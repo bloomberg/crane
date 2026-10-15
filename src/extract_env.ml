@@ -1462,6 +1462,10 @@ let template_kinds = "template_kinds"
 let install_template_kinds = "install_template_kinds"
 let represent_pass_names = [template_kinds; install_template_kinds]
 
+(** The steps run on the unit's Core once its target is planned, in order. *)
+let elaborate_calls = "elaborate_calls"
+let elaborate_pass_names = [elaborate_calls]
+
 (** Decide the kinds of the template parameters of the unit's inductives and
     type aliases, into [plan], and install them for the readers not yet
     converted.  They are decided from the inductive kinds {!analyze_and_plan}
@@ -1533,6 +1537,8 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   let planned = observed_fingerprint ~stage:"unit" struc in
   let modules, representation, callables, assumed = plan_layout struc in
   let plan = Target_plan.with_layout plan modules representation callables assumed in
+  Pipeline_trace.event "elaborate" elaborate_calls;
+  Core_elaborate.structure struc;
   let census_after_planning = Table.census () in
   (* Both bodies are rendered before either file is opened.  A preamble has to
      say what the body it precedes demands -- which headers it includes, which
@@ -1553,6 +1559,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   Install_legacy_plan.check_installed facts plan;
   report_structure_changes planned struc;
   report_late_solutions ();
+  if Pipeline_trace.enabled () then Pipeline_trace.event "emit" (Core_elaborate.report ());
   let opened = List.filter !opened_filter (opened_libraries ()) in
   let ns_open =
     match namespace with

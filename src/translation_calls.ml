@@ -1240,164 +1240,15 @@ let binding_results_of id compute =
       compute
   end
 
-(** [elaborate_call ~slot tyargs args] -- the call of the callee of
-    [tyargs], the call's reading of its type arguments, to [args], as Core
-    elaborates it ({!Elaborated_call}): which arguments are dictionaries,
-    regular, or past the callee's arity and so applied to its result, and
-    the scheme variables the arguments' types, and the ML types [slot]
-    expects or states, resolve.  A variable argument is read off the binder
-    it names in [lex], the environment the call is typed in, by its ML type
-    and its role ({!Lexenv.binder}); no C++ name is consulted, and nothing of
-    the traversal that asks. *)
-let elaborate_call ~lex ~slot tyargs args =
-  let id = Call_tyargs.callee tyargs in
-  (* When the call has more args than the function's ML value-domain, the
-     excess args are curried applications to the result. This is common with
-     Rocq's Function vernacular _correct proof terms, where the extraction
-     produces e.g. div2_rect f f0 f1 n _res __ but div2_rect only has 4
-     value-domain params (f, f0, f1, n). The trailing _res and __ are applied
-     to the result via currying.
-
-     Split into: - primary_args: first n_value_dom args (passed to the
-     function) - excess_args: remaining non-dummy args (curried onto the
-     result) Only activates when n_args > n_value_dom; otherwise unchanged. *)
-  let args_before_split = args in
-  let args, excess_args =
-    let is_value_arg = function
-      | MLdummy _ -> false
-      (* A variable bound at an erased type carries no more than a dummy:
-         under [Conservative Types] a definition keeps its type binders and
-         passes them on ([length A l']). *)
-      | MLrel i -> (
-        match Lexenv.type_opt lex i with
-        | Some t -> not (erased_by_extraction t)
-        | None -> true )
-      | _ -> true
-    in
-    let is_value_dom t =
-      match resolve_tmeta t with
-      | Miniml.Tdummy _ -> false
-      | _ -> true
-    in
-    let rec collect_tarr_dom acc = function
-      | Miniml.Tarr (t1, t2) -> collect_tarr_dom (resolve_tmeta t1 :: acc) t2
-      | _ -> List.rev acc
-    in
-    match find_type_opt id with
-    | Some ml_ty ->
-      let all_dom = collect_tarr_dom [] ml_ty in
-      (* Count value-domain entries by filtering out ALL [Tdummy] positions
-         (both [Ktype] for erased type params and [Kprop] for erased proofs).
-         Symmetrically, filter the arg list to exclude [MLdummy] entries.
-         Comparing these two filtered counts avoids false excess detection
-         when erased params appear in [args] as [MLdummy] instead of (or in
-         addition to) being carried in [tys]. *)
-      let n_value_dom = List.length (List.filter is_value_dom all_dom) in
-      (* An erased argument at a position the declaration takes a value at
-         stays: the category classes over [obj : Type] take their objects
-         as values, and at [obj := Type -> Type] those objects are families
-         the call erases.  Dropping them would change the call's arity; the
-         declaration receives an empty box instead. *)
-      let value_args =
-        (* Two conventions meet here.  The arguments the Rocq term gave
-           have the declaration's erased domains dropped ([make_mlargs]
-           kills each [Tdummy]), so each is at a value domain, erased or
-           not.  The tail an eta-expansion invents keeps them: a dummy at
-           each erased domain, a variable at each value one
-           ([STRefToIxNat __ __ ref]).  The tail is the longest suffix
-           paired with the domains that way, provided what precedes it
-           fills the remaining value domains exactly; with none, every
-           argument is at a value domain or past the last one.  The one
-           dummy with no domain at all is the one a purely logical
-           signature is applied to. *)
-        if n_value_dom = 0 then List.filter is_value_arg args
-        else
-          let n_args = List.length args and n_dom = List.length all_dom in
-          let eta_paired k =
-            List.for_all2
-              (fun d a -> is_value_dom d = is_value_arg a)
-              (List.lastn k all_dom) (List.lastn k args)
-            && List.length
-                 (List.filter is_value_dom (List.firstn (n_dom - k) all_dom))
-               = n_args - k
-          in
-          let rec longest k =
-            if k = 0 then None else if eta_paired k then Some k else longest (k - 1)
-          in
-          match longest (min n_args n_dom) with
-          | Some k ->
-            List.firstn (n_args - k) args
-            @ List.filter is_value_arg (List.lastn k args)
-          | None -> args
-      in
-      let n_value_args = List.length value_args in
-      if n_value_args > n_value_dom then
-        let primary =
-          List.filteri (fun i _ -> i < n_value_dom) value_args
-        in
-        let excess =
-          List.filteri
-            (fun i a -> i >= n_value_dom && is_value_arg a)
-            value_args
-        in
-        (primary, excess)
-      else
-        (value_args, [])
-    | None -> (List.filter is_value_arg args, [])
+(** [resolve_from_context ~lex ~slot call] -- the holes of [call]'s reading
+    of its scheme variables that its context states: the ML types [slot]
+    expects or states for its result, and the heads its arguments' types
+    give a type-level function a domain names.  The rest of the elaboration
+    ({!Core_elaborate.elaborate_arguments}) is fixed by the call alone. *)
+let resolve_from_context ~lex ~slot (call : Elaborated_call.t) =
+  let {Elaborated_call.callee = id; callee_type = fn_ml_ty; primary = primary_ml_args; tyargs; _} =
+    call
   in
-  (* A value argument that vanishes here vanishes from the emitted call, and
-     the parameter it would have filled is dropped from the declaration by
-     the same [Tdummy] reading of the callee's domain -- leaving a body that
-     names a binder nothing supplies.  Report it rather than make it a
-     question about reading the generated C++ back. *)
-  let () =
-    if Sys.getenv_opt "CRANE_DBG_DROPPED_ARGS" <> None then
-      let n_in = List.length args_before_split in
-      let n_out = List.length args + List.length excess_args in
-      if n_out < n_in then
-        Feedback.msg_warning
-          (Pp.str
-             (Printf.sprintf
-                "crane: call to %s drops %d of %d arguments (%d dummy, %d \
-                 value domains declared)"
-                (Table.kername_of_global id)
-                (n_in - n_out) n_in
-                (List.length
-                   (List.filter
-                      (function MLdummy _ -> true | _ -> false)
-                      args_before_split ))
-                (List.length args) ) )
-  in
-  (* The primary arguments while they are still ML: [args] is rebound to
-     generated C++ expressions further down, but the callee's instantiation
-     can only be read off the ML types. *)
-  let primary_ml_args = args in
-  (* Partition args into type class instances and regular args *)
-  (* An erased instance leaves the call but not the declaration: its
-     parameter is still one of the callee's, so a position counted in the
-     declaration's parameter list steps over it. *)
-  let typeclass_ml_args, n_erased_instance_args, regular_ml_args =
-    split_instance_args ~lex args
-  in
-  (* Order the instance arguments the way the callee numbered its own
-     [_tcI] parameters.  [Gen_decls.gen_dfun] iterates [collect_lams]
-     output, which is reversed from source order, so a plain constrained
-     function's first instance parameter is the source-last one; an instance
-     struct is stripped left to right by [Gen_decls.gen_instance_struct] and
-     keeps source order.  Call sites have the arguments in source order. *)
-  let callee_is_instance_struct = ref_returns_typeclass id in
-  let typeclass_ml_args =
-    if callee_is_instance_struct then typeclass_ml_args
-    else List.rev typeclass_ml_args
-  in
-  (* The erased arguments left here are the ones the declaration takes a
-     value at (see [value_args] above); they are generated as empty boxes
-     below rather than as the [CPPabort] an [MLdummy] is elsewhere. *)
-  (* Compute the function's ML type after type arg substitution, to detect
-     arguments that return std::any (from erased record fields like
-     Functor::object_of) but where the parameter expects a concrete type
-     (e.g., unsigned int after resolving a promoted type var). *)
-  let fn_ml_ty = find_type id in
   (* An erased event family the position's type names: [memM_interp]'s [E],
      given unapplied where [on_mem] takes a handler into [itree BotE].  The
      family occurs in the callee's result only, where nothing deduces it and
@@ -1450,10 +1301,8 @@ let elaborate_call ~lex ~slot tyargs args =
      by the dictionary argument.  Filled before anything is substituted, so
      the parameter types the arguments are generated against and the
      explicit type arguments the call writes agree. *)
-  let tyargs = resolve_from_argument_heads ~only_alias_args:true ~lex tyargs primary_ml_args in
-  Elaborated_call.make ~callee:id ~callee_type:fn_ml_ty ~primary:primary_ml_args
-    ~excess:excess_args ~instances:typeclass_ml_args ~erased_instances:n_erased_instance_args
-    ~regular:regular_ml_args ~tyargs
+  Elaborated_call.with_tyargs call
+    (resolve_from_argument_heads ~only_alias_args:true ~lex tyargs primary_ml_args)
 
 (** [plan_call ~caller ?expected_ty env call] -- what the elaborated [call]
     from the declaration [caller] needs to know before its arguments are
@@ -1724,7 +1573,9 @@ let plan_call ~caller ~lex ?expected_ty env (call : Elaborated_call.t) =
 let lower_call ~caller ~slot ?expected_ty env use args =
   let id = use.callee in
   let lex = current_lexenv () in
-  let call = elaborate_call ~lex ~slot (Call_tyargs.of_use use) args in
+  let call =
+    resolve_from_context ~lex ~slot (Core_elaborate.elaboration ~lex use args)
+  in
   let plan = plan_call ~caller ~lex ?expected_ty env call in
   call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args:(call.regular <> [])
 
