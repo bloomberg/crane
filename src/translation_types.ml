@@ -450,7 +450,7 @@ let dict_carrier_ml_type id args =
         let* r = !Table.current_decl_ref in
         let* decl_ty = find_type_opt r in
         let doms = ml_domains decl_ty in
-        let n = List.length (!tctx).env_types in
+        let n = Lexenv.depth (!tctx).env_types in
         (* [List.nth_opt] raises rather than answering [None] on a negative
            index, and [i] can exceed [n]: a dictionary reached through an
            argument of the call need not be a binder of this body at all. *)
@@ -977,7 +977,7 @@ let rec erase_type_args_to_any = function
     [Tdummy]-guarded [Tvar] codomain.  When such a call is made in a context
     where the enclosing function's return type is a concrete C++ type [T], the
     result is wrapped with [std::any_cast<T>].  See [ml_codomain_erases_to_any]. *)
-let binder_is_instance i =
+let binder_is_instance lex i =
   (* An instance parameter is not a value argument.  A declaration's
      class-typed parameter is its dictionary, as the binder records where it
      was bound ({!Translation_state.parameter_role}).  One that came from Coq
@@ -988,7 +988,7 @@ let binder_is_instance i =
      reading it as an instance would take the argument away from the call.
      The declaration drops both kinds; without the second the call sites went
      on passing the one the declaration had dropped. *)
-  match get_env_binder_opt i with
+  match Lexenv.binder lex i with
   | Some {eb_role = Dictionary; _} -> true
   | Some {eb_type; eb_role = Value; _} -> ml_ret_is_skipped eb_type
   | None -> false
@@ -1012,7 +1012,7 @@ let singleton_dictionary env head =
    [Opt : Type -> Type]).  Look through it, or the instance is left in value
    position and the generated call names the instance struct as if it were a
    value. *)
-let is_typeclass_instance_arg ml_arg =
+let is_typeclass_instance_arg ~lex ml_arg =
   match strip_dictionary ml_arg with
   | MLglob {callee = r; _} ->
     (* An instance parameterised over types alone carries its parameters in
@@ -1021,7 +1021,7 @@ let is_typeclass_instance_arg ml_arg =
        application case below does, or such an instance is left in value
        position and the call names the instance struct as if it were one. *)
     ref_is_instance r
-  | MLrel i -> binder_is_instance i
+  | MLrel i -> binder_is_instance lex i
   | MLapp (MLglob {callee = r; _}, _) ->
     (* Parameterized instance application, e.g. numList A H. Check if r's
        return type (after stripping Tarr) is a typeclass type, or if it
@@ -1059,7 +1059,7 @@ let is_typeclass_instance_arg ml_arg =
 
 (* Convert type class instance args to template type arguments *)
 
-let instance_arg_is_erased ml_arg =
+let instance_arg_is_erased ~lex ml_arg =
   (* An instance argument is not a value argument, but only one whose class
      Crane kept is a template argument either: {!collect_typeclass_param_ids}
      mints a concept-constrained parameter per kept class and none for a
@@ -1075,17 +1075,17 @@ let instance_arg_is_erased ml_arg =
        their mappings and not by a dictionary. *)
     ref_returns_skipped r || ref_is_skipped r
   | MLrel i -> (
-    match get_env_type_opt i with
+    match Lexenv.type_opt lex i with
     | Some ty -> ml_ret_is_skipped ty
     | None -> false )
   | _ -> false
 
-(** [split_instance_args env args] -- the class dictionaries a call passes,
+(** [split_instance_args ~lex args] -- the class dictionaries a call passes,
     the ones an erasure removed left out; how many were removed, which still
     occupy a parameter of the declaration; and the regular arguments. *)
-let split_instance_args args =
-  let tc, regular = List.partition is_typeclass_instance_arg args in
-  let erased, kept = List.partition instance_arg_is_erased tc in
+let split_instance_args ~lex args =
+  let tc, regular = List.partition (is_typeclass_instance_arg ~lex) args in
+  let erased, kept = List.partition (instance_arg_is_erased ~lex) tc in
   (kept, List.length erased, regular)
 
 (** [inline_custom_arg_arity id] is the number of [%aN] term placeholders an
@@ -1328,10 +1328,11 @@ let instance_class_ty env ml_arg =
    rule from firing on an ordinary mapped constant that merely takes an
    instance among its arguments. *)
 let kept_instance_of_projection env x args =
+  let lex = current_lexenv () in
   List.find_opt
     (fun a ->
-      is_typeclass_instance_arg a
-      && (not (instance_arg_is_erased a))
+      is_typeclass_instance_arg ~lex a
+      && (not (instance_arg_is_erased ~lex a))
       && List.mem (Some x)
            (record_fields_of_type (instance_class_ty env a)) )
     args
@@ -1345,7 +1346,9 @@ let static_projection_instance env x args =
   if Table.is_inline_custom x then kept_instance_of_projection env x args
   else if Table.singleton_method_class x <> None then
     List.find_opt
-      (fun a -> is_typeclass_instance_arg a && not (instance_arg_is_erased a))
+      (fun a ->
+        let lex = current_lexenv () in
+        is_typeclass_instance_arg ~lex a && not (instance_arg_is_erased ~lex a))
       args
   else None
 

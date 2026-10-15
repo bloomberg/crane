@@ -21,7 +21,8 @@ let declare s ty =
   MLglob (Global_use.monomorphic (r s))
 
 let elaborate f args =
-  Translation_calls.elaborate_call ~slot:Translation_support.empty_slot
+  Translation_calls.elaborate_call ~lex:(Translation_state.current_lexenv ())
+    ~slot:Translation_support.empty_slot
     (Call_tyargs.of_use (Global_use.monomorphic f)) args
 
 let () =

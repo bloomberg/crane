@@ -176,7 +176,7 @@ type lowered_call = {
     left nothing.  Also the callee's instantiated C++ type and the
     instantiation the type arguments were read from, which the assembly
     needs. *)
-let call_type_args ~caller ?expected_ty env id plan ~has_value_args =
+let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
   let args = if has_value_args then [()] else [] in
   let {
     cp_call = {Elaborated_call.primary = primary_ml_args; regular = regular_ml_args; _} as call;
@@ -211,7 +211,7 @@ let call_type_args ~caller ?expected_ty env id plan ~has_value_args =
      in OCaml costs nothing and in C++ costs everything -- they occur only
      in [typename I::m<T>] and in the return type, both non-deduced.  The
      arguments still say what they are, so resolve them from those. *)
-  let tyargs = resolve_from_argument_types tyargs primary_ml_args in
+  let tyargs = resolve_from_argument_types ~lex tyargs primary_ml_args in
   let tys = Call_tyargs.by_variable tyargs in
   (* The whole list is built as a function of the reading because it may
      have to be built twice: what a call writes is decided by the erasure
@@ -603,7 +603,7 @@ let call_type_args ~caller ?expected_ty env id plan ~has_value_args =
         filter_erased_keyed ~preserve_positions:true
           (from_expected
              (regular_of
-                (Call_tyargs.by_variable (resolve_from_argument_heads tyargs primary_ml_args)) ) )
+                (Call_tyargs.by_variable (resolve_from_argument_heads ~lex tyargs primary_ml_args)) ) )
       else filtered
     in
     if filtered = [] && regular_type_args <> [] && dictionary_filled then
@@ -707,7 +707,7 @@ let call_type_args ~caller ?expected_ty env id plan ~has_value_args =
              say what an erased plain type argument was, which is worth
              writing only here: filling a position is what would have taken
              the two routes above out of reach. *)
-          build_type_args (resolve_from_argument_heads tyargs primary_ml_args) )
+          build_type_args (resolve_from_argument_heads ~lex tyargs primary_ml_args) )
     else
       (* A list the call does write may still hold a family MiniML erased
          -- [translate inr1]'s source, taken off a morphism that erases it --
@@ -728,7 +728,7 @@ let call_type_args ~caller ?expected_ty env id plan ~has_value_args =
         resolve_from_argument_heads
           ~accept:(fun v f ->
             not (Table.is_phantom_type_param id (Scheme.Var.ordinal v - 1) || no_struct f) )
-          tyargs primary_ml_args
+          ~lex tyargs primary_ml_args
       in
       if List.equal Scheme.Var.equal (Call_tyargs.holes refined) (Call_tyargs.holes tyargs)
       then regular
@@ -1246,9 +1246,10 @@ let binding_results_of id compute =
     regular, or past the callee's arity and so applied to its result, and
     the scheme variables the arguments' types, and the ML types [slot]
     expects or states, resolve.  A variable argument is read off the binder
-    it names in the lexical environment, by its ML type and its role
-    ({!Translation_state.env_binder}); no C++ name is consulted. *)
-let elaborate_call ~slot tyargs args =
+    it names in [lex], the environment the call is typed in, by its ML type
+    and its role ({!Lexenv.binder}); no C++ name is consulted, and nothing of
+    the traversal that asks. *)
+let elaborate_call ~lex ~slot tyargs args =
   let id = Call_tyargs.callee tyargs in
   (* When the call has more args than the function's ML value-domain, the
      excess args are curried applications to the result. This is common with
@@ -1268,7 +1269,7 @@ let elaborate_call ~slot tyargs args =
          under [Conservative Types] a definition keeps its type binders and
          passes them on ([length A l']). *)
       | MLrel i -> (
-        match get_env_type_opt i with
+        match Lexenv.type_opt lex i with
         | Some t -> not (erased_by_extraction t)
         | None -> true )
       | _ -> true
@@ -1376,7 +1377,7 @@ let elaborate_call ~slot tyargs args =
      parameter is still one of the callee's, so a position counted in the
      declaration's parameter list steps over it. *)
   let typeclass_ml_args, n_erased_instance_args, regular_ml_args =
-    split_instance_args args
+    split_instance_args ~lex args
   in
   (* Order the instance arguments the way the callee numbered its own
      [_tcI] parameters.  [Gen_decls.gen_dfun] iterates [collect_lams]
@@ -1423,7 +1424,7 @@ let elaborate_call ~slot tyargs args =
          is the head, which for a family -- the only variables filled here --
          is the answer. *)
       let found =
-        tvar_instantiation_found ~in_scope:true ~constructors:true ~result
+        tvar_instantiation_found ~lex ~constructors:true ~result
           fn_ml_ty primary_ml_args
       in
       (* Only where nothing deduces it: a family a parameter spells is the
@@ -1449,7 +1450,7 @@ let elaborate_call ~slot tyargs args =
      by the dictionary argument.  Filled before anything is substituted, so
      the parameter types the arguments are generated against and the
      explicit type arguments the call writes agree. *)
-  let tyargs = resolve_from_argument_heads ~only_alias_args:true tyargs primary_ml_args in
+  let tyargs = resolve_from_argument_heads ~only_alias_args:true ~lex tyargs primary_ml_args in
   Elaborated_call.make ~callee:id ~callee_type:fn_ml_ty ~primary:primary_ml_args
     ~excess:excess_args ~instances:typeclass_ml_args ~erased_instances:n_erased_instance_args
     ~regular:regular_ml_args ~tyargs
@@ -1460,7 +1461,7 @@ let elaborate_call ~slot tyargs args =
     caller's scope, the callee's parameter types at that instantiation, and
     the C++ types its result and its dictionaries are expected at.  Read by
     {!gen_call_args} and by the assembly in {!eta_fun}. *)
-let plan_call ~caller ?expected_ty env (call : Elaborated_call.t) =
+let plan_call ~caller ~lex ?expected_ty env (call : Elaborated_call.t) =
   let {
     Elaborated_call.callee = id;
     callee_type = fn_ml_ty;
@@ -1482,7 +1483,7 @@ let plan_call ~caller ?expected_ty env (call : Elaborated_call.t) =
   let expected_result =
     let from_args () =
       match
-        tvar_instantiation_found ~in_scope:true ~constructors:true
+        tvar_instantiation_found ~lex ~constructors:true
           (find_type id) primary_ml_args
       with
       | [] -> None
@@ -1567,7 +1568,7 @@ let plan_call ~caller ?expected_ty env (call : Elaborated_call.t) =
     in
     if self_call || List.length primary_ml_args >= n_params then tyargs
     else
-      let tyargs = resolve_from_argument_types tyargs primary_ml_args in
+      let tyargs = resolve_from_argument_types ~lex tyargs primary_ml_args in
       let in_cod = collect_tvars_set IntSet.empty (ml_codomain fn_ml_ty) in
       let open_vars = Call_tyargs.beyond_extent tyargs in
       match
@@ -1722,9 +1723,10 @@ let plan_call ~caller ?expected_ty env (call : Elaborated_call.t) =
     reads the result and decides neither. *)
 let lower_call ~caller ~slot ?expected_ty env use args =
   let id = use.callee in
-  let call = elaborate_call ~slot (Call_tyargs.of_use use) args in
-  let plan = plan_call ~caller ?expected_ty env call in
-  call_type_args ~caller ?expected_ty env id plan ~has_value_args:(call.regular <> [])
+  let lex = current_lexenv () in
+  let call = elaborate_call ~lex ~slot (Call_tyargs.of_use use) args in
+  let plan = plan_call ~caller ~lex ?expected_ty env call in
+  call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args:(call.regular <> [])
 
 (** What a reference to global [x], its type instantiated by [instantiate],
     evaluates to as it is printed.

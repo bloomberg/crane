@@ -2554,22 +2554,20 @@ let rec infer_ml_body_type (a : ml_ast) : ml_type option =
     [i] instantiates [Tvar (_, i + 1)].  A variable no argument mentions keeps
     itself, so substituting leaves it alone. *)
 and tvar_instantiation_found
-    ?(in_scope = false)
+    ?lex
     ?(constructors = false)
     ?result
     callee_ty
     args =
   (* A binder's type is not on the [MLrel] that names it; it was written down
-     where it was bound, which is what {!Translation_state.env_types} keeps.
-     Only a caller generating code {e inside} that scope may read it, which is
-     why it is asked for rather than assumed. *)
+     where it was bound, which is what [lex], the environment [args] are typed
+     in, keeps.  Without one a variable says nothing. *)
   let arg_ml_ty a =
     match infer_ml_body_type a with
     | Some _ as t -> t
     | None -> (
-      match a with
-      | MLrel i when in_scope ->
-        get_env_type_opt i
+      match (a, lex) with
+      | MLrel i, Some lex -> Lexenv.type_opt lex i
       | _ -> None )
   in
   let found = Hashtbl.create 7 in
@@ -2710,7 +2708,7 @@ and tvar_instantiation callee_ty args =
     some short of the undeducible one achieves nothing.  Variables the
     compiler can deduce are left to it -- naming a type twice is an
     opportunity to spell it differently, not a safeguard. *)
-and resolve_from_argument_types tyargs args =
+and resolve_from_argument_types ~lex tyargs args =
   let id = Call_tyargs.callee tyargs in
   match find_type_opt id with
   | None -> tyargs
@@ -2722,7 +2720,7 @@ and resolve_from_argument_types tyargs args =
     let deducible = Option.default IntSet.empty (deducible_tvars_of_glob id) in
     if List.for_all (fun v -> IntSet.mem (Scheme.Var.ordinal v) deducible) missing then tyargs
     else
-      let found = tvar_instantiation_found ~in_scope:true callee_ty args in
+      let found = tvar_instantiation_found ~lex callee_ty args in
       Call_tyargs.resolve_all Call_tyargs.Argument_types
         (fun v -> List.assoc_opt (Scheme.Var.ordinal v) found)
         missing tyargs
@@ -2742,8 +2740,8 @@ and resolve_from_argument_types tyargs args =
     -- [Sub UBE E] against a [Sub UBE UBE] -- which is what
     {!tvar_instantiation_found} reads.  [accept v t] may decline the answer
     [t] for [v]. *)
-and resolve_from_argument_heads ?(only_alias_args = false) ?(accept = fun _ _ -> true) tyargs
-    args =
+and resolve_from_argument_heads ?(only_alias_args = false) ?(accept = fun _ _ -> true) ~lex
+    tyargs args =
   let id = Call_tyargs.callee tyargs in
   match (Call_tyargs.interior_holes tyargs, find_type_opt id) with
   | [], _ | _, None -> tyargs
@@ -2787,7 +2785,7 @@ and resolve_from_argument_heads ?(only_alias_args = false) ?(accept = fun _ _ ->
         holes
     in
     let found =
-      tvar_instantiation_found ~in_scope:true ~constructors:true callee_ty args
+      tvar_instantiation_found ~lex ~constructors:true callee_ty args
     in
     Call_tyargs.resolve Call_tyargs.Argument_heads
       (fun v ->
@@ -2804,8 +2802,8 @@ and resolve_from_argument_heads ?(only_alias_args = false) ?(accept = fun _ _ ->
     polymorphic in name only: lifting it makes a template whose variables no
     call can deduce, and whose partial applications erase what they do not
     know.  [None] where the binder is used other than applied, or where the
-    uses disagree.  The enclosing scope's binder types must be in scope. *)
-let sole_instance ~n_outer t body =
+    uses disagree.  [lex] is the enclosing scope's environment. *)
+let sole_instance ~lex ~n_outer t body =
   let exception Not_sole in
   try
     let instances = ref [] in
@@ -2820,7 +2818,7 @@ let sole_instance ~n_outer t body =
                 else Mlutil.ast_lift (-(n + 1)) a )
               args
           in
-          instances := tvar_instantiation_found ~in_scope:true t args :: !instances
+          instances := tvar_instantiation_found ~lex t args :: !instances
         end )
       body;
     let vars = IntSet.elements (collect_tvars_set IntSet.empty t) in

@@ -277,7 +277,8 @@ let is_shared_constant_term e =
 (* Whether [e] names no value of [env]: its only free variables are instance
    parameters, which C++ takes as template arguments ({!binder_is_instance}),
    so a static built from it is the same at every evaluation. *)
-let names_no_value e = Escape.IntSet.for_all binder_is_instance (Escape.free_rels 0 e)
+let names_no_value e =
+  Escape.IntSet.for_all (binder_is_instance (current_lexenv ())) (Escape.free_rels 0 e)
 
 (* Whether [e], the call [f args], is closed ({!names_no_value}) and builds a
    typeclass instance, which its Rocq type says ({!Table.builds_instance}): a
@@ -4762,7 +4763,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             f
         in
         let tc_args, _, value_args =
-          under_branch_binders (fun () -> split_instance_args value_args)
+          under_branch_binders (fun () -> split_instance_args ~lex:(current_lexenv ()) value_args)
         in
         let call =
           (* Source order, as {!mk_arity_call} takes them.  Under the
@@ -5102,7 +5103,7 @@ and project_through_instance env use args inst =
       (fun a ->
         match a with
         | MLdummy _ -> false
-        | _ -> not (is_typeclass_instance_arg a) )
+        | _ -> not (is_typeclass_instance_arg ~lex:(current_lexenv ()) a) )
       args
   in
   (* The instance declares each method as a member template over the method's
@@ -6799,7 +6800,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        the method the callee projects declares it as a template parameter.  It
        leaves the argument list for the callee's explicit template arguments,
        which is the only place that parameter can be given. *)
-    let tc_args, _, args = split_instance_args args in
+    let tc_args, _, args = split_instance_args ~lex:(current_lexenv ()) args in
     let gen_callee () =
       match (tc_args, gen_expr env f) with
       | [], e -> e
@@ -9276,7 +9277,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     if not has_extra then
       gen_normal_letin ()
     else (
-    match sole_instance ~n_outer t b with
+    match sole_instance ~lex:(current_lexenv ()) ~n_outer t b with
     | Some inst ->
       (* Used at one instance only: bound at it, not lifted. *)
       let subst = Mlutil.type_subst_list inst in
