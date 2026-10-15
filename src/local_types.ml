@@ -6,65 +6,60 @@
 
 open Miniml
 
-let rec mint ?late ~rigidity ~next = function
-  | Tmeta ({contents = None} as m) ->
-    let i = !next in
-    next := i + 1;
-    Mlutil.try_mgu ?late (Tmeta m) (Tvar (rigidity, i))
-  | Tmeta {contents = Some t} -> mint ?late ~rigidity ~next t
-  | Tarr (a, b) ->
-    mint ?late ~rigidity ~next a;
-    mint ?late ~rigidity ~next b
-  | Tglob (_, args, _) -> List.iter (mint ?late ~rigidity ~next) args
-  | _ -> ()
-
-let rec mint_in_ast mint = function
+(* [f] at every type [e] annotates, in order.  A global use is not walked:
+   its instantiation was frozen by extraction and holds no metavariable. *)
+let rec iter_annotations f = function
   | MLlam (_, ty, body) ->
-    mint ty;
-    mint_in_ast mint body
+    f ty;
+    iter_annotations f body
   | MLletin (_, ty, a, b) ->
-    mint ty;
-    mint_in_ast mint a;
-    mint_in_ast mint b
+    f ty;
+    iter_annotations f a;
+    iter_annotations f b
   | MLglob _ -> ()
   | MLcons (ty, _, args) ->
-    mint ty;
-    List.iter (mint_in_ast mint) args
+    f ty;
+    List.iter (iter_annotations f) args
   | MLcase (ty, e, brs) ->
-    mint ty;
-    mint_in_ast mint e;
+    f ty;
+    iter_annotations f e;
     Array.iter
       (fun (ids, ty, _, body) ->
-        List.iter (fun (_, t) -> mint t) ids;
-        mint ty;
-        mint_in_ast mint body )
+        List.iter (fun (_, t) -> f t) ids;
+        f ty;
+        iter_annotations f body )
       brs
   | MLfix (_, ids, funs, _) ->
-    Array.iter (fun (_, ty) -> mint ty) ids;
-    Array.iter (mint_in_ast mint) funs
-  | MLapp (f, args) ->
-    mint_in_ast mint f;
-    List.iter (mint_in_ast mint) args
-  | MLmagic (_, a) -> mint_in_ast mint a
+    Array.iter (fun (_, ty) -> f ty) ids;
+    Array.iter (iter_annotations f) funs
+  | MLapp (g, args) ->
+    iter_annotations f g;
+    List.iter (iter_annotations f) args
+  | MLmagic (_, a) -> iter_annotations f a
   | MLparray (arr, def) ->
-    Array.iter (mint_in_ast mint) arr;
-    mint_in_ast mint def
-  | MLtuple args -> List.iter (mint_in_ast mint) args
+    Array.iter (iter_annotations f) arr;
+    iter_annotations f def
+  | MLtuple args -> List.iter (iter_annotations f) args
   | MLrel _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> ()
 
-let rec unsolved = function
-  | Tmeta {contents = None} -> true
-  | Tmeta {contents = Some t} -> unsolved t
-  | Tarr (a, b) -> unsolved a || unsolved b
-  | Tglob (_, args, _) -> List.exists unsolved args
-  | _ -> false
+(* Solves each unsolved metavariable of a type, in order, to the rigid
+   variable [!next], advancing [next], and tells [minted]. *)
+let rec mint ~minted ~next = function
+  | Tmeta ({contents = None} as m) ->
+    Meta.solve m (Tvar (Rigid, !next));
+    incr next;
+    minted m
+  | Tmeta {contents = Some t} -> mint ~minted ~next t
+  | Tarr (a, b) ->
+    mint ~minted ~next a;
+    mint ~minted ~next b
+  | Tglob (_, args, _) -> List.iter (mint ~minted ~next) args
+  | _ -> ()
 
-let check_minted ids =
-  if Probe.checking () && Array.exists (fun (_, ty) -> unsolved ty) ids then
-    Probe.violation "frozen program"
-      Pp.(
-        str "the local fixpoint " ++ Names.Id.print (fst ids.(0))
-        ++ str " is lowered with a type freezing left open" )
+(* The number each let-bound lambda's variables were minted past, by the
+   metavariables minted for them: what lowering the lambda is checked
+   against. *)
+let let_lambda_bases : (int, int) Hashtbl.t = State.table State.Extraction 16
 
 (** The type a term builds in tail position, where its own annotations say so.
 
@@ -121,41 +116,89 @@ let recover_fix_codomains ids funs =
    no longer asking what the body builds. *)
 let fill_codomain_hole (_, ty) body =
   match snd (Mlutil.type_decomp ty) with
-  | Tmeta ({contents = None} as cell) ->
-    Option.iter (Meta.solve cell) (tail_result_type body)
+  | Tmeta ({contents = None} as cell) -> Option.iter (Meta.solve cell) (tail_result_type body)
   | _ -> ()
 
 (* Settles one group as translation reads it: codomains filled and recovered,
-   then the signatures' remaining metavariables minted from [1].  The counter
-   is returned for an applied group, which goes on to its bodies and
-   arguments. *)
+   then the signatures' remaining metavariables minted from [1].  The minting
+   goes on for an applied group, into its bodies and arguments. *)
 let settle ids funs =
   Array.iter2 fill_codomain_hole ids funs;
   let ids, funs = recover_fix_codomains ids funs in
-  let next = ref 1 in
-  Array.iter (fun (_, ty) -> mint ~rigidity:Rigid ~next ty) ids;
-  (funs, mint ~rigidity:Rigid ~next)
+  let mint = mint ~minted:ignore ~next:(ref 1) in
+  Array.iter (fun (_, ty) -> mint ty) ids;
+  (funs, mint)
 
-let rec expr = function
+let rec left_open = function
+  | Tmeta {contents = None} -> true
+  | Tmeta {contents = Some t} -> left_open t
+  | Tarr (a, b) -> left_open a || left_open b
+  | Tglob (_, args, _) -> List.exists left_open args
+  | _ -> false
+
+let violation what = Probe.violation "frozen program" (Pp.str what)
+
+let check_minted ids =
+  if Probe.checking () && Array.exists (fun (_, ty) -> left_open ty) ids then
+    violation
+      ( "the local fixpoint " ^ Names.Id.to_string (fst ids.(0))
+      ^ " is lowered with a type freezing left open" )
+
+let check_let_lambda ~outer t a =
+  if Probe.checking () then begin
+    let base = ref None and unsolved = ref false in
+    let rec visit = function
+      | Tmeta {contents = None} -> unsolved := true
+      | Tmeta {id; contents = Some t} ->
+        if !base = None then base := Hashtbl.find_opt let_lambda_bases id;
+        visit t
+      | Tarr (x, y) ->
+        visit x;
+        visit y
+      | Tglob (_, args, _) -> List.iter visit args
+      | _ -> ()
+    in
+    visit t;
+    iter_annotations visit a;
+    if !unsolved then violation "a let-bound lambda is lowered with a type freezing left open";
+    match !base with
+    | Some b when b <> outer ->
+      violation
+        (Printf.sprintf
+           "a let-bound lambda's variables were numbered past %d, and it is lowered under a head \
+            of %d"
+           b outer )
+    | _ -> ()
+  end
+
+let rec expr ~outer = function
   | MLletin (_, _, MLfix (_, ids, funs, _), b) ->
     ignore (settle ids funs);
-    Array.iter expr funs;
-    expr b
+    Array.iter (expr ~outer) funs;
+    expr ~outer b
   | MLapp (MLfix (_, ids, funs, _), args) ->
     let recovered, mint = settle ids funs in
-    Array.iter (mint_in_ast mint) recovered;
-    List.iter (mint_in_ast mint) args;
-    Array.iter expr funs;
-    List.iter expr args
+    Array.iter (iter_annotations mint) recovered;
+    List.iter (iter_annotations mint) args;
+    Array.iter (expr ~outer) funs;
+    List.iter (expr ~outer) args
   | MLfix (_, ids, funs, _) ->
     ignore (settle ids funs);
-    Array.iter expr funs
-  | MLletin (_, _, MLlam _, b) -> expr b
-  | e -> Mlutil.ast_iter expr e
+    Array.iter (expr ~outer) funs
+  | MLletin (_, t, (MLlam _ as a), b) ->
+    let minted m = Hashtbl.replace let_lambda_bases m.id outer in
+    let mint = mint ~minted ~next:(ref (outer + 1)) in
+    mint t;
+    iter_annotations mint a;
+    expr ~outer b
+  | e -> Mlutil.ast_iter (expr ~outer) e
 
 let structure =
   Modutil.struct_iter
     (function
-      | (Dterm _ | Dfix _) as d -> List.iter (fun fd -> expr fd.fd_body) (Mlutil.term_defs d)
+      | (Dterm _ | Dfix _) as d ->
+        List.iter
+          (fun fd -> expr ~outer:(Mlutil.IntSet.fold max (Mlutil.ml_tvars fd.fd_type) 0) fd.fd_body)
+          (Mlutil.term_defs d)
       | Dind _ | Dtype _ -> () )
     ignore ignore

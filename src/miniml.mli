@@ -488,10 +488,6 @@ end
 module Meta : sig
   (** Why a metavariable is solved after the program was frozen. *)
   type late_solution =
-    | Let_lambda_variable
-        (** A variable minted for what a let-bound lambda's types leave open,
-            numbered past the template head it is generated under
-            ({!Local_types}). *)
     | Erased_slot
         (** An open slot, at the type its context expects. *)
 

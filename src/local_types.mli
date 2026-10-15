@@ -4,29 +4,12 @@
 (** The types a local definition leaves open are its own variables.
 
     Extraction leaves a metavariable wherever nothing outside a local
-    fixpoint fixes one of its types -- [let fix len {B} (xs : list B)] says
-    nothing of [B] -- and the fixpoint is lifted to a C++ template over
-    exactly those variables.  {!structure} mints them before the program is
-    frozen, so that no fixpoint's generation solves a metavariable of the
-    frozen program; a let-bound lambda's are still minted where it is
-    generated, numbered past the template head it is generated under, as
-    {!Miniml.Meta.Let_lambda_variable} says. *)
-
-(** [mint ?late ~rigidity ~next ty] solves every unsolved metavariable of
-    [ty], in order, to a variable of [rigidity] numbered [!next], [!next + 1],
-    and so on, advancing [next]; [late] says why, after freezing. *)
-val mint :
-  ?late:Miniml.Meta.late_solution ->
-  rigidity:Miniml.tvar_rigidity ->
-  next:int ref ->
-  Miniml.ml_type ->
-  unit
-
-(** [mint_in_ast mint e] applies [mint] to every type [e] annotates, in
-    order.  A global use is not walked: its instantiation was frozen by
-    extraction and holds no metavariable, and a hole in it is not to be
-    renumbered into one of the caller's variables. *)
-val mint_in_ast : (Miniml.ml_type -> unit) -> Miniml.ml_ast -> unit
+    definition fixes one of its types -- [let fix len {B} (xs : list B)] says
+    nothing of [B], nor [let id := fun x => x] of [x]'s -- and the definition
+    is lifted to a C++ template over exactly those variables.  {!structure}
+    mints them before the program is frozen, so that lowering a body solves
+    no metavariable of the frozen program; lowering checks what it finds
+    instead ({!check_minted}, {!check_let_lambda}). *)
 
 (** [recover_fix_codomains ids funs] -- a recursive group's signatures and
     bodies, with each function's codomain recovered from its body where
@@ -42,16 +25,27 @@ val recover_fix_codomains :
 
 (** Under [CRANE_CHECK_IR], a group about to be lowered whose signatures
     still hold an unsolved metavariable is a violation: {!structure} missed
-    the shape it is lowered in, and lowering would decide the variable. *)
+    the shape it is lowered in. *)
 val check_minted : (Names.Id.t * Miniml.ml_type) array -> unit
 
-(** Mints the open variables of every local fixpoint of the structure's
-    declarations, at each of the shapes translation lowers one in: a
-    let-bound group's signatures, an applied group's signatures, bodies and
-    arguments, a bare group's signatures.  Each group numbers its own from
-    [1], as its lifting expects, and they are rigid: they are the group's,
-    and a substitution for the variables of the declaration around it -- an
-    instance method's body takes its class's -- must not capture them.  A
-    group inside a let-bound lambda is left to the lambda, which mints
-    everything it contains. *)
+(** [check_let_lambda ~outer t a] -- under [CRANE_CHECK_IR], the lambda [a]
+    bound at [t], about to be lowered under a head of [outer] variables, is
+    a violation if a type of it is still open, or if its variables were
+    minted past some other number than [outer], so that they would collide
+    with the head's or leave a gap.  The second is checked where the minted
+    cells are still found in [t] or [a]'s annotations. *)
+val check_let_lambda : outer:int -> Miniml.ml_type -> Miniml.ml_ast -> unit
+
+(** Mints the open variables of every local definition of the structure's
+    declarations, rigid: they are the definition's, and a substitution for
+    the variables around it -- an instance method's body takes its class's
+    -- must not capture them.
+
+    A recursive group's are minted at each of the shapes translation lowers
+    one in -- a let-bound group's signatures; an applied group's signatures,
+    bodies and arguments; a bare group's signatures -- each numbered from
+    [1], as its lifting expects, after the codomains its bodies determine
+    are filled.  A let-bound lambda's, everything it contains included, are
+    numbered past the variables of the declaration it is in, which name its
+    head's. *)
 val structure : Miniml.ml_structure -> unit

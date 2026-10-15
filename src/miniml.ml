@@ -378,11 +378,9 @@ end
 
 module Meta = struct
   type late_solution =
-    | Let_lambda_variable
     | Erased_slot
 
   let late_solution_name = function
-    | Let_lambda_variable -> "let-lambda variable"
     | Erased_slot -> "erased slot"
 
   let fresh id = {id; contents = None}
@@ -418,5 +416,5 @@ module Meta = struct
   let late_solutions () =
     List.filter_map
       (fun r -> Option.map (fun n -> (r, n)) (Hashtbl.find_opt counts r))
-      [Let_lambda_variable; Erased_slot]
+      [Erased_slot]
 end

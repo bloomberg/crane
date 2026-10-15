@@ -65,19 +65,20 @@ let () =
   let early = Meta.fresh 9 and late = Meta.fresh 10 in
   Meta.solve early nat;
   Meta.freeze ();
-  Meta.solve ~late:Meta.Let_lambda_variable late nat;
+  Meta.solve ~late:Meta.Erased_slot late nat;
   Meta.undo_late ();
   check "undoing unsolves a late solution" (late.contents = None);
   check "undoing leaves a solution made before freezing" (early.contents = Some nat);
-  Meta.solve ~late:Meta.Let_lambda_variable late (Tvar (Schematic, 1));
+  Meta.solve ~late:Meta.Erased_slot late (Tvar (Schematic, 1));
   check "an undone metavariable can be solved again" (late.contents = Some (Tvar (Schematic, 1)));
   Meta.undo_late ();
   Meta.undo_late ();
   check "undoing twice undoes once" (late.contents = None);
   Meta.thaw ()
 
-(* A local fixpoint's open types are minted before freezing, each group's
-   from 1 and rigid; one inside a let-bound lambda is left to the lambda. *)
+(* A local definition's open types are minted before freezing, rigid: each
+   recursive group's from 1, a let-bound lambda's, its groups' included,
+   past the variables of the declaration it is in. *)
 let () =
   let nat = Tglob (r "nat", [], []) in
   let list t = Tglob (r "list", [t], []) in
@@ -85,13 +86,16 @@ let () =
   let group m =
     MLfix (0, [|(go, Tarr (list (Tmeta m), nat))|], [|MLlam (Dummy, list (Tmeta m), MLrel 1)|], false)
   in
-  let a = Meta.fresh 11 and b = Meta.fresh 12 and c = Meta.fresh 13 in
+  let a = Meta.fresh 11 and b = Meta.fresh 12 and c = Meta.fresh 13 and d = Meta.fresh 14 in
   let body =
     MLletin
       ( Id go, nat, group a,
-        MLletin (Dummy, nat, MLlam (Dummy, nat, group c), MLapp (group b, [MLrel 1])) )
+        MLletin
+          ( Dummy, Tarr (Tmeta d, nat), MLlam (Dummy, Tmeta d, group c),
+            MLapp (group b, [MLrel 1]) ) )
   in
-  Local_types.structure [(mp "M", [term "f" body nat])];
+  Local_types.structure [(mp "M", [term "f" body (Tarr (Tvar (Schematic, 1), nat))])];
   check "a let-bound group's open type is its first rigid variable" (a.contents = Some (Tvar (Rigid, 1)));
   check "each group numbers its own from 1" (b.contents = Some (Tvar (Rigid, 1)));
-  check "a group inside a let-bound lambda is left to the lambda" (c.contents = None)
+  check "a let-bound lambda's are numbered past the declaration's" (d.contents = Some (Tvar (Rigid, 2)));
+  check "a group inside a let-bound lambda is the lambda's" (c.contents = Some (Tvar (Rigid, 3)))

@@ -9161,13 +9161,10 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
        top-level template function. *)
     let outer_tvars = get_current_type_vars () in
     let n_outer = List.length outer_tvars in
-    (* A type the binding leaves open is the binding's own: numbered past the
-       enclosing declaration's variables, which [Tvar 1] .. [Tvar n_outer]
-       already name. *)
-    let next_tvar = ref (n_outer + 1) in
-    let mint = Local_types.mint ~late:Let_lambda_variable ~rigidity:Schematic ~next:next_tvar in
-    mint t;
-    Local_types.mint_in_ast mint a;
+    (* A type the binding leaves open is the binding's own, minted before
+       the program was frozen past the enclosing declaration's variables,
+       which [Tvar 1] .. [Tvar n_outer] already name. *)
+    Local_types.check_let_lambda ~outer:n_outer t a;
     (* Collect all Tvar indices from the let-binding type *)
     let tvar_indices = collect_tvars [] t in
     (* Also collect Tvars from the lambda body *)
