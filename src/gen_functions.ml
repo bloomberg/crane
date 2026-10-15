@@ -434,22 +434,13 @@ let dfun_body_scope n b cty ty temps =
   in
   (* A body's lambda parameter types agree with the signature's by now: the
      one Core rewrite that broke that, promoting a polymorphic let-fix to a
-     top-level Dfix, unifies them where it promotes ([Modutil.decl_of_term]).
-     They are unified again here with no reason given for a late solution, so
-     a metavariable still left in a binder annotation, which the first render
-     would decide, fails extraction under [CRANE_CHECK_IR]. *)
+     top-level Dfix, unifies them where it promotes ([Modutil.decl_of_term]),
+     before the program is frozen.  What a binder left open stays open
+     ({!Miniml.Topen}), and is reconciled with the signature's type. *)
   let n_missing = List.length missing in
   let sig_types_for_ids =
     List.of_seq (Seq.drop n_missing (List.to_seq mldom))
   in
-  let rec unify_param_types body_params sig_types =
-    match (body_params, sig_types) with
-    | (id, body_ty) :: rest_params, sig_ty :: rest_sig ->
-      try_mgu body_ty sig_ty;
-      (id, body_ty) :: unify_param_types rest_params rest_sig
-    | _ -> body_params
-  in
-  let ids = unify_param_types ids sig_types_for_ids in
   let ids =
     if List.length ids = List.length sig_types_for_ids then
       List.map2
