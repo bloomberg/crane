@@ -1564,44 +1564,12 @@ and pp_cpp_expr env args t =
       []
       []
       cmds
-  | CPPglob (x, _tys, _)
-    when lookup_method_this_pos x <> None
-         &&
-         match is_registered_method x with
-         | Some (epon_ref, _) ->
-           (* Only use this-> for methods belonging to the current struct. Check
-              if the method's eponymous type name matches current_struct_name.
-              This prevents e.g. SigT::projT1 from being rendered as
-              this->projT1() when generating code inside a different struct like
-              Levenshtein. *)
-           ( match (!render_ctx).rc_struct_name with
-           | Some sn ->
-             let epon_name = Common.pp_global_name Type epon_ref in
-             let sn_str = Pp.string_of_ppcmds sn in
-             String.equal (String.capitalize_ascii epon_name) sn_str
-           | None -> false )
-         | None -> (!render_ctx).rc_struct_name <> None ->
-    (* A bare reference to a method on the same struct (eta-reduced from \self.
-       method self). Generate this->method() - a call to the method via this,
-       not a function pointer. *)
-    let method_name = Common.id_of_global Term x in
-    str "this->" ++ Id.print method_name ++ str "()"
-  | CPPglob (x, _tys, _)
-    when lookup_method_this_pos x <> None
-         &&
-         match is_registered_method x with
-         | Some (epon_ref, _) ->
-           (* Bare reference to a method on a DIFFERENT struct (used as a
-              function value). Since C++ non-static member functions can't be
-              passed as function pointers, wrap in a lambda that calls the
-              method on its argument. *)
-           ( match (!render_ctx).rc_struct_name with
-           | Some sn ->
-             let epon_name = Common.pp_global_name Type epon_ref in
-             let sn_str = Pp.string_of_ppcmds sn in
-             not (String.equal (String.capitalize_ascii epon_name) sn_str)
-           | None -> true )
-         | None -> (!render_ctx).rc_struct_name = None ->
+  | CPPglob (x, _tys, _) when lookup_method_this_pos x <> None ->
+    (* A method used as a function value.  A non-static member function is
+       not a value C++ can pass, so this is a lambda calling it on its
+       receiver -- wherever it is written: [this->m()] would apply the method
+       to a receiver rather than name the function, and a static member
+       definition has no [this] at all. *)
     let method_name = Common.id_of_global Term x in
     let accessor = if method_receiver_is_ptr x then "->" else "." in
     let arity = lookup_method_arity x in

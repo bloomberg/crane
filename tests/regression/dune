@@ -12820,3 +12820,14 @@
   (alias runtest)
   (deps tyarg_family_binder_shift.t.exe)
   (action (run ./tyarg_family_binder_shift.t.exe))))
+
+(subdir bare_self_method_value
+ (rule
+  (targets bare_self_method_value.t.exe)
+  (deps BareSelfMethodValue.vo bare_self_method_value.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bare_self_method_value.t.exe bare_self_method_value.cpp bare_self_method_value.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bare_self_method_value.t.exe)
+  (action (run ./bare_self_method_value.t.exe))))
