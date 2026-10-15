@@ -710,22 +710,15 @@ let plan_method name vars ((func_ref, _, ty, _) as candidate) =
     was made before anything was generated, as its template parameters, its
     return type, the variables the return type alone mentions, and the names
     of the variables it drops.  Under [CRANE_CHECK_IR] the head is decided
-    again ({!method_head}) and checked against the plan; a method with no
-    plan is decided here, and reported. *)
+    again ({!method_head}) and checked against the plan. *)
 let planned_method_head func_ref vars s =
-  let decided () =
-    let h = method_head vars s in
-    Callable_abi.check (method_plan func_ref s h);
-    (h.mh_tparams, h.mh_ret, h.mh_return_only, List.map snd h.mh_dropped)
-  in
-  match Callable_abi.lookup func_ref with
-  | Some abi -> (
-    match Callable_abi.receiver abi with
-    | Some r ->
-      if Probe.checking () then ignore (decided ());
-      (Callable_abi.declared_head abi, r.ret, Id.Set.of_list r.return_only, r.dropped_names)
-    | None -> decided () )
-  | None -> decided ()
+  let abi = Callable_abi.planned func_ref in
+  if Probe.checking () then Callable_abi.check (method_plan func_ref s (method_head vars s));
+  match Callable_abi.receiver abi with
+  | Some r -> (Callable_abi.declared_head abi, r.ret, Id.Set.of_list r.return_only, r.dropped_names)
+  | None ->
+    CErrors.anomaly
+      Pp.(str "the method " ++ GlobRef.print func_ref ++ str " was planned as a function.")
 
 (** Generate a single method for an inductive type from a method candidate:
     its body, generated under {!method_scope} and its planned head. *)

@@ -206,12 +206,20 @@ val check : t -> unit
 (** The installed plan of a declaration. *)
 val lookup : Names.GlobRef.t -> t option
 
+(** {!lookup} for a declaration that is generated: an anomaly where planning
+    made it no plan. *)
+val planned : Names.GlobRef.t -> t
+
 (** [install_instance_methods planned] makes [planned] the plans of the unit's
     instance structs' methods: for each instance, each method's by name. *)
 val install_instance_methods : (Names.GlobRef.t * (Names.Id.t * t) list) list -> unit
 
 (** The installed plan of the method [name] of [instance]'s struct. *)
 val instance_method : instance:Names.GlobRef.t -> Names.Id.t -> t option
+
+(** {!instance_method} for a method that is generated: an anomaly where
+    planning made it no plan. *)
+val planned_instance_method : instance:Names.GlobRef.t -> Names.Id.t -> t
 
 (** {!check} for the method [name] of [instance]'s struct. *)
 val check_instance_method : instance:Names.GlobRef.t -> Names.Id.t -> t -> unit

@@ -1025,19 +1025,13 @@ let plan_scope_head n ty scope =
 (** The head the function [n] generated under [scope] is declared with, and
     what its relaxations decided: its plan's, which was made before anything
     was generated.  Under [CRANE_CHECK_IR] the head is decided again from
-    [scope] and checked against the plan; a function with no plan is decided
-    here, and reported. *)
+    [scope] and checked against the plan. *)
 let planned_scope_head n ty scope =
-  let decided () =
-    let abi, temps, relaxations = plan_scope_head n ty scope in
-    Callable_abi.check abi;
-    (temps, relaxations)
-  in
-  match Callable_abi.lookup n with
-  | Some abi ->
-    if Probe.checking () then ignore (decided ());
-    (Callable_abi.declared_head abi, Callable_abi.relaxations abi)
-  | None -> decided ()
+  let abi = Callable_abi.planned n in
+  if Probe.checking () then (
+    let decided, _, _ = plan_scope_head n ty scope in
+    Callable_abi.check decided );
+  (Callable_abi.declared_head abi, Callable_abi.relaxations abi)
 
 let gen_dfun n b cty ty temps =
   let scope = dfun_body_scope n b cty ty temps in

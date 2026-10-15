@@ -606,16 +606,17 @@ let planned_methods r decl =
     if Probe.checking () then
       Callable_abi.check_instance_method ~instance:r mf.mf_name
         (Callable_abi.of_instance_method ~instance:r mf);
-    match Callable_abi.instance_method ~instance:r mf.mf_name with
-    | Some abi -> (
-      match Callable_abi.receiver abi with
-      | Some {params; ret; _} when List.length params = List.length mf.mf_params ->
-        { mf with
-          mf_tparams = Callable_abi.declared_head abi;
-          mf_ret_type = ret;
-          mf_params = List.map2 (fun (id, _) ty -> (id, ty)) mf.mf_params params }
-      | Some _ | None -> mf )
-    | None -> mf
+    let abi = Callable_abi.planned_instance_method ~instance:r mf.mf_name in
+    match Callable_abi.receiver abi with
+    | Some {params; ret; _} when List.length params = List.length mf.mf_params ->
+      { mf with
+        mf_tparams = Callable_abi.declared_head abi;
+        mf_ret_type = ret;
+        mf_params = List.map2 (fun (id, _) ty -> (id, ty)) mf.mf_params params }
+    | Some _ | None ->
+      CErrors.anomaly
+        Pp.(str "the method " ++ Id.print mf.mf_name ++ str " of " ++ GlobRef.print r
+            ++ str " is generated with other parameters than planned.")
   in
   let rec on_decl = function
     | Dstruct ds ->
