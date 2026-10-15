@@ -546,12 +546,49 @@ let rec reads_decl (d : settled) : settled =
 
 let lower_boxed_reads (d : settled) : settled = reads_decl d
 
+(* The lambda a methodified function [n] is written as where it is a value,
+   its receiver at [pos].  It takes the function's parameters at the types the
+   method was declared at, not [const auto &]: a generic lambda has no
+   deducible signature, so whatever inspects one -- [crane_erase_fn] probing
+   whether it accepts [std::any], [std::function] CTAD -- must instantiate its
+   body to find out, and an instantiation that does not type-check is a hard
+   error rather than a substitution failure.  A type mentioning a template
+   parameter can only be spelled where that parameter is in scope, which a
+   lambda in a static data member's initialiser is not, so such a type is left
+   generic; a method planned nowhere leaves only the generic form. *)
+let method_value n tys pos =
+  let spellable ty = if Ml_type_util.contains_tvar ty then None else Some ty in
+  let receiver = Option.bind (Cpp_state.method_receiver_cpp_type n tys) spellable in
+  let params, receiver_pos =
+    match Cpp_state.lookup_method_arity n with
+    | arity when arity <= 1 -> ([receiver], 0)
+    | arity ->
+      (* The plan records the declared parameters in order, without the
+         receiver's slot; each carries however many qualifiers the
+         declaration gave it, and the lambda spells its own. *)
+      let declared = Option.default [] (Callable_abi.method_params n) in
+      let rec unqualified = function Tref (_, t) | Tconst t -> unqualified t | t -> t in
+      let param i =
+        if i = pos then receiver
+        else
+          let i = if i > pos then i - 1 else i in
+          Option.bind (List.nth_opt declared i) (fun ty -> spellable (unqualified ty))
+      in
+      (List.init arity param, pos)
+  in
+  CPPmethod_value
+    { mv_method = n;
+      mv_access = Adot;
+      mv_receiver = receiver_pos;
+      mv_params = params;
+      mv_type_args = Cpp_names.method_type_args n tys }
+
 let lower_method_calls (d : settled) : settled =
   let rec fe e =
-    match map_expr fe fs Fun.id e with
+    match e with
     | CPPfun_call (_, CPPglob (n, tys, (None | Some {ci_inline = None; _})), args) as call -> (
       match Cpp_names.lookup_method_this_pos n with
-      | None -> call
+      | None -> map_expr fe fs Fun.id call
       | Some pos -> (
         match Common.extract_at_pos pos (call_args args) with
         | Some receiver, rest ->
@@ -559,19 +596,23 @@ let lower_method_calls (d : settled) : settled =
              raw pointer and a [CPPderef] dereferences a smart one, and both
              are reached with an arrow instead. *)
           let access, receiver =
-            match receiver with
-            | CPPthis -> (Aarrow, receiver)
+            match fe receiver with
+            | CPPthis -> (Aarrow, CPPthis)
             | CPPderef p -> (Aarrow, p)
-            | _ -> (Adot, receiver)
+            | receiver -> (Adot, receiver)
           in
           CPPmethod_call
             { mc_method = n;
               mc_access = access;
               mc_receiver = receiver;
               mc_type_args = Cpp_names.method_type_args n tys;
-              mc_args = rest }
-        | None, _ -> call ) )
-    | e -> e
+              mc_args = List.map fe rest }
+        | None, _ -> map_expr fe fs Fun.id call ) )
+    | CPPglob (n, tys, (None | Some {ci_inline = None; _})) -> (
+      match Cpp_names.lookup_method_this_pos n with
+      | Some pos -> method_value n tys pos
+      | None -> e )
+    | e -> map_expr fe fs Fun.id e
   and fs s = map_stmt fe fs Fun.id s in
   map_decl fe fs Fun.id d
 

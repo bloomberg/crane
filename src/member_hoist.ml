@@ -27,6 +27,7 @@ let field_names ?(body_only = false) (p : GlobRef.t -> bool) (f : cpp_field) :
     ( match e with
     | CPPglob (r, _, _) | CPPnamespace (r, _) | CPPstructmk (r, _, _)
     | CPPmethod_call {mc_method = r; _}
+    | CPPmethod_value {mv_method = r; _}
     | CPPget' (_, r, _) -> note r
     | CPPconcept_app (r1, r2, _) -> note r1; note r2
     | _ -> () );

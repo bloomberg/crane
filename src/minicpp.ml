@@ -434,6 +434,7 @@ and cpp_expr =
   | CPPaccess_call of obj_access * cpp_expr * Id.t * cpp_expr list
     (* obj.method(args) or obj->method(args) *)
   | CPPmethod_call of method_call
+  | CPPmethod_value of method_value
   | CPPscope of cpp_expr * Id.t * cpp_type list
     (* expr::id, or expr::template id<tys...> when the list is non-empty *)
   | CPPqualified_t of
@@ -538,6 +539,14 @@ and method_call = {
   mc_receiver : cpp_expr;
   mc_type_args : cpp_type list;
   mc_args : cpp_expr list;
+}
+
+and method_value = {
+  mv_method : GlobRef.t;
+  mv_access : obj_access;
+  mv_receiver : int;
+  mv_params : cpp_type option list;
+  mv_type_args : cpp_type list;
 }
 
 (** A lambda expression. *)
@@ -1433,6 +1442,11 @@ let map_expr ?fl
         mc_receiver = fe m.mc_receiver;
         mc_type_args = List.map ft m.mc_type_args;
         mc_args = List.map fe m.mc_args }
+  | CPPmethod_value v ->
+    CPPmethod_value
+      { v with
+        mv_params = List.map (Option.map ft) v.mv_params;
+        mv_type_args = List.map ft v.mv_type_args }
   | CPPscope (e', id, tys) -> CPPscope (fe e', id, List.map ft tys)
   | CPPqualified_t (ty, id) -> CPPqualified_t (ft ty, id)
   | CPPconvertible_to ty -> CPPconvertible_to (ft ty)
@@ -1552,7 +1566,7 @@ let map_stmt ?fl
     constructor in {!cpp_expr}. *)
 let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   match e with
-  | CPPvar _ | CPPglob _ | CPPalloc _
+  | CPPvar _ | CPPglob _ | CPPmethod_value _ | CPPalloc _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPin_place | CPPin_place_index _
   | CPPstd_holds_alternative _
@@ -1699,7 +1713,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
     ~(on_stmts : 'a -> cpp_stmt list -> 'a) (acc : 'a) (e : cpp_expr) : 'a =
   let fe acc e = on_expr acc e in
   match e with
-  | CPPvar _ | CPPglob _ | CPPalloc _
+  | CPPvar _ | CPPglob _ | CPPmethod_value _ | CPPalloc _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPin_place | CPPin_place_index _
   | CPPstd_holds_alternative _

@@ -141,8 +141,10 @@ val lower_boxed_reads : settled -> settled
     registry made a member of its receiver's struct as the
     {!Minicpp.CPPmethod_call} it is: the receiver taken out of the argument
     list, reached with [.] or [->], and the template arguments the struct
-    carries left off.  The last pass, so every pass before it sees the call
-    as translation built it. *)
+    carries left off.  Every other reference to such a function names it as
+    a value, and becomes the {!Minicpp.CPPmethod_value} lambda calling it on
+    its receiver.  The last pass, so every pass before it sees the call as
+    translation built it. *)
 val lower_method_calls : settled -> settled
 
 (** [materialise decl] replaces every {!Minicpp.Topaque} in [decl] with

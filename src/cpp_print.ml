@@ -1498,9 +1498,6 @@ and pp_member_name method_name = function
     ++ pp_list (pp_cpp_type false []) tys
     ++ str ">"
 
-and pp_method_call_name n method_name tys =
-  pp_member_name method_name (method_type_args n tys)
-
 and pp_cpp_expr env args t =
   let apply st = pp_apply_cpp st args in
   (* Generate an IIFE wrapper for a block template (%result) in expression
@@ -1564,82 +1561,23 @@ and pp_cpp_expr env args t =
       []
       []
       cmds
-  | CPPglob (x, _tys, _) when lookup_method_this_pos x <> None ->
-    (* A method used as a function value.  A non-static member function is
-       not a value C++ can pass, so this is a lambda calling it on its
-       receiver -- wherever it is written: [this->m()] would apply the method
-       to a receiver rather than name the function, and a static member
-       definition has no [this] at all. *)
-    let method_name = Common.id_of_global Term x in
-    let accessor = if method_receiver_is_ptr x then "->" else "." in
-    let arity = lookup_method_arity x in
-    let this_pos =
-      match lookup_method_this_pos x with Some p -> p | None -> 0
+  | CPPmethod_value {mv_method; mv_access; mv_receiver; mv_params; mv_type_args} ->
+    let names =
+      match mv_params with
+      | [_] -> ["_x"]
+      | ps -> List.mapi (fun i _ -> "_x" ^ string_of_int i) ps
     in
-    (* Spell the receiver parameter with its real type rather than
-       [const auto &].  A generic lambda has no deducible signature, so every
-       consumer that inspects one -- [crane_erase_fn] probing whether the
-       callable accepts [std::any], [std::function] CTAD -- must instantiate
-       its body to find out, and an instantiation that does not type-check is
-       a hard error rather than a substitution failure. *)
-    let receiver_param name =
-      match method_receiver_cpp_type x _tys with
-      (* A receiver type mentioning a template parameter can only be spelled
-         where that parameter is in scope.  Outside a template -- a lambda in
-         a static data member's initialiser, say -- fall back to the generic
-         form, which is what this always used to emit. *)
-      | Some ty when Ml_type_util.contains_tvar ty -> "const auto &" ^ name
+    let param name = function
       | Some ty ->
-        Pp.string_of_ppcmds
-          (str "const " ++ pp_cpp_type false [] ty ++ str (" &" ^ name))
+        Pp.string_of_ppcmds (str "const " ++ pp_cpp_type false [] ty ++ str (" &" ^ name))
       | None -> "const auto &" ^ name
     in
-    if arity <= 1 then
-      str ("[](" ^ receiver_param "_x" ^ ") { return _x")
-      ++ str accessor
-      ++ pp_method_call_name x method_name _tys
-      ++ str "(); }"
-    else
-      (* The method takes more than its receiver, so the forwarding lambda has
-         to accept every parameter and pass the non-receiver ones on -- calling
-         it with none would not even name an overload. *)
-      let names = List.init arity (fun i -> "_x" ^ string_of_int i) in
-      (* The non-receiver parameters get the types the method was declared at,
-         for the same reason the receiver does: a generic lambda has no
-         deducible signature, so nothing downstream can convert it to a
-         [std::function].  The method's plan records them in declaration
-         order, so the receiver's slot is not among them; a method planned
-         nowhere leaves [const auto &] as the only thing that can be said. *)
-      let declared = Option.default [] (Callable_abi.method_params x) in
-      (* A declared parameter carries however many qualifiers the declaration
-         gave it; the lambda spells its own, so they all come off first. *)
-      let rec unqualified = function
-        | Tref (_, t) | Tconst t -> unqualified t
-        | t -> t
-      in
-      let declared_param i name =
-        let i = if i > this_pos then i - 1 else i in
-        match Option.map unqualified (List.nth_opt declared i) with
-        | Some ty when not (Ml_type_util.contains_tvar ty) ->
-          Pp.string_of_ppcmds
-            (str "const "
-            ++ pp_cpp_type false [] ty
-            ++ str (" &" ^ name) )
-        | _ -> "const auto &" ^ name
-      in
-      let params =
-        String.concat ", "
-          (List.mapi
-             (fun i n ->
-               if i = this_pos then receiver_param n else declared_param i n )
-             names )
-      in
-      let call_args =
-        String.concat ", " (List.filteri (fun i _ -> i <> this_pos) names)
-      in
-      str ("[](" ^ params ^ ") { return _x" ^ string_of_int this_pos ^ accessor)
-      ++ pp_method_call_name x method_name _tys
-      ++ str ("(" ^ call_args ^ "); }")
+    let params = String.concat ", " (List.map2 param names mv_params) in
+    let call_args = String.concat ", " (List.filteri (fun i _ -> i <> mv_receiver) names) in
+    str ("[](" ^ params ^ ") { return " ^ List.nth names mv_receiver)
+    ++ str (pp_obj_access mv_access)
+    ++ pp_member_name (Common.id_of_global Term mv_method) mv_type_args
+    ++ str ("(" ^ call_args ^ "); }")
   | CPPglob (x, _, _) when Table.is_projection x ->
     let field_name = projection_field_name x in
     str "[](const auto &_x) { return _x." ++ str field_name ++ str "; }"
@@ -2402,10 +2340,10 @@ and pp_cpp_expr env args t =
     str caster ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ inner
     ++ str ")"
   | CPPerase_fn
-      (shape, (CPPglob ((GlobRef.ConstRef _ as r), [], (None | Some {ci_inline = None; _})) as g))
-    when lookup_method_this_pos r = None ->
-    (* A global never changes, so neither does its adapter: made once.  Not a
-       method, which is named through a lambda, never as itself. *)
+      (shape, (CPPglob (GlobRef.ConstRef _, [], (None | Some {ci_inline = None; _})) as g)) ->
+    (* A global never changes, so neither does its adapter: made once.  A
+       method is never a global here: it is named through a lambda
+       ({!Minicpp.method_value}), never as itself. *)
     Table.mark_needs_erase_fn ();
     str Crane_rt.erase_global ++ str "<" ++ pp_cpp_expr env args g
     ++ ( match shape with

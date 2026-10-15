@@ -189,9 +189,6 @@ val is_record_cached : Names.GlobRef.t -> bool
 (** The position of the [this] argument for a method global, if any. *)
 val lookup_method_this_pos : Names.GlobRef.t -> int option
 
-(** Whether a method's receiver is passed by pointer. *)
-val method_receiver_is_ptr : 'a -> bool
-
 (** [method_type_args n tys] -- of the type arguments [tys] a reference to
     the method [n] was instantiated at, the ones a call must write: the
     receiver's struct carries its own parameters, and the parameters the

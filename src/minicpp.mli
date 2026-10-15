@@ -544,6 +544,9 @@ and cpp_expr =
   | CPPmethod_call of method_call
       (** A call of a function Crane emits as a method of its receiver's
           struct: see {!method_call}. *)
+  | CPPmethod_value of method_value
+      (** Such a function named as a value rather than called: see
+          {!method_value}. *)
   | CPPscope of cpp_expr * Id.t * cpp_type list
       (** Scope resolution: [expr::id], or [expr::template id<tys...>] when
           the type list is non-empty.  Template arguments belong here and
@@ -661,6 +664,22 @@ and method_call = {
       (** The template arguments the call writes: the call's own, less those
           the receiver's struct carries and those the method's plan drops. *)
   mc_args : cpp_expr list;  (** The arguments besides the receiver, in order. *)
+}
+
+(** A methodified function used as a function value, written as a lambda
+    calling the method on its receiver: a non-static member function is not a
+    value C++ can pass.  {!Cpp_erasure.lower_method_calls} rewrites into this
+    every reference to such a function that it does not make a
+    {!method_call}. *)
+and method_value = {
+  mv_method : GlobRef.t;
+  mv_access : obj_access;
+  mv_receiver : int;  (** The receiver's position among {!mv_params}. *)
+  mv_params : cpp_type option list;
+      (** The lambda's parameters, receiver included, each taken by [const]
+          reference at the type given; [None] where no type can be spelled,
+          written [const auto &]. *)
+  mv_type_args : cpp_type list;  (** As {!method_call.mc_type_args}. *)
 }
 
 (** A lambda expression. *)

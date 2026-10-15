@@ -838,6 +838,7 @@ let rec collect_expr (check : call_checker) expr =
    |CPPcontainer_cast _
    |CPPconverting_ctor _
    |CPPbox _
+   |CPPmethod_value _
    |CPPqualified_t _
    |CPPstring _
    |CPPuint _
