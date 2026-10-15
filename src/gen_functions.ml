@@ -432,26 +432,12 @@ let dfun_body_scope n b cty ty temps =
   let missing =
     List.mapi (fun i t -> (Id (eta_param_id (n_miss - 1 - i)), t)) missing_types
   in
-  (* Unify body lambda parameter types with the function signature types.
-
-     When optimize_fix (mlutil.ml) promotes a polymorphic let-fix into a
-     top-level Dfix, the body's lambda parameter types may still contain
-     unresolved Tmeta cells left over from extraction. For example:
-
-     Definition local_length {A} (l : list A) : nat := let fix go (xs : list A)
-     := ... in go l.
-
-     After optimize_fix, the outer function IS the fixpoint, but the lambda
-     parameter type for [xs] still holds the original unresolved meta for A,
-     while the function's signature type [ty] correctly has Tvar 1 for A.
-     Without unification, convert_ml_type_to_cpp_type maps the unresolved meta
-     to Tany (std::any), producing e.g. list<std::any> instead of list<T1>.
-
-     By unifying each body parameter type with the corresponding signature type
-     via try_mgu, we resolve the shared Tmeta cells in-place. Because metas are
-     mutable references shared across the entire body AST, this single
-     unification step also fixes every other occurrence of the same meta inside
-     the function body (match annotations, recursive calls, etc.). *)
+  (* A body's lambda parameter types agree with the signature's by now: the
+     one Core rewrite that broke that, promoting a polymorphic let-fix to a
+     top-level Dfix, unifies them where it promotes ([Modutil.decl_of_term]).
+     They are unified again here with no reason given for a late solution, so
+     a metavariable still left in a binder annotation, which the first render
+     would decide, fails extraction under [CRANE_CHECK_IR]. *)
   let n_missing = List.length missing in
   let sig_types_for_ids =
     List.of_seq (Seq.drop n_missing (List.to_seq mldom))
@@ -459,7 +445,7 @@ let dfun_body_scope n b cty ty temps =
   let rec unify_param_types body_params sig_types =
     match (body_params, sig_types) with
     | (id, body_ty) :: rest_params, sig_ty :: rest_sig ->
-      (try try_mgu ~late:Binder_signature body_ty sig_ty with _ -> ());
+      try_mgu body_ty sig_ty;
       (id, body_ty) :: unify_param_types rest_params rest_sig
     | _ -> body_params
   in

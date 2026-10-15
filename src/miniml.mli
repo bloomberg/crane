@@ -494,8 +494,6 @@ module Meta : sig
     | Bind_continuation
         (** A sequential bind's continuation binder, at the bound value's
             type. *)
-    | Binder_signature
-        (** A function's binder, at its signature's domain. *)
     | Erased_slot
         (** An open slot, at the type its context expects. *)
 

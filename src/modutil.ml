@@ -384,12 +384,34 @@ let dfix_to_mlfix fds i =
     of code. The inlined functions are kept for the moment in order to preserve
     the global interface, later [depcheck_se] will get rid of them if possible
 *)
+(* A let-fix promoted to its declaration ([local_length]'s inner [go]) keeps
+   the binder annotations it had inside it, where extraction may have left a
+   metavariable for a variable the declaration's signature quantifies -- the
+   [A] of [xs : list A].  The fixpoint's binders are now the signature's
+   parameters, the outermost of them, so each annotation is unified with the
+   signature's domain, which solves every other occurrence of its
+   metavariables in the body too. *)
+let unify_binders_with_signature t body =
+  let rec domains t =
+    match t with
+    | Tarr (a, b) -> a :: domains b
+    | Tmeta {contents = Some t} -> domains t
+    | _ -> []
+  in
+  let doms = List.rev (domains t) in
+  let ids, _ = collect_lams body in
+  let ids = List.skipn (max 0 (List.length ids - List.length doms)) ids in
+  let doms = List.skipn (max 0 (List.length doms - List.length ids)) doms in
+  List.iter2 (fun (_, body_ty) sig_ty -> try_mgu body_ty sig_ty) ids doms
+
 let decl_of_term r a t =
   match dump_unused_vars (optimize_fix a) with
   (* An instance of a singleton class stays an instance, whose method the
      fixpoint is. *)
   | MLfix (0, _, [|c|], _) when singleton_instance_class r = None ->
-    Dfix [{fd_ref = r; fd_body = ast_subst (MLglob (Mlutil.self_reference r)) c; fd_type = t}]
+    let c = ast_subst (MLglob (Mlutil.self_reference r)) c in
+    unify_binders_with_signature t c;
+    Dfix [{fd_ref = r; fd_body = c; fd_type = t}]
     (* The [] ML type args are safe: gen_expr reads template args from the
        C++ environment, not from MLglob's arg list. *)
   | a -> Dterm (r, a, t)
