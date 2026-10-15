@@ -349,7 +349,11 @@ let plan ?(instances = 0) ?higher_kinded ?kept ?reachable ?relaxed ?phantom_pref
             Pp.(str "the foreign plan of " ++ GlobRef.print callee ++ str " differs from the one planned");
         base
       | None ->
-        if emitting then foreign_tally := {!foreign_tally with derived = !foreign_tally.derived + 1};
+        if emitting then begin
+          foreign_tally := {!foreign_tally with derived = !foreign_tally.derived + 1};
+          Probe.violation "callable ABI"
+            Pp.(str "no plan was made for " ++ GlobRef.print callee ++ str " before bodies were generated")
+        end;
         derive ()
     in
     with_dictionaries instances base

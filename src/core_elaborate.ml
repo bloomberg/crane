@@ -217,7 +217,7 @@ let push role ids lex = Lexenv.push (List.map (binder role) ids) lex
 
 let rec walk lex = function
   | MLapp (MLglob use, args) ->
-    name use.callee;
+    walk_use lex use;
     record lex use args;
     List.iter (walk lex) args
   | MLapp (f, args) ->
@@ -225,15 +225,26 @@ let rec walk lex = function
     List.iter (walk lex) args
   | MLlam _ as e ->
     let ids, body = Mlutil.collect_lams e in
+    List.iter (fun (_, ty) -> walk_type lex ty) ids;
     walk (push Lexenv.Value ids lex) body
   | MLletin (x, ty, a, b) ->
+    walk_type lex ty;
     walk lex a;
     walk (push Lexenv.Value [(x, ty)] lex) b
-  | MLcons (_, _, args) | MLtuple args -> List.iter (walk lex) args
-  | MLcase (_, scrut, branches) ->
+  | MLcons (ty, _, args) ->
+    walk_type lex ty;
+    List.iter (walk lex) args
+  | MLtuple args -> List.iter (walk lex) args
+  | MLcase (ty, scrut, branches) ->
+    walk_type lex ty;
     walk lex scrut;
-    Array.iter (fun (ids, _, _, body) -> walk (push Lexenv.Value (List.rev ids) lex) body) branches
+    Array.iter
+      (fun (ids, _, _, body) ->
+        List.iter (fun (_, ty) -> walk_type lex ty) ids;
+        walk (push Lexenv.Value (List.rev ids) lex) body )
+      branches
   | MLfix (_, fs, defs, _) ->
+    Array.iter (fun (_, ty) -> walk_type lex ty) fs;
     (* The last function of the group is the innermost binder. *)
     let fs = List.rev_map (fun (f, ty) -> (Id f, ty)) (Array.to_list fs) in
     Array.iter (walk (push Lexenv.Value fs lex)) defs
@@ -241,8 +252,25 @@ let rec walk lex = function
   | MLparray (elems, def) ->
     Array.iter (walk lex) elems;
     walk lex def
-  | MLglob use -> name use.callee
+  | MLglob use -> walk_use lex use
   | MLrel _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> ()
+
+and walk_use lex use =
+  name use.callee;
+  Global_use.iter_types (walk_type lex) use
+
+(* A custom type applied to a term -- a fixed-size array to its length --
+   has calls of its own, translated where the type is converted. *)
+and walk_type lex ty =
+  match resolve_tmeta ty with
+  | Tglob (g, tys, args) ->
+    List.iter (walk_type lex) tys;
+    if Table.is_custom g then List.iter (walk lex) args
+  | Tarr (a, b) ->
+    walk_type lex a;
+    walk_type lex b
+  | Tapp (_, tys) -> List.iter (walk_type lex) tys
+  | _ -> ()
 
 (* A declaration's own parameters are bound as its parameters, at the types
    its body is generated with ({!Translation_support.reconcile_parameter_type}):
@@ -265,18 +293,26 @@ let declaration ty body =
     let ty = reconcile_parameter_type body_ty sig_ty in
     binder (parameter_role ty) (x, ty)
   in
+  walk_type Lexenv.empty ty;
   walk (Lexenv.push (List.map2 parameter params declared) Lexenv.empty) body
 
 let structure struc =
   Calls.reset planned;
   named := GlobRef.Set_env.empty;
   tally := {found = 0; recomputed = 0};
+  let closed_type = walk_type Lexenv.empty in
+  let inductive ind = Array.iter (fun p -> Array.iter (List.iter closed_type) p.ip_types) ind.ind_packets in
   Modutil.struct_iter
     (function
       | Dterm (_, body, ty) -> declaration ty body
       | Dfix fds -> List.iter (fun fd -> declaration fd.fd_type fd.fd_body) fds
-      | Dind _ | Dtype _ -> () )
-    ignore ignore struc
+      | Dind (_, ind) -> inductive ind
+      | Dtype (_, _, ty) -> closed_type ty )
+    (function
+      | Sind (_, ind) -> inductive ind
+      | Stype (_, _, ty) -> Option.iter closed_type ty
+      | Sval (_, _, ty) -> closed_type ty )
+    ignore struc
 
 let referenced () = GlobRef.Set_env.elements !named
 

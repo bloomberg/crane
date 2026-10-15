@@ -24,10 +24,14 @@
 val elaborate_arguments : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> Elaborated_call.t
 
 (** [structure s] elaborates every global application in [s]'s
-    declarations, replacing the unit's previous elaborations. *)
+    declarations -- in their bodies, and in the terms custom types are
+    applied to in the types they write -- replacing the unit's previous
+    elaborations. *)
 val structure : Miniml.ml_structure -> unit
 
-(** Every global the declarations {!structure} walked name, applied or not. *)
+(** Every global the declarations {!structure} walked name, applied or not,
+    in their bodies or in a term a custom type is applied to in any type the
+    unit writes, specifications' included. *)
 val referenced : unit -> Names.GlobRef.t list
 
 (** [elaboration ~lex use args] -- the elaboration of the call [use args]

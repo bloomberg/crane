@@ -190,7 +190,9 @@ val install_foreign : (Names.GlobRef.t -> t) -> Names.GlobRef.t list -> unit
 (** The installed plan of [callee], or else its foreign one, with
     [instances] dictionaries: the one {!install_foreign} planned, or where it
     planned none, {!foreign}'s.  Under [CRANE_CHECK_IR] a planned one is
-    checked against {!foreign}'s.  A method's call is still planned against
+    checked against {!foreign}'s, and emission finding none planned is a
+    violation: every callee a body names is planned before bodies are
+    generated.  A method's call is still planned against
     its foreign one: it is written as its function's call would be, then
     printed on the receiver without the variables the receiver carries or
     {!dropped_positions}. *)
