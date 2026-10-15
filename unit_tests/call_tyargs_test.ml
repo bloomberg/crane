@@ -36,7 +36,7 @@ let () =
     in
     let t = Call_tyargs.of_use use in
     check "starts as what the use wrote"
-      (Call_tyargs.by_variable t = Mlutil.written_type_args use);
+      (Mlutil.Var_types.equal (Call_tyargs.by_variable t) (Mlutil.written_type_args use));
     check "a variable is a hole unless the use wrote a readable type"
       (List.for_all
          (fun (v, s) ->
@@ -47,7 +47,7 @@ let () =
       (List.for_all
          (fun (v, s) -> Call_tyargs.is_unwritten t v = (s = Scheme.Not_written))
          sources );
-    let extent = List.length (Call_tyargs.by_variable t) in
+    let extent = Mlutil.Var_types.extent (Call_tyargs.by_variable t) in
     check "interior holes and the variables beyond partition by the extent"
       (List.for_all (fun v -> Scheme.Var.ordinal v <= extent) (Call_tyargs.interior_holes t)
        && List.for_all (fun v -> Scheme.Var.ordinal v > extent) (Call_tyargs.beyond_extent t));
@@ -63,18 +63,18 @@ let () =
     let r = Call_tyargs.resolve Call_tyargs.Argument_types answer asked t in
     let after = Call_tyargs.by_variable r in
     let before = Call_tyargs.by_variable t in
-    List.iteri
-      (fun k ty ->
-        match List.nth_opt before k with
+    List.iter
+      (fun (j, ty) ->
+        match Mlutil.Var_types.find before j with
         | Some (Tdummy _) | None -> ()
         | Some b -> check "a known variable keeps its type" (b = ty) )
-      after;
+      (Mlutil.Var_types.bindings after);
     check "no resolution is an erased placeholder"
       (List.for_all
          (fun v ->
            Call_tyargs.is_hole r v
            || (not (Call_tyargs.is_hole t v))
-           || match List.nth_opt after (Scheme.Var.ordinal v - 1) with
+           || match Mlutil.Var_types.find after (Scheme.Var.ordinal v) with
               | Some (Tdummy _) | None -> false
               | Some _ -> true )
          (Call_tyargs.vars t) );

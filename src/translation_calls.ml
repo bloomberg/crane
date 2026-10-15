@@ -162,7 +162,7 @@ type lowered_call = {
   lc_callee : GlobRef.t;
   lc_plan : call_plan;
   lc_callee_type : cpp_type;
-  lc_written : Miniml.ml_type list;
+  lc_written : Mlutil.Var_types.t;
   lc_abi : Callable_abi.t;
   lc_application : Template_application.t;
   lc_written_by_var : (int * cpp_type) list;
@@ -286,7 +286,7 @@ let call_type_args ~caller ?expected_ty env id plan ~has_value_args =
           (fun a ->
             match resolve_tmeta a with
             | Miniml.Tvar (_, j) -> (
-              match List.nth_opt tys (j - 1) with
+              match Mlutil.Var_types.find tys j with
               | Some ty when not (Mlutil.isTdummy (resolve_tmeta ty)) ->
                 let c = template_arg_of_ml_type ~site:Through_tvar env tvars ty in
                 if prints_as_any c then None else Some c
@@ -432,7 +432,7 @@ let call_type_args ~caller ?expected_ty env id plan ~has_value_args =
        type), so it must not be passed — and it is always erased, which
        would otherwise make [filter_erased_type_args] drop the real type
        arguments alongside it. *)
-    List.mapi (fun k t -> (k + 1, t)) tys
+    Mlutil.Var_types.bindings tys
     |> List.filter (fun (i, _) -> keeps_type_arg_position id i)
     |> List.map
          (fun (i, ty) ->
@@ -625,7 +625,7 @@ let call_type_args ~caller ?expected_ty env id plan ~has_value_args =
         List.map (fun (j, t) -> (j, if j = v then ret_ty else t)) regular_type_args
         |> List.filter (fun (_, t) -> not (prints_as_any t))
       | None -> written_out ()
-    else if tys = [] then
+    else if Mlutil.Var_types.is_empty tys then
       (* Case (b): tys is empty — synthesize type args from scratch. Build one
          entry per Tdummy Ktype domain position.
 
@@ -859,7 +859,8 @@ let callee_result_bindings env id ~explicit expected =
 let instance_family_binding env r ts expected =
   let erased t = Mlutil.isTdummy (resolve_tmeta t) in
   match (expected, find_type_opt r) with
-  | Some exp, Some inst_ty when List.exists erased ts -> (
+  | Some exp, Some inst_ty
+    when List.exists (fun (_, t) -> erased t) (Mlutil.Var_types.bindings ts) -> (
     (* Counted with application heads: a family may occur only applied
        ([itree (E _) R]). *)
     let names =
@@ -922,21 +923,23 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
     match instance_family_binding env r ts expected with
     | None -> None
     | Some (_, names, m) ->
+      (* Variable [j] is the instance's [j]th family name. *)
       let filled =
-        List.mapi
-          (fun k t ->
-            if not (Mlutil.isTdummy (resolve_tmeta t)) then
-              Some (List.hd (build_template_params ~site:Through_tvar env [] [t]))
-            else
-              Option.bind (List.nth_opt names k) (fun v ->
-                  Option.map snd (List.find_opt (fun (v', _) -> Id.equal v v') m) ) )
-          ts
+        List.map
+          (fun (j, t) ->
+            ( j,
+              if not (Mlutil.isTdummy (resolve_tmeta t)) then
+                Some (List.hd (build_template_params ~site:Through_tvar env [] [t]))
+              else
+                Option.bind (List.nth_opt names (j - 1)) (fun v ->
+                    Option.map snd (List.find_opt (fun (v', _) -> Id.equal v v') m) ) ) )
+          (Mlutil.Var_types.bindings ts)
       in
-      if List.for_all (fun o -> o <> None) filled then
+      if List.for_all (fun (_, o) -> o <> None) filled then
         Some
-          (List.filteri
-             (fun i _ -> keeps_type_arg_position r (i + 1))
-             (List.map Option.get filled) )
+          (List.filter_map
+             (fun (j, o) -> if keeps_type_arg_position r j then o else None)
+             filled )
       else None
   in
   match strip_dictionary ml_arg with
@@ -1635,7 +1638,7 @@ let plan_call ~caller ?expected_ty env (call : Elaborated_call.t) =
         call site (C++ can't deduce [T1] from lambda args). *)
   let tvars = get_current_type_vars () in
   let concrete_tvar_type =
-    if tys <> [] || excess_args = [] then
+    if (not (Mlutil.Var_types.is_empty tys)) || excess_args = [] then
       None
     else
       match (!tctx).current_cpp_return_type with

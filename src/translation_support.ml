@@ -1638,7 +1638,7 @@ let kept_type_arg_positions r n =
 (** [r]'s type arguments, less those {!keeps_type_arg_position} rules out. *)
 let kept_type_args r ts =
   let keep = keeps_type_arg_position r in
-  List.filteri (fun i _ -> keep (i + 1)) ts
+  List.filter_map (fun (j, t) -> if keep j then Some t else None) (Mlutil.Var_types.bindings ts)
 
 (** The number of type parameters [g] is written with in C++: the promoted
     variables it leads with ({!ind_promoted_type_args}), then an inductive's
@@ -1688,7 +1688,10 @@ let rec collect_tvars_ast acc = function
   | MLletin (_, ty, a, b) ->
     collect_tvars_ast (collect_tvars_ast (collect_tvars acc ty) a) b
   | MLglob use ->
-    List.fold_left collect_tvars acc (Mlutil.written_type_args use)
+    List.fold_left
+      (fun acc (_, t) -> collect_tvars acc t)
+      acc
+      (Mlutil.Var_types.bindings (Mlutil.written_type_args use))
   | MLcons (ty, _, args) ->
     List.fold_left collect_tvars_ast (collect_tvars acc ty) args
   | MLcase (ty, e, brs) ->
@@ -2516,10 +2519,10 @@ let rec infer_ml_body_type (a : ml_ast) : ml_type option =
          ones the call site wrote, by variable, or, where it wrote none, the
          ones its arguments imply. *)
       let ty =
-        if Mlutil.written_type_args use <> [] then
+        if not (Mlutil.Var_types.is_empty (Mlutil.written_type_args use)) then
           Mlutil.instantiate_written ~reader:"infer_ml_body_type" use ty
         else
-          Mlutil.subst_by_variable
+          Mlutil.Var_types.apply
             (tvar_instantiation ty
                (List.filter (function MLdummy _ -> false | _ -> true) args) )
             ty
@@ -2686,19 +2689,16 @@ and tvar_instantiation_found
   walk callee_ty args ;
   Hashtbl.fold (fun i t acc -> (i, t) :: acc) found []
 
-(** {!tvar_instantiation_found} padded into the positional list
-    {!Mlutil.type_subst_list} expects: position [i] instantiates
-    [Tvar (_, i + 1)], and a variable no argument mentions keeps itself, so
-    substituting leaves it alone. *)
+(** {!tvar_instantiation_found} for every variable up to the last one found:
+    a variable no argument mentions keeps itself, so substituting leaves it
+    alone. *)
 and tvar_instantiation callee_ty args =
-  match tvar_instantiation_found callee_ty args with
-  | [] -> []
-  | found ->
-    let n = List.fold_left (fun m (i, _) -> max i m) 0 found in
-    List.init n (fun k ->
-        match List.assoc_opt (k + 1) found with
-        | Some t -> t
-        | None -> Miniml.Tvar (Miniml.Schematic, k + 1) )
+  let found = tvar_instantiation_found callee_ty args in
+  let n = List.fold_left (fun m (i, _) -> max i m) 0 found in
+  Mlutil.Var_types.of_ordinals n (fun j ->
+      match List.assoc_opt j found with
+      | Some t -> t
+      | None -> Miniml.Tvar (Miniml.Schematic, j) )
 
 (** [resolve_from_argument_types tyargs args] resolves the variables after
     the last one the call wrote or resolved ({!Call_tyargs.beyond_extent})
@@ -3323,9 +3323,8 @@ type call_plan = {
   cp_tyargs : Call_tyargs.t;
       (** The callee's scheme variables as the call reads them, spelled in
           the caller's scope. *)
-  cp_tys : ml_type list;
-      (** {!cp_tyargs} as the list substitutions take
-          ({!Call_tyargs.by_variable}). *)
+  cp_tys : Mlutil.Var_types.t;
+      (** {!cp_tyargs} as substitutions take it ({!Call_tyargs.by_variable}). *)
   cp_fn_ml_ty_subst : ml_type;
   cp_params : Param_pos.subst Param_pos.params;
   cp_params_orig : Param_pos.orig Param_pos.params;

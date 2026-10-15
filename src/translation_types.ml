@@ -472,7 +472,7 @@ let with_dict_carrier id value_args ty =
   | None -> ty
 
 let instantiate_at_call id tys value_args ty =
-  Mlutil.subst_by_variable tys (with_dict_carrier id value_args ty)
+  Mlutil.Var_types.apply tys (with_dict_carrier id value_args ty)
 
 (** {!instantiate_at_call} at the type arguments [use] wrote, read by the
     callee's scheme variables. *)
@@ -2512,7 +2512,7 @@ let hkt_carrier_type_args env tvars ?result id tys =
   Probe.changed "REPAIR_hkt_carrier_type_args" id ~before:None @@
   let ( let* ) = Option.bind in
   let* ml_ty = find_type_opt id in
-  match List.nth_opt tys 0 with
+  match Mlutil.Var_types.find tys 1 with
   | Some c
     when IntSet.mem 1 (Ml_type_util.higher_kinded_ml_tvars [ml_ty])
          && not (Mlutil.isTdummy (resolve_tmeta c))
@@ -2528,11 +2528,11 @@ let hkt_carrier_type_args env tvars ?result id tys =
     | _ -> None
   in
   let* () =
-    match List.nth_opt tys (p - 1) with
+    match Mlutil.Var_types.find tys p with
     | Some (Miniml.Tdummy _) -> Some ()
     | _ -> None
   in
-  let* v_ml = List.nth_opt tys (v - 1) in
+  let* v_ml = Mlutil.Var_types.find tys v in
   let* result =
     match result with None -> (!tctx).current_cpp_return_type | r -> r
   in
@@ -2992,7 +2992,7 @@ let regroup_crossing ~from ~into expr =
 let value_cpp_type env e =
   match strip_magic e with
   | MLrel j -> binder_cpp_type_or_derive env j
-  | MLglob ({callee = r; _} as use) when Mlutil.written_type_args use = [] ->
+  | MLglob ({callee = r; _} as use) when Mlutil.Var_types.is_empty (Mlutil.written_type_args use) ->
     Option.map (cpp_of_ml env) (find_type_opt r)
   | _ -> None
 

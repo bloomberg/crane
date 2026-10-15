@@ -688,16 +688,29 @@ let forwarding_use target =
            in
            {Scheme.solution = Scheme.Type own; source} ) )
 
+module Var_types = struct
+  (* Entry [k] is variable [k + 1]'s type.  The order is this module's
+     alone: nothing outside it reads a position. *)
+  type t = ml_type list
+
+  let empty = []
+  let is_empty t = t = []
+  let of_ordinals n f = List.init n (fun k -> f (k + 1))
+  let extent = List.length
+  let find t j = if j >= 1 then List.nth_opt t (j - 1) else None
+  let bindings t = List.mapi (fun k ty -> (k + 1, ty)) t
+  let types t = t
+  let apply t ty = type_subst_fun (find t) ty
+  let equal = List.equal eq_ml_type
+end
+
 let written_type_args use =
   let evidence = Global_use.written_evidence use in
   let last = List.fold_left (fun m (v, _) -> max m (Scheme.Var.ordinal v)) 0 evidence in
-  List.init last (fun k ->
-      match List.find_opt (fun (v, _) -> Scheme.Var.ordinal v = k + 1) evidence with
+  Var_types.of_ordinals last (fun j ->
+      match List.find_opt (fun (v, _) -> Scheme.Var.ordinal v = j) evidence with
       | Some (_, t) -> t
       | None -> Tdummy Ktype )
-
-let subst_by_variable tys t =
-  type_subst_fun (fun j -> if j >= 1 then List.nth_opt tys (j - 1) else None) t
 
 let subst_written_evidence use t =
   let evidence = Global_use.written_evidence use in

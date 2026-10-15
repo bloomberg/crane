@@ -75,9 +75,8 @@ val resolve_all :
 (** Whether some variable was resolved from [e]. *)
 val resolved_from : evidence -> t -> bool
 
-(** The reading as the list call planning substitutes with
-    ({!Mlutil.subst_by_variable}): entry [k] is variable [k + 1]'s type, up
+(** The reading as call planning substitutes with: each variable's type, up
     to the last variable known or written unreadably, a hole before it
     spelled [Tdummy Ktype] -- the erased placeholder the erasure filters
     leave to deduction. *)
-val by_variable : t -> Miniml.ml_type list
+val by_variable : t -> Mlutil.Var_types.t

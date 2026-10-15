@@ -129,7 +129,7 @@ let resolved_from e t =
     t.slots
 
 let by_variable t =
-  List.init (extent t) (fun k ->
-      match List.find_opt (fun (v, _) -> Scheme.Var.ordinal v = k + 1) t.slots with
+  Mlutil.Var_types.of_ordinals (extent t) (fun j ->
+      match List.find_opt (fun (v, _) -> Scheme.Var.ordinal v = j) t.slots with
       | Some (_, Known (ty, _)) -> ty
       | Some (_, (Unreadable | Unwritten)) | None -> Tdummy Ktype )

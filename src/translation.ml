@@ -1370,7 +1370,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            so the ML type args for Ret are [E, R] where E is typically Tdummy
            and R is the result type. *)
         let r_cpp =
-          let non_dummy = filter_value_types ret_tys in
+          let non_dummy = filter_value_types (Mlutil.Var_types.types ret_tys) in
           match non_dummy with
           | r_ml :: _ ->
             cpp_of_ml env r_ml
@@ -2630,7 +2630,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                [interp] calling a named handler [h] with an event.  Every
                variable is then written as the box it is, and a parameter
                that mentions one is read at that erased type. *)
-            let own_index = tys_inner = [] && all_tvars <> [] in
+            let own_index = Mlutil.Var_types.is_empty tys_inner && all_tvars <> [] in
             let at_own_index ty =
               Ml_type_util.resolve_tvars_to_any
                 (convert_ml_type_to_cpp_type env [] ty)
@@ -2662,9 +2662,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             (* The inner type arguments as C++ types, by variable. *)
             let inner_tvars = get_current_type_vars () in
             let by_var =
-              List.mapi
-                (fun k ty -> (k + 1, convert_ml_type_to_cpp_type env inner_tvars ty))
-                tys_inner
+              List.map
+                (fun (j, ty) -> (j, convert_ml_type_to_cpp_type env inner_tvars ty))
+                (Mlutil.Var_types.bindings tys_inner)
             in
             (* An erased argument is left to deduction -- unless nothing can
                deduce it: [h : getE ~> itree noE] quantifies an index the
@@ -2739,20 +2739,20 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     | _ ->
       mk_cppglob
         ?yields:(glob_yields env x (Mlutil.instantiate_written ~reader:"glob_yields" use))
-        x (template_params_of_ml ~site:Through_tvar env tys) )
+        x (template_params_of_ml ~site:Through_tvar env (Mlutil.Var_types.types tys)) )
   | MLglob ({callee = x; _} as use) ->
     let tys = Mlutil.written_type_args use in
     let tvars = get_current_type_vars () in
     (* Each argument with the variable it was written for. *)
     let by_var =
-      List.mapi
-        (fun k ty ->
+      List.map
+        (fun (j, ty) ->
           let t = cpp_of_ml env (type_simpl ty) in
-          ( k + 1,
+          ( j,
             match t with
             | Tvar (Tv_index (_, None)) when tvars <> [] -> Terased Ek_type
             | _ -> t ) )
-        tys
+        (Mlutil.Var_types.bindings tys)
     in
     (* An erased variable bound by a result: the [i]th of [names] stands for
        variable [i]. *)
@@ -5114,7 +5114,7 @@ and project_through_instance env use args inst =
      result. *)
   let targs =
     let n_class = Ml_type_util.projection_class_arity x in
-    let by_var = List.mapi (fun k t -> (k + 1, cpp_of_ml env t)) tys in
+    let by_var = List.map (fun (j, t) -> (j, cpp_of_ml env t)) (Mlutil.Var_types.bindings tys) in
     Template_application.to_list
       (Template_application.plan
          (Callable_abi.foreign ~callee:x ~scheme:(Mlutil.reference_scheme x)
@@ -5362,7 +5362,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
         | _ -> false
       in
       let tvar_arg_erased j =
-        match List.nth_opt tys (j - 1) with
+        match Mlutil.Var_types.find tys j with
         | Some t ->
           Ml_type_util.has_erased_type_in_type
             (unfold_cpp_typedef env (cpp_of_ml env t))
@@ -5376,7 +5376,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
             && param_states_type_args id orig
             && mentions j orig
             && Ml_type_util.has_erased_type_in_type
-                 (unfold_cpp_typedef env (cpp_of_ml env (Mlutil.subst_by_variable tys orig))))
+                 (unfold_cpp_typedef env (cpp_of_ml env (Mlutil.Var_types.apply tys orig))))
           (Param_pos.positioned fn_param_ml_tys_orig)
       | _ -> false
     in
@@ -5972,7 +5972,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
               | None -> false) ->
         CPPscope (CPPtype_name inst_ty, Common.id_of_global Term id, method_targs)
       | _ ->
-        mk_cppglob ?yields:(glob_yields env id (Mlutil.subst_by_variable tys)) id
+        mk_cppglob ?yields:(glob_yields env id (Mlutil.Var_types.apply tys)) id
           all_type_args
     in
     (* Check if this is a typeclass instance used as a type (for :: access).
@@ -6002,16 +6002,16 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        where the site carries them, and otherwise the one its arguments
        imply. *)
     let inst_tys =
-      if tys <> [] then tys
+      if not (Mlutil.Var_types.is_empty tys) then tys
       else
         match find_type_opt id with
         | Some ml_ty -> tvar_instantiation ml_ty primary_ml_args
-        | None -> []
+        | None -> Mlutil.Var_types.empty
     in
     (* The callee's codomain as this call instantiates it. *)
     let instantiated_codomain ml_ty =
       let cod = ml_codomain ml_ty in
-      if inst_tys = [] then cod else Mlutil.subst_by_variable inst_tys cod
+      if Mlutil.Var_types.is_empty inst_tys then cod else Mlutil.Var_types.apply inst_tys cod
     in
     let wrap_excess base =
       if excess_args = [] then
@@ -6060,10 +6060,10 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                  only exist when the return type instantiates to a function.
                  Proof-level excess args are already removed by the
                  [MLdummy] filter above. *)
-              if inst_tys = [] then
+              if Mlutil.Var_types.is_empty inst_tys then
                 true
               else
-                let cod_inst = Mlutil.subst_by_variable inst_tys cod in
+                let cod_inst = Mlutil.Var_types.apply inst_tys cod in
                 ( match resolve_tmeta cod_inst with
                 | Miniml.Tarr _ -> true
                 | Miniml.Tglob _ -> true
@@ -6811,7 +6811,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        call goes through. *)
     let callee_fun_ml_ty =
       match f with
-        | MLglob ({callee = r; _} as use) when Mlutil.written_type_args use <> [] ->
+        | MLglob ({callee = r; _} as use) when not (Mlutil.Var_types.is_empty (Mlutil.written_type_args use)) ->
           (match find_type_opt r with
            | Some ty -> Some (Mlutil.instantiate_written ~reader:"callee_fun_ml_ty" use ty)
            | None -> infer_ml_body_type f)
@@ -10205,7 +10205,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
        Tdummy entries in bind_tys -- an argument extraction could not read
        ({!Extraction.observe_type_arg}: a type constructor such as an HKT
        carrier).  Unifying a meta with Tdummy would not resolve it usefully. *)
-    let non_dummy_bind_tys = filter_value_types bind_tys in
+    let non_dummy_bind_tys = filter_value_types (Mlutil.Var_types.types bind_tys) in
     let () =
       match non_dummy_bind_tys with
       | elem_ty :: _ -> List.iter (fun (_, ty) -> try_mgu ~late:Bind_continuation ty elem_ty) ids'

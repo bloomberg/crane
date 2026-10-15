@@ -85,15 +85,46 @@ val self_reference : GlobRef.t -> global_use
     a forwarder with [target]'s type writes. *)
 val forwarding_use : GlobRef.t -> global_use
 
-(** The arguments [use] wrote, indexed by the scheme variable each is for:
-    entry [k] is variable [k + 1]'s, up to the last variable written, a
-    variable not written before it standing as the erased [Tdummy Ktype]. *)
-val written_type_args : global_use -> ml_type list
+(** Types for a callee's scheme variables, each keyed by the variable's
+    ordinal: what a use wrote, a call's reading of them, or what its
+    arguments imply.  Every variable up to the last one a reading speaks for
+    has a type, one it leaves open the erased [Tdummy Ktype]; past it there
+    is none.  The types are reached only through the variable they are for,
+    never by position, so they cannot be paired by position with a source
+    binder, an argument or a template parameter. *)
+module Var_types : sig
+  type t
 
-(** [subst_by_variable tys t] instantiates [t], a type in a callee's scheme
-    variables, at [tys] indexed by variable as {!written_type_args} is: entry
-    [k] replaces variable [k + 1], and a variable past the end stays. *)
-val subst_by_variable : ml_type list -> ml_type -> ml_type
+  val empty : t
+  val is_empty : t -> bool
+
+  (** [of_ordinals n f]: variables [1] to [n], variable [j] at [f j]. *)
+  val of_ordinals : int -> (int -> ml_type) -> t
+
+  (** The last variable spoken for, or [0]. *)
+  val extent : t -> int
+
+  (** Variable [j]'s type, if [j] is within {!extent}. *)
+  val find : t -> int -> ml_type option
+
+  (** Each variable spoken for, in ascending order, with its type. *)
+  val bindings : t -> (int * ml_type) list
+
+  (** The types of {!bindings}, in the same order: for a reader that wants
+      each variable's type in turn, not any one variable's. *)
+  val types : t -> ml_type list
+
+  (** [apply t ty] instantiates [ty], a type in the callee's scheme
+      variables: each variable spoken for is replaced, one past
+      {!extent} stays. *)
+  val apply : t -> ml_type -> ml_type
+
+  val equal : t -> t -> bool
+end
+
+(** The arguments [use] wrote, for the scheme variables they are for, up to
+    the last variable written. *)
+val written_type_args : global_use -> Var_types.t
 
 (** [subst_written_evidence use t] is [t], a type in [use]'s callee's
     scheme variables, with each variable the use wrote an argument for at
