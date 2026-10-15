@@ -71,9 +71,16 @@ type receiver = {
   dropped : Scheme.Var.t list;
       (** The function's variables the method declares no parameter for: no
           signature or annotation of it mentions them. *)
+  dropped_names : Names.Id.t list;
+      (** The names those variables had in the method, its own variables
+          included, which the function's scheme has no variable for. *)
   params : Minicpp.cpp_type list;
       (** The C++ types the method's parameters other than its receiver are
           declared at, in declaration order. *)
+  ret : Minicpp.cpp_type;  (** The return type the method is declared at. *)
+  return_only : Names.Id.t list;
+      (** The method's own variables the return type alone mentions, which it
+          spells erased there. *)
 }
 
 (** Why a callee's convention declares no template parameter for one of its

@@ -693,7 +693,10 @@ let method_plan func_ref s h =
     ~receiver:
       { dropped =
           List.filter_map (fun (i, _) -> Option.bind scheme (fun sc -> Scheme.Var.of_tvar sc i)) h.mh_dropped;
-        params = List.map snd s.ms_params }
+        dropped_names = List.map snd h.mh_dropped;
+        params = List.map snd s.ms_params;
+        ret = h.mh_ret;
+        return_only = Id.Set.elements h.mh_return_only }
     ~callee:func_ref ~scheme h.mh_tparams
 
 (** [plan_method name vars candidate] is the callable plan of the method
@@ -703,16 +706,35 @@ let plan_method name vars ((func_ref, _, ty, _) as candidate) =
   let s = method_scope name vars candidate in
   with_itree_mode_for ty @@ fun () -> method_plan func_ref s (method_head vars s)
 
+(** The head of the method [func_ref] whose scope is [s]: its plan's, which
+    was made before anything was generated, as its template parameters, its
+    return type, the variables the return type alone mentions, and the names
+    of the variables it drops.  Under [CRANE_CHECK_IR] the head is decided
+    again ({!method_head}) and checked against the plan; a method with no
+    plan is decided here, and reported. *)
+let planned_method_head func_ref vars s =
+  let decided () =
+    let h = method_head vars s in
+    Callable_abi.check (method_plan func_ref s h);
+    (h.mh_tparams, h.mh_ret, h.mh_return_only, List.map snd h.mh_dropped)
+  in
+  match Callable_abi.lookup func_ref with
+  | Some abi -> (
+    match Callable_abi.receiver abi with
+    | Some r ->
+      if Probe.checking () then ignore (decided ());
+      (Callable_abi.declared_head abi, r.ret, Id.Set.of_list r.return_only, r.dropped_names)
+    | None -> decided () )
+  | None -> decided ()
+
 (** Generate a single method for an inductive type from a method candidate:
-    its body, generated under {!method_scope} and the head {!method_head}
-    decided, which it must reproduce the plan of. *)
+    its body, generated under {!method_scope} and its planned head. *)
 let gen_single_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   let s = method_scope name vars candidate in
   (* Promotion moves a function into a struct; it does not change what the
      function returns: see {!method_scope}. *)
   with_itree_mode_for ty @@ fun () ->
-  let h = method_head vars s in
-  Callable_abi.check (method_plan func_ref s h);
+  let tparams, ret, return_only, dropped_names = planned_method_head func_ref vars s in
   let func_name = Common.id_of_global Term func_ref in
   let {
     ms_ty = ty;
@@ -906,13 +928,13 @@ let gen_single_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      the body would name a parameter no longer declared. *)
   if Probe.checking () then
     List.iter
-      (fun (_, name) ->
+      (fun name ->
         if stmt_has_tvar name stmts then
           Probe.violation "method head"
             Pp.(
               str "the body of " ++ GlobRef.print func_ref ++ str " names " ++ Id.print name
               ++ str ", which none of its annotations does" ) )
-      h.mh_dropped;
+      dropped_names;
   (* The body still builds its value at the one type it knows; the signature
      now promises the erased one.  [crane_container_cast] is the conversion
      between the two, and it is the identity when they agree.
@@ -920,18 +942,16 @@ let gen_single_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      A return type that erased away entirely needs nothing said: anything
      converts to [std::any] by boxing. *)
   let stmts =
-    if Id.Set.is_empty h.mh_return_only || h.mh_ret = Tany then stmts
+    if Id.Set.is_empty return_only || ret = Tany then stmts
     else
       let rec cast_stmt s =
         match s with
-        | Sreturn (Some e) -> Sreturn (Some (CPPcontainer_cast (h.mh_ret, e, false)))
+        | Sreturn (Some e) -> Sreturn (Some (CPPcontainer_cast (ret, e, false)))
         | _ -> Minicpp.map_stmt (fun e -> e) cast_stmt (fun t -> t) s
       in
       List.map cast_stmt stmts
   in
-  let phantom_name_set =
-    List.fold_left (fun s (_, n) -> Id.Set.add n s) Id.Set.empty h.mh_dropped
-  in
+  let phantom_name_set = Id.Set.of_list dropped_names in
   let rec strip_phantom_any_cast_expr e =
     let e = match e with
       | CPPany_cast (Tvar (Tv_index (_, Some name) | Tv_named name), inner) when Id.Set.mem name phantom_name_set ->
@@ -950,8 +970,8 @@ let gen_single_method name vars ((func_ref, _, ty, this_pos) as candidate) =
       {
         mf_name = func_name;
         mf_globref = Some func_ref;
-        mf_tparams = h.mh_tparams;
-        mf_ret_type = h.mh_ret;
+        mf_tparams = tparams;
+        mf_ret_type = ret;
         mf_params = params;
         mf_body = stmts;
         mf_receiver = Instance { this_pos = this_pos; is_const = true; ref_qual = Rq_any };

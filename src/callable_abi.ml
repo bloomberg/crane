@@ -35,7 +35,10 @@ type template_parameter = {
 
 type receiver = {
   dropped : Scheme.Var.t list;
+  dropped_names : Id.t list;
   params : Minicpp.cpp_type list;
+  ret : Minicpp.cpp_type;
+  return_only : Id.t list;
 }
 
 type omission =
@@ -211,7 +214,13 @@ let same_head a b =
     | Derived n -> `Derived (Id.to_string n)
   in
   let key p = (Id.to_string (Template_param.name p.id), origin_key p.origin, p.kind, p.write) in
-  let receiver_key r = (List.map Scheme.Var.ordinal r.dropped, r.params) in
+  let receiver_key r =
+    ( List.map Scheme.Var.ordinal r.dropped,
+      List.map Id.to_string r.dropped_names,
+      r.params,
+      r.ret,
+      List.map Id.to_string r.return_only )
+  in
   let variables_key abi = List.map (fun (v, o) -> (Scheme.Var.ordinal v, o)) abi.variables in
   List.equal (fun p q -> key p = key q) a.head b.head
   && List.equal Param_pos.equal a.deduced_callables b.deduced_callables
