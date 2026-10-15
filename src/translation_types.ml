@@ -2394,6 +2394,18 @@ let push_binders ?(cpp = []) env (ids : (Id.t * ml_type) list) =
   push_env_types ids;
   assign_binder_types ~cpp env ids
 
+(** [with_binders env ids f] runs [f] with [ids] (innermost first) pushed by
+    {!push_binders}, and closes that scope however [f] leaves.
+
+    It is the type half of a [push_vars'] that bound the same [ids] in the
+    name environment: a body generated under the extended name environment
+    reads its binders' types by de Bruijn index, so a name pushed without its
+    type makes every lookup beneath it read the binder one further out. *)
+let with_binders ?cpp env ids f =
+  let saved = (!tctx).env_types in
+  push_binders ?cpp env ids;
+  Fun.protect ~finally:(fun () -> restore_env_types saved) f
+
 (** [push_parameters env ids] is {!push_binders} for a declaration's
     parameters, whose class-typed ones are its dictionaries. *)
 let push_parameters ?(cpp = []) env (ids : (Id.t * ml_type) list) =

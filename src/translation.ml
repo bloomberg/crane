@@ -4906,8 +4906,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       in
       mk_iife None
         (asgns
-         @ with_iife_return_type expected_ty (fun () ->
-               gen_stmts ~slot env' (fun x -> Sreturn (Some x)) body)) )
+         @ with_binders env renamed_ids (fun () ->
+               with_iife_return_type expected_ty (fun () ->
+                   gen_stmts ~slot env' (fun x -> Sreturn (Some x)) body))) )
     (* Known limitation: simultaneous pattern matching on record fields is not
        supported — each field is destructured individually. *)
   | MLcase (typ, t, pv) when lang () == Cpp ->
@@ -7846,7 +7847,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
       | (ids, _rty, p, body) :: cs ->
       match p with
       | Pusual r | Pcons (r, _) ->
-        let _ids', env' =
+        let ids', env' =
           push_vars'
             (List.rev_map
                (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty))
@@ -7860,7 +7861,9 @@ and gen_cpp_case (typ : ml_type) t env pv =
           | _ -> Id.of_string (Common.enum_ctor_name_of_id
                    (Table.safe_basename_of_global r))
         in
-        let body_stmts = gen_stmts env' (fun x -> Sreturn (Some x)) body in
+        let body_stmts =
+          with_binders env ids' (fun () -> gen_stmts env' (fun x -> Sreturn (Some x)) body)
+        in
         (ctor_name, body_stmts) :: gen_enum_branches cs
       | Pwild | Prel _ | Ptuple _ -> gen_enum_branches cs
     in
