@@ -1121,14 +1121,16 @@ let rec mp_renaming_fun full_mp =
 and mp_renaming x =
   let add, get, _ = mp_renaming_table in
   note_file_reference x;
-  try
-    if is_mp_bound (base_mp x) then raise Not_found;
-    get x
-  with Not_found ->
-    let y = mp_renaming_fun x in
-    if not (is_mp_bound (base_mp x)) then note_decided_while_emitting (Module_name x);
-    add x y;
-    y
+  (* A path through a functor parameter is renamed afresh each time, from the
+     parameter's own name, and never cached: it is no decision. *)
+  if is_mp_bound (base_mp x) then mp_renaming_fun x
+  else
+    try get x
+    with Not_found ->
+      let y = mp_renaming_fun x in
+      note_decided_while_emitting (Module_name x);
+      add x y;
+      y
 
 (** {2 Renamings creation for a global_reference} *)
 
