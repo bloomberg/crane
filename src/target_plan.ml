@@ -24,6 +24,7 @@ type representation = {
   promoted_inductives : GlobRef.t list;
   accessors : GlobRef.t list;
   nested_structs : (string * Cpp_state.nested_struct_owner) list;
+  scopes : Scope_plan.t;
   instance_promoted_types : (GlobRef.t * (Id.t * Miniml.ml_type) list) list;
 }
 
@@ -278,6 +279,7 @@ let plan (_ : Program_facts.t) struc =
         promoted_inductives = [];
         accessors = [];
         nested_structs = [];
+        scopes = [];
         instance_promoted_types = [] };
     callables = [];
     assumed_callables = [] }
@@ -332,6 +334,9 @@ let equal a b =
   && List.equal
        (fun (n, o) (n', o') -> String.equal n n' && Cpp_state.nested_struct_owner_equal o o')
        a.representation.nested_structs b.representation.nested_structs
+  && List.equal
+       (fun (mp, s) (mp', s') -> ModPath.equal mp mp' && Scope_plan.equal s s')
+       a.representation.scopes b.representation.scopes
   && List.equal
        (fun (r, bs) (r', bs') ->
          GlobRef.UserOrd.equal r r'

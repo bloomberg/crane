@@ -2633,6 +2633,87 @@ let plan_accessors s =
       elems ~in_struct:(List.exists (ModPath.equal mp) wrapped) ~in_template:false sel )
     s
 
+(** The scope of each module the unit emits as a struct
+    ({!Scope_plan}): how a definition of one of its members, written out of
+    line, names it.
+
+    A wrapped file module is its wrapper struct.  A child a name collision
+    flattens into its parent's wrapper is a member of the wrapper, which is
+    its parent module's struct; a bystander keeps its own nesting under the
+    wrapper's name; and the parent, unwrapped, is the wrapper.  Any other
+    module emitted as a struct is nested in its parent's struct, if the parent
+    is one -- the extraction root is not: its members are at namespace scope.
+    A module holding a type class of its own name is a concept, not a struct,
+    and its members are at namespace scope too. *)
+let plan_scopes s =
+  let own mp = Table.escape_reserved_struct_name (Common.emitted_module_name mp) in
+  let child mp l = MPdot (mp, l) in
+  let is_wrapped_child mp l =
+    match Module_plan.wrapper_role (child mp l) with
+    | Some (Module_plan.Flattened | Module_plan.Bystander) -> true
+    | Some Module_plan.Own | None -> false
+  in
+  let modules sel =
+    List.filter_map (fun (l, se) -> match se with SEmodule m -> Some (l, m) | _ -> None) sel
+  in
+  let collision_wrapper mp sel =
+    if List.exists (fun (l, _) -> is_wrapped_child mp l) (modules sel) then
+      Some
+        ( List.find_map
+            (fun (l, _) -> if is_wrapped_child mp l then Module_plan.wrapper_struct (child mp l) else None)
+            (modules sel)
+        |> Option.default
+             (Table.escape_reserved_struct_name (String.capitalize_ascii (string_of_modfile mp))) )
+    else None
+  in
+  (* The names compared are the ones planned, not the ones a reference
+     spells: those depend on where the reference is written from. *)
+  let concept_name r =
+    match Module_plan.concept_name r with
+    | Some name -> Some name
+    | None -> Option.map Common.last_component (Common.decided_global_name r)
+  in
+  let concept_collision mp sel =
+    List.exists
+      (fun (_, se) ->
+        match se with
+        | SEdecl (Dind (kn, ({ind_kind = TypeClass _; _} as ind))) ->
+          List.exists
+            (fun i ->
+              Option.equal String.equal
+                (concept_name (GlobRef.IndRef (kn, i)))
+                (Some (Common.emitted_module_name mp)) )
+            (List.init (Array.length ind.ind_packets) Fun.id)
+        | _ -> false )
+      sel
+  in
+  let scope_of ~parent mp sel =
+    let at module_ qualifier = Some {Scope_plan.module_; qualifier} in
+    match Module_plan.wrapper mp with
+    | Some (w, Module_plan.Own) -> at mp [w]
+    | Some (w, Module_plan.Flattened) ->
+      at (match mp with MPdot (p, _) -> p | _ -> mp) [w]
+    | Some (w, Module_plan.Bystander) -> at mp [w; own mp]
+    | None -> (
+      match collision_wrapper mp sel with
+      | Some w -> at mp [w]
+      | None ->
+        if Common.is_struct_module mp && not (concept_collision mp sel) then
+          at mp (Option.cata (fun (p : Scope_plan.scope) -> p.qualifier) [] parent @ [own mp])
+        else None )
+  in
+  let rec walk ~parent mp sel acc =
+    let scope = scope_of ~parent mp sel in
+    let acc = match scope with Some sc -> (mp, sc) :: acc | None -> acc in
+    List.fold_left
+      (fun acc (l, m) ->
+        match m.ml_mod_expr with
+        | MEstruct (_, sel) -> walk ~parent:scope (child mp l) sel acc
+        | MEfunctor _ | MEident _ | MEapply _ -> acc )
+      acc (modules sel)
+  in
+  List.rev (List.fold_left (fun acc (mp, sel) -> walk ~parent:None mp sel acc) [] s)
+
 let plan_nested_structs s =
   (* An instance is a struct where, past its parameters, its body builds the
      class's record -- as a singleton class's always does, its one method

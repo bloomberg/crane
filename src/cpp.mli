@@ -85,6 +85,11 @@ val plan_promoted_inductives : Miniml.ml_structure -> Names.GlobRef.t list
     each a constant its generation does not make a function. *)
 val plan_accessors : Miniml.ml_structure -> Names.GlobRef.t list
 
+(** The scope of each module the unit emits as a struct: how a definition of
+    one of its members, written outside the struct's body, names the
+    struct. *)
+val plan_scopes : Miniml.ml_structure -> Scope_plan.t
+
 (** The structs written inside another struct, each with the name it is
     written under: a module's, and an inductive's -- its struct or its enum
     -- declared in a module.  A global type of the same name is spelled

@@ -1004,6 +1004,7 @@ let plan_unmerged_wrappers = "plan_unmerged_wrappers"
 let plan_promoted_inductives = "plan_promoted_inductives"
 let plan_accessors = "plan_accessors"
 let plan_nested_structs = "plan_nested_structs"
+let plan_scopes = "plan_scopes"
 let plan_instance_promoted_types = "plan_instance_promoted_types"
 let plan_callables = "plan_callables"
 let install_callables = "install_callables"
@@ -1018,6 +1019,7 @@ let layout_pass_names =
     plan_promoted_inductives;
     plan_accessors;
     plan_nested_structs;
+    plan_scopes;
     plan_instance_promoted_types;
     plan_callables;
     install_callables ]
@@ -1029,9 +1031,10 @@ let layout_pass_names =
     ({!Cpp.plan_referenced_names}), and of its constructors' fields
     ({!Cpp.plan_field_names}), which of those fields are stored behind the
     pointer ({!Cpp.plan_pointer_fields}), which wrapper structs hold
-    declarations ({!Cpp.plan_unmerged_wrappers}), and which constants are
-    accessor functions ({!Cpp.plan_accessors}), then plan the callable of
-    each
+    declarations ({!Cpp.plan_unmerged_wrappers}), which constants are
+    accessor functions ({!Cpp.plan_accessors}), and how a definition written
+    outside its struct's body names the struct ({!Cpp.plan_scopes}), then
+    plan the callable of each
     function and method a render will generate, installing each before the
     next is decided.  Returns all of them, with the callables assumed of the
     functions that have no plan.  Under [CRANE_CHECK_IR] the callables are
@@ -1065,6 +1068,9 @@ let plan_layout struc =
   Pipeline_trace.event "layout" plan_nested_structs;
   let nested_structs = Cpp.plan_nested_structs struc in
   Install_legacy_plan.install_nested_structs nested_structs;
+  Pipeline_trace.event "layout" plan_scopes;
+  let scopes = Cpp.plan_scopes struc in
+  Install_legacy_plan.install_scopes scopes;
   Pipeline_trace.event "layout" plan_instance_promoted_types;
   let instance_promoted_types = Cpp.plan_instance_promoted_types struc in
   Install_legacy_plan.install_instance_promoted_types instance_promoted_types;
@@ -1087,6 +1093,7 @@ let plan_layout struc =
       promoted_inductives;
       accessors;
       nested_structs;
+      scopes;
       instance_promoted_types },
     callables,
     assumed )

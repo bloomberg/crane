@@ -4147,6 +4147,32 @@ and pp_leaf_decl env (d : cpp_decl) =
     let is_lifted =
       match fst df_path.dp_outer with GlobRef.VarRef _ -> true | _ -> false
     in
+    (* A definition outside every struct body is a member of the struct its
+       declaration's scope names, as planned. *)
+    if is_def && (not (!render_ctx).rc_in_struct) && Probe.checking () then begin
+      let planned = Scope_plan.of_declaration (fst df_path.dp_outer) in
+      let walked =
+        match ((!render_ctx).rc_struct_name, (!render_ctx).rc_struct_mp) with
+        | Some name, Some module_ -> Some {Scope_plan.module_; qualifier = [Pp.string_of_ppcmds name]}
+        | _ -> None
+      in
+      let describe = function
+        | Some sc -> Scope_plan.qualifier sc ^ " (" ^ ModPath.to_string sc.Scope_plan.module_ ^ ")"
+        | None -> "namespace scope"
+      in
+      let agree =
+        match (planned, walked) with
+        | Some p, Some w ->
+          ModPath.equal p.module_ w.module_ && String.equal (Scope_plan.qualifier p) (Scope_plan.qualifier w)
+        | None, None -> true
+        | _ -> false
+      in
+      if not agree then
+        Probe.violation "scopes"
+          Pp.(
+            str "the definition of " ++ GlobRef.print (fst df_path.dp_outer) ++ str " is written in "
+            ++ str (describe walked) ++ str " where its scope is planned as " ++ str (describe planned) )
+    end;
     let name =
       match (!render_ctx).rc_struct_name with
       | Some struct_name

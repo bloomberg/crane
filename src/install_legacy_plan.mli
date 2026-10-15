@@ -35,6 +35,10 @@ val install_accessors : Names.GlobRef.t list -> unit
     another struct, as {!Target_plan.representation} holds them. *)
 val install_nested_structs : (string * Cpp_state.nested_struct_owner) list -> unit
 
+(** [install_scopes scopes] installs the scopes of the modules emitted as
+    structs, as {!Target_plan.representation} holds them. *)
+val install_scopes : Scope_plan.t -> unit
+
 (** [install_instance_promoted_types types] installs the concrete types the
     unit's instances give their classes' promoted variables, as
     {!Target_plan.representation} holds them. *)
