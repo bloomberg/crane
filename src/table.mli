@@ -576,6 +576,9 @@ val promoted_type_var_name : GlobRef.t -> Names.Id.t option
 (** The field a promoted type variable of this name stands for. *)
 val promoted_type_var_field : Names.Id.t -> GlobRef.t option
 
+(** Every field promoted to a type variable. *)
+val promoted_type_var_fields : unit -> GlobRef.t list
+
 (** Register an erased type constant (non-promoted type-valued record field). *)
 val add_erased_type_const : GlobRef.t -> unit
 

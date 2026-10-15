@@ -1066,6 +1066,8 @@ let note_file_reference mp =
     | vis -> if not (ModPath.equal file (List.last vis).mp) then mpfiles_add file )
   | _ -> ()
 
+let mp_renaming_table = mktable_modpath ~census:"mp_renaming" true
+
 (** First, the real function ... *)
 let rec mp_renaming_fun full_mp =
   match full_mp with
@@ -1100,17 +1102,16 @@ let rec mp_renaming_fun full_mp =
 
 (** ... and its version using a cache *)
 
-and mp_renaming =
-  let add, get, _ = mktable_modpath ~census:"mp_renaming" true in
-  fun x ->
-    note_file_reference x;
-    try
-      if is_mp_bound (base_mp x) then raise Not_found;
-      get x
-    with Not_found ->
-      let y = mp_renaming_fun x in
-      add x y;
-      y
+and mp_renaming x =
+  let add, get, _ = mp_renaming_table in
+  note_file_reference x;
+  try
+    if is_mp_bound (base_mp x) then raise Not_found;
+    get x
+  with Not_found ->
+    let y = mp_renaming_fun x in
+    add x y;
+    y
 
 (** {2 Renamings creation for a global_reference} *)
 
@@ -1267,17 +1268,18 @@ let ref_renaming_fun (k, r) =
   s :: l
 
 (** Cached version of ref_renaming_fun. *)
-let ref_renaming =
+let ref_renaming, decided_ref_renaming =
   let add, get, _ = mktable_ref ~census:"ref_renaming" true in
-  fun ((k, r) as x) ->
-    note_file_reference (modpath_of_r r);
-    try
-      if is_mp_bound (base_mp (modpath_of_r r)) then raise Not_found;
-      get r
-    with Not_found ->
-      let y = ref_renaming_fun x in
-      add r y;
-      y
+  ( (fun ((k, r) as x) ->
+      note_file_reference (modpath_of_r r);
+      try
+        if is_mp_bound (base_mp (modpath_of_r r)) then raise Not_found;
+        get r
+      with Not_found ->
+        let y = ref_renaming_fun x in
+        add r y;
+        y ),
+    fun r -> try Some (get r) with Not_found -> None )
 
 (** {2 On-the-fly qualification} *)
 
@@ -1534,6 +1536,11 @@ let pp_global_name k r =
   assert (List.length ls > 1);
   List.hd ls
 
+(** The short name already decided for [r], if any.  Unlike
+    {!pp_global_name} it decides nothing and demands nothing: it is how a
+    check reads a plan back. *)
+let decided_global_name r = Option.map List.hd (decided_ref_renaming r)
+
 (** {!pp_global_name} as an [Id.t]: the short C++ name a reference is emitted
     under, for the many places that need it as an identifier rather than a
     string (a struct field, a method, a [using] alias). *)
@@ -1542,6 +1549,12 @@ let id_of_global k r = Id.of_string (pp_global_name k r)
 (** The name a module's C++ struct is emitted under, including any suffix
     {!detect_sibling_module_inductive_collisions} gave it. *)
 let emitted_module_name mp = List.hd (mp_renaming mp)
+
+(** {!emitted_module_name} if already decided, deciding and demanding
+    nothing, as {!decided_global_name}. *)
+let decided_module_name mp =
+  let _, get, _ = mp_renaming_table in
+  try Some (List.hd (get mp)) with Not_found -> None
 
 (** Print the type name for an eponymous record reference.  Returns the
     enclosing module name (from [mp_renaming]) so that type references match

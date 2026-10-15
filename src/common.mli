@@ -212,6 +212,11 @@ val file_qualifier : kind -> GlobRef.t -> string option
 (** Print just the short name of a reference (for declarations). *)
 val pp_global_name : kind -> GlobRef.t -> string
 
+(** The short name already decided for a reference, if any.  Unlike
+    {!pp_global_name} it decides nothing and demands nothing: it is how a
+    check reads a plan back. *)
+val decided_global_name : GlobRef.t -> string option
+
 (** {!pp_global_name} as an [Id.t]: the short C++ name a reference is emitted
     under, for the many places that need it as an identifier rather than a
     string (a struct field, a method, a [using] alias). *)
@@ -238,6 +243,10 @@ val detect_sibling_module_inductive_collisions : ml_structure -> unit
 (** The name a module's C++ struct is emitted under, including any suffix
     {!detect_sibling_module_inductive_collisions} gave it. *)
 val emitted_module_name : ModPath.t -> string
+
+(** {!emitted_module_name} if already decided, deciding and demanding
+    nothing, as {!decided_global_name}. *)
+val decided_module_name : ModPath.t -> string option
 
 (** The members every inductive's C++ struct declares for itself (the variant
     alias, its accessors, the deep copy).  Whatever else is emitted inside that

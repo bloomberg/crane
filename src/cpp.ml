@@ -2422,6 +2422,120 @@ let plan_names s =
       | Dfix fds -> List.concat_map (fun fd -> name Term fd.fd_ref) fds )
     (declarations s)
 
+let plan_referenced_names s =
+  let seen = ref Ref.User.Set.empty and named = ref [] in
+  let name k r =
+    if not (Ref.User.Set.mem r !seen) then begin
+      seen := Ref.User.Set.add r !seen;
+      named := (r, Common.pp_global_name k r) :: !named
+    end
+  in
+  (* The constructors of an inductive a type names, which the code taking a
+     value of that type apart spells by their structs; only an inductive of
+     the global environment has them to read, not a functor parameter's. *)
+  let constructors ((kn, _) as ind) =
+    match Table.base_mp (MutInd.modpath kn) with
+    | MPbound _ -> ()
+    | _ when not (Environ.mem_mind kn (Global.env ())) -> ()
+    | _ ->
+      let _, mip = Global.lookup_inductive ind in
+      Array.iteri
+        (fun j _ -> name Cons (GlobRef.ConstructRef (ind, j + 1)))
+        mip.Declarations.mind_consnames
+  in
+  let rec ty : Miniml.ml_type -> unit = function
+    | Miniml.Tglob (r, ts, vs) ->
+      name Type r;
+      (match r with GlobRef.IndRef ind -> constructors ind | _ -> ());
+      List.iter ty ts;
+      List.iter term vs
+    | Tarr (a, b) ->
+      ty a;
+      ty b
+    | Tapp (_, ts) -> List.iter ty ts
+    | Tmeta {contents = Some t; _} -> ty t
+    | Tvar _ | Tmeta _ | Thole _ | Tdummy _ | Miniml.Tunknown | Taxiom | Tstring -> ()
+  and pattern = function
+    | Pcons (r, ps) ->
+      name Cons r;
+      List.iter pattern ps
+    | Pusual r -> name Cons r
+    | Ptuple ps -> List.iter pattern ps
+    | Prel _ | Pwild -> ()
+  and term a =
+    Mlutil.ast_iter term a;
+    match a with
+    | MLglob ({callee; _} as use) ->
+      name Term callee;
+      Global_use.iter_types ty use
+    | MLcons (t, r, _) ->
+      name Cons r;
+      ty t
+    | MLcase (t, _, brs) ->
+      ty t;
+      (* A match on a record reads its fields by name. *)
+      List.iter (Option.iter (name Term)) (Table.record_fields_of_type t);
+      Array.iter (fun (_, _, p, _) -> pattern p) brs
+    | MLlam (_, t, _) | MLletin (_, t, _, _) -> ty t
+    | MLfix (_, fs, _, _) -> Array.iter (fun (_, t) -> ty t) fs
+    | MLmagic (Mcoerce (a, b), _) ->
+      ty a;
+      ty b
+    | MLrel _ | MLapp _ | MLtuple _ | MLexn _ | MLdummy _ | MLaxiom _ | MLmagic _ | MLuint _
+    | MLfloat _ | MLstring _ | MLparray _ ->
+      ()
+  in
+  let inductive kn ind =
+    ( match ind.ind_kind with
+    | Record fields | TypeClass fields -> List.iter (fun (f, _) -> Option.iter (name Term) f) fields
+    | Standard | Coinductive -> () );
+    Array.iteri
+      (fun i p ->
+        name Type (GlobRef.IndRef (kn, i));
+        ( match ind.ind_equiv with
+        | Equiv kne -> name Type (GlobRef.IndRef (MutInd.make1 kne, i))
+        | NoEquiv | RenEquiv _ -> () );
+        Array.iteri
+          (fun j args ->
+            name Cons (GlobRef.ConstructRef ((kn, i), j + 1));
+            List.iter ty args )
+          p.ip_types )
+      ind.ind_packets
+  in
+  let decl = function
+    | Dind (kn, ind) -> inductive kn ind
+    | Dtype (r, _, t) ->
+      name Type r;
+      ty t
+    | Dterm (r, a, t) ->
+      name Term r;
+      term a;
+      ty t
+    | Dfix fds ->
+      List.iter (fun fd -> name Term fd.fd_ref) fds;
+      List.iter (fun fd -> term fd.fd_body) fds;
+      List.iter (fun fd -> ty fd.fd_type) fds
+  in
+  let spec = function
+    | Sind (kn, ind) -> inductive kn ind
+    | Stype (r, _, t) ->
+      name Type r;
+      Option.iter ty t
+    | Sval (r, _, t) ->
+      name Term r;
+      ty t
+  in
+  Modutil.struct_iter decl spec (fun mp -> ignore (Common.emitted_module_name mp)) s;
+  (* Under separate extraction a promoted type variable another file declares
+     is brought into scope by a [using] naming its field. *)
+  if Common.get_force_cross_file_qualification () then
+    List.iter
+      (fun g ->
+        let file = Table.base_mp (Table.modpath_of_r g) in
+        if not (List.exists (fun (mp, _) -> ModPath.equal mp file) s) then name Type g )
+      (Table.promoted_type_var_fields ());
+  List.rev !named
+
 (* The inductive the module [mp], of elements [sel], is promoted to where it
    is rendered outside every struct: its eponymous inductive, neither a record
    nor a class, where it declares no other inductive and no submodule --

@@ -36,6 +36,9 @@ type representation = {
   names : (Names.GlobRef.t * string) list;
       (** The C++ name of each global the unit declares, in declaration
           order. *)
+  referenced_names : (Names.GlobRef.t * string) list;
+      (** The C++ name of each other global the unit refers to, in the order
+          a walk of the structure meets them. *)
   field_names : (Names.GlobRef.t * Names.Id.t list) list;
       (** The names of each generated constructor struct's fields. *)
   pointer_fields : (Names.GlobRef.t * string * (int * bool) list) list;

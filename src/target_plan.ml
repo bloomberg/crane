@@ -17,6 +17,7 @@ type kind_decision = {
 type representation = {
   module_names : (ModPath.t * string) list;
   names : (GlobRef.t * string) list;
+  referenced_names : (GlobRef.t * string) list;
   field_names : (GlobRef.t * Id.t list) list;
   pointer_fields : (GlobRef.t * string * (int * bool) list) list;
   unmerged_wrappers : string list;
@@ -273,7 +274,7 @@ let plan (_ : Program_facts.t) struc =
     inductive_kinds = aligned @ value_use_demotion aligned struc;
     template_kinds = [];
     modules = Module_plan.empty;
-    representation = {module_names = []; names = []; field_names = []; pointer_fields = []; unmerged_wrappers = [];
+    representation = {module_names = []; names = []; referenced_names = []; field_names = []; pointer_fields = []; unmerged_wrappers = [];
         promoted_inductives = [];
         accessors = [];
         nested_structs = [];
@@ -304,6 +305,8 @@ let kind_equal a b =
   | Record f, Record f' | TypeClass f, TypeClass f' -> fields_equal f f'
   | (Coinductive | Standard | Record _ | TypeClass _), _ -> false
 
+let same_name (r, s) (r', s') = GlobRef.UserOrd.equal r r' && String.equal s s'
+
 let equal a b =
   List.equal
     (fun d d' -> MutInd.UserOrd.equal d.block d'.block && d.reason = d'.reason && kind_equal d.kind d'.kind)
@@ -315,9 +318,8 @@ let equal a b =
   && List.equal
        (fun (mp, s) (mp', s') -> ModPath.equal mp mp' && String.equal s s')
        a.representation.module_names b.representation.module_names
-  && List.equal
-       (fun (r, s) (r', s') -> GlobRef.UserOrd.equal r r' && String.equal s s')
-       a.representation.names b.representation.names
+  && List.equal same_name a.representation.names b.representation.names
+  && List.equal same_name a.representation.referenced_names b.representation.referenced_names
   && List.equal
        (fun (r, ids) (r', ids') -> GlobRef.UserOrd.equal r r' && List.equal Id.equal ids ids')
        a.representation.field_names b.representation.field_names

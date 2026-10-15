@@ -47,6 +47,18 @@ val plan_callables : ?reversed:bool -> Miniml.ml_structure -> Callable_abi.t lis
     not among them. *)
 val plan_names : Miniml.ml_structure -> (Names.GlobRef.t * string) list
 
+(** The C++ name of each global the unit refers to, decided once
+    {!plan_names} has named what it declares, in the order a walk of the
+    structure meets them: every global a term, pattern, type or module
+    specification names, the fields of a record a match takes apart, the
+    constructors of an inductive a type names, and, under separate
+    extraction, the field behind a promoted type variable another file
+    declares.  Custom mappings included: a render asks for their names too,
+    for a variant-shaped custom's constructor structs or a custom class's
+    fields.  With these and {!plan_names} decided, rendering computes no
+    global's name but a helper's lifted out of a body as it is generated. *)
+val plan_referenced_names : Miniml.ml_structure -> (Names.GlobRef.t * string) list
+
 (** The C++ name of each module the unit declares, a functor's body's
     included, decided in declaration order ({!Common.emitted_module_name}). *)
 val plan_module_names : Miniml.ml_structure -> (Names.ModPath.t * string) list

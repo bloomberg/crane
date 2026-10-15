@@ -1123,6 +1123,8 @@ let is_promoted_type_var r = GlobRef.Map.mem r !promoted_type_vars
 (** Retrieve the name of a promoted type variable if it exists. *)
 let promoted_type_var_name r = GlobRef.Map.find_opt r !promoted_type_vars
 
+let promoted_type_var_fields () = List.map fst (GlobRef.Map.bindings !promoted_type_vars)
+
 (** The field a promoted type variable is named after, given the name.  A
     name shared by two classes' fields is one file-scope alias in C++ already,
     so the first is as good an answer as any. *)

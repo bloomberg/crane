@@ -68,13 +68,13 @@ let check_installed (facts : Program_facts.t) (plan : Target_plan.t) =
       plan.template_kinds;
     if not (Module_plan.installed plan.modules) then fail "module plan";
     List.iter
-      (fun (mp, s) -> if not (String.equal (Common.emitted_module_name mp) s) then fail "module names")
+      (fun (mp, s) ->
+        if not (Option.equal String.equal (Common.decided_module_name mp) (Some s)) then fail "module names" )
       plan.representation.module_names;
-    (* Each was decided when it was planned, so the kind asked at is not
-       consulted again. *)
     List.iter
-      (fun (r, s) -> if not (String.equal (Common.pp_global_name Common.Term r) s) then fail "global names")
-      plan.representation.names;
+      (fun (r, s) ->
+        if not (Option.equal String.equal (Common.decided_global_name r) (Some s)) then fail "global names" )
+      (plan.representation.names @ plan.representation.referenced_names);
     List.iter
       (fun (c, ids) ->
         let ctor = Ml_type_util.ctor_struct_name_of_ref c in

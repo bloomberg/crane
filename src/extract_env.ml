@@ -997,6 +997,7 @@ let module_filename mp =
 (** The steps of {!plan_layout}, in order. *)
 let prepare_layout = "prepare"
 let plan_names = "plan_names"
+let plan_referenced_names = "plan_referenced_names"
 let plan_field_names = "plan_field_names"
 let plan_pointer_fields = "plan_pointer_fields"
 let plan_unmerged_wrappers = "plan_unmerged_wrappers"
@@ -1010,6 +1011,7 @@ let install_callables = "install_callables"
 let layout_pass_names =
   [ prepare_layout;
     plan_names;
+    plan_referenced_names;
     plan_field_names;
     plan_pointer_fields;
     plan_unmerged_wrappers;
@@ -1023,7 +1025,8 @@ let layout_pass_names =
 (** Settle the unit's layout -- where each declaration lives and what it is
     called ({!Module_plan}) -- then the names of the modules and the globals
     it declares, in declaration order ({!Cpp.plan_module_names},
-    {!Cpp.plan_names}), and of its constructors' fields
+    {!Cpp.plan_names}), and those it refers to
+    ({!Cpp.plan_referenced_names}), and of its constructors' fields
     ({!Cpp.plan_field_names}), which of those fields are stored behind the
     pointer ({!Cpp.plan_pointer_fields}), which wrapper structs hold
     declarations ({!Cpp.plan_unmerged_wrappers}), and which constants are
@@ -1043,6 +1046,8 @@ let plan_layout struc =
   Pipeline_trace.event "layout" plan_names;
   let module_names = Cpp.plan_module_names struc in
   let names = Cpp.plan_names struc in
+  Pipeline_trace.event "layout" plan_referenced_names;
+  let referenced_names = Cpp.plan_referenced_names struc in
   Pipeline_trace.event "layout" plan_field_names;
   let field_names = Cpp.plan_field_names struc in
   Pipeline_trace.event "layout" plan_pointer_fields;
@@ -1075,6 +1080,7 @@ let plan_layout struc =
   ( modules,
     { Target_plan.module_names;
       names;
+      referenced_names;
       field_names;
       pointer_fields;
       unmerged_wrappers;
