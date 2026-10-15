@@ -1872,9 +1872,11 @@ let recover_fix_codomain ~app_result ((id, ty) : Id.t * ml_type)
   match cod with
   | Miniml.Tmeta ({contents = None} as cell) -> (
     (* A hole, not a variable: the cell is shared with every annotation the
-       body writes it into, so filling it {e is} the substitution. *)
+       body writes it into, so filling it {e is} the substitution.  The frozen
+       program has none left here, and filling one gives no reason for a late
+       solution: it fails extraction under [CRANE_CHECK_IR]. *)
     match tail_result_type ~app_result body with
-    | Some t -> Miniml.Meta.solve ~late:Fixpoint_codomain cell t; ((id, ty), body)
+    | Some t -> Miniml.Meta.solve cell t; ((id, ty), body)
     | None -> ((id, ty), body) )
   | Miniml.Tvar (_, i)
     when (not (List.exists (fun t -> collect_tvars [] t |> List.mem i) dom))

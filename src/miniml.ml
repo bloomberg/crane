@@ -378,17 +378,13 @@ end
 
 module Meta = struct
   type late_solution =
-    | Fixpoint_codomain
     | Fixpoint_variable
     | Let_lambda_variable
-    | Bind_continuation
     | Erased_slot
 
   let late_solution_name = function
-    | Fixpoint_codomain -> "fixpoint codomain"
     | Fixpoint_variable -> "fixpoint variable"
     | Let_lambda_variable -> "let-lambda variable"
-    | Bind_continuation -> "bind continuation"
     | Erased_slot -> "erased slot"
 
   let fresh id = {id; contents = None}
@@ -415,5 +411,5 @@ module Meta = struct
   let late_solutions () =
     List.filter_map
       (fun r -> Option.map (fun n -> (r, n)) (Hashtbl.find_opt counts r))
-      [Fixpoint_codomain; Fixpoint_variable; Let_lambda_variable; Bind_continuation; Erased_slot]
+      [Fixpoint_variable; Let_lambda_variable; Erased_slot]
 end

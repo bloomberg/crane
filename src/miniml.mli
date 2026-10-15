@@ -485,15 +485,10 @@ end
 module Meta : sig
   (** Why a metavariable is solved after the program was frozen. *)
   type late_solution =
-    | Fixpoint_codomain
-        (** A local fixpoint's result type, read off what its body builds. *)
     | Fixpoint_variable
         (** A variable minted for what a local fixpoint's types leave open. *)
     | Let_lambda_variable
         (** The same for a let-bound lambda. *)
-    | Bind_continuation
-        (** A sequential bind's continuation binder, at the bound value's
-            type. *)
     | Erased_slot
         (** An open slot, at the type its context expects. *)
 

@@ -10213,17 +10213,18 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       let a_ml, f = Common.last_two (a1 :: a2 :: l) in
       let a = gen_expr env a_ml in
       let ids', f = collect_lams f in
-    (* Resolve metas in continuation parameter types using bind's type
-       arguments. bind has type forall A B, IO A -> (A -> IO B) -> IO B. The
-       first type argument is A, which is the type of the continuation
-       parameter. Use mgu to unify them, which mutably resolves metas. Skip
-       Tdummy entries in bind_tys -- an argument extraction could not read
+    (* The continuation's parameter is at bind's first type argument: bind
+       has type forall A B, IO A -> (A -> IO B) -> IO B.  Extraction unified
+       the two before the program was frozen; they are unified again with no
+       reason given for a late solution, so a metavariable still left in the
+       parameter fails extraction under [CRANE_CHECK_IR].  A [Tdummy] among
+       the type arguments -- one extraction could not read
        ({!Extraction.observe_type_arg}: a type constructor such as an HKT
-       carrier).  Unifying a meta with Tdummy would not resolve it usefully. *)
+       carrier) -- says nothing about the parameter. *)
     let non_dummy_bind_tys = filter_value_types (Mlutil.Var_types.types bind_tys) in
     let () =
       match non_dummy_bind_tys with
-      | elem_ty :: _ -> List.iter (fun (_, ty) -> try_mgu ~late:Bind_continuation ty elem_ty) ids'
+      | elem_ty :: _ -> List.iter (fun (_, ty) -> try_mgu ty elem_ty) ids'
       | [] -> ()
     in
     let ids, env =
