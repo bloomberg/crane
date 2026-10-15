@@ -589,9 +589,11 @@ val refine_erased :
   Miniml.ml_type ->
   Miniml.ml_type
 
-(** [fill_holes fills e] is [e] with each hole of [fills] standing as the
-    type it is paired with, in every annotation; [e] itself where it mentions
-    none of them. *)
+(** [fill_holes_type fills t] is [t] with each hole of [fills] standing as
+    the type it is paired with; [t] itself where it mentions none of them. *)
+val fill_holes_type : (Miniml.ml_meta * Miniml.ml_type) list -> Miniml.ml_type -> Miniml.ml_type
+
+(** {!fill_holes_type} in every annotation of a term. *)
 val fill_holes : (Miniml.ml_meta * Miniml.ml_type) list -> Miniml.ml_ast -> Miniml.ml_ast
 
 (** [refine_param_from_slot ~tvars ~slot bare] spells a parameter from the

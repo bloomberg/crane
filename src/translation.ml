@@ -1803,9 +1803,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       | Miniml.Tglob (g, ts, l) -> Miniml.Tglob (g, List.map erase_unscoped ts, l)
       | t -> t
     in
-    (* A hole a binder's type is filled at is the hole the body's
-       annotations mention -- the match destructuring the binder among them
-       -- so the body is generated with it filled too. *)
+    (* A hole a binder's type is filled at is the hole the other binders'
+       and the body's annotations mention -- the match destructuring the
+       binder among them -- so they are generated with it filled too. *)
     let fills = ref [] in
     let args =
       match (boxed slot, slot.expected_ml_ty) with
@@ -1831,6 +1831,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           args
       | _ -> args
     in
+    let args = List.map (fun (x, t) -> (x, Ml_type_util.fill_holes_type !fills t)) args in
     let a = Ml_type_util.fill_holes !fills a in
     let lam_params = List.map (fun (x, y) -> (id_of_mlid x, y)) args in
     let args, env = push_vars' lam_params env in

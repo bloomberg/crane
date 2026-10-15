@@ -1304,25 +1304,24 @@ let refine_erased ?(fills = ref []) ~writable have want =
   in
   refine have want
 
+(* Rebuilt only where a hole is filled, so a cell that stays keeps its
+   identity. *)
+let rec fill_holes_type fills t =
+  match t with
+  | Miniml.Tmeta ({contents = None} as m) -> Option.default t (List.assq_opt m fills)
+  | Miniml.Tmeta {contents = Some u} ->
+    let u' = fill_holes_type fills u in
+    if u' == u then t else u'
+  | Miniml.Tarr (a, b) ->
+    let a' = fill_holes_type fills a and b' = fill_holes_type fills b in
+    if a' == a && b' == b then t else Miniml.Tarr (a', b')
+  | Miniml.Tglob (g, ts, args) ->
+    let ts' = List.map (fill_holes_type fills) ts in
+    if List.for_all2 ( == ) ts ts' then t else Miniml.Tglob (g, ts', args)
+  | _ -> t
+
 let fill_holes fills e =
-  (* Rebuilt only where a hole is filled, so a cell that stays keeps its
-     identity. *)
-  let rec ty t =
-    match t with
-    | Miniml.Tmeta ({contents = None} as m) -> (
-      match List.find_opt (fun (m', _) -> m' == m) fills with Some (_, w) -> w | None -> t )
-    | Miniml.Tmeta {contents = Some u} ->
-      let u' = ty u in
-      if u' == u then t else u'
-    | Miniml.Tarr (a, b) ->
-      let a' = ty a and b' = ty b in
-      if a' == a && b' == b then t else Miniml.Tarr (a', b')
-    | Miniml.Tglob (g, ts, args) ->
-      let ts' = List.map ty ts in
-      if List.for_all2 ( == ) ts ts' then t else Miniml.Tglob (g, ts', args)
-    | _ -> t
-  in
-  match fills with [] -> e | _ -> Mlutil.ast_map_types ty e
+  match fills with [] -> e | _ -> Mlutil.ast_map_types (fill_holes_type fills) e
 
 let refine_param_from_slot ~tvars ~slot bare =
   let spelled_by_bare = Minicpp.tvar_names bare in
