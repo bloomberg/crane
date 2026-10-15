@@ -473,11 +473,10 @@ type render_ctx = {
   rc_in_struct : bool;
   (* TypeClass concepts already emitted for the current module? *)
   rc_concepts_hoisted : bool;
-  (* Current struct name for qualifying out-of-struct definitions *)
-  rc_struct_name : Pp.t option;
-  (* Current struct's ModPath for ModPath-based qualification checks. Needed
-     when the C++ struct name differs from the Rocq module path. *)
-  rc_struct_mp : ModPath.t option;
+  (* The scope of the out-of-line definition being printed, if one is: the
+     struct it is a member of, which a name written outside that struct's
+     body is qualified by.  Set by the definition, from its plan. *)
+  rc_scope : Scope_plan.scope option;
   (* Inside a template struct (functor)? Affects typename keyword insertion. *)
   rc_in_template : bool;
 }
@@ -487,8 +486,7 @@ let initial_render_ctx =
   {
     rc_in_struct = false;
     rc_concepts_hoisted = false;
-    rc_struct_name = None;
-    rc_struct_mp = None;
+    rc_scope = None;
     rc_in_template = false;
   }
 

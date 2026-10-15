@@ -130,8 +130,7 @@ val sig_preamble : 'a -> string option -> Names.ModPath.t list -> 'b -> Pp.t
 type render_ctx = {
   rc_in_struct : bool;
   rc_concepts_hoisted : bool;
-  rc_struct_name : Pp.t option;
-  rc_struct_mp : Names.ModPath.t option;
+  rc_scope : Scope_plan.scope option;
   rc_in_template : bool;
 }
 

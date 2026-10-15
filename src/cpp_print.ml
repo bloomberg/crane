@@ -921,10 +921,10 @@ let rec pp_cpp_type ?(lead = true) par vl t =
          An erased field also gets a file-scope [using] of the same name, and a
          hoisted body whose owner is some other struct must resolve to that
          one, not to a member that does not exist. *)
-      ( match (!render_ctx).rc_struct_name with
-      | Some struct_name
+      ( match (!render_ctx).rc_scope with
+      | Some sc
         when (not (!render_ctx).rc_in_struct) && not (is_file_scope_type id) ->
-        struct_name ++ str "::" ++ Id.print id
+        str (Scope_plan.qualifier sc) ++ str "::" ++ Id.print id
       | _ ->
         note_bare_promoted id;
         Id.print id )
@@ -934,16 +934,16 @@ let rec pp_cpp_type ?(lead = true) par vl t =
        parameterized like generic types: Leaf<int>. When generating
        out-of-struct definitions, prepend struct name. *)
     | Tid (id, []) ->
-      ( match (!render_ctx).rc_struct_name with
-      | Some struct_name
+      ( match (!render_ctx).rc_scope with
+      | Some sc
         when (not (!render_ctx).rc_in_struct) && not (is_file_scope_type id) ->
-        struct_name ++ str "::" ++ Id.print id
+        str (Scope_plan.qualifier sc) ++ str "::" ++ Id.print id
       | _ -> Id.print id )
     | Tid (id, args) ->
-      ( match (!render_ctx).rc_struct_name with
-      | Some struct_name
+      ( match (!render_ctx).rc_scope with
+      | Some sc
         when (not (!render_ctx).rc_in_struct) && not (is_file_scope_type id) ->
-        struct_name
+        str (Scope_plan.qualifier sc)
         ++ str "::"
         ++ Id.print id
         ++ str "<"
@@ -4130,6 +4130,15 @@ and pp_leaf_decl env (d : cpp_decl) =
        qualifies for [constexpr] (which needs the definition in the header),
        and ends at the semicolon. *)
     let is_def = match shape with Ddef _ -> true | Ddecl _ -> false in
+    (* A definition outside every struct body is a member of the struct its
+       declaration's scope names, as planned; so is every name written in it
+       that the struct declares. *)
+    let scope =
+      if is_def && not (!render_ctx).rc_in_struct then
+        Scope_plan.of_declaration (fst df_path.dp_outer)
+      else None
+    in
+    with_render_ctx (fun c -> {c with rc_scope = scope}) @@ fun () ->
     let pp_fun_name n =
       match n with
       | GlobRef.VarRef v when is_def -> str (Id.to_string v)
@@ -4147,37 +4156,9 @@ and pp_leaf_decl env (d : cpp_decl) =
     let is_lifted =
       match fst df_path.dp_outer with GlobRef.VarRef _ -> true | _ -> false
     in
-    (* A definition outside every struct body is a member of the struct its
-       declaration's scope names, as planned. *)
-    if is_def && (not (!render_ctx).rc_in_struct) && Probe.checking () then begin
-      let planned = Scope_plan.of_declaration (fst df_path.dp_outer) in
-      let walked =
-        match ((!render_ctx).rc_struct_name, (!render_ctx).rc_struct_mp) with
-        | Some name, Some module_ -> Some {Scope_plan.module_; qualifier = [Pp.string_of_ppcmds name]}
-        | _ -> None
-      in
-      let describe = function
-        | Some sc -> Scope_plan.qualifier sc ^ " (" ^ ModPath.to_string sc.Scope_plan.module_ ^ ")"
-        | None -> "namespace scope"
-      in
-      let agree =
-        match (planned, walked) with
-        | Some p, Some w ->
-          ModPath.equal p.module_ w.module_ && String.equal (Scope_plan.qualifier p) (Scope_plan.qualifier w)
-        | None, None -> true
-        | _ -> false
-      in
-      if not agree then
-        Probe.violation "scopes"
-          Pp.(
-            str "the definition of " ++ GlobRef.print (fst df_path.dp_outer) ++ str " is written in "
-            ++ str (describe walked) ++ str " where its scope is planned as " ++ str (describe planned) )
-    end;
     let name =
-      match (!render_ctx).rc_struct_name with
-      | Some struct_name
-        when is_def && (not (!render_ctx).rc_in_struct) && not is_lifted ->
-        struct_name ++ str "::" ++ base_name
+      match scope with
+      | Some sc when not is_lifted -> str (Scope_plan.qualifier sc) ++ str "::" ++ base_name
       | _ -> base_name
     in
     (* Anything the name says beyond a bare identifier -- a [::] qualifier or
@@ -4187,11 +4168,7 @@ and pp_leaf_decl env (d : cpp_decl) =
       df_path.dp_inner <> [] || snd df_path.dp_outer <> []
     in
     let is_struct_member = is_qualified || (!render_ctx).rc_in_struct in
-    let is_out_of_struct_def =
-      match (!render_ctx).rc_struct_name with
-      | Some _ -> not (!render_ctx).rc_in_struct
-      | None -> false
-    in
+    let is_out_of_struct_def = Option.has_some scope in
     let static_kw =
       if is_struct_member && ((not is_def) || not is_out_of_struct_def) then
         str "static "

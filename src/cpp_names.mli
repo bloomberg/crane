@@ -141,9 +141,6 @@ val rocq_to_cpp_path : string -> string
 
 (** {2 Struct and namespace qualification} *)
 
-(** Whether a global is nested inside the given struct. *)
-val is_nested_in_struct : Names.GlobRef.t -> string -> bool
-
 (** Find the qualifier reaching a common ancestor from a given path. *)
 val find_ancestor_qualifier_from : string -> string -> Pp.t
 

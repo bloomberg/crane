@@ -394,21 +394,6 @@ let cpp_to_rocq_path s =
 let rocq_to_cpp_path s =
   Str.global_replace (Str.regexp_string ".") "::" s
 
-(** Return [true] when [r]'s Rocq fully-qualified path shows that it lives
-    inside the module that maps to the C++ struct [struct_name_str].
-
-    The check converts C++ [::] separators in [struct_name_str] to Rocq [.]
-    separators, then tests whether the result is a substring of the global
-    reference path.  This tells us the type is nested inside the current
-    struct and therefore needs a struct qualifier in the [.cpp] file.
-    @param r               the global reference whose location is being tested
-    @param struct_name_str the C++ struct name (using [::] separators) of the
-                           enclosing struct context
-    @return [true] iff [r]'s Rocq path is nested under [struct_name_str] *)
-let is_nested_in_struct r struct_name_str =
-  let full_path = globref_full_path r in
-  Common.contains_substring full_path (cpp_to_rocq_path struct_name_str)
-
 (** Find the right ancestor qualifier for a type that lives inside a parent
     of the current nested struct.
 
@@ -452,23 +437,15 @@ let find_ancestor_qualifier_from full_path struct_name_dotted =
     @return a [Pp.t] prefix of the form [StructName::] when qualification is
             required, or [mt ()] otherwise *)
 let struct_qualifier_for r name_str =
-  match (!render_ctx).rc_struct_name with
-  | Some struct_name when not (!render_ctx).rc_in_struct ->
-    let struct_name_str = Pp.string_of_ppcmds struct_name in
-    (* Whether [r] is declared inside this struct's module.  The kernel path
-       answers where it is known; the textual test is the fallback, and alone
-       it fires on a sibling module whose path merely contains the struct's
-       name -- a file named after its module. *)
-    let member_of_struct () =
-      match
-        Option.map
-          (fun struct_mp -> mp_relation_to ~struct_mp r)
-          (!render_ctx).rc_struct_mp
-      with
-      | Some Member -> true
-      | Some _ -> false
-      | None -> is_nested_in_struct r struct_name_str
-    in
+  match (!render_ctx).rc_scope with
+  | Some scope when not (!render_ctx).rc_in_struct ->
+    let struct_name_str = Scope_plan.qualifier scope in
+    let struct_name = str struct_name_str in
+    (* How [r]'s module stands to the struct's, by kernel path: the textual
+       tests below fire on a sibling module whose path merely contains the
+       struct's name -- a file named after its module. *)
+    let relation = mp_relation_to ~struct_mp:scope.Scope_plan.module_ r in
+    let member_of_struct () = relation = Member in
     (* Already contains the struct prefix — nothing to add. *)
     if Common.contains_substring name_str (struct_name_str ^ "::") then
       mt ()
@@ -509,13 +486,9 @@ let struct_qualifier_for r name_str =
        takes no qualifier at all; only a type from an ancestor module is left
        to the heuristics, which pick the right ancestor prefix for it. *)
     else (
-      match
-        Option.map
-          (fun struct_mp -> mp_relation_to ~struct_mp r)
-          (!render_ctx).rc_struct_mp
-      with
-      | Some Member -> struct_name ++ str "::"
-      | Some Unrelated -> mt ()
+      match relation with
+      | Member -> struct_name ++ str "::"
+      | Unrelated -> mt ()
       (* A name declared in a module that encloses this struct is qualified by
          that module, never by the struct -- and only when the module is
          emitted as a struct of its own.  The extraction root is not: its
@@ -524,9 +497,9 @@ let struct_qualifier_for r name_str =
          module and the struct are commonly named alike (a file
          [MonadInstanceMissing.v] holding a [Module MonadInstanceMissing]), and
          it reads that shared prefix as containment. *)
-      | Some Ancestor when not (Common.is_struct_module (modpath_of_r r)) ->
+      | Ancestor when not (Common.is_struct_module (modpath_of_r r)) ->
         mt ()
-      | Some Ancestor | None ->
+      | Ancestor ->
       (* Default: qualify when the type's Rocq path nests under the struct,
          or when the type already carries a qualified C++ name whose Rocq path
          nests under the struct's parent module. *)
@@ -625,24 +598,16 @@ let wrapper_qualified_type_name r name_str =
     generating out-of-struct definitions, we add :: to call external functions
     rather than recursing into the struct's own member. *)
 let needs_global_qualifier x =
-  match (!render_ctx).rc_struct_name with
-  | Some struct_name ->
+  match (!render_ctx).rc_scope with
+  | Some scope ->
     let name_str = str_global Term x in
     if is_qualified_name name_str then
       false
     else
       let full_path = globref_full_path x in
-      let struct_name_str = Pp.string_of_ppcmds struct_name in
-      let struct_name_dotted = cpp_to_rocq_path struct_name_str in
-      if Common.contains_substring full_path struct_name_dotted then
-        false
-      else (
-        match
-          (!render_ctx).rc_struct_mp
-        with
-        | Some struct_mp ->
-          not (mp_encloses (modpath_of_r x) struct_mp)
-        | None -> true )
+      let struct_name_dotted = cpp_to_rocq_path (Scope_plan.qualifier scope) in
+      (not (Common.contains_substring full_path struct_name_dotted))
+      && not (mp_encloses (modpath_of_r x) scope.Scope_plan.module_)
   | None -> false
 
 (* ============================================================================

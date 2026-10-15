@@ -1491,8 +1491,7 @@ let rec pp_structure_elem ~is_header f = function
            the header spells it out, qualified by it in the implementation. *)
         let enter_module c =
           let c =
-            if has_concept_collision then c
-            else if is_header then
+            if is_header && not has_concept_collision then
               (* For promoted modules with template params, set rc_in_template
                  so non-inductive defs inside get full inline definitions. *)
               let promoted_template =
@@ -1502,13 +1501,7 @@ let rec pp_structure_elem ~is_header f = function
               { c with
                 rc_in_struct = true;
                 rc_in_template = c.rc_in_template || promoted_template }
-            else
-              { c with
-                rc_struct_name =
-                  ( match c.rc_struct_name with
-                  | Some parent -> Some (parent ++ str "::" ++ name)
-                  | None -> Some name );
-                rc_struct_mp = Some mp }
+            else c
           in
           if is_header && typeclass_concepts <> [] then
             { c with rc_concepts_hoisted = true }
@@ -2014,12 +2007,8 @@ let file_views ~is_header (gens : Gen_decls.generated_fun list list) =
     only picks which of its views this file writes ({!file_views}).
 
     @param is_header   When [true] produce declaration specs; when [false]
-                       produce out-of-line definitions.
-    @param wrapper_mp  The module path of the wrapper module being rendered;
-                       used to set [rc_struct_mp] so that out-of-line
-                       definitions are correctly qualified.
-    @param wrapper_name  The C++ struct name of the wrapper (e.g. ["Facts"]);
-                         used to set [rc_struct_name] in the definition pass.
+                       produce out-of-line definitions, each qualified by the
+                       scope its plan gives it ({!Scope_plan}).
     @param func_sels   The [(label, structure_elem)] pairs from the wrapper
                        that contain function declarations ([Dterm], [Dfix]).
     @return A quadruple [(specs_pp, defs_pp, lifted_pp, lifted_specs_pp)] where
@@ -2029,7 +2018,7 @@ let file_views ~is_header (gens : Gen_decls.generated_fun list list) =
             translation, and [lifted_specs_pp] the forward declarations of the
             functions among those, which are due before the struct rather than
             after it. *)
-let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
+let pp_wrapper_module_dual ~is_header func_sels =
   let is_method_candidate x =
     List.exists
       (fun (r', _, _, _) -> globref_equal x r')
@@ -2093,14 +2082,7 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
       (fun c -> { c with rc_in_struct = true })
       (fun () -> prlist_sep_nonempty cut2 render_sel_specs all_results)
   in
-  let defs_pp =
-    with_render_ctx
-      (fun c ->
-        { c with
-          rc_struct_name = Some (str wrapper_name);
-          rc_struct_mp = Some wrapper_mp } )
-      (fun () -> prlist_sep_nonempty cut2 render_sel_defs all_results)
-  in
+  let defs_pp = prlist_sep_nonempty cut2 render_sel_defs all_results in
   (* A lifted helper is emitted after the struct it was lifted out of, and its
      callers are inside that struct, so by the time the definition appears the
      name has already been used.  A wrapper struct's own members do not have
@@ -3243,7 +3225,7 @@ let do_struct_with_decl_tracking ~is_header f s =
           let old_decls = !current_structure_decls in
           current_structure_decls := sel;
           let p_specs, p_defs, p_lifted, p_lifted_specs =
-            pp_wrapper_module_dual ~is_header ~wrapper_mp:mp name func_sels
+            pp_wrapper_module_dual ~is_header func_sels
           in
           current_structure_decls := old_decls;
           if not (Pp.ismt p_specs) then Hashtbl.replace pending_wrapper_decls name p_specs;
@@ -3482,44 +3464,33 @@ let do_struct_with_decl_tracking ~is_header f s =
             in
             struct_pp
           else
-            let non_colliding_pp, colliding_pp =
-              with_render_ctx
-                (fun c ->
-                  { c with
-                    rc_struct_name = Some (str parent_name);
-                    rc_struct_mp = Some mp } )
-                (fun () ->
-                  let non_colliding =
-                    List.filter
-                      (fun (l, se) ->
-                        match se with
-                        | SEmodule se_inner ->
-                          not (is_colliding_child l (SEmodule se_inner))
-                        | _ -> true )
-                      sel
-                  in
-                  let non_colliding_pp =
-                    prlist_sep_nonempty cut2 f non_colliding
-                  in
-                  let colliding_pp =
-                    prlist_sep_nonempty
-                      cut2
-                      (fun (_l, se) ->
-                        match se with
-                        | SEmodule m ->
-                          ( match m.ml_mod_expr with
-                          | MEstruct (inner_mp, inner_sel) ->
-                            push_visible inner_mp [];
-                            let body = prlist_sep_nonempty cut2 f inner_sel in
-                            pop_visible ();
-                            body
-                          | _ -> mt () )
-                        | _ -> mt () )
-                      (List.filter
-                         (fun (l, se) -> is_colliding_child l se)
-                         sel )
-                  in
-                  (non_colliding_pp, colliding_pp) )
+            let non_colliding =
+              List.filter
+                (fun (l, se) ->
+                  match se with
+                  | SEmodule se_inner ->
+                    not (is_colliding_child l (SEmodule se_inner))
+                  | _ -> true )
+                sel
+            in
+            let non_colliding_pp = prlist_sep_nonempty cut2 f non_colliding in
+            let colliding_pp =
+              prlist_sep_nonempty
+                cut2
+                (fun (_l, se) ->
+                  match se with
+                  | SEmodule m ->
+                    ( match m.ml_mod_expr with
+                    | MEstruct (inner_mp, inner_sel) ->
+                      push_visible inner_mp [];
+                      let body = prlist_sep_nonempty cut2 f inner_sel in
+                      pop_visible ();
+                      body
+                    | _ -> mt () )
+                  | _ -> mt () )
+                (List.filter
+                   (fun (l, se) -> is_colliding_child l se)
+                   sel )
             in
             let body =
               if Pp.ismt non_colliding_pp then
