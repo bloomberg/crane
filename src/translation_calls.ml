@@ -426,14 +426,21 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
       && (not (ml_type_contains_erased ty))
       && Mlutil.eq_ml_type (Mlutil.apply_ml_type ty [Miniml.Tunknown]) ty
   in
-  let regular_of tys =
-    (* A type argument standing for a higher-kinded class parameter is not a
-       template parameter of the callee (it is the instance's associated
-       type), so it must not be passed — and it is always erased, which
-       would otherwise make [filter_erased_type_args] drop the real type
-       arguments alongside it. *)
+  (* The variables a call writes: those the callee's plan declares a
+     parameter for.  A higher-kinded class parameter is none of them (it is
+     the instance's associated type), nor is a result family the head leaves
+     to deduction ([case_sum1]'s). *)
+  let in_head =
+    List.filter_map
+      (fun p ->
+        match p.Callable_abi.origin with
+        | Callable_abi.From_scheme v -> Some (Scheme.Var.ordinal v)
+        | _ -> None )
+      (Callable_abi.template_head (callee_abi ~instances:0 id))
+  in
+  let regular_of ?(keep = fun i -> List.mem i in_head) tys =
     Mlutil.Var_types.bindings tys
-    |> List.filter (fun (i, _) -> keeps_type_arg_position id i)
+    |> List.filter (fun (i, _) -> keep i)
     |> List.map
          (fun (i, ty) ->
            (* A constant type function written at a higher-kinded variable is
@@ -542,11 +549,13 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
       | _ -> false
     in
     (* A higher-kinded argument is a type constructor, and [std::any] is not
-       a spelling of one: a list with an erased one in it cannot be written
-       out at all, so those calls keep deducing.  Higher-kinded as the
-       declaration has it ({!Ml_type_util.higher_kinded_ml_tvars}), not
-       merely applied: an event family is applied everywhere it occurs and
-       is still declared a plain [typename]. *)
+       a spelling of one: a call reading one erased cannot be written out at
+       all, so it keeps deducing -- whether or not its head declares a
+       parameter there, as it does not for a result family it leaves to
+       deduction.  Higher-kinded as the declaration has it
+       ({!Ml_type_util.higher_kinded_ml_tvars}), not merely applied: an event
+       family is applied everywhere it occurs and is still declared a plain
+       [typename]. *)
     let no_erased_hkt_arg () =
       match find_type_opt id with
       | None -> true
@@ -555,7 +564,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
         not
           (List.exists
              (fun (i, t) -> IntSet.mem i hk && prints_as_any t)
-             regular_type_args )
+             (regular_of ~keep:(keeps_type_arg_position id) tys) )
     in
     (* Writing the list out is what this call is left with once the
        recoveries have declined, so an erased family is worth resolving from
