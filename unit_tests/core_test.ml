@@ -33,6 +33,18 @@ let () =
   check "a local group selecting a missing member is refused"
     (refused [term "h" (MLfix (2, [|(Id.of_string "go", nat)|], [|lam|], false)) nat]);
   check "a declaration made twice is refused" (refused (fine @ fine));
+  let use_at scheme ty =
+    MLglob
+      (Global_use.polymorphic (r "g")
+         (Scheme.Instantiation.make scheme (fun _ ->
+              {Scheme.solution = Scheme.Type ty; source = Scheme.Not_written} ) ) )
+  in
+  check "a use at its callee's scheme freezes"
+    (not (refused [term "u" (use_at (Scheme.Id.fresh (r "g") ~arity:1) nat) nat]));
+  check "a use instantiated at another declaration's scheme is refused"
+    (refused [term "v" (use_at (Scheme.Id.fresh (r "h") ~arity:1) nat) nat]);
+  check "a use holding a metavariable in its instantiation is refused"
+    (refused [term "w" (use_at (Scheme.Id.fresh (r "g") ~arity:1) (Tmeta (Meta.fresh 3))) nat]);
   let shared = Tmeta (Meta.fresh 1) in
   let solved = Tmeta (Meta.solved 2 nat) in
   let open_term = term "k" (MLlam (Dummy, shared, MLrel 1)) (Tarr (shared, solved)) in

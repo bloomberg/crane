@@ -32,7 +32,9 @@ val extracted : Miniml.ml_structure -> extracted program
 val optimize : (Miniml.ml_structure -> Miniml.ml_structure) -> extracted program -> optimized program
 
 (** [freeze p] is [p], checked: every recursive group is nonempty and its
-    selected member exists, and no reference is declared twice.  From here
+    selected member exists, no reference is declared twice, and every
+    polymorphic use is instantiated at its callee's own scheme with no
+    metavariable in its instantiation.  From here
     until the extraction ends no metavariable is solved.  Under
     [CRANE_TRACE_PIPELINE] it reports the unsolved metavariables still
     reachable. *)

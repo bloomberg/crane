@@ -88,11 +88,51 @@ let check_declared_once p =
     (fun _ -> ())
     p.structure
 
+(** Every polymorphic use is instantiated at its callee's own scheme, and
+    no instantiation holds a metavariable: extraction froze each into an
+    immutable hole. *)
+let check_instantiations p =
+  let rec open_meta = function
+    | Tmeta {contents = None} -> true
+    | Tmeta {contents = Some t} -> open_meta t
+    | Tarr (a, b) -> open_meta a || open_meta b
+    | Tglob (_, ts, _) | Tapp (_, ts) -> List.exists open_meta ts
+    | Tvar _ | Thole _ | Tdummy _ | Tunknown | Taxiom | Tstring -> false
+  in
+  let check_use use =
+    let r = Global_use.callee use in
+    let name () = Pp.string_of_ppcmds (Printer.pr_global r) in
+    Option.iter
+      (fun inst ->
+        let scheme = Scheme.Instantiation.scheme inst in
+        if not (Names.GlobRef.UserOrd.equal (Scheme.Id.owner scheme) r) then
+          fail ("instantiates a use of " ^ name () ^ " at another declaration's scheme");
+        match Mlutil.reference_scheme r with
+        | Some own when Scheme.Id.arity own <> Scheme.Id.arity scheme ->
+          fail ("instantiates a use of " ^ name () ^ " at a scheme of another arity")
+        | _ -> () )
+      (Global_use.instantiation use);
+    if Global_use.exists_type open_meta use then
+      fail ("holds a metavariable in the instantiation of a use of " ^ name ())
+  in
+  let rec check_body = function
+    | MLglob use as e -> check_use use; Mlutil.ast_iter check_body e
+    | e -> Mlutil.ast_iter check_body e
+  in
+  Modutil.struct_iter
+    (function
+      | (Dterm _ | Dfix _) as d -> List.iter (fun fd -> check_body fd.fd_body) (Mlutil.term_defs d)
+      | Dind _ | Dtype _ -> () )
+    (fun _ -> ())
+    (fun _ -> ())
+    p.structure
+
 let freeze p =
   Meta.freeze ();
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
     check_recursive_groups p;
-    check_declared_once p
+    check_declared_once p;
+    check_instantiations p
   end;
   if Pipeline_trace.enabled () then
     Pipeline_trace.event "freeze" (Printf.sprintf "unsolved metavariables: %d" (unsolved_metas p));
