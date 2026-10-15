@@ -1803,6 +1803,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       | Miniml.Tglob (g, ts, l) -> Miniml.Tglob (g, List.map erase_unscoped ts, l)
       | t -> t
     in
+    (* A hole a binder's type is filled at is the hole the body's
+       annotations mention -- the match destructuring the binder among them
+       -- so the body is generated with it filled too. *)
+    let fills = ref [] in
     let args =
       match (boxed slot, slot.expected_ml_ty) with
       | false, Some fn_ty ->
@@ -1821,11 +1825,13 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               let d = if has_open_meta ty then erase_unscoped d else d in
               ( x,
                 Ml_type_util.refine_erased
+                  ~fills
                   ~writable:(fun t -> names_only_scoped_tvars (cpp_of_ml env t))
                   ty d ) )
           args
       | _ -> args
     in
+    let a = Ml_type_util.fill_holes !fills a in
     let lam_params = List.map (fun (x, y) -> (id_of_mlid x, y)) args in
     let args, env = push_vars' lam_params env in
     let saved_env_types = (!tctx).env_types in

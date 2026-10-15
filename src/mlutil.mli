@@ -198,7 +198,7 @@ val instantiate_unknowns : ml_type -> ml_type
     metavariable bindings on success; silently does nothing on failure.
     @param t1 first type
     @param t2 second type *)
-val try_mgu : ?late:Meta.late_solution -> ml_type -> ml_type -> unit
+val try_mgu : ml_type -> ml_type -> unit
 
 (** Determine if a type coercion requires magic (unsafe cast).
     @param p a pair [(expected, actual)] of ML types to compare

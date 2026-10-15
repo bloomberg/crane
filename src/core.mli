@@ -10,17 +10,14 @@
     else builds a program.
 
     Transitional.  {!freeze} checks the structural invariants that hold
-    today; it does not yet establish that no metavariable is reachable.  A
-    local definition's open types are minted before it ({!Local_types}),
-    but the back end still fills an open slot from the type its context
-    expects while it generates a body -- at the sites
-    {!Miniml.Meta.late_solution} enumerates, and only there, which freezing
-    enforces -- but undoes them before the next body and once rendering
-    ends, so between bodies the program is the one frozen, and under
-    [CRANE_CHECK_IR] rendering that changes it fails.  Until those
-    solutions become obligations resolved without writing to the program,
-    {!freeze} reports how many metavariables it leaves, and {!structure} is
-    the read-only view unconverted consumers take. *)
+    today.  Nothing solves a metavariable after it -- a local definition's
+    open types are minted before it ({!Local_types}), and a slot filling a
+    hole hands the answer to the terms that mention the hole instead of
+    writing it -- and [CRANE_CHECK_IR] enforces that, as it does that
+    rendering leaves the program it was planned against unchanged.  The
+    metavariables extraction left unsolved are still reachable, read as
+    erased: {!freeze} reports how many, and {!structure} is the read-only
+    view unconverted consumers take. *)
 
 type extracted
 type optimized
@@ -36,8 +33,7 @@ val optimize : (Miniml.ml_structure -> Miniml.ml_structure) -> extracted program
 
 (** [freeze p] is [p], checked: every recursive group is nonempty and its
     selected member exists, and no reference is declared twice.  From here
-    until the extraction ends a metavariable may only be solved for one of
-    the reasons {!Miniml.Meta.late_solution} names.  Under
+    until the extraction ends no metavariable is solved.  Under
     [CRANE_TRACE_PIPELINE] it reports the unsolved metavariables still
     reachable. *)
 val freeze : optimized program -> frozen program

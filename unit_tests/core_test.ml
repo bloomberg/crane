@@ -45,35 +45,36 @@ let () =
   check "modules keep each module with its own program"
     (List.map fst (Core.modules two) = [mp "A"; mp "B"])
 
-(* After freezing, a metavariable is solved only for a declared reason. *)
+(* After freezing, nothing solves a metavariable. *)
 let () =
   let nat = Tglob (r "nat", [], []) in
   let m = Meta.fresh 7 and m' = Meta.fresh 8 in
   Meta.freeze ();
-  check "an undeclared solve of the frozen program is refused"
+  check "a solve of the frozen program is refused"
     (match Meta.solve m nat with () -> false | exception e -> CErrors.is_anomaly e);
   check "a refused solve writes nothing" (m.contents = None);
-  Meta.solve ~late:Meta.Erased_slot m nat;
-  check "a declared solve is counted" (Meta.late_solutions () = [(Meta.Erased_slot, 1)]);
   Meta.thaw ();
   Meta.solve m' nat;
   check "a thawed program solves freely" (m'.contents = Some nat)
 
-(* A late solution lasts until it is undone: each body decides it afresh. *)
+(* A slot fills a hole without writing it: a hole met twice is filled once,
+   and the fill is carried to the terms that mention the hole. *)
 let () =
-  let nat = Tglob (r "nat", [], []) in
-  let early = Meta.fresh 9 and late = Meta.fresh 10 in
-  Meta.solve early nat;
+  let nat = Tglob (r "nat", [], []) and bool = Tglob (r "bool", [], []) in
+  let pair a b = Tglob (r "pair", [a; b], []) in
+  let m = Meta.fresh 15 in
   Meta.freeze ();
-  Meta.solve ~late:Meta.Erased_slot late nat;
-  Meta.undo_late ();
-  check "undoing unsolves a late solution" (late.contents = None);
-  check "undoing leaves a solution made before freezing" (early.contents = Some nat);
-  Meta.solve ~late:Meta.Erased_slot late (Tvar (Schematic, 1));
-  check "an undone metavariable can be solved again" (late.contents = Some (Tvar (Schematic, 1)));
-  Meta.undo_late ();
-  Meta.undo_late ();
-  check "undoing twice undoes once" (late.contents = None);
+  let fills = ref [] in
+  let refined =
+    Ml_type_util.refine_erased ~fills ~writable:(fun _ -> true) (pair (Tmeta m) (Tmeta m))
+      (pair nat bool)
+  in
+  check "a hole met twice is filled once" (refined = pair nat nat);
+  check "the hole is not written" (m.contents = None);
+  check "the fill is reported" (List.length !fills = 1);
+  let body = MLlam (Dummy, Tmeta m, MLrel 1) in
+  check "a term mentioning the hole is generated with it filled"
+    (Ml_type_util.fill_holes !fills body = MLlam (Dummy, nat, MLrel 1));
   Meta.thaw ()
 
 (* A local definition's open types are minted before freezing, rigid: each

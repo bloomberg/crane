@@ -570,20 +570,29 @@ val has_tany_written : Minicpp.cpp_type -> bool
     different arity, means the two are not talking about the same position and
     [have] stands.
 
-    An uninstantiated [Tmeta] is filled rather than replaced: it is the hole
-    extraction left, and the term shares the cell with every other mention of
-    the same unknown, so one write reaches the annotation on a match over the
-    value as well as the value's own type.
+    An uninstantiated [Tmeta] is the hole extraction left, and the term
+    shares it with every other mention of the same unknown -- the annotation
+    on a match over the value as well as the value's own type.  It is not
+    written, the program being frozen: each hole filled is added to [fills],
+    with what it was filled with, so that the caller can carry the answer to
+    the terms that mention it ({!fill_holes}), and [have] is read through
+    the holes already there, so a hole met twice is filled once.
 
     [writable] decides whether a type [want] offers can be written where
     [have] is going.  A type variable belonging to another scope is not, however
     concrete [want] looks; the caller supplies that judgement because only it
     knows which names its scope declares. *)
 val refine_erased :
+  ?fills:(Miniml.ml_meta * Miniml.ml_type) list ref ->
   writable:(Miniml.ml_type -> bool) ->
   Miniml.ml_type ->
   Miniml.ml_type ->
   Miniml.ml_type
+
+(** [fill_holes fills e] is [e] with each hole of [fills] standing as the
+    type it is paired with, in every annotation; [e] itself where it mentions
+    none of them. *)
+val fill_holes : (Miniml.ml_meta * Miniml.ml_type) list -> Miniml.ml_ast -> Miniml.ml_ast
 
 (** [refine_param_from_slot ~tvars ~slot bare] spells a parameter from the
     slot it flows into rather than from its own uninferred type.  Type

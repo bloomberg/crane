@@ -379,16 +379,16 @@ let rec type_occurs alpha t =
 
 (** {2 Most General Unificator} *)
 
-let rec mgu ?late = function
+let rec mgu = function
   | Tmeta m, Tmeta m' when Int.equal m.id m'.id -> ()
   | Tmeta m, t | t, Tmeta m ->
     ( match m.contents with
-    | Some u -> mgu ?late (u, t)
+    | Some u -> mgu (u, t)
     | None when type_occurs m.id t -> raise Impossible
-    | None -> Meta.solve ?late m t )
+    | None -> Meta.solve m t )
   | Tarr (a, b), Tarr (a', b') ->
-    mgu ?late (a, a');
-    mgu ?late (b, b')
+    mgu (a, a');
+    mgu (b, b')
   | Tglob (r, l, a), Tglob (r', l', a') when GlobRef.CanOrd.equal r r' ->
     if List.length l <> List.length l' then (
       Feedback.msg_debug
@@ -402,13 +402,13 @@ let rec mgu ?late = function
       (* Differing arity means the two applications cannot unify; falling
          through to [List.combine] would raise a bare [Invalid_argument]. *)
       raise Impossible );
-    List.iter (mgu ?late) (List.combine l l')
+    List.iter mgu (List.combine l l')
   | Tdummy _, Tdummy _ -> ()
   | Tvar (Schematic, i), Tvar (Schematic, j) when Int.equal i j -> ()
   | Tvar (Rigid, i), Tvar (Rigid, j) when Int.equal i j -> ()
   | Tapp (i, l), Tapp (j, l') when Int.equal i j ->
     if List.length l <> List.length l' then raise Impossible;
-    List.iter (mgu ?late) (List.combine l l')
+    List.iter mgu (List.combine l l')
   | Tunknown, Tunknown -> ()
   | Taxiom, Taxiom -> ()
   | Tstring, Tstring -> ()
@@ -417,7 +417,7 @@ let rec mgu ?late = function
 (* Try to unify two types using mgu. Silently fails if unification is
    impossible. This mutably sets the contents of metavariables when
    successful. *)
-let try_mgu ?late t1 t2 = try mgu ?late (t1, t2) with Impossible -> ()
+let try_mgu t1 t2 = try mgu (t1, t2) with Impossible -> ()
 
 let skip_typing () = is_extrcompute ()
 

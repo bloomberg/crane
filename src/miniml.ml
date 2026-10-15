@@ -377,44 +377,15 @@ module Global_use = struct
 end
 
 module Meta = struct
-  type late_solution =
-    | Erased_slot
-
-  let late_solution_name = function
-    | Erased_slot -> "erased slot"
-
   let fresh id = {id; contents = None}
   let solved id t = {id; contents = Some t}
   let frozen = ref false
-  let counts : (late_solution, int) Hashtbl.t = Hashtbl.create 6
 
-  (* The metavariables solved late, to be unsolved by [undo_late]. *)
-  let trail : ml_meta list ref = ref []
-
-  let undo_late () =
-    List.iter (fun m -> m.contents <- None) !trail;
-    trail := []
-
-  let solve ?late m t =
-    ( match late with
-    | Some reason ->
-      trail := m :: !trail;
-      Hashtbl.replace counts reason (1 + Option.default 0 (Hashtbl.find_opt counts reason))
-    | None ->
-      if !frozen && Sys.getenv_opt "CRANE_CHECK_IR" <> None then
-        CErrors.anomaly
-          Pp.(str "Crane: a metavariable of the frozen program was solved for no declared reason.") );
+  let solve m t =
+    if !frozen && Sys.getenv_opt "CRANE_CHECK_IR" <> None then
+      CErrors.anomaly Pp.(str "Crane: a metavariable of the frozen program was solved.");
     m.contents <- Some t
 
-  let freeze () =
-    frozen := true;
-    trail := [];
-    Hashtbl.reset counts
-
+  let freeze () = frozen := true
   let thaw () = frozen := false
-
-  let late_solutions () =
-    List.filter_map
-      (fun r -> Option.map (fun n -> (r, n)) (Hashtbl.find_opt counts r))
-      [Erased_slot]
 end

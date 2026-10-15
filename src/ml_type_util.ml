@@ -1281,31 +1281,48 @@ let prune_unwritten_args =
     erased argument in a position nothing writes never reaches the C++. *)
 let has_tany_written t = has_tany_in_type (prune_unwritten_args t)
 
-let rec refine_erased ~writable have want =
-  let have = resolve_tmeta have and want = resolve_tmeta want in
+let refine_erased ?(fills = ref []) ~writable have want =
   let erased = function
     | Miniml.Tunknown | Miniml.Tdummy _ | Miniml.Tmeta {contents = None} -> true
     | _ -> false
   in
-  match (have, want) with
-  | Miniml.Tmeta ({contents = None} as cell), w
-    when (not (erased w)) && writable w ->
-    (* An uninstantiated [Tmeta] is not merely an erased node, it is the hole
-       extraction left for exactly this answer -- and the term shares the cell
-       with everything else that mentions the same unknown, so the annotation
-       on a match over this binder and the binder's own type are one write, not
-       two.  Filling it is what keeps the body's generation in step with the
-       signature; replacing the type around it would leave the body reading the
-       hole. *)
-    Miniml.Meta.solve ~late:Erased_slot cell w;
-    w
-  | h, w when erased h -> if (not (erased w)) && writable w then w else h
-  | Miniml.Tglob (n, ha, sc), Miniml.Tglob (m, wa, _)
-    when GlobRef.CanOrd.equal n m && List.length ha = List.length wa ->
-    Miniml.Tglob (n, List.map2 (refine_erased ~writable) ha wa, sc)
-  | Miniml.Tarr (a, b), Miniml.Tarr (c, d) ->
-    Miniml.Tarr (refine_erased ~writable a c, refine_erased ~writable b d)
-  | h, _ -> h
+  let filled = function
+    | Miniml.Tmeta ({contents = None} as m) as t -> Option.default t (List.assq_opt m !fills)
+    | t -> t
+  in
+  let rec refine have want =
+    match (filled (resolve_tmeta have), resolve_tmeta want) with
+    | Miniml.Tmeta ({contents = None} as cell), w when (not (erased w)) && writable w ->
+      fills := (cell, w) :: !fills;
+      w
+    | h, w when erased h -> if (not (erased w)) && writable w then w else h
+    | Miniml.Tglob (n, ha, sc), Miniml.Tglob (m, wa, _)
+      when GlobRef.CanOrd.equal n m && List.length ha = List.length wa ->
+      Miniml.Tglob (n, List.map2 refine ha wa, sc)
+    | Miniml.Tarr (a, b), Miniml.Tarr (c, d) -> Miniml.Tarr (refine a c, refine b d)
+    | h, _ -> h
+  in
+  refine have want
+
+let fill_holes fills e =
+  (* Rebuilt only where a hole is filled, so a cell that stays keeps its
+     identity. *)
+  let rec ty t =
+    match t with
+    | Miniml.Tmeta ({contents = None} as m) -> (
+      match List.find_opt (fun (m', _) -> m' == m) fills with Some (_, w) -> w | None -> t )
+    | Miniml.Tmeta {contents = Some u} ->
+      let u' = ty u in
+      if u' == u then t else u'
+    | Miniml.Tarr (a, b) ->
+      let a' = ty a and b' = ty b in
+      if a' == a && b' == b then t else Miniml.Tarr (a', b')
+    | Miniml.Tglob (g, ts, args) ->
+      let ts' = List.map ty ts in
+      if List.for_all2 ( == ) ts ts' then t else Miniml.Tglob (g, ts', args)
+    | _ -> t
+  in
+  match fills with [] -> e | _ -> Mlutil.ast_map_types ty e
 
 let refine_param_from_slot ~tvars ~slot bare =
   let spelled_by_bare = Minicpp.tvar_names bare in

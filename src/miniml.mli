@@ -478,39 +478,22 @@ end
 
     A metavariable is extraction's: unification solves it while types are
     reconstructed, and the Core passes may still.  Once the program is frozen
-    ({!Core.freeze}) nothing should, but the back end still does, at the
-    sites {!late_solution} names, while it generates a body.  A solve after
-    freezing must say which of them it is; under [CRANE_CHECK_IR] one that
-    does not is an anomaly.  Every late solution is kept until {!undo_late},
-    which a body's generation calls before it starts, so each body decides
-    those types for itself and the frozen program is, between bodies, the
-    one that was frozen. *)
+    ({!Core.freeze}) nothing does: a local definition's open types are minted
+    before it ({!Local_types}), and a slot that fills a hole carries the
+    answer to the terms mentioning the hole instead of writing it
+    ({!Ml_type_util.refine_erased}).  Under [CRANE_CHECK_IR] a solve after
+    freezing is an anomaly. *)
 module Meta : sig
-  (** Why a metavariable is solved after the program was frozen. *)
-  type late_solution =
-    | Erased_slot
-        (** An open slot, at the type its context expects. *)
-
   val fresh : int -> ml_meta
 
   (** A cell numbered [id], already solved to [t]. *)
   val solved : int -> ml_type -> ml_meta
 
-  (** [solve ?late m t] solves [m] to [t]; [late] says why, after freezing. *)
-  val solve : ?late:late_solution -> ml_meta -> ml_type -> unit
+  val solve : ml_meta -> ml_type -> unit
 
-  (** Unsolve every metavariable solved late since {!freeze} or the last
-      [undo_late]. *)
-  val undo_late : unit -> unit
-
-  (** From here a solve must be late.  Counts start afresh. *)
+  (** From here nothing solves a metavariable. *)
   val freeze : unit -> unit
 
-  (** Solves need no reason again, as at the start of an extraction. *)
+  (** Solves are allowed again, as at the start of an extraction. *)
   val thaw : unit -> unit
-
-  (** How many late solutions of each kind since {!freeze}. *)
-  val late_solutions : unit -> (late_solution * int) list
-
-  val late_solution_name : late_solution -> string
 end

@@ -1367,10 +1367,7 @@ let observed_fingerprint ~stage struc =
     Everything the plan records is a fact about one structure, and emission
     reads those facts back against the structure it is handed, so a structure
     that changes while it is rendered is read by emission as a different
-    program from the one that was planned.  Translation still solves
-    metavariables of the frozen program while it generates a body, but each
-    body's solutions are undone before the next body and once rendering ends
-    ({!Miniml.Meta.undo_late}), so none survives into the structure. *)
+    program from the one that was planned. *)
 let check_structure_unchanged planned struc =
   Option.iter
     (fun before ->
@@ -1388,19 +1385,6 @@ let check_structure_unchanged planned struc =
             str "rendering changed "
             ++ prlist_with_sep pr_comma Label.print changed) )
     planned
-
-(** Under [CRANE_TRACE_PIPELINE], report the metavariables of the frozen
-    program rendering solved, by the reason each solve gave. *)
-let report_late_solutions () =
-  if Pipeline_trace.enabled () then
-    Pipeline_trace.event "emit"
-      ( "late solutions: "
-      ^
-      match Miniml.Meta.late_solutions () with
-      | [] -> "none"
-      | l ->
-        String.concat ", "
-          (List.map (fun (r, n) -> Printf.sprintf "%s %d" (Miniml.Meta.late_solution_name r) n) l) )
 
 (** [freeze core]: the frozen program ({!Core.freeze}), with the facts the
     whole of it is analysed for -- which definitions only throw, which
@@ -1559,22 +1543,18 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
      Rendering first and writing after lets the preamble follow from the body
      that is actually written.  Everything raised after this point is too
      late, which [freeze_demands] is there to catch. *)
-  (* What planning solved late is not emission's to read. *)
-  Miniml.Meta.undo_late ();
   set_phase (Emit Impl);
   Pipeline_trace.event "emit" "render_impl";
   let body_impl = d.pp_struct struc in
   set_phase (Emit Intf);
   Pipeline_trace.event "emit" "render_intf";
   let body_hstruct = d.pp_hstruct struc in
-  Miniml.Meta.undo_late ();
   report_body_generations fn;
   Table.freeze_demands ();
   check_no_late_decisions census_after_planning;
   Generated_program.check_against_plan ~declares:(declares struc);
   Install_legacy_plan.check_installed facts plan;
   check_structure_unchanged planned struc;
-  report_late_solutions ();
   if Pipeline_trace.enabled () then begin
     Pipeline_trace.event "emit" (Core_elaborate.report ());
     Pipeline_trace.event "emit" (Callable_abi.report_foreign ())
