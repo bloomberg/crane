@@ -58,8 +58,17 @@ let rec mint ~minted ~next = function
 
 (* The number each let-bound lambda's variables were minted past, by the
    metavariables minted for them: what lowering the lambda is checked
-   against. *)
-let let_lambda_bases : (int, int) Hashtbl.t = State.table State.Extraction 16
+   against.  A cell is its own identity: numbers restart with each
+   declaration extraction reconstructs. *)
+module Cells = Hashtbl.Make (struct
+  type t = ml_meta
+
+  let equal = ( == )
+  let hash (m : ml_meta) = Hashtbl.hash m.id
+end)
+
+let let_lambda_bases : int Cells.t = Cells.create 16
+let () = State.on_reset State.Extraction (fun () -> Cells.reset let_lambda_bases)
 
 (** The type a term builds in tail position, where its own annotations say so.
 
@@ -149,8 +158,8 @@ let check_let_lambda ~outer t a =
     let base = ref None and unsolved = ref false in
     let rec visit = function
       | Tmeta {contents = None} -> unsolved := true
-      | Tmeta {id; contents = Some t} ->
-        if !base = None then base := Hashtbl.find_opt let_lambda_bases id;
+      | Tmeta ({contents = Some t} as m) ->
+        if !base = None then base := Cells.find_opt let_lambda_bases m;
         visit t
       | Tarr (x, y) ->
         visit x;
@@ -186,7 +195,7 @@ let rec expr ~outer = function
     ignore (settle ids funs);
     Array.iter (expr ~outer) funs
   | MLletin (_, t, (MLlam _ as a), b) ->
-    let minted m = Hashtbl.replace let_lambda_bases m.id outer in
+    let minted m = Cells.replace let_lambda_bases m outer in
     let mint = mint ~minted ~next:(ref (outer + 1)) in
     mint t;
     iter_annotations mint a;
