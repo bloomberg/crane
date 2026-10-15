@@ -688,7 +688,8 @@ let method_head vars s =
 let method_plan func_ref s h =
   let renumber k = Option.default k (List.nth_opt s.ms_extra_tvars_orig (k - 1)) in
   let scheme = Mlutil.reference_scheme func_ref in
-  Callable_abi.of_head ~renumber ~deduced_callables:s.ms_deduced_callables ~passing:s.ms_passing
+  Callable_abi.of_head ~renumber ~omitted:(Translation_support.type_arg_omission func_ref)
+    ~deduced_callables:s.ms_deduced_callables ~passing:s.ms_passing
     ~receiver:
       { dropped =
           List.filter_map (fun (i, _) -> Option.bind scheme (fun sc -> Scheme.Var.of_tvar sc i)) h.mh_dropped;

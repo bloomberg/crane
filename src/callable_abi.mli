@@ -76,6 +76,17 @@ type receiver = {
           declared at, in declaration order. *)
 }
 
+(** Why a callee's convention declares no template parameter for one of its
+    scheme variables, so that no call writes a type argument for it. *)
+type omission =
+  | Class_carrier
+      (** A higher-kinded class parameter: the instance's associated type,
+          which the dictionary for it carries. *)
+  | Unmentioned
+      (** A variable the callee's type does not mention, where it mentions
+          a higher-kinded one ([mbind]'s [B] only ever appears under the
+          carrier [M B]). *)
+
 (** How a value parameter is passed: [Owned], by value, the caller moving
     or copying its argument in; [Borrowed], by const reference;
     [Forwarded], a callable the head deduces, by forwarding reference. *)
@@ -99,6 +110,19 @@ val receiver : t -> receiver option
 (** The head, in declaration order. *)
 val template_head : t -> template_parameter list
 
+(** Whether the callee's convention keeps its scheme variable [v] -- does
+    not omit it ({!omission}) -- as the plan was made. *)
+val keeps : t -> Scheme.Var.t -> bool
+
+(** {!keeps} for the variable the callee's type spells [Tvar (_, i)]: the
+    crossing from the body's numbering.  One the plan does not know is
+    kept. *)
+val keeps_tvar : t -> int -> bool
+
+(** The variables a call's dictionaries stand at, in order: those the
+    convention omits, up to the last one its type mentions. *)
+val dictionary_carriers : t -> Scheme.Var.t list
+
 (** The plan of a declaration of [callee] whose head is [temps], as
     {!Gen_functions} finalises it; [deduced_callables] are the declared
     positions of the value parameters the head deduces as an [F &&].  [scheme] is the callee's scheme, which
@@ -109,8 +133,10 @@ val template_head : t -> template_parameter list
     the [k]th variable declares the scheme's [renumber k]th, where a method
     numbers its own variables after the receiver's, and [receiver] is what
     the plan of a method adds; [passing] how its value parameters are
-    passed, in declaration order. *)
+    passed, in declaration order; [omitted] says why the convention omits a
+    variable of [scheme], if it does. *)
 val of_head :
+  ?omitted:(Scheme.Var.t -> omission option) ->
   ?phantom_prefix:int ->
   ?relaxed:(int -> bool) ->
   ?renumber:(int -> int) ->
@@ -168,8 +194,10 @@ val deduces_callable : Names.GlobRef.t -> Param_pos.orig Param_pos.pos -> bool
     dictionaries first, then one parameter per variable [kept] keeps, in
     order and no more than [reachable] of them, a template-template one
     where [higher_kinded] says so, a [relaxed] one a [Derived] parameter
-    defaulted to [void], the first [phantom_prefix] of them phantoms. *)
+    defaulted to [void], the first [phantom_prefix] of them phantoms, each
+    variable omitted as [omitted] says. *)
 val foreign :
+  ?omitted:(Scheme.Var.t -> omission option) ->
   ?instances:int ->
   ?higher_kinded:(Scheme.Var.t -> bool) ->
   ?kept:(Scheme.Var.t -> bool) ->
@@ -197,6 +225,7 @@ val install_foreign : (Names.GlobRef.t -> t) -> Names.GlobRef.t list -> unit
     printed on the receiver without the variables the receiver carries or
     {!dropped_positions}. *)
 val plan :
+  ?omitted:(Scheme.Var.t -> omission option) ->
   ?instances:int ->
   ?higher_kinded:(Scheme.Var.t -> bool) ->
   ?kept:(Scheme.Var.t -> bool) ->

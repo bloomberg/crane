@@ -1602,38 +1602,33 @@ let collect_tvars_set acc ty = IntSet.union acc (Mlutil.ml_tvars ty)
 let collect_tvars acc ty =
   IntSet.elements (collect_tvars_set (IntSet.of_list acc) ty)
 
-(** Whether [r] declares a C++ template parameter for the type argument at
-    (1-based) position [i].
+(** Why [r]'s convention declares no C++ template parameter for its scheme
+    variable [v], if it does not ({!Callable_abi.omission}): asked once, by
+    the planner, and recorded in [r]'s plan for its calls to read.
 
-    A type argument standing for a higher-kinded class parameter is not one:
-    it is the instance's associated type, and it is always erased, which would
+    A variable standing for a higher-kinded class parameter has none: it is
+    the instance's associated type, and it is always erased, which would
     otherwise make [filter_erased_type_args] drop the real type arguments
-    alongside it.  Neither is a variable that does not occur in [r]'s type at
-    all ([mbind]'s [B] only ever appears under the carrier [M B]).
-
-    Asked of a call's scheme variables and of an instance's type arguments,
-    both indexed by the variable each is for. *)
-let keeps_type_arg_position r =
+    alongside it.  Nor, in a type mentioning one, has a variable the type
+    does not mention at all. *)
+let type_arg_omission r =
   match find_type_opt r with
-  | None -> fun _ -> true
+  | None -> fun _ -> None
   | Some ty -> (
     match List.map (fun p -> p.htp_tvar) (hkt_tvar_positions_of_type ty) with
-    | [] -> fun _ -> true
+    | [] -> fun _ -> None
     | hkt ->
       let occurring = collect_tvars_set IntSet.empty ty in
-      fun i ->
-        (not (List.mem i hkt))
-        && (IntSet.is_empty occurring || IntSet.mem i occurring) )
+      fun v ->
+        let i = Scheme.Var.ordinal v in
+        if List.mem i hkt then Some Callable_abi.Class_carrier
+        else if IntSet.is_empty occurring || IntSet.mem i occurring then None
+        else Some Callable_abi.Unmentioned )
 
 (** [ty] with every family variable written applied taken back to the bare
     variable: a plain family is declared without its index. *)
 let deapply_families =
   map_cpp_type (function Tapply ((Tvar _ as v), _) -> v | t -> t)
-
-(** [r]'s type arguments, less those {!keeps_type_arg_position} rules out. *)
-let kept_type_args r ts =
-  let keep = keeps_type_arg_position r in
-  List.filter_map (fun (j, t) -> if keep j then Some t else None) (Mlutil.Var_types.bindings ts)
 
 (** The number of type parameters [g] is written with in C++: the promoted
     variables it leads with ({!ind_promoted_type_args}), then an inductive's

@@ -134,11 +134,10 @@ let callee_abi ~instances id =
   let ml_ty = find_type_opt id in
   let hk = Option.cata declared_higher_kinded_tvars IntSet.empty ml_ty in
   let relaxed_tt = relaxed_tt_return_var id in
-  Callable_abi.plan id ~scheme:(Mlutil.reference_scheme id) ~instances
+  let omitted = type_arg_omission id in
+  Callable_abi.plan id ~scheme:(Mlutil.reference_scheme id) ~instances ~omitted
     ~higher_kinded:(fun v -> IntSet.mem (Scheme.Var.ordinal v) hk)
-    ~kept:(fun v ->
-      let i = Scheme.Var.ordinal v in
-      keeps_type_arg_position id i && relaxed_tt <> Some i )
+    ~kept:(fun v -> omitted v = None && relaxed_tt <> Some (Scheme.Var.ordinal v))
     ?reachable:(writable_tvar_count id)
     ~relaxed:(fun i ->
       IntSet.mem i (Option.cata Ml_type_util.relaxed_higher_kinded_tvars IntSet.empty ml_ty) )
@@ -564,7 +563,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
         not
           (List.exists
              (fun (i, t) -> IntSet.mem i hk && prints_as_any t)
-             (regular_of ~keep:(keeps_type_arg_position id) tys) )
+             (regular_of ~keep:(Callable_abi.keeps_tvar (callee_abi ~instances:0 id)) tys) )
     in
     (* Writing the list out is what this call is left with once the
        recoveries have declined, so an erased family is worth resolving from
@@ -785,13 +784,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
              | _ -> [] )
            (Callable_abi.template_head abi) )
     in
-    let carriers =
-      match find_type_opt id with
-      | Some ml_ty ->
-        let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
-        List.filter (fun i -> not (keeps_type_arg_position id i)) (List.init n (fun i -> i + 1))
-      | None -> []
-    in
+    let carriers = List.map Scheme.Var.ordinal (Callable_abi.dictionary_carriers abi) in
     let dictionaries =
       List.filteri
         (fun j _ -> j >= List.length instance_args - List.length carriers)
@@ -926,7 +919,10 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
      a call applies to its own: a position is what gives the others their
      meaning, so one that cannot be written costs the list. *)
   let instance_type_args r ts =
-    filter_erased_type_args (build_template_params ~site:Through_tvar env [] (kept_type_args r ts))
+    let keeps = Callable_abi.keeps_tvar (callee_abi ~instances:0 r) in
+    filter_erased_type_args
+      (build_template_params ~site:Through_tvar env []
+         (List.filter_map (fun (j, t) -> if keeps j then Some t else None) (Mlutil.Var_types.bindings ts)) )
   in
   let instance_type_args_from_expected r ts =
     match instance_family_binding env r ts expected with
@@ -947,7 +943,7 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
       if List.for_all (fun (_, o) -> o <> None) filled then
         Some
           (List.filter_map
-             (fun (j, o) -> if keeps_type_arg_position r j then o else None)
+             (fun (j, o) -> if Callable_abi.keeps_tvar (callee_abi ~instances:0 r) j then o else None)
              filled )
       else None
   in

@@ -331,7 +331,7 @@ let promote_typeclass_params (params : (Id.t * ml_type) list) =
 let plan_function_head ?deduced_callables ?passing n ty temps signature =
   let temps, rewrite = relax_function_head temps signature in
   let abi =
-    Callable_abi.of_head ?deduced_callables ?passing
+    Callable_abi.of_head ?deduced_callables ?passing ~omitted:(Translation_support.type_arg_omission n)
       ~phantom_prefix:(Translation_types.leading_phantom_count n)
       ~relaxed:(fun i -> IntSet.mem i (Ml_type_util.relaxed_higher_kinded_tvars ty))
       ~callee:n ~scheme:(Mlutil.reference_scheme n) temps

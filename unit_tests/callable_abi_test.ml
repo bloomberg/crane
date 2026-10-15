@@ -59,3 +59,24 @@ let () =
   check "passing is part of the plan"
     (passing owned = Some [Owned; Borrowed] && not (equal owned borrowed));
   check "a foreign plan does not say how it passes" (passing f = None)
+
+(* A plan records why its convention omits a variable, and a call reads the
+   variables it keeps, and those its dictionaries stand at, from the plan. *)
+let () =
+  let scheme = Scheme.Id.fresh callee ~arity:4 in
+  let var i = Option.get (Scheme.Var.of_tvar scheme i) in
+  (* [M] at 1 is a class carrier, 2 and 3 are mentioned, 4 is not. *)
+  let omitted v =
+    match Scheme.Var.ordinal v with
+    | 1 -> Some Class_carrier
+    | 4 -> Some Unmentioned
+    | _ -> None
+  in
+  let f = foreign ~omitted ~kept:(fun v -> omitted v = None) ~callee ~scheme:(Some scheme) () in
+  check "an omitted variable is not kept" (not (keeps f (var 1)) && not (keeps f (var 4)));
+  check "a mentioned variable is kept" (keeps f (var 2) && keeps_tvar f 3);
+  check "a variable the plan does not know is kept" (keeps_tvar f 9);
+  check "dictionaries stand at the omitted variables up to the last mentioned"
+    (List.map Scheme.Var.ordinal (dictionary_carriers f) = [1]);
+  check "omissions are part of the plan"
+    (not (equal f (foreign ~kept:(fun v -> omitted v = None) ~callee ~scheme:(Some scheme) ())))

@@ -38,6 +38,10 @@ type receiver = {
   params : Minicpp.cpp_type list;
 }
 
+type omission =
+  | Class_carrier
+  | Unmentioned
+
 type passing =
   | Owned
   | Borrowed
@@ -49,12 +53,36 @@ type t = {
   deduced_callables : Param_pos.orig Param_pos.pos list;
   receiver : receiver option;
   passing : passing list option;
+  variables : (Scheme.Var.t * omission option) list;
   phase : Common.phase;
 }
 
 let callee abi = abi.callee
 let template_head abi = abi.head
 let receiver abi = abi.receiver
+
+let scheme_variables ?(omitted = fun _ -> None) scheme =
+  List.map (fun v -> (v, omitted v)) (Option.cata Scheme.Var.all [] scheme)
+
+let keeps abi v =
+  match List.find_opt (fun (v', _) -> Scheme.Var.equal v v') abi.variables with
+  | Some (_, Some _) -> false
+  | Some (_, None) | None -> true
+
+let keeps_tvar abi i =
+  match List.find_opt (fun (v, _) -> Int.equal (Scheme.Var.ordinal v) i) abi.variables with
+  | Some (v, _) -> keeps abi v
+  | None -> true
+
+let dictionary_carriers abi =
+  let mentioned =
+    List.fold_left
+      (fun n (v, o) -> if o = Some Unmentioned then n else max n (Scheme.Var.ordinal v))
+      0 abi.variables
+  in
+  List.filter_map
+    (fun (v, o) -> if o <> None && Scheme.Var.ordinal v <= mentioned then Some v else None)
+    abi.variables
 
 (* The [n] for which [spell n] is [name]: the number a generated name
    carries, read back through the function that minted it. *)
@@ -104,8 +132,8 @@ let mark_phantoms n head =
   in
   go n head
 
-let of_head ?(phantom_prefix = 0) ?relaxed ?renumber ?(deduced_callables = []) ?receiver ?passing
-    ~callee ~scheme temps =
+let of_head ?omitted ?(phantom_prefix = 0) ?relaxed ?renumber ?(deduced_callables = []) ?receiver
+    ?passing ~callee ~scheme temps =
   let head =
     List.mapi
       (fun position (kind, name) ->
@@ -124,6 +152,7 @@ let of_head ?(phantom_prefix = 0) ?relaxed ?renumber ?(deduced_callables = []) ?
     deduced_callables;
     receiver;
     passing;
+    variables = scheme_variables ?omitted scheme;
     phase = Common.get_phase () }
 
 let passing abi = abi.passing
@@ -179,10 +208,12 @@ let same_head a b =
   in
   let key p = (Id.to_string (Template_param.name p.id), origin_key p.origin, p.kind, p.write) in
   let receiver_key r = (List.map Scheme.Var.ordinal r.dropped, r.params) in
+  let variables_key abi = List.map (fun (v, o) -> (Scheme.Var.ordinal v, o)) abi.variables in
   List.equal (fun p q -> key p = key q) a.head b.head
   && List.equal Param_pos.equal a.deduced_callables b.deduced_callables
   && Option.equal ( = ) (Option.map receiver_key a.receiver) (Option.map receiver_key b.receiver)
   && Option.equal (List.equal ( = )) a.passing b.passing
+  && variables_key a = variables_key b
 
 let equal a b = GlobRef.UserOrd.equal a.callee b.callee && same_head a b
 
@@ -281,7 +312,7 @@ let with_dictionaries instances abi =
   let shift p = {p with id = {p.id with Template_param.position = p.id.position + instances}} in
   {abi with head = dictionaries @ List.map shift abi.head}
 
-let foreign ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept = fun _ -> true)
+let foreign ?omitted ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept = fun _ -> true)
     ?(reachable = max_int) ?(relaxed = fun _ -> false) ?(phantom_prefix = 0) ~callee ~scheme () =
   let variables =
     List.map
@@ -309,6 +340,7 @@ let foreign ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept = fun _ ->
       deduced_callables = [];
       receiver = None;
       passing = None;
+      variables = scheme_variables ?omitted scheme;
       phase = Common.get_phase () }
 
 (* The unit's foreign plans, without dictionaries, by callee. *)
@@ -334,11 +366,14 @@ let install_foreign derive callees =
    conventions of a callee generated nowhere, and printed on its receiver
    without the variables the receiver carries or the method dropped
    ({!dropped_positions}). *)
-let plan ?(instances = 0) ?higher_kinded ?kept ?reachable ?relaxed ?phantom_prefix callee ~scheme =
+let plan ?omitted ?(instances = 0) ?higher_kinded ?kept ?reachable ?relaxed ?phantom_prefix callee
+    ~scheme =
   match lookup callee with
   | Some ({receiver = None; _} as abi) -> abi
   | Some {receiver = Some _; _} | None ->
-    let derive () = foreign ?higher_kinded ?kept ?reachable ?relaxed ?phantom_prefix ~callee ~scheme () in
+    let derive () =
+      foreign ?omitted ?higher_kinded ?kept ?reachable ?relaxed ?phantom_prefix ~callee ~scheme ()
+    in
     let emitting = match Common.get_phase () with Common.Emit _ -> true | Common.Plan -> false in
     let base =
       match GlobRef.Map_env.find_opt callee !foreign_plans with
