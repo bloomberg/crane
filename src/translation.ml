@@ -1367,15 +1367,18 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         mk_itree_ret Tvoid []
       | _ ->
         let inner = gen_expr env t in
-        (* Extract R from the monad's type arguments: itree has template "%t1"
-           so the ML type args for Ret are [E, R] where E is typically Tdummy
-           and R is the result type. *)
+        (* The result type is the type argument written for the variable the
+           returned value is at: [Ret : forall E R, R -> itree E R].  One
+           extraction could not read says nothing. *)
         let r_cpp =
-          let non_dummy = filter_value_types (Mlutil.Var_types.types ret_tys) in
-          match non_dummy with
-          | r_ml :: _ ->
-            cpp_of_ml env r_ml
-          | [] -> Tvoid
+          let value_var =
+            match List.rev (Ml_type_util.ml_value_domains (find_type r)) with
+            | Miniml.Tvar (_, j) :: _ -> Some j
+            | _ -> None
+          in
+          match Option.bind value_var (Mlutil.Var_types.find ret_tys) with
+          | Some r_ml when not (Mlutil.isTdummy r_ml) -> cpp_of_ml env r_ml
+          | _ -> Tvoid
         in
         mk_itree_ret r_cpp [inner]
     end
@@ -10199,6 +10202,18 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
      (MLapp (a1, a2::[])) *)
   | MLapp (MLglob ({callee = r; _} as use), a1 :: a2 :: l) when is_bind r ->
     let bind_tys = Mlutil.written_type_args use in
+    (* The action's result type: the argument written for the variable the
+       continuation takes, [A] in [bind : forall A B, M A -> (A -> M B) -> M
+       B].  One extraction could not read ({!Extraction.observe_type_arg}: a
+       type constructor such as an HKT carrier) says nothing. *)
+    let action_result_ty =
+      match List.rev (Ml_type_util.ml_value_domains (find_type r)) with
+      | Miniml.Tarr (Miniml.Tvar (_, j), _) :: _ -> (
+        match Mlutil.Var_types.find bind_tys j with
+        | Some t when not (Mlutil.isTdummy t) -> Some t
+        | _ -> None )
+      | _ -> None
+    in
     (* Reified mode: bind is a real function call, not desugared. *)
     if (!tctx).itree_mode = Reified then
       let saved_dead = (!tctx).move_dead_after in
@@ -10211,20 +10226,6 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       let a_ml, f = Common.last_two (a1 :: a2 :: l) in
       let a = gen_expr env a_ml in
       let ids', f = collect_lams f in
-    (* The continuation's parameter is at bind's first type argument: bind
-       has type forall A B, IO A -> (A -> IO B) -> IO B.  Extraction unified
-       the two before the program was frozen; they are unified again with no
-       reason given for a late solution, so a metavariable still left in the
-       parameter fails extraction under [CRANE_CHECK_IR].  A [Tdummy] among
-       the type arguments -- one extraction could not read
-       ({!Extraction.observe_type_arg}: a type constructor such as an HKT
-       carrier) -- says nothing about the parameter. *)
-    let non_dummy_bind_tys = filter_value_types (Mlutil.Var_types.types bind_tys) in
-    let () =
-      match non_dummy_bind_tys with
-      | elem_ty :: _ -> List.iter (fun (_, ty) -> try_mgu ty elem_ty) ids'
-      | [] -> ()
-    in
     let ids, env =
       push_vars'
         (List.map (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty)) ids')
@@ -10303,8 +10304,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
            Bind action result to a temp var and apply f to it, instead of
            discarding the result and returning f unapplied. *)
         let non_void_ty =
-          match non_dummy_bind_tys with
-          | ty :: _ ->
+          match action_result_ty with
+          | Some ty ->
             let cpp_ty =
               cpp_of_ml env ty
             in
@@ -10312,7 +10313,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               None
             else
               Some cpp_ty
-          | [] -> None
+          | None -> None
         in
         ( match non_void_ty with
         | Some cpp_ty ->
