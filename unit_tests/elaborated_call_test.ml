@@ -70,3 +70,36 @@ let () =
   let lex = Lexenv.push [binder "inst" class_ty; binder "x" nat] Lexenv.empty in
   let local = elaborate ~lex h [MLrel 1; MLrel 2] in
   check "a class-typed binder bound in a body is a value" (local.instances = [])
+
+(* A call is found among the ones planned from Core by its use's occurrence,
+   which survives the annotation rewrites a body goes through before it is
+   translated: a polymorphic use is rebuilt by every rewrite of its types. *)
+let () =
+  let f = r "pf" in
+  Table.add_type f (Tarr (Tvar (Schematic, 1), Tvar (Schematic, 1)));
+  let scheme = Scheme.Id.fresh f ~arity:1 in
+  let at_nat () =
+    Global_use.polymorphic f
+      (Scheme.Instantiation.make scheme (fun _ ->
+           {Scheme.solution = Scheme.Type nat; source = Scheme.Not_written} ) )
+  in
+  let use = at_nat () in
+  let rewritten = Global_use.map_types Fun.id use in
+  check "a rewrite of a use's types keeps its occurrence"
+    (Occurrence.equal (Global_use.occurrence use) (Global_use.occurrence rewritten));
+  let again = at_nat () in
+  check "a use built afresh is another occurrence"
+    (not (Occurrence.equal (Global_use.occurrence use) (Global_use.occurrence again)));
+  check "occurrences do not tell terms apart structurally" (MLglob use = MLglob again);
+  let a = declare "pa" nat in
+  let unit = ModPath.MPfile (DirPath.make [Id.of_string "U"]) in
+  Common.set_phase Common.Plan;
+  Core_elaborate.structure
+    [(unit, [(Label.make "d", SEdecl (Dterm (r "d", MLapp (MLglob use, [a]), nat)))])];
+  Common.set_phase (Common.Emit Common.Impl);
+  ignore (Core_elaborate.elaboration ~lex:Lexenv.empty rewritten [a]);
+  ignore (Core_elaborate.elaboration ~lex:Lexenv.empty again [a]);
+  check "a call whose use was rewritten is found planned, one built afresh is not"
+    (Core_elaborate.report ()
+    = "elaborated calls: 1 planned; emission found 1, elaborated 1 itself");
+  Common.set_phase Common.Plan
