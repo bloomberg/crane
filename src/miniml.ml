@@ -14,6 +14,14 @@
 
 open Names
 
+(* A [unit ref] compares and hashes by its contents, which every occurrence
+   shares, and is told apart from another only physically. *)
+module Occurrence = struct
+  type t = unit ref
+  let fresh () = ref ()
+  let equal = ( == )
+end
+
 (** The [signature] type is used to know how many arguments a PCUIC object
     expects, and what these arguments will become in the ML object. *)
 
@@ -171,6 +179,7 @@ and ml_ast =
 and global_use = {
   callee : GlobRef.t;
   instance : global_instance;
+  occurrence : Occurrence.t;
 }
 
 and global_instance =
@@ -305,11 +314,12 @@ type language_descr = {
 
 module Global_use = struct
   let callee g = g.callee
-  let monomorphic callee = {callee; instance = Monomorphic}
+  let occurrence g = g.occurrence
+  let monomorphic callee = {callee; instance = Monomorphic; occurrence = Occurrence.fresh ()}
 
   let polymorphic callee inst =
     if Scheme.Id.arity (Scheme.Instantiation.scheme inst) = 0 then monomorphic callee
-    else {callee; instance = Polymorphic inst}
+    else {callee; instance = Polymorphic inst; occurrence = Occurrence.fresh ()}
 
   let with_slots callee scheme slot = polymorphic callee (Scheme.Instantiation.make scheme slot)
 

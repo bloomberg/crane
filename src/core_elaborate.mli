@@ -6,9 +6,10 @@
     application of a unit's frozen program, with the role each of its
     arguments has, elaborated in a lexical environment of the walk's own.
 
-    Transitional.  The roles are kept per unit by the [MLglob] node naming
-    the callee, which survives the annotation rewrites a body goes through
-    before it is translated, and emission takes a call's roles from here
+    Transitional.  The roles are kept per unit by the occurrence of the use
+    naming the callee ({!Miniml.Occurrence}), which the annotation rewrites a
+    body goes through before it is translated keep, and emission takes a
+    call's roles from here
     when it translates that application; a call translation built itself --
     a flattened spine, arguments pushed into a branch, a term inside a type
     -- is elaborated where it is translated, in the traversal's

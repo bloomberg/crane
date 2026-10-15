@@ -34,6 +34,17 @@
 
 open Names
 
+(** Which occurrence of a global a {!global_use} is: made fresh where the use
+    is built, and kept by every rewrite of its types, so that a pass can find
+    the application it planned in a term the annotation rewrites rebuilt.
+    Occurrences are told apart only by {!equal}; to structural equality and
+    hashing every occurrence is the same, so two terms that differ only in
+    where they were built still compare equal. *)
+module Occurrence : sig
+  type t
+  val equal : t -> t -> bool
+end
+
 (* The [signature] type is used to know how many arguments a PCUIC object expects,
    and what these arguments will become in the ML object. *)
 
@@ -252,6 +263,7 @@ and ml_ast =
 and global_use = private {
   callee : GlobRef.t;
   instance : global_instance;
+  occurrence : Occurrence.t;
 }
 
 (** A use of a declaration with no scheme variable is [Monomorphic].  Any
@@ -450,8 +462,10 @@ module Global_use : sig
       stood as. *)
   val written_evidence : global_use -> (Scheme.Var.t * ml_type) list
 
+  val occurrence : global_use -> Occurrence.t
+
   (** Maps every type of the instantiation, keeping the scheme, the slots'
-      evidence and the holes. *)
+      evidence, the holes and the occurrence. *)
   val map_types : (ml_type -> ml_type) -> global_use -> global_use
 
   (** Every type of the instantiation: solutions and written arguments. *)

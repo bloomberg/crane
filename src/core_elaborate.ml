@@ -182,10 +182,10 @@ let elaborate_arguments ~lex use args = of_roles use args (classify ~lex use.cal
 
 module Calls = Hashtbl.Make (GlobRef.UserOrd)
 
-(** A global application of the program: the [use] node it names its callee
-    by, and the roles of the arguments it writes. *)
+(** A global application of the program: the occurrence of the use naming
+    its callee, and the roles of the arguments it writes. *)
 type entry = {
-  use : global_use;
+  occurrence : Occurrence.t;
   roles : Elaborated_call.role list;
 }
 
@@ -205,7 +205,7 @@ let record lex use args =
   match classify ~lex use.callee args with
   | roles ->
     let others = Option.default [] (Calls.find_opt planned use.callee) in
-    Calls.replace planned use.callee ({use; roles} :: others)
+    Calls.replace planned use.callee ({occurrence = Global_use.occurrence use; roles} :: others)
   (* A callee with no type is never translated as a call: the traversal
      reaches it by another route or not at all. *)
   | exception Not_found -> ()
@@ -282,15 +282,18 @@ let referenced () = GlobRef.Set_env.elements !named
 
 (* The roles planned for the application naming its callee by [use] with
    [n] arguments.  A body's annotations may be rewritten before it is
-   translated, which rebuilds every node but the [MLglob]s, so the [use] is
-   what identifies the application; one a rewrite duplicated is found only
-   where every copy has the same roles. *)
+   translated, which rebuilds every node, so the use's occurrence is what
+   identifies the application; one a rewrite duplicated is found only where
+   every copy has the same roles. *)
 let planned_roles use n =
   match Calls.find_opt planned use.callee with
   | None -> None
   | Some entries -> (
+    let occurrence = Global_use.occurrence use in
     match
-      List.filter (fun e -> e.use == use && Int.equal (List.length e.roles) n) entries
+      List.filter
+        (fun e -> Occurrence.equal e.occurrence occurrence && Int.equal (List.length e.roles) n)
+        entries
     with
     | [] -> None
     | e :: rest when List.for_all (fun e' -> List.equal ( = ) e.roles e'.roles) rest ->
