@@ -52,6 +52,7 @@ let dependencies decls =
   let rec fe e =
     ( match e with
     | CPPglob (r, _, _) | CPPnamespace (r, _) | CPPstructmk (r, _, _)
+    | CPPmethod_call {mc_method = r; _}
     | CPPstruct (r, _, _) | CPPenum_val (r, _) ->
       note r
     | CPPconcept_app (c, r, _) -> note c; note r

@@ -433,6 +433,7 @@ and cpp_expr =
   | CPPaccess of obj_access * cpp_expr * Id.t (* obj.member or obj->member *)
   | CPPaccess_call of obj_access * cpp_expr * Id.t * cpp_expr list
     (* obj.method(args) or obj->method(args) *)
+  | CPPmethod_call of method_call
   | CPPscope of cpp_expr * Id.t * cpp_type list
     (* expr::id, or expr::template id<tys...> when the list is non-empty *)
   | CPPqualified_t of
@@ -529,6 +530,15 @@ and cpp_expr =
     (* std::get_if<T>(&variant) — pointer-returning variant accessor.
        Uses (sn()).get_if for BDE compatibility.  When [Id.t option] is
        [Some id], emits [std::get_if<typename T::Id>(&expr)]. *)
+
+(** A call of a methodified function: see [minicpp.mli]. *)
+and method_call = {
+  mc_method : GlobRef.t;
+  mc_access : obj_access;
+  mc_receiver : cpp_expr;
+  mc_type_args : cpp_type list;
+  mc_args : cpp_expr list;
+}
 
 (** A lambda expression. *)
 and cpp_lambda = {
@@ -1417,6 +1427,12 @@ let map_expr ?fl
   | CPPaccess (a, e', id) -> CPPaccess (a, fe e', id)
   | CPPaccess_call (a, obj, id, args) ->
     CPPaccess_call (a, fe obj, id, List.map fe args)
+  | CPPmethod_call m ->
+    CPPmethod_call
+      { m with
+        mc_receiver = fe m.mc_receiver;
+        mc_type_args = List.map ft m.mc_type_args;
+        mc_args = List.map fe m.mc_args }
   | CPPscope (e', id, tys) -> CPPscope (fe e', id, List.map ft tys)
   | CPPqualified_t (ty, id) -> CPPqualified_t (ft ty, id)
   | CPPconvertible_to ty -> CPPconvertible_to (ft ty)
@@ -1563,6 +1579,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
     List.iter on_expr es
   | CPPparray (arr, e') -> Array.iter on_expr arr; on_expr e'
   | CPPaccess_call (_, obj, _, args) -> on_expr obj; List.iter on_expr args
+  | CPPmethod_call m -> on_expr m.mc_receiver; List.iter on_expr m.mc_args
   | CPPrequires (_, constraints, _) ->
     List.iter (fun (e', _) -> on_expr e') constraints
   | CPPbinop (_, l, r) -> on_expr l; on_expr r
@@ -1709,6 +1726,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
     List.fold_left fe acc es
   | CPPparray (arr, e') -> fe (Array.fold_left fe acc arr) e'
   | CPPaccess_call (_, obj, _, args) -> List.fold_left fe (fe acc obj) args
+  | CPPmethod_call m -> List.fold_left fe (fe acc m.mc_receiver) m.mc_args
   | CPPrequires (_, constraints, _) ->
     List.fold_left (fun a (e', _) -> fe a e') acc constraints
   | CPPbinop (_, l, r) -> fe (fe acc l) r
@@ -2409,6 +2427,8 @@ let rec free_vars_expr = function
     free_vars_expr f @ List.concat_map free_vars_expr (to_reversed args)
   | CPPaccess_call (_, obj, _, args) ->
     free_vars_expr obj @ List.concat_map free_vars_expr args
+  | CPPmethod_call m ->
+    free_vars_expr m.mc_receiver @ List.concat_map free_vars_expr m.mc_args
   | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) ->
     free_vars_expr e
   | CPPbinop (_, e1, e2) -> free_vars_expr e1 @ free_vars_expr e2

@@ -1490,30 +1490,16 @@ and pp_value_qualifier env ty =
     @param args  arguments accumulated by callers (already pretty-printed) to be
                  applied once the head expression is reached, via [pp_apply_cpp]
     @param t     the expression to render *)
-and pp_method_call_name n method_name tys =
-  (* The explicit template arguments a call to a method must spell.  The
-     inductive's own type parameters are carried by the receiver and phantom
-     ones are not represented in the signature at all, so neither is written;
-     what is left has to be written, because nothing in the argument list
-     deduces it. *)
-  let filtered_tys =
-    match tys with
-    | [] -> []
-    | _ ->
-      let ind_tvar_positions = lookup_method_ind_tvar_positions n in
-      let phantom_positions = Callable_abi.dropped_positions n in
-      List.filteri
-        (fun i _ ->
-          (not (List.mem i ind_tvar_positions))
-          && not (List.mem i phantom_positions))
-        tys
-  in
-  match filtered_tys with
+(* A member named after [.] or [->], with the template arguments it writes. *)
+and pp_member_name method_name = function
   | [] -> Id.print method_name
-  | _ ->
+  | tys ->
     str "template " ++ Id.print method_name ++ str "<"
-    ++ pp_list (pp_cpp_type false []) filtered_tys
+    ++ pp_list (pp_cpp_type false []) tys
     ++ str ">"
+
+and pp_method_call_name n method_name tys =
+  pp_member_name method_name (method_type_args n tys)
 
 and pp_cpp_expr env args t =
   let apply st = pp_apply_cpp st args in
@@ -1901,35 +1887,13 @@ and pp_cpp_expr env args t =
         arg_types
         []
         cmds
-  | CPPfun_call (_, CPPglob (n, tys, _), ts)
-    when lookup_method_this_pos n <> None
-    ->
-    let method_name = Common.id_of_global Term n in
-    let this_pos =
-      match lookup_method_this_pos n with
-      | Some p -> p
-      | None -> 0
-    in
-    let args_normal = call_args ts in
-    let this_arg_opt, other_args = Common.extract_at_pos this_pos args_normal in
-    ( match this_arg_opt with
-    | Some this_arg ->
-      let args_s = pp_list (pp_cpp_expr env args) other_args in
-      (* All inductives (including coinductives) are value types, so use
-         dot access.  Exceptions: [this] is a raw pointer and [CPPderef e]
-         dereferences a smart pointer — both use arrow. *)
-      let acc, obj = match this_arg with
-        | CPPthis -> (Aarrow, this_arg)
-        | CPPderef e -> (Aarrow, e)
-        | _ -> (Adot, this_arg)
-      in
-      pp_cpp_expr env args obj
-      ++ str (pp_obj_access acc)
-      ++ pp_method_call_name n method_name tys
-      ++ str "("
-      ++ args_s
-      ++ str ")"
-    | None -> pp_cpp_expr env args (CPPglob (n, tys, None)) ++ str "()" )
+  | CPPmethod_call {mc_method; mc_access; mc_receiver; mc_type_args; mc_args} ->
+    pp_cpp_expr env args mc_receiver
+    ++ str (pp_obj_access mc_access)
+    ++ pp_member_name (Common.id_of_global Term mc_method) mc_type_args
+    ++ str "("
+    ++ pp_list (pp_cpp_expr env args) mc_args
+    ++ str ")"
   | CPPfun_call (_, CPPrt Crane_rt.Share_child, {rev = [arg]}) -> (
     (* A field read out of a matched value goes to the new node as the cell
        it is in; anything else is the value itself. *)
@@ -2060,7 +2024,7 @@ and pp_cpp_expr env args t =
   | CPPderef e ->
     let needs_parens = match e with
       | CPPvar _ | CPPthis | CPPfun_call _ | CPPaccess _
-      | CPPaccess_call _ -> false
+      | CPPaccess_call _ | CPPmethod_call _ -> false
       | _ -> true
     in
     if needs_parens then str "*(" ++ pp_cpp_expr env args e ++ str ")"
@@ -2576,8 +2540,8 @@ and pp_cpp_stmt env args = function
        shared_ptr) where explicit move is required. *)
     let e = match e with
       | CPPmove (CPPvar _ as inner) -> inner
-      | CPPmove ((CPPfun_call _ | CPPaccess_call _ | CPPstruct _ | CPPstructmk _
-                 | CPPstruct_id _) as inner) -> inner
+      | CPPmove ((CPPfun_call _ | CPPaccess_call _ | CPPmethod_call _ | CPPstruct _
+                 | CPPstructmk _ | CPPstruct_id _) as inner) -> inner
       | _ -> e
     in
     str "return " ++ pp_cpp_expr env args e ++ str ";"

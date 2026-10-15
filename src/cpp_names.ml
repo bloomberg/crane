@@ -781,4 +781,12 @@ let lookup_method_this_pos n =
     are value types, so this always returns false. *)
 let method_receiver_is_ptr _n = false
 
+let method_type_args n tys =
+  match tys with
+  | [] -> []
+  | _ ->
+    let carried = lookup_method_ind_tvar_positions n in
+    let dropped = Callable_abi.dropped_positions n in
+    List.filteri (fun i _ -> not (List.mem i carried || List.mem i dropped)) tys
+
 module IdSet = Set.Make (Names.Id)

@@ -776,6 +776,8 @@ let rec collect_expr (check : call_checker) expr =
     collect_expr check obj @ List.concat_map (collect_expr check) args
   | CPPaccess_call (Adot, obj, _id, args) ->
     collect_expr check obj @ List.concat_map (collect_expr check) args
+  | CPPmethod_call {mc_receiver = obj; mc_args = args; _} ->
+    collect_expr check obj @ List.concat_map (collect_expr check) args
   | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) | CPPsuspend (_, e) ->
     collect_expr check e
   | CPPlambda {cl_body = stmts; _} ->

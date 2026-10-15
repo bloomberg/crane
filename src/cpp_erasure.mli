@@ -137,6 +137,14 @@ val bind_free_tvars : settled -> settled
     boxes is read off their declared types. *)
 val lower_boxed_reads : settled -> settled
 
+(** [lower_method_calls decl] writes each call of a function the method
+    registry made a member of its receiver's struct as the
+    {!Minicpp.CPPmethod_call} it is: the receiver taken out of the argument
+    list, reached with [.] or [->], and the template arguments the struct
+    carries left off.  The last pass, so every pass before it sees the call
+    as translation built it. *)
+val lower_method_calls : settled -> settled
+
 (** [materialise decl] replaces every {!Minicpp.Topaque} in [decl] with
     {!Minicpp.Tany}.
 

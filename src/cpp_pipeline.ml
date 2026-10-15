@@ -159,7 +159,10 @@ let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
     pass "free_tvars" Cpp_erasure.bind_free_tvars;
     (* With every type final, a read of a boxed value the context needs at a
        concrete type is written down. *)
-    pass "boxed_reads" Cpp_erasure.lower_boxed_reads ]
+    pass "boxed_reads" Cpp_erasure.lower_boxed_reads;
+    (* A call of a methodified function becomes the member call it is, so
+       the printer spells the call it is given. *)
+    pass "method_calls" Cpp_erasure.lower_method_calls ]
 
 let pass_names =
   Pipeline_trace.names minicpp_passes @ [seam] @ Pipeline_trace.names settled_passes

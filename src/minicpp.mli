@@ -541,6 +541,9 @@ and cpp_expr =
           only difference between the two. *)
   | CPPaccess_call of obj_access * cpp_expr * Id.t * cpp_expr list
       (** The applied form of {!CPPaccess}: object, method name, arguments. *)
+  | CPPmethod_call of method_call
+      (** A call of a function Crane emits as a method of its receiver's
+          struct: see {!method_call}. *)
   | CPPscope of cpp_expr * Id.t * cpp_type list
       (** Scope resolution: [expr::id], or [expr::template id<tys...>] when
           the type list is non-empty.  Template arguments belong here and
@@ -644,6 +647,21 @@ and cpp_expr =
       (** [std::get_if<T>(&variant)] -- pointer-returning variant accessor.
           Uses [(sn()).get_if] for BDE compatibility.  See {!CPPstd_get} on
           naming an alternative. *)
+
+(** A call of a methodified function, written [receiver.method(args)].
+    Translation builds every call as a plain {!CPPfun_call}; the last
+    finishing pass ({!Cpp_erasure.lower_method_calls}) rewrites the calls of
+    the functions the method registry made members into this, so the printer
+    spells what it is given. *)
+and method_call = {
+  mc_method : GlobRef.t;  (** The function, called as its receiver's member. *)
+  mc_access : obj_access;
+  mc_receiver : cpp_expr;
+  mc_type_args : cpp_type list;
+      (** The template arguments the call writes: the call's own, less those
+          the receiver's struct carries and those the method's plan drops. *)
+  mc_args : cpp_expr list;  (** The arguments besides the receiver, in order. *)
+}
 
 (** A lambda expression. *)
 and cpp_lambda = {

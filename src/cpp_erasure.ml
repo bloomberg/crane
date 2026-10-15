@@ -546,6 +546,35 @@ let rec reads_decl (d : settled) : settled =
 
 let lower_boxed_reads (d : settled) : settled = reads_decl d
 
+let lower_method_calls (d : settled) : settled =
+  let rec fe e =
+    match map_expr fe fs Fun.id e with
+    | CPPfun_call (_, CPPglob (n, tys, (None | Some {ci_inline = None; _})), args) as call -> (
+      match Cpp_names.lookup_method_this_pos n with
+      | None -> call
+      | Some pos -> (
+        match Common.extract_at_pos pos (call_args args) with
+        | Some receiver, rest ->
+          (* Every inductive is a value type, reached with a dot; [this] is a
+             raw pointer and a [CPPderef] dereferences a smart one, and both
+             are reached with an arrow instead. *)
+          let access, receiver =
+            match receiver with
+            | CPPthis -> (Aarrow, receiver)
+            | CPPderef p -> (Aarrow, p)
+            | _ -> (Adot, receiver)
+          in
+          CPPmethod_call
+            { mc_method = n;
+              mc_access = access;
+              mc_receiver = receiver;
+              mc_type_args = Cpp_names.method_type_args n tys;
+              mc_args = rest }
+        | None, _ -> call ) )
+    | e -> e
+  and fs s = map_stmt fe fs Fun.id s in
+  map_decl fe fs Fun.id d
+
 (** [bind_free_tvars decl] spells [std::any] every type variable a body names
     that nothing in scope declares.
 
