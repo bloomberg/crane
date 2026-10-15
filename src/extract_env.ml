@@ -1542,13 +1542,30 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
      unsafe features it uses -- and the body is the only thing that knows.
      Rendering first and writing after lets the preamble follow from the body
      that is actually written.  Everything raised after this point is too
-     late, which [freeze_demands] is there to catch. *)
-  set_phase (Emit Impl);
-  Pipeline_trace.event "emit" "render_impl";
-  let body_impl = d.pp_struct struc in
-  set_phase (Emit Intf);
-  Pipeline_trace.event "emit" "render_intf";
-  let body_hstruct = d.pp_hstruct struc in
+     late, which [freeze_demands] is there to catch.
+
+     Neither render may depend on the other having run, so
+     [CRANE_RENDER_ORDER=intf-first] renders the header first: an order
+     dependence then shows as a difference in the generated files. *)
+  let render_impl () =
+    set_phase (Emit Impl);
+    Pipeline_trace.event "emit" "render_impl";
+    d.pp_struct struc
+  in
+  let render_intf () =
+    set_phase (Emit Intf);
+    Pipeline_trace.event "emit" "render_intf";
+    d.pp_hstruct struc
+  in
+  let body_impl, body_hstruct =
+    match Sys.getenv_opt "CRANE_RENDER_ORDER" with
+    | Some "intf-first" ->
+      let intf = render_intf () in
+      (render_impl (), intf)
+    | _ ->
+      let impl = render_impl () in
+      (impl, render_intf ())
+  in
   report_body_generations fn;
   Table.freeze_demands ();
   check_no_late_decisions census_after_planning;
