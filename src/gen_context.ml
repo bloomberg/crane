@@ -28,12 +28,15 @@ let body_generation_counts () =
 (** Begin generating a top-level body -- a function's, a constant's, a
     method's or an instance method's: count it, and start its state afresh,
     so that what it generates does not depend on what was generated before
-    it.  Fresh-name counters start at zero, and no parameter is tracked for
-    moves; a body with parameters sets that tracking after this.
+    it.  Fresh-name counters start at zero, no parameter is tracked for
+    moves -- a body with parameters sets that tracking after this -- and the
+    metavariables of the frozen program another body solved are unsolved
+    ({!Miniml.Meta.undo_late}).
 
     [owner] is the declaration the body belongs to, which
     [CRANE_TRACE_PIPELINE] reports with the phase. *)
 let begin_body ~owner () =
+  Miniml.Meta.undo_late ();
   let phase = get_phase () in
   Hashtbl.replace body_generations phase
     (1 + Option.default 0 (Hashtbl.find_opt body_generations phase));

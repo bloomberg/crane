@@ -479,9 +479,12 @@ end
     A metavariable is extraction's: unification solves it while types are
     reconstructed, and the Core passes may still.  Once the program is frozen
     ({!Core.freeze}) nothing should, but the back end still does, at the
-    sites {!late_solution} names, so the first render decides those types.
-    A solve after freezing must say which of them it is; under
-    [CRANE_CHECK_IR] one that does not is an anomaly. *)
+    sites {!late_solution} names, while it generates a body.  A solve after
+    freezing must say which of them it is; under [CRANE_CHECK_IR] one that
+    does not is an anomaly.  Every late solution is kept until {!undo_late},
+    which a body's generation calls before it starts, so each body decides
+    those types for itself and the frozen program is, between bodies, the
+    one that was frozen. *)
 module Meta : sig
   (** Why a metavariable is solved after the program was frozen. *)
   type late_solution =
@@ -499,6 +502,10 @@ module Meta : sig
 
   (** [solve ?late m t] solves [m] to [t]; [late] says why, after freezing. *)
   val solve : ?late:late_solution -> ml_meta -> ml_type -> unit
+
+  (** Unsolve every metavariable solved late since {!freeze} or the last
+      [undo_late]. *)
+  val undo_late : unit -> unit
 
   (** From here a solve must be late.  Counts start afresh. *)
   val freeze : unit -> unit

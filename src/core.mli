@@ -12,12 +12,14 @@
     Transitional.  {!freeze} checks the structural invariants that hold
     today; it does not yet establish that no metavariable is reachable.  The
     back end still solves the metavariables binder, match and fixpoint
-    annotations hold while rendering -- at the sites
+    annotations hold while it generates a body -- at the sites
     {!Miniml.Meta.late_solution} enumerates, and only there, which freezing
-    enforces -- so the first render decides those types.  Until they become
-    obligations resolved without writing to the program, {!freeze} reports
-    how many it leaves, and {!structure} is the read-only view unconverted
-    consumers take. *)
+    enforces -- but undoes them before the next body and once rendering
+    ends, so between bodies the program is the one frozen, and under
+    [CRANE_CHECK_IR] rendering that changes it fails.  Until those
+    solutions become obligations resolved without writing to the program,
+    {!freeze} reports how many metavariables it leaves, and {!structure} is
+    the read-only view unconverted consumers take. *)
 
 type extracted
 type optimized

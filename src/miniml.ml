@@ -392,9 +392,17 @@ module Meta = struct
   let frozen = ref false
   let counts : (late_solution, int) Hashtbl.t = Hashtbl.create 6
 
+  (* The metavariables solved late, to be unsolved by [undo_late]. *)
+  let trail : ml_meta list ref = ref []
+
+  let undo_late () =
+    List.iter (fun m -> m.contents <- None) !trail;
+    trail := []
+
   let solve ?late m t =
     ( match late with
     | Some reason ->
+      trail := m :: !trail;
       Hashtbl.replace counts reason (1 + Option.default 0 (Hashtbl.find_opt counts reason))
     | None ->
       if !frozen && Sys.getenv_opt "CRANE_CHECK_IR" <> None then
@@ -404,6 +412,7 @@ module Meta = struct
 
   let freeze () =
     frozen := true;
+    trail := [];
     Hashtbl.reset counts
 
   let thaw () = frozen := false

@@ -1350,35 +1350,42 @@ let core_passes to_appear : ml_structure Pipeline_trace.pass list =
 
 let core_pass_names = Pipeline_trace.names (core_passes ([], []))
 
-(** Under [CRANE_TRACE_PIPELINE], report the fingerprint of [struc], and
-    keep its elements' for {!report_structure_changes}. *)
+(** Under [CRANE_TRACE_PIPELINE], report the fingerprint of [struc]; under
+    it or [CRANE_CHECK_IR], keep its elements' for
+    {!check_structure_unchanged}. *)
 let observed_fingerprint ~stage struc =
-  if Pipeline_trace.enabled () then begin
+  if Pipeline_trace.enabled () then
     Pipeline_trace.event stage
       ("fingerprint " ^ Ml_fingerprint.to_hex (Ml_fingerprint.structure struc));
-    Some (Ml_fingerprint.elements struc)
-  end
+  if Pipeline_trace.enabled () || Probe.checking () then Some (Ml_fingerprint.elements struc)
   else None
 
-(** Report the elements rendering changed.
+(** Report the elements rendering changed, and under [CRANE_CHECK_IR] fail
+    if there is one.
 
     Everything the plan records is a fact about one structure, and emission
     reads those facts back against the structure it is handed, so a structure
     that changes while it is rendered is read by emission as a different
-    program from the one that was planned.  Some do change: translation
-    solves the metavariables a local fixpoint's binder types still hold
-    (tests/regression/let_fix), so the implementation pass decides those
-    types and the header pass reads them solved.  That is reported rather
-    than refused, until a frozen structure, with no metavariable left to
-    solve, makes it a check. *)
-let report_structure_changes planned struc =
+    program from the one that was planned.  Translation still solves
+    metavariables of the frozen program while it generates a body, but each
+    body's solutions are undone before the next body and once rendering ends
+    ({!Miniml.Meta.undo_late}), so none survives into the structure. *)
+let check_structure_unchanged planned struc =
   Option.iter
     (fun before ->
-      List.iter2
-        (fun (l, fp) (_, fp') ->
-          if not (Ml_fingerprint.equal fp fp') then
-            Pipeline_trace.event "emit" ("changed by rendering: " ^ Label.to_string l) )
-        before (Ml_fingerprint.elements struc) )
+      let changed =
+        List.filter_map
+          (fun ((l, fp), (_, fp')) -> if Ml_fingerprint.equal fp fp' then None else Some l)
+          (List.combine before (Ml_fingerprint.elements struc))
+      in
+      List.iter
+        (fun l -> Pipeline_trace.event "emit" ("changed by rendering: " ^ Label.to_string l))
+        changed;
+      if changed <> [] then
+        Probe.violation "frozen program"
+          Pp.(
+            str "rendering changed "
+            ++ prlist_with_sep pr_comma Label.print changed) )
     planned
 
 (** Under [CRANE_TRACE_PIPELINE], report the metavariables of the frozen
@@ -1551,18 +1558,21 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
      Rendering first and writing after lets the preamble follow from the body
      that is actually written.  Everything raised after this point is too
      late, which [freeze_demands] is there to catch. *)
+  (* What planning solved late is not emission's to read. *)
+  Miniml.Meta.undo_late ();
   set_phase (Emit Impl);
   Pipeline_trace.event "emit" "render_impl";
   let body_impl = d.pp_struct struc in
   set_phase (Emit Intf);
   Pipeline_trace.event "emit" "render_intf";
   let body_hstruct = d.pp_hstruct struc in
+  Miniml.Meta.undo_late ();
   report_body_generations fn;
   Table.freeze_demands ();
   check_no_late_decisions census_after_planning;
   Generated_program.check_against_plan ~declares:(declares struc);
   Install_legacy_plan.check_installed facts plan;
-  report_structure_changes planned struc;
+  check_structure_unchanged planned struc;
   report_late_solutions ();
   if Pipeline_trace.enabled () then begin
     Pipeline_trace.event "emit" (Core_elaborate.report ());
