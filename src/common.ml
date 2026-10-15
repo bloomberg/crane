@@ -443,7 +443,7 @@ type phase =
 
 (** Get/set the current extraction phase. *)
 let set_phase, get_phase =
-  let ph = ref (Emit Impl) in
+  let ph = ref Plan in
   (( := ) ph, fun () -> !ph)
 
 let phase_name = function

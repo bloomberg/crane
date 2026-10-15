@@ -1515,8 +1515,10 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   Buffer.clear buf;
   let d = descr () in
   (* Empties every per-file cell, the mutual-recursion registry among them,
-     before this unit is planned and rendered. *)
+     before this unit is planned and rendered.  Everything before the first
+     render is planning, whatever the previous unit left the phase at. *)
   reset_renaming_tables AllButExternal;
+  set_phase Plan;
   let unsafe_needs =
     {
       mldummy = struct_ast_search Mlutil.isMLdummy struc;
@@ -1667,6 +1669,7 @@ let reset () =
   Visit.reset ();
   reset_tables ();
   reset_renaming_tables Everything;
+  set_phase Plan;
   Miniml.Meta.thaw ()
 
 (** Initializes the extraction environment, checking section scope and setting
@@ -2090,7 +2093,6 @@ let print_per_library ~dry core =
   in
   (* Pre-build the method registry from the full structure so that
      cross-module method calls are recognized during per-module rendering. *)
-  set_phase Plan;
   Cpp_state.set_global_method_registry (Method_registry.create ~ret_is_erased:Translation.return_type_is_erased struc);
   (* Generic traversal of ml_structure: walks MEstruct/MEfunctor/MEapply
      and calls [visit ~in_struct elem] on each structure element. *)
@@ -2135,7 +2137,6 @@ let print_per_library ~dry core =
         (Mlutil.term_defs d)
     | _ -> ()
   ) struc;
-  set_phase (Emit Impl);
   List.iter print (Core.modules core)
 
 (** Entry point for extracting specific references to separate files. Each Rocq
