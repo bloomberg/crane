@@ -333,6 +333,18 @@ let declaration ty body =
   walk_type Lexenv.empty ty;
   walk (Lexenv.push missing (Lexenv.push (List.map2 parameter params declared) Lexenv.empty)) body
 
+(* A constant typed by a name that stands for arrows -- an instance of a
+   single-method class is typed by the class -- is generated eta-expanded to
+   those arrows ({!Gen_functions.gen_spec}): the slot it initialises is a
+   function of the full signature, which no partial application fills. *)
+let constant_at_alias ty body =
+  let ty = Mlutil.type_simpl ty in
+  let body = match body with MLmagic (_, b) -> b | b -> b in
+  if Ml_type_util.ml_domains ty = [] then
+    match Ml_type_util.eta_expand_to (Ml_type_util.expand_ml_fun_alias ty) body with
+    | expanded when expanded != body -> walk Lexenv.empty expanded
+    | _ -> ()
+
 (* An instance's methods are generated from its record's fields not as
    written but as {!Instance_methods} elaborates them -- expanded to the arity
    the class declares, or, a function named point-free, applied to
@@ -385,6 +397,7 @@ let structure struc =
     (function
       | Dterm (r, body, ty) ->
         declaration ty body;
+        constant_at_alias ty body;
         instance_methods r body ty
       | Dfix fds -> List.iter (fun fd -> declaration fd.fd_type fd.fd_body) fds
       | Dind (_, ind) -> inductive ind
