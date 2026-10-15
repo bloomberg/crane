@@ -113,7 +113,7 @@ let rec find_self_ref_args ~is_self_or_mutual = function
 (** Check if an ML type is directly erased (non-recursive, top-level only).
     Matches unresolved [Tmeta], [Tdummy], and [Tvar]. *)
 let is_erased_ml_type = function
-  | Miniml.Tmeta {contents = None} | Miniml.Tdummy _ | Miniml.Tvar (Schematic, _) -> true
+  | Miniml.Tmeta {contents = None} | Miniml.Topen _ | Miniml.Tdummy _ | Miniml.Tvar (Schematic, _) -> true
   | _ -> false
 
 (** Recursive check for erased sub-types inside an ML type.  Resolves [Tmeta]
@@ -128,7 +128,7 @@ let is_erased_ml_type = function
 let rec ml_type_contains_erased ?(in_arrows = false) ty =
   let recur = ml_type_contains_erased ~in_arrows in
   match resolve_tmeta ty with
-  | Miniml.Tmeta _ | Miniml.Tdummy _ | Miniml.Tvar (Schematic, _) -> true
+  | Miniml.Tmeta _ | Miniml.Topen _ | Miniml.Tdummy _ | Miniml.Tvar (Schematic, _) -> true
   | Miniml.Tglob (_, tys, _) -> List.exists recur tys
   | Miniml.Tarr (a, b) -> in_arrows && (recur a || recur b)
   | _ -> false
@@ -688,7 +688,7 @@ and resolve_tvars_to_any ty =
     and correspond to [std::any] in the C++ representation. *)
 and is_ml_erased_ty = function
   | Miniml.Tvar (_, _) | Miniml.Tunknown -> true
-  | Miniml.Tmeta {contents = None} -> true
+  | Miniml.Tmeta {contents = None} | Miniml.Topen _ -> true
   | Miniml.Tmeta {contents = Some t} -> is_ml_erased_ty t
   | _ -> false
 
@@ -840,7 +840,7 @@ let rec has_tvar = function
   | Miniml.Tarr (t1, t2) -> has_tvar t1 || has_tvar t2
   | Miniml.Tglob (_, args, _) -> List.exists has_tvar args
   | Miniml.Tmeta {contents = Some t} -> has_tvar t
-  | Miniml.Tmeta {contents = None} -> true
+  | Miniml.Tmeta {contents = None} | Miniml.Topen _ -> true
   | _ -> false
 
 (** Apply a type-level transformation to every type annotation in an ML AST. *)
@@ -1281,19 +1281,22 @@ let prune_unwritten_args =
     erased argument in a position nothing writes never reaches the C++. *)
 let has_tany_written t = has_tany_in_type (prune_unwritten_args t)
 
+let filled_with fills o =
+  List.find_map (fun (o', t) -> if Miniml.Open.equal o o' then Some t else None) fills
+
 let refine_erased ?(fills = ref []) ~writable have want =
   let erased = function
-    | Miniml.Tunknown | Miniml.Tdummy _ | Miniml.Tmeta {contents = None} -> true
+    | Miniml.Tunknown | Miniml.Tdummy _ | Miniml.Tmeta {contents = None} | Miniml.Topen _ -> true
     | _ -> false
   in
   let filled = function
-    | Miniml.Tmeta ({contents = None} as m) as t -> Option.default t (List.assq_opt m !fills)
+    | Miniml.Topen o as t -> Option.default t (filled_with !fills o)
     | t -> t
   in
   let rec refine have want =
     match (filled (resolve_tmeta have), resolve_tmeta want) with
-    | Miniml.Tmeta ({contents = None} as cell), w when (not (erased w)) && writable w ->
-      fills := (cell, w) :: !fills;
+    | Miniml.Topen o, w when (not (erased w)) && writable w ->
+      fills := (o, w) :: !fills;
       w
     | h, w when erased h -> if (not (erased w)) && writable w then w else h
     | Miniml.Tglob (n, ha, sc), Miniml.Tglob (m, wa, _)
@@ -1304,11 +1307,10 @@ let refine_erased ?(fills = ref []) ~writable have want =
   in
   refine have want
 
-(* Rebuilt only where a hole is filled, so a cell that stays keeps its
-   identity. *)
+(* Rebuilt only where a hole is filled, so the rest is shared. *)
 let rec fill_holes_type fills t =
   match t with
-  | Miniml.Tmeta ({contents = None} as m) -> Option.default t (List.assq_opt m fills)
+  | Miniml.Topen o -> Option.default t (filled_with fills o)
   | Miniml.Tmeta {contents = Some u} ->
     let u' = fill_holes_type fills u in
     if u' == u then t else u'
@@ -1736,7 +1738,7 @@ let higher_kinded_ml_tvars tys =
   in
   let survived_erasure a =
     match resolve_tmeta a with
-    | Miniml.Tunknown | Miniml.Tdummy _ | Miniml.Tmeta _ -> false
+    | Miniml.Tunknown | Miniml.Tdummy _ | Miniml.Tmeta _ | Miniml.Topen _ -> false
     | Miniml.Tvar (_, j) -> not (IntSet.mem j index_vars)
     | _ -> true
   in

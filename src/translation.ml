@@ -421,7 +421,7 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
           | Miniml.Tmeta {contents = Some t} -> is_writable t
           | Miniml.Tvar (_, _) as t ->
             names_only_scoped_tvars (cpp_of_ml env t)
-          | Miniml.Tapp _ | Miniml.Tunknown | Miniml.Tmeta {contents = None} ->
+          | Miniml.Tapp _ | Miniml.Tunknown | Miniml.Tmeta {contents = None} | Miniml.Topen _ ->
             false
           | _ -> true
         in
@@ -478,7 +478,7 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
           List.map2
             (fun t e ->
               match (resolve_tmeta t, e) with
-              | (Miniml.Tunknown | Miniml.Tmeta {contents = None}),
+              | (Miniml.Tunknown | Miniml.Tmeta {contents = None} | Miniml.Topen _),
                 Tvar (Tv_index (i, _))
                 when names_only_scoped_tvars e ->
                 Miniml.Tvar (Miniml.Schematic, i)
@@ -1031,7 +1031,7 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
          of_reversed args)
   in
   (* When [ty] (the MLcons node's own type annotation) is not itself a
-     resolved [Tglob] — e.g. an unresolved [Tmeta {contents = None}], which
+     resolved [Tglob] — e.g. an open annotation ([Topen]), which
      happens for a "cons" expression built from destructured pattern
      variables whose types extraction failed to unify with a non-reducible
      dependent computation (see [recover_pattern_var_types_from_scrutinee])
@@ -1788,7 +1788,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        has a type of its own ([state_get]'s [s : T1]), nor about its result. *)
     let rec has_open_meta t =
       match t with
-      | Miniml.Tmeta {contents = None} -> true
+      | Miniml.Tmeta {contents = None} | Miniml.Topen _ -> true
       | Miniml.Tmeta {contents = Some t} -> has_open_meta t
       | Miniml.Tarr (a, b) -> has_open_meta a || has_open_meta b
       | Miniml.Tglob (_, ts, _) -> List.exists has_open_meta ts
@@ -2234,7 +2234,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             | Some cod ->
               (match resolve_tmeta cod with
               | Miniml.Tdummy _ | Miniml.Tunknown
-              | Miniml.Tmeta {contents = None} -> slot.expected_ml_ty
+              | Miniml.Tmeta {contents = None} | Miniml.Topen _ -> slot.expected_ml_ty
               | _ -> Some cod)
             | None -> slot.expected_ml_ty)
           | None -> None)

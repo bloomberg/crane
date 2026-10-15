@@ -79,6 +79,7 @@ let rec ml_type w = function
   | Tmeta {contents = Some t; _} -> ml_type w t
   | Tmeta {id = m; contents = None} -> tag w "Tmeta"; int w (first_occurrence w.metas m)
   | Thole h -> tag w "Thole"; int w (first_occurrence w.holes h)
+  | Topen o -> tag w "Topen"; int w (first_occurrence w.metas (Open.id o))
   | Tdummy k -> tag w "Tdummy"; kill_reason w k
   | Tunknown -> tag w "Tunknown"
   | Taxiom -> tag w "Taxiom"

@@ -1510,7 +1510,7 @@ let rec is_closed_type = function
   | Miniml.Tmeta {contents = Some t} -> is_closed_type t
   | Miniml.Tstring -> true
   | Miniml.Tdummy _ | Miniml.Tvar _ | Miniml.Tapp _ | Miniml.Thole _
-  | Miniml.Tmeta {contents = None} | Miniml.Tunknown | Miniml.Taxiom ->
+  | Miniml.Tmeta {contents = None} | Miniml.Topen _ | Miniml.Tunknown | Miniml.Taxiom ->
     false
 
 let writable_offer ty = names_promoted_type_var ty || is_closed_type ty

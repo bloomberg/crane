@@ -10,14 +10,14 @@
     else builds a program.
 
     Transitional.  {!freeze} checks the structural invariants that hold
-    today.  Nothing solves a metavariable after it -- a local definition's
-    open types are minted before it ({!Local_types}), and a slot filling a
-    hole hands the answer to the terms that mention the hole instead of
-    writing it -- and [CRANE_CHECK_IR] enforces that, as it does that
-    rendering leaves the program it was planned against unchanged.  The
-    metavariables extraction left unsolved are still reachable, read as
-    erased: {!freeze} reports how many, and {!structure} is the read-only
-    view unconverted consumers take. *)
+    today.  It leaves no metavariable in the program: each solved one is
+    replaced by its solution and each unsolved one by an immutable open
+    annotation ({!Miniml.Topen}), read as erased.  A local definition's open
+    types are minted before it ({!Local_types}), and a slot filling a hole
+    hands the answer to the terms that mention the hole.  [CRANE_CHECK_IR]
+    checks that, as it does that rendering leaves the program it was planned
+    against unchanged; {!structure} is the read-only view unconverted
+    consumers take. *)
 
 type extracted
 type optimized
@@ -34,10 +34,11 @@ val optimize : (Miniml.ml_structure -> Miniml.ml_structure) -> extracted program
 (** [freeze p] is [p], checked: every recursive group is nonempty and its
     selected member exists, no reference is declared twice, and every
     polymorphic use is instantiated at its callee's own scheme with no
-    metavariable in its instantiation.  From here
-    until the extraction ends no metavariable is solved.  Under
-    [CRANE_TRACE_PIPELINE] it reports the unsolved metavariables still
-    reachable. *)
+    metavariable in its instantiation.  Its annotations hold no metavariable
+    either: each is replaced by its solution, or by an open annotation where
+    extraction left it unsolved, and from here until the extraction ends none
+    is made or solved.  Under [CRANE_TRACE_PIPELINE] it reports how many open
+    annotations the program holds. *)
 val freeze : optimized program -> frozen program
 
 (** The structure, for the consumers not converted to the phase types. *)
@@ -49,6 +50,6 @@ val partition : (Names.ModPath.t -> bool) -> 'phase program -> 'phase program * 
 (** Each top-level module of [p], as a program of its own. *)
 val modules : 'phase program -> (Names.ModPath.t * 'phase program) list
 
-(** The unsolved metavariables reachable from [p]'s annotations, each
-    counted once. *)
-val unsolved_metas : 'phase program -> int
+(** The open annotations reachable from [p]'s annotations
+    ({!Miniml.Topen}), each counted once. *)
+val open_annotations : 'phase program -> int

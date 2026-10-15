@@ -43,12 +43,13 @@ let rec iter_annotations f = function
   | MLrel _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> ()
 
 (* Solves each unsolved metavariable of a type, in order, to the rigid
-   variable [!next], advancing [next], and tells [minted]. *)
+   variable [!next], advancing [next], and tells [minted] the variable. *)
 let rec mint ~minted ~next = function
   | Tmeta ({contents = None} as m) ->
-    Meta.solve m (Tvar (Rigid, !next));
+    let v = Tvar (Rigid, !next) in
+    Meta.solve m v;
     incr next;
-    minted m
+    minted v
   | Tmeta {contents = Some t} -> mint ~minted ~next t
   | Tarr (a, b) ->
     mint ~minted ~next a;
@@ -57,18 +58,19 @@ let rec mint ~minted ~next = function
   | _ -> ()
 
 (* The number each let-bound lambda's variables were minted past, by the
-   metavariables minted for them: what lowering the lambda is checked
-   against.  A cell is its own identity: numbers restart with each
-   declaration extraction reconstructs. *)
-module Cells = Hashtbl.Make (struct
-  type t = ml_meta
+   variables minted for them: what lowering the lambda is checked against.
+   A minted variable is told apart by the node itself, which freezing keeps
+   where it replaces the cell solved to it ({!Core.freeze}): numbers say
+   nothing, every lambda's starting past a head of its own. *)
+module Minted = Hashtbl.Make (struct
+  type t = ml_type
 
   let equal = ( == )
-  let hash (m : ml_meta) = Hashtbl.hash m.id
+  let hash = Hashtbl.hash
 end)
 
-let let_lambda_bases : int Cells.t = Cells.create 16
-let () = State.on_reset State.Extraction (fun () -> Cells.reset let_lambda_bases)
+let let_lambda_bases : int Minted.t = Minted.create 16
+let () = State.on_reset State.Extraction (fun () -> Minted.reset let_lambda_bases)
 
 (** The type a term builds in tail position, where its own annotations say so.
 
@@ -139,7 +141,7 @@ let settle ids funs =
   (funs, mint)
 
 let rec left_open = function
-  | Tmeta {contents = None} -> true
+  | Tmeta {contents = None} | Topen _ -> true
   | Tmeta {contents = Some t} -> left_open t
   | Tarr (a, b) -> left_open a || left_open b
   | Tglob (_, args, _) -> List.exists left_open args
@@ -157,10 +159,9 @@ let check_let_lambda ~outer t a =
   if Probe.checking () then begin
     let base = ref None and unsolved = ref false in
     let rec visit = function
-      | Tmeta {contents = None} -> unsolved := true
-      | Tmeta ({contents = Some t} as m) ->
-        if !base = None then base := Cells.find_opt let_lambda_bases m;
-        visit t
+      | Tmeta {contents = None} | Topen _ -> unsolved := true
+      | Tmeta {contents = Some t} -> visit t
+      | Tvar (Rigid, _) as v -> if !base = None then base := Minted.find_opt let_lambda_bases v
       | Tarr (x, y) ->
         visit x;
         visit y
@@ -195,7 +196,7 @@ let rec expr ~outer = function
     ignore (settle ids funs);
     Array.iter (expr ~outer) funs
   | MLletin (_, t, (MLlam _ as a), b) ->
-    let minted m = Cells.replace let_lambda_bases m outer in
+    let minted v = Minted.replace let_lambda_bases v outer in
     let mint = mint ~minted ~next:(ref (outer + 1)) in
     mint t;
     iter_annotations mint a;

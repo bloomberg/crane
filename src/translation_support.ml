@@ -960,7 +960,7 @@ let recover_pattern_var_types_from_scrutinee ~ctor (typ : ml_type) ids =
            an erased component the scrutinee states ([md] of a pattern over
            [(nat * phi T) * list (metadata T)]). *)
         match ml_ty with
-        | Tmeta {contents = None} -> (x, fty)
+        | Tmeta {contents = None} | Topen _ -> (x, fty)
         | _
           when Ml_type_util.is_ml_erased_ty ml_ty
                && not (Ml_type_util.is_ml_erased_ty fty) ->
@@ -1260,7 +1260,7 @@ let rec is_reified_monadic_expr ml_expr =
     is_monadic_ml_type ty
     ||
     match Ml_type_util.resolve_tmeta ty with
-    | Miniml.Tvar _ | Miniml.Tunknown | Miniml.Tmeta {contents = None} -> true
+    | Miniml.Tvar _ | Miniml.Tunknown | Miniml.Tmeta {contents = None} | Miniml.Topen _ -> true
     | _ -> false
   in
   match ml_expr with

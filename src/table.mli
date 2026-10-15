@@ -1145,6 +1145,12 @@ val is_any_inline_custom : GlobRef.t -> bool
 (** Find type for reference. *)
 val find_type : GlobRef.t -> ml_type
 
+(** [iter_types f] applies [f] to every type {!find_type} can answer. *)
+val iter_types : (ml_type -> unit) -> unit
+
+(** [map_types f] makes {!find_type} answer [f t] wherever it answered [t]. *)
+val map_types : (ml_type -> ml_type) -> unit
+
 (** [add_type r ty] records [ty] as the type {!find_type} answers for [r],
     in the current session only: the cache {!register_glob_def} fills,
     without the library object that makes it persist. *)

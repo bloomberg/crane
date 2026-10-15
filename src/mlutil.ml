@@ -135,10 +135,12 @@ let reset_meta_count () =
   meta_count := 0;
   pending_applications := []
 
-(** Creates a fresh type metavariable for unification. *)
+(** Creates a fresh type metavariable for unification.  Once the program is
+    frozen nothing can solve one, so what is made instead is the open
+    annotation an unsolved metavariable becomes ({!Miniml.Topen}). *)
 let new_meta _ =
   incr meta_count;
-  Tmeta (Meta.fresh !meta_count)
+  if Meta.is_frozen () then Topen (Open.fresh !meta_count) else Tmeta (Meta.fresh !meta_count)
 
 (** Structural equality on ML types. *)
 let rec eq_ml_type t1 t2 =
@@ -152,6 +154,7 @@ let rec eq_ml_type t1 t2 =
     Int.equal i1 i2 && List.equal eq_ml_type l1 l2
   | Tmeta m1, Tmeta m2 -> eq_ml_meta m1 m2
   | Thole h1, Thole h2 -> Int.equal h1 h2
+  | Topen o1, Topen o2 -> Int.equal (Open.id o1) (Open.id o2)
   | Tdummy k1, Tdummy k2 -> k1 == k2
   | Tunknown, Tunknown -> true
   | Taxiom, Taxiom -> true
@@ -162,6 +165,7 @@ let rec eq_ml_type t1 t2 =
       | Tapp _
       | Tmeta _
       | Thole _
+      | Topen _
       | Tdummy _
       | Tunknown
       | Taxiom
@@ -230,6 +234,26 @@ let fill_placeholders ?(generated = true) pre args =
     List.map (fill_type_hole arg) pre
   | _ -> kept @ args
 
+(* An unsolved head [id] applied to [args].  The head is not known yet, and a
+   pending application of a metavariable is not representable.  Dropping the
+   arguments would make [M nat] and [M (nat -> nat)] the very same
+   metavariable, so that unifying one of them against a concrete carrier
+   resolves the other at the wrong instantiation.  Stand for the application
+   by an unknown of its own -- but the same one for the same head and
+   arguments, so that the two occurrences of [M B] in [bind]'s type still
+   unify with each other. *)
+let pending_application id args =
+  match
+    List.find_opt
+      (fun (id', a, _) -> Int.equal id id' && List.equal eq_ml_type a args)
+      !pending_applications
+  with
+  | Some (_, _, u) -> u
+  | None ->
+    let u = new_meta () in
+    pending_applications := (id, args, u) :: !pending_applications;
+    u
+
 (** Apply a type to [args], contracting the application when the head is
     known.  [Tapp] is a redex: its head is a type variable, so substituting
     that variable with a concrete type constructor reduces it.
@@ -262,25 +286,8 @@ let rec apply_ml_type head args =
       Tglob
         (r, fill_placeholders ~generated:(not (Table.is_custom r)) pre args, es)
     | Tmeta {contents = Some u} -> apply_ml_type u args
-    | Tmeta ({contents = None; _} as m) -> (
-      (* The head is not known yet, and a pending application of a
-         metavariable is not representable.  Dropping the arguments would make
-         [M nat] and [M (nat -> nat)] the very same metavariable, so that
-         unifying one of them against a concrete carrier resolves the other at
-         the wrong instantiation.  Stand for the application by an unknown of
-         its own -- but the same one for the same head and arguments, so that
-         the two occurrences of [M B] in [bind]'s type still unify with each
-         other. *)
-      match
-        List.find_opt
-          (fun (id, a, _) -> Int.equal id m.id && List.equal eq_ml_type a args)
-          !pending_applications
-      with
-      | Some (_, _, u) -> u
-      | None ->
-        let u = new_meta () in
-        pending_applications := (m.id, args, u) :: !pending_applications;
-        u )
+    | Tmeta {contents = None; id} -> pending_application id args
+    | Topen o -> pending_application (Open.id o) args
     | Tarr _ when type_has_hole head -> (
       (* A carrier that is a type-level lambda has no MiniML spelling, so what
          extraction leaves is its body with the binder written as [Tunknown]
@@ -375,7 +382,7 @@ let rec type_occurs alpha t =
   | Tarr (t1, t2) -> type_occurs alpha t1 || type_occurs alpha t2
   | Tglob (r, l, a) -> List.exists (type_occurs alpha) l
   | Tapp (_, l) -> List.exists (type_occurs alpha) l
-  | Tdummy _ | Tvar (_, _) | Thole _ | Taxiom | Tunknown | Tstring -> false
+  | Tdummy _ | Tvar (_, _) | Thole _ | Topen _ | Taxiom | Tunknown | Tstring -> false
 
 (** {2 Most General Unificator} *)
 
@@ -386,6 +393,8 @@ let rec mgu = function
     | Some u -> mgu (u, t)
     | None when type_occurs m.id t -> raise Impossible
     | None -> Meta.solve m t )
+  (* Frozen, an open annotation unifies with itself alone. *)
+  | Topen o, Topen o' when Int.equal (Open.id o) (Open.id o') -> ()
   | Tarr (a, b), Tarr (a', b') ->
     mgu (a, a');
     mgu (b, b')
@@ -590,7 +599,7 @@ let rec type_holes acc = function
   | _ -> acc
 
 let rec type_has_meta = function
-  | Tmeta {contents = None} -> true
+  | Tmeta {contents = None} | Topen _ -> true
   | Tmeta {contents = Some _} -> true
   | Tarr (a, b) -> type_has_meta a || type_has_meta b
   | Tglob (_, l, _) | Tapp (_, l) -> List.exists type_has_meta l
@@ -637,6 +646,7 @@ let rec debug_ml_type = function
     "'" ^ string_of_int i ^ "(" ^ String.concat ", " (List.map debug_ml_type l) ^ ")"
   | Tmeta {contents = Some t} -> debug_ml_type t
   | Tmeta {id; contents = None} -> "?" ^ string_of_int id
+  | Topen o -> "?" ^ string_of_int (Open.id o)
   | Thole h -> "_" ^ string_of_int h
   | Tdummy Ktype -> "__type"
   | Tdummy Kprop -> "__prop"
@@ -1083,14 +1093,17 @@ let rec ast_map_types f = function
 
 let freshen_metas e =
   let copies = Hashtbl.create 8 in
+  let copy id =
+    match Hashtbl.find_opt copies id with
+    | Some m -> m
+    | None ->
+      let m = new_meta () in
+      Hashtbl.add copies id m;
+      m
+  in
   let fresh = function
-    | Tmeta {contents = None; id} -> (
-      match Hashtbl.find_opt copies id with
-      | Some m -> m
-      | None ->
-        let m = new_meta () in
-        Hashtbl.add copies id m;
-        m )
+    | Tmeta {contents = None; id} -> copy id
+    | Topen o -> copy (Open.id o)
     | t -> t
   in
   ast_map_types (map_ml_type fresh) e
@@ -1144,7 +1157,7 @@ let recover_erased_types ?only ?(refine_only = false) (expected : ml_type)
      the printer then erases all three to [std::any], against a signature that
      by now spells every one of them. *)
   let rec uninformative = function
-    | Tmeta {contents = None} -> true
+    | Tmeta {contents = None} | Topen _ -> true
     | Tmeta {contents = Some t} -> uninformative t
     | Tunknown -> true
     | Tarr (a, b) -> uninformative a || uninformative b
@@ -1161,7 +1174,7 @@ let recover_erased_types ?only ?(refine_only = false) (expected : ml_type)
      changing nothing else. *)
   let rec refines ~have ~from =
     match (have, from) with
-    | (Tunknown | Tmeta {contents = None}), _ -> true
+    | (Tunknown | Tmeta {contents = None} | Topen _), _ -> true
     | Tmeta {contents = Some h}, f -> refines ~have:h ~from:f
     | h, Tmeta {contents = Some f} -> refines ~have:h ~from:f
     | Tarr (a, b), Tarr (c, d) ->
@@ -2734,8 +2747,7 @@ let remap_tvars f =
     | Tarr (t1, t2) -> Tarr (remap_type t1, remap_type t2)
     | Tglob (r, args, e) ->
       Tglob (r, List.map remap_type args, List.map remap_ast e)
-    | Tmeta ({contents = Some t} as m) ->
-      Tmeta (Meta.solved m.id (remap_type t))
+    | Tmeta {contents = Some t} -> remap_type t
     | t -> t
   and remap_ast = function
     | MLlam (id, ty, body) -> MLlam (id, remap_type ty, remap_ast body)

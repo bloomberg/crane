@@ -45,19 +45,73 @@ module Cells = Hashtbl.Make (struct
   let hash (m : ml_meta) = Hashtbl.hash m.id
 end)
 
-let unsolved_metas p =
-  let seen = Cells.create 16 in
+module Opens = Hashtbl.Make (Open)
+
+let open_annotations p =
+  let seen = Opens.create 16 in
   let rec walk = function
-    | Tmeta {contents = Some t; _} -> walk t
-    | Tmeta ({contents = None; _} as m) -> Cells.replace seen m ()
+    | Topen o -> Opens.replace seen o ()
     | Tarr (a, b) -> walk a; walk b
     | Tglob (_, ts, _) | Tapp (_, ts) -> List.iter walk ts
-    | Tvar _ | Thole _ | Tdummy _ | Tunknown | Taxiom | Tstring -> ()
+    | Tvar _ | Thole _ | Tmeta _ | Tdummy _ | Tunknown | Taxiom | Tstring -> ()
   in
   iter_types walk p;
-  Cells.length seen
+  Opens.length seen
 
 let fail what = CErrors.anomaly Pp.(str ("Crane: the frozen Core program " ^ what ^ "."))
+
+(** [zonk p]: [p] with every metavariable gone from its annotations -- a
+    solved one replaced by its solution, an unsolved one by an open
+    annotation, the same one for every annotation that shared the cell -- and
+    from the types its globals are registered at, which share cells with
+    them.  A packet's constructor types are rewritten in place: the inductive
+    is shared with the tables extraction registered it in. *)
+let zonk p =
+  let opens = Cells.create 64 in
+  let rec ty t =
+    match t with
+    | Tmeta {contents = Some u} -> ty u
+    | Tmeta ({contents = None} as m) -> (
+      match Cells.find_opt opens m with
+      | Some o -> Topen o
+      | None ->
+        let o = Open.fresh m.id in
+        Cells.add opens m o;
+        Topen o )
+    | Tarr (a, b) -> Tarr (ty a, ty b)
+    | Tglob (r, ts, args) -> Tglob (r, List.map ty ts, List.map body args)
+    | Tapp (i, ts) -> Tapp (i, List.map ty ts)
+    | Tvar _ | Thole _ | Topen _ | Tdummy _ | Tunknown | Taxiom | Tstring -> t
+  and body e = Mlutil.ast_map_types ty e in
+  let inductive ind =
+    Array.iter (fun pk -> Array.iteri (fun i ts -> pk.ip_types.(i) <- List.map ty ts) pk.ip_types) ind.ind_packets
+  in
+  let decl = function
+    | Dterm (r, b, t) -> Dterm (r, body b, ty t)
+    | Dfix fds -> Dfix (List.map (fun fd -> {fd with fd_body = body fd.fd_body; fd_type = ty fd.fd_type}) fds)
+    | Dtype (r, vars, t) -> Dtype (r, vars, ty t)
+    | Dind (_, ind) as d -> inductive ind; d
+  in
+  let spec = function
+    | Sind (_, ind) as s -> inductive ind; s
+    | Stype (r, vars, t) -> Stype (r, vars, Option.map ty t)
+    | Sval (r, b, t) -> Sval (r, body b, ty t)
+  in
+  Table.map_types ty;
+  { structure = Modutil.map_struct ~spec ~with_type:ty decl p.structure }
+
+(** No metavariable, solved or not, is reachable from an annotation, nor
+    from the type a global is registered at. *)
+let check_zonked p =
+  let rec walk = function
+    | Tmeta _ -> fail "holds a metavariable"
+    | Tarr (a, b) -> walk a; walk b
+    | Tglob (_, ts, args) -> List.iter walk ts; List.iter (fun a -> ignore (Mlutil.ast_map_types (fun t -> walk t; t) a)) args
+    | Tapp (_, ts) -> List.iter walk ts
+    | Tvar _ | Thole _ | Topen _ | Tdummy _ | Tunknown | Taxiom | Tstring -> ()
+  in
+  iter_types walk p;
+  Table.iter_types walk
 
 (** Every recursive group is nonempty, and a local one selects a member it
     has. *)
@@ -100,8 +154,9 @@ let check_declared_once p =
     no instantiation holds a metavariable: extraction froze each into an
     immutable hole. *)
 let check_instantiations p =
+  (* Frozen, a metavariable an instantiation held is an open annotation. *)
   let rec open_meta = function
-    | Tmeta {contents = None} -> true
+    | Tmeta {contents = None} | Topen _ -> true
     | Tmeta {contents = Some t} -> open_meta t
     | Tarr (a, b) -> open_meta a || open_meta b
     | Tglob (_, ts, _) | Tapp (_, ts) -> List.exists open_meta ts
@@ -136,12 +191,14 @@ let check_instantiations p =
     p.structure
 
 let freeze p =
+  let p = zonk p in
   Meta.freeze ();
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
     check_recursive_groups p;
     check_declared_once p;
-    check_instantiations p
+    check_instantiations p;
+    check_zonked p
   end;
   if Pipeline_trace.enabled () then
-    Pipeline_trace.event "freeze" (Printf.sprintf "unsolved metavariables: %d" (unsolved_metas p));
+    Pipeline_trace.event "freeze" (Printf.sprintf "open annotations: %d" (open_annotations p));
   { structure = p.structure }

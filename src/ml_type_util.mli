@@ -570,10 +570,10 @@ val has_tany_written : Minicpp.cpp_type -> bool
     different arity, means the two are not talking about the same position and
     [have] stands.
 
-    An uninstantiated [Tmeta] is the hole extraction left, and the term
-    shares it with every other mention of the same unknown -- the annotation
-    on a match over the value as well as the value's own type.  It is not
-    written, the program being frozen: each hole filled is added to [fills],
+    A [Topen] is the hole extraction left, and the term shares it with every
+    other mention of the same unknown -- the annotation on a match over the
+    value as well as the value's own type.  It is immutable: each hole
+    filled is added to [fills],
     with what it was filled with, so that the caller can carry the answer to
     the terms that mention it ({!fill_holes}), and [have] is read through
     the holes already there, so a hole met twice is filled once.
@@ -583,7 +583,7 @@ val has_tany_written : Minicpp.cpp_type -> bool
     concrete [want] looks; the caller supplies that judgement because only it
     knows which names its scope declares. *)
 val refine_erased :
-  ?fills:(Miniml.ml_meta * Miniml.ml_type) list ref ->
+  ?fills:(Miniml.Open.t * Miniml.ml_type) list ref ->
   writable:(Miniml.ml_type -> bool) ->
   Miniml.ml_type ->
   Miniml.ml_type ->
@@ -591,10 +591,10 @@ val refine_erased :
 
 (** [fill_holes_type fills t] is [t] with each hole of [fills] standing as
     the type it is paired with; [t] itself where it mentions none of them. *)
-val fill_holes_type : (Miniml.ml_meta * Miniml.ml_type) list -> Miniml.ml_type -> Miniml.ml_type
+val fill_holes_type : (Miniml.Open.t * Miniml.ml_type) list -> Miniml.ml_type -> Miniml.ml_type
 
 (** {!fill_holes_type} in every annotation of a term. *)
-val fill_holes : (Miniml.ml_meta * Miniml.ml_type) list -> Miniml.ml_ast -> Miniml.ml_ast
+val fill_holes : (Miniml.Open.t * Miniml.ml_type) list -> Miniml.ml_ast -> Miniml.ml_ast
 
 (** [refine_param_from_slot ~tvars ~slot bare] spells a parameter from the
     slot it flows into rather than from its own uninferred type.  Type

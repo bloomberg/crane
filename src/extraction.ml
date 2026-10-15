@@ -1845,7 +1845,7 @@ and extract_cst_app env sg mle mlt kn args =
     if lang () == Cpp && not rigid then
       let rec informative = function
         | Tdummy _ | Tunknown | Taxiom | Tapp _ | Tvar _ | Thole _ -> false
-        | Tmeta {contents = None} -> false
+        | Tmeta {contents = None} | Topen _ -> false
         | Tarr (a, b) -> informative a && informative b
         | Tglob (_, l, _) -> List.for_all informative l
         | Tmeta {contents = Some u} -> informative u

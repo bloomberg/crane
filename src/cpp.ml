@@ -2454,7 +2454,7 @@ let plan_referenced_names s =
       ty b
     | Tapp (_, ts) -> List.iter ty ts
     | Tmeta {contents = Some t; _} -> ty t
-    | Tvar _ | Tmeta _ | Thole _ | Tdummy _ | Miniml.Tunknown | Taxiom | Tstring -> ()
+    | Tvar _ | Tmeta _ | Thole _ | Topen _ | Tdummy _ | Miniml.Tunknown | Taxiom | Tstring -> ()
   and pattern = function
     | Pcons (r, ps) ->
       name Cons r;

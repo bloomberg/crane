@@ -22,6 +22,17 @@ module Occurrence = struct
   let equal = ( == )
 end
 
+(* An open annotation is told apart from another by its cell, as the
+   metavariable it replaces was; its number, the metavariable's, is all
+   structural equality and hashing see of it. *)
+module Open = struct
+  type t = { id : int; cell : Occurrence.t }
+  let fresh id = { id; cell = Occurrence.fresh () }
+  let id o = o.id
+  let equal a b = Occurrence.equal a.cell b.cell
+  let hash o = Hashtbl.hash o.id
+end
+
 (** The [signature] type is used to know how many arguments a PCUIC object
     expects, and what these arguments will become in the ML object. *)
 
@@ -72,6 +83,7 @@ type ml_type =
           to be element-erased. *)
   | Tmeta of ml_meta  (** used during ML type reconstruction *)
   | Thole of int  (** an inference hole of a frozen instantiation *)
+  | Topen of Open.t  (** an annotation reconstruction left open, frozen *)
   | Tdummy of kill_reason
   | Tunknown
   | Taxiom
@@ -388,4 +400,5 @@ module Meta = struct
 
   let freeze () = frozen := true
   let thaw () = frozen := false
+  let is_frozen () = !frozen
 end

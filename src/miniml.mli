@@ -45,6 +45,21 @@ module Occurrence : sig
   val equal : t -> t -> bool
 end
 
+(** Which open annotation a {!Topen} is.  Every annotation that shared one
+    unsolved metavariable shares one [Open.t], told apart from another only
+    by {!equal}; structural equality and hashing see its number alone, the
+    metavariable's, which restarts with each declaration. *)
+module Open : sig
+  type t
+
+  (** A new open annotation, numbered [id]. *)
+  val fresh : int -> t
+
+  val id : t -> int
+  val equal : t -> t -> bool
+  val hash : t -> int
+end
+
 (* The [signature] type is used to know how many arguments a PCUIC object expects,
    and what these arguments will become in the ML object. *)
 
@@ -125,6 +140,16 @@ type ml_type =
           something a hole does not.  Only an instantiation and the types a
           reader computes from one may hold it; a consumer resolves it from
           other evidence, leaves the parameter to deduction, or reports it. *)
+  | Topen of Open.t
+      (** An annotation reconstruction left open: a metavariable nothing
+          solved, as {!Core.freeze} hands it on.  Immutable, and read as
+          erased.  The annotations that shared the metavariable share the
+          [Open.t], so a reader that fills it from other evidence fills it
+          wherever it is written ({!Ml_type_util.fill_holes}).  Unlike a
+          [Thole] nothing is owed to it: no instantiation slot stands behind
+          it, and a consumer with nothing to fill it from spells it erased.
+          No [Tmeta] survives freezing; this is what becomes of the open
+          ones. *)
   | Tdummy of kill_reason
   | Tunknown
   | Taxiom
@@ -477,10 +502,12 @@ end
 (** Making and solving metavariables.
 
     A metavariable is extraction's: unification solves it while types are
-    reconstructed, and the Core passes may still.  Once the program is frozen
-    ({!Core.freeze}) nothing does: a local definition's open types are minted
-    before it ({!Local_types}), and a slot that fills a hole carries the
-    answer to the terms mentioning the hole instead of writing it
+    reconstructed, and the Core passes may still.  Freezing the program
+    ({!Core.freeze}) replaces each by its solution, or by a {!Topen} where
+    there is none, and from then on none is made ({!Mlutil.new_meta} makes an
+    open annotation instead) and none solved: a local definition's open types
+    are minted before it ({!Local_types}), and a slot that fills a hole
+    carries the answer to the terms mentioning the hole instead of writing it
     ({!Ml_type_util.refine_erased}).  Under [CRANE_CHECK_IR] a solve after
     freezing is an anomaly. *)
 module Meta : sig
@@ -496,4 +523,7 @@ module Meta : sig
 
   (** Solves are allowed again, as at the start of an extraction. *)
   val thaw : unit -> unit
+
+  (** Whether {!freeze} has run since the last {!thaw}. *)
+  val is_frozen : unit -> bool
 end

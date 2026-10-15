@@ -116,3 +116,14 @@ val declared_refs : ml_decl -> GlobRef.t list
 (** [map_struct_decls f s] applies [f] to every declaration of [s], in modules
     and functor bodies alike. *)
 val map_struct_decls : (ml_decl -> ml_decl) -> ml_structure -> ml_structure
+
+(** [map_struct ~spec ~with_type decl s] is {!map_struct_decls}[ decl s] with
+    the module types rewritten as well: [spec] applied to every
+    specification, and [with_type] to the type each [with] refinement
+    fixes. *)
+val map_struct :
+  ?spec:(ml_spec -> ml_spec) ->
+  ?with_type:(ml_type -> ml_type) ->
+  (ml_decl -> ml_decl) ->
+  ml_structure ->
+  ml_structure

@@ -308,7 +308,7 @@ let declaration ty body =
   let declared = List.skipn n_missing doms in
   let parameter (x, body_ty) sig_ty =
     let body_ty =
-      match resolve_tmeta body_ty with Tmeta {contents = None} -> sig_ty | t -> t
+      match resolve_tmeta body_ty with Tmeta {contents = None} | Topen _ -> sig_ty | t -> t
     in
     let ty = reconcile_parameter_type body_ty sig_ty in
     binder (parameter_role ty) (x, ty)

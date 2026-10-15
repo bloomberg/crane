@@ -150,7 +150,7 @@ let template_kinds ?applied r vars tys =
       let rec survives = function
         | Miniml.Tvar _ | Miniml.Tunknown | Miniml.Tdummy _ -> false
         | Miniml.Tmeta {contents = Some t} -> survives t
-        | Miniml.Tmeta {contents = None} -> false
+        | Miniml.Tmeta {contents = None} | Miniml.Topen _ -> false
         | _ -> true
       in
       let demanded = Hashtbl.create 4 in

@@ -48,8 +48,15 @@ let () =
   let shared = Tmeta (Meta.fresh 1) in
   let solved = Tmeta (Meta.solved 2 nat) in
   let open_term = term "k" (MLlam (Dummy, shared, MLrel 1)) (Tarr (shared, solved)) in
-  check "each unsolved metavariable is counted once"
-    (Core.unsolved_metas (frozen [open_term]) = 1);
+  let zonked = frozen [open_term] in
+  check "each unsolved metavariable becomes one open annotation"
+    (Core.open_annotations zonked = 1);
+  ( match Core.structure zonked with
+  | [(_, [(_, SEdecl (Dterm (_, MLlam (_, Topen o, _), Tarr (Topen o', t))))])] ->
+    check "the annotations sharing a cell share its open annotation" (Open.equal o o');
+    check "a solved metavariable is replaced by its solution" (t = nat)
+  | _ -> check "freezing leaves no metavariable in the program" false );
+  Meta.thaw ();
   let two = Core.extracted [(mp "A", fine); (mp "B", [])] in
   let a, b = Core.partition (ModPath.equal (mp "A")) two in
   check "partition splits by top-level module"
@@ -69,25 +76,24 @@ let () =
   Meta.solve m' nat;
   check "a thawed program solves freely" (m'.contents = Some nat)
 
-(* A slot fills a hole without writing it: a hole met twice is filled once,
-   and the fill is carried to the terms that mention the hole. *)
+(* A slot fills an open annotation without writing it: one met twice is
+   filled once, and the fill is carried to the terms that mention it. *)
 let () =
   let nat = Tglob (r "nat", [], []) and bool = Tglob (r "bool", [], []) in
   let pair a b = Tglob (r "pair", [a; b], []) in
-  let m = Meta.fresh 15 in
-  Meta.freeze ();
+  let o = Open.fresh 15 and other = Open.fresh 15 in
   let fills = ref [] in
   let refined =
-    Ml_type_util.refine_erased ~fills ~writable:(fun _ -> true) (pair (Tmeta m) (Tmeta m))
+    Ml_type_util.refine_erased ~fills ~writable:(fun _ -> true) (pair (Topen o) (Topen o))
       (pair nat bool)
   in
   check "a hole met twice is filled once" (refined = pair nat nat);
-  check "the hole is not written" (m.contents = None);
   check "the fill is reported" (List.length !fills = 1);
-  let body = MLlam (Dummy, Tmeta m, MLrel 1) in
+  let body = MLlam (Dummy, Topen o, MLrel 1) in
   check "a term mentioning the hole is generated with it filled"
     (Ml_type_util.fill_holes !fills body = MLlam (Dummy, nat, MLrel 1));
-  Meta.thaw ()
+  check "another hole of the same number is not filled"
+    (Ml_type_util.fill_holes !fills (MLlam (Dummy, Topen other, MLrel 1)) = MLlam (Dummy, Topen other, MLrel 1))
 
 (* A local definition's open types are minted before freezing, rigid: each
    recursive group's from 1, a let-bound lambda's, its groups' included,

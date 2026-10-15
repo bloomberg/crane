@@ -574,20 +574,37 @@ let optimize_struct to_appear struc =
   let () = check_for_remaining_implicits mini_struc in
   mini_struc
 
-(** [s] with [f] applied to every declaration, in modules and functor bodies
-    alike: the frame of a pass that rewrites declarations one at a time. *)
-let map_struct_decls f s =
+(** [s] with [decl] applied to every declaration, in modules and functor bodies
+    alike: the frame of a pass that rewrites declarations one at a time.  With
+    [spec], the module types are rewritten as well: [spec] is applied to every
+    specification and [with_type] to the type a [with] refinement fixes. *)
+let map_struct ?spec ?(with_type = Fun.id) decl s =
+  let rec mtype spec = function
+    | MTident _ as mt -> mt
+    | MTfunsig (mbid, mt, mt') -> MTfunsig (mbid, mtype spec mt, mtype spec mt')
+    | MTsig (mp, sign) -> MTsig (mp, List.map (fun (l, s) -> (l, specif spec s)) sign)
+    | MTwith (mt, ML_With_type (idl, l, t)) -> MTwith (mtype spec mt, ML_With_type (idl, l, with_type t))
+    | MTwith (mt, (ML_With_module _ as w)) -> MTwith (mtype spec mt, w)
+  and specif spec = function
+    | Spec s -> Spec (spec s)
+    | Smodule mt -> Smodule (mtype spec mt)
+    | Smodtype mt -> Smodtype (mtype spec mt)
+  in
+  let mtype mt = match spec with Some spec -> mtype spec mt | None -> mt in
   let rec elems sel =
     List.map
       (fun (l, se) ->
         match se with
-        | SEdecl d -> (l, SEdecl (f d))
-        | SEmodule m -> (l, SEmodule {m with ml_mod_expr = module_expr m.ml_mod_expr})
-        | se -> (l, se) )
+        | SEdecl d -> (l, SEdecl (decl d))
+        | SEmodule m ->
+          (l, SEmodule {ml_mod_expr = module_expr m.ml_mod_expr; ml_mod_type = mtype m.ml_mod_type})
+        | SEmodtype mt -> (l, SEmodtype (mtype mt)) )
       sel
   and module_expr = function
     | MEstruct (mp, sel) -> MEstruct (mp, elems sel)
-    | MEfunctor (mbid, mt, me) -> MEfunctor (mbid, mt, module_expr me)
+    | MEfunctor (mbid, mt, me) -> MEfunctor (mbid, mtype mt, module_expr me)
     | me -> me
   in
   List.map (fun (mp, sel) -> (mp, elems sel)) s
+
+let map_struct_decls f s = map_struct f s

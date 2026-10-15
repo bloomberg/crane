@@ -356,6 +356,10 @@ let add_type id ty = glob_tys := Ref.Can.Map.add id ty !glob_tys
 
 let find_type id = Ref.Can.Map.find id !glob_tys
 
+let iter_types f = Ref.Can.Map.iter (fun _ t -> f t) !glob_tys
+
+let map_types f = glob_tys := Ref.Can.Map.map f !glob_tys
+
 (* The custom extraction mappings, by global; declared here, ahead of their
    commands, because whether a class is kept depends on them.  A mapping is
    about a definition, so it is keyed by the canonical name: a reference

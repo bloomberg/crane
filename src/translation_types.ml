@@ -1754,7 +1754,7 @@ let rec convert_ml_type_to_cpp_type
     let head = Tvar (Tv_index (i, tvar_name_at tvars i)) in
     Tapply (head, List.map (convert_ml_type_to_cpp_type env ~ns tvars) args)
   | Tmeta {contents = Some t} -> convert_ml_type_to_cpp_type env ~ns tvars t
-  | Tmeta {id = i} ->
+  | Tmeta {contents = None} | Topen _ ->
     (* Unresolved meta - use std::any for type erasure. This happens for
        existential type variables in indexed inductives. *)
     Tany
