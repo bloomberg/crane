@@ -2270,6 +2270,46 @@ let collect_typed_lams ty b =
     (List.skipn n_excess all_ids, named_lams (safe_firstn n_excess all_ids) inner)
   else (all_ids, inner)
 
+(** [reconcile_parameter_type body_ty sig_ty] -- the type a definition's
+    parameter is bound at in its body, from the type its lambda is annotated
+    with, [body_ty] (unified with the signature's), and the type the
+    definition's signature gives it, [sig_ty].
+
+    A [Tunknown] in the annotation is the signature's: a promoted dependent
+    record's lambda leaves the erased carrier unknown, where the signature
+    has [Tglob (m_carrier, \[\])], which converts.
+
+    The signature's type replaces the annotation outright only where the
+    signature has fewer arrows -- a type alias like [State S A = S -> A * S]
+    expands to extra ones, and binding the parameter at the alias lets inner
+    call sites see an over-application and chain it ([f(a)(s')], not
+    [f(a, s')]) -- or names a type alias taking promoted parameters
+    ([FusedS := state * ...] under [Existing Instance], declared [template
+    <typename ptr>]): its body names class fields only the alias's own
+    parameters resolve, so the expansion spells them erased.  Not
+    unconditionally, because the definition's parameter types would then
+    differ from the declaration's, which [gen_sfun] spells from the expanded
+    types. *)
+let reconcile_parameter_type body_ty sig_ty =
+  let rec merge_unknown body_ty sig_ty =
+    match (body_ty, sig_ty) with
+    | Miniml.Tunknown, _ -> sig_ty
+    | Miniml.Tglob (r1, ts1, a1), Miniml.Tglob (r2, ts2, _)
+      when GlobRef.CanOrd.equal r1 r2 && List.length ts1 = List.length ts2 ->
+      Miniml.Tglob (r1, List.map2 merge_unknown ts1 ts2, a1)
+    | Miniml.Tarr (t1a, t1b), Miniml.Tarr (t2a, t2b) ->
+      Miniml.Tarr (merge_unknown t1a t2a, merge_unknown t1b t2b)
+    | _ -> body_ty
+  in
+  let promoted_alias t =
+    match Mlutil.type_simpl t with
+    | Miniml.Tglob ((GlobRef.ConstRef _ as g), _, _) -> Table.promoted_type_params g <> []
+    | _ -> false
+  in
+  let body_ty = merge_unknown body_ty sig_ty in
+  if count_ml_arrows body_ty > count_ml_arrows sig_ty || promoted_alias sig_ty then sig_ty
+  else body_ty
+
 (** {!ungeneralised_callable_params} for the definition of [r] at type [ty]
     with body [b], over the parameters {!collect_typed_lams} finds: the ones
     its function is generated with. *)

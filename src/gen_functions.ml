@@ -464,64 +464,12 @@ let dfun_body_scope n b cty ty temps =
     | _ -> body_params
   in
   let ids = unify_param_types ids sig_types_for_ids in
-  (* Replace Tunresolved in body param types with corresponding sig types. This
-     handles promoted dependent records where the lambda's type annotation has
-     Tunresolved for the erased carrier, while the function signature has
-     Tglob(m_carrier, []) which can be resolved by
-     convert_ml_type_to_cpp_type. *)
-  let rec merge_unknown body_ty sig_ty =
-    match (body_ty, sig_ty) with
-    | Miniml.Tunknown, _ -> sig_ty
-    | Miniml.Tglob (r1, ts1, a1), Miniml.Tglob (r2, ts2, _)
-      when GlobRef.CanOrd.equal r1 r2 && List.length ts1 = List.length ts2 ->
-      Miniml.Tglob (r1, List.map2 merge_unknown ts1 ts2, a1)
-    | Miniml.Tarr (t1a, t1b), Miniml.Tarr (t2a, t2b) ->
-      Miniml.Tarr (merge_unknown t1a t2a, merge_unknown t1b t2b)
-    | _ -> body_ty
-  in
   let ids =
     if List.length ids = List.length sig_types_for_ids then
       List.map2
-        (fun (id, body_ty) sig_ty -> (id, merge_unknown body_ty sig_ty))
-        ids
-        sig_types_for_ids
-    else
-      ids
-  in
-  (* Replace body lambda types with signature types for env_types tracking, but
-     ONLY when the signature type has fewer arrows than the body type. This
-     handles type aliases like [State S A = S -> A * S] where expansion adds
-     extra arrows. Using signature types in env_types ensures that inner call
-     sites can detect over-application and generate chained calls (e.g. f(a)(s')
-     instead of f(a, s')). We must NOT replace unconditionally, because that
-     would make parameter types in the .cpp definition differ from the .h
-     declaration (which uses gen_sfun with expanded types). *)
-  (* Nor where the signature names a type alias that takes promoted
-     parameters -- [FusedS := state * ...] under [Existing Instance], declared
-     [template <typename ptr>].  Its body names class fields only the alias's
-     own parameters resolve, so the expansion the lambda's binder carries
-     spells them erased, and the alias is the only spelling that keeps them;
-     the header's [gen_sfun] reads the signature's types already. *)
-  let promoted_alias t =
-    match Mlutil.type_simpl t with
-    | Miniml.Tglob ((GlobRef.ConstRef _ as g), _, _) ->
-      Table.promoted_type_params g <> []
-    | _ -> false
-  in
-  let ids =
-    if List.length ids = List.length sig_types_for_ids then
-      List.map2
-        (fun (id, body_ty) sig_ty ->
-          if count_ml_arrows body_ty > count_ml_arrows sig_ty
-             || promoted_alias sig_ty
-          then
-            (id, sig_ty)
-          else
-            (id, body_ty) )
-        ids
-        sig_types_for_ids
-    else
-      ids
+        (fun (id, body_ty) sig_ty -> (id, Translation_support.reconcile_parameter_type body_ty sig_ty))
+        ids sig_types_for_ids
+    else ids
   in
   let tvar_subst_from_sig =
     if not (has_tvar ty)
