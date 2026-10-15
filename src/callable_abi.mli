@@ -110,6 +110,10 @@ val receiver : t -> receiver option
 (** The head, in declaration order. *)
 val template_head : t -> template_parameter list
 
+(** The head as the declaration spells it: each parameter's kind and name,
+    in order. *)
+val declared_head : t -> (Minicpp.template_type * Names.Id.t) list
+
 (** What the relaxations that made the head out of the declaration's own
     decided ({!Head_relaxation}), in the order they were made: a
     declaration generated under the head is rewritten by each.  None for a

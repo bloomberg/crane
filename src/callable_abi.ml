@@ -60,6 +60,7 @@ type t = {
 
 let callee abi = abi.callee
 let relaxations abi = abi.relaxations
+let declared_head abi = List.map (fun p -> (p.kind, Template_param.name p.id)) abi.head
 let template_head abi = abi.head
 let receiver abi = abi.receiver
 

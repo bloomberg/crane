@@ -1031,12 +1031,26 @@ let plan_scope_head n ty scope =
         ty scope.bs_temps
         (Dfun (mk_dfun n ~ret:scope.bs_cod ~no_pure:scope.bs_no_pure (Ddef (scope.bs_ids, [])))))
 
+(** The head the function [n] generated under [scope] is declared with, and
+    what its relaxations decided: its plan's, which was made before anything
+    was generated.  Under [CRANE_CHECK_IR] the head is decided again from
+    [scope] and checked against the plan; a function with no plan is decided
+    here, and reported. *)
+let planned_scope_head n ty scope =
+  let decided () =
+    let abi, temps, relaxations = plan_scope_head n ty scope in
+    Callable_abi.check abi;
+    (temps, relaxations)
+  in
+  match Callable_abi.lookup n with
+  | Some abi ->
+    if Probe.checking () then ignore (decided ());
+    (Callable_abi.declared_head abi, Callable_abi.relaxations abi)
+  | None -> decided ()
+
 let gen_dfun n b cty ty temps =
   let scope = dfun_body_scope n b cty ty temps in
-  let abi, temps, relaxations = plan_scope_head n ty scope in
-  (* The head was planned before anything was generated; what is generated
-     must be it. *)
-  Callable_abi.check abi;
+  let temps, relaxations = planned_scope_head n ty scope in
   let inner, env =
     with_itree_mode_for ty @@ fun () ->
   let {
