@@ -352,40 +352,21 @@ let constant_at_alias ty body =
    are the bodies the calls inside them are elaborated in.  The record as
    written is walked too, with the rest of the declaration. *)
 let instance_methods name body ty =
-  let {Instance_methods.inner_ty; inner_body; lam_params; _} = Instance_methods.layers ty body in
-  match inner_ty with
-  | Tglob (class_ref, type_args, _) when Table.is_typeclass class_ref -> (
-    match Instance_methods.record_body name class_ref inner_ty lam_params inner_body with
-    | MLcons (cons_ty, _, method_bodies) ->
-      let fields = Table.record_field_bindings_of_type inner_ty in
-      if List.length fields = List.length method_bodies then begin
-        let type_args = Instance_methods.record_type_args cons_ty type_args in
-        let instance_tvars = Instance_methods.instance_tvars ty inner_ty in
-        let inst =
-          {Instance_methods.class_ref; type_args; tvar_count = Instance_methods.tvar_count ~instance_tvars ty type_args}
-        in
-        let lex =
-          Lexenv.push (List.rev_map (fun (x, ty) -> binder (parameter_role ty) (Id x, ty)) lam_params) Lexenv.empty
-        in
-        List.iter2
-          (fun (field, field_ty) field_body ->
-            match (field, field_ty) with
-            (* A class-typed field is promoted, not generated as a method. *)
-            | Some _, Tglob (r, _, _) when Table.is_typeclass r -> ()
-            | Some method_ref, _ ->
-              let m = Instance_methods.prepare_method ~freshen:false inst method_ref field_ty field_body in
-              walk lex m.body;
-              let params, inner = Instance_methods.params m in
-              if List.for_all (fun p -> p.Instance_methods.erased) params then
-                Option.iter
-                  (fun (eta, call) ->
-                    walk (push Lexenv.Value (List.rev_map (fun (x, ty) -> (Id x, ty)) eta) lex) call )
-                  (Instance_methods.eta_call m inner)
-            | None, _ -> () )
-          fields method_bodies
-      end
-    | _ -> () )
-  | _ -> ()
+  Option.iter
+    (fun (lam_params, methods) ->
+      let lex =
+        Lexenv.push (List.rev_map (fun (x, ty) -> binder (parameter_role ty) (Id x, ty)) lam_params) Lexenv.empty
+      in
+      List.iter
+        (fun (m : Instance_methods.method_) ->
+          walk lex m.body;
+          let params, inner = Instance_methods.params m in
+          if List.for_all (fun p -> p.Instance_methods.erased) params then
+            Option.iter
+              (fun (eta, call) -> walk (push Lexenv.Value (List.rev_map (fun (x, ty) -> (Id x, ty)) eta) lex) call)
+              (Instance_methods.eta_call m inner) )
+        methods )
+    (Instance_methods.methods name body ty)
 
 let structure struc =
   Calls.reset planned;

@@ -528,3 +528,26 @@ let eta_call m inner_body =
     let params = List.mapi (fun i t -> (Id.of_string ("a" ^ string_of_int i), t)) arg_types in
     (* The body's de Bruijn indices lifted over the new parameters. *)
     Some (params, MLapp (Mlutil.ast_lift nparams inner_body, ml_rels))
+
+let methods name body ty =
+  let {inner_ty; inner_body; lam_params; _} = layers ty body in
+  match inner_ty with
+  | Tglob (class_ref, type_args, _) when Table.is_typeclass class_ref -> (
+    match record_body name class_ref inner_ty lam_params inner_body with
+    | MLcons (cons_ty, _, method_bodies) ->
+      let fields = Table.record_field_bindings_of_type inner_ty in
+      if List.length fields <> List.length method_bodies then None
+      else
+        let type_args = record_type_args cons_ty type_args in
+        let tvar_count = tvar_count ~instance_tvars:(instance_tvars ty inner_ty) ty type_args in
+        let inst = {class_ref; type_args; tvar_count} in
+        let method_of (field, field_ty) field_body =
+          match (field, field_ty) with
+          (* A class-typed field is promoted, not generated as a method. *)
+          | Some _, Tglob (r, _, _) when Table.is_typeclass r -> None
+          | Some method_ref, _ -> Some (prepare_method ~freshen:false inst method_ref field_ty field_body)
+          | None, _ -> None
+        in
+        Some (lam_params, List.filter_map Fun.id (List.map2 method_of fields method_bodies))
+    | _ -> None )
+  | _ -> None

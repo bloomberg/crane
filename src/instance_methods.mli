@@ -129,3 +129,11 @@ val params : method_ -> param list * Miniml.ml_ast
     class-typed, and [inner_body] applied to them; [None] where there is no
     such argument, the field being a value. *)
 val eta_call : method_ -> Miniml.ml_ast -> ((Names.Id.t * Miniml.ml_type) list * Miniml.ml_ast) option
+
+(** [methods name body ty] -- the methods the instance [name], [body] of type
+    [ty], generates, each elaborated ({!prepare_method}, its open annotations
+    left as they are), with the binders of the instance's own parameters
+    ({!layers}) they are generated under; [None] for a declaration building no
+    record of a class. *)
+val methods :
+  Names.GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> ((Names.Id.t * Miniml.ml_type) list * method_ list) option
