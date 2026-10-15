@@ -94,8 +94,21 @@ let () =
   let a = declare "pa" nat in
   let unit = ModPath.MPfile (DirPath.make [Id.of_string "U"]) in
   Common.set_phase Common.Plan;
-  Core_elaborate.structure
-    [(unit, [(Label.make "d", SEdecl (Dterm (r "d", MLapp (MLglob use, [a]), nat)))])];
+  let elaborated =
+    Core_elaborate.structure
+      [(unit, [(Label.make "d", SEdecl (Dterm (r "d", MLapp (MLglob use, [a]), nat)))])]
+  in
+  (* The walk's result is a value: what it planned is read off it, with
+     nothing installed. *)
+  check "a call's roles are read off the elaboration, found by its rewritten use"
+    (Core_elaborate.roles elaborated rewritten 1 = Some [Elaborated_call.Regular]);
+  check "an application the walk did not see has no roles there"
+    (Core_elaborate.roles elaborated again 1 = None
+    && Core_elaborate.roles elaborated rewritten 2 = None);
+  check "the globals the declaration names, applied or not, are referenced"
+    (List.sort GlobRef.UserOrd.compare (Core_elaborate.referenced elaborated)
+    = List.sort GlobRef.UserOrd.compare [f; r "pa"]);
+  Core_elaborate.install elaborated;
   Common.set_phase (Common.Emit Common.Impl);
   ignore (Core_elaborate.elaboration ~lex:Lexenv.empty rewritten [a]);
   ignore (Core_elaborate.elaboration ~lex:Lexenv.empty again [a]);

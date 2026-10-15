@@ -1531,11 +1531,12 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   let modules, representation, callables, assumed = plan_layout struc in
   let plan = Target_plan.with_layout plan modules representation callables assumed in
   Pipeline_trace.event "elaborate" elaborate_calls;
-  Core_elaborate.structure struc;
+  let elaborations = Core_elaborate.structure struc in
+  Core_elaborate.install elaborations;
   Pipeline_trace.event "elaborate" plan_foreign_callables;
   Callable_abi.install_foreign
     (fun r -> Translation_calls.callee_abi ~instances:0 r)
-    (Core_elaborate.referenced ());
+    (Core_elaborate.referenced elaborations);
   let census_after_planning = Table.census () in
   (* Both bodies are rendered before either file is opened.  A preamble has to
      say what the body it precedes demands -- which headers it includes, which
