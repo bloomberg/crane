@@ -37,17 +37,25 @@ let iter_types f p =
     (fun _ -> ())
     p.structure
 
+(* A metavariable is its cell: extraction numbers each declaration's afresh. *)
+module Cells = Hashtbl.Make (struct
+  type t = ml_meta
+
+  let equal = ( == )
+  let hash (m : ml_meta) = Hashtbl.hash m.id
+end)
+
 let unsolved_metas p =
-  let seen = Hashtbl.create 16 in
+  let seen = Cells.create 16 in
   let rec walk = function
     | Tmeta {contents = Some t; _} -> walk t
-    | Tmeta {id; contents = None} -> Hashtbl.replace seen id ()
+    | Tmeta ({contents = None; _} as m) -> Cells.replace seen m ()
     | Tarr (a, b) -> walk a; walk b
     | Tglob (_, ts, _) | Tapp (_, ts) -> List.iter walk ts
     | Tvar _ | Thole _ | Tdummy _ | Tunknown | Taxiom | Tstring -> ()
   in
   iter_types walk p;
-  Hashtbl.length seen
+  Cells.length seen
 
 let fail what = CErrors.anomaly Pp.(str ("Crane: the frozen Core program " ^ what ^ "."))
 
