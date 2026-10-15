@@ -4748,24 +4748,30 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            and the method declares it as a template parameter.  It leaves the
            argument list for the callee's explicit template arguments, which is
            the only place that parameter can be given. *)
-        let tc_args, _, value_args =
-          (* The arguments stand under the branch's binders, as [arg_exprs]
-             below generates them. *)
-          split_instance_args env' value_args
-        in
-        let call =
-          (* The arguments live under the branch's binders, so the ML type
-             environment must be pushed alongside [env'] for the erasure
-             checks below to see their real types. *)
+        (* The arguments live under the branch's binders, so the ML type
+           environment is pushed alongside [env'] wherever they are read:
+           without it, a binder's type is some other binder's. *)
+        let under_branch_binders f =
           let saved_env_types = (!tctx).env_types in
           let saved_erased = save_erased_env () in
           push_binders env branch_binders;
+          Fun.protect
+            ~finally:(fun () ->
+              restore_env_types saved_env_types;
+              restore_erased_env saved_erased )
+            f
+        in
+        let tc_args, _, value_args =
+          under_branch_binders (fun () -> split_instance_args env' value_args)
+        in
+        let call =
           (* Source order, as {!mk_arity_call} takes them.  Under the
              branch's binders the move-tracking indices are too: unshifted, an
              argument's index names whatever outer variable sits that many
              binders further out -- the borrowed field [ta] read as the owned
              local [k], and moved out of the node it shares. *)
           let arg_exprs =
+            under_branch_binders @@ fun () ->
             with_shifted_move_tracking (List.length branch_binders) @@ fun () ->
             List.mapi
               (fun j a ->
@@ -4783,8 +4789,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 | None -> e )
               value_args
           in
-          restore_env_types saved_env_types;
-          restore_erased_env saved_erased;
           let callee =
             if not member_template then make_field_access (gen_expr env t) fld
             else
