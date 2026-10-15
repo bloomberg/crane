@@ -31,10 +31,10 @@ module StringSet = StringMap.Set
     with a way to size it.  A table names itself here when it is created, and
     {!census} reports the lot.
 
-    The point of measuring sizes is to find the facts that are discovered while
-    output is generated rather than before it: those are the ones that force a
-    declaration to be rendered before its uses can be, and so force the whole
-    discarded first pass.  See the census comparison in [extract_env.ml]. *)
+    The point of measuring sizes is to find the facts that are decided while
+    output is generated rather than planned before it: those are the ones a
+    use rendered before the decision could not have seen.  See the census
+    comparison in [extract_env.ml]. *)
 let census_entries : (string * (unit -> int)) list ref = ref []
 
 (** Enrol a table in the census under [name]. *)
@@ -503,18 +503,18 @@ let has_any_coinductive () =
     A demand is something the preamble of the generated file must provide -- a
     standard or runtime header, a directive -- that only code generation can
     discover.  It is raised while a declaration is generated and read when the
-    preamble is emitted, which happens first: the dry run in [extract_env.ml]
-    is what makes that order work, generating the whole file and discarding it
-    so that every demand is in before a byte is written.
+    preamble is emitted, which comes first in the file: [extract_env.ml]
+    renders both bodies before it writes either file, so that every demand is
+    in before a byte is written.
 
     They share one set rather than taking a ref apiece so that clearing them
     between files is a single call.  A per-file reset that has to name every
     demand is one that a later demand is silently left out of, and the demand
     then leaks from one file into the next of a separate extraction.
 
-    {!freeze_demands} closes collection at the end of the dry run.  A demand
-    raised after that is one the dry run failed to discover, so the preamble
-    already written is missing it; under [CRANE_CHECK_IR] that is an error
+    {!freeze_demands} closes collection once both bodies are rendered.  A
+    demand raised after that is one no body raised, so the preamble written
+    from them is missing it; under [CRANE_CHECK_IR] that is an error
     rather than a C++ file that does not compile. *)
 
 let raised_demands = ref CString.Set.empty
@@ -529,8 +529,8 @@ let raise_into set (d : string) =
       CErrors.user_err
         Pp.(
           str "Crane: demand '" ++ str d
-          ++ str "' raised after the preamble was written.  The dry run did \
-                  not reach the code that raised it." );
+          ++ str "' raised after the preamble was written: no rendered body \
+                  raised it." );
     set := CString.Set.add d !set
   end
 

@@ -2209,7 +2209,7 @@ let module_plan_of_analysis
     tables it fills are read by both the header and the implementation; it was
     nonetheless invoked from inside the renderer, so the same conclusions were
     reached four times per unit and the last one silently won.  Reaching them
-    once, here, is what makes discovery a pass in its own right.
+    once, here, is what lets the layout be planned before anything renders.
 
     The visibility stack is pushed exactly as a rendering pass would push it:
     the analysis is a function of the structure, but the helpers it calls read

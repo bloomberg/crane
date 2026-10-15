@@ -587,8 +587,8 @@ which the frame stack supplies as heap frames rather than C++ stack frames.
 The outcome is decided by a postcondition rather than by whether a bail-out
 announced itself — the transformed body is re-classified, and a surviving
 self-call is a decline whatever the strategy claimed — so a silent bail-out
-cannot hide. A function is transformed several times per unit (a dry run, then
-the header and implementation passes) and only one result is emitted, so
+cannot hide. A function may be transformed more than once per unit (by the
+implementation and header passes) and only one result is emitted, so
 outcomes are collected silently and each name is collapsed to its best outcome
 at the end of the real run, after inner lambdas have been linearised too.
 

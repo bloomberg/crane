@@ -134,12 +134,14 @@ type file =
   | Impl  (** the [.cpp] *)
   | Intf  (** the [.h] *)
 
-(** What a pass is for.  The two are different kinds of pass, not the same pass
-    run repeatedly: {!Discover} is the one that decides -- the names it
-    allocates and the facts it records are what the emissions go on to read --
-    and its output is discarded.  An {!Emit} pass only reads. *)
+(** What a pass is for.  {!Plan} decides, before anything is rendered: the
+    names of what a unit declares and refers to, its layout, its callables.
+    An {!Emit} pass renders one file and reads those decisions.  Beyond its
+    text it may only demand -- the headers its body includes -- and generate
+    the helpers it lifts out of the bodies it translates, which are named as
+    they are lifted; {!names_decided_while_emitting} is how that is checked. *)
 type phase =
-  | Discover
+  | Plan
   | Emit of file
 
 (** Set the current extraction phase. *)
@@ -148,7 +150,7 @@ val set_phase : phase -> unit
 (** Get the current extraction phase. *)
 val get_phase : unit -> phase
 
-(** How diagnostics name a phase: [discovery], [implementation], [header]. *)
+(** How diagnostics name a phase: [planning], [implementation], [header]. *)
 val phase_name : phase -> string
 
 (** Compute which libraries should be opened initially. *)
@@ -216,6 +218,15 @@ val pp_global_name : kind -> GlobRef.t -> string
     {!pp_global_name} it decides nothing and demands nothing: it is how a
     check reads a plan back. *)
 val decided_global_name : GlobRef.t -> string option
+
+type decided_name =
+  | Global_name of GlobRef.t
+  | Module_name of ModPath.t
+
+(** The names of globals and modules an emission pass of the current unit
+    decided, rather than read from the plan, in the order it decided them.
+    A functor parameter's, which is its own name, is not among them. *)
+val names_decided_while_emitting : unit -> decided_name list
 
 (** {!pp_global_name} as an [Id.t]: the short C++ name a reference is emitted
     under, for the many places that need it as an identifier rather than a

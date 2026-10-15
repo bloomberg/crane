@@ -652,7 +652,7 @@ let functions ~lifted (funs : Gen_decls.generated_fun list) =
 
 (** {2 Generating once}
 
-    After discovery, emission decides nothing -- {!Extract_env} checks that no
+    Emission decides nothing the plan has not -- {!Extract_env} checks that no
     table grows -- so functions the implementation pass generated are what the
     header pass would generate at the same declaration in the same context.
     The header pass takes them from here instead of translating the bodies
@@ -711,7 +711,7 @@ let generated_once ?(on_reuse = ignore) node gen =
       end;
       funs
     | None -> gen () )
-  | Discover -> gen ()
+  | Plan -> gen ()
 
 (** [generate d] is what the MiniML declaration [d] generates, for whichever
     file is being written: functions translated once, with their file

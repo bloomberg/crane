@@ -29,20 +29,21 @@
       {!Target_plan} -- the inductive kinds, then, once the unit's preparation
       has run, the template-parameter kinds -- each installed by
       {!Install_legacy_plan} into the tables unconverted readers consult.
-    + {b Layout} ([Common.Discover]): {!Cpp.prepare_structure} runs
+    + {b Layout} ([Common.Plan]): {!Cpp.prepare_structure} runs
       {!Structure_analysis.analyze} and decides the layout ({!Module_plan});
-      then every generated function's callable plan is planned
-      ({!Cpp.plan_callables}).  Both go into the target plan, and are
-      installed and frozen.
-    + {b Discovery} ([Common.Discover]): both files are rendered and the text
-      discarded.  What survives is what the renders recorded: names, method
-      registrations, wrapper and alias tables.  Every body is translated
-      here.
-    + {b Emission} ([Common.Emit Impl], then [Emit Intf]): both files are
-      rendered for real.  Emission is meant to decide nothing; the table
-      census taken after discovery is compared after emission
-      ([check_no_late_decisions]).  The header pass reuses the functions the
-      implementation pass generated ({!Cpp_ind.generated_once}).
+      then the names of every global and module the unit declares and refers
+      to are decided ({!Cpp.plan_names}, {!Cpp.plan_referenced_names}), the
+      constructor structs' fields and storage, and every generated
+      function's callable plan ({!Cpp.plan_callables}).  All go into the
+      target plan, and are installed and frozen.
+    + {b Emission} ([Common.Emit Impl], then [Emit Intf]): each file is
+      rendered once, and every body translated there.  Emission decides
+      nothing but the names of the helpers it lifts out of bodies; the table
+      census taken after planning is compared after emission
+      ([check_no_late_decisions]), and what it generated against what the
+      unit declares ({!Generated_program.check_against_plan}).  The header
+      pass reuses the functions the implementation pass generated
+      ({!Cpp_ind.generated_once}).
     + {b Demands} are frozen ([Table.freeze_demands]) and each file is written
       with the preamble its body demanded, then formatted.
 
@@ -144,15 +145,12 @@ val core_pass_names : string list
 (** Analysing and planning one unit, before anything else of it runs. *)
 val plan_pass_names : string list
 
-(** The unit's remaining preparation, before its discovery pass. *)
+(** The unit's remaining preparation, before its layout. *)
 val unit_pass_names : string list
 
 (** Deciding the unit's data representation once its preparation has run. *)
 val represent_pass_names : string list
 
-(** Settling the unit's layout and planning its callables, before its
-    discovery pass. *)
+(** Settling the unit's layout, naming what it declares and refers to, and
+    planning its callables, before anything of it is rendered. *)
 val layout_pass_names : string list
-
-(** One unit's discovery pass, whose renders are discarded. *)
-val discover_pass_names : string list

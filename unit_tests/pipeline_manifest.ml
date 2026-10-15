@@ -14,5 +14,4 @@ let () =
       ("unit", Crane_plugin.Extract_env.unit_pass_names);
       ("represent", Crane_plugin.Extract_env.represent_pass_names);
       ("layout", Crane_plugin.Extract_env.layout_pass_names);
-      ("discover", Crane_plugin.Extract_env.discover_pass_names);
       ("finish", Crane_plugin.Cpp_pipeline.pass_names) ]

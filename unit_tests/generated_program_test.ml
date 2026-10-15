@@ -1,8 +1,8 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(* Entity identities, and the check that emission generates what discovery
-   did. *)
+(* Entity identities, and the check that emission generates what the plan
+   accounts for. *)
 
 open Crane_plugin
 open Minicpp
@@ -45,16 +45,23 @@ let () =
   let entity name helpers =
     { Generated_program.entity_id = Entity_id.of_ref (r name); decls = []; helpers }
   in
-  Common.set_phase Common.Discover;
-  ignore (Generated_program.record (entity "a" [h]));
+  Common.set_phase Common.Plan;
+  check "nothing is generated while planning"
+    (raises_anomaly (fun () -> ignore (Generated_program.record (entity "a" []))));
+  let declares r' = List.exists (Names.GlobRef.UserOrd.equal r') [r "a"; r "owner"] in
+  let check_plan () = Generated_program.check_against_plan ~declares in
   Common.set_phase (Common.Emit Common.Impl);
-  ignore (Generated_program.record (entity "a" []));
+  ignore (Generated_program.record (entity "a" [h]));
   Common.set_phase (Common.Emit Common.Intf);
   Generated_program.record_helper h;
-  check "emission matching discovery passes"
-    (not (raises_anomaly Generated_program.check_emission_matches_discovery));
+  check "emitting what the unit declares passes" (not (raises_anomaly check_plan));
   check "the emitted program keeps what it recorded"
     (List.length (Generated_program.entities (Generated_program.emitted Common.Impl)) = 1);
   ignore (Generated_program.record (entity "b" []));
-  check "an entity first generated during emission is refused"
-    (raises_anomaly Generated_program.check_emission_matches_discovery)
+  check "an entity the unit does not declare is refused" (raises_anomaly check_plan);
+  State.reset State.Unit;
+  let owned = Lifted.make ~origin:(Some (r "stray")) ~binder:(Names.Id.of_string "go") in
+  let owned_decl = Dfun (mk_dfun ~ret:Tvoid (Lifted.ref_of owned) (Ddef ([], []))) in
+  Option.iter Generated_program.record_helper (Generated_program.helper owned_decl);
+  check "a helper lifted out of nothing the unit declares or emits is refused"
+    (raises_anomaly check_plan)

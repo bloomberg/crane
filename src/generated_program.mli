@@ -1,19 +1,19 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** What a phase generated, as a value rather than as the documents it was
-    printed into.
+(** What an emission generated, as a value rather than as the documents it
+    was printed into.
 
-    Each source declaration a phase generates is one entity, with the MiniCpp
-    declarations generating it produced and the helpers lifted out of its
-    bodies; each helper records the entity it was lifted out of.
+    Each source declaration an emission generates is one entity, with the
+    MiniCpp declarations generating it produced and the helpers lifted out of
+    its bodies; each helper records the entity it was lifted out of.
 
     Transitional: generation is still driven from inside the printer's
-    traversal, which records each generation as it renders it, so a phase's
-    program is complete only once its renders are.  What it already
-    establishes is identity: {!check_emission_matches_discovery} holds every
-    unit to "emission generates exactly the entities discovery did", the
-    evidence discovery-by-rendering can be retired against. *)
+    traversal, which records each generation as it renders it, so a file's
+    program is complete only once its render is.  What it already
+    establishes is identity: {!check_against_plan} holds every unit to
+    "emission generates what the unit declares, and the helpers lifted out of
+    it". *)
 
 type id =
   | Source of Entity_id.t
@@ -65,21 +65,18 @@ val ids : t -> Id_set.t
     The current phase's program is accumulated as generation happens, and
     emptied with the other per-unit state. *)
 
-(** [record e] adds [e] to the current phase's program, and returns it.
-    Discovery keeps [e]'s identities only: its declarations are discarded with
-    its documents. *)
+(** [record e] adds [e] to the program of the file being emitted, and
+    returns it.  Nothing is generated while planning. *)
 val record : entity -> entity
 
-(** [record_helper h] notes that the current phase lifted [h]. *)
+(** [record_helper h] notes that the file being emitted lifted [h]. *)
 val record_helper : helper -> unit
 
 (** The program the emission of file [f] of the current unit generated. *)
 val emitted : Common.file -> t
 
-(** The ids of the entities and helpers discovery generated. *)
-val discovered : unit -> Id_set.t
-
-(** Under [CRANE_CHECK_IR], fail unless the implementation and header
-    emissions together generated exactly the entities and helpers discovery
-    generated. *)
-val check_emission_matches_discovery : unit -> unit
+(** Under [CRANE_CHECK_IR], fail unless every entity the implementation and
+    header emissions generated is one the unit [declares], and every helper
+    was lifted out of such an entity or out of none: emission generates what
+    was planned, and the helpers its bodies lift. *)
+val check_against_plan : declares:(Names.GlobRef.t -> bool) -> unit

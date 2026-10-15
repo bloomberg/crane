@@ -263,9 +263,9 @@ val is_coinductive_type : ml_type -> bool
     A demand is something the preamble of the generated file must provide -- a
     standard or runtime header, a directive -- that only code generation can
     discover.  It is raised while a declaration is generated and read when the
-    preamble is emitted, which happens first; the dry run in [extract_env.ml]
-    generates the whole file and discards it so that every demand is in before
-    a byte is written. *)
+    preamble is emitted, which comes first in the file; [extract_env.ml]
+    renders both bodies before it writes either file, so that every demand is
+    in before a byte is written. *)
 
 (** Enrol a table in the census under [name]: [size] reports how many decisions
     it currently holds. *)
@@ -274,9 +274,9 @@ val register_census : string -> (unit -> int) -> unit
 (** Every enrolled table's current size.
 
     Comparing a census taken before output is generated with one taken after it
-    says which decisions are still being made *by* generating output.  Those are
-    what force a declaration to be rendered before its uses can be, and so force
-    the discarded first pass; see the comparison in [extract_env.ml]. *)
+    says which decisions are still being made *by* generating output, which a
+    use rendered before them could not have seen; see the comparison in
+    [extract_env.ml]. *)
 val census : unit -> (string * int) list
 
 (** [mark_demand d] records that the file being generated needs [d]. *)

@@ -60,7 +60,7 @@ val string_of_outcome : loopify_outcome -> string
 
 (** Outcomes recorded so far, in the order the functions were first processed.
 
-    A function may be transformed more than once per unit — the dry run and the
+    A function may be transformed more than once per unit — the
     header/implementation passes each invoke {!transform_decl} — so each name is
     collapsed to its best outcome, which is the one describing the emitted C++.
 *)

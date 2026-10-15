@@ -699,7 +699,7 @@ let relaxed_tt_return_var id =
 
     The condition is read off the Rocq type rather than the emitted
     declaration, which a call site cannot consult ({!Table.census}'s rule that
-    discovery decides and emission reads): the variable occurs in the
+    planning decides and emission reads): the variable occurs in the
     codomain, and every domain occurrence of it is under an arrow -- that is,
     it is a callback's result, which is exactly the parameter the declaration
     collapses to a deduced callable and stops naming. *)

@@ -72,7 +72,7 @@ val instance_decls :
 (** [generated_once ?on_reuse node gen] is [gen ()], except that the header
     pass reuses what the implementation pass generated from the physical
     MiniML node [node] in the same render context and module -- emission
-    decides nothing after discovery, so the two agree -- handing it to
+    decides nothing the plan has not, so the two agree -- handing it to
     [on_reuse] to replay any effect generating it had.  [CRANE_CHECK_IR]
     regenerates and checks. *)
 val generated_once :

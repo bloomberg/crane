@@ -208,7 +208,7 @@ let describe abi =
        abi.head )
 
 let phase_name = function
-  | Common.Discover -> "in discovery"
+  | Common.Plan -> "while planning"
   | Common.Emit Common.Impl -> "emitting the implementation"
   | Common.Emit Common.Intf -> "emitting the interface"
 

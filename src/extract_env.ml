@@ -673,7 +673,7 @@ let include_guard_name s =
 (** Generates the [#include] block for a C++ implementation file.
     Standard and custom headers are omitted for non-BDE mode because they
     are already included transitively via the component's own header (both
-    share the same accumulator during discovery). *)
+    share the same accumulator). *)
 let header fn () =
   (* The producing binary, named by the artifact itself under [CRANE_STAMP]:
      see {!Table.stamp_build}.  The implementation file is stamped as well as
@@ -1037,9 +1037,9 @@ let layout_pass_names =
     functions that have no plan.  Under [CRANE_CHECK_IR] the callables are
     planned a second time with every list reversed, and the two must agree:
     a head is a function of its declaration, not of what was planned before
-    it.  Runs in the discovery phase, which is the one that names modules. *)
+    it.  Runs in the planning phase, which is the one that names modules. *)
 let plan_layout struc =
-  set_phase Discover;
+  set_phase Plan;
   Pipeline_trace.event "layout" prepare_layout;
   let modules = Cpp.prepare_structure struc in
   Install_legacy_plan.install_modules modules;
@@ -1091,18 +1091,9 @@ let plan_layout struc =
     callables,
     assumed )
 
-(** The renders discovery runs. *)
-let discover_passes ~interface d : ml_structure Pipeline_trace.pass list =
-  let open Pipeline_trace in
-  effect "render_impl" (fun s -> ignore (d.pp_struct s))
-  :: (if interface then [effect "render_intf" (fun s -> ignore (d.pp_hstruct s))] else [])
-
-let discover_pass_names = Pipeline_trace.names (discover_passes ~interface:true (descr ()))
-
-(** Under [CRANE_TRACE_PIPELINE], report the decisions first made while
-    discovery rendered: what each census table gained between [before] and
-    now.  Rendering is analysis exactly to the extent of this report, and
-    discovery's renders can go when it is empty for every unit. *)
+(** Under [CRANE_TRACE_PIPELINE], report what the tables gained between
+    [before] and now, while output was generated: its demands, and the names
+    of the helpers lifted out of the bodies it generated. *)
 let report_decided_while_rendering before =
   if Pipeline_trace.enabled () then
     let grown =
@@ -1114,35 +1105,18 @@ let report_decided_while_rendering before =
           | _ -> None )
         (Table.census ())
     in
-    Pipeline_trace.event "discover"
+    Pipeline_trace.event "emit"
       ( "decided while rendering: "
       ^ if grown = [] then "nothing" else String.concat ", " grown )
 
-(** Run the discovery pass over [struc], once its layout is planned
-    ({!plan_layout}): allocate every name and record every fact the emissions
-    will go on to read.  Its output is discarded -- the point of it is the
-    tables it leaves behind, which are complete only once a whole traversal
-    has run, because a use can be rendered before its declaration.
-
-    Discover exactly the passes you will emit.  Each emission allocates names
-    the other does not -- measured: dropping either half renames binders in the
-    output and trips {!check_no_late_decisions} -- so [~interface:false] is for
-    callers that emit no interface at all. *)
-let discover ?(interface = true) d struc =
-  set_phase Discover;
-  let planned = if Pipeline_trace.enabled () then Table.census () else [] in
-  ignore (Pipeline_trace.run ~stage:"discover" (discover_passes ~interface d) struc);
-  report_decided_while_rendering planned
-
 (** {2 Extraction of one decl to stdout} *)
 
-(** Renders a single ML declaration to C++ output. Performs renaming and runs
-    both the discovery and the emission passes. *)
+(** Renders a single ML declaration to C++ output, once the unit it belongs
+    to is planned. *)
 let print_one_decl struc mp decl =
   let d = descr () in
   reset_renaming_tables AllButExternal;
   ignore (plan_layout struc);
-  discover ~interface:false d struc;
   set_phase (Emit Impl);
   push_visible mp [];
   let ans = d.pp_decl decl in
@@ -1152,35 +1126,52 @@ let print_one_decl struc mp decl =
      declaration groups.  Everything else is clang-format's to lay out. *)
   v 0 ans
 
-(** Check that generating output decided nothing.
+(** The tables output may add to: the headers a body demands, and the names
+    of the helpers lifted out of a body as it is generated, which
+    {!Common.names_decided_while_emitting} lists for the check below. *)
+let emission_products = ["demands"; "ref_renaming"; "mp_renaming"; "global_ids"]
+
+(** Check that generating output decided nothing the plan should have.
 
     Every decision about the shape of the code -- a name, a field, whether a
-    wrapper merged -- is taken during discovery, and generating output only
-    reads them.  That is what makes discovery a different kind of pass from
-    emission rather than the same pass run twice, and it is measured here
-    rather than assumed: a table that has grown since discovery ended holds a
-    decision that emission made, and a decision emission makes is one an
-    earlier use of the same declaration could not have seen.
+    wrapper merged -- is taken while planning, and generating output only
+    reads them.  A table that has grown since planning ended holds a decision
+    that emission made, which an earlier use of the same declaration could
+    not have seen.  Output may demand headers, and it generates the helpers
+    it lifts out of the bodies it translates, naming each as it is lifted;
+    any other name it decided is one the plan missed.
 
     The corpus satisfies this today.  Reported under [CRANE_CHECK_IR], like
     {!Table.mark_demand}'s late demands, rather than left to surface as C++
     that does not compile. *)
-let check_no_late_decisions before =
-  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then
+let check_no_late_decisions planned =
+  report_decided_while_rendering planned;
+  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
+    let late what =
+      CErrors.user_err
+        Pp.(
+          str "Crane: " ++ what
+          ++ str " while output was being generated.  Decisions belong to \
+                  planning; a use rendered before this one could not have \
+                  seen it." )
+    in
     let after = Table.census () in
     List.iter
       (fun (name, n_before) ->
         match List.assoc_opt name after with
-        | Some n_after when n_after > n_before ->
-          CErrors.user_err
-            Pp.(
-              str "Crane: " ++ int (n_after - n_before) ++ str " entries were \
-                   added to '" ++ str name
-              ++ str "' while output was being generated.  Decisions belong to \
-                      discovery; a use rendered before this one could not have \
-                      seen them." )
+        | Some n_after when n_after > n_before && not (List.mem name emission_products) ->
+          late Pp.(int (n_after - n_before) ++ str " entries were added to '" ++ str name ++ str "'")
         | _ -> () )
-      before
+      planned;
+    List.iter
+      (function
+        | Common.Global_name r when Option.has_some (Lifted.of_ref r) -> ()
+        | Common.Global_name r ->
+          late Pp.(str "the name of " ++ str (Table.kername_of_global r) ++ str " was decided")
+        | Common.Module_name mp ->
+          late Pp.(str "the name of module " ++ str (ModPath.to_string mp) ++ str " was decided") )
+      (Common.names_decided_while_emitting ())
+  end
 
 (** {2 Extraction of a ml struct to a file} *)
 
@@ -1371,14 +1362,15 @@ let observed_fingerprint ~stage struc =
 
 (** Report the elements rendering changed.
 
-    Everything discovery records is a fact about one structure, and emission
+    Everything the plan records is a fact about one structure, and emission
     reads those facts back against the structure it is handed, so a structure
     that changes while it is rendered is read by emission as a different
-    program from the one discovery planned.  Some do change: translation
+    program from the one that was planned.  Some do change: translation
     solves the metavariables a local fixpoint's binder types still hold
-    (tests/regression/let_fix), so the first render decides those types and
-    emission reads them solved.  That is reported rather than refused, until a
-    frozen structure, with no metavariable left to solve, makes it a check. *)
+    (tests/regression/let_fix), so the implementation pass decides those
+    types and the header pass reads them solved.  That is reported rather
+    than refused, until a frozen structure, with no metavariable left to
+    solve, makes it a check. *)
 let report_structure_changes planned struc =
   Option.iter
     (fun before ->
@@ -1447,7 +1439,7 @@ let analyze_and_plan struc =
   Install_legacy_plan.install struc facts plan;
   (facts, plan)
 
-(** What a unit decides about its structure before discovery, in order.
+(** What a unit decides about its structure before its layout, in order.
     [namespace] is the C++ namespace of a separately extracted file. *)
 let unit_passes ~namespace : ml_structure Pipeline_trace.pass list =
   let open Pipeline_trace in
@@ -1488,16 +1480,42 @@ let plan_representation plan struc =
   Install_legacy_plan.install_template_kinds plan;
   plan
 
-(** Renders an entire ML structure to C++ header and implementation files.
-    Performs dry run first for renaming, then generates and formats the output.
-*)
+(** Whether the unit [struc] declares a reference: an inductive of its, a
+    constructor, a record field, a constant, a module type's specification;
+    a functor's body included. *)
+let declares struc =
+  let declared = ref Ref.User.Set.empty in
+  let add r = declared := Ref.User.Set.add r !declared in
+  let inductive kn ind =
+    ( match ind.ind_kind with
+    | Record fields | TypeClass fields -> List.iter (fun (f, _) -> Option.iter add f) fields
+    | Standard | Coinductive -> () );
+    Array.iteri
+      (fun i p ->
+        add (GlobRef.IndRef (kn, i));
+        Array.iteri (fun j _ -> add (GlobRef.ConstructRef ((kn, i), j + 1))) p.ip_types )
+      ind.ind_packets
+  in
+  Modutil.struct_iter
+    (function
+      | Dind (kn, ind) -> inductive kn ind
+      | Dtype (r, _, _) | Dterm (r, _, _) -> add r
+      | Dfix fds -> List.iter (fun fd -> add fd.fd_ref) fds )
+    (function
+      | Sind (kn, ind) -> inductive kn ind
+      | Stype (r, _, _) | Sval (r, _, _) -> add r )
+    ignore struc;
+  fun r -> Ref.User.Set.mem r !declared
+
+(** Renders an entire ML structure to C++ header and implementation files:
+    plans the unit, renders each file once, then writes and formats them. *)
 let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
     (fn, si, mo) dry core =
   let struc = Core.structure core in
   Buffer.clear buf;
   let d = descr () in
   (* Empties every per-file cell, the mutual-recursion registry among them,
-     before this unit's dry run repopulates it. *)
+     before this unit is planned and rendered. *)
   reset_renaming_tables AllButExternal;
   let unsafe_needs =
     {
@@ -1513,15 +1531,13 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   let planned = observed_fingerprint ~stage:"unit" struc in
   let modules, representation, callables, assumed = plan_layout struc in
   let plan = Target_plan.with_layout plan modules representation callables assumed in
-  discover d struc;
-  let census_after_discovery = Table.census () in
+  let census_after_planning = Table.census () in
   (* Both bodies are rendered before either file is opened.  A preamble has to
      say what the body it precedes demands -- which headers it includes, which
      unsafe features it uses -- and the body is the only thing that knows.
      Rendering first and writing after lets the preamble follow from the body
-     that is actually written, rather than from the dry run above.  Everything
-     raised after this point is too late, which [freeze_demands] is there to
-     catch. *)
+     that is actually written.  Everything raised after this point is too
+     late, which [freeze_demands] is there to catch. *)
   set_phase (Emit Impl);
   Pipeline_trace.event "emit" "render_impl";
   let body_impl = d.pp_struct struc in
@@ -1530,8 +1546,8 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   let body_hstruct = d.pp_hstruct struc in
   report_body_generations fn;
   Table.freeze_demands ();
-  check_no_late_decisions census_after_discovery;
-  Generated_program.check_emission_matches_discovery ();
+  check_no_late_decisions census_after_planning;
+  Generated_program.check_against_plan ~declares:(declares struc);
   Install_legacy_plan.check_installed facts plan;
   report_structure_changes planned struc;
   report_late_solutions ();
@@ -1636,10 +1652,10 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
     Feedback.msg_notice (str formatted_output);
     Buffer.reset buf );
   (* Loopify records an outcome per recursive function but reports nothing as
-     it goes: a function is transformed several times per unit (dry run, then
-     the header and implementation passes) and only the best of those outcomes
-     describes the code actually emitted.  Report now that they are all in, and
-     only for the real run -- the dry run's results are discarded. *)
+     it goes: a function may be transformed more than once per unit (by the
+     implementation and header passes) and only the best of those outcomes
+     describes the code actually emitted.  Report now that they are all in,
+     and only when the files are written. *)
   if not dry then Loopify.report_outcomes ~unit_name:(match fn with Some f -> Filename.basename f | None -> "") ()
 
 (*********************************************)
@@ -2074,7 +2090,7 @@ let print_per_library ~dry core =
   in
   (* Pre-build the method registry from the full structure so that
      cross-module method calls are recognized during per-module rendering. *)
-  set_phase Discover;
+  set_phase Plan;
   Cpp_state.set_global_method_registry (Method_registry.create ~ret_is_erased:Translation.return_type_is_erased struc);
   (* Generic traversal of ml_structure: walks MEstruct/MEfunctor/MEapply
      and calls [visit ~in_struct elem] on each structure element. *)

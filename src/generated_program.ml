@@ -81,49 +81,40 @@ let ids t =
     (Id_set.of_list (List.map (fun h -> Generated h.helper_id) t.lifted))
     t.entities
 
-(** What discovery generated.  Its documents are discarded, and so are its
-    declarations: identities are all {!check_emission_matches_discovery}
-    reads. *)
-let discovered_ids : Id_set.t ref = State.cell State.Unit Id_set.empty
-
 (** Each emitted file's program so far, newest first. *)
 let emitted_files : (Common.file, t) Hashtbl.t = State.table State.Unit 2
 
-let add_to_file f update =
-  let t = Option.default { entities = []; lifted = [] } (Hashtbl.find_opt emitted_files f) in
-  Hashtbl.replace emitted_files f (update t)
+let add_to_file update =
+  match Common.get_phase () with
+  | Common.Emit f ->
+    let t = Option.default { entities = []; lifted = [] } (Hashtbl.find_opt emitted_files f) in
+    Hashtbl.replace emitted_files f (update t)
+  | Common.Plan -> CErrors.anomaly Pp.(str "Crane: a declaration was generated while planning.")
 
 let record e =
-  ( match Common.get_phase () with
-  | Common.Discover -> discovered_ids := Id_set.union !discovered_ids (entity_ids e)
-  | Common.Emit f -> add_to_file f (fun t -> { t with entities = e :: t.entities }) );
+  add_to_file (fun t -> { t with entities = e :: t.entities });
   e
 
-let record_helper h =
-  match Common.get_phase () with
-  | Common.Discover -> discovered_ids := Id_set.add (Generated h.helper_id) !discovered_ids
-  | Common.Emit f -> add_to_file f (fun t -> { t with lifted = h :: t.lifted })
-
-let discovered () = !discovered_ids
+let record_helper h = add_to_file (fun t -> { t with lifted = h :: t.lifted })
 
 let emitted f =
   match Hashtbl.find_opt emitted_files f with
   | Some t -> { entities = List.rev t.entities; lifted = List.rev t.lifted }
   | None -> { entities = []; lifted = [] }
 
-let check_emission_matches_discovery () =
+let check_against_plan ~declares =
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then
     let emitted = Id_set.union (ids (emitted Common.Impl)) (ids (emitted Common.Intf)) in
-    let report what s =
-      if Id_set.is_empty s then Pp.mt ()
-      else
-        Pp.(
-          fnl () ++ str what ++ str ": "
-          ++ prlist_with_sep (fun () -> str ", ") pp_id (Id_set.elements s))
+    let planned = function
+      | Source e -> declares (Entity_id.to_ref e)
+      | Generated g -> (
+        match Generated_entity_id.owner g with
+        | None -> true
+        | Some e -> declares (Entity_id.to_ref e) || Id_set.mem (Source e) emitted )
     in
-    if not (Id_set.equal !discovered_ids emitted) then
+    let unplanned = Id_set.filter (fun id -> not (planned id)) emitted in
+    if not (Id_set.is_empty unplanned) then
       CErrors.anomaly
         Pp.(
-          str "Crane: emission generated different entities from discovery."
-          ++ report "only in emission" (Id_set.diff emitted !discovered_ids)
-          ++ report "only in discovery" (Id_set.diff !discovered_ids emitted))
+          str "Crane: emission generated entities the plan does not account for: "
+          ++ prlist_with_sep (fun () -> str ", ") pp_id (Id_set.elements unplanned))

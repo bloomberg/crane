@@ -438,7 +438,7 @@ type file = Impl | Intf
 
 (** What a pass is for; see {!Common.phase} in the interface. *)
 type phase =
-  | Discover
+  | Plan
   | Emit of file
 
 (** Get/set the current extraction phase. *)
@@ -447,7 +447,7 @@ let set_phase, get_phase =
   (( := ) ph, fun () -> !ph)
 
 let phase_name = function
-  | Discover -> "discovery"
+  | Plan -> "planning"
   | Emit Impl -> "implementation"
   | Emit Intf -> "header"
 
@@ -633,8 +633,8 @@ let add_mpfiles_content, get_mpfiles_content, clear_mpfiles_content =
   mktable_modpath false
 
 (** Retrieve module file content, returning an empty map when the module
-    has not been registered yet (e.g. during discovery of Separate
-    Extraction where [pop_visible] has not yet populated the table). *)
+    has not been registered yet (e.g. while a separately extracted file is
+    planned, before [pop_visible] has populated the table). *)
 let get_mpfiles_content mp =
   try get_mpfiles_content mp with Not_found -> KMap.empty
 
@@ -1068,6 +1068,22 @@ let note_file_reference mp =
 
 let mp_renaming_table = mktable_modpath ~census:"mp_renaming" true
 
+type decided_name =
+  | Global_name of GlobRef.t
+  | Module_name of ModPath.t
+
+(** The names first decided by an emission pass, newest first.  A functor
+    parameter's is not among them: it is its parameter's own name, decided by
+    nothing. *)
+let decided_while_emitting : decided_name list ref = State.cell State.Unit []
+
+let note_decided_while_emitting n =
+  match get_phase () with
+  | Emit _ -> decided_while_emitting := n :: !decided_while_emitting
+  | Plan -> ()
+
+let names_decided_while_emitting () = List.rev !decided_while_emitting
+
 (** First, the real function ... *)
 let rec mp_renaming_fun full_mp =
   match full_mp with
@@ -1110,6 +1126,7 @@ and mp_renaming x =
     get x
   with Not_found ->
     let y = mp_renaming_fun x in
+    if not (is_mp_bound (base_mp x)) then note_decided_while_emitting (Module_name x);
     add x y;
     y
 
@@ -1272,11 +1289,13 @@ let ref_renaming, decided_ref_renaming =
   let add, get, _ = mktable_ref ~census:"ref_renaming" true in
   ( (fun ((k, r) as x) ->
       note_file_reference (modpath_of_r r);
+      let mp = modpath_of_r r in
       try
-        if is_mp_bound (base_mp (modpath_of_r r)) then raise Not_found;
+        if is_mp_bound (base_mp mp) then raise Not_found;
         get r
       with Not_found ->
         let y = ref_renaming_fun x in
+        if not (is_mp_bound (base_mp mp)) then note_decided_while_emitting (Global_name r);
         add r y;
         y ),
     fun r -> try Some (get r) with Not_found -> None )

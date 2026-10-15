@@ -166,7 +166,7 @@ val type_alias_kinds : GlobRef.t -> Id.t list -> ml_type -> Tparam_kinds.t
 val is_typeclass_instance : ml_ast -> ml_type -> bool
 
 (** How many top-level bodies each phase of the current unit has
-    generated -- discovery, then the implementation and header emissions.
-    Every phase still translates every body; [CRANE_COUNT_GENERATION] reports
-    these counts so the repetition stays visible. *)
+    generated -- none while planning, then the implementation and header
+    emissions; [CRANE_COUNT_GENERATION] reports these counts so any
+    repetition stays visible. *)
 val body_generation_counts : unit -> (Common.phase * int) list
