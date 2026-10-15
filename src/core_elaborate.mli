@@ -25,7 +25,8 @@ val elaborate_arguments : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast lis
 
 (** [structure s] elaborates every global application in [s]'s
     declarations -- in their bodies, and in the terms custom types are
-    applied to in the types they write -- replacing the unit's previous
+    applied to in the types they write -- and every global named there
+    unapplied, as its call with no arguments, replacing the unit's previous
     elaborations. *)
 val structure : Miniml.ml_structure -> unit
 

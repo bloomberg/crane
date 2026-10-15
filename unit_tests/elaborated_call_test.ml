@@ -99,7 +99,9 @@ let () =
   Common.set_phase (Common.Emit Common.Impl);
   ignore (Core_elaborate.elaboration ~lex:Lexenv.empty rewritten [a]);
   ignore (Core_elaborate.elaboration ~lex:Lexenv.empty again [a]);
+  (* The argument, a global named unapplied, is planned as its call with no
+     arguments. *)
   check "a call whose use was rewritten is found planned, one built afresh is not"
     (Core_elaborate.report ()
-    = "elaborated calls: 1 planned; emission found 1, elaborated 1 itself");
+    = "elaborated calls: 2 planned; emission found 1, elaborated 1 itself");
   Common.set_phase Common.Plan

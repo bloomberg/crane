@@ -264,7 +264,11 @@ let rec walk lex = function
   | MLparray (elems, def) ->
     Array.iter (walk lex) elems;
     walk lex def
-  | MLglob use -> walk_use lex use
+  (* A global named but not applied -- a function passed as a value -- is
+     translated as its call with no arguments. *)
+  | MLglob use ->
+    walk_use lex use;
+    record lex use []
   | MLrel _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> ()
 
 and walk_use lex use =
