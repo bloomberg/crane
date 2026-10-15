@@ -305,8 +305,8 @@ let relax_applied_return temps decl =
         temps
       @ computed
     in
-    (temps, Fun.id)
-  | _ -> (temps, Fun.id)
+    (temps, None)
+  | _ -> (temps, None)
 
 (** Relax a signature whose return type applies a template template parameter
     that nothing deduces.
@@ -351,7 +351,7 @@ let relax_tt_applied_return temps decl =
           temps
       in
       ( match producer with
-      | None -> (temps, Fun.id)
+      | None -> (temps, None)
       | Some (fid, doms, carrier) ->
         let at_ret_arg t =
           map_cpp_type (fun t -> if t = carrier then ret_arg else t) t
@@ -372,13 +372,9 @@ let relax_tt_applied_return temps decl =
               | _ -> Some (tt, i) )
             temps
         in
-        let returning = function
-          | Dfun f -> Dfun {f with df_ret = ret}
-          | d -> d
-        in
-        (temps, returning) )
-    | _ -> (temps, Fun.id) )
-  | _ -> (temps, Fun.id)
+        (temps, Some (Head_relaxation.Computed_return ret)) )
+    | _ -> (temps, None) )
+  | _ -> (temps, None)
 
 (** Relax a signature in which a parameter's type is the only place a template
     template parameter is applied.
@@ -448,7 +444,7 @@ let relax_applied_param temps decl =
           | _ -> false )
         temps
     in
-    if relaxed = [] then (temps, Fun.id)
+    if relaxed = [] then (temps, None)
     else begin
       (* One fresh parameter per application, named apart from the ones the
          signature already has. *)
@@ -479,9 +475,6 @@ let relax_applied_param temps decl =
           | None -> None )
         | _ -> None
       in
-      let lookup t =
-        Option.bind (key t) (fun k -> List.assoc_opt k !seen)
-      in
       let deduced t =
         match key t with
         | None -> None
@@ -503,24 +496,6 @@ let relax_applied_param temps decl =
                  match deduced t with Some id -> Tvar (Tv_named id) | None -> t )
                ty ) )
         params;
-      let ft =
-        map_cpp_type (fun t ->
-            match lookup t with Some id -> Tvar (Tv_named id) | None -> t )
-      in
-      (* The body annotates the very types the parameters do -- a pattern
-         match names the scrutinee's constructor struct -- so a relaxation
-         that renames a parameter's type has to rename the body's too, or the
-         body goes on applying a variable the signature no longer declares as
-         a template. *)
-      let rewrite = function
-        | Dfun ({df_shape = Ddef (params, body); _} as f) ->
-          let rec fe e = Minicpp.map_expr fe fs ft e
-          and fs st = Minicpp.map_stmt fe fs ft st in
-          Dfun
-            { f with
-              df_shape = Ddef (List.map (fun (n, ty) -> (n, ft ty)) params, List.map fs body) }
-        | d -> d
-      in
       let temps =
         List.map
           (fun (tt, id) ->
@@ -530,9 +505,9 @@ let relax_applied_param temps decl =
           temps
         @ !fresh
       in
-      (temps, rewrite)
+      (temps, Some (Head_relaxation.Param_applications {relaxed = List.map snd relaxed; deduced = !seen}))
     end
-  | _ -> (temps, Fun.id)
+  | _ -> (temps, None)
 
 (** Take the application back off a type variable that was left a plain
     [typename].
@@ -555,56 +530,14 @@ let deapplied_head temps =
       temps
   in
   let in_scope = List.map snd temps in
-  let rec ft t =
-    map_cpp_type
-      (function
-        | Tapply (head, args) when List.exists (fun id -> tvar_is id head) plain -> (
-          (* Named as it is declared: a head converted without names is
-             otherwise spelled [std::any]. *)
-          let head =
-            match head with
-            | Tvar (Tv_index (i, None)) ->
-              Tvar (Tv_index (i, List.find_opt (fun id -> tvar_is id head) plain))
-            | _ -> head
-          in
-          Minicpp.rebind_plain_var ~in_scope head args )
-        (* A carrier abstraction's body is written too, through a holder;
-           [map_cpp_type] leaves it alone. *)
-        | Ttyctor body -> Ttyctor (ft body)
-        | t -> t )
-      t
-  in
-  (* A lambda whose parameter deduced a template parameter only through the
-     application just taken off no longer does. *)
-  let settle = function
-    | CPPlambda l -> CPPlambda (Minicpp.settle_lambda_tparams l)
-    | e -> e
-  in
-  let rec fe e = settle (Minicpp.map_expr fe fs ft e)
-  and fs st = Minicpp.map_stmt fe fs ft st in
-  let rewrite decl =
-    match decl with
-    | Dfun ({df_ret = ret; df_shape = Ddef (params, body); _} as f) ->
-      Dfun
-        { f with
-          df_ret = ft ret;
-          df_shape = Ddef (List.map (fun (n, ty) -> (n, ft ty)) params, List.map fs body) }
-    | Dfun ({df_ret = ret; df_shape = Ddecl params; _} as f) ->
-      Dfun {f with df_ret = ft ret; df_shape = Ddecl (List.map (fun (n, ty) -> (n, ft ty)) params)}
-    | Dasgn (n, ty, e) -> Dasgn (n, ft ty, fe e)
-    | Dstruct _ | Dnspace _ | Dtemplate _ ->
-      (* An inductive's own fields and members, for the same reason: a family
-         parameter [hkt_templates] left plain is applied in its payloads. *)
-      Minicpp.map_decl fe fs ft decl
-    | _ -> decl
-  in
   (* The parameters' own types too: a callable parameter's constraint
      ([is_invocable_r_v<T3, F1 &, T1<T2> &>]) and a default. *)
-  (Minicpp.map_tparams ft temps, rewrite)
+  ( Minicpp.map_tparams (Head_relaxation.deapplied ~plain ~in_scope) temps,
+    Head_relaxation.Deapplied {plain; in_scope} )
 
 (** [decl] under the head [temps], its plain variables deapplied
     ({!deapplied_head}). *)
-let deapply_plain_tvars temps decl = snd (deapplied_head temps) decl
+let deapply_plain_tvars temps decl = Head_relaxation.apply (snd (deapplied_head temps)) decl
 
 (** {!deapply_plain_tvars} for a generated struct -- an inductive's, or an
     instance's -- whose template parameters are its own. *)
@@ -702,32 +635,8 @@ let default_unmentioned_temps temps decl =
         | _ -> None )
       temps
   in
-  if unmentioned = [] then (temps, Fun.id)
+  if unmentioned = [] then (temps, None)
   else
-    let is_unmentioned t =
-      let head = match t with Ttyctor h | Tapply (h, _) -> h | h -> h in
-      List.exists (fun id -> is_tvar id head) unmentioned
-    in
-    let erase = map_cpp_type (fun t -> if is_unmentioned t then Tany else t) in
-    let erase_params l = List.map (fun (id, t) -> (id, erase t)) l in
-    let rewrite = function
-      | Dfun ({df_shape; _} as f) ->
-        let df_shape =
-          match df_shape with
-          | Ddef (params, body) ->
-            let rec fe e =
-              match e with
-              (* The cast's target is left alone; its operand is not. *)
-              | CPPany_cast (ty, e') -> CPPany_cast (ty, fe e')
-              | CPPany_cast_tolerant (ty, e') -> CPPany_cast_tolerant (ty, fe e')
-              | e -> Minicpp.map_expr fe fs erase e
-            and fs s = Minicpp.map_stmt fe fs erase s in
-            Ddef (erase_params params, List.map fs body)
-          | Ddecl params -> Ddecl (erase_params params)
-        in
-        Dfun {f with df_ret = erase f.df_ret; df_shape}
-      | d -> d
-    in
     let temps =
       List.map
         (fun (tt, id) ->
@@ -738,7 +647,7 @@ let default_unmentioned_temps temps decl =
           | _ -> (tt, id) )
         temps
     in
-    (temps, rewrite)
+    (temps, Some (Head_relaxation.Unmentioned unmentioned))
 
 (** A function's head, relaxed: what the relaxations above decide from the
     head [temps] and the signature [signature] -- a declaration whose body
@@ -746,19 +655,20 @@ let default_unmentioned_temps temps decl =
     declaration, its body included.  Each relaxation decides from the
     signature the previous ones left. *)
 let relax_function_head temps signature =
-  let temps, _, rewrite =
+  let temps, _, relaxations =
     List.fold_left
-      (fun (temps, signature, rewrite) relax ->
-        let temps, step = relax temps signature in
-        (temps, step signature, fun d -> step (rewrite d)) )
-      (temps, signature, Fun.id)
+      (fun (temps, signature, relaxations) relax ->
+        match relax temps signature with
+        | temps, None -> (temps, signature, relaxations)
+        | temps, Some r -> (temps, Head_relaxation.apply r signature, relaxations @ [r]) )
+      (temps, signature, [])
       [ relax_applied_return;
         relax_tt_applied_return;
         relax_applied_param;
-        (fun temps _ -> deapplied_head temps);
+        (fun temps _ -> let temps, r = deapplied_head temps in (temps, Some r));
         default_unmentioned_temps ]
   in
-  (temps, rewrite)
+  (temps, relaxations)
 
 (** Build template parameter list with phantom detection.
 

@@ -54,10 +54,12 @@ type t = {
   receiver : receiver option;
   passing : passing list option;
   variables : (Scheme.Var.t * omission option) list;
+  relaxations : Head_relaxation.t list;
   phase : Common.phase;
 }
 
 let callee abi = abi.callee
+let relaxations abi = abi.relaxations
 let template_head abi = abi.head
 let receiver abi = abi.receiver
 
@@ -133,7 +135,7 @@ let mark_phantoms n head =
   go n head
 
 let of_head ?omitted ?(phantom_prefix = 0) ?relaxed ?renumber ?(deduced_callables = []) ?receiver
-    ?passing ~callee ~scheme temps =
+    ?passing ?(relaxations = []) ~callee ~scheme temps =
   let head =
     List.mapi
       (fun position (kind, name) ->
@@ -153,6 +155,7 @@ let of_head ?omitted ?(phantom_prefix = 0) ?relaxed ?renumber ?(deduced_callable
     receiver;
     passing;
     variables = scheme_variables ?omitted scheme;
+    relaxations;
     phase = Common.get_phase () }
 
 let passing abi = abi.passing
@@ -214,6 +217,7 @@ let same_head a b =
   && Option.equal ( = ) (Option.map receiver_key a.receiver) (Option.map receiver_key b.receiver)
   && Option.equal (List.equal ( = )) a.passing b.passing
   && variables_key a = variables_key b
+  && List.equal Head_relaxation.equal a.relaxations b.relaxations
 
 let equal a b = GlobRef.UserOrd.equal a.callee b.callee && same_head a b
 
@@ -341,6 +345,7 @@ let foreign ?omitted ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept =
       receiver = None;
       passing = None;
       variables = scheme_variables ?omitted scheme;
+      relaxations = [];
       phase = Common.get_phase () }
 
 (* The unit's foreign plans, without dictionaries, by callee. *)

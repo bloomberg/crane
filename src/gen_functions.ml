@@ -326,17 +326,17 @@ let promote_typeclass_params (params : (Id.t * ml_type) list) =
 
 (** The head [n] is declared with: [temps] relaxed against [signature]
     ({!Plan_templates.relax_function_head}), as [n]'s callable plan and as a
-    template head, with the rewrite that carries the relaxations through the
-    declaration. *)
+    template head, with what the relaxations decided, which carry them
+    through the declaration. *)
 let plan_function_head ?deduced_callables ?passing n ty temps signature =
-  let temps, rewrite = relax_function_head temps signature in
+  let temps, relaxations = relax_function_head temps signature in
   let abi =
-    Callable_abi.of_head ?deduced_callables ?passing ~omitted:(Translation_support.type_arg_omission n)
+    Callable_abi.of_head ?deduced_callables ?passing ~relaxations ~omitted:(Translation_support.type_arg_omission n)
       ~phantom_prefix:(Translation_types.leading_phantom_count n)
       ~relaxed:(fun i -> IntSet.mem i (Ml_type_util.relaxed_higher_kinded_tvars ty))
       ~callee:n ~scheme:(Mlutil.reference_scheme n) temps
   in
-  (abi, temps, rewrite)
+  (abi, temps, relaxations)
 
 (** What a function's body is generated under, settled before the body:
     its return type, its parameters and the environment that names them, the
@@ -1033,7 +1033,7 @@ let plan_scope_head n ty scope =
 
 let gen_dfun n b cty ty temps =
   let scope = dfun_body_scope n b cty ty temps in
-  let abi, temps, rewrite = plan_scope_head n ty scope in
+  let abi, temps, relaxations = plan_scope_head n ty scope in
   (* The head was planned before anything was generated; what is generated
      must be it. *)
   Callable_abi.check abi;
@@ -1403,7 +1403,7 @@ let gen_dfun n b cty ty temps =
   in
     (inner, env)
   in
-  let inner = rewrite inner in
+  let inner = Head_relaxation.apply_all relaxations inner in
   match temps with
   | [] -> (inner, env)
   | l -> (Dtemplate (l, None, inner), env)

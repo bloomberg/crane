@@ -110,6 +110,12 @@ val receiver : t -> receiver option
 (** The head, in declaration order. *)
 val template_head : t -> template_parameter list
 
+(** What the relaxations that made the head out of the declaration's own
+    decided ({!Head_relaxation}), in the order they were made: a
+    declaration generated under the head is rewritten by each.  None for a
+    foreign plan. *)
+val relaxations : t -> Head_relaxation.t list
+
 (** Whether the callee's convention keeps its scheme variable [v] -- does
     not omit it ({!omission}) -- as the plan was made. *)
 val keeps : t -> Scheme.Var.t -> bool
@@ -143,6 +149,7 @@ val of_head :
   ?deduced_callables:Param_pos.orig Param_pos.pos list ->
   ?receiver:receiver ->
   ?passing:passing list ->
+  ?relaxations:Head_relaxation.t list ->
   callee:Names.GlobRef.t ->
   scheme:Scheme.Id.t option ->
   (Minicpp.template_type * Names.Id.t) list ->
