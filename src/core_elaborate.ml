@@ -216,6 +216,18 @@ let binder role (x, ty) = {Lexenv.eb_id = Mlutil.id_of_mlid x; eb_type = ty; eb_
 let push role ids lex = Lexenv.push (List.map (binder role) ids) lex
 
 let rec walk lex = function
+  (* A spine is read whole, as translation reads it: a global applied in
+     stages is called once with every argument, and applying a one-branch
+     match applies its branch. *)
+  | MLapp (MLapp ((MLglob _ as g), inner), outer) -> walk lex (MLapp (g, inner @ outer))
+  | MLapp (MLcase (ty, scrut, [|(ids, rty, pat, body)|]), outer) ->
+    let outer = List.map (Mlutil.ast_lift (List.length ids)) outer in
+    let body =
+      match body with
+      | MLapp (f, inner) -> MLapp (f, inner @ outer)
+      | _ -> MLapp (body, outer)
+    in
+    walk lex (MLcase (ty, scrut, [|(ids, rty, pat, body)|]))
   | MLapp (MLglob use, args) ->
     walk_use lex use;
     record lex use args;
