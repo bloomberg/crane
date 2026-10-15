@@ -192,6 +192,11 @@ type entry = {
 let planned : entry list Calls.t = Calls.create 251
 let () = State.on_reset State.Unit (fun () -> Calls.reset planned)
 
+(* Every global the unit's bodies name, applied or not. *)
+let named = State.cell State.Unit GlobRef.Set_env.empty
+
+let name r = named := GlobRef.Set_env.add r !named
+
 type tally = {found : int; recomputed : int}
 
 let tally = State.cell State.Unit {found = 0; recomputed = 0}
@@ -212,6 +217,7 @@ let push role ids lex = Lexenv.push (List.map (binder role) ids) lex
 
 let rec walk lex = function
   | MLapp (MLglob use, args) ->
+    name use.callee;
     record lex use args;
     List.iter (walk lex) args
   | MLapp (f, args) ->
@@ -235,7 +241,8 @@ let rec walk lex = function
   | MLparray (elems, def) ->
     Array.iter (walk lex) elems;
     walk lex def
-  | MLrel _ | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> ()
+  | MLglob use -> name use.callee
+  | MLrel _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> ()
 
 (* A declaration's own parameters are bound as its parameters, at the types
    its body is generated with ({!Translation_support.reconcile_parameter_type}):
@@ -262,6 +269,7 @@ let declaration ty body =
 
 let structure struc =
   Calls.reset planned;
+  named := GlobRef.Set_env.empty;
   tally := {found = 0; recomputed = 0};
   Modutil.struct_iter
     (function
@@ -269,6 +277,8 @@ let structure struc =
       | Dfix fds -> List.iter (fun fd -> declaration fd.fd_type fd.fd_body) fds
       | Dind _ | Dtype _ -> () )
     ignore ignore struc
+
+let referenced () = GlobRef.Set_env.elements !named
 
 (* The roles planned for the application naming its callee by [use] with
    [n] arguments.  A body's annotations may be rewritten before it is

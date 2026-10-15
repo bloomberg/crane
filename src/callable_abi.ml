@@ -267,12 +267,22 @@ let deduces_callable r pos =
   | Some abi -> deduces_callable_at abi pos
   | None -> List.exists (Param_pos.equal pos) (Option.default [] (Ref.User.Map.find_opt r !assumed))
 
-let foreign ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept = fun _ -> true)
-    ?(reachable = max_int) ?(relaxed = fun _ -> false) ?(phantom_prefix = 0) ~callee ~scheme () =
+(* [abi] with [instances] dictionaries in front of its head, as a call
+   passing that many writes it. *)
+let with_dictionaries instances abi =
   let dictionaries =
     List.init instances (fun k ->
-        (Minicpp.TTtypename, Common.tc_instance_id k, From_instance k) )
+        let name = Common.tc_instance_id k in
+        { id = {Template_param.position = k; name};
+          origin = From_instance k;
+          kind = Minicpp.TTtypename;
+          write = Writable } )
   in
+  let shift p = {p with id = {p.id with Template_param.position = p.id.position + instances}} in
+  {abi with head = dictionaries @ List.map shift abi.head}
+
+let foreign ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept = fun _ -> true)
+    ?(reachable = max_int) ?(relaxed = fun _ -> false) ?(phantom_prefix = 0) ~callee ~scheme () =
   let variables =
     List.map
       (fun v ->
@@ -291,24 +301,62 @@ let foreign ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept = fun _ ->
       (fun position (kind, name, origin) ->
         let write = match kind with Minicpp.TTtypename_default d -> Defaulted d | _ -> Writable in
         {id = {Template_param.position; name}; origin; kind; write} )
-      (dictionaries @ variables)
+      variables
   in
-  { callee;
-    head = mark_phantoms phantom_prefix head;
-    deduced_callables = [];
-    receiver = None;
-    passing = None;
-    phase = Common.get_phase () }
+  with_dictionaries instances
+    { callee;
+      head = mark_phantoms phantom_prefix head;
+      deduced_callables = [];
+      receiver = None;
+      passing = None;
+      phase = Common.get_phase () }
+
+(* The unit's foreign plans, without dictionaries, by callee. *)
+let foreign_plans : t GlobRef.Map_env.t ref = State.cell State.Unit GlobRef.Map_env.empty
+
+type foreign_tally = {found : int; derived : int}
+
+let foreign_tally = State.cell State.Unit {found = 0; derived = 0}
+
+let install_foreign derive callees =
+  (* [derive] plans through {!plan}, which must derive afresh rather than
+     answer from plans this replaces. *)
+  foreign_plans := GlobRef.Map_env.empty;
+  foreign_plans :=
+    List.fold_left
+      (fun m r ->
+        match lookup r with
+        | Some {receiver = None; _} -> m
+        | Some {receiver = Some _; _} | None -> GlobRef.Map_env.add r (derive r) m )
+      GlobRef.Map_env.empty callees
 
 (* A method's call is still written as its function's would be, against the
    conventions of a callee generated nowhere, and printed on its receiver
    without the variables the receiver carries or the method dropped
    ({!dropped_positions}). *)
-let plan ?instances ?higher_kinded ?kept ?reachable ?relaxed ?phantom_prefix callee ~scheme =
+let plan ?(instances = 0) ?higher_kinded ?kept ?reachable ?relaxed ?phantom_prefix callee ~scheme =
   match lookup callee with
   | Some ({receiver = None; _} as abi) -> abi
   | Some {receiver = Some _; _} | None ->
-    foreign ?instances ?higher_kinded ?kept ?reachable ?relaxed ?phantom_prefix ~callee ~scheme ()
+    let derive () = foreign ?higher_kinded ?kept ?reachable ?relaxed ?phantom_prefix ~callee ~scheme () in
+    let emitting = match Common.get_phase () with Common.Emit _ -> true | Common.Plan -> false in
+    let base =
+      match GlobRef.Map_env.find_opt callee !foreign_plans with
+      | Some base ->
+        if emitting then foreign_tally := {!foreign_tally with found = !foreign_tally.found + 1};
+        if Probe.checking () && not (same_head base (derive ())) then
+          Probe.violation "callable ABI"
+            Pp.(str "the foreign plan of " ++ GlobRef.print callee ++ str " differs from the one planned");
+        base
+      | None ->
+        if emitting then foreign_tally := {!foreign_tally with derived = !foreign_tally.derived + 1};
+        derive ()
+    in
+    with_dictionaries instances base
+
+let report_foreign () =
+  Printf.sprintf "foreign callable plans: %d planned; emission found %d, derived %d"
+    (GlobRef.Map_env.cardinal !foreign_plans) !foreign_tally.found !foreign_tally.derived
 
 let dropped_positions r =
   match lookup r with

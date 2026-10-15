@@ -26,6 +26,9 @@ val elaborate_arguments : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast lis
     declarations, replacing the unit's previous elaborations. *)
 val structure : Miniml.ml_structure -> unit
 
+(** Every global the declarations {!structure} walked name, applied or not. *)
+val referenced : unit -> Names.GlobRef.t list
+
 (** [elaboration ~lex use args] -- the elaboration of the call [use args]
     while emitting: its arguments in the roles {!structure} found for the
     application naming its callee by [use], or, where it found none, as

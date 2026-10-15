@@ -1464,7 +1464,8 @@ let represent_pass_names = [template_kinds; install_template_kinds]
 
 (** The steps run on the unit's Core once its target is planned, in order. *)
 let elaborate_calls = "elaborate_calls"
-let elaborate_pass_names = [elaborate_calls]
+let plan_foreign_callables = "plan_foreign_callables"
+let elaborate_pass_names = [elaborate_calls; plan_foreign_callables]
 
 (** Decide the kinds of the template parameters of the unit's inductives and
     type aliases, into [plan], and install them for the readers not yet
@@ -1539,6 +1540,10 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   let plan = Target_plan.with_layout plan modules representation callables assumed in
   Pipeline_trace.event "elaborate" elaborate_calls;
   Core_elaborate.structure struc;
+  Pipeline_trace.event "elaborate" plan_foreign_callables;
+  Callable_abi.install_foreign
+    (fun r -> Translation_calls.callee_abi ~instances:0 r)
+    (Core_elaborate.referenced ());
   let census_after_planning = Table.census () in
   (* Both bodies are rendered before either file is opened.  A preamble has to
      say what the body it precedes demands -- which headers it includes, which
@@ -1559,7 +1564,10 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   Install_legacy_plan.check_installed facts plan;
   report_structure_changes planned struc;
   report_late_solutions ();
-  if Pipeline_trace.enabled () then Pipeline_trace.event "emit" (Core_elaborate.report ());
+  if Pipeline_trace.enabled () then begin
+    Pipeline_trace.event "emit" (Core_elaborate.report ());
+    Pipeline_trace.event "emit" (Callable_abi.report_foreign ())
+  end;
   let opened = List.filter !opened_filter (opened_libraries ()) in
   let ns_open =
     match namespace with

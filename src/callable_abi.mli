@@ -181,10 +181,19 @@ val foreign :
   unit ->
   t
 
-(** The installed plan of [callee], or else its {!foreign} one.  A method's
-    call is still planned against its foreign one: it is written as its
-    function's call would be, then printed on the receiver without the
-    variables the receiver carries or {!dropped_positions}. *)
+(** [install_foreign derive callees] makes the {!foreign} plan [derive r]
+    gives each of [callees] with no installed plan of its own, or only a
+    method's, the unit's plan of [r]: planned with no dictionary, before
+    anything is rendered.  Replaces the unit's previous foreign plans. *)
+val install_foreign : (Names.GlobRef.t -> t) -> Names.GlobRef.t list -> unit
+
+(** The installed plan of [callee], or else its foreign one, with
+    [instances] dictionaries: the one {!install_foreign} planned, or where it
+    planned none, {!foreign}'s.  Under [CRANE_CHECK_IR] a planned one is
+    checked against {!foreign}'s.  A method's call is still planned against
+    its foreign one: it is written as its function's call would be, then
+    printed on the receiver without the variables the receiver carries or
+    {!dropped_positions}. *)
 val plan :
   ?instances:int ->
   ?higher_kinded:(Scheme.Var.t -> bool) ->
@@ -195,6 +204,10 @@ val plan :
   Names.GlobRef.t ->
   scheme:Scheme.Id.t option ->
   t
+
+(** How many foreign plans the unit planned, and how many emission found
+    planned or derived itself. *)
+val report_foreign : unit -> string
 
 (** The places, among the variables of the function [r] was made from, of
     those the method [r] dropped ({!receiver}); none where [r] is not a
