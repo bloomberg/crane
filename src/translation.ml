@@ -8919,9 +8919,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
   match ast with
   | MLletin (_, _, (MLfix (x, ids, funs, _) as fix_term), b) as _whole ->
     (* Special case for let-fix: the let binding name is the fix function name *)
-    (* Resolve unresolved metas in fix function types to Tvars using mgu. *)
-    let next_tvar = ref 1 in
-    let ids, funs = resolve_fix_types ~app_result:ml_app_result_type ~next_tvar ids funs in
+    Local_types.check_minted ids;
+    let ids, funs = Local_types.recover_fix_codomains ids funs in
     (* Collect all Tvar indices from the fixpoint types *)
     let fix_tvar_indices =
       Array.fold_left (fun acc (_, ty) -> collect_tvars acc ty) [] ids
@@ -9166,9 +9165,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
        enclosing declaration's variables, which [Tvar 1] .. [Tvar n_outer]
        already name. *)
     let next_tvar = ref (n_outer + 1) in
-    let resolve_metas = resolve_type_metas ~late:Let_lambda_variable ~next_tvar in
-    resolve_metas t;
-    resolve_metas_in_ast resolve_metas a;
+    let mint = Local_types.mint ~late:Let_lambda_variable ~rigidity:Schematic ~next:next_tvar in
+    mint t;
+    Local_types.mint_in_ast mint a;
     (* Collect all Tvar indices from the let-binding type *)
     let tvar_indices = collect_tvars [] t in
     (* Also collect Tvars from the lambda body *)
@@ -9991,13 +9990,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       tctx := { !tctx with move_owned_vars = saved_owned };
       result
   | MLapp (MLfix (x, ids, funs, _), args) ->
-    (* Resolve unresolved metas in fix function types to Tvars using mgu.
-       Traverse types and assign Tvar 1, 2, ... to each unresolved meta. *)
-    let next_tvar = ref 1 in
-    let resolve_metas = resolve_type_metas ~late:Fixpoint_variable ~next_tvar in
-    let ids, funs = resolve_fix_types ~app_result:ml_app_result_type ~next_tvar ids funs in
-    Array.iter (resolve_metas_in_ast resolve_metas) funs;
-    List.iter (resolve_metas_in_ast resolve_metas) args;
+    Local_types.check_minted ids;
+    let ids, funs = Local_types.recover_fix_codomains ids funs in
     (* Collect Tvars from bodies too *)
     let body_tvars = Array.fold_left collect_tvars_ast [] funs in
     let all_body_tvars = List.sort_uniq Int.compare body_tvars in
@@ -10176,8 +10170,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
        RHS of a let-binding.  Since the fixpoint value itself is returned (not
        called in place), it will always escape.  Use the Y-combinator pattern:
        the generated wrapper lambda [fix_name] is already a plain callable. *)
-    let next_tvar = ref 1 in
-    let ids, funs = resolve_fix_types ~app_result:ml_app_result_type ~next_tvar ids funs in
+    Local_types.check_minted ids;
+    let ids, funs = Local_types.recover_fix_codomains ids funs in
     let all_fix_ids_list = Array.to_list ids in
     let funs_compiled =
       Array.to_list

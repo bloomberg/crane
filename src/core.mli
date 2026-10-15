@@ -10,9 +10,10 @@
     else builds a program.
 
     Transitional.  {!freeze} checks the structural invariants that hold
-    today; it does not yet establish that no metavariable is reachable.  The
-    back end still solves the metavariables binder, match and fixpoint
-    annotations hold while it generates a body -- at the sites
+    today; it does not yet establish that no metavariable is reachable.  A
+    local fixpoint's open types are minted before it ({!Local_types}), but
+    the back end still solves the metavariables a let-bound lambda's and a
+    slot's annotations hold while it generates a body -- at the sites
     {!Miniml.Meta.late_solution} enumerates, and only there, which freezing
     enforces -- but undoes them before the next body and once rendering
     ends, so between bodies the program is the one frozen, and under
