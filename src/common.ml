@@ -1253,7 +1253,16 @@ let ref_renaming_fun (k, r) =
         s
       | _ -> s )
   in
-  add_global_ids (Id.of_string s);
+  (* A local keeps clear of the names the code it sits in can refer to.  A
+     reference whose every use prints replacement text -- an inline custom,
+     a custom inductive and its constructors -- is never referred to by this
+     name, so no local has to avoid it. *)
+  let replaced =
+    Table.is_any_inline_custom r
+    || Table.is_custom r
+       && match r with GlobRef.IndRef _ | GlobRef.ConstructRef _ -> true | _ -> false
+  in
+  if not replaced then add_global_ids (Id.of_string s);
   canonical_short_name := GlobRef.Map.add r s !canonical_short_name;
   s :: l
 
