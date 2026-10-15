@@ -58,3 +58,20 @@ let () =
   Meta.thaw ();
   Meta.solve m' nat;
   check "a thawed program solves freely" (m'.contents = Some nat)
+
+(* A late solution lasts until it is undone: each body decides it afresh. *)
+let () =
+  let nat = Tglob (r "nat", [], []) in
+  let early = Meta.fresh 9 and late = Meta.fresh 10 in
+  Meta.solve early nat;
+  Meta.freeze ();
+  Meta.solve ~late:Meta.Fixpoint_variable late nat;
+  Meta.undo_late ();
+  check "undoing unsolves a late solution" (late.contents = None);
+  check "undoing leaves a solution made before freezing" (early.contents = Some nat);
+  Meta.solve ~late:Meta.Fixpoint_variable late (Tvar (Schematic, 1));
+  check "an undone metavariable can be solved again" (late.contents = Some (Tvar (Schematic, 1)));
+  Meta.undo_late ();
+  Meta.undo_late ();
+  check "undoing twice undoes once" (late.contents = None);
+  Meta.thaw ()
