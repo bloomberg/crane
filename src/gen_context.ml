@@ -67,7 +67,7 @@ let with_method_env_types ?(cpp = []) ?(outer = []) env params f =
   let saved_env_types = (!tctx).env_types in
   let saved_erased = save_erased_env () in
   reset_env_types ();
-  push_binders env outer;
+  push_parameters env outer;
   push_binders ~cpp env params;
   Fun.protect
     ~finally:(fun () ->

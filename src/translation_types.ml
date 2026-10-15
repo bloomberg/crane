@@ -977,21 +977,21 @@ let rec erase_type_args_to_any = function
     [Tdummy]-guarded [Tvar] codomain.  When such a call is made in a context
     where the enclosing function's return type is a concrete C++ type [T], the
     result is wrapped with [std::any_cast<T>].  See [ml_codomain_erases_to_any]. *)
-let binder_is_instance env i =
-  (* An instance parameter is not a value argument.  One Crane minted is
-     known by its name: {!promote_typeclass_params} renames a typeclass-typed
-     parameter to a {!Common.tc_instance_id}, and such a binder has no ML type
-     of its own.  One that came from Coq keeps its name -- [h : E -< F], whose
-     class [ReSum] is skipped, is never renamed -- and is known by its class
-     being skipped.  Skipped is the whole test there: a binder at a class
-     Crane {e kept} is an ordinary value wherever it was not renamed, and
+let binder_is_instance i =
+  (* An instance parameter is not a value argument.  A declaration's
+     class-typed parameter is its dictionary, as the binder records where it
+     was bound ({!Translation_state.parameter_role}).  One that came from Coq
+     at a class Crane skips -- [h : E -< F], whose class [ReSum] is skipped --
+     is no parameter of the declaration's either, and is known by that class.
+     Skipped is the whole test there: a binder at a class Crane {e kept} is
+     an ordinary value wherever it is not a declaration's parameter, and
      reading it as an instance would take the argument away from the call.
      The declaration drops both kinds; without the second the call sites went
      on passing the one the declaration had dropped. *)
-  Option.cata Common.is_tc_instance_id false (Common.get_db_name_opt i env)
-  || ( match get_env_type_opt i with
-     | Some ty -> ml_ret_is_skipped ty
-     | None -> false )
+  match get_env_binder_opt i with
+  | Some {eb_role = Dictionary; _} -> true
+  | Some {eb_type; eb_role = Value; _} -> ml_ret_is_skipped eb_type
+  | None -> false
 
 (** A singleton class's dictionary at the head of a call: the instance
     parameter it is, the class, and the class's one method. *)
@@ -1012,7 +1012,7 @@ let singleton_dictionary env head =
    [Opt : Type -> Type]).  Look through it, or the instance is left in value
    position and the generated call names the instance struct as if it were a
    value. *)
-let is_typeclass_instance_arg env ml_arg =
+let is_typeclass_instance_arg ml_arg =
   match strip_dictionary ml_arg with
   | MLglob {callee = r; _} ->
     (* An instance parameterised over types alone carries its parameters in
@@ -1021,7 +1021,7 @@ let is_typeclass_instance_arg env ml_arg =
        application case below does, or such an instance is left in value
        position and the call names the instance struct as if it were one. *)
     ref_is_instance r
-  | MLrel i -> binder_is_instance env i
+  | MLrel i -> binder_is_instance i
   | MLapp (MLglob {callee = r; _}, _) ->
     (* Parameterized instance application, e.g. numList A H. Check if r's
        return type (after stripping Tarr) is a typeclass type, or if it
@@ -1059,7 +1059,7 @@ let is_typeclass_instance_arg env ml_arg =
 
 (* Convert type class instance args to template type arguments *)
 
-let instance_arg_is_erased env ml_arg =
+let instance_arg_is_erased ml_arg =
   (* An instance argument is not a value argument, but only one whose class
      Crane kept is a template argument either: {!collect_typeclass_param_ids}
      mints a concept-constrained parameter per kept class and none for a
@@ -1083,9 +1083,9 @@ let instance_arg_is_erased env ml_arg =
 (** [split_instance_args env args] -- the class dictionaries a call passes,
     the ones an erasure removed left out; how many were removed, which still
     occupy a parameter of the declaration; and the regular arguments. *)
-let split_instance_args env args =
-  let tc, regular = List.partition (is_typeclass_instance_arg env) args in
-  let erased, kept = List.partition (instance_arg_is_erased env) tc in
+let split_instance_args args =
+  let tc, regular = List.partition is_typeclass_instance_arg args in
+  let erased, kept = List.partition instance_arg_is_erased tc in
   (kept, List.length erased, regular)
 
 (** [inline_custom_arg_arity id] is the number of [%aN] term placeholders an
@@ -1330,8 +1330,8 @@ let instance_class_ty env ml_arg =
 let kept_instance_of_projection env x args =
   List.find_opt
     (fun a ->
-      is_typeclass_instance_arg env a
-      && (not (instance_arg_is_erased env a))
+      is_typeclass_instance_arg a
+      && (not (instance_arg_is_erased a))
       && List.mem (Some x)
            (record_fields_of_type (instance_class_ty env a)) )
     args
@@ -1345,7 +1345,7 @@ let static_projection_instance env x args =
   if Table.is_inline_custom x then kept_instance_of_projection env x args
   else if Table.singleton_method_class x <> None then
     List.find_opt
-      (fun a -> is_typeclass_instance_arg env a && not (instance_arg_is_erased env a))
+      (fun a -> is_typeclass_instance_arg a && not (instance_arg_is_erased a))
       args
   else None
 
@@ -2069,7 +2069,7 @@ let iife_closure_return env typ pv stmts =
     | _ -> false
   in
   let binder_is_fun id =
-    match List.assoc_opt id (!tctx).env_types with
+    match env_type_of_id id with
     | Some ty -> is_arrow ty
     | None -> false
   in
@@ -2392,6 +2392,12 @@ let assign_binder_types ?(cpp = []) env (ids : (Id.t * ml_type) list) =
     cannot currently type does not become a new way for extraction to fail. *)
 let push_binders ?(cpp = []) env (ids : (Id.t * ml_type) list) =
   push_env_types ids;
+  assign_binder_types ~cpp env ids
+
+(** [push_parameters env ids] is {!push_binders} for a declaration's
+    parameters, whose class-typed ones are its dictionaries. *)
+let push_parameters ?(cpp = []) env (ids : (Id.t * ml_type) list) =
+  push_env_parameters ids;
   assign_binder_types ~cpp env ids
 
 (** The type arguments the enclosing function's return type supplies for the

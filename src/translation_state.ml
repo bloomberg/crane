@@ -43,6 +43,27 @@ let mk_cppglob_local (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
 let find_type_opt (r : GlobRef.t) : ml_type option =
   try Some (Table.find_type r) with Not_found -> None
 
+(** What a binder of the lexical environment stands for.  A declaration's
+    parameter at a class type is its [Dictionary]: the instance, which C++
+    takes as a template argument rather than a value.  Every other binder,
+    a class-typed one bound inside a body included, is a [Value]. *)
+type binder_role =
+  | Value
+  | Dictionary
+
+(** A declaration's parameter of type [ty] is its dictionary exactly when
+    [ty] is a class: the one criterion the head generators promote a
+    parameter to an instance by. *)
+let parameter_role ty = if Table.is_typeclass_type ty then Dictionary else Value
+
+(** A binder of the lexical environment: its name, its ML type, and what it
+    stands for. *)
+type env_binder = {
+  eb_id : Id.t;
+  eb_type : ml_type;
+  eb_role : binder_role;
+}
+
 (** Consolidated mutable state for expression compilation.
     All fields except {!local_inductives} (which has a different lifecycle
     and is exported to [cpp.ml]) live here. *)
@@ -71,8 +92,9 @@ type translation_ctx = {
      recover erased template type args at call sites where C++ can't deduce
      them from lambda arguments. *)
   current_cpp_return_type : cpp_type option;
-  (* De Bruijn environment mapping variable indices to ML types. *)
-  env_types : (Id.t * ml_type) list;
+  (* De Bruijn environment: each variable's binder, with its ML type and
+     role. *)
+  env_types : env_binder list;
   (* Nesting depth of let ... in expressions; used for unique name
      generation in nested scopes. *)
   current_letin_depth : int;
@@ -483,15 +505,25 @@ let with_scope f =
 (** Prepend bindings to the de Bruijn environment type stack.
     Also shifts all indices in {!cpp_binder_types} upward by [n] to account
     for the new bindings, keeping de Bruijn references consistent. *)
-let push_env_types (ids : (Id.t * ml_type) list) =
-  let n = List.length ids in
+let push_env_binders (binders : env_binder list) =
+  let n = List.length binders in
   let shift m =
     if n > 0 && not (IntMap.is_empty m) then
       IntMap.fold (fun k v acc -> IntMap.add (k + n) v acc) m IntMap.empty
     else m
   in
   tctx := { !tctx with cpp_binder_types = shift (!tctx).cpp_binder_types };
-  tctx := { !tctx with env_types = ids @ (!tctx).env_types }
+  tctx := { !tctx with env_types = binders @ (!tctx).env_types }
+
+(** Prepend value bindings, innermost first. *)
+let push_env_types (ids : (Id.t * ml_type) list) =
+  push_env_binders (List.map (fun (eb_id, eb_type) -> { eb_id; eb_type; eb_role = Value }) ids)
+
+(** Prepend a declaration's parameters, innermost first: each at a class type
+    is a dictionary ({!parameter_role}). *)
+let push_env_parameters (ids : (Id.t * ml_type) list) =
+  push_env_binders
+    (List.map (fun (eb_id, eb_type) -> { eb_id; eb_type; eb_role = parameter_role eb_type }) ids)
 
 (** Restore the de Bruijn environment type stack to a [saved] prefix, undoing
     whatever {!push_env_types} did to {!cpp_binder_types} in between.
@@ -502,7 +534,7 @@ let push_env_types (ids : (Id.t * ml_type) list) =
     down.  Leaving them shifted is worse than leaving them stale -- every
     surviving binder's recorded type then describes some other binder, so a
     concrete value can be read back as a box. *)
-let restore_env_types (saved : (Id.t * ml_type) list) =
+let restore_env_types (saved : env_binder list) =
   let n = List.length (!tctx).env_types - List.length saved in
   if n > 0 && not (IntMap.is_empty (!tctx).cpp_binder_types) then
     tctx :=
@@ -514,15 +546,21 @@ let restore_env_types (saved : (Id.t * ml_type) list) =
   tctx := { !tctx with env_types = saved }
 
 (** Retrieve the ML type of the variable at de Bruijn index [i] (1-based). *)
-let get_env_type (i : int) : ml_type = snd (List.nth (!tctx).env_types (pred i))
+let get_env_type (i : int) : ml_type = (List.nth (!tctx).env_types (pred i)).eb_type
+
+(** The binder at de Bruijn index [i] (1-based), or [None] when [i] is out of
+    range (or non-positive). *)
+let get_env_binder_opt (i : int) : env_binder option =
+  if i <= 0 then None else List.nth_opt (!tctx).env_types (pred i)
 
 (** Like {!get_env_type} but returns [None] instead of raising when [i] is out
     of range (or non-positive). *)
 let get_env_type_opt (i : int) : ml_type option =
-  if i <= 0 then None
-  else match List.nth_opt (!tctx).env_types (pred i) with
-       | Some (_, ty) -> Some ty
-       | None -> None
+  Option.map (fun b -> b.eb_type) (get_env_binder_opt i)
+
+(** The ML type of the innermost binder named [id], if any. *)
+let env_type_of_id (id : Id.t) : ml_type option =
+  Option.map (fun b -> b.eb_type) (List.find_opt (fun b -> Id.equal b.eb_id id) (!tctx).env_types)
 
 (** Reset the environment type stack to empty.
     Also clears {!cpp_binder_types}. *)

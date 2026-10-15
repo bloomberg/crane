@@ -40,7 +40,7 @@ let instance_layers ty body =
           tc_idx
           tc_acc
           ((id_of_mlid ml_id, lam_ty) :: lam_acc)
-      else if Table.is_typeclass_type arg_ty then
+      else if parameter_role arg_ty = Dictionary then
         (* Typeclass constraint — becomes a concept-constrained template
            parameter.  E.g., [PreCategory _tcI0] instead of [typename
            _tcI0], so the compiler enforces concept satisfaction. *)
@@ -892,7 +892,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
             List.mapi
               (fun i _ -> tc_instance_id i)
               (List.filter
-                 Table.is_typeclass_type
+                 (fun ty -> parameter_role ty = Dictionary)
                  (fst (method_args_and_ret ())) )
           in
           let cpp_params, ret_ty, body_stmts, tc_tparams =

@@ -406,7 +406,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   in
   let all_ids, env = push_vars' ids_converted (empty_env ()) in
   reset_env_types ();
-  push_binders env all_ids;
+  push_parameters env all_ids;
   (* Infer owned/borrowed for method parameters. Note: method 'this' is always
      borrowed (const method). *)
   let n_method_params = List.length ids_with_types in

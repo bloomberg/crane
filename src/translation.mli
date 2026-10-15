@@ -80,6 +80,11 @@ val type_is_erased : cpp_type -> bool
 val push_binders :
   ?cpp:cpp_type option list -> env -> (Id.t * ml_type) list -> unit
 
+(** {!push_binders} for a declaration's parameters, whose class-typed ones are
+    its dictionaries ({!Translation_state.parameter_role}). *)
+val push_parameters :
+  ?cpp:cpp_type option list -> env -> (Id.t * ml_type) list -> unit
+
 (** Binder-type state: every binder's C++ type, tagged with what decided it. *)
 type binder_env =
   (cpp_type * Translation_state.binder_origin) Translation_state.IntMap.t

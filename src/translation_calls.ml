@@ -1237,14 +1237,15 @@ let binding_results_of id compute =
       compute
   end
 
-(** [elaborate_call ~slot env tyargs args] -- the call of the callee of
+(** [elaborate_call ~slot tyargs args] -- the call of the callee of
     [tyargs], the call's reading of its type arguments, to [args], as Core
     elaborates it ({!Elaborated_call}): which arguments are dictionaries,
     regular, or past the callee's arity and so applied to its result, and
     the scheme variables the arguments' types, and the ML types [slot]
-    expects or states, resolve.  [env] is the lexical environment the
-    arguments are generated in. *)
-let elaborate_call ~slot env tyargs args =
+    expects or states, resolve.  A variable argument is read off the binder
+    it names in the lexical environment, by its ML type and its role
+    ({!Translation_state.env_binder}); no C++ name is consulted. *)
+let elaborate_call ~slot tyargs args =
   let id = Call_tyargs.callee tyargs in
   (* When the call has more args than the function's ML value-domain, the
      excess args are curried applications to the result. This is common with
@@ -1372,7 +1373,7 @@ let elaborate_call ~slot env tyargs args =
      parameter is still one of the callee's, so a position counted in the
      declaration's parameter list steps over it. *)
   let typeclass_ml_args, n_erased_instance_args, regular_ml_args =
-    split_instance_args env args
+    split_instance_args args
   in
   (* Order the instance arguments the way the callee numbered its own
      [_tcI] parameters.  [Gen_decls.gen_dfun] iterates [collect_lams]
@@ -1718,7 +1719,7 @@ let plan_call ~caller ?expected_ty env (call : Elaborated_call.t) =
     reads the result and decides neither. *)
 let lower_call ~caller ~slot ?expected_ty env use args =
   let id = use.callee in
-  let call = elaborate_call ~slot env (Call_tyargs.of_use use) args in
+  let call = elaborate_call ~slot (Call_tyargs.of_use use) args in
   let plan = plan_call ~caller ?expected_ty env call in
   call_type_args ~caller ?expected_ty env id plan ~has_value_args:(call.regular <> [])
 

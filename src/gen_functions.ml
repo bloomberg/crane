@@ -291,8 +291,9 @@ let promote_typeclass_params (params : (Id.t * ml_type) list) =
   let params =
     List.map
       (fun (id, ty) ->
-        if not (Table.is_typeclass_type ty) then (id, ty)
-        else
+        match parameter_role ty with
+        | Value -> (id, ty)
+        | Dictionary ->
           let i = !counter in
           counter := i + 1;
           let instance_name = tc_instance_id i in
@@ -771,7 +772,7 @@ let dfun_body_scope n b cty ty temps =
      f1->v() ... } where 'f1' in the body didn't match any parameter name. *)
   let all_ids, env = push_vars' all_params_for_env (empty_env ()) in
   reset_env_types ();
-  push_binders env all_ids;
+  push_parameters env all_ids;
   let n_params = List.length all_params in
   let owned_flags = infer_owned_flags n_params b all_ids in
   (* Zip all_ids with ownership flags. all_ids and all_params have the same

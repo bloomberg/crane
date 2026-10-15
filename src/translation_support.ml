@@ -285,7 +285,7 @@ let extract_monad_from_codomain ty =
 let collect_typeclass_param_ids ty =
   let rec aux acc i = function
     | Miniml.Tarr (t1, t2) ->
-      if Table.is_typeclass_type t1 then
+      if parameter_role t1 = Dictionary then
         aux (tc_instance_id i :: acc) (i + 1) t2
       else
         aux acc i t2
@@ -2566,7 +2566,7 @@ and tvar_instantiation_found
     | None -> (
       match a with
       | MLrel i when in_scope ->
-        Option.map snd (List.nth_opt (!tctx).env_types (i - 1))
+        get_env_type_opt i
       | _ -> None )
   in
   let found = Hashtbl.create 7 in
