@@ -1630,11 +1630,6 @@ let keeps_type_arg_position r =
 let deapply_families =
   map_cpp_type (function Tapply ((Tvar _ as v), _) -> v | t -> t)
 
-(** The 1-based positions among [1..n] that {!keeps_type_arg_position} keeps
-    for [r]: the written type arguments of a call to [r]. *)
-let kept_type_arg_positions r n =
-  List.filter (keeps_type_arg_position r) (List.init n (fun i -> i + 1))
-
 (** [r]'s type arguments, less those {!keeps_type_arg_position} rules out. *)
 let kept_type_args r ts =
   let keep = keeps_type_arg_position r in

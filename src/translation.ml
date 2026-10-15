@@ -8804,19 +8804,30 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
             | t :: rest when is_instance_arg t -> t :: instance_prefix rest
             | _ -> []
           in
+          (* The arguments were written against the callee's plan, so the
+             plan's head says which variable each one is at. *)
           let kept_by_deduction r tys =
             let insts = instance_prefix tys in
             let regular = List.filteri (fun i _ -> i >= List.length insts) tys in
             let undeducible =
-              match (find_type_opt r, deducible_tvars_of_glob r) with
-              | Some ml_ty, Some deducible ->
-                let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
-                let kept =
-                  kept_type_arg_positions r n
+              match deducible_tvars_of_glob r with
+              | Some deducible ->
+                let params =
+                  List.filteri
+                    (fun i _ -> i >= List.length insts)
+                    (Callable_abi.template_head (callee_abi ~instances:(List.length insts) r))
                 in
-                if List.length kept <> List.length regular then None
-                else Some (List.map (fun i -> not (IntSet.mem i deducible)) kept)
-              | _ -> None
+                if List.length params <> List.length regular then None
+                else
+                  Some
+                    (List.map
+                       (fun p ->
+                         match p.Callable_abi.origin with
+                         | Callable_abi.From_scheme v ->
+                           not (IntSet.mem (Scheme.Var.ordinal v) deducible)
+                         | _ -> true )
+                       params )
+              | None -> None
             in
             match undeducible with
             | None -> insts
