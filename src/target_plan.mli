@@ -56,7 +56,8 @@ type representation = {
       (** The structs written inside another struct, with their names. *)
   scopes : Scope_plan.t;
       (** How a definition written outside its struct's body names the
-          struct, for each module emitted as one. *)
+          struct, for each module emitted as one, and which modules are
+          written inside a struct's body. *)
   instance_promoted_types : (Names.GlobRef.t * (Names.Id.t * Miniml.ml_type) list) list;
       (** The concrete types each instance gives its class's promoted
           variables. *)

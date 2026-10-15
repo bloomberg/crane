@@ -3,7 +3,7 @@
 CofixCtorOutsideEponymous::Stream::stream
 CofixCtorOutsideEponymous::from(uint64_t n) {
   return Stream::stream::lazy_(
-      [=]() -> typename CofixCtorOutsideEponymous::Stream::Scons {
+      [=]() -> typename CofixCtorOutsideEponymous::Stream::stream::Scons {
         return {n, from((n + 1))};
       });
 }

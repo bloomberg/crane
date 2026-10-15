@@ -752,6 +752,10 @@ let spec_is_hoistable (spec : Cpp_erasure.settled) : bool =
     (spec_names_into_a_struct
        (Pp.string_of_ppcmds (pp_cpp_decl (empty_env ()) spec)) )
 
+(* Whether the module [mp] is rendered outside every struct, as planned
+   ({!Scope_plan.nested}). *)
+let outside_every_struct mp = not (Scope_plan.nested mp)
+
 (** A lifted helper [d], finalized: what to write in its place, and the
     declaration to hoist ahead of its callers where [d] defines a function,
     [may_hoist] allows it, and {!spec_is_hoistable} does.
@@ -1435,9 +1439,20 @@ let rec pp_structure_elem ~is_header f = function
           in
           ind_count > 1
         in
+        (* Whether this module is outside every struct is a question about
+           the module, not about the file: the implementation writes no
+           struct around a nested module, but the header does, and promotes
+           it only where none encloses it. *)
+        if is_header && Probe.checking () && old_context = outside_every_struct mp then
+          Probe.violation "promoted inductives"
+            Pp.(
+              str "the module " ++ str (ModPath.to_string mp)
+              ++ str
+                   ( if old_context then " is rendered inside a struct its plan says it is outside"
+                     else " is rendered outside every struct where its plan says it is inside" ) );
         let is_promoted =
           !eponymous_type_ref <> None
-          && (not old_context)
+          && outside_every_struct mp
           && (not has_nested_submodules)
           && not has_extra_inductives
         in
@@ -1487,6 +1502,9 @@ let rec pp_structure_elem ~is_header f = function
           else
             Table.with_demoted_inductive !eponymous_type_ref
         in
+        let promoted_template =
+          is_promoted && match promoted_tparams with Some (_ :: _) -> true | _ -> false
+        in
         (* Where the body of this module is rendered: inside the struct when
            the header spells it out, qualified by it in the implementation. *)
         let enter_module c =
@@ -1494,10 +1512,6 @@ let rec pp_structure_elem ~is_header f = function
             if is_header && not has_concept_collision then
               (* For promoted modules with template params, set rc_in_template
                  so non-inductive defs inside get full inline definitions. *)
-              let promoted_template =
-                is_promoted
-                && match promoted_tparams with Some (_ :: _) -> true | _ -> false
-              in
               { c with
                 rc_in_struct = true;
                 rc_in_template = c.rc_in_template || promoted_template }
@@ -2547,10 +2561,8 @@ let promoted_inductive mp sel =
         (List.init (Array.length ind.ind_packets) Fun.id)
     | _ -> None
 
-(* The implementation enters a module without making it a struct, so every
-   module outside a functor's body is rendered outside every struct there, at
-   whatever depth, and is promoted where {!promoted_inductive} says.  A
-   promotion outlives the rendering that decided it. *)
+(* A module outside every struct is promoted where {!promoted_inductive}
+   says.  A promotion outlives the rendering that decided it. *)
 let plan_promoted_inductives s =
   let rec elems parent sel =
     List.concat_map
@@ -2558,7 +2570,11 @@ let plan_promoted_inductives s =
         match se with
         | SEmodule {ml_mod_expr = MEstruct (_, sel'); _} ->
           let mp = MPdot (parent, l) in
-          Option.cata (fun (r, _) -> [r]) [] (promoted_inductive mp sel') @ elems mp sel'
+          let own =
+            if outside_every_struct mp then Option.cata (fun (r, _) -> [r]) [] (promoted_inductive mp sel')
+            else []
+          in
+          own @ elems mp sel'
         | SEdecl _ | SEmodule _ | SEmodtype _ -> [] )
       sel
   in
@@ -2622,7 +2638,7 @@ let plan_accessors s =
 
 (** The scope of each module the unit emits as a struct
     ({!Scope_plan}): how a definition of one of its members, written out of
-    line, names it.
+    line, names it; and which modules are written inside a struct's body.
 
     A wrapped file module is its wrapper struct.  A child a name collision
     flattens into its parent's wrapper is a member of the wrapper, which is
@@ -2689,17 +2705,31 @@ let plan_scopes s =
           at mp (Option.cata (fun (p : Scope_plan.scope) -> p.qualifier) [] parent @ [own mp])
         else None )
   in
-  let rec walk ~parent mp sel acc =
-    let scope = scope_of ~parent mp sel in
-    let acc = match scope with Some sc -> (mp, sc) :: acc | None -> acc in
+  (* Inside a functor's body no module gives a scope: the header writes the
+     body as a class template, members defined inline, and the
+     implementation writes none of it.  Every module there is nested. *)
+  let rec walk ~in_functor ~parent mp sel (scopes, nested) =
+    let scope = if in_functor then None else scope_of ~parent mp sel in
+    let scopes = match scope with Some sc -> (mp, sc) :: scopes | None -> scopes in
     List.fold_left
-      (fun acc (l, m) ->
-        match m.ml_mod_expr with
-        | MEstruct (_, sel) -> walk ~parent:scope (child mp l) sel acc
-        | MEfunctor _ | MEident _ | MEapply _ -> acc )
-      acc (modules sel)
+      (fun (scopes, nested) (l, m) ->
+        let mp' = child mp l in
+        let nested = if in_functor || Option.has_some scope then mp' :: nested else nested in
+        let rec body = function
+          | MEfunctor (_, _, me) -> body me
+          | MEstruct (_, sel) -> Some sel
+          | MEident _ | MEapply _ -> None
+        in
+        match (m.ml_mod_expr, body m.ml_mod_expr) with
+        | MEstruct _, Some sel -> walk ~in_functor ~parent:scope mp' sel (scopes, nested)
+        | MEfunctor _, Some sel -> walk ~in_functor:true ~parent:None mp' sel (scopes, nested)
+        | _ -> (scopes, nested) )
+      (scopes, nested) (modules sel)
   in
-  List.rev (List.fold_left (fun acc (mp, sel) -> walk ~parent:None mp sel acc) [] s)
+  let scopes, nested =
+    List.fold_left (fun acc (mp, sel) -> walk ~in_functor:false ~parent:None mp sel acc) ([], []) s
+  in
+  {Scope_plan.scopes = List.rev scopes; nested = List.rev nested}
 
 let plan_nested_structs s =
   (* An instance is a struct where, past its parameters, its body builds the

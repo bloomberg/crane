@@ -27,8 +27,18 @@ val equal : scope -> scope -> bool
 (** The qualifier as written, its components joined by [::]. *)
 val qualifier : scope -> string
 
-(** A unit's scopes: each module emitted as a struct, with its scope. *)
-type t = (ModPath.t * scope) list
+(** A unit's scopes: each module emitted as a struct, with its scope; and
+    the modules written inside a struct's body -- a struct's or a functor's,
+    which the header writes as a class template -- rather than outside every
+    struct. *)
+type t = {
+  scopes : (ModPath.t * scope) list;
+  nested : ModPath.t list;
+}
+
+val empty : t
+
+val equal_plans : t -> t -> bool
 
 (** Make [t] the unit's scopes. *)
 val install : t -> unit
@@ -36,6 +46,10 @@ val install : t -> unit
 (** The scope of the struct the module [mp] is emitted as, if it is emitted
     as one. *)
 val of_module : ModPath.t -> scope option
+
+(** Whether the module [mp] is written inside a struct's body.  The same in
+    both files, though only the header writes the struct. *)
+val nested : ModPath.t -> bool
 
 (** The scope of a definition of [r] written outside every struct body:
     the one its module is emitted as, if any.  A helper lifted out of a

@@ -1016,10 +1016,10 @@ let layout_pass_names =
     plan_field_names;
     plan_pointer_fields;
     plan_unmerged_wrappers;
+    plan_scopes;
     plan_promoted_inductives;
     plan_accessors;
     plan_nested_structs;
-    plan_scopes;
     plan_instance_promoted_types;
     plan_callables;
     install_callables ]
@@ -1059,6 +1059,9 @@ let plan_layout struc =
   Pipeline_trace.event "layout" plan_unmerged_wrappers;
   let unmerged_wrappers = Cpp.plan_unmerged_wrappers () in
   Install_legacy_plan.install_unmerged_wrappers unmerged_wrappers;
+  Pipeline_trace.event "layout" plan_scopes;
+  let scopes = Cpp.plan_scopes struc in
+  Install_legacy_plan.install_scopes scopes;
   Pipeline_trace.event "layout" plan_promoted_inductives;
   let promoted_inductives = Cpp.plan_promoted_inductives struc in
   Install_legacy_plan.install_promoted_inductives promoted_inductives;
@@ -1068,9 +1071,6 @@ let plan_layout struc =
   Pipeline_trace.event "layout" plan_nested_structs;
   let nested_structs = Cpp.plan_nested_structs struc in
   Install_legacy_plan.install_nested_structs nested_structs;
-  Pipeline_trace.event "layout" plan_scopes;
-  let scopes = Cpp.plan_scopes struc in
-  Install_legacy_plan.install_scopes scopes;
   Pipeline_trace.event "layout" plan_instance_promoted_types;
   let instance_promoted_types = Cpp.plan_instance_promoted_types struc in
   Install_legacy_plan.install_instance_promoted_types instance_promoted_types;

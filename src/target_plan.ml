@@ -280,7 +280,7 @@ let plan (_ : Program_facts.t) struc =
         promoted_inductives = [];
         accessors = [];
         nested_structs = [];
-        scopes = [];
+        scopes = Scope_plan.empty;
         instance_promoted_types = [] };
     callables = [];
     instance_methods = [];
@@ -346,9 +346,7 @@ let equal a b =
   && List.equal
        (fun (n, o) (n', o') -> String.equal n n' && Cpp_state.nested_struct_owner_equal o o')
        a.representation.nested_structs b.representation.nested_structs
-  && List.equal
-       (fun (mp, s) (mp', s') -> ModPath.equal mp mp' && Scope_plan.equal s s')
-       a.representation.scopes b.representation.scopes
+  && Scope_plan.equal_plans a.representation.scopes b.representation.scopes
   && List.equal
        (fun (r, bs) (r', bs') ->
          GlobRef.UserOrd.equal r r'
