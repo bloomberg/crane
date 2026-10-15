@@ -328,10 +328,10 @@ let promote_typeclass_params (params : (Id.t * ml_type) list) =
     ({!Plan_templates.relax_function_head}), as [n]'s callable plan and as a
     template head, with the rewrite that carries the relaxations through the
     declaration. *)
-let plan_function_head ?deduced_callables n ty temps signature =
+let plan_function_head ?deduced_callables ?passing n ty temps signature =
   let temps, rewrite = relax_function_head temps signature in
   let abi =
-    Callable_abi.of_head ?deduced_callables
+    Callable_abi.of_head ?deduced_callables ?passing
       ~phantom_prefix:(Translation_types.leading_phantom_count n)
       ~relaxed:(fun i -> IntSet.mem i (Ml_type_util.relaxed_higher_kinded_tvars ty))
       ~callee:n ~scheme:(Mlutil.reference_scheme n) temps
@@ -355,6 +355,8 @@ type body_scope = {
   bs_temps : (template_type * Id.t) list;
   bs_promoted_var_resolutions : (Id.t * cpp_type) list;
   bs_owned_flags : bool list;
+  bs_passing : Callable_abi.passing list;
+      (** How each value parameter is passed, in declaration order. *)
   bs_rec_call : cpp_expr;
   bs_gen_body_stmts : env -> (cpp_expr -> cpp_stmt) -> ml_ast -> cpp_stmt list;
   bs_no_pure : bool;
@@ -1079,6 +1081,8 @@ let dfun_body_scope n b cty ty temps =
     bs_temps = temps;
     bs_promoted_var_resolutions = promoted_var_resolutions;
     bs_owned_flags = owned_flags;
+    bs_passing =
+      List.rev (List.map2 (fun (_, ty) (_, _, owned) -> param_passing ~owned ty) ids ids_with_owned);
     bs_rec_call = rec_call;
     bs_gen_body_stmts = gen_body_stmts;
     bs_no_pure = no_pure;
@@ -1089,7 +1093,8 @@ let dfun_body_scope n b cty ty temps =
     callers see it: outside the type-variable scope its body is generated in. *)
 let plan_scope_head n ty scope =
   with_type_vars [] (fun () ->
-      plan_function_head ~deduced_callables:scope.bs_deduced_callables n ty scope.bs_temps
+      plan_function_head ~deduced_callables:scope.bs_deduced_callables ~passing:scope.bs_passing n
+        ty scope.bs_temps
         (Dfun (mk_dfun n ~ret:scope.bs_cod ~no_pure:scope.bs_no_pure (Ddef (scope.bs_ids, [])))))
 
 let gen_dfun n b cty ty temps =

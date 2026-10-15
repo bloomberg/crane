@@ -52,4 +52,10 @@ let () =
       |> function
       | [(From_scheme a, Writable); (From_scheme b, Writable)] ->
         Scheme.Var.equal a (var 1) && Scheme.Var.equal b (var 2)
-      | _ -> false )
+      | _ -> false );
+  (* How the value parameters are passed is part of the head. *)
+  let owned = of_head ~passing:[Owned; Borrowed] ~callee ~scheme:(Some scheme) [] in
+  let borrowed = of_head ~passing:[Borrowed; Borrowed] ~callee ~scheme:(Some scheme) [] in
+  check "passing is part of the plan"
+    (passing owned = Some [Owned; Borrowed] && not (equal owned borrowed));
+  check "a foreign plan does not say how it passes" (passing f = None)

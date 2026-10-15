@@ -76,9 +76,22 @@ type receiver = {
           declared at, in declaration order. *)
 }
 
+(** How a value parameter is passed: [Owned], by value, the caller moving
+    or copying its argument in; [Borrowed], by const reference;
+    [Forwarded], a callable the head deduces, by forwarding reference. *)
+type passing =
+  | Owned
+  | Borrowed
+  | Forwarded
+
 type t
 
 val callee : t -> Names.GlobRef.t
+
+(** How each of the callee's value parameters is passed, in declaration
+    order, where the plan is of a declaration generated here; a foreign plan
+    does not say. *)
+val passing : t -> passing list option
 
 (** Where the callee is a method, what its plan says of it as one. *)
 val receiver : t -> receiver option
@@ -95,13 +108,15 @@ val template_head : t -> template_parameter list
     any more: the parameter left at it is [Derived].  A parameter named for
     the [k]th variable declares the scheme's [renumber k]th, where a method
     numbers its own variables after the receiver's, and [receiver] is what
-    the plan of a method adds. *)
+    the plan of a method adds; [passing] how its value parameters are
+    passed, in declaration order. *)
 val of_head :
   ?phantom_prefix:int ->
   ?relaxed:(int -> bool) ->
   ?renumber:(int -> int) ->
   ?deduced_callables:Param_pos.orig Param_pos.pos list ->
   ?receiver:receiver ->
+  ?passing:passing list ->
   callee:Names.GlobRef.t ->
   scheme:Scheme.Id.t option ->
   (Minicpp.template_type * Names.Id.t) list ->

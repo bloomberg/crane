@@ -232,6 +232,8 @@ type method_scope = {
   ms_method_owned_flags : bool list;
   ms_this_arg_id : Id.t option;
   ms_params : (Id.t * cpp_type) list;
+  ms_passing : Callable_abi.passing list;
+      (** How each of {!ms_params} is passed. *)
   ms_fun_params : (Id.t * template_type * Id.t) list;
   ms_template_params : (template_type * Id.t) list;
   ms_deduced_callables : Param_pos.orig Param_pos.pos list;
@@ -528,6 +530,9 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
         (id, wrapped) )
       params_with_idx
   in
+  let passing =
+    List.map2 (fun (_, ty) (_, _, _, owned, _) -> param_passing ~owned ty) params params_with_idx
+  in
 
   {
     ms_ty = ty;
@@ -547,6 +552,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
     ms_method_owned_flags = method_owned_flags;
     ms_this_arg_id = this_arg_id;
     ms_params = params;
+    ms_passing = passing;
     ms_fun_params = fun_params;
     ms_template_params = template_params;
     ms_deduced_callables = deduced_callables;
@@ -682,7 +688,7 @@ let method_head vars s =
 let method_plan func_ref s h =
   let renumber k = Option.default k (List.nth_opt s.ms_extra_tvars_orig (k - 1)) in
   let scheme = Mlutil.reference_scheme func_ref in
-  Callable_abi.of_head ~renumber ~deduced_callables:s.ms_deduced_callables
+  Callable_abi.of_head ~renumber ~deduced_callables:s.ms_deduced_callables ~passing:s.ms_passing
     ~receiver:
       { dropped =
           List.filter_map (fun (i, _) -> Option.bind scheme (fun sc -> Scheme.Var.of_tvar sc i)) h.mh_dropped;

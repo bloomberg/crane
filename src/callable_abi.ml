@@ -38,11 +38,17 @@ type receiver = {
   params : Minicpp.cpp_type list;
 }
 
+type passing =
+  | Owned
+  | Borrowed
+  | Forwarded
+
 type t = {
   callee : GlobRef.t;
   head : template_parameter list;
   deduced_callables : Param_pos.orig Param_pos.pos list;
   receiver : receiver option;
+  passing : passing list option;
   phase : Common.phase;
 }
 
@@ -98,8 +104,8 @@ let mark_phantoms n head =
   in
   go n head
 
-let of_head ?(phantom_prefix = 0) ?relaxed ?renumber ?(deduced_callables = []) ?receiver ~callee
-    ~scheme temps =
+let of_head ?(phantom_prefix = 0) ?relaxed ?renumber ?(deduced_callables = []) ?receiver ?passing
+    ~callee ~scheme temps =
   let head =
     List.mapi
       (fun position (kind, name) ->
@@ -117,7 +123,10 @@ let of_head ?(phantom_prefix = 0) ?relaxed ?renumber ?(deduced_callables = []) ?
     head = mark_phantoms phantom_prefix head;
     deduced_callables;
     receiver;
+    passing;
     phase = Common.get_phase () }
+
+let passing abi = abi.passing
 
 let deduces_callable_at abi pos = List.exists (Param_pos.equal pos) abi.deduced_callables
 
@@ -173,6 +182,7 @@ let same_head a b =
   List.equal (fun p q -> key p = key q) a.head b.head
   && List.equal Param_pos.equal a.deduced_callables b.deduced_callables
   && Option.equal ( = ) (Option.map receiver_key a.receiver) (Option.map receiver_key b.receiver)
+  && Option.equal (List.equal ( = )) a.passing b.passing
 
 let equal a b = GlobRef.UserOrd.equal a.callee b.callee && same_head a b
 
@@ -287,6 +297,7 @@ let foreign ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept = fun _ ->
     head = mark_phantoms phantom_prefix head;
     deduced_callables = [];
     receiver = None;
+    passing = None;
     phase = Common.get_phase () }
 
 (* A method's call is still written as its function's would be, against the

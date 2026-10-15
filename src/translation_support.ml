@@ -3014,6 +3014,13 @@ let wrap_param_by_ownership ?(is_owned = false) cpp_ty =
     else Tref (Lvalue, Tconst cpp_ty)
   | _ -> cpp_ty
 
+(** How a parameter declared at [ty] -- after {!wrap_param_by_ownership},
+    or as the [F &&] a deduced callable is -- with ownership [owned], is
+    passed. *)
+let param_passing ~owned = function
+  | Tref (Forwarding, _) -> Callable_abi.Forwarded
+  | _ -> if owned then Callable_abi.Owned else Callable_abi.Borrowed
+
 (** Check if the return type of an ML function type is erased — i.e., it
     becomes [std::any] in C++.  This covers three cases:
     - Promoted type vars (erased carrier projections like [Obj C]).

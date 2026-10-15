@@ -329,6 +329,10 @@ val infer_owned_flags :
 (** Wrap a C++ parameter type with const/ref based on ownership semantics. *)
 val wrap_param_by_ownership : ?is_owned:bool -> cpp_type -> cpp_type
 
+(** How a parameter declared at a type -- after {!wrap_param_by_ownership},
+    or as the [F &&] a deduced callable is -- owned or not, is passed. *)
+val param_passing : owned:bool -> cpp_type -> Callable_abi.passing
+
 (** [resolves_to_any_type ty] — true if [ty] ultimately resolves to
     [std::any], following erased-type constants and alias chains. *)
 val resolves_to_any_type : cpp_type -> bool
