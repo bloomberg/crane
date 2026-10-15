@@ -435,6 +435,8 @@ and cpp_expr =
     (* obj.method(args) or obj->method(args) *)
   | CPPmethod_call of method_call
   | CPPmethod_value of method_value
+  | CPPprojection of projection
+  | CPPprojection_value of GlobRef.t
   | CPPscope of cpp_expr * Id.t * cpp_type list
     (* expr::id, or expr::template id<tys...> when the list is non-empty *)
   | CPPqualified_t of
@@ -547,6 +549,12 @@ and method_value = {
   mv_receiver : int;
   mv_params : cpp_type option list;
   mv_type_args : cpp_type list;
+}
+
+and projection = {
+  pj_projection : GlobRef.t;
+  pj_record : cpp_expr;
+  pj_args : cpp_expr list;
 }
 
 (** A lambda expression. *)
@@ -1447,6 +1455,9 @@ let map_expr ?fl
       { v with
         mv_params = List.map (Option.map ft) v.mv_params;
         mv_type_args = List.map ft v.mv_type_args }
+  | CPPprojection p ->
+    CPPprojection {p with pj_record = fe p.pj_record; pj_args = List.map fe p.pj_args}
+  | CPPprojection_value _ -> e
   | CPPscope (e', id, tys) -> CPPscope (fe e', id, List.map ft tys)
   | CPPqualified_t (ty, id) -> CPPqualified_t (ft ty, id)
   | CPPconvertible_to ty -> CPPconvertible_to (ft ty)
@@ -1566,7 +1577,7 @@ let map_stmt ?fl
     constructor in {!cpp_expr}. *)
 let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   match e with
-  | CPPvar _ | CPPglob _ | CPPmethod_value _ | CPPalloc _
+  | CPPvar _ | CPPglob _ | CPPmethod_value _ | CPPprojection_value _ | CPPalloc _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPin_place | CPPin_place_index _
   | CPPstd_holds_alternative _
@@ -1594,6 +1605,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPparray (arr, e') -> Array.iter on_expr arr; on_expr e'
   | CPPaccess_call (_, obj, _, args) -> on_expr obj; List.iter on_expr args
   | CPPmethod_call m -> on_expr m.mc_receiver; List.iter on_expr m.mc_args
+  | CPPprojection p -> on_expr p.pj_record; List.iter on_expr p.pj_args
   | CPPrequires (_, constraints, _) ->
     List.iter (fun (e', _) -> on_expr e') constraints
   | CPPbinop (_, l, r) -> on_expr l; on_expr r
@@ -1713,7 +1725,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
     ~(on_stmts : 'a -> cpp_stmt list -> 'a) (acc : 'a) (e : cpp_expr) : 'a =
   let fe acc e = on_expr acc e in
   match e with
-  | CPPvar _ | CPPglob _ | CPPmethod_value _ | CPPalloc _
+  | CPPvar _ | CPPglob _ | CPPmethod_value _ | CPPprojection_value _ | CPPalloc _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPin_place | CPPin_place_index _
   | CPPstd_holds_alternative _
@@ -1741,6 +1753,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPparray (arr, e') -> fe (Array.fold_left fe acc arr) e'
   | CPPaccess_call (_, obj, _, args) -> List.fold_left fe (fe acc obj) args
   | CPPmethod_call m -> List.fold_left fe (fe acc m.mc_receiver) m.mc_args
+  | CPPprojection p -> List.fold_left fe (fe acc p.pj_record) p.pj_args
   | CPPrequires (_, constraints, _) ->
     List.fold_left (fun a (e', _) -> fe a e') acc constraints
   | CPPbinop (_, l, r) -> fe (fe acc l) r
@@ -2443,6 +2456,7 @@ let rec free_vars_expr = function
     free_vars_expr obj @ List.concat_map free_vars_expr args
   | CPPmethod_call m ->
     free_vars_expr m.mc_receiver @ List.concat_map free_vars_expr m.mc_args
+  | CPPprojection p -> free_vars_expr p.pj_record @ List.concat_map free_vars_expr p.pj_args
   | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) ->
     free_vars_expr e
   | CPPbinop (_, e1, e2) -> free_vars_expr e1 @ free_vars_expr e2

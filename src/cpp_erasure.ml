@@ -616,6 +616,26 @@ let lower_method_calls (d : settled) : settled =
   and fs s = map_stmt fe fs Fun.id s in
   map_decl fe fs Fun.id d
 
+(* A projection reads a field, and the field's name does not depend on what
+   the record was instantiated at, so its type arguments are ignored rather
+   than required to be absent: one of a module obtained by functor
+   application is applied at a type, and once fell through to an ordinary
+   call of a function a suppressed projection never has. *)
+let lower_projections (d : settled) : settled =
+  let rec fe e =
+    match e with
+    | CPPfun_call (_, CPPglob (r, _, (None | Some {ci_inline = None; _})), args)
+      when Table.is_projection r && call_args args <> [] -> (
+      match call_args args with
+      | record :: rest ->
+        CPPprojection {pj_projection = r; pj_record = fe record; pj_args = List.map fe rest}
+      | [] -> assert false )
+    | CPPglob (r, _, (None | Some {ci_inline = None; _})) when Table.is_projection r ->
+      CPPprojection_value r
+    | e -> map_expr fe fs Fun.id e
+  and fs s = map_stmt fe fs Fun.id s in
+  map_decl fe fs Fun.id d
+
 (** [bind_free_tvars decl] spells [std::any] every type variable a body names
     that nothing in scope declares.
 

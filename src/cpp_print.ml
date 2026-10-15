@@ -1578,9 +1578,8 @@ and pp_cpp_expr env args t =
     ++ str (pp_obj_access mv_access)
     ++ pp_member_name (Common.id_of_global Term mv_method) mv_type_args
     ++ str ("(" ^ call_args ^ "); }")
-  | CPPglob (x, _, _) when Table.is_projection x ->
-    let field_name = projection_field_name x in
-    str "[](const auto &_x) { return _x." ++ str field_name ++ str "; }"
+  | CPPprojection_value r ->
+    str "[](const auto &_x) { return _x." ++ str (projection_field_name r) ++ str "; }"
   | CPPglob (x, tys, _) ->
     (* Determine the base name for a global reference *)
     let base_name =
@@ -1902,18 +1901,9 @@ and pp_cpp_expr env args t =
       | _ -> CErrors.anomaly (Pp.str "ternary: unexpected custom_case branch structure")
     in
     str "(" ++ pp scrut ++ str " ? " ++ pp e1 ++ str " : " ++ pp e2 ++ str ")"
-  (* A projection reads a field, and the field's name does not depend on what
-     the record was instantiated at, so the type arguments are ignored rather
-     than required to be absent.  Applied at a type -- as a projection of a
-     module obtained by functor application is -- this used to miss and fall
-     through to the ordinary qualified call, naming a function that a
-     suppressed projection never has.  Applied to more than the record, it
-     reads a field holding a function, which takes the rest. *)
-  | CPPfun_call (_, CPPglob (r, _, _), ts) when Table.is_projection r && call_args ts <> [] ->
-    let field_name = projection_field_name r in
-    let record, rest = match call_args ts with a :: rest -> (a, rest) | [] -> assert false in
-    pp_cpp_expr env args record ++ str "." ++ str field_name
-    ++ (if rest = [] then mt () else str "(" ++ pp_list (pp_cpp_expr env args) rest ++ str ")")
+  | CPPprojection {pj_projection; pj_record; pj_args} ->
+    pp_cpp_expr env args pj_record ++ str "." ++ str (projection_field_name pj_projection)
+    ++ (if pj_args = [] then mt () else str "(" ++ pp_list (pp_cpp_expr env args) pj_args ++ str ")")
   | CPPfun_call (_, f, ts) ->
     let args_s = pp_list (pp_cpp_expr env args) (call_args ts) in
     let prefix = match f with
@@ -1930,7 +1920,7 @@ and pp_cpp_expr env args t =
   | CPPderef e ->
     let needs_parens = match e with
       | CPPvar _ | CPPthis | CPPfun_call _ | CPPaccess _
-      | CPPaccess_call _ | CPPmethod_call _ -> false
+      | CPPaccess_call _ | CPPmethod_call _ | CPPprojection _ -> false
       | _ -> true
     in
     if needs_parens then str "*(" ++ pp_cpp_expr env args e ++ str ")"
@@ -2446,7 +2436,7 @@ and pp_cpp_stmt env args = function
        shared_ptr) where explicit move is required. *)
     let e = match e with
       | CPPmove (CPPvar _ as inner) -> inner
-      | CPPmove ((CPPfun_call _ | CPPaccess_call _ | CPPmethod_call _ | CPPstruct _
+      | CPPmove ((CPPfun_call _ | CPPaccess_call _ | CPPmethod_call _ | CPPprojection _ | CPPstruct _
                  | CPPstructmk _ | CPPstruct_id _) as inner) -> inner
       | _ -> e
     in

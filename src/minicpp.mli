@@ -547,6 +547,13 @@ and cpp_expr =
   | CPPmethod_value of method_value
       (** Such a function named as a value rather than called: see
           {!method_value}. *)
+  | CPPprojection of projection
+      (** A record projection applied to its record: see {!projection}. *)
+  | CPPprojection_value of GlobRef.t
+      (** A record projection named as a value, written as a lambda reading
+          the field from its argument.  {!Cpp_erasure.lower_projections}
+          rewrites into this every reference to a projection it does not make
+          a {!projection}. *)
   | CPPscope of cpp_expr * Id.t * cpp_type list
       (** Scope resolution: [expr::id], or [expr::template id<tys...>] when
           the type list is non-empty.  Template arguments belong here and
@@ -680,6 +687,18 @@ and method_value = {
           reference at the type given; [None] where no type can be spelled,
           written [const auto &]. *)
   mv_type_args : cpp_type list;  (** As {!method_call.mc_type_args}. *)
+}
+
+(** A record projection applied to its record, written [record.field], and
+    applied to the rest of its arguments when it is applied to more: the
+    field then holds a function.  Translation builds it as a plain
+    {!CPPfun_call}; {!Cpp_erasure.lower_projections} rewrites it into this.
+    The field's name does not depend on what the record was instantiated
+    at, so the projection's type arguments are not kept. *)
+and projection = {
+  pj_projection : GlobRef.t;
+  pj_record : cpp_expr;
+  pj_args : cpp_expr list;  (** The arguments past the record, in order. *)
 }
 
 (** A lambda expression. *)

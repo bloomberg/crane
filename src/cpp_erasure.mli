@@ -147,6 +147,13 @@ val lower_boxed_reads : settled -> settled
     translation built it. *)
 val lower_method_calls : settled -> settled
 
+(** [lower_projections decl] writes each record projection the same way:
+    applied to its record, as the {!Minicpp.CPPprojection} reading its field;
+    named as a value, as the {!Minicpp.CPPprojection_value} lambda reading it
+    from its argument.  After {!lower_method_calls}, so a projection made a
+    method of its record is called as one. *)
+val lower_projections : settled -> settled
+
 (** [materialise decl] replaces every {!Minicpp.Topaque} in [decl] with
     {!Minicpp.Tany}.
 

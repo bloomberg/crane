@@ -54,6 +54,8 @@ let dependencies decls =
     | CPPglob (r, _, _) | CPPnamespace (r, _) | CPPstructmk (r, _, _)
     | CPPmethod_call {mc_method = r; _}
     | CPPmethod_value {mv_method = r; _}
+    | CPPprojection {pj_projection = r; _}
+    | CPPprojection_value r
     | CPPstruct (r, _, _) | CPPenum_val (r, _) ->
       note r
     | CPPconcept_app (c, r, _) -> note c; note r

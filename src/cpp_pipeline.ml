@@ -162,7 +162,9 @@ let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
     pass "boxed_reads" Cpp_erasure.lower_boxed_reads;
     (* A call of a methodified function becomes the member call it is, so
        the printer spells the call it is given. *)
-    pass "method_calls" Cpp_erasure.lower_method_calls ]
+    pass "method_calls" Cpp_erasure.lower_method_calls;
+    (* So does a projection, applied or named as a value. *)
+    pass "projections" Cpp_erasure.lower_projections ]
 
 let pass_names =
   Pipeline_trace.names minicpp_passes @ [seam] @ Pipeline_trace.names settled_passes
