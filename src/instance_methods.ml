@@ -98,6 +98,12 @@ let record_type_args (cons_ty : ml_type) type_args =
       ta
   | _ -> type_args
 
+let rec class_type ty =
+  match ty with
+  | Tarr (d, rest) when erased_by_extraction d || Table.is_typeclass_type d -> class_type rest
+  | Tmeta {contents = Some t} -> class_type t
+  | t -> t
+
 let instance_tvars ty inner_ty =
   (* The classes of the instance's dictionary parameters.  Read off the
      instance's type, not its binders: a singleton class's dictionary binder

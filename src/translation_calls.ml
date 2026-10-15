@@ -918,11 +918,19 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
      {!Ml_type_util.filter_erased_type_args} is the same all-or-nothing filter
      a call applies to its own: a position is what gives the others their
      meaning, so one that cannot be written costs the list. *)
+  (* The variables the instance's struct declares a template parameter for,
+     in its head's order ({!Instance_methods.instance_tvars}), among those
+     the use writes an argument for. *)
+  let struct_vars r ts =
+    let ty = find_type r in
+    List.filter
+      (fun j -> Mlutil.Var_types.find ts j <> None)
+      (Instance_methods.instance_tvars ty (Instance_methods.class_type ty))
+  in
   let instance_type_args r ts =
-    let keeps = Callable_abi.keeps_tvar (callee_abi ~instances:0 r) in
     filter_erased_type_args
       (build_template_params ~site:Through_tvar env []
-         (List.filter_map (fun (j, t) -> if keeps j then Some t else None) (Mlutil.Var_types.bindings ts)) )
+         (List.filter_map (Mlutil.Var_types.find ts) (struct_vars r ts)) )
   in
   let instance_type_args_from_expected r ts =
     match instance_family_binding env r ts expected with
@@ -943,8 +951,8 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
       if List.for_all (fun (_, o) -> o <> None) filled then
         Some
           (List.filter_map
-             (fun (j, o) -> if Callable_abi.keeps_tvar (callee_abi ~instances:0 r) j then o else None)
-             filled )
+             (fun j -> match List.assoc_opt j filled with Some o -> o | None -> None)
+             (struct_vars r ts) )
       else None
   in
   match strip_dictionary ml_arg with

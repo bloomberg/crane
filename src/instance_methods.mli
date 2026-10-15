@@ -47,6 +47,11 @@ val record_body :
     where it says more, the declaration's where the constructor erased one. *)
 val record_type_args : Miniml.ml_type -> Miniml.ml_type list -> Miniml.ml_type list
 
+(** [class_type ty] -- the class type of an instance of type [ty]: past its
+    own parameters, erased type binders and class dictionaries; the
+    [inner_ty] {!layers} reaches. *)
+val class_type : Miniml.ml_type -> Miniml.ml_type
+
 (** [instance_tvars ty inner_ty] -- the type variables the instance of type
     [ty], whose class type past its parameters is [inner_ty], declares a
     template parameter for, in ascending order: those its class arguments
