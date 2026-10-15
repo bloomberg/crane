@@ -139,6 +139,11 @@ val strip_erased_method_prefix : Miniml.ml_type -> Miniml.ml_type
     of its dictionary, erased; [0] when its type is not known. *)
 val projection_class_arity : Names.GlobRef.t -> int
 
+(** The arguments a higher-kinded carrier has already fixed: [Fn (prod X)]
+    fixes the pair's first component, while the eta-expanded [option _] fixes
+    nothing.  What is left is what the class still applies. *)
+val hkt_carrier_fixed_args : int -> Miniml.ml_type -> Miniml.ml_type list
+
 (** [recover_method_quantifier class_ref field_ref erased] is the type of a
     class field with its own [forall A] intact -- the projection constant's
     type with the class's erased prefix stripped -- or [erased] when the

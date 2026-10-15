@@ -98,23 +98,7 @@ let recover_method_quantifier = Ml_type_util.recover_method_quantifier
 
 let method_tvar_count = Ml_type_util.method_tvar_count
 
-(** The arguments a higher-kinded carrier has already fixed: [Fn (prod X)]
-    fixes the pair's first component, while the eta-expanded [option _] fixes
-    nothing.  What is left is what the class still applies -- as the alias
-    template's parameters, or as the method's own type variables. *)
-let hkt_carrier_fixed_args arity ml_ty =
-  match ml_ty with
-  | Miniml.Tglob (r, args, _) ->
-    let given = List.length args in
-    let total = max arity (max given (Table.get_type_scheme_arity r)) in
-    let fixed = max 0 (total - arity) in
-    if given >= fixed then safe_firstn fixed args else []
-  | Miniml.Tapp (_, args) ->
-    (* A carrier that is a type variable ([Instance ... (M : Type -> Type)])
-       is eta-expanded the same way, but has no declared scheme to compare
-       against: what it applies beyond [arity] is what it fixed. *)
-    safe_firstn (max 0 (List.length args - arity)) args
-  | _ -> []
+let hkt_carrier_fixed_args = Ml_type_util.hkt_carrier_fixed_args
 
 (** Render a type CONSTRUCTOR argument as an alias template body: the [list] of
     [Instance ListContainer : Container list] becomes [List<_A0>], to be

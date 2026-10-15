@@ -19,116 +19,24 @@ open Gen_records
 module IntSet = Escape.IntSet
 
 (** An instance's type and body past its own parameters -- erased type
-    binders and class dictionaries, an eta-reduced instance's included --
-    with the template parameters the dictionaries become and the binders
-    stripped. *)
+    binders and class dictionaries, an eta-reduced instance's included
+    ({!Instance_methods.layers}) -- with the template parameters the
+    dictionaries become and the binders stripped. *)
 let instance_layers ty body =
-  (* For parameterized instances, strip Tarr/MLlam layers to get to the inner
-     typeclass type and constructor body. Collect template parameters along the
-     way. Example: numOption has type Tarr(Tdummy, Tarr(Tglob(Numeric,[A],[]),
-     Tglob(Numeric,[option A],[]))) and body MLlam(_, Tdummy, MLlam(_,
-     Tglob(Numeric,...), MLcons(...))) *)
-  let rec strip_outer_layers ty body tc_idx tc_acc lam_acc =
-    match (ty, body) with
-    | Tarr (arg_ty, rest_ty), MLlam (ml_id, lam_ty, rest_body) ->
-      if erased_by_extraction arg_ty then
-        (* Erased type parameter — skip (template params are inferred from type
-           variables in the return type via collect_ml_tvars below) *)
-        strip_outer_layers
-          rest_ty
-          rest_body
-          tc_idx
-          tc_acc
-          ((id_of_mlid ml_id, lam_ty) :: lam_acc)
-      else if parameter_role arg_ty = Dictionary then
-        (* Typeclass constraint — becomes a concept-constrained template
-           parameter.  E.g., [PreCategory _tcI0] instead of [typename
-           _tcI0], so the compiler enforces concept satisfaction. *)
-        let instance_name = tc_instance_id tc_idx in
-        let tt =
-          match arg_ty with
-          | Tglob (r, type_args, _) ->
-            (* Unary concepts (nb_sign_keeps = 0) are expressed inline as
-               [Eq _tcI0].  Multi-parameter concepts like [Numeric<I, t_A>]
-               carry their kept type args so a [requires C<_tcI0, T1>] clause
-               can be emitted at the use site instead of silently degrading to
-               an unconstrained [typename] (CWE-693 / CWE-345). *)
-            Option.default TTtypename
-              (concept_constraint_of_class_type arg_ty)
-          | _ -> TTtypename
-        in
-        (* The binder is typed by the class, as the instance's type writes
-           it: a singleton class's binder is annotated with the class
-           unfolded, which no call through it can read the carrier from. *)
-        strip_outer_layers
-          rest_ty
-          rest_body
-          (tc_idx + 1)
-          ((tt, instance_name) :: tc_acc)
-          ((instance_name, arg_ty) :: lam_acc)
-      else (* Not a type param or typeclass — stop stripping *)
-        (ty, body, List.rev tc_acc, List.rev lam_acc)
-    | Tarr (arg_ty, _), _
-      when erased_by_extraction arg_ty || Table.is_typeclass_type arg_ty ->
-      (* An instance eta-reduced past its own parameters -- [TFunctor_pair
-         := ft_pair] -- takes them all the same. *)
-      let arg = if erased_by_extraction arg_ty then MLdummy Ktype else MLrel 1 in
-      let applied =
-        match Mlutil.ast_lift 1 body with
-        | MLapp (f, args) -> MLapp (f, args @ [arg])
-        | f -> MLapp (f, [arg])
-      in
-      let body = MLlam (Id (Id.of_string "x"), arg_ty, applied) in
-      strip_outer_layers ty body tc_idx tc_acc lam_acc
-    | _ -> (ty, body, List.rev tc_acc, List.rev lam_acc)
+  let {Instance_methods.inner_ty; inner_body; dictionaries; lam_params} = Instance_methods.layers ty body in
+  (* A dictionary becomes a concept-constrained template parameter -- [PreCategory
+     _tcI0] instead of [typename _tcI0] -- so the compiler enforces concept
+     satisfaction.  Unary concepts are expressed inline as [Eq _tcI0];
+     multi-parameter concepts like [Numeric<I, t_A>] carry their kept type
+     args so a [requires C<_tcI0, T1>] clause can be emitted at the use site
+     instead of silently degrading to an unconstrained [typename] (CWE-693 /
+     CWE-345). *)
+  let constraint_of = function
+    | Miniml.Tglob _ as arg_ty -> Option.default TTtypename (concept_constraint_of_class_type arg_ty)
+    | _ -> TTtypename
   in
-  strip_outer_layers ty body 0 [] []
+  (inner_ty, inner_body, List.map (fun (id, arg_ty) -> (constraint_of arg_ty, id)) dictionaries, lam_params)
 
-(** A singleton class's instance is its method: past the instance's own
-    parameters, the body is the record's one field.  A fixpoint is the
-    method calling itself, through this very instance. *)
-let instance_record_body name class_ref inner_ty lam_params inner_body =
-  let inner_body =
-    match inner_body with
-    | MLmagic (_, b) -> b
-    | b -> b
-  in
-  let as_method m = function
-    | MLfix (0, [|_|], [|c|], _) when lam_params = [] ->
-      let n_class = Ml_type_util.projection_class_arity m in
-      Mlutil.ast_subst
-        (MLapp
-           ( MLglob (Mlutil.open_reference m),
-             List.init n_class (fun _ -> MLdummy Ktype)
-             @ [MLglob (Mlutil.open_reference name)] ))
-        c
-    | b -> b
-  in
-  match (Table.singleton_class_method class_ref, inner_body) with
-  | Some _, (MLcons _ as b) -> b
-  | Some m, b -> MLcons (inner_ty, class_ref, [as_method m b])
-  | None, b -> b
-
-(** The class arguments of an instance whose record constructor is typed
-    [cons_ty] and whose declared type gives [type_args]: the constructor's
-    where it says more, the declaration's where the constructor erased one. *)
-let record_type_args (cons_ty : ml_type) type_args =
-  let erased t =
-    match resolve_tmeta t with
-    | Miniml.Tunknown | Miniml.Tdummy _ -> true
-    | _ -> false
-  in
-  match cons_ty with
-  | Tglob (_, ta, _) when ta <> [] ->
-    List.mapi
-      (fun i t ->
-        if not (erased t) then t
-        else
-          match List.nth_opt type_args i with
-          | Some d when not (erased d) -> d
-          | _ -> t )
-      ta
-  | _ -> type_args
 
 (** The concrete types the instance [name] -- [body] of type [ty] -- gives
     its class's promoted variables, which a call through the instance
@@ -138,9 +46,9 @@ let instance_promoted_types name body ty =
   let inner_ty, inner_body, _, lam_params = instance_layers ty body in
   match (inner_ty : ml_type) with
   | Tglob (class_ref, type_args, _) when Table.is_typeclass class_ref -> (
-    match instance_record_body name class_ref inner_ty lam_params inner_body with
+    match Instance_methods.record_body name class_ref inner_ty lam_params inner_body with
     | MLcons (cons_ty, _, _) ->
-      let type_args = record_type_args cons_ty type_args in
+      let type_args = Instance_methods.record_type_args cons_ty type_args in
       let promoted_vars = class_promoted_vars class_ref in
       let promoted_concrete = class_promoted_concrete class_ref type_args in
       if List.length promoted_vars = List.length promoted_concrete && promoted_vars <> [] then
@@ -171,66 +79,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
      parameterized instances like numOption : Numeric (option A), the return
      type is Tglob(Numeric, [option A], []) which contains Tvar for A. These
      need to become template typename parameters (T1, T2, etc.). *)
-  (* The classes of the instance's dictionary parameters.  Read off the
-     instance's type, not its binders: a singleton class's dictionary binder
-     is annotated with the class unfolded. *)
-  let dict_tys =
-    let rec dicts acc = function
-      | Miniml.Tarr (a, b) ->
-        dicts (if Table.is_typeclass_type a then a :: acc else acc) b
-      | Miniml.Tmeta {contents = Some t} -> dicts acc t
-      | _ -> List.rev acc
-    in
-    dicts [] ty
-  in
-  let dict_vars =
-    let rec vars acc = function
-      | Miniml.Tvar (_, i) | Miniml.Tapp (i, []) -> i :: acc
-      | Miniml.Tapp (i, tys) -> List.fold_left vars (i :: acc) tys
-      | Miniml.Tglob (_, tys, _) -> List.fold_left vars acc tys
-      | Miniml.Tarr (a, b) -> vars (vars acc a) b
-      | Miniml.Tmeta {contents = Some t} -> vars acc t
-      | _ -> acc
-    in
-    List.fold_left vars [] dict_tys
-  in
-  let rec collect_ml_tvars acc = function
-    | Miniml.Tvar (Schematic, i) ->
-      if List.mem i acc then
-        acc
-      else
-        i :: acc
-    (* A family parameter -- [Functor (box E)] -- is written applied, and is
-       one of the instance's variables all the same.  Not a carrier one of
-       its dictionaries is about: [Monad m] reaches [m] through the
-       dictionary, and the instance declares nothing for it. *)
-    | Miniml.Tapp (i, tys) ->
-      let acc =
-        if List.mem i acc || List.mem i dict_vars then acc else i :: acc
-      in
-      List.fold_left collect_ml_tvars acc tys
-    | Miniml.Tarr (t1, t2) -> collect_ml_tvars (collect_ml_tvars acc t1) t2
-    | Miniml.Tglob (_, tys, _) -> List.fold_left collect_ml_tvars acc tys
-    | Miniml.Tmeta {contents = Some t} -> collect_ml_tvars acc t
-    | _ -> acc
-  in
-  (* A variable a dictionary parameter mentions is one of the instance's too,
-     though the class arguments may not: [via {A B C} `{Conv A B} `{Conv B C}
-     : Sz (A * C)] binds [B] for its constraints alone.  Not one a dictionary
-     is about as its carrier -- see [dict_vars]. *)
-  let constraint_args = function
-    | Miniml.Tglob (cls, args, _) ->
-      List.filteri (fun i _ -> not (Table.is_hkt_param cls i)) args
-    | _ -> []
-  in
-  let instance_tvars =
-    match inner_ty with
-    | Tglob (_, type_args, _) ->
-      List.sort compare
-        (List.fold_left collect_ml_tvars []
-           (type_args @ List.concat_map constraint_args dict_tys))
-    | _ -> []
-  in
+  let instance_tvars = Instance_methods.instance_tvars ty inner_ty in
   let tv_temps =
     List.mapi (fun i _ -> (TTtypename, tvar_id (i + 1))) instance_tvars
   in
@@ -330,7 +179,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
     let fields = Table.record_field_bindings_of_type inner_ty in
     (* Promoted dependent records may have their constructor wrapped in
        MLmagic due to Tvar/Tglob mismatches during extraction unification. *)
-    let inner_body = instance_record_body name class_ref inner_ty lam_params inner_body in
+    let inner_body = Instance_methods.record_body name class_ref inner_ty lam_params inner_body in
     ( match inner_body with
     | MLcons (cons_ty, _ctor_ref, method_bodies) ->
       (* For promoted dependent records, the definition type Tglob(Magma,[],[])
@@ -344,7 +193,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
          constructor's, because a class field standing as a type is a
          projection the constructor's unification drops.  Take the better of
          the two at each position rather than one list whole. *)
-      let type_args = record_type_args cons_ty type_args in
+      let type_args = Instance_methods.record_type_args cons_ty type_args in
       (* How many type variables the instance itself binds.  Not the number of
          template parameters it declares: a higher-kinded carrier ([Instance
          ... (M : Type -> Type)]) is a variable the instance's arguments name,
@@ -359,12 +208,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
          method variable too many, which spends [_A0] on the inner monad and
          erases [A], the variable the name was for.  The instance's own type
          is where every variable it binds is visible. *)
-      let instance_tvar_count =
-        List.fold_left
-          (fun n t -> max n (Mlutil.type_maxvar t))
-          (max (List.length tv_temps) (Mlutil.type_maxvar ty))
-          type_args
-      in
+      let instance_tvar_count = Instance_methods.tvar_count ~instance_tvars ty type_args in
+      let inst = {Instance_methods.class_ref; type_args; tvar_count = instance_tvar_count} in
       (* The concrete types it gives its class's promoted variables, which
          call sites substitute, were planned before rendering
          ({!instance_promoted_types}). *)
@@ -413,118 +258,10 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           let method_name =
             Common.id_of_global Term method_ref
           in
-          (* Strip MLmagic wrappers from the field body — promoted dependent
-             records produce MLmagic due to Tvar/Tglob mismatches. *)
-          let rec strip_magic = function
-            | MLmagic (_, b) -> strip_magic b
-            | b -> b
-          in
-          (* The method is generated more than once -- declared, then
-             defined -- and each generation fills the body's open holes in
-             its own renumbering of the type variables, so each gets its own
-             holes. *)
-          let field_body = Mlutil.freshen_metas (strip_magic field_body) in
-          (* Substitute type class parameter with instance's type arg in the
-             field type. This gives us the concrete return type (e.g., bool for
-             eqb: A -> A -> bool). For promoted dependent records, type_args may
-             be empty, leaving Tvars unsubstituted — we handle that below by
-             using lambda binder types. *)
-          let field_ml_ty =
-            recover_method_quantifier class_ref method_ref field_ml_ty
-          in
-          (* The field numbers its own [forall A] right after the class's
-             parameters, and the instance numbers its binders from one as
-             well: [Monad_stateT]'s carrier [stateT S m] names the same
-             variable the method's [A] does, so substituting the carrier in
-             would spell [A] as the inner monad.  Move the method's variables
-             above every instance binder first -- the positions the
-             declaration binds them at anyway. *)
-          let method_tvar_base =
-            max (List.length (Table.get_ind_ip_vars class_ref))
-              instance_tvar_count
-          in
-          let n_method_tvars = method_tvar_count class_ref field_ml_ty in
-          let field_ml_ty =
-            let nclass = List.length (Table.get_ind_ip_vars class_ref) in
-            let own =
-              List.sort compare
-                (List.filter (fun i -> i > nclass)
-                   (collect_tvars [] field_ml_ty))
-            in
-            let sub =
-              List.mapi
-                (fun k i ->
-                  (i, Miniml.Tvar (Schematic, method_tvar_base + 1 + k)) )
-                own
-            in
-            if List.for_all (fun (i, t) -> t = Miniml.Tvar (Schematic, i)) sub
-            then field_ml_ty
-            else subst_tvars_type sub field_ml_ty
-          in
-          (* Extraction eta-expands a type-constructor argument, so the
-             carrier arrives as [option<_>] rather than the bare [option] the
-             application needs; contract it before substituting.
-
-             Unless the carrier is written with a [Tunknown] hole.  Then it is
-             already the type-level lambda, the hole is its binder, and the
-             binder may be written more than once: [stateT S m] arrives as
-             [stateT(S, m _, _)], because the record's monad parameter is
-             itself applied to the element.  Dropping the trailing argument
-             keeps one occurrence and loses the other, and what comes out is a
-             [stateT] short a template argument.  Applying a hole is filling
-             it -- every occurrence at once -- which {!Mlutil.apply_ml_type}
-             already does, so there is nothing to contract here. *)
-          let subst_args =
-            List.mapi
-              (fun i t ->
-                match t with
-                | _ when Mlutil.type_has_hole t -> t
-                | Miniml.Tglob (r, _ :: _, es)
-                  when Table.is_hkt_param class_ref i ->
-                  (* Only the eta-expanded arguments come off: a carrier that
-                     arrived partially applied keeps the ones it fixed. *)
-                  Miniml.Tglob
-                    ( r,
-                      hkt_carrier_fixed_args
-                        (Table.get_ind_hkt_arity class_ref i)
-                        t,
-                      es )
-                | Miniml.Tapp (j, _ :: _) when Table.is_hkt_param class_ref i
-                  ->
-                  (* Same contraction for a carrier that is a type variable:
-                     what is left is the head the class applies. *)
-                  ( match
-                      hkt_carrier_fixed_args
-                        (Table.get_ind_hkt_arity class_ref i)
-                        t
-                    with
-                  | [] -> Miniml.Tvar (Schematic, j)
-                  | fixed -> Miniml.Tapp (j, fixed) )
-                | t -> t )
-              (Ml_type_util.instance_type_args type_args)
-          in
-          let subst_ty = Mlutil.type_subst_list subst_args field_ml_ty in
-          (* The concept requires the field at the arity the class declared it
-             at, so an instance whose type argument is itself a function type
-             ([Instance : D (nat -> nat)]) may not absorb the arrows that
-             arrived with the substitution as further parameters: they belong
-             to the value the accessor returns. *)
-          let declared_arity = count_ml_value_arrows field_ml_ty in
-          let split_at_declared_arity ty =
-            let args, ret = get_args_and_ret [] ty in
-            let rec split n acc = function
-              | t :: rest
-                when erased_by_extraction t || Table.is_typeclass_type t ->
-                split n (t :: acc) rest
-              | t :: rest when n > 0 -> split (n - 1) (t :: acc) rest
-              | surplus -> (List.rev acc, surplus)
-            in
-            let kept, surplus = split declared_arity [] args in
-            ( kept,
-              List.fold_right (fun a r -> Miniml.Tarr (a, r)) surplus ret )
-          in
-          let method_args_and_ret () = split_at_declared_arity subst_ty in
-          let orig_args_and_ret () = split_at_declared_arity field_ml_ty in
+          let m = Instance_methods.prepare_method inst method_ref field_ml_ty field_body in
+          let {Instance_methods.field_ml_ty; subst_args; subst_ty; n_method_tvars; declared_arity; body = field_body} = m in
+          let method_args_and_ret () = Instance_methods.args_and_ret m in
+          let orig_args_and_ret () = Instance_methods.declared_args_and_ret m in
           (* With the quantifier back, the method is a member template:
              [template <typename _A0> static Opt<_A0> mret(_A0)] rather than a
              signature erased to [std::any].  Its own type variables sit past
@@ -544,160 +281,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
               (names, type_var_names @ pad @ names)
           in
           set_current_type_vars type_var_names;
-          (* The declared signature numbers the method's own type variables
-             after every parameter of the class, while the body -- extracted
-             on its own -- numbers them after the instance's own binders, and
-             need not have numbered them consecutively.  Read the body's
-             quantifiers off the body and map them, in order, onto the
-             positions [type_var_names] gives them; left alone the body would
-             name [A] where the class carrier sits. *)
-          let field_body =
-            if n_method_tvars = 0 then field_body
-            else
-              let base = method_tvar_base in
-              let body_tvars =
-                let acc = ref [] in
-                ignore
-                  (Mlutil.ast_map_types
-                     (fun t ->
-                       acc := collect_tvars !acc t;
-                       t )
-                     field_body);
-                List.sort compare
-                  (List.filter (fun i -> i > instance_tvar_count) !acc)
-              in
-              let subst =
-                List.mapi
-                  (fun k i -> (i, Miniml.Tvar (Schematic, base + 1 + k)))
-                  (safe_firstn n_method_tvars body_tvars)
-                (* A body may name more variables than the field declares --
-                   an inner monad the mode erases leaves one behind.  The
-                   declaration binds what it declares and no more, so what is
-                   left over is spelled the way any type the declaration
-                   cannot name is: erased. *)
-                @ List.filteri
-                    (fun k _ -> k >= n_method_tvars)
-                    (List.map (fun i -> (i, Miniml.Tunknown)) body_tvars)
-              in
-              if List.for_all (fun (i, t) -> t = Miniml.Tvar (Schematic, i)) subst
-              then field_body
-              else Mlutil.ast_map_types (subst_tvars_type subst) field_body
-          in
-          (* An instance method may have been eta-reduced below the arity its
-             class field declares ([cmap A B f x := f x] extracts to
-             [fun A B f => f]).  The concept requires the declared arity, so
-             re-introduce the missing arguments.
-
-             A body with no lambdas at all is left alone: the eta path in
-             [gen_method] below handles the point-free case, and it also
-             bridges a parameter the class declares at an erased type to the
-             concrete type the named body expects. *)
-          let rec nb_lams = function
-            | MLlam (_, ty, rest) ->
-              (if erased_by_extraction ty then 0 else 1) + nb_lams rest
-            | _ -> 0
-          in
-          (* A binder whose type extraction erased away ([token], a
-             one-constructor inductive carrying no information) still occupies
-             a parameter slot: the class declares the field at an arity every
-             instance must meet, and the concept checks that arity.  Where the
-             body's leading binders line up one-for-one with the declared
-             arguments, the declaration's type wins over the body's erased
-             annotation, so the parameter survives instead of being dropped as
-             a proof binder would be. *)
-          let field_body =
-            let declared = fst (get_args_and_ret [] subst_ty) in
-            let rec leading = function MLlam (_, _, r) -> 1 + leading r | _ -> 0 in
-            if leading field_body <> List.length declared then field_body
-            else
-              let rec retype tys body =
-                match (tys, body) with
-                | ty :: rest, MLlam (id, bty, b) ->
-                  let erased_value =
-                    (* [Ktype] is an erased type abstraction -- the field's own
-                       [forall A], which stands at no declared argument.  Any
-                       other erased annotation is a value binder whose type
-                       carried no information. *)
-                    match extraction_erasure bty with
-                    | Some (Proof | Implicit _) -> true
-                    | Some (Type_binder | Void) | None -> false
-                  in
-                  let bty = if erased_value && not (erased_by_extraction ty) then ty else bty in
-                  MLlam (id, bty, retype rest b)
-                | _ -> body
-              in
-              retype declared field_body
-          in
-          let field_body =
-            if nb_lams field_body = 0 && Table.get_ind_hkt_params class_ref = []
-            then field_body
-            else
-            let arg_types =
-              List.filter
-                (fun t ->
-                  not (Table.is_typeclass_type t) && not (erased_by_extraction t) )
-                (fst (method_args_and_ret ()))
-            in
-            let missing =
-              List.length arg_types - nb_lams field_body
-            in
-            if missing <= 0 then field_body
-            else
-              let missing_tys =
-                List.filteri
-                  (fun i _ -> i >= List.length arg_types - missing)
-                  arg_types
-              in
-              let rec expand = function
-                | MLlam (id, ty, rest) -> MLlam (id, ty, expand rest)
-                | inner ->
-                  let inner = Mlutil.ast_lift missing inner in
-                  let args =
-                    List.init missing (fun i -> MLrel (missing - i))
-                  in
-                  List.fold_left
-                    (fun acc (i, ty) ->
-                      MLlam (Id (Id.of_string ("a" ^ string_of_int i)), ty, acc) )
-                    (MLapp (inner, args))
-                    (List.rev (List.mapi (fun i t -> (i, t)) missing_tys))
-              in
-              expand field_body
-          in
-          (* Extract parameter names and types from the lambda. For promoted
-             type vars (e.g., Tvar 3 for edge in Graph), substitute them with
-             their concrete types from type_args. Only substitute Tvars beyond
-             the ones the instance binds -- its template parameters, and the
-             carriers it reaches through a dictionary -- to avoid disturbing
-             regular type variable references. *)
-          let nb_sign_keeps = instance_tvar_count in
-          let subst_promoted_tvars ty =
-            if List.length type_args > nb_sign_keeps then
-              let rec subst = function
-                | Miniml.Tvar (Schematic, j)
-                  when j > nb_sign_keeps && j <= List.length type_args ->
-                  List.nth type_args (j - 1)
-                | Miniml.Tarr (a, b) -> Miniml.Tarr (subst a, subst b)
-                | Miniml.Tglob (r, l, a) -> Miniml.Tglob (r, List.map subst l, a)
-                | Miniml.Tmeta {contents = Some t} -> subst t
-                | Miniml.Tmeta _ as t -> t
-                | t -> t
-              in
-              subst ty
-            else
-              ty
-          in
-          (* The body's embedded types still mention the class's promoted type
-             variables ([list E] carries [Tvar 1], not [list nat]).  Resolve
-             them exactly as the parameter and return types are resolved: left
-             alone they would render as the concept's template parameter [T1],
-             which is not in scope inside the instance struct. *)
-          let field_body = Mlutil.ast_map_types subst_promoted_tvars field_body in
-          (* The body was extracted at the class's erased field type, so its
-             [MLcase] and [MLcons] annotations say [option _] where the
-             declared signature says [option A].  Push the declared type back
-             down, or the body would spell [Option<std::any>] against a value
-             the signature typed [Option<_A0>]. *)
-          let field_body = Mlutil.recover_erased_types subst_ty field_body in
+          let subst_promoted_tvars = Instance_methods.subst_promoted_tvars inst in
           (* The instance's own binders were extracted at the class's erased
              field types.  For a higher-kinded class the declared signature
              ([subst_ty]) knows better: it still names the element type. *)

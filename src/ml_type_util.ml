@@ -265,6 +265,24 @@ let projection_class_arity proj =
 let method_tvar_count class_ref ty =
   max 0 (Mlutil.type_maxvar ty - List.length (Table.get_ind_ip_vars class_ref))
 
+(** The arguments a higher-kinded carrier has already fixed: [Fn (prod X)]
+    fixes the pair's first component, while the eta-expanded [option _] fixes
+    nothing.  What is left is what the class still applies -- as the alias
+    template's parameters, or as the method's own type variables. *)
+let hkt_carrier_fixed_args arity ml_ty =
+  match ml_ty with
+  | Miniml.Tglob (r, args, _) ->
+    let given = List.length args in
+    let total = max arity (max given (Table.get_type_scheme_arity r)) in
+    let fixed = max 0 (total - arity) in
+    if given >= fixed then CList.firstn fixed args else []
+  | Miniml.Tapp (_, args) ->
+    (* A carrier that is a type variable ([Instance ... (M : Type -> Type)])
+       is eta-expanded the same way, but has no declared scheme to compare
+       against: what it applies beyond [arity] is what it fixed. *)
+    CList.firstn (max 0 (List.length args - arity)) args
+  | _ -> []
+
 (** [recover_method_quantifier class_ref field_ref erased] is the type of a
     class field with its own [forall A] intact.
 
