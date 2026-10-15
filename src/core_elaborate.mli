@@ -24,7 +24,8 @@
 val elaborate_arguments : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> Elaborated_call.t
 
 (** [structure s] elaborates every global application in [s]'s
-    declarations -- in their bodies, and in the terms custom types are
+    declarations -- in their bodies, in an instance's methods as
+    {!Instance_methods} elaborates them, and in the terms custom types are
     applied to in the types they write -- and every global named there
     unapplied, as its call with no arguments, replacing the unit's previous
     elaborations. *)

@@ -365,65 +365,29 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
              concept, and the instance satisfying it is a type.  Such a binder
              becomes one of the method's own template parameters, which is
              where its uses ([pa::width()]) already look for it. *)
-          let rec extract_params n rem acc body =
-            match body with
-            (* Past the declared arity the remaining binders are the value's
-               own, not the accessor's: they stay in the body, which the
-               return type spells as a [std::function].  Checked before the
-               erased case, since an erased binder past the arity is the
-               value's too. *)
-            | MLlam _ when n >= declared_arity -> (List.rev acc, body)
-            | MLlam (id, ty, rest)
-              when is_erasable_binder_ty ty
-                   && (rem > declared_arity - n
-                      || not (Mlutil.ast_occurs 1 rest)) ->
-              (* An erased binder is no parameter, but it is still a binder:
-                 dropping it would shift every de Bruijn index the body uses
-                 to name the ones that remain.
-
-                 A binder may only be dropped while binders are left to
-                 spare, or while the body makes no use of it: extraction
-                 sometimes annotates a value binder as erased ([ret := @Some]
-                 extracts as [fun (_ : axiom) (x : dummy) => Some x]), and the
-                 declared arity is what says how many of them the concept is
-                 owed. *)
-              extract_params
-                n
-                (rem - 1)
-                ( {
-                    mb_name = id_of_mlid id;
-                    mb_ml_ty = ty;
-                    mb_cpp_ty = Tany;
-                    mb_kind = `Erased;
-                  }
-                :: acc )
-                rest
-            | MLlam (id, ty, rest) ->
-              let resolved_ty =
-                let have = subst_promoted_tvars ty in
-                if n < Array.length declared_arg_tys then
-                  offer_declared have declared_arg_tys.(n)
-                else have
-              in
-              extract_params
-                (n + 1)
-                (rem - 1)
-                ( {
-                    mb_name = id_of_mlid id;
-                    mb_ml_ty = resolved_ty;
-                    mb_cpp_ty = param_cpp_ty n resolved_ty;
-                    mb_kind =
-                      ( if Table.is_typeclass_type resolved_ty then
-                          `Instance
-                        else
-                          `Value );
-                  }
-                :: acc )
-                rest
-            | _ -> (List.rev acc, body)
-          in
           let binders, inner_body =
-            extract_params 0 (count_leading_lams field_body) [] field_body
+            let params, inner_body = Instance_methods.params m in
+            let _, binders =
+              List.fold_left_map
+                (fun n {Instance_methods.binder = id; binder_ty = ty; erased} ->
+                  if erased then
+                    (n, {mb_name = id_of_mlid id; mb_ml_ty = ty; mb_cpp_ty = Tany; mb_kind = `Erased})
+                  else
+                    let resolved_ty =
+                      let have = subst_promoted_tvars ty in
+                      if n < Array.length declared_arg_tys then offer_declared have declared_arg_tys.(n)
+                      else have
+                    in
+                    ( n + 1,
+                      {
+                        mb_name = id_of_mlid id;
+                        mb_ml_ty = resolved_ty;
+                        mb_cpp_ty = param_cpp_ty n resolved_ty;
+                        mb_kind = (if Table.is_typeclass_type resolved_ty then `Instance else `Value);
+                      } ) )
+                0 params
+            in
+            (binders, inner_body)
           in
           (* Determine return type: if type_subst resolved everything, use the
              substituted type. Otherwise, infer from the lambda binders. *)
@@ -487,28 +451,19 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                  a function reference that needs eta-expansion, or a
                  non-function value field.  An erased binder is no parameter,
                  so a body that opens with nothing else is this case too. *)
-              let all_arg_types, _ret_type = method_args_and_ret () in
-              (* Filter out type class instance and erased args *)
-              let arg_types =
-                List.filter (fun t ->
-                  not (Table.is_typeclass_type t) && not (erased_by_extraction t))
-                  all_arg_types
-              in
-              if arg_types = [] then
+              ( match Instance_methods.eta_call m inner_body with
+              | None ->
                 (* Non-function field (like m_id : carrier) — generate as a
                    static value with a nullary accessor method. *)
                 let stmts =
                   gen_stmts base_env (fun x -> Sreturn (Some x)) inner_body
                 in
                 ([], method_ret_ty, stmts, [])
-              else
-                (* Function reference — eta-expand.  Build C++ params only for
-                   real args, but supply MLdummy for erased args in the ML
-                   application so the body receives all expected arguments. *)
+              | Some (eta_params, call_expr) ->
+                (* Function reference — eta-expand. *)
                 let params =
-                  List.mapi
-                    (fun i arg_ty ->
-                      let name = Id.of_string ("a" ^ string_of_int i) in
+                  List.map
+                    (fun (name, arg_ty) ->
                       (* A parameter is a declaration position: writing the
                          slot down as [std::any] is what makes the value
                          boxed, so a [Topaque] here becomes known-boxed. *)
@@ -520,24 +475,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                              arg_ty)
                       in
                       (name, arg_ty, cpp_ty) )
-                    arg_types
+                    eta_params
                 in
-                let nparams = List.length params in
-                let ml_rels =
-                  let real_idx = ref nparams in
-                  List.map (fun t ->
-                    if erased_by_extraction t || Table.is_typeclass_type t then
-                      MLdummy Ktype
-                    else begin
-                      let r = MLrel !real_idx in
-                      decr real_idx; r
-                    end
-                  ) all_arg_types
-                in
-                (* Lift the body's de Bruijn indices to account for the new eta
-                   params *)
-                let lifted_body = Mlutil.ast_lift nparams inner_body in
-                let call_expr = MLapp (lifted_body, ml_rels) in
                 (* Look up body function's types to detect mismatches from
                    inlined constants (e.g. Ref => "%t0" makes Ref A -> std::any
                    but refToIxNat expects RefNat).  Use the concrete types for
@@ -626,7 +565,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                    [MLdummy], so nothing in the body names them; the template
                    parameters are still declared, because the concept probe
                    and every call site spell the same list. *)
-                (cpp_params, method_ret_ty, stmts, n_tc_args_names)
+                (cpp_params, method_ret_ty, stmts, n_tc_args_names) )
             else
               (* Normal case: we have lambdas.  push_vars' lowercases
                  and uniquifies names for the de Bruijn environment;

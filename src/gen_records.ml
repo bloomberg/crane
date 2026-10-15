@@ -437,16 +437,6 @@ let gen_typeclass_cpp name fields =
   in
   Dtemplate (all_params, None, Dconcept (name, concept_body))
 
-(** Whether a binder's recorded type says it carries nothing: extraction
-    writes an erased binder's type as [Tdummy], and one it could not type at
-    all as [Taxiom]. *)
-let is_erasable_binder_ty ty =
-  erased_by_extraction ty || match ty with Miniml.Taxiom -> true | _ -> false
-
-(** The number of lambdas a term opens with. *)
-let rec count_leading_lams = function
-  | MLlam (_, _, rest) -> 1 + count_leading_lams rest
-  | _ -> 0
 
 (** What becomes of one of an instance method's binders in the C++ signature.
 

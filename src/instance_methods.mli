@@ -104,3 +104,23 @@ val declared_args_and_ret : method_ -> Miniml.ml_type list * Miniml.ml_type
     which each generation of the method needs. *)
 val prepare_method :
   ?freshen:bool -> instance -> Names.GlobRef.t -> Miniml.ml_type -> Miniml.ml_ast -> method_
+
+(** One of the leading binders of a method's body, as its accessor takes it:
+    a parameter, or [erased] -- no parameter, but still a binder the body
+    counts through. *)
+type param = {
+  binder : Miniml.ml_ident;
+  binder_ty : Miniml.ml_type;
+  erased : bool;
+}
+
+(** [params m] -- the binders {!method_.body} opens with that the accessor
+    takes, up to the declared arity, and the body past them. *)
+val params : method_ -> param list * Miniml.ml_ast
+
+(** [eta_call m inner_body] -- for a method whose accessor takes no parameter
+    from its body ({!params}), the parameters it is eta-expanded with, named
+    [a0], [a1], ..., one per declared argument that is neither erased nor
+    class-typed, and [inner_body] applied to them; [None] where there is no
+    such argument, the field being a value. *)
+val eta_call : method_ -> Miniml.ml_ast -> ((Names.Id.t * Miniml.ml_type) list * Miniml.ml_ast) option

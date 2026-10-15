@@ -448,3 +448,77 @@ let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instan
      the signature typed [Option<_A0>]. *)
   let field_body = Mlutil.recover_erased_types subst_ty field_body in
   {field_ml_ty; subst_args; subst_ty; n_method_tvars; declared_arity; body = field_body}
+
+type param = {
+  binder : ml_ident;
+  binder_ty : ml_type;
+  erased : bool;
+}
+
+(* Whether a binder's recorded type says it carries nothing: extraction
+   writes an erased binder's type as [Tdummy], and one it could not type at
+   all as [Taxiom]. *)
+let is_erasable_binder_ty ty =
+  erased_by_extraction ty || match ty with Miniml.Taxiom -> true | _ -> false
+
+let rec count_leading_lams = function
+  | MLlam (_, _, rest) -> 1 + count_leading_lams rest
+  | _ -> 0
+
+let params m =
+  let rec extract n rem acc body =
+    match body with
+    (* Past the declared arity the remaining binders are the value's own, not
+       the accessor's: they stay in the body, which the return type spells as
+       a [std::function].  Checked before the erased case, since an erased
+       binder past the arity is the value's too. *)
+    | MLlam _ when n >= m.declared_arity -> (List.rev acc, body)
+    | MLlam (binder, binder_ty, rest)
+      when is_erasable_binder_ty binder_ty
+           && (rem > m.declared_arity - n || not (Mlutil.ast_occurs 1 rest)) ->
+      (* An erased binder is no parameter, but it is still a binder: dropping
+         it would shift every de Bruijn index the body uses to name the ones
+         that remain.
+
+         A binder may only be dropped while binders are left to spare, or
+         while the body makes no use of it: extraction sometimes annotates a
+         value binder as erased ([ret := @Some] extracts as [fun (_ : axiom)
+         (x : dummy) => Some x]), and the declared arity is what says how many
+         of them the concept is owed. *)
+      extract n (rem - 1) ({binder; binder_ty; erased = true} :: acc) rest
+    | MLlam (binder, binder_ty, rest) ->
+      extract (n + 1) (rem - 1) ({binder; binder_ty; erased = false} :: acc) rest
+    | _ -> (List.rev acc, body)
+  in
+  extract 0 (count_leading_lams m.body) [] m.body
+
+let eta_call m inner_body =
+  let all_arg_types, _ = args_and_ret m in
+  (* Filter out type class instance and erased args *)
+  let arg_types =
+    List.filter
+      (fun t -> (not (Table.is_typeclass_type t)) && not (erased_by_extraction t))
+      all_arg_types
+  in
+  match arg_types with
+  | [] -> None
+  | _ ->
+    (* Parameters only for the real arguments, but [MLdummy] for the erased
+       ones in the application, so the body receives every argument it
+       expects. *)
+    let nparams = List.length arg_types in
+    let ml_rels =
+      let real_idx = ref nparams in
+      List.map
+        (fun t ->
+          if erased_by_extraction t || Table.is_typeclass_type t then MLdummy Ktype
+          else begin
+            let r = MLrel !real_idx in
+            decr real_idx;
+            r
+          end )
+        all_arg_types
+    in
+    let params = List.mapi (fun i t -> (Id.of_string ("a" ^ string_of_int i), t)) arg_types in
+    (* The body's de Bruijn indices lifted over the new parameters. *)
+    Some (params, MLapp (Mlutil.ast_lift nparams inner_body, ml_rels))
