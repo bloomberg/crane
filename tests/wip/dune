@@ -272,3 +272,14 @@
   (alias runtest)
   (deps tyarg_implicit_type_binder.t.exe)
   (action (run ./tyarg_implicit_type_binder.t.exe))))
+
+(subdir promoted_module_static_fn_undefined
+ (rule
+  (targets promoted_module_static_fn_undefined.t.exe)
+  (deps PromotedModuleStaticFnUndefined.vo promoted_module_static_fn_undefined.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} promoted_module_static_fn_undefined.t.exe promoted_module_static_fn_undefined.cpp promoted_module_static_fn_undefined.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps promoted_module_static_fn_undefined.t.exe)
+  (action (run ./promoted_module_static_fn_undefined.t.exe))))
