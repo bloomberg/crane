@@ -37,10 +37,6 @@ type generated = (Common.env * Minicpp.cpp_decl) list
 (** Declarations finished for the printer. *)
 type rendered = (Common.env * Cpp_erasure.settled) list
 
-(** [finished ds] finishes the declarations one MiniML declaration became. *)
-let finished (ds : generated) : rendered =
-  List.map (fun (env, d) -> (env, Cpp_pipeline.finish d)) ds
-
 
 (** Print the declarations an entry point answered with. *)
 let pp_decls (ds : rendered) =
@@ -944,26 +940,26 @@ let generate d =
     functions ~lifted:(By_element helpers) funs
   | Dfix fds -> group fds
 
-(** [finished_ahead_once table key finish ~what] is [finish ()] ahead of
-    the files ({!generating_ahead}), recorded in [table] by the physical
-    identity of [key].  A file's pass takes it from there -- finished again
-    and compared under [CRANE_CHECK_IR] -- and finds it missing only as an
-    anomaly about [what]. *)
-let finished_ahead_once table key finish ~what =
-  let earlier = Node_table.find_opt table (Obj.repr key) in
-  match (get_phase (), earlier) with
+(** {2 The finished program}
+
+    What a file writes is read from the unit's finished program
+    ({!Finished_program}), finished ahead of the files; a file's pass
+    finishes a declaration again under [CRANE_CHECK_IR] to compare, and
+    finds one missing only as an anomaly. *)
+
+type finishing = Finished_program.job
+
+let finishing = Finished_program.job
+let finish_program = Finished_program.finish
+let refinish_program = Finished_program.refinish
+
+(** [finished_of ~what job] is what {!finish_program} finished [job] as. *)
+let finished_of ~what (job : finishing) =
+  match (get_phase (), Finished_program.find job) with
   | Plan, _ -> CErrors.anomaly Pp.(str "Crane: " ++ str what ++ str " was finished while planning.")
-  | Emit _, Some f when !ahead ->
-    if !rechecking && compare f (finish ()) <> 0 then
-      CErrors.anomaly
-        Pp.(str "Crane: " ++ str what ++ str " was finished differently again in the reverse order.");
-    f
-  | Emit _, None when !ahead ->
-    let f = finish () in
-    Node_table.replace table (Obj.repr key) f;
-    f
   | Emit _, Some f ->
-    if Sys.getenv_opt "CRANE_CHECK_IR" <> None && compare f (finish ()) <> 0 then
+    if (not !ahead) && Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (Finished_program.finishes_as job f)
+    then
       CErrors.anomaly
         Pp.(str "Crane: " ++ str what
             ++ str " was finished differently ahead of the files and in one of them.");
@@ -973,115 +969,43 @@ let finished_ahead_once table key finish ~what =
       Pp.(str "Crane: " ++ str what ++ str " was rendered that was not finished ahead of \
                                          the files.")
 
-(** Each declaration finished on its own ahead of the files -- one written
-    without a definition, a lifted helper -- by its physical identity. *)
-let finished_alone_ahead : Cpp_erasure.settled Node_table.t = Node_table.create 64
-
-let () = State.on_reset State.Unit (fun () -> Node_table.reset finished_alone_ahead)
-
-let finished_alone d =
-  finished_ahead_once finished_alone_ahead d (fun () -> Cpp_pipeline.finish d) ~what:"a declaration"
+(** A declaration finished on its own -- one written without a definition,
+    a lifted helper. *)
+let finished_alone d = finished_of ~what:"a declaration" (finishing d)
 
 (** [render_decl env d] prints [d] finished ahead of the files
     ({!finished_alone}). *)
 let render_decl env d = Cpp_print.pp_cpp_decl env (finished_alone d)
 
-(** Each root instance's declarations, finished as one group ahead of the
-    files, by the physical identity of their generation. *)
-let instances_finished_ahead : rendered Node_table.t = Node_table.create 16
+(** [finished_group ~what ds] is [ds], each finished ahead of the files. *)
+let finished_group ~what (ds : generated) : rendered =
+  List.map (fun (env, d) -> (env, finished_of ~what (finishing d))) ds
 
-let () = State.on_reset State.Unit (fun () -> Node_table.reset instances_finished_ahead)
+let finished_instance = finished_group ~what:"an instance"
 
-let finished_instance (ds : generated) =
-  finished_ahead_once instances_finished_ahead ds (fun () -> finished ds) ~what:"an instance"
+(** What finishing [funs] takes: every definition among them, then every
+    declaration. *)
+let functions_finishing (funs : Gen_decls.generated_fun list) =
+  List.filter_map
+    (fun (g : Gen_decls.generated_fun) ->
+      match g.gf_entity with Defined (d, _) -> Some (finishing d) | Declared _ -> None )
+    funs
+  @ List.filter_map
+      (fun (g : Gen_decls.generated_fun) ->
+        match g.gf_entity with Declared d -> Some (finishing d) | Defined _ -> None )
+      funs
 
-(** The entity each generated definition was finalized as ahead of the
-    files, by the physical identity of the declaration generated: a function
-    filed in the header is a new record of the same declaration
-    ({!functions}). *)
-let finalized_ahead : Function_entity.t Node_table.t = Node_table.create 64
-
-let () = State.on_reset State.Unit (fun () -> Node_table.reset finalized_ahead)
-
-(** [finalized funs] pairs each generated function with its entity, every
-    definition among them finished as one group
-    ({!Function_entity.finalize_group}); [None] for a declaration.  The
-    functions are finished ahead of the files, with the walk that generates
-    them ({!generating_ahead}), and a file's pass takes their entities from
-    there, checked under [CRANE_CHECK_IR] like the generation itself; that it
-    finds one missing is an anomaly. *)
+(** [finalized funs] pairs each generated function with its entity, made
+    of the definition finished ahead of the files; [None] for a
+    declaration. *)
 let finalized (funs : Gen_decls.generated_fun list) =
-  let finalize () =
-    let entities =
-      Function_entity.finalize_group
-        (List.filter_map
-           (fun (g : Gen_decls.generated_fun) ->
-             match g.gf_entity with Defined (d, _) -> Some d | Declared _ -> None )
-           funs )
-    in
-    let rec pair funs es =
-      match (funs, es) with
-      | ({Gen_decls.gf_entity = Defined _; _} as g) :: funs, e :: es ->
-        (g, Some e) :: pair funs es
-      | ({gf_entity = Declared _; _} as g) :: funs, es -> (g, None) :: pair funs es
-      | [], [] -> []
-      | _ -> assert false
-    in
-    pair funs entities
-  in
-  match get_phase () with
-  | Plan -> CErrors.anomaly Pp.(str "Crane: a function was finished while planning.")
-  | Emit _ when !ahead && !rechecking ->
-    let paired = finalize () in
-    List.iter
-      (fun ((g : Gen_decls.generated_fun), e) ->
-        match (g.gf_entity, e) with
-        | Defined (d, _), Some e ->
-          if
-            not
-              (Option.equal
-                 (fun a b -> compare a b = 0)
-                 (Node_table.find_opt finalized_ahead (Obj.repr d))
-                 (Some e) )
-          then
-            CErrors.anomaly
-              Pp.(str "Crane: a function was finished differently again in the reverse order.")
-        | Declared d, _ -> ignore (finished_alone d : Cpp_erasure.settled)
-        | Defined _, None -> () )
-      paired;
-    paired
-  | Emit _ when !ahead ->
-    let paired = finalize () in
-    List.iter
-      (fun ((g : Gen_decls.generated_fun), e) ->
-        match (g.gf_entity, e) with
-        | Defined (d, _), Some e -> Node_table.replace finalized_ahead (Obj.repr d) e
-        | Declared d, _ -> ignore (finished_alone d : Cpp_erasure.settled)
-        | Defined _, None -> () )
-      paired;
-    paired
-  | Emit _ ->
-    let paired =
-      List.map
-        (fun (g : Gen_decls.generated_fun) ->
-          match g.gf_entity with
-          | Declared _ -> (g, None)
-          | Defined (d, _) -> (
-            match Node_table.find_opt finalized_ahead (Obj.repr d) with
-            | Some e -> (g, Some e)
-            | None ->
-              CErrors.anomaly
-                Pp.(str "Crane: a function was rendered that was not finished ahead of the \
-                         files.") ) )
-        funs
-    in
-    if Sys.getenv_opt "CRANE_CHECK_IR" <> None
-       && compare (List.map snd paired) (List.map snd (finalize ())) <> 0
-    then
-      CErrors.anomaly
-        Pp.(str "Crane: a function was finished differently ahead of the files and in one \
-                 of them.");
-    paired
+  List.map
+    (fun (g : Gen_decls.generated_fun) ->
+      match g.gf_entity with
+      | Declared _ -> (g, None)
+      | Defined (d, _) ->
+        (g, Some (Function_entity.of_finished (finished_of ~what:"a function" (finishing d)))) )
+    funs
 
 (** The views of [funs] a file writes, finished: a definition in the file
     that holds it, and in the header a declaration of a definition the
@@ -1335,23 +1259,20 @@ let record_methods r vars candidates =
     (fun () ->
       Translation.collecting_all_lifted (fun () -> Gen_decls.gen_record_methods r vars candidates) )
 
-(** The methods of each eponymous record, finished ahead of the files, by
-    the physical identity of their generation. *)
-let record_methods_finished : Cpp_erasure.settled Node_table.t = Node_table.create 8
-
-let () = State.on_reset State.Unit (fun () -> Node_table.reset record_methods_finished)
+(** What finishing the methods [fields] of the eponymous record [r], of
+    variables [vars], takes: the struct members they are, recorded by the
+    physical identity of their generation. *)
+let record_methods_finishing r vars fields : finishing =
+  Finished_program.job_of fields
+    (Dfields
+       { ds_ref = r;
+         ds_fields = fields;
+         ds_tparams = List.map (fun v -> (TTtypename, v)) vars;
+         ds_constraint = None;
+         ds_needs_shared_from_this = false } )
 
 let finished_record_methods r vars fields =
-  finished_ahead_once record_methods_finished fields
-    (fun () ->
-      Cpp_pipeline.finish
-        (Dfields
-           { ds_ref = r;
-             ds_fields = fields;
-             ds_tparams = List.map (fun v -> (TTtypename, v)) vars;
-             ds_constraint = None;
-             ds_needs_shared_from_this = false } ) )
-    ~what:"an eponymous record's methods"
+  finished_of ~what:"an eponymous record's methods" (record_methods_finishing r vars fields)
 
 (** What was generated ahead of the header for each declaration it writes
     alone, by the declaration's physical node, with the module it was
@@ -1384,16 +1305,7 @@ let header_entity d gen =
       (g, helpers) )
     (fun () -> Translation.collecting_all_lifted gen)
 
-(** What the header alone writes of each declaration, finished as one group
-    ahead of the files, by the physical identity of its generation: the
-    declarations, and apart from them the member definitions written after
-    the group. *)
-let headers_finished : rendered Node_table.t = Node_table.create 64
-
-let () = State.on_reset State.Unit (fun () -> Node_table.reset headers_finished)
-
-let finished_header (ds : generated) =
-  finished_ahead_once headers_finished ds (fun () -> finished ds) ~what:"a header declaration"
+let finished_header = finished_group ~what:"a header declaration"
 
 (** [in_header_scope f] runs [f] in the render context the header writes
     the current module's body in, as planned ({!header_scope}). *)
@@ -1418,11 +1330,11 @@ let generate_in_scope d k =
 type ahead = {
   entities : Generated_program.entity list;
   functions : cpp_decl list;
-  finish : unit -> unit;
+  finishing : finishing list;
   helpers : cpp_decl list;
 }
 
-let nothing_ahead = {entities = []; functions = []; finish = ignore; helpers = []}
+let nothing_ahead = {entities = []; functions = []; finishing = []; helpers = []}
 
 let functions_ahead ~entities (funs : Gen_decls.generated_fun list) =
   { entities;
@@ -1431,8 +1343,7 @@ let functions_ahead ~entities (funs : Gen_decls.generated_fun list) =
         (fun (g : Gen_decls.generated_fun) ->
           match g.gf_entity with Defined (d, _) -> Some d | Declared _ -> None )
         funs;
-    finish =
-      (fun () -> ignore (finalized funs : (Gen_decls.generated_fun * Function_entity.t option) list));
+    finishing = functions_finishing funs;
     helpers = List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) funs }
 
 let generate_ahead d =
@@ -1442,16 +1353,13 @@ let generate_ahead d =
     let ds, helpers = instance_entity r a t in
     { entities = [entity r (List.map snd ds) helpers];
       functions = [];
-      finish = (fun () -> ignore (finished_instance ds : rendered));
+      finishing = List.map (fun (_, d) -> finishing d) ds;
       helpers }
   | Header_only gen ->
     let g, lifted = header_entity d gen in
     { nothing_ahead with
       entities = [entity (decl_entity d) (List.map snd g.decls) lifted];
-      finish =
-        (fun () ->
-          ignore (finished_header g.member_defs : rendered);
-          ignore (finished_header g.decls : rendered) ) }
+      finishing = List.map (fun (_, d) -> finishing d) (g.member_defs @ g.decls) }
   | Nothing -> nothing_ahead
 
 let regenerate_ahead d =

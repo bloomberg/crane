@@ -1661,9 +1661,8 @@ let rec prlist_sep_nonempty sep f = function
     file being written, grouped as [gens] is: each one's declaration always,
     its definition only in the file that holds it.
 
-    Every definition is finished before it is split, and all of them as one
-    group ({!Function_entity.finalize_group}): a wrapper's functions may call
-    one another in any order. *)
+    Every definition is split as it was finished ahead of the files
+    ({!Cpp_ind.finalized}). *)
 let file_views ~is_header (gens : Gen_decls.generated_fun list list) =
   let views ((g : Gen_decls.generated_fun), entity) =
     let with_env d = (d, g.gf_env) in
@@ -2183,31 +2182,26 @@ let generating_ahead f =
   Translation.clear_seen_lifted_refs ();
   Cpp_ind.generating_ahead f
 
+(** What finishing [aheads] takes: what each generated, in the order
+    generated, and then the helpers lifted out of them, once every function
+    they may call is finished. *)
+let finishing (aheads : Cpp_ind.ahead list) =
+  List.concat_map (fun (a : Cpp_ind.ahead) -> a.finishing) aheads
+  @ List.concat_map (fun (a : Cpp_ind.ahead) -> List.map Cpp_ind.finishing a.helpers) aheads
+
 (** Record the unit's program ({!Generated_program.record_ahead}) and finish
-    what was generated ahead, [aheads] in the order generated:
-    every function, and every helper Loopify transforms, registered with
-    Loopify before any is finished, so that what it sees of the unit does
-    not depend on which were finished before; the helpers last, once every
-    function they may call is finished. *)
+    what was generated ahead, [aheads] in the order generated, all at once
+    ({!Cpp_ind.finish_program}): every function, and every helper Loopify
+    transforms, registered with Loopify before any is finished, so that what
+    it sees of the unit does not depend on which were finished before. *)
 let finish_ahead (aheads : Cpp_ind.ahead list) =
   List.iter (fun (a : Cpp_ind.ahead) -> List.iter Generated_program.record_ahead a.entities) aheads;
   let helpers = List.concat_map (fun (a : Cpp_ind.ahead) -> a.helpers) aheads in
   List.iter (fun (a : Cpp_ind.ahead) -> List.iter Loopify.register_decl a.functions) aheads;
   List.iter (fun h -> if Cpp_pipeline.should_loopify h then Loopify.register_decl h) helpers;
-  List.iter (fun (a : Cpp_ind.ahead) -> a.finish ()) aheads;
-  List.iter (fun h -> ignore (Cpp_ind.finished_alone h : Cpp_erasure.settled)) helpers
+  Cpp_ind.finish_program (finishing aheads)
 
 let generate_decl_ahead d = generating_ahead @@ fun () -> finish_ahead [Cpp_ind.generate_ahead d]
-
-(** Finish [aheads] again in the reverse order, while {!Cpp_ind.regenerating}:
-    what each finishes is compared with what {!finish_ahead} finished. *)
-let refinish_reversed (aheads : Cpp_ind.ahead list) =
-  let aheads = List.rev aheads in
-  List.iter (fun (a : Cpp_ind.ahead) -> a.finish ()) aheads;
-  List.iter
-    (fun (a : Cpp_ind.ahead) ->
-      List.iter (fun h -> ignore (Cpp_ind.finished_alone h : Cpp_erasure.settled)) (List.rev a.helpers) )
-    aheads
 
 let generate_ahead s =
   generating_ahead @@ fun () ->
@@ -2217,7 +2211,7 @@ let generate_ahead s =
   let wrapper_functions = ref [] in
   let aheads = ref [] in
   let later (a : Cpp_ind.ahead) = aheads := a :: !aheads in
-  let lifted helpers = later {Cpp_ind.entities = []; functions = []; finish = ignore; helpers} in
+  let lifted helpers = later {Cpp_ind.entities = []; functions = []; finishing = []; helpers} in
   walk_as_rendered ~modtype:Cpp_ind.modtype_concept
     ~after_module:(fun frame sel ->
       (* The class concepts the module's struct is preceded by. *)
@@ -2227,7 +2221,7 @@ let generate_ahead s =
           later
             { entities = [Cpp_ind.entity r [d] []];
               functions = [];
-              finish = (fun () -> ignore (Cpp_ind.finished_alone d : Cpp_erasure.settled));
+              finishing = [Cpp_ind.finishing d];
               helpers = [] } )
         (declared_classes sel);
       Option.iter
@@ -2236,10 +2230,8 @@ let generate_ahead s =
           later
             { entities = record_method_entities r fields hs;
               functions = [];
-              finish =
-                (fun () ->
-                  if fields <> [] then
-                    ignore (Cpp_ind.finished_record_methods r vars fields : Cpp_erasure.settled) );
+              finishing =
+                (if fields <> [] then [Cpp_ind.record_methods_finishing r vars fields] else []);
               helpers = hs } )
         (eponymous_record_methods frame) )
     ~after_wrapper:(fun () ->
@@ -2271,7 +2263,7 @@ let generate_ahead s =
           later
             { entities = [Cpp_ind.entity r (List.map snd ds) hs];
               functions = [];
-              finish = ignore;
+              finishing = [];
               helpers = hs @ List.map snd ds }
         | Wrapper_nothing -> () )
       | SEdecl d -> later (Cpp_ind.generate_ahead d)
@@ -2285,7 +2277,7 @@ let generate_ahead s =
      plan's Milestone 4). *)
   if Probe.checking () then
     Cpp_ind.regenerating @@ fun () ->
-    refinish_reversed aheads;
+    Cpp_ind.refinish_program (finishing (List.rev aheads));
     walk_as_rendered ~reversed:true ~modtype:Cpp_ind.modtype_concept
       ~after_module:(fun frame _ ->
         Option.iter

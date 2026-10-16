@@ -94,22 +94,35 @@ val generated_once :
     it for both files. *)
 val generating_ahead : (unit -> 'a) -> 'a
 
+(** A declaration to finish ({!Finished_program.job}). *)
+type finishing = Finished_program.job
+
+(** [finishing d] is [d] to finish, its result recorded by [d] itself. *)
+val finishing : Minicpp.cpp_decl -> finishing
+
+(** [finish_program jobs] finishes the unit, ahead of the files
+    ({!Finished_program.finish}); what the files write of it is read from
+    there ({!finished_alone}, {!finalized}, {!finished_record_methods}). *)
+val finish_program : finishing list -> unit
+
+(** [refinish_program jobs] is {!Finished_program.refinish}. *)
+val refinish_program : finishing list -> unit
+
 (** What generating a declaration ahead of the files leaves for later: the
     functions it generated, which Loopify reads while finishing any function
-    of the unit, so that all are registered before any is finished; how to
-    finish what it generated; and the helpers lifted out of it, finished once
-    everything else is. *)
+    of the unit, so that all are registered before any is finished; what of
+    it to finish; and the helpers lifted out of it, finished once everything
+    else is. *)
 type ahead = {
   entities : Generated_program.entity list;
       (** What was generated, as the entities a file records taking it. *)
   functions : Minicpp.cpp_decl list;
-  finish : unit -> unit;
+  finishing : finishing list;
   helpers : Minicpp.cpp_decl list;
 }
 
 (** [functions_ahead ~entities funs]: [funs], generated ahead
-    ({!generated_once}) as [entities], finished later as one group
-    ({!finalized}). *)
+    ({!generated_once}) as [entities], to finish later ({!finalized}). *)
 val functions_ahead :
   entities:Generated_program.entity list -> Gen_decls.generated_fun list -> ahead
 
@@ -127,8 +140,8 @@ val funs_entities :
     that {!impl_decls} and {!header_decls} then take from here: its
     functions ({!generated_once}), the struct of the instance it is
     ({!instance_entity}), or what the header alone writes of it, generated in
-    the scope the header writes it in ({!header_scope}); and say how to
-    finish them. *)
+    the scope the header writes it in ({!header_scope}); and say what of it
+    to finish. *)
 val generate_ahead : Miniml.ml_decl -> ahead
 
 (** How the header writes a module's body: inside a struct or not, and with
@@ -208,10 +221,18 @@ val record_methods :
   Method_registry.method_candidate list ->
   (Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag) list * Minicpp.cpp_decl list
 
-(** [finished_record_methods r vars fields] is [fields], the methods of the
-    eponymous record [r] of variables [vars], finished as the members of its
-    module's struct: ahead of the files, and taken from there by the header.
-    The key is [fields] itself, as {!record_methods} returned it. *)
+(** [record_methods_finishing r vars fields] is what finishing [fields],
+    the methods of the eponymous record [r] of variables [vars], takes: the
+    members of its module's struct, recorded by [fields] itself, as
+    {!record_methods} returned it. *)
+val record_methods_finishing :
+  Names.GlobRef.t ->
+  Names.Id.t list ->
+  (Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag) list ->
+  finishing
+
+(** [finished_record_methods r vars fields] is {!record_methods_finishing}
+    finished ahead of the files, taken from there by the header. *)
 val finished_record_methods :
   Names.GlobRef.t ->
   Names.Id.t list ->
@@ -229,18 +250,15 @@ val regenerating : (unit -> 'a) -> 'a
 val regenerate_ahead : Miniml.ml_decl -> unit
 
 (** [finished_alone d] is [d] finished on its own ({!Cpp_pipeline.finish}):
-    a declaration written without a definition, or a lifted helper.  Ahead
-    of the files ({!generating_ahead}) it is finished and recorded; a file's
-    pass takes it from there, and finds it missing only as an anomaly.
-    [CRANE_CHECK_IR] finishes again and checks. *)
+    a declaration written without a definition, or a lifted helper, as
+    {!finish_program} finished it.  That it did not is an anomaly; a file's
+    pass finishes it again under [CRANE_CHECK_IR] and checks. *)
 val finished_alone : Minicpp.cpp_decl -> Cpp_erasure.settled
 
-(** [finalized funs] pairs each generated function with its entity, every
-    definition among them finished as one group
-    ({!Function_entity.finalize_group}); [None] for a declaration.  Finished
-    ahead of the files ({!generating_ahead}) and taken from there by a
-    file's pass; that it was not is an anomaly.  [CRANE_CHECK_IR] finishes
-    again and checks. *)
+(** [finalized funs] pairs each generated function with its entity, made of
+    the definition {!finish_program} finished; [None] for a declaration.
+    That it did not is an anomaly; a file's pass finishes it again under
+    [CRANE_CHECK_IR] and checks. *)
 val finalized :
   Gen_decls.generated_fun list ->
   (Gen_decls.generated_fun * Function_entity.t option) list

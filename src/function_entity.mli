@@ -16,12 +16,6 @@ type t
     function. *)
 val of_finished : Cpp_erasure.settled -> t
 
-(** [finalize_group ds] finishes declarations that may call one another
-    ({!Cpp_pipeline.finish}: every function of the unit is registered with
-    Loopify before any is finished), each split as {!of_finished} splits
-    it. *)
-val finalize_group : Minicpp.cpp_decl list -> t list
-
 (** The declaration of the function the entity defines; anything else is its
     own declaration. *)
 val declaration : t -> Cpp_erasure.settled
