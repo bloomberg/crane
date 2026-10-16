@@ -2064,7 +2064,9 @@ let pp_wrapper_module_dual ~is_header func_sels =
        not a member of whatever module happened to declare it.  So it is
        lifted out of the wrapper's struct to namespace scope, exactly as an
        instance declared at the extraction root is emitted.  Dropping it here
-       left every use of it undeclared. *)
+       left every use of it undeclared.  Only the header writes it, so only
+       the header generates it, as at the root ({!Cpp_ind.generate}). *)
+    | SEdecl (Dterm (_, a, t)) when is_typeclass_instance a t && not is_header -> ([], [])
     | SEdecl (Dterm (r, a, t)) when is_typeclass_instance a t ->
       (* The helpers lifted out of its methods come first: the instance
          struct calls them. *)
