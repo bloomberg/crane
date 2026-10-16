@@ -1121,25 +1121,6 @@ let report_decided_while_rendering before =
       ( "decided while rendering: "
       ^ if grown = [] then "nothing" else String.concat ", " grown )
 
-(** {2 Extraction of one decl to stdout} *)
-
-(** Renders a single ML declaration to C++ output, once the unit it belongs
-    to is planned. *)
-let print_one_decl struc mp decl =
-  let d = descr () in
-  reset_renaming_tables AllButExternal;
-  ignore (plan_layout struc);
-  freeze_global_ids ();
-  set_phase (Emit Impl);
-  push_visible mp [];
-  Cpp.generate_decl_ahead decl;
-  let ans = d.pp_decl decl in
-  pop_visible ();
-  (* The one box the printers rely on: inside it every break is a newline,
-     which is what turns {!Cpp_print.cut2} into the blank line between two
-     declaration groups.  Everything else is clang-format's to lay out. *)
-  v 0 ans
-
 (** The tables output may add to: the headers a body demands, and the names
     of the helpers lifted out of a body as it is generated, which
     {!Common.names_decided_while_emitting} lists for the check below. *)
@@ -1473,6 +1454,17 @@ let elaborate_calls = "elaborate_calls"
 let plan_foreign_callables = "plan_foreign_callables"
 let elaborate_pass_names = [elaborate_calls; plan_foreign_callables]
 
+(** Elaborate every call of [struc] and install the elaborations, then plan
+    the callables of the globals it names that it does not declare. *)
+let elaborate_unit struc =
+  Pipeline_trace.event "elaborate" elaborate_calls;
+  let elaborations = Core_elaborate.structure struc in
+  Core_elaborate.install elaborations;
+  Pipeline_trace.event "elaborate" plan_foreign_callables;
+  Callable_abi.install_foreign
+    (fun r -> Translation_calls.callee_abi ~instances:0 r)
+    (Core_elaborate.referenced elaborations)
+
 (** Decide the kinds of the template parameters of the unit's inductives and
     type aliases, into [plan], and install them for the readers not yet
     converted.  They are decided from the inductive kinds {!analyze_and_plan}
@@ -1544,13 +1536,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   let planned = observed_fingerprint ~stage:"unit" struc in
   let modules, representation, callables, assumed = plan_layout struc in
   let plan = Target_plan.with_layout plan modules representation callables assumed in
-  Pipeline_trace.event "elaborate" elaborate_calls;
-  let elaborations = Core_elaborate.structure struc in
-  Core_elaborate.install elaborations;
-  Pipeline_trace.event "elaborate" plan_foreign_callables;
-  Callable_abi.install_foreign
-    (fun r -> Translation_calls.callee_abi ~instances:0 r)
-    (Core_elaborate.referenced elaborations);
+  elaborate_unit struc;
   let census_after_planning = Table.census () in
   freeze_global_ids ();
   (* Both bodies are rendered before either file is opened.  A preamble has to
@@ -2440,6 +2426,26 @@ let extract_and_compile ~opaque_access file l =
                      spc () ++ str "(" ++ str filename ++ str ")" )
               ++ fnl () ) ) )
 
+(** {2 Extraction of one decl to stdout} *)
+
+(** Renders the single ML declaration [decl], of the module [mp], to C++
+    output, once the unit [struc] it belongs to is planned. *)
+let print_one_decl struc mp decl =
+  let d = descr () in
+  reset_renaming_tables AllButExternal;
+  ignore (plan_layout struc);
+  elaborate_unit struc;
+  freeze_global_ids ();
+  set_phase (Emit Impl);
+  push_visible mp [];
+  Cpp.generate_decl_ahead decl;
+  let ans = d.pp_decl decl in
+  pop_visible ();
+  (* The one box the printers rely on: inside it every break is a newline,
+     which is what turns {!Cpp_print.cut2} into the blank line between two
+     declaration groups.  Everything else is clang-format's to lay out. *)
+  v 0 ans
+
 (* Show the extraction of the current ongoing proof *)
 let show_extraction ~pstate =
   init ~inner:true false false;
@@ -2452,6 +2458,6 @@ let show_extraction ~pstate =
     let l = Label.of_id (Declare.Proof.get_name pstate) in
     let fake_ref = GlobRef.ConstRef (Constant.make2 mp l) in
     let decl = Dterm (fake_ref, ast, ty) in
-    print_one_decl [] mp decl
+    print_one_decl [(mp, [(l, SEdecl decl)])] mp decl
   in
   Feedback.msg_notice (Pp.prlist_with_sep Pp.fnl extr_term trms)

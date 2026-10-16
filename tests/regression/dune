@@ -12864,3 +12864,14 @@
   (alias runtest)
   (deps promoted_module_static_fn_undefined.t.exe)
   (action (run ./promoted_module_static_fn_undefined.t.exe))))
+
+(subdir show_extraction_planned
+ (rule
+  (targets show_extraction_planned.t.exe)
+  (deps ShowExtractionPlanned.vo show_extraction_planned.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} show_extraction_planned.t.exe show_extraction_planned.cpp show_extraction_planned.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps show_extraction_planned.t.exe)
+  (action (run ./show_extraction_planned.t.exe))))
