@@ -279,23 +279,21 @@ val get_visible_mps : unit -> ModPath.t list
 val top_visible_mp : unit -> ModPath.t
 
 (** Push a module onto the visibility stack. The [module_path list] corresponds
-    to module parameters, the innermost one coming first in the list. *)
-val push_visible : ModPath.t -> ModPath.t list -> unit
+    to module parameters, the innermost one coming first in the list.
+    [members] are the C++ names the module's scope declares: an outer name
+    they hide is qualified, even in a body printed ahead of their
+    declarations. *)
+val push_visible : ?members:Id.Set.t -> ModPath.t -> ModPath.t list -> unit
 
 (** Pop the innermost visible layer. *)
 val pop_visible : unit -> unit
-
-(** Declare the C++ names the innermost visible layer's scope holds, before
-    any is printed: an outer name they hide is then qualified even in a body
-    printed ahead of their declarations. *)
-val add_visible_members : Id.Set.t -> unit
 
 (** Whether a visible scope nearer than global scope declares the name,
     hiding a global name spelled the same. *)
 val hidden_by_member : string -> bool
 
 (** The C++ names a structure declares as members of its struct, as
-    {!add_visible_members} takes them. *)
+    {!push_visible} takes them. *)
 val member_names_of_sel : Miniml.ml_module_structure -> Id.Set.t
 
 (** A snapshot of the visibility stack: the scope a name is spelled from. *)

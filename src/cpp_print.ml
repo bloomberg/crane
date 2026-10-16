@@ -3460,8 +3460,7 @@ let with_struct_scope r f =
         (Printf.sprintf "%sstruct_%s_%d" Common.crane_local_prefix
            (Label.to_string (MutInd.label kn)) i)
     in
-    push_visible (ModPath.MPdot (top_visible_mp (), scope)) [];
-    add_visible_members (Id.Set.of_list ctors);
+    push_visible ~members:(Id.Set.of_list ctors) (ModPath.MPdot (top_visible_mp (), scope)) [];
     Fun.protect ~finally:pop_visible f
   | _ -> f ()
 

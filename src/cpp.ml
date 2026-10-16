@@ -1597,8 +1597,7 @@ and pp_module_expr ~is_header f params = function
         Probe.violation "header scopes"
           Pp.(str "the module " ++ str (ModPath.to_string mp) ++ str " has no planned scope")
     end;
-    push_visible mp params;
-    add_visible_members (member_names_of_sel sel);
+    push_visible ~members:(member_names_of_sel sel) mp params;
     let old_structure_decls = !current_structure_decls in
     current_structure_decls := sel;
     let old_local_inductives = get_local_inductives () in

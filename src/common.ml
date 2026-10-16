@@ -677,31 +677,30 @@ let clear_non_output_modules () = Hashtbl.clear valid_output_module_set
       all a level knows: which names hide which is a question about the
       program, not about what was printed before. *)
 
-(** A layer of the visibility stack, tracking names visible at one scope level.
-*)
+(** A layer of the visibility stack: one scope level. *)
 type visible_layer = {
   mp : ModPath.t;
   params : ModPath.t list;
-  mutable members : Id.Set.t;
+  members : Id.Set.t;
 }
 
-(** Visibility stack for module rendering: tracks which module paths are in
-    scope and their label-to-key content mappings. *)
-let pop_visible, push_visible, get_visible, set_visible =
+(** Visibility stack for module rendering: the scopes enclosing what is being
+    written, innermost first. *)
+let pop_visible, push_layer, get_visible, set_visible =
   let vis = ref [] in
   register_cleanup (fun () -> vis := []);
   let pop () =
     match !vis with
     | [] -> CErrors.anomaly (Pp.str "pop_visible: empty visibility stack")
     | _ :: vl -> vis := vl
-  and push mp mps =
-    vis := {mp; params = mps; members = Id.Set.empty} :: !vis
+  and push layer = vis := layer :: !vis
   and get () = !vis
   and set v = vis := v in
   (pop, push, get, set)
 
-(** The visibility stack as it stands; layers are shared, not copied, so names
-    registered in them later are still seen. *)
+let push_visible ?(members = Id.Set.empty) mp params = push_layer {mp; params; members}
+
+(** The visibility stack as it stands. *)
 type visibility = visible_layer list
 
 let current_visibility = get_visible
@@ -727,14 +726,9 @@ let top_visible () =
 (** Get the module path of the innermost visible layer. *)
 let top_visible_mp () = (top_visible ()).mp
 
-(** Declare the C++ names the current visible layer's scope holds. *)
-let add_visible_members ids =
-  let visible = top_visible () in
-  visible.members <- Id.Set.union ids visible.members
-
 (** Whether a visible scope nearer than global scope declares [name] -- a
     member of a module's struct, or a constructor's struct inside an
-    inductive's ({!add_visible_members}) -- hiding a global name spelled so.
+    inductive's ({!push_visible}) -- hiding a global name spelled so.
     Of a qualified name, its first component is the one looked up. *)
 let hidden_by_member name =
   let head =
