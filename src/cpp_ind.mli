@@ -98,14 +98,28 @@ val generating_ahead : (unit -> 'a) -> 'a
     finish what it generated; and the helpers lifted out of it, finished once
     everything else is. *)
 type ahead = {
+  entities : Generated_program.entity list;
+      (** What was generated, as the entities a file records taking it. *)
   functions : Minicpp.cpp_decl list;
   finish : unit -> unit;
   helpers : Minicpp.cpp_decl list;
 }
 
-(** [functions_ahead funs]: [funs], generated ahead ({!generated_once}),
-    finished later as one group ({!finalized}). *)
-val functions_ahead : Gen_decls.generated_fun list -> ahead
+(** [functions_ahead ~entities funs]: [funs], generated ahead
+    ({!generated_once}) as [entities], finished later as one group
+    ({!finalized}). *)
+val functions_ahead :
+  entities:Generated_program.entity list -> Gen_decls.generated_fun list -> ahead
+
+(** [entity r decls helpers] is the generation of [r]: [decls], and the
+    helpers among [helpers]. *)
+val entity :
+  Names.GlobRef.t -> Minicpp.cpp_decl list -> Minicpp.cpp_decl list -> Generated_program.entity
+
+(** [funs_entities ~fallback funs] is each generated function as the entity
+    its declaration is about, [fallback] where it says none. *)
+val funs_entities :
+  fallback:Names.GlobRef.t -> Gen_decls.generated_fun list -> Generated_program.entity list
 
 (** Generate, ahead of both files, what the declaration [d] is written as
     that {!impl_decls} and {!header_decls} then take from here: its

@@ -1,19 +1,18 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** What an emission generated, as a value rather than as the documents it
-    was printed into.
+(** What a unit generated, as a value rather than as the documents it was
+    printed into.
 
-    Each source declaration an emission generates is one entity, with the
-    MiniCpp declarations generating it produced and the helpers lifted out of
-    its bodies; each helper records the entity it was lifted out of.
+    Each source declaration generated is one entity, with the MiniCpp
+    declarations generating it produced and the helpers lifted out of its
+    bodies; each helper records the entity it was lifted out of.
 
-    Transitional: generation is still driven from inside the printer's
-    traversal, which records each generation as it renders it, so a file's
-    program is complete only once its render is.  What it already
-    establishes is identity: {!check_against_plan} holds every unit to
-    "emission generates what the unit declares, and the helpers lifted out of
-    it". *)
+    The unit's program is recorded as the walk ahead of the files generates
+    it ({!record_ahead}); each file's render records the entities it takes
+    from there ({!record}).  {!check_against_ahead} holds the two to the same
+    entities, and {!check_against_plan} holds every unit to "emission
+    generates what the unit declares, and the helpers lifted out of it". *)
 
 type id =
   | Source of Entity_id.t
@@ -80,3 +79,13 @@ val emitted : Common.file -> t
     was lifted out of such an entity or out of none: emission generates what
     was planned, and the helpers its bodies lift. *)
 val check_against_plan : declares:(Names.GlobRef.t -> bool) -> unit
+
+(** [record_ahead e] adds [e] to the unit's program as the walk ahead of the
+    files generates it. *)
+val record_ahead : entity -> unit
+
+(** Under [CRANE_CHECK_IR], fail unless the entities the two files took,
+    with the helpers they claimed, are exactly those generated ahead of
+    them: the walk ahead generates what the renders write, and nothing
+    else. *)
+val check_against_ahead : unit -> unit

@@ -1604,6 +1604,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   Table.freeze_demands ();
   check_no_late_decisions ~planned:planned_checkpoint ~generated:generated_checkpoint;
   Generated_program.check_against_plan ~declares:(declares struc);
+  Generated_program.check_against_ahead ();
   Install_legacy_plan.check_installed facts plan;
   check_structure_unchanged planned struc;
   if Pipeline_trace.enabled () then begin

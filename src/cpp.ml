@@ -941,32 +941,39 @@ let generated_concept r fields =
 let record_method_candidates candidates =
   List.filter (fun (r, _, _, _) -> not (Table.is_projection r)) (List.rev candidates)
 
+(** The methods [fields] of the eponymous record [r], with the helpers
+    [lifted] out of them, each as the generation of the function it was made
+    of, with the helpers lifted out of it. *)
+let record_method_entities r fields lifted =
+  List.filter_map
+    (fun ((f, _, _) as field) ->
+      match f with
+      | Fmethod {mf_globref = Some m; _} ->
+        let own d =
+          match Option.bind (decl_globref d) Lifted.of_ref with
+          | Some h -> Option.equal Names.GlobRef.UserOrd.equal (Lifted.origin h) (Some m)
+          | None -> false
+        in
+        Some
+          (Cpp_ind.entity m
+             [ Dfields
+                 { ds_ref = r;
+                   ds_fields = [field];
+                   ds_tparams = [];
+                   ds_constraint = None;
+                   ds_needs_shared_from_this = false } ]
+             (List.filter own lifted) )
+      | _ -> None )
+    fields
+
 (** The methods of the eponymous record [r] made of [candidates], each
     recorded as the generation of the function it was made of, and the
     helpers lifted out of their bodies, which are members beside them. *)
 let generated_record_methods r vars candidates =
   let fields, lifted = Cpp_ind.record_methods r vars candidates in
   List.iter
-    (fun ((f, _, _) as field) ->
-      ignore
-        ( match f with
-        | Fmethod {mf_globref = Some m; _} ->
-          let own d =
-            match Option.bind (decl_globref d) Lifted.of_ref with
-            | Some h -> Option.equal Names.GlobRef.UserOrd.equal (Lifted.origin h) (Some m)
-            | None -> false
-          in
-          Some
-            (record_entity m
-               [ Dfields
-                   { ds_ref = r;
-                     ds_fields = [field];
-                     ds_tparams = [];
-                     ds_constraint = None;
-                     ds_needs_shared_from_this = false } ]
-               (List.filter own lifted) )
-        | _ -> None ) )
-    fields;
+    (fun e -> ignore (Generated_program.record e))
+    (record_method_entities r fields lifted);
   (fields, lifted)
 
 (** The classes [sel] declares, in order, each with its label and fields:
@@ -2399,12 +2406,14 @@ let generating_ahead f =
   Translation.clear_seen_lifted_refs ();
   Cpp_ind.generating_ahead f
 
-(** Finish what was generated ahead, [aheads] in the order generated:
+(** Record the unit's program ({!Generated_program.record_ahead}) and finish
+    what was generated ahead, [aheads] in the order generated:
     every function, and every helper Loopify transforms, registered with
     Loopify before any is finished, so that what it sees of the unit does
     not depend on which were finished before; the helpers last, once every
     function they may call is finished. *)
 let finish_ahead (aheads : Cpp_ind.ahead list) =
+  List.iter (fun (a : Cpp_ind.ahead) -> List.iter Generated_program.record_ahead a.entities) aheads;
   let helpers = List.concat_map (fun (a : Cpp_ind.ahead) -> a.helpers) aheads in
   List.iter (fun (a : Cpp_ind.ahead) -> List.iter Loopify.register_decl a.functions) aheads;
   List.iter (fun h -> if Cpp_pipeline.should_loopify h then Loopify.register_decl h) helpers;
@@ -2431,21 +2440,25 @@ let generate_ahead s =
   let wrapper_functions = ref [] in
   let aheads = ref [] in
   let later (a : Cpp_ind.ahead) = aheads := a :: !aheads in
-  let finishing finish = later {Cpp_ind.functions = []; finish; helpers = []} in
-  let lifted helpers = later {Cpp_ind.functions = []; finish = ignore; helpers} in
+  let lifted helpers = later {Cpp_ind.entities = []; functions = []; finish = ignore; helpers} in
   walk_as_rendered
     ~after_module:(fun frame sel ->
       (* The class concepts the module's struct is preceded by. *)
       List.iter
         (fun (_, r, fields) ->
           let d = Cpp_ind.concept r fields in
-          finishing (fun () -> ignore (Cpp_ind.finished_alone d : Cpp_erasure.settled)) )
+          later
+            { entities = [Cpp_ind.entity r [d] []];
+              functions = [];
+              finish = (fun () -> ignore (Cpp_ind.finished_alone d : Cpp_erasure.settled));
+              helpers = [] } )
         (declared_classes sel);
       Option.iter
         (fun (r, vars, candidates) ->
           let fields, hs = Cpp_ind.record_methods r vars candidates in
           later
-            { functions = [];
+            { entities = record_method_entities r fields hs;
+              functions = [];
               finish =
                 (fun () ->
                   if fields <> [] then
@@ -2453,7 +2466,14 @@ let generate_ahead s =
               helpers = hs } )
         (eponymous_record_methods frame) )
     ~after_wrapper:(fun () ->
-      later (Cpp_ind.functions_ahead (List.concat (List.rev !wrapper_functions)));
+      let elements = List.rev !wrapper_functions in
+      later
+        (Cpp_ind.functions_ahead
+           ~entities:
+             (List.concat_map
+                (fun (fallback, gs) -> Cpp_ind.funs_entities ~fallback gs)
+                elements )
+           (List.concat_map snd elements) );
       wrapper_functions := [] )
     ~decl:(fun ~wrapper se ->
       match se with
@@ -2466,11 +2486,16 @@ let generate_ahead s =
       | SEdecl (Dtype _ as d) -> later (Cpp_ind.generate_ahead d)
       | _ when wrapper -> (
         match wrapper_element se with
-        | Wrapper_functions (_, generate) -> wrapper_functions := generate () :: !wrapper_functions
+        | Wrapper_functions (fallback, generate) ->
+          wrapper_functions := (fallback, generate ()) :: !wrapper_functions
         | Wrapper_instance (r, a, t) ->
           (* Lifted out of the wrapper whole, after its helpers. *)
           let ds, hs = Cpp_ind.instance_entity r a t in
-          lifted (hs @ List.map snd ds)
+          later
+            { entities = [Cpp_ind.entity r (List.map snd ds) hs];
+              functions = [];
+              finish = ignore;
+              helpers = hs @ List.map snd ds }
         | Wrapper_nothing -> () )
       | SEdecl d -> later (Cpp_ind.generate_ahead d)
       | _ -> ())

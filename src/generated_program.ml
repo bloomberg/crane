@@ -104,3 +104,28 @@ let check_against_plan ~declares =
         Pp.(
           str "Crane: emission generated entities the plan does not account for: "
           ++ prlist_with_sep (fun () -> str ", ") pp_id (Id_set.elements unplanned))
+
+let entities_ids entities =
+  List.fold_left (fun s e -> Id_set.union s (entity_ids e)) Id_set.empty entities
+
+(** The unit's program as the walk ahead of the files generated it, newest
+    first. *)
+let generated_ahead : entity list ref = State.cell State.Unit []
+
+let record_ahead e = generated_ahead := e :: !generated_ahead
+
+let check_against_ahead () =
+  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then
+    let taken =
+      Id_set.union (entities_ids (emitted Common.Impl).entities)
+        (entities_ids (emitted Common.Intf).entities)
+    in
+    let ahead = entities_ids (List.rev !generated_ahead) in
+    if not (Id_set.equal taken ahead) then
+      let show s = Pp.(prlist_with_sep (fun () -> str ", ") pp_id (Id_set.elements s)) in
+      CErrors.anomaly
+        Pp.(
+          str "Crane: the files took other entities than were generated ahead of them; ahead only: "
+          ++ show (Id_set.diff ahead taken)
+          ++ str "; taken only: "
+          ++ show (Id_set.diff taken ahead) )

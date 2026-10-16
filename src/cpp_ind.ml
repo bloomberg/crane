@@ -1101,22 +1101,28 @@ let decl_entity = function
   | Dtype (r, _, _) | Dterm (r, _, _) -> r
   | Dfix fds -> (List.hd fds).fd_ref
 
-(** [record_entity r decls helpers] records the generation of [r]. *)
-let record_entity r decls helpers =
-  Generated_program.record
-    { entity_id = Entity_id.of_ref r;
-      decls;
-      helpers = List.filter_map Generated_program.helper helpers }
+(** [entity r decls helpers] is the generation of [r]: [decls], and the
+    helpers among [helpers]. *)
+let entity r decls helpers : Generated_program.entity =
+  { entity_id = Entity_id.of_ref r;
+    decls;
+    helpers = List.filter_map Generated_program.helper helpers }
 
-(** [record_funs ~fallback funs] records each generated function as the
-    entity its declaration is about, [fallback] where it says none. *)
-let record_funs ~fallback (funs : Gen_decls.generated_fun list) =
-  List.iter
+(** [record_entity r decls helpers] records the generation of [r]. *)
+let record_entity r decls helpers = Generated_program.record (entity r decls helpers)
+
+(** [funs_entities ~fallback funs] is each generated function as the entity
+    its declaration is about, [fallback] where it says none. *)
+let funs_entities ~fallback (funs : Gen_decls.generated_fun list) =
+  List.map
     (fun (g : Gen_decls.generated_fun) ->
       let d = match g.gf_entity with Defined (d, _) | Declared d -> d in
-      ignore
-        (record_entity (Option.default fallback (decl_globref d)) [d] g.gf_lifted) )
+      entity (Option.default fallback (decl_globref d)) [d] g.gf_lifted )
     funs
+
+(** [record_funs ~fallback funs] records {!funs_entities}. *)
+let record_funs ~fallback funs =
+  List.iter (fun e -> ignore (Generated_program.record e)) (funs_entities ~fallback funs)
 
 
 (** What a file writes for one MiniML declaration, and the helpers lifted
@@ -1297,15 +1303,17 @@ let generate_in_scope d k =
   | Dterm _ | Dfix _ -> k (generate d)
 
 type ahead = {
+  entities : Generated_program.entity list;
   functions : cpp_decl list;
   finish : unit -> unit;
   helpers : cpp_decl list;
 }
 
-let nothing_ahead = {functions = []; finish = ignore; helpers = []}
+let nothing_ahead = {entities = []; functions = []; finish = ignore; helpers = []}
 
-let functions_ahead (funs : Gen_decls.generated_fun list) =
-  { functions =
+let functions_ahead ~entities (funs : Gen_decls.generated_fun list) =
+  { entities;
+    functions =
       List.filter_map
         (fun (g : Gen_decls.generated_fun) ->
           match g.gf_entity with Defined (d, _) -> Some d | Declared _ -> None )
@@ -1316,13 +1324,17 @@ let functions_ahead (funs : Gen_decls.generated_fun list) =
 
 let generate_ahead d =
   generate_in_scope d @@ function
-  | Functions {funs; _} -> functions_ahead funs
+  | Functions {funs; _} -> functions_ahead ~entities:(funs_entities ~fallback:(decl_entity d) funs) funs
   | Instance (r, a, t) ->
     let ds, helpers = instance_entity r a t in
-    {functions = []; finish = (fun () -> ignore (finished_instance ds : rendered)); helpers}
+    { entities = [entity r (List.map snd ds) helpers];
+      functions = [];
+      finish = (fun () -> ignore (finished_instance ds : rendered));
+      helpers }
   | Header_only gen ->
-    let g, _ = header_entity d gen in
+    let g, lifted = header_entity d gen in
     { nothing_ahead with
+      entities = [entity (decl_entity d) (List.map snd g.decls) lifted];
       finish =
         (fun () ->
           ignore (finished_header g.member_defs : rendered);
