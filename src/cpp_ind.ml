@@ -913,9 +913,8 @@ let generate d =
     group [{fd_ref = r; fd_body = a; fd_type = t}]
   | Dterm (r, a, t) when is_typeclass_instance a t -> Instance (r, a, t)
   | Dterm (r, a, t) ->
-    (* The helpers lifted out of the body are the element's to place.  A
-       generation the header pass reuses claims them again, keeping those no
-       earlier element of this file has claimed, as generating would. *)
+    (* The helpers lifted out of the body are the element's to place: those
+       no earlier element of the header places ({!plan_header_claim}). *)
     let gen () =
       let (gf_entity, gf_env), gf_lifted =
         Translation.collecting_lifted @@ fun () ->
