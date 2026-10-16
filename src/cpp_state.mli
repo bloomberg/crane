@@ -141,9 +141,6 @@ val initial_render_ctx : render_ctx
     only through [with_render_ctx]. *)
 val render_ctx : render_ctx ref
 
-(** Concept definitions hoisted out of the current struct. *)
-val hoisted_concept_defs : Pp.t list ref
-
 (** A band of rendered text collected while the file is printed and written
     out, in collection order, at a fixed place in the file; emptied between
     extractions. *)

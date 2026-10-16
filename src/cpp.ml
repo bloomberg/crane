@@ -315,25 +315,24 @@ let pp_requirement : Modtype_concept.requirement -> Pp.t = function
     ++ fnl ()
 
 (** What a module type contributes where a concept body is expected
-    ({!Modtype_concept.constraint_}).  An anonymous signature's requirements
-    are printed with the signature and the functor parameters visible in it
-    visible; the concepts of the module types nested in it are hoisted
-    ({!hoisted_concept_defs}). *)
-let rec pp_constraint : Modtype_concept.constraint_ -> module_constraint = function
-  | Named kn -> MCname (pp_modname kn)
+    ({!Modtype_concept.constraint_}), with the concepts of the module types
+    nested in it, which are declared ahead of the concept it is the body of,
+    innermost first.  An anonymous signature's requirements are printed with
+    the signature and the functor parameters visible in it visible. *)
+let rec pp_constraint : Modtype_concept.constraint_ -> Pp.t list * module_constraint = function
+  | Named kn -> ([], MCname (pp_modname kn))
   | Requirements {signature; parameters; items} ->
     push_visible signature parameters;
-    let pp_item : Modtype_concept.item -> Pp.t = function
-      | Requirement req -> pp_requirement req
+    let item (hoisted, reqs) : Modtype_concept.item -> _ = function
+      | Requirement req -> (hoisted, pp_requirement req :: reqs)
       | Nested (path, c) ->
-        let def = concept_body_pp (pp_constraint c) in
-        let modtype_name = str (modtype_concept_name path) in
-        hoisted_concept_defs := pp_concept_def modtype_name def :: !hoisted_concept_defs;
-        mt ()
+        let inner, nested = pp_constraint c in
+        let def = pp_concept_def (str (modtype_concept_name path)) (concept_body_pp nested) in
+        (def :: List.rev_append inner hoisted, reqs)
     in
-    let reqs = List.filter (fun p -> not (Pp.ismt p)) (List.map pp_item items) in
+    let hoisted, reqs = List.fold_left item ([], []) items in
     pop_visible ();
-    MCrequirements reqs
+    (List.rev hoisted, MCrequirements (List.rev reqs))
 
 (** Format a doc comment string as [///] comment lines. Translates bracket
     references [[name]] by stripping the brackets. Returns [mt ()] if no doc
@@ -462,11 +461,9 @@ let pp_modtype_concept ?(params = []) name (c : Modtype_concept.t) =
     ++ prlist (fun c -> str " && " ++ c) (pp_refinements refinements)
     ++ str ";"
   | Constraint c ->
-    let hoisted, def =
-      collecting hoisted_concept_defs (fun () -> concept_body_pp (pp_constraint c))
-    in
+    let hoisted, body = pp_constraint c in
     prlist_with_sep (fun () -> fnl () ++ fnl ()) identity
-      (hoisted @ [head ++ pp_concept_clause name def])
+      (hoisted @ [head ++ pp_concept_clause name (concept_body_pp body)])
 
 (** Render a functor parameter as a C++ template parameter.
 
@@ -492,10 +489,10 @@ let pp_template_param (mbid, mt) =
     in
     cname ++ args ++ str " " ++ param_name
   | None ->
-    (* Printed for its side effects: nested module types are hoisted out of
-       the signature as concepts of their own. *)
+    (* Printed for the headers its requirements demand, and nothing else: its
+       requirement lines are not a constraint expression. *)
     ( match Cpp_ind.modtype_concept (MPbound mbid) ~params:[] mt with
-    | Constraint c -> ignore (pp_constraint c : module_constraint)
+    | Constraint c -> ignore (pp_constraint c : Pp.t list * module_constraint)
     | Alias _ -> () );
     str "typename " ++ param_name
 

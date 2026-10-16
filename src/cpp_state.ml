@@ -509,10 +509,6 @@ let drain (b : band) =
   b := [];
   l
 
-(** Accumulator for nested module type concepts that must be hoisted out of
-    requires bodies *)
-let hoisted_concept_defs : Pp.t list ref = owned_list "hoisted_concept_defs"
-
 (** The functor bodies whose module types are file-scope concepts over the
     functor's parameters as well as [M]: the body's path, the functor's
     label, and its parameters.  A concept cannot be declared in the class
