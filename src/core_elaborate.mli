@@ -50,8 +50,9 @@ val install : t -> unit
 (** [elaboration ~lex use args] -- the elaboration of the call [use args]
     while emitting: its arguments in the roles the installed elaborations
     have for the application naming its callee by [use], or, where they have
-    none, as elaborated here in [lex].  Planning elaborates every call
-    itself. *)
+    none, as elaborated here in [lex] -- which under [CRANE_CHECK_IR] is a
+    violation: every call emission translates was elaborated from Core.
+    Planning elaborates every call itself. *)
 val elaboration : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> Elaborated_call.t
 
 (** How many calls the unit elaborated ahead, and how many emission found

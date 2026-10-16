@@ -9179,7 +9179,6 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     let body_tvars = collect_tvars_ast [] a in
     let all_body_tvars = List.sort_uniq Int.compare body_tvars in
     let tvar_indices = List.sort Int.compare tvar_indices in
-    let has_extra = List.exists (fun i -> i > n_outer) tvar_indices in
     (* Normal MLletin fallback (shared by no-extra-tvars and
        thunk-with-free-vars cases) *)
     let gen_normal_letin () =
@@ -9288,15 +9287,14 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           :: asgn
           @ gen_cont ()
     in
-    if not has_extra then
-      gen_normal_letin ()
-    else (
-    match sole_instance ~lex:(current_lexenv ()) ~n_outer t b with
-    | Some inst ->
-      (* Used at one instance only: bound at it, not lifted. *)
+    (match let_lambda ~lex:(current_lexenv ()) ~n_outer t a b with
+    | Bound -> gen_normal_letin ()
+    | At_instance inst ->
       let subst = Mlutil.type_subst_list inst in
       gen_stmts ~slot env k (MLletin (x, subst t, Mlutil.ast_map_types subst a, b))
-    | None -> (* Lift the polymorphic lambda to a top-level template function. *)
+    | Inlined b -> gen_stmts ~slot env k b
+    | Lifted ->
+      (* Lift the polymorphic lambda to a top-level template function. *)
       let params, body = collect_lams a in
       let n_params = List.length params in
       let x' = cpp_id_of_id (id_of_mlid x) in
@@ -9304,338 +9302,307 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       (* 1. Collect free variables in the lambda body *)
       let free_indices = List.sort Int.compare (collect_free_rels n_params body) in
 
-      (* Check if all parameters are dummy/void - if so, this is likely a thunk
-         for monadic ops *)
-      let all_params_dummy =
-        List.for_all (fun (_, ty) -> not (is_runtime_binder_type ty)) params
+      (* 2. Build tvar names: outer tvars keep their names, extra tvars get
+         fresh names.  In the template head, the extras a call cannot
+         deduce -- named by the result alone, like [A] in [fun (A : Type) x
+         => @Tag A 1] -- go first: explicit type arguments are positional,
+         so the deducible ones then form the trailing run a call leaves
+         out. *)
+      let all_tvar_names = build_tvar_names ~outer_tvars tvar_indices in
+      let all_temps =
+        let deducible =
+          List.fold_left
+            (fun acc (_, ty) -> if erased_by_extraction ty then acc else collect_tvars_set acc ty)
+            IntSet.empty params
+        in
+        let outer, extra =
+          List.partition (fun (i, _) -> i <= n_outer) (List.combine tvar_indices all_tvar_names)
+        in
+        let fixed, deduced = List.partition (fun (i, _) -> not (IntSet.mem i deducible)) extra in
+        List.map (fun (_, id) -> (TTtypename, id)) (outer @ fixed @ deduced)
+      in
+      (* The body being lifted was written against the enclosing
+         declaration's class instances -- it spells [typename
+         _tcI0::PTR::ptr] -- and a concept-constrained parameter is not an
+         ML type variable, so [tvar_indices] cannot mention one.  Carry the
+         head's own instances over, ahead of the type variables and explicit
+         at every reference: nothing deduces a class instance. *)
+      let class_temps = current_class_temps () in
+      let class_args = List.map (fun (_, id) -> named_tvar id) class_temps in
+      let free_vars = lifted_free_vars ~class_temps env free_indices in
+
+      let extended_tvar_names =
+        build_extended_tvar_names tvar_indices all_tvar_names all_body_tvars
       in
 
-      if all_params_dummy then
-        (* All lambda params are erased type params — this is a polymorphic
-           function alias like `let alias := @id`. Don't lift to a top-level
-           template; instead inline the lambda into the continuation and
-           beta-reduce, so that call sites like `alias nat 9` become direct
-           calls like `id(9)`. *)
-        let b' = ast_subst a b in
-        let rec beta_red_app args = function
-          | MLlam (_, _, body) ->
-            ( match args with
-            | [] -> MLlam (Dummy, Tdummy Ktype, beta_normalize body)
-            | _ :: rest -> beta_red_app rest (ast_pop body) )
-          | f ->
-            let f = beta_normalize f in
-            if args = [] then
-              f
-            else
-              MLapp (f, List.map beta_normalize args)
-        and beta_normalize = function
-          | MLapp ((MLlam _ as f), args) -> beta_red_app args f
-          | t -> ast_map beta_normalize t
-        in
-        let b' = beta_normalize b' in
-        gen_stmts ~slot env k b'
-      else
-        (* 2. Build tvar names: outer tvars keep their names, extra tvars get
-           fresh names.  In the template head, the extras a call cannot
-           deduce -- named by the result alone, like [A] in [fun (A : Type) x
-           => @Tag A 1] -- go first: explicit type arguments are positional,
-           so the deducible ones then form the trailing run a call leaves
-           out. *)
-        let all_tvar_names = build_tvar_names ~outer_tvars tvar_indices in
-        let all_temps =
-          let deducible =
-            List.fold_left
-              (fun acc (_, ty) -> if erased_by_extraction ty then acc else collect_tvars_set acc ty)
-              IntSet.empty params
-          in
-          let outer, extra =
-            List.partition (fun (i, _) -> i <= n_outer) (List.combine tvar_indices all_tvar_names)
-          in
-          let fixed, deduced = List.partition (fun (i, _) -> not (IntSet.mem i deducible)) extra in
-          List.map (fun (_, id) -> (TTtypename, id)) (outer @ fixed @ deduced)
-        in
-        (* The body being lifted was written against the enclosing
-           declaration's class instances -- it spells [typename
-           _tcI0::PTR::ptr] -- and a concept-constrained parameter is not an
-           ML type variable, so [tvar_indices] cannot mention one.  Carry the
-           head's own instances over, ahead of the type variables and explicit
-           at every reference: nothing deduces a class instance. *)
-        let class_temps = current_class_temps () in
-        let class_args = List.map (fun (_, id) -> named_tvar id) class_temps in
-        let free_vars = lifted_free_vars ~class_temps env free_indices in
+      (* 3. Generate the lifted function name *)
+      let lifted_ref = lifted_fix_ref x' in
 
-        let extended_tvar_names =
-          build_extended_tvar_names tvar_indices all_tvar_names all_body_tvars
-        in
-
-        (* 3. Generate the lifted function name *)
-        let lifted_ref = lifted_fix_ref x' in
-
-        (* 4. Substitution helper for call sites: replace CPPfun_call(CPPvar x',
-           args) with CPPfun_call(CPPglob(lifted_ref, []), free_var_cpps @
-           args) *)
-        (* The lifted function is a template over the binder's type
-           arguments, so a parameter declared at one of them is a template
-           parameter C++ has to deduce.  A closure has no name to deduce, and
-           so cannot agree with the same parameter as settled by another
-           argument; {!name_fn_arg_for_tvar_param} names it. *)
-        (* {!Mlutil.collect_lams} hands the binders back innermost-first, so
-           the source order these are read in is the reverse of [params]. *)
-        let param_ml_tys =
-          List.rev
-            (List.filter_map
-               (fun (_, ty) ->
-                 if is_runtime_binder_type ty then Some ty else None )
-               params )
-        in
-        let n_actual_params = List.length param_ml_tys in
-        (* [args] in source order, as [param_ml_tys] is. *)
-        let name_lifted_args args =
-          List.mapi
-            (fun i a ->
-              match List.nth_opt param_ml_tys i with
-              | Some ty -> name_fn_arg_for_tvar_param ty a
-              | None -> a )
-            args
-        in
-        let rec subst_lifted_call_expr
-            (target : Id.t)
-            (lifted : cpp_expr)
-            (free_args : cpp_expr list)
-            (e : cpp_expr) =
-          let sub = subst_lifted_call_expr target lifted free_args in
-          match e with
-          | CPPfun_call (_, CPPvar id, args) when Id.equal id target ->
-            (* The lifted template's parameters come from the lambda, so its
-               arity is the lambda's. *)
-            mk_arity_call
-              ~params:(List.map (cpp_of_ml env) param_ml_tys)
-              ~saturated:(fun here ->
-                CPPfun_call
-                  (call_opaque, lifted,
-                    of_reversed (free_args @ List.rev (name_lifted_args here)) ) )
-              (List.map sub (call_args args))
-          | CPPvar id when Id.equal id target ->
-            (* Bare reference to lifted function: generate a properly-typed
-               wrapper lambda with one parameter per non-erased Rocq lambda
-               param. Capture by value ([=]) so that free variables don't
-               dangle when the wrapper outlives the current stack frame. *)
-            if free_args = [] && n_actual_params = 0 then
-              lifted
-            else
-              let fresh_ids =
-                List.init n_actual_params (fun i ->
-                  Id.of_string (Printf.sprintf "_xarg%d" i))
-              in
-              let wrapper_params =
-                List.map (fun id -> (Tauto, Some id)) fresh_ids
-              in
-              let wrapper_call_args =
-                free_args @ List.map (fun id -> CPPvar id) fresh_ids
-              in
-              CPPlambda
-                { cl_params = of_reversed wrapper_params;
-                cl_tparams = [];
-                cl_moved = [];
-                  cl_ret = None;
-                  cl_body =
-                    [ Sreturn
-                        (Some
-                           (CPPfun_call
-                              ( call_opaque, lifted,
-                                of_reversed wrapper_call_args ) ) ) ];
-                  cl_capture = Closure }
-          | CPPany_cast (_, CPPfun_call (_, CPPvar id, args))
-            when Id.equal id target ->
-            (* The any_cast wraps a direct call to the variable being lifted.
-               The lifted template function returns a concrete type (not
-               std::any), so drop the cast and replace with the lifted call. *)
-            CPPfun_call
-              (call_opaque,
-                lifted,
-                of_reversed (free_args @ List.map sub (to_reversed args)) )
-          | CPPany_cast (ty, e') -> Cpp_erasure.unbox ty (sub e')
-          | _ ->
-            (* Every other form is a plain structural descent.  Spelling the
-               cases out by hand is what let uses of [target] under an [if] or
-               a [switch] escape rewriting. *)
-            map_expr sub (subst_lifted_call_stmt target lifted free_args)
-              Fun.id e
-        and subst_lifted_call_stmt
-            (target : Id.t)
-            (lifted : cpp_expr)
-            (free_args : cpp_expr list)
-            (s : cpp_stmt) =
-          map_stmt
-            (subst_lifted_call_expr target lifted free_args)
-            (subst_lifted_call_stmt target lifted free_args)
-            Fun.id s
-        in
-
-        (* 6. Compile the lambda body under the extended type-variable
-           scope, which numbers the body's Tvars the way the lifted
-           function's signature will. *)
-        let free_var_params, lam_param_ids, lam_env, compiled_body =
-          with_type_vars extended_tvar_names (fun () ->
-              (* Push lambda params into env for body compilation *)
-              let param_ids =
-                List.map
-                  (fun (ml_id, ty) -> (cpp_id_of_id (id_of_mlid ml_id), ty))
-                  params
-              in
-              (* For free variables, we need to adjust de Bruijn indices in the body.
-                 The body references free vars as MLrel (n_params + i) where i is the
-                 outer index. We compile with an env that has: [free_var_params...;
-                 lambda_params...] So we push free var names first, then lambda param
-                 names. *)
-              let free_var_params =
-                List.map (fun (name, ty, _) -> (name, ty)) free_vars
-              in
-              let body_params_for_env = free_var_params @ param_ids in
-              let body_param_ids, body_env = push_vars' body_params_for_env env in
-              let saved_env_types = (!tctx).env_types in
-              push_binders env body_param_ids;
-
-              (* Now compile the body. The body's de Bruijn indices: MLrel 1..n_params
-                 -> lambda params (at positions n_free+1..n_free+n_params in our env)
-                 MLrel n_params+i -> free var i (should map to position n_free-i+1 in
-                 our env, but we actually need to adjust: MLrel (n_params +
-                 orig_outer_idx) in the body maps to outer env position
-                 orig_outer_idx. In our extended env, free vars are at positions
-                 n_params+1..n_params+n_free. So we need to remap. Actually, the body
-                 already has correct de Bruijn indices: - MLrel 1..n_params are the
-                 lambda params - MLrel (n_params + i) references outer scope position
-                 i When we push [free_var_params @ param_ids], the env has: positions
-                 1..n_params = param_ids (lambda params) positions
-                 n_params+1..n_params+n_free = free_var_params But the body references
-                 MLrel(n_params + original_outer_idx), and original_outer_idx may not
-                 equal the position in free_var_params. We need the body env to map
-                 MLrel(n_params + i) correctly for each free var. *)
-
-              (* Simpler approach: compile body in a modified env where free vars at
-                 their original positions are accessible. We push only the lambda
-                 params on top of the outer env. *)
-              let lam_param_ids, lam_env = push_vars' param_ids env in
-              restore_env_types saved_env_types;
-              push_binders env lam_param_ids;
-              (* The helper is a function of its own: its return type is not
-                 the enclosing one's, and nothing in it is owned -- every
-                 parameter, captured or not, is declared const by
-                 {!build_lifted_cpp_params}.  The enclosing ownership would
-                 not even name the same variables, being indexed from outside
-                 the lambda's binders. *)
-              let compiled_body =
-                with_escape_analysis (fun () ->
-                    gen_stmts lam_env (fun x -> Sreturn (Some x)) body )
-              in
-              restore_env_types saved_env_types;
-              (free_var_params, lam_param_ids, lam_env, compiled_body) )
-        in
-
-        (* 7. Now substitute free variable references in compiled body: Free
-           vars in the body were compiled as CPPvar(name_from_outer_env). In the
-           lifted function, they become parameters. The names are the same, so
-           no substitution of the body is needed — the free var params have the
-           same names as the outer scope variables. *)
-
-        (* 8. Build the lifted function parameters: free vars first, then lambda
-           params *)
-        let all_lifted_params =
-          free_var_params
-          @ List.filter
-              (fun (_, ty) -> is_runtime_binder_type ty)
-              lam_param_ids
-        in
-        let cpp_params, all_temps_with_funs =
-          build_lifted_cpp_params
-            (convert_ml_type_to_cpp_type
-               lam_env
-               extended_tvar_names )
-            all_temps
-            all_lifted_params
-        in
-
-        (* Get return type from the let-binding type *)
-        let cpp_ty =
-          convert_ml_type_to_cpp_type
-            lam_env
-            extended_tvar_names
-            t
-        in
-        let cod =
-          (* [collect_lams] stops at the first non-lambda, so a let-bound
-             [fix] keeps its own binders: the helper takes fewer parameters
-             than its type has domains, and what it returns is the closure
-             standing for the rest.  A closure type has no spelling, and
-             [auto] is how C++ declines to give it one.
-
-             The comparison has to be against the domains that actually took
-             a parameter, not the raw arrow count: a domain extraction erased
-             (a quantified [Type], a proof) never became one of [params]
-             either, so counting it here made an ordinary, fully-applied
-             helper with an erased argument -- [fun {A} (x : A) (_ : True) =>
-             x], one real binder, two erased ones -- look exactly like a
-             curried leftover, and its return type, which is nameable (the
-             same [T1] its parameter already spells), fell back to [auto].
-             An [auto]-returning template with more than one instantiation in
-             the same translation unit is then used before any of them is
-             defined. *)
-          let ml_dom, _ = Mlutil.type_decomp t in
-          let value_dom =
-            List.filter is_runtime_binder_type ml_dom
-          in
-          if List.length value_dom > n_params then Tauto
+      (* 4. Substitution helper for call sites: replace CPPfun_call(CPPvar x',
+         args) with CPPfun_call(CPPglob(lifted_ref, []), free_var_cpps @
+         args) *)
+      (* The lifted function is a template over the binder's type
+         arguments, so a parameter declared at one of them is a template
+         parameter C++ has to deduce.  A closure has no name to deduce, and
+         so cannot agree with the same parameter as settled by another
+         argument; {!name_fn_arg_for_tvar_param} names it. *)
+      (* {!Mlutil.collect_lams} hands the binders back innermost-first, so
+         the source order these are read in is the reverse of [params]. *)
+      let param_ml_tys =
+        List.rev
+          (List.filter_map
+             (fun (_, ty) ->
+               if is_runtime_binder_type ty then Some ty else None )
+             params )
+      in
+      let n_actual_params = List.length param_ml_tys in
+      (* [args] in source order, as [param_ml_tys] is. *)
+      let name_lifted_args args =
+        List.mapi
+          (fun i a ->
+            match List.nth_opt param_ml_tys i with
+            | Some ty -> name_fn_arg_for_tvar_param ty a
+            | None -> a )
+          args
+      in
+      let rec subst_lifted_call_expr
+          (target : Id.t)
+          (lifted : cpp_expr)
+          (free_args : cpp_expr list)
+          (e : cpp_expr) =
+        let sub = subst_lifted_call_expr target lifted free_args in
+        match e with
+        | CPPfun_call (_, CPPvar id, args) when Id.equal id target ->
+          (* The lifted template's parameters come from the lambda, so its
+             arity is the lambda's. *)
+          mk_arity_call
+            ~params:(List.map (cpp_of_ml env) param_ml_tys)
+            ~saturated:(fun here ->
+              CPPfun_call
+                (call_opaque, lifted,
+                  of_reversed (free_args @ List.rev (name_lifted_args here)) ) )
+            (List.map sub (call_args args))
+        | CPPvar id when Id.equal id target ->
+          (* Bare reference to lifted function: generate a properly-typed
+             wrapper lambda with one parameter per non-erased Rocq lambda
+             param. Capture by value ([=]) so that free variables don't
+             dangle when the wrapper outlives the current stack frame. *)
+          if free_args = [] && n_actual_params = 0 then
+            lifted
           else
-            match cpp_ty with
-            | Tfun (_, cod) -> cod
-            | _ -> cpp_ty
-        in
+            let fresh_ids =
+              List.init n_actual_params (fun i ->
+                Id.of_string (Printf.sprintf "_xarg%d" i))
+            in
+            let wrapper_params =
+              List.map (fun id -> (Tauto, Some id)) fresh_ids
+            in
+            let wrapper_call_args =
+              free_args @ List.map (fun id -> CPPvar id) fresh_ids
+            in
+            CPPlambda
+              { cl_params = of_reversed wrapper_params;
+              cl_tparams = [];
+              cl_moved = [];
+                cl_ret = None;
+                cl_body =
+                  [ Sreturn
+                      (Some
+                         (CPPfun_call
+                            ( call_opaque, lifted,
+                              of_reversed wrapper_call_args ) ) ) ];
+                cl_capture = Closure }
+        | CPPany_cast (_, CPPfun_call (_, CPPvar id, args))
+          when Id.equal id target ->
+          (* The any_cast wraps a direct call to the variable being lifted.
+             The lifted template function returns a concrete type (not
+             std::any), so drop the cast and replace with the lifted call. *)
+          CPPfun_call
+            (call_opaque,
+              lifted,
+              of_reversed (free_args @ List.map sub (to_reversed args)) )
+        | CPPany_cast (ty, e') -> Cpp_erasure.unbox ty (sub e')
+        | _ ->
+          (* Every other form is a plain structural descent.  Spelling the
+             cases out by hand is what let uses of [target] under an [if] or
+             a [switch] escape rewriting. *)
+          map_expr sub (subst_lifted_call_stmt target lifted free_args)
+            Fun.id e
+      and subst_lifted_call_stmt
+          (target : Id.t)
+          (lifted : cpp_expr)
+          (free_args : cpp_expr list)
+          (s : cpp_stmt) =
+        map_stmt
+          (subst_lifted_call_expr target lifted free_args)
+          (subst_lifted_call_stmt target lifted free_args)
+          Fun.id s
+      in
 
-        (* 9. Build and register the lifted declaration.  Call sites below
-           name the class prefix and nothing else, so a type parameter whose
-           only occurrence is a returned lambda's binder can move into that
-           lambda instead of sitting undeducible in the head. *)
-        let all_temps_with_funs, compiled_body =
-          generalize_lambda_only_tparams all_temps_with_funs cpp_params cod
-            compiled_body
-        in
-        let inner =
-          Dfun (mk_dfun ~ret:cod lifted_ref (Ddef (cpp_params, compiled_body)))
-        in
-        let lifted_decl =
-          Dtemplate (class_temps @ all_temps_with_funs, None, inner)
-        in
-        add_lifted_decl lifted_decl;
+      (* 6. Compile the lambda body under the extended type-variable
+         scope, which numbers the body's Tvars the way the lifted
+         function's signature will. *)
+      let free_var_params, lam_param_ids, lam_env, compiled_body =
+        with_type_vars extended_tvar_names (fun () ->
+            (* Push lambda params into env for body compilation *)
+            let param_ids =
+              List.map
+                (fun (ml_id, ty) -> (cpp_id_of_id (id_of_mlid ml_id), ty))
+                params
+            in
+            (* For free variables, we need to adjust de Bruijn indices in the body.
+               The body references free vars as MLrel (n_params + i) where i is the
+               outer index. We compile with an env that has: [free_var_params...;
+               lambda_params...] So we push free var names first, then lambda param
+               names. *)
+            let free_var_params =
+              List.map (fun (name, ty, _) -> (name, ty)) free_vars
+            in
+            let body_params_for_env = free_var_params @ param_ids in
+            let body_param_ids, body_env = push_vars' body_params_for_env env in
+            let saved_env_types = (!tctx).env_types in
+            push_binders env body_param_ids;
 
-        (* 10. Compile the continuation body b, substituting calls to x' with
-           calls to the lifted function *)
-        let lifted_ids, env' = push_vars' [(x', t)] env in
-        let x_lifted = fst (List.hd lifted_ids) in
-        push_binders env [(x_lifted, t)];
-        (* Phase 2: shift move tracking for lifted lambda binding *)
-        let cont =
-          with_shifted_move_tracking 1 (fun () -> gen_stmts ~slot env' k b)
+            (* Now compile the body. The body's de Bruijn indices: MLrel 1..n_params
+               -> lambda params (at positions n_free+1..n_free+n_params in our env)
+               MLrel n_params+i -> free var i (should map to position n_free-i+1 in
+               our env, but we actually need to adjust: MLrel (n_params +
+               orig_outer_idx) in the body maps to outer env position
+               orig_outer_idx. In our extended env, free vars are at positions
+               n_params+1..n_params+n_free. So we need to remap. Actually, the body
+               already has correct de Bruijn indices: - MLrel 1..n_params are the
+               lambda params - MLrel (n_params + i) references outer scope position
+               i When we push [free_var_params @ param_ids], the env has: positions
+               1..n_params = param_ids (lambda params) positions
+               n_params+1..n_params+n_free = free_var_params But the body references
+               MLrel(n_params + original_outer_idx), and original_outer_idx may not
+               equal the position in free_var_params. We need the body env to map
+               MLrel(n_params + i) correctly for each free var. *)
+
+            (* Simpler approach: compile body in a modified env where free vars at
+               their original positions are accessible. We push only the lambda
+               params on top of the outer env. *)
+            let lam_param_ids, lam_env = push_vars' param_ids env in
+            restore_env_types saved_env_types;
+            push_binders env lam_param_ids;
+            (* The helper is a function of its own: its return type is not
+               the enclosing one's, and nothing in it is owned -- every
+               parameter, captured or not, is declared const by
+               {!build_lifted_cpp_params}.  The enclosing ownership would
+               not even name the same variables, being indexed from outside
+               the lambda's binders. *)
+            let compiled_body =
+              with_escape_analysis (fun () ->
+                  gen_stmts lam_env (fun x -> Sreturn (Some x)) body )
+            in
+            restore_env_types saved_env_types;
+            (free_var_params, lam_param_ids, lam_env, compiled_body) )
+      in
+
+      (* 7. Now substitute free variable references in compiled body: Free
+         vars in the body were compiled as CPPvar(name_from_outer_env). In the
+         lifted function, they become parameters. The names are the same, so
+         no substitution of the body is needed — the free var params have the
+         same names as the outer scope variables. *)
+
+      (* 8. Build the lifted function parameters: free vars first, then lambda
+         params *)
+      let all_lifted_params =
+        free_var_params
+        @ List.filter
+            (fun (_, ty) -> is_runtime_binder_type ty)
+            lam_param_ids
+      in
+      let cpp_params, all_temps_with_funs =
+        build_lifted_cpp_params
+          (convert_ml_type_to_cpp_type
+             lam_env
+             extended_tvar_names )
+          all_temps
+          all_lifted_params
+      in
+
+      (* Get return type from the let-binding type *)
+      let cpp_ty =
+        convert_ml_type_to_cpp_type
+          lam_env
+          extended_tvar_names
+          t
+      in
+      let cod =
+        (* [collect_lams] stops at the first non-lambda, so a let-bound
+           [fix] keeps its own binders: the helper takes fewer parameters
+           than its type has domains, and what it returns is the closure
+           standing for the rest.  A closure type has no spelling, and
+           [auto] is how C++ declines to give it one.
+
+           The comparison has to be against the domains that actually took
+           a parameter, not the raw arrow count: a domain extraction erased
+           (a quantified [Type], a proof) never became one of [params]
+           either, so counting it here made an ordinary, fully-applied
+           helper with an erased argument -- [fun {A} (x : A) (_ : True) =>
+           x], one real binder, two erased ones -- look exactly like a
+           curried leftover, and its return type, which is nameable (the
+           same [T1] its parameter already spells), fell back to [auto].
+           An [auto]-returning template with more than one instantiation in
+           the same translation unit is then used before any of them is
+           defined. *)
+        let ml_dom, _ = Mlutil.type_decomp t in
+        let value_dom =
+          List.filter is_runtime_binder_type ml_dom
         in
-        (* Build the free variable argument expressions *)
-        let free_var_cpps =
-          List.map (fun (name, _, _) -> CPPvar name) free_vars
-        in
-        (* A lifted lambda's own type variables become template parameters of
-           the new top-level function, and one that occurs only in the return
-           type is deducible from nothing -- the call has to spell it.  Same
-           question, same answer, as the lifted-fix path; but asked of the head
-           the declaration ended up with, since generalisation may have moved
-           a parameter out of it. *)
-        let call_type_args =
-          lifted_call_type_args ~class_args ~env ~outer_tvars
-            ~head:(List.map snd all_temps_with_funs)
-            ~all_tvar_names ~binder_ty:t ~param_ml_tys
-        in
-        List.map
-          (subst_lifted_call_stmt x_lifted
-             (mk_cppglob lifted_ref call_type_args)
-             free_var_cpps )
-          cont )
+        if List.length value_dom > n_params then Tauto
+        else
+          match cpp_ty with
+          | Tfun (_, cod) -> cod
+          | _ -> cpp_ty
+      in
+
+      (* 9. Build and register the lifted declaration.  Call sites below
+         name the class prefix and nothing else, so a type parameter whose
+         only occurrence is a returned lambda's binder can move into that
+         lambda instead of sitting undeducible in the head. *)
+      let all_temps_with_funs, compiled_body =
+        generalize_lambda_only_tparams all_temps_with_funs cpp_params cod
+          compiled_body
+      in
+      let inner =
+        Dfun (mk_dfun ~ret:cod lifted_ref (Ddef (cpp_params, compiled_body)))
+      in
+      let lifted_decl =
+        Dtemplate (class_temps @ all_temps_with_funs, None, inner)
+      in
+      add_lifted_decl lifted_decl;
+
+      (* 10. Compile the continuation body b, substituting calls to x' with
+         calls to the lifted function *)
+      let lifted_ids, env' = push_vars' [(x', t)] env in
+      let x_lifted = fst (List.hd lifted_ids) in
+      push_binders env [(x_lifted, t)];
+      (* Phase 2: shift move tracking for lifted lambda binding *)
+      let cont =
+        with_shifted_move_tracking 1 (fun () -> gen_stmts ~slot env' k b)
+      in
+      (* Build the free variable argument expressions *)
+      let free_var_cpps =
+        List.map (fun (name, _, _) -> CPPvar name) free_vars
+      in
+      (* A lifted lambda's own type variables become template parameters of
+         the new top-level function, and one that occurs only in the return
+         type is deducible from nothing -- the call has to spell it.  Same
+         question, same answer, as the lifted-fix path; but asked of the head
+         the declaration ended up with, since generalisation may have moved
+         a parameter out of it. *)
+      let call_type_args =
+        lifted_call_type_args ~class_args ~env ~outer_tvars
+          ~head:(List.map snd all_temps_with_funs)
+          ~all_tvar_names ~binder_ty:t ~param_ml_tys
+      in
+      List.map
+        (subst_lifted_call_stmt x_lifted
+           (mk_cppglob lifted_ref call_type_args)
+           free_var_cpps )
+        cont )
   | MLletin (x, t, a, b) ->
     let x' = cpp_id_of_id (id_of_mlid x) in
     let ids_renamed, env' = push_vars' [(x', t)] env in

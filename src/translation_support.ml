@@ -2738,6 +2738,47 @@ let sole_instance ~lex ~n_outer t body =
       Some (List.init n (fun j -> if List.mem (j + 1) vars then instance (j + 1) else Miniml.Tvar (Miniml.Schematic, j + 1)))
   with Not_sole -> None
 
+(** How [let x : t := a in b], [a] a lambda, is generated under a head of
+    [n_outer] type variables, [lex] being the enclosing scope's environment. *)
+type let_lambda =
+  | Bound  (** Polymorphic in nothing of its own: bound as a value. *)
+  | At_instance of ml_type list
+      (** Used at one instance only ({!sole_instance}): bound at it. *)
+  | Inlined of ml_ast
+      (** A polymorphic alias -- [let alias := @id], abstracting over erased
+          type parameters alone -- used at several instances.  It has no C++
+          value to bind, only a template no call could deduce, so each use
+          calls what it abbreviates: this is [b] with [a] put in place of [x]
+          and the applications reduced, [alias nat 9] becoming [id 9]. *)
+  | Lifted  (** Lifted out to a function template of its own. *)
+
+(** The decision {!let_lambda} names, made from the Core term alone: it is
+    the one owner of it, read by translation to generate the binding and by
+    {!Core_elaborate} to elaborate the calls an inlined alias makes. *)
+let let_lambda ~lex ~n_outer t a b =
+  let has_extra = IntSet.exists (fun i -> i > n_outer) (Mlutil.ml_tvars t) in
+  if not has_extra then Bound
+  else
+    match sole_instance ~lex ~n_outer t b with
+    | Some inst -> At_instance inst
+    | None ->
+      let params, _ = collect_lams a in
+      if List.exists (fun (_, ty) -> is_runtime_binder_type ty) params then Lifted
+      else
+        let rec beta_red_app args = function
+          | MLlam (_, _, body) -> (
+            match args with
+            | [] -> MLlam (Dummy, Tdummy Ktype, beta_normalize body)
+            | _ :: rest -> beta_red_app rest (ast_pop body) )
+          | f ->
+            let f = beta_normalize f in
+            if args = [] then f else MLapp (f, List.map beta_normalize args)
+        and beta_normalize = function
+          | MLapp ((MLlam _ as f), args) -> beta_red_app args f
+          | t -> ast_map beta_normalize t
+        in
+        Inlined (beta_normalize (ast_subst a b))
+
 (** Check if a GlobRef returns a typeclass type (possibly through Tarr layers).
 *)
 let ref_returns_typeclass r =

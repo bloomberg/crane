@@ -215,14 +215,14 @@ let binder role (x, ty) = {Lexenv.eb_id = Mlutil.id_of_mlid x; eb_type = ty; eb_
 (* The binders [ids], innermost first, as [collect_lams] returns them. *)
 let push role ids lex = Lexenv.push (List.map (binder role) ids) lex
 
-let rec walk b lex = function
+let rec walk b ~n_outer lex = function
   (* A spine is read whole, as translation reads it: a global applied in
      stages is called once with every argument, and applying a one-branch
      match applies its branch.  A coercion of the callee is seen through:
      what is called is what it coerces, at every argument -- [not] applied
      to the proposition it erases, in a type written [{P} + {~P}]. *)
-  | MLapp (MLapp ((MLglob _ as g), inner), outer) -> walk b lex (MLapp (g, inner @ outer))
-  | MLapp (MLmagic (_, f), args) -> walk b lex (MLapp (f, args))
+  | MLapp (MLapp ((MLglob _ as g), inner), outer) -> walk b ~n_outer lex (MLapp (g, inner @ outer))
+  | MLapp (MLmagic (_, f), args) -> walk b ~n_outer lex (MLapp (f, args))
   | MLapp (MLcase (ty, scrut, [|(ids, rty, pat, body)|]), outer) ->
     let outer = List.map (Mlutil.ast_lift (List.length ids)) outer in
     let body =
@@ -230,70 +230,85 @@ let rec walk b lex = function
       | MLapp (f, inner) -> MLapp (f, inner @ outer)
       | _ -> MLapp (body, outer)
     in
-    walk b lex (MLcase (ty, scrut, [|(ids, rty, pat, body)|]))
+    walk b ~n_outer lex (MLcase (ty, scrut, [|(ids, rty, pat, body)|]))
   | MLapp (MLglob use, args) ->
-    walk_use b lex use;
+    walk_use b ~n_outer lex use;
     record b lex use args;
-    List.iter (walk b lex) args
+    List.iter (walk b ~n_outer lex) args
   | MLapp (f, args) ->
-    walk b lex f;
-    List.iter (walk b lex) args
+    walk b ~n_outer lex f;
+    List.iter (walk b ~n_outer lex) args
   | MLlam _ as e ->
     let ids, body = Mlutil.collect_lams e in
-    List.iter (fun (_, ty) -> walk_type b lex ty) ids;
-    walk b (push Lexenv.Value ids lex) body
+    List.iter (fun (_, ty) -> walk_type b ~n_outer lex ty) ids;
+    walk b ~n_outer (push Lexenv.Value ids lex) body
+  (* An alias of a polymorphic function is not bound but put in place of its
+     uses ({!Translation_support.let_lambda}), and its calls are those of
+     what it abbreviates, at the arguments each use gives it. *)
+  | MLletin (x, ty, (MLlam _ as a), body) -> (
+    walk_type b ~n_outer lex ty;
+    match let_lambda ~lex ~n_outer ty a body with
+    | Inlined body -> walk b ~n_outer lex body
+    | Bound | At_instance _ | Lifted ->
+      walk b ~n_outer lex a;
+      walk b ~n_outer (push Lexenv.Value [(x, ty)] lex) body )
   | MLletin (x, ty, a, body) ->
-    walk_type b lex ty;
-    walk b lex a;
-    walk b (push Lexenv.Value [(x, ty)] lex) body
+    walk_type b ~n_outer lex ty;
+    walk b ~n_outer lex a;
+    walk b ~n_outer (push Lexenv.Value [(x, ty)] lex) body
   | MLcons (ty, _, args) ->
-    walk_type b lex ty;
-    List.iter (walk b lex) args
-  | MLtuple args -> List.iter (walk b lex) args
+    walk_type b ~n_outer lex ty;
+    List.iter (walk b ~n_outer lex) args
+  | MLtuple args -> List.iter (walk b ~n_outer lex) args
   | MLcase (ty, scrut, branches) ->
-    walk_type b lex ty;
-    walk b lex scrut;
+    walk_type b ~n_outer lex ty;
+    walk b ~n_outer lex scrut;
     (* A branch's result type is written under its binders: a custom match
        declares it as the type its arm returns. *)
     Array.iter
       (fun (ids, rty, _, body) ->
-        List.iter (fun (_, ty) -> walk_type b lex ty) ids;
+        List.iter (fun (_, ty) -> walk_type b ~n_outer lex ty) ids;
         let lex = push Lexenv.Value (List.rev ids) lex in
-        walk_type b lex rty;
-        walk b lex body )
+        walk_type b ~n_outer lex rty;
+        walk b ~n_outer lex body )
       branches
   | MLfix (_, fs, defs, _) ->
-    Array.iter (fun (_, ty) -> walk_type b lex ty) fs;
+    Array.iter (fun (_, ty) -> walk_type b ~n_outer lex ty) fs;
     (* The last function of the group is the innermost binder. *)
     let fs = List.rev_map (fun (f, ty) -> (Id f, ty)) (Array.to_list fs) in
-    Array.iter (walk b (push Lexenv.Value fs lex)) defs
-  | MLmagic (_, e) -> walk b lex e
+    Array.iter (walk b ~n_outer (push Lexenv.Value fs lex)) defs
+  | MLmagic (_, e) -> walk b ~n_outer lex e
   | MLparray (elems, def) ->
-    Array.iter (walk b lex) elems;
-    walk b lex def
+    Array.iter (walk b ~n_outer lex) elems;
+    walk b ~n_outer lex def
   (* A global named but not applied -- a function passed as a value -- is
      translated as its call with no arguments. *)
   | MLglob use ->
-    walk_use b lex use;
+    walk_use b ~n_outer lex use;
     record b lex use []
   | MLrel _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> ()
 
-and walk_use b lex use =
+and walk_use b ~n_outer lex use =
   name b use.callee;
-  Global_use.iter_types (walk_type b lex) use
+  Global_use.iter_types (walk_type b ~n_outer lex) use
 
 (* A custom type applied to a term -- a fixed-size array to its length --
    has calls of its own, translated where the type is converted. *)
-and walk_type b lex ty =
+and walk_type b ~n_outer lex ty =
   match resolve_tmeta ty with
   | Tglob (g, tys, args) ->
-    List.iter (walk_type b lex) tys;
-    if Table.is_custom g then List.iter (walk b lex) args
+    List.iter (walk_type b ~n_outer lex) tys;
+    if Table.is_custom g then List.iter (walk b ~n_outer lex) args
   | Tarr (dom, cod) ->
-    walk_type b lex dom;
-    walk_type b lex cod
-  | Tapp (_, tys) -> List.iter (walk_type b lex) tys
+    walk_type b ~n_outer lex dom;
+    walk_type b ~n_outer lex cod
+  | Tapp (_, tys) -> List.iter (walk_type b ~n_outer lex) tys
   | _ -> ()
+
+(* The variables a declaration of type [ty] is generated under: the type
+   variables of its head, which a let-bound lambda in its body is numbered
+   past ({!Local_types}). *)
+let head_variables ty = Mlutil.IntSet.fold max (Mlutil.ml_tvars ty) 0
 
 (* A declaration's own parameters are bound as its parameters, at the types
    its body is generated with ({!Translation_support.reconcile_parameter_type}):
@@ -337,8 +352,9 @@ let declaration b ty body =
       in
       Mlutil.apply_eta_args (Mlutil.ast_lift n_missing b) args
   in
-  walk_type b Lexenv.empty ty;
-  walk b (Lexenv.push missing (Lexenv.push (List.map2 parameter params declared) Lexenv.empty)) body
+  let n_outer = head_variables ty in
+  walk_type b ~n_outer Lexenv.empty ty;
+  walk b ~n_outer (Lexenv.push missing (Lexenv.push (List.map2 parameter params declared) Lexenv.empty)) body
 
 (* A constant typed by a name that stands for arrows -- an instance of a
    single-method class is typed by the class -- is generated eta-expanded to
@@ -349,7 +365,7 @@ let constant_at_alias b ty body =
   let body = match body with MLmagic (_, b) -> b | b -> b in
   if Ml_type_util.ml_domains ty = [] then
     match Ml_type_util.eta_expand_to (Ml_type_util.expand_ml_fun_alias ty) body with
-    | expanded when expanded != body -> walk b Lexenv.empty expanded
+    | expanded when expanded != body -> walk b ~n_outer:(head_variables ty) Lexenv.empty expanded
     | _ -> ()
 
 (* An instance's methods are generated from its record's fields not as
@@ -364,13 +380,15 @@ let instance_methods b name body ty =
       let lex =
         Lexenv.push (List.rev_map (fun (x, ty) -> binder (parameter_role ty) (Id x, ty)) lam_params) Lexenv.empty
       in
+      let n_outer = head_variables ty in
       List.iter
         (fun (m : Instance_methods.method_) ->
-          walk b lex m.body;
+          walk b ~n_outer lex m.body;
           let params, inner = Instance_methods.params m in
           if List.for_all (fun p -> p.Instance_methods.erased) params then
             Option.iter
-              (fun (eta, call) -> walk b (push Lexenv.Value (List.rev_map (fun (x, ty) -> (Id x, ty)) eta) lex) call)
+              (fun (eta, call) ->
+                walk b ~n_outer (push Lexenv.Value (List.rev_map (fun (x, ty) -> (Id x, ty)) eta) lex) call )
               (Instance_methods.eta_call m inner) )
         methods )
     (Instance_methods.methods name body ty)
@@ -383,7 +401,7 @@ let instance_methods b name body ty =
 let rec foreign_types b ~walked =
   let pending = GlobRef.Set_env.diff !b.named walked in
   if not (GlobRef.Set_env.is_empty pending) then begin
-    GlobRef.Set_env.iter (fun r -> Option.iter (walk_type b Lexenv.empty) (find_type_opt r)) pending;
+    GlobRef.Set_env.iter (fun r -> Option.iter (walk_type b ~n_outer:0 Lexenv.empty) (find_type_opt r)) pending;
     foreign_types b ~walked:(GlobRef.Set_env.union walked pending)
   end
 
@@ -391,7 +409,7 @@ let structure struc =
   let b = ref empty in
   let defined = ref GlobRef.Set_env.empty in
   let define r = defined := GlobRef.Set_env.add r !defined in
-  let closed_type = walk_type b Lexenv.empty in
+  let closed_type = walk_type b ~n_outer:0 Lexenv.empty in
   let inductive ind = Array.iter (fun p -> Array.iter (List.iter closed_type) p.ip_types) ind.ind_packets in
   Modutil.struct_iter
     (function
@@ -464,6 +482,10 @@ let elaboration ~lex use args =
       call
     | None ->
       tally := {!tally with recomputed = !tally.recomputed + 1};
+      Probe.violation "elaborated calls"
+        Pp.(
+          str "a call to " ++ str (Table.kername_of_global use.callee)
+          ++ str " is translated where Core elaboration did not reach it.");
       elaborate () )
 
 let report () =
