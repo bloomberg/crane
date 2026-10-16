@@ -176,8 +176,8 @@ and binder_origin =
   | Bpattern  (** Pinned down by the scrutinee's instantiation in a branch *)
 
 (** Mode for ITree effect extraction: sequential erases the tree,
-    reified preserves it as [shared_ptr<ITree<R>>]. *)
-and itree_extraction_mode =
+    reified preserves it as [shared_ptr<ITree<R>>] ({!Core_effects.mode}). *)
+and itree_extraction_mode = Core_effects.mode =
   | Sequential  (* Default: erase itree E R to R, bind becomes ; *)
   | Reified     (* Preserve structure: itree E R becomes shared_ptr<ITree<R>> *)
 

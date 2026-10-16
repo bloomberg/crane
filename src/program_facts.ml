@@ -6,6 +6,7 @@ open Miniml
 type t = {
   used_customs : Ref.User.Set.t;
   higher_order_projections : Ref.User.Set.t;
+  effects : Core_effects.t;
 }
 
 type program = {
@@ -52,8 +53,11 @@ let higher_order_projections struc =
   !found
 
 let analyze struc =
-  { used_customs = used_customs struc; higher_order_projections = higher_order_projections struc }
+  { used_customs = used_customs struc;
+    higher_order_projections = higher_order_projections struc;
+    effects = Core_effects.analyze struc }
 
 let equal a b =
   Ref.User.Set.equal a.used_customs b.used_customs
   && Ref.User.Set.equal a.higher_order_projections b.higher_order_projections
+  && Core_effects.equal a.effects b.effects

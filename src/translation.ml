@@ -1356,9 +1356,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        alone: calling it would apply the throwing thunk's [std::any] result
        as though it were a function. *)
     gen_expr ?expected_ty env absurd
-  | MLapp (MLglob ({callee = r; _} as use), a1 :: l) when is_ret r ->
+  | MLapp (MLglob ({callee = r; _} as use), a1 :: l) when is_effect Core_effects.Return use ->
     let ret_tys = Mlutil.written_type_args use in
-    if (!tctx).itree_mode = Reified then begin
+    if not (is_sequential_effect Core_effects.Return use) then begin
       (* Reified mode: Ret produces ITree<R>::ret(value). Don't strip it. *)
       let t = Common.last (a1 :: l) in
       match t with
@@ -1387,8 +1387,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     end
   (* | MLapp (MLglob {callee = h; _}, a1 :: a2 :: l) when is_hoist h -> gen_expr env
      (MLapp (a1, a2::[])) *)
-  | MLapp (MLglob {callee = r; _}, _ :: _ :: _) as a when is_bind r
-      && (!tctx).itree_mode <> Reified ->
+  | MLapp (MLglob use, _ :: _ :: _) as a when is_sequential_effect Core_effects.Bind use ->
     (* Sequential mode: bind in expression context (e.g., nested inside
        another expression). Wrap in IIFE so gen_stmts can sequentialize. *)
     with_escape_analysis (fun () ->
@@ -10164,7 +10163,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     decls @ defs @ [k (CPPvar fix_id)]
   (* | MLapp (MLglob {callee = h; _}, a1 :: a2 :: l) when is_hoist h -> gen_stmts env k
      (MLapp (a1, a2::[])) *)
-  | MLapp (MLglob ({callee = r; _} as use), a1 :: a2 :: l) when is_bind r ->
+  | MLapp (MLglob ({callee = r; _} as use), a1 :: a2 :: l) when is_effect Core_effects.Bind use ->
     let bind_tys = Mlutil.written_type_args use in
     (* The action's result type: the argument written for the variable the
        continuation takes, [A] in [bind : forall A B, M A -> (A -> M B) -> M
@@ -10179,7 +10178,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       | _ -> None
     in
     (* Reified mode: bind is a real function call, not desugared. *)
-    if (!tctx).itree_mode = Reified then
+    if not (is_sequential_effect Core_effects.Bind use) then
       let saved_dead = (!tctx).move_dead_after in
       let e = gen_tail_expr ~slot env ast in
       let result = inline_iife k e in
@@ -10217,7 +10216,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
            can reference it if needed. *)
         let action_is_pure_ret =
           match a_ml with
-          | MLapp (MLglob {callee = r; _}, _) when is_ret r -> true
+          | MLapp (MLglob use, _) -> is_effect Core_effects.Return use
           | _ -> false
         in
         let side_effect =
@@ -10256,7 +10255,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         match a with CPPenum_val _ -> [] | _ -> [Sexpr a]
       in
       ( match f with
-      | MLglob {callee = r; _} when is_ret r ->
+      | MLglob use when is_effect Core_effects.Return use ->
         (* Eta-reduced Ret: bind action Ret = action (monad right identity).
            In sequential mode, just execute the action and return. *)
         if (!tctx).current_cpp_return_type = Some Tvoid then
@@ -10288,8 +10287,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         | None ->
           side_effect @ gen_stmts ~slot env k f ) ) )
     end
-  | MLapp (MLglob {callee = r; _}, a1 :: l) when is_ret r ->
-    if (!tctx).itree_mode = Reified then begin
+  | MLapp (MLglob use, a1 :: l) when is_effect Core_effects.Return use ->
+    if not (is_sequential_effect Core_effects.Return use) then begin
       (* Reified mode: Ret is a constructor call, not desugared. *)
       let saved_dead = (!tctx).move_dead_after in
       let e = gen_tail_expr ~slot env ast in

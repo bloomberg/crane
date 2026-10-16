@@ -16,6 +16,9 @@ type t = {
   higher_order_projections : Ref.User.Set.t;
       (** The projections used as function values rather than as field
           accessors, which need a standalone definition. *)
+  effects : Core_effects.t;
+      (** Which applications are a monad's [bind] or [ret], and the mode
+          each is generated in. *)
 }
 
 val analyze : Miniml.ml_structure -> t

@@ -1623,6 +1623,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   check_structure_unchanged planned struc;
   if Pipeline_trace.enabled () then begin
     Pipeline_trace.event "emit" (Core_elaborate.report ());
+    Pipeline_trace.event "emit" (Core_effects.report ());
     Pipeline_trace.event "emit" (Callable_abi.report_foreign ())
   end;
   let opened = List.filter !opened_filter (opened_libraries ()) in

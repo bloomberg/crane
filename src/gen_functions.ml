@@ -270,8 +270,7 @@ let sig_witness_expr name (ml_ty : ml_type) =
     e.g. ["std::shared_ptr<ITree<%t1>>"]. *)
 let with_itree_mode_for ty f =
   match extract_monad_from_codomain ty with
-  | Some monad_ref ->
-    with_itree_mode (if is_monad_reified monad_ref then Reified else Sequential) f
+  | Some monad_ref -> with_itree_mode (Core_effects.mode_of_monad monad_ref) f
   | None -> f ()
 
 (** A class-typed parameter is not a value in C++: the class is a concept, and

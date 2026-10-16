@@ -6,6 +6,7 @@ open Miniml
 let install struc (facts : Program_facts.t) (plan : Target_plan.t) =
   Table.set_used_customs facts.used_customs;
   Table.set_higher_order_projections facts.higher_order_projections;
+  Core_effects.install facts.effects;
   List.iter
     (fun ({block; kind; _} : Target_plan.kind_decision) ->
       Table.add_inductive_kind block kind;
