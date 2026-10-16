@@ -488,13 +488,7 @@ let pp_template_param (mbid, mt) =
       | ps -> str "<" ++ prlist_with_sep (fun () -> str ", ") pp_modname ps ++ str ">"
     in
     cname ++ args ++ str " " ++ param_name
-  | None ->
-    (* Printed for the headers its requirements demand, and nothing else: its
-       requirement lines are not a constraint expression. *)
-    ( match Cpp_ind.modtype_concept (MPbound mbid) ~params:[] mt with
-    | Constraint c -> ignore (pp_constraint c : Pp.t list * module_constraint)
-    | Alias _ -> () );
-    str "typename " ++ param_name
+  | None -> str "typename " ++ param_name
 
 (** The lifted helper a declaration defines, if it defines one, used to emit it
     only once.
@@ -1975,8 +1969,8 @@ let registered_methods ?(order = Fun.id) kn ind =
     a module of elements [sel] has been walked, still in its frame [frame]
     but no longer inside it; [modtype path ~params mt] at each module type
     [mt] whose concept the header writes, where it writes it: a module's
-    after its body, a top-level one in place, a functor body's and the
-    anonymous signatures of a functor's parameters at the functor.  A
+    in its frame, a top-level one in place, a functor body's at the
+    functor.  A
     functor's body is walked as the class
     template it becomes,
     its parameters visible in it.  The visibility stack is restored, not
@@ -2061,28 +2055,17 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
     | SEdecl _ -> decl ~wrapper se
     | SEmodule {ml_mod_expr = MEfunctor _ as me; _} ->
       let rec split params = function
-        | MEfunctor (mbid, mt, me) -> split (params @ [(mbid, mt)]) me
+        | MEfunctor (mbid, _, me) -> split (params @ [MPbound mbid]) me
         | body -> (params, body)
       in
-      let signatures, body = split [] me in
-      let params = List.map (fun (mbid, _) -> MPbound mbid) signatures in
+      let params, body = split [] me in
       (match body with MEstruct (body_mp, sel) -> ignore (modtypes body_mp ~params sel) | _ -> ());
-      List.iter (fun (mbid, mt) -> ignore (modtype (MPbound mbid) ~params:[] mt)) signatures;
       with_render_ctx
         (fun c -> {c with rc_in_struct = true; rc_in_template = true})
         (fun () ->
           in_header_scope {!header with in_struct = true} (fun () -> module_expr ~params body) )
     | SEmodule {ml_mod_expr = MEstruct (_, sel) as me; _} ->
       in_module_frame (MPdot (top_visible_mp (), l)) sel (fun () -> module_expr ~params:[] me)
-    | SEmodule {ml_mod_expr = MEident _; ml_mod_type; _} ->
-      (* An alias of a functor is a template alias over its parameters. *)
-      let rec params = function
-        | MTfunsig (mbid, mt, rest) ->
-          ignore (modtype (MPbound mbid) ~params:[] mt);
-          params rest
-        | _ -> ()
-      in
-      params ml_mod_type
     | SEmodule {ml_mod_expr; _} -> module_expr ~params:[] ml_mod_expr
     | SEmodtype m -> ignore (modtype (MPdot (top_visible_mp (), l)) ~params:[] m)
   and module_expr ~params = function

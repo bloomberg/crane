@@ -191,10 +191,9 @@ val concept_placement : concept_plan -> Cpp_state.held_concept -> concept_placem
 val concept : Names.GlobRef.t -> Miniml.record_field list -> Minicpp.cpp_decl
 
 (** [modtype_concept path ~params mt] is the concept of the module type [mt]
-    at [path] -- a functor parameter's path, for the anonymous signature of
-    one -- over the functor parameters [params]: generated ahead of the files
-    where the header writes it, and taken from there by the header, which
-    generates it again under [CRANE_CHECK_IR] to compare. *)
+    at [path], over the functor parameters [params]: generated ahead of the
+    files where the header writes it, and taken from there by the header,
+    which generates it again under [CRANE_CHECK_IR] to compare. *)
 val modtype_concept :
   Names.ModPath.t -> params:Names.ModPath.t list -> Miniml.ml_module_type -> Modtype_concept.t
 

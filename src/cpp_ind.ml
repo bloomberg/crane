@@ -1296,8 +1296,7 @@ let concept r fields =
     (fun () -> Gen_decls.gen_typeclass_cpp r fields)
 
 (** The concept of each module type, generated ahead of the files where
-    the header writes it, by the module type's path -- a functor
-    parameter's, for the anonymous signature of one. *)
+    the header writes it, by the module type's path. *)
 let modtype_concepts_generated : (ModPath.t * Modtype_concept.t) list MPmap.t ref =
   State.cell State.Unit MPmap.empty
 
