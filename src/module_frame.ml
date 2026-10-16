@@ -137,3 +137,26 @@ let of_module mp ~name sel ~enclosing =
     method_candidates;
     concept_collision = concept_collision mp sel;
     promoted = promoted mp sel eponymous_type }
+
+let equal a b =
+  let ref_equal = Option.equal GlobRef.UserOrd.equal in
+  ref_equal a.eponymous_type b.eponymous_type
+  && ref_equal
+       (Option.map (fun (r, _, _) -> r) a.eponymous_record)
+       (Option.map (fun (r, _, _) -> r) b.eponymous_record)
+  && List.equal
+       (fun (r, _, _, i) (r', _, _, i') -> GlobRef.UserOrd.equal r r' && Int.equal i i')
+       a.method_candidates b.method_candidates
+  && Bool.equal a.concept_collision b.concept_collision
+  && Option.equal (List.equal Id.equal) a.promoted b.promoted
+
+let planned_frames : t MPmap.t ref = State.cell State.Unit MPmap.empty
+
+let plan mp frame = planned_frames := MPmap.add mp frame !planned_frames
+
+let planned mp =
+  match MPmap.find_opt mp !planned_frames with
+  | Some frame -> frame
+  | None ->
+    CErrors.anomaly
+      Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned frame.")

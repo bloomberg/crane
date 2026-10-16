@@ -35,3 +35,15 @@ val of_module :
   (Label.t * Miniml.ml_structure_elem) list ->
   enclosing:(Label.t * Miniml.ml_structure_elem) list ->
   t
+
+(** Whether two frames say the same of a module: the same eponymous
+    inductive and record, the same candidates at the same receiver
+    positions, the same collision and promotion. *)
+val equal : t -> t -> bool
+
+(** [plan mp frame] makes [frame] the planned frame of the module [mp],
+    which the walk ahead of the files works out ({!Cpp.walk_as_rendered}). *)
+val plan : ModPath.t -> t -> unit
+
+(** The planned frame of a module; an anomaly where none was planned. *)
+val planned : ModPath.t -> t

@@ -1244,13 +1244,20 @@ let rec pp_structure_elem ~is_header f = function
             str "using " ++ name ++ str " = " ++ body ++ str ";"
           in
           using_decl ++ concept_assert_pp name m.ml_mod_type
-      | MEstruct (_mp, sel) ->
+      | MEstruct (body_mp, sel) ->
         let old_context = (!render_ctx).rc_in_struct in
         with_module_frame @@ fun () ->
-        let frame =
-          Module_frame.of_module mp ~name:(Pp.string_of_ppcmds name) sel
-            ~enclosing:!current_structure_decls
-        in
+        let frame = Module_frame.planned mp in
+        if
+          Probe.checking ()
+          && not
+               (Module_frame.equal frame
+                  (Module_frame.of_module mp ~name:(Pp.string_of_ppcmds name) sel
+                     ~enclosing:!current_structure_decls ) )
+        then
+          Probe.violation "module frames"
+            Pp.(str "the module " ++ str (ModPath.to_string mp)
+                ++ str " is entered with another frame than planned");
         eponymous_type_ref := frame.eponymous_type;
         eponymous_record := frame.eponymous_record;
         method_candidates := frame.method_candidates;
@@ -1380,19 +1387,35 @@ let rec pp_structure_elem ~is_header f = function
         in
         (* Where the body of this module is rendered: inside the struct when
            the header spells it out, qualified by it in the implementation. *)
+        (* The header writes the body in the scope planned for it
+           ({!Cpp_ind.header_scope}): inside the struct unless a class concept
+           takes the module's name, and with the concepts hoisted where this
+           module or an enclosing one hoisted one.  Under [CRANE_CHECK_IR] the
+           plan is checked against those two answers as this render reaches
+           them. *)
         let enter_module c =
-          let c =
-            if is_header && not has_concept_collision then
-              (* For promoted modules with template params, set rc_in_template
-                 so non-inductive defs inside get full inline definitions. *)
+          if not is_header then c
+          else
+            match Cpp_ind.header_scope body_mp with
+            | Some {in_struct; concepts_hoisted} ->
+              if
+                Probe.checking ()
+                && ( in_struct <> (c.rc_in_struct || not has_concept_collision)
+                   || concepts_hoisted <> (c.rc_concepts_hoisted || typeclass_concepts <> []) )
+              then
+                Probe.violation "header scopes"
+                  Pp.(str "the module " ++ str (ModPath.to_string mp)
+                      ++ str " is entered in another scope than planned");
               { c with
-                rc_in_struct = true;
-                rc_in_template = c.rc_in_template || promoted_template }
-            else c
-          in
-          if is_header && typeclass_concepts <> [] then
-            { c with rc_concepts_hoisted = true }
-          else c
+                rc_in_struct = in_struct;
+                rc_concepts_hoisted = concepts_hoisted;
+                (* A promoted module's template defines everything inline. *)
+                rc_in_template =
+                  c.rc_in_template || (promoted_template && not has_concept_collision) }
+            | None ->
+              CErrors.anomaly
+                Pp.(str "Crane: the module " ++ str (ModPath.to_string mp)
+                    ++ str " has no planned header scope.")
         in
         let body, deferred_asserts_pp, this_method_candidates =
           with_promotion_scope @@ fun () ->
@@ -2213,6 +2236,7 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
   let in_module_frame mp sel k =
     let name = Table.escape_reserved_struct_name (Common.pp_module mp) in
     let frame = Module_frame.of_module mp ~name sel ~enclosing:!current_structure_decls in
+    Module_frame.plan mp frame;
     let outer = !header in
     let concepts = List.map (fun (_, r, fields) -> Cpp_ind.concept r fields) (declared_classes sel) in
     let hoisted_here =
