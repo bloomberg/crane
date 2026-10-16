@@ -90,10 +90,9 @@ let pp_concept_def name body =
     whether any came out qualified under [outer].
 
     That is what "this concept's requirements name the enclosing struct's own
-    types" means.  It used to be asked of the finished text, by searching it
-    for ["Outer::"], which also matched any identifier merely ending in
-    [Outer]; asking the resolutions instead answers the question that was
-    meant. *)
+    types" means for a module type's concept, which is printed straight from
+    its signature, with no generated declaration to ask
+    ({!concept_names_member} asks a class's). *)
 let watching_for_reference_to outer f =
   let seen = ref false in
   let saved = !Common.on_resolved in
@@ -107,6 +106,31 @@ let watching_for_reference_to outer f =
     Fun.protect ~finally:(fun () -> Common.on_resolved := saved) f
   in
   (result, !seen)
+
+(** Whether the concept [d] of a type class declared in the module [mp]
+    names one of the module's own members, and so cannot be declared ahead
+    of the module's struct.  Asked of the concept generated, not of its
+    text: a class it names is not a member, since its concept is declared
+    outside every struct too.  Under [CRANE_CHECK_IR] the answer is checked
+    against the references rendering [d] resolves under [outer], the
+    struct's name ({!watching_for_reference_to}). *)
+let concept_names_member mp ~outer d =
+  let names = ref false in
+  Minicpp.iter_globrefs
+    (fun r ->
+      if MPset.mem mp (Table.prefixes_mp (modpath_of_r r)) && not (Table.is_typeclass r) then
+        names := true )
+    d;
+  ( if Probe.checking () then
+    let _, resolved = watching_for_reference_to outer (fun () -> render_decl (empty_env ()) d) in
+    if resolved <> !names then
+      Probe.violation "class concepts held back"
+        Pp.(
+          str "the concept " ++ GlobRef.print (Option.get (decl_globref d))
+          ++ str
+               ( if !names then " names a member of its module but rendering it resolves none"
+                 else " names no member of its module but rendering it resolves one" ) ) );
+  !names
 
 (** The functor whose body declares module types at [mp], as
     {!Cpp_state.functor_concept_scopes} records it. *)
@@ -1296,6 +1320,11 @@ let rec pp_structure_elem ~is_header f = function
               | _ -> false )
             sel
         in
+        let class_concept l r fields =
+          let d = generated_concept r fields in
+          let names_member = concept_names_member mp ~outer:(Pp.string_of_ppcmds name) d in
+          (HCclass r, pp_doc_comment l ++ render_decl (empty_env ()) d, names_member)
+        in
         let typeclass_concepts =
           if is_header then
             List.concat_map
@@ -1306,27 +1335,12 @@ let rec pp_structure_elem ~is_header f = function
                     (List.init (Array.length ind.ind_packets) (fun i ->
                        match ind.ind_kind with
                        | TypeClass fields ->
-                         let ind_ref = GlobRef.IndRef (kn, i) in
-                         let concept_pp, mentions_outer =
-                           watching_for_reference_to
-                             (Pp.string_of_ppcmds name)
-                           @@ fun () ->
-                           render_decl
-                             (empty_env ())
-                             (generated_concept ind_ref fields)
-                         in
-                         let doc = pp_doc_comment l in
-                         [(HCclass ind_ref, doc ++ concept_pp, mentions_outer)]
+                         [class_concept l (GlobRef.IndRef (kn, i)) fields]
                        | _ -> [] ) )
                 (* A singleton class is declared as its method's type, and
                    becomes a concept all the same. *)
                 | SEdecl (Dtype (r, _, _)) when Table.singleton_class_method r <> None ->
-                  let concept_pp, mentions_outer =
-                    watching_for_reference_to (Pp.string_of_ppcmds name) @@ fun () ->
-                    render_decl (empty_env ())
-                      (generated_concept r (Table.get_record_field_bindings r))
-                  in
-                  [(HCclass r, pp_doc_comment l ++ concept_pp, mentions_outer)]
+                  [class_concept l r (Table.get_record_field_bindings r)]
                 | _ -> [] )
               sel
           else

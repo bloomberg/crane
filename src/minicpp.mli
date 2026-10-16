@@ -1608,6 +1608,11 @@ val map_decl :
   (cpp_expr -> cpp_expr) -> (cpp_stmt -> cpp_stmt) -> (cpp_type -> cpp_type) ->
   cpp_decl -> cpp_decl
 
+(** [iter_globrefs note d] calls [note] on each global [d]'s types,
+    expressions, statements and template constraints name, wherever they
+    occur, as often as they occur. *)
+val iter_globrefs : (GlobRef.t -> unit) -> cpp_decl -> unit
+
 (** Whether evaluating [e] evaluates every immediate child of it, there and
     then.  Not a lambda (its body runs later, if at all), a conditional, or a
     short-circuit [&&] / [||] (one side may not run): nothing may be moved

@@ -2437,6 +2437,47 @@ let rec map_decl ?fl
         dm_field = map_out_of_line ?fl fs ft m.dm_field }
   | Denum e -> Denum {e with de_tparams = map_tparams ft e.de_tparams}
 
+let iter_globrefs note d =
+  let rec ty t =
+    ignore
+      (map_cpp_type
+         (fun t ->
+           ( match t with
+           | Tglob (r, _, args) ->
+             note r;
+             List.iter (fun e -> ignore (expr e)) args
+           | Tnamespace (r, _) | Tinstance (_, r) -> note r
+           | Texpr_type e -> ignore (expr e)
+           | _ -> () );
+           t )
+         t );
+    t
+  and expr e =
+    ( match e with
+    | CPPglob (r, _, _) | CPPnamespace (r, _) | CPPstructmk (r, _, _) | CPPstruct (r, _, _)
+    | CPPget' (_, r, _) | CPPprojection_value r | CPPenum_val (r, _) | CPPnumeral (r, _) ->
+      note r
+    | CPPconcept_app (c, r, _) -> note c; note r
+    | CPPmethod_call m -> note m.mc_method
+    | CPPmethod_value m -> note m.mv_method
+    | CPPprojection p -> note p.pj_projection
+    | _ -> () );
+    map_expr expr stmt ty e
+  and stmt s =
+    (match s with Sswitch (_, r, _, _) -> note r | _ -> ());
+    map_stmt expr stmt ty s
+  in
+  let rec decl = function
+    | Dtemplate (tps, c, inner) ->
+      List.iter (function TTconcept (r, _), _ -> note r | _ -> ()) tps;
+      ignore (map_tparams ty tps);
+      Option.iter (fun e -> ignore (expr e)) c;
+      decl inner
+    | Dnspace (_, ds) -> List.iter decl ds
+    | d -> ignore (map_decl expr stmt ty d)
+  in
+  decl d
+
 let evaluates_children = function
   | CPPlambda _ | CPPcond _ | CPPbinop ((Band | Bor), _, _) -> false
   | _ -> true
