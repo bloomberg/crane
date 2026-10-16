@@ -752,43 +752,57 @@ let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) 
   && List.equal Id.equal (fst a.gf_env) (fst b.gf_env)
   && Id.Set.equal (snd a.gf_env) (snd b.gf_env)
 
-(** [generated_once ?on_reuse node gen] is [gen ()] ahead of the files,
-    recorded by the physical MiniML node [node] and the module it is
-    generated in.  A file's pass takes what was recorded at [node] in the
-    same module, handing it to [on_reuse] to replay any effect generating it
-    had; that nothing was is a walk ahead that missed a declaration a render
-    reaches. *)
-let generated_once ?(on_reuse = ignore) node gen =
+(** [ahead_once ~what ~recorded ~record ~same ?take gen] is [gen ()]
+    ahead of the files ({!generating_ahead}), recorded ([record]) with the
+    module it is generated in.  A file's pass takes what was recorded
+    ([recorded ()]) in the same module, handing it to [take] -- to claim the
+    helpers lifted out of it, or record its entity -- unless it is only
+    generating it again to check it ({!regenerating}); under
+    [CRANE_CHECK_IR] it generates it again and compares the two with
+    [same].  That nothing was recorded there is a walk ahead that missed a
+    declaration a render reaches, an anomaly about [what].  While planning,
+    it is [gen ()]. *)
+let ahead_once ~what ~recorded ~record ~same ?(take = Fun.id) gen =
   match get_phase () with
   | Plan -> gen ()
   | Emit _ when !ahead && not !rechecking ->
-    let key = Obj.repr node in
-    let funs = gen () in
-    Node_table.replace generated key
-      ((top_visible_mp (), funs) :: Option.default [] (Node_table.find_opt generated key));
-    funs
+    let v = gen () in
+    record ((top_visible_mp (), v) :: recorded ());
+    v
   | Emit _ -> (
     let mp = top_visible_mp () in
-    match
-      List.find_map
-        (fun (mp', funs) -> if ModPath.equal mp' mp then Some funs else None)
-        (Option.default [] (Node_table.find_opt generated (Obj.repr node)))
-    with
-    | Some funs ->
-      if not !rechecking then on_reuse funs;
-      if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
-        let again, _ = Translation.collecting_lifted gen in
-        if not (List.equal same_generation funs again) then
-          CErrors.anomaly
-            Pp.(str "Crane: a function was generated differently ahead of the files and "
-                ++ str (if !rechecking then "again in the reverse order." else "in one of them."))
-      end;
-      funs
+    match List.find_map (fun (mp', v) -> if ModPath.equal mp' mp then Some v else None) (recorded ()) with
+    | Some v ->
+      let taken = if !rechecking then v else take v in
+      if Sys.getenv_opt "CRANE_CHECK_IR" <> None
+         && not (same v (fst (Translation.collecting_lifted gen)))
+      then
+        CErrors.anomaly
+          Pp.(str "Crane: " ++ what () ++ str " was generated differently ahead of the files and "
+              ++ str (if !rechecking then "again in the reverse order." else "in one of them."));
+      taken
     | None ->
       CErrors.anomaly
-        Pp.(str "Crane: a function was reached while rendering in the module "
-            ++ str (ModPath.to_string mp)
-            ++ str " that was not generated ahead of the files there.") )
+        Pp.(str "Crane: " ++ what () ++ str " was reached while rendering in the module "
+            ++ str (ModPath.to_string mp) ++ str " that was not generated ahead of the files there.") )
+
+(** [in_node_table table node] is the [~recorded] and [~record] of
+    {!ahead_once} for what is recorded in [table] by the physical node
+    [node]. *)
+let in_node_table table node =
+  let key = Obj.repr node in
+  ( (fun () -> Option.default [] (Node_table.find_opt table key)),
+    fun l -> Node_table.replace table key l )
+
+(** [generated_once ?on_reuse node gen] is {!ahead_once} for the functions
+    generated at the MiniML node [node]: a file's pass hands them to
+    [on_reuse] to replay any effect generating them had. *)
+let generated_once ?(on_reuse = ignore) node gen =
+  let recorded, record = in_node_table generated node in
+  ahead_once ~what:(fun () -> Pp.str "a function") ~recorded ~record
+    ~same:(List.equal same_generation)
+    ~take:(fun funs -> on_reuse funs; funs)
+    gen
 
 (** [generate d] is what the MiniML declaration [d] generates, for whichever
     file is being written: functions translated once, with their file
@@ -1106,36 +1120,16 @@ let same_generated (a : generated) (b : generated) =
     generated ahead of the files, like a function ({!generated_once}), and
     taken from there by the header. *)
 let instance_entity r a t =
-  let mp = top_visible_mp () in
-  if !ahead && not !rechecking then begin
-    let generation = Translation.collecting_lifted (fun () -> instance_decls r a t) in
-    Node_table.replace instances_generated (Obj.repr a)
-      ((mp, generation)
-       :: Option.default [] (Node_table.find_opt instances_generated (Obj.repr a)) );
-    generation
-  end
-  else
-    match
-      List.find_map
-        (fun (mp', g) -> if ModPath.equal mp' mp then Some g else None)
-        (Option.default [] (Node_table.find_opt instances_generated (Obj.repr a)))
-    with
-    | Some (ds, lifted) ->
-      let helpers = if !rechecking then lifted else Translation.claim_lifted lifted in
-      if not !rechecking then ignore (record_entity r (List.map snd ds) helpers);
-      if Sys.getenv_opt "CRANE_CHECK_IR" <> None
-         && not (same_generated ds (fst (Translation.collecting_lifted (fun () -> instance_decls r a t))))
-      then
-        CErrors.anomaly
-          Pp.(str "Crane: the instance " ++ GlobRef.print r
-              ++ str " was generated differently ahead of the header and "
-              ++ str (if !rechecking then "again in the reverse order." else "in it."));
-      (ds, helpers)
-    | None ->
-      CErrors.anomaly
-        Pp.(str "Crane: the instance " ++ GlobRef.print r
-            ++ str " was not generated ahead of the header in the module "
-            ++ str (ModPath.to_string mp) ++ str ".")
+  let recorded, record = in_node_table instances_generated a in
+  ahead_once
+    ~what:(fun () -> Pp.(str "the instance " ++ GlobRef.print r))
+    ~recorded ~record
+    ~same:(fun (ds, _) (ds', _) -> same_generated ds ds')
+    ~take:(fun (ds, lifted) ->
+      let helpers = Translation.claim_lifted lifted in
+      ignore (record_entity r (List.map snd ds) helpers);
+      (ds, helpers) )
+    (fun () -> Translation.collecting_lifted (fun () -> instance_decls r a t))
 
 (** {2 The header's scope of a module}
 
@@ -1167,29 +1161,12 @@ let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset concepts_genera
     by the header, which generates it again under [CRANE_CHECK_IR] to
     compare. *)
 let concept r fields =
-  let gen () = Gen_decls.gen_typeclass_cpp r fields in
-  let mp = top_visible_mp () in
-  let earlier = Option.default [] (Ref.User.Tbl.find_opt concepts_generated r) in
-  match get_phase () with
-  | Plan -> gen ()
-  | Emit _ when !ahead && not !rechecking ->
-    let d = gen () in
-    Ref.User.Tbl.replace concepts_generated r ((mp, d) :: earlier);
-    d
-  | Emit _ -> (
-    match List.find_map (fun (mp', d) -> if ModPath.equal mp mp' then Some d else None) earlier with
-    | Some d ->
-      if Sys.getenv_opt "CRANE_CHECK_IR" <> None && compare d (gen ()) <> 0 then
-        CErrors.anomaly
-          Pp.(str "Crane: the concept of " ++ GlobRef.print r
-              ++ str " was generated differently ahead of the header and "
-              ++ str (if !rechecking then "again in the reverse order." else "in it."));
-      d
-    | None ->
-      CErrors.anomaly
-        Pp.(str "Crane: the concept of " ++ GlobRef.print r
-            ++ str " was not generated ahead of the header in the module "
-            ++ str (ModPath.to_string mp) ++ str ".") )
+  ahead_once
+    ~what:(fun () -> Pp.(str "the concept of " ++ GlobRef.print r))
+    ~recorded:(fun () -> Option.default [] (Ref.User.Tbl.find_opt concepts_generated r))
+    ~record:(Ref.User.Tbl.replace concepts_generated r)
+    ~same:(fun d d' -> compare d d' = 0)
+    (fun () -> Gen_decls.gen_typeclass_cpp r fields)
 
 (** What was generated ahead of the header for each declaration it writes
     alone, by the declaration's physical node, with the module it was
@@ -1210,36 +1187,16 @@ let same_header_generation a b =
     header writes the module in ({!header_scope}), like an instance
     ({!instance_entity}), and taken from there by the header. *)
 let header_entity d gen =
-  let mp = top_visible_mp () in
-  let generate () = Translation.collecting_lifted gen in
-  if !ahead && not !rechecking then begin
-    let generation = generate () in
-    Node_table.replace headers_generated (Obj.repr d)
-      ((mp, generation) :: Option.default [] (Node_table.find_opt headers_generated (Obj.repr d)));
-    generation
-  end
-  else
-    match
-      List.find_map
-        (fun (mp', g) -> if ModPath.equal mp' mp then Some g else None)
-        (Option.default [] (Node_table.find_opt headers_generated (Obj.repr d)))
-    with
-    | Some (g, lifted) ->
-      let helpers = if !rechecking then lifted else Translation.claim_lifted lifted in
-      if not !rechecking then ignore (record_entity (decl_entity d) (List.map snd g.decls) helpers);
-      if Sys.getenv_opt "CRANE_CHECK_IR" <> None
-         && not (same_header_generation g (fst (generate ())))
-      then
-        CErrors.anomaly
-          Pp.(str "Crane: " ++ GlobRef.print (decl_entity d)
-              ++ str " was generated differently ahead of the header and "
-              ++ str (if !rechecking then "again in the reverse order." else "in it."));
-      (g, helpers)
-    | None ->
-      CErrors.anomaly
-        Pp.(str "Crane: " ++ GlobRef.print (decl_entity d)
-            ++ str " was not generated ahead of the header in the module "
-            ++ str (ModPath.to_string mp) ++ str ".")
+  let recorded, record = in_node_table headers_generated d in
+  ahead_once
+    ~what:(fun () -> GlobRef.print (decl_entity d))
+    ~recorded ~record
+    ~same:(fun (g, _) (g', _) -> same_header_generation g g')
+    ~take:(fun (g, lifted) ->
+      let helpers = Translation.claim_lifted lifted in
+      ignore (record_entity (decl_entity d) (List.map snd g.decls) helpers);
+      (g, helpers) )
+    (fun () -> Translation.collecting_lifted gen)
 
 (** [in_header_scope f] runs [f] in the render context the header writes
     the current module's body in, as planned ({!header_scope}). *)
