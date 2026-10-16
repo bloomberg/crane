@@ -490,28 +490,17 @@ let pp_template_param (mbid, mt) =
     cname ++ args ++ str " " ++ param_name
   | None -> str "typename " ++ param_name
 
-(** The lifted helper a declaration defines, if it defines one, used to emit it
-    only once.
+(** The name of the lifted helper a declaration defines, if it defines one.
 
     Asking {!Lifted.of_ref} rather than matching the shape of the name is what
     keeps an ordinary [Dfun] whose reference happens to be a [VarRef] -- a
-    record field accessor, a [make] factory -- from being mistaken for a
-    helper and deduplicated against one. *)
+    record field accessor, a [make] factory -- from being taken for a
+    helper. *)
 let rec lifted_decl_key = function
   | Dtemplate (_, _, inner) -> lifted_decl_key inner
   | Dfun {df_path = {dp_outer = r, []; dp_inner = []}; _} ->
     Option.map Lifted.name (Lifted.of_ref r)
   | _ -> None
-
-let dedup_lifted_decls ds =
-  let seen = Hashtbl.create 16 in
-  List.filter
-    (fun d ->
-      match lifted_decl_key d with
-      | Some k ->
-        if Hashtbl.mem seen k then false else (Hashtbl.replace seen k (); true)
-      | None -> true )
-    ds
 
 (** Whether [spec] may be emitted at the top of the file, above every
     definition in it.
@@ -714,9 +703,6 @@ let dbg_lifted =
     collect. *)
 let pending_lifted_specs = Cpp_ind.deferred "pending_lifted_specs"
 
-(** Lifted helpers already emitted as members of the struct being rendered. *)
-let emitted_member_lifted : (Id.t, unit) Hashtbl.t = Hashtbl.create 16
-
 (** The concept of the type class [r], recorded as [r]'s generation. *)
 let generated_concept r fields =
   let d = Cpp_ind.concept r fields in
@@ -887,19 +873,11 @@ let rec pp_structure_elem ~is_header f = function
       else
         body
     in
+    (* The helpers are the ones planned for this element alone
+       ({!Cpp_ind.header_claim}), each lifted once in the file. *)
     let member_lifted =
       if not is_header then mt ()
       else
-        let lifted =
-          helpers
-          |> dedup_lifted_decls
-          |> List.filter (fun d' ->
-                 match lifted_decl_key d' with
-                 | Some k ->
-                   if Hashtbl.mem emitted_member_lifted k then false
-                   else (Hashtbl.replace emitted_member_lifted k (); true)
-                 | None -> true )
-        in
         List.fold_left
           (fun acc d' ->
             (* Emitted after the struct this was lifted out of, so after the
@@ -931,7 +909,7 @@ let rec pp_structure_elem ~is_header f = function
             else if Pp.ismt acc then pp
             else acc ++ cut2 () ++ pp )
           (mt ())
-          lifted
+          helpers
     in
     let body =
       if Pp.ismt member_lifted then body
@@ -1340,7 +1318,7 @@ let rec pp_structure_elem ~is_header f = function
                     (fun h ->
                       pp_cpp_decl (empty_env ()) (fst (lifted_views ~may_hoist:false h))
                       ++ fnl () )
-                    (dedup_lifted_decls method_helpers)
+                    method_helpers
                 in
                 let methods_pp =
                   if method_fields = [] then
@@ -1763,9 +1741,7 @@ let pp_wrapper_module_dual ~is_header func_sels =
   in
   let generated = List.map process_sel func_sels in
   let all_results = file_views ~is_header (List.map fst generated) in
-  let all_lifted =
-    List.concat_map snd generated
-    |> dedup_lifted_decls in
+  let all_lifted = List.concat_map snd generated in
   let render_sel_specs (specs, _) =
     match specs with
     | [] -> mt ()
@@ -3224,7 +3200,6 @@ let do_struct_with_decl_tracking ~is_header f s =
   hoisted_module_structs := [];
   Cpp_ind.discard Cpp_ind.deferred_member_defs;
   Cpp_ind.discard Cpp_ind.file_scope_erased_aliases;
-  Hashtbl.clear emitted_member_lifted;
   Translation.clear_seen_lifted_refs ();
   init_std_names ();
   (* In Separate Extraction mode the visibility stack is empty when we enter
