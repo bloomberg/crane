@@ -899,7 +899,11 @@ let finished_ahead_once table key finish ~what =
   let earlier = Node_table.find_opt table (Obj.repr key) in
   match (get_phase (), earlier) with
   | Plan, _ -> finish ()
-  | Emit _, Some f when !ahead -> f
+  | Emit _, Some f when !ahead ->
+    if !rechecking && compare f (finish ()) <> 0 then
+      CErrors.anomaly
+        Pp.(str "Crane: " ++ str what ++ str " was finished differently again in the reverse order.");
+    f
   | Emit _, None when !ahead ->
     let f = finish () in
     Node_table.replace table (Obj.repr key) f;
@@ -973,6 +977,25 @@ let finalized (funs : Gen_decls.generated_fun list) =
   in
   match get_phase () with
   | Plan -> finalize ()
+  | Emit _ when !ahead && !rechecking ->
+    let paired = finalize () in
+    List.iter
+      (fun ((g : Gen_decls.generated_fun), e) ->
+        match (g.gf_entity, e) with
+        | Defined (d, _), Some e ->
+          if
+            not
+              (Option.equal
+                 (fun a b -> compare a b = 0)
+                 (Node_table.find_opt finalized_ahead (Obj.repr d))
+                 (Some e) )
+          then
+            CErrors.anomaly
+              Pp.(str "Crane: a function was finished differently again in the reverse order.")
+        | Declared d, _ -> ignore (finished_alone d : Cpp_erasure.settled)
+        | Defined _, None -> () )
+      paired;
+    paired
   | Emit _ when !ahead ->
     let paired = finalize () in
     List.iter

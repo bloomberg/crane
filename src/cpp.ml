@@ -2389,6 +2389,16 @@ let finish_ahead (aheads : Cpp_ind.ahead list) =
 
 let generate_decl_ahead d = generating_ahead @@ fun () -> finish_ahead [Cpp_ind.generate_ahead d]
 
+(** Finish [aheads] again in the reverse order, while {!Cpp_ind.regenerating}:
+    what each finishes is compared with what {!finish_ahead} finished. *)
+let refinish_reversed (aheads : Cpp_ind.ahead list) =
+  let aheads = List.rev aheads in
+  List.iter (fun (a : Cpp_ind.ahead) -> a.finish ()) aheads;
+  List.iter
+    (fun (a : Cpp_ind.ahead) ->
+      List.iter (fun h -> ignore (Cpp_ind.finished_alone h : Cpp_erasure.settled)) (List.rev a.helpers) )
+    aheads
+
 let generate_ahead s =
   generating_ahead @@ fun () ->
   (* Everything is generated first, and finished after ({!finish_ahead}).  A
@@ -2441,12 +2451,15 @@ let generate_ahead s =
       | SEdecl d -> later (Cpp_ind.generate_ahead d)
       | _ -> ())
     s;
-  finish_ahead (List.rev !aheads);
-  (* A body is a function of its declaration, not of the bodies generated
-     before it: under [CRANE_CHECK_IR] everything is generated again in the
-     reverse order and must come out the same (the plan's Milestone 4). *)
+  let aheads = List.rev !aheads in
+  finish_ahead aheads;
+  (* A body is a function of its declaration, not of the bodies generated or
+     finished before it: under [CRANE_CHECK_IR] everything is finished and
+     generated again in the reverse order and must come out the same (the
+     plan's Milestone 4). *)
   if Probe.checking () then
     Cpp_ind.regenerating @@ fun () ->
+    refinish_reversed aheads;
     walk_as_rendered ~reversed:true
       ~after_module:(fun frame _ ->
         Option.iter
