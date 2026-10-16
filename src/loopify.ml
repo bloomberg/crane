@@ -104,20 +104,6 @@ include Loopify_frame
 
 (** {2 Main transformation dispatch} *)
 
-(** Check if a function body contains any call to a function identified by
-    [target_id]. Searches through all statements and nested expressions for a
-    [CPPfun_call (call_opaque, CPPvar id, of_reversed (_))] where [id] equals [target_id].
-
-    @param target_id The function name to search for
-    @param stmts     The statement list (function body) to search
-    @return [true] if any call to [target_id] is found *)
-let body_calls_id target_id stmts =
-  body_exists
-    (function
-      | CPPfun_call (_, CPPvar id, _) when Id.equal id target_id -> true
-      | _ -> false )
-    stmts
-
 (** {3 GlobRef-based mutual recursion} *)
 
 (** Check if a function body calls any function whose [GlobRef.t] appears in
@@ -152,12 +138,10 @@ let body_calls_any_ref refs body =
 
 (** {3 Generic mutual recursion inlining}
 
-    Both the GlobRef-based path ({!try_inline_mutual_into}) and the
-    Id-based path ({!try_inline_mutual_fields}) perform the same core
-    operation: find every call to a target function and replace it with
-    the callee's body.  This record and the three generic traversal
-    functions capture that shared logic, parameterised only by how the
-    call target is recognised. *)
+    Every inlining Loopify does is one operation: find every call to a
+    target function and replace it with the callee's body.  This record and
+    the three generic traversal functions capture it, parameterised only by
+    how the call target is recognised. *)
 
 (** Parameters for a single inlining substitution. *)
 type inline_spec = {
@@ -1712,72 +1696,6 @@ and transform_field_exn ~tparams ~self_ty (fld, vis, tag) =
     (Fnested_struct (id, fields'), vis, tag)
   | _ -> (fld, vis, tag)
 
-(** {2 Mutual recursion inlining}
-
-    When two functions A and B call each other (mutual recursion), inline B's
-    body at each call site in A. After inlining, A becomes self-recursive and
-    can be loopified normally. B remains unchanged — it calls the (now
-    loopified) A. *)
-
-(** Try to inline mutual recursion among the method fields of a struct.
-    Returns the modified field list.
-
-    Identifies mutually recursive pairs (A calls B and B calls A), then inlines
-    B's body into A's call sites using {!generic_inline_stmts}.  After inlining,
-    A becomes self-recursive and can be loopified normally. *)
-let try_inline_mutual_fields fields =
-  let fundefs =
-    List.filter_map
-      (fun (f, _, _) ->
-        match f with
-        | Fmethod mf ->
-          Some (mf.mf_name, mf.mf_ret_type, mf.mf_params, mf.mf_body)
-        | _ -> None )
-      fields
-  in
-  (* Look for mutual pairs *)
-  let find_mutual_pair () =
-    let n = List.length fundefs in
-    let found = ref None in
-    for i = 0 to n - 1 do
-      for j = i + 1 to n - 1 do
-        if !found = None then
-          let name_a, _, _, body_a = List.nth fundefs i in
-          let name_b, _, _, body_b = List.nth fundefs j in
-          let a_calls_b = body_calls_id name_b body_a in
-          let b_calls_a = body_calls_id name_a body_b in
-          if a_calls_b && b_calls_a then
-            found := Some (i, j)
-      done
-    done;
-    !found
-  in
-  match find_mutual_pair () with
-  | None -> fields
-  | Some (i, j) ->
-    let name_a, _ret_ty_a, _params_a, _body_a = List.nth fundefs i in
-    let name_b, ret_ty_b, params_b, body_b = List.nth fundefs j in
-    (* Build an inline_spec that identifies calls to B by name *)
-    let spec = {
-      is_target =
-        (function
-          | CPPfun_call (_, CPPvar id, _) -> Id.equal id name_b
-          | _ -> false);
-      get_args =
-        (function CPPfun_call (_, _, args) -> to_reversed args | _ -> []);
-      params = params_b;
-      body = body_b;
-      ret_ty = ret_ty_b;
-    } in
-    List.map
-      (fun (f, vis, tag) ->
-        match f with
-        | Fmethod mf when Id.equal mf.mf_name name_a ->
-          (Fmethod { mf with mf_body = generic_inline_stmts spec mf.mf_body }, vis, tag)
-        | _ -> (f, vis, tag) )
-      fields
-
-
 (** [transform_local_tail_loops decl] turns the tail-recursive local
     fixpoints in [decl]'s bodies into loops, and leaves everything else as it
     was.  A tail loop needs no frame and changes no evaluation order, so it is
@@ -1824,8 +1742,7 @@ let rec transform_decl ?(tparams = []) = function
         (if ds.ds_tparams = [] then tparams else ds.ds_tparams)
     in
     let self_ty = Tconst (Tptr (Tglob (ds.ds_ref, self_args, []))) in
-    (* Try inlining mutual recursion among struct fields before transforms *)
-    let fields = try_inline_mutual_fields ds.ds_fields in
+    let fields = ds.ds_fields in
     (* Collect smart-pointer field indices from variant structs for TMC *)
     let rec collect_uptr_fields (fld, _vis, _tag) =
       match fld with
