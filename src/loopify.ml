@@ -1866,9 +1866,5 @@ let rec transform_decl ?(tparams = []) = function
     ( match transform_decl ~tparams (Dstruct ds) with
     | Dstruct ds' -> Dfields ds'
     | d -> d )
-  | Dnspace (r, decls) ->
-    (* Pre-register all functions for mutual recursion detection before
-       transforming *)
-    List.iter register_decl decls;
-    Dnspace (r, List.map (transform_decl ~tparams) decls)
+  | Dnspace (r, decls) -> Dnspace (r, List.map (transform_decl ~tparams) decls)
   | d -> d
