@@ -241,28 +241,54 @@ let rec lifted_origin r =
   | Some h -> ( match Lifted.origin h with Some o -> lifted_origin o | None -> r )
   | None -> r
 
-(** Under [CRANE_CHECK_IR], that a cycle partner inlined into the function
-    known by [self_refs] is one by the program's recursive groups
-    ({!Recursive_groups}): a callee whose body reaches the function's reaches
-    it in Core too, a helper's body being part of the declaration it was
-    lifted out of. *)
-let check_planned_partner self_refs r =
-  if Probe.checking () then
-    let groups = Recursive_groups.installed () in
-    let origin = lifted_origin r in
-    if not (List.exists (fun s -> Recursive_groups.in_group groups (lifted_origin s) origin) self_refs)
-    then
-      Probe.violation "recursive groups"
-        Pp.(
-          str "Loopify inlines " ++ GlobRef.print r ++ str " into "
-          ++ prlist_with_sep pr_comma GlobRef.print self_refs
-          ++ str ", which the program's recursive groups do not put on one cycle")
+(** Whether the body registered for [start] reaches the function known by
+    [self_refs] through the call graph of the registered bodies: how Loopify
+    found a cycle partner before the program's recursive groups said, kept
+    to check them against ({!on_cycle_with}).  Cycles are broken with a
+    visited set. *)
+let reaches_through_bodies self_refs start =
+  let is_self r = List.exists (Common.globref_equal r) self_refs in
+  let visited = ref [] in
+  let rec go r =
+    if List.exists (Common.globref_equal r) !visited then false
+    else begin
+      visited := r :: !visited;
+      match Ref.User.Tbl.find_opt mutual_fn_table r with
+      | None -> false
+      | Some {rf_body = b; _} ->
+        body_calls_any_ref self_refs b
+        || Ref.User.Tbl.fold
+             (fun r2 _ acc -> acc || ((not (is_self r2)) && body_calls_any_ref [r2] b && go r2))
+             mutual_fn_table false
+    end
+  in
+  go start
+
+(** Whether [r] is on a cycle through the function known by [self_refs] by
+    the program's recursive groups ({!Recursive_groups}), a helper's body
+    being part of the declaration it was lifted out of: inlining it moves
+    the function towards calling itself.  Under [CRANE_CHECK_IR], the
+    registered bodies must say the same ({!reaches_through_bodies}). *)
+let on_cycle_with self_refs r =
+  let groups = Recursive_groups.installed () in
+  let planned =
+    List.exists (fun s -> Recursive_groups.in_group groups (lifted_origin s) (lifted_origin r)) self_refs
+  in
+  if Probe.checking () && planned <> reaches_through_bodies self_refs r then
+    Probe.violation "recursive groups"
+      Pp.(
+        str "the program's recursive groups " ++ str (if planned then "put " else "do not put ")
+        ++ GlobRef.print r ++ str " on a cycle with "
+        ++ prlist_with_sep pr_comma GlobRef.print self_refs
+        ++ str ", and its registered body says otherwise");
+  planned
 
 (** Try to inline a mutual recursion partner into a function body.
 
     Scans [body] for calls to functions registered in {!mutual_fn_table} that
-    also call back into the current function (true mutual recursion). If such a
-    callee is found, its body is inlined at each call site:
+    the program's recursive groups put on a cycle with the current function
+    ({!on_cycle_with}). If such a callee is found, its body is inlined at
+    each call site:
 
     - {b Tail calls} ([return callee(args)]) are replaced by parameter bindings
       followed by the callee's body directly.
@@ -289,42 +315,15 @@ let try_inline_mutual_into names body =
      in the body, check if the callee is registered AND lies on a recursion
      cycle back to this function.  A directly-mutual partner (2-way) calls this
      function outright; a longer cycle (e.g. 3-way [a -> b -> c -> a]) reaches
-     it only transitively, so we test transitive reachability through the
-     registered call graph and inline the whole cycle one hop at a time. *)
+     it only transitively, and the whole cycle is inlined one hop at a time. *)
   let self_refs = List.map fst names in
   let is_self r = List.exists (Common.globref_equal r) self_refs in
-  (* Does [b] call the registered function [r]?  By its global: a local of
-     the same name is not the function. *)
-  let body_calls_reg r b = body_calls_any_ref [r] b in
-  (* Can [start]'s body reach one of [self_refs] through the registered call
-     graph (so that inlining [start] moves this function towards
-     self-recursion)?  Cycles are broken with a visited set. *)
-  let reaches_self start =
-    let visited = ref [] in
-    let rec go r =
-      if List.exists (Common.globref_equal r) !visited then false
-      else begin
-        visited := r :: !visited;
-        match Ref.User.Tbl.find_opt mutual_fn_table r with
-        | None -> false
-        | Some {rf_body = b; _} ->
-          body_calls_any_ref self_refs b
-          || Ref.User.Tbl.fold
-               (fun r2 _ acc ->
-                 acc
-                 || ((not (is_self r2)) && body_calls_reg r2 b && go r2) )
-               mutual_fn_table false
-      end
-    in
-    go start
-  in
   (* Whether a callee is a registered function on a cycle, not yet inlined. *)
   let find_registered_callee_by_ref inlined r =
     if is_self r || List.exists (Common.globref_equal r) inlined then None
     else
       match Ref.User.Tbl.find_opt mutual_fn_table r with
-      | Some {rf_ret_ty; rf_params; rf_body} when reaches_self r ->
-        check_planned_partner self_refs r;
+      | Some {rf_ret_ty; rf_params; rf_body} when on_cycle_with self_refs r ->
         Some (r, rf_ret_ty, rf_params, rf_body)
       | _ -> None
   in

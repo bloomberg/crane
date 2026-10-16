@@ -7,6 +7,7 @@
     group of its own.  A fact about the Core program, computed once from it
     ({!Program_facts.analyze_program}), and the first part of a recursion
     plan: which functions recurse through which, before any is lowered.
+    Loopify takes the partners it inlines into a function from here.
 
     A function is a node under the name it is defined with; an edge is a
     reference to a defined function anywhere in a body, applied or not.  A
