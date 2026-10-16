@@ -946,16 +946,10 @@ let rec pp_structure_elem ~is_header f = function
     let name =
       match m.ml_mod_expr with
       | MEident _ | MEapply _ ->
-        (* Transparent aliases generate a [using X = Y;] alias in C++.
-           Calling [pp_modname mp] would call [add_visible (Mod, s) l], which
-           marks this short name as "in scope" and triggers a spurious
-           [error_module_clash] when two modules at different nesting depths
-           share the same short name (e.g. a top-level [Module Impl] and an
-           inner [Module Impl := ...] inside a functor body).  Since aliases
-           don't introduce new identifiers into the qualified-name namespace,
-           we compute the name without registering it -- the name references
-           spell, a renamed one where another module shares the label
-           ([OrdersEx.Positive_as_OT] beside [OrderedTypeEx.Positive_as_OT]). *)
+        (* Transparent aliases generate a [using X = Y;] alias in C++, named
+           as references spell the module: a renamed one where another module
+           shares the label ([OrdersEx.Positive_as_OT] beside
+           [OrderedTypeEx.Positive_as_OT]). *)
         let s = Common.emitted_module_name mp in
         str (Table.escape_reserved_struct_name s)
       | _ ->

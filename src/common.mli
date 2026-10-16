@@ -245,9 +245,7 @@ val pp_type_name_capitalized : GlobRef.t -> string
 (** Print a module path. *)
 val pp_module : ModPath.t -> string
 
-(** Compute the C++ name for a module label without the [add_visible]
-    side-effect.  Use when the module is a transparent alias ([MEident] /
-    [MEapply]) and you only need the string for display. *)
+(** The C++ name of a module label, as {!modular_rename} spells it. *)
 val module_label_name : Label.t -> string
 
 (** Pre-scan the structure for module/inductive name collisions.  When a module
@@ -325,18 +323,12 @@ val resolved_is_qualified : resolved -> bool
     [None] when the name comes out unqualified. *)
 val resolved_split : resolved -> (string * string) option
 
-(** Resolve a module path to its name.  Registers the name in the visible
-    scope, so call it once per occurrence; {!pp_module} is this plus
-    {!resolved_string}. *)
+(** Resolve a module path to its name, as the visible scopes qualify it;
+    {!pp_module} is this plus {!resolved_string}. *)
 val resolve_module : Names.ModPath.t -> resolved
 
-type reset_kind =
-  | AllButExternal
-  | Everything
-      (** What to reset: all renaming tables, or also external file content. *)
-
 (** Reset all renaming tables. *)
-val reset_renaming_tables : reset_kind -> unit
+val reset_renaming_tables : unit -> unit
 
 (** Set the set of reserved keywords for the target language. *)
 val set_keywords : Id.Set.t -> unit

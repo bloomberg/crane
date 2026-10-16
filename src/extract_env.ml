@@ -1546,7 +1546,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   (* Empties every per-file cell, the mutual-recursion registry among them,
      before this unit is planned and rendered.  Everything before the first
      render is planning, whatever the previous unit left the phase at. *)
-  reset_renaming_tables AllButExternal;
+  reset_renaming_tables ();
   set_phase Plan;
   let unsafe_needs =
     {
@@ -1739,7 +1739,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
 let reset () =
   Visit.reset ();
   reset_tables ();
-  reset_renaming_tables Everything;
+  reset_renaming_tables ();
   set_phase Plan;
   Miniml.Meta.thaw ()
 
@@ -2473,7 +2473,7 @@ let extract_and_compile ~opaque_access file l =
     output, once the unit [struc] it belongs to is planned. *)
 let print_one_decl struc mp decl =
   let d = descr () in
-  reset_renaming_tables AllButExternal;
+  reset_renaming_tables ();
   ignore (plan_layout struc);
   elaborate_unit struc;
   freeze_global_ids ();

@@ -69,8 +69,6 @@ val error_inductive : ?loc:Loc.t -> GlobRef.t -> 'a
 (** Report error for number of constructors. *)
 val error_nb_cons : unit -> 'a
 
-(** Report error for module clash. *)
-val error_module_clash : ModPath.t -> ModPath.t -> 'a
 
 (** Report error for missing module expression. *)
 val error_no_module_expr : ModPath.t -> 'a

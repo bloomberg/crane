@@ -284,24 +284,6 @@ type kind =
   | Cons
   | Mod
 
-(** Ordered comparison for (kind, string) pairs. *)
-module KOrd = struct
-  type t = kind * string
-
-  let compare (k1, s1) (k2, s2) =
-    let c =
-      Stdlib.compare k1 k2
-      (* OK *)
-    in
-    if c = 0 then
-      String.compare s1 s2
-    else
-      c
-end
-
-(** Map keyed by (kind, string) pairs. *)
-module KMap = Map.Make (KOrd)
-
 (** Apply case convention to identifier based on kind (currently identity). *)
 let kindcase_id k id =
   id (* if upperkind k then uppercase_id id else lowercase_id id *)
@@ -634,16 +616,6 @@ let mktable_modpath ?census autoclean =
     census;
   ((fun r v -> m := MPmap.add r v !m), (fun r -> MPmap.find r !m), clear)
 
-(** Table recording first-level content of each MPfile. *)
-let add_mpfiles_content, get_mpfiles_content, clear_mpfiles_content =
-  mktable_modpath false
-
-(** Retrieve module file content, returning an empty map when the module
-    has not been registered yet (e.g. while a separately extracted file is
-    planned, before [pop_visible] has populated the table). *)
-let get_mpfiles_content mp =
-  try get_mpfiles_content mp with Not_found -> KMap.empty
-
 (** The list of external modules that will be opened initially *)
 
 let mpfiles_add, mpfiles_mem, mpfiles_list =
@@ -700,20 +672,16 @@ let clear_non_output_modules () = Hashtbl.clear valid_output_module_set
     - the [params] are the [MPbound] when [mp] is a functor, the innermost
       [MPbound] coming first in the list.
 
-    - The [content] part is used to record all the names already seen at this
-      level.
-
     - The [members] part holds the C++ names the level declares, known when
-      it is entered: [content] fills in only as references are printed, and a
-      member printed later still hides an outer name from a body printed
-      before it. *)
+      it is entered, which hide an outer name spelled the same way.  They are
+      all a level knows: which names hide which is a question about the
+      program, not about what was printed before. *)
 
 (** A layer of the visibility stack, tracking names visible at one scope level.
 *)
 type visible_layer = {
   mp : ModPath.t;
   params : ModPath.t list;
-  mutable content : Label.t KMap.t;
   mutable members : Id.Set.t;
 }
 
@@ -725,13 +693,9 @@ let pop_visible, push_visible, get_visible, set_visible =
   let pop () =
     match !vis with
     | [] -> CErrors.anomaly (Pp.str "pop_visible: empty visibility stack")
-    | v :: vl ->
-      vis := vl;
-      (* we save the 1st-level-content of MPfile for later use *)
-      if get_phase () = Emit Impl && modular () && is_modfile v.mp then
-        add_mpfiles_content v.mp v.content
+    | _ :: vl -> vis := vl
   and push mp mps =
-    vis := {mp; params = mps; content = KMap.empty; members = Id.Set.empty} :: !vis
+    vis := {mp; params = mps; members = Id.Set.empty} :: !vis
   and get () = !vis
   and set v = vis := v in
   (pop, push, get, set)
@@ -763,11 +727,6 @@ let top_visible () =
 (** Get the module path of the innermost visible layer. *)
 let top_visible_mp () = (top_visible ()).mp
 
-(** Register a name in the current visible layer. *)
-let add_visible ks l =
-  let visible = top_visible () in
-  visible.content <- KMap.add ks l visible.content
-
 (** Declare the C++ names the current visible layer's scope holds. *)
 let add_visible_members ids =
   let visible = top_visible () in
@@ -785,15 +744,8 @@ let hidden_by_member name =
   in
   List.exists (fun v -> Id.Set.mem (Id.of_string head) v.members) (get_visible ())
 
-(** What to reset: all renaming tables, or also external file content. *)
-type reset_kind =
-  | AllButExternal
-  | Everything
-
 (** Reset all renaming tables. *)
-let reset_renaming_tables flag =
-  do_cleanup ();
-  if flag == Everything then clear_mpfiles_content ()
+let reset_renaming_tables () = do_cleanup ()
 
 (** {1 Renaming functions} *)
 
@@ -1312,25 +1264,8 @@ let ref_renaming, decided_ref_renaming =
 
 (** [visible_clash mp0 (k,s)] checks if [mp0-s] of kind [k] can be printed as
     [s] in the current context of visible modules. More precisely, we check if
-    there exists a visible [mp] that contains [s]. The verification stops if we
-    encounter [mp=mp0]. *)
-
-let rec clash mem mp0 ks = function
-  | [] -> false
-  | mp :: _ when ModPath.equal mp mp0 -> false
-  | mp :: _ when mem mp ks -> true
-  | _ :: mpl -> clash mem mp0 ks mpl
-
-(** Check if a name clashes with content from opened files.
-    @param mp0 The defining module path (search stops when this is reached)
-    @param ks  The [(kind, name)] pair to look up in each opened file's content
-    @return [true] iff some opened file other than [mp0] exports [ks] *)
-let mpfiles_clash mp0 ks =
-  clash
-    (fun mp k -> KMap.mem k (get_mpfiles_content mp))
-    mp0
-    ks
-    (List.rev (mpfiles_list ()))
+    there exists a visible [mp] that declares [s]. The verification stops if
+    we encounter [mp=mp0]. *)
 
 (** Check if a module path is one of the current layer's functor parameters.
     @param mp0    The module path of the reference being printed
@@ -1338,42 +1273,20 @@ let mpfiles_clash mp0 ks =
     @return [true] iff [mp0] is one of the functor parameters *)
 let params_lookup mp0 params = List.exists (ModPath.equal mp0) params
 
-(** Check if a name clashes with a visible module's content.
+(** Check if a name clashes with a member a visible module declares.
     @param mp0 The defining module path (search stops when this is reached)
     @param ks  The [(kind, name)] pair to look for in the visible scope stack
-    @return [true] iff some visible module other than [mp0] already exports [ks] *)
+    @return [true] iff some visible module other than [mp0] declares [ks]'s
+            name *)
 let visible_clash mp0 ks =
   let rec clash = function
     | [] -> false
     | v :: _ when ModPath.equal v.mp mp0 -> false
     | v :: vis ->
-      if
-        (KMap.mem ks v.content || Id.Set.mem (Id.of_string (snd ks)) v.members)
-        && not (is_mp_bound mp0)
-      then
+      if Id.Set.mem (Id.of_string (snd ks)) v.members && not (is_mp_bound mp0) then
         true
       else if params_lookup mp0 v.params then
         false
-      else
-        clash vis
-  in
-  clash (get_visible ())
-
-(** Like {!visible_clash} but returns the conflicting module path (and mp0
-    shouldn't be a MPbound).
-    @param mp0 The defining module path
-    @param ks  The [(kind, name)] pair to look up
-    @return [Some (mp, lbl)] identifying the clashing visible module and label,
-            or [None] if no clash is detected *)
-let visible_clash_dbg mp0 ks =
-  let rec clash = function
-    | [] -> None
-    | v :: _ when ModPath.equal v.mp mp0 -> None
-    | v :: vis ->
-    try Some (v.mp, KMap.find ks v.content)
-    with Not_found ->
-      if params_lookup mp0 v.params then
-        None
       else
         clash vis
   in
@@ -1438,7 +1351,6 @@ let extern_needs_file k base rls' =
   || !force_cross_file_qualification
      (* Separate extraction: nothing is in scope across files *)
   || (not (mpfiles_mem base)) (* Module not referenced *)
-  || mpfiles_clash base (fstlev_ks k rls') (* Conflict in opened files *)
   || visible_clash base (fstlev_ks k rls')
 (* Local conflict *)
 
@@ -1459,13 +1371,7 @@ let pp_ocaml_extern k base rls =
            where a nearer name hides it: [Decimal] inside [Number]'s struct,
            whose constructor of that name is a struct too. *)
         plain (("::" ^ base_s) :: rls')
-      else
-      (* We need to fully qualify. Last clash situation is unsupported *)
-        match
-          visible_clash_dbg base (Mod, base_s)
-        with
-      | None -> plain rls
-      | Some (mp, l) -> error_module_clash base (MPdot (mp, l))
+      else plain rls
     else (* Standard situation : object in an opened file *)
       plain rls'
 
@@ -1508,9 +1414,9 @@ let pp_cpp_gen k mp rls olab =
     else
       pp_ocaml_extern k base rls
 
-(** Main name printing function for a reference, using a kernel name key.
-    Registers the reference's short name in the current visible scope and
-    delegates to {!pp_cpp_gen} for cross-module qualification.
+(** Main name printing function for a reference, using a kernel name key:
+    its short name in its own module, and otherwise as {!pp_cpp_gen}
+    qualifies it.
     @param k   Kind of the global reference
     @param key Kernel name used to determine the defining module path
     @param r   The global reference to print
@@ -1520,11 +1426,9 @@ let pp_global_with_key k key r =
   assert (List.length ls > 1);
   let s = List.hd ls in
   let mp, l = KerName.repr key in
-  if ModPath.equal mp (top_visible_mp ()) then (
+  if ModPath.equal mp (top_visible_mp ()) then
     (* simplest situation: definition of r (or use in the same context) *)
-    (* we update the visible environment *)
-    add_visible (k, s) l;
-    unquote s )
+    unquote s
   else
     let rls = List.rev ls in
     (* for what come next it's easier this way *)
@@ -1591,28 +1495,19 @@ let decided_module_name mp =
     definition uses the module name, so type references must too. *)
 let pp_type_name_capitalized r = emitted_module_name (modpath_of_r r)
 
-(** Resolve a module path to its name, registering it in the visible scope.
-    Has the side effect of {!add_visible}, so it must be called once per
-    occurrence. *)
+(** Resolve a module path to its name. *)
 let resolve_module mp =
   let ls = mp_renaming mp in
   match mp with
-  | MPdot (mp0, l) when ModPath.equal mp0 (top_visible_mp ()) ->
+  | MPdot (mp0, _) when ModPath.equal mp0 (top_visible_mp ()) ->
     (* simplest situation: definition of mp (or use in the same context) *)
-    (* we update the visible environment *)
-    let s = List.hd ls in
-    add_visible (Mod, s) l;
-    plain [s]
+    plain [List.hd ls]
   | _ -> pp_ocaml_gen Mod mp (List.rev ls) None
 
 (** {!resolve_module} as text. *)
 let pp_module mp = resolved_string (resolve_module mp)
 
-(** Compute the C++ name for a module label without registering it in the
-    visible scope.  Use this instead of [pp_module] when the module produces a
-    [using] alias (MEident / MEapply) and the side-effect of [add_visible]
-    would incorrectly mark the name as "occupied" in the current scope,
-    triggering spurious [error_module_clash] errors. *)
+(** The C++ name of a module label, as {!modular_rename} spells it. *)
 let module_label_name l = modular_rename Mod (Label.to_id l)
 
 (** Special hack for constants of type Ascii.ascii : if an
