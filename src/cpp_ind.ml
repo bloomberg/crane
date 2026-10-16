@@ -731,8 +731,9 @@ let generating_ahead f =
 let rechecking = ref false
 
 let regenerating f =
+  let outer = !rechecking in
   rechecking := true;
-  Fun.protect ~finally:(fun () -> rechecking := false) f
+  Fun.protect ~finally:(fun () -> rechecking := outer) f
 
 (* [compare] rather than [=]: a NaN literal is equal to itself. *)
 let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) =
@@ -1130,6 +1131,60 @@ let instance_entity r a t =
         Pp.(str "Crane: the instance " ++ GlobRef.print r
             ++ str " was not generated ahead of the header in the module "
             ++ str (ModPath.to_string mp) ++ str ".")
+
+(** {2 The header's scope of a module}
+
+    How the header writes a module's body: inside a struct or not, and with
+    the module's class concepts already declared ahead of its struct or not
+    ({!Cpp.walk_as_rendered} works both out from the module's frame).  Planned
+    for every module ahead of the files, by the module, and checked against
+    the header's render context as it enters the module. *)
+
+type header_scope = {
+  in_struct : bool;
+  concepts_hoisted : bool;
+}
+
+let header_scopes : header_scope MPmap.t ref = State.cell State.Unit MPmap.empty
+
+let plan_header_scope mp scope = header_scopes := MPmap.add mp scope !header_scopes
+
+let header_scope mp = MPmap.find_opt mp !header_scopes
+
+(** The concept of each class, generated ahead of the files in the module
+    declaring it, by the class. *)
+let concepts_generated : (ModPath.t * cpp_decl) list Ref.User.Tbl.t = Ref.User.Tbl.create 16
+
+let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset concepts_generated)
+
+(** [concept r fields] is the concept of the class [r], of fields [fields]:
+    generated ahead of the files ({!generating_ahead}) and taken from there
+    by the header, which generates it again under [CRANE_CHECK_IR] to
+    compare. *)
+let concept r fields =
+  let gen () = Gen_decls.gen_typeclass_cpp r fields in
+  let mp = top_visible_mp () in
+  let earlier = Option.default [] (Ref.User.Tbl.find_opt concepts_generated r) in
+  match get_phase () with
+  | Plan -> gen ()
+  | Emit _ when !ahead && not !rechecking ->
+    let d = gen () in
+    Ref.User.Tbl.replace concepts_generated r ((mp, d) :: earlier);
+    d
+  | Emit _ -> (
+    match List.find_map (fun (mp', d) -> if ModPath.equal mp mp' then Some d else None) earlier with
+    | Some d ->
+      if Sys.getenv_opt "CRANE_CHECK_IR" <> None && compare d (gen ()) <> 0 then
+        CErrors.anomaly
+          Pp.(str "Crane: the concept of " ++ GlobRef.print r
+              ++ str " was generated differently ahead of the header and "
+              ++ str (if !rechecking then "again in the reverse order." else "in it."));
+      d
+    | None ->
+      CErrors.anomaly
+        Pp.(str "Crane: the concept of " ++ GlobRef.print r
+            ++ str " was not generated ahead of the header in the module "
+            ++ str (ModPath.to_string mp) ++ str ".") )
 
 let generate_ahead d =
   match generate d with

@@ -112,25 +112,27 @@ let watching_for_reference_to outer f =
     of the module's struct.  Asked of the concept generated, not of its
     text: a class it names is not a member, since its concept is declared
     outside every struct too.  Under [CRANE_CHECK_IR] the answer is checked
-    against the references rendering [d] resolves under [outer], the
-    struct's name ({!watching_for_reference_to}). *)
-let concept_names_member mp ~outer d =
+    against the references rendering [d] resolves under the struct's name
+    ({!check_concept_names_member}). *)
+let concept_names_member mp d =
   let names = ref false in
   Minicpp.iter_globrefs
     (fun r ->
       if MPset.mem mp (Table.prefixes_mp (modpath_of_r r)) && not (Table.is_typeclass r) then
         names := true )
     d;
-  ( if Probe.checking () then
+  !names
+
+let check_concept_names_member ~outer d names =
+  if Probe.checking () then
     let _, resolved = watching_for_reference_to outer (fun () -> render_decl (empty_env ()) d) in
-    if resolved <> !names then
+    if resolved <> names then
       Probe.violation "class concepts held back"
         Pp.(
           str "the concept " ++ GlobRef.print (Option.get (decl_globref d))
           ++ str
-               ( if !names then " names a member of its module but rendering it resolves none"
-                 else " names no member of its module but rendering it resolves one" ) ) );
-  !names
+               ( if names then " names a member of its module but rendering it resolves none"
+                 else " names no member of its module but rendering it resolves one" ) )
 
 (** The functor whose body declares module types at [mp], as
     {!Cpp_state.functor_concept_scopes} records it. *)
@@ -929,7 +931,7 @@ let emitted_member_lifted : (Id.t, unit) Hashtbl.t = Hashtbl.create 16
 
 (** The concept of the type class [r], recorded as [r]'s generation. *)
 let generated_concept r fields =
-  let d = Gen_decls.gen_typeclass_cpp r fields in
+  let d = Cpp_ind.concept r fields in
   ignore (record_entity r [d] []);
   d
 
@@ -962,6 +964,20 @@ let generated_record_methods r vars candidates =
         | _ -> None ) )
     fields;
   (fields, lifted)
+
+(** The classes [sel] declares, in order, each with its label and fields:
+    every packet of a class inductive, and every singleton class, which is
+    declared as its method's type and becomes a concept all the same. *)
+let declared_classes sel =
+  List.concat_map
+    (fun (l, se) ->
+      match se with
+      | SEdecl (Dind (kn, ({ind_kind = TypeClass fields; _} as ind))) ->
+        List.init (Array.length ind.ind_packets) (fun i -> (l, GlobRef.IndRef (kn, i), fields))
+      | SEdecl (Dtype (r, _, _)) when Table.singleton_class_method r <> None ->
+        [(l, r, Table.get_record_field_bindings r)]
+      | _ -> [] )
+    sel
 
 (** Pretty-print a structure element (label, elem) pair. Handles modules, module
     types, and declarations.
@@ -1223,29 +1239,14 @@ let rec pp_structure_elem ~is_header f = function
         let has_concept_collision = frame.concept_collision in
         let class_concept l r fields =
           let d = generated_concept r fields in
-          let names_member = concept_names_member mp ~outer:(Pp.string_of_ppcmds name) d in
+          let names_member = concept_names_member mp d in
+          check_concept_names_member ~outer:(Pp.string_of_ppcmds name) d names_member;
           (HCclass r, pp_doc_comment l ++ render_decl (empty_env ()) d, names_member)
         in
         let typeclass_concepts =
           if is_header then
-            List.concat_map
-              (fun (l, se) ->
-                match se with
-                | SEdecl (Dind (kn, ind)) ->
-                  List.concat
-                    (List.init (Array.length ind.ind_packets) (fun i ->
-                       match ind.ind_kind with
-                       | TypeClass fields ->
-                         [class_concept l (GlobRef.IndRef (kn, i)) fields]
-                       | _ -> [] ) )
-                (* A singleton class is declared as its method's type, and
-                   becomes a concept all the same. *)
-                | SEdecl (Dtype (r, _, _)) when Table.singleton_class_method r <> None ->
-                  [class_concept l r (Table.get_record_field_bindings r)]
-                | _ -> [] )
-              sel
-          else
-            []
+            List.map (fun (l, r, fields) -> class_concept l r fields) (declared_classes sel)
+          else []
         in
         (* A concept cannot be declared inside a struct, so the concepts of a
            module nested in another module travel to file scope instead of
@@ -1776,6 +1777,19 @@ and pp_module_expr ~is_header f params = function
                ( if (!render_ctx).rc_in_template then
                    " is written in a class template its plan says it is outside"
                  else " is written outside every class template where its plan says it is inside" ) );
+    if is_header && Probe.checking () then begin
+      let c = !render_ctx in
+      match Cpp_ind.header_scope mp with
+      | Some {in_struct; concepts_hoisted}
+        when in_struct = c.rc_in_struct && concepts_hoisted = c.rc_concepts_hoisted -> ()
+      | Some _ ->
+        Probe.violation "header scopes"
+          Pp.(str "the module " ++ str (ModPath.to_string mp)
+              ++ str " is written in another scope than its plan says")
+      | None ->
+        Probe.violation "header scopes"
+          Pp.(str "the module " ++ str (ModPath.to_string mp) ++ str " has no planned scope")
+    end;
     push_visible mp params;
     add_visible_members (member_names_of_sel sel);
     let old_structure_decls = !current_structure_decls in
@@ -2144,8 +2158,13 @@ let registered_methods ?(order = Fun.id) kn ind =
 (** [walk_as_rendered ?reversed ~decl s] calls [decl ~wrapper se] at each
     declaration element [se] of [s], in the order the renders reach them or,
     if [reversed], the reverse, with what generating a declaration reads of
-    the render's walk set as the render sets it: the visibility stack, and
-    the inductives local to the enclosing modules.  [wrapper] says [se] is
+    the render's walk set as the render sets it: the visibility stack, the
+    inductives local to the enclosing modules, the declarations of the
+    structure being walked, and each module's frame ({!Module_frame}).  The
+    scope the header writes each module's body in is planned on the way
+    ({!Cpp_ind.plan_header_scope}), from the module's frame and whether its
+    class concepts, generated here ({!Cpp_ind.concept}), name its members.
+    [wrapper] says [se] is
     one of a wrapper module's own elements, which a render generates as the
     wrapper's ({!pp_wrapper_module_dual}), before any inductive is made
     local; [after_wrapper ()] once a wrapper module's elements have all
@@ -2167,10 +2186,39 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ~decl s =
       sel
   in
   let restoring_visible k = with_visibility (current_visibility ()) k in
-  let in_module ?(params = []) mp k =
+  let in_module ?(params = []) mp sel k =
     restoring_visible @@ fun () ->
     push_visible mp params;
-    k ()
+    setting current_structure_decls sel k
+  in
+  let header = ref {Cpp_ind.in_struct = false; concepts_hoisted = false} in
+  let in_header_scope scope k = setting header scope k in
+  (* A module's frame, as the render enters its body: the eponymous state
+     and promotion the frame says, and the header's scope worked out as the
+     header works it out ({!pp_structure_elem}), from whether the module's
+     class concepts name its members. *)
+  let in_module_frame mp sel k =
+    let name = Table.escape_reserved_struct_name (Common.pp_module mp) in
+    let frame = Module_frame.of_module mp ~name sel ~enclosing:!current_structure_decls in
+    let outer = !header in
+    let concepts = List.map (fun (_, r, fields) -> Cpp_ind.concept r fields) (declared_classes sel) in
+    let hoisted_here =
+      (not outer.in_struct) && List.exists (fun d -> not (concept_names_member mp d)) concepts
+    in
+    let scope =
+      { Cpp_ind.in_struct = outer.in_struct || not frame.concept_collision;
+        concepts_hoisted = outer.concepts_hoisted || hoisted_here }
+    in
+    with_module_frame @@ fun () ->
+    eponymous_type_ref := frame.eponymous_type;
+    eponymous_record := frame.eponymous_record;
+    method_candidates := frame.method_candidates;
+    let with_promotion k =
+      match frame.promoted with
+      | Some _ -> setting eponymous_promote_ref frame.eponymous_type k
+      | None -> Table.with_demoted_inductive frame.eponymous_type k
+    in
+    with_promotion (fun () -> in_header_scope scope k)
   in
   let with_local_inductives refs k =
     let outer = get_local_inductives () in
@@ -2181,7 +2229,7 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ~decl s =
         List.iter add_local_inductive outer )
       k
   in
-  let rec elem ~wrapper (_, se) =
+  let rec elem ~wrapper (l, se) =
     match se with
     | SEdecl _ -> decl ~wrapper se
     | SEmodule {ml_mod_expr = MEfunctor _ as me; _} ->
@@ -2192,12 +2240,16 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ~decl s =
       let params, body = split [] me in
       with_render_ctx
         (fun c -> {c with rc_in_struct = true; rc_in_template = true})
-        (fun () -> module_expr ~params body)
+        (fun () ->
+          in_header_scope {!header with in_struct = true} (fun () -> module_expr ~params body) )
+    | SEmodule {ml_mod_expr = MEstruct (_, sel) as me; _} ->
+      in_module_frame (MPdot (top_visible_mp (), l)) sel (fun () -> module_expr ~params:[] me)
     | SEmodule {ml_mod_expr; _} -> module_expr ~params:[] ml_mod_expr
     | SEmodtype _ -> ()
   and module_expr ~params = function
     | MEstruct (mp, sel) ->
-      in_module ~params mp (fun () ->
+      Cpp_ind.plan_header_scope mp !header;
+      in_module ~params mp sel (fun () ->
           with_local_inductives (declared_inductives mp sel) (fun () ->
               List.iter (elem ~wrapper:false) (order sel) ) )
     | MEident _ | MEapply _ | MEfunctor _ -> ()
@@ -2217,7 +2269,7 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ~decl s =
   List.iter
     (fun (mi : Structure_analysis.module_info) ->
       if mi.wrapper_name <> None then
-        in_module mi.modpath (fun () ->
+        in_module mi.modpath mi.sels (fun () ->
             List.iter (elem ~wrapper:true) (order mi.sels);
             after_wrapper () ) )
     (order analysis.sorted_modules);
@@ -2230,7 +2282,7 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ~decl s =
       List.iter
         (fun (mi : Structure_analysis.module_info) ->
           if mi.wrapper_name = None then
-            in_module mi.modpath (fun () -> List.iter (elem ~wrapper:false) (order mi.sels)) )
+            in_module mi.modpath mi.sels (fun () -> List.iter (elem ~wrapper:false) (order mi.sels)) )
         (order analysis.sorted_modules) )
 
 (** The callable plan of each function the renders will generate, in the
@@ -2342,6 +2394,7 @@ let generate_ahead s =
      before it: under [CRANE_CHECK_IR] everything is generated again in the
      reverse order and must come out the same (the plan's Milestone 4). *)
   if Probe.checking () then
+    Cpp_ind.regenerating @@ fun () ->
     walk_as_rendered ~reversed:true
       ~decl:(fun ~wrapper se ->
         match se with
@@ -2351,11 +2404,9 @@ let generate_ahead s =
             (registered_methods ~order:List.rev kn ind)
         | _ when wrapper -> (
           match wrapper_element se with
-          | Wrapper_functions (_, generate) ->
-            Cpp_ind.regenerating (fun () -> ignore (generate () : Gen_decls.generated_fun list))
+          | Wrapper_functions (_, generate) -> ignore (generate () : Gen_decls.generated_fun list)
           | Wrapper_instance (r, a, t) ->
-            Cpp_ind.regenerating (fun () ->
-                ignore (Cpp_ind.instance_entity r a t : Cpp_ind.generated * cpp_decl list) )
+            ignore (Cpp_ind.instance_entity r a t : Cpp_ind.generated * cpp_decl list)
           | Wrapper_nothing -> () )
         | SEdecl d -> Cpp_ind.regenerate_ahead d
         | _ -> ())

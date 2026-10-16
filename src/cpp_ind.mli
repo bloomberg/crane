@@ -99,6 +99,28 @@ val generating_ahead : (unit -> 'a) -> 'a
     helpers lifted out of them.  Nothing for any other declaration. *)
 val generate_ahead : Miniml.ml_decl -> Minicpp.cpp_decl list
 
+(** How the header writes a module's body: inside a struct or not, and with
+    the module's class concepts already declared ahead of its struct or not.
+    Planned for every module ahead of the files ({!plan_header_scope}) and
+    checked against the header's render context as it enters the module. *)
+type header_scope = {
+  in_struct : bool;
+  concepts_hoisted : bool;
+}
+
+(** [plan_header_scope mp scope] plans [scope] for the body of the module
+    [mp]. *)
+val plan_header_scope : Names.ModPath.t -> header_scope -> unit
+
+(** The scope planned for the body of a module. *)
+val header_scope : Names.ModPath.t -> header_scope option
+
+(** [concept r fields] is the concept of the class [r], of fields [fields]:
+    generated ahead of the files ({!generating_ahead}) in the module
+    declaring the class, and taken from there by the header, which generates
+    it again under [CRANE_CHECK_IR] to compare. *)
+val concept : Names.GlobRef.t -> Miniml.record_field list -> Minicpp.cpp_decl
+
 (** [regenerating f] runs [f], generating again what was generated ahead
     of the files to check it: {!generated_once} and {!instance_entity}
     compare what they generate with what they recorded, and record and claim
