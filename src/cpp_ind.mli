@@ -147,6 +147,43 @@ val plan_header_scope : Names.ModPath.t -> header_scope -> unit
 (** The scope planned for the body of a module. *)
 val header_scope : Names.ModPath.t -> header_scope option
 
+(** Where the header declares one of a module's concepts.  No concept can
+    be declared inside a struct, so a module nested in one declares its
+    concepts at file scope.  Otherwise a concept goes ahead of the module's
+    struct, whose body may constrain a functor with it, unless it names one
+    of the struct's members, when it follows the struct. *)
+type concept_placement = Ahead_of_struct | After_struct | At_file_scope
+
+(** The concepts of a module's classes and module types, planned ahead of
+    the files: where each is declared, and which the struct's body treats as
+    not declared yet ({!Cpp_state.held_back_concepts}). *)
+type concept_plan = {
+  placements : (Cpp_state.held_concept * concept_placement) list;
+      (** The class concepts, then the module-type concepts, in declaration
+          order. *)
+  held_back : Cpp_state.held_concept list;
+}
+
+(** [plan_concepts ~nested ~classes ~modtypes] places the concepts
+    [classes] and then [modtypes], each with whether it names a member of
+    its module, of a module inside a struct if [nested]. *)
+val plan_concepts :
+  nested:bool ->
+  classes:(Cpp_state.held_concept * bool) list ->
+  modtypes:(Cpp_state.held_concept * bool) list ->
+  concept_plan
+
+val equal_concept_plan : concept_plan -> concept_plan -> bool
+
+(** [plan_module_concepts mp plan] plans [plan] for the module [mp]. *)
+val plan_module_concepts : Names.ModPath.t -> concept_plan -> unit
+
+(** The concepts planned for the module [mp]; an anomaly if none were. *)
+val concept_plan : Names.ModPath.t -> concept_plan
+
+(** Where [plan] places the concept [c]; an anomaly if it does not. *)
+val concept_placement : concept_plan -> Cpp_state.held_concept -> concept_placement
+
 (** [concept r fields] is the concept of the class [r], of fields [fields]:
     generated ahead of the files ({!generating_ahead}) in the module
     declaring the class, and taken from there by the header, which generates

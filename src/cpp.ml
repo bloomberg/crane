@@ -1069,43 +1069,14 @@ let rec pp_structure_elem ~is_header f = function
         method_candidates := frame.method_candidates;
         let this_eponymous_record = frame.eponymous_record in
         let has_concept_collision = frame.concept_collision in
-        let class_concept l r fields =
-          let d = generated_concept r fields in
-          (HCclass r, pp_doc_comment l ++ render_decl (empty_env ()) d, concept_names_member mp d)
-        in
-        let typeclass_concepts =
+        let class_concepts =
           if is_header then
-            List.map (fun (l, r, fields) -> class_concept l r fields) (declared_classes sel)
+            List.map
+              (fun (l, r, fields) ->
+                let d = generated_concept r fields in
+                (HCclass r, pp_doc_comment l ++ render_decl (empty_env ()) d, concept_names_member mp d) )
+              (declared_classes sel)
           else []
-        in
-        (* A concept cannot be declared inside a struct, so the concepts of a
-           module nested in another module travel to file scope instead of
-           preceding their own struct. *)
-        let typeclass_concepts =
-          if old_context then (
-            push_all file_scope_concepts
-              (List.map (fun (_, c, _) -> c) typeclass_concepts);
-            [] )
-          else typeclass_concepts
-        in
-        (* A concept whose [requires] clause names one of the enclosing
-           struct's own types cannot be emitted before that struct, whether it
-           came from a module type or from a type class. *)
-        let hold_back_after concepts =
-          List.partition (fun (_, _, mentions_outer) -> not mentions_outer)
-            concepts
-        in
-        let typeclass_concepts, typeclass_concepts_after =
-          hold_back_after typeclass_concepts
-        in
-        let typeclasses_pp =
-          if typeclass_concepts = [] then
-            mt ()
-          else
-            fnl ()
-            ++ prlist_with_sep fnl (fun (_, c, _) -> c) typeclass_concepts
-            ++ fnl ()
-            ++ fnl ()
         in
         let modtype_concepts =
           if is_header then
@@ -1122,40 +1093,48 @@ let rec pp_structure_elem ~is_header f = function
           else
             []
         in
-        (* Such a concept is held back and emitted after the struct instead;
-           the others keep their place, since the struct's body may constrain
-           a functor with them. *)
-        let modtype_concepts, modtype_concepts_after =
-          hold_back_after modtype_concepts
+        (* The header declares the module's concepts where the walk ahead of
+           the files planned them ({!Cpp_ind.concept_plan}); under
+           [CRANE_CHECK_IR] the plan is checked against the concepts
+           generated here. *)
+        let plan = if is_header then Some (Cpp_ind.concept_plan mp) else None in
+        if
+          is_header && Probe.checking ()
+          && not
+               (Cpp_ind.equal_concept_plan (Option.get plan)
+                  (Cpp_ind.plan_concepts ~nested:old_context
+                     ~classes:(List.map (fun (c, _, names) -> (c, names)) class_concepts)
+                     ~modtypes:(List.map (fun (c, _, names) -> (c, names)) modtype_concepts) ) )
+        then
+          Probe.violation "concept placements"
+            Pp.(str "the module " ++ str (ModPath.to_string mp)
+                ++ str " places its concepts otherwise than planned");
+        let placed placement concepts =
+          match plan with
+          | None -> []
+          | Some plan ->
+            List.filter (fun (c, _, _) -> Cpp_ind.concept_placement plan c = placement) concepts
         in
-        let this_held_back =
-          List.map (fun (key, _, _) -> key)
-            (typeclass_concepts_after @ modtype_concepts_after)
+        let docs = List.map (fun (_, c, _) -> c) in
+        push_all file_scope_concepts (docs (placed At_file_scope class_concepts));
+        push_all file_scope_concepts (docs (placed At_file_scope modtype_concepts));
+        let typeclass_concepts = placed Ahead_of_struct class_concepts in
+        let modtype_concepts_ahead = placed Ahead_of_struct modtype_concepts in
+        let concepts_after =
+          placed After_struct class_concepts @ placed After_struct modtype_concepts
         in
+        let this_held_back = match plan with Some plan -> plan.held_back | None -> [] in
         let concepts_group_pp concepts =
-          if concepts = [] then
-            mt ()
-          else
-            prlist_with_sep fnl (fun (_, c, _) -> c) concepts ++ fnl () ++ fnl ()
+          if concepts = [] then mt ()
+          else prlist_with_sep fnl identity (docs concepts) ++ fnl () ++ fnl ()
         in
-        (* A concept cannot be declared inside a struct, so a module type
-           belonging to a module that is itself nested travels to file scope,
-           just as a typeclass concept does. *)
-        let modtype_concepts, modtype_concepts_after =
-          if old_context then (
-            push_all file_scope_concepts
-              (List.map (fun (_, c, _) -> c)
-                 (modtype_concepts @ modtype_concepts_after));
-            ([], []) )
-          else (modtype_concepts, modtype_concepts_after)
+        let typeclasses_pp =
+          if typeclass_concepts = [] then mt ()
+          else fnl () ++ prlist_with_sep fnl identity (docs typeclass_concepts) ++ fnl () ++ fnl ()
         in
-        let modtypes_pp = concepts_group_pp modtype_concepts in
-        let concepts_after = typeclass_concepts_after @ modtype_concepts_after in
+        let modtypes_pp = concepts_group_pp modtype_concepts_ahead in
         let modtypes_after_pp =
-          if concepts_after = [] then
-            mt ()
-          else
-            fnl () ++ fnl () ++ concepts_group_pp concepts_after
+          if concepts_after = [] then mt () else fnl () ++ fnl () ++ concepts_group_pp concepts_after
         in
         (* Whether this module is outside every struct is a question about
            the module, not about the file: the implementation writes no
@@ -2013,7 +1992,8 @@ let registered_methods ?(order = Fun.id) kn ind =
     its parameters visible in it.  The visibility stack is restored, not
     popped: popping a file's layer while emitting records its content. *)
 let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
-    ?(after_module = fun _ _ -> ()) ?(modtype = fun _ ~params:_ _ -> ()) ~decl s =
+    ?(after_module = fun _ _ -> ()) ?(modtype = fun _ ~params mt -> Modtype_concept.generate ~params mt)
+    ~decl s =
   let order l = if reversed then List.rev l else l in
   let analysis = get_structure_analysis () in
   let declared_inductives mp sel =
@@ -2036,7 +2016,9 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
   in
   let in_header_scope scope k = setting header scope k in
   let modtypes mp ~params sel =
-    List.iter (function l, SEmodtype m -> modtype (MPdot (mp, l)) ~params m | _ -> ()) sel
+    List.filter_map
+      (function l, SEmodtype m -> Some (MPdot (mp, l), modtype (MPdot (mp, l)) ~params m) | _ -> None)
+      sel
   in
   (* A module's frame, as the render enters its body: the eponymous state
      and promotion the frame says, and the header's scope worked out as the
@@ -2047,10 +2029,12 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
     let frame = Module_frame.of_module mp ~name sel ~enclosing:!current_structure_decls in
     Module_frame.plan mp frame;
     let outer = !header in
-    let concepts = List.map (fun (_, r, fields) -> Cpp_ind.concept r fields) (declared_classes sel) in
-    let hoisted_here =
-      (not outer.in_struct) && List.exists (fun d -> not (concept_names_member mp d)) concepts
+    let classes =
+      List.map
+        (fun (_, r, fields) -> (HCclass r, concept_names_member mp (Cpp_ind.concept r fields)))
+        (declared_classes sel)
     in
+    let hoisted_here = (not outer.in_struct) && List.exists (fun (_, names) -> not names) classes in
     let scope =
       { Cpp_ind.in_struct = outer.in_struct || not frame.concept_collision;
         concepts_hoisted = outer.concepts_hoisted || hoisted_here }
@@ -2059,13 +2043,18 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
     eponymous_type_ref := frame.eponymous_type;
     eponymous_record := frame.eponymous_record;
     method_candidates := frame.method_candidates;
+    let modtypes =
+      List.map
+        (fun (path, c) -> (HCmodtype path, Modtype_concept.names_member mp c))
+        (modtypes mp ~params:[] sel)
+    in
+    Cpp_ind.plan_module_concepts mp (Cpp_ind.plan_concepts ~nested:outer.in_struct ~classes ~modtypes);
     let with_promotion k =
       match frame.promoted with
       | Some _ -> setting eponymous_promote_ref frame.eponymous_type k
       | None -> Table.with_demoted_inductive frame.eponymous_type k
     in
     with_promotion (fun () -> in_header_scope scope k);
-    modtypes mp ~params:[] sel;
     after_module frame sel
   in
   let with_local_inductives refs k =
@@ -2087,8 +2076,8 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
       in
       let signatures, body = split [] me in
       let params = List.map (fun (mbid, _) -> MPbound mbid) signatures in
-      (match body with MEstruct (body_mp, sel) -> modtypes body_mp ~params sel | _ -> ());
-      List.iter (fun (mbid, mt) -> modtype (MPbound mbid) ~params:[] mt) signatures;
+      (match body with MEstruct (body_mp, sel) -> ignore (modtypes body_mp ~params sel) | _ -> ());
+      List.iter (fun (mbid, mt) -> ignore (modtype (MPbound mbid) ~params:[] mt)) signatures;
       with_render_ctx
         (fun c -> {c with rc_in_struct = true; rc_in_template = true})
         (fun () ->
@@ -2099,13 +2088,13 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
       (* An alias of a functor is a template alias over its parameters. *)
       let rec params = function
         | MTfunsig (mbid, mt, rest) ->
-          modtype (MPbound mbid) ~params:[] mt;
+          ignore (modtype (MPbound mbid) ~params:[] mt);
           params rest
         | _ -> ()
       in
       params ml_mod_type
     | SEmodule {ml_mod_expr; _} -> module_expr ~params:[] ml_mod_expr
-    | SEmodtype m -> modtype (MPdot (top_visible_mp (), l)) ~params:[] m
+    | SEmodtype m -> ignore (modtype (MPdot (top_visible_mp (), l)) ~params:[] m)
   and module_expr ~params = function
     | MEstruct (mp, sel) ->
       in_module ~params mp sel (fun () ->
@@ -2247,11 +2236,6 @@ let refinish_reversed (aheads : Cpp_ind.ahead list) =
       List.iter (fun h -> ignore (Cpp_ind.finished_alone h : Cpp_erasure.settled)) (List.rev a.helpers) )
     aheads
 
-(* The concept of a module type, generated ahead where the header writes
-   it. *)
-let modtype_concept_ahead path ~params mt =
-  ignore (Cpp_ind.modtype_concept path ~params mt : Modtype_concept.t)
-
 let generate_ahead s =
   generating_ahead @@ fun () ->
   (* Everything is generated first, and finished after ({!finish_ahead}).  A
@@ -2261,7 +2245,7 @@ let generate_ahead s =
   let aheads = ref [] in
   let later (a : Cpp_ind.ahead) = aheads := a :: !aheads in
   let lifted helpers = later {Cpp_ind.entities = []; functions = []; finish = ignore; helpers} in
-  walk_as_rendered ~modtype:modtype_concept_ahead
+  walk_as_rendered ~modtype:Cpp_ind.modtype_concept
     ~after_module:(fun frame sel ->
       (* The class concepts the module's struct is preceded by. *)
       List.iter
@@ -2329,7 +2313,7 @@ let generate_ahead s =
   if Probe.checking () then
     Cpp_ind.regenerating @@ fun () ->
     refinish_reversed aheads;
-    walk_as_rendered ~reversed:true ~modtype:modtype_concept_ahead
+    walk_as_rendered ~reversed:true ~modtype:Cpp_ind.modtype_concept
       ~after_module:(fun frame _ ->
         Option.iter
           (fun (r, vars, candidates) -> ignore (Cpp_ind.record_methods r vars candidates))

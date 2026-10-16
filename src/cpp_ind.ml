@@ -1237,6 +1237,46 @@ let plan_header_scope mp scope = header_scopes := MPmap.add mp scope !header_sco
 
 let header_scope mp = MPmap.find_opt mp !header_scopes
 
+type concept_placement = Ahead_of_struct | After_struct | At_file_scope
+
+type concept_plan = {
+  placements : (held_concept * concept_placement) list;
+  held_back : held_concept list;
+}
+
+let plan_concepts ~nested ~classes ~modtypes =
+  let place (c, names_member) =
+    (c, if nested then At_file_scope else if names_member then After_struct else Ahead_of_struct)
+  in
+  let classes' = List.map place classes in
+  { placements = classes' @ List.map place modtypes;
+    (* A module type's concept naming a member is held back from the
+       struct's body even where the concept goes to file scope; a class's
+       is held back only where it follows the struct. *)
+    held_back =
+      List.filter_map (fun (c, p) -> if p = After_struct then Some c else None) classes'
+      @ List.filter_map (fun (c, names_member) -> if names_member then Some c else None) modtypes }
+
+let equal_concept_plan a b =
+  List.equal (fun (c, p) (c', p') -> held_concept_equal c c' && p = p') a.placements b.placements
+  && List.equal held_concept_equal a.held_back b.held_back
+
+let concept_plans : concept_plan MPmap.t ref = State.cell State.Unit MPmap.empty
+
+let plan_module_concepts mp plan = concept_plans := MPmap.add mp plan !concept_plans
+
+let concept_plan mp =
+  match MPmap.find_opt mp !concept_plans with
+  | Some plan -> plan
+  | None ->
+    CErrors.anomaly
+      Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned concepts.")
+
+let concept_placement plan c =
+  match List.find_opt (fun (c', _) -> held_concept_equal c c') plan.placements with
+  | Some (_, p) -> p
+  | None -> CErrors.anomaly Pp.(str "Crane: a concept was written whose placement was not planned.")
+
 (** The concept of each class, generated ahead of the files in the module
     declaring it, by the class. *)
 let concepts_generated : (ModPath.t * cpp_decl) list Ref.User.Tbl.t = Ref.User.Tbl.create 16
