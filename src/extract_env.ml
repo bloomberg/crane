@@ -1574,7 +1574,10 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
 
      Neither render may depend on the other having run, so
      [CRANE_RENDER_ORDER=intf-first] renders the header first: an order
-     dependence then shows as a difference in the generated files. *)
+     dependence then shows as a difference in the generated files.  Nor may
+     a render depend on having run before: [CRANE_RENDER_TWICE] renders both
+     files again once both are rendered, and fails unless each comes out the
+     same (the plan's Milestone 9). *)
   let render_impl () =
     set_phase (Emit Impl);
     Pipeline_trace.event "emit" "render_impl";
@@ -1600,6 +1603,16 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
       let impl = render_impl () in
       (impl, render_intf ())
   in
+  if Sys.getenv_opt "CRANE_RENDER_TWICE" <> None then begin
+    (* As documents: a string of one depends on the formatter's state. *)
+    let same body again = Stdlib.compare body again = 0 in
+    let impl_again = render_impl () in
+    let intf_again = render_intf () in
+    if not (same body_impl impl_again && same body_hstruct intf_again) then
+      CErrors.anomaly
+        Pp.(str "Crane: rendering " ++ str (Option.default "<stdout>" fn)
+            ++ str " again gave another document.")
+  end;
   report_body_generations fn;
   Table.freeze_demands ();
   check_no_late_decisions ~planned:planned_checkpoint ~generated:generated_checkpoint;
