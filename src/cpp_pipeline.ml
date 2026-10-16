@@ -205,7 +205,3 @@ let finish decl =
           ++ prlist_with_sep (fun () -> str ", ") str (List.rev !steps) ) )
     trace;
   decl
-
-let finish_group decls =
-  List.iter Loopify.register_decl decls;
-  List.map finish decls

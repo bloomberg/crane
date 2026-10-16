@@ -23,10 +23,6 @@ val should_loopify : Minicpp.cpp_decl -> bool
     count before and after each. *)
 val finish : Minicpp.cpp_decl -> Cpp_erasure.settled
 
-(** [finish_group decls] finishes declarations that may call one another:
-    every function among them is known to loopification before any is
-    transformed, so a mutual partner can be inlined whichever comes first. *)
-val finish_group : Minicpp.cpp_decl list -> Cpp_erasure.settled list
 
 (** The names of the passes {!finish} runs, in order, the {!Cpp_erasure} seam
     among them.  Read by [unit_tests/pipeline_manifest.ml]. *)

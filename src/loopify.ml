@@ -1281,10 +1281,9 @@ let fundef_display_name path =
 (** Transform a top-level function definition by loopifying its body.
 
     This is the main entry point for loopifying a [Dfun]. The transformation
-    proceeds in four steps:
+    proceeds in three steps, reading {!mutual_fn_table}, where every function
+    of the unit was registered before any was finished:
 
-    + Register the function in {!mutual_fn_table} so that other functions can
-      detect mutual recursion with it.
     + Try to inline mutual recursion partners via {!try_inline_mutual_into},
       converting mutual recursion into self-recursion.
     + Classify the recursion pattern with {!classify} and apply the appropriate
@@ -1310,9 +1309,8 @@ let fundef_display_name path =
 let transform_fundef_exn ~tparams (f : dfun) params body =
   let names = dfun_path_list f.df_path in
   let ret_ty = f.df_ret in
-  (* Register this function for mutual recursion detection *)
-  register_fundef names ret_ty params body;
-  (* Try to inline mutual recursion partners *)
+  (* Try to inline mutual recursion partners, every function of the unit
+     registered before any was finished ({!register_decl}). *)
   let body = try_inline_mutual_into names body in
   (* Inline an Equations-style functional applied to itself so its hidden
      recursion becomes ordinary self-recursion that loopifies. *)

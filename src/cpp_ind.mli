@@ -22,8 +22,8 @@
     in. *)
 type generated = (Common.env * Minicpp.cpp_decl) list
 
-(** Declarations finished for the printer ({!Cpp_pipeline.finish_group} of
-    what one MiniML declaration became). *)
+(** Declarations finished for the printer ({!Cpp_pipeline.finish} of what
+    one MiniML declaration became). *)
 type rendered = (Common.env * Cpp_erasure.settled) list
 
 (** [render_decl env d] prints [d] as it was finished ahead of the files

@@ -37,12 +37,9 @@ type generated = (Common.env * Minicpp.cpp_decl) list
 (** Declarations finished for the printer. *)
 type rendered = (Common.env * Cpp_erasure.settled) list
 
-(** [finished ds] finishes the declarations one MiniML declaration became, as
-    one group ({!Cpp_pipeline.finish_group}): a fixpoint's functions may call
-    one another. *)
+(** [finished ds] finishes the declarations one MiniML declaration became. *)
 let finished (ds : generated) : rendered =
-  let envs, decls = List.split ds in
-  List.combine envs (Cpp_pipeline.finish_group decls)
+  List.map (fun (env, d) -> (env, Cpp_pipeline.finish d)) ds
 
 
 (** Print the declarations an entry point answered with. *)
@@ -956,7 +953,7 @@ let generate d =
 let finished_ahead_once table key finish ~what =
   let earlier = Node_table.find_opt table (Obj.repr key) in
   match (get_phase (), earlier) with
-  | Plan, _ -> finish ()
+  | Plan, _ -> CErrors.anomaly Pp.(str "Crane: " ++ str what ++ str " was finished while planning.")
   | Emit _, Some f when !ahead ->
     if !rechecking && compare f (finish ()) <> 0 then
       CErrors.anomaly
@@ -1034,7 +1031,7 @@ let finalized (funs : Gen_decls.generated_fun list) =
     pair funs entities
   in
   match get_phase () with
-  | Plan -> finalize ()
+  | Plan -> CErrors.anomaly Pp.(str "Crane: a function was finished while planning.")
   | Emit _ when !ahead && !rechecking ->
     let paired = finalize () in
     List.iter
