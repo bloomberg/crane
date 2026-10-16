@@ -695,11 +695,11 @@ let functions ~lifted (funs : Gen_decls.generated_fun list) =
 (** {2 Generating once}
 
     Emission decides nothing the plan has not -- {!Extract_env} checks that no
-    table grows -- so functions the implementation pass generated are what the
-    header pass would generate at the same declaration in the same module.
-    The header pass takes them from here instead of translating the bodies
-    again.  Under [CRANE_CHECK_IR] it translates them anyway and checks the
-    two agree. *)
+    table grows -- so functions one file's pass generated are what the other
+    file's would generate at the same declaration in the same module.  The
+    pass that comes second takes them from here instead of translating the
+    bodies again, whichever file it writes.  Under [CRANE_CHECK_IR] it
+    translates them anyway and checks the two agree. *)
 
 module Node_table = Hashtbl.Make (struct
   type t = Obj.t
@@ -708,12 +708,13 @@ module Node_table = Hashtbl.Make (struct
   let hash = Hashtbl.hash
 end)
 
-(** What the implementation pass generated, by the MiniML node it generated
-    it from, with the module it generated it in. *)
-let generated_in_impl : (ModPath.t * Gen_decls.generated_fun list) list Node_table.t =
+(** What each file's pass generated, by the MiniML node it generated it
+    from, with the module it generated it in. *)
+let generated_by_file :
+    (file * ModPath.t * Gen_decls.generated_fun list) list Node_table.t =
   Node_table.create 64
 
-let () = State.on_reset State.Unit (fun () -> Node_table.reset generated_in_impl)
+let () = State.on_reset State.Unit (fun () -> Node_table.reset generated_by_file)
 
 (* [compare] rather than [=]: a NaN literal is equal to itself. *)
 let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) =
@@ -721,25 +722,23 @@ let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) 
   && List.equal Id.equal (fst a.gf_env) (fst b.gf_env)
   && Id.Set.equal (snd a.gf_env) (snd b.gf_env)
 
-(** [generated_once ?on_reuse node gen] is [gen ()], except that the header
-    pass reuses what the implementation pass generated from the physical
-    MiniML node [node] in the same module, handing it to [on_reuse] to replay
-    any effect generating it had.  Where in the file the node is written does
-    not enter into it: what a generation depends on beyond the node and its
-    module is planned ({!in_template}, {!Common.freeze_global_ids}). *)
+(** [generated_once ?on_reuse node gen] is [gen ()], except that a pass
+    reuses what the other file's pass generated from the physical MiniML node
+    [node] in the same module, handing it to [on_reuse] to replay any effect
+    generating it had.  Where in the file the node is written does not enter
+    into it: what a generation depends on beyond the node and its module is
+    planned ({!in_template}, {!Common.freeze_global_ids}). *)
 let generated_once ?(on_reuse = ignore) node gen =
-  let key = Obj.repr node in
-  let mp = top_visible_mp () in
-  let earlier = Option.default [] (Node_table.find_opt generated_in_impl key) in
   match get_phase () with
-  | Emit Impl ->
-    let funs = gen () in
-    Node_table.replace generated_in_impl key ((mp, funs) :: earlier);
-    funs
-  | Emit Intf -> (
+  | Plan -> gen ()
+  | Emit file -> (
+    let key = Obj.repr node in
+    let mp = top_visible_mp () in
+    let earlier = Option.default [] (Node_table.find_opt generated_by_file key) in
     match
       List.find_map
-        (fun (mp', funs) -> if ModPath.equal mp' mp then Some funs else None)
+        (fun (file', mp', funs) ->
+          if file' <> file && ModPath.equal mp' mp then Some funs else None )
         earlier
     with
     | Some funs ->
@@ -748,12 +747,14 @@ let generated_once ?(on_reuse = ignore) node gen =
         let again, _ = Translation.collecting_lifted gen in
         if not (List.equal same_generation funs again) then
           CErrors.anomaly
-            Pp.(str "Crane: the header pass generated differently from the \
-                     implementation pass.")
+            Pp.(str "Crane: the header and the implementation generated one \
+                     declaration differently.")
       end;
       funs
-    | None -> gen () )
-  | Plan -> gen ()
+    | None ->
+      let funs = gen () in
+      Node_table.replace generated_by_file key ((file, mp, funs) :: earlier);
+      funs )
 
 (** [generate d] is what the MiniML declaration [d] generates, for whichever
     file is being written: functions translated once, with their file
@@ -840,19 +841,19 @@ let generate d =
     functions ~lifted:(By_element helpers) funs
   | Dfix fds -> group fds
 
-(** The entity the implementation pass finalized for each generated
-    function, by physical identity: a generation the header pass reused
-    ({!generated_once}) is finished once too. *)
-let finalized_in_impl : Function_entity.t option Node_table.t =
+(** The entity each file's pass finalized for each generated function, by
+    physical identity: a generation the other pass reused ({!generated_once})
+    is finished once too. *)
+let finalized_by_file : (file * Function_entity.t option) Node_table.t =
   Node_table.create 64
 
-let () = State.on_reset State.Unit (fun () -> Node_table.reset finalized_in_impl)
+let () = State.on_reset State.Unit (fun () -> Node_table.reset finalized_by_file)
 
 (** [finalized funs] pairs each generated function with its entity, every
     definition among them finished as one group
-    ({!Function_entity.finalize_group}); [None] for a declaration.  The
-    header pass takes the implementation pass's entities for functions it
-    reused, checked under [CRANE_CHECK_IR] like the generation itself. *)
+    ({!Function_entity.finalize_group}); [None] for a declaration.  A pass
+    takes the other file's entities for functions it reused, checked under
+    [CRANE_CHECK_IR] like the generation itself. *)
 let finalized (funs : Gen_decls.generated_fun list) =
   let finalize () =
     let entities =
@@ -872,22 +873,32 @@ let finalized (funs : Gen_decls.generated_fun list) =
     in
     pair funs entities
   in
-  let earlier g = Node_table.find_opt finalized_in_impl (Obj.repr g) in
   match get_phase () with
-  | Emit Impl ->
-    let paired = finalize () in
-    List.iter (fun (g, e) -> Node_table.replace finalized_in_impl (Obj.repr g) e) paired;
-    paired
-  | Emit Intf when funs <> [] && List.for_all (fun g -> earlier g <> None) funs ->
-    let paired = List.map (fun g -> (g, Option.get (earlier g))) funs in
-    if Sys.getenv_opt "CRANE_CHECK_IR" <> None
-       && compare (List.map snd paired) (List.map snd (finalize ())) <> 0
-    then
-      CErrors.anomaly
-        Pp.(str "Crane: the header pass finished differently from the \
-                 implementation pass.");
-    paired
-  | _ -> finalize ()
+  | Plan -> finalize ()
+  | Emit file -> (
+    let by_other g =
+      match Node_table.find_opt finalized_by_file (Obj.repr g) with
+      | Some (file', e) when file' <> file -> Some e
+      | _ -> None
+    in
+    match List.map by_other funs with
+    | earlier when funs <> [] && List.for_all Option.has_some earlier ->
+      let paired = List.combine funs (List.map Option.get earlier) in
+      if Sys.getenv_opt "CRANE_CHECK_IR" <> None
+         && compare (List.map snd paired) (List.map snd (finalize ())) <> 0
+      then
+        CErrors.anomaly
+          Pp.(str "Crane: the header and the implementation finished one \
+                   declaration differently.");
+      paired
+    | _ ->
+      let paired = finalize () in
+      List.iter
+        (fun (g, e) ->
+          if not (Node_table.mem finalized_by_file (Obj.repr g)) then
+            Node_table.replace finalized_by_file (Obj.repr g) (file, e) )
+        paired;
+      paired )
 
 (** The views of [funs] a file writes, finished: a definition in the file
     that holds it, and in the header a declaration of a definition the
