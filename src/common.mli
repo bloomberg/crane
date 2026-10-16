@@ -25,6 +25,9 @@ val globref_equal : Names.GlobRef.t -> Names.GlobRef.t -> bool
 *)
 val contains_substring : string -> string -> bool
 
+(** Whether a module path lies inside a functor's parameter. *)
+val under_mp_bound : Names.ModPath.t -> bool
+
 (** [render_template substs tmpl] replaces each [(placeholder, value)] pair
     in [substs] within [tmpl].  Used for numeric literal formatting templates. *)
 val render_template : (string * string) list -> string -> string

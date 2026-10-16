@@ -136,6 +136,11 @@ let is_mp_bound = function
   | MPbound _ -> true
   | _ -> false
 
+let rec under_mp_bound = function
+  | MPbound _ -> true
+  | MPdot (parent, _) -> under_mp_bound parent
+  | MPfile _ -> false
+
 (** {2 Pretty-print utility functions} *)
 
 (** Wrap in parentheses if [par] is true.

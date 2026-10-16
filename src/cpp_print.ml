@@ -296,29 +296,7 @@ let spell_double (x : float) : string =
     are stored in, and its accessors. *)
 let require_variant () = Table.demand_header (sn ()).variant_header
 
-(* Whether a module path lies inside a functor's parameter. *)
-let rec has_mpbound mp =
-  match mp with
-  | Names.ModPath.MPbound _ -> true
-  | Names.ModPath.MPdot (parent, _) -> has_mpbound parent
-  | _ -> false
 
-(* What a pointer to [t] is held in.  [`Shared]: a shared slot
-   ([crane::shared_box]), [t] being an inductive stored as a shared variant,
-   whose value is already the shared handle a pointer would otherwise add.
-   [`At_instantiation]: an inductive a functor's body reaches through its
-   parameter, which is a shared variant or not according to the argument --
-   known to the C++ instantiation only, so the slot is chosen there
-   ([crane::shared_or_t]).  [`Pointer]: an ordinary pointer. *)
-let rec slot_of = function
-  | Tglob (r, _, _) when Table.is_shared_variant r -> `Shared
-  | Tglob (GlobRef.IndRef (kn, _), _, _)
-    when Table.shared_variant () && has_mpbound (MutInd.modpath kn) ->
-    `At_instantiation
-  | Tnamespace (_, t) | Tconst t -> slot_of t
-  | _ -> `Pointer
-
-let boxes_shared t = slot_of t = `Shared
 
 (** Print an unqualified angle-bracket type: [label<s>].
 
@@ -1209,14 +1187,14 @@ let rec pp_cpp_type ?(lead = true) par vl t =
         require_header "memory";
         cpp_angle (sn ()).shared_ptr (pp_rec false t)
       in
-      match slot_of t with
-      | `Shared ->
+      match Pointer_slot.of_pointee t with
+      | Pointer_slot.Shared ->
         Table.demand_header (Table.Runtime Crane_rt.shared_variant_header);
         cpp_angle Crane_rt.shared_box (pp_rec false t)
-      | `At_instantiation ->
+      | Pointer_slot.At_instantiation ->
         Table.demand_header (Table.Runtime Crane_rt.shared_variant_header);
         cpp_angle Crane_rt.shared_or (pp_rec false t ++ str ", " ++ pointer ())
-      | `Pointer -> pointer () )
+      | Pointer_slot.Pointer -> pointer () )
     | Tvoid -> str "void"
     | Tunresolved ->
       (* There is no C++ spelling for "no type was determined"; emitting a
@@ -1691,9 +1669,9 @@ and pp_cpp_expr env args t =
           let in_lbl_list = List.exists (fun (_, reg_lbl) -> Label.equal x_lbl reg_lbl)
             !template_static_accessors in
           in_lbl_list
-          && ( has_mpbound x_mp
-             || (not (has_mpbound resolved_x_mp)
-                 && (has_mpbound x_mp || has_mpbound resolved_x_mp
+          && ( under_mp_bound x_mp
+             || (not (under_mp_bound resolved_x_mp)
+                 && (under_mp_bound x_mp || under_mp_bound resolved_x_mp
                      || not (ModPath.equal x_mp resolved_x_mp))) )
     in
     let full_name =
@@ -1719,7 +1697,7 @@ and pp_cpp_expr env args t =
     in
     let full_name =
       if not is_accessor then full_name
-      else if has_mpbound (modpath_of_r x) then
+      else if under_mp_bound (modpath_of_r x) then
         (* Reached through a bound module parameter, whose member shape is not
            known here: the argument module may define this value as a static
            data member or -- when it is itself inside a template, as a Meyers
@@ -2007,7 +1985,7 @@ and pp_cpp_expr env args t =
       ++ body_s
       ++ fnl ()
       ++ str "}" )
-  | CPPalloc ((Alloc_heap | Alloc_arena_scoped), t) when boxes_shared t ->
+  | CPPalloc ((Alloc_heap | Alloc_arena_scoped), t) when Pointer_slot.of_pointee t = Pointer_slot.Shared ->
     (* A shared value goes into its slot as it is: no cell to allocate. *)
     Table.demand_header (Table.Runtime Crane_rt.shared_variant_header);
     cpp_angle Crane_rt.shared_box (pp_cpp_type false [] t) ++ str "::make"
