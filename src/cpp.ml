@@ -1743,8 +1743,9 @@ let rec pp_structure_elem ~is_header f = function
               typeclasses_pp ++ modtypes_pp ++ struct_def ++ modtypes_after_pp
               ++ deferred_asserts_pp
               ++ concept_assert_pp name m.ml_mod_type
-        else if this_promoted then
-          (* Promoted template: all defs are inline in header, skip .cpp *)
+        else if this_promoted && promoted_template then
+          (* A promoted template's members are all defined inline in the
+             header. *)
           mt ()
         else
           body

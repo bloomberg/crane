@@ -449,6 +449,16 @@ let struct_qualifier_for r name_str =
     (* Already contains the struct prefix — nothing to add. *)
     if Common.contains_substring name_str (struct_name_str ^ "::") then
       mt ()
+    (* An inductive promoted to the struct is the struct, and qualified by
+       its own name it would name the struct's constructor; it takes the
+       qualifier the struct itself is written with. *)
+    else if
+      Ref.User.Tbl.mem promoted_inductives r
+      && ModPath.equal (modpath_of_r r) scope.Scope_plan.module_
+    then
+      match List.rev scope.Scope_plan.qualifier with
+      | _ :: (_ :: _ as enclosing) -> str (String.concat "::" (List.rev enclosing)) ++ str "::"
+      | _ -> mt ()
     (* Eponymous records are merged into the module struct at global scope,
        so they don't get an extra wrapper prefix.  However, when the record
        itself lives inside the current struct (nested sub-module), we must
