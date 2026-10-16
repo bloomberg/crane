@@ -2729,9 +2729,6 @@ let plan_nested_structs s =
   (* An inductive declared outside every struct is still written inside one
      where its namespace wrapper holds declarations and so is not merged
      with it. *)
-  let in_unmerged_wrapper r =
-    Hashtbl.mem unmerged_wrappers (String.capitalize_ascii (Common.pp_global_name Type r))
-  in
   (* A struct written inside another is its module's rendering, which demotes
      the module's inductive while it lasts: none is promoted there.  Whether
      its wrapper is merged is as a reference sees it at the declaration
@@ -2818,7 +2815,7 @@ let plan_instance_promoted_types s =
       | Dind _ | Dtype _ | Dterm _ | Dfix _ -> [] )
     (declarations s)
 
-let plan_unmerged_wrappers () =
+let plan_unmerged_wrappers () : (string * ModPath.t) list =
   let is_member (_, se) =
     match se with
     | SEdecl (Dterm (r, _, _))
@@ -2836,7 +2833,7 @@ let plan_unmerged_wrappers () =
   List.filter_map
     (fun (mi : Structure_analysis.module_info) ->
       match mi.wrapper_name with
-      | Some name when List.exists is_member mi.sels -> Some name
+      | Some name when List.exists is_member mi.sels -> Some (name, mi.modpath)
       | Some _ | None -> None )
     (get_structure_analysis ()).sorted_modules
 
@@ -3288,11 +3285,7 @@ let do_struct_with_decl_tracking ~is_header f s =
       | _ -> mt ()
     in
     name_cache :=
-      Some
-        (Name_resolution.create
-           ~structure_analysis:analysis
-           ~unmerged:unmerged_wrappers
-           s );
+      Some (Name_resolution.create ~structure_analysis:analysis s);
     let old_local_inductives = get_local_inductives () in
     if modular () then begin
       let rec collect_inductives sel =

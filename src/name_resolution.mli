@@ -51,7 +51,6 @@ type resolved_type_name = {
       (** True if this is a record (not standard inductive) *)
   rtn_is_enum : bool;  (** True if this is an enum class *)
   rtn_is_local : bool;  (** True if defined in the current module scope *)
-  rtn_is_merged : bool;  (** True if the Dnspace wrapper was merged *)
   rtn_is_global_scope_enum : bool;  (** True if this enum is at global scope *)
 }
 
@@ -66,11 +65,9 @@ type resolved_term_name = {
     the wrapper table is populated.
     @param structure_analysis the result of {!Structure_analysis.analyze}
       with an inductive from another module
-    @param unmerged set of capitalized names that must not be merged into a parent struct
     @return a freshly built name resolution cache *)
 val create :
   structure_analysis:Structure_analysis.t ->
-  unmerged:(string, unit) Hashtbl.t ->
   Miniml.ml_structure ->
   t
 

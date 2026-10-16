@@ -20,7 +20,7 @@ type representation = {
   referenced_names : (GlobRef.t * string) list;
   field_names : (GlobRef.t * Id.t list) list;
   pointer_fields : (GlobRef.t * string * (int * bool) list) list;
-  unmerged_wrappers : string list;
+  unmerged_wrappers : (string * Names.ModPath.t) list;
   promoted_inductives : GlobRef.t list;
   accessors : GlobRef.t list;
   nested_structs : (string * Cpp_state.nested_struct_owner) list;
@@ -340,7 +340,9 @@ let equal a b =
   && List.equal
        (fun (r, c, fs) (r', c', fs') -> GlobRef.UserOrd.equal r r' && String.equal c c' && fs = fs')
        a.representation.pointer_fields b.representation.pointer_fields
-  && List.equal String.equal a.representation.unmerged_wrappers b.representation.unmerged_wrappers
+  && List.equal
+       (fun (n, mp) (n', mp') -> String.equal n n' && Names.ModPath.equal mp mp')
+       a.representation.unmerged_wrappers b.representation.unmerged_wrappers
   && List.equal GlobRef.UserOrd.equal a.representation.promoted_inductives b.representation.promoted_inductives
   && List.equal GlobRef.UserOrd.equal a.representation.accessors b.representation.accessors
   && List.equal

@@ -22,7 +22,6 @@ type resolved_type_name = {
   rtn_is_record : bool;
   rtn_is_enum : bool;
   rtn_is_local : bool;
-  rtn_is_merged : bool;
   rtn_is_global_scope_enum : bool;
 }
 
@@ -76,7 +75,6 @@ let register_ind_kind t r kind = Ref.User.Tbl.replace t.ind_kinds r kind
     from miniml packets to avoid triggering renaming side effects. Returns a
     thunk that computes the resolved name and kind. *)
 let classify_inductive
-    ~unmerged
     (kn : MutInd.t)
     (i : int)
     (ind : Miniml.ml_ind) :
@@ -92,28 +90,6 @@ let classify_inductive
     | _ -> false
   in
   let is_en = is_enum_inductive ind_ref in
-  let parent_mp = Names.MutInd.modpath kn in
-  let parent_module_label =
-    match parent_mp with
-    | Names.ModPath.MPdot (_, l) ->
-      let lbl = String.capitalize_ascii (Names.Label.to_string l) in
-      if String.equal lbl (String.capitalize_ascii raw_name) then None
-      else Some lbl
-    | _ -> None
-  in
-  let rec has_bound_ancestor = function
-    | Names.ModPath.MPdot (p, _) -> has_bound_ancestor p
-    | Names.ModPath.MPbound _ -> true
-    | Names.ModPath.MPfile _ -> false
-  in
-  let cap_raw = String.capitalize_ascii raw_name in
-  let is_merged =
-    not (Hashtbl.mem unmerged cap_raw)
-    && (match parent_module_label with
-        | Some lbl -> not (Hashtbl.mem unmerged lbl)
-        | None -> true)
-    && not (has_bound_ancestor parent_mp)
-  in
   let is_gse = Module_plan.is_global_scope_enum ind_ref in
   let kind =
     match ind.Miniml.ind_kind with
@@ -138,7 +114,6 @@ let classify_inductive
       rtn_is_record = is_rec;
       rtn_is_enum = is_en;
       rtn_is_local = false;
-      rtn_is_merged = is_merged;
       rtn_is_global_scope_enum = is_gse;
     }
   in
@@ -148,7 +123,6 @@ let classify_inductive
     classifications for all inductive types without side effects. *)
 let create
     ~structure_analysis:_
-    ~unmerged
     s =
   let type_names = Ref.User.Tbl.create 256 in
   let ind_kinds = Ref.User.Tbl.create 64 in
@@ -162,13 +136,7 @@ let create
         | Miniml.SEdecl (Miniml.Dind (kn, ind)) ->
           Array.iteri
             (fun i _p ->
-              let thunk =
-                classify_inductive
-                  ~unmerged
-                  kn
-                  i
-                  ind
-              in
+              let thunk = classify_inductive kn i ind in
               let ind_ref, rtn, kind = thunk () in
               Ref.User.Tbl.replace type_names ind_ref rtn;
               Ref.User.Tbl.replace ind_kinds ind_ref kind )

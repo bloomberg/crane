@@ -101,14 +101,7 @@ let pp_modname mp = str (Common.pp_module mp)
     use List<A>). Returns false if it was NOT merged (has pending declarations →
     use List::list<A>). *)
 let is_merged_inductive (r : GlobRef.t) : bool =
-  Ref.User.Tbl.mem promoted_inductives r
-  ||
-  let base = str_global Type r in
-  let wrapper_name =
-    if Common.get_force_cross_file_qualification ()
-    then Common.capitalize_last_component base
-    else String.capitalize_ascii base in
-  not (Hashtbl.mem unmerged_wrappers wrapper_name)
+  Ref.User.Tbl.mem promoted_inductives r || not (in_unmerged_wrapper r)
 
 (** Extract the [IndRef] from an [IndRef] or [ConstructRef]. *)
 let get_ind =
@@ -659,19 +652,6 @@ let is_global_scope_enum_cached : GlobRef.t -> bool =
   with_cache Name_resolution.is_global_scope_enum (fun r ->
     Module_plan.is_global_scope_enum r )
 
-(** Cache-backed is_merged_inductive check — avoids hashtable lookup. Promoted
-    inductives always count as merged regardless of cache. *)
-let is_merged_inductive_cached : GlobRef.t -> bool =
- fun r ->
-   Ref.User.Tbl.mem promoted_inductives r
-   || with_cache
-        (fun cache r ->
-          match Name_resolution.resolve_type cache r with
-          | Some rtn -> rtn.Name_resolution.rtn_is_merged
-          | None -> is_merged_inductive r )
-        is_merged_inductive
-        r
-
 (** Cache-backed inductive classification queries. *)
 let get_ind_kind_cached : GlobRef.t -> Minicpp.cpp_ind_kind option =
   with_cache Name_resolution.get_ind_kind (fun _ -> None)
@@ -699,7 +679,7 @@ type struct_spelling =
 (** The spelling of [id]'s struct at its declaration, [local] where the
     declaration is rendered among the inductives local to it: a promoted
     inductive, and one a reference sees as merged, take the merged spelling. *)
-let struct_spelling ?(merged = is_merged_inductive_cached)
+let struct_spelling ?(merged = is_merged_inductive)
     ?(promoted = Ref.User.Tbl.mem promoted_inductives) ~local id =
   match id with
   | GlobRef.IndRef _ when is_eponymous_record_cached id -> Eponymous_record_name

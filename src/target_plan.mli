@@ -45,9 +45,10 @@ type representation = {
       (** The fields each generated constructor struct stores behind the
           smart pointer, by inductive and constructor struct name, each with
           whether it holds the inductive itself. *)
-  unmerged_wrappers : string list;
+  unmerged_wrappers : (string * Names.ModPath.t) list;
       (** The wrapper structs that hold declarations, and so are not merged
-          with their eponymous inductive's struct. *)
+          with their eponymous inductive's struct, each with the module it
+          wraps. *)
   promoted_inductives : Names.GlobRef.t list;
       (** The inductives promoted to their eponymous module's struct. *)
   accessors : Names.GlobRef.t list;

@@ -1049,7 +1049,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
             then Common.capitalize_last_component type_name_str
             else type_name_str in
           let cap =
-            if is_merged_inductive_cached r' then
+            if is_merged_inductive r' then
               dedup_qualified_tail
                 ~allow_bare:(Table.modular () && not needs_ns) cap
             else
@@ -1067,7 +1067,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
           ++ struct_qualifier_for r' cap
           ++ cap_pp
           ++ templates
-        else if is_merged_inductive_cached r' && not (is_local_inductive r') then
+        else if is_merged_inductive r' && not (is_local_inductive r') then
           (* A local inductive is a sibling member of the enclosing module
              struct, so it is in scope under its own name; the merged-wrapper
              spelling ([Opt] for [opt]) names nothing there. *)
@@ -1579,7 +1579,7 @@ and pp_cpp_expr env args t =
             if Common.get_force_cross_file_qualification ()
             then Common.capitalize_last_component type_name_str
             else type_name_str in
-          let merged = is_merged_inductive_cached x in
+          let merged = is_merged_inductive x in
           if merged then
             let allow_bare =
               let ref_base = base_mp (modpath_of_r x) in
@@ -1588,7 +1588,7 @@ and pp_cpp_expr env args t =
             str (dedup_qualified_tail ~allow_bare cap)
           else str cap
         else if needs_ns then
-          if is_merged_inductive_cached x then
+          if is_merged_inductive x then
             (* Merged non-local inductive: use capitalized name directly *)
             global_scope_qualifier_for x (Pp.string_of_ppcmds ns_name)
             ++ ns_name
@@ -3866,11 +3866,9 @@ let nspace_wrapper_name id =
     declarations were queued against -- a file module of the same name, whose
     functions go in beside it -- and so is spelled [List::list] rather than
     [List].  A struct written inside another is named by member lookup, which
-    no forward declaration answers.  Read from {!unmerged_wrappers}, which
-    printing the wrapper does not empty, so the answer does not depend on
-    whether the wrapper has been written yet. *)
-let nested_in_wrapper r =
-  Hashtbl.mem unmerged_wrappers (nspace_wrapper_name r)
+    no forward declaration answers.  Planned ({!in_unmerged_wrapper}), so the
+    answer does not depend on whether the wrapper has been written yet. *)
+let nested_in_wrapper = in_unmerged_wrapper
 
 (** Whether a wrapper and the struct inside it are written as one struct
     rather than two.  A sole struct is merged into its wrapper and takes the

@@ -910,12 +910,33 @@ let is_typeclass_instance _body ty =
 let pending_wrapper_decls : (string, Pp.t) Hashtbl.t =
   owned_table "pending_wrapper_decls"
 
-(** Set of wrapper struct names that have pending declarations and thus cannot
-    be merged. Populated alongside pending_wrapper_decls during PASS 1. Used
-    during type/expression rendering to decide between merged (List<A>) and
-    unmerged (List::list<A>) name formats. Not consumed during rendering. *)
-let unmerged_wrappers : (string, unit) Hashtbl.t =
+(** The wrapper structs that hold declarations of their module's and so
+    cannot be merged with the eponymous inductive's struct, by struct name,
+    with the module each wraps; planned ({!Cpp.plan_unmerged_wrappers}). *)
+let unmerged_wrappers : (string, ModPath.t) Hashtbl.t =
   owned_table "unmerged_wrappers"
+
+(** Whether the inductive [r] is written inside a wrapper that holds other
+    declarations, and so is spelled [List::list] rather than [List].
+
+    A property of [r]'s declaration, asked of the name its wrapper is named
+    after -- its own short name -- and never of the way a use spells it: a use
+    written through a qualifier names the same struct.  A type reached through
+    a functor parameter is the parameter's member, in no wrapper; and a
+    separately extracted file only plans its own wrappers, so a type of
+    another file is not in one of them. *)
+let in_unmerged_wrapper r =
+  let mp = modpath_of_r r in
+  (not (Common.under_mp_bound mp))
+  &&
+  match
+    Hashtbl.find_opt unmerged_wrappers
+      (String.capitalize_ascii (Common.pp_global_name Type r))
+  with
+  | None -> false
+  | Some wrapped ->
+    (not (Common.get_force_cross_file_qualification ()))
+    || ModPath.equal (base_mp mp) (base_mp wrapped)
 
 (** What a nested struct name was emitted for. A Rocq module has no
     [GlobRef.t], so it is identified by its module path instead -- which also

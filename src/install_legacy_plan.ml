@@ -45,7 +45,7 @@ let install_instance_promoted_types =
 let install_promoted_inductives = List.iter Table.promote_inductive
 
 let install_unmerged_wrappers =
-  List.iter (fun name -> Hashtbl.replace Cpp_state.unmerged_wrappers name ())
+  List.iter (fun (name, mp) -> Hashtbl.replace Cpp_state.unmerged_wrappers name mp)
 
 let check_installed (facts : Program_facts.t) (plan : Target_plan.t) =
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin

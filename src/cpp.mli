@@ -122,8 +122,9 @@ val plan_instance_promoted_types :
     functions, generated as the wrapper's members -- and so cannot be merged
     with the eponymous inductive's struct: a reference to the inductive then
     spells the wrapper's member.  Decided from what the wrapper's module
-    declares, before the header renders the members. *)
-val plan_unmerged_wrappers : unit -> string list
+    declares, before the header renders the members.  Each with the module
+    it wraps. *)
+val plan_unmerged_wrappers : unit -> (string * Names.ModPath.t) list
 
 (** The fields each such constructor struct stores behind the smart pointer
     ({!Gen_decls.constructor_pointer_fields}): the inductive, the

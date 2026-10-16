@@ -108,7 +108,7 @@ type struct_spelling =
 (** The spelling of an inductive's struct at its declaration, [local] where
     the declaration is rendered among the inductives local to it; [merged]
     says whether its namespace wrapper is merged with it, as a reference
-    sees it ({!is_merged_inductive_cached} by default), and [promoted]
+    sees it ({!is_merged_inductive} by default), and [promoted]
     whether it is promoted where it is declared. *)
 val struct_spelling :
   ?merged:(Names.GlobRef.t -> bool) ->
@@ -168,9 +168,6 @@ val is_eponymous_record_cached : Names.GlobRef.t -> bool
 
 (** Cached: whether the global is a global-scope enum. *)
 val is_global_scope_enum_cached : Names.GlobRef.t -> bool
-
-(** Cached: whether the global is a merged inductive. *)
-val is_merged_inductive_cached : Names.GlobRef.t -> bool
 
 (** Cached: the C++ inductive kind of the global, if any. *)
 val get_ind_kind_cached : Names.GlobRef.t -> Minicpp.cpp_ind_kind option

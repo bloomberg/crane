@@ -359,9 +359,13 @@ val wrapper_qualify_modname : Names.ModPath.t -> string -> string
 val pending_wrapper_decls : (string, Pp.t) Hashtbl.t
 
 (** Wrapper struct names that have pending declarations and therefore cannot be
-    merged; consulted when choosing between the merged ([List<A>]) and unmerged
-    ([List::list<A>]) name forms. Cleared by [reset_cpp_state]. *)
-val unmerged_wrappers : (string, unit) Hashtbl.t
+    merged, with the module each wraps. Cleared by [reset_cpp_state]. *)
+val unmerged_wrappers : (string, Names.ModPath.t) Hashtbl.t
+
+(** Whether an inductive's struct is written inside a wrapper that holds
+    other declarations, and so is spelled [List::list] rather than [List]: a
+    property of its declaration, the same wherever a use is written. *)
+val in_unmerged_wrapper : Names.GlobRef.t -> bool
 
 (** What a nested struct name was emitted for: a Rocq reference, or a module
     (which has no [GlobRef.t]). *)
