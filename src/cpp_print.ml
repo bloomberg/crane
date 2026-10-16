@@ -292,9 +292,9 @@ let spell_double (x : float) : string =
   else if x = Float.neg_infinity then "-__builtin_inf()"
   else Printf.sprintf "%h" x
 
-(** Demand the header declaring the tagged union an inductive's alternatives
-    are stored in, and its accessors. *)
-let require_variant () = Table.demand_header (sn ()).variant_header
+(** What is being written needs the header declaring the tagged union an
+    inductive's alternatives are stored in, and its accessors. *)
+let writes_variant () = writes (sn ()).variant_header
 
 
 
@@ -931,7 +931,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
     | Tnondeduced t ->
       str "std::type_identity_t<" ++ pp_rec false t ++ str ">"
     | Trebind (h, x) ->
-      require_obj_header ();
+      writes_obj ();
       str Crane_rt.rebind ++ str "<" ++ pp_list (pp_rec false) [ h; x ] ++ str ">"
     | Thole -> str ctor_alias_tvar
     | Tref (Forwarding, t) -> pp_rec false t ++ str "&&"
@@ -940,10 +940,10 @@ let rec pp_cpp_type ?(lead = true) par vl t =
     | Tid_external (id_s, args) ->
       let id_s =
         if String.equal id_s "std::vector" then begin
-          require_header "vector";
+          writes_standard "vector";
           if (sn ()).ns <> "std" then "bsl::vector" else id_s
         end else if String.equal id_s Crane_rt.constant_tc then begin
-          require_obj_header ();
+          writes_obj ();
           id_s
         end else id_s
       in
@@ -954,7 +954,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
        survive -- a template argument of [SigT<nat, dummy_prop>] -- it is
        rendered as the erased type. *)
     | Terased _ ->
-      require_obj_header ();
+      writes_obj ();
       str Crane_rt.obj
     | Tglob (r, tys, args) ->
       ( match find_custom_opt r with
@@ -1002,7 +1002,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
           ++ pp_list (pp_rec false) l
           ++ str ">" ) )
     | Tfun (d, c) ->
-      Table.demand_header (Table.Runtime Crane_rt.fn_header);
+      writes (Table.Runtime Crane_rt.fn_header);
       cpp_angle
         Crane_rt.fn
         (pp_rec false c ++ pp_par true (pp_list (pp_rec false) d))
@@ -1177,22 +1177,22 @@ let rec pp_cpp_type ?(lead = true) par vl t =
         (if dependent_member then leading_typename else mt ())
         ++ head_pp ++ str "<" ++ pp_list (pp_rec false) args ++ str ">" )
     | Tvariant (Inline_variant, tys) ->
-      require_variant ();
+      writes_variant ();
       cpp_angle (sn ()).variant (pp_list (pp_rec false) tys)
     | Tvariant (Shared_variant, tys) ->
-      Table.demand_header (Table.Runtime Crane_rt.shared_variant_header);
+      writes (Table.Runtime Crane_rt.shared_variant_header);
       cpp_angle Crane_rt.shared_variant (pp_list (pp_rec false) tys)
     | Tshared_ptr t -> (
       let pointer () =
-        require_header "memory";
+        writes_standard "memory";
         cpp_angle (sn ()).shared_ptr (pp_rec false t)
       in
       match Pointer_slot.of_pointee t with
       | Pointer_slot.Shared ->
-        Table.demand_header (Table.Runtime Crane_rt.shared_variant_header);
+        writes (Table.Runtime Crane_rt.shared_variant_header);
         cpp_angle Crane_rt.shared_box (pp_rec false t)
       | Pointer_slot.At_instantiation ->
-        Table.demand_header (Table.Runtime Crane_rt.shared_variant_header);
+        writes (Table.Runtime Crane_rt.shared_variant_header);
         cpp_angle Crane_rt.shared_or (pp_rec false t ++ str ", " ++ pointer ())
       | Pointer_slot.Pointer -> pointer () )
     | Tvoid -> str "void"
@@ -1204,7 +1204,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
     | Tany | Topaque ->
       (* [Topaque] is a type we could not pin down; [std::any] is the only
          spelling that accepts whatever it turns out to be. *)
-      require_obj_header ();
+      writes_obj ();
       str Crane_rt.obj
     | Ttyctor t ->
       (* A template template argument is the bare template name.  Ask the type
@@ -1436,7 +1436,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       | _ -> str (cut_at_argument_list (Pp.string_of_ppcmds (pp_rec false t))) ) )
     | Tauto -> str "auto"
     | Tdecay t ->
-      require_header "type_traits";
+      writes_standard "type_traits";
       str "std::decay_t<" ++ pp_rec false t ++ str ">"
   in
   (pp_rec ~lead par t)
@@ -1813,7 +1813,7 @@ and pp_cpp_expr env args t =
              | [Sreturn (Some _)] -> true
              | _ -> false )
       | _ -> false ) ->
-    require_variant ();
+    writes_variant ();
     let pp = pp_cpp_expr env args in
     let cond_pp, then_e, else_e =
       match branches, wildcard with
@@ -1904,7 +1904,7 @@ and pp_cpp_expr env args t =
     if needs_parens then str "*(" ++ pp_cpp_expr env args e ++ str ")"
     else str "*" ++ pp_cpp_expr env args e
   | CPPmove e ->
-    require_header "utility";
+    writes_standard "utility";
     str (sn ()).move ++ str "(" ++ pp_cpp_expr env args e ++ str ")"
   | CPPforward (ty, e) ->
     str (sn ()).forward
@@ -1987,10 +1987,10 @@ and pp_cpp_expr env args t =
       ++ str "}" )
   | CPPalloc ((Alloc_heap | Alloc_arena_scoped), t) when Pointer_slot.of_pointee t = Pointer_slot.Shared ->
     (* A shared value goes into its slot as it is: no cell to allocate. *)
-    Table.demand_header (Table.Runtime Crane_rt.shared_variant_header);
+    writes (Table.Runtime Crane_rt.shared_variant_header);
     cpp_angle Crane_rt.shared_box (pp_cpp_type false [] t) ++ str "::make"
   | CPPalloc (Alloc_heap, t) ->
-    require_header "memory";
+    writes_standard "memory";
     cpp_angle (sn ()).make_shared (pp_cpp_type false [] t)
   | CPPalloc (Alloc_reusing, t) ->
     (* Perceus reuse factory; only emitted under NonAtomicRc (crane::rc). *)
@@ -2002,14 +2002,14 @@ and pp_cpp_expr env args t =
     let inner = pp_cpp_type false [] t in
     if Table.non_atomic_rc () then begin
       (* crane::rc<T>::make(...) -- rc.h transitively includes arena.h. *)
-      require_header "memory";
+      writes_standard "memory";
       cpp_angle Crane_rt.rc inner ++ str "::make"
     end
     else if Table.std_lib () = "BDE" then
       (* No runtime arena under BDE (arena.h is std-only): plain factory. *)
       cpp_angle (sn ()).make_shared inner
     else begin
-      Table.mark_needs_arena ();
+      writes Table.arena_header;
       cpp_angle Crane_rt.arena_make_shared inner
     end
   | CPPstructmk (id, tys, es) | CPPstruct (id, tys, es) as e ->
@@ -2169,10 +2169,10 @@ and pp_cpp_expr env args t =
   | CPPqualified_t (ty, id) ->
     pp_value_qualifier env ty ++ str "::" ++ Id.print id
   | CPPconvertible_to ty ->
-    require_header "concepts";
+    writes_standard "concepts";
     str "std::convertible_to<" ++ pp_cpp_type false [] ty ++ str ">"
   | CPPabort (msg, ty) ->
-    require_header "stdexcept";
+    writes_standard "stdexcept";
     str "([]() -> "
     ++ pp_cpp_type false [] ty
     ++ str " { throw "
@@ -2190,36 +2190,36 @@ and pp_cpp_expr env args t =
     ++ Id.print ctor
   | CPPnullptr -> str "nullptr"
   | CPPin_place ->
-    require_header "utility";
+    writes_standard "utility";
     str ((sn ()).ns ^ "::in_place")
   | CPPin_place_index i ->
-    require_header "utility";
+    writes_standard "utility";
     str ((sn ()).ns ^ "::in_place_index<" ^ string_of_int i ^ ">")
   | CPPbraced es ->
     str "{" ++ pp_list (pp_cpp_expr env args) es ++ str "}"
   | CPPstd_get (ty, None) ->
-    require_variant ();
+    writes_variant ();
     str ((sn ()).get ^ "<") ++ pp_cpp_type false [] ty ++ str ">"
   | CPPstd_get (ty, Some e) ->
-    require_variant ();
+    writes_variant ();
     str ((sn ()).get ^ "<") ++ pp_cpp_type false [] ty ++ str ">("
     ++ pp_cpp_expr env args e
     ++ str ")"
   | CPPstd_holds_alternative ty ->
-    require_variant ();
+    writes_variant ();
     str ((sn ()).holds_alternative ^ "<") ++ pp_cpp_type false [] ty ++ str ">"
   | CPPdeclval ty ->
-    require_header "utility";
+    writes_standard "utility";
     str "std::declval<" ++ pp_cpp_type false [] ty ++ str ">()"
   | CPPtype_name ty -> pp_cpp_type false [] ty
   (* Low-level constructs for reuse optimization *)
   | CPPrt h ->
     (match h with
-     | Crane_rt.Raw | Crane_rt.Deep_box -> Table.mark_needs_erase_fn ()
-     | Crane_rt.Unbox_field -> Table.demand_header (Table.Runtime Crane_rt.field_header)
-     | Crane_rt.Apply2 -> Table.demand_header (Table.Runtime Crane_rt.fn_header)
+     | Crane_rt.Raw | Crane_rt.Deep_box -> writes Table.erase_fn_header
+     | Crane_rt.Unbox_field -> writes (Table.Runtime Crane_rt.field_header)
+     | Crane_rt.Apply2 -> writes (Table.Runtime Crane_rt.fn_header)
      | Crane_rt.Constant _ | Crane_rt.Immortal ->
-       Table.demand_header (Table.Runtime Crane_rt.shared_block_header)
+       writes (Table.Runtime Crane_rt.shared_block_header)
      | Crane_rt.Make_rc_reusing_unchecked | Crane_rt.Reuse_step
      | Crane_rt.Share_child -> ());
     str (Crane_rt.name h)
@@ -2274,11 +2274,11 @@ and pp_cpp_expr env args t =
     in
     str (spell_unop op) ++ operand
   | CPPunbox (Unbox_to ty, e) ->
-    require_obj_header ();
+    writes_obj ();
     str Crane_rt.obj_cast ++ str "<" ++ pp_cpp_type false [] ty ++ str ">("
     ++ pp_cpp_expr env args e ++ str ")"
   | CPPunbox (Unbox_or_keep ty, e) ->
-    require_header "type_traits";
+    writes_standard "type_traits";
     let ty_pp = pp_cpp_type false [] ty and e_pp = pp_cpp_expr env args e in
     str "[&]() -> " ++ ty_pp
     ++ str " { if constexpr (std::is_same_v<" ++ ty_pp
@@ -2291,7 +2291,7 @@ and pp_cpp_expr env args t =
     ++ pp_cpp_type false [] flat_ty
     ++ str ">(" ++ pp_cpp_expr env args e ++ str "))"
   | CPPany_cast (ty, e) | CPPany_cast_tolerant (ty, e) ->
-    require_obj_header ();
+    writes_obj ();
     (* A binder holding a known type in a box is read bare inside a cast
        that already names its type; {!Cpp_erasure.lower_boxed_reads} leaves
        it so. *)
@@ -2301,7 +2301,7 @@ and pp_cpp_expr env args t =
     let caster =
       match t with
       | CPPany_cast_tolerant _ ->
-        Table.mark_needs_erase_fn ();
+        writes Table.erase_fn_header;
         Crane_rt.any_cast
       | _ -> Crane_rt.obj_cast
     in
@@ -2312,7 +2312,7 @@ and pp_cpp_expr env args t =
     (* A global never changes, so neither does its adapter: made once.  A
        method is never a global here: it is named through a lambda
        ({!Minicpp.method_value}), never as itself. *)
-    Table.mark_needs_erase_fn ();
+    writes Table.erase_fn_header;
     str Crane_rt.erase_global ++ str "<" ++ pp_cpp_expr env args g
     ++ ( match shape with
        | Boxed_whole -> mt ()
@@ -2325,7 +2325,7 @@ and pp_cpp_expr env args t =
            CPPqualified_t (ty, Id.of_string "lazy_"),
            of_reversed [thunk] ))
   | CPPerase_fn (shape, e) ->
-    Table.mark_needs_erase_fn ();
+    writes Table.erase_fn_header;
     str Crane_rt.erase_fn
     ++ ( match shape with
        | Boxed_whole -> mt ()
@@ -2336,8 +2336,8 @@ and pp_cpp_expr env args t =
   | CPPerased_call (f, a) ->
     (* The one signature a callable is erased into storage at, so the one it
        can be recovered at; each application yields a [std::any] in turn. *)
-    require_obj_header ();
-    require_header "functional";
+    writes_obj ();
+    writes_standard "functional";
     str Crane_rt.obj_cast
     ++ str "<"
     ++ pp_cpp_type false [] (Tfun ([Tany], Tany))
@@ -2347,16 +2347,16 @@ and pp_cpp_expr env args t =
     ++ pp_cpp_expr env args a
     ++ str ")"
   | CPPtolerant_call (f, call_args) ->
-    Table.mark_needs_erase_fn ();
+    writes Table.erase_fn_header;
     str Crane_rt.call_erased
     ++ str "("
     ++ prlist_with_sep pr_comma (pp_cpp_expr env args) (f :: call_args)
     ++ str ")"
   | CPPfn_value e ->
-    Table.demand_header (Table.Runtime Crane_rt.fn_header);
+    writes (Table.Runtime Crane_rt.fn_header);
     str Crane_rt.fn ++ str "(" ++ pp_cpp_expr env args e ++ str ")"
   | CPPconvert (ty, e) ->
-    Table.mark_needs_erase_fn ();
+    writes Table.erase_fn_header;
     str Crane_rt.convert
     ++ str "<"
     ++ pp_cpp_type false [] ty
@@ -2364,7 +2364,7 @@ and pp_cpp_expr env args t =
     ++ pp_cpp_expr env args e
     ++ str ")"
   | CPPcontainer_cast (ty, e, suppress_boxing) ->
-    Table.mark_needs_erase_fn ();
+    writes Table.erase_fn_header;
     let saved = !suppress_elem_boxing in
     if suppress_boxing then suppress_elem_boxing := true;
     let ty_pp = pp_cpp_type false [] ty in
@@ -2375,7 +2375,7 @@ and pp_cpp_expr env args t =
     ++ pp_cpp_expr env args e
     ++ str ")"
   | CPPstd_get_if (ty, e) ->
-    require_variant ();
+    writes_variant ();
     str ((sn ()).get_if ^ "<") ++ pp_cpp_type false [] ty ++ str ">("
     ++ pp_cpp_expr env args e ++ str ")"
 
@@ -2399,7 +2399,7 @@ and pp_object env args e =
 and pp_cpp_stmt env args = function
   | Sreturn None -> str "return;"
   | Sreturn (Some (CPPabort (msg, _))) ->
-    require_header "stdexcept";
+    writes_standard "stdexcept";
     str "throw "
     ++ str (sn ()).logic_error
     ++ str "(\""
@@ -2435,7 +2435,7 @@ and pp_cpp_stmt env args = function
     ++ pp_cpp_expr env args e ++ str ";"
   | Sexpr e -> pp_cpp_expr env args e ++ str ";"
   | Sthrow msg ->
-    require_header "stdexcept";
+    writes_standard "stdexcept";
     str "throw "
     ++ str (sn ()).logic_error
     ++ str "(\""
@@ -2467,7 +2467,7 @@ and pp_cpp_stmt env args = function
       ++ fnl ()
       ++ str "}"
     in
-    require_header "utility";
+    writes_standard "utility";
     str "switch ("
     ++ pp_cpp_expr env args scrut
     ++ str ") {"
@@ -2503,12 +2503,12 @@ and pp_cpp_stmt env args = function
     ++
     ( match precond with
     | Pchecked expr_str ->
-      require_header "cassert";
+      writes_standard "cassert";
       fnl () ++ str "assert(" ++ str expr_str ++ str ");"
     | Pstated _ -> mt () )
   (* Reuse optimization constructs *)
   | Sif_constexpr (Tt_convertible (t1, t2), then_stmts, else_stmts) ->
-    Table.mark_needs_erase_fn ();
+    writes Table.erase_fn_header;
     str "if constexpr (" ++ str Crane_rt.convertible ++ str "<"
     ++ pp_cpp_type false [] t1
     ++ str ", "
@@ -2555,7 +2555,7 @@ and pp_cpp_stmt env args = function
           ++ str "}")
   | Sraw code ->
     if Common.contains_substring code "std::vector" then
-      require_header "vector";
+      writes_standard "vector";
     str code
   | Scomment text ->
     str ("/// " ^ text)
@@ -2656,7 +2656,7 @@ and pp_cpp_stmt env args = function
       []
       cmds
   | Smatch (scrut, branches, default) ->
-    require_variant ();
+    writes_variant ();
     (* Print an if/else-if chain using [std::holds_alternative] for
        discrimination, then structured bindings via [std::get]:
 
@@ -2904,7 +2904,7 @@ and pp_cpp_stmt env args = function
    construction rather than with the [s] literal suffix, which would need a
    [using namespace] in every header that splices one. *)
 and string_object printed =
-  require_header "string";
+  writes_standard "string";
   str (sn ()).string ++ str "(" ++ printed ++ str ")"
 
 and pp_custom ?container custom env typ t tyargs cases args _arg_types vl cmds =
@@ -3017,7 +3017,7 @@ and pp_custom ?container custom env typ t tyargs cases args _arg_types vl cmds =
             report_unspellable
               (Printf.sprintf "branch %d var %d of %s" i j custom)
               ty;
-            require_obj_header ();
+            writes_obj ();
             str Crane_rt.obj )
           else pp_cpp_type false vl ty
         with Failure _ ->
@@ -3259,7 +3259,7 @@ let pp_requires_of_tparams tparams =
         (* What a callable must accept was settled from the body before
            printing: see {!Minicpp.settle_constraints}. *)
         | TTinvocable (invs, cod) ->
-          require_header "type_traits";
+          writes_standard "type_traits";
           let operand cat ty =
             match cat with
             | Mutable_lvalue -> ty ++ str " &"
@@ -3895,7 +3895,7 @@ let nspace_merges (w : dm_wrapper) : bool =
 let rec pp_initialiser env ty e =
   match e with
   | CPPabort (msg, _) ->
-    require_header "stdexcept";
+    writes_standard "stdexcept";
     (* The lambda returns by value, so a top-level [const] on [ty] says
        nothing and [-Wignored-qualifiers] rejects it. *)
     let ret_ty = match ty with Tconst t -> t | t -> t in

@@ -222,6 +222,14 @@ val record_methods :
 val record_field_types :
   Names.GlobRef.t -> Names.Id.t list -> Miniml.record_field list -> Minicpp.cpp_type list
 
+(** Every module type's concept generated ahead of the files
+    ({!modtype_concept}). *)
+val generated_concepts : unit -> Modtype_concept.t list
+
+(** The types of every eponymous record's fields converted ahead of the
+    files ({!record_field_types}). *)
+val generated_record_field_types : unit -> Minicpp.cpp_type list
+
 (** [record_methods_finishing r vars fields] is what finishing [fields],
     the methods of the eponymous record [r] of variables [vars], takes: the
     members of its module's struct, recorded by [fields] itself, as

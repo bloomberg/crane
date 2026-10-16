@@ -506,10 +506,10 @@ let has_any_coinductive () =
 
     A demand is something the preamble of the generated file must provide -- a
     standard or runtime header, a directive -- that only code generation can
-    discover.  It is raised while a declaration is generated and read when the
-    preamble is emitted, which comes first in the file: [extract_env.ml]
-    renders both bodies before it writes either file, so that every demand is
-    in before a byte is written.
+    discover.  It is raised before either file is rendered, from what was
+    generated ahead of them ({!Cpp_demands}), and read when the preamble is
+    emitted, which comes first in the file.  The printer raises none: what it
+    writes is only checked against them ({!written_needs_header}).
 
     They share one set rather than taking a ref apiece so that clearing them
     between files is a single call.  A per-file reset that has to name every
@@ -567,41 +567,65 @@ let demanded (d : string) = CString.Set.mem d !raised_demands
 (** Every demand raised so far, sorted. *)
 let demanded_list () = CString.Set.elements !raised_demands
 
+let has_demand = function
+  | Standard h -> CString.Set.mem h !standard_headers
+  | Runtime h -> demanded h
+
+(* What the files being rendered write that needs a header, recorded under
+   [CRANE_CHECK_IR] only, to be checked against the demands when they
+   freeze. *)
+let written_needs : header list ref = ref []
+
+let checking_demands = lazy (Sys.getenv_opt "CRANE_CHECK_IR" <> None)
+
+let written_needs_header h =
+  if Lazy.force checking_demands && not (List.mem h !written_needs) then
+    written_needs := h :: !written_needs
+
 (** Start collecting demands afresh, for a new output file. *)
 let reset_demands () =
   raised_demands := CString.Set.empty;
   standard_headers := CString.Set.empty;
+  written_needs := [];
   demands_frozen := false
 
 let () = on_reset reset_demands
 
-(** Close collection: from here on the preamble may be written. *)
-let freeze_demands () = demands_frozen := true
+let freeze_demands () =
+  demands_frozen := true;
+  match List.filter (fun h -> not (has_demand h)) !written_needs with
+  | [] -> ()
+  | missing ->
+    CErrors.user_err
+      Pp.(
+        str "Crane: the files write what needs "
+        ++ prlist_with_sep pr_comma
+             (function Standard h -> str ("<" ^ h ^ ">") | Runtime h -> str h)
+             missing
+        ++ str ", which no declaration generated ahead of them demanded.")
 
-(* The named demands.  Standard-library headers are demanded by their own
-   names, from [Common.require_header]; these are the rest. *)
-
-
+(* The named runtime demands.  Standard-library headers are demanded by
+   their own names; these are the rest. *)
 
 (* The [crane_erase_fn] runtime helper adapts a concrete callable to the erased
    [std::function<std::any(std::any...)>] representation. *)
-let mark_needs_erase_fn () = mark_demand "erase_fn"
+let erase_fn_header = Runtime "erase_fn"
 
 let needs_erase_fn () = demanded "erase_fn"
 
 (* Arena-mode codegen emits [crane::arena_alloc], from [arena.h]. *)
-let mark_needs_arena () = mark_demand "arena"
+let arena_header = Runtime "arena"
 
 let needs_arena () = demanded "arena"
 
 (* [crane::small_vector], from [small_vector.h], is the small-buffer-optimized
    worklist used by the iterative destructor drain. *)
-let mark_needs_small_vector () = mark_demand "small_vector"
+let small_vector_header = Runtime "small_vector"
 
 let needs_small_vector () = demanded "small_vector"
 
 (* Reified [ITree<R>] types in the output need [crane_itree.h]. *)
-let require_itree_header () = mark_demand "itree_header"
+let itree_header = Runtime "itree_header"
 
 let needs_itree_header () = demanded "itree_header"
 

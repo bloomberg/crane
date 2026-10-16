@@ -260,10 +260,10 @@ val is_coinductive_type : ml_type -> bool
 
     A demand is something the preamble of the generated file must provide -- a
     standard or runtime header, a directive -- that only code generation can
-    discover.  It is raised while a declaration is generated and read when the
-    preamble is emitted, which comes first in the file; [extract_env.ml]
-    renders both bodies before it writes either file, so that every demand is
-    in before a byte is written. *)
+    discover.  It is raised before either file is rendered, from what was
+    generated ahead of them ({!Cpp_demands}), and read when the preamble is
+    emitted, which comes first in the file.  The printer raises none: what it
+    writes is only checked against them ({!written_needs_header}). *)
 
 (** Enrol a table in the census under [name]: [size] reports how many decisions
     it currently holds. *)
@@ -300,32 +300,39 @@ val demanded_list : unit -> string list
 (** Start collecting demands afresh, for a new output file. *)
 val reset_demands : unit -> unit
 
+(** [written_needs_header h] records that what a file being rendered writes
+    needs [h].  It demands nothing: a unit's demands are read off what is
+    generated ahead of its files ({!Cpp_demands}).  Recorded under
+    [CRANE_CHECK_IR] only, for {!freeze_demands} to check. *)
+val written_needs_header : header -> unit
+
 (** Close collection: from here on the preamble may be written. A demand raised
     afterwards is reported under [CRANE_CHECK_IR], since the preamble that has
-    already gone out is missing it. *)
+    already gone out is missing it; so is a header what the files write needs
+    ({!written_needs_header}) that was not demanded. *)
 val freeze_demands : unit -> unit
 
-(** Mark that the [crane_erase_fn] runtime helper must be emitted. *)
-val mark_needs_erase_fn : unit -> unit
+(** The [crane_erase_fn] runtime helper, as a demand. *)
+val erase_fn_header : header
 
 (** Check whether the [crane_erase_fn] runtime helper is needed. *)
 val needs_erase_fn : unit -> bool
 
-(** Mark that the [arena.h] runtime header is needed (arena-mode codegen). *)
-val mark_needs_arena : unit -> unit
+(** The [arena.h] runtime header (arena-mode codegen), as a demand. *)
+val arena_header : header
 
 (** Check whether the [arena.h] runtime header is needed. *)
 val needs_arena : unit -> bool
 
-(** Mark that [small_vector.h] is needed (small-buffer-optimized destructor
-    drain worklist codegen). *)
-val mark_needs_small_vector : unit -> unit
+(** [small_vector.h] (the destructor drain's small-buffer worklist), as a
+    demand. *)
+val small_vector_header : header
 
 (** Check whether [small_vector.h] is needed. *)
 val needs_small_vector : unit -> bool
 
-(** Mark that [crane_itree.h] is needed (reified ITree types in output). *)
-val require_itree_header : unit -> unit
+(** [crane_itree.h] (reified ITree types in output), as a demand. *)
+val itree_header : header
 
 (** Check whether [crane_itree.h] is needed. *)
 val needs_itree_header : unit -> bool

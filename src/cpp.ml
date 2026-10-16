@@ -220,7 +220,7 @@ let rec pp_concept_type : Modtype_concept.concept_type -> Pp.t = function
     ++ prlist_with_sep (fun () -> str ", ") pp_concept_type tys
     ++ str ">"
   | Function (dom, cod) ->
-    Table.demand_header (Table.Runtime Crane_rt.fn_header);
+    writes (Table.Runtime Crane_rt.fn_header);
     str Crane_rt.fn ++ str "<"
     ++ pp_concept_type cod
     ++ str "("
@@ -249,7 +249,7 @@ let pp_requirement : Modtype_concept.requirement -> Pp.t = function
       ++ fnl ()
   | Instance_member {value; class_; arguments} ->
     let name = pp_global_name Term value in
-    require_header "concepts";
+    writes_standard "concepts";
     str "typename M::"
     ++ name
     ++ str ";"
@@ -264,7 +264,7 @@ let pp_requirement : Modtype_concept.requirement -> Pp.t = function
   | Nullary_member {value; result} ->
     let name = pp_global_name Term value in
     let convertible_to = (sn ()).convertible_to in
-    require_header "concepts";
+    writes_standard "concepts";
     let qualified_ret = pp_concept_type result in
     str "requires ("
     ++ fnl ()
@@ -290,7 +290,7 @@ let pp_requirement : Modtype_concept.requirement -> Pp.t = function
     let name = pp_global_name Term value in
     let same_as = (sn ()).same_as in
     let declval = (sn ()).declval in
-    require_header "concepts";
+    writes_standard "concepts";
     let declvals =
       List.map (fun ty -> str declval ++ str "<" ++ pp_concept_type ty ++ str ">()") parameters
     in
@@ -437,7 +437,7 @@ let pp_refinements refinements =
         ++ str ">" )
       refinements
   in
-  if clauses <> [] then require_header "concepts";
+  if clauses <> [] then writes_standard "concepts";
   clauses
 
 (** The declaration of the concept [name] of a module type, generated as
@@ -2204,10 +2204,13 @@ let finishing (aheads : Cpp_ind.ahead list) =
 
 (** Record the unit's program ({!Generated_program.record_ahead}) and finish
     what was generated ahead, [aheads] in the order generated, all at once
-    ({!Finished_program.finish}), installing the program and demanding the
-    headers it needs: every function, and every helper Loopify
-    transforms, registered with Loopify before any is finished, so that what
-    it sees of the unit does not depend on which were finished before. *)
+    ({!Finished_program.finish}), installing the program: every function,
+    and every helper Loopify transforms, registered with Loopify before any
+    is finished, so that what it sees of the unit does not depend on which
+    were finished before.  Then demand every header the files will need for
+    what they write ({!Cpp_demands}): the finished program's, and those of
+    the module-type concepts and eponymous record fields generated ahead of
+    them. *)
 let finish_ahead (aheads : Cpp_ind.ahead list) =
   List.iter (fun (a : Cpp_ind.ahead) -> List.iter Generated_program.record_ahead a.entities) aheads;
   let helpers = List.concat_map (fun (a : Cpp_ind.ahead) -> a.helpers) aheads in
@@ -2215,7 +2218,10 @@ let finish_ahead (aheads : Cpp_ind.ahead list) =
   List.iter (fun h -> if Cpp_pipeline.should_loopify h then Loopify.register_decl h) helpers;
   let program = Finished_program.finish (finishing aheads) in
   Finished_program.install program;
-  List.iter Table.demand_header (Finished_program.demands program)
+  List.iter Table.demand_header
+    (Finished_program.demands program
+    @ List.concat_map Cpp_demands.of_modtype_concept (Cpp_ind.generated_concepts ())
+    @ List.concat_map Cpp_demands.of_type (Cpp_ind.generated_record_field_types ()))
 
 let generate_decl_ahead d = generating_ahead @@ fun () -> finish_ahead [Cpp_ind.generate_ahead d]
 

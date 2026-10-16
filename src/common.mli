@@ -555,9 +555,14 @@ val capitalize_last_component : string -> string
 
 (** {2 Needed C++ Headers} *)
 
-(** Record that a standard C++ header is needed by the current extraction
-    output. *)
-val require_header : string -> unit
+(** [writes h] records that what is being written needs the header [h].  It
+    demands nothing: a unit's demands are read off what is generated ahead of
+    its files ({!Cpp_demands}), and under [CRANE_CHECK_IR] what was written is
+    checked against them ({!Table.written_needs_header}). *)
+val writes : Table.header -> unit
 
-(** Record that the current output erases a value, and so needs obj.h. *)
-val require_obj_header : unit -> unit
+(** [writes_standard h] is [writes (Standard h)]. *)
+val writes_standard : string -> unit
+
+(** What is being written erases a value, and so needs obj.h. *)
+val writes_obj : unit -> unit

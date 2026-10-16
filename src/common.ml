@@ -1930,13 +1930,15 @@ let capitalize_last_component s =
 
 (* ---- Needed C++ headers ---- *)
 
-(* A standard header is a {!Table} demand, collected, frozen and cleared along
-   with every other thing the preamble has to provide. *)
+(* The printer demands no header: a unit's demands are read off what is
+   generated ahead of its files ({!Cpp_demands}).  What it writes is recorded,
+   for {!Table.freeze_demands} to check under [CRANE_CHECK_IR]. *)
 
-let require_header h = Table.demand_header (Table.Standard h)
+let writes = Table.written_needs_header
+
+let writes_standard h = writes (Table.Standard h)
 
 (* An erased value is a [crane::obj], and everything that reads or builds one
    -- [crane_any_cast], [crane::rebind_t] -- is declared in obj.h. *)
-let require_obj_header () =
-  Table.demand_header (Table.Runtime Crane_rt.obj_header)
+let writes_obj () = writes (Table.Runtime Crane_rt.obj_header)
 

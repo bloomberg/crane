@@ -1,24 +1,31 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** The headers a finished declaration needs for what it writes down
-    (docs/Pipeline-Disentangling-Plan.md, Milestone 9): read off the
-    declaration, rather than raised by the pass that happened to build each
-    construct.  A generator or a lowering pass builds a [crane::small_vector]
-    or an acquire fence and says nothing about headers; the finished program
-    holds what its declarations need ({!Finished_program.demands}), and the
-    driver demands that.
+(** The headers what a unit writes needs (docs/Pipeline-Disentangling-Plan.md,
+    Milestone 9): read off what is generated ahead of its files -- its
+    finished declarations, the concepts of its module types, the types of
+    its eponymous records' fields -- where the printer writes it, rather
+    than raised by the pass that built each construct or by the printer as
+    it spells it.  The driver demands them all before either file is
+    rendered ({!Cpp.finish_ahead}); the printer demands nothing, and under
+    [CRANE_CHECK_IR] what it writes is checked against them
+    ({!Table.written_needs_header}).
 
-    Transitional.  Only the constructs below are read here; the printer still
-    raises the rest of a file's demands as it writes them. *)
+    Only what is written counts.  The annotations a node carries for later
+    passes -- a call's signature, a projection's field type, a structured
+    binding's field types -- are not written; a custom mapping writes only
+    what its placeholders name; and a printing rule may drop a node's part,
+    as a returned abort is written as a [throw] without its type. *)
 
 (** The text of the acquire fence a destructor's drain issues before it
     takes a node it owns alone, which needs [<atomic>]. *)
 val acquire_fence : string
 
-(** [of_decl d] is the headers [d]'s types, expressions and statements
-    need: the runtime's [crane::small_vector], [crane::field] and [ITree],
-    the standard [optional], the acquire fence, a pointer read at another
-    instantiation of its pointee, and [crane::obj] where [d] may build one --
-    a conversion at a type parameter, an axiom's erased type. *)
+(** The headers the finished declaration [d] needs for what it writes. *)
 val of_decl : Minicpp.cpp_decl -> Table.header list
+
+(** The headers the type [t] needs where it is written. *)
+val of_type : Minicpp.cpp_type -> Table.header list
+
+(** The headers the concept of a module type needs for what it writes. *)
+val of_modtype_concept : Modtype_concept.t -> Table.header list

@@ -1136,15 +1136,16 @@ let report_decided_while_rendering before =
         else String.concat ", " (List.map (fun (name, n) -> Printf.sprintf "%s +%d" name n) grown) )
 
 (** The tables generating output ahead of the files may add to: the headers
-    a body demands, and the names of the helpers lifted out of a body as it
-    is generated, which {!Common.names_decided_while_emitting} lists for the
-    check below.  Rendering may add to the first alone. *)
+    what is generated needs, and the names of the helpers lifted out of a
+    body as it is generated, which {!Common.names_decided_while_emitting}
+    lists for the check below.  Rendering may add to none: the headers are
+    demanded from what was generated ({!Cpp_demands}). *)
 let generation_products = ["demands"; "ref_renaming"; "mp_renaming"; "global_ids"]
 
-let rendering_products = ["demands"]
+let rendering_products = []
 
 (** Check that generating output decided nothing the plan should have, and
-    that rendering it decided nothing at all but the headers it demands.
+    that rendering it decided nothing at all.
 
     Every decision about the shape of the code -- a name, a field, whether a
     wrapper merged -- is taken while planning, and generating output only
@@ -1153,8 +1154,8 @@ let rendering_products = ["demands"]
     not have seen.  Generation, from [planned] to [generated], may demand
     headers, and names the helpers it lifts out of the bodies it translates
     as it lifts them; any other name it decided is one the plan missed.
-    Every body is generated before the files are rendered, so from
-    [generated] on only the text's demands may be added.
+    Every body is generated, and every header it needs demanded, before the
+    files are rendered, so from [generated] on nothing may be added.
 
     The corpus satisfies this today.  Reported under [CRANE_CHECK_IR], like
     {!Table.mark_demand}'s late demands, rather than left to surface as C++

@@ -1277,6 +1277,17 @@ let record_field_types r vars (fields : Miniml.record_field list) =
     ~same:(fun tys tys' -> compare tys tys' = 0)
     (fun () -> List.map (fun (_, ty) -> Translation.convert_ml_type_to_cpp_type (empty_env ()) vars ty) fields)
 
+(** Every module type's concept generated ahead of the files. *)
+let generated_concepts () =
+  MPmap.fold (fun _ generated acc -> List.map snd generated @ acc) !modtype_concepts_generated []
+
+(** The types of every eponymous record's fields converted ahead of the
+    files. *)
+let generated_record_field_types () =
+  Ref.User.Tbl.fold
+    (fun _ generated acc -> List.concat_map snd generated @ acc)
+    record_field_types_generated []
+
 (** What finishing the methods [fields] of the eponymous record [r], of
     variables [vars], takes: the struct members they are, recorded by the
     physical identity of their generation. *)
