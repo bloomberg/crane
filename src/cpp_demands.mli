@@ -15,7 +15,9 @@
     takes a node it owns alone, which needs [<atomic>]. *)
 val acquire_fence : string
 
-(** [demand d] raises the headers [d]'s types and statements need: the
-    runtime's [crane::small_vector] and [crane::field], the standard
-    [optional], and the acquire fence. *)
+(** [demand d] raises the headers [d]'s types, expressions and statements
+    need: the runtime's [crane::small_vector], [crane::field] and [ITree],
+    the standard [optional], the acquire fence, a pointer read at another
+    instantiation of its pointee, and [crane::obj] where [d] may build one --
+    a conversion at a type parameter, an axiom's erased type. *)
 val demand : Minicpp.cpp_decl -> unit

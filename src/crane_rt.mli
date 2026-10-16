@@ -100,7 +100,9 @@ val erasure_header : string
 (** [crane_fn.h] -- the erasure and conversion helpers: {!erase_fn},
     {!call_erased}, {!any_cast}, {!convert}, {!container_cast}. *)
 
-val itree_header : string  (** [crane_itree.h] -- reified interaction trees. *)
+val itree : string  (** [ITree<R>], a reified interaction tree. *)
+
+val itree_header : string  (** [crane_itree.h] -- {!itree}. *)
 
 val rebind : string  (** [crane::rebind_t], a plain carrier read at an element *)
 

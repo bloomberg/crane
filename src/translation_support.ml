@@ -476,7 +476,7 @@ let extract_itree_result_ml (ml_ty : ml_type) : ml_type =
 
 (** Build the C++ type [std::shared_ptr<ITree<r_cpp>>]. *)
 let mk_itree_type (r_cpp : cpp_type) : cpp_type =
-  Tshared_ptr (Tid_external ("ITree", [r_cpp]))
+  Tshared_ptr (Tid_external (Crane_rt.itree, [r_cpp]))
 
 (** Recursively wrap [Tglob] inductive references with [Tnamespace] so that
     the type printer produces fully-qualified names.  The [~skip]
@@ -1043,7 +1043,6 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
          value crosses instantiations -- a [std::pair] is read component by
          component instead -- so ask the helper for the pointee and allocate
          what it gives back. *)
-      require_header "memory";
       naming_expr ~lambda_ty:dst_ty ~body:(fun x ->
         CPPcond
           ( x,
@@ -1089,7 +1088,6 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
          [U] may be [std::any], and [pair<K,V>] has no constructor from one --
          nor from [pair<any,any>], which is how a pair's components are boxed
          one at a time.  Dispatch at compile time instead. *)
-      require_obj_header ();
       if not (is_access_path expr) then
         Cpp_erasure.converting_ctor orig_dst_ty [expr]
       else begin
@@ -1137,7 +1135,7 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
 (** Build a [CPPfun_call] for [ITree<R>::ret(...)].
     When [r_cpp] is [Tvoid], generates [ITree<void>::ret()]. *)
 let mk_itree_ret (r_cpp : cpp_type) (args : cpp_expr list) : cpp_expr =
-  let itree_ty = Tid_external ("ITree", [r_cpp]) in
+  let itree_ty = Tid_external (Crane_rt.itree, [r_cpp]) in
   mk_call (CPPqualified_t (itree_ty, Id.of_string "ret")) args
 
 (** Build [ITree<R>::ret(v)], or [ITree<void>::ret()] where there is no value
@@ -1160,7 +1158,6 @@ let mk_itree_ret_for_value r_cpp r_ml v =
     Does nothing in sequential mode or when [ml_ty] is not monadic. *)
 let reify_monadic_param_type ml_ty cpp_ty =
   if is_monadic_ml_type ml_ty && (!tctx).itree_mode = Reified then begin
-    Table.require_itree_header ();
     let r_ty =
       match cpp_ty with
       | Tglob (_, _ :: r :: _, _) -> r

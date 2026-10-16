@@ -7,9 +7,12 @@ let acquire_fence = "std::atomic_thread_fence(std::memory_order_acquire);"
 
 let of_external name =
   if String.equal name Crane_rt.small_vector then Some (Table.Runtime "small_vector")
+  else if String.equal name Crane_rt.itree then Some (Table.Runtime "itree_header")
   else if String.equal name Crane_rt.field then Some (Table.Runtime Crane_rt.field_header)
   else if String.equal name ((Cpp_state.sn ()).ns ^ "::optional") then Some (Table.Standard "optional")
   else None
+
+let at_type_variable = function Tvar _ | Tapply (Tvar _, _) -> true | _ -> false
 
 let demand d =
   let rec ty t =
@@ -24,10 +27,21 @@ let demand d =
            t )
          t );
     t
-  and expr e = map_expr expr stmt ty e
+  and expr e =
+    ( match e with
+    (* A type parameter may be instantiated at an erased type, which a
+       converting construction then builds. *)
+    | CPPconverting_ctor (t, _) when at_type_variable t -> Common.require_obj_header ()
+    (* A pointer read at another instantiation of its pointee: allocated
+       afresh, or null. *)
+    | CPPcond (_, CPPfun_call (_, CPPalloc (Alloc_heap, _), _), CPPnullptr) ->
+      Table.demand_header (Table.Standard "memory")
+    | _ -> () );
+    map_expr expr stmt ty e
   and stmt s =
     ( match s with
     | Sraw text when String.equal text acquire_fence -> Table.demand_header (Table.Standard "atomic")
+    | Sif_constexpr (Tt_convertible (t, _), _, _) when at_type_variable t -> Common.require_obj_header ()
     | _ -> () );
     map_stmt expr stmt ty s
   in
@@ -37,6 +51,8 @@ let demand d =
       Option.iter (fun e -> ignore (expr e)) c;
       decl inner
     | Dnspace (_, ds) -> List.iter decl ds
+    (* An axiom's type, which the user has yet to realise, is erased. *)
+    | Dusing {du_rhs = Some Tany; _} -> Common.require_obj_header ()
     | d -> ignore (map_decl expr stmt ty d)
   in
   decl d

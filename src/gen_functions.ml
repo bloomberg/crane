@@ -38,7 +38,6 @@ let type_alias_rhs r vars ot =
     | Some Taxiom ->
       Cpp_erasure.register_axiom_type r;
       Table.add_erased_type_const r;
-      require_obj_header ();
       (Some Tany, Some "AXIOM TO BE REALIZED")
     | Some t ->
       (* Name the body's type variables from the alias's own list.  Left

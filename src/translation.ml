@@ -1360,7 +1360,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let ret_tys = Mlutil.written_type_args use in
     if (!tctx).itree_mode = Reified then begin
       (* Reified mode: Ret produces ITree<R>::ret(value). Don't strip it. *)
-      Table.require_itree_header ();
       let t = Common.last (a1 :: l) in
       match t with
       | MLglob {callee = g; _} when is_ghost g ->
@@ -5808,7 +5807,6 @@ and gen_call_args ~slot ?expected_ty env id plan =
     | Some param_ty when (!tctx).itree_mode = Reified
         && is_monadic_ml_type param_ty
         && not (is_reified_monadic_expr ml_arg) ->
-      Table.require_itree_header ();
       let r_ml = extract_itree_result_ml param_ty in
       let r_cpp = cpp_of_ml env r_ml in
 
@@ -9247,7 +9245,6 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       else if (!tctx).itree_mode = Reified && is_monadic_ml_type t then begin
         (* Monadic let-binding (reified mode): wrap RHS in an ITree IIFE so
            the variable has type [shared_ptr<ITree<R>>]. *)
-        Table.require_itree_header ();
         push_binders env [(x_renamed, t)];
         let r_ml = extract_itree_result_ml t in
         let r_cpp = cpp_of_ml env r_ml in
@@ -10364,20 +10361,15 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
   | MLcons (_, r, []) when Table.is_tt_constructor r
       && (!tctx).current_cpp_return_type = Some Tvoid ->
     (* tt (unit constructor) in tail position of a void-returning function *)
-    if (!tctx).itree_mode = Reified then begin
-      Table.require_itree_header ();
-      [k (mk_itree_ret Tvoid [])]
-    end
+    if (!tctx).itree_mode = Reified then [k (mk_itree_ret Tvoid [])]
     else
       [Sreturn None]
   | MLglob {callee = r; _} when is_ghost r ->
-    if (!tctx).itree_mode = Reified then begin
+    if (!tctx).itree_mode = Reified then
       (* Reified mode: ghost (void value) at tail position must produce
          ITree<void>::ret() rather than bare return, since the function
          returns shared_ptr<ITree<void>>. *)
-      Table.require_itree_header ();
       [k (mk_itree_ret Tvoid [])]
-    end
     else
       [Sreturn None]
   | MLexn msg ->
