@@ -9,9 +9,7 @@
 #include <utility>
 #include <variant>
 
-#include "Datatypes.h"
 #include "Decimal.h"
-#include "Specif.h"
 
 namespace Hexadecimal {
 

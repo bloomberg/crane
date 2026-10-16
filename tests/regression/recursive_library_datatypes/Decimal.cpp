@@ -1,8 +1,5 @@
 #include "Decimal.h"
 
-#include "Datatypes.h"
-#include "Specif.h"
-
 namespace Decimal {
 
 Uint Little::succ(const Uint &d) {

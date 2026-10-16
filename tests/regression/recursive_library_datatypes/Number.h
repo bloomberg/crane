@@ -4,10 +4,8 @@
 #include <utility>
 #include <variant>
 
-#include "Datatypes.h"
 #include "Decimal.h"
 #include "Hexadecimal.h"
-#include "Specif.h"
 
 namespace Number {
 

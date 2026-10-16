@@ -621,15 +621,17 @@ let mktable_modpath ?census autoclean =
     census;
   ((fun r v -> m := MPmap.add r v !m), (fun r -> MPmap.find r !m), clear)
 
-(** The list of external modules that will be opened initially *)
-
-let mpfiles_add, mpfiles_list =
+(** The files whose namespace the file being emitted writes into a name, so
+    whose headers it includes.  Computing a name demands nothing -- a
+    generator asking whether a reference is spelled [list] reaches no other
+    file -- and only a reference spelled through another file's namespace
+    ({!pp_ocaml_extern}, {!file_qualifier}) needs that file declared. *)
+let note_written_file, written_files =
   let m = ref MPset.empty in
-  let add mp = m := MPset.add mp !m
-  and list () = MPset.elements !m
-  and clear () = m := MPset.empty in
-  register_cleanup clear;
-  (add, list)
+  register_cleanup (fun () -> m := MPset.empty);
+  ( (fun file ->
+      match get_phase () with Emit _ -> m := MPset.add file !m | Plan -> ()),
+    fun () -> MPset.elements !m )
 
 (** Separate extraction: every cross-file reference is spelled in full, since
     each file is emitted into its own namespace and nothing is brought into
@@ -1022,20 +1024,6 @@ let modfstlev_rename =
 
 (** {2 Creating renaming for a module_path} *)
 
-(** Record that the file being emitted names something the file defining
-    [mp] declares, so it includes that file's header.  A name is a function
-    of the program, computed once and wherever it is first wanted, so
-    computing one demands nothing; emitting it does.  The visibility stack is
-    empty outside every file being emitted, and a name wanted there is
-    conservatively taken to be another file's. *)
-let note_file_reference mp =
-  match (get_phase (), base_mp mp) with
-  | Emit _, (MPfile _ as file) when modular () -> (
-    match get_visible () with
-    | [] -> mpfiles_add file
-    | vis -> if not (ModPath.equal file (List.last vis).mp) then mpfiles_add file )
-  | _ -> ()
-
 let mp_renaming_table = mktable_modpath ~census:"mp_renaming" true
 
 type decided_name =
@@ -1090,7 +1078,6 @@ let rec mp_renaming_fun full_mp =
 
 and mp_renaming x =
   let add, get, _ = mp_renaming_table in
-  note_file_reference x;
   (* A path through a functor parameter is renamed afresh each time, from the
      parameter's own name, and never cached: it is no decision. *)
   if is_mp_bound (base_mp x) then mp_renaming_fun x
@@ -1260,7 +1247,6 @@ let ref_renaming_fun (k, r) =
 let ref_renaming, decided_ref_renaming =
   let add, get, _ = mktable_ref ~census:"ref_renaming" true in
   ( (fun ((k, r) as x) ->
-      note_file_reference (modpath_of_r r);
       let mp = modpath_of_r r in
       try
         if is_mp_bound (base_mp mp) then raise Not_found;
@@ -1304,19 +1290,18 @@ let visible_clash mp0 ks =
   in
   clash (get_visible ())
 
-(** Compute which libraries should be opened initially. After the 1st pass, we
-    can decide which modules will be opened initially *)
+(** The files whose headers the unit includes, once both of its files are
+    rendered. *)
 let opened_libraries () =
   if not (modular ()) then
     []
   else
-    (* Every file a reference reached into.  OCaml pruned this set before
+    (* Every file a written name reached into.  OCaml pruned this set before
        opening it -- a file A with an immediate submodule A.B shadowing another
        used file B could not be opened without making B unreachable -- but C++
        has no [open]: this list becomes [#include] lines, and dropping one of
-       those would leave a referenced declaration undeclared.  Over the whole
-       test corpus the prune never removed anything. *)
-    mpfiles_list ()
+       those would leave a referenced declaration undeclared. *)
+    written_files ()
 
 (** On-the-fly qualification issues for both monolithic or modular extraction.
 
@@ -1362,12 +1347,14 @@ let pp_ocaml_local k prefix mp rls olab =
     separate extraction names every cross-file reference in full
     ({!force_cross_file_qualification}), so which files were referenced
     before never decides a spelling.
+    @param base The [MPfile] the reference is defined in
     @param rls  Full renaming list (outermost component first)
     @return The fully qualified dotted name *)
-let pp_ocaml_extern rls =
+let pp_ocaml_extern base rls =
   match rls with
   | [] -> CErrors.anomaly (Pp.str "pp_ocaml_extern: empty renaming list")
   | base_s :: rls' ->
+    note_written_file base;
     if !force_cross_file_qualification && hidden_by_member base_s then
       (* A file is a namespace at global scope, so it is named from there
          where a nearer name hides it: [Decimal] inside [Number]'s struct,
@@ -1393,7 +1380,7 @@ let pp_ocaml_gen k mp rls olab =
          spells the same way. *)
       plain rls
     else
-      pp_ocaml_extern rls
+      pp_ocaml_extern base rls
 
 (** C++ variant of {!pp_ocaml_gen}: same dispatch logic but treats non-output
     module references as external (unqualified short name only).
@@ -1412,7 +1399,7 @@ let pp_cpp_gen k mp rls olab =
     else if is_non_output_module base then
       plain [unquote (last rls)]
     else
-      pp_ocaml_extern rls
+      pp_ocaml_extern base rls
 
 (** Main name printing function for a reference, using a kernel name key:
     its short name in its own module, and otherwise as {!pp_cpp_gen}
@@ -1453,7 +1440,9 @@ let file_qualifier k r =
     if is_mp_bound base || is_non_output_module base then None
     else
       match List.rev (ref_renaming (k, r)) with
-      | base_s :: _ -> Some (unquote base_s)
+      | base_s :: _ ->
+        note_written_file base;
+        Some (unquote base_s)
       | [] -> None )
 
 (** Print just the short name of a reference (for declarations). Main name

@@ -9,9 +9,6 @@
 #include <utility>
 #include <variant>
 
-#include "Datatypes.h"
-#include "Specif.h"
-
 namespace Decimal {
 
 struct Uint;

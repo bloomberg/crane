@@ -12,8 +12,6 @@
 #include <utility>
 #include <variant>
 
-#include "Datatypes.h"
-
 namespace Specif {
 
 template <typename A> struct Sig;

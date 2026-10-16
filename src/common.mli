@@ -161,7 +161,8 @@ val get_phase : unit -> phase
 (** How diagnostics name a phase: [planning], [implementation], [header]. *)
 val phase_name : phase -> string
 
-(** Compute which libraries should be opened initially. *)
+(** The files whose namespace a rendered name was written through, whose
+    headers the unit includes. *)
 val opened_libraries : unit -> ModPath.t list
 
 (** Activate separate-extraction naming: every cross-file reference is spelled
