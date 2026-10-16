@@ -74,15 +74,17 @@ val instance_decls :
 val plan_instance_methods :
   Names.GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> (Names.Id.t * Callable_abi.t) list
 
-(** [generated_once ?on_reuse node gen] is [gen ()] ahead of the files
-    ({!generating_ahead}), recorded by the physical MiniML node [node] and
-    the module it is generated in.  A file's pass takes what was recorded
-    there -- emission decides nothing the plan has not, so it is what the
-    pass would generate -- handing it to [on_reuse] to replay any effect
-    generating it had; that nothing was is an anomaly.  [CRANE_CHECK_IR]
-    regenerates and checks. *)
+(** [generated_once ?on_reuse ?planned node gen] is [gen ()] ahead of the
+    files ({!generating_ahead}), recorded by the physical MiniML node [node]
+    and the module it is generated in, and handed to [planned] to plan what
+    taking it needs.  A file's pass takes what was recorded there --
+    emission decides nothing the plan has not, so it is what the pass would
+    generate -- handing it to [on_reuse] to replay any effect generating it
+    had; that nothing was is an anomaly.  [CRANE_CHECK_IR] regenerates and
+    checks. *)
 val generated_once :
   ?on_reuse:(Gen_decls.generated_fun list -> unit) ->
+  ?planned:(Gen_decls.generated_fun list -> unit) ->
   'node ->
   (unit -> Gen_decls.generated_fun list) ->
   Gen_decls.generated_fun list

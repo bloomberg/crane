@@ -751,9 +751,10 @@ let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) 
   && List.equal Id.equal (fst a.gf_env) (fst b.gf_env)
   && Id.Set.equal (snd a.gf_env) (snd b.gf_env)
 
-(** [ahead_once ~what ~recorded ~record ~same ?take gen] is [gen ()]
-    ahead of the files ({!generating_ahead}), recorded ([record]) with the
-    module it is generated in.  A file's pass takes what was recorded
+(** [ahead_once ~what ~recorded ~record ~same ?planned ?take gen] is
+    [gen ()] ahead of the files ({!generating_ahead}), recorded ([record])
+    with the module it is generated in, and handed to [planned] to plan what
+    taking it will need.  A file's pass takes what was recorded
     ([recorded ()]) in the same module, handing it to [take] -- to claim the
     helpers lifted out of it, or record its entity -- unless it is only
     generating it again to check it ({!regenerating}); under
@@ -761,12 +762,13 @@ let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) 
     [same].  That nothing was recorded there is a walk ahead that missed a
     declaration a render reaches, an anomaly about [what].  While planning,
     it is [gen ()]. *)
-let ahead_once ~what ~recorded ~record ~same ?(take = Fun.id) gen =
+let ahead_once ~what ~recorded ~record ~same ?(planned = ignore) ?(take = Fun.id) gen =
   match get_phase () with
   | Plan -> gen ()
   | Emit _ when !ahead && not !rechecking ->
     let v = gen () in
     record ((top_visible_mp (), v) :: recorded ());
+    planned v;
     v
   | Emit _ -> (
     let mp = top_visible_mp () in
@@ -793,13 +795,69 @@ let in_node_table table node =
   ( (fun () -> Option.default [] (Node_table.find_opt table key)),
     fun l -> Node_table.replace table key l )
 
+(** {2 Which element of the header places a lifted helper}
+
+    A helper lifted out of several generations is placed by the first of
+    them the header writes.  Which one that is is planned in the walk ahead
+    of the files, which reaches the header's elements in the order the
+    header writes them ({!plan_header_claim}), rather than claimed against
+    the helpers the header has placed so far as it reaches them; under
+    [CRANE_CHECK_IR] the header still claims them that way and must agree
+    ({!header_claim}).  Only the header places an element's helpers. *)
+
+(** The helpers some element of the header places, as planned so far. *)
+let header_placed : GlobRef.t list ref = State.cell State.Unit []
+
+(** The helpers each generation the header takes places, by the physical
+    identity of the generation. *)
+let header_claims : cpp_decl list Node_table.t = Node_table.create 64
+
+let () = State.on_reset State.Unit (fun () -> Node_table.reset header_claims)
+
+(** [plan_header_claim key lifted] plans that the generation [key], whose
+    bodies lifted [lifted], places those of them no earlier element of the
+    header places. *)
+let plan_header_claim key lifted =
+  let placed_here d =
+    match decl_globref d with
+    | None -> true
+    | Some r ->
+      (not (List.exists (globref_equal r) !header_placed))
+      && (header_placed := r :: !header_placed; true)
+  in
+  Node_table.replace header_claims (Obj.repr key) (List.filter placed_here lifted)
+
+(** [header_claim key lifted] is what {!plan_header_claim} planned the
+    generation [key] places of [lifted]. *)
+let header_claim key lifted =
+  match Node_table.find_opt header_claims (Obj.repr key) with
+  | Some planned ->
+    if Probe.checking () && get_phase () = Emit Intf then begin
+      let claimed = Translation.claim_lifted lifted in
+      if not (List.equal ( == ) planned claimed) then
+        Probe.violation "header claims"
+          Pp.(str "the header places other helpers at a generation than planned: "
+              ++ prlist_with_sep (fun () -> str ", ")
+                   (fun d -> Option.cata GlobRef.print (str "?") (decl_globref d))
+                   claimed
+              ++ str " where the plan says "
+              ++ prlist_with_sep (fun () -> str ", ")
+                   (fun d -> Option.cata GlobRef.print (str "?") (decl_globref d))
+                   planned )
+    end;
+    planned
+  | None ->
+    CErrors.anomaly
+      Pp.(str "Crane: a generation was taken whose helpers' placement was not planned.")
+
 (** [generated_once ?on_reuse node gen] is {!ahead_once} for the functions
     generated at the MiniML node [node]: a file's pass hands them to
     [on_reuse] to replay any effect generating them had. *)
-let generated_once ?(on_reuse = ignore) node gen =
+let generated_once ?(on_reuse = ignore) ?planned node gen =
   let recorded, record = in_node_table generated node in
   ahead_once ~what:(fun () -> Pp.str "a function") ~recorded ~record
     ~same:(List.equal same_generation)
+    ?planned
     ~take:(fun funs -> on_reuse funs; funs)
     gen
 
@@ -876,12 +934,12 @@ let generate d =
       in
       [{Gen_decls.gf_entity; gf_env; gf_lifted}]
     in
+    let lifted funs = List.concat_map (fun g -> g.Gen_decls.gf_lifted) funs in
     let claimed = ref None in
-    let reuse funs =
-      claimed :=
-        Some (Translation.claim_lifted (List.concat_map (fun g -> g.Gen_decls.gf_lifted) funs))
+    let reuse funs = claimed := Some (header_claim funs (lifted funs)) in
+    let funs =
+      generated_once ~planned:(fun funs -> plan_header_claim funs (lifted funs)) ~on_reuse:reuse d gen
     in
-    let funs = generated_once ~on_reuse:reuse d gen in
     let helpers =
       match !claimed with
       | Some helpers -> helpers
@@ -1157,8 +1215,9 @@ let instance_entity r a t =
     ~what:(fun () -> Pp.(str "the instance " ++ GlobRef.print r))
     ~recorded ~record
     ~same:(fun (ds, _) (ds', _) -> same_generated ds ds')
-    ~take:(fun (ds, lifted) ->
-      let helpers = Translation.claim_lifted lifted in
+    ~planned:(fun ((_, lifted) as v) -> plan_header_claim v lifted)
+    ~take:(fun ((ds, lifted) as v) ->
+      let helpers = header_claim v lifted in
       ignore (record_entity r (List.map snd ds) helpers);
       (ds, helpers) )
     (fun () -> Translation.collecting_all_lifted (fun () -> instance_decls r a t))
@@ -1219,7 +1278,8 @@ let record_methods r vars candidates =
     ~recorded:(fun () -> Option.default [] (Ref.User.Tbl.find_opt record_methods_generated r))
     ~record:(Ref.User.Tbl.replace record_methods_generated r)
     ~same:(fun (fields, _) (fields', _) -> compare fields fields' = 0)
-    ~take:(fun (fields, lifted) -> (fields, Translation.claim_lifted lifted))
+    ~planned:(fun ((_, lifted) as v) -> plan_header_claim v lifted)
+    ~take:(fun ((fields, lifted) as v) -> (fields, header_claim v lifted))
     (fun () ->
       Translation.collecting_all_lifted (fun () -> Gen_decls.gen_record_methods r vars candidates) )
 
@@ -1265,8 +1325,9 @@ let header_entity d gen =
     ~what:(fun () -> GlobRef.print (decl_entity d))
     ~recorded ~record
     ~same:(fun (g, _) (g', _) -> same_header_generation g g')
-    ~take:(fun (g, lifted) ->
-      let helpers = Translation.claim_lifted lifted in
+    ~planned:(fun ((_, lifted) as v) -> plan_header_claim v lifted)
+    ~take:(fun ((g, lifted) as v) ->
+      let helpers = header_claim v lifted in
       ignore (record_entity (decl_entity d) (List.map snd g.decls) helpers);
       (g, helpers) )
     (fun () -> Translation.collecting_all_lifted gen)
