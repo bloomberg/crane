@@ -2199,7 +2199,8 @@ let finishing (aheads : Cpp_ind.ahead list) =
 
 (** Record the unit's program ({!Generated_program.record_ahead}) and finish
     what was generated ahead, [aheads] in the order generated, all at once
-    ({!Cpp_ind.finish_program}): every function, and every helper Loopify
+    ({!Finished_program.finish}), installing the program and demanding the
+    headers it needs: every function, and every helper Loopify
     transforms, registered with Loopify before any is finished, so that what
     it sees of the unit does not depend on which were finished before. *)
 let finish_ahead (aheads : Cpp_ind.ahead list) =
@@ -2207,7 +2208,9 @@ let finish_ahead (aheads : Cpp_ind.ahead list) =
   let helpers = List.concat_map (fun (a : Cpp_ind.ahead) -> a.helpers) aheads in
   List.iter (fun (a : Cpp_ind.ahead) -> List.iter Loopify.register_decl a.functions) aheads;
   List.iter (fun h -> if Cpp_pipeline.should_loopify h then Loopify.register_decl h) helpers;
-  Cpp_ind.finish_program (finishing aheads)
+  let program = Finished_program.finish (finishing aheads) in
+  Finished_program.install program;
+  List.iter Table.demand_header (Finished_program.demands program)
 
 let generate_decl_ahead d = generating_ahead @@ fun () -> finish_ahead [Cpp_ind.generate_ahead d]
 
@@ -2285,7 +2288,7 @@ let generate_ahead s =
      plan's Milestone 4). *)
   if Probe.checking () then
     Cpp_ind.regenerating @@ fun () ->
-    Cpp_ind.refinish_program (finishing (List.rev aheads));
+    Finished_program.refinish (finishing (List.rev aheads));
     walk_as_rendered ~reversed:true ~modtype:Cpp_ind.modtype_concept
       ~after_module:(fun frame _ ->
         Option.iter

@@ -14,13 +14,16 @@ let of_external name =
 
 let at_type_variable = function Tvar _ | Tapply (Tvar _, _) -> true | _ -> false
 
-let demand d =
+let of_decl d =
+  let found = ref [] in
+  let need h = found := h :: !found in
+  let obj () = need (Table.Runtime Crane_rt.obj_header) in
   let rec ty t =
     ignore
       (map_cpp_type
          (fun t ->
            ( match t with
-           | Tid_external (name, _) -> Option.iter Table.demand_header (of_external name)
+           | Tid_external (name, _) -> Option.iter need (of_external name)
            | Tglob (_, _, args) -> List.iter (fun e -> ignore (expr e)) args
            | Texpr_type e -> ignore (expr e)
            | _ -> () );
@@ -31,17 +34,17 @@ let demand d =
     ( match e with
     (* A type parameter may be instantiated at an erased type, which a
        converting construction then builds. *)
-    | CPPconverting_ctor (t, _) when at_type_variable t -> Common.require_obj_header ()
+    | CPPconverting_ctor (t, _) when at_type_variable t -> obj ()
     (* A pointer read at another instantiation of its pointee: allocated
        afresh, or null. *)
     | CPPcond (_, CPPfun_call (_, CPPalloc (Alloc_heap, _), _), CPPnullptr) ->
-      Table.demand_header (Table.Standard "memory")
+      need (Table.Standard "memory")
     | _ -> () );
     map_expr expr stmt ty e
   and stmt s =
     ( match s with
-    | Sraw text when String.equal text acquire_fence -> Table.demand_header (Table.Standard "atomic")
-    | Sif_constexpr (Tt_convertible (t, _), _, _) when at_type_variable t -> Common.require_obj_header ()
+    | Sraw text when String.equal text acquire_fence -> need (Table.Standard "atomic")
+    | Sif_constexpr (Tt_convertible (t, _), _, _) when at_type_variable t -> obj ()
     | _ -> () );
     map_stmt expr stmt ty s
   in
@@ -52,7 +55,8 @@ let demand d =
       decl inner
     | Dnspace (_, ds) -> List.iter decl ds
     (* An axiom's type, which the user has yet to realise, is erased. *)
-    | Dusing {du_rhs = Some Tany; _} -> Common.require_obj_header ()
+    | Dusing {du_rhs = Some Tany; _} -> obj ()
     | d -> ignore (map_decl expr stmt ty d)
   in
-  decl d
+  decl d;
+  !found

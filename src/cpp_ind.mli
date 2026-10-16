@@ -100,13 +100,6 @@ type finishing = Finished_program.job
 (** [finishing d] is [d] to finish, its result recorded by [d] itself. *)
 val finishing : Minicpp.cpp_decl -> finishing
 
-(** [finish_program jobs] finishes the unit, ahead of the files
-    ({!Finished_program.finish}); what the files write of it is read from
-    there ({!finished_alone}, {!finalized}, {!finished_record_methods}). *)
-val finish_program : finishing list -> unit
-
-(** [refinish_program jobs] is {!Finished_program.refinish}. *)
-val refinish_program : finishing list -> unit
 
 (** What generating a declaration ahead of the files leaves for later: the
     functions it generated, which Loopify reads while finishing any function
@@ -251,13 +244,13 @@ val regenerate_ahead : Miniml.ml_decl -> unit
 
 (** [finished_alone d] is [d] finished on its own ({!Cpp_pipeline.finish}):
     a declaration written without a definition, or a lifted helper, as
-    {!finish_program} finished it.  That it did not is an anomaly; a file's
+    the unit's program has it ({!Finished_program}).  That it does not is an anomaly; a file's
     pass finishes it again under [CRANE_CHECK_IR] and checks. *)
 val finished_alone : Minicpp.cpp_decl -> Cpp_erasure.settled
 
 (** [finalized funs] pairs each generated function with its entity, made of
-    the definition {!finish_program} finished; [None] for a declaration.
-    That it did not is an anomaly; a file's pass finishes it again under
+    the definition as the unit's program has it; [None] for a declaration.
+    That it does not is an anomaly; a file's pass finishes it again under
     [CRANE_CHECK_IR] and checks. *)
 val finalized :
   Gen_decls.generated_fun list ->

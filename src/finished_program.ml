@@ -13,24 +13,33 @@ type job = Obj.t * Minicpp.cpp_decl
 let job d : job = (Obj.repr d, d)
 let job_of key d : job = (Obj.repr key, d)
 
-let finished : Cpp_erasure.settled Node_table.t = Node_table.create 256
+type t = {
+  decls : Cpp_erasure.settled Node_table.t;
+  demands : Table.header list;
+}
 
-let () = State.on_reset State.Unit (fun () -> Node_table.reset finished)
+let finish jobs =
+  let decls = Node_table.create 256 and demands = ref [] in
+  List.iter
+    (fun (key, d) ->
+      if not (Node_table.mem decls key) then begin
+        let f = Cpp_pipeline.finish d in
+        demands := List.rev_append (Cpp_demands.of_decl (f :> Minicpp.cpp_decl)) !demands;
+        Node_table.replace decls key f
+      end )
+    jobs;
+  {decls; demands = List.sort_uniq compare !demands}
+
+let demands t = t.demands
+
+let installed = State.cell State.Unit {decls = Node_table.create 0; demands = []}
+
+let install t = installed := t
 
 (* [compare] rather than [=]: a NaN literal is equal to itself. *)
 let finishes_as ((_, d) : job) f = compare f (Cpp_pipeline.finish d) = 0
 
-let finish jobs =
-  List.iter
-    (fun (key, d) ->
-      if not (Node_table.mem finished key) then begin
-        let f = Cpp_pipeline.finish d in
-        Cpp_demands.demand (f :> Minicpp.cpp_decl);
-        Node_table.replace finished key f
-      end )
-    jobs
-
-let find ((key, _) : job) = Node_table.find_opt finished key
+let find ((key, _) : job) = Node_table.find_opt !installed.decls key
 
 let refinish jobs =
   List.iter

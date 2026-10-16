@@ -950,10 +950,9 @@ let generate d =
 type finishing = Finished_program.job
 
 let finishing = Finished_program.job
-let finish_program = Finished_program.finish
-let refinish_program = Finished_program.refinish
 
-(** [finished_of ~what job] is what {!finish_program} finished [job] as. *)
+(** [finished_of ~what job] is what [job] is finished as in the unit's
+    program ({!Finished_program.find}). *)
 let finished_of ~what (job : finishing) =
   match (get_phase (), Finished_program.find job) with
   | Plan, _ -> CErrors.anomaly Pp.(str "Crane: " ++ str what ++ str " was finished while planning.")

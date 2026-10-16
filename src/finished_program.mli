@@ -6,9 +6,11 @@
     Every declaration a file writes is finished ({!Cpp_pipeline.finish})
     once, ahead of the files, by the driver ({!finish}): the walk that
     generates the unit's declarations says what each needs finished, and
-    the driver finishes all of it, each result recorded by the physical
-    identity of what was finished.  The files read the results from here
-    ({!find}); nothing else finishes a declaration. *)
+    the driver finishes all of it into a program, each result recorded by
+    the physical identity of what was finished, with the headers the
+    finished declarations need.  The driver installs the program
+    ({!install}); the files read the results from it ({!find}); nothing else
+    finishes a declaration. *)
 
 (** A declaration to finish, with the physical identity of what it was made
     of, which its result is recorded by. *)
@@ -21,15 +23,24 @@ val job : Minicpp.cpp_decl -> job
     assembled from a generation, by the generation. *)
 val job_of : 'a -> Minicpp.cpp_decl -> job
 
-(** [finish jobs] finishes every one of [jobs], in order, once each, and
-    demands the headers each finished declaration needs ({!Cpp_demands}). *)
-val finish : job list -> unit
+(** A unit's finished program. *)
+type t
+
+(** [finish jobs] is the program of [jobs], each finished once, in order. *)
+val finish : job list -> t
+
+(** The headers the declarations of a program need for what they write down
+    ({!Cpp_demands}). *)
+val demands : t -> Table.header list
+
+(** Make [t] the unit's program, the one {!find} reads. *)
+val install : t -> unit
 
 (** [refinish jobs] finishes [jobs] again, in order, and fails unless each
-    comes out as {!finish} finished it. *)
+    comes out as it is in the installed program. *)
 val refinish : job list -> unit
 
-(** What {!finish} finished [job] as, if it did. *)
+(** What [job] is finished as in the installed program, if it is there. *)
 val find : job -> Cpp_erasure.settled option
 
 (** [finishes_as job f] is whether finishing [job] again gives [f]. *)
