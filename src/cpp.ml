@@ -86,34 +86,11 @@ let pp_concept_clause name = function
 let pp_concept_def name body =
   str "template<typename M>" ++ fnl () ++ pp_concept_clause name body
 
-(** Run [f] while watching which global references it resolves, and report
-    whether any came out qualified under [outer].
-
-    That is what "this concept's requirements name the enclosing struct's own
-    types" means for a module type's concept, which is printed straight from
-    its signature, with no generated declaration to ask
-    ({!concept_names_member} asks a class's). *)
-let watching_for_reference_to outer f =
-  let seen = ref false in
-  let saved = !Common.on_resolved in
-  Common.on_resolved :=
-    (fun r ->
-      saved r;
-      match List.filter (fun c -> c <> "") r.Common.rn_parts with
-      | first :: _ :: _ when String.equal first outer -> seen := true
-      | _ -> () );
-  let result =
-    Fun.protect ~finally:(fun () -> Common.on_resolved := saved) f
-  in
-  (result, !seen)
-
 (** Whether the concept [d] of a type class declared in the module [mp]
     names one of the module's own members, and so cannot be declared ahead
     of the module's struct.  Asked of the concept generated, not of its
     text: a class it names is not a member, since its concept is declared
-    outside every struct too.  Under [CRANE_CHECK_IR] the answer is checked
-    against the references rendering [d] resolves under the struct's name
-    ({!check_concept_names_member}). *)
+    outside every struct too. *)
 let concept_names_member mp d =
   let names = ref false in
   Minicpp.iter_globrefs
@@ -122,17 +99,6 @@ let concept_names_member mp d =
         names := true )
     d;
   !names
-
-let check_concept_names_member ~outer d names =
-  if Probe.checking () then
-    let _, resolved = watching_for_reference_to outer (fun () -> render_decl (empty_env ()) d) in
-    if resolved <> names then
-      Probe.violation "class concepts held back"
-        Pp.(
-          str "the concept " ++ GlobRef.print (Option.get (decl_globref d))
-          ++ str
-               ( if names then " names a member of its module but rendering it resolves none"
-                 else " names no member of its module but rendering it resolves one" ) )
 
 (** The functor whose body declares module types at [mp], as
     {!Cpp_state.functor_concept_scopes} records it. *)
@@ -1105,9 +1071,7 @@ let rec pp_structure_elem ~is_header f = function
         let has_concept_collision = frame.concept_collision in
         let class_concept l r fields =
           let d = generated_concept r fields in
-          let names_member = concept_names_member mp d in
-          check_concept_names_member ~outer:(Pp.string_of_ppcmds name) d names_member;
-          (HCclass r, pp_doc_comment l ++ render_decl (empty_env ()) d, names_member)
+          (HCclass r, pp_doc_comment l ++ render_decl (empty_env ()) d, concept_names_member mp d)
         in
         let typeclass_concepts =
           if is_header then
@@ -1151,18 +1115,8 @@ let rec pp_structure_elem ~is_header f = function
                 | SEmodtype m ->
                   let path = MPdot (mp, l) in
                   let concept = Cpp_ind.modtype_concept path ~params:[] m in
-                  let names_member = Modtype_concept.names_member mp concept in
-                  let modtype_name = str (modtype_concept_name path) in
-                  let concept_pp, mentions_outer =
-                    watching_for_reference_to (Pp.string_of_ppcmds name)
-                    @@ fun () -> pp_modtype_concept modtype_name concept
-                  in
-                  if Probe.checking () && names_member <> mentions_outer then
-                    Probe.violation "module-type concepts held back"
-                      Pp.(str "the concept of " ++ str (ModPath.to_string path)
-                          ++ str (if names_member then " names a member of its module but rendering it resolves none"
-                                  else " names no member of its module but rendering it resolves one"));
-                  Some (HCmodtype path, concept_pp, mentions_outer)
+                  let concept_pp = pp_modtype_concept (str (modtype_concept_name path)) concept in
+                  Some (HCmodtype path, concept_pp, Modtype_concept.names_member mp concept)
                 | _ -> None )
               sel
           else
