@@ -1212,114 +1212,15 @@ let rec pp_structure_elem ~is_header f = function
       | MEstruct (_mp, sel) ->
         let old_context = (!render_ctx).rc_in_struct in
         with_module_frame @@ fun () ->
-        let module_name_str = Pp.string_of_ppcmds name in
-        let lowercase_module = String.lowercase_ascii module_name_str in
-        List.iter
-          (fun (_l, se) ->
-            match se with
-            | SEdecl (Dind (kn, ind)) ->
-              Array.iteri
-                (fun i p ->
-                  let ind_ref = GlobRef.IndRef (kn, i) in
-                  let ind_name = Common.pp_global_name Type ind_ref in
-                  if String.lowercase_ascii ind_name = lowercase_module then
-                    match
-                      ind.ind_kind
-                    with
-                    | TypeClass _ -> ()
-                    | Record fields ->
-                      (* Registered up front from
-                         {!Structure_analysis.eponymous_records}; here we only
-                         need it as the module currently being rendered. *)
-                      eponymous_record := Some (ind_ref, fields, p)
-                    | _ -> eponymous_type_ref := Some ind_ref )
-                ind.ind_packets
-            | _ -> () )
-          sel;
-        method_candidates := [];
-        let epon_ref_opt =
-          match (!eponymous_type_ref, !eponymous_record) with
-          | Some r, _ -> Some r
-          | _, Some (r, _, _) -> Some r
-          | None, None -> None
+        let frame =
+          Module_frame.of_module mp ~name:(Pp.string_of_ppcmds name) sel
+            ~enclosing:!current_structure_decls
         in
-        ( match epon_ref_opt with
-        (* A custom type has no struct of Crane's, and an enum is an [enum
-           class]: neither can hold a method, as the registry's own scan
-           already says. *)
-        | Some epon_ref when not (is_custom epon_ref || Table.is_enum_inductive epon_ref) ->
-          let epon_modpath = modpath_of_r epon_ref in
-          let same_module r = ModPath.equal (modpath_of_r r) epon_modpath in
-          let module_type_aliases =
-            ref (Method_registry.collect_module_type_aliases
-                   ~extract_decl:(fun (_l, se) ->
-                     match se with SEdecl d -> Some d | _ -> None)
-                   epon_modpath sel)
-          in
-          let forward_inductives = ref [] in
-          let seen_epon = ref false in
-          List.iter
-            (fun (_l, se) ->
-              match se with
-              | SEdecl (Dind (fwd_kn, fwd_ind)) ->
-                Array.iteri
-                  (fun j _p ->
-                    let fwd_ref = GlobRef.IndRef (fwd_kn, j) in
-                    if globref_equal fwd_ref epon_ref
-                    then
-                      seen_epon := true
-                    else if !seen_epon then
-                      forward_inductives := fwd_ref :: !forward_inductives )
-                  fwd_ind.ind_packets
-              | _ -> () )
-            sel;
-          let excluded_refs = !module_type_aliases @ !forward_inductives in
-          let rec refs_excluded ty =
-            match ty with
-            | Miniml.Tglob (r, args, _) ->
-              List.exists
-                (globref_equal r)
-                excluded_refs
-              || List.exists refs_excluded args
-            | Miniml.Tarr (t1, t2) -> refs_excluded t1 || refs_excluded t2
-            | Miniml.Tmeta {contents = Some t} -> refs_excluded t
-            | _ -> false
-          in
-          let process_decl (_l, se) =
-            match se with
-            | SEdecl d ->
-              List.iter
-                (fun {fd_ref = r; fd_body = body; fd_type = ty} ->
-                  if same_module r && not (refs_excluded ty) then
-                    Option.iter
-                      (fun c -> method_candidates := c :: !method_candidates)
-                      (planned_method_candidate epon_ref r body ty) )
-                (Mlutil.term_defs d)
-            | _ -> ()
-          in
-          List.iter process_decl sel;
-          List.iter process_decl !current_structure_decls
-        | Some _ | None -> () );
-        let this_eponymous_record = !eponymous_record in
-        let module_name_str_raw = Common.pp_module mp in
-        let has_concept_collision =
-          List.exists
-            (fun (_l, se) ->
-              match se with
-              | SEdecl (Dind (kn, ind)) ->
-                List.exists
-                  (fun i ->
-                    match ind.ind_kind with
-                    | TypeClass _ ->
-                      let ind_ref = GlobRef.IndRef (kn, i) in
-                      String.equal
-                        (Cpp_names.concept_name_of_ref ind_ref)
-                        module_name_str_raw
-                    | _ -> false )
-                  (List.init (Array.length ind.ind_packets) Fun.id)
-              | _ -> false )
-            sel
-        in
+        eponymous_type_ref := frame.eponymous_type;
+        eponymous_record := frame.eponymous_record;
+        method_candidates := frame.method_candidates;
+        let this_eponymous_record = frame.eponymous_record in
+        let has_concept_collision = frame.concept_collision in
         let class_concept l r fields =
           let d = generated_concept r fields in
           let names_member = concept_names_member mp ~outer:(Pp.string_of_ppcmds name) d in
@@ -1427,32 +1328,6 @@ let rec pp_structure_elem ~is_header f = function
           else
             fnl () ++ fnl () ++ concepts_group_pp concepts_after
         in
-        (* Determine if this module should be promoted: eponymous inductive
-           (not record) where the module struct IS the type directly. *)
-        (* Only promote top-level modules (not nested inside another struct)
-           that don't contain nested submodules with their own inductives.
-           Promoting modules with nested types would break external
-           accessibility of those types. *)
-        let has_nested_submodules =
-          List.exists
-            (fun (_l, se) ->
-              match se with
-              | SEmodule _ -> true
-              | _ -> false )
-            sel
-        in
-        let has_extra_inductives =
-          let ind_count =
-            List.fold_left
-              (fun acc (_l, se) ->
-                match se with
-                | SEdecl (Dind _) -> acc + 1
-                | _ -> acc )
-              0
-              sel
-          in
-          ind_count > 1
-        in
         (* Whether this module is outside every struct is a question about
            the module, not about the file: the implementation writes no
            struct around a nested module, but the header does, and promotes
@@ -1464,44 +1339,8 @@ let rec pp_structure_elem ~is_header f = function
               ++ str
                    ( if old_context then " is rendered inside a struct its plan says it is outside"
                      else " is rendered outside every struct where its plan says it is inside" ) );
-        let is_promoted =
-          !eponymous_type_ref <> None
-          && outside_every_struct mp
-          && (not has_nested_submodules)
-          && not has_extra_inductives
-        in
-        (* Extract template params from the eponymous inductive packet. *)
-        let promoted_tparams =
-          if is_promoted then
-            List.find_map
-              (fun (_l, se) ->
-                match se with
-                | SEdecl (Dind (kn, ind)) ->
-                  let found = ref None in
-                  Array.iteri
-                    (fun i p ->
-                      let ind_ref = GlobRef.IndRef (kn, i) in
-                      if
-                        Option.map
-                          (fun r ->
-                            globref_equal r ind_ref )
-                          !eponymous_type_ref
-                        = Some true
-                      then
-                        let (param_vars, _) = Table.ind_param_vars ind p in
-                        (* The promoted variables the payloads name are
-                           parameters too -- see {!Table.ind_promoted_params}
-                           and its use in [Cpp_ind]; the head spelled here must
-                           be the one the struct is generated with. *)
-                        found :=
-                          Some (Table.ind_promoted_params kn @ param_vars) )
-                    ind.ind_packets;
-                  !found
-                | _ -> None )
-              sel
-          else
-            None
-        in
+        let is_promoted = frame.promoted <> None in
+        let promoted_tparams = frame.promoted in
         (* Set the promotion state the body will be rendered under.  A
            promotion outlives this module -- every later mention of the
            inductive spells it the promoted way -- whereas the demotion a
