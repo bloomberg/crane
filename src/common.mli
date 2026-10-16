@@ -292,10 +292,6 @@ val push_visible : ?members:Id.Set.t -> ModPath.t -> ModPath.t list -> unit
 (** Pop the innermost visible layer. *)
 val pop_visible : unit -> unit
 
-(** Whether a visible scope nearer than global scope declares the name,
-    hiding a global name spelled the same. *)
-val hidden_by_member : string -> bool
-
 (** The C++ names a structure declares as members of its struct, as
     {!push_visible} takes them. *)
 val member_names_of_sel : Miniml.ml_module_structure -> Id.Set.t
@@ -343,6 +339,22 @@ val resolved_split : resolved -> (string * string) option
 (** Resolve a module path to its name, as the visible scopes qualify it;
     {!pp_module} is this plus {!resolved_string}. *)
 val resolve_module : Names.ModPath.t -> resolved
+
+(** {2 Resolution in an explicit scope}
+
+    Each of these is a function of the visibility it is given and the naming
+    tables, so it answers the same wherever it is asked; the printer's
+    {!pp_global_with_key}, {!resolve_module} and {!file_qualifier} are these
+    at the visibility it is writing in. *)
+
+(** The name of a reference written where the visibility is. *)
+val resolve_global : visibility -> kind -> KerName.t -> GlobRef.t -> string
+
+(** The name of a module written where the visibility is. *)
+val resolve_module_in : visibility -> ModPath.t -> resolved
+
+(** {!file_qualifier} where the visibility is. *)
+val resolve_file_qualifier : visibility -> kind -> GlobRef.t -> string option
 
 (** Reset all renaming tables. *)
 val reset_renaming_tables : unit -> unit

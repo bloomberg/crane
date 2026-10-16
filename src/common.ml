@@ -746,17 +746,17 @@ let top_visible () =
 (** Get the module path of the innermost visible layer. *)
 let top_visible_mp () = (top_visible ()).mp
 
-(** Whether a visible scope nearer than global scope declares [name] -- a
+(** Whether a scope of [vis] nearer than global scope declares [name] -- a
     member of a module's struct, or a constructor's struct inside an
-    inductive's ({!push_visible}) -- hiding a global name spelled so.
-    Of a qualified name, its first component is the one looked up. *)
-let hidden_by_member name =
+    inductive's -- hiding a global name spelled so.  Of a qualified name, its
+    first component is the one looked up. *)
+let hidden_by_member vis name =
   let head =
     match Str.bounded_split (Str.regexp_string "::") name 2 with
     | h :: _ -> h
     | [] -> name
   in
-  List.exists (fun v -> Id.Set.mem (Id.of_string head) v.members) (get_visible ())
+  List.exists (fun v -> Id.Set.mem (Id.of_string head) v.members) vis
 
 (** Reset all renaming tables. *)
 let reset_renaming_tables () = do_cleanup ()
@@ -1260,10 +1260,10 @@ let ref_renaming, decided_ref_renaming =
 
 (** {2 On-the-fly qualification} *)
 
-(** [visible_clash mp0 (k,s)] checks if [mp0-s] of kind [k] can be printed as
-    [s] in the current context of visible modules. More precisely, we check if
-    there exists a visible [mp] that declares [s]. The verification stops if
-    we encounter [mp=mp0]. *)
+(** [visible_clash vis mp0 (k,s)] checks if [mp0-s] of kind [k] can be
+    printed as [s] where [vis] is visible. More precisely, we check if there
+    exists a visible [mp] that declares [s]. The verification stops if we
+    encounter [mp=mp0]. *)
 
 (** Check if a module path is one of the current layer's functor parameters.
     @param mp0    The module path of the reference being printed
@@ -1272,11 +1272,12 @@ let ref_renaming, decided_ref_renaming =
 let params_lookup mp0 params = List.exists (ModPath.equal mp0) params
 
 (** Check if a name clashes with a member a visible module declares.
+    @param vis The scopes visible where the name is written, innermost first
     @param mp0 The defining module path (search stops when this is reached)
-    @param ks  The [(kind, name)] pair to look for in the visible scope stack
+    @param ks  The [(kind, name)] pair to look for in [vis]
     @return [true] iff some visible module other than [mp0] declares [ks]'s
             name *)
-let visible_clash mp0 ks =
+let visible_clash vis mp0 ks =
   let rec clash = function
     | [] -> false
     | v :: _ when ModPath.equal v.mp mp0 -> false
@@ -1288,7 +1289,7 @@ let visible_clash mp0 ks =
       else
         clash vis
   in
-  clash (get_visible ())
+  clash vis
 
 (** The files whose headers the unit includes, once both of its files are
     rendered. *)
@@ -1317,21 +1318,22 @@ let fstlev_ks k = function
   | s :: _ -> (Mod, s)
 
 (** Print a locally-visible reference. [pp_ocaml_local] : [mp] has something in
-    common with [top_visible ()] but isn't equal to it.
+    common with the innermost scope of [vis] but isn't equal to it.
+    @param vis    The scopes visible where the reference is written
     @param k      Kind of the reference
     @param prefix Largest visible module-path prefix shared with [mp]
     @param mp     Full module path of the reference
     @param rls    Full renaming list (outermost component first)
     @param olab   Label of the reference within its module ([None] for modules)
     @return The shortest unambiguous dotted name for the reference *)
-let pp_ocaml_local k prefix mp rls olab =
+let pp_ocaml_local vis k prefix mp rls olab =
   (* what is the largest prefix of [mp] that belongs to [visible]? *)
   assert (k != Mod || not (ModPath.equal mp prefix));
   (* mp as whole module isn't in itself *)
   let rls' = List.skipn (mp_length prefix) rls in
   let k's = fstlev_ks k rls' in
   (* Reference r / module path mp is of the form [<prefix>.s.<...>]. *)
-  if not (visible_clash prefix k's) then
+  if not (visible_clash vis prefix k's) then
     plain rls'
   else
     (* C++ lets a name be qualified from inside the scope that declares it, so
@@ -1347,15 +1349,16 @@ let pp_ocaml_local k prefix mp rls olab =
     separate extraction names every cross-file reference in full
     ({!force_cross_file_qualification}), so which files were referenced
     before never decides a spelling.
+    @param vis  The scopes visible where the reference is written
     @param base The [MPfile] the reference is defined in
     @param rls  Full renaming list (outermost component first)
     @return The fully qualified dotted name *)
-let pp_ocaml_extern base rls =
+let pp_ocaml_extern vis base rls =
   match rls with
   | [] -> CErrors.anomaly (Pp.str "pp_ocaml_extern: empty renaming list")
   | base_s :: rls' ->
     note_written_file base;
-    if !force_cross_file_qualification && hidden_by_member base_s then
+    if !force_cross_file_qualification && hidden_by_member vis base_s then
       (* A file is a namespace at global scope, so it is named from there
          where a nearer name hides it: [Decimal] inside [Number]'s struct,
          whose constructor of that name is a struct too. *)
@@ -1364,14 +1367,15 @@ let pp_ocaml_extern base rls =
 
 (** Main name printer: dispatch between local, bound, and external.
     [pp_ocaml_gen] : choosing between [pp_ocaml_local] or [pp_ocaml_extern].
+    @param vis  The scopes visible where the reference is written
     @param k    Kind of the reference
     @param mp   Full module path of the reference
     @param rls  Full renaming list (outermost component first)
     @param olab Label of the reference ([None] for module paths)
-    @return The shortest unambiguous printed name in the current visible context *)
-let pp_ocaml_gen k mp rls olab =
-  match common_prefix_from_list mp (get_visible_mps ()) with
-  | Some prefix -> pp_ocaml_local k prefix mp rls olab
+    @return The shortest unambiguous printed name where [vis] is visible *)
+let pp_ocaml_gen vis k mp rls olab =
+  match common_prefix_from_list mp (List.map (fun v -> v.mp) vis) with
+  | Some prefix -> pp_ocaml_local vis k prefix mp rls olab
   | None ->
     let base = base_mp mp in
     if is_mp_bound base then
@@ -1380,18 +1384,19 @@ let pp_ocaml_gen k mp rls olab =
          spells the same way. *)
       plain rls
     else
-      pp_ocaml_extern base rls
+      pp_ocaml_extern vis base rls
 
 (** C++ variant of {!pp_ocaml_gen}: same dispatch logic but treats non-output
     module references as external (unqualified short name only).
+    @param vis  The scopes visible where the reference is written
     @param k    Kind of the reference
     @param mp   Full module path of the reference
     @param rls  Full renaming list (outermost component first)
     @param olab Label of the reference ([None] for module paths)
     @return The shortest unambiguous printed name for C++ output *)
-let pp_cpp_gen k mp rls olab =
-  match common_prefix_from_list mp (get_visible_mps ()) with
-  | Some prefix -> pp_ocaml_local k prefix mp rls olab
+let pp_cpp_gen vis k mp rls olab =
+  match common_prefix_from_list mp (List.map (fun v -> v.mp) vis) with
+  | Some prefix -> pp_ocaml_local vis k prefix mp rls olab
   | None ->
     let base = base_mp mp in
     if is_mp_bound base then
@@ -1399,28 +1404,38 @@ let pp_cpp_gen k mp rls olab =
     else if is_non_output_module base then
       plain [unquote (last rls)]
     else
-      pp_ocaml_extern base rls
+      pp_ocaml_extern vis base rls
 
-(** Main name printing function for a reference, using a kernel name key:
-    its short name in its own module, and otherwise as {!pp_cpp_gen}
-    qualifies it.
+(** The innermost module of a visibility. *)
+let innermost_mp = function
+  | [] -> CErrors.anomaly (Pp.str "innermost_mp: no scope is visible")
+  | v :: _ -> v.mp
+
+(** The name of the reference [r] written where [vis] is visible, using a
+    kernel name key: its short name in its own module, and otherwise as
+    {!pp_cpp_gen} qualifies it.  A function of [vis] and the naming tables:
+    nothing about what is being printed enters it.
+    @param vis The scopes visible where the reference is written
     @param k   Kind of the global reference
     @param key Kernel name used to determine the defining module path
     @param r   The global reference to print
     @return The printed name string *)
-let pp_global_with_key k key r =
+let resolve_global vis k key r =
   let ls = ref_renaming (k, r) in
   assert (List.length ls > 1);
   let s = List.hd ls in
   let mp, l = KerName.repr key in
-  if ModPath.equal mp (top_visible_mp ()) then
+  if ModPath.equal mp (innermost_mp vis) then
     (* simplest situation: definition of r (or use in the same context) *)
     unquote s
   else
     let rls = List.rev ls in
     (* for what come next it's easier this way *)
     match lang () with
-    | Cpp -> resolved_string (pp_cpp_gen k mp rls (Some l))
+    | Cpp -> resolved_string (pp_cpp_gen vis k mp rls (Some l))
+
+(** {!resolve_global} where the printer is. *)
+let pp_global_with_key k key r = resolve_global (get_visible ()) k key r
 
 (** Print a reference using its canonical kernel name.
     @param k The kind of the global reference
@@ -1431,9 +1446,9 @@ let pp_global k r = pp_global_with_key k (repr_of_r r) r
     [r] when a reference to it from here must name it, as {!pp_cpp_gen}
     decides.  For a name hoisted out of its module's structs to the file's
     namespace, which keeps the file and drops the rest. *)
-let file_qualifier k r =
+let resolve_file_qualifier vis k r =
   let mp, _ = KerName.repr (repr_of_r r) in
-  match common_prefix_from_list mp (get_visible_mps ()) with
+  match common_prefix_from_list mp (List.map (fun v -> v.mp) vis) with
   | Some _ -> None
   | None -> (
     let base = base_mp mp in
@@ -1444,6 +1459,9 @@ let file_qualifier k r =
         note_written_file base;
         Some (unquote base_s)
       | [] -> None )
+
+(** {!resolve_file_qualifier} where the printer is. *)
+let file_qualifier k r = resolve_file_qualifier (get_visible ()) k r
 
 (** Print just the short name of a reference (for declarations). Main name
     printing function for declaring a reference.
@@ -1483,14 +1501,17 @@ let decided_module_name mp =
     definition uses the module name, so type references must too. *)
 let pp_type_name_capitalized r = emitted_module_name (modpath_of_r r)
 
-(** Resolve a module path to its name. *)
-let resolve_module mp =
+(** The name of the module [mp] written where [vis] is visible. *)
+let resolve_module_in vis mp =
   let ls = mp_renaming mp in
   match mp with
-  | MPdot (mp0, _) when ModPath.equal mp0 (top_visible_mp ()) ->
+  | MPdot (mp0, _) when ModPath.equal mp0 (innermost_mp vis) ->
     (* simplest situation: definition of mp (or use in the same context) *)
     plain [List.hd ls]
-  | _ -> pp_ocaml_gen Mod mp (List.rev ls) None
+  | _ -> pp_ocaml_gen vis Mod mp (List.rev ls) None
+
+(** {!resolve_module_in} where the printer is. *)
+let resolve_module mp = resolve_module_in (get_visible ()) mp
 
 (** {!resolve_module} as text. *)
 let pp_module mp = resolved_string (resolve_module mp)
