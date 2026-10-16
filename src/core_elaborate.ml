@@ -218,8 +218,11 @@ let push role ids lex = Lexenv.push (List.map (binder role) ids) lex
 let rec walk b lex = function
   (* A spine is read whole, as translation reads it: a global applied in
      stages is called once with every argument, and applying a one-branch
-     match applies its branch. *)
+     match applies its branch.  A coercion of the callee is seen through:
+     what is called is what it coerces, at every argument -- [not] applied
+     to the proposition it erases, in a type written [{P} + {~P}]. *)
   | MLapp (MLapp ((MLglob _ as g), inner), outer) -> walk b lex (MLapp (g, inner @ outer))
+  | MLapp (MLmagic (_, f), args) -> walk b lex (MLapp (f, args))
   | MLapp (MLcase (ty, scrut, [|(ids, rty, pat, body)|]), outer) ->
     let outer = List.map (Mlutil.ast_lift (List.length ids)) outer in
     let body =
@@ -250,10 +253,14 @@ let rec walk b lex = function
   | MLcase (ty, scrut, branches) ->
     walk_type b lex ty;
     walk b lex scrut;
+    (* A branch's result type is written under its binders: a custom match
+       declares it as the type its arm returns. *)
     Array.iter
-      (fun (ids, _, _, body) ->
+      (fun (ids, rty, _, body) ->
         List.iter (fun (_, ty) -> walk_type b lex ty) ids;
-        walk b (push Lexenv.Value (List.rev ids) lex) body )
+        let lex = push Lexenv.Value (List.rev ids) lex in
+        walk_type b lex rty;
+        walk b lex body )
       branches
   | MLfix (_, fs, defs, _) ->
     Array.iter (fun (_, ty) -> walk_type b lex ty) fs;
@@ -368,17 +375,37 @@ let instance_methods b name body ty =
         methods )
     (Instance_methods.methods name body ty)
 
+(* A call converts its callee's declared type, instantiated, so the terms
+   custom types are applied to there -- [not] in [{x = y} + {x <> y}] -- are
+   elaborated with it; the unit's own declarations' types are walked with
+   them, the others' here, as closed types.  Walking one may name another
+   global, whose type is then walked in turn. *)
+let rec foreign_types b ~walked =
+  let pending = GlobRef.Set_env.diff !b.named walked in
+  if not (GlobRef.Set_env.is_empty pending) then begin
+    GlobRef.Set_env.iter (fun r -> Option.iter (walk_type b Lexenv.empty) (find_type_opt r)) pending;
+    foreign_types b ~walked:(GlobRef.Set_env.union walked pending)
+  end
+
 let structure struc =
   let b = ref empty in
+  let defined = ref GlobRef.Set_env.empty in
+  let define r = defined := GlobRef.Set_env.add r !defined in
   let closed_type = walk_type b Lexenv.empty in
   let inductive ind = Array.iter (fun p -> Array.iter (List.iter closed_type) p.ip_types) ind.ind_packets in
   Modutil.struct_iter
     (function
       | Dterm (r, body, ty) ->
+        define r;
         declaration b ty body;
         constant_at_alias b ty body;
         instance_methods b r body ty
-      | Dfix fds -> List.iter (fun fd -> declaration b fd.fd_type fd.fd_body) fds
+      | Dfix fds ->
+        List.iter
+          (fun fd ->
+            define fd.fd_ref;
+            declaration b fd.fd_type fd.fd_body )
+          fds
       | Dind (_, ind) -> inductive ind
       | Dtype (_, _, ty) -> closed_type ty )
     (function
@@ -386,6 +413,7 @@ let structure struc =
       | Stype (_, _, ty) -> Option.iter closed_type ty
       | Sval (_, _, ty) -> closed_type ty )
     ignore struc;
+  foreign_types b ~walked:!defined;
   !b
 
 let referenced t = GlobRef.Set_env.elements t.named

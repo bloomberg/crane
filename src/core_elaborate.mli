@@ -9,11 +9,11 @@
     Transitional.  The roles are installed for the unit, by the occurrence of
     the use naming the callee ({!Miniml.Occurrence}), which the annotation
     rewrites a body goes through before it is translated keep, and emission
-    takes a call's roles from there when it translates that application; a call translation built itself --
-    a flattened spine, arguments pushed into a branch, a term inside a type
-    -- is elaborated where it is translated, in the traversal's
-    environment.  Under [CRANE_CHECK_IR] every elaboration taken from here
-    is checked against that one. *)
+    takes a call's roles from there when it translates that application; a
+    call translation built itself -- a global a let-bound alias names,
+    applied where the alias is -- is elaborated where it is translated, in
+    the traversal's environment.  Under [CRANE_CHECK_IR] every elaboration
+    taken from here is checked against that one. *)
 
 (** [elaborate_arguments ~lex use args] -- the call [use args] as Core
     elaborates it from the call alone: which arguments are dictionaries,
@@ -28,13 +28,15 @@ type t
 (** [structure s] elaborates every global application in [s]'s
     declarations -- in their bodies, in an instance's methods as
     {!Instance_methods} elaborates them, and in the terms custom types are
-    applied to in the types they write -- and every global named there
-    unapplied, as its call with no arguments. *)
+    applied to in the types they write, a match branch's result type and
+    the declared type of every global they call included -- and every
+    global named there unapplied, as its call with no arguments. *)
 val structure : Miniml.ml_structure -> t
 
 (** Every global the declarations walked name, applied or not, in their
     bodies or in a term a custom type is applied to in any type the unit
-    writes, specifications' included. *)
+    writes, specifications' and the declared types of the globals they
+    call included. *)
 val referenced : t -> Names.GlobRef.t list
 
 (** [roles t use n] -- the roles of the arguments of the application, with
