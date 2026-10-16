@@ -44,7 +44,7 @@ type entity = {
 (** [helper d] is the helper [d] declares, if [d] is a lifted helper. *)
 val helper : Minicpp.cpp_decl -> helper option
 
-(** The globals [decls] name in their expressions and types: what has to be
+(** The globals [decls] name ({!Minicpp.iter_globrefs}): what has to be
     declared before them. *)
 val dependencies : Minicpp.cpp_decl list -> Entity_id.Set.t
 

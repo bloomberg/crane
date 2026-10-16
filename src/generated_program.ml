@@ -42,27 +42,9 @@ let helper d =
 
 let dependencies decls =
   let found = ref Entity_id.Set.empty in
-  let note r = found := Entity_id.Set.add (Entity_id.of_ref r) !found in
-  let ft t =
-    ( match t with
-    | Tglob (r, _, _) | Tnamespace (r, _) | Tinstance (_, r) -> note r
-    | _ -> () );
-    t
-  in
-  let rec fe e =
-    ( match e with
-    | CPPglob (r, _, _) | CPPnamespace (r, _) | CPPstructmk (r, _, _)
-    | CPPmethod_call {mc_method = r; _}
-    | CPPmethod_value {mv_method = r; _}
-    | CPPprojection {pj_projection = r; _}
-    | CPPprojection_value r
-    | CPPstruct (r, _, _) | CPPenum_val (r, _) ->
-      note r
-    | CPPconcept_app (c, r, _) -> note c; note r
-    | _ -> () );
-    map_expr fe fs (map_cpp_type ft) e
-  and fs s = map_stmt fe fs (map_cpp_type ft) s in
-  List.iter (fun d -> ignore (map_decl fe fs (map_cpp_type ft) d)) decls;
+  List.iter
+    (Minicpp.iter_globrefs (fun r -> found := Entity_id.Set.add (Entity_id.of_ref r) !found))
+    decls;
   !found
 
 type t = {
