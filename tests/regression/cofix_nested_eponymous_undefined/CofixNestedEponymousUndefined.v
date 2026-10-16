@@ -1,11 +1,11 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** BUG: a [CoFixpoint] inside a nested module eponymous with its coinductive
-    is declared in the header, [static stream from(uint64_t n);] inside
-    [struct Stream], and defined nowhere, so every use fails to link.  The
-    sibling functions [hd] and [tl], which become methods of [stream], are
-    written correctly. *)
+(** A [CoFixpoint] inside a nested module eponymous with its coinductive is
+    declared in the header, [static stream from(uint64_t n);] inside
+    [struct Stream], and defined in the implementation.  The implementation
+    once counted the nested module promoted to its inductive and skipped it,
+    so every use failed to link. *)
 
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.

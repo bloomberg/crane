@@ -12831,3 +12831,36 @@
   (alias runtest)
   (deps bare_self_method_value.t.exe)
   (action (run ./bare_self_method_value.t.exe))))
+
+(subdir cofix_ctor_outside_eponymous
+ (rule
+  (targets cofix_ctor_outside_eponymous.t.exe)
+  (deps CofixCtorOutsideEponymous.vo cofix_ctor_outside_eponymous.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} cofix_ctor_outside_eponymous.t.exe cofix_ctor_outside_eponymous.cpp cofix_ctor_outside_eponymous.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps cofix_ctor_outside_eponymous.t.exe)
+  (action (run ./cofix_ctor_outside_eponymous.t.exe))))
+
+(subdir cofix_nested_eponymous_undefined
+ (rule
+  (targets cofix_nested_eponymous_undefined.t.exe)
+  (deps CofixNestedEponymousUndefined.vo cofix_nested_eponymous_undefined.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} cofix_nested_eponymous_undefined.t.exe cofix_nested_eponymous_undefined.cpp cofix_nested_eponymous_undefined.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps cofix_nested_eponymous_undefined.t.exe)
+  (action (run ./cofix_nested_eponymous_undefined.t.exe))))
+
+(subdir promoted_module_static_fn_undefined
+ (rule
+  (targets promoted_module_static_fn_undefined.t.exe)
+  (deps PromotedModuleStaticFnUndefined.vo promoted_module_static_fn_undefined.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} promoted_module_static_fn_undefined.t.exe promoted_module_static_fn_undefined.cpp promoted_module_static_fn_undefined.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps promoted_module_static_fn_undefined.t.exe)
+  (action (run ./promoted_module_static_fn_undefined.t.exe))))

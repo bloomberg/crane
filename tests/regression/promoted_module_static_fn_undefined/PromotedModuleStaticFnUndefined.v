@@ -1,11 +1,12 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** A module whose only inductive is its eponymous type is promoted: the
-    module's struct is the type itself.  Its implementation file is then
-    skipped, on the assumption that the header defined every member inline;
-    but a definition that is not a method of the type ([sizes], whose first
-    argument is a list) is only declared there, as a static member, so it is
-    defined nowhere and [example], which calls it, does not link. *)
+    module's struct is the type itself.  A definition that is not a method of
+    the type ([sizes], whose first argument is a list) is declared in the
+    struct as a static member and defined in the implementation, where the
+    type is spelled by the struct's own qualifier.  The implementation of a
+    promoted module was once skipped altogether, so [example], which calls
+    [sizes], did not link. *)
 
 From Stdlib Require Import List.
 Import ListNotations.

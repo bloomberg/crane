@@ -1,12 +1,12 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** BUG: a [CoFixpoint] declared outside the module eponymous with its
-    coinductive spells the constructor's struct as a member of that module
-    rather than of the type: [CoindProjectionBorrow::Stream::Scons] instead of
-    [Stream::stream::Scons], so the thunk's return type names nothing and the
-    braced initializer has no aggregate to build.  The same [CoFixpoint]
-    inside [Stream] is written correctly. *)
+(** A [CoFixpoint] declared outside a nested module eponymous with its
+    coinductive spells the constructor's struct as a member of the type,
+    [Stream::stream::Scons].  A nested module is not promoted to its
+    inductive; the implementation once counted it promoted, having no struct
+    around it, and every reference spelled [CoindProjectionBorrow::Stream::Scons],
+    which names nothing. *)
 
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
