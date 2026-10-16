@@ -785,6 +785,23 @@ let is_wrapped_child mp =
   | Some (Flattened | Bystander) -> true
   | Some Own | None -> false
 
+(** Under [CRANE_CHECK_IR], that the body of the module [mp] is being
+    written in the visibility planned for it ({!plan_visibility}). *)
+let check_planned_visibility mp =
+  if Probe.checking () then
+    let actual = current_visibility () in
+    match Scope_plan.visibility mp with
+    | Some planned when equal_visibility planned actual -> ()
+    | planned ->
+      Probe.violation "visibility chains"
+        Pp.(
+          str "the module " ++ str (ModPath.to_string mp) ++ str " is written in "
+          ++ pp_visibility actual
+          ++
+          match planned with
+          | None -> str ", with no visibility planned"
+          | Some p -> str ", planned in " ++ pp_visibility p)
+
 (** Whether the module [mp], of elements [sel], has a child a name collision
     puts inside a wrapper struct, which then holds all of [mp]'s elements:
     the header writes them inside that struct. *)
@@ -1589,6 +1606,7 @@ and pp_module_expr ~is_header f params = function
           Pp.(str "the module " ++ str (ModPath.to_string mp) ++ str " has no planned scope")
     end;
     push_visible ~members:(member_names_of_sel sel) mp params;
+    check_planned_visibility mp;
     let old_structure_decls = !current_structure_decls in
     current_structure_decls := sel;
     let old_local_inductives = get_local_inductives () in
@@ -2554,9 +2572,57 @@ let plan_accessors s =
       elems ~in_struct:(List.exists (ModPath.equal mp) wrapped) ~in_template:false sel )
     s
 
+(** The visibility each module's body is written in ({!Scope_plan.visibility}),
+    keyed by the path the body is written under.  Every file of the unit is
+    visible beneath all else; a top-level module's own scope is entered
+    declaring nothing, and so is a child a name collision flattens into its
+    parent's wrapper, whose elements are written in the wrapper beside its
+    parent's.  Every other module's body, and a functor's, declares its
+    elements' names, a functor's binding its parameters, outermost first. *)
+let plan_visibility s =
+  let base =
+    List.fold_left
+      (fun v (mp, _) -> if is_modfile mp then inside mp [] v else v)
+      global_visibility s
+  in
+  let rec elems outer sel acc =
+    List.fold_left
+      (fun acc (_, se) ->
+        match se with
+        | SEmodule {ml_mod_expr; _} -> module_expr outer [] ml_mod_expr acc
+        | SEdecl _ | SEmodtype _ -> acc )
+      acc sel
+  and module_expr outer params me acc =
+    match me with
+    | MEfunctor (mbid, _, me) -> module_expr outer (params @ [MPbound mbid]) me acc
+    | MEstruct (mp, sel) -> body (inside ~members:(member_names_of_sel sel) mp params outer) mp sel acc
+    | MEident _ | MEapply _ -> acc
+  and body v mp sel acc = elems v sel ((mp, v) :: acc) in
+  let wrapped =
+    List.filter_map
+      (fun (mi : Structure_analysis.module_info) ->
+        if mi.wrapper_name <> None then Some mi.modpath else None )
+      (get_structure_analysis ()).sorted_modules
+  in
+  let top acc (mp, sel) =
+    let v = inside mp [] base in
+    if List.exists (ModPath.equal mp) wrapped || not (wraps_children mp sel) then body v mp sel acc
+    else
+      List.fold_left
+        (fun acc (l, se) ->
+          match se with
+          | SEmodule {ml_mod_expr = MEstruct (inner, sel'); _}
+            when Module_plan.wrapper_role (MPdot (mp, l)) = Some Module_plan.Flattened ->
+            body (inside inner [] v) inner sel' acc
+          | se -> elems v [(l, se)] acc )
+        ((mp, v) :: acc) sel
+  in
+  List.rev (List.fold_left top [] s)
+
 (** The scope of each module the unit emits as a struct
     ({!Scope_plan}): how a definition of one of its members, written out of
-    line, names it; and which modules are written inside a struct's body.
+    line, names it; which modules are written inside a struct's body; and
+    the visibility each module's body is written in ({!plan_visibility}).
 
     A wrapped file module is its wrapper struct.  A child a name collision
     flattens into its parent's wrapper is a member of the wrapper, which is
@@ -2661,7 +2727,8 @@ let plan_scopes s =
   in
   { Scope_plan.scopes = List.rev scopes;
     nested = List.rev nested;
-    templated = List.rev templated }
+    templated = List.rev templated;
+    visibility = plan_visibility s }
 
 let plan_nested_structs s =
   (* An instance is a struct where, past its parameters, its body builds the
@@ -3188,6 +3255,7 @@ let do_struct_with_decl_tracking ~is_header f s =
         | None -> None
         | Some name ->
           push_visible mp [];
+          check_planned_visibility mp;
           let func_sels = List.filter is_func_decl sel in
           let old_decls = !current_structure_decls in
           current_structure_decls := sel;
@@ -3274,6 +3342,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     let old_decls = !current_structure_decls in
     current_structure_decls := sel;
     push_visible mp [];
+    check_planned_visibility mp;
     let p =
       match wrapper_name with
       | Some name ->
@@ -3385,6 +3454,7 @@ let do_struct_with_decl_tracking ~is_header f s =
                           ( match m.ml_mod_expr with
                           | MEstruct (inner_mp, inner_sel) ->
                             push_visible inner_mp [];
+                            check_planned_visibility inner_mp;
                             let inner_func_sels =
                               List.filter is_func_decl inner_sel
                             in
@@ -3442,6 +3512,7 @@ let do_struct_with_decl_tracking ~is_header f s =
                     ( match m.ml_mod_expr with
                     | MEstruct (inner_mp, inner_sel) ->
                       push_visible inner_mp [];
+                      check_planned_visibility inner_mp;
                       let body = prlist_sep_nonempty cut2 f inner_sel in
                       pop_visible ();
                       body

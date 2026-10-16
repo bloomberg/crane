@@ -684,24 +684,36 @@ type visible_layer = {
   members : Id.Set.t;
 }
 
+(** A visibility: the scopes enclosing a point, innermost first. *)
+type visibility = visible_layer list
+
+let global_visibility = []
+
+let inside ?(members = Id.Set.empty) mp params v = {mp; params; members} :: v
+
+let equal_visibility =
+  List.equal (fun a b ->
+      ModPath.equal a.mp b.mp
+      && List.equal ModPath.equal a.params b.params
+      && Id.Set.equal a.members b.members )
+
+let pp_visibility v =
+  Pp.prlist_with_sep (fun () -> Pp.str " < ") (fun l -> Pp.str (ModPath.to_string l.mp)) v
+
 (** Visibility stack for module rendering: the scopes enclosing what is being
     written, innermost first. *)
-let pop_visible, push_layer, get_visible, set_visible =
-  let vis = ref [] in
-  register_cleanup (fun () -> vis := []);
+let pop_visible, get_visible, set_visible =
+  let vis = ref global_visibility in
+  register_cleanup (fun () -> vis := global_visibility);
   let pop () =
     match !vis with
     | [] -> CErrors.anomaly (Pp.str "pop_visible: empty visibility stack")
     | _ :: vl -> vis := vl
-  and push layer = vis := layer :: !vis
   and get () = !vis
   and set v = vis := v in
-  (pop, push, get, set)
+  (pop, get, set)
 
-let push_visible ?(members = Id.Set.empty) mp params = push_layer {mp; params; members}
-
-(** The visibility stack as it stands. *)
-type visibility = visible_layer list
+let push_visible ?members mp params = set_visible (inside ?members mp params (get_visible ()))
 
 let current_visibility = get_visible
 

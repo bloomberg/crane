@@ -30,12 +30,14 @@ val qualifier : scope -> string
 (** A unit's scopes: each module emitted as a struct, with its scope; the
     modules written inside a struct's body -- a struct's or a functor's,
     which the header writes as a class template -- rather than outside every
-    struct; and the modules whose members the header writes inside a class
-    template. *)
+    struct; the modules whose members the header writes inside a class
+    template; and the visibility each module's body is written in, keyed by
+    the path the body is written under. *)
 type t = {
   scopes : (ModPath.t * scope) list;
   nested : ModPath.t list;
   templated : ModPath.t list;
+  visibility : (ModPath.t * Common.visibility) list;
 }
 
 val empty : t
@@ -66,3 +68,8 @@ val templated : ModPath.t -> bool
     lifted to namespace scope ({!Module_plan.is_namespace_scope_ref}), in
     which case so is the helper. *)
 val of_declaration : GlobRef.t -> scope option
+
+(** The visibility the body of the module [mp] is written in: the scopes
+    enclosing it and its own, innermost first, each with the names it
+    declares and the functor parameters it binds. *)
+val visibility : ModPath.t -> Common.visibility option

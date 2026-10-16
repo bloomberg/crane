@@ -305,6 +305,18 @@ val current_visibility : unit -> visibility
     the stack as it was however [f] leaves. *)
 val with_visibility : visibility -> (unit -> 'a) -> 'a
 
+(** Global scope: no layer visible. *)
+val global_visibility : visibility
+
+(** [inside ?members mp params v] is [v] with [mp]'s scope innermost, as
+    {!push_visible} would make it. *)
+val inside : ?members:Id.Set.t -> ModPath.t -> ModPath.t list -> visibility -> visibility
+
+val equal_visibility : visibility -> visibility -> bool
+
+(** The scopes of a visibility, innermost first, for a diagnostic. *)
+val pp_visibility : visibility -> Pp.t
+
 (** A name as name resolution settled it, before it is flattened to text: the
     qualifier components that reach it, outermost first.  Callers that need to
     know how a name came out should ask here rather than inspect the printed
