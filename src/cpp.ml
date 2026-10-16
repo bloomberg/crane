@@ -979,6 +979,21 @@ let declared_classes sel =
       | _ -> [] )
     sel
 
+(** Whether a name collision puts the module [mp] inside a wrapper struct,
+    flattened or as a bystander. *)
+let is_wrapped_child mp =
+  match Module_plan.wrapper_role mp with
+  | Some (Flattened | Bystander) -> true
+  | Some Own | None -> false
+
+(** Whether the module [mp], of elements [sel], has a child a name collision
+    puts inside a wrapper struct, which then holds all of [mp]'s elements:
+    the header writes them inside that struct. *)
+let wraps_children mp sel =
+  List.exists
+    (fun (l, se) -> match se with SEmodule _ -> is_wrapped_child (MPdot (mp, l)) | _ -> false)
+    sel
+
 (** Pretty-print a structure element (label, elem) pair. Handles modules, module
     types, and declarations.
 
@@ -2186,12 +2201,13 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ~decl s =
       sel
   in
   let restoring_visible k = with_visibility (current_visibility ()) k in
+  let header = ref {Cpp_ind.in_struct = false; concepts_hoisted = false} in
   let in_module ?(params = []) mp sel k =
+    Cpp_ind.plan_header_scope mp !header;
     restoring_visible @@ fun () ->
     push_visible mp params;
     setting current_structure_decls sel k
   in
-  let header = ref {Cpp_ind.in_struct = false; concepts_hoisted = false} in
   let in_header_scope scope k = setting header scope k in
   (* A module's frame, as the render enters its body: the eponymous state
      and promotion the frame says, and the header's scope worked out as the
@@ -2248,7 +2264,6 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ~decl s =
     | SEmodtype _ -> ()
   and module_expr ~params = function
     | MEstruct (mp, sel) ->
-      Cpp_ind.plan_header_scope mp !header;
       in_module ~params mp sel (fun () ->
           with_local_inductives (declared_inductives mp sel) (fun () ->
               List.iter (elem ~wrapper:false) (order sel) ) )
@@ -2282,7 +2297,11 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ~decl s =
       List.iter
         (fun (mi : Structure_analysis.module_info) ->
           if mi.wrapper_name = None then
-            in_module mi.modpath mi.sels (fun () -> List.iter (elem ~wrapper:false) (order mi.sels)) )
+            in_header_scope
+              {!header with in_struct = wraps_children mi.modpath mi.sels}
+              (fun () ->
+                in_module mi.modpath mi.sels (fun () ->
+                    List.iter (elem ~wrapper:false) (order mi.sels) ) ) )
         (order analysis.sorted_modules) )
 
 (** The callable plan of each function the renders will generate, in the
@@ -2337,14 +2356,13 @@ let plan_callables ?(reversed = false) s =
     s;
   (List.rev !plans, List.rev !instance_plans)
 
-(** Generate every function the renders write, and every instance's struct,
-    before either file is rendered (docs/Pipeline-Disentangling-Plan.md,
-    Milestones 1 and 8): each declaration as {!Cpp_ind.generate} generates
-    it, each of a wrapper module's own as {!pp_wrapper_module_dual} does, in
-    the module the render generates it in.  What is generated is recorded
-    for both files ({!Cpp_ind.generating_ahead}); the renders take it from
-    there.  An inductive and an alias are still generated for the header as
-    it is rendered. *)
+(** Generate every declaration the renders write before either file is
+    rendered (docs/Pipeline-Disentangling-Plan.md, Milestones 1, 8 and 9):
+    each declaration as {!Cpp_ind.generate} generates it, each of a wrapper
+    module's own as {!pp_wrapper_module_dual} does, in the module the render
+    generates it in, an inductive, an alias and a concept in the scope the
+    header writes their module in.  What is generated is recorded for both
+    files ({!Cpp_ind.generating_ahead}); the renders take it from there. *)
 let generating_ahead f =
   init_std_names ();
   Translation.clear_seen_lifted_refs ();
@@ -2373,11 +2391,13 @@ let generate_ahead s =
       wrapper_functions := [] )
     ~decl:(fun ~wrapper se ->
       match se with
-      | SEdecl (Dind (kn, ind)) ->
+      | SEdecl (Dind (kn, ind) as d) ->
         List.iter
           (fun (ind_ref, vars, candidate) ->
             lifted (Gen_decls.generate_method_ahead ind_ref vars candidate) )
-          (registered_methods kn ind)
+          (registered_methods kn ind);
+        lifted (Cpp_ind.generate_ahead d)
+      | SEdecl (Dtype _ as d) -> lifted (Cpp_ind.generate_ahead d)
       | _ when wrapper -> (
         match wrapper_element se with
         | Wrapper_functions (_, generate) -> wrapper_functions := generate () :: !wrapper_functions
@@ -2398,10 +2418,12 @@ let generate_ahead s =
     walk_as_rendered ~reversed:true
       ~decl:(fun ~wrapper se ->
         match se with
-        | SEdecl (Dind (kn, ind)) ->
+        | SEdecl (Dind (kn, ind) as d) ->
+          Cpp_ind.regenerate_ahead d;
           List.iter
             (fun (ind_ref, vars, candidate) -> Gen_decls.check_method_ahead ind_ref vars candidate)
             (registered_methods ~order:List.rev kn ind)
+        | SEdecl (Dtype _ as d) -> Cpp_ind.regenerate_ahead d
         | _ when wrapper -> (
           match wrapper_element se with
           | Wrapper_functions (_, generate) -> ignore (generate () : Gen_decls.generated_fun list)
@@ -3433,17 +3455,8 @@ let do_struct_with_decl_tracking ~is_header f s =
         (* Whether a wrapper formed is not the same question as which children
            it flattens: a bystander is recorded only when one did, so a child
            in either table says the struct is there to be written. *)
-        let is_wrapped_child l =
-          match Module_plan.wrapper_role (MPdot (mp, l)) with
-          | Some (Flattened | Bystander) -> true
-          | Some Own | None -> false
-        in
-        let has_child_collision =
-          List.exists
-            (fun (l, se) ->
-              match se with SEmodule _ -> is_wrapped_child l | _ -> false )
-            sel
-        in
+        let is_wrapped_child l = is_wrapped_child (MPdot (mp, l)) in
+        let has_child_collision = wraps_children mp sel in
         if has_child_collision then (
           (* The wrapper's name was chosen with the collision that forced it in
              view, by {!Structure_analysis}; each wrapped child records it. *)

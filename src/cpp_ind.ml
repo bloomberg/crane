@@ -144,6 +144,19 @@ let template_kinds struc =
     struc;
   List.rev !kinds
 
+(** What a declaration written in the header alone generates: its
+    declarations; the member definitions that cross a cycle at namespace
+    scope, written after the whole group ({!Member_hoist}); and, for an
+    inductive promoted to its module's struct, whether that struct derives
+    from [enable_shared_from_this]. *)
+type header_generation = {
+  decls : generated;
+  member_defs : generated;
+  promoted_sft : bool option;
+}
+
+let header_decls decls = {decls; member_defs = []; promoted_sft = None}
+
 (** Render inductive type header (.h file).
     TypeClasses become C++ concepts, Records become structs,
     other inductives become variant-like structs with constructors.
@@ -186,19 +199,17 @@ let ind_header_decls kn ind =
   | TypeClass fields ->
     (* Type classes become C++ concepts *)
     (* Skip if concepts have been hoisted or we're inside a struct *)
-    if (!render_ctx).rc_in_struct || (!render_ctx).rc_concepts_hoisted then
-      []
-    else
-      [(empty_env (), gen_typeclass_cpp names.(0) fields)]
+    header_decls
+      ( if (!render_ctx).rc_in_struct || (!render_ctx).rc_concepts_hoisted then []
+        else [(empty_env (), gen_typeclass_cpp names.(0) fields)] )
   | Record fields ->
     (* Check if this is an eponymous record being merged into module struct *)
     let ind_ref = names.(0) in
-    ( match !eponymous_record with
-    | Some (epon_ref, _, _)
-      when globref_equal ind_ref epon_ref ->
-      [] (* Skip - merged into module struct *)
-    | _ -> [(empty_env (), gen_record_cpp names.(0) fields ind.ind_packets.(0))]
-    )
+    header_decls
+      ( match !eponymous_record with
+      | Some (epon_ref, _, _) when globref_equal ind_ref epon_ref ->
+        [] (* Skip - merged into module struct *)
+      | _ -> [(empty_env (), gen_record_cpp names.(0) fields ind.ind_packets.(0))] )
   | _ ->
     let is_mutual = Array.length ind.ind_packets > 1 in
     let forward_decls =
@@ -323,6 +334,7 @@ let ind_header_decls kn ind =
            (fun (r, body, ty) -> planned_method_candidate ind_ref r body ty)
            kept)
     in
+    let promoted_sft = ref None in
     let rec pp i =
       if i >= Array.length ind.ind_packets then
         []
@@ -501,7 +513,7 @@ let ind_header_decls kn ind =
                members rather than a nested type. *)
             match decl with
             | Dstruct ds ->
-              eponymous_promote_sft := ds.ds_needs_shared_from_this;
+              promoted_sft := Some ds.ds_needs_shared_from_this;
               (empty_env (), Dfields ds) :: pp (i + 1)
             | _ ->
               (* Non-Dstruct promoted inductive (shouldn't happen normally) *)
@@ -531,9 +543,9 @@ let ind_header_decls kn ind =
        every sibling has been written.  At namespace scope nothing defers
        them, so the members that cross the cycle are written after the whole
        group. *)
-    let group =
+    let group, member_defs =
       if (!render_ctx).rc_in_struct then
-        group
+        (group, [])
       else
         let group = if is_mutual then Member_hoist.split_group group else group in
         (* The other cycle a struct at namespace scope can be in, and the one
@@ -580,10 +592,9 @@ let ind_header_decls kn ind =
               && not (List.mem (module_struct_name mp) own_nspace_names) )
             group
         in
-        defer deferred_member_defs (finished defs);
-        group
+        (group, defs)
     in
-    forward_decls @ group
+    {decls = forward_decls @ group; member_defs; promoted_sft = !promoted_sft}
 
 (** What a type class instance becomes: the struct carrying its methods, and
     the [static_assert] that checks the struct against the class's concept.
@@ -663,9 +674,9 @@ type generation =
       funs : Gen_decls.generated_fun list;
       lifted : lifted_placement;
     }
-  | Header_only of (unit -> generated)
-      (** Written in the header alone, and generated only for it: generating
-          an inductive's header defers member definitions as it goes. *)
+  | Header_only of (unit -> header_generation)
+      (** Written in the header alone, generated ahead of the files in the
+          scope the header writes it in ({!header_entity}). *)
   | Instance of GlobRef.t * ml_ast * ml_type
       (** A type-class instance, written in the header alone and generated
           ahead of both files ({!instance_entity}). *)
@@ -809,7 +820,9 @@ let generate d =
     if (!render_ctx).rc_in_struct || (!render_ctx).rc_concepts_hoisted then Nothing
     else
       Header_only
-        (fun () -> [(empty_env (), gen_typeclass_cpp r (Table.get_record_field_bindings r))])
+        (fun () ->
+          header_decls
+            [(empty_env (), gen_typeclass_cpp r (Table.get_record_field_bindings r))] )
   | Dtype (r, l, t) ->
     if t == Taxiom then begin
       Cpp_erasure.register_axiom_type r;
@@ -827,7 +840,7 @@ let generate d =
          for -- an event family -- is erased at every use, so nothing looks
          for it. *)
       Nothing
-    | t -> Header_only (fun () -> [(empty_env (), gen_type_alias r l (Some t))]) )
+    | t -> Header_only (fun () -> header_decls [(empty_env (), gen_type_alias r l (Some t))]) )
   | Dterm (r, a, (Tglob (ty, _, _) as t)) when is_monad ty ->
     group [{fd_ref = r; fd_body = a; fd_type = t}]
   | Dterm (r, a, t) when is_typeclass_instance a t -> Instance (r, a, t)
@@ -1065,14 +1078,6 @@ let record_funs ~fallback (funs : Gen_decls.generated_fun list) =
         (record_entity (Option.default fallback (decl_globref d)) [d] g.gf_lifted) )
     funs
 
-(** [recorded capture r ds] runs the generation [ds] under [capture],
-    recording what it produced and the helpers it lifted as the entity [r]. *)
-let recorded capture r (ds : unit -> generated) =
-  let ds, lifted = capture ds in
-  ignore (record_entity r (List.map snd ds) lifted);
-  (ds, lifted)
-
-let generated_entity r ds = recorded Translation.collecting_lifted r ds
 
 (** What a file writes for one MiniML declaration, and the helpers lifted
     out of it that the element places. *)
@@ -1186,8 +1191,78 @@ let concept r fields =
             ++ str " was not generated ahead of the header in the module "
             ++ str (ModPath.to_string mp) ++ str ".") )
 
+(** What was generated ahead of the header for each declaration it writes
+    alone, by the declaration's physical node, with the module it was
+    generated in: its generation, and the helpers lifted out of it. *)
+let headers_generated : (ModPath.t * (header_generation * cpp_decl list)) list Node_table.t =
+  Node_table.create 64
+
+let () = State.on_reset State.Unit (fun () -> Node_table.reset headers_generated)
+
+let same_header_generation a b =
+  same_generated a.decls b.decls
+  && same_generated a.member_defs b.member_defs
+  && a.promoted_sft = b.promoted_sft
+
+(** [header_entity d gen] is what the declaration [d] generates for the
+    header ([gen ()]), with the helpers lifted out of it, recorded as the
+    entity [d] is.  It is generated ahead of the files, in the scope the
+    header writes the module in ({!header_scope}), like an instance
+    ({!instance_entity}), and taken from there by the header. *)
+let header_entity d gen =
+  let mp = top_visible_mp () in
+  let generate () = Translation.collecting_lifted gen in
+  if !ahead && not !rechecking then begin
+    let generation = generate () in
+    Node_table.replace headers_generated (Obj.repr d)
+      ((mp, generation) :: Option.default [] (Node_table.find_opt headers_generated (Obj.repr d)));
+    generation
+  end
+  else
+    match
+      List.find_map
+        (fun (mp', g) -> if ModPath.equal mp' mp then Some g else None)
+        (Option.default [] (Node_table.find_opt headers_generated (Obj.repr d)))
+    with
+    | Some (g, lifted) ->
+      let helpers = if !rechecking then lifted else Translation.claim_lifted lifted in
+      if not !rechecking then ignore (record_entity (decl_entity d) (List.map snd g.decls) helpers);
+      if Sys.getenv_opt "CRANE_CHECK_IR" <> None
+         && not (same_header_generation g (fst (generate ())))
+      then
+        CErrors.anomaly
+          Pp.(str "Crane: " ++ GlobRef.print (decl_entity d)
+              ++ str " was generated differently ahead of the header and "
+              ++ str (if !rechecking then "again in the reverse order." else "in it."));
+      (g, helpers)
+    | None ->
+      CErrors.anomaly
+        Pp.(str "Crane: " ++ GlobRef.print (decl_entity d)
+            ++ str " was not generated ahead of the header in the module "
+            ++ str (ModPath.to_string mp) ++ str ".")
+
+(** [in_header_scope f] runs [f] in the render context the header writes
+    the current module's body in, as planned ({!header_scope}). *)
+let in_header_scope f =
+  let mp = top_visible_mp () in
+  match header_scope mp with
+  | Some {in_struct; concepts_hoisted} ->
+    with_render_ctx
+      (fun c -> {c with rc_in_struct = in_struct; rc_concepts_hoisted = concepts_hoisted})
+      f
+  | None ->
+    CErrors.anomaly
+      Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned header scope.")
+
+(** What [d] generates, a declaration the header alone writes generated in
+    the scope the header writes it in. *)
+let generate_in_scope d k =
+  match d with
+  | Dind _ | Dtype _ -> in_header_scope (fun () -> k (generate d))
+  | Dterm _ | Dfix _ -> k (generate d)
+
 let generate_ahead d =
-  match generate d with
+  generate_in_scope d @@ function
   | Functions {funs; _} ->
     ignore (finalized funs : (Gen_decls.generated_fun * Function_entity.t option) list);
     List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) funs
@@ -1195,13 +1270,17 @@ let generate_ahead d =
     let ds, helpers = instance_entity r a t in
     ignore (finished_instance ds : rendered);
     helpers
-  | Header_only _ | Nothing -> []
+  | Header_only gen ->
+    ignore (header_entity d gen : header_generation * cpp_decl list);
+    []
+  | Nothing -> []
 
 let regenerate_ahead d =
   regenerating @@ fun () ->
-  match generate d with
+  generate_in_scope d @@ function
   | Instance (r, a, t) -> ignore (instance_entity r a t : generated * cpp_decl list)
-  | Functions _ | Header_only _ | Nothing -> ()
+  | Header_only gen -> ignore (header_entity d gen : header_generation * cpp_decl list)
+  | Functions _ | Nothing -> ()
 
 let decls_for ~is_header d =
   match generate d with
@@ -1214,9 +1293,11 @@ let decls_for ~is_header d =
       | Unwritten -> (false, [])
     in
     { rendered = function_views ~is_header ~lifted_inline funs; helpers }
-  | Header_only ds when is_header ->
-    let ds, helpers = generated_entity (decl_entity d) ds in
-    { rendered = finished ds; helpers }
+  | Header_only gen when is_header ->
+    let g, helpers = header_entity d gen in
+    defer deferred_member_defs (finished g.member_defs);
+    Option.iter (fun sft -> eponymous_promote_sft := sft) g.promoted_sft;
+    { rendered = finished g.decls; helpers }
   | Instance (r, a, t) when is_header ->
     let ds, helpers = instance_entity r a t in
     { rendered = finished_instance ds; helpers }

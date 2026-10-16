@@ -95,8 +95,10 @@ val generating_ahead : (unit -> 'a) -> 'a
 (** Generate, ahead of both files, what the declaration [d] is written as
     that {!impl_decls} and {!header_decls} then take from here: its
     functions, generated ({!generated_once}) and finished ({!finalized}),
-    or the struct of the instance it is ({!instance_entity}); and return the
-    helpers lifted out of them.  Nothing for any other declaration. *)
+    the struct of the instance it is ({!instance_entity}), or what the
+    header alone writes of it, generated in the scope the header writes it
+    in ({!header_scope}); and return the helpers lifted out of functions and
+    instances. *)
 val generate_ahead : Miniml.ml_decl -> Minicpp.cpp_decl list
 
 (** How the header writes a module's body: inside a struct or not, and with
@@ -168,12 +170,6 @@ val record_entity :
 (** [record_funs ~fallback funs] records each generated function as the
     entity its declaration is about, [fallback] where it names none. *)
 val record_funs : fallback:Names.GlobRef.t -> Gen_decls.generated_fun list -> unit
-
-(** [generated_entity r ds] runs the generation [ds], recording what it
-    produced and the helpers it lifted as the entity [r], and returns both:
-    the helpers are the caller's to place. *)
-val generated_entity :
-  Names.GlobRef.t -> (unit -> generated) -> generated * Minicpp.cpp_decl list
 
 (** [instance_entity r a t] is the instance [r], of body [a] and type [t]
     ({!instance_decls}), recorded as the entity [r], with the helpers lifted
