@@ -53,7 +53,6 @@ type t = {
 }
 
 let entities t = t.entities
-let helpers t = t.lifted
 
 let entity_ids e =
   List.fold_left
@@ -67,30 +66,50 @@ let ids t =
     (Id_set.of_list (List.map (fun h -> Generated h.helper_id) t.lifted))
     t.entities
 
-(** Each emitted file's program so far, newest first. *)
-let emitted_files : (Common.file, t) Hashtbl.t = State.table State.Unit 2
-
-let add_to_file update =
-  match Common.get_phase () with
-  | Common.Emit f ->
-    let t = Option.default { entities = []; lifted = [] } (Hashtbl.find_opt emitted_files f) in
-    Hashtbl.replace emitted_files f (update t)
-  | Common.Plan -> CErrors.anomaly Pp.(str "Crane: a declaration was generated while planning.")
+(** The entities each emitted file has taken so far, newest first. *)
+let emitted_files : (Common.file, entity list) Hashtbl.t = State.table State.Unit 2
 
 let record e =
-  add_to_file (fun t -> { t with entities = e :: t.entities });
+  ( match Common.get_phase () with
+  | Common.Emit f ->
+    Hashtbl.replace emitted_files f (e :: Option.default [] (Hashtbl.find_opt emitted_files f))
+  | Common.Plan -> CErrors.anomaly Pp.(str "Crane: a declaration was generated while planning.") );
   e
 
-let record_helper h = add_to_file (fun t -> { t with lifted = h :: t.lifted })
-
 let emitted f =
-  match Hashtbl.find_opt emitted_files f with
-  | Some t -> { entities = List.rev t.entities; lifted = List.rev t.lifted }
-  | None -> { entities = []; lifted = [] }
+  { entities = List.rev (Option.default [] (Hashtbl.find_opt emitted_files f)); lifted = [] }
+
+(** The unit's program as the walk ahead of the files generated it, newest
+    first: its entities, and every helper its generations lifted. *)
+let generated_ahead : t ref = State.cell State.Unit { entities = []; lifted = [] }
+
+(* A helper is lifted by one generation: the same declaration may be handed
+   on -- a method's helpers to the inductive that takes the method -- but a
+   second declaration of the same helper is a second generation of it, and
+   both would be written. *)
+let record_helper_ahead h =
+  let t = !generated_ahead in
+  match
+    List.find_opt (fun h' -> Generated_entity_id.equal h'.helper_id h.helper_id) t.lifted
+  with
+  | None -> generated_ahead := { t with lifted = h :: t.lifted }
+  | Some h' ->
+    if h'.helper_decl != h.helper_decl then
+      let id = Generated_entity_id.pp h.helper_id in
+      Probe.violation "lifted helpers" Pp.(str "two generations lifted the helper " ++ id)
+
+let record_lifted_ahead ds = List.iter (fun d -> Option.iter record_helper_ahead (helper d)) ds
+
+let record_ahead e =
+  List.iter record_helper_ahead e.helpers;
+  generated_ahead := { !generated_ahead with entities = e :: !generated_ahead.entities }
 
 let check_against_plan ~declares =
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then
-    let emitted = Id_set.union (ids (emitted Common.Impl)) (ids (emitted Common.Intf)) in
+    let emitted =
+      List.fold_left Id_set.union (ids !generated_ahead)
+        [ids (emitted Common.Impl); ids (emitted Common.Intf)]
+    in
     let planned = function
       | Source e -> declares (Entity_id.to_ref e)
       | Generated g -> (
@@ -108,19 +127,13 @@ let check_against_plan ~declares =
 let entities_ids entities =
   List.fold_left (fun s e -> Id_set.union s (entity_ids e)) Id_set.empty entities
 
-(** The unit's program as the walk ahead of the files generated it, newest
-    first. *)
-let generated_ahead : entity list ref = State.cell State.Unit []
-
-let record_ahead e = generated_ahead := e :: !generated_ahead
-
 let check_against_ahead () =
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then
     let taken =
       Id_set.union (entities_ids (emitted Common.Impl).entities)
         (entities_ids (emitted Common.Intf).entities)
     in
-    let ahead = entities_ids (List.rev !generated_ahead) in
+    let ahead = entities_ids !generated_ahead.entities in
     if not (Id_set.equal taken ahead) then
       let show s = Pp.(prlist_with_sep (fun () -> str ", ") pp_id (Id_set.elements s)) in
       CErrors.anomaly

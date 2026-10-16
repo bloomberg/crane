@@ -9,10 +9,13 @@
     bodies; each helper records the entity it was lifted out of.
 
     The unit's program is recorded as the walk ahead of the files generates
-    it ({!record_ahead}); each file's render records the entities it takes
-    from there ({!record}).  {!check_against_ahead} holds the two to the same
-    entities, and {!check_against_plan} holds every unit to "emission
-    generates what the unit declares, and the helpers lifted out of it". *)
+    it ({!record_ahead}, {!record_lifted_ahead}): the bodies a generation
+    translates lift its helpers, and the walk records them; nothing records
+    a helper as it is lifted.  Each file's render records the entities it
+    takes from there ({!record}).  {!check_against_ahead} holds the two to
+    the same entities, and {!check_against_plan} holds every unit to
+    "emission generates what the unit declares, and the helpers lifted out of
+    it". *)
 
 type id =
   | Source of Entity_id.t
@@ -52,10 +55,6 @@ type t
 
 val entities : t -> entity list
 
-(** Every helper the phase lifted, by its owner, including those no entity
-    claimed. *)
-val helpers : t -> helper list
-
 (** Every entity and helper id of the program. *)
 val ids : t -> Id_set.t
 
@@ -68,21 +67,25 @@ val ids : t -> Id_set.t
     returns it.  Nothing is generated while planning. *)
 val record : entity -> entity
 
-(** [record_helper h] notes that the file being emitted lifted [h]. *)
-val record_helper : helper -> unit
-
-(** The program the emission of file [f] of the current unit generated. *)
+(** The entities the emission of file [f] of the current unit took. *)
 val emitted : Common.file -> t
 
-(** Under [CRANE_CHECK_IR], fail unless every entity the implementation and
-    header emissions generated is one the unit [declares], and every helper
-    was lifted out of such an entity or out of none: emission generates what
-    was planned, and the helpers its bodies lift. *)
+(** Under [CRANE_CHECK_IR], fail unless every entity generated ahead of the
+    files or taken by them is one the unit [declares], and every helper was
+    lifted out of such an entity or out of none: emission generates what was
+    planned, and the helpers its bodies lift. *)
 val check_against_plan : declares:(Names.GlobRef.t -> bool) -> unit
 
-(** [record_ahead e] adds [e] to the unit's program as the walk ahead of the
-    files generates it. *)
+(** [record_ahead e] adds [e], and the helpers lifted out of it, to the
+    unit's program as the walk ahead of the files generates it. *)
 val record_ahead : entity -> unit
+
+(** [record_lifted_ahead ds] adds the helpers among [ds], lifted by some
+    generation of the walk ahead of the files, to the unit's program.  Under
+    [CRANE_CHECK_IR] a helper is lifted by one generation: a second
+    declaration of one already recorded is a violation, the same declaration
+    handed on to another generation is not. *)
+val record_lifted_ahead : Minicpp.cpp_decl list -> unit
 
 (** Under [CRANE_CHECK_IR], fail unless the entities the two files took,
     with the helpers they claimed, are exactly those generated ahead of

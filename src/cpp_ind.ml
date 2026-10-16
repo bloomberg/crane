@@ -801,6 +801,20 @@ let in_node_table table node =
 (** The helpers some element of the header places, as planned so far. *)
 let header_placed : GlobRef.t list ref = State.cell State.Unit []
 
+(** The helpers the header has placed so far as it takes its elements, under
+    [CRANE_CHECK_IR]; emptied as each render begins ({!start_render}). *)
+let header_took : GlobRef.t list ref = State.cell State.Unit []
+
+let start_render () = header_took := []
+
+(** [newly_placed placed d] is whether [d] is a helper no element counted in
+    [placed] places, counting it placed by this one. *)
+let newly_placed placed d =
+  match decl_globref d with
+  | None -> true
+  | Some r ->
+    (not (List.exists (globref_equal r) !placed)) && (placed := r :: !placed; true)
+
 (** The helpers each generation the header takes places, by the physical
     identity of the generation. *)
 let header_claims : cpp_decl list Node_table.t = Node_table.create 64
@@ -811,14 +825,7 @@ let () = State.on_reset State.Unit (fun () -> Node_table.reset header_claims)
     bodies lifted [lifted], places those of them no earlier element of the
     header places. *)
 let plan_header_claim key lifted =
-  let placed_here d =
-    match decl_globref d with
-    | None -> true
-    | Some r ->
-      (not (List.exists (globref_equal r) !header_placed))
-      && (header_placed := r :: !header_placed; true)
-  in
-  Node_table.replace header_claims (Obj.repr key) (List.filter placed_here lifted)
+  Node_table.replace header_claims (Obj.repr key) (List.filter (newly_placed header_placed) lifted)
 
 (** [header_claim key lifted] is what {!plan_header_claim} planned the
     generation [key] places of [lifted]. *)
@@ -826,7 +833,7 @@ let header_claim key lifted =
   match Node_table.find_opt header_claims (Obj.repr key) with
   | Some planned ->
     if Probe.checking () && get_phase () = Emit Intf then begin
-      let claimed = Translation.claim_lifted lifted in
+      let claimed = List.filter (newly_placed header_took) lifted in
       if not (List.equal ( == ) planned claimed) then
         Probe.violation "header claims"
           Pp.(str "the header places other helpers at a generation than planned: "
@@ -1139,7 +1146,7 @@ let instance_entity r a t =
       let helpers = header_claim v lifted in
       ignore (record_entity r (List.map snd ds) helpers);
       (ds, helpers) )
-    (fun () -> Translation.collecting_all_lifted (fun () -> instance_decls r a t))
+    (fun () -> Translation.collecting_lifted (fun () -> instance_decls r a t))
 
 (** {2 The header's scope of a module}
 
@@ -1256,7 +1263,7 @@ let record_methods r vars candidates =
     ~planned:(fun ((_, lifted) as v) -> plan_header_claim v lifted)
     ~take:(fun ((fields, lifted) as v) -> (fields, header_claim v lifted))
     (fun () ->
-      Translation.collecting_all_lifted (fun () -> Gen_decls.gen_record_methods r vars candidates) )
+      Translation.collecting_lifted (fun () -> Gen_decls.gen_record_methods r vars candidates) )
 
 (** The C++ types of each eponymous record's fields, converted ahead of the
     files, by the record. *)
@@ -1332,7 +1339,7 @@ let header_entity d gen =
       let helpers = header_claim v lifted in
       ignore (record_entity (decl_entity d) (List.map snd g.decls) helpers);
       (g, helpers) )
-    (fun () -> Translation.collecting_all_lifted gen)
+    (fun () -> Translation.collecting_lifted gen)
 
 let finished_header = finished_group ~what:"a header declaration"
 

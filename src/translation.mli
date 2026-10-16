@@ -418,32 +418,17 @@ val compute_and_register_field_names :
   string -> Id.t option list -> Id.t option list -> int -> Id.t list
 
 
-(** [collecting_lifted f] runs [f] and returns, with its result, the
-    declarations lifted while it ran.  Every helper is lifted inside one: a
-    generator's helpers are its output, for it to place, and a helper lifted
-    outside every collection is an anomaly. *)
+(** [collecting_lifted f] runs [f] and returns, with its result, the helpers
+    lifted out of the bodies it generated, in the order they were lifted.
+    Every helper is lifted inside one: a generation's helpers are part of
+    what it generates, for whoever records the generation to place, and a
+    helper lifted outside every collection is an anomaly. *)
 val collecting_lifted : (unit -> 'a) -> 'a * cpp_decl list
 
-(** [collecting_all_lifted f] is {!collecting_lifted} [f], returning every
-    helper [f] lifts, those an earlier generation of the same pass lifted
-    included: what a generation ahead of the files records where each file
-    claims the helpers for itself ({!claim_lifted}). *)
-val collecting_all_lifted : (unit -> 'a) -> 'a * cpp_decl list
-
-(** [claim_lifted ds] is what of [ds] generating them again would lift: each
-    is kept unless this file has already lifted a declaration of the same
-    name, and is then marked lifted. *)
-val claim_lifted : cpp_decl list -> cpp_decl list
-
-(** [relift ds] lifts [ds] to the generator collecting the current body's
-    helpers, as generating them again would: each this file has not lifted
-    already. *)
+(** [relift ds] lifts [ds] again, to the generation collecting the current
+    body's helpers: a generation that takes another's output takes the
+    helpers lifted out of it along with it. *)
 val relift : cpp_decl list -> unit
-
-(** Reset the seen-lifted-refs deduplication set. Call at the start of each
-    new output file so that identical helpers in different files are NOT
-    suppressed. *)
-val clear_seen_lifted_refs : unit -> unit
 
 
 (** [is_list_global g] returns true iff [g] is the Coq list inductive.

@@ -62,9 +62,10 @@ type env_binder = Lexenv.binder = {
 
 (** Consolidated mutable state for expression compilation.
     All fields except {!local_inductives} (which has a different lifecycle
-    and is exported to [cpp.ml]) live here. *)
+    and is exported to [cpp.ml]) and the helpers being lifted
+    ({!lifted_so_far}, which belong to a generation rather than a scope) live
+    here. *)
 type translation_ctx = {
-  output : translation_output;  (** What the pass has produced; see below. *)
   (* Template type variables for the function currently being translated. *)
   current_type_vars : Id.t list;
   (* The declaration's template head, verbatim: every parameter it declares,
@@ -167,27 +168,6 @@ type translation_ctx = {
   cpp_binder_types : (cpp_type * binder_origin) IntMap.t;
 }
 
-(** What a translation pass has {e produced}, as opposed to the scope it was
-    producing it in.  Everything here outlives a nested scope: a declaration
-    lifted out of a lambda still has to be emitted, and a helper already
-    emitted must not be emitted again.
-
-    Its purpose is to be the one field {!with_scope} carries out of the scope
-    it restores.  Which state survives a scope is then settled by which record
-    it sits in -- a field added to either one does the right thing by default,
-    where a bracket that lists the fields it saves is one field away from
-    being wrong. *)
-and translation_output = {
-  (* Declarations lifted out of bodies (hoisted fixpoints and lambdas) inside
-     the innermost {!collecting_lifted}, which hands them to the generator
-     that places them. *)
-  pending_lifted_decls : cpp_decl list;
-  (* Tracks which lifted function refs have already been emitted so that
-     the same helper (e.g. _index_eq_dec_F) appears only once per file.
-     Reset per-file via clear_seen_lifted_refs. *)
-  seen_lifted_refs : GlobRef.t list;
-}
-
 (** What decided a binder's C++ type, and so which answer wins when both are
     available: an instantiation a pattern match pinned down is more precise
     than the type the binder was given where it was bound. *)
@@ -210,7 +190,6 @@ and itree_extraction_mode =
 let tctx =
   ref
     {
-        output = {pending_lifted_decls = []; seen_lifted_refs = []};
         current_type_vars = [];
         current_template_head = [];
         current_param_types = [];
@@ -232,18 +211,13 @@ let tctx =
         cpp_binder_types = IntMap.empty;
     }
 
-(** Modify the produced-so-far half of the context.  Every writer goes through
-    this rather than rebuilding [tctx] in place, so {!with_scope} has exactly one
-    field to carry across a scope boundary. *)
-let update_output f = tctx := { !tctx with output = f (!tctx).output }
-
 (** [with_field get set v f] runs [f] with one context field set to [v], and
     puts the enclosing value back on the way out however [f] leaves --
     returning or raising.
 
     Only the one field is restored, deliberately: the effects [f] means to
-    have on the rest of the context (a lifted declaration collected, a counter
-    advanced) must survive, so saving and restoring the whole record would be
+    have on the rest of the context (a counter advanced, a reuse token
+    consumed) must survive, so saving and restoring the whole record would be
     wrong here even though it is right at a declaration boundary.
 
     Every dynamic-extent field gets a [with_*] built from this, so that no
@@ -431,96 +405,70 @@ let get_param_type_by_index (idx : int) : ml_type option =
 let clear_current_param_types () =
   tctx := { !tctx with current_param_types = [] }
 
-(** How many {!collecting_lifted} calls are running.  A helper lifted outside
-    every one of them has no generator to place it, and would be called and
-    never declared. *)
-let collecting_depth = ref 0
+(** The helpers lifted so far out of the bodies the innermost
+    {!collecting_lifted} is generating, newest first, and [None] outside every
+    one.  Not a field of {!tctx}: a helper belongs to the generation it was
+    lifted in, whatever scope inside that generation lifted it, so no scope
+    restores it. *)
+let lifted_so_far : cpp_decl list option ref = ref None
 
-(** Lift a declaration to the generator collecting this body's helpers.
-    Skips duplicate declarations (same GlobRef) so that identical helpers
-    (e.g. [_index_eq_dec_F]) are only emitted once per file even when
-    multiple functions in the same module use them. *)
+(** Lift a declaration out of the body being generated, to the generation
+    collecting its helpers ({!collecting_lifted}).
+
+    A helper's identity is the declaration it comes out of and the binder it
+    was bound to there ({!Lifted}), so a generation lifting one identity
+    twice lifts one helper and keeps the first.  That is sound only where
+    both are the same declaration, which [CRANE_CHECK_IR] holds it to. *)
 let add_lifted_decl (d : cpp_decl) =
-  if !collecting_depth = 0 then
+  match !lifted_so_far with
+  | None ->
     CErrors.anomaly
-      Pp.(str "Crane: a helper was lifted outside every generation that places one.");
-  let keep =
-    match decl_globref d with
-    | None -> true
-    | Some r ->
-      let fresh =
-        not (List.exists (globref_equal r) (!tctx).output.seen_lifted_refs)
-      in
-      if fresh then
-        update_output (fun o ->
-            {o with seen_lifted_refs = r :: o.seen_lifted_refs} );
-      fresh
-  in
-  if keep then begin
-    Option.iter Generated_program.record_helper (Generated_program.helper d);
-    update_output (fun o ->
-        {o with pending_lifted_decls = d :: o.pending_lifted_decls} )
-  end
+      Pp.(str "Crane: a helper was lifted outside every generation that places one.")
+  | Some ds -> (
+    let same_helper d' =
+      match (decl_globref d, decl_globref d') with
+      | Some r, Some r' -> globref_equal r r'
+      | _ -> false
+    in
+    match List.find_opt same_helper ds with
+    | None -> lifted_so_far := Some (d :: ds)
+    | Some d' ->
+      if compare d d' <> 0 then
+        Probe.violation "lifted helpers"
+          Pp.(
+            str "one generation lifted two different helpers as "
+            ++ Option.cata GlobRef.print (mt ()) (decl_globref d)) )
 
-(** [collecting_lifted f] runs [f] and returns, with its result, the
-    declarations lifted while it ran: a generator's helpers are its output,
-    for it to place. *)
+(** [collecting_lifted f] runs [f] and returns, with its result, the helpers
+    lifted out of the bodies it generated, in the order they were lifted: a
+    generation's helpers are part of what it generates, for whoever records
+    the generation to place. *)
 let collecting_lifted f =
-  let earlier = (!tctx).output.pending_lifted_decls in
-  update_output (fun o -> {o with pending_lifted_decls = []});
-  incr collecting_depth;
+  let outer = !lifted_so_far in
+  lifted_so_far := Some [];
   Fun.protect
-    ~finally:(fun () ->
-      decr collecting_depth;
-      update_output (fun o -> {o with pending_lifted_decls = earlier}) )
+    ~finally:(fun () -> lifted_so_far := outer)
     (fun () ->
       let v = f () in
-      (v, List.rev (!tctx).output.pending_lifted_decls) )
+      (v, List.rev (Option.default [] !lifted_so_far)) )
 
-(** [collecting_all_lifted f] is {!collecting_lifted} [f], with every
-    helper [f] lifts among the declarations returned, those a generation
-    before it has already lifted in the same pass included; they stay marked
-    lifted afterwards.  What a generation ahead of the files records when
-    each file claims its helpers for itself ({!claim_lifted}): whether an
-    earlier element of a file lifted one is a question about that file, not
-    about the walk ahead of both. *)
-let collecting_all_lifted f =
-  let seen = (!tctx).output.seen_lifted_refs in
-  update_output (fun o -> {o with seen_lifted_refs = []});
-  Fun.protect
-    ~finally:(fun () ->
-      update_output (fun o ->
-          { o with
-            seen_lifted_refs =
-              List.fold_left
-                (fun acc r -> if List.exists (globref_equal r) acc then acc else r :: acc)
-                seen o.seen_lifted_refs } ) )
-    (fun () -> collecting_lifted f)
-
-(** [claim_lifted ds] is what of [ds] generating them again would lift: those
-    this file has not lifted already, which are marked lifted now. *)
-let claim_lifted ds = snd (collecting_lifted (fun () -> List.iter add_lifted_decl ds))
-
-(** [relift ds] lifts [ds] to the generator collecting the current body's
-    helpers, as generating them again would. *)
+(** [relift ds] lifts [ds] again, to the generation collecting the current
+    body's helpers: a generation that takes another's output takes the
+    helpers lifted out of it along with it. *)
 let relift ds = List.iter add_lifted_decl ds
 
-(** Reset the seen-lifted-refs deduplication set. Call at the start of each
-    new output file so identical helpers in different files are not suppressed. *)
-let clear_seen_lifted_refs () =
-  update_output (fun o -> { o with seen_lifted_refs = [] })
-
 (** Run [f] with the whole translation scope restored afterwards, however [f]
-    leaves -- returning or raising -- while keeping everything [f] {e produced}.
+    leaves -- returning or raising.
 
     This is the bracket to reach for at a scope boundary: it saves the context
-    wholesale and carries only {!translation_output} back out, so it cannot
-    forget a field the way an explicit list of fields can.  Use the single-field
+    wholesale, so it cannot forget a field the way an explicit list of fields
+    can.  What [f] produces is not context: the helpers it lifts go to the
+    generation collecting them ({!collecting_lifted}).  Use the single-field
     {!with_field} brackets instead where the point is precisely that the rest of
     the scope's effects must escape. *)
 let with_scope f =
   let saved = !tctx in
-  Fun.protect ~finally:(fun () -> tctx := { saved with output = (!tctx).output }) f
+  Fun.protect ~finally:(fun () -> tctx := saved) f
 
 (** Prepend bindings to the de Bruijn environment type stack.
     Also shifts all indices in {!cpp_binder_types} upward by [n] to account

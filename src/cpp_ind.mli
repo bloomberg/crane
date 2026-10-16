@@ -94,6 +94,10 @@ val generated_once :
     it for both files. *)
 val generating_ahead : (unit -> 'a) -> 'a
 
+(** Begin a render of a file: under [CRANE_CHECK_IR] the header claims the
+    helpers it places afresh, to check them against the planned claims. *)
+val start_render : unit -> unit
+
 (** A declaration to finish ({!Finished_program.job}). *)
 type finishing = Finished_program.job
 

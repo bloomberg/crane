@@ -19,6 +19,11 @@ let raises_anomaly f =
   | () -> false
   | exception e -> CErrors.is_anomaly e
 
+let raises_user_error f =
+  match f () with
+  | () -> false
+  | exception CErrors.UserError _ -> true
+
 let () =
   Unix.putenv "CRANE_CHECK_IR" "1";
   let helper = Lifted.make ~origin:None ~binder:(Names.Id.of_string "go") in
@@ -52,8 +57,7 @@ let () =
   let check_plan () = Generated_program.check_against_plan ~declares in
   Common.set_phase (Common.Emit Common.Impl);
   ignore (Generated_program.record (entity "a" [h]));
-  Common.set_phase (Common.Emit Common.Intf);
-  Generated_program.record_helper h;
+  Generated_program.record_lifted_ahead [helper_decl];
   check "emitting what the unit declares passes" (not (raises_anomaly check_plan));
   check "the emitted program keeps what it recorded"
     (List.length (Generated_program.entities (Generated_program.emitted Common.Impl)) = 1);
@@ -62,6 +66,13 @@ let () =
   State.reset State.Unit;
   let owned = Lifted.make ~origin:(Some (r "stray")) ~binder:(Names.Id.of_string "go") in
   let owned_decl = Dfun (mk_dfun ~ret:Tvoid (Lifted.ref_of owned) (Ddef ([], []))) in
-  Option.iter Generated_program.record_helper (Generated_program.helper owned_decl);
+  Generated_program.record_lifted_ahead [owned_decl];
   check "a helper lifted out of nothing the unit declares or emits is refused"
-    (raises_anomaly check_plan)
+    (raises_anomaly check_plan);
+  State.reset State.Unit;
+  let again = Dfun (mk_dfun ~ret:Tvoid (Lifted.ref_of owned) (Ddef ([], []))) in
+  Generated_program.record_lifted_ahead [owned_decl; owned_decl];
+  check "a helper handed on to another generation is one helper"
+    (not (raises_user_error (fun () -> Generated_program.record_lifted_ahead [owned_decl])));
+  check "a helper two generations lifted is refused"
+    (raises_user_error (fun () -> Generated_program.record_lifted_ahead [again]))

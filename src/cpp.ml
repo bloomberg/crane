@@ -2168,7 +2168,6 @@ let convert_eponymous_record_fields frame =
     files ({!Cpp_ind.generating_ahead}); the renders take it from there. *)
 let generating_ahead f =
   init_std_names ();
-  Translation.clear_seen_lifted_refs ();
   Cpp_ind.generating_ahead f
 
 (** What finishing [aheads] takes: what each generated, in the order
@@ -2190,6 +2189,7 @@ let finishing (aheads : Cpp_ind.ahead list) =
 let finish_ahead (aheads : Cpp_ind.ahead list) =
   List.iter (fun (a : Cpp_ind.ahead) -> List.iter Generated_program.record_ahead a.entities) aheads;
   let helpers = List.concat_map (fun (a : Cpp_ind.ahead) -> a.helpers) aheads in
+  Generated_program.record_lifted_ahead helpers;
   List.iter (fun (a : Cpp_ind.ahead) -> List.iter Loopify.register_decl a.functions) aheads;
   List.iter (fun h -> if Cpp_pipeline.should_loopify h then Loopify.register_decl h) helpers;
   let program = Finished_program.finish (finishing aheads) in
@@ -3200,7 +3200,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   hoisted_module_structs := [];
   Cpp_ind.discard Cpp_ind.deferred_member_defs;
   Cpp_ind.discard Cpp_ind.file_scope_erased_aliases;
-  Translation.clear_seen_lifted_refs ();
+  Cpp_ind.start_render ();
   init_std_names ();
   (* In Separate Extraction mode the visibility stack is empty when we enter
      here, but analysis helpers (mp_renaming, top_visible, etc.) expect at
