@@ -12,11 +12,13 @@
 
 type t
 
-(** [finalize d] finishes [d] and splits it where it defines a function. *)
-val finalize : Minicpp.cpp_decl -> t
+(** [of_finished d] splits [d], already finished, where it defines a
+    function. *)
+val of_finished : Cpp_erasure.settled -> t
 
-(** [finalize_group ds] is {!finalize} for declarations that may call one
-    another, finished together ({!Cpp_pipeline.finish_group}). *)
+(** [finalize_group ds] finishes declarations that may call one another
+    together ({!Cpp_pipeline.finish_group}), each split as {!of_finished}
+    splits it. *)
 val finalize_group : Minicpp.cpp_decl list -> t list
 
 (** The declaration of the function the entity defines; anything else is its

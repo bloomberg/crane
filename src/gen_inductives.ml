@@ -990,7 +990,8 @@ let generate_method_ahead name vars ((func_ref, _, _, _) as candidate) =
   let generation = collecting_lifted (fun () -> generate_method name vars candidate) in
   Ref.User.Tbl.replace methods_ahead func_ref
     (((name, vars), generation)
-     :: Option.default [] (Ref.User.Tbl.find_opt methods_ahead func_ref) )
+     :: Option.default [] (Ref.User.Tbl.find_opt methods_ahead func_ref) );
+  snd generation
 
 (** [gen_single_method name vars candidate] is the method made of
     [candidate] in the inductive [name] whose variables are [vars], as

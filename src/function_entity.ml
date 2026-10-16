@@ -14,7 +14,6 @@ let of_finished d =
     {declaration; definition; defines_function = true}
   | None -> {declaration = d; definition = d; defines_function = false}
 
-let finalize d = of_finished (Cpp_pipeline.finish d)
 let finalize_group ds = List.map of_finished (Cpp_pipeline.finish_group ds)
 let declaration e = e.declaration
 let definition e = e.definition

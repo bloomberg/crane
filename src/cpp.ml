@@ -764,7 +764,7 @@ let outside_every_struct mp = not (Scope_plan.nested mp)
     the head the definition does; the definition then leaves the template
     defaults to the declaration. *)
 let lifted_views ?(may_hoist = true) (d : cpp_decl) =
-  let e = Function_entity.finalize d in
+  let e = Function_entity.of_finished (Cpp_ind.finished_alone d) in
   let spec = Function_entity.declaration e in
   if Function_entity.defines_function e && may_hoist && spec_is_hoistable spec
   then (Function_entity.definition_after_declaration e, Some spec)
@@ -878,7 +878,7 @@ let dbg_lifted =
         | None -> "<not-a-lifted-helper>"
       in
       let split =
-        let e = Function_entity.finalize d in
+        let e = Function_entity.of_finished (Cpp_pipeline.finish d) in
         if Function_entity.defines_function e then
           let spec = Function_entity.declaration e in
           Printf.sprintf "splits=yes hoistable=%b spec=%S"
@@ -2009,7 +2009,7 @@ let file_views ~is_header (gens : Gen_decls.generated_fun list list) =
         if (file = Gen_decls.Header) = is_header then
           [with_env (Function_entity.definition_after_declaration e)]
         else [] )
-    | Declared d, _ -> ([with_env (Cpp_pipeline.finish d)], [])
+    | Declared d, _ -> ([with_env (Cpp_ind.finished_alone d)], [])
     | Defined _, None -> assert false
   in
   let rec regroup gens views =
@@ -2445,32 +2445,46 @@ let generating_ahead f =
   Translation.clear_seen_lifted_refs ();
   Cpp_ind.generating_ahead f
 
-let generate_decl_ahead d = generating_ahead (fun () -> Cpp_ind.generate_ahead d)
+let generate_decl_ahead d =
+  generating_ahead @@ fun () ->
+  List.iter
+    (fun h -> ignore (Cpp_ind.finished_alone h : Cpp_erasure.settled))
+    (Cpp_ind.generate_ahead d)
 
 let generate_ahead s =
   generating_ahead @@ fun () ->
   (* A wrapper's functions are finished as one group, as {!file_views}
-     finishes them, once the wrapper's last one is generated. *)
+     finishes them, once the wrapper's last one is generated.  The helpers
+     lifted out of anything are finished last, each on its own, once every
+     function they may call is finished. *)
   let wrapper_functions = ref [] in
+  let helpers = ref [] in
+  let lifted hs = helpers := List.rev_append hs !helpers in
   walk_as_rendered
     ~after_wrapper:(fun () ->
-      ignore (Cpp_ind.finalized (List.concat (List.rev !wrapper_functions)));
+      let funs = List.concat (List.rev !wrapper_functions) in
+      ignore (Cpp_ind.finalized funs);
+      lifted (List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) funs);
       wrapper_functions := [] )
     ~decl:(fun ~wrapper se ->
       match se with
       | SEdecl (Dind (kn, ind)) ->
         List.iter
-          (fun (ind_ref, vars, candidate) -> Gen_decls.generate_method_ahead ind_ref vars candidate)
+          (fun (ind_ref, vars, candidate) ->
+            lifted (Gen_decls.generate_method_ahead ind_ref vars candidate) )
           (registered_methods kn ind)
       | _ when wrapper -> (
         match wrapper_element se with
         | Wrapper_functions (_, generate) -> wrapper_functions := generate () :: !wrapper_functions
         | Wrapper_instance (r, a, t) ->
-          ignore (Cpp_ind.instance_entity r a t : Cpp_ind.generated * cpp_decl list)
+          (* Lifted out of the wrapper whole, after its helpers. *)
+          let ds, hs = Cpp_ind.instance_entity r a t in
+          lifted (hs @ List.map snd ds)
         | Wrapper_nothing -> () )
-      | SEdecl d -> Cpp_ind.generate_ahead d
+      | SEdecl d -> lifted (Cpp_ind.generate_ahead d)
       | _ -> ())
-    s
+    s;
+  List.iter (fun h -> ignore (Cpp_ind.finished_alone h : Cpp_erasure.settled)) (List.rev !helpers)
 
 (* The declarations of [s], a functor's body's among them, in order. *)
 let declarations s =

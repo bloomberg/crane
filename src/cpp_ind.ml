@@ -855,6 +855,31 @@ let generate d =
     functions ~lifted:(By_element helpers) funs
   | Dfix fds -> group fds
 
+(** Each declaration finished on its own ahead of the files -- one written
+    without a definition, a lifted helper -- by its physical identity. *)
+let finished_alone_ahead : Cpp_erasure.settled Node_table.t = Node_table.create 64
+
+let () = State.on_reset State.Unit (fun () -> Node_table.reset finished_alone_ahead)
+
+let finished_alone d =
+  let earlier = Node_table.find_opt finished_alone_ahead (Obj.repr d) in
+  match (get_phase (), earlier) with
+  | Plan, _ -> Cpp_pipeline.finish d
+  | Emit _, Some f when !ahead -> f
+  | Emit _, None when !ahead ->
+    let f = Cpp_pipeline.finish d in
+    Node_table.replace finished_alone_ahead (Obj.repr d) f;
+    f
+  | Emit _, Some f ->
+    if Sys.getenv_opt "CRANE_CHECK_IR" <> None && compare f (Cpp_pipeline.finish d) <> 0 then
+      CErrors.anomaly
+        Pp.(str "Crane: a declaration was finished differently ahead of the files and in \
+                 one of them.");
+    f
+  | Emit _, None ->
+    CErrors.anomaly
+      Pp.(str "Crane: a declaration was rendered that was not finished ahead of the files.")
+
 (** The entity each generated definition was finalized as ahead of the
     files, by the physical identity of the declaration generated: a function
     filed in the header is a new record of the same declaration
@@ -897,7 +922,8 @@ let finalized (funs : Gen_decls.generated_fun list) =
       (fun ((g : Gen_decls.generated_fun), e) ->
         match (g.gf_entity, e) with
         | Defined (d, _), Some e -> Node_table.replace finalized_ahead (Obj.repr d) e
-        | _ -> () )
+        | Declared d, _ -> ignore (finished_alone d : Cpp_erasure.settled)
+        | Defined _, None -> () )
       paired;
     paired
   | Emit _ ->
@@ -959,7 +985,7 @@ let function_views ~is_header ~lifted_inline funs =
       let with_env d = (g.gf_env, d) in
       let lifted =
         if is_header && lifted_inline then
-          List.map (fun d -> (empty_env (), Cpp_pipeline.finish d)) g.gf_lifted
+          List.map (fun d -> (empty_env (), finished_alone d)) g.gf_lifted
         else []
       in
       let views =
@@ -976,7 +1002,7 @@ let function_views ~is_header ~lifted_inline funs =
           | Implementation, true -> [with_env (Function_entity.declaration e)]
           | Header, false -> [] )
         | Declared d, _ ->
-          if is_header then [with_env (Cpp_pipeline.finish d)] else []
+          if is_header then [with_env (finished_alone d)] else []
         | Defined _, None -> assert false
       in
       lifted @ views )
@@ -1080,9 +1106,11 @@ let instance_entity r a t =
 
 let generate_ahead d =
   match generate d with
-  | Functions {funs; _} -> ignore (finalized funs : (Gen_decls.generated_fun * Function_entity.t option) list)
-  | Instance (r, a, t) -> ignore (instance_entity r a t : generated * cpp_decl list)
-  | Header_only _ | Nothing -> ()
+  | Functions {funs; _} ->
+    ignore (finalized funs : (Gen_decls.generated_fun * Function_entity.t option) list);
+    List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) funs
+  | Instance (r, a, t) -> snd (instance_entity r a t)
+  | Header_only _ | Nothing -> []
 
 let decls_for ~is_header d =
   match generate d with

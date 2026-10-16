@@ -94,9 +94,17 @@ val generating_ahead : (unit -> 'a) -> 'a
 
 (** Generate, ahead of both files, what the declaration [d] is written as
     that {!impl_decls} and {!header_decls} then take from here: its
-    functions ({!generated_once}), or the struct of the instance it is
-    ({!instance_entity}).  Nothing for any other declaration. *)
-val generate_ahead : Miniml.ml_decl -> unit
+    functions, generated ({!generated_once}) and finished ({!finalized}),
+    or the struct of the instance it is ({!instance_entity}); and return the
+    helpers lifted out of them.  Nothing for any other declaration. *)
+val generate_ahead : Miniml.ml_decl -> Minicpp.cpp_decl list
+
+(** [finished_alone d] is [d] finished on its own ({!Cpp_pipeline.finish}):
+    a declaration written without a definition, or a lifted helper.  Ahead
+    of the files ({!generating_ahead}) it is finished and recorded; a file's
+    pass takes it from there, and finds it missing only as an anomaly.
+    [CRANE_CHECK_IR] finishes again and checks. *)
+val finished_alone : Minicpp.cpp_decl -> Cpp_erasure.settled
 
 (** [finalized funs] pairs each generated function with its entity, every
     definition among them finished as one group
