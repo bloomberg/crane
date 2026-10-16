@@ -855,20 +855,21 @@ let generate d =
     functions ~lifted:(By_element helpers) funs
   | Dfix fds -> group fds
 
+(** The entity each generated definition was finalized as ahead of the
+    files, by the physical identity of the declaration generated: a function
+    filed in the header is a new record of the same declaration
+    ({!functions}). *)
+let finalized_ahead : Function_entity.t Node_table.t = Node_table.create 64
 
-(** The entity each file's pass finalized for each generated function, by
-    physical identity: a generation the other pass reused ({!generated_once})
-    is finished once too. *)
-let finalized_by_file : (file * Function_entity.t option) Node_table.t =
-  Node_table.create 64
-
-let () = State.on_reset State.Unit (fun () -> Node_table.reset finalized_by_file)
+let () = State.on_reset State.Unit (fun () -> Node_table.reset finalized_ahead)
 
 (** [finalized funs] pairs each generated function with its entity, every
     definition among them finished as one group
-    ({!Function_entity.finalize_group}); [None] for a declaration.  A pass
-    takes the other file's entities for functions it reused, checked under
-    [CRANE_CHECK_IR] like the generation itself. *)
+    ({!Function_entity.finalize_group}); [None] for a declaration.  The
+    functions are finished ahead of the files, with the walk that generates
+    them ({!generating_ahead}), and a file's pass takes their entities from
+    there, checked under [CRANE_CHECK_IR] like the generation itself; that it
+    finds one missing is an anomaly. *)
 let finalized (funs : Gen_decls.generated_fun list) =
   let finalize () =
     let entities =
@@ -890,30 +891,37 @@ let finalized (funs : Gen_decls.generated_fun list) =
   in
   match get_phase () with
   | Plan -> finalize ()
-  | Emit file -> (
-    let by_other g =
-      match Node_table.find_opt finalized_by_file (Obj.repr g) with
-      | Some (file', e) when file' <> file -> Some e
-      | _ -> None
+  | Emit _ when !ahead ->
+    let paired = finalize () in
+    List.iter
+      (fun ((g : Gen_decls.generated_fun), e) ->
+        match (g.gf_entity, e) with
+        | Defined (d, _), Some e -> Node_table.replace finalized_ahead (Obj.repr d) e
+        | _ -> () )
+      paired;
+    paired
+  | Emit _ ->
+    let paired =
+      List.map
+        (fun (g : Gen_decls.generated_fun) ->
+          match g.gf_entity with
+          | Declared _ -> (g, None)
+          | Defined (d, _) -> (
+            match Node_table.find_opt finalized_ahead (Obj.repr d) with
+            | Some e -> (g, Some e)
+            | None ->
+              CErrors.anomaly
+                Pp.(str "Crane: a function was rendered that was not finished ahead of the \
+                         files.") ) )
+        funs
     in
-    match List.map by_other funs with
-    | earlier when funs <> [] && List.for_all Option.has_some earlier ->
-      let paired = List.combine funs (List.map Option.get earlier) in
-      if Sys.getenv_opt "CRANE_CHECK_IR" <> None
-         && compare (List.map snd paired) (List.map snd (finalize ())) <> 0
-      then
-        CErrors.anomaly
-          Pp.(str "Crane: the header and the implementation finished one \
-                   declaration differently.");
-      paired
-    | _ ->
-      let paired = finalize () in
-      List.iter
-        (fun (g, e) ->
-          if not (Node_table.mem finalized_by_file (Obj.repr g)) then
-            Node_table.replace finalized_by_file (Obj.repr g) (file, e) )
-        paired;
-      paired )
+    if Sys.getenv_opt "CRANE_CHECK_IR" <> None
+       && compare (List.map snd paired) (List.map snd (finalize ())) <> 0
+    then
+      CErrors.anomaly
+        Pp.(str "Crane: a function was finished differently ahead of the files and in one \
+                 of them.");
+    paired
 
 (** The views of [funs] a file writes, finished: a definition in the file
     that holds it, and in the header a declaration of a definition the
@@ -1072,8 +1080,9 @@ let instance_entity r a t =
 
 let generate_ahead d =
   match generate d with
+  | Functions {funs; _} -> ignore (finalized funs : (Gen_decls.generated_fun * Function_entity.t option) list)
   | Instance (r, a, t) -> ignore (instance_entity r a t : generated * cpp_decl list)
-  | Functions _ | Header_only _ | Nothing -> ()
+  | Header_only _ | Nothing -> ()
 
 let decls_for ~is_header d =
   match generate d with

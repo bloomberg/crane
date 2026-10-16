@@ -2295,10 +2295,12 @@ let registered_methods ?(order = Fun.id) kn ind =
     the inductives local to the enclosing modules.  [wrapper] says [se] is
     one of a wrapper module's own elements, which a render generates as the
     wrapper's ({!pp_wrapper_module_dual}), before any inductive is made
-    local.  A functor's body is walked as the class template it becomes,
+    local; [after_wrapper ()] once a wrapper module's elements have all
+    been walked, still inside it.  A functor's body is walked as the class
+    template it becomes,
     its parameters visible in it.  The visibility stack is restored, not
     popped: popping a file's layer while emitting records its content. *)
-let walk_as_rendered ?(reversed = false) ~decl s =
+let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ~decl s =
   let order l = if reversed then List.rev l else l in
   let analysis = get_structure_analysis () in
   let declared_inductives mp sel =
@@ -2362,7 +2364,9 @@ let walk_as_rendered ?(reversed = false) ~decl s =
   List.iter
     (fun (mi : Structure_analysis.module_info) ->
       if mi.wrapper_name <> None then
-        in_module mi.modpath (fun () -> List.iter (elem ~wrapper:true) (order mi.sels)) )
+        in_module mi.modpath (fun () ->
+            List.iter (elem ~wrapper:true) (order mi.sels);
+            after_wrapper () ) )
     (order analysis.sorted_modules);
   let file_inductives =
     if modular () then
@@ -2445,7 +2449,13 @@ let generate_decl_ahead d = generating_ahead (fun () -> Cpp_ind.generate_ahead d
 
 let generate_ahead s =
   generating_ahead @@ fun () ->
+  (* A wrapper's functions are finished as one group, as {!file_views}
+     finishes them, once the wrapper's last one is generated. *)
+  let wrapper_functions = ref [] in
   walk_as_rendered
+    ~after_wrapper:(fun () ->
+      ignore (Cpp_ind.finalized (List.concat (List.rev !wrapper_functions)));
+      wrapper_functions := [] )
     ~decl:(fun ~wrapper se ->
       match se with
       | SEdecl (Dind (kn, ind)) ->
@@ -2454,7 +2464,7 @@ let generate_ahead s =
           (registered_methods kn ind)
       | _ when wrapper -> (
         match wrapper_element se with
-        | Wrapper_functions (_, generate) -> ignore (generate () : Gen_decls.generated_fun list)
+        | Wrapper_functions (_, generate) -> wrapper_functions := generate () :: !wrapper_functions
         | Wrapper_instance (r, a, t) ->
           ignore (Cpp_ind.instance_entity r a t : Cpp_ind.generated * cpp_decl list)
         | Wrapper_nothing -> () )
