@@ -675,6 +675,12 @@ and lifted_placement =
       (** The element places them, as a constant's or a function's are. *)
   | Unwritten  (** A fixpoint inside a template struct writes none. *)
 
+(** Whether the module being written is one whose members the header
+    defines in a class template ({!Scope_plan.templated}).  Asked of the
+    plan, not of the render context: the implementation writes no template,
+    and generates what the header does all the same. *)
+let in_template () = Scope_plan.templated (top_visible_mp ())
+
 (** [functions ~lifted funs], with every definition filed in the header
     inside a template struct, which has no implementation file. *)
 let functions ~lifted (funs : Gen_decls.generated_fun list) =
@@ -683,16 +689,14 @@ let functions ~lifted (funs : Gen_decls.generated_fun list) =
     | Defined (d, _) -> {g with gf_entity = Defined (d, Header)}
     | Declared _ -> g
   in
-  let funs =
-    if (!render_ctx).rc_in_template then List.map in_header funs else funs
-  in
+  let funs = if in_template () then List.map in_header funs else funs in
   Functions {funs; lifted}
 
 (** {2 Generating once}
 
     Emission decides nothing the plan has not -- {!Extract_env} checks that no
     table grows -- so functions the implementation pass generated are what the
-    header pass would generate at the same declaration in the same context.
+    header pass would generate at the same declaration in the same module.
     The header pass takes them from here instead of translating the bodies
     again.  Under [CRANE_CHECK_IR] it translates them anyway and checks the
     two agree. *)
@@ -705,9 +709,8 @@ module Node_table = Hashtbl.Make (struct
 end)
 
 (** What the implementation pass generated, by the MiniML node it generated
-    it from, with the context it generated it in. *)
-let generated_in_impl :
-    (render_ctx * ModPath.t * Gen_decls.generated_fun list) list Node_table.t =
+    it from, with the module it generated it in. *)
+let generated_in_impl : (ModPath.t * Gen_decls.generated_fun list) list Node_table.t =
   Node_table.create 64
 
 let () = State.on_reset State.Unit (fun () -> Node_table.reset generated_in_impl)
@@ -720,22 +723,23 @@ let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) 
 
 (** [generated_once ?on_reuse node gen] is [gen ()], except that the header
     pass reuses what the implementation pass generated from the physical
-    MiniML node [node] in the same render context and module, handing it to
-    [on_reuse] to replay any effect generating it had. *)
+    MiniML node [node] in the same module, handing it to [on_reuse] to replay
+    any effect generating it had.  Where in the file the node is written does
+    not enter into it: what a generation depends on beyond the node and its
+    module is planned ({!in_template}, {!Common.freeze_global_ids}). *)
 let generated_once ?(on_reuse = ignore) node gen =
   let key = Obj.repr node in
-  let rc = !render_ctx and mp = top_visible_mp () in
+  let mp = top_visible_mp () in
   let earlier = Option.default [] (Node_table.find_opt generated_in_impl key) in
   match get_phase () with
   | Emit Impl ->
     let funs = gen () in
-    Node_table.replace generated_in_impl key ((rc, mp, funs) :: earlier);
+    Node_table.replace generated_in_impl key ((mp, funs) :: earlier);
     funs
   | Emit Intf -> (
     match
       List.find_map
-        (fun (rc', mp', funs) ->
-          if rc' = rc && ModPath.equal mp' mp then Some funs else None )
+        (fun (mp', funs) -> if ModPath.equal mp' mp then Some funs else None)
         earlier
     with
     | Some funs ->
@@ -768,7 +772,7 @@ let generate d =
     | [] -> Nothing
     | fds ->
       functions
-        ~lifted:(if (!render_ctx).rc_in_template then Unwritten else Inline)
+        ~lifted:(if in_template () then Unwritten else Inline)
         (generated_once d (fun () -> gen_dfuns_dual fds))
   in
   match d with
@@ -812,7 +816,7 @@ let generate d =
         Translation.collecting_lifted @@ fun () ->
         match gen_decl_for_pp r a t with
         | Some ds, env, tvars -> (Gen_decls.defined ds tvars, env)
-        | None, _, _ when (!render_ctx).rc_in_template ->
+        | None, _, _ when in_template () ->
           let ds, env, _ = gen_decl r a t in
           (Defined (ds, Header), env)
         | None, _, _ ->

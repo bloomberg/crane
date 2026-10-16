@@ -14,23 +14,30 @@ let qualifier s = String.concat "::" s.qualifier
 type t = {
   scopes : (ModPath.t * scope) list;
   nested : ModPath.t list;
+  templated : ModPath.t list;
 }
 
-let empty = {scopes = []; nested = []}
+let empty = {scopes = []; nested = []; templated = []}
 
 let equal_plans a b =
   List.equal (fun (mp, s) (mp', s') -> ModPath.equal mp mp' && equal s s') a.scopes b.scopes
   && List.equal ModPath.equal a.nested b.nested
+  && List.equal ModPath.equal a.templated b.templated
 
 let installed : scope MPmap.t ref = State.cell State.Unit MPmap.empty
 let installed_nested : MPset.t ref = State.cell State.Unit MPset.empty
+let installed_templated : MPset.t ref = State.cell State.Unit MPset.empty
+
+let set_of = List.fold_left (fun s mp -> MPset.add mp s) MPset.empty
 
 let install t =
   installed := List.fold_left (fun m (mp, s) -> MPmap.add mp s m) MPmap.empty t.scopes;
-  installed_nested := List.fold_left (fun s mp -> MPset.add mp s) MPset.empty t.nested
+  installed_nested := set_of t.nested;
+  installed_templated := set_of t.templated
 
 let of_module mp = MPmap.find_opt mp !installed
 let nested mp = MPset.mem mp !installed_nested
+let templated mp = MPset.mem mp !installed_templated
 
 let of_declaration r =
   let origin =
