@@ -97,8 +97,13 @@ val rename_id : Id.t -> Id.Set.t -> Id.t
 (** de Bruijn environment: names in scope and set of avoided names. *)
 type env = Id.t list * Id.Set.t
 
-(** Create a fresh de Bruijn environment with current global ids. *)
+(** A fresh de Bruijn environment avoiding the global names: those planning
+    decided once {!freeze_global_ids} has run, the current ones before. *)
 val empty_env : unit -> env
+
+(** Fix the global names every later {!empty_env} avoids at the ones decided
+    so far.  Called where planning ends, before any body is generated. *)
+val freeze_global_ids : unit -> unit
 
 (** Prefix of the names Crane introduces itself, which no Rocq identifier is
     spelled with in C++. *)

@@ -56,18 +56,36 @@ let rec unique_name base n =
   let id = Id.of_string (if n = 0 then base else base ^ "_" ^ string_of_int n) in
   if Hashtbl.mem by_name id then unique_name base (n + 1) else id
 
+let ref_of t = GlobRef.VarRef t.name
+
+(** Decide [t]'s name in the unit being extracted, as it is made: a name
+    decided later, when the helper is first printed, is missing from every
+    environment snapshot taken in between -- its origin's among them -- so a
+    file that generates the origin before printing the helper sees a
+    different set of global names than one that generates it after.  The
+    definition is written under {!name} and its calls under the decided name,
+    so the two must agree. *)
+let decide t =
+  let decided = Common.pp_global_name Common.Term (ref_of t) in
+  if not (String.equal decided (Id.to_string t.name)) then
+    CErrors.anomaly
+      Pp.(str "Crane: the helper " ++ Id.print t.name ++ str " would be called as "
+          ++ str decided ++ str ".")
+
 let make ~origin ~binder =
   let key = (origin, binder) in
-  match KeyMap.find_opt key !by_key with
-  | Some t -> t
-  | None ->
-    let name = unique_name (preferred_name ~origin ~binder) 0 in
-    let t = { key; name } in
-    by_key := KeyMap.add key t !by_key;
-    Hashtbl.replace by_name name t;
-    t
-
-let ref_of t = GlobRef.VarRef t.name
+  let t =
+    match KeyMap.find_opt key !by_key with
+    | Some t -> t
+    | None ->
+      let name = unique_name (preferred_name ~origin ~binder) 0 in
+      let t = { key; name } in
+      by_key := KeyMap.add key t !by_key;
+      Hashtbl.replace by_name name t;
+      t
+  in
+  decide t;
+  t
 
 let of_ref = function
   | GlobRef.VarRef id -> Hashtbl.find_opt by_name id

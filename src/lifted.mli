@@ -24,6 +24,9 @@ type t
     returning the same identity -- and so the same spelling -- on every later
     call, which is what lets the header and implementation passes agree.
 
+    The helper's C++ name is decided in the unit being extracted by the same
+    call, so nothing generated after the helper is made can miss it.
+
     [origin] is [None] only for a helper lifted outside any declaration. *)
 val make : origin:Names.GlobRef.t option -> binder:Names.Id.t -> t
 

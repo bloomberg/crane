@@ -580,8 +580,24 @@ let is_methodified_ref r = Ref.User.Map.mem r !methodified_refs
 (** The inductive whose struct [r] is emitted into, if [r] is methodified. *)
 let methodified_owner r = Ref.User.Map.find_opt r !methodified_refs
 
-(** Create a fresh de Bruijn environment with current global ids. *)
-let empty_env () = ([], get_global_ids ())
+(** The global names as planning left them, once it has ({!freeze_global_ids}).
+
+    Emission still names the helpers it lifts out of bodies, so the live set
+    grows while bodies are generated, and an environment snapshotting it would
+    depend on how many helpers the files generated before it had lifted: the
+    header and the implementation would generate one body differently.  So an
+    environment starts from the planned names.  A helper is spelled with
+    {!Generated_name.companion}'s [_crane_] infix, which no local avoids. *)
+let planned_global_ids : Id.Set.t option ref = ref None
+
+let () = register_cleanup (fun () -> planned_global_ids := None)
+
+let freeze_global_ids () = planned_global_ids := Some (get_global_ids ())
+
+let empty_env () =
+  match !planned_global_ids with
+  | Some ids -> ([], ids)
+  | None -> ([], get_global_ids ())
 
 (** We might have built [global_reference] whose canonical part is inaccurate.
     We must hence compare only the user part, hence using a Hashtbl might be

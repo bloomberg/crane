@@ -1129,6 +1129,7 @@ let print_one_decl struc mp decl =
   let d = descr () in
   reset_renaming_tables AllButExternal;
   ignore (plan_layout struc);
+  freeze_global_ids ();
   set_phase (Emit Impl);
   push_visible mp [];
   let ans = d.pp_decl decl in
@@ -1550,6 +1551,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
     (fun r -> Translation_calls.callee_abi ~instances:0 r)
     (Core_elaborate.referenced elaborations);
   let census_after_planning = Table.census () in
+  freeze_global_ids ();
   (* Both bodies are rendered before either file is opened.  A preamble has to
      say what the body it precedes demands -- which headers it includes, which
      unsafe features it uses -- and the body is the only thing that knows.
