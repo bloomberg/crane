@@ -666,6 +666,9 @@ type generation =
   | Header_only of (unit -> generated)
       (** Written in the header alone, and generated only for it: generating
           an inductive's header defers member definitions as it goes. *)
+  | Instance of GlobRef.t * ml_ast * ml_type
+      (** A type-class instance, written in the header alone and generated
+          ahead of both files ({!instance_entity}). *)
   | Nothing
 
 (** Where the helpers lifted out of generated functions are written. *)
@@ -818,8 +821,7 @@ let generate d =
     | t -> Header_only (fun () -> [(empty_env (), gen_type_alias r l (Some t))]) )
   | Dterm (r, a, (Tglob (ty, _, _) as t)) when is_monad ty ->
     group [{fd_ref = r; fd_body = a; fd_type = t}]
-  | Dterm (r, a, t) when is_typeclass_instance a t ->
-    Header_only (fun () -> instance_decls r a t)
+  | Dterm (r, a, t) when is_typeclass_instance a t -> Instance (r, a, t)
   | Dterm (r, a, t) ->
     (* The helpers lifted out of the body are the element's to place.  A
        generation the header pass reuses claims them again, keeping those no
@@ -853,7 +855,6 @@ let generate d =
     functions ~lifted:(By_element helpers) funs
   | Dfix fds -> group fds
 
-let generate_functions d = ignore (generate d : generation)
 
 (** The entity each file's pass finalized for each generated function, by
     physical identity: a generation the other pass reused ({!generated_once})
@@ -1019,6 +1020,61 @@ type element = {
   helpers : cpp_decl list;
 }
 
+(** What was generated ahead of the header for each instance, by the
+    physical node of its body, with the module it was generated in: its
+    declarations, and the helpers lifted out of its methods. *)
+let instances_generated : (ModPath.t * (generated * cpp_decl list)) list Node_table.t =
+  Node_table.create 16
+
+let () = State.on_reset State.Unit (fun () -> Node_table.reset instances_generated)
+
+let same_generated (a : generated) (b : generated) =
+  List.equal
+    (fun ((ids, avoid), d) ((ids', avoid'), d') ->
+      List.equal Id.equal ids ids' && Id.Set.equal avoid avoid' && compare d d' = 0 )
+    a b
+
+(** [instance_entity r a t] is the instance [r], of body [a] and type [t],
+    generated ({!instance_decls}) and recorded as the entity [r], with the
+    helpers lifted out of its methods, which come before it.  It is
+    generated ahead of the files, like a function ({!generated_once}), and
+    taken from there by the header. *)
+let instance_entity r a t =
+  let mp = top_visible_mp () in
+  if !ahead then begin
+    let generation = Translation.collecting_lifted (fun () -> instance_decls r a t) in
+    Node_table.replace instances_generated (Obj.repr a)
+      ((mp, generation)
+       :: Option.default [] (Node_table.find_opt instances_generated (Obj.repr a)) );
+    generation
+  end
+  else
+    match
+      List.find_map
+        (fun (mp', g) -> if ModPath.equal mp' mp then Some g else None)
+        (Option.default [] (Node_table.find_opt instances_generated (Obj.repr a)))
+    with
+    | Some (ds, lifted) ->
+      let helpers = Translation.claim_lifted lifted in
+      ignore (record_entity r (List.map snd ds) helpers);
+      if Sys.getenv_opt "CRANE_CHECK_IR" <> None
+         && not (same_generated ds (fst (Translation.collecting_lifted (fun () -> instance_decls r a t))))
+      then
+        CErrors.anomaly
+          Pp.(str "Crane: the instance " ++ GlobRef.print r
+              ++ str " was generated differently ahead of the header and in it.");
+      (ds, helpers)
+    | None ->
+      CErrors.anomaly
+        Pp.(str "Crane: the instance " ++ GlobRef.print r
+            ++ str " was not generated ahead of the header in the module "
+            ++ str (ModPath.to_string mp) ++ str ".")
+
+let generate_ahead d =
+  match generate d with
+  | Instance (r, a, t) -> ignore (instance_entity r a t : generated * cpp_decl list)
+  | Functions _ | Header_only _ | Nothing -> ()
+
 let decls_for ~is_header d =
   match generate d with
   | Functions {funs; lifted} ->
@@ -1033,7 +1089,10 @@ let decls_for ~is_header d =
   | Header_only ds when is_header ->
     let ds, helpers = generated_entity (decl_entity d) ds in
     { rendered = finished ds; helpers }
-  | Header_only _ | Nothing -> { rendered = []; helpers = [] }
+  | Instance (r, a, t) when is_header ->
+    let ds, helpers = instance_entity r a t in
+    { rendered = finished ds; helpers }
+  | Header_only _ | Instance _ | Nothing -> { rendered = []; helpers = [] }
 
 let impl_decls = decls_for ~is_header:false
 let header_decls = decls_for ~is_header:true

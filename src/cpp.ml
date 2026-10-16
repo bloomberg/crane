@@ -2087,7 +2087,7 @@ let pp_wrapper_module_dual ~is_header func_sels =
     | Wrapper_instance (r, a, t) ->
       (* The helpers lifted out of its methods come first: the instance
          struct calls them. *)
-      let ds, helpers = generated_entity r (fun () -> instance_decls r a t) in
+      let ds, helpers = Cpp_ind.instance_entity r a t in
       ([], helpers @ List.map snd ds)
     | Wrapper_functions (fallback, generate) ->
       let gs = generate () in
@@ -2415,20 +2415,20 @@ let plan_callables ?(reversed = false) s =
     s;
   (List.rev !plans, List.rev !instance_plans)
 
-(** Generate every function the renders write, before either file is
-    rendered (docs/Pipeline-Disentangling-Plan.md, Milestones 1 and 8):
-    each declaration as {!Cpp_ind.generate} generates it, each of a wrapper
-    module's own as {!pp_wrapper_module_dual} does, in the module the render
-    generates it in.  What is generated is recorded for both files
-    ({!Cpp_ind.generating_ahead}); the renders take it from there.  What
-    else a declaration generates -- an inductive, an instance, an alias --
-    is generated for the header as it is rendered. *)
+(** Generate every function the renders write, and every instance's struct,
+    before either file is rendered (docs/Pipeline-Disentangling-Plan.md,
+    Milestones 1 and 8): each declaration as {!Cpp_ind.generate} generates
+    it, each of a wrapper module's own as {!pp_wrapper_module_dual} does, in
+    the module the render generates it in.  What is generated is recorded
+    for both files ({!Cpp_ind.generating_ahead}); the renders take it from
+    there.  An inductive and an alias are still generated for the header as
+    it is rendered. *)
 let generating_ahead f =
   init_std_names ();
   Translation.clear_seen_lifted_refs ();
   Cpp_ind.generating_ahead f
 
-let generate_decl_ahead d = generating_ahead (fun () -> Cpp_ind.generate_functions d)
+let generate_decl_ahead d = generating_ahead (fun () -> Cpp_ind.generate_ahead d)
 
 let generate_ahead s =
   generating_ahead @@ fun () ->
@@ -2437,8 +2437,10 @@ let generate_ahead s =
       if wrapper then
         match wrapper_element se with
         | Wrapper_functions (_, generate) -> ignore (generate () : Gen_decls.generated_fun list)
-        | Wrapper_instance _ | Wrapper_nothing -> ()
-      else match se with SEdecl d -> Cpp_ind.generate_functions d | _ -> ())
+        | Wrapper_instance (r, a, t) ->
+          ignore (Cpp_ind.instance_entity r a t : Cpp_ind.generated * cpp_decl list)
+        | Wrapper_nothing -> ()
+      else match se with SEdecl d -> Cpp_ind.generate_ahead d | _ -> ())
     s
 
 (* The declarations of [s], a functor's body's among them, in order. *)

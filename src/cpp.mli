@@ -44,11 +44,12 @@ val plan_callables :
   Miniml.ml_structure ->
   Callable_abi.t list * (Names.GlobRef.t * (Names.Id.t * Callable_abi.t) list) list
 
-(** Generate every function the renders write, before either file is
-    rendered, for both files ({!Cpp_ind.generating_ahead}). *)
+(** Generate every function the renders write, and every instance's struct,
+    before either file is rendered, for both files
+    ({!Cpp_ind.generating_ahead}). *)
 val generate_ahead : Miniml.ml_structure -> unit
 
-(** Generate the functions one declaration is written as, before it is
+(** Generate what one declaration is written as, before it is
     rendered in the module at the top of the visibility stack: the walk
     {!generate_ahead} would make for a structure holding only it. *)
 val generate_decl_ahead : Miniml.ml_decl -> unit

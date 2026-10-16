@@ -92,11 +92,11 @@ val generated_once :
     it for both files. *)
 val generating_ahead : (unit -> 'a) -> 'a
 
-(** Generate the functions the declaration [d] is written as, for both
-    files: what {!impl_decls} and {!header_decls} then take from
-    {!generated_once}.  Nothing for a declaration that is not written as
-    functions. *)
-val generate_functions : Miniml.ml_decl -> unit
+(** Generate, ahead of both files, what the declaration [d] is written as
+    that {!impl_decls} and {!header_decls} then take from here: its
+    functions ({!generated_once}), or the struct of the instance it is
+    ({!instance_entity}).  Nothing for any other declaration. *)
+val generate_ahead : Miniml.ml_decl -> unit
 
 (** [finalized funs] pairs each generated function with its entity, every
     definition among them finished as one group
@@ -131,6 +131,14 @@ val record_funs : fallback:Names.GlobRef.t -> Gen_decls.generated_fun list -> un
     the helpers are the caller's to place. *)
 val generated_entity :
   Names.GlobRef.t -> (unit -> generated) -> generated * Minicpp.cpp_decl list
+
+(** [instance_entity r a t] is the instance [r], of body [a] and type [t]
+    ({!instance_decls}), recorded as the entity [r], with the helpers lifted
+    out of its methods, which come before it.  Generated ahead of the files
+    ({!generating_ahead}) and taken from there by the header; that it was
+    not is an anomaly.  [CRANE_CHECK_IR] regenerates and checks. *)
+val instance_entity :
+  Names.GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> generated * Minicpp.cpp_decl list
 
 (** What a file writes for one MiniML declaration, and the helpers lifted
     out of it that the element places: a constant's or a function's.  A
