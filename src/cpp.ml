@@ -2375,39 +2375,51 @@ let generating_ahead f =
   Translation.clear_seen_lifted_refs ();
   Cpp_ind.generating_ahead f
 
-let generate_decl_ahead d =
-  generating_ahead @@ fun () ->
-  List.iter
-    (fun h -> ignore (Cpp_ind.finished_alone h : Cpp_erasure.settled))
-    (Cpp_ind.generate_ahead d)
+(** Finish what was generated ahead, [aheads] in the order generated:
+    every function, and every helper Loopify transforms, registered with
+    Loopify before any is finished, so that what it sees of the unit does
+    not depend on which were finished before; the helpers last, once every
+    function they may call is finished. *)
+let finish_ahead (aheads : Cpp_ind.ahead list) =
+  let helpers = List.concat_map (fun (a : Cpp_ind.ahead) -> a.helpers) aheads in
+  List.iter (fun (a : Cpp_ind.ahead) -> List.iter Loopify.register_decl a.functions) aheads;
+  List.iter (fun h -> if Cpp_pipeline.should_loopify h then Loopify.register_decl h) helpers;
+  List.iter (fun (a : Cpp_ind.ahead) -> a.finish ()) aheads;
+  List.iter (fun h -> ignore (Cpp_ind.finished_alone h : Cpp_erasure.settled)) helpers
+
+let generate_decl_ahead d = generating_ahead @@ fun () -> finish_ahead [Cpp_ind.generate_ahead d]
 
 let generate_ahead s =
   generating_ahead @@ fun () ->
-  (* A wrapper's functions are finished as one group, as {!file_views}
-     finishes them, once the wrapper's last one is generated.  The helpers
-     lifted out of anything are finished last, each on its own, once every
-     function they may call is finished. *)
+  (* Everything is generated first, and finished after ({!finish_ahead}).  A
+     wrapper's functions are finished as one group, as {!file_views} finishes
+     them. *)
   let wrapper_functions = ref [] in
-  let helpers = ref [] in
-  let lifted hs = helpers := List.rev_append hs !helpers in
+  let aheads = ref [] in
+  let later (a : Cpp_ind.ahead) = aheads := a :: !aheads in
+  let finishing finish = later {Cpp_ind.functions = []; finish; helpers = []} in
+  let lifted helpers = later {Cpp_ind.functions = []; finish = ignore; helpers} in
   walk_as_rendered
     ~after_module:(fun frame sel ->
       (* The class concepts the module's struct is preceded by. *)
       List.iter
         (fun (_, r, fields) ->
-          ignore (Cpp_ind.finished_alone (Cpp_ind.concept r fields) : Cpp_erasure.settled) )
+          let d = Cpp_ind.concept r fields in
+          finishing (fun () -> ignore (Cpp_ind.finished_alone d : Cpp_erasure.settled)) )
         (declared_classes sel);
       Option.iter
         (fun (r, vars, candidates) ->
           let fields, hs = Cpp_ind.record_methods r vars candidates in
-          if fields <> [] then
-            ignore (Cpp_ind.finished_record_methods r vars fields : Cpp_erasure.settled);
-          lifted hs )
+          later
+            { functions = [];
+              finish =
+                (fun () ->
+                  if fields <> [] then
+                    ignore (Cpp_ind.finished_record_methods r vars fields : Cpp_erasure.settled) );
+              helpers = hs } )
         (eponymous_record_methods frame) )
     ~after_wrapper:(fun () ->
-      let funs = List.concat (List.rev !wrapper_functions) in
-      ignore (Cpp_ind.finalized funs);
-      lifted (List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) funs);
+      later (Cpp_ind.functions_ahead (List.concat (List.rev !wrapper_functions)));
       wrapper_functions := [] )
     ~decl:(fun ~wrapper se ->
       match se with
@@ -2416,8 +2428,8 @@ let generate_ahead s =
           (fun (ind_ref, vars, candidate) ->
             lifted (Gen_decls.generate_method_ahead ind_ref vars candidate) )
           (registered_methods kn ind);
-        lifted (Cpp_ind.generate_ahead d)
-      | SEdecl (Dtype _ as d) -> lifted (Cpp_ind.generate_ahead d)
+        later (Cpp_ind.generate_ahead d)
+      | SEdecl (Dtype _ as d) -> later (Cpp_ind.generate_ahead d)
       | _ when wrapper -> (
         match wrapper_element se with
         | Wrapper_functions (_, generate) -> wrapper_functions := generate () :: !wrapper_functions
@@ -2426,10 +2438,10 @@ let generate_ahead s =
           let ds, hs = Cpp_ind.instance_entity r a t in
           lifted (hs @ List.map snd ds)
         | Wrapper_nothing -> () )
-      | SEdecl d -> lifted (Cpp_ind.generate_ahead d)
+      | SEdecl d -> later (Cpp_ind.generate_ahead d)
       | _ -> ())
     s;
-  List.iter (fun h -> ignore (Cpp_ind.finished_alone h : Cpp_erasure.settled)) (List.rev !helpers);
+  finish_ahead (List.rev !aheads);
   (* A body is a function of its declaration, not of the bodies generated
      before it: under [CRANE_CHECK_IR] everything is generated again in the
      reverse order and must come out the same (the plan's Milestone 4). *)

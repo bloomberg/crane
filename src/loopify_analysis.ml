@@ -262,9 +262,9 @@ let register_fundef
 (** [register_decl d] registers [d] with {!register_fundef} if it is a
     function definition, and does nothing otherwise.
 
-    Callers pre-register a whole group of declarations before rendering any of
-    them, so that the first one rendered can already see the last one in the
-    mutual table. *)
+    Every function of a unit is registered before any is finished
+    ({!Cpp.finish_ahead}), so that what a function sees in the mutual table
+    does not depend on which functions were finished before it. *)
 let register_decl = function
   | Dfun {df_path; df_ret; df_shape = Ddef (params, body)}
   | Dtemplate (_, _, Dfun {df_path; df_ret; df_shape = Ddef (params, body)}) ->

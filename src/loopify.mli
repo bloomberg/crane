@@ -31,7 +31,8 @@ val worthwhile_move_type : cpp_type -> bool
     frame field. *)
 
 (** [register_decl d] makes [d], if it is a function definition, known to
-    mutual-recursion inlining before it is transformed.  Called by
+    mutual-recursion inlining before it is transformed.  Called on every
+    function of a unit before any is finished ({!Cpp.finish_ahead}), and by
     {!Cpp_pipeline.finish_group} on a whole group, so that the first member
     transformed can already see the last. *)
 val register_decl : cpp_decl -> unit

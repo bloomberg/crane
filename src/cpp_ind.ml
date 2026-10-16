@@ -1273,21 +1273,38 @@ let generate_in_scope d k =
   | Dind _ | Dtype _ -> in_header_scope (fun () -> k (generate d))
   | Dterm _ | Dfix _ -> k (generate d)
 
+type ahead = {
+  functions : cpp_decl list;
+  finish : unit -> unit;
+  helpers : cpp_decl list;
+}
+
+let nothing_ahead = {functions = []; finish = ignore; helpers = []}
+
+let functions_ahead (funs : Gen_decls.generated_fun list) =
+  { functions =
+      List.filter_map
+        (fun (g : Gen_decls.generated_fun) ->
+          match g.gf_entity with Defined (d, _) -> Some d | Declared _ -> None )
+        funs;
+    finish =
+      (fun () -> ignore (finalized funs : (Gen_decls.generated_fun * Function_entity.t option) list));
+    helpers = List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) funs }
+
 let generate_ahead d =
   generate_in_scope d @@ function
-  | Functions {funs; _} ->
-    ignore (finalized funs : (Gen_decls.generated_fun * Function_entity.t option) list);
-    List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) funs
+  | Functions {funs; _} -> functions_ahead funs
   | Instance (r, a, t) ->
     let ds, helpers = instance_entity r a t in
-    ignore (finished_instance ds : rendered);
-    helpers
+    {functions = []; finish = (fun () -> ignore (finished_instance ds : rendered)); helpers}
   | Header_only gen ->
     let g, _ = header_entity d gen in
-    ignore (finished_header g.member_defs : rendered);
-    ignore (finished_header g.decls : rendered);
-    []
-  | Nothing -> []
+    { nothing_ahead with
+      finish =
+        (fun () ->
+          ignore (finished_header g.member_defs : rendered);
+          ignore (finished_header g.decls : rendered) ) }
+  | Nothing -> nothing_ahead
 
 let regenerate_ahead d =
   regenerating @@ fun () ->

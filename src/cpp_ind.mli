@@ -92,14 +92,28 @@ val generated_once :
     it for both files. *)
 val generating_ahead : (unit -> 'a) -> 'a
 
+(** What generating a declaration ahead of the files leaves for later: the
+    functions it generated, which Loopify reads while finishing any function
+    of the unit, so that all are registered before any is finished; how to
+    finish what it generated; and the helpers lifted out of it, finished once
+    everything else is. *)
+type ahead = {
+  functions : Minicpp.cpp_decl list;
+  finish : unit -> unit;
+  helpers : Minicpp.cpp_decl list;
+}
+
+(** [functions_ahead funs]: [funs], generated ahead ({!generated_once}),
+    finished later as one group ({!finalized}). *)
+val functions_ahead : Gen_decls.generated_fun list -> ahead
+
 (** Generate, ahead of both files, what the declaration [d] is written as
     that {!impl_decls} and {!header_decls} then take from here: its
-    functions, generated ({!generated_once}) and finished ({!finalized}),
-    the struct of the instance it is ({!instance_entity}), or what the
-    header alone writes of it, generated in the scope the header writes it
-    in ({!header_scope}); and return the helpers lifted out of functions and
-    instances. *)
-val generate_ahead : Miniml.ml_decl -> Minicpp.cpp_decl list
+    functions ({!generated_once}), the struct of the instance it is
+    ({!instance_entity}), or what the header alone writes of it, generated in
+    the scope the header writes it in ({!header_scope}); and say how to
+    finish them. *)
+val generate_ahead : Miniml.ml_decl -> ahead
 
 (** How the header writes a module's body: inside a struct or not, and with
     the module's class concepts already declared ahead of its struct or not.
