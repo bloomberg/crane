@@ -855,6 +855,31 @@ let generate d =
     functions ~lifted:(By_element helpers) funs
   | Dfix fds -> group fds
 
+(** [finished_ahead_once table key finish ~what] is [finish ()] ahead of
+    the files ({!generating_ahead}), recorded in [table] by the physical
+    identity of [key].  A file's pass takes it from there -- finished again
+    and compared under [CRANE_CHECK_IR] -- and finds it missing only as an
+    anomaly about [what]. *)
+let finished_ahead_once table key finish ~what =
+  let earlier = Node_table.find_opt table (Obj.repr key) in
+  match (get_phase (), earlier) with
+  | Plan, _ -> finish ()
+  | Emit _, Some f when !ahead -> f
+  | Emit _, None when !ahead ->
+    let f = finish () in
+    Node_table.replace table (Obj.repr key) f;
+    f
+  | Emit _, Some f ->
+    if Sys.getenv_opt "CRANE_CHECK_IR" <> None && compare f (finish ()) <> 0 then
+      CErrors.anomaly
+        Pp.(str "Crane: " ++ str what
+            ++ str " was finished differently ahead of the files and in one of them.");
+    f
+  | Emit _, None ->
+    CErrors.anomaly
+      Pp.(str "Crane: " ++ str what ++ str " was rendered that was not finished ahead of \
+                                         the files.")
+
 (** Each declaration finished on its own ahead of the files -- one written
     without a definition, a lifted helper -- by its physical identity. *)
 let finished_alone_ahead : Cpp_erasure.settled Node_table.t = Node_table.create 64
@@ -862,23 +887,16 @@ let finished_alone_ahead : Cpp_erasure.settled Node_table.t = Node_table.create 
 let () = State.on_reset State.Unit (fun () -> Node_table.reset finished_alone_ahead)
 
 let finished_alone d =
-  let earlier = Node_table.find_opt finished_alone_ahead (Obj.repr d) in
-  match (get_phase (), earlier) with
-  | Plan, _ -> Cpp_pipeline.finish d
-  | Emit _, Some f when !ahead -> f
-  | Emit _, None when !ahead ->
-    let f = Cpp_pipeline.finish d in
-    Node_table.replace finished_alone_ahead (Obj.repr d) f;
-    f
-  | Emit _, Some f ->
-    if Sys.getenv_opt "CRANE_CHECK_IR" <> None && compare f (Cpp_pipeline.finish d) <> 0 then
-      CErrors.anomaly
-        Pp.(str "Crane: a declaration was finished differently ahead of the files and in \
-                 one of them.");
-    f
-  | Emit _, None ->
-    CErrors.anomaly
-      Pp.(str "Crane: a declaration was rendered that was not finished ahead of the files.")
+  finished_ahead_once finished_alone_ahead d (fun () -> Cpp_pipeline.finish d) ~what:"a declaration"
+
+(** Each root instance's declarations, finished as one group ahead of the
+    files, by the physical identity of their generation. *)
+let instances_finished_ahead : rendered Node_table.t = Node_table.create 16
+
+let () = State.on_reset State.Unit (fun () -> Node_table.reset instances_finished_ahead)
+
+let finished_instance (ds : generated) =
+  finished_ahead_once instances_finished_ahead ds (fun () -> finished ds) ~what:"an instance"
 
 (** The entity each generated definition was finalized as ahead of the
     files, by the physical identity of the declaration generated: a function
@@ -1109,7 +1127,10 @@ let generate_ahead d =
   | Functions {funs; _} ->
     ignore (finalized funs : (Gen_decls.generated_fun * Function_entity.t option) list);
     List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) funs
-  | Instance (r, a, t) -> snd (instance_entity r a t)
+  | Instance (r, a, t) ->
+    let ds, helpers = instance_entity r a t in
+    ignore (finished_instance ds : rendered);
+    helpers
   | Header_only _ | Nothing -> []
 
 let decls_for ~is_header d =
@@ -1128,7 +1149,7 @@ let decls_for ~is_header d =
     { rendered = finished ds; helpers }
   | Instance (r, a, t) when is_header ->
     let ds, helpers = instance_entity r a t in
-    { rendered = finished ds; helpers }
+    { rendered = finished_instance ds; helpers }
   | Header_only _ | Instance _ | Nothing -> { rendered = []; helpers = [] }
 
 let impl_decls = decls_for ~is_header:false
