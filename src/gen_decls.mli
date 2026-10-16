@@ -74,6 +74,12 @@ val plan_function : fixpoint:bool -> GlobRef.t -> ml_ast -> ml_type -> Callable_
 val plan_method :
   GlobRef.t -> Id.t list -> GlobRef.t * ml_ast * ml_type * int -> Callable_abi.t
 
+(** [generate_method_ahead name vars candidate] generates the method made of
+    [candidate] in the inductive [name], whose variables are [vars], before
+    the files are rendered, recording it with the helpers lifted out of its
+    body for the inductive's generation to take. *)
+val generate_method_ahead : GlobRef.t -> Id.t list -> GlobRef.t * ml_ast * ml_type * int -> unit
+
 (** The concrete types the instance [r] -- of body [b] and type [ty] -- gives
     its class's promoted variables, which a call through it substitutes for
     them; none where it builds no record of its class or does not give them

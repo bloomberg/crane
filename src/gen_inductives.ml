@@ -722,7 +722,7 @@ let planned_method_head func_ref vars s =
 
 (** Generate a single method for an inductive type from a method candidate:
     its body, generated under {!method_scope} and its planned head. *)
-let gen_single_method name vars ((func_ref, _, ty, this_pos) as candidate) =
+let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   let s = method_scope name vars candidate in
   (* Promotion moves a function into a struct; it does not change what the
      function returns: see {!method_scope}. *)
@@ -975,6 +975,48 @@ let gen_single_method name vars ((func_ref, _, ty, this_pos) as candidate) =
       },
     VPublic,
     SNoTag )
+
+(** The methods generated ahead of the files, by the function each is made
+    of, with the struct and variables it was generated for, and the helpers
+    lifted out of its body. *)
+let methods_ahead :
+    ((GlobRef.t * Id.t list) * ((cpp_field * cpp_visibility * section_tag) * cpp_decl list)) list
+    Ref.User.Tbl.t =
+  Ref.User.Tbl.create 16
+
+let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset methods_ahead)
+
+let generate_method_ahead name vars ((func_ref, _, _, _) as candidate) =
+  let generation = collecting_lifted (fun () -> generate_method name vars candidate) in
+  Ref.User.Tbl.replace methods_ahead func_ref
+    (((name, vars), generation)
+     :: Option.default [] (Ref.User.Tbl.find_opt methods_ahead func_ref) )
+
+(** [gen_single_method name vars candidate] is the method made of
+    [candidate] in the inductive [name] whose variables are [vars], as
+    generated ahead of the files ({!generate_method_ahead}), its helpers
+    lifted again into the generation that takes it.  Under [CRANE_CHECK_IR]
+    it is generated again and compared. *)
+let gen_single_method name vars ((func_ref, _, _, _) as candidate) =
+  match
+    List.find_map
+      (fun ((name', vars'), g) ->
+        if globref_equal name name' && List.equal Id.equal vars vars' then Some g else None )
+      (Option.default [] (Ref.User.Tbl.find_opt methods_ahead func_ref))
+  with
+  | Some (field, lifted) ->
+    relift lifted;
+    if Probe.checking ()
+       && compare field (fst (collecting_lifted (fun () -> generate_method name vars candidate))) <> 0
+    then
+      CErrors.anomaly
+        Pp.(str "Crane: the method " ++ GlobRef.print func_ref
+            ++ str " was generated differently ahead of the header and in it.");
+    field
+  | None ->
+    CErrors.anomaly
+      Pp.(str "Crane: the method " ++ GlobRef.print func_ref
+          ++ str " was not generated ahead of the files.")
 
 (** Generate C++ header for an inductive type (v2 style: encapsulated struct
     with methods).

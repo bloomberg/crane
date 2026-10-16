@@ -429,6 +429,11 @@ val collecting_lifted : (unit -> 'a) -> 'a * cpp_decl list
     name, and is then marked lifted. *)
 val claim_lifted : cpp_decl list -> cpp_decl list
 
+(** [relift ds] lifts [ds] to the generator collecting the current body's
+    helpers, as generating them again would: each this file has not lifted
+    already. *)
+val relift : cpp_decl list -> unit
+
 (** Reset the seen-lifted-refs deduplication set. Call at the start of each
     new output file so that identical helpers in different files are NOT
     suppressed. *)

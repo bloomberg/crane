@@ -481,6 +481,10 @@ let collecting_lifted f =
     this file has not lifted already, which are marked lifted now. *)
 let claim_lifted ds = snd (collecting_lifted (fun () -> List.iter add_lifted_decl ds))
 
+(** [relift ds] lifts [ds] to the generator collecting the current body's
+    helpers, as generating them again would. *)
+let relift ds = List.iter add_lifted_decl ds
+
 (** Reset the seen-lifted-refs deduplication set. Call at the start of each
     new output file so identical helpers in different files are not suppressed. *)
 let clear_seen_lifted_refs () =

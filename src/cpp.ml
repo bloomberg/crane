@@ -2264,6 +2264,30 @@ let prepare_structure s =
   structure_analysis := Some analysis;
   modules
 
+(** The functions registered as methods of each packet of the inductive
+    [kn] -- its projections apart, which its struct declares itself --, each
+    with the packet's reference and the variables it is generated at: an
+    eponymous record's own declaration's, which its methods are generated
+    with, and otherwise those of the inductive's struct.  The candidates of a
+    packet come in [order]. *)
+let registered_methods ?(order = Fun.id) kn ind =
+  let analysis = get_structure_analysis () in
+  List.concat
+    (List.mapi
+       (fun i p ->
+         let ind_ref = GlobRef.IndRef (kn, i) in
+         if is_custom ind_ref || is_monad ind_ref then []
+         else
+           let vars =
+             if List.exists (globref_equal ind_ref) analysis.eponymous_records then p.ip_vars
+             else Common.ind_struct_tparams kn ind p
+           in
+           List.filter_map
+             (fun ((r, _, _, _) as candidate) ->
+               if Table.is_projection r then None else Some (ind_ref, vars, candidate) )
+             (order (Method_registry.get_candidates (get_method_registry ()) ind_ref)) )
+       (Array.to_list ind.ind_packets) )
+
 (** [walk_as_rendered ?reversed ~decl s] calls [decl ~wrapper se] at each
     declaration element [se] of [s], in the order the renders reach them or,
     if [reversed], the reverse, with what generating a declaration reads of
@@ -2376,7 +2400,6 @@ let walk_as_rendered ?(reversed = false) ~decl s =
     with, and otherwise at those of the inductive's struct. *)
 let plan_callables ?(reversed = false) s =
   let order l = if reversed then List.rev l else l in
-  let analysis = get_structure_analysis () in
   let plans = ref [] in
   let instance_plans = ref [] in
   let plan ~fixpoint r a t =
@@ -2384,20 +2407,10 @@ let plan_callables ?(reversed = false) s =
     then Option.iter (fun abi -> plans := abi :: !plans) (Gen_decls.plan_function ~fixpoint r a t)
   in
   let plan_methods kn ind =
-    Array.iteri
-      (fun i p ->
-        let ind_ref = GlobRef.IndRef (kn, i) in
-        if not (is_custom ind_ref || is_monad ind_ref) then
-          let vars =
-            if List.exists (globref_equal ind_ref) analysis.eponymous_records then p.ip_vars
-            else Common.ind_struct_tparams kn ind p
-          in
-          List.iter
-            (fun ((r, _, _, _) as candidate) ->
-              if not (Table.is_projection r) then
-                plans := Gen_decls.plan_method ind_ref vars candidate :: !plans )
-            (order (Method_registry.get_candidates (get_method_registry ()) ind_ref)) )
-      ind.ind_packets
+    List.iter
+      (fun (ind_ref, vars, candidate) ->
+        plans := Gen_decls.plan_method ind_ref vars candidate :: !plans )
+      (registered_methods ~order kn ind)
   in
   (* A monadic constant is generated as a recursive group of one. *)
   let plan_decl ~wrapper = function
@@ -2434,13 +2447,19 @@ let generate_ahead s =
   generating_ahead @@ fun () ->
   walk_as_rendered
     ~decl:(fun ~wrapper se ->
-      if wrapper then
+      match se with
+      | SEdecl (Dind (kn, ind)) ->
+        List.iter
+          (fun (ind_ref, vars, candidate) -> Gen_decls.generate_method_ahead ind_ref vars candidate)
+          (registered_methods kn ind)
+      | _ when wrapper -> (
         match wrapper_element se with
         | Wrapper_functions (_, generate) -> ignore (generate () : Gen_decls.generated_fun list)
         | Wrapper_instance (r, a, t) ->
           ignore (Cpp_ind.instance_entity r a t : Cpp_ind.generated * cpp_decl list)
-        | Wrapper_nothing -> ()
-      else match se with SEdecl d -> Cpp_ind.generate_ahead d | _ -> ())
+        | Wrapper_nothing -> () )
+      | SEdecl d -> Cpp_ind.generate_ahead d
+      | _ -> ())
     s
 
 (* The declarations of [s], a functor's body's among them, in order. *)
