@@ -799,7 +799,6 @@ let transform_tmc ?(param_inits = []) tparams check params ret_ty body =
   let root_decls =
     match storage with
     | Value_root t ->
-      Common.require_header "optional";
       [ Sdecl_init (id_root, Tid_external ((Cpp_state.sn ()).ns ^ "::optional", [t]));
         Sasgn (id_write, Declare (Tptr head_ty), CPPnullptr) ]
     | Boxed_root _ | Pointer_result _ ->

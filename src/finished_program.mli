@@ -21,7 +21,8 @@ val job : Minicpp.cpp_decl -> job
     assembled from a generation, by the generation. *)
 val job_of : 'a -> Minicpp.cpp_decl -> job
 
-(** [finish jobs] finishes every one of [jobs], in order, once each. *)
+(** [finish jobs] finishes every one of [jobs], in order, once each, and
+    demands the headers each finished declaration needs ({!Cpp_demands}). *)
 val finish : job list -> unit
 
 (** [refinish jobs] finishes [jobs] again, in order, and fails unless each

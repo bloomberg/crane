@@ -1396,16 +1396,7 @@ let gen_ind_header_v2
       end else
 
 
-      (* A field stored as [crane::field] needs its runtime header in the
-         file the struct is rendered into. *)
-      let field_storage_ty var_names ty =
-        let t = constructor_field_storage ~name ~is_coinductive var_names ty in
-        ( match t with
-          | Tid_external (f, _) when String.equal f Crane_rt.field ->
-            Table.demand_header (Table.Runtime Crane_rt.field_header)
-          | _ -> () );
-        t
-      in
+      let field_storage_ty var_names ty = constructor_field_storage ~name ~is_coinductive var_names ty in
       let compute_field_cpp_ty ty =
         let cpp_ty = field_storage_ty vars ty in
         constructor_field_at_own_vars vars cpp_ty
@@ -1861,8 +1852,11 @@ let gen_ind_header_v2
           let unique_fence =
             if Table.non_atomic_rc () then []
             else (
+              (* Raised here, where the fence is made whether or not the
+                 drain writes it, as well as for the fences the drain does
+                 write ({!Cpp_demands}). *)
               Common.require_header "atomic";
-              [Sraw "std::atomic_thread_fence(std::memory_order_acquire);"] )
+              [Sraw Cpp_demands.acquire_fence] )
           in
           let is_sole p =
             CPPbinop (Beq, CPPaccess_call (Adot, p, Id.of_string "use_count", []), CPPint 1)
@@ -2161,7 +2155,6 @@ let gen_ind_header_v2
             in
             if not self_recursive then body_for None e
             else begin
-              Table.mark_needs_small_vector ();
               let wl = fresh_hv "_hw" in
               let wl_id = Id.of_string wl in
               let pv = Id.of_string (wl ^ "p")
@@ -2435,7 +2428,6 @@ let gen_ind_header_v2
             (* Self-recursive only: stack holds shared_ptr<Self> directly *)
             let stack_elem_ty = Tshared_ptr self_ty in
             let stack_ty =
-              Table.mark_needs_small_vector ();
               Tid_external (Crane_rt.small_vector, [stack_elem_ty])
             in
             let _drain_id = Id.of_string "_drain" in
@@ -2547,7 +2539,6 @@ let gen_ind_header_v2
             (* Mutual recursion: stack holds std::any to accommodate
                shared_ptrs of different types in the mutual group *)
             let stack_ty =
-              Table.mark_needs_small_vector ();
               Tid_external (Crane_rt.small_vector, [Tany])
             in
             let _drain_self_id = Id.of_string "_drain_self" in

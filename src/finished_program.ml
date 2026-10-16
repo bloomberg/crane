@@ -23,7 +23,11 @@ let finishes_as ((_, d) : job) f = compare f (Cpp_pipeline.finish d) = 0
 let finish jobs =
   List.iter
     (fun (key, d) ->
-      if not (Node_table.mem finished key) then Node_table.replace finished key (Cpp_pipeline.finish d) )
+      if not (Node_table.mem finished key) then begin
+        let f = Cpp_pipeline.finish d in
+        Cpp_demands.demand (f :> Minicpp.cpp_decl);
+        Node_table.replace finished key f
+      end )
     jobs
 
 let find ((key, _) : job) = Node_table.find_opt finished key

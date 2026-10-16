@@ -2148,7 +2148,6 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
      loopified comparison functions are called once per key comparison, so
      that allocation showed up as a third of all allocations in a
      comparison-heavy workload. *)
-  Table.mark_needs_small_vector ();
   let vector_ty =
     Tid_external (Crane_rt.small_vector, [frame_ty])
   in
