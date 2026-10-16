@@ -1972,8 +1972,8 @@ let registered_methods ?(order = Fun.id) kn ind =
     functor.  A
     functor's body is walked as the class
     template it becomes,
-    its parameters visible in it.  The visibility stack is restored, not
-    popped: popping a file's layer while emitting records its content. *)
+    its parameters visible in it.  Each module is walked with the stack it
+    was entered with restored after it, as the render restores it. *)
 let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
     ?(after_module = fun _ _ -> ()) ?(modtype = fun _ ~params mt -> Modtype_concept.generate ~params mt)
     ~decl s =
@@ -3270,6 +3270,7 @@ let do_struct_with_decl_tracking ~is_header f s =
       wrapper_names
   end;
   let ppl ((mp, sel), wrapper_name) =
+    with_visibility (current_visibility ()) @@ fun () ->
     let old_decls = !current_structure_decls in
     current_structure_decls := sel;
     push_visible mp [];
@@ -3463,7 +3464,6 @@ let do_struct_with_decl_tracking ~is_header f s =
           prlist_sep_nonempty cut2 f sel
     in
     current_structure_decls := old_decls;
-    if modular () then pop_visible ();
     p
   in
   let rendered = List.map (fun wn -> (wn, ppl wn)) wrapper_names in
@@ -3501,8 +3501,6 @@ let do_struct_with_decl_tracking ~is_header f s =
       | Some main_p -> [p_pre; main_p]
       | None -> [p_pre] )
   in
-  if not (modular ()) then
-    repeat (List.length wrapper_names) pop_visible ();
   (* Pop the initial visibility entries pushed at the top of this function. *)
   List.iter (fun _ -> pop_visible ()) initial_mps;
   let hoisted_erased_aliases =
