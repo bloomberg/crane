@@ -1311,8 +1311,8 @@ let rec pp_structure_elem ~is_header f = function
                 in
                 (* [fields] already pairs each projection with its type:
                    extraction selected the two together. *)
-                let field_list = fields in
-                let pp_field i (field_ref, field_ty) =
+                let field_types = Cpp_ind.record_field_types epon_ref ty_vars fields in
+                let pp_field i (field_ref, _) cpp_ty =
                   let field_name =
                     match field_ref with
                     | Some r -> str (Common.pp_global_name Term r)
@@ -1321,19 +1321,11 @@ let rec pp_structure_elem ~is_header f = function
                        would not compile).  Matches gen_decls.ml. *)
                     | None -> str ("_field" ^ string_of_int i)
                   in
-                  let cpp_ty =
-                    pp_cpp_type
-                      false
-                      ty_vars
-                      (convert_ml_type_to_cpp_type
-                         (empty_env ())
-                         ty_vars
-                         field_ty )
-                  in
-                  cpp_ty ++ spc () ++ field_name ++ str ";"
+                  pp_cpp_type false ty_vars cpp_ty ++ spc () ++ field_name ++ str ";"
                 in
                 let fields_pp =
-                  prlist_with_sep fnl (fun p -> p) (List.mapi pp_field field_list)
+                  prlist_with_sep fnl (fun p -> p)
+                    (List.mapi (fun i (f, ty) -> pp_field i f ty) (List.combine fields field_types))
                   ++ fnl ()
                 in
                 let method_fields, method_helpers =
@@ -2169,14 +2161,27 @@ let plan_callables ?(reversed = false) s =
     s;
   (List.rev !plans, List.rev !instance_plans)
 
-(** The record, variables and candidates of the methods the header gives
-    the eponymous record of a module of frame [frame], if it gives any: a
+(** The eponymous record of a module of frame [frame] that the header merges
+    into the module's struct, with its fields and packet, if it has one: a
     record merged into a struct that is not a promoted inductive's. *)
-let eponymous_record_methods (frame : Module_frame.t) =
+let merged_eponymous_record (frame : Module_frame.t) =
   match frame.eponymous_record with
-  | Some (r, _, packet) when frame.promoted = None ->
-    Some (r, packet.ip_vars, record_method_candidates frame.method_candidates)
+  | Some record when frame.promoted = None -> Some record
   | Some _ | None -> None
+
+(** The record, variables and candidates of the methods the header gives
+    the eponymous record of a module of frame [frame], if it gives any. *)
+let eponymous_record_methods (frame : Module_frame.t) =
+  Option.map
+    (fun (r, _, packet) -> (r, packet.ip_vars, record_method_candidates frame.method_candidates))
+    (merged_eponymous_record frame)
+
+(** Convert the types of the fields the header writes for the eponymous
+    record of a module of frame [frame], if it writes any. *)
+let convert_eponymous_record_fields frame =
+  Option.iter
+    (fun (r, fields, packet) -> ignore (Cpp_ind.record_field_types r packet.ip_vars fields))
+    (merged_eponymous_record frame)
 
 (** Generate every declaration the renders write before either file is
     rendered (docs/Pipeline-Disentangling-Plan.md, Milestones 1, 8 and 9):
@@ -2235,6 +2240,7 @@ let generate_ahead s =
               finishing = [Cpp_ind.finishing d];
               helpers = [] } )
         (declared_classes sel);
+      convert_eponymous_record_fields frame;
       Option.iter
         (fun (r, vars, candidates) ->
           let fields, hs = Cpp_ind.record_methods r vars candidates in
@@ -2291,6 +2297,7 @@ let generate_ahead s =
     Finished_program.refinish (finishing (List.rev aheads));
     walk_as_rendered ~reversed:true ~modtype:Cpp_ind.modtype_concept
       ~after_module:(fun frame _ ->
+        convert_eponymous_record_fields frame;
         Option.iter
           (fun (r, vars, candidates) -> ignore (Cpp_ind.record_methods r vars candidates))
           (eponymous_record_methods frame) )

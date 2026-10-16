@@ -214,6 +214,14 @@ val record_methods :
   Method_registry.method_candidate list ->
   (Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag) list * Minicpp.cpp_decl list
 
+(** [record_field_types r vars fields] is the C++ type of each of the
+    fields [fields] of the eponymous record [r], of variables [vars], which
+    the header writes in the struct [r] is merged into: converted ahead of
+    the files, and taken from there by the header, which converts them again
+    under [CRANE_CHECK_IR] to compare. *)
+val record_field_types :
+  Names.GlobRef.t -> Names.Id.t list -> Miniml.record_field list -> Minicpp.cpp_type list
+
 (** [record_methods_finishing r vars fields] is what finishing [fields],
     the methods of the eponymous record [r] of variables [vars], takes: the
     members of its module's struct, recorded by [fields] itself, as

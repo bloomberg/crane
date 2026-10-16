@@ -1258,6 +1258,25 @@ let record_methods r vars candidates =
     (fun () ->
       Translation.collecting_all_lifted (fun () -> Gen_decls.gen_record_methods r vars candidates) )
 
+(** The C++ types of each eponymous record's fields, converted ahead of the
+    files, by the record. *)
+let record_field_types_generated : (ModPath.t * cpp_type list) list Ref.User.Tbl.t =
+  Ref.User.Tbl.create 8
+
+let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset record_field_types_generated)
+
+(** [record_field_types r vars fields] is the C++ type of each of the fields
+    [fields] of the eponymous record [r], of variables [vars], as the header
+    writes them in the struct [r] is merged into: converted ahead of the
+    files, and taken from there by the header ({!ahead_once}). *)
+let record_field_types r vars (fields : Miniml.record_field list) =
+  ahead_once
+    ~what:(fun () -> Pp.(str "the field types of the record " ++ GlobRef.print r))
+    ~recorded:(fun () -> Option.default [] (Ref.User.Tbl.find_opt record_field_types_generated r))
+    ~record:(Ref.User.Tbl.replace record_field_types_generated r)
+    ~same:(fun tys tys' -> compare tys tys' = 0)
+    (fun () -> List.map (fun (_, ty) -> Translation.convert_ml_type_to_cpp_type (empty_env ()) vars ty) fields)
+
 (** What finishing the methods [fields] of the eponymous record [r], of
     variables [vars], takes: the struct members they are, recorded by the
     physical identity of their generation. *)
