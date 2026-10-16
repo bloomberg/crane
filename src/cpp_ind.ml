@@ -694,12 +694,14 @@ let functions ~lifted (funs : Gen_decls.generated_fun list) =
 
 (** {2 Generating once}
 
-    Emission decides nothing the plan has not -- {!Extract_env} checks that no
-    table grows -- so functions one file's pass generated are what the other
-    file's would generate at the same declaration in the same module.  The
-    pass that comes second takes them from here instead of translating the
-    bodies again, whichever file it writes.  Under [CRANE_CHECK_IR] it
-    translates them anyway and checks the two agree. *)
+    The functions generated at a declaration in a module are the same
+    whichever file is being written: emission decides nothing the plan has
+    not -- {!Extract_env} checks that no table grows -- and what a
+    generation reads beyond its declaration and module is planned
+    ({!in_template}, {!Common.freeze_global_ids}).  So every function is
+    generated once, ahead of both files ({!generating_ahead}), and each
+    file's pass takes it from here.  Under [CRANE_CHECK_IR] a pass
+    translates it again anyway and checks the two agree. *)
 
 module Node_table = Hashtbl.Make (struct
   type t = Obj.t
@@ -708,13 +710,18 @@ module Node_table = Hashtbl.Make (struct
   let hash = Hashtbl.hash
 end)
 
-(** What each file's pass generated, by the MiniML node it generated it
-    from, with the module it generated it in. *)
-let generated_by_file :
-    (file * ModPath.t * Gen_decls.generated_fun list) list Node_table.t =
+(** What was generated ahead of the files, by the MiniML node it was
+    generated from, with the module it was generated in. *)
+let generated : (ModPath.t * Gen_decls.generated_fun list) list Node_table.t =
   Node_table.create 64
 
-let () = State.on_reset State.Unit (fun () -> Node_table.reset generated_by_file)
+let () = State.on_reset State.Unit (fun () -> Node_table.reset generated)
+
+let ahead = ref false
+
+let generating_ahead f =
+  ahead := true;
+  Fun.protect ~finally:(fun () -> ahead := false) f
 
 (* [compare] rather than [=]: a NaN literal is equal to itself. *)
 let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) =
@@ -722,24 +729,27 @@ let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) 
   && List.equal Id.equal (fst a.gf_env) (fst b.gf_env)
   && Id.Set.equal (snd a.gf_env) (snd b.gf_env)
 
-(** [generated_once ?on_reuse node gen] is [gen ()], except that a pass
-    reuses what the other file's pass generated from the physical MiniML node
-    [node] in the same module, handing it to [on_reuse] to replay any effect
-    generating it had.  Where in the file the node is written does not enter
-    into it: what a generation depends on beyond the node and its module is
-    planned ({!in_template}, {!Common.freeze_global_ids}). *)
+(** [generated_once ?on_reuse node gen] is [gen ()] ahead of the files,
+    recorded by the physical MiniML node [node] and the module it is
+    generated in.  A file's pass takes what was recorded at [node] in the
+    same module, handing it to [on_reuse] to replay any effect generating it
+    had; that nothing was is a walk ahead that missed a declaration a render
+    reaches. *)
 let generated_once ?(on_reuse = ignore) node gen =
   match get_phase () with
   | Plan -> gen ()
-  | Emit file -> (
+  | Emit _ when !ahead ->
     let key = Obj.repr node in
+    let funs = gen () in
+    Node_table.replace generated key
+      ((top_visible_mp (), funs) :: Option.default [] (Node_table.find_opt generated key));
+    funs
+  | Emit _ -> (
     let mp = top_visible_mp () in
-    let earlier = Option.default [] (Node_table.find_opt generated_by_file key) in
     match
       List.find_map
-        (fun (file', mp', funs) ->
-          if file' <> file && ModPath.equal mp' mp then Some funs else None )
-        earlier
+        (fun (mp', funs) -> if ModPath.equal mp' mp then Some funs else None)
+        (Option.default [] (Node_table.find_opt generated (Obj.repr node)))
     with
     | Some funs ->
       on_reuse funs;
@@ -747,14 +757,15 @@ let generated_once ?(on_reuse = ignore) node gen =
         let again, _ = Translation.collecting_lifted gen in
         if not (List.equal same_generation funs again) then
           CErrors.anomaly
-            Pp.(str "Crane: the header and the implementation generated one \
-                     declaration differently.")
+            Pp.(str "Crane: a function was generated differently ahead of the \
+                     files and in one of them.")
       end;
       funs
     | None ->
-      let funs = gen () in
-      Node_table.replace generated_by_file key ((file, mp, funs) :: earlier);
-      funs )
+      CErrors.anomaly
+        Pp.(str "Crane: a function was reached while rendering in the module "
+            ++ str (ModPath.to_string mp)
+            ++ str " that was not generated ahead of the files there.") )
 
 (** [generate d] is what the MiniML declaration [d] generates, for whichever
     file is being written: functions translated once, with their file
@@ -762,10 +773,11 @@ let generated_once ?(on_reuse = ignore) node gen =
     projections merged into a struct, and functions emitted as methods
     generate nothing. *)
 let generate d =
+  (* A method candidate is a registered method
+     ({!Method_registry.planned_candidate}). *)
   let skipped r =
     is_eponymous_record_projection r
     || is_suppressed_projection r
-    || List.exists (fun (r', _, _, _) -> globref_equal r r') !method_candidates
     || is_registered_method r <> None
   in
   let group fds =
@@ -840,6 +852,8 @@ let generate d =
     in
     functions ~lifted:(By_element helpers) funs
   | Dfix fds -> group fds
+
+let generate_functions d = ignore (generate d : generation)
 
 (** The entity each file's pass finalized for each generated function, by
     physical identity: a generation the other pass reused ({!generated_once})

@@ -1132,6 +1132,7 @@ let print_one_decl struc mp decl =
   freeze_global_ids ();
   set_phase (Emit Impl);
   push_visible mp [];
+  Cpp.generate_decl_ahead decl;
   let ans = d.pp_decl decl in
   pop_visible ();
   (* The one box the printers rely on: inside it every break is a newline,
@@ -1572,12 +1573,17 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
     Pipeline_trace.event "emit" "render_intf";
     d.pp_hstruct struc
   in
+  let intf_first = Sys.getenv_opt "CRANE_RENDER_ORDER" = Some "intf-first" in
+  (* Every function is generated before either render, emitting as the file
+     rendered first does: calls read the plans emission reads. *)
+  set_phase (Emit (if intf_first then Intf else Impl));
+  Pipeline_trace.event "emit" "generate_ahead";
+  Cpp.generate_ahead struc;
   let body_impl, body_hstruct =
-    match Sys.getenv_opt "CRANE_RENDER_ORDER" with
-    | Some "intf-first" ->
+    if intf_first then
       let intf = render_intf () in
       (render_impl (), intf)
-    | _ ->
+    else
       let impl = render_impl () in
       (impl, render_intf ())
   in

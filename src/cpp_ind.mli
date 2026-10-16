@@ -74,17 +74,29 @@ val instance_decls :
 val plan_instance_methods :
   Names.GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> (Names.Id.t * Callable_abi.t) list
 
-(** [generated_once ?on_reuse node gen] is [gen ()], except that the header
-    pass reuses what the implementation pass generated from the physical
-    MiniML node [node] in the same render context and module -- emission
-    decides nothing the plan has not, so the two agree -- handing it to
-    [on_reuse] to replay any effect generating it had.  [CRANE_CHECK_IR]
+(** [generated_once ?on_reuse node gen] is [gen ()] ahead of the files
+    ({!generating_ahead}), recorded by the physical MiniML node [node] and
+    the module it is generated in.  A file's pass takes what was recorded
+    there -- emission decides nothing the plan has not, so it is what the
+    pass would generate -- handing it to [on_reuse] to replay any effect
+    generating it had; that nothing was is an anomaly.  [CRANE_CHECK_IR]
     regenerates and checks. *)
 val generated_once :
   ?on_reuse:(Gen_decls.generated_fun list -> unit) ->
   'node ->
   (unit -> Gen_decls.generated_fun list) ->
   Gen_decls.generated_fun list
+
+(** [generating_ahead f] runs [f], a walk generating every function before
+    either file is rendered, recording what {!generated_once} generates in
+    it for both files. *)
+val generating_ahead : (unit -> 'a) -> 'a
+
+(** Generate the functions the declaration [d] is written as, for both
+    files: what {!impl_decls} and {!header_decls} then take from
+    {!generated_once}.  Nothing for a declaration that is not written as
+    functions. *)
+val generate_functions : Miniml.ml_decl -> unit
 
 (** [finalized funs] pairs each generated function with its entity, every
     definition among them finished as one group
