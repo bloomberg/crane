@@ -312,6 +312,9 @@ val global_visibility : visibility
     {!push_visible} would make it. *)
 val inside : ?members:Id.Set.t -> ModPath.t -> ModPath.t list -> visibility -> visibility
 
+(** The visibility enclosing the innermost scope of [v]. *)
+val enclosing_visibility : visibility -> visibility
+
 val equal_visibility : visibility -> visibility -> bool
 
 (** The scopes of a visibility, innermost first, for a diagnostic. *)

@@ -691,6 +691,8 @@ let global_visibility = []
 
 let inside ?(members = Id.Set.empty) mp params v = {mp; params; members} :: v
 
+let enclosing_visibility = function [] -> [] | _ :: outer -> outer
+
 let equal_visibility =
   List.equal (fun a b ->
       ModPath.equal a.mp b.mp

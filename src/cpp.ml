@@ -785,22 +785,23 @@ let is_wrapped_child mp =
   | Some (Flattened | Bystander) -> true
   | Some Own | None -> false
 
-(** Under [CRANE_CHECK_IR], that the body of the module [mp] is being
-    written in the visibility planned for it ({!plan_visibility}). *)
-let check_planned_visibility mp =
-  if Probe.checking () then
-    let actual = current_visibility () in
-    match Scope_plan.visibility mp with
-    | Some planned when equal_visibility planned actual -> ()
-    | planned ->
-      Probe.violation "visibility chains"
-        Pp.(
-          str "the module " ++ str (ModPath.to_string mp) ++ str " is written in "
-          ++ pp_visibility actual
-          ++
-          match planned with
-          | None -> str ", with no visibility planned"
-          | Some p -> str ", planned in " ++ pp_visibility p)
+(** [in_planned_visibility mp k] runs [k] in the visibility planned for the
+    body of the module [mp] ({!plan_visibility}).  Under [CRANE_CHECK_IR],
+    the body must be entered from the scope its plan nests it in. *)
+let in_planned_visibility mp k =
+  match Scope_plan.visibility mp with
+  | None ->
+    CErrors.anomaly
+      Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
+  | Some planned ->
+    ( if Probe.checking () then
+        let actual = current_visibility () in
+        if not (equal_visibility (enclosing_visibility planned) actual) then
+          Probe.violation "visibility chains"
+            Pp.(
+              str "the module " ++ str (ModPath.to_string mp) ++ str " is entered from "
+              ++ pp_visibility actual ++ str ", planned in " ++ pp_visibility planned) );
+    with_visibility planned k
 
 (** Whether the module [mp], of elements [sel], has a child a name collision
     puts inside a wrapper struct, which then holds all of [mp]'s elements:
@@ -1019,11 +1020,7 @@ let rec pp_structure_elem ~is_header f = function
             with_render_ctx
               (fun c -> { c with rc_in_struct = true; rc_in_template = true })
               (fun () ->
-                pp_module_expr
-                  ~is_header
-                  f
-                  (List.map (fun (mbid, _) -> MPbound mbid) template_params)
-                  body )
+                pp_module_expr ~is_header f body )
           in
           (match body with
           | MEapply _ ->
@@ -1047,7 +1044,7 @@ let rec pp_structure_elem ~is_header f = function
         if not is_header then
           mt ()
         else
-          let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
+          let body = pp_module_expr ~is_header f m.ml_mod_expr in
           let using_decl =
             str "using " ++ name ++ str " = " ++ body ++ str ";"
           in
@@ -1209,7 +1206,7 @@ let rec pp_structure_elem ~is_header f = function
                     setting
                       held_back_concepts
                       (this_held_back @ !held_back_concepts)
-                      (fun () -> pp_module_expr ~is_header f [] m.ml_mod_expr)
+                      (fun () -> pp_module_expr ~is_header f m.ml_mod_expr)
                   in
                   (body, !method_candidates) )
             in
@@ -1538,7 +1535,7 @@ and pp_module_app ~is_header f me me' =
       let r = Common.resolve_module mp in
       (str (wrapper_qualify_modname mp (Common.resolved_string r)), Some r)
     | MEapply (g, g') -> pp_module_app ~is_header f g g'
-    | _ -> (pp_module_expr ~is_header f [] me, None)
+    | _ -> (pp_module_expr ~is_header f me, None)
   in
   let is_qualified = function
     | Some r -> Common.resolved_is_qualified r
@@ -1571,18 +1568,15 @@ and pp_module_app ~is_header f me me' =
     @param is_header  Controls header vs. implementation rendering (see
                       {!pp_structure_elem}).
     @param f          Callback for rendering individual declarations inside an
-                      [MEstruct] body.
-    @param params     Bound module paths accumulated from enclosing [MEfunctor]
-                      binders; pushed onto the visibility stack when the
-                      [MEstruct] body is entered.
+                      [MEstruct] body, which is written in the visibility
+                      planned for it ({!in_planned_visibility}).
     @return Pretty-printer document for the module expression. For [MEident]
             this is the qualified module name; for [MEapply] a template
             instantiation; for [MEstruct] the indented body of declarations. *)
-and pp_module_expr ~is_header f params = function
+and pp_module_expr ~is_header f = function
   | MEident mp -> pp_modname mp
   | MEapply (me, me') -> fst (pp_module_app ~is_header f me me')
-  | MEfunctor (mbid, mt, me) ->
-    pp_module_expr ~is_header f (MPbound mbid :: params) me
+  | MEfunctor (_, _, me) -> pp_module_expr ~is_header f me
   | MEstruct (mp, sel) ->
     if is_header && Probe.checking () && (!render_ctx).rc_in_template <> Scope_plan.templated mp then
       Probe.violation "templated modules"
@@ -1605,8 +1599,7 @@ and pp_module_expr ~is_header f params = function
         Probe.violation "header scopes"
           Pp.(str "the module " ++ str (ModPath.to_string mp) ++ str " has no planned scope")
     end;
-    push_visible ~members:(member_names_of_sel sel) mp params;
-    check_planned_visibility mp;
+    in_planned_visibility mp @@ fun () ->
     let old_structure_decls = !current_structure_decls in
     current_structure_decls := sel;
     let old_local_inductives = get_local_inductives () in
@@ -1648,7 +1641,6 @@ and pp_module_expr ~is_header f params = function
     clear_local_inductives ();
     List.iter add_local_inductive old_local_inductives;
     current_structure_decls := old_structure_decls;
-    pop_visible ();
     if List.is_empty l then
       mt ()
     else
@@ -1990,8 +1982,8 @@ let registered_methods ?(order = Fun.id) kn ind =
     functor.  A
     functor's body is walked as the class
     template it becomes,
-    its parameters visible in it.  Each module is walked with the stack it
-    was entered with restored after it, as the render restores it. *)
+    its parameters visible in it.  Each module is walked in the visibility
+    planned for it ({!in_planned_visibility}), as the render writes it. *)
 let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
     ?(after_module = fun _ _ -> ()) ?(modtype = fun _ ~params mt -> Modtype_concept.generate ~params mt)
     ~decl s =
@@ -2009,11 +2001,9 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
   in
   let restoring_visible k = with_visibility (current_visibility ()) k in
   let header = ref {Cpp_ind.in_struct = false; concepts_hoisted = false} in
-  let in_module ?(params = []) mp sel k =
+  let in_module mp sel k =
     Cpp_ind.plan_header_scope mp !header;
-    restoring_visible @@ fun () ->
-    push_visible mp params;
-    setting current_structure_decls sel k
+    in_planned_visibility mp @@ fun () -> setting current_structure_decls sel k
   in
   let in_header_scope scope k = setting header scope k in
   let modtypes mp ~params sel =
@@ -2080,14 +2070,14 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
       with_render_ctx
         (fun c -> {c with rc_in_struct = true; rc_in_template = true})
         (fun () ->
-          in_header_scope {!header with in_struct = true} (fun () -> module_expr ~params body) )
+          in_header_scope {!header with in_struct = true} (fun () -> module_expr body) )
     | SEmodule {ml_mod_expr = MEstruct (_, sel) as me; _} ->
-      in_module_frame (MPdot (top_visible_mp (), l)) sel (fun () -> module_expr ~params:[] me)
-    | SEmodule {ml_mod_expr; _} -> module_expr ~params:[] ml_mod_expr
+      in_module_frame (MPdot (top_visible_mp (), l)) sel (fun () -> module_expr me)
+    | SEmodule {ml_mod_expr; _} -> module_expr ml_mod_expr
     | SEmodtype m -> ignore (modtype (MPdot (top_visible_mp (), l)) ~params:[] m)
-  and module_expr ~params = function
+  and module_expr = function
     | MEstruct (mp, sel) ->
-      in_module ~params mp sel (fun () ->
+      in_module mp sel (fun () ->
           with_local_inductives (declared_inductives mp sel) (fun () ->
               List.iter (elem ~wrapper:false) (order sel) ) )
     | MEident _ | MEapply _ | MEfunctor _ -> ()
@@ -3224,8 +3214,8 @@ let do_struct_with_decl_tracking ~is_header f s =
   (* In Separate Extraction mode the visibility stack is empty when we enter
      here, but analysis helpers (mp_renaming, top_visible, etc.) expect at
      least one entry.  Push the top-level module paths now; they will be
-     popped at the end of this function.  The inner per-module push/pop in
-     [ppl] adds a second layer which is harmless. *)
+     popped at the end of this function.  [ppl] writes each module in the
+     visibility planned for it, which has them beneath it. *)
   let initial_mps =
     List.filter_map
       (fun (mp, _) -> if is_modfile mp then Some mp else None) s
@@ -3254,8 +3244,7 @@ let do_struct_with_decl_tracking ~is_header f s =
         match wrapper_name with
         | None -> None
         | Some name ->
-          push_visible mp [];
-          check_planned_visibility mp;
+          in_planned_visibility mp @@ fun () ->
           let func_sels = List.filter is_func_decl sel in
           let old_decls = !current_structure_decls in
           current_structure_decls := sel;
@@ -3271,7 +3260,6 @@ let do_struct_with_decl_tracking ~is_header f s =
                 ++ str
                      ( if Pp.ismt p_specs then " was planned to hold declarations and holds none"
                        else " holds declarations it was not planned to" ) );
-          pop_visible ();
           Some
             {
               wr_name = name;
@@ -3338,11 +3326,9 @@ let do_struct_with_decl_tracking ~is_header f s =
       wrapper_names
   end;
   let ppl ((mp, sel), wrapper_name) =
-    with_visibility (current_visibility ()) @@ fun () ->
+    in_planned_visibility mp @@ fun () ->
     let old_decls = !current_structure_decls in
     current_structure_decls := sel;
-    push_visible mp [];
-    check_planned_visibility mp;
     let p =
       match wrapper_name with
       | Some name ->
@@ -3453,16 +3439,8 @@ let do_struct_with_decl_tracking ~is_header f s =
                         | SEmodule m ->
                           ( match m.ml_mod_expr with
                           | MEstruct (inner_mp, inner_sel) ->
-                            push_visible inner_mp [];
-                            check_planned_visibility inner_mp;
-                            let inner_func_sels =
-                              List.filter is_func_decl inner_sel
-                            in
-                            let body =
-                              prlist_sep_nonempty cut2 f inner_func_sels
-                            in
-                            pop_visible ();
-                            body
+                            in_planned_visibility inner_mp (fun () ->
+                                prlist_sep_nonempty cut2 f (List.filter is_func_decl inner_sel) )
                           | _ -> mt () )
                         | _ -> mt () )
                       (List.filter
@@ -3511,11 +3489,7 @@ let do_struct_with_decl_tracking ~is_header f s =
                   | SEmodule m ->
                     ( match m.ml_mod_expr with
                     | MEstruct (inner_mp, inner_sel) ->
-                      push_visible inner_mp [];
-                      check_planned_visibility inner_mp;
-                      let body = prlist_sep_nonempty cut2 f inner_sel in
-                      pop_visible ();
-                      body
+                      in_planned_visibility inner_mp (fun () -> prlist_sep_nonempty cut2 f inner_sel)
                     | _ -> mt () )
                   | _ -> mt () )
                 (List.filter
