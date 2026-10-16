@@ -100,7 +100,10 @@ val generate_ahead : Miniml.ml_decl -> unit
 
 (** [finalized funs] pairs each generated function with its entity, every
     definition among them finished as one group
-    ({!Function_entity.finalize_group}); [None] for a declaration. *)
+    ({!Function_entity.finalize_group}); [None] for a declaration.  Finished
+    ahead of the files ({!generating_ahead}) and taken from there by a
+    file's pass; that it was not is an anomaly.  [CRANE_CHECK_IR] finishes
+    again and checks. *)
 val finalized :
   Gen_decls.generated_fun list ->
   (Gen_decls.generated_fun * Function_entity.t option) list
