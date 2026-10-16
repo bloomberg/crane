@@ -322,7 +322,7 @@ let pp_requirement : Modtype_concept.requirement -> Pp.t = function
 let rec pp_constraint : Modtype_concept.constraint_ -> Pp.t list * module_constraint = function
   | Named kn -> ([], MCname (pp_modname kn))
   | Requirements {signature; parameters; items} ->
-    push_visible signature parameters;
+    with_visibility (inside signature parameters (current_visibility ())) @@ fun () ->
     let item (hoisted, reqs) : Modtype_concept.item -> _ = function
       | Requirement req -> (hoisted, pp_requirement req :: reqs)
       | Nested (path, c) ->
@@ -331,7 +331,6 @@ let rec pp_constraint : Modtype_concept.constraint_ -> Pp.t list * module_constr
         (def :: List.rev_append inner hoisted, reqs)
     in
     let hoisted, reqs = List.fold_left item ([], []) items in
-    pop_visible ();
     (List.rev hoisted, MCrequirements (List.rev reqs))
 
 (** Format a doc comment string as [///] comment lines. Translates bracket
@@ -1868,15 +1867,16 @@ let module_plan_of_analysis
     reached four times per unit and the last one silently won.  Reaching them
     once, here, is what lets the layout be planned before anything renders.
 
-    The visibility stack is pushed exactly as a rendering pass would push it:
-    the analysis is a function of the structure, but the helpers it calls read
-    the stack, and this is a relocation, not a re-derivation. *)
+    It runs where a rendering pass starts, the unit's files visible: the
+    analysis is a function of the structure, but the helpers it calls read
+    the visibility, and this is a relocation, not a re-derivation. *)
 let prepare_structure s =
   let initial_mps =
     List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s
   in
-  List.iter (fun mp -> push_visible mp []) initial_mps;
-  Common.detect_sibling_module_inductive_collisions s;
+  let analysis =
+    with_visibility (toplevel_visibility initial_mps) @@ fun () ->
+    Common.detect_sibling_module_inductive_collisions s;
   method_registry :=
     Some
       ( match !global_method_registry with
@@ -1885,7 +1885,6 @@ let prepare_structure s =
         Method_registry.create
           ~ret_is_erased:Translation.return_type_is_erased s );
   let analysis = Structure_analysis.analyze (get_method_registry ()) s in
-  let modules = module_plan_of_analysis analysis in
   (* Whether an inductive is a flat struct is a property of its declaration;
      every reader, before or after its struct is generated, gets one answer. *)
   Modutil.struct_iter
@@ -1901,9 +1900,10 @@ let prepare_structure s =
     (fun _ -> ())
     (fun _ -> ())
     s;
-  List.iter (fun _ -> pop_visible ()) initial_mps;
+    analysis
+  in
   structure_analysis := Some analysis;
-  modules
+  module_plan_of_analysis analysis
 
 (** The functions registered as methods of each packet of the inductive
     [kn] -- its projections apart, which its struct declares itself --, each
@@ -1932,7 +1932,7 @@ let registered_methods ?(order = Fun.id) kn ind =
 (** [walk_as_rendered ?reversed ~decl s] calls [decl ~wrapper se] at each
     declaration element [se] of [s], in the order the renders reach them or,
     if [reversed], the reverse, with what generating a declaration reads of
-    the render's walk set as the render sets it: the visibility stack, the
+    the render's walk set as the render sets it: the visibility, the
     inductives local to the enclosing modules, the declarations of the
     structure being walked, and each module's frame ({!Module_frame}).  The
     scope the header writes each module's body in is planned on the way
@@ -1967,7 +1967,6 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
         | _ -> [] )
       sel
   in
-  let restoring_visible k = with_visibility (current_visibility ()) k in
   let header = ref {Cpp_ind.in_struct = false; concepts_hoisted = false} in
   let in_module mp sel k =
     Cpp_ind.plan_header_scope mp !header;
@@ -2060,8 +2059,8 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
         | _ -> [] )
       sel
   in
-  restoring_visible @@ fun () ->
-  List.iter (fun (mp, _) -> if is_modfile mp then push_visible mp []) s;
+  with_visibility (toplevel_visibility (List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s))
+  @@ fun () ->
   List.iter
     (fun (mi : Structure_analysis.module_info) ->
       if mi.wrapper_name <> None then
@@ -2092,7 +2091,7 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
     reads the head the callee is declared with.
 
     The modules are walked as a render walks them, for the two things a head
-    is converted against: the visibility stack, and the inductives local to
+    is converted against: the visibility, and the inductives local to
     the enclosing modules.  Only what a render generates as a function is
     planned: a method, a projection, an inline custom and an alias's copy are
     not, and neither is a wrapper module's monadic constant, which no render
@@ -2563,9 +2562,7 @@ let plan_accessors s =
     elements' names, a functor's binding its parameters, outermost first. *)
 let plan_visibility s =
   let base =
-    List.fold_left
-      (fun v (mp, _) -> if is_modfile mp then inside mp [] v else v)
-      global_visibility s
+    toplevel_visibility (List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s)
   in
   let rec elems outer sel acc =
     List.fold_left
@@ -3202,343 +3199,342 @@ let do_struct_with_decl_tracking ~is_header f s =
   Cpp_ind.discard Cpp_ind.file_scope_erased_aliases;
   Cpp_ind.start_render ();
   init_std_names ();
-  (* In Separate Extraction mode the visibility stack is empty when we enter
-     here, but analysis helpers (mp_renaming, top_visible, etc.) expect at
-     least one entry.  Push the top-level module paths now; they will be
-     popped at the end of this function.  [ppl] writes each module in the
-     visibility planned for it, which has them beneath it. *)
+  (* The file is written outside every module body, its files visible;
+     [ppl] writes each module in the visibility planned for it, which has them
+     beneath it.  What follows only assembles what was written there. *)
   let initial_mps =
     List.filter_map
       (fun (mp, _) -> if is_modfile mp then Some mp else None) s
   in
-  List.iter (fun mp -> push_visible mp []) initial_mps;
-  let analysis = get_structure_analysis () in
-  let is_func_decl (_, se) =
-    match se with
-    | SEdecl (Dterm _ | Dfix _) -> true
-    | _ -> false
-  in
-  let wrapper_names =
-    List.map
-      (fun (mi : Structure_analysis.module_info) ->
-        ((mi.modpath, mi.sels), mi.wrapper_name) )
-      analysis.sorted_modules
-  in
-  (* Each wrapper module contributes up to three fragments: declarations that
-     merge into the struct, and definitions and lifted helpers that must follow
-     it.  The struct's declarations go into {!pending_wrapper_decls}, which
-     {!Cpp_print} reads when it finds an eponymous type to merge them into; the
-     other two stay here, where both producer and consumer are. *)
-  let wrapper_parts =
-    List.filter_map
-      (fun ((mp, sel), wrapper_name) ->
-        match wrapper_name with
-        | None -> None
-        | Some name ->
-          in_planned_visibility mp @@ fun () ->
-          let func_sels = List.filter is_func_decl sel in
-          let old_decls = !current_structure_decls in
-          current_structure_decls := sel;
-          let p_specs, p_defs, p_lifted, p_lifted_specs =
-            pp_wrapper_module_dual ~is_header func_sels
-          in
-          current_structure_decls := old_decls;
-          if not (Pp.ismt p_specs) then Hashtbl.replace pending_wrapper_decls name p_specs;
-          if is_header && Pp.ismt p_specs = Hashtbl.mem unmerged_wrappers name then
-            Probe.violation "unmerged wrappers"
-              Pp.(
-                str "the wrapper " ++ str name
-                ++ str
-                     ( if Pp.ismt p_specs then " was planned to hold declarations and holds none"
-                       else " holds declarations it was not planned to" ) );
-          Some
-            {
-              wr_name = name;
-              wr_defs = p_defs;
-              wr_lifted = (if Pp.ismt p_lifted then None else Some p_lifted);
-              wr_lifted_specs = p_lifted_specs;
-            } )
-      wrapper_names
-  in
-  (* Asked only now, because whether an inductive is written inside a wrapper
-     depends on the declarations just queued against it. *)
-  if is_header then
-    concept_prereq_labels :=
-      concept_prereqs s ~wrapper_sels:(fun name ->
-          List.concat_map
-            (fun ((_, sel), wrapper_name) ->
-              if wrapper_name = Some name then List.filter is_func_decl sel
-              else [] )
-            wrapper_names );
-  let joined pick =
-    prlist
-      (fun part ->
-        match pick part with
-        | None -> mt ()
-        | Some pp -> if Pp.ismt pp then mt () else cut2 () ++ pp )
-      wrapper_parts
-  in
-  let deferred_defs = joined (fun w -> Some w.wr_defs) in
-  (* A lifted declaration [ppl] did not get to emit -- its module is not in the
-     rendered order -- still has to appear somewhere, so it goes at the end. *)
-  let deferred_lifted () = joined (fun w -> w.wr_lifted) in
-  (* [ppl] emits a module's lifted declaration when the module's turn comes,
-     and empties the field so the tail does not repeat it. *)
-  let claim_lifted name =
-    match List.find_opt (fun w -> String.equal w.wr_name name) wrapper_parts with
-    | Some ({wr_lifted = Some l; _} as w) ->
-      w.wr_lifted <- None;
-      l
-    | _ -> mt ()
-  in
-  name_cache :=
-    Some
-      (Name_resolution.create
-         ~structure_analysis:analysis
-         ~unmerged:unmerged_wrappers
-         s );
-  let old_local_inductives = get_local_inductives () in
-  if modular () then begin
-    let rec collect_inductives sel =
-      List.iter
-        (fun (_l, se) ->
-          match se with
-          | SEdecl (Dind (kn, ind)) ->
-            Array.iteri
-              (fun i _p -> add_local_inductive (GlobRef.IndRef (kn, i)))
-              ind.ind_packets
-          | SEmodule { ml_mod_expr = MEstruct (_, sub_sel); _ } ->
-            collect_inductives sub_sel
-          | _ -> () )
-        sel
+  let wrapper_parts, deferred_defs, deferred_lifted, p =
+    with_visibility (toplevel_visibility initial_mps) @@ fun () ->
+    let analysis = get_structure_analysis () in
+    let is_func_decl (_, se) =
+      match se with
+      | SEdecl (Dterm _ | Dfix _) -> true
+      | _ -> false
     in
-    List.iter
-      (fun ((_mp, sel), _wrapper_name) -> collect_inductives sel)
-      wrapper_names
-  end;
-  let ppl ((mp, sel), wrapper_name) =
-    in_planned_visibility mp @@ fun () ->
-    let old_decls = !current_structure_decls in
-    current_structure_decls := sel;
-    let p =
-      match wrapper_name with
-      | Some name ->
-        let type_sels = List.filter (fun x -> not (is_func_decl x)) sel in
-        let type_pp = prlist_sep_nonempty cut2 f type_sels in
-        (* The wrapper struct belongs at its module's own place in the
-           topological order, whether or not the module also declares types.
-           A later module's constant is initialised inside its struct body, so
-           a callee's struct has to be complete by then -- emitting the
-           wrapper after everything else, as a leftover, is too late.  A
-           module whose types include an eponymous struct has already had the
-           specs merged into it by {!Cpp_print}, and nothing is pending. *)
-        let wrapper_pp =
-          if not is_header then mt ()
-          else
-            match Hashtbl.find_opt pending_wrapper_decls name with
-            | Some specs ->
-              Hashtbl.remove pending_wrapper_decls name;
-              let struct_pp = pp_wrapper_struct name specs in
-              if
-                module_members_name_only_inductives sel
-                && module_struct_is_hoistable (Pp.string_of_ppcmds struct_pp)
-              then (
-                hoisted_module_structs := struct_pp :: !hoisted_module_structs;
-                mt () )
-              else struct_pp
-            | None -> mt ()
-        in
-        (* A declaration lifted out of this module -- an instance struct -- is
-           due at the same point, and for the same reason: a later module's
-           constant may be initialised from it. *)
-        let lifted_pp = claim_lifted name in
-        (* The wrapper struct and what was lifted out of it are elements of
-           their own, assembled here rather than by [f]: an alias they spell
-           goes in front of them, not in front of the whole section they end
-           up in (see {!prefix_mentioned_aliases}). *)
-        let wrapper_pp = prefix_mentioned_aliases ~is_header wrapper_pp in
-        let lifted_pp = prefix_mentioned_aliases ~is_header lifted_pp in
-        prlist_sep_nonempty cut2 (fun x -> x) [type_pp; wrapper_pp; lifted_pp]
-      | None ->
-        (* Which children a name collision forces inside a wrapper struct is
-           layout, decided by {!Structure_analysis} before any rendering began;
-           here we only read the answer back. *)
-        let is_colliding_child l _se =
-          Module_plan.wrapper_role (MPdot (mp, l)) = Some Module_plan.Flattened
-        in
-        (* Whether a wrapper formed is not the same question as which children
-           it flattens: a bystander is recorded only when one did, so a child
-           in either table says the struct is there to be written. *)
-        let is_wrapped_child l = is_wrapped_child (MPdot (mp, l)) in
-        let has_child_collision = wraps_children mp sel in
-        if has_child_collision then (
-          (* The wrapper's name was chosen with the collision that forced it in
-             view, by {!Structure_analysis}; each wrapped child records it. *)
-          let parent_name =
-            List.find_map
-              (fun (l, se) ->
-                match se with
-                | SEmodule _ when is_wrapped_child l ->
-                  Module_plan.wrapper_struct (MPdot (mp, l))
-                | _ -> None )
-              sel
-            |> Option.default
-                 (Table.escape_reserved_struct_name
-                    (String.capitalize_ascii (string_of_modfile mp)))
+    let wrapper_names =
+      List.map
+        (fun (mi : Structure_analysis.module_info) ->
+          ((mi.modpath, mi.sels), mi.wrapper_name) )
+        analysis.sorted_modules
+    in
+    (* Each wrapper module contributes up to three fragments: declarations that
+       merge into the struct, and definitions and lifted helpers that must follow
+       it.  The struct's declarations go into {!pending_wrapper_decls}, which
+       {!Cpp_print} reads when it finds an eponymous type to merge them into; the
+       other two stay here, where both producer and consumer are. *)
+    let wrapper_parts =
+      List.filter_map
+        (fun ((mp, sel), wrapper_name) ->
+          match wrapper_name with
+          | None -> None
+          | Some name ->
+            in_planned_visibility mp @@ fun () ->
+            let func_sels = List.filter is_func_decl sel in
+            let old_decls = !current_structure_decls in
+            current_structure_decls := sel;
+            let p_specs, p_defs, p_lifted, p_lifted_specs =
+              pp_wrapper_module_dual ~is_header func_sels
+            in
+            current_structure_decls := old_decls;
+            if not (Pp.ismt p_specs) then Hashtbl.replace pending_wrapper_decls name p_specs;
+            if is_header && Pp.ismt p_specs = Hashtbl.mem unmerged_wrappers name then
+              Probe.violation "unmerged wrappers"
+                Pp.(
+                  str "the wrapper " ++ str name
+                  ++ str
+                       ( if Pp.ismt p_specs then " was planned to hold declarations and holds none"
+                         else " holds declarations it was not planned to" ) );
+            Some
+              {
+                wr_name = name;
+                wr_defs = p_defs;
+                wr_lifted = (if Pp.ismt p_lifted then None else Some p_lifted);
+                wr_lifted_specs = p_lifted_specs;
+              } )
+        wrapper_names
+    in
+    (* Asked only now, because whether an inductive is written inside a wrapper
+       depends on the declarations just queued against it. *)
+    if is_header then
+      concept_prereq_labels :=
+        concept_prereqs s ~wrapper_sels:(fun name ->
+            List.concat_map
+              (fun ((_, sel), wrapper_name) ->
+                if wrapper_name = Some name then List.filter is_func_decl sel
+                else [] )
+              wrapper_names );
+    let joined pick =
+      prlist
+        (fun part ->
+          match pick part with
+          | None -> mt ()
+          | Some pp -> if Pp.ismt pp then mt () else cut2 () ++ pp )
+        wrapper_parts
+    in
+    let deferred_defs = joined (fun w -> Some w.wr_defs) in
+    (* A lifted declaration [ppl] did not get to emit -- its module is not in the
+       rendered order -- still has to appear somewhere, so it goes at the end. *)
+    let deferred_lifted () = joined (fun w -> w.wr_lifted) in
+    (* [ppl] emits a module's lifted declaration when the module's turn comes,
+       and empties the field so the tail does not repeat it. *)
+    let claim_lifted name =
+      match List.find_opt (fun w -> String.equal w.wr_name name) wrapper_parts with
+      | Some ({wr_lifted = Some l; _} as w) ->
+        w.wr_lifted <- None;
+        l
+      | _ -> mt ()
+    in
+    name_cache :=
+      Some
+        (Name_resolution.create
+           ~structure_analysis:analysis
+           ~unmerged:unmerged_wrappers
+           s );
+    let old_local_inductives = get_local_inductives () in
+    if modular () then begin
+      let rec collect_inductives sel =
+        List.iter
+          (fun (_l, se) ->
+            match se with
+            | SEdecl (Dind (kn, ind)) ->
+              Array.iteri
+                (fun i _p -> add_local_inductive (GlobRef.IndRef (kn, i)))
+                ind.ind_packets
+            | SEmodule { ml_mod_expr = MEstruct (_, sub_sel); _ } ->
+              collect_inductives sub_sel
+            | _ -> () )
+          sel
+      in
+      List.iter
+        (fun ((_mp, sel), _wrapper_name) -> collect_inductives sel)
+        wrapper_names
+    end;
+    let ppl ((mp, sel), wrapper_name) =
+      in_planned_visibility mp @@ fun () ->
+      let old_decls = !current_structure_decls in
+      current_structure_decls := sel;
+      let p =
+        match wrapper_name with
+        | Some name ->
+          let type_sels = List.filter (fun x -> not (is_func_decl x)) sel in
+          let type_pp = prlist_sep_nonempty cut2 f type_sels in
+          (* The wrapper struct belongs at its module's own place in the
+             topological order, whether or not the module also declares types.
+             A later module's constant is initialised inside its struct body, so
+             a callee's struct has to be complete by then -- emitting the
+             wrapper after everything else, as a leftover, is too late.  A
+             module whose types include an eponymous struct has already had the
+             specs merged into it by {!Cpp_print}, and nothing is pending. *)
+          let wrapper_pp =
+            if not is_header then mt ()
+            else
+              match Hashtbl.find_opt pending_wrapper_decls name with
+              | Some specs ->
+                Hashtbl.remove pending_wrapper_decls name;
+                let struct_pp = pp_wrapper_struct name specs in
+                if
+                  module_members_name_only_inductives sel
+                  && module_struct_is_hoistable (Pp.string_of_ppcmds struct_pp)
+                then (
+                  hoisted_module_structs := struct_pp :: !hoisted_module_structs;
+                  mt () )
+                else struct_pp
+              | None -> mt ()
           in
-          if is_header then
-            (* A module type is a concept, and C++ has no member concepts, so
-               one written among a wrapper's children cannot stay there -- and
-               cannot simply move ahead of the wrapper either, because a
-               functor elsewhere may be constrained by it and be emitted
-               first.  It goes where the concepts of a nested module's
-               typeclasses already go, which is the top of the file.  Being
-               unwritable inside the struct used to be answered by dropping
-               it. *)
-            let modtype_sels, sel =
-              List.partition
-                (fun (_, se) -> match se with SEmodtype _ -> true | _ -> false)
-                sel
-            in
-            List.iter
-              (fun x ->
-                let pp = f x in
-                if not (Pp.ismt pp) then
-                  push file_scope_concepts pp )
-              modtype_sels;
-            let non_colliding_pp, colliding_pp =
-              with_render_ctx
-                (fun c -> { c with rc_in_struct = true })
-                (fun () ->
-                  let non_colliding =
-                    List.filter
-                      (fun (l, se) ->
-                        match se with
-                        | SEmodule se_inner ->
-                          not (is_colliding_child l (SEmodule se_inner))
-                        | _ -> true )
-                      sel
-                  in
-                  let non_colliding_pp =
-                    prlist_sep_nonempty cut2 f non_colliding
-                  in
-                  let colliding_pp =
-                    prlist_sep_nonempty
-                      cut2
-                      (fun (_l, se) ->
-                        match se with
-                        | SEmodule m ->
-                          ( match m.ml_mod_expr with
-                          | MEstruct (inner_mp, inner_sel) ->
-                            in_planned_visibility inner_mp (fun () ->
-                                prlist_sep_nonempty cut2 f (List.filter is_func_decl inner_sel) )
-                          | _ -> mt () )
-                        | _ -> mt () )
-                      (List.filter
-                         (fun (l, se) -> is_colliding_child l se)
-                         sel )
-                  in
-                  (non_colliding_pp, colliding_pp) )
-            in
-            let body =
-              if Pp.ismt non_colliding_pp then
-                colliding_pp
-              else if Pp.ismt colliding_pp then
-                non_colliding_pp
-              else
-                non_colliding_pp ++ cut2 () ++ colliding_pp
-            in
-            let struct_pp =
-              if Pp.ismt body then
-                mt ()
-              else
-                str "struct "
-                ++ str parent_name
-                ++ str " {"
-                ++ fnl ()
-                ++ body
-                ++ fnl ()
-                ++ str "};"
-            in
-            struct_pp
-          else
-            let non_colliding =
-              List.filter
+          (* A declaration lifted out of this module -- an instance struct -- is
+             due at the same point, and for the same reason: a later module's
+             constant may be initialised from it. *)
+          let lifted_pp = claim_lifted name in
+          (* The wrapper struct and what was lifted out of it are elements of
+             their own, assembled here rather than by [f]: an alias they spell
+             goes in front of them, not in front of the whole section they end
+             up in (see {!prefix_mentioned_aliases}). *)
+          let wrapper_pp = prefix_mentioned_aliases ~is_header wrapper_pp in
+          let lifted_pp = prefix_mentioned_aliases ~is_header lifted_pp in
+          prlist_sep_nonempty cut2 (fun x -> x) [type_pp; wrapper_pp; lifted_pp]
+        | None ->
+          (* Which children a name collision forces inside a wrapper struct is
+             layout, decided by {!Structure_analysis} before any rendering began;
+             here we only read the answer back. *)
+          let is_colliding_child l _se =
+            Module_plan.wrapper_role (MPdot (mp, l)) = Some Module_plan.Flattened
+          in
+          (* Whether a wrapper formed is not the same question as which children
+             it flattens: a bystander is recorded only when one did, so a child
+             in either table says the struct is there to be written. *)
+          let is_wrapped_child l = is_wrapped_child (MPdot (mp, l)) in
+          let has_child_collision = wraps_children mp sel in
+          if has_child_collision then (
+            (* The wrapper's name was chosen with the collision that forced it in
+               view, by {!Structure_analysis}; each wrapped child records it. *)
+            let parent_name =
+              List.find_map
                 (fun (l, se) ->
                   match se with
-                  | SEmodule se_inner ->
-                    not (is_colliding_child l (SEmodule se_inner))
-                  | _ -> true )
+                  | SEmodule _ when is_wrapped_child l ->
+                    Module_plan.wrapper_struct (MPdot (mp, l))
+                  | _ -> None )
                 sel
+              |> Option.default
+                   (Table.escape_reserved_struct_name
+                      (String.capitalize_ascii (string_of_modfile mp)))
             in
-            let non_colliding_pp = prlist_sep_nonempty cut2 f non_colliding in
-            let colliding_pp =
-              prlist_sep_nonempty
-                cut2
-                (fun (_l, se) ->
-                  match se with
-                  | SEmodule m ->
-                    ( match m.ml_mod_expr with
-                    | MEstruct (inner_mp, inner_sel) ->
-                      in_planned_visibility inner_mp (fun () -> prlist_sep_nonempty cut2 f inner_sel)
+            if is_header then
+              (* A module type is a concept, and C++ has no member concepts, so
+                 one written among a wrapper's children cannot stay there -- and
+                 cannot simply move ahead of the wrapper either, because a
+                 functor elsewhere may be constrained by it and be emitted
+                 first.  It goes where the concepts of a nested module's
+                 typeclasses already go, which is the top of the file.  Being
+                 unwritable inside the struct used to be answered by dropping
+                 it. *)
+              let modtype_sels, sel =
+                List.partition
+                  (fun (_, se) -> match se with SEmodtype _ -> true | _ -> false)
+                  sel
+              in
+              List.iter
+                (fun x ->
+                  let pp = f x in
+                  if not (Pp.ismt pp) then
+                    push file_scope_concepts pp )
+                modtype_sels;
+              let non_colliding_pp, colliding_pp =
+                with_render_ctx
+                  (fun c -> { c with rc_in_struct = true })
+                  (fun () ->
+                    let non_colliding =
+                      List.filter
+                        (fun (l, se) ->
+                          match se with
+                          | SEmodule se_inner ->
+                            not (is_colliding_child l (SEmodule se_inner))
+                          | _ -> true )
+                        sel
+                    in
+                    let non_colliding_pp =
+                      prlist_sep_nonempty cut2 f non_colliding
+                    in
+                    let colliding_pp =
+                      prlist_sep_nonempty
+                        cut2
+                        (fun (_l, se) ->
+                          match se with
+                          | SEmodule m ->
+                            ( match m.ml_mod_expr with
+                            | MEstruct (inner_mp, inner_sel) ->
+                              in_planned_visibility inner_mp (fun () ->
+                                  prlist_sep_nonempty cut2 f (List.filter is_func_decl inner_sel) )
+                            | _ -> mt () )
+                          | _ -> mt () )
+                        (List.filter
+                           (fun (l, se) -> is_colliding_child l se)
+                           sel )
+                    in
+                    (non_colliding_pp, colliding_pp) )
+              in
+              let body =
+                if Pp.ismt non_colliding_pp then
+                  colliding_pp
+                else if Pp.ismt colliding_pp then
+                  non_colliding_pp
+                else
+                  non_colliding_pp ++ cut2 () ++ colliding_pp
+              in
+              let struct_pp =
+                if Pp.ismt body then
+                  mt ()
+                else
+                  str "struct "
+                  ++ str parent_name
+                  ++ str " {"
+                  ++ fnl ()
+                  ++ body
+                  ++ fnl ()
+                  ++ str "};"
+              in
+              struct_pp
+            else
+              let non_colliding =
+                List.filter
+                  (fun (l, se) ->
+                    match se with
+                    | SEmodule se_inner ->
+                      not (is_colliding_child l (SEmodule se_inner))
+                    | _ -> true )
+                  sel
+              in
+              let non_colliding_pp = prlist_sep_nonempty cut2 f non_colliding in
+              let colliding_pp =
+                prlist_sep_nonempty
+                  cut2
+                  (fun (_l, se) ->
+                    match se with
+                    | SEmodule m ->
+                      ( match m.ml_mod_expr with
+                      | MEstruct (inner_mp, inner_sel) ->
+                        in_planned_visibility inner_mp (fun () -> prlist_sep_nonempty cut2 f inner_sel)
+                      | _ -> mt () )
                     | _ -> mt () )
-                  | _ -> mt () )
-                (List.filter
-                   (fun (l, se) -> is_colliding_child l se)
-                   sel )
-            in
-            let body =
-              if Pp.ismt non_colliding_pp then
-                colliding_pp
-              else if Pp.ismt colliding_pp then
-                non_colliding_pp
-              else
-                non_colliding_pp ++ cut2 () ++ colliding_pp
-            in
-            body )
-        else
-          prlist_sep_nonempty cut2 f sel
+                  (List.filter
+                     (fun (l, se) -> is_colliding_child l se)
+                     sel )
+              in
+              let body =
+                if Pp.ismt non_colliding_pp then
+                  colliding_pp
+                else if Pp.ismt colliding_pp then
+                  non_colliding_pp
+                else
+                  non_colliding_pp ++ cut2 () ++ colliding_pp
+              in
+              body )
+          else
+            prlist_sep_nonempty cut2 f sel
+      in
+      current_structure_decls := old_decls;
+      p
     in
-    current_structure_decls := old_decls;
-    p
+    let rendered = List.map (fun wn -> (wn, ppl wn)) wrapper_names in
+    if modular () then begin
+      clear_local_inductives ();
+      List.iter add_local_inductive old_local_inductives
+    end;
+    (* Every pending name came from [wrapper_names], and rendering that module in
+       the header consumes it: either {!Cpp_print} merged the specs into an
+       eponymous struct, or [ppl] emitted them as a struct of their own.  A name
+       still pending there is one whose module was never rendered, and emitting
+       it as a leftover at the end of the file would put it after its users.  The
+       implementation file declares no wrapper structs at all, so specs left
+       pending by its pass are simply unused. *)
+    if is_header && Sys.getenv_opt "CRANE_CHECK_IR" <> None then
+      Hashtbl.iter
+        (fun name _ ->
+          CErrors.user_err
+            Pp.(
+              str "Crane: wrapper struct '" ++ str name
+              ++ str "' was never emitted: its module is not in the rendered \
+                      order." ) )
+        pending_wrapper_decls;
+    Hashtbl.clear pending_wrapper_decls;
+    let rev_rendered = List.rev rendered in
+    let main_entry, pre_entries =
+      match rev_rendered with
+      | ((_, None), p) :: rest -> (Some p, List.rev rest)
+      | _ -> (None, rendered)
+    in
+    let p_pre = prlist_sep_nonempty cut2 snd pre_entries in
+    let p =
+      prlist_sep_nonempty cut2 (fun x -> x)
+        ( match main_entry with
+        | Some main_p -> [p_pre; main_p]
+        | None -> [p_pre] )
+    in
+    (wrapper_parts, deferred_defs, deferred_lifted, p)
   in
-  let rendered = List.map (fun wn -> (wn, ppl wn)) wrapper_names in
-  if modular () then begin
-    clear_local_inductives ();
-    List.iter add_local_inductive old_local_inductives
-  end;
-  (* Every pending name came from [wrapper_names], and rendering that module in
-     the header consumes it: either {!Cpp_print} merged the specs into an
-     eponymous struct, or [ppl] emitted them as a struct of their own.  A name
-     still pending there is one whose module was never rendered, and emitting
-     it as a leftover at the end of the file would put it after its users.  The
-     implementation file declares no wrapper structs at all, so specs left
-     pending by its pass are simply unused. *)
-  if is_header && Sys.getenv_opt "CRANE_CHECK_IR" <> None then
-    Hashtbl.iter
-      (fun name _ ->
-        CErrors.user_err
-          Pp.(
-            str "Crane: wrapper struct '" ++ str name
-            ++ str "' was never emitted: its module is not in the rendered \
-                    order." ) )
-      pending_wrapper_decls;
-  Hashtbl.clear pending_wrapper_decls;
-  let rev_rendered = List.rev rendered in
-  let main_entry, pre_entries =
-    match rev_rendered with
-    | ((_, None), p) :: rest -> (Some p, List.rev rest)
-    | _ -> (None, rendered)
-  in
-  let p_pre = prlist_sep_nonempty cut2 snd pre_entries in
-  let p =
-    prlist_sep_nonempty cut2 (fun x -> x)
-      ( match main_entry with
-      | Some main_p -> [p_pre; main_p]
-      | None -> [p_pre] )
-  in
-  (* Pop the initial visibility entries pushed at the top of this function. *)
-  List.iter (fun _ -> pop_visible ()) initial_mps;
   let hoisted_erased_aliases =
     let imports = List.map str (Cpp_print.take_promoted_alias_imports ()) in
     match imports @ Cpp_ind.render_deferred Cpp_ind.file_scope_erased_aliases with

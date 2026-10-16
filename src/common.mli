@@ -276,40 +276,37 @@ val inductive_generated_members : Id.Set.t
     methods.  Must be called before any [pp_global] for [r]. *)
 val reserve_methodified : ind:GlobRef.t -> GlobRef.t -> unit
 
-(** Get module paths of all visible layers. *)
-val get_visible_mps : unit -> ModPath.t list
-
 (** Get the module path of the innermost visible layer. *)
 val top_visible_mp : unit -> ModPath.t
 
-(** Push a module onto the visibility stack. The [module_path list] corresponds
-    to module parameters, the innermost one coming first in the list.
-    [members] are the C++ names the module's scope declares: an outer name
-    they hide is qualified, even in a body printed ahead of their
-    declarations. *)
-val push_visible : ?members:Id.Set.t -> ModPath.t -> ModPath.t list -> unit
-
-(** Pop the innermost visible layer. *)
-val pop_visible : unit -> unit
-
 (** The C++ names a structure declares as members of its struct, as
-    {!push_visible} takes them. *)
+    {!inside} takes them. *)
 val member_names_of_sel : Miniml.ml_module_structure -> Id.Set.t
 
-(** A snapshot of the visibility stack: the scope a name is spelled from. *)
+(** The scopes a name is spelled from, innermost first. *)
 type visibility
 
+(** The visibility what is being written is written in. *)
 val current_visibility : unit -> visibility
 
-(** [with_visibility v f] runs [f] with the visibility stack at [v], restoring
-    the stack as it was however [f] leaves. *)
+(** [with_visibility v f] runs [f] written in [v], which the plan computed,
+    restoring the enclosing visibility however [f] leaves. *)
 val with_visibility : visibility -> (unit -> 'a) -> 'a
+
+(** Outside every module body, with only the given modules -- a unit's files
+    -- visible, the last innermost. *)
+val toplevel_visibility : ModPath.t list -> visibility
+
+(** The module paths of a visibility's scopes, innermost first. *)
+val visible_mps : visibility -> ModPath.t list
 
 (** Global scope: no layer visible. *)
 val global_visibility : visibility
 
-(** [inside ?members mp params v] is [v] with [mp]'s scope innermost, as
-    {!push_visible} would make it. *)
+(** [inside ?members mp params v] is [v] with [mp]'s scope innermost: its
+    functor parameters [params], the innermost first, and the C++ names
+    [members] it declares, which hide an outer name spelled the same even in a
+    body printed ahead of their declarations. *)
 val inside : ?members:Id.Set.t -> ModPath.t -> ModPath.t list -> visibility -> visibility
 
 (** The visibility enclosing the innermost scope of [v]. *)

@@ -1026,7 +1026,7 @@ let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
       in
       struct_name ^ "::" ^ through_child ^ name
     | Some (struct_name, role) when String.contains name ':' ->
-      (* Name is already qualified (e.g., "N::add" from visibility stack). Only
+      (* Name is already qualified (e.g., "N::add", as its visibility qualifies it). Only
          strip the child qualifier for collision-wrapped entries (e.g., BinNat
          wrapping N). For normal wrappers (e.g., List wrapping list), keep the
          full qualification. *)

@@ -1583,7 +1583,7 @@ and pp_cpp_expr env args t =
           if merged then
             let allow_bare =
               let ref_base = base_mp (modpath_of_r x) in
-              List.exists (ModPath.equal ref_base) (get_visible_mps ())
+              List.exists (ModPath.equal ref_base) (visible_mps (current_visibility ()))
             in
             str (dedup_qualified_tail ~allow_bare cap)
           else str cap
@@ -3438,8 +3438,9 @@ let with_struct_scope r f =
         (Printf.sprintf "%sstruct_%s_%d" Common.crane_local_prefix
            (Label.to_string (MutInd.label kn)) i)
     in
-    push_visible ~members:(Id.Set.of_list ctors) (ModPath.MPdot (top_visible_mp (), scope)) [];
-    Fun.protect ~finally:pop_visible f
+    let outer = current_visibility () in
+    let mp = ModPath.MPdot (top_visible_mp (), scope) in
+    with_visibility (inside ~members:(Id.Set.of_list ctors) mp [] outer) f
   | _ -> f ()
 
 (** Where a member is being written.

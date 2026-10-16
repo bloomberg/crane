@@ -1864,8 +1864,7 @@ let cpp_unit () =
 let exports refs =
   let export r =
     let base, _ = Table.labels_of_ref r in
-    push_visible base [];
-    Fun.protect ~finally:pop_visible (fun () ->
+    with_visibility (toplevel_visibility [base]) (fun () ->
         {ex_ref = r; ex_name = pp_global Term r; ex_unit = cpp_unit ()} )
   in
   List.filter_map
@@ -2479,10 +2478,11 @@ let print_one_decl struc mp decl =
   elaborate_unit struc;
   freeze_global_ids ();
   set_phase (Emit Impl);
-  push_visible mp [];
-  Cpp.generate_decl_ahead decl;
-  let ans = d.pp_decl decl in
-  pop_visible ();
+  let ans =
+    with_visibility (toplevel_visibility [mp]) @@ fun () ->
+    Cpp.generate_decl_ahead decl;
+    d.pp_decl decl
+  in
   (* The one box the printers rely on: inside it every break is a newline,
      which is what turns {!Cpp_print.cut2} into the blank line between two
      declaration groups.  Everything else is clang-format's to lay out. *)

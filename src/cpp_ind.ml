@@ -48,7 +48,7 @@ let pp_decls (ds : rendered) =
     An imported module's wrapper is recorded, because the name it is given is
     not always its own.  A module declared in the unit being extracted is not:
     it is emitted as a struct named after itself, and nothing records that,
-    because nothing has to -- the visibility stack is still standing where its
+    because nothing has to -- its body's visibility is still entered where its
     members are spelled.  Both kinds are emitted after every datatype, so a
     datatype's member naming either one is naming something still to come. *)
 let module_struct_name (mp : ModPath.t) : string option =

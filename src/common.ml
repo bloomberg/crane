@@ -668,8 +668,8 @@ let is_non_output_module mp =
 
 let clear_non_output_modules () = Hashtbl.clear valid_output_module_set
 
-(** Table indicating the visible horizon at a precise moment, i.e. the stack of
-    structures we are inside.
+(** The visible horizon at a precise moment, i.e. the structures we are
+    inside, innermost first.
 
     - The sequence of [mp] parts should have the following form: a [MPfile] at
       the beginning, and then more and more [MPdot] over this [MPfile], or
@@ -683,7 +683,7 @@ let clear_non_output_modules () = Hashtbl.clear valid_output_module_set
       all a level knows: which names hide which is a question about the
       program, not about what was printed before. *)
 
-(** A layer of the visibility stack: one scope level. *)
+(** A layer of a visibility: one scope level. *)
 type visible_layer = {
   mp : ModPath.t;
   params : ModPath.t list;
@@ -708,39 +708,35 @@ let equal_visibility =
 let pp_visibility v =
   Pp.prlist_with_sep (fun () -> Pp.str " < ") (fun l -> Pp.str (ModPath.to_string l.mp)) v
 
-(** Visibility stack for module rendering: the scopes enclosing what is being
-    written, innermost first. *)
-let pop_visible, get_visible, set_visible =
-  let vis = ref global_visibility in
-  register_cleanup (fun () -> vis := global_visibility);
-  let pop () =
-    match !vis with
-    | [] -> CErrors.anomaly (Pp.str "pop_visible: empty visibility stack")
-    | _ :: vl -> vis := vl
-  and get () = !vis
-  and set v = vis := v in
-  (pop, get, set)
+(** The visibility outside every module body, where only the modules [mps]
+    -- a unit's files -- are visible, declaring nothing, the last innermost. *)
+let toplevel_visibility mps =
+  List.fold_left (fun v mp -> inside mp [] v) global_visibility mps
 
-let push_visible ?members mp params = set_visible (inside ?members mp params (get_visible ()))
+let visible_mps v = List.map (fun l -> l.mp) v
 
-let current_visibility = get_visible
+(** The scopes enclosing what is being written, innermost first.  Only ever
+    entered for the extent of a function ({!with_visibility}) and at a
+    visibility the plan computed -- a module body's ({!Scope_plan.visibility}),
+    the files' ({!toplevel_visibility}), or one of those with a layer
+    {!inside} it -- so it is never pushed or popped. *)
+let visible = ref global_visibility
+
+let () = register_cleanup (fun () -> visible := global_visibility)
+
+let get_visible () = !visible
 
 let with_visibility v f =
-  let saved = get_visible () in
-  set_visible v;
-  Fun.protect ~finally:(fun () -> set_visible saved) f
+  let saved = !visible in
+  visible := v;
+  Fun.protect ~finally:(fun () -> visible := saved) f
 
-(** Get module paths of all visible layers. *)
-let get_visible_mps () =
-  List.map
-    (function
-      | v -> v.mp )
-    (get_visible ())
+let current_visibility = get_visible
 
 (** Get the innermost visible layer. *)
 let top_visible () =
   match get_visible () with
-  | [] -> CErrors.anomaly (Pp.str "top_visible: empty visibility stack")
+  | [] -> CErrors.anomaly (Pp.str "top_visible: no scope is visible")
   | v :: _ -> v
 
 (** Get the module path of the innermost visible layer. *)
