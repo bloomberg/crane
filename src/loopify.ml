@@ -250,6 +250,30 @@ and generic_inline_expr spec expr =
       Fun.id
       expr
 
+(** The declaration a function was lifted out of, through every lift: the
+    function itself unless it is a lifted helper. *)
+let rec lifted_origin r =
+  match Lifted.of_ref r with
+  | Some h -> ( match Lifted.origin h with Some o -> lifted_origin o | None -> r )
+  | None -> r
+
+(** Under [CRANE_CHECK_IR], that a cycle partner inlined into the function
+    known by [self_refs] is one by the program's recursive groups
+    ({!Recursive_groups}): a callee whose body reaches the function's reaches
+    it in Core too, a helper's body being part of the declaration it was
+    lifted out of. *)
+let check_planned_partner self_refs r =
+  if Probe.checking () then
+    let groups = Recursive_groups.installed () in
+    let origin = lifted_origin r in
+    if not (List.exists (fun s -> Recursive_groups.in_group groups (lifted_origin s) origin) self_refs)
+    then
+      Probe.violation "recursive groups"
+        Pp.(
+          str "Loopify inlines " ++ GlobRef.print r ++ str " into "
+          ++ prlist_with_sep pr_comma GlobRef.print self_refs
+          ++ str ", which the program's recursive groups do not put on one cycle")
+
 (** Try to inline a mutual recursion partner into a function body.
 
     Scans [body] for calls to functions registered in {!mutual_fn_table} that
@@ -316,6 +340,7 @@ let try_inline_mutual_into names body =
     else
       match Ref.User.Tbl.find_opt mutual_fn_table r with
       | Some {rf_ret_ty; rf_params; rf_body} when reaches_self r ->
+        check_planned_partner self_refs r;
         Some (r, rf_ret_ty, rf_params, rf_body)
       | _ -> None
   in

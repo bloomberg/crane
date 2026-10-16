@@ -28,6 +28,8 @@ type program = {
   parameter_ownership : (Names.GlobRef.t * bool list) list;
       (** Which parameters of each function it owns rather than borrows,
           innermost first ({!Ownership.summarize}). *)
+  recursive_groups : Recursive_groups.t;
+      (** Which functions recurse through which. *)
 }
 
 (** [analyze_program p] analyses the frozen program [p]; it writes nothing. *)
