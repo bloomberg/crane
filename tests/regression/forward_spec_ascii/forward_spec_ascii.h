@@ -1,7 +1,6 @@
 #ifndef INCLUDED_FORWARD_SPEC_ASCII
 #define INCLUDED_FORWARD_SPEC_ASCII
 
-#include <atomic>
 #include <cstdint>
 #include <type_traits>
 #include <utility>

@@ -1,7 +1,6 @@
 #ifndef INCLUDED_IND_PARAM
 #define INCLUDED_IND_PARAM
 
-#include <atomic>
 #include <concepts>
 #include <cstdint>
 #include <type_traits>

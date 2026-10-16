@@ -1851,12 +1851,7 @@ let gen_ind_header_v2
              and <atomic> is not included (see extract_env.ml). *)
           let unique_fence =
             if Table.non_atomic_rc () then []
-            else (
-              (* Raised here, where the fence is made whether or not the
-                 drain writes it, as well as for the fences the drain does
-                 write ({!Cpp_demands}). *)
-              Common.require_header "atomic";
-              [Sraw Cpp_demands.acquire_fence] )
+            else [Sraw Cpp_demands.acquire_fence]
           in
           let is_sole p =
             CPPbinop (Beq, CPPaccess_call (Adot, p, Id.of_string "use_count", []), CPPint 1)

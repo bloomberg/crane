@@ -5,7 +5,6 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
-#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <optional>

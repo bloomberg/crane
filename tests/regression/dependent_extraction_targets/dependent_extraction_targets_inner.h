@@ -1,7 +1,6 @@
 #ifndef INCLUDED_DEPENDENT_EXTRACTION_TARGETS_INNER
 #define INCLUDED_DEPENDENT_EXTRACTION_TARGETS_INNER
 
-#include <atomic>
 #include <cstdint>
 #include <type_traits>
 #include <utility>

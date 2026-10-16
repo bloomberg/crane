@@ -1,7 +1,6 @@
 #ifndef INCLUDED_COUNT_LOOP_TEST_TARGET
 #define INCLUDED_COUNT_LOOP_TEST_TARGET
 
-#include <atomic>
 #include <cstdint>
 #include <type_traits>
 #include <utility>

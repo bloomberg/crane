@@ -6,7 +6,6 @@
 #include "lazy.h"
 #include "obj.h"
 #include "shared_block.h"
-#include <atomic>
 #include <concepts>
 #include <cstdint>
 #include <stdexcept>

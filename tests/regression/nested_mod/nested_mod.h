@@ -1,7 +1,6 @@
 #ifndef INCLUDED_NESTED_MOD
 #define INCLUDED_NESTED_MOD
 
-#include <atomic>
 #include <cstdint>
 #include <type_traits>
 #include <utility>

@@ -1,7 +1,6 @@
 #ifndef INCLUDED_FACTORY_HIDES_FIELD_TYPE
 #define INCLUDED_FACTORY_HIDES_FIELD_TYPE
 
-#include <atomic>
 #include <cstdint>
 #include <type_traits>
 #include <utility>

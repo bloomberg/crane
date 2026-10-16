@@ -1,7 +1,6 @@
 #ifndef INCLUDED_NUMBER
 #define INCLUDED_NUMBER
 
-#include <atomic>
 #include <utility>
 #include <variant>
 

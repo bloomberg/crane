@@ -1,7 +1,6 @@
 #ifndef INCLUDED_PERSISTENT_ARRAY_DEFAULT_CONSTRUCTION
 #define INCLUDED_PERSISTENT_ARRAY_DEFAULT_CONSTRUCTION
 
-#include <atomic>
 #include <cstdint>
 #include <persistent_array.h>
 #include <type_traits>

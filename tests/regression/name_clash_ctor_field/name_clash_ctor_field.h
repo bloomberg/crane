@@ -1,7 +1,6 @@
 #ifndef INCLUDED_NAME_CLASH_CTOR_FIELD
 #define INCLUDED_NAME_CLASH_CTOR_FIELD
 
-#include <atomic>
 #include <cstdint>
 #include <type_traits>
 #include <utility>

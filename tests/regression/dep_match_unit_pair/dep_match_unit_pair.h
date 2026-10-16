@@ -1,7 +1,6 @@
 #ifndef INCLUDED_DEP_MATCH_UNIT_PAIR
 #define INCLUDED_DEP_MATCH_UNIT_PAIR
 
-#include <atomic>
 #include <cstdint>
 #include <stdexcept>
 #include <type_traits>

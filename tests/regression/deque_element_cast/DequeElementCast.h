@@ -2,7 +2,6 @@
 #define INCLUDED_DEQUEELEMENTCAST
 
 #include "obj.h"
-#include <atomic>
 #include <cstdint>
 #include <deque>
 #include <utility>

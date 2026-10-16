@@ -1,7 +1,6 @@
 #ifndef INCLUDED_DEP_MATCH_UNIT_BOOL_IDX
 #define INCLUDED_DEP_MATCH_UNIT_BOOL_IDX
 
-#include <atomic>
 #include <cstdint>
 #include <stdexcept>
 #include <type_traits>

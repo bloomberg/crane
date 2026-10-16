@@ -2,7 +2,6 @@
 #define INCLUDED_CLOSURE_IN_CTOR
 
 #include "fn.h"
-#include <atomic>
 #include <cstdint>
 #include <type_traits>
 #include <utility>

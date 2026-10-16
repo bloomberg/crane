@@ -2,7 +2,6 @@
 #define INCLUDED_DEP_MATCH_UNIT_FUN
 
 #include "fn.h"
-#include <atomic>
 #include <cstdint>
 #include <stdexcept>
 #include <type_traits>

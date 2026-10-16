@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <atomic>
 #include <concepts>
 #include <cstdint>
 #include <type_traits>

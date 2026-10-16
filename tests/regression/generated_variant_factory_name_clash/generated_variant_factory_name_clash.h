@@ -1,7 +1,6 @@
 #ifndef INCLUDED_GENERATED_VARIANT_FACTORY_NAME_CLASH
 #define INCLUDED_GENERATED_VARIANT_FACTORY_NAME_CLASH
 
-#include <atomic>
 #include <type_traits>
 #include <utility>
 #include <variant>
