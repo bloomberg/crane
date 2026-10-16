@@ -993,6 +993,19 @@ let generate_method_ahead name vars ((func_ref, _, _, _) as candidate) =
      :: Option.default [] (Ref.User.Tbl.find_opt methods_ahead func_ref) );
   snd generation
 
+let check_method_ahead name vars ((func_ref, _, _, _) as candidate) =
+  let recorded =
+    List.find_map
+      (fun ((name', vars'), (field, _)) ->
+        if globref_equal name name' && List.equal Id.equal vars vars' then Some field else None )
+      (Option.default [] (Ref.User.Tbl.find_opt methods_ahead func_ref))
+  in
+  let again = fst (collecting_lifted (fun () -> generate_method name vars candidate)) in
+  if not (Option.equal (fun a b -> compare a b = 0) recorded (Some again)) then
+    CErrors.anomaly
+      Pp.(str "Crane: the method " ++ GlobRef.print func_ref
+          ++ str " was generated differently in reverse order.")
+
 (** [gen_single_method name vars candidate] is the method made of
     [candidate] in the inductive [name] whose variables are [vars], as
     generated ahead of the files ({!generate_method_ahead}), its helpers

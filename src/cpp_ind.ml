@@ -726,6 +726,14 @@ let generating_ahead f =
   ahead := true;
   Fun.protect ~finally:(fun () -> ahead := false) f
 
+(* Set while what was generated ahead is generated again to check it
+   ({!regenerating}): nothing is recorded or claimed. *)
+let rechecking = ref false
+
+let regenerating f =
+  rechecking := true;
+  Fun.protect ~finally:(fun () -> rechecking := false) f
+
 (* [compare] rather than [=]: a NaN literal is equal to itself. *)
 let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) =
   compare a.gf_entity b.gf_entity = 0
@@ -741,7 +749,7 @@ let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) 
 let generated_once ?(on_reuse = ignore) node gen =
   match get_phase () with
   | Plan -> gen ()
-  | Emit _ when !ahead ->
+  | Emit _ when !ahead && not !rechecking ->
     let key = Obj.repr node in
     let funs = gen () in
     Node_table.replace generated key
@@ -755,13 +763,13 @@ let generated_once ?(on_reuse = ignore) node gen =
         (Option.default [] (Node_table.find_opt generated (Obj.repr node)))
     with
     | Some funs ->
-      on_reuse funs;
+      if not !rechecking then on_reuse funs;
       if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
         let again, _ = Translation.collecting_lifted gen in
         if not (List.equal same_generation funs again) then
           CErrors.anomaly
-            Pp.(str "Crane: a function was generated differently ahead of the \
-                     files and in one of them.")
+            Pp.(str "Crane: a function was generated differently ahead of the files and "
+                ++ str (if !rechecking then "again in the reverse order." else "in one of them."))
       end;
       funs
     | None ->
@@ -1093,7 +1101,7 @@ let same_generated (a : generated) (b : generated) =
     taken from there by the header. *)
 let instance_entity r a t =
   let mp = top_visible_mp () in
-  if !ahead then begin
+  if !ahead && not !rechecking then begin
     let generation = Translation.collecting_lifted (fun () -> instance_decls r a t) in
     Node_table.replace instances_generated (Obj.repr a)
       ((mp, generation)
@@ -1107,14 +1115,15 @@ let instance_entity r a t =
         (Option.default [] (Node_table.find_opt instances_generated (Obj.repr a)))
     with
     | Some (ds, lifted) ->
-      let helpers = Translation.claim_lifted lifted in
-      ignore (record_entity r (List.map snd ds) helpers);
+      let helpers = if !rechecking then lifted else Translation.claim_lifted lifted in
+      if not !rechecking then ignore (record_entity r (List.map snd ds) helpers);
       if Sys.getenv_opt "CRANE_CHECK_IR" <> None
          && not (same_generated ds (fst (Translation.collecting_lifted (fun () -> instance_decls r a t))))
       then
         CErrors.anomaly
           Pp.(str "Crane: the instance " ++ GlobRef.print r
-              ++ str " was generated differently ahead of the header and in it.");
+              ++ str " was generated differently ahead of the header and "
+              ++ str (if !rechecking then "again in the reverse order." else "in it."));
       (ds, helpers)
     | None ->
       CErrors.anomaly
@@ -1132,6 +1141,12 @@ let generate_ahead d =
     ignore (finished_instance ds : rendered);
     helpers
   | Header_only _ | Nothing -> []
+
+let regenerate_ahead d =
+  regenerating @@ fun () ->
+  match generate d with
+  | Instance (r, a, t) -> ignore (instance_entity r a t : generated * cpp_decl list)
+  | Functions _ | Header_only _ | Nothing -> ()
 
 let decls_for ~is_header d =
   match generate d with

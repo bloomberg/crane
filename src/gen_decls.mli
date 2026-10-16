@@ -81,6 +81,10 @@ val plan_method :
 val generate_method_ahead :
   GlobRef.t -> Id.t list -> GlobRef.t * ml_ast * ml_type * int -> cpp_decl list
 
+(** [check_method_ahead name vars candidate] generates the method again and
+    checks it is the one {!generate_method_ahead} recorded. *)
+val check_method_ahead : GlobRef.t -> Id.t list -> GlobRef.t * ml_ast * ml_type * int -> unit
+
 (** The concrete types the instance [r] -- of body [b] and type [ty] -- gives
     its class's promoted variables, which a call through it substitutes for
     them; none where it builds no record of its class or does not give them

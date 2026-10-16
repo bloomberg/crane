@@ -2484,7 +2484,29 @@ let generate_ahead s =
       | SEdecl d -> lifted (Cpp_ind.generate_ahead d)
       | _ -> ())
     s;
-  List.iter (fun h -> ignore (Cpp_ind.finished_alone h : Cpp_erasure.settled)) (List.rev !helpers)
+  List.iter (fun h -> ignore (Cpp_ind.finished_alone h : Cpp_erasure.settled)) (List.rev !helpers);
+  (* A body is a function of its declaration, not of the bodies generated
+     before it: under [CRANE_CHECK_IR] everything is generated again in the
+     reverse order and must come out the same (the plan's Milestone 4). *)
+  if Probe.checking () then
+    walk_as_rendered ~reversed:true
+      ~decl:(fun ~wrapper se ->
+        match se with
+        | SEdecl (Dind (kn, ind)) ->
+          List.iter
+            (fun (ind_ref, vars, candidate) -> Gen_decls.check_method_ahead ind_ref vars candidate)
+            (registered_methods ~order:List.rev kn ind)
+        | _ when wrapper -> (
+          match wrapper_element se with
+          | Wrapper_functions (_, generate) ->
+            Cpp_ind.regenerating (fun () -> ignore (generate () : Gen_decls.generated_fun list))
+          | Wrapper_instance (r, a, t) ->
+            Cpp_ind.regenerating (fun () ->
+                ignore (Cpp_ind.instance_entity r a t : Cpp_ind.generated * cpp_decl list) )
+          | Wrapper_nothing -> () )
+        | SEdecl d -> Cpp_ind.regenerate_ahead d
+        | _ -> ())
+      s
 
 (* The declarations of [s], a functor's body's among them, in order. *)
 let declarations s =

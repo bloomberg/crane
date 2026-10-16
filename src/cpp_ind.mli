@@ -99,6 +99,16 @@ val generating_ahead : (unit -> 'a) -> 'a
     helpers lifted out of them.  Nothing for any other declaration. *)
 val generate_ahead : Miniml.ml_decl -> Minicpp.cpp_decl list
 
+(** [regenerating f] runs [f], generating again what was generated ahead
+    of the files to check it: {!generated_once} and {!instance_entity}
+    compare what they generate with what they recorded, and record and claim
+    nothing. *)
+val regenerating : (unit -> 'a) -> 'a
+
+(** [regenerate_ahead d] generates again what {!generate_ahead} generated
+    for [d], checking it ({!regenerating}). *)
+val regenerate_ahead : Miniml.ml_decl -> unit
+
 (** [finished_alone d] is [d] finished on its own ({!Cpp_pipeline.finish}):
     a declaration written without a definition, or a lifted helper.  Ahead
     of the files ({!generating_ahead}) it is finished and recorded; a file's
