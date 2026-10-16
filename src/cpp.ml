@@ -904,7 +904,7 @@ let dbg_lifted =
         | None -> "<not-a-lifted-helper>"
       in
       let split =
-        let e = Function_entity.of_finished (Cpp_pipeline.finish d) in
+        let e = Function_entity.of_finished (Cpp_ind.finished_alone d) in
         if Function_entity.defines_function e then
           let spec = Function_entity.declaration e in
           Printf.sprintf "splits=yes hoistable=%b spec=%S"
@@ -2176,14 +2176,15 @@ let registered_methods ?(order = Fun.id) kn ind =
     one of a wrapper module's own elements, which a render generates as the
     wrapper's ({!pp_wrapper_module_dual}), before any inductive is made
     local; [after_wrapper ()] once a wrapper module's elements have all
-    been walked, still inside it; [after_module frame] once a module's body
-    has been walked, still in its frame [frame] but no longer inside it.  A
+    been walked, still inside it; [after_module frame sel] once the body of
+    a module of elements [sel] has been walked, still in its frame [frame]
+    but no longer inside it.  A
     functor's body is walked as the class
     template it becomes,
     its parameters visible in it.  The visibility stack is restored, not
     popped: popping a file's layer while emitting records its content. *)
-let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(after_module = ignore)
-    ~decl s =
+let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
+    ?(after_module = fun _ _ -> ()) ~decl s =
   let order l = if reversed then List.rev l else l in
   let analysis = get_structure_analysis () in
   let declared_inductives mp sel =
@@ -2231,7 +2232,7 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(after_modul
       | None -> Table.with_demoted_inductive frame.eponymous_type k
     in
     with_promotion (fun () -> in_header_scope scope k);
-    after_module frame
+    after_module frame sel
   in
   let with_local_inductives refs k =
     let outer = get_local_inductives () in
@@ -2390,7 +2391,12 @@ let generate_ahead s =
   let helpers = ref [] in
   let lifted hs = helpers := List.rev_append hs !helpers in
   walk_as_rendered
-    ~after_module:(fun frame ->
+    ~after_module:(fun frame sel ->
+      (* The class concepts the module's struct is preceded by. *)
+      List.iter
+        (fun (_, r, fields) ->
+          ignore (Cpp_ind.finished_alone (Cpp_ind.concept r fields) : Cpp_erasure.settled) )
+        (declared_classes sel);
       Option.iter
         (fun (r, vars, candidates) ->
           let fields, hs = Cpp_ind.record_methods r vars candidates in
@@ -2430,7 +2436,7 @@ let generate_ahead s =
   if Probe.checking () then
     Cpp_ind.regenerating @@ fun () ->
     walk_as_rendered ~reversed:true
-      ~after_module:(fun frame ->
+      ~after_module:(fun frame _ ->
         Option.iter
           (fun (r, vars, candidates) -> ignore (Cpp_ind.record_methods r vars candidates))
           (eponymous_record_methods frame) )

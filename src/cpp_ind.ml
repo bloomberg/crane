@@ -44,7 +44,6 @@ let finished (ds : generated) : rendered =
   let envs, decls = List.split ds in
   List.combine envs (Cpp_pipeline.finish_group decls)
 
-let render_decl env d = Cpp_print.pp_cpp_decl env (Cpp_pipeline.finish d)
 
 (** Print the declarations an entry point answered with. *)
 let pp_decls (ds : rendered) =
@@ -925,6 +924,10 @@ let () = State.on_reset State.Unit (fun () -> Node_table.reset finished_alone_ah
 let finished_alone d =
   finished_ahead_once finished_alone_ahead d (fun () -> Cpp_pipeline.finish d) ~what:"a declaration"
 
+(** [render_decl env d] prints [d] finished ahead of the files
+    ({!finished_alone}). *)
+let render_decl env d = Cpp_print.pp_cpp_decl env (finished_alone d)
+
 (** Each root instance's declarations, finished as one group ahead of the
     files, by the physical identity of their generation. *)
 let instances_finished_ahead : rendered Node_table.t = Node_table.create 16
@@ -1239,6 +1242,17 @@ let header_entity d gen =
       (g, helpers) )
     (fun () -> Translation.collecting_all_lifted gen)
 
+(** What the header alone writes of each declaration, finished as one group
+    ahead of the files, by the physical identity of its generation: the
+    declarations, and apart from them the member definitions written after
+    the group. *)
+let headers_finished : rendered Node_table.t = Node_table.create 64
+
+let () = State.on_reset State.Unit (fun () -> Node_table.reset headers_finished)
+
+let finished_header (ds : generated) =
+  finished_ahead_once headers_finished ds (fun () -> finished ds) ~what:"a header declaration"
+
 (** [in_header_scope f] runs [f] in the render context the header writes
     the current module's body in, as planned ({!header_scope}). *)
 let in_header_scope f =
@@ -1269,7 +1283,9 @@ let generate_ahead d =
     ignore (finished_instance ds : rendered);
     helpers
   | Header_only gen ->
-    ignore (header_entity d gen : header_generation * cpp_decl list);
+    let g, _ = header_entity d gen in
+    ignore (finished_header g.member_defs : rendered);
+    ignore (finished_header g.decls : rendered);
     []
   | Nothing -> []
 
@@ -1293,9 +1309,9 @@ let decls_for ~is_header d =
     { rendered = function_views ~is_header ~lifted_inline funs; helpers }
   | Header_only gen when is_header ->
     let g, helpers = header_entity d gen in
-    defer deferred_member_defs (finished g.member_defs);
+    defer deferred_member_defs (finished_header g.member_defs);
     Option.iter (fun sft -> eponymous_promote_sft := sft) g.promoted_sft;
-    { rendered = finished g.decls; helpers }
+    { rendered = finished_header g.decls; helpers }
   | Instance (r, a, t) when is_header ->
     let ds, helpers = instance_entity r a t in
     { rendered = finished_instance ds; helpers }

@@ -26,8 +26,8 @@ type generated = (Common.env * Minicpp.cpp_decl) list
     what one MiniML declaration became). *)
 type rendered = (Common.env * Cpp_erasure.settled) list
 
-(** [render_decl env d] finishes [d] and prints it: the one place a generated
-    declaration crosses from the compiler's passes to the printer. *)
+(** [render_decl env d] prints [d] as it was finished ahead of the files
+    ({!finished_alone}). *)
 val render_decl : Common.env -> Minicpp.cpp_decl -> Pp.t
 
 (** Print the declarations an entry point answered with. *)
