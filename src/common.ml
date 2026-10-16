@@ -623,14 +623,13 @@ let mktable_modpath ?census autoclean =
 
 (** The list of external modules that will be opened initially *)
 
-let mpfiles_add, mpfiles_mem, mpfiles_list =
+let mpfiles_add, mpfiles_list =
   let m = ref MPset.empty in
   let add mp = m := MPset.add mp !m
-  and mem mp = MPset.mem mp !m
   and list () = MPset.elements !m
   and clear () = m := MPset.empty in
   register_cleanup clear;
-  (add, mem, list)
+  (add, list)
 
 (** Separate extraction: every cross-file reference is spelled in full, since
     each file is emitted into its own namespace and nothing is brought into
@@ -1356,37 +1355,25 @@ let pp_ocaml_local k prefix mp rls olab =
        wrapper module; Crane has no need of that. *)
     plain rls
 
-(** Whether a reference into the file [base], whose path within the file is
-    [rls'], must name the file. *)
-let extern_needs_file k base rls' =
-  (not (modular ())) (* Pseudo qualification with "" *)
-  || List.is_empty rls' (* Case of a file A.v used as a module later *)
-  || !force_cross_file_qualification
-     (* Separate extraction: nothing is in scope across files *)
-  || (not (mpfiles_mem base)) (* Module not referenced *)
-  || visible_clash base (fstlev_ks k rls')
-(* Local conflict *)
-
 (** Print an externally-defined reference. [pp_ocaml_extern] : [mp] isn't local,
-    it is defined in another [MPfile].
-    @param k    Kind of the reference
-    @param base The [MPfile] base of the module path
+    it is defined in another [MPfile], and the file is always named.  OCaml
+    could leave it out for a file it had opened; C++ opens nothing.  A
+    monolithic extraction's file component is the empty string, and a
+    separate extraction names every cross-file reference in full
+    ({!force_cross_file_qualification}), so which files were referenced
+    before never decides a spelling.
     @param rls  Full renaming list (outermost component first)
-    @return The shortest unambiguous dotted name, fully qualified when the
-            module is not opened or when a clash is detected *)
-let pp_ocaml_extern k base rls =
+    @return The fully qualified dotted name *)
+let pp_ocaml_extern rls =
   match rls with
   | [] -> CErrors.anomaly (Pp.str "pp_ocaml_extern: empty renaming list")
   | base_s :: rls' ->
-    if extern_needs_file k base rls' then
-      if !force_cross_file_qualification && hidden_by_member base_s then
-        (* A file is a namespace at global scope, so it is named from there
-           where a nearer name hides it: [Decimal] inside [Number]'s struct,
-           whose constructor of that name is a struct too. *)
-        plain (("::" ^ base_s) :: rls')
-      else plain rls
-    else (* Standard situation : object in an opened file *)
-      plain rls'
+    if !force_cross_file_qualification && hidden_by_member base_s then
+      (* A file is a namespace at global scope, so it is named from there
+         where a nearer name hides it: [Decimal] inside [Number]'s struct,
+         whose constructor of that name is a struct too. *)
+      plain (("::" ^ base_s) :: rls')
+    else plain rls
 
 (** Main name printer: dispatch between local, bound, and external.
     [pp_ocaml_gen] : choosing between [pp_ocaml_local] or [pp_ocaml_extern].
@@ -1406,7 +1393,7 @@ let pp_ocaml_gen k mp rls olab =
          spells the same way. *)
       plain rls
     else
-      pp_ocaml_extern k base rls
+      pp_ocaml_extern rls
 
 (** C++ variant of {!pp_ocaml_gen}: same dispatch logic but treats non-output
     module references as external (unqualified short name only).
@@ -1425,7 +1412,7 @@ let pp_cpp_gen k mp rls olab =
     else if is_non_output_module base then
       plain [unquote (last rls)]
     else
-      pp_ocaml_extern k base rls
+      pp_ocaml_extern rls
 
 (** Main name printing function for a reference, using a kernel name key:
     its short name in its own module, and otherwise as {!pp_cpp_gen}
@@ -1466,9 +1453,8 @@ let file_qualifier k r =
     if is_mp_bound base || is_non_output_module base then None
     else
       match List.rev (ref_renaming (k, r)) with
-      | base_s :: rls' when extern_needs_file k base rls' ->
-        Some (unquote base_s)
-      | _ -> None )
+      | base_s :: _ -> Some (unquote base_s)
+      | [] -> None )
 
 (** Print just the short name of a reference (for declarations). Main name
     printing function for declaring a reference.
