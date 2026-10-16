@@ -1103,68 +1103,94 @@ let plan_layout struc =
     planned,
     assumed )
 
-(** Under [CRANE_TRACE_PIPELINE], report what the tables gained between
-    [before] and now, while output was generated: its demands, and the names
-    of the helpers lifted out of the bodies it generated. *)
+(** The tables' sizes ({!Table.census}), and how many names emission had
+    decided ({!Common.names_decided_while_emitting}), at one point of a
+    unit's extraction. *)
+type checkpoint = {
+  census : (string * int) list;
+  names_decided : int;
+}
+
+let checkpoint () =
+  { census = Table.census (); names_decided = List.length (Common.names_decided_while_emitting ()) }
+
+(** The tables that grew from [before] to [after], with how much. *)
+let grown before after =
+  List.filter_map
+    (fun (name, n) ->
+      match List.assoc_opt name before.census with
+      | Some m when n > m -> Some (name, n - m)
+      | None when n > 0 -> Some (name, n)
+      | _ -> None )
+    after.census
+
+(** Under [CRANE_TRACE_PIPELINE], report what the tables gained from
+    [before] to now, while the files were rendered: the headers their text
+    demands. *)
 let report_decided_while_rendering before =
   if Pipeline_trace.enabled () then
-    let grown =
-      List.filter_map
-        (fun (name, n) ->
-          match List.assoc_opt name before with
-          | Some m when n > m -> Some (Printf.sprintf "%s +%d" name (n - m))
-          | None when n > 0 -> Some (Printf.sprintf "%s +%d" name n)
-          | _ -> None )
-        (Table.census ())
-    in
+    let grown = grown before (checkpoint ()) in
     Pipeline_trace.event "emit"
       ( "decided while rendering: "
-      ^ if grown = [] then "nothing" else String.concat ", " grown )
+      ^ if grown = [] then "nothing"
+        else String.concat ", " (List.map (fun (name, n) -> Printf.sprintf "%s +%d" name n) grown) )
 
-(** The tables output may add to: the headers a body demands, and the names
-    of the helpers lifted out of a body as it is generated, which
-    {!Common.names_decided_while_emitting} lists for the check below. *)
-let emission_products = ["demands"; "ref_renaming"; "mp_renaming"; "global_ids"]
+(** The tables generating output ahead of the files may add to: the headers
+    a body demands, and the names of the helpers lifted out of a body as it
+    is generated, which {!Common.names_decided_while_emitting} lists for the
+    check below.  Rendering may add to the first alone. *)
+let generation_products = ["demands"; "ref_renaming"; "mp_renaming"; "global_ids"]
 
-(** Check that generating output decided nothing the plan should have.
+let rendering_products = ["demands"]
+
+(** Check that generating output decided nothing the plan should have, and
+    that rendering it decided nothing at all but the headers it demands.
 
     Every decision about the shape of the code -- a name, a field, whether a
     wrapper merged -- is taken while planning, and generating output only
     reads them.  A table that has grown since planning ended holds a decision
     that emission made, which an earlier use of the same declaration could
-    not have seen.  Output may demand headers, and it generates the helpers
-    it lifts out of the bodies it translates, naming each as it is lifted;
-    any other name it decided is one the plan missed.
+    not have seen.  Generation, from [planned] to [generated], may demand
+    headers, and names the helpers it lifts out of the bodies it translates
+    as it lifts them; any other name it decided is one the plan missed.
+    Every body is generated before the files are rendered, so from
+    [generated] on only the text's demands may be added.
 
     The corpus satisfies this today.  Reported under [CRANE_CHECK_IR], like
     {!Table.mark_demand}'s late demands, rather than left to surface as C++
     that does not compile. *)
-let check_no_late_decisions planned =
-  report_decided_while_rendering planned;
+let check_no_late_decisions ~planned ~generated =
+  report_decided_while_rendering generated;
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
-    let late what =
+    let late ~stage what =
       CErrors.user_err
         Pp.(
-          str "Crane: " ++ what
-          ++ str " while output was being generated.  Decisions belong to \
-                  planning; a use rendered before this one could not have \
-                  seen it." )
+          str "Crane: " ++ what ++ str " while " ++ str stage
+          ++ str ".  Decisions belong to planning; a use rendered before \
+                  this one could not have seen it." )
     in
-    let after = Table.census () in
-    List.iter
-      (fun (name, n_before) ->
-        match List.assoc_opt name after with
-        | Some n_after when n_after > n_before && not (List.mem name emission_products) ->
-          late Pp.(int (n_after - n_before) ++ str " entries were added to '" ++ str name ++ str "'")
-        | _ -> () )
-      planned;
-    List.iter
-      (function
-        | Common.Global_name r when Option.has_some (Lifted.of_ref r) -> ()
+    let check ~stage products before after =
+      List.iter
+        (fun (name, n) ->
+          if not (List.mem name products) then
+            late ~stage Pp.(int n ++ str " entries were added to '" ++ str name ++ str "'") )
+        (grown before after)
+    in
+    let rendered = checkpoint () in
+    check ~stage:"output was being generated" generation_products planned generated;
+    check ~stage:"the files were being rendered" rendering_products generated rendered;
+    List.iteri
+      (fun i decided ->
+        let stage =
+          if i < generated.names_decided then "output was being generated"
+          else "the files were being rendered"
+        in
+        match decided with
+        | Common.Global_name r when i < generated.names_decided && Option.has_some (Lifted.of_ref r) -> ()
         | Common.Global_name r ->
-          late Pp.(str "the name of " ++ str (Table.kername_of_global r) ++ str " was decided")
+          late ~stage Pp.(str "the name of " ++ str (Table.kername_of_global r) ++ str " was decided")
         | Common.Module_name mp ->
-          late Pp.(str "the name of module " ++ str (ModPath.to_string mp) ++ str " was decided") )
+          late ~stage Pp.(str "the name of module " ++ str (ModPath.to_string mp) ++ str " was decided") )
       (Common.names_decided_while_emitting ())
   end
 
@@ -1537,7 +1563,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   let modules, representation, callables, assumed = plan_layout struc in
   let plan = Target_plan.with_layout plan modules representation callables assumed in
   elaborate_unit struc;
-  let census_after_planning = Table.census () in
+  let planned_checkpoint = checkpoint () in
   freeze_global_ids ();
   (* Both bodies are rendered before either file is opened.  A preamble has to
      say what the body it precedes demands -- which headers it includes, which
@@ -1565,6 +1591,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   set_phase (Emit (if intf_first then Intf else Impl));
   Pipeline_trace.event "emit" "generate_ahead";
   Cpp.generate_ahead struc;
+  let generated_checkpoint = checkpoint () in
   let body_impl, body_hstruct =
     if intf_first then
       let intf = render_intf () in
@@ -1575,7 +1602,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   in
   report_body_generations fn;
   Table.freeze_demands ();
-  check_no_late_decisions census_after_planning;
+  check_no_late_decisions ~planned:planned_checkpoint ~generated:generated_checkpoint;
   Generated_program.check_against_plan ~declares:(declares struc);
   Install_legacy_plan.check_installed facts plan;
   check_structure_unchanged planned struc;
