@@ -477,6 +477,26 @@ let collecting_lifted f =
       let v = f () in
       (v, List.rev (!tctx).output.pending_lifted_decls) )
 
+(** [collecting_all_lifted f] is {!collecting_lifted} [f], with every
+    helper [f] lifts among the declarations returned, those a generation
+    before it has already lifted in the same pass included; they stay marked
+    lifted afterwards.  What a generation ahead of the files records when
+    each file claims its helpers for itself ({!claim_lifted}): whether an
+    earlier element of a file lifted one is a question about that file, not
+    about the walk ahead of both. *)
+let collecting_all_lifted f =
+  let seen = (!tctx).output.seen_lifted_refs in
+  update_output (fun o -> {o with seen_lifted_refs = []});
+  Fun.protect
+    ~finally:(fun () ->
+      update_output (fun o ->
+          { o with
+            seen_lifted_refs =
+              List.fold_left
+                (fun acc r -> if List.exists (globref_equal r) acc then acc else r :: acc)
+                seen o.seen_lifted_refs } ) )
+    (fun () -> collecting_lifted f)
+
 (** [claim_lifted ds] is what of [ds] generating them again would lift: those
     this file has not lifted already, which are marked lifted now. *)
 let claim_lifted ds = snd (collecting_lifted (fun () -> List.iter add_lifted_decl ds))

@@ -935,13 +935,17 @@ let generated_concept r fields =
   ignore (record_entity r [d] []);
   d
 
+(** The functions of a module's method candidates [candidates] its
+    eponymous record's struct is given as methods: those that are not
+    projections, oldest first. *)
+let record_method_candidates candidates =
+  List.filter (fun (r, _, _, _) -> not (Table.is_projection r)) (List.rev candidates)
+
 (** The methods of the eponymous record [r] made of [candidates], each
     recorded as the generation of the function it was made of, and the
     helpers lifted out of their bodies, which are members beside them. *)
 let generated_record_methods r vars candidates =
-  let fields, lifted =
-    Translation.collecting_lifted (fun () -> Gen_decls.gen_record_methods r vars candidates)
-  in
+  let fields, lifted = Cpp_ind.record_methods r vars candidates in
   List.iter
     (fun ((f, _, _) as field) ->
       ignore
@@ -1529,13 +1533,9 @@ let rec pp_structure_elem ~is_header f = function
                   prlist_with_sep fnl (fun p -> p) (List.mapi pp_field field_list)
                   ++ fnl ()
                 in
-                let non_projection_candidates =
-                  List.filter
-                    (fun (r, _, _, _) -> not (Table.is_projection r))
-                    (List.rev this_method_candidates)
-                in
                 let method_fields, method_helpers =
-                  generated_record_methods epon_ref ty_vars non_projection_candidates
+                  generated_record_methods epon_ref ty_vars
+                    (record_method_candidates this_method_candidates)
                 in
                 (* A struct is a complete-class context, so a helper lifted out
                    of a method is a member that may follow the methods calling
@@ -1556,14 +1556,7 @@ let rec pp_structure_elem ~is_header f = function
                        member does -- loopification, moves, the constraints
                        their bodies settle -- before they are printed. *)
                     let finished =
-                      Cpp_pipeline.finish
-                        (Dfields
-                           { ds_ref = epon_ref;
-                             ds_fields = method_fields;
-                             ds_tparams =
-                               List.map (fun v -> (TTtypename, v)) ty_vars;
-                             ds_constraint = None;
-                             ds_needs_shared_from_this = false } )
+                      Cpp_ind.finished_record_methods epon_ref ty_vars method_fields
                     in
                     let fields =
                       match (finished :> cpp_decl) with
@@ -2183,11 +2176,14 @@ let registered_methods ?(order = Fun.id) kn ind =
     one of a wrapper module's own elements, which a render generates as the
     wrapper's ({!pp_wrapper_module_dual}), before any inductive is made
     local; [after_wrapper ()] once a wrapper module's elements have all
-    been walked, still inside it.  A functor's body is walked as the class
+    been walked, still inside it; [after_module frame] once a module's body
+    has been walked, still in its frame [frame] but no longer inside it.  A
+    functor's body is walked as the class
     template it becomes,
     its parameters visible in it.  The visibility stack is restored, not
     popped: popping a file's layer while emitting records its content. *)
-let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ~decl s =
+let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(after_module = ignore)
+    ~decl s =
   let order l = if reversed then List.rev l else l in
   let analysis = get_structure_analysis () in
   let declared_inductives mp sel =
@@ -2234,7 +2230,8 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ~decl s =
       | Some _ -> setting eponymous_promote_ref frame.eponymous_type k
       | None -> Table.with_demoted_inductive frame.eponymous_type k
     in
-    with_promotion (fun () -> in_header_scope scope k)
+    with_promotion (fun () -> in_header_scope scope k);
+    after_module frame
   in
   let with_local_inductives refs k =
     let outer = get_local_inductives () in
@@ -2356,6 +2353,15 @@ let plan_callables ?(reversed = false) s =
     s;
   (List.rev !plans, List.rev !instance_plans)
 
+(** The record, variables and candidates of the methods the header gives
+    the eponymous record of a module of frame [frame], if it gives any: a
+    record merged into a struct that is not a promoted inductive's. *)
+let eponymous_record_methods (frame : Module_frame.t) =
+  match frame.eponymous_record with
+  | Some (r, _, packet) when frame.promoted = None ->
+    Some (r, packet.ip_vars, record_method_candidates frame.method_candidates)
+  | Some _ | None -> None
+
 (** Generate every declaration the renders write before either file is
     rendered (docs/Pipeline-Disentangling-Plan.md, Milestones 1, 8 and 9):
     each declaration as {!Cpp_ind.generate} generates it, each of a wrapper
@@ -2384,6 +2390,14 @@ let generate_ahead s =
   let helpers = ref [] in
   let lifted hs = helpers := List.rev_append hs !helpers in
   walk_as_rendered
+    ~after_module:(fun frame ->
+      Option.iter
+        (fun (r, vars, candidates) ->
+          let fields, hs = Cpp_ind.record_methods r vars candidates in
+          if fields <> [] then
+            ignore (Cpp_ind.finished_record_methods r vars fields : Cpp_erasure.settled);
+          lifted hs )
+        (eponymous_record_methods frame) )
     ~after_wrapper:(fun () ->
       let funs = List.concat (List.rev !wrapper_functions) in
       ignore (Cpp_ind.finalized funs);
@@ -2416,6 +2430,10 @@ let generate_ahead s =
   if Probe.checking () then
     Cpp_ind.regenerating @@ fun () ->
     walk_as_rendered ~reversed:true
+      ~after_module:(fun frame ->
+        Option.iter
+          (fun (r, vars, candidates) -> ignore (Cpp_ind.record_methods r vars candidates))
+          (eponymous_record_methods frame) )
       ~decl:(fun ~wrapper se ->
         match se with
         | SEdecl (Dind (kn, ind) as d) ->

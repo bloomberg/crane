@@ -1129,7 +1129,7 @@ let instance_entity r a t =
       let helpers = Translation.claim_lifted lifted in
       ignore (record_entity r (List.map snd ds) helpers);
       (ds, helpers) )
-    (fun () -> Translation.collecting_lifted (fun () -> instance_decls r a t))
+    (fun () -> Translation.collecting_all_lifted (fun () -> instance_decls r a t))
 
 (** {2 The header's scope of a module}
 
@@ -1168,6 +1168,47 @@ let concept r fields =
     ~same:(fun d d' -> compare d d' = 0)
     (fun () -> Gen_decls.gen_typeclass_cpp r fields)
 
+(** The methods of each eponymous record, generated ahead of the files with
+    the helpers lifted out of them, by the record. *)
+let record_methods_generated :
+    (ModPath.t * ((cpp_field * cpp_visibility * section_tag) list * cpp_decl list)) list
+    Ref.User.Tbl.t =
+  Ref.User.Tbl.create 8
+
+let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset record_methods_generated)
+
+(** [record_methods r vars candidates] is the methods the eponymous record
+    [r], of variables [vars], is given, made of [candidates], with the
+    helpers lifted out of them: generated ahead of the files, and taken from
+    there by the header ({!ahead_once}). *)
+let record_methods r vars candidates =
+  ahead_once
+    ~what:(fun () -> Pp.(str "the methods of the record " ++ GlobRef.print r))
+    ~recorded:(fun () -> Option.default [] (Ref.User.Tbl.find_opt record_methods_generated r))
+    ~record:(Ref.User.Tbl.replace record_methods_generated r)
+    ~same:(fun (fields, _) (fields', _) -> compare fields fields' = 0)
+    ~take:(fun (fields, lifted) -> (fields, Translation.claim_lifted lifted))
+    (fun () ->
+      Translation.collecting_all_lifted (fun () -> Gen_decls.gen_record_methods r vars candidates) )
+
+(** The methods of each eponymous record, finished ahead of the files, by
+    the physical identity of their generation. *)
+let record_methods_finished : Cpp_erasure.settled Node_table.t = Node_table.create 8
+
+let () = State.on_reset State.Unit (fun () -> Node_table.reset record_methods_finished)
+
+let finished_record_methods r vars fields =
+  finished_ahead_once record_methods_finished fields
+    (fun () ->
+      Cpp_pipeline.finish
+        (Dfields
+           { ds_ref = r;
+             ds_fields = fields;
+             ds_tparams = List.map (fun v -> (TTtypename, v)) vars;
+             ds_constraint = None;
+             ds_needs_shared_from_this = false } ) )
+    ~what:"an eponymous record's methods"
+
 (** What was generated ahead of the header for each declaration it writes
     alone, by the declaration's physical node, with the module it was
     generated in: its generation, and the helpers lifted out of it. *)
@@ -1196,7 +1237,7 @@ let header_entity d gen =
       let helpers = Translation.claim_lifted lifted in
       ignore (record_entity (decl_entity d) (List.map snd g.decls) helpers);
       (g, helpers) )
-    (fun () -> Translation.collecting_lifted gen)
+    (fun () -> Translation.collecting_all_lifted gen)
 
 (** [in_header_scope f] runs [f] in the render context the header writes
     the current module's body in, as planned ({!header_scope}). *)

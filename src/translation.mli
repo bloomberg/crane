@@ -424,6 +424,12 @@ val compute_and_register_field_names :
     outside every collection is an anomaly. *)
 val collecting_lifted : (unit -> 'a) -> 'a * cpp_decl list
 
+(** [collecting_all_lifted f] is {!collecting_lifted} [f], returning every
+    helper [f] lifts, those an earlier generation of the same pass lifted
+    included: what a generation ahead of the files records where each file
+    claims the helpers for itself ({!claim_lifted}). *)
+val collecting_all_lifted : (unit -> 'a) -> 'a * cpp_decl list
+
 (** [claim_lifted ds] is what of [ds] generating them again would lift: each
     is kept unless this file has already lifted a declaration of the same
     name, and is then marked lifted. *)

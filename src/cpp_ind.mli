@@ -123,6 +123,27 @@ val header_scope : Names.ModPath.t -> header_scope option
     it again under [CRANE_CHECK_IR] to compare. *)
 val concept : Names.GlobRef.t -> Miniml.record_field list -> Minicpp.cpp_decl
 
+(** [record_methods r vars candidates] is the methods the eponymous record
+    [r], of variables [vars], is given, made of [candidates], with the
+    helpers lifted out of them: generated ahead of the files, and taken from
+    there by the header, which generates them again under [CRANE_CHECK_IR]
+    to compare. *)
+val record_methods :
+  Names.GlobRef.t ->
+  Names.Id.t list ->
+  Method_registry.method_candidate list ->
+  (Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag) list * Minicpp.cpp_decl list
+
+(** [finished_record_methods r vars fields] is [fields], the methods of the
+    eponymous record [r] of variables [vars], finished as the members of its
+    module's struct: ahead of the files, and taken from there by the header.
+    The key is [fields] itself, as {!record_methods} returned it. *)
+val finished_record_methods :
+  Names.GlobRef.t ->
+  Names.Id.t list ->
+  (Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag) list ->
+  Cpp_erasure.settled
+
 (** [regenerating f] runs [f], generating again what was generated ahead
     of the files to check it: {!generated_once} and {!instance_entity}
     compare what they generate with what they recorded, and record and claim
