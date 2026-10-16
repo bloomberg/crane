@@ -123,15 +123,12 @@ let tolerant ty =
   instance_dependent ty <> None || needs_deep_recovery ty
   || match ty with Tvar _ -> true | _ -> false
 
-(** [is_method n] -- [n] is rendered as a member function: either a candidate
-    collected for the inductive currently being rendered, or one the registry
-    found in its up-front scan.  Mirrors [Cpp_names.lookup_method_this_pos],
-    which answers the same question and additionally says where [this] sits. *)
-let is_method (n : GlobRef.t) : bool =
-  List.exists
-    (fun (r, _, _, _) -> Common.globref_equal n r)
-    !Cpp_state.method_candidates
-  || Cpp_state.is_registered_method n <> None
+(** [is_method n] -- [n] is rendered as a member function: one the registry
+    found in its up-front scan, which every candidate a render collects is
+    ({!Method_registry.planned_candidate}).  Mirrors
+    [Cpp_names.lookup_method_this_pos], which answers the same question and
+    additionally says where [this] sits. *)
+let is_method (n : GlobRef.t) : bool = Cpp_state.is_registered_method n <> None
 
 (** [returns_a_box e] -- [e] is a call whose result is declared [std::any], so
     reading it at a concrete type needs a cast.  Method results are the only

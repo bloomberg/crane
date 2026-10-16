@@ -1172,19 +1172,13 @@ let is_eponymous_record_projection r =
 let is_suppressed_projection r =
   Table.is_projection r && not (Table.is_higher_order_projection r)
 
-(** Filter a Dfix group, removing entries that are inline customs, method
-    candidates (local or globally registered), eponymous record projections, or
+(** Filter a Dfix group, removing entries that are inline customs, registered
+    methods (every method candidate is one), eponymous record projections, or
     suppressed projections: what is left is rendered directly. *)
 let filter_dfix fds =
-  let is_method_candidate x =
-    List.exists
-      (fun (r', _, _, _) -> globref_equal x r')
-      !method_candidates
-  in
   List.filter
     (fun {Miniml.fd_ref = x; _} ->
       (not (is_inline_custom x))
-      && (not (is_method_candidate x))
       && is_registered_method x = None
       && (not (is_eponymous_record_projection x))
       && not (is_suppressed_projection x) )
