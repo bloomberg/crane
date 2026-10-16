@@ -1255,6 +1255,23 @@ let concept r fields =
     ~same:(fun d d' -> compare d d' = 0)
     (fun () -> Gen_decls.gen_typeclass_cpp r fields)
 
+(** The concept of each module type, generated ahead of the files where
+    the header writes it, by the module type's path -- a functor
+    parameter's, for the anonymous signature of one. *)
+let modtype_concepts_generated : (ModPath.t * Modtype_concept.t) list MPmap.t ref =
+  State.cell State.Unit MPmap.empty
+
+(** [modtype_concept path ~params mt] is the concept of the module type
+    [mt] at [path], over the functor parameters [params]: generated ahead of
+    the files and taken from there by the header ({!ahead_once}). *)
+let modtype_concept path ~params mt =
+  ahead_once
+    ~what:(fun () -> Pp.(str "the concept of the module type " ++ str (ModPath.to_string path)))
+    ~recorded:(fun () -> Option.default [] (MPmap.find_opt path !modtype_concepts_generated))
+    ~record:(fun l -> modtype_concepts_generated := MPmap.add path l !modtype_concepts_generated)
+    ~same:(fun c c' -> compare c c' = 0)
+    (fun () -> Modtype_concept.generate ~params mt)
+
 (** The methods of each eponymous record, generated ahead of the files with
     the helpers lifted out of them, by the record. *)
 let record_methods_generated :

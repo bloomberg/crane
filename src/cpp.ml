@@ -166,258 +166,12 @@ let modtype_concept_name mp =
   | MPfile _ | MPbound _ ->
     CErrors.anomaly (Pp.str "modtype_concept_name: a module type is a member of a structure")
 
-(** Convert a signature spec element to a C++20 [requires] clause requirement.
-    Used for module type -> concept conversion.
-
-    Each {!Miniml.ml_spec} variant maps to a different requirement:
-    - [Sind]: [typename M::Name;] — checks that a nested type exists.
-    - [Sval]: [{M::name(declval<A>(),...)} -> same_as<R>;] or the nullary
-      form with [convertible_to].
-    - [Stype] with empty [vl]: [typename M::Name;] — simple type member.
-    - [Stype] with non-empty [vl]: [typename M::template Name<void,...>;]
-      — validates a template alias member (higher-kinded type parameter
-      such as [Parameter F : Type -> Type]).  The dummy [void] arguments
-      serve only to check that the template exists with the correct arity;
-      no semantic meaning is attached to the instantiation.
-
-    @param modtype_mp    Module path of the enclosing module type; used to
-                         decide whether a type reference is a member of [M]
-                         (and should be qualified ["typename M::"]) or an
-                         external type.
-    @param modtype_refs  All type/inductive global refs declared directly in
-                         the module-type signature; used to detect self-referential
-                         member types without recursing into [modtype_mp].
-    @return Pretty-printer document for the single requirement line, or [mt ()]
-            if the spec should be suppressed (e.g. inline-custom, polymorphic
-            value). *)
-let rec pp_spec_as_requirement modtype_mp modtype_refs spec =
-  (* The member type [name] of [M], a path to [r] from inside it, spelled as
-     [r] is declared -- an enum capitalised -- and applied to [args] when it
-     is a template. *)
-  let member_type name r args =
-    let name = if is_enum_cached r then capitalize_enum_qualified name r else name in
-    match args with
-    | [] -> str "typename M::" ++ str name
-    | _ ->
-      str "typename M::template " ++ str name ++ str "<"
-      ++ prlist_with_sep (fun () -> str ", ") Fun.id args
-      ++ str ">"
-  in
-  match spec with
-  | Sval (r, _, _) when is_inline_custom r -> mt ()
-  | Stype (r, _, _) when is_inline_custom r -> mt ()
-  (* A record's projection is a data member of the record's struct, which
-     [typename M::pt] already requires: a module emits no static function for
-     it, and the functor body reads the field off the value. *)
-  | Sval (r, _, _) when Table.is_projection r -> mt ()
-  | Sind (kn, ind) ->
-    (* A parameterised inductive is a class template, which only an
-       instantiation names: any one will do, so the erased type. *)
-    prvecti
-      (fun i p ->
-        let placeholders = List.map (fun _ -> pp_cpp_type false [] Tany) p.ip_vars in
-        let r = GlobRef.IndRef (kn, i) in
-        member_type (Common.pp_global_name Type r) r placeholders ++ str ";" ++ fnl () )
-      ind.ind_packets
-  | Sval (r, _, t) when has_tvar t -> mt ()
-  | Sval (r, b, t) ->
-    let name = pp_global_name Term r in
-    let rec get_function_parts = function
-      | Tarr (arg, rest) ->
-        let args, ret = get_function_parts rest in
-        (arg :: args, ret)
-      | ret_ty -> ([], ret_ty)
-    in
-    let args, ret_ty = get_function_parts t in
-    let cpp_ret =
-      convert_ml_type_to_cpp_type (empty_env ()) [] ret_ty
-    in
-    let stdlib_ns = (sn ()).ns ^ "::" in
-    let same_as = (sn ()).same_as in
-    let declval = (sn ()).declval in
-    let convertible_to = (sn ()).convertible_to in
-    require_header "concepts";
-    let rec is_mp_under base mp =
-      ModPath.equal mp base
-      || match mp with MPdot (parent, _) -> is_mp_under base parent | _ -> false
-    in
-    let rec get_base_mp = function
-      | MPdot (parent, _) -> get_base_mp parent
-      | mp -> mp
-    in
-    (* A parameter of a functor declaring the module type is an argument of
-       the concept, named as itself. *)
-    let is_functor_param_ref r =
-      let b = get_base_mp (modpath_of_r r) in
-      List.exists
-        (fun (_, (_, params)) -> List.exists (ModPath.equal b) params)
-        !functor_concept_scopes
-    in
-    let is_member_ref r =
-      let rmp = modpath_of_r r in
-      is_mp_under modtype_mp rmp
-      || match get_base_mp rmp with
-         | MPbound _ -> not (is_functor_param_ref r)
-         | _ -> false
-    in
-    let rec qualify_type = function
-      | Tglob (r, args, _) when not (is_custom r) && is_member_ref r ->
-        member_type (Pp.string_of_ppcmds (pp_global Type r)) r (List.map qualify_type args)
-      | Tglob (r, [], _) as t when not (is_custom r) && is_functor_param_ref r ->
-        str "typename " ++ pp_cpp_type false [] t
-      | Tglob (r, args, _) ->
-        ( match find_custom_opt r with
-        | Some custom_str ->
-          qualify_custom_template
-            (Foreign_template.custom_template_with_args custom_str (List.length args))
-            args qualify_type
-        | None ->
-          ( match args with
-          | [] -> pp_cpp_type false [] (Tglob (r, [], []))
-          | _ ->
-            pp_cpp_type false [] (Tglob (r, [], []))
-            ++ str "<"
-            ++ prlist_with_sep (fun () -> str ", ") qualify_type args
-            ++ str ">" ) )
-      | Tshared_ptr ty ->
-        str stdlib_ns ++ str "shared_ptr<" ++ qualify_type ty ++ str ">"
-      | Tvariant (Inline_variant, tys) ->
-        str stdlib_ns
-        ++ str "variant<"
-        ++ prlist_with_sep (fun () -> str ", ") qualify_type tys
-        ++ str ">"
-      | Tvariant (Shared_variant, tys) ->
-        str Crane_rt.shared_variant
-        ++ str "<"
-        ++ prlist_with_sep (fun () -> str ", ") qualify_type tys
-        ++ str ">"
-      | Tnamespace (r, Tglob (r', args, e)) when not (is_member_ref r) ->
-        ( match args with
-        | [] -> pp_cpp_type false [] (Tnamespace (r, Tglob (r', [], e)))
-        | _ ->
-          pp_cpp_type false [] (Tnamespace (r, Tglob (r', [], e)))
-          ++ str "<"
-          ++ prlist_with_sep (fun () -> str ", ") qualify_type args
-          ++ str ">" )
-      | Tnamespace (r, ty) ->
-        if is_member_ref r then qualify_type ty
-        else pp_cpp_type false [] (Tnamespace (r, ty))
-      | Tfun (d, c) ->
-        (* Function-type argument: qualify member types inside the function
-           signature.  Without this case, (elt -> bool) would fall through to
-           pp_cpp_type and render as crane::fn<bool(elt)> — elt is bare.
-           We need crane::fn<bool(typename M::elt)>. *)
-        Table.demand_header (Table.Runtime Crane_rt.fn_header);
-        str Crane_rt.fn ++ str "<"
-        ++ qualify_type c
-        ++ str "("
-        ++ prlist_with_sep (fun () -> str ", ") qualify_type d
-        ++ str ")>"
-      | ty -> pp_cpp_type false [] ty
-    in
-    (* A parameter whose type is a type class names an {e instance}, and Crane
-       emits an instance as a nested struct that satisfies the class's concept.
-       Ask for the member type and constrain it: a concept name is not a type,
-       so the value form below would spell [convertible_to<Weigh<...>>], which
-       does not compile. *)
-    begin match ret_ty with
-    | Tglob (cls, cls_args, _) when args = [] && Table.is_typeclass cls ->
-      str "typename M::"
-      ++ name
-      ++ str ";"
-      ++ fnl ()
-      ++ str "requires "
-      ++ str (Common.pp_global_name Type cls)
-      ++ str "<typename M::"
-      ++ name
-      ++ prlist
-           (fun a ->
-             str ", "
-             ++ qualify_type
-                  (convert_ml_type_to_cpp_type (empty_env ()) [] a) )
-           cls_args
-      ++ str ">;"
-      ++ fnl ()
-    | _ ->
-    if args = [] then
-      (* A nullary module value may be emitted either as a static data member
-         ([M::name]) or, inside a template where it becomes a Meyers singleton,
-         as a nullary accessor function ([M::name()]).  Which spelling a functor
-         body uses is decided later (by the [template_static_accessors] registry
-         and per-reference resolution) and is not reliably knowable here at
-         concept-generation time.  Accept BOTH forms so the concept never
-         rejects a module a generated body would in fact accept; the requirement
-         still enforces that the member exists with a convertible result type. *)
-      let qualified_ret = qualify_type cpp_ret in
-      str "requires ("
-      ++ fnl ()
-      ++ str "  requires { { M::"
-      ++ name
-      ++ str " } -> "
-      ++ str convertible_to
-      ++ str "<"
-      ++ qualified_ret
-      ++ str ">; } ||"
-      ++ fnl ()
-      ++ str "  requires { { M::"
-      ++ name
-      ++ str "() } -> "
-      ++ str convertible_to
-      ++ str "<"
-      ++ qualified_ret
-      ++ str ">; }"
-      ++ fnl ()
-      ++ str ");"
-      ++ fnl ()
-    else
-      let cpp_args =
-        List.map
-          (convert_ml_type_to_cpp_type (empty_env ()) [])
-          args
-      in
-      let declvals =
-        List.map
-          (fun arg_ty ->
-            str declval ++ str "<" ++ qualify_type arg_ty ++ str ">()" )
-          cpp_args
-      in
-      let call_expr =
-        str "M::"
-        ++ name
-        ++ str "("
-        ++ prlist_with_sep (fun () -> str ", ") identity declvals
-        ++ str ")"
-      in
-      str "{ "
-      ++ call_expr
-      ++ str " } -> "
-      ++ str same_as
-      ++ str "<"
-      ++ qualify_type cpp_ret
-      ++ str ">;"
-      ++ fnl ()
-    end
-  | Stype (r, vl, ot) ->
-    let name = pp_global_name Type r in
-    if vl = [] then
-      str "typename M::" ++ name ++ str ";" ++ fnl ()
-    else
-      (* Higher-kinded type parameter: check template alias exists by
-         instantiating with dummy void arguments *)
-      let dummy_args = List.map (fun _ -> str "void") vl in
-      str "typename M::template "
-      ++ name
-      ++ str "<"
-      ++ prlist_with_sep (fun () -> str ", ") identity dummy_args
-      ++ str ">;"
-      ++ fnl ()
-
 (** Render a concept name from a module path reference.  In separate extraction,
     concepts live inside their own namespace, so cross-file references need
     qualification.  For a top-level module type [X] that is its own extraction
     unit, the C++ structure is [namespace X { concept X = ...; }], requiring
     [X::X] from outside. *)
-and pp_concept_ref kn =
+let pp_concept_ref kn =
   match kn with
   | MPdot (mp0, _) when Option.has_some (functor_concept_scope mp0) ->
     (* Declared at file scope, so named after the functor declaring it. *)
@@ -457,60 +211,163 @@ and pp_concept_ref kn =
     end
   | _ -> pp_modname kn
 
-(** Convert a module type to a C++20 concept. MTsig generates requires clauses,
-    MTfunsig is handled by param tracking, MTident references an existing
-    concept by name.
+(** The type member [name] of [M], an enum's capitalised, applied to [args]
+    when it is a template. *)
+let pp_member_type ~enum name r args =
+  let name = if enum then capitalize_enum_qualified name r else name in
+  match args with
+  | [] -> str "typename M::" ++ str name
+  | _ ->
+    str "typename M::template " ++ str name ++ str "<"
+    ++ prlist_with_sep (fun () -> str ", ") Fun.id args
+    ++ str ">"
 
-    @param params  Accumulated list of bound module-path parameters introduced
-                   by enclosing [MTfunsig] binders.  These are pushed onto the
-                   visibility stack when an [MTsig] body is entered so that
-                   functor-parameter references resolve correctly.
-    @return The concept name the module type refers to, or the requirement
-            lines an anonymous signature contributes. *)
-and pp_module_type params = function
-  | MTident kn -> MCname (pp_modname kn)
-  | MTfunsig (mbid, mt, mt') -> pp_module_type (MPbound mbid :: params) mt'
-  | MTsig (mp, sign) ->
-    push_visible mp params;
-    let modtype_refs =
-      List.fold_left
-        (fun acc (_label, specif) ->
-          match specif with
-          | Spec (Stype (r, _, _)) -> r :: acc
-          | Spec (Sind (kn, _)) -> GlobRef.IndRef (kn, 0) :: acc
-          | _ -> acc )
-        []
-        sign
+(** A type of a module-type concept's requirements, spelled from inside the
+    concept ({!Modtype_concept.concept_type}). *)
+let rec pp_concept_type : Modtype_concept.concept_type -> Pp.t = function
+  | Member {member; enum; arguments} ->
+    pp_member_type ~enum (Pp.string_of_ppcmds (pp_global Type member)) member
+      (List.map pp_concept_type arguments)
+  | Parameter ty -> str "typename " ++ pp_cpp_type false [] ty
+  | Foreign (template, args) -> qualify_custom_template template args pp_concept_type
+  | Global (r, []) -> pp_cpp_type false [] (Tglob (r, [], []))
+  | Global (r, args) ->
+    pp_cpp_type false [] (Tglob (r, [], []))
+    ++ str "<"
+    ++ prlist_with_sep (fun () -> str ", ") pp_concept_type args
+    ++ str ">"
+  | Namespaced (r, r', e, []) -> pp_cpp_type false [] (Tnamespace (r, Tglob (r', [], e)))
+  | Namespaced (r, r', e, args) ->
+    pp_cpp_type false [] (Tnamespace (r, Tglob (r', [], e)))
+    ++ str "<"
+    ++ prlist_with_sep (fun () -> str ", ") pp_concept_type args
+    ++ str ">"
+  | Shared_pointer ty -> str ((sn ()).ns ^ "::") ++ str "shared_ptr<" ++ pp_concept_type ty ++ str ">"
+  | Variant (Inline_variant, tys) ->
+    str ((sn ()).ns ^ "::")
+    ++ str "variant<"
+    ++ prlist_with_sep (fun () -> str ", ") pp_concept_type tys
+    ++ str ">"
+  | Variant (Shared_variant, tys) ->
+    str Crane_rt.shared_variant
+    ++ str "<"
+    ++ prlist_with_sep (fun () -> str ", ") pp_concept_type tys
+    ++ str ">"
+  | Function (dom, cod) ->
+    Table.demand_header (Table.Runtime Crane_rt.fn_header);
+    str Crane_rt.fn ++ str "<"
+    ++ pp_concept_type cod
+    ++ str "("
+    ++ prlist_with_sep (fun () -> str ", ") pp_concept_type dom
+    ++ str ")>"
+  | Plain ty -> pp_cpp_type false [] ty
+
+(** One line of a module-type concept's [requires] clause
+    ({!Modtype_concept.requirement}).  A nullary value may be a static data
+    member or, inside a template where it becomes a Meyers singleton, a
+    nullary accessor; which one a functor body uses is decided by
+    per-reference resolution later, so both are accepted. *)
+let pp_requirement : Modtype_concept.requirement -> Pp.t = function
+  | Inductive_member {member; enum; arity} ->
+    let placeholders = List.init arity (fun _ -> pp_cpp_type false [] Tany) in
+    pp_member_type ~enum (Common.pp_global_name Type member) member placeholders ++ str ";" ++ fnl ()
+  | Type_member {member; arity} ->
+    let name = pp_global_name Type member in
+    if arity = 0 then str "typename M::" ++ name ++ str ";" ++ fnl ()
+    else
+      str "typename M::template "
+      ++ name
+      ++ str "<"
+      ++ prlist_with_sep (fun () -> str ", ") identity (List.init arity (fun _ -> str "void"))
+      ++ str ">;"
+      ++ fnl ()
+  | Instance_member {value; class_; arguments} ->
+    let name = pp_global_name Term value in
+    require_header "concepts";
+    str "typename M::"
+    ++ name
+    ++ str ";"
+    ++ fnl ()
+    ++ str "requires "
+    ++ str (Common.pp_global_name Type class_)
+    ++ str "<typename M::"
+    ++ name
+    ++ prlist (fun a -> str ", " ++ pp_concept_type a) arguments
+    ++ str ">;"
+    ++ fnl ()
+  | Nullary_member {value; result} ->
+    let name = pp_global_name Term value in
+    let convertible_to = (sn ()).convertible_to in
+    require_header "concepts";
+    let qualified_ret = pp_concept_type result in
+    str "requires ("
+    ++ fnl ()
+    ++ str "  requires { { M::"
+    ++ name
+    ++ str " } -> "
+    ++ str convertible_to
+    ++ str "<"
+    ++ qualified_ret
+    ++ str ">; } ||"
+    ++ fnl ()
+    ++ str "  requires { { M::"
+    ++ name
+    ++ str "() } -> "
+    ++ str convertible_to
+    ++ str "<"
+    ++ qualified_ret
+    ++ str ">; }"
+    ++ fnl ()
+    ++ str ");"
+    ++ fnl ()
+  | Function_member {value; parameters; result} ->
+    let name = pp_global_name Term value in
+    let same_as = (sn ()).same_as in
+    let declval = (sn ()).declval in
+    require_header "concepts";
+    let declvals =
+      List.map (fun ty -> str declval ++ str "<" ++ pp_concept_type ty ++ str ">()") parameters
     in
-    let pp_req (label, specif) =
-      match specif with
-      | Spec s -> pp_spec_as_requirement mp modtype_refs s
-      | Smodule mod_type ->
-        ( match mod_type with
-        | MTident kn ->
-          let concept_name = pp_concept_ref kn in
-          let label_name = Label.to_string label in
-          str "  requires "
-          ++ concept_name
-          ++ str "<typename M::"
-          ++ str label_name
-          ++ str ">;"
-          ++ fnl ()
-        | MTfunsig _ -> mt ()
-        | _ -> mt () )
-      | Smodtype nested_mt ->
-        let def = concept_body_pp (pp_module_type [] nested_mt) in
-        let modtype_name = str (modtype_concept_name (MPdot (mp, label))) in
-        let concept_pp = pp_concept_def modtype_name def in
-        hoisted_concept_defs := concept_pp :: !hoisted_concept_defs;
+    let call_expr =
+      str "M::" ++ name ++ str "(" ++ prlist_with_sep (fun () -> str ", ") identity declvals ++ str ")"
+    in
+    str "{ "
+    ++ call_expr
+    ++ str " } -> "
+    ++ str same_as
+    ++ str "<"
+    ++ pp_concept_type result
+    ++ str ">;"
+    ++ fnl ()
+  | Submodule {label; module_type} ->
+    let concept_name = pp_concept_ref module_type in
+    str "  requires "
+    ++ concept_name
+    ++ str "<typename M::"
+    ++ str (Label.to_string label)
+    ++ str ">;"
+    ++ fnl ()
+
+(** What a module type contributes where a concept body is expected
+    ({!Modtype_concept.constraint_}).  An anonymous signature's requirements
+    are printed with the signature and the functor parameters visible in it
+    visible; the concepts of the module types nested in it are hoisted
+    ({!hoisted_concept_defs}). *)
+let rec pp_constraint : Modtype_concept.constraint_ -> module_constraint = function
+  | Named kn -> MCname (pp_modname kn)
+  | Requirements {signature; parameters; items} ->
+    push_visible signature parameters;
+    let pp_item : Modtype_concept.item -> Pp.t = function
+      | Requirement req -> pp_requirement req
+      | Nested (path, c) ->
+        let def = concept_body_pp (pp_constraint c) in
+        let modtype_name = str (modtype_concept_name path) in
+        hoisted_concept_defs := pp_concept_def modtype_name def :: !hoisted_concept_defs;
         mt ()
     in
-    let reqs = List.map pp_req sign in
-    let reqs = List.filter (fun p -> not (Pp.ismt p)) reqs in
+    let reqs = List.filter (fun p -> not (Pp.ismt p)) (List.map pp_item items) in
     pop_visible ();
     MCrequirements reqs
-  | MTwith (mt, ML_With_type (idl, vl, typ)) -> pp_module_type [] mt
-  | MTwith (mt, ML_With_module (idl, mp)) -> pp_module_type [] mt
 
 (** Format a doc comment string as [///] comment lines. Translates bracket
     references [[name]] by stripping the brackets. Returns [mt ()] if no doc
@@ -598,77 +455,49 @@ let concept_assert_pp name mty =
       mt () )
     else pp_concept_assert concept_name name
 
-(** Like {!concept_of_mt}, but returns the base module type's raw
-    kernel name (for callers that emit [Name<M>] directly rather than a
-    pretty-printed concept reference). *)
-let rec get_base_concept = function
-  | MTident kn -> Some kn
-  | MTwith (mt, _) -> get_base_concept mt
-  | _ -> None
-
-(** Render the [MTwith] refinements of a module type ([BASE with Definition t
-    := nat], [OUTER with Module Inner := NatInner]) as C++ [std::same_as<…>]
-    constraints.
-
-    A refined module type such as [NAT_BASE := BASE with Definition t := nat]
-    would otherwise be emitted as a bare alias [concept NAT_BASE = BASE<M>;],
-    silently dropping the [t := nat] equality so any module satisfying [BASE]
-    is accepted — including ones whose [t] is not [nat] (CWE-345 / CWE-807).
-    Emitting [std::same_as<typename M::t, uint64_t>] as an extra conjunct
-    restores that fixed-type / fixed-submodule requirement at the concept
-    boundary.  Returns the constraint documents (one per refinement); the
-    caller conjoins them onto the base concept. *)
-let collect_with_refinements mt =
-  let rec go acc = function
-    | MTwith (inner, ML_With_type (idl, _vl, typ)) ->
-      let path = String.concat "::" (List.map Id.to_string idl) in
-      let cpp = convert_ml_type_to_cpp_type (empty_env ()) [] typ in
-      let clause =
+(** The [std::same_as] constraints the [with Definition] refinements of a
+    module type conjoin onto the concept it refines
+    ({!Modtype_concept.Alias}): [BASE with Definition t := nat] asks for
+    [std::same_as<typename M::t, uint64_t>] on top of [BASE]'s concept. *)
+let pp_refinements refinements =
+  let clauses =
+    List.map
+      (fun (idl, cpp) ->
+        let path = String.concat "::" (List.map Id.to_string idl) in
         str (sn ()).same_as
         ++ str "<typename M::"
         ++ str path
         ++ str ", "
         ++ pp_cpp_type false [] cpp
-        ++ str ">"
-      in
-      go (clause :: acc) inner
-    | MTwith (inner, ML_With_module _) ->
-      (* [with Module Inner := Concrete] would need a [std::same_as<typename
-         M::Inner, Concrete>] check, but the concept is emitted at namespace
-         scope before the concrete module's struct is declared, so a forward
-         reference to it does not compile.  Leave the submodule refinement
-         unenforced (as before) rather than emit a broken constraint. *)
-      go acc inner
-    | _ -> acc
+        ++ str ">" )
+      refinements
   in
-  let clauses = go [] mt in
   if clauses <> [] then require_header "concepts";
   clauses
 
-(** The declaration of the concept [name] a module type [m] becomes, with the
-    concepts its nested module types are hoisted into ahead of it.  The
-    concept is over [M], the module it constrains, and over [params], the
-    parameters of a functor declaring it, which its requirements may
-    mention. *)
-let pp_modtype_concept ?(params = []) name m =
+(** The declaration of the concept [name] of a module type, generated as
+    [c], with the concepts its nested module types are hoisted into ahead of
+    it.  The concept is over [M], the module it constrains, and over
+    [params], the parameters of a functor declaring it, which its
+    requirements may mention. *)
+let pp_modtype_concept ?(params = []) name (c : Modtype_concept.t) =
   let head =
     str "template<typename M"
     ++ prlist (fun p -> str ", typename " ++ pp_modname p) params
     ++ str ">" ++ fnl ()
   in
-  match get_base_concept m with
-  | Some base_kn ->
+  match c with
+  | Alias {base; refinements} ->
     let base_args =
-      prlist (fun p -> str ", " ++ pp_modname p) (concept_extra_args base_kn)
+      prlist (fun p -> str ", " ++ pp_modname p) (concept_extra_args base)
     in
-    head ++ str "concept " ++ name ++ str " = " ++ pp_concept_ref base_kn
+    head ++ str "concept " ++ name ++ str " = " ++ pp_concept_ref base
     ++ str "<M" ++ base_args ++ str ">"
-    ++ prlist (fun c -> str " && " ++ c) (collect_with_refinements m)
+    ++ prlist (fun c -> str " && " ++ c) (pp_refinements refinements)
     ++ str ";"
-  | None ->
+  | Constraint c ->
     let hoisted, def =
-      collecting hoisted_concept_defs (fun () ->
-          concept_body_pp (pp_module_type params m) )
+      collecting hoisted_concept_defs (fun () -> concept_body_pp (pp_constraint c))
     in
     prlist_with_sep (fun () -> fnl () ++ fnl ()) identity
       (hoisted @ [head ++ pp_concept_clause name def])
@@ -697,9 +526,11 @@ let pp_template_param (mbid, mt) =
     in
     cname ++ args ++ str " " ++ param_name
   | None ->
-    (* Rendered for its side effects: nested module types are hoisted out of
+    (* Printed for its side effects: nested module types are hoisted out of
        the signature as concepts of their own. *)
-    ignore (pp_module_type [] mt : module_constraint);
+    ( match Cpp_ind.modtype_concept (MPbound mbid) ~params:[] mt with
+    | Constraint c -> ignore (pp_constraint c : module_constraint)
+    | Alias _ -> () );
     str "typename " ++ param_name
 
 (** The lifted helper a declaration defines, if it defines one, used to emit it
@@ -1202,7 +1033,9 @@ let rec pp_structure_elem ~is_header f = function
               (function
                 | l, SEmodtype mty ->
                   push file_scope_concepts
-                    (pp_modtype_concept ~params (pp_concept_ref (MPdot (body_mp, l))) mty)
+                    (pp_modtype_concept ~params
+                       (pp_concept_ref (MPdot (body_mp, l)))
+                       (Cpp_ind.modtype_concept (MPdot (body_mp, l)) ~params mty) )
                 | _ -> () )
               sel
           | _ -> () );
@@ -1316,12 +1149,20 @@ let rec pp_structure_elem ~is_header f = function
               (fun (l, se) ->
                 match se with
                 | SEmodtype m ->
-                  let modtype_name = str (modtype_concept_name (MPdot (mp, l))) in
+                  let path = MPdot (mp, l) in
+                  let concept = Cpp_ind.modtype_concept path ~params:[] m in
+                  let names_member = Modtype_concept.names_member mp concept in
+                  let modtype_name = str (modtype_concept_name path) in
                   let concept_pp, mentions_outer =
                     watching_for_reference_to (Pp.string_of_ppcmds name)
-                    @@ fun () -> pp_modtype_concept modtype_name m
+                    @@ fun () -> pp_modtype_concept modtype_name concept
                   in
-                  Some (HCmodtype (MPdot (mp, l)), concept_pp, mentions_outer)
+                  if Probe.checking () && names_member <> mentions_outer then
+                    Probe.violation "module-type concepts held back"
+                      Pp.(str "the concept of " ++ str (ModPath.to_string path)
+                          ++ str (if names_member then " names a member of its module but rendering it resolves none"
+                                  else " names no member of its module but rendering it resolves one"));
+                  Some (HCmodtype path, concept_pp, mentions_outer)
                 | _ -> None )
               sel
           else
@@ -1735,7 +1576,8 @@ let rec pp_structure_elem ~is_header f = function
     if (not is_header) || (!render_ctx).rc_in_struct then
       mt ()
     else
-      pp_modtype_concept (str (modtype_concept_name (MPdot (top_visible_mp (), l)))) m
+      let path = MPdot (top_visible_mp (), l) in
+      pp_modtype_concept (str (modtype_concept_name path)) (Cpp_ind.modtype_concept path ~params:[] m)
 
 (** Render a functor application, and say whether the result comes out with a
     [::] qualifier.
@@ -2208,13 +2050,16 @@ let registered_methods ?(order = Fun.id) kn ind =
     local; [after_wrapper ()] once a wrapper module's elements have all
     been walked, still inside it; [after_module frame sel] once the body of
     a module of elements [sel] has been walked, still in its frame [frame]
-    but no longer inside it.  A
+    but no longer inside it; [modtype path ~params mt] at each module type
+    [mt] whose concept the header writes, where it writes it: a module's
+    after its body, a top-level one in place, a functor body's and the
+    anonymous signatures of a functor's parameters at the functor.  A
     functor's body is walked as the class
     template it becomes,
     its parameters visible in it.  The visibility stack is restored, not
     popped: popping a file's layer while emitting records its content. *)
 let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
-    ?(after_module = fun _ _ -> ()) ~decl s =
+    ?(after_module = fun _ _ -> ()) ?(modtype = fun _ ~params:_ _ -> ()) ~decl s =
   let order l = if reversed then List.rev l else l in
   let analysis = get_structure_analysis () in
   let declared_inductives mp sel =
@@ -2236,6 +2081,9 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
     setting current_structure_decls sel k
   in
   let in_header_scope scope k = setting header scope k in
+  let modtypes mp ~params sel =
+    List.iter (function l, SEmodtype m -> modtype (MPdot (mp, l)) ~params m | _ -> ()) sel
+  in
   (* A module's frame, as the render enters its body: the eponymous state
      and promotion the frame says, and the header's scope worked out as the
      header works it out ({!pp_structure_elem}), from whether the module's
@@ -2263,6 +2111,7 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
       | None -> Table.with_demoted_inductive frame.eponymous_type k
     in
     with_promotion (fun () -> in_header_scope scope k);
+    modtypes mp ~params:[] sel;
     after_module frame sel
   in
   let with_local_inductives refs k =
@@ -2279,18 +2128,30 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
     | SEdecl _ -> decl ~wrapper se
     | SEmodule {ml_mod_expr = MEfunctor _ as me; _} ->
       let rec split params = function
-        | MEfunctor (mbid, _, me) -> split (params @ [MPbound mbid]) me
+        | MEfunctor (mbid, mt, me) -> split (params @ [(mbid, mt)]) me
         | body -> (params, body)
       in
-      let params, body = split [] me in
+      let signatures, body = split [] me in
+      let params = List.map (fun (mbid, _) -> MPbound mbid) signatures in
+      (match body with MEstruct (body_mp, sel) -> modtypes body_mp ~params sel | _ -> ());
+      List.iter (fun (mbid, mt) -> modtype (MPbound mbid) ~params:[] mt) signatures;
       with_render_ctx
         (fun c -> {c with rc_in_struct = true; rc_in_template = true})
         (fun () ->
           in_header_scope {!header with in_struct = true} (fun () -> module_expr ~params body) )
     | SEmodule {ml_mod_expr = MEstruct (_, sel) as me; _} ->
       in_module_frame (MPdot (top_visible_mp (), l)) sel (fun () -> module_expr ~params:[] me)
+    | SEmodule {ml_mod_expr = MEident _; ml_mod_type; _} ->
+      (* An alias of a functor is a template alias over its parameters. *)
+      let rec params = function
+        | MTfunsig (mbid, mt, rest) ->
+          modtype (MPbound mbid) ~params:[] mt;
+          params rest
+        | _ -> ()
+      in
+      params ml_mod_type
     | SEmodule {ml_mod_expr; _} -> module_expr ~params:[] ml_mod_expr
-    | SEmodtype _ -> ()
+    | SEmodtype m -> modtype (MPdot (top_visible_mp (), l)) ~params:[] m
   and module_expr ~params = function
     | MEstruct (mp, sel) ->
       in_module ~params mp sel (fun () ->
@@ -2432,6 +2293,11 @@ let refinish_reversed (aheads : Cpp_ind.ahead list) =
       List.iter (fun h -> ignore (Cpp_ind.finished_alone h : Cpp_erasure.settled)) (List.rev a.helpers) )
     aheads
 
+(* The concept of a module type, generated ahead where the header writes
+   it. *)
+let modtype_concept_ahead path ~params mt =
+  ignore (Cpp_ind.modtype_concept path ~params mt : Modtype_concept.t)
+
 let generate_ahead s =
   generating_ahead @@ fun () ->
   (* Everything is generated first, and finished after ({!finish_ahead}).  A
@@ -2441,7 +2307,7 @@ let generate_ahead s =
   let aheads = ref [] in
   let later (a : Cpp_ind.ahead) = aheads := a :: !aheads in
   let lifted helpers = later {Cpp_ind.entities = []; functions = []; finish = ignore; helpers} in
-  walk_as_rendered
+  walk_as_rendered ~modtype:modtype_concept_ahead
     ~after_module:(fun frame sel ->
       (* The class concepts the module's struct is preceded by. *)
       List.iter
@@ -2509,7 +2375,7 @@ let generate_ahead s =
   if Probe.checking () then
     Cpp_ind.regenerating @@ fun () ->
     refinish_reversed aheads;
-    walk_as_rendered ~reversed:true
+    walk_as_rendered ~reversed:true ~modtype:modtype_concept_ahead
       ~after_module:(fun frame _ ->
         Option.iter
           (fun (r, vars, candidates) -> ignore (Cpp_ind.record_methods r vars candidates))
