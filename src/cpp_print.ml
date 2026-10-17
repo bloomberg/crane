@@ -1254,17 +1254,13 @@ let rec pp_cpp_type ?(lead = true) par vl t =
            a member of a holder and comes back spelled [H<T1>::template c].
            That is a dependent qualified name, and applying it yields a type,
            which needs the [typename] the {!Tqualified} arm above would have
-           given it.  The head is asked for its own rendering because only the
-           rendering knows: whether a holder was needed is decided by which
-           names the body actually {e writes}, which is not a property of the
-           type's shape. *)
-        let head_pp = pp_rec false head in
-        let dependent_member =
-          let text = Pp.string_of_ppcmds head_pp in
-          let sep = "::template " in
-          let n = String.length text and m = String.length sep in
-          let rec at i = i + m <= n && (String.sub text i m = sep || at (i + 1)) in
-          at 0
+           given it.  Whether a holder was needed is decided by which names
+           the body actually {e writes}, which is not a property of the type's
+           shape, so the head says how it was written ({!tyctor_head}). *)
+        let head_pp, dependent_member =
+          match head with
+          | Ttyctor t -> tyctor_head t
+          | _ -> (pp_rec false head, false)
         in
         (if dependent_member then leading_typename else mt ())
         ++ head_pp ++ str "<" ++ pp_list (pp_rec false) args ++ str ">" )
@@ -1298,35 +1294,75 @@ let rec pp_cpp_type ?(lead = true) par vl t =
          spelling that accepts whatever it turns out to be. *)
       writes_obj ();
       pp_library_name Crane_rt.obj
-    | Ttyctor t ->
-      (* A template template argument is the bare template name.  Ask the type
-         for its head rather than rendering it applied and cutting the result
-         back: an applied type is a head plus arguments, and for a custom
-         mapping the head is the template's own leading text. *)
-      let cut_at_argument_list str_of =
-        match String.index_opt str_of '<' with
-        | Some i -> String.sub str_of 0 i
-        | None -> str_of
+    | Ttyctor t -> fst (tyctor_head t)
+    | Tauto -> str "auto"
+    | Tdecay t ->
+      writes_standard "type_traits";
+      cpp_angle "std::decay_t" (pp_rec false t)
+  (* A type constructor written as a template template argument, and
+     whether it is written as a member of a dependent qualifier -- a
+     higher-kinded carrier's [_tcI0::template M], or a holder's
+     [H<T1>::template c] -- which, applied, needs [typename]. *)
+  and tyctor_head t =
+    (* A template template argument is the bare template name.  Ask the type
+       for its head rather than rendering it applied and cutting the result
+       back: an applied type is a head plus arguments, and for a custom
+       mapping the head is the template's own leading text. *)
+    let cut_at_argument_list str_of =
+      match String.index_opt str_of '<' with
+      | Some i -> String.sub str_of 0 i
+      | None -> str_of
+    in
+    (* An applied type here is the eta-expansion of the constructor: its head
+       is what the position wants. *)
+    let t = match t with Tapply (head, _) -> head | t -> t in
+    (* A constructor applied to the sentinel is both the test and the alias
+       body: where the rendering comes out as a head plus that one argument,
+       the head is a template name and naming it is enough; where it does
+       not, there is no head to name and an alias template is introduced.
+       [itree] is [std::shared_ptr<ITree<%t1>>] and a composite Rocq carrier
+       is [std::pair<_CraneTcArg, Box<_CraneTcArg>>]; neither can be cut
+       back, and the same reading of the same rendering covers both. *)
+    (* The template parameters of the enclosing declaration that the body
+       names.  An alias whose body mentions one cannot live at namespace
+       scope, so those are what the holder abstracts over. *)
+    let captured probe =
+      let seen = ref [] in
+      let rec go t =
+        match t with
+        | Tvar (Tv_index (i, _)) ->
+          if not (List.mem i !seen) then seen := !seen @ [i]
+        | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts)
+        | Tvariant (_, ts) ->
+          List.iter go ts
+        | Tfun (dom, cod) -> List.iter go dom; go cod
+        | Tconst t | Tshared_ptr t | Tref (_, t) | Tptr t | Tnamespace (_, t)
+        | Tqualified (t, _) | Tdecay t | Ttyctor t | Tnondeduced t ->
+          go t
+        | Trebind (h, x) -> go h; go x
+        | Tapply (t, ts) -> go t; List.iter go ts
+        | _ -> ()
       in
-      (* An applied type here is the eta-expansion of the constructor: its head
-         is what the position wants. *)
-      let t = match t with Tapply (head, _) -> head | t -> t in
-      (* A constructor applied to the sentinel is both the test and the alias
-         body: where the rendering comes out as a head plus that one argument,
-         the head is a template name and naming it is enough; where it does
-         not, there is no head to name and an alias template is introduced.
-         [itree] is [std::shared_ptr<ITree<%t1>>] and a composite Rocq carrier
-         is [std::pair<_CraneTcArg, Box<_CraneTcArg>>]; neither can be cut
-         back, and the same reading of the same rendering covers both. *)
-      (* The template parameters of the enclosing declaration that the body
-         names.  An alias whose body mentions one cannot live at namespace
-         scope, so those are what the holder abstracts over. *)
-      let captured probe =
+      go probe; !seen
+    in
+    let alias_for_probe ~base probe =
+      (* A captured parameter is named {e applied} to the alias's own
+         argument -- that is what makes the body an abstraction rather than a
+         type, and it is what lets the holder declare every parameter it
+         takes as a type constructor.  A variable the body names bare is not
+         a carrier parameter; it is a type the body mentions, and mentioning
+         it at the use site writes a name from the declaration's quantifier.
+         An instance method's body is emitted without that quantifier, so
+         [crane_carrier_tch<T1>] there names a scope the function is not in.
+         What the body has instead is the erasure it was emitted under, and
+         [std::any] is how the rest of it already spells that. *)
+      let applied_vars =
         let seen = ref [] in
         let rec go t =
           match t with
-          | Tvar (Tv_index (i, _)) ->
-            if not (List.mem i !seen) then seen := !seen @ [i]
+          | Tapply (Tvar (Tv_index (i, _)), ts) ->
+            seen := i :: !seen;
+            List.iter go ts
           | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts)
           | Tvariant (_, ts) ->
             List.iter go ts
@@ -1340,196 +1376,164 @@ let rec pp_cpp_type ?(lead = true) par vl t =
         in
         go probe; !seen
       in
-      let alias_for_probe ~base probe =
-        (* A captured parameter is named {e applied} to the alias's own
-           argument -- that is what makes the body an abstraction rather than a
-           type, and it is what lets the holder declare every parameter it
-           takes as a type constructor.  A variable the body names bare is not
-           a carrier parameter; it is a type the body mentions, and mentioning
-           it at the use site writes a name from the declaration's quantifier.
-           An instance method's body is emitted without that quantifier, so
-           [crane_carrier_tch<T1>] there names a scope the function is not in.
-           What the body has instead is the erasure it was emitted under, and
-           [std::any] is how the rest of it already spells that. *)
-        let applied_vars =
-          let seen = ref [] in
-          let rec go t =
-            match t with
-            | Tapply (Tvar (Tv_index (i, _)), ts) ->
-              seen := i :: !seen;
-              List.iter go ts
-            | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts)
-            | Tvariant (_, ts) ->
-              List.iter go ts
-            | Tfun (dom, cod) -> List.iter go dom; go cod
-            | Tconst t | Tshared_ptr t | Tref (_, t) | Tptr t | Tnamespace (_, t)
-            | Tqualified (t, _) | Tdecay t | Ttyctor t | Tnondeduced t ->
-              go t
-            | Trebind (h, x) -> go h; go x
-            | Tapply (t, ts) -> go t; List.iter go ts
-            | _ -> ()
-          in
-          go probe; !seen
+      (* A variable the body names bare is kept where it is a declared
+         parameter -- named, as a plain family the declaration deapplied is
+         -- and becomes a [typename] parameter of the holder. *)
+      let bare_vars =
+        let seen = ref [] in
+        ignore
+          (map_cpp_type
+             (function
+               | Tvar (Tv_index (i, Some _)) as t when not (List.mem i applied_vars) ->
+                 seen := i :: !seen;
+                 t
+               | t -> t )
+             probe );
+        !seen
+      in
+      let probe =
+        map_cpp_type
+          (function
+            | Tvar (Tv_index (i, _))
+              when not (List.mem i applied_vars || List.mem i bare_vars) ->
+              Tany
+            | t -> t )
+          probe
+      in
+      let rendered = Pp.string_of_ppcmds (pp_rec false probe) in
+      if
+        String.equal rendered
+          (cut_at_argument_list rendered ^ "<" ^ ctor_alias_tvar ^ ">")
+      then None
+      else
+        (* Only a name the body actually {e writes} has to be abstracted
+           over.  A custom mapping's replacement text need not use every
+           argument -- [itree]'s spells only its last -- so a parameter that
+           the probe carries structurally but the rendering drops would
+           otherwise mint a holder with an unused parameter, and the alias
+           would be declared as a partial specialisation of nothing. *)
+        let names = identifier_tokens rendered in
+        let captured probe =
+          List.filter
+            (fun i ->
+              List.mem
+                (Pp.string_of_ppcmds (print_cpp_type_var vl i))
+                names )
+            (captured probe)
         in
-        (* A variable the body names bare is kept where it is a declared
-           parameter -- named, as a plain family the declaration deapplied is
-           -- and becomes a [typename] parameter of the holder. *)
-        let bare_vars =
+        (* A class instance the body reads a type out of -- [typename
+           _tcI0::ptr] -- is the enclosing declaration's parameter as much
+           as a variable is, and is captured the same way. *)
+        let instances =
           let seen = ref [] in
           ignore
             (map_cpp_type
                (function
-                 | Tvar (Tv_index (i, Some _)) as t when not (List.mem i applied_vars) ->
-                   seen := i :: !seen;
+                 | Tinstance (id, _) as t ->
+                   if not (List.exists (Id.equal id) !seen) then
+                     seen := !seen @ [id];
                    t
                  | t -> t )
                probe );
           !seen
         in
-        let probe =
-          map_cpp_type
-            (function
-              | Tvar (Tv_index (i, _))
-                when not (List.mem i applied_vars || List.mem i bare_vars) ->
-                Tany
-              | t -> t )
-            probe
-        in
-        let rendered = Pp.string_of_ppcmds (pp_rec false probe) in
-        if
-          String.equal rendered
-            (cut_at_argument_list rendered ^ "<" ^ ctor_alias_tvar ^ ">")
-        then None
-        else
-          (* Only a name the body actually {e writes} has to be abstracted
-             over.  A custom mapping's replacement text need not use every
-             argument -- [itree]'s spells only its last -- so a parameter that
-             the probe carries structurally but the rendering drops would
-             otherwise mint a holder with an unused parameter, and the alias
-             would be declared as a partial specialisation of nothing. *)
-          let names = identifier_tokens rendered in
-          let captured probe =
-            List.filter
-              (fun i ->
-                List.mem
-                  (Pp.string_of_ppcmds (print_cpp_type_var vl i))
-                  names )
-              (captured probe)
+        match (captured probe, instances) with
+        | [], [] ->
+          let name = ctor_alias_name_for ~base rendered in
+          record_ctor_alias_home name probe;
+          Some (name, false)
+        | vars, instances ->
+          (* Rendered a second time with the captured names replaced by the
+             holder's own, so that two declarations differing only in what
+             they call their parameters share one holder. *)
+          let renamed =
+            List.fold_left
+              (fun acc (k, i) ->
+                map_cpp_type
+                  (function
+                    | Tvar (Tv_index (j, _)) when j = i ->
+                      Tid_external
+                        ( Id.to_string
+                            (Generated_name.indexed
+                               (if List.mem i bare_vars then "P" else "F")
+                               k),
+                          [] )
+                    | t -> t )
+                  acc )
+              probe
+              (List.mapi (fun k i -> (k, i)) vars)
           in
-          (* A class instance the body reads a type out of -- [typename
-             _tcI0::ptr] -- is the enclosing declaration's parameter as much
-             as a variable is, and is captured the same way. *)
-          let instances =
-            let seen = ref [] in
-            ignore
-              (map_cpp_type
-                 (function
-                   | Tinstance (id, _) as t ->
-                     if not (List.exists (Id.equal id) !seen) then
-                       seen := !seen @ [id];
-                     t
-                   | t -> t )
-                 probe );
-            !seen
+          let renamed =
+            List.fold_left
+              (fun acc (k, id) ->
+                map_cpp_type
+                  (function
+                    | Tinstance (id', c) when Id.equal id id' ->
+                      Tinstance (Generated_name.indexed "P" k, c)
+                    | t -> t )
+                  acc )
+              renamed
+              (List.mapi (fun j id -> (List.length vars + j, id)) instances)
           in
-          match (captured probe, instances) with
-          | [], [] ->
-            let name = ctor_alias_name_for ~base rendered in
-            record_ctor_alias_home name probe;
-            Some name
-          | vars, instances ->
-            (* Rendered a second time with the captured names replaced by the
-               holder's own, so that two declarations differing only in what
-               they call their parameters share one holder. *)
-            let renamed =
-              List.fold_left
-                (fun acc (k, i) ->
-                  map_cpp_type
-                    (function
-                      | Tvar (Tv_index (j, _)) when j = i ->
-                        Tid_external
-                          ( Id.to_string
-                              (Generated_name.indexed
-                                 (if List.mem i bare_vars then "P" else "F")
-                                 k),
-                            [] )
-                      | t -> t )
-                    acc )
-                probe
-                (List.mapi (fun k i -> (k, i)) vars)
-            in
-            let renamed =
-              List.fold_left
-                (fun acc (k, id) ->
-                  map_cpp_type
-                    (function
-                      | Tinstance (id', c) when Id.equal id id' ->
-                        Tinstance (Generated_name.indexed "P" k, c)
-                      | t -> t )
-                    acc )
-                renamed
-                (List.mapi (fun j id -> (List.length vars + j, id)) instances)
-            in
-            let body = Pp.string_of_ppcmds (pp_rec false renamed) in
-            let name = ctor_holder_name_for ~base body in
-            record_ctor_alias_home name probe;
-            Some
-              ( name ^ "<"
-              ^ String.concat ", "
-                  (List.map
-                     (fun i -> Pp.string_of_ppcmds (print_cpp_type_var vl i))
-                     vars
-                  @ List.map Id.to_string instances )
-              ^ ">::template c" )
-      in
-      (* A custom mapping arrives applied to its real arguments, so the
-         sentinel has to be put in the carrier's place first. *)
-      let alias_for_custom r args =
-        match args with
-        | [] -> None
-        | _ ->
-          let fixed = List.filteri (fun i _ -> i < List.length args - 1) args in
-          alias_for_probe
-            ~base:(Common.pp_global_name Type r)
-            (Tglob (r, fixed @ [Thole], []))
-      in
-      (* A carrier built by the front end already has the sentinel standing
-         where its argument goes -- it is the abstraction, not an application
-         of one, and there is nothing to substitute. *)
-      ( match
-        if exists_cpp_type (fun s -> s = Thole) t
-        then alias_for_probe ~base:"crane_carrier" t
-        else None
-      with
-      | Some name -> str name
-      | None ->
-      ( match t with
-      | Tglob (r, (_ :: _ as args), _)
-        when ( match find_custom_opt r with Some _ -> true | None -> false )
-             && alias_for_custom r args <> None ->
-        str (Option.get (alias_for_custom r args))
-      | Tqualified (base, id) ->
-        (* A dependent alias template -- the carrier of a higher-kinded class
-           parameter.  Here it names a template rather than a type, so the
-           leading [typename] a qualified type would take is wrong; what the
-           member needs is [template], which tells the parser the dependent
-           name is a template before any argument list is in sight
-           ([temp.names]/5).  Without it the name parses as a non-template
-           member and the position rejects it. *)
-        pp_rec ~lead:false false base ++ str "::template " ++ Id.print id
-      | Tglob (r, _ :: _, _) -> (
-        match find_custom_opt r with
+          let body = Pp.string_of_ppcmds (pp_rec false renamed) in
+          let name = ctor_holder_name_for ~base body in
+          record_ctor_alias_home name probe;
+          Some
+            ( name ^ "<"
+            ^ String.concat ", "
+                (List.map
+                   (fun i -> Pp.string_of_ppcmds (print_cpp_type_var vl i))
+                   vars
+                @ List.map Id.to_string instances )
+            ^ ">::template c",
+              true )
+    in
+    (* A custom mapping arrives applied to its real arguments, so the
+       sentinel has to be put in the carrier's place first. *)
+    let alias_for_custom r args =
+      match args with
+      | [] -> None
+      | _ ->
+        let fixed = List.filteri (fun i _ -> i < List.length args - 1) args in
+        alias_for_probe
+          ~base:(Common.pp_global_name Type r)
+          (Tglob (r, fixed @ [Thole], []))
+    in
+    (* A carrier built by the front end already has the sentinel standing
+       where its argument goes -- it is the abstraction, not an application
+       of one, and there is nothing to substitute. *)
+    ( match
+      if exists_cpp_type (fun s -> s = Thole) t
+      then alias_for_probe ~base:"crane_carrier" t
+      else None
+    with
+    | Some (name, member) -> (str name, member)
+    | None ->
+    ( match t with
+    | Tglob (r, (_ :: _ as args), _)
+      when ( match find_custom_opt r with Some _ -> true | None -> false )
+           && alias_for_custom r args <> None ->
+      let name, member = Option.get (alias_for_custom r args) in
+      (str name, member)
+    | Tqualified (base, id) ->
+      (* A dependent alias template -- the carrier of a higher-kinded class
+         parameter.  Here it names a template rather than a type, so the
+         leading [typename] a qualified type would take is wrong; what the
+         member needs is [template], which tells the parser the dependent
+         name is a template before any argument list is in sight
+         ([temp.names]/5).  Without it the name parses as a non-template
+         member and the position rejects it. *)
+      (pp_rec ~lead:false false base ++ str "::template " ++ Id.print id, true)
+    | Tglob (r, _ :: _, _) ->
+      ( ( match find_custom_opt r with
         | Some template when String.contains template '%' -> (
           match type_template template with
           | CCstring lit :: _ -> str (cut_at_argument_list lit)
           | _ -> str (cut_at_argument_list template) )
         | Some template -> str (cut_at_argument_list template)
-        | None -> pp_rec false (Tglob (r, [], [])) )
-      | _ -> str (cut_at_argument_list (Pp.string_of_ppcmds (pp_rec false t))) ) )
-    | Tauto -> str "auto"
-    | Tdecay t ->
-      writes_standard "type_traits";
-      cpp_angle "std::decay_t" (pp_rec false t)
+        | None -> pp_rec false (Tglob (r, [], [])) ),
+        false )
+    | _ -> (str (cut_at_argument_list (Pp.string_of_ppcmds (pp_rec false t))), false) ) )
   in
   (pp_rec ~lead par t)
 
