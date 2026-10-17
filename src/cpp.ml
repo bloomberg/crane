@@ -3819,16 +3819,7 @@ let do_struct_with_decl_tracking ~is_header f s =
         !file_layout.constrained_decls
     else []
   in
-  let unit = {Cpp_ast.prologue = forward_decls; sections} in
-  let written = Cpp_ast.print (Cpp_ast.schedule ~templates ~forwards unit) in
-  ( if Probe.checking () then
-      let legacy = Cpp_ast.print (Cpp_ast.schedule ~templates ~forwards (Cpp_ast.legacy_unit unit)) in
-      if not (String.equal (Pp.string_of_ppcmds written) (Pp.string_of_ppcmds legacy)) then
-        Probe.violation "module bodies"
-          Pp.(
-            str "the " ++ str (Common.file_name (if is_header then Common.Intf else Common.Impl))
-            ++ str " is written otherwise from its modules' bodies than from their struct text and members") );
-  written ++ fnl ()
+  Cpp_ast.print (Cpp_ast.schedule ~templates ~forwards {prologue = forward_decls; sections}) ++ fnl ()
 
 (** Main entry point: render structure to C++ implementation file. *)
 let pp_struct s =

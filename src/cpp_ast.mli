@@ -46,9 +46,6 @@ type t = private
   | Top_level of t
       (** A chunk at namespace scope: a namespace-scope declaration due
           before it goes in front of it.  Never empty. *)
-  | Member of ModPath.t * t
-      (** A member of the struct of the module: a template homed in the
-          module goes in front of it.  Never empty. *)
   | Module of {module_ : ModPath.t; enclosure : enclosure; fields : t; members : t list}
       (** The body of [module_] as the file writes it: [fields], then its
           elements, each a member of it that a template homed in [module_]
@@ -78,9 +75,6 @@ val seq : t list -> t
 
 (** [t] as a chunk at namespace scope; nothing, if [t] is. *)
 val top_level : t -> t
-
-(** [t] as a member of the struct of [mp]; nothing, if [t] is. *)
-val member : ModPath.t -> t -> t
 
 (** The elements of a module's body as written, before the file decides
     what encloses them. *)
@@ -156,7 +150,3 @@ val schedule : templates:template list -> forwards:forward list -> translation_u
 
 (** The scheduled unit as a document. *)
 val print : scheduled -> Pp.t
-
-(** [u] with each module's body written as it was before {!Module}: struct
-    text around a member list, for checking. *)
-val legacy_unit : translation_unit -> translation_unit

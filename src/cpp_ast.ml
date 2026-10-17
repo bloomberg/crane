@@ -16,7 +16,6 @@ type t =
   | Decl of {text : Pp.t; needs : Needs.t}
   | Seq of t list
   | Top_level of t
-  | Member of ModPath.t * t
   | Module of {module_ : ModPath.t; enclosure : enclosure; fields : t; members : t list}
   | Declarations of Pp.t list
 
@@ -31,13 +30,12 @@ let rec is_empty = function
   | Text d -> Pp.ismt d
   | Decl {text; needs} -> Pp.ismt text && Needs.is_none needs
   | Seq l -> List.for_all is_empty l
-  | Top_level _ | Member _ -> false
+  | Top_level _ -> false
   | Module {enclosure = Struct _; _} -> false
   | Module {fields; members; _} -> members = [] && is_empty fields
   | Declarations l -> l = []
 
 let top_level t = if is_empty t then t else Top_level t
-let member mp t = if is_empty t then t else Member (mp, t)
 
 type body = {body_module : ModPath.t; body_members : t list}
 
@@ -57,7 +55,7 @@ let rec needs = function
   | Text _ | Declarations _ -> Needs.none
   | Decl {needs; _} -> needs
   | Seq l -> List.fold_left (fun acc t -> Needs.union acc (needs t)) Needs.none l
-  | Top_level t | Member (_, t) -> needs t
+  | Top_level t -> needs t
   | Module {fields; members; _} -> needs (Seq (fields :: members))
 
 let cut2 () = Pp.(brk (0, -100000) ++ brk (0, 0))
@@ -85,7 +83,7 @@ let starts_with_doc_comment t =
         | Text d | Decl {text = d; _} -> first_output [d]
         | Declarations _ -> None
         | Seq l -> first l
-        | Top_level t | Member (_, t) -> first [t]
+        | Top_level t -> first [t]
         | Module {enclosure = Struct {head; _}; _} -> first_output [head]
         | Module {fields; members; _} -> first (fields :: members)
       in
@@ -106,36 +104,16 @@ let rec to_pp = function
   | Text d -> d
   | Decl {text; _} -> text
   | Seq l -> List.fold_left (fun acc t -> Pp.(acc ++ to_pp t)) (Pp.mt ()) l
-  | Top_level t | Member (_, t) -> to_pp t
+  | Top_level t -> to_pp t
   | Module {enclosure; fields; members; _} -> (
     let inside = to_pp (Seq (fields :: (if members = [] then [] else join_members members @ [Text (Pp.fnl ())]))) in
     match enclosure with Struct {head; tail} -> Pp.(head ++ inside ++ tail) | Out_of_line | In_enclosing_scope -> inside )
   | Declarations l -> Pp.(prlist_with_sep fnl (fun d -> d) l ++ cut2 ())
 
-let rec legacy = function
-  | (Text _ | Decl _ | Declarations _) as t -> t
-  | Seq l -> Seq (List.map legacy l)
-  | Top_level t -> Top_level (legacy t)
-  | Member (mp, t) -> Member (mp, legacy t)
-  | Module {module_; enclosure; fields; members} -> (
-    let members = List.map (fun t -> Member (module_, legacy t)) members in
-    let rec doc_safe = function
-      | [] -> empty
-      | [p] -> p
-      | p :: (next :: _ as rest) ->
-        Seq [p; Text (if starts_with_doc_comment next then Pp.fnl () else cut2 ()); doc_safe rest]
-    in
-    let inside = Seq [legacy fields; (if members = [] then empty else Seq [doc_safe members; Text (Pp.fnl ())])] in
-    match enclosure with
-    | Struct {head; tail} -> Seq [Text head; inside; Text tail]
-    | Out_of_line | In_enclosing_scope -> inside )
-
 type template = {name : string; home : ModPath.t option; holder : bool; declaration : Pp.t}
 type forward = {struct_ : string; forward_declaration : Pp.t}
 type translation_unit = {prologue : Pp.t; sections : t list}
 type scheduled = {opening : Pp.t; body : t list}
-
-let legacy_unit u = {u with sections = List.map legacy u.sections}
 
 (* The chunks are numbered in the order written, in both passes: a chunk at
    namespace scope and a member of a struct each take the next number. *)
@@ -155,9 +133,6 @@ let schedule ~templates ~forwards u =
       let defined = first_uses ~top:(Some k) ~members t in
       Hashtbl.replace defined_in k defined;
       defined
-    | Member (mp, t) ->
-      incr count;
-      first_uses ~top ~members:((mp, !count) :: members) t
     | Module {module_; fields; members = l; _} ->
       let defined = first_uses ~top ~members fields in
       defined
@@ -206,10 +181,6 @@ let schedule ~templates ~forwards u =
       let k = !count in
       let due = forwards_due k @ templates_due (Some k) in
       in_front due (Top_level (placed t))
-    | Member (mp, t) ->
-      incr count;
-      let due = templates_due (Some !count) in
-      in_front due (Member (mp, placed t))
     | Module m ->
       let fields = placed m.fields in
       let members =

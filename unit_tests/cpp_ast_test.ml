@@ -40,16 +40,24 @@ let () =
   check_text "a template nothing writes is declared nowhere" (text ~templates:[template "U"] unit) "Pabc";
   let nested = [top (Cpp_ast.seq [Cpp_ast.text (Pp.str "s{"); top (leaf ~templates:["T"] "x"); Cpp_ast.text (Pp.str "}")])] in
   check_text "a template goes in front of the innermost chunk" (text ~templates:[template "T"] nested) "Ps{<T>x}";
-  let homed =
-    [ top
-        (Cpp_ast.seq
-           [ Cpp_ast.text (Pp.str "struct-M{");
-             Cpp_ast.member m (Cpp_ast.text (Pp.str "y"));
-             Cpp_ast.member m (leaf ~templates:["T"] "z");
-             Cpp_ast.text (Pp.str "}") ]) ]
+  let struct_ = Cpp_ast.Struct {head = Pp.str "struct-M{"; tail = Pp.str "}"} in
+  let body = Cpp_ast.module_body m [Cpp_ast.text (Pp.str "y"); Cpp_ast.empty; leaf ~templates:["T"] "z"] in
+  let homed = [top (Cpp_ast.module_ struct_ ~fields:(Cpp_ast.text (Pp.str "f")) body)] in
+  check_text "a homed template goes in front of its home's member" (text ~templates:[template ~home:m "T"] homed) "Pstruct-M{fy<T>z}";
+  check_text "an unhomed template written in a member goes at namespace scope" (text ~templates:[template "T"] homed) "P<T>struct-M{fyz}";
+  check_text "a homed template goes in front of its home's member defined out of line"
+    (text ~templates:[template ~home:m "T"] [top (Cpp_ast.module_ Out_of_line body)]) "Py<T>z";
+  check "a struct with no members is written" (not (Cpp_ast.is_empty (Cpp_ast.module_ struct_ (Cpp_ast.module_body m []))));
+  check "a body with no members and no struct writes nothing"
+    (Cpp_ast.is_empty (Cpp_ast.module_ In_enclosing_scope (Cpp_ast.module_body m [Cpp_ast.empty])));
+  let documented =
+    Cpp_ast.module_ In_enclosing_scope
+      (Cpp_ast.module_body m [Cpp_ast.text (Pp.str "y;"); leaf ~templates:["T"] "/// z"])
   in
-  check_text "a homed template goes in front of its home's member" (text ~templates:[template ~home:m "T"] homed) "Pstruct-M{y<T>z}";
-  check_text "an unhomed template written in a member goes at namespace scope" (text ~templates:[template "T"] homed) "P<T>struct-M{yz}";
+  let printed = Pp.string_of_ppcmds (Cpp_ast.print (Cpp_ast.schedule ~templates:[template ~home:m "T"] ~forwards:[]
+    {prologue = Pp.mt (); sections = [documented]})) in
+  check_text "a member opening with a doc comment follows a newline, whatever is due in front of it"
+    (String.sub printed 0 6) "y;\n<T>";
   check_text "holders go in front of aliases, each in the order given" (text
         ~templates:[template "A"; template ~holder:true "H"; template "B"]
         [top (leaf ~templates:["B"; "A"; "H"] "d")]) "P<H><A><B>d";
