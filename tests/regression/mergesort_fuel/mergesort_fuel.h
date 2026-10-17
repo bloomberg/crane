@@ -17,6 +17,18 @@ struct Compare_dec {
   static bool le_lt_dec(uint64_t n, uint64_t m);
 };
 
+struct MergesortFuel {
+  /// * Split
+  static std::pair<List<uint64_t>, List<uint64_t>>
+  split(const List<uint64_t> &l);
+  /// * Merge
+  static List<uint64_t> merge(List<uint64_t> l1, const List<uint64_t> &l2);
+  /// * Fuel-based merge sort
+  static List<uint64_t> msort_go(uint64_t fuel, const List<uint64_t> &l);
+  /// * Top-level sort and correctness
+  static List<uint64_t> msort(const List<uint64_t> &l);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -132,18 +144,6 @@ public:
     }
     return _result;
   }
-};
-
-struct MergesortFuel {
-  /// * Split
-  static std::pair<List<uint64_t>, List<uint64_t>>
-  split(const List<uint64_t> &l);
-  /// * Merge
-  static List<uint64_t> merge(List<uint64_t> l1, const List<uint64_t> &l2);
-  /// * Fuel-based merge sort
-  static List<uint64_t> msort_go(uint64_t fuel, const List<uint64_t> &l);
-  /// * Top-level sort and correctness
-  static List<uint64_t> msort(const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_MERGESORT_FUEL

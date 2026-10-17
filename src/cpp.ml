@@ -334,16 +334,6 @@ let rec pp_constraint : Modtype_concept.constraint_ -> Pp.t list * module_constr
     let hoisted, reqs = List.fold_left item ([], []) items in
     (List.rev hoisted, MCrequirements (List.rev reqs))
 
-(** Format a doc comment string as [///] comment lines. Translates bracket
-    references [[name]] by stripping the brackets. Returns [mt ()] if no doc
-    comment is found for the given name. *)
-let pp_doc_comment_for_name name =
-  match Doc_comments.find name with
-  | None -> mt ()
-  | Some text ->
-    let lines = Doc_comments.format_as_cpp_lines text in
-    prlist_with_sep fnl (fun l -> str l) lines ++ fnl ()
-
 (** Look up and format a doc comment for the given label. *)
 let pp_doc_comment label = pp_doc_comment_for_name (Label.to_string label)
 
@@ -640,9 +630,13 @@ let module_members_name_only_inductives sel =
     another struct, which is the question {!spec_is_hoistable} asks of a lifted
     helper and for the same reason: [Other::t] needs [Other] complete, so
     moving this in front of it would not help.  The other half, which the text
-    cannot answer, is {!module_members_name_only_inductives}. *)
+    cannot answer, is {!module_members_name_only_inductives}.
+
+    A doc comment is none of this: it is read with the comments taken out,
+    or a member's comment would fail it for not starting with [static], and
+    the word "template" in the struct's own would make a template of it. *)
 let module_struct_is_hoistable doc =
-  let rendered = Pp.string_of_ppcmds doc in
+  let rendered = Pp.string_of_ppcmds (Doc_comments.strip doc) in
   match (String.index_opt rendered '{', String.rindex_opt rendered '}') with
   | Some o, Some c when o < c ->
     let head = String.sub rendered 0 o in

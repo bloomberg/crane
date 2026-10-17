@@ -13,6 +13,25 @@
 
 template <typename A> struct List;
 
+struct LetMatchType2 {
+  /// 1. Match returning bool — should be fine
+  static bool let_match_bool(uint64_t n);
+  /// 2. Match returning pair — might trigger std::any
+  static uint64_t let_match_pair(bool b);
+  /// 3. Match returning list — might trigger std::any
+  static List<uint64_t> let_match_list(bool b);
+  /// 4. Match returning option — might trigger std::any
+  static std::optional<uint64_t> let_match_opt(bool b);
+  /// 5. Cascading let-matches all returning nat — should be fine
+  static uint64_t cascading_nat(bool a, bool b, bool c);
+  /// 6. Match returning function type
+  static uint64_t let_match_fun(bool b);
+  /// 7. Match result used in another match
+  static uint64_t match_of_match(uint64_t n);
+  /// 8. let-bound match where arms have bindings
+  static uint64_t let_match_bindings(uint64_t n);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -90,25 +109,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-struct LetMatchType2 {
-  /// 1. Match returning bool — should be fine
-  static bool let_match_bool(uint64_t n);
-  /// 2. Match returning pair — might trigger std::any
-  static uint64_t let_match_pair(bool b);
-  /// 3. Match returning list — might trigger std::any
-  static List<uint64_t> let_match_list(bool b);
-  /// 4. Match returning option — might trigger std::any
-  static std::optional<uint64_t> let_match_opt(bool b);
-  /// 5. Cascading let-matches all returning nat — should be fine
-  static uint64_t cascading_nat(bool a, bool b, bool c);
-  /// 6. Match returning function type
-  static uint64_t let_match_fun(bool b);
-  /// 7. Match result used in another match
-  static uint64_t match_of_match(uint64_t n);
-  /// 8. let-bound match where arms have bindings
-  static uint64_t let_match_bindings(uint64_t n);
 };
 
 #endif // INCLUDED_LET_MATCH_TYPE2

@@ -13,6 +13,24 @@
 
 template <typename A> struct List;
 
+struct NameClashScopeLeak {
+  /// Match on list, return list. Both branches produce the same type.
+  static List<uint64_t> rotate(const List<uint64_t> &l);
+  /// Two consecutive matches on different lists in the same function.
+  static uint64_t heads_sum(const List<uint64_t> &l1, const List<uint64_t> &l2);
+  /// Match on list, and in the Cons branch, match on the tail.
+  static uint64_t first_two_sum(const List<uint64_t> &l);
+  /// Match where both branches contain let bindings with same name.
+  static uint64_t branch_let_clash(const List<uint64_t> &l);
+  /// Three consecutive matches, each with same binding variable name pattern.
+  static uint64_t triple_head(const List<uint64_t> &l1,
+                              const List<uint64_t> &l2,
+                              const List<uint64_t> &l3);
+  /// Matching on a pair where both components are lists.
+  static uint64_t
+  pair_match(const std::pair<List<uint64_t>, List<uint64_t>> &p);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -116,24 +134,6 @@ public:
     }
     return std::move(*_root);
   }
-};
-
-struct NameClashScopeLeak {
-  /// Match on list, return list. Both branches produce the same type.
-  static List<uint64_t> rotate(const List<uint64_t> &l);
-  /// Two consecutive matches on different lists in the same function.
-  static uint64_t heads_sum(const List<uint64_t> &l1, const List<uint64_t> &l2);
-  /// Match on list, and in the Cons branch, match on the tail.
-  static uint64_t first_two_sum(const List<uint64_t> &l);
-  /// Match where both branches contain let bindings with same name.
-  static uint64_t branch_let_clash(const List<uint64_t> &l);
-  /// Three consecutive matches, each with same binding variable name pattern.
-  static uint64_t triple_head(const List<uint64_t> &l1,
-                              const List<uint64_t> &l2,
-                              const List<uint64_t> &l3);
-  /// Matching on a pair where both components are lists.
-  static uint64_t
-  pair_match(const std::pair<List<uint64_t>, List<uint64_t>> &p);
 };
 
 #endif // INCLUDED_NAME_CLASH_SCOPE_LEAK

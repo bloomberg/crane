@@ -3384,12 +3384,7 @@ let register_forward_enum_decl ~name =
 
     @param indent  optional prefix prepended to every line (e.g. ["  "] for
     indented contexts such as enum values).  Defaults to [""]. *)
-let pp_doc_comment_for_name ?(indent = "") name =
-  match Doc_comments.find name with
-  | None -> mt ()
-  | Some text ->
-    let lines = Doc_comments.format_as_cpp_lines text in
-    prlist_with_sep fnl (fun l -> str (indent ^ l)) lines ++ fnl ()
+let pp_doc_comment_for_name = Doc_comments.pp
 
 (** Run [f] in the scope an inductive [r]'s struct opens.  The struct is a
     scope of its own between its module and its members: a constructor's

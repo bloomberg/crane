@@ -15,6 +15,15 @@
 
 template <typename A> struct List;
 
+struct EtaClosureFirstClass {
+  /// A definition whose body is a let followed by a lambda is eta-expanded
+  /// into a two-argument C++ function.  Passing it first-class to map then
+  /// fails, because a uint64_t(uint64_t, uint64_t) is not convertible to
+  /// std::function<uint64_t(uint64_t)>.
+  static uint64_t mkclosure(uint64_t n, uint64_t x0_);
+  static uint64_t run(uint64_t k);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -140,15 +149,6 @@ public:
 
 struct ListDef {
   template <typename T1> static List<T1> repeat(const T1 &x, uint64_t n);
-};
-
-struct EtaClosureFirstClass {
-  /// A definition whose body is a let followed by a lambda is eta-expanded
-  /// into a two-argument C++ function.  Passing it first-class to map then
-  /// fails, because a uint64_t(uint64_t, uint64_t) is not convertible to
-  /// std::function<uint64_t(uint64_t)>.
-  static uint64_t mkclosure(uint64_t n, uint64_t x0_);
-  static uint64_t run(uint64_t k);
 };
 
 template <typename T1> List<T1> ListDef::repeat(const T1 &x, uint64_t n) {

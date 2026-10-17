@@ -31,6 +31,19 @@ struct Ascii0 {
   static uint64_t nat_of_ascii(char a);
 };
 
+/// With Mapping.AsciiChar, a character is a C++ char: identifier
+/// comparison compares bytes instead of building a binary natural per
+/// character.  The constructor packs bits and a match unpacks them, so
+/// code that looks inside a character still works.
+struct AsciiAsChar {
+  static Comparison cmp(const String &a, const String &b);
+  static bool same(const String &a, const String &b);
+  /// Looks inside a character: its low bit.
+  static bool odd_code(char c);
+  static bool decide(char a, char b);
+  static bool check(std::monostate _x);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -296,19 +309,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-/// With Mapping.AsciiChar, a character is a C++ char: identifier
-/// comparison compares bytes instead of building a binary natural per
-/// character.  The constructor packs bits and a match unpacks them, so
-/// code that looks inside a character still works.
-struct AsciiAsChar {
-  static Comparison cmp(const String &a, const String &b);
-  static bool same(const String &a, const String &b);
-  /// Looks inside a character: its low bit.
-  static bool odd_code(char c);
-  static bool decide(char a, char b);
-  static bool check(std::monostate _x);
 };
 
 #endif // INCLUDED_ASCII_AS_CHAR

@@ -14,6 +14,49 @@
 
 template <typename A> struct List;
 
+/// Consolidated combinatorial algorithms.
+struct LoopifyCombinatorics {
+  /// remove x l removes first occurrence of x from list.
+  static List<uint64_t> remove(uint64_t x, const List<uint64_t> &l);
+  /// Helper: prepend x to each list in lsts.
+  static List<List<uint64_t>> map_cons(uint64_t x,
+                                       const List<List<uint64_t>> &lsts);
+  /// perms_choices_fuel fuel choices orig generates permutations by iterating
+  /// over choices.  Single self-recursive function that handles both the choice
+  /// iteration and the recursive subproblem, enabling full loopification.
+  /// The match on remaining is hoisted out of the let-binding so that all
+  /// recursive calls appear at the top level of each branch.
+  static List<List<uint64_t>> perms_choices_fuel(uint64_t fuel,
+                                                 const List<uint64_t> &choices,
+                                                 const List<uint64_t> &orig);
+  /// permutations_fuel fuel l generates all permutations of a list.
+  static List<List<uint64_t>> permutations_fuel(uint64_t fuel,
+                                                const List<uint64_t> &l);
+  static uint64_t len_list(const List<uint64_t> &l);
+  static uint64_t factorial_impl(uint64_t n);
+  static List<List<uint64_t>> permutations(const List<uint64_t> &l);
+  /// subsequences l generates all subsequences (subsets preserving order).
+  static List<List<uint64_t>> subsequences(const List<uint64_t> &l);
+  /// Helper for cartesian product.
+  static List<std::pair<uint64_t, uint64_t>> map_pairs(uint64_t y,
+                                                       const List<uint64_t> &l);
+  /// cartesian l1 l2 Cartesian product of two lists.
+  static List<std::pair<uint64_t, uint64_t>>
+  cartesian(const List<uint64_t> &l1, const List<uint64_t> &l2);
+  /// power_set l generates the power set (all subsets).
+  static List<List<uint64_t>> power_set(const List<uint64_t> &l);
+  /// insert_everywhere x l inserts x at every position in l.
+  static List<List<uint64_t>> insert_everywhere(uint64_t x,
+                                                const List<uint64_t> &l);
+  /// Helper: check if element is in list.
+  static bool elem(uint64_t x, const List<uint64_t> &l);
+  /// Helper: list length.
+  static uint64_t len_impl(const List<uint64_t> &l);
+  /// dedup l removes all duplicates (keeps first occurrence).
+  static List<uint64_t> dedup_fuel(uint64_t fuel, const List<uint64_t> &l);
+  static List<uint64_t> dedup(const List<uint64_t> &l);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -117,49 +160,6 @@ public:
     }
     return std::move(*_root);
   }
-};
-
-/// Consolidated combinatorial algorithms.
-struct LoopifyCombinatorics {
-  /// remove x l removes first occurrence of x from list.
-  static List<uint64_t> remove(uint64_t x, const List<uint64_t> &l);
-  /// Helper: prepend x to each list in lsts.
-  static List<List<uint64_t>> map_cons(uint64_t x,
-                                       const List<List<uint64_t>> &lsts);
-  /// perms_choices_fuel fuel choices orig generates permutations by iterating
-  /// over choices.  Single self-recursive function that handles both the choice
-  /// iteration and the recursive subproblem, enabling full loopification.
-  /// The match on remaining is hoisted out of the let-binding so that all
-  /// recursive calls appear at the top level of each branch.
-  static List<List<uint64_t>> perms_choices_fuel(uint64_t fuel,
-                                                 const List<uint64_t> &choices,
-                                                 const List<uint64_t> &orig);
-  /// permutations_fuel fuel l generates all permutations of a list.
-  static List<List<uint64_t>> permutations_fuel(uint64_t fuel,
-                                                const List<uint64_t> &l);
-  static uint64_t len_list(const List<uint64_t> &l);
-  static uint64_t factorial_impl(uint64_t n);
-  static List<List<uint64_t>> permutations(const List<uint64_t> &l);
-  /// subsequences l generates all subsequences (subsets preserving order).
-  static List<List<uint64_t>> subsequences(const List<uint64_t> &l);
-  /// Helper for cartesian product.
-  static List<std::pair<uint64_t, uint64_t>> map_pairs(uint64_t y,
-                                                       const List<uint64_t> &l);
-  /// cartesian l1 l2 Cartesian product of two lists.
-  static List<std::pair<uint64_t, uint64_t>>
-  cartesian(const List<uint64_t> &l1, const List<uint64_t> &l2);
-  /// power_set l generates the power set (all subsets).
-  static List<List<uint64_t>> power_set(const List<uint64_t> &l);
-  /// insert_everywhere x l inserts x at every position in l.
-  static List<List<uint64_t>> insert_everywhere(uint64_t x,
-                                                const List<uint64_t> &l);
-  /// Helper: check if element is in list.
-  static bool elem(uint64_t x, const List<uint64_t> &l);
-  /// Helper: list length.
-  static uint64_t len_impl(const List<uint64_t> &l);
-  /// dedup l removes all duplicates (keeps first occurrence).
-  static List<uint64_t> dedup_fuel(uint64_t fuel, const List<uint64_t> &l);
-  static List<uint64_t> dedup(const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_COMBINATORICS

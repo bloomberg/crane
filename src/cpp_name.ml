@@ -137,6 +137,7 @@ let written doc =
     | Ppcmd_string s -> Buffer.add_string run s
     | Ppcmd_glue ds -> List.iter go ds
     | Ppcmd_box (_, d) -> go d
+    | Ppcmd_tag (tag, _) when String.equal tag Doc_comments.tag -> ()
     | Ppcmd_tag (tag, d) -> (
       match scope_of_tag tag with
       | Some s -> emit (Scope s)

@@ -13,6 +13,24 @@
 
 template <typename A> struct List;
 
+struct LoopifyItreeSeq {
+  /// Tail-recursive countdown using erased ITree. In sequential mode, itree is
+  /// erased so this becomes a plain tail-recursive C++ function. Loopify should
+  /// convert it to a while loop.
+  static uint64_t count_down(uint64_t n);
+  /// Sum 1..n via tail recursion with accumulator.
+  static uint64_t sum_to(uint64_t n);
+  /// Non-tail recursive: build a list counting down from n.
+  static List<uint64_t> countdown_list(uint64_t n);
+  static uint64_t delay_ret(uint64_t n, uint64_t v);
+  static void spin();
+  static void forever(uint64_t n);
+  static uint64_t test_count_5();
+  static uint64_t test_sum_10();
+  static List<uint64_t> test_clist_4();
+  static uint64_t test_delay();
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -90,24 +108,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-struct LoopifyItreeSeq {
-  /// Tail-recursive countdown using erased ITree. In sequential mode, itree is
-  /// erased so this becomes a plain tail-recursive C++ function. Loopify should
-  /// convert it to a while loop.
-  static uint64_t count_down(uint64_t n);
-  /// Sum 1..n via tail recursion with accumulator.
-  static uint64_t sum_to(uint64_t n);
-  /// Non-tail recursive: build a list counting down from n.
-  static List<uint64_t> countdown_list(uint64_t n);
-  static uint64_t delay_ret(uint64_t n, uint64_t v);
-  static void spin();
-  static void forever(uint64_t n);
-  static uint64_t test_count_5();
-  static uint64_t test_sum_10();
-  static List<uint64_t> test_clist_4();
-  static uint64_t test_delay();
 };
 
 #endif // INCLUDED_LOOPIFY_ITREE_SEQ

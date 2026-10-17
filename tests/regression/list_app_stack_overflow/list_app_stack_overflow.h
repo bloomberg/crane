@@ -14,6 +14,14 @@
 
 template <typename A> struct List;
 
+struct ListAppStackOverflow {
+  /// A tail-recursive builder, loopified below, so that constructing the
+  /// list itself is stack-safe: only the generated List method under test
+  /// can overflow.
+  static List<uint64_t> bld(uint64_t n, List<uint64_t> acc);
+  static uint64_t run(uint64_t k);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -134,14 +142,6 @@ public:
     }
     return std::move(*_root);
   }
-};
-
-struct ListAppStackOverflow {
-  /// A tail-recursive builder, loopified below, so that constructing the
-  /// list itself is stack-safe: only the generated List method under test
-  /// can overflow.
-  static List<uint64_t> bld(uint64_t n, List<uint64_t> acc);
-  static uint64_t run(uint64_t k);
 };
 
 #endif // INCLUDED_LIST_APP_STACK_OVERFLOW

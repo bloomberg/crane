@@ -15,6 +15,14 @@
 
 template <typename A> struct List;
 
+struct EtaClosureFixpoint {
+  /// The Fixpoint form of the eta-expansion arity bug: adder is emitted
+  /// as uint64_t adder(uint64_t, uint64_t), so map adder ... cannot build
+  /// the std::function<uint64_t(uint64_t)> it is declared to produce.
+  static uint64_t adder(uint64_t n, uint64_t k);
+  static uint64_t run(uint64_t k);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -136,14 +144,6 @@ public:
     }
     return std::move(*_root);
   }
-};
-
-struct EtaClosureFixpoint {
-  /// The Fixpoint form of the eta-expansion arity bug: adder is emitted
-  /// as uint64_t adder(uint64_t, uint64_t), so map adder ... cannot build
-  /// the std::function<uint64_t(uint64_t)> it is declared to produce.
-  static uint64_t adder(uint64_t n, uint64_t k);
-  static uint64_t run(uint64_t k);
 };
 
 #endif // INCLUDED_ETA_CLOSURE_FIXPOINT

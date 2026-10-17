@@ -14,6 +14,21 @@
 struct Nat;
 template <typename A> struct List;
 
+/// A match in argument position becomes an immediately invoked lambda,
+/// std::make_optional<Nat>([...]() { ... n.v_mut() ... }()).  The
+/// scrutinee n is an owned local, so the match destructures it through
+/// v_mut().  return_captures_by_value made that lambda a Closure
+/// because it sits in a returned expression, and a closure's captures are
+/// const since a0357147d, so v_mut() on the captured Nat did not
+/// compile.  A lambda invoked where it is written is never stored: it stays
+/// Immediate and captures by reference.  Found in Vellvm's
+/// FMapFacts.cardinal_inv_2b.
+struct ImmediateMatchOwnedScrutinee {
+  static Nat count(const List<Nat> &l);
+  static std::optional<Nat> pred_count(List<Nat> l);
+  static bool check(std::monostate _x);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -145,21 +160,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-/// A match in argument position becomes an immediately invoked lambda,
-/// std::make_optional<Nat>([...]() { ... n.v_mut() ... }()).  The
-/// scrutinee n is an owned local, so the match destructures it through
-/// v_mut().  return_captures_by_value made that lambda a Closure
-/// because it sits in a returned expression, and a closure's captures are
-/// const since a0357147d, so v_mut() on the captured Nat did not
-/// compile.  A lambda invoked where it is written is never stored: it stays
-/// Immediate and captures by reference.  Found in Vellvm's
-/// FMapFacts.cardinal_inv_2b.
-struct ImmediateMatchOwnedScrutinee {
-  static Nat count(const List<Nat> &l);
-  static std::optional<Nat> pred_count(List<Nat> l);
-  static bool check(std::monostate _x);
 };
 
 #endif // INCLUDED_IMMEDIATE_MATCH_OWNED_SCRUTINEE

@@ -13,6 +13,15 @@
 
 template <typename A> struct List;
 
+struct DepReturnAnyCast {
+  /// A definition with a dependent return type erases to std::any.  The
+  /// producer stores a List<uint64_t> but the consumer any_casts to
+  /// List<std::any>, so the program compiles and then dies at run time with
+  /// an uncaught std::bad_any_cast.
+  static crane::obj dep(bool b);
+  static uint64_t run(uint64_t k);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -128,15 +137,6 @@ public:
     }
     return _result;
   }
-};
-
-struct DepReturnAnyCast {
-  /// A definition with a dependent return type erases to std::any.  The
-  /// producer stores a List<uint64_t> but the consumer any_casts to
-  /// List<std::any>, so the program compiles and then dies at run time with
-  /// an uncaught std::bad_any_cast.
-  static crane::obj dep(bool b);
-  static uint64_t run(uint64_t k);
 };
 
 #endif // INCLUDED_DEP_RETURN_ANY_CAST
