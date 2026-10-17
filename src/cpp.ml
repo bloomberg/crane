@@ -822,6 +822,46 @@ let wraps_children mp sel =
     (fun (l, se) -> match se with SEmodule _ -> is_wrapped_child (MPdot (mp, l)) | _ -> false)
     sel
 
+(** The inductives the body of the module [mp] of elements [sel] spells
+    bare: those it declares, under separate extraction only those whose
+    kernel name is [mp]'s own. *)
+let inductives_declared_in mp sel =
+  List.concat_map
+    (fun (_, se) ->
+      match se with
+      | SEdecl (Dind (kn, ind)) when (not (modular ())) || ModPath.equal (MutInd.modpath kn) mp ->
+        List.init (Array.length ind.ind_packets) (fun i -> GlobRef.IndRef (kn, i))
+      | _ -> [] )
+    sel
+
+(** The inductives every module of the unit that is not a wrapper module
+    spells bare: under separate extraction, all those the unit declares, at
+    any depth; otherwise none.  A wrapper module is written without them,
+    and a separately extracted unit, being one file module that is its own
+    main module, has none. *)
+let file_local_inductives (analysis : Structure_analysis.t) =
+  let rec all sel =
+    List.concat_map
+      (fun (_, se) ->
+        match se with
+        | SEdecl (Dind (kn, ind)) -> List.init (Array.length ind.ind_packets) (fun i -> GlobRef.IndRef (kn, i))
+        | SEmodule {ml_mod_expr = MEstruct (_, sub); _} -> all sub
+        | _ -> [] )
+      sel
+  in
+  if modular () then List.concat_map (fun (mi : Structure_analysis.module_info) -> all mi.sels) analysis.sorted_modules
+  else []
+
+(** [with_local_inductives refs k] runs [k] with [refs] local as well. *)
+let with_local_inductives refs k =
+  let outer = get_local_inductives () in
+  List.iter add_local_inductive refs;
+  Fun.protect
+    ~finally:(fun () ->
+      clear_local_inductives ();
+      List.iter add_local_inductive outer )
+    k
+
 (** Whether a finished declaration is an erasure landing pad: [using X =
     std::any;], which names nothing. *)
 let is_erased_alias (_, d) =
@@ -1604,18 +1644,7 @@ and pp_module_expr ~is_header f = function
     in_planned_visibility mp @@ fun () ->
     let old_structure_decls = !current_structure_decls in
     current_structure_decls := sel;
-    let old_local_inductives = get_local_inductives () in
-    List.iter
-      (fun (_l, se) ->
-        match se with
-        | SEdecl (Dind (kn, ind)) ->
-          let ind_mp = Names.MutInd.modpath kn in
-          if (not (modular ())) || Names.ModPath.equal ind_mp mp then
-            Array.iteri
-              (fun i _p -> add_local_inductive (GlobRef.IndRef (kn, i)))
-              ind.ind_packets
-        | _ -> () )
-      sel;
+    with_local_inductives (inductives_declared_in mp sel) @@ fun () ->
     (* A synthesised alias whose body names this module's own types, as its
        members spell them, is declared inside the struct, in front of the
        first member that writes it (see {!Cpp_print.ctor_alias_home}):
@@ -1626,8 +1655,6 @@ and pp_module_expr ~is_header f = function
     in
     let l, concepts, asserts = List.fold_left try_pp_structure_elem ([], [], []) sel in
     let l = List.rev l in
-    clear_local_inductives ();
-    List.iter add_local_inductive old_local_inductives;
     current_structure_decls := old_structure_decls;
     { text = (if List.is_empty l then mt () else prlist_with_doc_safe_sep cut2 l ++ fnl ());
       concepts = List.rev concepts;
@@ -1984,16 +2011,6 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
     ~decl s =
   let order l = if reversed then List.rev l else l in
   let analysis = get_structure_analysis () in
-  let declared_inductives mp sel =
-    List.concat_map
-      (fun (_, se) ->
-        match se with
-        | SEdecl (Dind (kn, ind))
-          when (not (modular ())) || ModPath.equal (MutInd.modpath kn) mp ->
-          List.init (Array.length ind.ind_packets) (fun i -> GlobRef.IndRef (kn, i))
-        | _ -> [] )
-      sel
-  in
   let header = ref {Cpp_ind.in_struct = false; concepts_hoisted = false} in
   let in_module mp sel k =
     Cpp_ind.plan_header_scope mp !header;
@@ -2042,15 +2059,6 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
     with_promotion (fun () -> in_header_scope scope k);
     after_module frame sel
   in
-  let with_local_inductives refs k =
-    let outer = get_local_inductives () in
-    List.iter add_local_inductive refs;
-    Fun.protect
-      ~finally:(fun () ->
-        clear_local_inductives ();
-        List.iter add_local_inductive outer )
-      k
-  in
   let rec elem ~wrapper (l, se) =
     match se with
     | SEdecl _ -> decl ~wrapper se
@@ -2072,20 +2080,10 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
   and module_expr = function
     | MEstruct (mp, sel) ->
       in_module mp sel (fun () ->
-          with_local_inductives (declared_inductives mp sel) (fun () ->
+          with_local_inductives (inductives_declared_in mp sel) (fun () ->
               List.iter (elem ~wrapper:false) (order sel);
               in_body ~wrapper:false mp sel ) )
     | MEident _ | MEapply _ | MEfunctor _ -> ()
-  in
-  let rec all_inductives sel =
-    List.concat_map
-      (fun (_, se) ->
-        match se with
-        | SEdecl (Dind (kn, ind)) ->
-          List.init (Array.length ind.ind_packets) (fun i -> GlobRef.IndRef (kn, i))
-        | SEmodule {ml_mod_expr = MEstruct (_, sub); _} -> all_inductives sub
-        | _ -> [] )
-      sel
   in
   with_visibility (toplevel_visibility (List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s))
   @@ fun () ->
@@ -2097,12 +2095,7 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
             after_wrapper ();
             in_body ~wrapper:true mi.modpath mi.sels ) )
     (order analysis.sorted_modules);
-  let file_inductives =
-    if modular () then
-      List.concat_map (fun (mi : Structure_analysis.module_info) -> all_inductives mi.sels) analysis.sorted_modules
-    else []
-  in
-  with_local_inductives file_inductives (fun () ->
+  with_local_inductives (file_local_inductives analysis) (fun () ->
       List.iter
         (fun (mi : Structure_analysis.module_info) ->
           if mi.wrapper_name = None then
@@ -3683,25 +3676,6 @@ let do_struct_with_decl_tracking ~is_header f s =
     let deferred_defs =
       prlist (fun w -> if Pp.ismt w.wr_defs then mt () else cut2 () ++ w.wr_defs) wrapper_parts
     in
-    let old_local_inductives = get_local_inductives () in
-    if modular () then begin
-      let rec collect_inductives sel =
-        List.iter
-          (fun (_l, se) ->
-            match se with
-            | SEdecl (Dind (kn, ind)) ->
-              Array.iteri
-                (fun i _p -> add_local_inductive (GlobRef.IndRef (kn, i)))
-                ind.ind_packets
-            | SEmodule { ml_mod_expr = MEstruct (_, sub_sel); _ } ->
-              collect_inductives sub_sel
-            | _ -> () )
-          sel
-      in
-      List.iter
-        (fun ((_mp, sel), _wrapper_name) -> collect_inductives sel)
-        wrapper_names
-    end;
     let ppl ((mp, sel), wrapper_name) =
       in_planned_visibility mp @@ fun () ->
       let hoisted = ref [] and prereqs = ref [] and concepts = ref [] in
@@ -3892,12 +3866,14 @@ let do_struct_with_decl_tracking ~is_header f s =
       current_structure_decls := old_decls;
       (p, List.rev !hoisted, List.rev !prereqs, List.rev !concepts)
     in
-    let placed = List.map ppl wrapper_names in
+    let placed =
+      let file_inductives = file_local_inductives analysis in
+      List.map
+        (fun ((_, wrapper_name) as m) ->
+          if wrapper_name = None then with_local_inductives file_inductives (fun () -> ppl m) else ppl m )
+        wrapper_names
+    in
     let rendered = List.map2 (fun wn (p, _, _, _) -> (wn, p)) wrapper_names placed in
-    if modular () then begin
-      clear_local_inductives ();
-      List.iter add_local_inductive old_local_inductives
-    end;
     let rev_rendered = List.rev rendered in
     let main_entry, pre_entries =
       match rev_rendered with
