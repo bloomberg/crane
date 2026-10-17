@@ -1601,7 +1601,7 @@ and pp_module_expr ~is_header f = function
       sel;
     (* A synthesised alias whose body names this module's own types, as its
        members spell them, is declared inside the struct, in front of the
-       first member that spells it (see {!Cpp_print.record_ctor_alias_home}):
+       first member that spells it (see {!Cpp_print.ctor_alias_home}):
        at namespace scope those names mean nothing. *)
     let with_homed_aliases px =
       match Cpp_print.pending_ctor_aliases_homed_in mp with

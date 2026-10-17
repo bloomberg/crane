@@ -127,10 +127,6 @@ val take_ctor_alias_decls :
 (** The synthesised names minted but not yet declared. *)
 val pending_ctor_alias_names : unit -> string list
 
-(** [record_ctor_alias_home name body] notes the module struct [name] must be
-    declared in, when [body] names one of its globals. *)
-val record_ctor_alias_home : string -> cpp_type -> unit
-
 (** The pending synthesised names whose home is [mp]. *)
 val pending_ctor_aliases_homed_in : ModPath.t -> string list
 
