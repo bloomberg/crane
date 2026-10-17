@@ -703,29 +703,28 @@ let generated : (ModPath.t * Gen_decls.generated_fun list) list Node_table.t =
 
 let () = State.on_reset State.Unit (fun () -> Node_table.reset generated)
 
-let ahead = ref false
+(** What an emission pass over the unit's declarations does with what is
+    generated ahead of the files. *)
+type mode =
+  | Generating  (** generates it, and records it ({!generating_ahead}) *)
+  | Regenerating
+      (** generates it again, in the reverse order, to check it
+          ({!regenerating}): nothing is recorded or claimed *)
+  | Peeking
+      (** reads it, to plan what the files will write of it ({!peeking}):
+          nothing is generated, recorded or claimed *)
+  | Rendering  (** a file takes it *)
 
-let generating_ahead f =
-  ahead := true;
-  Fun.protect ~finally:(fun () -> ahead := false) f
+let mode = ref Rendering
 
-(* Set while what was generated ahead is generated again to check it
-   ({!regenerating}): nothing is recorded or claimed. *)
-let rechecking = ref false
+let in_mode m f =
+  let outer = !mode in
+  mode := m;
+  Fun.protect ~finally:(fun () -> mode := outer) f
 
-let regenerating f =
-  let outer = !rechecking in
-  rechecking := true;
-  Fun.protect ~finally:(fun () -> rechecking := outer) f
-
-(* Set while what was generated ahead is read to plan what the files will
-   write of it ({!peeking}): nothing is generated, recorded or claimed. *)
-let peeked = ref false
-
-let peeking f =
-  let outer = !peeked in
-  peeked := true;
-  Fun.protect ~finally:(fun () -> peeked := outer) f
+let generating_ahead f = in_mode Generating f
+let regenerating f = in_mode Regenerating f
+let peeking f = in_mode Peeking f
 
 (* [compare] rather than [=]: a NaN literal is equal to itself. *)
 let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) =
@@ -746,30 +745,37 @@ let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) 
     it is [gen ()].  Read while {!peeking}, it is what was recorded, handed
     to [peek] for what taking it would give without taking it. *)
 let ahead_once ~what ~recorded ~record ~same ?(planned = ignore) ?(take = Fun.id) ?(peek = Fun.id) gen =
-  match get_phase () with
-  | Plan -> gen ()
-  | Emit when !ahead && not !rechecking ->
+  let check v ~again =
+    if Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (same v (fst (Translation.collecting_lifted gen))) then
+      CErrors.anomaly
+        Pp.(str "Crane: " ++ what () ++ str " was generated differently ahead of the files and " ++ str again)
+  in
+  let recorded_here () =
+    let mp = top_visible_mp () in
+    match List.find_map (fun (mp', v) -> if ModPath.equal mp' mp then Some v else None) (recorded ()) with
+    | Some v -> v
+    | None ->
+      CErrors.anomaly
+        Pp.(str "Crane: " ++ what () ++ str " was reached while rendering in the module "
+            ++ str (ModPath.to_string mp) ++ str " that was not generated ahead of the files there.")
+  in
+  match (get_phase (), !mode) with
+  | Plan, _ -> gen ()
+  | Emit, Generating ->
     let v = gen () in
     record ((top_visible_mp (), v) :: recorded ());
     planned v;
     v
-  | Emit -> (
-    let mp = top_visible_mp () in
-    match List.find_map (fun (mp', v) -> if ModPath.equal mp' mp then Some v else None) (recorded ()) with
-    | Some v when !peeked -> peek v
-    | Some v ->
-      let taken = if !rechecking then v else take v in
-      if Sys.getenv_opt "CRANE_CHECK_IR" <> None
-         && not (same v (fst (Translation.collecting_lifted gen)))
-      then
-        CErrors.anomaly
-          Pp.(str "Crane: " ++ what () ++ str " was generated differently ahead of the files and "
-              ++ str (if !rechecking then "again in the reverse order." else "in one of them."));
-      taken
-    | None ->
-      CErrors.anomaly
-        Pp.(str "Crane: " ++ what () ++ str " was reached while rendering in the module "
-            ++ str (ModPath.to_string mp) ++ str " that was not generated ahead of the files there.") )
+  | Emit, Peeking -> peek (recorded_here ())
+  | Emit, Regenerating ->
+    let v = recorded_here () in
+    check v ~again:"again in the reverse order.";
+    v
+  | Emit, Rendering ->
+    let v = recorded_here () in
+    let taken = take v in
+    check v ~again:"in one of them.";
+    taken
 
 (** [in_node_table table node] is the [~recorded] and [~record] of
     {!ahead_once} for what is recorded in [table] by the physical node
@@ -959,7 +965,8 @@ let finished_of ~what (job : finishing) =
   match (get_phase (), Finished_program.find job) with
   | Plan, _ -> CErrors.anomaly Pp.(str "Crane: " ++ str what ++ str " was finished while planning.")
   | Emit, Some f ->
-    if (not !ahead) && Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (Finished_program.finishes_as job f)
+    let ahead = match !mode with Generating | Regenerating -> true | Peeking | Rendering -> false in
+    if (not ahead) && Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (Finished_program.finishes_as job f)
     then
       CErrors.anomaly
         Pp.(str "Crane: " ++ str what
@@ -1406,7 +1413,7 @@ let regenerate_ahead d =
 let decls_for ~is_header d =
   match generate d with
   | Functions {funs; lifted} ->
-    if not !peeked then record_funs ~fallback:(decl_entity d) funs;
+    if !mode <> Peeking then record_funs ~fallback:(decl_entity d) funs;
     let lifted_inline, helpers =
       match lifted with
       | Inline -> (true, [])
