@@ -5,10 +5,8 @@
    names and qualified paths. It provides string and [Pp.t] renderings of
    globals, field names, and inductive/enum type names, together with the
    namespace and struct qualification needed to reference them from a given
-   context. It also handles translation between Rocq and C++ path spellings.
-   A few small caches (such as [globref_full_path_cache]) and cached predicates
-   over the name-resolution cache ([with_cache], [*_cached]) keep repeated
-   lookups cheap. *)
+   context. Cached predicates over the name-resolution cache ([with_cache],
+   [*_cached]) keep repeated lookups cheap. *)
 
 (** {2 String and [Pp.t] renderings of globals} *)
 
@@ -38,12 +36,6 @@ val pp_concept_name_of_ref : Names.GlobRef.t -> Pp.t
 val pp_global_name : Common.kind -> Names.GlobRef.t -> Pp.t
 
 (** {2 Full paths and module names} *)
-
-(** Cache mapping globals to their fully-qualified path strings. *)
-val globref_full_path_cache : string Ref.User.Tbl.t
-
-(** The fully-qualified path string of a global. *)
-val globref_full_path : Names.GlobRef.t -> string
 
 (** Pretty-print a module path. *)
 val pp_modname : Names.ModPath.t -> Pp.t
@@ -131,18 +123,7 @@ val struct_declaration_name :
 (** The [typename] prefix required for the given qualified name. *)
 val typename_prefix_for : string -> Pp.t
 
-(** {2 Rocq / C++ path translation} *)
-
-(** Convert a C++ path spelling to its Rocq form. *)
-val cpp_to_rocq_path : string -> string
-
-(** Convert a Rocq path spelling to its C++ form. *)
-val rocq_to_cpp_path : string -> string
-
 (** {2 Struct and namespace qualification} *)
-
-(** Find the qualifier reaching a common ancestor from a given path. *)
-val find_ancestor_qualifier_from : string -> string -> Pp.t
 
 (** The struct qualifier needed to reach a global from the given context. *)
 val struct_qualifier_for : Names.GlobRef.t -> string -> Pp.t

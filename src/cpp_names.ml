@@ -74,25 +74,6 @@ let pp_concept_name_of_ref r = str (concept_name_of_ref r)
 (** Pretty-print a global name (without custom mapping) as a Pp.t. *)
 let pp_global_name k r = str (Common.pp_global k r)
 
-(** Memoized fully-qualified Rocq path of a global reference.
-
-    [GlobRef.print] resolves to absolute kernel names (via [to_string]), so its
-    rendering is a stable pure function of the reference for the whole process —
-    not visibility-dependent. It stringifies a [Pp.t] and is invoked on nearly
-    every reference during name qualification, so the result is cached. The cache
-    never needs resetting: the same reference always prints the same path,
-    consistent with the polymorphic [Hashtbl] keying already used in this file for
-    [GlobRef.t]. *)
-let globref_full_path_cache : string Ref.User.Tbl.t = Ref.User.Tbl.create 512
-
-let globref_full_path r =
-  match Ref.User.Tbl.find_opt globref_full_path_cache r with
-  | Some s -> s
-  | None ->
-    let s = Pp.string_of_ppcmds (GlobRef.print r) in
-    Ref.User.Tbl.add globref_full_path_cache r s;
-    s
-
 (** Pretty-print a module path as a Pp.t. *)
 let pp_modname mp = str (Common.pp_module mp)
 
@@ -377,46 +358,6 @@ let typename_prefix_for name_str =
   else
     mt ()
 
-(** Convert a C++ qualified name ([A::B::C]) to its Rocq dotted form
-    ([A.B.C]). *)
-let cpp_to_rocq_path s =
-  Str.global_replace (Str.regexp_string "::") "." s
-
-(** Convert a Rocq dotted path ([A.B.C]) to its C++ qualified form
-    ([A::B::C]). *)
-let rocq_to_cpp_path s =
-  Str.global_replace (Str.regexp_string ".") "::" s
-
-(** Find the right ancestor qualifier for a type that lives inside a parent
-    of the current nested struct.
-
-    E.g., when struct_name is [RecordFieldPatterns::PointImpl] and the type
-    [Point] has Rocq path [RecordFieldPatterns.Point], this returns
-    [RecordFieldPatterns::].
-
-    Walks up the [.]-separated components of [struct_name_dotted] (the Rocq
-    form of the struct name), checking whether the type's Rocq path contains
-    each prefix.  Returns the first matching ancestor as a C++ qualifier, or
-    [mt ()] if none matches.
-    @param full_path          the Rocq fully-qualified path of the type being
-                              rendered (as returned by [GlobRef.print])
-    @param struct_name_dotted the Rocq-dotted form (using [.] separators) of
-                              the current C++ struct name
-    @return a [Pp.t] C++ qualifier ending with [::] for the nearest ancestor
-            module that contains [full_path], or [mt ()] if none found *)
-let find_ancestor_qualifier_from full_path struct_name_dotted =
-  let rec find s =
-    match String.rindex_opt s '.' with
-    | Some i ->
-      let parent = String.sub s 0 i in
-      if Common.contains_substring full_path parent then
-        str (rocq_to_cpp_path parent) ++ str "::"
-      else
-        find parent
-    | None -> mt ()
-  in
-  find struct_name_dotted
-
 (** Add struct qualification prefix when generating out-of-struct definitions.
 
     In a [.cpp] file, types defined inside the enclosing struct need to be
@@ -476,18 +417,16 @@ let struct_qualifier_for r name_str =
        and for these two answers [Member]. *)
     else if Module_plan.is_global_scope_type r then
       mt ()
-    (* The kernel module path settles the question outright when it is known:
-       the type is a member of this struct exactly when it was declared in the
-       module the struct came from, or in one nested inside it.  Ask that
-       before the textual tests below, which compare the struct's C++ name
-       against the type's Rocq path and so both give up whenever the module was
-       emitted under a different name -- a duplicate-avoidance rename ([Pos]
-       and [Coq_Pos]) or a collision suffix -- and fire spuriously when the
-       paths merely share a prefix, as they do when the enclosing library is
-       named after the module.  A type declared in a module that neither
-       contains nor is contained by this struct's is not a member of it, so it
-       takes no qualifier at all; only a type from an ancestor module is left
-       to the heuristics, which pick the right ancestor prefix for it. *)
+    (* The kernel module path settles the question: the type is a member of
+       this struct exactly when it was declared in the module the struct came
+       from, or in one nested inside it.  Comparing the struct's C++ name with
+       the type's Rocq path instead gives up whenever the module was emitted
+       under a different name -- a duplicate-avoidance rename ([Pos] and
+       [Coq_Pos]) or a collision suffix -- and fires spuriously when the paths
+       merely share a prefix, as they do when the enclosing library is named
+       after the module.  A type declared in a module that neither contains
+       nor is contained by this struct's is not a member of it, so it takes no
+       qualifier at all. *)
     else (
       match relation with
       | Member -> struct_name ++ str "::"
@@ -495,49 +434,14 @@ let struct_qualifier_for r name_str =
       (* A name declared in a module that encloses this struct is qualified by
          that module, never by the struct -- and only when the module is
          emitted as a struct of its own.  The extraction root is not: its
-         members sit at global scope, so the bare name is already right.  The
-         textual fallback below cannot tell the two apart, because the root
-         module and the struct are commonly named alike (a file
-         [MonadInstanceMissing.v] holding a [Module MonadInstanceMissing]), and
-         it reads that shared prefix as containment. *)
-      | Ancestor when not (Common.is_struct_module (modpath_of_r r)) ->
-        mt ()
-      | Ancestor ->
-      (* Default: qualify when the type's Rocq path nests under the struct,
-         or when the type already carries a qualified C++ name whose Rocq path
-         nests under the struct's parent module. *)
-      let full_path = globref_full_path r in
-      let struct_name_dotted = cpp_to_rocq_path struct_name_str in
-      let parent_struct_dotted =
-        match String.rindex_opt struct_name_dotted '.' with
-        | Some i -> String.sub struct_name_dotted 0 i
-        | None -> struct_name_dotted
-      in
-      if full_path = struct_name_dotted then
-        (* The type IS the current struct itself (self-referential use in out-of-struct
-           context).  Adding the full struct_name:: prefix would double the last
-           component (e.g. "HashTrie::Trie::Trie<X>").  Use only the parent module
-           qualifier so the combined name is just "HashTrie::Trie". *)
-        (match String.rindex_opt struct_name_str ':' with
-         | Some i when i > 0 ->
-           str (String.sub struct_name_str 0 (i - 1)) ++ str "::"
-         | _ -> mt ())
-      else if
-        Common.contains_substring full_path struct_name_dotted
-        || is_qualified_name name_str
-           && Common.contains_substring full_path parent_struct_dotted
-      then
-        struct_name ++ str "::"
-      else if is_local_inductive r then
-        (* Local inductives live inside the C++ struct.  When the current
-           struct context is a nested sub-module (e.g.,
-           RecordFieldPatterns::PointImpl) and the type is in an ancestor
-           module (e.g., RecordFieldPatterns), use the ancestor qualifier
-           instead of the full nested path.  Reuse the already-computed
-           [full_path] and [struct_name_dotted] to avoid re-deriving them. *)
-        find_ancestor_qualifier_from full_path struct_name_dotted
-      else
-        mt () )
+         members sit at global scope, so the bare name is already right.  A
+         module that is a struct is named as its plan qualifies its
+         out-of-line members ({!Scope_plan.qualifier}). *)
+      | Ancestor -> (
+        match Scope_plan.of_module (modpath_of_r r) with
+        | Some sc when Common.is_struct_module (modpath_of_r r) ->
+          str (Scope_plan.qualifier sc) ++ str "::"
+        | _ -> mt () ) )
   | _ -> mt ()
 
 (** Prefix a global-scope type name with [::] when a module-local inductive of
@@ -603,14 +507,8 @@ let wrapper_qualified_type_name r name_str =
 let needs_global_qualifier x =
   match (!render_ctx).rc_scope with
   | Some scope ->
-    let name_str = str_global Term x in
-    if is_qualified_name name_str then
-      false
-    else
-      let full_path = globref_full_path x in
-      let struct_name_dotted = cpp_to_rocq_path (Scope_plan.qualifier scope) in
-      (not (Common.contains_substring full_path struct_name_dotted))
-      && not (mp_encloses (modpath_of_r x) scope.Scope_plan.module_)
+    (not (is_qualified_name (str_global Term x)))
+    && not (mp_encloses (modpath_of_r x) scope.Scope_plan.module_)
   | None -> false
 
 (* ============================================================================
