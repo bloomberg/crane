@@ -109,7 +109,8 @@ let hkt_carrier_fixed_args = Ml_type_util.hkt_carrier_fixed_args
 let hkt_carrier_alias base arity ml_ty =
   let is_lambda =
     match ml_ty with
-    | Miniml.Tglob (_, args, _) | Miniml.Tapp (_, args) -> Mlutil.writes_binder args
+    | Miniml.Tglob (r, args, _) -> Mlutil.writes_binder ~constructors:(Mlutil.constructor_params r) args
+    | Miniml.Tapp (_, args) -> Mlutil.writes_binder args
     | _ -> Mlutil.type_has_hole ml_ty
   in
   match ml_ty with

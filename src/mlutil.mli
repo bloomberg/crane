@@ -279,8 +279,15 @@ val type_has_hole : ml_type -> bool
     [fun Z => EOU (MaybePoison Z)] arrives as [EOU (MaybePoison _)] -- and
     applying it fills every occurrence.  [~generated:false], for a mapped
     head, counts only a hole standing as an argument itself: a nested one is
-    the argument's own placeholder (see {!fill_placeholders}). *)
-val writes_binder : ?generated:bool -> ml_type list -> bool
+    the argument's own placeholder (see {!fill_placeholders}), and so is a
+    hole inside an argument at one of the [~constructors] positions, a type
+    alias's parameter its definition applies ({!constructor_params}). *)
+val writes_binder : ?generated:bool -> ?constructors:int list -> ml_type list -> bool
+
+(** The 0-based positions of the parameters the type alias [r] applies in its
+    definition, as far as that definition has been extracted; none for
+    anything else. *)
+val constructor_params : GlobRef.t -> int list
 
 (** [fill_type_hole a t] is [t] with its [Tunknown] holes filled by [a]: the
     type-level lambda {!type_has_hole} recognises, applied to [a]. *)

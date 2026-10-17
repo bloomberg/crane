@@ -276,9 +276,9 @@ struct NestedStatetRetType {
       stacked = []() {
         return [](Nat n) {
           return [=](bool b) {
-            return Itree<noE, std::pair<Nat, Nat>>::go(
-                ItreeF<noE, std::pair<Nat, Nat>,
-                       Itree<noE, std::pair<Nat, Nat>>>::
+            return Itree<noE, std::pair<bool, std::pair<Nat, Nat>>>::go(
+                ItreeF<noE, std::pair<bool, std::pair<Nat, Nat>>,
+                       Itree<noE, std::pair<bool, std::pair<Nat, Nat>>>>::
                     retf(std::make_pair(
                         !(b), std::make_pair(n.add(Nat::s(Nat::o())), n))));
           };

@@ -215,11 +215,29 @@ let rec drop_placeholders rpre n =
   | Tunknown :: rest, n when n > 0 -> drop_placeholders rest (n - 1)
   | _ -> rpre
 
-let writes_binder ?(generated = true) args =
-  let binder = if generated then type_has_hole else ( = ) Tunknown in
-  List.exists binder (drop_placeholders (List.rev args) (List.length args))
+(* The 0-based positions of the parameters the type alias [r] applies in
+   its definition, as far as that definition has been extracted: each is a
+   type constructor, handed over eta-expanded like any other -- [stateT bool
+   (itree noE)] arrives as [stateT(bool, itree(noE, _), _)] -- so a hole
+   inside the argument there is that constructor's own placeholder, not the
+   binder of a type-level lambda.  A generated inductive's higher-kinded
+   parameter is different: it holds the carrier already applied at the
+   element, the binder in it. *)
+let constructor_params = function
+  | GlobRef.ConstRef kn -> (
+    match Table.lookup_typedef_unchecked kn with
+    | Some body ->
+      fold_ml_type (fun acc -> function Tapp (j, _) when not (List.mem (j - 1) acc) -> (j - 1) :: acc | _ -> acc) [] body
+    | None -> [] )
+  | GlobRef.IndRef _ | GlobRef.ConstructRef _ | GlobRef.VarRef _ -> []
 
-let fill_placeholders ?(generated = true) pre args =
+let writes_binder ?(generated = true) ?(constructors = []) args =
+  let binder = if generated then type_has_hole else ( = ) Tunknown in
+  List.rev (drop_placeholders (List.rev args) (List.length args))
+  |> List.filteri (fun i _ -> not (List.mem i constructors))
+  |> List.exists binder
+
+let fill_placeholders ?(generated = true) ?(constructors = []) pre args =
   let kept = List.rev (drop_placeholders (List.rev pre) (List.length args)) in
   (* The trailing run of placeholders is the eta-expansion, whichever part of
      it these arguments reach; a hole anywhere else is a binder the lambda
@@ -230,8 +248,8 @@ let fill_placeholders ?(generated = true) pre args =
      application is a fill of every occurrence at once, and one argument is
      all such a spelling can say where to put. *)
   match args with
-  | [arg] when writes_binder ~generated pre ->
-    List.map (fill_type_hole arg) pre
+  | [arg] when writes_binder ~generated ~constructors pre ->
+    List.mapi (fun i a -> if List.mem i constructors then a else fill_type_hole arg a) pre
   | _ -> kept @ args
 
 (* An unsolved head [id] applied to [args].  The head is not known yet, and a
@@ -284,7 +302,7 @@ let rec apply_ml_type head args =
       | _ -> head )
     | Tglob (r, pre, es) ->
       Tglob
-        (r, fill_placeholders ~generated:(not (Table.is_custom r)) pre args, es)
+        (r, fill_placeholders ~generated:(not (Table.is_custom r)) ~constructors:(constructor_params r) pre args, es)
     | Tmeta {contents = Some u} -> apply_ml_type u args
     | Tmeta {contents = None; id} -> pending_application id args
     | Topen o -> pending_application (Open.id o) args
