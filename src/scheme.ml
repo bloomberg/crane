@@ -46,6 +46,11 @@ module Var = struct
     | c -> c
 
   let assoc_opt v l = List.find_map (fun (w, x) -> if equal v w then Some x else None) l
+
+  let assoc_tvar i l =
+    match l with
+    | [] -> None
+    | (w, _) :: _ -> Option.bind (of_tvar w.owner i) (fun v -> assoc_opt v l)
   let pp var = Pp.(Id.pp var.owner ++ str "." ++ int var.ordinal)
 end
 

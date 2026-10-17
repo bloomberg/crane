@@ -748,10 +748,7 @@ module Var_types = struct
         invalid_arg "Mlutil.Var_types.find: a variable of another scheme";
       List.find_map (fun (w, ty) -> if Scheme.Var.equal v w then Some ty else None) t
 
-  let find_tvar t i =
-    match t with
-    | [] -> None
-    | (w, _) :: _ -> Option.bind (Scheme.Var.of_tvar (Scheme.Var.owner w) i) (find t)
+  let find_tvar t i = Scheme.Var.assoc_tvar i t
 
   let bindings t = t
   let apply t ty = type_subst_fun (find_tvar t) ty

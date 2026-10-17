@@ -54,6 +54,11 @@ module Var : sig
   (** What [l] pairs with the variable, if anything. *)
   val assoc_opt : t -> (t * 'a) list -> 'a option
 
+  (** {!assoc_opt} at the variable [l]'s scheme spells [Tvar (_, i)]
+      ({!of_tvar}): for a reader holding a variable it met in that scheme's
+      body.  [l] pairs variables of one scheme. *)
+  val assoc_tvar : int -> (t * 'a) list -> 'a option
+
   val pp : t -> Pp.t
 end
 

@@ -5945,7 +5945,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        for a function type is spelled curried ([Through_tvar]), where the
        value passed was spelled where it was declared. *)
     let written_fn_ty =
-      let subst i = List.assoc_opt i written_tvar_args in
+      let subst i = Scheme.Var.assoc_tvar i written_tvar_args in
       (* An inline custom has no signature its type arguments instantiate:
          its text reads the values as they are ({!call_result_site}). *)
       if written_tvar_args = [] || is_inline_custom id then None
@@ -6128,7 +6128,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
            [T2] written [std::function<std::any(std::any)>] where the ML
            instantiation erased the morphism type. *)
         let written_cod =
-          let subst i = List.assoc_opt i written_tvar_args in
+          let subst i = Scheme.Var.assoc_tvar i written_tvar_args in
           match
             Option.map
               (fun t -> Minicpp.subst_cpp_tvars subst (cpp_of_ml env t))
@@ -6451,7 +6451,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                relaxed to a deduced parameter -- so in a domain it is erased,
                and applied it is the erased type ([void<std::any>] is none). *)
             let subst i =
-              match List.assoc_opt i written_tvar_args with
+              match Scheme.Var.assoc_tvar i written_tvar_args with
               | Some Tvoid -> Some Tany
               | t -> t
             in

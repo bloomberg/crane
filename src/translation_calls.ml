@@ -164,7 +164,7 @@ type lowered_call = {
   lc_written : Mlutil.Var_types.t;
   lc_abi : Callable_abi.t;
   lc_application : Template_application.t;
-  lc_written_by_var : (int * cpp_type) list;
+  lc_written_by_var : (Scheme.Var.t * cpp_type) list;
 }
 
 (** [call_type_args ~caller ?expected_ty env id plan args] -- the type
@@ -192,6 +192,10 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
   } = plan in
   let leading_params = Elaborated_call.leading_params call in
   let dictionary_filled = Elaborated_call.dictionary_filled call in
+  (* The callee's variable its type spells [Tvar (_, i)]. *)
+  let scheme_var i =
+    Option.bind (Mlutil.reference_scheme id) (fun s -> Scheme.Var.of_tvar s i)
+  in
   let ty = fn_ml_ty_subst in
   let ty = cpp_of_ml env ty in
   (* Combine: instance types first, then regular type args. If any regular
@@ -407,7 +411,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
     List.filter_map
       (fun p ->
         match (p.Callable_abi.write, p.Callable_abi.origin) with
-        | Callable_abi.Phantom _, Callable_abi.From_scheme v -> Some (Scheme.Var.ordinal v)
+        | Callable_abi.Phantom _, Callable_abi.From_scheme v -> Some v
         | _ -> None )
       (Callable_abi.template_head (callee_abi ~instances:0 id))
   in
@@ -433,16 +437,19 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
     List.filter_map
       (fun p ->
         match p.Callable_abi.origin with
-        | Callable_abi.From_scheme v -> Some (Scheme.Var.ordinal v)
+        | Callable_abi.From_scheme v -> Some v
         | _ -> None )
       (Callable_abi.template_head (callee_abi ~instances:0 id))
   in
-  let regular_of ?(keep = fun i -> List.mem i in_head) tys =
+  let mem v vs = List.exists (Scheme.Var.equal v) vs in
+  let regular_of ?(keep = fun v -> mem v in_head) tys =
     Mlutil.Var_types.bindings tys
-    |> List.map (fun (v, ty) -> (Scheme.Var.ordinal v, ty))
-    |> List.filter (fun (i, _) -> keep i)
+    |> List.filter (fun (v, _) -> keep v)
     |> List.map
-         (fun (i, ty) ->
+         (fun (v, ty) ->
+           (* How the callee's type spells the variable, which the sets read
+              off that type are keyed by. *)
+           let i = Scheme.Var.ordinal v in
            (* A constant type function written at a higher-kinded variable is
               the constant carrier, not the head of the type it returns. *)
            let t =
@@ -470,13 +477,13 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
               std::any>>] for [bind]'s [S * (I + R)] with the method's own
               [I] and [R] gone.  Only a type that is nothing else says
               nothing. *)
-           ( i,
+           ( v,
              match t with
              | Tvar (Tv_index (_, None)) ->
                Terased Ek_type
              | t when has_unnamed_tvar t -> Ml_type_util.resolve_tvars_to_any t
              | t -> t ) )
-    |> List.filter (fun (i, t) -> not (List.mem i phantom_vars && prints_as_any t))
+    |> List.filter (fun (v, t) -> not (mem v phantom_vars && prints_as_any t))
   in
   let regular_type_args = regular_of tys in
   (* Recover erased type args that C++ cannot deduce. Two cases: (a) tys is
@@ -563,8 +570,8 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
         let hk = declared_higher_kinded_tvars ml_ty in
         not
           (List.exists
-             (fun (i, t) -> IntSet.mem i hk && prints_as_any t)
-             (regular_of ~keep:(Callable_abi.keeps_tvar (callee_abi ~instances:0 id)) tys) )
+             (fun (v, t) -> IntSet.mem (Scheme.Var.ordinal v) hk && prints_as_any t)
+             (regular_of ~keep:(Callable_abi.keeps (callee_abi ~instances:0 id)) tys) )
     in
     (* Writing the list out is what this call is left with once the
        recoveries have declined, so an erased family is worth resolving from
@@ -579,7 +586,8 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
       (* A type-level lambda extraction could only write as its head
          ({!under_applied_ind}) is filled the same way. *)
       List.map
-        (fun (i, t) ->
+        (fun (v, t) ->
+          let i = Scheme.Var.ordinal v in
           let bound () =
             match
               Option.bind
@@ -592,7 +600,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
               | None -> None )
             | None -> None
           in
-          ( i,
+          ( v,
             if prints_as_any t || under_applied_ind t then
               match bound () with
               | Some (_, t') -> t'
@@ -631,7 +639,9 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
       | Some (v, ret_ty, _) ->
         (* The erased variable is the concrete return type; any other erased
            entry is dropped. *)
-        List.map (fun (j, t) -> (j, if j = v then ret_ty else t)) regular_type_args
+        List.map
+          (fun (w, t) -> (w, if Scheme.Var.ordinal w = v then ret_ty else t))
+          regular_type_args
         |> List.filter (fun (_, t) -> not (prints_as_any t))
       | None -> written_out ()
     else if Mlutil.Var_types.is_empty tys then
@@ -658,12 +668,14 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
           | Some t -> t
           | None -> _ret_ty
         in
-        List.mapi (fun k t -> (k + 1, t))
-          (List.filter_map
-             (function
-               | Miniml.Tdummy Miniml.Ktype -> Some t1
-               | _ -> None )
-             all_dom )
+        List.filter_map Fun.id
+          (List.mapi
+             (fun k t -> Option.map (fun v -> (v, t)) (scheme_var (k + 1)))
+             (List.filter_map
+                (function
+                  | Miniml.Tdummy Miniml.Ktype -> Some t1
+                  | _ -> None )
+                all_dom ) )
       | None -> filtered
     else
       from_expected filtered
@@ -681,17 +693,23 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
         (find_type_opt id)
     in
     List.map
-      (fun (i, t) ->
-        (i, if (not (IntSet.mem i hk)) && under_applied_ind t then saturate_at_any t else t) )
+      (fun (v, t) ->
+        ( v,
+          if (not (IntSet.mem (Scheme.Var.ordinal v) hk)) && under_applied_ind t then
+            saturate_at_any t
+          else t ) )
       regular
   in
   let apply regular =
     let regular = at_plain_positions regular in
     Template_application.plan abi
       ~instance:(fun k -> List.nth_opt instance_args k)
-      ~scheme:(fun v -> List.assoc_opt (Scheme.Var.ordinal v) regular)
+      ~scheme:(fun v -> Scheme.Var.assoc_opt v regular)
   in
   let regular = build_type_args tyargs in
+  (* A class parameter is quantified first, so the carrier is the callee's
+     first variable. *)
+  let carrier_first carrier = Option.cata (fun v -> [(v, carrier)]) [] (scheme_var 1) in
 
   (* Nothing survived the erasure filters, so if the callee opens with
      parameters its signature never mentions, deduction has nothing to work
@@ -705,12 +723,12 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
       match
         hkt_carrier_type_args env tvars ?result:expected_ty id tys
       with
-      | Some [carrier] -> [(1, carrier)]
+      | Some [carrier] -> carrier_first carrier
       | _ -> (
         (* The result did not say what the carrier is; the dictionary the
            call passes for the class still does. *)
         match dict_carrier_type_args env tvars id primary_ml_args with
-        | Some [carrier] -> [(1, carrier)]
+        | Some [carrier] -> carrier_first carrier
         | _ ->
           (* Neither route knew the carrier.  An argument's type may still
              say what an erased plain type argument was, which is worth
@@ -781,11 +799,11 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
         (List.mapi
            (fun k p ->
              match (p.Callable_abi.origin, List.nth_opt all_type_args k) with
-             | Callable_abi.From_scheme v, Some t -> [(Scheme.Var.ordinal v, t)]
+             | Callable_abi.From_scheme v, Some t -> [(v, t)]
              | _ -> [] )
            (Callable_abi.template_head abi) )
     in
-    let carriers = List.map Scheme.Var.ordinal (Callable_abi.dictionary_carriers abi) in
+    let carriers = Callable_abi.dictionary_carriers abi in
     let dictionaries =
       List.filteri
         (fun j _ -> j >= List.length instance_args - List.length carriers)
