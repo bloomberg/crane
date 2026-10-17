@@ -638,10 +638,13 @@ type ctor_alias = {
 
 (** The module struct the template abbreviating [body], written in [file],
     has to be declared inside, if any: the one being written, where [body]
-    names a global of it.  Such a global is written bare only because that
-    struct is the innermost visible scope, and so means nothing at namespace
-    scope.  In the implementation file, which writes no module struct, it is
-    the struct whose members are defined out of line around it. *)
+    names a global declared anywhere in the struct at namespace scope that
+    encloses it -- of that module, of one enclosing it, or of one nested in
+    either.  Such a global is incomplete, or written bare, in front of that
+    struct, and so means nothing at namespace scope; inside the module being
+    written, every one declared ahead of the use is in scope.  In the
+    implementation file, which writes no module struct, it is the struct
+    whose members are defined out of line around it. *)
 let ctor_alias_home body =
   let cur = Common.top_visible_mp () in
   let modpath_of = function
@@ -650,17 +653,23 @@ let ctor_alias_home body =
       Some (Names.MutInd.modpath kn)
     | GlobRef.VarRef _ -> None
   in
-  let in_cur =
+  (* The struct at namespace scope [cur] is written in: what it declares,
+     at any depth, is incomplete in front of it. *)
+  let rec outermost mp =
+    match mp with ModPath.MPdot (parent, _) when not (Table.is_modfile parent) -> outermost parent | _ -> mp
+  in
+  let struct_ = outermost cur in
+  let rec inside mp =
+    ModPath.equal mp struct_ || match mp with ModPath.MPdot (parent, _) -> inside parent | _ -> false
+  in
+  let names_struct =
     exists_cpp_type
       (function
-        | Tglob (r, _, _) -> (
-          match modpath_of r with
-          | Some mp -> Names.ModPath.equal mp cur
-          | None -> false )
+        | Tglob (r, _, _) -> ( match modpath_of r with Some mp -> inside mp | None -> false )
         | _ -> false )
       body
   in
-  if in_cur && not (Table.is_modfile cur) then Some cur else None
+  if names_struct && not (Table.is_modfile cur) then Some cur else None
 
 (** Where a template with home [home] is declared, and so the visibility
     its body is written in: the body of its home module, as planned, or

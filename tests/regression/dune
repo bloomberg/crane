@@ -12919,3 +12919,14 @@
   (alias runtest)
   (deps nested_statet_ret_type.t.exe)
   (action (run ./nested_statet_ret_type.t.exe))))
+
+(subdir alias_home_enclosing_module
+ (rule
+  (targets alias_home_enclosing_module.t.exe)
+  (deps AliasHomeEnclosingModule.vo alias_home_enclosing_module.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} alias_home_enclosing_module.t.exe alias_home_enclosing_module.cpp alias_home_enclosing_module.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps alias_home_enclosing_module.t.exe)
+  (action (run ./alias_home_enclosing_module.t.exe))))
