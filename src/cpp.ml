@@ -1942,6 +1942,7 @@ let prepare_structure s =
     (fun _ -> ())
     (fun _ -> ())
     s;
+    name_cache := Some (Name_resolution.create ~structure_analysis:analysis s);
     analysis
   in
   structure_analysis := Some analysis;
@@ -3656,8 +3657,6 @@ let do_struct_with_decl_tracking ~is_header f s =
     let deferred_defs =
       prlist (fun w -> if Pp.ismt w.wr_defs then mt () else cut2 () ++ w.wr_defs) wrapper_parts
     in
-    name_cache :=
-      Some (Name_resolution.create ~structure_analysis:analysis s);
     let old_local_inductives = get_local_inductives () in
     if modular () then begin
       let rec collect_inductives sel =
