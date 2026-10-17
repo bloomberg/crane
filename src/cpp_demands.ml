@@ -37,7 +37,7 @@ let no_holes = {typ = None; scrut = None; tyargs = []; cases = []; args = []}
    a structured binding's field types -- are not written, and neither is
    what a printing rule drops (the type of an abort that is returned, a move
    out of a returned variable). *)
-let collect visit =
+let collect ?(global = ignore) visit =
   let found = ref [] in
   let need h = if not (List.mem h !found) then found := h :: !found in
   let std h = need (Table.Standard h) in
@@ -62,6 +62,10 @@ let collect visit =
         std "memory"
       | Pointer_slot.Pointer -> std "memory" )
     | Tdecay _ -> std "type_traits"
+    | Tnamespace (r, _) -> global r
+    (* Spelled bare, a class's type field is imported by name from the class's
+       file ([using ProvDef::prov;]). *)
+    | Tpromoted id -> Option.iter global (Table.promoted_type_var_field id)
     | _ -> () );
     match t with
     | Tglob (r, tys, args) -> (
@@ -71,6 +75,7 @@ let collect visit =
           (Foreign_template.term_template (Foreign_template.custom_template_with_args s (List.length tys)));
         Some t
       | _ ->
+        global r;
         List.iter ty tys;
         Some t )
     (* Only its head is written. *)
@@ -148,12 +153,18 @@ let collect visit =
       std "functional";
       rt Crane_rt.fn_header
     | CPPfn_value _ -> rt Crane_rt.fn_header
+    | CPPnamespace (r, _) | CPPstructmk (r, _, _) | CPPstruct (r, _, _) | CPPenum_val (r, _) -> global r
+    | CPPconcept_app (concept, subject, _) ->
+      global concept;
+      global subject
     | _ -> () );
     match e with
     | CPPglob (_, tys, Some {ci_inline = Some tmpl; ci_yields; _}) ->
       if tmpl.it_form = Block_iife then block_template ?yields:ci_yields {no_holes with tyargs = tys} tmpl.it_text
       else custom {no_holes with tyargs = tys} (Foreign_template.type_template tmpl.it_text)
-    | CPPglob (_, tys, _) -> List.iter ty tys
+    | CPPglob (r, tys, _) ->
+      global r;
+      List.iter ty tys
     | CPPfun_call (res, CPPglob (_, tys, Some {ci_inline = Some tmpl; _}), call) -> (
       let args = call_args call in
       let yields = match res.cs_yields with Ryields t -> Some t | Ropaque -> None in
@@ -179,7 +190,9 @@ let collect visit =
   and stmt s =
     ( match s with
     | Sthrow _ -> std "stdexcept"
-    | Sswitch _ -> std "utility"
+    | Sswitch (_, r, _, _) ->
+      std "utility";
+      global r
     | Sassert (Pchecked _) -> std "cassert"
     | Sif_constexpr (Tt_convertible (t, _), _, _) ->
       erase_fn ();
@@ -215,7 +228,13 @@ let collect visit =
     | _ -> ignore (map_stmt (fun e -> expr e; e) (fun s -> stmt s; s) (fun t -> ty t; t) s)
   in
   let tparams tps =
-    List.iter (fun (tt, _) -> match tt with TTinvocable _ -> std "type_traits" | _ -> ()) tps;
+    List.iter
+      (fun (tt, _) ->
+        match tt with
+        | TTinvocable _ -> std "type_traits"
+        | TTconcept (r, _) -> global r
+        | _ -> () )
+      tps;
     ignore (map_tparams (fun t -> ty t; t) tps)
   in
   let rec field (f, _, _) =
@@ -246,6 +265,15 @@ let collect visit =
 let of_decl d = collect (fun ~decl ~ty:_ -> decl d)
 
 let of_type t = collect (fun ~decl:_ ~ty -> ty t)
+
+let globals visit =
+  let found = ref [] in
+  ignore (collect ~global:(fun r -> found := r :: !found) visit);
+  !found
+
+let globals_of_decl d = globals (fun ~decl ~ty:_ -> decl d)
+
+let globals_of_type t = globals (fun ~decl:_ ~ty -> ty t)
 
 let of_modtype_concept (c : Modtype_concept.t) =
   let found = ref [] in

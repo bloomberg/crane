@@ -16,23 +16,28 @@ let job_of key d : job = (Obj.repr key, d)
 type t = {
   decls : Cpp_erasure.settled Node_table.t;
   demands : Table.header list;
+  globals : Names.GlobRef.t list;
 }
 
 let finish jobs =
-  let decls = Node_table.create 256 and demands = ref [] in
+  let decls = Node_table.create 256 and demands = ref [] and globals = ref [] in
   List.iter
     (fun (key, d) ->
       if not (Node_table.mem decls key) then begin
         let f = Cpp_pipeline.finish d in
         demands := List.rev_append (Cpp_demands.of_decl (f :> Minicpp.cpp_decl)) !demands;
+        globals := List.rev_append (Cpp_demands.globals_of_decl (f :> Minicpp.cpp_decl)) !globals;
         Node_table.replace decls key f
       end )
     jobs;
-  {decls; demands = List.sort_uniq compare !demands}
+  {decls; demands = List.sort_uniq compare !demands; globals = !globals}
 
 let demands t = t.demands
+let globals t = t.globals
 
-let installed = State.cell State.Unit {decls = Node_table.create 0; demands = []}
+let installed = State.cell State.Unit {decls = Node_table.create 0; demands = []; globals = []}
+
+let installed_globals () = !installed.globals
 
 let install t = installed := t
 

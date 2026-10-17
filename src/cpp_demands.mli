@@ -29,3 +29,11 @@ val of_type : Minicpp.cpp_type -> Table.header list
 
 (** The headers the concept of a module type needs for what it writes. *)
 val of_modtype_concept : Modtype_concept.t -> Table.header list
+
+(** The globals the finished declaration [d] writes the names of, where the
+    printer resolves them: a type's, a constant's or a constructor's, an
+    enum's, the concept constraining a template parameter. *)
+val globals_of_decl : Minicpp.cpp_decl -> Names.GlobRef.t list
+
+(** The globals the type [t] writes the names of where it is written. *)
+val globals_of_type : Minicpp.cpp_type -> Names.GlobRef.t list

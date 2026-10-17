@@ -54,6 +54,10 @@ val generate_ahead : Miniml.ml_structure -> unit
     {!generate_ahead} would make for a structure holding only it. *)
 val generate_decl_ahead : Miniml.ml_decl -> unit
 
+(** The files the names of the unit [s] are written through, read off what
+    {!generate_ahead} generated: what its files include. *)
+val files_named_ahead : Miniml.ml_structure -> Names.ModPath.t list
+
 (** The C++ name of each global the unit declares, a functor's body
     included, decided in declaration order ({!Common.pp_global_name}): an
     inductive's, then its constructors', then a record's fields, at the kind

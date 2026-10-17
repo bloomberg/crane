@@ -161,9 +161,23 @@ val get_phase : unit -> phase
 (** How diagnostics name a phase: [planning], [implementation], [header]. *)
 val phase_name : phase -> string
 
-(** The files whose namespace a rendered name was written through, whose
-    headers the unit includes. *)
+(** The files whose namespace a name the unit writes is written through,
+    whose headers the unit includes: as planned ({!plan_written_files}). *)
 val opened_libraries : unit -> ModPath.t list
+
+(** Plan the files the unit's names are written through, before either
+    file is rendered. *)
+val plan_written_files : ModPath.t list -> unit
+
+(** Under [CRANE_CHECK_IR], that the files the rendered names were written
+    through are exactly the planned ones. *)
+val check_written_files : unit -> unit
+
+(** The file a reference to the global, written in the unit of the files
+    [unit_files], names: its own, unless that is one of the unit's, or the
+    global is reached through a functor parameter, is in a module not output,
+    or is an inline custom. *)
+val file_named_by : unit_files:ModPath.t list -> GlobRef.t -> ModPath.t option
 
 (** Activate separate-extraction naming: every cross-file reference is spelled
     in full, and the last component of a qualified type name is capitalized to

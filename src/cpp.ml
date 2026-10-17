@@ -2210,6 +2210,17 @@ let finish_ahead (aheads : Cpp_ind.ahead list) =
 
 let generate_decl_ahead d = generating_ahead @@ fun () -> finish_ahead [Cpp_ind.generate_ahead d]
 
+(** The files the unit [s]'s names are written through, read off what was
+    generated ahead of its files where the printer writes it
+    ({!Cpp_demands.globals_of_decl}): the installed finished program's, and
+    the types of the eponymous record fields generated with it. *)
+let files_named_ahead s =
+  let unit_files = List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s in
+  Finished_program.installed_globals ()
+  @ List.concat_map Cpp_demands.globals_of_type (Cpp_ind.generated_record_field_types ())
+  |> List.filter_map (Common.file_named_by ~unit_files)
+  |> List.sort_uniq ModPath.compare
+
 let generate_ahead s =
   generating_ahead @@ fun () ->
   (* Everything is generated first, and finished after ({!finish_ahead}).  A

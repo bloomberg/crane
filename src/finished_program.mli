@@ -33,6 +33,13 @@ val finish : job list -> t
     ({!Cpp_demands}). *)
 val demands : t -> Table.header list
 
+(** The globals the declarations of a program write the names of
+    ({!Cpp_demands.globals_of_decl}). *)
+val globals : t -> Names.GlobRef.t list
+
+(** {!globals} of the installed program. *)
+val installed_globals : unit -> Names.GlobRef.t list
+
 (** Make [t] the unit's program, the one {!find} reads. *)
 val install : t -> unit
 

@@ -1595,6 +1595,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   set_phase (Emit (if intf_first then Intf else Impl));
   Pipeline_trace.event "emit" "generate_ahead";
   Cpp.generate_ahead struc;
+  Common.plan_written_files (Cpp.files_named_ahead struc);
   let generated_checkpoint = checkpoint () in
   let body_impl, body_hstruct =
     if intf_first then
@@ -1616,6 +1617,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   end;
   report_body_generations fn;
   Table.freeze_demands ();
+  Common.check_written_files ();
   check_no_late_decisions ~planned:planned_checkpoint ~generated:generated_checkpoint;
   Generated_program.check_against_plan ~declares:(declares struc);
   Generated_program.check_against_ahead ();

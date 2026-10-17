@@ -587,18 +587,6 @@ let mktable_modpath ?census autoclean =
     census;
   ((fun r v -> m := MPmap.add r v !m), (fun r -> MPmap.find r !m), clear)
 
-(** The files whose namespace the file being emitted writes into a name, so
-    whose headers it includes.  Computing a name demands nothing -- a
-    generator asking whether a reference is spelled [list] reaches no other
-    file -- and only a reference spelled through another file's namespace
-    ({!pp_ocaml_extern}, {!file_qualifier}) needs that file declared. *)
-let note_written_file, written_files =
-  let m = ref MPset.empty in
-  register_cleanup (fun () -> m := MPset.empty);
-  ( (fun file ->
-      match get_phase () with Emit _ -> m := MPset.add file !m | Plan -> ()),
-    fun () -> MPset.elements !m )
-
 (** Separate extraction: every cross-file reference is spelled in full, since
     each file is emitted into its own namespace and nothing is brought into
     scope.  Qualifying is the primary effect; capitalizing the last component
@@ -633,6 +621,58 @@ let is_non_output_module mp =
   && not (Hashtbl.mem valid_output_module_set mp)
 
 let clear_non_output_modules () = Hashtbl.clear valid_output_module_set
+
+(** The files whose namespace the unit's files write into a name, so whose
+    headers they include: planned before either file is rendered, from the
+    names what was generated ahead of them writes ({!plan_written_files}).
+    Computing a name demands nothing -- a generator asking whether a
+    reference is spelled [list] reaches no other file -- and only a reference
+    spelled through another file's namespace ({!pp_ocaml_extern},
+    {!file_qualifier}) needs that file declared.  What the files do write is
+    recorded under [CRANE_CHECK_IR] ({!note_written_file}), and the two must
+    agree ({!check_written_files}). *)
+let planned_files = ref MPset.empty
+
+let rendered_files = ref MPset.empty
+
+let () =
+  register_cleanup (fun () ->
+      planned_files := MPset.empty;
+      rendered_files := MPset.empty )
+
+let plan_written_files files = planned_files := List.fold_right MPset.add files MPset.empty
+
+let note_written_file file =
+  if Probe.checking () then
+    match get_phase () with
+    | Emit _ -> rendered_files := MPset.add file !rendered_files
+    | Plan -> ()
+
+let check_written_files () =
+  if Probe.checking () && not (MPset.equal !planned_files !rendered_files) then
+    let show s = Pp.prlist_with_sep Pp.pr_comma ModPath.print (MPset.elements s) in
+    Probe.violation "written files"
+      Pp.(
+        str "the files name " ++ show (MPset.diff !rendered_files !planned_files)
+        ++ str " that nothing generated ahead of them names, and do not name "
+        ++ show (MPset.diff !planned_files !rendered_files)
+        ++ str " that it does" )
+
+(** The file a reference to [r], written in the unit of the files
+    [unit_files], names ({!pp_cpp_gen}): [r]'s own, unless it is one of the
+    unit's, or [r] is reached through a functor parameter, is in a module not
+    output, or is an inline custom, whose replacement text is written instead
+    of any name. *)
+let file_named_by ~unit_files r =
+  let base = base_mp (modpath_of_r r) in
+  match base with
+  | MPfile _
+    when not
+           ( is_non_output_module base
+           || List.exists (ModPath.equal base) unit_files
+           || (Table.to_inline r && Option.has_some (Table.find_custom_opt r)) ) ->
+    Some base
+  | _ -> None
 
 (** The visible horizon at a precise moment, i.e. the structures we are
     inside, innermost first.
@@ -1259,12 +1299,12 @@ let opened_libraries () =
   if not (modular ()) then
     []
   else
-    (* Every file a written name reached into.  OCaml pruned this set before
+    (* Every file a written name reaches into.  OCaml pruned this set before
        opening it -- a file A with an immediate submodule A.B shadowing another
        used file B could not be opened without making B unreachable -- but C++
        has no [open]: this list becomes [#include] lines, and dropping one of
        those would leave a referenced declaration undeclared. *)
-    written_files ()
+    MPset.elements !planned_files
 
 (** On-the-fly qualification issues for both monolithic or modular extraction.
 
