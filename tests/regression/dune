@@ -12941,3 +12941,14 @@
   (alias runtest)
   (deps alias_home_sibling_modules.t.exe)
   (action (run ./alias_home_sibling_modules.t.exe))))
+
+(subdir alias_home_constructor_field
+ (rule
+  (targets alias_home_constructor_field.t.exe)
+  (deps AliasHomeConstructorField.vo alias_home_constructor_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} alias_home_constructor_field.t.exe alias_home_constructor_field.cpp alias_home_constructor_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps alias_home_constructor_field.t.exe)
+  (action (run ./alias_home_constructor_field.t.exe))))

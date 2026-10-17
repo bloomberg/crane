@@ -646,7 +646,15 @@ type ctor_alias = {
     implementation file, which writes no module struct, it is the struct
     whose members are defined out of line around it. *)
 let ctor_alias_home body =
+  (* The module whose body is being written: an inductive's constructors
+     are written inside a scope of their own ({!with_struct_scope}), which
+     is no module and has no struct a template can be declared in. *)
+  let rec planned mp =
+    if Option.has_some (Scope_plan.visibility mp) then Some mp
+    else match mp with ModPath.MPdot (parent, _) -> planned parent | _ -> None
+  in
   let cur = Common.top_visible_mp () in
+  let cur = Option.default cur (planned cur) in
   let modpath_of = function
     | GlobRef.ConstRef c -> Some (Names.Constant.modpath c)
     | GlobRef.IndRef (kn, _) | GlobRef.ConstructRef ((kn, _), _) ->
