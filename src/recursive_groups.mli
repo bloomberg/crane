@@ -24,6 +24,9 @@ val analyze : Miniml.ml_structure -> t
 (** The members of the group of [r], [r] among them, if [r] is on a cycle. *)
 val group : t -> GlobRef.t -> GlobRef.t list option
 
+(** Every group, each one's members in definition order. *)
+val groups : t -> GlobRef.t list list
+
 (** Whether [r'] is in the group of [r]: [r] is on a cycle and [r'] is one
     of its members, [r] itself among them. *)
 val in_group : t -> GlobRef.t -> GlobRef.t -> bool

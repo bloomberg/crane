@@ -8,9 +8,18 @@ type kind =
   | Tail
   | Nontail
 
-type t = kind Ref.User.Map.t
+type group = {
+  members : Names.GlobRef.t list;
+  kind : kind;
+}
 
-let empty = Ref.User.Map.empty
+type t = {
+  groups : group list;
+  by_member : group Ref.User.Map.t;
+  defined : Ref.User.Set.t;
+}
+
+let empty = {groups = []; by_member = Ref.User.Map.empty; defined = Ref.User.Set.empty}
 
 let rec split_params n = function
   | MLlam (_, _, b) -> split_params (n + 1) b
@@ -99,10 +108,11 @@ let combine a b =
   | Tail, _ | _, Tail -> Tail
   | No_recursion, No_recursion -> No_recursion
 
-(* A function in a group with partners is planned as its group: Loopify
-   inlines the partners into it before reading it, where a tail call to one
-   continues in that partner's body and any other call is wrapped in a
-   closure, so the calls it then reads are every call between members. *)
+(* A group with partners is planned as one: Loopify inlines the partners
+   into a member before reading it, where a tail call to one continues in
+   that partner's body and any other call is wrapped in a closure, so the
+   calls it then reads are every call between members.  A function on no
+   cycle calls no function it could recurse through. *)
 let analyze groups struc =
   let defs = ref Ref.User.Map.empty in
   Modutil.struct_iter
@@ -126,24 +136,44 @@ let analyze groups struc =
         | None -> k )
       No_recursion members
   in
-  let by_group = Ref.User.Tbl.create 16 in
-  Ref.User.Map.mapi
-    (fun r _ ->
-      match Recursive_groups.group groups r with
-      | Some ((first :: _ :: _) as members) -> (
-        match Ref.User.Tbl.find_opt by_group first with
-        | Some k -> k
-        | None ->
-          let k = kind_of members in
-          Ref.User.Tbl.replace by_group first k;
-          k )
-      | _ -> kind_of [r] )
-    defs
+  let plans =
+    List.map (fun members -> {members; kind = kind_of members}) (Recursive_groups.groups groups)
+  in
+  let by_member =
+    List.fold_left
+      (fun m g -> List.fold_left (fun m r -> Ref.User.Map.add r g m) m g.members)
+      Ref.User.Map.empty plans
+  in
+  let defined = Ref.User.Map.fold (fun r _ s -> Ref.User.Set.add r s) defs Ref.User.Set.empty in
+  (* Every recursive group has exactly one plan, and a function on no cycle
+     reads as not recursing. *)
+  if Probe.checking () then
+    Ref.User.Map.iter
+      (fun r _ ->
+        let planned = Option.map (fun g -> g.members) (Ref.User.Map.find_opt r by_member) in
+        let grouped = Recursive_groups.group groups r in
+        let off_cycle_recurses () = kind_of [r] <> No_recursion in
+        if (not (Option.equal (List.equal Common.globref_equal) planned grouped))
+           || (grouped = None && off_cycle_recurses ())
+        then
+          Probe.violation "recursion plan"
+            Pp.(str "no single plan for the group of " ++ str (Table.kername_of_global r)) )
+      defs;
+  {groups = plans; by_member; defined}
 
-let equal = Ref.User.Map.equal ( = )
+let equal a b =
+  List.equal
+    (fun g g' -> List.equal Common.globref_equal g.members g'.members && g.kind = g'.kind)
+    a.groups b.groups
+  && Ref.User.Set.equal a.defined b.defined
 
 let installed : t ref = State.cell State.Extraction empty
 
 let install t = installed := t
 
-let find r = Ref.User.Map.find_opt r !installed
+let group_of r = Ref.User.Map.find_opt r !installed.by_member
+
+let find r =
+  match group_of r with
+  | Some g -> Some g.kind
+  | None -> if Ref.User.Set.mem r !installed.defined then Some No_recursion else None

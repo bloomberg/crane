@@ -73,6 +73,14 @@ let analyze struc =
 
 let group t r = Map.find_opt r t
 
+let groups t =
+  Map.fold
+    (fun r members acc ->
+      match members with
+      | first :: _ when Ref.User.equal first r -> members :: acc
+      | _ -> acc )
+    t []
+
 let in_group t r r' =
   match Map.find_opt r t with Some ms -> List.exists (Ref.User.equal r') ms | None -> false
 

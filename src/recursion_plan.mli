@@ -11,15 +11,22 @@
     effect operations are read as {!Core_effects} elaborates them: in a
     sequential computation the continuation of a [bind] and the value of a
     [ret] stand where the operation does.  A custom whose replacement text is
-    just its one argument stands for that argument.  A function in a
-    recursive group with partners ({!Recursive_groups}) is planned as its
-    group: every call between members counts, as it does once Loopify has
-    inlined the partners into it. *)
+    just its one argument stands for that argument.  The plan is per
+    recursive group ({!Recursive_groups}), exactly one each: every call
+    between members counts, as it does once Loopify has inlined the partners
+    into a member.  A function on no cycle does not recurse. *)
 
 type kind =
   | No_recursion
   | Tail  (** every recursive call is a tail call *)
   | Nontail  (** some recursive call is not *)
+
+(** A recursive group's plan: its members, in definition order, and how
+    the group recurses. *)
+type group = private {
+  members : Names.GlobRef.t list;
+  kind : kind;
+}
 
 type t
 
@@ -34,5 +41,9 @@ val equal : t -> t -> bool
 (** Make [t] the extraction's plan, the one {!find} reads. *)
 val install : t -> unit
 
-(** The kind of the function [r], if the program defines it. *)
+(** The plan of the group of the function [r], if [r] is on a cycle. *)
+val group_of : Names.GlobRef.t -> group option
+
+(** The kind of the function [r], if the program defines it: its group's,
+    or [No_recursion] off every cycle. *)
 val find : Names.GlobRef.t -> kind option
