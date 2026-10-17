@@ -574,52 +574,6 @@ let report_unspellable where ty =
                @ tagged "skipped module" (List.rev !skipped_mod) ) ) ) )
   end
 
-(** Alias templates standing in for custom-mapped type constructors that
-    cannot be named by cutting their application back to a head.
-
-    A custom mapping is a {e spelling}, not a template name: [itree] maps to
-    [std::shared_ptr<ITree<%t1>>], whose head is [std::shared_ptr] -- a
-    template that, applied to the element, gives something else entirely.  A
-    template template argument position needs a name that applies correctly,
-    so one is introduced: [template <typename _A> using ITree_tc =
-    std::shared_ptr<ITree<_A>>;], declared in front of the first text that
-    spells it ({!take_ctor_alias_decls}).  Keyed by the alias body, so a constructor
-    reached twice is declared once. *)
-let ctor_alias_decls : (string * string) list ref = ref []
-
-(** Alias templates whose body mentions template parameters of the declaration
-    that needs them.
-
-    A namespace-scope alias cannot name a function template's own parameter, so
-    the carrier of [`{TFunctor (fun T => two T (FnBody T))}] -- whose body is
-    [two<_CraneTcArg, T1<_CraneTcArg>>] -- has nowhere to be declared as a
-    plain alias.  What can be declared there is a holder parameterised over
-    exactly those names, with the alias as a member:
-
-      template <template <typename> class _F0> struct C_h {
-        template <typename _CraneTcArg> using c = two<_CraneTcArg, _F0<_CraneTcArg>>;
-      };
-
-    and the use site writes [C_h<T1>::template c], which is the dependent alias
-    the [Tqualified] branch below already knows how to spell.  Keyed by the
-    body with the captured names replaced, so two declarations that differ only
-    in what they call their parameters share one holder. *)
-let ctor_holder_decls : (string * string) list ref = ref []
-
-(** The alias and holder names already declared in the file being written.
-
-    {!take_ctor_alias_decls} is called once per top-level element rather than
-    once per file, so that an alias lands after the definitions its body names
-    ({!Cpp.do_struct_with_decl_tracking}).  Draining empties the registry, and
-    a later element reaching the same constructor mints the same name again --
-    the same name, because it is a digest of the body.  Repeating the
-    declaration would be legal and is what this avoids: the earlier one is
-    still in scope, so the repeat says nothing.
-
-    Per file, because the two files declare independently: a use in the
-    implementation file is reached after the header has been handed over. *)
-let ctor_alias_emitted : (string, unit) Hashtbl.t = Hashtbl.create 16
-
 (** Whether [text] spells [name] as a whole identifier.  An alias's name ends
     in a digest of its body, but a holder's is numbered ([crane_carrier_tch],
     [crane_carrier_tch1]), so one can be a prefix of another. *)
@@ -637,19 +591,56 @@ let mentions_name text name =
   let rec go i = i + n <= m && (at i || go (i + 1)) in
   n > 0 && go 0
 
-(** The synthesised names minted but not yet declared. *)
-let pending_ctor_alias_names () =
-  List.map snd !ctor_alias_decls @ List.map snd !ctor_holder_decls
+(** The C++ identifiers appearing in [text], as whole tokens.  Used to tell
+    whether a rendered type body really names a template parameter, which a
+    structural walk over the type cannot: a custom mapping's replacement text
+    may leave an argument unwritten. *)
+let identifier_tokens text =
+  let is_id c =
+    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+    || c = '_'
+  in
+  let out = ref [] and buf = Buffer.create 16 in
+  let flush () =
+    if Buffer.length buf > 0 then (
+      out := Buffer.contents buf :: !out;
+      Buffer.clear buf )
+  in
+  String.iter (fun c -> if is_id c then Buffer.add_char buf c else flush ()) text;
+  flush ();
+  !out
 
-(** The module struct a synthesised name has to be declared inside
-    ({!ctor_alias_home}). *)
-let ctor_alias_homes : (string, Names.ModPath.t) Hashtbl.t = Hashtbl.create 17
+(** The type variable an alias template abstracts over, and the sentinel used
+    to find out whether one is needed at all: rendering the constructor
+    applied to it says whether the application is just a head plus this
+    argument. *)
+let ctor_alias_tvar = Minicpp.ctor_alias_tvar
 
 (** A template synthesised to stand where a type constructor is written as a
-    template template argument but has no template name of its own: an alias
-    template, or a holder -- a struct parameterised over the enclosing
-    declaration's parameters the body names, with the alias as its member
-    [c]. *)
+    template template argument but has no template name of its own.
+
+    A custom mapping is a {e spelling}, not a template name: [itree] maps to
+    [std::shared_ptr<ITree<%t1>>], whose head is [std::shared_ptr] -- a
+    template that, applied to the element, gives something else entirely.  A
+    template template argument position needs a name that applies correctly,
+    so one is introduced: an alias template, [template <typename _A> using
+    ITree_tc = std::shared_ptr<ITree<_A>>;].
+
+    A namespace-scope alias cannot name a function template's own parameter,
+    so the carrier of [`{TFunctor (fun T => two T (FnBody T))}] -- whose body
+    is [two<_CraneTcArg, T1<_CraneTcArg>>] -- has nowhere to be declared as a
+    plain alias.  What can be declared there is a holder parameterised over
+    exactly those names, with the alias as a member:
+
+      template <template <typename> class _F0> struct C_h {
+        template <typename _CraneTcArg> using c = two<_CraneTcArg, _F0<_CraneTcArg>>;
+      };
+
+    and the use site writes [C_h<T1>::template c], which is the dependent
+    alias the [Tqualified] branch of the type printer already knows how to
+    spell.  Its body has the captured names replaced by the holder's own, so
+    two declarations that differ only in what they call their parameters
+    share one holder. *)
 type ctor_alias = {
   ca_base : string;  (** What its name is made from. *)
   ca_holder : bool;
@@ -701,89 +692,21 @@ let ctor_alias_visibility = function
     Common.toplevel_visibility
       (List.rev (List.filter Table.is_modfile (Common.visible_mps (Common.current_visibility ()))))
 
-(** The context a template with home [home] is written in, in [file]: at
+(** The file being written, which a template is declared in: a planning
+    render writes the header's view. *)
+let ctor_alias_file () = match Common.get_phase () with Common.Emit file -> file | Common.Plan -> Common.Intf
+
+(** The context a template with home [home] is written in, in the file
+    being written ({!ctor_alias_file}): at
     namespace scope; in the header, inside its home's struct, a class
     template where the home's struct is one; in the implementation, beside
     the definitions of its home's members, which are written out of line and
     qualify what they name by the struct they are members of. *)
-let ctor_alias_render_ctx ~file home =
-  match (home, file) with
+let ctor_alias_render_ctx home =
+  match (home, ctor_alias_file ()) with
   | None, _ -> initial_render_ctx
   | Some home, Common.Intf -> {initial_render_ctx with rc_in_struct = true; rc_in_template = Scope_plan.templated home}
   | Some home, Common.Impl -> {initial_render_ctx with rc_scope = Scope_plan.of_module home}
-
-(** The pending synthesised names whose home is [mp]. *)
-let pending_ctor_aliases_homed_in mp =
-  List.filter
-    (fun name ->
-      match Hashtbl.find_opt ctor_alias_homes name with
-      | Some home -> Names.ModPath.equal home mp
-      | None -> false )
-    (pending_ctor_alias_names ())
-
-(** The C++ identifiers appearing in [text], as whole tokens.  Used to tell
-    whether a rendered type body really names a template parameter, which a
-    structural walk over the type cannot: a custom mapping's replacement text
-    may leave an argument unwritten. *)
-let identifier_tokens text =
-  let is_id c =
-    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
-    || c = '_'
-  in
-  let out = ref [] and buf = Buffer.create 16 in
-  let flush () =
-    if Buffer.length buf > 0 then (
-      out := Buffer.contents buf :: !out;
-      Buffer.clear buf )
-  in
-  String.iter (fun c -> if is_id c then Buffer.add_char buf c else flush ()) text;
-  flush ();
-  !out
-
-let ctor_holder_name_for ~base body =
-  match List.assoc_opt body !ctor_holder_decls with
-  | Some name -> name
-  | None ->
-    let taken name =
-      List.exists (fun (_, n) -> String.equal n name) !ctor_holder_decls
-    in
-    let rec fresh i =
-      let name = base ^ "_tch" ^ (if i = 0 then "" else string_of_int i) in
-      if taken name then fresh (i + 1) else name
-    in
-    let name = fresh 0 in
-    ctor_holder_decls := (body, name) :: !ctor_holder_decls;
-    name
-
-(** The type variable an alias template abstracts over, and the sentinel used
-    to find out whether one is needed at all: rendering the constructor
-    applied to it says whether the application is just a head plus this
-    argument. *)
-let ctor_alias_tvar = Minicpp.ctor_alias_tvar
-
-(** The name of the alias template for [body], as a function of [body] alone.
-
-    Not a counter.  {!ctor_alias_decls} is drained once per file, so a counter
-    allocated against it restarts in the implementation file and binds the
-    names the header already bound to different bodies -- and the use sites,
-    written from whichever file reached them, then name entries their own
-    table never declared.  Repeating a [using] with the same definition is
-    legal, which is what makes the per-file draining sound; repeating the
-    {e name} with a different definition is the error it was read as being.
-
-    A digest is what makes the two agree without either file knowing what the
-    other minted: the same body is the same name in both, so both may declare
-    it and every use site names what it meant.  The body is a rendered C++
-    type, so the digest is over text that is already canonical. *)
-let ctor_alias_name_for ~base body =
-  match List.assoc_opt body !ctor_alias_decls with
-  | Some name -> name
-  | None ->
-    let name =
-      base ^ "_tc_" ^ String.sub (Digest.to_hex (Digest.string body)) 0 16
-    in
-    ctor_alias_decls := (body, name) :: !ctor_alias_decls;
-    name
 
 (** The synthesised templates each file writes, planned before either is
     rendered ({!Cpp.plan_ctor_aliases}): each file's, in the order it first
@@ -796,47 +719,105 @@ type ctor_alias_plan = {
 
 let ctor_alias_plan : ctor_alias_plan ref = State.cell State.Unit {intf = []; impl = []; holder_names = []}
 
-(** Plan [intf] and [impl], the templates the header and the implementation
-    write, each in the order the walk ahead of the files reaches them.  A
-    holder is named after its base, numbered past every other holder of that
-    base the unit writes, the header's first. *)
-let plan_ctor_aliases ~intf ~impl =
-  let dedup l = List.fold_left (fun acc a -> if List.mem a acc then acc else acc @ [a]) [] l in
-  let intf = dedup intf and impl = dedup impl in
-  let holder_names =
-    List.fold_left
-      (fun names a ->
-        if (not a.ca_holder) || List.mem_assoc a.ca_body names then names
-        else
-          let rec fresh i =
-            let name = a.ca_base ^ "_tch" ^ if i = 0 then "" else string_of_int i in
-            if List.exists (fun (_, n) -> String.equal n name) names then fresh (i + 1) else name
-          in
-          names @ [(a.ca_body, fresh 0)] )
-      [] (intf @ impl)
-  in
-  ctor_alias_plan := {intf; impl; holder_names}
+(** Set while the templates the files write are planned
+    ({!plan_ctor_aliases}). *)
+let planning_ctor_aliases = ref false
 
-(** The templates spelled in the file being written, under [CRANE_CHECK_IR]. *)
+(** The templates spelled in the file being written, under [CRANE_CHECK_IR],
+    or in the type constructor being planned. *)
 let ctor_aliases_spelled : ctor_alias list ref = ref []
 
-(** The name of [alias], declared in the registries. *)
-let register_ctor_alias alias =
-  let name =
-    if alias.ca_holder then ctor_holder_name_for ~base:alias.ca_base alias.ca_body
-    else ctor_alias_name_for ~base:alias.ca_base alias.ca_body
+let note_ctor_alias_spelled a =
+  if (!planning_ctor_aliases || Probe.checking ()) && not (List.mem a !ctor_aliases_spelled) then
+    ctor_aliases_spelled := !ctor_aliases_spelled @ [a]
+
+let start_ctor_alias_census () = ctor_aliases_spelled := []
+
+(** Plan the templates each file writes, [written file] those of [file] in
+    the order written: the header's, then the implementation's.  A holder is
+    named as it is first spelled ({!ctor_alias_name}). *)
+let plan_ctor_aliases written =
+  ctor_alias_plan := {intf = []; impl = []; holder_names = []};
+  let dedup l = List.fold_left (fun acc a -> if List.mem a acc then acc else acc @ [a]) [] l in
+  setting planning_ctor_aliases true @@ fun () ->
+  let intf = dedup (written Common.Intf) in
+  let impl = dedup (written Common.Impl) in
+  ctor_alias_plan := {!ctor_alias_plan with intf; impl}
+
+(** The name of [alias].
+
+    An alias template's is a function of its body alone, not a counter: the
+    two files declare the aliases they write independently, so the same body
+    has to be the same name in both, and every use names what it meant.
+    Repeating a [using] with the same definition is legal, which is what lets
+    both declare it.  The body is written where the template is declared, so
+    the digest is over text that is already canonical.  A holder's is
+    planned: its base, numbered past every other holder of that base the
+    unit writes, in the order the plan first spells them -- the header's
+    first, and one written inside another template's body before that
+    template, whose body names it. *)
+let ctor_alias_name a =
+  if a.ca_holder then
+    match List.assoc_opt a.ca_body !ctor_alias_plan.holder_names with
+    | Some name -> name
+    | None when !planning_ctor_aliases ->
+      let names = !ctor_alias_plan.holder_names in
+      let rec fresh i =
+        let name = a.ca_base ^ "_tch" ^ if i = 0 then "" else string_of_int i in
+        if List.exists (fun (_, n) -> String.equal n name) names then fresh (i + 1) else name
+      in
+      let name = fresh 0 in
+      ctor_alias_plan := {!ctor_alias_plan with holder_names = names @ [(a.ca_body, name)]};
+      name
+    | None ->
+      CErrors.anomaly Pp.(str "Crane: a holder of " ++ str a.ca_body ++ str " is written that was not planned.")
+  else a.ca_base ^ "_tc_" ^ String.sub (Digest.to_hex (Digest.string a.ca_body)) 0 16
+
+(** The declaration of [alias].  A holder's parameters are the captured
+    names its body writes: one written applied to the alias's own argument
+    is a type constructor ([CraneFk]), one written bare a type ([CranePk]),
+    a plain family the declaration deapplied. *)
+let ctor_alias_declaration a =
+  let name = ctor_alias_name a in
+  if not a.ca_holder then
+    str "template <typename " ++ str ctor_alias_tvar ++ str "> using " ++ str name ++ str " = "
+    ++ str a.ca_body ++ str ";"
+  else
+    let names = identifier_tokens a.ca_body in
+    let rec params i =
+      let f = Id.to_string (Generated_name.indexed "F" i)
+      and p = Id.to_string (Generated_name.indexed "P" i) in
+      if List.mem f names then (str "template <typename> class " ++ str f) :: params (i + 1)
+      else if List.mem p names then (str "typename " ++ str p) :: params (i + 1)
+      else []
+    in
+    str "template <"
+    ++ prlist_with_sep (fun () -> str ", ") (fun p -> p) (params 0)
+    ++ str "> struct " ++ str name ++ str " { template <typename " ++ str ctor_alias_tvar
+    ++ str "> using c = " ++ str a.ca_body ++ str "; };"
+
+(** The templates the file [file] declares, each once, in the order planned:
+    the aliases it writes, and, in the header, every holder the unit writes.
+
+    A holder is a struct, and a struct may be defined once.  An alias may be
+    declared in whichever file writes the use, because repeating a [using]
+    with the same definition is legal; repeating a [struct] is not, so the
+    header, the one file everything sees, declares every holder. *)
+let ctor_aliases_declared_in ~file =
+  let plan = !ctor_alias_plan in
+  let declared =
+    match file with
+    | Common.Intf -> plan.intf @ List.filter (fun a -> a.ca_holder) plan.impl
+    | Common.Impl -> List.filter (fun a -> not a.ca_holder) plan.impl
   in
-  Option.iter (Hashtbl.replace ctor_alias_homes name) alias.ca_home;
-  if Probe.checking () && not (List.mem alias !ctor_aliases_spelled) then
-    ctor_aliases_spelled := !ctor_aliases_spelled @ [alias];
-  name
+  List.fold_left
+    (fun acc a ->
+      if List.exists (fun a' -> String.equal (ctor_alias_name a') (ctor_alias_name a)) acc then acc else acc @ [a] )
+    [] declared
 
-let reset_ctor_alias_emitted () =
-  Hashtbl.reset ctor_alias_emitted;
-  ctor_aliases_spelled := []
 
-(** Under [CRANE_CHECK_IR], the templates the file [file] spelled must be the
-    ones planned for it, and each holder named as planned. *)
+(** Under [CRANE_CHECK_IR], the templates the file [file] spelled must be
+    the ones planned for it. *)
 let check_ctor_alias_plan ~file =
   if Probe.checking () then begin
     let planned = match file with Common.Intf -> !ctor_alias_plan.intf | Common.Impl -> !ctor_alias_plan.impl in
@@ -847,7 +828,7 @@ let check_ctor_alias_plan ~file =
         (match a.ca_home with Some mp -> " in " ^ ModPath.to_string mp | None -> "")
     in
     let missing l l' = List.filter (fun a -> not (List.mem a l')) l in
-    ( match (missing spelled planned, missing planned spelled) with
+    match (missing spelled planned, missing planned spelled) with
     | [], [] -> ()
     | unplanned, unspelled ->
       Probe.violation "constructor aliases"
@@ -856,18 +837,7 @@ let check_ctor_alias_plan ~file =
           ++ prlist_with_sep pr_comma (fun a -> str (describe a)) unplanned
           ++ str " unplanned, and does not spell "
           ++ prlist_with_sep pr_comma (fun a -> str (describe a)) unspelled
-          ++ str " planned" ) );
-    List.iter
-      (fun a ->
-        if a.ca_holder then
-          let registered = List.assoc_opt a.ca_body !ctor_holder_decls in
-          let planned = List.assoc_opt a.ca_body !ctor_alias_plan.holder_names in
-          if registered <> None && registered <> planned then
-            Probe.violation "constructor aliases"
-              Pp.(
-                str "the holder " ++ str (Option.default "?" registered) ++ str " of " ++ str a.ca_body
-                ++ str " was planned to be named " ++ str (Option.default "nothing" planned) ) )
-      spelled
+          ++ str " planned" )
   end
 
 (** The constructor a type constructor position writes: an applied type
@@ -1144,7 +1114,7 @@ let external_type_name id_s =
     the one {!pp_cpp_type} writes, from the same heads, in the render context
     the caller has set.  [None] where only the rendering can tell -- an
     expression's type, and a type constructor named as a template argument,
-    whose alias is minted as it is written. *)
+    which may be written through a synthesised alias ({!ctor_alias_at}). *)
 let rec type_names_into_a_struct t =
   let any ts =
     List.fold_left
@@ -1385,8 +1355,8 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       | _ ->
         (* Non-dependent is what the head usually is, but not always: a
            carrier whose body names a template parameter of the enclosing
-           declaration has no namespace-scope alias to be, so it is minted as
-           a member of a holder and comes back spelled [H<T1>::template c].
+           declaration has no namespace-scope alias to be, so it is
+           synthesised as a member of a holder, spelled [H<T1>::template c].
            That is a dependent qualified name, and applying it yields a type,
            which needs the [typename] the {!Tqualified} arm above would have
            given it.  Whether a holder was needed is decided by which names
@@ -1446,10 +1416,10 @@ let rec pp_cpp_type ?(lead = true) par vl t =
        here is the eta-expansion of the constructor: its head is what the
        position wants. *)
     let t = tyctor_constructor t in
-    let file = match Common.get_phase () with Common.Emit file -> file | Common.Plan -> Common.Intf in
-    match ctor_alias_at ~file vl t with
+    match ctor_alias_at vl t with
     | Some (alias, args) ->
-      let name = register_ctor_alias alias in
+      note_ctor_alias_spelled alias;
+      let name = ctor_alias_name alias in
       if alias.ca_holder then (str (name ^ "<" ^ String.concat ", " args ^ ">::template c"), true)
       else (str name, false)
     | None -> (
@@ -1492,16 +1462,16 @@ let rec pp_cpp_type ?(lead = true) par vl t =
     its argument goes -- it is the abstraction, not an application of one.  A
     custom mapping arrives applied to its real arguments, so the sentinel is
     put in the carrier's place first. *)
-and ctor_alias_at ~file vl t =
+and ctor_alias_at vl t =
   let custom () =
     match t with
     | Tglob (r, (_ :: _ as args), _) when find_custom_opt r <> None ->
       let fixed = List.filteri (fun i _ -> i < List.length args - 1) args in
-      ctor_alias_of_probe ~file vl ~base:(Common.pp_global_name Type r) (Tglob (r, fixed @ [Thole], []))
+      ctor_alias_of_probe vl ~base:(Common.pp_global_name Type r) (Tglob (r, fixed @ [Thole], []))
     | _ -> None
   in
   if exists_cpp_type (fun s -> s = Thole) t then
-    match ctor_alias_of_probe ~file vl ~base:"crane_carrier" t with
+    match ctor_alias_of_probe vl ~base:"crane_carrier" t with
     | Some _ as alias -> alias
     | None -> custom ()
   else custom ()
@@ -1512,7 +1482,7 @@ and ctor_alias_at ~file vl t =
     The body is rendered where the template is declared ({!ctor_alias_visibility}),
     because that is where a [using] is read; every name it writes
     has to mean there what it means at the use. *)
-and ctor_alias_of_probe ~file vl ~base probe =
+and ctor_alias_of_probe vl ~base probe =
   (* The template parameters of the enclosing declaration that the body
      names.  An alias whose body mentions one cannot live at namespace
      scope, so those are what the holder abstracts over. *)
@@ -1592,7 +1562,7 @@ and ctor_alias_of_probe ~file vl ~base probe =
   let home = ctor_alias_home probe in
   let render t =
     with_render_ctx
-      (fun _ -> ctor_alias_render_ctx ~file home)
+      (fun _ -> ctor_alias_render_ctx home)
       (fun () ->
         Common.with_visibility (ctor_alias_visibility home) (fun () -> Pp.string_of_ppcmds (pp_cpp_type false vl t)) )
   in
@@ -3318,94 +3288,6 @@ let pp_template_type = function
        via {!pp_requires_of_tparams}. *)
     str "typename"
 
-(** Take and clear the alias templates ({!ctor_alias_decls}) minted since the
-    last call, as declarations.
-
-    A struct forward declaration belongs in the header, and the
-    implementation file, which includes it, has no use for one.  An alias
-    is minted by whichever file writes the use that needs it, and a use in the
-    implementation file is reached while the header has already been handed
-    over -- so it has to be declared where it was minted.
-
-    Draining is sound only because {!ctor_alias_name_for} names an alias after
-    its body rather than after its position in this list: a body minted in both
-    files gets one name and two identical declarations, which is legal, while a
-    counter would give the second file the first file's names for other
-    bodies. *)
-let take_ctor_alias_decls ?(select = fun _ -> true) ~is_header () =
-  let unemitted l =
-    List.filter
-      (fun (_, name) ->
-        if Hashtbl.mem ctor_alias_emitted name then false
-        else (Hashtbl.add ctor_alias_emitted name (); true) )
-      l
-  in
-  let taken, kept = List.partition (fun (_, name) -> select name) !ctor_alias_decls in
-  ctor_alias_decls := taken;
-  let held_taken, held_kept =
-    (* A holder is named by the body of the alias that captured it, not by the
-       text that uses the alias, so it comes along with whichever aliases go. *)
-    let needed name =
-      select name
-      || List.exists (fun (body, _) -> mentions_name body name) taken
-    in
-    List.partition (fun (_, name) -> needed name) !ctor_holder_decls
-  in
-  if is_header then ctor_holder_decls := held_taken;
-  let l =
-    List.rev_map
-      (fun (body, name) ->
-        str "template <typename "
-        ++ str ctor_alias_tvar
-        ++ str "> using "
-        ++ str name
-        ++ str " = "
-        ++ str body
-        ++ str ";")
-      (unemitted !ctor_alias_decls)
-  in
-  ctor_alias_decls := kept;
-  (* A holder is a struct, and a struct may be defined once.  An alias above
-     may be minted in whichever file writes the use, because repeating a
-     [using] with the same definition is legal and a use in the implementation
-     file is reached after the header has been handed over; repeating a
-     [struct] is not, so the same reasoning gives [vellvm_bench.cpp:5]
-     redefining [vellvm_bench.h:173].  The header is the one file everything
-     sees, so every holder is declared there and the registry is not drained
-     until it has been -- which also keeps a holder's name stable across the
-     two passes, since the name is chosen fresh against this list. *)
-  let holders =
-    if not is_header then []
-    else
-    List.rev_map
-      (fun (body, name) ->
-        (* A captured parameter named applied to the alias's own argument is
-           a type constructor ([CraneFk]); one named bare is a type
-           ([CranePk]), a plain family the declaration deapplied. *)
-        let names = identifier_tokens body in
-        let rec params i =
-          let f = Id.to_string (Generated_name.indexed "F" i)
-          and p = Id.to_string (Generated_name.indexed "P" i) in
-          if List.mem f names then
-            (str "template <typename> class " ++ str f) :: params (i + 1)
-          else if List.mem p names then
-            (str "typename " ++ str p) :: params (i + 1)
-          else []
-        in
-        str "template <"
-        ++ prlist_with_sep (fun () -> str ", ") (fun p -> p) (params 0)
-        ++ str "> struct "
-        ++ str name
-        ++ str " { template <typename "
-        ++ str ctor_alias_tvar
-        ++ str "> using c = "
-        ++ str body
-        ++ str "; };" )
-      (unemitted !ctor_holder_decls)
-  in
-  if is_header then ctor_holder_decls := held_kept;
-  holders @ l
-
 (** Print a complete template parameter including name and optional default *)
 let pp_template_param (tt, id) =
   match tt with
@@ -3598,21 +3480,21 @@ let with_struct_scope r f =
     with_visibility (inside ~members:(Id.Set.of_list ctors) mp [] outer) f
   | _ -> f ()
 
-(** The synthesised templates found by [visit], which calls its argument at
-    each type constructor written, in [file], each in the context the printer
-    writes it in: inside the struct of the inductive whose members are
+(** The synthesised templates spelled, in [file], at the type constructors
+    [visit] calls its argument at, in the order spelled -- one written in
+    another's body ahead of it -- each spelled as the printer spells it, in
+    the file's phase and inside the struct of the inductive whose members are
     written around it, if any ({!with_struct_scope}). *)
 let ctor_aliases_found ~file visit =
-  let found = ref [] in
+  Common.with_phase (Common.Emit file) @@ fun () ->
+  setting ctor_aliases_spelled [] @@ fun () ->
   visit (fun ~vl ~owner t ->
       match t with
-      | Ttyctor t ->
-        let at () =
-          Option.iter (fun (a, _) -> found := a :: !found) (ctor_alias_at ~file vl (tyctor_constructor t))
-        in
-        ( match owner with Some r -> with_struct_scope r at | None -> at () )
+      | Ttyctor _ ->
+        let spell () = ignore (pp_cpp_type false vl t) in
+        ( match owner with Some r -> with_struct_scope r spell | None -> spell () )
       | _ -> () );
-  List.rev !found
+  !ctor_aliases_spelled
 
 let ctor_aliases_written ~file (d : Cpp_erasure.settled) =
   ctor_aliases_found ~file (fun f -> Cpp_demands.tyctors_of_decl f (d :> cpp_decl))

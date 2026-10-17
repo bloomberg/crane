@@ -120,8 +120,18 @@ val promoted_alias_import : Names.Id.t -> string option
 (** {2 Synthesised aliases} *)
 
 (** A template synthesised to stand where a type constructor is written as a
-    template template argument but has no template name of its own. *)
-type ctor_alias
+    template template argument but has no template name of its own: an alias
+    template, or a holder -- a struct over the enclosing declaration's
+    parameters the body names, with the alias as its member [c]. *)
+type ctor_alias = private {
+  ca_base : string;  (** What its name is made from. *)
+  ca_holder : bool;
+  ca_home : ModPath.t option;
+      (** The module struct it is declared in, or [None] for namespace
+          scope. *)
+  ca_body : string;
+      (** The type it abbreviates, as written where it is declared. *)
+}
 
 (** The synthesised templates the finished declaration written in [file]
     writes, in the order written, in the scope being written. *)
@@ -131,27 +141,29 @@ val ctor_aliases_written : file:Common.file -> Cpp_erasure.settled -> ctor_alias
     variables read as [vl]. *)
 val ctor_aliases_of_type : file:Common.file -> vl:Id.t list -> cpp_type -> ctor_alias list
 
-(** Plan the templates the header and the implementation write
-    ([intf], [impl]), each in the order written. *)
-val plan_ctor_aliases : intf:ctor_alias list -> impl:ctor_alias list -> unit
+(** [plan_ctor_aliases written] plans the templates each file writes,
+    [written file] being those of [file], read off what it writes
+    ({!ctor_aliases_written}): the header's, then the implementation's. *)
+val plan_ctor_aliases : (Common.file -> ctor_alias list) -> unit
+
+(** The name of a template, as planned. *)
+val ctor_alias_name : ctor_alias -> string
+
+(** The declaration of a template. *)
+val ctor_alias_declaration : ctor_alias -> Pp.t
+
+(** The templates the file [file] declares, each once, in the order
+    planned: the aliases it writes, and, in the header, every holder the
+    unit writes. *)
+val ctor_aliases_declared_in : file:Common.file -> ctor_alias list
+
+(** Under [CRANE_CHECK_IR], start recording the templates the file about
+    to be written spells. *)
+val start_ctor_alias_census : unit -> unit
 
 (** Under [CRANE_CHECK_IR], check what the file [file] spelled against the
     plan. *)
 val check_ctor_alias_plan : file:Common.file -> unit
-
-(** Take the alias templates minted since the last call, as declarations;
-    [select] keeps only the names it accepts. *)
-val take_ctor_alias_decls :
-  ?select:(string -> bool) -> is_header:bool -> unit -> Pp.t list
-
-(** The synthesised names minted but not yet declared. *)
-val pending_ctor_alias_names : unit -> string list
-
-(** The pending synthesised names whose home is [mp]. *)
-val pending_ctor_aliases_homed_in : ModPath.t -> string list
-
-(** Forget which aliases were emitted, for a new file. *)
-val reset_ctor_alias_emitted : unit -> unit
 
 (** Whether [text] spells [name] as a whole identifier. *)
 val mentions_name : string -> string -> bool

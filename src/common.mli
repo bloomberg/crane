@@ -158,6 +158,10 @@ val set_phase : phase -> unit
 (** Get the current extraction phase. *)
 val get_phase : unit -> phase
 
+(** [with_phase ph f] runs [f] in the phase [ph], restoring the current one
+    however [f] leaves. *)
+val with_phase : phase -> (unit -> 'a) -> 'a
+
 (** How diagnostics name a phase: [planning], [implementation], [header]. *)
 val phase_name : phase -> string
 

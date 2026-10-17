@@ -827,6 +827,37 @@ let is_erased_alias (_, d) =
   | Dusing {du_rhs = Some rhs; _} -> Cpp_erasure.is_any_shaped rhs
   | _ -> false
 
+(** The names of the synthesised templates the file being written has
+    declared so far ({!take_ctor_aliases}). *)
+let ctor_aliases_placed : string list ref = ref []
+
+(** The synthesised templates the file being written declares
+    ({!Cpp_print.ctor_aliases_declared_in}) and has not declared yet. *)
+let pending_ctor_aliases ~is_header =
+  List.filter
+    (fun a -> not (List.mem (Cpp_print.ctor_alias_name a) !ctor_aliases_placed))
+    (Cpp_print.ctor_aliases_declared_in ~file:(if is_header then Common.Intf else Common.Impl))
+
+(** Declare the pending synthesised templates whose names [select] accepts,
+    and the holders their bodies name: a holder is named by the body of the
+    alias that captured it, not by the text that uses the alias, so it comes
+    along with whichever aliases go, and ahead of them. *)
+let take_ctor_aliases ?(select = fun _ -> true) ~is_header () =
+  let pending = pending_ctor_aliases ~is_header in
+  let selected a = select (Cpp_print.ctor_alias_name a) in
+  let aliases = List.filter (fun (a : Cpp_print.ctor_alias) -> (not a.ca_holder) && selected a) pending in
+  let named_by_alias holder =
+    List.exists
+      (fun (a : Cpp_print.ctor_alias) -> Cpp_print.mentions_name a.ca_body (Cpp_print.ctor_alias_name holder))
+      aliases
+  in
+  let holders =
+    List.filter (fun (a : Cpp_print.ctor_alias) -> a.ca_holder && (selected a || named_by_alias a)) pending
+  in
+  let taken = holders @ aliases in
+  ctor_aliases_placed := List.map Cpp_print.ctor_alias_name taken @ !ctor_aliases_placed;
+  List.map Cpp_print.ctor_alias_declaration taken
+
 (** What writing a structure element gives: its text, written where it is,
     and the concepts it declares that only namespace scope can hold, in the
     order written, which go to the top of the file. *)
@@ -1604,7 +1635,15 @@ and pp_module_expr ~is_header f = function
        first member that spells it (see {!Cpp_print.ctor_alias_home}):
        at namespace scope those names mean nothing. *)
     let with_homed_aliases px =
-      match Cpp_print.pending_ctor_aliases_homed_in mp with
+      let homed =
+        List.filter_map
+          (fun (a : Cpp_print.ctor_alias) ->
+            match a.ca_home with
+            | Some home when ModPath.equal home mp -> Some (Cpp_print.ctor_alias_name a)
+            | Some _ | None -> None )
+          (pending_ctor_aliases ~is_header)
+      in
+      match homed with
       | [] -> px
       | homed ->
         let text = Pp.string_of_ppcmds px in
@@ -1613,7 +1652,7 @@ and pp_module_expr ~is_header f = function
         in
         if not (List.exists select homed) then px
         else
-          match Cpp_print.take_ctor_alias_decls ~select ~is_header () with
+          match take_ctor_aliases ~select ~is_header () with
           | [] -> px
           | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 () ++ px
     in
@@ -2526,78 +2565,77 @@ let plan_file_layout s =
 
 (** Plan the synthesised templates each file writes
     ({!Cpp_print.plan_ctor_aliases}), read off what was generated ahead of
-    the files where each writes it, in the scope it writes it in
+    the files where the file writes it, in the scope it writes it in
     ({!walk_as_rendered}): each element's declarations, its helpers and the
-    member definitions it gives up; a wrapper module's functions, and what
-    is lifted out of them; and a module's class concepts and the fields and
-    methods of the record merged into its struct, which are written with the
-    module, in the scope that encloses it. *)
+    member definitions it gives up; a wrapper module's functions, and, in
+    the header, what is lifted out of them and its instances; and, in the
+    header, a module's class concepts and the fields and methods of the
+    record merged into its struct, which are written with the module, in the
+    scope that encloses it. *)
 let plan_ctor_aliases s =
-  let intf = ref [] and impl = ref [] in
-  let written file ds =
-    let cell = match file with Common.Intf -> intf | Common.Impl -> impl in
-    List.iter (fun d -> cell := List.rev_append (Cpp_print.ctor_aliases_written ~file d) !cell) ds
+  let written_in file =
+    let found = ref [] in
+    let written ds = List.iter (fun d -> found := List.rev_append (Cpp_print.ctor_aliases_written ~file d) !found) ds in
+    let helpers hs =
+      written
+        (List.concat_map
+           (fun h -> match lifted_views h with def, Some spec -> [def; spec] | def, None -> [def])
+           hs )
+    in
+    let header = file = Common.Intf in
+    let element d =
+      let scope k =
+        if header then in_header_element_scope (top_visible_mp ()) (fun ~in_struct:_ -> k Cpp_ind.header_element_ahead)
+        else with_render_ctx (fun _ -> initial_render_ctx) (fun () -> k Cpp_ind.impl_element_ahead)
+      in
+      scope (fun ahead ->
+          let e : Cpp_ind.element = ahead d in
+          written (List.map snd e.rendered);
+          helpers e.helpers;
+          written (List.map snd e.member_defs) )
+    in
+    let wrapper_element se =
+      with_render_ctx (fun _ -> initial_render_ctx) @@ fun () ->
+      match wrapper_element se with
+      | Wrapper_nothing -> ()
+      | Wrapper_instance (r, a, t) ->
+        if header then
+          let ds, hs = Cpp_ind.instance_entity r a t in
+          written (List.map Cpp_ind.finished_alone (hs @ List.map snd ds))
+      | Wrapper_functions (_, generate) ->
+        let gs = generate () in
+        List.iter (fun (specs, defs) -> written (List.map fst (specs @ defs))) (file_views ~is_header:header [gs]);
+        if header then helpers (List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) gs)
+    in
+    let after_module (frame : Module_frame.t) sel =
+      if header then begin
+        List.iter (fun (_, r, fields) -> written [Cpp_ind.finished_alone (Cpp_ind.concept r fields)]) (declared_classes sel);
+        Option.iter
+          (fun (r, fields, (packet : ml_ind_packet)) ->
+            let vl = packet.ip_vars in
+            List.iter
+              (fun t -> found := List.rev_append (Cpp_print.ctor_aliases_of_type ~file ~vl t) !found)
+              (Cpp_ind.record_field_types r vl fields) )
+          (merged_eponymous_record frame);
+        Option.iter
+          (fun (r, vars, candidates) ->
+            let fields, hs = Cpp_ind.record_methods r vars candidates in
+            if fields <> [] then written [Cpp_ind.finished_record_methods r vars fields];
+            written (List.map (fun h -> fst (lifted_views ~may_hoist:false h)) hs) )
+          (eponymous_record_methods frame)
+      end
+    in
+    Cpp_ind.peeking (fun () ->
+        walk_as_rendered ~after_module
+          ~decl:(fun ~wrapper se ->
+            match se with
+            | SEdecl (Dterm _ | Dfix _) when wrapper -> wrapper_element se
+            | SEdecl d -> element d
+            | SEmodule _ | SEmodtype _ -> () )
+          s );
+    List.rev !found
   in
-  let helpers file hs =
-    written file
-      (List.concat_map
-         (fun h -> match lifted_views h with def, Some spec -> [def; spec] | def, None -> [def])
-         hs )
-  in
-  let element d =
-    in_header_element_scope (top_visible_mp ()) (fun ~in_struct:_ ->
-        let h = Cpp_ind.header_element_ahead d in
-        written Common.Intf (List.map snd h.rendered);
-        helpers Common.Intf h.helpers;
-        written Common.Intf (List.map snd h.member_defs) );
-    with_render_ctx (fun _ -> initial_render_ctx) (fun () ->
-        let i = Cpp_ind.impl_element_ahead d in
-        written Common.Impl (List.map snd i.rendered);
-        helpers Common.Impl i.helpers;
-        written Common.Impl (List.map snd i.member_defs) )
-  in
-  let wrapper_element se =
-    with_render_ctx (fun _ -> initial_render_ctx) @@ fun () ->
-    match wrapper_element se with
-    | Wrapper_nothing -> ()
-    | Wrapper_instance (r, a, t) ->
-      let ds, hs = Cpp_ind.instance_entity r a t in
-      written Common.Intf (List.map Cpp_ind.finished_alone (hs @ List.map snd ds))
-    | Wrapper_functions (_, generate) ->
-      let gs = generate () in
-      List.iter
-        (fun file ->
-          List.iter
-            (fun (specs, defs) -> written file (List.map fst (specs @ defs)))
-            (file_views ~is_header:(file = Common.Intf) [gs]) )
-        [Common.Intf; Common.Impl];
-      helpers Common.Intf (List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) gs)
-  in
-  let after_module (frame : Module_frame.t) sel =
-    List.iter (fun (_, r, fields) -> written Common.Intf [Cpp_ind.finished_alone (Cpp_ind.concept r fields)]) (declared_classes sel);
-    Option.iter
-      (fun (r, fields, (packet : ml_ind_packet)) ->
-        let vl = packet.ip_vars in
-        List.iter
-          (fun t -> intf := List.rev_append (Cpp_print.ctor_aliases_of_type ~file:Common.Intf ~vl t) !intf)
-          (Cpp_ind.record_field_types r vl fields) )
-      (merged_eponymous_record frame);
-    Option.iter
-      (fun (r, vars, candidates) ->
-        let fields, hs = Cpp_ind.record_methods r vars candidates in
-        if fields <> [] then written Common.Intf [Cpp_ind.finished_record_methods r vars fields];
-        written Common.Intf (List.map (fun h -> fst (lifted_views ~may_hoist:false h)) hs) )
-      (eponymous_record_methods frame)
-  in
-  Cpp_ind.peeking (fun () ->
-      walk_as_rendered ~after_module
-        ~decl:(fun ~wrapper se ->
-          match se with
-          | SEdecl (Dterm _ | Dfix _) when wrapper -> wrapper_element se
-          | SEdecl d -> element d
-          | SEmodule _ | SEmodtype _ -> () )
-        s );
-  Cpp_print.plan_ctor_aliases ~intf:(List.rev !intf) ~impl:(List.rev !impl)
+  Cpp_print.plan_ctor_aliases written_in
 
 (* The declarations of [s], a functor's body's among them, in order. *)
 let declarations s =
@@ -3266,9 +3304,10 @@ let take_constrained_forward_decls pending text =
 
     Called on each chunk of the file in the order the chunks are written, so an
     alias is declared in front of the earliest text that uses it and nowhere
-    else: the registry keeps what nothing has asked for yet.  Rendering [p] to
-    a string is the whole test, and is skipped when there is nothing pending,
-    so a file that mints no alias pays nothing. *)
+    else: what no chunk has asked for yet stays pending
+    ({!pending_ctor_aliases}).  Rendering [p] to a string is the whole test,
+    and is skipped when there is nothing pending, so a file that declares no
+    alias pays nothing. *)
 let prefix_mentioned_aliases ~is_header ~constrained p =
   let prefix l p =
     match l with
@@ -3277,14 +3316,14 @@ let prefix_mentioned_aliases ~is_header ~constrained p =
     | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 () ++ p
   in
   let p =
-    match Cpp_print.pending_ctor_alias_names () with
+    match List.map Cpp_print.ctor_alias_name (pending_ctor_aliases ~is_header) with
     | [] -> p
     | pending ->
       let text = Pp.string_of_ppcmds p in
       if not (List.exists (Cpp_print.mentions_name text) pending) then p
       else
         let select name = Cpp_print.mentions_name text name in
-        prefix (Cpp_print.take_ctor_alias_decls ~select ~is_header ()) p
+        prefix (take_ctor_aliases ~select ~is_header ()) p
   in
   (* A constrained template named ahead of its definition is declared in front
      of the chunk that names it, in the same way; see
@@ -3466,8 +3505,8 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
             implementation), including lifted declarations and deferred
             out-of-line function definitions. *)
 let do_struct_with_decl_tracking ~is_header f s =
-  (* A synthesised alias is emitted in front of the top-level element whose
-     rendering minted it, rather than collected into the file's prologue.
+  (* A synthesised alias is emitted in front of the top-level element that
+     writes it, rather than collected into the file's prologue.
 
      The prologue is only sound for a body naming top-level class templates:
      those can be forward-declared, so the prologue's forward declarations make
@@ -3477,10 +3516,10 @@ let do_struct_with_decl_tracking ~is_header f s =
      alias has to follow the {e definition}.
 
      The element to go in front of is the one that {e uses} the alias, which is
-     not the one that minted it: a use written into a deferred member
-     definition is minted while some earlier element is rendering but placed at
-     the end of the file, and following the mint puts the declaration hundreds
-     of lines ahead of everything the body names.  A use, by contrast, sits in
+     not the one whose declaration produced the use: a use written into a
+     deferred member definition belongs to some earlier element but is placed
+     at the end of the file, and following its declaration puts the alias
+     hundreds of lines ahead of everything the body names.  A use, by contrast, sits in
      code that manipulates values of the types the body names, and so comes
      after their definitions -- as a tendency and not as a guarantee: the use
      spells the alias, not the types inside it, so nothing here forces the
@@ -3488,8 +3527,8 @@ let do_struct_with_decl_tracking ~is_header f s =
      on this corpus the two placements coincide exactly, nothing in it being
      deferred.
 
-     So the alias waits in the registry until some rendered chunk spells it,
-     and is emitted in front of that chunk -- which needs no knowledge of what
+     So the alias stays pending until some rendered chunk spells it, and is
+     emitted in front of that chunk -- which needs no knowledge of what
      the body names, only of where its name appears.  See
      {!prefix_mentioned_aliases}, applied here per top-level element and again
      to each section of the assembled file.
@@ -3561,7 +3600,8 @@ let do_struct_with_decl_tracking ~is_header f s =
         mt () )
       else p
   in
-  Cpp_print.reset_ctor_alias_emitted ();
+  ctor_aliases_placed := [];
+  Cpp_print.start_ctor_alias_census ();
   Cpp_ind.start_render ();
   init_std_names ();
   (* The file is written outside every module body, its files visible;
@@ -3966,7 +4006,7 @@ let do_struct_with_decl_tracking ~is_header f s =
      which is the case the placement above exists for, but an alias with no use
      in the file has no later position to be after either. *)
   let leftover_aliases =
-    match Cpp_print.take_ctor_alias_decls ~is_header () with
+    match take_ctor_aliases ~is_header () with
     | [] -> mt ()
     | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
   in
