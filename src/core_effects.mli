@@ -58,10 +58,10 @@ val lookup : t -> Miniml.global_use -> effect option
 (** [find use] -- {!lookup} among the installed operations. *)
 val find : Miniml.global_use -> effect option
 
-(** Record that translation took an operation from the installed ones
-    ([true]) or decided it itself ([false]), for {!report}. *)
-val tally : found:bool -> unit
+(** Record that translation took an operation from the installed ones, for
+    {!report}. *)
+val tally : unit -> unit
 
 (** How many operations the unit analysed, and how many translation found
-    there or decided itself. *)
+    there. *)
 val report : unit -> string

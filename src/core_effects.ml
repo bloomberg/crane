@@ -61,13 +61,11 @@ let equal =
 
 let installed = State.cell State.Unit empty
 
-type counts = {found : int; decided : int}
-
-let counts = State.cell State.Unit {found = 0; decided = 0}
+let found_count = State.cell State.Unit 0
 
 let install t =
   installed := t;
-  counts := {found = 0; decided = 0}
+  found_count := 0
 
 (* A body's annotations may be rewritten before it is translated, which
    rebuilds every node, so the use's occurrence is what identifies it. *)
@@ -83,12 +81,8 @@ let lookup t use =
 
 let find use = lookup !installed use
 
-let tally ~found =
-  counts :=
-    if found then {!counts with found = !counts.found + 1}
-    else {!counts with decided = !counts.decided + 1}
+let tally () = incr found_count
 
 let report () =
   let n = Ref.User.Map.fold (fun _ l acc -> acc + List.length l) !installed 0 in
-  Printf.sprintf "effect operations: %d analysed; translation found %d, decided %d itself" n
-    !counts.found !counts.decided
+  Printf.sprintf "effect operations: %d analysed; translation found %d" n !found_count

@@ -265,35 +265,32 @@ let is_monad_reified = Table.is_monad_reified
 (** The effect operation the use [use] heads, as Core elaborated it
     ({!Core_effects}): its operation, and the mode it is generated in, read
     from the unit's facts, which are installed before anything is planned
-    ({!Install_legacy_plan.install}).  One the analysis did not reach is
-    computed from the global's registration and the mode of the generation
-    translating it -- under [CRANE_CHECK_IR], a violation, as is a found one
-    that disagrees with what is computed so. *)
+    ({!Install_legacy_plan.install}).  One the analysis did not reach heads
+    none.  Under [CRANE_CHECK_IR] both are checked against what the global's
+    registration and the mode of the generation translating it would say. *)
 let effect_of (use : Miniml.global_use) =
-  let here () =
-    Option.map
-      (fun operation -> {Core_effects.operation; mode = (!tctx).itree_mode})
-      (Core_effects.operation_of use.callee)
-  in
-  match Core_effects.find use with
-  | Some e ->
-    Core_effects.tally ~found:true;
-    if Probe.checking () && here () <> Some e then
+  let found = Core_effects.find use in
+  if Option.has_some found then Core_effects.tally ();
+  if Probe.checking () then begin
+    let here =
+      Option.map
+        (fun operation -> {Core_effects.operation; mode = (!tctx).itree_mode})
+        (Core_effects.operation_of use.callee)
+    in
+    match (found, here) with
+    | Some e, here when here <> Some e ->
       Probe.violation "effect operations"
         Pp.(
           str "an effect operation of " ++ str (Table.kername_of_global use.callee)
-          ++ str " elaborated from Core disagrees with the generation translating it");
-    Some e
-  | None ->
-    let e = here () in
-    if Option.has_some e then begin
-      Core_effects.tally ~found:false;
+          ++ str " elaborated from Core disagrees with the generation translating it")
+    | None, Some _ ->
       Probe.violation "effect operations"
         Pp.(
           str "an effect operation of " ++ str (Table.kername_of_global use.callee)
           ++ str " is translated where Core did not reach it")
-    end;
-    e
+    | _ -> ()
+  end;
+  found
 
 (** Whether the use [use] heads the effect operation [op]. *)
 let is_effect op use =
