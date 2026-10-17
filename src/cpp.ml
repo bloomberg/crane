@@ -1716,14 +1716,16 @@ let wrapper_element se =
                        scope its plan gives it ({!Scope_plan}).
     @param func_sels   The [(label, structure_elem)] pairs from the wrapper
                        that contain function declarations ([Dterm], [Dfix]).
-    @return A quadruple [(specs_pp, defs_pp, lifted_pp, lifted_specs_pp)] where
-            [specs_pp] is the header-pass declaration block, [defs_pp] the
+    @param mp          The wrapper module.
+    @return A quadruple [(specs, defs_pp, lifted_pp, lifted_specs_pp)] where
+            [specs] is the header pass's body of the module's struct, each
+            element's declarations a member of it, [defs_pp] the
             implementation-pass definition block, [lifted_pp] any top-level
             declarations that were lifted out of local function bodies during
             translation, and [lifted_specs_pp] the forward declarations of the
             functions among those, which are due before the struct rather than
             after it. *)
-let pp_wrapper_module_dual ~is_header func_sels =
+let pp_wrapper_module_dual ~is_header mp func_sels =
   let process_sel (_l, se) =
     match wrapper_element se with
     | Wrapper_nothing -> ([], [])
@@ -1746,10 +1748,10 @@ let pp_wrapper_module_dual ~is_header func_sels =
   let render_decls ds = Cpp_ast.concat fnl (List.map (fun (d, env) -> write_decl env d) ds) in
   let render_sel_specs (specs, _) = render_decls specs in
   let render_sel_defs (_, defs) = render_decls defs in
-  let specs_pp =
+  let specs =
     with_render_ctx
       (fun c -> { c with rc_in_struct = true })
-      (fun () -> concat_nonempty cut2 render_sel_specs all_results)
+      (fun () -> Cpp_ast.module_body mp (List.map render_sel_specs all_results))
   in
   let defs_pp = concat_nonempty cut2 render_sel_defs all_results in
   (* A lifted helper is emitted after the struct it was lifted out of, and its
@@ -1777,7 +1779,7 @@ let pp_wrapper_module_dual ~is_header func_sels =
       (write_decl (empty_env ()))
       (List.filter_map snd lifted_split)
   in
-  (specs_pp, defs_pp, lifted_pp, lifted_specs_pp)
+  (specs, defs_pp, lifted_pp, lifted_specs_pp)
 
 (** What analysing the structure concluded, for the passes that render it. *)
 let structure_analysis : Structure_analysis.t option ref = ref None
@@ -3150,14 +3152,14 @@ let plan_field_names s =
     (declarations s)
 
 (** [pp_wrapper_struct name specs] is the struct a library module is rendered
-    as: its member declarations, [specs], inside a struct of that name. *)
+    as: its body, [specs], inside a struct of that name. *)
 let pp_wrapper_struct name specs =
-  Cpp_ast.(seq [text (str "struct " ++ str name ++ str " {" ++ fnl ()); specs; text (fnl () ++ str "};")])
+  Cpp_ast.module_ (Struct {head = str "struct " ++ str name ++ str " {" ++ fnl (); tail = str "};"}) specs
 
 (** What rendering one wrapper module produced, beyond the declarations that
     merge into its struct.
 
-    [wr_specs] are the declarations of its functions, which go in its struct:
+    [wr_specs] is the body of declarations of its functions, which go in its struct:
     one of its own at the module's turn, or one of the same name around an
     inductive, as planned ({!file_layout}).
     [wr_defs] are the out-of-line definitions, which follow the whole file.
@@ -3173,7 +3175,7 @@ let pp_wrapper_struct name specs =
 type wrapper_render = {
   wr_module : ModPath.t;
   wr_name : string;
-  wr_specs : Cpp_ast.t;
+  wr_specs : Cpp_ast.body;
   wr_defs : Cpp_ast.t;
   wr_lifted : Cpp_ast.t;
   wr_lifted_specs : Cpp_ast.t;
@@ -3406,7 +3408,9 @@ let do_struct_with_decl_tracking ~is_header f s =
       List.filter_map (fun (name, d) -> if List.memq d defined then Some name else None) !file_layout.wrapper_homes
     in
     let {text = p; concepts = c; asserts = _} =
-      Cpp_print.writing_wrapper_members (List.map (fun name -> (name, wrapper_specs name)) homed) (fun () -> f x)
+      Cpp_print.writing_wrapper_members
+        (List.map (fun name -> (name, Cpp_ast.spliced (wrapper_specs name))) homed)
+        (fun () -> f x)
     in
     if is_header && Probe.checking () then begin
       let absorbed = Cpp_print.take_absorbed_wrappers () in
@@ -3475,15 +3479,15 @@ let do_struct_with_decl_tracking ~is_header f s =
             let old_decls = !current_structure_decls in
             current_structure_decls := sel;
             let p_specs, p_defs, p_lifted, p_lifted_specs =
-              pp_wrapper_module_dual ~is_header func_sels
+              pp_wrapper_module_dual ~is_header mp func_sels
             in
             current_structure_decls := old_decls;
-            if is_header && Cpp_ast.is_empty p_specs = Hashtbl.mem unmerged_wrappers name then
+            if is_header && Cpp_ast.body_is_empty p_specs = Hashtbl.mem unmerged_wrappers name then
               Probe.violation "unmerged wrappers"
                 Pp.(
                   str "the wrapper " ++ str name
                   ++ str
-                       ( if Cpp_ast.is_empty p_specs then " was planned to hold declarations and holds none"
+                       ( if Cpp_ast.body_is_empty p_specs then " was planned to hold declarations and holds none"
                          else " holds declarations it was not planned to" ) );
             Some
               {
@@ -3523,7 +3527,7 @@ let do_struct_with_decl_tracking ~is_header f s =
       let wrapper_specs name =
         match List.find_opt (fun w -> String.equal w.wr_name name) wrapper_parts with
         | Some w -> w.wr_specs
-        | None -> Cpp_ast.empty
+        | None -> Cpp_ast.module_body mp []
       in
       let f = place ~wrapper_specs ~prereq_labels ~hoisted ~prereqs ~concepts in
       let old_decls = !current_structure_decls in
@@ -3542,7 +3546,7 @@ let do_struct_with_decl_tracking ~is_header f s =
              hold its declarations, and has ({!file_layout}). *)
           let wrapper_pp =
             let specs = wrapper_specs name in
-            if (not is_header) || Cpp_ast.is_empty specs || List.mem_assoc name !file_layout.wrapper_homes then
+            if (not is_header) || Cpp_ast.body_is_empty specs || List.mem_assoc name !file_layout.wrapper_homes then
               Cpp_ast.empty
             else
               let struct_pp = pp_wrapper_struct name specs in

@@ -87,6 +87,11 @@ val module_body : ModPath.t -> t list -> body
 (** Whether [body] has no members. *)
 val body_is_empty : body -> bool
 
+(** [body]'s members as a declaration writes them into a struct of its own:
+    one after another, separated as {!Module} separates them, with nothing
+    around them. *)
+val spliced : body -> t
+
 (** [module_ enclosure ~fields body] writes [body] as {!Module}; nothing, if
     that writes nothing. *)
 val module_ : enclosure -> ?fields:t -> body -> t

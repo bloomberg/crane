@@ -100,6 +100,8 @@ let rec join_members = function
   | t :: (next :: _ as rest) ->
     t :: Text (if starts_with_doc_comment next then Pp.fnl () else cut2 ()) :: join_members rest
 
+let spliced b = Seq (join_members b.body_members)
+
 let rec to_pp = function
   | Text d -> d
   | Decl {text; _} -> text
