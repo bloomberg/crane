@@ -119,6 +119,26 @@ val promoted_alias_import : Names.Id.t -> string option
 
 (** {2 Synthesised aliases} *)
 
+(** A template synthesised to stand where a type constructor is written as a
+    template template argument but has no template name of its own. *)
+type ctor_alias
+
+(** The synthesised templates the finished declaration written in [file]
+    writes, in the order written, in the scope being written. *)
+val ctor_aliases_written : file:Common.file -> Cpp_erasure.settled -> ctor_alias list
+
+(** The synthesised templates the type [t] writes in [file], its type
+    variables read as [vl]. *)
+val ctor_aliases_of_type : file:Common.file -> vl:Id.t list -> cpp_type -> ctor_alias list
+
+(** Plan the templates the header and the implementation write
+    ([intf], [impl]), each in the order written. *)
+val plan_ctor_aliases : intf:ctor_alias list -> impl:ctor_alias list -> unit
+
+(** Under [CRANE_CHECK_IR], check what the file [file] spelled against the
+    plan. *)
+val check_ctor_alias_plan : file:Common.file -> unit
+
 (** Take the alias templates minted since the last call, as declarations;
     [select] keeps only the names it accepts. *)
 val take_ctor_alias_decls :

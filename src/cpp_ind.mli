@@ -314,6 +314,10 @@ val header_decls : Miniml.ml_decl -> element
     and the helpers are those the header is planned to place there. *)
 val header_element_ahead : Miniml.ml_decl -> element
 
+(** What the implementation writes for a declaration, read off what was
+    generated ahead of the files without taking it. *)
+val impl_element_ahead : Miniml.ml_decl -> element
+
 (** Whether the inductive [d] declares, promoted to its module's struct,
     makes that struct derive from [enable_shared_from_this], read off what
     was generated ahead of the files in the current module. *)

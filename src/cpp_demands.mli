@@ -38,6 +38,24 @@ val globals_of_decl : Minicpp.cpp_decl -> Names.GlobRef.t list
 (** The globals the type [t] writes the names of where it is written. *)
 val globals_of_type : Minicpp.cpp_type -> Names.GlobRef.t list
 
+(** [tyctors_of_decl f d] calls [f ~vl ~owner t] at each type constructor
+    [Ttyctor t] the finished declaration [d] writes, in the order written,
+    with the names of the template parameters its type variables are read
+    as there ([vl]), and the struct whose members are written around it, if
+    any ([owner]). *)
+val tyctors_of_decl :
+  (vl:Names.Id.t list -> owner:Names.GlobRef.t option -> Minicpp.cpp_type -> unit) ->
+  Minicpp.cpp_decl ->
+  unit
+
+(** [tyctors_of_type f ~vl t] is {!tyctors_of_decl} of the type [t], written
+    where its type variables are read as [vl]. *)
+val tyctors_of_type :
+  (vl:Names.Id.t list -> owner:Names.GlobRef.t option -> Minicpp.cpp_type -> unit) ->
+  vl:Names.Id.t list ->
+  Minicpp.cpp_type ->
+  unit
+
 (** The promoted type variables -- a class's [Type]-valued fields -- the
     finished declaration [d] writes, in the order it writes them. *)
 val promoted_of_decl : Minicpp.cpp_decl -> Names.Id.t list

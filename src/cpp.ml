@@ -2373,6 +2373,24 @@ let struct_members ~wrapper mp sel =
             | {helpers = _ :: _; _} -> None ) )
         (Some []) sel
 
+(** [in_header_element_scope mp k] runs [k ~in_struct] in the render
+    context the header writes an element of the module [mp] in, as planned
+    ({!Cpp_ind.header_scope}): [in_struct] says whether that is inside the
+    module's struct. *)
+let in_header_element_scope mp k =
+  match Cpp_ind.header_scope mp with
+  | None ->
+    CErrors.anomaly
+      Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned header scope.")
+  | Some {in_struct; concepts_hoisted} ->
+    with_render_ctx
+      (fun _ ->
+        { initial_render_ctx with
+          rc_in_struct = in_struct;
+          rc_concepts_hoisted = concepts_hoisted;
+          rc_in_template = Scope_plan.templated mp } )
+      (fun () -> k ~in_struct)
+
 (** Plan where the header writes what it does not write in place
     ({!file_layout}), and which modules' structs it declares ahead of the
     file ({!hoisted_structs}).
@@ -2451,18 +2469,7 @@ let plan_file_layout s =
     List.iter (fun h -> defines ~origin:Lifted_from_wrapper mp (empty_env ()) (fst (lifted_views h))) (wrapper_lifted se)
   in
   let element mp d =
-    match Cpp_ind.header_scope mp with
-    | None ->
-      CErrors.anomaly
-        Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned header scope.")
-    | Some {in_struct; concepts_hoisted} ->
-      with_render_ctx
-        (fun _ ->
-          { initial_render_ctx with
-            rc_in_struct = in_struct;
-            rc_concepts_hoisted = concepts_hoisted;
-            rc_in_template = Scope_plan.templated mp } )
-      @@ fun () ->
+    in_header_element_scope mp @@ fun ~in_struct ->
       let scope = current_scope () in
       let e = Cpp_ind.header_element_ahead d in
       home mp d e.rendered;
@@ -2516,6 +2523,81 @@ let plan_file_layout s =
             if at <= own && not (List.mem_assoc name acc) then acc @ [(name, d)] else acc )
           []
           (List.stable_sort (fun (i, _, _, _) (j, _, _, _) -> Int.compare i j) (List.rev !homes)) }
+
+(** Plan the synthesised templates each file writes
+    ({!Cpp_print.plan_ctor_aliases}), read off what was generated ahead of
+    the files where each writes it, in the scope it writes it in
+    ({!walk_as_rendered}): each element's declarations, its helpers and the
+    member definitions it gives up; a wrapper module's functions, and what
+    is lifted out of them; and a module's class concepts and the fields and
+    methods of the record merged into its struct, which are written with the
+    module, in the scope that encloses it. *)
+let plan_ctor_aliases s =
+  let intf = ref [] and impl = ref [] in
+  let written file ds =
+    let cell = match file with Common.Intf -> intf | Common.Impl -> impl in
+    List.iter (fun d -> cell := List.rev_append (Cpp_print.ctor_aliases_written ~file d) !cell) ds
+  in
+  let helpers file hs =
+    written file
+      (List.concat_map
+         (fun h -> match lifted_views h with def, Some spec -> [def; spec] | def, None -> [def])
+         hs )
+  in
+  let element d =
+    in_header_element_scope (top_visible_mp ()) (fun ~in_struct:_ ->
+        let h = Cpp_ind.header_element_ahead d in
+        written Common.Intf (List.map snd h.rendered);
+        helpers Common.Intf h.helpers;
+        written Common.Intf (List.map snd h.member_defs) );
+    with_render_ctx (fun _ -> initial_render_ctx) (fun () ->
+        let i = Cpp_ind.impl_element_ahead d in
+        written Common.Impl (List.map snd i.rendered);
+        helpers Common.Impl i.helpers;
+        written Common.Impl (List.map snd i.member_defs) )
+  in
+  let wrapper_element se =
+    with_render_ctx (fun _ -> initial_render_ctx) @@ fun () ->
+    match wrapper_element se with
+    | Wrapper_nothing -> ()
+    | Wrapper_instance (r, a, t) ->
+      let ds, hs = Cpp_ind.instance_entity r a t in
+      written Common.Intf (List.map Cpp_ind.finished_alone (hs @ List.map snd ds))
+    | Wrapper_functions (_, generate) ->
+      let gs = generate () in
+      List.iter
+        (fun file ->
+          List.iter
+            (fun (specs, defs) -> written file (List.map fst (specs @ defs)))
+            (file_views ~is_header:(file = Common.Intf) [gs]) )
+        [Common.Intf; Common.Impl];
+      helpers Common.Intf (List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) gs)
+  in
+  let after_module (frame : Module_frame.t) sel =
+    List.iter (fun (_, r, fields) -> written Common.Intf [Cpp_ind.finished_alone (Cpp_ind.concept r fields)]) (declared_classes sel);
+    Option.iter
+      (fun (r, fields, (packet : ml_ind_packet)) ->
+        let vl = packet.ip_vars in
+        List.iter
+          (fun t -> intf := List.rev_append (Cpp_print.ctor_aliases_of_type ~file:Common.Intf ~vl t) !intf)
+          (Cpp_ind.record_field_types r vl fields) )
+      (merged_eponymous_record frame);
+    Option.iter
+      (fun (r, vars, candidates) ->
+        let fields, hs = Cpp_ind.record_methods r vars candidates in
+        if fields <> [] then written Common.Intf [Cpp_ind.finished_record_methods r vars fields];
+        written Common.Intf (List.map (fun h -> fst (lifted_views ~may_hoist:false h)) hs) )
+      (eponymous_record_methods frame)
+  in
+  Cpp_ind.peeking (fun () ->
+      walk_as_rendered ~after_module
+        ~decl:(fun ~wrapper se ->
+          match se with
+          | SEdecl (Dterm _ | Dfix _) when wrapper -> wrapper_element se
+          | SEdecl d -> element d
+          | SEmodule _ | SEmodtype _ -> () )
+        s );
+  Cpp_print.plan_ctor_aliases ~intf:(List.rev !intf) ~impl:(List.rev !impl)
 
 (* The declarations of [s], a functor's body's among them, in order. *)
 let declarations s =
@@ -3888,6 +3970,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     | [] -> mt ()
     | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
   in
+  Cpp_print.check_ctor_alias_plan ~file:(if is_header then Common.Intf else Common.Impl);
   (forward_decls ++ leftover_aliases ++ prlist (fun x -> x) sections)
   ++ fnl ()
 

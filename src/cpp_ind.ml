@@ -1434,6 +1434,10 @@ let header_decls = decls_for ~is_header:true
     it: nothing is recorded or claimed. *)
 let header_element_ahead d = peeking (fun () -> header_decls d)
 
+(** What the implementation writes for the declaration [d], read off what
+    was generated ahead of the files without taking it. *)
+let impl_element_ahead d = peeking (fun () -> impl_decls d)
+
 let promoted_shared_from_this d =
   peeking @@ fun () ->
   match generate d with

@@ -67,6 +67,10 @@ val files_named_ahead : Miniml.ml_structure -> Names.ModPath.t list
     forward declarations and name nothing inside another struct. *)
 val plan_file_layout : Miniml.ml_structure -> unit
 
+(** Plan the synthesised templates each file writes, before either is
+    rendered ({!Cpp_print.plan_ctor_aliases}). *)
+val plan_ctor_aliases : Miniml.ml_structure -> unit
+
 (** The C++ name of each global the unit declares, a functor's body
     included, decided in declaration order ({!Common.pp_global_name}): an
     inductive's, then its constructors', then a record's fields, at the kind

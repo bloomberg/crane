@@ -620,8 +620,6 @@ let ctor_holder_decls : (string * string) list ref = ref []
     implementation file is reached after the header has been handed over. *)
 let ctor_alias_emitted : (string, unit) Hashtbl.t = Hashtbl.create 16
 
-let reset_ctor_alias_emitted () = Hashtbl.reset ctor_alias_emitted
-
 (** Whether [text] spells [name] as a whole identifier.  An alias's name ends
     in a digest of its body, but a holder's is numbered ([crane_carrier_tch],
     [crane_carrier_tch1]), so one can be a prefix of another. *)
@@ -787,6 +785,41 @@ let ctor_alias_name_for ~base body =
     ctor_alias_decls := (body, name) :: !ctor_alias_decls;
     name
 
+(** The synthesised templates each file writes, planned before either is
+    rendered ({!Cpp.plan_ctor_aliases}): each file's, in the order it first
+    writes them, and the name of each holder, by its body. *)
+type ctor_alias_plan = {
+  intf : ctor_alias list;
+  impl : ctor_alias list;
+  holder_names : (string * string) list;
+}
+
+let ctor_alias_plan : ctor_alias_plan ref = State.cell State.Unit {intf = []; impl = []; holder_names = []}
+
+(** Plan [intf] and [impl], the templates the header and the implementation
+    write, each in the order the walk ahead of the files reaches them.  A
+    holder is named after its base, numbered past every other holder of that
+    base the unit writes, the header's first. *)
+let plan_ctor_aliases ~intf ~impl =
+  let dedup l = List.fold_left (fun acc a -> if List.mem a acc then acc else acc @ [a]) [] l in
+  let intf = dedup intf and impl = dedup impl in
+  let holder_names =
+    List.fold_left
+      (fun names a ->
+        if (not a.ca_holder) || List.mem_assoc a.ca_body names then names
+        else
+          let rec fresh i =
+            let name = a.ca_base ^ "_tch" ^ if i = 0 then "" else string_of_int i in
+            if List.exists (fun (_, n) -> String.equal n name) names then fresh (i + 1) else name
+          in
+          names @ [(a.ca_body, fresh 0)] )
+      [] (intf @ impl)
+  in
+  ctor_alias_plan := {intf; impl; holder_names}
+
+(** The templates spelled in the file being written, under [CRANE_CHECK_IR]. *)
+let ctor_aliases_spelled : ctor_alias list ref = ref []
+
 (** The name of [alias], declared in the registries. *)
 let register_ctor_alias alias =
   let name =
@@ -794,7 +827,53 @@ let register_ctor_alias alias =
     else ctor_alias_name_for ~base:alias.ca_base alias.ca_body
   in
   Option.iter (Hashtbl.replace ctor_alias_homes name) alias.ca_home;
+  if Probe.checking () && not (List.mem alias !ctor_aliases_spelled) then
+    ctor_aliases_spelled := !ctor_aliases_spelled @ [alias];
   name
+
+let reset_ctor_alias_emitted () =
+  Hashtbl.reset ctor_alias_emitted;
+  ctor_aliases_spelled := []
+
+(** Under [CRANE_CHECK_IR], the templates the file [file] spelled must be the
+    ones planned for it, and each holder named as planned. *)
+let check_ctor_alias_plan ~file =
+  if Probe.checking () then begin
+    let planned = match file with Common.Intf -> !ctor_alias_plan.intf | Common.Impl -> !ctor_alias_plan.impl in
+    let spelled = !ctor_aliases_spelled in
+    ctor_aliases_spelled := [];
+    let describe a =
+      Printf.sprintf "%s %s%s" (if a.ca_holder then "holder" else "alias") a.ca_body
+        (match a.ca_home with Some mp -> " in " ^ ModPath.to_string mp | None -> "")
+    in
+    let missing l l' = List.filter (fun a -> not (List.mem a l')) l in
+    ( match (missing spelled planned, missing planned spelled) with
+    | [], [] -> ()
+    | unplanned, unspelled ->
+      Probe.violation "constructor aliases"
+        Pp.(
+          str "the " ++ str (Common.phase_name (Common.Emit file)) ++ str " spells "
+          ++ prlist_with_sep pr_comma (fun a -> str (describe a)) unplanned
+          ++ str " unplanned, and does not spell "
+          ++ prlist_with_sep pr_comma (fun a -> str (describe a)) unspelled
+          ++ str " planned" ) );
+    List.iter
+      (fun a ->
+        if a.ca_holder then
+          let registered = List.assoc_opt a.ca_body !ctor_holder_decls in
+          let planned = List.assoc_opt a.ca_body !ctor_alias_plan.holder_names in
+          if registered <> None && registered <> planned then
+            Probe.violation "constructor aliases"
+              Pp.(
+                str "the holder " ++ str (Option.default "?" registered) ++ str " of " ++ str a.ca_body
+                ++ str " was planned to be named " ++ str (Option.default "nothing" planned) ) )
+      spelled
+  end
+
+(** The constructor a type constructor position writes: an applied type
+    there is the eta-expansion of the constructor, whose head is what the
+    position wants. *)
+let tyctor_constructor = function Tapply (head, _) -> head | t -> t
 
 (** [str_of] up to its first template argument list. *)
 let cut_at_argument_list str_of =
@@ -1366,7 +1445,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
        mapping the head is the template's own leading text.  An applied type
        here is the eta-expansion of the constructor: its head is what the
        position wants. *)
-    let t = match t with Tapply (head, _) -> head | t -> t in
+    let t = tyctor_constructor t in
     let file = match Common.get_phase () with Common.Emit file -> file | Common.Plan -> Common.Intf in
     match ctor_alias_at ~file vl t with
     | Some (alias, args) ->
@@ -3518,6 +3597,27 @@ let with_struct_scope r f =
     let mp = ModPath.MPdot (top_visible_mp (), scope) in
     with_visibility (inside ~members:(Id.Set.of_list ctors) mp [] outer) f
   | _ -> f ()
+
+(** The synthesised templates found by [visit], which calls its argument at
+    each type constructor written, in [file], each in the context the printer
+    writes it in: inside the struct of the inductive whose members are
+    written around it, if any ({!with_struct_scope}). *)
+let ctor_aliases_found ~file visit =
+  let found = ref [] in
+  visit (fun ~vl ~owner t ->
+      match t with
+      | Ttyctor t ->
+        let at () =
+          Option.iter (fun (a, _) -> found := a :: !found) (ctor_alias_at ~file vl (tyctor_constructor t))
+        in
+        ( match owner with Some r -> with_struct_scope r at | None -> at () )
+      | _ -> () );
+  List.rev !found
+
+let ctor_aliases_written ~file (d : Cpp_erasure.settled) =
+  ctor_aliases_found ~file (fun f -> Cpp_demands.tyctors_of_decl f (d :> cpp_decl))
+
+let ctor_aliases_of_type ~file ~vl t = ctor_aliases_found ~file (fun f -> Cpp_demands.tyctors_of_type f ~vl t)
 
 (** Where a member is being written.
 

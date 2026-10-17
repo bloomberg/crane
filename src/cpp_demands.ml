@@ -37,8 +37,16 @@ let no_holes = {typ = None; scrut = None; tyargs = []; cases = []; args = []}
    a structured binding's field types -- are not written, and neither is
    what a printing rule drops (the type of an abort that is returned, a move
    out of a returned variable). *)
-let collect ?(global = ignore) ?(promoted = ignore) visit =
+let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:_ _ -> ()) ?(vl = []) visit =
   let found = ref [] in
+  (* The names of the template parameters the type variables written are
+     read as, and the struct whose members are being written. *)
+  let names = ref vl and owner = ref None in
+  let scoped cell v k =
+    let saved = !cell in
+    cell := v;
+    Fun.protect ~finally:(fun () -> cell := saved) k
+  in
   let need h = if not (List.mem h !found) then found := h :: !found in
   let std h = need (Table.Standard h) in
   let rt h = need (Table.Runtime h) in
@@ -81,7 +89,9 @@ let collect ?(global = ignore) ?(promoted = ignore) visit =
         List.iter ty tys;
         Some t )
     (* Only its head is written. *)
-    | Ttyctor _ -> Some t
+    | Ttyctor _ ->
+      tyctor ~vl:!names ~owner:!owner t;
+      Some t
     | Texpr_type e ->
       expr e;
       Some t
@@ -255,11 +265,18 @@ let collect ?(global = ignore) ?(promoted = ignore) visit =
     | Dasgn (_, t, CPPabort _) ->
       ty t;
       std "stdexcept"
-    | d ->
-      ( match d with
-      | Dstruct {ds_fields; _} | Dfields {ds_fields; _} -> List.iter field ds_fields
-      | _ -> () );
-      ignore (map_decl (fun e -> expr e; e) (fun s -> stmt s; s) (fun t -> ty t; t) d)
+    | d -> (
+      let members () =
+        ( match d with
+        | Dstruct {ds_fields; _} | Dfields {ds_fields; _} -> List.iter field ds_fields
+        | _ -> () );
+        ignore (map_decl (fun e -> expr e; e) (fun s -> stmt s; s) (fun t -> ty t; t) d)
+      in
+      match d with
+      | Dusing u -> scoped names (List.map snd u.du_tparams) members
+      | Dstruct {ds_ref = r; _} | Dfields {ds_ref = r; _} | Dmember_def {dm_owner = r; _} ->
+        scoped owner (Some r) members
+      | _ -> members () )
   in
   visit ~decl ~ty;
   !found
@@ -276,6 +293,10 @@ let globals visit =
 let globals_of_decl d = globals (fun ~decl ~ty:_ -> decl d)
 
 let globals_of_type t = globals (fun ~decl:_ ~ty -> ty t)
+
+let tyctors_of_decl tyctor d = ignore (collect ~tyctor (fun ~decl ~ty:_ -> decl d))
+
+let tyctors_of_type tyctor ~vl t = ignore (collect ~tyctor ~vl (fun ~decl:_ ~ty -> ty t))
 
 let promoted visit =
   let found = ref [] in
