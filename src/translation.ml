@@ -6166,6 +6166,11 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         let rec chain_excess base cod excess =
           if excess = [] then base
           else
+            (* A codomain written by name -- [stateT nat (stateT bool m) A],
+               which is [nat -> stateT bool m (nat * A)] -- takes the
+               arguments of the arrows the name stands for, and what is left
+               after them may be another such name. *)
+            let cod = Option.map expand_ml_fun_alias cod in
             let n_here, cod' =
               let cod_cpp c =
                 let t = cpp_of_ml env c in

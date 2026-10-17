@@ -286,7 +286,7 @@ struct NestedStatetRetType {
       }();
   static inline const Nat unstacked = []() {
     auto &&_sv =
-        stacked(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))), true).observe();
+        stacked(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))(true).observe();
     if (std::holds_alternative<typename ItreeF<
             noE, std::pair<bool, std::pair<Nat, Nat>>,
             Itree<noE, std::pair<bool, std::pair<Nat, Nat>>>>::RetF>(_sv.v())) {

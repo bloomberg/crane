@@ -249,15 +249,3 @@
   (alias runtest)
   (deps tyarg_implicit_type_binder.t.exe)
   (action (run ./tyarg_implicit_type_binder.t.exe))))
-
-
-(subdir nested_statet_ret_type
- (rule
-  (targets nested_statet_ret_type.t.exe)
-  (deps NestedStatetRetType.vo nested_statet_ret_type.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_statet_ret_type.t.exe nested_statet_ret_type.cpp nested_statet_ret_type.t.cpp)))
- (rule
-  (alias runtest)
-  (deps nested_statet_ret_type.t.exe)
-  (action (run ./nested_statet_ret_type.t.exe))))
