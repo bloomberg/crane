@@ -3248,19 +3248,16 @@ let pp_wrapper_struct name specs =
     module's own place in the topological order, because a later module's
     constant may be initialised from it.
 
-    A lifted declaration is emitted once: whoever emits it empties the field,
-    so what is left at the end of the file is exactly what no module's turn
-    came round to claim.
-
     [wr_lifted_specs] are the forward declarations of the functions among them,
     and go at the top of the file instead, because the callers of a lifted
     helper are inside the struct it was lifted out of and so precede it
     wherever its definition lands. *)
 type wrapper_render = {
+  wr_module : ModPath.t;
   wr_name : string;
   wr_specs : Pp.t;
   wr_defs : Pp.t;
-  mutable wr_lifted : Pp.t option;
+  wr_lifted : Pp.t;
   wr_lifted_specs : Pp.t;
 }
 
@@ -3592,7 +3589,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     List.filter_map
       (fun (mp, _) -> if is_modfile mp then Some mp else None) s
   in
-  let wrapper_parts, deferred_defs, deferred_lifted, p, hoisted, prereqs, concepts =
+  let wrapper_parts, deferred_defs, p, hoisted, prereqs, concepts =
     with_visibility (toplevel_visibility initial_mps) @@ fun () ->
     let analysis = get_structure_analysis () in
     let is_func_decl (_, se) =
@@ -3632,10 +3629,11 @@ let do_struct_with_decl_tracking ~is_header f s =
                          else " holds declarations it was not planned to" ) );
             Some
               {
+                wr_module = mp;
                 wr_name = name;
                 wr_specs = p_specs;
                 wr_defs = p_defs;
-                wr_lifted = (if Pp.ismt p_lifted then None else Some p_lifted);
+                wr_lifted = p_lifted;
                 wr_lifted_specs = p_lifted_specs;
               } )
         wrapper_names
@@ -3655,26 +3653,8 @@ let do_struct_with_decl_tracking ~is_header f s =
                 else [] )
               wrapper_names )
     in
-    let joined pick =
-      prlist
-        (fun part ->
-          match pick part with
-          | None -> mt ()
-          | Some pp -> if Pp.ismt pp then mt () else cut2 () ++ pp )
-        wrapper_parts
-    in
-    let deferred_defs = joined (fun w -> Some w.wr_defs) in
-    (* A lifted declaration [ppl] did not get to emit -- its module is not in the
-       rendered order -- still has to appear somewhere, so it goes at the end. *)
-    let deferred_lifted () = joined (fun w -> w.wr_lifted) in
-    (* [ppl] emits a module's lifted declaration when the module's turn comes,
-       and empties the field so the tail does not repeat it. *)
-    let claim_lifted name =
-      match List.find_opt (fun w -> String.equal w.wr_name name) wrapper_parts with
-      | Some ({wr_lifted = Some l; _} as w) ->
-        w.wr_lifted <- None;
-        l
-      | _ -> mt ()
+    let deferred_defs =
+      prlist (fun w -> if Pp.ismt w.wr_defs then mt () else cut2 () ++ w.wr_defs) wrapper_parts
     in
     name_cache :=
       Some (Name_resolution.create ~structure_analysis:analysis s);
@@ -3733,7 +3713,11 @@ let do_struct_with_decl_tracking ~is_header f s =
           (* A declaration lifted out of this module -- an instance struct -- is
              due at the same point, and for the same reason: a later module's
              constant may be initialised from it. *)
-          let lifted_pp = claim_lifted name in
+          let lifted_pp =
+            match List.find_opt (fun w -> ModPath.equal w.wr_module mp) wrapper_parts with
+            | Some w -> w.wr_lifted
+            | None -> mt ()
+          in
           (* The wrapper struct and what was lifted out of it are elements of
              their own, assembled here rather than by [f]: an alias they spell
              goes in front of them, not in front of the whole section they end
@@ -3904,7 +3888,6 @@ let do_struct_with_decl_tracking ~is_header f s =
     in
     ( wrapper_parts,
       deferred_defs,
-      deferred_lifted,
       p,
       List.concat_map (fun (_, h, _, _) -> h) placed,
       List.concat_map (fun (_, _, c, _) -> c) placed,
@@ -3974,14 +3957,13 @@ let do_struct_with_decl_tracking ~is_header f s =
     | [] -> mt ()
     | ds -> cut2 () ++ prlist_with_sep cut2 (fun x -> x) ds
   in
-  let deferred_lifted = deferred_lifted () in
   (* In writing order, so that an alias no single element claimed -- one whose
      only use is in a section assembled out of several -- still lands in front
      of the first section that writes it rather than in the prologue. *)
   let sections =
     List.map (prefix_due_declarations ~is_header)
       [ hoisted_erased_aliases; hoisted_concept_prereqs; hoisted_concepts; hoisted_wrappers; lifted_fun_specs; p;
-        deferred_lifted; deferred_defs; deferred_members ]
+        deferred_defs; deferred_members ]
   in
   (* Whatever nothing spelled.  A body may still name something defined later,
      which is the case the placement above exists for, but an alias with no use
