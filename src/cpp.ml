@@ -620,11 +620,6 @@ let struct_hoists mp doc =
         ++ str " was planned to be declared ahead of the file and qualifies a name into another struct" );
   planned
 
-(** The module structs this file's pass chose to declare ahead of everything,
-    newest first.  Emptied by the assembly at the end of
-    {!do_struct_with_decl_tracking}. *)
-let hoisted_module_structs : Pp.t list ref = ref []
-
 (** Report what a lifted helper met at the site that placed it, under
     [CRANE_DBG_LIFTED].
 
@@ -1422,19 +1417,7 @@ let rec pp_structure_elem ~is_header f = function
     if Pp.ismt mod_pp then
       mt ()
     else
-      let doc = pp_doc_comment l in
-      let whole = doc ++ mod_pp in
-      (* A [Module] of nothing but definitions is rendered as a struct of
-         declarations, and a datatype's hoisted member may call one; see
-         {!hoisted_structs}. *)
-      if
-        is_header
-        && (not (!render_ctx).rc_in_struct)
-        && (match m.ml_mod_expr with MEstruct (body_mp, _) -> struct_hoists body_mp whole | _ -> false)
-      then (
-        hoisted_module_structs := whole :: !hoisted_module_structs;
-        mt () )
-      else whole
+      pp_doc_comment l ++ mod_pp
   | l, SEmodtype m ->
     if (not is_header) || (!render_ctx).rc_in_struct then
       mt ()
@@ -2316,8 +2299,10 @@ let struct_members ~wrapper mp sel =
         (Some []) sel
 
 (** Plan which modules' structs the header declares ahead of the file
-    ({!hoisted_structs}): wrapper modules, and modules written
-    outside every struct and every class template a functor becomes, whose members' types name only inductives
+    ({!hoisted_structs}): wrapper modules, and the modules a file's own
+    elements are, written outside every struct and every class template a
+    functor becomes -- the struct of a module written further in is placed
+    with whatever contains it -- whose members' types name only inductives
     ({!module_members_name_only_inductives}), and whose struct holds nothing
     but static function declarations naming nothing inside another struct.
     Asked of what was generated ahead of the files, in the context the
@@ -2325,7 +2310,9 @@ let struct_members ~wrapper mp sel =
     rendered. *)
 let plan_hoisted_structs s =
   let hoists ~wrapper mp sel =
-    (wrapper || (outside_every_struct mp && not (Scope_plan.templated mp)))
+    (wrapper
+    || (match mp with MPdot (parent, _) -> is_modfile parent | MPfile _ | MPbound _ -> false)
+       && outside_every_struct mp && not (Scope_plan.templated mp))
     && module_members_name_only_inductives sel
     && Option.cata
          (List.for_all (fun d ->
@@ -3205,33 +3192,39 @@ let do_struct_with_decl_tracking ~is_header f s =
      {!prefix_mentioned_aliases}, applied here per top-level element and again
      to each section of the assembled file.
 
-     Only at the outermost call.  [f] recurses through module children, and a
-     nested element is rendered inside a struct, where an alias template would
-     acquire that struct's scope while its use sites spell it unqualified. *)
-  let f =
-    let depth = ref 0 in
-    fun ((l, _) as x) ->
-      incr depth;
-      let p = Fun.protect ~finally:(fun () -> decr depth) (fun () -> f x) in
-      if !depth <> 0 then
-        p
-      else
-        let p = prefix_mentioned_aliases ~is_header p in
-        (* An element the concepts cannot be read without travels with them.
-           Decided here rather than inside the element because the question is
-           about the file -- see {!concept_prereqs} -- and answered by label
-           because that is what the element knows about itself. *)
-        if Names.Label.Set.mem l !concept_prereq_labels && not (Pp.ismt p)
-        then (
-          push file_scope_concept_prereqs p;
-          mt () )
-        else
-          p
+     Only for a top-level element.  A nested element is rendered inside a
+     struct, where an alias template would acquire that struct's scope while
+     its use sites spell it unqualified.
+
+     A top-level element is placed here, in one of three places: the
+     struct of a module planned to be declared ahead of the file goes to the
+     top ({!hoisted_structs}); an element the concepts cannot be read without
+     travels with them -- decided by label, because that is what the element
+     knows about itself, against [prereq_labels] ({!concept_prereqs}); and
+     everything else stays where it is.  The first two are collected into
+     [hoisted] and [prereqs], newest first, by the module being written
+     ([ppl] below). *)
+  let place ~prereq_labels ~hoisted ~prereqs ((l, se) as x) =
+    let p = f x in
+    let hoists =
+      is_header
+      && (not (!render_ctx).rc_in_struct)
+      && (not (Pp.ismt p))
+      && match se with
+         | SEmodule {ml_mod_expr = MEstruct (body_mp, _); _} -> struct_hoists body_mp p
+         | _ -> false
+    in
+    if hoists then (
+      hoisted := p :: !hoisted;
+      mt () )
+    else
+      let p = prefix_mentioned_aliases ~is_header p in
+      if Names.Label.Set.mem l prereq_labels && not (Pp.ismt p) then (
+        prereqs := p :: !prereqs;
+        mt () )
+      else p
   in
-  concept_prereq_labels := Names.Label.Set.empty;
-  ignore (drain file_scope_concept_prereqs);
   Cpp_print.reset_ctor_alias_emitted ();
-  hoisted_module_structs := [];
   Cpp_ind.discard Cpp_ind.deferred_member_defs;
   Cpp_ind.discard Cpp_ind.file_scope_erased_aliases;
   Cpp_ind.start_render ();
@@ -3243,7 +3236,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     List.filter_map
       (fun (mp, _) -> if is_modfile mp then Some mp else None) s
   in
-  let wrapper_parts, deferred_defs, deferred_lifted, p =
+  let wrapper_parts, deferred_defs, deferred_lifted, p, hoisted, prereqs =
     with_visibility (toplevel_visibility initial_mps) @@ fun () ->
     let analysis = get_structure_analysis () in
     let is_func_decl (_, se) =
@@ -3295,14 +3288,16 @@ let do_struct_with_decl_tracking ~is_header f s =
     in
     (* Asked only now, because whether an inductive is written inside a wrapper
        depends on the declarations just queued against it. *)
-    if is_header then
-      concept_prereq_labels :=
+    let prereq_labels =
+      if not is_header then Names.Label.Set.empty
+      else
         concept_prereqs s ~wrapper_sels:(fun name ->
             List.concat_map
               (fun ((_, sel), wrapper_name) ->
                 if wrapper_name = Some name then List.filter is_func_decl sel
                 else [] )
-              wrapper_names );
+              wrapper_names )
+    in
     let joined pick =
       prlist
         (fun part ->
@@ -3347,6 +3342,8 @@ let do_struct_with_decl_tracking ~is_header f s =
     end;
     let ppl ((mp, sel), wrapper_name) =
       in_planned_visibility mp @@ fun () ->
+      let hoisted = ref [] and prereqs = ref [] in
+      let f = place ~prereq_labels ~hoisted ~prereqs in
       let old_decls = !current_structure_decls in
       current_structure_decls := sel;
       let p =
@@ -3368,10 +3365,8 @@ let do_struct_with_decl_tracking ~is_header f s =
               | Some specs ->
                 Hashtbl.remove pending_wrapper_decls name;
                 let struct_pp = pp_wrapper_struct name specs in
-                if
-                  struct_hoists mp struct_pp
-                then (
-                  hoisted_module_structs := struct_pp :: !hoisted_module_structs;
+                if struct_hoists mp struct_pp then (
+                  hoisted := struct_pp :: !hoisted;
                   mt () )
                 else struct_pp
               | None -> mt ()
@@ -3528,9 +3523,10 @@ let do_struct_with_decl_tracking ~is_header f s =
             prlist_sep_nonempty cut2 f sel
       in
       current_structure_decls := old_decls;
-      p
+      (p, List.rev !hoisted, List.rev !prereqs)
     in
-    let rendered = List.map (fun wn -> (wn, ppl wn)) wrapper_names in
+    let placed = List.map ppl wrapper_names in
+    let rendered = List.map2 (fun wn (p, _, _) -> (wn, p)) wrapper_names placed in
     if modular () then begin
       clear_local_inductives ();
       List.iter add_local_inductive old_local_inductives
@@ -3565,7 +3561,12 @@ let do_struct_with_decl_tracking ~is_header f s =
         | Some main_p -> [p_pre; main_p]
         | None -> [p_pre] )
     in
-    (wrapper_parts, deferred_defs, deferred_lifted, p)
+    ( wrapper_parts,
+      deferred_defs,
+      deferred_lifted,
+      p,
+      List.concat_map (fun (_, h, _) -> h) placed,
+      List.concat_map (fun (_, _, c) -> c) placed )
   in
   let hoisted_erased_aliases =
     let imports = List.map str (Cpp_print.take_promoted_alias_imports ()) in
@@ -3574,7 +3575,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
   in
   let hoisted_concept_prereqs =
-    match drain file_scope_concept_prereqs with
+    match prereqs with
     | [] -> mt ()
     | l -> prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
   in
@@ -3621,11 +3622,9 @@ let do_struct_with_decl_tracking ~is_header f s =
   (* Alongside the lifted helpers and for the same reason, in front of them
      because a helper's own declaration may name one of these. *)
   let hoisted_wrappers =
-    match List.rev !hoisted_module_structs with
+    match hoisted with
     | [] -> mt ()
-    | l ->
-      hoisted_module_structs := [];
-      prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
+    | l -> prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
   in
   (* Last of all: a datatype's method whose body names a module's struct, which
      is emitted after every datatype.  Nothing else in the header is later. *)
