@@ -28,10 +28,10 @@ type rendered = (Common.env * Cpp_erasure.settled) list
 
 (** [render_decl env d] prints [d] as it was finished ahead of the files
     ({!finished_alone}). *)
-val render_decl : Common.env -> Minicpp.cpp_decl -> Pp.t
+val render_decl : Common.env -> Minicpp.cpp_decl -> Cpp_ast.t
 
 (** Print the declarations an entry point answered with. *)
-val pp_decls : rendered -> Pp.t
+val pp_decls : rendered -> Cpp_ast.t
 
 (** Groups of finished declarations written away from where they were
     generated, in writing order, each with the scope it is written in
@@ -39,7 +39,7 @@ val pp_decls : rendered -> Pp.t
 type section = (Cpp_state.scope * rendered) list
 
 (** Render a section's groups, in order and each in its own scope. *)
-val render_section : section -> Pp.t list
+val render_section : section -> Cpp_ast.t list
 
 (** What a type class instance becomes: the struct carrying its methods, and,
     for a ground instance, the [static_assert] checking it against the class's

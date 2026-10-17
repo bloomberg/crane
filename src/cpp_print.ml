@@ -3950,7 +3950,7 @@ let rec unmerged_wrappers_written (d : Cpp_erasure.settled) =
 (** The declarations of the wrapper modules the element being written
     writes into a wrapper struct of the same name, by that name, as planned
     ({!Cpp.file_layout}). *)
-let wrapper_members : (string * Pp.t) list ref = ref []
+let wrapper_members : (string * Cpp_ast.t) list ref = ref []
 
 let writing_wrapper_members members f = setting wrapper_members members f
 
@@ -4230,7 +4230,7 @@ and pp_wrapper_nspace env id (members : Cpp_erasure.settled list) =
       match List.assoc_opt struct_name_str !wrapper_members with
       | Some specs ->
         if Probe.checking () then absorbed_wrappers := struct_name_str :: !absorbed_wrappers;
-        fnl () ++ specs
+        fnl () ++ Cpp_ast.to_pp specs
       | None -> mt ()
     in
     (str "struct " ++ str struct_name_str ++ str " {")
@@ -4554,18 +4554,6 @@ and pp_leaf_decl env (d : cpp_decl) =
     ++ fnl ()
     ++ str "};"
 
-(** What a declaration's text carries, as tags that travel with the text
-    however it is assembled, so that where a declaration it needs is placed
-    -- in front of the first text that needs it -- is read off what was
-    written, not searched for in it: the synthesised templates the
-    declaration writes, as planned ({!ctor_aliases_planned}); and, of the
-    structs the file has constrained forward declarations of
-    ({!constrained_structs}), those it names or defines, and those it
-    defines. *)
-let writes_tag = "crane.writes:"
-let names_tag = "crane.names:"
-let defines_tag = "crane.defines:"
-
 (** The structs the file being written has constrained forward declarations
     of, planned with its layout, each by its reference and the name its
     declaration declares. *)
@@ -4573,36 +4561,27 @@ let constrained_structs : (GlobRef.t * string) list ref = State.cell State.Unit 
 
 let read_cpp_decl = pp_cpp_decl
 
-let pp_cpp_decl env settled =
-  let tagged tag names doc = match names with [] -> doc | _ -> Pp.tag (tag ^ String.concat " " names) doc in
-  let doc =
-    tagged writes_tag (List.map ctor_alias_name (ctor_aliases_planned settled)) (pp_cpp_decl env settled)
+(** A declaration as the file writes it, with what placing the declarations
+    it needs reads: the synthesised templates it writes, as planned
+    ({!ctor_aliases_planned}); and, of the structs the file has constrained
+    forward declarations of ({!constrained_structs}), those it names or
+    defines, and those it defines. *)
+let write_decl env settled =
+  let text = pp_cpp_decl env settled in
+  let templates = List.map ctor_alias_name (ctor_aliases_planned settled) in
+  let names, defines =
+    match !constrained_structs with
+    | [] -> ([], [])
+    | constrained ->
+      let of_refs refs =
+        List.filter_map
+          (fun (r, name) -> if List.exists (GlobRef.UserOrd.equal r) refs then Some name else None)
+          constrained
+      in
+      let defined = List.map defined_ref (structs_defined settled) in
+      (of_refs (defined @ Cpp_demands.globals_of_decl (settled :> cpp_decl)), of_refs defined)
   in
-  match !constrained_structs with
-  | [] -> doc
-  | constrained ->
-    let of_refs refs =
-      List.filter_map (fun (r, name) -> if List.exists (GlobRef.UserOrd.equal r) refs then Some name else None) constrained
-    in
-    let defined = List.map defined_ref (structs_defined settled) in
-    doc
-    |> tagged names_tag (of_refs (defined @ Cpp_demands.globals_of_decl (settled :> cpp_decl)))
-    |> tagged defines_tag (of_refs defined)
-
-type carried =
-  | Writes of string list
-  | Names of string list
-  | Defines of string list
-
-let carried_by tag =
-  let names prefix =
-    let n = String.length prefix in
-    String.split_on_char ' ' (String.sub tag n (String.length tag - n))
-  in
-  if String.starts_with ~prefix:writes_tag tag then Some (Writes (names writes_tag))
-  else if String.starts_with ~prefix:names_tag tag then Some (Names (names names_tag))
-  else if String.starts_with ~prefix:defines_tag tag then Some (Defines (names defines_tag))
-  else None
+  Cpp_ast.decl ~needs:{templates; names; defines} text
 
 (** The break between two declaration groups.  It is a break hint, not a
     forced newline, so the vertical box the whole file is printed in

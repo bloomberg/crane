@@ -39,8 +39,7 @@ type rendered = (Common.env * Cpp_erasure.settled) list
 
 
 (** Print the declarations an entry point answered with. *)
-let pp_decls (ds : rendered) =
-  pp_list_stmt (fun (env, d) -> Cpp_print.pp_cpp_decl env d) ds
+let pp_decls (ds : rendered) = Cpp_ast.concat Pp.fnl (List.map (fun (env, d) -> Cpp_print.write_decl env d) ds)
 
 (** The struct a module's declarations are written inside of, when the module is
     written as a struct at all.
@@ -983,7 +982,7 @@ let finished_alone d = finished_of ~what:"a declaration" (finishing d)
 
 (** [render_decl env d] prints [d] finished ahead of the files
     ({!finished_alone}). *)
-let render_decl env d = Cpp_print.pp_cpp_decl env (finished_alone d)
+let render_decl env d = Cpp_print.write_decl env (finished_alone d)
 
 (** [finished_group ~what ds] is [ds], each finished ahead of the files. *)
 let finished_group ~what (ds : generated) : rendered =

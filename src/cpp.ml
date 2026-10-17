@@ -337,9 +337,9 @@ let rec pp_constraint : Modtype_concept.constraint_ -> Pp.t list * module_constr
 (** Look up and format a doc comment for the given label. *)
 let pp_doc_comment label = pp_doc_comment_for_name (Label.to_string label)
 
-(** Whether the first printable content in [p] is a C++ doc comment.  Soft
+(** Whether the first printable content in [t] is a C++ doc comment.  Soft
     breaks are ignored because they may be flattened to nothing. *)
-let starts_with_doc_comment p =
+let starts_with_doc_comment (t : Cpp_ast.t) =
   let rec first_output = function
     | [] -> None
     | p :: rest ->
@@ -356,20 +356,31 @@ let starts_with_doc_comment p =
         | None -> first_output rest )
       | Ppcmd_force_newline | Ppcmd_comment _ -> Some false )
   in
-  match first_output [p] with Some result -> result | None -> false
+  let rec first = function
+    | [] -> None
+    | (t : Cpp_ast.t) :: rest -> (
+      let inner =
+        match t with
+        | Text d | Decl {text = d; _} -> first_output [d]
+        | Seq l -> first l
+        | Top_level t | Member (_, t) -> first [t]
+      in
+      match inner with Some _ -> inner | None -> first rest )
+  in
+  match first [t] with Some result -> result | None -> false
 
 (** Join already-rendered structure elements, forcing a newline before a
     leading C++ doc comment.  [cut2] normally supplies soft breaks for
     clang-format, but an unbroken [}///] or [;///] is interpreted as a trailing
     comment and cannot be repaired by the formatter. *)
-let rec prlist_with_doc_safe_sep sep = function
-  | [] -> mt ()
+let rec concat_doc_safe sep = function
+  | [] -> Cpp_ast.empty
   | [p] -> p
   | p :: ((next :: _) as rest) ->
     let boundary =
       if starts_with_doc_comment next then fnl () else sep ()
     in
-    p ++ boundary ++ prlist_with_doc_safe_sep sep rest
+    Cpp_ast.(seq [p; text boundary; concat_doc_safe sep rest])
 
 (** Try to extract a named concept from a module type.
 
@@ -719,7 +730,7 @@ let dbg_lifted =
           let spec = Function_entity.declaration e in
           Printf.sprintf "splits=yes hoistable=%b spec=%S"
             (spec_is_hoistable spec)
-            (Pp.string_of_ppcmds (pp_cpp_decl (empty_env ()) spec))
+            (Pp.string_of_ppcmds (read_cpp_decl (empty_env ()) spec))
         else "splits=no"
       in
       Feedback.msg_notice
@@ -869,27 +880,14 @@ let is_erased_alias (_, d) =
   | Dusing {du_rhs = Some rhs; _} -> Cpp_erasure.is_any_shaped rhs
   | _ -> false
 
-(** Where a chunk of the file begins, as the driver assembles it: a
-    top-level element, a wrapper module's struct or lifted declarations, or
-    a section of the file, in front of which a namespace-scope declaration
-    goes; and a member of a module's struct, in front of which a template
-    homed in that module goes ({!place_due_declarations}). *)
-let top_slot_tag = "crane.slot"
-
 type slot = Top_slot | Member_slot of string
-
-let member_slot_tag = "crane.member:"
-
-let top_slot doc = if Pp.ismt doc then doc else Pp.tag top_slot_tag doc
-
-let member_slot mp doc = if Pp.ismt doc then doc else Pp.tag (member_slot_tag ^ ModPath.to_string mp) doc
 
 (** What writing a structure element gives: its text, written where it is,
     and the concepts it declares that only namespace scope can hold, in the
     order written, which go to the top of the file. *)
 type written = {
-  text : Pp.t;
-  concepts : Pp.t list;
+  text : Cpp_ast.t;
+  concepts : Cpp_ast.t list;
   asserts : (held_concept * Pp.t * Pp.t) list;
       (** The assertions it held back, each with the concept it asserts and
           what it asserts it of, in the order written: a concept an
@@ -908,7 +906,7 @@ let written text = {text; concepts = []; asserts = []}
                       bodies, skipping header-only constructs).
     @param f          Callback used to pretty-print individual {!Miniml.ml_decl}
                       nodes; typically [impl_decls] or [header_decls].
-    @return The element written ({!written}): its text, [mt ()] if it
+    @return The element written ({!written}): its text, empty if it
             produces no output in the current pass, and its concepts. *)
 let rec pp_structure_elem ~is_header f = function
   | l, SEdecl d ->
@@ -939,7 +937,7 @@ let rec pp_structure_elem ~is_header f = function
         && (not (!render_ctx).rc_in_struct)
         && rendered <> []
         && List.for_all is_erased_alias rendered
-      then mt ()
+      then Cpp_ast.empty
       else pp_decls rendered
     in
     (* A type class rendered at file scope is a concept, and a concept has no
@@ -962,14 +960,14 @@ let rec pp_structure_elem ~is_header f = function
            | Miniml.Dind (_, ind) -> (
              match ind.ind_kind with Miniml.TypeClass _ -> true | _ -> false )
            | _ -> false)
-        && not (Pp.ismt body)
-      then ([pp_doc_comment l ++ body], mt ())
+        && not (Cpp_ast.is_empty body)
+      then ([Cpp_ast.(seq [text (pp_doc_comment l); body])], Cpp_ast.empty)
       else ([], body)
     in
     (* The helpers are the ones planned for this element alone
        ({!Cpp_ind.header_claim}), each lifted once in the file. *)
     let member_lifted =
-      if not is_header then mt ()
+      if not is_header then Cpp_ast.empty
       else
         List.fold_left
           (fun acc d' ->
@@ -992,16 +990,16 @@ let rec pp_structure_elem ~is_header f = function
                a sibling type, and hoisting the declaration to file scope takes
                those names out of scope with it. *)
             let def, _ = lifted_views ~may_hoist:(not (!render_ctx).rc_in_struct) d' in
-            let pp = pp_cpp_decl (empty_env ()) def in
-            if Pp.ismt pp then acc
-            else if Pp.ismt acc then pp
-            else acc ++ cut2 () ++ pp )
-          (mt ())
+            let pp = write_decl (empty_env ()) def in
+            if Cpp_ast.is_empty pp then acc
+            else if Cpp_ast.is_empty acc then pp
+            else Cpp_ast.(seq [acc; text (cut2 ()); pp]) )
+          Cpp_ast.empty
           helpers
     in
     let body =
-      if Pp.ismt member_lifted then body
-      else if Pp.ismt body then member_lifted
+      if Cpp_ast.is_empty member_lifted then body
+      else if Cpp_ast.is_empty body then member_lifted
       else
         (* A helper lifted out of an inductive's own declaration comes from a
            definition that was turned into a method of that inductive, so it
@@ -1009,10 +1007,10 @@ let rec pp_structure_elem ~is_header f = function
            call sites are method bodies, which are complete-class contexts and
            so may name a member declared later. *)
         match d with
-        | Miniml.Dind _ -> body ++ cut2 () ++ member_lifted
-        | _ -> member_lifted ++ cut2 () ++ body
+        | Miniml.Dind _ -> Cpp_ast.(seq [body; text (cut2 ()); member_lifted])
+        | _ -> Cpp_ast.(seq [member_lifted; text (cut2 ()); body])
     in
-    { text = (if Pp.ismt body then mt () else pp_doc_comment l ++ body);
+    { text = (if Cpp_ast.is_empty body then Cpp_ast.empty else Cpp_ast.(seq [text (pp_doc_comment l); body]));
       concepts;
       asserts = List.concat_map (fun (_, d) -> Cpp_print.held_back_assertions d) rendered }
   | l, SEmodule m ->
@@ -1042,7 +1040,7 @@ let rec pp_structure_elem ~is_header f = function
       match m.ml_mod_expr with
       | MEfunctor _ ->
         if not is_header then
-          written (mt ())
+          written Cpp_ast.empty
         else
           let get_template_and_body = function
             | MEfunctor (mbid, mt, me) ->
@@ -1068,9 +1066,10 @@ let rec pp_structure_elem ~is_header f = function
                 (function
                   | l, SEmodtype mty ->
                     Some
-                      (pp_modtype_concept ~params
-                         (pp_concept_ref (MPdot (body_mp, l)))
-                         (Cpp_ind.modtype_concept (MPdot (body_mp, l)) ~params mty) )
+                      (Cpp_ast.text
+                         (pp_modtype_concept ~params
+                            (pp_concept_ref (MPdot (body_mp, l)))
+                            (Cpp_ind.modtype_concept (MPdot (body_mp, l)) ~params mty) ) )
                   | _ -> None )
                 sel
             | _ -> []
@@ -1092,34 +1091,28 @@ let rec pp_structure_elem ~is_header f = function
           { text =
               ( match body with
               | MEapply _ ->
-                template_decl
-                ++ fnl ()
-                ++ str "struct "
-                ++ name
-                ++ str " : "
-                ++ struct_body
-                ++ str " {};"
+                Cpp_ast.(
+                  seq
+                    [ text (template_decl ++ fnl () ++ str "struct " ++ name ++ str " : ");
+                      struct_body;
+                      text (str " {};") ])
               | _ ->
-                template_decl
-                ++ fnl ()
-                ++ str "struct "
-                ++ name
-                ++ str " {"
-                ++ fnl ()
-                ++ struct_body
-                ++ str "};" );
+                Cpp_ast.(
+                  seq
+                    [ text (template_decl ++ fnl () ++ str "struct " ++ name ++ str " {" ++ fnl ());
+                      struct_body;
+                      text (str "};") ]) );
             concepts = concepts @ body_concepts;
             asserts }
       | MEapply _ ->
         if not is_header then
-          written (mt ())
+          written Cpp_ast.empty
         else
           let {text = body; concepts; asserts} = pp_module_expr ~is_header f m.ml_mod_expr in
-          let using_decl =
-            str "using " ++ name ++ str " = " ++ body ++ str ";"
-          in
           let assertion, held = concept_assertion name m.ml_mod_type in
-          {text = using_decl ++ assertion; concepts; asserts = asserts @ held}
+          { text = Cpp_ast.(seq [text (str "using " ++ name ++ str " = "); body; text (str ";" ++ assertion)]);
+            concepts;
+            asserts = asserts @ held }
       | MEstruct (body_mp, sel) ->
         let old_context = (!render_ctx).rc_in_struct in
         with_module_frame @@ fun () ->
@@ -1144,7 +1137,9 @@ let rec pp_structure_elem ~is_header f = function
             List.map
               (fun (l, r, fields) ->
                 let d = generated_concept r fields in
-                (HCclass r, pp_doc_comment l ++ render_decl (empty_env ()) d, concept_names_member mp d) )
+                ( HCclass r,
+                  Cpp_ast.(seq [text (pp_doc_comment l); render_decl (empty_env ()) d]),
+                  concept_names_member mp d ) )
               (declared_classes sel)
           else []
         in
@@ -1156,7 +1151,7 @@ let rec pp_structure_elem ~is_header f = function
                 | SEmodtype m ->
                   let path = MPdot (mp, l) in
                   let concept = Cpp_ind.modtype_concept path ~params:[] m in
-                  let concept_pp = pp_modtype_concept (str (modtype_concept_name path)) concept in
+                  let concept_pp = Cpp_ast.text (pp_modtype_concept (str (modtype_concept_name path)) concept) in
                   Some (HCmodtype path, concept_pp, Modtype_concept.names_member mp concept)
                 | _ -> None )
               sel
@@ -1196,16 +1191,17 @@ let rec pp_structure_elem ~is_header f = function
         in
         let this_held_back = match plan with Some plan -> plan.held_back | None -> [] in
         let concepts_group_pp concepts =
-          if concepts = [] then mt ()
-          else prlist_with_sep fnl identity (docs concepts) ++ fnl () ++ fnl ()
+          if concepts = [] then Cpp_ast.empty
+          else Cpp_ast.(seq [concat fnl (docs concepts); text (fnl () ++ fnl ())])
         in
         let typeclasses_pp =
-          if typeclass_concepts = [] then mt ()
-          else fnl () ++ prlist_with_sep fnl identity (docs typeclass_concepts) ++ fnl () ++ fnl ()
+          if typeclass_concepts = [] then Cpp_ast.empty
+          else Cpp_ast.(seq [text (fnl ()); concat fnl (docs typeclass_concepts); text (fnl () ++ fnl ())])
         in
         let modtypes_pp = concepts_group_pp modtype_concepts_ahead in
         let modtypes_after_pp =
-          if concepts_after = [] then mt () else fnl () ++ fnl () ++ concepts_group_pp concepts_after
+          if concepts_after = [] then Cpp_ast.empty
+          else Cpp_ast.(seq [text (fnl () ++ fnl ()); concepts_group_pp concepts_after])
         in
         (* Whether this module is outside every struct is a question about
            the module, not about the file: the implementation writes no
@@ -1287,10 +1283,8 @@ let rec pp_structure_elem ~is_header f = function
             body_written.asserts
         in
         let deferred_asserts_pp =
-          prlist
-            (fun (_, concept, sub) ->
-              pp_concept_assert concept (name ++ str "::" ++ sub) )
-            mine
+          Cpp_ast.text
+            (prlist (fun (_, concept, sub) -> pp_concept_assert concept (name ++ str "::" ++ sub)) mine)
         in
         let passed_out = List.map (fun (mt_mp, concept, sub) -> (mt_mp, concept, name ++ str "::" ++ sub)) passed_out in
         let body = body_written.text in
@@ -1352,16 +1346,13 @@ let rec pp_structure_elem ~is_header f = function
                 mt ()
             in
             let struct_def =
-              template_decl
-              ++ str "struct "
-              ++ name
-              ++ inherit_clause
-              ++ str " {"
-              ++ fnl ()
-              ++ body
-              ++ str "};"
+              Cpp_ast.(
+                seq
+                  [ text (template_decl ++ str "struct " ++ name ++ inherit_clause ++ str " {" ++ fnl ());
+                    body;
+                    text (str "};") ])
             in
-            (typeclasses_pp ++ modtypes_pp ++ struct_def ++ modtypes_after_pp ++ deferred_asserts_pp, [])
+            (Cpp_ast.seq [typeclasses_pp; modtypes_pp; struct_def; modtypes_after_pp; deferred_asserts_pp], [])
           else
             let template_decl, record_fields_pp, record_methods_pp =
               match this_eponymous_record with
@@ -1394,9 +1385,10 @@ let rec pp_structure_elem ~is_header f = function
                   pp_cpp_type false ty_vars cpp_ty ++ spc () ++ field_name ++ str ";"
                 in
                 let fields_pp =
-                  prlist_with_sep fnl (fun p -> p)
-                    (List.mapi (fun i (f, ty) -> pp_field i f ty) (List.combine fields field_types))
-                  ++ fnl ()
+                  Cpp_ast.text
+                    ( prlist_with_sep fnl (fun p -> p)
+                        (List.mapi (fun i (f, ty) -> pp_field i f ty) (List.combine fields field_types))
+                    ++ fnl () )
                 in
                 let method_fields, method_helpers =
                   generated_record_methods epon_ref ty_vars
@@ -1406,15 +1398,16 @@ let rec pp_structure_elem ~is_header f = function
                    of a method is a member that may follow the methods calling
                    it; it precedes them here. *)
                 let helpers_pp =
-                  prlist
-                    (fun h ->
-                      pp_cpp_decl (empty_env ()) (fst (lifted_views ~may_hoist:false h))
-                      ++ fnl () )
-                    method_helpers
+                  Cpp_ast.seq
+                    (List.map
+                       (fun h ->
+                         Cpp_ast.(
+                           seq [write_decl (empty_env ()) (fst (lifted_views ~may_hoist:false h)); text (fnl ())]) )
+                       method_helpers )
                 in
                 let methods_pp =
                   if method_fields = [] then
-                    mt ()
+                    Cpp_ast.empty
                   else
                     (* The record's methods are members of the module struct
                        it was merged into, and pass through every stage a
@@ -1429,20 +1422,22 @@ let rec pp_structure_elem ~is_header f = function
                       | _ -> method_fields
                     in
                     setting method_candidates this_method_candidates (fun () ->
-                        helpers_pp
-                        ++ prlist_with_sep
-                             fnl
-                             (fun (fld, _vis, _tag) -> pp_cpp_field (empty_env ()) fld)
-                             fields
-                        ++ fnl () )
+                        Cpp_ast.(
+                          seq
+                            [ helpers_pp;
+                              text
+                                ( prlist_with_sep fnl
+                                    (fun (fld, _vis, _tag) -> pp_cpp_field (empty_env ()) fld)
+                                    fields
+                                ++ fnl () ) ]) )
                 in
                 (template_str, fields_pp, methods_pp)
-              | None -> (mt (), mt (), mt ())
+              | None -> (mt (), Cpp_ast.empty, Cpp_ast.empty)
             in
             if has_concept_collision then
-              (typeclasses_pp ++ modtypes_pp ++ record_fields_pp ++ record_methods_pp ++ body, [])
-            else if Pp.ismt body && Pp.ismt record_fields_pp
-                    && Pp.ismt record_methods_pp then
+              (Cpp_ast.seq [typeclasses_pp; modtypes_pp; record_fields_pp; record_methods_pp; body], [])
+            else if Cpp_ast.is_empty body && Cpp_ast.is_empty record_fields_pp
+                    && Cpp_ast.is_empty record_methods_pp then
               (* Empty module: emit [struct Name {};] even though there are
                  no declarations.  The struct may be needed as a template
                  argument in functor instantiations, e.g.
@@ -1450,33 +1445,32 @@ let rec pp_structure_elem ~is_header f = function
                  empty Rocq module satisfying some module type.  Previously
                  this returned [mt ()] which suppressed the struct
                  entirely, causing undeclared-identifier errors. *)
-              (template_decl ++ str "struct " ++ name ++ str " {};", [])
+              (Cpp_ast.text (template_decl ++ str "struct " ++ name ++ str " {};"), [])
             else
               let struct_def =
-                template_decl
-                ++ str "struct "
-                ++ name
-                ++ str " {"
-                ++ fnl ()
-                ++ record_fields_pp
-                ++ record_methods_pp
-                ++ body
-                ++ str "};"
+                Cpp_ast.(
+                  seq
+                    [ text (template_decl ++ str "struct " ++ name ++ str " {" ++ fnl ());
+                      record_fields_pp;
+                      record_methods_pp;
+                      body;
+                      text (str "};") ])
               in
               let assertion, held = concept_assertion name m.ml_mod_type in
-              ( typeclasses_pp ++ modtypes_pp ++ struct_def ++ modtypes_after_pp ++ deferred_asserts_pp
-                ++ assertion,
+              ( Cpp_ast.(
+                  seq [typeclasses_pp; modtypes_pp; struct_def; modtypes_after_pp; deferred_asserts_pp; text assertion]),
                 held )
         else if this_promoted && promoted_template then
           (* A promoted template's members are all defined inline in the
              header. *)
-          (mt (), [])
+          (Cpp_ast.empty, [])
         else
           (body, [])
         in
         {text; concepts = own_concepts @ body_written.concepts; asserts = passed_out @ own_held}
       | MEident target ->
         written
+        @@ Cpp_ast.text
         @@
         if not is_header then
           mt ()
@@ -1548,9 +1542,13 @@ let rec pp_structure_elem ~is_header f = function
             ++ str ">;"
           end
     in
-    {mod_pp with text = (if Pp.ismt mod_pp.text then mt () else pp_doc_comment l ++ mod_pp.text)}
+    { mod_pp with
+      text =
+        (if Cpp_ast.is_empty mod_pp.text then Cpp_ast.empty else Cpp_ast.(seq [text (pp_doc_comment l); mod_pp.text]))
+    }
   | l, SEmodtype m ->
     written
+    @@ Cpp_ast.text
       ( if (not is_header) || (!render_ctx).rc_in_struct then mt ()
         else
           let path = MPdot (top_visible_mp (), l) in
@@ -1582,7 +1580,7 @@ and pp_module_app ~is_header f me me' =
     | MEapply (g, g') -> pp_module_app ~is_header f g g'
     (* A functor is applied to paths, so nothing written here declares a
        concept. *)
-    | _ -> ((pp_module_expr ~is_header f me).text, None)
+    | _ -> (Cpp_ast.to_pp (pp_module_expr ~is_header f me).text, None)
   in
   let is_qualified = function
     | Some r -> Common.resolved_is_qualified r
@@ -1616,8 +1614,8 @@ and pp_module_app ~is_header f me me' =
             this is the qualified module name; for [MEapply] a template
             instantiation; for [MEstruct] the indented body of declarations. *)
 and pp_module_expr ~is_header f = function
-  | MEident mp -> written (pp_modname mp)
-  | MEapply (me, me') -> written (fst (pp_module_app ~is_header f me me'))
+  | MEident mp -> written (Cpp_ast.text (pp_modname mp))
+  | MEapply (me, me') -> written (Cpp_ast.text (fst (pp_module_app ~is_header f me me')))
   | MEfunctor (_, _, me) -> pp_module_expr ~is_header f me
   | MEstruct (mp, sel) ->
     if is_header && Probe.checking () && (!render_ctx).rc_in_template <> Scope_plan.templated mp then
@@ -1651,35 +1649,35 @@ and pp_module_expr ~is_header f = function
        at namespace scope those names mean nothing. *)
     let try_pp_structure_elem (l, concepts, asserts) x =
       let {text = px; concepts = c; asserts = a} = pp_structure_elem ~is_header f x in
-      ((if Pp.ismt px then l else member_slot mp px :: l), List.rev_append c concepts, List.rev_append a asserts)
+      ((if Cpp_ast.is_empty px then l else Cpp_ast.member mp px :: l), List.rev_append c concepts, List.rev_append a asserts)
     in
     let l, concepts, asserts = List.fold_left try_pp_structure_elem ([], [], []) sel in
     let l = List.rev l in
     current_structure_decls := old_structure_decls;
-    { text = (if List.is_empty l then mt () else prlist_with_doc_safe_sep cut2 l ++ fnl ());
+    { text = (if List.is_empty l then Cpp_ast.empty else Cpp_ast.(seq [concat_doc_safe cut2 l; text (fnl ())]));
       concepts = List.rev concepts;
       asserts = List.rev asserts }
 
-(** Like [prlist_with_sep] but skips empty ([mt ()]) elements.
+(** Like {!Cpp_ast.concat} but skips empty elements.
 
     @param sep  Thunk producing the separator document inserted between
                 consecutive non-empty rendered elements.
     @param f    Function applied to each list element to produce its document.
     @return Concatenation of all non-empty documents separated by [sep ()],
-            or [mt ()] if every element renders empty. *)
-let rec prlist_sep_nonempty sep f = function
-  | [] -> mt ()
+            or nothing if every element renders empty. *)
+let rec concat_nonempty sep f = function
+  | [] -> Cpp_ast.empty
   | [h] -> f h
   | h :: t ->
     let e = f h in
-    let r = prlist_sep_nonempty sep f t in
-    if Pp.ismt e then
+    let r = concat_nonempty sep f t in
+    if Cpp_ast.is_empty e then
       r
-    else if Pp.ismt r then
+    else if Cpp_ast.is_empty r then
       e
     else
       let boundary = if starts_with_doc_comment r then fnl () else sep () in
-      e ++ boundary ++ r
+      Cpp_ast.(seq [e; text boundary; r])
 
 (** The declarations and definitions generated functions contribute to the
     file being written, grouped as [gens] is: each one's declaration always,
@@ -1786,22 +1784,15 @@ let pp_wrapper_module_dual ~is_header func_sels =
   let generated = List.map process_sel func_sels in
   let all_results = file_views ~is_header (List.map fst generated) in
   let all_lifted = List.concat_map snd generated in
-  let render_sel_specs (specs, _) =
-    match specs with
-    | [] -> mt ()
-    | _ -> pp_list_stmt (fun (ds, env) -> pp_cpp_decl env ds) specs
-  in
-  let render_sel_defs (_, defs) =
-    match defs with
-    | [] -> mt ()
-    | _ -> pp_list_stmt (fun (ds, env) -> pp_cpp_decl env ds) defs
-  in
+  let render_decls ds = Cpp_ast.concat fnl (List.map (fun (d, env) -> write_decl env d) ds) in
+  let render_sel_specs (specs, _) = render_decls specs in
+  let render_sel_defs (_, defs) = render_decls defs in
   let specs_pp =
     with_render_ctx
       (fun c -> { c with rc_in_struct = true })
-      (fun () -> prlist_sep_nonempty cut2 render_sel_specs all_results)
+      (fun () -> concat_nonempty cut2 render_sel_specs all_results)
   in
-  let defs_pp = prlist_sep_nonempty cut2 render_sel_defs all_results in
+  let defs_pp = concat_nonempty cut2 render_sel_defs all_results in
   (* A lifted helper is emitted after the struct it was lifted out of, and its
      callers are inside that struct, so by the time the definition appears the
      name has already been used.  A wrapper struct's own members do not have
@@ -1818,13 +1809,13 @@ let pp_wrapper_module_dual ~is_header func_sels =
     if is_header then List.map lifted_views all_lifted else []
   in
   let lifted_pp =
-    prlist_sep_nonempty cut2
-      (fun (def, _) -> pp_cpp_decl (empty_env ()) def)
+    concat_nonempty cut2
+      (fun (def, _) -> write_decl (empty_env ()) def)
       lifted_split
   in
   let lifted_specs_pp =
-    prlist_sep_nonempty cut2
-      (pp_cpp_decl (empty_env ()))
+    concat_nonempty cut2
+      (write_decl (empty_env ()))
       (List.filter_map snd lifted_split)
   in
   (specs_pp, defs_pp, lifted_pp, lifted_specs_pp)
@@ -3212,7 +3203,7 @@ let plan_field_names s =
 (** [pp_wrapper_struct name specs] is the struct a library module is rendered
     as: its member declarations, [specs], inside a struct of that name. *)
 let pp_wrapper_struct name specs =
-  str "struct " ++ str name ++ str " {" ++ fnl () ++ specs ++ fnl () ++ str "};"
+  Cpp_ast.(seq [text (str "struct " ++ str name ++ str " {" ++ fnl ()); specs; text (fnl () ++ str "};")])
 
 (** What rendering one wrapper module produced, beyond the declarations that
     merge into its struct.
@@ -3233,10 +3224,10 @@ let pp_wrapper_struct name specs =
 type wrapper_render = {
   wr_module : ModPath.t;
   wr_name : string;
-  wr_specs : Pp.t;
-  wr_defs : Pp.t;
-  wr_lifted : Pp.t;
-  wr_lifted_specs : Pp.t;
+  wr_specs : Cpp_ast.t;
+  wr_defs : Cpp_ast.t;
+  wr_lifted : Cpp_ast.t;
+  wr_lifted_specs : Cpp_ast.t;
 }
 
 (** Declare each synthesised template the file writes, and each constrained
@@ -3258,9 +3249,10 @@ let place_due_declarations ~is_header ~prologue sections =
   let templates = Cpp_print.ctor_aliases_declared_in ~file:(if is_header then Common.Intf else Common.Impl) in
   let constrained = if is_header then !file_layout.constrained_decls else [] in
   let slot_of_tag t =
-    let n = String.length member_slot_tag in
-    if String.equal t top_slot_tag then Some Top_slot
-    else if String.starts_with ~prefix:member_slot_tag t then Some (Member_slot (String.sub t n (String.length t - n)))
+    let n = String.length Cpp_ast.member_slot_tag in
+    if String.equal t Cpp_ast.top_slot_tag then Some Top_slot
+    else if String.starts_with ~prefix:Cpp_ast.member_slot_tag t then
+      Some (Member_slot (String.sub t n (String.length t - n)))
     else None
   in
   (* Where each template and each constrained struct is first needed, and
@@ -3283,7 +3275,7 @@ let place_due_declarations ~is_header ~prologue sections =
         first_uses ~top ~members:((mp, !count) :: members) d
       | None -> (
         let inner = first_uses ~top ~members d in
-        match Cpp_print.carried_by t with
+        match Cpp_ast.carried_by t with
         | Some (Writes names) ->
           List.iter
             (fun name ->
@@ -3586,18 +3578,18 @@ let do_struct_with_decl_tracking ~is_header f s =
     let hoists =
       is_header
       && (not (!render_ctx).rc_in_struct)
-      && (not (Pp.ismt p))
+      && (not (Cpp_ast.is_empty p))
       && match se with
-         | SEmodule {ml_mod_expr = MEstruct (body_mp, _); _} -> struct_hoists body_mp p
+         | SEmodule {ml_mod_expr = MEstruct (body_mp, _); _} -> struct_hoists body_mp (Cpp_ast.to_pp p)
          | _ -> false
     in
-    let p = top_slot p in
+    let p = Cpp_ast.top_level p in
     if hoists then (
       hoisted := p :: !hoisted;
-      mt () )
-    else if Names.Label.Set.mem l prereq_labels && not (Pp.ismt p) then (
+      Cpp_ast.empty )
+    else if Names.Label.Set.mem l prereq_labels && not (Cpp_ast.is_empty p) then (
       prereqs := p :: !prereqs;
-      mt () )
+      Cpp_ast.empty )
     else p
   in
   Cpp_print.start_ctor_alias_census ();
@@ -3642,12 +3634,12 @@ let do_struct_with_decl_tracking ~is_header f s =
               pp_wrapper_module_dual ~is_header func_sels
             in
             current_structure_decls := old_decls;
-            if is_header && Pp.ismt p_specs = Hashtbl.mem unmerged_wrappers name then
+            if is_header && Cpp_ast.is_empty p_specs = Hashtbl.mem unmerged_wrappers name then
               Probe.violation "unmerged wrappers"
                 Pp.(
                   str "the wrapper " ++ str name
                   ++ str
-                       ( if Pp.ismt p_specs then " was planned to hold declarations and holds none"
+                       ( if Cpp_ast.is_empty p_specs then " was planned to hold declarations and holds none"
                          else " holds declarations it was not planned to" ) );
             Some
               {
@@ -3676,7 +3668,10 @@ let do_struct_with_decl_tracking ~is_header f s =
               wrapper_names )
     in
     let deferred_defs =
-      prlist (fun w -> if Pp.ismt w.wr_defs then mt () else cut2 () ++ w.wr_defs) wrapper_parts
+      Cpp_ast.seq
+        (List.map
+           (fun w -> if Cpp_ast.is_empty w.wr_defs then Cpp_ast.empty else Cpp_ast.(seq [text (cut2 ()); w.wr_defs]))
+           wrapper_parts )
     in
     let ppl ((mp, sel), wrapper_name) =
       in_planned_visibility mp @@ fun () ->
@@ -3684,7 +3679,7 @@ let do_struct_with_decl_tracking ~is_header f s =
       let wrapper_specs name =
         match List.find_opt (fun w -> String.equal w.wr_name name) wrapper_parts with
         | Some w -> w.wr_specs
-        | None -> mt ()
+        | None -> Cpp_ast.empty
       in
       let f = place ~wrapper_specs ~prereq_labels ~hoisted ~prereqs ~concepts in
       let old_decls = !current_structure_decls in
@@ -3693,7 +3688,7 @@ let do_struct_with_decl_tracking ~is_header f s =
         match wrapper_name with
         | Some name ->
           let type_sels = List.filter (fun x -> not (is_func_decl x)) sel in
-          let type_pp = prlist_sep_nonempty cut2 f type_sels in
+          let type_pp = concat_nonempty cut2 f type_sels in
           (* The wrapper struct belongs at its module's own place in the
              topological order, whether or not the module also declares types.
              A later module's constant is initialised inside its struct body, so
@@ -3703,12 +3698,13 @@ let do_struct_with_decl_tracking ~is_header f s =
              hold its declarations, and has ({!file_layout}). *)
           let wrapper_pp =
             let specs = wrapper_specs name in
-            if (not is_header) || Pp.ismt specs || List.mem_assoc name !file_layout.wrapper_homes then mt ()
+            if (not is_header) || Cpp_ast.is_empty specs || List.mem_assoc name !file_layout.wrapper_homes then
+              Cpp_ast.empty
             else
               let struct_pp = pp_wrapper_struct name specs in
-              if struct_hoists mp struct_pp then (
+              if struct_hoists mp (Cpp_ast.to_pp struct_pp) then (
                 hoisted := struct_pp :: !hoisted;
-                mt () )
+                Cpp_ast.empty )
               else struct_pp
           in
           (* A declaration lifted out of this module -- an instance struct -- is
@@ -3717,15 +3713,15 @@ let do_struct_with_decl_tracking ~is_header f s =
           let lifted_pp =
             match List.find_opt (fun w -> ModPath.equal w.wr_module mp) wrapper_parts with
             | Some w -> w.wr_lifted
-            | None -> mt ()
+            | None -> Cpp_ast.empty
           in
           (* The wrapper struct and what was lifted out of it are elements of
              their own, assembled here rather than by [f]: an alias they spell
              goes in front of them, not in front of the whole section they end
              up in (see {!place_due_declarations}). *)
-          let wrapper_pp = top_slot wrapper_pp in
-          let lifted_pp = top_slot lifted_pp in
-          prlist_sep_nonempty cut2 (fun x -> x) [type_pp; wrapper_pp; lifted_pp]
+          let wrapper_pp = Cpp_ast.top_level wrapper_pp in
+          let lifted_pp = Cpp_ast.top_level lifted_pp in
+          concat_nonempty cut2 (fun x -> x) [type_pp; wrapper_pp; lifted_pp]
         | None ->
           (* Which children a name collision forces inside a wrapper struct is
              layout, decided by {!Structure_analysis} before any rendering began;
@@ -3770,7 +3766,7 @@ let do_struct_with_decl_tracking ~is_header f s =
               List.iter
                 (fun x ->
                   let pp = f x in
-                  if not (Pp.ismt pp) then concepts := pp :: !concepts )
+                  if not (Cpp_ast.is_empty pp) then concepts := pp :: !concepts )
                 modtype_sels;
               let non_colliding_pp, colliding_pp =
                 with_render_ctx
@@ -3786,10 +3782,10 @@ let do_struct_with_decl_tracking ~is_header f s =
                         sel
                     in
                     let non_colliding_pp =
-                      prlist_sep_nonempty cut2 f non_colliding
+                      concat_nonempty cut2 f non_colliding
                     in
                     let colliding_pp =
-                      prlist_sep_nonempty
+                      concat_nonempty
                         cut2
                         (fun (_l, se) ->
                           match se with
@@ -3797,9 +3793,9 @@ let do_struct_with_decl_tracking ~is_header f s =
                             ( match m.ml_mod_expr with
                             | MEstruct (inner_mp, inner_sel) ->
                               in_planned_visibility inner_mp (fun () ->
-                                  prlist_sep_nonempty cut2 f (List.filter is_func_decl inner_sel) )
-                            | _ -> mt () )
-                          | _ -> mt () )
+                                  concat_nonempty cut2 f (List.filter is_func_decl inner_sel) )
+                            | _ -> Cpp_ast.empty )
+                          | _ -> Cpp_ast.empty )
                         (List.filter
                            (fun (l, se) -> is_colliding_child l se)
                            sel )
@@ -3807,24 +3803,22 @@ let do_struct_with_decl_tracking ~is_header f s =
                     (non_colliding_pp, colliding_pp) )
               in
               let body =
-                if Pp.ismt non_colliding_pp then
+                if Cpp_ast.is_empty non_colliding_pp then
                   colliding_pp
-                else if Pp.ismt colliding_pp then
+                else if Cpp_ast.is_empty colliding_pp then
                   non_colliding_pp
                 else
-                  non_colliding_pp ++ cut2 () ++ colliding_pp
+                  Cpp_ast.(seq [non_colliding_pp; text (cut2 ()); colliding_pp])
               in
               let struct_pp =
-                if Pp.ismt body then
-                  mt ()
+                if Cpp_ast.is_empty body then
+                  Cpp_ast.empty
                 else
-                  str "struct "
-                  ++ str parent_name
-                  ++ str " {"
-                  ++ fnl ()
-                  ++ body
-                  ++ fnl ()
-                  ++ str "};"
+                  Cpp_ast.(
+                    seq
+                      [ text (str "struct " ++ str parent_name ++ str " {" ++ fnl ());
+                        body;
+                        text (fnl () ++ str "};") ])
               in
               struct_pp
             else
@@ -3837,33 +3831,33 @@ let do_struct_with_decl_tracking ~is_header f s =
                     | _ -> true )
                   sel
               in
-              let non_colliding_pp = prlist_sep_nonempty cut2 f non_colliding in
+              let non_colliding_pp = concat_nonempty cut2 f non_colliding in
               let colliding_pp =
-                prlist_sep_nonempty
+                concat_nonempty
                   cut2
                   (fun (_l, se) ->
                     match se with
                     | SEmodule m ->
                       ( match m.ml_mod_expr with
                       | MEstruct (inner_mp, inner_sel) ->
-                        in_planned_visibility inner_mp (fun () -> prlist_sep_nonempty cut2 f inner_sel)
-                      | _ -> mt () )
-                    | _ -> mt () )
+                        in_planned_visibility inner_mp (fun () -> concat_nonempty cut2 f inner_sel)
+                      | _ -> Cpp_ast.empty )
+                    | _ -> Cpp_ast.empty )
                   (List.filter
                      (fun (l, se) -> is_colliding_child l se)
                      sel )
               in
               let body =
-                if Pp.ismt non_colliding_pp then
+                if Cpp_ast.is_empty non_colliding_pp then
                   colliding_pp
-                else if Pp.ismt colliding_pp then
+                else if Cpp_ast.is_empty colliding_pp then
                   non_colliding_pp
                 else
-                  non_colliding_pp ++ cut2 () ++ colliding_pp
+                  Cpp_ast.(seq [non_colliding_pp; text (cut2 ()); colliding_pp])
               in
               body )
           else
-            prlist_sep_nonempty cut2 f sel
+            concat_nonempty cut2 f sel
       in
       current_structure_decls := old_decls;
       (p, List.rev !hoisted, List.rev !prereqs, List.rev !concepts)
@@ -3882,9 +3876,9 @@ let do_struct_with_decl_tracking ~is_header f s =
       | ((_, None), p) :: rest -> (Some p, List.rev rest)
       | _ -> (None, rendered)
     in
-    let p_pre = prlist_sep_nonempty cut2 snd pre_entries in
+    let p_pre = concat_nonempty cut2 snd pre_entries in
     let p =
-      prlist_sep_nonempty cut2 (fun x -> x)
+      concat_nonempty cut2 (fun x -> x)
         ( match main_entry with
         | Some main_p -> [p_pre; main_p]
         | None -> [p_pre] )
@@ -3896,23 +3890,16 @@ let do_struct_with_decl_tracking ~is_header f s =
       List.concat_map (fun (_, _, c, _) -> c) placed,
       List.concat_map (fun (_, _, _, c) -> c) placed )
   in
+  (* A section of the file: its groups, [sep] between each two, closed by a
+     break; nothing, where it has none. *)
+  let group sep = function [] -> Cpp_ast.empty | l -> Cpp_ast.(seq [concat sep l; text (cut2 ())]) in
   let hoisted_erased_aliases =
-    let imports = if is_header then List.map str !file_layout.promoted_imports else [] in
+    let imports = if is_header then List.map (fun i -> Cpp_ast.text (str i)) !file_layout.promoted_imports else [] in
     let pads = if is_header then !file_layout.erased_aliases else [] in
-    match imports @ Cpp_ind.render_section pads with
-    | [] -> mt ()
-    | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
+    group fnl (imports @ Cpp_ind.render_section pads)
   in
-  let hoisted_concept_prereqs =
-    match prereqs with
-    | [] -> mt ()
-    | l -> prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
-  in
-  let hoisted_concepts =
-    match concepts with
-    | [] -> mt ()
-    | l -> prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
-  in
+  let hoisted_concept_prereqs = group cut2 prereqs in
+  let hoisted_concepts = group cut2 concepts in
   let forward_decls =
     let structs = if is_header then !file_layout.forward_decls else [] in
     (* Aliases go in front of the text that writes them, and only what no
@@ -3933,43 +3920,37 @@ let do_struct_with_decl_tracking ~is_header f s =
     if is_header then
       let parts =
         List.filter_map
-          (fun w -> if Pp.ismt w.wr_lifted_specs then None else Some w.wr_lifted_specs)
+          (fun w -> if Cpp_ast.is_empty w.wr_lifted_specs then None else Some w.wr_lifted_specs)
           wrapper_parts
         @ Cpp_ind.render_section !file_layout.lifted_specs
       in
-      match List.filter (fun x -> not (Pp.ismt x)) parts with
-      | [] -> mt ()
-      | l -> prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
+      group cut2 (List.filter (fun x -> not (Cpp_ast.is_empty x)) parts)
     else
-      mt ()
+      Cpp_ast.empty
   in
   (* Alongside the lifted helpers and for the same reason, in front of them
      because a helper's own declaration may name one of these. *)
-  let hoisted_wrappers =
-    match hoisted with
-    | [] -> mt ()
-    | l -> prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
-  in
+  let hoisted_wrappers = group cut2 hoisted in
   (* Last of all: a datatype's method whose body names a module's struct, which
      is emitted after every datatype.  Nothing else in the header is later. *)
   let deferred_members =
     let defs = if is_header then !file_layout.member_defs else [] in
     match Cpp_ind.render_section defs with
-    | [] -> mt ()
-    | ds -> cut2 () ++ prlist_with_sep cut2 (fun x -> x) ds
+    | [] -> Cpp_ast.empty
+    | ds -> Cpp_ast.(seq [text (cut2 ()); concat cut2 ds])
   in
   (* Each a chunk of its own, so that an alias no single element claimed --
      one whose only use is in a section assembled out of several -- still
      lands in front of the first section that writes it rather than in the
      prologue. *)
   let sections =
-    List.map top_slot
+    List.map Cpp_ast.top_level
       [ hoisted_erased_aliases; hoisted_concept_prereqs; hoisted_concepts; hoisted_wrappers; lifted_fun_specs; p;
         deferred_defs; deferred_members ]
   in
   Cpp_print.check_ctor_alias_plan ~file:(if is_header then Common.Intf else Common.Impl);
   Cpp_print.check_file_scope_types ~file:(if is_header then Common.Intf else Common.Impl);
-  place_due_declarations ~is_header ~prologue:forward_decls sections ++ fnl ()
+  place_due_declarations ~is_header ~prologue:forward_decls (List.map Cpp_ast.to_pp sections) ++ fnl ()
 
 (** Main entry point: render structure to C++ implementation file. *)
 let pp_struct s =
@@ -3997,5 +3978,5 @@ let cpp_descr =
     pp_hstruct;
     sig_suffix = Some ".h";
     sig_preamble;
-    pp_decl = (fun d -> pp_decls (impl_decls d).rendered);
+    pp_decl = (fun d -> Cpp_ast.to_pp (pp_decls (impl_decls d).rendered));
   }

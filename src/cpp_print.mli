@@ -13,14 +13,12 @@ open Minicpp
 
 (** {2 Rendering} *)
 
-(** [pp_cpp_decl env decl] renders a settled declaration a file writes, its
-    text carrying what placing the declarations it needs reads
-    ({!carried_by}). *)
-val pp_cpp_decl : Common.env -> Cpp_erasure.settled -> Pp.t
+(** [write_decl env decl] is a settled declaration a file writes, with what
+    placing the declarations it needs reads ({!Cpp_ast.Needs}). *)
+val write_decl : Common.env -> Cpp_erasure.settled -> Cpp_ast.t
 
-(** [read_cpp_decl env decl] renders [decl] without what a written
-    declaration's text carries: for a declaration whose text is read, not
-    written. *)
+(** [read_cpp_decl env decl] renders [decl]: for a declaration whose text is
+    read, not written. *)
 val read_cpp_decl : Common.env -> Cpp_erasure.settled -> Pp.t
 
 (** How a member is written: in the struct with or without its body, or out
@@ -91,7 +89,7 @@ val unmerged_wrappers_written : Cpp_erasure.settled -> string list
     wrapper structs of the names [members] gives hold, after their own
     members, the declarations it gives with them: those of the wrapper
     modules of those names. *)
-val writing_wrapper_members : (string * Pp.t) list -> (unit -> 'a) -> 'a
+val writing_wrapper_members : (string * Cpp_ast.t) list -> (unit -> 'a) -> 'a
 
 (** Take the names of the wrapper structs that took a wrapper module's
     declarations since the last call, under [CRANE_CHECK_IR]. *)
@@ -178,21 +176,8 @@ val check_ctor_alias_plan : file:Common.file -> unit
 
 (** The structs the file being written has constrained forward declarations
     of, each by its reference and the name its declaration declares; a
-    declaration's text carries those it names or defines. *)
+    written declaration needs those it names or defines ({!write_decl}). *)
 val constrained_structs : (GlobRef.t * string) list ref
-
-(** What a declaration's text carries ({!pp_cpp_decl}), each by name: the
-    synthesised templates the declaration writes; of the
-    {!constrained_structs}, those it names or defines; and those it
-    defines. *)
-type carried =
-  | Writes of string list
-  | Names of string list
-  | Defines of string list
-
-(** What the tag [tag] on a declaration's text says it carries, if it is one
-    of those. *)
-val carried_by : string -> carried option
 
 (** The type names the file being written introduces at file scope, as
     planned: a definition written out of line leaves them unqualified. *)
