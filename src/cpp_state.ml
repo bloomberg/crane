@@ -611,15 +611,6 @@ let eponymous_type_ref : GlobRef.t option ref = owned_ref None
     of a wrapping struct. *)
 let eponymous_promote_ref : GlobRef.t option ref = owned_ref None
 
-(** Accumulator for non-inductive definitions that should be emitted after the
-    promoted template struct at file scope. *)
-let eponymous_deferred : Pp.t ref = owned_ref (Pp.mt ())
-
-
-(** Whether the promoted inductive needs enable_shared_from_this. Captured
-    during flat rendering in cpp_ind.ml, consumed by the MEstruct wrapper in
-    cpp.ml. *)
-let eponymous_promote_sft : bool ref = owned_ref false
 
 (** Collected method candidates: (function_ref, body, type, this_position) for
     current eponymous type. this_position is the index (0-based) of the first

@@ -1164,8 +1164,6 @@ let rec pp_structure_elem ~is_header f = function
           if is_promoted then (
             eponymous_promote_ref := !eponymous_type_ref;
             Option.iter rendered_promotion !eponymous_type_ref;
-            eponymous_deferred := Pp.mt ();
-            eponymous_promote_sft := false;
             fun body -> body () )
           else
             Table.with_demoted_inductive !eponymous_type_ref
@@ -1244,12 +1242,22 @@ let rec pp_structure_elem ~is_header f = function
         let body = body_written.text in
         (* Capture and clean up promotion state. *)
         let this_promoted = is_promoted in
-        let this_deferred = !eponymous_deferred in
-        let this_promote_sft = !eponymous_promote_sft in
-        if is_promoted then (
-          eponymous_promote_ref := None;
-          eponymous_deferred := Pp.mt ();
-          eponymous_promote_sft := false );
+        (* Whether the struct the eponymous inductive is promoted to derives
+           from [enable_shared_from_this] is decided where the inductive was
+           generated. *)
+        let this_promote_sft =
+          is_promoted
+          && List.exists
+               (function
+                 | _, SEdecl (Dind (kn, _) as d) ->
+                   (match !eponymous_type_ref with
+                    | Some (GlobRef.IndRef (kn', _)) -> MutInd.CanOrd.equal kn kn'
+                    | _ -> false)
+                   && in_planned_visibility body_mp (fun () -> Cpp_ind.promoted_shared_from_this d)
+                 | _ -> false )
+               sel
+        in
+        if is_promoted then eponymous_promote_ref := None;
         let text =
         if is_header then
           if this_promoted then
@@ -1301,7 +1309,6 @@ let rec pp_structure_elem ~is_header f = function
             in
             typeclasses_pp ++ modtypes_pp ++ struct_def ++ modtypes_after_pp
             ++ deferred_asserts_pp
-            ++ this_deferred
           else
             let template_decl, record_fields_pp, record_methods_pp =
               match this_eponymous_record with

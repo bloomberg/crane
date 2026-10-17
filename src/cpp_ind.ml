@@ -1420,7 +1420,6 @@ let decls_for ~is_header d =
     { rendered = function_views ~is_header ~lifted_inline funs; helpers; member_defs = [] }
   | Header_only gen when is_header ->
     let g, helpers = header_entity d gen in
-    if not !peeked then Option.iter (fun sft -> eponymous_promote_sft := sft) g.promoted_sft;
     { rendered = finished_header g.decls; helpers; member_defs = finished_header g.member_defs }
   | Instance (r, a, t) when is_header ->
     let ds, helpers = instance_entity r a t in
@@ -1434,3 +1433,9 @@ let header_decls = decls_for ~is_header:true
     places, read off what was generated ahead of the files without taking
     it: nothing is recorded or claimed. *)
 let header_element_ahead d = peeking (fun () -> header_decls d)
+
+let promoted_shared_from_this d =
+  peeking @@ fun () ->
+  match generate d with
+  | Header_only gen -> (fst (header_entity d gen)).promoted_sft = Some true
+  | Functions _ | Instance _ | Nothing -> false

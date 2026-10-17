@@ -232,15 +232,6 @@ val eponymous_type_ref : Names.GlobRef.t option ref
     inside a wrapping struct. Reset to [None] by [reset_cpp_state]. *)
 val eponymous_promote_ref : Names.GlobRef.t option ref
 
-(** Accumulated non-inductive definitions to emit at file scope after the
-    promoted template struct. Reset to empty by [reset_cpp_state]. *)
-val eponymous_deferred : Pp.t ref
-
-(** Whether the promoted inductive needs [enable_shared_from_this]; set while
-    rendering flat in [cpp_ind.ml] and consumed by the [MEstruct] wrapper in
-    [cpp.ml]. Reset to [false] by [reset_cpp_state]. *)
-val eponymous_promote_sft : bool ref
-
 (** Method candidates collected for the current eponymous type, as
     [(function_ref, body, type, this_position)] where [this_position] is the
     0-based index of the first argument matching the eponymous type. Reset to
