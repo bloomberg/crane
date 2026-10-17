@@ -59,49 +59,12 @@ let module_struct_name (mp : ModPath.t) : string option =
     | MPdot (_, lbl) -> Some (String.capitalize_ascii (Label.to_string lbl))
     | MPfile _ | MPbound _ -> None )
 
-(** Finished declarations written later than they were generated, each group
-    kept with the scope it was generated in and rendered in it. *)
-type deferred = (Cpp_state.scope * rendered) list ref
-
-let deferred name : deferred = Cpp_state.owned_list name
-
-let defer (band : deferred) ds =
-  if ds <> [] then band := (Cpp_state.current_scope (), ds) :: !band
-
+(** Groups of finished declarations written away from where they were
+    generated, in writing order, each with the scope it is written in. *)
 type section = (Cpp_state.scope * rendered) list
 
 let render_section (groups : section) =
   List.map (fun (sc, ds) -> Cpp_state.in_scope sc (fun () -> pp_decls ds)) groups
-
-let take_deferred (band : deferred) : section =
-  let groups = List.rev !band in
-  band := [];
-  groups
-
-let render_deferred band = render_section (take_deferred band)
-
-let equal_section (a : section) (b : section) =
-  List.equal
-    (fun (sc, ds) (sc', ds') ->
-      Cpp_state.equal_scope sc sc'
-      && List.equal
-           (fun ((ids, avoid), d) ((ids', avoid'), d') ->
-             List.equal Id.equal ids ids' && Id.Set.equal avoid avoid' && compare d d' = 0 )
-           ds ds' )
-    a b
-
-let discard (band : deferred) = band := []
-
-(** Member definitions a datatype struct at namespace scope gave up because
-    their bodies name a module's struct, which is emitted after every datatype
-    and cannot be moved in front of one it holds by value. *)
-let deferred_member_defs = deferred "deferred_member_defs"
-
-(** The landing pads for erasure: file-scope [using X = std::any;] for a name
-    with no C++ spelling behind it.  Written before everything, the concepts
-    included, because an alias to [std::any] names nothing and the text that
-    lands on it does not follow it. *)
-let file_scope_erased_aliases = deferred "file_scope_erased_aliases"
 
 (** The kinds of the template parameters of the inductive [kn]'s packets,
     as {!ind_header_decls} gives them. *)

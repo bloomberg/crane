@@ -626,27 +626,25 @@ let struct_hoists mp doc =
     written in. *)
 type file_layout = {
   erased_aliases : Cpp_ind.section;
-      (** The erasure landing pads written at file scope, which go ahead of
-          everything, the concepts included. *)
+      (** The erasure landing pads written at file scope -- [using X =
+          std::any;] for a name with no C++ spelling behind it -- which go
+          ahead of everything, the concepts included: an alias to [std::any]
+          names nothing, and the text that lands on it does not follow it. *)
   lifted_specs : Cpp_ind.section;
       (** The declarations of the helpers an element written at namespace
-          scope places, which go ahead of every section. *)
+          scope places, which go ahead of every section: an inductive's
+          helpers are written directly after its struct closes, and so after
+          the methods that call them. *)
   member_defs : Cpp_ind.section;
-      (** The definitions of members a datatype's struct gave up, which go
-          last. *)
+      (** The definitions of members a datatype's struct at namespace scope
+          gave up because their bodies name a module's struct, which is
+          written after every datatype and cannot be moved in front of one it
+          holds by value: they go last. *)
 }
 
 let file_layout : file_layout ref =
   State.cell State.Unit {erased_aliases = []; lifted_specs = []; member_defs = []}
 
-(** The section [planned] of the header, which under [CRANE_CHECK_IR] must be
-    what the render deferred to [band] as it wrote each element. *)
-let planned_section ~what planned band =
-  let deferred = Cpp_ind.take_deferred band in
-  if Probe.checking () && not (Cpp_ind.equal_section planned deferred) then
-    Probe.violation "file layout"
-      Pp.(str "the header deferred other " ++ str what ++ str " than its layout planned");
-  planned
 
 (** Report what a lifted helper met at the site that placed it, under
     [CRANE_DBG_LIFTED].
@@ -681,14 +679,6 @@ let dbg_lifted =
            (Printf.sprintf "[crane:lifted] %-28s site=%-12s %s%s" name site
               split
               (if extra = "" then "" else " " ^ extra) ) )
-
-(** The declarations of helpers lifted out of a declaration that is not a
-    wrapper module's -- an inductive's own, whose helpers {!pp_structure_elem}
-    emits directly after the struct closes, and so after the methods that call
-    them.  They are due at the top of the file like every other lifted
-    helper's, so they are deferred, with their scope, for the file to
-    collect. *)
-let pending_lifted_specs = Cpp_ind.deferred "pending_lifted_specs"
 
 (** The concept of the type class [r], recorded as [r]'s generation. *)
 let generated_concept r fields =
@@ -812,8 +802,7 @@ let rec pp_structure_elem ~is_header f = function
        referring to an undeclared name.  Emit it as a static member template
        right before the declaration that produced it instead; helpers produced
        elsewhere keep their file-scope placement. *)
-    let {Cpp_ind.rendered; helpers; member_defs} = f d in
-    Cpp_ind.defer Cpp_ind.deferred_member_defs member_defs;
+    let {Cpp_ind.rendered; helpers; _} = f d in
     (* An erasure landing pad -- [using X = std::any;] -- travels to the very
        top of the file, ahead of the concepts.
 
@@ -824,16 +813,15 @@ let rec pp_structure_elem ~is_header f = function
        case below, so leaving the alias where it was written puts the use in
        front of the declaration.  Hoisting both and ordering them here is what
        makes that pair of placements independent of each other, and of any
-       later pass that reorders the file. *)
+       later pass that reorders the file.  It is planned there
+       ({!file_layout}); here it is only left out. *)
     let body =
       if
         is_header
         && (not (!render_ctx).rc_in_struct)
         && rendered <> []
         && List.for_all is_erased_alias rendered
-      then (
-        Cpp_ind.defer Cpp_ind.file_scope_erased_aliases rendered;
-        mt () )
+      then mt ()
       else pp_decls rendered
     in
     (* A type class rendered at file scope is a concept, and a concept has no
@@ -872,7 +860,7 @@ let rec pp_structure_elem ~is_header f = function
           (fun acc d' ->
             (* Emitted after the struct this was lifted out of, so after the
                methods that call it.  The definition stays where it is and the
-               declaration is left for the file to put at the top -- the same
+               declaration is planned at the top ({!file_layout}) -- the same
                repair as for a wrapper module's lifted helpers, on the path
                that produces them one at a time into a [Pp.t]. *)
             dbg_lifted ~site:"structure-elem"
@@ -888,12 +876,7 @@ let rec pp_structure_elem ~is_header f = function
                member's signature resolves against the struct, a nested [t] or
                a sibling type, and hoisting the declaration to file scope takes
                those names out of scope with it. *)
-            let def, spec =
-              lifted_views ~may_hoist:(not (!render_ctx).rc_in_struct) d'
-            in
-            Option.iter
-              (fun spec -> Cpp_ind.defer pending_lifted_specs [(empty_env (), spec)])
-              spec;
+            let def, _ = lifted_views ~may_hoist:(not (!render_ctx).rc_in_struct) d' in
             let pp = pp_cpp_decl (empty_env ()) def in
             if Pp.ismt pp then acc
             else if Pp.ismt acc then pp
@@ -3313,8 +3296,6 @@ let do_struct_with_decl_tracking ~is_header f s =
       else p
   in
   Cpp_print.reset_ctor_alias_emitted ();
-  Cpp_ind.discard Cpp_ind.deferred_member_defs;
-  Cpp_ind.discard Cpp_ind.file_scope_erased_aliases;
   Cpp_ind.start_render ();
   init_std_names ();
   (* The file is written outside every module body, its files visible;
@@ -3658,12 +3639,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   in
   let hoisted_erased_aliases =
     let imports = List.map str (Cpp_print.take_promoted_alias_imports ()) in
-    let pads =
-      if is_header then
-        planned_section ~what:"erasure landing pads" !file_layout.erased_aliases
-          Cpp_ind.file_scope_erased_aliases
-      else Cpp_ind.take_deferred Cpp_ind.file_scope_erased_aliases
-    in
+    let pads = if is_header then !file_layout.erased_aliases else [] in
     match imports @ Cpp_ind.render_section pads with
     | [] -> mt ()
     | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
@@ -3705,8 +3681,7 @@ let do_struct_with_decl_tracking ~is_header f s =
         List.filter_map
           (fun w -> if Pp.ismt w.wr_lifted_specs then None else Some w.wr_lifted_specs)
           wrapper_parts
-        @ Cpp_ind.render_section
-            (planned_section ~what:"helper declarations" !file_layout.lifted_specs pending_lifted_specs)
+        @ Cpp_ind.render_section !file_layout.lifted_specs
       in
       match List.filter (fun x -> not (Pp.ismt x)) parts with
       | [] -> mt ()
@@ -3724,11 +3699,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   (* Last of all: a datatype's method whose body names a module's struct, which
      is emitted after every datatype.  Nothing else in the header is later. *)
   let deferred_members =
-    let defs =
-      if is_header then
-        planned_section ~what:"member definitions" !file_layout.member_defs Cpp_ind.deferred_member_defs
-      else Cpp_ind.take_deferred Cpp_ind.deferred_member_defs
-    in
+    let defs = if is_header then !file_layout.member_defs else [] in
     match Cpp_ind.render_section defs with
     | [] -> mt ()
     | ds -> cut2 () ++ prlist_with_sep cut2 (fun x -> x) ds
