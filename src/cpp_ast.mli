@@ -94,7 +94,10 @@ val body_is_empty : body -> bool
 val spliced : body -> t
 
 (** [module_ enclosure ~fields body] writes [body] as {!Module}; nothing, if
-    that writes nothing. *)
+    that writes nothing.
+    @raise Invalid_argument if [enclosure] is a struct and [fields] or a
+    member holds a {!Top_level} chunk: nothing inside a struct is at
+    namespace scope. *)
 val module_ : enclosure -> ?fields:t -> body -> t
 
 (** Whether [t] writes nothing, which is whether its text is empty: a

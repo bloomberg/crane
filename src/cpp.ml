@@ -3439,7 +3439,8 @@ let do_struct_with_decl_tracking ~is_header f s =
          | SEmodule {ml_mod_expr = MEstruct (body_mp, _); _} -> struct_hoists body_mp (Cpp_ast.to_pp p)
          | _ -> false
     in
-    let p = Cpp_ast.top_level p in
+    (* A struct's member is not a chunk at namespace scope: the struct is. *)
+    let p = if (!render_ctx).rc_in_struct then p else Cpp_ast.top_level p in
     if hoists then (
       hoisted := p :: !hoisted;
       Cpp_ast.empty )
@@ -3644,7 +3645,11 @@ let do_struct_with_decl_tracking ~is_header f s =
                 with_render_ctx (fun c -> {c with rc_in_struct = true}) (fun () -> body In_enclosing_scope ~keep:is_func_decl sel)
               in
               if Cpp_ast.body_is_empty body then Cpp_ast.empty
-              else Cpp_ast.module_ (Struct {head = str "struct " ++ str parent_name ++ str " {" ++ fnl (); tail = str "};"}) body )
+              else
+                Cpp_ast.top_level
+                  (Cpp_ast.module_
+                     (Struct {head = str "struct " ++ str parent_name ++ str " {" ++ fnl (); tail = str "};"})
+                     body ) )
             else Cpp_ast.module_ Out_of_line (body Out_of_line ~keep:(fun _ -> true) sel) )
           else
             concat_nonempty cut2 f sel

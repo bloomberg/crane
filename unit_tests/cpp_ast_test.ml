@@ -102,6 +102,12 @@ let () =
     (raw (Cpp_ast.module_ (Struct {head = Pp.str "s{"; tail = Pp.str "}"}) one)) "s{y;\n}";
   check_text "a body with no struct of its own writes nothing after its members"
     (raw (Cpp_ast.module_ In_enclosing_scope one)) "y;";
+  check "no chunk at namespace scope is a struct's member"
+    ( match Cpp_ast.module_ struct_ (Cpp_ast.module_body m [top (leaf "x")]) with
+    | exception Invalid_argument _ -> true
+    | _ -> false );
+  check "a chunk at namespace scope may be a member of a body defined out of line"
+    (not (Cpp_ast.is_empty (Cpp_ast.module_ Out_of_line (Cpp_ast.module_body m [top (leaf "x")]))));
   check "a spliced body with no members writes nothing" (Cpp_ast.is_empty (Cpp_ast.spliced (Cpp_ast.module_body m [])));
   check "an empty chunk is no chunk" (Cpp_ast.is_empty (top Cpp_ast.empty));
   check "a declaration needing something is not empty" (not (Cpp_ast.is_empty (leaf ~templates:["T"] "")))

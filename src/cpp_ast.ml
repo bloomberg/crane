@@ -42,7 +42,17 @@ type body = {body_module : ModPath.t; body_members : t list}
 let module_body mp members = {body_module = mp; body_members = List.filter (fun t -> not (is_empty t)) members}
 let body_is_empty b = b.body_members = []
 
+let rec has_top_level = function
+  | Text _ | Decl _ | Declarations _ -> false
+  | Top_level _ -> true
+  | Seq l -> List.exists has_top_level l
+  | Module {fields; members; _} -> List.exists has_top_level (fields :: members)
+
 let module_ enclosure ?(fields = empty) b =
+  ( match enclosure with
+  | Struct _ when List.exists has_top_level (fields :: b.body_members) ->
+    invalid_arg "Cpp_ast.module_: a chunk at namespace scope inside a struct"
+  | Struct _ | Out_of_line | In_enclosing_scope -> () );
   let t = Module {module_ = b.body_module; enclosure; fields; members = b.body_members} in
   if is_empty t then empty else t
 
