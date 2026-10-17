@@ -1055,19 +1055,39 @@ let is_static_member_declaration (d : cpp_decl) =
   match d with Dfun {df_shape = Ddecl _; _} -> true | _ -> false
 
 (** Whether the function declaration [d] writes a qualifier into a struct or
-    a template parameter, in its name, its result or its parameters ({!type_names_into_a_struct}); [None]
-    for anything else, or where only its rendering can tell. *)
-let declaration_names_into_a_struct (d : cpp_decl) =
+    a template parameter ({!type_names_into_a_struct}): in its name, result
+    and parameters, and in its template head -- a concept constraining a
+    parameter, a type a parameter defaults to or a callable one is invoked
+    with.  [None] for anything else, a declaration under a [requires]
+    clause, or where only its rendering can tell. *)
+let rec declaration_names_into_a_struct (d : cpp_decl) =
+  let any_type ts =
+    List.fold_left
+      (fun acc t -> match acc with Some false -> type_names_into_a_struct t | _ -> acc)
+      (Some false) ts
+  in
+  let names_through n = head_names_into_a_struct (unqualified_head n) in
   match d with
   | Dfun {df_path = {dp_outer; dp_inner}; df_ret; df_shape = Ddecl params; _} ->
     let path = dp_outer :: dp_inner in
-    if List.exists (fun (n, _) -> head_names_into_a_struct (unqualified_head (global_name Type n))) path
+    if List.exists (fun (n, _) -> names_through (global_name Type n)) path then Some true
+    else any_type ((df_ret :: List.map snd params) @ List.concat_map snd path)
+  | Dtemplate (tparams, None, inner) ->
+    let concept_names_through c = (not (class_concept_held_back c)) && names_through (concept_name c) in
+    let param_types (tt, _) =
+      match tt with
+      | TTtypename | TTtemplate _ -> []
+      | TTtypename_default t -> [t]
+      | TTfun (dom, cod) -> cod :: dom
+      | TTinvocable (invs, cod) -> cod :: List.concat_map (fun inv -> List.map snd inv.inv_args) invs
+      | TTconcept (_, args) -> args
+    in
+    if List.exists (function TTconcept (c, _), _ -> concept_names_through c | _ -> false) tparams
     then Some true
-    else
-      List.fold_left
-        (fun acc t -> match acc with Some false -> type_names_into_a_struct t | _ -> acc)
-        (Some false)
-        ((df_ret :: List.map snd params) @ List.concat_map snd path)
+    else (
+      match any_type (List.concat_map param_types tparams) with
+      | Some false -> declaration_names_into_a_struct inner
+      | answer -> answer )
   | _ -> None
 
 (** Pretty-print a MiniCpp type as C++ source text.

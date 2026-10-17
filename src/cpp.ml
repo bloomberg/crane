@@ -492,6 +492,11 @@ let rec lifted_decl_key = function
     Option.map Lifted.name (Lifted.of_ref r)
   | _ -> None
 
+(** Whether a rendering writes a qualifier into a struct or a template
+    parameter, read from the kinds its names were tagged with as they were
+    written ({!Cpp_name.written}). *)
+let names_into_a_struct (doc : Pp.t) : bool = List.exists writes_into_a_struct (Cpp_name.written doc)
+
 (** Whether [spec] may be emitted at the top of the file, above every
     definition in it.
 
@@ -502,16 +507,19 @@ let rec lifted_decl_key = function
     position above the structs is legal for such a signature and the honest
     answer is to leave it where it is.
 
-    Decided by reading the qualifiers the rendered declaration writes, each
-    tagged by the code that wrote it with what it is ({!Cpp_name.written}),
-    because the question is about what is written and nothing else can answer
-    it without disagreeing.  The IR node cannot: [Nat] and [List::list] are
-    both [Tnamespace], which means "an inductive's own scope", not "inside a
-    module struct".  Nor can the tables behind the printer, taken one at a
-    time -- whether a qualifier is written is settled by a chain of them (is
-    the module a wrapper, is the type nonetheless emitted at global scope, is
-    it an eponymous record, an enum, a local inductive), and any single one of
-    them is a second opinion.  Two such opinions have already been wrong here.
+    The question is about what is written, and is asked of the declaration's
+    types through the heads the type printer writes them with
+    ({!Cpp_print.declaration_names_into_a_struct}), each qualifier with what it
+    is.  The IR node alone cannot answer: [Nat] and [List::list] are both
+    [Tnamespace], which means "an inductive's own scope", not "inside a module
+    struct".  Nor can the tables behind the printer, taken one at a time --
+    whether a qualifier is written is settled by a chain of them (is the
+    module a wrapper, is the type nonetheless emitted at global scope, is it
+    an eponymous record, an enum, a local inductive), and any single one of
+    them is a second opinion; two such opinions have already been wrong here.
+    The heads are not one: they are what the printer writes from.  Under
+    [CRANE_CHECK_IR] the answer must agree with the qualifiers the rendered
+    declaration writes, read back from their tags ({!names_into_a_struct}).
 
     A namespace needs nothing complete: naming into one asks only that the
     name be declared, which is all a declaration asks of an unqualified name
@@ -529,10 +537,14 @@ let rec lifted_decl_key = function
     qualifying into a struct would drag the whole block below that struct --
     past the uses it exists to precede -- so what it costs is the position, for
     every other helper in the block. *)
-let names_into_a_struct (doc : Pp.t) : bool = List.exists writes_into_a_struct (Cpp_name.written doc)
-
 let spec_is_hoistable (spec : Cpp_erasure.settled) : bool =
-  not (names_into_a_struct (pp_cpp_decl (empty_env ()) spec))
+  let hoistable = declaration_names_into_a_struct (spec :> cpp_decl) = Some false in
+  if Probe.checking () && hoistable = names_into_a_struct (pp_cpp_decl (empty_env ()) spec) then
+    Probe.violation "hoisted helpers"
+      Pp.(str "a helper's declaration was judged by its type to "
+          ++ str (if hoistable then "name nothing inside a struct, and its rendering does"
+                  else "name into a struct, and its rendering does not"));
+  hoistable
 
 (* Whether the module [mp] is rendered outside every struct, as planned
    ({!Scope_plan.nested}). *)
@@ -654,8 +666,8 @@ let file_layout : file_layout ref =
     not recoverable from the output.
 
     The rendered declaration is printed with it, because that text is what
-    {!spec_is_hoistable} reads: a rejection is only interpretable next to the
-    qualifier that caused it. *)
+    {!spec_is_hoistable} answers for: a rejection is only interpretable next
+    to the qualifier that caused it. *)
 let dbg_lifted =
   let on = lazy (Sys.getenv_opt "CRANE_DBG_LIFTED" <> None) in
   fun ~site ?(extra = "") (d : cpp_decl) ->
