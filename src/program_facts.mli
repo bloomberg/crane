@@ -33,6 +33,8 @@ type program = {
           innermost first ({!Ownership.summarize}). *)
   recursive_groups : Recursive_groups.t;
       (** Which functions recurse through which. *)
+  recursion : Recursion_plan.t;
+      (** How each function recurses through itself. *)
 }
 
 (** [analyze_program p] analyses the frozen program [p]; it writes nothing. *)

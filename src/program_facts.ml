@@ -13,13 +13,16 @@ type program = {
   throwing_values : Names.GlobRef.t list;
   parameter_ownership : (Names.GlobRef.t * bool list) list;
   recursive_groups : Recursive_groups.t;
+  recursion : Recursion_plan.t;
 }
 
 let analyze_program frozen =
   let struc = Core.structure frozen in
+  let recursive_groups = Recursive_groups.analyze struc in
   { throwing_values = Structure_analysis.throwing_values struc;
     parameter_ownership = Ownership.summarize struc;
-    recursive_groups = Recursive_groups.analyze struc }
+    recursive_groups;
+    recursion = Recursion_plan.analyze recursive_groups struc }
 
 let used_customs struc =
   let used = ref Ref.User.Set.empty in

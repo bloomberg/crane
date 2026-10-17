@@ -1286,6 +1286,37 @@ let fundef_display_name path =
   in
   Id.to_string label
 
+(** How the function [r], whose body is [body], recurses through itself: as
+    the program's recursion plan has it ({!Recursion_plan}), read off its
+    Core body and its recursive group's before any of them was lowered.
+
+    Under [CRANE_CHECK_IR] the plan is checked against [classify check body],
+    the reading of the finished body, mutual partners inlined, that decided
+    this before; a function the plan does not know is classified here, which
+    is a violation.  A member the backend generates itself -- a factory, a
+    deep copy -- has no Core body and no reference, and is classified here. *)
+let planned_recursion r check body =
+  let classified () = classify check body in
+  match Option.map (fun r -> (r, Recursion_plan.find r)) r with
+  | None -> classified ()
+  | Some (r, Some planned) ->
+    let planned =
+      match planned with
+      | Recursion_plan.No_recursion -> No_recursion
+      | Tail -> Tail_recursion
+      | Nontail -> Nontail_recursion
+    in
+    if Probe.checking () && classified () <> planned then
+      Probe.violation "recursion plan"
+        Pp.(
+          str "the recursion plan disagrees with the finished body of "
+          ++ str (Table.kername_of_global r));
+    planned
+  | Some (r, None) ->
+    Probe.violation "recursion plan"
+      Pp.(str "the recursion plan does not know " ++ str (Table.kername_of_global r));
+    classified ()
+
 (** Transform a top-level function definition by loopifying its body.
 
     This is the main entry point for loopifying a [Dfun]. The transformation
@@ -1339,12 +1370,12 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
   let body =
     let name = fundef_display_name f.df_path in
     if is_cofix_body body then begin
-      if classify check body <> No_recursion then
+      if planned_recursion (Some (fst f.df_path.dp_outer)) check body <> No_recursion then
         record_outcome name (Lp_deferred "cofixpoint body is lazy_-wrapped");
       loopify_inner_lambdas ~tparams ~outer_env:params body
     end else
       (* Normal (non-lazy) function — existing path *)
-      let kind = classify check body in
+      let kind = planned_recursion (Some (fst f.df_path.dp_outer)) check body in
       (* Recursion that lives inside a lambda -- a local fixpoint, or an
          inlined mutual partner -- is visible to {!classify} but out of reach
          of the transforms, which never rewrite through a lambda: the machine
@@ -1475,7 +1506,7 @@ let transform_method ~tparams ~self_ty mf =
       method_checker ~n_params ~has_self_param:false ~this_pos
         ?self_ref:mf.mf_globref mf.mf_name
     in
-    if classify basic_check mf.mf_body <> No_recursion then
+    if planned_recursion mf.mf_globref basic_check mf.mf_body <> No_recursion then
       record_outcome name (Lp_deferred "cofixpoint body is lazy_-wrapped");
     Fmethod mf
   end else
@@ -1483,7 +1514,7 @@ let transform_method ~tparams ~self_ty mf =
       method_checker ~n_params ~has_self_param:false ~this_pos
         ?self_ref:mf.mf_globref mf.mf_name
     in
-    ( match classify basic_check mf.mf_body with
+    ( match planned_recursion mf.mf_globref basic_check mf.mf_body with
     | No_recursion ->
       Fmethod mf
     | (Tail_recursion | Nontail_recursion) as kind ->
