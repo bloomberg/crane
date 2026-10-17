@@ -17,27 +17,31 @@ type t = {
   decls : Cpp_erasure.settled Node_table.t;
   demands : Table.header list;
   globals : Names.GlobRef.t list;
+  promoted : Names.Id.t list;
 }
 
 let finish jobs =
-  let decls = Node_table.create 256 and demands = ref [] and globals = ref [] in
+  let decls = Node_table.create 256 and demands = ref [] and globals = ref [] and promoted = ref [] in
   List.iter
     (fun (key, d) ->
       if not (Node_table.mem decls key) then begin
         let f = Cpp_pipeline.finish d in
         demands := List.rev_append (Cpp_demands.of_decl (f :> Minicpp.cpp_decl)) !demands;
         globals := List.rev_append (Cpp_demands.globals_of_decl (f :> Minicpp.cpp_decl)) !globals;
+        promoted := List.rev_append (Cpp_demands.promoted_of_decl (f :> Minicpp.cpp_decl)) !promoted;
         Node_table.replace decls key f
       end )
     jobs;
-  {decls; demands = List.sort_uniq compare !demands; globals = !globals}
+  {decls; demands = List.sort_uniq compare !demands; globals = !globals; promoted = List.rev !promoted}
 
 let demands t = t.demands
 let globals t = t.globals
 
-let installed = State.cell State.Unit {decls = Node_table.create 0; demands = []; globals = []}
+let installed = State.cell State.Unit {decls = Node_table.create 0; demands = []; globals = []; promoted = []}
 
 let installed_globals () = !installed.globals
+
+let installed_promoted () = !installed.promoted
 
 let install t = installed := t
 

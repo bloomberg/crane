@@ -107,9 +107,9 @@ type forward_declaration = {
     them, printed in the current scope as the definition prints its head. *)
 val forward_declarations : Common.env -> Cpp_erasure.settled -> forward_declaration list
 
-(** The using-declarations this rendering pass needs for promoted type
-    variables whose file-scope alias another file declares, emptying the set. *)
-val take_promoted_alias_imports : unit -> string list
+(** The using-declaration a unit needs for a promoted type variable whose
+    file-scope alias another file declares, under separate extraction. *)
+val promoted_alias_import : Names.Id.t -> string option
 
 (** {2 Synthesised aliases} *)
 

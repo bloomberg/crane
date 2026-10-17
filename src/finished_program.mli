@@ -40,6 +40,10 @@ val globals : t -> Names.GlobRef.t list
 (** {!globals} of the installed program. *)
 val installed_globals : unit -> Names.GlobRef.t list
 
+(** The promoted type variables the installed program's declarations write
+    ({!Cpp_demands.promoted_of_decl}), in the order they were finished. *)
+val installed_promoted : unit -> Names.Id.t list
+
 (** Make [t] the unit's program, the one {!find} reads. *)
 val install : t -> unit
 

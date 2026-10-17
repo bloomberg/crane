@@ -37,3 +37,10 @@ val globals_of_decl : Minicpp.cpp_decl -> Names.GlobRef.t list
 
 (** The globals the type [t] writes the names of where it is written. *)
 val globals_of_type : Minicpp.cpp_type -> Names.GlobRef.t list
+
+(** The promoted type variables -- a class's [Type]-valued fields -- the
+    finished declaration [d] writes, in the order it writes them. *)
+val promoted_of_decl : Minicpp.cpp_decl -> Names.Id.t list
+
+(** The promoted type variables the type [t] writes, in order. *)
+val promoted_of_type : Minicpp.cpp_type -> Names.Id.t list

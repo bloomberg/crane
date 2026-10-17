@@ -37,7 +37,7 @@ let no_holes = {typ = None; scrut = None; tyargs = []; cases = []; args = []}
    a structured binding's field types -- are not written, and neither is
    what a printing rule drops (the type of an abort that is returned, a move
    out of a returned variable). *)
-let collect ?(global = ignore) visit =
+let collect ?(global = ignore) ?(promoted = ignore) visit =
   let found = ref [] in
   let need h = if not (List.mem h !found) then found := h :: !found in
   let std h = need (Table.Standard h) in
@@ -65,7 +65,9 @@ let collect ?(global = ignore) visit =
     | Tnamespace (r, _) -> global r
     (* Spelled bare, a class's type field is imported by name from the class's
        file ([using ProvDef::prov;]). *)
-    | Tpromoted id -> Option.iter global (Table.promoted_type_var_field id)
+    | Tpromoted id ->
+      promoted id;
+      Option.iter global (Table.promoted_type_var_field id)
     | _ -> () );
     match t with
     | Tglob (r, tys, args) -> (
@@ -274,6 +276,16 @@ let globals visit =
 let globals_of_decl d = globals (fun ~decl ~ty:_ -> decl d)
 
 let globals_of_type t = globals (fun ~decl:_ ~ty -> ty t)
+
+let promoted visit =
+  let found = ref [] in
+  ignore
+    (collect ~promoted:(fun id -> if not (List.exists (Names.Id.equal id) !found) then found := id :: !found) visit);
+  List.rev !found
+
+let promoted_of_decl d = promoted (fun ~decl ~ty:_ -> decl d)
+
+let promoted_of_type t = promoted (fun ~decl:_ ~ty -> ty t)
 
 let of_modtype_concept (c : Modtype_concept.t) =
   let found = ref [] in

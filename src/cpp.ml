@@ -661,6 +661,12 @@ type file_layout = {
           defines at namespace scope, in the order it defines them, each with
           what defines it: they go in front of the first chunk of the file
           that names the struct before defining it. *)
+  promoted_imports : string list;
+      (** The using-declarations, at the top of the header, of the promoted
+          type variables the unit's declarations write whose class field
+          another file declares ({!Cpp_print.promoted_alias_import}), in
+          alphabetical order: the implementation file includes the header,
+          and so sees them too. *)
   wrapper_homes : (string * ml_decl) list;
       (** The wrapper modules whose declarations the header writes into a
           struct of the same name that a declaration writes around an
@@ -684,6 +690,7 @@ let file_layout : file_layout ref =
       member_defs = [];
       forward_decls = [];
       constrained_decls = [];
+      promoted_imports = [];
       wrapper_homes = [] }
 
 
@@ -2481,6 +2488,14 @@ let plan_file_layout s =
         ~in_body:(fun ~wrapper mp sel ->
           if hoists ~wrapper mp sel then hoisted_structs := MPset.add mp !hoisted_structs )
         s );
+  let promoted_imports =
+    with_visibility (toplevel_visibility (List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s))
+    @@ fun () ->
+    List.sort_uniq String.compare
+      (List.filter_map Cpp_print.promoted_alias_import
+         ( Finished_program.installed_promoted ()
+         @ List.concat_map Cpp_demands.promoted_of_type (Cpp_ind.generated_record_field_types ()) ))
+  in
   let forward =
     List.concat_map snd
       (List.stable_sort
@@ -2492,6 +2507,7 @@ let plan_file_layout s =
       lifted_specs = in_writing_order specs;
       member_defs = in_writing_order member_defs;
       forward_decls = List.filter_map (fun (_, (f : Cpp_print.forward_declaration)) -> if f.fwd_constrained then None else Some f.fwd_text) forward;
+      promoted_imports;
       constrained_decls = List.filter (fun (_, (f : Cpp_print.forward_declaration)) -> f.fwd_constrained) forward;
       wrapper_homes =
         List.fold_left
@@ -3791,7 +3807,7 @@ let do_struct_with_decl_tracking ~is_header f s =
       List.concat_map (fun (_, _, _, c) -> c) placed )
   in
   let hoisted_erased_aliases =
-    let imports = List.map str (Cpp_print.take_promoted_alias_imports ()) in
+    let imports = if is_header then List.map str !file_layout.promoted_imports else [] in
     let pads = if is_header then !file_layout.erased_aliases else [] in
     match imports @ Cpp_ind.render_section pads with
     | [] -> mt ()
