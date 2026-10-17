@@ -585,8 +585,10 @@ let module_members_name_only_inductives sel =
       | _ -> true )
     sel
 
-(** Whether a module's struct may be declared ahead of the file rather than at
-    the module's own place in the emitted order.
+(** The modules whose structs the header declares ahead of the file rather
+    than at the module's own place in the emitted order, by the module path
+    of their body: planned before either file is rendered
+    ({!plan_hoisted_structs}).
 
     Its own place is the safe answer and stays the default, because a member
     initialised inside the struct body runs there, and everything that body
@@ -594,69 +596,28 @@ let module_members_name_only_inductives sel =
     that is a struct of nothing but static function {e declarations} --
     [static Nat pick(Nat, Nat);], defined out of line: a declaration asks its
     parameter and result types to be declared, which the forward declarations
-    above already do, and asks nothing else of the file at all.  So the only
-    thing such a struct's position decides is whether its callers can see it,
-    and a function hoisted onto a datatype is a caller emitted with the
-    datatype, which may come first.
-
-    This half is read off the rendered struct, because that text is what the
-    compiler reads: every member must be a [static] declaration ending at its
-    semicolon -- no body, no initialiser, no alias, no data, no nested type --
-    the struct must not be a template, and no name may be qualified into
-    another struct, which is the question {!spec_is_hoistable} asks of a lifted
-    helper and for the same reason: [Other::t] needs [Other] complete, so
-    moving this in front of it would not help.  The other half, which the text
-    cannot answer, is {!module_members_name_only_inductives}.
-
-    A doc comment is none of this: it is read with the comments taken out,
-    or a member's comment would fail it for not starting with [static], and
-    the word "template" in the struct's own would make a template of it. *)
-let module_struct_is_hoistable doc =
-  let rendered = Pp.string_of_ppcmds (Doc_comments.strip doc) in
-  match (String.index_opt rendered '{', String.rindex_opt rendered '}') with
-  | Some o, Some c when o < c ->
-    let head = String.sub rendered 0 o in
-    let body = String.sub rendered (o + 1) (c - o - 1) in
-    let members = String.split_on_char ';' body in
-    let is_static_decl m =
-      let m = String.trim m in
-      m = ""
-      || (String.length m > 7
-         && String.equal (String.sub m 0 7) "static "
-         && String.contains m '('
-         && not (String.contains m '='))
-    in
-    let is_template =
-      let n = String.length head in
-      let rec scan i =
-        i + 8 <= n
-        && (String.equal (String.sub head i 8) "template" || scan (i + 1))
-      in
-      scan 0
-    in
-    (not (String.contains body '{'))
-    && (not is_template)
-    && List.for_all is_static_decl members
-    && not (names_into_a_struct doc)
-  | _ -> false
-
-(** The modules whose structs the header declares ahead of the file, by the
-    module path of their body: planned before either file is rendered
-    ({!plan_hoisted_structs}). *)
+    above already do ({!module_members_name_only_inductives}), and asks
+    nothing else of the file at all -- unless it qualifies a name into
+    another struct, which is the question {!spec_is_hoistable} asks of a
+    lifted helper and for the same reason: [Other::t] needs [Other] complete,
+    so moving this in front of it would not help.  So the only thing such a
+    struct's position decides is whether its callers can see it, and a
+    function hoisted onto a datatype is a caller emitted with the datatype,
+    which may come first. *)
 let hoisted_structs : MPset.t ref = State.cell State.Unit MPset.empty
 
 (** Whether the struct of the module whose body is [mp] is declared ahead of
-    the file, as planned.  Under [CRANE_CHECK_IR] the plan must agree with
-    [rendered ()], the same question asked of the rendered struct
-    ({!module_struct_is_hoistable}). *)
-let struct_hoists mp ~rendered =
+    the file, as planned.  Under [CRANE_CHECK_IR] a struct planned to be
+    must not write, in [doc], its rendering, a qualifier into another
+    struct: the plan asked that of its members' types, and this is what was
+    written. *)
+let struct_hoists mp doc =
   let planned = MPset.mem mp !hoisted_structs in
-  if Probe.checking () && planned <> rendered () then
+  if Probe.checking () && planned && names_into_a_struct doc then
     Probe.violation "hoisted structs"
       Pp.(
         str "the struct of the module " ++ str (ModPath.to_string mp)
-        ++ str (if planned then " was planned to be declared ahead of the file and is not hoistable"
-                else " is hoistable and was not planned to be declared ahead of the file") );
+        ++ str " was planned to be declared ahead of the file and qualifies a name into another struct" );
   planned
 
 (** The module structs this file's pass chose to declare ahead of everything,
@@ -1465,15 +1426,11 @@ let rec pp_structure_elem ~is_header f = function
       let whole = doc ++ mod_pp in
       (* A [Module] of nothing but definitions is rendered as a struct of
          declarations, and a datatype's hoisted member may call one; see
-         {!module_struct_is_hoistable}. *)
+         {!hoisted_structs}. *)
       if
         is_header
         && (not (!render_ctx).rc_in_struct)
-        && (match m.ml_mod_expr with
-           | MEstruct (body_mp, sel) ->
-             struct_hoists body_mp ~rendered:(fun () ->
-                 module_members_name_only_inductives sel && module_struct_is_hoistable whole )
-           | _ -> false)
+        && (match m.ml_mod_expr with MEstruct (body_mp, _) -> struct_hoists body_mp whole | _ -> false)
       then (
         hoisted_module_structs := whole :: !hoisted_module_structs;
         mt () )
@@ -2359,7 +2316,7 @@ let struct_members ~wrapper mp sel =
         (Some []) sel
 
 (** Plan which modules' structs the header declares ahead of the file
-    ({!module_struct_is_hoistable}): wrapper modules, and modules written
+    ({!hoisted_structs}): wrapper modules, and modules written
     outside every struct and every class template a functor becomes, whose members' types name only inductives
     ({!module_members_name_only_inductives}), and whose struct holds nothing
     but static function declarations naming nothing inside another struct.
@@ -3412,8 +3369,7 @@ let do_struct_with_decl_tracking ~is_header f s =
                 Hashtbl.remove pending_wrapper_decls name;
                 let struct_pp = pp_wrapper_struct name specs in
                 if
-                  struct_hoists mp ~rendered:(fun () ->
-                      module_members_name_only_inductives sel && module_struct_is_hoistable struct_pp )
+                  struct_hoists mp struct_pp
                 then (
                   hoisted_module_structs := struct_pp :: !hoisted_module_structs;
                   mt () )

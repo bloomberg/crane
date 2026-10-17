@@ -428,12 +428,3 @@ let pp ?(indent = "") name =
   | None -> Pp.mt ()
   | Some text ->
     Pp.tag tag Pp.(prlist_with_sep fnl (fun l -> str (indent ^ l)) (format_as_cpp_lines text) ++ fnl ())
-
-(** [doc] without the doc comments in it. *)
-let rec strip doc =
-  match Pp.repr doc with
-  | Pp.Ppcmd_tag (t, _) when String.equal t tag -> Pp.mt ()
-  | Ppcmd_tag (t, d) -> Pp.unrepr (Ppcmd_tag (t, strip d))
-  | Ppcmd_glue ds -> Pp.unrepr (Ppcmd_glue (List.map strip ds))
-  | Ppcmd_box (b, d) -> Pp.unrepr (Ppcmd_box (b, strip d))
-  | Ppcmd_empty | Ppcmd_string _ | Ppcmd_print_break _ | Ppcmd_force_newline | Ppcmd_comment _ -> doc
