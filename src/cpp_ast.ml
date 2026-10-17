@@ -17,7 +17,10 @@ type t =
   | Seq of t list
   | Top_level of t
   | Member of ModPath.t * t
+  | Module of {module_ : ModPath.t; enclosure : enclosure; fields : t; members : t list}
   | Declarations of Pp.t list
+
+and enclosure = Struct of {head : Pp.t; tail : Pp.t} | Out_of_line | In_enclosing_scope
 
 let text d = Text d
 let empty = Seq []
@@ -29,10 +32,21 @@ let rec is_empty = function
   | Decl {text; needs} -> Pp.ismt text && Needs.is_none needs
   | Seq l -> List.for_all is_empty l
   | Top_level _ | Member _ -> false
+  | Module {enclosure = Struct _; _} -> false
+  | Module {fields; members; _} -> members = [] && is_empty fields
   | Declarations l -> l = []
 
 let top_level t = if is_empty t then t else Top_level t
 let member mp t = if is_empty t then t else Member (mp, t)
+
+type body = {body_module : ModPath.t; body_members : t list}
+
+let module_body mp members = {body_module = mp; body_members = List.filter (fun t -> not (is_empty t)) members}
+let body_is_empty b = b.body_members = []
+
+let module_ enclosure ?(fields = empty) b =
+  let t = Module {module_ = b.body_module; enclosure; fields; members = b.body_members} in
+  if is_empty t then empty else t
 
 let rec concat sep = function
   | [] -> empty
@@ -44,20 +58,84 @@ let rec needs = function
   | Decl {needs; _} -> needs
   | Seq l -> List.fold_left (fun acc t -> Needs.union acc (needs t)) Needs.none l
   | Top_level t | Member (_, t) -> needs t
+  | Module {fields; members; _} -> needs (Seq (fields :: members))
 
 let cut2 () = Pp.(brk (0, -100000) ++ brk (0, 0))
+
+(* Declarations scheduled in front of a chunk are not part of it: the break
+   in front of a member was chosen by the member, before any was placed. *)
+let starts_with_doc_comment t =
+  let rec first_output = function
+    | [] -> None
+    | p :: rest -> (
+      match Pp.repr p with
+      | Ppcmd_empty | Ppcmd_print_break _ -> first_output rest
+      | Ppcmd_string text -> Some (String.starts_with ~prefix:"///" text)
+      | Ppcmd_glue parts -> (
+        match first_output parts with Some _ as result -> result | None -> first_output rest )
+      | Ppcmd_box (_, contents) | Ppcmd_tag (_, contents) -> (
+        match first_output [contents] with Some _ as result -> result | None -> first_output rest )
+      | Ppcmd_force_newline | Ppcmd_comment _ -> Some false )
+  in
+  let rec first = function
+    | [] -> None
+    | t :: rest -> (
+      let inner =
+        match t with
+        | Text d | Decl {text = d; _} -> first_output [d]
+        | Declarations _ -> None
+        | Seq l -> first l
+        | Top_level t | Member (_, t) -> first [t]
+        | Module {enclosure = Struct {head; _}; _} -> first_output [head]
+        | Module {fields; members; _} -> first (fields :: members)
+      in
+      match inner with Some _ -> inner | None -> first rest )
+  in
+  match first [t] with Some result -> result | None -> false
+
+(* A module's members, each two separated by a break, or by a newline where
+   the second opens with a doc comment: an unbroken [}///] or [;///] reads
+   as a trailing comment, which the formatter cannot repair. *)
+let rec join_members = function
+  | [] -> []
+  | [t] -> [t]
+  | t :: (next :: _ as rest) ->
+    t :: Text (if starts_with_doc_comment next then Pp.fnl () else cut2 ()) :: join_members rest
 
 let rec to_pp = function
   | Text d -> d
   | Decl {text; _} -> text
   | Seq l -> List.fold_left (fun acc t -> Pp.(acc ++ to_pp t)) (Pp.mt ()) l
   | Top_level t | Member (_, t) -> to_pp t
+  | Module {enclosure; fields; members; _} -> (
+    let inside = to_pp (Seq (fields :: (if members = [] then [] else join_members members @ [Text (Pp.fnl ())]))) in
+    match enclosure with Struct {head; tail} -> Pp.(head ++ inside ++ tail) | Out_of_line | In_enclosing_scope -> inside )
   | Declarations l -> Pp.(prlist_with_sep fnl (fun d -> d) l ++ cut2 ())
+
+let rec legacy = function
+  | (Text _ | Decl _ | Declarations _) as t -> t
+  | Seq l -> Seq (List.map legacy l)
+  | Top_level t -> Top_level (legacy t)
+  | Member (mp, t) -> Member (mp, legacy t)
+  | Module {module_; enclosure; fields; members} -> (
+    let members = List.map (fun t -> Member (module_, legacy t)) members in
+    let rec doc_safe = function
+      | [] -> empty
+      | [p] -> p
+      | p :: (next :: _ as rest) ->
+        Seq [p; Text (if starts_with_doc_comment next then Pp.fnl () else cut2 ()); doc_safe rest]
+    in
+    let inside = Seq [legacy fields; (if members = [] then empty else Seq [doc_safe members; Text (Pp.fnl ())])] in
+    match enclosure with
+    | Struct {head; tail} -> Seq [Text head; inside; Text tail]
+    | Out_of_line | In_enclosing_scope -> inside )
 
 type template = {name : string; home : ModPath.t option; holder : bool; declaration : Pp.t}
 type forward = {struct_ : string; forward_declaration : Pp.t}
 type translation_unit = {prologue : Pp.t; sections : t list}
 type scheduled = {opening : Pp.t; body : t list}
+
+let legacy_unit u = {u with sections = List.map legacy u.sections}
 
 (* The chunks are numbered in the order written, in both passes: a chunk at
    namespace scope and a member of a struct each take the next number. *)
@@ -80,6 +158,14 @@ let schedule ~templates ~forwards u =
     | Member (mp, t) ->
       incr count;
       first_uses ~top ~members:((mp, !count) :: members) t
+    | Module {module_; fields; members = l; _} ->
+      let defined = first_uses ~top ~members fields in
+      defined
+      @ List.concat_map
+          (fun t ->
+            incr count;
+            first_uses ~top ~members:((module_, !count) :: members) t )
+          l
     | Decl {needs; _} ->
       List.iter
         (fun name ->
@@ -124,6 +210,17 @@ let schedule ~templates ~forwards u =
       incr count;
       let due = templates_due (Some !count) in
       in_front due (Member (mp, placed t))
+    | Module m ->
+      let fields = placed m.fields in
+      let members =
+        List.map
+          (fun t ->
+            incr count;
+            let due = templates_due (Some !count) in
+            in_front due (placed t) )
+          m.members
+      in
+      Module {m with fields; members}
   in
   let body = List.map placed u.sections in
   let opening = match templates_due None with [] -> u.prologue | l -> Pp.(u.prologue ++ to_pp (Declarations l)) in

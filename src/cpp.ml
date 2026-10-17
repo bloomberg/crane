@@ -337,52 +337,6 @@ let rec pp_constraint : Modtype_concept.constraint_ -> Pp.t list * module_constr
 (** Look up and format a doc comment for the given label. *)
 let pp_doc_comment label = pp_doc_comment_for_name (Label.to_string label)
 
-(** Whether the first printable content in [t] is a C++ doc comment.  Soft
-    breaks are ignored because they may be flattened to nothing. *)
-let starts_with_doc_comment (t : Cpp_ast.t) =
-  let rec first_output = function
-    | [] -> None
-    | p :: rest ->
-      ( match Pp.repr p with
-      | Ppcmd_empty | Ppcmd_print_break _ -> first_output rest
-      | Ppcmd_string text -> Some (String.starts_with ~prefix:"///" text)
-      | Ppcmd_glue parts ->
-        ( match first_output parts with
-        | Some _ as result -> result
-        | None -> first_output rest )
-      | Ppcmd_box (_, contents) | Ppcmd_tag (_, contents) ->
-        ( match first_output [contents] with
-        | Some _ as result -> result
-        | None -> first_output rest )
-      | Ppcmd_force_newline | Ppcmd_comment _ -> Some false )
-  in
-  let rec first = function
-    | [] -> None
-    | (t : Cpp_ast.t) :: rest -> (
-      let inner =
-        match t with
-        | Text d | Decl {text = d; _} -> first_output [d]
-        | Declarations _ -> first_output [Cpp_ast.to_pp t]
-        | Seq l -> first l
-        | Top_level t | Member (_, t) -> first [t]
-      in
-      match inner with Some _ -> inner | None -> first rest )
-  in
-  match first [t] with Some result -> result | None -> false
-
-(** Join already-rendered structure elements, forcing a newline before a
-    leading C++ doc comment.  [cut2] normally supplies soft breaks for
-    clang-format, but an unbroken [}///] or [;///] is interpreted as a trailing
-    comment and cannot be repaired by the formatter. *)
-let rec concat_doc_safe sep = function
-  | [] -> Cpp_ast.empty
-  | [p] -> p
-  | p :: ((next :: _) as rest) ->
-    let boundary =
-      if starts_with_doc_comment next then fnl () else sep ()
-    in
-    Cpp_ast.(seq [p; text boundary; concat_doc_safe sep rest])
-
 (** Try to extract a named concept from a module type.
 
     Strips [MTwith] constraints (which have no C++ concept equivalent) and
@@ -883,9 +837,10 @@ let is_erased_alias (_, d) =
 
 (** What writing a structure element gives: its text, written where it is,
     and the concepts it declares that only namespace scope can hold, in the
-    order written, which go to the top of the file. *)
-type written = {
-  text : Cpp_ast.t;
+    order written, which go to the top of the file.  A module's body gives
+    its members as text, which the module encloses ({!Cpp_ast.body}). *)
+type 'a rendering = {
+  text : 'a;
   concepts : Cpp_ast.t list;
   asserts : (held_concept * Pp.t * Pp.t) list;
       (** The assertions it held back, each with the concept it asserts and
@@ -894,7 +849,9 @@ type written = {
           the assertion goes with it. *)
 }
 
-let written text = {text; concepts = []; asserts = []}
+type written = Cpp_ast.t rendering
+
+let written text : written = {text; concepts = []; asserts = []}
 
 (** Pretty-print a structure element (label, elem) pair. Handles modules, module
     types, and declarations.
@@ -1081,28 +1038,38 @@ let rec pp_structure_elem ~is_header f = function
                  template_params
             ++ str ">"
           in
-          let {text = struct_body; concepts = body_concepts; asserts} =
+          let {text = struct_def; concepts = body_concepts; asserts} =
             with_render_ctx
               (fun c -> { c with rc_in_struct = true; rc_in_template = true })
               (fun () ->
-                pp_module_expr ~is_header f body )
+                match body with
+                | MEstruct (body_mp, sel) ->
+                  let b = pp_module_body ~is_header f body_mp sel in
+                  { b with
+                    text =
+                      Cpp_ast.module_
+                        (Struct {head = template_decl ++ fnl () ++ str "struct " ++ name ++ str " {" ++ fnl (); tail = str "};"})
+                        b.text }
+                | MEapply _ ->
+                  let b = pp_module_expr ~is_header f body in
+                  { b with
+                    text =
+                      Cpp_ast.(
+                        seq
+                          [ text (template_decl ++ fnl () ++ str "struct " ++ name ++ str " : ");
+                            b.text;
+                            text (str " {};") ]) }
+                | _ ->
+                  let b = pp_module_expr ~is_header f body in
+                  { b with
+                    text =
+                      Cpp_ast.(
+                        seq
+                          [ text (template_decl ++ fnl () ++ str "struct " ++ name ++ str " {" ++ fnl ());
+                            b.text;
+                            text (str "};") ]) } )
           in
-          { text =
-              ( match body with
-              | MEapply _ ->
-                Cpp_ast.(
-                  seq
-                    [ text (template_decl ++ fnl () ++ str "struct " ++ name ++ str " : ");
-                      struct_body;
-                      text (str " {};") ])
-              | _ ->
-                Cpp_ast.(
-                  seq
-                    [ text (template_decl ++ fnl () ++ str "struct " ++ name ++ str " {" ++ fnl ());
-                      struct_body;
-                      text (str "};") ]) );
-            concepts = concepts @ body_concepts;
-            asserts }
+          { text = struct_def; concepts = concepts @ body_concepts; asserts }
       | MEapply _ ->
         if not is_header then
           written Cpp_ast.empty
@@ -1269,7 +1236,7 @@ let rec pp_structure_elem ~is_header f = function
               setting
                 held_back_concepts
                 (this_held_back @ !held_back_concepts)
-                (fun () -> pp_module_expr ~is_header f m.ml_mod_expr)
+                (fun () -> pp_module_body ~is_header f body_mp sel)
             in
             (body, !method_candidates) )
         in
@@ -1345,11 +1312,9 @@ let rec pp_structure_elem ~is_header f = function
                 mt ()
             in
             let struct_def =
-              Cpp_ast.(
-                seq
-                  [ text (template_decl ++ str "struct " ++ name ++ inherit_clause ++ str " {" ++ fnl ());
-                    body;
-                    text (str "};") ])
+              Cpp_ast.module_
+                (Struct {head = template_decl ++ str "struct " ++ name ++ inherit_clause ++ str " {" ++ fnl (); tail = str "};"})
+                body
             in
             (Cpp_ast.seq [typeclasses_pp; modtypes_pp; struct_def; modtypes_after_pp; deferred_asserts_pp], [])
           else
@@ -1433,10 +1398,10 @@ let rec pp_structure_elem ~is_header f = function
                 (template_str, fields_pp, methods_pp)
               | None -> (mt (), Cpp_ast.empty, Cpp_ast.empty)
             in
+            let fields = Cpp_ast.seq [record_fields_pp; record_methods_pp] in
             if has_concept_collision then
-              (Cpp_ast.seq [typeclasses_pp; modtypes_pp; record_fields_pp; record_methods_pp; body], [])
-            else if Cpp_ast.is_empty body && Cpp_ast.is_empty record_fields_pp
-                    && Cpp_ast.is_empty record_methods_pp then
+              (Cpp_ast.seq [typeclasses_pp; modtypes_pp; Cpp_ast.module_ In_enclosing_scope ~fields body], [])
+            else if Cpp_ast.body_is_empty body && Cpp_ast.is_empty fields then
               (* Empty module: emit [struct Name {};] even though there are
                  no declarations.  The struct may be needed as a template
                  argument in functor instantiations, e.g.
@@ -1444,16 +1409,12 @@ let rec pp_structure_elem ~is_header f = function
                  empty Rocq module satisfying some module type.  Previously
                  this returned [mt ()] which suppressed the struct
                  entirely, causing undeclared-identifier errors. *)
-              (Cpp_ast.text (template_decl ++ str "struct " ++ name ++ str " {};"), [])
+              (Cpp_ast.module_ (Struct {head = template_decl ++ str "struct " ++ name ++ str " {"; tail = str "};"}) body, [])
             else
               let struct_def =
-                Cpp_ast.(
-                  seq
-                    [ text (template_decl ++ str "struct " ++ name ++ str " {" ++ fnl ());
-                      record_fields_pp;
-                      record_methods_pp;
-                      body;
-                      text (str "};") ])
+                Cpp_ast.module_
+                  (Struct {head = template_decl ++ str "struct " ++ name ++ str " {" ++ fnl (); tail = str "};"})
+                  ~fields body
               in
               let assertion, held = concept_assertion name m.ml_mod_type in
               ( Cpp_ast.(
@@ -1464,7 +1425,7 @@ let rec pp_structure_elem ~is_header f = function
              header. *)
           (Cpp_ast.empty, [])
         else
-          (body, [])
+          (Cpp_ast.module_ Out_of_line body, [])
         in
         {text; concepts = own_concepts @ body_written.concepts; asserts = passed_out @ own_held}
       | MEident target ->
@@ -1617,45 +1578,43 @@ and pp_module_expr ~is_header f = function
   | MEapply (me, me') -> written (Cpp_ast.text (fst (pp_module_app ~is_header f me me')))
   | MEfunctor (_, _, me) -> pp_module_expr ~is_header f me
   | MEstruct (mp, sel) ->
-    if is_header && Probe.checking () && (!render_ctx).rc_in_template <> Scope_plan.templated mp then
-      Probe.violation "templated modules"
-        Pp.(
-          str "the module " ++ str (ModPath.to_string mp)
-          ++ str
-               ( if (!render_ctx).rc_in_template then
-                   " is written in a class template its plan says it is outside"
-                 else " is written outside every class template where its plan says it is inside" ) );
-    if is_header && Probe.checking () then begin
-      let c = !render_ctx in
-      match Cpp_ind.header_scope mp with
-      | Some {in_struct; concepts_hoisted}
-        when in_struct = c.rc_in_struct && concepts_hoisted = c.rc_concepts_hoisted -> ()
-      | Some _ ->
-        Probe.violation "header scopes"
-          Pp.(str "the module " ++ str (ModPath.to_string mp)
-              ++ str " is written in another scope than its plan says")
-      | None ->
-        Probe.violation "header scopes"
-          Pp.(str "the module " ++ str (ModPath.to_string mp) ++ str " has no planned scope")
-    end;
-    in_planned_visibility mp @@ fun () ->
-    let old_structure_decls = !current_structure_decls in
-    current_structure_decls := sel;
-    with_local_inductives (inductives_declared_in mp sel) @@ fun () ->
-    (* A synthesised alias whose body names this module's own types, as its
-       members spell them, is declared inside the struct, in front of the
-       first member that writes it (see {!Cpp_print.ctor_alias_home}):
-       at namespace scope those names mean nothing. *)
-    let try_pp_structure_elem (l, concepts, asserts) x =
-      let {text = px; concepts = c; asserts = a} = pp_structure_elem ~is_header f x in
-      ((if Cpp_ast.is_empty px then l else Cpp_ast.member mp px :: l), List.rev_append c concepts, List.rev_append a asserts)
-    in
-    let l, concepts, asserts = List.fold_left try_pp_structure_elem ([], [], []) sel in
-    let l = List.rev l in
-    current_structure_decls := old_structure_decls;
-    { text = (if List.is_empty l then Cpp_ast.empty else Cpp_ast.(seq [concat_doc_safe cut2 l; text (fnl ())]));
-      concepts = List.rev concepts;
-      asserts = List.rev asserts }
+    let b = pp_module_body ~is_header f mp sel in
+    {b with text = Cpp_ast.module_ (if is_header then In_enclosing_scope else Out_of_line) b.text}
+
+(** The body of the module [mp] of elements [sel], each element a member of
+    it, written in the visibility planned for it ({!in_planned_visibility}). *)
+and pp_module_body ~is_header f mp sel =
+  if is_header && Probe.checking () && (!render_ctx).rc_in_template <> Scope_plan.templated mp then
+    Probe.violation "templated modules"
+      Pp.(
+        str "the module " ++ str (ModPath.to_string mp)
+        ++ str
+             ( if (!render_ctx).rc_in_template then " is written in a class template its plan says it is outside"
+               else " is written outside every class template where its plan says it is inside" ) );
+  if is_header && Probe.checking () then begin
+    let c = !render_ctx in
+    match Cpp_ind.header_scope mp with
+    | Some {in_struct; concepts_hoisted} when in_struct = c.rc_in_struct && concepts_hoisted = c.rc_concepts_hoisted
+      -> ()
+    | Some _ ->
+      Probe.violation "header scopes"
+        Pp.(str "the module " ++ str (ModPath.to_string mp) ++ str " is written in another scope than its plan says")
+    | None ->
+      Probe.violation "header scopes" Pp.(str "the module " ++ str (ModPath.to_string mp) ++ str " has no planned scope")
+  end;
+  in_planned_visibility mp @@ fun () ->
+  let old_structure_decls = !current_structure_decls in
+  current_structure_decls := sel;
+  with_local_inductives (inductives_declared_in mp sel) @@ fun () ->
+  (* A synthesised alias whose body names this module's own types, as its
+     members spell them, is declared inside the struct, in front of the
+     first member that writes it (see {!Cpp_print.ctor_alias_home}): at
+     namespace scope those names mean nothing. *)
+  let written = List.map (pp_structure_elem ~is_header f) sel in
+  current_structure_decls := old_structure_decls;
+  { text = Cpp_ast.module_body mp (List.map (fun w -> w.text) written);
+    concepts = List.concat_map (fun w -> w.concepts) written;
+    asserts = List.concat_map (fun w -> w.asserts) written }
 
 (** Like {!Cpp_ast.concat} but skips empty elements.
 
@@ -1675,7 +1634,7 @@ let rec concat_nonempty sep f = function
     else if Cpp_ast.is_empty r then
       e
     else
-      let boundary = if starts_with_doc_comment r then fnl () else sep () in
+      let boundary = if Cpp_ast.starts_with_doc_comment r then fnl () else sep () in
       Cpp_ast.(seq [e; text boundary; r])
 
 (** The declarations and definitions generated functions contribute to the
@@ -3860,7 +3819,16 @@ let do_struct_with_decl_tracking ~is_header f s =
         !file_layout.constrained_decls
     else []
   in
-  Cpp_ast.print (Cpp_ast.schedule ~templates ~forwards {prologue = forward_decls; sections}) ++ fnl ()
+  let unit = {Cpp_ast.prologue = forward_decls; sections} in
+  let written = Cpp_ast.print (Cpp_ast.schedule ~templates ~forwards unit) in
+  ( if Probe.checking () then
+      let legacy = Cpp_ast.print (Cpp_ast.schedule ~templates ~forwards (Cpp_ast.legacy_unit unit)) in
+      if not (String.equal (Pp.string_of_ppcmds written) (Pp.string_of_ppcmds legacy)) then
+        Probe.violation "module bodies"
+          Pp.(
+            str "the " ++ str (Common.file_name (if is_header then Common.Intf else Common.Impl))
+            ++ str " is written otherwise from its modules' bodies than from their struct text and members") );
+  written ++ fnl ()
 
 (** Main entry point: render structure to C++ implementation file. *)
 let pp_struct s =

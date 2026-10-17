@@ -13,12 +13,13 @@
     that is can only be read off the assembled file, so the file has to be
     a value that says, for every chunk, what it is and what it needs.
 
-    This is that value.  It records only what placing a declaration reads:
-    where a chunk at namespace scope begins ({!Top_level}), where a member of
-    a module's struct begins ({!Member}), and each declaration with what it
-    needs in front of it ({!Decl}).  Everything else is text, already
-    formatted: a declaration's own text is still the printer's, and the
-    struct and concept text around it is the driver's. *)
+    This is that value.  It records what placing a declaration reads: where
+    a chunk at namespace scope begins ({!Top_level}), the body of each module
+    with the struct written around it, if any, and each of its members
+    ({!Module}), and each declaration with what it needs in front of it
+    ({!Decl}).  Everything else is text, already formatted: a declaration's
+    own text is still the printer's, and the concept text around a struct is
+    the driver's. *)
 
 open Names
 
@@ -48,9 +49,27 @@ type t = private
   | Member of ModPath.t * t
       (** A member of the struct of the module: a template homed in the
           module goes in front of it.  Never empty. *)
+  | Module of {module_ : ModPath.t; enclosure : enclosure; fields : t; members : t list}
+      (** The body of [module_] as the file writes it: [fields], then its
+          elements, each a member of it that a template homed in [module_]
+          goes in front of -- in order, none empty -- inside the struct
+          [enclosure] writes, if any.  Empty only where no struct is
+          written and there is nothing in it. *)
   | Declarations of Pp.t list
       (** Declarations {!schedule} placed in front of what follows it; no
           tree built before scheduling has one. *)
+
+(** Where the members of a module's body are written. *)
+and enclosure =
+  | Struct of {head : Pp.t; tail : Pp.t}
+      (** In the header, inside the module's struct, which [head] opens and
+          [tail] closes. *)
+  | Out_of_line
+      (** In the implementation, which writes no struct: they are defined
+          out of line, by the struct the header declares. *)
+  | In_enclosing_scope
+      (** In the header, where a class concept takes the module's name: in
+          whatever scope encloses the module, with no struct of its own. *)
 
 val text : Pp.t -> t
 val empty : t
@@ -63,6 +82,21 @@ val top_level : t -> t
 (** [t] as a member of the struct of [mp]; nothing, if [t] is. *)
 val member : ModPath.t -> t -> t
 
+(** The elements of a module's body as written, before the file decides
+    what encloses them. *)
+type body
+
+(** [module_body mp l] is the body of the module [mp] whose elements are written
+    [l], in order; the empty ones write nothing and are not members. *)
+val module_body : ModPath.t -> t list -> body
+
+(** Whether [body] has no members. *)
+val body_is_empty : body -> bool
+
+(** [module_ enclosure ~fields body] writes [body] as {!Module}; nothing, if
+    that writes nothing. *)
+val module_ : enclosure -> ?fields:t -> body -> t
+
 (** Whether [t] writes nothing, which is whether its text is empty: a
     declaration needing something is not. *)
 val is_empty : t -> bool
@@ -73,6 +107,11 @@ val concat : (unit -> Pp.t) -> t list -> t
 
 (** What the declarations of [t] need, together. *)
 val needs : t -> Needs.t
+
+(** Whether the first text [t] writes opens a doc comment, scheduled
+    declarations aside; a soft break, which may print as nothing, is no
+    text. *)
+val starts_with_doc_comment : t -> bool
 
 (** [t] as a document, for reading. *)
 val to_pp : t -> Pp.t
@@ -117,3 +156,7 @@ val schedule : templates:template list -> forwards:forward list -> translation_u
 
 (** The scheduled unit as a document. *)
 val print : scheduled -> Pp.t
+
+(** [u] with each module's body written as it was before {!Module}: struct
+    text around a member list, for checking. *)
+val legacy_unit : translation_unit -> translation_unit
