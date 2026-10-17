@@ -578,6 +578,9 @@ type scope = { sc_visibility : Common.visibility; sc_render : render_ctx }
 let current_scope () =
   { sc_visibility = Common.current_visibility (); sc_render = !render_ctx }
 
+let equal_scope a b =
+  Common.equal_visibility a.sc_visibility b.sc_visibility && compare a.sc_render b.sc_render = 0
+
 let in_scope sc f =
   Common.with_visibility sc.sc_visibility (fun () ->
       with_render_ctx (fun _ -> sc.sc_render) f )

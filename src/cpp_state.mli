@@ -207,6 +207,8 @@ type scope
 
 val current_scope : unit -> scope
 
+val equal_scope : scope -> scope -> bool
+
 (** [in_scope sc f] runs [f] as if at [sc], restoring the current scope
     however [f] leaves. *)
 val in_scope : scope -> (unit -> 'a) -> 'a

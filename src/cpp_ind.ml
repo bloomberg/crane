@@ -68,10 +68,27 @@ let deferred name : deferred = Cpp_state.owned_list name
 let defer (band : deferred) ds =
   if ds <> [] then band := (Cpp_state.current_scope (), ds) :: !band
 
-let render_deferred (band : deferred) =
+type section = (Cpp_state.scope * rendered) list
+
+let render_section (groups : section) =
+  List.map (fun (sc, ds) -> Cpp_state.in_scope sc (fun () -> pp_decls ds)) groups
+
+let take_deferred (band : deferred) : section =
   let groups = List.rev !band in
   band := [];
-  List.map (fun (sc, ds) -> Cpp_state.in_scope sc (fun () -> pp_decls ds)) groups
+  groups
+
+let render_deferred band = render_section (take_deferred band)
+
+let equal_section (a : section) (b : section) =
+  List.equal
+    (fun (sc, ds) (sc', ds') ->
+      Cpp_state.equal_scope sc sc'
+      && List.equal
+           (fun ((ids, avoid), d) ((ids', avoid'), d') ->
+             List.equal Id.equal ids ids' && Id.Set.equal avoid avoid' && compare d d' = 0 )
+           ds ds' )
+    a b
 
 let discard (band : deferred) = band := []
 
@@ -1133,6 +1150,7 @@ let record_funs ~fallback funs =
 type element = {
   rendered : rendered;
   helpers : cpp_decl list;
+  member_defs : rendered;
 }
 
 (** What was generated ahead of the header for each instance, by the
@@ -1436,23 +1454,20 @@ let decls_for ~is_header d =
       | By_element helpers -> (false, helpers)
       | Unwritten -> (false, [])
     in
-    { rendered = function_views ~is_header ~lifted_inline funs; helpers }
+    { rendered = function_views ~is_header ~lifted_inline funs; helpers; member_defs = [] }
   | Header_only gen when is_header ->
     let g, helpers = header_entity d gen in
-    if not !peeked then begin
-      defer deferred_member_defs (finished_header g.member_defs);
-      Option.iter (fun sft -> eponymous_promote_sft := sft) g.promoted_sft
-    end;
-    { rendered = finished_header g.decls; helpers }
+    if not !peeked then Option.iter (fun sft -> eponymous_promote_sft := sft) g.promoted_sft;
+    { rendered = finished_header g.decls; helpers; member_defs = finished_header g.member_defs }
   | Instance (r, a, t) when is_header ->
     let ds, helpers = instance_entity r a t in
-    { rendered = finished_instance ds; helpers }
-  | Header_only _ | Instance _ | Nothing -> { rendered = []; helpers = [] }
+    { rendered = finished_instance ds; helpers; member_defs = [] }
+  | Header_only _ | Instance _ | Nothing -> { rendered = []; helpers = []; member_defs = [] }
 
 let impl_decls = decls_for ~is_header:false
 let header_decls = decls_for ~is_header:true
 
 (** What the header writes for the declaration [d] and the helpers it
     places, read off what was generated ahead of the files without taking
-    it: nothing is recorded, claimed or deferred. *)
+    it: nothing is recorded or claimed. *)
 let header_element_ahead d = peeking (fun () -> header_decls d)

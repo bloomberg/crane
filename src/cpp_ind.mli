@@ -45,6 +45,18 @@ val deferred : string -> deferred
 (** [defer band ds] keeps [ds] in [band], with the current scope. *)
 val defer : deferred -> rendered -> unit
 
+(** Groups of finished declarations written away from where they were
+    generated, in writing order, each with the scope it is written in. *)
+type section = (Cpp_state.scope * rendered) list
+
+(** Render a section's groups, in order and each in its own scope. *)
+val render_section : section -> Pp.t list
+
+(** [band]'s groups, in the order they were deferred, emptying it. *)
+val take_deferred : deferred -> section
+
+val equal_section : section -> section -> bool
+
 (** Render [band]'s groups, in the order they were deferred and each in its
     own scope, and empty it. *)
 val render_deferred : deferred -> Pp.t list
@@ -319,6 +331,9 @@ val instance_entity :
 type element = {
   rendered : rendered;
   helpers : Minicpp.cpp_decl list;
+  member_defs : rendered;
+      (** The definitions of members its struct gave up, written at the end
+          of the file: only a datatype's, and only in the header. *)
 }
 
 (** The implementation-file declarations for one MiniML declaration. *)
@@ -328,8 +343,7 @@ val impl_decls : Miniml.ml_decl -> element
 val header_decls : Miniml.ml_decl -> element
 
 (** What {!header_decls} gives for a declaration, read off what was generated
-    ahead of the files without taking it: nothing is recorded, claimed or
-    deferred, and the helpers are those the header is planned to place
-    there. *)
+    ahead of the files without taking it: nothing is recorded or claimed,
+    and the helpers are those the header is planned to place there. *)
 val header_element_ahead : Miniml.ml_decl -> element
 

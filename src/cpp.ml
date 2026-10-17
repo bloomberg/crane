@@ -620,6 +620,34 @@ let struct_hoists mp doc =
         ++ str " was planned to be declared ahead of the file and qualifies a name into another struct" );
   planned
 
+(** What the header writes away from where it is written, planned before
+    either file is rendered ({!plan_file_layout}): each a section of groups
+    of declarations, in writing order, each group with the scope it is
+    written in. *)
+type file_layout = {
+  erased_aliases : Cpp_ind.section;
+      (** The erasure landing pads written at file scope, which go ahead of
+          everything, the concepts included. *)
+  lifted_specs : Cpp_ind.section;
+      (** The declarations of the helpers an element written at namespace
+          scope places, which go ahead of every section. *)
+  member_defs : Cpp_ind.section;
+      (** The definitions of members a datatype's struct gave up, which go
+          last. *)
+}
+
+let file_layout : file_layout ref =
+  State.cell State.Unit {erased_aliases = []; lifted_specs = []; member_defs = []}
+
+(** The section [planned] of the header, which under [CRANE_CHECK_IR] must be
+    what the render deferred to [band] as it wrote each element. *)
+let planned_section ~what planned band =
+  let deferred = Cpp_ind.take_deferred band in
+  if Probe.checking () && not (Cpp_ind.equal_section planned deferred) then
+    Probe.violation "file layout"
+      Pp.(str "the header deferred other " ++ str what ++ str " than its layout planned");
+  planned
+
 (** Report what a lifted helper met at the site that placed it, under
     [CRANE_DBG_LIFTED].
 
@@ -756,6 +784,13 @@ let wraps_children mp sel =
     (fun (l, se) -> match se with SEmodule _ -> is_wrapped_child (MPdot (mp, l)) | _ -> false)
     sel
 
+(** Whether a finished declaration is an erasure landing pad: [using X =
+    std::any;], which names nothing. *)
+let is_erased_alias (_, d) =
+  match (d : Cpp_erasure.settled :> cpp_decl) with
+  | Dusing {du_rhs = Some rhs; _} -> Cpp_erasure.is_any_shaped rhs
+  | _ -> false
+
 (** Pretty-print a structure element (label, elem) pair. Handles modules, module
     types, and declarations.
 
@@ -777,7 +812,8 @@ let rec pp_structure_elem ~is_header f = function
        referring to an undeclared name.  Emit it as a static member template
        right before the declaration that produced it instead; helpers produced
        elsewhere keep their file-scope placement. *)
-    let {Cpp_ind.rendered; helpers} = f d in
+    let {Cpp_ind.rendered; helpers; member_defs} = f d in
+    Cpp_ind.defer Cpp_ind.deferred_member_defs member_defs;
     (* An erasure landing pad -- [using X = std::any;] -- travels to the very
        top of the file, ahead of the concepts.
 
@@ -789,11 +825,6 @@ let rec pp_structure_elem ~is_header f = function
        front of the declaration.  Hoisting both and ordering them here is what
        makes that pair of placements independent of each other, and of any
        later pass that reorders the file. *)
-    let is_erased_alias (_, d) =
-      match (d : Cpp_erasure.settled :> cpp_decl) with
-      | Dusing {du_rhs = Some rhs; _} -> Cpp_erasure.is_any_shaped rhs
-      | _ -> false
-    in
     let body =
       if
         is_header
@@ -2294,12 +2325,25 @@ let struct_members ~wrapper mp sel =
           | None, _ | _, (SEmodule _ | SEmodtype _) -> None
           | Some members, SEdecl d -> (
             match Cpp_ind.header_element_ahead d with
-            | {rendered; helpers = []} -> Some (members @ decls rendered)
+            | {rendered; helpers = []; _} -> Some (members @ decls rendered)
             | {helpers = _ :: _; _} -> None ) )
         (Some []) sel
 
-(** Plan which modules' structs the header declares ahead of the file
-    ({!hoisted_structs}): wrapper modules, and the modules a file's own
+(** Plan where the header writes what it does not write in place
+    ({!file_layout}), and which modules' structs it declares ahead of the
+    file ({!hoisted_structs}).
+
+    The sections are read off each element the header writes through
+    {!pp_structure_elem} -- every one but a wrapper module's functions -- in
+    the scope it writes it in: the module's visibility and planned header
+    scope ({!Cpp_ind.header_scope}).  An element's member definitions go
+    last; at namespace scope, an element written as nothing but erasure
+    landing pads goes first, and so do the declarations of the helpers it
+    places ({!lifted_views}).  The walk reaches the wrapper modules first,
+    and the header writes the modules in their order, so the groups are put
+    back in that order, by the file module each is written in.
+
+    The structs hoisted are those of wrapper modules, and the modules a file's own
     elements are, written outside every struct and every class template a
     functor becomes -- the struct of a module written further in is placed
     with whatever contains it -- whose members' types name only inductives
@@ -2308,7 +2352,7 @@ let struct_members ~wrapper mp sel =
     Asked of what was generated ahead of the files, in the context the
     header writes each struct in ({!walk_as_rendered}), before either file is
     rendered. *)
-let plan_hoisted_structs s =
+let plan_file_layout s =
   let hoists ~wrapper mp sel =
     (wrapper
     || (match mp with MPdot (parent, _) -> is_modfile parent | MPfile _ | MPbound _ -> false)
@@ -2320,12 +2364,56 @@ let plan_hoisted_structs s =
          false
          (struct_members ~wrapper mp sel)
   in
-  Cpp_ind.peeking @@ fun () ->
-  walk_as_rendered
-    ~decl:(fun ~wrapper:_ _ -> ())
-    ~in_body:(fun ~wrapper mp sel ->
-      if hoists ~wrapper mp sel then hoisted_structs := MPset.add mp !hoisted_structs )
-    s
+  let analysis = get_structure_analysis () in
+  let position mp =
+    let rec file = function MPdot (mp, _) -> file mp | mp -> mp in
+    let rec find i = function
+      | [] -> List.length analysis.sorted_modules
+      | (mi : Structure_analysis.module_info) :: rest ->
+        if ModPath.equal mi.modpath (file mp) then i else find (i + 1) rest
+    in
+    find 0 analysis.sorted_modules
+  in
+  let erased = ref [] and specs = ref [] and member_defs = ref [] in
+  let add band mp group = band := (position mp, group) :: !band in
+  let element mp d =
+    match Cpp_ind.header_scope mp with
+    | None ->
+      CErrors.anomaly
+        Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned header scope.")
+    | Some {in_struct; concepts_hoisted} ->
+      with_render_ctx
+        (fun _ ->
+          { initial_render_ctx with
+            rc_in_struct = in_struct;
+            rc_concepts_hoisted = concepts_hoisted;
+            rc_in_template = Scope_plan.templated mp } )
+      @@ fun () ->
+      let scope = current_scope () in
+      let e = Cpp_ind.header_element_ahead d in
+      if e.member_defs <> [] then add member_defs mp (scope, e.member_defs);
+      if not in_struct then begin
+        if e.rendered <> [] && List.for_all is_erased_alias e.rendered then add erased mp (scope, e.rendered);
+        List.iter
+          (fun h -> Option.iter (fun spec -> add specs mp (scope, [(empty_env (), spec)])) (snd (lifted_views h)))
+          e.helpers
+      end
+  in
+  let in_writing_order band = List.map snd (List.stable_sort (fun (i, _) (j, _) -> Int.compare i j) (List.rev !band)) in
+  Cpp_ind.peeking (fun () ->
+      walk_as_rendered
+        ~decl:(fun ~wrapper se ->
+          match se with
+          | SEdecl (Dterm _ | Dfix _) when wrapper -> ()
+          | SEdecl d -> element (top_visible_mp ()) d
+          | SEmodule _ | SEmodtype _ -> () )
+        ~in_body:(fun ~wrapper mp sel ->
+          if hoists ~wrapper mp sel then hoisted_structs := MPset.add mp !hoisted_structs )
+        s );
+  file_layout :=
+    { erased_aliases = in_writing_order erased;
+      lifted_specs = in_writing_order specs;
+      member_defs = in_writing_order member_defs }
 
 (* The declarations of [s], a functor's body's among them, in order. *)
 let declarations s =
@@ -3570,7 +3658,13 @@ let do_struct_with_decl_tracking ~is_header f s =
   in
   let hoisted_erased_aliases =
     let imports = List.map str (Cpp_print.take_promoted_alias_imports ()) in
-    match imports @ Cpp_ind.render_deferred Cpp_ind.file_scope_erased_aliases with
+    let pads =
+      if is_header then
+        planned_section ~what:"erasure landing pads" !file_layout.erased_aliases
+          Cpp_ind.file_scope_erased_aliases
+      else Cpp_ind.take_deferred Cpp_ind.file_scope_erased_aliases
+    in
+    match imports @ Cpp_ind.render_section pads with
     | [] -> mt ()
     | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
   in
@@ -3611,7 +3705,8 @@ let do_struct_with_decl_tracking ~is_header f s =
         List.filter_map
           (fun w -> if Pp.ismt w.wr_lifted_specs then None else Some w.wr_lifted_specs)
           wrapper_parts
-        @ Cpp_ind.render_deferred pending_lifted_specs
+        @ Cpp_ind.render_section
+            (planned_section ~what:"helper declarations" !file_layout.lifted_specs pending_lifted_specs)
       in
       match List.filter (fun x -> not (Pp.ismt x)) parts with
       | [] -> mt ()
@@ -3629,7 +3724,12 @@ let do_struct_with_decl_tracking ~is_header f s =
   (* Last of all: a datatype's method whose body names a module's struct, which
      is emitted after every datatype.  Nothing else in the header is later. *)
   let deferred_members =
-    match Cpp_ind.render_deferred Cpp_ind.deferred_member_defs with
+    let defs =
+      if is_header then
+        planned_section ~what:"member definitions" !file_layout.member_defs Cpp_ind.deferred_member_defs
+      else Cpp_ind.take_deferred Cpp_ind.deferred_member_defs
+    in
+    match Cpp_ind.render_section defs with
     | [] -> mt ()
     | ds -> cut2 () ++ prlist_with_sep cut2 (fun x -> x) ds
   in
