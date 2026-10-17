@@ -327,10 +327,6 @@ val is_typeclass_instance : 'a -> Miniml.ml_type -> bool
     The module-as-a-module counterpart of [wrapper_qualify]. *)
 val wrapper_qualify_modname : Names.ModPath.t -> string -> string
 
-(** Pre-rendered forward declarations to inject into a [Dnspace] struct, keyed
-    by struct name. Cleared by [reset_cpp_state]. *)
-val pending_wrapper_decls : (string, Pp.t) Hashtbl.t
-
 (** Wrapper struct names that have pending declarations and therefore cannot be
     merged, with the module each wraps. Cleared by [reset_cpp_state]. *)
 val unmerged_wrappers : (string, Names.ModPath.t) Hashtbl.t

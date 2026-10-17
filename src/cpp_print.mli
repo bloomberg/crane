@@ -80,6 +80,12 @@ val nested_in_wrapper : GlobRef.t -> bool
     the structs another wrapper's declarations can be written into. *)
 val unmerged_wrappers_written : Cpp_erasure.settled -> string list
 
+(** [writing_wrapper_members members f] runs [f], writing an element whose
+    wrapper structs of the names [members] gives hold, after their own
+    members, the declarations it gives with them: those of the wrapper
+    modules of those names. *)
+val writing_wrapper_members : (string * Pp.t) list -> (unit -> 'a) -> 'a
+
 (** Take the names of the wrapper structs that took a wrapper module's
     declarations since the last call, under [CRANE_CHECK_IR]. *)
 val take_absorbed_wrappers : unit -> string list

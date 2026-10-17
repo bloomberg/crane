@@ -3111,6 +3111,9 @@ let pp_wrapper_struct name specs =
 (** What rendering one wrapper module produced, beyond the declarations that
     merge into its struct.
 
+    [wr_specs] are the declarations of its functions, which go in its struct:
+    one of its own at the module's turn, or one of the same name around an
+    inductive, as planned ({!file_layout}).
     [wr_defs] are the out-of-line definitions, which follow the whole file.
     [wr_lifted] is a declaration lifted out of the module -- an instance struct,
     whose concept argument is a type no module owns -- and is due at the
@@ -3127,6 +3130,7 @@ let pp_wrapper_struct name specs =
     wherever its definition lands. *)
 type wrapper_render = {
   wr_name : string;
+  wr_specs : Pp.t;
   wr_defs : Pp.t;
   mutable wr_lifted : Pp.t option;
   wr_lifted_specs : Pp.t;
@@ -3343,9 +3347,9 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
 
 (** Main structure renderer with declaration tracking.
 
-    PASS 1: Process all wrapper modules to populate pending_wrapper_decls. PASS
-    2: Render types and inject pending specs into Dnspace structs. PASS 3: Emit
-    deferred function definitions.
+    PASS 1: Render every wrapper module's functions. PASS 2: Render types,
+    writing a wrapper module's declarations into the struct planned for them.
+    PASS 3: Emit deferred function definitions.
 
     This three-pass approach resolves forward reference issues while maintaining
     proper C++ declaration order.
@@ -3416,22 +3420,19 @@ let do_struct_with_decl_tracking ~is_header f s =
             !file_layout.constrained_decls )
   in
   let prefix_mentioned_aliases = prefix_mentioned_aliases ~constrained in
-  let place ~prereq_labels ~hoisted ~prereqs ~concepts ((l, se) as x) =
-    if is_header then begin
-      let defined = declarations [(top_visible_mp (), [x])] in
-      constrained :=
-        !constrained
-        @ List.filter_map
-            (function Defined_by d, f when List.memq d defined -> Some f | _ -> None)
-            !file_layout.constrained_decls
-    end;
+  let place ~wrapper_specs ~prereq_labels ~hoisted ~prereqs ~concepts ((l, se) as x) =
+    let defined = if is_header then declarations [(top_visible_mp (), [x])] else [] in
+    constrained :=
+      !constrained
+      @ List.filter_map
+          (function Defined_by d, f when List.memq d defined -> Some f | _ -> None)
+          !file_layout.constrained_decls;
     let homed =
-      if is_header && Probe.checking () then
-        let defined = declarations [(top_visible_mp (), [x])] in
-        List.filter_map (fun (name, d) -> if List.memq d defined then Some name else None) !file_layout.wrapper_homes
-      else []
+      List.filter_map (fun (name, d) -> if List.memq d defined then Some name else None) !file_layout.wrapper_homes
     in
-    let {text = p; concepts = c} = f x in
+    let {text = p; concepts = c} =
+      Cpp_print.writing_wrapper_members (List.map (fun name -> (name, wrapper_specs name)) homed) (fun () -> f x)
+    in
     if is_header && Probe.checking () then begin
       let absorbed = Cpp_print.take_absorbed_wrappers () in
       if absorbed <> homed then
@@ -3486,10 +3487,8 @@ let do_struct_with_decl_tracking ~is_header f s =
         analysis.sorted_modules
     in
     (* Each wrapper module contributes up to three fragments: declarations that
-       merge into the struct, and definitions and lifted helpers that must follow
-       it.  The struct's declarations go into {!pending_wrapper_decls}, which
-       {!Cpp_print} reads when it finds an eponymous type to merge them into; the
-       other two stay here, where both producer and consumer are. *)
+       go in its struct, and definitions and lifted helpers that must follow
+       it. *)
     let wrapper_parts =
       List.filter_map
         (fun ((mp, sel), wrapper_name) ->
@@ -3504,7 +3503,6 @@ let do_struct_with_decl_tracking ~is_header f s =
               pp_wrapper_module_dual ~is_header func_sels
             in
             current_structure_decls := old_decls;
-            if not (Pp.ismt p_specs) then Hashtbl.replace pending_wrapper_decls name p_specs;
             if is_header && Pp.ismt p_specs = Hashtbl.mem unmerged_wrappers name then
               Probe.violation "unmerged wrappers"
                 Pp.(
@@ -3515,6 +3513,7 @@ let do_struct_with_decl_tracking ~is_header f s =
             Some
               {
                 wr_name = name;
+                wr_specs = p_specs;
                 wr_defs = p_defs;
                 wr_lifted = (if Pp.ismt p_lifted then None else Some p_lifted);
                 wr_lifted_specs = p_lifted_specs;
@@ -3581,7 +3580,12 @@ let do_struct_with_decl_tracking ~is_header f s =
     let ppl ((mp, sel), wrapper_name) =
       in_planned_visibility mp @@ fun () ->
       let hoisted = ref [] and prereqs = ref [] and concepts = ref [] in
-      let f = place ~prereq_labels ~hoisted ~prereqs ~concepts in
+      let wrapper_specs name =
+        match List.find_opt (fun w -> String.equal w.wr_name name) wrapper_parts with
+        | Some w -> w.wr_specs
+        | None -> mt ()
+      in
+      let f = place ~wrapper_specs ~prereq_labels ~hoisted ~prereqs ~concepts in
       let old_decls = !current_structure_decls in
       current_structure_decls := sel;
       let p =
@@ -3593,21 +3597,18 @@ let do_struct_with_decl_tracking ~is_header f s =
              topological order, whether or not the module also declares types.
              A later module's constant is initialised inside its struct body, so
              a callee's struct has to be complete by then -- emitting the
-             wrapper after everything else, as a leftover, is too late.  A
-             module whose types include an eponymous struct has already had the
-             specs merged into it by {!Cpp_print}, and nothing is pending. *)
+             wrapper after everything else, as a leftover, is too late.  Unless
+             a struct of its name written around an inductive was planned to
+             hold its declarations, and has ({!file_layout}). *)
           let wrapper_pp =
-            if not is_header then mt ()
+            let specs = wrapper_specs name in
+            if (not is_header) || Pp.ismt specs || List.mem_assoc name !file_layout.wrapper_homes then mt ()
             else
-              match Hashtbl.find_opt pending_wrapper_decls name with
-              | Some specs ->
-                Hashtbl.remove pending_wrapper_decls name;
-                let struct_pp = pp_wrapper_struct name specs in
-                if struct_hoists mp struct_pp then (
-                  hoisted := struct_pp :: !hoisted;
-                  mt () )
-                else struct_pp
-              | None -> mt ()
+              let struct_pp = pp_wrapper_struct name specs in
+              if struct_hoists mp struct_pp then (
+                hoisted := struct_pp :: !hoisted;
+                mt () )
+              else struct_pp
           in
           (* A declaration lifted out of this module -- an instance struct -- is
              due at the same point, and for the same reason: a later module's
@@ -3768,23 +3769,6 @@ let do_struct_with_decl_tracking ~is_header f s =
       clear_local_inductives ();
       List.iter add_local_inductive old_local_inductives
     end;
-    (* Every pending name came from [wrapper_names], and rendering that module in
-       the header consumes it: either {!Cpp_print} merged the specs into an
-       eponymous struct, or [ppl] emitted them as a struct of their own.  A name
-       still pending there is one whose module was never rendered, and emitting
-       it as a leftover at the end of the file would put it after its users.  The
-       implementation file declares no wrapper structs at all, so specs left
-       pending by its pass are simply unused. *)
-    if is_header && Sys.getenv_opt "CRANE_CHECK_IR" <> None then
-      Hashtbl.iter
-        (fun name _ ->
-          CErrors.user_err
-            Pp.(
-              str "Crane: wrapper struct '" ++ str name
-              ++ str "' was never emitted: its module is not in the rendered \
-                      order." ) )
-        pending_wrapper_decls;
-    Hashtbl.clear pending_wrapper_decls;
     let rev_rendered = List.rev rendered in
     let main_entry, pre_entries =
       match rev_rendered with

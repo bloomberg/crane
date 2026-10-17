@@ -863,14 +863,6 @@ let is_typeclass_instance _body ty =
     body printed long before the [.h] declares the name.  Queried in
     [cpp_names.ml] for name qualification; cleared by [reset_cpp_state]. *)
 
-(** Pending wrapper declarations: maps a Dnspace struct name (e.g., "Nat") to
-    pre-rendered forward declarations (specs) that should be injected into that
-    struct. Full definitions are rendered separately in PASS 3 after all types
-    are defined. Populated during do_struct_with_decl_tracking PASS 1. Consumed
-    during Dnspace rendering in PASS 2. *)
-let pending_wrapper_decls : (string, Pp.t) Hashtbl.t =
-  owned_table "pending_wrapper_decls"
-
 (** The wrapper structs that hold declarations of their module's and so
     cannot be merged with the eponymous inductive's struct, by struct name,
     with the module each wraps; planned ({!Cpp.plan_unmerged_wrappers}). *)

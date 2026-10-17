@@ -3938,6 +3938,13 @@ let rec unmerged_wrappers_written (d : Cpp_erasure.settled) =
     else List.concat_map unmerged_wrappers_written members @ [nspace_wrapper_name id]
   | Decl _ -> []
 
+(** The declarations of the wrapper modules the element being written
+    writes into a wrapper struct of the same name, by that name, as planned
+    ({!Cpp.file_layout}). *)
+let wrapper_members : (string * Pp.t) list ref = ref []
+
+let writing_wrapper_members members f = setting wrapper_members members f
+
 (** The wrapper structs that took a wrapper module's declarations, in the
     order they did, under [CRANE_CHECK_IR]. *)
 let absorbed_wrappers : string list ref = ref []
@@ -4143,9 +4150,8 @@ and pp_wrapper_nspace env id (members : Cpp_erasure.settled list) =
         (fun () -> pp_list_stmt (pp_cpp_decl env) members)
     in
     let pending_fwd =
-      match Hashtbl.find_opt pending_wrapper_decls struct_name_str with
+      match List.assoc_opt struct_name_str !wrapper_members with
       | Some specs ->
-        Hashtbl.remove pending_wrapper_decls struct_name_str;
         if Probe.checking () then absorbed_wrappers := struct_name_str :: !absorbed_wrappers;
         fnl () ++ specs
       | None -> mt ()
