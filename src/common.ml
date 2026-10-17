@@ -385,11 +385,6 @@ type phase =
   | Plan
   | Emit
 
-(** Get/set the current extraction phase. *)
-let set_phase, get_phase =
-  let ph = ref Plan in
-  (( := ) ph, fun () -> !ph)
-
 let phase_name = function Plan -> "planning" | Emit -> "emission"
 
 (** Get/set the set of reserved keywords. *)
@@ -521,7 +516,7 @@ let is_methodified_ref r = Ref.User.Map.mem r !methodified_refs
 (** The inductive whose struct [r] is emitted into, if [r] is methodified. *)
 let methodified_owner r = Ref.User.Map.find_opt r !methodified_refs
 
-(** The global names as planning left them, once it has ({!freeze_global_ids}).
+(** The global names as planning left them, once it has ({!end_planning}).
 
     Emission still names the helpers it lifts out of bodies, so the live set
     grows while bodies are generated, and an environment snapshotting it would
@@ -533,7 +528,9 @@ let planned_global_ids : Id.Set.t option ref = ref None
 
 let () = register_cleanup (fun () -> planned_global_ids := None)
 
-let freeze_global_ids () = planned_global_ids := Some (get_global_ids ())
+let end_planning () = planned_global_ids := Some (get_global_ids ())
+
+let get_phase () = match !planned_global_ids with Some _ -> Emit | None -> Plan
 
 let empty_env () =
   match !planned_global_ids with

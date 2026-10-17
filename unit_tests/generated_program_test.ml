@@ -50,12 +50,11 @@ let () =
   let entity name helpers =
     { Generated_program.entity_id = Entity_id.of_ref (r name); decls = []; helpers }
   in
-  Common.set_phase Common.Plan;
   check "nothing is generated while planning"
     (raises_anomaly (fun () -> ignore (Generated_program.record (entity "a" []))));
   let declares r' = List.exists (Names.GlobRef.UserOrd.equal r') [r "a"; r "owner"] in
   let check_plan () = Generated_program.check_against_plan ~declares in
-  Common.set_phase Common.Emit;
+  Common.end_planning ();
   ignore (Generated_program.record (entity "a" [h]));
   Generated_program.record_lifted_ahead [helper_decl];
   check "emitting what the unit declares passes" (not (raises_anomaly check_plan));

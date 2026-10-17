@@ -101,12 +101,8 @@ val rename_id : Id.t -> Id.Set.t -> Id.t
 type env = Id.t list * Id.Set.t
 
 (** A fresh de Bruijn environment avoiding the global names: those planning
-    decided once {!freeze_global_ids} has run, the current ones before. *)
+    decided once it has ended ({!end_planning}), the current ones before. *)
 val empty_env : unit -> env
-
-(** Fix the global names every later {!empty_env} avoids at the ones decided
-    so far.  Called where planning ends, before any body is generated. *)
-val freeze_global_ids : unit -> unit
 
 (** Prefix of the names Crane introduces itself, which no Rocq identifier is
     spelled with in C++. *)
@@ -157,10 +153,12 @@ type phase =
   | Plan
   | Emit
 
-(** Set the current extraction phase. *)
-val set_phase : phase -> unit
+(** End the unit's planning, before any body is generated: from here the
+    phase is {!Emit}, and every later {!empty_env} avoids the global names
+    decided so far.  The unit's state is reset to {!Plan}. *)
+val end_planning : unit -> unit
 
-(** Get the current extraction phase. *)
+(** The current extraction phase. *)
 val get_phase : unit -> phase
 
 (** How diagnostics name a phase: [planning], [emission]. *)

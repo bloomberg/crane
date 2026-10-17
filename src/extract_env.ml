@@ -1042,7 +1042,6 @@ let layout_pass_names =
     a head is a function of its declaration, not of what was planned before
     it.  Runs in the planning phase, which is the one that names modules. *)
 let plan_layout struc =
-  set_phase Plan;
   Pipeline_trace.event "layout" prepare_layout;
   let modules = Cpp.prepare_structure struc in
   Install_legacy_plan.install_modules modules;
@@ -1545,10 +1544,9 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   Buffer.clear buf;
   let d = descr () in
   (* Empties every per-file cell, the mutual-recursion registry among them,
-     before this unit is planned and rendered.  Everything before the first
-     render is planning, whatever the previous unit left the phase at. *)
+     before this unit is planned and rendered.  Everything until planning
+     ends is planning, whatever the previous unit left the phase at. *)
   reset_renaming_tables ();
-  set_phase Plan;
   let unsafe_needs =
     {
       mldummy = struct_ast_search Mlutil.isMLdummy struc;
@@ -1565,7 +1563,6 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   let plan = Target_plan.with_layout plan modules representation callables assumed in
   elaborate_unit struc;
   let planned_checkpoint = checkpoint () in
-  freeze_global_ids ();
   (* Both bodies are rendered before either file is opened.  A preamble has to
      say what the body it precedes demands -- which headers it includes, which
      unsafe features it uses -- and the body is the only thing that knows.
@@ -1590,7 +1587,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   let intf_first = Sys.getenv_opt "CRANE_RENDER_ORDER" = Some "intf-first" in
   (* Every function is generated before either render, as the file rendered
      first writes it, reading the plans emission reads. *)
-  set_phase Emit;
+  end_planning ();
   Cpp_state.writing_file (if intf_first then Intf else Impl) (fun () ->
       Pipeline_trace.event "emit" "generate_ahead";
       Cpp.generate_ahead struc;
@@ -1747,7 +1744,6 @@ let reset () =
   Visit.reset ();
   reset_tables ();
   reset_renaming_tables ();
-  set_phase Plan;
   Miniml.Meta.thaw ()
 
 (** Initializes the extraction environment, checking section scope and setting
@@ -2482,8 +2478,7 @@ let print_one_decl struc mp decl =
   reset_renaming_tables ();
   ignore (plan_layout struc);
   elaborate_unit struc;
-  freeze_global_ids ();
-  set_phase Emit;
+  end_planning ();
   let ans =
     Cpp_state.writing_file Impl @@ fun () ->
     with_visibility (toplevel_visibility [mp]) @@ fun () ->

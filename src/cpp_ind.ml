@@ -684,7 +684,7 @@ let functions ~lifted (funs : Gen_decls.generated_fun list) =
     whichever file is being written: emission decides nothing the plan has
     not -- {!Extract_env} checks that no table grows -- and what a
     generation reads beyond its declaration and module is planned
-    ({!in_template}, {!Common.freeze_global_ids}).  So every function is
+    ({!in_template}, {!Common.end_planning}).  So every function is
     generated once, ahead of both files ({!generating_ahead}), and each
     file's pass takes it from here.  Under [CRANE_CHECK_IR] a pass
     translates it again anyway and checks the two agree. *)

@@ -93,7 +93,6 @@ let () =
   check "occurrences do not tell terms apart structurally" (MLglob use = MLglob again);
   let a = declare "pa" nat in
   let unit = ModPath.MPfile (DirPath.make [Id.of_string "U"]) in
-  Common.set_phase Common.Plan;
   let elaborated =
     Core_elaborate.structure
       [(unit, [(Label.make "d", SEdecl (Dterm (r "d", MLapp (MLglob use, [a]), nat)))])]
@@ -109,12 +108,11 @@ let () =
     (List.sort GlobRef.UserOrd.compare (Core_elaborate.referenced elaborated)
     = List.sort GlobRef.UserOrd.compare [f; r "pa"]);
   Core_elaborate.install elaborated;
-  Common.set_phase Common.Emit;
+  Common.end_planning ();
   ignore (Core_elaborate.elaboration ~lex:Lexenv.empty rewritten [a]);
   ignore (Core_elaborate.elaboration ~lex:Lexenv.empty again [a]);
   (* The argument, a global named unapplied, is planned as its call with no
      arguments. *)
   check "a call whose use was rewritten is found planned, one built afresh is not"
     (Core_elaborate.report ()
-    = "elaborated calls: 2 planned; emission found 1, elaborated 1 itself");
-  Common.set_phase Common.Plan
+    = "elaborated calls: 2 planned; emission found 1, elaborated 1 itself")
