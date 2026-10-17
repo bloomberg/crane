@@ -298,11 +298,23 @@ let writes_variant () = writes (sn ()).variant_header
 
 
 
-(** Print an unqualified angle-bracket type: [label<s>].
+(** A name of Crane's runtime or of the standard library the configuration
+    selects, written in full as {!Crane_rt} and {!Cpp_state.sn} spell it:
+    every qualifier such a name has is a namespace. *)
+let library_name s =
+  match List.rev (Str.split (Str.regexp_string "::") s) with
+  | base :: rev_namespaces ->
+    Cpp_name.name (List.rev_map (fun ns -> Cpp_name.Namespace ns) rev_namespaces) base
+  | [] -> Cpp_name.unqualified s
 
-    @param label  the type name (e.g. a typedef or BDE name)
+(** {!library_name} as a document. *)
+let pp_library_name s = Cpp_name.pp (library_name s)
+
+(** Print a library template applied: [label<s>].
+
+    @param label  the template's name (e.g. [crane::fn] or [std::variant])
     @param s      the pre-rendered type argument list *)
-let cpp_angle label s = str label ++ str "<" ++ s ++ str ">"
+let cpp_angle label s = pp_library_name label ++ str "<" ++ s ++ str ">"
 
 (** Split a rendered C++ string on semicolons while respecting string
     literals (double-quoted) and character literals (single-quoted).
@@ -932,10 +944,10 @@ let rec pp_cpp_type ?(lead = true) par vl t =
         ++ str ">"
       | _ -> Id.print id ++ str "<" ++ pp_list (pp_rec false) args ++ str ">" )
     | Tnondeduced t ->
-      str "std::type_identity_t<" ++ pp_rec false t ++ str ">"
+      cpp_angle "std::type_identity_t" (pp_rec false t)
     | Trebind (h, x) ->
       writes_obj ();
-      str Crane_rt.rebind ++ str "<" ++ pp_list (pp_rec false) [ h; x ] ++ str ">"
+      cpp_angle Crane_rt.rebind (pp_list (pp_rec false) [ h; x ])
     | Thole -> str ctor_alias_tvar
     | Tref (Forwarding, t) -> pp_rec false t ++ str "&&"
     | Texpr_type e -> str "decltype(" ++ pp_cpp_expr ([], Id.Set.empty) [] e ++ str ")"
@@ -958,7 +970,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
        rendered as the erased type. *)
     | Terased _ ->
       writes_obj ();
-      str Crane_rt.obj
+      pp_library_name Crane_rt.obj
     | Tglob (r, tys, args) ->
       ( match find_custom_opt r with
       | Some s when to_inline r ->
@@ -1122,10 +1134,8 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       ++ Cpp_name.pp_type_qualifier (member_kind base_ty) (pp_qualified_chain base_ty)
       ++ ( if targs = [] then Id.print nested_id
            else
-             str "template "
-             ++ cpp_angle
-                  (Id.to_string nested_id)
-                  (pp_list (pp_rec false) targs) )
+             str "template " ++ Id.print nested_id
+             ++ str "<" ++ pp_list (pp_rec false) targs ++ str ">" )
     | Tapply (head, args) ->
       (* A non-dependent alias template: the head names it outright.
 
@@ -1189,7 +1199,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       (* [Topaque] is a type we could not pin down; [std::any] is the only
          spelling that accepts whatever it turns out to be. *)
       writes_obj ();
-      str Crane_rt.obj
+      pp_library_name Crane_rt.obj
     | Ttyctor t ->
       (* A template template argument is the bare template name.  Ask the type
          for its head rather than rendering it applied and cutting the result
@@ -1421,7 +1431,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
     | Tauto -> str "auto"
     | Tdecay t ->
       writes_standard "type_traits";
-      str "std::decay_t<" ++ pp_rec false t ++ str ">"
+      cpp_angle "std::decay_t" (pp_rec false t)
   in
   (pp_rec ~lead par t)
 

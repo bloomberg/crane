@@ -512,48 +512,62 @@ let rec lifted_decl_key = function
     position above the structs is legal for such a signature and the honest
     answer is to leave it where it is.
 
-    Decided by reading the rendered declaration, because the question is about
-    the text and nothing else can answer it without disagreeing.  The IR node
-    cannot: [Nat] and [List::list] are both [Tnamespace], which means "an
-    inductive's own scope", not "inside a module struct".  Nor can the tables
-    behind the printer, taken one at a time -- whether a qualifier is written
-    is settled by a chain of them (is the module a wrapper, is the type
-    nonetheless emitted at global scope, is it an eponymous record, an enum, a
-    local inductive), and any single one of them is a second opinion.  Two
-    such opinions have already been wrong here.
+    Decided by reading the qualifiers the rendered declaration writes, each
+    tagged by the code that wrote it with what it is ({!Cpp_name.written}),
+    because the question is about what is written and nothing else can answer
+    it without disagreeing.  The IR node cannot: [Nat] and [List::list] are
+    both [Tnamespace], which means "an inductive's own scope", not "inside a
+    module struct".  Nor can the tables behind the printer, taken one at a
+    time -- whether a qualifier is written is settled by a chain of them (is
+    the module a wrapper, is the type nonetheless emitted at global scope, is
+    it an eponymous record, an enum, a local inductive), and any single one of
+    them is a second opinion.  Two such opinions have already been wrong here.
 
     [std::] is the one qualifier that needs nothing complete: it names into a
     namespace, not a struct, and the standard library is included above
     everything.  Every other qualifier is refused, including a dependent
     [M::t], which needs no completeness but costs only a missed hoist to
-    refuse.
+    refuse.  Text no name was written through -- an external name, a custom
+    mapping's replacement -- is read as text: the identifier in front of each
+    [::] is the qualifier.
 
     This is the one place a declaration is not free.  A helper declared
     needlessly costs a line, but a helper declared needlessly {e and}
     qualifying into a struct would drag the whole block below that struct --
     past the uses it exists to precede -- so what it costs is the position, for
     every other helper in the block. *)
-let spec_names_into_a_struct (rendered : string) : bool =
-  let n = String.length rendered in
-  let is_ident c =
-    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
-    || c = '_'
+let names_into_a_struct (doc : Pp.t) : bool =
+  let text_names_into_a_struct text =
+    let n = String.length text in
+    let is_ident c =
+      (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+      || c = '_'
+    in
+    let rec scan i =
+      if i + 1 >= n then false
+      else if text.[i] = ':' && text.[i + 1] = ':' then
+        let stop = ref i in
+        while !stop > 0 && is_ident text.[!stop - 1] do decr stop done;
+        let qualifier = String.sub text !stop (i - !stop) in
+        if String.equal qualifier "std" then scan (i + 2) else true
+      else scan (i + 1)
+    in
+    scan 0
   in
-  let rec scan i =
-    if i + 1 >= n then false
-    else if rendered.[i] = ':' && rendered.[i + 1] = ':' then
-      let stop = ref i in
-      while !stop > 0 && is_ident rendered.[!stop - 1] do decr stop done;
-      let qualifier = String.sub rendered !stop (i - !stop) in
-      if String.equal qualifier "std" then scan (i + 2) else true
-    else scan (i + 1)
+  let decided =
+    List.exists
+      (function
+        | Cpp_name.Scope (Cpp_name.Namespace "std") -> false
+        | Cpp_name.Scope _ -> true
+        | Cpp_name.Foreign_text text | Cpp_name.Untagged text -> text_names_into_a_struct text )
+      (Cpp_name.written doc)
   in
-  scan 0
+  if Probe.checking () && decided <> text_names_into_a_struct (Pp.string_of_ppcmds doc) then
+    Probe.violation "hoist qualifiers" doc;
+  decided
 
 let spec_is_hoistable (spec : Cpp_erasure.settled) : bool =
-  not
-    (spec_names_into_a_struct
-       (Pp.string_of_ppcmds (pp_cpp_decl (empty_env ()) spec)) )
+  not (names_into_a_struct (pp_cpp_decl (empty_env ()) spec))
 
 (* Whether the module [mp] is rendered outside every struct, as planned
    ({!Scope_plan.nested}). *)
@@ -628,7 +642,8 @@ let module_members_name_only_inductives sel =
     helper and for the same reason: [Other::t] needs [Other] complete, so
     moving this in front of it would not help.  The other half, which the text
     cannot answer, is {!module_members_name_only_inductives}. *)
-let module_struct_is_hoistable rendered =
+let module_struct_is_hoistable doc =
+  let rendered = Pp.string_of_ppcmds doc in
   match (String.index_opt rendered '{', String.rindex_opt rendered '}') with
   | Some o, Some c when o < c ->
     let head = String.sub rendered 0 o in
@@ -652,8 +667,8 @@ let module_struct_is_hoistable rendered =
     in
     (not (String.contains body '{'))
     && (not is_template)
-    && (not (spec_names_into_a_struct rendered))
     && List.for_all is_static_decl members
+    && not (names_into_a_struct doc)
   | _ -> false
 
 (** The module structs this file's pass chose to declare ahead of everything,
@@ -1469,7 +1484,7 @@ let rec pp_structure_elem ~is_header f = function
         && (match m.ml_mod_expr with
            | MEstruct (_, sel) -> module_members_name_only_inductives sel
            | _ -> false)
-        && module_struct_is_hoistable (Pp.string_of_ppcmds whole)
+        && module_struct_is_hoistable whole
       then (
         hoisted_module_structs := whole :: !hoisted_module_structs;
         mt () )
@@ -3326,7 +3341,7 @@ let do_struct_with_decl_tracking ~is_header f s =
                 let struct_pp = pp_wrapper_struct name specs in
                 if
                   module_members_name_only_inductives sel
-                  && module_struct_is_hoistable (Pp.string_of_ppcmds struct_pp)
+                  && module_struct_is_hoistable struct_pp
                 then (
                   hoisted_module_structs := struct_pp :: !hoisted_module_structs;
                   mt () )
