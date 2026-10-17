@@ -673,6 +673,10 @@ type file_layout = {
           if it writes it before the module's own turn.  Any other wrapper
           module's declarations are written as a struct of their own, at the
           module's turn. *)
+  file_scope_types : CString.Set.t;
+      (** The type names the header introduces at namespace scope
+          ({!Cpp_print.file_scope_types}), which a definition written out of
+          line leaves unqualified. *)
 }
 
 (** What writes a struct the header defines at namespace scope: one of
@@ -689,7 +693,8 @@ let file_layout : file_layout ref =
       forward_decls = [];
       constrained_decls = [];
       promoted_imports = [];
-      wrapper_homes = [] }
+      wrapper_homes = [];
+      file_scope_types = CString.Set.empty }
 
 
 (** Report what a lifted helper met at the site that placed it, under
@@ -2459,6 +2464,7 @@ let plan_file_layout s =
     find 0 analysis.sorted_modules
   in
   let erased = ref [] and specs = ref [] and member_defs = ref [] and forward = ref [] and homes = ref [] in
+  let types = ref CString.Set.empty in
   let home mp d (rendered : Cpp_ind.rendered) =
     List.iter
       (fun (_, d') ->
@@ -2476,7 +2482,8 @@ let plan_file_layout s =
      lifted out of them first. *)
   let defines ~origin mp env d =
     let pass = match origin with Lifted_from_wrapper -> 0 | Defined_by _ -> 1 in
-    forward := ((pass, position mp), List.map (fun f -> (origin, f)) (Cpp_print.forward_declarations env d)) :: !forward
+    forward := ((pass, position mp), List.map (fun f -> (origin, f)) (Cpp_print.forward_declarations env d)) :: !forward;
+    types := List.fold_right CString.Set.add (Cpp_print.file_scope_types d) !types
   in
   let wrapper_lifted se =
     match wrapper_element se with
@@ -2544,7 +2551,8 @@ let plan_file_layout s =
           (fun acc (at, own, name, d) ->
             if at <= own && not (List.mem_assoc name acc) then acc @ [(name, d)] else acc )
           []
-          (List.stable_sort (fun (i, _, _, _) (j, _, _, _) -> Int.compare i j) (List.rev !homes)) }
+          (List.stable_sort (fun (i, _, _, _) (j, _, _, _) -> Int.compare i j) (List.rev !homes));
+      file_scope_types = !types }
 
 (** Plan the synthesised templates each file writes
     ({!Cpp_print.plan_ctor_aliases}), read off what was generated ahead of
@@ -3524,6 +3532,7 @@ let do_struct_with_decl_tracking ~is_header f s =
             (function Lifted_from_wrapper, f -> Some f | Defined_by _, _ -> None)
             !file_layout.constrained_decls )
   in
+  Cpp_print.file_scope_type_names := if is_header then !file_layout.file_scope_types else CString.Set.empty;
   Cpp_print.constrained_structs :=
     if is_header then
       List.map (fun (_, (f : Cpp_print.forward_declaration)) -> (f.fwd_ref, f.fwd_struct)) !file_layout.constrained_decls
@@ -3573,6 +3582,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   in
   ctor_aliases_placed := [];
   Cpp_print.start_ctor_alias_census ();
+  Cpp_print.start_file_scope_census ();
   Cpp_ind.start_render ();
   init_std_names ();
   (* The file is written outside every module body, its files visible;
@@ -3982,6 +3992,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
   in
   Cpp_print.check_ctor_alias_plan ~file:(if is_header then Common.Intf else Common.Impl);
+  Cpp_print.check_file_scope_types ~file:(if is_header then Common.Intf else Common.Impl);
   (forward_decls ++ leftover_aliases ++ prlist (fun x -> x) sections)
   ++ fnl ()
 

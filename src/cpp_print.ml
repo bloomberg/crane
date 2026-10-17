@@ -439,7 +439,9 @@ let print_cpp_type_var vl i =
     an erasure boundary and the printer cannot disagree. *)
 let is_any_type = Cpp_erasure.is_any_shaped
 
-(** Type names introduced at file scope, recorded as they are emitted.
+(** The type names the header introduces at file scope, planned with its
+    layout ({!file_scope_types}); none in the implementation, which defines
+    no type of its own.
 
     A definition written outside its struct ([Owner::f]) qualifies the plain
     names in its signature with [Owner::], which is right for a member and
@@ -449,23 +451,22 @@ let is_any_type = Cpp_erasure.is_any_shaped
     body must resolve [iptr] to that alias rather than claim it as a member it
     never declared.
 
-    The set is only consulted to {i withhold} the qualifier, so a name not yet
-    seen keeps the old behaviour; and a file-scope name that a struct also
-    declares as a member still resolves to the member, because the body of an
-    out-of-line definition is inside its class's scope. *)
+    The set is only consulted to {i withhold} the qualifier, and a file-scope
+    name that a struct also declares as a member still resolves to the
+    member, because the body of an out-of-line definition is inside its
+    class's scope. *)
 let file_scope_type_names : CString.Set.t ref = State.cell State.Unit CString.Set.empty
 
 let is_file_scope_type id =
   CString.Set.mem (Id.to_string id) !file_scope_type_names
 
-(** Record [name] as declared at file scope, if that is where we are.  Called
-    with the name the printer is about to write, not one recomputed from the
-    reference: a struct's spelling goes through several cases and a recomputed
-    name would silently fail to match the one a use site writes. *)
-let record_file_scope_name name =
-  if not (!render_ctx).rc_in_struct then
-    file_scope_type_names :=
-      CString.Set.add (Pp.string_of_ppcmds name) !file_scope_type_names
+(** Under [CRANE_CHECK_IR], the type names the file being written introduced
+    at file scope, as written. *)
+let file_scope_types_written : CString.Set.t ref = ref CString.Set.empty
+
+let note_file_scope_name name =
+  if Probe.checking () && not (!render_ctx).rc_in_struct then
+    file_scope_types_written := CString.Set.add (Pp.string_of_ppcmds name) !file_scope_types_written
 
 (** The type name a declaration introduces, for the shapes whose spelling is
     settled here.  A struct records itself where it is printed. *)
@@ -476,7 +477,7 @@ let rec decl_type_name = function
     Some (str (String.capitalize_ascii (str_global Type r)))
   | _ -> None
 
-let record_file_scope_type d = Option.iter record_file_scope_name (decl_type_name d)
+let note_file_scope_type d = Option.iter note_file_scope_name (decl_type_name d)
 
 (** The using-declaration a unit needs for the promoted type variable [id]
     when its file-scope alias is another file's: under separate extraction
@@ -3981,6 +3982,39 @@ let forward_declarations env (d : Cpp_erasure.settled) =
         | Defined_enum r -> enum_forward_declaration ~ref:r (enum_definition_name r) )
       (structs_defined d)
 
+(** The type names [d], written at namespace scope, introduces there, as the
+    printer writes them ({!note_file_scope_type}): its own, through a
+    template head and an anonymous namespace, and a struct's -- but not
+    those of what a wrapper struct holds, which are its members. *)
+let file_scope_types (d : Cpp_erasure.settled) =
+  let rec go (d : Cpp_erasure.settled) =
+    (match decl_type_name (d :> cpp_decl) with Some name -> [name] | None -> [])
+    @
+    match Cpp_erasure.view d with
+    | Template (_, _, inner) -> go inner
+    | Namespace (None, decls) -> List.concat_map go decls
+    | Decl (Dstruct {ds_ref; _}) -> [struct_definition_name ds_ref]
+    | Namespace (Some _, _) | Decl _ -> []
+  in
+  List.map Pp.string_of_ppcmds (go d)
+
+let start_file_scope_census () = file_scope_types_written := CString.Set.empty
+
+(** Under [CRANE_CHECK_IR], the type names the file [file] introduced at
+    file scope must be the ones planned for it. *)
+let check_file_scope_types ~file =
+  if Probe.checking () then begin
+    let written = !file_scope_types_written and planned = !file_scope_type_names in
+    file_scope_types_written := CString.Set.empty;
+    if not (CString.Set.equal written planned) then
+      Probe.violation "file-scope types"
+        Pp.(
+          str "the " ++ str (Common.phase_name (Common.Emit file)) ++ str " introduced "
+          ++ prlist_with_sep pr_comma str (CString.Set.elements (CString.Set.diff written planned))
+          ++ str " unplanned, and not "
+          ++ prlist_with_sep pr_comma str (CString.Set.elements (CString.Set.diff planned written)) )
+  end
+
 (** [pp_initialiser env ty e] prints [e] as the initialiser of something
     declared with type [ty].
 
@@ -4009,7 +4043,7 @@ let rec pp_initialiser env ty e =
 
     @param env  name environment for sub-expression and sub-type printers *)
 and pp_cpp_decl env (settled : Cpp_erasure.settled) =
-  record_file_scope_type (settled :> cpp_decl);
+  note_file_scope_type (settled :> cpp_decl);
   match Cpp_erasure.view settled with
   | Template (temps, cstr, inner) -> pp_template_decl env temps cstr inner
   | Namespace (None, decls) ->
@@ -4276,7 +4310,7 @@ and pp_leaf_decl env (d : cpp_decl) =
         ds_needs_shared_from_this = sft;
       } ->
     let struct_name = struct_definition_name id in
-    record_file_scope_name struct_name;
+    note_file_scope_name struct_name;
     if (!render_ctx).rc_in_struct then printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref id);
     let f_s =
       with_struct_scope id (fun () ->

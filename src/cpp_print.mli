@@ -185,6 +185,21 @@ val structs_named : Pp.t -> string list
     text [doc] holds define. *)
 val structs_defined_in : Pp.t -> string list
 
+(** The type names the file being written introduces at file scope, as
+    planned: a definition written out of line leaves them unqualified. *)
+val file_scope_type_names : CString.Set.t ref
+
+(** The type names a declaration written at namespace scope introduces
+    there, as they are written. *)
+val file_scope_types : Cpp_erasure.settled -> string list
+
+(** Under [CRANE_CHECK_IR], start recording the type names the file about
+    to be written introduces at file scope. *)
+val start_file_scope_census : unit -> unit
+
+(** Under [CRANE_CHECK_IR], check those against {!file_scope_type_names}. *)
+val check_file_scope_types : file:Common.file -> unit
+
 (** Whether an expression is a lambda that captures nothing, or one such
     invoked at once with no argument: the same value wherever it is evaluated
     (see {!Cpp_constants}). *)
