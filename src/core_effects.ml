@@ -15,6 +15,9 @@ type effect = {operation : operation; mode : mode}
 
 let mode_of_monad m = if Table.is_monad_reified m then Reified else Sequential
 
+(* The mode a declaration of type [ty] is generated in: its codomain's
+   monad's, and [Sequential], the mode a generation starts in, for a
+   codomain that is no monad. *)
 let declaration_mode ty =
   match Ml_type_util.ml_codomain ty with
   | Tglob (m, _, _) when Table.is_monad m -> mode_of_monad m

@@ -33,11 +33,6 @@ type effect = {operation : operation; mode : mode}
     extracted as a tree ({!Table.is_monad_reified}). *)
 val mode_of_monad : Names.GlobRef.t -> mode
 
-(** The mode a declaration of type [ty] is generated in: its codomain's
-    monad's, and {!Sequential}, the mode a generation starts in, for a
-    codomain that is no monad. *)
-val declaration_mode : Miniml.ml_type -> mode
-
 (** The operation the global is registered as, if it is one. *)
 val operation_of : Names.GlobRef.t -> operation option
 

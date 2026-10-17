@@ -32,20 +32,21 @@ let rec split_params n = function
   | MLlam (_, _, b) -> split_params (n + 1) b
   | b -> (n, b)
 
-(* How [fd_body], a function generated in [mode], calls the members of its
-   recursive group, as the C++ it becomes does: a call is a tail call where
-   its result is the function's, and a call the C++ wraps in a closure, or
-   one applied to more arguments than its parameters, is not.  [callee
-   ~depth f] is the number of parameters of the member [f] names, under
-   [depth] binders inside the function's parameters, and [None] where [f]
-   names none. *)
-let classify ~callee ~mode fd_body =
+(* How [fd_body] calls the members of its recursive group, as the C++ it
+   becomes does: a call is a tail call where its result is the function's,
+   and a call the C++ wraps in a closure, or one applied to more arguments
+   than its parameters, is not.  [callee ~depth f] is the number of
+   parameters of the member [f] names, under [depth] binders inside the
+   function's parameters, and [None] where [f] names none.  A bind or a ret
+   is sequencing where [effects], the analysis of the program [fd_body] is
+   taken from, says it is generated sequentially. *)
+let classify ~effects ~callee fd_body =
   let _, body = split_params 0 fd_body in
   let tail_call = ref false and nontail_call = ref false in
   let effect use =
-    match Core_effects.operation_of use.callee with
-    | Some operation when mode = Core_effects.Sequential -> Some operation
-    | _ -> None
+    match Core_effects.lookup effects use with
+    | Some {Core_effects.operation; mode = Core_effects.Sequential} -> Some operation
+    | Some _ | None -> None
   in
   (* A custom whose replacement text is its one argument writes nothing
      around it, so the argument is where the custom is: sequential [itree]
@@ -123,7 +124,7 @@ let combine a b =
 (* The plan of every local fixpoint in [defs], one per fixpoint, under the
    definition it occurs in.  Inside a member's body, before its parameters,
    the member [k] of [n] is the variable [n - k]. *)
-let local_groups defs =
+let local_groups ~effects defs =
   let plans = ref [] in
   let plan origin ids funs =
     let n = Array.length ids in
@@ -138,7 +139,7 @@ let local_groups defs =
           if 0 <= k && k < n then Some arities.(k) else None
         | _ -> None
       in
-      classify ~callee ~mode:(Core_effects.declaration_mode (snd ids.(j))) funs.(j)
+      classify ~effects ~callee funs.(j)
     in
     let kind = Array.fold_left combine No_recursion (Array.init n kind_of) in
     plans :=
@@ -162,6 +163,7 @@ let local_groups defs =
    calls it then reads are every call between members.  A function on no
    cycle calls no function it could recurse through. *)
 let analyze groups struc =
+  let effects = Core_effects.analyze struc in
   let defs = ref Ref.User.Map.empty in
   Modutil.struct_iter
     (fun d -> List.iter (fun fd -> defs := Ref.User.Map.add fd.fd_ref fd !defs) (Mlutil.term_defs d))
@@ -180,7 +182,7 @@ let analyze groups struc =
       (fun k m ->
         match Ref.User.Map.find_opt m defs with
         | Some fd ->
-          combine k (classify ~callee ~mode:(Core_effects.declaration_mode fd.fd_type) fd.fd_body)
+          combine k (classify ~effects ~callee fd.fd_body)
         | None -> k )
       No_recursion members
   in
@@ -207,7 +209,7 @@ let analyze groups struc =
           Probe.violation "recursion plan"
             Pp.(str "no single plan for the group of " ++ str (Table.kername_of_global r)) )
       defs;
-  {groups = plans; by_member; defined; locals = local_groups defs}
+  {groups = plans; by_member; defined; locals = local_groups ~effects defs}
 
 let equal a b =
   List.equal
