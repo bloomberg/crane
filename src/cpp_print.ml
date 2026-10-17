@@ -1483,28 +1483,23 @@ and ctor_alias_at vl t =
     because that is where a [using] is read; every name it writes
     has to mean there what it means at the use. *)
 and ctor_alias_of_probe vl ~base probe =
+  (* Every node of a type, in the order written, a type constructor's
+     included: a carrier nested in the body as a template template argument
+     is written through its own template, whose arguments name what it
+     names. *)
+  let visit t f = ignore (exists_cpp_type (fun t -> f t; false) t) in
   (* The template parameters of the enclosing declaration that the body
-     names.  An alias whose body mentions one cannot live at namespace
-     scope, so those are what the holder abstracts over. *)
+     names, each as the body writes it.  An alias whose body mentions one
+     cannot live at namespace scope, so those are what the holder abstracts
+     over. *)
   let captured probe =
     let seen = ref [] in
-    let rec go t =
-      match t with
-      | Tvar (Tv_index (i, _)) ->
-        if not (List.mem i !seen) then seen := !seen @ [i]
-      | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts)
-      | Tvariant (_, ts) ->
-        List.iter go ts
-      | Tfun (dom, cod) -> List.iter go dom; go cod
-      | Tconst t | Tshared_ptr t | Tref (_, t) | Tptr t | Tnamespace (_, t)
-      | Tqualified (t, _) | Tdecay t | Ttyctor t | Tnondeduced t ->
-        go t
-      | Trebind (h, x) -> go h; go x
-      | Tapply (t, ts) -> go t; List.iter go ts
-      | _ -> ()
-    in
-    go probe; !seen
+    visit probe (function
+      | Tvar (Tv_index (i, _) as v) when not (List.mem_assoc i !seen) -> seen := !seen @ [(i, v)]
+      | _ -> () );
+    !seen
   in
+  let written_var v = Pp.string_of_ppcmds (pp_cpp_type false vl (Tvar v)) in
   (* A captured parameter is named {e applied} to the alias's own
      argument -- that is what makes the body an abstraction rather than a
      type, and it is what lets the holder declare every parameter it
@@ -1517,37 +1512,17 @@ and ctor_alias_of_probe vl ~base probe =
      [std::any] is how the rest of it already spells that. *)
   let applied_vars =
     let seen = ref [] in
-    let rec go t =
-      match t with
-      | Tapply (Tvar (Tv_index (i, _)), ts) ->
-        seen := i :: !seen;
-        List.iter go ts
-      | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts)
-      | Tvariant (_, ts) ->
-        List.iter go ts
-      | Tfun (dom, cod) -> List.iter go dom; go cod
-      | Tconst t | Tshared_ptr t | Tref (_, t) | Tptr t | Tnamespace (_, t)
-      | Tqualified (t, _) | Tdecay t | Ttyctor t | Tnondeduced t ->
-        go t
-      | Trebind (h, x) -> go h; go x
-      | Tapply (t, ts) -> go t; List.iter go ts
-      | _ -> ()
-    in
-    go probe; !seen
+    visit probe (function Tapply (Tvar (Tv_index (i, _)), _) -> seen := i :: !seen | _ -> ());
+    !seen
   in
   (* A variable the body names bare is kept where it is a declared
      parameter -- named, as a plain family the declaration deapplied is
      -- and becomes a [typename] parameter of the holder. *)
   let bare_vars =
     let seen = ref [] in
-    ignore
-      (map_cpp_type
-         (function
-           | Tvar (Tv_index (i, Some _)) as t when not (List.mem i applied_vars) ->
-             seen := i :: !seen;
-             t
-           | t -> t )
-         probe );
+    visit probe (function
+      | Tvar (Tv_index (i, Some _)) when not (List.mem i applied_vars) -> seen := i :: !seen
+      | _ -> () );
     !seen
   in
   let probe =
@@ -1579,28 +1554,15 @@ and ctor_alias_of_probe vl ~base probe =
        otherwise mint a holder with an unused parameter, and the alias
        would be declared as a partial specialisation of nothing. *)
     let names = identifier_tokens rendered in
-    let captured probe =
-      List.filter
-        (fun i ->
-          List.mem
-            (Pp.string_of_ppcmds (print_cpp_type_var vl i))
-            names )
-        (captured probe)
-    in
+    let captured probe = List.filter (fun (_, v) -> List.mem (written_var v) names) (captured probe) in
     (* A class instance the body reads a type out of -- [typename
        _tcI0::ptr] -- is the enclosing declaration's parameter as much
        as a variable is, and is captured the same way. *)
     let instances =
       let seen = ref [] in
-      ignore
-        (map_cpp_type
-           (function
-             | Tinstance (id, _) as t ->
-               if not (List.exists (Id.equal id) !seen) then
-                 seen := !seen @ [id];
-               t
-             | t -> t )
-           probe );
+      visit probe (function
+        | Tinstance (id, _) when not (List.exists (Id.equal id) !seen) -> seen := !seen @ [id]
+        | _ -> () );
       !seen
     in
     match (captured probe, instances) with
@@ -1608,40 +1570,26 @@ and ctor_alias_of_probe vl ~base probe =
     | vars, instances ->
       (* Rendered a second time with the captured names replaced by the
          holder's own, so that two declarations differing only in what
-         they call their parameters share one holder. *)
+         they call their parameters share one holder.  A renamed variable
+         is still a variable: a holder nested in the body captures it under
+         its new name, and is applied to that. *)
+      let var_names =
+        List.mapi (fun k (i, _) -> (i, Generated_name.indexed (if List.mem i bare_vars then "P" else "F") k)) vars
+      and instance_names = List.mapi (fun j id -> (id, Generated_name.indexed "P" (List.length vars + j))) instances in
       let renamed =
-        List.fold_left
-          (fun acc (k, i) ->
-            map_cpp_type
-              (function
-                | Tvar (Tv_index (j, _)) when j = i ->
-                  Tid_external
-                    ( Id.to_string
-                        (Generated_name.indexed
-                           (if List.mem i bare_vars then "P" else "F")
-                           k),
-                      [] )
-                | t -> t )
-              acc )
+        rewrite_cpp_type
+          (function
+            | Tvar (Tv_index (i, _)) -> Option.map (fun name -> Tvar (Tv_index (i, Some name))) (List.assoc_opt i var_names)
+            | Tinstance (id, c) -> (
+              match List.find_opt (fun (id', _) -> Id.equal id id') instance_names with
+              | Some (_, name) -> Some (Tinstance (name, c))
+              | None -> None )
+            | _ -> None )
           probe
-          (List.mapi (fun k i -> (k, i)) vars)
-      in
-      let renamed =
-        List.fold_left
-          (fun acc (k, id) ->
-            map_cpp_type
-              (function
-                | Tinstance (id', c) when Id.equal id id' ->
-                  Tinstance (Generated_name.indexed "P" k, c)
-                | t -> t )
-              acc )
-          renamed
-          (List.mapi (fun j id -> (List.length vars + j, id)) instances)
       in
       Some
         ( {ca_base = base; ca_holder = true; ca_home = home; ca_body = render renamed},
-          List.map (fun i -> Pp.string_of_ppcmds (print_cpp_type_var vl i)) vars
-          @ List.map Id.to_string instances )
+          List.map (fun (_, v) -> written_var v) vars @ List.map Id.to_string instances )
 
 (** Render [ty] as the qualifier of a {e value} -- [T::member] -- rather than of
     a nested type.

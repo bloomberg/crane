@@ -251,17 +251,6 @@
   (action (run ./tyarg_implicit_type_binder.t.exe))))
 
 
-(subdir holder_inside_holder_body
- (rule
-  (targets holder_inside_holder_body.t.exe)
-  (deps HolderInsideHolderBody.vo holder_inside_holder_body.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} holder_inside_holder_body.t.exe holder_inside_holder_body.cpp holder_inside_holder_body.t.cpp)))
- (rule
-  (alias runtest)
-  (deps holder_inside_holder_body.t.exe)
-  (action (run ./holder_inside_holder_body.t.exe))))
-
 (subdir nested_statet_ret_type
  (rule
   (targets nested_statet_ret_type.t.exe)

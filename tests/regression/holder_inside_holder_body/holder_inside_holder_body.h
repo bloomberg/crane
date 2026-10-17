@@ -234,9 +234,9 @@ struct HolderInsideHolderBody {
     noE() = delete;
   };
 
-  template <> struct crane_carrier_tch1 {
+  template <typename CraneP0> struct crane_carrier_tch1 {
     template <typename CraneTcArg>
-    using c = stateT<bool, crane_carrier_tch<T1>::template c, CraneTcArg>;
+    using c = stateT<bool, crane_carrier_tch<CraneP0>::template c, CraneTcArg>;
   };
 
   template <typename T1>
