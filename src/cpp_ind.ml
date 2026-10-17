@@ -1177,17 +1177,33 @@ let in_header_element_scope mp k =
           rc_in_template = Scope_plan.templated mp } )
       (fun () -> k ~in_struct)
 
+let in_spelling spelling k =
+  let in_body mp k =
+    match Scope_plan.visibility mp with
+    | None -> CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
+    | Some v -> with_visibility v k
+  in
+  match (spelling : Cpp_ast.spelling) with
+  | Element_of mp -> in_body mp (fun () -> in_header_element_scope mp (fun ~in_struct:_ -> k ()))
+  | Member_of mp -> in_body mp (fun () -> with_render_ctx (fun c -> {(at_file_scope c) with rc_in_struct = true}) k)
+
+let write_unprinted spelling u = in_spelling spelling (fun () -> Cpp_print.print_unprinted u)
+
 type group = {source : ModPath.t; declarations : rendered}
 type section = group list
 
 let render_section (groups : section) =
   List.map
     (fun {source; declarations} ->
-      match Scope_plan.visibility source with
-      | None ->
-        CErrors.anomaly
-          Pp.(str "Crane: the module " ++ str (ModPath.to_string source) ++ str " has no planned visibility.")
-      | Some v -> with_visibility v (fun () -> in_header_element_scope source (fun ~in_struct:_ -> pp_decls declarations)) )
+      let expected =
+        if Probe.checking () then
+          in_spelling (Element_of source) (fun () ->
+              List.map (fun (env, d) -> Some (Cpp_ast.to_pp (Cpp_print.write_decl env d))) declarations )
+        else List.map (fun _ -> None) declarations
+      in
+      Cpp_ast.elements ~source
+        (Cpp_ast.concat Pp.fnl
+           (List.map2 (fun (env, d) expected -> Cpp_print.unprinted ?expected ~module_:source env d) declarations expected) ) )
     groups
 
 type concept_placement = Ahead_of_struct | After_struct | At_file_scope

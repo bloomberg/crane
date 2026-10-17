@@ -3474,27 +3474,33 @@ let ctor_aliases_written ~file (d : Cpp_erasure.settled) =
 let ctor_aliases_of_type ~file ~vl t =
   {read_decl = None; read_aliases = ctor_aliases_found ~file (fun f -> Cpp_demands.tyctors_of_type f ~vl t)}
 
-(** The synthesised templates the finished declaration [d] writes in the
-    file being written, as planned; under [CRANE_CHECK_IR], spelled again
-    and compared. *)
-let ctor_aliases_planned (d : Cpp_erasure.settled) =
+(** The synthesised templates the finished declaration [d], written in the
+    module [module_], writes in the file being written, as planned. *)
+let planned_ctor_aliases ~module_ (d : Cpp_erasure.settled) =
   match !ctor_alias_plan with
   | None -> []
   | Some plan -> (
     let file = (!render_ctx).rc_file in
     let writes = match file with Common.Intf -> plan.intf_writes | Common.Impl -> plan.impl_writes in
-    match Written_decl.find_opt writes (top_visible_mp (), (d :> cpp_decl)) with
-    | Some aliases ->
-      if Probe.checking () && (ctor_aliases_written ~file d).read_aliases <> aliases then
-        Probe.violation "constructor aliases"
-          Pp.(str "a declaration of the " ++ str (Common.file_name file)
-              ++ str " writes other templates than were planned for it");
-      aliases
+    match Written_decl.find_opt writes (module_, (d :> cpp_decl)) with
+    | Some aliases -> aliases
     | None ->
       CErrors.anomaly
         Pp.(str "Crane: a declaration of the " ++ str (Common.file_name file) ++ str " in "
-            ++ str (ModPath.to_string (top_visible_mp ()))
+            ++ str (ModPath.to_string module_)
             ++ str " is written that was not read when its templates were planned.") )
+
+(** The synthesised templates the finished declaration [d] writes in the
+    file being written, as planned; under [CRANE_CHECK_IR], spelled again
+    and compared. *)
+let ctor_aliases_planned (d : Cpp_erasure.settled) =
+  let aliases = planned_ctor_aliases ~module_:(top_visible_mp ()) d in
+  let file = (!render_ctx).rc_file in
+  if Probe.checking () && Option.has_some !ctor_alias_plan && (ctor_aliases_written ~file d).read_aliases <> aliases then
+    Probe.violation "constructor aliases"
+      Pp.(str "a declaration of the " ++ str (Common.file_name file)
+          ++ str " writes other templates than were planned for it");
+  aliases
 
 (** Where a member is being written.
 
@@ -4578,17 +4584,14 @@ let constrained_structs : (GlobRef.t * string) list ref = State.cell State.Unit 
 
 let read_cpp_decl = pp_cpp_decl
 
-(** A declaration as the file writes it, with what placing the declarations
-    it needs reads: the synthesised templates it writes, as planned
-    ({!ctor_aliases_planned}); and, of the structs the file has constrained
+(** What placing the declarations a written declaration needs reads: the
+    synthesised templates it writes, [templates], as planned
+    ({!planned_ctor_aliases}); and, of the structs the file has constrained
     forward declarations of ({!constrained_structs}), those it names or
     defines, and those it defines.  The declarations of a wrapper module it
     writes into a struct of its own ({!wrapper_members}) are part of its
     text, and what they need it needs. *)
-let write_decl env settled =
-  let absorbed_before = List.length !absorbed_wrappers in
-  let text = pp_cpp_decl env settled in
-  let templates = List.map ctor_alias_name (ctor_aliases_planned settled) in
+let needs_of ~templates settled =
   let names, defines =
     match !constrained_structs with
     | [] -> ([], [])
@@ -4601,6 +4604,13 @@ let write_decl env settled =
       let defined = List.map defined_ref (structs_defined settled) in
       (of_refs (defined @ Cpp_demands.globals_of_decl (settled :> cpp_decl)), of_refs defined)
   in
+  let absorbed = List.filter_map (fun name -> List.assoc_opt name !wrapper_members) (unmerged_wrappers_written settled) in
+  List.fold_left (fun n t -> Cpp_ast.Needs.union n (Cpp_ast.needs t)) {templates; names; defines} absorbed
+
+let printed_decl env settled =
+  let absorbed_before = List.length !absorbed_wrappers in
+  let text = pp_cpp_decl env settled in
+  let needs = needs_of ~templates:(List.map ctor_alias_name (ctor_aliases_planned settled)) settled in
   let absorbing = List.filter (fun name -> List.mem_assoc name !wrapper_members) (unmerged_wrappers_written settled) in
   ( if Probe.checking () then
       let printed = List.filteri (fun i _ -> i < List.length !absorbed_wrappers - absorbed_before) !absorbed_wrappers in
@@ -4612,9 +4622,34 @@ let write_decl env settled =
             ++ str " into its structs, and needs what those of "
             ++ prlist_with_sep pr_comma str absorbing
             ++ str " need" ) );
-  let absorbed = List.map (fun name -> List.assoc name !wrapper_members) absorbing in
-  Cpp_ast.decl
-    ~needs:(List.fold_left (fun n t -> Cpp_ast.Needs.union n (Cpp_ast.needs t)) {templates; names; defines} absorbed)
-    text
+  (text, needs)
+
+(** [settled], printed where it is made, with what placing the declarations
+    it needs reads ({!needs_of}). *)
+let write_decl env settled =
+  let text, needs = printed_decl env settled in
+  Cpp_ast.decl ~needs text
+
+let unprinted ?expected ~module_ env settled =
+  Cpp_ast.unprinted ?expected
+    ~needs:(needs_of ~templates:(List.map ctor_alias_name (planned_ctor_aliases ~module_ settled)) settled)
+    env settled
+
+let print_unprinted (u : Cpp_ast.unprinted) =
+  let text, needs = printed_decl u.env u.declaration in
+  if Probe.checking () then begin
+    if needs <> u.needs then
+      Probe.violation "unprinted declarations"
+        (Pp.str "a declaration printed where the tree puts it needs other declarations than planned where it was made");
+    Option.iter
+      (fun expected ->
+        if not (String.equal (Pp.string_of_ppcmds expected) (Pp.string_of_ppcmds text)) then
+          Probe.violation "unprinted declarations"
+            Pp.(
+              str "a declaration printed where the tree puts it reads" ++ fnl () ++ text ++ fnl ()
+              ++ str "and where it was made" ++ fnl () ++ expected ) )
+      u.expected
+  end;
+  text
 
 let cut2 = Cpp_ast.cut2

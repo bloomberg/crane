@@ -146,9 +146,17 @@ type group = {source : Names.ModPath.t; declarations : rendered}
 (** Groups in writing order. *)
 type section = group list
 
-(** Render a section's groups, in order, each as an element of its
-    source module is spelled. *)
+(** A section's groups, in order, each to be printed as an element of its
+    source module is spelled ({!Cpp_ast.Elements}). *)
 val render_section : section -> Cpp_ast.t list
+
+(** [in_spelling spelling k] runs [k] in the render context and visibility
+    a declaration spelled [spelling] is printed in. *)
+val in_spelling : Cpp_ast.spelling -> (unit -> 'a) -> 'a
+
+(** Print a declaration not yet printed as the tree spells it
+    ({!Cpp_ast.print}). *)
+val write_unprinted : Cpp_ast.spelling -> Cpp_ast.unprinted -> Pp.t
 
 (** Where the header declares one of a module's concepts.  No concept can
     be declared inside a struct, so a module nested in one declares its

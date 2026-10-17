@@ -28,7 +28,7 @@ let forward s = {Cpp_ast.struct_ = s; forward_declaration = Pp.str ("fwd:" ^ s)}
 
 (* The text, without whitespace: breaks and separators are formatting. *)
 let text ?(templates = []) ?(forwards = []) sections =
-  let doc = Cpp_ast.print (Cpp_ast.schedule ~templates ~forwards {prologue = Pp.str "P"; sections}) in
+  let doc = Cpp_ast.print ~write:(fun _ _ -> Pp.str "?") (Cpp_ast.schedule ~templates ~forwards {prologue = Pp.str "P"; sections}) in
   String.to_seq (Pp.string_of_ppcmds doc)
   |> Seq.filter (fun c -> not (List.mem c [' '; '\n'; '\t']))
   |> String.of_seq
@@ -82,7 +82,7 @@ let () =
     Cpp_ast.module_ In_enclosing_scope
       (Cpp_ast.module_body m [Cpp_ast.text (Pp.str "y;"); leaf ~templates:["T"] "/// z"])
   in
-  let printed = Pp.string_of_ppcmds (Cpp_ast.print (Cpp_ast.schedule ~templates:[template ~homed:true "T"] ~forwards:[]
+  let printed = Pp.string_of_ppcmds (Cpp_ast.print ~write:(fun _ _ -> Pp.str "?") (Cpp_ast.schedule ~templates:[template ~homed:true "T"] ~forwards:[]
     {prologue = Pp.mt (); sections = [documented]})) in
   check_text "a member opening with a doc comment follows a newline, whatever is due in front of it"
     (String.sub printed 0 6) "y;\n<T>";

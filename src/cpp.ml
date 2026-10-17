@@ -3761,7 +3761,8 @@ let do_struct_with_decl_tracking ~is_header f s =
         !file_layout.constrained_decls
     else []
   in
-  Cpp_ast.print (Cpp_ast.schedule ~templates ~forwards {prologue = forward_decls; sections}) ++ fnl ()
+  Cpp_ast.print ~write:Cpp_ind.write_unprinted (Cpp_ast.schedule ~templates ~forwards {prologue = forward_decls; sections})
+  ++ fnl ()
 
 (** Main entry point: render structure to C++ implementation file. *)
 let pp_struct s =

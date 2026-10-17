@@ -17,9 +17,11 @@
     a chunk at namespace scope begins ({!Top_level}), the body of each module
     with the struct written around it, if any, and each of its members
     ({!Module}), and each declaration with what it needs in front of it
-    ({!Decl}).  Everything else is text, already formatted: a declaration's
-    own text is still the printer's, and the concept text around a struct is
-    the driver's. *)
+    ({!Decl}, {!Unprinted}).  A declaration is either printed already, or
+    printed by {!print} as the tree says it is spelled: as an element of the
+    module a group of declarations was generated in ({!Elements}), or as a
+    member of the struct around it ({!Module}).  Everything else is text,
+    already formatted: the concept text around a struct is the driver's. *)
 
 open Names
 
@@ -39,9 +41,38 @@ module Needs : sig
   val union : t -> t -> t
 end
 
+(** How a declaration not yet printed is spelled, which is what printing it
+    reads off where the tree puts it. *)
+type spelling =
+  | Element_of of ModPath.t
+      (** As the header spells an element of the module: in the visibility
+          planned for its body and in its planned header scope, wherever it
+          is written. *)
+  | Member_of of ModPath.t
+      (** As a member of the module's struct: inside it, in the visibility
+          planned for its body. *)
+
+(** A declaration not yet printed, in the name environment it is printed
+    in, with what placing the declarations it needs reads -- planned, so
+    known before it is printed. *)
+type unprinted = {
+  env : Common.env;
+  declaration : Cpp_erasure.settled;
+  needs : Needs.t;
+  expected : Pp.t option;
+      (** Under [CRANE_CHECK_IR], its text as printed where it was made,
+          which printing it where the tree puts it must reproduce. *)
+}
+
 type t = private
   | Text of Pp.t  (** Written as it is; nothing is placed by it. *)
   | Decl of {text : Pp.t; needs : Needs.t}  (** A declaration, as printed. *)
+  | Unprinted of unprinted
+      (** A declaration {!print} prints, spelled as the innermost {!Elements}
+          or struct {!Module} around it says. *)
+  | Elements of {source : ModPath.t; elements : t}
+      (** Declarations generated in the module [source], written here and
+          spelled as its elements are. *)
   | Seq of t list  (** One after the other. *)
   | Top_level of t
       (** A chunk at namespace scope: a namespace-scope declaration due
@@ -72,6 +103,13 @@ and enclosure =
 val text : Pp.t -> t
 val empty : t
 val decl : needs:Needs.t -> Pp.t -> t
+
+(** [unprinted ?expected ~needs env d] is [d], printed in [env] where the
+    tree puts it. *)
+val unprinted : ?expected:Pp.t -> needs:Needs.t -> Common.env -> Cpp_erasure.settled -> t
+
+(** [elements ~source t] is [t], spelled as the elements of [source] are. *)
+val elements : source:ModPath.t -> t -> t
 val seq : t list -> t
 
 (** [t] as a chunk at namespace scope; nothing, if [t] is. *)
@@ -113,10 +151,12 @@ val needs : t -> Needs.t
 
 (** Whether the first text [t] writes opens a doc comment, scheduled
     declarations aside; a soft break, which may print as nothing, is no
-    text. *)
+    text.
+    @raise Invalid_argument if that is a declaration not yet printed. *)
 val starts_with_doc_comment : t -> bool
 
-(** [t] as a document, for reading. *)
+(** [t] as a document, for reading.
+    @raise Invalid_argument if it holds a declaration not yet printed. *)
 val to_pp : t -> Pp.t
 
 (** The break between two declaration groups.  It is a break hint, not a
@@ -159,5 +199,8 @@ type scheduled
     chunk defines the struct. *)
 val schedule : templates:template list -> forwards:forward list -> translation_unit -> scheduled
 
-(** The scheduled unit as a document. *)
-val print : scheduled -> Pp.t
+(** The scheduled unit as a document, each declaration not yet printed
+    printed by [write], in the order written, as the tree spells it.
+    @raise Invalid_argument if one is outside every {!Elements} and struct
+    {!Module}: nothing says how it is spelled. *)
+val print : write:(spelling -> unprinted -> Pp.t) -> scheduled -> Pp.t
