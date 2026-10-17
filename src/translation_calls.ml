@@ -196,6 +196,15 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
   let scheme_var i =
     Option.bind (Mlutil.reference_scheme id) (fun s -> Scheme.Var.of_tvar s i)
   in
+  (* Whether [v] comes from a type binder of the callee's that erasure
+     removed, as its schema records: what the call would pass there is a
+     type, and nothing is passed. *)
+  let schema = Mlutil.recorded_schema id in
+  let erased_type_binder v =
+    match Option.bind schema (fun s -> Ml_schema.origin s v) with
+    | Some {Ml_schema.role = Ml_schema.Erased Miniml.Ktype; _} -> true
+    | _ -> false
+  in
   let ty = fn_ml_ty_subst in
   let ty = cpp_of_ml env ty in
   (* Combine: instance types first, then regular type args. If any regular
@@ -505,22 +514,16 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
         ~preserve_positions:(Table.is_inline_custom id)
         regular_type_args
     in
-    (* Check if the callee's return type is a Tvar standing for an erased
-       (Tdummy Ktype) domain, and if so, return the variable, the concrete
-       C++ type to use, and the full ML domain. *)
+    (* Whether the callee returns a variable of an erased type binder, and
+       if so the variable and the concrete C++ type to use for it. *)
     let try_recover_erased_return_type () =
       match (!tctx).current_cpp_return_type with
       | None -> None
-      | Some ret_ty ->
-      match find_type_opt id with
-      | None -> None
-      | Some ml_ty_orig ->
-        let ret = resolve_tmeta (ml_return_type ml_ty_orig) in
-        ( match ret with
-        | Miniml.Tvar (_, i) ->
-          let all_dom = List.map resolve_tmeta (ml_domains ml_ty_orig) in
-          ( match List.nth_opt all_dom (i - 1) with
-          | Some (Miniml.Tdummy Miniml.Ktype) when i >= 1 -> Some (i, ret_ty, all_dom)
+      | Some ret_ty -> (
+        match Option.map (fun t -> resolve_tmeta (ml_return_type t)) (find_type_opt id) with
+        | Some (Miniml.Tvar (_, i)) -> (
+          match scheme_var i with
+          | Some v when erased_type_binder v -> Some (v, ret_ty)
           | _ -> None )
         | _ -> None )
     in
@@ -636,11 +639,11 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
             try_recover_erased_return_type ()
           else None
         with
-      | Some (v, ret_ty, _) ->
+      | Some (v, ret_ty) ->
         (* The erased variable is the concrete return type; any other erased
            entry is dropped. *)
         List.map
-          (fun (w, t) -> (w, if Scheme.Var.ordinal w = v then ret_ty else t))
+          (fun (w, t) -> (w, if Scheme.Var.equal w v then ret_ty else t))
           regular_type_args
         |> List.filter (fun (_, t) -> not (prints_as_any t))
       | None -> written_out ()
@@ -659,23 +662,14 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
         match
           if should_recover then try_recover_erased_return_type () else None
         with
-      | Some (_v, _ret_ty, all_dom) ->
+      | Some (_, ret_ty) ->
         (* Use [concrete_tvar_type] when available (excess args case),
-           otherwise fall back to the enclosing function's return type.  The
-           erased domains are the type binders, the [k]th one variable
-           [k]. *)
-        let t1 = match concrete_tvar_type with
-          | Some t -> t
-          | None -> _ret_ty
-        in
-        List.filter_map Fun.id
-          (List.mapi
-             (fun k t -> Option.map (fun v -> (v, t)) (scheme_var (k + 1)))
-             (List.filter_map
-                (function
-                  | Miniml.Tdummy Miniml.Ktype -> Some t1
-                  | _ -> None )
-                all_dom ) )
+           otherwise fall back to the enclosing function's return type, at
+           every variable of an erased type binder. *)
+        let t1 = Option.default ret_ty concrete_tvar_type in
+        List.map
+          (fun v -> (v, t1))
+          (List.filter erased_type_binder (Option.cata Ml_schema.vars [] schema))
       | None -> filtered
     else
       from_expected filtered
@@ -752,10 +746,8 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
         | _ -> false
       in
       let refined =
-        resolve_from_argument_heads
-          ~accept:(fun v f ->
-            not (Table.is_phantom_type_param id (Scheme.Var.ordinal v - 1) || no_struct f) )
-          ~lex tyargs primary_ml_args
+        resolve_from_argument_heads ~accept:(fun _ f -> not (no_struct f)) ~lex tyargs
+          primary_ml_args
       in
       if List.equal Scheme.Var.equal (Call_tyargs.holes refined) (Call_tyargs.holes tyargs)
       then regular

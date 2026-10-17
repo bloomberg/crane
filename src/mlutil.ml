@@ -678,11 +678,14 @@ let rec debug_ml_type = function
    variables unequal.  A type re-registered at another arity mints anew. *)
 let minted_schemes = State.cell State.Extraction GlobRef.Map.empty
 
+let recorded_schema = function
+  | GlobRef.ConstRef kn -> Table.constant_schema kn
+  | _ -> None
+
 let reference_scheme r =
-  match r with
-  | GlobRef.ConstRef kn when Option.has_some (Table.constant_schema kn) ->
-    Option.map Ml_schema.id (Table.constant_schema kn)
-  | _ -> (
+  match recorded_schema r with
+  | Some schema -> Some (Ml_schema.id schema)
+  | None -> (
     match Table.find_type r with
     | exception Not_found -> None
     | ty -> (
@@ -709,11 +712,7 @@ let forwarding_use target =
   match reference_scheme target with
   | None -> Global_use.monomorphic target
   | Some scheme ->
-    let schema =
-      match target with
-      | GlobRef.ConstRef kn -> Table.constant_schema kn
-      | _ -> None
-    in
+    let schema = recorded_schema target in
     Global_use.polymorphic target
       (Scheme.Instantiation.make scheme (fun v ->
            let own = Tvar (Schematic, Scheme.Var.ordinal v) in
