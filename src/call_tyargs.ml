@@ -62,21 +62,23 @@ let is_unwritten t v =
 
 let holes t = List.filter (is_hole t) (vars t)
 
-let extent t =
-  List.fold_left
-    (fun n (v, s) ->
-      match s with
-      | Known _ | Unreadable -> max n (Scheme.Var.ordinal v)
-      | Unwritten -> n )
-    0 t.slots
+(* The last variable known or written unreadably. *)
+let last_spoken t =
+  Mlutil.last_var
+    (List.filter_map
+       (fun (v, s) ->
+         match s with
+         | Known _ | Unreadable -> Some v
+         | Unwritten -> None )
+       t.slots )
 
-let interior_holes t =
-  let n = extent t in
-  List.filter (fun v -> Scheme.Var.ordinal v <= n && is_hole t v) (vars t)
+let within t v =
+  match last_spoken t with
+  | Some last -> Scheme.Var.compare v last <= 0
+  | None -> false
 
-let beyond_extent t =
-  let n = extent t in
-  List.filter (fun v -> Scheme.Var.ordinal v > n) (vars t)
+let interior_holes t = List.filter (fun v -> within t v && is_hole t v) (vars t)
+let beyond_extent t = List.filter (fun v -> not (within t v)) (vars t)
 
 let evidence_name = function
   | Written -> "written"
@@ -129,7 +131,7 @@ let resolved_from e t =
     t.slots
 
 let by_variable t =
-  Mlutil.Var_types.of_ordinals (extent t) (fun j ->
-      match List.find_opt (fun (v, _) -> Scheme.Var.ordinal v = j) t.slots with
-      | Some (_, Known (ty, _)) -> ty
-      | Some (_, (Unreadable | Unwritten)) | None -> Tdummy Ktype )
+  Mlutil.Var_types.through (last_spoken t) (fun v ->
+      match slot t v with
+      | Known (ty, _) -> ty
+      | Unreadable | Unwritten -> Tdummy Ktype )

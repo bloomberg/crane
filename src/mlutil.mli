@@ -67,8 +67,9 @@ val type_subst_fun : (int -> ml_type option) -> ml_type -> ml_type
 val debug_ml_type : ml_type -> string
 
 (** The scheme a reference to [r] is at: the one extraction recorded, or
-    else one minted at the arity of the type [r] is registered with.  [None]
-    for a declaration quantifying nothing, or with no type. *)
+    else one minted at the arity of the type [r] is registered with, the
+    same one at every reference.  [None] for a declaration quantifying
+    nothing, or with no type. *)
 val reference_scheme : GlobRef.t -> Scheme.Id.t option
 
 (** A reference to the declaration [r] that a pass synthesises: open
@@ -85,42 +86,44 @@ val self_reference : GlobRef.t -> global_use
     a forwarder with [target]'s type writes. *)
 val forwarding_use : GlobRef.t -> global_use
 
-(** Types for a callee's scheme variables, each keyed by the variable's
-    ordinal: what a use wrote, a call's reading of them, or what its
-    arguments imply.  Every variable up to the last one a reading speaks for
-    has a type, one it leaves open the erased [Tdummy Ktype]; past it there
-    is none.  The types are reached only through the variable they are for,
-    never by position, so they cannot be paired by position with a source
-    binder, an argument or a template parameter. *)
+(** Types for a callee's scheme variables, keyed by {!Scheme.Var.t}: what a
+    use wrote, a call's reading of them, or what its arguments imply.  Every
+    variable up to the last one a reading speaks for has a type -- whatever
+    the reading fills an open one with -- and past it there is none.  The
+    types are reached only through the variable they are for, never by
+    position, so they cannot be paired by position with a source binder, an
+    argument or a template parameter. *)
 module Var_types : sig
   type t
 
   val empty : t
   val is_empty : t -> bool
 
-  (** [of_ordinals n f]: variables [1] to [n], variable [j] at [f j]. *)
-  val of_ordinals : int -> (int -> ml_type) -> t
+  (** [through last f]: every variable of [last]'s scheme up to [last],
+      variable [v] at [f v]; {!empty} for [None]. *)
+  val through : Scheme.Var.t option -> (Scheme.Var.t -> ml_type) -> t
 
-  (** The last variable spoken for, or [0]. *)
-  val extent : t -> int
+  (** Variable [v]'s type, if it is spoken for; [Invalid_argument] for a
+      variable of another scheme, which is a caller confusing two schemes. *)
+  val find : t -> Scheme.Var.t -> ml_type option
 
-  (** Variable [j]'s type, if [j] is within {!extent}. *)
-  val find : t -> int -> ml_type option
+  (** {!find} at the variable the callee's own type spells [Tvar (_, i)]
+      ({!Scheme.Var.of_tvar}): for a reader holding a variable it met in
+      that type. *)
+  val find_tvar : t -> int -> ml_type option
 
   (** Each variable spoken for, in ascending order, with its type. *)
-  val bindings : t -> (int * ml_type) list
-
-  (** The types of {!bindings}, in the same order: for a reader that wants
-      each variable's type in turn, not any one variable's. *)
-  val types : t -> ml_type list
+  val bindings : t -> (Scheme.Var.t * ml_type) list
 
   (** [apply t ty] instantiates [ty], a type in the callee's scheme
-      variables: each variable spoken for is replaced, one past
-      {!extent} stays. *)
+      variables: each variable spoken for is replaced, any other stays. *)
   val apply : t -> ml_type -> ml_type
 
   val equal : t -> t -> bool
 end
+
+(** The greatest of [vars], all of one scheme; [None] for none. *)
+val last_var : Scheme.Var.t list -> Scheme.Var.t option
 
 (** The arguments [use] wrote, for the scheme variables they are for, up to
     the last variable written. *)

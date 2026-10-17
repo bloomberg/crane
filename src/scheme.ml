@@ -45,6 +45,7 @@ module Var = struct
     | 0 -> Int.compare a.ordinal b.ordinal
     | c -> c
 
+  let assoc_opt v l = List.find_map (fun (w, x) -> if equal v w then Some x else None) l
   let pp var = Pp.(Id.pp var.owner ++ str "." ++ int var.ordinal)
 end
 

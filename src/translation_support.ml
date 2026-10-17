@@ -2460,7 +2460,7 @@ let rec infer_ml_body_type (a : ml_ast) : ml_type option =
           Mlutil.instantiate_written ~reader:"infer_ml_body_type" use ty
         else
           Mlutil.Var_types.apply
-            (tvar_instantiation ty
+            (tvar_instantiation r ty
                (List.filter (function MLdummy _ -> false | _ -> true) args) )
             ty
       in
@@ -2624,16 +2624,21 @@ and tvar_instantiation_found
   walk callee_ty args ;
   Hashtbl.fold (fun i t acc -> (i, t) :: acc) found []
 
-(** {!tvar_instantiation_found} for every variable up to the last one found:
-    a variable no argument mentions keeps itself, so substituting leaves it
-    alone. *)
-and tvar_instantiation callee_ty args =
-  let found = tvar_instantiation_found callee_ty args in
-  let n = List.fold_left (fun m (i, _) -> max i m) 0 found in
-  Mlutil.Var_types.of_ordinals n (fun j ->
-      match List.assoc_opt j found with
-      | Some t -> t
-      | None -> Miniml.Tvar (Miniml.Schematic, j) )
+(** {!tvar_instantiation_found} at [r]'s variables, every one up to the last
+    one found: a variable no argument mentions keeps itself, so substituting
+    leaves it alone. *)
+and tvar_instantiation r callee_ty args =
+  match Mlutil.reference_scheme r with
+  | None -> Mlutil.Var_types.empty
+  | Some scheme ->
+    let found = tvar_instantiation_found callee_ty args in
+    let at v = List.assoc_opt (Scheme.Var.ordinal v) found in
+    Mlutil.Var_types.through
+      (Mlutil.last_var (List.filter (fun v -> Option.has_some (at v)) (Scheme.Var.all scheme)))
+      (fun v ->
+        match at v with
+        | Some t -> t
+        | None -> Miniml.Tvar (Miniml.Schematic, Scheme.Var.ordinal v) )
 
 (** [resolve_from_argument_types tyargs args] resolves the variables after
     the last one the call wrote or resolved ({!Call_tyargs.beyond_extent})

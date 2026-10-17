@@ -1386,7 +1386,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             | Miniml.Tvar (_, j) :: _ -> Some j
             | _ -> None
           in
-          match Option.bind value_var (Mlutil.Var_types.find ret_tys) with
+          match Option.bind value_var (Mlutil.Var_types.find_tvar ret_tys) with
           | Some r_ml when not (Mlutil.isTdummy r_ml) -> cpp_of_ml env r_ml
           | _ -> Tvoid
         in
@@ -2683,7 +2683,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             let inner_tvars = get_current_type_vars () in
             let by_var =
               List.map
-                (fun (j, ty) -> (j, convert_ml_type_to_cpp_type env inner_tvars ty))
+                (fun (v, ty) ->
+                  (Scheme.Var.ordinal v, convert_ml_type_to_cpp_type env inner_tvars ty) )
                 (Mlutil.Var_types.bindings tys_inner)
             in
             (* An erased argument is left to deduction -- unless nothing can
@@ -2759,16 +2760,18 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     | _ ->
       mk_cppglob
         ?yields:(glob_yields env x (Mlutil.instantiate_written ~reader:"glob_yields" use))
-        x (template_params_of_ml ~site:Through_tvar env (Mlutil.Var_types.types tys)) )
+        x
+        (template_params_of_ml ~site:Through_tvar env
+           (List.map snd (Mlutil.Var_types.bindings tys)) ) )
   | MLglob ({callee = x; _} as use) ->
     let tys = Mlutil.written_type_args use in
     let tvars = get_current_type_vars () in
     (* Each argument with the variable it was written for. *)
     let by_var =
       List.map
-        (fun (j, ty) ->
+        (fun (v, ty) ->
           let t = cpp_of_ml env (type_simpl ty) in
-          ( j,
+          ( Scheme.Var.ordinal v,
             match t with
             | Tvar (Tv_index (_, None)) when tvars <> [] -> Terased Ek_type
             | _ -> t ) )
@@ -5135,14 +5138,14 @@ and project_through_instance env use args inst =
      result. *)
   let targs =
     let n_class = Ml_type_util.projection_class_arity x in
-    let by_var = List.map (fun (j, t) -> (j, cpp_of_ml env t)) (Mlutil.Var_types.bindings tys) in
+    let by_var = List.map (fun (v, t) -> (v, cpp_of_ml env t)) (Mlutil.Var_types.bindings tys) in
     Template_application.to_list
       (Template_application.plan
          (Callable_abi.foreign ~callee:x ~scheme:(Mlutil.reference_scheme x)
             ~kept:(fun v -> Scheme.Var.ordinal v > n_class)
             () )
          ~instance:(fun _ -> None)
-         ~scheme:(fun v -> List.assoc_opt (Scheme.Var.ordinal v) by_var) )
+         ~scheme:(fun v -> Scheme.Var.assoc_opt v by_var) )
   in
   (* What each operand is written into.  [tys] leads with the carrier, which
      is how the field's own type numbers the class parameter, so the single
@@ -5383,7 +5386,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
         | _ -> false
       in
       let tvar_arg_erased j =
-        match Mlutil.Var_types.find tys j with
+        match Mlutil.Var_types.find_tvar tys j with
         | Some t ->
           Ml_type_util.has_erased_type_in_type
             (unfold_cpp_typedef env (cpp_of_ml env t))
@@ -6025,7 +6028,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       if not (Mlutil.Var_types.is_empty tys) then tys
       else
         match find_type_opt id with
-        | Some ml_ty -> tvar_instantiation ml_ty primary_ml_args
+        | Some ml_ty -> tvar_instantiation id ml_ty primary_ml_args
         | None -> Mlutil.Var_types.empty
     in
     (* The callee's codomain as this call instantiates it. *)
@@ -10189,7 +10192,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     let action_result_ty =
       match List.rev (Ml_type_util.ml_value_domains (find_type r)) with
       | Miniml.Tarr (Miniml.Tvar (_, j), _) :: _ -> (
-        match Mlutil.Var_types.find bind_tys j with
+        match Mlutil.Var_types.find_tvar bind_tys j with
         | Some t when not (Mlutil.isTdummy t) -> Some t
         | _ -> None )
       | _ -> None

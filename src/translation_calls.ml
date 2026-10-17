@@ -285,7 +285,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
           (fun a ->
             match resolve_tmeta a with
             | Miniml.Tvar (_, j) -> (
-              match Mlutil.Var_types.find tys j with
+              match Mlutil.Var_types.find_tvar tys j with
               | Some ty when not (Mlutil.isTdummy (resolve_tmeta ty)) ->
                 let c = template_arg_of_ml_type ~site:Through_tvar env tvars ty in
                 if prints_as_any c then None else Some c
@@ -439,6 +439,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
   in
   let regular_of ?(keep = fun i -> List.mem i in_head) tys =
     Mlutil.Var_types.bindings tys
+    |> List.map (fun (v, ty) -> (Scheme.Var.ordinal v, ty))
     |> List.filter (fun (i, _) -> keep i)
     |> List.map
          (fun (i, ty) ->
@@ -924,13 +925,13 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
   let struct_vars r ts =
     let ty = find_type r in
     List.filter
-      (fun j -> Mlutil.Var_types.find ts j <> None)
+      (fun j -> Mlutil.Var_types.find_tvar ts j <> None)
       (Instance_methods.instance_tvars ty (Instance_methods.class_type ty))
   in
   let instance_type_args r ts =
     filter_erased_type_args
       (build_template_params ~site:Through_tvar env []
-         (List.filter_map (Mlutil.Var_types.find ts) (struct_vars r ts)) )
+         (List.filter_map (Mlutil.Var_types.find_tvar ts) (struct_vars r ts)) )
   in
   let instance_type_args_from_expected r ts =
     match instance_family_binding env r ts expected with
@@ -939,7 +940,8 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
       (* Variable [j] is the instance's [j]th family name. *)
       let filled =
         List.map
-          (fun (j, t) ->
+          (fun (v, t) ->
+            let j = Scheme.Var.ordinal v in
             ( j,
               if not (Mlutil.isTdummy (resolve_tmeta t)) then
                 Some (List.hd (build_template_params ~site:Through_tvar env [] [t]))

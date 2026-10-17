@@ -47,10 +47,14 @@ let () =
       (List.for_all
          (fun (v, s) -> Call_tyargs.is_unwritten t v = (s = Scheme.Not_written))
          sources );
-    let extent = Mlutil.Var_types.extent (Call_tyargs.by_variable t) in
+    let spoken = List.map fst (Mlutil.Var_types.bindings (Call_tyargs.by_variable t)) in
+    let within v = List.exists (Scheme.Var.equal v) spoken in
     check "interior holes and the variables beyond partition by the extent"
-      (List.for_all (fun v -> Scheme.Var.ordinal v <= extent) (Call_tyargs.interior_holes t)
-       && List.for_all (fun v -> Scheme.Var.ordinal v > extent) (Call_tyargs.beyond_extent t));
+      (List.for_all within (Call_tyargs.interior_holes t)
+       && List.for_all (fun v -> not (within v)) (Call_tyargs.beyond_extent t)
+       && List.for_all
+            (fun v -> within v || List.exists (Scheme.Var.equal v) (Call_tyargs.beyond_extent t))
+            (Call_tyargs.vars t));
     let asked = List.filter (fun _ -> Random.bool ()) (Call_tyargs.vars t) in
     let answer v =
       match Random.int 3 with
@@ -74,7 +78,7 @@ let () =
          (fun v ->
            Call_tyargs.is_hole r v
            || (not (Call_tyargs.is_hole t v))
-           || match Mlutil.Var_types.find after (Scheme.Var.ordinal v) with
+           || match Mlutil.Var_types.find after v with
               | Some (Tdummy _) | None -> false
               | Some _ -> true )
          (Call_tyargs.vars t) );

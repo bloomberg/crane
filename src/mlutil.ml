@@ -673,9 +673,11 @@ let rec debug_ml_type = function
   | Taxiom -> "axiom"
   | Tstring -> "string"
 
-(* The scheme a synthesised reference to [r] is at: the one extraction
-   recorded, or else one minted at the arity of the type [r] is registered
-   with.  [None] for a declaration quantifying nothing, or with no type. *)
+(* A minted scheme is kept, so that every reference to [r] meets the same
+   variables: one minted per call would make two readings of one callee's
+   variables unequal.  A type re-registered at another arity mints anew. *)
+let minted_schemes = State.cell State.Extraction GlobRef.Map.empty
+
 let reference_scheme r =
   match r with
   | GlobRef.ConstRef kn when Option.has_some (Table.constant_schema kn) ->
@@ -683,9 +685,15 @@ let reference_scheme r =
   | _ -> (
     match Table.find_type r with
     | exception Not_found -> None
-    | ty ->
+    | ty -> (
       let arity = Ml_schema.max_tvar ty in
-      if arity = 0 then None else Some (Scheme.Id.fresh r ~arity) )
+      match GlobRef.Map.find_opt r !minted_schemes with
+      | _ when arity = 0 -> None
+      | Some id when Int.equal (Scheme.Id.arity id) arity -> Some id
+      | _ ->
+        let id = Scheme.Id.fresh r ~arity in
+        minted_schemes := GlobRef.Map.add r id !minted_schemes;
+        Some id ) )
 
 let open_reference r =
   match reference_scheme r with
@@ -717,26 +725,53 @@ let forwarding_use target =
            {Scheme.solution = Scheme.Type own; source} ) )
 
 module Var_types = struct
-  (* Entry [k] is variable [k + 1]'s type.  The order is this module's
-     alone: nothing outside it reads a position. *)
-  type t = ml_type list
+  (* One scheme's variables from its first to the last spoken for, in
+     order. *)
+  type t = (Scheme.Var.t * ml_type) list
 
   let empty = []
   let is_empty t = t = []
-  let of_ordinals n f = List.init n (fun k -> f (k + 1))
-  let extent = List.length
-  let find t j = if j >= 1 then List.nth_opt t (j - 1) else None
-  let bindings t = List.mapi (fun k ty -> (k + 1, ty)) t
-  let types t = t
-  let apply t ty = type_subst_fun (find t) ty
-  let equal = List.equal eq_ml_type
+
+  let through last f =
+    match last with
+    | None -> []
+    | Some last ->
+      List.filter_map
+        (fun v -> if Scheme.Var.compare v last <= 0 then Some (v, f v) else None)
+        (Scheme.Var.all (Scheme.Var.owner last))
+
+  let find t v =
+    match t with
+    | [] -> None
+    | (w, _) :: _ ->
+      if not (Scheme.Id.equal (Scheme.Var.owner v) (Scheme.Var.owner w)) then
+        invalid_arg "Mlutil.Var_types.find: a variable of another scheme";
+      List.find_map (fun (w, ty) -> if Scheme.Var.equal v w then Some ty else None) t
+
+  let find_tvar t i =
+    match t with
+    | [] -> None
+    | (w, _) :: _ -> Option.bind (Scheme.Var.of_tvar (Scheme.Var.owner w) i) (find t)
+
+  let bindings t = t
+  let apply t ty = type_subst_fun (find_tvar t) ty
+
+  let equal =
+    List.equal (fun (v, a) (w, b) -> Scheme.Var.equal v w && eq_ml_type a b)
 end
+
+let last_var vars =
+  List.fold_left
+    (fun last v ->
+      match last with
+      | Some w when Scheme.Var.compare w v >= 0 -> last
+      | _ -> Some v )
+    None vars
 
 let written_type_args use =
   let evidence = Global_use.written_evidence use in
-  let last = List.fold_left (fun m (v, _) -> max m (Scheme.Var.ordinal v)) 0 evidence in
-  Var_types.of_ordinals last (fun j ->
-      match List.find_opt (fun (v, _) -> Scheme.Var.ordinal v = j) evidence with
+  Var_types.through (last_var (List.map fst evidence)) (fun v ->
+      match List.find_opt (fun (w, _) -> Scheme.Var.equal v w) evidence with
       | Some (_, t) -> t
       | None -> Tdummy Ktype )
 

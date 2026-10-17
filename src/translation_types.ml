@@ -2527,7 +2527,7 @@ let hkt_carrier_type_args env tvars ?result id tys =
   Probe.changed "REPAIR_hkt_carrier_type_args" id ~before:None @@
   let ( let* ) = Option.bind in
   let* ml_ty = find_type_opt id in
-  match Mlutil.Var_types.find tys 1 with
+  match Mlutil.Var_types.find_tvar tys 1 with
   | Some c
     when IntSet.mem 1 (Ml_type_util.higher_kinded_ml_tvars [ml_ty])
          && not (Mlutil.isTdummy (resolve_tmeta c))
@@ -2543,11 +2543,11 @@ let hkt_carrier_type_args env tvars ?result id tys =
     | _ -> None
   in
   let* () =
-    match Mlutil.Var_types.find tys p with
+    match Mlutil.Var_types.find_tvar tys p with
     | Some (Miniml.Tdummy _) -> Some ()
     | _ -> None
   in
-  let* v_ml = Mlutil.Var_types.find tys v in
+  let* v_ml = Mlutil.Var_types.find_tvar tys v in
   let* result =
     match result with None -> (!tctx).current_cpp_return_type | r -> r
   in

@@ -50,6 +50,10 @@ module Var : sig
 
   val equal : t -> t -> bool
   val compare : t -> t -> int
+
+  (** What [l] pairs with the variable, if anything. *)
+  val assoc_opt : t -> (t * 'a) list -> 'a option
+
   val pp : t -> Pp.t
 end
 
