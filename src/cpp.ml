@@ -598,8 +598,9 @@ let struct_hoists mp doc =
 
 (** What the header writes away from where it is written, planned before
     either file is rendered ({!plan_file_layout}): each a section of groups
-    of declarations, in writing order, each group with the scope it is
-    written in. *)
+    of declarations, in writing order, each group with the module it was
+    generated in, whose elements' scope it is spelled in
+    ({!Cpp_ind.group}). *)
 type file_layout = {
   erased_aliases : Cpp_ind.section;
       (** The erasure landing pads written at file scope -- [using X =
@@ -2323,24 +2324,6 @@ let struct_members ~wrapper mp sel =
             | {helpers = _ :: _; _} -> None ) )
         (Some []) sel
 
-(** [in_header_element_scope mp k] runs [k ~in_struct] in the render
-    context the header writes an element of the module [mp] in, as planned
-    ({!Cpp_ind.header_scope}): [in_struct] says whether that is inside the
-    module's struct. *)
-let in_header_element_scope mp k =
-  match Cpp_ind.header_scope mp with
-  | None ->
-    CErrors.anomaly
-      Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned header scope.")
-  | Some {in_struct; concepts_hoisted} ->
-    with_render_ctx
-      (fun c ->
-        { (at_file_scope c) with
-          rc_in_struct = in_struct;
-          rc_concepts_hoisted = concepts_hoisted;
-          rc_in_template = Scope_plan.templated mp } )
-      (fun () -> k ~in_struct)
-
 (** Plan where the header writes what it does not write in place
     ({!file_layout}), and which modules' structs it declares ahead of the
     file ({!hoisted_structs}).
@@ -2421,8 +2404,7 @@ let plan_file_layout s =
     List.iter (fun h -> defines ~lifted:true mp (empty_env ()) (fst (lifted_views h))) (wrapper_lifted se)
   in
   let element mp d =
-    in_header_element_scope mp @@ fun ~in_struct ->
-      let scope = current_scope () in
+    Cpp_ind.in_header_element_scope mp @@ fun ~in_struct ->
       if
         Probe.checking ()
         && not (Option.cata (equal_visibility (current_visibility ())) false (Scope_plan.visibility mp))
@@ -2434,15 +2416,15 @@ let plan_file_layout s =
             ++ pp_visibility (current_visibility ()) );
       let e = Cpp_ind.header_element_ahead d in
       home mp d e.rendered;
-      if e.member_defs <> [] then add member_defs mp (scope, e.member_defs);
+      if e.member_defs <> [] then add member_defs mp {Cpp_ind.source = mp; declarations = e.member_defs};
       if not in_struct then begin
-        if e.rendered <> [] && List.for_all is_erased_alias e.rendered then add erased mp (scope, e.rendered);
+        if e.rendered <> [] && List.for_all is_erased_alias e.rendered then add erased mp {Cpp_ind.source = mp; declarations = e.rendered};
         List.iter (fun (env, d') -> defines ~lifted:false mp env d') e.rendered;
         List.iter
           (fun h ->
             let def, spec = lifted_views h in
             defines ~lifted:false mp (empty_env ()) def;
-            Option.iter (fun spec -> add specs mp (scope, [(empty_env (), spec)])) spec )
+            Option.iter (fun spec -> add specs mp {Cpp_ind.source = mp; declarations = [(empty_env (), spec)]}) spec )
           e.helpers
       end
   in
@@ -2512,7 +2494,7 @@ let plan_ctor_aliases s =
     let header = file = Common.Intf in
     let element d =
       let scope k =
-        if header then in_header_element_scope (top_visible_mp ()) (fun ~in_struct:_ -> k Cpp_ind.header_element_ahead)
+        if header then Cpp_ind.in_header_element_scope (top_visible_mp ()) (fun ~in_struct:_ -> k Cpp_ind.header_element_ahead)
         else with_render_ctx at_file_scope (fun () -> k Cpp_ind.impl_element_ahead)
       in
       scope (fun ahead ->

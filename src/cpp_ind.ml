@@ -58,13 +58,6 @@ let module_struct_name (mp : ModPath.t) : string option =
     | MPdot (_, lbl) -> Some (String.capitalize_ascii (Label.to_string lbl))
     | MPfile _ | MPbound _ -> None )
 
-(** Groups of finished declarations written away from where they were
-    generated, in writing order, each with the scope it is written in. *)
-type section = (Cpp_state.scope * rendered) list
-
-let render_section (groups : section) =
-  List.map (fun (sc, ds) -> Cpp_state.in_scope sc (fun () -> pp_decls ds)) groups
-
 (** The kinds of the template parameters of the inductive [kn]'s packets,
     as {!ind_header_decls} gives them. *)
 let ind_template_kinds kn ind =
@@ -1169,6 +1162,33 @@ let header_scopes : header_scope MPmap.t ref = State.cell State.Unit MPmap.empty
 let plan_header_scope mp scope = header_scopes := MPmap.add mp scope !header_scopes
 
 let header_scope mp = MPmap.find_opt mp !header_scopes
+
+let in_header_element_scope mp k =
+  match header_scope mp with
+  | None ->
+    CErrors.anomaly
+      Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned header scope.")
+  | Some {in_struct; concepts_hoisted} ->
+    with_render_ctx
+      (fun c ->
+        { (at_file_scope c) with
+          rc_in_struct = in_struct;
+          rc_concepts_hoisted = concepts_hoisted;
+          rc_in_template = Scope_plan.templated mp } )
+      (fun () -> k ~in_struct)
+
+type group = {source : ModPath.t; declarations : rendered}
+type section = group list
+
+let render_section (groups : section) =
+  List.map
+    (fun {source; declarations} ->
+      match Scope_plan.visibility source with
+      | None ->
+        CErrors.anomaly
+          Pp.(str "Crane: the module " ++ str (ModPath.to_string source) ++ str " has no planned visibility.")
+      | Some v -> with_visibility v (fun () -> in_header_element_scope source (fun ~in_struct:_ -> pp_decls declarations)) )
+    groups
 
 type concept_placement = Ahead_of_struct | After_struct | At_file_scope
 

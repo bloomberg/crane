@@ -33,14 +33,6 @@ val render_decl : Common.env -> Minicpp.cpp_decl -> Cpp_ast.t
 (** Print the declarations an entry point answered with. *)
 val pp_decls : rendered -> Cpp_ast.t
 
-(** Groups of finished declarations written away from where they were
-    generated, in writing order, each with the scope it is written in
-    ({!Cpp_state.scope}). *)
-type section = (Cpp_state.scope * rendered) list
-
-(** Render a section's groups, in order and each in its own scope. *)
-val render_section : section -> Cpp_ast.t list
-
 (** What a type class instance becomes: the struct carrying its methods, and,
     for a ground instance, the [static_assert] checking it against the class's
     concept.  Both belong at namespace scope, wherever the instance was
@@ -137,6 +129,26 @@ val plan_header_scope : Names.ModPath.t -> header_scope -> unit
 
 (** The scope planned for the body of a module. *)
 val header_scope : Names.ModPath.t -> header_scope option
+
+(** [in_header_element_scope mp k] runs [k ~in_struct] in the render
+    context the header writes an element of the module [mp] in, as planned
+    ({!header_scope}): [in_struct] says whether that is inside the module's
+    struct. *)
+val in_header_element_scope : Names.ModPath.t -> (in_struct:bool -> 'a) -> 'a
+
+(** A group of finished declarations the header writes at file scope, away
+    from the module [source] they were generated in.  They are spelled as
+    the header spells an element of [source] -- in the visibility planned
+    for its body and in its planned header scope -- so the module is all a
+    group has to say about where it reads its names from. *)
+type group = {source : Names.ModPath.t; declarations : rendered}
+
+(** Groups in writing order. *)
+type section = group list
+
+(** Render a section's groups, in order, each as an element of its
+    source module is spelled. *)
+val render_section : section -> Cpp_ast.t list
 
 (** Where the header declares one of a module's concepts.  No concept can
     be declared inside a struct, so a module nested in one declares its

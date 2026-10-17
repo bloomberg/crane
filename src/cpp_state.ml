@@ -554,15 +554,6 @@ let with_render_ctx (upd : render_ctx -> render_ctx) (f : unit -> 'a) : 'a =
 
 let writing_file file f = with_render_ctx (fun c -> {c with rc_file = file}) f
 
-type scope = { sc_visibility : Common.visibility; sc_render : render_ctx }
-
-let current_scope () =
-  { sc_visibility = Common.current_visibility (); sc_render = !render_ctx }
-
-let in_scope sc f =
-  Common.with_visibility sc.sc_visibility (fun () ->
-      with_render_ctx (fun c -> {sc.sc_render with rc_file = c.rc_file}) f )
-
 (** Track definitions rendered as function accessors (Meyers singletons) instead
     of static inline variables, due to template static init ordering. Stores
     both (modpath, label) pairs for direct matching and canonical KerNames for

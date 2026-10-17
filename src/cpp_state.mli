@@ -187,18 +187,6 @@ val with_render_ctx : (render_ctx -> render_ctx) -> (unit -> 'a) -> 'a
 (** [writing_file file f] renders [f] as part of the file [file]. *)
 val writing_file : Common.file -> (unit -> 'a) -> 'a
 
-(** Where a declaration was generated: the visibility stack and render
-    context its names are spelled against.  A declaration written somewhere
-    later than it was generated carries one, so that it reads the same as it
-    would have in place. *)
-type scope
-
-val current_scope : unit -> scope
-
-(** [in_scope sc f] runs [f] as if at [sc] in the file being written,
-    restoring the current scope however [f] leaves. *)
-val in_scope : scope -> (unit -> 'a) -> 'a
-
 (** {2 Template static accessors} *)
 
 (** Tracking for template static accessor labels and their kernel names. *)
