@@ -77,6 +77,25 @@ val nested_in_wrapper : GlobRef.t -> bool
 
 (** {2 Forward declarations} *)
 
+(** A forward declaration of a struct or scoped enum defined at namespace
+    scope: the name it declares, its text, and whether it is a constrained
+    template -- one whose [requires] clause or concept-kinded parameter names
+    a concept, which the header's prologue need not have declared. *)
+type forward_declaration = {
+  fwd_struct : string;
+  fwd_text : Pp.t;
+  fwd_constrained : bool;
+}
+
+(** [forward_declarations env d] is the forward declaration of each struct
+    and scoped enum [d] defines at namespace scope, in the order it defines
+    them, printed in the current scope as the definition prints its head. *)
+val forward_declarations : Common.env -> Cpp_erasure.settled -> forward_declaration list
+
+(** Take the forward declarations recorded by the render under way, under
+    [CRANE_CHECK_IR]. *)
+val take_registered_forward_decls : unit -> forward_declaration list
+
 (** Take the struct forward declarations accumulated since the last call. *)
 val take_forward_struct_decls : unit -> Pp.t list
 

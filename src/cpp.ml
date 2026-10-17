@@ -652,10 +652,13 @@ type file_layout = {
           gave up because their bodies name a module's struct, which is
           written after every datatype and cannot be moved in front of one it
           holds by value: they go last. *)
+  forward_decls : Cpp_print.forward_declaration list;
+      (** The forward declaration of every struct and scoped enum the header
+          defines at namespace scope, in the order it defines them. *)
 }
 
 let file_layout : file_layout ref =
-  State.cell State.Unit {erased_aliases = []; lifted_specs = []; member_defs = []}
+  State.cell State.Unit {erased_aliases = []; lifted_specs = []; member_defs = []; forward_decls = []}
 
 
 (** Report what a lifted helper met at the site that placed it, under
@@ -2381,8 +2384,24 @@ let plan_file_layout s =
     in
     find 0 analysis.sorted_modules
   in
-  let erased = ref [] and specs = ref [] and member_defs = ref [] in
+  let erased = ref [] and specs = ref [] and member_defs = ref [] and forward = ref [] in
   let add band mp group = band := (position mp, group) :: !band in
+  (* The header writes every wrapper module's functions before any module's
+     types ({!do_struct_with_decl_tracking}), and so defines the structs
+     lifted out of them first. *)
+  let defines ~pass mp env d = forward := ((pass, position mp), Cpp_print.forward_declarations env d) :: !forward in
+  let wrapper_lifted se =
+    match wrapper_element se with
+    | Wrapper_nothing -> []
+    | Wrapper_instance (r, a, t) ->
+      let ds, helpers = Cpp_ind.instance_entity r a t in
+      helpers @ List.map snd ds
+    | Wrapper_functions (_, generate) -> List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) (generate ())
+  in
+  let wrapper_functions mp se =
+    with_render_ctx (fun _ -> initial_render_ctx) @@ fun () ->
+    List.iter (fun h -> defines ~pass:0 mp (empty_env ()) (fst (lifted_views h))) (wrapper_lifted se)
+  in
   let element mp d =
     match Cpp_ind.header_scope mp with
     | None ->
@@ -2401,8 +2420,12 @@ let plan_file_layout s =
       if e.member_defs <> [] then add member_defs mp (scope, e.member_defs);
       if not in_struct then begin
         if e.rendered <> [] && List.for_all is_erased_alias e.rendered then add erased mp (scope, e.rendered);
+        List.iter (fun (env, d) -> defines ~pass:1 mp env d) e.rendered;
         List.iter
-          (fun h -> Option.iter (fun spec -> add specs mp (scope, [(empty_env (), spec)])) (snd (lifted_views h)))
+          (fun h ->
+            let def, spec = lifted_views h in
+            defines ~pass:1 mp (empty_env ()) def;
+            Option.iter (fun spec -> add specs mp (scope, [(empty_env (), spec)])) spec )
           e.helpers
       end
   in
@@ -2411,7 +2434,7 @@ let plan_file_layout s =
       walk_as_rendered
         ~decl:(fun ~wrapper se ->
           match se with
-          | SEdecl (Dterm _ | Dfix _) when wrapper -> ()
+          | SEdecl (Dterm _ | Dfix _) when wrapper -> wrapper_functions (top_visible_mp ()) se
           | SEdecl d -> element (top_visible_mp ()) d
           | SEmodule _ | SEmodtype _ -> () )
         ~in_body:(fun ~wrapper mp sel ->
@@ -2420,7 +2443,12 @@ let plan_file_layout s =
   file_layout :=
     { erased_aliases = in_writing_order erased;
       lifted_specs = in_writing_order specs;
-      member_defs = in_writing_order member_defs }
+      member_defs = in_writing_order member_defs;
+      forward_decls =
+        List.concat_map snd
+          (List.stable_sort
+             (fun ((p, i), _) ((q, j), _) -> if p <> q then Int.compare p q else Int.compare i j)
+             (List.rev !forward) ) }
 
 (* The declarations of [s], a functor's body's among them, in order. *)
 let declarations s =
@@ -3322,6 +3350,7 @@ let do_struct_with_decl_tracking ~is_header f s =
       else p
   in
   Cpp_print.reset_ctor_alias_emitted ();
+  ignore (Cpp_print.take_registered_forward_decls ());
   Cpp_ind.start_render ();
   init_std_names ();
   (* The file is written outside every module body, its files visible;
@@ -3680,6 +3709,18 @@ let do_struct_with_decl_tracking ~is_header f s =
     | [] -> mt ()
     | l -> prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
   in
+  if is_header && Probe.checking () then begin
+    let written (fwd : Cpp_print.forward_declaration) = (Pp.string_of_ppcmds fwd.fwd_text, fwd.fwd_constrained) in
+    let planned = List.map written !file_layout.forward_decls in
+    let registered = List.map written (Cpp_print.take_registered_forward_decls ()) in
+    if planned <> registered then
+      Probe.violation "forward declarations"
+        Pp.(
+          str "the header defines the structs "
+          ++ prlist_with_sep (fun () -> str ", ") (fun (t, _) -> str t) registered
+          ++ str " at namespace scope, and was planned to define "
+          ++ prlist_with_sep (fun () -> str ", ") (fun (t, _) -> str t) planned )
+  end;
   let forward_decls =
     let structs =
       if is_header then Cpp_print.take_forward_struct_decls ()

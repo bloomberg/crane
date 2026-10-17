@@ -3457,36 +3457,60 @@ let reset_constrained_forward_decls () = constrained_forward_struct_decls := []
     module's struct can each name the other, [typename StateV<_tcI0>::state]
     in a member's signature against a call to that member in the instance's
     body. *)
-let register_forward_struct_decl ~env ~name ~tparams ~cstr =
+type forward_declaration = {
+  fwd_struct : string;
+  fwd_text : Pp.t;
+  fwd_constrained : bool;
+}
+
+let forward_declaration ~env ~name ~tparams ~cstr =
   let concept_kinded (tt, _) =
     match tt with
     | TTconcept _ -> true
     | _ -> false
   in
-  if not (!render_ctx).rc_in_struct then
-    let decl =
+  { fwd_struct = Pp.string_of_ppcmds name;
+    fwd_text =
       struct_template_head ~pp_param:pp_template_param_redecl env tparams cstr
-      ++ str "struct " ++ name ++ str ";"
-    in
-    if
-      cstr = None
-      && pp_requires_of_tparams tparams = None
-      && not (List.exists concept_kinded tparams)
-    then forward_struct_decls := decl :: !forward_struct_decls
-    else
-      constrained_forward_struct_decls :=
-        (Pp.string_of_ppcmds name, decl) :: !constrained_forward_struct_decls
+      ++ str "struct " ++ name ++ str ";";
+    fwd_constrained =
+      cstr <> None
+      || pp_requires_of_tparams tparams <> None
+      || List.exists concept_kinded tparams }
 
-(** Record an opaque declaration for a scoped enum about to be rendered at C++
-    global scope.  A module struct can be emitted before an enum a later module
-    pulled up to global scope, so a member declaration may name the enum ahead
-    of its definition.  [enum class E;] is a complete type -- a scoped enum has
-    a fixed underlying type -- so replaying it in the header prologue is enough
-    for those members, and the definition still follows in its own place. *)
+(** An opaque declaration of a scoped enum.  A module struct can be emitted
+    before an enum a later module pulled up to global scope, so a member
+    declaration may name the enum ahead of its definition.  [enum class E;]
+    is a complete type -- a scoped enum has a fixed underlying type -- so
+    replaying it in the header prologue is enough for those members, and the
+    definition still follows in its own place. *)
+let enum_forward_declaration name =
+  {fwd_struct = Pp.string_of_ppcmds name; fwd_text = str "enum class " ++ name ++ str ";"; fwd_constrained = false}
+
+(** Every forward declaration recorded by the render under way, in order,
+    under [CRANE_CHECK_IR]: what the plan ahead of the files is checked
+    against. *)
+let registered_forward_decls : forward_declaration list ref = ref []
+
+let register_forward_decl fwd =
+  if not (!render_ctx).rc_in_struct then begin
+    if Probe.checking () then registered_forward_decls := fwd :: !registered_forward_decls;
+    if fwd.fwd_constrained then
+      constrained_forward_struct_decls :=
+        (fwd.fwd_struct, fwd.fwd_text) :: !constrained_forward_struct_decls
+    else forward_struct_decls := fwd.fwd_text :: !forward_struct_decls
+  end
+
+let register_forward_struct_decl ~env ~name ~tparams ~cstr =
+  if not (!render_ctx).rc_in_struct then register_forward_decl (forward_declaration ~env ~name ~tparams ~cstr)
+
 let register_forward_enum_decl ~name =
-  if not (!render_ctx).rc_in_struct then
-    forward_struct_decls :=
-      (str "enum class " ++ name ++ str ";") :: !forward_struct_decls
+  if not (!render_ctx).rc_in_struct then register_forward_decl (enum_forward_declaration name)
+
+let take_registered_forward_decls () =
+  let l = List.rev !registered_forward_decls in
+  registered_forward_decls := [];
+  l
 
 (** Render a doc comment as [///]-prefixed lines followed by a newline, or
     [mt ()] if no comment is registered for [name].  This is the single lookup
@@ -3961,6 +3985,39 @@ let nested_in_wrapper = in_unmerged_wrapper
 let nspace_merges (w : dm_wrapper) : bool =
   w.dw_sole_child && not (nested_in_wrapper w.dw_ref)
 
+(** The name the struct of [id] is defined under. *)
+let struct_definition_name id =
+  let local = is_local_inductive id in
+  match struct_spelling ~local id with
+  | As_declared -> pp_global Type id
+  | Eponymous_record_name | Capitalized -> str (struct_declaration_name ~local id)
+
+(** The name the scoped enum of [r] is defined under. *)
+let enum_definition_name r =
+  match r with
+  | GlobRef.IndRef _ -> pp_inductive_type_name r
+  | _ -> pp_global Type r
+
+(** The forward declarations of the structs and scoped enums [d] defines at
+    namespace scope, in the order it defines them: none inside a struct,
+    where a member is not nameable before its enclosing struct anyway. *)
+let rec forward_declarations env (d : Cpp_erasure.settled) =
+  if (!render_ctx).rc_in_struct then []
+  else
+    match Cpp_erasure.view d with
+    | Template (_, _, inner) -> forward_declarations env inner
+    | Namespace (None, decls) -> List.concat_map (forward_declarations env) decls
+    | Namespace (Some id, members) -> (
+      match (members :> cpp_decl list) with
+      | [Dstruct {ds_tparams; ds_constraint; _}] when nspace_merges {dw_ref = id; dw_sole_child = true} ->
+        [ forward_declaration ~env ~name:(str (nspace_wrapper_name id)) ~tparams:ds_tparams
+            ~cstr:ds_constraint ]
+      | _ -> [] )
+    | Decl (Dstruct {ds_ref; ds_tparams; ds_constraint; _}) ->
+      [forward_declaration ~env ~name:(struct_definition_name ds_ref) ~tparams:ds_tparams ~cstr:ds_constraint]
+    | Decl (Denum {de_ref; _}) -> [enum_forward_declaration (enum_definition_name de_ref)]
+    | Decl _ -> []
+
 (** [pp_initialiser env ty e] prints [e] as the initialiser of something
     declared with type [ty].
 
@@ -4262,12 +4319,7 @@ and pp_leaf_decl env (d : cpp_decl) =
         ds_constraint = cstr;
         ds_needs_shared_from_this = sft;
       } ->
-    let local = is_local_inductive id in
-    let struct_name =
-      match struct_spelling ~local id with
-      | As_declared -> pp_global Type id
-      | Eponymous_record_name | Capitalized -> str (struct_declaration_name ~local id)
-    in
+    let struct_name = struct_definition_name id in
     register_forward_struct_decl ~env ~name:struct_name ~tparams ~cstr;
     record_file_scope_name struct_name;
     if (!render_ctx).rc_in_struct then printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref id);
@@ -4458,11 +4510,7 @@ and pp_leaf_decl env (d : cpp_decl) =
         ++ str "\");" ) )
   | Denum {de_ref = name; de_ctors = ctors; de_ctor_rocq_names = rocq_names; _}
     ->
-    let struct_name =
-      match name with
-      | GlobRef.IndRef _ -> pp_inductive_type_name name
-      | _ -> pp_global Type name
-    in
+    let struct_name = enum_definition_name name in
     (* Emit each enum value, preceded by its doc comment if one exists.
        [rocq_names] and [ctors] are parallel lists from the same constructor
        array, so [List.map2] is safe. *)
