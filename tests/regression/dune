@@ -12886,3 +12886,14 @@
   (alias runtest)
   (deps lifted_local_fix_loopify.t.exe)
   (action (run ./lifted_local_fix_loopify.t.exe))))
+
+(subdir nested_carrier_alias
+ (rule
+  (targets nested_carrier_alias.t.exe)
+  (deps NestedCarrierAlias.vo nested_carrier_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_carrier_alias.t.exe nested_carrier_alias.cpp nested_carrier_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_carrier_alias.t.exe)
+  (action (run ./nested_carrier_alias.t.exe))))

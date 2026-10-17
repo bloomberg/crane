@@ -1639,7 +1639,7 @@ and pp_module_expr ~is_header f = function
         List.filter_map
           (fun (a : Cpp_print.ctor_alias) ->
             match a.ca_home with
-            | Some home when ModPath.equal home mp -> Some (Cpp_print.ctor_alias_name a)
+            | Some home when ModPath.equal home mp -> Some (Cpp_print.ctor_alias_name a, a.ca_body)
             | Some _ | None -> None )
           (pending_ctor_aliases ~is_header)
       in
@@ -1647,14 +1647,29 @@ and pp_module_expr ~is_header f = function
       | [] -> px
       | homed ->
         let text = Pp.string_of_ppcmds px in
-        let select name =
-          List.mem name homed && Cpp_print.mentions_name text name
+        (* What the member spells, and what the bodies of those spell in
+           turn: a template written only inside another's body is due
+           with it, in the same struct, ahead of it. *)
+        let rec due names =
+          let more =
+            List.filter_map
+              (fun (name, _) ->
+                if (not (List.mem name names))
+                   && List.exists
+                        (fun (name', body) -> List.mem name' names && Cpp_print.mentions_name body name)
+                        homed
+                then Some name
+                else None )
+              homed
+          in
+          if more = [] then names else due (names @ more)
         in
-        if not (List.exists select homed) then px
-        else
-          match take_ctor_aliases ~select ~is_header () with
+        match due (List.filter_map (fun (name, _) -> if Cpp_print.mentions_name text name then Some name else None) homed) with
+        | [] -> px
+        | names -> (
+          match take_ctor_aliases ~select:(fun name -> List.mem name names) ~is_header () with
           | [] -> px
-          | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 () ++ px
+          | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 () ++ px )
     in
     let try_pp_structure_elem (l, concepts, asserts) x =
       let {text = px; concepts = c; asserts = a} = pp_structure_elem ~is_header f x in
