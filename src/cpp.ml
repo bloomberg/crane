@@ -661,6 +661,14 @@ type file_layout = {
           defines at namespace scope, in the order it defines them, each with
           what defines it: they go in front of the first chunk of the file
           that names the struct before defining it. *)
+  wrapper_homes : (string * ml_decl) list;
+      (** The wrapper modules whose declarations the header writes into a
+          struct of the same name that a declaration writes around an
+          inductive -- [Nat::nat], with the functions of the module [Nat] --
+          by that name, with the declaration: the first the header writes,
+          if it writes it before the module's own turn.  Any other wrapper
+          module's declarations are written as a struct of their own, at the
+          module's turn. *)
 }
 
 (** What writes a struct the header defines at namespace scope: one of
@@ -671,7 +679,12 @@ and struct_origin = Lifted_from_wrapper | Defined_by of ml_decl
 
 let file_layout : file_layout ref =
   State.cell State.Unit
-    {erased_aliases = []; lifted_specs = []; member_defs = []; forward_decls = []; constrained_decls = []}
+    { erased_aliases = [];
+      lifted_specs = [];
+      member_defs = [];
+      forward_decls = [];
+      constrained_decls = [];
+      wrapper_homes = [] }
 
 
 (** Report what a lifted helper met at the site that placed it, under
@@ -2397,7 +2410,18 @@ let plan_file_layout s =
     in
     find 0 analysis.sorted_modules
   in
-  let erased = ref [] and specs = ref [] and member_defs = ref [] and forward = ref [] in
+  let erased = ref [] and specs = ref [] and member_defs = ref [] and forward = ref [] and homes = ref [] in
+  let home mp d (rendered : Cpp_ind.rendered) =
+    List.iter
+      (fun (_, d') ->
+        List.iter
+          (fun name ->
+            match Hashtbl.find_opt unmerged_wrappers name with
+            | Some wrapped -> homes := (position mp, position wrapped, name, d) :: !homes
+            | None -> () )
+          (Cpp_print.unmerged_wrappers_written d') )
+      rendered
+  in
   let add band mp group = band := (position mp, group) :: !band in
   (* The header writes every wrapper module's functions before any module's
      types ({!do_struct_with_decl_tracking}), and so defines the structs
@@ -2433,6 +2457,7 @@ let plan_file_layout s =
       @@ fun () ->
       let scope = current_scope () in
       let e = Cpp_ind.header_element_ahead d in
+      home mp d e.rendered;
       if e.member_defs <> [] then add member_defs mp (scope, e.member_defs);
       if not in_struct then begin
         if e.rendered <> [] && List.for_all is_erased_alias e.rendered then add erased mp (scope, e.rendered);
@@ -2467,7 +2492,13 @@ let plan_file_layout s =
       lifted_specs = in_writing_order specs;
       member_defs = in_writing_order member_defs;
       forward_decls = List.filter_map (fun (_, (f : Cpp_print.forward_declaration)) -> if f.fwd_constrained then None else Some f.fwd_text) forward;
-      constrained_decls = List.filter (fun (_, (f : Cpp_print.forward_declaration)) -> f.fwd_constrained) forward }
+      constrained_decls = List.filter (fun (_, (f : Cpp_print.forward_declaration)) -> f.fwd_constrained) forward;
+      wrapper_homes =
+        List.fold_left
+          (fun acc (at, own, name, d) ->
+            if at <= own && not (List.mem_assoc name acc) then acc @ [(name, d)] else acc )
+          []
+          (List.stable_sort (fun (i, _, _, _) (j, _, _, _) -> Int.compare i j) (List.rev !homes)) }
 
 (* The declarations of [s], a functor's body's among them, in order. *)
 let declarations s =
@@ -3394,7 +3425,23 @@ let do_struct_with_decl_tracking ~is_header f s =
             (function Defined_by d, f when List.memq d defined -> Some f | _ -> None)
             !file_layout.constrained_decls
     end;
+    let homed =
+      if is_header && Probe.checking () then
+        let defined = declarations [(top_visible_mp (), [x])] in
+        List.filter_map (fun (name, d) -> if List.memq d defined then Some name else None) !file_layout.wrapper_homes
+      else []
+    in
     let {text = p; concepts = c} = f x in
+    if is_header && Probe.checking () then begin
+      let absorbed = Cpp_print.take_absorbed_wrappers () in
+      if absorbed <> homed then
+        Probe.violation "wrapper homes"
+          Pp.(
+            str "an element wrote the declarations of the wrappers "
+            ++ prlist_with_sep pr_comma str absorbed
+            ++ str " into its structs, and was planned to write those of "
+            ++ prlist_with_sep pr_comma str homed )
+    end;
     concepts := List.rev_append c !concepts;
     let hoists =
       is_header
@@ -3474,6 +3521,9 @@ let do_struct_with_decl_tracking ~is_header f s =
               } )
         wrapper_names
     in
+    if is_header && Cpp_print.take_absorbed_wrappers () <> [] then
+      Probe.violation "wrapper homes"
+        (Pp.str "a wrapper's declarations were written into a struct lifted out of a wrapper module");
     (* Asked only now, because whether an inductive is written inside a wrapper
        depends on the declarations just queued against it. *)
     let prereq_labels =

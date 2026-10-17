@@ -3925,6 +3925,28 @@ let enum_definition_name r =
   | GlobRef.IndRef _ -> pp_inductive_type_name r
   | _ -> pp_global Type r
 
+(** The names of the wrapper structs [d] writes around something other than
+    a sole struct merged into them, in the order it writes them: the structs
+    another wrapper's declarations can be written into. *)
+let rec unmerged_wrappers_written (d : Cpp_erasure.settled) =
+  match Cpp_erasure.view d with
+  | Template (_, _, inner) -> unmerged_wrappers_written inner
+  | Namespace (None, decls) -> List.concat_map unmerged_wrappers_written decls
+  | Namespace (Some id, members) ->
+    let sole_child = match (members :> cpp_decl list) with [Dstruct _] -> true | _ -> false in
+    if nspace_merges {dw_ref = id; dw_sole_child = sole_child} then []
+    else List.concat_map unmerged_wrappers_written members @ [nspace_wrapper_name id]
+  | Decl _ -> []
+
+(** The wrapper structs that took a wrapper module's declarations, in the
+    order they did, under [CRANE_CHECK_IR]. *)
+let absorbed_wrappers : string list ref = ref []
+
+let take_absorbed_wrappers () =
+  let l = List.rev !absorbed_wrappers in
+  absorbed_wrappers := [];
+  l
+
 (** The forward declarations of the structs and scoped enums [d] defines at
     namespace scope, in the order it defines them: none inside a struct,
     where a member is not nameable before its enclosing struct anyway. *)
@@ -4124,6 +4146,7 @@ and pp_wrapper_nspace env id (members : Cpp_erasure.settled list) =
       match Hashtbl.find_opt pending_wrapper_decls struct_name_str with
       | Some specs ->
         Hashtbl.remove pending_wrapper_decls struct_name_str;
+        if Probe.checking () then absorbed_wrappers := struct_name_str :: !absorbed_wrappers;
         fnl () ++ specs
       | None -> mt ()
     in

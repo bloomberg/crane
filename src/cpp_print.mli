@@ -75,6 +75,15 @@ val nspace_wrapper_name : GlobRef.t -> string
     queued against, and so is spelled [List::list] rather than [List]. *)
 val nested_in_wrapper : GlobRef.t -> bool
 
+(** The names of the wrapper structs a declaration writes around something
+    other than a sole struct merged into them, in the order it writes them:
+    the structs another wrapper's declarations can be written into. *)
+val unmerged_wrappers_written : Cpp_erasure.settled -> string list
+
+(** Take the names of the wrapper structs that took a wrapper module's
+    declarations since the last call, under [CRANE_CHECK_IR]. *)
+val take_absorbed_wrappers : unit -> string list
+
 (** {2 Forward declarations} *)
 
 (** A forward declaration of a struct or scoped enum defined at namespace
