@@ -118,10 +118,11 @@ val cut2 : unit -> Pp.t
 
 (** {2 Translation units} *)
 
-(** A synthesised template a file declares: by its name, the module whose
-    struct it is declared in if any, and whether it is a holder -- a struct
-    -- rather than an alias. *)
-type template = {name : string; home : ModPath.t option; holder : bool; declaration : Pp.t}
+(** A synthesised template a file declares: by its name, whether it is
+    homed -- declared in the struct of the module whose member writes it,
+    because its body names what only that struct declares -- and whether it
+    is a holder -- a struct -- rather than an alias. *)
+type template = {name : string; homed : bool; holder : bool; declaration : Pp.t}
 
 (** A constrained template's forward declaration, by the name of the struct
     it declares. *)
@@ -139,8 +140,8 @@ type scheduled
     first needs it, reading the chunks in the order written.
 
     A template goes in front of the innermost chunk holding the first
-    declaration that writes it: one homed in a module in front of that
-    member of the module's struct, any other in front of the innermost
+    declaration that writes it: a homed one in front of the innermost
+    member of a module holding it, any other in front of the innermost
     chunk at namespace scope, holders in front of aliases.  One written
     outside every chunk goes after the prologue; one nothing writes, nowhere.
     A forward declaration goes in front of the innermost chunk at namespace
@@ -150,9 +151,3 @@ val schedule : templates:template list -> forwards:forward list -> translation_u
 
 (** The scheduled unit as a document. *)
 val print : scheduled -> Pp.t
-
-(** Of [templates], those homed in a module whose placement by that module
-    differs from the placement in front of the innermost member enclosing
-    the first declaration writing it, or at namespace scope where no member
-    does: each with its home and that member's module, for checking. *)
-val homes_off_the_tree : templates:template list -> translation_unit -> (string * ModPath.t * ModPath.t option) list

@@ -3807,7 +3807,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     List.map
       (fun a ->
         { Cpp_ast.name = ctor_alias_name a;
-          home = a.ca_home;
+          homed = Option.has_some a.ca_home;
           holder = a.ca_holder;
           declaration = ctor_alias_declaration a } )
       (ctor_aliases_declared_in ~file:(if is_header then Common.Intf else Common.Impl))
@@ -3819,21 +3819,7 @@ let do_struct_with_decl_tracking ~is_header f s =
         !file_layout.constrained_decls
     else []
   in
-  let unit = {Cpp_ast.prologue = forward_decls; sections} in
-  ( if Probe.checking () then
-      match Cpp_ast.homes_off_the_tree ~templates unit with
-      | [] -> ()
-      | off ->
-        Probe.violation "constructor alias homes"
-          Pp.(
-            str "the " ++ str (Common.file_name (if is_header then Common.Intf else Common.Impl))
-            ++ str " writes templates whose home is not the module of the member first writing them: "
-            ++ prlist_with_sep pr_comma
-                 (fun (name, home, innermost) ->
-                   str name ++ str " in " ++ str (ModPath.to_string home) ++ str ", written in "
-                   ++ str (Option.cata ModPath.to_string "no member" innermost) )
-                 off ) );
-  Cpp_ast.print (Cpp_ast.schedule ~templates ~forwards unit) ++ fnl ()
+  Cpp_ast.print (Cpp_ast.schedule ~templates ~forwards {prologue = forward_decls; sections}) ++ fnl ()
 
 (** Main entry point: render structure to C++ implementation file. *)
 let pp_struct s =

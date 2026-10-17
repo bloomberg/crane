@@ -2,9 +2,10 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (* Where a translation unit's due declarations go, read off the tree alone:
-   a template in front of the innermost chunk first writing it, or of the
-   member of its home's struct; a constrained forward declaration in front
-   of the chunk first naming its struct, unless that chunk defines it. *)
+   a template in front of the innermost chunk first writing it, or, homed,
+   of the innermost member of a module first writing it; a constrained
+   forward declaration in front of the chunk first naming its struct,
+   unless that chunk defines it. *)
 
 open Crane_plugin
 open Names
@@ -22,7 +23,7 @@ let check_text name got expected =
 let m = ModPath.MPdot (ModPath.MPfile (DirPath.make [Id.of_string "F"]), Label.make "M")
 let needs ?(templates = []) ?(names = []) ?(defines = []) () = {Cpp_ast.Needs.templates; names; defines}
 let leaf ?templates ?names ?defines s = Cpp_ast.decl ~needs:(needs ?templates ?names ?defines ()) (Pp.str s)
-let template ?home ?(holder = false) name = {Cpp_ast.name; home; holder; declaration = Pp.str ("<" ^ name ^ ">")}
+let template ?(homed = false) ?(holder = false) name = {Cpp_ast.name; homed; holder; declaration = Pp.str ("<" ^ name ^ ">")}
 let forward s = {Cpp_ast.struct_ = s; forward_declaration = Pp.str ("fwd:" ^ s)}
 
 (* The text, without whitespace: breaks and separators are formatting. *)
@@ -43,10 +44,21 @@ let () =
   let struct_ = Cpp_ast.Struct {head = Pp.str "struct-M{"; tail = Pp.str "}"} in
   let body = Cpp_ast.module_body m [Cpp_ast.text (Pp.str "y"); Cpp_ast.empty; leaf ~templates:["T"] "z"] in
   let homed = [top (Cpp_ast.module_ struct_ ~fields:(Cpp_ast.text (Pp.str "f")) body)] in
-  check_text "a homed template goes in front of its home's member" (text ~templates:[template ~home:m "T"] homed) "Pstruct-M{fy<T>z}";
+  check_text "a homed template goes in front of the member writing it" (text ~templates:[template ~homed:true "T"] homed) "Pstruct-M{fy<T>z}";
+  let inner = ModPath.MPdot (m, Label.make "N") in
+  let nested =
+    Cpp_ast.module_ struct_
+      (Cpp_ast.module_body m
+         [ Cpp_ast.text (Pp.str "y");
+           Cpp_ast.module_
+             (Struct {head = Pp.str "struct-N{"; tail = Pp.str "}"})
+             (Cpp_ast.module_body inner [Cpp_ast.text (Pp.str "w"); leaf ~templates:["T"] "z"]) ])
+  in
+  check_text "a homed template goes in front of the innermost member writing it"
+    (text ~templates:[template ~homed:true "T"] [top nested]) "Pstruct-M{ystruct-N{w<T>z}}";
   check_text "an unhomed template written in a member goes at namespace scope" (text ~templates:[template "T"] homed) "P<T>struct-M{fyz}";
   check_text "a homed template goes in front of its home's member defined out of line"
-    (text ~templates:[template ~home:m "T"] [top (Cpp_ast.module_ Out_of_line body)]) "Py<T>z";
+    (text ~templates:[template ~homed:true "T"] [top (Cpp_ast.module_ Out_of_line body)]) "Py<T>z";
   check "a struct with no members is written" (not (Cpp_ast.is_empty (Cpp_ast.module_ struct_ (Cpp_ast.module_body m []))));
   check "a body with no members and no struct writes nothing"
     (Cpp_ast.is_empty (Cpp_ast.module_ In_enclosing_scope (Cpp_ast.module_body m [Cpp_ast.empty])));
@@ -54,7 +66,7 @@ let () =
     Cpp_ast.module_ In_enclosing_scope
       (Cpp_ast.module_body m [Cpp_ast.text (Pp.str "y;"); leaf ~templates:["T"] "/// z"])
   in
-  let printed = Pp.string_of_ppcmds (Cpp_ast.print (Cpp_ast.schedule ~templates:[template ~home:m "T"] ~forwards:[]
+  let printed = Pp.string_of_ppcmds (Cpp_ast.print (Cpp_ast.schedule ~templates:[template ~homed:true "T"] ~forwards:[]
     {prologue = Pp.mt (); sections = [documented]})) in
   check_text "a member opening with a doc comment follows a newline, whatever is due in front of it"
     (String.sub printed 0 6) "y;\n<T>";

@@ -110,7 +110,7 @@ let rec to_pp = function
     match enclosure with Struct {head; tail} -> Pp.(head ++ inside ++ tail) | Out_of_line | In_enclosing_scope -> inside )
   | Declarations l -> Pp.(prlist_with_sep fnl (fun d -> d) l ++ cut2 ())
 
-type template = {name : string; home : ModPath.t option; holder : bool; declaration : Pp.t}
+type template = {name : string; homed : bool; holder : bool; declaration : Pp.t}
 type forward = {struct_ : string; forward_declaration : Pp.t}
 type translation_unit = {prologue : Pp.t; sections : t list}
 type scheduled = {opening : Pp.t; body : t list}
@@ -121,42 +121,38 @@ let schedule ~templates ~forwards u =
   let template_slot = Hashtbl.create 16 and struct_slot = Hashtbl.create 16 and defined_in = Hashtbl.create 16 in
   let count = ref 0 in
   (* Where each template and constrained struct is first needed, from the
-     innermost chunk at namespace scope [top] and the members [members]
-     enclosing the declaration that needs it, innermost first; and which
-     structs each chunk at namespace scope defines, which a chunk returns. *)
-  let rec first_uses ~top ~members = function
+     innermost chunk at namespace scope [top] and the innermost member
+     [member] enclosing the declaration that needs it; and which structs
+     each chunk at namespace scope defines, which a chunk returns. *)
+  let rec first_uses ~top ~member = function
     | Text _ | Declarations _ -> []
-    | Seq l -> List.concat_map (first_uses ~top ~members) l
+    | Seq l -> List.concat_map (first_uses ~top ~member) l
     | Top_level t ->
       incr count;
       let k = !count in
-      let defined = first_uses ~top:(Some k) ~members t in
+      let defined = first_uses ~top:(Some k) ~member t in
       Hashtbl.replace defined_in k defined;
       defined
-    | Module {module_; fields; members = l; _} ->
-      let defined = first_uses ~top ~members fields in
+    | Module {fields; members; _} ->
+      let defined = first_uses ~top ~member fields in
       defined
       @ List.concat_map
           (fun t ->
             incr count;
-            first_uses ~top ~members:((module_, !count) :: members) t )
-          l
+            first_uses ~top ~member:(Some !count) t )
+          members
     | Decl {needs; _} ->
       List.iter
         (fun name ->
           match List.find_opt (fun (a : template) -> String.equal a.name name) templates with
           | Some a when not (Hashtbl.mem template_slot name) ->
-            let homed =
-              Option.bind a.home (fun home ->
-                  List.find_map (fun (mp, k) -> if ModPath.equal mp home then Some k else None) members )
-            in
-            Hashtbl.replace template_slot name (if Option.has_some homed then homed else top)
+            Hashtbl.replace template_slot name (if a.homed && Option.has_some member then member else top)
           | Some _ | None -> () )
         needs.templates;
       List.iter (fun name -> if not (Hashtbl.mem struct_slot name) then Hashtbl.replace struct_slot name top) needs.names;
       needs.defines
   in
-  List.iter (fun t -> ignore (first_uses ~top:None ~members:[] t)) u.sections;
+  List.iter (fun t -> ignore (first_uses ~top:None ~member:None t)) u.sections;
   let templates_due k =
     let due = List.filter (fun (a : template) -> Hashtbl.find_opt template_slot a.name = Some k) templates in
     let holders, aliases = List.partition (fun (a : template) -> a.holder) due in
@@ -199,31 +195,3 @@ let schedule ~templates ~forwards u =
 
 let print s = Pp.(s.opening ++ List.fold_left (fun acc t -> acc ++ to_pp t) (mt ()) s.body)
 
-let homes_off_the_tree ~templates u =
-  let first = Hashtbl.create 16 in
-  let rec walk ~members = function
-    | Text _ | Declarations _ -> ()
-    | Seq l -> List.iter (walk ~members) l
-    | Top_level t -> walk ~members t
-    | Module {module_; fields; members = l; _} ->
-      walk ~members fields;
-      List.iter (walk ~members:(module_ :: members)) l
-    | Decl {needs; _} ->
-      List.iter
-        (fun name ->
-          match List.find_opt (fun (a : template) -> String.equal a.name name) templates with
-          | Some a when not (Hashtbl.mem first name) -> Hashtbl.replace first name (a, members)
-          | Some _ | None -> () )
-        needs.templates
-  in
-  List.iter (walk ~members:[]) u.sections;
-  List.filter_map
-    (fun (a : template) ->
-      match (a.home, Hashtbl.find_opt first a.name) with
-      | Some home, Some (_, members) ->
-        let innermost = match members with mp :: _ -> Some mp | [] -> None in
-        let encloses = List.exists (ModPath.equal home) members in
-        if (encloses && innermost = Some home) || ((not encloses) && innermost = None) then None
-        else Some (a.name, home, innermost)
-      | _ -> None )
-    templates
