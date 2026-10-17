@@ -690,15 +690,37 @@ let ctor_alias_render_ctx home =
   | Some home, Common.Intf -> {start with rc_in_struct = true; rc_in_template = Scope_plan.templated home}
   | Some home, Common.Impl -> {start with rc_scope = Scope_plan.of_module home}
 
+(** A declaration as a file writes it: in the module it is written in. *)
+module Written_decl = Hashtbl.Make (struct
+  type t = ModPath.t * cpp_decl
+
+  (* [compare] rather than [=]: a NaN literal is equal to itself. *)
+  let equal (mp, d) (mp', d') = ModPath.equal mp mp' && compare d d' = 0
+  let hash (mp, d) = Hashtbl.hash (ModPath.hash mp, Hashtbl.hash_param 40 160 d)
+end)
+
+(** What planning reads off something a file writes: the synthesised
+    templates it writes, in the order written, and, for a declaration, the
+    declaration as written. *)
+type ctor_aliases_read = {
+  read_decl : Written_decl.key option;
+  read_aliases : ctor_alias list;
+}
+
 (** The synthesised templates each file writes, planned before either is
     rendered ({!Cpp.plan_ctor_aliases}): each file's, in the order it first
-    writes them. *)
+    writes them, and those each declaration it writes writes. *)
 type ctor_alias_plan = {
   intf : ctor_alias list;
   impl : ctor_alias list;
+  intf_writes : ctor_alias list Written_decl.t;
+  impl_writes : ctor_alias list Written_decl.t;
 }
 
-let ctor_alias_plan : ctor_alias_plan ref = State.cell State.Unit {intf = []; impl = []}
+(** [None] until the unit's templates are planned: a declaration rendered
+    before then, for its text, or on its own
+    ({!Extract_env.print_one_decl}), places none. *)
+let ctor_alias_plan : ctor_alias_plan option ref = State.cell State.Unit None
 
 (** Set while the templates some declaration or type writes are collected
     ({!ctor_aliases_found}). *)
@@ -718,9 +740,20 @@ let start_ctor_alias_census () = ctor_aliases_spelled := []
     the order written: the header's, then the implementation's. *)
 let plan_ctor_aliases written =
   let dedup l = List.fold_left (fun acc a -> if List.mem a acc then acc else acc @ [a]) [] l in
-  let intf = dedup (written Common.Intf) in
-  let impl = dedup (written Common.Impl) in
-  ctor_alias_plan := {intf; impl}
+  let planned file =
+    let reads = written file in
+    let writes = Written_decl.create 64 in
+    List.iter
+      (fun r ->
+        Option.iter
+          (fun d -> if not (Written_decl.mem writes d) then Written_decl.add writes d r.read_aliases)
+          r.read_decl )
+      reads;
+    (dedup (List.concat_map (fun r -> r.read_aliases) reads), writes)
+  in
+  let intf, intf_writes = planned Common.Intf in
+  let impl, impl_writes = planned Common.Impl in
+  ctor_alias_plan := Some {intf; impl; intf_writes; impl_writes}
 
 (** The name of [alias]: a function of its body alone, not a counter.  The
     two files declare the aliases they write independently, so the same body
@@ -766,11 +799,11 @@ let ctor_alias_declaration a =
     with the same definition is legal; repeating a [struct] is not, so the
     header, the one file everything sees, declares every holder. *)
 let ctor_aliases_declared_in ~file =
-  let plan = !ctor_alias_plan in
   let declared =
-    match file with
-    | Common.Intf -> plan.intf @ List.filter (fun a -> a.ca_holder) plan.impl
-    | Common.Impl -> List.filter (fun a -> not a.ca_holder) plan.impl
+    match (!ctor_alias_plan, file) with
+    | None, _ -> []
+    | Some plan, Common.Intf -> plan.intf @ List.filter (fun a -> a.ca_holder) plan.impl
+    | Some plan, Common.Impl -> List.filter (fun a -> not a.ca_holder) plan.impl
   in
   List.fold_left
     (fun acc a ->
@@ -782,7 +815,12 @@ let ctor_aliases_declared_in ~file =
     the ones planned for it. *)
 let check_ctor_alias_plan ~file =
   if Probe.checking () then begin
-    let planned = match file with Common.Intf -> !ctor_alias_plan.intf | Common.Impl -> !ctor_alias_plan.impl in
+    let planned =
+      match (!ctor_alias_plan, file) with
+      | None, _ -> []
+      | Some plan, Common.Intf -> plan.intf
+      | Some plan, Common.Impl -> plan.impl
+    in
     let spelled = !ctor_aliases_spelled in
     ctor_aliases_spelled := [];
     let describe a =
@@ -3413,9 +3451,33 @@ let ctor_aliases_found ~file visit =
   !ctor_aliases_spelled
 
 let ctor_aliases_written ~file (d : Cpp_erasure.settled) =
-  ctor_aliases_found ~file (fun f -> Cpp_demands.tyctors_of_decl f (d :> cpp_decl))
+  { read_decl = Some (top_visible_mp (), (d :> cpp_decl));
+    read_aliases = ctor_aliases_found ~file (fun f -> Cpp_demands.tyctors_of_decl f (d :> cpp_decl)) }
 
-let ctor_aliases_of_type ~file ~vl t = ctor_aliases_found ~file (fun f -> Cpp_demands.tyctors_of_type f ~vl t)
+let ctor_aliases_of_type ~file ~vl t =
+  {read_decl = None; read_aliases = ctor_aliases_found ~file (fun f -> Cpp_demands.tyctors_of_type f ~vl t)}
+
+(** The synthesised templates the finished declaration [d] writes in the
+    file being written, as planned; under [CRANE_CHECK_IR], spelled again
+    and compared. *)
+let ctor_aliases_planned (d : Cpp_erasure.settled) =
+  match !ctor_alias_plan with
+  | None -> []
+  | Some plan -> (
+    let file = (!render_ctx).rc_file in
+    let writes = match file with Common.Intf -> plan.intf_writes | Common.Impl -> plan.impl_writes in
+    match Written_decl.find_opt writes (top_visible_mp (), (d :> cpp_decl)) with
+    | Some aliases ->
+      if Probe.checking () && (ctor_aliases_written ~file d).read_aliases <> aliases then
+        Probe.violation "constructor aliases"
+          Pp.(str "a declaration of the " ++ str (Common.file_name file)
+              ++ str " writes other templates than were planned for it");
+      aliases
+    | None ->
+      CErrors.anomaly
+        Pp.(str "Crane: a declaration of the " ++ str (Common.file_name file) ++ str " in "
+            ++ str (ModPath.to_string (top_visible_mp ()))
+            ++ str " is written that was not read when its templates were planned.") )
 
 (** Where a member is being written.
 
@@ -4496,9 +4558,10 @@ and pp_leaf_decl env (d : cpp_decl) =
     however it is assembled, so that where a declaration it needs is placed
     -- in front of the first text that needs it -- is read off what was
     written, not searched for in it: the synthesised templates the
-    declaration writes ({!ctor_aliases_written}); and, of the structs the
-    file has constrained forward declarations of ({!constrained_structs}),
-    those it names or defines, and those it defines. *)
+    declaration writes, as planned ({!ctor_aliases_planned}); and, of the
+    structs the file has constrained forward declarations of
+    ({!constrained_structs}), those it names or defines, and those it
+    defines. *)
 let writes_tag = "crane.writes:"
 let names_tag = "crane.names:"
 let defines_tag = "crane.defines:"
@@ -4508,12 +4571,12 @@ let defines_tag = "crane.defines:"
     declaration declares. *)
 let constrained_structs : (GlobRef.t * string) list ref = State.cell State.Unit []
 
+let read_cpp_decl = pp_cpp_decl
+
 let pp_cpp_decl env settled =
   let tagged tag names doc = match names with [] -> doc | _ -> Pp.tag (tag ^ String.concat " " names) doc in
   let doc =
-    tagged writes_tag
-      (List.map ctor_alias_name (ctor_aliases_written ~file:(!render_ctx).rc_file settled))
-      (pp_cpp_decl env settled)
+    tagged writes_tag (List.map ctor_alias_name (ctor_aliases_planned settled)) (pp_cpp_decl env settled)
   in
   match !constrained_structs with
   | [] -> doc

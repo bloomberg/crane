@@ -13,10 +13,15 @@ open Minicpp
 
 (** {2 Rendering} *)
 
-(** [pp_cpp_decl env decl] renders a settled declaration, its text carrying
-    the synthesised templates the declaration writes
-    ({!ctor_aliases_carried}). *)
+(** [pp_cpp_decl env decl] renders a settled declaration a file writes, its
+    text carrying what placing the declarations it needs reads
+    ({!carried_by}). *)
 val pp_cpp_decl : Common.env -> Cpp_erasure.settled -> Pp.t
+
+(** [read_cpp_decl env decl] renders [decl] without what a written
+    declaration's text carries: for a declaration whose text is read, not
+    written. *)
+val read_cpp_decl : Common.env -> Cpp_erasure.settled -> Pp.t
 
 (** How a member is written: in the struct with or without its body, or out
     of line. *)
@@ -136,18 +141,21 @@ type ctor_alias = private {
       (** The type it abbreviates, as written where it is declared. *)
 }
 
-(** The synthesised templates the finished declaration written in [file]
-    writes, in the order written, in the scope being written. *)
-val ctor_aliases_written : file:Common.file -> Cpp_erasure.settled -> ctor_alias list
+(** The synthesised templates something a file writes writes, in the order
+    written, read in the scope being written. *)
+type ctor_aliases_read
 
-(** The synthesised templates the type [t] writes in [file], its type
-    variables read as [vl]. *)
-val ctor_aliases_of_type : file:Common.file -> vl:Id.t list -> cpp_type -> ctor_alias list
+(** What the finished declaration written in [file] writes; the render of
+    the declaration there reads it back from the plan. *)
+val ctor_aliases_written : file:Common.file -> Cpp_erasure.settled -> ctor_aliases_read
+
+(** What the type [t] writes in [file], its type variables read as [vl]. *)
+val ctor_aliases_of_type : file:Common.file -> vl:Id.t list -> cpp_type -> ctor_aliases_read
 
 (** [plan_ctor_aliases written] plans the templates each file writes,
-    [written file] being those of [file], read off what it writes
-    ({!ctor_aliases_written}): the header's, then the implementation's. *)
-val plan_ctor_aliases : (Common.file -> ctor_alias list) -> unit
+    [written file] being what is read off what [file] writes, in the order
+    written: the header's, then the implementation's. *)
+val plan_ctor_aliases : (Common.file -> ctor_aliases_read list) -> unit
 
 (** The name of a template, a function of its body. *)
 val ctor_alias_name : ctor_alias -> string

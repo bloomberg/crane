@@ -537,7 +537,7 @@ let names_into_a_struct (doc : Pp.t) : bool = List.exists writes_into_a_struct (
     every other helper in the block. *)
 let spec_is_hoistable (spec : Cpp_erasure.settled) : bool =
   let hoistable = declaration_names_into_a_struct (spec :> cpp_decl) = Some false in
-  if Probe.checking () && hoistable = names_into_a_struct (pp_cpp_decl (empty_env ()) spec) then
+  if Probe.checking () && hoistable = names_into_a_struct (Cpp_print.read_cpp_decl (empty_env ()) spec) then
     Probe.violation "hoisted helpers"
       Pp.(str "a helper's declaration was judged by its type to "
           ++ str (if hoistable then "name nothing inside a struct, and its rendering does"
@@ -2536,14 +2536,15 @@ let plan_file_layout s =
     the files where the file writes it, in the scope it writes it in
     ({!walk_as_rendered}): each element's declarations, its helpers and the
     member definitions it gives up; a wrapper module's functions, and, in
-    the header, what is lifted out of them and its instances; and, in the
+    the header, what is lifted out of them and its instances, which the
+    header writes as it writes what is lifted ({!lifted_views}); and, in the
     header, a module's class concepts and the fields and methods of the
     record merged into its struct, which are written with the module, in the
     scope that encloses it. *)
 let plan_ctor_aliases s =
   let written_in file =
     let found = ref [] in
-    let written ds = List.iter (fun d -> found := List.rev_append (Cpp_print.ctor_aliases_written ~file d) !found) ds in
+    let written ds = List.iter (fun d -> found := Cpp_print.ctor_aliases_written ~file d :: !found) ds in
     let helpers hs =
       written
         (List.concat_map
@@ -2569,7 +2570,7 @@ let plan_ctor_aliases s =
       | Wrapper_instance (r, a, t) ->
         if header then
           let ds, hs = Cpp_ind.instance_entity r a t in
-          written (List.map Cpp_ind.finished_alone (hs @ List.map snd ds))
+          helpers (hs @ List.map snd ds)
       | Wrapper_functions (_, generate) ->
         let gs = generate () in
         List.iter (fun (specs, defs) -> written (List.map fst (specs @ defs))) (file_views ~is_header:header [gs]);
@@ -2582,7 +2583,7 @@ let plan_ctor_aliases s =
           (fun (r, fields, (packet : ml_ind_packet)) ->
             let vl = packet.ip_vars in
             List.iter
-              (fun t -> found := List.rev_append (Cpp_print.ctor_aliases_of_type ~file ~vl t) !found)
+              (fun t -> found := Cpp_print.ctor_aliases_of_type ~file ~vl t :: !found)
               (Cpp_ind.record_field_types r vl fields) )
           (merged_eponymous_record frame);
         Option.iter
