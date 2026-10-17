@@ -4569,6 +4569,7 @@ let read_cpp_decl = pp_cpp_decl
     writes into a struct of its own ({!wrapper_members}) are part of its
     text, and what they need it needs. *)
 let write_decl env settled =
+  let absorbed_before = List.length !absorbed_wrappers in
   let text = pp_cpp_decl env settled in
   let templates = List.map ctor_alias_name (ctor_aliases_planned settled) in
   let names, defines =
@@ -4583,9 +4584,18 @@ let write_decl env settled =
       let defined = List.map defined_ref (structs_defined settled) in
       (of_refs (defined @ Cpp_demands.globals_of_decl (settled :> cpp_decl)), of_refs defined)
   in
-  let absorbed =
-    List.filter_map (fun name -> List.assoc_opt name !wrapper_members) (unmerged_wrappers_written settled)
-  in
+  let absorbing = List.filter (fun name -> List.mem_assoc name !wrapper_members) (unmerged_wrappers_written settled) in
+  ( if Probe.checking () then
+      let printed = List.filteri (fun i _ -> i < List.length !absorbed_wrappers - absorbed_before) !absorbed_wrappers in
+      if List.sort String.compare printed <> List.sort String.compare absorbing then
+        Probe.violation "wrapper homes"
+          Pp.(
+            str "a declaration wrote the declarations of the wrappers "
+            ++ prlist_with_sep pr_comma str printed
+            ++ str " into its structs, and needs what those of "
+            ++ prlist_with_sep pr_comma str absorbing
+            ++ str " need" ) );
+  let absorbed = List.map (fun name -> List.assoc name !wrapper_members) absorbing in
   Cpp_ast.decl
     ~needs:(List.fold_left (fun n t -> Cpp_ast.Needs.union n (Cpp_ast.needs t)) {templates; names; defines} absorbed)
     text
