@@ -3222,6 +3222,7 @@ let self_call_rewriter (selves : local_fix_self list) :
         let args_rev = List.map (fun (_, x) -> CPPvar (Option.get x)) params_rev in
         CPPlambda
           { cl_tparams = [];
+            cl_fixpoint = None;
             cl_moved = [];
             cl_params = of_reversed params_rev;
             cl_ret = None;

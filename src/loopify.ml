@@ -213,6 +213,7 @@ and generic_inline_expr spec expr =
         CPPlambda
           { cl_params = of_reversed lparams;
             cl_tparams = [];
+            cl_fixpoint = None;
             cl_moved = [];
             cl_ret = Some spec.ret_ty;
             cl_body = spec.body;
@@ -445,6 +446,44 @@ let try_inline_mutual_into names body =
   in
   loop [] body
 
+(** [checked_plan planned ~what classified] is the kind [planned] of the
+    function [what ()] names, as the program's recursion plan has it
+    ({!Recursion_plan}).  Under [CRANE_CHECK_IR] it is checked against
+    [classified ()], the reading of the finished body that decided this
+    before. *)
+let checked_plan planned ~what classified =
+  let planned =
+    match planned with
+    | Recursion_plan.No_recursion -> No_recursion
+    | Tail -> Tail_recursion
+    | Nontail -> Nontail_recursion
+  in
+  if Probe.checking () && classified () <> planned then
+    Probe.violation "recursion plan"
+      Pp.(str "the recursion plan disagrees with the finished body of " ++ what ());
+  planned
+
+(** How the local fixpoint [fixpoint], whose body is [body], recurses
+    through itself, as planned ({!Recursion_plan.find_local}).  A body with
+    no fixpoint recorded on it, or one the plan does not know, is classified
+    here, which is a violation. *)
+let planned_local_recursion fixpoint check body =
+  let classified () = classify check body in
+  match fixpoint with
+  | Some {lf_origin = Some origin; lf_binder} -> (
+    let what () =
+      Pp.(str "the local fixpoint " ++ Id.print lf_binder ++ str " of " ++ str (Table.kername_of_global origin))
+    in
+    match Recursion_plan.find_local ~origin ~binder:lf_binder with
+    | Some planned -> checked_plan planned ~what classified
+    | None ->
+      Probe.violation "recursion plan" Pp.(str "the recursion plan does not know " ++ what ());
+      classified () )
+  | Some {lf_origin = None; _} | None ->
+    Probe.violation "recursion plan"
+      (Pp.str "a local fixpoint's body was reached with no fixpoint of a definition recorded on it");
+    classified ()
+
 (** {2 Inner lambda loopification}
 
     Transforms self-recursive [std::function] lambdas within function bodies
@@ -547,13 +586,13 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
      unreferenced params without a name, so there is no [-Wunused-parameter].
      Only single (non-mutual) fixpoints are handled; mutual ones (multiple
      self-params) and non-tail recursion are left unchanged. *)
-  let try_loopify_ycomb lparams ret_ty_opt lbody =
+  let try_loopify_ycomb ~fixpoint lparams ret_ty_opt lbody =
     match ycomb_self_id lparams with
     | None -> None
     | Some self_id -> (
       let check = self_checker self_id in
       let lbody = expose_tail_calls check lbody in
-      match classify check lbody with
+      match planned_local_recursion fixpoint check lbody with
       | No_recursion -> None
       (* A local cofixpoint: its calls run when a thunk is forced, after it
          has returned, as a top-level one's do ({!transform_fundef_exn}). *)
@@ -615,6 +654,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         :: Sasgn (id, Existing, CPPlambda
           { cl_params = lparams;
           cl_tparams = [];
+          cl_fixpoint = None;
           cl_moved = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';
@@ -626,6 +666,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         :: Sasgn (id, Existing, CPPlambda
           { cl_params = lparams;
           cl_tparams = [];
+          cl_fixpoint = None;
           cl_moved = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';
@@ -647,6 +688,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         Sasgn (id, tgt, CPPlambda
           { cl_params = lparams;
           cl_tparams = [];
+          cl_fixpoint = None;
           cl_moved = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';
@@ -657,6 +699,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         Sasgn (id, tgt, CPPlambda
           { cl_params = lparams;
           cl_tparams = [];
+          cl_fixpoint = None;
           cl_moved = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';
@@ -694,6 +737,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         :: Sasgn (id, Existing, CPPlambda
           { cl_params = lparams;
           cl_tparams = [];
+          cl_fixpoint = None;
           cl_moved = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';
@@ -705,6 +749,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         :: Sassign_expr (CPPderef (CPPvar id), CPPlambda
           { cl_params = lparams;
           cl_tparams = [];
+          cl_fixpoint = None;
           cl_moved = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';
@@ -721,10 +766,12 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
             { cl_params = lparams;
               cl_ret = ret_ty_opt;
               cl_body = lbody;
-              cl_capture = cap } )
+              cl_capture = cap;
+              cl_fixpoint = fixpoint;
+              _ } )
       :: rest
       when Option.has_some (ycomb_self_id (to_reversed lparams)) ->
-      ( match try_loopify_ycomb (to_reversed lparams) ret_ty_opt lbody with
+      ( match try_loopify_ycomb ~fixpoint (to_reversed lparams) ret_ty_opt lbody with
       | Some (lparams', lbody') -> (
         (* The loop no longer recurses, so the self-parameter and the wrapper
            that supplied it are scaffolding: the wrapper [go] becomes the loop
@@ -751,6 +798,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
                     of_reversed
                       (List.filter (fun (_, x) -> x <> self) lparams');
                   cl_tparams = [];
+                  cl_fixpoint = fixpoint;
                   cl_moved = [];
                   cl_ret = ret_ty_opt;
                   cl_body = lbody';
@@ -761,6 +809,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
             (id, tgt, CPPlambda
               { cl_params = of_reversed lparams';
               cl_tparams = [];
+              cl_fixpoint = fixpoint;
               cl_moved = [];
                 cl_ret = ret_ty_opt;
                 cl_body = lbody';
@@ -771,6 +820,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         Sasgn (id, tgt, CPPlambda
           { cl_params = lparams;
           cl_tparams = [];
+          cl_fixpoint = fixpoint;
           cl_moved = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';
@@ -1297,6 +1347,7 @@ let fundef_display_name path =
     deep copy -- has no Core body and no reference, and is classified here. *)
 let planned_recursion r check body =
   let classified () = classify check body in
+  let what () = Pp.str (Table.kername_of_global (Option.get r)) in
   (* A helper lifted out of a definition for one of its local fixpoints is
      planned by that fixpoint. *)
   let find r =
@@ -1309,19 +1360,7 @@ let planned_recursion r check body =
   in
   match Option.map (fun r -> (r, find r)) r with
   | None -> classified ()
-  | Some (r, Some planned) ->
-    let planned =
-      match planned with
-      | Recursion_plan.No_recursion -> No_recursion
-      | Tail -> Tail_recursion
-      | Nontail -> Nontail_recursion
-    in
-    if Probe.checking () && classified () <> planned then
-      Probe.violation "recursion plan"
-        Pp.(
-          str "the recursion plan disagrees with the finished body of "
-          ++ str (Table.kername_of_global r));
-    planned
+  | Some (_, Some planned) -> checked_plan planned ~what classified
   | Some (r, None) ->
     Probe.violation "recursion plan"
       Pp.(str "the recursion plan does not know " ++ str (Table.kername_of_global r));

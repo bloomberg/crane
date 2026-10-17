@@ -33,6 +33,13 @@ include Translation_calls
    BoxedFields], boxed or not per instantiation). *)
 type field_read = Read_as_bound | Read_through_pointer | Read_unboxed
 
+(* The binders of a local fixpoint group, as the source has them. *)
+let local_fix_binders ids = Array.to_list (Array.map fst ids)
+
+(* The local fixpoint bound to [binder] in the declaration being generated:
+   what the recursion plan knows its body by. *)
+let local_fixpoint binder = Some {lf_origin = !Table.current_decl_ref; lf_binder = binder}
+
 (** Generate local fixpoint declarations using the Y-combinator pattern
     for escaping fixpoints.
 
@@ -61,7 +68,7 @@ type field_read = Read_as_bound | Read_through_pointer | Read_unboxed
     @return [(decls, defs, deref_subst)] where [defs] is empty and
     [deref_subst] is the identity function (no dereferencing needed).
     @see gen_local_fix_by_ref for the non-escaping alternative. *)
-let gen_local_fix_ycomb env renamed_ids funs_with_params =
+let gen_local_fix_ycomb env ~binders renamed_ids funs_with_params =
   let ret_ty ty =
     match cpp_of_ml env ty with
     | Tfun (_, t) ->
@@ -84,7 +91,7 @@ let gen_local_fix_ycomb env renamed_ids funs_with_params =
   (* Generate impl lambdas: each takes all self params (auto &) + original params. *)
   let impl_stmts =
     List.map2
-      (fun ((_fix_id, fty), impl_id) (args, body) ->
+      (fun (((_fix_id, fty), impl_id), binder) (args, body) ->
         let self_params =
           List.rev_map (fun sid -> (Tref (Lvalue, Tauto), Some sid)) self_ids
         in
@@ -99,12 +106,13 @@ let gen_local_fix_ycomb env renamed_ids funs_with_params =
             Declare Tauto,
             CPPlambda
               { cl_tparams = [];
+                cl_fixpoint = local_fixpoint binder;
                 cl_moved = [];
                 cl_params = of_reversed (orig_params @ self_params);
                 cl_ret = ret_ty fty;
                 cl_body = List.map rewrite_stmt body;
                 cl_capture = Closure } ))
-      (List.combine renamed_ids impl_ids)
+      (List.combine (List.combine renamed_ids impl_ids) binders)
       funs_with_params
   in
   (* Generate wrapper lambdas: forward to impl with all impl_ids prepended. *)
@@ -134,6 +142,7 @@ let gen_local_fix_ycomb env renamed_ids funs_with_params =
             CPPlambda
               { cl_params = of_reversed orig_params;
               cl_tparams = [];
+              cl_fixpoint = None;
               cl_moved = [];
                 cl_ret = rty;
                 cl_body = wrapper_body;
@@ -168,7 +177,7 @@ let gen_local_fix_ycomb env renamed_ids funs_with_params =
 
     @return [(decls, defs)] — declaration and definition statement lists.
     @see gen_local_fix_shared_ptr for the escaping-fixpoint alternative. *)
-let gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
+let gen_local_fix_by_ref env ~binders renamed_ids funs_with_params owned_flags_per_fun =
   let ret_ty ty =
     match cpp_of_ml env ty with
     | Tfun (_, t) ->
@@ -189,7 +198,7 @@ let gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
   in
   let impl_stmts =
     List.map2
-      (fun (((_fix_id, fty), impl_id), owned_flags) (args, body) ->
+      (fun ((((_fix_id, fty), impl_id), binder), owned_flags) (args, body) ->
         let self_params =
           List.rev_map (fun sid -> (Tref (Lvalue, Tauto), Some sid)) self_ids
         in
@@ -209,11 +218,12 @@ let gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
             CPPlambda
               { cl_params = of_reversed (orig_params @ self_params);
               cl_tparams = [];
+              cl_fixpoint = local_fixpoint binder;
               cl_moved = [];
                 cl_ret = ret_ty fty;
                 cl_body = List.map rewrite_stmt body;
                 cl_capture = Immediate } ))
-      (List.combine (List.combine renamed_ids impl_ids) owned_flags_per_fun)
+      (List.combine (List.combine (List.combine renamed_ids impl_ids) binders) owned_flags_per_fun)
       funs_with_params
   in
   let impl_vars_rev = List.rev_map (fun id -> CPPvar id) impl_ids in
@@ -246,6 +256,7 @@ let gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
             CPPlambda
               { cl_params = of_reversed orig_params;
               cl_tparams = [];
+              cl_fixpoint = None;
               cl_moved = [];
                 cl_ret = rty;
                 cl_body = wrapper_body;
@@ -9138,7 +9149,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       in
       if any_escapes then
         let decls, defs, deref_subst =
-          gen_local_fix_ycomb env renamed_ids funs_with_params
+          gen_local_fix_ycomb env ~binders:(local_fix_binders ids) renamed_ids funs_with_params
         in
         decls @ defs @ deref_subst cont
       else
@@ -9159,7 +9170,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           ) funs)
         in
         let decls, defs =
-          gen_local_fix_by_ref env renamed_ids funs_with_params
+          gen_local_fix_by_ref env ~binders:(local_fix_binders ids) renamed_ids funs_with_params
             owned_flags_per_fun
         in
         decls @ defs @ cont
@@ -9402,6 +9413,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             CPPlambda
               { cl_params = of_reversed wrapper_params;
               cl_tparams = [];
+              cl_fixpoint = None;
               cl_moved = [];
                 cl_ret = None;
                 cl_body =
@@ -10079,7 +10091,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
            Use Y-combinator pattern so the fixpoint body doesn't capture
            a stack-local std::function by reference. *)
         let decls, defs, deref_subst =
-          gen_local_fix_ycomb env renamed_ids funs_with_params
+          gen_local_fix_ycomb env ~binders:(local_fix_binders ids) renamed_ids funs_with_params
         in
         let remaining_params =
           (* [fix_params] is in de Bruijn order -- last parameter first -- so
@@ -10106,7 +10118,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         @ deref_subst [k (mk_lambda pa_params None [Sreturn (Some full_call)] ~capture:Closure)]
       end else if fix_escapes_in_own_bodies renamed_ids funs_with_params then
         let decls, defs, deref_subst =
-          gen_local_fix_ycomb env renamed_ids funs_with_params
+          gen_local_fix_ycomb env ~binders:(local_fix_binders ids) renamed_ids funs_with_params
         in
         decls @ defs
         @ deref_subst
@@ -10129,7 +10141,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           ) funs)
         in
         let decls, defs =
-          gen_local_fix_by_ref env renamed_ids funs_with_params
+          gen_local_fix_by_ref env ~binders:(local_fix_binders ids) renamed_ids funs_with_params
             owned_flags_per_fun
         in
         decls @ defs
@@ -10157,7 +10169,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       List.map (fun (_, params, body) -> (params, body)) funs_compiled
     in
     let decls, defs, _deref_subst =
-      gen_local_fix_ycomb env renamed_ids funs_with_params
+      gen_local_fix_ycomb env ~binders:(local_fix_binders ids) renamed_ids funs_with_params
     in
     let fix_id = fst (List.nth renamed_ids x) in
     decls @ defs @ [k (CPPvar fix_id)]

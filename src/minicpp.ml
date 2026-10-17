@@ -572,6 +572,17 @@ and cpp_lambda = {
       (** The variables a {!Closure} takes by move, at their last use --
           [\[=, x = std::move(x)\]]; the rest it copies.  Set by
           {!Last_use} only. *)
+  cl_fixpoint : local_fixpoint option;
+      (** The local fixpoint whose body this lambda is, as the source has
+          it: what the recursion plan knows it by.  Set by the encodings of
+          a local fixpoint only. *)
+}
+
+(** A local fixpoint: the definition it occurs in, if it occurs in one,
+    and the binder it binds there. *)
+and local_fixpoint = {
+  lf_origin : GlobRef.t option;
+  lf_binder : Id.t;
 }
 
 (** A C++ constraint expression (used in requires clauses). *)
@@ -2289,7 +2300,8 @@ let rec lambda ?(tparams = []) params ret body ~capture =
       cl_ret = (match ret with Some (Tconst t) -> Some t | r -> r);
       cl_body = body;
       cl_capture = capture;
-      cl_moved = [] }
+      cl_moved = [];
+      cl_fixpoint = None }
   in
   settle_lambda_tparams l
 
