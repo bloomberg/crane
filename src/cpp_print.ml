@@ -3942,6 +3942,25 @@ let take_absorbed_wrappers () =
   absorbed_wrappers := [];
   l
 
+(** The assertions [d] holds back, in the order it writes them: those that
+    a class's concept holds of an instance where the concept is declared
+    after the struct being written, because its requirements name the
+    struct's own types.  Each is the concept held back, its name, and what
+    it is asserted of, which the struct qualifies on the way out. *)
+let rec held_back_assertions (d : Cpp_erasure.settled) =
+  match Cpp_erasure.view d with
+  | Template (_, _, inner) -> held_back_assertions inner
+  | Namespace (None, decls) -> List.concat_map held_back_assertions decls
+  | Namespace (Some id, members) ->
+    let sole_child = match (members :> cpp_decl list) with [Dstruct _] -> true | _ -> false in
+    if nspace_merges {dw_ref = id; dw_sole_child = sole_child} then []
+    else List.concat_map held_back_assertions members
+  | Decl (Dstatic_assert (CPPconcept_app (class_ref, subject, tys), None)) when class_concept_held_back class_ref ->
+    [ ( HCclass class_ref,
+        pp_concept_name_of_ref class_ref,
+        pp_global Type subject ++ prlist (fun ty -> str ", " ++ pp_cpp_type false [] ty) tys ) ]
+  | Decl _ -> []
+
 (** The forward declarations of the structs and scoped enums [d] defines at
     namespace scope, in the order it defines them: none inside a struct,
     where a member is not nameable before its enclosing struct anyway. *)
@@ -4422,17 +4441,10 @@ and pp_leaf_decl env (d : cpp_decl) =
       (fun () ->
         with_struct_scope ds.ds_ref (fun () ->
             pp_cpp_fields_with_vis ~struct_name env ds.ds_fields ) )
-  | Dstatic_assert (CPPconcept_app (class_ref, subject, tys), None)
-    when class_concept_held_back class_ref ->
+  | Dstatic_assert (CPPconcept_app (class_ref, _, _), None) when class_concept_held_back class_ref ->
     (* The concept is declared after the struct being rendered, because its
-       requirements name the struct's own types.  The assertion goes with it,
-       and is qualified by the struct on the way out. *)
-    deferred_concept_asserts :=
-      ( HCclass class_ref,
-        pp_concept_name_of_ref class_ref,
-        pp_global Type subject
-        ++ prlist (fun ty -> str ", " ++ pp_cpp_type false [] ty) tys )
-      :: !deferred_concept_asserts;
+       requirements name the struct's own types.  The assertion goes with it
+       ({!held_back_assertions}). *)
     mt ()
   | Dstatic_assert (e, so) ->
     ( match so with

@@ -173,10 +173,6 @@ val concept_held_back : held_concept -> bool
     checks for every instance. *)
 val class_concept_held_back : Names.GlobRef.t -> bool
 
-(** Assertions deferred out of the struct being rendered: the concept held
-    back, its name, and the asserted subject. *)
-val deferred_concept_asserts : (held_concept * Pp.t * Pp.t) list ref
-
 (** [with_render_ctx upd f] renders [f] in the context [upd] derives from the
     current one, restoring the enclosing context on the way out however [f]
     leaves -- returning or raising. The only supported way to change the
@@ -258,11 +254,6 @@ val with_module_frame : (unit -> 'a) -> 'a
 (** [setting cell v f] runs [f] with [cell] holding [v] and puts the enclosing
     contents back on the way out, however [f] leaves -- returning or raising. *)
 val setting : 'a ref -> 'a -> (unit -> 'b) -> 'b
-
-(** [collecting acc f] runs [f] with the accumulator [acc] emptied and returns
-    what [f] pushed onto it, in push order, alongside [f]'s result.  The
-    enclosing contents are put back on the way out however [f] leaves. *)
-val collecting : 'a list ref -> (unit -> 'b) -> 'a list * 'b
 
 (** {2 std:: names} *)
 

@@ -397,18 +397,16 @@ let pp_concept_assert concept subject =
   fnl () ++ str "static_assert(" ++ concept ++ str "<" ++ subject ++ str ">);"
 
 (** The assertion that the module rendered as [name] satisfies the concept of
-    its module type [mty].  When that concept is one the enclosing struct holds
-    back, so is the assertion: the concept is not declared yet. *)
-let concept_assert_pp name mty =
+    its module type [mty], and the assertions it holds back.  When that
+    concept is one the enclosing struct holds back, so is the assertion: the
+    concept is not declared yet. *)
+let concept_assertion name mty =
   match concept_of_mt mty with
-  | None -> mt ()
+  | None -> (mt (), [])
   | Some (mt_mp, concept_name) ->
     let held = HCmodtype mt_mp in
-    if concept_held_back held then (
-      deferred_concept_asserts :=
-        (held, concept_name, name) :: !deferred_concept_asserts;
-      mt () )
-    else pp_concept_assert concept_name name
+    if concept_held_back held then (mt (), [(held, concept_name, name)])
+    else (pp_concept_assert concept_name name, [])
 
 (** The [std::same_as] constraints the [with Definition] refinements of a
     module type conjoin onto the concept it refines
@@ -835,9 +833,14 @@ let is_erased_alias (_, d) =
 type written = {
   text : Pp.t;
   concepts : Pp.t list;
+  asserts : (held_concept * Pp.t * Pp.t) list;
+      (** The assertions it held back, each with the concept it asserts and
+          what it asserts it of, in the order written: a concept an
+          enclosing struct holds back is declared after that struct, and
+          the assertion goes with it. *)
 }
 
-let written text = {text; concepts = []}
+let written text = {text; concepts = []; asserts = []}
 
 (** Pretty-print a structure element (label, elem) pair. Handles modules, module
     types, and declarations.
@@ -952,7 +955,9 @@ let rec pp_structure_elem ~is_header f = function
         | Miniml.Dind _ -> body ++ cut2 () ++ member_lifted
         | _ -> member_lifted ++ cut2 () ++ body
     in
-    {text = (if Pp.ismt body then mt () else pp_doc_comment l ++ body); concepts}
+    { text = (if Pp.ismt body then mt () else pp_doc_comment l ++ body);
+      concepts;
+      asserts = List.concat_map (fun (_, d) -> Cpp_print.held_back_assertions d) rendered }
   | l, SEmodule m ->
     let mp = MPdot (top_visible_mp (), l) in
     let name =
@@ -1021,7 +1026,7 @@ let rec pp_structure_elem ~is_header f = function
                  template_params
             ++ str ">"
           in
-          let {text = struct_body; concepts = body_concepts} =
+          let {text = struct_body; concepts = body_concepts; asserts} =
             with_render_ctx
               (fun c -> { c with rc_in_struct = true; rc_in_template = true })
               (fun () ->
@@ -1046,16 +1051,18 @@ let rec pp_structure_elem ~is_header f = function
                 ++ fnl ()
                 ++ struct_body
                 ++ str "};" );
-            concepts = concepts @ body_concepts }
+            concepts = concepts @ body_concepts;
+            asserts }
       | MEapply _ ->
         if not is_header then
           written (mt ())
         else
-          let {text = body; concepts} = pp_module_expr ~is_header f m.ml_mod_expr in
+          let {text = body; concepts; asserts} = pp_module_expr ~is_header f m.ml_mod_expr in
           let using_decl =
             str "using " ++ name ++ str " = " ++ body ++ str ";"
           in
-          {text = using_decl ++ concept_assert_pp name m.ml_mod_type; concepts}
+          let assertion, held = concept_assertion name m.ml_mod_type in
+          {text = using_decl ++ assertion; concepts; asserts = asserts @ held}
       | MEstruct (body_mp, sel) ->
         let old_context = (!render_ctx).rc_in_struct in
         with_module_frame @@ fun () ->
@@ -1203,42 +1210,32 @@ let rec pp_structure_elem ~is_header f = function
                 Pp.(str "Crane: the module " ++ str (ModPath.to_string mp)
                     ++ str " has no planned header scope.")
         in
-        let body_written, deferred_asserts_pp, this_method_candidates =
+        let body_written, this_method_candidates =
           with_promotion_scope @@ fun () ->
           with_render_ctx enter_module (fun () ->
-            let held, (body, candidates) =
-              collecting deferred_concept_asserts (fun () ->
-                  let body =
-                    setting
-                      held_back_concepts
-                      (this_held_back @ !held_back_concepts)
-                      (fun () -> pp_module_expr ~is_header f m.ml_mod_expr)
-                  in
-                  (body, !method_candidates) )
+            let body =
+              setting
+                held_back_concepts
+                (this_held_back @ !held_back_concepts)
+                (fun () -> pp_module_expr ~is_header f m.ml_mod_expr)
             in
-            (* The assertions this struct held back: those naming a concept it
-               declares are emitted after it, now that both are in scope; the rest
-               travel further out, qualified by this struct on the way. *)
-            let mine, passed_out =
-              List.partition
-                (fun (mt_mp, _, _) -> is_held_back_in this_held_back mt_mp)
-                held
-            in
-            let deferred_asserts_pp =
-              prlist
-                (fun (_, concept, sub) ->
-                  pp_concept_assert concept (name ++ str "::" ++ sub) )
-                mine
-            in
-            deferred_concept_asserts :=
-              List.rev_append
-                (List.map
-                   (fun (mt_mp, concept, sub) ->
-                     (mt_mp, concept, name ++ str "::" ++ sub) )
-                   passed_out )
-                !deferred_concept_asserts;
-            (body, deferred_asserts_pp, candidates) )
+            (body, !method_candidates) )
         in
+        (* The assertions this struct's body held back: those naming a concept
+           it declares are emitted after it, now that both are in scope; the
+           rest travel further out, qualified by this struct on the way. *)
+        let mine, passed_out =
+          List.partition
+            (fun (mt_mp, _, _) -> is_held_back_in this_held_back mt_mp)
+            body_written.asserts
+        in
+        let deferred_asserts_pp =
+          prlist
+            (fun (_, concept, sub) ->
+              pp_concept_assert concept (name ++ str "::" ++ sub) )
+            mine
+        in
+        let passed_out = List.map (fun (mt_mp, concept, sub) -> (mt_mp, concept, name ++ str "::" ++ sub)) passed_out in
         let body = body_written.text in
         (* Capture and clean up promotion state. *)
         let this_promoted = is_promoted in
@@ -1258,7 +1255,7 @@ let rec pp_structure_elem ~is_header f = function
                sel
         in
         if is_promoted then eponymous_promote_ref := None;
-        let text =
+        let text, own_held =
         if is_header then
           if this_promoted then
             (* Promoted module: the module struct IS the eponymous type. Wrap
@@ -1307,8 +1304,7 @@ let rec pp_structure_elem ~is_header f = function
               ++ body
               ++ str "};"
             in
-            typeclasses_pp ++ modtypes_pp ++ struct_def ++ modtypes_after_pp
-            ++ deferred_asserts_pp
+            (typeclasses_pp ++ modtypes_pp ++ struct_def ++ modtypes_after_pp ++ deferred_asserts_pp, [])
           else
             let template_decl, record_fields_pp, record_methods_pp =
               match this_eponymous_record with
@@ -1387,11 +1383,7 @@ let rec pp_structure_elem ~is_header f = function
               | None -> (mt (), mt (), mt ())
             in
             if has_concept_collision then
-              typeclasses_pp
-              ++ modtypes_pp
-              ++ record_fields_pp
-              ++ record_methods_pp
-              ++ body
+              (typeclasses_pp ++ modtypes_pp ++ record_fields_pp ++ record_methods_pp ++ body, [])
             else if Pp.ismt body && Pp.ismt record_fields_pp
                     && Pp.ismt record_methods_pp then
               (* Empty module: emit [struct Name {};] even though there are
@@ -1401,7 +1393,7 @@ let rec pp_structure_elem ~is_header f = function
                  empty Rocq module satisfying some module type.  Previously
                  this returned [mt ()] which suppressed the struct
                  entirely, causing undeclared-identifier errors. *)
-              template_decl ++ str "struct " ++ name ++ str " {};"
+              (template_decl ++ str "struct " ++ name ++ str " {};", [])
             else
               let struct_def =
                 template_decl
@@ -1414,17 +1406,18 @@ let rec pp_structure_elem ~is_header f = function
                 ++ body
                 ++ str "};"
               in
-              typeclasses_pp ++ modtypes_pp ++ struct_def ++ modtypes_after_pp
-              ++ deferred_asserts_pp
-              ++ concept_assert_pp name m.ml_mod_type
+              let assertion, held = concept_assertion name m.ml_mod_type in
+              ( typeclasses_pp ++ modtypes_pp ++ struct_def ++ modtypes_after_pp ++ deferred_asserts_pp
+                ++ assertion,
+                held )
         else if this_promoted && promoted_template then
           (* A promoted template's members are all defined inline in the
              header. *)
-          mt ()
+          (mt (), [])
         else
-          body
+          (body, [])
         in
-        {text; concepts = own_concepts @ body_written.concepts}
+        {text; concepts = own_concepts @ body_written.concepts; asserts = passed_out @ own_held}
       | MEident target ->
         written
         @@
@@ -1624,17 +1617,18 @@ and pp_module_expr ~is_header f = function
           | [] -> px
           | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 () ++ px
     in
-    let try_pp_structure_elem (l, concepts) x =
-      let {text = px; concepts = c} = pp_structure_elem ~is_header f x in
-      ((if Pp.ismt px then l else with_homed_aliases px :: l), List.rev_append c concepts)
+    let try_pp_structure_elem (l, concepts, asserts) x =
+      let {text = px; concepts = c; asserts = a} = pp_structure_elem ~is_header f x in
+      ((if Pp.ismt px then l else with_homed_aliases px :: l), List.rev_append c concepts, List.rev_append a asserts)
     in
-    let l, concepts = List.fold_left try_pp_structure_elem ([], []) sel in
+    let l, concepts, asserts = List.fold_left try_pp_structure_elem ([], [], []) sel in
     let l = List.rev l in
     clear_local_inductives ();
     List.iter add_local_inductive old_local_inductives;
     current_structure_decls := old_structure_decls;
     { text = (if List.is_empty l then mt () else prlist_with_doc_safe_sep cut2 l ++ fnl ());
-      concepts = List.rev concepts }
+      concepts = List.rev concepts;
+      asserts = List.rev asserts }
 
 (** Like [prlist_with_sep] but skips empty ([mt ()]) elements.
 
@@ -3453,7 +3447,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     let homed =
       List.filter_map (fun (name, d) -> if List.memq d defined then Some name else None) !file_layout.wrapper_homes
     in
-    let {text = p; concepts = c} =
+    let {text = p; concepts = c; asserts = _} =
       Cpp_print.writing_wrapper_members (List.map (fun name -> (name, wrapper_specs name)) homed) (fun () -> f x)
     in
     if is_header && Probe.checking () then begin

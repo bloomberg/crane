@@ -90,6 +90,12 @@ val writing_wrapper_members : (string * Pp.t) list -> (unit -> 'a) -> 'a
     declarations since the last call, under [CRANE_CHECK_IR]. *)
 val take_absorbed_wrappers : unit -> string list
 
+(** The assertions a declaration holds back, in the order it writes them:
+    those that a class's concept holds of an instance where the concept is
+    declared after the struct being written.  Each is the concept held back,
+    its name, and what it is asserted of. *)
+val held_back_assertions : Cpp_erasure.settled -> (Cpp_state.held_concept * Pp.t * Pp.t) list
+
 (** {2 Forward declarations} *)
 
 (** A forward declaration of a struct or scoped enum defined at namespace

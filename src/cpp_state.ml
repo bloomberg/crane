@@ -531,13 +531,6 @@ let concept_held_back c =
 
 let class_concept_held_back r = concept_held_back (HCclass r)
 
-(** Assertions deferred out of the struct being rendered.  Each entry is the
-    concept held back, its name, and the asserted subject -- qualified as far
-    as the frames it has passed through; the frame that held the concept back
-    emits it. *)
-let deferred_concept_asserts : (held_concept * Pp.t * Pp.t) list ref =
-  owned_list ~census:false "deferred_concept_asserts"
-
 (** [with_render_ctx upd f] renders [f] in the context [upd] derives from the
     current one, and puts the enclosing context back on the way out however [f]
     leaves -- returning or raising.
@@ -686,22 +679,6 @@ let setting cell v f =
   with_saved [Saver cell] (fun () ->
       cell := v;
       f () )
-
-(** [collecting acc f] runs [f] with the accumulator [acc] emptied and returns
-    what [f] pushed onto it, in push order, alongside [f]'s result.  The
-    enclosing contents are put back on the way out however [f] leaves.
-
-    An accumulator differs from the cells above in that the enclosing scope
-    wants to {e see} what the nested one produced; restoring it is not enough
-    and reading it after the restore is too late. *)
-let collecting acc f =
-  let outer = !acc in
-  acc := [];
-  Fun.protect
-    ~finally:(fun () -> acc := outer)
-    (fun () ->
-      let v = f () in
-      (List.rev !acc, v) )
 
 (* NOTE: The global method registry has moved to Method_registry. Lookups go
    through get_method_registry(). *)
