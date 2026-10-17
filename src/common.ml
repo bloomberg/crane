@@ -376,23 +376,21 @@ let register_cleanup f = State.on_reset State.Unit f
 
 let do_cleanup () = State.reset State.Unit
 
-(** Which file an emission pass is writing. *)
 type file = Impl | Intf
+
+let file_name = function Impl -> "implementation" | Intf -> "header"
 
 (** What a pass is for; see {!Common.phase} in the interface. *)
 type phase =
   | Plan
-  | Emit of file
+  | Emit
 
 (** Get/set the current extraction phase. *)
 let set_phase, get_phase =
   let ph = ref Plan in
   (( := ) ph, fun () -> !ph)
 
-let phase_name = function
-  | Plan -> "planning"
-  | Emit Impl -> "implementation"
-  | Emit Intf -> "header"
+let phase_name = function Plan -> "planning" | Emit -> "emission"
 
 (** Get/set the set of reserved keywords. *)
 let set_keywords, get_keywords =
@@ -645,7 +643,7 @@ let plan_written_files files = planned_files := List.fold_right MPset.add files 
 let note_written_file file =
   if Probe.checking () then
     match get_phase () with
-    | Emit _ -> rendered_files := MPset.add file !rendered_files
+    | Emit -> rendered_files := MPset.add file !rendered_files
     | Plan -> ()
 
 let check_written_files () =
@@ -1039,7 +1037,7 @@ let decided_while_emitting : decided_name list ref = State.cell State.Unit []
 
 let note_decided_while_emitting n =
   match get_phase () with
-  | Emit _ -> decided_while_emitting := n :: !decided_while_emitting
+  | Emit -> decided_while_emitting := n :: !decided_while_emitting
   | Plan -> ()
 
 let names_decided_while_emitting () = List.rev !decided_while_emitting

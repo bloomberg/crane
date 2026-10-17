@@ -137,20 +137,25 @@ val get_db_name_opt : int -> env -> Names.Id.t option
 
 (** {2 Extraction phases and renaming} *)
 
-(** Which file an emission pass is writing. *)
+(** One of the two files a unit is written as. *)
 type file =
   | Impl  (** the [.cpp] *)
   | Intf  (** the [.h] *)
 
+(** How diagnostics name a file: [implementation], [header]. *)
+val file_name : file -> string
+
 (** What a pass is for.  {!Plan} decides, before anything is rendered: the
     names of what a unit declares and refers to, its layout, its callables.
-    An {!Emit} pass renders one file and reads those decisions.  Beyond its
-    text it may only demand -- the headers its body includes -- and generate
-    the helpers it lifts out of the bodies it translates, which are named as
-    they are lifted; {!names_decided_while_emitting} is how that is checked. *)
+    {!Emit} generates the unit's declarations ahead of the files, from those
+    decisions, and renders each file, which one the printer's context says
+    ({!Cpp_state.writing_file}).  Beyond its text it may only demand -- the
+    headers its body includes -- and generate the helpers it lifts out of
+    the bodies it translates, which are named as they are lifted;
+    {!names_decided_while_emitting} is how that is checked. *)
 type phase =
   | Plan
-  | Emit of file
+  | Emit
 
 (** Set the current extraction phase. *)
 val set_phase : phase -> unit
@@ -158,7 +163,7 @@ val set_phase : phase -> unit
 (** Get the current extraction phase. *)
 val get_phase : unit -> phase
 
-(** How diagnostics name a phase: [planning], [implementation], [header]. *)
+(** How diagnostics name a phase: [planning], [emission]. *)
 val phase_name : phase -> string
 
 (** The files whose namespace a name the unit writes is written through,

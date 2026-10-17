@@ -23,7 +23,7 @@ let body_generations : (Common.phase, int) Hashtbl.t = State.table State.Unit 3
 let body_generation_counts () =
   List.map
     (fun p -> (p, Option.default 0 (Hashtbl.find_opt body_generations p)))
-    [Plan; Emit Impl; Emit Intf]
+    [Plan; Emit]
 
 (** Begin generating a top-level body -- a function's, a constant's, a
     method's or an instance method's: count it, and start its state afresh,

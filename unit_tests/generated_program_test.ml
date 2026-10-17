@@ -55,12 +55,15 @@ let () =
     (raises_anomaly (fun () -> ignore (Generated_program.record (entity "a" []))));
   let declares r' = List.exists (Names.GlobRef.UserOrd.equal r') [r "a"; r "owner"] in
   let check_plan () = Generated_program.check_against_plan ~declares in
-  Common.set_phase (Common.Emit Common.Impl);
+  Common.set_phase Common.Emit;
   ignore (Generated_program.record (entity "a" [h]));
   Generated_program.record_lifted_ahead [helper_decl];
   check "emitting what the unit declares passes" (not (raises_anomaly check_plan));
-  check "the emitted program keeps what it recorded"
-    (List.length (Generated_program.entities (Generated_program.emitted Common.Impl)) = 1);
+  check "the files took something generated ahead of nothing"
+    (raises_anomaly Generated_program.check_against_ahead);
+  Generated_program.record_ahead (entity "a" [h]);
+  check "the files took what was generated ahead of them"
+    (not (raises_anomaly Generated_program.check_against_ahead));
   ignore (Generated_program.record (entity "b" []));
   check "an entity the unit does not declare is refused" (raises_anomaly check_plan);
   State.reset State.Unit;

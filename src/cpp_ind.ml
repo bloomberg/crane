@@ -748,12 +748,12 @@ let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) 
 let ahead_once ~what ~recorded ~record ~same ?(planned = ignore) ?(take = Fun.id) ?(peek = Fun.id) gen =
   match get_phase () with
   | Plan -> gen ()
-  | Emit _ when !ahead && not !rechecking ->
+  | Emit when !ahead && not !rechecking ->
     let v = gen () in
     record ((top_visible_mp (), v) :: recorded ());
     planned v;
     v
-  | Emit _ -> (
+  | Emit -> (
     let mp = top_visible_mp () in
     match List.find_map (fun (mp', v) -> if ModPath.equal mp' mp then Some v else None) (recorded ()) with
     | Some v when !peeked -> peek v
@@ -828,7 +828,7 @@ let planned_claim key =
 let header_claim key lifted =
   match Node_table.find_opt header_claims (Obj.repr key) with
   | Some planned ->
-    if Probe.checking () && get_phase () = Emit Intf then begin
+    if Probe.checking () && (!render_ctx).rc_file = Intf then begin
       let claimed = List.filter (newly_placed header_took) lifted in
       if not (List.equal ( == ) planned claimed) then
         Probe.violation "header claims"
@@ -958,14 +958,14 @@ let finishing = Finished_program.job
 let finished_of ~what (job : finishing) =
   match (get_phase (), Finished_program.find job) with
   | Plan, _ -> CErrors.anomaly Pp.(str "Crane: " ++ str what ++ str " was finished while planning.")
-  | Emit _, Some f ->
+  | Emit, Some f ->
     if (not !ahead) && Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (Finished_program.finishes_as job f)
     then
       CErrors.anomaly
         Pp.(str "Crane: " ++ str what
             ++ str " was finished differently ahead of the files and in one of them.");
     f
-  | Emit _, None ->
+  | Emit, None ->
     CErrors.anomaly
       Pp.(str "Crane: " ++ str what ++ str " was rendered that was not finished ahead of \
                                          the files.")

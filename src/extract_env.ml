@@ -1580,21 +1580,18 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
      files again once both are rendered, and fails unless each comes out the
      same (the plan's Milestone 9). *)
   let render_impl () =
-    set_phase (Emit Impl);
     Pipeline_trace.event "emit" "render_impl";
     d.pp_struct struc
   in
   let render_intf () =
-    set_phase (Emit Intf);
     Pipeline_trace.event "emit" "render_intf";
     d.pp_hstruct struc
   in
   let intf_first = Sys.getenv_opt "CRANE_RENDER_ORDER" = Some "intf-first" in
-  (* Every function is generated before either render, emitting as the file
-     rendered first does: calls read the plans emission reads. *)
-  let first = if intf_first then Intf else Impl in
-  set_phase (Emit first);
-  Cpp_state.writing_file first (fun () ->
+  (* Every function is generated before either render, as the file rendered
+     first writes it, reading the plans emission reads. *)
+  set_phase Emit;
+  Cpp_state.writing_file (if intf_first then Intf else Impl) (fun () ->
       Pipeline_trace.event "emit" "generate_ahead";
       Cpp.generate_ahead struc;
       Common.plan_written_files (Cpp.files_named_ahead struc);
@@ -2486,7 +2483,7 @@ let print_one_decl struc mp decl =
   ignore (plan_layout struc);
   elaborate_unit struc;
   freeze_global_ids ();
-  set_phase (Emit Impl);
+  set_phase Emit;
   let ans =
     Cpp_state.writing_file Impl @@ fun () ->
     with_visibility (toplevel_visibility [mp]) @@ fun () ->

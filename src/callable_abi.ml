@@ -277,8 +277,7 @@ let describe abi =
 
 let phase_name = function
   | Common.Plan -> "while planning"
-  | Common.Emit Common.Impl -> "emitting the implementation"
-  | Common.Emit Common.Intf -> "emitting the interface"
+  | Common.Emit -> "while emitting"
 
 let validated abi =
   List.iter
@@ -426,7 +425,7 @@ let plan ?omitted ?(instances = 0) ?higher_kinded ?kept ?reachable ?relaxed ?pha
     let derive () =
       foreign ?omitted ?higher_kinded ?kept ?reachable ?relaxed ?phantom_prefix ~callee ~scheme ()
     in
-    let emitting = match Common.get_phase () with Common.Emit _ -> true | Common.Plan -> false in
+    let emitting = match Common.get_phase () with Common.Emit -> true | Common.Plan -> false in
     let base =
       match GlobRef.Map_env.find_opt callee !foreign_plans with
       | Some base ->

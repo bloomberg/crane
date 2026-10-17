@@ -819,7 +819,7 @@ let check_ctor_alias_plan ~file =
     | unplanned, unspelled ->
       Probe.violation "constructor aliases"
         Pp.(
-          str "the " ++ str (Common.phase_name (Common.Emit file)) ++ str " spells "
+          str "the " ++ str (Common.file_name file) ++ str " spells "
           ++ prlist_with_sep pr_comma (fun a -> str (describe a)) unplanned
           ++ str " unplanned, and does not spell "
           ++ prlist_with_sep pr_comma (fun a -> str (describe a)) unspelled
@@ -4007,7 +4007,7 @@ let check_file_scope_types ~file =
     if not (CString.Set.equal written planned) then
       Probe.violation "file-scope types"
         Pp.(
-          str "the " ++ str (Common.phase_name (Common.Emit file)) ++ str " introduced "
+          str "the " ++ str (Common.file_name file) ++ str " introduced "
           ++ prlist_with_sep pr_comma str (CString.Set.elements (CString.Set.diff written planned))
           ++ str " unplanned, and not "
           ++ prlist_with_sep pr_comma str (CString.Set.elements (CString.Set.diff planned written)) )

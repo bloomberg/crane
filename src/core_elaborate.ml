@@ -469,7 +469,7 @@ let elaboration ~lex use args =
   let elaborate () = elaborate_arguments ~lex use args in
   match Common.get_phase () with
   | Common.Plan -> elaborate ()
-  | Common.Emit _ -> (
+  | Common.Emit -> (
     match roles !installed use (List.length args) with
     | Some roles ->
       tally := {!tally with found = !tally.found + 1};

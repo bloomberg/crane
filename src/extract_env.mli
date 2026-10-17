@@ -36,14 +36,15 @@
       constructor structs' fields and storage, and every generated
       function's callable plan ({!Cpp.plan_callables}).  All go into the
       target plan, and are installed and frozen.
-    + {b Emission} ([Common.Emit Impl], then [Emit Intf]): each file is
-      rendered once, and every body translated there.  Emission decides
+    + {b Emission} ([Common.Emit]): every declaration is generated and
+      finished ahead of the files ({!Cpp.generate_ahead}), what the files
+      write of it is planned ({!Cpp.plan_file_layout},
+      {!Cpp.plan_ctor_aliases}), and then each file is rendered once, taking
+      what was generated ({!Cpp_ind.generated_once}).  Emission decides
       nothing but the names of the helpers it lifts out of bodies; the table
       census taken after planning is compared after emission
       ([check_no_late_decisions]), and what it generated against what the
-      unit declares ({!Generated_program.check_against_plan}).  The header
-      pass reuses the functions the implementation pass generated
-      ({!Cpp_ind.generated_once}).
+      unit declares ({!Generated_program.check_against_plan}).
     + {b Demands} are frozen ([Table.freeze_demands]) and each file is written
       with the preamble its body demanded, then formatted.
 

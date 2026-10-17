@@ -109,7 +109,7 @@ let () =
     (List.sort GlobRef.UserOrd.compare (Core_elaborate.referenced elaborated)
     = List.sort GlobRef.UserOrd.compare [f; r "pa"]);
   Core_elaborate.install elaborated;
-  Common.set_phase (Common.Emit Common.Impl);
+  Common.set_phase Common.Emit;
   ignore (Core_elaborate.elaboration ~lex:Lexenv.empty rewritten [a]);
   ignore (Core_elaborate.elaboration ~lex:Lexenv.empty again [a]);
   (* The argument, a global named unapplied, is planned as its call with no

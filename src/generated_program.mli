@@ -63,12 +63,9 @@ val ids : t -> Id_set.t
     The current phase's program is accumulated as generation happens, and
     emptied with the other per-unit state. *)
 
-(** [record e] adds [e] to the program of the file being emitted, and
-    returns it.  Nothing is generated while planning. *)
+(** [record e] adds [e] to what the files have taken, and returns it.
+    Nothing is generated while planning. *)
 val record : entity -> entity
-
-(** The entities the emission of file [f] of the current unit took. *)
-val emitted : Common.file -> t
 
 (** Under [CRANE_CHECK_IR], fail unless every entity generated ahead of the
     files or taken by them is one the unit [declares], and every helper was

@@ -60,24 +60,19 @@ let entity_ids e =
     (Id_set.singleton (Source e.entity_id))
     e.helpers
 
-let ids t =
-  List.fold_left
-    (fun s e -> Id_set.union s (entity_ids e))
-    (Id_set.of_list (List.map (fun h -> Generated h.helper_id) t.lifted))
-    t.entities
+let entities_ids entities =
+  List.fold_left (fun s e -> Id_set.union s (entity_ids e)) Id_set.empty entities
 
-(** The entities each emitted file has taken so far, newest first. *)
-let emitted_files : (Common.file, entity list) Hashtbl.t = State.table State.Unit 2
+let ids t = Id_set.union (Id_set.of_list (List.map (fun h -> Generated h.helper_id) t.lifted)) (entities_ids t.entities)
+
+(** The entities the files have taken so far, either file, newest first. *)
+let taken : entity list ref = State.cell State.Unit []
 
 let record e =
   ( match Common.get_phase () with
-  | Common.Emit f ->
-    Hashtbl.replace emitted_files f (e :: Option.default [] (Hashtbl.find_opt emitted_files f))
+  | Common.Emit -> taken := e :: !taken
   | Common.Plan -> CErrors.anomaly Pp.(str "Crane: a declaration was generated while planning.") );
   e
-
-let emitted f =
-  { entities = List.rev (Option.default [] (Hashtbl.find_opt emitted_files f)); lifted = [] }
 
 (** The unit's program as the walk ahead of the files generated it, newest
     first: its entities, and every helper its generations lifted. *)
@@ -106,10 +101,7 @@ let record_ahead e =
 
 let check_against_plan ~declares =
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then
-    let emitted =
-      List.fold_left Id_set.union (ids !generated_ahead)
-        [ids (emitted Common.Impl); ids (emitted Common.Intf)]
-    in
+    let emitted = Id_set.union (ids !generated_ahead) (entities_ids !taken) in
     let planned = function
       | Source e -> declares (Entity_id.to_ref e)
       | Generated g -> (
@@ -124,15 +116,9 @@ let check_against_plan ~declares =
           str "Crane: emission generated entities the plan does not account for: "
           ++ prlist_with_sep (fun () -> str ", ") pp_id (Id_set.elements unplanned))
 
-let entities_ids entities =
-  List.fold_left (fun s e -> Id_set.union s (entity_ids e)) Id_set.empty entities
-
 let check_against_ahead () =
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then
-    let taken =
-      Id_set.union (entities_ids (emitted Common.Impl).entities)
-        (entities_ids (emitted Common.Intf).entities)
-    in
+    let taken = entities_ids !taken in
     let ahead = entities_ids !generated_ahead.entities in
     if not (Id_set.equal taken ahead) then
       let show s = Pp.(prlist_with_sep (fun () -> str ", ") pp_id (Id_set.elements s)) in
