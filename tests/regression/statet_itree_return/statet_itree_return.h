@@ -283,7 +283,7 @@ public:
   }
 };
 
-template <typename CraneP0> struct crane_carrier_tch {
+template <typename CraneP0> struct crane_carrier_tch_f0580980f5c54262 {
   template <typename CraneTcArg> using c = Itree<CraneP0, CraneTcArg>;
 };
 
@@ -292,7 +292,8 @@ struct StatetItreeReturn {
   using stateT = crane::fn<m<std::pair<s, a>>(s)>;
 
   template <typename T1>
-  static stateT<Nat, crane_carrier_tch<T1>::template c, Nat> get_st(Nat n) {
+  static stateT<Nat, crane_carrier_tch_f0580980f5c54262<T1>::template c, Nat>
+  get_st(Nat n) {
     return [=, n = std::move(n)](const Nat &s) {
       return Itree<T1, std::pair<Nat, Nat>>::go(
           ItreeF<T1, std::pair<Nat, Nat>, Itree<T1, std::pair<Nat, Nat>>>::retf(

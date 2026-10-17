@@ -433,7 +433,7 @@ struct Subevent {
            crane::rebind_t<T1, T3> x);
 };
 
-template <typename CraneP0> struct crane_carrier_tch {
+template <typename CraneP0> struct crane_carrier_tch_f0580980f5c54262 {
   template <typename CraneTcArg> using c = Itree<CraneP0, CraneTcArg>;
 };
 
@@ -468,7 +468,8 @@ struct FamilyAliasArityAtCall {
   template <typename ptr, typename x> using BotE = Sum1<extE<ptr>, FailE, x>;
 
   template <typename T1, typename T2>
-  static Monads::template stateT<Nat, crane_carrier_tch<T1>::template c, T2>
+  static Monads::template stateT<
+      Nat, crane_carrier_tch_f0580980f5c54262<T1>::template c, T2>
   memM_interp(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h, MemE) {
     return [=,
             h = std::move(h)](const Nat &s) -> Itree<T1, std::pair<Nat, T2>> {
@@ -489,26 +490,29 @@ struct FamilyAliasArityAtCall {
   }
 
   template <typename T1, typename T2, typename F0>
-  static Monads::template stateT<Nat, crane_carrier_tch<T1>::template c, T2>
+  static Monads::template stateT<
+      Nat, crane_carrier_tch_f0580980f5c54262<T1>::template c, T2>
   handle_intrinsic(F0 &&h, IntrE) {
     return h(MemE::LOAD);
   }
 
-  template <typename CraneP0> struct crane_carrier_tch1 {
+  template <typename CraneP0> struct crane_carrier_tch_6c159993d2c4c06f {
     template <typename CraneTcArg>
     using c = Itree<BotE<typename CraneP0::ptr, crane::obj>, CraneTcArg>;
   };
 
   template <Params _tcI0, typename T1>
-  static Monads::template stateT<Nat, crane_carrier_tch1<_tcI0>::template c, T1>
+  static Monads::template stateT<
+      Nat, crane_carrier_tch_6c159993d2c4c06f<_tcI0>::template c, T1>
   on_mem(std::type_identity_t<Monads::template stateT<
-             Nat, crane_carrier_tch1<_tcI0>::template c, T1>>
+             Nat, crane_carrier_tch_6c159993d2c4c06f<_tcI0>::template c, T1>>
              f) {
     return f;
   }
 
   template <Params _tcI0, typename T1>
-  static Monads::template stateT<Nat, crane_carrier_tch1<_tcI0>::template c, T1>
+  static Monads::template stateT<
+      Nat, crane_carrier_tch_6c159993d2c4c06f<_tcI0>::template c, T1>
   fused_intrinsic(IntrE e) {
     static const auto resum_inr = crane::immortal(
         CategoryOps::template ReSum_inr<crane::obj,
@@ -535,9 +539,11 @@ struct FamilyAliasArityAtCall {
         handle_intrinsic<BotE<typename _tcI0::ptr, crane::obj>, T1>(
             [=]() {
               return
-                  [=](MemE _x0) -> Monads::template stateT<
-                                    Nat, crane_carrier_tch1<_tcI0>::template c,
-                                    crane::obj> {
+                  [=](MemE _x0)
+                      -> Monads::template stateT<
+                          Nat,
+                          crane_carrier_tch_6c159993d2c4c06f<_tcI0>::template c,
+                          crane::obj> {
                     return memM_interp<BotE<typename _tcI0::ptr, crane::obj>,
                                        crane::obj>(resum_inr, _x0);
                   };

@@ -432,7 +432,7 @@ struct Subevent {
            crane::rebind_t<T1, T3> x);
 };
 
-template <typename CraneP0> struct crane_carrier_tch {
+template <typename CraneP0> struct crane_carrier_tch_f0580980f5c54262 {
   template <typename CraneTcArg> using c = Itree<CraneP0, CraneTcArg>;
 };
 
@@ -448,7 +448,8 @@ struct HandlerCombinatorFamily {
   template <typename x> using BotE = Sum1<FailE, noE, x>;
 
   template <typename T1, typename T2>
-  static Monads::template stateT<Nat, crane_carrier_tch<T1>::template c, T2>
+  static Monads::template stateT<
+      Nat, crane_carrier_tch_f0580980f5c54262<T1>::template c, T2>
   memM_interp(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h, MemE) {
     return [=,
             h = std::move(h)](const Nat &s) -> Itree<T1, std::pair<Nat, T2>> {
@@ -469,7 +470,8 @@ struct HandlerCombinatorFamily {
   }
 
   template <typename T1, typename T2, typename F0>
-  static Monads::template stateT<Nat, crane_carrier_tch<T1>::template c, T2>
+  static Monads::template stateT<
+      Nat, crane_carrier_tch_f0580980f5c54262<T1>::template c, T2>
   handle_intrinsic(F0 &&h, IntrE) {
     return h(MemE::LOAD);
   }

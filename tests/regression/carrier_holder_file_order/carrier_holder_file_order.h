@@ -352,14 +352,15 @@ template <typename ptr, typename x> using AllE = Sum1<MemE<ptr>, FailE, x>;
 template <typename s, template <typename> class m, typename a>
 using stateT = crane::fn<m<std::pair<s, a>>(s)>;
 
-template <typename CraneP0> struct crane_carrier_tch {
+template <typename CraneP0> struct crane_carrier_tch_39cd911840c5c5a4 {
   template <typename CraneTcArg>
   using c = Itree<AllE<typename CraneP0::ptr, crane::obj>, CraneTcArg>;
 };
 
 struct HoStack {
   template <Params _tcI0>
-  static stateT<Nat, crane_carrier_tch<_tcI0>::template c, Nat> get_st(Nat n);
+  static stateT<Nat, crane_carrier_tch_39cd911840c5c5a4<_tcI0>::template c, Nat>
+  get_st(Nat n);
 };
 
 struct natParams {
@@ -376,7 +377,8 @@ struct CarrierHolderFileOrder {
 };
 
 template <Params _tcI0>
-stateT<Nat, crane_carrier_tch<_tcI0>::template c, Nat> HoStack::get_st(Nat n) {
+stateT<Nat, crane_carrier_tch_39cd911840c5c5a4<_tcI0>::template c, Nat>
+HoStack::get_st(Nat n) {
   return [=, n = std::move(n)](const Nat &s) {
     return Itree<AllE<typename _tcI0::ptr, crane::obj>, std::pair<Nat, Nat>>::
         go(ItreeF<AllE<typename _tcI0::ptr, crane::obj>, std::pair<Nat, Nat>,

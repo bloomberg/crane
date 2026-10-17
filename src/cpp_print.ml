@@ -692,18 +692,13 @@ let ctor_alias_render_ctx home =
 
 (** The synthesised templates each file writes, planned before either is
     rendered ({!Cpp.plan_ctor_aliases}): each file's, in the order it first
-    writes them, and the name of each holder, by its body. *)
+    writes them. *)
 type ctor_alias_plan = {
   intf : ctor_alias list;
   impl : ctor_alias list;
-  holder_names : (string * string) list;
 }
 
-let ctor_alias_plan : ctor_alias_plan ref = State.cell State.Unit {intf = []; impl = []; holder_names = []}
-
-(** Set while the templates the files write are planned
-    ({!plan_ctor_aliases}). *)
-let planning_ctor_aliases = ref false
+let ctor_alias_plan : ctor_alias_plan ref = State.cell State.Unit {intf = []; impl = []}
 
 (** Set while the templates some declaration or type writes are collected
     ({!ctor_aliases_found}). *)
@@ -720,44 +715,25 @@ let note_ctor_alias_spelled a =
 let start_ctor_alias_census () = ctor_aliases_spelled := []
 
 (** Plan the templates each file writes, [written file] those of [file] in
-    the order written: the header's, then the implementation's.  A holder is
-    named as it is first spelled ({!ctor_alias_name}). *)
+    the order written: the header's, then the implementation's. *)
 let plan_ctor_aliases written =
-  ctor_alias_plan := {intf = []; impl = []; holder_names = []};
   let dedup l = List.fold_left (fun acc a -> if List.mem a acc then acc else acc @ [a]) [] l in
-  setting planning_ctor_aliases true @@ fun () ->
   let intf = dedup (written Common.Intf) in
   let impl = dedup (written Common.Impl) in
-  ctor_alias_plan := {!ctor_alias_plan with intf; impl}
+  ctor_alias_plan := {intf; impl}
 
-(** The name of [alias].
-
-    An alias template's is a function of its body alone, not a counter: the
+(** The name of [alias]: a function of its body alone, not a counter.  The
     two files declare the aliases they write independently, so the same body
-    has to be the same name in both, and every use names what it meant.
-    Repeating a [using] with the same definition is legal, which is what lets
-    both declare it.  The body is written where the template is declared, so
-    the digest is over text that is already canonical.  A holder's is
-    planned: its base, numbered past every other holder of that base the
-    unit writes, in the order the plan first spells them -- the header's
-    first, and one written inside another template's body before that
-    template, whose body names it. *)
+    has to be the same name in both, and every use names what it meant;
+    repeating a [using] with the same definition is legal, which is what
+    lets both declare it.  A holder's body names the holders written inside
+    it by their names, which are functions of their own bodies, so no order
+    of spelling enters any name.  The body is written where the template is
+    declared, with the holder's own parameters for what it captures, so the
+    digest is over text that is already canonical. *)
 let ctor_alias_name a =
-  if a.ca_holder then
-    match List.assoc_opt a.ca_body !ctor_alias_plan.holder_names with
-    | Some name -> name
-    | None when !planning_ctor_aliases ->
-      let names = !ctor_alias_plan.holder_names in
-      let rec fresh i =
-        let name = a.ca_base ^ "_tch" ^ if i = 0 then "" else string_of_int i in
-        if List.exists (fun (_, n) -> String.equal n name) names then fresh (i + 1) else name
-      in
-      let name = fresh 0 in
-      ctor_alias_plan := {!ctor_alias_plan with holder_names = names @ [(a.ca_body, name)]};
-      name
-    | None ->
-      CErrors.anomaly Pp.(str "Crane: a holder of " ++ str a.ca_body ++ str " is written that was not planned.")
-  else a.ca_base ^ "_tc_" ^ String.sub (Digest.to_hex (Digest.string a.ca_body)) 0 16
+  let kind = if a.ca_holder then "_tch_" else "_tc_" in
+  a.ca_base ^ kind ^ String.sub (Digest.to_hex (Digest.string a.ca_body)) 0 16
 
 (** The declaration of [alias].  A holder's parameters are the captured
     names its body writes: one written applied to the alias's own argument

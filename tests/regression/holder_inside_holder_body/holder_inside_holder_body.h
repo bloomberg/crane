@@ -222,7 +222,7 @@ public:
   const crane::lazy<variant_t> &lazy_cell() const { return lazy_v_; }
 };
 
-template <typename CraneP0> struct crane_carrier_tch {
+template <typename CraneP0> struct crane_carrier_tch_f0580980f5c54262 {
   template <typename CraneTcArg> using c = Itree<CraneP0, CraneTcArg>;
 };
 
@@ -234,14 +234,18 @@ struct HolderInsideHolderBody {
     noE() = delete;
   };
 
-  template <typename CraneP0> struct crane_carrier_tch1 {
+  template <typename CraneP0> struct crane_carrier_tch_8ea34c1396504950 {
     template <typename CraneTcArg>
-    using c = stateT<bool, crane_carrier_tch<CraneP0>::template c, CraneTcArg>;
+    using c =
+        stateT<bool, crane_carrier_tch_f0580980f5c54262<CraneP0>::template c,
+               CraneTcArg>;
   };
 
   template <typename T1>
-  static stateT<Nat, crane_carrier_tch1<T1>::template c, Nat> stacked_id(
-      std::type_identity_t<stateT<Nat, crane_carrier_tch1<T1>::template c, Nat>>
+  static stateT<Nat, crane_carrier_tch_8ea34c1396504950<T1>::template c, Nat>
+  stacked_id(
+      std::type_identity_t<
+          stateT<Nat, crane_carrier_tch_8ea34c1396504950<T1>::template c, Nat>>
           m) {
     return m;
   }

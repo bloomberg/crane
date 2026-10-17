@@ -311,13 +311,14 @@ struct CarrierAliasPromoted {
     static memE<ptr> load(ptr a0) { return {std::move(a0)}; }
   };
 
-  template <typename CraneP0> struct crane_carrier_tch {
+  template <typename CraneP0> struct crane_carrier_tch_cb95536bb9bb9fb3 {
     template <typename CraneTcArg>
     using c = Itree<memE<typename CraneP0::ptr>, CraneTcArg>;
   };
 
   template <Params _tcI0>
-  static stateT<Nat, crane_carrier_tch<_tcI0>::template c, Nat> get_st(Nat n) {
+  static stateT<Nat, crane_carrier_tch_cb95536bb9bb9fb3<_tcI0>::template c, Nat>
+  get_st(Nat n) {
     return [=, n = std::move(n)](const Nat &s) {
       return Itree<memE<typename _tcI0::ptr>, std::pair<Nat, Nat>>::go(
           ItreeF<memE<typename _tcI0::ptr>, std::pair<Nat, Nat>,

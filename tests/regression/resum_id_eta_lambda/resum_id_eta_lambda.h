@@ -451,13 +451,13 @@ struct ResumIdEtaLambda {
   template <typename ptr, typename x>
   using BotE = Sum1<aE<ptr>, Sum1<BE, CE, crane::obj>, x>;
 
-  template <typename CraneP0> struct crane_carrier_tch {
+  template <typename CraneP0> struct crane_carrier_tch_6c159993d2c4c06f {
     template <typename CraneTcArg>
     using c = Itree<BotE<typename CraneP0::ptr, crane::obj>, CraneTcArg>;
   };
 
   template <Params _tcI0, typename T1 = void, typename T2, typename CraneP0>
-  static stateT<Nat, crane_carrier_tch<_tcI0>::template c, T2>
+  static stateT<Nat, crane_carrier_tch_6c159993d2c4c06f<_tcI0>::template c, T2>
   fused_trigger(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h0, CraneP0 e) {
     return [=, e = std::move(e), h0 = std::move(h0)](const Nat &s) {
       return ITree::template bind<BotE<typename _tcI0::ptr, crane::obj>, T2,
@@ -481,7 +481,7 @@ struct ResumIdEtaLambda {
   }
 
   template <Params _tcI0, typename T1>
-  static stateT<Nat, crane_carrier_tch<_tcI0>::template c, T1>
+  static stateT<Nat, crane_carrier_tch_6c159993d2c4c06f<_tcI0>::template c, T1>
   h(Sum1<aE<typename _tcI0::ptr>, Sum1<BE, CE, crane::obj>, T1> x) {
     static const auto case_1 = crane::immortal(CategoryOps::template case_<
                                                crane::obj, crane::fn<crane::obj(
@@ -497,8 +497,10 @@ struct ResumIdEtaLambda {
         crane::obj(), crane::obj(), crane::obj(),
         []() {
           return [](const auto &_x0)
-                     -> stateT<Nat, crane_carrier_tch<_tcI0>::template c,
-                               crane::obj> {
+                     -> stateT<
+                         Nat,
+                         crane_carrier_tch_6c159993d2c4c06f<_tcI0>::template c,
+                         crane::obj> {
             return fused_trigger<_tcI0, void, crane::obj>(
                 CategoryOps::template ReSum_inl<
                     crane::obj, crane::fn<crane::obj(crane::obj)>>(
@@ -539,9 +541,10 @@ struct ResumIdEtaLambda {
             },
             crane::obj(), crane::obj(), crane::obj(),
             crane_erase_fn<crane::obj>([]() {
-              return [](BE _x0)
-                         -> stateT<Nat, crane_carrier_tch<_tcI0>::template c,
-                                   crane::obj> {
+              return [](BE _x0) -> stateT<Nat,
+                                          crane_carrier_tch_6c159993d2c4c06f<
+                                              _tcI0>::template c,
+                                          crane::obj> {
                 return fused_trigger<_tcI0, void, crane::obj>(
                     CategoryOps::template ReSum_inr<
                         crane::obj, crane::fn<crane::obj(crane::obj)>>(
@@ -593,9 +596,10 @@ struct ResumIdEtaLambda {
               };
             }()),
             crane_erase_fn<crane::obj>([]() {
-              return [](CE _x0)
-                         -> stateT<Nat, crane_carrier_tch<_tcI0>::template c,
-                                   crane::obj> {
+              return [](CE _x0) -> stateT<Nat,
+                                          crane_carrier_tch_6c159993d2c4c06f<
+                                              _tcI0>::template c,
+                                          crane::obj> {
                 return fused_trigger<_tcI0, void, crane::obj>(
                     CategoryOps::template ReSum_inr<
                         crane::obj, crane::fn<crane::obj(crane::obj)>>(

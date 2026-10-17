@@ -149,7 +149,7 @@ val ctor_aliases_of_type : file:Common.file -> vl:Id.t list -> cpp_type -> ctor_
     ({!ctor_aliases_written}): the header's, then the implementation's. *)
 val plan_ctor_aliases : (Common.file -> ctor_alias list) -> unit
 
-(** The name of a template, as planned. *)
+(** The name of a template, a function of its body. *)
 val ctor_alias_name : ctor_alias -> string
 
 (** The declaration of a template. *)

@@ -134,14 +134,17 @@ struct PartialAppCarrier {
     noE() = delete;
   };
 
-  template <typename CraneP0> struct crane_carrier_tch {
+  template <typename CraneP0> struct crane_carrier_tch_6096434c9c343c6d {
     template <typename CraneTcArg> using c = box<CraneP0, CraneTcArg>;
   };
 
   template <typename T1>
-  static const stateT<Nat, crane_carrier_tch<T1>::template c, Nat> &get_st() {
-    static const stateT<Nat, crane_carrier_tch<T1>::template c, Nat> v =
-        [](const Nat &s) {
+  static const stateT<Nat, crane_carrier_tch_6096434c9c343c6d<T1>::template c,
+                      Nat> &
+  get_st() {
+    static const stateT<Nat, crane_carrier_tch_6096434c9c343c6d<T1>::template c,
+                        Nat>
+        v = [](const Nat &s) {
           return box<T1, std::pair<Nat, Nat>>::box0(std::make_pair(s, s));
         };
     return v;

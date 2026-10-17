@@ -385,13 +385,14 @@ struct CarrierHolderBeforeAlias {
   enum class FailE { FAIL };
   template <typename ptr, typename x> using AllE = Sum1<memE<ptr>, FailE, x>;
 
-  template <typename CraneP0> struct crane_carrier_tch {
+  template <typename CraneP0> struct crane_carrier_tch_39cd911840c5c5a4 {
     template <typename CraneTcArg>
     using c = Itree<AllE<typename CraneP0::ptr, crane::obj>, CraneTcArg>;
   };
 
   template <Params _tcI0>
-  static stateT<Nat, crane_carrier_tch<_tcI0>::template c, Nat> get_st(Nat n) {
+  static stateT<Nat, crane_carrier_tch_39cd911840c5c5a4<_tcI0>::template c, Nat>
+  get_st(Nat n) {
     return [=, n = std::move(n)](const Nat &s) {
       return Itree<AllE<typename _tcI0::ptr, crane::obj>, std::pair<Nat, Nat>>::
           go(ItreeF<AllE<typename _tcI0::ptr, crane::obj>, std::pair<Nat, Nat>,
