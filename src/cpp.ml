@@ -670,7 +670,7 @@ type file_layout = {
       (** The forward declarations of the constrained templates lifted out of
           a wrapper module's functions, in the order the header defines them:
           they go in front of the first chunk of the file that names the
-          struct before defining it ({!place_due_declarations}).  One a
+          struct before defining it ({!Cpp_ast.schedule}).  One a
           top-level element defines is never needed: nothing ahead of the
           element names it, or the struct would not be a template the
           element defines. *)
@@ -880,8 +880,6 @@ let is_erased_alias (_, d) =
   match (d : Cpp_erasure.settled :> cpp_decl) with
   | Dusing {du_rhs = Some rhs; _} -> Cpp_erasure.is_any_shaped rhs
   | _ -> false
-
-type slot = Top_slot | Member_slot of string
 
 (** What writing a structure element gives: its text, written where it is,
     and the concepts it declares that only namespace scope can hold, in the
@@ -3231,111 +3229,6 @@ type wrapper_render = {
   wr_lifted_specs : Cpp_ast.t;
 }
 
-(** Declare each synthesised template the file writes, and each constrained
-    forward declaration it needs, in front of the chunk of [sections] -- the
-    file as written -- that first needs it, read in the order written, which
-    is what puts each in front of its first use wherever the driver put the
-    chunk using it.
-
-    A template goes in front of the innermost chunk holding the first
-    declaration that writes it ({!Cpp_print.carried_by}): one homed in a
-    module in front of that member of the module's struct, any other in
-    front of the innermost top-level chunk, at namespace scope; the holders
-    in front of the aliases, each in the order planned.  One no chunk
-    writes goes after [prologue], ahead of everything.  A constrained
-    forward declaration goes in front of the innermost top-level chunk
-    holding the first declaration that names its struct, and is not needed
-    if that chunk defines the struct. *)
-let place_due_declarations ~is_header ~prologue sections =
-  let templates = Cpp_print.ctor_aliases_declared_in ~file:(if is_header then Common.Intf else Common.Impl) in
-  let constrained = if is_header then !file_layout.constrained_decls else [] in
-  let slot_of_tag t =
-    let n = String.length Cpp_ast.member_slot_tag in
-    if String.equal t Cpp_ast.top_slot_tag then Some Top_slot
-    else if String.starts_with ~prefix:Cpp_ast.member_slot_tag t then
-      Some (Member_slot (String.sub t n (String.length t - n)))
-    else None
-  in
-  (* Where each template and each constrained struct is first needed, and
-     which structs each top-level chunk defines, by chunk, the chunks
-     numbered in the order written. *)
-  let template_slot = Hashtbl.create 16 and struct_slot = Hashtbl.create 16 and defined_in = Hashtbl.create 16 in
-  let count = ref 0 in
-  let rec first_uses ~top ~members d =
-    match Pp.repr d with
-    | Ppcmd_tag (t, d) -> (
-      match slot_of_tag t with
-      | Some Top_slot ->
-        incr count;
-        let k = !count in
-        let defined = first_uses ~top:(Some k) ~members d in
-        Hashtbl.replace defined_in k defined;
-        defined
-      | Some (Member_slot mp) ->
-        incr count;
-        first_uses ~top ~members:((mp, !count) :: members) d
-      | None -> (
-        let inner = first_uses ~top ~members d in
-        match Cpp_ast.carried_by t with
-        | Some (Writes names) ->
-          List.iter
-            (fun name ->
-              match List.find_opt (fun a -> String.equal (Cpp_print.ctor_alias_name a) name) templates with
-              | Some a when not (Hashtbl.mem template_slot name) ->
-                let homed =
-                  Option.bind a.Cpp_print.ca_home (fun home -> List.assoc_opt (ModPath.to_string home) members)
-                in
-                Hashtbl.replace template_slot name (if Option.has_some homed then homed else top)
-              | Some _ | None -> () )
-            names;
-          inner
-        | Some (Names names) ->
-          List.iter (fun name -> if not (Hashtbl.mem struct_slot name) then Hashtbl.replace struct_slot name top) names;
-          inner
-        | Some (Defines names) -> names @ inner
-        | None -> inner ) )
-    | Ppcmd_glue ds -> List.concat_map (first_uses ~top ~members) ds
-    | Ppcmd_box (_, d) -> first_uses ~top ~members d
-    | Ppcmd_empty | Ppcmd_string _ | Ppcmd_print_break _ | Ppcmd_force_newline | Ppcmd_comment _ -> []
-  in
-  let body = prlist (fun x -> x) sections in
-  ignore (first_uses ~top:None ~members:[] body);
-  let template_due k =
-    let due = List.filter (fun a -> Hashtbl.find_opt template_slot (Cpp_print.ctor_alias_name a) = Some k) templates in
-    let holders, aliases = List.partition (fun (a : Cpp_print.ctor_alias) -> a.ca_holder) due in
-    List.map Cpp_print.ctor_alias_declaration (holders @ aliases)
-  in
-  let constrained_due k =
-    List.filter_map
-      (fun (f : Cpp_print.forward_declaration) ->
-        match Hashtbl.find_opt struct_slot f.fwd_struct with
-        | Some (Some k') when k' = k && not (List.mem f.fwd_struct (Hashtbl.find defined_in k)) -> Some f.fwd_text
-        | _ -> None )
-      constrained
-  in
-  let declarations l = prlist_with_sep fnl (fun x -> x) l ++ cut2 () in
-  let in_front due doc = match due with [] -> doc | l -> declarations l ++ doc in
-  let count = ref 0 in
-  let rec placed d =
-    match Pp.repr d with
-    | Ppcmd_tag (t, inner) -> (
-      match slot_of_tag t with
-      | Some Top_slot ->
-        incr count;
-        let k = !count in
-        in_front (constrained_due k @ template_due (Some k)) (Pp.tag t (placed inner))
-      | Some (Member_slot _) ->
-        incr count;
-        let k = !count in
-        in_front (template_due (Some k)) (Pp.tag t (placed inner))
-      | None -> Pp.tag t (placed inner) )
-    | Ppcmd_glue ds -> Pp.unrepr (Ppcmd_glue (List.map placed ds))
-    | Ppcmd_box (b, inner) -> Pp.unrepr (Ppcmd_box (b, placed inner))
-    | Ppcmd_empty | Ppcmd_string _ | Ppcmd_print_break _ | Ppcmd_force_newline | Ppcmd_comment _ -> d
-  in
-  let unwritten = match template_due None with [] -> mt () | l -> declarations l in
-  prologue ++ unwritten ++ placed body
-
 (** The top-level elements a hoisted concept cannot be read without.
 
     Hoisting a file-scope concept to the top of the file is answered, for
@@ -3537,7 +3430,7 @@ let do_struct_with_decl_tracking ~is_header f s =
      file is written, that carries a declaration writing it -- which needs no
      knowledge of what the body names, only of which declaration writes it.
      Each top-level element is such a chunk, and so is each section of the
-     assembled file; see {!place_due_declarations}.
+     assembled file; see {!Cpp_ast.schedule}.
 
      Only a top-level chunk.  A nested element is rendered inside a struct,
      where an alias template would acquire that struct's scope while its use
@@ -3719,7 +3612,7 @@ let do_struct_with_decl_tracking ~is_header f s =
           (* The wrapper struct and what was lifted out of it are elements of
              their own, assembled here rather than by [f]: an alias they spell
              goes in front of them, not in front of the whole section they end
-             up in (see {!place_due_declarations}). *)
+             up in (see {!Cpp_ast.schedule}). *)
           let wrapper_pp = Cpp_ast.top_level wrapper_pp in
           let lifted_pp = Cpp_ast.top_level lifted_pp in
           concat_nonempty cut2 (fun x -> x) [type_pp; wrapper_pp; lifted_pp]
@@ -3904,7 +3797,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   let forward_decls =
     let structs = if is_header then !file_layout.forward_decls else [] in
     (* Aliases go in front of the text that writes them, and only what no
-       text writes is left for the prologue; see {!place_due_declarations}. *)
+       text writes is left for the prologue; see {!Cpp_ast.schedule}. *)
     match structs with
     | [] -> mt ()
     | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
@@ -3967,18 +3860,7 @@ let do_struct_with_decl_tracking ~is_header f s =
         !file_layout.constrained_decls
     else []
   in
-  let scheduled = Cpp_ast.schedule ~templates ~forwards {prologue = forward_decls; sections} in
-  let placed = place_due_declarations ~is_header ~prologue:forward_decls (List.map Cpp_ast.to_pp sections) in
-  if
-    Probe.checking ()
-    && not (String.equal (Pp.string_of_ppcmds placed) (Pp.string_of_ppcmds (Cpp_ast.print scheduled)))
-  then
-    Probe.violation "due declarations"
-      Pp.(
-        str "the "
-        ++ str (Common.file_name (if is_header then Common.Intf else Common.Impl))
-        ++ str " places its due declarations otherwise from its tree than from its tags" );
-  placed ++ fnl ()
+  Cpp_ast.print (Cpp_ast.schedule ~templates ~forwards {prologue = forward_decls; sections}) ++ fnl ()
 
 (** Main entry point: render structure to C++ implementation file. *)
 let pp_struct s =

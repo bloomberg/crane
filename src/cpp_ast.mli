@@ -117,18 +117,3 @@ val schedule : templates:template list -> forwards:forward list -> translation_u
 
 (** The scheduled unit as a document. *)
 val print : scheduled -> Pp.t
-
-(** {2 Transitional}
-
-    The tags the assembled document carries for {!Cpp.place_due_declarations},
-    which reads the slots and needs back out of the printed file. *)
-
-val top_slot_tag : string
-val member_slot_tag : string
-
-type carried =
-  | Writes of string list
-  | Names of string list
-  | Defines of string list
-
-val carried_by : string -> carried option

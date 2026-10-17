@@ -47,23 +47,11 @@ let rec needs = function
 
 let cut2 () = Pp.(brk (0, -100000) ++ brk (0, 0))
 
-let top_slot_tag = "crane.slot"
-let member_slot_tag = "crane.member:"
-let writes_tag = "crane.writes:"
-let names_tag = "crane.names:"
-let defines_tag = "crane.defines:"
-
 let rec to_pp = function
   | Text d -> d
-  | Decl {text; needs} ->
-    let tagged tag names doc = match names with [] -> doc | _ -> Pp.tag (tag ^ String.concat " " names) doc in
-    text
-    |> tagged writes_tag needs.templates
-    |> tagged names_tag needs.names
-    |> tagged defines_tag needs.defines
+  | Decl {text; _} -> text
   | Seq l -> List.fold_left (fun acc t -> Pp.(acc ++ to_pp t)) (Pp.mt ()) l
-  | Top_level t -> Pp.tag top_slot_tag (to_pp t)
-  | Member (mp, t) -> Pp.tag (member_slot_tag ^ ModPath.to_string mp) (to_pp t)
+  | Top_level t | Member (_, t) -> to_pp t
   | Declarations l -> Pp.(prlist_with_sep fnl (fun d -> d) l ++ cut2 ())
 
 type template = {name : string; home : ModPath.t option; holder : bool; declaration : Pp.t}
@@ -142,18 +130,3 @@ let schedule ~templates ~forwards u =
   {opening; body}
 
 let print s = Pp.(s.opening ++ List.fold_left (fun acc t -> acc ++ to_pp t) (mt ()) s.body)
-
-type carried =
-  | Writes of string list
-  | Names of string list
-  | Defines of string list
-
-let carried_by tag =
-  let names prefix =
-    let n = String.length prefix in
-    String.split_on_char ' ' (String.sub tag n (String.length tag - n))
-  in
-  if String.starts_with ~prefix:writes_tag tag then Some (Writes (names writes_tag))
-  else if String.starts_with ~prefix:names_tag tag then Some (Names (names names_tag))
-  else if String.starts_with ~prefix:defines_tag tag then Some (Defines (names defines_tag))
-  else None
