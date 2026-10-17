@@ -2633,7 +2633,7 @@ let plan_scopes s =
   let concept_name r =
     match Module_plan.concept_name r with
     | Some name -> Some name
-    | None -> Option.map Common.last_component (Common.decided_global_name r)
+    | None -> Common.decided_global_name r
   in
   let concept_collision mp sel =
     List.exists

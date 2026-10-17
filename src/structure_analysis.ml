@@ -922,7 +922,7 @@ let collect_concept_renames (s : ml_structure) :
           ( List.fold_left
               (fun acc (ind_ref, _i, ind) ->
                 match ind.ind_kind with
-                | TypeClass _ -> (ind_ref, Common.last_component (Common.pp_global_name Type ind_ref)) :: acc
+                | TypeClass _ -> (ind_ref, Common.pp_global_name Type ind_ref) :: acc
                 | _ -> acc )
               classes (element_inductives se),
             modtypes ) )

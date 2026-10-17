@@ -1913,23 +1913,6 @@ let enum_ctor_name_of_ref kn i j =
     (enum_ctor_names_of_packet consnames).(j - 1)
   | _ -> enum_ctor_name ("ctor" ^ string_of_int j)
 
-(** Split a qualified name at its last [::], as [(qualifier_including_colons,
-    last_component)].  The qualifier is empty when the name is unqualified. *)
-let split_last_component s =
-  match String.rindex_opt s ':' with
-  | Some i when i > 0 && i < String.length s - 1 && s.[i - 1] = ':' ->
-    ( String.sub s 0 (i + 1),
-      String.sub s (i + 1) (String.length s - i - 1) )
-  | _ -> ("", s)
-
-(** The last [::]-separated component of a qualified name. *)
-let last_component s = snd (split_last_component s)
-
-(** Capitalize only the last [::]-separated component of a qualified name. *)
-let capitalize_last_component s =
-  let prefix, suffix = split_last_component s in
-  prefix ^ String.capitalize_ascii suffix
-
 (* ---- Needed C++ headers ---- *)
 
 (* The printer demands no header: a unit's demands are read off what is

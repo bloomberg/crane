@@ -1054,63 +1054,6 @@ let wrapper_qualify (r : GlobRef.t) (name : Cpp_name.t) : Cpp_name.t =
       else Cpp_name.within (Cpp_name.Class struct_name) name
     | Some _, _ -> name )
 
-(** Check if a GlobRef belongs to a wrapper module and return the qualified
-    name. If the reference's module path matches a wrapper module, prepend the
-    struct name. Only qualify ConstRef globals (actual Rocq constants from
-    modules). VarRef globals are lifted declarations (like _foo_aux) that should
-    not be qualified with a wrapper struct name — their modpath comes from
-    Lib.make_kn which reflects the current library, not the wrapper module.
-    @param r the global reference whose module path is checked
-    @param name the unqualified (or partially qualified) C++ name string
-    @return [name] unchanged if [r] is not in a wrapper module; otherwise
-      ["StructName::name"] (or the collision-stripped variant for
-      collision-wrapped modules) *)
-let wrapper_qualify_name_text (r : GlobRef.t) (name : string) : string =
-  match r with
-  | GlobRef.VarRef _ -> name (* Lifted declarations: never qualify *)
-  | _ when Module_plan.is_namespace_scope_ref r ->
-    (* Lifted out of the wrapper's struct, so the struct is not its scope. *)
-    name
-  | _ ->
-    let mp = modpath_of_r r in
-    ( match Module_plan.wrapper mp with
-    | Some (struct_name, role) when not (String.contains name ':') ->
-      (* A bare name is the one a use written inside the reference's own module
-         would say, and the wrapper's name alone does not get back to it: a
-         bystander keeps its own struct, so the path runs through that struct
-         too.  Flattened children have no struct left to name, and for them the
-         wrapper's name is the whole of it. *)
-      let through_child =
-        if role = Module_plan.Bystander then Common.emitted_module_name mp ^ "::" else ""
-      in
-      struct_name ^ "::" ^ through_child ^ name
-    | Some (struct_name, role) when String.contains name ':' ->
-      (* Name is already qualified (e.g., "N::add", as its visibility qualifies it). Only
-         strip the child qualifier for collision-wrapped entries (e.g., BinNat
-         wrapping N). For normal wrappers (e.g., List wrapping list), keep the
-         full qualification. *)
-      if role = Flattened then
-        match
-          String.index_opt name ':'
-        with
-        | Some colon_pos
-          when colon_pos > 0
-               && colon_pos + 1 < String.length name
-               && name.[colon_pos + 1] = ':' ->
-          let func_part =
-            String.sub name (colon_pos + 2) (String.length name - colon_pos - 2)
-          in
-          struct_name ^ "::" ^ func_part
-        | _ -> name
-      else if role = Module_plan.Bystander then
-        (* Nested rather than flattened: the child's own qualifier stays and the
-           wrapper's name goes in front of it, unless it is already there. *)
-        let prefix = struct_name ^ "::" in
-        if String.starts_with ~prefix name then name else prefix ^ name
-      else
-        name
-    | _ -> name )
-
 (** The name a module absorbed into a collision wrapper as a bystander is
     spelled under, when it is named as a module rather than through one of its
     members: the wrapper's name in front of its own, unless already there.

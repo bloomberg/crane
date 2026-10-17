@@ -415,10 +415,6 @@ val is_shadowed_global_name : string -> Names.GlobRef.t -> bool
     @return the possibly-qualified name *)
 val wrapper_qualify : Names.GlobRef.t -> Cpp_name.t -> Cpp_name.t
 
-(* The text version {!wrapper_qualify} replaces, kept as a CRANE_CHECK_IR
-   witness while the migration is verified. *)
-val wrapper_qualify_name_text : Names.GlobRef.t -> string -> string
-
 (** {2 Method registration} *)
 
 (** The candidate a function, given its body and type, is as a method of an
