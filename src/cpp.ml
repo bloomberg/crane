@@ -3257,31 +3257,21 @@ type wrapper_render = {
 }
 
 (** The constrained forward declarations, of those pending in [pending], that
-    [text] needs, taken out of [pending] in the order they were planned:
-    those of the structs it names without defining.  A struct [text] defines
-    is taken out without one -- everything after its definition sees it -- so
-    a template never gets a declaration in front of itself. *)
-let take_constrained_forward_decls pending text =
-  let defines name =
-    let at s = Str.string_match (Str.regexp_string s) in
-    let rec go i =
-      match Str.search_forward (Str.regexp_string ("struct " ^ name)) text i with
-      | j ->
-        let k = j + String.length "struct " + String.length name in
-        (at " {" text k || at " :" text k || at "{" text k) || go (j + 1)
-      | exception Not_found -> false
-    in
-    go 0
-  in
-  let named, rest =
-    List.partition
-      (fun (f : Cpp_print.forward_declaration) -> Cpp_print.mentions_name text f.fwd_struct)
-      !pending
+    the declarations written in [p] need, taken out of [pending] in the order
+    they were planned: those of the structs they name without defining, as
+    [p] carries them ({!Cpp_print.structs_named}).  A struct [p] defines is
+    taken out without one -- everything after its definition sees it -- so a
+    template never gets a declaration in front of itself. *)
+let take_constrained_forward_decls pending p =
+  let named = Cpp_print.structs_named p and defined = Cpp_print.structs_defined_in p in
+  let taken, rest =
+    List.partition (fun (f : Cpp_print.forward_declaration) -> List.mem f.fwd_struct named) !pending
   in
   pending := rest;
   List.filter_map
-    (fun (f : Cpp_print.forward_declaration) -> if defines f.fwd_struct then None else Some f.fwd_text)
-    named
+    (fun (f : Cpp_print.forward_declaration) ->
+      if List.mem f.fwd_struct defined then None else Some f.fwd_text )
+    taken
 
 (** Declare, in front of [p], the synthesised templates the declarations
     written in [p] write, as [p] carries them ({!Cpp_print.ctor_aliases_carried}).
@@ -3303,8 +3293,9 @@ let prefix_due_declarations ~is_header ~constrained p =
     | carried -> prefix (take_ctor_aliases ~select:(carries carried) ~is_header ()) p
   in
   (* A constrained template named ahead of its definition is declared in front
-     of the chunk whose text names it; see {!Cpp_print.forward_declaration}. *)
-  if !constrained <> [] then prefix (take_constrained_forward_decls constrained (Pp.string_of_ppcmds p)) p
+     of the chunk that names it, in the same way; see
+     {!Cpp_print.forward_declaration}. *)
+  if !constrained <> [] then prefix (take_constrained_forward_decls constrained p) p
   else p
 
 (** The top-level elements a hoisted concept cannot be read without.
@@ -3533,6 +3524,10 @@ let do_struct_with_decl_tracking ~is_header f s =
             (function Lifted_from_wrapper, f -> Some f | Defined_by _, _ -> None)
             !file_layout.constrained_decls )
   in
+  Cpp_print.constrained_structs :=
+    if is_header then
+      List.map (fun (_, (f : Cpp_print.forward_declaration)) -> (f.fwd_ref, f.fwd_struct)) !file_layout.constrained_decls
+    else [];
   let prefix_due_declarations = prefix_due_declarations ~constrained in
   let place ~wrapper_specs ~prereq_labels ~hoisted ~prereqs ~concepts ((l, se) as x) =
     let defined = if is_header then declarations [(top_visible_mp (), [x])] else [] in

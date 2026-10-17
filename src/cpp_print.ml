@@ -574,23 +574,6 @@ let report_unspellable where ty =
                @ tagged "skipped module" (List.rev !skipped_mod) ) ) ) )
   end
 
-(** Whether [text] spells [name] as a whole identifier.  An alias's name ends
-    in a digest of its body, but a holder's is numbered ([crane_carrier_tch],
-    [crane_carrier_tch1]), so one can be a prefix of another. *)
-let mentions_name text name =
-  let n = String.length name and m = String.length text in
-  let is_id c =
-    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
-    || c = '_'
-  in
-  let at i =
-    String.sub text i n = name
-    && (i = 0 || not (is_id text.[i - 1]))
-    && (i + n = m || not (is_id text.[i + n]))
-  in
-  let rec go i = i + n <= m && (at i || go (i + 1)) in
-  n > 0 && go 0
-
 (** The C++ identifiers appearing in [text], as whole tokens.  Used to tell
     whether a rendered type body really names a template parameter, which a
     structural walk over the type cannot: a custom mapping's replacement text
@@ -3372,18 +3355,20 @@ let struct_template_head ~pp_param env tparams cstr =
     name the other, [typename StateV<_tcI0>::state] in a member's signature
     against a call to that member in the instance's body. *)
 type forward_declaration = {
+  fwd_ref : GlobRef.t;
   fwd_struct : string;
   fwd_text : Pp.t;
   fwd_constrained : bool;
 }
 
-let forward_declaration ~env ~name ~tparams ~cstr =
+let forward_declaration ~env ~ref ~name ~tparams ~cstr =
   let concept_kinded (tt, _) =
     match tt with
     | TTconcept _ -> true
     | _ -> false
   in
-  { fwd_struct = Pp.string_of_ppcmds name;
+  { fwd_ref = ref;
+    fwd_struct = Pp.string_of_ppcmds name;
     fwd_text =
       struct_template_head ~pp_param:pp_template_param_redecl env tparams cstr
       ++ str "struct " ++ name ++ str ";";
@@ -3398,8 +3383,11 @@ let forward_declaration ~env ~name ~tparams ~cstr =
     is a complete type -- a scoped enum has a fixed underlying type -- so
     replaying it in the header prologue is enough for those members, and the
     definition still follows in its own place. *)
-let enum_forward_declaration name =
-  {fwd_struct = Pp.string_of_ppcmds name; fwd_text = str "enum class " ++ name ++ str ";"; fwd_constrained = false}
+let enum_forward_declaration ~ref name =
+  { fwd_ref = ref;
+    fwd_struct = Pp.string_of_ppcmds name;
+    fwd_text = str "enum class " ++ name ++ str ";";
+    fwd_constrained = false }
 
 (** Render a doc comment as [///]-prefixed lines followed by a newline, or
     [mt ()] if no comment is registered for [name].  This is the single lookup
@@ -3957,25 +3945,41 @@ let rec held_back_assertions (d : Cpp_erasure.settled) =
         pp_global Type subject ++ prlist (fun ty -> str ", " ++ pp_cpp_type false [] ty) tys ) ]
   | Decl _ -> []
 
+(** The structs and scoped enums [d] defines at namespace scope, written
+    in the scope being written, in the order it defines them, each with the
+    reference it is declared under, its definition's template head and its
+    constraint. *)
+type defined =
+  | Defined_struct of GlobRef.t * Pp.t * (template_type * Id.t) list * cpp_constraint option
+  | Defined_enum of GlobRef.t
+
+let rec structs_defined (d : Cpp_erasure.settled) =
+  match Cpp_erasure.view d with
+  | Template (_, _, inner) -> structs_defined inner
+  | Namespace (None, decls) -> List.concat_map structs_defined decls
+  | Namespace (Some id, members) -> (
+    match (members :> cpp_decl list) with
+    | [Dstruct {ds_tparams; ds_constraint; _}] when nspace_merges {dw_ref = id; dw_sole_child = true} ->
+      [Defined_struct (id, str (nspace_wrapper_name id), ds_tparams, ds_constraint)]
+    | _ -> [] )
+  | Decl (Dstruct {ds_ref; ds_tparams; ds_constraint; _}) ->
+    [Defined_struct (ds_ref, struct_definition_name ds_ref, ds_tparams, ds_constraint)]
+  | Decl (Denum {de_ref; _}) -> [Defined_enum de_ref]
+  | Decl _ -> []
+
+let defined_ref = function Defined_struct (r, _, _, _) | Defined_enum r -> r
+
 (** The forward declarations of the structs and scoped enums [d] defines at
     namespace scope, in the order it defines them: none inside a struct,
     where a member is not nameable before its enclosing struct anyway. *)
-let rec forward_declarations env (d : Cpp_erasure.settled) =
+let forward_declarations env (d : Cpp_erasure.settled) =
   if (!render_ctx).rc_in_struct then []
   else
-    match Cpp_erasure.view d with
-    | Template (_, _, inner) -> forward_declarations env inner
-    | Namespace (None, decls) -> List.concat_map (forward_declarations env) decls
-    | Namespace (Some id, members) -> (
-      match (members :> cpp_decl list) with
-      | [Dstruct {ds_tparams; ds_constraint; _}] when nspace_merges {dw_ref = id; dw_sole_child = true} ->
-        [ forward_declaration ~env ~name:(str (nspace_wrapper_name id)) ~tparams:ds_tparams
-            ~cstr:ds_constraint ]
-      | _ -> [] )
-    | Decl (Dstruct {ds_ref; ds_tparams; ds_constraint; _}) ->
-      [forward_declaration ~env ~name:(struct_definition_name ds_ref) ~tparams:ds_tparams ~cstr:ds_constraint]
-    | Decl (Denum {de_ref; _}) -> [enum_forward_declaration (enum_definition_name de_ref)]
-    | Decl _ -> []
+    List.map
+      (function
+        | Defined_struct (ref, name, tparams, cstr) -> forward_declaration ~env ~ref ~name ~tparams ~cstr
+        | Defined_enum r -> enum_forward_declaration ~ref:r (enum_definition_name r) )
+      (structs_defined d)
 
 (** [pp_initialiser env ty e] prints [e] as the initialiser of something
     declared with type [ty].
@@ -4480,29 +4484,51 @@ and pp_leaf_decl env (d : cpp_decl) =
     ++ fnl ()
     ++ str "};"
 
-(** The tag a declaration's text carries naming the synthesised templates
-    the declaration writes ({!ctor_aliases_written}).  It travels with the
-    text however the text is assembled, so where a template is declared --
-    in front of the first text that writes it -- is read off what was
-    written, not searched for in it. *)
+(** What a declaration's text carries, as tags that travel with the text
+    however it is assembled, so that where a declaration it needs is placed
+    -- in front of the first text that needs it -- is read off what was
+    written, not searched for in it: the synthesised templates the
+    declaration writes ({!ctor_aliases_written}); and, of the structs the
+    file has constrained forward declarations of ({!constrained_structs}),
+    those it names or defines, and those it defines. *)
 let writes_tag = "crane.writes:"
+let names_tag = "crane.names:"
+let defines_tag = "crane.defines:"
+
+(** The structs the file being written has constrained forward declarations
+    of, planned with its layout, each by its reference and the name its
+    declaration declares. *)
+let constrained_structs : (GlobRef.t * string) list ref = State.cell State.Unit []
 
 let pp_cpp_decl env settled =
-  let doc = pp_cpp_decl env settled in
-  match ctor_aliases_written ~file:(ctor_alias_file ()) settled with
+  let tagged tag names doc = match names with [] -> doc | _ -> Pp.tag (tag ^ String.concat " " names) doc in
+  let doc =
+    tagged writes_tag
+      (List.map ctor_alias_name (ctor_aliases_written ~file:(ctor_alias_file ()) settled))
+      (pp_cpp_decl env settled)
+  in
+  match !constrained_structs with
   | [] -> doc
-  | written -> Pp.tag (writes_tag ^ String.concat " " (List.map ctor_alias_name written)) doc
+  | constrained ->
+    let of_refs refs =
+      List.filter_map (fun (r, name) -> if List.exists (GlobRef.UserOrd.equal r) refs then Some name else None) constrained
+    in
+    let defined = List.map defined_ref (structs_defined settled) in
+    doc
+    |> tagged names_tag (of_refs (defined @ Cpp_demands.globals_of_decl (settled :> cpp_decl)))
+    |> tagged defines_tag (of_refs defined)
 
-let ctor_aliases_carried doc =
+(* The names [doc] carries under [tag], in the order first carried. *)
+let carried tag doc =
   let found = ref [] in
   let rec go d =
     match Pp.repr d with
-    | Pp.Ppcmd_tag (tag, d) ->
-      if String.starts_with ~prefix:writes_tag tag then begin
-        let n = String.length writes_tag in
+    | Pp.Ppcmd_tag (t, d) ->
+      if String.starts_with ~prefix:tag t then begin
+        let n = String.length tag in
         List.iter
           (fun name -> if not (List.mem name !found) then found := name :: !found)
-          (String.split_on_char ' ' (String.sub tag n (String.length tag - n)))
+          (String.split_on_char ' ' (String.sub t n (String.length t - n)))
       end;
       go d
     | Ppcmd_glue ds -> List.iter go ds
@@ -4511,6 +4537,10 @@ let ctor_aliases_carried doc =
   in
   go doc;
   List.rev !found
+
+let ctor_aliases_carried = carried writes_tag
+let structs_named = carried names_tag
+let structs_defined_in = carried defines_tag
 
 (** The break between two declaration groups.  It is a break hint, not a
     forced newline, so the vertical box the whole file is printed in

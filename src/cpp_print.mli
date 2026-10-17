@@ -105,6 +105,7 @@ val held_back_assertions : Cpp_erasure.settled -> (Cpp_state.held_concept * Pp.t
     template -- one whose [requires] clause or concept-kinded parameter names
     a concept, which the header's prologue need not have declared. *)
 type forward_declaration = {
+  fwd_ref : GlobRef.t;  (** The struct or enum it declares. *)
   fwd_struct : string;
   fwd_text : Pp.t;
   fwd_constrained : bool;
@@ -167,12 +168,22 @@ val start_ctor_alias_census : unit -> unit
     plan. *)
 val check_ctor_alias_plan : file:Common.file -> unit
 
-(** Whether [text] spells [name] as a whole identifier. *)
-val mentions_name : string -> string -> bool
-
 (** The names of the synthesised templates the declarations whose text
     [doc] holds write, in the order first carried ({!pp_cpp_decl}). *)
 val ctor_aliases_carried : Pp.t -> string list
+
+(** The structs the file being written has constrained forward declarations
+    of, each by its reference and the name its declaration declares; a
+    declaration's text carries those it names or defines. *)
+val constrained_structs : (GlobRef.t * string) list ref
+
+(** The names, of the {!constrained_structs}, that the declarations whose
+    text [doc] holds name or define. *)
+val structs_named : Pp.t -> string list
+
+(** The names, of the {!constrained_structs}, that the declarations whose
+    text [doc] holds define. *)
+val structs_defined_in : Pp.t -> string list
 
 (** Whether an expression is a lambda that captures nothing, or one such
     invoked at once with no argument: the same value wherever it is evaluated
