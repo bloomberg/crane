@@ -453,7 +453,7 @@ let is_any_type = Cpp_erasure.is_any_shaped
     seen keeps the old behaviour; and a file-scope name that a struct also
     declares as a member still resolves to the member, because the body of an
     out-of-line definition is inside its class's scope. *)
-let file_scope_type_names : CString.Set.t ref = ref CString.Set.empty
+let file_scope_type_names : CString.Set.t ref = State.cell State.Unit CString.Set.empty
 
 let is_file_scope_type id =
   CString.Set.mem (Id.to_string id) !file_scope_type_names
