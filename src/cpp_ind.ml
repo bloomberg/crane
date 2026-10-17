@@ -738,6 +738,15 @@ let regenerating f =
   rechecking := true;
   Fun.protect ~finally:(fun () -> rechecking := outer) f
 
+(* Set while what was generated ahead is read to plan what the files will
+   write of it ({!peeking}): nothing is generated, recorded or claimed. *)
+let peeked = ref false
+
+let peeking f =
+  let outer = !peeked in
+  peeked := true;
+  Fun.protect ~finally:(fun () -> peeked := outer) f
+
 (* [compare] rather than [=]: a NaN literal is equal to itself. *)
 let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) =
   compare a.gf_entity b.gf_entity = 0
@@ -754,8 +763,9 @@ let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) 
     [CRANE_CHECK_IR] it generates it again and compares the two with
     [same].  That nothing was recorded there is a walk ahead that missed a
     declaration a render reaches, an anomaly about [what].  While planning,
-    it is [gen ()]. *)
-let ahead_once ~what ~recorded ~record ~same ?(planned = ignore) ?(take = Fun.id) gen =
+    it is [gen ()].  Read while {!peeking}, it is what was recorded, handed
+    to [peek] for what taking it would give without taking it. *)
+let ahead_once ~what ~recorded ~record ~same ?(planned = ignore) ?(take = Fun.id) ?(peek = Fun.id) gen =
   match get_phase () with
   | Plan -> gen ()
   | Emit _ when !ahead && not !rechecking ->
@@ -766,6 +776,7 @@ let ahead_once ~what ~recorded ~record ~same ?(planned = ignore) ?(take = Fun.id
   | Emit _ -> (
     let mp = top_visible_mp () in
     match List.find_map (fun (mp', v) -> if ModPath.equal mp' mp then Some v else None) (recorded ()) with
+    | Some v when !peeked -> peek v
     | Some v ->
       let taken = if !rechecking then v else take v in
       if Sys.getenv_opt "CRANE_CHECK_IR" <> None
@@ -827,6 +838,11 @@ let () = State.on_reset State.Unit (fun () -> Node_table.reset header_claims)
 let plan_header_claim key lifted =
   Node_table.replace header_claims (Obj.repr key) (List.filter (newly_placed header_placed) lifted)
 
+let planned_claim key =
+  match Node_table.find_opt header_claims (Obj.repr key) with
+  | Some planned -> planned
+  | None -> CErrors.anomaly Pp.(str "Crane: a generation was read whose helpers' placement was not planned.")
+
 (** [header_claim key lifted] is what {!plan_header_claim} planned the
     generation [key] places of [lifted]. *)
 let header_claim key lifted =
@@ -853,12 +869,13 @@ let header_claim key lifted =
 (** [generated_once ?on_reuse node gen] is {!ahead_once} for the functions
     generated at the MiniML node [node]: a file's pass hands them to
     [on_reuse] to replay any effect generating them had. *)
-let generated_once ?(on_reuse = ignore) ?planned node gen =
+let generated_once ?(on_reuse = ignore) ?(on_peek = ignore) ?planned node gen =
   let recorded, record = in_node_table generated node in
   ahead_once ~what:(fun () -> Pp.str "a function") ~recorded ~record
     ~same:(List.equal same_generation)
     ?planned
     ~take:(fun funs -> on_reuse funs; funs)
+    ~peek:(fun funs -> on_peek funs; funs)
     gen
 
 (** [generate d] is what the MiniML declaration [d] generates, for whichever
@@ -936,8 +953,10 @@ let generate d =
     let lifted funs = List.concat_map (fun g -> g.Gen_decls.gf_lifted) funs in
     let claimed = ref None in
     let reuse funs = claimed := Some (header_claim funs (lifted funs)) in
+    let peek funs = claimed := Some (planned_claim funs) in
     let funs =
-      generated_once ~planned:(fun funs -> plan_header_claim funs (lifted funs)) ~on_reuse:reuse d gen
+      generated_once ~planned:(fun funs -> plan_header_claim funs (lifted funs)) ~on_reuse:reuse
+        ~on_peek:peek d gen
     in
     let helpers =
       match !claimed with
@@ -1146,6 +1165,7 @@ let instance_entity r a t =
       let helpers = header_claim v lifted in
       ignore (record_entity r (List.map snd ds) helpers);
       (ds, helpers) )
+    ~peek:(fun ((ds, _) as v) -> (ds, planned_claim v))
     (fun () -> Translation.collecting_lifted (fun () -> instance_decls r a t))
 
 (** {2 The header's scope of a module}
@@ -1339,6 +1359,7 @@ let header_entity d gen =
       let helpers = header_claim v lifted in
       ignore (record_entity (decl_entity d) (List.map snd g.decls) helpers);
       (g, helpers) )
+    ~peek:(fun ((g, _) as v) -> (g, planned_claim v))
     (fun () -> Translation.collecting_lifted gen)
 
 let finished_header = finished_group ~what:"a header declaration"
@@ -1408,7 +1429,7 @@ let regenerate_ahead d =
 let decls_for ~is_header d =
   match generate d with
   | Functions {funs; lifted} ->
-    record_funs ~fallback:(decl_entity d) funs;
+    if not !peeked then record_funs ~fallback:(decl_entity d) funs;
     let lifted_inline, helpers =
       match lifted with
       | Inline -> (true, [])
@@ -1418,8 +1439,10 @@ let decls_for ~is_header d =
     { rendered = function_views ~is_header ~lifted_inline funs; helpers }
   | Header_only gen when is_header ->
     let g, helpers = header_entity d gen in
-    defer deferred_member_defs (finished_header g.member_defs);
-    Option.iter (fun sft -> eponymous_promote_sft := sft) g.promoted_sft;
+    if not !peeked then begin
+      defer deferred_member_defs (finished_header g.member_defs);
+      Option.iter (fun sft -> eponymous_promote_sft := sft) g.promoted_sft
+    end;
     { rendered = finished_header g.decls; helpers }
   | Instance (r, a, t) when is_header ->
     let ds, helpers = instance_entity r a t in
@@ -1428,3 +1451,8 @@ let decls_for ~is_header d =
 
 let impl_decls = decls_for ~is_header:false
 let header_decls = decls_for ~is_header:true
+
+(** What the header writes for the declaration [d] and the helpers it
+    places, read off what was generated ahead of the files without taking
+    it: nothing is recorded, claimed or deferred. *)
+let header_element_ahead d = peeking (fun () -> header_decls d)

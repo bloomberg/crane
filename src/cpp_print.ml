@@ -973,10 +973,102 @@ let pp_written_head ~lead h =
   ++ Cpp_name.pp_scopes h.outer
   ++ Cpp_name.pp ~template_keyword:h.template_keyword h.head
 
+(** Whether text no name was written through -- an external name, a custom
+    mapping's replacement -- qualifies a name into something other than one
+    of the included libraries' namespaces: the identifier in front of each
+    [::] is the qualifier. *)
+let text_names_into_a_struct text =
+  let libraries = ["std"; "crane"; (sn ()).ns] in
+  let n = String.length text in
+  let is_ident c =
+    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c = '_'
+  in
+  let rec scan i =
+    if i + 1 >= n then false
+    else if text.[i] = ':' && text.[i + 1] = ':' then
+      let stop = ref i in
+      while !stop > 0 && is_ident text.[!stop - 1] do decr stop done;
+      let qualifier = String.sub text !stop (i - !stop) in
+      if List.mem qualifier libraries then scan (i + 2) else true
+    else scan (i + 1)
+  in
+  scan 0
+
+(** Whether one thing a rendering writes ({!Cpp_name.written}) is a qualifier
+    naming into a struct or a template parameter rather than a namespace. *)
+let writes_into_a_struct = function
+  | Cpp_name.Scope (Cpp_name.Namespace _ | Cpp_name.Global) -> false
+  | Cpp_name.Scope (Cpp_name.Class _ | Cpp_name.Parameter _) -> true
+  | Cpp_name.Foreign_text text | Cpp_name.Untagged text -> text_names_into_a_struct text
+
+let scopes_name_into_a_struct = List.exists (fun s -> writes_into_a_struct (Cpp_name.Scope s))
+
+(** Whether the head [h] is written through a struct or a template
+    parameter. *)
+let head_names_into_a_struct h =
+  scopes_name_into_a_struct (h.outer @ Cpp_name.scopes h.head)
+  || match h.head with Cpp_name.Foreign text -> text_names_into_a_struct text | Cpp_name.Name _ -> false
+
 (** The spelling of an external type's name: the configured library's vector
     for the standard one. *)
 let external_type_name id_s =
   if String.equal id_s "std::vector" && (sn ()).ns <> "std" then "bsl::vector" else id_s
+
+(** Whether the type [t] writes a qualifier into a struct or a template
+    parameter, asked of the type rather than of its rendering: each name is
+    the one {!pp_cpp_type} writes, from the same heads, in the render context
+    the caller has set.  [None] where only the rendering can tell -- an
+    expression's type, and a type constructor named as a template argument,
+    whose alias is minted as it is written. *)
+let rec type_names_into_a_struct t =
+  let any ts =
+    List.fold_left
+      (fun acc t -> match acc with Some true | None -> acc | Some false -> type_names_into_a_struct t)
+      (Some false) ts
+  in
+  let ( ||? ) b rest = if b then Some true else rest in
+  match t with
+  | Tvar _ | Tinstance _ | Tvoid | Thole | Tdecltype_auto | Terased _ | Tany | Topaque -> Some false
+  | Tunresolved -> None
+  | Tpromoted id -> Some (scopes_name_into_a_struct (Option.default [] (member_scopes id)))
+  | Tid (id, args) -> scopes_name_into_a_struct (Option.default [] (member_scopes id)) ||? any args
+  | Tid_external (id_s, args) -> text_names_into_a_struct (external_type_name id_s) ||? any args
+  | Tglob (r, tys, _) -> (
+    match find_custom_opt r with
+    | Some s when to_inline r -> text_names_into_a_struct s ||? any tys
+    | _ ->
+      head_names_into_a_struct (glob_head r ~applied:(tys <> [])) ||? any tys )
+  | Tnamespace ((GlobRef.IndRef _ as r), Tglob (r', args, _)) when globref_equal r r' ->
+    head_names_into_a_struct (inductive_head r' ~applied:(args <> [])) ||? any args
+  | Tnamespace _ | Tqualified _ | Tapply (Tqualified _, _) -> Some true
+  | Tapply (head, args) -> any (head :: args)
+  | Tfun (dom, cod) -> any (cod :: dom)
+  | Tnondeduced t | Tref (_, t) | Tptr t | Tconst t | Tshared_ptr t -> type_names_into_a_struct t
+  | Trebind (h, x) -> any [h; x]
+  | Tvariant (_, tys) -> any tys
+  | Texpr_type _ | Ttyctor _ | Tdecay _ | Tauto -> None
+
+(** Whether [d], written as a member of a struct body, is a static function
+    declaration ending at its semicolon: no body, no initialiser, no
+    template head. *)
+let is_static_member_declaration (d : cpp_decl) =
+  match d with Dfun {df_shape = Ddecl _; _} -> true | _ -> false
+
+(** Whether the function declaration [d] writes a qualifier into a struct or
+    a template parameter, in its name, its result or its parameters ({!type_names_into_a_struct}); [None]
+    for anything else, or where only its rendering can tell. *)
+let declaration_names_into_a_struct (d : cpp_decl) =
+  match d with
+  | Dfun {df_path = {dp_outer; dp_inner}; df_ret; df_shape = Ddecl params; _} ->
+    let path = dp_outer :: dp_inner in
+    if List.exists (fun (n, _) -> head_names_into_a_struct (unqualified_head (global_name Type n))) path
+    then Some true
+    else
+      List.fold_left
+        (fun acc t -> match acc with Some false -> type_names_into_a_struct t | _ -> acc)
+        (Some false)
+        ((df_ret :: List.map snd params) @ List.concat_map snd path)
+  | _ -> None
 
 (** Pretty-print a MiniCpp type as C++ source text.
 

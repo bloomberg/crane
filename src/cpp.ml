@@ -529,31 +529,7 @@ let rec lifted_decl_key = function
     qualifying into a struct would drag the whole block below that struct --
     past the uses it exists to precede -- so what it costs is the position, for
     every other helper in the block. *)
-let names_into_a_struct (doc : Pp.t) : bool =
-  let libraries = ["std"; "crane"; (sn ()).ns] in
-  let text_names_into_a_struct text =
-    let n = String.length text in
-    let is_ident c =
-      (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
-      || c = '_'
-    in
-    let rec scan i =
-      if i + 1 >= n then false
-      else if text.[i] = ':' && text.[i + 1] = ':' then
-        let stop = ref i in
-        while !stop > 0 && is_ident text.[!stop - 1] do decr stop done;
-        let qualifier = String.sub text !stop (i - !stop) in
-        if List.mem qualifier libraries then scan (i + 2) else true
-      else scan (i + 1)
-    in
-    scan 0
-  in
-  List.exists
-    (function
-      | Cpp_name.Scope (Cpp_name.Namespace _ | Cpp_name.Global) -> false
-      | Cpp_name.Scope (Cpp_name.Class _ | Cpp_name.Parameter _) -> true
-      | Cpp_name.Foreign_text text | Cpp_name.Untagged text -> text_names_into_a_struct text )
-    (Cpp_name.written doc)
+let names_into_a_struct (doc : Pp.t) : bool = List.exists writes_into_a_struct (Cpp_name.written doc)
 
 let spec_is_hoistable (spec : Cpp_erasure.settled) : bool =
   not (names_into_a_struct (pp_cpp_decl (empty_env ()) spec))
@@ -663,6 +639,25 @@ let module_struct_is_hoistable doc =
     && List.for_all is_static_decl members
     && not (names_into_a_struct doc)
   | _ -> false
+
+(** The modules whose structs the header declares ahead of the file, by the
+    module path of their body: planned before either file is rendered
+    ({!plan_hoisted_structs}). *)
+let hoisted_structs : MPset.t ref = State.cell State.Unit MPset.empty
+
+(** Whether the struct of the module whose body is [mp] is declared ahead of
+    the file, as planned.  Under [CRANE_CHECK_IR] the plan must agree with
+    [rendered ()], the same question asked of the rendered struct
+    ({!module_struct_is_hoistable}). *)
+let struct_hoists mp ~rendered =
+  let planned = MPset.mem mp !hoisted_structs in
+  if Probe.checking () && planned <> rendered () then
+    Probe.violation "hoisted structs"
+      Pp.(
+        str "the struct of the module " ++ str (ModPath.to_string mp)
+        ++ str (if planned then " was planned to be declared ahead of the file and is not hoistable"
+                else " is hoistable and was not planned to be declared ahead of the file") );
+  planned
 
 (** The module structs this file's pass chose to declare ahead of everything,
     newest first.  Emptied by the assembly at the end of
@@ -1475,9 +1470,10 @@ let rec pp_structure_elem ~is_header f = function
         is_header
         && (not (!render_ctx).rc_in_struct)
         && (match m.ml_mod_expr with
-           | MEstruct (_, sel) -> module_members_name_only_inductives sel
+           | MEstruct (body_mp, sel) ->
+             struct_hoists body_mp ~rendered:(fun () ->
+                 module_members_name_only_inductives sel && module_struct_is_hoistable whole )
            | _ -> false)
-        && module_struct_is_hoistable whole
       then (
         hoisted_module_structs := whole :: !hoisted_module_structs;
         mt () )
@@ -1948,7 +1944,10 @@ let registered_methods ?(order = Fun.id) kn ind =
     local; [after_wrapper ()] once a wrapper module's elements have all
     been walked, still inside it; [after_module frame sel] once the body of
     a module of elements [sel] has been walked, still in its frame [frame]
-    but no longer inside it; [modtype path ~params mt] at each module type
+    but no longer inside it; [in_body ~wrapper mp sel] once the elements
+    [sel] of a module [mp] written as a struct -- a wrapper module, or a
+    module of the unit's -- have all been walked, still inside it;
+    [modtype path ~params mt] at each module type
     [mt] whose concept the header writes, where it writes it: a module's
     in its frame, a top-level one in place, a functor body's at the
     functor.  A
@@ -1957,7 +1956,8 @@ let registered_methods ?(order = Fun.id) kn ind =
     its parameters visible in it.  Each module is walked in the visibility
     planned for it ({!in_planned_visibility}), as the render writes it. *)
 let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
-    ?(after_module = fun _ _ -> ()) ?(modtype = fun _ ~params mt -> Modtype_concept.generate ~params mt)
+    ?(after_module = fun _ _ -> ()) ?(in_body = fun ~wrapper:_ _ _ -> ())
+    ?(modtype = fun _ ~params mt -> Modtype_concept.generate ~params mt)
     ~decl s =
   let order l = if reversed then List.rev l else l in
   let analysis = get_structure_analysis () in
@@ -2050,7 +2050,8 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
     | MEstruct (mp, sel) ->
       in_module mp sel (fun () ->
           with_local_inductives (declared_inductives mp sel) (fun () ->
-              List.iter (elem ~wrapper:false) (order sel) ) )
+              List.iter (elem ~wrapper:false) (order sel);
+              in_body ~wrapper:false mp sel ) )
     | MEident _ | MEapply _ | MEfunctor _ -> ()
   in
   let rec all_inductives sel =
@@ -2070,7 +2071,8 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
       if mi.wrapper_name <> None then
         in_module mi.modpath mi.sels (fun () ->
             List.iter (elem ~wrapper:true) (order mi.sels);
-            after_wrapper () ) )
+            after_wrapper ();
+            in_body ~wrapper:true mi.modpath mi.sels ) )
     (order analysis.sorted_modules);
   let file_inductives =
     if modular () then
@@ -2314,6 +2316,72 @@ let generate_ahead s =
         | SEdecl d -> Cpp_ind.regenerate_ahead d
         | _ -> ())
       s
+
+(** The declarations the header writes in the struct of the module [mp] of
+    elements [sel], read off what was generated ahead of the files
+    ({!Cpp_ind.header_element_ahead}), or [None] where the struct holds
+    something more: a nested module or module type, a concept, the fields of
+    a merged record, a helper's definition.  A wrapper module's struct holds
+    the declarations of its functions ({!pp_wrapper_module_dual}); any other
+    module's holds what each of its elements is written as there. *)
+let struct_members ~wrapper mp sel =
+  let decls (rendered : Cpp_ind.rendered) = List.map (fun (_, d) -> (d : Cpp_erasure.settled :> cpp_decl)) rendered in
+  with_render_ctx (fun c -> {c with rc_in_struct = true; rc_in_template = false; rc_scope = None})
+  @@ fun () ->
+  if wrapper then
+    let generated =
+      List.filter_map
+        (fun (_, se) ->
+          match wrapper_element se with
+          | Wrapper_functions (_, generate) -> Some (generate ())
+          | Wrapper_instance _ | Wrapper_nothing -> None )
+        sel
+    in
+    Some
+      (List.concat_map
+         (fun (specs, _) -> List.map (fun (d, _) -> (d : Cpp_erasure.settled :> cpp_decl)) specs)
+         (file_views ~is_header:true generated) )
+  else
+    let frame = Module_frame.planned mp in
+    if
+      frame.promoted <> None || merged_eponymous_record frame <> None || frame.concept_collision
+      || declared_classes sel <> []
+    then None
+    else
+      List.fold_left
+        (fun acc (_, se) ->
+          match (acc, se) with
+          | None, _ | _, (SEmodule _ | SEmodtype _) -> None
+          | Some members, SEdecl d -> (
+            match Cpp_ind.header_element_ahead d with
+            | {rendered; helpers = []} -> Some (members @ decls rendered)
+            | {helpers = _ :: _; _} -> None ) )
+        (Some []) sel
+
+(** Plan which modules' structs the header declares ahead of the file
+    ({!module_struct_is_hoistable}): wrapper modules, and modules written
+    outside every struct and every class template a functor becomes, whose members' types name only inductives
+    ({!module_members_name_only_inductives}), and whose struct holds nothing
+    but static function declarations naming nothing inside another struct.
+    Asked of what was generated ahead of the files, in the context the
+    header writes each struct in ({!walk_as_rendered}), before either file is
+    rendered. *)
+let plan_hoisted_structs s =
+  let hoists ~wrapper mp sel =
+    (wrapper || (outside_every_struct mp && not (Scope_plan.templated mp)))
+    && module_members_name_only_inductives sel
+    && Option.cata
+         (List.for_all (fun d ->
+              is_static_member_declaration d && declaration_names_into_a_struct d = Some false ) )
+         false
+         (struct_members ~wrapper mp sel)
+  in
+  Cpp_ind.peeking @@ fun () ->
+  walk_as_rendered
+    ~decl:(fun ~wrapper:_ _ -> ())
+    ~in_body:(fun ~wrapper mp sel ->
+      if hoists ~wrapper mp sel then hoisted_structs := MPset.add mp !hoisted_structs )
+    s
 
 (* The declarations of [s], a functor's body's among them, in order. *)
 let declarations s =
@@ -3344,8 +3412,8 @@ let do_struct_with_decl_tracking ~is_header f s =
                 Hashtbl.remove pending_wrapper_decls name;
                 let struct_pp = pp_wrapper_struct name specs in
                 if
-                  module_members_name_only_inductives sel
-                  && module_struct_is_hoistable struct_pp
+                  struct_hoists mp ~rendered:(fun () ->
+                      module_members_name_only_inductives sel && module_struct_is_hoistable struct_pp )
                 then (
                   hoisted_module_structs := struct_pp :: !hoisted_module_structs;
                   mt () )

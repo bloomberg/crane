@@ -31,6 +31,26 @@ val pp_cpp_field :
     longer one. *)
 val pp_cpp_type : ?lead:bool -> bool -> Id.t list -> cpp_type -> Pp.t
 
+(** Whether one thing a rendering writes ({!Cpp_name.written}) is a
+    qualifier naming into a struct or a template parameter rather than a
+    namespace: a tagged scope by its kind, untagged text by the identifier in
+    front of each [::], which passes only as an included library's
+    namespace. *)
+val writes_into_a_struct : Cpp_name.written -> bool
+
+(** Whether a declaration, written as a member of a struct body, is a static
+    function declaration ending at its semicolon. *)
+val is_static_member_declaration : cpp_decl -> bool
+
+(** Whether a function declaration writes a qualifier into a struct or a
+    template parameter, in its name, result or parameters, asked of the
+    declaration rather than of its rendering: each name is the one
+    {!pp_cpp_type} writes, from the same heads, in the render context the
+    caller has set.  [None] for anything but a function declaration, and
+    where only the rendering can tell -- an expression's type, a type
+    constructor named as a template argument. *)
+val declaration_names_into_a_struct : cpp_decl -> bool option
+
 (** Doc-comment lines for [name], or nothing when none is registered. *)
 val pp_doc_comment_for_name : ?indent:string -> string -> Pp.t
 

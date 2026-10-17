@@ -1596,6 +1596,8 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   Pipeline_trace.event "emit" "generate_ahead";
   Cpp.generate_ahead struc;
   Common.plan_written_files (Cpp.files_named_ahead struc);
+  Pipeline_trace.event "emit" "plan_hoisted_structs";
+  Cpp.plan_hoisted_structs struc;
   let generated_checkpoint = checkpoint () in
   let body_impl, body_hstruct =
     if intf_first then

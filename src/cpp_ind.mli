@@ -81,9 +81,11 @@ val plan_instance_methods :
     emission decides nothing the plan has not, so it is what the pass would
     generate -- handing it to [on_reuse] to replay any effect generating it
     had; that nothing was is an anomaly.  [CRANE_CHECK_IR] regenerates and
-    checks. *)
+    checks.  Read while peeking ({!header_element_ahead}), it is what was
+    recorded, handed to [on_peek] in place of [on_reuse]. *)
 val generated_once :
   ?on_reuse:(Gen_decls.generated_fun list -> unit) ->
+  ?on_peek:(Gen_decls.generated_fun list -> unit) ->
   ?planned:(Gen_decls.generated_fun list -> unit) ->
   'node ->
   (unit -> Gen_decls.generated_fun list) ->
@@ -258,6 +260,12 @@ val finished_record_methods :
     nothing. *)
 val regenerating : (unit -> 'a) -> 'a
 
+(** [peeking f] runs [f], reading what was generated ahead of the files to
+    plan what they will write of it: what {!ahead_once} recorded is handed
+    out without being taken -- nothing is recorded, claimed or deferred --
+    and a lifted helper's placement is the planned one. *)
+val peeking : (unit -> 'a) -> 'a
+
 (** [regenerate_ahead d] generates again what {!generate_ahead} generated
     for [d], checking it ({!regenerating}). *)
 val regenerate_ahead : Miniml.ml_decl -> unit
@@ -318,4 +326,10 @@ val impl_decls : Miniml.ml_decl -> element
 
 (** The header declarations for one MiniML declaration. *)
 val header_decls : Miniml.ml_decl -> element
+
+(** What {!header_decls} gives for a declaration, read off what was generated
+    ahead of the files without taking it: nothing is recorded, claimed or
+    deferred, and the helpers are those the header is planned to place
+    there. *)
+val header_element_ahead : Miniml.ml_decl -> element
 
