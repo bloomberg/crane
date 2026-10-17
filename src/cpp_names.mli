@@ -8,7 +8,16 @@
    context. Cached predicates over the name-resolution cache ([with_cache],
    [*_cached]) keep repeated lookups cheap. *)
 
-(** {2 String and [Pp.t] renderings of globals} *)
+(** {2 Names of globals} *)
+
+(** The name of a global, using an explicit [KerName.t] key: the replacement
+    text of an inline custom mapping, otherwise as resolution settles it where
+    the printer is. *)
+val global_name_with_key :
+  Common.kind -> Names.KerName.t -> Names.GlobRef.t -> Cpp_name.t
+
+(** {!global_name_with_key} using the default key. *)
+val global_name : Common.kind -> Names.GlobRef.t -> Cpp_name.t
 
 (** Render a global to a string, using an explicit [KerName.t] key. *)
 val str_global_with_key :
@@ -24,9 +33,12 @@ val pp_global_with_key :
 (** Pretty-print a global. *)
 val pp_global : Common.kind -> Names.GlobRef.t -> Pp.t
 
-(** The name a typeclass concept is declared and referenced under: the last
-    component of its C++ name, since a concept may only appear at namespace
-    scope and so carries no qualifier. *)
+(** The name a typeclass concept is declared and referenced under: its short
+    name, since a concept may only appear at namespace scope and so carries no
+    struct qualifier; a use in another file names that file's namespace. *)
+val concept_name : Names.GlobRef.t -> Cpp_name.t
+
+(** {!concept_name} as text. *)
 val concept_name_of_ref : Names.GlobRef.t -> string
 
 (** {!concept_name_of_ref} as a [Pp.t]. *)
@@ -61,34 +73,46 @@ val pp_field : Names.GlobRef.t -> Names.GlobRef.t option list -> int -> Pp.t
 
 (** {2 Name predicates and inductive/enum naming} *)
 
-(** Whether a string is already a qualified (namespaced) name. *)
-val is_qualified_name : string -> bool
-
 (** Whether the inductive is a record. *)
 val is_record_inductive : Names.GlobRef.t -> bool
 
 (** Whether the inductive is local. *)
 val is_local_inductive : Names.GlobRef.t -> bool
 
-(** The pretty-printed inductive name and whether it is (e.g.) local/record. *)
-val inductive_name_info : Names.GlobRef.t -> Pp.t * bool
+(** The name with its final component capitalized. *)
+val capitalize_base : Cpp_name.t -> Cpp_name.t
+
+(** [String.capitalize_ascii] of the name's text: the first character of its
+    outermost qualifier, or of its base when it has none. *)
+val capitalize_initial : Cpp_name.t -> Cpp_name.t
+
+(** An inductive's name, and whether it is a non-local inductive's, which
+    is capitalized and stands for the inductive's namespace wrapper. *)
+val inductive_name : Names.GlobRef.t -> Cpp_name.t * bool
 
 (** Whether an enum name collides with its parent's name. *)
 val enum_name_collides_with_parent : Names.GlobRef.t -> bool
 
-(** Capitalize an enum name for the given global. *)
+(** Capitalize an enum's (unqualified) declared name for the given global. *)
 val capitalize_enum_name : string -> Names.GlobRef.t -> string
 
-(** Capitalize an enum's qualified name for the given global. *)
-val capitalize_enum_qualified : string -> Names.GlobRef.t -> string
+(** An enum's name, its final component capitalized unless that collides
+    with its parent module's struct name. *)
+val enum_name : Cpp_name.t -> Names.GlobRef.t -> Cpp_name.t
 
-(** The C++ name of a promoted (inductive) constructor/type. *)
-val cpp_name_of_promoted : string -> string
+(** The name of a promoted inductive, which is its module's struct, from its
+    resolved name. *)
+val promoted_name : Cpp_name.t -> Cpp_name.t
 
-(** Deduplicate a repeated trailing qualifier in a qualified name. *)
-val dedup_qualified_tail : ?allow_bare:bool -> string -> string
+(** The name without a trailing [A::A] qualifier repeating its final
+    component; [allow_bare] also collapses an unqualified-but-for-it [A::A]
+    to [A]. *)
+val dedup_tail : ?allow_bare:bool -> Cpp_name.t -> Cpp_name.t
 
-(** Pretty-print the C++ type name of an inductive. *)
+(** The C++ type name of an inductive. *)
+val inductive_type_name : Names.GlobRef.t -> Cpp_name.t
+
+(** {!inductive_type_name} as a document. *)
 val pp_inductive_type_name : Names.GlobRef.t -> Pp.t
 
 (** How an inductive's struct is spelled where it is declared. *)
@@ -120,19 +144,25 @@ val struct_declaration_name :
   Names.GlobRef.t ->
   string
 
-(** The [typename] prefix required for the given qualified name. *)
-val typename_prefix_for : string -> Pp.t
+(** The [typename] prefix required for the given name, if qualified. *)
+val typename_prefix_for : Cpp_name.t -> Pp.t
 
 (** {2 Struct and namespace qualification} *)
 
-(** The struct qualifier needed to reach a global from the given context. *)
-val struct_qualifier_for : Names.GlobRef.t -> string -> Pp.t
+(** The struct qualifiers needed in front of a global's type name, written
+    otherwise as given, from the given context. *)
+val struct_scopes_for : Names.GlobRef.t -> Cpp_name.t -> Cpp_name.scope list
 
-val global_scope_qualifier_for : Names.GlobRef.t -> string -> Pp.t
+(** The global-scope qualifier needed in front of an inductive's type name,
+    written otherwise as given, where a nested struct shadows it. *)
+val global_scopes_for : Names.GlobRef.t -> Cpp_name.t -> Cpp_name.scope list
+
+(** {!Cpp_state.wrapper_qualify}. *)
+val wrapper_qualify : Names.GlobRef.t -> Cpp_name.t -> Cpp_name.t
 
 (** The name a type is written under from outside the wrapper struct that owns
     it; the name unchanged while that struct's own body is being printed. *)
-val wrapper_qualified_type_name : Names.GlobRef.t -> string -> string
+val wrapper_qualified_type_name : Names.GlobRef.t -> Cpp_name.t -> Cpp_name.t
 
 (** Whether the global must be referenced with a global-scope qualifier. *)
 val needs_global_qualifier : Names.GlobRef.t -> bool

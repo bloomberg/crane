@@ -29,53 +29,61 @@ open Cpp_state
     update table of content for modules. Many [let] below should not be altered
     since they force evaluation order. *)
 
-(** Print a global reference as a C++ name string, respecting custom mappings
-    and inline extraction.
+(** The name of a global reference: the replacement text of an inline custom
+    mapping, otherwise as resolution settles it where the printer is.
     @param k  the extraction key category (e.g. [Type] or [Term])
     @param key the [KerName] used as the lookup key in the name table
-    @param r  the global reference to print
-    @return the C++ name string for [r] *)
-let str_global_with_key k key r =
+    @param r  the global reference to name *)
+let global_name_with_key k key r =
   match find_custom_opt r with
-  | Some custom_str when to_inline r -> custom_str
-  | _ -> Common.pp_global_with_key k key r
+  | Some custom_str when to_inline r -> Cpp_name.foreign custom_str
+  | _ -> Common.global_name_with_key k key r
 
-(** Print a global reference as a C++ name string using the default key. *)
-let str_global k r = str_global_with_key k (repr_of_r r) r
+(** {!global_name_with_key} using the default key. *)
+let global_name k r = global_name_with_key k (repr_of_r r) r
 
-(** Pretty-print a global reference as a Pp.t, with explicit key.
-    @param k  the extraction key category (e.g. [Type] or [Term])
-    @param key the [KerName] used as the lookup key in the name table
-    @param r  the global reference to pretty-print
-    @return a [Pp.t] rendering of the C++ name for [r] *)
-let pp_global_with_key k key r = str (str_global_with_key k key r)
+(** {!global_name_with_key} as text. *)
+let str_global_with_key k key r = Cpp_name.to_string (global_name_with_key k key r)
 
-(** Pretty-print a global reference as a Pp.t. *)
-let pp_global k r = str (str_global k r)
+(** {!global_name} as text. *)
+let str_global k r = Cpp_name.to_string (global_name k r)
+
+(** {!global_name_with_key} as a document. *)
+let pp_global_with_key k key r = Cpp_name.pp (global_name_with_key k key r)
+
+(** {!global_name} as a document. *)
+let pp_global k r = Cpp_name.pp (global_name k r)
 
 (** The name a typeclass concept is declared and referenced under.  A concept
     may only appear at namespace scope, so it is hoisted out of every
     enclosing struct and carries no struct qualifier -- neither at its
     declaration nor at its uses.  A use in another file still names the file's
     namespace. *)
-let concept_name_of_ref r =
+let concept_name r =
   let name =
     match Module_plan.concept_name r with
     | Some name -> name
-    | None -> Common.last_component (Common.pp_global_name Type r)
+    | None ->
+      let short = Common.pp_global_name Type r in
+      if Probe.checking () && not (String.equal (Common.last_component short) short) then
+        Probe.violation "structured name: qualified short name" (str short);
+      short
   in
   match Common.file_qualifier Type r with
-  | Some file -> file ^ "::" ^ name
-  | None -> name
+  | Some file -> Cpp_name.name [Cpp_name.Namespace file] name
+  | None -> Cpp_name.unqualified name
 
-(** {!concept_name_of_ref} as a [Pp.t]. *)
-let pp_concept_name_of_ref r = str (concept_name_of_ref r)
+(** {!concept_name} as text. *)
+let concept_name_of_ref r = Cpp_name.to_string (concept_name r)
+
+(** {!concept_name} as a document. *)
+let pp_concept_name_of_ref r = Cpp_name.pp (concept_name r)
 
 (** Pretty-print a global name (without custom mapping) as a Pp.t. *)
-let pp_global_name k r = str (Common.pp_global k r)
+let pp_global_name k r = Cpp_name.pp (Common.global_name k r)
 
 (** Pretty-print a module path as a Pp.t. *)
-let pp_modname mp = str (Common.pp_module mp)
+let pp_modname mp = Cpp_name.pp (Common.resolve_module mp)
 
 (** Check if a non-local inductive's Dnspace wrapper was merged with its inner
     struct. Returns true if the wrapper WAS merged (no pending declarations →
@@ -145,161 +153,116 @@ let mp_relation_to ~struct_mp r =
   else if mp_encloses r_mp struct_mp then Ancestor
   else Unrelated
 
-(** Check if a type name is already qualified (contains ::) *)
-let is_qualified_name name_str = String.contains name_str ':'
+(** The text functions the structural ones below replace, verbatim, kept as
+    the CRANE_CHECK_IR witness while the migration is verified. *)
+module Text_witness = struct
+  let is_qualified_name name_str = String.contains name_str ':'
 
-(** Check if a GlobRef is a record type (not a regular inductive). Records don't
-    get wrapped in namespace structs, so they keep their original case. *)
-let is_record_inductive r =
-  match r with
-  | GlobRef.IndRef _ -> Table.get_record_fields r <> []
-  | _ -> false
+  let is_record_inductive r =
+    match r with
+    | GlobRef.IndRef _ -> Table.get_record_fields r <> []
+    | _ -> false
 
-(** Check if a GlobRef refers to a local inductive (defined in current module
-    scope). Local inductives don't need namespace qualification (e.g.,
-    List::list vs just list). *)
-let is_local_inductive r =
-  List.exists (globref_equal r) (Translation_state.get_local_inductives ())
+  let is_local_inductive r =
+    List.exists (globref_equal r) (Translation_state.get_local_inductives ())
 
-(** Get the appropriate name for an inductive reference.
-    - Local inductives: original name directly (e.g., "list", "EvenTree")
-    - Non-local inductives: capitalized name (e.g., "List", "Nat") Returns
-      (name_pp, needs_namespace) where:
-    - name_pp is the printed name
-    - needs_namespace indicates if this is a non-local inductive (capitalized)
-*)
-let inductive_name_info r =
-  match r with
-  | GlobRef.IndRef _ when Module_plan.is_eponymous_record r ->
-    (str (Common.pp_type_name_capitalized r), false)
-  | GlobRef.IndRef _ when Ref.User.Tbl.mem promoted_inductives r ->
-    let s = str_global Type r in
-    let cap = if Common.get_force_cross_file_qualification ()
-              then Common.capitalize_last_component s
-              else String.capitalize_ascii s in
-    (str cap, false)
-  | GlobRef.IndRef _ when is_local_inductive r ->
-    if Common.get_force_cross_file_qualification ()
-    then (str (String.capitalize_ascii (Common.pp_global_name Type r)), false)
-    else (pp_global Type r, false)
-  | GlobRef.IndRef _ ->
-    let s = str_global Type r in
-    let cap = if Common.get_force_cross_file_qualification ()
-              then Common.capitalize_last_component s
-              else String.capitalize_ascii s in
-    (str cap, true)
-  | _ -> (pp_global Type r, false)
+  let inductive_name_info r =
+    match r with
+    | GlobRef.IndRef _ when Module_plan.is_eponymous_record r ->
+      (str (Common.pp_type_name_capitalized r), false)
+    | GlobRef.IndRef _ when Ref.User.Tbl.mem promoted_inductives r ->
+      let s = str_global Type r in
+      let cap = if Common.get_force_cross_file_qualification ()
+                then Common.capitalize_last_component s
+                else String.capitalize_ascii s in
+      (str cap, false)
+    | GlobRef.IndRef _ when is_local_inductive r ->
+      if Common.get_force_cross_file_qualification ()
+      then (str (String.capitalize_ascii (Common.pp_global_name Type r)), false)
+      else (pp_global Type r, false)
+    | GlobRef.IndRef _ ->
+      let s = str_global Type r in
+      let cap = if Common.get_force_cross_file_qualification ()
+                then Common.capitalize_last_component s
+                else String.capitalize_ascii s in
+      (str cap, true)
+    | _ -> (pp_global Type r, false)
 
-(** Check if capitalizing an enum type name would collide with its parent
-    module's struct name. Returns true if so. *)
-let enum_name_collides_with_parent r =
-  match r with
-  | GlobRef.IndRef (kn, _) ->
-    let base_name = Common.pp_global_name Type r in
-    let capitalized = String.capitalize_ascii base_name in
-    let parent_mp = Names.MutInd.modpath kn in
-    ( match parent_mp with
-    | Names.ModPath.MPdot (_, label) ->
-      String.equal
-        capitalized
-        (String.capitalize_ascii (Names.Label.to_string label))
-    | _ -> false )
-  | _ -> false
+  let enum_name_collides_with_parent r =
+    match r with
+    | GlobRef.IndRef (kn, _) ->
+      let base_name = Common.pp_global_name Type r in
+      let capitalized = String.capitalize_ascii base_name in
+      let parent_mp = Names.MutInd.modpath kn in
+      ( match parent_mp with
+      | Names.ModPath.MPdot (_, label) ->
+        String.equal
+          capitalized
+          (String.capitalize_ascii (Names.Label.to_string label))
+      | _ -> false )
+    | _ -> false
 
-(** Capitalize an enum type name, avoiding collision with parent module.
-    @param s the base (unqualified) name string of the enum type
-    @param r the [GlobRef] of the enum inductive, used for collision detection
-    @return [s] unchanged if capitalization would collide with the parent
-            module's struct name; otherwise [String.capitalize_ascii s] *)
-let capitalize_enum_name s r =
-  if enum_name_collides_with_parent r then
-    s
-  else
-    String.capitalize_ascii s
+  let capitalize_enum_name s r =
+    if enum_name_collides_with_parent r then s else String.capitalize_ascii s
 
-(** Same as capitalize_enum_name but for qualified names (capitalize last
-    component).
-    @param s the fully-qualified C++ name string (may contain [::])
-    @param r the [GlobRef] of the enum inductive, used for collision detection
-    @return [s] unchanged on collision; otherwise the name with its last
-            [::]-separated component capitalized *)
-let capitalize_enum_qualified s r =
-  if enum_name_collides_with_parent r then
-    s
-  else
-    Common.capitalize_last_component s
+  let capitalize_enum_qualified s r =
+    if enum_name_collides_with_parent r then s else Common.capitalize_last_component s
 
-(** Compute the C++ name for a promoted inductive (one that IS its module
-    struct) from the fully-qualified Rocq path [base] = [str_global Type r].
-    Strips the inductive's own lowercase label when it matches the parent
-    module name (case-insensitively), so that e.g. ["Foo::foo"] → ["Foo"] and
-    ["Ns::Trie::trie"] → ["Ns::Trie"].  Falls back to capitalizing the last
-    component for bare strings (["foo"] → ["Foo"]). *)
-let cpp_name_of_promoted (base : string) : string =
-  match String.rindex_opt base ':' with
-  | Some last_colon when last_colon > 0 ->
-    let last = String.sub base (last_colon + 1) (String.length base - last_colon - 1) in
-    let prev_start =
-      if last_colon > 1 then
-        match String.rindex_from_opt base (last_colon - 2) ':' with
-        | Some j -> j + 1
-        | None -> 0
-      else 0
-    in
-    let parent =
-      if last_colon > 1 then
-        String.sub base prev_start (last_colon - 1 - prev_start)
-      else ""
-    in
-    if String.equal (String.lowercase_ascii parent) (String.lowercase_ascii last) then
-      let prefix =
-        if prev_start > 2 then String.sub base 0 (prev_start - 2) ^ "::"
+  let cpp_name_of_promoted (base : string) : string =
+    match String.rindex_opt base ':' with
+    | Some last_colon when last_colon > 0 ->
+      let last = String.sub base (last_colon + 1) (String.length base - last_colon - 1) in
+      let prev_start =
+        if last_colon > 1 then
+          match String.rindex_from_opt base (last_colon - 2) ':' with
+          | Some j -> j + 1
+          | None -> 0
+        else 0
+      in
+      let parent =
+        if last_colon > 1 then
+          String.sub base prev_start (last_colon - 1 - prev_start)
         else ""
       in
-      prefix ^ String.capitalize_ascii parent
-    else
-      Common.capitalize_last_component base
-  | _ ->
-    String.capitalize_ascii base
+      if String.equal (String.lowercase_ascii parent) (String.lowercase_ascii last) then
+        let prefix =
+          if prev_start > 2 then String.sub base 0 (prev_start - 2) ^ "::"
+          else ""
+        in
+        prefix ^ String.capitalize_ascii parent
+      else
+        Common.capitalize_last_component base
+    | _ ->
+      String.capitalize_ascii base
 
-(** Deduplicate trailing A::A in a qualified C++ name.  When the last two
-    "::" components are equal and [allow_bare] is false, collapse only if
-    there is an outer prefix (e.g. "X::A::A" → "X::A").  When [allow_bare]
-    is true, also collapse bare "A::A" → "A".  Returns the (possibly
-    shortened) string unchanged if no dedup applies.  A leading [::], naming
-    the global scope, is not a component: it stays in front of the result. *)
-let rec dedup_qualified_tail ?(allow_bare = false) cap =
-  match String.rindex_opt cap ':' with
-  | _ when String.starts_with ~prefix:"::" cap ->
-    "::" ^ dedup_qualified_tail ~allow_bare (String.sub cap 2 (String.length cap - 2))
-  | Some last_colon when last_colon < String.length cap - 1 ->
-    let last = String.sub cap (last_colon + 1) (String.length cap - last_colon - 1) in
-    let prev_start =
-      if last_colon > 1 then
-        match String.rindex_from_opt cap (last_colon - 2) ':' with
-        | Some j -> j + 1
-        | None -> 0
-      else 0
-    in
-    let parent =
-      if last_colon > 1 then
-        String.sub cap prev_start (last_colon - 1 - prev_start)
-      else ""
-    in
-    if String.equal parent last && (prev_start > 0 || allow_bare) then
-      let prefix =
-        if prev_start > 2 then String.sub cap 0 (prev_start - 2) ^ "::"
+  let rec dedup_qualified_tail ?(allow_bare = false) cap =
+    match String.rindex_opt cap ':' with
+    | _ when String.starts_with ~prefix:"::" cap ->
+      "::" ^ dedup_qualified_tail ~allow_bare (String.sub cap 2 (String.length cap - 2))
+    | Some last_colon when last_colon < String.length cap - 1 ->
+      let last = String.sub cap (last_colon + 1) (String.length cap - last_colon - 1) in
+      let prev_start =
+        if last_colon > 1 then
+          match String.rindex_from_opt cap (last_colon - 2) ':' with
+          | Some j -> j + 1
+          | None -> 0
+        else 0
+      in
+      let parent =
+        if last_colon > 1 then
+          String.sub cap prev_start (last_colon - 1 - prev_start)
         else ""
       in
-      prefix ^ last
-    else cap
-  | _ -> cap
+      if String.equal parent last && (prev_start > 0 || allow_bare) then
+        let prefix =
+          if prev_start > 2 then String.sub cap 0 (prev_start - 2) ^ "::"
+          else ""
+        in
+        prefix ^ last
+      else cap
+    | _ -> cap
 
-(** Pretty-print the C++ type name for an inductive reference, handling
-    eponymous records, promoted inductives, enums, locals, and merged/unmerged
-    wrappers. *)
-let pp_inductive_type_name r =
-  let result =
+  let pp_inductive_type_name r =
     match r with
     | GlobRef.IndRef _ when Module_plan.is_eponymous_record r ->
       let cap_name = Common.pp_type_name_capitalized r in
@@ -347,105 +310,357 @@ let pp_inductive_type_name r =
         let wrapper = String.capitalize_ascii base in
         str (wrapper ^ "::" ^ base)
     | _ -> pp_global Type r
+
+  let struct_qualifier_for r name_str =
+    match (!render_ctx).rc_scope with
+    | Some scope when not (!render_ctx).rc_in_struct ->
+      let struct_name_str = Scope_plan.qualifier scope in
+      let struct_name = str struct_name_str in
+      let relation = mp_relation_to ~struct_mp:scope.Scope_plan.module_ r in
+      let member_of_struct () = relation = Member in
+      if Common.contains_substring name_str (struct_name_str ^ "::") then
+        mt ()
+      else if
+        Ref.User.Tbl.mem promoted_inductives r
+        && ModPath.equal (modpath_of_r r) scope.Scope_plan.module_
+      then
+        match List.rev scope.Scope_plan.qualifier with
+        | _ :: (_ :: _ as enclosing) -> str (String.concat "::" (List.rev enclosing)) ++ str "::"
+        | _ -> mt ()
+      else if Module_plan.is_eponymous_record r then
+        if member_of_struct () then struct_name ++ str "::" else mt ()
+      else if is_record_inductive r && not (is_local_inductive r) then
+        mt ()
+      else if Table.is_enum_inductive r then
+        if Module_plan.is_global_scope_enum r then mt ()
+        else if member_of_struct () then struct_name ++ str "::"
+        else mt ()
+      else if Module_plan.is_global_scope_type r then
+        mt ()
+      else (
+        match relation with
+        | Member -> struct_name ++ str "::"
+        | Unrelated -> mt ()
+        | Ancestor -> (
+          match Scope_plan.of_module (modpath_of_r r) with
+          | Some sc when Common.is_struct_module (modpath_of_r r) ->
+            str (Scope_plan.qualifier sc) ++ str "::"
+          | _ -> mt () ) )
+    | _ -> mt ()
+
+  let global_scope_qualifier_for r name_str =
+    match r with
+    | GlobRef.IndRef _ when not (is_qualified_name name_str) ->
+      if Cpp_state.is_shadowed_global_name name_str r then str "::" else mt ()
+    | _ -> mt ()
+end
+
+(** Under [CRANE_CHECK_IR], that a structural answer reads as the text one. *)
+let witness what ~structural ~text =
+  if Probe.checking () && not (String.equal structural text) then
+    Probe.violation ("structured name: " ^ what) (str (structural ^ " but the text says " ^ text))
+
+let scopes_text scopes = String.concat "" (List.map (fun s -> Cpp_name.scope_text s ^ "::") scopes)
+
+(** Check if a GlobRef is a record type (not a regular inductive). Records don't
+    get wrapped in namespace structs, so they keep their original case. *)
+let is_record_inductive r =
+  match r with
+  | GlobRef.IndRef _ -> Table.get_record_fields r <> []
+  | _ -> false
+
+(** Check if a GlobRef refers to a local inductive (defined in current module
+    scope). Local inductives don't need namespace qualification (e.g.,
+    List::list vs just list). *)
+let is_local_inductive r =
+  List.exists (globref_equal r) (Translation_state.get_local_inductives ())
+
+(** [String.capitalize_ascii] of the name's text: the first character of its
+    outermost qualifier, or of its base when it has none. *)
+let capitalize_initial n =
+  let cap = String.capitalize_ascii in
+  match n with
+  | Cpp_name.Name {scopes = []; base} -> Cpp_name.unqualified (cap base)
+  | Cpp_name.Name {scopes = Cpp_name.Global :: _; _} -> n
+  | Cpp_name.Name {scopes = s :: rest; base} ->
+    let s =
+      match s with
+      | Cpp_name.Namespace t -> Cpp_name.Namespace (cap t)
+      | Cpp_name.Class t -> Cpp_name.Class (cap t)
+      | Cpp_name.Parameter t -> Cpp_name.Parameter (cap t)
+      | Cpp_name.Global -> Cpp_name.Global
+    in
+    Cpp_name.name (s :: rest) base
+  | Cpp_name.Foreign text -> Cpp_name.foreign (cap text)
+
+(** The name with its final component capitalized. *)
+let capitalize_base = Cpp_name.map_base String.capitalize_ascii
+
+(** A type's struct name is its own, capitalized: under separate
+    extraction's full qualification that is the final component; otherwise
+    the name's initial, which is the final component's whenever the name is
+    unqualified. *)
+let capitalize_struct n =
+  if Common.get_force_cross_file_qualification () then capitalize_base n else capitalize_initial n
+
+(** Get the appropriate name for an inductive reference.
+    - Local inductives: original name directly (e.g., "list", "EvenTree")
+    - Non-local inductives: capitalized name (e.g., "List", "Nat")
+    Returns the name and whether it is a non-local inductive's
+    (capitalized) one. *)
+let inductive_name r =
+  let n, needs_ns =
+    match r with
+    | GlobRef.IndRef _ when Module_plan.is_eponymous_record r ->
+      (Cpp_name.unqualified (Common.pp_type_name_capitalized r), false)
+    | GlobRef.IndRef _ when Ref.User.Tbl.mem promoted_inductives r ->
+      (capitalize_struct (global_name Type r), false)
+    | GlobRef.IndRef _ when is_local_inductive r ->
+      if Common.get_force_cross_file_qualification () then
+        (Cpp_name.unqualified (String.capitalize_ascii (Common.pp_global_name Type r)), false)
+      else (global_name Type r, false)
+    | GlobRef.IndRef _ -> (capitalize_struct (global_name Type r), true)
+    | _ -> (global_name Type r, false)
   in
-  result
+  if Probe.checking () then begin
+    let text, text_ns = Text_witness.inductive_name_info r in
+    witness "inductive_name" ~structural:(Cpp_name.to_string n) ~text:(Pp.string_of_ppcmds text);
+    if needs_ns <> text_ns then Probe.violation "structured name: inductive_name namespace" (GlobRef.print r)
+  end;
+  (n, needs_ns)
+
+(** Check if capitalizing an enum type name would collide with its parent
+    module's struct name. Returns true if so. *)
+let enum_name_collides_with_parent r =
+  match r with
+  | GlobRef.IndRef (kn, _) ->
+    let base_name = Common.pp_global_name Type r in
+    let capitalized = String.capitalize_ascii base_name in
+    let parent_mp = Names.MutInd.modpath kn in
+    ( match parent_mp with
+    | Names.ModPath.MPdot (_, label) ->
+      String.equal
+        capitalized
+        (String.capitalize_ascii (Names.Label.to_string label))
+    | _ -> false )
+  | _ -> false
+
+(** Capitalize an enum type name, avoiding collision with parent module.
+    @param s the base (unqualified) name string of the enum type
+    @param r the [GlobRef] of the enum inductive, used for collision detection
+    @return [s] unchanged if capitalization would collide with the parent
+            module's struct name; otherwise [String.capitalize_ascii s] *)
+let capitalize_enum_name s r =
+  if enum_name_collides_with_parent r then
+    s
+  else
+    String.capitalize_ascii s
+
+(** An enum's name, its final component capitalized unless that would collide
+    with its parent module's struct name. *)
+let enum_name n r =
+  let e = if enum_name_collides_with_parent r then n else capitalize_base n in
+  witness "enum_name" ~structural:(Cpp_name.to_string e)
+    ~text:(Text_witness.capitalize_enum_qualified (Cpp_name.to_string n) r);
+  e
+
+(** The name of a promoted inductive (one that IS its module struct), from its
+    resolved name: the inductive's own label goes when it is its parent
+    module's, case aside, so that [Foo::foo] is [Foo] and [Ns::Trie::trie] is
+    [Ns::Trie]; otherwise the final component is capitalized. *)
+let promoted_name n =
+  let p =
+    match n with
+    | Cpp_name.Name {scopes; base} -> (
+      match List.rev scopes with
+      | (Cpp_name.Namespace parent | Cpp_name.Class parent | Cpp_name.Parameter parent) :: rev_outer
+        when String.equal (String.lowercase_ascii parent) (String.lowercase_ascii base) ->
+        Cpp_name.name (List.rev rev_outer) (String.capitalize_ascii parent)
+      | _ -> capitalize_base n )
+    | Cpp_name.Foreign _ -> capitalize_base n
+  in
+  witness "promoted_name" ~structural:(Cpp_name.to_string p)
+    ~text:(Text_witness.cpp_name_of_promoted (Cpp_name.to_string n));
+  p
+
+(** The name without a trailing [A::A]: when its innermost qualifier is its
+    final component, the qualifier goes -- if another qualifier is left in
+    front of it ([X::A::A] is [X::A]), or [allow_bare] allows none ([A::A] is
+    [A]).  A leading [::] names the global scope and is no qualifier here. *)
+let dedup_tail ?(allow_bare = false) n =
+  let d =
+    match n with
+    | Cpp_name.Name {scopes; base} -> (
+      let global, inner =
+        match scopes with Cpp_name.Global :: rest -> ([Cpp_name.Global], rest) | s -> ([], s)
+      in
+      match List.rev inner with
+      | last :: rev_outer
+        when last <> Cpp_name.Global
+             && String.equal (Cpp_name.scope_text last) base
+             && (rev_outer <> [] || allow_bare) ->
+        Cpp_name.name (global @ List.rev rev_outer) base
+      | _ -> n )
+    | Cpp_name.Foreign _ -> n
+  in
+  witness "dedup_tail" ~structural:(Cpp_name.to_string d)
+    ~text:(Text_witness.dedup_qualified_tail ~allow_bare (Cpp_name.to_string n));
+  d
+
+(** The C++ type name for an inductive reference, handling eponymous records,
+    promoted inductives, enums, locals, and merged/unmerged wrappers. *)
+let inductive_type_name r =
+  let force = Common.get_force_cross_file_qualification () in
+  let n =
+    match r with
+    | GlobRef.IndRef _ when Module_plan.is_eponymous_record r ->
+      let cap_name = Common.pp_type_name_capitalized r in
+      if force && Cpp_name.is_qualified (global_name Type r) then
+        Cpp_name.name [Cpp_name.Class cap_name] cap_name
+      else Cpp_name.unqualified cap_name
+    | GlobRef.IndRef _ when Ref.User.Tbl.mem promoted_inductives r ->
+      if is_local_inductive r then
+        Cpp_name.unqualified (String.capitalize_ascii (Common.pp_global_name Type r))
+      else promoted_name (global_name Type r)
+    | GlobRef.IndRef _ when is_record_inductive r -> global_name Type r
+    | GlobRef.IndRef _ when is_enum_inductive r ->
+      let n = global_name Type r in
+      enum_name
+        (if Cpp_name.is_qualified n then n
+         else Cpp_name.unqualified (Common.pp_global_name Type r))
+        r
+    | GlobRef.IndRef _ when is_local_inductive r ->
+      if force then capitalize_base (global_name Type r) else global_name Type r
+    | GlobRef.IndRef _ ->
+      let n = global_name Type r in
+      if Cpp_name.is_qualified n then
+        if not force then n
+        else if is_merged_inductive r then promoted_name n
+        else capitalize_base n
+      else if is_merged_inductive r then capitalize_initial n
+      else Cpp_name.inside (capitalize_initial n) (fun s -> Cpp_name.Class s) n
+    | _ -> global_name Type r
+  in
+  witness "inductive_type_name" ~structural:(Cpp_name.to_string n)
+    ~text:(Pp.string_of_ppcmds (Text_witness.pp_inductive_type_name r));
+  n
+
+(** {!inductive_type_name} as a document. *)
+let pp_inductive_type_name r = Cpp_name.pp (inductive_type_name r)
 
 (** Add typename prefix for dependent types in template contexts. C++ requires
     'typename' keyword when accessing nested types in templates. *)
-let typename_prefix_for name_str =
-  if (!render_ctx).rc_in_template && is_qualified_name name_str then
+let typename_prefix_for n =
+  if (!render_ctx).rc_in_template && Cpp_name.is_qualified n then
     str "typename "
   else
     mt ()
 
-(** Add struct qualification prefix when generating out-of-struct definitions.
+(** Whether the qualifiers [quals], outermost first, are written in [n],
+    one after another. *)
+let names_through n quals =
+  let texts = List.map Cpp_name.scope_text (Cpp_name.scopes n) in
+  let rec starts_with = function
+    | _, [] -> true
+    | t :: ts, q :: qs -> String.equal t q && starts_with (ts, qs)
+    | [], _ :: _ -> false
+  in
+  let rec somewhere = function
+    | [] -> quals = []
+    | _ :: rest as ts -> starts_with (ts, quals) || somewhere rest
+  in
+  match n with
+  | Cpp_name.Foreign text -> Common.contains_substring text (String.concat "::" quals ^ "::")
+  | Cpp_name.Name _ -> somewhere texts
+
+(** The struct qualifiers to write in front of [r]'s type name [n] when
+    generating out-of-struct definitions.
 
     In a [.cpp] file, types defined inside the enclosing struct need to be
     qualified (e.g. [MyStruct::NestedType]) because the return-type position
-    is outside the class scope.  This function decides whether to prepend
-    [struct_name::] for a given global reference [r] whose printed name is
-    [name_str].
-    @param r        the global reference whose C++ type name may need a
-                    struct qualifier
-    @param name_str the already-rendered C++ name string for [r]
-    @return a [Pp.t] prefix of the form [StructName::] when qualification is
-            required, or [mt ()] otherwise *)
-let struct_qualifier_for r name_str =
-  match (!render_ctx).rc_scope with
-  | Some scope when not (!render_ctx).rc_in_struct ->
-    let struct_name_str = Scope_plan.qualifier scope in
-    let struct_name = str struct_name_str in
-    (* How [r]'s module stands to the struct's, by kernel path: the textual
-       tests below fire on a sibling module whose path merely contains the
-       struct's name -- a file named after its module. *)
-    let relation = mp_relation_to ~struct_mp:scope.Scope_plan.module_ r in
-    let member_of_struct () = relation = Member in
-    (* Already contains the struct prefix — nothing to add. *)
-    if Common.contains_substring name_str (struct_name_str ^ "::") then
-      mt ()
-    (* An inductive promoted to the struct is the struct, and qualified by
-       its own name it would name the struct's constructor; it takes the
-       qualifier the struct itself is written with. *)
-    else if
-      Ref.User.Tbl.mem promoted_inductives r
-      && ModPath.equal (modpath_of_r r) scope.Scope_plan.module_
-    then
-      match List.rev scope.Scope_plan.qualifier with
-      | _ :: (_ :: _ as enclosing) -> str (String.concat "::" (List.rev enclosing)) ++ str "::"
-      | _ -> mt ()
-    (* Eponymous records are merged into the module struct at global scope,
-       so they don't get an extra wrapper prefix.  However, when the record
-       itself lives inside the current struct (nested sub-module), we must
-       still qualify it in the [.cpp] file. *)
-    else if Module_plan.is_eponymous_record r then
-      if member_of_struct () then struct_name ++ str "::" else mt ()
-    (* Non-local records are placed at C++ global scope (before the struct),
-       so they never need the struct prefix. *)
-    else if is_record_inductive r && not (is_local_inductive r) then
-      mt ()
-    (* Enums at global scope need no prefix; those inside the struct do. *)
-    else if Table.is_enum_inductive r then
-      if Module_plan.is_global_scope_enum r then mt ()
-      else if member_of_struct () then struct_name ++ str "::"
-      else mt ()
-    (* A name the struct's module contributes to global scope rather than to
-       the struct is never a member of it: a [using T = ...] alias, which C++
-       puts outside, and a type class instance, which Crane lifts out so that
-       a concept's template argument can be written unqualified.  Both are
-       recorded by the module layout, which knows where the declaration goes;
-       the kernel module path consulted below only knows where it came from,
-       and for these two answers [Member]. *)
-    else if Module_plan.is_global_scope_type r then
-      mt ()
-    (* The kernel module path settles the question: the type is a member of
-       this struct exactly when it was declared in the module the struct came
-       from, or in one nested inside it.  Comparing the struct's C++ name with
-       the type's Rocq path instead gives up whenever the module was emitted
-       under a different name -- a duplicate-avoidance rename ([Pos] and
-       [Coq_Pos]) or a collision suffix -- and fires spuriously when the paths
-       merely share a prefix, as they do when the enclosing library is named
-       after the module.  A type declared in a module that neither contains
-       nor is contained by this struct's is not a member of it, so it takes no
-       qualifier at all. *)
-    else (
-      match relation with
-      | Member -> struct_name ++ str "::"
-      | Unrelated -> mt ()
-      (* A name declared in a module that encloses this struct is qualified by
-         that module, never by the struct -- and only when the module is
-         emitted as a struct of its own.  The extraction root is not: its
-         members sit at global scope, so the bare name is already right.  A
-         module that is a struct is named as its plan qualifies its
-         out-of-line members ({!Scope_plan.qualifier}). *)
-      | Ancestor -> (
-        match Scope_plan.of_module (modpath_of_r r) with
-        | Some sc when Common.is_struct_module (modpath_of_r r) ->
-          str (Scope_plan.qualifier sc) ++ str "::"
-        | _ -> mt () ) )
-  | _ -> mt ()
+    is outside the class scope.
+    @param r the global reference whose C++ type name may need a struct
+             qualifier
+    @param n the name [r] is otherwise written under
+    @return the qualifiers, outermost first, when qualification is required,
+            or none otherwise *)
+let struct_scopes_for r n =
+  let scopes =
+    match (!render_ctx).rc_scope with
+    | Some scope when not (!render_ctx).rc_in_struct ->
+      let classes = List.map (fun s -> Cpp_name.Class s) in
+      let struct_scopes = classes scope.Scope_plan.qualifier in
+      (* How [r]'s module stands to the struct's, by kernel path: the textual
+         tests below fire on a sibling module whose path merely contains the
+         struct's name -- a file named after its module. *)
+      let relation = mp_relation_to ~struct_mp:scope.Scope_plan.module_ r in
+      let member_of_struct () = relation = Member in
+      (* Already qualified by the struct -- nothing to add. *)
+      if names_through n scope.Scope_plan.qualifier then []
+      (* An inductive promoted to the struct is the struct, and qualified by
+         its own name it would name the struct's constructor; it takes the
+         qualifier the struct itself is written with. *)
+      else if
+        Ref.User.Tbl.mem promoted_inductives r
+        && ModPath.equal (modpath_of_r r) scope.Scope_plan.module_
+      then
+        match List.rev struct_scopes with
+        | _ :: (_ :: _ as enclosing) -> List.rev enclosing
+        | _ -> []
+      (* Eponymous records are merged into the module struct at global scope,
+         so they don't get an extra wrapper prefix.  However, when the record
+         itself lives inside the current struct (nested sub-module), we must
+         still qualify it in the [.cpp] file. *)
+      else if Module_plan.is_eponymous_record r then
+        if member_of_struct () then struct_scopes else []
+      (* Non-local records are placed at C++ global scope (before the struct),
+         so they never need the struct prefix. *)
+      else if is_record_inductive r && not (is_local_inductive r) then []
+      (* Enums at global scope need no prefix; those inside the struct do. *)
+      else if Table.is_enum_inductive r then
+        if Module_plan.is_global_scope_enum r then []
+        else if member_of_struct () then struct_scopes
+        else []
+      (* A name the struct's module contributes to global scope rather than to
+         the struct is never a member of it: a [using T = ...] alias, which C++
+         puts outside, and a type class instance, which Crane lifts out so that
+         a concept's template argument can be written unqualified.  Both are
+         recorded by the module layout, which knows where the declaration goes;
+         the kernel module path consulted below only knows where it came from,
+         and for these two answers [Member]. *)
+      else if Module_plan.is_global_scope_type r then []
+      (* The kernel module path settles the question: the type is a member of
+         this struct exactly when it was declared in the module the struct came
+         from, or in one nested inside it.  Comparing the struct's C++ name with
+         the type's Rocq path instead gives up whenever the module was emitted
+         under a different name -- a duplicate-avoidance rename ([Pos] and
+         [Coq_Pos]) or a collision suffix -- and fires spuriously when the paths
+         merely share a prefix, as they do when the enclosing library is named
+         after the module.  A type declared in a module that neither contains
+         nor is contained by this struct's is not a member of it, so it takes no
+         qualifier at all. *)
+      else (
+        match relation with
+        | Member -> struct_scopes
+        | Unrelated -> []
+        (* A name declared in a module that encloses this struct is qualified by
+           that module, never by the struct -- and only when the module is
+           emitted as a struct of its own.  The extraction root is not: its
+           members sit at global scope, so the bare name is already right.  A
+           module that is a struct is named as its plan qualifies its
+           out-of-line members ({!Scope_plan.qualifier}). *)
+        | Ancestor -> (
+          match Scope_plan.of_module (modpath_of_r r) with
+          | Some sc when Common.is_struct_module (modpath_of_r r) -> classes sc.Scope_plan.qualifier
+          | _ -> [] ) )
+    | _ -> []
+  in
+  witness "struct_scopes_for" ~structural:(scopes_text scopes)
+    ~text:(Pp.string_of_ppcmds (Text_witness.struct_qualifier_for r (Cpp_name.to_string n)));
+  scopes
 
-(** Prefix a global-scope type name with [::] when a module-local inductive of
-    the same name shadows it.
+(** The global-scope qualifier [::] in front of a type name when a
+    module-local inductive of the same name shadows it.
 
     A user inductive named [Nat] is rendered inside its module struct as
     [Nat], which is exactly the name Crane gives the runtime [nat] at C++
@@ -457,30 +672,42 @@ let struct_qualifier_for r name_str =
     The nested names come from {!Cpp_state.nested_struct_names}, recorded by
     the struct printer itself, so the shadow test compares against the name
     that was actually emitted. *)
-let global_scope_qualifier_for r name_str =
-  match r with
-  | GlobRef.IndRef _ when not (is_qualified_name name_str) ->
-    if Cpp_state.is_shadowed_global_name name_str r then str "::" else mt ()
-  | _ -> mt ()
+let global_scopes_for r n =
+  let scopes =
+    match r with
+    | GlobRef.IndRef _ when not (Cpp_name.is_qualified n) ->
+      if Cpp_state.is_shadowed_global_name (Cpp_name.to_string n) r then [Cpp_name.Global] else []
+    | _ -> []
+  in
+  witness "global_scopes_for" ~structural:(scopes_text scopes)
+    ~text:(Pp.string_of_ppcmds (Text_witness.global_scope_qualifier_for r (Cpp_name.to_string n)));
+  scopes
+
+(** {!wrapper_qualify}, checked against the text it replaces. *)
+let wrapper_qualify r n =
+  let w = Cpp_state.wrapper_qualify r n in
+  witness "wrapper_qualify" ~structural:(Cpp_name.to_string w)
+    ~text:(Cpp_state.wrapper_qualify_name_text r (Cpp_name.to_string n));
+  w
 
 (** The name a type is written under, from outside the struct that owns it.
 
     A module a name collision forced into a struct keeps its declarations
     there, so a use of one from elsewhere has to say which struct -- the same
-    answer {!Cpp_state.wrapper_qualify_name} already gives the {i term}
-    printer for a call into such a module.  Only the term printer was asking:
-    an inductive reaches the reader through {!inductive_name_info}, which
-    qualifies for its own reasons, and everything else a wrapped module
-    declares -- a type class instance above all, named as a concept's template
-    argument -- came out bare.
+    answer {!Cpp_state.wrapper_qualify} already gives the {i term} printer for
+    a call into such a module.  Only the term printer was asking: an inductive
+    reaches the reader through {!inductive_name}, which qualifies for its own
+    reasons, and everything else a wrapped module declares -- a type class
+    instance above all, named as a concept's template argument -- came out
+    bare.
 
-    The exceptions are the ones {!struct_qualifier_for} already makes, and for
+    The exceptions are the ones {!struct_scopes_for} already makes, and for
     its reasons: a [using T = ...] alias and a {i lifted} instance are
     contributed to namespace scope rather than to the struct, so the module
     path they came from does not say where they went.
 
     An inductive is excluded outright.  It reaches the reader through
-    {!inductive_name_info} and the [Tnamespace] machinery, which qualify it for
+    {!inductive_name} and the [Tnamespace] machinery, which qualify it for
     their own reasons and by their own spelling; asking here as well turns a
     settled [List<A>] into [Datatypes::template List<A>].  A type class is
     excluded for the reason {!concept_name_of_ref} gives: a concept may only be
@@ -490,16 +717,12 @@ let global_scope_qualifier_for r name_str =
     Inside the struct the qualifier must not be written at all.  The class is
     incomplete while its own body is being printed, so [Wrapper::member] there
     names nothing -- and the member is in scope unqualified anyway. *)
-let wrapper_qualified_type_name r name_str =
+let wrapper_qualified_type_name r n =
   match r with
-  | GlobRef.IndRef _ | GlobRef.ConstructRef _ -> name_str
-  | _ when Table.is_typeclass r -> name_str
-  | _ when Module_plan.is_global_scope_type r -> name_str
-  | _ ->
-    if (!render_ctx).rc_in_struct then
-      name_str
-    else
-      Cpp_state.wrapper_qualify_name r name_str
+  | GlobRef.IndRef _ | GlobRef.ConstructRef _ -> n
+  | _ when Table.is_typeclass r -> n
+  | _ when Module_plan.is_global_scope_type r -> n
+  | _ -> if (!render_ctx).rc_in_struct then n else wrapper_qualify r n
 
 (** Check if a global function needs :: prefix to avoid name collision. When
     generating out-of-struct definitions, we add :: to call external functions
@@ -507,7 +730,7 @@ let wrapper_qualified_type_name r name_str =
 let needs_global_qualifier x =
   match (!render_ctx).rc_scope with
   | Some scope ->
-    (not (is_qualified_name (str_global Term x)))
+    (not (Cpp_name.is_qualified (global_name Term x)))
     && not (mp_encloses (modpath_of_r x) scope.Scope_plan.module_)
   | None -> false
 

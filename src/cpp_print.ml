@@ -406,24 +406,6 @@ let num_ind_params = function
 let gen_placeholder_args n =
   String.concat ", " (List.init n (fun _ -> "int"))
 
-(** Insert ["template "] before the last [::]-separated component of a
-    qualified name.  E.g. ["C::foo"] becomes ["C::template foo"].
-    Returns [name_pp] unchanged if the string contains no [:].
-
-    @param name_pp   the pretty-printed form of the name (returned or modified)
-    @param name_str  the string form of [name_pp] used for position arithmetic *)
-let insert_template_keyword name_pp name_str =
-  if String.contains name_str ':' then
-    let last_colon_pos = String.rindex name_str ':' in
-    let before = String.sub name_str 0 (last_colon_pos + 1) in
-    let after =
-      String.sub name_str (last_colon_pos + 1)
-        (String.length name_str - last_colon_pos - 1)
-    in
-    str before ++ str "template " ++ str after
-  else
-    name_pp
-
 (** Print a type variable by de Bruijn index, looking up in [vl]. Falls back to
     [T<n>] if index is out of range.
 
@@ -865,6 +847,28 @@ let fun_qualifier ~can_constexpr ~throws ~no_pure ret_ty params =
   else
     mt ()
 
+(** Whether a rendered document writes a qualifier anywhere in it, its
+    template arguments included. *)
+let writes_qualifier doc =
+  List.exists
+    (function
+      | Cpp_name.Scope _ -> true
+      | Cpp_name.Foreign_text text | Cpp_name.Untagged text -> String.contains text ':')
+    (Cpp_name.written doc)
+
+(** The qualifier an out-of-line definition writes for the struct [sc] it is
+    a member of. *)
+let scope_qualifier sc =
+  Cpp_name.pp_scopes (List.map (fun s -> Cpp_name.Class s) sc.Scope_plan.qualifier)
+
+(** What a type is as the qualifier of a member type named through it: a
+    template parameter, which defers the lookup, when it is one or is a chain
+    of member types through one; a struct otherwise. *)
+let rec member_kind = function
+  | Tvar _ | Tinstance _ -> fun s -> Cpp_name.Parameter s
+  | Tqualified (t, _) -> member_kind t
+  | _ -> fun s -> Cpp_name.Class s
+
 (** Pretty-print a MiniCpp type as C++ source text.
 
     @param par  whether to parenthesize (for precedence in function types)
@@ -902,7 +906,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       ( match (!render_ctx).rc_scope with
       | Some sc
         when (not (!render_ctx).rc_in_struct) && not (is_file_scope_type id) ->
-        str (Scope_plan.qualifier sc) ++ str "::" ++ Id.print id
+        scope_qualifier sc ++ Id.print id
       | _ ->
         note_bare_promoted id;
         Id.print id )
@@ -915,14 +919,13 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       ( match (!render_ctx).rc_scope with
       | Some sc
         when (not (!render_ctx).rc_in_struct) && not (is_file_scope_type id) ->
-        str (Scope_plan.qualifier sc) ++ str "::" ++ Id.print id
+        scope_qualifier sc ++ Id.print id
       | _ -> Id.print id )
     | Tid (id, args) ->
       ( match (!render_ctx).rc_scope with
       | Some sc
         when (not (!render_ctx).rc_in_struct) && not (is_file_scope_type id) ->
-        str (Scope_plan.qualifier sc)
-        ++ str "::"
+        scope_qualifier sc
         ++ Id.print id
         ++ str "<"
         ++ pp_list (pp_rec false) args
@@ -976,28 +979,18 @@ let rec pp_cpp_type ?(lead = true) par vl t =
           cmds
       | _ ->
         (* Non-custom cases *)
-        let bare_str = Pp.string_of_ppcmds (pp_inductive_type_name r) in
-        let struct_qual = struct_qualifier_for r bare_str in
-        let global_qual = global_scope_qualifier_for r bare_str in
+        let bare = inductive_type_name r in
+        let enclosing = struct_scopes_for r bare @ global_scopes_for r bare in
         (* The wrapper qualifier is the last resort: the two qualifiers above
            say where the name lives whenever they say anything, and stacking
            this one on top of them spells the same struct twice. *)
-        let name_str =
-          if Pp.ismt struct_qual && Pp.ismt global_qual then
-            wrapper_qualified_type_name r bare_str
-          else bare_str
-        in
-        let type_name = str name_str in
+        let name = if enclosing = [] then wrapper_qualified_type_name r bare else bare in
+        let head = typename_prefix_for name ++ Cpp_name.pp_scopes enclosing in
         ( match tys with
-        | [] ->
-          typename_prefix_for name_str ++ struct_qual ++ global_qual
-          ++ type_name
+        | [] -> head ++ Cpp_name.pp name
         | l ->
-          let type_name_with_template =
-            insert_template_keyword type_name name_str
-          in
-          typename_prefix_for name_str ++ struct_qual ++ global_qual
-          ++ type_name_with_template
+          head
+          ++ Cpp_name.pp ~template_keyword:true name
           ++ str "<"
           ++ pp_list (pp_rec false) l
           ++ str ">" ) )
@@ -1016,7 +1009,8 @@ let rec pp_cpp_type ?(lead = true) par vl t =
          get the prefix. EXCEPTION: Eponymous records are merged into the module
          struct, so we use just the capitalized name without namespace
          qualification (CHT, not CHT::cHT). *)
-      let name, needs_ns = inductive_name_info r in
+      let name, needs_ns = inductive_name r in
+      let class_ s = Cpp_name.Class s in
       ( match (r, t) with
       | GlobRef.IndRef _, Tglob (r', args, _)
         when globref_equal r r' ->
@@ -1025,79 +1019,70 @@ let rec pp_cpp_type ?(lead = true) par vl t =
           | [] -> mt ()
           | args -> str "<" ++ pp_list (pp_rec false) args ++ str ">"
         in
-        (* Skip prefix if type name already contains module path (::) *)
-        let type_name_str = str_global Type r' in
+        let type_name = global_name Type r' in
         (* Check eponymous record FIRST because they can also be local *)
         if is_eponymous_record_cached r' then
           let cap_name = Common.pp_type_name_capitalized r' in
           if Common.get_force_cross_file_qualification () && not (is_local_inductive r')
-          then str (cap_name ^ "::" ^ cap_name) ++ templates
+          then Cpp_name.pp (Cpp_name.name [class_ cap_name] cap_name) ++ templates
           else str cap_name ++ templates
         else if is_enum_cached r' then
           (* Enum types at global scope need no struct qualification. Enums
              inside structs (e.g., Comparison::cmp) need it. *)
           let qualifier =
-            if is_global_scope_enum_cached r' then mt ()
-            else struct_qualifier_for r' type_name_str
+            if is_global_scope_enum_cached r' then []
+            else struct_scopes_for r' type_name
           in
-          qualifier
-          ++ str (capitalize_enum_qualified type_name_str r')
+          Cpp_name.pp_scopes qualifier
+          ++ Cpp_name.pp (enum_name type_name r')
           ++ templates
-        else if is_qualified_name type_name_str then
+        else if Cpp_name.is_qualified type_name then
           let cap =
             if Common.get_force_cross_file_qualification ()
-            then Common.capitalize_last_component type_name_str
-            else type_name_str in
+            then capitalize_base type_name
+            else type_name in
           let cap =
             if is_merged_inductive r' then
-              dedup_qualified_tail
-                ~allow_bare:(Table.modular () && not needs_ns) cap
+              dedup_tail ~allow_bare:(Table.modular () && not needs_ns) cap
             else
               cap
           in
-          let cap_pp =
-            if args <> [] && (!render_ctx).rc_in_template then
-              insert_template_keyword (str cap) cap
-            else str cap in
           (* The qualified name is relative to the enclosing module struct, so
              out-of-line definitions -- whose return type precedes the qualified
              function name, and so sits outside that struct's scope -- need the
              struct prefix in front of it. *)
           typename_prefix_for cap
-          ++ struct_qualifier_for r' cap
-          ++ cap_pp
+          ++ Cpp_name.pp_scopes (struct_scopes_for r' cap)
+          ++ Cpp_name.pp ~template_keyword:(args <> [] && (!render_ctx).rc_in_template) cap
           ++ templates
         else if is_merged_inductive r' && not (is_local_inductive r') then
           (* A local inductive is a sibling member of the enclosing module
              struct, so it is in scope under its own name; the merged-wrapper
              spelling ([Opt] for [opt]) names nothing there. *)
-          let cap = String.capitalize_ascii type_name_str in
+          let cap = capitalize_initial type_name in
           if needs_ns && Table.modular () then
-            str (cap ^ "::" ^ cap) ++ templates
+            Cpp_name.pp (Cpp_name.inside cap class_ cap) ++ templates
           else
             (* A file whose declarations were folded into a struct keeps its
                inductives there too, so the struct is their scope -- the same
                qualifier a call into that file already gets. *)
             let qualified =
-              if Cpp_state.is_nested_struct_ref r' then
-                wrapper_qualify_name r' cap
-              else
-                cap
+              if Cpp_state.is_nested_struct_ref r' then wrapper_qualify r' cap else cap
             in
-            if qualified <> cap then
-              str qualified ++ templates
+            if not (Cpp_name.equal qualified cap) then
+              Cpp_name.pp qualified ++ templates
             else
-              global_scope_qualifier_for r' cap ++ str cap ++ templates
+              Cpp_name.pp_scopes (global_scopes_for r' cap) ++ Cpp_name.pp cap ++ templates
         else
           if needs_ns then
-            name ++ str "::" ++ str type_name_str ++ templates
+            Cpp_name.pp (Cpp_name.inside name class_ type_name) ++ templates
           else
-            global_scope_qualifier_for r' type_name_str
-            ++ str type_name_str
+            Cpp_name.pp_scopes (global_scopes_for r' type_name)
+            ++ Cpp_name.pp type_name
             ++ templates
       | _ ->
         (* Fallback: generic namespace-qualified type *)
-        leading_typename ++ name ++ str "::" ++ pp_rec false t )
+        leading_typename ++ Cpp_name.pp_qualifier class_ name ++ pp_rec false t )
     | (Tqualified _ | Tapply (Tqualified _, _)) as qualified_ty ->
       (* An associated type may itself be an alias template — the carrier of a
          higher-kinded class parameter, [typename I::template C<A>].  It is
@@ -1134,8 +1119,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
         | ty -> pp_chain_base ty
       in
       leading_typename
-      ++ pp_qualified_chain base_ty
-      ++ str "::"
+      ++ Cpp_name.pp_type_qualifier (member_kind base_ty) (pp_qualified_chain base_ty)
       ++ ( if targs = [] then Id.print nested_id
            else
              str "template "
@@ -1559,47 +1543,41 @@ and pp_cpp_expr env args t =
   | CPPprojection_value r ->
     str "[](const auto &_x) { return _x." ++ str (projection_field_name r) ++ str "; }"
   | CPPglob (x, tys, _) ->
-    (* Determine the base name for a global reference *)
-    let base_name =
+    let class_ s = Cpp_name.Class s in
+    (* The base name of a global reference: a name, or -- for a function in an
+       eponymous template struct, which writes its own template arguments --
+       already written. *)
+    let base =
       match x with
       | GlobRef.IndRef _ ->
-        let ns_name, needs_ns = inductive_name_info x in
-        let type_name_str = str_global Type x in
-        (* Check eponymous record FIRST because they can also be local *)
-        if is_eponymous_record_cached x then
-          str (Common.pp_type_name_capitalized x)
-        else if Ref.User.Tbl.mem promoted_inductives x then
-          let cap =
-            if Common.get_force_cross_file_qualification ()
-            then Common.capitalize_last_component type_name_str
-            else String.capitalize_ascii type_name_str in
-          str (dedup_qualified_tail cap)
-        else if is_qualified_name type_name_str then
-          let cap =
-            if Common.get_force_cross_file_qualification ()
-            then Common.capitalize_last_component type_name_str
-            else type_name_str in
-          let merged = is_merged_inductive x in
-          if merged then
-            let allow_bare =
-              let ref_base = base_mp (modpath_of_r x) in
-              List.exists (ModPath.equal ref_base) (visible_mps (current_visibility ()))
-            in
-            str (dedup_qualified_tail ~allow_bare cap)
-          else str cap
-        else if needs_ns then
-          if is_merged_inductive x then
-            (* Merged non-local inductive: use capitalized name directly *)
-            global_scope_qualifier_for x (Pp.string_of_ppcmds ns_name)
-            ++ ns_name
-          else (* Unmerged non-local inductive: Wrapper::inner *)
-            ns_name ++ str "::" ++ str type_name_str
-        else if Common.get_force_cross_file_qualification () then
-          str (String.capitalize_ascii type_name_str)
-        else (* Local inductive: use original name directly *)
-          str type_name_str
-      | GlobRef.VarRef v ->
-        str (Id.to_string v)
+        let ns_name, needs_ns = inductive_name x in
+        let type_name = global_name Type x in
+        let force = Common.get_force_cross_file_qualification () in
+        `Named
+          ( (* Check eponymous record FIRST because they can also be local *)
+            if is_eponymous_record_cached x then
+              Cpp_name.unqualified (Common.pp_type_name_capitalized x)
+            else if Ref.User.Tbl.mem promoted_inductives x then
+              dedup_tail (if force then capitalize_base type_name else capitalize_initial type_name)
+            else if Cpp_name.is_qualified type_name then
+              let cap = if force then capitalize_base type_name else type_name in
+              if is_merged_inductive x then
+                let allow_bare =
+                  let ref_base = base_mp (modpath_of_r x) in
+                  List.exists (ModPath.equal ref_base) (visible_mps (current_visibility ()))
+                in
+                dedup_tail ~allow_bare cap
+              else cap
+            else if needs_ns then
+              if is_merged_inductive x then
+                (* Merged non-local inductive: use capitalized name directly *)
+                List.fold_right Cpp_name.within (global_scopes_for x ns_name) ns_name
+              else (* Unmerged non-local inductive: Wrapper::inner *)
+                Cpp_name.inside ns_name class_ type_name
+            else if force then capitalize_initial type_name
+            else (* Local inductive: use original name directly *)
+              type_name )
+      | GlobRef.VarRef v -> `Named (Cpp_name.unqualified (Id.to_string v))
       | _ ->
       (* Check if this function is inside an eponymous template struct. If so,
          type args go on the struct name, not the function name. *)
@@ -1613,34 +1591,31 @@ and pp_cpp_expr env args t =
         let func_name = Common.pp_global_name Term x in
         let placeholder_args = gen_placeholder_args (num_ind_params record_ref) in
         let ty_args = pp_list (pp_cpp_type false []) tys in
-        str (String.capitalize_ascii struct_name)
-          ++ str "<"
-          ++ str placeholder_args
-          ++ str ">::template "
+        `Written
+          ( Cpp_name.pp_type_qualifier class_
+              (str (String.capitalize_ascii struct_name) ++ str "<" ++ str placeholder_args ++ str ">")
+          ++ str "template "
           ++ str func_name
           ++ str "<"
           ++ ty_args
-          ++ str ">"
+          ++ str ">" )
       | Some record_ref, [] ->
         let struct_name = Common.pp_global_name Type record_ref in
         let func_name = Common.pp_global_name Term x in
         let placeholder_args = gen_placeholder_args (num_ind_params record_ref) in
-        str (String.capitalize_ascii struct_name)
-          ++ str "<"
-          ++ str placeholder_args
-          ++ str ">::"
-          ++ str func_name
+        `Written
+          ( Cpp_name.pp_type_qualifier class_
+              (str (String.capitalize_ascii struct_name) ++ str "<" ++ str placeholder_args ++ str ">")
+          ++ str func_name )
       | None, _ ->
         (* Normal case: function not in eponymous struct *)
-        let name = str_global Term x in
-        let qualified_name = wrapper_qualify_name x name in
-        if qualified_name <> name then
-          str qualified_name
-        else if needs_global_qualifier x then
-          str "::" ++ pp_global Term x
-        else
-          pp_global Term x
+        let name = global_name Term x in
+        let qualified = wrapper_qualify x name in
+        if not (Cpp_name.equal qualified name) then `Named qualified
+        else if needs_global_qualifier x then `Named (Cpp_name.within Cpp_name.Global name)
+        else `Named name
     in
+    let base_name = match base with `Named n -> Cpp_name.pp n | `Written d -> d in
     let is_accessor =
       let x_mp = modpath_of_r x in
       let x_lbl = label_of_r x in
@@ -1675,25 +1650,13 @@ and pp_cpp_expr env args t =
                      || not (ModPath.equal x_mp resolved_x_mp))) )
     in
     let full_name =
-      match (tys, Module_plan.eponymous_record_containing x) with
-      | [], _ -> base_name
-      | _, Some _ -> base_name
-      | _ ->
-        let ty_args = pp_list (pp_cpp_type false []) tys in
-        (match x with
-         | GlobRef.IndRef _ ->
-           let base_name_str = string_of_ppcmds base_name in
-           if String.contains base_name_str ':' then
-             insert_template_keyword base_name base_name_str
-             ++ str "<" ++ ty_args ++ str ">"
-           else
-             base_name ++ str "<" ++ ty_args ++ str ">"
-         | _ ->
-           (* Function template: may need "template" keyword when accessed
-              through a qualified name, e.g. "C::template empty<T>". *)
-           let base_name_str = string_of_ppcmds base_name in
-           insert_template_keyword base_name base_name_str
-           ++ str "<" ++ ty_args ++ str ">")
+      match (base, tys, Module_plan.eponymous_record_containing x) with
+      | `Written _, _, _ | _, [], _ | _, _, Some _ -> base_name
+      | `Named n, _, None ->
+        (* A template named through a qualifier takes the [template]
+           disambiguator: [C::template empty<T>]. *)
+        Cpp_name.pp ~template_keyword:true n
+        ++ str "<" ++ pp_list (pp_cpp_type false []) tys ++ str ">"
     in
     let full_name =
       if not is_accessor then full_name
@@ -1711,8 +1674,8 @@ and pp_cpp_expr env args t =
     in
     apply full_name
   | CPPnamespace (r, t) ->
-    let name, _ = inductive_name_info r in
-    (name ++ str "::" ++ pp_cpp_expr env args t)
+    let name, _ = inductive_name r in
+    Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) name ++ pp_cpp_expr env args t
   | CPPfun_call (res, CPPglob (n, tys, Some {ci_inline = Some tmpl; _}), ts) ->
     let s = tmpl.it_text in
     if tmpl.it_form = Block_iife then
@@ -1885,9 +1848,9 @@ and pp_cpp_expr env args t =
   | CPPfun_call (_, f, ts) ->
     let args_s = pp_list (pp_cpp_expr env args) (call_args ts) in
     let prefix = match f with
-      | CPPglob (GlobRef.IndRef _, _, _) ->
-        let name_str = string_of_ppcmds (pp_cpp_expr env args f) in
-        typename_prefix_for name_str
+      | CPPglob (GlobRef.IndRef _, _, _)
+        when (!render_ctx).rc_in_template && writes_qualifier (pp_cpp_expr env args f) ->
+        str "typename "
       | _ -> mt ()
     in
     prefix ++ pp_cpp_expr env args f ++ str "(" ++ args_s ++ str ")"
@@ -2024,12 +1987,11 @@ and pp_cpp_expr env args t =
     let struct_name =
       match id with
       | GlobRef.IndRef _ when is_eponymous_record_cached id ->
-        str (Common.pp_type_name_capitalized id)
-      | _ -> pp_global Type id
+        Cpp_name.unqualified (Common.pp_type_name_capitalized id)
+      | _ -> global_name Type id
     in
-    let name_str = string_of_ppcmds struct_name in
-    typename_prefix_for name_str
-    ++ struct_name ++ templates ++ str suffix ++ es_s ++ closing
+    typename_prefix_for struct_name
+    ++ Cpp_name.pp struct_name ++ templates ++ str suffix ++ es_s ++ closing
   | CPPstruct_id (id, tys, es) ->
     let es_s = pp_list (pp_cpp_expr env args) es in
     let templates =
@@ -2183,10 +2145,9 @@ and pp_cpp_expr env args t =
   | CPPenum_val (ind, ctor) ->
     (* Generate EnumType::Constructor for enum class values. Use str_global for
        proper module qualification, with collision-aware capitalization. *)
-    let full_name = capitalize_enum_qualified (str_global Type ind) ind in
-    global_scope_qualifier_for ind full_name
-    ++ str full_name
-    ++ str "::"
+    let full_name = enum_name (global_name Type ind) ind in
+    Cpp_name.pp_scopes (global_scopes_for ind full_name)
+    ++ Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) full_name
     ++ Id.print ctor
   | CPPnullptr -> str "nullptr"
   | CPPin_place ->
@@ -2446,8 +2407,8 @@ and pp_cpp_stmt env args = function
        get the unqualified base name, capitalize to match enum class
        definition. *)
     let type_name =
-      let n = pp_inductive_type_name ind in
-      global_scope_qualifier_for ind (Pp.string_of_ppcmds n) ++ n
+      let n = inductive_type_name ind in
+      Cpp_name.pp_scopes (global_scopes_for ind n) ++ Cpp_name.pp n
     in
     let ends_with_return stmts =
       match List.rev stmts with

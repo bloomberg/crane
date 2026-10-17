@@ -1016,6 +1016,44 @@ let is_shadowed_global_name name r =
   | None -> false
 
 
+(** The name [r], written [name] where its own module would write it, takes
+    from outside a collision wrapper its module was put in.  Only constants
+    and inductives: a [VarRef] is a lifted declaration, whose module path is
+    the library's rather than any wrapper's, and a reference lifted out of the
+    wrapper's struct to namespace scope does not have the struct as its
+    scope.
+    - A bare name is the one a use inside the reference's own module would
+      say, and the wrapper's name alone does not get back to it: a bystander
+      keeps its own struct, so the path runs through that struct too.
+      Flattened children have no struct left to name, and for them the
+      wrapper's name is the whole of it.
+    - A qualified name, as its visibility qualifies it ([N::add]): a
+      flattened child's own qualifier is replaced by the wrapper's ([BinNat]
+      wrapping [N]); a bystander's stays, the wrapper's name going in front of
+      it unless already there.  Under an ordinary wrapper ([List] wrapping
+      [list]) the qualification is already complete. *)
+let wrapper_qualify (r : GlobRef.t) (name : Cpp_name.t) : Cpp_name.t =
+  match r with
+  | GlobRef.VarRef _ -> name
+  | _ when Module_plan.is_namespace_scope_ref r -> name
+  | _ -> (
+    let mp = modpath_of_r r in
+    match (Module_plan.wrapper mp, name) with
+    | None, _ | _, Cpp_name.Foreign _ -> name
+    | Some (struct_name, role), Cpp_name.Name {scopes = []; base} ->
+      let through_child =
+        if role = Module_plan.Bystander then [Cpp_name.Class (Common.emitted_module_name mp)]
+        else []
+      in
+      Cpp_name.name (Cpp_name.Class struct_name :: through_child) base
+    | Some (_, Module_plan.Flattened), Cpp_name.Name {scopes = Cpp_name.Global :: _; _} -> name
+    | Some (struct_name, Module_plan.Flattened), Cpp_name.Name {scopes = _ :: inner; base} ->
+      Cpp_name.name (Cpp_name.Class struct_name :: inner) base
+    | Some (struct_name, Module_plan.Bystander), Cpp_name.Name {scopes = first :: _; _} ->
+      if first <> Cpp_name.Global && String.equal (Cpp_name.scope_text first) struct_name then name
+      else Cpp_name.within (Cpp_name.Class struct_name) name
+    | Some _, _ -> name )
+
 (** Check if a GlobRef belongs to a wrapper module and return the qualified
     name. If the reference's module path matches a wrapper module, prepend the
     struct name. Only qualify ConstRef globals (actual Rocq constants from
@@ -1027,7 +1065,7 @@ let is_shadowed_global_name name r =
     @return [name] unchanged if [r] is not in a wrapper module; otherwise
       ["StructName::name"] (or the collision-stripped variant for
       collision-wrapped modules) *)
-let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
+let wrapper_qualify_name_text (r : GlobRef.t) (name : string) : string =
   match r with
   | GlobRef.VarRef _ -> name (* Lifted declarations: never qualify *)
   | _ when Module_plan.is_namespace_scope_ref r ->

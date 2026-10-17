@@ -180,11 +180,12 @@ let pp_concept_ref kn =
 (** The type member [name] of [M], an enum's capitalised, applied to [args]
     when it is a template. *)
 let pp_member_type ~enum name r args =
-  let name = if enum then capitalize_enum_qualified name r else name in
+  let name = Cpp_name.pp (if enum then enum_name name r else name) in
+  let m = Cpp_name.pp_scope (Cpp_name.Parameter "M") in
   match args with
-  | [] -> str "typename M::" ++ str name
+  | [] -> str "typename " ++ m ++ name
   | _ ->
-    str "typename M::template " ++ str name ++ str "<"
+    str "typename " ++ m ++ str "template " ++ name ++ str "<"
     ++ prlist_with_sep (fun () -> str ", ") Fun.id args
     ++ str ">"
 
@@ -192,7 +193,7 @@ let pp_member_type ~enum name r args =
     concept ({!Modtype_concept.concept_type}). *)
 let rec pp_concept_type : Modtype_concept.concept_type -> Pp.t = function
   | Member {member; enum; arguments} ->
-    pp_member_type ~enum (Pp.string_of_ppcmds (pp_global Type member)) member
+    pp_member_type ~enum (global_name Type member) member
       (List.map pp_concept_type arguments)
   | Parameter ty -> str "typename " ++ pp_cpp_type false [] ty
   | Foreign (template, args) -> qualify_custom_template template args pp_concept_type
@@ -236,7 +237,7 @@ let rec pp_concept_type : Modtype_concept.concept_type -> Pp.t = function
 let pp_requirement : Modtype_concept.requirement -> Pp.t = function
   | Inductive_member {member; enum; arity} ->
     let placeholders = List.init arity (fun _ -> pp_cpp_type false [] Tany) in
-    pp_member_type ~enum (Common.pp_global_name Type member) member placeholders ++ str ";" ++ fnl ()
+    pp_member_type ~enum (Cpp_name.unqualified (Common.pp_global_name Type member)) member placeholders ++ str ";" ++ fnl ()
   | Type_member {member; arity} ->
     let name = pp_global_name Type member in
     if arity = 0 then str "typename M::" ++ name ++ str ";" ++ fnl ()

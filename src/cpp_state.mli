@@ -351,7 +351,7 @@ val is_typeclass_instance : 'a -> Miniml.ml_type -> bool
 
 (** [wrapper_qualify_modname mp name] re-roots [name] at the wrapper struct
     holding [mp], when [mp] is a bystander that struct nests under its own name.
-    The module-as-a-module counterpart of [wrapper_qualify_name]. *)
+    The module-as-a-module counterpart of [wrapper_qualify]. *)
 val wrapper_qualify_modname : Names.ModPath.t -> string -> string
 
 (** Pre-rendered forward declarations to inject into a [Dnspace] struct, keyed
@@ -413,7 +413,11 @@ val is_shadowed_global_name : string -> Names.GlobRef.t -> bool
     collision-wrapped modules, whose child qualifier is replaced by the wrapper
     struct name.
     @return the possibly-qualified name *)
-val wrapper_qualify_name : Names.GlobRef.t -> string -> string
+val wrapper_qualify : Names.GlobRef.t -> Cpp_name.t -> Cpp_name.t
+
+(* The text version {!wrapper_qualify} replaces, kept as a CRANE_CHECK_IR
+   witness while the migration is verified. *)
+val wrapper_qualify_name_text : Names.GlobRef.t -> string -> string
 
 (** {2 Method registration} *)
 
