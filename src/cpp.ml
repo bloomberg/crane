@@ -362,6 +362,7 @@ let starts_with_doc_comment (t : Cpp_ast.t) =
       let inner =
         match t with
         | Text d | Decl {text = d; _} -> first_output [d]
+        | Declarations _ -> first_output [Cpp_ast.to_pp t]
         | Seq l -> first l
         | Top_level t | Member (_, t) -> first [t]
       in
@@ -3950,7 +3951,34 @@ let do_struct_with_decl_tracking ~is_header f s =
   in
   Cpp_print.check_ctor_alias_plan ~file:(if is_header then Common.Intf else Common.Impl);
   Cpp_print.check_file_scope_types ~file:(if is_header then Common.Intf else Common.Impl);
-  place_due_declarations ~is_header ~prologue:forward_decls (List.map Cpp_ast.to_pp sections) ++ fnl ()
+  let templates =
+    List.map
+      (fun a ->
+        { Cpp_ast.name = ctor_alias_name a;
+          home = a.ca_home;
+          holder = a.ca_holder;
+          declaration = ctor_alias_declaration a } )
+      (ctor_aliases_declared_in ~file:(if is_header then Common.Intf else Common.Impl))
+  in
+  let forwards =
+    if is_header then
+      List.map
+        (fun (f : Cpp_print.forward_declaration) -> {Cpp_ast.struct_ = f.fwd_struct; forward_declaration = f.fwd_text})
+        !file_layout.constrained_decls
+    else []
+  in
+  let scheduled = Cpp_ast.schedule ~templates ~forwards {prologue = forward_decls; sections} in
+  let placed = place_due_declarations ~is_header ~prologue:forward_decls (List.map Cpp_ast.to_pp sections) in
+  if
+    Probe.checking ()
+    && not (String.equal (Pp.string_of_ppcmds placed) (Pp.string_of_ppcmds (Cpp_ast.print scheduled)))
+  then
+    Probe.violation "due declarations"
+      Pp.(
+        str "the "
+        ++ str (Common.file_name (if is_header then Common.Intf else Common.Impl))
+        ++ str " places its due declarations otherwise from its tree than from its tags" );
+  placed ++ fnl ()
 
 (** Main entry point: render structure to C++ implementation file. *)
 let pp_struct s =

@@ -4565,7 +4565,9 @@ let read_cpp_decl = pp_cpp_decl
     it needs reads: the synthesised templates it writes, as planned
     ({!ctor_aliases_planned}); and, of the structs the file has constrained
     forward declarations of ({!constrained_structs}), those it names or
-    defines, and those it defines. *)
+    defines, and those it defines.  The declarations of a wrapper module it
+    writes into a struct of its own ({!wrapper_members}) are part of its
+    text, and what they need it needs. *)
 let write_decl env settled =
   let text = pp_cpp_decl env settled in
   let templates = List.map ctor_alias_name (ctor_aliases_planned settled) in
@@ -4581,10 +4583,11 @@ let write_decl env settled =
       let defined = List.map defined_ref (structs_defined settled) in
       (of_refs (defined @ Cpp_demands.globals_of_decl (settled :> cpp_decl)), of_refs defined)
   in
-  Cpp_ast.decl ~needs:{templates; names; defines} text
+  let absorbed =
+    List.filter_map (fun name -> List.assoc_opt name !wrapper_members) (unmerged_wrappers_written settled)
+  in
+  Cpp_ast.decl
+    ~needs:(List.fold_left (fun n t -> Cpp_ast.Needs.union n (Cpp_ast.needs t)) {templates; names; defines} absorbed)
+    text
 
-(** The break between two declaration groups.  It is a break hint, not a
-    forced newline, so the vertical box the whole file is printed in
-    ([Extract_env]) decides where it falls; clang-format keeps the blank lines
-    it leaves. *)
-let cut2 () = brk (0, -100000) ++ brk (0, 0)
+let cut2 = Cpp_ast.cut2

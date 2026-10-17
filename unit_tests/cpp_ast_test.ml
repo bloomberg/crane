@@ -1,0 +1,61 @@
+(* Copyright 2026 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+
+(* Where a translation unit's due declarations go, read off the tree alone:
+   a template in front of the innermost chunk first writing it, or of the
+   member of its home's struct; a constrained forward declaration in front
+   of the chunk first naming its struct, unless that chunk defines it. *)
+
+open Crane_plugin
+open Names
+
+let check name cond =
+  if not cond then (
+    Printf.eprintf "cpp_ast: %s\n" name;
+    exit 1 )
+
+let check_text name got expected =
+  if not (String.equal got expected) then (
+    Printf.eprintf "cpp_ast: %s: got %S, expected %S\n" name got expected;
+    exit 1 )
+
+let m = ModPath.MPdot (ModPath.MPfile (DirPath.make [Id.of_string "F"]), Label.make "M")
+let needs ?(templates = []) ?(names = []) ?(defines = []) () = {Cpp_ast.Needs.templates; names; defines}
+let leaf ?templates ?names ?defines s = Cpp_ast.decl ~needs:(needs ?templates ?names ?defines ()) (Pp.str s)
+let template ?home ?(holder = false) name = {Cpp_ast.name; home; holder; declaration = Pp.str ("<" ^ name ^ ">")}
+let forward s = {Cpp_ast.struct_ = s; forward_declaration = Pp.str ("fwd:" ^ s)}
+
+(* The text, without whitespace: breaks and separators are formatting. *)
+let text ?(templates = []) ?(forwards = []) sections =
+  let doc = Cpp_ast.print (Cpp_ast.schedule ~templates ~forwards {prologue = Pp.str "P"; sections}) in
+  String.to_seq (Pp.string_of_ppcmds doc)
+  |> Seq.filter (fun c -> not (List.mem c [' '; '\n'; '\t']))
+  |> String.of_seq
+
+let top = Cpp_ast.top_level
+
+let () =
+  let unit = [top (Cpp_ast.text (Pp.str "a")); top (leaf ~templates:["T"] "b"); top (leaf ~templates:["T"] "c")] in
+  check_text "a template goes in front of the first chunk writing it" (text ~templates:[template "T"] unit) "Pa<T>bc";
+  check_text "a template nothing writes is declared nowhere" (text ~templates:[template "U"] unit) "Pabc";
+  let nested = [top (Cpp_ast.seq [Cpp_ast.text (Pp.str "s{"); top (leaf ~templates:["T"] "x"); Cpp_ast.text (Pp.str "}")])] in
+  check_text "a template goes in front of the innermost chunk" (text ~templates:[template "T"] nested) "Ps{<T>x}";
+  let homed =
+    [ top
+        (Cpp_ast.seq
+           [ Cpp_ast.text (Pp.str "struct-M{");
+             Cpp_ast.member m (Cpp_ast.text (Pp.str "y"));
+             Cpp_ast.member m (leaf ~templates:["T"] "z");
+             Cpp_ast.text (Pp.str "}") ]) ]
+  in
+  check_text "a homed template goes in front of its home's member" (text ~templates:[template ~home:m "T"] homed) "Pstruct-M{y<T>z}";
+  check_text "an unhomed template written in a member goes at namespace scope" (text ~templates:[template "T"] homed) "P<T>struct-M{yz}";
+  check_text "holders go in front of aliases, each in the order given" (text
+        ~templates:[template "A"; template ~holder:true "H"; template "B"]
+        [top (leaf ~templates:["B"; "A"; "H"] "d")]) "P<H><A><B>d";
+  let fwd = [top (leaf ~names:["S"] "e"); top (leaf ~names:["S"] ~defines:["S"] "f")] in
+  check_text "a forward declaration goes in front of the first chunk naming its struct" (text ~forwards:[forward "S"] fwd) "Pfwd:Sef";
+  check_text "no forward declaration is due where the first chunk naming the struct defines it" (text ~forwards:[forward "S"] (List.rev fwd)) "Pfe";
+  check_text "forward declarations go in front of templates" (text ~templates:[template "T"] ~forwards:[forward "S"] [top (leaf ~templates:["T"] ~names:["S"] "g")]) "Pfwd:S<T>g";
+  check "an empty chunk is no chunk" (Cpp_ast.is_empty (top Cpp_ast.empty));
+  check "a declaration needing something is not empty" (not (Cpp_ast.is_empty (leaf ~templates:["T"] "")))

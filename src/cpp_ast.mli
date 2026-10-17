@@ -35,6 +35,7 @@ module Needs : sig
 
   val none : t
   val is_none : t -> bool
+  val union : t -> t -> t
 end
 
 type t = private
@@ -47,6 +48,9 @@ type t = private
   | Member of ModPath.t * t
       (** A member of the struct of the module: a template homed in the
           module goes in front of it.  Never empty. *)
+  | Declarations of Pp.t list
+      (** Declarations {!schedule} placed in front of what follows it; no
+          tree built before scheduling has one. *)
 
 val text : Pp.t -> t
 val empty : t
@@ -67,8 +71,52 @@ val is_empty : t -> bool
     [Pp.prlist_with_sep]. *)
 val concat : (unit -> Pp.t) -> t list -> t
 
+(** What the declarations of [t] need, together. *)
+val needs : t -> Needs.t
+
 (** [t] as a document, for reading. *)
 val to_pp : t -> Pp.t
+
+(** The break between two declaration groups.  It is a break hint, not a
+    forced newline, so the vertical box the whole file is printed in
+    ([Extract_env]) decides where it falls; clang-format keeps the blank
+    lines it leaves. *)
+val cut2 : unit -> Pp.t
+
+(** {2 Translation units} *)
+
+(** A synthesised template a file declares: by its name, the module whose
+    struct it is declared in if any, and whether it is a holder -- a struct
+    -- rather than an alias. *)
+type template = {name : string; home : ModPath.t option; holder : bool; declaration : Pp.t}
+
+(** A constrained template's forward declaration, by the name of the struct
+    it declares. *)
+type forward = {struct_ : string; forward_declaration : Pp.t}
+
+(** A file as the driver assembled it: what opens it, and its sections, in
+    the order written. *)
+type translation_unit = {prologue : Pp.t; sections : t list}
+
+(** A translation unit with every due declaration placed. *)
+type scheduled
+
+(** [schedule ~templates ~forwards u] places each of [templates], in the
+    order given, and each of [forwards] in front of the chunk of [u] that
+    first needs it, reading the chunks in the order written.
+
+    A template goes in front of the innermost chunk holding the first
+    declaration that writes it: one homed in a module in front of that
+    member of the module's struct, any other in front of the innermost
+    chunk at namespace scope, holders in front of aliases.  One written
+    outside every chunk goes after the prologue; one nothing writes, nowhere.
+    A forward declaration goes in front of the innermost chunk at namespace
+    scope holding the first declaration that names its struct, unless that
+    chunk defines the struct. *)
+val schedule : templates:template list -> forwards:forward list -> translation_unit -> scheduled
+
+(** The scheduled unit as a document. *)
+val print : scheduled -> Pp.t
 
 (** {2 Transitional}
 

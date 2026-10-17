@@ -59,8 +59,7 @@ val declaration_names_into_a_struct : cpp_decl -> bool option
 (** Doc-comment lines for [name], or nothing when none is registered. *)
 val pp_doc_comment_for_name : ?indent:string -> string -> Pp.t
 
-(** The break between two declaration groups; see the vertical box in
-    [Extract_env]. *)
+(** The break between two declaration groups ({!Cpp_ast.cut2}). *)
 val cut2 : unit -> Pp.t
 
 (** {2 Custom type templates} *)
