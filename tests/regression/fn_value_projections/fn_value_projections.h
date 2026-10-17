@@ -15,6 +15,10 @@
 
 template <typename A> struct List;
 
+struct Datatypes {
+  static crane::obj id(crane::obj x);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -201,10 +205,6 @@ public:
     }
     return _result;
   }
-};
-
-struct Datatypes {
-  static crane::obj id(crane::obj x);
 };
 
 struct FnValueProjections {

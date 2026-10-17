@@ -523,13 +523,16 @@ let rec lifted_decl_key = function
     it an eponymous record, an enum, a local inductive), and any single one of
     them is a second opinion.  Two such opinions have already been wrong here.
 
-    [std::] is the one qualifier that needs nothing complete: it names into a
-    namespace, not a struct, and the standard library is included above
-    everything.  Every other qualifier is refused, including a dependent
-    [M::t], which needs no completeness but costs only a missed hoist to
-    refuse.  Text no name was written through -- an external name, a custom
-    mapping's replacement -- is read as text: the identifier in front of each
-    [::] is the qualifier.
+    A namespace needs nothing complete: naming into one asks only that the
+    name be declared, which is all a declaration asks of an unqualified name
+    too.  So a library's namespace ([std::], [crane::]), whose headers are
+    included above everything, a file's under separate extraction, and the
+    global one ([::Nat]) all pass.  A struct is refused, and so is a
+    dependent [M::t], which needs no completeness but costs only a missed
+    hoist to refuse.  Text no name was written through -- an external name,
+    a custom mapping's replacement -- is read as text: the identifier in front
+    of each [::] is the qualifier, and passes only as one of the included
+    libraries' namespaces.
 
     This is the one place a declaration is not free.  A helper declared
     needlessly costs a line, but a helper declared needlessly {e and}
@@ -537,6 +540,7 @@ let rec lifted_decl_key = function
     past the uses it exists to precede -- so what it costs is the position, for
     every other helper in the block. *)
 let names_into_a_struct (doc : Pp.t) : bool =
+  let libraries = ["std"; "crane"; (sn ()).ns] in
   let text_names_into_a_struct text =
     let n = String.length text in
     let is_ident c =
@@ -549,22 +553,17 @@ let names_into_a_struct (doc : Pp.t) : bool =
         let stop = ref i in
         while !stop > 0 && is_ident text.[!stop - 1] do decr stop done;
         let qualifier = String.sub text !stop (i - !stop) in
-        if String.equal qualifier "std" then scan (i + 2) else true
+        if List.mem qualifier libraries then scan (i + 2) else true
       else scan (i + 1)
     in
     scan 0
   in
-  let decided =
-    List.exists
-      (function
-        | Cpp_name.Scope (Cpp_name.Namespace "std") -> false
-        | Cpp_name.Scope _ -> true
-        | Cpp_name.Foreign_text text | Cpp_name.Untagged text -> text_names_into_a_struct text )
-      (Cpp_name.written doc)
-  in
-  if Probe.checking () && decided <> text_names_into_a_struct (Pp.string_of_ppcmds doc) then
-    Probe.violation "hoist qualifiers" doc;
-  decided
+  List.exists
+    (function
+      | Cpp_name.Scope (Cpp_name.Namespace _ | Cpp_name.Global) -> false
+      | Cpp_name.Scope (Cpp_name.Class _ | Cpp_name.Parameter _) -> true
+      | Cpp_name.Foreign_text text | Cpp_name.Untagged text -> text_names_into_a_struct text )
+    (Cpp_name.written doc)
 
 let spec_is_hoistable (spec : Cpp_erasure.settled) : bool =
   not (names_into_a_struct (pp_cpp_decl (empty_env ()) spec))

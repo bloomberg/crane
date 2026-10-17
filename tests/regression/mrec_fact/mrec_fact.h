@@ -16,6 +16,10 @@ template <typename E1, typename E2, typename X> struct Sum1;
 template <typename E, typename R, typename itree> struct ItreeF;
 template <typename E, typename R> struct Itree;
 
+struct Function {
+  static crane::obj Id_IFun(crane::obj e);
+};
+
 template <typename A, typename B> struct Sum {
   // TYPES
   struct Inl {
@@ -165,10 +169,6 @@ public:
 };
 
 template <typename e, typename f> using IFun = crane::fn<f(e)>;
-
-struct Function {
-  static crane::obj Id_IFun(crane::obj e);
-};
 
 template <typename E, typename R, typename itree> struct ItreeF {
   // TYPES

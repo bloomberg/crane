@@ -18,6 +18,10 @@ template <typename A> struct List;
 template <typename E, typename R, typename itree> struct ItreeF;
 template <typename E, typename R> struct Itree;
 
+struct Function {
+  static crane::obj Id_IFun(crane::obj e);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -403,10 +407,6 @@ struct ITree {
 };
 
 template <typename e, typename f> using IFun = crane::fn<f(e)>;
-
-struct Function {
-  static crane::obj Id_IFun(crane::obj e);
-};
 
 struct Subevent {
   template <typename T1, typename T2, typename T3>

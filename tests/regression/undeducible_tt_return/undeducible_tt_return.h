@@ -15,6 +15,11 @@ template <typename E, typename F, typename X> struct Sum1;
 template <typename X> struct ReqA;
 template <typename X> struct ReqB;
 
+struct UndeducibleTtReturn {
+  static std::optional<Nat>
+  use(const Sum1<ReqA<crane::obj>, ReqB<crane::obj>, Nat> &ab);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -188,11 +193,6 @@ template <typename X> struct ReqB {
 
   // CREATORS
   static ReqB<X> mkb(X x) { return {std::move(x)}; }
-};
-
-struct UndeducibleTtReturn {
-  static std::optional<Nat>
-  use(const Sum1<ReqA<crane::obj>, ReqB<crane::obj>, Nat> &ab);
 };
 
 template <typename T1, typename T2, typename T4, typename F0, typename F1>

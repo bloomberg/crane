@@ -43,6 +43,10 @@ concept Monad = requires {
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
 
+struct Function {
+  static crane::obj Id_IFun(crane::obj e);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -252,10 +256,6 @@ struct CategoryOps {
 };
 
 template <typename e, typename f> using IFun = crane::fn<f(e)>;
-
-struct Function {
-  static crane::obj Id_IFun(crane::obj e);
-};
 
 template <typename E, typename R, typename itree> struct ItreeF {
   // TYPES

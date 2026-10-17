@@ -12,6 +12,10 @@
 
 struct Nat;
 
+struct Datatypes {
+  static crane::obj id(crane::obj x0);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -114,10 +118,6 @@ public:
     }
     return std::move(*_root);
   }
-};
-
-struct Datatypes {
-  static crane::obj id(crane::obj x0);
 };
 
 template <typename I, typename T>
