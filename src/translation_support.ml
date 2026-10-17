@@ -2445,8 +2445,9 @@ let deducible_tvars_of_glob id =
     loopified call builds is typed instead of falling back on
     [decltype(lambda)].
 
-    Instantiation goes through {!Mlutil.type_subst_list}, the one substituter:
-    a second one here would be a second oracle, free to disagree. *)
+    Instantiation goes through {!Mlutil.Var_types.apply}, by the callee's
+    variables: a second substituter here would be a second oracle, free to
+    disagree. *)
 let rec infer_ml_body_type (a : ml_ast) : ml_type option =
   match a with
   | MLapp (MLglob ({callee = r; _} as use), args) ->
@@ -2477,7 +2478,7 @@ let rec infer_ml_body_type (a : ml_ast) : ml_type option =
   | MLmagic (_, e) -> infer_ml_body_type e
   | _ -> None
 
-(** [tvar_instantiation callee_ty args] is the callee's type-variable
+(** [tvar_instantiation_found callee_ty args] is the callee's type-variable
     instantiation, read off the arguments' own ML types.
 
     A call site does not always carry its type arguments: where the use wrote
@@ -2487,9 +2488,9 @@ let rec infer_ml_body_type (a : ml_ast) : ml_type option =
     the variables down -- matching the declared domain against the type each
     argument actually has recovers them.
 
-    The result is indexed the way {!Mlutil.type_subst_list} expects: position
-    [i] instantiates [Tvar (_, i + 1)].  A variable no argument mentions keeps
-    itself, so substituting leaves it alone. *)
+    The result pairs each variable found with its type, the variable as
+    [callee_ty] spells it, [i] for [Tvar (_, i)]; a variable no argument
+    mentions is absent. *)
 and tvar_instantiation_found
     ?lex
     ?(constructors = false)

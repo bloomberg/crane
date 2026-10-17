@@ -1,7 +1,8 @@
 (* A call's reading of its callee's scheme variables: it starts as exactly
    the arguments the use wrote, a resolution fills only holes and never with
    an erased placeholder, and the list view spells every hole before the
-   last known variable as the placeholder the erasure filters drop. *)
+   last known variable as the placeholder the erasure filters drop.  The
+   view is keyed by the callee's own variables. *)
 
 open Crane_plugin
 open Miniml
@@ -103,5 +104,17 @@ let () =
            asked );
     check "the evidence is recorded"
       (Call_tyargs.resolved_from Call_tyargs.Argument_types r
-       = (Call_tyargs.holes r <> Call_tyargs.holes t))
+       = (Call_tyargs.holes r <> Call_tyargs.holes t));
+    let tys = Call_tyargs.by_variable r in
+    check "a variable is found where the callee's type spells it"
+      (List.for_all
+         (fun v ->
+           Mlutil.Var_types.find tys v = Mlutil.Var_types.find_tvar tys (Scheme.Var.ordinal v) )
+         (Call_tyargs.vars r) );
+    let other = List.hd (Scheme.Var.all (Scheme.Id.fresh callee ~arity)) in
+    check "another scheme's variable is never read as this one's"
+      ( Mlutil.Var_types.is_empty tys
+      || match Mlutil.Var_types.find tys other with
+         | exception Invalid_argument _ -> true
+         | _ -> false )
   done

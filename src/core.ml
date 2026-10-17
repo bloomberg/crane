@@ -150,9 +150,10 @@ let check_declared_once p =
     (fun _ -> ())
     p.structure
 
-(** Every polymorphic use is instantiated at its callee's own scheme, and
-    no instantiation holds a metavariable: extraction froze each into an
-    immutable hole. *)
+(** Every polymorphic use is instantiated at its callee's own scheme, the
+    one {!Mlutil.reference_scheme} names, so that two readings of one
+    callee's variables meet the same variables; and no instantiation holds a
+    metavariable: extraction froze each into an immutable hole. *)
 let check_instantiations p =
   (* Frozen, a metavariable an instantiation held is an open annotation. *)
   let rec open_meta = function
@@ -171,9 +172,11 @@ let check_instantiations p =
         if not (Names.GlobRef.UserOrd.equal (Scheme.Id.owner scheme) r) then
           fail ("instantiates a use of " ^ name () ^ " at another declaration's scheme");
         match Mlutil.reference_scheme r with
+        | Some own when Scheme.Id.equal own scheme -> ()
         | Some own when Scheme.Id.arity own <> Scheme.Id.arity scheme ->
           fail ("instantiates a use of " ^ name () ^ " at a scheme of another arity")
-        | _ -> () )
+        | Some _ -> fail ("instantiates a use of " ^ name () ^ " at a scheme other than its own")
+        | None -> () )
       (Global_use.instantiation use);
     if Global_use.exists_type open_meta use then
       fail ("holds a metavariable in the instantiation of a use of " ^ name ())

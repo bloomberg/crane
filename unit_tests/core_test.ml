@@ -43,6 +43,17 @@ let () =
     (not (refused [term "u" (use_at (Scheme.Id.fresh (r "g") ~arity:1) nat) nat]));
   check "a use instantiated at another declaration's scheme is refused"
     (refused [term "v" (use_at (Scheme.Id.fresh (r "h") ~arity:1) nat) nat]);
+  Table.add_type (r "p") (Tarr (Tvar (Schematic, 1), Tvar (Schematic, 1)));
+  let use_of_p scheme =
+    MLglob
+      (Global_use.polymorphic (r "p")
+         (Scheme.Instantiation.make scheme (fun _ ->
+              {Scheme.solution = Scheme.Type nat; source = Scheme.Not_written} ) ) )
+  in
+  check "a use at the scheme its callee is referenced at freezes"
+    (not (refused [term "x" (use_of_p (Option.get (Mlutil.reference_scheme (r "p")))) nat]));
+  check "a use at a look-alike of its callee's scheme is refused"
+    (refused [term "y" (use_of_p (Scheme.Id.fresh (r "p") ~arity:1)) nat]);
   check "a use holding a metavariable in its instantiation is refused"
     (refused [term "w" (use_at (Scheme.Id.fresh (r "g") ~arity:1) (Tmeta (Meta.fresh 3))) nat]);
   let shared = Tmeta (Meta.fresh 1) in
