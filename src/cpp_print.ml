@@ -592,8 +592,8 @@ let report_unspellable where ty =
     template that, applied to the element, gives something else entirely.  A
     template template argument position needs a name that applies correctly,
     so one is introduced: [template <typename _A> using ITree_tc =
-    std::shared_ptr<ITree<_A>>;], replayed in the header prologue by
-    {!take_forward_struct_decls}.  Keyed by the alias body, so a constructor
+    std::shared_ptr<ITree<_A>>;], declared in front of the first text that
+    spells it ({!take_ctor_alias_decls}).  Keyed by the alias body, so a constructor
     reached twice is declared once. *)
 let ctor_alias_decls : (string * string) list ref = ref []
 
@@ -3190,30 +3190,11 @@ let pp_template_type = function
        via {!pp_requires_of_tparams}. *)
     str "typename"
 
-(** Forward declarations for the structs rendered at C++ global scope,
-    accumulated as they are printed.
-
-    A module struct can be emitted before an inductive a later module pulled up
-    to global scope, so a member declaration may name a type whose definition
-    comes further down the header ([static Prod<nat, nat> divmod(...)] ahead of
-    [struct Prod]).  A declaration only needs the name to have been introduced,
-    so the header prologue replays these up front.  Recording them here, in the
-    printer that also emits the definition, keeps the two spellings of the
-    template parameter list from drifting apart. *)
-let forward_struct_decls = ref ([] : Pp.t list)
-
-(** Take and clear the forward declarations accumulated since the last call. *)
-let take_forward_struct_decls () =
-  let l = List.rev !forward_struct_decls in
-  forward_struct_decls := [];
-  l
-
 (** Take and clear the alias templates ({!ctor_alias_decls}) minted since the
     last call, as declarations.
 
-    Separate from {!take_forward_struct_decls} because the two answer to
-    different files.  A struct forward declaration belongs in the header, and
-    the implementation file, which includes it, has no use for one.  An alias
+    A struct forward declaration belongs in the header, and the
+    implementation file, which includes it, has no use for one.  An alias
     is minted by whichever file writes the use that needs it, and a use in the
     implementation file is reached while the header has already been handed
     over -- so it has to be declared where it was minted.
@@ -3410,53 +3391,24 @@ let struct_template_head ~pp_param env tparams cstr =
     (str "template <" ++ args ++ str ">")
     ++ cstr_pp
 
-(** Forward declarations of the constrained templates rendered at global
-    scope, by struct name, not yet placed: see {!register_forward_struct_decl}
-    and {!take_constrained_forward_decls}. *)
-let constrained_forward_struct_decls = ref ([] : (string * Pp.t) list)
+(** A forward declaration of a struct defined at namespace scope.
 
-(** The pending constrained forward declarations [text] needs, taken out of
-    the registry: those of the structs it names without defining.  A struct
-    [text] defines is taken out without one -- everything after its definition
-    sees it -- so a template never gets a declaration in front of itself. *)
-let take_constrained_forward_decls text =
-  let defines name =
-    let at s = Str.string_match (Str.regexp_string s) in
-    let rec go i =
-      match Str.search_forward (Str.regexp_string ("struct " ^ name)) text i with
-      | j ->
-        let k = j + String.length "struct " + String.length name in
-        (at " {" text k || at " :" text k || at "{" text k) || go (j + 1)
-      | exception Not_found -> false
-    in
-    go 0
-  in
-  let settled, pending =
-    List.partition
-      (fun (name, _) -> mentions_name text name)
-      !constrained_forward_struct_decls
-  in
-  constrained_forward_struct_decls := pending;
-  List.rev_map snd (List.filter (fun (name, _) -> not (defines name)) settled)
-
-(** Forget the constrained forward declarations no chunk of the file asked
-    for. *)
-let reset_constrained_forward_decls () = constrained_forward_struct_decls := []
-
-(** Record a forward declaration for a struct about to be rendered at C++
-    global scope, so {!take_forward_struct_decls} can replay it in the header
-    prologue.  Nested structs are skipped -- a member is not nameable before
-    its enclosing struct anyway.
+    A module struct can be emitted before an inductive a later module pulled
+    up to global scope, so a member declaration may name a type whose
+    definition comes further down the header ([static Prod<nat, nat>
+    divmod(...)] ahead of [struct Prod]).  A declaration only needs the name
+    to have been introduced, so the header's prologue declares them up front.
+    Made here, by the function that prints the definition's template head,
+    so the two spellings of the parameter list cannot drift apart.
 
     A constrained template -- a [requires] clause on the struct, or a
     concept-kinded parameter -- names its concept, which need not be declared
-    by that prologue, nor anywhere above the struct's first use.  Its
-    declaration waits in {!constrained_forward_struct_decls} instead, and is
-    placed in front of the first chunk of the file that names the struct
-    before defining it: a section-local instance's struct and the file
-    module's struct can each name the other, [typename StateV<_tcI0>::state]
-    in a member's signature against a call to that member in the instance's
-    body. *)
+    by that prologue, nor anywhere above the struct's first use; its
+    declaration goes in front of the first chunk of the file that names the
+    struct before defining it ({!Cpp.do_struct_with_decl_tracking}): a
+    section-local instance's struct and the file module's struct can each
+    name the other, [typename StateV<_tcI0>::state] in a member's signature
+    against a call to that member in the instance's body. *)
 type forward_declaration = {
   fwd_struct : string;
   fwd_text : Pp.t;
@@ -3486,31 +3438,6 @@ let forward_declaration ~env ~name ~tparams ~cstr =
     definition still follows in its own place. *)
 let enum_forward_declaration name =
   {fwd_struct = Pp.string_of_ppcmds name; fwd_text = str "enum class " ++ name ++ str ";"; fwd_constrained = false}
-
-(** Every forward declaration recorded by the render under way, in order,
-    under [CRANE_CHECK_IR]: what the plan ahead of the files is checked
-    against. *)
-let registered_forward_decls : forward_declaration list ref = ref []
-
-let register_forward_decl fwd =
-  if not (!render_ctx).rc_in_struct then begin
-    if Probe.checking () then registered_forward_decls := fwd :: !registered_forward_decls;
-    if fwd.fwd_constrained then
-      constrained_forward_struct_decls :=
-        (fwd.fwd_struct, fwd.fwd_text) :: !constrained_forward_struct_decls
-    else forward_struct_decls := fwd.fwd_text :: !forward_struct_decls
-  end
-
-let register_forward_struct_decl ~env ~name ~tparams ~cstr =
-  if not (!render_ctx).rc_in_struct then register_forward_decl (forward_declaration ~env ~name ~tparams ~cstr)
-
-let register_forward_enum_decl ~name =
-  if not (!render_ctx).rc_in_struct then register_forward_decl (enum_forward_declaration name)
-
-let take_registered_forward_decls () =
-  let l = List.rev !registered_forward_decls in
-  registered_forward_decls := [];
-  l
 
 (** Render a doc comment as [///]-prefixed lines followed by a newline, or
     [mt ()] if no comment is registered for [name].  This is the single lookup
@@ -4101,13 +4028,6 @@ and pp_wrapper_nspace env id (members : Cpp_erasure.settled list) =
         dw_sole_child = (match decls with [Dstruct _] -> true | _ -> false) }
   in
   ( match (decls, merges) with
-  | ([Dstruct {ds_tparams; ds_constraint; _}], true) ->
-    register_forward_struct_decl ~env
-      ~name:(str struct_name_str)
-      ~tparams:ds_tparams
-      ~cstr:ds_constraint
-  | _ -> () );
-  ( match (decls, merges) with
   | ( [
         Dstruct
           {
@@ -4320,7 +4240,6 @@ and pp_leaf_decl env (d : cpp_decl) =
         ds_needs_shared_from_this = sft;
       } ->
     let struct_name = struct_definition_name id in
-    register_forward_struct_decl ~env ~name:struct_name ~tparams ~cstr;
     record_file_scope_name struct_name;
     if (!render_ctx).rc_in_struct then printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref id);
     let f_s =
@@ -4522,7 +4441,6 @@ and pp_leaf_decl env (d : cpp_decl) =
           ++ str "  " ++ Id.print id )
         (List.combine ctors rocq_names)
     in
-    register_forward_enum_decl ~name:struct_name;
     (* An [enum class] nested in a module struct shadows a global-scope type of
        the same name exactly as a nested struct does, so it is recorded the
        same way -- the standard library's [comparison] is emitted globally and

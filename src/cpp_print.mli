@@ -92,36 +92,9 @@ type forward_declaration = {
     them, printed in the current scope as the definition prints its head. *)
 val forward_declarations : Common.env -> Cpp_erasure.settled -> forward_declaration list
 
-(** Take the forward declarations recorded by the render under way, under
-    [CRANE_CHECK_IR]. *)
-val take_registered_forward_decls : unit -> forward_declaration list
-
-(** Take the struct forward declarations accumulated since the last call. *)
-val take_forward_struct_decls : unit -> Pp.t list
-
 (** The using-declarations this rendering pass needs for promoted type
     variables whose file-scope alias another file declares, emptying the set. *)
 val take_promoted_alias_imports : unit -> string list
-
-(** Record a forward declaration for a struct about to be rendered at global
-    scope.  A constrained template's waits in
-    {!constrained_forward_struct_decls} until a chunk needs it. *)
-val register_forward_struct_decl :
-  env:Common.env ->
-  name:Pp.t ->
-  tparams:(template_type * Id.t) list ->
-  cstr:cpp_constraint option ->
-  unit
-
-(** Pending forward declarations of constrained templates, by struct name. *)
-val constrained_forward_struct_decls : (string * Pp.t) list ref
-
-(** The pending constrained forward declarations [text] needs, taken out of
-    the registry. *)
-val take_constrained_forward_decls : string -> Pp.t list
-
-(** Forget the constrained forward declarations no chunk asked for. *)
-val reset_constrained_forward_decls : unit -> unit
 
 (** {2 Synthesised aliases} *)
 
