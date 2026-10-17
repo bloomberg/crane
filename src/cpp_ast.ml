@@ -108,8 +108,10 @@ let rec to_pp = function
   | Seq l -> List.fold_left (fun acc t -> Pp.(acc ++ to_pp t)) (Pp.mt ()) l
   | Top_level t -> to_pp t
   | Module {enclosure; fields; members; _} -> (
-    let inside = to_pp (Seq (fields :: (if members = [] then [] else join_members members @ [Text (Pp.fnl ())]))) in
-    match enclosure with Struct {head; tail} -> Pp.(head ++ inside ++ tail) | Out_of_line | In_enclosing_scope -> inside )
+    let inside = to_pp (Seq (fields :: join_members members)) in
+    match enclosure with
+    | Struct {head; tail} -> Pp.(head ++ inside ++ (if members = [] then mt () else fnl ()) ++ tail)
+    | Out_of_line | In_enclosing_scope -> inside )
   | Declarations l -> Pp.(prlist_with_sep fnl (fun d -> d) l ++ cut2 ())
 
 type template = {name : string; homed : bool; holder : bool; declaration : Pp.t}

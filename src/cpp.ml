@@ -854,6 +854,14 @@ type written = Cpp_ast.t rendering
 
 let written text : written = {text; concepts = []; asserts = []}
 
+(** [unenclosed_element enclosure ?fields body] is a module element whose
+    body is written with no struct of its own, as {!Cpp_ast.module_}
+    writes it, and then, where it has members, the line break a struct
+    would have closed them with. *)
+let unenclosed_element enclosure ?fields body =
+  let m = Cpp_ast.module_ enclosure ?fields body in
+  if Cpp_ast.body_is_empty body then m else Cpp_ast.(seq [m; text (fnl ())])
+
 (** Pretty-print a structure element (label, elem) pair. Handles modules, module
     types, and declarations.
 
@@ -1401,7 +1409,7 @@ let rec pp_structure_elem ~is_header f = function
             in
             let fields = Cpp_ast.seq [record_fields_pp; record_methods_pp] in
             if has_concept_collision then
-              (Cpp_ast.seq [typeclasses_pp; modtypes_pp; Cpp_ast.module_ In_enclosing_scope ~fields body], [])
+              (Cpp_ast.seq [typeclasses_pp; modtypes_pp; unenclosed_element In_enclosing_scope ~fields body], [])
             else if Cpp_ast.body_is_empty body && Cpp_ast.is_empty fields then
               (* Empty module: emit [struct Name {};] even though there are
                  no declarations.  The struct may be needed as a template
@@ -1426,7 +1434,7 @@ let rec pp_structure_elem ~is_header f = function
              header. *)
           (Cpp_ast.empty, [])
         else
-          (Cpp_ast.module_ Out_of_line body, [])
+          (unenclosed_element Out_of_line body, [])
         in
         {text; concepts = own_concepts @ body_written.concepts; asserts = passed_out @ own_held}
       | MEident target ->
@@ -1580,7 +1588,7 @@ and pp_module_expr ~is_header f = function
   | MEfunctor (_, _, me) -> pp_module_expr ~is_header f me
   | MEstruct (mp, sel) ->
     let b = pp_module_body ~is_header f mp sel in
-    {b with text = Cpp_ast.module_ (if is_header then In_enclosing_scope else Out_of_line) b.text}
+    {b with text = unenclosed_element (if is_header then In_enclosing_scope else Out_of_line) b.text}
 
 (** The body of the module [mp] of elements [sel], each element a member of
     it, written in the visibility planned for it ({!in_planned_visibility}). *)
@@ -3597,7 +3605,23 @@ let do_struct_with_decl_tracking ~is_header f s =
                    (Table.escape_reserved_struct_name
                       (String.capitalize_ascii (string_of_modfile mp)))
             in
-            if is_header then
+            (* The struct holds the module's own elements, then each flattened
+               child's, which it writes with no struct of its own: the header
+               only the child's functions, the implementation all of it. *)
+            let flattened (l, se) = match se with SEmodule _ -> is_colliding_child l se | _ -> false in
+            let child enclosure ~keep (_, se) =
+              match se with
+              | SEmodule {ml_mod_expr = MEstruct (inner_mp, inner_sel); _} ->
+                in_planned_visibility inner_mp (fun () ->
+                    Cpp_ast.module_ enclosure (Cpp_ast.module_body inner_mp (List.map f (List.filter keep inner_sel))) )
+              | _ -> Cpp_ast.empty
+            in
+            let body enclosure ~keep sel =
+              let children, own = List.partition flattened sel in
+              let own = List.map f own in
+              Cpp_ast.module_body mp (own @ List.map (child enclosure ~keep) children)
+            in
+            if is_header then (
               (* A module type is a concept, and C++ has no member concepts, so
                  one written among a wrapper's children cannot stay there -- and
                  cannot simply move ahead of the wrapper either, because a
@@ -3616,94 +3640,12 @@ let do_struct_with_decl_tracking ~is_header f s =
                   let pp = f x in
                   if not (Cpp_ast.is_empty pp) then concepts := pp :: !concepts )
                 modtype_sels;
-              let non_colliding_pp, colliding_pp =
-                with_render_ctx
-                  (fun c -> { c with rc_in_struct = true })
-                  (fun () ->
-                    let non_colliding =
-                      List.filter
-                        (fun (l, se) ->
-                          match se with
-                          | SEmodule se_inner ->
-                            not (is_colliding_child l (SEmodule se_inner))
-                          | _ -> true )
-                        sel
-                    in
-                    let non_colliding_pp =
-                      concat_nonempty cut2 f non_colliding
-                    in
-                    let colliding_pp =
-                      concat_nonempty
-                        cut2
-                        (fun (_l, se) ->
-                          match se with
-                          | SEmodule m ->
-                            ( match m.ml_mod_expr with
-                            | MEstruct (inner_mp, inner_sel) ->
-                              in_planned_visibility inner_mp (fun () ->
-                                  concat_nonempty cut2 f (List.filter is_func_decl inner_sel) )
-                            | _ -> Cpp_ast.empty )
-                          | _ -> Cpp_ast.empty )
-                        (List.filter
-                           (fun (l, se) -> is_colliding_child l se)
-                           sel )
-                    in
-                    (non_colliding_pp, colliding_pp) )
-              in
               let body =
-                if Cpp_ast.is_empty non_colliding_pp then
-                  colliding_pp
-                else if Cpp_ast.is_empty colliding_pp then
-                  non_colliding_pp
-                else
-                  Cpp_ast.(seq [non_colliding_pp; text (cut2 ()); colliding_pp])
+                with_render_ctx (fun c -> {c with rc_in_struct = true}) (fun () -> body In_enclosing_scope ~keep:is_func_decl sel)
               in
-              let struct_pp =
-                if Cpp_ast.is_empty body then
-                  Cpp_ast.empty
-                else
-                  Cpp_ast.(
-                    seq
-                      [ text (str "struct " ++ str parent_name ++ str " {" ++ fnl ());
-                        body;
-                        text (fnl () ++ str "};") ])
-              in
-              struct_pp
-            else
-              let non_colliding =
-                List.filter
-                  (fun (l, se) ->
-                    match se with
-                    | SEmodule se_inner ->
-                      not (is_colliding_child l (SEmodule se_inner))
-                    | _ -> true )
-                  sel
-              in
-              let non_colliding_pp = concat_nonempty cut2 f non_colliding in
-              let colliding_pp =
-                concat_nonempty
-                  cut2
-                  (fun (_l, se) ->
-                    match se with
-                    | SEmodule m ->
-                      ( match m.ml_mod_expr with
-                      | MEstruct (inner_mp, inner_sel) ->
-                        in_planned_visibility inner_mp (fun () -> concat_nonempty cut2 f inner_sel)
-                      | _ -> Cpp_ast.empty )
-                    | _ -> Cpp_ast.empty )
-                  (List.filter
-                     (fun (l, se) -> is_colliding_child l se)
-                     sel )
-              in
-              let body =
-                if Cpp_ast.is_empty non_colliding_pp then
-                  colliding_pp
-                else if Cpp_ast.is_empty colliding_pp then
-                  non_colliding_pp
-                else
-                  Cpp_ast.(seq [non_colliding_pp; text (cut2 ()); colliding_pp])
-              in
-              body )
+              if Cpp_ast.body_is_empty body then Cpp_ast.empty
+              else Cpp_ast.module_ (Struct {head = str "struct " ++ str parent_name ++ str " {" ++ fnl (); tail = str "};"}) body )
+            else Cpp_ast.module_ Out_of_line (body Out_of_line ~keep:(fun _ -> true) sel) )
           else
             concat_nonempty cut2 f sel
       in

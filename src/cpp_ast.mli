@@ -50,8 +50,9 @@ type t = private
       (** The body of [module_] as the file writes it: [fields], then its
           elements, each a member of it that a template homed in [module_]
           goes in front of -- in order, none empty -- inside the struct
-          [enclosure] writes, if any.  Empty only where no struct is
-          written and there is nothing in it. *)
+          [enclosure] writes, if any, which closes them on a line of its
+          own.  Empty only where no struct is written and there is nothing
+          in it. *)
   | Declarations of Pp.t list
       (** Declarations {!schedule} placed in front of what follows it; no
           tree built before scheduling has one. *)

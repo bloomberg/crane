@@ -96,6 +96,12 @@ let () =
   let spliced = Cpp_ast.spliced (Cpp_ast.module_body m [Cpp_ast.text (Pp.str "y;"); Cpp_ast.empty; Cpp_ast.text (Pp.str "/// z")]) in
   check_text "a spliced body writes its members as a struct separates them, and nothing around them"
     (Pp.string_of_ppcmds (Cpp_ast.to_pp spliced)) "y;\n/// z";
+  let raw t = Pp.string_of_ppcmds (Cpp_ast.to_pp t) in
+  let one = Cpp_ast.module_body m [Cpp_ast.text (Pp.str "y;")] in
+  check_text "a struct closes its members on a line of its own"
+    (raw (Cpp_ast.module_ (Struct {head = Pp.str "s{"; tail = Pp.str "}"}) one)) "s{y;\n}";
+  check_text "a body with no struct of its own writes nothing after its members"
+    (raw (Cpp_ast.module_ In_enclosing_scope one)) "y;";
   check "a spliced body with no members writes nothing" (Cpp_ast.is_empty (Cpp_ast.spliced (Cpp_ast.module_body m [])));
   check "an empty chunk is no chunk" (Cpp_ast.is_empty (top Cpp_ast.empty));
   check "a declaration needing something is not empty" (not (Cpp_ast.is_empty (leaf ~templates:["T"] "")))
