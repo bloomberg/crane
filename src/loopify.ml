@@ -1297,7 +1297,17 @@ let fundef_display_name path =
     deep copy -- has no Core body and no reference, and is classified here. *)
 let planned_recursion r check body =
   let classified () = classify check body in
-  match Option.map (fun r -> (r, Recursion_plan.find r)) r with
+  (* A helper lifted out of a definition for one of its local fixpoints is
+     planned by that fixpoint. *)
+  let find r =
+    match Lifted.of_ref r with
+    | Some h -> (
+      match Lifted.origin h with
+      | Some origin -> Recursion_plan.find_local ~origin ~binder:(Lifted.binder h)
+      | None -> None )
+    | None -> Recursion_plan.find r
+  in
+  match Option.map (fun r -> (r, find r)) r with
   | None -> classified ()
   | Some (r, Some planned) ->
     let planned =

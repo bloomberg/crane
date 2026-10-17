@@ -12875,3 +12875,14 @@
   (alias runtest)
   (deps show_extraction_planned.t.exe)
   (action (run ./show_extraction_planned.t.exe))))
+
+(subdir lifted_local_fix_loopify
+ (rule
+  (targets lifted_local_fix_loopify.t.exe)
+  (deps LiftedLocalFixLoopify.vo lifted_local_fix_loopify.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_local_fix_loopify.t.exe lifted_local_fix_loopify.cpp lifted_local_fix_loopify.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_local_fix_loopify.t.exe)
+  (action (run ./lifted_local_fix_loopify.t.exe))))

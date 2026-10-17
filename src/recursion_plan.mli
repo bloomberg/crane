@@ -47,3 +47,11 @@ val group_of : Names.GlobRef.t -> group option
 (** The kind of the function [r], if the program defines it: its group's,
     or [No_recursion] off every cycle. *)
 val find : Names.GlobRef.t -> kind option
+
+(** The kind of the local fixpoint bound to [binder] in the definition
+    [origin], if [origin] defines one: the kind of the fixpoint's group,
+    planned from its body as a definition's is, every call between its
+    members counting.  A helper lifted out of [origin] for that fixpoint is
+    planned by it ({!Lifted}).  Two fixpoints binding the same name in one
+    definition both count. *)
+val find_local : origin:Names.GlobRef.t -> binder:Names.Id.t -> kind option
