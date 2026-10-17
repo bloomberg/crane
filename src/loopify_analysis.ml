@@ -811,6 +811,18 @@ let rec collect_expr (check : call_checker) expr =
   | CPPbraced args -> List.concat_map (collect_expr check) args
   | CPPstd_get (_, Some e) -> collect_expr check e
   | CPPstd_get_if (_, e) -> collect_expr check e
+  (* A cast, a conversion or an operator around a call evaluates the call
+     first: the call is not in tail position, but it is a call. *)
+  | CPPunop (_, e)
+  | CPPany_cast (_, e)
+  | CPPany_cast_tolerant (_, e)
+  | CPPunbox (_, e)
+  | CPPconvert (_, e)
+  | CPPerase_fn (_, e)
+  | CPPfn_value e
+  | CPPcontainer_cast (_, e, _)
+  | CPPbox (_, e) -> collect_expr check e
+  | CPPconverting_ctor (_, args) -> List.concat_map (collect_expr check) args
   | CPPvar _
    |CPPglob _
    |CPPalloc _
@@ -829,16 +841,6 @@ let rec collect_expr (check : call_checker) expr =
    |CPPrt _
    |CPPbool _
    |CPPint _
-   |CPPunop _
-   |CPPany_cast _
-   |CPPany_cast_tolerant _
-   |CPPconvert _
-   |CPPunbox _
-   |CPPerase_fn _
-   |CPPfn_value _
-   |CPPcontainer_cast _
-   |CPPconverting_ctor _
-   |CPPbox _
    |CPPmethod_value _
    |CPPprojection_value _
    |CPPqualified_t _
