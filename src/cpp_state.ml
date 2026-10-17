@@ -493,34 +493,12 @@ let initial_render_ctx =
 (** Global render context state. *)
 let render_ctx = owned_ref initial_render_ctx
 
-(** A band of rendered text collected while the file is printed and written
-    out, in the order it was collected, at a fixed place in the file.  Pushed
-    in amortised constant time; {!drain} takes the contents and empties it. *)
-type band = Pp.t list ref (* newest first *)
-
-let band name : band = owned_list name
-
-let push (b : band) p = b := p :: !b
-
-let push_all (b : band) ps = List.iter (push b) ps
-
-let drain (b : band) =
-  let l = List.rev !b in
-  b := [];
-  l
-
 (** The functor bodies whose module types are file-scope concepts over the
     functor's parameters as well as [M]: the body's path, the functor's
     label, and its parameters.  A concept cannot be declared in the class
     template a functor becomes, and the module type may mention a parameter. *)
 let functor_concept_scopes : (Names.ModPath.t * (Names.Label.t * Names.ModPath.t list)) list ref =
   owned_list "functor_concept_scopes"
-
-(** Concepts from typeclasses declared inside a module.  A concept may only
-    appear at namespace scope, so one declared in a module -- which is emitted
-    as a struct -- cannot stay where it was written; it is collected here and
-    emitted at file scope instead. *)
-let file_scope_concepts : band = band "file_scope_concepts"
 
 
 (** A concept a frame is holding back until after the struct it was written

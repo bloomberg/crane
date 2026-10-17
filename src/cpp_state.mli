@@ -141,22 +141,6 @@ val initial_render_ctx : render_ctx
     only through [with_render_ctx]. *)
 val render_ctx : render_ctx ref
 
-(** A band of rendered text collected while the file is printed and written
-    out, in collection order, at a fixed place in the file; emptied between
-    extractions. *)
-type band
-
-val band : string -> band
-val push : band -> Pp.t -> unit
-val push_all : band -> Pp.t list -> unit
-
-(** The band's contents in collection order; empties it. *)
-val drain : band -> Pp.t list
-
-(** Concepts from typeclasses declared inside a module.  A concept may only
-    appear at namespace scope, so one declared in a module -- emitted as a
-    struct -- is collected here and emitted at file scope instead. *)
-val file_scope_concepts : band
 
 (** A concept a frame is holding back until after the struct it was written
     in, identified by whatever declares it. *)

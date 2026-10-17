@@ -781,6 +781,16 @@ let is_erased_alias (_, d) =
   | Dusing {du_rhs = Some rhs; _} -> Cpp_erasure.is_any_shaped rhs
   | _ -> false
 
+(** What writing a structure element gives: its text, written where it is,
+    and the concepts it declares that only namespace scope can hold, in the
+    order written, which go to the top of the file. *)
+type written = {
+  text : Pp.t;
+  concepts : Pp.t list;
+}
+
+let written text = {text; concepts = []}
+
 (** Pretty-print a structure element (label, elem) pair. Handles modules, module
     types, and declarations.
 
@@ -790,8 +800,8 @@ let is_erased_alias (_, d) =
                       bodies, skipping header-only constructs).
     @param f          Callback used to pretty-print individual {!Miniml.ml_decl}
                       nodes; typically [impl_decls] or [header_decls].
-    @return Pretty-printer document for the element, or [mt ()] if the element
-            produces no output in the current pass. *)
+    @return The element written ({!written}): its text, [mt ()] if it
+            produces no output in the current pass, and its concepts. *)
 let rec pp_structure_elem ~is_header f = function
   | l, SEdecl d ->
     (* {b Placement of lifted lambda helpers.}  A helper lifted out of a local
@@ -835,7 +845,7 @@ let rec pp_structure_elem ~is_header f = function
        Only at file scope: inside a struct the concept has already been
        hoisted or held back by {!pp_structure_elements}, which knows which of
        those two it is and this does not. *)
-    let body =
+    let concepts, body =
       if
         is_header
         && (not (!render_ctx).rc_in_struct)
@@ -845,11 +855,8 @@ let rec pp_structure_elem ~is_header f = function
              match ind.ind_kind with Miniml.TypeClass _ -> true | _ -> false )
            | _ -> false)
         && not (Pp.ismt body)
-      then (
-        push file_scope_concepts (pp_doc_comment l ++ body);
-        mt () )
-      else
-        body
+      then ([pp_doc_comment l ++ body], mt ())
+      else ([], body)
     in
     (* The helpers are the ones planned for this element alone
        ({!Cpp_ind.header_claim}), each lifted once in the file. *)
@@ -897,10 +904,7 @@ let rec pp_structure_elem ~is_header f = function
         | Miniml.Dind _ -> body ++ cut2 () ++ member_lifted
         | _ -> member_lifted ++ cut2 () ++ body
     in
-    if Pp.ismt body then
-      mt ()
-    else
-      pp_doc_comment l ++ body
+    {text = (if Pp.ismt body then mt () else pp_doc_comment l ++ body); concepts}
   | l, SEmodule m ->
     let mp = MPdot (top_visible_mp (), l) in
     let name =
@@ -928,7 +932,7 @@ let rec pp_structure_elem ~is_header f = function
       match m.ml_mod_expr with
       | MEfunctor _ ->
         if not is_header then
-          mt ()
+          written (mt ())
         else
           let get_template_and_body = function
             | MEfunctor (mbid, mt, me) ->
@@ -946,19 +950,21 @@ let rec pp_structure_elem ~is_header f = function
           (* The module types the body declares cannot be concepts inside the
              class template the functor becomes: they go to file scope, over
              the functor's parameters too, under the functor's name. *)
-          ( match body with
-          | MEstruct (body_mp, sel) ->
-            let params = List.map (fun (mbid, _) -> MPbound mbid) template_params in
-            List.iter
-              (function
-                | l, SEmodtype mty ->
-                  push file_scope_concepts
-                    (pp_modtype_concept ~params
-                       (pp_concept_ref (MPdot (body_mp, l)))
-                       (Cpp_ind.modtype_concept (MPdot (body_mp, l)) ~params mty) )
-                | _ -> () )
-              sel
-          | _ -> () );
+          let concepts =
+            match body with
+            | MEstruct (body_mp, sel) ->
+              let params = List.map (fun (mbid, _) -> MPbound mbid) template_params in
+              List.filter_map
+                (function
+                  | l, SEmodtype mty ->
+                    Some
+                      (pp_modtype_concept ~params
+                         (pp_concept_ref (MPdot (body_mp, l)))
+                         (Cpp_ind.modtype_concept (MPdot (body_mp, l)) ~params mty) )
+                  | _ -> None )
+                sel
+            | _ -> []
+          in
           let template_decl =
             str "template<"
             ++ prlist_with_sep
@@ -967,39 +973,41 @@ let rec pp_structure_elem ~is_header f = function
                  template_params
             ++ str ">"
           in
-          let struct_body =
+          let {text = struct_body; concepts = body_concepts} =
             with_render_ctx
               (fun c -> { c with rc_in_struct = true; rc_in_template = true })
               (fun () ->
                 pp_module_expr ~is_header f body )
           in
-          (match body with
-          | MEapply _ ->
-            template_decl
-            ++ fnl ()
-            ++ str "struct "
-            ++ name
-            ++ str " : "
-            ++ struct_body
-            ++ str " {};"
-          | _ ->
-            template_decl
-            ++ fnl ()
-            ++ str "struct "
-            ++ name
-            ++ str " {"
-            ++ fnl ()
-            ++ struct_body
-            ++ str "};")
+          { text =
+              ( match body with
+              | MEapply _ ->
+                template_decl
+                ++ fnl ()
+                ++ str "struct "
+                ++ name
+                ++ str " : "
+                ++ struct_body
+                ++ str " {};"
+              | _ ->
+                template_decl
+                ++ fnl ()
+                ++ str "struct "
+                ++ name
+                ++ str " {"
+                ++ fnl ()
+                ++ struct_body
+                ++ str "};" );
+            concepts = concepts @ body_concepts }
       | MEapply _ ->
         if not is_header then
-          mt ()
+          written (mt ())
         else
-          let body = pp_module_expr ~is_header f m.ml_mod_expr in
+          let {text = body; concepts} = pp_module_expr ~is_header f m.ml_mod_expr in
           let using_decl =
             str "using " ++ name ++ str " = " ++ body ++ str ";"
           in
-          using_decl ++ concept_assert_pp name m.ml_mod_type
+          {text = using_decl ++ concept_assert_pp name m.ml_mod_type; concepts}
       | MEstruct (body_mp, sel) ->
         let old_context = (!render_ctx).rc_in_struct in
         with_module_frame @@ fun () ->
@@ -1066,8 +1074,9 @@ let rec pp_structure_elem ~is_header f = function
             List.filter (fun (c, _, _) -> Cpp_ind.concept_placement plan c = placement) concepts
         in
         let docs = List.map (fun (_, c, _) -> c) in
-        push_all file_scope_concepts (docs (placed At_file_scope class_concepts));
-        push_all file_scope_concepts (docs (placed At_file_scope modtype_concepts));
+        let own_concepts =
+          docs (placed At_file_scope class_concepts) @ docs (placed At_file_scope modtype_concepts)
+        in
         let typeclass_concepts = placed Ahead_of_struct class_concepts in
         let modtype_concepts_ahead = placed Ahead_of_struct modtype_concepts in
         let concepts_after =
@@ -1148,7 +1157,7 @@ let rec pp_structure_elem ~is_header f = function
                 Pp.(str "Crane: the module " ++ str (ModPath.to_string mp)
                     ++ str " has no planned header scope.")
         in
-        let body, deferred_asserts_pp, this_method_candidates =
+        let body_written, deferred_asserts_pp, this_method_candidates =
           with_promotion_scope @@ fun () ->
           with_render_ctx enter_module (fun () ->
             let held, (body, candidates) =
@@ -1184,6 +1193,7 @@ let rec pp_structure_elem ~is_header f = function
                 !deferred_concept_asserts;
             (body, deferred_asserts_pp, candidates) )
         in
+        let body = body_written.text in
         (* Capture and clean up promotion state. *)
         let this_promoted = is_promoted in
         let this_deferred = !eponymous_deferred in
@@ -1192,6 +1202,7 @@ let rec pp_structure_elem ~is_header f = function
           eponymous_promote_ref := None;
           eponymous_deferred := Pp.mt ();
           eponymous_promote_sft := false );
+        let text =
         if is_header then
           if this_promoted then
             (* Promoted module: the module struct IS the eponymous type. Wrap
@@ -1357,7 +1368,11 @@ let rec pp_structure_elem ~is_header f = function
           mt ()
         else
           body
+        in
+        {text; concepts = own_concepts @ body_written.concepts}
       | MEident target ->
+        written
+        @@
         if not is_header then
           mt ()
         else
@@ -1428,16 +1443,13 @@ let rec pp_structure_elem ~is_header f = function
             ++ str ">;"
           end
     in
-    if Pp.ismt mod_pp then
-      mt ()
-    else
-      pp_doc_comment l ++ mod_pp
+    {mod_pp with text = (if Pp.ismt mod_pp.text then mt () else pp_doc_comment l ++ mod_pp.text)}
   | l, SEmodtype m ->
-    if (not is_header) || (!render_ctx).rc_in_struct then
-      mt ()
-    else
-      let path = MPdot (top_visible_mp (), l) in
-      pp_modtype_concept (str (modtype_concept_name path)) (Cpp_ind.modtype_concept path ~params:[] m)
+    written
+      ( if (not is_header) || (!render_ctx).rc_in_struct then mt ()
+        else
+          let path = MPdot (top_visible_mp (), l) in
+          pp_modtype_concept (str (modtype_concept_name path)) (Cpp_ind.modtype_concept path ~params:[] m) )
 
 (** Render a functor application, and say whether the result comes out with a
     [::] qualifier.
@@ -1463,7 +1475,9 @@ and pp_module_app ~is_header f me me' =
       let r = Common.resolve_module mp in
       (str (wrapper_qualify_modname mp (Common.resolved_string r)), Some r)
     | MEapply (g, g') -> pp_module_app ~is_header f g g'
-    | _ -> (pp_module_expr ~is_header f me, None)
+    (* A functor is applied to paths, so nothing written here declares a
+       concept. *)
+    | _ -> ((pp_module_expr ~is_header f me).text, None)
   in
   let is_qualified = function
     | Some r -> Common.resolved_is_qualified r
@@ -1497,8 +1511,8 @@ and pp_module_app ~is_header f me me' =
             this is the qualified module name; for [MEapply] a template
             instantiation; for [MEstruct] the indented body of declarations. *)
 and pp_module_expr ~is_header f = function
-  | MEident mp -> pp_modname mp
-  | MEapply (me, me') -> fst (pp_module_app ~is_header f me me')
+  | MEident mp -> written (pp_modname mp)
+  | MEapply (me, me') -> written (fst (pp_module_app ~is_header f me me'))
   | MEfunctor (_, _, me) -> pp_module_expr ~is_header f me
   | MEstruct (mp, sel) ->
     if is_header && Probe.checking () && (!render_ctx).rc_in_template <> Scope_plan.templated mp then
@@ -1555,19 +1569,17 @@ and pp_module_expr ~is_header f = function
           | [] -> px
           | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 () ++ px
     in
-    let try_pp_structure_elem l x =
-      let px = pp_structure_elem ~is_header f x in
-      if Pp.ismt px then l else with_homed_aliases px :: l
+    let try_pp_structure_elem (l, concepts) x =
+      let {text = px; concepts = c} = pp_structure_elem ~is_header f x in
+      ((if Pp.ismt px then l else with_homed_aliases px :: l), List.rev_append c concepts)
     in
-    let l = List.fold_left try_pp_structure_elem [] sel in
+    let l, concepts = List.fold_left try_pp_structure_elem ([], []) sel in
     let l = List.rev l in
     clear_local_inductives ();
     List.iter add_local_inductive old_local_inductives;
     current_structure_decls := old_structure_decls;
-    if List.is_empty l then
-      mt ()
-    else
-      (prlist_with_doc_safe_sep cut2 l) ++ fnl ()
+    { text = (if List.is_empty l then mt () else prlist_with_doc_safe_sep cut2 l ++ fnl ());
+      concepts = List.rev concepts }
 
 (** Like [prlist_with_sep] but skips empty ([mt ()]) elements.
 
@@ -3274,9 +3286,11 @@ let do_struct_with_decl_tracking ~is_header f s =
      knows about itself, against [prereq_labels] ({!concept_prereqs}); and
      everything else stays where it is.  The first two are collected into
      [hoisted] and [prereqs], newest first, by the module being written
-     ([ppl] below). *)
-  let place ~prereq_labels ~hoisted ~prereqs ((l, se) as x) =
-    let p = f x in
+     ([ppl] below), and so are the concepts the element declares, which go
+     to the top of the file, into [concepts]. *)
+  let place ~prereq_labels ~hoisted ~prereqs ~concepts ((l, se) as x) =
+    let {text = p; concepts = c} = f x in
+    concepts := List.rev_append c !concepts;
     let hoists =
       is_header
       && (not (!render_ctx).rc_in_struct)
@@ -3305,7 +3319,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     List.filter_map
       (fun (mp, _) -> if is_modfile mp then Some mp else None) s
   in
-  let wrapper_parts, deferred_defs, deferred_lifted, p, hoisted, prereqs =
+  let wrapper_parts, deferred_defs, deferred_lifted, p, hoisted, prereqs, concepts =
     with_visibility (toplevel_visibility initial_mps) @@ fun () ->
     let analysis = get_structure_analysis () in
     let is_func_decl (_, se) =
@@ -3411,8 +3425,8 @@ let do_struct_with_decl_tracking ~is_header f s =
     end;
     let ppl ((mp, sel), wrapper_name) =
       in_planned_visibility mp @@ fun () ->
-      let hoisted = ref [] and prereqs = ref [] in
-      let f = place ~prereq_labels ~hoisted ~prereqs in
+      let hoisted = ref [] and prereqs = ref [] and concepts = ref [] in
+      let f = place ~prereq_labels ~hoisted ~prereqs ~concepts in
       let old_decls = !current_structure_decls in
       current_structure_decls := sel;
       let p =
@@ -3495,8 +3509,7 @@ let do_struct_with_decl_tracking ~is_header f s =
               List.iter
                 (fun x ->
                   let pp = f x in
-                  if not (Pp.ismt pp) then
-                    push file_scope_concepts pp )
+                  if not (Pp.ismt pp) then concepts := pp :: !concepts )
                 modtype_sels;
               let non_colliding_pp, colliding_pp =
                 with_render_ctx
@@ -3592,10 +3605,10 @@ let do_struct_with_decl_tracking ~is_header f s =
             prlist_sep_nonempty cut2 f sel
       in
       current_structure_decls := old_decls;
-      (p, List.rev !hoisted, List.rev !prereqs)
+      (p, List.rev !hoisted, List.rev !prereqs, List.rev !concepts)
     in
     let placed = List.map ppl wrapper_names in
-    let rendered = List.map2 (fun wn (p, _, _) -> (wn, p)) wrapper_names placed in
+    let rendered = List.map2 (fun wn (p, _, _, _) -> (wn, p)) wrapper_names placed in
     if modular () then begin
       clear_local_inductives ();
       List.iter add_local_inductive old_local_inductives
@@ -3634,8 +3647,9 @@ let do_struct_with_decl_tracking ~is_header f s =
       deferred_defs,
       deferred_lifted,
       p,
-      List.concat_map (fun (_, h, _) -> h) placed,
-      List.concat_map (fun (_, _, c) -> c) placed )
+      List.concat_map (fun (_, h, _, _) -> h) placed,
+      List.concat_map (fun (_, _, c, _) -> c) placed,
+      List.concat_map (fun (_, _, _, c) -> c) placed )
   in
   let hoisted_erased_aliases =
     let imports = List.map str (Cpp_print.take_promoted_alias_imports ()) in
@@ -3650,7 +3664,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     | l -> prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
   in
   let hoisted_concepts =
-    match drain file_scope_concepts with
+    match concepts with
     | [] -> mt ()
     | l -> prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
   in
