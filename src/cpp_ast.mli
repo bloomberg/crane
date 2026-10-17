@@ -140,9 +140,10 @@ type scheduled
     first needs it, reading the chunks in the order written.
 
     A template goes in front of the innermost chunk holding the first
-    declaration that writes it: a homed one in front of the innermost
-    member of a module holding it, any other in front of the innermost
-    chunk at namespace scope, holders in front of aliases.  One written
+    declaration that writes it: a homed one, in each module struct whose
+    members write it, in front of the innermost member holding it, any
+    other in front of the innermost chunk at namespace scope, holders in
+    front of aliases.  One written
     outside every chunk goes after the prologue; one nothing writes, nowhere.
     A forward declaration goes in front of the innermost chunk at namespace
     scope holding the first declaration that names its struct, unless that

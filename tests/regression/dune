@@ -12930,3 +12930,14 @@
   (alias runtest)
   (deps alias_home_enclosing_module.t.exe)
   (action (run ./alias_home_enclosing_module.t.exe))))
+
+(subdir alias_home_sibling_modules
+ (rule
+  (targets alias_home_sibling_modules.t.exe)
+  (deps AliasHomeSiblingModules.vo alias_home_sibling_modules.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} alias_home_sibling_modules.t.exe alias_home_sibling_modules.cpp alias_home_sibling_modules.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps alias_home_sibling_modules.t.exe)
+  (action (run ./alias_home_sibling_modules.t.exe))))

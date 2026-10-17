@@ -118,43 +118,51 @@ type scheduled = {opening : Pp.t; body : t list}
 (* The chunks are numbered in the order written, in both passes: a chunk at
    namespace scope and a member of a struct each take the next number. *)
 let schedule ~templates ~forwards u =
-  let template_slot = Hashtbl.create 16 and struct_slot = Hashtbl.create 16 and defined_in = Hashtbl.create 16 in
+  let template_slots = Hashtbl.create 16 and placed_in = Hashtbl.create 16 in
+  let struct_slot = Hashtbl.create 16 and defined_in = Hashtbl.create 16 in
   let count = ref 0 in
   (* Where each template and constrained struct is first needed, from the
-     innermost chunk at namespace scope [top] and the innermost member
-     [member] enclosing the declaration that needs it; and which structs
-     each chunk at namespace scope defines, which a chunk returns. *)
-  let rec first_uses ~top ~member = function
+     innermost chunk at namespace scope [top], the innermost member [member]
+     and the innermost module struct [scope] enclosing the declaration that
+     needs it; and which structs each chunk at namespace scope defines,
+     which a chunk returns.  A homed template is first needed once in each
+     struct: a sibling's declaration is not in scope, and the name, a digest
+     of the body, is the same in every struct writing the same text. *)
+  let rec first_uses ~top ~member ~scope = function
     | Text _ | Declarations _ -> []
-    | Seq l -> List.concat_map (first_uses ~top ~member) l
+    | Seq l -> List.concat_map (first_uses ~top ~member ~scope) l
     | Top_level t ->
       incr count;
       let k = !count in
-      let defined = first_uses ~top:(Some k) ~member t in
+      let defined = first_uses ~top:(Some k) ~member ~scope t in
       Hashtbl.replace defined_in k defined;
       defined
-    | Module {fields; members; _} ->
-      let defined = first_uses ~top ~member fields in
+    | Module {module_; enclosure; fields; members} ->
+      let defined = first_uses ~top ~member ~scope fields in
+      let scope = match enclosure with Struct _ -> Some module_ | Out_of_line | In_enclosing_scope -> scope in
       defined
       @ List.concat_map
           (fun t ->
             incr count;
-            first_uses ~top ~member:(Some !count) t )
+            first_uses ~top ~member:(Some !count) ~scope t )
           members
     | Decl {needs; _} ->
       List.iter
         (fun name ->
           match List.find_opt (fun (a : template) -> String.equal a.name name) templates with
-          | Some a when not (Hashtbl.mem template_slot name) ->
-            Hashtbl.replace template_slot name (if a.homed && Option.has_some member then member else top)
-          | Some _ | None -> () )
+          | Some a -> (
+            let in_, slot = if a.homed && Option.has_some member then (scope, member) else (None, top) in
+            if not (Hashtbl.mem placed_in (name, in_)) then (
+              Hashtbl.replace placed_in (name, in_) ();
+              Hashtbl.add template_slots slot name ) )
+          | None -> () )
         needs.templates;
       List.iter (fun name -> if not (Hashtbl.mem struct_slot name) then Hashtbl.replace struct_slot name top) needs.names;
       needs.defines
   in
-  List.iter (fun t -> ignore (first_uses ~top:None ~member:None t)) u.sections;
+  List.iter (fun t -> ignore (first_uses ~top:None ~member:None ~scope:None t)) u.sections;
   let templates_due k =
-    let due = List.filter (fun (a : template) -> Hashtbl.find_opt template_slot a.name = Some k) templates in
+    let due = List.filter (fun (a : template) -> List.mem a.name (Hashtbl.find_all template_slots k)) templates in
     let holders, aliases = List.partition (fun (a : template) -> a.holder) due in
     List.map (fun (a : template) -> a.declaration) (holders @ aliases)
   in

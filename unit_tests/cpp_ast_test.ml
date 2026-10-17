@@ -56,6 +56,22 @@ let () =
   in
   check_text "a homed template goes in front of the innermost member writing it"
     (text ~templates:[template ~homed:true "T"] [top nested]) "Pstruct-M{ystruct-N{w<T>z}}";
+  let sibling name =
+    let mp = ModPath.MPdot (m, Label.make name) in
+    Cpp_ast.module_
+      (Struct {head = Pp.str (name ^ "{"); tail = Pp.str "}"})
+      (Cpp_ast.module_body mp [leaf ~templates:["T"] "u"; leaf ~templates:["T"] "v"])
+  in
+  check_text "a homed template goes in front of the first member writing it in each module struct"
+    (text ~templates:[template ~homed:true "T"] [top (Cpp_ast.seq [sibling "A"; sibling "B"])]) "PA{<T>uv}B{<T>uv}";
+  let out_of_line name =
+    Cpp_ast.module_ Out_of_line
+      (Cpp_ast.module_body (ModPath.MPdot (m, Label.make name)) [leaf ~templates:["T"] (name ^ "u")])
+  in
+  check_text "modules defined out of line share the scope a homed template is declared in"
+    (text ~templates:[template ~homed:true "T"] [top (Cpp_ast.seq [out_of_line "A"; out_of_line "B"])]) "P<T>AuBu";
+  check_text "an unhomed template is declared once"
+    (text ~templates:[template "T"] [top (sibling "A"); top (sibling "B")]) "P<T>A{uv}B{uv}";
   check_text "an unhomed template written in a member goes at namespace scope" (text ~templates:[template "T"] homed) "P<T>struct-M{fyz}";
   check_text "a homed template goes in front of its home's member defined out of line"
     (text ~templates:[template ~homed:true "T"] [top (Cpp_ast.module_ Out_of_line body)]) "Py<T>z";
