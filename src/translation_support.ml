@@ -263,41 +263,37 @@ let ml_result_type ty =
 let is_monad_reified = Table.is_monad_reified
 
 (** The effect operation the use [use] heads, as Core elaborated it
-    ({!Core_effects}): its operation, and the mode it is generated in.
-
-    While planning the operations are computed here, from the global's
-    registration and the mode of the generation translating it; while
-    emitting they are read from the unit's facts, and one the analysis did
-    not reach is computed here too -- under [CRANE_CHECK_IR], a violation,
-    as is a found one that disagrees with what is computed here. *)
+    ({!Core_effects}): its operation, and the mode it is generated in, read
+    from the unit's facts, which are installed before anything is planned
+    ({!Install_legacy_plan.install}).  One the analysis did not reach is
+    computed from the global's registration and the mode of the generation
+    translating it -- under [CRANE_CHECK_IR], a violation, as is a found one
+    that disagrees with what is computed so. *)
 let effect_of (use : Miniml.global_use) =
   let here () =
     Option.map
       (fun operation -> {Core_effects.operation; mode = (!tctx).itree_mode})
       (Core_effects.operation_of use.callee)
   in
-  match Common.get_phase () with
-  | Common.Plan -> here ()
-  | Common.Emit _ -> (
-    match Core_effects.find use with
-    | Some e ->
-      Core_effects.tally ~found:true;
-      if Probe.checking () && here () <> Some e then
-        Probe.violation "effect operations"
-          Pp.(
-            str "an effect operation of " ++ str (Table.kername_of_global use.callee)
-            ++ str " elaborated from Core disagrees with the generation translating it");
-      Some e
-    | None ->
-      let e = here () in
-      if Option.has_some e then begin
-        Core_effects.tally ~found:false;
-        Probe.violation "effect operations"
-          Pp.(
-            str "an effect operation of " ++ str (Table.kername_of_global use.callee)
-            ++ str " is translated where Core did not reach it")
-      end;
-      e )
+  match Core_effects.find use with
+  | Some e ->
+    Core_effects.tally ~found:true;
+    if Probe.checking () && here () <> Some e then
+      Probe.violation "effect operations"
+        Pp.(
+          str "an effect operation of " ++ str (Table.kername_of_global use.callee)
+          ++ str " elaborated from Core disagrees with the generation translating it");
+    Some e
+  | None ->
+    let e = here () in
+    if Option.has_some e then begin
+      Core_effects.tally ~found:false;
+      Probe.violation "effect operations"
+        Pp.(
+          str "an effect operation of " ++ str (Table.kername_of_global use.callee)
+          ++ str " is translated where Core did not reach it")
+    end;
+    e
 
 (** Whether the use [use] heads the effect operation [op]. *)
 let is_effect op use =
