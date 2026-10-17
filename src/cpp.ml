@@ -2385,8 +2385,8 @@ let in_header_element_scope mp k =
       Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned header scope.")
   | Some {in_struct; concepts_hoisted} ->
     with_render_ctx
-      (fun _ ->
-        { initial_render_ctx with
+      (fun c ->
+        { (at_file_scope c) with
           rc_in_struct = in_struct;
           rc_concepts_hoisted = concepts_hoisted;
           rc_in_template = Scope_plan.templated mp } )
@@ -2468,7 +2468,7 @@ let plan_file_layout s =
     | Wrapper_functions (_, generate) -> List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) (generate ())
   in
   let wrapper_functions mp se =
-    with_render_ctx (fun _ -> initial_render_ctx) @@ fun () ->
+    with_render_ctx at_file_scope @@ fun () ->
     List.iter (fun h -> defines ~lifted:true mp (empty_env ()) (fst (lifted_views h))) (wrapper_lifted se)
   in
   let element mp d =
@@ -2554,7 +2554,7 @@ let plan_ctor_aliases s =
     let element d =
       let scope k =
         if header then in_header_element_scope (top_visible_mp ()) (fun ~in_struct:_ -> k Cpp_ind.header_element_ahead)
-        else with_render_ctx (fun _ -> initial_render_ctx) (fun () -> k Cpp_ind.impl_element_ahead)
+        else with_render_ctx at_file_scope (fun () -> k Cpp_ind.impl_element_ahead)
       in
       scope (fun ahead ->
           let e : Cpp_ind.element = ahead d in
@@ -2563,7 +2563,7 @@ let plan_ctor_aliases s =
           written (List.map snd e.member_defs) )
     in
     let wrapper_element se =
-      with_render_ctx (fun _ -> initial_render_ctx) @@ fun () ->
+      with_render_ctx at_file_scope @@ fun () ->
       match wrapper_element se with
       | Wrapper_nothing -> ()
       | Wrapper_instance (r, a, t) ->
@@ -3516,6 +3516,7 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
             implementation), including lifted declarations and deferred
             out-of-line function definitions. *)
 let do_struct_with_decl_tracking ~is_header f s =
+  writing_file (if is_header then Common.Intf else Common.Impl) @@ fun () ->
   (* A synthesised alias is emitted in front of the top-level element that
      writes it, rather than collected into the file's prologue.
 

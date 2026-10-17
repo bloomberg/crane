@@ -389,11 +389,6 @@ let set_phase, get_phase =
   let ph = ref Plan in
   (( := ) ph, fun () -> !ph)
 
-let with_phase ph f =
-  let saved = get_phase () in
-  set_phase ph;
-  Fun.protect ~finally:(fun () -> set_phase saved) f
-
 let phase_name = function
   | Plan -> "planning"
   | Emit Impl -> "implementation"

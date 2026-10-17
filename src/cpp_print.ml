@@ -676,21 +676,19 @@ let ctor_alias_visibility = function
     Common.toplevel_visibility
       (List.rev (List.filter Table.is_modfile (Common.visible_mps (Common.current_visibility ()))))
 
-(** The file being written, which a template is declared in: a planning
-    render writes the header's view. *)
-let ctor_alias_file () = match Common.get_phase () with Common.Emit file -> file | Common.Plan -> Common.Intf
-
 (** The context a template with home [home] is written in, in the file
-    being written ({!ctor_alias_file}): at
+    being written: at
     namespace scope; in the header, inside its home's struct, a class
     template where the home's struct is one; in the implementation, beside
     the definitions of its home's members, which are written out of line and
     qualify what they name by the struct they are members of. *)
 let ctor_alias_render_ctx home =
-  match (home, ctor_alias_file ()) with
-  | None, _ -> initial_render_ctx
-  | Some home, Common.Intf -> {initial_render_ctx with rc_in_struct = true; rc_in_template = Scope_plan.templated home}
-  | Some home, Common.Impl -> {initial_render_ctx with rc_scope = Scope_plan.of_module home}
+  let file = (!render_ctx).rc_file in
+  let start = file_start file in
+  match (home, file) with
+  | None, _ -> start
+  | Some home, Common.Intf -> {start with rc_in_struct = true; rc_in_template = Scope_plan.templated home}
+  | Some home, Common.Impl -> {start with rc_scope = Scope_plan.of_module home}
 
 (** The synthesised templates each file writes, planned before either is
     rendered ({!Cpp.plan_ctor_aliases}): each file's, in the order it first
@@ -3423,11 +3421,11 @@ let with_struct_scope r f =
 
 (** The synthesised templates spelled, in [file], at the type constructors
     [visit] calls its argument at, in the order spelled -- one written in
-    another's body ahead of it -- each spelled as the printer spells it, in
-    the file's phase and inside the struct of the inductive whose members are
-    written around it, if any ({!with_struct_scope}). *)
+    another's body ahead of it -- each spelled as the printer spells it in
+    that file, inside the struct of the inductive whose members are written
+    around it, if any ({!with_struct_scope}). *)
 let ctor_aliases_found ~file visit =
-  Common.with_phase (Common.Emit file) @@ fun () ->
+  writing_file file @@ fun () ->
   setting collecting_ctor_aliases true @@ fun () ->
   setting ctor_aliases_spelled [] @@ fun () ->
   visit (fun ~vl ~owner t ->
@@ -4538,7 +4536,7 @@ let pp_cpp_decl env settled =
   let tagged tag names doc = match names with [] -> doc | _ -> Pp.tag (tag ^ String.concat " " names) doc in
   let doc =
     tagged writes_tag
-      (List.map ctor_alias_name (ctor_aliases_written ~file:(ctor_alias_file ()) settled))
+      (List.map ctor_alias_name (ctor_aliases_written ~file:(!render_ctx).rc_file settled))
       (pp_cpp_decl env settled)
   in
   match !constrained_structs with

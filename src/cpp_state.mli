@@ -128,14 +128,19 @@ val sig_preamble : 'a -> string option -> Names.ModPath.t list -> 'b -> Pp.t
     mutability lives in the {!render_ctx} ref, so that save/restore around a
     sub-render cannot forget a field. *)
 type render_ctx = {
+  rc_file : Common.file;  (** The file being written. *)
   rc_in_struct : bool;
   rc_concepts_hoisted : bool;
   rc_scope : Scope_plan.scope option;
   rc_in_template : bool;
 }
 
-(** The context at the start of a file: file scope, outside every struct. *)
-val initial_render_ctx : render_ctx
+(** The context at the start of the file [file]: file scope, outside every
+    struct. *)
+val file_start : Common.file -> render_ctx
+
+(** The context at file scope in the file [c] is written in. *)
+val at_file_scope : render_ctx -> render_ctx
 
 (** The single global render context, reset by [reset_cpp_state]. Change it
     only through [with_render_ctx]. *)
@@ -179,6 +184,9 @@ val class_concept_held_back : Names.GlobRef.t -> bool
     context. *)
 val with_render_ctx : (render_ctx -> render_ctx) -> (unit -> 'a) -> 'a
 
+(** [writing_file file f] renders [f] as part of the file [file]. *)
+val writing_file : Common.file -> (unit -> 'a) -> 'a
+
 (** Where a declaration was generated: the visibility stack and render
     context its names are spelled against.  A declaration written somewhere
     later than it was generated carries one, so that it reads the same as it
@@ -187,8 +195,8 @@ type scope
 
 val current_scope : unit -> scope
 
-(** [in_scope sc f] runs [f] as if at [sc], restoring the current scope
-    however [f] leaves. *)
+(** [in_scope sc f] runs [f] as if at [sc] in the file being written,
+    restoring the current scope however [f] leaves. *)
 val in_scope : scope -> (unit -> 'a) -> 'a
 
 (** {2 Template static accessors} *)

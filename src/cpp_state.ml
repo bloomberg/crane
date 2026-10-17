@@ -469,6 +469,8 @@ let sig_preamble _ comment used_modules _usf =
     [let saved = !render_ctx in ... ; render_ctx := saved] cannot forget a
     field, whatever fields are added later. *)
 type render_ctx = {
+  (* The file being written. *)
+  rc_file : Common.file;
   (* Inside a struct body? Affects qualification of nested type references. *)
   rc_in_struct : bool;
   (* TypeClass concepts already emitted for the current module? *)
@@ -481,17 +483,23 @@ type render_ctx = {
   rc_in_template : bool;
 }
 
-(** The context at the start of a file: file scope, outside every struct. *)
-let initial_render_ctx =
+(** The context at the start of the file [file]: file scope, outside every
+    struct. *)
+let file_start rc_file =
   {
+    rc_file;
     rc_in_struct = false;
     rc_concepts_hoisted = false;
     rc_scope = None;
     rc_in_template = false;
   }
 
-(** Global render context state. *)
-let render_ctx = owned_ref initial_render_ctx
+(** The context at file scope in the file [c] is written in. *)
+let at_file_scope c = file_start c.rc_file
+
+(** Global render context state.  Outside every file a planning pass reads
+    as the header would be written. *)
+let render_ctx = owned_ref (file_start Common.Intf)
 
 (** The functor bodies whose module types are file-scope concepts over the
     functor's parameters as well as [M]: the body's path, the functor's
@@ -544,6 +552,8 @@ let with_render_ctx (upd : render_ctx -> render_ctx) (f : unit -> 'a) : 'a =
   render_ctx := upd saved;
   Fun.protect ~finally:(fun () -> render_ctx := saved) f
 
+let writing_file file f = with_render_ctx (fun c -> {c with rc_file = file}) f
+
 type scope = { sc_visibility : Common.visibility; sc_render : render_ctx }
 
 let current_scope () =
@@ -551,7 +561,7 @@ let current_scope () =
 
 let in_scope sc f =
   Common.with_visibility sc.sc_visibility (fun () ->
-      with_render_ctx (fun _ -> sc.sc_render) f )
+      with_render_ctx (fun c -> {sc.sc_render with rc_file = c.rc_file}) f )
 
 (** Track definitions rendered as function accessors (Meyers singletons) instead
     of static inline variables, due to template static init ordering. Stores

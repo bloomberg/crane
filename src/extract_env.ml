@@ -1592,14 +1592,16 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   let intf_first = Sys.getenv_opt "CRANE_RENDER_ORDER" = Some "intf-first" in
   (* Every function is generated before either render, emitting as the file
      rendered first does: calls read the plans emission reads. *)
-  set_phase (Emit (if intf_first then Intf else Impl));
-  Pipeline_trace.event "emit" "generate_ahead";
-  Cpp.generate_ahead struc;
-  Common.plan_written_files (Cpp.files_named_ahead struc);
-  Pipeline_trace.event "emit" "plan_file_layout";
-  Cpp.plan_file_layout struc;
-  Pipeline_trace.event "emit" "plan_ctor_aliases";
-  Cpp.plan_ctor_aliases struc;
+  let first = if intf_first then Intf else Impl in
+  set_phase (Emit first);
+  Cpp_state.writing_file first (fun () ->
+      Pipeline_trace.event "emit" "generate_ahead";
+      Cpp.generate_ahead struc;
+      Common.plan_written_files (Cpp.files_named_ahead struc);
+      Pipeline_trace.event "emit" "plan_file_layout";
+      Cpp.plan_file_layout struc;
+      Pipeline_trace.event "emit" "plan_ctor_aliases";
+      Cpp.plan_ctor_aliases struc );
   let generated_checkpoint = checkpoint () in
   let body_impl, body_hstruct =
     if intf_first then
@@ -2486,6 +2488,7 @@ let print_one_decl struc mp decl =
   freeze_global_ids ();
   set_phase (Emit Impl);
   let ans =
+    Cpp_state.writing_file Impl @@ fun () ->
     with_visibility (toplevel_visibility [mp]) @@ fun () ->
     Cpp.generate_decl_ahead decl;
     d.pp_decl decl
