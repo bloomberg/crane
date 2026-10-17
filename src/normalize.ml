@@ -31,11 +31,13 @@ type local = {l_type : ml_type; l_arity : int}
 (* The functions whose calls are bound: a top-level fixpoint group, by
    reference, and the local fixpoints enclosing the term, each by the depth
    its bodies start at and its functions, the [j]th being [MLrel (j + 1)]
-   there.  [fresh] names the next temporary of the declaration. *)
+   there.  [fresh] names the next temporary of the declaration, and
+   [effects] are the effect operations of the program it is in. *)
 type group = {
   globals : GlobRef.t list;
   locals : (int * local array) list;
   fresh : unit -> ml_ident;
+  effects : Core_effects.t;
 }
 
 (* A supply of the declaration's temporaries, numbered from 1, so no two of
@@ -128,9 +130,12 @@ let rec scope ~group ~depth e =
   in
   let rec strict ~tail e =
     match e with
-    | MLapp ((MLglob {callee = r; _} as f), args) when Table.is_bind r ->
+    | MLapp ((MLglob use as f), args)
+      when Core_effects.lookup group.effects use = Some {operation = Bind; mode = Sequential} ->
       (* Monadic sequencing: the action runs where the bind puts it, and a
-         recursive call that is the whole action is a tail call there. *)
+         recursive call that is the whole action is a tail call there.  A
+         reified bind is a call building the tree, its action evaluated
+         first, like any other call's argument. *)
       MLapp (f, List.map (inner 0) args)
     | MLapp (f, args) -> (
       let e' = MLapp (strict ~tail:false f, List.map (strict ~tail:false) args) in
@@ -221,21 +226,26 @@ let loopified ~methods r =
   | None -> Table.should_loopify r
 
 (* A declaration's body, normalized against the top-level functions
-   [globals] it recurses through. *)
-let body ~globals b = scope ~group:{globals; locals = []; fresh = temporaries ()} ~depth:0 b
+   [globals] it recurses through, in a program of effect operations
+   [effects]. *)
+let body ~effects ~globals b = scope ~group:{globals; locals = []; fresh = temporaries (); effects} ~depth:0 b
 
-let decl ~methods = function
+let decl ~effects ~methods = function
   | Dfix fds when List.exists (fun fd -> loopified ~methods fd.fd_ref) fds ->
     (* A group is normalized whole: loopification inlines one member's
        partners into it, whether or not they are loopified themselves. *)
     let globals = List.map (fun fd -> fd.fd_ref) fds in
-    Dfix (List.map (fun fd -> {fd with fd_body = body ~globals fd.fd_body}) fds)
+    Dfix (List.map (fun fd -> {fd with fd_body = body ~effects ~globals fd.fd_body}) fds)
   | Dterm (r, b, ty) when loopified ~methods r ->
     (* No recursion of its own, but a local fixpoint in it is loopified. *)
-    Dterm (r, body ~globals:[] b, ty)
+    Dterm (r, body ~effects ~globals:[] b, ty)
   | d -> d
 
 (* The methods the structure's functions become. *)
 let methods_of struc = Method_registry.create ~ret_is_erased:Translation.return_type_is_erased struc
 
-let structure struc = Modutil.map_struct_decls (decl ~methods:(methods_of struc)) struc
+(* The effect operations are those of the program being normalized, read
+   off it first ({!Core_effects.analyze}): a bind is sequencing only where
+   the declaration it is written in erases its monad. *)
+let structure struc =
+  Modutil.map_struct_decls (decl ~effects:(Core_effects.analyze struc) ~methods:(methods_of struc)) struc

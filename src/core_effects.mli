@@ -55,9 +55,12 @@ val equal : t -> t -> bool
 (** Make [t] the unit's operations, the ones {!find} reads. *)
 val install : t -> unit
 
-(** [find use] -- the installed operation of the use [use], if the analysis
-    reached it; [None] for a use it did not, or one whose copies a rewrite
-    duplicated were found in two modes. *)
+(** [lookup t use] -- the operation of the use [use] among [t], if the
+    analysis reached it; [None] for a use it did not, or one whose copies a
+    rewrite duplicated were found in two modes. *)
+val lookup : t -> Miniml.global_use -> effect option
+
+(** [find use] -- {!lookup} among the installed operations. *)
 val find : Miniml.global_use -> effect option
 
 (** Record that translation took an operation from the installed ones

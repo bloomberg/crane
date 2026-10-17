@@ -68,8 +68,8 @@ let install t =
 
 (* A body's annotations may be rewritten before it is translated, which
    rebuilds every node, so the use's occurrence is what identifies it. *)
-let find use =
-  match Ref.User.Map.find_opt use.callee !installed with
+let lookup t use =
+  match Ref.User.Map.find_opt use.callee t with
   | None -> None
   | Some entries -> (
     let occurrence = Global_use.occurrence use in
@@ -77,6 +77,8 @@ let find use =
     | [] -> None
     | e :: rest when List.for_all (fun e' -> e'.effect = e.effect) rest -> Some e.effect
     | _ -> None )
+
+let find use = lookup !installed use
 
 let tally ~found =
   counts :=
