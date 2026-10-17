@@ -2423,6 +2423,15 @@ let plan_file_layout s =
   let element mp d =
     in_header_element_scope mp @@ fun ~in_struct ->
       let scope = current_scope () in
+      if
+        Probe.checking ()
+        && not (Option.cata (equal_visibility (current_visibility ())) false (Scope_plan.visibility mp))
+      then
+        Probe.violation "section scopes"
+          Pp.(
+            str "an element of the module " ++ str (ModPath.to_string mp)
+            ++ str " is planned from a visibility other than the one planned for the module: "
+            ++ pp_visibility (current_visibility ()) );
       let e = Cpp_ind.header_element_ahead d in
       home mp d e.rendered;
       if e.member_defs <> [] then add member_defs mp (scope, e.member_defs);
