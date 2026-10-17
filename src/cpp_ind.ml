@@ -892,10 +892,6 @@ let generate d =
           header_decls
             [(empty_env (), gen_typeclass_cpp r (Table.get_record_field_bindings r))] )
   | Dtype (r, l, t) ->
-    if t == Taxiom then begin
-      Cpp_erasure.register_axiom_type r;
-      Table.add_erased_type_const r
-    end;
     ( match t with
     | Miniml.Tdummy Miniml.Ktype -> Nothing (* erased Type aliases *)
     | t

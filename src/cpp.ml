@@ -1927,8 +1927,9 @@ let prepare_structure s =
         Method_registry.create
           ~ret_is_erased:Translation.return_type_is_erased s );
   let analysis = Structure_analysis.analyze (get_method_registry ()) s in
-  (* Whether an inductive is a flat struct is a property of its declaration;
-     every reader, before or after its struct is generated, gets one answer. *)
+  (* Whether an inductive is a flat struct, and whether a type is an axiom,
+     are properties of their declarations; every reader, before or after the
+     declaration is generated, gets one answer. *)
   Modutil.struct_iter
     (function
       | Dind (kn, ind) ->
@@ -1938,6 +1939,9 @@ let prepare_structure s =
             if Table.is_flat_inductive_packet kn ind i then
               Table.add_flat_inductive r )
           ind.ind_packets
+      | Dtype (r, _, Taxiom) when (not (is_any_inline_custom r)) && Table.singleton_class_method r = None ->
+        Cpp_erasure.register_axiom_type r;
+        Table.add_erased_type_const r
       | _ -> () )
     (fun _ -> ())
     (fun _ -> ())

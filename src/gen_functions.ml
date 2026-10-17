@@ -35,10 +35,7 @@ let type_alias_rhs r vars ot =
   | None -> (
     match ot with
     | None -> (None, None)
-    | Some Taxiom ->
-      Cpp_erasure.register_axiom_type r;
-      Table.add_erased_type_const r;
-      (Some Tany, Some "AXIOM TO BE REALIZED")
+    | Some Taxiom -> (Some Tany, Some "AXIOM TO BE REALIZED")
     | Some t ->
       (* Name the body's type variables from the alias's own list.  Left
          anonymous they are resolved by position against the emitted

@@ -27,7 +27,8 @@ open Minicpp
 
     A Rocq axiom has no computational content, so its type extracts to
     [std::any].  The classification is global to a session — the registry is
-    populated by {!Cpp_ind} as declarations are processed and read here and by
+    populated from each unit's declarations before anything about the unit
+    is planned ({!Cpp.prepare_structure}) and read here and by
     {!Cpp_print} (which suppresses [__attribute__((pure))] on functions whose
     type mentions one, since they may call a throwing axiom stub). *)
 
