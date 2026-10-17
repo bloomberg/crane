@@ -663,10 +663,12 @@ type ctor_alias = {
           sentinel where the template's own parameter goes. *)
 }
 
-(** The module struct the template abbreviating [body] has to be declared
-    inside, if any: the one being written, where [body] names a global of
-    it.  Such a global is written bare only because that struct is the
-    innermost visible scope, and so means nothing at namespace scope. *)
+(** The module struct the template abbreviating [body], written in [file],
+    has to be declared inside, if any: the one being written, where [body]
+    names a global of it.  Such a global is written bare only because that
+    struct is the innermost visible scope, and so means nothing at namespace
+    scope.  In the implementation file, which writes no module struct, it is
+    the struct whose members are defined out of line around it. *)
 let ctor_alias_home body =
   let cur = Common.top_visible_mp () in
   let modpath_of = function
@@ -700,6 +702,17 @@ let ctor_alias_visibility = function
   | None ->
     Common.toplevel_visibility
       (List.rev (List.filter Table.is_modfile (Common.visible_mps (Common.current_visibility ()))))
+
+(** The context a template with home [home] is written in, in [file]: at
+    namespace scope; in the header, inside its home's struct, a class
+    template where the home's struct is one; in the implementation, beside
+    the definitions of its home's members, which are written out of line and
+    qualify what they name by the struct they are members of. *)
+let ctor_alias_render_ctx ~file home =
+  match (home, file) with
+  | None, _ -> initial_render_ctx
+  | Some home, Common.Intf -> {initial_render_ctx with rc_in_struct = true; rc_in_template = Scope_plan.templated home}
+  | Some home, Common.Impl -> {initial_render_ctx with rc_scope = Scope_plan.of_module home}
 
 (** The pending synthesised names whose home is [mp]. *)
 let pending_ctor_aliases_homed_in mp =
@@ -1354,7 +1367,8 @@ let rec pp_cpp_type ?(lead = true) par vl t =
        here is the eta-expansion of the constructor: its head is what the
        position wants. *)
     let t = match t with Tapply (head, _) -> head | t -> t in
-    match ctor_alias_at vl t with
+    let file = match Common.get_phase () with Common.Emit file -> file | Common.Plan -> Common.Intf in
+    match ctor_alias_at ~file vl t with
     | Some (alias, args) ->
       let name = register_ctor_alias alias in
       if alias.ca_holder then (str (name ^ "<" ^ String.concat ", " args ^ ">::template c"), true)
@@ -1399,16 +1413,16 @@ let rec pp_cpp_type ?(lead = true) par vl t =
     its argument goes -- it is the abstraction, not an application of one.  A
     custom mapping arrives applied to its real arguments, so the sentinel is
     put in the carrier's place first. *)
-and ctor_alias_at vl t =
+and ctor_alias_at ~file vl t =
   let custom () =
     match t with
     | Tglob (r, (_ :: _ as args), _) when find_custom_opt r <> None ->
       let fixed = List.filteri (fun i _ -> i < List.length args - 1) args in
-      ctor_alias_of_probe vl ~base:(Common.pp_global_name Type r) (Tglob (r, fixed @ [Thole], []))
+      ctor_alias_of_probe ~file vl ~base:(Common.pp_global_name Type r) (Tglob (r, fixed @ [Thole], []))
     | _ -> None
   in
   if exists_cpp_type (fun s -> s = Thole) t then
-    match ctor_alias_of_probe vl ~base:"crane_carrier" t with
+    match ctor_alias_of_probe ~file vl ~base:"crane_carrier" t with
     | Some _ as alias -> alias
     | None -> custom ()
   else custom ()
@@ -1419,7 +1433,7 @@ and ctor_alias_at vl t =
     The body is rendered where the template is declared ({!ctor_alias_visibility}),
     because that is where a [using] is read; every name it writes
     has to mean there what it means at the use. *)
-and ctor_alias_of_probe vl ~base probe =
+and ctor_alias_of_probe ~file vl ~base probe =
   (* The template parameters of the enclosing declaration that the body
      names.  An alias whose body mentions one cannot live at namespace
      scope, so those are what the holder abstracts over. *)
@@ -1498,7 +1512,10 @@ and ctor_alias_of_probe vl ~base probe =
   in
   let home = ctor_alias_home probe in
   let render t =
-    Common.with_visibility (ctor_alias_visibility home) (fun () -> Pp.string_of_ppcmds (pp_cpp_type false vl t))
+    with_render_ctx
+      (fun _ -> ctor_alias_render_ctx ~file home)
+      (fun () ->
+        Common.with_visibility (ctor_alias_visibility home) (fun () -> Pp.string_of_ppcmds (pp_cpp_type false vl t)) )
   in
   let rendered = render probe in
   if
