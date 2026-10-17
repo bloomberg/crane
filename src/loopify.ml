@@ -486,88 +486,27 @@ let planned_local_recursion fixpoint check body =
 
 (** {2 Inner lambda loopification}
 
-    Transforms self-recursive [std::function] lambdas within function bodies
-    into iterative versions using the same while-loop or stack-frame techniques
-    as top-level functions. *)
+    Transforms the local fixpoints within function bodies into iterative
+    versions using the same while-loop or stack-frame techniques as
+    top-level functions. *)
 
-(** Create a {!call_checker} that recognises self-recursive calls within an
-    inner lambda. Matches [CPPfun_call (call_opaque, CPPvar id, of_reversed (args))] where [id] equals
-    [lambda_name]. All matched calls are marked as non-tail since inner lambda
-    calls are processed within expression contexts.
+(** Walk through a statement list and loopify each local fixpoint: the
+    implementation lambda of the Y-combinator pair a local [fix] becomes
+    ({!Translation.gen_local_fix_by_ref}), which recurses through its
+    self-parameter, as the program's recursion plan has it
+    ({!planned_local_recursion}).  A [let]-bound lambda cannot name the
+    variable it is bound to, so no other lambda recurses.
 
-    @param lambda_name The [Id.t] name of the lambda variable (e.g., the [id]
-                       in [std::function<...> id = ...])
-    @return A {!call_checker} suitable for {!classify}, {!transform_tail}, etc. *)
-let lambda_checker (lambda_name : Id.t) : call_checker =
- fun e ->
-   match e with
-   | CPPfun_call (_, CPPvar id, args) when Id.equal id lambda_name ->
-     (* Direct call: [f(args)] — by-reference fixpoint pattern *)
-     Some (mk_call_site (to_reversed args))
-   | CPPfun_call (_, CPPderef (CPPvar id), args) when Id.equal id lambda_name ->
-     (* Dereferenced call — shared_ptr fixpoint pattern *)
-     Some (mk_call_site (to_reversed args))
-   | _ -> None
-
-(** Walk through a statement list and loopify any self-recursive [std::function]
-    lambda assignments.
-
-    Recognises two patterns for self-recursive lambdas:
-    + [Sdecl(id, Tfun _); Sasgn(id, Existing, CPPlambda(...))] -- declaration
-      followed by assignment (common when Coq's [let fix] is extracted).
-    + [Sasgn(id, Some(Tfun _), CPPlambda(...))] -- combined declaration and
-      assignment.
-
-    For each matched lambda whose body contains recursive calls to [id] (as
-    determined by {!lambda_checker} and {!classify}), applies the appropriate
-    transformation ({!transform_tail} or {!transform_nontail}). Lambdas without self-recursion are left unchanged but
-    their bodies are recursively scanned for nested lambdas.
-
-    Also descends into all nested statement structures (if/else, while loops,
+    Descends into all nested statement structures (if/else, while loops,
     match branches, switch, blocks) and into lambda expressions within
-    assignments and returns, to find recursive lambda patterns at any depth.
+    assignments and returns, to find local fixpoints at any depth.
 
     @param tparams  Type parameters of the enclosing function
     @param body     The statement list to scan and transform
-    @return The statement list with all self-recursive inner lambdas loopified *)
+    @return The statement list with all recursive local fixpoints loopified *)
 let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
   (* What the enclosing scope binds, which a local fixpoint captures. *)
   let outer_env = collect_type_env body @ outer_env in
-  let try_loopify_lambda id lparams ret_ty_opt lbody cap =
-    let lparams = to_reversed lparams in
-    let check = lambda_checker id in
-    let lbody = expose_tail_calls check lbody in
-    match classify check lbody with
-    | No_recursion -> None
-    | Nontail_recursion when tail_only -> None
-    | (Tail_recursion | Nontail_recursion) as kind ->
-      let params =
-        List.filter_map
-          (fun (ty, id_opt) ->
-            match id_opt with
-            | Some pid -> Some (pid, ty)
-            | None -> None )
-          lparams
-      in
-      let ret_ty =
-        match ret_ty_opt with
-        | Some ty -> ty
-        | None -> Tvoid
-      in
-      let name = Id.to_string id in
-      let lbody' =
-        match kind with
-        | Tail_recursion ->
-          report_outcome ~name ~check ~strategy:Lp_tail
-            (transform_tail tparams check params ret_ty lbody)
-        | Nontail_recursion ->
-          report_outcome ~name ~check ~strategy:Lp_frame
-            (transform_nontail ~fn_name:name ~outer_env check tparams params
-               ret_ty lbody)
-        | No_recursion -> CErrors.anomaly (Pp.str "loopify: No_recursion cannot appear here")
-      in
-      Some lbody'
-  in
   (* Y-combinator idiom emitted by {!Translation.gen_local_fix_by_ref} for
      local fixpoints:
      {v
@@ -638,127 +577,9 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
   let rec process_stmts stmts =
     match stmts with
     | [] -> []
-    (* Pattern 1: Sdecl(id, Tfun _) followed by Sasgn(id, Existing,
-       CPPlambda(...)) *)
-    | Sdecl (id, (Tfun _ as decl_ty))
-      :: Sasgn (id2, Existing, CPPlambda
-        { cl_params = lparams;
-          cl_ret = ret_ty_opt;
-          cl_body = lbody;
-          cl_capture = cap })
-      :: rest
-      when Id.equal id id2 ->
-      ( match try_loopify_lambda id lparams ret_ty_opt lbody cap with
-      | Some lbody' ->
-        Sdecl (id, decl_ty)
-        :: Sasgn (id, Existing, CPPlambda
-          { cl_params = lparams;
-          cl_tparams = [];
-          cl_fixpoint = None;
-          cl_moved = [];
-            cl_ret = ret_ty_opt;
-            cl_body = lbody';
-            cl_capture = cap })
-        :: process_stmts rest
-      | None ->
-        let lbody' = process_stmts lbody in
-        Sdecl (id, decl_ty)
-        :: Sasgn (id, Existing, CPPlambda
-          { cl_params = lparams;
-          cl_tparams = [];
-          cl_fixpoint = None;
-          cl_moved = [];
-            cl_ret = ret_ty_opt;
-            cl_body = lbody';
-            cl_capture = cap })
-        :: process_stmts rest )
-    (* Pattern 2: Sasgn(id, Some(Tfun _), CPPlambda(...)) — combined
-       decl+assign *)
-    | Sasgn
-        ( id,
-          (Declare (Tfun _) as tgt),
-          CPPlambda
-            { cl_params = lparams;
-              cl_ret = ret_ty_opt;
-              cl_body = lbody;
-              cl_capture = cap } )
-      :: rest ->
-      ( match try_loopify_lambda id lparams ret_ty_opt lbody cap with
-      | Some lbody' ->
-        Sasgn (id, tgt, CPPlambda
-          { cl_params = lparams;
-          cl_tparams = [];
-          cl_fixpoint = None;
-          cl_moved = [];
-            cl_ret = ret_ty_opt;
-            cl_body = lbody';
-            cl_capture = cap })
-        :: process_stmts rest
-      | None ->
-        let lbody' = process_stmts lbody in
-        Sasgn (id, tgt, CPPlambda
-          { cl_params = lparams;
-          cl_tparams = [];
-          cl_fixpoint = None;
-          cl_moved = [];
-            cl_ret = ret_ty_opt;
-            cl_body = lbody';
-            cl_capture = cap })
-        :: process_stmts rest )
-    (* Pattern 3: shared_ptr fixpoint.
-
-       Matches the two-statement pattern emitted by
-       {!Translation.gen_local_fix_shared_ptr}:
-       {v
-         auto f = make_shared<function<R(A...)>>();
-         *f = [=](A... args) mutable { ... };
-       v}
-
-       If loopification succeeds (the recursion is converted to a loop),
-       the shared_ptr indirection is no longer needed.  We revert the
-       declaration to a plain [std::function] and strip [CPPderef] wrappers
-       from call sites in the continuation via {!un_deref_var_stmts}.
-
-       If loopification fails (recursion cannot be converted), the original
-       shared_ptr pattern is preserved with its body recursively processed. *)
-    | Sasgn (id, (Declare Tauto as _ty_opt),
-             ( CPPfun_call ({cs_yields = Ropaque; _}, CPPalloc (Alloc_heap, func_ty), {rev = []}) as
-               init_expr ))
-      :: Sassign_expr (CPPderef (CPPvar id2), CPPlambda
-        { cl_params = lparams;
-          cl_ret = ret_ty_opt;
-          cl_body = lbody;
-          cl_capture = cap })
-      :: rest
-      when Id.equal id id2 ->
-      ( match try_loopify_lambda id lparams ret_ty_opt lbody cap with
-      | Some lbody' ->
-        Sdecl (id, func_ty)
-        :: Sasgn (id, Existing, CPPlambda
-          { cl_params = lparams;
-          cl_tparams = [];
-          cl_fixpoint = None;
-          cl_moved = [];
-            cl_ret = ret_ty_opt;
-            cl_body = lbody';
-            cl_capture = Immediate })
-        :: process_stmts (un_deref_var_stmts id rest)
-      | None ->
-        let lbody' = process_stmts lbody in
-        Sasgn (id, _ty_opt, init_expr)
-        :: Sassign_expr (CPPderef (CPPvar id), CPPlambda
-          { cl_params = lparams;
-          cl_tparams = [];
-          cl_fixpoint = None;
-          cl_moved = [];
-            cl_ret = ret_ty_opt;
-            cl_body = lbody';
-            cl_capture = cap })
-        :: process_stmts rest )
-    (* Pattern 4: Y-combinator local fixpoint from {!gen_local_fix_by_ref}:
+    (* A Y-combinator local fixpoint from {!gen_local_fix_by_ref}:
        [Sasgn(id, Declare Tauto, CPPlambda(...))] whose last param is a single
-       self-reference [_self_*].  Distinct from Pattern 2 ([Some (Tfun _)]) and
-       Pattern 3 (a heap-allocating init). *)
+       self-reference [_self_*]. *)
     | Sasgn
         ( id,
           (Declare Tauto as tgt),
@@ -915,7 +736,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
     flow through the standard loopification path.
 
     The post-pass {!loopify_inner_lambdas} is still applied to the full body
-    so that any nested [std::function] fixpoints inside the thunk are
+    so that any local fixpoints nested inside the thunk are
     loopified independently. *)
 
 (** Detect a [lazy_]-wrapped cofixpoint body.
@@ -1377,8 +1198,8 @@ let planned_recursion r check body =
     + Classify the recursion pattern with {!classify} and apply the appropriate
       strategy: {!transform_tail} for tail recursion, or {!transform_nontail}
       for the general case (including multi-call patterns).
-    + Post-pass with {!loopify_inner_lambdas} to loopify any self-recursive
-      [std::function] lambdas nested within the body.
+    + Post-pass with {!loopify_inner_lambdas} to loopify any local
+      fixpoints nested within the body.
 
     For cofixpoints returning a coinductive type, the body is wrapped in a
     [lazy_] thunk by [cofix_wrap].  The recursive calls are captured inside
@@ -1415,7 +1236,7 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
      stack frames.  Loopification is unnecessary and TMC would generate
      invalid [v_mut()] calls (see the {!has_lazy_body} section header for
      the full rationale).  We still run [loopify_inner_lambdas] to handle
-     any nested [std::function] fixpoints inside the lazy thunk. *)
+     any local fixpoints nested inside the lazy thunk. *)
   let body =
     let name = fundef_display_name f.df_path in
     if is_cofix_body body then begin

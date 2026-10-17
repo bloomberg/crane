@@ -344,30 +344,6 @@ let free_vars_expr = Minicpp.free_vars_expr
 let free_vars_stmt = Minicpp.free_vars_stmt
 let free_vars_body = Minicpp.free_vars_body
 
-(** Substitute [CPPderef (CPPvar target_id)] with [CPPvar target_id] throughout
-    an expression, statement, or statement list.
-
-    When {!Translation.gen_local_fix_shared_ptr} generates a
-    shared_ptr fixpoint, all call sites use dereferenced calls
-    (i.e. [CPPfun_call(CPPderef(CPPvar f), args)]).  After
-    {!loopify_inner_lambdas} converts the recursion into a loop, the
-    indirection is no longer needed.  This function strips the [CPPderef]
-    wrapper so subsequent code sees plain [CPPvar f] calls and the emitted
-    C++ uses direct calls instead of dereferenced ones. *)
-let rec un_deref_var_expr target_id e =
-  let fe e = un_deref_var_expr target_id e in
-  match e with
-  | CPPderef (CPPvar id) when Id.equal id target_id -> CPPvar id
-  | _ -> Minicpp.map_expr fe (un_deref_var_stmt target_id) (fun t -> t) e
-
-and un_deref_var_stmt target_id s =
-  let fe e = un_deref_var_expr target_id e in
-  let fs s = un_deref_var_stmt target_id s in
-  Minicpp.map_stmt fe fs (fun t -> t) s
-
-let un_deref_var_stmts target_id stmts =
-  List.map (un_deref_var_stmt target_id) stmts
-
 (** {3 Continuation variable helpers}
 
     When a recursive call occurs mid-statement-sequence (e.g., [let x = f(n) in

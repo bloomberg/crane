@@ -780,18 +780,18 @@ let mk_arity_call ?params ~saturated args =
 
     Determines whether [target_id] appears in any position other than the
     callee of a direct call [CPPfun_call(CPPvar target_id, args)].  If so,
-    the fixpoint "escapes" and must use the [shared_ptr<std::function>]
-    pattern (see {!gen_local_fix_shared_ptr}) instead of the simpler [\[&\]]
-    capture pattern (see {!gen_local_fix_by_ref}).
+    the fixpoint "escapes" and must capture by value (see
+    {!gen_local_fix_ycomb}) instead of the simpler [\[&\]] capture pattern
+    (see {!gen_local_fix_by_ref}).
 
     Escape positions include: function argument, constructor field, return
     value, record field, or binding RHS.
 
     Lambda bodies are treated conservatively: {b any} reference to the
     fixpoint inside a lambda body — even in call position — counts as an
-    escape.  This is because the lambda captures the [std::function] value,
-    and a [\[&\]]-captured [std::function]'s internal lambda still holds
-    dangling stack references when the lambda outlives the fixpoint's scope.
+    escape.  This is because the lambda captures the fixpoint, and a
+    [\[&\]]-captured one still holds dangling stack references when the
+    lambda outlives the fixpoint's scope.
 
     @param target_id  The fixpoint variable to track.
     @param stmts      The statement list (typically the continuation after

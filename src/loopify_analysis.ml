@@ -479,8 +479,8 @@ type nontail_result = {
     A [call_checker] is a function that recognises recursive calls in
     expressions. It returns [Some call_site] when the expression is a direct
     recursive call, and [None] otherwise. Different checkers are used for
-    top-level functions ({!fn_checker}) vs methods ({!method_checker}) vs inner
-    lambdas ({!lambda_checker}). *)
+    top-level functions ({!fn_checker}) vs methods ({!method_checker}) vs local
+    fixpoints, which recurse through their self-parameter. *)
 
 (** Type alias for recursive call detection functions. Given a [cpp_expr],
     returns [Some call_site] if it is a direct recursive call, [None] otherwise. *)
