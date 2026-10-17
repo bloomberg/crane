@@ -198,3 +198,32 @@ let schedule ~templates ~forwards u =
   {opening; body}
 
 let print s = Pp.(s.opening ++ List.fold_left (fun acc t -> acc ++ to_pp t) (mt ()) s.body)
+
+let homes_off_the_tree ~templates u =
+  let first = Hashtbl.create 16 in
+  let rec walk ~members = function
+    | Text _ | Declarations _ -> ()
+    | Seq l -> List.iter (walk ~members) l
+    | Top_level t -> walk ~members t
+    | Module {module_; fields; members = l; _} ->
+      walk ~members fields;
+      List.iter (walk ~members:(module_ :: members)) l
+    | Decl {needs; _} ->
+      List.iter
+        (fun name ->
+          match List.find_opt (fun (a : template) -> String.equal a.name name) templates with
+          | Some a when not (Hashtbl.mem first name) -> Hashtbl.replace first name (a, members)
+          | Some _ | None -> () )
+        needs.templates
+  in
+  List.iter (walk ~members:[]) u.sections;
+  List.filter_map
+    (fun (a : template) ->
+      match (a.home, Hashtbl.find_opt first a.name) with
+      | Some home, Some (_, members) ->
+        let innermost = match members with mp :: _ -> Some mp | [] -> None in
+        let encloses = List.exists (ModPath.equal home) members in
+        if (encloses && innermost = Some home) || ((not encloses) && innermost = None) then None
+        else Some (a.name, home, innermost)
+      | _ -> None )
+    templates

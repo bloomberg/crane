@@ -150,3 +150,9 @@ val schedule : templates:template list -> forwards:forward list -> translation_u
 
 (** The scheduled unit as a document. *)
 val print : scheduled -> Pp.t
+
+(** Of [templates], those homed in a module whose placement by that module
+    differs from the placement in front of the innermost member enclosing
+    the first declaration writing it, or at namespace scope where no member
+    does: each with its home and that member's module, for checking. *)
+val homes_off_the_tree : templates:template list -> translation_unit -> (string * ModPath.t * ModPath.t option) list
