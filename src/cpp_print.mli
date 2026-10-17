@@ -168,22 +168,23 @@ val start_ctor_alias_census : unit -> unit
     plan. *)
 val check_ctor_alias_plan : file:Common.file -> unit
 
-(** The names of the synthesised templates the declarations whose text
-    [doc] holds write, in the order first carried ({!pp_cpp_decl}). *)
-val ctor_aliases_carried : Pp.t -> string list
-
 (** The structs the file being written has constrained forward declarations
     of, each by its reference and the name its declaration declares; a
     declaration's text carries those it names or defines. *)
 val constrained_structs : (GlobRef.t * string) list ref
 
-(** The names, of the {!constrained_structs}, that the declarations whose
-    text [doc] holds name or define. *)
-val structs_named : Pp.t -> string list
+(** What a declaration's text carries ({!pp_cpp_decl}), each by name: the
+    synthesised templates the declaration writes; of the
+    {!constrained_structs}, those it names or defines; and those it
+    defines. *)
+type carried =
+  | Writes of string list
+  | Names of string list
+  | Defines of string list
 
-(** The names, of the {!constrained_structs}, that the declarations whose
-    text [doc] holds define. *)
-val structs_defined_in : Pp.t -> string list
+(** What the tag [tag] on a declaration's text says it carries, if it is one
+    of those. *)
+val carried_by : string -> carried option
 
 (** The type names the file being written introduces at file scope, as
     planned: a definition written out of line leaves them unqualified. *)

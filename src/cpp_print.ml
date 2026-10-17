@@ -4552,29 +4552,20 @@ let pp_cpp_decl env settled =
     |> tagged names_tag (of_refs (defined @ Cpp_demands.globals_of_decl (settled :> cpp_decl)))
     |> tagged defines_tag (of_refs defined)
 
-(* The names [doc] carries under [tag], in the order first carried. *)
-let carried tag doc =
-  let found = ref [] in
-  let rec go d =
-    match Pp.repr d with
-    | Pp.Ppcmd_tag (t, d) ->
-      if String.starts_with ~prefix:tag t then begin
-        let n = String.length tag in
-        List.iter
-          (fun name -> if not (List.mem name !found) then found := name :: !found)
-          (String.split_on_char ' ' (String.sub t n (String.length t - n)))
-      end;
-      go d
-    | Ppcmd_glue ds -> List.iter go ds
-    | Ppcmd_box (_, d) -> go d
-    | Ppcmd_empty | Ppcmd_string _ | Ppcmd_print_break _ | Ppcmd_force_newline | Ppcmd_comment _ -> ()
-  in
-  go doc;
-  List.rev !found
+type carried =
+  | Writes of string list
+  | Names of string list
+  | Defines of string list
 
-let ctor_aliases_carried = carried writes_tag
-let structs_named = carried names_tag
-let structs_defined_in = carried defines_tag
+let carried_by tag =
+  let names prefix =
+    let n = String.length prefix in
+    String.split_on_char ' ' (String.sub tag n (String.length tag - n))
+  in
+  if String.starts_with ~prefix:writes_tag tag then Some (Writes (names writes_tag))
+  else if String.starts_with ~prefix:names_tag tag then Some (Names (names names_tag))
+  else if String.starts_with ~prefix:defines_tag tag then Some (Defines (names defines_tag))
+  else None
 
 (** The break between two declaration groups.  It is a break hint, not a
     forced newline, so the vertical box the whole file is printed in

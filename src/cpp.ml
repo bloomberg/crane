@@ -654,11 +654,14 @@ type file_layout = {
       (** The forward declaration of every struct and scoped enum the header
           defines at namespace scope but a constrained template, in the order
           it defines them, which open the file. *)
-  constrained_decls : (struct_origin * Cpp_print.forward_declaration) list;
-      (** The forward declarations of the constrained templates the header
-          defines at namespace scope, in the order it defines them, each with
-          what defines it: they go in front of the first chunk of the file
-          that names the struct before defining it. *)
+  constrained_decls : Cpp_print.forward_declaration list;
+      (** The forward declarations of the constrained templates lifted out of
+          a wrapper module's functions, in the order the header defines them:
+          they go in front of the first chunk of the file that names the
+          struct before defining it ({!place_due_declarations}).  One a
+          top-level element defines is never needed: nothing ahead of the
+          element names it, or the struct would not be a template the
+          element defines. *)
   promoted_imports : string list;
       (** The using-declarations, at the top of the header, of the promoted
           type variables the unit's declarations write whose class field
@@ -678,12 +681,6 @@ type file_layout = {
           ({!Cpp_print.file_scope_types}), which a definition written out of
           line leaves unqualified. *)
 }
-
-(** What writes a struct the header defines at namespace scope: one of
-    the declarations of the top-level element the header is writing, or
-    a wrapper module's functions, which the header writes ahead of every
-    module's types. *)
-and struct_origin = Lifted_from_wrapper | Defined_by of ml_decl
 
 let file_layout : file_layout ref =
   State.cell State.Unit
@@ -832,32 +829,20 @@ let is_erased_alias (_, d) =
   | Dusing {du_rhs = Some rhs; _} -> Cpp_erasure.is_any_shaped rhs
   | _ -> false
 
-(** The names of the synthesised templates the file being written has
-    declared so far ({!take_ctor_aliases}). *)
-let ctor_aliases_placed : string list ref = ref []
+(** Where a chunk of the file begins, as the driver assembles it: a
+    top-level element, a wrapper module's struct or lifted declarations, or
+    a section of the file, in front of which a namespace-scope declaration
+    goes; and a member of a module's struct, in front of which a template
+    homed in that module goes ({!place_due_declarations}). *)
+let top_slot_tag = "crane.slot"
 
-(** The synthesised templates the file being written declares
-    ({!Cpp_print.ctor_aliases_declared_in}) and has not declared yet. *)
-let pending_ctor_aliases ~is_header =
-  List.filter
-    (fun a -> not (List.mem (Cpp_print.ctor_alias_name a) !ctor_aliases_placed))
-    (Cpp_print.ctor_aliases_declared_in ~file:(if is_header then Common.Intf else Common.Impl))
+type slot = Top_slot | Member_slot of string
 
-(** Declare the pending synthesised templates [select] accepts, the holders
-    ahead of the aliases, each in the order planned. *)
-let take_ctor_aliases ?(select = fun (_ : Cpp_print.ctor_alias) -> true) ~is_header () =
-  let holders, aliases =
-    List.partition (fun (a : Cpp_print.ctor_alias) -> a.ca_holder) (List.filter select (pending_ctor_aliases ~is_header))
-  in
-  let taken = holders @ aliases in
-  ctor_aliases_placed := List.map Cpp_print.ctor_alias_name taken @ !ctor_aliases_placed;
-  List.map Cpp_print.ctor_alias_declaration taken
+let member_slot_tag = "crane.member:"
 
-(** Whether [a] is among the templates [carried] by a text
-    ({!Cpp_print.ctor_aliases_carried}): written by a declaration in it, or
-    in the body of a template one writes, which is spelled, and carried,
-    along with it. *)
-let carries carried (a : Cpp_print.ctor_alias) = List.mem (Cpp_print.ctor_alias_name a) carried
+let top_slot doc = if Pp.ismt doc then doc else Pp.tag top_slot_tag doc
+
+let member_slot mp doc = if Pp.ismt doc then doc else Pp.tag (member_slot_tag ^ ModPath.to_string mp) doc
 
 (** What writing a structure element gives: its text, written where it is,
     and the concepts it declares that only namespace scope can hold, in the
@@ -1635,18 +1620,9 @@ and pp_module_expr ~is_header f = function
        members spell them, is declared inside the struct, in front of the
        first member that writes it (see {!Cpp_print.ctor_alias_home}):
        at namespace scope those names mean nothing. *)
-    let with_homed_aliases px =
-      let carried = Cpp_print.ctor_aliases_carried px in
-      let homed (a : Cpp_print.ctor_alias) =
-        match a.ca_home with Some home -> ModPath.equal home mp && carries carried a | None -> false
-      in
-      match take_ctor_aliases ~select:homed ~is_header () with
-      | [] -> px
-      | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 () ++ px
-    in
     let try_pp_structure_elem (l, concepts, asserts) x =
       let {text = px; concepts = c; asserts = a} = pp_structure_elem ~is_header f x in
-      ((if Pp.ismt px then l else with_homed_aliases px :: l), List.rev_append c concepts, List.rev_append a asserts)
+      ((if Pp.ismt px then l else member_slot mp px :: l), List.rev_append c concepts, List.rev_append a asserts)
     in
     let l, concepts, asserts = List.fold_left try_pp_structure_elem ([], [], []) sel in
     let l = List.rev l in
@@ -2485,9 +2461,9 @@ let plan_file_layout s =
   (* The header writes every wrapper module's functions before any module's
      types ({!do_struct_with_decl_tracking}), and so defines the structs
      lifted out of them first. *)
-  let defines ~origin mp env d =
-    let pass = match origin with Lifted_from_wrapper -> 0 | Defined_by _ -> 1 in
-    forward := ((pass, position mp), List.map (fun f -> (origin, f)) (Cpp_print.forward_declarations env d)) :: !forward;
+  let defines ~lifted mp env d =
+    let pass = if lifted then 0 else 1 in
+    forward := ((pass, position mp), List.map (fun f -> (lifted, f)) (Cpp_print.forward_declarations env d)) :: !forward;
     types := List.fold_right CString.Set.add (Cpp_print.file_scope_types d) !types
   in
   let wrapper_lifted se =
@@ -2500,7 +2476,7 @@ let plan_file_layout s =
   in
   let wrapper_functions mp se =
     with_render_ctx (fun _ -> initial_render_ctx) @@ fun () ->
-    List.iter (fun h -> defines ~origin:Lifted_from_wrapper mp (empty_env ()) (fst (lifted_views h))) (wrapper_lifted se)
+    List.iter (fun h -> defines ~lifted:true mp (empty_env ()) (fst (lifted_views h))) (wrapper_lifted se)
   in
   let element mp d =
     in_header_element_scope mp @@ fun ~in_struct ->
@@ -2510,11 +2486,11 @@ let plan_file_layout s =
       if e.member_defs <> [] then add member_defs mp (scope, e.member_defs);
       if not in_struct then begin
         if e.rendered <> [] && List.for_all is_erased_alias e.rendered then add erased mp (scope, e.rendered);
-        List.iter (fun (env, d') -> defines ~origin:(Defined_by d) mp env d') e.rendered;
+        List.iter (fun (env, d') -> defines ~lifted:false mp env d') e.rendered;
         List.iter
           (fun h ->
             let def, spec = lifted_views h in
-            defines ~origin:(Defined_by d) mp (empty_env ()) def;
+            defines ~lifted:false mp (empty_env ()) def;
             Option.iter (fun spec -> add specs mp (scope, [(empty_env (), spec)])) spec )
           e.helpers
       end
@@ -2550,7 +2526,10 @@ let plan_file_layout s =
       member_defs = in_writing_order member_defs;
       forward_decls = List.filter_map (fun (_, (f : Cpp_print.forward_declaration)) -> if f.fwd_constrained then None else Some f.fwd_text) forward;
       promoted_imports;
-      constrained_decls = List.filter (fun (_, (f : Cpp_print.forward_declaration)) -> f.fwd_constrained) forward;
+      constrained_decls =
+        List.filter_map
+          (fun (lifted, (f : Cpp_print.forward_declaration)) -> if lifted && f.fwd_constrained then Some f else None)
+          forward;
       wrapper_homes =
         List.fold_left
           (fun acc (at, own, name, d) ->
@@ -3266,47 +3245,109 @@ type wrapper_render = {
   wr_lifted_specs : Pp.t;
 }
 
-(** The constrained forward declarations, of those pending in [pending], that
-    the declarations written in [p] need, taken out of [pending] in the order
-    they were planned: those of the structs they name without defining, as
-    [p] carries them ({!Cpp_print.structs_named}).  A struct [p] defines is
-    taken out without one -- everything after its definition sees it -- so a
-    template never gets a declaration in front of itself. *)
-let take_constrained_forward_decls pending p =
-  let named = Cpp_print.structs_named p and defined = Cpp_print.structs_defined_in p in
-  let taken, rest =
-    List.partition (fun (f : Cpp_print.forward_declaration) -> List.mem f.fwd_struct named) !pending
-  in
-  pending := rest;
-  List.filter_map
-    (fun (f : Cpp_print.forward_declaration) ->
-      if List.mem f.fwd_struct defined then None else Some f.fwd_text )
-    taken
+(** Declare each synthesised template the file writes, and each constrained
+    forward declaration it needs, in front of the chunk of [sections] -- the
+    file as written -- that first needs it, read in the order written, which
+    is what puts each in front of its first use wherever the driver put the
+    chunk using it.
 
-(** Declare, in front of [p], the synthesised templates the declarations
-    written in [p] write, as [p] carries them ({!Cpp_print.ctor_aliases_carried}).
-
-    Called on each chunk of the file in the order the chunks are written, so a
-    template is declared in front of the earliest text that writes it and
-    nowhere else: what no chunk has written yet stays pending
-    ({!pending_ctor_aliases}). *)
-let prefix_due_declarations ~is_header ~constrained p =
-  let prefix l p =
-    match l with
-    | [] -> p
-    | l when Pp.ismt p -> prlist_with_sep fnl (fun x -> x) l
-    | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 () ++ p
+    A template goes in front of the innermost chunk holding the first
+    declaration that writes it ({!Cpp_print.carried_by}): one homed in a
+    module in front of that member of the module's struct, any other in
+    front of the innermost top-level chunk, at namespace scope; the holders
+    in front of the aliases, each in the order planned.  One no chunk
+    writes goes after [prologue], ahead of everything.  A constrained
+    forward declaration goes in front of the innermost top-level chunk
+    holding the first declaration that names its struct, and is not needed
+    if that chunk defines the struct. *)
+let place_due_declarations ~is_header ~prologue sections =
+  let templates = Cpp_print.ctor_aliases_declared_in ~file:(if is_header then Common.Intf else Common.Impl) in
+  let constrained = if is_header then !file_layout.constrained_decls else [] in
+  let slot_of_tag t =
+    let n = String.length member_slot_tag in
+    if String.equal t top_slot_tag then Some Top_slot
+    else if String.starts_with ~prefix:member_slot_tag t then Some (Member_slot (String.sub t n (String.length t - n)))
+    else None
   in
-  let p =
-    match Cpp_print.ctor_aliases_carried p with
-    | [] -> p
-    | carried -> prefix (take_ctor_aliases ~select:(carries carried) ~is_header ()) p
+  (* Where each template and each constrained struct is first needed, and
+     which structs each top-level chunk defines, by chunk, the chunks
+     numbered in the order written. *)
+  let template_slot = Hashtbl.create 16 and struct_slot = Hashtbl.create 16 and defined_in = Hashtbl.create 16 in
+  let count = ref 0 in
+  let rec first_uses ~top ~members d =
+    match Pp.repr d with
+    | Ppcmd_tag (t, d) -> (
+      match slot_of_tag t with
+      | Some Top_slot ->
+        incr count;
+        let k = !count in
+        let defined = first_uses ~top:(Some k) ~members d in
+        Hashtbl.replace defined_in k defined;
+        defined
+      | Some (Member_slot mp) ->
+        incr count;
+        first_uses ~top ~members:((mp, !count) :: members) d
+      | None -> (
+        let inner = first_uses ~top ~members d in
+        match Cpp_print.carried_by t with
+        | Some (Writes names) ->
+          List.iter
+            (fun name ->
+              match List.find_opt (fun a -> String.equal (Cpp_print.ctor_alias_name a) name) templates with
+              | Some a when not (Hashtbl.mem template_slot name) ->
+                let homed =
+                  Option.bind a.Cpp_print.ca_home (fun home -> List.assoc_opt (ModPath.to_string home) members)
+                in
+                Hashtbl.replace template_slot name (if Option.has_some homed then homed else top)
+              | Some _ | None -> () )
+            names;
+          inner
+        | Some (Names names) ->
+          List.iter (fun name -> if not (Hashtbl.mem struct_slot name) then Hashtbl.replace struct_slot name top) names;
+          inner
+        | Some (Defines names) -> names @ inner
+        | None -> inner ) )
+    | Ppcmd_glue ds -> List.concat_map (first_uses ~top ~members) ds
+    | Ppcmd_box (_, d) -> first_uses ~top ~members d
+    | Ppcmd_empty | Ppcmd_string _ | Ppcmd_print_break _ | Ppcmd_force_newline | Ppcmd_comment _ -> []
   in
-  (* A constrained template named ahead of its definition is declared in front
-     of the chunk that names it, in the same way; see
-     {!Cpp_print.forward_declaration}. *)
-  if !constrained <> [] then prefix (take_constrained_forward_decls constrained p) p
-  else p
+  let body = prlist (fun x -> x) sections in
+  ignore (first_uses ~top:None ~members:[] body);
+  let template_due k =
+    let due = List.filter (fun a -> Hashtbl.find_opt template_slot (Cpp_print.ctor_alias_name a) = Some k) templates in
+    let holders, aliases = List.partition (fun (a : Cpp_print.ctor_alias) -> a.ca_holder) due in
+    List.map Cpp_print.ctor_alias_declaration (holders @ aliases)
+  in
+  let constrained_due k =
+    List.filter_map
+      (fun (f : Cpp_print.forward_declaration) ->
+        match Hashtbl.find_opt struct_slot f.fwd_struct with
+        | Some (Some k') when k' = k && not (List.mem f.fwd_struct (Hashtbl.find defined_in k)) -> Some f.fwd_text
+        | _ -> None )
+      constrained
+  in
+  let declarations l = prlist_with_sep fnl (fun x -> x) l ++ cut2 () in
+  let in_front due doc = match due with [] -> doc | l -> declarations l ++ doc in
+  let count = ref 0 in
+  let rec placed d =
+    match Pp.repr d with
+    | Ppcmd_tag (t, inner) -> (
+      match slot_of_tag t with
+      | Some Top_slot ->
+        incr count;
+        let k = !count in
+        in_front (constrained_due k @ template_due (Some k)) (Pp.tag t (placed inner))
+      | Some (Member_slot _) ->
+        incr count;
+        let k = !count in
+        in_front (template_due (Some k)) (Pp.tag t (placed inner))
+      | None -> Pp.tag t (placed inner) )
+    | Ppcmd_glue ds -> Pp.unrepr (Ppcmd_glue (List.map placed ds))
+    | Ppcmd_box (b, inner) -> Pp.unrepr (Ppcmd_box (b, placed inner))
+    | Ppcmd_empty | Ppcmd_string _ | Ppcmd_print_break _ | Ppcmd_force_newline | Ppcmd_comment _ -> d
+  in
+  let unwritten = match template_due None with [] -> mt () | l -> declarations l in
+  prologue ++ unwritten ++ placed body
 
 (** The top-level elements a hoisted concept cannot be read without.
 
@@ -3504,15 +3545,15 @@ let do_struct_with_decl_tracking ~is_header f s =
      on this corpus the two placements coincide exactly, nothing in it being
      deferred.
 
-     So the alias stays pending until some chunk carries a declaration that
-     writes it, and is emitted in front of that chunk -- which needs no
+     So the alias is emitted in front of the first chunk, in the order the
+     file is written, that carries a declaration writing it -- which needs no
      knowledge of what the body names, only of which declaration writes it.
-     See {!prefix_due_declarations}, applied here per top-level element and
-     again to each section of the assembled file.
+     Each top-level element is such a chunk, and so is each section of the
+     assembled file; see {!place_due_declarations}.
 
-     Only for a top-level element.  A nested element is rendered inside a
-     struct, where an alias template would acquire that struct's scope while
-     its use sites spell it unqualified.
+     Only a top-level chunk.  A nested element is rendered inside a struct,
+     where an alias template would acquire that struct's scope while its use
+     sites spell it unqualified.
 
      A top-level element is placed here, in one of three places: the
      struct of a module planned to be declared ahead of the file goes to the
@@ -3523,30 +3564,13 @@ let do_struct_with_decl_tracking ~is_header f s =
      [hoisted] and [prereqs], newest first, by the module being written
      ([ppl] below), and so are the concepts the element declares, which go
      to the top of the file, into [concepts]. *)
-  (* The constrained forward declarations pending: from the start, those of
-     the structs lifted out of a wrapper module's functions; and each
-     element's own, from the element on, written or hoisted. *)
-  let constrained =
-    ref
-      ( if not is_header then []
-        else
-          List.filter_map
-            (function Lifted_from_wrapper, f -> Some f | Defined_by _, _ -> None)
-            !file_layout.constrained_decls )
-  in
   Cpp_print.file_scope_type_names := if is_header then !file_layout.file_scope_types else CString.Set.empty;
   Cpp_print.constrained_structs :=
     if is_header then
-      List.map (fun (_, (f : Cpp_print.forward_declaration)) -> (f.fwd_ref, f.fwd_struct)) !file_layout.constrained_decls
+      List.map (fun (f : Cpp_print.forward_declaration) -> (f.fwd_ref, f.fwd_struct)) !file_layout.constrained_decls
     else [];
-  let prefix_due_declarations = prefix_due_declarations ~constrained in
   let place ~wrapper_specs ~prereq_labels ~hoisted ~prereqs ~concepts ((l, se) as x) =
     let defined = if is_header then declarations [(top_visible_mp (), [x])] else [] in
-    constrained :=
-      !constrained
-      @ List.filter_map
-          (function Defined_by d, f when List.memq d defined -> Some f | _ -> None)
-          !file_layout.constrained_decls;
     let homed =
       List.filter_map (fun (name, d) -> if List.memq d defined then Some name else None) !file_layout.wrapper_homes
     in
@@ -3572,17 +3596,15 @@ let do_struct_with_decl_tracking ~is_header f s =
          | SEmodule {ml_mod_expr = MEstruct (body_mp, _); _} -> struct_hoists body_mp p
          | _ -> false
     in
+    let p = top_slot p in
     if hoists then (
       hoisted := p :: !hoisted;
       mt () )
-    else
-      let p = prefix_due_declarations ~is_header p in
-      if Names.Label.Set.mem l prereq_labels && not (Pp.ismt p) then (
-        prereqs := p :: !prereqs;
-        mt () )
-      else p
+    else if Names.Label.Set.mem l prereq_labels && not (Pp.ismt p) then (
+      prereqs := p :: !prereqs;
+      mt () )
+    else p
   in
-  ctor_aliases_placed := [];
   Cpp_print.start_ctor_alias_census ();
   Cpp_print.start_file_scope_census ();
   Cpp_ind.start_render ();
@@ -3724,9 +3746,9 @@ let do_struct_with_decl_tracking ~is_header f s =
           (* The wrapper struct and what was lifted out of it are elements of
              their own, assembled here rather than by [f]: an alias they spell
              goes in front of them, not in front of the whole section they end
-             up in (see {!prefix_due_declarations}). *)
-          let wrapper_pp = prefix_due_declarations ~is_header wrapper_pp in
-          let lifted_pp = prefix_due_declarations ~is_header lifted_pp in
+             up in (see {!place_due_declarations}). *)
+          let wrapper_pp = top_slot wrapper_pp in
+          let lifted_pp = top_slot lifted_pp in
           prlist_sep_nonempty cut2 (fun x -> x) [type_pp; wrapper_pp; lifted_pp]
         | None ->
           (* Which children a name collision forces inside a wrapper struct is
@@ -3915,10 +3937,8 @@ let do_struct_with_decl_tracking ~is_header f s =
   in
   let forward_decls =
     let structs = if is_header then !file_layout.forward_decls else [] in
-    (* Aliases go in front of the text that writes them; see
-       {!prefix_due_declarations}.  Only what no text asked for is left for
-       the prologue, and it is collected below, after every section has had
-       its turn. *)
+    (* Aliases go in front of the text that writes them, and only what no
+       text writes is left for the prologue; see {!place_due_declarations}. *)
     match structs with
     | [] -> mt ()
     | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
@@ -3960,26 +3980,18 @@ let do_struct_with_decl_tracking ~is_header f s =
     | [] -> mt ()
     | ds -> cut2 () ++ prlist_with_sep cut2 (fun x -> x) ds
   in
-  (* In writing order, so that an alias no single element claimed -- one whose
-     only use is in a section assembled out of several -- still lands in front
-     of the first section that writes it rather than in the prologue. *)
+  (* Each a chunk of its own, so that an alias no single element claimed --
+     one whose only use is in a section assembled out of several -- still
+     lands in front of the first section that writes it rather than in the
+     prologue. *)
   let sections =
-    List.map (prefix_due_declarations ~is_header)
+    List.map top_slot
       [ hoisted_erased_aliases; hoisted_concept_prereqs; hoisted_concepts; hoisted_wrappers; lifted_fun_specs; p;
         deferred_defs; deferred_members ]
   in
-  (* Whatever nothing spelled.  A body may still name something defined later,
-     which is the case the placement above exists for, but an alias with no use
-     in the file has no later position to be after either. *)
-  let leftover_aliases =
-    match take_ctor_aliases ~is_header () with
-    | [] -> mt ()
-    | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
-  in
   Cpp_print.check_ctor_alias_plan ~file:(if is_header then Common.Intf else Common.Impl);
   Cpp_print.check_file_scope_types ~file:(if is_header then Common.Intf else Common.Impl);
-  (forward_decls ++ leftover_aliases ++ prlist (fun x -> x) sections)
-  ++ fnl ()
+  place_due_declarations ~is_header ~prologue:forward_decls sections ++ fnl ()
 
 (** Main entry point: render structure to C++ implementation file. *)
 let pp_struct s =
