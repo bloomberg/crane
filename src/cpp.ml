@@ -838,25 +838,21 @@ let pending_ctor_aliases ~is_header =
     (fun a -> not (List.mem (Cpp_print.ctor_alias_name a) !ctor_aliases_placed))
     (Cpp_print.ctor_aliases_declared_in ~file:(if is_header then Common.Intf else Common.Impl))
 
-(** Declare the pending synthesised templates whose names [select] accepts,
-    and the holders their bodies name: a holder is named by the body of the
-    alias that captured it, not by the text that uses the alias, so it comes
-    along with whichever aliases go, and ahead of them. *)
-let take_ctor_aliases ?(select = fun _ -> true) ~is_header () =
-  let pending = pending_ctor_aliases ~is_header in
-  let selected a = select (Cpp_print.ctor_alias_name a) in
-  let aliases = List.filter (fun (a : Cpp_print.ctor_alias) -> (not a.ca_holder) && selected a) pending in
-  let named_by_alias holder =
-    List.exists
-      (fun (a : Cpp_print.ctor_alias) -> Cpp_print.mentions_name a.ca_body (Cpp_print.ctor_alias_name holder))
-      aliases
-  in
-  let holders =
-    List.filter (fun (a : Cpp_print.ctor_alias) -> a.ca_holder && (selected a || named_by_alias a)) pending
+(** Declare the pending synthesised templates [select] accepts, the holders
+    ahead of the aliases, each in the order planned. *)
+let take_ctor_aliases ?(select = fun (_ : Cpp_print.ctor_alias) -> true) ~is_header () =
+  let holders, aliases =
+    List.partition (fun (a : Cpp_print.ctor_alias) -> a.ca_holder) (List.filter select (pending_ctor_aliases ~is_header))
   in
   let taken = holders @ aliases in
   ctor_aliases_placed := List.map Cpp_print.ctor_alias_name taken @ !ctor_aliases_placed;
   List.map Cpp_print.ctor_alias_declaration taken
+
+(** Whether [a] is among the templates [carried] by a text
+    ({!Cpp_print.ctor_aliases_carried}): written by a declaration in it, or
+    in the body of a template one writes, which is spelled, and carried,
+    along with it. *)
+let carries carried (a : Cpp_print.ctor_alias) = List.mem (Cpp_print.ctor_alias_name a) carried
 
 (** What writing a structure element gives: its text, written where it is,
     and the concepts it declares that only namespace scope can hold, in the
@@ -1632,44 +1628,16 @@ and pp_module_expr ~is_header f = function
       sel;
     (* A synthesised alias whose body names this module's own types, as its
        members spell them, is declared inside the struct, in front of the
-       first member that spells it (see {!Cpp_print.ctor_alias_home}):
+       first member that writes it (see {!Cpp_print.ctor_alias_home}):
        at namespace scope those names mean nothing. *)
     let with_homed_aliases px =
-      let homed =
-        List.filter_map
-          (fun (a : Cpp_print.ctor_alias) ->
-            match a.ca_home with
-            | Some home when ModPath.equal home mp -> Some (Cpp_print.ctor_alias_name a, a.ca_body)
-            | Some _ | None -> None )
-          (pending_ctor_aliases ~is_header)
+      let carried = Cpp_print.ctor_aliases_carried px in
+      let homed (a : Cpp_print.ctor_alias) =
+        match a.ca_home with Some home -> ModPath.equal home mp && carries carried a | None -> false
       in
-      match homed with
+      match take_ctor_aliases ~select:homed ~is_header () with
       | [] -> px
-      | homed ->
-        let text = Pp.string_of_ppcmds px in
-        (* What the member spells, and what the bodies of those spell in
-           turn: a template written only inside another's body is due
-           with it, in the same struct, ahead of it. *)
-        let rec due names =
-          let more =
-            List.filter_map
-              (fun (name, _) ->
-                if (not (List.mem name names))
-                   && List.exists
-                        (fun (name', body) -> List.mem name' names && Cpp_print.mentions_name body name)
-                        homed
-                then Some name
-                else None )
-              homed
-          in
-          if more = [] then names else due (names @ more)
-        in
-        match due (List.filter_map (fun (name, _) -> if Cpp_print.mentions_name text name then Some name else None) homed) with
-        | [] -> px
-        | names -> (
-          match take_ctor_aliases ~select:(fun name -> List.mem name names) ~is_header () with
-          | [] -> px
-          | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 () ++ px )
+      | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 () ++ px
     in
     let try_pp_structure_elem (l, concepts, asserts) x =
       let {text = px; concepts = c; asserts = a} = pp_structure_elem ~is_header f x in
@@ -3315,15 +3283,14 @@ let take_constrained_forward_decls pending text =
     (fun (f : Cpp_print.forward_declaration) -> if defines f.fwd_struct then None else Some f.fwd_text)
     named
 
-(** Declare, in front of [p], those synthesised aliases whose names [p] spells.
+(** Declare, in front of [p], the synthesised templates the declarations
+    written in [p] write, as [p] carries them ({!Cpp_print.ctor_aliases_carried}).
 
-    Called on each chunk of the file in the order the chunks are written, so an
-    alias is declared in front of the earliest text that uses it and nowhere
-    else: what no chunk has asked for yet stays pending
-    ({!pending_ctor_aliases}).  Rendering [p] to a string is the whole test,
-    and is skipped when there is nothing pending, so a file that declares no
-    alias pays nothing. *)
-let prefix_mentioned_aliases ~is_header ~constrained p =
+    Called on each chunk of the file in the order the chunks are written, so a
+    template is declared in front of the earliest text that writes it and
+    nowhere else: what no chunk has written yet stays pending
+    ({!pending_ctor_aliases}). *)
+let prefix_due_declarations ~is_header ~constrained p =
   let prefix l p =
     match l with
     | [] -> p
@@ -3331,18 +3298,12 @@ let prefix_mentioned_aliases ~is_header ~constrained p =
     | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 () ++ p
   in
   let p =
-    match List.map Cpp_print.ctor_alias_name (pending_ctor_aliases ~is_header) with
+    match Cpp_print.ctor_aliases_carried p with
     | [] -> p
-    | pending ->
-      let text = Pp.string_of_ppcmds p in
-      if not (List.exists (Cpp_print.mentions_name text) pending) then p
-      else
-        let select name = Cpp_print.mentions_name text name in
-        prefix (take_ctor_aliases ~select ~is_header ()) p
+    | carried -> prefix (take_ctor_aliases ~select:(carries carried) ~is_header ()) p
   in
   (* A constrained template named ahead of its definition is declared in front
-     of the chunk that names it, in the same way; see
-     {!Cpp_print.forward_declaration}. *)
+     of the chunk whose text names it; see {!Cpp_print.forward_declaration}. *)
   if !constrained <> [] then prefix (take_constrained_forward_decls constrained (Pp.string_of_ppcmds p)) p
   else p
 
@@ -3542,11 +3503,11 @@ let do_struct_with_decl_tracking ~is_header f s =
      on this corpus the two placements coincide exactly, nothing in it being
      deferred.
 
-     So the alias stays pending until some rendered chunk spells it, and is
-     emitted in front of that chunk -- which needs no knowledge of what
-     the body names, only of where its name appears.  See
-     {!prefix_mentioned_aliases}, applied here per top-level element and again
-     to each section of the assembled file.
+     So the alias stays pending until some chunk carries a declaration that
+     writes it, and is emitted in front of that chunk -- which needs no
+     knowledge of what the body names, only of which declaration writes it.
+     See {!prefix_due_declarations}, applied here per top-level element and
+     again to each section of the assembled file.
 
      Only for a top-level element.  A nested element is rendered inside a
      struct, where an alias template would acquire that struct's scope while
@@ -3572,7 +3533,7 @@ let do_struct_with_decl_tracking ~is_header f s =
             (function Lifted_from_wrapper, f -> Some f | Defined_by _, _ -> None)
             !file_layout.constrained_decls )
   in
-  let prefix_mentioned_aliases = prefix_mentioned_aliases ~constrained in
+  let prefix_due_declarations = prefix_due_declarations ~constrained in
   let place ~wrapper_specs ~prereq_labels ~hoisted ~prereqs ~concepts ((l, se) as x) =
     let defined = if is_header then declarations [(top_visible_mp (), [x])] else [] in
     constrained :=
@@ -3609,7 +3570,7 @@ let do_struct_with_decl_tracking ~is_header f s =
       hoisted := p :: !hoisted;
       mt () )
     else
-      let p = prefix_mentioned_aliases ~is_header p in
+      let p = prefix_due_declarations ~is_header p in
       if Names.Label.Set.mem l prereq_labels && not (Pp.ismt p) then (
         prereqs := p :: !prereqs;
         mt () )
@@ -3771,9 +3732,9 @@ let do_struct_with_decl_tracking ~is_header f s =
           (* The wrapper struct and what was lifted out of it are elements of
              their own, assembled here rather than by [f]: an alias they spell
              goes in front of them, not in front of the whole section they end
-             up in (see {!prefix_mentioned_aliases}). *)
-          let wrapper_pp = prefix_mentioned_aliases ~is_header wrapper_pp in
-          let lifted_pp = prefix_mentioned_aliases ~is_header lifted_pp in
+             up in (see {!prefix_due_declarations}). *)
+          let wrapper_pp = prefix_due_declarations ~is_header wrapper_pp in
+          let lifted_pp = prefix_due_declarations ~is_header lifted_pp in
           prlist_sep_nonempty cut2 (fun x -> x) [type_pp; wrapper_pp; lifted_pp]
         | None ->
           (* Which children a name collision forces inside a wrapper struct is
@@ -3963,8 +3924,8 @@ let do_struct_with_decl_tracking ~is_header f s =
   in
   let forward_decls =
     let structs = if is_header then !file_layout.forward_decls else [] in
-    (* Aliases go in front of the text that uses them; see
-       {!prefix_mentioned_aliases}.  Only what no text asked for is left for
+    (* Aliases go in front of the text that writes them; see
+       {!prefix_due_declarations}.  Only what no text asked for is left for
        the prologue, and it is collected below, after every section has had
        its turn. *)
     match structs with
@@ -4011,9 +3972,9 @@ let do_struct_with_decl_tracking ~is_header f s =
   let deferred_lifted = deferred_lifted () in
   (* In writing order, so that an alias no single element claimed -- one whose
      only use is in a section assembled out of several -- still lands in front
-     of the first section that spells it rather than in the prologue. *)
+     of the first section that writes it rather than in the prologue. *)
   let sections =
-    List.map (prefix_mentioned_aliases ~is_header)
+    List.map (prefix_due_declarations ~is_header)
       [ hoisted_erased_aliases; hoisted_concept_prereqs; hoisted_concepts; hoisted_wrappers; lifted_fun_specs; p;
         deferred_lifted; deferred_defs; deferred_members ]
   in

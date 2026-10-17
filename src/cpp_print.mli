@@ -13,7 +13,9 @@ open Minicpp
 
 (** {2 Rendering} *)
 
-(** [pp_cpp_decl env decl] renders a settled declaration. *)
+(** [pp_cpp_decl env decl] renders a settled declaration, its text carrying
+    the synthesised templates the declaration writes
+    ({!ctor_aliases_carried}). *)
 val pp_cpp_decl : Common.env -> Cpp_erasure.settled -> Pp.t
 
 (** How a member is written: in the struct with or without its body, or out
@@ -167,6 +169,10 @@ val check_ctor_alias_plan : file:Common.file -> unit
 
 (** Whether [text] spells [name] as a whole identifier. *)
 val mentions_name : string -> string -> bool
+
+(** The names of the synthesised templates the declarations whose text
+    [doc] holds write, in the order first carried ({!pp_cpp_decl}). *)
+val ctor_aliases_carried : Pp.t -> string list
 
 (** Whether an expression is a lambda that captures nothing, or one such
     invoked at once with no argument: the same value wherever it is evaluated

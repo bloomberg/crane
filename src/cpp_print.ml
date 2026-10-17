@@ -723,12 +723,16 @@ let ctor_alias_plan : ctor_alias_plan ref = State.cell State.Unit {intf = []; im
     ({!plan_ctor_aliases}). *)
 let planning_ctor_aliases = ref false
 
+(** Set while the templates some declaration or type writes are collected
+    ({!ctor_aliases_found}). *)
+let collecting_ctor_aliases = ref false
+
 (** The templates spelled in the file being written, under [CRANE_CHECK_IR],
-    or in the type constructor being planned. *)
+    or in what is being collected. *)
 let ctor_aliases_spelled : ctor_alias list ref = ref []
 
 let note_ctor_alias_spelled a =
-  if (!planning_ctor_aliases || Probe.checking ()) && not (List.mem a !ctor_aliases_spelled) then
+  if (!collecting_ctor_aliases || Probe.checking ()) && not (List.mem a !ctor_aliases_spelled) then
     ctor_aliases_spelled := !ctor_aliases_spelled @ [a]
 
 let start_ctor_alias_census () = ctor_aliases_spelled := []
@@ -3435,6 +3439,7 @@ let with_struct_scope r f =
     written around it, if any ({!with_struct_scope}). *)
 let ctor_aliases_found ~file visit =
   Common.with_phase (Common.Emit file) @@ fun () ->
+  setting collecting_ctor_aliases true @@ fun () ->
   setting ctor_aliases_spelled [] @@ fun () ->
   visit (fun ~vl ~owner t ->
       match t with
@@ -4474,6 +4479,38 @@ and pp_leaf_decl env (d : cpp_decl) =
     ++ ctors_s
     ++ fnl ()
     ++ str "};"
+
+(** The tag a declaration's text carries naming the synthesised templates
+    the declaration writes ({!ctor_aliases_written}).  It travels with the
+    text however the text is assembled, so where a template is declared --
+    in front of the first text that writes it -- is read off what was
+    written, not searched for in it. *)
+let writes_tag = "crane.writes:"
+
+let pp_cpp_decl env settled =
+  let doc = pp_cpp_decl env settled in
+  match ctor_aliases_written ~file:(ctor_alias_file ()) settled with
+  | [] -> doc
+  | written -> Pp.tag (writes_tag ^ String.concat " " (List.map ctor_alias_name written)) doc
+
+let ctor_aliases_carried doc =
+  let found = ref [] in
+  let rec go d =
+    match Pp.repr d with
+    | Pp.Ppcmd_tag (tag, d) ->
+      if String.starts_with ~prefix:writes_tag tag then begin
+        let n = String.length writes_tag in
+        List.iter
+          (fun name -> if not (List.mem name !found) then found := name :: !found)
+          (String.split_on_char ' ' (String.sub tag n (String.length tag - n)))
+      end;
+      go d
+    | Ppcmd_glue ds -> List.iter go ds
+    | Ppcmd_box (_, d) -> go d
+    | Ppcmd_empty | Ppcmd_string _ | Ppcmd_print_break _ | Ppcmd_force_newline | Ppcmd_comment _ -> ()
+  in
+  go doc;
+  List.rev !found
 
 (** The break between two declaration groups.  It is a break hint, not a
     forced newline, so the vertical box the whole file is printed in
