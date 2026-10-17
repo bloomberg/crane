@@ -1519,16 +1519,11 @@ and pp_module_app ~is_header f me me' =
   in
   let args_pp = prlist_with_sep (fun () -> str ", ") pp_module_arg args in
   let head_pp =
-    if (!render_ctx).rc_in_template && is_qualified base_resolved then
+    match base_resolved with
+    | Some r when (!render_ctx).rc_in_template && is_qualified base_resolved ->
       (* [A::B<...>] must be spelled [A::template B<...>] inside a template. *)
-      match
-        match base_resolved with
-        | Some r -> Common.resolved_split r
-        | None -> None
-      with
-      | Some (qual, last) -> str qual ++ str "::template " ++ str last
-      | None -> base_pp
-    else base_pp
+      Cpp_name.pp ~template_keyword:true r
+    | _ -> base_pp
   in
   (head_pp ++ str "<" ++ args_pp ++ str ">", base_resolved)
 

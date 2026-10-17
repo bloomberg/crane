@@ -211,6 +211,11 @@ val pp_global_with_key : kind -> KerName.t -> GlobRef.t -> string
     renaming tables. *)
 val pp_global : kind -> GlobRef.t -> string
 
+(** {!pp_global_with_key} and {!pp_global}, resolved rather than printed. *)
+val global_name_with_key : kind -> KerName.t -> GlobRef.t -> Cpp_name.t
+
+val global_name : kind -> GlobRef.t -> Cpp_name.t
+
 (** Emit the file [mp] under the namespace [ns] rather than its own name, in
     its declaration and in every reference to it.  Must be decided before any
     file is rendered. *)
@@ -318,20 +323,16 @@ val equal_visibility : visibility -> visibility -> bool
 val pp_visibility : visibility -> Pp.t
 
 (** A name as name resolution settled it, before it is flattened to text: the
-    qualifier components that reach it, outermost first.  Callers that need to
-    know how a name came out should ask here rather than inspect the printed
-    string. *)
-type resolved = {rn_parts : string list}
+    qualifiers that reach it, outermost first, each saying what it is.
+    Callers that need to know how a name came out should ask here rather than
+    inspect the printed string. *)
+type resolved = Cpp_name.t
 
 (** The resolved name as text. *)
 val resolved_string : resolved -> string
 
 (** Whether the resolved name comes out carrying a [::] qualifier. *)
 val resolved_is_qualified : resolved -> bool
-
-(** The resolved name split at its last [::], as (qualifier, final component).
-    [None] when the name comes out unqualified. *)
-val resolved_split : resolved -> (string * string) option
 
 (** Resolve a module path to its name, as the visible scopes qualify it;
     {!pp_module} is this plus {!resolved_string}. *)
@@ -346,6 +347,9 @@ val resolve_module : Names.ModPath.t -> resolved
 
 (** The name of a reference written where the visibility is. *)
 val resolve_global : visibility -> kind -> KerName.t -> GlobRef.t -> string
+
+(** {!resolve_global}, resolved rather than printed. *)
+val resolve_global_name : visibility -> kind -> KerName.t -> GlobRef.t -> Cpp_name.t
 
 (** The name of a module written where the visibility is. *)
 val resolve_module_in : visibility -> ModPath.t -> resolved

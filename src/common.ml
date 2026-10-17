@@ -234,45 +234,11 @@ let space_if = function
 (** Identity function (historically removed quotes). *)
 let unquote s = s
 
-(** Join non-empty strings with a delimiter.
-    @param delim The separator inserted between consecutive non-empty strings
-    @raise Anomaly if the list is empty *)
-let rec qualify delim = function
-  | [] -> CErrors.anomaly (Pp.str "qualify: empty list")
-  | [s] -> s
-  | "" :: l -> qualify delim l
-  | s :: l -> s ^ delim ^ qualify delim l
+(** A name as name resolution settled it, before it is flattened to text. *)
+type resolved = Cpp_name.t
 
-(** Join strings with "::" for C++ namespace qualification. *)
-let dottify = qualify "::"
-
-(** A name as name resolution settled it, before it is flattened to text.
-
-    Callers used to recover facts about a name by inspecting the printed
-    string -- testing it for a [':'] to see whether it came out qualified, or
-    scanning back for the last ["::"] to split it.  Those are properties the
-    resolver knows and the string only hints at, so the resolver says them. *)
-type resolved = {
-  rn_parts : string list;  (** components, outermost first; may contain [""] *)
-}
-
-(** A resolved name, from its components. *)
-let plain rn_parts = {rn_parts}
-
-(** The name as text: exactly what {!dottify} makes of its components. *)
-let resolved_string r = dottify r.rn_parts
-
-(** Whether the name comes out with a [::] qualifier, i.e. whether more than
-    one of its components survives {!qualify}'s dropping of empty strings. *)
-let resolved_is_qualified r =
-  List.length (List.filter (fun s -> s <> "") r.rn_parts) > 1
-
-(** The resolved name split at its last [::]: the qualifier and the final
-    component.  [None] when the name comes out unqualified. *)
-let resolved_split r =
-  match List.rev (List.filter (fun s -> s <> "") r.rn_parts) with
-  | last :: (_ :: _ as rev_prefix) -> Some (dottify (List.rev rev_prefix), last)
-  | _ -> None
+let resolved_string = Cpp_name.to_string
+let resolved_is_qualified = Cpp_name.is_qualified
 
 (** {2 Uppercase/lowercase renamings} *)
 
@@ -1313,30 +1279,62 @@ let fstlev_ks k = function
   | [s] -> (k, s)
   | s :: _ -> (Mod, s)
 
+(** What each component of [mp]'s renaming is, written as a qualifier,
+    outermost first.  Built by the recursion {!mp_renaming_fun} builds the
+    renaming by, so the two are aligned component for component: a file is a
+    namespace, a module a struct, and a functor parameter a template
+    parameter, as is everything reached through one. *)
+let rec mp_scope_kinds mp : (string -> Cpp_name.scope) list =
+  match mp with
+  | _ when (not (modular ())) && at_toplevel mp -> [(fun s -> Cpp_name.Namespace s)]
+  | MPdot (parent, _) ->
+    mp_scope_kinds parent
+    @ [ (if under_mp_bound parent then fun s -> Cpp_name.Parameter s
+         else fun s -> Cpp_name.Class s) ]
+  | MPbound _ -> [(fun s -> Cpp_name.Parameter s)]
+  | MPfile _ -> [(fun s -> Cpp_name.Namespace s)]
+
+(** The name whose components are [rls], outermost first and the last its
+    final component, each qualifier of the kind [kinds] gives the same
+    position. *)
+let kinded kinds rls =
+  let rec split kinds rls =
+    match (kinds, rls) with
+    | _, [base] -> ([], base)
+    | kind :: kinds, s :: rls ->
+      let scopes, base = split kinds rls in
+      (kind s :: scopes, base)
+    | _ -> CErrors.anomaly (Pp.str "kinded: a renaming component has no kind")
+  in
+  let scopes, base = split kinds rls in
+  Cpp_name.name scopes base
+
 (** Print a locally-visible reference. [pp_ocaml_local] : [mp] has something in
     common with the innermost scope of [vis] but isn't equal to it.
     @param vis    The scopes visible where the reference is written
     @param k      Kind of the reference
     @param prefix Largest visible module-path prefix shared with [mp]
     @param mp     Full module path of the reference
+    @param kinds  What each component of [rls] is as a qualifier
     @param rls    Full renaming list (outermost component first)
     @param olab   Label of the reference within its module ([None] for modules)
     @return The shortest unambiguous dotted name for the reference *)
-let pp_ocaml_local vis k prefix mp rls olab =
+let pp_ocaml_local vis k prefix mp kinds rls olab =
   (* what is the largest prefix of [mp] that belongs to [visible]? *)
   assert (k != Mod || not (ModPath.equal mp prefix));
   (* mp as whole module isn't in itself *)
-  let rls' = List.skipn (mp_length prefix) rls in
+  let n = mp_length prefix in
+  let rls' = List.skipn n rls in
   let k's = fstlev_ks k rls' in
   (* Reference r / module path mp is of the form [<prefix>.s.<...>]. *)
   if not (visible_clash vis prefix k's) then
-    plain rls'
+    kinded (List.skipn n kinds) rls'
   else
     (* C++ lets a name be qualified from inside the scope that declares it, so
        a local clash is resolved by spelling the name in full.  OCaml cannot,
        and resolved it instead by duplicating the definition into a [Coq__N]
        wrapper module; Crane has no need of that. *)
-    plain rls
+    kinded kinds rls
 
 (** Print an externally-defined reference. [pp_ocaml_extern] : [mp] isn't local,
     it is defined in another [MPfile], and the file is always named.  OCaml
@@ -1345,62 +1343,65 @@ let pp_ocaml_local vis k prefix mp rls olab =
     separate extraction names every cross-file reference in full
     ({!force_cross_file_qualification}), so which files were referenced
     before never decides a spelling.
-    @param vis  The scopes visible where the reference is written
-    @param base The [MPfile] the reference is defined in
-    @param rls  Full renaming list (outermost component first)
+    @param vis   The scopes visible where the reference is written
+    @param base  The [MPfile] the reference is defined in
+    @param kinds What each component of [rls] is as a qualifier
+    @param rls   Full renaming list (outermost component first)
     @return The fully qualified dotted name *)
-let pp_ocaml_extern vis base rls =
+let pp_ocaml_extern vis base kinds rls =
   match rls with
   | [] -> CErrors.anomaly (Pp.str "pp_ocaml_extern: empty renaming list")
-  | base_s :: rls' ->
+  | base_s :: _ ->
     note_written_file base;
     if !force_cross_file_qualification && hidden_by_member vis base_s then
       (* A file is a namespace at global scope, so it is named from there
          where a nearer name hides it: [Decimal] inside [Number]'s struct,
          whose constructor of that name is a struct too. *)
-      plain (("::" ^ base_s) :: rls')
-    else plain rls
+      Cpp_name.within Cpp_name.Global (kinded kinds rls)
+    else kinded kinds rls
 
 (** Main name printer: dispatch between local, bound, and external.
     [pp_ocaml_gen] : choosing between [pp_ocaml_local] or [pp_ocaml_extern].
-    @param vis  The scopes visible where the reference is written
-    @param k    Kind of the reference
-    @param mp   Full module path of the reference
-    @param rls  Full renaming list (outermost component first)
-    @param olab Label of the reference ([None] for module paths)
+    @param vis   The scopes visible where the reference is written
+    @param k     Kind of the reference
+    @param mp    Full module path of the reference
+    @param kinds What each component of [rls] is as a qualifier
+    @param rls   Full renaming list (outermost component first)
+    @param olab  Label of the reference ([None] for module paths)
     @return The shortest unambiguous printed name where [vis] is visible *)
-let pp_ocaml_gen vis k mp rls olab =
+let pp_ocaml_gen vis k mp kinds rls olab =
   match common_prefix_from_list mp (List.map (fun v -> v.mp) vis) with
-  | Some prefix -> pp_ocaml_local vis k prefix mp rls olab
+  | Some prefix -> pp_ocaml_local vis k prefix mp kinds rls olab
   | None ->
     let base = base_mp mp in
     if is_mp_bound base then
       (* Reached through a functor parameter: the template parameter's own name
          is the whole answer, since it shadows anything an enclosing scope
          spells the same way. *)
-      plain rls
+      kinded kinds rls
     else
-      pp_ocaml_extern vis base rls
+      pp_ocaml_extern vis base kinds rls
 
 (** C++ variant of {!pp_ocaml_gen}: same dispatch logic but treats non-output
     module references as external (unqualified short name only).
-    @param vis  The scopes visible where the reference is written
-    @param k    Kind of the reference
-    @param mp   Full module path of the reference
-    @param rls  Full renaming list (outermost component first)
-    @param olab Label of the reference ([None] for module paths)
+    @param vis   The scopes visible where the reference is written
+    @param k     Kind of the reference
+    @param mp    Full module path of the reference
+    @param kinds What each component of [rls] is as a qualifier
+    @param rls   Full renaming list (outermost component first)
+    @param olab  Label of the reference ([None] for module paths)
     @return The shortest unambiguous printed name for C++ output *)
-let pp_cpp_gen vis k mp rls olab =
+let pp_cpp_gen vis k mp kinds rls olab =
   match common_prefix_from_list mp (List.map (fun v -> v.mp) vis) with
-  | Some prefix -> pp_ocaml_local vis k prefix mp rls olab
+  | Some prefix -> pp_ocaml_local vis k prefix mp kinds rls olab
   | None ->
     let base = base_mp mp in
     if is_mp_bound base then
-      plain rls
+      kinded kinds rls
     else if is_non_output_module base then
-      plain [unquote (last rls)]
+      Cpp_name.unqualified (unquote (last rls))
     else
-      pp_ocaml_extern vis base rls
+      pp_ocaml_extern vis base kinds rls
 
 (** The innermost module of a visibility. *)
 let innermost_mp = function
@@ -1415,20 +1416,26 @@ let innermost_mp = function
     @param k   Kind of the global reference
     @param key Kernel name used to determine the defining module path
     @param r   The global reference to print
-    @return The printed name string *)
-let resolve_global vis k key r =
+    @return The resolved name *)
+let resolve_global_name vis k key r =
   let ls = ref_renaming (k, r) in
   assert (List.length ls > 1);
   let s = List.hd ls in
   let mp, l = KerName.repr key in
   if ModPath.equal mp (innermost_mp vis) then
     (* simplest situation: definition of r (or use in the same context) *)
-    unquote s
+    Cpp_name.unqualified (unquote s)
   else
-    let rls = List.rev ls in
-    (* for what come next it's easier this way *)
+    (* The renaming is [r]'s module's, whatever module [key] names. *)
+    let kinds = mp_scope_kinds (modpath_of_r r) in
     match lang () with
-    | Cpp -> resolved_string (pp_cpp_gen vis k mp rls (Some l))
+    | Cpp -> pp_cpp_gen vis k mp kinds (List.rev ls) (Some l)
+
+(** {!resolve_global_name} as text. *)
+let resolve_global vis k key r = Cpp_name.to_string (resolve_global_name vis k key r)
+
+(** {!resolve_global_name} where the printer is. *)
+let global_name_with_key k key r = resolve_global_name (get_visible ()) k key r
 
 (** {!resolve_global} where the printer is. *)
 let pp_global_with_key k key r = resolve_global (get_visible ()) k key r
@@ -1437,6 +1444,9 @@ let pp_global_with_key k key r = resolve_global (get_visible ()) k key r
     @param k The kind of the global reference
     @param r The global reference to print *)
 let pp_global k r = pp_global_with_key k (repr_of_r r) r
+
+(** {!pp_global}, resolved. *)
+let global_name k r = global_name_with_key k (repr_of_r r) r
 
 (** The file part of {!pp_global}'s answer: the name of the file defining
     [r] when a reference to it from here must name it, as {!pp_cpp_gen}
@@ -1503,8 +1513,8 @@ let resolve_module_in vis mp =
   match mp with
   | MPdot (mp0, _) when ModPath.equal mp0 (innermost_mp vis) ->
     (* simplest situation: definition of mp (or use in the same context) *)
-    plain [List.hd ls]
-  | _ -> pp_ocaml_gen vis Mod mp (List.rev ls) None
+    Cpp_name.unqualified (List.hd ls)
+  | _ -> pp_ocaml_gen vis Mod mp (mp_scope_kinds mp) (List.rev ls) None
 
 (** {!resolve_module_in} where the printer is. *)
 let resolve_module mp = resolve_module_in (get_visible ()) mp
