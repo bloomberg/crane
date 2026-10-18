@@ -2585,6 +2585,9 @@ let plan_nested_structs s =
              | Record _ when Module_plan.is_eponymous_record r -> []
              | _ when Table.is_enum_inductive r ->
                [(enum_declaration_name r, NSref r)]
+             (* Moved out of the collision struct holding it to namespace
+                scope, where it is generated ({!plan_concept_prerequisites}). *)
+             | _ when Module_plan.is_namespace_scope_ref r -> []
              | _ -> [(struct_declaration_name ~merged ~promoted ~local r, NSref r)] )
          (Array.to_list ind.ind_packets) )
   in

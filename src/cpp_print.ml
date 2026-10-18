@@ -488,6 +488,7 @@ let rec declared_types ?(outer = []) = function
   | Dusing u -> [(u.du_name, outer @ u.du_tparams)]
   | Denum {de_ref; _} -> [(de_ref, outer)]
   | Dstruct {ds_ref; ds_tparams; _} when Module_plan.is_namespace_scope_ref ds_ref -> [(ds_ref, outer @ ds_tparams)]
+  | Dnspace (Some r, ds) when Module_plan.is_namespace_scope_ref r -> List.concat_map (declared_types ~outer) ds
   | _ -> []
 
 let stand_ins t =

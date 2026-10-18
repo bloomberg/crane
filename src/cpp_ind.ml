@@ -153,6 +153,12 @@ let header_decls decls = {decls; member_defs = []; promoted_sft = None}
     ("redefinition as different kind of symbol"). *)
 let ind_header_decls kn ind =
   let names = Array.mapi (fun i p -> GlobRef.IndRef (kn, i)) ind.ind_packets in
+  (* Written at namespace scope: outside every struct, or moved out of the
+     collision struct holding it ahead of the concepts
+     ({!Cpp.plan_concept_prerequisites}), which is planned. *)
+  let at_namespace_scope =
+    (not (!render_ctx).rc_in_struct) || Array.for_all Module_plan.is_namespace_scope_ref names
+  in
   let cnames =
     Array.mapi
       (fun i p ->
@@ -494,10 +500,8 @@ let ind_header_decls kn ind =
               match decl with
               | Denum _ -> decl (* Enums don't need namespace wrapper *)
               | _ ->
-                if (!render_ctx).rc_in_struct then
-                  decl
-                else
-                  Dnspace (Some names.(i), [decl])
+                if at_namespace_scope then Dnspace (Some names.(i), [decl])
+                else decl
             in
             (empty_env (), wrapped_decl) :: pp (i + 1)
     in
@@ -508,7 +512,7 @@ let ind_header_decls kn ind =
        them, so the members that cross the cycle are written after the whole
        group. *)
     let group, member_defs =
-      if (!render_ctx).rc_in_struct then
+      if not at_namespace_scope then
         (group, [])
       else
         let group = if is_mutual then Member_hoist.split_group group else group in
