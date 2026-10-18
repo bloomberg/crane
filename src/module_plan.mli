@@ -38,7 +38,9 @@ type t = {
   eponymous_records : GlobRef.t list;
       (** Records merged into the module struct of the same name. *)
   namespace_scope_refs : GlobRef.t list;
-      (** Declarations lifted out of their wrapper struct to namespace scope. *)
+      (** Declarations lifted out of their wrapper struct to namespace scope:
+          instances, and the inductives a collision struct holds that are
+          concept prerequisites. *)
   wrappers : (ModPath.t * string * wrapper_role option) list;
       (** Modules emitted inside a wrapper struct, with its name and their
           role; a role not given keeps the one already recorded, and is [Own]
@@ -46,6 +48,10 @@ type t = {
   global_scope_types : GlobRef.t list;
       (** Type names a wrapper's module contributes to global scope rather
           than to the struct: its aliases and its lifted instances. *)
+  concept_prerequisites : Label.t list;
+      (** The labels of the files' top-level elements the concepts at the top
+          of the header cannot be read without, which move ahead of them
+          ({!Cpp.plan_concept_prerequisites}). *)
 }
 
 (** The plan of a unit that decides nothing. *)
@@ -54,7 +60,9 @@ val empty : t
 val equal : t -> t -> bool
 
 (** Record a unit's facts.  The enums replace the previous unit's; the rest
-    accumulate over the extraction, the namespace-scope refs over the unit. *)
+    accumulate over the extraction, the namespace-scope refs and the concept
+    prerequisites over the unit.  Recording a plan again records nothing
+    new but what it adds. *)
 val install : t -> unit
 
 (** Whether every decision of [t] reads back as {!install} recorded it: the
@@ -78,3 +86,4 @@ val wrapper : ModPath.t -> (string * wrapper_role) option
 val wrapper_struct : ModPath.t -> string option
 val wrapper_role : ModPath.t -> wrapper_role option
 val is_global_scope_type : GlobRef.t -> bool
+val is_concept_prerequisite : Label.t -> bool

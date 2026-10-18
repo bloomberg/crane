@@ -1352,7 +1352,10 @@ let module_plan_of_analysis
                 | SEdecl (Dterm (r, a, t)) when is_typeclass_instance a t -> Some r
                 | _ -> None )
               mi.sels )
-          wrapped }
+          wrapped;
+      (* Planned once the wrappers holding declarations are
+         ({!plan_concept_prerequisites}). *)
+      concept_prerequisites = [] }
 
 (** Decide everything about the structure that does not depend on which file is
     being written, record what rendering reads of it here, and return its
@@ -2785,9 +2788,9 @@ type wrapper_render = {
 
     An inductive is spelled qualified when it is written inside a wrapper
     struct rather than merged with it -- [List::list], beside the functions of
-    the file module [List] -- and that is a question only the printer's table
-    answers ({!Cpp_print.nested_in_wrapper}), so this is asked once the
-    wrapper modules have queued their declarations.
+    the file module [List] -- which is planned ({!Cpp_print.nested_in_wrapper}),
+    so this is asked once the wrappers holding declarations are
+    ({!plan_concept_prerequisites}).
 
     An enum a collision struct holds -- a top-level element of a file
     written inside one -- has no declaration outside the struct for the
@@ -2931,6 +2934,25 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
   in
   fixpoint (seed, Ref.User.Set.empty) Names.Label.Set.empty
 
+(** Whether an element is a function, which a wrapper module writes into its
+    struct. *)
+let is_func_decl (_, se) = match se with SEdecl (Dterm _ | Dfix _) -> true | _ -> false
+
+(** [plan] with the concept prerequisites of [s] ({!concept_prereqs}), asked
+    in the visibility the files are written in, once the wrappers holding
+    declarations are planned ({!plan_unmerged_wrappers}). *)
+let plan_concept_prerequisites (plan : Module_plan.t) s =
+  let initial_mps = List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s in
+  let modules = (get_structure_analysis ()).sorted_modules in
+  let wrapper_sels name =
+    List.concat_map
+      (fun (mi : Structure_analysis.module_info) ->
+        if mi.wrapper_name = Some name then List.filter is_func_decl mi.sels else [] )
+      modules
+  in
+  let labels = with_visibility (toplevel_visibility initial_mps) (fun () -> concept_prereqs ~wrapper_sels s) in
+  {plan with concept_prerequisites = Names.Label.Set.elements labels}
+
 (** What placing top-level elements moves out of their places, each to a
     section of its own ahead of the body, in the order written: the structs
     of modules planned to be declared ahead of the file
@@ -3009,7 +3031,7 @@ let do_struct_with_decl_tracking ~is_header f s =
      struct of a module planned to be declared ahead of the file goes to the
      top ({!hoisted_structs}); an element the concepts cannot be read without
      travels with them -- decided by label, because that is what the element
-     knows about itself, against [prereq_labels] ({!concept_prereqs}); and
+     knows about itself, against the plan ({!plan_concept_prerequisites}); and
      everything else stays where it is.  Placing an element gives what
      stays and what it moved ({!moved}), the concepts it declares, which go
      to the top of the file, among them. *)
@@ -3018,7 +3040,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     if is_header then
       List.map (fun (f : Cpp_print.forward_declaration) -> (f.fwd_ref, f.fwd_struct)) !file_layout.constrained_decls
     else [];
-  let place ~wrapper_specs ~prereq_labels ~source ((l, se) as x) =
+  let place ~wrapper_specs ~source ((l, se) as x) =
     let defined = if is_header then declarations [(source, [x])] else [] in
     let homed =
       List.filter_map (fun (name, d) -> if List.memq d defined then Some name else None) !file_layout.wrapper_homes
@@ -3050,7 +3072,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     (* A struct's member is not a chunk at namespace scope: the struct is. *)
     let p = if (!render_ctx).rc_in_struct then p else Cpp_ast.top_level p in
     if hoists then (Cpp_ast.empty, {nothing_moved with hoisted = [p]; concepts = c})
-    else if Names.Label.Set.mem l prereq_labels && is_modfile source && not (Cpp_ast.is_empty p) then (
+    else if is_header && Module_plan.is_concept_prerequisite l && is_modfile source && not (Cpp_ast.is_empty p) then (
       (* The prerequisites are asked for by label, of the files' top-level
          elements: a flattened child's element sharing the label is not one.
          A top-level element of a file a collision struct holds is a member
@@ -3085,11 +3107,6 @@ let do_struct_with_decl_tracking ~is_header f s =
   let wrapper_parts, deferred_definitions, p, moved =
     with_visibility (toplevel_visibility initial_mps) @@ fun () ->
     let analysis = get_structure_analysis () in
-    let is_func_decl (_, se) =
-      match se with
-      | SEdecl (Dterm _ | Dfix _) -> true
-      | _ -> false
-    in
     let wrapper_names =
       List.map
         (fun (mi : Structure_analysis.module_info) ->
@@ -3134,18 +3151,6 @@ let do_struct_with_decl_tracking ~is_header f s =
     if is_header && Cpp_print.take_absorbed_wrappers () <> [] then
       Probe.violation "wrapper homes"
         (Pp.str "a wrapper's declarations were written into a struct lifted out of a wrapper module");
-    (* Asked only now, because whether an inductive is written inside a wrapper
-       depends on the declarations just queued against it. *)
-    let prereq_labels =
-      if not is_header then Names.Label.Set.empty
-      else
-        concept_prereqs s ~wrapper_sels:(fun name ->
-            List.concat_map
-              (fun ((_, sel), wrapper_name) ->
-                if wrapper_name = Some name then List.filter is_func_decl sel
-                else [] )
-              wrapper_names )
-    in
     let deferred_definitions = List.map (fun w -> w.wr_defs) wrapper_parts in
     let ppl ((mp, sel), wrapper_name) =
       in_planned_visibility mp @@ fun () ->
@@ -3155,7 +3160,7 @@ let do_struct_with_decl_tracking ~is_header f s =
         | Some w -> w.wr_specs
         | None -> Cpp_ast.module_body mp []
       in
-      let place_in source = place ~wrapper_specs ~prereq_labels ~source in
+      let place_in source = place ~wrapper_specs ~source in
       let f = place_in mp in
       let joined_placed sel =
         let stays, moved = gathered (List.map f sel) in

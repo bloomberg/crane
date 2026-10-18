@@ -14,6 +14,7 @@ type t = {
   namespace_scope_refs : GlobRef.t list;
   wrappers : (ModPath.t * string * wrapper_role option) list;
   global_scope_types : GlobRef.t list;
+  concept_prerequisites : Label.t list;
 }
 
 (* One table per fact.  Each lives as long as its current users rely on: most
@@ -44,6 +45,7 @@ let namespace_scope : unit Ref.User.Tbl.t =
   ref_table ~scope:State.Unit "namespace_scope_refs"
 let wrapper_table : (ModPath.t, string * wrapper_role) Hashtbl.t = table "wrapper_table"
 let global_types : unit Ref.User.Tbl.t = ref_table "global_scope_type_table"
+let prerequisites : (Label.t, unit) Hashtbl.t = table ~scope:State.Unit "concept_prerequisite_table"
 
 let empty =
   { global_scope_enums = [];
@@ -53,7 +55,8 @@ let empty =
     eponymous_records = [];
     namespace_scope_refs = [];
     wrappers = [];
-    global_scope_types = [] }
+    global_scope_types = [];
+    concept_prerequisites = [] }
 
 let equal a b =
   let refs = List.equal GlobRef.UserOrd.equal in
@@ -68,6 +71,7 @@ let equal a b =
        (fun (mp, n, r) (mp', n', r') -> ModPath.equal mp mp' && String.equal n n' && r = r')
        a.wrappers b.wrappers
   && refs a.global_scope_types b.global_scope_types
+  && List.equal Label.equal a.concept_prerequisites b.concept_prerequisites
 
 let install f =
   Ref.User.Tbl.reset enums;
@@ -95,7 +99,8 @@ let install f =
       in
       Hashtbl.replace wrapper_table mp (name, role) )
     f.wrappers;
-  List.iter (fun r -> Ref.User.Tbl.replace global_types r ()) f.global_scope_types
+  List.iter (fun r -> Ref.User.Tbl.replace global_types r ()) f.global_scope_types;
+  List.iter (fun l -> Hashtbl.replace prerequisites l ()) f.concept_prerequisites
 
 let is_global_scope_enum r = Ref.User.Tbl.mem enums r
 let concept_name r = Ref.User.Tbl.find_opt concepts r
@@ -110,6 +115,7 @@ let wrapper mp = Hashtbl.find_opt wrapper_table mp
 let wrapper_struct mp = Option.map fst (wrapper mp)
 let wrapper_role mp = Option.map snd (wrapper mp)
 let is_global_scope_type r = Ref.User.Tbl.mem global_types r
+let is_concept_prerequisite l = Hashtbl.mem prerequisites l
 
 (* The last of [l]'s answers for each key, which is the one installing [l]
    leaves. *)
@@ -139,3 +145,4 @@ let installed f =
          | None -> false )
        (last_answers mp_equal (List.map (fun (mp, name, role) -> (mp, (name, role))) f.wrappers))
   && List.for_all is_global_scope_type f.global_scope_types
+  && List.for_all is_concept_prerequisite f.concept_prerequisites

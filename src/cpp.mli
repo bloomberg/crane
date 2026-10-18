@@ -143,6 +143,13 @@ val plan_instance_promoted_types :
     it wraps. *)
 val plan_unmerged_wrappers : unit -> (string * Names.ModPath.t) list
 
+(** [plan_concept_prerequisites plan s] is [plan] with the labels of the
+    top-level elements of [s]'s files that the concepts at the top of the
+    header cannot be read without, which move ahead of them.  Asked once the
+    wrappers holding declarations are installed: whether an inductive is
+    spelled qualified by its wrapper depends on them. *)
+val plan_concept_prerequisites : Module_plan.t -> Miniml.ml_structure -> Module_plan.t
+
 (** The fields each such constructor struct stores behind the smart pointer
     ({!Gen_decls.constructor_pointer_fields}): the inductive, the
     constructor's struct name, and each field's index with whether it holds

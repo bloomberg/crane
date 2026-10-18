@@ -1001,6 +1001,7 @@ let plan_referenced_names = "plan_referenced_names"
 let plan_field_names = "plan_field_names"
 let plan_pointer_fields = "plan_pointer_fields"
 let plan_unmerged_wrappers = "plan_unmerged_wrappers"
+let plan_concept_prerequisites = "plan_concept_prerequisites"
 let plan_promoted_inductives = "plan_promoted_inductives"
 let plan_accessors = "plan_accessors"
 let plan_nested_structs = "plan_nested_structs"
@@ -1016,6 +1017,7 @@ let layout_pass_names =
     plan_field_names;
     plan_pointer_fields;
     plan_unmerged_wrappers;
+    plan_concept_prerequisites;
     plan_scopes;
     plan_promoted_inductives;
     plan_accessors;
@@ -1031,7 +1033,9 @@ let layout_pass_names =
     ({!Cpp.plan_referenced_names}), and of its constructors' fields
     ({!Cpp.plan_field_names}), which of those fields are stored behind the
     pointer ({!Cpp.plan_pointer_fields}), which wrapper structs hold
-    declarations ({!Cpp.plan_unmerged_wrappers}), which constants are
+    declarations ({!Cpp.plan_unmerged_wrappers}), which elements the
+    concepts cannot be read without, the module plan's last fact
+    ({!Cpp.plan_concept_prerequisites}), which constants are
     accessor functions ({!Cpp.plan_accessors}), and how a definition written
     outside its struct's body names the struct ({!Cpp.plan_scopes}), then
     plan the callable of each
@@ -1058,6 +1062,9 @@ let plan_layout struc =
   Pipeline_trace.event "layout" plan_unmerged_wrappers;
   let unmerged_wrappers = Cpp.plan_unmerged_wrappers () in
   Install_legacy_plan.install_unmerged_wrappers unmerged_wrappers;
+  Pipeline_trace.event "layout" plan_concept_prerequisites;
+  let modules = Cpp.plan_concept_prerequisites modules struc in
+  Install_legacy_plan.install_modules modules;
   Pipeline_trace.event "layout" plan_scopes;
   let scopes = Cpp.plan_scopes struc in
   Install_legacy_plan.install_scopes scopes;
