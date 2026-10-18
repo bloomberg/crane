@@ -3484,12 +3484,19 @@ let ctor_aliases_found ~file visit =
       | _ -> () );
   !ctor_aliases_spelled
 
+(* The module whose element is being written: what the plan reads off
+   something written there is keyed by it. *)
+let module_written () =
+  match (!render_ctx).rc_module with
+  | Some mp -> mp
+  | None -> CErrors.anomaly (Pp.str "Crane: templates were read off something written as no module's element.")
+
 let ctor_aliases_written ~file (d : Cpp_erasure.settled) =
-  { read_written = (top_visible_mp (), Written_declaration (d :> cpp_decl));
+  { read_written = (module_written (), Written_declaration (d :> cpp_decl));
     read_aliases = ctor_aliases_found ~file (fun f -> Cpp_demands.tyctors_of_decl f (d :> cpp_decl)) }
 
 let ctor_aliases_of_fields ~file ~vl r types =
-  { read_written = (top_visible_mp (), Written_fields r);
+  { read_written = (module_written (), Written_fields r);
     read_aliases = ctor_aliases_found ~file (fun f -> List.iter (Cpp_demands.tyctors_of_type f ~vl) types) }
 
 (** The synthesised templates [w], written in the module [module_], writes
@@ -3514,16 +3521,20 @@ let planned_aliases ~module_ w =
 let planned_ctor_aliases ~module_ (d : Cpp_erasure.settled) = planned_aliases ~module_ (Written_declaration (d :> cpp_decl))
 
 (** The synthesised templates the finished declaration [d] writes in the
-    file being written, as planned; under [CRANE_CHECK_IR], spelled again
-    and compared. *)
+    file being written, as an element of the module the render context
+    names, as planned; under [CRANE_CHECK_IR], spelled again and
+    compared. *)
 let ctor_aliases_planned (d : Cpp_erasure.settled) =
-  let aliases = planned_ctor_aliases ~module_:(top_visible_mp ()) d in
-  let file = (!render_ctx).rc_file in
-  if Probe.checking () && Option.has_some !ctor_alias_plan && (ctor_aliases_written ~file d).read_aliases <> aliases then
-    Probe.violation "constructor aliases"
-      Pp.(str "a declaration of the " ++ str (Common.file_name file)
-          ++ str " writes other templates than were planned for it");
-  aliases
+  match !ctor_alias_plan with
+  | None -> []
+  | Some _ ->
+    let aliases = planned_ctor_aliases ~module_:(module_written ()) d in
+    let file = (!render_ctx).rc_file in
+    if Probe.checking () && (ctor_aliases_written ~file d).read_aliases <> aliases then
+      Probe.violation "constructor aliases"
+        Pp.(str "a declaration of the " ++ str (Common.file_name file)
+            ++ str " writes other templates than were planned for it");
+    aliases
 
 (** Where a member is being written.
 
@@ -4709,7 +4720,7 @@ let print_unprinted (u : Cpp_ast.unprinted) =
     | Fields {record; vars; fields} ->
       ( prlist_with_sep fnl (fun (name, ty) -> pp_cpp_type false vars ty ++ spc () ++ str name ++ str ";") fields
         ++ fnl (),
-        if Probe.checking () then fields_needs ~module_:(top_visible_mp ()) ~vl:vars record (List.map snd fields)
+        if Probe.checking () then fields_needs ~module_:(module_written ()) ~vl:vars record (List.map snd fields)
         else u.needs )
   in
   if Probe.checking () && needs <> u.needs then
