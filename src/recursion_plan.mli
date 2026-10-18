@@ -18,7 +18,7 @@
 
     For a function that does not recurse only by tail calls, the plan also
     reads the constructors its result is built of around its calls, which
-    decide whether it is lowered tail modulo cons ({!modulo_cons}). *)
+    decide whether it is lowered tail modulo cons ({!strategy}). *)
 
 type kind =
   | No_recursion
@@ -42,23 +42,11 @@ val analyze : Recursive_groups.t -> Miniml.ml_structure -> t
 
 val equal : t -> t -> bool
 
-(** Make [t] the extraction's plan, the one {!find} reads. *)
+(** Make [t] the extraction's plan, the one {!strategy} reads. *)
 val install : t -> unit
 
 (** The plan of the group of the function [r], if [r] is on a cycle. *)
 val group_of : Names.GlobRef.t -> group option
-
-(** The kind of the function [r], if the program defines it: its group's,
-    or [No_recursion] off every cycle. *)
-val find : Names.GlobRef.t -> kind option
-
-(** The kind of the local fixpoint bound to [binder] in the definition
-    [origin], if [origin] defines one: the kind of the fixpoint's group,
-    planned from its body as a definition's is, every call between its
-    members counting.  A helper lifted out of [origin] for that fixpoint is
-    planned by it ({!Lifted}).  Two fixpoints binding the same name in one
-    definition both count. *)
-val find_local : origin:Names.GlobRef.t -> binder:Names.Id.t -> kind option
 
 (** A constructor applied around a recursive call: its argument [hole], in
     the constructor's declared order, holds the call. *)
@@ -74,34 +62,44 @@ type chain = private {
   innermost : cell;
 }
 
-(** How a function that does not recurse only by tail calls builds its
-    result around its calls. *)
-type modulo_cons =
-  | Not_modulo_cons
+(** How a function's recursion is lowered, one per function. *)
+type strategy =
+  | No_loop  (** it does not recurse *)
+  | Tail_loop  (** every recursive call is a tail call, and becomes a jump *)
   | Modulo_cons of chain list
-      (** each call that is not a tail call is the one call of one of these
-          chains, all ending in the same cell; there is at least one *)
+      (** tail modulo cons: each call that is not a tail call is the one
+          call of one of these chains, all ending in the same cell, which is
+          left empty and filled by the next turn of the loop; there is at
+          least one *)
+  | Frame_stack  (** some call is not a tail call: an explicit stack *)
 
-(** Whether the recursion of the function [r] is lowered tail modulo cons,
-    if the program defines [r]: [r] does not recurse only by tail calls, and
-    each call that is not one is the one call of a chain of constructor
-    applications in tail position, the innermost holding it directly, read
-    off [r]'s Core body with {!Normalize}'s temporaries put back and its
-    partners inlined as Loopify inlines them.  Every chain ends in the same
-    constructor, holding the call at the same argument, which its
-    constructor stores behind the pointer, and every constructor in a chain
-    stores some field there: [pointer_fields c] are the arguments of [c] so
-    stored, [None] where it stores none
+(** The kind of recursion a strategy lowers. *)
+val kind_of_strategy : strategy -> kind
+
+(** The strategy of the function [r], if the program defines it: its
+    group's kind, [No_recursion] off every cycle, and for a member that does
+    not recurse only by tail calls whether it is lowered tail modulo cons.
+    It is, where each call that is not a tail call is the one call of a
+    chain of constructor applications in tail position, the innermost
+    holding it directly, read off [r]'s Core body with {!Normalize}'s
+    temporaries put back and its partners inlined as Loopify inlines them.
+    Every chain ends in the same constructor, holding the call at the same
+    argument, which its constructor stores behind the pointer, and every
+    constructor in a chain stores some field there: [pointer_fields c] are
+    the arguments of [c] so stored, [None] where it stores none
     ({!Gen_inductives.constructor_pointer_fields}). *)
-val modulo_cons :
-  pointer_fields:(Names.GlobRef.t -> int list option) -> Names.GlobRef.t -> modulo_cons option
+val strategy :
+  pointer_fields:(Names.GlobRef.t -> int list option) -> Names.GlobRef.t -> strategy option
 
-(** {!modulo_cons} of the local fixpoint bound to [binder] in the definition
-    [origin], read off its body as a definition's is, if [origin] defines
-    one; where two fixpoints bind the same name there, both must lower, and
-    the chains are both's. *)
-val modulo_cons_local :
+(** The strategy of the local fixpoint bound to [binder] in the definition
+    [origin], if [origin] defines one: planned from its body as a
+    definition's is, every call between the members of its group counting.
+    A helper lifted out of [origin] for that fixpoint is planned by it
+    ({!Lifted}).  Where two fixpoints bind the same name in one definition,
+    both count: the kind is the stronger, and the chains both's where they
+    end in the same cell. *)
+val strategy_local :
   pointer_fields:(Names.GlobRef.t -> int list option) ->
   origin:Names.GlobRef.t ->
   binder:Names.Id.t ->
-  modulo_cons option
+  strategy option

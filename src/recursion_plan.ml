@@ -405,28 +405,26 @@ let install t = installed := t
 
 let group_of r = Ref.User.Map.find_opt r !installed.by_member
 
-let find r =
-  match group_of r with
-  | Some g -> Some g.kind
-  | None -> if Ref.User.Set.mem r !installed.defined then Some No_recursion else None
-
-let find_local ~origin ~binder =
-  List.fold_left
-    (fun found l ->
-      if Common.globref_equal l.origin origin && List.exists (Names.Id.equal binder) l.binders then
-        Some (combine l.local_kind (Option.default No_recursion found))
-      else found )
-    None !installed.locals
-
-type modulo_cons =
-  | Not_modulo_cons
+type strategy =
+  | No_loop
+  | Tail_loop
   | Modulo_cons of chain list
+  | Frame_stack
 
-(* Whether [chains] lower tail modulo cons: there is one, every one ends in
-   the same cell, whose hole its constructor stores behind the pointer, and
-   every constructor in them stores some field there. *)
-let lowers ~pointer_fields = function
-  | Some ({innermost; _} :: _ as chains)
+let kind_of_strategy = function
+  | No_loop -> No_recursion
+  | Tail_loop -> Tail
+  | Modulo_cons _ | Frame_stack -> Nontail
+
+(* The strategy of a function of kind [kind] whose chains are [chains]:
+   tail modulo cons where there is a chain, every one ends in the same cell,
+   whose hole its constructor stores behind the pointer, and every
+   constructor in them stores some field there. *)
+let strategy_of ~pointer_fields kind chains =
+  match (kind, chains) with
+  | No_recursion, _ -> No_loop
+  | Tail, _ -> Tail_loop
+  | Nontail, Some ({innermost; _} :: _ as chains)
     when (let stored c = pointer_fields c.constructor in
           (match stored innermost with Some fields -> List.mem innermost.hole fields | None -> false)
           && List.for_all
@@ -435,20 +433,23 @@ let lowers ~pointer_fields = function
                  && List.for_all (fun c -> Option.has_some (stored c)) (c.innermost :: c.around) )
                chains ) ->
     Modulo_cons chains
-  | Some _ | None -> Not_modulo_cons
+  | Nontail, _ -> Frame_stack
 
-let modulo_cons ~pointer_fields r =
+let strategy ~pointer_fields r =
   if Ref.User.Set.mem r !installed.defined then
-    Some (lowers ~pointer_fields (Ref.User.Map.find_opt r !installed.modulo_cons))
+    let kind = match group_of r with Some g -> g.kind | None -> No_recursion in
+    Some (strategy_of ~pointer_fields kind (Ref.User.Map.find_opt r !installed.modulo_cons))
   else None
 
-let modulo_cons_local ~pointer_fields ~origin ~binder =
+let strategy_local ~pointer_fields ~origin ~binder =
   let both a b =
     match (a, b) with
     | Modulo_cons (c :: _ as cs), Modulo_cons (c' :: _ as cs')
       when same_cell c.innermost c'.innermost ->
       Modulo_cons (cs @ cs')
-    | (Modulo_cons _ | Not_modulo_cons), _ -> Not_modulo_cons
+    | (Modulo_cons _ | Frame_stack), _ | _, (Modulo_cons _ | Frame_stack) -> Frame_stack
+    | Tail_loop, _ | _, Tail_loop -> Tail_loop
+    | No_loop, No_loop -> No_loop
   in
   List.fold_left
     (fun found l ->
@@ -456,7 +457,7 @@ let modulo_cons_local ~pointer_fields ~origin ~binder =
         List.fold_left2
           (fun found b chains ->
             if Names.Id.equal b binder then
-              let this = lowers ~pointer_fields chains in
+              let this = strategy_of ~pointer_fields l.local_kind chains in
               Some (match found with Some f -> both f this | None -> this)
             else found )
           found l.binders l.chains

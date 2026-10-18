@@ -155,7 +155,7 @@ let make_cell ~cell_ty ~ctor_name ~factory_s args idx =
     tca_ptr_fields = uptr_idxs }
 
 (** The return expression [expr] as the branch of one of the recursion plan's
-    [chains] ({!Recursion_plan.modulo_cons}): the factory calls it nests, each
+    [chains] ({!Recursion_plan.strategy}): the factory calls it nests, each
     building its chain cell's constructor, holding the next in the cell's
     hole, the innermost a recursive call.  The plan counts a hole among the
     constructor's declared arguments; a factory call stores them reversed. *)
@@ -657,7 +657,7 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~storage ~branch check
     destination-passing style.
 
     @param param_inits Optional custom initializers for shadow variables
-    @param chains the recursion plan's chains ({!Recursion_plan.modulo_cons})
+    @param chains the recursion plan's chains ({!Recursion_plan.strategy})
     @param check Call checker for identifying recursive calls
     @param params Function parameters
     @param ret_ty Return type
