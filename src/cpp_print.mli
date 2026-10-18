@@ -44,6 +44,10 @@ val unprinted : module_:Names.ModPath.t -> Common.env -> Cpp_erasure.settled -> 
 val unprinted_fields :
   module_:ModPath.t -> vl:Id.t list -> GlobRef.t -> (string * cpp_type) list -> Cpp_ast.t
 
+(** The module whose element is being written, which every element is
+    written as one of; an anomaly where none is. *)
+val module_written : unit -> ModPath.t
+
 (** The text of a declaration not yet printed, printed in the render
     context and visibility its spelling enters, a module type's concept by
     [modtype_concept] and an assertion by [assertion].  Under

@@ -118,15 +118,14 @@ let pp_concept_ref kn =
          outside [ConceptName] refers to the namespace — we need
          [ConceptName::ConceptName].
 
-         Compare mp0 against the file-level MPfile of the current context,
-         not top_visible_mp() — the latter may be an MPdot (e.g. inside a
-         module-type body) even when the concept is in the same file. *)
+         The file is the one holding the module whose element is being
+         written, which the plan says, not the visibility in effect. *)
       let rec get_file_mp = function
         | ModPath.MPfile _ as mp -> mp
         | ModPath.MPdot (mp, _) -> get_file_mp mp
         | ModPath.MPbound _ -> mp0  (* functor param scope — treat as same *)
       in
-      let current_file_mp = get_file_mp (top_visible_mp ()) in
+      let current_file_mp = get_file_mp (module_written ()) in
       if (match mp0 with MPfile _ -> true | _ -> false)
          && not (ModPath.equal mp0 current_file_mp)
          && not (Common.resolved_is_qualified resolved) then
