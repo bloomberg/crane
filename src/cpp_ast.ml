@@ -16,6 +16,7 @@ type spelling = Element_of of ModPath.t | Member_of of ModPath.t
 type declaration =
   | Declaration of {env : Common.env; settled : Cpp_erasure.settled}
   | Fields of {record : GlobRef.t; vars : Id.t list; fields : (string * Minicpp.cpp_type) list}
+  | Modtype_concept of {path : ModPath.t; params : ModPath.t list; concept : Modtype_concept.t}
   | Global_alias of global_alias
 
 and global_alias =
@@ -42,6 +43,8 @@ let empty = Seq []
 let decl ~needs text = Decl {text; needs}
 let unprinted ~needs env settled = Unprinted {declaration = Declaration {env; settled}; needs}
 let fields ~needs ~record ~vars fields = Unprinted {declaration = Fields {record; vars; fields}; needs}
+let modtype_concept ~path ~params concept =
+  Unprinted {declaration = Modtype_concept {path; params; concept}; needs = Needs.none}
 let global_alias a = Unprinted {declaration = Global_alias a; needs = Needs.none}
 let elements ~source elements = Elements {source; elements}
 let seq l = Seq l

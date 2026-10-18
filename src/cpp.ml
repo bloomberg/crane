@@ -723,11 +723,9 @@ let rec pp_structure_elem ~is_header f ~module_ = function
               List.filter_map
                 (function
                   | l, SEmodtype mty ->
-                    Some
-                      (Cpp_ast.text
-                         (pp_modtype_concept ~params
-                            (pp_concept_ref (MPdot (body_mp, l)))
-                            (Cpp_ind.modtype_concept ~module_ (MPdot (body_mp, l)) ~params mty) ) )
+                    let path = MPdot (body_mp, l) in
+                    let concept = Cpp_ind.modtype_concept ~module_ path ~params mty in
+                    Some (Cpp_ast.modtype_concept ~path ~params concept)
                   | _ -> None )
                 sel
             | _ -> []
@@ -818,7 +816,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                 | SEmodtype m ->
                   let path = MPdot (mp, l) in
                   let concept = Cpp_ind.modtype_concept ~module_ path ~params:[] m in
-                  let concept_pp = Cpp_ast.text (pp_modtype_concept (str (modtype_concept_name path)) concept) in
+                  let concept_pp = Cpp_ast.modtype_concept ~path ~params:[] concept in
                   Some (HCmodtype path, concept_pp, Modtype_concept.names_member mp concept)
                 | _ -> None )
               sel
@@ -1197,11 +1195,11 @@ let rec pp_structure_elem ~is_header f ~module_ = function
     }
   | l, SEmodtype m ->
     written
-    @@ Cpp_ast.text
-      ( if (not is_header) || (!render_ctx).rc_in_struct then mt ()
+      ( if (not is_header) || (!render_ctx).rc_in_struct then Cpp_ast.empty
         else
           let path = MPdot (module_, l) in
-          pp_modtype_concept (str (modtype_concept_name path)) (Cpp_ind.modtype_concept ~module_ path ~params:[] m) )
+          let concept = Cpp_ind.modtype_concept ~module_ path ~params:[] m in
+          Cpp_ast.modtype_concept ~path ~params:[] concept )
 
 (** Render a functor application, and say whether the result comes out with a
     [::] qualifier.

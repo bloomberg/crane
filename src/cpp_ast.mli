@@ -21,7 +21,7 @@
     printed by {!print} as the tree says it is spelled: as an element of the
     module a group of declarations was generated in ({!Elements}), or as a
     member of the struct around it ({!Module}).  Everything else is text,
-    already formatted: the concept text around a struct is the driver's. *)
+    already formatted: the head and tail of a struct are the driver's. *)
 
 open Names
 
@@ -64,6 +64,10 @@ type declaration =
       (** The fields of the eponymous record [record] merged into its
           module's struct, each by its name and type, the type variables
           they name named [vars]: no declaration holds them. *)
+  | Modtype_concept of {path : ModPath.t; params : ModPath.t list; concept : Modtype_concept.t}
+      (** The concept the module type at [path] becomes, generated as
+          [concept], over the parameters [params] of a functor declaring
+          it. *)
   | Global_alias of global_alias
       (** [using N = ::N;]: a member standing in for a type declared under
           the same name at namespace scope, where the file moved it, so that
@@ -134,6 +138,10 @@ val unprinted : needs:Needs.t -> Common.env -> Cpp_erasure.settled -> t
 (** [fields ~needs ~record ~vars fields] is {!Fields}, printed where the
     tree puts it. *)
 val fields : needs:Needs.t -> record:GlobRef.t -> vars:Id.t list -> (string * Minicpp.cpp_type) list -> t
+
+(** [modtype_concept ~path ~params c] is {!Modtype_concept}, printed where
+    the tree puts it.  It needs nothing placed in front of it. *)
+val modtype_concept : path:ModPath.t -> params:ModPath.t list -> Modtype_concept.t -> t
 
 (** [global_alias a] is {!Global_alias}, printed where the tree puts it.
     It writes no synthesised template and names no constrained struct but

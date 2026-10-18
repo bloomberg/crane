@@ -45,9 +45,11 @@ val unprinted_fields :
   module_:ModPath.t -> vl:Id.t list -> GlobRef.t -> (string * cpp_type) list -> Cpp_ast.t
 
 (** The text of a declaration not yet printed, printed in the render
-    context and visibility its spelling enters.  Under [CRANE_CHECK_IR] it
-    must need, printed there, what was planned for it where it was made. *)
-val print_unprinted : Cpp_ast.unprinted -> Pp.t
+    context and visibility its spelling enters, a module type's concept by
+    [modtype_concept].  Under [CRANE_CHECK_IR] it must need, printed there,
+    what was planned for it where it was made. *)
+val print_unprinted :
+  modtype_concept:(path:ModPath.t -> params:ModPath.t list -> Modtype_concept.t -> Pp.t) -> Cpp_ast.unprinted -> Pp.t
 
 (** [stand_ins t] is, for each type the declarations of [t] declare, a
     member alias of it ({!Cpp_ast.global_alias}): what a struct holds in

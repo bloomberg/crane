@@ -494,7 +494,7 @@ let stand_ins t =
         List.map
           (fun (target, tparams) -> Cpp_ast.(global_alias (Alias_of_type {target; tparams})))
           (declared_types (settled :> cpp_decl))
-      | Declared (Fields _ | Global_alias _) -> []
+      | Declared (Fields _ | Modtype_concept _ | Global_alias _) -> []
       | Struct_of mp -> [Cpp_ast.(global_alias (Alias_of_module mp))] )
     (Cpp_ast.declared t)
 
@@ -4732,9 +4732,10 @@ let unprinted ~module_ env settled = Cpp_ast.unprinted ~needs:(planned_needs ~mo
 let unprinted_fields ~module_ ~vl r fields =
   Cpp_ast.fields ~needs:(fields_needs ~module_ ~vl r (List.map snd fields)) ~record:r ~vars:vl fields
 
-let print_unprinted (u : Cpp_ast.unprinted) =
+let print_unprinted ~modtype_concept (u : Cpp_ast.unprinted) =
   let text, needs =
     match u.declaration with
+    | Modtype_concept {path; params; concept} -> (modtype_concept ~path ~params concept, u.needs)
     | Declaration {env; settled} -> printed_decl ~print:pp_cpp_decl env settled
     | Fields {record; vars; fields} ->
       ( prlist_with_sep fnl (fun (name, ty) -> pp_cpp_type false vars ty ++ spc () ++ str name ++ str ";") fields
