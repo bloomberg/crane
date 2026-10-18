@@ -4693,8 +4693,19 @@ let planned_needs ~module_ settled =
 
 let unprinted ~module_ env settled = Cpp_ast.unprinted ~needs:(planned_needs ~module_ settled) env settled
 
+let unprinted_fields ~module_ ~vl r fields =
+  Cpp_ast.fields ~needs:(fields_needs ~module_ ~vl r (List.map snd fields)) ~record:r ~vars:vl fields
+
 let print_unprinted (u : Cpp_ast.unprinted) =
-  let text, needs = printed_decl ~print:pp_cpp_decl u.env u.declaration in
+  let text, needs =
+    match u.declaration with
+    | Declaration {env; settled} -> printed_decl ~print:pp_cpp_decl env settled
+    | Fields {record; vars; fields} ->
+      ( prlist_with_sep fnl (fun (name, ty) -> pp_cpp_type false vars ty ++ spc () ++ str name ++ str ";") fields
+        ++ fnl (),
+        if Probe.checking () then fields_needs ~module_:(top_visible_mp ()) ~vl:vars record (List.map snd fields)
+        else u.needs )
+  in
   if Probe.checking () && needs <> u.needs then
     Probe.violation "unprinted declarations"
       (Pp.str "a declaration printed where the tree puts it needs other declarations than planned where it was made");

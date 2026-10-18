@@ -13,7 +13,11 @@ end
 
 type spelling = Element_of of ModPath.t | Member_of of ModPath.t
 
-type unprinted = {env : Common.env; declaration : Cpp_erasure.settled; needs : Needs.t}
+type declaration =
+  | Declaration of {env : Common.env; settled : Cpp_erasure.settled}
+  | Fields of {record : GlobRef.t; vars : Id.t list; fields : (string * Minicpp.cpp_type) list}
+
+type unprinted = {declaration : declaration; needs : Needs.t}
 
 type t =
   | Text of Pp.t
@@ -31,7 +35,8 @@ and enclosure = Struct of {head : Pp.t; tail : Pp.t} | Out_of_line | In_enclosin
 let text d = Text d
 let empty = Seq []
 let decl ~needs text = Decl {text; needs}
-let unprinted ~needs env declaration = Unprinted {env; declaration; needs}
+let unprinted ~needs env settled = Unprinted {declaration = Declaration {env; settled}; needs}
+let fields ~needs ~record ~vars fields = Unprinted {declaration = Fields {record; vars; fields}; needs}
 let elements ~source elements = Elements {source; elements}
 let seq l = Seq l
 

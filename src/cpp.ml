@@ -1362,23 +1362,17 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                 (* [fields] already pairs each projection with its type:
                    extraction selected the two together. *)
                 let field_types = Cpp_ind.record_field_types epon_ref ty_vars fields in
-                let pp_field i (field_ref, _) cpp_ty =
-                  let field_name =
-                    match field_ref with
-                    | Some r -> str (Common.pp_global_name Term r)
-                    (* Index anonymous fields so multiple of them don't all
-                       collapse to a single duplicate "_field" member (which
-                       would not compile).  Matches gen_decls.ml. *)
-                    | None -> str ("_field" ^ string_of_int i)
-                  in
-                  pp_cpp_type false ty_vars cpp_ty ++ spc () ++ field_name ++ str ";"
+                let field_name i (field_ref, _) =
+                  match field_ref with
+                  | Some r -> Common.pp_global_name Term r
+                  (* Index anonymous fields so multiple of them don't all
+                     collapse to a single duplicate "_field" member (which
+                     would not compile).  Matches gen_decls.ml. *)
+                  | None -> "_field" ^ string_of_int i
                 in
                 let fields_pp =
-                  Cpp_ast.decl
-                    ~needs:(Cpp_print.fields_needs ~module_ ~vl:ty_vars epon_ref field_types)
-                    ( prlist_with_sep fnl (fun p -> p)
-                        (List.mapi (fun i (f, ty) -> pp_field i f ty) (List.combine fields field_types))
-                    ++ fnl () )
+                  Cpp_print.unprinted_fields ~module_ ~vl:ty_vars epon_ref
+                    (List.combine (List.mapi field_name fields) field_types)
                 in
                 let method_fields, method_helpers =
                   generated_record_methods epon_ref ty_vars
@@ -1391,8 +1385,9 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                   Cpp_ast.seq
                     (List.map
                        (fun h ->
-                         Cpp_ast.(
-                           seq [write_decl (empty_env ()) (fst (lifted_views ~may_hoist:false h)); text (fnl ())]) )
+                         Cpp_ast.seq
+                           [ Cpp_print.unprinted ~module_ (empty_env ()) (fst (lifted_views ~may_hoist:false h));
+                             Cpp_ast.text (fnl ()) ] )
                        method_helpers )
                 in
                 let methods_pp =
@@ -1406,26 +1401,19 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                     let finished =
                       Cpp_ind.finished_record_methods epon_ref ty_vars method_fields
                     in
-                    let fields =
-                      match (finished :> cpp_decl) with
-                      | Dfields ds -> ds.ds_fields
-                      | _ -> method_fields
-                    in
-                    let methods_needs = Cpp_print.planned_needs ~module_ finished in
-                    setting method_candidates this_method_candidates (fun () ->
-                        Cpp_ast.(
-                          seq
-                            [ helpers_pp;
-                              decl ~needs:methods_needs
-                                ( prlist_with_sep fnl
-                                    (fun (fld, _vis, _tag) -> pp_cpp_field (empty_env ()) fld)
-                                    fields
-                                ++ fnl () ) ]) )
+                    Cpp_ast.seq
+                      [helpers_pp; Cpp_print.unprinted ~module_ (empty_env ()) finished; Cpp_ast.text (fnl ())]
                 in
                 (template_str, fields_pp, methods_pp)
               | None -> (mt (), Cpp_ast.empty, Cpp_ast.empty)
             in
-            let fields = Cpp_ast.seq [record_fields_pp; record_methods_pp] in
+            (* The record's fields and methods are members of the module's
+               struct, but written as elements of the module it is an
+               element of, in that body's visibility: they are planned
+               there ({!plan_ctor_aliases}), and a type they name that the
+               struct declares later means, in front of that declaration,
+               what it means outside. *)
+            let fields = Cpp_ast.elements ~source:module_ (Cpp_ast.seq [record_fields_pp; record_methods_pp]) in
             if has_concept_collision then
               (Cpp_ast.seq [typeclasses_pp; modtypes_pp; unenclosed_element In_enclosing_scope ~fields body], [])
             else if Cpp_ast.body_is_empty body && Cpp_ast.is_empty fields then

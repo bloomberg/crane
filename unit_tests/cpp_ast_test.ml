@@ -128,6 +128,26 @@ let () =
   check_text "the innermost group around a declaration not yet printed spells it"
     (spelled [top (Cpp_ast.module_ struct_ (Cpp_ast.module_body m [Cpp_ast.elements ~source:inner (unprinted ())]))])
     "struct-M{E(F.M.N)\n}";
+  let fields ?templates () =
+    Cpp_ast.fields ~needs:(needs ?templates ()) ~record:(GlobRef.VarRef (Id.of_string "r")) ~vars:[] []
+  in
+  check_text "a struct's fields written as elements of the module around it are spelled as its elements"
+    (spelled
+       [ top
+           (Cpp_ast.elements ~source:m
+              (Cpp_ast.module_ struct_ ~fields:(Cpp_ast.elements ~source:m (fields ())) (Cpp_ast.module_body inner [unprinted ()])) ) ])
+    "struct-M{E(F.M)M(F.M.N)\n}";
+  check_text "a homed template a struct's fields write goes in front of the member holding the struct"
+    (text ~templates:[template ~homed:true "T"]
+       [ top
+           (Cpp_ast.module_ struct_
+              (Cpp_ast.module_body m
+                 [ Cpp_ast.text (Pp.str "y");
+                   Cpp_ast.module_
+                     (Struct {head = Pp.str "struct-N{"; tail = Pp.str "}"})
+                     ~fields:(Cpp_ast.elements ~source:m (fields ~templates:["T"] ()))
+                     (Cpp_ast.module_body inner [leaf "w"]) ]) ) ])
+    "Pstruct-M{y<T>struct-N{?w}}";
   check_text "a declaration not yet printed is placed by what it needs, as planned"
     (spelled ~templates:[template "T"] [top (Cpp_ast.elements ~source:m (unprinted ~templates:["T"] ()))])
     "<T>E(F.M)";

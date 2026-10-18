@@ -56,10 +56,18 @@ type spelling =
           planned header scope says -- a library module writes its types
           at namespace scope and its functions in a struct of its name. *)
 
-(** A declaration not yet printed, in the name environment it is printed
-    in, with what placing the declarations it needs reads -- planned, so
-    known before it is printed. *)
-type unprinted = {env : Common.env; declaration : Cpp_erasure.settled; needs : Needs.t}
+(** What a declaration not yet printed declares. *)
+type declaration =
+  | Declaration of {env : Common.env; settled : Cpp_erasure.settled}
+      (** A finished declaration, printed in the name environment [env]. *)
+  | Fields of {record : GlobRef.t; vars : Id.t list; fields : (string * Minicpp.cpp_type) list}
+      (** The fields of the eponymous record [record] merged into its
+          module's struct, each by its name and type, the type variables
+          they name named [vars]: no declaration holds them. *)
+
+(** A declaration not yet printed, with what placing the declarations it
+    needs reads -- planned, so known before it is printed. *)
+type unprinted = {declaration : declaration; needs : Needs.t}
 
 type t = private
   | Text of Pp.t  (** Written as it is; nothing is placed by it. *)
@@ -109,6 +117,10 @@ val decl : needs:Needs.t -> Pp.t -> t
 (** [unprinted ~needs env d] is [d], printed in [env] where the tree puts
     it. *)
 val unprinted : needs:Needs.t -> Common.env -> Cpp_erasure.settled -> t
+
+(** [fields ~needs ~record ~vars fields] is {!Fields}, printed where the
+    tree puts it. *)
+val fields : needs:Needs.t -> record:GlobRef.t -> vars:Id.t list -> (string * Minicpp.cpp_type) list -> t
 
 (** [elements ~source t] is [t], spelled as the elements of [source] are. *)
 val elements : source:ModPath.t -> t -> t

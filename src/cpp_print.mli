@@ -34,6 +34,16 @@ val planned_needs : module_:Names.ModPath.t -> Cpp_erasure.settled -> Cpp_ast.Ne
     with what placing the declarations it needs reads, as planned. *)
 val unprinted : module_:Names.ModPath.t -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
 
+(** [unprinted_fields ~module_ ~vl r fields] is the fields [fields] of the
+    eponymous record [r], each by its name and type, their type variables
+    named [vl], written in the module [module_], to be printed where the
+    tree puts them, with what placing the declarations they need reads: the
+    synthesised templates they write, as planned, and the constrained
+    structs they name.  Under [CRANE_CHECK_IR] the templates are spelled
+    again and compared. *)
+val unprinted_fields :
+  module_:ModPath.t -> vl:Id.t list -> GlobRef.t -> (string * cpp_type) list -> Cpp_ast.t
+
 (** The text of a declaration not yet printed, printed in the render
     context and visibility its spelling enters.  Under [CRANE_CHECK_IR] it
     must need, printed there, what was planned for it where it was made. *)
@@ -43,12 +53,6 @@ val print_unprinted : Cpp_ast.unprinted -> Pp.t
     read, not written. *)
 val read_cpp_decl : Common.env -> Cpp_erasure.settled -> Pp.t
 
-(** [fields_needs ~module_ ~vl r types] is what placing the declarations the
-    fields of the eponymous record [r], of types [types], need reads, where
-    they are written in the module [module_]: the synthesised templates
-    they write, as planned, and the constrained structs they name.  Under
-    [CRANE_CHECK_IR] the templates are spelled again and compared. *)
-val fields_needs : module_:ModPath.t -> vl:Id.t list -> GlobRef.t -> cpp_type list -> Cpp_ast.Needs.t
 
 (** How a member is written: in the struct with or without its body, or out
     of line. *)
