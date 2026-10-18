@@ -597,49 +597,17 @@ let unstable_locals ~(stable : Id.Set.t) (body : cpp_stmt list) : Id.Set.t =
     recognise that shape. They sit here, beside the other checkers, because
     both {!transform_nontail} and {!loopify_inner_lambdas} need them. *)
 
-(** The prefix {!Translation.gen_local_fix_by_ref} gives a local fixpoint's
-    self-reference parameter. *)
-let self_param_prefix = "_self_"
-
-(** Whether [id] is such a self-reference parameter. *)
-let is_self_param_id id =
-  let s = Id.to_string id in
-  let p = self_param_prefix in
-  String.length s > String.length p && String.sub s 0 (String.length p) = p
-
-(** The self-reference parameter of a lambda written in the idiom, if it is one.
-
-    Only a single (non-mutual) fixpoint qualifies: a mutual group forwards one
-    self-reference per partner, and those the callers here cannot linearise. *)
-let ycomb_self_id lparams =
-  let self_count =
-    List.length
-      (List.filter
-         (fun (_, io) ->
-           match io with Some id -> is_self_param_id id | None -> false )
-         lparams)
-  in
-  match List.rev lparams with
-  | (_, Some sid) :: _ when is_self_param_id sid && self_count = 1 -> Some sid
-  | _ -> None
-
 (** The self-reference parameter of the lambda a single local fixpoint's
     body is, as its encoding recorded it ({!Minicpp.local_fixpoint}): the
     one self-parameter of [fixpoint], where it is the last of [lparams], the
     lambda's parameters as stored.  A mutual group's lambda takes one per
-    member, which the callers here cannot linearise.  Under [CRANE_CHECK_IR]
-    it is checked against the parameters' names ({!ycomb_self_id}), which
-    decided this before. *)
+    member, which the callers here cannot linearise.  Its name is no
+    evidence: the encoding spells it [_self_f], and Crane spells other
+    locals of its own in that space too ([_self_val]). *)
 let fixpoint_self fixpoint lparams =
-  let recorded =
-    match (fixpoint, List.rev lparams) with
-    | Some {lf_selves = [self]; _}, (_, Some last) :: _ when Id.equal self last -> Some self
-    | _ -> None
-  in
-  if Probe.checking () && not (Option.equal Id.equal recorded (ycomb_self_id lparams)) then
-    Probe.violation "local fixpoint"
-      (Pp.str "a lambda's recorded self-parameter is not the one its parameters' names say");
-  recorded
+  match (fixpoint, List.rev lparams) with
+  | Some {lf_selves = [self]; _}, (_, Some last) :: _ when Id.equal self last -> Some self
+  | _ -> None
 
 (** A checker matching the fixpoint's calls to itself through [self_id]. *)
 let self_checker self_id : call_checker =
