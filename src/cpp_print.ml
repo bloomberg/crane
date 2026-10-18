@@ -703,20 +703,37 @@ let ctor_alias_render_ctx home =
     {start with rc_in_struct = true; rc_in_template = Scope_plan.templated home; rc_module = Some home}
   | Some home, Common.Impl -> {start with rc_scope = Scope_plan.of_module home; rc_module = Some home}
 
-(** A declaration as a file writes it: in the module it is written in. *)
-module Written_decl = Hashtbl.Make (struct
-  type t = ModPath.t * cpp_decl
+(** What a file writes that places the templates it writes: a declaration,
+    or the fields of the eponymous record merged into a module's struct,
+    which no declaration holds. *)
+type written = Written_declaration of cpp_decl | Written_fields of GlobRef.t
+
+(** What a file writes, in the module it is written in. *)
+module Written = Hashtbl.Make (struct
+  type t = ModPath.t * written
 
   (* [compare] rather than [=]: a NaN literal is equal to itself. *)
-  let equal (mp, d) (mp', d') = ModPath.equal mp mp' && compare d d' = 0
-  let hash (mp, d) = Hashtbl.hash (ModPath.hash mp, Hashtbl.hash_param 40 160 d)
+  let equal (mp, w) (mp', w') =
+    ModPath.equal mp mp'
+    &&
+    match (w, w') with
+    | Written_declaration d, Written_declaration d' -> compare d d' = 0
+    | Written_fields r, Written_fields r' -> GlobRef.UserOrd.equal r r'
+    | (Written_declaration _ | Written_fields _), _ -> false
+
+  let hash (mp, w) =
+    Hashtbl.hash
+      ( ModPath.hash mp,
+        match w with
+        | Written_declaration d -> Hashtbl.hash_param 40 160 d
+        | Written_fields r -> GlobRef.UserOrd.hash r )
 end)
 
-(** What planning reads off something a file writes: the synthesised
-    templates it writes, in the order written, and, for a declaration, the
-    declaration as written. *)
+(** What planning reads off something a file writes: what it is, as the
+    render reads it back, and the synthesised templates it writes, in the
+    order written. *)
 type ctor_aliases_read = {
-  read_decl : Written_decl.key option;
+  read_written : Written.key;
   read_aliases : ctor_alias list;
 }
 
@@ -726,8 +743,8 @@ type ctor_aliases_read = {
 type ctor_alias_plan = {
   intf : ctor_alias list;
   impl : ctor_alias list;
-  intf_writes : ctor_alias list Written_decl.t;
-  impl_writes : ctor_alias list Written_decl.t;
+  intf_writes : ctor_alias list Written.t;
+  impl_writes : ctor_alias list Written.t;
 }
 
 (** [None] until the unit's templates are planned: a declaration rendered
@@ -755,12 +772,10 @@ let plan_ctor_aliases written =
   let dedup l = List.fold_left (fun acc a -> if List.mem a acc then acc else acc @ [a]) [] l in
   let planned file =
     let reads = written file in
-    let writes = Written_decl.create 64 in
+    let writes = Written.create 64 in
     List.iter
       (fun r ->
-        Option.iter
-          (fun d -> if not (Written_decl.mem writes d) then Written_decl.add writes d r.read_aliases)
-          r.read_decl )
+        if not (Written.mem writes r.read_written) then Written.add writes r.read_written r.read_aliases )
       reads;
     (dedup (List.concat_map (fun r -> r.read_aliases) reads), writes)
   in
@@ -3464,27 +3479,33 @@ let ctor_aliases_found ~file visit =
   !ctor_aliases_spelled
 
 let ctor_aliases_written ~file (d : Cpp_erasure.settled) =
-  { read_decl = Some (top_visible_mp (), (d :> cpp_decl));
+  { read_written = (top_visible_mp (), Written_declaration (d :> cpp_decl));
     read_aliases = ctor_aliases_found ~file (fun f -> Cpp_demands.tyctors_of_decl f (d :> cpp_decl)) }
 
-let ctor_aliases_of_type ~file ~vl t =
-  {read_decl = None; read_aliases = ctor_aliases_found ~file (fun f -> Cpp_demands.tyctors_of_type f ~vl t)}
+let ctor_aliases_of_fields ~file ~vl r types =
+  { read_written = (top_visible_mp (), Written_fields r);
+    read_aliases = ctor_aliases_found ~file (fun f -> List.iter (Cpp_demands.tyctors_of_type f ~vl) types) }
 
-(** The synthesised templates the finished declaration [d], written in the
-    module [module_], writes in the file being written, as planned. *)
-let planned_ctor_aliases ~module_ (d : Cpp_erasure.settled) =
+(** The synthesised templates [w], written in the module [module_], writes
+    in the file being written, as planned. *)
+let planned_aliases ~module_ w =
   match !ctor_alias_plan with
   | None -> []
   | Some plan -> (
     let file = (!render_ctx).rc_file in
     let writes = match file with Common.Intf -> plan.intf_writes | Common.Impl -> plan.impl_writes in
-    match Written_decl.find_opt writes (module_, (d :> cpp_decl)) with
+    match Written.find_opt writes (module_, w) with
     | Some aliases -> aliases
     | None ->
+      let what = match w with Written_declaration _ -> "a declaration" | Written_fields _ -> "the fields of a record" in
       CErrors.anomaly
-        Pp.(str "Crane: a declaration of the " ++ str (Common.file_name file) ++ str " in "
+        Pp.(str "Crane: " ++ str what ++ str " of the " ++ str (Common.file_name file) ++ str " in "
             ++ str (ModPath.to_string module_)
-            ++ str " is written that was not read when its templates were planned.") )
+            ++ str " are written that were not read when their templates were planned.") )
+
+(** The synthesised templates the finished declaration [d], written in the
+    module [module_], writes in the file being written, as planned. *)
+let planned_ctor_aliases ~module_ (d : Cpp_erasure.settled) = planned_aliases ~module_ (Written_declaration (d :> cpp_decl))
 
 (** The synthesised templates the finished declaration [d] writes in the
     file being written, as planned; under [CRANE_CHECK_IR], spelled again
@@ -4598,27 +4619,46 @@ let is_held_back_assertion (d : Cpp_erasure.settled) =
   | Decl (Dstatic_assert (CPPconcept_app (class_ref, _, _), None)) -> class_concept_held_back class_ref
   | _ -> false
 
+(* Of the structs the file has constrained forward declarations of
+   ({!constrained_structs}), those named by [names ()] or [defined ()], and
+   those defined. *)
+let constrained_named ~names ~defined =
+  match !constrained_structs with
+  | [] -> ([], [])
+  | constrained ->
+    let of_refs refs =
+      List.filter_map (fun (r, name) -> if List.exists (GlobRef.UserOrd.equal r) refs then Some name else None) constrained
+    in
+    let defined = defined () in
+    (of_refs (defined @ names ()), of_refs defined)
+
 (** What placing the declarations a written declaration needs reads: the
     synthesised templates it writes, [templates], as planned
     ({!planned_ctor_aliases}); and, of the structs the file has constrained
-    forward declarations of ({!constrained_structs}), those it names or
-    defines, and those it defines.  The declarations of a wrapper module it
-    writes into a struct of its own ({!wrapper_members}) are members of that
-    struct, and need what they need themselves. *)
-let needs_of ~templates settled =
+    forward declarations of, those it names or defines, and those it
+    defines.  The declarations of a wrapper module it writes into a struct
+    of its own ({!wrapper_members}) are members of that struct, and need
+    what they need themselves. *)
+let needs_of ~templates (settled : Cpp_erasure.settled) =
   let names, defines =
-    match !constrained_structs with
-    | [] -> ([], [])
-    | constrained ->
-      let of_refs refs =
-        List.filter_map
-          (fun (r, name) -> if List.exists (GlobRef.UserOrd.equal r) refs then Some name else None)
-          constrained
-      in
-      let defined = List.map defined_ref (structs_defined settled) in
-      (of_refs (defined @ Cpp_demands.globals_of_decl (settled :> cpp_decl)), of_refs defined)
+    constrained_named
+      ~names:(fun () -> Cpp_demands.globals_of_decl (settled :> cpp_decl))
+      ~defined:(fun () -> List.map defined_ref (structs_defined settled))
   in
   {Cpp_ast.Needs.templates; names; defines}
+
+let fields_needs ~module_ ~vl r types =
+  let aliases = planned_aliases ~module_ (Written_fields r) in
+  let file = (!render_ctx).rc_file in
+  if Probe.checking () && Option.has_some !ctor_alias_plan && (ctor_aliases_of_fields ~file ~vl r types).read_aliases <> aliases
+  then
+    Probe.violation "constructor aliases"
+      Pp.(str "the fields of a record in the " ++ str (Common.file_name file)
+          ++ str " write other templates than were planned for them");
+  let names, _ =
+    constrained_named ~names:(fun () -> List.concat_map Cpp_demands.globals_of_type types) ~defined:(fun () -> [])
+  in
+  {Cpp_ast.Needs.templates = List.map ctor_alias_name aliases; names; defines = []}
 
 let printed_decl ~print env settled =
   let absorbed_before = List.length !absorbed_wrappers in
@@ -4648,10 +4688,10 @@ let write_decl env settled =
     let text, needs = printed_decl ~print:pp_cpp_decl env settled in
     Cpp_ast.decl ~needs text
 
-let unprinted ~module_ env settled =
-  Cpp_ast.unprinted
-    ~needs:(needs_of ~templates:(List.map ctor_alias_name (planned_ctor_aliases ~module_ settled)) settled)
-    env settled
+let planned_needs ~module_ settled =
+  needs_of ~templates:(List.map ctor_alias_name (planned_ctor_aliases ~module_ settled)) settled
+
+let unprinted ~module_ env settled = Cpp_ast.unprinted ~needs:(planned_needs ~module_ settled) env settled
 
 let print_unprinted (u : Cpp_ast.unprinted) =
   let text, needs = printed_decl ~print:pp_cpp_decl u.env u.declaration in

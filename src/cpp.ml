@@ -1374,7 +1374,8 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                   pp_cpp_type false ty_vars cpp_ty ++ spc () ++ field_name ++ str ";"
                 in
                 let fields_pp =
-                  Cpp_ast.text
+                  Cpp_ast.decl
+                    ~needs:(Cpp_print.fields_needs ~module_ ~vl:ty_vars epon_ref field_types)
                     ( prlist_with_sep fnl (fun p -> p)
                         (List.mapi (fun i (f, ty) -> pp_field i f ty) (List.combine fields field_types))
                     ++ fnl () )
@@ -1410,11 +1411,12 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                       | Dfields ds -> ds.ds_fields
                       | _ -> method_fields
                     in
+                    let methods_needs = Cpp_print.planned_needs ~module_ finished in
                     setting method_candidates this_method_candidates (fun () ->
                         Cpp_ast.(
                           seq
                             [ helpers_pp;
-                              text
+                              decl ~needs:methods_needs
                                 ( prlist_with_sep fnl
                                     (fun (fld, _vis, _tag) -> pp_cpp_field (empty_env ()) fld)
                                     fields
@@ -2500,16 +2502,16 @@ let plan_ctor_aliases s =
            hs )
     in
     let header = file = Common.Intf in
-    let element d =
+    (* What an element of the module being walked writes is read in the
+       scope the render writes it in, as an element of that module. *)
+    let in_element_scope k =
       let mp = top_visible_mp () in
-      let scope k =
-        if header then
-          Cpp_ind.in_header_element_scope mp (fun ~in_struct:_ ->
-              writing_element_of mp (fun () -> k Cpp_ind.header_element_ahead) )
-        else with_render_ctx at_file_scope (fun () -> writing_element_of mp (fun () -> k Cpp_ind.impl_element_ahead))
-      in
-      scope (fun ahead ->
-          let e : Cpp_ind.element = ahead d in
+      if header then Cpp_ind.in_header_element_scope mp (fun ~in_struct:_ -> writing_element_of mp k)
+      else with_render_ctx at_file_scope (fun () -> writing_element_of mp k)
+    in
+    let element d =
+      in_element_scope (fun () ->
+          let e : Cpp_ind.element = if header then Cpp_ind.header_element_ahead d else Cpp_ind.impl_element_ahead d in
           written (List.map snd e.rendered);
           helpers e.helpers;
           written (List.map snd e.member_defs) )
@@ -2531,13 +2533,12 @@ let plan_ctor_aliases s =
     in
     let after_module (frame : Module_frame.t) sel =
       if header then begin
+        in_element_scope @@ fun () ->
         List.iter (fun (_, r, fields) -> written [Cpp_ind.finished_alone (Cpp_ind.concept r fields)]) (declared_classes sel);
         Option.iter
           (fun (r, fields, (packet : ml_ind_packet)) ->
             let vl = packet.ip_vars in
-            List.iter
-              (fun t -> found := Cpp_print.ctor_aliases_of_type ~file ~vl t :: !found)
-              (Cpp_ind.record_field_types r vl fields) )
+            found := Cpp_print.ctor_aliases_of_fields ~file ~vl r (Cpp_ind.record_field_types r vl fields) :: !found )
           (merged_eponymous_record frame);
         Option.iter
           (fun (r, vars, candidates) ->

@@ -12952,3 +12952,14 @@
   (alias runtest)
   (deps alias_home_constructor_field.t.exe)
   (action (run ./alias_home_constructor_field.t.exe))))
+
+(subdir record_field_carrier_alias
+ (rule
+  (targets record_field_carrier_alias.t.exe)
+  (deps RecordFieldCarrierAlias.vo record_field_carrier_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_field_carrier_alias.t.exe record_field_carrier_alias.cpp record_field_carrier_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_field_carrier_alias.t.exe)
+  (action (run ./record_field_carrier_alias.t.exe))))
