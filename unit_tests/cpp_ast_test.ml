@@ -213,4 +213,9 @@ let () =
     (let s = printed {full with forward_declarations = []; concept_prerequisites = []; concepts = []; hoisted_structs = []; body = Cpp_ast.empty;
                      deferred_definitions = []; deferred_members = []} in
      String.starts_with ~prefix:"e1\ne2" s);
-  check "a unit with nothing in it writes nothing" (printed (unit_of []) = "")
+  check "a unit with nothing in it writes nothing" (printed (unit_of []) = "");
+  let group position = raw (Cpp_ast.concept_group position [t "c1"; t "c2"]) in
+  check_text "classes' concepts ahead of a struct follow a line break" (group Classes_ahead) "\nc1\nc2\n\n";
+  check_text "module types' concepts ahead of a struct follow nothing" (group Module_types_ahead) "c1\nc2\n\n";
+  check_text "concepts after a struct follow a blank line" (group After_struct) "\n\nc1\nc2\n\n";
+  check "no concepts are no group" (Cpp_ast.is_empty (Cpp_ast.concept_group After_struct []))

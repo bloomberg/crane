@@ -159,6 +159,9 @@ type t = private
           [enclosure] writes, if any, which closes them on a line of its
           own.  Empty only where no struct is written and there is nothing
           in it. *)
+  | Concept_group of {position : concept_position; concepts : t list}
+      (** Concepts a module's struct is written beside, each on a line of
+          its own, laid out as [position] says.  At least one. *)
   | Declarations of Pp.t list
       (** Declarations {!schedule} placed in front of what follows it; no
           tree built before scheduling has one. *)
@@ -188,8 +191,20 @@ and layout =
   | Block  (** The body opens on a line of its own. *)
   | One_line  (** [struct N {};]: there is no body. *)
 
+(** Where a {!Concept_group} is written beside its module's struct, which
+    is how it is laid out: a blank line after the last concept, and in
+    front of the first nothing, a line break, or a blank line. *)
+and concept_position =
+  | Classes_ahead  (** The module's classes' concepts, ahead of it, after a line break. *)
+  | Module_types_ahead  (** Its module types' concepts, ahead of it. *)
+  | After_struct  (** Concepts naming its members, after it, after a blank line. *)
+
 val text : Pp.t -> t
 val empty : t
+
+(** [concept_group position l] is {!Concept_group}; nothing, if [l] is
+    empty. *)
+val concept_group : concept_position -> t list -> t
 
 (** [template<..>] and a line break, if [params] is not empty; nothing
     otherwise. *)

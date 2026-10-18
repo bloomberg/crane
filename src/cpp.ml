@@ -848,19 +848,9 @@ let rec pp_structure_elem ~is_header f ~module_ = function
           placed After_struct class_concepts @ placed After_struct modtype_concepts
         in
         let this_held_back = match plan with Some plan -> plan.held_back | None -> [] in
-        let concepts_group_pp concepts =
-          if concepts = [] then Cpp_ast.empty
-          else Cpp_ast.(seq [concat fnl (docs concepts); text (fnl () ++ fnl ())])
-        in
-        let typeclasses_pp =
-          if typeclass_concepts = [] then Cpp_ast.empty
-          else Cpp_ast.(seq [text (fnl ()); concat fnl (docs typeclass_concepts); text (fnl () ++ fnl ())])
-        in
-        let modtypes_pp = concepts_group_pp modtype_concepts_ahead in
-        let modtypes_after_pp =
-          if concepts_after = [] then Cpp_ast.empty
-          else Cpp_ast.(seq [text (fnl () ++ fnl ()); concepts_group_pp concepts_after])
-        in
+        let typeclasses_pp = Cpp_ast.concept_group Classes_ahead (docs typeclass_concepts) in
+        let modtypes_pp = Cpp_ast.concept_group Module_types_ahead (docs modtype_concepts_ahead) in
+        let modtypes_after_pp = Cpp_ast.concept_group After_struct (docs concepts_after) in
         (* Whether this module is outside every struct is a question about
            the module, not about the file: the implementation writes no
            struct around a nested module, but the header does, and promotes

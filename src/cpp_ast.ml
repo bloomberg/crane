@@ -49,14 +49,36 @@ type t =
   | Joined of t list
   | Top_level of t
   | Module of {module_ : ModPath.t; enclosure : enclosure; fields : t; members : t list}
+  | Concept_group of {position : concept_position; concepts : t list}
   | Declarations of Pp.t list
 
 and enclosure = Struct of {head : struct_head; layout : layout} | Out_of_line | In_enclosing_scope
 and struct_head = {template : template_param list; name : Pp.t; base : Pp.t option}
 and layout = Block | One_line
+and concept_position = Classes_ahead | Module_types_ahead | After_struct
 
 let text d = Text d
 let empty = Seq []
+
+let rec concat sep = function
+  | [] -> empty
+  | [t] -> t
+  | t :: rest -> Seq [t; Text (sep ()); concat sep rest]
+
+(* A group of concepts as written: each on its own line, a blank line after
+   the last, and in front of the first a line break if they are classes'
+   concepts ahead of their module's struct, or a blank line if they follow
+   it. *)
+let laid_out position concepts =
+  let lead =
+    match position with
+    | Classes_ahead -> [Text (Pp.fnl ())]
+    | Module_types_ahead -> []
+    | After_struct -> [Text Pp.(fnl () ++ fnl ())]
+  in
+  Seq (lead @ [concat Pp.fnl concepts; Text Pp.(fnl () ++ fnl ())])
+
+let concept_group position = function [] -> empty | concepts -> Concept_group {position; concepts}
 
 let pp_template_head = function
   | [] -> Pp.mt ()
@@ -99,6 +121,7 @@ let rec is_empty = function
   | Top_level _ -> false
   | Module {enclosure = Struct _; _} -> false
   | Module {fields; members; _} -> members = [] && is_empty fields
+  | Concept_group _ -> false
   | Declarations l -> l = []
 
 let joined l = match List.filter (fun t -> not (is_empty t)) l with [] -> empty | [t] -> t | l -> Joined l
@@ -115,6 +138,7 @@ let rec has_top_level = function
   | Top_level _ -> true
   | Seq l | Joined l -> List.exists has_top_level l
   | Module {fields; members; _} -> List.exists has_top_level (fields :: members)
+  | Concept_group {concepts; _} -> List.exists has_top_level concepts
 
 let module_ enclosure ?(fields = empty) b =
   ( match enclosure with
@@ -126,11 +150,6 @@ let module_ enclosure ?(fields = empty) b =
   let t = Module {module_ = b.body_module; enclosure; fields; members = b.body_members} in
   if is_empty t then empty else t
 
-let rec concat sep = function
-  | [] -> empty
-  | [t] -> t
-  | t :: rest -> Seq [t; Text (sep ()); concat sep rest]
-
 let rec needs = function
   | Text _ | Declarations _ -> Needs.none
   | Decl {needs; _} | Unprinted {needs; _} -> needs
@@ -138,6 +157,7 @@ let rec needs = function
   | Seq l | Joined l -> List.fold_left (fun acc t -> Needs.union acc (needs t)) Needs.none l
   | Top_level t -> needs t
   | Module {fields; members; _} -> needs (Seq (fields :: members))
+  | Concept_group {concepts; _} -> needs (Seq concepts)
 
 type declared = Declared of declaration | Struct_of of ModPath.t
 
@@ -145,7 +165,7 @@ let rec declared = function
   | Text _ | Decl _ | Declarations _ -> []
   | Unprinted {declaration; _} -> [Declared declaration]
   | Elements {elements = t; _} | Top_level t -> declared t
-  | Seq l | Joined l -> List.concat_map declared l
+  | Seq l | Joined l | Concept_group {concepts = l; _} -> List.concat_map declared l
   | Module {module_; enclosure = Struct _; _} -> [Struct_of module_]
   | Module {fields; members; enclosure = Out_of_line | In_enclosing_scope; _} ->
     List.concat_map declared (fields :: members)
@@ -182,6 +202,7 @@ let starts_with_doc_comment t =
         | Top_level t -> first [t]
         | Module {enclosure = Struct _; _} -> Some false
         | Module {fields; members; _} -> first (fields :: members)
+        | Concept_group {position; concepts} -> first [laid_out position concepts]
       in
       match inner with Some _ -> inner | None -> first rest )
   in
@@ -220,6 +241,7 @@ let rec to_pp = function
         ++ (if members = [] then mt () else fnl ())
         ++ str "};")
     | Out_of_line | In_enclosing_scope -> inside )
+  | Concept_group {position; concepts} -> to_pp (laid_out position concepts)
   | Declarations l -> Pp.(prlist_with_sep fnl (fun d -> d) l ++ cut2 ())
 
 type template = {name : string; homed : bool; holder : bool; declaration : Pp.t}
@@ -267,7 +289,7 @@ let schedule ~templates ~forwards u =
      of the body, is the same in every struct writing the same text. *)
   let rec first_uses ~top ~member ~scope = function
     | Text _ | Declarations _ -> []
-    | Seq l | Joined l -> List.concat_map (first_uses ~top ~member ~scope) l
+    | Seq l | Joined l | Concept_group {concepts = l; _} -> List.concat_map (first_uses ~top ~member ~scope) l
     | Elements {elements; _} -> first_uses ~top ~member ~scope elements
     | Top_level t ->
       incr count;
@@ -319,6 +341,7 @@ let schedule ~templates ~forwards u =
     | (Text _ | Decl _ | Unprinted _ | Declarations _) as t -> t
     | Seq l -> Seq (List.map placed l)
     | Joined l -> Joined (List.map placed l)
+    | Concept_group g -> Concept_group {g with concepts = List.map placed g.concepts}
     | Elements e -> Elements {e with elements = placed e.elements}
     | Top_level t ->
       incr count;
@@ -356,6 +379,7 @@ let print_tree ~write t =
     | Elements {source; elements} -> printed (Some (Element_of source)) elements
     | Seq l -> Seq (List.map (printed spelling) l)
     | Joined l -> Joined (List.map (printed spelling) l)
+    | Concept_group g -> Concept_group {g with concepts = List.map (printed spelling) g.concepts}
     | Top_level t -> Top_level (printed spelling t)
     | Module m ->
       let spelling = match m.enclosure with Struct _ -> Some (Member_of m.module_) | Out_of_line | In_enclosing_scope -> None in
