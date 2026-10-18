@@ -4645,8 +4645,15 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
          (see [ml_codomain_erases_to_any]), wrap the result with
          [std::any_cast<T>] to recover the caller's concrete return type. *)
       | Some fld ->
+        (* A record's field is a data member of its type, so a call takes as
+           many arguments as that type's function does, through an alias of
+           a function type naming it -- [pred nat] is [crane::fn<bool(Nat)>].
+           A class's method is a function declared at the field's own arity. *)
         let declared =
-          try Some (List.nth non_erased_field_types (n - i)) with _ -> None
+          try
+            let ty = List.nth non_erased_field_types (n - i) in
+            Some (if is_typeclass then ty else expand_ml_fun_alias ty)
+          with _ -> None
         in
         (* An instance keeps a method's own quantifier -- a higher-kinded
            class's every method, and any method parametric in a type of its

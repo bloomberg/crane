@@ -12996,3 +12996,14 @@
   (alias runtest)
   (deps method_type_names_module_alias.t.exe)
   (action (run ./method_type_names_module_alias.t.exe))))
+
+(subdir record_field_function_alias
+ (rule
+  (targets record_field_function_alias.t.exe)
+  (deps RecordFieldFunctionAlias.vo record_field_function_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_field_function_alias.t.exe record_field_function_alias.cpp record_field_function_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_field_function_alias.t.exe)
+  (action (run ./record_field_function_alias.t.exe))))
