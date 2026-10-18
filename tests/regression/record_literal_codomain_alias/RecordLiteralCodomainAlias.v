@@ -1,14 +1,14 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Known bug: a record field whose type is a function returning an alias
-    of a function type, [nat -> pred nat], is the curried
-    [crane::fn<pred<Nat>(Nat)>], but a record literal fills it with the
-    two-argument lambda the term is written as, [[](const Nat &a, Nat b)],
-    which converts only through the currying adapter [crane::fn] has when
-    [CRANE_STRICT_ARITY] is off.  The same lambda passed to a parameter of
-    that type is split into a lambda returning a lambda, as the slot's type
-    says. *)
+(** A record field whose type is a function returning an alias of a
+    function type, [nat -> pred nat], is the curried
+    [crane::fn<pred<Nat>(Nat)>].  A record literal fills it with the
+    two-argument lambda the term is written as, split by the field's type
+    into a lambda returning a lambda, as the same lambda passed to a
+    parameter of that type is split by the parameter's: whole, it converts
+    only through the currying adapter [crane::fn] has when
+    [CRANE_STRICT_ARITY] is off. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.

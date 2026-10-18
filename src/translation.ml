@@ -4381,6 +4381,30 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             | _ when is_erased_rel ->
               let ct = cpp_of_ml env ft in
               if prints_as_any ct then None else Some ct
+            (* A lambda is split by the field's type, as one passed to a
+               parameter is by the parameter's, where that type returns a
+               function -- [nat -> pred nat] is the curried
+               [crane::fn<pred<Nat>(Nat)>], an alias hiding the second arrow
+               -- and [gen_expr]'s [MLlam] case would otherwise gather every
+               binder into one lambda, which does not convert to it. *)
+            | _ when (match strip_magic e with MLlam _ -> true | _ -> false) -> (
+              let rec codomain = function
+                | Tconst t | Tref (_, t) -> codomain t
+                | Tfun (_, cod) -> Some cod
+                | t -> (
+                  match unfold_cpp_typedef env t with
+                  | Tfun _ as f when f <> t -> codomain f
+                  | _ -> None )
+              in
+              match ty with
+              | Miniml.Tglob (_, tys, _) -> (
+                let ct = cpp_of_ml env (Mlutil.type_subst_list tys ft) in
+                match codomain ct with
+                | Some cod
+                  when Option.has_some (codomain cod) && (not (prints_as_any ct)) && names_only_scoped_tvars ct ->
+                  Some ct
+                | _ -> None )
+              | _ -> None )
             (* A call is the field's value: its result is the field's type at
                this record's arguments -- [tfmap f (g_exp g)] into [g_exp :
                option (exp T)] at an erased [T] is an

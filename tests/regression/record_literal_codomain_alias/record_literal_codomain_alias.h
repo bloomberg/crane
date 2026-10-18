@@ -134,11 +134,14 @@ struct RecordLiteralCodomainAlias {
     Nat tag;
   };
 
-  static inline const holder h =
-      holder{[](const Nat &a, Nat b) {
-               return a.add(b).eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
-             },
-             Nat::o()};
+  static inline const holder h = []() {
+    return holder{[](Nat a) {
+                    return [=](Nat b) {
+                      return a.add(b).eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
+                    };
+                  },
+                  Nat::o()};
+  }();
   static inline const bool through_field =
       h.staged(Nat::s(Nat::o()))(Nat::s(Nat::s(Nat::o())));
 };

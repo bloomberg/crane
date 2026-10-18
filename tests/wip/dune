@@ -250,17 +250,6 @@
   (deps tyarg_implicit_type_binder.t.exe)
   (action (run ./tyarg_implicit_type_binder.t.exe))))
 
-(subdir record_literal_codomain_alias
- (rule
-  (targets record_literal_codomain_alias.t.exe)
-  (deps RecordLiteralCodomainAlias.vo record_literal_codomain_alias.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} record_literal_codomain_alias.t.exe record_literal_codomain_alias.cpp record_literal_codomain_alias.t.cpp)))
- (rule
-  (alias runtest)
-  (deps record_literal_codomain_alias.t.exe)
-  (action (run ./record_literal_codomain_alias.t.exe))))
-
 (subdir collision_struct_concept_names_inductive
  (rule
   (targets collision_struct_concept_names_inductive.t.exe)

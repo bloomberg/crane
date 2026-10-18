@@ -13040,3 +13040,14 @@
   (alias runtest)
   (deps concept_prereq_in_collision.t.exe)
   (action (run ./concept_prereq_in_collision.t.exe))))
+
+(subdir record_literal_codomain_alias
+ (rule
+  (targets record_literal_codomain_alias.t.exe)
+  (deps RecordLiteralCodomainAlias.vo record_literal_codomain_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_literal_codomain_alias.t.exe record_literal_codomain_alias.cpp record_literal_codomain_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_literal_codomain_alias.t.exe)
+  (action (run ./record_literal_codomain_alias.t.exe))))
