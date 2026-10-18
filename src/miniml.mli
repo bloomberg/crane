@@ -456,8 +456,8 @@ type language_descr = {
   sig_suffix : string option;
   (* the second argument is a comment to add to the preamble *)
   sig_preamble : Id.t -> string option -> ModPath.t list -> unsafe_needs -> Pp.t;
-  (* for an isolated declaration print *)
-  pp_decl : ml_decl -> Pp.t;
+  (* for an isolated declaration print, an element of the module given *)
+  pp_decl : module_:ModPath.t -> ml_decl -> Pp.t;
 }
 
 (** Building and reading {!global_use}. *)

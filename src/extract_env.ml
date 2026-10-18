@@ -2482,8 +2482,8 @@ let print_one_decl struc mp decl =
   let ans =
     Cpp_state.writing_file Impl @@ fun () ->
     with_visibility (toplevel_visibility [mp]) @@ fun () ->
-    Cpp.generate_decl_ahead decl;
-    d.pp_decl decl
+    Cpp.generate_decl_ahead ~module_:mp decl;
+    d.pp_decl ~module_:mp decl
   in
   (* The one box the printers rely on: inside it every break is a newline,
      which is what turns {!Cpp_print.cut2} into the blank line between two

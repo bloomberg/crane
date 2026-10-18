@@ -653,21 +653,22 @@ and lifted_placement =
       (** The element places them, as a constant's or a function's are. *)
   | Unwritten  (** A fixpoint inside a template struct writes none. *)
 
-(** Whether the module being written is one whose members the header
-    defines in a class template ({!Scope_plan.templated}).  Asked of the
+(** Whether the module [module_] is one whose members the header defines
+    in a class template ({!Scope_plan.templated}).  Asked of the
     plan, not of the render context: the implementation writes no template,
     and generates what the header does all the same. *)
-let in_template () = Scope_plan.templated (top_visible_mp ())
+let in_template ~module_ = Scope_plan.templated module_
 
-(** [functions ~lifted funs], with every definition filed in the header
-    inside a template struct, which has no implementation file. *)
-let functions ~lifted (funs : Gen_decls.generated_fun list) =
+(** [functions ~module_ ~lifted funs], generated in [module_], with every
+    definition filed in the header inside a template struct, which has no
+    implementation file. *)
+let functions ~module_ ~lifted (funs : Gen_decls.generated_fun list) =
   let in_header (g : Gen_decls.generated_fun) =
     match g.gf_entity with
     | Defined (d, _) -> {g with gf_entity = Defined (d, Header)}
     | Declared _ -> g
   in
-  let funs = if in_template () then List.map in_header funs else funs in
+  let funs = if in_template ~module_ then List.map in_header funs else funs in
   Functions {funs; lifted}
 
 (** {2 Generating once}
@@ -724,11 +725,12 @@ let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) 
   && List.equal Id.equal (fst a.gf_env) (fst b.gf_env)
   && Id.Set.equal (snd a.gf_env) (snd b.gf_env)
 
-(** [ahead_once ~what ~recorded ~record ~same ?planned ?take gen] is
-    [gen ()] ahead of the files ({!generating_ahead}), recorded ([record])
-    with the module it is generated in, and handed to [planned] to plan what
-    taking it will need.  A file's pass takes what was recorded
-    ([recorded ()]) in the same module, handing it to [take] -- to claim the
+(** [ahead_once ~module_ ~what ~recorded ~record ~same ?planned ?take gen]
+    is [gen ()] ahead of the files ({!generating_ahead}), recorded
+    ([record]) with [module_], the module whose element it is generated as,
+    and handed to [planned] to plan what taking it will need.  A file's pass
+    takes what was recorded ([recorded ()]) in the same module, handing it
+    to [take] -- to claim the
     helpers lifted out of it, or record its entity -- unless it is only
     generating it again to check it ({!regenerating}); under
     [CRANE_CHECK_IR] it generates it again and compares the two with
@@ -736,26 +738,25 @@ let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) 
     declaration a render reaches, an anomaly about [what].  While planning,
     it is [gen ()].  Read while {!peeking}, it is what was recorded, handed
     to [peek] for what taking it would give without taking it. *)
-let ahead_once ~what ~recorded ~record ~same ?(planned = ignore) ?(take = Fun.id) ?(peek = Fun.id) gen =
+let ahead_once ~module_ ~what ~recorded ~record ~same ?(planned = ignore) ?(take = Fun.id) ?(peek = Fun.id) gen =
   let check v ~again =
     if Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (same v (fst (Translation.collecting_lifted gen))) then
       CErrors.anomaly
         Pp.(str "Crane: " ++ what () ++ str " was generated differently ahead of the files and " ++ str again)
   in
   let recorded_here () =
-    let mp = top_visible_mp () in
-    match List.find_map (fun (mp', v) -> if ModPath.equal mp' mp then Some v else None) (recorded ()) with
+    match List.find_map (fun (mp, v) -> if ModPath.equal mp module_ then Some v else None) (recorded ()) with
     | Some v -> v
     | None ->
       CErrors.anomaly
         Pp.(str "Crane: " ++ what () ++ str " was reached while rendering in the module "
-            ++ str (ModPath.to_string mp) ++ str " that was not generated ahead of the files there.")
+            ++ str (ModPath.to_string module_) ++ str " that was not generated ahead of the files there.")
   in
   match (get_phase (), !mode) with
   | Plan, _ -> gen ()
   | Emit, Generating ->
     let v = gen () in
-    record ((top_visible_mp (), v) :: recorded ());
+    record ((module_, v) :: recorded ());
     planned v;
     v
   | Emit, Peeking -> peek (recorded_here ())
@@ -847,9 +848,9 @@ let header_claim key lifted =
 (** [generated_once ?on_reuse node gen] is {!ahead_once} for the functions
     generated at the MiniML node [node]: a file's pass hands them to
     [on_reuse] to replay any effect generating them had. *)
-let generated_once ?(on_reuse = ignore) ?(on_peek = ignore) ?planned node gen =
+let generated_once ~module_ ?(on_reuse = ignore) ?(on_peek = ignore) ?planned node gen =
   let recorded, record = in_node_table generated node in
-  ahead_once ~what:(fun () -> Pp.str "a function") ~recorded ~record
+  ahead_once ~module_ ~what:(fun () -> Pp.str "a function") ~recorded ~record
     ~same:(List.equal same_generation)
     ?planned
     ~take:(fun funs -> on_reuse funs; funs)
@@ -861,7 +862,7 @@ let generated_once ?(on_reuse = ignore) ?(on_peek = ignore) ?planned node gen =
     recorded, or declarations only the header writes.  Inline customs,
     projections merged into a struct, and functions emitted as methods
     generate nothing. *)
-let generate d =
+let generate ~module_ d =
   (* A method candidate is a registered method
      ({!Method_registry.planned_candidate}). *)
   let skipped r =
@@ -873,9 +874,9 @@ let generate d =
     match filter_dfix fds with
     | [] -> Nothing
     | fds ->
-      functions
-        ~lifted:(if in_template () then Unwritten else Inline)
-        (generated_once d (fun () -> gen_dfuns_dual fds))
+      functions ~module_
+        ~lifted:(if in_template ~module_ then Unwritten else Inline)
+        (generated_once ~module_ d (fun () -> gen_dfuns_dual fds))
   in
   match d with
   | (Dtype (r, _, _) | Dterm (r, _, _)) when is_any_inline_custom r -> Nothing
@@ -914,7 +915,7 @@ let generate d =
         Translation.collecting_lifted @@ fun () ->
         match gen_decl_for_pp r a t with
         | Some ds, env, tvars -> (Gen_decls.defined ds tvars, env)
-        | None, _, _ when in_template () ->
+        | None, _, _ when in_template ~module_ ->
           let ds, env, _ = gen_decl r a t in
           (Defined (ds, Header), env)
         | None, _, _ ->
@@ -929,7 +930,7 @@ let generate d =
     let reuse funs = claimed := Some (header_claim funs (lifted funs)) in
     let peek funs = claimed := Some (planned_claim funs) in
     let funs =
-      generated_once ~planned:(fun funs -> plan_header_claim funs (lifted funs)) ~on_reuse:reuse
+      generated_once ~module_ ~planned:(fun funs -> plan_header_claim funs (lifted funs)) ~on_reuse:reuse
         ~on_peek:peek d gen
     in
     let helpers =
@@ -937,7 +938,7 @@ let generate d =
       | Some helpers -> helpers
       | None -> List.concat_map (fun g -> g.Gen_decls.gf_lifted) funs
     in
-    functions ~lifted:(By_element helpers) funs
+    functions ~module_ ~lifted:(By_element helpers) funs
   | Dfix fds -> group fds
 
 (** {2 The finished program}
@@ -1130,9 +1131,9 @@ let same_generated (a : generated) (b : generated) =
     helpers lifted out of its methods, which come before it.  It is
     generated ahead of the files, like a function ({!generated_once}), and
     taken from there by the header. *)
-let instance_entity r a t =
+let instance_entity ~module_ r a t =
   let recorded, record = in_node_table instances_generated a in
-  ahead_once
+  ahead_once ~module_
     ~what:(fun () -> Pp.(str "the instance " ++ GlobRef.print r))
     ~recorded ~record
     ~same:(fun (ds, _) (ds', _) -> same_generated ds ds')
@@ -1292,8 +1293,8 @@ let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset concepts_genera
     generated ahead of the files ({!generating_ahead}) and taken from there
     by the header, which generates it again under [CRANE_CHECK_IR] to
     compare. *)
-let concept r fields =
-  ahead_once
+let concept ~module_ r fields =
+  ahead_once ~module_
     ~what:(fun () -> Pp.(str "the concept of " ++ GlobRef.print r))
     ~recorded:(fun () -> Option.default [] (Ref.User.Tbl.find_opt concepts_generated r))
     ~record:(Ref.User.Tbl.replace concepts_generated r)
@@ -1308,8 +1309,8 @@ let modtype_concepts_generated : (ModPath.t * Modtype_concept.t) list MPmap.t re
 (** [modtype_concept path ~params mt] is the concept of the module type
     [mt] at [path], over the functor parameters [params]: generated ahead of
     the files and taken from there by the header ({!ahead_once}). *)
-let modtype_concept path ~params mt =
-  ahead_once
+let modtype_concept ~module_ path ~params mt =
+  ahead_once ~module_
     ~what:(fun () -> Pp.(str "the concept of the module type " ++ str (ModPath.to_string path)))
     ~recorded:(fun () -> Option.default [] (MPmap.find_opt path !modtype_concepts_generated))
     ~record:(fun l -> modtype_concepts_generated := MPmap.add path l !modtype_concepts_generated)
@@ -1329,8 +1330,8 @@ let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset record_methods_
     [r], of variables [vars], is given, made of [candidates], with the
     helpers lifted out of them: generated ahead of the files, and taken from
     there by the header ({!ahead_once}). *)
-let record_methods r vars candidates =
-  ahead_once
+let record_methods ~module_ r vars candidates =
+  ahead_once ~module_
     ~what:(fun () -> Pp.(str "the methods of the record " ++ GlobRef.print r))
     ~recorded:(fun () -> Option.default [] (Ref.User.Tbl.find_opt record_methods_generated r))
     ~record:(Ref.User.Tbl.replace record_methods_generated r)
@@ -1351,8 +1352,8 @@ let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset record_field_ty
     [fields] of the eponymous record [r], of variables [vars], as the header
     writes them in the struct [r] is merged into: converted ahead of the
     files, and taken from there by the header ({!ahead_once}). *)
-let record_field_types r vars (fields : Miniml.record_field list) =
-  ahead_once
+let record_field_types ~module_ r vars (fields : Miniml.record_field list) =
+  ahead_once ~module_
     ~what:(fun () -> Pp.(str "the field types of the record " ++ GlobRef.print r))
     ~recorded:(fun () -> Option.default [] (Ref.User.Tbl.find_opt record_field_types_generated r))
     ~record:(Ref.User.Tbl.replace record_field_types_generated r)
@@ -1403,9 +1404,9 @@ let same_header_generation a b =
     entity [d] is.  It is generated ahead of the files, in the scope the
     header writes the module in ({!header_scope}), like an instance
     ({!instance_entity}), and taken from there by the header. *)
-let header_entity d gen =
+let header_entity ~module_ d gen =
   let recorded, record = in_node_table headers_generated d in
-  ahead_once
+  ahead_once ~module_
     ~what:(fun () -> GlobRef.print (decl_entity d))
     ~recorded ~record
     ~same:(fun (g, _) (g', _) -> same_header_generation g g')
@@ -1419,10 +1420,9 @@ let header_entity d gen =
 
 let finished_header = finished_group ~what:"a header declaration"
 
-(** [in_header_scope f] runs [f] in the render context the header writes
-    the current module's body in, as planned ({!header_scope}). *)
-let in_header_scope f =
-  let mp = top_visible_mp () in
+(** [in_header_scope ~module_ f] runs [f] in the render context the header
+    writes the body of [module_] in, as planned ({!header_scope}). *)
+let in_header_scope ~module_:mp f =
   match header_scope mp with
   | Some {in_struct; concepts_hoisted} ->
     with_render_ctx
@@ -1434,10 +1434,10 @@ let in_header_scope f =
 
 (** What [d] generates, a declaration the header alone writes generated in
     the scope the header writes it in. *)
-let generate_in_scope d k =
+let generate_in_scope ~module_ d k =
   match d with
-  | Dind _ | Dtype _ -> in_header_scope (fun () -> k (generate d))
-  | Dterm _ | Dfix _ -> k (generate d)
+  | Dind _ | Dtype _ -> in_header_scope ~module_ (fun () -> k (generate ~module_ d))
+  | Dterm _ | Dfix _ -> k (generate ~module_ d)
 
 type ahead = {
   entities : Generated_program.entity list;
@@ -1458,31 +1458,31 @@ let functions_ahead ~entities (funs : Gen_decls.generated_fun list) =
     finishing = functions_finishing funs;
     helpers = List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) funs }
 
-let generate_ahead d =
-  generate_in_scope d @@ function
+let generate_ahead ~module_ d =
+  generate_in_scope ~module_ d @@ function
   | Functions {funs; _} -> functions_ahead ~entities:(funs_entities ~fallback:(decl_entity d) funs) funs
   | Instance (r, a, t) ->
-    let ds, helpers = instance_entity r a t in
+    let ds, helpers = instance_entity ~module_ r a t in
     { entities = [entity r (List.map snd ds) helpers];
       functions = [];
       finishing = List.map (fun (_, d) -> finishing d) ds;
       helpers }
   | Header_only gen ->
-    let g, lifted = header_entity d gen in
+    let g, lifted = header_entity ~module_ d gen in
     { nothing_ahead with
       entities = [entity (decl_entity d) (List.map snd g.decls) lifted];
       finishing = List.map (fun (_, d) -> finishing d) (g.member_defs @ g.decls) }
   | Nothing -> nothing_ahead
 
-let regenerate_ahead d =
+let regenerate_ahead ~module_ d =
   regenerating @@ fun () ->
-  generate_in_scope d @@ function
-  | Instance (r, a, t) -> ignore (instance_entity r a t : generated * cpp_decl list)
-  | Header_only gen -> ignore (header_entity d gen : header_generation * cpp_decl list)
+  generate_in_scope ~module_ d @@ function
+  | Instance (r, a, t) -> ignore (instance_entity ~module_ r a t : generated * cpp_decl list)
+  | Header_only gen -> ignore (header_entity ~module_ d gen : header_generation * cpp_decl list)
   | Functions _ | Nothing -> ()
 
-let decls_for ~is_header d =
-  match generate d with
+let decls_for ~is_header ~module_ d =
+  match generate ~module_ d with
   | Functions {funs; lifted} ->
     if !mode <> Peeking then record_funs ~fallback:(decl_entity d) funs;
     let lifted_inline, helpers =
@@ -1493,10 +1493,10 @@ let decls_for ~is_header d =
     in
     { rendered = function_views ~is_header ~lifted_inline funs; helpers; member_defs = [] }
   | Header_only gen when is_header ->
-    let g, helpers = header_entity d gen in
+    let g, helpers = header_entity ~module_ d gen in
     { rendered = finished_header g.decls; helpers; member_defs = finished_header g.member_defs }
   | Instance (r, a, t) when is_header ->
-    let ds, helpers = instance_entity r a t in
+    let ds, helpers = instance_entity ~module_ r a t in
     { rendered = finished_instance ds; helpers; member_defs = [] }
   | Header_only _ | Instance _ | Nothing -> { rendered = []; helpers = []; member_defs = [] }
 
@@ -1506,14 +1506,14 @@ let header_decls = decls_for ~is_header:true
 (** What the header writes for the declaration [d] and the helpers it
     places, read off what was generated ahead of the files without taking
     it: nothing is recorded or claimed. *)
-let header_element_ahead d = peeking (fun () -> header_decls d)
+let header_element_ahead ~module_ d = peeking (fun () -> header_decls ~module_ d)
 
 (** What the implementation writes for the declaration [d], read off what
     was generated ahead of the files without taking it. *)
-let impl_element_ahead d = peeking (fun () -> impl_decls d)
+let impl_element_ahead ~module_ d = peeking (fun () -> impl_decls ~module_ d)
 
-let promoted_shared_from_this d =
+let promoted_shared_from_this ~module_ d =
   peeking @@ fun () ->
-  match generate d with
-  | Header_only gen -> (fst (header_entity d gen)).promoted_sft = Some true
+  match generate ~module_ d with
+  | Header_only gen -> (fst (header_entity ~module_ d gen)).promoted_sft = Some true
   | Functions _ | Instance _ | Nothing -> false

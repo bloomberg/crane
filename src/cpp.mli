@@ -49,10 +49,10 @@ val plan_callables :
     ({!Cpp_ind.generating_ahead}). *)
 val generate_ahead : Miniml.ml_structure -> unit
 
-(** Generate what one declaration is written as, before it is
-    rendered in the module at the top of the visibility stack: the walk
-    {!generate_ahead} would make for a structure holding only it. *)
-val generate_decl_ahead : Miniml.ml_decl -> unit
+(** Generate what one declaration, an element of the module [module_], is
+    written as, before it is rendered: the walk {!generate_ahead} would
+    make for a structure holding only it. *)
+val generate_decl_ahead : module_:Names.ModPath.t -> Miniml.ml_decl -> unit
 
 (** The files the names of the unit [s] are written through, read off what
     {!generate_ahead} generated: what its files include. *)

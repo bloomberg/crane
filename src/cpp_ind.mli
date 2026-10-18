@@ -45,9 +45,11 @@ val instance_decls :
 val plan_instance_methods :
   Names.GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> (Names.Id.t * Callable_abi.t) list
 
-(** [generated_once ?on_reuse ?planned node gen] is [gen ()] ahead of the
-    files ({!generating_ahead}), recorded by the physical MiniML node [node]
-    and the module it is generated in, and handed to [planned] to plan what
+(** [generated_once ~module_ ?on_reuse ?planned node gen] is [gen ()] ahead
+    of the files ({!generating_ahead}), recorded by the physical MiniML node
+    [node] and the module [module_] it is generated in -- the module whose
+    element it is, as for everything below that takes one -- and handed to
+    [planned] to plan what
     taking it needs.  A file's pass takes what was recorded there --
     emission decides nothing the plan has not, so it is what the pass would
     generate -- handing it to [on_reuse] to replay any effect generating it
@@ -55,6 +57,7 @@ val plan_instance_methods :
     checks.  Read while peeking ({!header_element_ahead}), it is what was
     recorded, handed to [on_peek] in place of [on_reuse]. *)
 val generated_once :
+  module_:Names.ModPath.t ->
   ?on_reuse:(Gen_decls.generated_fun list -> unit) ->
   ?on_peek:(Gen_decls.generated_fun list -> unit) ->
   ?planned:(Gen_decls.generated_fun list -> unit) ->
@@ -112,7 +115,7 @@ val funs_entities :
     ({!instance_entity}), or what the header alone writes of it, generated in
     the scope the header writes it in ({!header_scope}); and say what of it
     to finish. *)
-val generate_ahead : Miniml.ml_decl -> ahead
+val generate_ahead : module_:Names.ModPath.t -> Miniml.ml_decl -> ahead
 
 (** How the header writes a module's body: inside a struct or not, and with
     the module's class concepts already declared ahead of its struct or not.
@@ -214,14 +217,14 @@ val concept_placement : concept_plan -> Cpp_state.held_concept -> concept_placem
     generated ahead of the files ({!generating_ahead}) in the module
     declaring the class, and taken from there by the header, which generates
     it again under [CRANE_CHECK_IR] to compare. *)
-val concept : Names.GlobRef.t -> Miniml.record_field list -> Minicpp.cpp_decl
+val concept : module_:Names.ModPath.t -> Names.GlobRef.t -> Miniml.record_field list -> Minicpp.cpp_decl
 
 (** [modtype_concept path ~params mt] is the concept of the module type [mt]
     at [path], over the functor parameters [params]: generated ahead of the
     files where the header writes it, and taken from there by the header,
     which generates it again under [CRANE_CHECK_IR] to compare. *)
 val modtype_concept :
-  Names.ModPath.t -> params:Names.ModPath.t list -> Miniml.ml_module_type -> Modtype_concept.t
+  module_:Names.ModPath.t -> Names.ModPath.t -> params:Names.ModPath.t list -> Miniml.ml_module_type -> Modtype_concept.t
 
 (** [record_methods r vars candidates] is the methods the eponymous record
     [r], of variables [vars], is given, made of [candidates], with the
@@ -229,6 +232,7 @@ val modtype_concept :
     there by the header, which generates them again under [CRANE_CHECK_IR]
     to compare. *)
 val record_methods :
+  module_:Names.ModPath.t ->
   Names.GlobRef.t ->
   Names.Id.t list ->
   Method_registry.method_candidate list ->
@@ -240,7 +244,7 @@ val record_methods :
     the files, and taken from there by the header, which converts them again
     under [CRANE_CHECK_IR] to compare. *)
 val record_field_types :
-  Names.GlobRef.t -> Names.Id.t list -> Miniml.record_field list -> Minicpp.cpp_type list
+  module_:Names.ModPath.t -> Names.GlobRef.t -> Names.Id.t list -> Miniml.record_field list -> Minicpp.cpp_type list
 
 (** Every module type's concept generated ahead of the files
     ({!modtype_concept}). *)
@@ -282,7 +286,7 @@ val peeking : (unit -> 'a) -> 'a
 
 (** [regenerate_ahead d] generates again what {!generate_ahead} generated
     for [d], checking it ({!regenerating}). *)
-val regenerate_ahead : Miniml.ml_decl -> unit
+val regenerate_ahead : module_:Names.ModPath.t -> Miniml.ml_decl -> unit
 
 (** [finished_alone d] is [d] finished on its own ({!Cpp_pipeline.finish}):
     a declaration written without a definition, or a lifted helper, as
@@ -325,7 +329,7 @@ val record_funs : fallback:Names.GlobRef.t -> Gen_decls.generated_fun list -> un
     ({!generating_ahead}) and taken from there by the header; that it was
     not is an anomaly.  [CRANE_CHECK_IR] regenerates and checks. *)
 val instance_entity :
-  Names.GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> generated * Minicpp.cpp_decl list
+  module_:Names.ModPath.t -> Names.GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> generated * Minicpp.cpp_decl list
 
 (** What a file writes for one MiniML declaration, and the helpers lifted
     out of it that the element places: a constant's or a function's.  A
@@ -339,22 +343,22 @@ type element = {
 }
 
 (** The implementation-file declarations for one MiniML declaration. *)
-val impl_decls : Miniml.ml_decl -> element
+val impl_decls : module_:Names.ModPath.t -> Miniml.ml_decl -> element
 
 (** The header declarations for one MiniML declaration. *)
-val header_decls : Miniml.ml_decl -> element
+val header_decls : module_:Names.ModPath.t -> Miniml.ml_decl -> element
 
 (** What {!header_decls} gives for a declaration, read off what was generated
     ahead of the files without taking it: nothing is recorded or claimed,
     and the helpers are those the header is planned to place there. *)
-val header_element_ahead : Miniml.ml_decl -> element
+val header_element_ahead : module_:Names.ModPath.t -> Miniml.ml_decl -> element
 
 (** What the implementation writes for a declaration, read off what was
     generated ahead of the files without taking it. *)
-val impl_element_ahead : Miniml.ml_decl -> element
+val impl_element_ahead : module_:Names.ModPath.t -> Miniml.ml_decl -> element
 
 (** Whether the inductive [d] declares, promoted to its module's struct,
     makes that struct derive from [enable_shared_from_this], read off what
-    was generated ahead of the files in the current module. *)
-val promoted_shared_from_this : Miniml.ml_decl -> bool
+    was generated ahead of the files in the module [module_]. *)
+val promoted_shared_from_this : module_:Names.ModPath.t -> Miniml.ml_decl -> bool
 
