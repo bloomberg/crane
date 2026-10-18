@@ -3,8 +3,8 @@
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
-From CraneTestsWIP Require Import collision_struct_class_concept.Cls.
-From CraneTestsWIP Require Import collision_struct_class_concept.AstLike.
+From CraneTestsRegression Require Import collision_struct_class_concept.Cls.
+From CraneTestsRegression Require Import collision_struct_class_concept.AstLike.
 
 Definition to_ident (n : nat) : ident := Global n.
 

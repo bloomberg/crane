@@ -2,12 +2,17 @@
 #define INCLUDED_COLLISION_STRUCT_CLASS_CONCEPT
 
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <utility>
 #include <variant>
 
 struct Nat;
 struct Ident;
+template <typename I, typename A>
+concept Keyed = requires {
+  { I::key_of(std::declval<A>()) } -> std::convertible_to<Nat>;
+};
 
 struct Nat {
   // TYPES

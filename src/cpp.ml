@@ -1942,7 +1942,12 @@ let registered_methods ?(order = Fun.id) kn ind =
     one of a wrapper module's own elements, which a render generates as the
     wrapper's ({!pp_wrapper_module_dual}), before any inductive is made
     local; [after_wrapper ()] once a wrapper module's elements have all
-    been walked, still inside it; [after_module ~module_ frame sel] once
+    been walked, still inside it; [classes ~module_ cs] at the classes [cs]
+    whose concepts the header writes outside the struct declaring them, as
+    elements of [module_]: a module's, as {!declared_classes} gives them, just
+    before [after_module], and a collision struct's own, once its elements
+    have all been walked, still inside its file module, which they are
+    elements of; [after_module ~module_ frame sel] once
     the body of a module of elements [sel], an element of [module_], has
     been walked, still in its frame [frame] but no longer inside it;
     [in_body ~wrapper mp sel] once the elements
@@ -1957,7 +1962,7 @@ let registered_methods ?(order = Fun.id) kn ind =
     template it becomes,
     its parameters visible in it.  Each module is walked in the visibility
     planned for it ({!in_planned_visibility}), as the render writes it. *)
-let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
+let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = fun ~module_:_ _ -> ())
     ?(after_module = fun ~module_:_ _ _ -> ()) ?(in_body = fun ~wrapper:_ _ _ -> ())
     ?(modtype = fun ~module_:_ _ ~params mt -> Modtype_concept.generate ~params mt)
     ~decl s =
@@ -1983,12 +1988,12 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
     let frame = Module_frame.of_module mp ~name sel ~enclosing:!current_structure_decls in
     Module_frame.plan mp frame;
     let outer = !header in
-    let classes =
+    let class_concepts =
       List.map
         (fun (_, r, fields) -> (HCclass r, concept_names_member mp (Cpp_ind.concept ~module_ r fields)))
         (declared_classes sel)
     in
-    let hoisted_here = (not outer.in_struct) && List.exists (fun (_, names) -> not names) classes in
+    let hoisted_here = (not outer.in_struct) && List.exists (fun (_, names) -> not names) class_concepts in
     let scope =
       { Cpp_ind.in_struct = outer.in_struct || not frame.concept_collision;
         concepts_hoisted = outer.concepts_hoisted || hoisted_here }
@@ -2002,13 +2007,14 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
         (fun (path, c) -> (HCmodtype path, Modtype_concept.names_member mp c))
         (modtypes ~module_ mp ~params:[] sel)
     in
-    Cpp_ind.plan_module_concepts mp (Cpp_ind.plan_concepts ~nested:outer.in_struct ~classes ~modtypes);
+    Cpp_ind.plan_module_concepts mp (Cpp_ind.plan_concepts ~nested:outer.in_struct ~classes:class_concepts ~modtypes);
     let with_promotion k =
       match frame.promoted with
       | Some _ -> setting eponymous_promote_ref frame.eponymous_type k
       | None -> Table.with_demoted_inductive frame.eponymous_type k
     in
     with_promotion (fun () -> in_header_scope scope k);
+    classes ~module_ (declared_classes sel);
     after_module ~module_ frame sel
   in
   let rec elem ~wrapper ~module_ (l, se) =
@@ -2051,11 +2057,11 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore)
       List.iter
         (fun (mi : Structure_analysis.module_info) ->
           if mi.wrapper_name = None then
-            in_header_scope
-              {!header with in_struct = wraps_children mi.modpath mi.sels}
-              (fun () ->
+            let collision = wraps_children mi.modpath mi.sels in
+            in_header_scope {!header with in_struct = collision} (fun () ->
                 in_module mi.modpath mi.sels (fun () ->
-                    List.iter (elem ~wrapper:false ~module_:mi.modpath) (order mi.sels) ) ) )
+                    List.iter (elem ~wrapper:false ~module_:mi.modpath) (order mi.sels);
+                    if collision then classes ~module_:mi.modpath (declared_classes mi.sels) ) ) )
         (order analysis.sorted_modules) )
 
 (** The callable plan of each function the renders will generate, in the
@@ -2195,17 +2201,15 @@ let generate_ahead s =
   let later (a : Cpp_ind.ahead) = aheads := a :: !aheads in
   let lifted helpers = later {Cpp_ind.entities = []; functions = []; finishing = []; helpers} in
   walk_as_rendered ~modtype:Cpp_ind.modtype_concept
-    ~after_module:(fun ~module_ frame sel ->
-      (* The class concepts the module's struct is preceded by. *)
-      List.iter
-        (fun (_, r, fields) ->
+    ~classes:(fun ~module_ ->
+      List.iter (fun (_, r, fields) ->
           let d = Cpp_ind.concept ~module_ r fields in
           later
             { entities = [Cpp_ind.entity r [d] []];
               functions = [];
               finishing = [Cpp_ind.finishing d];
-              helpers = [] } )
-        (declared_classes sel);
+              helpers = [] } ) )
+    ~after_module:(fun ~module_ frame _ ->
       convert_eponymous_record_fields ~module_ frame;
       Option.iter
         (fun (r, vars, candidates) ->
@@ -2527,12 +2531,14 @@ let plan_ctor_aliases s =
           (file_views ~is_header:header [gs]);
         if header then helpers (List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) gs)
     in
-    let after_module ~module_ (frame : Module_frame.t) sel =
+    let classes ~module_ cs =
+      if header then
+        in_element_scope module_ @@ fun () ->
+        List.iter (fun (_, r, fields) -> written [Cpp_ind.finished_alone (Cpp_ind.concept ~module_ r fields)]) cs
+    in
+    let after_module ~module_ (frame : Module_frame.t) _ =
       if header then begin
         in_element_scope module_ @@ fun () ->
-        List.iter
-          (fun (_, r, fields) -> written [Cpp_ind.finished_alone (Cpp_ind.concept ~module_ r fields)])
-          (declared_classes sel);
         Option.iter
           (fun (r, fields, (packet : ml_ind_packet)) ->
             let vl = packet.ip_vars in
@@ -2549,7 +2555,7 @@ let plan_ctor_aliases s =
       end
     in
     Cpp_ind.peeking (fun () ->
-        walk_as_rendered ~after_module
+        walk_as_rendered ~classes ~after_module
           ~decl:(fun ~wrapper ~module_ se ->
             match se with
             | SEdecl (Dterm _ | Dfix _) when wrapper -> wrapper_element ~module_ se
@@ -3708,24 +3714,28 @@ let do_struct_with_decl_tracking ~is_header f s =
               Cpp_ast.module_body mp (own @ List.map (child enclosure ~keep) children)
             in
             if is_header then (
-              (* A module type is a concept, and C++ has no member concepts, so
-                 one written among a wrapper's children cannot stay there -- and
-                 cannot simply move ahead of the wrapper either, because a
-                 functor elsewhere may be constrained by it and be emitted
-                 first.  It goes where the concepts of a nested module's
-                 typeclasses already go, which is the top of the file.  Being
-                 unwritable inside the struct used to be answered by dropping
-                 it. *)
-              let modtype_sels, sel =
-                List.partition
-                  (fun (_, se) -> match se with SEmodtype _ -> true | _ -> false)
-                  sel
+              (* A module type is a concept, and so is a class, and C++ has no
+                 member concepts, so one written among a wrapper's elements
+                 cannot stay there -- and cannot simply move ahead of the
+                 wrapper either, because a functor elsewhere may be constrained
+                 by it and be emitted first.  It goes where the concepts of a
+                 nested module's typeclasses already go, which is the top of
+                 the file, written as an element of the module it is one of,
+                 a class's generated as a module's are ({!walk_as_rendered}).
+                 Being unwritable inside the struct used to be answered by
+                 dropping it. *)
+              let class_concept (l, r, fields) =
+                with_render_ctx (fun c -> {c with rc_in_struct = true}) @@ fun () ->
+                writing_element_of mp @@ fun () ->
+                let d = generated_concept ~module_:mp r fields in
+                Cpp_ast.elements ~source:mp Cpp_ast.(seq [text (pp_doc_comment l); render_decl (empty_env ()) d])
               in
               List.iter
-                (fun x ->
-                  let pp = f x in
-                  if not (Cpp_ast.is_empty pp) then concepts := pp :: !concepts )
-                modtype_sels;
+                (fun ((_, se) as x) ->
+                  let pps = match se with SEmodtype _ -> [f x] | _ -> List.map class_concept (declared_classes [x]) in
+                  List.iter (fun pp -> if not (Cpp_ast.is_empty pp) then concepts := pp :: !concepts) pps )
+                sel;
+              let sel = List.filter (fun (_, se) -> match se with SEmodtype _ -> false | _ -> true) sel in
               let body =
                 with_render_ctx (fun c -> {c with rc_in_struct = true}) (fun () -> body In_enclosing_scope ~keep:is_func_decl sel)
               in
