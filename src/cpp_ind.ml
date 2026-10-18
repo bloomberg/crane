@@ -1275,7 +1275,8 @@ let write_unprinted ~file spelling u =
   let modtype_concept ~path ~params c =
     Cpp_concepts.pp_modtype_concept ~params (Pp.str (Cpp_concepts.modtype_concept_name path)) c
   in
-  in_spelling ~file spelling (fun () -> Cpp_print.print_unprinted ~modtype_concept u)
+  in_spelling ~file spelling (fun () ->
+      Cpp_print.print_unprinted ~modtype_concept ~assertion:Cpp_concepts.pp_assertion u )
 
 type group = {source : ModPath.t; declarations : rendered}
 type section = group list

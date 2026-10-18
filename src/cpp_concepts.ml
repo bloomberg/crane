@@ -345,3 +345,16 @@ let pp_modtype_concept ?(params = []) name (c : Modtype_concept.t) =
     prlist_with_sep (fun () -> fnl () ++ fnl ()) identity
       (hoisted @ [head ++ pp_concept_clause name (concept_body_pp body)])
 
+(** The one spelling of "this subject satisfies this concept", on a line of
+    its own. *)
+let pp_assertion (a : Cpp_ast.assertion) =
+  let concept =
+    match a.concept with Of_module_type mp -> pp_concept_ref mp | Of_class r -> pp_concept_name_of_ref r
+  in
+  let subject =
+    match a.subject with
+    | Module mp -> module_struct_name mp
+    | Instance {instance; args} -> pp_global Type instance ++ prlist (fun ty -> str ", " ++ pp_cpp_type false [] ty) args
+  in
+  fnl () ++ str "static_assert(" ++ concept ++ str "<" ++ subject ++ str ">);"
+

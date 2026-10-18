@@ -494,7 +494,7 @@ let stand_ins t =
         List.map
           (fun (target, tparams) -> Cpp_ast.(global_alias (Alias_of_type {target; tparams})))
           (declared_types (settled :> cpp_decl))
-      | Declared (Fields _ | Modtype_concept _ | Global_alias _) -> []
+      | Declared (Fields _ | Modtype_concept _ | Global_alias _ | Assertion _) -> []
       | Struct_of mp -> [Cpp_ast.(global_alias (Alias_of_module mp))] )
     (Cpp_ast.declared t)
 
@@ -4042,8 +4042,7 @@ let take_absorbed_wrappers () =
 (** The assertions [d] holds back, in the order it writes them: those that
     a class's concept holds of an instance where the concept is declared
     after the struct being written, because its requirements name the
-    struct's own types.  Each is the concept held back, its name, and what
-    it is asserted of, which the struct qualifies on the way out. *)
+    struct's own types. *)
 let rec held_back_assertions (d : Cpp_erasure.settled) =
   match Cpp_erasure.view d with
   | Template (_, _, inner) -> held_back_assertions inner
@@ -4053,9 +4052,8 @@ let rec held_back_assertions (d : Cpp_erasure.settled) =
     if nspace_merges {dw_ref = id; dw_sole_child = sole_child} then []
     else List.concat_map held_back_assertions members
   | Decl (Dstatic_assert (CPPconcept_app (class_ref, subject, tys), None)) when class_concept_held_back class_ref ->
-    [ ( HCclass class_ref,
-        pp_concept_name_of_ref class_ref,
-        pp_global Type subject ++ prlist (fun ty -> str ", " ++ pp_cpp_type false [] ty) tys ) ]
+    [ { Cpp_ast.concept = Of_class class_ref;
+        subject = Instance {instance = subject; args = tys} } ]
   | Decl _ -> []
 
 (** The structs and scoped enums [d] defines at namespace scope, written
@@ -4732,10 +4730,11 @@ let unprinted ~module_ env settled = Cpp_ast.unprinted ~needs:(planned_needs ~mo
 let unprinted_fields ~module_ ~vl r fields =
   Cpp_ast.fields ~needs:(fields_needs ~module_ ~vl r (List.map snd fields)) ~record:r ~vars:vl fields
 
-let print_unprinted ~modtype_concept (u : Cpp_ast.unprinted) =
+let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
   let text, needs =
     match u.declaration with
     | Modtype_concept {path; params; concept} -> (modtype_concept ~path ~params concept, u.needs)
+    | Assertion a -> (assertion a, u.needs)
     | Declaration {env; settled} -> printed_decl ~print:pp_cpp_decl env settled
     | Fields {record; vars; fields} ->
       ( prlist_with_sep fnl (fun (name, ty) -> pp_cpp_type false vars ty ++ spc () ++ str name ++ str ";") fields

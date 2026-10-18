@@ -18,6 +18,11 @@ type declaration =
   | Fields of {record : GlobRef.t; vars : Id.t list; fields : (string * Minicpp.cpp_type) list}
   | Modtype_concept of {path : ModPath.t; params : ModPath.t list; concept : Modtype_concept.t}
   | Global_alias of global_alias
+  | Assertion of assertion
+
+and assertion = {concept : asserted; subject : subject}
+and asserted = Of_module_type of ModPath.t | Of_class of GlobRef.t
+and subject = Module of ModPath.t | Instance of {instance : GlobRef.t; args : Minicpp.cpp_type list}
 
 and global_alias =
   | Alias_of_type of {target : GlobRef.t; tparams : (Minicpp.template_type * Id.t) list}
@@ -46,6 +51,7 @@ let fields ~needs ~record ~vars fields = Unprinted {declaration = Fields {record
 let modtype_concept ~path ~params concept =
   Unprinted {declaration = Modtype_concept {path; params; concept}; needs = Needs.none}
 let global_alias a = Unprinted {declaration = Global_alias a; needs = Needs.none}
+let assertion a = Unprinted {declaration = Assertion a; needs = Needs.none}
 let elements ~source elements = Elements {source; elements}
 let seq l = Seq l
 

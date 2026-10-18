@@ -73,6 +73,25 @@ type declaration =
           the same name at namespace scope, where the file moved it, so that
           the struct still names it.  Not a declaration of the program's:
           one of the file's layout. *)
+  | Assertion of assertion
+      (** [static_assert(C<S>);], on a line of its own: that a module or an
+          instance satisfies a concept. *)
+
+(** That [subject] satisfies [concept], each named as written where the
+    assertion is: a subject declared in a struct the assertion follows is
+    qualified by it. *)
+and assertion = {concept : asserted; subject : subject}
+
+(** The concept an {!assertion} asserts. *)
+and asserted =
+  | Of_module_type of ModPath.t  (** That of the module type at the path. *)
+  | Of_class of GlobRef.t  (** That of the type class. *)
+
+(** What an {!assertion} asserts it of. *)
+and subject =
+  | Module of ModPath.t  (** The struct the module is written as. *)
+  | Instance of {instance : GlobRef.t; args : Minicpp.cpp_type list}
+      (** The instance, as a type, with the class's further arguments. *)
 
 (** What a {!Global_alias} stands in for. *)
 and global_alias =
@@ -147,6 +166,10 @@ val modtype_concept : path:ModPath.t -> params:ModPath.t list -> Modtype_concept
     It writes no synthesised template and names no constrained struct but
     the one it stands in for, which it does not define. *)
 val global_alias : global_alias -> t
+
+(** [assertion a] is {!Assertion}, printed where the tree puts it.  It
+    needs nothing placed in front of it. *)
+val assertion : assertion -> t
 
 (** [elements ~source t] is [t], spelled as the elements of [source] are. *)
 val elements : source:ModPath.t -> t -> t

@@ -46,10 +46,14 @@ val unprinted_fields :
 
 (** The text of a declaration not yet printed, printed in the render
     context and visibility its spelling enters, a module type's concept by
-    [modtype_concept].  Under [CRANE_CHECK_IR] it must need, printed there,
-    what was planned for it where it was made. *)
+    [modtype_concept] and an assertion by [assertion].  Under
+    [CRANE_CHECK_IR] it must need, printed there, what was planned for it
+    where it was made. *)
 val print_unprinted :
-  modtype_concept:(path:ModPath.t -> params:ModPath.t list -> Modtype_concept.t -> Pp.t) -> Cpp_ast.unprinted -> Pp.t
+  modtype_concept:(path:ModPath.t -> params:ModPath.t list -> Modtype_concept.t -> Pp.t) ->
+  assertion:(Cpp_ast.assertion -> Pp.t) ->
+  Cpp_ast.unprinted ->
+  Pp.t
 
 (** [stand_ins t] is, for each type the declarations of [t] declare, a
     member alias of it ({!Cpp_ast.global_alias}): what a struct holds in
@@ -138,9 +142,8 @@ val take_absorbed_wrappers : unit -> string list
 
 (** The assertions a declaration holds back, in the order it writes them:
     those that a class's concept holds of an instance where the concept is
-    declared after the struct being written.  Each is the concept held back,
-    its name, and what it is asserted of. *)
-val held_back_assertions : Cpp_erasure.settled -> (Cpp_state.held_concept * Pp.t * Pp.t) list
+    declared after the struct being written, and so is the assertion. *)
+val held_back_assertions : Cpp_erasure.settled -> Cpp_ast.assertion list
 
 (** {2 Forward declarations} *)
 

@@ -27,3 +27,6 @@ val pp_concept_ref : ModPath.t -> Pp.t
     [params] of a functor declaring it, with the concepts its nested module
     types are hoisted into ahead of it. *)
 val pp_modtype_concept : ?params:ModPath.t list -> Pp.t -> Modtype_concept.t -> Pp.t
+
+(** The assertion [a], as written where the tree puts it. *)
+val pp_assertion : Cpp_ast.assertion -> Pp.t

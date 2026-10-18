@@ -73,23 +73,21 @@ let rec concept_of_mt = function
   | MTfunsig (_, _, mt') -> concept_of_mt mt'
   | MTsig _ -> None
 
-(** The one spelling of "this struct satisfies this concept".  Both the
-    immediate assertion and the deferred one go through here, so the two cannot
-    drift apart. *)
-let pp_concept_assert concept subject =
-  fnl () ++ str "static_assert(" ++ concept ++ str "<" ++ subject ++ str ">);"
+(** The concept an enclosing struct holds back that makes it hold back
+    [a]. *)
+let held_concept_of (a : Cpp_ast.assertion) =
+  match a.concept with Of_module_type mp -> HCmodtype mp | Of_class r -> HCclass r
 
-(** The assertion that the module rendered as [name] satisfies the concept of
-    its module type [mty], and the assertions it holds back.  When that
-    concept is one the enclosing struct holds back, so is the assertion: the
-    concept is not declared yet. *)
-let concept_assertion name mty =
+(** The assertion that the module [mp] satisfies the concept of its module
+    type [mty], and the assertions it holds back.  When that concept is one
+    the enclosing struct holds back, so is the assertion: the concept is not
+    declared yet. *)
+let concept_assertion mp mty =
   match concept_of_mt mty with
-  | None -> (mt (), [])
-  | Some (mt_mp, concept_name) ->
-    let held = HCmodtype mt_mp in
-    if concept_held_back held then (mt (), [(held, concept_name, name)])
-    else (pp_concept_assert concept_name name, [])
+  | None -> (Cpp_ast.empty, [])
+  | Some (mt_mp, _) ->
+    let a = {Cpp_ast.concept = Of_module_type mt_mp; subject = Module mp} in
+    if concept_held_back (held_concept_of a) then (Cpp_ast.empty, [a]) else (Cpp_ast.assertion a, [])
 
 (** Render a functor parameter as a C++ template parameter.
 
@@ -522,9 +520,8 @@ let is_erased_alias (_, d) =
 type 'a rendering = {
   text : 'a;
   concepts : Cpp_ast.t list;
-  asserts : (held_concept * Pp.t * Pp.t) list;
-      (** The assertions it held back, each with the concept it asserts and
-          what it asserts it of, in the order written: a concept an
+  asserts : Cpp_ast.assertion list;
+      (** The assertions it held back, in the order written: a concept an
           enclosing struct holds back is declared after that struct, and
           the assertion goes with it. *)
 }
@@ -775,8 +772,8 @@ let rec pp_structure_elem ~is_header f ~module_ = function
           written Cpp_ast.empty
         else
           let {text = body; concepts; asserts} = pp_module_expr ~is_header f m.ml_mod_expr in
-          let assertion, held = concept_assertion name m.ml_mod_type in
-          { text = Cpp_ast.(seq [text (str "using " ++ name ++ str " = "); body; text (str ";" ++ assertion)]);
+          let assertion, held = concept_assertion mp m.ml_mod_type in
+          { text = Cpp_ast.seq [Cpp_ast.text (str "using " ++ name ++ str " = "); body; Cpp_ast.text (str ";"); assertion];
             concepts;
             asserts = asserts @ held }
       | MEstruct (body_mp, sel) ->
@@ -939,17 +936,12 @@ let rec pp_structure_elem ~is_header f ~module_ = function
         in
         (* The assertions this struct's body held back: those naming a concept
            it declares are emitted after it, now that both are in scope; the
-           rest travel further out, qualified by this struct on the way. *)
+           rest travel further out.  Each names its subject from where it is
+           written, which qualifies it by every struct it left. *)
         let mine, passed_out =
-          List.partition
-            (fun (mt_mp, _, _) -> is_held_back_in this_held_back mt_mp)
-            body_written.asserts
+          List.partition (fun a -> is_held_back_in this_held_back (held_concept_of a)) body_written.asserts
         in
-        let deferred_asserts_pp =
-          Cpp_ast.text
-            (prlist (fun (_, concept, sub) -> pp_concept_assert concept (name ++ str "::" ++ sub)) mine)
-        in
-        let passed_out = List.map (fun (mt_mp, concept, sub) -> (mt_mp, concept, name ++ str "::" ++ sub)) passed_out in
+        let deferred_asserts_pp = Cpp_ast.seq (List.map Cpp_ast.assertion mine) in
         let body = body_written.text in
         (* Capture and clean up promotion state. *)
         let this_promoted = is_promoted in
@@ -1103,9 +1095,8 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                   (Struct {head = template_decl ++ str "struct " ++ name ++ str " {" ++ fnl (); tail = str "};"})
                   ~fields body
               in
-              let assertion, held = concept_assertion name m.ml_mod_type in
-              ( Cpp_ast.(
-                  seq [typeclasses_pp; modtypes_pp; struct_def; modtypes_after_pp; deferred_asserts_pp; text assertion]),
+              let assertion, held = concept_assertion mp m.ml_mod_type in
+              ( Cpp_ast.seq [typeclasses_pp; modtypes_pp; struct_def; modtypes_after_pp; deferred_asserts_pp; assertion],
                 held )
         else if this_promoted && promoted_template then
           (* A promoted template's members are all defined inline in the
