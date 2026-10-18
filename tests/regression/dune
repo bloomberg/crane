@@ -13051,3 +13051,14 @@
   (alias runtest)
   (deps record_literal_codomain_alias.t.exe)
   (action (run ./record_literal_codomain_alias.t.exe))))
+
+(subdir assertion_held_through_structs
+ (rule
+  (targets assertion_held_through_structs.t.exe)
+  (deps AssertionHeldThroughStructs.vo assertion_held_through_structs.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} assertion_held_through_structs.t.exe assertion_held_through_structs.cpp assertion_held_through_structs.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps assertion_held_through_structs.t.exe)
+  (action (run ./assertion_held_through_structs.t.exe))))
