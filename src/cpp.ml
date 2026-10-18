@@ -892,6 +892,14 @@ let rec pp_structure_elem ~is_header f ~module_ = function
        right before the declaration that produced it instead; helpers produced
        elsewhere keep their file-scope placement. *)
     let {Cpp_ind.rendered; helpers; _} = f d in
+    (* Each declaration, the helpers lifted out of it among them, is printed
+       where the tree puts it, as an element of [module_] ({!Cpp_ast.print}),
+       but a wrapper struct holding a wrapper module's declarations, whose
+       members are, and an assertion held back, which writes nothing here. *)
+    let element env d =
+      if Cpp_print.absorbs d || Cpp_print.is_held_back_assertion d then write_decl env d
+      else Cpp_print.unprinted ~module_ env d
+    in
     (* An erasure landing pad -- [using X = std::any;] -- travels to the very
        top of the file, ahead of the concepts.
 
@@ -911,17 +919,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
         && rendered <> []
         && List.for_all is_erased_alias rendered
       then Cpp_ast.empty
-      else
-        (* Each declaration is printed where the tree puts it, as an
-           element of [module_] ({!Cpp_ast.print}), but a wrapper struct
-           holding a wrapper module's declarations, whose members are, and
-           an assertion held back, which writes nothing here. *)
-        Cpp_ast.concat fnl
-          (List.map
-             (fun (env, d) ->
-               if Cpp_print.absorbs d || Cpp_print.is_held_back_assertion d then write_decl env d
-               else Cpp_print.unprinted ~module_ env d )
-             rendered )
+      else Cpp_ast.concat fnl (List.map (fun (env, d) -> element env d) rendered)
     in
     (* A type class rendered at file scope is a concept, and a concept has no
        forward declaration to bridge a use that precedes it.  One such use is
@@ -973,7 +971,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                a sibling type, and hoisting the declaration to file scope takes
                those names out of scope with it. *)
             let def, _ = lifted_views ~may_hoist:(not (!render_ctx).rc_in_struct) d' in
-            let pp = write_decl (empty_env ()) def in
+            let pp = element (empty_env ()) def in
             if Cpp_ast.is_empty pp then acc
             else if Cpp_ast.is_empty acc then pp
             else Cpp_ast.(seq [acc; text (cut2 ()); pp]) )
