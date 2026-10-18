@@ -108,8 +108,8 @@ public:
 };
 
 struct Arith {
-  static Zed roundtrip(Zed x);
   static Comparison norm(Comparison c);
+  static Zed roundtrip(Zed x);
 };
 
 bool le(const Zed &x0_, const Zed &x1_);

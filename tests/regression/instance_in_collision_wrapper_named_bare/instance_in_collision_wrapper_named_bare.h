@@ -293,6 +293,8 @@ struct AstLike {
     }
   };
 
+  static bool eq(const Nat &x0_, const Nat &x1_);
+
   struct eq_dec_raw_id {
     static bool dec(AstLike::Raw_id a0, AstLike::Raw_id a1) {
       return a0.raw_id_eqb(std::move(a1));
@@ -301,7 +303,6 @@ struct AstLike {
 
   static_assert(Dec<eq_dec_raw_id, AstLike::Raw_id>);
   static Nat combine(const Nat &x0_, const Nat &x1_);
-  static bool eq(const Nat &x0_, const Nat &x1_);
 };
 
 Ident to_ident(const AstLike::Raw_id &k);

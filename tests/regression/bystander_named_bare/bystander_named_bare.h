@@ -241,12 +241,12 @@ public:
 };
 
 struct AstLib {
+  static Nat pick(Nat a, Nat b);
+
   struct RawIDOrd {
     using t = Raw_id;
     static bool eq_dec(t x0_, t x1_);
   };
-
-  static Nat pick(Nat a, Nat b);
 };
 
 bool viaQualified(const Raw_id &a, const Raw_id &b);

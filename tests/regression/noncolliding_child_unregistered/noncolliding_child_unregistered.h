@@ -140,13 +140,14 @@ public:
 };
 
 struct AstLib {
+  static Nat pick(Nat a, Nat b);
+
   struct RawIDOrd {
     using t = Raw_id;
     static bool eq_dec(t x0_, t x1_);
   };
 
   static bool eq_dec_raw_id(const Raw_id &a, const Raw_id &b);
-  static Nat pick(Nat a, Nat b);
 };
 
 bool via_non_colliding(const Raw_id &a, const Raw_id &b);

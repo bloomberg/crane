@@ -13073,3 +13073,14 @@
   (alias runtest)
   (deps collision_struct_concept_names_inductive.t.exe)
   (action (run ./collision_struct_concept_names_inductive.t.exe))))
+
+(subdir collision_child_function_before_constant
+ (rule
+  (targets collision_child_function_before_constant.t.exe)
+  (deps CollisionChildFunctionBeforeConstant.vo collision_child_function_before_constant.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} collision_child_function_before_constant.t.exe collision_child_function_before_constant.cpp collision_child_function_before_constant.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps collision_child_function_before_constant.t.exe)
+  (action (run ./collision_child_function_before_constant.t.exe))))

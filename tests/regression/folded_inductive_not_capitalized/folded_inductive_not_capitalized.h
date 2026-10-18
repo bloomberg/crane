@@ -170,6 +170,8 @@ public:
 };
 
 struct Helper {
+  static inline const N two = N::npos(Positive::xo(Positive::xh()));
+
   struct Dval {
     // DATA
     Nat n;
@@ -182,7 +184,6 @@ struct Helper {
   };
 
   static Helper::Dval mk(const Nat &n);
-  static inline const N two = N::npos(Positive::xo(Positive::xh()));
 };
 
 struct FoldedInductiveNotCapitalized {

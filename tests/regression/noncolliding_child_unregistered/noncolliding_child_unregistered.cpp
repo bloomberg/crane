@@ -37,6 +37,14 @@ bool PeanoNat::eq_dec(const Nat &n, const Nat &m) {
   }
 }
 
+Nat AstLib::pick(Nat a, Nat b) {
+  if (PeanoNat::leb(a, b)) {
+    return b;
+  } else {
+    return a;
+  }
+}
+
 bool AstLib::RawIDOrd::eq_dec(AstLib::RawIDOrd::t x0_,
                               AstLib::RawIDOrd::t x1_) {
   return x0_.raw_id_dec(std::move(x1_));
@@ -47,14 +55,6 @@ bool AstLib::eq_dec_raw_id(const Raw_id &a, const Raw_id &b) {
     return true;
   } else {
     return false;
-  }
-}
-
-Nat AstLib::pick(Nat a, Nat b) {
-  if (PeanoNat::leb(a, b)) {
-    return b;
-  } else {
-    return a;
   }
 }
 

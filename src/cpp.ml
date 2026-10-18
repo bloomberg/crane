@@ -3353,9 +3353,13 @@ let do_struct_with_decl_tracking ~is_header f s =
                    (Table.escape_reserved_struct_name
                       (String.capitalize_ascii (string_of_modfile mp)))
             in
-            (* The struct holds the module's own elements, then each flattened
-               child's, which it writes with no struct of its own: the header
-               only the child's functions, the implementation all of it. *)
+            (* The struct holds the module's elements in order, each flattened
+               child's where the child is, written with no struct of its own:
+               the header only the child's functions, the implementation all
+               of it.  Where the child is, because the initialiser of a
+               constant is no complete-class context: a function of the child
+               it calls has to be declared ahead of it, which Rocq's order
+               already ensures. *)
             let flattened (l, se) = match se with SEmodule _ -> is_colliding_child l se | _ -> false in
             let child enclosure ~keep (_, se) =
               match se with
@@ -3367,10 +3371,7 @@ let do_struct_with_decl_tracking ~is_header f s =
               | _ -> (Cpp_ast.empty, nothing_moved)
             in
             let body enclosure ~keep sel =
-              let children, own = List.partition flattened sel in
-              let own = List.map f own in
-              let children = List.map (child enclosure ~keep) children in
-              let stays, moved = gathered (own @ children) in
+              let stays, moved = gathered (List.map (fun x -> if flattened x then child enclosure ~keep x else f x) sel) in
               (Cpp_ast.module_body mp stays, moved)
             in
             if is_header then (

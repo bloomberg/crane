@@ -313,6 +313,15 @@ struct BinNat {
 };
 
 struct Helpers {
+  template <typename T1> static N length(const List<T1> &l) {
+    if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
+      return N::n0();
+    } else {
+      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+      return BinNat::succ(Helpers::template length<T1>(*a1));
+    }
+  }
+
   template <Monad _tcI0, typename T2, typename T3>
   static typename _tcI0::template m<List<T3>> map_monad(
       const std::type_identity_t<crane::fn<typename _tcI0::template m<T3>(T2)>>
@@ -330,15 +339,6 @@ struct Helpers {
               return _tcI0::template ret<List<T3>>(List<T3>::cons(b0, bs));
             });
       });
-    }
-  }
-
-  template <typename T1> static N length(const List<T1> &l) {
-    if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-      return N::n0();
-    } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-      return BinNat::succ(Helpers::template length<T1>(*a1));
     }
   }
 };

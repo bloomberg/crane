@@ -108,6 +108,8 @@ struct PeanoNat {
 };
 
 struct AstLike {
+  static bool eq(const Nat &x0_, const Nat &x1_);
+
   struct keyed_nat {
     static Nat key_of(Nat n) { return n; }
   };
@@ -119,8 +121,6 @@ struct AstLike {
   static bool same(const T1 &x, const T1 &y) {
     return AstLike::eq(_tcI0::key_of(x), _tcI0::key_of(y));
   }
-
-  static bool eq(const Nat &x0_, const Nat &x1_);
 };
 
 Ident to_ident(const Nat &n);

@@ -160,6 +160,7 @@ struct PeanoNat {
 struct CollisionStructConceptNamesInductive {
   using key = ::key;
   using Color = ::Color;
+  static Nat first(const List<Nat> &l);
 
   struct keyed_nat {
     static key key_of(Nat n) { return n; }
@@ -181,6 +182,7 @@ struct CollisionStructConceptNamesInductive {
   static inline const bool check =
       CollisionStructConceptNamesInductive::template same<keyed_nat, Nat>(
           Nat::s(Nat::s(Nat::s(Nat::o()))), Nat::s(Nat::s(Nat::s(Nat::o()))));
+
   static inline const bool blue = []() {
     switch (CollisionStructConceptNamesInductive::keyed_nat::color_of(
         Nat::s(Nat::s(Nat::s(Nat::o()))))) {
@@ -194,7 +196,6 @@ struct CollisionStructConceptNamesInductive {
       std::unreachable();
     }
   }();
-  static Nat first(const List<Nat> &l);
 };
 
 #endif // INCLUDED_COLLISION_STRUCT_CONCEPT_NAMES_INDUCTIVE
