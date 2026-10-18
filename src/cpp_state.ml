@@ -481,6 +481,9 @@ type render_ctx = {
   rc_scope : Scope_plan.scope option;
   (* Inside a template struct (functor)? Affects typename keyword insertion. *)
   rc_in_template : bool;
+  (* The module whose element is being written, if one is: said by whatever
+     writes or plans it, from the module it is an element of. *)
+  rc_module : Names.ModPath.t option;
 }
 
 (** The context at the start of the file [file]: file scope, outside every
@@ -492,6 +495,7 @@ let file_start rc_file =
     rc_concepts_hoisted = false;
     rc_scope = None;
     rc_in_template = false;
+    rc_module = None;
   }
 
 (** The context at file scope in the file [c] is written in. *)
@@ -553,6 +557,8 @@ let with_render_ctx (upd : render_ctx -> render_ctx) (f : unit -> 'a) : 'a =
   Fun.protect ~finally:(fun () -> render_ctx := saved) f
 
 let writing_file file f = with_render_ctx (fun c -> {c with rc_file = file}) f
+
+let writing_element_of mp f = with_render_ctx (fun c -> {c with rc_module = Some mp}) f
 
 (** Track definitions rendered as function accessors (Meyers singletons) instead
     of static inline variables, due to template static init ordering. Stores

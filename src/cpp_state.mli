@@ -133,6 +133,10 @@ type render_ctx = {
   rc_concepts_hoisted : bool;
   rc_scope : Scope_plan.scope option;
   rc_in_template : bool;
+  rc_module : Names.ModPath.t option;
+      (** The module whose element is being written, if one is: the one
+          whose struct a synthesised template it writes may be declared in
+          ({!Cpp_print.ctor_alias_home}). *)
 }
 
 (** The context at the start of the file [file]: file scope, outside every
@@ -186,6 +190,10 @@ val with_render_ctx : (render_ctx -> render_ctx) -> (unit -> 'a) -> 'a
 
 (** [writing_file file f] renders [f] as part of the file [file]. *)
 val writing_file : Common.file -> (unit -> 'a) -> 'a
+
+(** [writing_element_of mp f] runs [f] writing an element of the module
+    [mp] ({!render_ctx}). *)
+val writing_element_of : Names.ModPath.t -> (unit -> 'a) -> 'a
 
 (** {2 Template static accessors} *)
 

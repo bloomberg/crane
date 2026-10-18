@@ -645,16 +645,7 @@ type ctor_alias = {
     written, every one declared ahead of the use is in scope.  In the
     implementation file, which writes no module struct, it is the struct
     whose members are defined out of line around it. *)
-let ctor_alias_home body =
-  (* The module whose body is being written: an inductive's constructors
-     are written inside a scope of their own ({!with_struct_scope}), which
-     is no module and has no struct a template can be declared in. *)
-  let rec planned mp =
-    if Option.has_some (Scope_plan.visibility mp) then Some mp
-    else match mp with ModPath.MPdot (parent, _) -> planned parent | _ -> None
-  in
-  let cur = Common.top_visible_mp () in
-  let cur = Option.default cur (planned cur) in
+let ctor_alias_home_in cur body =
   let modpath_of = function
     | GlobRef.ConstRef c -> Some (Names.Constant.modpath c)
     | GlobRef.IndRef (kn, _) | GlobRef.ConstructRef ((kn, _), _) ->
@@ -678,6 +669,30 @@ let ctor_alias_home body =
       body
   in
   if names_struct && not (Table.is_modfile cur) then Some cur else None
+
+let ctor_alias_home body =
+  (* The module whose body is being written: an inductive's constructors
+     are written inside a scope of their own ({!with_struct_scope}), which
+     is no module and has no struct a template can be declared in. *)
+  let rec planned mp =
+    if Option.has_some (Scope_plan.visibility mp) then Some mp
+    else match mp with ModPath.MPdot (parent, _) -> planned parent | _ -> None
+  in
+  let cur = Common.top_visible_mp () in
+  let cur = Option.default cur (planned cur) in
+  let home = ctor_alias_home_in cur body in
+  ( if Probe.checking () then
+      let read = Option.bind (!render_ctx).rc_module (fun mp -> ctor_alias_home_in mp body) in
+      if not (Option.equal ModPath.equal home read) then
+        Probe.violation "constructor alias homes"
+          Pp.(
+            str "a template is homed in "
+            ++ str (Option.cata ModPath.to_string "no module" home)
+            ++ str " by the visibility and in "
+            ++ str (Option.cata ModPath.to_string "no module" read)
+            ++ str " by the module whose element is written, "
+            ++ str (Option.cata ModPath.to_string "none" (!render_ctx).rc_module) ) );
+  home
 
 (** Where a template with home [home] is declared, and so the visibility
     its body is written in: the body of its home module, as planned, or
@@ -704,8 +719,9 @@ let ctor_alias_render_ctx home =
   let start = file_start file in
   match (home, file) with
   | None, _ -> start
-  | Some home, Common.Intf -> {start with rc_in_struct = true; rc_in_template = Scope_plan.templated home}
-  | Some home, Common.Impl -> {start with rc_scope = Scope_plan.of_module home}
+  | Some home, Common.Intf ->
+    {start with rc_in_struct = true; rc_in_template = Scope_plan.templated home; rc_module = Some home}
+  | Some home, Common.Impl -> {start with rc_scope = Scope_plan.of_module home; rc_module = Some home}
 
 (** A declaration as a file writes it: in the module it is written in. *)
 module Written_decl = Hashtbl.Make (struct

@@ -1655,7 +1655,9 @@ and pp_module_body ~is_header f mp sel =
      members spell them, is declared inside the struct, in front of the
      first member that writes it (see {!Cpp_print.ctor_alias_home}): at
      namespace scope those names mean nothing. *)
-  let written = List.map (fun e -> element_of mp (pp_structure_elem ~is_header f ~module_:mp e)) sel in
+  let written =
+    List.map (fun e -> element_of mp (writing_element_of mp (fun () -> pp_structure_elem ~is_header f ~module_:mp e))) sel
+  in
   current_structure_decls := old_structure_decls;
   { text = Cpp_ast.module_body mp (List.map (fun w -> w.text) written);
     concepts = List.concat_map (fun w -> w.concepts) written;
@@ -2527,9 +2529,12 @@ let plan_ctor_aliases s =
     in
     let header = file = Common.Intf in
     let element d =
+      let mp = top_visible_mp () in
       let scope k =
-        if header then Cpp_ind.in_header_element_scope (top_visible_mp ()) (fun ~in_struct:_ -> k Cpp_ind.header_element_ahead)
-        else with_render_ctx at_file_scope (fun () -> k Cpp_ind.impl_element_ahead)
+        if header then
+          Cpp_ind.in_header_element_scope mp (fun ~in_struct:_ ->
+              writing_element_of mp (fun () -> k Cpp_ind.header_element_ahead) )
+        else with_render_ctx at_file_scope (fun () -> writing_element_of mp (fun () -> k Cpp_ind.impl_element_ahead))
       in
       scope (fun ahead ->
           let e : Cpp_ind.element = ahead d in
@@ -3533,7 +3538,7 @@ let do_struct_with_decl_tracking ~is_header f s =
       element_of source
         (Cpp_print.writing_wrapper_members
            (List.map (fun name -> (name, wrapper_specs name)) homed)
-           (fun () -> f ~module_:source x) )
+           (fun () -> writing_element_of source (fun () -> f ~module_:source x)) )
     in
     if is_header && Probe.checking () then begin
       let absorbed = Cpp_print.take_absorbed_wrappers () in

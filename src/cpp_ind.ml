@@ -1247,6 +1247,7 @@ let planned_held_back ~file mp =
   | Impl -> []
 
 let in_spelling ~file spelling k =
+  let k = match spelling with Cpp_ast.Element_of mp | Member_of mp -> fun () -> writing_element_of mp k in
   let in_body mp k =
     match Scope_plan.visibility mp with
     | Some v ->
