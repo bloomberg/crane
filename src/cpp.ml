@@ -831,11 +831,16 @@ let with_local_inductives refs k =
 
 (** Under [CRANE_CHECK_IR], that the module frames the render has entered
     where the body of the module [mp] is written are the ones planned for
-    it ({!Scope_plan.frames}). *)
+    it ({!Scope_plan.frames}), holding back the concepts planned
+    ({!Cpp_ind.planned_held_back}). *)
 let check_frames mp =
   if Probe.checking () then
     match Scope_plan.frames mp with
-    | Some planned when List.equal ModPath.equal planned !entered_frames -> ()
+    | Some planned
+      when List.equal ModPath.equal planned !entered_frames
+           && List.equal held_concept_equal
+                (Cpp_ind.planned_held_back ~file:(!render_ctx).rc_file mp)
+                !held_back_concepts -> ()
     | _ ->
       Probe.violation "module frames"
         Pp.(str "the body of the module " ++ str (ModPath.to_string mp) ++ str " is written in other frames than planned")

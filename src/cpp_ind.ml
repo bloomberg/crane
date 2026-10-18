@@ -1201,30 +1201,6 @@ let with_planned_demotions mp k =
   in
   List.fold_left (fun k r () -> Table.with_demoted_inductive (Some r) k) k demoted ()
 
-let in_spelling spelling k =
-  let in_body mp k =
-    match Scope_plan.visibility mp with
-    | Some v -> with_visibility v (fun () -> with_planned_local_inductives mp (fun () -> with_planned_demotions mp k))
-    | None -> CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
-  in
-  match (spelling : Cpp_ast.spelling) with
-  | Element_of mp -> in_body mp (fun () -> in_header_element_scope mp (fun ~in_struct:_ -> k ()))
-  | Member_of mp ->
-    in_body mp (fun () ->
-        in_header_element_scope mp (fun ~in_struct:_ -> with_render_ctx (fun c -> {c with rc_in_struct = true}) k) )
-
-let write_unprinted spelling u = in_spelling spelling (fun () -> Cpp_print.print_unprinted u)
-
-type group = {source : ModPath.t; declarations : rendered}
-type section = group list
-
-let render_section (groups : section) =
-  List.map
-    (fun {source; declarations} ->
-      Cpp_ast.elements ~source
-        (Cpp_ast.concat Pp.fnl (List.map (fun (env, d) -> Cpp_print.unprinted ~module_:source env d) declarations)) )
-    groups
-
 type concept_placement = Ahead_of_struct | After_struct | At_file_scope
 
 type concept_plan = {
@@ -1264,6 +1240,39 @@ let concept_placement plan c =
   match List.find_opt (fun (c', _) -> held_concept_equal c c') plan.placements with
   | Some (_, p) -> p
   | None -> CErrors.anomaly Pp.(str "Crane: a concept was written whose placement was not planned.")
+
+let planned_held_back ~file mp =
+  match (file : Common.file) with
+  | Intf -> List.concat_map (fun m -> (concept_plan m).held_back) (planned_frames mp)
+  | Impl -> []
+
+let in_spelling spelling k =
+  let in_body mp k =
+    match Scope_plan.visibility mp with
+    | Some v ->
+      with_visibility v (fun () ->
+          with_planned_local_inductives mp (fun () ->
+              with_planned_demotions mp (fun () ->
+                  setting held_back_concepts (planned_held_back ~file:(!render_ctx).rc_file mp) k ) ) )
+    | None -> CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
+  in
+  match (spelling : Cpp_ast.spelling) with
+  | Element_of mp -> in_body mp (fun () -> in_header_element_scope mp (fun ~in_struct:_ -> k ()))
+  | Member_of mp ->
+    in_body mp (fun () ->
+        in_header_element_scope mp (fun ~in_struct:_ -> with_render_ctx (fun c -> {c with rc_in_struct = true}) k) )
+
+let write_unprinted spelling u = in_spelling spelling (fun () -> Cpp_print.print_unprinted u)
+
+type group = {source : ModPath.t; declarations : rendered}
+type section = group list
+
+let render_section (groups : section) =
+  List.map
+    (fun {source; declarations} ->
+      Cpp_ast.elements ~source
+        (Cpp_ast.concat Pp.fnl (List.map (fun (env, d) -> Cpp_print.unprinted ~module_:source env d) declarations)) )
+    groups
 
 (** The concept of each class, generated ahead of the files in the module
     declaring it, by the class. *)

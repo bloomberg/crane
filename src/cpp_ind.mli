@@ -147,6 +147,13 @@ val with_planned_local_inductives : Names.ModPath.t -> (unit -> 'a) -> 'a
     demoted, as the render demotes it there. *)
 val with_planned_demotions : Names.ModPath.t -> (unit -> 'a) -> 'a
 
+(** [planned_held_back ~file mp] is what the concepts held back around the
+    body of the module [mp] are in [file], innermost first: in the header,
+    those each module frame around it ({!Scope_plan.frames}) holds back,
+    as planned ({!concept_plan}); in the implementation, which declares no
+    concept, none. *)
+val planned_held_back : file:Common.file -> Names.ModPath.t -> Cpp_state.held_concept list
+
 (** A group of finished declarations the header writes at file scope, away
     from the module [source] they were generated in.  They are spelled as
     the header spells an element of [source] -- in the visibility planned
