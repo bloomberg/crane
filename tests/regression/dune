@@ -12974,3 +12974,14 @@
   (alias runtest)
   (deps record_module_function_qualifier.t.exe)
   (action (run ./record_module_function_qualifier.t.exe))))
+
+(subdir record_param_out_of_line
+ (rule
+  (targets record_param_out_of_line.t.exe)
+  (deps RecordParamOutOfLine.vo record_param_out_of_line.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_param_out_of_line.t.exe record_param_out_of_line.cpp record_param_out_of_line.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_param_out_of_line.t.exe)
+  (action (run ./record_param_out_of_line.t.exe))))

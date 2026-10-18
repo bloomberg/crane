@@ -359,11 +359,12 @@ let struct_scopes_for r n =
     let member_of_struct () = relation = Member in
     (* Already qualified by the struct -- nothing to add. *)
     if names_through n scope.Scope_plan.qualifier then []
-    (* An inductive promoted to the struct is the struct, and qualified by
-       its own name it would name the struct's constructor; it takes the
-       qualifier the struct itself is written with. *)
+    (* An inductive promoted to the struct, and an eponymous record merged
+       into it, is the struct, and qualified by its own name it would name
+       the struct's constructor; it takes the qualifier the struct itself is
+       written with. *)
     else if
-      Ref.User.Tbl.mem promoted_inductives r
+      (Ref.User.Tbl.mem promoted_inductives r || Module_plan.is_eponymous_record r)
       && ModPath.equal (modpath_of_r r) scope.Scope_plan.module_
     then
       match List.rev struct_scopes with
