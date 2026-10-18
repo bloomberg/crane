@@ -607,28 +607,31 @@ let register_methods_for_epon
       check
     in
     let refs_forward = refs_any fwd_refs in
-    (* [~top_level_siblings]: the inductive is declared at the top level of a
-       file.  It is rendered at C++ global scope, while the file's other
-       functions go into the file's module struct, emitted after every
-       global-scope type.  An inline method body can therefore name neither
-       the file's type aliases nor its non-method functions: both are declared
-       further down.  [write_reg : regfile -> reg -> register_value -> ...],
-       whose body calls [replace_nth], hit both ([regfile] and
-       [State::replace_nth] undeclared).  The nested-module paths already keep
-       type aliases out ([register_methods_for_all_inductives], [Cpp_ind]);
-       this applies that rule here, and the rule about calls below. *)
+    (* A method is written inside its type's struct, where none of the
+       module's type aliases is declared yet: at the top level of a file the
+       struct is at C++ global scope, ahead of the file's module struct, and
+       in a nested module it is a member written ahead of them.  So a function
+       whose type names one stays a function -- in a nested module, as the
+       module's frame already keeps it ({!Module_frame.method_candidates});
+       registered here as well, its calls were written as calls of a method
+       of an eponymous record that the record never got, and a function of
+       an eponymous inductive was given to it as a method naming an alias
+       declared after it.  [~top_level_siblings]: the inductive is declared
+       at the top level of a file.  An inline method body can name neither
+       the file's type aliases nor its non-method functions: both are
+       declared further down.  [write_reg : regfile -> reg -> register_value
+       -> ...], whose body calls [replace_nth], hit both ([regfile] and
+       [State::replace_nth] undeclared); the rule about calls is below. *)
     let module_aliases =
-      if not top_level_siblings then []
-      else
-        List.filter_map
-          (fun (_l, se) ->
-            match se with
-            | SEdecl (Dtype (r, _, _))
-              when ModPath.equal (modpath_of_r r) epon_modpath
-                   && not (Table.is_any_inline_custom r) ->
-              Some r
-            | _ -> None )
-          decls
+      List.filter_map
+        (fun (_l, se) ->
+          match se with
+          | SEdecl (Dtype (r, _, _))
+            when ModPath.equal (modpath_of_r r) epon_modpath
+                 && not (Table.is_any_inline_custom r) ->
+            Some r
+          | _ -> None )
+        decls
     in
     let refs_alias = refs_any module_aliases in
     (* Helper to add a candidate to both the method table and candidates

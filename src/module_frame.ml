@@ -84,7 +84,31 @@ let method_candidates epon_ref sel ~enclosing =
         acc (Mlutil.term_defs d)
     | _ -> acc
   in
-  List.fold_left candidates_of (List.fold_left candidates_of [] sel) enclosing
+  let candidates = List.fold_left candidates_of (List.fold_left candidates_of [] sel) enclosing in
+  (* The registry's scan decides what every call is written as, and the
+     frame what the type's struct is given: a function of the module the
+     scan made a method of the type and the frame does not is called as a
+     method nothing declares. *)
+  if Probe.checking () then
+    List.iter
+      (fun (_, se) ->
+        match se with
+        | SEdecl d ->
+          List.iter
+            (fun {fd_ref = r; _} ->
+              match Cpp_state.is_registered_method r with
+              | Some (e, _)
+                when same_module r && globref_equal e epon_ref
+                     && not (List.exists (fun (r', _, _, _) -> globref_equal r r') candidates) ->
+                Probe.violation "method registry"
+                  Pp.(
+                    str "the registry's scan made " ++ GlobRef.print r ++ str " a method of " ++ GlobRef.print epon_ref
+                    ++ str ", which its module's frame does not" )
+              | _ -> () )
+            (Mlutil.term_defs d)
+        | _ -> () )
+      sel;
+  candidates
 
 let concept_collision mp sel =
   let module_name = pp_module mp in
