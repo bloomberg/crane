@@ -98,21 +98,25 @@ let concept_assertion mp mty =
       {!concept_of_mt} declines only for [MTsig], and an anonymous
       signature's requirement lines are not a constraint expression: they
       belong inside a named concept, not in a template parameter list. *)
-let pp_template_param (mbid, mt) =
-  let param_name = pp_modname (MPbound mbid) in
+let template_param (mbid, mt) : Cpp_ast.template_param =
+  let param = pp_modname (MPbound mbid) in
   match concept_of_mt mt with
   (* A concept the enclosing struct holds back is declared after it, so a
      functor inside it takes its parameter unconstrained, as a class concept
      held back does. *)
-  | Some (mt_mp, _) when concept_held_back (HCmodtype mt_mp) -> str "typename " ++ param_name
+  | Some (mt_mp, _) when concept_held_back (HCmodtype mt_mp) -> Typename param
   | Some (mt_mp, cname) ->
     let args =
       match concept_extra_args mt_mp with
       | [] -> Pp.mt ()
       | ps -> str "<" ++ prlist_with_sep (fun () -> str ", ") pp_modname ps ++ str ">"
     in
-    cname ++ args ++ str " " ++ param_name
-  | None -> str "typename " ++ param_name
+    Constrained {concept = cname ++ args; param}
+  | None -> Typename param
+
+(** [plain_struct name] is the head of the struct [name], which is no
+    template and derives from nothing. *)
+let plain_struct name = {Cpp_ast.template = []; name; base = None}
 
 (** The name of the lifted helper a declaration defines, if it defines one.
 
@@ -727,14 +731,8 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                 sel
             | _ -> []
           in
-          let template_decl =
-            str "template<"
-            ++ prlist_with_sep
-                 (fun () -> str ", ")
-                 pp_template_param
-                 template_params
-            ++ str ">"
-          in
+          let template = List.map template_param template_params in
+          let template_decl = Cpp_ast.pp_template_head template in
           let {text = struct_def; concepts = body_concepts; asserts} =
             with_render_ctx
               (fun c -> { c with rc_in_struct = true; rc_in_template = true })
@@ -745,7 +743,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                   { b with
                     text =
                       Cpp_ast.module_
-                        (Struct {head = template_decl ++ fnl () ++ str "struct " ++ name ++ str " {" ++ fnl (); tail = str "};"})
+                        (Struct {head = {template; name; base = None}; layout = Block})
                         b.text }
                 | MEapply _ ->
                   let b = pp_module_expr ~is_header f body in
@@ -753,7 +751,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                     text =
                       Cpp_ast.(
                         seq
-                          [ text (template_decl ++ fnl () ++ str "struct " ++ name ++ str " : ");
+                          [ text (template_decl ++ str "struct " ++ name ++ str " : ");
                             b.text;
                             text (str " {};") ]) }
                 | _ ->
@@ -762,7 +760,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                     text =
                       Cpp_ast.(
                         seq
-                          [ text (template_decl ++ fnl () ++ str "struct " ++ name ++ str " {" ++ fnl ());
+                          [ text (template_decl ++ str "struct " ++ name ++ str " {" ++ fnl ());
                             b.text;
                             text (str "};") ]) } )
           in
@@ -967,20 +965,12 @@ let rec pp_structure_elem ~is_header f ~module_ = function
             (* Promoted module: the module struct IS the eponymous type. Wrap
                body in a template struct with the inductive's template params
                and emit deferred defs at file scope. *)
-            let template_decl =
+            let template =
               match promoted_tparams with
-              | Some (_ :: _ as vars) ->
-                str "template<"
-                ++ prlist_with_sep
-                     (fun () -> str ", ")
-                     (fun v ->
-                       str "typename " ++ Id.print (Common.tparam_name v) )
-                     vars
-                ++ str ">"
-                ++ fnl ()
-              | _ -> mt ()
+              | Some vars -> List.map (fun v -> Cpp_ast.Typename (Id.print (Common.tparam_name v))) vars
+              | None -> []
             in
-            let inherit_clause =
+            let base =
               if this_promote_sft then
                 let type_args =
                   match promoted_tparams with
@@ -993,36 +983,22 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                     ++ str ">"
                   | _ -> mt ()
                 in
-                str " : public " ++ str (sn ()).enable_from_this ++ str "<"
-                ++ name
-                ++ type_args
-                ++ str ">"
+                Some (str (sn ()).enable_from_this ++ str "<" ++ name ++ type_args ++ str ">")
               else
-                mt ()
+                None
             in
             let struct_def =
               Cpp_ast.module_
-                (Struct {head = template_decl ++ str "struct " ++ name ++ inherit_clause ++ str " {" ++ fnl (); tail = str "};"})
+                (Struct {head = {template; name; base}; layout = Block})
                 body
             in
             (Cpp_ast.seq [typeclasses_pp; modtypes_pp; struct_def; modtypes_after_pp; deferred_asserts_pp], [])
           else
-            let template_decl, record_fields_pp, record_methods_pp =
+            let template, record_fields_pp, record_methods_pp =
               match this_eponymous_record with
               | Some (epon_ref, fields, packet) ->
                 let ty_vars = packet.ip_vars in
-                let template_str =
-                  if ty_vars = [] then
-                    mt ()
-                  else
-                    str "template<"
-                    ++ prlist_with_sep
-                         (fun () -> str ", ")
-                         (fun v -> str "typename " ++ Id.print v)
-                         ty_vars
-                    ++ str ">"
-                    ++ fnl ()
-                in
+                let template = List.map (fun v -> Cpp_ast.Typename (Id.print v)) ty_vars in
                 (* [fields] already pairs each projection with its type:
                    extraction selected the two together. *)
                 let field_types = Cpp_ind.record_field_types ~module_ epon_ref ty_vars fields in
@@ -1068,8 +1044,8 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                     Cpp_ast.seq
                       [helpers_pp; Cpp_print.unprinted ~module_ (empty_env ()) finished; Cpp_ast.text (fnl ())]
                 in
-                (template_str, fields_pp, methods_pp)
-              | None -> (mt (), Cpp_ast.empty, Cpp_ast.empty)
+                (template, fields_pp, methods_pp)
+              | None -> ([], Cpp_ast.empty, Cpp_ast.empty)
             in
             (* The record's fields and methods are members of the module's
                struct, but written as elements of the module it is an
@@ -1088,11 +1064,11 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                  empty Rocq module satisfying some module type.  Previously
                  this returned [mt ()] which suppressed the struct
                  entirely, causing undeclared-identifier errors. *)
-              (Cpp_ast.module_ (Struct {head = template_decl ++ str "struct " ++ name ++ str " {"; tail = str "};"}) body, [])
+              (Cpp_ast.module_ (Struct {head = {template; name; base = None}; layout = One_line}) body, [])
             else
               let struct_def =
                 Cpp_ast.module_
-                  (Struct {head = template_decl ++ str "struct " ++ name ++ str " {" ++ fnl (); tail = str "};"})
+                  (Struct {head = {template; name; base = None}; layout = Block})
                   ~fields body
               in
               let assertion, held = concept_assertion mp m.ml_mod_type in
@@ -1154,15 +1130,8 @@ let rec pp_structure_elem ~is_header f ~module_ = function
               str "using " ++ name ++ str " = " ++ body_with_typename ++ str ";"
           else begin
             (* Functor alias: emit [template<...> using Name = Body<params>;].
-               Re-uses {!pp_template_param} from the MEfunctor case. *)
-            let template_decl =
-              str "template<"
-              ++ prlist_with_sep
-                   (fun () -> str ", ")
-                   pp_template_param
-                   functor_params
-              ++ str ">"
-            in
+               Re-uses {!template_param} from the MEfunctor case. *)
+            let template_decl = Cpp_ast.pp_template_head (List.map template_param functor_params) in
             let param_args =
               prlist_with_sep
                 (fun () -> str ", ")
@@ -1170,7 +1139,6 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                 functor_params
             in
             template_decl
-            ++ fnl ()
             ++ str "using "
             ++ name
             ++ str " = "
@@ -2899,7 +2867,7 @@ let plan_field_names s =
 (** [pp_wrapper_struct name specs] is the struct a library module is rendered
     as: its body, [specs], inside a struct of that name. *)
 let pp_wrapper_struct name specs =
-  Cpp_ast.module_ (Struct {head = str "struct " ++ str name ++ str " {" ++ fnl (); tail = str "};"}) specs
+  Cpp_ast.module_ (Struct {head = plain_struct (str name); layout = Block}) specs
 
 (** What rendering one wrapper module produced, beyond the declarations that
     merge into its struct.
@@ -3412,7 +3380,7 @@ let do_struct_with_decl_tracking ~is_header f s =
               else
                 Cpp_ast.top_level
                   (Cpp_ast.module_
-                     (Struct {head = str "struct " ++ str parent_name ++ str " {" ++ fnl (); tail = str "};"})
+                     (Struct {head = plain_struct (str parent_name); layout = Block})
                      body ) )
             else Cpp_ast.module_ Out_of_line (body Out_of_line ~keep:(fun _ -> true) sel) )
           else

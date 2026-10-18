@@ -41,10 +41,28 @@ type t =
   | Module of {module_ : ModPath.t; enclosure : enclosure; fields : t; members : t list}
   | Declarations of Pp.t list
 
-and enclosure = Struct of {head : Pp.t; tail : Pp.t} | Out_of_line | In_enclosing_scope
+and enclosure = Struct of {head : struct_head; layout : layout} | Out_of_line | In_enclosing_scope
+and struct_head = {template : template_param list; name : Pp.t; base : Pp.t option}
+and template_param = Typename of Pp.t | Constrained of {concept : Pp.t; param : Pp.t}
+and layout = Block | One_line
 
 let text d = Text d
 let empty = Seq []
+
+let pp_template_head = function
+  | [] -> Pp.mt ()
+  | params ->
+    let param = function
+      | Typename p -> Pp.(str "typename " ++ p)
+      | Constrained {concept; param} -> Pp.(concept ++ str " " ++ param)
+    in
+    Pp.(str "template<" ++ prlist_with_sep (fun () -> str ", ") param params ++ str ">" ++ fnl ())
+
+let pp_struct_head {template; name; base} =
+  Pp.(
+    pp_template_head template ++ str "struct " ++ name
+    ++ (match base with Some b -> str " : public " ++ b | None -> mt ())
+    ++ str " {")
 let decl ~needs text = Decl {text; needs}
 let unprinted ~needs env settled = Unprinted {declaration = Declaration {env; settled}; needs}
 let fields ~needs ~record ~vars fields = Unprinted {declaration = Fields {record; vars; fields}; needs}
@@ -85,6 +103,8 @@ let module_ enclosure ?(fields = empty) b =
   ( match enclosure with
   | Struct _ when List.exists has_top_level (fields :: b.body_members) ->
     invalid_arg "Cpp_ast.module_: a chunk at namespace scope inside a struct"
+  | Struct {layout = One_line; _} when not (is_empty fields && b.body_members = []) ->
+    invalid_arg "Cpp_ast.module_: a struct laid out on one line with a body"
   | Struct _ | Out_of_line | In_enclosing_scope -> () );
   let t = Module {module_ = b.body_module; enclosure; fields; members = b.body_members} in
   if is_empty t then empty else t
@@ -143,7 +163,7 @@ let starts_with_doc_comment t =
         | Declarations _ -> None
         | Seq l | Joined l -> first l
         | Top_level t -> first [t]
-        | Module {enclosure = Struct {head; _}; _} -> first_output [head]
+        | Module {enclosure = Struct _; _} -> Some false
         | Module {fields; members; _} -> first (fields :: members)
       in
       match inner with Some _ -> inner | None -> first rest )
@@ -175,7 +195,13 @@ let rec to_pp = function
   | Module {enclosure; fields; members; _} -> (
     let inside = to_pp (Seq (fields :: join_members members)) in
     match enclosure with
-    | Struct {head; tail} -> Pp.(head ++ inside ++ (if members = [] then mt () else fnl ()) ++ tail)
+    | Struct {head; layout} ->
+      Pp.(
+        pp_struct_head head
+        ++ (match layout with Block -> fnl () | One_line -> mt ())
+        ++ inside
+        ++ (if members = [] then mt () else fnl ())
+        ++ str "};")
     | Out_of_line | In_enclosing_scope -> inside )
   | Declarations l -> Pp.(prlist_with_sep fnl (fun d -> d) l ++ cut2 ())
 

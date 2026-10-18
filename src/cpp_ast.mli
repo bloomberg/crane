@@ -136,9 +136,9 @@ type t = private
 
 (** Where the members of a module's body are written. *)
 and enclosure =
-  | Struct of {head : Pp.t; tail : Pp.t}
+  | Struct of {head : struct_head; layout : layout}
       (** In the header, inside the module's struct, which [head] opens and
-          [tail] closes. *)
+          [};] closes. *)
   | Out_of_line
       (** In the implementation, which writes no struct: they are defined
           out of line, by the struct the header declares. *)
@@ -146,8 +146,31 @@ and enclosure =
       (** In the header, where a class concept takes the module's name: in
           whatever scope encloses the module, with no struct of its own. *)
 
+(** What a struct's head declares, each name in it as spelled where the
+    struct is written: [template <template> struct name : public base]. *)
+and struct_head = {
+  template : template_param list;  (** None if the struct is no template. *)
+  name : Pp.t;
+  base : Pp.t option;  (** The class it derives from, if any. *)
+}
+
+(** A parameter of a struct's template, by its name. *)
+and template_param =
+  | Typename of Pp.t  (** [typename T]. *)
+  | Constrained of {concept : Pp.t; param : Pp.t}
+      (** [C<..> M], the concept applied to any further arguments. *)
+
+(** How a struct's braces are laid out. *)
+and layout =
+  | Block  (** The body opens on a line of its own. *)
+  | One_line  (** [struct N {};]: there is no body. *)
+
 val text : Pp.t -> t
 val empty : t
+
+(** [template<..>] and a line break, if [params] is not empty; nothing
+    otherwise. *)
+val pp_template_head : template_param list -> Pp.t
 val decl : needs:Needs.t -> Pp.t -> t
 
 (** [unprinted ~needs env d] is [d], printed in [env] where the tree puts
@@ -197,7 +220,8 @@ val body_is_empty : body -> bool
     that writes nothing.
     @raise Invalid_argument if [enclosure] is a struct and [fields] or a
     member holds a {!Top_level} chunk: nothing inside a struct is at
-    namespace scope. *)
+    namespace scope; or if it is a struct laid out on one line and [fields]
+    or [body] writes anything. *)
 val module_ : enclosure -> ?fields:t -> body -> t
 
 (** Whether [t] writes nothing, which is whether its text is empty: a

@@ -4640,8 +4640,8 @@ let rec absorbing_decl env (d : Cpp_erasure.settled) =
     | Some body ->
       if Probe.checking () then absorbed_wrappers := name :: !absorbed_wrappers;
       Cpp_ast.module_
-        (Struct {head = str "struct " ++ str name ++ str " {"; tail = str "};"})
-        ~fields:Cpp_ast.(seq [text (fnl ()); ds; text (fnl ())])
+        (Struct {head = {template = []; name = str name; base = None}; layout = Block})
+        ~fields:Cpp_ast.(seq [ds; text (fnl ())])
         body
     | None -> Cpp_ast.(seq [text (str "struct " ++ str name ++ str " {" ++ fnl ()); ds; text (fnl () ++ str "};")]) )
   | Decl _ -> Cpp_ast.text (pp_cpp_decl env d)

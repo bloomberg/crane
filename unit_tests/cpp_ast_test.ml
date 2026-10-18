@@ -34,6 +34,7 @@ let text ?(templates = []) ?(forwards = []) sections =
   |> String.of_seq
 
 let top = Cpp_ast.top_level
+let struct_named ?(layout = Cpp_ast.Block) name = Cpp_ast.Struct {head = {template = []; name = Pp.str name; base = None}; layout}
 
 let () =
   let unit = [top (Cpp_ast.text (Pp.str "a")); top (leaf ~templates:["T"] "b"); top (leaf ~templates:["T"] "c")] in
@@ -41,29 +42,29 @@ let () =
   check_text "a template nothing writes is declared nowhere" (text ~templates:[template "U"] unit) "Pabc";
   let nested = [top (Cpp_ast.seq [Cpp_ast.text (Pp.str "s{"); top (leaf ~templates:["T"] "x"); Cpp_ast.text (Pp.str "}")])] in
   check_text "a template goes in front of the innermost chunk" (text ~templates:[template "T"] nested) "Ps{<T>x}";
-  let struct_ = Cpp_ast.Struct {head = Pp.str "struct-M{"; tail = Pp.str "}"} in
+  let struct_ = struct_named "M" in
   let body = Cpp_ast.module_body m [Cpp_ast.text (Pp.str "y"); Cpp_ast.empty; leaf ~templates:["T"] "z"] in
   let homed = [top (Cpp_ast.module_ struct_ ~fields:(Cpp_ast.text (Pp.str "f")) body)] in
-  check_text "a homed template goes in front of the member writing it" (text ~templates:[template ~homed:true "T"] homed) "Pstruct-M{fy<T>z}";
+  check_text "a homed template goes in front of the member writing it" (text ~templates:[template ~homed:true "T"] homed) "PstructM{fy<T>z};";
   let inner = ModPath.MPdot (m, Label.make "N") in
   let nested =
     Cpp_ast.module_ struct_
       (Cpp_ast.module_body m
          [ Cpp_ast.text (Pp.str "y");
            Cpp_ast.module_
-             (Struct {head = Pp.str "struct-N{"; tail = Pp.str "}"})
+             (struct_named "N")
              (Cpp_ast.module_body inner [Cpp_ast.text (Pp.str "w"); leaf ~templates:["T"] "z"]) ])
   in
   check_text "a homed template goes in front of the innermost member writing it"
-    (text ~templates:[template ~homed:true "T"] [top nested]) "Pstruct-M{ystruct-N{w<T>z}}";
+    (text ~templates:[template ~homed:true "T"] [top nested]) "PstructM{ystructN{w<T>z};};";
   let sibling name =
     let mp = ModPath.MPdot (m, Label.make name) in
     Cpp_ast.module_
-      (Struct {head = Pp.str (name ^ "{"); tail = Pp.str "}"})
+      (struct_named name)
       (Cpp_ast.module_body mp [leaf ~templates:["T"] "u"; leaf ~templates:["T"] "v"])
   in
   check_text "a homed template goes in front of the first member writing it in each module struct"
-    (text ~templates:[template ~homed:true "T"] [top (Cpp_ast.seq [sibling "A"; sibling "B"])]) "PA{<T>uv}B{<T>uv}";
+    (text ~templates:[template ~homed:true "T"] [top (Cpp_ast.seq [sibling "A"; sibling "B"])]) "PstructA{<T>uv};structB{<T>uv};";
   let out_of_line name =
     Cpp_ast.module_ Out_of_line
       (Cpp_ast.module_body (ModPath.MPdot (m, Label.make name)) [leaf ~templates:["T"] (name ^ "u")])
@@ -71,8 +72,8 @@ let () =
   check_text "modules defined out of line share the scope a homed template is declared in"
     (text ~templates:[template ~homed:true "T"] [top (Cpp_ast.seq [out_of_line "A"; out_of_line "B"])]) "P<T>AuBu";
   check_text "an unhomed template is declared once"
-    (text ~templates:[template "T"] [top (sibling "A"); top (sibling "B")]) "P<T>A{uv}B{uv}";
-  check_text "an unhomed template written in a member goes at namespace scope" (text ~templates:[template "T"] homed) "P<T>struct-M{fyz}";
+    (text ~templates:[template "T"] [top (sibling "A"); top (sibling "B")]) "P<T>structA{uv};structB{uv};";
+  check_text "an unhomed template written in a member goes at namespace scope" (text ~templates:[template "T"] homed) "P<T>structM{fyz};";
   check_text "a homed template goes in front of its home's member defined out of line"
     (text ~templates:[template ~homed:true "T"] [top (Cpp_ast.module_ Out_of_line body)]) "Py<T>z";
   check "a struct with no members is written" (not (Cpp_ast.is_empty (Cpp_ast.module_ struct_ (Cpp_ast.module_body m []))));
@@ -96,7 +97,20 @@ let () =
   let raw t = Pp.string_of_ppcmds (Cpp_ast.to_pp t) in
   let one = Cpp_ast.module_body m [Cpp_ast.text (Pp.str "y;")] in
   check_text "a struct closes its members on a line of its own"
-    (raw (Cpp_ast.module_ (Struct {head = Pp.str "s{"; tail = Pp.str "}"}) one)) "s{y;\n}";
+    (raw (Cpp_ast.module_ (struct_named "s") one)) "struct s {\ny;\n};";
+  check_text "a struct with no members opens a line all the same"
+    (raw (Cpp_ast.module_ (struct_named "s") (Cpp_ast.module_body m []))) "struct s {\n};";
+  check_text "a struct laid out on one line has its braces on the line of its head"
+    (raw (Cpp_ast.module_ (struct_named ~layout:One_line "s") (Cpp_ast.module_body m []))) "struct s {};";
+  check "a struct laid out on one line has no body"
+    ( match Cpp_ast.module_ (struct_named ~layout:One_line "s") one with
+    | exception Invalid_argument _ -> true
+    | _ -> false );
+  let head = {Cpp_ast.template = [Typename (Pp.str "A"); Constrained {concept = Pp.str "C<P>"; param = Pp.str "M"}];
+              name = Pp.str "s"; base = Some (Pp.str "b<s<A, M>>")} in
+  check_text "a struct's head writes its template and the class it derives from"
+    (raw (Cpp_ast.module_ (Struct {head; layout = Block}) one))
+    "template<typename A, C<P> M>\nstruct s : public b<s<A, M>> {\ny;\n};";
   check_text "a body with no struct of its own writes nothing after its members"
     (raw (Cpp_ast.module_ In_enclosing_scope one)) "y;";
   check "no chunk at namespace scope is a struct's member"
@@ -124,10 +138,10 @@ let () =
     (spelled [top (Cpp_ast.elements ~source:m (unprinted ()))]) "E(F.M)";
   check_text "the innermost struct around a declaration not yet printed spells it as its member"
     (spelled [top (Cpp_ast.elements ~source:m (Cpp_ast.module_ struct_ (Cpp_ast.module_body inner [unprinted ()])))])
-    "struct-M{M(F.M.N)\n}";
+    "struct M {\nM(F.M.N)\n};";
   check_text "the innermost group around a declaration not yet printed spells it"
     (spelled [top (Cpp_ast.module_ struct_ (Cpp_ast.module_body m [Cpp_ast.elements ~source:inner (unprinted ())]))])
-    "struct-M{E(F.M.N)\n}";
+    "struct M {\nE(F.M.N)\n};";
   let fields ?templates () =
     Cpp_ast.fields ~needs:(needs ?templates ()) ~record:(GlobRef.VarRef (Id.of_string "r")) ~vars:[] []
   in
@@ -136,7 +150,7 @@ let () =
        [ top
            (Cpp_ast.elements ~source:m
               (Cpp_ast.module_ struct_ ~fields:(Cpp_ast.elements ~source:m (fields ())) (Cpp_ast.module_body inner [unprinted ()])) ) ])
-    "struct-M{E(F.M)M(F.M.N)\n}";
+    "struct M {\nE(F.M)M(F.M.N)\n};";
   check_text "a homed template a struct's fields write goes in front of the member holding the struct"
     (text ~templates:[template ~homed:true "T"]
        [ top
@@ -144,10 +158,10 @@ let () =
               (Cpp_ast.module_body m
                  [ Cpp_ast.text (Pp.str "y");
                    Cpp_ast.module_
-                     (Struct {head = Pp.str "struct-N{"; tail = Pp.str "}"})
+                     (struct_named "N")
                      ~fields:(Cpp_ast.elements ~source:m (fields ~templates:["T"] ()))
                      (Cpp_ast.module_body inner [leaf "w"]) ]) ) ])
-    "Pstruct-M{y<T>struct-N{?w}}";
+    "PstructM{y<T>structN{?w};};";
   check_text "a declaration not yet printed is placed by what it needs, as planned"
     (spelled ~templates:[template "T"] [top (Cpp_ast.elements ~source:m (unprinted ~templates:["T"] ()))])
     "<T>E(F.M)";
