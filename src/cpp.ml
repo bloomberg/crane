@@ -3565,6 +3565,16 @@ let do_struct_with_decl_tracking ~is_header f s =
       hoisted := p :: !hoisted;
       Cpp_ast.empty )
     else if Names.Label.Set.mem l prereq_labels && not (Cpp_ast.is_empty p) then (
+      (* The prerequisites are asked for by label, of the file's top-level
+         elements; inside a struct, a label that matches is a member's --
+         a top-level element's of a collision struct, or a flattened
+         child's sharing the name -- and moving it would write it ahead of
+         the concepts, outside its struct. *)
+      if Probe.checking () && (!render_ctx).rc_in_struct then
+        Probe.violation "concept prerequisites"
+          Pp.(
+            str "the element " ++ Names.Label.print l ++ str " of the module " ++ str (ModPath.to_string source)
+            ++ str " is a member of a struct and would be written ahead of the concepts, outside it" );
       prereqs := p :: !prereqs;
       Cpp_ast.empty )
     else p
