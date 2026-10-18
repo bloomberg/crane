@@ -13029,3 +13029,14 @@
   (alias runtest)
   (deps collision_struct_class_concept.t.exe)
   (action (run ./collision_struct_class_concept.t.exe))))
+
+(subdir concept_prereq_in_collision
+ (rule
+  (targets concept_prereq_in_collision.t.exe)
+  (deps User.vo concept_prereq_in_collision.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} concept_prereq_in_collision.t.exe concept_prereq_in_collision.cpp concept_prereq_in_collision.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps concept_prereq_in_collision.t.exe)
+  (action (run ./concept_prereq_in_collision.t.exe))))

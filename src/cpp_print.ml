@@ -479,6 +479,25 @@ let rec decl_type_name = function
 
 let note_file_scope_type d = Option.iter note_file_scope_name (decl_type_name d)
 
+(** The types [d] declares under the name {!pp_global} spells, each with the
+    template parameters it is declared over, which an alias of it written
+    elsewhere repeats. *)
+let rec declared_types ?(outer = []) = function
+  | Dtemplate (tparams, _, inner) -> declared_types ~outer:(outer @ tparams) inner
+  | Dusing u -> [(u.du_name, outer @ u.du_tparams)]
+  | _ -> []
+
+let stand_ins t =
+  List.concat_map
+    (function
+      | Cpp_ast.Declared (Declaration {settled; _}) ->
+        List.map
+          (fun (target, tparams) -> Cpp_ast.(global_alias (Alias_of_type {target; tparams})))
+          (declared_types (settled :> cpp_decl))
+      | Declared (Fields _ | Global_alias _) -> []
+      | Struct_of mp -> [Cpp_ast.(global_alias (Alias_of_module mp))] )
+    (Cpp_ast.declared t)
+
 (** The using-declaration a unit needs for the promoted type variable [id]
     when its file-scope alias is another file's: under separate extraction
     that alias sits in its class's namespace, which a bare name in this one
@@ -4722,6 +4741,16 @@ let print_unprinted (u : Cpp_ast.unprinted) =
         ++ fnl (),
         if Probe.checking () then fields_needs ~module_:(module_written ()) ~vl:vars record (List.map snd fields)
         else u.needs )
+    | Global_alias a ->
+      let tparams, name =
+        match a with
+        | Alias_of_type {target; tparams} -> (tparams, pp_global Type target)
+        | Alias_of_module mp -> ([], Cpp_names.module_struct_name mp)
+      in
+      let args =
+        if tparams = [] then mt () else str "<" ++ prlist_with_sep (fun () -> str ", ") (fun (_, v) -> Id.print v) tparams ++ str ">"
+      in
+      (pp_template_header tparams ++ str "using " ++ name ++ str " = ::" ++ name ++ args ++ str ";", u.needs)
   in
   if Probe.checking () && needs <> u.needs then
     Probe.violation "unprinted declarations"

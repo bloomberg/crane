@@ -52,6 +52,10 @@ val pp_global_name : Common.kind -> Names.GlobRef.t -> Pp.t
 (** Pretty-print a module path. *)
 val pp_modname : Names.ModPath.t -> Pp.t
 
+(** The name of the struct the module [mp] is written as, at its
+    declaration: {!pp_modname}, escaped where it is reserved. *)
+val module_struct_name : Names.ModPath.t -> Pp.t
+
 (** {2 Inductive references} *)
 
 (** Whether the given global is a merged inductive. *)

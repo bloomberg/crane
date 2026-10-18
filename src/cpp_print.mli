@@ -49,6 +49,13 @@ val unprinted_fields :
     must need, printed there, what was planned for it where it was made. *)
 val print_unprinted : Cpp_ast.unprinted -> Pp.t
 
+(** [stand_ins t] is, for each type the declarations of [t] declare, a
+    member alias of it ({!Cpp_ast.global_alias}): what a struct holds in
+    place of [t] once [t] is moved out of it to namespace scope.  Only an
+    alias's name is spelled the way a reference to it is, so only aliases
+    are stood in for. *)
+val stand_ins : Cpp_ast.t -> Cpp_ast.t list
+
 (** [read_cpp_decl env decl] renders [decl]: for a declaration whose text is
     read, not written. *)
 val read_cpp_decl : Common.env -> Cpp_erasure.settled -> Pp.t

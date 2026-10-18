@@ -64,6 +64,19 @@ type declaration =
       (** The fields of the eponymous record [record] merged into its
           module's struct, each by its name and type, the type variables
           they name named [vars]: no declaration holds them. *)
+  | Global_alias of global_alias
+      (** [using N = ::N;]: a member standing in for a type declared under
+          the same name at namespace scope, where the file moved it, so that
+          the struct still names it.  Not a declaration of the program's:
+          one of the file's layout. *)
+
+(** What a {!Global_alias} stands in for. *)
+and global_alias =
+  | Alias_of_type of {target : GlobRef.t; tparams : (Minicpp.template_type * Id.t) list}
+      (** The type [target] declares, over [tparams], which the alias
+          repeats: [template <tparams> using N = ::N<tparams>;]. *)
+  | Alias_of_module of ModPath.t
+      (** The struct a module is written as. *)
 
 (** A declaration not yet printed, with what placing the declarations it
     needs reads -- planned, so known before it is printed. *)
@@ -122,6 +135,11 @@ val unprinted : needs:Needs.t -> Common.env -> Cpp_erasure.settled -> t
     tree puts it. *)
 val fields : needs:Needs.t -> record:GlobRef.t -> vars:Id.t list -> (string * Minicpp.cpp_type) list -> t
 
+(** [global_alias a] is {!Global_alias}, printed where the tree puts it.
+    It writes no synthesised template and names no constrained struct but
+    the one it stands in for, which it does not define. *)
+val global_alias : global_alias -> t
+
 (** [elements ~source t] is [t], spelled as the elements of [source] are. *)
 val elements : source:ModPath.t -> t -> t
 val seq : t list -> t
@@ -161,6 +179,13 @@ val concat : (unit -> Pp.t) -> t list -> t
 
 (** What the declarations of [t] need, together. *)
 val needs : t -> Needs.t
+
+(** What [t] declares in the scope it is written in, in the order written:
+    a declaration not yet printed, or a module's struct -- nothing inside
+    one. *)
+type declared = Declared of declaration | Struct_of of ModPath.t
+
+val declared : t -> declared list
 
 (** [t] as a document, for reading.
     @raise Invalid_argument if it holds a declaration not yet printed. *)

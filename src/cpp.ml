@@ -1008,11 +1008,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
            [OrderedTypeEx.Positive_as_OT]). *)
         let s = Common.emitted_module_name mp in
         str (Table.escape_reserved_struct_name s)
-      | _ ->
-        let raw = pp_modname mp in
-        let s = Pp.string_of_ppcmds raw in
-        let escaped = Table.escape_reserved_struct_name s in
-        if String.equal s escaped then raw else str escaped
+      | _ -> Cpp_names.module_struct_name mp
     in
     (* A submodule becomes a nested struct, which shadows any global-scope type
        of the same name for unqualified lookups from inside the parent -- a
@@ -3521,19 +3517,25 @@ let do_struct_with_decl_tracking ~is_header f s =
     if hoists then (
       hoisted := p :: !hoisted;
       Cpp_ast.empty )
-    else if Names.Label.Set.mem l prereq_labels && not (Cpp_ast.is_empty p) then (
-      (* The prerequisites are asked for by label, of the file's top-level
-         elements; inside a struct, a label that matches is a member's --
-         a top-level element's of a collision struct, or a flattened
-         child's sharing the name -- and moving it would write it ahead of
-         the concepts, outside its struct. *)
-      if Probe.checking () && (!render_ctx).rc_in_struct then
-        Probe.violation "concept prerequisites"
-          Pp.(
-            str "the element " ++ Names.Label.print l ++ str " of the module " ++ str (ModPath.to_string source)
-            ++ str " is a member of a struct and would be written ahead of the concepts, outside it" );
+    else if Names.Label.Set.mem l prereq_labels && is_modfile source && not (Cpp_ast.is_empty p) then (
+      (* The prerequisites are asked for by label, of the files' top-level
+         elements: a flattened child's element sharing the label is not one.
+         A top-level element of a file a collision struct holds is a member
+         of the struct, which cannot come first, its members naming the
+         concepts: it moves out ahead of them all the same, the only order in
+         which the concepts can be read, and leaves behind a member alias of
+         each type it declares, through which the struct, and every
+         reference qualified by it, still names it. *)
       prereqs := p :: !prereqs;
-      Cpp_ast.empty )
+      if not (!render_ctx).rc_in_struct then Cpp_ast.empty
+      else
+        let stand_ins = Cpp_print.stand_ins p in
+        if Probe.checking () && stand_ins = [] then
+          Probe.violation "concept prerequisites"
+            Pp.(
+              str "the element " ++ Names.Label.print l ++ str " of the module " ++ str (ModPath.to_string source)
+              ++ str " is a member of a struct written ahead of the concepts, outside it, and nothing stands in for it" );
+        Cpp_ast.elements ~source (Cpp_ast.concat Pp.fnl stand_ins) )
     else p
   in
   Cpp_print.start_ctor_alias_census ();

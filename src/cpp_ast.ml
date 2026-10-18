@@ -16,6 +16,11 @@ type spelling = Element_of of ModPath.t | Member_of of ModPath.t
 type declaration =
   | Declaration of {env : Common.env; settled : Cpp_erasure.settled}
   | Fields of {record : GlobRef.t; vars : Id.t list; fields : (string * Minicpp.cpp_type) list}
+  | Global_alias of global_alias
+
+and global_alias =
+  | Alias_of_type of {target : GlobRef.t; tparams : (Minicpp.template_type * Id.t) list}
+  | Alias_of_module of ModPath.t
 
 type unprinted = {declaration : declaration; needs : Needs.t}
 
@@ -37,6 +42,7 @@ let empty = Seq []
 let decl ~needs text = Decl {text; needs}
 let unprinted ~needs env settled = Unprinted {declaration = Declaration {env; settled}; needs}
 let fields ~needs ~record ~vars fields = Unprinted {declaration = Fields {record; vars; fields}; needs}
+let global_alias a = Unprinted {declaration = Global_alias a; needs = Needs.none}
 let elements ~source elements = Elements {source; elements}
 let seq l = Seq l
 
@@ -86,6 +92,17 @@ let rec needs = function
   | Seq l | Joined l -> List.fold_left (fun acc t -> Needs.union acc (needs t)) Needs.none l
   | Top_level t -> needs t
   | Module {fields; members; _} -> needs (Seq (fields :: members))
+
+type declared = Declared of declaration | Struct_of of ModPath.t
+
+let rec declared = function
+  | Text _ | Decl _ | Declarations _ -> []
+  | Unprinted {declaration; _} -> [Declared declaration]
+  | Elements {elements = t; _} | Top_level t -> declared t
+  | Seq l | Joined l -> List.concat_map declared l
+  | Module {module_; enclosure = Struct _; _} -> [Struct_of module_]
+  | Module {fields; members; enclosure = Out_of_line | In_enclosing_scope; _} ->
+    List.concat_map declared (fields :: members)
 
 let cut2 () = Pp.(brk (0, -100000) ++ brk (0, 0))
 
