@@ -829,22 +829,6 @@ let with_local_inductives refs k =
       List.iter add_local_inductive outer )
     k
 
-(** Under [CRANE_CHECK_IR], that the inductives local where the body of the
-    module [mp] is written are the ones planned for it
-    ({!Scope_plan.local_inductives}). *)
-let check_local_inductives mp =
-  if Probe.checking () then
-    let actual = get_local_inductives () in
-    let within a b = List.for_all (fun r -> List.exists (globref_equal r) b) a in
-    match Scope_plan.local_inductives mp with
-    | Some planned when within planned actual && within actual planned -> ()
-    | Some _ ->
-      Probe.violation "local inductives"
-        Pp.(str "the body of the module " ++ str (ModPath.to_string mp) ++ str " is written with other inductives local than planned")
-    | None ->
-      Probe.violation "local inductives"
-        Pp.(str "the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned local inductives")
-
 (** Whether a finished declaration is an erasure landing pad: [using X =
     std::any;], which names nothing. *)
 let is_erased_alias (_, d) =
@@ -1637,8 +1621,7 @@ and pp_module_body ~is_header f mp sel =
   in_planned_visibility mp @@ fun () ->
   let old_structure_decls = !current_structure_decls in
   current_structure_decls := sel;
-  with_local_inductives (inductives_declared_in mp sel) @@ fun () ->
-  check_local_inductives mp;
+  Cpp_ind.with_planned_local_inductives mp @@ fun () ->
   (* A synthesised alias whose body names this module's own types, as its
      members spell them, is declared inside the struct, in front of the
      first member that writes it (see {!Cpp_print.ctor_alias_home}): at
@@ -3591,7 +3574,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     in
     let ppl ((mp, sel), wrapper_name) =
       in_planned_visibility mp @@ fun () ->
-      check_local_inductives mp;
+      Cpp_ind.with_planned_local_inductives mp @@ fun () ->
       let hoisted = ref [] and prereqs = ref [] and concepts = ref [] in
       let wrapper_specs name =
         match List.find_opt (fun w -> String.equal w.wr_name name) wrapper_parts with
@@ -3675,7 +3658,7 @@ let do_struct_with_decl_tracking ~is_header f s =
               match se with
               | SEmodule {ml_mod_expr = MEstruct (inner_mp, inner_sel); _} ->
                 in_planned_visibility inner_mp (fun () ->
-                    check_local_inductives inner_mp;
+                    Cpp_ind.with_planned_local_inductives inner_mp @@ fun () ->
                     Cpp_ast.module_ enclosure
                       (Cpp_ast.module_body inner_mp (List.map (place_in inner_mp) (List.filter keep inner_sel))) )
               | _ -> Cpp_ast.empty
@@ -3720,13 +3703,7 @@ let do_struct_with_decl_tracking ~is_header f s =
       current_structure_decls := old_decls;
       (p, List.rev !hoisted, List.rev !prereqs, List.rev !concepts)
     in
-    let placed =
-      let file_inductives = file_local_inductives analysis in
-      List.map
-        (fun ((_, wrapper_name) as m) ->
-          if wrapper_name = None then with_local_inductives file_inductives (fun () -> ppl m) else ppl m )
-        wrapper_names
-    in
+    let placed = List.map ppl wrapper_names in
     let rendered = List.map2 (fun wn (p, _, _, _) -> (wn, p)) wrapper_names placed in
     let rev_rendered = List.rev rendered in
     let main_entry, pre_entries =

@@ -136,11 +136,17 @@ val header_scope : Names.ModPath.t -> header_scope option
     struct. *)
 val in_header_element_scope : Names.ModPath.t -> (in_struct:bool -> 'a) -> 'a
 
+(** [with_planned_local_inductives mp k] runs [k] with the inductives the
+    body of the module [mp] spells bare local, as planned
+    ({!Scope_plan.local_inductives}), and no others. *)
+val with_planned_local_inductives : Names.ModPath.t -> (unit -> 'a) -> 'a
+
 (** A group of finished declarations the header writes at file scope, away
     from the module [source] they were generated in.  They are spelled as
     the header spells an element of [source] -- in the visibility planned
-    for its body and in its planned header scope -- so the module is all a
-    group has to say about where it reads its names from. *)
+    for its body, with the inductives it spells bare, and in its planned
+    header scope -- so the module is all a group has to say about where it
+    reads its names from. *)
 type group = {source : Names.ModPath.t; declarations : rendered}
 
 (** Groups in writing order. *)
