@@ -56,6 +56,12 @@ type spelling =
           planned header scope says -- a library module writes its types
           at namespace scope and its functions in a struct of its name. *)
 
+(** A parameter of a template, by its name. *)
+type template_param =
+  | Typename of Pp.t  (** [typename T]. *)
+  | Constrained of {concept : Pp.t; param : Pp.t}
+      (** [C<..> M], the concept applied to any further arguments. *)
+
 (** What a declaration not yet printed declares. *)
 type declaration =
   | Declaration of {env : Common.env; settled : Cpp_erasure.settled}
@@ -80,6 +86,26 @@ type declaration =
   | Assertion of assertion
       (** [static_assert(C<S>);], on a line of its own: that a module or an
           instance satisfies a concept. *)
+  | Module_alias of {name : Pp.t; target : module_target}
+      (** [using name = target;]: a module defined as another. *)
+  | Derived_functor of {template : template_param list; name : Pp.t; base : application}
+      (** [template <template> struct name : base {};]: a functor whose body
+          applies another functor, its own parameters visible to [base]. *)
+
+(** What a {!Module_alias} defines its module as, as written where the
+    alias is: inside a class template, a qualified name is a dependent
+    one. *)
+and module_target =
+  | Module_named of ModPath.t  (** The module at the path. *)
+  | Functor_of of {functor_ : ModPath.t; params : (template_param * ModPath.t) list}
+      (** The functor at the path, applied to the alias's own parameters,
+          each as declared and by its path: a functor defined as another,
+          which Rocq reduces to the other's name.  The alias is a template
+          over them. *)
+  | Applied of application
+
+(** A functor applied to modules, each by its path. *)
+and application = {functor_ : ModPath.t; args : ModPath.t list}
 
 (** That [subject] satisfies [concept], each named as written where the
     assertion is: a subject declared in a struct the assertion follows is
@@ -158,12 +184,6 @@ and struct_head = {
   base : Pp.t option;  (** The class it derives from, if any. *)
 }
 
-(** A parameter of a struct's template, by its name. *)
-and template_param =
-  | Typename of Pp.t  (** [typename T]. *)
-  | Constrained of {concept : Pp.t; param : Pp.t}
-      (** [C<..> M], the concept applied to any further arguments. *)
-
 (** How a struct's braces are laid out. *)
 and layout =
   | Block  (** The body opens on a line of its own. *)
@@ -200,6 +220,14 @@ val global_alias : global_alias -> t
 (** [assertion a] is {!Assertion}, printed where the tree puts it.  It
     needs nothing placed in front of it. *)
 val assertion : assertion -> t
+
+(** [module_alias ~name target] is {!Module_alias}, printed where the tree
+    puts it.  It needs nothing placed in front of it. *)
+val module_alias : name:Pp.t -> module_target -> t
+
+(** [derived_functor ~template ~name base] is {!Derived_functor}, printed
+    where the tree puts it.  It needs nothing placed in front of it. *)
+val derived_functor : template:template_param list -> name:Pp.t -> application -> t
 
 (** [elements ~source t] is [t], spelled as the elements of [source] are. *)
 val elements : source:ModPath.t -> t -> t

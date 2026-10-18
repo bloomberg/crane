@@ -114,6 +114,17 @@ let template_param (mbid, mt) : Cpp_ast.template_param =
     Constrained {concept = cname ++ args; param}
   | None -> Typename param
 
+(** The functor application [me], its arguments in order.  Rocq applies a
+    functor to paths only ({!Extract_env.extract_mexpr}), and only a path
+    or an application is applied. *)
+let application_of me =
+  let rec flatten args = function
+    | MEapply (g, MEident arg) -> flatten (arg :: args) g
+    | MEident functor_ -> {Cpp_ast.functor_; args}
+    | _ -> CErrors.anomaly (Pp.str "Crane: a functor application whose functor or argument is not a path.")
+  in
+  flatten [] me
+
 (** [plain_struct name] is the head of the struct [name], which is no
     template and derives from nothing. *)
 let plain_struct name = {Cpp_ast.template = []; name; base = None}
@@ -745,15 +756,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                       Cpp_ast.module_
                         (Struct {head = {template; name; base = None}; layout = Block})
                         b.text }
-                | MEapply _ ->
-                  let b = pp_module_expr ~is_header f body in
-                  { b with
-                    text =
-                      Cpp_ast.(
-                        seq
-                          [ text (template_decl ++ str "struct " ++ name ++ str " : ");
-                            b.text;
-                            text (str " {};") ]) }
+                | MEapply _ -> written (Cpp_ast.derived_functor ~template ~name (application_of body))
                 | _ ->
                   let b = pp_module_expr ~is_header f body in
                   { b with
@@ -769,11 +772,10 @@ let rec pp_structure_elem ~is_header f ~module_ = function
         if not is_header then
           written Cpp_ast.empty
         else
-          let {text = body; concepts; asserts} = pp_module_expr ~is_header f m.ml_mod_expr in
           let assertion, held = concept_assertion mp m.ml_mod_type in
-          { text = Cpp_ast.seq [Cpp_ast.text (str "using " ++ name ++ str " = "); body; Cpp_ast.text (str ";"); assertion];
-            concepts;
-            asserts = asserts @ held }
+          { text = Cpp_ast.seq [Cpp_ast.module_alias ~name (Applied (application_of m.ml_mod_expr)); assertion];
+            concepts = [];
+            asserts = held }
       | MEstruct (body_mp, sel) ->
         let old_context = (!render_ctx).rc_in_struct in
         with_module_frame @@ fun () ->
@@ -1083,70 +1085,22 @@ let rec pp_structure_elem ~is_header f ~module_ = function
         in
         {text; concepts = own_concepts @ body_written.concepts; asserts = passed_out @ own_held}
       | MEident target ->
-        written
-        @@ Cpp_ast.text
-        @@
-        if not is_header then
-          mt ()
+        if not is_header then written Cpp_ast.empty
         else
-          (* The target is a module path, so it resolves to a name that says
-             for itself whether it came out qualified. *)
-          let resolved = Common.resolve_module target in
-          let body = str (Common.resolved_string resolved) in
-          (* Check whether this alias is itself a functor (i.e., the module
-             type has MTfunsig parameters).  This happens when Rocq's
-             extraction eta-reduces [Module Facts (M:WS) := WFacts M.] to
-             [MEident(WFacts)].  A bare [using Facts = WFacts;] is invalid
-             C++ when WFacts is a template struct; we need a template alias
-             [template<WS M> using Facts = WFacts<M>;] instead. *)
-          let rec collect_functor_params acc = function
-            | MTfunsig (mbid, mt, rest) ->
-              collect_functor_params ((mbid, mt) :: acc) rest
-            | _ -> List.rev acc
+          (* Rocq's extraction reduces [Module Facts (M : WS) := WFacts M.] to
+             [MEident WFacts] with a functor's type: the alias is a template
+             over the functor's parameters, [WFacts] being one too. *)
+          let rec functor_params = function
+            | MTfunsig (mbid, mt, rest) -> (template_param (mbid, mt), MPbound mbid) :: functor_params rest
+            | _ -> []
           in
-          let functor_params = collect_functor_params [] m.ml_mod_type in
-          if functor_params = [] then
-            (* Non-functor alias. File-level modules are rendered as C++
-               namespaces; a [using R = Namespace;] alias inside a struct
-               body is invalid C++, so we drop it.  Aliases whose target is
-               a sub-module (MPdot — rendered as a struct) are valid type
-               aliases inside a struct body and are kept. *)
-            let target_is_namespace =
-              match m.ml_mod_expr with
-              | MEident mp -> is_modfile mp
-              | _ -> false
-            in
-            if target_is_namespace && (!render_ctx).rc_in_struct then
-              mt ()
-            else
-              let body_with_typename =
-                if
-                  (!render_ctx).rc_in_template
-                  && Common.resolved_is_qualified resolved
-                then
-                  str "typename " ++ body
-                else body
-              in
-              str "using " ++ name ++ str " = " ++ body_with_typename ++ str ";"
-          else begin
-            (* Functor alias: emit [template<...> using Name = Body<params>;].
-               Re-uses {!template_param} from the MEfunctor case. *)
-            let template_decl = Cpp_ast.pp_template_head (List.map template_param functor_params) in
-            let param_args =
-              prlist_with_sep
-                (fun () -> str ", ")
-                (fun (mbid, _) -> pp_modname (MPbound mbid))
-                functor_params
-            in
-            template_decl
-            ++ str "using "
-            ++ name
-            ++ str " = "
-            ++ body
-            ++ str "<"
-            ++ param_args
-            ++ str ">;"
-          end
+          match functor_params m.ml_mod_type with
+          (* A file module is a namespace, which no alias in a struct can
+             name. *)
+          | [] when is_modfile target && (!render_ctx).rc_in_struct -> written Cpp_ast.empty
+          | [] -> written (Cpp_ast.module_alias ~name (Module_named target))
+          | params ->
+            written (Cpp_ast.module_alias ~name (Functor_of {functor_ = target; params}))
     in
     { mod_pp with
       text =

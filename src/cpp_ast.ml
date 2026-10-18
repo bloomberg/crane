@@ -13,6 +13,8 @@ end
 
 type spelling = Element_of of ModPath.t | Member_of of ModPath.t
 
+type template_param = Typename of Pp.t | Constrained of {concept : Pp.t; param : Pp.t}
+
 type declaration =
   | Declaration of {env : Common.env; settled : Cpp_erasure.settled}
   | Absorbed of {env : Common.env; settled : Cpp_erasure.settled}
@@ -20,6 +22,15 @@ type declaration =
   | Modtype_concept of {path : ModPath.t; params : ModPath.t list; concept : Modtype_concept.t}
   | Global_alias of global_alias
   | Assertion of assertion
+  | Module_alias of {name : Pp.t; target : module_target}
+  | Derived_functor of {template : template_param list; name : Pp.t; base : application}
+
+and module_target =
+  | Module_named of ModPath.t
+  | Functor_of of {functor_ : ModPath.t; params : (template_param * ModPath.t) list}
+  | Applied of application
+
+and application = {functor_ : ModPath.t; args : ModPath.t list}
 
 and assertion = {concept : asserted; subject : subject}
 and asserted = Of_module_type of ModPath.t | Of_class of GlobRef.t
@@ -44,7 +55,6 @@ type t =
 
 and enclosure = Struct of {head : struct_head; layout : layout} | Out_of_line | In_enclosing_scope
 and struct_head = {template : template_param list; name : Pp.t; base : Pp.t option}
-and template_param = Typename of Pp.t | Constrained of {concept : Pp.t; param : Pp.t}
 and layout = Block | One_line
 
 let text d = Text d
@@ -72,6 +82,10 @@ let modtype_concept ~path ~params concept =
   Unprinted {declaration = Modtype_concept {path; params; concept}; needs = Needs.none}
 let global_alias a = Unprinted {declaration = Global_alias a; needs = Needs.none}
 let assertion a = Unprinted {declaration = Assertion a; needs = Needs.none}
+let module_alias ~name target = Unprinted {declaration = Module_alias {name; target}; needs = Needs.none}
+
+let derived_functor ~template ~name base =
+  Unprinted {declaration = Derived_functor {template; name; base}; needs = Needs.none}
 let elements ~source elements = Elements {source; elements}
 let seq l = Seq l
 
