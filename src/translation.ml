@@ -3414,8 +3414,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              the qualifier spells (see [mk_factory_methods] in {!Gen_decls}),
              so the call knows its own result -- and loopify can type a frame
              field holding one instead of falling back on [decltype]. *)
-          let ctor_sig args =
-            Minicpp.call_sig ~yields:type_expr ~nargs:(List.length args) ()
+          let ctor_sig ?constructs args =
+            Minicpp.call_sig ~yields:type_expr ?constructs ~nargs:(List.length args) ()
           in
           (* Perceus reuse: if a reuse token is pending for this constructor
              (set by a use_count()==1-guarded arm in gen_cpp_case), call the
@@ -3435,13 +3435,15 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               suspend_ctor type_expr (Id.of_string ctor_struct) (of_reversed args)
             else
               CPPfun_call
-                ( ctor_sig args, CPPqualified_t (type_expr, Id.of_string fname),
+                ( ctor_sig ~constructs:r args,
+                  CPPqualified_t (type_expr, Id.of_string fname),
                   of_reversed args ) )
         | _ ->
           (* Fallback for non-Tglob types *)
           let fname = factory_name_of_ctor r in
           CPPfun_call
-            (call_opaque, CPPqualified_t (Tglob (r, [], []), Id.of_string fname),
+            ( call_sig ~constructs:r ~nargs:(List.length args) (),
+              CPPqualified_t (Tglob (r, [], []), Id.of_string fname),
               of_reversed args )
       in
       (* [CPPfun_call] stores args reversed; [List.rev_map] compensates. *)

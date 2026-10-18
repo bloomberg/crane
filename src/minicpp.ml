@@ -362,6 +362,7 @@ and erase_shape =
 and call_sig = {
   cs_yields : call_result;
   cs_params : call_params;
+  cs_constructs : GlobRef.t option;
 }
 
 and call_result =
@@ -1191,18 +1192,19 @@ let to_reversed (l : 'a revd) : 'a list = l.rev
 let of_reversed (l : 'a list) : 'a revd = {rev = l}
 
 (** The signature of a call nothing is known about. *)
-let call_opaque = {cs_yields = Ropaque; cs_params = Punknown}
+let call_opaque = {cs_yields = Ropaque; cs_params = Punknown; cs_constructs = None}
 
-(** [call_sig ?yields ?params ()] is what a builder knows about a call.
-    [params] is recorded only when it is positionally aligned with the
+(** [call_sig ?yields ?params ?constructs ()] is what a builder knows about a
+    call.  [params] is recorded only when it is positionally aligned with the
     arguments; a length mismatch is no knowledge at all, so it is dropped
     rather than stored misaligned. *)
-let call_sig ?yields ?params ~nargs () =
+let call_sig ?yields ?params ?constructs ~nargs () =
   { cs_yields = (match yields with Some t -> Ryields t | None -> Ropaque);
     cs_params =
       ( match params with
       | Some ts when List.length ts = nargs -> Ptypes ts
-      | _ -> Punknown ) }
+      | _ -> Punknown );
+    cs_constructs = constructs }
 
 (** [mk_call ?yields ?params fn args] is a call of [fn] on [args] given in
     {e source} order.  [yields] is the call's result type and [params] the
@@ -1423,7 +1425,8 @@ let map_expr ?fl
         cs_params =
           (match res.cs_params with
           | Ptypes ts -> Ptypes (List.map ft ts)
-          | Punknown -> Punknown) }
+          | Punknown -> Punknown);
+        cs_constructs = res.cs_constructs }
     in
     CPPfun_call (res, fe f, {rev = List.map fe args.rev})
   | CPPconverting_ctor (ty, args) -> CPPconverting_ctor (ft ty, List.map fe args)

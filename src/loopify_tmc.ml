@@ -104,37 +104,20 @@ let cell_value_type = function
     constructor struct name (e.g., ["Cons"]), [factory_name] is the factory
     method name (e.g., ["cons"]), and [args] are the constructor arguments.
 
-    Factory calls are the only use of [CPPfun_call(CPPqualified_t(...), ...)]
-    in the MiniCpp AST.  The struct name is the capitalized factory name. *)
+    A factory call records the constructor it builds ({!Minicpp.call_sig}),
+    and the struct is named after that constructor
+    ({!Ml_type_util.ctor_struct_name_of_ref}).  The factory's own name does
+    not say: it is the struct's lowercased, so [PeanoSucc] and [WW] have
+    factories [peanosucc] and [ww], from which no capitalisation recovers
+    them. *)
 let is_ctor_factory_call = function
-  | CPPfun_call (_, CPPqualified_t (ty, factory_id), args) ->
+  | CPPfun_call ({cs_constructs = Some c; _}, CPPqualified_t (ty, factory_id), args) ->
     let factory_s = Id.to_string factory_id in
-    let n = String.length factory_s in
-    (* Strip trailing underscore (collision escape) before capitalizing *)
-    let base =
-      if n > 0 && factory_s.[n - 1] = '_' then
-        String.sub factory_s 0 (n - 1)
-      else factory_s
-    in
-    let struct_name = String.capitalize_ascii base in
-    (* A genuine TMC-wrapping data constructor always has a recursive
-       (shared_ptr) field — the hole the recursion writes into — so it is
-       recorded in [ctor_ptr_fields].  A qualified call whose "constructor" is
-       NOT registered there is not a data constructor at all (e.g. a record's
-       function-typed field applied as [M::m_op(x, rec)] on the abstract record
-       type); TMC-decomposing it would fabricate a nonexistent variant cell with
-       a [nullptr] hole.  Requiring registration rejects those. *)
-    (* Skip built-in accessors and other non-factory qualified calls *)
-    let ptr_fields =
-      match cell_owner ty with
-      | Some owner ->
-        Hashtbl.find_opt ctor_ptr_fields
-          (Common.ctor_owner_key owner, struct_name)
-      | None -> None
-    in
-    if factory_s = "v" || factory_s = "v_mut"
-       || ptr_fields = None
-    then None
+    let struct_name = Ml_type_util.ctor_struct_name_of_ref c in
+    (* A TMC-wrapping constructor has a field behind the pointer -- the hole
+       the recursion writes into -- so it is recorded in [ctor_ptr_fields];
+       one that has none is no cell. *)
+    if not (Hashtbl.mem ctor_ptr_fields (Common.ctor_owner_key c, struct_name)) then None
     else
       (* The arguments come back as stored -- reversed.  Everything downstream
          indexes them in that space; see [uptr_idxs] in [try_tmc_decompose]. *)

@@ -6,6 +6,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -212,42 +213,29 @@ struct MethodifiedTmcNoLoopify {
     }
 
     wrap wraps(uint64_t n) const {
-      const wrap *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const wrap *_self;
-        uint64_t n;
-      };
-
-      /// CraneCont_k: resumes after recursive call, then processes rest.
-      struct CraneCont_k {};
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_k>;
-      wrap _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self, n});
-      /// Loopified wraps: CraneEnter -> CraneCont_k.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const wrap *_self = _f._self;
-          uint64_t n = _f.n;
-          if (n <= 0) {
-            _result = std::move(*_self);
-          } else {
-            uint64_t k = n - 1;
-            _stack.emplace_back(CraneCont_k{});
-            _stack.emplace_back(CraneEnter{crane_raw(_self), k});
-          }
+      std::optional<wrap> _root{};
+      std::shared_ptr<wrap> *_write = nullptr;
+      const wrap *_loop_self = this;
+      uint64_t _loop_n = n;
+      while (true) {
+        if (_loop_n <= 0) {
+          auto _value = std::move(*_loop_self);
+          (_write ? *(*_write = std::make_shared<wrap>(std::move(_value)))
+                  : _root.emplace(std::move(_value)));
+          break;
         } else {
-          auto _f = std::move(std::get<CraneCont_k>(_frame));
-          _result = wrap::ww(std::move(_result));
+          uint64_t k = _loop_n - 1;
+          auto _cell = typename wrap::WW(nullptr);
+          wrap &_node =
+              (_write ? *(*_write = std::make_shared<wrap>(std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename wrap::WW>(_node.v_mut()).a0;
+          _loop_self = crane_raw(_loop_self);
+          _loop_n = k;
+          continue;
         }
       }
-      return _result;
+      return std::move(*_root);
     }
 
     template <typename T1, typename F0, typename F1>

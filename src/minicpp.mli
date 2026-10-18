@@ -442,6 +442,11 @@ and erase_shape =
 and call_sig = {
   cs_yields : call_result;  (** what the call evaluates to *)
   cs_params : call_params;  (** what the callee takes *)
+  cs_constructs : GlobRef.t option;
+      (** The constructor a factory call builds.  A factory's name is the
+          constructor struct's, lowercased and possibly escaped, which no
+          reading of the name undoes: Loopify recognises the cells it
+          rewrites by this. *)
 }
 
 (** What a call yields. *)
@@ -1158,11 +1163,13 @@ val call_opaque : call_sig
 val call_sig :
   ?yields:cpp_type ->
   ?params:cpp_type list ->
+  ?constructs:GlobRef.t ->
   nargs:int ->
   unit ->
   call_sig
-(** [call_sig ?yields ?params ~nargs ()] is what a builder knows about a call
-    on [nargs] arguments.  [params] is recorded only when its length matches
+(** [call_sig ?yields ?params ?constructs ~nargs ()] is what a builder knows
+    about a call on [nargs] arguments, [constructs] the constructor where it
+    is a factory call.  [params] is recorded only when its length matches
     [nargs]: a misaligned list is worse than none, so alignment holds by
     construction rather than by convention. *)
 

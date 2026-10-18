@@ -1583,101 +1583,73 @@ struct Coq_Pos {
       return _result;
     }
 
-    PeanoView peanoView_xI(const Positive &_x) const {
-      const PeanoView *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const PeanoView *_self;
-        Positive _x;
-      };
-
-      /// CraneCont_PeanoSucc: saves [p], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_PeanoSucc {
-        Positive p;
-      };
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_PeanoSucc>;
-      PeanoView _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self, _x});
-      /// Loopified peanoView_xI: CraneEnter -> CraneCont_PeanoSucc.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const PeanoView *_self = _f._self;
-          const Positive &_x = std::move(_f._x);
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename PeanoView::PeanoOne>(_sv.v())) {
-            _result = PeanoView::peanosucc(
-                succ(Positive::xh()),
-                PeanoView::peanosucc(Positive::xh(), PeanoView::peanoone()));
-          } else {
-            const auto &[p, a1] =
-                std::get<typename PeanoView::PeanoSucc>(_sv.v());
-            _stack.emplace_back(CraneCont_PeanoSucc{p});
-            _stack.emplace_back(CraneEnter{crane_raw(a1), p});
-          }
+    PeanoView peanoView_xI(const Positive &) const {
+      std::optional<PeanoView> _root{};
+      std::shared_ptr<PeanoView> *_write = nullptr;
+      const PeanoView *_loop_self = this;
+      while (true) {
+        auto &&_sv = *_loop_self;
+        if (std::holds_alternative<typename PeanoView::PeanoOne>(_sv.v())) {
+          auto _value = PeanoView::peanosucc(
+              succ(Positive::xh()),
+              PeanoView::peanosucc(Positive::xh(), PeanoView::peanoone()));
+          (_write ? *(*_write = std::make_shared<PeanoView>(std::move(_value)))
+                  : _root.emplace(std::move(_value)));
+          break;
         } else {
-          auto _f = std::move(std::get<CraneCont_PeanoSucc>(_frame));
-          Positive p = std::move(_f.p);
-          _result = PeanoView::peanosucc(
-              succ(Positive::xi(p)),
-              PeanoView::peanosucc(Positive::xi(p), std::move(_result)));
+          const auto &[p, a1] =
+              std::get<typename PeanoView::PeanoSucc>(_sv.v());
+          auto _cell1 = std::make_shared<PeanoView>(
+              typename PeanoView::PeanoSucc(Positive::xi(p), nullptr));
+          auto _cell = typename PeanoView::PeanoSucc(succ(Positive::xi(p)),
+                                                     std::move(_cell1));
+          PeanoView &_node =
+              (_write
+                   ? *(*_write = std::make_shared<PeanoView>(std::move(_cell)))
+                   : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename PeanoView::PeanoSucc>(
+                        std::get<typename PeanoView::PeanoSucc>(_node.v_mut())
+                            .a1->v_mut())
+                        .a1;
+          _loop_self = crane_raw(a1);
+          continue;
         }
       }
-      return _result;
+      return std::move(*_root);
     }
 
-    PeanoView peanoView_xO(const Positive &_x) const {
-      const PeanoView *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const PeanoView *_self;
-        Positive _x;
-      };
-
-      /// CraneCont_PeanoSucc: saves [p], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_PeanoSucc {
-        Positive p;
-      };
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_PeanoSucc>;
-      PeanoView _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self, _x});
-      /// Loopified peanoView_xO: CraneEnter -> CraneCont_PeanoSucc.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const PeanoView *_self = _f._self;
-          const Positive &_x = std::move(_f._x);
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename PeanoView::PeanoOne>(_sv.v())) {
-            _result =
-                PeanoView::peanosucc(Positive::xh(), PeanoView::peanoone());
-          } else {
-            const auto &[p, a1] =
-                std::get<typename PeanoView::PeanoSucc>(_sv.v());
-            _stack.emplace_back(CraneCont_PeanoSucc{p});
-            _stack.emplace_back(CraneEnter{crane_raw(a1), p});
-          }
+    PeanoView peanoView_xO(const Positive &) const {
+      std::optional<PeanoView> _root{};
+      std::shared_ptr<PeanoView> *_write = nullptr;
+      const PeanoView *_loop_self = this;
+      while (true) {
+        auto &&_sv = *_loop_self;
+        if (std::holds_alternative<typename PeanoView::PeanoOne>(_sv.v())) {
+          auto _value =
+              PeanoView::peanosucc(Positive::xh(), PeanoView::peanoone());
+          (_write ? *(*_write = std::make_shared<PeanoView>(std::move(_value)))
+                  : _root.emplace(std::move(_value)));
+          break;
         } else {
-          auto _f = std::move(std::get<CraneCont_PeanoSucc>(_frame));
-          Positive p = std::move(_f.p);
-          _result = PeanoView::peanosucc(
-              succ(Positive::xo(p)),
-              PeanoView::peanosucc(Positive::xo(p), std::move(_result)));
+          const auto &[p, a1] =
+              std::get<typename PeanoView::PeanoSucc>(_sv.v());
+          auto _cell1 = std::make_shared<PeanoView>(
+              typename PeanoView::PeanoSucc(Positive::xo(p), nullptr));
+          auto _cell = typename PeanoView::PeanoSucc(succ(Positive::xo(p)),
+                                                     std::move(_cell1));
+          PeanoView &_node =
+              (_write
+                   ? *(*_write = std::make_shared<PeanoView>(std::move(_cell)))
+                   : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename PeanoView::PeanoSucc>(
+                        std::get<typename PeanoView::PeanoSucc>(_node.v_mut())
+                            .a1->v_mut())
+                        .a1;
+          _loop_self = crane_raw(a1);
+          continue;
         }
       }
-      return _result;
+      return std::move(*_root);
     }
 
     template <typename T1, typename F1>
