@@ -2916,6 +2916,13 @@ type wrapper_render = {
     answers ({!Cpp_print.nested_in_wrapper}), so this is asked once the
     wrapper modules have queued their declarations.
 
+    An enum a collision struct holds -- a top-level element of a file
+    written inside one -- has no declaration outside the struct for the
+    concepts to read, and so moves too, leaving a member alias behind
+    ({!Cpp_print.stand_ins}), as an alias does.  Any other inductive held
+    there is spelled qualified by the struct, and moving it would respell
+    every reference to it; it stays.
+
     Transitive, and only through the elements themselves: an alias in the set
     spells types that then have to precede {e it}, and one of those may be
     another alias.  A struct in the set wants more than names: its payloads
@@ -2987,6 +2994,10 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
           (wrapper_sels (Cpp_print.nspace_wrapper_name r)) )
       payloads (packet_refs kn ind)
   in
+  let held_in_collision_struct =
+    let held = List.filter_map (fun (mp, ms) -> if is_modfile mp && wraps_children mp ms then Some mp else None) s in
+    fun mp -> List.exists (ModPath.equal mp) held
+  in
   let label_of (mp, l, se) (needed, complete) =
     match se with
     | Miniml.SEdecl (Miniml.Dtype (r, _, _)) ->
@@ -2999,7 +3010,8 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
           List.exists
             (fun r ->
               Ref.User.Set.mem r complete
-              || (Ref.User.Set.mem r needed && Cpp_print.nested_in_wrapper r) )
+              || Ref.User.Set.mem r needed
+                 && (Cpp_print.nested_in_wrapper r || (Table.is_enum_inductive r && held_in_collision_struct mp)) )
             (packet_refs kn ind)
         then Some l
         else None )

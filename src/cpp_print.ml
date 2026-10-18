@@ -481,10 +481,11 @@ let note_file_scope_type d = Option.iter note_file_scope_name (decl_type_name d)
 
 (** The types [d] declares under the name {!pp_global} spells, each with the
     template parameters it is declared over, which an alias of it written
-    elsewhere repeats. *)
+    elsewhere repeats: an alias, and an enum, which no struct qualifies. *)
 let rec declared_types ?(outer = []) = function
   | Dtemplate (tparams, _, inner) -> declared_types ~outer:(outer @ tparams) inner
   | Dusing u -> [(u.du_name, outer @ u.du_tparams)]
+  | Denum {de_ref; _} -> [(de_ref, outer)]
   | _ -> []
 
 let stand_ins t =
@@ -4744,7 +4745,8 @@ let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
     | Global_alias a ->
       let tparams, name =
         match a with
-        | Alias_of_type {target; tparams} -> (tparams, pp_global Type target)
+        | Alias_of_type {target; tparams} ->
+          (tparams, if Table.is_enum_inductive target then enum_definition_name target else pp_global Type target)
         | Alias_of_module mp -> ([], Cpp_names.module_struct_name mp)
       in
       let args =

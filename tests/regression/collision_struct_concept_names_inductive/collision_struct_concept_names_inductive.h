@@ -13,6 +13,7 @@
 struct Nat;
 template <typename A> struct List;
 using key = Nat;
+enum class Color { RED, BLUE };
 template <typename I, typename A>
 concept Keyed = requires {
   { I::key_of(std::declval<A>()) } -> std::convertible_to<key>;
@@ -158,7 +159,7 @@ struct PeanoNat {
 
 struct CollisionStructConceptNamesInductive {
   using key = ::key;
-  enum class Color { RED, BLUE };
+  using Color = ::Color;
 
   struct keyed_nat {
     static key key_of(Nat n) { return n; }

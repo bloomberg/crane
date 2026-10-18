@@ -1,15 +1,16 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Known bug: the child module [List] collides with the [List] struct the
-    standard library's [list] is written as, so everything this file
-    declares is written inside the struct [CollisionStructConceptNamesInductive],
-    and [Keyed]'s concept at the top of the file.  The concept names
-    [color], an inductive the file declares, which is a member of the struct
-    and so is not declared where the concept is (1 undeclared name).  A type
-    alias the concept names, [key], moves out ahead of it and leaves a member
-    alias behind; an inductive is never one of the concept's prerequisites
-    inside a struct, so it stays. *)
+(** The child module [List] collides with the [List] struct the standard
+    library's [list] is written as, so everything this file declares is
+    written inside the struct [CollisionStructConceptNamesInductive], and
+    [Keyed]'s concept at the top of the file.  The concept names [key], a
+    type alias, and [color], an inductive written as an enum, both members of
+    the struct, so neither was declared where the concept is.  Each moves out
+    ahead of the concept and leaves a member alias behind, through which the
+    struct still names it: both are spelled bare, wherever they are.  An
+    inductive written as a struct is spelled qualified by the struct, and
+    does not move (wip collision_struct_concept_names_struct). *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
