@@ -2865,90 +2865,68 @@ let plan_visibility s =
   in
   List.rev (List.fold_left top [] s)
 
-(** The inductives each module's body spells bare
-    ({!Scope_plan.local_inductives}), keyed by the path the body is written
-    under, as the render enters them: a file module that is not a library's
-    starts from {!file_local_inductives}, and every module body -- a
-    struct's or a functor's -- adds those it declares
-    ({!inductives_declared_in}), except a child a name collision flattens
-    into its parent's wrapper, whose elements are written beside its
-    parent's. *)
-let plan_local_inductives s =
-  let analysis = get_structure_analysis () in
-  let rec elems local sel acc =
-    List.fold_left
-      (fun acc (_, se) ->
-        match se with
-        | SEmodule {ml_mod_expr; _} -> module_expr local ml_mod_expr acc
-        | SEdecl _ | SEmodtype _ -> acc )
-      acc sel
-  and module_expr local me acc =
-    match me with
-    | MEfunctor (_, _, me) -> module_expr local me acc
-    | MEstruct (mp, sel) -> body (inductives_declared_in mp sel @ local) mp sel acc
-    | MEident _ | MEapply _ -> acc
-  and body local mp sel acc = elems local sel ((mp, local) :: acc) in
-  let wrapped =
-    List.filter_map
-      (fun (mi : Structure_analysis.module_info) -> if mi.wrapper_name <> None then Some mi.modpath else None)
-      analysis.sorted_modules
-  in
-  let top acc (mp, sel) =
-    if List.exists (ModPath.equal mp) wrapped then body [] mp sel acc
-    else
-      let local = file_local_inductives analysis in
-      if not (wraps_children mp sel) then body local mp sel acc
-      else
-        List.fold_left
-          (fun acc (l, se) ->
-            match se with
-            | SEmodule {ml_mod_expr = MEstruct (inner, sel'); _}
-              when Module_plan.wrapper_role (MPdot (mp, l)) = Some Module_plan.Flattened ->
-              body local inner sel' acc
-            | se -> elems local [(l, se)] acc )
-          ((mp, local) :: acc) sel
-  in
-  List.rev (List.fold_left top [] s)
-
-(** The module frames around each module's body ({!Scope_plan.frames}),
-    keyed by the path the body is written under, as the render enters them:
-    a module declared with a struct for its body, at the path its label
-    gives it in the body declaring it, is entered as a frame around its
-    body ({!pp_structure_elem}); a functor's body, a file module and a child
-    a name collision flattens into its parent's wrapper are not. *)
-let plan_frames s =
-  let rec elems frames body_mp sel acc =
+(** [plan_bodies ~start ~enter s] is what the render carries into each
+    module body of [s] it enters, keyed by the path the body is written
+    under: [start ~wrapper] into a file module's -- a library's, if
+    [wrapper] -- and into a child a name collision flattens into its
+    parent's wrapper, whose elements are written beside its parent's;
+    [enter state ~frame mp sel], from the [state] of the body declaring it,
+    into the body [mp] of elements [sel] of a module declared with a struct
+    for its body, which the render enters as a frame ({!pp_structure_elem}),
+    [frame] being that module, at the path its label gives it, or of a
+    functor, which it does not. *)
+let plan_bodies ~start ~enter s =
+  let rec elems state body_mp sel acc =
     List.fold_left
       (fun acc (l, se) ->
         match se with
-        | SEmodule {ml_mod_expr = MEstruct (mp, sel'); _} -> body (MPdot (body_mp, l) :: frames) mp sel' acc
-        | SEmodule {ml_mod_expr; _} -> module_expr frames ml_mod_expr acc
+        | SEmodule {ml_mod_expr = MEstruct (mp, sel'); _} ->
+          body (enter state ~frame:(Some (MPdot (body_mp, l))) mp sel') mp sel' acc
+        | SEmodule {ml_mod_expr; _} -> module_expr state ml_mod_expr acc
         | SEdecl _ | SEmodtype _ -> acc )
       acc sel
-  and module_expr frames me acc =
+  and module_expr state me acc =
     match me with
-    | MEfunctor (_, _, me) -> module_expr frames me acc
-    | MEstruct (mp, sel) -> body frames mp sel acc
+    | MEfunctor (_, _, me) -> module_expr state me acc
+    | MEstruct (mp, sel) -> body (enter state ~frame:None mp sel) mp sel acc
     | MEident _ | MEapply _ -> acc
-  and body frames mp sel acc = elems frames mp sel ((mp, frames) :: acc) in
+  and body state mp sel acc = elems state mp sel ((mp, state) :: acc) in
   let wrapped =
     List.filter_map
       (fun (mi : Structure_analysis.module_info) -> if mi.wrapper_name <> None then Some mi.modpath else None)
       (get_structure_analysis ()).sorted_modules
   in
   let top acc (mp, sel) =
-    if List.exists (ModPath.equal mp) wrapped || not (wraps_children mp sel) then body [] mp sel acc
+    let wrapper = List.exists (ModPath.equal mp) wrapped in
+    let state = start ~wrapper in
+    if wrapper || not (wraps_children mp sel) then body state mp sel acc
     else
       List.fold_left
         (fun acc (l, se) ->
           match se with
           | SEmodule {ml_mod_expr = MEstruct (inner, sel'); _}
             when Module_plan.wrapper_role (MPdot (mp, l)) = Some Module_plan.Flattened ->
-            body [] inner sel' acc
-          | se -> elems [] mp [(l, se)] acc )
-        ((mp, []) :: acc) sel
+            body state inner sel' acc
+          | se -> elems state mp [(l, se)] acc )
+        ((mp, state) :: acc) sel
   in
   List.rev (List.fold_left top [] s)
+
+(** The inductives each module's body spells bare
+    ({!Scope_plan.local_inductives}), as the render enters them: a file
+    module that is not a library's starts from {!file_local_inductives},
+    and every module body -- a struct's or a functor's -- adds those it
+    declares ({!inductives_declared_in}). *)
+let plan_local_inductives s =
+  let analysis = get_structure_analysis () in
+  plan_bodies s
+    ~start:(fun ~wrapper -> if wrapper then [] else file_local_inductives analysis)
+    ~enter:(fun local ~frame:_ mp sel -> inductives_declared_in mp sel @ local)
+
+(** The module frames around each module's body ({!Scope_plan.frames}),
+    innermost first, as the render enters them. *)
+let plan_frames =
+  plan_bodies ~start:(fun ~wrapper:_ -> []) ~enter:(fun frames ~frame _ _ -> Option.cata (fun m -> m :: frames) frames frame)
 
 (** The scope of each module the unit emits as a struct
     ({!Scope_plan}): how a definition of one of its members, written out of
