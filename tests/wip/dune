@@ -260,3 +260,14 @@
   (alias runtest)
   (deps record_literal_codomain_alias.t.exe)
   (action (run ./record_literal_codomain_alias.t.exe))))
+
+(subdir collision_struct_concept_names_inductive
+ (rule
+  (targets collision_struct_concept_names_inductive.t.exe)
+  (deps CollisionStructConceptNamesInductive.vo collision_struct_concept_names_inductive.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} collision_struct_concept_names_inductive.t.exe collision_struct_concept_names_inductive.cpp collision_struct_concept_names_inductive.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps collision_struct_concept_names_inductive.t.exe)
+  (action (run ./collision_struct_concept_names_inductive.t.exe))))
