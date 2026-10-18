@@ -249,3 +249,14 @@
   (alias runtest)
   (deps tyarg_implicit_type_binder.t.exe)
   (action (run ./tyarg_implicit_type_binder.t.exe))))
+
+(subdir collision_struct_class_concept
+ (rule
+  (targets collision_struct_class_concept.t.exe)
+  (deps User.vo collision_struct_class_concept.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} collision_struct_class_concept.t.exe collision_struct_class_concept.cpp collision_struct_class_concept.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps collision_struct_class_concept.t.exe)
+  (action (run ./collision_struct_class_concept.t.exe))))
