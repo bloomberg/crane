@@ -601,10 +601,6 @@ let register_template_static_accessor_ref r =
   | _ -> ()
 
 
-(** The modules whose frames the render has entered, innermost first, which
-    the plan of each body is checked against ({!Scope_plan.frames}). *)
-let entered_frames : Names.ModPath.t list ref = owned_list ~census:false "entered_frames"
-
 (** Track eponymous type info for method generation. When a module M contains an
     inductive type m (lowercase of M), functions taking shared_ptr<m> as first
     arg become methods on m. *)
@@ -667,7 +663,6 @@ let with_saved cells f =
     merely shadowing it, which is {!with_render_ctx}'s job. *)
 let module_frame_cells =
   [
-    Saver entered_frames;
     Saver eponymous_type_ref;
     Saver eponymous_record;
     Saver method_candidates;
