@@ -563,10 +563,12 @@ let unenclosed_element enclosure ?fields body =
 (** [element_decl ~module_ env d] is the declaration [d], written as an
     element of the module [module_]: printed where the tree puts it
     ({!Cpp_ast.print}), but a wrapper struct holding a wrapper module's
-    declarations, whose members are, and an assertion held back, which
-    writes nothing. *)
+    declarations, whose members are, and an assertion held back, which is
+    nothing here: it is written after the struct holding it back
+    ({!Cpp_print.held_back_assertions}). *)
 let element_decl ~module_ env d =
-  if Cpp_print.absorbs d || Cpp_print.is_held_back_assertion d then write_decl env d
+  if Cpp_print.is_held_back_assertion d then Cpp_ast.empty
+  else if Cpp_print.absorbs d then write_decl env d
   else Cpp_print.unprinted ~module_ env d
 
 (** Pretty-print a structure element (label, elem) pair. Handles modules, module
