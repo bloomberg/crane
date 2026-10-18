@@ -869,6 +869,15 @@ let unenclosed_element enclosure ?fields body =
   let m = Cpp_ast.module_ enclosure ?fields body in
   if Cpp_ast.body_is_empty body then m else Cpp_ast.(seq [m; text (fnl ())])
 
+(** [element_decl ~module_ env d] is the declaration [d], written as an
+    element of the module [module_]: printed where the tree puts it
+    ({!Cpp_ast.print}), but a wrapper struct holding a wrapper module's
+    declarations, whose members are, and an assertion held back, which
+    writes nothing. *)
+let element_decl ~module_ env d =
+  if Cpp_print.absorbs d || Cpp_print.is_held_back_assertion d then write_decl env d
+  else Cpp_print.unprinted ~module_ env d
+
 (** Pretty-print a structure element (label, elem) pair. Handles modules, module
     types, and declarations.
 
@@ -892,14 +901,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
        right before the declaration that produced it instead; helpers produced
        elsewhere keep their file-scope placement. *)
     let {Cpp_ind.rendered; helpers; _} = f d in
-    (* Each declaration, the helpers lifted out of it among them, is printed
-       where the tree puts it, as an element of [module_] ({!Cpp_ast.print}),
-       but a wrapper struct holding a wrapper module's declarations, whose
-       members are, and an assertion held back, which writes nothing here. *)
-    let element env d =
-      if Cpp_print.absorbs d || Cpp_print.is_held_back_assertion d then write_decl env d
-      else Cpp_print.unprinted ~module_ env d
-    in
+    let element = element_decl ~module_ in
     (* An erasure landing pad -- [using X = std::any;] -- travels to the very
        top of the file, ahead of the concepts.
 
@@ -1753,14 +1755,14 @@ let pp_wrapper_module_dual ~is_header mp func_sels =
   let generated = List.map process_sel func_sels in
   let all_results = file_views ~is_header (List.map fst generated) in
   let all_lifted = List.concat_map snd generated in
-  let render_decls ds = Cpp_ast.concat fnl (List.map (fun (d, env) -> write_decl env d) ds) in
   (* The declarations of its functions are members of its struct -- its
-     own, or one an inductive of its name writes -- printed as the tree
-     spells them. *)
+     own, or one an inductive of its name writes -- and everything else it
+     writes is an element of it, all printed as the tree spells them. *)
   let render_sel_specs (specs, _) =
     Cpp_ast.concat fnl (List.map (fun (d, env) -> Cpp_print.unprinted ~module_:mp env d) specs)
   in
-  let render_sel_defs (_, defs) = render_decls defs in
+  let element = element_decl ~module_:mp in
+  let render_sel_defs (_, defs) = Cpp_ast.concat fnl (List.map (fun (d, env) -> element env d) defs) in
   let specs = Cpp_ast.module_body mp (if is_header then List.map render_sel_specs all_results else []) in
   let defs_pp = joined render_sel_defs all_results in
   (* A lifted helper is emitted after the struct it was lifted out of, and its
@@ -1778,18 +1780,10 @@ let pp_wrapper_module_dual ~is_header mp func_sels =
   let lifted_split =
     if is_header then List.map lifted_views all_lifted else []
   in
-  let lifted_pp =
-    joined
-      (fun (def, _) -> write_decl (empty_env ()) def)
-      lifted_split
-  in
-  let lifted_specs_pp =
-    joined
-      (write_decl (empty_env ()))
-      (List.filter_map snd lifted_split)
-  in
-  let element = Cpp_ast.elements ~source:mp in
-  (specs, element defs_pp, element lifted_pp, element lifted_specs_pp)
+  let lifted_pp = joined (fun (def, _) -> element (empty_env ()) def) lifted_split in
+  let lifted_specs_pp = joined (element (empty_env ())) (List.filter_map snd lifted_split) in
+  let elements = Cpp_ast.elements ~source:mp in
+  (specs, elements defs_pp, elements lifted_pp, elements lifted_specs_pp)
 
 (** What analysing the structure concluded, for the passes that render it. *)
 let structure_analysis : Structure_analysis.t option ref = ref None
