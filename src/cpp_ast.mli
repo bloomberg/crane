@@ -49,8 +49,10 @@ type spelling =
           planned for its body and in its planned header scope, wherever it
           is written. *)
   | Member_of of ModPath.t
-      (** As a member of the module's struct: inside it, in the visibility
-          planned for its body. *)
+      (** As a member of the module's struct: as the header spells an
+          element of the module, but inside the struct whatever its planned
+          header scope says -- a library module writes its types at
+          namespace scope and its functions in a struct of its name. *)
 
 (** A declaration not yet printed, in the name environment it is printed
     in, with what placing the declarations it needs reads -- planned, so

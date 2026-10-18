@@ -1185,7 +1185,9 @@ let in_spelling spelling k =
   in
   match (spelling : Cpp_ast.spelling) with
   | Element_of mp -> in_body mp (fun () -> in_header_element_scope mp (fun ~in_struct:_ -> k ()))
-  | Member_of mp -> in_body mp (fun () -> with_render_ctx (fun c -> {(at_file_scope c) with rc_in_struct = true}) k)
+  | Member_of mp ->
+    in_body mp (fun () ->
+        in_header_element_scope mp (fun ~in_struct:_ -> with_render_ctx (fun c -> {c with rc_in_struct = true}) k) )
 
 let write_unprinted spelling u = in_spelling spelling (fun () -> Cpp_print.print_unprinted u)
 
