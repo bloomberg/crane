@@ -45,14 +45,16 @@ end
     reads off where the tree puts it. *)
 type spelling =
   | Element_of of ModPath.t
-      (** As the header spells an element of the module: in the visibility
-          planned for its body and in its planned header scope, wherever it
-          is written. *)
+      (** As an element of the module, wherever it is written: in its body
+          as planned -- the visibility, the inductives it spells bare, and
+          what the module frames around it demote and hold back -- and in
+          the header's planned scope for it, or, in the implementation, at
+          file scope, where a definition is qualified by its own plan. *)
   | Member_of of ModPath.t
-      (** As a member of the module's struct: as the header spells an
-          element of the module, but inside the struct whatever its planned
-          header scope says -- a library module writes its types at
-          namespace scope and its functions in a struct of its name. *)
+      (** As a member of the module's struct, which only the header writes:
+          as an element of the module, but inside the struct whatever its
+          planned header scope says -- a library module writes its types
+          at namespace scope and its functions in a struct of its name. *)
 
 (** A declaration not yet printed, in the name environment it is printed
     in, with what placing the declarations it needs reads -- planned, so
