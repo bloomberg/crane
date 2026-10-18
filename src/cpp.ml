@@ -2505,7 +2505,9 @@ let plan_ctor_aliases s =
           written (List.map snd e.member_defs) )
     in
     let wrapper_element se =
+      let mp = top_visible_mp () in
       with_render_ctx at_file_scope @@ fun () ->
+      writing_element_of mp @@ fun () ->
       match wrapper_element se with
       | Wrapper_nothing -> ()
       | Wrapper_instance (r, a, t) ->
