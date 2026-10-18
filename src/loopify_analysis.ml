@@ -278,7 +278,7 @@ let () = State.on_reset State.Unit clear_mutual_table
 
 (** Table mapping constructor struct names to their shared_ptr field indices.
     Populated from [Dstruct] definitions in {!transform_decl} and queried by
-    {!try_tmc_decompose} to determine which fields need [make_shared] wrapping
+    {!Loopify_tmc.make_cell} to determine which fields need [make_shared] wrapping
     in the direct-struct-construction path.
 
     The key pairs {!Common.ctor_owner_key} of the owning inductive with the

@@ -782,8 +782,7 @@ let is_cofix_body body = has_lazy_body body || body_contains_lazy_factory body
       {- {b TMC} ({!transform_tmc}) — if the recursion plan lowers it "tail
          modulo cons" (each non-tail call the one call of a constructor
          chain), each return read as one of the plan's chains
-         ({!planned_branch}); {!try_tmc_classify} reading the finished body
-         is the check.}
+         ({!planned_branch}).}
       {- {b General nontail} ({!transform_nontail}) — frame-based stack for all
          other patterns, including multi-call (e.g. fibonacci, tree traversal).}}
 
@@ -795,8 +794,7 @@ let is_cofix_body body = has_lazy_body body || body_contains_lazy_factory body
                        (forwarded to {!transform_nontail}).
     @param modulo_cons Whether the recursion is lowered tail modulo cons, and
                        around which chains, as planned
-                       ({!planned_modulo_cons}); [None] reads the finished
-                       body instead
+                       ({!planned_modulo_cons})
     @param check       Call checker for identifying recursive calls
     @param tparams     Template parameter context
     @param adopted     A body calling back into this function, to adopt as a
@@ -832,41 +830,12 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ~modulo_co
      only calls directly under a constructor, so a body mixing a branch that
      conses onto the recursive result with one that scrutinises it keeps a
      real C++ self-call in the second, and falls back to the frame stack. *)
-  let lowered branch =
-    let tmc = transform_tmc ~param_inits ~branch tparams check params ret_ty restored in
-    if classify check tmc = No_recursion then Some tmc else None
-  in
-  (* How the finished body decided before the plan did. *)
-  let finished () =
-    match try_tmc_classify check restored with
-    | Some () -> lowered (try_tmc_decompose check)
-    | None -> None
-  in
   let tmc =
     match modulo_cons with
-    | None -> finished ()
-    | Some modulo_cons ->
-      let planned =
-        match modulo_cons with Recursion_plan.Modulo_cons _ -> true | Not_modulo_cons -> false
-      in
-      (* A transform that cannot linearise the body declines the function,
-         so it agrees only with a plan that lowers it too. *)
-      let agrees () =
-        match finished () with
-        | Some _ -> planned
-        | None -> not planned
-        | exception Not_linearisable _ -> planned
-      in
-      if Probe.checking () && not (agrees ()) then
-        Probe.violation "recursion plan"
-          Pp.(
-            str "the recursion plan "
-            ++ str (if planned then "lowers " else "does not lower ")
-            ++ str (Option.default "a function" fn_name)
-            ++ str " tail modulo cons, and its finished body says otherwise");
-      ( match modulo_cons with
-      | Modulo_cons chains -> lowered (planned_branch chains check)
-      | Not_modulo_cons -> None )
+    | Recursion_plan.Modulo_cons chains ->
+      let tmc = transform_tmc ~param_inits ~chains tparams check params ret_ty restored in
+      if classify check tmc = No_recursion then Some tmc else None
+    | Not_modulo_cons -> None
   in
   match tmc with
   | Some tmc -> {nt_body = tmc; nt_outcome = Lp_tmc; nt_used_param_inits = true}
@@ -1220,15 +1189,14 @@ let planned_recursion r check body =
 
 (** Whether the non-tail recursion of the function [r] is lowered tail modulo
     cons, and around which chains, as the program's recursion plan has it
-    ({!Recursion_plan.modulo_cons}),
-    given the constructor fields planned behind the pointer.  A helper lifted
-    out of a definition for one of its local fixpoints is planned by that
-    fixpoint.  A member the backend generates itself has no Core body and no
-    reference, and its finished body decides ([None]); a function the plan
-    does not know is a violation, decided the same way. *)
+    ({!Recursion_plan.modulo_cons}), given the constructor fields planned
+    behind the pointer.  A helper lifted out of a definition for one of its
+    local fixpoints is planned by that fixpoint.  A member the backend
+    generates itself has no Core body and no reference, and is not lowered
+    so; nor is a function the plan does not know, which is a violation. *)
 let planned_modulo_cons r =
   match r with
-  | None -> None
+  | None -> Recursion_plan.Not_modulo_cons
   | Some r ->
     let pointer_fields = constructor_pointer_fields in
     let planned =
@@ -1238,12 +1206,14 @@ let planned_modulo_cons r =
             Recursion_plan.modulo_cons_local ~pointer_fields ~origin ~binder:(Lifted.binder h) )
       | None -> Recursion_plan.modulo_cons ~pointer_fields r
     in
-    if planned = None then
+    match planned with
+    | Some planned -> planned
+    | None ->
       Probe.violation "recursion plan"
         Pp.(
           str "the recursion plan does not say how " ++ str (Table.kername_of_global r)
           ++ str " recurses");
-    planned
+      Not_modulo_cons
 
 (** Transform a top-level function definition by loopifying its body.
 

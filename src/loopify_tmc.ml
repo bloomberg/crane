@@ -53,12 +53,6 @@ type tmc_branch_info = {
       (** Arguments to the innermost recursive call *)
 }
 
-(** Summary of TMC analysis for a whole function.  The type is a unit-like
-    marker: [Some ()] signals that all TMC branches are eligible and use the
-    same constructor and recursive field.  The per-branch details are carried
-    directly in the [tmc_cell_alloc] records inside each [tmc_branch]. *)
-type tmc_info = unit [@@warning "-34"]
-
 (** Where a loop assembles its result, decided once per function from the
     return type and the reuse policy.  Each says what [_write] points at and
     what the function returns, so the three cannot be mixed within a loop. *)
@@ -160,67 +154,6 @@ let make_cell ~cell_ty ~ctor_name ~factory_s args idx =
     tca_n_args = n_args;
     tca_ptr_fields = uptr_idxs }
 
-(** Try to decompose a return expression as a TMC-eligible branch.  Handles
-    both single-level ([cons x (RECURSE xs)]) and nested constructors
-    ([cons x (cons x (RECURSE xs))]).  Strips [CPPmove] wrapping before
-    checking.
-
-    {b Example.}  Given [cons x (cons y (f xs))]:
-    - Outer constructor [cons(x, HOLE)] is cell 0 (allocated first, returned to
-      the caller via [_head]).
-    - Inner constructor [cons(y, HOLE)] is cell 1 (allocated second, linked
-      into cell 0's recursive field).
-    - [f xs] is the recursive call that fills cell 1's HOLE.
-
-    Cells are returned outermost-first so the caller can chain them:
-    allocate cell 0, allocate cell 1, link cell 1 into cell 0, then loop with
-    [_last] pointing to cell 1 for the next iteration to fill.
-
-    @return [Some tmc_branch_info] with a chain of cells, outermost first *)
-let rec try_tmc_decompose check expr =
-  let expr' = match expr with CPPmove e -> e | e -> e in
-  match is_ctor_factory_call expr' with
-  | None -> None
-  | Some (_, cell_ty, ctor_name, factory_s, args) ->
-    let indexed = List.mapi (fun i a -> (i, a)) args in
-    let make_cell = make_cell ~cell_ty ~ctor_name ~factory_s args in
-    (* Find which args are direct recursive calls *)
-    let direct =
-      List.filter_map
-        (fun (i, a) ->
-          match check a with Some cs -> Some (i, cs) | None -> None)
-        indexed
-    in
-    ( match direct with
-    | [(idx, cs)] ->
-      (* Single direct recursive call — innermost cell.  Destination passing
-         needs a hole it can leave empty and point at, so the field the call
-         fills must be a [shared_ptr].  It is not always: a constructor may
-         nest one of another inductive whose corresponding field is a value
-         ([rnode (cons r nil)] fills [list rose]'s element).  There is no null
-         [rose] to write, so such a chain is not TMC-eligible and the function
-         stays plainly recursive. *)
-      let cell = make_cell idx in
-      if not (List.exists (fun f -> ptr_field_index f = idx) cell.tca_ptr_fields) then None
-      else Some { tmc_cells = [cell]; tmc_rec_args = cs.cs_args }
-    | [] ->
-      (* No direct call — look for a nested constructor wrapping a call *)
-      let nested =
-        List.filter_map
-          (fun (i, a) ->
-            if count_calls_expr check a = 1 then Some (i, a) else None)
-          indexed
-      in
-      ( match nested with
-      | [(idx, nested_expr)] ->
-        ( match try_tmc_decompose check nested_expr with
-        | Some inner ->
-          Some { tmc_cells = make_cell idx :: inner.tmc_cells;
-                 tmc_rec_args = inner.tmc_rec_args }
-        | None -> None )
-      | _ -> None )
-    | _ -> None (* Multiple direct calls — not TMC *) )
-
 (** The return expression [expr] as the branch of one of the recursion plan's
     [chains] ({!Recursion_plan.modulo_cons}): the factory calls it nests, each
     building its chain cell's constructor, holding the next in the cell's
@@ -242,89 +175,9 @@ let planned_branch chains check expr =
             Option.map (fun br -> {br with tmc_cells = this :: br.tmc_cells}) (follow held inner) )
     | _ -> None
   in
-  let planned =
-    List.find_map
-      (fun (ch : Recursion_plan.chain) -> follow expr (ch.around @ [ch.innermost]))
-      chains
-  in
-  ( if Probe.checking () then
-      let same a b =
-        List.equal
-          (fun x y ->
-            x.tca_type == y.tca_type && x.tca_ctor_name = y.tca_ctor_name
-            && x.tca_rec_field_idx = y.tca_rec_field_idx )
-          a.tmc_cells b.tmc_cells
-        && List.equal ( = ) a.tmc_rec_args b.tmc_rec_args
-      in
-      if not (Option.equal same planned (try_tmc_decompose check expr)) then
-        Probe.violation "recursion plan"
-          Pp.(str "a tail-modulo-cons branch is built of other cells than the plan's") );
-  planned
-
-(** Classify an entire function body for TMC eligibility.  Walks all return
-    positions (including inside match branches) and checks that:
-    - Every return is either a tail call, a base case (0 recursive calls), or a
-      TMC-eligible constructor wrapping
-    - All TMC branches use the {e same} constructor name and recursive field
-
-    The program's recursion plan decides this before any body is lowered
-    ({!Recursion_plan.modulo_cons}); this reading of the finished body checks
-    it, and decides for a member the backend generates itself.
-
-    @return [Some tmc_info] if the function is TMC-eligible *)
-let try_tmc_classify check body =
-  (* Scan a single return expression, threading (branches, compatible) *)
-  let scan_return_expr (branches, compatible) e =
-    if not compatible then (branches, false)
-    else
-      match check e with
-      | Some _ -> (branches, compatible) (* tail call — compatible *)
-      | None ->
-        let n = count_calls_expr check e in
-        if n = 0 then (branches, compatible) (* base case *)
-        else if n = 1 then (
-          match try_tmc_decompose check e with
-          | Some br -> (br :: branches, compatible)
-          | None -> (branches, false) )
-        else (branches, false)
-  in
-  (* Walk all return positions in statements, scanning each for TMC
-     eligibility. *)
-  let rec scan_stmts acc stmts = List.fold_left scan_stmt acc stmts
-  and scan_stmt acc = function
-    | Sreturn (Some e) -> scan_return_expr acc e
-    | Sif (_, then_br, else_br) ->
-      scan_stmts (scan_stmts acc then_br) else_br
-    | Scustom_case (_, _, _, branches, _) ->
-      List.fold_left (fun acc (_, _, body) -> scan_stmts acc body) acc branches
-    | Sswitch (_, _, branches, _) ->
-      List.fold_left (fun acc (_, body) -> scan_stmts acc body) acc branches
-    | Smatch (scrut, branches, default) ->
-      let acc =
-        List.fold_left (fun acc br -> scan_stmts acc br.smb_body) acc branches in
-      (match default with Some ss -> scan_stmts acc ss | None -> acc)
-    | Sblock stmts -> scan_stmts acc stmts
-    | _ -> acc
-  in
-  let (tmc_branches, compatible) = scan_stmts ([], true) body in
-  if not compatible || tmc_branches = [] then None
-  else
-    let first = List.hd tmc_branches in
-    (* All branches must use the same innermost constructor and recursive
-       field — the innermost cell determines _head/_last type and patching. *)
-    let inner br = List.rev br.tmc_cells |> List.hd in
-    let first_inner = inner first in
-    let all_same =
-      List.for_all
-        (fun br ->
-          let i = inner br in
-          i.tca_ctor_name = first_inner.tca_ctor_name
-          && i.tca_rec_field_idx = first_inner.tca_rec_field_idx )
-        tmc_branches
-    in
-    if all_same then Some ()
-    else None
-
+  List.find_map
+    (fun (ch : Recursion_plan.chain) -> follow expr (ch.around @ [ch.innermost]))
+    chains
 (** {3 TMC transformation}
 
     Converts non-tail recursive functions where the recursive call is wrapped
@@ -763,9 +616,9 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~storage br
     at the top level append [Scontinue]; inside visitor lambdas they do not
     (the lambda returns and the [while] loop naturally continues).
 
-    @param vt_ret  [Some ret_ty] when the return type is a value type
-    @param check   Call checker for identifying recursive calls
-    @param ti      TMC info from {!try_tmc_classify} *)
+    @param storage where the result is assembled
+    @param branch  a returned expression as a TMC branch ({!planned_branch})
+    @param check   Call checker for identifying recursive calls *)
 let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~storage ~branch check
     varying shadow_params =
   (* Emit code for a non-tail return in the TMC context.
@@ -804,13 +657,14 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~storage ~branch check
     destination-passing style.
 
     @param param_inits Optional custom initializers for shadow variables
+    @param chains the recursion plan's chains ({!Recursion_plan.modulo_cons})
     @param check Call checker for identifying recursive calls
-    @param ti TMC info from {!try_tmc_classify}
     @param params Function parameters
     @param ret_ty Return type
     @param body Function body
     @return Transformed body with TMC while loop *)
-let transform_tmc ?(param_inits = []) ~branch tparams check params ret_ty body =
+let transform_tmc ?(param_inits = []) ~chains tparams check params ret_ty body =
+  let branch = planned_branch chains check in
   let storage = storage_of ret_ty in
   let { ss_varying = varying; ss_varying_params = varying_params;
         ss_shadow_params = shadow_params; ss_subs = subs } =
