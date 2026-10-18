@@ -28,7 +28,7 @@ val is_held_back_assertion : Cpp_erasure.settled -> bool
 (** [unprinted ~module_ env decl] is [decl], written in the module
     [module_], to be printed where the tree puts it ({!Cpp_ast.print}),
     with what placing the declarations it needs reads, as planned. *)
-val unprinted : ?expected:Pp.t -> module_:Names.ModPath.t -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
+val unprinted : module_:Names.ModPath.t -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
 
 (** The text of a declaration not yet printed, printed in the render
     context and visibility its spelling enters.  Under [CRANE_CHECK_IR] it

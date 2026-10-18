@@ -4652,8 +4652,8 @@ let write_decl env settled =
     let text, needs = printed_decl ~print:pp_cpp_decl env settled in
     Cpp_ast.decl ~needs text
 
-let unprinted ?expected ~module_ env settled =
-  Cpp_ast.unprinted ?expected
+let unprinted ~module_ env settled =
+  Cpp_ast.unprinted
     ~needs:(needs_of ~templates:(List.map ctor_alias_name (planned_ctor_aliases ~module_ settled)) settled)
     env settled
 
@@ -4662,12 +4662,6 @@ let print_unprinted (u : Cpp_ast.unprinted) =
   if Probe.checking () && needs <> u.needs then
     Probe.violation "unprinted declarations"
       (Pp.str "a declaration printed where the tree puts it needs other declarations than planned where it was made");
-  ( match u.expected with
-  | Some expected when not (String.equal (Pp.string_of_ppcmds expected) (Pp.string_of_ppcmds text)) ->
-    Probe.violation "unprinted declarations"
-      Pp.(str "a declaration printed where the tree puts it reads otherwise than printed where it was made:"
-          ++ fnl () ++ text ++ fnl () ++ str "rather than" ++ fnl () ++ expected)
-  | Some _ | None -> () );
   text
 
 let cut2 = Cpp_ast.cut2

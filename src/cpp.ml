@@ -936,9 +936,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
           (List.map
              (fun (env, d) ->
                if Cpp_print.absorbs d || Cpp_print.is_held_back_assertion d then write_decl env d
-               else
-                 let expected = if Probe.checking () then Some (Cpp_ast.to_pp (write_decl env d)) else None in
-                 Cpp_print.unprinted ?expected ~module_ env d )
+               else Cpp_print.unprinted ~module_ env d )
              rendered )
     in
     (* A type class rendered at file scope is a concept, and a concept has no

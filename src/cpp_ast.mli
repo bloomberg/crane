@@ -56,10 +56,8 @@ type spelling =
 
 (** A declaration not yet printed, in the name environment it is printed
     in, with what placing the declarations it needs reads -- planned, so
-    known before it is printed -- and, under [CRANE_CHECK_IR], the text it
-    was printed as where it was made, which printing it where the tree puts
-    it must give again. *)
-type unprinted = {env : Common.env; declaration : Cpp_erasure.settled; needs : Needs.t; expected : Pp.t option}
+    known before it is printed. *)
+type unprinted = {env : Common.env; declaration : Cpp_erasure.settled; needs : Needs.t}
 
 type t = private
   | Text of Pp.t  (** Written as it is; nothing is placed by it. *)
@@ -106,9 +104,9 @@ val text : Pp.t -> t
 val empty : t
 val decl : needs:Needs.t -> Pp.t -> t
 
-(** [unprinted ?expected ~needs env d] is [d], printed in [env] where the
-    tree puts it, as [expected], if given. *)
-val unprinted : ?expected:Pp.t -> needs:Needs.t -> Common.env -> Cpp_erasure.settled -> t
+(** [unprinted ~needs env d] is [d], printed in [env] where the tree puts
+    it. *)
+val unprinted : needs:Needs.t -> Common.env -> Cpp_erasure.settled -> t
 
 (** [elements ~source t] is [t], spelled as the elements of [source] are. *)
 val elements : source:ModPath.t -> t -> t
