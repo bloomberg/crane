@@ -366,8 +366,13 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
 
      Previously, renamed ids were discarded and original names used for the
      signature, causing errors like: void method(tree t) { ... t0->v() ... }
-     where 't0' in the body didn't exist as a parameter. *)
-  let ids_with_types, inner_body = Mlutil.collect_lams body in
+     where 't0' in the body didn't exist as a parameter.
+
+     Only as many as the type declares, as for a function: a lambda beyond
+     them -- under a result that is an alias of a function type -- is the
+     closure the method returns, which is how its callers, reading the
+     type, call it. *)
+  let ids_with_types, inner_body = collect_typed_lams ty body in
   (* Eta-expansion: if the body has fewer lambdas than the ML type's domain,
      add missing parameters (innermost first, named _x0, _x1, ...).
      This handles functions like [tree_to_adder : tree -> nat -> nat] where

@@ -13007,3 +13007,14 @@
   (alias runtest)
   (deps record_field_function_alias.t.exe)
   (action (run ./record_field_function_alias.t.exe))))
+
+(subdir method_returns_function_alias
+ (rule
+  (targets method_returns_function_alias.t.exe)
+  (deps MethodReturnsFunctionAlias.vo method_returns_function_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} method_returns_function_alias.t.exe method_returns_function_alias.cpp method_returns_function_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps method_returns_function_alias.t.exe)
+  (action (run ./method_returns_function_alias.t.exe))))
