@@ -270,9 +270,29 @@ type template = {name : string; homed : bool; holder : bool; declaration : Pp.t}
     it declares. *)
 type forward = {struct_ : string; forward_declaration : Pp.t}
 
-(** A file as the driver assembled it: what opens it, and its sections, in
-    the order written. *)
-type translation_unit = {prologue : Pp.t; sections : t list}
+(** A file as the driver assembled it, in the order written: the forward
+    declarations of the structs it names ahead of their definitions, then
+    one section after another, each a chunk at namespace scope.  A section
+    of groups writes nothing if every group is empty, and otherwise its
+    non-empty groups, with a break between each two -- a line break between
+    erased aliases -- and one after the last. *)
+type translation_unit = {
+  forward_declarations : Pp.t list;
+  erased_aliases : t list;
+      (** Erasure landing pads ([using X = std::any;]) and the imports of
+          promoted aliases, ahead of the concepts that spell them. *)
+  concept_prerequisites : t list;  (** The top-level elements the concepts cannot be read without. *)
+  concepts : t list;  (** The concepts only namespace scope can hold. *)
+  hoisted_structs : t list;  (** The structs of the modules declared ahead of the file. *)
+  lifted_specs : t list;
+      (** The declarations of lifted helpers, ahead of everything that could
+          call them. *)
+  body : t;  (** The modules, each at its turn. *)
+  deferred_definitions : t list;  (** Out-of-line definitions, each after a break. *)
+  deferred_members : t list;
+      (** Datatype members whose bodies name a module's struct, last of
+          all, after a break. *)
+}
 
 (** A translation unit with every due declaration placed. *)
 type scheduled
@@ -285,8 +305,7 @@ type scheduled
     declaration that writes it: a homed one, in each module struct whose
     members write it, in front of the innermost member holding it, any
     other in front of the innermost chunk at namespace scope, holders in
-    front of aliases.  One written
-    outside every chunk goes after the prologue; one nothing writes, nowhere.
+    front of aliases.  One nothing writes is declared nowhere.
     A forward declaration goes in front of the innermost chunk at namespace
     scope holding the first declaration that names its struct, unless that
     chunk defines the struct. *)

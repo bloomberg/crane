@@ -207,12 +207,37 @@ let rec to_pp = function
 
 type template = {name : string; homed : bool; holder : bool; declaration : Pp.t}
 type forward = {struct_ : string; forward_declaration : Pp.t}
-type translation_unit = {prologue : Pp.t; sections : t list}
+type translation_unit = {
+  forward_declarations : Pp.t list;
+  erased_aliases : t list;
+  concept_prerequisites : t list;
+  concepts : t list;
+  hoisted_structs : t list;
+  lifted_specs : t list;
+  body : t;
+  deferred_definitions : t list;
+  deferred_members : t list;
+}
 type scheduled = {opening : Pp.t; body : t list}
+
+let sections u =
+  let non_empty = List.filter (fun t -> not (is_empty t)) in
+  let groups sep l = match non_empty l with [] -> empty | l -> Seq [concat sep l; Text (cut2 ())] in
+  let after_breaks l = Seq (List.concat_map (fun t -> [Text (cut2 ()); t]) (non_empty l)) in
+  List.map top_level
+    [ groups Pp.fnl u.erased_aliases;
+      groups cut2 u.concept_prerequisites;
+      groups cut2 u.concepts;
+      groups cut2 u.hoisted_structs;
+      groups cut2 u.lifted_specs;
+      u.body;
+      after_breaks u.deferred_definitions;
+      (match non_empty u.deferred_members with [] -> empty | l -> Seq [Text (cut2 ()); concat cut2 l]) ]
 
 (* The chunks are numbered in the order written, in both passes: a chunk at
    namespace scope and a member of a struct each take the next number. *)
 let schedule ~templates ~forwards u =
+  let u_sections = sections u in
   let template_slots = Hashtbl.create 16 and placed_in = Hashtbl.create 16 in
   let struct_slot = Hashtbl.create 16 and defined_in = Hashtbl.create 16 in
   let count = ref 0 in
@@ -256,7 +281,7 @@ let schedule ~templates ~forwards u =
       List.iter (fun name -> if not (Hashtbl.mem struct_slot name) then Hashtbl.replace struct_slot name top) needs.names;
       needs.defines
   in
-  List.iter (fun t -> ignore (first_uses ~top:None ~member:None ~scope:None t)) u.sections;
+  List.iter (fun t -> ignore (first_uses ~top:None ~member:None ~scope:None t)) u_sections;
   let templates_due k =
     let due = List.filter (fun (a : template) -> List.mem a.name (Hashtbl.find_all template_slots k)) templates in
     let holders, aliases = List.partition (fun (a : template) -> a.holder) due in
@@ -295,8 +320,11 @@ let schedule ~templates ~forwards u =
       in
       Module {m with fields; members}
   in
-  let body = List.map placed u.sections in
-  let opening = match templates_due None with [] -> u.prologue | l -> Pp.(u.prologue ++ to_pp (Declarations l)) in
+  let body = List.map placed u_sections in
+  let prologue =
+    match u.forward_declarations with [] -> Pp.mt () | l -> Pp.(prlist_with_sep fnl (fun d -> d) l ++ cut2 ())
+  in
+  let opening = match templates_due None with [] -> prologue | l -> Pp.(prologue ++ to_pp (Declarations l)) in
   {opening; body}
 
 (* Every declaration is printed before any text is joined: whether a member

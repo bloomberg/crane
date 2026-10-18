@@ -3197,7 +3197,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     List.filter_map
       (fun (mp, _) -> if is_modfile mp then Some mp else None) s
   in
-  let wrapper_parts, deferred_defs, p, moved =
+  let wrapper_parts, deferred_definitions, p, moved =
     with_visibility (toplevel_visibility initial_mps) @@ fun () ->
     let analysis = get_structure_analysis () in
     let is_func_decl (_, se) =
@@ -3261,12 +3261,7 @@ let do_struct_with_decl_tracking ~is_header f s =
                 else [] )
               wrapper_names )
     in
-    let deferred_defs =
-      Cpp_ast.seq
-        (List.map
-           (fun w -> if Cpp_ast.is_empty w.wr_defs then Cpp_ast.empty else Cpp_ast.(seq [text (cut2 ()); w.wr_defs]))
-           wrapper_parts )
-    in
+    let deferred_definitions = List.map (fun w -> w.wr_defs) wrapper_parts in
     let ppl ((mp, sel), wrapper_name) =
       in_planned_visibility mp @@ fun () ->
       Cpp_ind.with_planned_local_inductives mp @@ fun () ->
@@ -3433,26 +3428,16 @@ let do_struct_with_decl_tracking ~is_header f s =
         | Some main_p -> [p_pre; main_p]
         | None -> [p_pre] )
     in
-    (wrapper_parts, deferred_defs, p, moved_together (List.map snd placed))
+    (wrapper_parts, deferred_definitions, p, moved_together (List.map snd placed))
   in
-  (* A section of the file: its groups, [sep] between each two, closed by a
-     break; nothing, where it has none. *)
-  let group sep = function [] -> Cpp_ast.empty | l -> Cpp_ast.(seq [concat sep l; text (cut2 ())]) in
-  let hoisted_erased_aliases =
+  let erased_aliases =
     let imports = if is_header then List.map (fun i -> Cpp_ast.text (str i)) !file_layout.promoted_imports else [] in
     let pads = if is_header then !file_layout.erased_aliases else [] in
-    group fnl (imports @ Cpp_ind.render_section pads)
+    imports @ Cpp_ind.render_section pads
   in
-  let hoisted_concept_prereqs = group cut2 moved.prereqs in
-  let hoisted_concepts = group cut2 moved.concepts in
-  let forward_decls =
-    let structs = if is_header then !file_layout.forward_decls else [] in
-    (* Aliases go in front of the text that writes them, and only what no
-       text writes is left for the prologue; see {!Cpp_ast.schedule}. *)
-    match structs with
-    | [] -> mt ()
-    | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
-  in
+  (* Aliases go in front of the text that writes them, and only what no text
+     writes is left for the prologue; see {!Cpp_ast.schedule}. *)
+  let forward_declarations = if is_header then !file_layout.forward_decls else [] in
   (* Declared ahead of everything that could call them, which is everything:
      a lifted helper's definition is placed after the struct it came out of,
      and its callers are that struct's members.  This goes after the concepts
@@ -3461,37 +3446,30 @@ let do_struct_with_decl_tracking ~is_header f s =
      needs those declared, not complete.  Redeclaring a helper that did land
      before its uses is legal and costs a line; deciding which those are would
      cost the property that makes this correct. *)
-  let lifted_fun_specs =
+  let lifted_specs =
     if is_header then
-      let parts =
-        List.filter_map
-          (fun w -> if Cpp_ast.is_empty w.wr_lifted_specs then None else Some w.wr_lifted_specs)
-          wrapper_parts
-        @ Cpp_ind.render_section !file_layout.lifted_specs
-      in
-      group cut2 (List.filter (fun x -> not (Cpp_ast.is_empty x)) parts)
-    else
-      Cpp_ast.empty
+      List.map (fun w -> w.wr_lifted_specs) wrapper_parts @ Cpp_ind.render_section !file_layout.lifted_specs
+    else []
   in
-  (* Alongside the lifted helpers and for the same reason, in front of them
-     because a helper's own declaration may name one of these. *)
-  let hoisted_wrappers = group cut2 moved.hoisted in
   (* Last of all: a datatype's method whose body names a module's struct, which
      is emitted after every datatype.  Nothing else in the header is later. *)
-  let deferred_members =
-    let defs = if is_header then !file_layout.member_defs else [] in
-    match Cpp_ind.render_section defs with
-    | [] -> Cpp_ast.empty
-    | ds -> Cpp_ast.(seq [text (cut2 ()); concat cut2 ds])
-  in
-  (* Each a chunk of its own, so that an alias no single element claimed --
-     one whose only use is in a section assembled out of several -- still
-     lands in front of the first section that writes it rather than in the
-     prologue. *)
-  let sections =
-    List.map Cpp_ast.top_level
-      [ hoisted_erased_aliases; hoisted_concept_prereqs; hoisted_concepts; hoisted_wrappers; lifted_fun_specs; p;
-        deferred_defs; deferred_members ]
+  let deferred_members = Cpp_ind.render_section (if is_header then !file_layout.member_defs else []) in
+  (* Each section a chunk of its own, so that an alias no single element
+     claimed -- one whose only use is in a section assembled out of several
+     -- still lands in front of the first section that writes it rather than
+     in the prologue.  The structs hoisted ahead of the file go alongside the
+     lifted helpers and for the same reason, in front of them because a
+     helper's own declaration may name one of them. *)
+  let unit =
+    { Cpp_ast.forward_declarations;
+      erased_aliases;
+      concept_prerequisites = moved.prereqs;
+      concepts = moved.concepts;
+      hoisted_structs = moved.hoisted;
+      lifted_specs;
+      body = p;
+      deferred_definitions;
+      deferred_members }
   in
   let templates =
     List.map
@@ -3512,7 +3490,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   let written = if is_header then Common.Intf else Common.Impl in
   let file =
     Cpp_ast.print ~write:(Cpp_ind.write_unprinted ~file:written)
-      (Cpp_ast.schedule ~templates ~forwards {prologue = forward_decls; sections})
+      (Cpp_ast.schedule ~templates ~forwards unit)
   in
   Cpp_print.check_ctor_alias_plan ~file:written;
   Cpp_print.check_file_scope_types ~file:written;

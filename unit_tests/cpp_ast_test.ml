@@ -26,9 +26,21 @@ let leaf ?templates ?names ?defines s = Cpp_ast.decl ~needs:(needs ?templates ?n
 let template ?(homed = false) ?(holder = false) name = {Cpp_ast.name; homed; holder; declaration = Pp.str ("<" ^ name ^ ">")}
 let forward s = {Cpp_ast.struct_ = s; forward_declaration = Pp.str ("fwd:" ^ s)}
 
+(* A unit whose body is [sections], nothing in any other section. *)
+let unit_of ?(prologue = []) sections =
+  { Cpp_ast.forward_declarations = prologue;
+    erased_aliases = [];
+    concept_prerequisites = [];
+    concepts = [];
+    hoisted_structs = [];
+    lifted_specs = [];
+    body = Cpp_ast.seq sections;
+    deferred_definitions = [];
+    deferred_members = [] }
+
 (* The text, without whitespace: breaks and separators are formatting. *)
 let text ?(templates = []) ?(forwards = []) sections =
-  let doc = Cpp_ast.print ~write:(fun _ _ -> Pp.str "?") (Cpp_ast.schedule ~templates ~forwards {prologue = Pp.str "P"; sections}) in
+  let doc = Cpp_ast.print ~write:(fun _ _ -> Pp.str "?") (Cpp_ast.schedule ~templates ~forwards (unit_of ~prologue:[Pp.str "P"] sections)) in
   String.to_seq (Pp.string_of_ppcmds doc)
   |> Seq.filter (fun c -> not (List.mem c [' '; '\n'; '\t']))
   |> String.of_seq
@@ -84,7 +96,7 @@ let () =
       (Cpp_ast.module_body m [Cpp_ast.text (Pp.str "y;"); leaf ~templates:["T"] "/// z"])
   in
   let printed = Pp.string_of_ppcmds (Cpp_ast.print ~write:(fun _ _ -> Pp.str "?") (Cpp_ast.schedule ~templates:[template ~homed:true "T"] ~forwards:[]
-    {prologue = Pp.mt (); sections = [documented]})) in
+    (unit_of [documented]))) in
   check_text "a member opening with a doc comment follows a newline, whatever is due in front of it"
     (String.sub printed 0 6) "y;\n<T>";
   check_text "holders go in front of aliases, each in the order given" (text
@@ -132,7 +144,7 @@ let () =
         | Cpp_ast.Element_of mp -> "E(" ^ ModPath.to_string mp ^ ")"
         | Member_of mp -> "M(" ^ ModPath.to_string mp ^ ")" )
     in
-    Pp.string_of_ppcmds (Cpp_ast.print ~write (Cpp_ast.schedule ~templates ~forwards:[] {prologue = Pp.mt (); sections}))
+    Pp.string_of_ppcmds (Cpp_ast.print ~write (Cpp_ast.schedule ~templates ~forwards:[] (unit_of sections)))
   in
   check_text "a declaration not yet printed is spelled as an element of the module of the group around it"
     (spelled [top (Cpp_ast.elements ~source:m (unprinted ()))]) "E(F.M)";
@@ -174,10 +186,31 @@ let () =
     let l = [leaf "x;"; Cpp_ast.empty; Cpp_ast.elements ~source:m (unprinted ())] in
     Pp.string_of_ppcmds
       (Cpp_ast.print ~write:(fun _ _ -> Pp.str printed)
-         (Cpp_ast.schedule ~templates:[] ~forwards:[] {prologue = Pp.mt (); sections = [Cpp_ast.joined l]}) )
+         (Cpp_ast.schedule ~templates:[] ~forwards:[] (unit_of [Cpp_ast.joined l])) )
   in
   check_text "a joined declaration printed opening a doc comment follows a newline" (joined_as "/// d") "x;\n/// d";
   check "any other joined declaration follows a break"
     (let s = joined_as "d" in String.starts_with ~prefix:"x;" s && String.ends_with ~suffix:"d" s && not (String.contains s '\n'));
   check "nothing joined is nothing" (Cpp_ast.is_empty (Cpp_ast.joined [Cpp_ast.empty; Cpp_ast.empty]));
-  check_text "one thing joined is that thing" (raw (Cpp_ast.joined [Cpp_ast.empty; leaf "x;"])) "x;"
+  check_text "one thing joined is that thing" (raw (Cpp_ast.joined [Cpp_ast.empty; leaf "x;"])) "x;";
+  let t s = Cpp_ast.text (Pp.str s) in
+  let full =
+    { Cpp_ast.forward_declarations = [Pp.str "f1"; Pp.str "f2"];
+      erased_aliases = [t "e1"; t "e2"];
+      concept_prerequisites = [t "p"];
+      concepts = [t "c1"; Cpp_ast.empty; t "c2"];
+      hoisted_structs = [t "h"];
+      lifted_specs = [Cpp_ast.empty];
+      body = t "b";
+      deferred_definitions = [t "d1"; Cpp_ast.empty; t "d2"];
+      deferred_members = [t "m"] }
+  in
+  let printed u = Pp.string_of_ppcmds (Cpp_ast.print ~write:(fun _ _ -> Pp.str "?") (Cpp_ast.schedule ~templates:[] ~forwards:[] u)) in
+  let squeezed u = String.of_seq (Seq.filter (fun c -> not (List.mem c [' '; '\n'])) (String.to_seq (printed u))) in
+  check_text "a unit writes its forward declarations, then its sections in order, skipping empty groups"
+    (squeezed full) "f1f2e1e2pc1c2hbd1d2m";
+  check "erased aliases are separated by a line break"
+    (let s = printed {full with forward_declarations = []; concept_prerequisites = []; concepts = []; hoisted_structs = []; body = Cpp_ast.empty;
+                     deferred_definitions = []; deferred_members = []} in
+     String.starts_with ~prefix:"e1\ne2" s);
+  check "a unit with nothing in it writes nothing" (printed (unit_of []) = "")
