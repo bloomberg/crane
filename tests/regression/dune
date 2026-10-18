@@ -12963,3 +12963,14 @@
   (alias runtest)
   (deps record_field_carrier_alias.t.exe)
   (action (run ./record_field_carrier_alias.t.exe))))
+
+(subdir record_module_function_qualifier
+ (rule
+  (targets record_module_function_qualifier.t.exe)
+  (deps RecordModuleFunctionQualifier.vo record_module_function_qualifier.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_module_function_qualifier.t.exe record_module_function_qualifier.cpp record_module_function_qualifier.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_module_function_qualifier.t.exe)
+  (action (run ./record_module_function_qualifier.t.exe))))

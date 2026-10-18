@@ -1774,8 +1774,14 @@ and pp_cpp_expr env args t =
       | GlobRef.VarRef v -> `Named (Cpp_name.unqualified (Id.to_string v))
       | _ ->
       (* Check if this function is inside an eponymous template struct. If so,
-         type args go on the struct name, not the function name. *)
-      match (Module_plan.eponymous_record_containing x, tys) with
+         type args go on the struct name, not the function name.  A record of
+         no parameters merges into a struct that is no template, whose
+         functions are spelled as any module's are. *)
+      let template_record = function
+        | Some record_ref when num_ind_params record_ref > 0 -> Some record_ref
+        | Some _ | None -> None
+      in
+      match (template_record (Module_plan.eponymous_record_containing x), tys) with
       | Some record_ref, _ :: _ ->
         (* Function inside eponymous template struct with type args: Generate
            StructName<int, ...>::template funcName<Args> for static methods. We
