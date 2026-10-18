@@ -3046,6 +3046,24 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
   in
   fixpoint (seed, Ref.User.Set.empty) Names.Label.Set.empty
 
+(** What placing top-level elements moves out of their places, each to a
+    section of its own ahead of the body, in the order written: the structs
+    of modules planned to be declared ahead of the file
+    ({!hoisted_structs}), the elements the concepts cannot be read without
+    ({!concept_prereqs}), and the concepts only namespace scope can hold. *)
+type moved = {hoisted : Cpp_ast.t list; prereqs : Cpp_ast.t list; concepts : Cpp_ast.t list}
+
+let nothing_moved = {hoisted = []; prereqs = []; concepts = []}
+
+(** Everything [l] moves, in the order of [l]. *)
+let moved_together l =
+  { hoisted = List.concat_map (fun m -> m.hoisted) l;
+    prereqs = List.concat_map (fun m -> m.prereqs) l;
+    concepts = List.concat_map (fun m -> m.concepts) l }
+
+(** What stays of each of [l], in order, and what they move. *)
+let gathered l = (List.map fst l, moved_together (List.map snd l))
+
 (** Main structure renderer with declaration tracking.
 
     PASS 1: Render every wrapper module's functions. PASS 2: Render types,
@@ -3107,16 +3125,15 @@ let do_struct_with_decl_tracking ~is_header f s =
      top ({!hoisted_structs}); an element the concepts cannot be read without
      travels with them -- decided by label, because that is what the element
      knows about itself, against [prereq_labels] ({!concept_prereqs}); and
-     everything else stays where it is.  The first two are collected into
-     [hoisted] and [prereqs], newest first, by the module being written
-     ([ppl] below), and so are the concepts the element declares, which go
-     to the top of the file, into [concepts]. *)
+     everything else stays where it is.  Placing an element gives what
+     stays and what it moved ({!moved}), the concepts it declares, which go
+     to the top of the file, among them. *)
   Cpp_print.file_scope_type_names := if is_header then !file_layout.file_scope_types else CString.Set.empty;
   Cpp_print.constrained_structs :=
     if is_header then
       List.map (fun (f : Cpp_print.forward_declaration) -> (f.fwd_ref, f.fwd_struct)) !file_layout.constrained_decls
     else [];
-  let place ~wrapper_specs ~prereq_labels ~hoisted ~prereqs ~concepts ~source ((l, se) as x) =
+  let place ~wrapper_specs ~prereq_labels ~source ((l, se) as x) =
     let defined = if is_header then declarations [(source, [x])] else [] in
     let homed =
       List.filter_map (fun (name, d) -> if List.memq d defined then Some name else None) !file_layout.wrapper_homes
@@ -3137,7 +3154,6 @@ let do_struct_with_decl_tracking ~is_header f s =
             ++ str " into its structs, and was planned to write those of "
             ++ prlist_with_sep pr_comma str homed )
     end;
-    concepts := List.rev_append c !concepts;
     let hoists =
       is_header
       && (not (!render_ctx).rc_in_struct)
@@ -3148,9 +3164,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     in
     (* A struct's member is not a chunk at namespace scope: the struct is. *)
     let p = if (!render_ctx).rc_in_struct then p else Cpp_ast.top_level p in
-    if hoists then (
-      hoisted := p :: !hoisted;
-      Cpp_ast.empty )
+    if hoists then (Cpp_ast.empty, {nothing_moved with hoisted = [p]; concepts = c})
     else if Names.Label.Set.mem l prereq_labels && is_modfile source && not (Cpp_ast.is_empty p) then (
       (* The prerequisites are asked for by label, of the files' top-level
          elements: a flattened child's element sharing the label is not one.
@@ -3160,8 +3174,8 @@ let do_struct_with_decl_tracking ~is_header f s =
          which the concepts can be read, and leaves behind a member alias of
          each type it declares, through which the struct, and every
          reference qualified by it, still names it. *)
-      prereqs := p :: !prereqs;
-      if not (!render_ctx).rc_in_struct then Cpp_ast.empty
+      let moved = {nothing_moved with prereqs = [p]; concepts = c} in
+      if not (!render_ctx).rc_in_struct then (Cpp_ast.empty, moved)
       else
         let stand_ins = Cpp_print.stand_ins p in
         if Probe.checking () && stand_ins = [] then
@@ -3169,8 +3183,8 @@ let do_struct_with_decl_tracking ~is_header f s =
             Pp.(
               str "the element " ++ Names.Label.print l ++ str " of the module " ++ str (ModPath.to_string source)
               ++ str " is a member of a struct written ahead of the concepts, outside it, and nothing stands in for it" );
-        Cpp_ast.elements ~source (Cpp_ast.concat Pp.fnl stand_ins) )
-    else p
+        (Cpp_ast.elements ~source (Cpp_ast.concat Pp.fnl stand_ins), moved) )
+    else (p, {nothing_moved with concepts = c})
   in
   Cpp_print.start_ctor_alias_census ();
   Cpp_print.start_file_scope_census ();
@@ -3183,7 +3197,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     List.filter_map
       (fun (mp, _) -> if is_modfile mp then Some mp else None) s
   in
-  let wrapper_parts, deferred_defs, p, hoisted, prereqs, concepts =
+  let wrapper_parts, deferred_defs, p, moved =
     with_visibility (toplevel_visibility initial_mps) @@ fun () ->
     let analysis = get_structure_analysis () in
     let is_func_decl (_, se) =
@@ -3256,21 +3270,24 @@ let do_struct_with_decl_tracking ~is_header f s =
     let ppl ((mp, sel), wrapper_name) =
       in_planned_visibility mp @@ fun () ->
       Cpp_ind.with_planned_local_inductives mp @@ fun () ->
-      let hoisted = ref [] and prereqs = ref [] and concepts = ref [] in
       let wrapper_specs name =
         match List.find_opt (fun w -> String.equal w.wr_name name) wrapper_parts with
         | Some w -> w.wr_specs
         | None -> Cpp_ast.module_body mp []
       in
-      let place_in source = place ~wrapper_specs ~prereq_labels ~hoisted ~prereqs ~concepts ~source in
+      let place_in source = place ~wrapper_specs ~prereq_labels ~source in
       let f = place_in mp in
+      let joined_placed sel =
+        let stays, moved = gathered (List.map f sel) in
+        (Cpp_ast.joined stays, moved)
+      in
       let old_decls = !current_structure_decls in
       current_structure_decls := sel;
-      let p =
+      let placed =
         match wrapper_name with
         | Some name ->
           let type_sels = List.filter (fun x -> not (is_func_decl x)) sel in
-          let type_pp = joined f type_sels in
+          let type_pp, type_moved = joined_placed type_sels in
           (* The wrapper struct belongs at its module's own place in the
              topological order, whether or not the module also declares types.
              A later module's constant is initialised inside its struct body, so
@@ -3278,16 +3295,14 @@ let do_struct_with_decl_tracking ~is_header f s =
              wrapper after everything else, as a leftover, is too late.  Unless
              a struct of its name written around an inductive was planned to
              hold its declarations, and has ({!file_layout}). *)
-          let wrapper_pp =
+          let wrapper_pp, wrapper_moved =
             let specs = wrapper_specs name in
             if (not is_header) || Cpp_ast.body_is_empty specs || List.mem_assoc name !file_layout.wrapper_homes then
-              Cpp_ast.empty
+              (Cpp_ast.empty, nothing_moved)
             else
               let struct_pp = pp_wrapper_struct name specs in
-              if struct_hoists mp struct_pp then (
-                hoisted := struct_pp :: !hoisted;
-                Cpp_ast.empty )
-              else struct_pp
+              if struct_hoists mp struct_pp then (Cpp_ast.empty, {nothing_moved with hoisted = [struct_pp]})
+              else (struct_pp, nothing_moved)
           in
           (* A declaration lifted out of this module -- an instance struct -- is
              due at the same point, and for the same reason: a later module's
@@ -3303,7 +3318,7 @@ let do_struct_with_decl_tracking ~is_header f s =
              up in (see {!Cpp_ast.schedule}). *)
           let wrapper_pp = Cpp_ast.top_level wrapper_pp in
           let lifted_pp = Cpp_ast.top_level lifted_pp in
-          Cpp_ast.joined [type_pp; wrapper_pp; lifted_pp]
+          (Cpp_ast.joined [type_pp; wrapper_pp; lifted_pp], moved_together [type_moved; wrapper_moved])
         | None ->
           (* Which children a name collision forces inside a wrapper struct is
              layout, decided by {!Structure_analysis} before any rendering began;
@@ -3340,14 +3355,16 @@ let do_struct_with_decl_tracking ~is_header f s =
               | SEmodule {ml_mod_expr = MEstruct (inner_mp, inner_sel); _} ->
                 in_planned_visibility inner_mp (fun () ->
                     Cpp_ind.with_planned_local_inductives inner_mp @@ fun () ->
-                    Cpp_ast.module_ enclosure
-                      (Cpp_ast.module_body inner_mp (List.map (place_in inner_mp) (List.filter keep inner_sel))) )
-              | _ -> Cpp_ast.empty
+                    let stays, moved = gathered (List.map (place_in inner_mp) (List.filter keep inner_sel)) in
+                    (Cpp_ast.module_ enclosure (Cpp_ast.module_body inner_mp stays), moved) )
+              | _ -> (Cpp_ast.empty, nothing_moved)
             in
             let body enclosure ~keep sel =
               let children, own = List.partition flattened sel in
               let own = List.map f own in
-              Cpp_ast.module_body mp (own @ List.map (child enclosure ~keep) children)
+              let children = List.map (child enclosure ~keep) children in
+              let stays, moved = gathered (own @ children) in
+              (Cpp_ast.module_body mp stays, moved)
             in
             if is_header then (
               (* A module type is a concept, and so is a class, and C++ has no
@@ -3367,30 +3384,42 @@ let do_struct_with_decl_tracking ~is_header f s =
                 let concept = class_concept_element ~module_:mp d in
                 Cpp_ast.elements ~source:mp Cpp_ast.(seq [text (pp_doc_comment l); concept])
               in
-              List.iter
-                (fun ((_, se) as x) ->
-                  let pps = match se with SEmodtype _ -> [f x] | _ -> List.map class_concept (declared_classes [x]) in
-                  List.iter (fun pp -> if not (Cpp_ast.is_empty pp) then concepts := pp :: !concepts) pps )
-                sel;
+              let concepts_moved =
+                List.map
+                  (fun ((_, se) as x) ->
+                    let concepts, moved =
+                      match se with
+                      | SEmodtype _ ->
+                        let concept, moved = f x in
+                        ([concept], moved)
+                      | _ -> (List.map class_concept (declared_classes [x]), nothing_moved)
+                    in
+                    {moved with concepts = moved.concepts @ List.filter (fun pp -> not (Cpp_ast.is_empty pp)) concepts} )
+                  sel
+              in
               let sel = List.filter (fun (_, se) -> match se with SEmodtype _ -> false | _ -> true) sel in
-              let body =
+              let body, body_moved =
                 with_render_ctx (fun c -> {c with rc_in_struct = true}) (fun () -> body In_enclosing_scope ~keep:is_func_decl sel)
               in
-              if Cpp_ast.body_is_empty body then Cpp_ast.empty
+              let moved = moved_together (concepts_moved @ [body_moved]) in
+              if Cpp_ast.body_is_empty body then (Cpp_ast.empty, moved)
               else
-                Cpp_ast.top_level
-                  (Cpp_ast.module_
-                     (Struct {head = plain_struct (str parent_name); layout = Block})
-                     body ) )
-            else Cpp_ast.module_ Out_of_line (body Out_of_line ~keep:(fun _ -> true) sel) )
+                ( Cpp_ast.top_level
+                    (Cpp_ast.module_
+                       (Struct {head = plain_struct (str parent_name); layout = Block})
+                       body ),
+                  moved ) )
+            else
+              let body, moved = body Out_of_line ~keep:(fun _ -> true) sel in
+              (Cpp_ast.module_ Out_of_line body, moved) )
           else
-            joined f sel
+            joined_placed sel
       in
       current_structure_decls := old_decls;
-      (p, List.rev !hoisted, List.rev !prereqs, List.rev !concepts)
+      placed
     in
     let placed = List.map ppl wrapper_names in
-    let rendered = List.map2 (fun wn (p, _, _, _) -> (wn, p)) wrapper_names placed in
+    let rendered = List.map2 (fun wn (p, _) -> (wn, p)) wrapper_names placed in
     let rev_rendered = List.rev rendered in
     let main_entry, pre_entries =
       match rev_rendered with
@@ -3404,12 +3433,7 @@ let do_struct_with_decl_tracking ~is_header f s =
         | Some main_p -> [p_pre; main_p]
         | None -> [p_pre] )
     in
-    ( wrapper_parts,
-      deferred_defs,
-      p,
-      List.concat_map (fun (_, h, _, _) -> h) placed,
-      List.concat_map (fun (_, _, c, _) -> c) placed,
-      List.concat_map (fun (_, _, _, c) -> c) placed )
+    (wrapper_parts, deferred_defs, p, moved_together (List.map snd placed))
   in
   (* A section of the file: its groups, [sep] between each two, closed by a
      break; nothing, where it has none. *)
@@ -3419,8 +3443,8 @@ let do_struct_with_decl_tracking ~is_header f s =
     let pads = if is_header then !file_layout.erased_aliases else [] in
     group fnl (imports @ Cpp_ind.render_section pads)
   in
-  let hoisted_concept_prereqs = group cut2 prereqs in
-  let hoisted_concepts = group cut2 concepts in
+  let hoisted_concept_prereqs = group cut2 moved.prereqs in
+  let hoisted_concepts = group cut2 moved.concepts in
   let forward_decls =
     let structs = if is_header then !file_layout.forward_decls else [] in
     (* Aliases go in front of the text that writes them, and only what no
@@ -3451,7 +3475,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   in
   (* Alongside the lifted helpers and for the same reason, in front of them
      because a helper's own declaration may name one of these. *)
-  let hoisted_wrappers = group cut2 hoisted in
+  let hoisted_wrappers = group cut2 moved.hoisted in
   (* Last of all: a datatype's method whose body names a module's struct, which
      is emitted after every datatype.  Nothing else in the header is later. *)
   let deferred_members =
