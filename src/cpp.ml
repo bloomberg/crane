@@ -1727,7 +1727,8 @@ let wrapper_element se =
     @param mp          The wrapper module.
     @return A quadruple [(specs, defs_pp, lifted_pp, lifted_specs_pp)] where
             [specs] is the header pass's body of the module's struct, each
-            element's declarations a member of it, [defs_pp] the
+            element's declarations a member of it, and nothing in the
+            implementation, which writes no struct, [defs_pp] the
             implementation-pass definition block, [lifted_pp] any top-level
             declarations that were lifted out of local function bodies during
             translation, and [lifted_specs_pp] the forward declarations of the
@@ -1769,7 +1770,7 @@ let pp_wrapper_module_dual ~is_header mp func_sels =
   let specs =
     with_render_ctx
       (fun c -> { c with rc_in_struct = true })
-      (fun () -> Cpp_ast.module_body mp (List.map render_sel_specs all_results))
+      (fun () -> Cpp_ast.module_body mp (if is_header then List.map render_sel_specs all_results else []))
   in
   let defs_pp = concat_nonempty cut2 render_sel_defs all_results in
   (* A lifted helper is emitted after the struct it was lifted out of, and its
@@ -2495,7 +2496,9 @@ let plan_file_layout s =
     ({!Cpp_print.plan_ctor_aliases}), read off what was generated ahead of
     the files where the file writes it, in the scope it writes it in
     ({!walk_as_rendered}): each element's declarations, its helpers and the
-    member definitions it gives up; a wrapper module's functions, and, in
+    member definitions it gives up; a wrapper module's functions -- in the
+    implementation only the definitions it holds, the declarations being
+    members of the header's struct -- and, in
     the header, what is lifted out of them and its instances, which the
     header writes as it writes what is lifted ({!lifted_views}); and, in the
     header, a module's class concepts and the fields and methods of the
@@ -2533,7 +2536,9 @@ let plan_ctor_aliases s =
           helpers (hs @ List.map snd ds)
       | Wrapper_functions (_, generate) ->
         let gs = generate () in
-        List.iter (fun (specs, defs) -> written (List.map fst (specs @ defs))) (file_views ~is_header:header [gs]);
+        List.iter
+          (fun (specs, defs) -> written (List.map fst (if header then specs @ defs else defs)))
+          (file_views ~is_header:header [gs]);
         if header then helpers (List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) gs)
     in
     let after_module (frame : Module_frame.t) sel =
