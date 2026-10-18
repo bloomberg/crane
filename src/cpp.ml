@@ -3443,7 +3443,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     in
     let {text = p; concepts = c; asserts = _} =
       Cpp_print.writing_wrapper_members
-        (List.map (fun name -> (name, Cpp_ast.spliced (wrapper_specs name))) homed)
+        (List.map (fun name -> (name, wrapper_specs name)) homed)
         (fun () -> f x)
     in
     if is_header && Probe.checking () then begin

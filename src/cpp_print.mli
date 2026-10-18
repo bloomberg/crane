@@ -100,7 +100,7 @@ val unmerged_wrappers_written : Cpp_erasure.settled -> string list
     wrapper structs of the names [members] gives hold, after their own
     members, the declarations it gives with them: those of the wrapper
     modules of those names. *)
-val writing_wrapper_members : (string * Cpp_ast.t) list -> (unit -> 'a) -> 'a
+val writing_wrapper_members : (string * Cpp_ast.body) list -> (unit -> 'a) -> 'a
 
 (** Take the names of the wrapper structs that took a wrapper module's
     declarations since the last call, under [CRANE_CHECK_IR]. *)

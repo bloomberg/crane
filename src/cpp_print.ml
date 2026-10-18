@@ -3973,7 +3973,7 @@ let rec unmerged_wrappers_written (d : Cpp_erasure.settled) =
 (** The declarations of the wrapper modules the element being written
     writes into a wrapper struct of the same name, by that name, as planned
     ({!Cpp.file_layout}). *)
-let wrapper_members : (string * Cpp_ast.t) list ref = ref []
+let wrapper_members : (string * Cpp_ast.body) list ref = ref []
 
 let writing_wrapper_members members f = setting wrapper_members members f
 
@@ -4115,34 +4115,24 @@ and pp_cpp_decl env (settled : Cpp_erasure.settled) =
 and pp_template_decl env temps cstr (inner : Cpp_erasure.settled) =
   match (inner :> cpp_decl) with
   | Dasgn (id, ty, e) when (!render_ctx).rc_in_struct ->
-    let args = pp_list pp_template_param temps in
     let expr_pp = pp_initialiser env ty e in
-    let req = pp_requires_of_tparams temps in
-    let cstr_pp = match (req, cstr) with
-      | None, None -> mt ()
-      | Some r, None -> r ++ fnl ()
-      | None, Some c -> pp_cpp_expr env [] c ++ fnl ()
-      | Some r, Some c -> r ++ str " && " ++ pp_cpp_expr env [] c ++ fnl ()
-    in
-    (str "template <" ++ args ++ str ">")
-    ++ cstr_pp
-    ++ pp_meyers_singleton env id ty expr_pp
-  | decl ->
-    (* A default may be given once per parameter.  Which printing gives it is
-       decided in the declarations: a definition written after its
-       declaration has had its defaults stripped
-       ({!Function_entity.definition_after_declaration}). *)
-    let args = pp_list pp_template_param temps in
-    let req = pp_requires_of_tparams temps in
-    let cstr_pp = match (req, cstr) with
-      | None, None -> mt ()
-      | Some r, None -> r ++ fnl ()
-      | None, Some c -> pp_cpp_expr env [] c ++ fnl ()
-      | Some r, Some c -> r ++ str " && " ++ pp_cpp_expr env [] c ++ fnl ()
-    in
-    (str "template <" ++ args ++ str ">")
-    ++ cstr_pp
-    ++ pp_cpp_decl env inner
+    template_head env temps cstr ++ pp_meyers_singleton env id ty expr_pp
+  | _ -> template_head env temps cstr ++ pp_cpp_decl env inner
+
+(** A template head with its constraint.  A default may be given once per
+    parameter.  Which printing gives it is decided in the declarations: a
+    definition written after its declaration has had its defaults stripped
+    ({!Function_entity.definition_after_declaration}). *)
+and template_head env temps cstr =
+  let args = pp_list pp_template_param temps in
+  let req = pp_requires_of_tparams temps in
+  let cstr_pp = match (req, cstr) with
+    | None, None -> mt ()
+    | Some r, None -> r ++ fnl ()
+    | None, Some c -> pp_cpp_expr env [] c ++ fnl ()
+    | Some r, Some c -> r ++ str " && " ++ pp_cpp_expr env [] c ++ fnl ()
+  in
+  (str "template <" ++ args ++ str ">") ++ cstr_pp
 
 (** A namespace-scope wrapper struct around [members], merged with its sole
     struct child where it can be. *)
@@ -4249,17 +4239,9 @@ and pp_wrapper_nspace env id (members : Cpp_erasure.settled list) =
         (fun c -> { c with rc_in_struct = true })
         (fun () -> pp_list_stmt (pp_cpp_decl env) members)
     in
-    let pending_fwd =
-      match List.assoc_opt struct_name_str !wrapper_members with
-      | Some specs ->
-        if Probe.checking () then absorbed_wrappers := struct_name_str :: !absorbed_wrappers;
-        fnl () ++ Cpp_ast.to_pp specs
-      | None -> mt ()
-    in
     (str "struct " ++ str struct_name_str ++ str " {")
     ++ fnl ()
     ++ ds
-    ++ pending_fwd
     ++ fnl ()
     ++ str "};" )
 
@@ -4584,13 +4566,42 @@ let constrained_structs : (GlobRef.t * string) list ref = State.cell State.Unit 
 
 let read_cpp_decl = pp_cpp_decl
 
+(** Whether [d] writes a wrapper struct that holds a wrapper module's
+    declarations ({!wrapper_members}). *)
+let absorbs (d : Cpp_erasure.settled) =
+  List.exists (fun name -> List.mem_assoc name !wrapper_members) (unmerged_wrappers_written d)
+
+(** [d], which {!absorbs}, as written: its text, but each wrapper struct
+    holding a wrapper module's declarations the body of that module in a
+    struct of its own name, the wrapper's own members first, as fields. *)
+let rec absorbing_decl env (d : Cpp_erasure.settled) =
+  note_file_scope_type (d :> cpp_decl);
+  let written d = if absorbs d then absorbing_decl env d else Cpp_ast.text (pp_cpp_decl env d) in
+  match Cpp_erasure.view d with
+  | Template (temps, cstr, inner) -> Cpp_ast.seq [Cpp_ast.text (template_head env temps cstr); written inner]
+  | Namespace (None, decls) ->
+    Cpp_ast.seq
+      [Cpp_ast.text (str "namespace {" ++ fnl ()); Cpp_ast.concat fnl (List.map written decls); Cpp_ast.text (fnl () ++ str "};")]
+  | Namespace (Some id, members) -> (
+    let name = nspace_wrapper_name id in
+    let ds = with_render_ctx (fun c -> {c with rc_in_struct = true}) (fun () -> Cpp_ast.concat fnl (List.map written members)) in
+    match List.assoc_opt name !wrapper_members with
+    | Some body ->
+      if Probe.checking () then absorbed_wrappers := name :: !absorbed_wrappers;
+      Cpp_ast.module_
+        (Struct {head = str "struct " ++ str name ++ str " {"; tail = str "};"})
+        ~fields:Cpp_ast.(seq [text (fnl ()); ds; text (fnl ())])
+        body
+    | None -> Cpp_ast.(seq [text (str "struct " ++ str name ++ str " {" ++ fnl ()); ds; text (fnl () ++ str "};")]) )
+  | Decl _ -> Cpp_ast.text (pp_cpp_decl env d)
+
 (** What placing the declarations a written declaration needs reads: the
     synthesised templates it writes, [templates], as planned
     ({!planned_ctor_aliases}); and, of the structs the file has constrained
     forward declarations of ({!constrained_structs}), those it names or
     defines, and those it defines.  The declarations of a wrapper module it
-    writes into a struct of its own ({!wrapper_members}) are part of its
-    text, and what they need it needs. *)
+    writes into a struct of its own ({!wrapper_members}) are members of that
+    struct, and need what they need themselves. *)
 let needs_of ~templates settled =
   let names, defines =
     match !constrained_structs with
@@ -4604,12 +4615,11 @@ let needs_of ~templates settled =
       let defined = List.map defined_ref (structs_defined settled) in
       (of_refs (defined @ Cpp_demands.globals_of_decl (settled :> cpp_decl)), of_refs defined)
   in
-  let absorbed = List.filter_map (fun name -> List.assoc_opt name !wrapper_members) (unmerged_wrappers_written settled) in
-  List.fold_left (fun n t -> Cpp_ast.Needs.union n (Cpp_ast.needs t)) {templates; names; defines} absorbed
+  {Cpp_ast.Needs.templates; names; defines}
 
-let printed_decl env settled =
+let printed_decl ~print env settled =
   let absorbed_before = List.length !absorbed_wrappers in
-  let text = pp_cpp_decl env settled in
+  let text = print env settled in
   let needs = needs_of ~templates:(List.map ctor_alias_name (ctor_aliases_planned settled)) settled in
   let absorbing = List.filter (fun name -> List.mem_assoc name !wrapper_members) (unmerged_wrappers_written settled) in
   ( if Probe.checking () then
@@ -4625,10 +4635,15 @@ let printed_decl env settled =
   (text, needs)
 
 (** [settled], printed where it is made, with what placing the declarations
-    it needs reads ({!needs_of}). *)
+    it needs reads ({!needs_of}), ahead of a wrapper struct it writes holding
+    a wrapper module's declarations. *)
 let write_decl env settled =
-  let text, needs = printed_decl env settled in
-  Cpp_ast.decl ~needs text
+  if absorbs settled then
+    let tree, needs = printed_decl ~print:absorbing_decl env settled in
+    Cpp_ast.seq [Cpp_ast.decl ~needs (Pp.mt ()); tree]
+  else
+    let text, needs = printed_decl ~print:pp_cpp_decl env settled in
+    Cpp_ast.decl ~needs text
 
 let unprinted ?expected ~module_ env settled =
   Cpp_ast.unprinted ?expected
@@ -4636,7 +4651,7 @@ let unprinted ?expected ~module_ env settled =
     env settled
 
 let print_unprinted (u : Cpp_ast.unprinted) =
-  let text, needs = printed_decl u.env u.declaration in
+  let text, needs = printed_decl ~print:pp_cpp_decl u.env u.declaration in
   if Probe.checking () then begin
     if needs <> u.needs then
       Probe.violation "unprinted declarations"

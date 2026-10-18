@@ -93,9 +93,6 @@ let () =
   check_text "a forward declaration goes in front of the first chunk naming its struct" (text ~forwards:[forward "S"] fwd) "Pfwd:Sef";
   check_text "no forward declaration is due where the first chunk naming the struct defines it" (text ~forwards:[forward "S"] (List.rev fwd)) "Pfe";
   check_text "forward declarations go in front of templates" (text ~templates:[template "T"] ~forwards:[forward "S"] [top (leaf ~templates:["T"] ~names:["S"] "g")]) "Pfwd:S<T>g";
-  let spliced = Cpp_ast.spliced (Cpp_ast.module_body m [Cpp_ast.text (Pp.str "y;"); Cpp_ast.empty; Cpp_ast.text (Pp.str "/// z")]) in
-  check_text "a spliced body writes its members as a struct separates them, and nothing around them"
-    (Pp.string_of_ppcmds (Cpp_ast.to_pp spliced)) "y;\n/// z";
   let raw t = Pp.string_of_ppcmds (Cpp_ast.to_pp t) in
   let one = Cpp_ast.module_body m [Cpp_ast.text (Pp.str "y;")] in
   check_text "a struct closes its members on a line of its own"
@@ -108,6 +105,5 @@ let () =
     | _ -> false );
   check "a chunk at namespace scope may be a member of a body defined out of line"
     (not (Cpp_ast.is_empty (Cpp_ast.module_ Out_of_line (Cpp_ast.module_body m [top (leaf "x")]))));
-  check "a spliced body with no members writes nothing" (Cpp_ast.is_empty (Cpp_ast.spliced (Cpp_ast.module_body m [])));
   check "an empty chunk is no chunk" (Cpp_ast.is_empty (top Cpp_ast.empty));
   check "a declaration needing something is not empty" (not (Cpp_ast.is_empty (leaf ~templates:["T"] "")))
