@@ -200,14 +200,10 @@ val writing_element_of : Names.ModPath.t -> (unit -> 'a) -> 'a
 (** Tracking for template static accessor labels and their kernel names. *)
 val template_static_accessors : (Names.ModPath.t * Names.Label.t) list ref
 
-(** Canonical kernel names of template static accessors, for cross-functor
-    matching. Cleared by [reset_cpp_state]. *)
-val template_static_accessor_kns : (Names.KerName.t, unit) Hashtbl.t
-
-(** Labels also used by non-Meyers-singleton definitions, so that label-only
-    fallback matching does not produce false positives. Cleared by
+(** Canonical kernel names of template static accessors, which is what a
+    constant reached through a module alias is. Cleared by
     [reset_cpp_state]. *)
-val non_accessor_labels : (Names.Label.t, unit) Hashtbl.t
+val template_static_accessor_kns : (Names.KerName.t, unit) Hashtbl.t
 
 (** Record the definition at the given module path and label as a template
     static accessor (Meyers singleton), by adding it to

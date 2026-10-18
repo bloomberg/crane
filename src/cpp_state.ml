@@ -563,15 +563,11 @@ let writing_element_of mp f = with_render_ctx (fun c -> {c with rc_module = Some
 (** Track definitions rendered as function accessors (Meyers singletons) instead
     of static inline variables, due to template static init ordering. Stores
     both (modpath, label) pairs for direct matching and canonical KerNames for
-    cross-functor matching. [non_accessor_labels] tracks labels that are
-    also used by NON-Meyers-singleton definitions, to prevent false positives
-    when doing label-only fallback matching. *)
+    a constant reached through a module alias. *)
 let template_static_accessors : (ModPath.t * Label.t) list ref =
   owned_list "template_static_accessors"
 let template_static_accessor_kns : (KerName.t, unit) Hashtbl.t =
   owned_table "template_static_accessor_kns"
-let non_accessor_labels : (Label.t, unit) Hashtbl.t =
-  owned_table "non_accessor_labels"
 
 (** Record a definition as a template static accessor (Meyers singleton).
     Definitions rendered this way are emitted as inline functions rather than

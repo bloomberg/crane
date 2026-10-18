@@ -1851,7 +1851,7 @@ and pp_cpp_expr env args t =
           | _ -> mp
       in
       let resolved_x_mp = resolve_mp x_mp in
-      let found_in_list =
+      let planned =
         List.exists
           (fun (reg_mp, reg_lbl) ->
             Label.equal x_lbl reg_lbl
@@ -1859,15 +1859,14 @@ and pp_cpp_expr env args t =
                || ModPath.equal resolved_x_mp reg_mp ) )
           !template_static_accessors
       in
-      if found_in_list then true
-      else
-          let in_lbl_list = List.exists (fun (_, reg_lbl) -> Label.equal x_lbl reg_lbl)
-            !template_static_accessors in
-          in_lbl_list
-          && ( under_mp_bound x_mp
-             || (not (under_mp_bound resolved_x_mp)
-                 && (under_mp_bound x_mp || under_mp_bound resolved_x_mp
-                     || not (ModPath.equal x_mp resolved_x_mp))) )
+      (* A constant reached through a module alias is the target's own, which
+         its canonical name says.  One reached through a functor parameter
+         has whatever shape the argument gives it, and the use below accepts
+         both: any accessor of the same name makes it one. *)
+      planned
+      || (match x with GlobRef.ConstRef c -> Hashtbl.mem template_static_accessor_kns (Constant.canonical c) | _ -> false)
+      || under_mp_bound x_mp
+         && List.exists (fun (_, reg_lbl) -> Label.equal x_lbl reg_lbl) !template_static_accessors
     in
     let full_name =
       match (base, tys, Module_plan.eponymous_record_containing x) with

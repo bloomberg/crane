@@ -13095,3 +13095,14 @@
   (alias runtest)
   (deps functor_body_is_a_module.t.exe)
   (action (run ./functor_body_is_a_module.t.exe))))
+
+(subdir module_alias_value_beside_accessor
+ (rule
+  (targets module_alias_value_beside_accessor.t.exe)
+  (deps ModuleAliasValueBesideAccessor.vo module_alias_value_beside_accessor.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_alias_value_beside_accessor.t.exe module_alias_value_beside_accessor.cpp module_alias_value_beside_accessor.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_alias_value_beside_accessor.t.exe)
+  (action (run ./module_alias_value_beside_accessor.t.exe))))

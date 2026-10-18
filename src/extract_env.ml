@@ -2076,9 +2076,7 @@ let print_per_library ~dry core =
           (fun {fd_ref = r; fd_type = ty; _} ->
             let is_function = match ty with Tarr _ -> true | _ -> false in
             if in_template && not is_function then
-              Cpp_state.register_template_static_accessor_ref r
-            else if not in_template && not is_function then
-              Hashtbl.replace Cpp_state.non_accessor_labels (Table.label_of_r r) () )
+              Cpp_state.register_template_static_accessor_ref r )
           (Mlutil.term_defs d)
       | SEmodule m ->
         let has_params = match m.ml_mod_expr with
