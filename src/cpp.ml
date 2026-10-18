@@ -1759,19 +1759,10 @@ let pp_wrapper_module_dual ~is_header mp func_sels =
      own, or one an inductive of its name writes -- printed as the tree
      spells them. *)
   let render_sel_specs (specs, _) =
-    Cpp_ast.concat fnl
-      (List.map
-         (fun (d, env) ->
-           let expected = if Probe.checking () then Some (Cpp_ast.to_pp (write_decl env d)) else None in
-           Cpp_print.unprinted ?expected ~module_:mp env d )
-         specs )
+    Cpp_ast.concat fnl (List.map (fun (d, env) -> Cpp_print.unprinted ~module_:mp env d) specs)
   in
   let render_sel_defs (_, defs) = render_decls defs in
-  let specs =
-    with_render_ctx
-      (fun c -> { c with rc_in_struct = true })
-      (fun () -> Cpp_ast.module_body mp (if is_header then List.map render_sel_specs all_results else []))
-  in
+  let specs = Cpp_ast.module_body mp (if is_header then List.map render_sel_specs all_results else []) in
   let defs_pp = concat_nonempty cut2 render_sel_defs all_results in
   (* A lifted helper is emitted after the struct it was lifted out of, and its
      callers are inside that struct, so by the time the definition appears the
@@ -3758,8 +3749,6 @@ let do_struct_with_decl_tracking ~is_header f s =
       [ hoisted_erased_aliases; hoisted_concept_prereqs; hoisted_concepts; hoisted_wrappers; lifted_fun_specs; p;
         deferred_defs; deferred_members ]
   in
-  Cpp_print.check_ctor_alias_plan ~file:(if is_header then Common.Intf else Common.Impl);
-  Cpp_print.check_file_scope_types ~file:(if is_header then Common.Intf else Common.Impl);
   let templates =
     List.map
       (fun a ->
@@ -3776,8 +3765,10 @@ let do_struct_with_decl_tracking ~is_header f s =
         !file_layout.constrained_decls
     else []
   in
-  Cpp_ast.print ~write:Cpp_ind.write_unprinted (Cpp_ast.schedule ~templates ~forwards {prologue = forward_decls; sections})
-  ++ fnl ()
+  let file = Cpp_ast.print ~write:Cpp_ind.write_unprinted (Cpp_ast.schedule ~templates ~forwards {prologue = forward_decls; sections}) in
+  Cpp_print.check_ctor_alias_plan ~file:(if is_header then Common.Intf else Common.Impl);
+  Cpp_print.check_file_scope_types ~file:(if is_header then Common.Intf else Common.Impl);
+  file ++ fnl ()
 
 (** Main entry point: render structure to C++ implementation file. *)
 let pp_struct s =

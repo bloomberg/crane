@@ -1195,15 +1195,8 @@ type section = group list
 let render_section (groups : section) =
   List.map
     (fun {source; declarations} ->
-      let expected =
-        if Probe.checking () then
-          in_spelling (Element_of source) (fun () ->
-              List.map (fun (env, d) -> Some (Cpp_ast.to_pp (Cpp_print.write_decl env d))) declarations )
-        else List.map (fun _ -> None) declarations
-      in
       Cpp_ast.elements ~source
-        (Cpp_ast.concat Pp.fnl
-           (List.map2 (fun (env, d) expected -> Cpp_print.unprinted ?expected ~module_:source env d) declarations expected) ) )
+        (Cpp_ast.concat Pp.fnl (List.map (fun (env, d) -> Cpp_print.unprinted ~module_:source env d) declarations)) )
     groups
 
 type concept_placement = Ahead_of_struct | After_struct | At_file_scope

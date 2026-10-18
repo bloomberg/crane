@@ -17,16 +17,14 @@ open Minicpp
     placing the declarations it needs reads ({!Cpp_ast.Needs}). *)
 val write_decl : Common.env -> Cpp_erasure.settled -> Cpp_ast.t
 
-(** [unprinted ?expected ~module_ env decl] is [decl], written in the
-    module [module_], to be printed where the tree puts it
-    ({!Cpp_ast.print}), with what placing the declarations it needs reads,
-    as planned. *)
-val unprinted : ?expected:Pp.t -> module_:Names.ModPath.t -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
+(** [unprinted ~module_ env decl] is [decl], written in the module
+    [module_], to be printed where the tree puts it ({!Cpp_ast.print}),
+    with what placing the declarations it needs reads, as planned. *)
+val unprinted : module_:Names.ModPath.t -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
 
 (** The text of a declaration not yet printed, printed in the render
     context and visibility its spelling enters.  Under [CRANE_CHECK_IR] it
-    must need what was planned for it where it was made, and read as it did
-    there, if it was printed there. *)
+    must need, printed there, what was planned for it where it was made. *)
 val print_unprinted : Cpp_ast.unprinted -> Pp.t
 
 (** [read_cpp_decl env decl] renders [decl]: for a declaration whose text is
