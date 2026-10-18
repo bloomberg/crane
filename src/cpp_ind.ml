@@ -1179,9 +1179,9 @@ let in_header_element_scope mp k =
 
 let in_spelling spelling k =
   let in_body mp k =
-    match Scope_plan.visibility mp with
-    | None -> CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
-    | Some v -> with_visibility v k
+    match (Scope_plan.visibility mp, Scope_plan.local_inductives mp) with
+    | Some v, Some local -> with_visibility v (fun () -> setting Translation_state.local_inductives local k)
+    | _ -> CErrors.anomaly Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " was not planned.")
   in
   match (spelling : Cpp_ast.spelling) with
   | Element_of mp -> in_body mp (fun () -> in_header_element_scope mp (fun ~in_struct:_ -> k ()))

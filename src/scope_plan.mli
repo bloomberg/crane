@@ -31,13 +31,15 @@ val qualifier : scope -> string
     modules written inside a struct's body -- a struct's or a functor's,
     which the header writes as a class template -- rather than outside every
     struct; the modules whose members the header writes inside a class
-    template; and the visibility each module's body is written in, keyed by
-    the path the body is written under. *)
+    template; and the visibility each module's body is written in, and the
+    inductives it spells bare, each keyed by the path the body is written
+    under. *)
 type t = {
   scopes : (ModPath.t * scope) list;
   nested : ModPath.t list;
   templated : ModPath.t list;
   visibility : (ModPath.t * Common.visibility) list;
+  local_inductives : (ModPath.t * GlobRef.t list) list;
 }
 
 val empty : t
@@ -73,3 +75,9 @@ val of_declaration : GlobRef.t -> scope option
     enclosing it and its own, innermost first, each with the names it
     declares and the functor parameters it binds. *)
 val visibility : ModPath.t -> Common.visibility option
+
+(** The inductives the body of the module [mp] spells bare: those it and
+    each module body enclosing it declare, as {!Cpp.inductives_declared_in}
+    says, and, in a file module that is not a library's, those
+    {!Cpp.file_local_inductives} says every such module does. *)
+val local_inductives : ModPath.t -> GlobRef.t list option
