@@ -829,6 +829,17 @@ let with_local_inductives refs k =
       List.iter add_local_inductive outer )
     k
 
+(** Under [CRANE_CHECK_IR], that the module frames the render has entered
+    where the body of the module [mp] is written are the ones planned for
+    it ({!Scope_plan.frames}). *)
+let check_frames mp =
+  if Probe.checking () then
+    match Scope_plan.frames mp with
+    | Some planned when List.equal ModPath.equal planned !entered_frames -> ()
+    | _ ->
+      Probe.violation "module frames"
+        Pp.(str "the body of the module " ++ str (ModPath.to_string mp) ++ str " is written in other frames than planned")
+
 (** Whether a finished declaration is an erasure landing pad: [using X =
     std::any;], which names nothing. *)
 let is_erased_alias (_, d) =
@@ -1098,6 +1109,7 @@ let rec pp_structure_elem ~is_header f = function
       | MEstruct (body_mp, sel) ->
         let old_context = (!render_ctx).rc_in_struct in
         with_module_frame @@ fun () ->
+        entered_frames := mp :: !entered_frames;
         let frame = Module_frame.planned mp in
         if
           Probe.checking ()
@@ -1622,6 +1634,7 @@ and pp_module_body ~is_header f mp sel =
   let old_structure_decls = !current_structure_decls in
   current_structure_decls := sel;
   Cpp_ind.with_planned_local_inductives mp @@ fun () ->
+  check_frames mp;
   (* A synthesised alias whose body names this module's own types, as its
      members spell them, is declared inside the struct, in front of the
      first member that writes it (see {!Cpp_print.ctor_alias_home}): at
@@ -2896,6 +2909,46 @@ let plan_local_inductives s =
   in
   List.rev (List.fold_left top [] s)
 
+(** The module frames around each module's body ({!Scope_plan.frames}),
+    keyed by the path the body is written under, as the render enters them:
+    a module declared with a struct for its body, at the path its label
+    gives it in the body declaring it, is entered as a frame around its
+    body ({!pp_structure_elem}); a functor's body, a file module and a child
+    a name collision flattens into its parent's wrapper are not. *)
+let plan_frames s =
+  let rec elems frames body_mp sel acc =
+    List.fold_left
+      (fun acc (l, se) ->
+        match se with
+        | SEmodule {ml_mod_expr = MEstruct (mp, sel'); _} -> body (MPdot (body_mp, l) :: frames) mp sel' acc
+        | SEmodule {ml_mod_expr; _} -> module_expr frames ml_mod_expr acc
+        | SEdecl _ | SEmodtype _ -> acc )
+      acc sel
+  and module_expr frames me acc =
+    match me with
+    | MEfunctor (_, _, me) -> module_expr frames me acc
+    | MEstruct (mp, sel) -> body frames mp sel acc
+    | MEident _ | MEapply _ -> acc
+  and body frames mp sel acc = elems frames mp sel ((mp, frames) :: acc) in
+  let wrapped =
+    List.filter_map
+      (fun (mi : Structure_analysis.module_info) -> if mi.wrapper_name <> None then Some mi.modpath else None)
+      (get_structure_analysis ()).sorted_modules
+  in
+  let top acc (mp, sel) =
+    if List.exists (ModPath.equal mp) wrapped || not (wraps_children mp sel) then body [] mp sel acc
+    else
+      List.fold_left
+        (fun acc (l, se) ->
+          match se with
+          | SEmodule {ml_mod_expr = MEstruct (inner, sel'); _}
+            when Module_plan.wrapper_role (MPdot (mp, l)) = Some Module_plan.Flattened ->
+            body [] inner sel' acc
+          | se -> elems [] mp [(l, se)] acc )
+        ((mp, []) :: acc) sel
+  in
+  List.rev (List.fold_left top [] s)
+
 (** The scope of each module the unit emits as a struct
     ({!Scope_plan}): how a definition of one of its members, written out of
     line, names it; which modules are written inside a struct's body; and
@@ -3006,7 +3059,8 @@ let plan_scopes s =
     nested = List.rev nested;
     templated = List.rev templated;
     visibility = plan_visibility s;
-    local_inductives = plan_local_inductives s }
+    local_inductives = plan_local_inductives s;
+    frames = plan_frames s }
 
 let plan_nested_structs s =
   (* An instance is a struct where, past its parameters, its body builds the
@@ -3575,6 +3629,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     let ppl ((mp, sel), wrapper_name) =
       in_planned_visibility mp @@ fun () ->
       Cpp_ind.with_planned_local_inductives mp @@ fun () ->
+      check_frames mp;
       let hoisted = ref [] and prereqs = ref [] and concepts = ref [] in
       let wrapper_specs name =
         match List.find_opt (fun w -> String.equal w.wr_name name) wrapper_parts with
@@ -3659,6 +3714,7 @@ let do_struct_with_decl_tracking ~is_header f s =
               | SEmodule {ml_mod_expr = MEstruct (inner_mp, inner_sel); _} ->
                 in_planned_visibility inner_mp (fun () ->
                     Cpp_ind.with_planned_local_inductives inner_mp @@ fun () ->
+                    check_frames inner_mp;
                     Cpp_ast.module_ enclosure
                       (Cpp_ast.module_body inner_mp (List.map (place_in inner_mp) (List.filter keep inner_sel))) )
               | _ -> Cpp_ast.empty

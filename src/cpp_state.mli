@@ -216,6 +216,10 @@ val register_template_static_accessor_ref : Names.GlobRef.t -> unit
 
 (** {2 Eponymous records} *)
 
+(** The modules whose frames the render has entered, innermost first, which
+    the plan of each body is checked against ({!Scope_plan.frames}). *)
+val entered_frames : Names.ModPath.t list ref
+
 (** In-flight state used while emitting an eponymous record. *)
 val eponymous_type_ref : Names.GlobRef.t option ref
 

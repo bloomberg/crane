@@ -1184,10 +1184,27 @@ let with_planned_local_inductives mp k =
     CErrors.anomaly
       Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned local inductives.")
 
+let planned_frames mp =
+  match Scope_plan.frames mp with
+  | Some frames -> frames
+  | None ->
+    CErrors.anomaly
+      Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned frames.")
+
+let with_planned_demotions mp k =
+  let demoted =
+    List.filter_map
+      (fun m ->
+        let frame = Module_frame.planned m in
+        if Option.has_some frame.promoted then None else frame.eponymous_type )
+      (planned_frames mp)
+  in
+  List.fold_left (fun k r () -> Table.with_demoted_inductive (Some r) k) k demoted ()
+
 let in_spelling spelling k =
   let in_body mp k =
     match Scope_plan.visibility mp with
-    | Some v -> with_visibility v (fun () -> with_planned_local_inductives mp k)
+    | Some v -> with_visibility v (fun () -> with_planned_local_inductives mp (fun () -> with_planned_demotions mp k))
     | None -> CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
   in
   match (spelling : Cpp_ast.spelling) with

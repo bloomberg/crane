@@ -141,6 +141,12 @@ val in_header_element_scope : Names.ModPath.t -> (in_struct:bool -> 'a) -> 'a
     ({!Scope_plan.local_inductives}), and no others. *)
 val with_planned_local_inductives : Names.ModPath.t -> (unit -> 'a) -> 'a
 
+(** [with_planned_demotions mp k] runs [k] with the inductive of each
+    module frame around the body of the module [mp]
+    ({!Scope_plan.frames}) that is not promoted to that module's struct
+    demoted, as the render demotes it there. *)
+val with_planned_demotions : Names.ModPath.t -> (unit -> 'a) -> 'a
+
 (** A group of finished declarations the header writes at file scope, away
     from the module [source] they were generated in.  They are spelled as
     the header spells an element of [source] -- in the visibility planned

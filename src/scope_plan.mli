@@ -31,15 +31,16 @@ val qualifier : scope -> string
     modules written inside a struct's body -- a struct's or a functor's,
     which the header writes as a class template -- rather than outside every
     struct; the modules whose members the header writes inside a class
-    template; and the visibility each module's body is written in, and the
-    inductives it spells bare, each keyed by the path the body is written
-    under. *)
+    template; and the visibility each module's body is written in, the
+    inductives it spells bare, and the module frames around it, each keyed
+    by the path the body is written under. *)
 type t = {
   scopes : (ModPath.t * scope) list;
   nested : ModPath.t list;
   templated : ModPath.t list;
   visibility : (ModPath.t * Common.visibility) list;
   local_inductives : (ModPath.t * GlobRef.t list) list;
+  frames : (ModPath.t * ModPath.t list) list;
 }
 
 val empty : t
@@ -81,3 +82,11 @@ val visibility : ModPath.t -> Common.visibility option
     says, and, in a file module that is not a library's, those
     {!Cpp.file_local_inductives} says every such module does. *)
 val local_inductives : ModPath.t -> GlobRef.t list option
+
+(** The modules whose frames ({!Module_frame}) are around the body of the
+    module [mp], innermost first: every module declared with a struct for
+    its body, around which the render enters its frame, that is [mp] or
+    encloses it.  A functor's body is entered without one, and so is a
+    child a name collision flattens into its parent's wrapper, which is
+    written beside its parent's elements; a file module has none. *)
+val frames : ModPath.t -> ModPath.t list option
