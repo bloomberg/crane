@@ -233,7 +233,7 @@ let schedule ~templates ~forwards u =
 
 (* Every declaration is printed before any text is joined: whether a member
    opens a doc comment decides the break in front of it. *)
-let print ~write s =
+let print_tree ~write t =
   let rec printed spelling = function
     | (Text _ | Decl _ | Declarations _) as t -> t
     | Unprinted u -> (
@@ -247,5 +247,7 @@ let print ~write s =
       let spelling = match m.enclosure with Struct _ -> Some (Member_of m.module_) | Out_of_line | In_enclosing_scope -> None in
       Module {m with fields = printed spelling m.fields; members = List.map (printed spelling) m.members}
   in
-  Pp.(s.opening ++ List.fold_left (fun acc t -> acc ++ to_pp (printed None t)) (mt ()) s.body)
+  to_pp (printed None t)
+
+let print ~write s = Pp.(s.opening ++ List.fold_left (fun acc t -> acc ++ print_tree ~write t) (mt ()) s.body)
 

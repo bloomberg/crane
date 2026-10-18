@@ -154,6 +154,12 @@ val starts_with_doc_comment : t -> bool
     @raise Invalid_argument if it holds a declaration not yet printed. *)
 val to_pp : t -> Pp.t
 
+(** [t] as a document, each declaration not yet printed printed by [write],
+    in the order written, as the tree spells it.
+    @raise Invalid_argument if one is outside every {!Elements} and struct
+    {!Module}: nothing says how it is spelled. *)
+val print_tree : write:(spelling -> unprinted -> Pp.t) -> t -> Pp.t
+
 (** The break between two declaration groups.  It is a break hint, not a
     forced newline, so the vertical box the whole file is printed in
     ([Extract_env]) decides where it falls; clang-format keeps the blank
@@ -194,8 +200,6 @@ type scheduled
     chunk defines the struct. *)
 val schedule : templates:template list -> forwards:forward list -> translation_unit -> scheduled
 
-(** The scheduled unit as a document, each declaration not yet printed
-    printed by [write], in the order written, as the tree spells it.
-    @raise Invalid_argument if one is outside every {!Elements} and struct
-    {!Module}: nothing says how it is spelled. *)
+(** The scheduled unit as a document, as {!print_tree} writes each
+    section. *)
 val print : write:(spelling -> unprinted -> Pp.t) -> scheduled -> Pp.t

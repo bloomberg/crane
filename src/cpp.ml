@@ -584,28 +584,17 @@ let hoisted_structs : MPset.t ref = State.cell State.Unit MPset.empty
 
 (** Whether the struct of the module whose body is [mp] is declared ahead of
     the file, as planned.  Under [CRANE_CHECK_IR] a struct planned to be
-    must not write, in [doc], its rendering, a qualifier into another
-    struct: the plan asked that of its members' types, and this is what was
-    written. *)
-let struct_hoists mp doc =
+    must not write, in [t], what is written for it, a qualifier into another
+    struct: the plan asked that of its members' types, and this is what is
+    written, its declarations printed as the tree spells them. *)
+let struct_hoists mp t =
   let planned = MPset.mem mp !hoisted_structs in
-  if Probe.checking () && planned && names_into_a_struct doc then
+  if Probe.checking () && planned && names_into_a_struct (Cpp_ast.print_tree ~write:Cpp_ind.write_unprinted t) then
     Probe.violation "hoisted structs"
       Pp.(
         str "the struct of the module " ++ str (ModPath.to_string mp)
         ++ str " was planned to be declared ahead of the file and qualifies a name into another struct" );
   planned
-
-(** [write_unprinted spelling u] prints [u] as {!Cpp_ind.write_unprinted}
-    does.  A member of a struct planned to be declared ahead of the file is
-    part of its text, which {!struct_hoists} reads: the struct is printed
-    one member at a time, where the tree puts each. *)
-let write_unprinted spelling u =
-  let text = Cpp_ind.write_unprinted spelling u in
-  ( match spelling with
-  | Cpp_ast.Member_of mp -> ignore (struct_hoists mp text)
-  | Element_of _ -> () );
-  text
 
 (** What the header writes away from where it is written, planned before
     either file is rendered ({!plan_file_layout}): each a section of groups
@@ -1733,9 +1722,6 @@ let wrapper_element se =
     @param is_header   When [true] produce declaration specs; when [false]
                        produce out-of-line definitions, each qualified by the
                        scope its plan gives it ({!Scope_plan}).
-    @param absorbed    Whether a struct of the wrapper's name an inductive
-                       writes holds the declarations ({!file_layout}),
-                       which are then printed here, as part of its text.
     @param func_sels   The [(label, structure_elem)] pairs from the wrapper
                        that contain function declarations ([Dterm], [Dfix]).
     @param mp          The wrapper module.
@@ -1747,7 +1733,7 @@ let wrapper_element se =
             translation, and [lifted_specs_pp] the forward declarations of the
             functions among those, which are due before the struct rather than
             after it. *)
-let pp_wrapper_module_dual ~is_header ~absorbed mp func_sels =
+let pp_wrapper_module_dual ~is_header mp func_sels =
   let process_sel (_l, se) =
     match wrapper_element se with
     | Wrapper_nothing -> ([], [])
@@ -1768,18 +1754,16 @@ let pp_wrapper_module_dual ~is_header ~absorbed mp func_sels =
   let all_results = file_views ~is_header (List.map fst generated) in
   let all_lifted = List.concat_map snd generated in
   let render_decls ds = Cpp_ast.concat fnl (List.map (fun (d, env) -> write_decl env d) ds) in
-  (* The declarations of its functions are members of its struct, printed
-     as the tree spells them -- unless the struct is one an inductive
-     writes, whose text holds them. *)
+  (* The declarations of its functions are members of its struct -- its
+     own, or one an inductive of its name writes -- printed as the tree
+     spells them. *)
   let render_sel_specs (specs, _) =
-    if absorbed then render_decls specs
-    else
-      Cpp_ast.concat fnl
-        (List.map
-           (fun (d, env) ->
-             let expected = if Probe.checking () then Some (Cpp_ast.to_pp (write_decl env d)) else None in
-             Cpp_print.unprinted ?expected ~module_:mp env d )
-           specs )
+    Cpp_ast.concat fnl
+      (List.map
+         (fun (d, env) ->
+           let expected = if Probe.checking () then Some (Cpp_ast.to_pp (write_decl env d)) else None in
+           Cpp_print.unprinted ?expected ~module_:mp env d )
+         specs )
   in
   let render_sel_defs (_, defs) = render_decls defs in
   let specs =
@@ -3462,7 +3446,7 @@ let do_struct_with_decl_tracking ~is_header f s =
       && (not (!render_ctx).rc_in_struct)
       && (not (Cpp_ast.is_empty p))
       && match se with
-         | SEmodule {ml_mod_expr = MEstruct (body_mp, _); _} -> struct_hoists body_mp (Cpp_ast.to_pp p)
+         | SEmodule {ml_mod_expr = MEstruct (body_mp, _); _} -> struct_hoists body_mp p
          | _ -> false
     in
     (* A struct's member is not a chunk at namespace scope: the struct is. *)
@@ -3514,7 +3498,7 @@ let do_struct_with_decl_tracking ~is_header f s =
             let old_decls = !current_structure_decls in
             current_structure_decls := sel;
             let p_specs, p_defs, p_lifted, p_lifted_specs =
-              pp_wrapper_module_dual ~is_header ~absorbed:(List.mem_assoc name !file_layout.wrapper_homes) mp func_sels
+              pp_wrapper_module_dual ~is_header mp func_sels
             in
             current_structure_decls := old_decls;
             if is_header && Cpp_ast.body_is_empty p_specs = Hashtbl.mem unmerged_wrappers name then
@@ -3585,7 +3569,7 @@ let do_struct_with_decl_tracking ~is_header f s =
               Cpp_ast.empty
             else
               let struct_pp = pp_wrapper_struct name specs in
-              if MPset.mem mp !hoisted_structs then (
+              if struct_hoists mp struct_pp then (
                 hoisted := struct_pp :: !hoisted;
                 Cpp_ast.empty )
               else struct_pp
@@ -3787,7 +3771,7 @@ let do_struct_with_decl_tracking ~is_header f s =
         !file_layout.constrained_decls
     else []
   in
-  Cpp_ast.print ~write:write_unprinted (Cpp_ast.schedule ~templates ~forwards {prologue = forward_decls; sections})
+  Cpp_ast.print ~write:Cpp_ind.write_unprinted (Cpp_ast.schedule ~templates ~forwards {prologue = forward_decls; sections})
   ++ fnl ()
 
 (** Main entry point: render structure to C++ implementation file. *)
