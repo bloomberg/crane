@@ -479,13 +479,15 @@ let rec decl_type_name = function
 
 let note_file_scope_type d = Option.iter note_file_scope_name (decl_type_name d)
 
-(** The types [d] declares under the name {!pp_global} spells, each with the
+(** The types [d] declares under a name no struct qualifies, each with the
     template parameters it is declared over, which an alias of it written
-    elsewhere repeats: an alias, and an enum, which no struct qualifies. *)
+    elsewhere repeats: an alias, an enum, and a struct planned at namespace
+    scope. *)
 let rec declared_types ?(outer = []) = function
   | Dtemplate (tparams, _, inner) -> declared_types ~outer:(outer @ tparams) inner
   | Dusing u -> [(u.du_name, outer @ u.du_tparams)]
   | Denum {de_ref; _} -> [(de_ref, outer)]
+  | Dstruct {ds_ref; ds_tparams; _} when Module_plan.is_namespace_scope_ref ds_ref -> [(ds_ref, outer @ ds_tparams)]
   | _ -> []
 
 let stand_ins t =
@@ -4799,7 +4801,11 @@ let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
       let tparams, name =
         match a with
         | Alias_of_type {target; tparams} ->
-          (tparams, if Table.is_enum_inductive target then enum_definition_name target else pp_global Type target)
+          ( tparams,
+            match target with
+            | GlobRef.IndRef _ when Table.is_enum_inductive target -> enum_definition_name target
+            | GlobRef.IndRef _ -> struct_definition_name target
+            | _ -> pp_global Type target )
         | Alias_of_module mp -> ([], Cpp_names.module_struct_name mp)
       in
       let args =

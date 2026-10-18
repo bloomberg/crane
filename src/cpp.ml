@@ -2792,12 +2792,13 @@ type wrapper_render = {
     so this is asked once the wrappers holding declarations are
     ({!plan_concept_prerequisites}).
 
-    An enum a collision struct holds -- a top-level element of a file
+    An inductive a collision struct holds -- a top-level element of a file
     written inside one -- has no declaration outside the struct for the
     concepts to read, and so moves too, leaving a member alias behind
-    ({!Cpp_print.stand_ins}), as an alias does.  Any other inductive held
-    there is spelled qualified by the struct, and moving it would respell
-    every reference to it; it stays.
+    ({!Cpp_print.stand_ins}), as an alias does.  An enum is spelled bare
+    already; any other is planned at namespace scope with the move
+    ({!plan_concept_prerequisites}), so that every reference spells it
+    bare too, its own body's, the concept's and its members' out of line.
 
     Transitive, and only through the elements themselves: an alias in the set
     spells types that then have to precede {e it}, and one of those may be
@@ -2887,7 +2888,7 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
             (fun r ->
               Ref.User.Set.mem r complete
               || Ref.User.Set.mem r needed
-                 && (Cpp_print.nested_in_wrapper r || (Table.is_enum_inductive r && held_in_collision_struct mp)) )
+                 && (Cpp_print.nested_in_wrapper r || held_in_collision_struct mp) )
             (packet_refs kn ind)
         then Some l
         else None )
@@ -2940,7 +2941,9 @@ let is_func_decl (_, se) = match se with SEdecl (Dterm _ | Dfix _) -> true | _ -
 
 (** [plan] with the concept prerequisites of [s] ({!concept_prereqs}), asked
     in the visibility the files are written in, once the wrappers holding
-    declarations are planned ({!plan_unmerged_wrappers}). *)
+    declarations are planned ({!plan_unmerged_wrappers}); and, at namespace
+    scope, the inductives among them a collision struct holds, which move
+    out of it. *)
 let plan_concept_prerequisites (plan : Module_plan.t) s =
   let initial_mps = List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s in
   let modules = (get_structure_analysis ()).sorted_modules in
@@ -2951,7 +2954,23 @@ let plan_concept_prerequisites (plan : Module_plan.t) s =
       modules
   in
   let labels = with_visibility (toplevel_visibility initial_mps) (fun () -> concept_prereqs ~wrapper_sels s) in
-  {plan with concept_prerequisites = Names.Label.Set.elements labels}
+  let moved_out =
+    List.concat_map
+      (fun (mp, sel) ->
+        if is_modfile mp && wraps_children mp sel then
+          List.concat_map
+            (fun (l, se) ->
+              match se with
+              | SEdecl (Dind (kn, ind)) when Names.Label.Set.mem l labels ->
+                List.init (Array.length ind.ind_packets) (fun i -> GlobRef.IndRef (kn, i))
+              | _ -> [] )
+            sel
+        else [] )
+      s
+  in
+  { plan with
+    concept_prerequisites = Names.Label.Set.elements labels;
+    namespace_scope_refs = plan.namespace_scope_refs @ moved_out }
 
 (** What placing top-level elements moves out of their places, each to a
     section of its own ahead of the body, in the order written: the structs

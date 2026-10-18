@@ -14,12 +14,6 @@
 
 struct Nat;
 template <typename A> struct List;
-template <typename I, typename A>
-concept Shaped = requires {
-  {
-    I::shape_of(std::declval<A>())
-  } -> std::convertible_to<CollisionStructConceptNamesStruct::Shape>;
-};
 
 struct Nat {
   // TYPES
@@ -99,6 +93,113 @@ public:
     }
     return std::move(*_root);
   }
+};
+
+struct Shape {
+  // TYPES
+  struct Circle {
+    Nat r;
+  };
+
+  struct Square {
+    Nat s;
+    std::shared_ptr<Shape> t;
+  };
+
+  using variant_t = std::variant<Circle, Square>;
+
+private:
+  // DATA
+  variant_t v_;
+
+public:
+  // CREATORS
+  Shape() {}
+
+  explicit Shape(Circle _v) : v_(std::move(_v)) {}
+
+  explicit Shape(Square _v) : v_(std::move(_v)) {}
+
+  static Shape circle(Nat r) { return Shape(Circle{std::move(r)}); }
+
+  static Shape square(Nat s, Shape t) {
+    return Shape(Square{std::move(s), std::make_shared<Shape>(std::move(t))});
+  }
+
+  // MANIPULATORS
+  ~Shape() {
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<Shape> {
+      if (auto *_alt = std::get_if<Square>(&_v)) {
+        if (_alt->t && _alt->t.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->t);
+        }
+      }
+      return nullptr;
+    };
+    std::shared_ptr<Shape> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
+    }
+  }
+
+  Shape(const Shape &) = default;
+  Shape &operator=(const Shape &) = default;
+  Shape(Shape &&) = default;
+  Shape &operator=(Shape &&) = default;
+
+  inline variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
+
+  Nat size() const {
+    const Shape *_self = this;
+
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
+      const Shape *_self;
+    };
+
+    /// CraneCont_Square: saves [s0], resumes after recursive call, then
+    /// processes rest.
+    struct CraneCont_Square {
+      Nat s0;
+    };
+
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Square>;
+    Nat _result{};
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified size: CraneEnter -> CraneCont_Square.
+    while (!_stack.empty()) {
+      CraneFrame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
+        const Shape *_self = _f._self;
+        auto &&_sv = *_self;
+        if (std::holds_alternative<typename Shape::Circle>(_sv.v())) {
+          const auto &[r0] = std::get<typename Shape::Circle>(_sv.v());
+          _result = std::move(r0);
+        } else {
+          const auto &[s0, t0] = std::get<typename Shape::Square>(_sv.v());
+          _stack.emplace_back(CraneCont_Square{s0});
+          _stack.emplace_back(CraneEnter{crane_raw(t0)});
+        }
+      } else {
+        auto _f = std::move(std::get<CraneCont_Square>(_frame));
+        Nat s0 = std::move(_f.s0);
+        _result = s0.add(std::move(_result));
+      }
+    }
+    return _result;
+  }
+};
+
+template <typename I, typename A>
+concept Shaped = requires {
+  { I::shape_of(std::declval<A>()) } -> std::convertible_to<Shape>;
 };
 
 template <typename A> struct List {
@@ -181,120 +282,11 @@ public:
 };
 
 struct CollisionStructConceptNamesStruct {
-  struct Shape {
-    // TYPES
-    struct Circle {
-      Nat r;
-    };
-
-    struct Square {
-      Nat s;
-      std::shared_ptr<Shape> t;
-    };
-
-    using variant_t = std::variant<Circle, Square>;
-
-  private:
-    // DATA
-    variant_t v_;
-
-  public:
-    // CREATORS
-    Shape() {}
-
-    explicit Shape(Circle _v) : v_(std::move(_v)) {}
-
-    explicit Shape(Square _v) : v_(std::move(_v)) {}
-
-    static Shape circle(Nat r) { return Shape(Circle{std::move(r)}); }
-
-    static Shape square(Nat s, CollisionStructConceptNamesStruct::Shape t) {
-      return Shape(Square{std::move(s), std::make_shared<Shape>(std::move(t))});
-    }
-
-    // MANIPULATORS
-    ~Shape() {
-      auto _next = [&](variant_t &_v) -> std::shared_ptr<Shape> {
-        if (auto *_alt = std::get_if<Square>(&_v)) {
-          if (_alt->t && _alt->t.use_count() == 1) {
-            std::atomic_thread_fence(std::memory_order_acquire);
-            return std::move(_alt->t);
-          }
-        }
-        return nullptr;
-      };
-      std::shared_ptr<Shape> _cur = _next(v_mut());
-      while (_cur) {
-        _cur = _next(_cur->v_mut());
-      }
-    }
-
-    Shape(const Shape &) = default;
-    Shape &operator=(const Shape &) = default;
-    Shape(Shape &&) = default;
-    Shape &operator=(Shape &&) = default;
-
-    inline variant_t &v_mut() { return v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return v_; }
-
-    Nat size() const {
-      const Shape *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const Shape *_self;
-      };
-
-      /// CraneCont_Square: saves [s0], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Square {
-        Nat s0;
-      };
-
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Square>;
-      Nat _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified size: CraneEnter -> CraneCont_Square.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
-          const Shape *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<
-                  typename CollisionStructConceptNamesStruct::Shape::Circle>(
-                  _sv.v())) {
-            const auto &[r0] = std::get<
-                typename CollisionStructConceptNamesStruct::Shape::Circle>(
-                _sv.v());
-            _result = std::move(r0);
-          } else {
-            const auto &[s0, t0] = std::get<
-                typename CollisionStructConceptNamesStruct::Shape::Square>(
-                _sv.v());
-            _stack.emplace_back(CraneCont_Square{s0});
-            _stack.emplace_back(CraneEnter{crane_raw(t0)});
-          }
-        } else {
-          auto _f = std::move(std::get<CraneCont_Square>(_frame));
-          Nat s0 = std::move(_f.s0);
-          _result = s0.add(std::move(_result));
-        }
-      }
-      return _result;
-    }
-  };
-
+  using Shape = ::Shape;
   static Nat first(const List<Nat> &l);
 
   struct shaped_nat {
-    static CollisionStructConceptNamesStruct::Shape shape_of(Nat n) {
-      return Shape::square(n, Shape::circle(n));
-    }
+    static Shape shape_of(Nat n) { return Shape::square(n, Shape::circle(n)); }
   };
 
   static_assert(Shaped<shaped_nat, Nat>);
