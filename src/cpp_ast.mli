@@ -60,6 +60,10 @@ type spelling =
 type declaration =
   | Declaration of {env : Common.env; settled : Cpp_erasure.settled}
       (** A finished declaration, printed in the name environment [env]. *)
+  | Absorbed of {env : Common.env; settled : Cpp_erasure.settled}
+      (** A member of the struct a declaration writes around a wrapper
+          module's declarations, printed in [env].  What it needs is placed
+          with that declaration, which is what was planned. *)
   | Fields of {record : GlobRef.t; vars : Id.t list; fields : (string * Minicpp.cpp_type) list}
       (** The fields of the eponymous record [record] merged into its
           module's struct, each by its name and type, the type variables
@@ -176,6 +180,9 @@ val decl : needs:Needs.t -> Pp.t -> t
 (** [unprinted ~needs env d] is [d], printed in [env] where the tree puts
     it. *)
 val unprinted : needs:Needs.t -> Common.env -> Cpp_erasure.settled -> t
+
+(** [absorbed env d] is {!Absorbed}, printed where the tree puts it. *)
+val absorbed : Common.env -> Cpp_erasure.settled -> t
 
 (** [fields ~needs ~record ~vars fields] is {!Fields}, printed where the
     tree puts it. *)

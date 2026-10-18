@@ -491,7 +491,7 @@ let rec declared_types ?(outer = []) = function
 let stand_ins t =
   List.concat_map
     (function
-      | Cpp_ast.Declared (Declaration {settled; _}) ->
+      | Cpp_ast.Declared (Declaration {settled; _} | Absorbed {settled; _}) ->
         List.map
           (fun (target, tparams) -> Cpp_ast.(global_alias (Alias_of_type {target; tparams})))
           (declared_types (settled :> cpp_decl))
@@ -4623,12 +4623,13 @@ let read_cpp_decl = pp_cpp_decl
 let absorbs (d : Cpp_erasure.settled) =
   List.exists (fun name -> List.mem_assoc name !wrapper_members) (unmerged_wrappers_written d)
 
-(** [d], which {!absorbs}, as written: its text, but each wrapper struct
-    holding a wrapper module's declarations the body of that module in a
-    struct of its own name, the wrapper's own members first, as fields. *)
+(** [d], which {!absorbs}, as written: each wrapper struct holding a wrapper
+    module's declarations the body of that module in a struct of its own
+    name, the wrapper's own members first, as fields, each printed where
+    the tree puts it ({!Cpp_ast.Absorbed}). *)
 let rec absorbing_decl env (d : Cpp_erasure.settled) =
   note_file_scope_type (d :> cpp_decl);
-  let written d = if absorbs d then absorbing_decl env d else Cpp_ast.text (pp_cpp_decl env d) in
+  let written d = if absorbs d then absorbing_decl env d else Cpp_ast.absorbed env d in
   match Cpp_erasure.view d with
   | Template (temps, cstr, inner) -> Cpp_ast.seq [Cpp_ast.text (template_head env temps cstr); written inner]
   | Namespace (None, decls) ->
@@ -4737,6 +4738,7 @@ let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
     | Modtype_concept {path; params; concept} -> (modtype_concept ~path ~params concept, u.needs)
     | Assertion a -> (assertion a, u.needs)
     | Declaration {env; settled} -> printed_decl ~print:pp_cpp_decl env settled
+    | Absorbed {env; settled} -> (pp_cpp_decl env settled, u.needs)
     | Fields {record; vars; fields} ->
       ( prlist_with_sep fnl (fun (name, ty) -> pp_cpp_type false vars ty ++ spc () ++ str name ++ str ";") fields
         ++ fnl (),

@@ -15,6 +15,7 @@ type spelling = Element_of of ModPath.t | Member_of of ModPath.t
 
 type declaration =
   | Declaration of {env : Common.env; settled : Cpp_erasure.settled}
+  | Absorbed of {env : Common.env; settled : Cpp_erasure.settled}
   | Fields of {record : GlobRef.t; vars : Id.t list; fields : (string * Minicpp.cpp_type) list}
   | Modtype_concept of {path : ModPath.t; params : ModPath.t list; concept : Modtype_concept.t}
   | Global_alias of global_alias
@@ -65,6 +66,7 @@ let pp_struct_head {template; name; base} =
     ++ str " {")
 let decl ~needs text = Decl {text; needs}
 let unprinted ~needs env settled = Unprinted {declaration = Declaration {env; settled}; needs}
+let absorbed env settled = Unprinted {declaration = Absorbed {env; settled}; needs = Needs.none}
 let fields ~needs ~record ~vars fields = Unprinted {declaration = Fields {record; vars; fields}; needs}
 let modtype_concept ~path ~params concept =
   Unprinted {declaration = Modtype_concept {path; params; concept}; needs = Needs.none}
