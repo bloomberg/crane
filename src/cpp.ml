@@ -1632,26 +1632,9 @@ and pp_module_body ~is_header f mp sel =
     concepts = List.concat_map (fun w -> w.concepts) written;
     asserts = List.concat_map (fun w -> w.asserts) written }
 
-(** Like {!Cpp_ast.concat} but skips empty elements.
-
-    @param sep  Thunk producing the separator document inserted between
-                consecutive non-empty rendered elements.
-    @param f    Function applied to each list element to produce its document.
-    @return Concatenation of all non-empty documents separated by [sep ()],
-            or nothing if every element renders empty. *)
-let rec concat_nonempty sep f = function
-  | [] -> Cpp_ast.empty
-  | [h] -> f h
-  | h :: t ->
-    let e = f h in
-    let r = concat_nonempty sep f t in
-    if Cpp_ast.is_empty e then
-      r
-    else if Cpp_ast.is_empty r then
-      e
-    else
-      let boundary = if Cpp_ast.starts_with_doc_comment r then fnl () else sep () in
-      Cpp_ast.(seq [e; text boundary; r])
+(** [joined f l] writes each of [l] as [f] does, the non-empty ones joined
+    ({!Cpp_ast.joined}). *)
+let joined f l = Cpp_ast.joined (List.map f l)
 
 (** The declarations and definitions generated functions contribute to the
     file being written, grouped as [gens] is: each one's declaration always,
@@ -1770,7 +1753,7 @@ let pp_wrapper_module_dual ~is_header mp func_sels =
   in
   let render_sel_defs (_, defs) = render_decls defs in
   let specs = Cpp_ast.module_body mp (if is_header then List.map render_sel_specs all_results else []) in
-  let defs_pp = concat_nonempty cut2 render_sel_defs all_results in
+  let defs_pp = joined render_sel_defs all_results in
   (* A lifted helper is emitted after the struct it was lifted out of, and its
      callers are inside that struct, so by the time the definition appears the
      name has already been used.  A wrapper struct's own members do not have
@@ -1787,12 +1770,12 @@ let pp_wrapper_module_dual ~is_header mp func_sels =
     if is_header then List.map lifted_views all_lifted else []
   in
   let lifted_pp =
-    concat_nonempty cut2
+    joined
       (fun (def, _) -> write_decl (empty_env ()) def)
       lifted_split
   in
   let lifted_specs_pp =
-    concat_nonempty cut2
+    joined
       (write_decl (empty_env ()))
       (List.filter_map snd lifted_split)
   in
@@ -3559,7 +3542,7 @@ let do_struct_with_decl_tracking ~is_header f s =
         match wrapper_name with
         | Some name ->
           let type_sels = List.filter (fun x -> not (is_func_decl x)) sel in
-          let type_pp = concat_nonempty cut2 f type_sels in
+          let type_pp = joined f type_sels in
           (* The wrapper struct belongs at its module's own place in the
              topological order, whether or not the module also declares types.
              A later module's constant is initialised inside its struct body, so
@@ -3592,7 +3575,7 @@ let do_struct_with_decl_tracking ~is_header f s =
              up in (see {!Cpp_ast.schedule}). *)
           let wrapper_pp = Cpp_ast.top_level wrapper_pp in
           let lifted_pp = Cpp_ast.top_level lifted_pp in
-          concat_nonempty cut2 (fun x -> x) [type_pp; wrapper_pp; lifted_pp]
+          Cpp_ast.joined [type_pp; wrapper_pp; lifted_pp]
         | None ->
           (* Which children a name collision forces inside a wrapper struct is
              layout, decided by {!Structure_analysis} before any rendering began;
@@ -3667,7 +3650,7 @@ let do_struct_with_decl_tracking ~is_header f s =
                      body ) )
             else Cpp_ast.module_ Out_of_line (body Out_of_line ~keep:(fun _ -> true) sel) )
           else
-            concat_nonempty cut2 f sel
+            joined f sel
       in
       current_structure_decls := old_decls;
       (p, List.rev !hoisted, List.rev !prereqs, List.rev !concepts)
@@ -3686,9 +3669,9 @@ let do_struct_with_decl_tracking ~is_header f s =
       | ((_, None), p) :: rest -> (Some p, List.rev rest)
       | _ -> (None, rendered)
     in
-    let p_pre = concat_nonempty cut2 snd pre_entries in
+    let p_pre = joined snd pre_entries in
     let p =
-      concat_nonempty cut2 (fun x -> x)
+      Cpp_ast.joined
         ( match main_entry with
         | Some main_p -> [p_pre; main_p]
         | None -> [p_pre] )

@@ -69,6 +69,11 @@ type t = private
       (** Declarations generated in the module [source], written here and
           spelled as its elements are. *)
   | Seq of t list  (** One after the other. *)
+  | Joined of t list
+      (** One after the other, each two separated by a break, or by a
+          newline where what follows opens with a doc comment -- which
+          {!print} reads once every declaration in it is printed.  At least
+          two, none empty. *)
   | Top_level of t
       (** A chunk at namespace scope: a namespace-scope declaration due
           before it goes in front of it.  Never empty. *)
@@ -107,6 +112,10 @@ val unprinted : needs:Needs.t -> Common.env -> Cpp_erasure.settled -> t
 val elements : source:ModPath.t -> t -> t
 val seq : t list -> t
 
+(** [joined l] is the non-empty ones of [l] as {!Joined}; the one, if only
+    one is; nothing, if none is. *)
+val joined : t list -> t
+
 (** [t] as a chunk at namespace scope; nothing, if [t] is. *)
 val top_level : t -> t
 
@@ -138,12 +147,6 @@ val concat : (unit -> Pp.t) -> t list -> t
 
 (** What the declarations of [t] need, together. *)
 val needs : t -> Needs.t
-
-(** Whether the first text [t] writes opens a doc comment, scheduled
-    declarations aside; a soft break, which may print as nothing, is no
-    text.
-    @raise Invalid_argument if that is a declaration not yet printed. *)
-val starts_with_doc_comment : t -> bool
 
 (** [t] as a document, for reading.
     @raise Invalid_argument if it holds a declaration not yet printed. *)

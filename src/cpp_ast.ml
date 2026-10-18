@@ -21,6 +21,7 @@ type t =
   | Unprinted of unprinted
   | Elements of {source : ModPath.t; elements : t}
   | Seq of t list
+  | Joined of t list
   | Top_level of t
   | Module of {module_ : ModPath.t; enclosure : enclosure; fields : t; members : t list}
   | Declarations of Pp.t list
@@ -39,12 +40,13 @@ let rec is_empty = function
   | Decl {text; needs} -> Pp.ismt text && Needs.is_none needs
   | Unprinted _ -> false
   | Elements {elements; _} -> is_empty elements
-  | Seq l -> List.for_all is_empty l
+  | Seq l | Joined l -> List.for_all is_empty l
   | Top_level _ -> false
   | Module {enclosure = Struct _; _} -> false
   | Module {fields; members; _} -> members = [] && is_empty fields
   | Declarations l -> l = []
 
+let joined l = match List.filter (fun t -> not (is_empty t)) l with [] -> empty | [t] -> t | l -> Joined l
 let top_level t = if is_empty t then t else Top_level t
 
 type body = {body_module : ModPath.t; body_members : t list}
@@ -56,7 +58,7 @@ let rec has_top_level = function
   | Text _ | Decl _ | Unprinted _ | Declarations _ -> false
   | Elements {elements; _} -> has_top_level elements
   | Top_level _ -> true
-  | Seq l -> List.exists has_top_level l
+  | Seq l | Joined l -> List.exists has_top_level l
   | Module {fields; members; _} -> List.exists has_top_level (fields :: members)
 
 let module_ enclosure ?(fields = empty) b =
@@ -76,14 +78,16 @@ let rec needs = function
   | Text _ | Declarations _ -> Needs.none
   | Decl {needs; _} | Unprinted {needs; _} -> needs
   | Elements {elements; _} -> needs elements
-  | Seq l -> List.fold_left (fun acc t -> Needs.union acc (needs t)) Needs.none l
+  | Seq l | Joined l -> List.fold_left (fun acc t -> Needs.union acc (needs t)) Needs.none l
   | Top_level t -> needs t
   | Module {fields; members; _} -> needs (Seq (fields :: members))
 
 let cut2 () = Pp.(brk (0, -100000) ++ brk (0, 0))
 
-(* Declarations scheduled in front of a chunk are not part of it: the break
-   in front of a member was chosen by the member, before any was placed. *)
+(* Whether the first text [t] writes opens a doc comment; a soft break, which
+   may print as nothing, is no text.  Declarations scheduled in front of a
+   chunk are not part of it: the break in front of a member was chosen by the
+   member, before any was placed. *)
 let starts_with_doc_comment t =
   let rec first_output = function
     | [] -> None
@@ -106,7 +110,7 @@ let starts_with_doc_comment t =
         | Unprinted _ -> invalid_arg "Cpp_ast.starts_with_doc_comment: an unprinted declaration"
         | Elements {elements; _} -> first [elements]
         | Declarations _ -> None
-        | Seq l -> first l
+        | Seq l | Joined l -> first l
         | Top_level t -> first [t]
         | Module {enclosure = Struct {head; _}; _} -> first_output [head]
         | Module {fields; members; _} -> first (fields :: members)
@@ -115,14 +119,19 @@ let starts_with_doc_comment t =
   in
   match first [t] with Some result -> result | None -> false
 
-(* A module's members, each two separated by a break, or by a newline where
-   the second opens with a doc comment: an unbroken [}///] or [;///] reads
-   as a trailing comment, which the formatter cannot repair. *)
-let rec join_members = function
+(* Each two of [l] separated by a break, or by a newline where what follows
+   opens with a doc comment: an unbroken [}///] or [;///] reads as a
+   trailing comment, which the formatter cannot repair.  What follows is
+   [following rest], the items after the break. *)
+let rec join ~following = function
   | [] -> []
   | [t] -> [t]
-  | t :: (next :: _ as rest) ->
-    t :: Text (if starts_with_doc_comment next then Pp.fnl () else cut2 ()) :: join_members rest
+  | t :: rest -> t :: Text (if starts_with_doc_comment (following rest) then Pp.fnl () else cut2 ()) :: join ~following rest
+
+(* A module's members are read one at a time; a joined list as everything
+   after the break. *)
+let join_members = join ~following:List.hd
+let join_items = join ~following:(fun rest -> Seq rest)
 
 let rec to_pp = function
   | Text d -> d
@@ -130,6 +139,7 @@ let rec to_pp = function
   | Unprinted _ -> invalid_arg "Cpp_ast.to_pp: an unprinted declaration"
   | Elements {elements; _} -> to_pp elements
   | Seq l -> List.fold_left (fun acc t -> Pp.(acc ++ to_pp t)) (Pp.mt ()) l
+  | Joined l -> to_pp (Seq (join_items l))
   | Top_level t -> to_pp t
   | Module {enclosure; fields; members; _} -> (
     let inside = to_pp (Seq (fields :: join_members members)) in
@@ -158,7 +168,7 @@ let schedule ~templates ~forwards u =
      of the body, is the same in every struct writing the same text. *)
   let rec first_uses ~top ~member ~scope = function
     | Text _ | Declarations _ -> []
-    | Seq l -> List.concat_map (first_uses ~top ~member ~scope) l
+    | Seq l | Joined l -> List.concat_map (first_uses ~top ~member ~scope) l
     | Elements {elements; _} -> first_uses ~top ~member ~scope elements
     | Top_level t ->
       incr count;
@@ -209,6 +219,7 @@ let schedule ~templates ~forwards u =
   let rec placed = function
     | (Text _ | Decl _ | Unprinted _ | Declarations _) as t -> t
     | Seq l -> Seq (List.map placed l)
+    | Joined l -> Joined (List.map placed l)
     | Elements e -> Elements {e with elements = placed e.elements}
     | Top_level t ->
       incr count;
@@ -242,6 +253,7 @@ let print_tree ~write t =
       | None -> invalid_arg "Cpp_ast.print: a declaration written where nothing says how it is spelled" )
     | Elements {source; elements} -> printed (Some (Element_of source)) elements
     | Seq l -> Seq (List.map (printed spelling) l)
+    | Joined l -> Joined (List.map (printed spelling) l)
     | Top_level t -> Top_level (printed spelling t)
     | Module m ->
       let spelling = match m.enclosure with Struct _ -> Some (Member_of m.module_) | Out_of_line | In_enclosing_scope -> None in

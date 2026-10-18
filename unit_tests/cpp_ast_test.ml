@@ -136,7 +136,14 @@ let () =
   check "a body defined out of line does not say how a declaration in it is spelled"
     (refused [top (Cpp_ast.module_ Out_of_line (Cpp_ast.module_body m [unprinted ()]))]);
   check "a declaration not yet printed is not empty" (not (Cpp_ast.is_empty (unprinted ())));
-  check "whether a declaration not yet printed opens a doc comment is not known"
-    ( match Cpp_ast.starts_with_doc_comment (unprinted ()) with
-    | exception Invalid_argument _ -> true
-    | _ -> false )
+  let joined_as printed =
+    let l = [leaf "x;"; Cpp_ast.empty; Cpp_ast.elements ~source:m (unprinted ())] in
+    Pp.string_of_ppcmds
+      (Cpp_ast.print ~write:(fun _ _ -> Pp.str printed)
+         (Cpp_ast.schedule ~templates:[] ~forwards:[] {prologue = Pp.mt (); sections = [Cpp_ast.joined l]}) )
+  in
+  check_text "a joined declaration printed opening a doc comment follows a newline" (joined_as "/// d") "x;\n/// d";
+  check "any other joined declaration follows a break"
+    (let s = joined_as "d" in String.starts_with ~prefix:"x;" s && String.ends_with ~suffix:"d" s && not (String.contains s '\n'));
+  check "nothing joined is nothing" (Cpp_ast.is_empty (Cpp_ast.joined [Cpp_ast.empty; Cpp_ast.empty]));
+  check_text "one thing joined is that thing" (raw (Cpp_ast.joined [Cpp_ast.empty; leaf "x;"])) "x;"
