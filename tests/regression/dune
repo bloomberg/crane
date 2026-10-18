@@ -13128,3 +13128,14 @@
   (alias runtest)
   (deps moved_struct_method_after_collision.t.exe)
   (action (run ./moved_struct_method_after_collision.t.exe))))
+
+(subdir collision_struct_concept_names_template
+ (rule
+  (targets collision_struct_concept_names_template.t.exe)
+  (deps CollisionStructConceptNamesTemplate.vo collision_struct_concept_names_template.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} collision_struct_concept_names_template.t.exe collision_struct_concept_names_template.cpp collision_struct_concept_names_template.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps collision_struct_concept_names_template.t.exe)
+  (action (run ./collision_struct_concept_names_template.t.exe))))
