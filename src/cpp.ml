@@ -702,6 +702,12 @@ let generated_concept ~module_ r fields =
   ignore (record_entity r [d] []);
   d
 
+(** The concept [d] of a class, an element of the module [module_]
+    wherever the file moves it -- ahead of or after the struct of the
+    module declaring the class, or to the top of the file -- printed where
+    the tree puts it. *)
+let class_concept_element ~module_ d = Cpp_print.unprinted ~module_ (empty_env ()) (Cpp_ind.finished_alone d)
+
 (** The functions of a module's method candidates [candidates] its
     eponymous record's struct is given as methods: those that are not
     projections, oldest first. *)
@@ -1127,9 +1133,8 @@ let rec pp_structure_elem ~is_header f ~module_ = function
             List.map
               (fun (l, r, fields) ->
                 let d = generated_concept ~module_ r fields in
-                ( HCclass r,
-                  Cpp_ast.(seq [text (pp_doc_comment l); render_decl (empty_env ()) d]),
-                  concept_names_member mp d ) )
+                let concept = class_concept_element ~module_ d in
+                (HCclass r, Cpp_ast.(seq [text (pp_doc_comment l); concept]), concept_names_member mp d) )
               (declared_classes sel)
           else []
         in
@@ -3730,7 +3735,8 @@ let do_struct_with_decl_tracking ~is_header f s =
                 with_render_ctx (fun c -> {c with rc_in_struct = true}) @@ fun () ->
                 writing_element_of mp @@ fun () ->
                 let d = generated_concept ~module_:mp r fields in
-                Cpp_ast.elements ~source:mp Cpp_ast.(seq [text (pp_doc_comment l); render_decl (empty_env ()) d])
+                let concept = class_concept_element ~module_:mp d in
+                Cpp_ast.elements ~source:mp Cpp_ast.(seq [text (pp_doc_comment l); concept])
               in
               List.iter
                 (fun ((_, se) as x) ->
