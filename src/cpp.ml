@@ -589,7 +589,7 @@ let hoisted_structs : MPset.t ref = State.cell State.Unit MPset.empty
     written, its declarations printed as the tree spells them. *)
 let struct_hoists mp t =
   let planned = MPset.mem mp !hoisted_structs in
-  if Probe.checking () && planned && names_into_a_struct (Cpp_ast.print_tree ~write:Cpp_ind.write_unprinted t) then
+  if Probe.checking () && planned && names_into_a_struct (Cpp_ast.print_tree ~write:(Cpp_ind.write_unprinted ~file:Intf) t) then
     Probe.violation "hoisted structs"
       Pp.(
         str "the struct of the module " ++ str (ModPath.to_string mp)
@@ -3860,9 +3860,13 @@ let do_struct_with_decl_tracking ~is_header f s =
         !file_layout.constrained_decls
     else []
   in
-  let file = Cpp_ast.print ~write:Cpp_ind.write_unprinted (Cpp_ast.schedule ~templates ~forwards {prologue = forward_decls; sections}) in
-  Cpp_print.check_ctor_alias_plan ~file:(if is_header then Common.Intf else Common.Impl);
-  Cpp_print.check_file_scope_types ~file:(if is_header then Common.Intf else Common.Impl);
+  let written = if is_header then Common.Intf else Common.Impl in
+  let file =
+    Cpp_ast.print ~write:(Cpp_ind.write_unprinted ~file:written)
+      (Cpp_ast.schedule ~templates ~forwards {prologue = forward_decls; sections})
+  in
+  Cpp_print.check_ctor_alias_plan ~file:written;
+  Cpp_print.check_file_scope_types ~file:written;
   file ++ fnl ()
 
 (** Main entry point: render structure to C++ implementation file. *)

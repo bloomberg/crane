@@ -1246,23 +1246,30 @@ let planned_held_back ~file mp =
   | Intf -> List.concat_map (fun m -> (concept_plan m).held_back) (planned_frames mp)
   | Impl -> []
 
-let in_spelling spelling k =
+let in_spelling ~file spelling k =
   let in_body mp k =
     match Scope_plan.visibility mp with
     | Some v ->
       with_visibility v (fun () ->
           with_planned_local_inductives mp (fun () ->
-              with_planned_demotions mp (fun () ->
-                  setting held_back_concepts (planned_held_back ~file:(!render_ctx).rc_file mp) k ) ) )
+              with_planned_demotions mp (fun () -> setting held_back_concepts (planned_held_back ~file mp) k) ) )
     | None -> CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
   in
-  match (spelling : Cpp_ast.spelling) with
-  | Element_of mp -> in_body mp (fun () -> in_header_element_scope mp (fun ~in_struct:_ -> k ()))
-  | Member_of mp ->
+  match ((file : Common.file), (spelling : Cpp_ast.spelling)) with
+  | Intf, Element_of mp -> in_body mp (fun () -> in_header_element_scope mp (fun ~in_struct:_ -> k ()))
+  | Intf, Member_of mp ->
     in_body mp (fun () ->
         in_header_element_scope mp (fun ~in_struct:_ -> with_render_ctx (fun c -> {c with rc_in_struct = true}) k) )
+  (* The implementation writes every element of a module at file scope:
+     what it defines out of line is qualified by the scope its plan gives
+     it ({!Scope_plan.of_declaration}). *)
+  | Impl, Element_of mp -> in_body mp (fun () -> with_render_ctx (fun _ -> file_start Impl) k)
+  | Impl, Member_of mp ->
+    CErrors.anomaly
+      Pp.(str "Crane: the implementation writes a member of the struct of " ++ str (ModPath.to_string mp)
+          ++ str ", which it does not write.")
 
-let write_unprinted spelling u = in_spelling spelling (fun () -> Cpp_print.print_unprinted u)
+let write_unprinted ~file spelling u = in_spelling ~file spelling (fun () -> Cpp_print.print_unprinted u)
 
 type group = {source : ModPath.t; declarations : rendered}
 type section = group list
