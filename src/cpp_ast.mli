@@ -86,22 +86,21 @@ type declaration =
   | Assertion of assertion
       (** [static_assert(C<S>);], on a line of its own: that a module or an
           instance satisfies a concept. *)
-  | Module_alias of {name : Pp.t; target : module_target}
-      (** [using name = target;]: a module defined as another. *)
-  | Derived_functor of {template : template_param list; name : Pp.t; base : application}
+  | Module_alias of {name : Pp.t; target : module_expr}
+      (** [using name = target;]: a module defined as another, inside a
+          class template a qualified name in [target] being a dependent
+          one. *)
+  | Functor_alias of {name : Pp.t; functor_ : ModPath.t; params : (template_param * ModPath.t) list}
+      (** [template <params> using name = functor_<params>;]: a functor
+          defined as another, which Rocq reduces to the other's name, over
+          its own parameters, each as declared and by its path. *)
+  | Derived_functor of {template : template_param list; name : Pp.t; base : module_expr}
       (** [template <template> struct name : base {};]: a functor whose body
-          applies another functor, its own parameters visible to [base]. *)
+          is another module, its own parameters visible to [base]. *)
 
-(** What a {!Module_alias} defines its module as, as written where the
-    alias is: inside a class template, a qualified name is a dependent
-    one. *)
-and module_target =
+(** A module a declaration names. *)
+and module_expr =
   | Module_named of ModPath.t  (** The module at the path. *)
-  | Functor_of of {functor_ : ModPath.t; params : (template_param * ModPath.t) list}
-      (** The functor at the path, applied to the alias's own parameters,
-          each as declared and by its path: a functor defined as another,
-          which Rocq reduces to the other's name.  The alias is a template
-          over them. *)
   | Applied of application
 
 (** A functor applied to modules, each by its path. *)
@@ -223,11 +222,15 @@ val assertion : assertion -> t
 
 (** [module_alias ~name target] is {!Module_alias}, printed where the tree
     puts it.  It needs nothing placed in front of it. *)
-val module_alias : name:Pp.t -> module_target -> t
+val module_alias : name:Pp.t -> module_expr -> t
+
+(** [functor_alias ~name functor_ params] is {!Functor_alias}, printed where
+    the tree puts it.  It needs nothing placed in front of it. *)
+val functor_alias : name:Pp.t -> ModPath.t -> (template_param * ModPath.t) list -> t
 
 (** [derived_functor ~template ~name base] is {!Derived_functor}, printed
     where the tree puts it.  It needs nothing placed in front of it. *)
-val derived_functor : template:template_param list -> name:Pp.t -> application -> t
+val derived_functor : template:template_param list -> name:Pp.t -> module_expr -> t
 
 (** [elements ~source t] is [t], spelled as the elements of [source] are. *)
 val elements : source:ModPath.t -> t -> t

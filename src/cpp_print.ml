@@ -495,7 +495,7 @@ let stand_ins t =
         List.map
           (fun (target, tparams) -> Cpp_ast.(global_alias (Alias_of_type {target; tparams})))
           (declared_types (settled :> cpp_decl))
-      | Declared (Fields _ | Modtype_concept _ | Global_alias _ | Assertion _ | Module_alias _ | Derived_functor _) -> []
+      | Declared (Fields _ | Modtype_concept _ | Global_alias _ | Assertion _ | Module_alias _ | Functor_alias _ | Derived_functor _) -> []
       | Struct_of mp -> [Cpp_ast.(global_alias (Alias_of_module mp))] )
     (Cpp_ast.declared t)
 
@@ -4732,40 +4732,54 @@ let unprinted ~module_ env settled = Cpp_ast.unprinted ~needs:(planned_needs ~mo
 let unprinted_fields ~module_ ~vl r fields =
   Cpp_ast.fields ~needs:(fields_needs ~module_ ~vl r (List.map snd fields)) ~record:r ~vars:vl fields
 
+(* A module named in a module expression, and its resolution. *)
+let pp_module_name mp =
+  let r = resolve_module mp in
+  (str (wrapper_qualify_modname mp (resolved_string r)), r)
+
 (* Inside a class template a qualified module is a dependent name: an
    argument is preceded by [typename], and a functor applied is named
    [A::template F]. *)
 let pp_application {Cpp_ast.functor_; args} =
   let in_template = (!render_ctx).rc_in_template in
-  let resolved mp =
-    let r = resolve_module mp in
-    (str (wrapper_qualify_modname mp (resolved_string r)), r)
-  in
   let head =
-    match resolved functor_ with
+    match pp_module_name functor_ with
     | _, r when in_template && resolved_is_qualified r -> Cpp_name.pp ~template_keyword:true r
     | head, _ -> head
   in
   let arg mp =
-    match resolved mp with
+    match pp_module_name mp with
     | a, r when in_template && resolved_is_qualified r -> str "typename " ++ a
     | a, _ -> a
   in
   head ++ str "<" ++ prlist_with_sep (fun () -> str ", ") arg args ++ str ">"
 
-let pp_module_alias name (target : Cpp_ast.module_target) =
-  match target with
-  | Module_named mp ->
-    let r = resolve_module mp in
-    let named = str (resolved_string r) in
-    let named = if (!render_ctx).rc_in_template && resolved_is_qualified r then str "typename " ++ named else named in
-    str "using " ++ name ++ str " = " ++ named ++ str ";"
-  | Functor_of {functor_; params} ->
-    Cpp_ast.pp_template_head (List.map fst params)
-    ++ str "using " ++ name ++ str " = "
-    ++ str (resolved_string (resolve_module functor_))
-    ++ str "<" ++ prlist_with_sep (fun () -> str ", ") (fun (_, mp) -> pp_modname mp) params ++ str ">;"
-  | Applied a -> str "using " ++ name ++ str " = " ++ pp_application a ++ str ";"
+let pp_module_alias name (target : Cpp_ast.module_expr) =
+  let target =
+    match target with
+    | Module_named mp ->
+      let r = resolve_module mp in
+      let named = str (resolved_string r) in
+      if (!render_ctx).rc_in_template && resolved_is_qualified r then str "typename " ++ named else named
+    | Applied a -> pp_application a
+  in
+  str "using " ++ name ++ str " = " ++ target ++ str ";"
+
+let pp_functor_alias name functor_ params =
+  Cpp_ast.pp_template_head (List.map fst params)
+  ++ str "using " ++ name ++ str " = "
+  ++ str (resolved_string (resolve_module functor_))
+  ++ str "<" ++ prlist_with_sep (fun () -> str ", ") (fun (_, mp) -> pp_modname mp) params ++ str ">;"
+
+(* The base is written inside the functor's template; a base specifier
+   names a type, so a dependent one takes no [typename]. *)
+let pp_derived_functor template name (base : Cpp_ast.module_expr) =
+  let base =
+    with_render_ctx
+      (fun c -> {c with rc_in_struct = true; rc_in_template = true})
+      (fun () -> match base with Module_named mp -> fst (pp_module_name mp) | Applied a -> pp_application a)
+  in
+  Cpp_ast.pp_template_head template ++ str "struct " ++ name ++ str " : " ++ base ++ str " {};"
 
 let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
   let text, needs =
@@ -4773,11 +4787,8 @@ let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
     | Modtype_concept {path; params; concept} -> (modtype_concept ~path ~params concept, u.needs)
     | Assertion a -> (assertion a, u.needs)
     | Module_alias {name; target} -> (pp_module_alias name target, u.needs)
-    | Derived_functor {template; name; base} ->
-      ( Cpp_ast.pp_template_head template ++ str "struct " ++ name ++ str " : "
-        ++ with_render_ctx (fun c -> {c with rc_in_struct = true; rc_in_template = true}) (fun () -> pp_application base)
-        ++ str " {};",
-        u.needs )
+    | Functor_alias {name; functor_; params} -> (pp_functor_alias name functor_ params, u.needs)
+    | Derived_functor {template; name; base} -> (pp_derived_functor template name base, u.needs)
     | Declaration {env; settled} -> printed_decl ~print:pp_cpp_decl env settled
     | Absorbed {env; settled} -> (pp_cpp_decl env settled, u.needs)
     | Fields {record; vars; fields} ->

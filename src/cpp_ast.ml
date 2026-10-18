@@ -22,13 +22,11 @@ type declaration =
   | Modtype_concept of {path : ModPath.t; params : ModPath.t list; concept : Modtype_concept.t}
   | Global_alias of global_alias
   | Assertion of assertion
-  | Module_alias of {name : Pp.t; target : module_target}
-  | Derived_functor of {template : template_param list; name : Pp.t; base : application}
+  | Module_alias of {name : Pp.t; target : module_expr}
+  | Functor_alias of {name : Pp.t; functor_ : ModPath.t; params : (template_param * ModPath.t) list}
+  | Derived_functor of {template : template_param list; name : Pp.t; base : module_expr}
 
-and module_target =
-  | Module_named of ModPath.t
-  | Functor_of of {functor_ : ModPath.t; params : (template_param * ModPath.t) list}
-  | Applied of application
+and module_expr = Module_named of ModPath.t | Applied of application
 
 and application = {functor_ : ModPath.t; args : ModPath.t list}
 
@@ -83,6 +81,9 @@ let modtype_concept ~path ~params concept =
 let global_alias a = Unprinted {declaration = Global_alias a; needs = Needs.none}
 let assertion a = Unprinted {declaration = Assertion a; needs = Needs.none}
 let module_alias ~name target = Unprinted {declaration = Module_alias {name; target}; needs = Needs.none}
+
+let functor_alias ~name functor_ params =
+  Unprinted {declaration = Functor_alias {name; functor_; params}; needs = Needs.none}
 
 let derived_functor ~template ~name base =
   Unprinted {declaration = Derived_functor {template; name; base}; needs = Needs.none}

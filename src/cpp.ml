@@ -743,7 +743,6 @@ let rec pp_structure_elem ~is_header f ~module_ = function
             | _ -> []
           in
           let template = List.map template_param template_params in
-          let template_decl = Cpp_ast.pp_template_head template in
           let {text = struct_def; concepts = body_concepts; asserts} =
             with_render_ctx
               (fun c -> { c with rc_in_struct = true; rc_in_template = true })
@@ -756,16 +755,11 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                       Cpp_ast.module_
                         (Struct {head = {template; name; base = None}; layout = Block})
                         b.text }
-                | MEapply _ -> written (Cpp_ast.derived_functor ~template ~name (application_of body))
-                | _ ->
-                  let b = pp_module_expr ~is_header f body in
-                  { b with
-                    text =
-                      Cpp_ast.(
-                        seq
-                          [ text (template_decl ++ str "struct " ++ name ++ str " {" ++ fnl ());
-                            b.text;
-                            text (str "};") ]) } )
+                (* A functor that is another module is a struct deriving
+                   from it, as one applying another functor is. *)
+                | MEapply _ -> written (Cpp_ast.derived_functor ~template ~name (Applied (application_of body)))
+                | MEident mp -> written (Cpp_ast.derived_functor ~template ~name (Module_named mp))
+                | MEfunctor _ -> CErrors.anomaly (Pp.str "Crane: a functor's parameters were not all collected.") )
           in
           { text = struct_def; concepts = concepts @ body_concepts; asserts }
       | MEapply _ ->
@@ -1100,7 +1094,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
           | [] when is_modfile target && (!render_ctx).rc_in_struct -> written Cpp_ast.empty
           | [] -> written (Cpp_ast.module_alias ~name (Module_named target))
           | params ->
-            written (Cpp_ast.module_alias ~name (Functor_of {functor_ = target; params}))
+            written (Cpp_ast.functor_alias ~name target params)
     in
     { mod_pp with
       text =
@@ -1113,73 +1107,6 @@ let rec pp_structure_elem ~is_header f ~module_ = function
           let path = MPdot (module_, l) in
           let concept = Cpp_ind.modtype_concept ~module_ path ~params:[] m in
           Cpp_ast.modtype_concept ~path ~params:[] concept )
-
-(** Render a functor application, and say whether the result comes out with a
-    [::] qualifier.
-
-    Qualification is a property of the name at the application's head, not of
-    the whole rendering: [F<A::B>] needs no [typename], [A::F<B>] does.  The
-    question used to be put to the rendered text, which cannot tell those two
-    apart.  Returning the head's resolution alongside the document lets a
-    nested application answer for itself, and resolves each name exactly once.
-
-    The head is never itself an application -- the argument collection below
-    flattens those -- and a struct or functor abstraction has no name to
-    qualify, hence the [None]. *)
-and pp_module_app ~is_header f me me' =
-  let rec collect_args acc = function
-    | MEapply (g, arg) -> collect_args (arg :: acc) g
-    | base -> (base, acc)
-  in
-  let base, args = collect_args [me'] me in
-  let render me =
-    match me with
-    | MEident mp ->
-      let r = Common.resolve_module mp in
-      (str (wrapper_qualify_modname mp (Common.resolved_string r)), Some r)
-    | MEapply (g, g') -> pp_module_app ~is_header f g g'
-    (* A functor is applied to paths, so nothing written here declares a
-       concept. *)
-    | _ -> (Cpp_ast.to_pp (pp_module_expr ~is_header f me).text, None)
-  in
-  let is_qualified = function
-    | Some r -> Common.resolved_is_qualified r
-    | None -> false
-  in
-  let base_pp, base_resolved = render base in
-  let pp_module_arg arg =
-    let arg_pp, arg_resolved = render arg in
-    if (!render_ctx).rc_in_template && is_qualified arg_resolved then
-      str "typename " ++ arg_pp
-    else arg_pp
-  in
-  let args_pp = prlist_with_sep (fun () -> str ", ") pp_module_arg args in
-  let head_pp =
-    match base_resolved with
-    | Some r when (!render_ctx).rc_in_template && is_qualified base_resolved ->
-      (* [A::B<...>] must be spelled [A::template B<...>] inside a template. *)
-      Cpp_name.pp ~template_keyword:true r
-    | _ -> base_pp
-  in
-  (head_pp ++ str "<" ++ args_pp ++ str ">", base_resolved)
-
-(** Pretty-print a module expression (MEident, MEapply, MEfunctor, MEstruct).
-
-    @param is_header  Controls header vs. implementation rendering (see
-                      {!pp_structure_elem}).
-    @param f          Callback for rendering individual declarations inside an
-                      [MEstruct] body, which is written in the visibility
-                      planned for it ({!in_planned_visibility}).
-    @return Pretty-printer document for the module expression. For [MEident]
-            this is the qualified module name; for [MEapply] a template
-            instantiation; for [MEstruct] the indented body of declarations. *)
-and pp_module_expr ~is_header f = function
-  | MEident mp -> written (Cpp_ast.text (pp_modname mp))
-  | MEapply (me, me') -> written (Cpp_ast.text (fst (pp_module_app ~is_header f me me')))
-  | MEfunctor (_, _, me) -> pp_module_expr ~is_header f me
-  | MEstruct (mp, sel) ->
-    let b = pp_module_body ~is_header f mp sel in
-    {b with text = unenclosed_element (if is_header then In_enclosing_scope else Out_of_line) b.text}
 
 (** The body of the module [mp] of elements [sel], each element a member of
     it, written in the visibility planned for it ({!in_planned_visibility}). *)

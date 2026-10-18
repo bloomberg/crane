@@ -13084,3 +13084,14 @@
   (alias runtest)
   (deps collision_child_function_before_constant.t.exe)
   (action (run ./collision_child_function_before_constant.t.exe))))
+
+(subdir functor_body_is_a_module
+ (rule
+  (targets functor_body_is_a_module.t.exe)
+  (deps FunctorBodyIsAModule.vo functor_body_is_a_module.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} functor_body_is_a_module.t.exe functor_body_is_a_module.cpp functor_body_is_a_module.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps functor_body_is_a_module.t.exe)
+  (action (run ./functor_body_is_a_module.t.exe))))
