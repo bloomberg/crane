@@ -120,9 +120,45 @@ let is_ctor_factory_call = function
     if not (Hashtbl.mem ctor_ptr_fields (Common.ctor_owner_key c, struct_name)) then None
     else
       (* The arguments come back as stored -- reversed.  Everything downstream
-         indexes them in that space; see [uptr_idxs] in [try_tmc_decompose]. *)
-      Some (ty, struct_name, factory_s, to_reversed args)
+         indexes them in that space; see [uptr_idxs] in [make_cell]. *)
+      Some (c, ty, struct_name, factory_s, to_reversed args)
   | _ -> None
+
+(** The cell a factory call [args] builds of the constructor struct
+    [ctor_name] of [cell_ty], its argument [idx] the hole. *)
+let make_cell ~cell_ty ~ctor_name ~factory_s args idx =
+  let n_args = List.length args in
+  let uptr_idxs =
+    (* [ctor_ptr_fields] records shared_ptr field positions in STRUCT-field
+       order, but [idx]/[tca_non_rec_args] here index into [args] from
+       [is_ctor_factory_call], which are stored REVERSED (as [CPPfun_call]
+       keeps them).  Map the struct-order positions into the same reversed
+       arg-space ([n_args - 1 - j]) so [build_cell_call]'s lookup of an
+       argument's field aligns — otherwise a non-pointer field (e.g. a
+       [cons] element) is spuriously [make_shared]-wrapped. *)
+    match
+      match cell_owner cell_ty with
+      | Some owner ->
+        Hashtbl.find_opt ctor_ptr_fields
+          (Common.ctor_owner_key owner, ctor_name)
+      | None -> None
+    with
+    | Some fields ->
+      List.map
+        (function
+          | Recursive j -> Recursive (n_args - 1 - j)
+          | Boxed j -> Boxed (n_args - 1 - j))
+        fields
+    | None -> [Recursive idx]
+  in
+  { tca_factory = CPPqualified_t (cell_ty, Id.of_string factory_s);
+    tca_type = cell_ty;
+    tca_ctor_name = ctor_name;
+    tca_rec_field_idx = idx;
+    tca_non_rec_args =
+      List.concat (List.mapi (fun i a -> if i <> idx then [(i, a)] else []) args);
+    tca_n_args = n_args;
+    tca_ptr_fields = uptr_idxs }
 
 (** Try to decompose a return expression as a TMC-eligible branch.  Handles
     both single-level ([cons x (RECURSE xs)]) and nested constructors
@@ -145,48 +181,9 @@ let rec try_tmc_decompose check expr =
   let expr' = match expr with CPPmove e -> e | e -> e in
   match is_ctor_factory_call expr' with
   | None -> None
-  | Some (cell_ty, ctor_name, factory_s, args) ->
-    let n_args = List.length args in
+  | Some (_, cell_ty, ctor_name, factory_s, args) ->
     let indexed = List.mapi (fun i a -> (i, a)) args in
-    let non_rec_of idx =
-      List.filter_map
-        (fun (i, a) -> if i <> idx then Some (i, a) else None)
-        indexed
-    in
-    let make_cell idx =
-      let uptr_idxs =
-        (* [ctor_ptr_fields] records shared_ptr field positions in STRUCT-field
-           order, but [idx]/[tca_non_rec_args] here index into [args] from
-           [is_ctor_factory_call], which are stored REVERSED (as [CPPfun_call]
-           keeps them).  Map the struct-order positions into the same reversed
-           arg-space ([n_args - 1 - j]) so [build_cell_call]'s lookup of an
-           argument's field aligns — otherwise a non-pointer field (e.g. a
-           [cons] element) is spuriously [make_shared]-wrapped. *)
-        match
-          match cell_owner cell_ty with
-          | Some owner ->
-            Hashtbl.find_opt ctor_ptr_fields
-              (Common.ctor_owner_key owner, ctor_name)
-          | None -> None
-        with
-        | Some fields ->
-          List.map
-            (function
-              | Recursive j -> Recursive (n_args - 1 - j)
-              | Boxed j -> Boxed (n_args - 1 - j))
-            fields
-        | None -> [Recursive idx]
-      in
-      {
-      tca_factory =
-        CPPqualified_t (cell_ty, Id.of_string factory_s);
-      tca_type = cell_ty;
-      tca_ctor_name = ctor_name;
-      tca_rec_field_idx = idx;
-      tca_non_rec_args = non_rec_of idx;
-      tca_n_args = n_args;
-      tca_ptr_fields = uptr_idxs;
-    } in
+    let make_cell = make_cell ~cell_ty ~ctor_name ~factory_s args in
     (* Find which args are direct recursive calls *)
     let direct =
       List.filter_map
@@ -223,6 +220,46 @@ let rec try_tmc_decompose check expr =
         | None -> None )
       | _ -> None )
     | _ -> None (* Multiple direct calls — not TMC *) )
+
+(** The return expression [expr] as the branch of one of the recursion plan's
+    [chains] ({!Recursion_plan.modulo_cons}): the factory calls it nests, each
+    building its chain cell's constructor, holding the next in the cell's
+    hole, the innermost a recursive call.  The plan counts a hole among the
+    constructor's declared arguments; a factory call stores them reversed. *)
+let planned_branch chains check expr =
+  let rec follow expr cells =
+    let expr = match expr with CPPmove e -> e | e -> e in
+    match (cells, is_ctor_factory_call expr) with
+    | (cell : Recursion_plan.cell) :: inner, Some (c, cell_ty, ctor_name, factory_s, args)
+      when Common.globref_equal c cell.constructor ->
+      let idx = List.length args - 1 - cell.hole in
+      let held = if idx < 0 then None else List.nth_opt args idx in
+      let this = make_cell ~cell_ty ~ctor_name ~factory_s args idx in
+      Option.bind held (fun held ->
+          match inner with
+          | [] -> Option.map (fun cs -> {tmc_cells = [this]; tmc_rec_args = cs.cs_args}) (check held)
+          | _ ->
+            Option.map (fun br -> {br with tmc_cells = this :: br.tmc_cells}) (follow held inner) )
+    | _ -> None
+  in
+  let planned =
+    List.find_map
+      (fun (ch : Recursion_plan.chain) -> follow expr (ch.around @ [ch.innermost]))
+      chains
+  in
+  ( if Probe.checking () then
+      let same a b =
+        List.equal
+          (fun x y ->
+            x.tca_type == y.tca_type && x.tca_ctor_name = y.tca_ctor_name
+            && x.tca_rec_field_idx = y.tca_rec_field_idx )
+          a.tmc_cells b.tmc_cells
+        && List.equal ( = ) a.tmc_rec_args b.tmc_rec_args
+      in
+      if not (Option.equal same planned (try_tmc_decompose check expr)) then
+        Probe.violation "recursion plan"
+          Pp.(str "a tail-modulo-cons branch is built of other cells than the plan's") );
+  planned
 
 (** Classify an entire function body for TMC eligibility.  Walks all return
     positions (including inside match branches) and checks that:
@@ -398,7 +435,7 @@ let build_cell_call ?token ?(rec_arg = CPPnullptr) ?(allocate = true) ~vt_ret ce
   in
   let expr_builds_cell_type e =
     match is_ctor_factory_call e with
-    | Some (ty, _, _, _) -> ty = cell.tca_type
+    | Some (_, ty, _, _, _) -> ty = cell.tca_type
     | None -> false
   in
   let args =
@@ -729,7 +766,7 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~storage br
     @param vt_ret  [Some ret_ty] when the return type is a value type
     @param check   Call checker for identifying recursive calls
     @param ti      TMC info from {!try_tmc_classify} *)
-let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~storage check
+let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~storage ~branch check
     varying shadow_params =
   (* Emit code for a non-tail return in the TMC context.
      [suffix] is appended after TMC branches: empty inside visitor lambdas,
@@ -741,12 +778,13 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~storage check
       place_base storage e @ [Sbreak]
     else
       (* TMC branch — allocate cell(s) with holes, patch, continue *)
-      match try_tmc_decompose check e with
+      match branch e with
       | Some br ->
         build_tmc_branch_stmts ~cursor_used ~storage br varying shadow_params
         @ suffix
       | None ->
-        (* Fallback: shouldn't happen if try_tmc_classify was correct *)
+        (* A call the plan's chains do not reach stays a call; the loop is
+           then not taken ({!Loopify.apply_nontail_loopification}). *)
         [Sreturn (Some e)]
   in
   let inner_rc =
@@ -772,7 +810,7 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~storage check
     @param ret_ty Return type
     @param body Function body
     @return Transformed body with TMC while loop *)
-let transform_tmc ?(param_inits = []) tparams check params ret_ty body =
+let transform_tmc ?(param_inits = []) ~branch tparams check params ret_ty body =
   let storage = storage_of ret_ty in
   let { ss_varying = varying; ss_varying_params = varying_params;
         ss_shadow_params = shadow_params; ss_subs = subs } =
@@ -825,7 +863,7 @@ let transform_tmc ?(param_inits = []) tparams check params ret_ty body =
   let cursor_used = ref false in
   let body'' =
     List.map
-      (rewrite_tmc_visit_stmt ~cursor_used ~storage check varying shadow_params)
+      (rewrite_tmc_visit_stmt ~cursor_used ~storage ~branch check varying shadow_params)
       body'
     |> strip_unnecessary_blocks
     |> rewrite_borrowed_shadow_uses shadow_params

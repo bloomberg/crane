@@ -781,7 +781,9 @@ let is_cofix_body body = has_lazy_body body || body_contains_lazy_factory body
          (the frame-based rewriter can't handle this yet).}
       {- {b TMC} ({!transform_tmc}) — if the recursion plan lowers it "tail
          modulo cons" (each non-tail call the one call of a constructor
-         chain), {!try_tmc_classify} reading the finished body as the check.}
+         chain), each return read as one of the plan's chains
+         ({!planned_branch}); {!try_tmc_classify} reading the finished body
+         is the check.}
       {- {b General nontail} ({!transform_nontail}) — frame-based stack for all
          other patterns, including multi-call (e.g. fibonacci, tree traversal).}}
 
@@ -791,9 +793,10 @@ let is_cofix_body body = has_lazy_body body || body_contains_lazy_factory body
                        initialised directly from [this].
     @param fn_name     Optional function name for loop-comment annotations
                        (forwarded to {!transform_nontail}).
-    @param modulo_cons Whether the recursion is lowered tail modulo cons, as
-                       planned ({!planned_modulo_cons}); [None] reads the
-                       finished body instead
+    @param modulo_cons Whether the recursion is lowered tail modulo cons, and
+                       around which chains, as planned
+                       ({!planned_modulo_cons}); [None] reads the finished
+                       body instead
     @param check       Call checker for identifying recursive calls
     @param tparams     Template parameter context
     @param adopted     A body calling back into this function, to adopt as a
@@ -829,18 +832,23 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ~modulo_co
      only calls directly under a constructor, so a body mixing a branch that
      conses onto the recursive result with one that scrutinises it keeps a
      real C++ self-call in the second, and falls back to the frame stack. *)
-  let lowered () =
-    let tmc = transform_tmc ~param_inits tparams check params ret_ty restored in
+  let lowered branch =
+    let tmc = transform_tmc ~param_inits ~branch tparams check params ret_ty restored in
     if classify check tmc = No_recursion then Some tmc else None
   in
   (* How the finished body decided before the plan did. *)
   let finished () =
-    match try_tmc_classify check restored with Some () -> lowered () | None -> None
+    match try_tmc_classify check restored with
+    | Some () -> lowered (try_tmc_decompose check)
+    | None -> None
   in
   let tmc =
     match modulo_cons with
     | None -> finished ()
-    | Some planned ->
+    | Some modulo_cons ->
+      let planned =
+        match modulo_cons with Recursion_plan.Modulo_cons _ -> true | Not_modulo_cons -> false
+      in
       (* A transform that cannot linearise the body declines the function,
          so it agrees only with a plan that lowers it too. *)
       let agrees () =
@@ -856,7 +864,9 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ~modulo_co
             ++ str (if planned then "lowers " else "does not lower ")
             ++ str (Option.default "a function" fn_name)
             ++ str " tail modulo cons, and its finished body says otherwise");
-      if planned then lowered () else None
+      ( match modulo_cons with
+      | Modulo_cons chains -> lowered (planned_branch chains check)
+      | Not_modulo_cons -> None )
   in
   match tmc with
   | Some tmc -> {nt_body = tmc; nt_outcome = Lp_tmc; nt_used_param_inits = true}
@@ -1209,7 +1219,8 @@ let planned_recursion r check body =
     classified ()
 
 (** Whether the non-tail recursion of the function [r] is lowered tail modulo
-    cons, as the program's recursion plan has it ({!Recursion_plan.modulo_cons}),
+    cons, and around which chains, as the program's recursion plan has it
+    ({!Recursion_plan.modulo_cons}),
     given the constructor fields planned behind the pointer.  A helper lifted
     out of a definition for one of its local fixpoints is planned by that
     fixpoint.  A member the backend generates itself has no Core body and no

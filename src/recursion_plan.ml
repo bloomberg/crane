@@ -418,19 +418,24 @@ let find_local ~origin ~binder =
       else found )
     None !installed.locals
 
+type modulo_cons =
+  | Not_modulo_cons
+  | Modulo_cons of chain list
+
 (* Whether [chains] lower tail modulo cons: there is one, every one ends in
    the same cell, whose hole its constructor stores behind the pointer, and
    every constructor in them stores some field there. *)
 let lowers ~pointer_fields = function
-  | Some ({innermost; _} :: _ as chains) ->
-    let stored c = pointer_fields c.constructor in
-    (match stored innermost with Some fields -> List.mem innermost.hole fields | None -> false)
-    && List.for_all
-         (fun c ->
-           same_cell c.innermost innermost
-           && List.for_all (fun c -> Option.has_some (stored c)) (c.innermost :: c.around) )
-         chains
-  | Some [] | None -> false
+  | Some ({innermost; _} :: _ as chains)
+    when (let stored c = pointer_fields c.constructor in
+          (match stored innermost with Some fields -> List.mem innermost.hole fields | None -> false)
+          && List.for_all
+               (fun c ->
+                 same_cell c.innermost innermost
+                 && List.for_all (fun c -> Option.has_some (stored c)) (c.innermost :: c.around) )
+               chains ) ->
+    Modulo_cons chains
+  | Some _ | None -> Not_modulo_cons
 
 let modulo_cons ~pointer_fields r =
   if Ref.User.Set.mem r !installed.defined then
@@ -438,13 +443,21 @@ let modulo_cons ~pointer_fields r =
   else None
 
 let modulo_cons_local ~pointer_fields ~origin ~binder =
+  let both a b =
+    match (a, b) with
+    | Modulo_cons (c :: _ as cs), Modulo_cons (c' :: _ as cs')
+      when same_cell c.innermost c'.innermost ->
+      Modulo_cons (cs @ cs')
+    | (Modulo_cons _ | Not_modulo_cons), _ -> Not_modulo_cons
+  in
   List.fold_left
     (fun found l ->
       if Common.globref_equal l.origin origin then
         List.fold_left2
           (fun found b chains ->
             if Names.Id.equal b binder then
-              Some (lowers ~pointer_fields chains && Option.default true found)
+              let this = lowers ~pointer_fields chains in
+              Some (match found with Some f -> both f this | None -> this)
             else found )
           found l.binders l.chains
       else found )

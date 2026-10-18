@@ -60,6 +60,28 @@ val find : Names.GlobRef.t -> kind option
     definition both count. *)
 val find_local : origin:Names.GlobRef.t -> binder:Names.Id.t -> kind option
 
+(** A constructor applied around a recursive call: its argument [hole], in
+    the constructor's declared order, holds the call. *)
+type cell = private {
+  constructor : Names.GlobRef.t;
+  hole : int;
+}
+
+(** The constructors around one recursive call, outermost first, the
+    innermost holding the call itself. *)
+type chain = private {
+  around : cell list;
+  innermost : cell;
+}
+
+(** How a function that does not recurse only by tail calls builds its
+    result around its calls. *)
+type modulo_cons =
+  | Not_modulo_cons
+  | Modulo_cons of chain list
+      (** each call that is not a tail call is the one call of one of these
+          chains, all ending in the same cell; there is at least one *)
+
 (** Whether the recursion of the function [r] is lowered tail modulo cons,
     if the program defines [r]: [r] does not recurse only by tail calls, and
     each call that is not one is the one call of a chain of constructor
@@ -72,13 +94,14 @@ val find_local : origin:Names.GlobRef.t -> binder:Names.Id.t -> kind option
     stored, [None] where it stores none
     ({!Gen_inductives.constructor_pointer_fields}). *)
 val modulo_cons :
-  pointer_fields:(Names.GlobRef.t -> int list option) -> Names.GlobRef.t -> bool option
+  pointer_fields:(Names.GlobRef.t -> int list option) -> Names.GlobRef.t -> modulo_cons option
 
 (** {!modulo_cons} of the local fixpoint bound to [binder] in the definition
     [origin], read off its body as a definition's is, if [origin] defines
-    one; where two fixpoints bind the same name there, both must lower. *)
+    one; where two fixpoints bind the same name there, both must lower, and
+    the chains are both's. *)
 val modulo_cons_local :
   pointer_fields:(Names.GlobRef.t -> int list option) ->
   origin:Names.GlobRef.t ->
   binder:Names.Id.t ->
-  bool option
+  modulo_cons option
