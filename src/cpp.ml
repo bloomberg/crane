@@ -854,6 +854,13 @@ type written = Cpp_ast.t rendering
 
 let written text : written = {text; concepts = []; asserts = []}
 
+(** [element_of mp w] is [w], an element of the body of the module [mp],
+    spelled as its elements are ({!Cpp_ast.elements}) -- and so are the
+    concepts it declares, which were written in that body too, wherever the
+    file moves them. *)
+let element_of mp (w : written) =
+  {w with text = Cpp_ast.elements ~source:mp w.text; concepts = List.map (Cpp_ast.elements ~source:mp) w.concepts}
+
 (** [unenclosed_element enclosure ?fields body] is a module element whose
     body is written with no struct of its own, as {!Cpp_ast.module_}
     writes it, and then, where it has members, the line break a struct
@@ -1619,7 +1626,7 @@ and pp_module_body ~is_header f mp sel =
      members spell them, is declared inside the struct, in front of the
      first member that writes it (see {!Cpp_print.ctor_alias_home}): at
      namespace scope those names mean nothing. *)
-  let written = List.map (pp_structure_elem ~is_header f) sel in
+  let written = List.map (fun e -> element_of mp (pp_structure_elem ~is_header f e)) sel in
   current_structure_decls := old_structure_decls;
   { text = Cpp_ast.module_body mp (List.map (fun w -> w.text) written);
     concepts = List.concat_map (fun w -> w.concepts) written;
@@ -1789,7 +1796,8 @@ let pp_wrapper_module_dual ~is_header mp func_sels =
       (write_decl (empty_env ()))
       (List.filter_map snd lifted_split)
   in
-  (specs, defs_pp, lifted_pp, lifted_specs_pp)
+  let element = Cpp_ast.elements ~source:mp in
+  (specs, element defs_pp, element lifted_pp, element lifted_specs_pp)
 
 (** What analysing the structure concluded, for the passes that render it. *)
 let structure_analysis : Structure_analysis.t option ref = ref None
@@ -3416,15 +3424,14 @@ let do_struct_with_decl_tracking ~is_header f s =
     if is_header then
       List.map (fun (f : Cpp_print.forward_declaration) -> (f.fwd_ref, f.fwd_struct)) !file_layout.constrained_decls
     else [];
-  let place ~wrapper_specs ~prereq_labels ~hoisted ~prereqs ~concepts ((l, se) as x) =
-    let defined = if is_header then declarations [(top_visible_mp (), [x])] else [] in
+  let place ~wrapper_specs ~prereq_labels ~hoisted ~prereqs ~concepts ~source ((l, se) as x) =
+    let defined = if is_header then declarations [(source, [x])] else [] in
     let homed =
       List.filter_map (fun (name, d) -> if List.memq d defined then Some name else None) !file_layout.wrapper_homes
     in
     let {text = p; concepts = c; asserts = _} =
-      Cpp_print.writing_wrapper_members
-        (List.map (fun name -> (name, wrapper_specs name)) homed)
-        (fun () -> f x)
+      element_of source
+        (Cpp_print.writing_wrapper_members (List.map (fun name -> (name, wrapper_specs name)) homed) (fun () -> f x))
     in
     if is_header && Probe.checking () then begin
       let absorbed = Cpp_print.take_absorbed_wrappers () in
@@ -3544,7 +3551,8 @@ let do_struct_with_decl_tracking ~is_header f s =
         | Some w -> w.wr_specs
         | None -> Cpp_ast.module_body mp []
       in
-      let f = place ~wrapper_specs ~prereq_labels ~hoisted ~prereqs ~concepts in
+      let place_in source = place ~wrapper_specs ~prereq_labels ~hoisted ~prereqs ~concepts ~source in
+      let f = place_in mp in
       let old_decls = !current_structure_decls in
       current_structure_decls := sel;
       let p =
@@ -3620,7 +3628,8 @@ let do_struct_with_decl_tracking ~is_header f s =
               match se with
               | SEmodule {ml_mod_expr = MEstruct (inner_mp, inner_sel); _} ->
                 in_planned_visibility inner_mp (fun () ->
-                    Cpp_ast.module_ enclosure (Cpp_ast.module_body inner_mp (List.map f (List.filter keep inner_sel))) )
+                    Cpp_ast.module_ enclosure
+                      (Cpp_ast.module_body inner_mp (List.map (place_in inner_mp) (List.filter keep inner_sel))) )
               | _ -> Cpp_ast.empty
             in
             let body enclosure ~keep sel =
