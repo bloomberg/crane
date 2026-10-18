@@ -584,6 +584,8 @@ and cpp_lambda = {
 and local_fixpoint = {
   lf_origin : GlobRef.t option;
   lf_binder : Id.t;
+  lf_name : Id.t;
+  lf_selves : Id.t list;
 }
 
 (** A C++ constraint expression (used in requires clauses). *)

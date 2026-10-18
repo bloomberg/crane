@@ -36,9 +36,15 @@ type field_read = Read_as_bound | Read_through_pointer | Read_unboxed
 (* The binders of a local fixpoint group, as the source has them. *)
 let local_fix_binders ids = Array.to_list (Array.map fst ids)
 
-(* The local fixpoint bound to [binder] in the declaration being generated:
-   what the recursion plan knows its body by. *)
-let local_fixpoint binder = Some {lf_origin = !Table.current_decl_ref; lf_binder = binder}
+(* The local fixpoint bound to [binder] in the declaration being generated,
+   what the recursion plan knows its body by, called [name] and recursing
+   through the self-parameters [selves]. *)
+let local_fixpoint ~name ~selves binder =
+  Some
+    { lf_origin = !Table.current_decl_ref;
+      lf_binder = binder;
+      lf_name = name;
+      lf_selves = selves }
 
 (** Generate local fixpoint declarations using the Y-combinator pattern
     for escaping fixpoints.
@@ -91,7 +97,7 @@ let gen_local_fix_ycomb env ~binders renamed_ids funs_with_params =
   (* Generate impl lambdas: each takes all self params (auto &) + original params. *)
   let impl_stmts =
     List.map2
-      (fun (((_fix_id, fty), impl_id), binder) (args, body) ->
+      (fun (((fix_id, fty), impl_id), binder) (args, body) ->
         let self_params =
           List.rev_map (fun sid -> (Tref (Lvalue, Tauto), Some sid)) self_ids
         in
@@ -106,7 +112,7 @@ let gen_local_fix_ycomb env ~binders renamed_ids funs_with_params =
             Declare Tauto,
             CPPlambda
               { cl_tparams = [];
-                cl_fixpoint = local_fixpoint binder;
+                cl_fixpoint = local_fixpoint ~name:fix_id ~selves:self_ids binder;
                 cl_moved = [];
                 cl_params = of_reversed (orig_params @ self_params);
                 cl_ret = ret_ty fty;
@@ -198,7 +204,7 @@ let gen_local_fix_by_ref env ~binders renamed_ids funs_with_params owned_flags_p
   in
   let impl_stmts =
     List.map2
-      (fun ((((_fix_id, fty), impl_id), binder), owned_flags) (args, body) ->
+      (fun ((((fix_id, fty), impl_id), binder), owned_flags) (args, body) ->
         let self_params =
           List.rev_map (fun sid -> (Tref (Lvalue, Tauto), Some sid)) self_ids
         in
@@ -218,7 +224,7 @@ let gen_local_fix_by_ref env ~binders renamed_ids funs_with_params owned_flags_p
             CPPlambda
               { cl_params = of_reversed (orig_params @ self_params);
               cl_tparams = [];
-              cl_fixpoint = local_fixpoint binder;
+              cl_fixpoint = local_fixpoint ~name:fix_id ~selves:self_ids binder;
               cl_moved = [];
                 cl_ret = ret_ty fty;
                 cl_body = List.map rewrite_stmt body;

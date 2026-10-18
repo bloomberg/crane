@@ -623,6 +623,24 @@ let ycomb_self_id lparams =
   | (_, Some sid) :: _ when is_self_param_id sid && self_count = 1 -> Some sid
   | _ -> None
 
+(** The self-reference parameter of the lambda a single local fixpoint's
+    body is, as its encoding recorded it ({!Minicpp.local_fixpoint}): the
+    one self-parameter of [fixpoint], where it is the last of [lparams], the
+    lambda's parameters as stored.  A mutual group's lambda takes one per
+    member, which the callers here cannot linearise.  Under [CRANE_CHECK_IR]
+    it is checked against the parameters' names ({!ycomb_self_id}), which
+    decided this before. *)
+let fixpoint_self fixpoint lparams =
+  let recorded =
+    match (fixpoint, List.rev lparams) with
+    | Some {lf_selves = [self]; _}, (_, Some last) :: _ when Id.equal self last -> Some self
+    | _ -> None
+  in
+  if Probe.checking () && not (Option.equal Id.equal recorded (ycomb_self_id lparams)) then
+    Probe.violation "local fixpoint"
+      (Pp.str "a lambda's recorded self-parameter is not the one its parameters' names say");
+  recorded
+
 (** A checker matching the fixpoint's calls to itself through [self_id]. *)
 let self_checker self_id : call_checker =
  fun e ->

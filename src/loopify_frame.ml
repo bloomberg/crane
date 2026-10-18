@@ -742,13 +742,6 @@ let entry_emission ?pointer_safe en body =
 
 (** {3 Bodies the machine adopts as extra entry points} *)
 
-(** A local fixpoint's own name, recovered from its self-parameter [_self_f]. *)
-let name_of_self_id self_id =
-  let s = Id.to_string self_id in
-  String.sub s
-    (String.length self_param_prefix)
-    (String.length s - String.length self_param_prefix)
-
 (** The statement lists that run as part of evaluating [e]: the bodies of
     immediately-invoked zero-parameter lambdas, collected recursively.
 
@@ -945,7 +938,7 @@ let decline_reason ad =
     the enclosing function.
 
     The shape is the Y-combinator pair {!Translation.gen_local_fix_by_ref}
-    emits (see {!ycomb_self_id}).  A fixpoint whose body calls none of the
+    emits (see {!fixpoint_self}).  A fixpoint whose body calls none of the
     enclosing function is left for {!loopify_inner_lambdas}, which handles it
     correctly on its own; one that does call back cannot be loopified alone,
     because two machines leave each other's stack to unwind.
@@ -956,11 +949,11 @@ let decline_reason ad =
     {!ad_entry_id}.  The self-call forwards the fixpoint as a leading argument
     that the entry does not need, so installation drops it. *)
 let adopt_local_fix ~stmts check = function
-  | Sasgn (impl_id, Declare Tauto, CPPlambda {cl_params; cl_body; cl_ret; _}) -> (
+  | Sasgn (impl_id, Declare Tauto, CPPlambda {cl_params; cl_body; cl_ret; cl_fixpoint; _}) -> (
     let lparams = to_reversed cl_params in
-    match ycomb_self_id lparams with
-    | None -> None
-    | Some self_id ->
+    match (cl_fixpoint, fixpoint_self cl_fixpoint lparams) with
+    | None, _ | _, None -> None
+    | Some {lf_name; _}, Some self_id ->
       if collect_stmts check ~in_visitor:false cl_body = [] then None
       else
         (* Drop the self-parameter, and any unnamed one: a frame can only
@@ -980,7 +973,7 @@ let adopt_local_fix ~stmts check = function
           |> List.filter (fun v -> not (List.exists (Id.equal v) bound))
           |> List.sort_uniq Id.compare
         in
-        let name = name_of_self_id self_id in
+        let name = Id.to_string lf_name in
         let entry_id = adopted_entry_id name in
         let wrapper = find_fix_wrapper impl_id stmts in
         let reroute e =

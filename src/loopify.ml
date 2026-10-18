@@ -526,9 +526,9 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
      Only single (non-mutual) fixpoints are handled; mutual ones (multiple
      self-params) and non-tail recursion are left unchanged. *)
   let try_loopify_ycomb ~fixpoint lparams ret_ty_opt lbody =
-    match ycomb_self_id lparams with
-    | None -> None
-    | Some self_id -> (
+    match (fixpoint, fixpoint_self fixpoint lparams) with
+    | None, _ | _, None -> None
+    | Some {lf_name; _}, Some self_id -> (
       let check = self_checker self_id in
       let lbody = expose_tail_calls check lbody in
       match planned_local_recursion fixpoint check lbody with
@@ -549,14 +549,9 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
             loop_lparams
         in
         let ret_ty = match ret_ty_opt with Some ty -> ty | None -> Tvoid in
-        (* The fixpoint's own name, recovered from its self-parameter, so the
-           frame structs a non-tail transform emits are named after it. *)
-        let name =
-          let s = Id.to_string self_id in
-          String.sub s
-            (String.length self_param_prefix)
-            (String.length s - String.length self_param_prefix)
-        in
+        (* The frame structs a non-tail transform emits are named after the
+           fixpoint. *)
+        let name = Id.to_string lf_name in
         let body' =
           match kind with
           | Tail_recursion ->
@@ -578,8 +573,8 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
     match stmts with
     | [] -> []
     (* A Y-combinator local fixpoint from {!gen_local_fix_by_ref}:
-       [Sasgn(id, Declare Tauto, CPPlambda(...))] whose last param is a single
-       self-reference [_self_*]. *)
+       [Sasgn(id, Declare Tauto, CPPlambda(...))] whose last param is the
+       single self-reference its encoding recorded. *)
     | Sasgn
         ( id,
           (Declare Tauto as tgt),
@@ -591,7 +586,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
               cl_fixpoint = fixpoint;
               _ } )
       :: rest
-      when Option.has_some (ycomb_self_id (to_reversed lparams)) ->
+      when Option.has_some (fixpoint_self fixpoint (to_reversed lparams)) ->
       ( match try_loopify_ycomb ~fixpoint (to_reversed lparams) ret_ty_opt lbody with
       | Some (lparams', lbody') -> (
         (* The loop no longer recurses, so the self-parameter and the wrapper
@@ -599,7 +594,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
            itself, an ordinary lambda.  Only when the next statement is that
            wrapper -- [return go_impl(go_impl, args...)] over its own
            parameters -- and nothing after it names [go_impl]. *)
-        let self = ycomb_self_id (to_reversed lparams) in
+        let self = fixpoint_self fixpoint (to_reversed lparams) in
         let is_wrapper (w : cpp_lambda) =
           match w.cl_body with
           | [Sreturn (Some (CPPfun_call (_, CPPvar f, args)))] when Id.equal f id ->
@@ -619,7 +614,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
                     of_reversed
                       (List.filter (fun (_, x) -> x <> self) lparams');
                   cl_tparams = [];
-                  cl_fixpoint = fixpoint;
+                  cl_fixpoint = Option.map (fun f -> {f with lf_selves = []}) fixpoint;
                   cl_moved = [];
                   cl_ret = ret_ty_opt;
                   cl_body = lbody';

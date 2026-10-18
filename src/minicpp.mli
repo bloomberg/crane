@@ -732,6 +732,11 @@ and cpp_lambda = {
 and local_fixpoint = {
   lf_origin : GlobRef.t option;
   lf_binder : Id.t;
+  lf_name : Id.t;  (** the name the fixpoint is called by in C++ *)
+  lf_selves : Id.t list;
+      (** The parameters through which the lambda calls its group's members,
+          one per member, in the group's order: the knot its encoding ties.
+          A lambda that no longer recurses through them has none. *)
 }
 
 (** Alias for constraint expressions in requires clauses. *)
