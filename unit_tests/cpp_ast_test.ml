@@ -106,4 +106,37 @@ let () =
   check "a chunk at namespace scope may be a member of a body defined out of line"
     (not (Cpp_ast.is_empty (Cpp_ast.module_ Out_of_line (Cpp_ast.module_body m [top (leaf "x")]))));
   check "an empty chunk is no chunk" (Cpp_ast.is_empty (top Cpp_ast.empty));
-  check "a declaration needing something is not empty" (not (Cpp_ast.is_empty (leaf ~templates:["T"] "")))
+  check "a declaration needing something is not empty" (not (Cpp_ast.is_empty (leaf ~templates:["T"] "")));
+  let unprinted ?templates () =
+    Cpp_ast.unprinted ~needs:(needs ?templates ()) (Common.empty_env ())
+      (Cpp_erasure.materialise (Minicpp.Dstatic_assert (Minicpp.CPPbool true, None)))
+  in
+  let spelled ?(templates = []) sections =
+    let write spelling (_ : Cpp_ast.unprinted) =
+      Pp.str
+        ( match spelling with
+        | Cpp_ast.Element_of mp -> "E(" ^ ModPath.to_string mp ^ ")"
+        | Member_of mp -> "M(" ^ ModPath.to_string mp ^ ")" )
+    in
+    Pp.string_of_ppcmds (Cpp_ast.print ~write (Cpp_ast.schedule ~templates ~forwards:[] {prologue = Pp.mt (); sections}))
+  in
+  check_text "a declaration not yet printed is spelled as an element of the module of the group around it"
+    (spelled [top (Cpp_ast.elements ~source:m (unprinted ()))]) "E(F.M)";
+  check_text "the innermost struct around a declaration not yet printed spells it as its member"
+    (spelled [top (Cpp_ast.elements ~source:m (Cpp_ast.module_ struct_ (Cpp_ast.module_body inner [unprinted ()])))])
+    "struct-M{M(F.M.N)\n}";
+  check_text "the innermost group around a declaration not yet printed spells it"
+    (spelled [top (Cpp_ast.module_ struct_ (Cpp_ast.module_body m [Cpp_ast.elements ~source:inner (unprinted ())]))])
+    "struct-M{E(F.M.N)\n}";
+  check_text "a declaration not yet printed is placed by what it needs, as planned"
+    (spelled ~templates:[template "T"] [top (Cpp_ast.elements ~source:m (unprinted ~templates:["T"] ()))])
+    "<T>E(F.M)";
+  let refused sections = match spelled sections with exception Invalid_argument _ -> true | _ -> false in
+  check "a declaration not yet printed outside every group and struct is refused" (refused [top (unprinted ())]);
+  check "a body defined out of line does not say how a declaration in it is spelled"
+    (refused [top (Cpp_ast.module_ Out_of_line (Cpp_ast.module_body m [unprinted ()]))]);
+  check "a declaration not yet printed is not empty" (not (Cpp_ast.is_empty (unprinted ())));
+  check "whether a declaration not yet printed opens a doc comment is not known"
+    ( match Cpp_ast.starts_with_doc_comment (unprinted ()) with
+    | exception Invalid_argument _ -> true
+    | _ -> false )
