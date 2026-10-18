@@ -309,6 +309,13 @@ let install_ctor_ptr_fields planned =
         (List.map (fun (i, recursive) -> if recursive then Recursive i else Boxed i) fields) )
     planned
 
+(** The arguments of the constructor [c] its struct stores behind the pointer,
+    as planned, or [None] where it stores none. *)
+let constructor_pointer_fields c =
+  Option.map (List.map ptr_field_index)
+    (Hashtbl.find_opt ctor_ptr_fields
+       (Common.ctor_owner_key c, Ml_type_util.ctor_struct_name_of_ref c))
+
 (** Check the pointer fields read off a generated constructor struct against
     the ones planned before rendering, under [CRANE_CHECK_IR]. *)
 let agree_ptr_fields owner ctor_name fields =

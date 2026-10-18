@@ -13,10 +13,27 @@ type group = {
   kind : kind;
 }
 
+(* A constructor applied around a recursive call: the argument at [hole]
+   holds the call. *)
+type cell = {
+  constructor : Names.GlobRef.t;
+  hole : int;
+}
+
+(* The constructors around one recursive call, outermost first, the
+   innermost holding the call itself. *)
+type chain = {
+  around : cell list;
+  innermost : cell;
+}
+
 type local_group = {
   origin : Names.GlobRef.t;
   binders : Names.Id.t list;
   local_kind : kind;
+  chains : chain list option list;
+      (* per binder, its chains, if it recurses through no other call that
+         is not a tail call *)
 }
 
 type t = {
@@ -24,13 +41,33 @@ type t = {
   by_member : group Ref.User.Map.t;
   defined : Ref.User.Set.t;
   locals : local_group list;
+  modulo_cons : chain list Ref.User.Map.t;
 }
 
-let empty = {groups = []; by_member = Ref.User.Map.empty; defined = Ref.User.Set.empty; locals = []}
+let empty =
+  { groups = [];
+    by_member = Ref.User.Map.empty;
+    defined = Ref.User.Set.empty;
+    locals = [];
+    modulo_cons = Ref.User.Map.empty }
 
 let rec split_params n = function
   | MLlam (_, _, b) -> split_params (n + 1) b
   | b -> (n, b)
+
+(* The effect operation [use] is, where [effects] says it is generated
+   sequentially: a bind's continuation and a ret's value then stand where
+   the operation does. *)
+let sequential effects use =
+  match Core_effects.lookup effects use with
+  | Some {Core_effects.operation; mode = Core_effects.Sequential} -> Some operation
+  | Some _ | None -> None
+
+(* A custom whose replacement text is its one argument writes nothing
+   around it, so the argument is where the custom is: sequential [itree]
+   maps [go] and [TauF] so, and [Tau t] is [t]. *)
+let identity r =
+  Table.is_custom r && Minicpp.inline_shape_of_text (Table.find_custom r) = Minicpp.Inline_identity
 
 (* How [fd_body] calls the members of its recursive group, as the C++ it
    becomes does: a call is a tail call where its result is the function's,
@@ -43,18 +80,7 @@ let rec split_params n = function
 let classify ~effects ~callee fd_body =
   let _, body = split_params 0 fd_body in
   let tail_call = ref false and nontail_call = ref false in
-  let effect use =
-    match Core_effects.lookup effects use with
-    | Some {Core_effects.operation; mode = Core_effects.Sequential} -> Some operation
-    | Some _ | None -> None
-  in
-  (* A custom whose replacement text is its one argument writes nothing
-     around it, so the argument is where the custom is: sequential [itree]
-     maps [go] and [TauF] so, and [Tau t] is [t]. *)
-  let identity r =
-    Table.is_custom r
-    && Minicpp.inline_shape_of_text (Table.find_custom r) = Minicpp.Inline_identity
-  in
+  let effect = sequential effects in
   let rec walk ~depth ~tail e =
     let walk_under n ~tail e = walk ~depth:(depth + n) ~tail e in
     let walk ~tail e = walk ~depth ~tail e in
@@ -121,6 +147,121 @@ let combine a b =
   | Tail, _ | _, Tail -> Tail
   | No_recursion, No_recursion -> No_recursion
 
+(* [e] with each temporary {!Normalize} bound a call to put back where it
+   is read, when it is read once: the expression Normalize took the call out
+   of, as {!Cpp_temporaries} restores it for the transform that reads
+   constructors around calls. *)
+let rec restore_temporaries e =
+  match e with
+  | MLletin ((Tmp _ as id), ty, rhs, body) ->
+    let rhs = restore_temporaries rhs and body = restore_temporaries body in
+    let reads = ref 0 in
+    Mlutil.ast_iter_rel_applied (fun n i _ -> if i = n + 1 then incr reads) body;
+    if !reads = 1 then Mlutil.ast_subst rhs body else MLletin (id, ty, rhs, body)
+  | e -> Mlutil.ast_map restore_temporaries e
+
+(* The constructor chains the member [self] of a recursive group builds its
+   result of, if it recurses only through tail calls and through calls that
+   are each the one call of a chain in tail position, one chain per call:
+   constructor applications each holding the call in one of its arguments,
+   the innermost holding it directly.  [bodies.(k)] is the member [k]'s
+   body, parameters included, read with Normalize's temporaries put back,
+   and [member ~within ~depth f] the member [f] names in the body of the
+   member [within], under [depth] binders inside its parameters.  A tail call to a partner continues in
+   the partner's body, as Loopify inlines it there; any other call to a
+   partner is inlined in a closure, out of reach.  A partner already
+   inlined is called as any function is. *)
+let modulo_cons_chains ~effects ~member ~bodies self =
+  let bodies = Array.map (fun b -> split_params 0 (restore_temporaries b)) bodies in
+  let effect = sequential effects in
+  let chains = ref [] and general = ref false in
+  let general_if b = if b then general := true in
+  let rec walk ~within ~inlined ~depth e =
+    let reached ~depth f =
+      match member ~within ~depth f with
+      | Some k when not (List.mem k inlined) -> Some k
+      | Some _ | None -> None
+    in
+    let rec calls ~depth e =
+      let under n = calls ~depth:(depth + n) in
+      match e with
+      | MLapp (f, args) when Option.has_some (reached ~depth f) ->
+        List.fold_left (fun n a -> n + calls ~depth a) 1 args
+      | f when Option.has_some (reached ~depth f) -> 1
+      | MLletin (_, _, a, b) -> calls ~depth a + under 1 b
+      | MLlam (_, _, b) -> under 1 b
+      | MLcase (_, s, branches) ->
+        Array.fold_left
+          (fun n (ids, _, _, b) -> n + under (List.length ids) b)
+          (calls ~depth s) branches
+      | MLfix (_, ids, funs, _) -> Array.fold_left (fun n b -> n + under (Array.length ids) b) 0 funs
+      | e ->
+        let n = ref 0 in
+        Mlutil.ast_iter (fun c -> n := !n + calls ~depth c) e;
+        !n
+    in
+    let full_call ~depth = function
+      | MLapp (f, args) -> (
+        match reached ~depth f with
+        | Some k
+          when fst bodies.(k) = List.length args && List.for_all (fun a -> calls ~depth a = 0) args
+          ->
+          Some k
+        | Some _ | None -> None )
+      | _ -> None
+    in
+    let self_call ~depth e = full_call ~depth e = Some self in
+    let rec chain = function
+      | MLcons (_, constructor, args) -> (
+        let args = List.mapi (fun hole a -> (hole, a)) args in
+        match List.filter (fun (_, a) -> self_call ~depth a) args with
+        | [(hole, _)] -> Some {around = []; innermost = {constructor; hole}}
+        | [] -> (
+          match List.filter (fun (_, a) -> calls ~depth a = 1) args with
+          | [(hole, a)] ->
+            Option.map (fun c -> {c with around = {constructor; hole} :: c.around}) (chain a)
+          | _ -> None )
+        | _ -> None )
+      | _ -> None
+    in
+    let walk_under n e = walk ~within ~inlined ~depth:(depth + n) e in
+    match e with
+    | MLcase (_, s, branches) ->
+      general_if (calls ~depth s > 0);
+      Array.iter (fun (ids, _, _, b) -> walk_under (List.length ids) b) branches
+    | MLletin (_, _, a, b) ->
+      general_if (calls ~depth a > 0);
+      walk_under 1 b
+    | MLmagic (_, a) -> general_if ((not (self_call ~depth a)) && calls ~depth a > 0)
+    | MLcons (_, c, [a]) when identity c -> walk_under 0 a
+    | MLapp (MLglob use, [a]) when identity use.callee && Table.to_inline use.callee -> walk_under 0 a
+    | MLapp (MLglob use, args) when effect use = Some Core_effects.Bind -> (
+      match List.rev args with
+      | (MLlam _ as k) :: action :: rest ->
+        general_if (List.exists (fun a -> calls ~depth a > 0) (action :: rest));
+        let n, b = split_params 0 k in
+        walk_under n b
+      | _ -> general_if (calls ~depth e > 0) )
+    | MLapp (MLglob use, args) when effect use = Some Core_effects.Return -> (
+      match List.rev args with
+      | value :: rest ->
+        general_if (List.exists (fun a -> calls ~depth a > 0) rest);
+        walk_under 0 value
+      | [] -> () )
+    | _ when self_call ~depth e -> ()
+    | _ -> (
+      match full_call ~depth e with
+      | Some partner ->
+        walk ~within:partner ~inlined:(partner :: inlined) ~depth:0 (snd bodies.(partner))
+      | None -> (
+        match calls ~depth e with
+        | 0 -> ()
+        | 1 -> ( match chain e with Some c -> chains := c :: !chains | None -> general := true )
+        | _ -> general := true ) )
+  in
+  walk ~within:self ~inlined:[] ~depth:0 (snd bodies.(self));
+  if !general then None else Some (List.rev !chains)
+
 (* The plan of every local fixpoint in [defs], one per fixpoint, under the
    definition it occurs in.  Inside a member's body, before its parameters,
    the member [k] of [n] is the variable [n - k]. *)
@@ -129,21 +270,25 @@ let local_groups ~effects defs =
   let plan origin ids funs =
     let n = Array.length ids in
     let arities = Array.map (fun f -> fst (split_params 0 f)) funs in
+    let rec strip = function MLmagic (_, e) -> strip e | e -> e in
+    let member ~within ~depth f =
+      match strip f with
+      | MLrel db ->
+        let k = arities.(within) + n + depth - db in
+        if 0 <= k && k < n then Some k else None
+      | _ -> None
+    in
     let kind_of j =
-      let n_params = arities.(j) in
-      let rec strip = function MLmagic (_, e) -> strip e | e -> e in
-      let callee ~depth f =
-        match strip f with
-        | MLrel db ->
-          let k = n_params + n + depth - db in
-          if 0 <= k && k < n then Some arities.(k) else None
-        | _ -> None
-      in
+      let callee ~depth f = Option.map (Array.get arities) (member ~within:j ~depth f) in
       classify ~effects ~callee funs.(j)
     in
     let kind = Array.fold_left combine No_recursion (Array.init n kind_of) in
+    let chains =
+      List.init n (fun j ->
+          if kind = Nontail then modulo_cons_chains ~effects ~member ~bodies:funs j else None )
+    in
     plans :=
-      {origin; binders = Array.to_list (Array.map fst ids); local_kind = kind} :: !plans
+      {origin; binders = Array.to_list (Array.map fst ids); local_kind = kind; chains} :: !plans
   in
   Ref.User.Map.iter
     (fun r fd ->
@@ -209,7 +354,36 @@ let analyze groups struc =
           Probe.violation "recursion plan"
             Pp.(str "no single plan for the group of " ++ str (Table.kername_of_global r)) )
       defs;
-  {groups = plans; by_member; defined; locals = local_groups ~effects defs}
+  let modulo_cons =
+    List.fold_left
+      (fun m g ->
+        if g.kind <> Nontail then m
+        else
+          let index r =
+            let rec go k = function
+              | [] -> None
+              | m :: ms -> if Common.globref_equal m r then Some k else go (k + 1) ms
+            in
+            go 0 g.members
+          in
+          let bodies =
+            Array.of_list (List.map (fun r -> (Ref.User.Map.find r defs).fd_body) g.members)
+          in
+          let member ~within:_ ~depth:_ = function MLglob use -> index use.callee | _ -> None in
+          let chains_of r = Option.bind (index r) (modulo_cons_chains ~effects ~member ~bodies) in
+          List.fold_left
+            (fun m r ->
+              match chains_of r with Some chains -> Ref.User.Map.add r chains m | None -> m )
+            m g.members )
+      Ref.User.Map.empty plans
+  in
+  {groups = plans; by_member; defined; locals = local_groups ~effects defs; modulo_cons}
+
+let same_cell c c' = Common.globref_equal c.constructor c'.constructor && c.hole = c'.hole
+
+let same_chains =
+  List.equal (fun c c' ->
+      List.equal same_cell c.around c'.around && same_cell c.innermost c'.innermost )
 
 let equal a b =
   List.equal
@@ -220,8 +394,10 @@ let equal a b =
        (fun l l' ->
          Common.globref_equal l.origin l'.origin
          && List.equal Names.Id.equal l.binders l'.binders
-         && l.local_kind = l'.local_kind )
+         && l.local_kind = l'.local_kind
+         && List.equal (Option.equal same_chains) l.chains l'.chains )
        a.locals b.locals
+  && Ref.User.Map.equal same_chains a.modulo_cons b.modulo_cons
 
 let installed : t ref = State.cell State.Extraction empty
 
@@ -239,5 +415,37 @@ let find_local ~origin ~binder =
     (fun found l ->
       if Common.globref_equal l.origin origin && List.exists (Names.Id.equal binder) l.binders then
         Some (combine l.local_kind (Option.default No_recursion found))
+      else found )
+    None !installed.locals
+
+(* Whether [chains] lower tail modulo cons: there is one, every one ends in
+   the same cell, whose hole its constructor stores behind the pointer, and
+   every constructor in them stores some field there. *)
+let lowers ~pointer_fields = function
+  | Some ({innermost; _} :: _ as chains) ->
+    let stored c = pointer_fields c.constructor in
+    (match stored innermost with Some fields -> List.mem innermost.hole fields | None -> false)
+    && List.for_all
+         (fun c ->
+           same_cell c.innermost innermost
+           && List.for_all (fun c -> Option.has_some (stored c)) (c.innermost :: c.around) )
+         chains
+  | Some [] | None -> false
+
+let modulo_cons ~pointer_fields r =
+  if Ref.User.Set.mem r !installed.defined then
+    Some (lowers ~pointer_fields (Ref.User.Map.find_opt r !installed.modulo_cons))
+  else None
+
+let modulo_cons_local ~pointer_fields ~origin ~binder =
+  List.fold_left
+    (fun found l ->
+      if Common.globref_equal l.origin origin then
+        List.fold_left2
+          (fun found b chains ->
+            if Names.Id.equal b binder then
+              Some (lowers ~pointer_fields chains && Option.default true found)
+            else found )
+          found l.binders l.chains
       else found )
     None !installed.locals

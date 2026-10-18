@@ -14,7 +14,11 @@
     just its one argument stands for that argument.  The plan is per
     recursive group ({!Recursive_groups}), exactly one each: every call
     between members counts, as it does once Loopify has inlined the partners
-    into a member.  A function on no cycle does not recurse. *)
+    into a member.  A function on no cycle does not recurse.
+
+    For a function that does not recurse only by tail calls, the plan also
+    reads the constructors its result is built of around its calls, which
+    decide whether it is lowered tail modulo cons ({!modulo_cons}). *)
 
 type kind =
   | No_recursion
@@ -55,3 +59,26 @@ val find : Names.GlobRef.t -> kind option
     planned by it ({!Lifted}).  Two fixpoints binding the same name in one
     definition both count. *)
 val find_local : origin:Names.GlobRef.t -> binder:Names.Id.t -> kind option
+
+(** Whether the recursion of the function [r] is lowered tail modulo cons,
+    if the program defines [r]: [r] does not recurse only by tail calls, and
+    each call that is not one is the one call of a chain of constructor
+    applications in tail position, the innermost holding it directly, read
+    off [r]'s Core body with {!Normalize}'s temporaries put back and its
+    partners inlined as Loopify inlines them.  Every chain ends in the same
+    constructor, holding the call at the same argument, which its
+    constructor stores behind the pointer, and every constructor in a chain
+    stores some field there: [pointer_fields c] are the arguments of [c] so
+    stored, [None] where it stores none
+    ({!Gen_inductives.constructor_pointer_fields}). *)
+val modulo_cons :
+  pointer_fields:(Names.GlobRef.t -> int list option) -> Names.GlobRef.t -> bool option
+
+(** {!modulo_cons} of the local fixpoint bound to [binder] in the definition
+    [origin], read off its body as a definition's is, if [origin] defines
+    one; where two fixpoints bind the same name there, both must lower. *)
+val modulo_cons_local :
+  pointer_fields:(Names.GlobRef.t -> int list option) ->
+  origin:Names.GlobRef.t ->
+  binder:Names.Id.t ->
+  bool option

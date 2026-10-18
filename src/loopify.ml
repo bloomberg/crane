@@ -784,8 +784,9 @@ let is_cofix_body body = has_lazy_body body || body_contains_lazy_factory body
       {- {b Branch dependency} — bail out if any return expression depends on a
          destructured match binding that is also passed to a recursive call
          (the frame-based rewriter can't handle this yet).}
-      {- {b TMC} ({!transform_tmc}) — if the recursion is "tail modulo cons"
-         (exactly one recursive call wrapped in a single constructor).}
+      {- {b TMC} ({!transform_tmc}) — if the recursion plan lowers it "tail
+         modulo cons" (each non-tail call the one call of a constructor
+         chain), {!try_tmc_classify} reading the finished body as the check.}
       {- {b General nontail} ({!transform_nontail}) — frame-based stack for all
          other patterns, including multi-call (e.g. fibonacci, tree traversal).}}
 
@@ -795,6 +796,9 @@ let is_cofix_body body = has_lazy_body body || body_contains_lazy_factory body
                        initialised directly from [this].
     @param fn_name     Optional function name for loop-comment annotations
                        (forwarded to {!transform_nontail}).
+    @param modulo_cons Whether the recursion is lowered tail modulo cons, as
+                       planned ({!planned_modulo_cons}); [None] reads the
+                       finished body instead
     @param check       Call checker for identifying recursive calls
     @param tparams     Template parameter context
     @param adopted     A body calling back into this function, to adopt as a
@@ -803,7 +807,7 @@ let is_cofix_body body = has_lazy_body body || body_contains_lazy_factory body
     @param ret_ty      Return type
     @param body        Function body statements
     @return what the transform did; see {!nontail_result}. *)
-let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted check
+let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ~modulo_cons check
     tparams params ret_ty body =
   let declined reason =
     {nt_body = body; nt_outcome = Lp_declined reason; nt_used_param_inits = false}
@@ -826,19 +830,41 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted check
      {!Normalize} took out into temporaries; it reads the body with them put
      back.  Everything else reads the normalized body. *)
   let restored = Cpp_temporaries.own_stmts body in
-  match try_tmc_classify check restored with
-  | Some () ->
-    (* TMC only rewrites calls that sit directly under a constructor.  A body
-       can mix shapes -- one branch conses onto the recursive result while
-       another scrutinises it -- and {!try_tmc_classify} accepts it on the
-       strength of the branch it does understand, leaving the other branch as a
-       real C++ self-call.  That is exactly the stack growth this pass exists to
-       remove, so check the postcondition and fall back to the frame transform,
-       which handles the scrutinising shape via a continuation frame. *)
+  (* The loop, if the transform leaves no self-call behind.  It rewrites
+     only calls directly under a constructor, so a body mixing a branch that
+     conses onto the recursive result with one that scrutinises it keeps a
+     real C++ self-call in the second, and falls back to the frame stack. *)
+  let lowered () =
     let tmc = transform_tmc ~param_inits tparams check params ret_ty restored in
-    if classify check tmc = No_recursion then
-      {nt_body = tmc; nt_outcome = Lp_tmc; nt_used_param_inits = true}
-    else frame ()
+    if classify check tmc = No_recursion then Some tmc else None
+  in
+  (* How the finished body decided before the plan did. *)
+  let finished () =
+    match try_tmc_classify check restored with Some () -> lowered () | None -> None
+  in
+  let tmc =
+    match modulo_cons with
+    | None -> finished ()
+    | Some planned ->
+      (* A transform that cannot linearise the body declines the function,
+         so it agrees only with a plan that lowers it too. *)
+      let agrees () =
+        match finished () with
+        | Some _ -> planned
+        | None -> not planned
+        | exception Not_linearisable _ -> planned
+      in
+      if Probe.checking () && not (agrees ()) then
+        Probe.violation "recursion plan"
+          Pp.(
+            str "the recursion plan "
+            ++ str (if planned then "lowers " else "does not lower ")
+            ++ str (Option.default "a function" fn_name)
+            ++ str " tail modulo cons, and its finished body says otherwise");
+      if planned then lowered () else None
+  in
+  match tmc with
+  | Some tmc -> {nt_body = tmc; nt_outcome = Lp_tmc; nt_used_param_inits = true}
   | None -> frame ()
   with Not_linearisable reason -> declined reason
 
@@ -1187,6 +1213,32 @@ let planned_recursion r check body =
       Pp.(str "the recursion plan does not know " ++ str (Table.kername_of_global r));
     classified ()
 
+(** Whether the non-tail recursion of the function [r] is lowered tail modulo
+    cons, as the program's recursion plan has it ({!Recursion_plan.modulo_cons}),
+    given the constructor fields planned behind the pointer.  A helper lifted
+    out of a definition for one of its local fixpoints is planned by that
+    fixpoint.  A member the backend generates itself has no Core body and no
+    reference, and its finished body decides ([None]); a function the plan
+    does not know is a violation, decided the same way. *)
+let planned_modulo_cons r =
+  match r with
+  | None -> None
+  | Some r ->
+    let pointer_fields = constructor_pointer_fields in
+    let planned =
+      match Lifted.of_ref r with
+      | Some h ->
+        Option.bind (Lifted.origin h) (fun origin ->
+            Recursion_plan.modulo_cons_local ~pointer_fields ~origin ~binder:(Lifted.binder h) )
+      | None -> Recursion_plan.modulo_cons ~pointer_fields r
+    in
+    if planned = None then
+      Probe.violation "recursion plan"
+        Pp.(
+          str "the recursion plan does not say how " ++ str (Table.kername_of_global r)
+          ++ str " recurses");
+    planned
+
 (** Transform a top-level function definition by loopifying its body.
 
     This is the main entry point for loopifying a [Dfun]. The transformation
@@ -1266,8 +1318,9 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
           (transform_tail tparams check params ret_ty body, Some Lp_tail)
         | Nontail_recursion ->
           let r =
-            apply_nontail_loopification ~fn_name:name ?adopted check tparams
-              params ret_ty body
+            apply_nontail_loopification ~fn_name:name ?adopted
+              ~modulo_cons:(planned_modulo_cons (Some (fst f.df_path.dp_outer)))
+              check tparams params ret_ty body
           in
           (r.nt_body, Some r.nt_outcome)
       in
@@ -1540,7 +1593,7 @@ let transform_method ~tparams ~self_ty mf =
           let r =
             apply_nontail_loopification
               ~param_inits:[(self_id, CPPthis)]
-              ?fn_name
+              ?fn_name ~modulo_cons:(planned_modulo_cons mf.mf_globref)
               self_check tparams
               augmented_params mf.mf_ret_type body_with_self
           in

@@ -230,6 +230,10 @@ let rec try_tmc_decompose check expr =
       TMC-eligible constructor wrapping
     - All TMC branches use the {e same} constructor name and recursive field
 
+    The program's recursion plan decides this before any body is lowered
+    ({!Recursion_plan.modulo_cons}); this reading of the finished body checks
+    it, and decides for a member the backend generates itself.
+
     @return [Some tmc_info] if the function is TMC-eligible *)
 let try_tmc_classify check body =
   (* Scan a single return expression, threading (branches, compatible) *)
