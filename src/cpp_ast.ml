@@ -13,7 +13,7 @@ end
 
 type spelling = Element_of of ModPath.t | Member_of of ModPath.t
 
-type unprinted = {env : Common.env; declaration : Cpp_erasure.settled; needs : Needs.t}
+type unprinted = {env : Common.env; declaration : Cpp_erasure.settled; needs : Needs.t; expected : Pp.t option}
 
 type t =
   | Text of Pp.t
@@ -31,7 +31,7 @@ and enclosure = Struct of {head : Pp.t; tail : Pp.t} | Out_of_line | In_enclosin
 let text d = Text d
 let empty = Seq []
 let decl ~needs text = Decl {text; needs}
-let unprinted ~needs env declaration = Unprinted {env; declaration; needs}
+let unprinted ?expected ~needs env declaration = Unprinted {env; declaration; needs; expected}
 let elements ~source elements = Elements {source; elements}
 let seq l = Seq l
 

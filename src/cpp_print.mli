@@ -17,10 +17,18 @@ open Minicpp
     placing the declarations it needs reads ({!Cpp_ast.Needs}). *)
 val write_decl : Common.env -> Cpp_erasure.settled -> Cpp_ast.t
 
+(** Whether [d] writes a wrapper struct holding a wrapper module's
+    declarations, which are members of it ({!write_decl}). *)
+val absorbs : Cpp_erasure.settled -> bool
+
+(** Whether [d] is an assertion the struct being written holds back until
+    after it, writing nothing for it here. *)
+val is_held_back_assertion : Cpp_erasure.settled -> bool
+
 (** [unprinted ~module_ env decl] is [decl], written in the module
     [module_], to be printed where the tree puts it ({!Cpp_ast.print}),
     with what placing the declarations it needs reads, as planned. *)
-val unprinted : module_:Names.ModPath.t -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
+val unprinted : ?expected:Pp.t -> module_:Names.ModPath.t -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
 
 (** The text of a declaration not yet printed, printed in the render
     context and visibility its spelling enters.  Under [CRANE_CHECK_IR] it

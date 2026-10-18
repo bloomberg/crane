@@ -4595,6 +4595,13 @@ let rec absorbing_decl env (d : Cpp_erasure.settled) =
     | None -> Cpp_ast.(seq [text (str "struct " ++ str name ++ str " {" ++ fnl ()); ds; text (fnl () ++ str "};")]) )
   | Decl _ -> Cpp_ast.text (pp_cpp_decl env d)
 
+(** Whether [d] is an assertion the struct being written holds back
+    ({!held_back_assertions}), which it writes nothing for. *)
+let is_held_back_assertion (d : Cpp_erasure.settled) =
+  match Cpp_erasure.view d with
+  | Decl (Dstatic_assert (CPPconcept_app (class_ref, _, _), None)) -> class_concept_held_back class_ref
+  | _ -> false
+
 (** What placing the declarations a written declaration needs reads: the
     synthesised templates it writes, [templates], as planned
     ({!planned_ctor_aliases}); and, of the structs the file has constrained
@@ -4645,8 +4652,8 @@ let write_decl env settled =
     let text, needs = printed_decl ~print:pp_cpp_decl env settled in
     Cpp_ast.decl ~needs text
 
-let unprinted ~module_ env settled =
-  Cpp_ast.unprinted
+let unprinted ?expected ~module_ env settled =
+  Cpp_ast.unprinted ?expected
     ~needs:(needs_of ~templates:(List.map ctor_alias_name (planned_ctor_aliases ~module_ settled)) settled)
     env settled
 
@@ -4655,6 +4662,12 @@ let print_unprinted (u : Cpp_ast.unprinted) =
   if Probe.checking () && needs <> u.needs then
     Probe.violation "unprinted declarations"
       (Pp.str "a declaration printed where the tree puts it needs other declarations than planned where it was made");
+  ( match u.expected with
+  | Some expected when not (String.equal (Pp.string_of_ppcmds expected) (Pp.string_of_ppcmds text)) ->
+    Probe.violation "unprinted declarations"
+      Pp.(str "a declaration printed where the tree puts it reads otherwise than printed where it was made:"
+          ++ fnl () ++ text ++ fnl () ++ str "rather than" ++ fnl () ++ expected)
+  | Some _ | None -> () );
   text
 
 let cut2 = Cpp_ast.cut2

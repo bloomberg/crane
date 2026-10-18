@@ -894,9 +894,10 @@ let unenclosed_element enclosure ?fields body =
                       bodies, skipping header-only constructs).
     @param f          Callback used to pretty-print individual {!Miniml.ml_decl}
                       nodes; typically [impl_decls] or [header_decls].
+    @param module_    The module whose body the element is an element of.
     @return The element written ({!written}): its text, empty if it
             produces no output in the current pass, and its concepts. *)
-let rec pp_structure_elem ~is_header f = function
+let rec pp_structure_elem ~is_header f ~module_ = function
   | l, SEdecl d ->
     (* {b Placement of lifted lambda helpers.}  A helper lifted out of a local
        [let g := fun ... in] that mentions the enclosing struct (its parameter
@@ -926,7 +927,19 @@ let rec pp_structure_elem ~is_header f = function
         && rendered <> []
         && List.for_all is_erased_alias rendered
       then Cpp_ast.empty
-      else pp_decls rendered
+      else
+        (* Each declaration is printed where the tree puts it, as an
+           element of [module_] ({!Cpp_ast.print}), but a wrapper struct
+           holding a wrapper module's declarations, whose members are, and
+           an assertion held back, which writes nothing here. *)
+        Cpp_ast.concat fnl
+          (List.map
+             (fun (env, d) ->
+               if Cpp_print.absorbs d || Cpp_print.is_held_back_assertion d then write_decl env d
+               else
+                 let expected = if Probe.checking () then Some (Cpp_ast.to_pp (write_decl env d)) else None in
+                 Cpp_print.unprinted ?expected ~module_ env d )
+             rendered )
     in
     (* A type class rendered at file scope is a concept, and a concept has no
        forward declaration to bridge a use that precedes it.  One such use is
@@ -1002,7 +1015,7 @@ let rec pp_structure_elem ~is_header f = function
       concepts;
       asserts = List.concat_map (fun (_, d) -> Cpp_print.held_back_assertions d) rendered }
   | l, SEmodule m ->
-    let mp = MPdot (top_visible_mp (), l) in
+    let mp = MPdot (module_, l) in
     let name =
       match m.ml_mod_expr with
       | MEident _ | MEapply _ ->
@@ -1544,7 +1557,7 @@ let rec pp_structure_elem ~is_header f = function
     @@ Cpp_ast.text
       ( if (not is_header) || (!render_ctx).rc_in_struct then mt ()
         else
-          let path = MPdot (top_visible_mp (), l) in
+          let path = MPdot (module_, l) in
           pp_modtype_concept (str (modtype_concept_name path)) (Cpp_ind.modtype_concept path ~params:[] m) )
 
 (** Render a functor application, and say whether the result comes out with a
@@ -1644,7 +1657,7 @@ and pp_module_body ~is_header f mp sel =
      members spell them, is declared inside the struct, in front of the
      first member that writes it (see {!Cpp_print.ctor_alias_home}): at
      namespace scope those names mean nothing. *)
-  let written = List.map (fun e -> element_of mp (pp_structure_elem ~is_header f e)) sel in
+  let written = List.map (fun e -> element_of mp (pp_structure_elem ~is_header f ~module_:mp e)) sel in
   current_structure_decls := old_structure_decls;
   { text = Cpp_ast.module_body mp (List.map (fun w -> w.text) written);
     concepts = List.concat_map (fun w -> w.concepts) written;
@@ -3457,7 +3470,8 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
                       the implementation pass (out-of-line function bodies).
     @param f          Structure-element callback, typically
                       [pp_structure_elem ~is_header impl_decls] or the [header_decls]
-                      variant; called for each [(label, ml_structure_elem)] pair.
+                      variant; called for each [(label, ml_structure_elem)] pair
+                      with the module it is an element of.
     @param s          The flat extraction structure: a list of
                       [(module_path, structure_elem list)] pairs produced by the
                       extraction pipeline.
@@ -3519,7 +3533,9 @@ let do_struct_with_decl_tracking ~is_header f s =
     in
     let {text = p; concepts = c; asserts = _} =
       element_of source
-        (Cpp_print.writing_wrapper_members (List.map (fun name -> (name, wrapper_specs name)) homed) (fun () -> f x))
+        (Cpp_print.writing_wrapper_members
+           (List.map (fun name -> (name, wrapper_specs name)) homed)
+           (fun () -> f ~module_:source x) )
     in
     if is_header && Probe.checking () then begin
       let absorbed = Cpp_print.take_absorbed_wrappers () in
