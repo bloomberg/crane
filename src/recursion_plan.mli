@@ -110,3 +110,20 @@ val strategy_local :
   origin:Names.GlobRef.t ->
   binder:Names.Id.t ->
   strategy option
+
+(** Where a function goes on once a recursive call returns: [binder], the
+    binder the call's result is bound to, and [live], the binders bound
+    before it that what follows reads -- what a frame keeps across the
+    call. *)
+type resume = private {
+  binder : Core_binder.t;
+  live : Core_binder.t list;
+}
+
+(** The points binding [b] at which its definition, a member of a group that
+    does not recurse only by tail calls, resumes after a call into the
+    group: a let whose right-hand side is the call, or ends in one in every
+    branch that recurses, and a sequential bind's continuation.  A call
+    under a lambda or in a local fixpoint is not one.  Two lets of one
+    definition at one level, in two branches, both bind [b]. *)
+val resumes_binding : Core_binder.t -> resume list

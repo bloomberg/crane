@@ -367,13 +367,13 @@ let into_erased_return slot =
   | Some Native | None -> slot
 
 (** The Core binder of the variable at de Bruijn index [db] in [env], in the
-    declaration being translated ({!Core_binder}): [env] binds the
-    declaration's Core binders, its parameters first, so the variable's
+    definition whose body is being generated ({!Core_binder}): [env] binds
+    the definition's Core binders, its parameters first, so the variable's
     level is the number bound outside it. *)
 let core_binder env db =
   Option.map
     (fun origin -> Core_binder.make ~origin ~level:(List.length (fst env) - db))
-    !Table.current_decl_ref
+    (!tctx).body_owner
 
 let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
     r ts =

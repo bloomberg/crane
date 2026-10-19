@@ -44,6 +44,7 @@ let begin_body ~owner () =
     { !tctx with
       match_param_counter = 0;
       cs_counter = 0;
+      body_owner = Some owner;
       current_letin_depth = 0;
       move_owned_vars = Escape.IntSet.empty;
       move_n_params = 0;

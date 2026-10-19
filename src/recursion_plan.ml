@@ -37,6 +37,14 @@ type local_group = {
   suspends : bool;  (* some member's body suspends ({!suspends_within}) *)
 }
 
+(* Where a function goes on once a recursive call returns: the binder the
+   call's result is bound to, and the binders bound before it that what
+   follows reads, which a frame keeps across the call. *)
+type resume = {
+  binder : Core_binder.t;
+  live : Core_binder.t list;
+}
+
 type t = {
   groups : group list;
   by_member : group Ref.User.Map.t;
@@ -44,6 +52,7 @@ type t = {
   locals : local_group list;
   modulo_cons : chain list Ref.User.Map.t;
   suspended : Ref.User.Set.t;  (* the definitions whose body suspends *)
+  resumes : resume list Ref.User.Map.t;
 }
 
 let empty =
@@ -52,7 +61,8 @@ let empty =
     defined = Ref.User.Set.empty;
     locals = [];
     modulo_cons = Ref.User.Map.empty;
-    suspended = Ref.User.Set.empty }
+    suspended = Ref.User.Set.empty;
+    resumes = Ref.User.Map.empty }
 
 let rec split_params n = function
   | MLlam (_, _, b) -> split_params (n + 1) b
@@ -317,6 +327,110 @@ let definition_suspends self ty body =
   Translation_support.suspends_whole self (Ml_type_util.ml_return_type ty) body
   || suspends_within ~self lex body
 
+(* The levels of the binders outside [e] that [e] reads, [e] standing under
+   [depth] binders. *)
+let free_levels ~depth e =
+  let found = ref [] in
+  let rec go d = function
+    | MLrel i -> if i > d then found := (depth + d - i) :: !found
+    | MLlam (_, _, b) -> go (d + 1) b
+    | MLletin (_, _, a, b) ->
+      go d a;
+      go (d + 1) b
+    | MLcase (_, s, branches) ->
+      go d s;
+      Array.iter (fun (ids, _, _, b) -> go (d + List.length ids) b) branches
+    | MLfix (_, ids, funs, _) -> Array.iter (go (d + Array.length ids)) funs
+    | e -> Mlutil.ast_iter (go d) e
+  in
+  go 0 e;
+  List.sort_uniq Int.compare !found
+
+(* The points the body of [origin], standing in [lex], resumes at once a
+   recursive call returns: a let whose right-hand side is the call, or ends
+   in one in some branch, and a sequential bind whose action is the call,
+   its continuation's parameter binding the result.  In the body itself a
+   recursive call is one [calls] recognises; in a local fixpoint's bodies it
+   is a call of a member of that fixpoint, or of an enclosing group, whose
+   machine Loopify may make the fixpoint a second entry of.  A call under a
+   lambda is made where the closure runs, not here. *)
+let resumes_of ~effects ~origin ~calls lex body =
+  let effect = sequential effects in
+  let found = ref [] in
+  let binder level = Core_binder.make ~origin ~level in
+  let resume depth rest =
+    let live = List.filter (fun l -> l <> depth) (free_levels ~depth:(depth + 1) rest) in
+    found := {binder = binder depth; live = List.map binder live} :: !found
+  in
+  let rec walk ~calls depth e =
+    (* A local fixpoint applied where it is written, reaching a recursive
+       call, is bound as one ({!Normalize}). *)
+    let rec reaches depth e =
+      calls ~depth e
+      ||
+      match e with
+      | MLfix (_, ids, funs, _) ->
+        Array.exists
+          (fun f ->
+            let arity, b = split_params 0 f in
+            reaches (depth + Array.length ids + arity) b )
+          funs
+      | MLlam _ -> false
+      | MLletin (_, _, a, b) -> reaches depth a || reaches (depth + 1) b
+      | MLcase (_, s, branches) ->
+        reaches depth s
+        || Array.exists (fun (ids, _, _, b) -> reaches (depth + List.length ids) b) branches
+      | e ->
+        let found = ref false in
+        Mlutil.ast_iter (fun c -> if reaches depth c then found := true) e;
+        !found
+    in
+    let rec ends_in_call depth e =
+      calls ~depth e
+      ||
+      match e with
+      | MLapp ((MLfix _ as fix), _) -> reaches depth fix
+      | MLcase (_, _, branches) ->
+        Array.exists (fun (ids, _, _, b) -> ends_in_call (depth + List.length ids) b) branches
+      | MLletin (_, _, _, b) -> ends_in_call (depth + 1) b
+      | MLmagic (_, b) -> ends_in_call depth b
+      | _ -> false
+    in
+    let go = walk ~calls in
+    match e with
+    | MLletin (_, _, a, b) ->
+      if ends_in_call depth a then resume depth b;
+      go depth a;
+      go (depth + 1) b
+    | MLapp (MLglob use, args) when effect use = Some Core_effects.Bind -> (
+      match List.rev args with
+      | MLlam (_, _, k) :: action :: rest ->
+        if calls ~depth action then resume depth k;
+        List.iter (go depth) (action :: rest);
+        go (depth + 1) k
+      | _ -> List.iter (go depth) args )
+    | MLcase (_, s, branches) ->
+      go depth s;
+      Array.iter (fun (ids, _, _, b) -> go (depth + List.length ids) b) branches
+    | MLfix (_, ids, funs, _) ->
+      (* The member [m] is bound at level [depth + m], the last innermost. *)
+      let first = depth and n = Array.length ids in
+      let rec member ~depth = function
+        | MLmagic (_, e) -> member ~depth e
+        | MLapp (MLrel k, _) -> first <= depth - k && depth - k < first + n
+        | _ -> false
+      in
+      Array.iter
+        (fun f ->
+          let arity, b = split_params 0 f in
+          walk ~calls:(fun ~depth e -> member ~depth e || calls ~depth e) (depth + n + arity) b )
+        funs
+    | MLlam _ -> ()
+    | e -> Mlutil.ast_iter (go depth) e
+  in
+  walk ~calls:(fun ~depth:_ e -> calls e) (Lexenv.depth lex) body;
+  List.rev !found
+
 (* The plan of every local fixpoint in [defs], one per fixpoint, under the
    definition it occurs in.  Inside a member's body, before its parameters,
    the member [k] of [n] is the variable [n - k]. *)
@@ -446,7 +560,32 @@ let analyze groups struc =
         if definition_suspends r fd.fd_type fd.fd_body then Ref.User.Set.add r s else s )
       defs Ref.User.Set.empty
   in
-  {groups = plans; by_member; defined; locals = local_groups ~effects defs; modulo_cons; suspended}
+  (* A definition off every group that does not recurse only by tail calls
+     resumes nowhere but in its local fixpoints. *)
+  let resumes =
+    Ref.User.Map.mapi
+      (fun r fd ->
+        let members =
+          match Ref.User.Map.find_opt r by_member with
+          | Some g when g.kind = Nontail -> g.members
+          | Some _ | None -> []
+        in
+        let rec calls = function
+          | MLmagic (_, e) -> calls e
+          | MLapp (MLglob use, _) -> List.exists (Common.globref_equal use.callee) members
+          | _ -> false
+        in
+        let lex, body = Core_elaborate.declaration_scope fd.fd_type fd.fd_body in
+        resumes_of ~effects ~origin:r ~calls lex body )
+      defs
+  in
+  { groups = plans;
+    by_member;
+    defined;
+    locals = local_groups ~effects defs;
+    modulo_cons;
+    suspended;
+    resumes }
 
 let same_cell c c' = Common.globref_equal c.constructor c'.constructor && c.hole = c'.hole
 
@@ -469,6 +608,10 @@ let equal a b =
        a.locals b.locals
   && Ref.User.Map.equal same_chains a.modulo_cons b.modulo_cons
   && Ref.User.Set.equal a.suspended b.suspended
+  && Ref.User.Map.equal
+       (List.equal (fun r r' ->
+            Core_binder.equal r.binder r'.binder && List.equal Core_binder.equal r.live r'.live ) )
+       a.resumes b.resumes
 
 let installed : t ref = State.cell State.Extraction empty
 
@@ -544,3 +687,8 @@ let strategy_local ~pointer_fields ~origin ~binder =
           found l.binders l.chains
       else found )
     None !installed.locals
+
+let resumes_binding (b : Core_binder.t) =
+  match Ref.User.Map.find_opt b.origin !installed.resumes with
+  | Some rs -> List.filter (fun r -> Core_binder.equal r.binder b) rs
+  | None -> []

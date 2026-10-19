@@ -92,6 +92,10 @@ type translation_ctx = {
   (* De Bruijn environment: each variable's binder, with its ML type and
      role. *)
   env_types : Lexenv.t;
+  (* The definition whose body is being generated
+     ({!Gen_context.begin_body}): what its Core binders are binders of
+     ({!Core_binder}). *)
+  body_owner : GlobRef.t option;
   (* Nesting depth of let ... in expressions; used for unique name
      generation in nested scopes. *)
   current_letin_depth : int;
@@ -195,6 +199,7 @@ let tctx =
         current_param_types = [];
         current_cpp_return_type = None;
         env_types = Lexenv.empty;
+        body_owner = None;
         current_letin_depth = 0;
         move_owned_vars = Escape.IntSet.empty;
         move_dead_after = Escape.IntSet.empty;

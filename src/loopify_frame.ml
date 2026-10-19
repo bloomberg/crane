@@ -1127,6 +1127,9 @@ type enter_rewrite_ctx = {
       (** Template parameters of the enclosing function *)
   er_env : (Id.t * cpp_type) list;
       (** Type environment — changes when entering sub-scopes *)
+  er_binders : (Id.t * Core_binder.t option) list;
+      (** The Core binder each local in scope stands for, innermost first,
+          where translation declared it for one ({!Core_binder}) *)
   er_call_counter : int ref;
       (** Mutable counter for generating unique frame names *)
   er_frames_ref : call_frame_info list ref;
@@ -1199,6 +1202,38 @@ let with_rematerialized ctx stmt =
     {ctx with er_rematerialized = ctx.er_rematerialized @ [(id, stmt)]}
   | _ -> ctx
 
+(** [binders] once [stmt] has run: the local it declares joins them. *)
+let declared_binders binders = function
+  | Sasgn (id, Declare (_, b), _) | Sdecl (id, _, b) -> (id, b) :: binders
+  | Sasgn (id, Declare_static _, _) | Sdecl_init (id, _) -> (id, None) :: binders
+  | Sbind (ids, _) -> List.map (fun id -> (id, None)) ids @ binders
+  | _ -> binders
+
+(** Under [CRANE_CHECK_IR], that the frame keeping [saved] across the call
+    whose result [tgt] binds to [id] keeps nothing the recursion plan does not
+    find live there ({!Recursion_plan.resumes_binding}): some point the plan
+    resumes at, binding the binder [id] stands for, reads every saved local
+    that stands for a Core binder.  A local the backend made stands for none,
+    and neither yet does a parameter or a custom match's binding. *)
+let check_frame_plan ctx id tgt saved =
+  if Probe.checking () then
+    let binder_of v = Option.flatten (List.assoc_opt v ctx.er_binders) in
+    let resume =
+      match tgt with Declare (_, b) -> b | Existing -> binder_of id | Declare_static _ -> None
+    in
+    Option.iter
+      (fun r ->
+        let kept = List.filter_map binder_of saved in
+        let keeps (p : Recursion_plan.resume) =
+          List.for_all (fun b -> List.exists (Core_binder.equal b) p.live) kept
+        in
+        if not (List.exists keeps (Recursion_plan.resumes_binding r)) then
+          Probe.violation "frame plan"
+            Pp.(
+              str "the frame resuming at " ++ Id.print id
+              ++ str " keeps a binder the recursion plan does not find live there") )
+      resume
+
 (** Rewrite a single return statement for the [CraneEnter] handler in frame-based
     non-tail recursion transformation.
 
@@ -1252,6 +1287,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
               in
               ( ps, ret_ty2,
                 rewrite_enter_stmts { ctx with er_env = lenv;
+                                               er_binders = List.map (fun (id, _) -> (id, None)) ps @ ctx.er_binders;
                                                er_branch_ctx = br_ctx } body ) )
             branches,
           err );
@@ -1274,8 +1310,14 @@ let rec rewrite_enter_lambda_return ctx stmt =
         in
         fb_env @ var_env @ env
       in
+      let branch_binders =
+        List.map (fun fb -> (fb.fb_name, fb.fb_binder)) br.smb_field_bindings
+        @ (match br.smb_var with Some id -> [(id, None)] | None -> [])
+        @ ctx.er_binders
+      in
       let br_ctx = ctor_type_short_name br.smb_ctor_type in
       let rw = rewrite_enter_stmts { ctx with er_env = branch_env;
+                                              er_binders = branch_binders;
                                               er_branch_ctx = br_ctx } in
       { br with smb_body = rw br.smb_body }
     in
@@ -1383,6 +1425,7 @@ and rewrite_enter_stmts ctx stmts =
         |> List.filter (fun cid -> not (Id.Set.mem cid ctx.er_invariant_params))
         |> List.filter (fun cid -> not (List.mem_assoc cid remat))
         |> List.filter (fun cid -> not (List.exists (Id.equal cid) entry_heads)) in
+      check_frame_plan ctx id tgt cont_vars;
       let cont_saved = List.map (fun cid -> CPPvar cid) cont_vars in
       let cont_types = infer_saved_types tparams env cont_saved in
       let call_name = make_call_frame_name (Generated_name.role "Cont") call_counter seen ?branch_ctx () in
@@ -1409,7 +1452,15 @@ and rewrite_enter_stmts ctx stmts =
               declared := v :: !declared;
               s
             | s -> s )
-          (rewrite_enter_stmts { ctx with er_env = rest_env } rest)
+          (rewrite_enter_stmts
+             { ctx with
+               er_env = rest_env;
+               er_binders =
+                 (match tgt with
+                  | Declare (_, b) -> (id, b) :: ctx.er_binders
+                  | Existing -> ctx.er_binders
+                  | Declare_static _ -> (id, None) :: ctx.er_binders) }
+             rest)
       in
       (* The handler restores what it saved and rebuilds what it did not,
          then binds the call's result.  The temporaries among the restores
@@ -1519,7 +1570,10 @@ and rewrite_enter_stmts ctx stmts =
     in
     rewrite_enter_lambda_return ctx stmt
     @ rewrite_enter_stmts
-        { (with_rematerialized ctx stmt) with er_env = updated_env } rest
+        { (with_rematerialized ctx stmt) with
+          er_env = updated_env;
+          er_binders = declared_binders ctx.er_binders stmt }
+        rest
 
 (** Rewrite a single non-tail recursive statement for the Enter handler.
 
@@ -2551,6 +2605,7 @@ let transform_nontail ?(fn_name : string option) ?adopted ?(outer_env = [])
   let ctx = { er_check = check; er_entries = entries;
                er_tparams = tparams;
                er_env = env;
+               er_binders = List.map (fun (id, _) -> (id, None)) env;
                er_call_counter = call_counter; er_frames_ref = frames_ref;
                er_branch_ctx = None;
                er_seen_frame_names = Hashtbl.create 16;
@@ -2563,7 +2618,9 @@ let transform_nontail ?(fn_name : string option) ?adopted ?(outer_env = [])
     List.rev
       (fst
          (List.fold_left
-            (fun (acc, ctx) st -> (rewrite_enter_stmt ctx st :: acc, with_rematerialized ctx st))
+            (fun (acc, ctx) st ->
+              ( rewrite_enter_stmt ctx st :: acc,
+                {(with_rematerialized ctx st) with er_binders = declared_binders ctx.er_binders st} ) )
             ([], ctx) body ))
   in
   (* The adopted entry's handler is that body, rewritten under a context
