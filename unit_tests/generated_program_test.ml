@@ -26,7 +26,7 @@ let raises_user_error f =
 
 let () =
   Unix.putenv "CRANE_CHECK_IR" "1";
-  let helper = Lifted.make ~origin:None ~binder:(Names.Id.of_string "go") in
+  let helper = Lifted.make ~fixpoint:None ~origin:None ~binder:(Names.Id.of_string "go") in
   let helper_decl =
     Dfun
       (mk_dfun ~ret:Tvoid (Lifted.ref_of helper)
@@ -66,7 +66,7 @@ let () =
   ignore (Generated_program.record (entity "b" []));
   check "an entity the unit does not declare is refused" (raises_anomaly check_plan);
   State.reset State.Unit;
-  let owned = Lifted.make ~origin:(Some (r "stray")) ~binder:(Names.Id.of_string "go") in
+  let owned = Lifted.make ~fixpoint:None ~origin:(Some (r "stray")) ~binder:(Names.Id.of_string "go") in
   let owned_decl = Dfun (mk_dfun ~ret:Tvoid (Lifted.ref_of owned) (Ddef ([], []))) in
   Generated_program.record_lifted_ahead [owned_decl];
   check "a helper lifted out of nothing the unit declares or emits is refused"

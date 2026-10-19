@@ -111,6 +111,15 @@ val strategy_local :
   binder:Names.Id.t ->
   strategy option
 
+(** The strategy of the function [member] of the local fixpoint
+    [occurrence], if the program has that fixpoint: planned from its body as
+    a definition's is, every call between the members of its group
+    counting. *)
+val strategy_at :
+  pointer_fields:(Names.GlobRef.t -> int list option) ->
+  Miniml.Occurrence.t * int ->
+  strategy option
+
 (** Where a function goes on once a recursive call returns: [binder], the
     binder the call's result is bound to, and [live], the binders bound
     before it that what follows reads -- what a frame keeps across the

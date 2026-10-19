@@ -33,17 +33,19 @@ include Translation_calls
    BoxedFields], boxed or not per instantiation). *)
 type field_read = Read_as_bound | Read_through_pointer | Read_unboxed
 
-(* The binders of a local fixpoint group, as the source has them. *)
-let local_fix_binders ids = Array.to_list (Array.map fst ids)
+(* The binders of the local fixpoint [occ], as the source has them, each
+   with the member of the fixpoint it binds. *)
+let local_fix_binders occ ids = Array.to_list (Array.mapi (fun j (x, _) -> (x, (occ, j))) ids)
 
-(* The local fixpoint bound to [binder] in the declaration being generated,
-   what the recursion plan knows its body by, called [name] and recursing
+(* The local fixpoint bound to [binder], the function [member] of a Core
+   fixpoint, in the declaration being generated, called [name] and recursing
    through the self-parameters [selves]. *)
-let local_fixpoint ~name ~selves binder =
+let local_fixpoint ~name ~selves (binder, member) =
   Some
     { lf_origin = !Table.current_decl_ref;
       lf_binder = binder;
       lf_name = name;
+      lf_member = Some member;
       lf_selves = selves }
 
 (** Generate local fixpoint declarations using the Y-combinator pattern
@@ -9016,7 +9018,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
      statement lands in is {!with_cpp_return_type}, which
      {!position_cpp_ty} falls back to. *)
   match ast with
-  | MLletin (_, _, (MLfix (x, ids, funs, _, _) as fix_term), b) as _whole ->
+  | MLletin (_, _, (MLfix (x, ids, funs, _, occ) as fix_term), b) as _whole ->
     (* Special case for let-fix: the let binding name is the fix function name *)
     Local_types.check_minted ids;
     let ids, funs = Local_types.recover_fix_codomains ids funs in
@@ -9055,7 +9057,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       let free_args = List.map (fun (name, _, _) -> CPPvar name) free_vars in
       (* Generate the lifted function name *)
       let fix_name = fst ids.(x) in
-      let lifted_ref = lifted_fix_ref fix_name in
+      let lifted_ref = lifted_fix_ref ~fixpoint:(occ, x) fix_name in
       (* Generate the fixpoint body using gen_fix, under the lifted function's
          own tvar scope, passing all mutual fixpoint names *)
       let all_fix_ids_list = Array.to_list ids in
@@ -9230,7 +9232,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       in
       if any_escapes then
         let decls, defs, deref_subst =
-          gen_local_fix_ycomb env ~binders:(local_fix_binders ids) renamed_ids funs_with_params
+          gen_local_fix_ycomb env ~binders:(local_fix_binders occ ids) renamed_ids funs_with_params
         in
         decls @ defs @ deref_subst cont
       else
@@ -9251,7 +9253,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           ) funs)
         in
         let decls, defs =
-          gen_local_fix_by_ref env ~binders:(local_fix_binders ids) renamed_ids funs_with_params
+          gen_local_fix_by_ref env ~binders:(local_fix_binders occ ids) renamed_ids funs_with_params
             owned_flags_per_fun
         in
         decls @ defs @ cont
@@ -10052,7 +10054,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       in
       tctx := { !tctx with move_owned_vars = saved_owned };
       result
-  | MLapp (MLfix (x, ids, funs, _, _), args) ->
+  | MLapp (MLfix (x, ids, funs, _, occ), args) ->
     Local_types.check_minted ids;
     let ids, funs = Local_types.recover_fix_codomains ids funs in
     (* Collect Tvars from bodies too *)
@@ -10083,7 +10085,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         build_extended_tvar_names fix_tvar_indices all_tvar_names all_body_tvars
       in
       let fix_name = fst ids.(x) in
-      let lifted_ref = lifted_fix_ref fix_name in
+      let lifted_ref = lifted_fix_ref ~fixpoint:(occ, x) fix_name in
       (* Compile under the lifted function's extended tvar scope, which covers
          both signature and body Tvar indices. *)
       let all_fix_ids_list = Array.to_list ids in
@@ -10172,7 +10174,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
            Use Y-combinator pattern so the fixpoint body doesn't capture
            a stack-local std::function by reference. *)
         let decls, defs, deref_subst =
-          gen_local_fix_ycomb env ~binders:(local_fix_binders ids) renamed_ids funs_with_params
+          gen_local_fix_ycomb env ~binders:(local_fix_binders occ ids) renamed_ids funs_with_params
         in
         let remaining_params =
           (* [fix_params] is in de Bruijn order -- last parameter first -- so
@@ -10199,7 +10201,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         @ deref_subst [k (mk_lambda pa_params None [Sreturn (Some full_call)] ~capture:Closure)]
       end else if fix_escapes_in_own_bodies renamed_ids funs_with_params then
         let decls, defs, deref_subst =
-          gen_local_fix_ycomb env ~binders:(local_fix_binders ids) renamed_ids funs_with_params
+          gen_local_fix_ycomb env ~binders:(local_fix_binders occ ids) renamed_ids funs_with_params
         in
         decls @ defs
         @ deref_subst
@@ -10222,13 +10224,13 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           ) funs)
         in
         let decls, defs =
-          gen_local_fix_by_ref env ~binders:(local_fix_binders ids) renamed_ids funs_with_params
+          gen_local_fix_by_ref env ~binders:(local_fix_binders occ ids) renamed_ids funs_with_params
             owned_flags_per_fun
         in
         decls @ defs
         @ [k (CPPfun_call (call_opaque, CPPvar (fst (List.nth renamed_ids x)), of_reversed args))]
       end
-  | MLfix (x, ids, funs, _, _) ->
+  | MLfix (x, ids, funs, _, occ) ->
     (* Standalone fixpoint (not immediately applied) — e.g., appearing as the
        RHS of a let-binding.  Since the fixpoint value itself is returned (not
        called in place), it will always escape.  Use the Y-combinator pattern:
@@ -10250,7 +10252,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       List.map (fun (_, params, body) -> (params, body)) funs_compiled
     in
     let decls, defs, _deref_subst =
-      gen_local_fix_ycomb env ~binders:(local_fix_binders ids) renamed_ids funs_with_params
+      gen_local_fix_ycomb env ~binders:(local_fix_binders occ ids) renamed_ids funs_with_params
     in
     let fix_id = fst (List.nth renamed_ids x) in
     decls @ defs @ [k (CPPvar fix_id)]

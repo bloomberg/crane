@@ -28,6 +28,7 @@ type chain = {
 }
 
 type local_group = {
+  occurrence : Occurrence.t;
   origin : Names.GlobRef.t;
   binders : Names.Id.t list;
   local_kind : kind;
@@ -436,7 +437,7 @@ let resumes_of ~effects ~origin ~calls lex body =
    the member [k] of [n] is the variable [n - k]. *)
 let local_groups ~effects defs =
   let plans = ref [] in
-  let plan origin lex ids funs =
+  let plan origin lex ids funs occurrence =
     let n = Array.length ids in
     let arities = Array.map (fun f -> fst (split_params 0 f)) funs in
     let rec strip = function MLmagic (_, e) -> strip e | e -> e in
@@ -467,14 +468,19 @@ let local_groups ~effects defs =
       Array.exists (suspends_within ~self:origin lex) funs
     in
     plans :=
-      {origin; binders = Array.to_list (Array.map fst ids); local_kind = kind; chains; suspends}
+      { occurrence;
+        origin;
+        binders = Array.to_list (Array.map fst ids);
+        local_kind = kind;
+        chains;
+        suspends }
       :: !plans
   in
   Ref.User.Map.iter
     (fun r fd ->
       let lex, body = Core_elaborate.declaration_scope fd.fd_type fd.fd_body in
       iter_scoped
-        (fun lex -> function MLfix (_, ids, funs, _, _) -> plan r lex ids funs | _ -> ())
+        (fun lex -> function MLfix (_, ids, funs, _, occ) -> plan r lex ids funs occ | _ -> ())
         lex body )
     defs;
   List.rev !plans
@@ -600,7 +606,8 @@ let equal a b =
   && Ref.User.Set.equal a.defined b.defined
   && List.equal
        (fun l l' ->
-         Common.globref_equal l.origin l'.origin
+         Occurrence.equal l.occurrence l'.occurrence
+         && Common.globref_equal l.origin l'.origin
          && List.equal Names.Id.equal l.binders l'.binders
          && l.local_kind = l'.local_kind
          && List.equal (Option.equal same_chains) l.chains l'.chains
@@ -664,17 +671,32 @@ let strategy ~pointer_fields r =
       (strategy_of ~pointer_fields ~suspends kind (Ref.User.Map.find_opt r !installed.modulo_cons))
   else None
 
+(* One strategy for two plans of what is lowered as one function. *)
+let both a b =
+  match (a, b) with
+  | Suspended k, s | s, Suspended k -> Suspended (combine k (kind_of_strategy s))
+  | Modulo_cons (c :: _ as cs), Modulo_cons (c' :: _ as cs')
+    when same_cell c.innermost c'.innermost ->
+    Modulo_cons (cs @ cs')
+  | (Modulo_cons _ | Frame_stack), _ | _, (Modulo_cons _ | Frame_stack) -> Frame_stack
+  | Tail_loop, _ | _, Tail_loop -> Tail_loop
+  | No_loop, No_loop -> No_loop
+
+(* A copy of a fixpoint keeps its occurrence, so a definition holding two
+   copies plans it twice: the copies are lowered by one strategy. *)
+let strategy_at ~pointer_fields (occurrence, member) =
+  List.fold_left
+    (fun found l ->
+      if Occurrence.equal l.occurrence occurrence then
+        match List.nth_opt l.chains member with
+        | Some chains ->
+          let this = strategy_of ~pointer_fields ~suspends:l.suspends l.local_kind chains in
+          Some (match found with Some f -> both f this | None -> this)
+        | None -> found
+      else found )
+    None !installed.locals
+
 let strategy_local ~pointer_fields ~origin ~binder =
-  let both a b =
-    match (a, b) with
-    | Suspended k, s | s, Suspended k -> Suspended (combine k (kind_of_strategy s))
-    | Modulo_cons (c :: _ as cs), Modulo_cons (c' :: _ as cs')
-      when same_cell c.innermost c'.innermost ->
-      Modulo_cons (cs @ cs')
-    | (Modulo_cons _ | Frame_stack), _ | _, (Modulo_cons _ | Frame_stack) -> Frame_stack
-    | Tail_loop, _ | _, Tail_loop -> Tail_loop
-    | No_loop, No_loop -> No_loop
-  in
   List.fold_left
     (fun found l ->
       if Common.globref_equal l.origin origin then

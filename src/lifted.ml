@@ -26,7 +26,9 @@ module KeyMap = Map.Make (Key)
 
 type t =
   { key : Key.t;  (** what the helper is *)
-    name : Id.t  (** what it is spelled, derived from {!field:key} *) }
+    name : Id.t;  (** what it is spelled, derived from {!field:key} *)
+    fixpoint : (Miniml.Occurrence.t * int) option
+        (** the Core fixpoint member it lowers, if it lowers one *) }
 
 (** The two directions of the identity/spelling correspondence. Both are kept
     for the whole session: a helper must spell the same in the header and in
@@ -72,14 +74,14 @@ let decide t =
       Pp.(str "Crane: the helper " ++ Id.print t.name ++ str " would be called as "
           ++ str decided ++ str ".")
 
-let make ~origin ~binder =
+let make ~fixpoint ~origin ~binder =
   let key = (origin, binder) in
   let t =
     match KeyMap.find_opt key !by_key with
     | Some t -> t
     | None ->
       let name = unique_name (preferred_name ~origin ~binder) 0 in
-      let t = { key; name } in
+      let t = { key; name; fixpoint } in
       by_key := KeyMap.add key t !by_key;
       Hashtbl.replace by_name name t;
       t
@@ -94,5 +96,6 @@ let of_ref = function
 let name t = t.name
 let origin t = fst t.key
 let binder t = snd t.key
+let fixpoint t = t.fixpoint
 
 let equal a b = Key.compare a.key b.key = 0

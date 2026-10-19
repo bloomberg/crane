@@ -756,6 +756,9 @@ and local_fixpoint = {
   lf_origin : GlobRef.t option;
   lf_binder : Id.t;
   lf_name : Id.t;  (** the name the fixpoint is called by in C++ *)
+  lf_member : (Miniml.Occurrence.t * int) option;
+      (** The Core fixpoint it lowers, by the fixpoint's occurrence, and the
+          index of its function among the fixpoint's *)
   lf_selves : Id.t list;
       (** The parameters through which the lambda calls its group's members,
           one per member, in the group's order: the knot its encoding ties.

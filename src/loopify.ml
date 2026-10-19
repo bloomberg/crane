@@ -463,28 +463,40 @@ let checked_plan planned ~what classified =
           Pp.(str "the recursion plan disagrees with the finished body of " ++ what ()) );
   planned
 
+(** Under [CRANE_CHECK_IR], that the plan of the local fixpoint bound to
+    [binder] in [origin], read by the binder's name, is [planned]. *)
+let check_named_plan ~origin ~binder planned =
+  if Probe.checking () then
+    match origin with
+    | Some origin -> (
+      match
+        Recursion_plan.strategy_local ~pointer_fields:constructor_pointer_fields ~origin ~binder
+      with
+      | Some named when named <> planned ->
+        Probe.violation "recursion plan"
+          Pp.(str "the local fixpoint " ++ Id.print binder ++ str " is planned otherwise by its name")
+      | Some _ | None -> () )
+    | None -> ()
+
 (** The strategy of the local fixpoint [fixpoint], whose body is [body], as
-    planned ({!Recursion_plan.strategy_local}).  A body with no fixpoint
-    recorded on it, or one the plan does not know, is classified here, which
-    is a violation. *)
+    planned for the Core fixpoint it lowers ({!Recursion_plan.strategy_at}).
+    A body with no fixpoint recorded on it, or one the plan does not know, is
+    classified here, which is a violation. *)
 let planned_local_strategy fixpoint check body =
   let classified () = classify check body in
   match fixpoint with
-  | Some {lf_origin = Some origin; lf_binder} -> (
-    let what () =
-      Pp.(str "the local fixpoint " ++ Id.print lf_binder ++ str " of " ++ str (Table.kername_of_global origin))
-    in
-    match
-      Recursion_plan.strategy_local ~pointer_fields:constructor_pointer_fields ~origin
-        ~binder:lf_binder
-    with
-    | Some planned -> checked_plan planned ~what classified
+  | Some {lf_member = Some member; lf_binder; lf_origin; _} -> (
+    let what () = Pp.(str "the local fixpoint " ++ Id.print lf_binder) in
+    match Recursion_plan.strategy_at ~pointer_fields:constructor_pointer_fields member with
+    | Some planned ->
+      check_named_plan ~origin:lf_origin ~binder:lf_binder planned;
+      checked_plan planned ~what classified
     | None ->
       Probe.violation "recursion plan" Pp.(str "the recursion plan does not know " ++ what ());
       classified_strategy (classified ()) )
-  | Some {lf_origin = None; _} | None ->
+  | Some {lf_member = None; _} | None ->
     Probe.violation "recursion plan"
-      (Pp.str "a local fixpoint's body was reached with no fixpoint of a definition recorded on it");
+      (Pp.str "a local fixpoint's body was reached with no Core fixpoint recorded on it");
     classified_strategy (classified ())
 
 (** {2 Inner lambda loopification}
@@ -1143,8 +1155,9 @@ let planned_strategy r check body =
     let planned =
       match Lifted.of_ref r with
       | Some h ->
-        Option.bind (Lifted.origin h) (fun origin ->
-            Recursion_plan.strategy_local ~pointer_fields ~origin ~binder:(Lifted.binder h) )
+        let planned = Option.bind (Lifted.fixpoint h) (Recursion_plan.strategy_at ~pointer_fields) in
+        Option.iter (check_named_plan ~origin:(Lifted.origin h) ~binder:(Lifted.binder h)) planned;
+        planned
       | None -> Recursion_plan.strategy ~pointer_fields r
     in
     let what () = Pp.str (Table.kername_of_global r) in

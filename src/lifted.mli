@@ -27,8 +27,11 @@ type t
     The helper's C++ name is decided in the unit being extracted by the same
     call, so nothing generated after the helper is made can miss it.
 
-    [origin] is [None] only for a helper lifted outside any declaration. *)
-val make : origin:Names.GlobRef.t option -> binder:Names.Id.t -> t
+    [origin] is [None] only for a helper lifted outside any declaration.
+    [fixpoint] is the Core fixpoint and the member of it the helper lowers,
+    as the first call making the helper says. *)
+val make :
+  fixpoint:(Miniml.Occurrence.t * int) option -> origin:Names.GlobRef.t option -> binder:Names.Id.t -> t
 
 (** The reference the helper is emitted and called under. *)
 val ref_of : t -> Names.GlobRef.t
@@ -47,5 +50,8 @@ val origin : t -> Names.GlobRef.t option
 
 (** The binder the helper was bound to in {!origin}. *)
 val binder : t -> Names.Id.t
+
+(** The Core fixpoint, and the member of it, the helper lowers. *)
+val fixpoint : t -> (Miniml.Occurrence.t * int) option
 
 val equal : t -> t -> bool
