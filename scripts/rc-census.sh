@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Reference-count census: run the whole test sweep with the counting shared
 # pointer (theories/cpp/count_rc.h) and report, per test, how much
 # reference-count traffic it performs.

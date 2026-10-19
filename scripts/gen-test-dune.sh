@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Generate (subdir ...) stanzas for dune test infrastructure
 # Usage: ./scripts/gen-test-dune.sh [basics|monadic|regression|wip]
 

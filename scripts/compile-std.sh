@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Compile C++ files with proper libc++ linking for Homebrew LLVM
 # Usage: compile-std.sh <project_root> output.exe source1.cpp source2.cpp ...
 

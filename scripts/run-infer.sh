@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Run Facebook Infer static analysis on all test C++ files
 # Usage: ./scripts/run-infer.sh
 

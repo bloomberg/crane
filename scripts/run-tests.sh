@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Run tests and format output as a summary table
 # Usage: ./scripts/run-tests.sh [--verbose]
 

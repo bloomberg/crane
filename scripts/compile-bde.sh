@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Compile C++ files with BDE libraries using pkg-config
 # Usage: compile-bde.sh <project_root> output.exe source1.cpp source2.cpp ...
 
