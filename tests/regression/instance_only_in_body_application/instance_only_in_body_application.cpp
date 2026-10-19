@@ -11,7 +11,7 @@ typename ParamsV<natIPtr>::IPTR::iptr>>::Inl>(r.v_mut())) {
 auto& [a0] = std::get<typename Sum<Nat,
 Dval<typename ParamsV<natIPtr>::PTR::ptr,
 typename ParamsV<natIPtr>::IPTR::iptr>>::Inl>(r.v_mut());
-return a0;
+return std::move(a0);
 } else {
 auto& [a0] = std::get<typename Sum<Nat,
 Dval<typename ParamsV<natIPtr>::PTR::ptr,

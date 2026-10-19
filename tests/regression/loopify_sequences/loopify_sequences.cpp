@@ -489,7 +489,7 @@ uint64_t LoopifySequences::last_elem(const List<uint64_t> &l) {
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
-        return a0;
+        return std::move(a0);
       } else {
         _loop_l = crane_raw(a1);
       }

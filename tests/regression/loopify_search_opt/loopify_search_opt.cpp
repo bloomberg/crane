@@ -361,7 +361,7 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
                 } else {
                   const auto &[a01, a11] =
                       std::get<typename List<uint64_t>::Cons>(_loop_xs->v());
-                  return a01;
+                  return std::move(a01);
                 }
               } else {
                 uint64_t n_ = _loop_n - 1;

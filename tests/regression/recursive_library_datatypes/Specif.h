@@ -502,7 +502,7 @@ Choice2(std::type_identity_t<crane::fn<SigT<T2, T3>(T1)>> h) {
       [=](const T1 &z) {
         SigT<T2, T3> s = h(z);
         auto &[x, a1] = s;
-        return a1;
+        return std::move(a1);
       });
 }
 

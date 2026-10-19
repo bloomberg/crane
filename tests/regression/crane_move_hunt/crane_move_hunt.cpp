@@ -96,7 +96,7 @@ CraneMoveHunt::state effect_pair_frame(const CraneMoveHunt::state &s0) {
   if (quit) {
     return s2;
   } else {
-    return s1;
+    return std::move(s1);
   }
 }
 
@@ -129,7 +129,7 @@ CraneMoveHunt::state axiom_pair_frame(const CraneMoveHunt::state &s0) {
   if (quit) {
     return s2;
   } else {
-    return s1;
+    return std::move(s1);
   }
 }
 
@@ -142,6 +142,6 @@ CraneMoveHunt::state axiom_nat_pair_frame(const CraneMoveHunt::state &s0) {
   if ((quit || n == UINT64_C(0))) {
     return s2;
   } else {
-    return s1;
+    return std::move(s1);
   }
 }

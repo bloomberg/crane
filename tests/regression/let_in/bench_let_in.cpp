@@ -4,7 +4,7 @@ uint64_t BenchLetIn::swap_snd(uint64_t a, uint64_t b) {
   BenchLetIn::pair<uint64_t, uint64_t> p =
       pair<uint64_t, uint64_t>::pair0(a, b);
   auto &[a0, a1] = p;
-  return a1;
+  return std::move(a1);
 }
 
 uint64_t BenchLetIn::add_via_pair(uint64_t a, uint64_t b) {
@@ -41,7 +41,7 @@ uint64_t BenchLetIn::mid3(uint64_t a, uint64_t b, uint64_t c) {
   BenchLetIn::triple<uint64_t, uint64_t, uint64_t> t =
       triple<uint64_t, uint64_t, uint64_t>::triple0(a, b, c);
   auto &[a0, a1, a2] = t;
-  return a1;
+  return std::move(a1);
 }
 
 uint64_t BenchLetIn::sum3(uint64_t a, uint64_t b, uint64_t c) {

@@ -6,11 +6,11 @@ uint64_t VisitMatchBug::match_after_consume(VisitMatchBug::Tree t) {
   VisitMatchBug::Tree t2 = consume(std::move(t));
   if (std::holds_alternative<typename VisitMatchBug::Tree::Leaf>(t2.v_mut())) {
     auto &[a0] = std::get<typename VisitMatchBug::Tree::Leaf>(t2.v_mut());
-    return a0;
+    return std::move(a0);
   } else {
     auto &[a0, a1, a2] =
         std::get<typename VisitMatchBug::Tree::Node>(t2.v_mut());
-    return a1;
+    return std::move(a1);
   }
 }
 
@@ -34,11 +34,11 @@ uint64_t VisitMatchBug::chain_then_match(VisitMatchBug::Tree t1) {
   VisitMatchBug::Tree t3 = consume(std::move(t2));
   if (std::holds_alternative<typename VisitMatchBug::Tree::Leaf>(t3.v_mut())) {
     auto &[a0] = std::get<typename VisitMatchBug::Tree::Leaf>(t3.v_mut());
-    return a0;
+    return std::move(a0);
   } else {
     auto &[a0, a1, a2] =
         std::get<typename VisitMatchBug::Tree::Node>(t3.v_mut());
-    return a1;
+    return std::move(a1);
   }
 }
 

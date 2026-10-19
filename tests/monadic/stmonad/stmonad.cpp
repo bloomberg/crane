@@ -114,7 +114,7 @@ uint64_t STMonadTests::nth(uint64_t n, const List<uint64_t> &l,
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-        return a0;
+        return std::move(a0);
       }
     } else {
       uint64_t m = _loop_n - 1;

@@ -233,7 +233,7 @@ struct DepMatchWildcardUnitArm {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename exp::ELit>(_sv.v())) {
           const auto &[a0] = std::get<typename exp::ELit>(_sv.v());
-          return a0;
+          return std::move(a0);
         } else if (std::holds_alternative<typename exp::EB>(_sv.v())) {
           throw std::logic_error(
               "unreachable: impossible dependent match branch");

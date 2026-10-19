@@ -482,7 +482,7 @@ struct LoopifyTrees {
           const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(_sv.v());
           auto &&_sv = *a2;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
-            return a1;
+            return std::move(a1);
           } else {
             _loop_self = crane_raw(a2);
           }
@@ -501,7 +501,7 @@ struct LoopifyTrees {
           const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(_sv.v());
           auto &&_sv = *a0;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
-            return a1;
+            return std::move(a1);
           } else {
             _loop_self = crane_raw(a0);
           }

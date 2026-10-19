@@ -44,7 +44,7 @@ template <typename A, typename B> struct Prod {
 
   A fst() const {
     auto &[a0, a1] = *this;
-    return a0;
+    return std::move(a0);
   }
 };
 

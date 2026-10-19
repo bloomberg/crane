@@ -35,8 +35,9 @@ val transform_decl : cpp_decl -> cpp_decl
     returned unchanged. *)
 
 val drop_return_moves : cpp_decl -> cpp_decl
-(** Remove the [std::move] around the value of every [return] that would move
-    it anyway -- a local, a by-value parameter, a call or a construction --
-    where writing it would only suppress copy elision.  Translation moves a
-    variable at its last use, and a returned one is one; this is where the
-    move is spelled the way C++ wants it, rather than in the printer. *)
+(** Remove the [std::move] around the value of every [return] that moves it
+    anyway -- a call, a construction, or a by-value local or parameter of the
+    innermost function -- where writing it would only suppress copy elision.
+    A returned structured binding, reference, loop variable or lambda capture
+    keeps its move: C++ copies those.  This is where a returned value's move
+    is spelled, rather than in the printer. *)

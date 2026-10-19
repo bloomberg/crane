@@ -68,7 +68,7 @@ NameClashNestedDeep::let_match_chain(const NameClashNestedDeep::mylist &xs,
   } else {
     auto &[a01, a11] = std::get<typename NameClashNestedDeep::mylist::MyCons>(
         combined.v_mut());
-    return a01;
+    return std::move(a01);
   }
 }
 

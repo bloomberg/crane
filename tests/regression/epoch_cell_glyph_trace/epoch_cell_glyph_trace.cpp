@@ -489,12 +489,12 @@ std::pair<Z, Z> BinInt::div_eucl(const Z &a, const Z &b) {
 
 Z BinInt::div(const Z &a, const Z &b) {
   auto [q, _x] = BinInt::div_eucl(a, b);
-  return q;
+  return std::move(q);
 }
 
 Z BinInt::modulo(const Z &a, const Z &b) {
   auto [_x, r] = BinInt::div_eucl(a, b);
-  return r;
+  return std::move(r);
 }
 
 Z BinInt::abs(const Z &z) {

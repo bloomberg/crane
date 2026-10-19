@@ -74,7 +74,7 @@ struct LetIn {
     pair<uint64_t, uint64_t> p =
         pair<uint64_t, uint64_t>::pair0(UINT64_C(3), UINT64_C(4));
     auto &[a0, a1] = p;
-    return a0;
+    return std::move(a0);
   }();
   static inline const uint64_t multi_let = []() {
     uint64_t a = UINT64_C(1);

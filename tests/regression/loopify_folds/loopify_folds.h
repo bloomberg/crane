@@ -293,7 +293,7 @@ struct LoopifyFolds {
               std::get<typename List<uint64_t>::Cons>(_loop_l.v());
           auto &&_sv0 = *a1;
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-            return a0;
+            return std::move(a0);
           } else {
             const auto &[a00, a10] =
                 std::get<typename List<uint64_t>::Cons>(_sv0.v());

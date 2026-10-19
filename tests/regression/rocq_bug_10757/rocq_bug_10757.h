@@ -49,7 +49,7 @@ struct RocqBug10757 {
       Sig<Sig<T1>> y = Sig<Sig<T1>>::exist(Sig<T1>::exist(x1));
       return iterate_func<T1>(beq, f, [&]() {
         auto &[x2] = y;
-        return x2;
+        return std::move(x2);
       }());
     };
     T1 x_ = f(x0);

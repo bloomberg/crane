@@ -165,12 +165,12 @@ template <typename A, typename B> struct Prod {
 
   A fst() const {
     auto &[a0, a1] = *this;
-    return a0;
+    return std::move(a0);
   }
 
   B snd() const {
     auto &[a0, a1] = *this;
-    return a1;
+    return std::move(a1);
   }
 };
 
@@ -841,7 +841,7 @@ struct RocqBug14174 {
           [=](const T1 &z) {
             sigT<T2, T3> s = h(z);
             auto &[x, a1] = s;
-            return a1;
+            return std::move(a1);
           });
     }
 

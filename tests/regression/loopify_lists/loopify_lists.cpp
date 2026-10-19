@@ -1188,7 +1188,7 @@ uint64_t LoopifyLists::lookup(
           _loop_l->v());
       const auto &[k, v] = a0;
       if (k == key) {
-        return v;
+        return std::move(v);
       } else {
         _loop_l = crane_raw(a1);
       }
@@ -1613,7 +1613,7 @@ uint64_t LoopifyLists::nth(uint64_t n, const LoopifyLists::list<uint64_t> &l,
       const auto &[a0, a1] =
           std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
       if (_loop_n == UINT64_C(0)) {
-        return a0;
+        return std::move(a0);
       } else {
         _loop_l = crane_raw(a1);
         _loop_n =
@@ -1637,7 +1637,7 @@ uint64_t LoopifyLists::last(const LoopifyLists::list<uint64_t> &l,
       auto &&_sv = *a1;
       if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
               _sv.v())) {
-        return a0;
+        return std::move(a0);
       } else {
         _loop_l = crane_raw(a1);
       }
