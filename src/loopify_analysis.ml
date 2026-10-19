@@ -149,15 +149,6 @@ and stmt_exists (pred : cpp_expr -> bool) (s : cpp_stmt) : bool =
 let body_exists (pred : cpp_expr -> bool) (stmts : cpp_stmt list) : bool =
   List.exists (stmt_exists pred) stmts
 
-(** Whether the expression is a suspension ({!Minicpp.CPPsuspend}): the mark
-    of a cofixpoint body, even where the suspension is buried inside branches
-    rather than at the top level (where {!Loopify.has_lazy_body} catches
-    it). *)
-let is_lazy_factory_call = function CPPsuspend _ -> true | _ -> false
-
-let body_contains_lazy_factory body =
-  body_exists is_lazy_factory_call body
-
 (** Check whether a C++ return type is a value-type inductive (non-coinductive,
     non-enum bare [Tglob]).  When true, TMC must wrap [_head]/_write in
     [shared_ptr] because the constructor's recursive field is [shared_ptr].

@@ -452,28 +452,6 @@ let plan_kind = function
   | Tail_recursion -> Tail
   | Nontail_recursion -> Nontail
 
-(** Check, under [CRANE_CHECK_IR], that the plan's [strategy] for the body
-    [body] of the function [what ()] names is {!Recursion_plan.Suspended}
-    exactly where [suspended body], the reading of the finished body that
-    decided this before, finds a suspension in it.  Only where it recurses:
-    a body that does not is lowered alike either way. *)
-let check_suspension ~what ~suspended strategy body =
-  if Probe.checking () then
-    match strategy with
-    | Recursion_plan.No_loop -> ()
-    | Suspended _ ->
-      if not (suspended body) then
-        Probe.violation "recursion plan"
-          Pp.(
-            str "the recursion plan suspends " ++ what ()
-            ++ str ", and its finished body does not" )
-    | Tail_loop | Modulo_cons _ | Frame_stack ->
-      if suspended body then
-        Probe.violation "recursion plan"
-          Pp.(
-            str "the finished body of " ++ what ()
-            ++ str " suspends, and the recursion plan does not" )
-
 (** The strategy for a body {!classify} reads as recursing so, where no plan
     says: a loop for tail recursion, an explicit stack for any other. *)
 let classified_strategy = function
@@ -564,11 +542,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
     | Some {lf_name; _}, Some self_id -> (
       let check = self_checker self_id in
       let lbody = expose_tail_calls check lbody in
-      let strategy = planned_local_strategy fixpoint check lbody in
-      check_suspension
-        ~what:(fun () -> Pp.(str "the local fixpoint " ++ Id.print lf_name))
-        ~suspended:body_contains_lazy_factory strategy lbody;
-      match strategy with
+      match planned_local_strategy fixpoint check lbody with
       | No_loop -> None
       (* A local cofixpoint: its calls run when a thunk is forced, after it
          has returned, as a top-level one's do ({!transform_fundef_exn}). *)
@@ -727,12 +701,14 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
   in
   process_stmts body
 
-(** {2 Cofixpoint detection}
+(** {2:cofixpoints Cofixpoints}
 
     Cofixpoints (corecursive definitions) returning a standard coinductive type
-    are wrapped in a [lazy_] thunk by [cofix_wrap] in [translation.ml].  This
-    wrapping defers evaluation so the infinite corecursive structure is built
-    on demand rather than eagerly.
+    are suspended: wrapped in a [lazy_] thunk whole, or at the constructors
+    whose arguments may run the corecursion.  This defers evaluation so the
+    infinite corecursive structure is built on demand rather than eagerly.
+    The recursion plan says which functions these are, before any is lowered
+    ({!Recursion_plan.Suspended}).
 
     {b Why loopification is unnecessary.}  The [lazy_] wrapper means the
     generated C++ function has this shape:
@@ -772,46 +748,6 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
     The post-pass {!loopify_inner_lambdas} is still applied to the full body
     so that any local fixpoints nested inside the thunk are
     loopified independently. *)
-
-(** Detect a [lazy_]-wrapped cofixpoint body.
-
-    The pattern is a return of a suspension ({!Minicpp.CPPsuspend}) whose
-    thunk takes nothing:
-
-    {v
-      Sreturn (Some (CPPsuspend (ty, CPPlambda { cl_params = []; cl_ret = Some _; ... })))
-    v}
-
-    This appears as the {e last} statement in the function body.  Cofixpoints
-    with [let ... in] bindings before the return (e.g. [unfold]) have prefix
-    statements before the [lazy_] return, so we check only the final statement.
-
-    For cofixpoints whose body branches (e.g. an [Sif] at the top level),
-    [cofix_wrap] wraps each return expression individually, so the last
-    statement is the branch, not a [lazy_] return.  In that case we return
-    [false] and the function falls through unchanged — this is safe because
-    each branch still returns a [lazy_] thunk (no stack growth), and the
-    loopify pass would see recursive calls inside lambdas and classify the
-    function as [No_recursion], producing no transformation.
-
-    @param body  The statement list comprising the function body.
-    @return [true] if the last statement matches the [lazy_] factory pattern. *)
-let has_lazy_body body =
-  let rec last_stmt = function
-    | [] -> None
-    | [s] -> Some s
-    | _ :: rest -> last_stmt rest
-  in
-  match last_stmt body with
-  | Some (Sreturn (Some (CPPsuspend (_, CPPlambda {cl_params = {rev = []}; cl_ret = Some _; _}))))
-    -> true
-  | _ -> false
-
-(** Whether [body] is a cofixpoint's: it returns a suspension, or holds one
-    in a branch.  Its calls run when a thunk is forced, after it has
-    returned, so there is no stack for a loop to save -- for a function and a
-    method alike. *)
-let is_cofix_body body = has_lazy_body body || body_contains_lazy_factory body
 
 (** Apply nontail-recursion loopification, trying strategies in priority order:
     {ol
@@ -1209,11 +1145,7 @@ let fundef_display_name path =
 let planned_strategy r check body =
   let classified () = classify check body in
   match r with
-  | None -> (
-    match classified () with
-    | (Tail_recursion | Nontail_recursion) as kind when is_cofix_body body ->
-      Recursion_plan.Suspended (plan_kind kind)
-    | kind -> classified_strategy kind )
+  | None -> classified_strategy (classified ())
   | Some r -> (
     let pointer_fields = constructor_pointer_fields in
     let planned =
@@ -1249,12 +1181,12 @@ let modulo_cons_chains = function
     + Post-pass with {!loopify_inner_lambdas} to loopify any local
       fixpoints nested within the body.
 
-    For cofixpoints returning a coinductive type, the body is wrapped in a
-    [lazy_] thunk by [cofix_wrap].  The recursive calls are captured inside
-    the closure and never executed at call time, so the function returns in
-    O(1) stack frames and loopification is unnecessary.  We detect the
-    [lazy_] pattern via {!has_lazy_body} and skip the main loopification
-    pass.  See the {!has_lazy_body} section header for the full rationale.
+    A cofixpoint returning a coinductive type is suspended: its recursive
+    calls are captured inside closures and never executed at call time, so
+    the function returns in O(1) stack frames and loopification is
+    unnecessary.  The plan says so ({!Recursion_plan.Suspended}) and the
+    main loopification pass is skipped; see the {!section-cofixpoints}
+    section for the full rationale.
 
                      passes and [decltype] generation)
     @param tparams Template parameters of the enclosing declaration
@@ -1277,18 +1209,15 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
      condition-dependent recursion can loopify instead of bailing. *)
   let body = hoist_rec_conditions check params ret_ty body in
   let body = expose_tail_calls check body in
-  (* Cofixpoint guard: if this function body ends with a [lazy_] return,
-     it is a cofixpoint returning a standard coinductive type.  The entire
-     body (including recursive calls) is captured inside a [=] lambda and
-     never executed at call time — the function returns a thunk in O(1)
-     stack frames.  Loopification is unnecessary and TMC would generate
-     invalid [v_mut()] calls (see the {!has_lazy_body} section header for
-     the full rationale).  We still run [loopify_inner_lambdas] to handle
-     any local fixpoints nested inside the lazy thunk. *)
+  (* A suspended cofixpoint's calls are captured inside closures and never
+     executed at call time -- the function returns a thunk in O(1) stack
+     frames.  Loopification is unnecessary and TMC would generate invalid
+     [v_mut()] calls (see {!section-cofixpoints}).  We still run
+     [loopify_inner_lambdas] to handle any local fixpoints nested inside the
+     thunk. *)
   let body =
     let name = fundef_display_name f.df_path in
     let strategy = planned_strategy (Some (fst f.df_path.dp_outer)) check body in
-    check_suspension ~what:(fun () -> Pp.str name) ~suspended:is_cofix_body strategy body;
     match strategy with
     | Suspended _ ->
       record_outcome name (Lp_deferred "cofixpoint body is lazy_-wrapped");
@@ -1399,10 +1328,6 @@ let transform_method ~tparams ~self_ty mf =
   let this_pos =
     match mf.mf_receiver with Instance r -> r.this_pos | Static -> 0
   in
-  (* Cofixpoint guard: same reasoning as {!transform_fundef} — if the
-     method body is [lazy_]-wrapped, the entire body is deferred inside a
-     closure and the method returns in O(1) stack frames.  Loopification
-     is unnecessary and TMC would be invalid.  See {!has_lazy_body}. *)
   let name = Id.to_string mf.mf_name in
   (* Hoist recursive calls out of conditions and dispatch scrutinees, exactly
      as {!transform_fundef} does. Methods went without this, so a method whose
@@ -1425,8 +1350,9 @@ let transform_method ~tparams ~self_ty mf =
       ?self_ref:mf.mf_globref mf.mf_name
   in
   let strategy = planned_strategy mf.mf_globref basic_check mf.mf_body in
-  check_suspension ~what:(fun () -> Pp.str name) ~suspended:is_cofix_body strategy mf.mf_body;
     ( match strategy with
+    (* A suspended method returns in O(1) stack frames, as a function does
+       ({!transform_fundef_exn}). *)
     | Suspended _ ->
       record_outcome name (Lp_deferred "cofixpoint body is lazy_-wrapped");
       Fmethod mf
