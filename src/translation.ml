@@ -396,6 +396,28 @@ let parameter_binders env params =
           Option.map (fun b -> (id, b)) (core_binder env db) ) )
     params
 
+(** Under [CRANE_CHECK_IR], that the variable at de Bruijn index [i] is one
+    binder to both of the scopes translation keeps: [env], which names it, and
+    the binder environment ({!current_lexenv}), which types it.  The two are
+    pushed side by side at every binding, and nothing but the position ties an
+    entry of one to an entry of the other, so a binder pushed to one alone, or
+    in another order, retypes every variable beneath it.  The renamed C++
+    identifier is what both record.  An instance's dictionary is the one
+    binder named and not typed: inside its methods it is a template parameter
+    of the enclosing struct. *)
+let check_binder_scopes env i =
+  if Probe.checking () then
+    match (get_db_name_opt i env, get_env_binder_opt i) with
+    | Some x, Some b when Id.equal x b.eb_id -> ()
+    | Some x, None when Common.is_tc_instance_id x -> ()
+    | x, b ->
+      let name = Option.cata Id.print (Pp.str "nothing") in
+      Probe.violation "binder scopes"
+        Pp.(
+          str "the variable at index " ++ int i ++ str " is " ++ name x ++ str " to the names in scope and "
+          ++ name (Option.map (fun b -> b.eb_id) b)
+          ++ str " to the binders typed in scope")
+
 let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
     r ts =
   let slot = into_erased_return slot in
@@ -1292,6 +1314,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     (ml_e : ml_ast) : cpp_expr =
   match ml_e with
   | MLrel i ->
+    check_binder_scopes env i;
     let var_expr =
       try CPPvar (get_db_name i env)
       with Failure _ -> CPPvar (db_fallback_id i)
@@ -9747,8 +9770,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          so we can't assign its result to a variable.  Execute the RHS for
          side effects, then declare the variable as Unit::e_TT (its only
          possible value) so the body can still reference it. *)
-      push_binders env [(x_renamed, t)];
       let rhs = gen_stmts env_rhs (fun e -> Sexpr e) a in
+      push_binders env [(x_renamed, t)];
       (* Drop trivially pure RHS (e.g. Unit::e_TT from tt, variable refs) *)
       let rhs = List.filter (fun s ->
         match s with
@@ -10575,13 +10598,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             | None -> [Sasgn (renamed_name, Declare (decl_ty, None), e)])
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
       in
-      let env_ids =
-        List.map
-          (fun ((n, _), (_, ty)) -> (n, ty))
-          (List.combine renamed_ids_fwd ids)
-        |> retype_dependent_params typ
-      in
-      push_binders env env_ids;
+      push_binders env (retype_dependent_params typ renamed_ids);
       asgns @ gen_stmts ~slot env' k body
   | t ->
     (* Tail position: generate expression with dead-after tracking.

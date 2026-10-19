@@ -460,7 +460,8 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                 (* Non-function field (like m_id : carrier) — generate as a
                    static value with a nullary accessor method. *)
                 let stmts =
-                  gen_stmts base_env (fun x -> Sreturn (Some x)) inner_body
+                  with_method_env_types ~outer:outer_binders base_env [] (fun () ->
+                      gen_stmts base_env (fun x -> Sreturn (Some x)) inner_body )
                 in
                 ([], method_ret_ty, stmts, [])
               | Some (eta_params, call_expr) ->
