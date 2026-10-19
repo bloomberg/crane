@@ -338,7 +338,7 @@ List<uint64_t> ReuseListShapes::take(uint64_t n, List<uint64_t> l) {
         uint64_t m = n - 1;
         return List<uint64_t>::cons_crane_reuse(
             std::move(crane::get<typename List<uint64_t>::Cons>(l.v_mut()).l),
-            x, take(m, std::move(t)));
+            std::move(x), take(m, std::move(t)));
       }
     } else {
       if (crane::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {

@@ -13150,3 +13150,14 @@
   (alias runtest)
   (deps reuse_arm_field_order.t.exe)
   (action (run ./reuse_arm_field_order.t.exe))))
+
+(subdir reuse_arm_field_used_twice
+ (rule
+  (targets reuse_arm_field_used_twice.t.exe)
+  (deps ReuseArmFieldUsedTwice.vo reuse_arm_field_used_twice.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_arm_field_used_twice.t.exe reuse_arm_field_used_twice.cpp reuse_arm_field_used_twice.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_arm_field_used_twice.t.exe)
+  (action (run ./reuse_arm_field_used_twice.t.exe))))

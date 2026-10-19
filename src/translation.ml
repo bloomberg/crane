@@ -8350,9 +8350,24 @@ and gen_cpp_case (typ : ml_type) t env pv =
                       mk_call (CPPaccess (Adot, rf k, Id.of_string "use_count")) [],
                       CPPint 1 ) )
             in
+            (* The body is under the pattern's binders, so the move sets are
+               too: every field the arm binds is a local of its own, owned,
+               and nothing is dead before the body says so. *)
+            let n = List.length ids in
+            let bound =
+              List.fold_left
+                (fun acc (i, read) ->
+                  match read with
+                  | Some `Unused | None -> acc
+                  | Some _ -> Escape.IntSet.add (n - i) acc )
+                Escape.IntSet.empty
+                (List.mapi (fun i r -> (i, r)) reads)
+            in
             let body_stmts =
               with_reuse_token (Some (tok, tail_ctor)) (fun () ->
-                  gen_stmts env' (fun x -> Sreturn (Some x)) body )
+                  with_shifted_move_tracking n ~clear_dead:true ~add_owned_set:bound
+                    ?exclude_owned:(Option.map (fun db -> db + n) scrut_db)
+                    (fun () -> gen_stmts env' (fun x -> Sreturn (Some x)) body) )
             in
             restore_env_types saved_env_types;
             Some (branch_idx, extract @ body_stmts, unique_cond)
