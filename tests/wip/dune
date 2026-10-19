@@ -249,3 +249,14 @@
   (alias runtest)
   (deps tyarg_implicit_type_binder.t.exe)
   (action (run ./tyarg_implicit_type_binder.t.exe))))
+
+(subdir lifted_helper_same_binder_name
+ (rule
+  (targets lifted_helper_same_binder_name.t.exe)
+  (deps LiftedHelperSameBinderName.vo lifted_helper_same_binder_name.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_helper_same_binder_name.t.exe lifted_helper_same_binder_name.cpp lifted_helper_same_binder_name.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_helper_same_binder_name.t.exe)
+  (action (run ./lifted_helper_same_binder_name.t.exe))))
