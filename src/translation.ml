@@ -8211,11 +8211,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
           in
           let rev_ids' = List.rev ids' in
           let dummies_arr =
-            Array.of_list
-              (List.rev
-                 (List.map
-                    (fun (x, _) -> match x with Dummy -> false | _ -> true)
-                    ids))
+            Array.of_list (List.map (fun (x, _) -> match x with Dummy -> false | _ -> true) ids)
           in
           (* How each bound field comes out of the recycled node, read off
              the constructor's own field types: the token -- the first field

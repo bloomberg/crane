@@ -13139,3 +13139,14 @@
   (alias runtest)
   (deps collision_struct_concept_names_template.t.exe)
   (action (run ./collision_struct_concept_names_template.t.exe))))
+
+(subdir reuse_arm_field_order
+ (rule
+  (targets reuse_arm_field_order.t.exe)
+  (deps ReuseArmFieldOrder.vo reuse_arm_field_order.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_arm_field_order.t.exe reuse_arm_field_order.cpp reuse_arm_field_order.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_arm_field_order.t.exe)
+  (action (run ./reuse_arm_field_order.t.exe))))
