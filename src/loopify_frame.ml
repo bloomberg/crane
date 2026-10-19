@@ -1258,37 +1258,57 @@ let resumes_after r occurrence =
     | after -> after )
   | None -> points
 
-(** Under [CRANE_CHECK_IR], that the frame keeping [saved] across the call
-    whose result [tgt] binds to [id] keeps what the recursion plan says
-    ({!Recursion_plan.resumes_binding}): some point the plan resumes at,
-    binding the binder [id] stands for after the call whose use is
-    [occurrence] ({!resumes_after}), has the saved locals that stand for a
-    Core binder as its {!planned_frame}.  [kept_elsewhere] are the locals
-    the frame leaves out by design: what the handler rebuilds, the machine's
-    entries, the parameters no re-entry changes.  A local the backend made
-    stands for no binder, and the frame keeps it as the C++ reads it. *)
-let check_frame_plan ctx id tgt ~occurrence ~kept_elsewhere saved =
-  if Probe.checking () then
-    let binder_of v = Option.flatten (List.assoc_opt v ctx.er_binders) in
-    let resume =
-      match tgt with Declare (_, b) -> b | Existing -> binder_of id | Declare_static _ -> None
-    in
-    Option.iter
-      (fun r ->
-        let identified = List.filter (fun v -> Option.has_some (binder_of v)) saved in
-        let same a b = List.equal Id.equal (List.sort Id.compare a) (List.sort Id.compare b) in
-        let plans (p : Recursion_plan.resume) =
-          same identified
-            (planned_frame ctx.er_binders
-               ~kept_elsewhere:(fun x -> Id.equal x id || kept_elsewhere x)
-               p )
-        in
-        if not (List.exists plans (resumes_after r occurrence)) then
-          Probe.violation "frame plan"
-            Pp.(
-              str "the frame resuming at " ++ Id.print id
-              ++ str " keeps other binders than the recursion plan finds live there") )
-      resume
+(** The frames the plan has for the call whose result [tgt] binds to [id]
+    and whose use is [occurrence], each sorted, without repetition: one per
+    distinct {!planned_frame} of the points resuming after that call
+    ({!resumes_after}).  [None] where the result stands for no Core binder:
+    a call the backend bound to a local of its own.  [kept_elsewhere] are
+    the locals the frame leaves out by design: what the handler rebuilds,
+    the machine's entries, the parameters no re-entry changes. *)
+let planned_frames ctx id tgt ~occurrence ~kept_elsewhere =
+  let resume =
+    match tgt with
+    | Declare (_, b) -> b
+    | Existing -> Option.flatten (List.assoc_opt id ctx.er_binders)
+    | Declare_static _ -> None
+  in
+  Option.map
+    (fun r ->
+      List.sort_uniq (List.compare Id.compare)
+        (List.map
+           (fun p ->
+             List.sort Id.compare
+               (planned_frame ctx.er_binders
+                  ~kept_elsewhere:(fun x -> Id.equal x id || kept_elsewhere x)
+                  p ) )
+           (resumes_after r occurrence) ) )
+    resume
+
+(** The locals the frame for that call keeps, given [read], the locals the
+    continuation reads, in the order it keeps them: of those standing for a
+    Core binder, the ones the plan finds live there, where it plans one
+    frame ({!planned_frames}); every local the backend made that the
+    continuation reads.  Where the plan has several frames for the call --
+    sibling points resuming after a call of a local fixpoint, which has no
+    global use to tell them apart -- what the continuation reads decides.
+
+    Under [CRANE_CHECK_IR], the locals standing for a Core binder that the
+    continuation reads are checked to be some planned frame. *)
+let frame_locals ctx frames read =
+  let identified v = Option.has_some (Option.flatten (List.assoc_opt v ctx.er_binders)) in
+  Option.iter
+    (fun frames ->
+      let read = List.sort Id.compare (List.filter identified read) in
+      if Probe.checking () && not (List.exists (List.equal Id.equal read) frames) then
+        Probe.violation "frame plan"
+          (Pp.str "a frame keeps other binders than the recursion plan finds live there") )
+    frames;
+  match frames with
+  | Some [planned] ->
+    let planned_has v = List.exists (Id.equal v) planned in
+    List.filter (fun v -> (not (identified v)) || planned_has v) read
+    @ List.filter (fun v -> not (List.exists (Id.equal v) read)) planned
+  | Some _ | None -> read
 
 (** Rewrite a single return statement for the [CraneEnter] handler in frame-based
     non-tail recursion transformation.
@@ -1473,19 +1493,25 @@ and rewrite_enter_stmts ctx stmts =
           remat
         |> List.filter (fun v -> not (List.exists (fun (_, tp) -> Id.equal tp v) tparams))
       in
-      let cont_vars =
+      let kept_elsewhere x =
+        Id.Set.mem x ctx.er_invariant_params
+        || List.mem_assoc x remat
+        || List.exists (Id.equal x) entry_heads
+      in
+      let read =
         filter_cont_vars ~exclude_id:id
           (List.fold_left
              (fun acc v -> if List.exists (Id.equal v) acc then acc else acc @ [v])
              rest_free remat_free)
-        |> List.filter (fun cid -> not (Id.Set.mem cid ctx.er_invariant_params))
-        |> List.filter (fun cid -> not (List.mem_assoc cid remat))
-        |> List.filter (fun cid -> not (List.exists (Id.equal cid) entry_heads)) in
-      check_frame_plan ctx id tgt cont_vars ~occurrence:(call_occurrence check e)
-        ~kept_elsewhere:(fun x ->
-          Id.Set.mem x ctx.er_invariant_params
-          || List.mem_assoc x remat
-          || List.exists (Id.equal x) entry_heads );
+        |> List.filter (fun cid -> not (kept_elsewhere cid))
+      in
+      (* Which Core values cross the call is the plan's; the order the frame
+         keeps them in, and the backend's own locals, are the C++'s. *)
+      let cont_vars =
+        frame_locals ctx
+          (planned_frames ctx id tgt ~occurrence:(call_occurrence check e) ~kept_elsewhere)
+          read
+      in
       let cont_saved = List.map (fun cid -> CPPvar cid) cont_vars in
       let cont_types = infer_saved_types tparams env cont_saved in
       let call_name = make_call_frame_name (Generated_name.role "Cont") call_counter seen ?branch_ctx () in
