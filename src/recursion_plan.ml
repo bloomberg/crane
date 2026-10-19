@@ -28,12 +28,10 @@ type chain = {
 }
 
 type local_group = {
-  occurrence : Occurrence.t;
-  origin : Names.GlobRef.t;
-  binders : Names.Id.t list;
+  occurrence : Occurrence.t;  (* the fixpoint's *)
   local_kind : kind;
   chains : chain list option list;
-      (* per binder, its chains, if it recurses through no other call that
+      (* per member, its chains, if it recurses through no other call that
          is not a tail call *)
   suspends : bool;  (* some member's body suspends ({!suspends_within}) *)
 }
@@ -432,8 +430,8 @@ let resumes_of ~effects ~origin ~calls lex body =
   walk ~calls:(fun ~depth:_ e -> calls e) (Lexenv.depth lex) body;
   List.rev !found
 
-(* The plan of every local fixpoint in [defs], one per fixpoint, under the
-   definition it occurs in.  Inside a member's body, before its parameters,
+(* The plan of every local fixpoint in [defs], one per fixpoint, under its
+   occurrence.  Inside a member's body, before its parameters,
    the member [k] of [n] is the variable [n - k]. *)
 let local_groups ~effects defs =
   let plans = ref [] in
@@ -469,8 +467,6 @@ let local_groups ~effects defs =
     in
     plans :=
       { occurrence;
-        origin;
-        binders = Array.to_list (Array.map fst ids);
         local_kind = kind;
         chains;
         suspends }
@@ -607,8 +603,6 @@ let equal a b =
   && List.equal
        (fun l l' ->
          Occurrence.equal l.occurrence l'.occurrence
-         && Common.globref_equal l.origin l'.origin
-         && List.equal Names.Id.equal l.binders l'.binders
          && l.local_kind = l'.local_kind
          && List.equal (Option.equal same_chains) l.chains l'.chains
          && l.suspends = l'.suspends )
@@ -693,20 +687,6 @@ let strategy_at ~pointer_fields (occurrence, member) =
           let this = strategy_of ~pointer_fields ~suspends:l.suspends l.local_kind chains in
           Some (match found with Some f -> both f this | None -> this)
         | None -> found
-      else found )
-    None !installed.locals
-
-let strategy_local ~pointer_fields ~origin ~binder =
-  List.fold_left
-    (fun found l ->
-      if Common.globref_equal l.origin origin then
-        List.fold_left2
-          (fun found b chains ->
-            if Names.Id.equal b binder then
-              let this = strategy_of ~pointer_fields ~suspends:l.suspends l.local_kind chains in
-              Some (match found with Some f -> both f this | None -> this)
-            else found )
-          found l.binders l.chains
       else found )
     None !installed.locals
 

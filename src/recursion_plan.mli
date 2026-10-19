@@ -98,23 +98,11 @@ val kind_of_strategy : strategy -> kind
 val strategy :
   pointer_fields:(Names.GlobRef.t -> int list option) -> Names.GlobRef.t -> strategy option
 
-(** The strategy of the local fixpoint bound to [binder] in the definition
-    [origin], if [origin] defines one: planned from its body as a
-    definition's is, every call between the members of its group counting.
-    A helper lifted out of [origin] for that fixpoint is planned by it
-    ({!Lifted}).  Where two fixpoints bind the same name in one definition,
-    both count: the kind is the stronger, and the chains both's where they
-    end in the same cell. *)
-val strategy_local :
-  pointer_fields:(Names.GlobRef.t -> int list option) ->
-  origin:Names.GlobRef.t ->
-  binder:Names.Id.t ->
-  strategy option
-
 (** The strategy of the function [member] of the local fixpoint
     [occurrence], if the program has that fixpoint: planned from its body as
     a definition's is, every call between the members of its group
-    counting. *)
+    counting.  A helper lifted for that function is planned by it
+    ({!Lifted.fixpoint}). *)
 val strategy_at :
   pointer_fields:(Names.GlobRef.t -> int list option) ->
   Miniml.Occurrence.t * int ->

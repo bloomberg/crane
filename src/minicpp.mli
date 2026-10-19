@@ -750,13 +750,11 @@ and cpp_lambda = {
           a local fixpoint only. *)
 }
 
-(** A local fixpoint: the definition it occurs in, if it occurs in one,
-    and the binder it binds there. *)
+(** A local fixpoint: the binder it binds in its definition. *)
 and local_fixpoint = {
-  lf_origin : GlobRef.t option;
   lf_binder : Id.t;
   lf_name : Id.t;  (** the name the fixpoint is called by in C++ *)
-  lf_member : (Miniml.Occurrence.t * int) option;
+  lf_member : Miniml.Occurrence.t * int;
       (** The Core fixpoint it lowers, by the fixpoint's occurrence, and the
           index of its function among the fixpoint's *)
   lf_selves : Id.t list;

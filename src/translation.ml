@@ -42,10 +42,9 @@ let local_fix_binders occ ids = Array.to_list (Array.mapi (fun j (x, _) -> (x, (
    through the self-parameters [selves]. *)
 let local_fixpoint ~name ~selves (binder, member) =
   Some
-    { lf_origin = !Table.current_decl_ref;
-      lf_binder = binder;
+    { lf_binder = binder;
       lf_name = name;
-      lf_member = Some member;
+      lf_member = member;
       lf_selves = selves }
 
 (** Generate local fixpoint declarations using the Y-combinator pattern

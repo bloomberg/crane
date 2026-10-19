@@ -589,10 +589,9 @@ and cpp_lambda = {
 (** A local fixpoint: the definition it occurs in, if it occurs in one,
     and the binder it binds there. *)
 and local_fixpoint = {
-  lf_origin : GlobRef.t option;
   lf_binder : Id.t;
   lf_name : Id.t;
-  lf_member : (Miniml.Occurrence.t * int) option;
+  lf_member : Miniml.Occurrence.t * int;
   lf_selves : Id.t list;
 }
 
