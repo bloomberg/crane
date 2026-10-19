@@ -13172,3 +13172,14 @@
   (alias runtest)
   (deps inlined_alias_resume_frame.t.exe)
   (action (run ./inlined_alias_resume_frame.t.exe))))
+
+(subdir sigma_assertion_after_implicit
+ (rule
+  (targets sigma_assertion_after_implicit.t.exe)
+  (deps SigmaAssertionAfterImplicit.vo sigma_assertion_after_implicit.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sigma_assertion_after_implicit.t.exe sigma_assertion_after_implicit.cpp sigma_assertion_after_implicit.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sigma_assertion_after_implicit.t.exe)
+  (action (run ./sigma_assertion_after_implicit.t.exe))))
