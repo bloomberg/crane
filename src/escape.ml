@@ -38,7 +38,7 @@ let nb_occur_match =
           0
           branches
     | MLletin (_, _, rhs, cont) -> nb k rhs + nb (k + 1) cont
-    | MLfix (_, ids, bodies, _) ->
+    | MLfix (_, ids, bodies, _, _) ->
       let k' = k + Array.length ids in
       Array.fold_left (fun total body -> total + nb k' body) 0 bodies
     | MLlam (_, _, body) -> nb (k + 1) body
@@ -81,7 +81,7 @@ let rec occurs k = function
   | MLletin (_, _, rhs, cont) -> occurs k rhs || occurs (k + 1) cont
   | MLlam (_, _, body) -> occurs (k + 1) body
   | MLapp (head, args) -> occurs k head || List.exists (occurs k) args
-  | MLfix (_, ids, bodies, _) ->
+  | MLfix (_, ids, bodies, _, _) ->
     let k' = k + Array.length ids in
     Array.exists (occurs k') bodies
   | MLcons (_, _, args) | MLtuple args -> List.exists (occurs k) args
@@ -208,7 +208,7 @@ let escapes ?(query = Conservative) ?(return_escapes = true) k t =
       || List.exists (check k false (refined)) args
       || (not in_fn_arg && is_partial_app head args
          && List.exists (occurs k) args)
-    | MLfix (_, ids, bodies, _) ->
+    | MLfix (_, ids, bodies, _, _) ->
       let k' = k + Array.length ids in
       Array.exists (occurs k') bodies
     | MLcons (_, _, args) ->
@@ -344,7 +344,7 @@ let is_reuse_scrutinee k body =
     | MLletin (_, _, rhs, cont) -> scan d rhs; scan (d + 1) cont
     | MLlam (_, _, b) -> scan (d + 1) b
     | MLapp (f, args) -> scan d f; List.iter (scan d) args
-    | MLfix (_, ids, bodies, _) ->
+    | MLfix (_, ids, bodies, _, _) ->
       Array.iter (scan (d + Array.length ids)) bodies
     | MLcons (_, _, ts) | MLtuple ts -> List.iter (scan d) ts
     | MLmagic (_, a) -> scan d a
@@ -421,7 +421,7 @@ let free_rels depth t =
     | MLapp (head, args) ->
       collect d head;
       List.iter (collect d) args
-    | MLfix (_, ids, bodies, _) ->
+    | MLfix (_, ids, bodies, _, _) ->
       let d' = d + Array.length ids in
       Array.iter (collect d') bodies
     | MLcons (_, _, args) | MLtuple args -> List.iter (collect d) args
@@ -460,7 +460,7 @@ let single_use_nargs k t =
         (fun (ids, _, _, body) -> search (k + List.length ids) body)
         branches
     | MLlam (_, _, body) -> search (k + 1) body
-    | MLfix (_, ids, bodies, _) ->
+    | MLfix (_, ids, bodies, _, _) ->
       Array.iter (search (k + Array.length ids)) bodies
     | MLapp (head, args) ->
       search k head;

@@ -117,7 +117,7 @@ let check_zonked p =
     has. *)
 let check_recursive_groups p =
   let rec check_body = function
-    | MLfix (i, ids, funs, _) as e ->
+    | MLfix (i, ids, funs, _, _) as e ->
       if Array.length ids <> Array.length funs || Array.length ids = 0 then
         fail "has a local recursive group whose names and bodies disagree";
       if i < 0 || i >= Array.length ids then fail "selects a recursive function its group lacks";

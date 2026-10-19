@@ -519,7 +519,7 @@ let promoted_resolutions_of_body ?r ?ty b =
     | MLcase (_, sc, pv) ->
       walk_at d sc;
       Array.iter (fun (ids, _, _, br) -> walk_at (d + List.length ids) br) pv
-    | MLfix (_, ids, funs, _) -> Array.iter (walk_at (d + Array.length ids)) funs
+    | MLfix (_, ids, funs, _, _) -> Array.iter (walk_at (d + Array.length ids)) funs
     | e' -> Mlutil.ast_iter (walk_at d) e'
   in
   let rec walk e =

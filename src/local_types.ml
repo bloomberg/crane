@@ -29,7 +29,7 @@ let rec iter_annotations f = function
         f ty;
         iter_annotations f body )
       brs
-  | MLfix (_, ids, funs, _) ->
+  | MLfix (_, ids, funs, _, _) ->
     Array.iter (fun (_, ty) -> f ty) ids;
     Array.iter (iter_annotations f) funs
   | MLapp (g, args) ->
@@ -182,17 +182,17 @@ let check_let_lambda ~outer t a =
   end
 
 let rec expr ~outer = function
-  | MLletin (_, _, MLfix (_, ids, funs, _), b) ->
+  | MLletin (_, _, MLfix (_, ids, funs, _, _), b) ->
     ignore (settle ids funs);
     Array.iter (expr ~outer) funs;
     expr ~outer b
-  | MLapp (MLfix (_, ids, funs, _), args) ->
+  | MLapp (MLfix (_, ids, funs, _, _), args) ->
     let recovered, mint = settle ids funs in
     Array.iter (iter_annotations mint) recovered;
     List.iter (iter_annotations mint) args;
     Array.iter (expr ~outer) funs;
     List.iter (expr ~outer) args
-  | MLfix (_, ids, funs, _) ->
+  | MLfix (_, ids, funs, _, _) ->
     ignore (settle ids funs);
     Array.iter (expr ~outer) funs
   | MLletin (_, t, (MLlam _ as a), b) ->

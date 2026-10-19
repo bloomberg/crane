@@ -1749,7 +1749,7 @@ let rec collect_tvars_ast acc = function
         collect_tvars_ast (collect_tvars acc ty) body )
       acc
       brs
-  | MLfix (_, ids, funs, _) ->
+  | MLfix (_, ids, funs, _, _) ->
     let acc =
       Array.fold_left (fun acc (_, ty) -> collect_tvars acc ty) acc ids
     in
@@ -1781,7 +1781,7 @@ let rec ast_may_throw = function
   | MLcase (_, e, brs) ->
     ast_may_throw e
     || Array.exists (fun (_, _, _, body) -> ast_may_throw body) brs
-  | MLfix (_, _, funs, _) -> Array.exists ast_may_throw funs
+  | MLfix (_, _, funs, _, _) -> Array.exists ast_may_throw funs
   | MLapp (f, args) -> ast_may_throw f || List.exists ast_may_throw args
   | MLmagic (_, a) -> ast_may_throw a
   | MLparray (arr, def) -> Array.exists ast_may_throw arr || ast_may_throw def
@@ -1833,7 +1833,7 @@ let collect_body_types_for_unify body =
   let types = ref [] in
   let rec from_lams = function
     | MLlam (_, ty, inner) -> Miniml.Tarr (ty, from_lams inner)
-    | MLfix (_, ids, funs, _) ->
+    | MLfix (_, ids, funs, _, _) ->
       Array.iter (fun (_, ty) -> types := ty :: !types) ids;
       Array.iter (fun f -> types := from_lams f :: !types) funs;
       Miniml.Tunknown
@@ -2019,7 +2019,7 @@ let detect_non_forwarded_params_generic ~is_self_call n_params body =
         branches
     | MLcons (_, _, args) -> List.iter (walk depth) args
     | MLtuple args -> List.iter (walk depth) args
-    | MLfix (_, _, bodies, _) ->
+    | MLfix (_, _, bodies, _, _) ->
       let n = Array.length bodies in
       Array.iter (walk (depth + n)) bodies
     | MLmagic (_, e) -> walk depth e
@@ -2079,7 +2079,7 @@ let escaping_params ~suspended n_params body =
         List.iter (walk under depth) rest;
         spine depth k
       | [] -> () )
-    | MLapp (MLfix (_, _, bodies, _), args) ->
+    | MLapp (MLfix (_, _, bodies, _, _), args) ->
       (* A local fixpoint entered where it is written, as [let fix go ... in
          go l []] is: its recursion runs here, through a lambda captured by
          reference, and nothing outlives the call. *)
@@ -2103,7 +2103,7 @@ let escaping_params ~suspended n_params body =
         (fun (ids, _, _, b) -> walk under (depth + List.length ids) b)
         branches
     | MLcons (_, _, args) | MLtuple args -> List.iter (walk under depth) args
-    | MLfix (_, _, bodies, _) ->
+    | MLfix (_, _, bodies, _, _) ->
       (* A local fixpoint is a closure over its free variables. *)
       let n = Array.length bodies in
       Array.iter (walk true (depth + n)) bodies
@@ -2908,7 +2908,7 @@ let rec collect_free_rels_set n_bound acc = function
         collect_free_rels_set (n_bound + List.length ids) acc body )
       acc
       brs
-  | MLfix (_, ids, funs, _) ->
+  | MLfix (_, ids, funs, _, _) ->
     let n_fix = Array.length ids in
     Array.fold_left
       (fun acc f ->

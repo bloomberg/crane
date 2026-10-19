@@ -2292,7 +2292,8 @@ and extract_fix env sg mle i ((fi, ti, ci) as recd) is_cofix mlt =
     ( i,
       Array.mapi (fun i x -> (id_of_name x.binder_name, metas.(i))) fi,
       ei,
-      is_cofix )
+      is_cofix,
+      Occurrence.fresh () )
 
 (** {1 ML declarations} *)
 

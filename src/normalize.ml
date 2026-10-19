@@ -84,7 +84,7 @@ let rec reaches_call group ~depth e =
   group_call group ~depth e <> None
   ||
   match e with
-  | MLapp (MLfix (_, ids, bodies, false), args) ->
+  | MLapp (MLfix (_, ids, bodies, false, _), args) ->
     List.exists (reaches_call group ~depth) args || fix_reaches_call group ~depth ids bodies
   | MLlam _ | MLfix _ -> false
   | MLletin (_, _, rhs, body) ->
@@ -141,7 +141,7 @@ let rec scope ~group ~depth e =
       let e' = MLapp (strict ~tail:false f, List.map (strict ~tail:false) args) in
       match group_call e', f with
       | Some ty, _ when not tail -> take e' ty
-      | None, MLfix (i, ids, bodies, false)
+      | None, MLfix (i, ids, bodies, false, _)
         when (not tail) && fix_reaches_call group ~depth ids bodies ->
         (* A local fixpoint applied here that recurses into the group is a
            call into it. *)
@@ -192,7 +192,7 @@ let rec scope ~group ~depth e =
       in
       MLletin (id, ty, rhs, inner 1 body)
     | MLlam (id, ty, body) -> MLlam (id, ty, inner 1 body)
-    | MLfix (i, ids, bodies, cofix) ->
+    | MLfix (i, ids, bodies, cofix, occ) ->
       let n = Array.length ids in
       let group =
         if cofix then group
@@ -202,7 +202,7 @@ let rec scope ~group ~depth e =
           in
           {group with locals = (depth + n, fns) :: group.locals}
       in
-      MLfix (i, ids, Array.map (inner ~group n) bodies, cofix)
+      MLfix (i, ids, Array.map (inner ~group n) bodies, cofix, occ)
     | _ -> e
   in
   let body = strict ~tail:true e in

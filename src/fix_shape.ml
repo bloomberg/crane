@@ -15,7 +15,7 @@ let rec float_lets_under_lams = function
   | e -> e
 
 (* [cofix o := Cons 1 o] as [(cofix o (_ : unit) := Cons 1 (o tt)) tt]. *)
-let thunk_nullary_cofix x ids funs =
+let thunk_nullary_cofix x ids funs occ =
   match (Table.resolve_unit_type (), Table.resolve_tt_ctor ()) with
   | Some u, Some tt ->
     let unit_ty = Tglob (u, [], []) in
@@ -29,16 +29,16 @@ let thunk_nullary_cofix x ids funs =
     in
     let thunk f = MLlam (Id (Id.of_string "u"), unit_ty, call_self 1 (Mlutil.ast_lift 1 f)) in
     let ids = Array.map (fun (id, ty) -> (id, Tarr (unit_ty, ty))) ids in
-    MLapp (MLfix (x, ids, Array.map thunk funs, true), [tt_v])
+    MLapp (MLfix (x, ids, Array.map thunk funs, true, occ), [tt_v])
   | _ -> CErrors.anomaly (Pp.str "Fix_shape: a parameterless local cofixpoint needs unit")
 
 let rec expr e =
   match Mlutil.ast_map expr e with
-  | MLfix (x, ids, funs, is_cofix) ->
+  | MLfix (x, ids, funs, is_cofix, occ) ->
     let funs = Array.map float_lets_under_lams funs in
     if is_cofix && Array.for_all (function MLlam _ -> false | _ -> true) funs then
-      thunk_nullary_cofix x ids funs
-    else MLfix (x, ids, funs, is_cofix)
+      thunk_nullary_cofix x ids funs occ
+    else MLfix (x, ids, funs, is_cofix, occ)
   | e -> e
 
 let decl = function

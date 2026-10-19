@@ -138,7 +138,7 @@ let classify ~effects ~callee fd_body =
       Array.iter (fun (ids, _, _, b) -> walk_under (List.length ids) ~tail b) branches
     | MLmagic (_, a) -> walk ~tail a
     | MLlam (_, _, b) -> walk_under 1 ~tail:false b
-    | MLfix (_, ids, bodies, _) -> Array.iter (walk_under (Array.length ids) ~tail:false) bodies
+    | MLfix (_, ids, bodies, _, _) -> Array.iter (walk_under (Array.length ids) ~tail:false) bodies
     | MLcons (_, _, l) | MLtuple l -> List.iter (walk ~tail:false) l
     | MLparray (a, d) ->
       Array.iter (walk ~tail:false) a;
@@ -207,7 +207,7 @@ let modulo_cons_chains ~effects ~member ~bodies self =
         Array.fold_left
           (fun n (ids, _, _, b) -> n + under (List.length ids) b)
           (calls ~depth s) branches
-      | MLfix (_, ids, funs, _) -> Array.fold_left (fun n b -> n + under (Array.length ids) b) 0 funs
+      | MLfix (_, ids, funs, _, _) -> Array.fold_left (fun n b -> n + under (Array.length ids) b) 0 funs
       | e ->
         let n = ref 0 in
         Mlutil.ast_iter (fun c -> n := !n + calls ~depth c) e;
@@ -294,7 +294,7 @@ let rec iter_scoped f lex e =
   | MLcase (_, s, branches) ->
     iter_scoped f lex s;
     Array.iter (fun (ids, _, _, b) -> iter_scoped f (bind (List.rev ids) lex) b) branches
-  | MLfix (_, ids, funs, _) ->
+  | MLfix (_, ids, funs, _, _) ->
     (* The last function of the group is the innermost binder. *)
     let lex = bind (List.rev_map (fun (g, ty) -> (Id g, ty)) (Array.to_list ids)) lex in
     Array.iter (iter_scoped f lex) funs
@@ -340,7 +340,7 @@ let free_levels ~depth e =
     | MLcase (_, s, branches) ->
       go d s;
       Array.iter (fun (ids, _, _, b) -> go (d + List.length ids) b) branches
-    | MLfix (_, ids, funs, _) -> Array.iter (go (d + Array.length ids)) funs
+    | MLfix (_, ids, funs, _, _) -> Array.iter (go (d + Array.length ids)) funs
     | e -> Mlutil.ast_iter (go d) e
   in
   go 0 e;
@@ -369,7 +369,7 @@ let resumes_of ~effects ~origin ~calls lex body =
       calls ~depth e
       ||
       match e with
-      | MLfix (_, ids, funs, _) ->
+      | MLfix (_, ids, funs, _, _) ->
         Array.exists
           (fun f ->
             let arity, b = split_params 0 f in
@@ -412,7 +412,7 @@ let resumes_of ~effects ~origin ~calls lex body =
     | MLcase (_, s, branches) ->
       go depth s;
       Array.iter (fun (ids, _, _, b) -> go (depth + List.length ids) b) branches
-    | MLfix (_, ids, funs, _) ->
+    | MLfix (_, ids, funs, _, _) ->
       (* The member [m] is bound at level [depth + m], the last innermost. *)
       let first = depth and n = Array.length ids in
       let rec member ~depth = function
@@ -474,7 +474,7 @@ let local_groups ~effects defs =
     (fun r fd ->
       let lex, body = Core_elaborate.declaration_scope fd.fd_type fd.fd_body in
       iter_scoped
-        (fun lex -> function MLfix (_, ids, funs, _) -> plan r lex ids funs | _ -> ())
+        (fun lex -> function MLfix (_, ids, funs, _, _) -> plan r lex ids funs | _ -> ())
         lex body )
     defs;
   List.rev !plans

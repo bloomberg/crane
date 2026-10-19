@@ -42,6 +42,11 @@ open Names
     where they were built still compare equal. *)
 module Occurrence : sig
   type t
+
+  (** A new occurrence, for a term built rather than copied: a copy keeps
+      the occurrence of what it copies. *)
+  val fresh : unit -> t
+
   val equal : t -> t -> bool
 end
 
@@ -271,7 +276,12 @@ and ml_ast =
   | MLcons of ml_type * GlobRef.t * ml_ast list
   | MLtuple of ml_ast list
   | MLcase of ml_type * ml_ast * ml_branch array
-  | MLfix of int * (Id.t * ml_type) array * ml_ast array * bool  (** is_cofix *)
+  | MLfix of int * (Id.t * ml_type) array * ml_ast array * bool * Occurrence.t
+      (** The function selected, the group's binders and bodies, whether it
+          is a cofixpoint, and the occurrence telling this fixpoint apart
+          from every other one in the program: a pass rebuilding it keeps
+          it, so the plan made of the fixpoint and the code made of it name
+          one fixpoint. *)
   | MLexn of string
   | MLdummy of kill_reason
   | MLaxiom of string

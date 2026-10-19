@@ -879,12 +879,13 @@ let rec map_types_in_ast (f : ml_type -> ml_type) = function
               pat,
               map_types_in_ast f body ) )
           brs )
-  | MLfix (i, ids, funs, cf) ->
+  | MLfix (i, ids, funs, cf, occ) ->
     MLfix
       ( i,
         Array.map (fun (n, ty) -> (n, f ty)) ids,
         Array.map (map_types_in_ast f) funs,
-        cf )
+        cf,
+        occ )
   | MLapp (fn, args) ->
     MLapp (map_types_in_ast f fn, List.map (map_types_in_ast f) args)
   | MLmagic (m, a) -> MLmagic (Mlutil.map_magic_types f m, map_types_in_ast f a)

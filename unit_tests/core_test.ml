@@ -31,7 +31,7 @@ let () =
   check "an empty recursive group is refused"
     (refused [(Label.make "g", SEdecl (Dfix []))]);
   check "a local group selecting a missing member is refused"
-    (refused [term "h" (MLfix (2, [|(Id.of_string "go", nat)|], [|lam|], false)) nat]);
+    (refused [term "h" (MLfix (2, [|(Id.of_string "go", nat)|], [|lam|], false, Occurrence.fresh ())) nat]);
   check "a declaration made twice is refused" (refused (fine @ fine));
   let use_at scheme ty =
     MLglob
@@ -114,7 +114,7 @@ let () =
   let list t = Tglob (r "list", [t], []) in
   let go = Id.of_string "go" in
   let group m =
-    MLfix (0, [|(go, Tarr (list (Tmeta m), nat))|], [|MLlam (Dummy, list (Tmeta m), MLrel 1)|], false)
+    MLfix (0, [|(go, Tarr (list (Tmeta m), nat))|], [|MLlam (Dummy, list (Tmeta m), MLrel 1)|], false, Occurrence.fresh ())
   in
   let a = Meta.fresh 11 and b = Meta.fresh 12 and c = Meta.fresh 13 and d = Meta.fresh 14 in
   let body =

@@ -63,7 +63,7 @@ let rec size e =
   | MLletin (_, _, a, b) -> size a + size b
   | MLcons (_, _, a) | MLtuple a -> sizes a
   | MLcase (_, s, brs) -> Array.fold_left (fun n (_, _, _, b) -> n + size b) (size s) brs
-  | MLfix (_, _, bs, _) -> Array.fold_left (fun n b -> n + size b) 0 bs
+  | MLfix (_, _, bs, _, _) -> Array.fold_left (fun n b -> n + size b) 0 bs
   | _ -> 0
 
 and sizes l = List.fold_left (fun n a -> n + size a) 0 l
@@ -296,7 +296,7 @@ let specialize f fd use args =
           (* [b_rec] has exactly [k] lambdas, and the lambda among [args_b]
              is a value, so it is substituted for its parameter. *)
           let body = Option.get (instantiate b_rec args_b) in
-          MLfix (0, [|(fid, spec_ty)|], [|Mlutil.named_lams qs body|], false)
+          MLfix (0, [|(fid, spec_ty)|], [|Mlutil.named_lams qs body|], false, Occurrence.fresh ())
         in
         let rest = List.filteri (fun i _ -> i <> j) args in
         Some (if rest = [] then fix else MLapp (fix, rest))

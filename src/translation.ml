@@ -2000,7 +2000,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               || Array.exists
                    (fun (ids, _, _, br) -> reads (depth + List.length ids) br)
                    pv
-            | MLfix (_, ids, funs, _) ->
+            | MLfix (_, ids, funs, _, _) ->
               Array.exists (reads (depth + Array.length ids)) funs
             | e ->
               let found = ref false in
@@ -2028,7 +2028,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             | MLcase (_, sc, pv) ->
               walk depth sc;
               Array.iter (fun (ids, _, _, br) -> walk (depth + List.length ids) br) pv
-            | MLfix (_, ids, funs, _) -> Array.iter (walk (depth + Array.length ids)) funs
+            | MLfix (_, ids, funs, _, _) -> Array.iter (walk (depth + Array.length ids)) funs
             | e -> Mlutil.ast_iter (walk depth) e
           in
           walk 0 body;
@@ -2363,7 +2363,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            directly compatible with [std::function<R(A,B)>] contexts. *)
         let cpp_args, body_stmts =
           match a with
-          | MLfix (fix_x, _fix_ids, fix_funs, _)
+          | MLfix (fix_x, _fix_ids, fix_funs, _, _)
             when List.length filtered_args <= 1 ->
             let fix_lam_params, _ = Mlutil.collect_lams fix_funs.(fix_x) in
             let fix_value_params =
@@ -9016,7 +9016,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
      statement lands in is {!with_cpp_return_type}, which
      {!position_cpp_ty} falls back to. *)
   match ast with
-  | MLletin (_, _, (MLfix (x, ids, funs, _) as fix_term), b) as _whole ->
+  | MLletin (_, _, (MLfix (x, ids, funs, _, _) as fix_term), b) as _whole ->
     (* Special case for let-fix: the let binding name is the fix function name *)
     Local_types.check_minted ids;
     let ids, funs = Local_types.recover_fix_codomains ids funs in
@@ -10052,7 +10052,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       in
       tctx := { !tctx with move_owned_vars = saved_owned };
       result
-  | MLapp (MLfix (x, ids, funs, _), args) ->
+  | MLapp (MLfix (x, ids, funs, _, _), args) ->
     Local_types.check_minted ids;
     let ids, funs = Local_types.recover_fix_codomains ids funs in
     (* Collect Tvars from bodies too *)
@@ -10228,7 +10228,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         decls @ defs
         @ [k (CPPfun_call (call_opaque, CPPvar (fst (List.nth renamed_ids x)), of_reversed args))]
       end
-  | MLfix (x, ids, funs, _) ->
+  | MLfix (x, ids, funs, _, _) ->
     (* Standalone fixpoint (not immediately applied) — e.g., appearing as the
        RHS of a let-binding.  Since the fixpoint value itself is returned (not
        called in place), it will always escape.  Use the Y-combinator pattern:

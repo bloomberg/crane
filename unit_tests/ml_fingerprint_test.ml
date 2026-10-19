@@ -37,8 +37,8 @@ let () =
   check "fix and cofix differ"
     (not
        (same
-          (term id_ty (MLfix (0, [|(Names.Id.of_string "f", id_ty)|], [|lam|], false)))
-          (term id_ty (MLfix (0, [|(Names.Id.of_string "f", id_ty)|], [|lam|], true)))));
+          (term id_ty (MLfix (0, [|(Names.Id.of_string "f", id_ty)|], [|lam|], false, Occurrence.fresh ())))
+          (term id_ty (MLfix (0, [|(Names.Id.of_string "f", id_ty)|], [|lam|], true, Occurrence.fresh ())))));
   check "list boundaries are encoded"
     (not
        (same

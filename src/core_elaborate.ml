@@ -272,7 +272,7 @@ let rec walk b ~n_outer lex = function
         walk_type b ~n_outer lex rty;
         walk b ~n_outer lex body )
       branches
-  | MLfix (_, fs, defs, _) ->
+  | MLfix (_, fs, defs, _, _) ->
     Array.iter (fun (_, ty) -> walk_type b ~n_outer lex ty) fs;
     (* The last function of the group is the innermost binder. *)
     let fs = List.rev_map (fun (f, ty) -> (Id f, ty)) (Array.to_list fs) in

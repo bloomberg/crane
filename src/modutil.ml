@@ -378,7 +378,7 @@ let dfix_to_mlfix fds i =
       (List.map (fun fd -> (Label.to_id (label_of_r fd.fd_ref), fd.fd_type)) fds)
   in
   let c = Array.of_list (List.map (fun fd -> subst 0 fd.fd_body) fds) in
-  MLfix (i, ids, c, false)
+  MLfix (i, ids, c, false, Occurrence.fresh ())
 
 (** [optim_se] applies the [normalize] function everywhere and does the inlining
     of code. The inlined functions are kept for the moment in order to preserve
@@ -408,7 +408,7 @@ let decl_of_term r a t =
   match dump_unused_vars (optimize_fix a) with
   (* An instance of a singleton class stays an instance, whose method the
      fixpoint is. *)
-  | MLfix (0, _, [|c|], _) when singleton_instance_class r = None ->
+  | MLfix (0, _, [|c|], _, _) when singleton_instance_class r = None ->
     let c = ast_subst (MLglob (Mlutil.self_reference r)) c in
     unify_binders_with_signature t c;
     Dfix [{fd_ref = r; fd_body = c; fd_type = t}]
@@ -431,7 +431,7 @@ let rec optim_se top to_appear s = function
         fds
     in
     (* This fake body ensures that no fixpoint will be auto-inlined. *)
-    let fake_body = MLfix (0, [||], [||], false) in
+    let fake_body = MLfix (0, [||], [||], false, Occurrence.fresh ()) in
     List.iteri
       (fun i fd ->
         if inline fd.fd_ref fake_body then

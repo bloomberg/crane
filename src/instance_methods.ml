@@ -65,7 +65,7 @@ let record_body name class_ref inner_ty lam_params inner_body =
     | b -> b
   in
   let as_method m = function
-    | MLfix (0, [|_|], [|c|], _) when lam_params = [] ->
+    | MLfix (0, [|_|], [|c|], _, _) when lam_params = [] ->
       let n_class = Ml_type_util.projection_class_arity m in
       Mlutil.ast_subst
         (MLapp
