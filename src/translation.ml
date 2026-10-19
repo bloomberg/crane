@@ -132,7 +132,7 @@ let gen_local_fix_ycomb env ~binders renamed_ids funs_with_params =
   let impl_vars_rev = List.rev_map (fun id -> CPPvar id) impl_ids in
   let wrapper_stmts =
     List.map2
-      (fun ((fix_id, fty), impl_id) (args, _body) ->
+      (fun (((fix_id, fty), impl_id), binder) (args, _body) ->
         let orig_params =
           List.map
             (fun (id, ty) ->
@@ -155,12 +155,12 @@ let gen_local_fix_ycomb env ~binders renamed_ids funs_with_params =
             CPPlambda
               { cl_params = of_reversed orig_params;
               cl_tparams = [];
-              cl_fixpoint = None;
+              cl_fixpoint = local_fixpoint ~name:fix_id ~selves:[] binder;
               cl_moved = [];
                 cl_ret = rty;
                 cl_body = wrapper_body;
                 cl_capture = Closure } ))
-      (List.combine renamed_ids impl_ids)
+      (List.combine (List.combine renamed_ids impl_ids) binders)
       funs_with_params
   in
   let deref_subst stmts = stmts in
@@ -242,7 +242,7 @@ let gen_local_fix_by_ref env ~binders renamed_ids funs_with_params owned_flags_p
   let impl_vars_rev = List.rev_map (fun id -> CPPvar id) impl_ids in
   let wrapper_stmts =
     List.map2
-      (fun (((fix_id, fty), _impl_id), owned_flags) (args, _body) ->
+      (fun ((((fix_id, fty), _impl_id), binder), owned_flags) (args, _body) ->
         let orig_params =
           List.map2
             (fun (id, ty) owned ->
@@ -269,12 +269,12 @@ let gen_local_fix_by_ref env ~binders renamed_ids funs_with_params owned_flags_p
             CPPlambda
               { cl_params = of_reversed orig_params;
               cl_tparams = [];
-              cl_fixpoint = None;
+              cl_fixpoint = local_fixpoint ~name:fix_id ~selves:[] binder;
               cl_moved = [];
                 cl_ret = rty;
                 cl_body = wrapper_body;
                 cl_capture = Immediate } ))
-      (List.combine (List.combine renamed_ids impl_ids) owned_flags_per_fun)
+      (List.combine (List.combine (List.combine renamed_ids impl_ids) binders) owned_flags_per_fun)
       funs_with_params
   in
   (impl_stmts @ wrapper_stmts, [])

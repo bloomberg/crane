@@ -766,7 +766,8 @@ and local_fixpoint = {
   lf_selves : Id.t list;
       (** The parameters through which the lambda calls its group's members,
           one per member, in the group's order: the knot its encoding ties.
-          A lambda that no longer recurses through them has none. *)
+          A lambda that no longer recurses through them has none, and so has
+          the wrapper that ties the knot for its callers. *)
 }
 
 (** Alias for constraint expressions in requires clauses. *)

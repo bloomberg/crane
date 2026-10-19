@@ -588,6 +588,15 @@ let unstable_locals ~(stable : Id.Set.t) (body : cpp_stmt list) : Id.Set.t =
     recognise that shape. They sit here, beside the other checkers, because
     both {!transform_nontail} and {!loopify_inner_lambdas} need them. *)
 
+(** Whether [w] is the wrapper tying the knot of the local fixpoint
+    [fixpoint] for its callers: a lambda lowering the same function of the
+    same Core fixpoint through no self-parameter. *)
+let wraps fixpoint (w : cpp_lambda) =
+  match (fixpoint, w.cl_fixpoint) with
+  | Some {lf_member = occ, j; _}, Some {lf_member = occ', j'; lf_selves = []; _} ->
+    Miniml.Occurrence.equal occ occ' && Int.equal j j'
+  | _ -> false
+
 (** The self-reference parameter of the lambda a single local fixpoint's
     body is, as its encoding recorded it ({!Minicpp.local_fixpoint}): the
     one self-parameter of [fixpoint], where it is the last of [lparams], the

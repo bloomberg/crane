@@ -603,6 +603,13 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
             = Some (CPPvar id) :: own
           | _ -> false
         in
+        let is_wrapper w =
+          let wrapper = wraps fixpoint w in
+          if Probe.checking () && wrapper <> is_wrapper w then
+            Probe.violation "local fixpoint"
+              Pp.(str "the wrapper of " ++ Id.print id ++ str " is recorded otherwise than it reads");
+          wrapper
+        in
         match rest with
         | Sasgn (wid, (Declare (Tauto, _) as wtgt), CPPlambda w) :: rest'
           when is_wrapper w && not (List.exists (Id.equal id) (free_vars_body rest')) ->
