@@ -1209,13 +1209,34 @@ let declared_binders binders = function
   | Sbind (ids, _) -> List.map (fun id -> (id, None)) ids @ binders
   | _ -> binders
 
+(** The locals of [binders], a scope, innermost first, that the planned
+    resume point [p] keeps across its call: for each binder it finds live,
+    the innermost local in scope standing for it that the frame carries --
+    one [kept_elsewhere] does not leave out, such as a reference to a field
+    the handler binds again from the field, which the frame carries
+    instead. *)
+let planned_frame binders ~kept_elsewhere (p : Recursion_plan.resume) =
+  let stands_for b x =
+    match List.assoc_opt x binders with
+    | Some (Some b') -> Core_binder.equal b b'
+    | Some None | None -> false
+  in
+  List.filter_map
+    (fun b ->
+      List.find_map
+        (fun (x, _) -> if stands_for b x && not (kept_elsewhere x) then Some x else None)
+        binders )
+    p.live
+
 (** Under [CRANE_CHECK_IR], that the frame keeping [saved] across the call
-    whose result [tgt] binds to [id] keeps nothing the recursion plan does not
-    find live there ({!Recursion_plan.resumes_binding}): some point the plan
-    resumes at, binding the binder [id] stands for, reads every saved local
-    that stands for a Core binder.  A local the backend made stands for
-    none. *)
-let check_frame_plan ctx id tgt saved =
+    whose result [tgt] binds to [id] keeps what the recursion plan says
+    ({!Recursion_plan.resumes_binding}): some point the plan resumes at,
+    binding the binder [id] stands for, has the saved locals that stand for
+    a Core binder as its {!planned_frame}.  [kept_elsewhere] are the locals
+    the frame leaves out by design: what the handler rebuilds, the machine's
+    entries, the parameters no re-entry changes.  A local the backend made
+    stands for no binder, and the frame keeps it as the C++ reads it. *)
+let check_frame_plan ctx id tgt ~kept_elsewhere saved =
   if Probe.checking () then
     let binder_of v = Option.flatten (List.assoc_opt v ctx.er_binders) in
     let resume =
@@ -1223,15 +1244,19 @@ let check_frame_plan ctx id tgt saved =
     in
     Option.iter
       (fun r ->
-        let kept = List.filter_map binder_of saved in
-        let keeps (p : Recursion_plan.resume) =
-          List.for_all (fun b -> List.exists (Core_binder.equal b) p.live) kept
+        let identified = List.filter (fun v -> Option.has_some (binder_of v)) saved in
+        let same a b = List.equal Id.equal (List.sort Id.compare a) (List.sort Id.compare b) in
+        let plans (p : Recursion_plan.resume) =
+          same identified
+            (planned_frame ctx.er_binders
+               ~kept_elsewhere:(fun x -> Id.equal x id || kept_elsewhere x)
+               p )
         in
-        if not (List.exists keeps (Recursion_plan.resumes_binding r)) then
+        if not (List.exists plans (Recursion_plan.resumes_binding r)) then
           Probe.violation "frame plan"
             Pp.(
               str "the frame resuming at " ++ Id.print id
-              ++ str " keeps a binder the recursion plan does not find live there") )
+              ++ str " keeps other binders than the recursion plan finds live there") )
       resume
 
 (** Rewrite a single return statement for the [CraneEnter] handler in frame-based
@@ -1425,7 +1450,11 @@ and rewrite_enter_stmts ctx stmts =
         |> List.filter (fun cid -> not (Id.Set.mem cid ctx.er_invariant_params))
         |> List.filter (fun cid -> not (List.mem_assoc cid remat))
         |> List.filter (fun cid -> not (List.exists (Id.equal cid) entry_heads)) in
-      check_frame_plan ctx id tgt cont_vars;
+      check_frame_plan ctx id tgt cont_vars
+        ~kept_elsewhere:(fun x ->
+          Id.Set.mem x ctx.er_invariant_params
+          || List.mem_assoc x remat
+          || List.exists (Id.equal x) entry_heads );
       let cont_saved = List.map (fun cid -> CPPvar cid) cont_vars in
       let cont_types = infer_saved_types tparams env cont_saved in
       let call_name = make_call_frame_name (Generated_name.role "Cont") call_counter seen ?branch_ctx () in
