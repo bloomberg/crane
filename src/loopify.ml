@@ -409,16 +409,8 @@ let try_inline_mutual_into names body =
     in
     let fresh_body = rename_ids rename_var callee_body in
     (* Inline: replace calls to callee_ref with fresh_body *)
-    let callee_label =
-      match callee_ref with
-      | GlobRef.ConstRef c -> Label.to_id (Constant.label c)
-      | GlobRef.VarRef v -> v
-      | _ -> Id.of_string ""
-    in
     let is_callee_call = function
-      | CPPfun_call (_, CPPglob (r, _, _), _)
-        when Common.globref_equal r callee_ref -> true
-      | CPPfun_call (_, CPPvar id, _) when Id.equal id callee_label -> true
+      | CPPfun_call (_, CPPglob (r, _, _), _) -> Common.globref_equal r callee_ref
       | _ -> false
     in
     let get_call_args = function
@@ -1299,7 +1291,7 @@ let transform_fundef ~tparams (f : dfun) params body =
     loop to track which object is being processed across iterations.
 
     The transformation:
-    + Creates a {!method_checker} for the method name.
+    + Creates a {!method_checker} for the global the method was made from.
     + Classifies the recursion pattern.
     + Replaces [CPPthis] with [CPPvar _self] throughout the body.
     + Adds [_self] (with the struct pointer type) to the parameter list.
@@ -1338,16 +1330,14 @@ let transform_method ~tparams ~self_ty mf =
   let mf =
     let n_params = List.length mf.mf_params in
     let check =
-      method_checker ~n_params ~has_self_param:false ~this_pos
-        ?self_ref:mf.mf_globref mf.mf_name
+      method_checker ~n_params ~has_self_param:false ~this_pos mf.mf_globref
     in
     { mf with
       mf_body =
         hoist_rec_conditions check mf.mf_params mf.mf_ret_type mf.mf_body }
   in
   let basic_check =
-    method_checker ~n_params ~has_self_param:false ~this_pos
-      ?self_ref:mf.mf_globref mf.mf_name
+    method_checker ~n_params ~has_self_param:false ~this_pos mf.mf_globref
   in
   let strategy = planned_strategy mf.mf_globref basic_check mf.mf_body in
     ( match strategy with
@@ -1362,8 +1352,7 @@ let transform_method ~tparams ~self_ty mf =
       let self_id = id_self in
       let body_with_self = List.map (this_to_self_stmt self_id) mf.mf_body in
       let self_check =
-        method_checker ~n_params ~has_self_param:true ~this_pos
-          ?self_ref:mf.mf_globref mf.mf_name
+        method_checker ~n_params ~has_self_param:true ~this_pos mf.mf_globref
       in
       (* Check whether any recursive call has a value-type receiver — a
          temporary such as [Trie::leaf()], whose address would dangle once
@@ -1428,16 +1417,13 @@ let transform_method ~tparams ~self_ty mf =
         let replace_at pos x l = List.mapi (fun i y -> if i = pos then x else y) l in
         (* [park e] returns the rewritten self-call, with its value receiver
            replaced by a reference to the parking slot, or [None]. *)
+        let is_self r =
+          match mf.mf_globref with Some sr -> Common.globref_equal r sr | None -> false
+        in
         let park e =
           match e with
-          | CPPaccess_call (Aarrow, recv, id, args)
-            when Id.equal id mf.mf_name
-                 && is_value_recv recv
-                 && not (List.exists mentions_self args) ->
-            Some (recv, CPPaccess_call (Aarrow, CPPvar id_self_store, id, args))
           | CPPfun_call (_, CPPglob (r, targs, x), args)
-            when calls_self_glob ~self_ref:mf.mf_globref mf.mf_name r
-                 && List.length (to_reversed args) > n_params ->
+            when is_self r && List.length (to_reversed args) > n_params ->
             let args_normal = call_args args in
             let recv = List.nth args_normal this_pos in
             if

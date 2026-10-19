@@ -627,26 +627,17 @@ let receiver_is_value = function
   | CPPderef _ | CPPvar _ | CPPthis -> false
   | _ -> true
 
-(** Whether a [CPPglob] callee is the method itself.
+(** Build a call checker for struct methods: a recursive call is a call of
+    the global the method was made from, [self_ref], and when
+    [has_self_param] is true the receiver pointer becomes its first
+    argument.
 
-    The method's own global decides it where there is one.  Matching on the
-    bare label instead is not a weaker test but a wrong one: [T1.cmp] called
-    from [T2.cmp] shares its label and nothing else, and reading that call as
+    The method's own global decides it, never its name: [T1.cmp] called from
+    [T2.cmp] shares its label and nothing else, and reading that call as
     recursion parks a delegation as a self-call, discards the real callee and
     leaves a [while (true)] with no exit -- a miscompilation that compiles.
-    The label is still the answer where the method has no global to compare
-    against, which is the generated members ([clone], [v]) that no body calls
-    by name. *)
-let calls_self_glob ~(self_ref : GlobRef.t option) (name : Id.t) (r : GlobRef.t)
-    =
-  match self_ref with
-  | Some sr -> Common.globref_equal r sr
-  | None -> Id.equal (Label.to_id (Common.label_of_r r)) name
-
-(** Build a call checker for struct methods. Matches [CPPaccess_call] on
-    [method_name] and, when [has_self_param] is true, includes the receiver
-    pointer as the first argument. Also matches [CPPglob] calls that resolve to
-    the same method name.
+    A method with no global is a member the backend generates ([clone],
+    [v]), which no body calls; it does not recurse here.
 
     @param n_params     Number of formal parameters of the method (excluding
                         the implicit [this] pointer). Used to detect when an
@@ -659,16 +650,12 @@ let calls_self_glob ~(self_ref : GlobRef.t option) (name : Id.t) (r : GlobRef.t)
     @param this_pos     Index of the [this]/receiver argument in the argument
                         list of [CPPfun_call] forms. Used to extract and remove
                         the receiver from over-long argument lists.
-    @param self_ref     The global the method was made from, when known.  See
-                        {!calls_self_glob}.
-    @param method_name  The method name to match on. *)
-
+    @param self_ref     The global the method was made from, when known. *)
 let method_checker
     ~(n_params : int)
     ~(has_self_param : bool)
     ~(this_pos : int)
-    ?(self_ref : GlobRef.t option)
-    (method_name : Id.t) : call_checker =
+    (self_ref : GlobRef.t option) : call_checker =
  (* Convert a receiver expression to a raw pointer for the CraneEnter struct.
     CPPderef(shared_ptr): use shared_ptr.get() to extract the raw pointer.
     CPPvar: take the address (&var) to get a pointer.
@@ -690,26 +677,9 @@ let method_checker
    aux 0 [] lst
  in
  fun e ->
-   match e with
-   | CPPaccess_call (Aarrow, recv, id, args) when Id.equal id method_name ->
-     if has_self_param then
-       Some (mk_call_site ~recv (recv_to_self recv :: args))
-     else
-       Some (mk_call_site args)
-   | CPPfun_call (_, CPPvar id, args) when Id.equal id method_name ->
-     let args_normal = call_args args in
-     if has_self_param && List.length args_normal > n_params then
-       let self_arg, rest = extract_at this_pos args_normal in
-       ( match self_arg with
-       | Some recv ->
-         Some (mk_call_site ~recv (recv_to_self recv :: rest))
-       | None -> Some (mk_call_site args_normal) )
-     else if (not has_self_param) && List.length args_normal > n_params then
-       Some (mk_call_site (list_remove_at this_pos args_normal))
-     else
-       Some (mk_call_site args_normal)
-   | CPPfun_call (_, CPPglob (r, _, _), args) ->
-     if calls_self_glob ~self_ref method_name r then
+   match (e, self_ref) with
+   | CPPfun_call (_, CPPglob (r, _, _), args), Some self_ref ->
+     if Common.globref_equal r self_ref then
        let args_normal = call_args args in
        if has_self_param then
          let self_arg, rest = extract_at this_pos args_normal in
