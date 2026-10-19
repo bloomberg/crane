@@ -1525,14 +1525,12 @@ let plan_call ~caller ~lex ?expected_ty env (call : Elaborated_call.t) =
           let ret = Ml_type_util.resolve_tmeta (ml_return_type ml_ty_orig) in
           ( match ret with
           | Miniml.Tvar (_, _) ->
-            (* Compute excess arg C++ types from de Bruijn lookup. *)
+            (* The excess arguments' C++ types, where each is a parameter. *)
             let excess_cpp_tys =
               List.filter_map
                 (fun ml_arg ->
                   match ml_arg with
-                  | MLrel i ->
-                    Option.map (convert_ml_type_to_cpp_type env tvars)
-                      (get_param_type_by_index i)
+                  | MLrel i -> Option.map (convert_ml_type_to_cpp_type env tvars) (parameter_type env i)
                   | _ -> None )
                 excess_args
             in

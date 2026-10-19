@@ -373,29 +373,6 @@ let into_erased_return slot =
   | Some (Boxed kind) -> into_box kind slot
   | Some Native | None -> slot
 
-(** The Core binder of the variable at de Bruijn index [db] in [env], in the
-    definition whose body is being generated ({!Core_binder}): [env] binds
-    the definition's Core binders, its parameters first, so the variable's
-    level is the number bound outside it. *)
-let core_binder env db =
-  Option.map
-    (fun origin -> Core_binder.make ~origin ~level:(List.length (fst env) - db))
-    (!tctx).body_owner
-
-(** The Core binders of [params], parameters of a function whose body is
-    generated under [env], by name: [env] gives no two binders in scope one
-    name, so a parameter's is the binder [env] names so. *)
-let parameter_binders env params =
-  let rec index id db = function
-    | [] -> None
-    | x :: xs -> if Id.equal x id then Some db else index id (db + 1) xs
-  in
-  List.filter_map
-    (fun (id, _) ->
-      Option.bind (index id 1 (fst env)) (fun db ->
-          Option.map (fun b -> (id, b)) (core_binder env db) ) )
-    params
-
 (** Under [CRANE_CHECK_IR], that the variable at de Bruijn index [i] is one
     binder to both of the scopes translation keeps: [env], which names it, and
     the binder environment ({!current_lexenv}), which types it.  The two are
@@ -7015,7 +6992,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
              variable it was abstracted over, while the declaration this body
              belongs to (e.g. a typeclass instance at a function type) pinned
              it to a concrete C++ signature. *)
-          ( match get_param_type_by_index i with
+          ( match parameter_type env i with
           | Some t ->
             (not (is_ml_erased_ty t))
             && not
@@ -7879,10 +7856,9 @@ and gen_cpp_case (typ : ml_type) t env pv =
   let typ =
     match t with
     | MLrel i | MLmagic (_, MLrel i) ->
-      (* Scrutinee is a variable reference — use its concrete type. Try
-         env_types first (correctly tracks let-bound variables with shifted de
-         Bruijn indices), then fall back to param_types. Unwrap Tmeta wrappers
-         since env_types may store types in Tmeta form. *)
+      (* Scrutinee is a variable reference — use its concrete type, the one
+         its binder was given, a parameter's as much as a let's.  Unwrap Tmeta
+         wrappers since env_types may store types in Tmeta form. *)
       let rec unwrap_tmeta = function
         | Miniml.Tmeta {contents = Some t} -> unwrap_tmeta t
         | t -> t
@@ -7898,10 +7874,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
       let typ =
         match env_ty_opt with
         | Some let_ty -> resolve_tvar_type typ let_ty
-        | None -> (
-          match get_param_type_by_index i with
-          | Some (Miniml.Tglob _ as param_ty) -> resolve_tvar_type typ param_ty
-          | _ -> typ )
+        | None -> typ
       in
       (* The variable's declared C++ type is what its value is: where it
          erased a position -- a pattern field of a plain family parameter,
