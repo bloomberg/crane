@@ -169,6 +169,11 @@ val unbox_value : cpp_type -> cpp_expr -> cpp_expr
     the scrutinee's variant, wrapped in an immediately-invoked lambda. *)
 val gen_cpp_case : ml_type -> ml_ast -> env -> ml_branch array -> cpp_expr
 
+(** The Core binders of the parameters of a function whose body is generated
+    under [env], by name ({!Core_binder}): [env] gives no two binders in
+    scope one name. *)
+val parameter_binders : env -> (Names.Id.t * 'a) list -> (Names.Id.t * Core_binder.t) list
+
 (** Generate C++ statements from an ML AST. The continuation [k] transforms the
     final expression into a statement (e.g., return, assignment). Handles
     let-bindings, pattern matching, fix expressions, and monadic operations.

@@ -526,7 +526,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
   let try_loopify_ycomb ~fixpoint lparams ret_ty_opt lbody =
     match (fixpoint, fixpoint_self fixpoint lparams) with
     | None, _ | _, None -> None
-    | Some {lf_name; _}, Some self_id -> (
+    | Some {lf_name; lf_binders; _}, Some self_id -> (
       let check = self_checker self_id in
       let lbody = expose_tail_calls check lbody in
       match planned_local_strategy fixpoint check lbody with
@@ -559,8 +559,8 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
              a local fixpoint gets it only through a helper lifted out of it. *)
           | Modulo_cons _ | Frame_stack ->
             report_outcome ~name ~check ~strategy:Lp_frame
-              (transform_nontail ~fn_name:name ~outer_env check tparams params
-                 ret_ty lbody)
+              (transform_nontail ~fn_name:name ~outer_env ~binders:lf_binders check tparams
+                 params ret_ty lbody)
           | No_loop | Suspended _ ->
             CErrors.anomaly (Pp.str "loopify: no loop cannot appear here")
         in
@@ -764,8 +764,8 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
     @param ret_ty      Return type
     @param body        Function body statements
     @return what the transform did; see {!nontail_result}. *)
-let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?modulo_cons check
-    tparams params ret_ty body =
+let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?modulo_cons ?binders
+    check tparams params ret_ty body =
   let declined reason =
     {nt_body = body; nt_outcome = Lp_declined reason; nt_used_param_inits = false}
   in
@@ -774,7 +774,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?modulo_co
   else
   let frame () =
     { nt_body =
-        transform_nontail ?fn_name ?adopted check tparams params ret_ty body;
+        transform_nontail ?fn_name ?adopted ?binders check tparams params ret_ty body;
       nt_outcome = Lp_frame;
       nt_used_param_inits = false }
   in
@@ -1228,7 +1228,7 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
           (transform_tail tparams check params ret_ty body, Some Lp_tail)
         | Modulo_cons _ | Frame_stack ->
           let r =
-            apply_nontail_loopification ~fn_name:name ?adopted
+            apply_nontail_loopification ~fn_name:name ?adopted ~binders:f.df_binders
               ?modulo_cons:(modulo_cons_chains strategy)
               check tparams params ret_ty body
           in
@@ -1490,6 +1490,9 @@ let transform_method ~tparams ~self_ty mf =
           let r =
             apply_nontail_loopification
               ~param_inits:[(self_id, CPPthis)]
+              ~binders:
+                ( (match mf.mf_receiver_binder with Some b -> [(self_id, b)] | None -> [])
+                @ mf.mf_binders )
               ?fn_name ?modulo_cons:(modulo_cons_chains strategy)
               self_check tparams
               augmented_params mf.mf_ret_type body_with_self

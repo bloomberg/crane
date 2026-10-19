@@ -47,7 +47,9 @@ let method_ () =
     mf_is_inline = false;
     mf_no_pure = false;
     mf_is_noexcept = false;
-    mf_is_conversion = false }
+    mf_is_conversion = false;
+    mf_binders = [];
+    mf_receiver_binder = None }
 
 let struct_ () =
   { ds_ref = r "S";

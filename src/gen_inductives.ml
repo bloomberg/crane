@@ -979,6 +979,10 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
         mf_no_pure = no_pure;
         mf_is_noexcept = false;
         mf_is_conversion = false;
+        mf_binders = parameter_binders env params;
+        mf_receiver_binder =
+          Option.bind this_arg_id (fun id ->
+              Option.map snd (List.nth_opt (parameter_binders env [(id, ())]) 0) );
       },
     VPublic,
     SNoTag )
@@ -1358,7 +1362,9 @@ let gen_ind_header_v2
                 mf_is_inline = false;
                 mf_no_pure = true;
                 mf_is_noexcept = false;
-                mf_is_conversion = false },
+                mf_is_conversion = false;
+                mf_binders = [];
+                mf_receiver_binder = None },
             VPublic, SAccessors )
         in
         let conversion_field =
@@ -3248,6 +3254,8 @@ let gen_ind_header_v2
                   mf_no_pure = false;
                   mf_is_noexcept = false;
                   mf_is_conversion = false;
+                  mf_binders = [];
+                  mf_receiver_binder = None;
                 },
               VPublic,
               SAccessors ) ]
@@ -3279,6 +3287,8 @@ let gen_ind_header_v2
                 mf_no_pure = false;
                 mf_is_noexcept = false;
                 mf_is_conversion = false;
+                mf_binders = [];
+                mf_receiver_binder = None;
               },
             VPublic,
             SAccessors )
@@ -3297,6 +3307,8 @@ let gen_ind_header_v2
                 mf_no_pure = false;
                 mf_is_noexcept = false;
                 mf_is_conversion = false;
+                mf_binders = [];
+                mf_receiver_binder = None;
               },
             VPublic,
             SAccessors )
@@ -3323,6 +3335,8 @@ let gen_ind_header_v2
                   mf_no_pure = true;
                   mf_is_noexcept = false;
                   mf_is_conversion = false;
+                  mf_binders = [];
+                  mf_receiver_binder = None;
                 },
               VPublic,
               SManipulators );

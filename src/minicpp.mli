@@ -757,6 +757,9 @@ and local_fixpoint = {
   lf_member : Miniml.Occurrence.t * int;
       (** The Core fixpoint it lowers, by the fixpoint's occurrence, and the
           index of its function among the fixpoint's *)
+  lf_binders : (Id.t * Core_binder.t) list;
+      (** The Core binder each of the lambda's own parameters stands for, by
+          the parameter's name *)
   lf_selves : Id.t list;
       (** The parameters through which the lambda calls its group's members,
           one per member, in the group's order: the knot its encoding ties.
@@ -914,6 +917,12 @@ and method_field = {
           return type: it prints as [operator <mf_ret_type>()] with no return
           type of its own, and [mf_name] is only what the doc comment and any
           out-of-line qualifier use. *)
+  mf_binders : (Id.t * Core_binder.t) list;
+      (** The Core binder each parameter stands for, by the parameter's name,
+          where translation bound it for one *)
+  mf_receiver_binder : Core_binder.t option;
+      (** The Core binder the receiver stands for, where translation bound
+          it for one *)
 }
 
 (** A method's receiver.  A static method has none, so it has no position for
@@ -1549,6 +1558,10 @@ and dfun = {
       (** Suppress [__attribute__((pure))] / [constexpr]: monadic functions
           and axiom stubs are neither. *)
   df_shape : dfun_shape;
+  df_binders : (Id.t * Core_binder.t) list;
+      (** The Core binder each parameter stands for, by the parameter's name,
+          which no other parameter shares, where translation bound it for
+          one *)
 }
 
 (** The qualified name a function is written under.
@@ -1617,6 +1630,7 @@ val mk_dfun :
   ?inner:(GlobRef.t * cpp_type list) list ->
   ?targs:cpp_type list ->
   ?no_pure:bool ->
+  ?binders:(Id.t * Core_binder.t) list ->
   ret:cpp_type ->
   GlobRef.t ->
   dfun_shape ->

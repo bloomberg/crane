@@ -1245,7 +1245,7 @@ let gen_dfun n b cty ty temps =
       clear_current_type_vars ();
       clear_current_param_types ();
       Dfun
-        (mk_dfun n ~ret:cod ~no_pure
+        (mk_dfun n ~ret:cod ~no_pure ~binders:(parameter_binders env ids)
            (Ddef
               ( ids,
                 finish_fn_body cod (guard_compare n ids (sigma_asserts @ b)) ) ) ) )
@@ -1293,7 +1293,7 @@ let gen_dfun n b cty ty temps =
       clear_current_type_vars ();
       clear_current_param_types ();
       Dfun
-        (mk_dfun n ~ret:cod ~no_pure
+        (mk_dfun n ~ret:cod ~no_pure ~binders:(parameter_binders env ids)
            (Ddef
               ( ids,
                 finish_fn_body cod (guard_compare n ids (sigma_asserts @ b)) ) ) )

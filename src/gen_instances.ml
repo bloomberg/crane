@@ -653,6 +653,8 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                   mf_no_pure = false;
                   mf_is_noexcept = false;
                   mf_is_conversion = false;
+                  mf_binders = [];
+                  mf_receiver_binder = None;
                 },
               VPublic,
               SNoTag )

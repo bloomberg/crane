@@ -592,6 +592,7 @@ and local_fixpoint = {
   lf_binder : Id.t;
   lf_name : Id.t;
   lf_member : Miniml.Occurrence.t * int;
+  lf_binders : (Id.t * Core_binder.t) list;
   lf_selves : Id.t list;
 }
 
@@ -726,6 +727,8 @@ and method_field = {
   mf_no_pure : bool;
   mf_is_noexcept : bool;
   mf_is_conversion : bool;
+  mf_binders : (Id.t * Core_binder.t) list;
+  mf_receiver_binder : Core_binder.t option;
 }
 
 and receiver =
@@ -811,7 +814,9 @@ let static_fun ~name ~ret ~params ~body =
     mf_is_inline = false;
     mf_no_pure = false;
     mf_is_noexcept = false;
-    mf_is_conversion = false }
+    mf_is_conversion = false;
+    mf_binders = [];
+    mf_receiver_binder = None }
 
 (** Rvalue reference type [T&&]. *)
 let rval_ref ty = Tref (Forwarding, ty)
@@ -1912,6 +1917,7 @@ and dfun = {
       (** Suppress [__attribute__((pure))] / [constexpr]: monadic functions
           and axiom stubs are neither. *)
   df_shape : dfun_shape;
+  df_binders : (Id.t * Core_binder.t) list;
 }
 
 (** The qualified name a function is written under.
@@ -2198,12 +2204,13 @@ let dfun_path_list p = p.dp_outer :: p.dp_inner
 (** [mk_dfun ?inner ?targs ?no_pure ~ret r shape] is the function named [r]
     (qualified under [inner], if given), which is how all but one caller
     builds one. *)
-let mk_dfun ?inner ?(targs = []) ?(no_pure = false) ~ret r shape =
+let mk_dfun ?inner ?(targs = []) ?(no_pure = false) ?(binders = []) ~ret r shape =
   {
     df_path = dfun_path ?inner (r, targs);
     df_ret = ret;
     df_no_pure = no_pure;
     df_shape = shape;
+    df_binders = binders;
   }
 
 (** The member as a field, to be written where a field is written. *)

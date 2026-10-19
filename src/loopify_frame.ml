@@ -1213,8 +1213,8 @@ let declared_binders binders = function
     whose result [tgt] binds to [id] keeps nothing the recursion plan does not
     find live there ({!Recursion_plan.resumes_binding}): some point the plan
     resumes at, binding the binder [id] stands for, reads every saved local
-    that stands for a Core binder.  A local the backend made stands for none,
-    and neither yet does a parameter. *)
+    that stands for a Core binder.  A local the backend made stands for
+    none. *)
 let check_frame_plan ctx id tgt saved =
   if Probe.checking () then
     let binder_of v = Option.flatten (List.assoc_opt v ctx.er_binders) in
@@ -2483,12 +2483,14 @@ let fix_handler_bindings field_names cf_ps handler =
     @param check    Call checker for identifying recursive calls
     @param tparams  Template parameter context of the enclosing function
     @param params   Function parameters [(id, type)]
+    @param binders  The Core binder each parameter, or capture, stands for, by
+                    name ({!Core_binder})
     @param ret_ty   Return type of the function
     @param body     Function body statements
     @return Transformed body with frame-based stack structure, or the original
             [body] unchanged when the transformation is unsafe (branch
             dependencies on recursive calls) *)
-let transform_nontail ?(fn_name : string option) ?adopted ?(outer_env = [])
+let transform_nontail ?(fn_name : string option) ?adopted ?(outer_env = []) ?(binders = [])
     check tparams params ret_ty body =
   (* An adopted body becomes a second entry point of this machine rather than
      a machine of its own: two machines cannot unwind each other's stack, so
@@ -2605,7 +2607,11 @@ let transform_nontail ?(fn_name : string option) ?adopted ?(outer_env = [])
   let ctx = { er_check = check; er_entries = entries;
                er_tparams = tparams;
                er_env = env;
-               er_binders = List.map (fun (id, _) -> (id, None)) env;
+               er_binders =
+                 List.map
+                   (fun (id, _) ->
+                     (id, List.find_map (fun (p, b) -> if Id.equal p id then Some b else None) binders) )
+                   env;
                er_call_counter = call_counter; er_frames_ref = frames_ref;
                er_branch_ctx = None;
                er_seen_frame_names = Hashtbl.create 16;
