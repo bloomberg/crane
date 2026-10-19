@@ -33,3 +33,10 @@ val transform_decl : cpp_decl -> cpp_decl
 (** Rewrite the bodies of every function, method and destructor in [d],
     descending through templates, namespaces and structs.  Anything else is
     returned unchanged. *)
+
+val drop_return_moves : cpp_decl -> cpp_decl
+(** Remove the [std::move] around the value of every [return] that would move
+    it anyway -- a local, a by-value parameter, a call or a construction --
+    where writing it would only suppress copy elision.  Translation moves a
+    variable at its last use, and a returned one is one; this is where the
+    move is spelled the way C++ wants it, rather than in the printer. *)

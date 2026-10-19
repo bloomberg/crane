@@ -136,6 +136,9 @@ let minicpp_passes : cpp_decl Pipeline_trace.pass list =
        read is visible, and becomes a move. *)
     pass "last_use" (fun d ->
         if Table.move_last_use () then Last_use.transform_decl d else d );
+    (* A returned value is moved by the language; writing the move there
+       only suppresses copy elision. *)
+    pass "return_moves" Last_use.drop_return_moves;
     (* A coinductive's field projection hands out a reference into an lvalue
        receiver, and a copy only to a temporary one. *)
     pass "borrow_projection" Borrow_projection.transform_decl;

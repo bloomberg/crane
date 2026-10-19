@@ -393,6 +393,26 @@ and two_alts scope live t e =
 
 (** {1 Entry points} *)
 
+(* What a [return] gives up without being told: a local or by-value
+   parameter is moved out by the language, and a call or a construction is
+   built in the caller's object.  Writing the move there only pessimises --
+   it suppresses copy elision -- whoever wrote it.  A dereference is not
+   among them: [return *p] copies unless told otherwise. *)
+let implicitly_moved = function
+  | CPPvar _ | CPPfun_call _ | CPPaccess_call _ | CPPmethod_call _ | CPPprojection _
+  | CPPstruct _ | CPPstructmk _ | CPPstruct_id _ ->
+    true
+  | _ -> false
+
+let drop_return_moves d =
+  let rec fe e = map_expr fe fs Fun.id e
+  and fs s =
+    match s with
+    | Sreturn (Some (CPPmove e)) when implicitly_moved e -> Sreturn (Some (fe e))
+    | _ -> map_stmt fe fs Fun.id s
+  in
+  map_decl fe fs Fun.id d
+
 let body params body =
   let scope = {cands = IdSet.empty; banned = IdSet.empty; opaque = false} in
   List.iter

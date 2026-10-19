@@ -2589,18 +2589,6 @@ and pp_cpp_stmt env args = function
     ++ str (escape_cpp_string msg)
     ++ str "\");"
   | Sreturn (Some e) ->
-    (* Strip std::move from return statements when the inner expression is a
-       plain variable — C++ applies implicit move on local variables in return
-       statements.  Explicit std::move prevents NRVO and triggers
-       -Wpessimizing-move / -Wredundant-move.
-       Keep std::move for non-variable expressions like *_head (dereference of
-       shared_ptr) where explicit move is required. *)
-    let e = match e with
-      | CPPmove (CPPvar _ as inner) -> inner
-      | CPPmove ((CPPfun_call _ | CPPaccess_call _ | CPPmethod_call _ | CPPprojection _ | CPPstruct _
-                 | CPPstructmk _ | CPPstruct_id _) as inner) -> inner
-      | _ -> e
-    in
     str "return " ++ pp_cpp_expr env args e ++ str ";"
   | Sdecl (id, ty, _) ->
     pp_cpp_type false [] ty ++ str " " ++ Id.print id ++ str ";"
