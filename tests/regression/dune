@@ -13161,3 +13161,14 @@
   (alias runtest)
   (deps reuse_arm_field_used_twice.t.exe)
   (action (run ./reuse_arm_field_used_twice.t.exe))))
+
+(subdir inlined_alias_resume_frame
+ (rule
+  (targets inlined_alias_resume_frame.t.exe)
+  (deps InlinedAliasResumeFrame.vo inlined_alias_resume_frame.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} inlined_alias_resume_frame.t.exe inlined_alias_resume_frame.cpp inlined_alias_resume_frame.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps inlined_alias_resume_frame.t.exe)
+  (action (run ./inlined_alias_resume_frame.t.exe))))
