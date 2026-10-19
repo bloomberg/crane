@@ -3437,7 +3437,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                   (type_expr, Generated_name.companion (Id.of_string fname) "reuse"),
                 of_reversed args )
           | _ ->
-            if Table.is_coinductive n && (not (List.for_all ml_is_value ts)) && args_may_corecurse ts then
+            if
+              suspends_constructor ~self:!Table.current_decl_ref ~binder_type:get_env_type_opt n
+                ts
+            then
               suspend_ctor type_expr (Id.of_string ctor_struct) (of_reversed args)
             else
               CPPfun_call

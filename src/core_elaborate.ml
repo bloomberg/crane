@@ -322,7 +322,7 @@ let head_variables ty = Mlutil.IntSet.fold max (Mlutil.ml_tvars ty) 0
    that is not erased ({!Gen_functions.dfun_body_scope}), and that
    application is what is elaborated: a definition that is another
    function, [add := Z.add], calls it. *)
-let declaration b ty body =
+let declaration_scope ty body =
   let ty = Mlutil.type_simpl ty in
   let params, body = collect_typed_lams ty body in
   let doms = List.rev (Ml_type_util.ml_domains ty) in
@@ -352,9 +352,15 @@ let declaration b ty body =
       in
       Mlutil.apply_eta_args (Mlutil.ast_lift n_missing b) args
   in
+  (Lexenv.push missing (Lexenv.push (List.map2 parameter params declared) Lexenv.empty), body)
+
+(* A declaration's calls, read in that scope. *)
+let declaration b ty body =
+  let lex, body = declaration_scope ty body in
+  let ty = Mlutil.type_simpl ty in
   let n_outer = head_variables ty in
   walk_type b ~n_outer Lexenv.empty ty;
-  walk b ~n_outer (Lexenv.push missing (Lexenv.push (List.map2 parameter params declared) Lexenv.empty)) body
+  walk b ~n_outer lex body
 
 (* A constant typed by a name that stands for arrows -- an instance of a
    single-method class is typed by the class -- is generated eta-expanded to

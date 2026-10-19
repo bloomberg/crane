@@ -34,6 +34,7 @@ type local_group = {
   chains : chain list option list;
       (* per binder, its chains, if it recurses through no other call that
          is not a tail call *)
+  suspends : bool;  (* some member's body suspends ({!suspends_within}) *)
 }
 
 type t = {
@@ -42,6 +43,7 @@ type t = {
   defined : Ref.User.Set.t;
   locals : local_group list;
   modulo_cons : chain list Ref.User.Map.t;
+  suspended : Ref.User.Set.t;  (* the definitions whose body suspends *)
 }
 
 let empty =
@@ -49,7 +51,8 @@ let empty =
     by_member = Ref.User.Map.empty;
     defined = Ref.User.Set.empty;
     locals = [];
-    modulo_cons = Ref.User.Map.empty }
+    modulo_cons = Ref.User.Map.empty;
+    suspended = Ref.User.Set.empty }
 
 let rec split_params n = function
   | MLlam (_, _, b) -> split_params (n + 1) b
@@ -262,12 +265,64 @@ let modulo_cons_chains ~effects ~member ~bodies self =
   walk ~within:self ~inlined:[] ~depth:0 (snd bodies.(self));
   if !general then None else Some (List.rev !chains)
 
+(* [f lex e'] for [e] and every term [e'] in it, [lex] the lexical
+   environment [e'] stands in, [e] standing in [lex]. *)
+let rec iter_scoped f lex e =
+  f lex e;
+  let bind ids lex =
+    Lexenv.push
+      (List.map
+         (fun (x, ty) -> {Lexenv.eb_id = Mlutil.id_of_mlid x; eb_type = ty; eb_role = Lexenv.Value})
+         ids )
+      lex
+  in
+  match e with
+  | MLlam (x, ty, b) -> iter_scoped f (bind [(x, ty)] lex) b
+  | MLletin (x, ty, a, b) ->
+    iter_scoped f lex a;
+    iter_scoped f (bind [(x, ty)] lex) b
+  | MLcase (_, s, branches) ->
+    iter_scoped f lex s;
+    Array.iter (fun (ids, _, _, b) -> iter_scoped f (bind (List.rev ids) lex) b) branches
+  | MLfix (_, ids, funs, _) ->
+    (* The last function of the group is the innermost binder. *)
+    let lex = bind (List.rev_map (fun (g, ty) -> (Id g, ty)) (Array.to_list ids)) lex in
+    Array.iter (iter_scoped f lex) funs
+  | e -> Mlutil.ast_iter (iter_scoped f lex) e
+
+(* Whether [e], standing in [lex] in the definition [self], suspends a
+   coinductive constructor ({!Translation_support.suspends_constructor})
+   anywhere, under a lambda or in a local fixpoint's body too: the C++ [e]
+   becomes holds the suspension wherever it stands. *)
+let suspends_within ~self lex e =
+  let exception Found in
+  try
+    iter_scoped
+      (fun lex -> function
+        | MLcons (Tglob (n, _, _), c, args)
+          when (not (Table.is_custom c))
+               && Translation_support.suspends_constructor ~self:(Some self)
+                    ~binder_type:(Lexenv.type_opt lex) n args ->
+          raise Found
+        | _ -> () )
+      lex e;
+    false
+  with Found -> true
+
+(* Whether the C++ the definition [self] of type [ty] becomes holds a
+   suspension: it is suspended whole
+   ({!Translation_support.suspends_whole}), or at a constructor. *)
+let definition_suspends self ty body =
+  let lex, body = Core_elaborate.declaration_scope ty body in
+  Translation_support.suspends_whole self (Ml_type_util.ml_return_type ty) body
+  || suspends_within ~self lex body
+
 (* The plan of every local fixpoint in [defs], one per fixpoint, under the
    definition it occurs in.  Inside a member's body, before its parameters,
    the member [k] of [n] is the variable [n - k]. *)
 let local_groups ~effects defs =
   let plans = ref [] in
-  let plan origin ids funs =
+  let plan origin lex ids funs =
     let n = Array.length ids in
     let arities = Array.map (fun f -> fst (split_params 0 f)) funs in
     let rec strip = function MLmagic (_, e) -> strip e | e -> e in
@@ -287,18 +342,26 @@ let local_groups ~effects defs =
       List.init n (fun j ->
           if kind = Nontail then modulo_cons_chains ~effects ~member ~bodies:funs j else None )
     in
+    let suspends =
+      let lex =
+        Lexenv.push
+          (List.rev_map
+             (fun (g, ty) -> {Lexenv.eb_id = g; eb_type = ty; eb_role = Lexenv.Value})
+             (Array.to_list ids) )
+          lex
+      in
+      Array.exists (suspends_within ~self:origin lex) funs
+    in
     plans :=
-      {origin; binders = Array.to_list (Array.map fst ids); local_kind = kind; chains} :: !plans
+      {origin; binders = Array.to_list (Array.map fst ids); local_kind = kind; chains; suspends}
+      :: !plans
   in
   Ref.User.Map.iter
     (fun r fd ->
-      let rec visit = function
-        | MLfix (_, ids, funs, _) ->
-          plan r ids funs;
-          Array.iter visit funs
-        | e -> Mlutil.ast_iter visit e
-      in
-      visit fd.fd_body )
+      let lex, body = Core_elaborate.declaration_scope fd.fd_type fd.fd_body in
+      iter_scoped
+        (fun lex -> function MLfix (_, ids, funs, _) -> plan r lex ids funs | _ -> ())
+        lex body )
     defs;
   List.rev !plans
 
@@ -377,7 +440,13 @@ let analyze groups struc =
             m g.members )
       Ref.User.Map.empty plans
   in
-  {groups = plans; by_member; defined; locals = local_groups ~effects defs; modulo_cons}
+  let suspended =
+    Ref.User.Map.fold
+      (fun r fd s ->
+        if definition_suspends r fd.fd_type fd.fd_body then Ref.User.Set.add r s else s )
+      defs Ref.User.Set.empty
+  in
+  {groups = plans; by_member; defined; locals = local_groups ~effects defs; modulo_cons; suspended}
 
 let same_cell c c' = Common.globref_equal c.constructor c'.constructor && c.hole = c'.hole
 
@@ -395,9 +464,11 @@ let equal a b =
          Common.globref_equal l.origin l'.origin
          && List.equal Names.Id.equal l.binders l'.binders
          && l.local_kind = l'.local_kind
-         && List.equal (Option.equal same_chains) l.chains l'.chains )
+         && List.equal (Option.equal same_chains) l.chains l'.chains
+         && l.suspends = l'.suspends )
        a.locals b.locals
   && Ref.User.Map.equal same_chains a.modulo_cons b.modulo_cons
+  && Ref.User.Set.equal a.suspended b.suspended
 
 let installed : t ref = State.cell State.Extraction empty
 
@@ -410,19 +481,23 @@ type strategy =
   | Tail_loop
   | Modulo_cons of chain list
   | Frame_stack
+  | Suspended of kind
 
 let kind_of_strategy = function
   | No_loop -> No_recursion
   | Tail_loop -> Tail
   | Modulo_cons _ | Frame_stack -> Nontail
+  | Suspended kind -> kind
 
-(* The strategy of a function of kind [kind] whose chains are [chains]:
-   tail modulo cons where there is a chain, every one ends in the same cell,
-   whose hole its constructor stores behind the pointer, and every
-   constructor in them stores some field there. *)
-let strategy_of ~pointer_fields kind chains =
+(* The strategy of a function of kind [kind] whose chains are [chains], in a
+   group some member of which suspends where [suspends]: tail modulo cons
+   where there is a chain, every one ends in the same cell, whose hole its
+   constructor stores behind the pointer, and every constructor in them
+   stores some field there. *)
+let strategy_of ~pointer_fields ~suspends kind chains =
   match (kind, chains) with
   | No_recursion, _ -> No_loop
+  | (Tail | Nontail), _ when suspends -> Suspended kind
   | Tail, _ -> Tail_loop
   | Nontail, Some ({innermost; _} :: _ as chains)
     when (let stored c = pointer_fields c.constructor in
@@ -435,15 +510,21 @@ let strategy_of ~pointer_fields kind chains =
     Modulo_cons chains
   | Nontail, _ -> Frame_stack
 
+(* A partner is inlined into a member, its suspensions with it. *)
 let strategy ~pointer_fields r =
   if Ref.User.Set.mem r !installed.defined then
-    let kind = match group_of r with Some g -> g.kind | None -> No_recursion in
-    Some (strategy_of ~pointer_fields kind (Ref.User.Map.find_opt r !installed.modulo_cons))
+    let kind, members =
+      match group_of r with Some g -> (g.kind, g.members) | None -> (No_recursion, [r])
+    in
+    let suspends = List.exists (fun m -> Ref.User.Set.mem m !installed.suspended) members in
+    Some
+      (strategy_of ~pointer_fields ~suspends kind (Ref.User.Map.find_opt r !installed.modulo_cons))
   else None
 
 let strategy_local ~pointer_fields ~origin ~binder =
   let both a b =
     match (a, b) with
+    | Suspended k, s | s, Suspended k -> Suspended (combine k (kind_of_strategy s))
     | Modulo_cons (c :: _ as cs), Modulo_cons (c' :: _ as cs')
       when same_cell c.innermost c'.innermost ->
       Modulo_cons (cs @ cs')
@@ -457,7 +538,7 @@ let strategy_local ~pointer_fields ~origin ~binder =
         List.fold_left2
           (fun found b chains ->
             if Names.Id.equal b binder then
-              let this = strategy_of ~pointer_fields l.local_kind chains in
+              let this = strategy_of ~pointer_fields ~suspends:l.suspends l.local_kind chains in
               Some (match found with Some f -> both f this | None -> this)
             else found )
           found l.binders l.chains

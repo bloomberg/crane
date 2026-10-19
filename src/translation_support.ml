@@ -1462,25 +1462,33 @@ let calls_eagerly r body =
   in
   try walk body; false with Found -> true
 
+(** Whether the definition [r], whose ML result type is [ml_ret], is suspended
+    whole: a coinductive result, and a body [b] that calls [r] outside every
+    constructor -- Rocq's guard condition holds only up to unfolding.  Any
+    other coinductive body is suspended at its constructors
+    ({!suspend_ctor}). *)
+let suspends_whole r ml_ret b = Table.is_coinductive_type ml_ret && calls_eagerly r b
+
 (** Whether the arguments [ts] of a coinductive constructor may run the
     corecursion the constructor guards, so that only a suspension keeps them
-    from unfolding without end: they name the declaration being generated, a
-    global or a binder that yields a coinductive value -- a sibling in a
-    mutual block, a local cofixpoint -- or a fixpoint of their own.  Anything
-    else is an ordinary call, which ends: every body suspends its own
-    corecursive calls at its constructors.  A binder whose type is not known
-    counts as corecursive. *)
-let args_may_corecurse ts =
+    from unfolding without end: they name the declaration being generated,
+    [self], a global or a binder that yields a coinductive value -- a sibling
+    in a mutual block, a local cofixpoint -- or a fixpoint of their own.
+    Anything else is an ordinary call, which ends: every body suspends its
+    own corecursive calls at its constructors.  [binder_type i] is the type
+    of the binder at de Bruijn index [i] where the constructor stands; a
+    binder whose type is not known counts as corecursive. *)
+let args_may_corecurse ~self ~binder_type ts =
   let yields_coinductive ty = Table.is_coinductive_type (ml_codomain ty) in
   let rec corec depth t =
     match t with
     | MLglob {callee = g; _} -> (
-      (match !Table.current_decl_ref with
+      (match self with
        | Some self -> globref_equal g self
        | None -> false)
       || match find_type_opt g with Some ty -> yields_coinductive ty | None -> false )
     | MLrel i when i > depth -> (
-      match get_env_type_opt (i - depth) with
+      match binder_type (i - depth) with
       | Some (Tunknown | Taxiom) | None -> true
       | Some ty -> yields_coinductive ty )
     | MLrel _ -> false
@@ -1496,6 +1504,15 @@ let args_may_corecurse ts =
        with Found -> true)
   in
   List.exists (corec 0) ts
+
+(** Whether a constructor of the inductive [n] applied to [ts] is suspended
+    ({!suspend_ctor}): [n] is coinductive, and its arguments are not all
+    values and may run the corecursion ({!args_may_corecurse}, which [self]
+    and [binder_type] are passed to). *)
+let suspends_constructor ~self ~binder_type n ts =
+  Table.is_coinductive n
+  && (not (List.for_all ml_is_value ts))
+  && args_may_corecurse ~self ~binder_type ts
 
 (** [suspend_ctor ty ctor args] is the coinductive constructor [ctor] of
     type [ty] applied to [args], suspended:

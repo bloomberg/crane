@@ -33,6 +33,12 @@ type t
     global named there unapplied, as its call with no arguments. *)
 val structure : Miniml.ml_structure -> t
 
+(** [declaration_scope ty body] is the lexical environment a definition of
+    type [ty] generates its body [body] in, its parameters bound at the
+    types the body is generated with and those an eta-expansion adds after
+    them, and the body as generated: applied to the added parameters. *)
+val declaration_scope : Miniml.ml_type -> Miniml.ml_ast -> Lexenv.t * Miniml.ml_ast
+
 (** Every global the declarations walked name, applied or not, in their
     bodies or in a term a custom type is applied to in any type the unit
     writes, specifications' and the declared types of the globals they

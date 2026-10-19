@@ -72,13 +72,20 @@ type strategy =
           left empty and filled by the next turn of the loop; there is at
           least one *)
   | Frame_stack  (** some call is not a tail call: an explicit stack *)
+  | Suspended of kind
+      (** it recurses so, but its body, or a partner's, suspends a
+          computation: a coinductive result built at a constructor whose
+          arguments may run the corecursion, or suspended whole.  Its calls
+          run when the suspension is forced, after it has returned, and
+          there is no stack for a loop to save. *)
 
 (** The kind of recursion a strategy lowers. *)
 val kind_of_strategy : strategy -> kind
 
 (** The strategy of the function [r], if the program defines it: its
-    group's kind, [No_recursion] off every cycle, and for a member that does
-    not recurse only by tail calls whether it is lowered tail modulo cons.
+    group's kind, [No_recursion] off every cycle, whether the group suspends
+    ({!Suspended}), and for a member that does not recurse only by tail calls
+    whether it is lowered tail modulo cons.
     It is, where each call that is not a tail call is the one call of a
     chain of constructor applications in tail position, the innermost
     holding it directly, read off [r]'s Core body with {!Normalize}'s

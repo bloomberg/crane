@@ -446,6 +446,34 @@ let try_inline_mutual_into names body =
   in
   loop [] body
 
+(** The plan's name for the way {!classify} reads a body as recursing. *)
+let plan_kind = function
+  | No_recursion -> Recursion_plan.No_recursion
+  | Tail_recursion -> Tail
+  | Nontail_recursion -> Nontail
+
+(** Check, under [CRANE_CHECK_IR], that the plan's [strategy] for the body
+    [body] of the function [what ()] names is {!Recursion_plan.Suspended}
+    exactly where [suspended body], the reading of the finished body that
+    decided this before, finds a suspension in it.  Only where it recurses:
+    a body that does not is lowered alike either way. *)
+let check_suspension ~what ~suspended strategy body =
+  if Probe.checking () then
+    match strategy with
+    | Recursion_plan.No_loop -> ()
+    | Suspended _ ->
+      if not (suspended body) then
+        Probe.violation "recursion plan"
+          Pp.(
+            str "the recursion plan suspends " ++ what ()
+            ++ str ", and its finished body does not" )
+    | Tail_loop | Modulo_cons _ | Frame_stack ->
+      if suspended body then
+        Probe.violation "recursion plan"
+          Pp.(
+            str "the finished body of " ++ what ()
+            ++ str " suspends, and the recursion plan does not" )
+
 (** The strategy for a body {!classify} reads as recursing so, where no plan
     says: a loop for tail recursion, an explicit stack for any other. *)
 let classified_strategy = function
@@ -460,13 +488,7 @@ let classified_strategy = function
     body that decided this before. *)
 let checked_plan planned ~what classified =
   ( if Probe.checking () then
-      let kind =
-        match Recursion_plan.kind_of_strategy planned with
-        | Recursion_plan.No_recursion -> No_recursion
-        | Tail -> Tail_recursion
-        | Nontail -> Nontail_recursion
-      in
-      if classified () <> kind then
+      if plan_kind (classified ()) <> Recursion_plan.kind_of_strategy planned then
         Probe.violation "recursion plan"
           Pp.(str "the recursion plan disagrees with the finished body of " ++ what ()) );
   planned
@@ -542,11 +564,15 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
     | Some {lf_name; _}, Some self_id -> (
       let check = self_checker self_id in
       let lbody = expose_tail_calls check lbody in
-      match planned_local_strategy fixpoint check lbody with
+      let strategy = planned_local_strategy fixpoint check lbody in
+      check_suspension
+        ~what:(fun () -> Pp.(str "the local fixpoint " ++ Id.print lf_name))
+        ~suspended:body_contains_lazy_factory strategy lbody;
+      match strategy with
       | No_loop -> None
       (* A local cofixpoint: its calls run when a thunk is forced, after it
          has returned, as a top-level one's do ({!transform_fundef_exn}). *)
-      | _ when body_contains_lazy_factory lbody -> None
+      | Suspended _ -> None
       | (Modulo_cons _ | Frame_stack) when tail_only -> None
       | (Tail_loop | Modulo_cons _ | Frame_stack) as strategy ->
         (* Loop params = all params except the trailing self-param. *)
@@ -574,8 +600,8 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
             report_outcome ~name ~check ~strategy:Lp_frame
               (transform_nontail ~fn_name:name ~outer_env check tparams params
                  ret_ty lbody)
-          | No_loop ->
-            CErrors.anomaly (Pp.str "loopify: No_loop cannot appear here")
+          | No_loop | Suspended _ ->
+            CErrors.anomaly (Pp.str "loopify: no loop cannot appear here")
         in
         (* Params the loop body no longer mentions keep their names here; the
            lambda printer drops the name of any param its body does not
@@ -1183,7 +1209,11 @@ let fundef_display_name path =
 let planned_strategy r check body =
   let classified () = classify check body in
   match r with
-  | None -> classified_strategy (classified ())
+  | None -> (
+    match classified () with
+    | (Tail_recursion | Nontail_recursion) as kind when is_cofix_body body ->
+      Recursion_plan.Suspended (plan_kind kind)
+    | kind -> classified_strategy kind )
   | Some r -> (
     let pointer_fields = constructor_pointer_fields in
     let planned =
@@ -1203,7 +1233,7 @@ let planned_strategy r check body =
 (** The chains a strategy lowers tail modulo cons around, if it does. *)
 let modulo_cons_chains = function
   | Recursion_plan.Modulo_cons chains -> Some chains
-  | No_loop | Tail_loop | Frame_stack -> None
+  | No_loop | Tail_loop | Frame_stack | Suspended _ -> None
 
 (** Transform a top-level function definition by loopifying its body.
 
@@ -1258,11 +1288,12 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
   let body =
     let name = fundef_display_name f.df_path in
     let strategy = planned_strategy (Some (fst f.df_path.dp_outer)) check body in
-    if is_cofix_body body then begin
-      if Recursion_plan.kind_of_strategy strategy <> No_recursion then
-        record_outcome name (Lp_deferred "cofixpoint body is lazy_-wrapped");
+    check_suspension ~what:(fun () -> Pp.str name) ~suspended:is_cofix_body strategy body;
+    match strategy with
+    | Suspended _ ->
+      record_outcome name (Lp_deferred "cofixpoint body is lazy_-wrapped");
       loopify_inner_lambdas ~tparams ~outer_env:params body
-    end else
+    | No_loop | Tail_loop | Modulo_cons _ | Frame_stack ->
       (* Recursion that lives inside a lambda -- a local fixpoint, or an
          inlined mutual partner -- is visible to {!classify} but out of reach
          of the transforms, which never rewrite through a lambda: the machine
@@ -1273,12 +1304,12 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
       let adopted =
         match strategy with
         | Modulo_cons _ | Frame_stack -> find_adopted check body
-        | No_loop | Tail_loop -> None
+        | No_loop | Tail_loop | Suspended _ -> None
       in
       let survived = Option.map decline_reason adopted in
       let body, outcome =
         match strategy with
-        | No_loop -> (body, None)
+        | No_loop | Suspended _ -> (body, None)
         | Tail_loop ->
           (transform_tail tparams check params ret_ty body, Some Lp_tail)
         | Modulo_cons _ | Frame_stack ->
@@ -1394,12 +1425,11 @@ let transform_method ~tparams ~self_ty mf =
       ?self_ref:mf.mf_globref mf.mf_name
   in
   let strategy = planned_strategy mf.mf_globref basic_check mf.mf_body in
-  if is_cofix_body mf.mf_body then begin
-    if Recursion_plan.kind_of_strategy strategy <> No_recursion then
-      record_outcome name (Lp_deferred "cofixpoint body is lazy_-wrapped");
-    Fmethod mf
-  end else
+  check_suspension ~what:(fun () -> Pp.str name) ~suspended:is_cofix_body strategy mf.mf_body;
     ( match strategy with
+    | Suspended _ ->
+      record_outcome name (Lp_deferred "cofixpoint body is lazy_-wrapped");
+      Fmethod mf
     | No_loop ->
       Fmethod mf
     | Tail_loop | Modulo_cons _ | Frame_stack ->
@@ -1564,7 +1594,7 @@ let transform_method ~tparams ~self_ty mf =
               r.nt_body
           in
           (body', not r.nt_used_param_inits)
-        | No_loop -> CErrors.anomaly (Pp.str "loopify: No_loop cannot appear here")
+        | No_loop | Suspended _ -> CErrors.anomaly (Pp.str "loopify: no loop cannot appear here")
       in
       (* Declare the parking slot outside the loop so the pointer taken to it
          on the back-edge stays valid for the next iteration. *)

@@ -753,7 +753,9 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   } = s in
   (* Suspended at its constructors, and whole only where it calls itself
      outside all of them: see [cofix_wrap] in [gen_dfun]. *)
-  let is_cofix_method = suspends_whole func_ref ret_ty (snd (collect_lams body)) in
+  let is_cofix_method =
+    Translation_support.suspends_whole func_ref ret_ty (snd (collect_lams body))
+  in
   let method_k x =
     if is_cofix_method then
       suspend_whole

@@ -212,13 +212,6 @@ let dead_unit_returns_to_abort (cod : cpp_type) (body : cpp_stmt list) =
     its caller reads ({!Translation.erase_returned_fn_values}). *)
 let finish_fn_body cod body = dead_unit_returns_to_abort cod (erase_returned_fn_values cod body)
 
-(** Whether the definition [r], whose ML result type is [ml_ret], is suspended
-    whole: a coinductive result, and a body [b] that calls [r] outside every
-    constructor -- Rocq's guard condition holds only up to unfolding.  Any
-    other coinductive body is suspended at its constructors
-    ({!Translation_support.suspend_ctor}). *)
-let suspends_whole r ml_ret b = Table.is_coinductive_type ml_ret && calls_eagerly r b
-
 (** [return ty::lazy_([=]() -> cod { return x; })]: the body's result [x], of
     C++ type [cod], suspended whole as the coinductive [ml_ret], whose type
     arguments [cpp_of] spells. *)
@@ -1108,7 +1101,7 @@ let gen_dfun n b cty ty temps =
      body that calls itself outside every constructor -- guarded, for Rocq,
      only up to unfolding -- is suspended whole. *)
   let ml_ret = ml_return_type ty in
-  let is_cofix_return = suspends_whole n ml_ret b in
+  let is_cofix_return = Translation_support.suspends_whole n ml_ret b in
   let cofix_wrap x =
     if is_cofix_return then
       suspend_whole ~cpp_of:(convert_ml_type_to_cpp_type env type_var_ids) ~cod ml_ret x
