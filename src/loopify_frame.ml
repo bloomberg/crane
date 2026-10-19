@@ -1228,15 +1228,46 @@ let planned_frame binders ~kept_elsewhere (p : Recursion_plan.resume) =
         binders )
     p.live
 
+(** The occurrence of the Core global use the recursive call [check]
+    recognises in [e] is made of, where translation recorded one. *)
+let call_occurrence check e =
+  let found = ref None in
+  let rec fe e =
+    ( match e with
+    | CPPfun_call ({cs_occurrence = Some o; _}, _, _) when check e <> None && !found = None ->
+      found := Some o
+    | _ -> () );
+    iter_expr_children ~on_expr:fe ~on_stmts:(fun _ -> ()) e
+  in
+  fe e;
+  !found
+
+(** The points the plan resumes at that bind [r] after the call whose use
+    is [occurrence]: of the sibling points binding [r], those resuming
+    after that use, when one does. *)
+let resumes_after r occurrence =
+  let points = Recursion_plan.resumes_binding r in
+  match occurrence with
+  | Some o -> (
+    match
+      List.filter
+        (fun (p : Recursion_plan.resume) -> List.exists (Miniml.Occurrence.equal o) p.calls)
+        points
+    with
+    | [] -> points
+    | after -> after )
+  | None -> points
+
 (** Under [CRANE_CHECK_IR], that the frame keeping [saved] across the call
     whose result [tgt] binds to [id] keeps what the recursion plan says
     ({!Recursion_plan.resumes_binding}): some point the plan resumes at,
-    binding the binder [id] stands for, has the saved locals that stand for
-    a Core binder as its {!planned_frame}.  [kept_elsewhere] are the locals
+    binding the binder [id] stands for after the call whose use is
+    [occurrence] ({!resumes_after}), has the saved locals that stand for a
+    Core binder as its {!planned_frame}.  [kept_elsewhere] are the locals
     the frame leaves out by design: what the handler rebuilds, the machine's
     entries, the parameters no re-entry changes.  A local the backend made
     stands for no binder, and the frame keeps it as the C++ reads it. *)
-let check_frame_plan ctx id tgt ~kept_elsewhere saved =
+let check_frame_plan ctx id tgt ~occurrence ~kept_elsewhere saved =
   if Probe.checking () then
     let binder_of v = Option.flatten (List.assoc_opt v ctx.er_binders) in
     let resume =
@@ -1252,7 +1283,7 @@ let check_frame_plan ctx id tgt ~kept_elsewhere saved =
                ~kept_elsewhere:(fun x -> Id.equal x id || kept_elsewhere x)
                p )
         in
-        if not (List.exists plans (Recursion_plan.resumes_binding r)) then
+        if not (List.exists plans (resumes_after r occurrence)) then
           Probe.violation "frame plan"
             Pp.(
               str "the frame resuming at " ++ Id.print id
@@ -1450,7 +1481,7 @@ and rewrite_enter_stmts ctx stmts =
         |> List.filter (fun cid -> not (Id.Set.mem cid ctx.er_invariant_params))
         |> List.filter (fun cid -> not (List.mem_assoc cid remat))
         |> List.filter (fun cid -> not (List.exists (Id.equal cid) entry_heads)) in
-      check_frame_plan ctx id tgt cont_vars
+      check_frame_plan ctx id tgt cont_vars ~occurrence:(call_occurrence check e)
         ~kept_elsewhere:(fun x ->
           Id.Set.mem x ctx.er_invariant_params
           || List.mem_assoc x remat

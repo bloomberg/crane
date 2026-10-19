@@ -470,6 +470,9 @@ and call_sig = {
           constructor struct's, lowercased and possibly escaped, which no
           reading of the name undoes: Loopify recognises the cells it
           rewrites by this. *)
+  cs_occurrence : Miniml.Occurrence.t option;
+      (** The occurrence of the Core global use the call is made of, where
+          translation lowered one to it *)
 }
 
 (** What a call yields. *)
