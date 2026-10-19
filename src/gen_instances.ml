@@ -460,7 +460,8 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                 (* Non-function field (like m_id : carrier) — generate as a
                    static value with a nullary accessor method. *)
                 let stmts =
-                  gen_stmts base_env (fun x -> Sreturn (Some x)) inner_body
+                  with_method_env_types ~outer:outer_binders base_env [] (fun () ->
+                      gen_stmts base_env (fun x -> Sreturn (Some x)) inner_body )
                 in
                 ([], method_ret_ty, stmts, [])
               | Some (eta_params, call_expr) ->
@@ -603,12 +604,12 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                     if b.mb_kind = `Instance then Some b.mb_name else None )
                   binders
               in
-              (* Record the instance-resolved parameter types: the ambient
-                 environment still spells them with the class's type variable,
-                 so call sites inside the body need this to tell a concrete
-                 parameter (e.g. [Sz (nat -> nat)]'s [f]) from an erased one. *)
+              (* Record which binders are the method's parameters: their
+                 instance-resolved types, which the binder environment holds,
+                 are what call sites inside the body tell a concrete parameter
+                 (e.g. [Sz (nat -> nat)]'s [f]) from an erased one by. *)
               let stmts =
-                with_param_types (List.rev renamed_ml) @@ fun () ->
+                with_parameters (List.map snd (parameter_binders env renamed_ml)) @@ fun () ->
                 (* The declared parameter types, so the body reads the
                    arities the signature was written at rather than
                    re-deriving them from ML types substitution has since

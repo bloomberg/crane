@@ -2492,7 +2492,8 @@ let translate_predicate_body env sg body =
 (* Walk a function type, detect sigma-typed parameters, and register assertions.
    info_idx counts the parameters that survive as values -- matching C++ param
    indices -- not the types, which become template parameters, nor the
-   proofs. *)
+   proofs, nor the parameters declared implicit; [position] counts every
+   product, as implicit positions do. *)
 
 (** Detects sigma type assertions (dependent pair projections) in function
     parameters and registers them.
@@ -2502,15 +2503,19 @@ let translate_predicate_body env sg body =
     @param typ The full Rocq type of [kn]; sigma-typed parameters are detected in the products *)
 let detect_sigma_assertions env sg kn typ =
   let func_ref = GlobRef.ConstRef kn in
-  let rec walk env info_idx typ =
+  (* A parameter declared implicit is no C++ parameter ({!sign_with_implicits}),
+     whatever its type. *)
+  let implicits = implicits_of_global func_ref in
+  let rec walk env position info_idx typ =
     match EConstr.kind sg (whd_all env sg typ) with
     | Prod (n, t, d) ->
       let t_whnf = whd_all env sg t in
+      let kept = not (Int.Set.mem position implicits) in
       (* Check if t is @sig A P — check regardless of is_info since sig is
          sometimes classified as non-informative due to its Prop component *)
       ( match EConstr.kind sg t_whnf with
       | App (hd, args)
-        when head_is_ref sg "core.sig.type" t_whnf && Array.length args >= 2 ->
+        when kept && head_is_ref sg "core.sig.type" t_whnf && Array.length args >= 2 ->
         let pred = args.(1) in
         (* P : A -> Prop *)
         let pred_whnf = whd_all env sg pred in
@@ -2529,12 +2534,12 @@ let detect_sigma_assertions env sg kn typ =
          params *)
       let is_sig_type = head_is_ref sg "core.sig.type" t_whnf in
       let next_info =
-        if is_default env sg t || is_sig_type then info_idx + 1 else info_idx
+        if kept && (is_default env sg t || is_sig_type) then info_idx + 1 else info_idx
       in
-      walk (push_rel_assum (n, t) env) next_info d
+      walk (push_rel_assum (n, t) env) (position + 1) next_info d
     | _ -> ()
   in
-  walk env 0 typ
+  walk env 1 0 typ
 
 (** Extracts a standard (non-record) constant definition, handling lambda
     decomposition and type expunging.

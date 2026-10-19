@@ -354,6 +354,31 @@ let declaration_scope ty body =
   in
   (Lexenv.push missing (Lexenv.push (List.map2 parameter params declared) Lexenv.empty), body)
 
+(* [e], standing in [lex] under a head of [n_outer] type variables, with
+   every alias {!Translation_support.let_lambda} inlines put in place of its
+   uses, as translation generates it. *)
+let rec inline_aliases ~n_outer lex e =
+  let go = inline_aliases ~n_outer in
+  let under ids body = go (push Lexenv.Value ids lex) body in
+  match e with
+  | MLletin (x, ty, (MLlam _ as a), body) -> (
+    match let_lambda ~lex ~n_outer ty a body with
+    | Inlined body -> go lex body
+    | Bound | At_instance _ | Lifted -> MLletin (x, ty, go lex a, under [(x, ty)] body) )
+  | MLletin (x, ty, a, body) -> MLletin (x, ty, go lex a, under [(x, ty)] body)
+  | MLlam (x, ty, body) -> MLlam (x, ty, under [(x, ty)] body)
+  | MLcase (ty, scrut, branches) ->
+    MLcase
+      (ty, go lex scrut, Array.map (fun (ids, rty, pat, body) -> (ids, rty, pat, under (List.rev ids) body)) branches)
+  | MLfix (i, fs, defs, cofix, occ) ->
+    let fs' = List.rev_map (fun (f, ty) -> (Id f, ty)) (Array.to_list fs) in
+    MLfix (i, fs, Array.map (under fs') defs, cofix, occ)
+  | e -> Mlutil.ast_map (go lex) e
+
+let generated_scope ty body =
+  let lex, body = declaration_scope ty body in
+  (lex, inline_aliases ~n_outer:(head_variables (Mlutil.type_simpl ty)) lex body)
+
 (* A declaration's calls, read in that scope. *)
 let declaration b ty body =
   let lex, body = declaration_scope ty body in

@@ -82,9 +82,11 @@ type translation_ctx = {
      Only the emitters that build the head know it, so a scope that does not
      say leaves this empty and both readers answer negatively. *)
   current_template_head : (template_type * Id.t) list;
-  (* 1-indexed parameter types for the current function; used to recover
-     erased type info at call sites. *)
-  current_param_types : (int * ml_type) list;
+  (* The Core binders of the parameters of the declaration whose body is
+     being generated ({!Core_binder}), which call sites and matches ask a
+     variable's type as a parameter of: by binder, since every binder the
+     body pushes shifts a parameter's index. *)
+  current_parameters : Core_binder.t list;
   (* C++ return type of the enclosing function, set by gen_dfun. Used to
      recover erased template type args at call sites where C++ can't deduce
      them from lambda arguments. *)
@@ -196,7 +198,7 @@ let tctx =
     {
         current_type_vars = [];
         current_template_head = [];
-        current_param_types = [];
+        current_parameters = [];
         current_cpp_return_type = None;
         env_types = Lexenv.empty;
         body_owner = None;
@@ -297,14 +299,13 @@ let with_cpp_return_type (ty : cpp_type option) (f : unit -> 'a) : 'a =
     (fun t -> tctx := { !tctx with current_cpp_return_type = t })
     ty f
 
-(** [with_param_types params f] runs [f] with [params] as the current
-    function's parameters, indexed from 1. *)
-let with_param_types (params : (Id.t * ml_type) list) (f : unit -> 'a) : 'a =
+(** [with_parameters bs f] runs [f] with [bs] as the binders of the
+    declaration's parameters ({!translation_ctx.current_parameters}). *)
+let with_parameters (bs : Core_binder.t list) (f : unit -> 'a) : 'a =
   with_field
-    (fun c -> c.current_param_types)
-    (fun t -> tctx := { !tctx with current_param_types = t })
-    (List.mapi (fun i (_, ty) -> (i + 1, ty)) params)
-    f
+    (fun c -> c.current_parameters)
+    (fun bs -> tctx := { !tctx with current_parameters = bs })
+    bs f
 
 (** [with_method_self_ns ns f] runs [f] with [ns] as the inductives whose
     methods are being generated, so self-references inside container types get
@@ -396,19 +397,9 @@ let end_alternatives a =
     { !tctx with
       pending_reuse_token = (if a.alt_consumed then None else a.alt_start) }
 
-(** Accessors for {!translation_ctx.current_param_types}: the 1-indexed
-    parameter types of the current function, used to recover erased type info
-    at call sites. [set_current_param_types] assigns the 1-based indices. *)
-let set_current_param_types (params : (Id.t * ml_type) list) =
-  tctx :=
-    { !tctx with
-      current_param_types = List.mapi (fun i (_, ty) -> (i + 1, ty)) params }
-
-let get_param_type_by_index (idx : int) : ml_type option =
-  List.assoc_opt idx (!tctx).current_param_types
-
-let clear_current_param_types () =
-  tctx := { !tctx with current_param_types = [] }
+(** Set {!translation_ctx.current_parameters}. *)
+let set_current_parameters (bs : Core_binder.t list) =
+  tctx := { !tctx with current_parameters = bs }
 
 (** The helpers lifted so far out of the bodies the innermost
     {!collecting_lifted} is generating, newest first, and [None] outside every
@@ -537,6 +528,37 @@ let env_type_of_id (id : Id.t) : ml_type option =
 
 (** The lexical environment the traversal is generating code in. *)
 let current_lexenv () : Lexenv.t = (!tctx).env_types
+
+(** The Core binder of the variable at de Bruijn index [db] in [env], in the
+    definition whose body is being generated ({!Core_binder}): [env] binds
+    the definition's Core binders, its parameters first, so the variable's
+    level is the number bound outside it. *)
+let core_binder env db =
+  Option.map
+    (fun origin -> Core_binder.make ~origin ~level:(List.length (fst env) - db))
+    (!tctx).body_owner
+
+(** The Core binders of [params], parameters of a function whose body is
+    generated under [env], by name: [env] gives no two binders in scope one
+    name, so a parameter's is the binder [env] names so. *)
+let parameter_binders env params =
+  let rec index id db = function
+    | [] -> None
+    | x :: xs -> if Id.equal x id then Some db else index id (db + 1) xs
+  in
+  List.filter_map
+    (fun (id, _) ->
+      Option.bind (index id 1 (fst env)) (fun db ->
+          Option.map (fun b -> (id, b)) (core_binder env db) ) )
+    params
+
+(** The ML type of the variable at de Bruijn index [i] in [env], where it is
+    a parameter of the declaration whose body is being generated
+    ({!translation_ctx.current_parameters}). *)
+let parameter_type env i =
+  match core_binder env i with
+  | Some b when List.exists (Core_binder.equal b) (!tctx).current_parameters -> get_env_type_opt i
+  | Some _ | None -> None
 
 (** Reset the environment type stack to empty.
     Also clears {!cpp_binder_types}. *)

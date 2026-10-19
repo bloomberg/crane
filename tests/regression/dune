@@ -13139,3 +13139,47 @@
   (alias runtest)
   (deps collision_struct_concept_names_template.t.exe)
   (action (run ./collision_struct_concept_names_template.t.exe))))
+
+(subdir reuse_arm_field_order
+ (rule
+  (targets reuse_arm_field_order.t.exe)
+  (deps ReuseArmFieldOrder.vo reuse_arm_field_order.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_arm_field_order.t.exe reuse_arm_field_order.cpp reuse_arm_field_order.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_arm_field_order.t.exe)
+  (action (run ./reuse_arm_field_order.t.exe))))
+
+(subdir reuse_arm_field_used_twice
+ (rule
+  (targets reuse_arm_field_used_twice.t.exe)
+  (deps ReuseArmFieldUsedTwice.vo reuse_arm_field_used_twice.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_arm_field_used_twice.t.exe reuse_arm_field_used_twice.cpp reuse_arm_field_used_twice.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_arm_field_used_twice.t.exe)
+  (action (run ./reuse_arm_field_used_twice.t.exe))))
+
+(subdir inlined_alias_resume_frame
+ (rule
+  (targets inlined_alias_resume_frame.t.exe)
+  (deps InlinedAliasResumeFrame.vo inlined_alias_resume_frame.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} inlined_alias_resume_frame.t.exe inlined_alias_resume_frame.cpp inlined_alias_resume_frame.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps inlined_alias_resume_frame.t.exe)
+  (action (run ./inlined_alias_resume_frame.t.exe))))
+
+(subdir sigma_assertion_after_implicit
+ (rule
+  (targets sigma_assertion_after_implicit.t.exe)
+  (deps SigmaAssertionAfterImplicit.vo sigma_assertion_after_implicit.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sigma_assertion_after_implicit.t.exe sigma_assertion_after_implicit.cpp sigma_assertion_after_implicit.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sigma_assertion_after_implicit.t.exe)
+  (action (run ./sigma_assertion_after_implicit.t.exe))))

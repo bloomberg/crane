@@ -596,7 +596,7 @@ let analyze groups struc =
           | MLapp (MLglob use, _) -> List.exists (Common.globref_equal use.callee) members
           | _ -> false
         in
-        let lex, body = Core_elaborate.declaration_scope fd.fd_type fd.fd_body in
+        let lex, body = Core_elaborate.generated_scope fd.fd_type fd.fd_body in
         resumes_of ~effects ~origin:r ~calls lex body )
       defs
   in

@@ -157,12 +157,13 @@ struct ReuseTwoChildren {
         if (k < k_) {
           return tree<T1>::node_crane_reuse(
               std::move(std::get<typename tree<T1>::Node>(t.v_mut()).a0),
-              insert<T1>(k, v, std::move(l)), k_, std::move(v_), std::move(r));
+              insert<T1>(k, v, std::move(l)), std::move(k_), std::move(v_),
+              std::move(r));
         } else {
           if (k_ < k) {
             return tree<T1>::node_crane_reuse(
                 std::move(std::get<typename tree<T1>::Node>(t.v_mut()).a0),
-                std::move(l), k_, std::move(v_),
+                std::move(l), std::move(k_), std::move(v_),
                 insert<T1>(k, v, std::move(r)));
           } else {
             return tree<T1>::node_crane_reuse(

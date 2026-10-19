@@ -1076,7 +1076,6 @@ let gen_dfun n b cty ty temps =
      {!Translation_state.current_template_head}. *)
   let saved_template_head = get_current_template_head () in
   set_current_template_head (typeclass_temps_basic @ regular_temps);
-  set_current_param_types all_ids;
   (* Activate promoted var resolution for body generation — types like
      [Tpromoted "Obj"] in type annotations will be resolved to
      qualified access through the typeclass instance chain. *)
@@ -1175,6 +1174,7 @@ let gen_dfun n b cty ty temps =
         assertions
   in
   begin_body ~owner:n ();
+  set_current_parameters (List.map snd (parameter_binders env all_ids));
   (* Phase 2: Initialize owned-variable tracking for move insertion. Parameters
      at de Bruijn indices 1..n_params; owned ones get added to the set. *)
   let n_all_params = List.length all_params in
@@ -1243,7 +1243,7 @@ let gen_dfun n b cty ty temps =
         | _ -> (ids, b)
       in
       clear_current_type_vars ();
-      clear_current_param_types ();
+      set_current_parameters [];
       Dfun
         (mk_dfun n ~ret:cod ~no_pure ~binders:(parameter_binders env ids)
            (Ddef
@@ -1291,7 +1291,7 @@ let gen_dfun n b cty ty temps =
       let b = return_captures_by_value b in
       (* let b = List.map forward_fun_args b in *)
       clear_current_type_vars ();
-      clear_current_param_types ();
+      set_current_parameters [];
       Dfun
         (mk_dfun n ~ret:cod ~no_pure ~binders:(parameter_binders env ids)
            (Ddef
