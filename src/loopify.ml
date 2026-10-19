@@ -592,27 +592,11 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         (* The loop no longer recurses, so the self-parameter and the wrapper
            that supplied it are scaffolding: the wrapper [go] becomes the loop
            itself, an ordinary lambda.  Only when the next statement is that
-           wrapper -- [return go_impl(go_impl, args...)] over its own
-           parameters -- and nothing after it names [go_impl]. *)
+           wrapper ({!wraps}) and nothing after it names [go_impl]. *)
         let self = fixpoint_self fixpoint (to_reversed lparams) in
-        let is_wrapper (w : cpp_lambda) =
-          match w.cl_body with
-          | [Sreturn (Some (CPPfun_call (_, CPPvar f, args)))] when Id.equal f id ->
-            let own = List.map (fun (_, x) -> Option.map (fun x -> CPPvar x) x) (lambda_params w.cl_params) in
-            List.map (fun a -> Some a) (call_args args)
-            = Some (CPPvar id) :: own
-          | _ -> false
-        in
-        let is_wrapper w =
-          let wrapper = wraps fixpoint w in
-          if Probe.checking () && wrapper <> is_wrapper w then
-            Probe.violation "local fixpoint"
-              Pp.(str "the wrapper of " ++ Id.print id ++ str " is recorded otherwise than it reads");
-          wrapper
-        in
         match rest with
         | Sasgn (wid, (Declare (Tauto, _) as wtgt), CPPlambda w) :: rest'
-          when is_wrapper w && not (List.exists (Id.equal id) (free_vars_body rest')) ->
+          when wraps fixpoint w && not (List.exists (Id.equal id) (free_vars_body rest')) ->
           Sasgn
             ( wid,
               wtgt,

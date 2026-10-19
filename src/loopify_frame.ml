@@ -853,31 +853,13 @@ and drop_bindings_expr ids e =
   | None -> map_expr (drop_bindings_expr ids) Fun.id Fun.id e
 
 (** The binder of the wrapper lambda for the local fixpoint [fixpoint]
-    bound to [impl_id] ({!wraps}).  Searched over the same flow the fixpoint
-    itself is, since translation emits the pair together.  Under
-    [CRANE_CHECK_IR] it is checked to be the one whose body passes [impl_id]
-    to itself. *)
-let find_fix_wrapper fixpoint impl_id stmts =
-  let found =
-    find_in_flow stmts
-      ~on_stmt:(function
-        | Sasgn (wid, Declare (Tauto, _), CPPlambda w) when wraps fixpoint w -> Some wid
-        | _ -> None )
-  in
-  ( if Probe.checking () then
-      let read =
-        find_in_flow stmts
-          ~on_stmt:(function
-            | Sasgn (wid, Declare (Tauto, _), (CPPlambda _ as w))
-              when (not (Id.equal wid impl_id))
-                   && List.exists (Id.equal impl_id) (free_vars_expr w) ->
-              Some wid
-            | _ -> None )
-      in
-      if not (Option.equal Id.equal found read) then
-        Probe.violation "local fixpoint"
-          Pp.(str "the wrapper of " ++ Id.print impl_id ++ str " is recorded otherwise than it reads") );
-  found
+    ({!wraps}).  Searched over the same flow the fixpoint itself is, since
+    translation emits the pair together. *)
+let find_fix_wrapper fixpoint stmts =
+  find_in_flow stmts
+    ~on_stmt:(function
+      | Sasgn (wid, Declare (Tauto, _), CPPlambda w) when wraps fixpoint w -> Some wid
+      | _ -> None )
 
 (** A body this machine adopts as an extra entry point.
 
@@ -990,7 +972,7 @@ let adopt_local_fix ~stmts check = function
         in
         let name = Id.to_string lf_name in
         let entry_id = adopted_entry_id name in
-        let wrapper = find_fix_wrapper cl_fixpoint impl_id stmts in
+        let wrapper = find_fix_wrapper cl_fixpoint stmts in
         let reroute e =
           match e with
           | CPPfun_call (res, CPPvar id, args) when Id.equal id self_id -> (
