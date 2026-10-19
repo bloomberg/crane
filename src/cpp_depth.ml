@@ -63,7 +63,7 @@ let rec flatten_expr e =
       else begin
         let id = Id.of_string (Printf.sprintf "_lit%d" !next) in
         incr next;
-        stmts := Sasgn (id, Declare Tauto, e) :: !stmts;
+        stmts := Sasgn (id, Declare (Tauto, None), e) :: !stmts;
         CPPmove (CPPvar id)
       end
     end

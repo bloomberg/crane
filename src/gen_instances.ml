@@ -543,7 +543,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                   List.fold_left (fun acc (name, _body_ty, body_cpp) ->
                     let param_name =
                       Id.of_string ("_p_" ^ Id.to_string name) in
-                    Sasgn (name, Declare body_cpp,
+                    Sasgn (name, Declare (body_cpp, None),
                            Cpp_erasure.unbox body_cpp (CPPvar param_name))
                     :: acc
                   ) stmts (List.rev cast_info)

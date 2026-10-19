@@ -203,7 +203,7 @@ type cpp_type =
    [ty x = e;] (Tauto for [auto]), [Existing] prints [x = e;] for a variable
    already in scope, [Declare_static ty] prints [static ty x = e;]. *)
 and asgn_target =
-  | Declare of cpp_type
+  | Declare of cpp_type * Core_binder.t option
   | Existing
   | Declare_static of cpp_type
 
@@ -212,7 +212,7 @@ and type_test = Tt_convertible of cpp_type * cpp_type
 
 and cpp_stmt =
   | Sreturn of cpp_expr option
-  | Sdecl of Id.t * cpp_type
+  | Sdecl of Id.t * cpp_type * Core_binder.t option
   | Sasgn of Id.t * asgn_target * cpp_expr
   | Sexpr of cpp_expr
   | Scustom_case of
@@ -298,18 +298,19 @@ and smatch_branch = {
     (** Binding variable for [std::get], or [None] when no fields
         are accessed in the branch body.  Kept for scrutinee-name
         derivation even when {!smb_field_bindings} is non-empty. *)
-  smb_field_bindings : (Id.t * cpp_type * bool) list;
-    (** Ordered list of [(binding_name, field_cpp_type, used)] for C++
-        structured bindings ([const auto& [f1, f2] = std::get<T>(…)]).
-        Covers ALL constructor fields in struct-declaration order.
-        [used] is [true] when the binding is referenced in the branch
-        body; unused bindings are annotated [[[maybe_unused]]].
-        Empty when no fields are used or for frame-dispatch branches. *)
+  smb_field_bindings : field_binding list;
   smb_extra_conds : cpp_expr list;
     (** Additional [&&]-joined conditions after the primary check. *)
   smb_body : cpp_stmt list;
     (** Branch body statements.  When {!smb_field_bindings} is non-empty,
         field accesses use direct [CPPvar binding_name] references. *)
+}
+
+and field_binding = {
+  fb_name : Id.t;
+  fb_type : cpp_type;
+  fb_used : bool;
+  fb_binder : Core_binder.t option;
 }
 
 (* A precondition carried over from a Rocq annotation.  Either it has a C++
@@ -1523,11 +1524,11 @@ let map_stmt ?fl
   match s with
   | Sreturn None -> s
   | Sreturn (Some e) -> Sreturn (Some (fe e))
-  | Sdecl (id, ty) -> Sdecl (id, ft ty)
+  | Sdecl (id, ty, b) -> Sdecl (id, ft ty, b)
   | Sasgn (id, tgt, e) ->
     let tgt =
       match tgt with
-      | Declare ty -> Declare (ft ty)
+      | Declare (ty, b) -> Declare (ft ty, b)
       | Declare_static ty -> Declare_static (ft ty)
       | Existing -> tgt
     in
@@ -1581,7 +1582,7 @@ let map_stmt ?fl
             { smb_ctor_type = ft br.smb_ctor_type;
               smb_var = br.smb_var;
               smb_field_bindings =
-                List.map (fun (id, ty, u) -> (id, ft ty, u)) br.smb_field_bindings;
+                List.map (fun fb -> {fb with fb_type = ft fb.fb_type}) br.smb_field_bindings;
               smb_extra_conds = List.map fe br.smb_extra_conds;
               smb_body = fl br.smb_body })
           branches,
@@ -2049,8 +2050,8 @@ let invocations ~params body tparam dom =
     match s with
     | Sreturn eo -> Option.iter (expr env) eo; env
     | Sexpr e -> expr env e; env
-    | Sdecl (x, ty) | Sdecl_init (x, ty) -> bind env x (declared ty)
-    | Sasgn (x, Declare ty, e) -> expr env e; bind env x (declared ty)
+    | Sdecl (x, ty, _) | Sdecl_init (x, ty) -> bind env x (declared ty)
+    | Sasgn (x, Declare (ty, _), e) -> expr env e; bind env x (declared ty)
     | Sasgn (_, Existing, e) -> expr env e; env
     | Sassign_expr (l, r) -> expr env l; expr env r; env
     | Sbind (xs, e) ->
@@ -2075,7 +2076,7 @@ let invocations ~params body tparam dom =
         (fun br ->
           let env =
             List.fold_left
-              (fun env (x, _, _) -> bind env x (Some field))
+              (fun env fb -> bind env fb.fb_name (Some field))
               env br.smb_field_bindings
           in
           let env =
@@ -2572,7 +2573,7 @@ and free_vars_stmt = function
         (* Filter out variables bound by this branch: structured-binding
            field names and/or the aggregate binding variable. *)
         let bound_ids =
-          List.map (fun (id, _, _) -> id) br.smb_field_bindings
+          List.map (fun fb -> fb.fb_name) br.smb_field_bindings
           @ (match br.smb_var with Some id -> [id] | None -> [])
         in
         List.filter
@@ -2605,7 +2606,7 @@ and free_vars_body (stmts : cpp_stmt list) : Id.t list =
     | stmt :: rest ->
       let newly_defined =
         match stmt with
-        | Sasgn (id, Declare _, _) | Sdecl (id, _) | Sdecl_init (id, _)
+        | Sasgn (id, Declare _, _) | Sdecl (id, _, _) | Sdecl_init (id, _)
         | Sblock_custom (_, _, id, _, _, _) -> [id]
         | Sbind (ids, _) -> ids
         | _ -> []
@@ -2676,7 +2677,7 @@ and rename_stmt_ids f s =
   let fe = rename_expr_ids f and fl = rename_ids f in
   match s with
   | Sasgn (id, tgt, e) -> Sasgn (f id, tgt, fe e)
-  | Sdecl (id, ty) -> Sdecl (f id, ty)
+  | Sdecl (id, ty, b) -> Sdecl (f id, ty, b)
   | Sdecl_init (id, ty) -> Sdecl_init (f id, ty)
   | Sbind (ids, e) -> Sbind (List.map f ids, fe e)
   | Sif_decl (id, ty, e, a, b) -> Sif_decl (f id, ty, fe e, fl a, fl b)
@@ -2691,7 +2692,7 @@ and rename_stmt_ids f s =
             { br with
               smb_var = Option.map f br.smb_var;
               smb_field_bindings =
-                List.map (fun (id, ty, u) -> (f id, ty, u)) br.smb_field_bindings;
+                List.map (fun fb -> {fb with fb_name = f fb.fb_name}) br.smb_field_bindings;
               smb_extra_conds = List.map fe br.smb_extra_conds;
               smb_body = fl br.smb_body })
           branches,
@@ -2714,7 +2715,7 @@ let declared_ids stmts =
   let note id = if not (List.exists (Id.equal id) !acc) then acc := id :: !acc in
   let rec fs s =
     ( match s with
-    | Sasgn (id, Declare _, _) | Sdecl (id, _) | Sdecl_init (id, _)
+    | Sasgn (id, Declare _, _) | Sdecl (id, _, _) | Sdecl_init (id, _)
     | Sif_decl (id, _, _, _, _) | Sfor_range (id, _, _) ->
       note id
     | Sbind (ids, _) -> List.iter note ids
@@ -2723,7 +2724,7 @@ let declared_ids stmts =
       List.iter
         (fun br ->
           Option.iter note br.smb_var;
-          List.iter (fun (id, _, _) -> note id) br.smb_field_bindings)
+          List.iter (fun fb -> note fb.fb_name) br.smb_field_bindings)
         branches
     | Scustom_case (_, _, _, branches, _) ->
       List.iter (fun (ps, _, _) -> List.iter (fun (id, _) -> note id) ps) branches
@@ -2769,7 +2770,7 @@ let borrow_matches_on ids stmts =
             (fun br ->
               if not through then { br with smb_body = List.map stmt br.smb_body }
               else
-                let bound = List.map (fun (id, _, _) -> id) br.smb_field_bindings in
+                let bound = List.map (fun fb -> fb.fb_name) br.smb_field_bindings in
                 { br with smb_body = strip_moves bound (List.map stmt br.smb_body) })
             branches,
           Option.map (List.map stmt) default )
@@ -2785,7 +2786,7 @@ let borrow_bound_matches stmts =
   let ids = ref [] in
   let rec scan s =
     ( match s with
-    | Sasgn (id, Declare (Tref (Lvalue, Tconst _) | Tptr _), _) -> ids := id :: !ids
+    | Sasgn (id, Declare ((Tref (Lvalue, Tconst _) | Tptr _), _), _) -> ids := id :: !ids
     | _ -> () );
     ignore (map_stmt Fun.id (fun s -> scan s; s) Fun.id s)
   in

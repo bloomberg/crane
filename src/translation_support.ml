@@ -910,7 +910,7 @@ let lift_iife_assignment target_var (target_ty : cpp_type option) expr =
       | s -> s
     ) body in
     Some (Sdecl_init (target_var, actual_ty)
-          :: Sasgn (param_id, Declare param_ty, arg)
+          :: Sasgn (param_id, Declare (param_ty, None), arg)
           :: lifted_body)
   | _ -> None
 

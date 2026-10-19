@@ -109,7 +109,7 @@ let gen_local_fix_ycomb env ~binders renamed_ids funs_with_params =
         in
         Sasgn
           ( impl_id,
-            Declare Tauto,
+            Declare (Tauto, None),
             CPPlambda
               { cl_tparams = [];
                 cl_fixpoint = local_fixpoint ~name:fix_id ~selves:self_ids binder;
@@ -144,7 +144,7 @@ let gen_local_fix_ycomb env ~binders renamed_ids funs_with_params =
         in
         Sasgn
           ( fix_id,
-            Declare Tauto,
+            Declare (Tauto, None),
             CPPlambda
               { cl_params = of_reversed orig_params;
               cl_tparams = [];
@@ -220,7 +220,7 @@ let gen_local_fix_by_ref env ~binders renamed_ids funs_with_params owned_flags_p
         in
         Sasgn
           ( impl_id,
-            Declare Tauto,
+            Declare (Tauto, None),
             CPPlambda
               { cl_params = of_reversed (orig_params @ self_params);
               cl_tparams = [];
@@ -258,7 +258,7 @@ let gen_local_fix_by_ref env ~binders renamed_ids funs_with_params owned_flags_p
         in
         Sasgn
           ( fix_id,
-            Declare Tauto,
+            Declare (Tauto, None),
             CPPlambda
               { cl_params = of_reversed orig_params;
               cl_tparams = [];
@@ -365,6 +365,15 @@ let into_erased_return slot =
   match Option.map slot_repr_of_cpp_type (!tctx).current_cpp_return_type with
   | Some (Boxed kind) -> into_box kind slot
   | Some Native | None -> slot
+
+(** The Core binder of the variable at de Bruijn index [db] in [env], in the
+    declaration being translated ({!Core_binder}): [env] binds the
+    declaration's Core binders, its parameters first, so the variable's
+    level is the number bound outside it. *)
+let core_binder env db =
+  Option.map
+    (fun origin -> Core_binder.make ~origin ~level:(List.length (fst env) - db))
+    !Table.current_decl_ref
 
 let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
     r ts =
@@ -3655,7 +3664,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 ) (List.mapi (fun idx p -> (idx, p)) new_params) in
                 let new_body =
                   List.fold_left (fun stmts (orig_id, any_id, concrete_ty) ->
-                    let cast_stmt = Sasgn (orig_id, Declare concrete_ty,
+                    let cast_stmt = Sasgn (orig_id, Declare (concrete_ty, None),
                       Cpp_erasure.unbox concrete_ty (CPPvar any_id)) in
                     cast_stmt :: stmts
                   ) body_stmts (List.rev cast_bindings)
@@ -3814,7 +3823,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 ) (List.mapi (fun idx p -> (idx, p)) new_params) in
                 let new_body =
                   List.fold_left (fun stmts (orig_id, any_id, concrete_ty) ->
-                    let cast_stmt = Sasgn (orig_id, Declare concrete_ty,
+                    let cast_stmt = Sasgn (orig_id, Declare (concrete_ty, None),
                       Cpp_erasure.unbox concrete_ty (CPPvar any_id)) in
                     cast_stmt :: stmts
                   ) body_stmts (List.rev cast_bindings)
@@ -4002,7 +4011,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               | None -> (ty, id)
             ) new_params in
             let cast_stmts = List.map (fun (_, orig_id, any_id, concrete_ty) ->
-              Sasgn (orig_id, Declare concrete_ty,
+              Sasgn (orig_id, Declare (concrete_ty, None),
                 Cpp_erasure.unbox concrete_ty (CPPvar any_id))
             ) cast_bindings in
             let new_body = cast_stmts @ body_stmts in
@@ -4966,7 +4975,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             in
             match lift_iife_assignment renamed_name (Some decl_ty) e with
             | Some stmts -> stmts
-            | None -> [Sasgn (renamed_name, Declare decl_ty, e)])
+            | None -> [Sasgn (renamed_name, Declare (decl_ty, None), e)])
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
       in
       mk_iife None
@@ -7453,8 +7462,14 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
   in
   let field_bindings =
     List.mapi
-      (fun i (_var_name, ml_ty) ->
+      (fun i (var_name, ml_ty) ->
         let binding_name = binding_names_arr.(i) in
+        if Probe.checking ()
+           && not (Option.equal Id.equal (get_db_name_opt (n_pat_vars - i) env) (Some var_name))
+        then
+          Probe.violation "match field binder"
+            Pp.(str "field " ++ int i ++ str " of " ++ Id.print ctor_name ++ str " is not "
+                ++ Id.print var_name ++ str " in its branch's scope");
         (* A field needs dereferencing if:
            1. It's a direct self/mutual ref at the definition site
               (stored as shared_ptr in the struct), OR
@@ -7560,7 +7575,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
           else if is_param_boxed then Read_unboxed
           else Read_as_bound
         in
-        (binding_name, field_cpp_ty, read, used))
+        (binding_name, field_cpp_ty, read, used, core_binder env (n_pat_vars - i)))
       rev_ids
   in
   let field_bindings_arr = Array.of_list field_bindings in
@@ -7641,7 +7656,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     List.fold_left
       (fun stmts (i, (var_name, _ml_ty)) ->
         if dummies_arr.(i) then
-          let (binding_name, field_ty, read, _) = field_bindings_arr.(i) in
+          let (binding_name, field_ty, read, _, _) = field_bindings_arr.(i) in
           let bare_ty = cpp_of_ml env _ml_ty in
           (* Pre-extract fields stored as shared_ptr when the branch body
              contains a lambda (or the return type is coinductive), so the
@@ -7709,7 +7724,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     List.filter_map
       (fun (i, (_var_name, ml_ty)) ->
         if dummies_arr.(i) then
-          let (binding_name, field_ty, read, _) =
+          let (binding_name, field_ty, read, _, _) =
             field_bindings_arr.(i)
           in
           let is_uptr_field = read = Read_through_pointer in
@@ -7728,18 +7743,19 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
                When the stored type (storage_inner) differs from bare_ty,
                apply a conversion (e.g. optional<shared_ptr<T>> → optional<T>). *)
             let deref = CPPderef (CPPvar binding_name) in
-            let (binding_name', field_ty', _, _) = field_bindings_arr.(i) in
-            let _ = binding_name' in
+            let (_, field_ty', _, _, binder) = field_bindings_arr.(i) in
             let rhs =
               match field_ty' with
               | Tshared_ptr storage_inner when storage_inner <> bare_ty ->
                 gen_type_conversion_expr ~src_ty:storage_inner ~dst_ty:bare_ty deref
               | _ -> deref
             in
+            (* The value is what the branch body reads for the pattern
+               variable, so it stands for that variable's binder. *)
             Some
               (Sasgn
                  ( value_id,
-                   Declare (Tref (Lvalue, Tconst bare_ty)),
+                   Declare (Tref (Lvalue, Tconst bare_ty), binder),
                    rhs ))
           else None
         else None)
@@ -7753,7 +7769,10 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     smb_var = (if has_used_fields then Some sname else None);
     smb_field_bindings =
       (if has_used_fields then
-         List.map (fun (n, ty, _read, used) -> (n, ty, used)) field_bindings
+         List.map
+           (fun (n, ty, _read, used, binder) ->
+             {fb_name = n; fb_type = ty; fb_used = used; fb_binder = binder})
+           field_bindings
        else []);
     smb_extra_conds = [];
     smb_body = body_stmts }
@@ -8261,7 +8280,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
               List.concat
                 (List.map2
                    (fun (i, (var_name, ml_ty)) read ->
-                     let bind e = [Sasgn (var_name, Declare (cpp_of_ml env ml_ty), e)] in
+                     let bind e = [Sasgn (var_name, Declare (cpp_of_ml env ml_ty, None), e)] in
                      match read with
                      | Some `Unused | None -> []
                      (* The token: its value is moved out, owned, so the
@@ -8641,7 +8660,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       let cache_id = Common.scrutinee_cache_id n in
       match lift_iife_assignment cache_id None t with
       | Some stmts -> (CPPvar cache_id, stmts)
-      | None -> (CPPvar cache_id, [Sasgn (cache_id, Declare Tauto, t)])
+      | None -> (CPPvar cache_id, [Sasgn (cache_id, Declare (Tauto, None), t)])
     end else begin
       (t, [])
     end
@@ -9321,7 +9340,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           with_shifted_move_tracking 1 (fun () -> gen_stmts ~slot env' k b)
         in
         (* Generate the assignment with reified type *)
-        [Sasgn (x_renamed, Declare reified_ty, iife)] @ cont
+        [Sasgn (x_renamed, Declare (reified_ty, core_binder env' 1), iife)] @ cont
       end else
         let afun v = Sasgn (x_renamed, Existing, v) in
         let asgn = gen_stmts env afun a in
@@ -9342,12 +9361,12 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         | [Sasgn (_, Existing, e)] ->
           Sasgn
             ( x_renamed,
-              Declare (cpp_of_ml env t),
+              Declare (cpp_of_ml env t, core_binder env' 1),
               e )
           :: gen_cont ()
         | _ ->
           Sdecl
-            (x_renamed, cpp_of_ml env t)
+            (x_renamed, cpp_of_ml env t, core_binder env' 1)
           :: asgn
           @ gen_cont ()
     in
@@ -9707,7 +9726,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       let decl =
         if stmts_reference_var x_renamed body then
           let cpp_ty = cpp_of_ml env t in
-          [Sasgn (x_renamed, Declare cpp_ty, mk_tt_expr ())]
+          [Sasgn (x_renamed, Declare (cpp_ty, core_binder env' 1), mk_tt_expr ())]
         else []
       in
       rhs @ decl @ body )
@@ -10017,11 +10036,11 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               Sblock_custom (ref, tmpl, x_renamed, cpp_ty, args, tys)
               :: gen_stmts ~slot env' k b
             | None ->
-              Sasgn (x_renamed, Declare cpp_ty, e) :: gen_stmts ~slot env' k b
+              Sasgn (x_renamed, Declare (cpp_ty, core_binder env' 1), e) :: gen_stmts ~slot env' k b
             end
           | _ ->
             let cpp_ty = cpp_of_ml env t in
-            (Sdecl (x_renamed, cpp_ty) :: asgn) @ gen_stmts ~slot env' k b
+            (Sdecl (x_renamed, cpp_ty, core_binder env' 1) :: asgn) @ gen_stmts ~slot env' k b
       in
       tctx := { !tctx with move_owned_vars = saved_owned };
       result
@@ -10301,7 +10320,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           else if ml_type_is_unit ml_ty && not (is_cpp_unit_type cpp_ty) then
             []
           else if ml_type_is_unit ml_ty then
-            [Sasgn (x, Declare cpp_ty, mk_tt_expr ())]
+            [Sasgn (x, Declare (cpp_ty, core_binder env 1), mk_tt_expr ())]
           else
             []
         in
@@ -10312,7 +10331,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           Sblock_custom (ref, tmpl, x, ty, args, tys)
           :: gen_stmts ~slot env k f
         | None ->
-          Sasgn (x, Declare ty, a) :: gen_stmts ~slot env k f
+          Sasgn (x, Declare (ty, core_binder env 1), a) :: gen_stmts ~slot env k f
       end
     | _ ->
       (* No lambda parameters (eta-reduced continuation like bare Ret).
@@ -10349,7 +10368,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           let temp_id = Id.of_string "_bind_result" in
           let f_expr = gen_expr env f in
           let app = mk_call f_expr [CPPvar temp_id] in
-          [Sasgn (temp_id, Declare cpp_ty, a); k app]
+          [Sasgn (temp_id, Declare (cpp_ty, None), a); k app]
         | None ->
           side_effect @ gen_stmts ~slot env k f ) ) )
     end
@@ -10512,7 +10531,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             in
             match lift_iife_assignment renamed_name (Some decl_ty) e with
             | Some stmts -> stmts
-            | None -> [Sasgn (renamed_name, Declare decl_ty, e)])
+            | None -> [Sasgn (renamed_name, Declare (decl_ty, None), e)])
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
       in
       let env_ids =

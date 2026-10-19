@@ -49,7 +49,7 @@ let named_params (l : cpp_lambda) =
 let declared_here stmts =
   List.concat_map
     (function
-      | Sasgn (id, Declare _, _) | Sdecl (id, _) | Sdecl_init (id, _) -> [id]
+      | Sasgn (id, Declare _, _) | Sdecl (id, _, _) | Sdecl_init (id, _) -> [id]
       | Sbind (ids, _) -> ids
       | Sblock_custom (_, _, id, _, _, _) -> [id]
       | _ -> [])
@@ -83,7 +83,7 @@ let expand fresh (l : cpp_lambda) args =
       List.concat
         (List.map2
            (fun ((p, ty), unnamed) a ->
-             if unnamed && pure_expr a then [] else [Sasgn (f p, Declare ty, a)])
+             if unnamed && pure_expr a then [] else [Sasgn (f p, Declare (ty, None), a)])
            (List.combine params unnamed)
            args)
     in
@@ -173,7 +173,7 @@ let rec same_type a b =
 
 let inline_tail_call fresh ret_ty stmts =
   match List.rev stmts with
-  | Sreturn (Some (CPPfun_call (_, CPPvar f', args))) :: Sasgn (f, Declare Tauto, CPPlambda l)
+  | Sreturn (Some (CPPfun_call (_, CPPvar f', args))) :: Sasgn (f, Declare (Tauto, _), CPPlambda l)
     :: rev_before
     when Id.equal f f'
          && (match (l.cl_ret, ret_ty) with
@@ -194,10 +194,10 @@ let inline_tail_call fresh ret_ty stmts =
 let inline_iife_initializers fresh stmts =
   let rec go = function
     | [] -> []
-    | (Sasgn (x, Declare t, CPPfun_call (_, CPPlambda l, args)) as s) :: rest
+    | (Sasgn (x, (Declare (t, _) as tgt), CPPfun_call (_, CPPlambda l, args)) as s) :: rest
       when to_reversed args = [] && (t <> Tauto || l.cl_ret = None) -> (
       match Option.bind (expand fresh l []) straight_line with
-      | Some (body, e) -> go (body @ (Sasgn (x, Declare t, e) :: rest))
+      | Some (body, e) -> go (body @ (Sasgn (x, tgt, e) :: rest))
       | None -> s :: go rest )
     | s :: rest -> s :: go rest
   in

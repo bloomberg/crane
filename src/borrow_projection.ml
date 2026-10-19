@@ -36,7 +36,7 @@ let is_projection m =
     &&
     ( match b.smb_body with
     | [Sreturn (Some (CPPvar x))] ->
-      List.exists (fun (y, _, _) -> Id.equal x y) b.smb_field_bindings
+      List.exists (fun fb -> Id.equal x fb.fb_name) b.smb_field_bindings
     | _ -> false )
   | _ -> false
 

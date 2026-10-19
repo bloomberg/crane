@@ -171,7 +171,7 @@ and generic_inline_stmt spec = function
     (* Tail call — substitute parameters and splice body inline *)
     let bindings =
       List.map2
-        (fun (pid, ty) arg -> Sasgn (pid, Declare ty, arg))
+        (fun (pid, ty) arg -> Sasgn (pid, Declare (ty, None), arg))
         spec.params (spec.get_args e)
     in
     bindings @ spec.body
@@ -582,7 +582,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
        single self-reference its encoding recorded. *)
     | Sasgn
         ( id,
-          (Declare Tauto as tgt),
+          (Declare (Tauto, _) as tgt),
           CPPlambda
             { cl_params = lparams;
               cl_ret = ret_ty_opt;
@@ -609,7 +609,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
           | _ -> false
         in
         match rest with
-        | Sasgn (wid, (Declare Tauto as wtgt), CPPlambda w) :: rest'
+        | Sasgn (wid, (Declare (Tauto, _) as wtgt), CPPlambda w) :: rest'
           when is_wrapper w && not (List.exists (Id.equal id) (free_vars_body rest')) ->
           Sasgn
             ( wid,
@@ -1067,7 +1067,7 @@ let hoist_rec_conditions (check : call_checker)
       (List.rev !bindings, e')
     in
     let binds_to_stmts binds =
-      List.map (fun (f, c) -> Sasgn (f, Declare ret_ty, c)) binds
+      List.map (fun (f, c) -> Sasgn (f, Declare (ret_ty, None), c)) binds
     in
     let rec hs stmts = List.concat_map hstmt stmts
     and hstmt s =
@@ -1512,11 +1512,11 @@ let transform_method ~tparams ~self_ty mf =
          on the back-edge stays valid for the next iteration. *)
       let body' =
         match self_store_ty with
-        | Some ty -> Sdecl (id_self_store, ty) :: body'
+        | Some ty -> Sdecl (id_self_store, ty, None) :: body'
         | None -> body'
       in
       if needs_init_self then
-        let init_self = Sasgn (self_id, Declare self_ty, CPPthis) in
+        let init_self = Sasgn (self_id, Declare (self_ty, None), CPPthis) in
         Fmethod {mf with mf_body = init_self :: body'}
       else
         Fmethod {mf with mf_body = body'} )

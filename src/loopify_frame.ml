@@ -102,7 +102,7 @@ let rec collect_type_env (stmts : cpp_stmt list) : (Id.t * cpp_type) list =
   List.concat_map
     (fun s ->
       match s with
-      | Sasgn (id, Declare Tauto, CPPlambda
+      | Sasgn (id, Declare (Tauto, _), CPPlambda
         { cl_params = params;
           cl_ret = ret_ty_opt;
           _ }) ->
@@ -114,8 +114,8 @@ let rec collect_type_env (stmts : cpp_stmt list) : (Id.t * cpp_type) list =
           | _ -> Tvoid
         in
         [(id, Tfun (param_types, ret_ty))]
-      | Sasgn (id, Declare ty, _) -> [(id, ty)]
-      | Sdecl (id, ty) -> [(id, ty)]
+      | Sasgn (id, Declare (ty, _), _) -> [(id, ty)]
+      | Sdecl (id, ty, _) -> [(id, ty)]
       | Scustom_case (_, _, _, branches, _) ->
         List.concat_map
           (fun (ps, _, body) -> ps @ collect_type_env body)
@@ -129,7 +129,7 @@ let rec collect_type_env (stmts : cpp_stmt list) : (Id.t * cpp_type) list =
                [infer_saved_type] can resolve them for frame structs. *)
             let field_type_bindings =
               List.map
-                (fun (bname, ty, _) -> (bname, ty))
+                (fun fb -> (fb.fb_name, fb.fb_type))
                 br.smb_field_bindings
             in
             (* Also register the aggregate binding for frame-dispatch
@@ -363,7 +363,7 @@ let compute_rest_free_vars rest =
     List.filter_map
       (function
         | Sasgn (vid, _, _) -> Some vid
-        | Sdecl (vid, _) -> Some vid
+        | Sdecl (vid, _, _) -> Some vid
         | _ -> None)
       rest
   in
@@ -396,23 +396,23 @@ let make_cont_bindings ~field_names cont_vars cont_types =
       let ty = List.nth cont_types i in
       let field_expr = CPPaccess (Adot, CPPvar id_f, List.nth field_names i) in
       match ty with
-      | Tshared_ptr _ -> Sasgn (id, Declare ty, CPPmove field_expr)
+      | Tshared_ptr _ -> Sasgn (id, Declare (ty, None), CPPmove field_expr)
       | Tunresolved -> Sasgn (id, Existing, field_expr)
       | Tconst inner when not (is_trivially_copyable_type inner) ->
-        Sasgn (id, Declare (Tref (Lvalue, Tconst inner)), field_expr)
+        Sasgn (id, Declare (Tref (Lvalue, Tconst inner), None), field_expr)
       | t when not (is_trivially_copyable_type t) ->
         (* Move from frame field to avoid O(n) deep copy of owned value types
            (e.g. [List<T>]).  Safe because [_f] was obtained via
            [std::move(std::get<...>(_frame))] and this field is not used again. *)
-        Sasgn (id, Declare ty, CPPmove field_expr)
+        Sasgn (id, Declare (ty, None), CPPmove field_expr)
       | Tvar _ ->
         (* Template type parameter (e.g. [F0] from [F0 &&f]).  When [F0] is
            deduced as a reference type, [F0 f = std::move(_f.f)] would be
            ill-formed — a non-const lvalue reference cannot bind to an rvalue.
            Use [auto] so the declared type is always deduced as a value type,
            regardless of whether [F0] was a reference or function type. *)
-        Sasgn (id, Declare Tauto, CPPmove field_expr)
-      | _ -> Sasgn (id, Declare ty, field_expr))
+        Sasgn (id, Declare (Tauto, None), CPPmove field_expr)
+      | _ -> Sasgn (id, Declare (ty, None), field_expr))
     cont_vars
 
 (** Build a type environment from continuation variables and their types,
@@ -831,7 +831,7 @@ let rec drop_bindings ids stmts =
     (fun st ->
       match st with
       | Sasgn (id, Declare _, _) when dropped id -> None
-      | Sdecl (id, _) when dropped id -> None
+      | Sdecl (id, _, _) when dropped id -> None
       | _ -> Some (map_stmt (drop_bindings_expr ids) (drop_bindings_stmt ids)
                      Fun.id st) )
     stmts
@@ -858,7 +858,7 @@ and drop_bindings_expr ids e =
 let find_fix_wrapper impl_id stmts =
   find_in_flow stmts
     ~on_stmt:(function
-      | Sasgn (wid, Declare Tauto, (CPPlambda _ as w))
+      | Sasgn (wid, Declare (Tauto, _), (CPPlambda _ as w))
         when (not (Id.equal wid impl_id))
              && List.exists (Id.equal impl_id) (free_vars_expr w) ->
         Some wid
@@ -949,7 +949,7 @@ let decline_reason ad =
     {!ad_entry_id}.  The self-call forwards the fixpoint as a leading argument
     that the entry does not need, so installation drops it. *)
 let adopt_local_fix ~stmts check = function
-  | Sasgn (impl_id, Declare Tauto, CPPlambda {cl_params; cl_body; cl_ret; cl_fixpoint; _}) -> (
+  | Sasgn (impl_id, Declare (Tauto, _), CPPlambda {cl_params; cl_body; cl_ret; cl_fixpoint; _}) -> (
     let lparams = to_reversed cl_params in
     match (cl_fixpoint, fixpoint_self cl_fixpoint lparams) with
     | None, _ | _, None -> None
@@ -1193,7 +1193,7 @@ let with_rematerialized ctx stmt =
   (* A reference names someone else's value: saving it would copy the value
      and leave a pointer taken from it dangling with the frame.  The
      continuation rebuilds it from its source, which is saved instead. *)
-  | Sasgn (id, Declare ty, e)
+  | Sasgn (id, Declare (ty, _), e)
     when calls_nothing e
          && (is_reference_type ty || List.for_all rebindable (free_vars_expr e)) ->
     {ctx with er_rematerialized = ctx.er_rematerialized @ [(id, stmt)]}
@@ -1263,7 +1263,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
       let branch_env =
         (* Register structured-binding field types. *)
         let fb_env =
-          List.map (fun (bname, ty, _) -> (bname, ty)) br.smb_field_bindings
+          List.map (fun fb -> (fb.fb_name, fb.fb_type)) br.smb_field_bindings
         in
         (* Also register aggregate binding for frame-dispatch branches. *)
         let var_env =
@@ -1391,7 +1391,7 @@ and rewrite_enter_stmts ctx stmts =
       (* The rest sees the result binding too: a later frame saving it needs
          its type, and the body it came from may only say [auto]. *)
       let rest_env =
-        let bound = match tgt with Declare ty when ty <> Tauto -> [(id, ty)] | _ -> [] in
+        let bound = match tgt with Declare (ty, _) when ty <> Tauto -> [(id, ty)] | _ -> [] in
         bound @ make_cont_env cont_vars cont_types env
       in
       (* A variable the rest assigns before reading it was declared in the
@@ -1404,8 +1404,8 @@ and rewrite_enter_stmts ctx stmts =
             | Sasgn (v, Existing, e)
               when (not (List.exists (Id.equal v) !declared)) && List.mem_assoc v env ->
               declared := v :: !declared;
-              Sasgn (v, Declare (List.assoc v env), e)
-            | (Sasgn (v, Declare _, _) | Sdecl (v, _)) as s ->
+              Sasgn (v, Declare (List.assoc v env, None), e)
+            | (Sasgn (v, Declare _, _) | Sdecl (v, _, _)) as s ->
               declared := v :: !declared;
               s
             | s -> s )
@@ -1428,7 +1428,7 @@ and rewrite_enter_stmts ctx stmts =
       (* When tgt is Existing (a bare assignment), the variable was declared
          in the CraneEnter handler scope and does not exist in the CraneCont handler
          scope.  Promote to [auto] so the handler declares it. *)
-      let handler_ty = match tgt with Existing -> Declare Tauto | t -> t in
+      let handler_ty = match tgt with Existing -> Declare (Tauto, None) | t -> t in
       let handler =
         early @ remat_stmts @ late
         @ (Sasgn (id, handler_ty, CPPmove (CPPvar id_result)) :: rest_processed)
@@ -1501,7 +1501,7 @@ and rewrite_enter_stmts ctx stmts =
        is defined here and then used as the callee in a continuation. *)
     let updated_env =
       match stmt with
-      | Sasgn (id, Declare Tauto, CPPlambda
+      | Sasgn (id, Declare (Tauto, _), CPPlambda
         { cl_params = params;
           cl_ret = ret_ty_opt;
           _ }) ->
@@ -1513,8 +1513,8 @@ and rewrite_enter_stmts ctx stmts =
           | _ -> Tvoid
         in
         (id, Tfun (param_types, ret_ty)) :: ctx.er_env
-      | Sasgn (id, Declare ty, _) -> (id, ty) :: ctx.er_env
-      | Sdecl (id, ty) -> (id, ty) :: ctx.er_env
+      | Sasgn (id, Declare (ty, _), _) -> (id, ty) :: ctx.er_env
+      | Sdecl (id, ty, _) -> (id, ty) :: ctx.er_env
       | _ -> ctx.er_env
     in
     rewrite_enter_lambda_return ctx stmt
@@ -1583,22 +1583,22 @@ let make_param_copies varying_params =
     | Tconst inner when not (is_trivially_copyable_type inner) ->
       (* Const-ref param stored in frame: bind by [const T&] reference, cheaper
          than cloning. *)
-      Sasgn (id, Declare (Tref (Lvalue, Tconst inner)), f)
+      Sasgn (id, Declare (Tref (Lvalue, Tconst inner), None), f)
     | t when not (is_trivially_copyable_type t) ->
       (* Owned non-trivial type (e.g. [List<T>]): move from frame field to avoid
          an O(n) deep-copy.  [_f] was obtained via [std::move(std::get<...>(_frame))]
          so the field is safe to consume. *)
-      Sasgn (id, Declare t, CPPmove f)
+      Sasgn (id, Declare (t, None), CPPmove f)
     | Tvar _ ->
       (* Template type parameter (e.g. [F0] from [F0 &&f]).  When [F0] is
          deduced as a reference type, [F0 f = std::move(_f.f)] would be
          ill-formed — a non-const lvalue reference cannot bind to an rvalue.
          Use [auto] so the declared type is always deduced as a value type,
          regardless of whether [F0] was a reference or function type. *)
-      Sasgn (id, Declare Tauto, CPPmove f)
+      Sasgn (id, Declare (Tauto, None), CPPmove f)
     | _ ->
       (* Trivially copyable (scalar, pointer, enum): plain copy is fine. *)
-      Sasgn (id, Declare stripped, f)
+      Sasgn (id, Declare (stripped, None), f)
   in
   List.map
     (fun {fp_name = id; fp_ty = ty; fp_pointer_safe} ->
@@ -1606,11 +1606,11 @@ let make_param_copies varying_params =
       else
         match borrowed_value_param_pointee ty with
         | Some t ->
-          Sasgn (id, Declare (Tref (Lvalue, Tconst t)),
+          Sasgn (id, Declare (Tref (Lvalue, Tconst t), None),
                  CPPderef (CPPaccess (Adot, CPPvar (id_f), id)))
         | None ->
           let stripped = strip_ref_type ty in
-          Sasgn (id, Declare stripped,
+          Sasgn (id, Declare (stripped, None),
                  CPPaccess (Adot, CPPvar (id_f), id)) )
     varying_params
 
@@ -1943,10 +1943,10 @@ let optimize_frame_push_args frame_field_types stmts =
     let owned_bindings_of_branch ~owned br =
       if owned then
         List.filter_map
-          (fun (id, ty, _used) ->
-            match ty with
+          (fun fb ->
+            match fb.fb_type with
             | Tshared_ptr _ -> None
-            | _ -> Some id)
+            | _ -> Some fb.fb_name)
           br.smb_field_bindings
       else []
     in
@@ -2013,7 +2013,7 @@ let optimize_frame_push_args frame_field_types stmts =
     in
     let rec on_stmts ~decl_owned match_owned = function
       | [] -> []
-      | (Sasgn (id, (Declare ty), _) as s) :: rest
+      | (Sasgn (id, (Declare (ty, _)), _) as s) :: rest
         when is_owned_decl_type ty ->
         on_stmt ~decl_owned match_owned s
         :: on_stmts ~decl_owned:(id :: decl_owned) match_owned rest
@@ -2121,13 +2121,13 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
     Tid_external (Crane_rt.small_vector, [frame_ty])
   in
   let stack_id = id_stack in
-  let stack_decl = Sdecl (stack_id, vector_ty) in
+  let stack_decl = Sdecl (stack_id, vector_ty, None) in
   (* An exhaustive if/else-if chain; no wildcard needed, since the variant can
      only hold the listed frame types. *)
   let dispatch_stmt = Smatch (frame_scrutinee, branches, None) in
   let loop_body =
     [
-      Sasgn (id_frame, Declare frame_ty,
+      Sasgn (id_frame, Declare (frame_ty, None),
              CPPmove
                (CPPfun_call
                   (call_opaque, CPPaccess (Adot, CPPvar (id_stack),
@@ -2345,20 +2345,20 @@ let fix_handler_bindings field_names cf_ps handler =
       List.map
         (fun stmt ->
           match stmt with
-          | Sasgn (id, Declare orig_ty, CPPmove e) when is_ps_field_access e ->
+          | Sasgn (id, Declare (orig_ty, _), CPPmove e) when is_ps_field_access e ->
             let base_ty = match orig_ty with
               | Tshared_ptr inner -> inner
               | _ -> strip_ref_and_const_type orig_ty
             in
             remapped := id :: !remapped;
-            Sasgn (id, Declare (Tref (Lvalue, Tconst base_ty)), CPPderef e)
-          | Sasgn (id, Declare orig_ty, e) when is_ps_field_access e ->
+            Sasgn (id, Declare (Tref (Lvalue, Tconst base_ty), None), CPPderef e)
+          | Sasgn (id, Declare (orig_ty, _), e) when is_ps_field_access e ->
             let base_ty = match orig_ty with
               | Tshared_ptr inner -> inner
               | _ -> strip_ref_and_const_type orig_ty
             in
             remapped := id :: !remapped;
-            Sasgn (id, Declare (Tref (Lvalue, Tconst base_ty)), CPPderef e)
+            Sasgn (id, Declare (Tref (Lvalue, Tconst base_ty), None), CPPderef e)
           | s -> s)
         handler
     in

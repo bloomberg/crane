@@ -257,7 +257,7 @@ let place_value ty v =
 let place_base storage e =
   match storage with
   | Value_root ty ->
-    [ Sasgn (id_value, Declare Tauto, e);
+    [ Sasgn (id_value, Declare (Tauto, None), e);
       Sexpr (place_value ty (CPPmove (CPPvar id_value))) ]
   | Boxed_root ty ->
     [Sexpr (CPPbinop (Bassign, CPPderef (CPPvar id_write), alloc_value ty e))]
@@ -463,7 +463,7 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~storage br
     | Some (_, rec_field) ->
       (* CPPfun_call holds its arguments reversed (see translation.ml:1776),
          so [reuse_step(_own, _uniq, a1)] is written innermost-first here. *)
-      [ Sasgn (id_rstep, Declare Tauto,
+      [ Sasgn (id_rstep, Declare (Tauto, None),
                CPPfun_call (call_opaque, CPPrt Crane_rt.Reuse_step,
                             of_reversed ([rec_field; CPPvar id_uniq; CPPvar id_own]))) ]
     | None -> []
@@ -528,7 +528,7 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~storage br
       let inner_decls =
         List.map
           (fun (cell_id, cell) ->
-            Sasgn (cell_id, Declare Tauto, build_cell_call ~vt_ret cell))
+            Sasgn (cell_id, Declare (Tauto, None), build_cell_call ~vt_ret cell))
           (List.combine inner_names inner_cells)
       in
       let inner_links = List.rev (link_cells inner_cells inner_names) in
@@ -541,11 +541,11 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~storage br
       inner_decls @ inner_links
       @ [ Sasgn
             ( List.hd cell_names,
-              Declare Tauto,
+              Declare (Tauto, None),
               build_cell_call ~rec_arg ~allocate:false ~vt_ret outer );
           Sasgn
             ( id_node,
-              Declare (Tref (Lvalue, ty)),
+              Declare (Tref (Lvalue, ty), None),
               place_value ty (CPPmove (CPPvar (List.hd cell_names))) );
           advance_to (innermost_hole Adot (CPPvar id_node) br.tmc_cells) ]
     | Boxed_root _ | Pointer_result _ ->
@@ -555,7 +555,7 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~storage br
         List.mapi
           (fun i (cell_id, cell) ->
             let token = if i = 0 then token else None in
-            Sasgn (cell_id, Declare Tauto, build_cell_call ?token ~vt_ret cell))
+            Sasgn (cell_id, Declare (Tauto, None), build_cell_call ?token ~vt_ret cell))
           (List.combine cell_names br.tmc_cells)
       in
       let link_stmts = List.rev (link_cells br.tmc_cells cell_names) in
@@ -679,10 +679,10 @@ let transform_tmc ?(param_inits = []) ~chains tparams check params ret_ty body =
     match storage with
     | Value_root t ->
       [ Sdecl_init (id_root, Tid_external ((Cpp_state.sn ()).ns ^ "::optional", [t]));
-        Sasgn (id_write, Declare (Tptr head_ty), CPPnullptr) ]
+        Sasgn (id_write, Declare (Tptr head_ty, None), CPPnullptr) ]
     | Boxed_root _ | Pointer_result _ ->
       [ Sdecl_init (id_head, head_ty);
-        Sasgn (id_write, Declare (Tptr head_ty), CPPunop (Uaddr, CPPvar id_head)) ]
+        Sasgn (id_write, Declare (Tptr head_ty, None), CPPunop (Uaddr, CPPvar id_head)) ]
   in
   (* Shadow variable declarations.
      For pointer params with custom inits (e.g., _self = this in methods), only
@@ -707,7 +707,7 @@ let transform_tmc ?(param_inits = []) ~chains tparams check params ret_ty body =
             if has_custom_init then strip_ref_type shadow_ty
             else strip_ref_and_const_type shadow_ty
         in
-        Sasgn (shadow_id, Declare decl_ty, init_expr) )
+        Sasgn (shadow_id, Declare (decl_ty, None), init_expr) )
       varying_params
       shadow_params
   in
@@ -737,13 +737,13 @@ let transform_tmc ?(param_inits = []) ~chains tparams check params ret_ty body =
   let cursor_decls =
     if not !cursor_used then []
     else
-      [ Sasgn (id_own, Declare head_ty, Cpp_erasure.converting_ctor head_ty []);
+      [ Sasgn (id_own, Declare (head_ty, None), Cpp_erasure.converting_ctor head_ty []);
         (* [Tid] is the *user-defined* type constructor, so the printer
            namespace-qualifies it ("Mod::bool").  This is the builtin, which
            must never be qualified. *)
         Sasgn
           ( id_uniq,
-            Declare (Tid_external ("bool", [])),
+            Declare (Tid_external ("bool", []), None),
             CPPbool true )
       ]
   in

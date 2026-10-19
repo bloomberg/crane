@@ -425,7 +425,7 @@ and reads_stmt r s =
   | Smatch (scrut, branches, default) ->
     let branch b =
       let r' =
-        with_boxed_params r (List.map (fun (id, ty, _) -> (id, ty)) b.smb_field_bindings)
+        with_boxed_params r (List.map (fun fb -> (fb.fb_name, fb.fb_type)) b.smb_field_bindings)
       in
       {b with smb_body = List.map (reads_stmt r') b.smb_body}
     in

@@ -163,9 +163,9 @@ let replace_this_in_lambdas self_type stmts =
     in
     let self_expr, self_ty =
       if is_value_self then
-        (CPPderef CPPthis, Declare self_type)
+        (CPPderef CPPthis, Declare (self_type, None))
       else
-        (CPPshared_from_this self_type, Declare (Tshared_ptr self_type))
+        (CPPshared_from_this self_type, Declare (Tshared_ptr self_type, None))
     in
     let self_binding = Sasgn (self_id, self_ty, self_expr) in
     self_binding :: List.map walk_stmt stmts
@@ -2170,11 +2170,11 @@ let gen_ind_header_v2
                    CPPvar wl_id, Id.of_string "push_back", [CPPmove fe]))]
               in
               let on_spine = Some push in
-              [Sdecl (wl_id, wl_ty)]
+              [Sdecl (wl_id, wl_ty, None)]
               @ body_for on_spine e
               @ [Swhile (
                    CPPunop (Unot, dot0 (CPPvar wl_id) "empty"),
-                   [ Sasgn (pv, Declare Tauto,
+                   [ Sasgn (pv, Declare (Tauto, None),
                        CPPmove (dot0 (CPPvar wl_id) "back"));
                      Sexpr (dot0 (CPPvar wl_id) "pop_back");
                      Sif (
@@ -2183,7 +2183,7 @@ let gen_ind_header_v2
                            CPPint 1)),
                        [Scontinue], []) ]
                    @ unique_fence
-                   @ [Sasgn (ev, Declare (Tref (Lvalue, Tauto)), CPPderef (CPPvar pv))]
+                   @ [Sasgn (ev, Declare (Tref (Lvalue, Tauto), None), CPPderef (CPPvar pv))]
                    @ body_for on_spine (CPPvar ev))]
             end
           in
@@ -2274,12 +2274,12 @@ let gen_ind_header_v2
                      a tail is not uniquely owned -- the remaining cells then
                      die with their real owner. *)
                   sole_owner fe
-                    [ Sasgn (lp, Declare Tauto, dot0 fe "get");
+                    [ Sasgn (lp, Declare (Tauto, None), dot0 fe "get");
                       Swhile (
                         mk_call
                           (CPPstd_holds_alternative (Tqualified (ls, cons_id)))
                           [arrow0 (CPPvar lp) "v"],
-                        [ Sasgn (lc, Declare (Tref (Lvalue, Tauto)),
+                        [ Sasgn (lc, Declare (Tref (Lvalue, Tauto), None),
                             CPPstd_get (Tqualified (ls, cons_id),
                               Some (arrow0 (CPPvar lp) "v_mut")));
                           push_self_stmt
@@ -2417,8 +2417,8 @@ let gen_ind_header_v2
                 ~capture:Immediate
             in
             let body =
-              [ Sasgn (next_id, Declare Tauto, next_lambda);
-                Sasgn (_cur_id, Declare ptr_ty,
+              [ Sasgn (next_id, Declare (Tauto, None), next_lambda);
+                Sasgn (_cur_id, Declare (ptr_ty, None),
                   mk_call (CPPvar next_id) [mk_call (CPPvar (Id.of_string "v_mut")) []]);
                 Swhile (CPPvar _cur_id,
                   [ Sasgn (_cur_id, Existing,
@@ -2504,7 +2504,7 @@ let gen_ind_header_v2
             in
             let body =
               early_returns @
-              [ Sasgn (_stack_id, Declare stack_ty,
+              [ Sasgn (_stack_id, Declare (stack_ty, None),
                   CPPbraced []);
                 (* Most drains only ever hold a handful of pending nodes at
                    once (worklist depth tracks tree height, not size), so
@@ -2512,14 +2512,14 @@ let gen_ind_header_v2
                    with no heap allocation at all, spilling to a heap
                    std::vector only if a destructor happens to drain a
                    worklist deeper than that. *)
-                Sasgn (_drain_id, Declare Tauto, drain_lambda);
+                Sasgn (_drain_id, Declare (Tauto, None), drain_lambda);
                 Sexpr (mk_call (CPPvar _drain_id)
                   [mk_call (CPPvar (Id.of_string "v_mut")) []]);
                 Swhile (
                   CPPunop (Unot,
                     CPPaccess_call (Adot, CPPvar _stack_id,
                       Id.of_string "empty", [])),
-                  [ Sasgn (_cur_id, Declare Tauto,
+                  [ Sasgn (_cur_id, Declare (Tauto, None),
                       CPPmove (CPPaccess_call (Adot, CPPvar _stack_id,
                         Id.of_string "back", [])));
                     Sexpr (CPPaccess_call (Adot, CPPvar _stack_id,
@@ -2594,7 +2594,7 @@ let gen_ind_header_v2
                 let inner = build_if_chain rest in
                 let partner_body =
                   [Sif (sp_alive_and_unique,
-                    Sasgn (_pv_id, Declare (Tref (Lvalue, Tauto)),
+                    Sasgn (_pv_id, Declare (Tref (Lvalue, Tauto), None),
                       CPPaccess_call (Aarrow, deref_sp,
                         Id.of_string "v_mut", []))
                     :: partner_drains, [])]
@@ -2612,15 +2612,15 @@ let gen_ind_header_v2
                 build_if_chain partner_branches)]
             in
             let body =
-              [ Sasgn (_stack_id, Declare stack_ty, CPPbraced []);
-                Sasgn (_drain_self_id, Declare Tauto, drain_self_lambda);
+              [ Sasgn (_stack_id, Declare (stack_ty, None), CPPbraced []);
+                Sasgn (_drain_self_id, Declare (Tauto, None), drain_self_lambda);
                 Sexpr (mk_call (CPPvar _drain_self_id)
                   [mk_call (CPPvar (Id.of_string "v_mut")) []]);
                 Swhile (
                   CPPunop (Unot,
                     CPPaccess_call (Adot, CPPvar _stack_id,
                       Id.of_string "empty", [])),
-                  Sasgn (_cur_id, Declare Tauto,
+                  Sasgn (_cur_id, Declare (Tauto, None),
                     CPPmove (CPPaccess_call (Adot, CPPvar _stack_id,
                       Id.of_string "back", [])))
                   :: Sexpr (CPPaccess_call (Adot, CPPvar _stack_id,
@@ -2882,7 +2882,7 @@ let gen_ind_header_v2
                 [CPPmove (CPPvar alt_id)] )
           in
           let body =
-            [ Sasgn (alt_id, Declare Tauto, CPPstruct_id (Id.of_string cname, [], ctor_args));
+            [ Sasgn (alt_id, Declare (Tauto, None), CPPstruct_id (Id.of_string cname, [], ctor_args));
               Sif (reused, [Sreturn (Some (CPPvar tok_id))], []);
               Sreturn (Some (build i cname [CPPmove (CPPvar alt_id)])) ]
           in

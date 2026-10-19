@@ -51,7 +51,7 @@ let rec name_args fresh bind e =
    where [s] evaluates its expression once, as its first act. *)
 let in_stmt fresh s =
   let bound = ref [] in
-  let bind x a = bound := Sasgn (x, Declare (Tref (Forwarding, Tauto)), a) :: !bound in
+  let bind x a = bound := Sasgn (x, Declare (Tref (Forwarding, Tauto), None), a) :: !bound in
   let e' e = name_args fresh bind e in
   let s =
     match s with

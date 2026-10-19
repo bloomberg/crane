@@ -37,7 +37,7 @@ let names_in body =
     | _ -> () );
     map_expr fe fs Fun.id e
   and fs s =
-    ( match s with Sasgn (id, _, _) | Sdecl (id, _) -> add id | _ -> () );
+    ( match s with Sasgn (id, _, _) | Sdecl (id, _, _) -> add id | _ -> () );
     map_stmt fe fs Fun.id s
   in
   List.iter (fun s -> ignore (fs s)) body;

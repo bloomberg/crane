@@ -152,7 +152,7 @@ let lambda_needs_capture
   and collect_from_stmt (refs, decls) stmt =
     match stmt with
     | Sraw raw_s -> collect_from_expr (refs, decls) (CPPraw raw_s)
-    | Sdecl (id, _) -> (refs, IdSet.add id decls)
+    | Sdecl (id, _, _) -> (refs, IdSet.add id decls)
     | Sasgn (id, ty, e) ->
       let refs', decls' = collect_from_expr (refs, decls) e in
       ( match ty with
@@ -189,7 +189,7 @@ let lambda_needs_capture
             let branch_decls =
               let d =
                 List.fold_left
-                  (fun d (bname, _, _) -> IdSet.add bname d)
+                  (fun d fb -> IdSet.add fb.fb_name d)
                   decls' br.smb_field_bindings
               in
               match br.smb_var with Some id -> IdSet.add id d | None -> d
@@ -2602,9 +2602,9 @@ and pp_cpp_stmt env args = function
       | _ -> e
     in
     str "return " ++ pp_cpp_expr env args e ++ str ";"
-  | Sdecl (id, ty) ->
+  | Sdecl (id, ty, _) ->
     pp_cpp_type false [] ty ++ str " " ++ Id.print id ++ str ";"
-  | Sasgn (id, Declare ty, e) ->
+  | Sasgn (id, Declare (ty, _), e) ->
     pp_cpp_type false [] ty
     ++ str " "
     ++ Id.print id
@@ -2910,13 +2910,13 @@ and pp_cpp_stmt env args = function
         if scrut.sc_flat then
           str binding_qual
           ++ prlist_with_sep (fun () -> str ", ")
-               (fun (bname, _ty, _used) -> Id.print bname)
+               (fun fb -> Id.print fb.fb_name)
                br.smb_field_bindings
           ++ str "] = " ++ scrut_var_pp ++ str ";"
         else
           str binding_qual
           ++ prlist_with_sep (fun () -> str ", ")
-               (fun (bname, _ty, _used) -> Id.print bname)
+               (fun fb -> Id.print fb.fb_name)
                br.smb_field_bindings
           ++ str "] = " ++ str (sn ()).get ++ str "<"
           ++ pp_cpp_type false [] br.smb_ctor_type ++ str ">("

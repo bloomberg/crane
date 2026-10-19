@@ -234,9 +234,10 @@ type cpp_type =
     meant "not a declaration at all" -- an unannotated declaration is
     [Declare Tauto]. *)
 and asgn_target =
-  | Declare of cpp_type
+  | Declare of cpp_type * Core_binder.t option
       (** [ty x = e;] -- a declaration with an initialiser; [Tauto] gives
-          [auto x = e;]. *)
+          [auto x = e;].  The binder is the Core binder [x] stands for, where
+          translation declared it for one. *)
   | Existing  (** [x = e;] -- [x] is already in scope. *)
   | Declare_static of cpp_type
       (** [static ty x = e;] -- a local built the first time control reaches
@@ -252,7 +253,9 @@ and type_test =
 (** C++ statement representation. *)
 and cpp_stmt =
   | Sreturn of cpp_expr option  (** Return statement with optional expression *)
-  | Sdecl of Id.t * cpp_type  (** Variable declaration *)
+  | Sdecl of Id.t * cpp_type * Core_binder.t option
+      (** Variable declaration, of the Core binder it stands for where
+          translation declared it for one *)
   | Sasgn of Id.t * asgn_target * cpp_expr
       (** Assignment to a variable, declaring it or not: see
           {!asgn_target}. *)
@@ -357,17 +360,27 @@ and smatch_branch = {
       (** Binding variable for [std::get], or [None] when the
           branch body doesn't use fields.  Kept for scrutinee-name
           derivation even when {!smb_field_bindings} is non-empty. *)
-  smb_field_bindings : (Id.t * cpp_type * bool) list;
-      (** Ordered list of [(binding_name, field_cpp_type, used)] for C++
-          structured bindings ([const auto& [f1, f2] = std::get<T>(…)]).
-          Covers ALL constructor fields in struct-declaration order.
-          The [used] flag is [true] when the binding is referenced in the
-          branch body; unused bindings are annotated [[[maybe_unused]]].
-          Empty when no fields are used or for frame-dispatch branches. *)
+  smb_field_bindings : field_binding list;
+      (** The C++ structured bindings ([const auto& [f1, f2] =
+          std::get<T>(…)]), one per constructor field in struct-declaration
+          order.  Empty when no fields are used or for frame-dispatch
+          branches. *)
   smb_extra_conds : cpp_expr list;
       (** Additional [&&]-joined conditions. *)
   smb_body : cpp_stmt list;
       (** Branch body statements. *)
+}
+
+(** One structured binding of an {!Smatch} branch. *)
+and field_binding = {
+  fb_name : Id.t;
+  fb_type : cpp_type;  (** the field's C++ type, as stored *)
+  fb_used : bool;
+      (** whether the branch body reads the binding; one it does not is
+          annotated [[[maybe_unused]]] *)
+  fb_binder : Core_binder.t option;
+      (** the Core pattern variable the binding stands for, where translation
+          bound it for one *)
 }
 
 (** {2 C++ expressions} *)

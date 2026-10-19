@@ -72,7 +72,7 @@ let subst_stmt x v s =
   match s with
   | Sreturn (Some e) -> in_expr (fun e -> Sreturn (Some e)) e
   | Sexpr e -> in_expr (fun e -> Sexpr e) e
-  | Sasgn (y, (Declare ty as t), e) when not (is_reference_type ty) ->
+  | Sasgn (y, (Declare (ty, _) as t), e) when not (is_reference_type ty) ->
     in_expr (fun e -> Sasgn (y, t, e)) e
   | Sasgn (y, Existing, e) -> in_expr (fun e -> Sasgn (y, Existing, e)) e
   | Sif (c, a, b) -> in_expr (fun c -> Sif (c, a, b)) c

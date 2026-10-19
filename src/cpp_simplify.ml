@@ -71,7 +71,7 @@ let takes_from v stmts =
    copied as it was. *)
 let rec bind_by_reference = function
   | [] -> []
-  | Sasgn (x, Declare ty, rhs) :: rest
+  | Sasgn (x, Declare (ty, binder), rhs) :: rest
     when (match ty with Tref _ | Tconst (Tref _) -> false | _ -> true)
          && (ty = Tauto || Loopify.worthwhile_move_type ty)
          && ( match member_root rhs with
@@ -82,7 +82,7 @@ let rec bind_by_reference = function
                 || takes_from v rest || takes_from x rest )
             | None -> false ) ->
     let ty = match ty with Tconst _ -> ty | _ -> Tconst ty in
-    Sasgn (x, Declare (Tref (Lvalue, ty)), rhs) :: bind_by_reference rest
+    Sasgn (x, Declare (Tref (Lvalue, ty), binder), rhs) :: bind_by_reference rest
   | s :: rest -> s :: bind_by_reference rest
 
 (* Under Reuse, a match-only scrutinee may be marked owned so that a reuse arm

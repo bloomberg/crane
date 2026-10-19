@@ -47,7 +47,7 @@ let declared_in stmts =
   and fl l = List.iter fs l
   and fs s =
     ( match s with
-    | Sasgn (id, Declare _, _) | Sdecl (id, _) | Sdecl_init (id, _) -> note id
+    | Sasgn (id, Declare _, _) | Sdecl (id, _, _) | Sdecl_init (id, _) -> note id
     | Sbind (ids, _) -> List.iter note ids
     | _ -> () );
     iter_stmt_children ~on_expr:fe ~on_stmts:fl s
@@ -153,14 +153,14 @@ and scan_stmts scope l = List.iter (scan_stmt scope) l
 and scan_stmt scope s =
   ( match s with
   | Sraw _ -> scope.opaque <- true
-  | Sasgn (id, Declare ty, rhs) ->
+  | Sasgn (id, Declare (ty, _), rhs) ->
     if is_borrowed ty then (
       (* [const auto &x = e] binds a reference into whatever [e] names. *)
       ban scope rhs;
       bind_other scope id )
     else if movable ty then
       scope.cands <- IdSet.add id scope.cands
-  | Sdecl (id, ty) | Sdecl_init (id, ty) ->
+  | Sdecl (id, ty, _) | Sdecl_init (id, ty) ->
     if movable ty then scope.cands <- IdSet.add id scope.cands
   | Sif_decl (id, ty, cond, _, _) ->
     if is_borrowed ty then (
@@ -177,7 +177,7 @@ and scan_stmt scope s =
     List.iter
       (fun b ->
         bind_other_opt scope b.smb_var;
-        List.iter (fun (id, _, _) -> bind_other scope id) b.smb_field_bindings )
+        List.iter (fun fb -> bind_other scope fb.fb_name) b.smb_field_bindings )
       branches
   | Scustom_case (_, scrut, _, branches, _) ->
     ban scope scrut;

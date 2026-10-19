@@ -551,7 +551,7 @@ let unstable_locals ~(stable : Id.Set.t) (body : cpp_stmt list) : Id.Set.t =
     ( match e with
     | CPPaccess_call _ | CPPfun_call _ -> true
     | _ -> false )
-    && match ty with Declare t | Declare_static t -> not (is_alias_ty t) | Existing -> true
+    && match ty with Declare (t, _) | Declare_static t -> not (is_alias_ty t) | Existing -> true
   in
   let classify ok id =
     if ok then stable := Id.Set.add id !stable
@@ -572,7 +572,7 @@ let unstable_locals ~(stable : Id.Set.t) (body : cpp_stmt list) : Id.Set.t =
       List.iter
         (fun br ->
           Option.iter (classify ok) br.smb_var;
-          List.iter (fun (id, _, _) -> classify ok id) br.smb_field_bindings)
+          List.iter (fun fb -> classify ok fb.fb_name) br.smb_field_bindings)
         branches
     | _ -> () );
     iter_stmt_children ~on_expr:(fun _ -> ()) ~on_stmts:(List.iter walk) s

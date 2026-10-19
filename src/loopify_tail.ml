@@ -218,7 +218,7 @@ let compute_binder_provenance params body =
       List.iter
         (fun br ->
           Option.iter (fun v -> record v root) br.smb_var;
-          List.iter (fun (fid, _, _) -> record fid root) br.smb_field_bindings;
+          List.iter (fun fb -> record fb.fb_name root) br.smb_field_bindings;
           List.iter walk_stmt br.smb_body)
         branches;
       Option.iter (List.iter walk_stmt) default
@@ -477,7 +477,7 @@ let make_shadow_updates shadow_params args =
             Some
               (Sasgn
                  ( temp_name shadow_id,
-                   Declare (strip_ref_and_const_type ty),
+                   Declare (strip_ref_and_const_type ty, None),
                    make_rhs ty arg ))
           else
             None)
@@ -657,7 +657,7 @@ let declares_variable = function
 
 (** Names declared directly by a statement (not recursing into sub-statements). *)
 let direct_decl_ids = function
-  | Sdecl (id, _) | Sdecl_init (id, _) -> [ id ]
+  | Sdecl (id, _, _) | Sdecl_init (id, _) -> [ id ]
   | Sasgn (id, Declare _, _) -> [ id ]
   | Susing (id, _) -> [ id ]
   | Sbind (ids, _) -> ids
@@ -1057,7 +1057,7 @@ let transform_tail ?(param_inits = []) tparams check params ret_ty body =
         in
         Sasgn
           ( shadow_id,
-            Declare (strip_ref_and_const_type shadow_ty),
+            Declare (strip_ref_and_const_type shadow_ty, None),
             init_expr ) )
       varying_params
       shadow_params
