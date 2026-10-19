@@ -11,6 +11,11 @@
     [T m() const &&] for a temporary, which copies.  No call reaches the
     reference through a temporary.
 
+    Which methods are projections is not read off their C++ bodies: it was
+    decided from the Core function each method is made of, and recorded on
+    its receiver ({!Escape.returns_receiver_field}).  Under [CRANE_CHECK_IR]
+    the body is checked to agree.
+
     Input: a declaration whose struct methods are all {!Minicpp.Rq_any}.
     Output: the same declaration, with each projection of a coinductive split
     in two. *)

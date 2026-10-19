@@ -742,7 +742,12 @@ let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
             mf_ret_type = Tglob (name, leading @ u_tys, []);
             mf_params = [];
             mf_body = [Sreturn (Some (CPPbraced converted))];
-            mf_receiver = Instance { this_pos = 0; is_const = true; ref_qual = Rq_any };
+            mf_receiver =
+              Instance
+                { this_pos = 0;
+                  is_const = true;
+                  ref_qual = Rq_any;
+                  returns_field = false };
             mf_is_inline = false;
             mf_no_pure = true;
             mf_is_noexcept = false;

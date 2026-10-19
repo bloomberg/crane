@@ -397,6 +397,20 @@ let infer_sub_bindings_escape_params n_params body =
   List.init n_params (fun i ->
     sub_bindings_escape (i + 1) body)
 
+(** {2 Projections} *)
+
+let returns_receiver_field ~this_pos fn =
+  let params, body = Mlutil.collect_lams fn in
+  let receiver = List.length params - this_pos in
+  let rec bare = function MLmagic (_, a) -> bare a | a -> a in
+  List.length params = 1
+  &&
+  match bare body with
+  | MLcase (_, scrut, [| (ids, _, (Pcons _ | Pusual _), result) |]) -> (
+    (match bare scrut with MLrel i -> i = receiver | _ -> false)
+    && match bare result with MLrel j -> j <= List.length ids | _ -> false )
+  | _ -> false
+
 (** {2 Utility functions} *)
 
 (** Set of integers for tracking de Bruijn indices. *)

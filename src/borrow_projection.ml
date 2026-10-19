@@ -18,17 +18,12 @@ let rec reads_this e =
       e;
     !found
 
-(* [m] reads one field of its own receiver and returns it: a single-branch
-   match on [this], borrowed, whose body returns one of the fields it
-   binds. *)
-let is_projection m =
-  ( match m.mf_receiver with
-  | Instance {is_const = true; ref_qual = Rq_any; _} -> true
-  | _ -> false )
-  && m.mf_params = [] && not m.mf_is_conversion
-  && ( match m.mf_ret_type with
-     | Tref _ | Tvoid -> false
-     | _ -> true )
+(* What the C++ body of a projection looks like: a single-branch match on
+   [this], borrowed, whose body returns one of the fields it binds.  Not what
+   decides a split -- the Core function does ({!Minicpp.receiver}'s
+   [returns_field]) -- but what that decision promises, checked. *)
+let reads_one_field m =
+  m.mf_params = [] && not m.mf_is_conversion
   &&
   match m.mf_body with
   | [Smatch (sc, [b], None)] ->
@@ -39,6 +34,37 @@ let is_projection m =
       List.exists (fun fb -> Id.equal x fb.fb_name) b.smb_field_bindings
     | _ -> false )
   | _ -> false
+
+(* [m] returns one field of its receiver, not yet split, and the field has a
+   value a reference can name. *)
+let lends_field m =
+  ( match m.mf_receiver with
+  | Instance {returns_field = true; is_const = true; ref_qual = Rq_any; _} -> true
+  | _ -> false )
+  &&
+  match m.mf_ret_type with
+  | Tref _ | Tvoid -> false
+  | _ -> true
+
+let is_projection m =
+  let lends = lends_field m in
+  ( if Probe.checking () then
+      let unsplit =
+        match m.mf_receiver with
+        | Instance {is_const = true; ref_qual = Rq_any; _} -> true
+        | _ -> false
+      in
+      let shaped =
+        unsplit && reads_one_field m
+        && (match m.mf_ret_type with Tref _ | Tvoid -> false | _ -> true)
+      in
+      if shaped <> lends then
+        Probe.violation "borrowed projection"
+          Pp.(
+            str "the Core function of " ++ Id.print m.mf_name
+            ++ str (if lends then " returns a receiver field its body does not read"
+                    else " does not return the receiver field its body reads") ) );
+  lends
 
 (* The projection as the pair that cannot dangle: a reference for an lvalue
    receiver, and a copy for a temporary one, which dies at the end of the

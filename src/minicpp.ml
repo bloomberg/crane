@@ -734,7 +734,7 @@ and method_field = {
 
 and receiver =
   | Static
-  | Instance of { this_pos : int; is_const : bool; ref_qual : ref_qual }
+  | Instance of { this_pos : int; is_const : bool; ref_qual : ref_qual; returns_field : bool }
 
 and ref_qual =
   | Rq_any

@@ -943,6 +943,11 @@ and receiver =
               [0]. *)
       is_const : bool;  (** A [const] method *)
       ref_qual : ref_qual;  (** Which receivers it takes: see {!ref_qual}. *)
+      returns_field : bool;
+          (** The method returns one field of its receiver as it is, so it
+              could hand out a reference into the receiver instead of a
+              copy.  Decided from the Core function the method is made of
+              ({!Escape.returns_receiver_field}), not from its C++ body. *)
     }
 
 (** The ref-qualifier of a method, which receivers it may be called on.  A

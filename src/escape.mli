@@ -115,6 +115,16 @@ val infer_owned_params : int -> ml_ast -> bool list
     custom [prod]), NOT for shared_ptr-backed types ([list], cofix, etc.). *)
 val infer_sub_bindings_escape_params : int -> ml_ast -> bool list
 
+(** {2 Projections} *)
+
+(** [returns_receiver_field ~this_pos fn] holds when the function [fn] takes
+    one argument, the receiver at [this_pos] (0-based, outermost first), and
+    returns one field of it as it is: a single-branch constructor match on
+    the receiver whose body is a variable the branch binds.  The result is
+    then a place inside the receiver, which a method may lend out rather
+    than copy ({!Borrow_projection}). *)
+val returns_receiver_field : this_pos:int -> ml_ast -> bool
+
 (** {2 Utility functions} *)
 
 (** Set of integers for tracking de Bruijn indices. *)

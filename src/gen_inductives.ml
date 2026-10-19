@@ -974,7 +974,12 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
         mf_ret_type = ret;
         mf_params = params;
         mf_body = stmts;
-        mf_receiver = Instance { this_pos = this_pos; is_const = true; ref_qual = Rq_any };
+        mf_receiver =
+          Instance
+            { this_pos;
+              is_const = true;
+              ref_qual = Rq_any;
+              returns_field = Escape.returns_receiver_field ~this_pos body };
         mf_is_inline = false;
         mf_no_pure = no_pure;
         mf_is_noexcept = false;
@@ -1358,7 +1363,12 @@ let gen_ind_header_v2
                 mf_ret_type = self_ty;
                 mf_params = [];
                 mf_body = clone_body;
-                mf_receiver = Instance { this_pos = 0; is_const = true; ref_qual = Rq_any };
+                mf_receiver =
+                  Instance
+                    { this_pos = 0;
+                      is_const = true;
+                      ref_qual = Rq_any;
+                      returns_field = false };
                 mf_is_inline = false;
                 mf_no_pure = true;
                 mf_is_noexcept = false;
@@ -3249,7 +3259,12 @@ let gen_ind_header_v2
                             (Crane_rt.lazy_, [variant_alias_ty])));
                   mf_params = [];
                   mf_body = [Sreturn (Some (CPPvar vmn_id))];
-                  mf_receiver = Instance { this_pos = 0; is_const = true; ref_qual = Rq_any };
+                  mf_receiver =
+                    Instance
+                      { this_pos = 0;
+                        is_const = true;
+                        ref_qual = Rq_any;
+                        returns_field = false };
                   mf_is_inline = false;
                   mf_no_pure = false;
                   mf_is_noexcept = false;
@@ -3282,7 +3297,12 @@ let gen_ind_header_v2
                                (Adot, CPPvar vmn_id, Id.of_string "force"))
                             [] ) );
                   ];
-                mf_receiver = Instance { this_pos = 0; is_const = true; ref_qual = Rq_any };
+                mf_receiver =
+                  Instance
+                    { this_pos = 0;
+                      is_const = true;
+                      ref_qual = Rq_any;
+                      returns_field = false };
                 mf_is_inline = false;
                 mf_no_pure = false;
                 mf_is_noexcept = false;
@@ -3302,7 +3322,12 @@ let gen_ind_header_v2
                   Tconst (Tref (Lvalue, variant_alias_ty));
                 mf_params = [];
                 mf_body = [Sreturn (Some (CPPvar vmn_id))];
-                mf_receiver = Instance { this_pos = 0; is_const = true; ref_qual = Rq_any };
+                mf_receiver =
+                  Instance
+                    { this_pos = 0;
+                      is_const = true;
+                      ref_qual = Rq_any;
+                      returns_field = false };
                 mf_is_inline = false;
                 mf_no_pure = false;
                 mf_is_noexcept = false;
@@ -3330,7 +3355,12 @@ let gen_ind_header_v2
                   mf_ret_type = Tref (Lvalue, variant_alias_ty);
                   mf_params = [];
                   mf_body = [Sreturn (Some (CPPvar vmn_id))];
-                  mf_receiver = Instance { this_pos = 0; is_const = false; ref_qual = Rq_any };
+                  mf_receiver =
+                    Instance
+                      { this_pos = 0;
+                        is_const = false;
+                        ref_qual = Rq_any;
+                        returns_field = false };
                   mf_is_inline = true;
                   mf_no_pure = true;
                   mf_is_noexcept = false;
