@@ -264,7 +264,7 @@ and cpp_stmt =
       cpp_type
       * cpp_expr
       * cpp_type list
-      * ((Id.t * cpp_type) list * cpp_type * cpp_stmt list) list
+      * (custom_param list * cpp_type * cpp_stmt list) list
       * custom_match
       (** Custom pattern match: return type, scrutinee, type args, branches
           (params, type, body), custom match string *)
@@ -369,6 +369,16 @@ and smatch_branch = {
       (** Additional [&&]-joined conditions. *)
   smb_body : cpp_stmt list;
       (** Branch body statements. *)
+}
+
+(** A variable a branch of an {!Scustom_case} binds, written into the
+    match's template. *)
+and custom_param = {
+  cp_name : Id.t;
+  cp_type : cpp_type;
+  cp_binder : Core_binder.t option;
+      (** the Core pattern variable it stands for, where translation bound it
+          for one *)
 }
 
 (** One structured binding of an {!Smatch} branch. *)

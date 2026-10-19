@@ -25,7 +25,7 @@ type custom_holes = {
   typ : cpp_type option;
   scrut : cpp_expr option;
   tyargs : cpp_type list;
-  cases : ((Names.Id.t * cpp_type) list * cpp_type * cpp_stmt list) list;
+  cases : (custom_param list * cpp_type * cpp_stmt list) list;
   args : cpp_expr list;
 }
 
@@ -113,7 +113,7 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
           Option.iter
             (fun (ids, _, _) ->
               Option.iter
-                (fun (_, t) -> if Ml_type_util.has_no_cpp_spelling t then obj () else ty t)
+                (fun p -> if Ml_type_util.has_no_cpp_spelling p.cp_type then obj () else ty p.cp_type)
                 (nth ids j) )
             (nth holes.cases i)
         | CCarg i ->

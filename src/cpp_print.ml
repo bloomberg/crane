@@ -167,7 +167,7 @@ let lambda_needs_capture
       List.fold_left
         (fun (r, d) (branch_vars, _, stmts) ->
           let branch_decls =
-            List.fold_left (fun acc (id, _) -> IdSet.add id acc) d branch_vars
+            List.fold_left (fun acc p -> IdSet.add p.cp_name acc) d branch_vars
           in
           List.fold_left collect_from_stmt (r, branch_decls) stmts)
         (collect_from_expr (refs, decls) scrut)
@@ -3178,8 +3178,7 @@ and pp_custom ?container custom env typ t tyargs cases args _arg_types vl cmds =
     | CCbr_var (i, j) ->
       ( try
           let ids, _, _ = List.nth cases i in
-          let id, _ = List.nth ids j in
-          Id.print id
+          Id.print (List.nth ids j).cp_name
         with Failure _ ->
           CErrors.anomaly
             Pp.(
@@ -3188,7 +3187,7 @@ and pp_custom ?container custom env typ t tyargs cases args _arg_types vl cmds =
     | CCbr_var_ty (i, j) ->
       ( try
           let ids, _, _ = List.nth cases i in
-          let _, ty = List.nth ids j in
+          let ty = (List.nth ids j).cp_type in
           (* The generator's belief is only worth printing if this file can
              spell it.  A type from a module [Crane Extract Skip Module] left
              out has no declaration to name -- the binder would read

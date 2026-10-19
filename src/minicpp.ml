@@ -219,7 +219,7 @@ and cpp_stmt =
       cpp_type
       * cpp_expr
       * cpp_type list
-      * ((Id.t * cpp_type) list * cpp_type * cpp_stmt list) list
+      * (custom_param list * cpp_type * cpp_stmt list) list
       * custom_match
   | Sthrow of string (* throw statement for unreachable/absurd cases *)
   | Sswitch of cpp_expr * GlobRef.t * (Id.t * cpp_stmt list) list * cpp_stmt list option
@@ -304,6 +304,12 @@ and smatch_branch = {
   smb_body : cpp_stmt list;
     (** Branch body statements.  When {!smb_field_bindings} is non-empty,
         field accesses use direct [CPPvar binding_name] references. *)
+}
+
+and custom_param = {
+  cp_name : Id.t;
+  cp_type : cpp_type;
+  cp_binder : Core_binder.t option;
 }
 
 and field_binding = {
@@ -1541,7 +1547,7 @@ let map_stmt ?fl
         List.map ft tyargs,
         List.map
           (fun (params, ret_ty, body) ->
-            ( List.map (fun (id, ty) -> (id, ft ty)) params,
+            ( List.map (fun p -> {p with cp_type = ft p.cp_type}) params,
               ft ret_ty,
               fl body ) )
           branches,
@@ -2554,7 +2560,7 @@ and free_vars_stmt = function
     free_vars_expr s
     @ List.concat_map
         (fun (ps, _, b) ->
-          let pat_bound = List.map fst ps in
+          let pat_bound = List.map (fun p -> p.cp_name) ps in
           let body_fv = free_vars_body b in
           List.filter
             (fun id -> not (List.exists (Id.equal id) pat_bound))
@@ -2703,7 +2709,7 @@ and rename_stmt_ids f s =
         fe scrut,
         tys,
         List.map
-          (fun (ps, rty, b) -> (List.map (fun (id, t) -> (f id, t)) ps, rty, fl b))
+          (fun (ps, rty, b) -> (List.map (fun p -> {p with cp_name = f p.cp_name}) ps, rty, fl b))
           branches,
         m )
   | _ -> map_stmt fe (rename_stmt_ids f) Fun.id s
@@ -2727,7 +2733,7 @@ let declared_ids stmts =
           List.iter (fun fb -> note fb.fb_name) br.smb_field_bindings)
         branches
     | Scustom_case (_, _, _, branches, _) ->
-      List.iter (fun (ps, _, _) -> List.iter (fun (id, _) -> note id) ps) branches
+      List.iter (fun (ps, _, _) -> List.iter (fun p -> note p.cp_name) ps) branches
     | _ -> () );
     iter_stmt_children ~on_expr:fe ~on_stmts:(List.iter fs) s
   and fe e =

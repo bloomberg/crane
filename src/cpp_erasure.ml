@@ -227,8 +227,8 @@ and resolve_stmt ?(ret = None) boxed s =
         (fun (ps, bty, body) ->
           let boxed =
             List.fold_left
-              (fun acc (id, ty) ->
-                if is_any_shaped ty then Id.Set.add id acc else acc)
+              (fun acc p ->
+                if is_any_shaped p.cp_type then Id.Set.add p.cp_name acc else acc)
               boxed ps
           in
           (ps, bty, List.map (resolve_stmt ~ret boxed) body))
@@ -490,11 +490,11 @@ and reads_custom_case r typ scrut tyargs branches cmatch =
     match scrut with CPPany_cast (Tglob (g, _, _), _) -> Ml_type_util.is_prod_global g | _ -> false
   in
   let branch (params, rty, body) =
-    let r' = with_boxed_params r params in
+    let r' = with_boxed_params r (List.map (fun p -> (p.cp_name, p.cp_type)) params) in
     let r' =
       if overridden || scrut_is_cast_pair then
         List.fold_left
-          (fun r' (id, ty) ->
+          (fun r' {cp_name = id; cp_type = ty; _} ->
             let is_pair = match ty with Tglob (g, _ :: _, _) -> Ml_type_util.is_prod_global g | _ -> false in
             if is_any_shaped ty || is_pair then {r' with boxed = Id.Set.add id r'.boxed}
             else

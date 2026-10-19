@@ -8335,9 +8335,15 @@ and gen_cpp_case (typ : ml_type) t env pv =
 and gen_cpp_custom_body env k rty ids body scrut_ind_opt =
   let tvars = get_current_type_vars () in
   let ret = cpp_of_ml env rty in
+  let n_pat_vars = List.length ids in
   let ids =
-    List.map
-      (fun (x, ty) ->
+    List.mapi
+      (fun j (x, ty) ->
+        if Probe.checking ()
+           && not (Option.equal Id.equal (get_db_name_opt (n_pat_vars - j) env) (Some x))
+        then
+          Probe.violation "custom match binder"
+            Pp.(str "parameter " ++ int j ++ str " is not " ++ Id.print x ++ str " in its branch's scope");
         let ns =
           match scrut_ind_opt with
           | Some g_scrut when not (is_prod_global g_scrut) ->
@@ -8360,7 +8366,9 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt =
             else Ref.User.Set.singleton g_scrut
           | _ -> Ref.User.Set.empty
         in
-        (x, convert_ml_type_to_cpp_type env ~ns tvars ty) )
+        { cp_name = x;
+          cp_type = convert_ml_type_to_cpp_type env ~ns tvars ty;
+          cp_binder = core_binder env (n_pat_vars - j) } )
       (List.rev ids)
   in
   (* Wrap erased variables with any_cast when returned as a template parameter. *)
@@ -8807,7 +8815,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       let br_stmts =
         if fix_a_fired then
           List.fold_left
-            (fun stmts (name, cpp_ty) ->
+            (fun stmts {cp_name = name; cp_type = cpp_ty; _} ->
                if not (prints_as_any cpp_ty) then
                  let stripped = strip_ns_tglob cpp_ty in
                  let cast_expr =
@@ -8857,8 +8865,8 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       let br_stmts =
         let tany_pat_var_names =
           if not fix_a_fired then
-            List.fold_left (fun acc (name, cpp_ty) ->
-              if has_tany_in_type cpp_ty then Id.Set.add name acc else acc)
+            List.fold_left (fun acc p ->
+              if has_tany_in_type p.cp_type then Id.Set.add p.cp_name acc else acc)
               Id.Set.empty br_ids
           else Id.Set.empty
         in
@@ -8945,8 +8953,8 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
         match br_ret with
         | Tvar _ ->
           let erased_pat_vars =
-            List.fold_left (fun acc (name, cpp_ty) ->
-              if prints_as_any cpp_ty then Id.Set.add name acc else acc)
+            List.fold_left (fun acc p ->
+              if prints_as_any p.cp_type then Id.Set.add p.cp_name acc else acc)
               Id.Set.empty br_ids
           in
           if Id.Set.is_empty erased_pat_vars then br_stmts

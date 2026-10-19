@@ -182,7 +182,7 @@ and scan_stmt scope s =
   | Scustom_case (_, scrut, _, branches, _) ->
     ban scope scrut;
     List.iter
-      (fun (ps, _, _) -> List.iter (fun (id, _) -> bind_other scope id) ps)
+      (fun (ps, _, _) -> List.iter (fun p -> bind_other scope p.cp_name) ps)
       branches
   | Sblock_custom (_, _, _, _, args, _) -> List.iter (ban scope) args
   | _ -> () );

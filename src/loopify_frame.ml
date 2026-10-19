@@ -118,7 +118,7 @@ let rec collect_type_env (stmts : cpp_stmt list) : (Id.t * cpp_type) list =
       | Sdecl (id, ty, _) -> [(id, ty)]
       | Scustom_case (_, _, _, branches, _) ->
         List.concat_map
-          (fun (ps, _, body) -> ps @ collect_type_env body)
+          (fun (ps, _, body) -> List.map (fun p -> (p.cp_name, p.cp_type)) ps @ collect_type_env body)
           branches
       | Sif (_, then_br, else_br) ->
         collect_type_env then_br @ collect_type_env else_br
@@ -1214,7 +1214,7 @@ let declared_binders binders = function
     find live there ({!Recursion_plan.resumes_binding}): some point the plan
     resumes at, binding the binder [id] stands for, reads every saved local
     that stands for a Core binder.  A local the backend made stands for none,
-    and neither yet does a parameter or a custom match's binding. *)
+    and neither yet does a parameter. *)
 let check_frame_plan ctx id tgt saved =
   if Probe.checking () then
     let binder_of v = Option.flatten (List.assoc_opt v ctx.er_binders) in
@@ -1280,14 +1280,14 @@ let rec rewrite_enter_lambda_return ctx stmt =
           tyargs,
           List.map
             (fun (ps, ret_ty2, body) ->
-              let lenv = ps @ env in
+              let lenv = List.map (fun p -> (p.cp_name, p.cp_type)) ps @ env in
               let br_ctx = match ps with
-                | (id, _) :: _ -> Some (Id.to_string id)
+                | p :: _ -> Some (Id.to_string p.cp_name)
                 | [] -> None
               in
               ( ps, ret_ty2,
                 rewrite_enter_stmts { ctx with er_env = lenv;
-                                               er_binders = List.map (fun (id, _) -> (id, None)) ps @ ctx.er_binders;
+                                               er_binders = List.map (fun p -> (p.cp_name, p.cp_binder)) ps @ ctx.er_binders;
                                                er_branch_ctx = br_ctx } body ) )
             branches,
           err );

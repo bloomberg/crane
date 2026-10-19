@@ -844,7 +844,7 @@ let rewrite_state_threading_moves
         List.map
           (fun (params, ret_ty, body_stmts) ->
             match params with
-            | (alias_id, _) :: _ ->
+            | {cp_name = alias_id; _} :: _ ->
               if is_move_binding then begin
                 direct_owned := Id.Set.add alias_id !direct_owned;
                 let body = List.map (rewrite_stmt subst) body_stmts in

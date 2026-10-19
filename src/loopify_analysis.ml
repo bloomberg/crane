@@ -564,7 +564,7 @@ let unstable_locals ~(stable : Id.Set.t) (body : cpp_stmt list) : Id.Set.t =
     | Scustom_case (_, scrut, _, branches, _) ->
       let ok = denotes_stable scrut in
       List.iter
-        (fun (binders, _, _) -> List.iter (fun (id, _) -> classify ok id) binders)
+        (fun (binders, _, _) -> List.iter (fun p -> classify ok p.cp_name) binders)
         branches
     | Smatch (scrut, branches, _) ->
       (* Structured bindings alias the matched object. *)
