@@ -108,6 +108,21 @@ val strategy_at :
   Miniml.Occurrence.t * int ->
   strategy option
 
+(** The local fixpoints the machine of the function [r], lowered by an
+    explicit stack, may adopt as a second entry: those in its flow -- run
+    where its body runs, not under a lambda nor in another local fixpoint --
+    some member of which names a function of its recursive group, read in
+    its body as translation generates it.  Two machines cannot unwind each
+    other's stack, so such a fixpoint is lowered inside [r]'s; the first of
+    them in the flow that lowering can take is adopted
+    ({!Loopify_frame.find_adopted}). *)
+val adoptable : Names.GlobRef.t -> Miniml.Occurrence.t list
+
+(** {!adoptable} for the function [member] of the local fixpoint
+    [occurrence], lowered as a helper of its own ({!Lifted.fixpoint}): the
+    fixpoints in its flow naming a member of its group. *)
+val adoptable_at : Miniml.Occurrence.t * int -> Miniml.Occurrence.t list
+
 (** Where a function goes on once a recursive call returns: [binder], the
     binder the call's result is bound to, and [live], the binders bound
     before it that what follows reads -- what a frame keeps across the

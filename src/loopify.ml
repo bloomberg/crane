@@ -1138,6 +1138,15 @@ let planned_strategy r check body =
       Probe.violation "recursion plan" Pp.(str "the recursion plan does not know " ++ what ());
       classified_strategy (classified ()) )
 
+(** The local fixpoints the machine of [r] may adopt, as the recursion plan
+    has them ({!Recursion_plan.adoptable}): a helper lifted for a local
+    fixpoint's function is planned by it. *)
+let planned_adoptable r =
+  match Lifted.of_ref r with
+  | Some h -> (
+    match Lifted.fixpoint h with Some m -> Recursion_plan.adoptable_at m | None -> [] )
+  | None -> Recursion_plan.adoptable r
+
 (** The chains a strategy lowers tail modulo cons around, if it does. *)
 let modulo_cons_chains = function
   | Recursion_plan.Modulo_cons chains -> Some chains
@@ -1208,7 +1217,8 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
          survived". *)
       let adopted =
         match strategy with
-        | Modulo_cons _ | Frame_stack -> find_adopted check body
+        | Modulo_cons _ | Frame_stack ->
+          find_adopted ~adoptable:(planned_adoptable (fst f.df_path.dp_outer)) check body
         | No_loop | Tail_loop | Suspended _ -> None
       in
       let survived = Option.map decline_reason adopted in

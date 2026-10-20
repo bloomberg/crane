@@ -34,6 +34,7 @@ type local_group = {
       (* per member, its chains, if it recurses through no other call that
          is not a tail call *)
   suspends : bool;  (* some member's body suspends ({!suspends_within}) *)
+  adoptable : Occurrence.t list list;  (* per member, {!flow_fixpoints} calling the group *)
 }
 
 (* Where a function goes on once a recursive call returns: the binder the
@@ -53,6 +54,7 @@ type t = {
   modulo_cons : chain list Ref.User.Map.t;
   suspended : Ref.User.Set.t;  (* the definitions whose body suspends *)
   resumes : resume list Ref.User.Map.t;
+  adoptable : Occurrence.t list Ref.User.Map.t;
 }
 
 let empty =
@@ -62,7 +64,8 @@ let empty =
     locals = [];
     modulo_cons = Ref.User.Map.empty;
     suspended = Ref.User.Set.empty;
-    resumes = Ref.User.Map.empty }
+    resumes = Ref.User.Map.empty;
+    adoptable = Ref.User.Map.empty }
 
 let rec split_params n = function
   | MLlam (_, _, b) -> split_params (n + 1) b
@@ -452,6 +455,42 @@ let resumes_of ~effects ~origin ~calls lex body =
   walk ~calls:(fun ~depth:_ e -> calls e) (Lexenv.depth lex) body;
   List.rev !found
 
+(* The local fixpoints in the flow of [body], standing under [depth]
+   binders -- run where the code made of [body] runs, not under a lambda nor
+   in another local fixpoint -- some member of which names a function
+   [names ~depth] recognises, in the order they are met. *)
+let flow_fixpoints ~names depth body =
+  let rec mentions depth e =
+    names ~depth e
+    ||
+    match e with
+    | MLlam (_, _, b) -> mentions (depth + 1) b
+    | MLletin (_, _, a, b, _) -> mentions depth a || mentions (depth + 1) b
+    | MLcase (_, s, branches) ->
+      mentions depth s
+      || Array.exists (fun (ids, _, _, b) -> mentions (depth + List.length ids) b) branches
+    | MLfix (_, ids, funs, _, _) -> Array.exists (mentions (depth + Array.length ids)) funs
+    | e ->
+      let found = ref false in
+      Mlutil.ast_iter (fun c -> if mentions depth c then found := true) e;
+      !found
+  in
+  let found = ref [] in
+  let rec flow depth = function
+    | MLfix (_, ids, funs, _, occ) ->
+      if Array.exists (mentions (depth + Array.length ids)) funs then found := occ :: !found
+    | MLlam _ -> ()
+    | MLletin (_, _, a, b, _) ->
+      flow depth a;
+      flow (depth + 1) b
+    | MLcase (_, s, branches) ->
+      flow depth s;
+      Array.iter (fun (ids, _, _, b) -> flow (depth + List.length ids) b) branches
+    | e -> Mlutil.ast_iter (flow depth) e
+  in
+  flow depth body;
+  List.rev !found
+
 (* The plan of every local fixpoint in [defs], one per fixpoint, under its
    occurrence.  Inside a member's body, before its parameters,
    the member [k] of [n] is the variable [n - k]. *)
@@ -487,11 +526,21 @@ let local_groups ~effects defs =
       in
       Array.exists (suspends_within ~self:origin lex) funs
     in
+    let adoptable =
+      List.init n (fun j ->
+          let names ~depth = function
+            | MLrel db -> Option.has_some (member ~within:j ~depth:(depth - arities.(j)) (MLrel db))
+            | _ -> false
+          in
+          let arity, body = split_params 0 funs.(j) in
+          flow_fixpoints ~names arity body )
+    in
     plans :=
       { occurrence;
         local_kind = kind;
         chains;
-        suspends }
+        suspends;
+        adoptable }
       :: !plans
   in
   Ref.User.Map.iter
@@ -603,13 +652,26 @@ let analyze groups struc =
         resumes_of ~effects ~origin:r ~calls lex body )
       defs
   in
+  let adoptable =
+    Ref.User.Map.mapi
+      (fun r fd ->
+        let members = match Ref.User.Map.find_opt r by_member with Some g -> g.members | None -> [] in
+        let names ~depth:_ = function
+          | MLglob use -> List.exists (Common.globref_equal use.callee) members
+          | _ -> false
+        in
+        let lex, body = Core_elaborate.generated_scope fd.fd_type fd.fd_body in
+        flow_fixpoints ~names (Lexenv.depth lex) body )
+      defs
+  in
   { groups = plans;
     by_member;
     defined;
     locals = local_groups ~effects defs;
     modulo_cons;
     suspended;
-    resumes }
+    resumes;
+    adoptable }
 
 let same_cell c c' = Common.globref_equal c.constructor c'.constructor && c.hole = c'.hole
 
@@ -627,7 +689,8 @@ let equal a b =
          Occurrence.equal l.occurrence l'.occurrence
          && l.local_kind = l'.local_kind
          && List.equal (Option.equal same_chains) l.chains l'.chains
-         && l.suspends = l'.suspends )
+         && l.suspends = l'.suspends
+         && List.equal (List.equal Occurrence.equal) l.adoptable l'.adoptable )
        a.locals b.locals
   && Ref.User.Map.equal same_chains a.modulo_cons b.modulo_cons
   && Ref.User.Set.equal a.suspended b.suspended
@@ -638,6 +701,7 @@ let equal a b =
             && List.equal Core_binder.equal r.live r'.live
             && List.equal Occurrence.equal r.calls r'.calls ) )
        a.resumes b.resumes
+  && Ref.User.Map.equal (List.equal Occurrence.equal) a.adoptable b.adoptable
 
 let installed : t ref = State.cell State.Extraction empty
 
@@ -714,6 +778,17 @@ let strategy_at ~pointer_fields (occurrence, member) =
         | None -> found
       else found )
     None !installed.locals
+
+let adoptable r =
+  Option.default [] (Ref.User.Map.find_opt r !installed.adoptable)
+
+(* Copies of a fixpoint share its occurrence, and plan alike. *)
+let adoptable_at (occurrence, member) =
+  List.find_map
+    (fun l ->
+      if Occurrence.equal l.occurrence occurrence then List.nth_opt l.adoptable member else None )
+    !installed.locals
+  |> Option.default []
 
 let resumes_binding (b : Core_binder.t) =
   match Ref.User.Map.find_opt b.origin !installed.resumes with
