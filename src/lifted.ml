@@ -6,37 +6,41 @@
 
 open Names
 
-(** A helper's identity -- the declaration it was lifted out of, and the binder
-    it was bound to there -- ordered so it can key the registry. *)
-module Key = struct
-  type t = GlobRef.t option * Id.t
+type site =
+  | Let of Miniml.Occurrence.t
+  | Fixpoint of Miniml.Occurrence.t * int
 
-  let compare (o1, b1) (o2, b2) =
-    let c =
-      match (o1, o2) with
-      | None, None -> 0
-      | None, Some _ -> -1
-      | Some _, None -> 1
-      | Some r1, Some r2 -> GlobRef.CanOrd.compare r1 r2
-    in
-    if c <> 0 then c else Id.compare b1 b2
-end
-
-module KeyMap = Map.Make (Key)
+let same_site a b =
+  match (a, b) with
+  | Let o, Let o' -> Miniml.Occurrence.equal o o'
+  | Fixpoint (o, m), Fixpoint (o', m') -> Miniml.Occurrence.equal o o' && Int.equal m m'
+  | Let _, Fixpoint _ | Fixpoint _, Let _ -> false
 
 type t =
-  { key : Key.t;  (** what the helper is *)
-    name : Id.t;  (** what it is spelled, derived from {!field:key} *)
-    fixpoint : (Miniml.Occurrence.t * int) option
-        (** the Core fixpoint member it lowers, if it lowers one *) }
+  { origin : GlobRef.t option;
+    binder : Id.t;
+    site : site;  (** what the helper is, with {!field:origin} *)
+    serial : int;
+        (** the order it was made in among the helpers of this extraction,
+            which orders two helpers of one origin bound to one name *)
+    name : Id.t  (** what it is spelled, derived from the rest *) }
 
-(** The two directions of the identity/spelling correspondence. Both are kept
-    for the whole session: a helper must spell the same in the header and in
-    the implementation, and an identity is canonical across units, so there is
-    nothing to reset between them. *)
-let by_key : t KeyMap.t ref = ref KeyMap.empty
+let compare_origin o o' =
+  match (o, o') with
+  | None, None -> 0
+  | None, Some _ -> -1
+  | Some _, None -> 1
+  | Some r, Some r' -> GlobRef.CanOrd.compare r r'
 
-let by_name : (Id.t, t) Hashtbl.t = Hashtbl.create 16
+let same_origin o o' = compare_origin o o' = 0
+
+(** The helpers made in this extraction, newest first, and their spellings.
+    A site is an occurrence in the terms this extraction made, so neither
+    outlives it; within it a helper spells the same in the header and in the
+    implementation, and in every unit. *)
+let made : t list ref = State.cell State.Extraction []
+
+let by_name : (Id.t, t) Hashtbl.t = State.table State.Extraction 16
 
 (** The spelling a helper would like, before uniqueness is imposed: the
     {!Generated_name.companion} of the enclosing declaration, whose name is
@@ -74,15 +78,18 @@ let decide t =
       Pp.(str "Crane: the helper " ++ Id.print t.name ++ str " would be called as "
           ++ str decided ++ str ".")
 
-let make ~fixpoint ~origin ~binder =
-  let key = (origin, binder) in
+let make ~origin ~binder site =
   let t =
-    match KeyMap.find_opt key !by_key with
+    match
+      List.find_opt
+        (fun t -> same_origin t.origin origin && Id.equal t.binder binder && same_site t.site site)
+        !made
+    with
     | Some t -> t
     | None ->
       let name = unique_name (preferred_name ~origin ~binder) 0 in
-      let t = { key; name; fixpoint } in
-      by_key := KeyMap.add key t !by_key;
+      let t = { origin; binder; site; serial = List.length !made; name } in
+      made := t :: !made;
       Hashtbl.replace by_name name t;
       t
   in
@@ -94,8 +101,15 @@ let of_ref = function
   | _ -> None
 
 let name t = t.name
-let origin t = fst t.key
-let binder t = snd t.key
-let fixpoint t = t.fixpoint
+let origin t = t.origin
+let binder t = t.binder
+let fixpoint t = match t.site with Fixpoint (o, m) -> Some (o, m) | Let _ -> None
 
-let equal a b = Key.compare a.key b.key = 0
+let compare a b =
+  let c = compare_origin a.origin b.origin in
+  if c <> 0 then c
+  else
+    let c = Id.compare a.binder b.binder in
+    if c <> 0 then c else Int.compare a.serial b.serial
+
+let equal a b = compare a b = 0

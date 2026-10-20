@@ -13183,3 +13183,27 @@
   (alias runtest)
   (deps sigma_assertion_after_implicit.t.exe)
   (action (run ./sigma_assertion_after_implicit.t.exe))))
+
+(subdir lifted_helper_same_binder_name
+ (rule
+  (targets lifted_helper_same_binder_name.t.exe)
+  (deps LiftedHelperSameBinderName.vo lifted_helper_same_binder_name.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_helper_same_binder_name.t.exe lifted_helper_same_binder_name.cpp lifted_helper_same_binder_name.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_helper_same_binder_name.t.exe)
+  (action (run ./lifted_helper_same_binder_name.t.exe))))
+
+(subdir method_lifted_helper_same_name
+ (rule
+  (targets method_lifted_helper_same_name.t.exe)
+  (deps MethodLiftedHelperSameName.vo method_lifted_helper_same_name.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} method_lifted_helper_same_name.t.exe method_lifted_helper_same_name.cpp method_lifted_helper_same_name.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps method_lifted_helper_same_name.t.exe)
+  (action (run ./method_lifted_helper_same_name.t.exe))))
+
+

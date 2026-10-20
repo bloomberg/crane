@@ -1974,13 +1974,13 @@ let build_extended_tvar_names sig_indices sig_names body_tvars =
   else
     sig_names
 
-(** The reference under which an inner fixpoint named [fix_name], lifted out of
-    the declaration currently being generated, is emitted.
+(** The reference under which a helper bound to [binder] by [site], lifted
+    out of the declaration currently being generated, is emitted.
 
     The identity is minted by {!Lifted.make} rather than assembled here, so that
     two helpers cannot become one by agreeing on a spelling; see [lifted.mli]. *)
-let lifted_fix_ref ?fixpoint (fix_name : Id.t) : GlobRef.t =
-  Lifted.ref_of (Lifted.make ~fixpoint ~origin:!Table.current_decl_ref ~binder:fix_name)
+let lifted_ref site (binder : Id.t) : GlobRef.t =
+  Lifted.ref_of (Lifted.make ~origin:!Table.current_decl_ref ~binder site)
 
 (* Walk an ML AST and collect source-order parameter indices that are NOT
    simply forwarded unchanged at recursive call sites.  [is_self_call depth f]

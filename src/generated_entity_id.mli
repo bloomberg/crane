@@ -8,9 +8,9 @@
 
 (** What the generated declaration is for its owner. *)
 type role =
-  | Lifted_helper of Names.Id.t
-      (** A function lifted out of the owner's body, keyed by the binder it
-          was bound to there. *)
+  | Lifted_helper of Lifted.t
+      (** A function lifted out of the owner's body, keyed by the term that
+          bound it there ({!Lifted.site}). *)
 
 type t
 

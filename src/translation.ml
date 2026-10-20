@@ -9089,7 +9089,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       let free_args = List.map (fun (name, _, _) -> CPPvar name) free_vars in
       (* Generate the lifted function name *)
       let fix_name = fst ids.(x) in
-      let lifted_ref = lifted_fix_ref ~fixpoint:(occ, x) fix_name in
+      let lifted_ref = lifted_ref (Lifted.Fixpoint (occ, x)) fix_name in
       (* Generate the fixpoint body using gen_fix, under the lifted function's
          own tvar scope, passing all mutual fixpoint names *)
       let all_fix_ids_list = Array.to_list ids in
@@ -9465,7 +9465,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       in
 
       (* 3. Generate the lifted function name *)
-      let lifted_ref = lifted_fix_ref x' in
+      let lifted_ref = lifted_ref (Lifted.Let let_occ) x' in
 
       (* 4. Substitution helper for call sites: replace CPPfun_call(CPPvar x',
          args) with CPPfun_call(CPPglob(lifted_ref, []), free_var_cpps @
@@ -10121,7 +10121,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         build_extended_tvar_names fix_tvar_indices all_tvar_names all_body_tvars
       in
       let fix_name = fst ids.(x) in
-      let lifted_ref = lifted_fix_ref ~fixpoint:(occ, x) fix_name in
+      let lifted_ref = lifted_ref (Lifted.Fixpoint (occ, x)) fix_name in
       (* Compile under the lifted function's extended tvar scope, which covers
          both signature and body Tvar indices. *)
       let all_fix_ids_list = Array.to_list ids in
