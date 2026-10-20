@@ -486,7 +486,7 @@ let promoted_resolutions_of_body ?r ?ty b =
       | _ -> () );
       match t with
       | MLlam (_, _, b) -> go (depth + 1) b
-      | MLletin (_, _, a, b) -> go depth a; go (depth + 1) b
+      | MLletin (_, _, a, b, _) -> go depth a; go (depth + 1) b
       | _ -> Mlutil.ast_iter (go depth) t
     in
     go 0 e;
@@ -515,7 +515,7 @@ let promoted_resolutions_of_body ?r ?ty b =
           | _ -> walk_at d a )
         args
     | MLlam (_, _, b') -> walk_at (d + 1) b'
-    | MLletin (_, _, a, b') -> walk_at d a; walk_at (d + 1) b'
+    | MLletin (_, _, a, b', _) -> walk_at d a; walk_at (d + 1) b'
     | MLcase (_, sc, pv) ->
       walk_at d sc;
       Array.iter (fun (ids, _, _, br) -> walk_at (d + List.length ids) br) pv

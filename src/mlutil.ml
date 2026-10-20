@@ -970,7 +970,7 @@ let rec eq_ml_ast t1 t2 =
     eq_ml_ast f1 f2 && List.equal eq_ml_ast t1 t2
   | MLlam (na1, _, t1), MLlam (na2, _, t2) ->
     eq_ml_ident na1 na2 && eq_ml_ast t1 t2
-  | MLletin (na1, ty1, c1, t1), MLletin (na2, ty2, c2, t2) ->
+  | MLletin (na1, ty1, c1, t1, _), MLletin (na2, ty2, c2, t2, _) ->
     eq_ml_ident na1 na2 && eq_ml_ast c1 c2 && eq_ml_ast t1 t2
   | MLglob {callee = gr1; _}, MLglob {callee = gr2; _} -> GlobRef.CanOrd.equal gr1 gr2
   | MLcons (t1, gr1, c1), MLcons (t2, gr2, c2) ->
@@ -1040,7 +1040,7 @@ let ast_iter_rel_applied f =
       f n i l;
       List.iter (iter n) l
     | MLlam (_, _, a) -> iter (n + 1) a
-    | MLletin (_, _, a, b) ->
+    | MLletin (_, _, a, b, _) ->
       iter n a;
       iter (n + 1) b
     | MLcase (_, a, v) ->
@@ -1078,7 +1078,7 @@ let ast_map_branch f (c, r, ids, a) = (c, r, ids, f a)
 
 let ast_map f = function
   | MLlam (i, t, a) -> MLlam (i, t, f a)
-  | MLletin (i, t, a, b) -> MLletin (i, t, f a, f b)
+  | MLletin (i, t, a, b, occ) -> MLletin (i, t, f a, f b, occ)
   | MLcase (typ, a, v) -> MLcase (typ, f a, Array.map (ast_map_branch f) v)
   | MLfix (i, ids, v, is_cofix, occ) -> MLfix (i, ids, Array.map f v, is_cofix, occ)
   | MLapp (a, l) -> MLapp (f a, List.map f l)
@@ -1109,8 +1109,8 @@ let map_magic_types f = function
     [MLcase] heads, pattern binders, and fixpoint signatures. *)
 let rec ast_map_types f = function
   | MLlam (i, t, a) -> MLlam (i, f t, ast_map_types f a)
-  | MLletin (i, t, a, b) ->
-    MLletin (i, f t, ast_map_types f a, ast_map_types f b)
+  | MLletin (i, t, a, b, occ) ->
+    MLletin (i, f t, ast_map_types f a, ast_map_types f b, occ)
   | MLglob use -> MLglob (Global_use.map_types f use)
   | MLcons (t, c, l) -> MLcons (f t, c, List.map (ast_map_types f) l)
   | MLtuple l -> MLtuple (List.map (ast_map_types f) l)
@@ -1331,9 +1331,9 @@ let recover_erased_types ?only ?(refine_only = false) (expected : ml_type)
       let better_ty = better ~have:ty ~from:dom in
       let ty = if only = None then ty else better_ty in
       MLlam (i, ty, go (better_ty :: env) cod b)
-    | MLletin (i, ty, e, b) ->
+    | MLletin (i, ty, e, b, occ) ->
       let e = go env (if has_unknown ty then None else Some ty) e in
-      MLletin (i, ty, e, go (ty :: env) expected b)
+      MLletin (i, ty, e, go (ty :: env) expected b, occ)
     | MLcase (ty, scrut, branches) ->
       (* The head type is the scrutinee's, and the scrutinee is usually a
          binder whose type the signature has already pinned down. *)
@@ -1374,7 +1374,7 @@ let ast_map_lift_branch f n (ids, r, p, a) =
 
 let ast_map_lift f n = function
   | MLlam (i, t, a) -> MLlam (i, t, f (n + 1) a)
-  | MLletin (i, t, a, b) -> MLletin (i, t, f n a, f (n + 1) b)
+  | MLletin (i, t, a, b, occ) -> MLletin (i, t, f n a, f (n + 1) b, occ)
   | MLcase (typ, a, v) ->
     MLcase (typ, f n a, Array.map (ast_map_lift_branch f n) v)
   | MLfix (i, ids, v, is_cofix, occ) ->
@@ -1400,7 +1400,7 @@ let ast_iter_branch f (c, r, ids, a) = f a
 
 let ast_iter f = function
   | MLlam (i, _, a) -> f a
-  | MLletin (i, t, a, b) ->
+  | MLletin (_, _, a, b, _) ->
     f a;
     f b
   | MLcase (_, a, v) ->
@@ -1455,7 +1455,7 @@ let nb_occur_match =
           (fun r (ids, _, _, a) -> max r (nb (k + List.length ids) a))
           0
           v
-    | MLletin (_, _, a, b) -> nb k a + nb (k + 1) b
+    | MLletin (_, _, a, b, _) -> nb k a + nb (k + 1) b
     | MLfix (_, ids, v, _, _) ->
       let k = k + Array.length ids in
       Array.fold_left (fun r a -> r + nb k a) 0 v
@@ -1489,14 +1489,14 @@ let dump_unused_vars a =
         if b' == b then a else MLlam (id, t, b')
       else
         MLlam (Dummy, t, b')
-    | MLletin (id, t, b, c) ->
+    | MLletin (id, t, b, c, occ) ->
       let occ_id = ref false in
       let b' = ren env b in
       let c' = ren (occ_id :: env) c in
       if !occ_id then
-        if b' == b && c' == c then a else MLletin (id, t, b', c')
+        if b' == b && c' == c then a else MLletin (id, t, b', c', occ)
       else (* 'let' without occurrence: shouldn't happen after simpl *)
-        MLletin (Dummy, t, b', c')
+        MLletin (Dummy, t, b', c', occ)
     | MLcase (t, e, br) ->
       let e' = ren env e in
       let br' = Array.Smart.map (ren_branch env) br in
@@ -1842,7 +1842,7 @@ let rec linear_beta_red a t =
     | 1 -> linear_beta_red a (ast_subst a0 t)
     | _ ->
       let a = List.map (ast_lift 1) a in
-      MLletin (id, ty, a0, linear_beta_red a t) )
+      MLletin (id, ty, a0, linear_beta_red a t, Occurrence.fresh ()) )
   | _ -> MLapp (t, a)
 
 (** Marks leading lambdas as temporary (for later cleanup during optimization).
@@ -2189,8 +2189,8 @@ let rec simpl o = function
   | MLcase (typ, e, br) ->
     let br = Array.map (fun (l, r, p, t) -> (l, r, p, simpl o t)) br in
     simpl_case o typ br (simpl o e)
-  | MLletin (Dummy, _, _, e) -> simpl o (ast_pop e)
-  | MLletin (id, t, c, e) ->
+  | MLletin (Dummy, _, _, e, _) -> simpl o (ast_pop e)
+  | MLletin (id, t, c, e, occ) ->
     let e = simpl o e in
     (* A call {!Normalize} named stays named: the binding is where
        loopification splits the body, and a later simplification -- an
@@ -2206,7 +2206,7 @@ let rec simpl o = function
     then
       simpl o (ast_subst c e)
     else
-      MLletin (id, t, simpl o c, e)
+      MLletin (id, t, simpl o c, e, occ)
   | MLfix (i, ids, c, is_cofix, occ) ->
     let n = Array.length ids in
     if ast_occurs_itvl 1 n c.(i) then
@@ -2235,7 +2235,7 @@ and simpl_app o a = function
       simpl o (MLapp (ast_subst (List.hd a) t, List.tl a))
     | _ ->
       let a' = List.map (ast_lift 1) (List.tl a) in
-      simpl o (MLletin (id, ty, List.hd a, MLapp (t, a'))) )
+      simpl o (MLletin (id, ty, List.hd a, MLapp (t, a'), Occurrence.fresh ())) )
   | MLmagic (m, (MLlam _ as lam)) as f -> (
     (* [(coerce (fun x => t)) a] -- reduce the redex without relocating the
        coercion: it is split along its own arrow, the domain half landing on
@@ -2245,9 +2245,9 @@ and simpl_app o a = function
       let arg = on_dom (List.hd a) in
       simpl o (on_cod (MLapp (lam, [arg])) |> fun r -> MLapp (r, List.tl a))
     | None -> MLapp (f, a) )
-  | MLletin (id, t, e1, e2) when o.opt_let_app ->
+  | MLletin (id, t, e1, e2, occ) when o.opt_let_app ->
     (* Application of a letin: we push arguments inside *)
-    MLletin (id, t, e1, simpl o (MLapp (e2, List.map (ast_lift 1) a)))
+    MLletin (id, t, e1, simpl o (MLapp (e2, List.map (ast_lift 1) a)), occ)
   | MLcase (typ, e, br) when o.opt_case_app ->
     (* Application of a case: we push arguments inside *)
     let br' =
@@ -2491,34 +2491,34 @@ let rec kill_dummy = function
         ast_subst (MLfix (i, fi, c, is_cofix, occ)) fake'
       with Impossible ->
         MLapp (MLfix (i, fi, Array.map kill_dummy c, is_cofix, occ), a) )
-  | MLletin (id, t, MLfix (i, fi, c, is_cofix, occ), e) ->
+  | MLletin (id, t, MLfix (i, fi, c, is_cofix, occ), e, let_occ) ->
     ( try
         let k, c = kill_dummy_fix i c [] in
         let e = kill_dummy (kill_dummy_args k 1 e) in
-        MLletin (id, t, MLfix (i, fi, c, is_cofix, occ), e)
+        MLletin (id, t, MLfix (i, fi, c, is_cofix, occ), e, let_occ)
       with Impossible ->
         MLletin
-          (id, t, MLfix (i, fi, Array.map kill_dummy c, is_cofix, occ), kill_dummy e)
+          (id, t, MLfix (i, fi, Array.map kill_dummy c, is_cofix, occ), kill_dummy e, let_occ)
     )
-  | MLletin (id, t, c, e) ->
+  | MLletin (id, t, c, e, occ) ->
     ( try
         let k, c = kill_dummy_lams [] (kill_dummy_hd c) in
         let e = kill_dummy (kill_dummy_args k 1 e) in
         let c = kill_dummy c in
-        if is_atomic c then ast_subst c e else MLletin (id, t, c, e)
-      with Impossible -> MLletin (id, t, kill_dummy c, kill_dummy e) )
+        if is_atomic c then ast_subst c e else MLletin (id, t, c, e, occ)
+      with Impossible -> MLletin (id, t, kill_dummy c, kill_dummy e, occ) )
   | a -> ast_map kill_dummy a
 
 (** Like [kill_dummy] but only acts on head lambdas and let-ins. *)
 and kill_dummy_hd = function
   | MLlam (id, ty, e) -> MLlam (id, ty, kill_dummy_hd e)
-  | MLletin (id, t, c, e) ->
+  | MLletin (id, t, c, e, occ) ->
     ( try
         let k, c = kill_dummy_lams [] (kill_dummy_hd c) in
         let e = kill_dummy_hd (kill_dummy_args k 1 e) in
         let c = kill_dummy c in
-        if is_atomic c then ast_subst c e else MLletin (id, t, c, e)
-      with Impossible -> MLletin (id, t, kill_dummy c, kill_dummy_hd e) )
+        if is_atomic c then ast_subst c e else MLletin (id, t, c, e, occ)
+      with Impossible -> MLletin (id, t, kill_dummy c, kill_dummy_hd e, occ) )
   | a -> a
 
 (** Removes dummy lambdas from fixpoint body [i] and propagates the change
@@ -2639,7 +2639,7 @@ let rec ml_size = function
   | MLcons (_, _, l) | MLtuple l -> ml_size_list l
   | MLcase (_, t, pv) -> 1 + ml_size t + ml_size_branch ml_size pv
   | MLfix (_, _, f, _, _) -> ml_size_array f
-  | MLletin (_, _, _, t) -> ml_size t
+  | MLletin (_, _, _, t, _) -> ml_size t
   | MLmagic (_, t) -> ml_size t
   | MLparray (t, def) -> ml_size_array t + ml_size def
   | MLglob _
@@ -2694,7 +2694,7 @@ let rec non_stricts add cand = function
     let cand = non_stricts false cand t in
     List.fold_left (non_stricts false) cand l
   | MLcons (_, _, l) -> List.fold_left (non_stricts false) cand l
-  | MLletin (_, _, t1, t2) ->
+  | MLletin (_, _, t1, t2, _) ->
     let cand = non_stricts false cand t1 in
     pop 1 (non_stricts add (lift 1 cand) t2)
   | MLfix (_, i, f, _, _) ->
@@ -2801,8 +2801,8 @@ let remap_tvars f =
     | t -> t
   and remap_ast = function
     | MLlam (id, ty, body) -> MLlam (id, remap_type ty, remap_ast body)
-    | MLletin (id, ty, def, body) ->
-      MLletin (id, remap_type ty, remap_ast def, remap_ast body)
+    | MLletin (id, ty, def, body, occ) ->
+      MLletin (id, remap_type ty, remap_ast def, remap_ast body, occ)
     | MLapp (f', args) -> MLapp (remap_ast f', List.map remap_ast args)
     | MLglob use -> MLglob (Global_use.map_types remap_type use)
     | MLcons (ty, r, args) -> MLcons (remap_type ty, r, List.map remap_ast args)

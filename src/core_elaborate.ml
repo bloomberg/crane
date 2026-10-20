@@ -245,14 +245,14 @@ let rec walk b ~n_outer lex = function
   (* An alias of a polymorphic function is not bound but put in place of its
      uses ({!Translation_support.let_lambda}), and its calls are those of
      what it abbreviates, at the arguments each use gives it. *)
-  | MLletin (x, ty, (MLlam _ as a), body) -> (
+  | MLletin (x, ty, (MLlam _ as a), body, _) -> (
     walk_type b ~n_outer lex ty;
     match let_lambda ~lex ~n_outer ty a body with
     | Inlined body -> walk b ~n_outer lex body
     | Bound | At_instance _ | Lifted ->
       walk b ~n_outer lex a;
       walk b ~n_outer (push Lexenv.Value [(x, ty)] lex) body )
-  | MLletin (x, ty, a, body) ->
+  | MLletin (x, ty, a, body, _) ->
     walk_type b ~n_outer lex ty;
     walk b ~n_outer lex a;
     walk b ~n_outer (push Lexenv.Value [(x, ty)] lex) body
@@ -361,11 +361,11 @@ let rec inline_aliases ~n_outer lex e =
   let go = inline_aliases ~n_outer in
   let under ids body = go (push Lexenv.Value ids lex) body in
   match e with
-  | MLletin (x, ty, (MLlam _ as a), body) -> (
+  | MLletin (x, ty, (MLlam _ as a), body, occ) -> (
     match let_lambda ~lex ~n_outer ty a body with
     | Inlined body -> go lex body
-    | Bound | At_instance _ | Lifted -> MLletin (x, ty, go lex a, under [(x, ty)] body) )
-  | MLletin (x, ty, a, body) -> MLletin (x, ty, go lex a, under [(x, ty)] body)
+    | Bound | At_instance _ | Lifted -> MLletin (x, ty, go lex a, under [(x, ty)] body, occ) )
+  | MLletin (x, ty, a, body, occ) -> MLletin (x, ty, go lex a, under [(x, ty)] body, occ)
   | MLlam (x, ty, body) -> MLlam (x, ty, under [(x, ty)] body)
   | MLcase (ty, scrut, branches) ->
     MLcase

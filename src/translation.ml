@@ -2021,7 +2021,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               when k = depth + 1 && member_access g ->
               true
             | MLlam (_, _, b) -> reads (depth + 1) b
-            | MLletin (_, _, x, b) -> reads depth x || reads (depth + 1) b
+            | MLletin (_, _, x, b, _) -> reads depth x || reads (depth + 1) b
             | MLcase (_, sc, pv) ->
               reads depth sc
               || Array.exists
@@ -2051,7 +2051,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               when strip_magic sc = MLrel (depth + 1) && !found = None ->
               found := Some t
             | MLlam (_, _, b) -> walk (depth + 1) b
-            | MLletin (_, _, x, b) -> walk depth x; walk (depth + 1) b
+            | MLletin (_, _, x, b, _) -> walk depth x; walk (depth + 1) b
             | MLcase (_, sc, pv) ->
               walk depth sc;
               Array.iter (fun (ids, _, _, br) -> walk (depth + List.length ids) br) pv
@@ -2487,7 +2487,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 | MLcase _ | MLletin _ -> leaf_rtys body
                 | _ -> [rty] )
               (Array.to_list pv)
-          | MLletin (_, _, _, b) -> leaf_rtys b
+          | MLletin (_, _, _, b, _) -> leaf_rtys b
           | _ -> []
         in
         let dropped_type_binder =
@@ -5014,7 +5014,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        supported — each field is destructured individually. *)
   | MLcase (typ, t, pv) when lang () == Cpp ->
     gen_cpp_case typ t env pv
-  | MLletin (_, ty, _, _) as a ->
+  | MLletin (_, ty, _, _, _) as a ->
     with_escape_analysis (fun () ->
       with_iife_return_type expected_ty (fun () ->
         mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) ) )
@@ -9050,7 +9050,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
      statement lands in is {!with_cpp_return_type}, which
      {!position_cpp_ty} falls back to. *)
   match ast with
-  | MLletin (_, _, (MLfix (x, ids, funs, _, occ) as fix_term), b) as _whole ->
+  | MLletin (_, _, (MLfix (x, ids, funs, _, occ) as fix_term), b, _) as _whole ->
     (* Special case for let-fix: the let binding name is the fix function name *)
     Local_types.check_minted ids;
     let ids, funs = Local_types.recover_fix_codomains ids funs in
@@ -9293,7 +9293,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             owned_flags_per_fun
         in
         decls @ defs @ cont
-  | MLletin (x, t, (MLlam _ as a), b) ->
+  | MLletin (x, t, (MLlam _ as a), b, let_occ) ->
     (* Check if this is a polymorphic lambda that should be lifted to a
        top-level template function. *)
     let outer_tvars = get_current_type_vars () in
@@ -9420,7 +9420,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     | Bound -> gen_normal_letin ()
     | At_instance inst ->
       let subst = Mlutil.type_subst_list inst in
-      gen_stmts ~slot env k (MLletin (x, subst t, Mlutil.ast_map_types subst a, b))
+      gen_stmts ~slot env k (MLletin (x, subst t, Mlutil.ast_map_types subst a, b, let_occ))
     | Inlined b -> gen_stmts ~slot env k b
     | Lifted ->
       (* Lift the polymorphic lambda to a top-level template function. *)
@@ -9733,7 +9733,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
            (mk_cppglob lifted_ref call_type_args)
            free_var_cpps )
         cont )
-  | MLletin (x, t, a, b) ->
+  | MLletin (x, t, a, b, _) ->
     let x' = cpp_id_of_id (id_of_mlid x) in
     let ids_renamed, env' = push_vars' [(x', t)] env in
     let x_renamed = fst (List.hd ids_renamed) in
@@ -9940,7 +9940,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               in
               let inferred = match (b : Miniml.ml_ast) with
                 | Miniml.MLcons _ -> try_cons_body b 0
-                | Miniml.MLletin (_, _, a', _) ->
+                | Miniml.MLletin (_, _, a', _, _) ->
                   (* In body = MLletin(sk0, pair_expr, ...), nil is at MLrel 1 in pair_expr.
                      db_offset=0 because pair_expr is evaluated before sk0 is bound. *)
                   (match try_cons_body a' 0 with

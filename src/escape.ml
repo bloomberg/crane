@@ -37,7 +37,7 @@ let nb_occur_match =
             max max_count (nb (k + List.length ids) body) )
           0
           branches
-    | MLletin (_, _, rhs, cont) -> nb k rhs + nb (k + 1) cont
+    | MLletin (_, _, rhs, cont, _) -> nb k rhs + nb (k + 1) cont
     | MLfix (_, ids, bodies, _, _) ->
       let k' = k + Array.length ids in
       Array.fold_left (fun total body -> total + nb k' body) 0 bodies
@@ -78,7 +78,7 @@ let rec occurs k = function
     || Array.exists
          (fun (ids, _, _, body) -> occurs (k + List.length ids) body)
          branches
-  | MLletin (_, _, rhs, cont) -> occurs k rhs || occurs (k + 1) cont
+  | MLletin (_, _, rhs, cont, _) -> occurs k rhs || occurs (k + 1) cont
   | MLlam (_, _, body) -> occurs (k + 1) body
   | MLapp (head, args) -> occurs k head || List.exists (occurs k) args
   | MLfix (_, ids, bodies, _, _) ->
@@ -195,7 +195,7 @@ let escapes ?(query = Conservative) ?(return_escapes = true) k t =
            (fun (ids, _, _, body) ->
              check (k + List.length ids) in_tail false body )
            branches
-    | MLletin (_, _, rhs, cont) ->
+    | MLletin (_, _, rhs, cont, _) ->
       check k false false rhs || check (k + 1) in_tail false cont
     | MLlam (_, _, body) ->
       if refined && in_fn_arg then
@@ -261,7 +261,7 @@ let sub_bindings_escape k body =
       || Array.exists (fun (ids, _, _, body) ->
            check (k + List.length ids) body
          ) branches
-    | MLletin (_, _, rhs, cont) ->
+    | MLletin (_, _, rhs, cont, _) ->
       check k rhs || check (k + 1) cont
     | MLmagic (_, a) -> check k a
     | _ -> false
@@ -289,7 +289,7 @@ let find_reuse_candidates (_typ : ml_type) (pv : ml_branch array) =
      rebuilds its node in whichever branch the key comparison picks. *)
   let rec tail_conses = function
     | MLmagic (_, a) -> tail_conses a
-    | MLletin (_, _, _, b) -> tail_conses b
+    | MLletin (_, _, _, b, _) -> tail_conses b
     | MLcons (_, r, args) -> [(r, args)]
     | MLcase (_, _, brs) ->
       List.concat_map (fun (_, _, _, b) -> tail_conses b) (Array.to_list brs)
@@ -341,7 +341,7 @@ let is_reuse_scrutinee k body =
       Array.iter
         (fun (ids, _, _, b) -> scan (d + List.length ids) b)
         branches
-    | MLletin (_, _, rhs, cont) -> scan d rhs; scan (d + 1) cont
+    | MLletin (_, _, rhs, cont, _) -> scan d rhs; scan (d + 1) cont
     | MLlam (_, _, b) -> scan (d + 1) b
     | MLapp (f, args) -> scan d f; List.iter (scan d) args
     | MLfix (_, ids, bodies, _, _) ->
@@ -360,7 +360,7 @@ let rec matched k = function
     (match scrut with MLrel i | MLmagic (_, MLrel i) -> i = k | _ -> false)
     || matched k scrut
     || Array.exists (fun (ids, _, _, b) -> matched (k + List.length ids) b) branches
-  | MLletin (_, _, rhs, cont) -> matched k rhs || matched (k + 1) cont
+  | MLletin (_, _, rhs, cont, _) -> matched k rhs || matched (k + 1) cont
   | MLmagic (_, a) -> matched k a
   | _ -> false
 
@@ -428,7 +428,7 @@ let free_rels depth t =
       Array.iter
         (fun (ids, _, _, body) -> collect (d + List.length ids) body)
         branches
-    | MLletin (_, _, rhs, cont) ->
+    | MLletin (_, _, rhs, cont, _) ->
       collect d rhs;
       collect (d + 1) cont
     | MLlam (_, _, body) -> collect (d + 1) body
@@ -465,7 +465,7 @@ let single_use_nargs k t =
         List.length
           (List.filter (function MLdummy _ -> false | _ -> true) args)
     | MLrel _ -> ()
-    | MLletin (_, _, rhs, cont) ->
+    | MLletin (_, _, rhs, cont, _) ->
       search k rhs;
       search (k + 1) cont
     | MLcase (_, scrut, branches) ->

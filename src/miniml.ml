@@ -172,7 +172,7 @@ and ml_ast =
   | MLrel of int
   | MLapp of ml_ast * ml_ast list
   | MLlam of ml_ident * ml_type * ml_ast
-  | MLletin of ml_ident * ml_type * ml_ast * ml_ast
+  | MLletin of ml_ident * ml_type * ml_ast * ml_ast * Occurrence.t
   | MLglob of global_use
   | MLcons of ml_type * GlobRef.t * ml_ast list
   | MLtuple of ml_ast list

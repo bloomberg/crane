@@ -7,11 +7,11 @@ open Names
 open Miniml
 
 let rec float_lets_under_lams = function
-  | MLletin (x, t, a, b) -> (
+  | MLletin (x, t, a, b, occ) -> (
     match float_lets_under_lams b with
     | MLlam (y, ty, c) ->
-      MLlam (y, ty, float_lets_under_lams (MLletin (x, t, Mlutil.ast_lift 1 a, Mlutil.permut_rels 1 1 c)))
-    | b -> MLletin (x, t, a, b) )
+      MLlam (y, ty, float_lets_under_lams (MLletin (x, t, Mlutil.ast_lift 1 a, Mlutil.permut_rels 1 1 c, occ)))
+    | b -> MLletin (x, t, a, b, occ) )
   | e -> e
 
 (* [cofix o := Cons 1 o] as [(cofix o (_ : unit) := Cons 1 (o tt)) tt]. *)

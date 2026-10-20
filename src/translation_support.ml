@@ -1494,7 +1494,7 @@ let args_may_corecurse ~self ~binder_type ts =
     | MLrel _ -> false
     | MLfix _ -> true
     | MLlam (_, _, b) -> corec (depth + 1) b
-    | MLletin (_, _, a, b) -> corec depth a || corec (depth + 1) b
+    | MLletin (_, _, a, b, _) -> corec depth a || corec (depth + 1) b
     | MLcase (_, s, brs) ->
       corec depth s
       || Array.exists (fun (ids, _, _, b) -> corec (depth + List.length ids) b) brs
@@ -1730,7 +1730,7 @@ let saturate_at_any t =
     types. Used to find all type variables referenced in a function body. *)
 let rec collect_tvars_ast acc = function
   | MLlam (_, ty, body) -> collect_tvars_ast (collect_tvars acc ty) body
-  | MLletin (_, ty, a, b) ->
+  | MLletin (_, ty, a, b, _) ->
     collect_tvars_ast (collect_tvars_ast (collect_tvars acc ty) a) b
   | MLglob use ->
     List.fold_left
@@ -1776,7 +1776,7 @@ let rec ast_may_throw = function
   | MLaxiom _ | MLexn _ -> true
   | MLglob {callee = r; _} -> Table.is_throwing_value r
   | MLlam (_, _, body) -> ast_may_throw body
-  | MLletin (_, _, a, b) -> ast_may_throw a || ast_may_throw b
+  | MLletin (_, _, a, b, _) -> ast_may_throw a || ast_may_throw b
   | MLcons (_, _, args) -> List.exists ast_may_throw args
   | MLcase (_, e, brs) ->
     ast_may_throw e
@@ -2008,7 +2008,7 @@ let detect_non_forwarded_params_generic ~is_self_call n_params body =
       walk depth f;
       List.iter (walk depth) args
     | MLlam (_, _, body) -> walk (depth + 1) body
-    | MLletin (_, _, e1, e2) ->
+    | MLletin (_, _, e1, e2, _) ->
       walk depth e1;
       walk (depth + 1) e2
     | MLcase (_, scrut, branches) ->
@@ -2094,7 +2094,7 @@ let escaping_params ~suspended n_params body =
     | MLapp (f, args) ->
       walk under depth f;
       List.iter (walk under depth) args
-    | MLletin (_, _, e1, e2) ->
+    | MLletin (_, _, e1, e2, _) ->
       walk under depth e1;
       walk under (depth + 1) e2
     | MLcase (_, scrut, branches) ->
@@ -2488,7 +2488,7 @@ let rec infer_ml_body_type (a : ml_ast) : ml_type option =
   | MLcase (_, _, pv) when Array.length pv > 0 ->
     let (_, rty, _, _) = pv.(0) in
     Some (resolve_tmeta rty)
-  | MLletin (_, _, _, body) -> infer_ml_body_type body
+  | MLletin (_, _, _, body, _) -> infer_ml_body_type body
   | MLlam (_, ty, body) ->
     Option.map (fun rty -> Tarr (ty, rty)) (infer_ml_body_type body)
   | MLglob {callee = r; _} -> find_type_opt r
@@ -2894,7 +2894,7 @@ let make_subst_extra_tvars num_ind_vars extra_tvar_map =
 let rec collect_free_rels_set n_bound acc = function
   | MLrel i -> if i > n_bound then IntSet.add (i - n_bound) acc else acc
   | MLlam (_, _, body) -> collect_free_rels_set (n_bound + 1) acc body
-  | MLletin (_, _, a, b) ->
+  | MLletin (_, _, a, b, _) ->
     collect_free_rels_set n_bound (collect_free_rels_set (n_bound + 1) acc b) a
   | MLapp (f, args) ->
     List.fold_left

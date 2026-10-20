@@ -89,7 +89,7 @@ and ml_ast w = function
   | MLrel i -> tag w "MLrel"; int w i
   | MLapp (f, args) -> tag w "MLapp"; ml_ast w f; list w (ml_ast w) args
   | MLlam (x, ty, b) -> tag w "MLlam"; ml_ident w x; ml_type w ty; ml_ast w b
-  | MLletin (x, ty, a, b) ->
+  | MLletin (x, ty, a, b, _) ->
     tag w "MLletin"; ml_ident w x; ml_type w ty; ml_ast w a; ml_ast w b
   | MLglob u -> tag w "MLglob"; global_use w u
   | MLcons (ty, r, args) ->

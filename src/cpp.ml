@@ -2167,7 +2167,7 @@ let plan_referenced_names s =
       (* A match on a record reads its fields by name. *)
       List.iter (Option.iter (name Term)) (Table.record_fields_of_type t);
       Array.iter (fun (_, _, p, _) -> pattern p) brs
-    | MLlam (_, t, _) | MLletin (_, t, _, _) -> ty t
+    | MLlam (_, t, _) | MLletin (_, t, _, _, _) -> ty t
     | MLfix (_, fs, _, _, _) -> Array.iter (fun (_, t) -> ty t) fs
     | MLmagic (Mcoerce (a, b), _) ->
       ty a;

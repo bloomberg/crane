@@ -122,7 +122,7 @@ let () =
       ( Id go, nat, group a,
         MLletin
           ( Dummy, Tarr (Tmeta d, nat), MLlam (Dummy, Tmeta d, group c),
-            MLapp (group b, [MLrel 1]) ) )
+            MLapp (group b, [MLrel 1]), Occurrence.fresh () ), Occurrence.fresh () )
   in
   Local_types.structure [(mp "M", [term "f" body (Tarr (Tvar (Schematic, 1), nat))])];
   check "a let-bound group's open type is its first rigid variable" (a.contents = Some (Tvar (Rigid, 1)));

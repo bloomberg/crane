@@ -87,7 +87,7 @@ let rec reaches_call group ~depth e =
   | MLapp (MLfix (_, ids, bodies, false, _), args) ->
     List.exists (reaches_call group ~depth) args || fix_reaches_call group ~depth ids bodies
   | MLlam _ | MLfix _ -> false
-  | MLletin (_, _, rhs, body) ->
+  | MLletin (_, _, rhs, body, _) ->
     reaches_call group ~depth rhs || reaches_call group ~depth:(depth + 1) body
   | MLcase (_, scrut, branches) ->
     reaches_call group ~depth scrut || branch_reaches_call group ~depth branches
@@ -180,7 +180,7 @@ let rec scope ~group ~depth e =
         let _, rty, _, _ = branches.(0) in
         take e' rty
       else e' 
-    | MLletin (id, ty, rhs, body) ->
+    | MLletin (id, ty, rhs, body, occ) ->
       (* A right-hand side that is the call, or a match ending in one, is
          already bound. *)
       let rhs =
@@ -190,7 +190,7 @@ let rec scope ~group ~depth e =
         | MLcase _ -> strict ~tail:true rhs
         | _ -> strict ~tail:false rhs
       in
-      MLletin (id, ty, rhs, inner 1 body)
+      MLletin (id, ty, rhs, inner 1 body, occ)
     | MLlam (id, ty, body) -> MLlam (id, ty, inner 1 body)
     | MLfix (i, ids, bodies, cofix, occ) ->
       let n = Array.length ids in
@@ -213,7 +213,7 @@ let rec scope ~group ~depth e =
     | [] -> replace_placeholders (fun j -> MLrel (k - j + 1)) (Mlutil.ast_lift k body)
     | (call, ty) :: rest ->
       let rhs = replace_placeholders (fun j -> MLrel (i - j)) (Mlutil.ast_lift (i - 1) call) in
-      MLletin (group.fresh (), ty, rhs, wrap (i + 1) rest)
+      MLletin (group.fresh (), ty, rhs, wrap (i + 1) rest, Occurrence.fresh ())
   in
   if k = 0 then body else wrap 1 calls
 

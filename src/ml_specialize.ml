@@ -60,7 +60,7 @@ let rec size e =
   match e with
   | MLapp (f, a) -> size f + sizes a
   | MLlam (_, _, b) | MLmagic (_, b) -> size b
-  | MLletin (_, _, a, b) -> size a + size b
+  | MLletin (_, _, a, b, _) -> size a + size b
   | MLcons (_, _, a) | MLtuple a -> sizes a
   | MLcase (_, s, brs) -> Array.fold_left (fun n (_, _, _, b) -> n + size b) (size s) brs
   | MLfix (_, _, bs, _, _) -> Array.fold_left (fun n b -> n + size b) 0 bs
@@ -96,7 +96,7 @@ let instantiate b args =
         let a = Mlutil.ast_lift (n - i - 1) a in
         let body' =
           if is_value a || Mlutil.nb_occur_match body <= 1 then Mlutil.ast_subst a body
-          else MLletin (id, ty, a, body)
+          else MLletin (id, ty, a, body, Occurrence.fresh ())
         in
         go body' (i + 1) rest
     in
@@ -125,7 +125,7 @@ let known_ctor defs e =
    constructor bound by a beta-reduction is then matched where it is used. *)
 let rec subst_value_lets e =
   match Mlutil.ast_map subst_value_lets e with
-  | MLletin (_, _, c, b) when is_value c && Mlutil.nb_occur_match b <= 1 ->
+  | MLletin (_, _, c, b, _) when is_value c && Mlutil.nb_occur_match b <= 1 ->
     Mlutil.ast_subst c b
   | e -> e
 
@@ -208,7 +208,8 @@ and push defs shrunk fuel use args =
             ( ids, bty, p,
               MLletin
                 ( Id (Id.of_string "step"), bty, b,
-                  MLapp (MLglob use, lift1 before @ [MLrel 1] @ lift1 after) ) ) )
+                  MLapp (MLglob use, lift1 before @ [MLrel 1] @ lift1 after),
+                  Occurrence.fresh () ) ) )
         brs
     in
     if !any then (

@@ -16,7 +16,7 @@ let rec canonical self body =
   | MLglob {callee = r; _} when GlobRef.CanOrd.equal r self -> MLrel 0
   | MLglob {callee = r; _} -> MLglob (Global_use.monomorphic r)
   | MLlam (_, _, b) -> MLlam (anon, Tunknown, canonical self b)
-  | MLletin (_, _, a, b) -> MLletin (anon, Tunknown, canonical self a, canonical self b)
+  | MLletin (_, _, a, b, occ) -> MLletin (anon, Tunknown, canonical self a, canonical self b, occ)
   | MLcons (_, c, args) -> MLcons (Tunknown, c, List.map (canonical self) args)
   | MLcase (_, s, brs) ->
     MLcase

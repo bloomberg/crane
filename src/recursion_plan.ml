@@ -130,7 +130,7 @@ let classify ~effects ~callee fd_body =
     | MLapp (f, args) ->
       walk ~tail:false f;
       List.iter (walk ~tail:false) args
-    | MLletin (_, _, a, b) ->
+    | MLletin (_, _, a, b, _) ->
       walk ~tail:false a;
       walk_under 1 ~tail b
     | MLcase (_, s, branches) ->
@@ -166,11 +166,11 @@ let combine a b =
    constructors around calls. *)
 let rec restore_temporaries e =
   match e with
-  | MLletin ((Tmp _ as id), ty, rhs, body) ->
+  | MLletin ((Tmp _ as id), ty, rhs, body, occ) ->
     let rhs = restore_temporaries rhs and body = restore_temporaries body in
     let reads = ref 0 in
     Mlutil.ast_iter_rel_applied (fun n i _ -> if i = n + 1 then incr reads) body;
-    if !reads = 1 then Mlutil.ast_subst rhs body else MLletin (id, ty, rhs, body)
+    if !reads = 1 then Mlutil.ast_subst rhs body else MLletin (id, ty, rhs, body, occ)
   | e -> Mlutil.ast_map restore_temporaries e
 
 (* The constructor chains the member [self] of a recursive group builds its
@@ -201,7 +201,7 @@ let modulo_cons_chains ~effects ~member ~bodies self =
       | MLapp (f, args) when Option.has_some (reached ~depth f) ->
         List.fold_left (fun n a -> n + calls ~depth a) 1 args
       | f when Option.has_some (reached ~depth f) -> 1
-      | MLletin (_, _, a, b) -> calls ~depth a + under 1 b
+      | MLletin (_, _, a, b, _) -> calls ~depth a + under 1 b
       | MLlam (_, _, b) -> under 1 b
       | MLcase (_, s, branches) ->
         Array.fold_left
@@ -242,7 +242,7 @@ let modulo_cons_chains ~effects ~member ~bodies self =
     | MLcase (_, s, branches) ->
       general_if (calls ~depth s > 0);
       Array.iter (fun (ids, _, _, b) -> walk_under (List.length ids) b) branches
-    | MLletin (_, _, a, b) ->
+    | MLletin (_, _, a, b, _) ->
       general_if (calls ~depth a > 0);
       walk_under 1 b
     | MLmagic (_, a) -> general_if ((not (self_call ~depth a)) && calls ~depth a > 0)
@@ -288,7 +288,7 @@ let rec iter_scoped f lex e =
   in
   match e with
   | MLlam (x, ty, b) -> iter_scoped f (bind [(x, ty)] lex) b
-  | MLletin (x, ty, a, b) ->
+  | MLletin (x, ty, a, b, _) ->
     iter_scoped f lex a;
     iter_scoped f (bind [(x, ty)] lex) b
   | MLcase (_, s, branches) ->
@@ -334,7 +334,7 @@ let free_levels ~depth e =
   let rec go d = function
     | MLrel i -> if i > d then found := (depth + d - i) :: !found
     | MLlam (_, _, b) -> go (d + 1) b
-    | MLletin (_, _, a, b) ->
+    | MLletin (_, _, a, b, _) ->
       go d a;
       go (d + 1) b
     | MLcase (_, s, branches) ->
@@ -381,7 +381,7 @@ let resumes_of ~effects ~origin ~calls lex body =
             reaches (depth + Array.length ids + arity) b )
           funs
       | MLlam _ -> false
-      | MLletin (_, _, a, b) -> reaches depth a || reaches (depth + 1) b
+      | MLletin (_, _, a, b, _) -> reaches depth a || reaches (depth + 1) b
       | MLcase (_, s, branches) ->
         reaches depth s
         || Array.exists (fun (ids, _, _, b) -> reaches (depth + List.length ids) b) branches
@@ -397,7 +397,7 @@ let resumes_of ~effects ~origin ~calls lex body =
       | MLapp ((MLfix _ as fix), _) -> reaches depth fix
       | MLcase (_, _, branches) ->
         Array.exists (fun (ids, _, _, b) -> ends_in_call (depth + List.length ids) b) branches
-      | MLletin (_, _, _, b) -> ends_in_call (depth + 1) b
+      | MLletin (_, _, _, b, _) -> ends_in_call (depth + 1) b
       | MLmagic (_, b) -> ends_in_call depth b
       | _ -> false
     in
@@ -410,13 +410,13 @@ let resumes_of ~effects ~origin ~calls lex body =
           List.concat_map
             (fun (ids, _, _, b) -> ending_calls (depth + List.length ids) b)
             (Array.to_list branches)
-        | MLletin (_, _, _, b) -> ending_calls (depth + 1) b
+        | MLletin (_, _, _, b, _) -> ending_calls (depth + 1) b
         | MLmagic (_, b) -> ending_calls depth b
         | _ -> []
     in
     let go = walk ~calls in
     match e with
-    | MLletin (_, _, a, b) ->
+    | MLletin (_, _, a, b, _) ->
       if ends_in_call depth a then resume ~calls:(ending_calls depth a) depth b;
       go depth a;
       go (depth + 1) b

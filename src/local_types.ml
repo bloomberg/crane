@@ -12,7 +12,7 @@ let rec iter_annotations f = function
   | MLlam (_, ty, body) ->
     f ty;
     iter_annotations f body
-  | MLletin (_, ty, a, b) ->
+  | MLletin (_, ty, a, b, _) ->
     f ty;
     iter_annotations f a;
     iter_annotations f b
@@ -79,7 +79,7 @@ let () = State.on_reset State.Extraction (fun () -> Minted.reset let_lambda_base
     that knows its type without reconstruction; a recursive call, by
     definition, says nothing the fixpoint's own type does not already. *)
 let rec tail_result_type = function
-  | MLlam (_, _, b) | MLletin (_, _, _, b) | MLmagic (_, b) -> tail_result_type b
+  | MLlam (_, _, b) | MLletin (_, _, _, b, _) | MLmagic (_, b) -> tail_result_type b
   | MLcons (ty, _, _) -> Some ty
   | MLapp (f, args) -> Translation_types.ml_app_result_type f args
   | MLcase (_, _, brs) ->
@@ -182,7 +182,7 @@ let check_let_lambda ~outer t a =
   end
 
 let rec expr ~outer = function
-  | MLletin (_, _, MLfix (_, ids, funs, _, _), b) ->
+  | MLletin (_, _, MLfix (_, ids, funs, _, _), b, _) ->
     ignore (settle ids funs);
     Array.iter (expr ~outer) funs;
     expr ~outer b
@@ -195,7 +195,7 @@ let rec expr ~outer = function
   | MLfix (_, ids, funs, _, _) ->
     ignore (settle ids funs);
     Array.iter (expr ~outer) funs
-  | MLletin (_, t, (MLlam _ as a), b) ->
+  | MLletin (_, t, (MLlam _ as a), b, _) ->
     let minted v = Minted.replace let_lambda_bases v outer in
     let mint = mint ~minted ~next:(ref (outer + 1)) in
     mint t;

@@ -864,8 +864,8 @@ let rec has_tvar = function
 (** Apply a type-level transformation to every type annotation in an ML AST. *)
 let rec map_types_in_ast (f : ml_type -> ml_type) = function
   | MLlam (id, ty, body) -> MLlam (id, f ty, map_types_in_ast f body)
-  | MLletin (id, ty, a, b) ->
-    MLletin (id, f ty, map_types_in_ast f a, map_types_in_ast f b)
+  | MLletin (id, ty, a, b, occ) ->
+    MLletin (id, f ty, map_types_in_ast f a, map_types_in_ast f b, occ)
   | MLglob use -> MLglob (Global_use.map_types f use)
   | MLcons (ty, r, args) -> MLcons (f ty, r, List.map (map_types_in_ast f) args)
   | MLcase (ty, e, brs) ->

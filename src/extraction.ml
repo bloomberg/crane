@@ -1568,7 +1568,7 @@ and extract_term env sg mle mlt c args =
             Mlenv.push_type mle a
         in
         MLletin
-          (Id id.binder_name, a, c1', extract_term env' sg mle' mlt c2 args')
+          (Id id.binder_name, a, c1', extract_term env' sg mle' mlt c2 args', Occurrence.fresh ())
       with NotDefault d ->
         let mle' = Mlenv.push_std_type mle (Tdummy d) in
         ast_pop (extract_term env' sg mle' mlt c2 args') )
