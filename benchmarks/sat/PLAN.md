@@ -1,7 +1,9 @@
 # SAT benchmark: Crane vs. OCaml extraction of direct-style ITrees
 
-Status: working prototype, preliminary numbers, no proofs yet.
-Branch: `joom/refactor`. Everything here is uncommitted.
+Status: working prototype with preliminary numbers. Staging steps 1–2 are
+done: fuel-outs abort, `vec` is a record, and **SAT soundness is proved**
+(`SolverSat.v`, `solve_sat_sound`). UNSAT soundness (step 3) is next.
+Branch: `joom/refactor`.
 
 ## Goal
 
@@ -33,10 +35,12 @@ Decision: write our own solver directly in `itree vecE`.
 
 | File | Role |
 |---|---|
-| `SatVec.v` | `vec : Type -> Type` (axiom) and the `vecE` effect: `VMake n x`, `VGet v i`, `VSet v i x`, `VLen v`, `VPush v x`, `VShrink v n`; smart constructors `vmake`/`vget`/... via `embed` |
+| `SatVec.v` | `vec A`, a phantom-typed record around a `loc := nat`, and the `vecE` effect: `VMake n x`, `VGet v i`, `VSet v i x`, `VLen v`, `VPush v x`, `VShrink v n`, `VAbort site`; smart constructors `vmake`/`vget`/.../`vabort` via `embed` |
+| `VecSem.v` | Layer 0: relational heap semantics `step`, finite runs `runs`, partial-correctness `wp`, and the rules for `Ret`, `bind` and each event |
+| `SolverSat.v` | SAT soundness: the input spec `encodes`/`satisfies`, the frame invariant, `check_model_spec`, and `solve_sat_sound` |
 | `Solver.v` | the CDCL solver, module `Solver`, entry point `Solver.solve` |
-| `CraneVec.v` | Crane mappings: `vec` → `satbench::vec<T>`, events → method calls |
-| `sat_vec.h` | `satbench::vec<T>`: `shared_ptr<std::vector<T>>`, so vectors are reference-semantics handles |
+| `CraneVec.v` | Crane mappings: `vec` → `satbench::vec<T>`, events → method calls, `vabort` → `satbench::abort<T>(site)` |
+| `sat_vec.h` | `satbench::vec<T>`: `shared_ptr<std::vector<T>>`, so vectors are reference-semantics handles; `abort` throws `out_of_fuel`, which the driver reports as UNKNOWN |
 | `SolverCrane.v` | `Set Crane Loopify. Set Crane SharedVariant. Crane Extraction "solver" Solver.` || `OcamlNat.v` | native-int realizers for the `nat` ops used (so OCaml doesn't pay for Peano arithmetic) |
 | `SolverOcaml.v` | stock OCaml extraction of `Solver.solve` (real ITree, lazy `Go`/`RetF`/`TauF`/`VisF` nodes) |
 | `vec_impl.ml`, `itree_run.ml` | OCaml growable arrays; the cheapest possible ITree interpreter (force, handle event, continue; no `interp`) |
@@ -78,7 +82,10 @@ part of the test suite; build it with `dune build benchmarks/sat`.
   - geometric restarts (limit ×1.5, starting at 100);
   - no clause deletion.
 - Loops: every loop is a `Fixpoint` on a `fuel : nat` argument (the driver
-  passes 2^61/2^62). `search` uses a separate step `budget`. With Loopify, all
+  passes 2^61/2^62). Running out of fuel performs `vabort site` (numbered
+  1–15), which has no semantics, so an aborted run has no result and
+  carries no proof obligation. C++ throws and OCaml raises; the drivers
+  catch it and print UNKNOWN. `search` uses a separate step `budget`. With Loopify, all
   16 fixpoints become `while (true)` loops in C++. Without Loopify the C++
   overflowed the stack: the by-value `shared_ptr` argument blocks tail calls
   under the Itanium ABI.
@@ -86,7 +93,8 @@ part of the test suite; build it with `dune build benchmarks/sat`.
   list conversion is needed on either side.
 - Result: `code + 4 * conflicts`, where `code` is:
   - 1: SAT, with the model checked in Rocq by `check_model` against every
-    input clause;
+    clause of the caller's `input` vector (not the database, whose clauses
+    propagation reorders in place);
   - 3: SAT, but the model failed that check (never observed);
   - 0: UNSAT;
   - 2: out of budget.
@@ -174,15 +182,11 @@ Reading:
 
 ## Known issues to fix in the implementation
 
-1. **Fuel-out defaults are unsound.** Inner loops return a default when fuel
-   runs out. For example, `analyze_loop` returns literal 0 and `prop_watch`
-   returns "no conflict" while leaving `ws` unshrunk. With adequate fuel this
-   never happens, but neither the code nor a proof rules it out. Either make
-   every fuel-out abort `solve` with code 2 (preferred: cheap, and it removes
-   a whole class of proof obligations), or prove fuel adequacy.
-2. **Result overflow on the OCaml side.** `code + 4 * conflicts` overflows
-   OCaml's 63-bit int if conflicts approach 2^61. The driver's budget should
-   be ≤ 2^59, or the result should be a pair.
+1. ~~**Fuel-out defaults are unsound.**~~ Fixed: every fuel-out is
+   `vabort site`.
+2. ~~**Result overflow on the OCaml side.**~~ Fixed in the drivers: the step
+   budget is 2^59 (at most one conflict per step), so
+   `code + 4 * conflicts < 2^61`.
 3. **`shrink` semantics differ.** `satbench::vec::shrink` uses `resize`, which
    *grows* when `n > len`; `Vec_impl.shrink` is a no-op then. All current
    calls have `n ≤ len`. The proof's semantics should only define
@@ -206,6 +210,50 @@ Reading:
 - **Bigger instances:** a larger suite, e.g. SATLIB uf200/uuf200 or SAT
   Competition "easy" instances, for the final numbers.
 - **Final run:** `REPS=5`, on a quiet machine.
+
+## Stage 1–2 log (2026-10-20)
+
+- **`vec` as a record, not a definition.** With `Definition vec A := loc`,
+  stock OCaml extraction unfolds `vec int` and `vec Obj.t` to the same
+  `int`, leaves out the `Obj.magic` between them, and the realized
+  `'a Vec_impl.t` then fails to typecheck. `Record vec A := mk_vec { vloc :
+  loc }` stays a type constructor of its own. Both extractions now map it
+  with `Extract Inductive`.
+- **Side effect on the C++.** Under an `Extract Inductive` mapping, Crane
+  passes `satbench::vec` by `const&` rather than by value. That removes
+  `shared_ptr` refcount traffic on every call: about 5–12% faster on the
+  suite (single runs, load ≈ 17), with identical answers and conflict counts.
+  The `O3` binary and any published numbers need a rerun.
+- **Crane bug found (not fixed).** A *nullary* inlined constant of type
+  `itree E unit` in tail position of a void function is treated as pure
+  and dropped: an argument-less `vabort` became a bare `return;`. Giving
+  `vabort` a `site` argument avoids it. The likely culprit is the
+  `CPPglob … ci_inline` case of `cofix_wrap` in `src/gen_functions.ml`.
+  Needs a regression test.
+- **Proof of SAT soundness.**
+  - `solve_sat_sound`: if `solve` finishes with `r mod 4 = 1` from a heap
+    where `input` holds an encoding of `F` (`encodes xs ninput 0 F`), then
+    `F` has a model.
+  - Only axiom: `Eqdep.Eq_rect_eq.eq_rect_eq` (via `inj_pair2`, when two
+    reads of one cell are compared).
+  - The search-side obligation is a frame: every write goes to a location
+    other than `input`, `clauses` and `watches`. The cells of the last two
+    only ever hold such handles, and `assigns` stays a nat cell. One
+    `*_fr` lemma per loop, each proved by the `fr_go` stepping tactic.
+- **Limitation of untyped cells.** A cell is `{A : Type & list A}`, and
+  `existT nat ys = existT (vec nat) ws` cannot be refuted (`vec nat` might
+  be `nat`), so typing never separates locations: every separation fact
+  must be an explicit disequality. A type-code universe as in
+  `theories/Monads/STMonad.v` (cells indexed by a code, `V : T -> Type`,
+  here just `nat` and `vec nat`) would fix this and remove the axiom, at
+  the price of re-stating `step` over codes.
+- **`theories/Monads/STMonad*.v` as a reference.** It has a functional
+  handler into `stateT` via `interp_state`, and equational
+  `interp_st_{ret,vis,tau,trigger,bind}` lemmas under `≅`/`≈`. It has no
+  Hoare layer and no proofs about looping programs, which is what the
+  solver needs, so `runs`/`wp` stay. If the result should be stated in
+  that style, an adequacy lemma `runs h t r h' ↔ interp_vec t h ≈ Ret (h',
+  r)` can bridge the two.
 
 ## Correctness proof sketch
 
@@ -358,10 +406,11 @@ the clause is all-false whatever I6 says. I6 is a separate, later milestone.
   trivially), and I6 for attached clauses. It returns false only on an empty
   input clause or a unit whose literal is already false (`F` contains `l` and
   `¬l`), both of which make `F` unsat.
-- **`check_model`:** returns true iff every clause in `DB[0, norig)` has a
-  true literal. Decoding `assigns` (unassigned → false) gives a valuation
-  satisfying `F`. This alone proves the SAT half of the target theorem,
-  independently of everything above.
+- **`check_model`:** now walks the caller's `input`, not `DB[0, norig)`.
+  It returns true only if every clause there has a true literal. Decoding
+  `assigns` (unassigned → false) gives a valuation satisfying `F`. Proved
+  as `check_model_spec`. Together with the frame (`input` is never written),
+  it gives the SAT half; no solver invariant is involved.
 
 ### Layer 4: what stays trusted
 
@@ -375,10 +424,11 @@ the clause is all-false whatever I6 says. I6 is a separate, later milestone.
 
 ### Staging (suggested)
 
-1. Fix known issue 1 (fuel-outs abort). Make `vec` a definition and confirm
-   both extractions are unchanged.
-2. Layer 0 semantics and WP rules, plus the `check_model` spec, which gives
-   **SAT soundness**. Small.
+1. ✅ Fix known issue 1 (fuel-outs abort). `vec` is a record (not a
+   definition, see the log). Extractions are unchanged except the abort sites
+   and, in C++, `const&` handle parameters.
+2. ✅ Layer 0 semantics and WP rules, the `check_model` spec and the frame
+   invariant, which give **SAT soundness** (`SolverSat.v`).
 3. Layer 1 plus I1–I5, and the specs for `enqueue`, `propagate`, `backtrack`,
    `analyze`, `learn`, `search` and `load`, which give **UNSAT soundness**.
    This is the bulk of the work; analysis is the hardest part.
