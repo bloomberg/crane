@@ -1,10 +1,15 @@
 # SAT benchmark: Crane vs. OCaml extraction of direct-style ITrees
 
-Status: working prototype with preliminary numbers. Staging steps 1–3 are
-done: fuel-outs abort, `vec` is a record, **SAT soundness is proved**
-(`SolverSat.v`, `solve_sat_sound`) and **UNSAT soundness is proved**
-(`SolverUnsat.v`, `solve_unsat_sound`). Both rest only on the axiom
-`eq_rect_eq`. Memory safety (step 4) and I6 (step 5) remain.
+Status: working prototype with preliminary numbers. Staging steps 1–4 are
+done. The drivers only read the file's bytes; parsing and solving happen in
+Rocq (`Solver.solve_dimacs`). **`solve_dimacs_correct`** (`SolverMain.v`)
+says: from any finite heap where the byte vector holds `bs`, no run gets
+stuck (every access in bounds, every handle live; `VAbort` allowed), and a
+finished run's answer is exact. It answers 4 iff `bs` is not a DIMACS CNF
+file (`DimacsSpec.dimacs`), and says SAT/UNSAT only when that is right
+about the formula `bs` spells. It rests only on the axiom `eq_rect_eq`.
+Still open: I6 (step 5), and machine-integer bounds, which are argued below
+but not proved (see "What stays trusted").
 Branch: `joom/refactor`.
 
 ## Goal
@@ -43,6 +48,10 @@ Decision: write our own solver directly in `itree vecE`.
 | `SolverRepr.v` | Layer 1: the abstract state `astate`, `repr` (heap ↔ abstract state, separation as one `NoDup`), and a `wp` rule per event in abstract terms |
 | `SolverInv.v` | Layer 2: the invariants `Core`/`Wch`/`Seen0` (against a fixed model `val`), their preservation lemmas, and the first-UIP analysis invariant `AInv` |
 | `SolverUnsat.v` | Layer 3: `wp` specs for every solver function, the initialization glue, and `solve_unsat_sound` |
+| `VecSafe.v` | `safe t Q h`: no configuration reachable from a finite heap is stuck (or it is `VAbort`), and finished runs satisfy `Q`; rules mirroring `wp`'s, `safe_wp`, `safe_and_wp` |
+| `SolverSafe.v` | memory safety: the model-free invariant `SI`, a `safe` spec per solver function, `run_safe` |
+| `DimacsSpec.v` | the accepted DIMACS language as a declarative spec `dimacs bs F`; `Solver.parse` proved sound, complete and deterministic against it |
+| `SolverMain.v` | `answer` and the top-level theorem `solve_dimacs_correct` |
 | `Solver.v` | the CDCL solver, module `Solver`, entry point `Solver.solve` |
 | `CraneVec.v` | Crane mappings: `vec` → `satbench::vec<T>`, events → method calls, `vabort` → `satbench::abort<T>(site)` |
 | `sat_vec.h` | `satbench::vec<T>`: `shared_ptr<std::vector<T>>`, so vectors are reference-semantics handles; `abort` throws `out_of_fuel`, which the driver reports as UNKNOWN |
@@ -50,7 +59,9 @@ Decision: write our own solver directly in `itree vecE`.
 | `SolverOcaml.v` | stock OCaml extraction of `Solver.solve` (real ITree, lazy `Go`/`RetF`/`TauF`/`VisF` nodes) |
 | `vec_impl.ml`, `itree_run.ml` | OCaml growable arrays; the cheapest possible ITree interpreter (force, handle event, continue; no `interp`) |
 | `SolverOcamlDirect.v`, `direct.ml` | control: stock OCaml extraction with the tree erased by hand (`itree E R := R`, `bind m k := k m`, events → direct `Vec_impl` calls) |
-| `solver_main.cpp`, `dimacs.h`, `solver_main.ml`, `solver_direct_main.ml`, `solver_main_common.ml` | DIMACS drivers |
+| `solver_main.cpp`, `solver_main.ml`, `solver_direct_main.ml`, `solver_main_common.ml` | drivers: read the file's bytes into a `vec`, call `solve_dimacs`, print `names[r mod 8]` and `r / 8` |
+| `solver_checked.cpp` | the C++ driver with `SATBENCH_CHECKED` bounds checks, built with ASan/UBSan as `solver_cpp_checked.exe` (testing aid) |
+| `check_bad.sh`, `inst_bad/` | malformed and edge-case DIMACS files with expected answers (`inst_bad/expected.txt`); runs every build under time and memory limits |
 | `gen.py` | instance generator: uniform random 3-SAT (`rand3 n ratio seed out`), pigeonhole PHP(n+1,n) (`php n out`) |
 | `build.sh` | dune-extract, then compile everything into `build/` |
 | `run.sh` | time every binary on every `inst/*.cnf`, median of `REPS` (default 3), write `results.csv` |
@@ -94,8 +105,20 @@ part of the test suite; build it with `dune build benchmarks/sat`.
   16 fixpoints become `while (true)` loops in C++. Without Loopify the C++
   overflowed the stack: the by-value `shared_ptr` argument blocks tail calls
   under the Itanium ABI.
-- Input: a flat `vec nat` of `[len, lits...]*`, built by the driver, so no
-  list conversion is needed on either side.
+- Entry point: `solve_dimacs fuel budget bytes`.
+  - It reads the file's bytes out of the `vec` into a list, then parses it
+    with the pure `parse`, which is tail-recursive throughout, so the
+    extracted code runs in constant stack. A 29 MB file parses without
+    trouble but peaks at about 3.6 GB, because each byte becomes a Crane
+    list cell; parsing straight off the `vec` would fix that if it matters.
+  - Variable count: the largest variable the formula mentions, not the
+    header's `nv`, so a huge `nv` allocates nothing.
+  - The clauses are written to a fresh `vec` as `[len, lits...]*`, and the
+    result is `run` on that `vec`.
+  - DIMACS literal `x` becomes `2(|x|-1) + (x < 0)`.
+- `solve fuel budget nvars input ninput`: the older entry point on a flat
+  `vec nat` of `[len, lits...]*`. Still extracted and still proved
+  (`solve_sat_sound`, `solve_unsat_sound`), but the drivers no longer call it.
 - Input validation: `solve` first checks, in Rocq, that `ninput <= |input|`
   and that `input[0, ninput)` is a list of length-prefixed clauses whose
   literals are all `< 2 * nvars` (`valid_clauses`/`valid_lits`), and
@@ -108,13 +131,17 @@ part of the test suite; build it with `dune build benchmarks/sat`.
   - 3: SAT, but the model failed that check (never observed);
   - 0: UNSAT;
   - 2: out of budget;
-  - 4: invalid input (rejected by the validator).
+  - 4: invalid input (`solve`: rejected by the validator; `solve_dimacs`:
+    not a DIMACS file).
 
 ## Methodology
 
-- Only the `solve` call is timed: `steady_clock` in C++, `Unix.gettimeofday`
-  in OCaml. Extraction, compilation, parsing and input construction are
-  excluded.
+- Only the `solve_dimacs` call is timed: `steady_clock` in C++,
+  `Unix.gettimeofday` in OCaml. Extraction, compilation and reading the file
+  are excluded. Since Stage 4 this *includes parsing*, because the theorem
+  is about the composition the drivers call. On the suite parsing is noise:
+  php7 takes 0.0285 s against 0.0294 s before, and uf150_1 0.260 s against
+  0.27 s.
 - C++: `scripts/compile-std.sh` (Homebrew clang, libc++, `-std=c++2c`),
   `CRANE_CPP_OPTIMIZATION=O2` by default. `build/solver_cpp_O3.exe` was built
   by hand for the O3 comparison.
@@ -202,19 +229,20 @@ Reading:
    *grows* when `n > len`; `Vec_impl.shrink` is a no-op then. All current
    calls have `n ≤ len`. The proof's semantics should only define
    `n ≤ len`.
-4. **Unchecked indexing.** `get`/`set` are unchecked on both sides (C++
-   `operator[]`, OCaml `-unsafe`). Out-of-bounds is undefined behaviour in
-   C++. The proof must establish in-bounds access, or the header should
-   assert in debug builds. With well-formed input every access is believed
-   in bounds (argument in "Stage 4 plan"), but this is not yet proved.
-5. ~~**The drivers do not validate input.**~~ Partly fixed: `solve`
+4. ~~**Unchecked indexing.**~~ Proved unnecessary: `solve_dimacs_correct`
+   shows that every `get`/`set`/`shrink` is in bounds and every handle is
+   live, for every input. The accesses stay unchecked (C++ `operator[]`,
+   OCaml `-unsafe`).
+5. ~~**The drivers do not validate input.**~~ Fixed by Stage 4: parsing is
+   in Rocq and proved exact, and the drivers only read bytes. History:
+   first `solve`
    validates the flat encoding in Rocq (code 4), so out-of-range literals and
    malformed length prefixes can no longer reach the solver. Still open:
    `nvars` comes from the driver unchecked (`p cnf -1 0` makes both drivers
    allocate until killed), and the lenient parsers can produce a different
    formula than the file (the SATLIB `%`/`0` trailer becomes an empty clause;
    junk tokens are skipped in C++; an unterminated last clause is dropped).
-   Stage 4 moves parsing into Rocq. Original text: `read_dimacs` (`dimacs.h`) and
+   Original text: `read_dimacs` (`dimacs.h`, since deleted) and
    `solver_main_common.ml` never check literals against the `p cnf` header.
    A literal with `|x| > nv`, a missing header (`nv = 0`), or a final clause
    without its terminating `0` produces input outside `encodes`/the
@@ -359,7 +387,69 @@ Reading:
   "2WL implies" half of I6 (step 5); bounds of `nat` values below 2^62; and
   everything in Layer 4.
 
-## Stage 4 plan: memory safety
+## Stage 4 log (2026-10-20)
+
+- **Parsing in Rocq.** The old drivers accepted malformed files and
+  sometimes produced a different formula than the file said:
+  - the SATLIB `%` trailer followed by `0` became an extra empty clause, so a
+    SAT file answered UNSAT;
+  - C++ skipped junk tokens, while OCaml died in `int_of_string`;
+  - an unterminated last clause was dropped;
+  - `p cnf -1 0` made both drivers allocate until killed.
+
+  Now `DimacsSpec.dimacs` defines the accepted language declaratively:
+  - lines split at `\n`;
+  - lines starting with `c` are comments;
+  - a line starting with `%` ends the input;
+  - words are maximal runs of non-space, where space is ` \t\n\v\f\r`;
+  - the first four words are `p cnf nv nc`, with `nv ≤ MAXVAR = 2^32`;
+  - the rest is clauses, each a run of literals `x` or `-x` with
+    `1 ≤ x ≤ nv` in plain decimal (leading zeros allowed), ended by a word
+    with value 0;
+  - there are exactly `nc` clauses.
+
+  `parse_sound`, `parse_complete` and `dimacs_det` are closed (no axioms).
+  Numbers are accumulated with saturation (`sdigits`), so no file content can
+  make the parser's arithmetic grow beyond `10 * max(2^32, |bs|) + 9`: an
+  overflowing literal like `18446744073709551617` is rejected instead of
+  wrapping to 1. `inst_bad/` has 33 cases; every build gives the expected
+  answer on all of them.
+- **`safe` (VecSafe.v).** `safe t Q h` = from finite `h`, every reachable
+  configuration is finished with `Q`, or is a `Tau`, or performs an event
+  that has a `step` (or is `VAbort`). It is defined through an inductive
+  `reach`, so `safe_bind` etc. are ordinary inductions; no coinduction. `fin`
+  is assumed once (allocation needs a free location) and preserved by
+  `step`, so solver proofs never mention it. `safe` *sits beside* `wp`
+  rather than replacing it: `safe_and_wp` combines a safety proof with the
+  existing `wp` soundness proofs. That was forced. `Core` is relative to a
+  model `val` of the formula, which exists only when the formula is SAT, so
+  safety of UNSAT runs could not reuse the Stage 3 specs. The Stage 3
+  proofs are untouched.
+- **The invariant (`SI`, SolverSafe.v).** Model-free and much weaker than
+  `Core`:
+  - the per-variable vectors have `nv` cells, `watches` has `2nv` lists,
+    and `misc` has 4 cells;
+  - database and trail literals are `< 2nv`;
+  - every watch entry names a clause of length `≥ 2`;
+  - every reason is `≤ |db|`;
+  - `trail_lim` is strictly increasing and below `|trail|`.
+
+  `SIc` is `SI` without the last bound, which a decision breaks for one
+  event (`vpush trail_lim tl` before `enqueue`). Things the plan expected
+  but turned out to be unneeded:
+  - `next_seen`'s saturation at 0 is harmless for safety: it rereads
+    `trail[0]` until fuel runs out, which aborts;
+  - `analyze_loop`'s `clauses[r - 1]` with `r = 0` reads `clauses[0]`, in
+    bounds because a conflict clause exists;
+  - `ck ≠ fl` doesn't matter: a push onto the list being visited only
+    lengthens it.
+
+  The `search` postcondition also says the answer is `≤ 2`, which `run`
+  needs for `r mod 8 ≤ 3`, so that 4 can only come from the parser.
+- **Bugs found:** none in the solver. Every access was in bounds, as
+  predicted.
+
+## Stage 4 plan: memory safety (done; kept for reference)
 
 Goal: with well-formed input, no run of `solve` gets stuck. Every event it
 performs has a `step`, so in-bounds indexing and live handles are guaranteed
@@ -613,8 +703,33 @@ only needed for "never BADMODEL" and completeness.
 - That `sat_vec.h` and `vec_impl.ml` implement `step`. Points to audit:
   shared handle aliasing, fresh allocation on `make`, `shrink` only for
   `n ≤ len` (see known issue 3), and `uint64_t`/OCaml `int` versus `nat`.
-- Bounding all `nat` values below 2^62 (fuel, budget, counters, `4 *
-  conflicts`). Each needs a small lemma, or the driver chooses bounds.
+- **Machine integers.** `nat` is `uint64_t` in C++ and a 63-bit `int` in
+  OCaml (`max_int = 2^62 - 1`). The theorems are about `nat`, so they
+  transfer only if no value the program computes reaches 2^62. This is
+  argued, not proved. Assume `|bytes| < 2^58` and `budget ≤ 2^58`; the
+  drivers pass a budget of 2^58 and fuel of 2^62 (C++) or 2^61 (OCaml), and
+  fuel only decreases. Then:
+  - parser numbers are at most `10 * max(2^32, |bytes|) + 9` (saturation);
+  - variables are at most 2^32 and literals below 2^33;
+  - positions and counts are at most about `2 |bytes|`;
+  - conflicts and stamps are at most the budget;
+  - `|db|` is at most the input clauses plus the conflicts, and the watch
+    entries at most `2 |db|`;
+  - the restart limit is at most `1.5 (conflicts + 1) + 100`;
+  - the result is at most `8 budget + 7 < 2^62`.
+
+  Proving it would take more than another invariant. Intermediate
+  arithmetic (`pos + 1 + len` before a comparison) is not an event argument,
+  so `safe` cannot see it. The program would need checked arithmetic, for
+  example an event, or a `bounded` assertion the semantics checks.
+- Out of memory is not modelled: `VMake` always succeeds on a finite heap.
+  Allocation is proportional to the largest variable mentioned (at most
+  2^32), not to the header's `nv`.
+- Stack: every recursive function on the parse path, and every solver loop,
+  is a `while (true)` loop in the C++ (Loopify). Destroying long Crane lists
+  did not overflow the stack at 29M cells. Nothing proves this.
+- The drivers: they read the file's bytes faithfully and print the result
+  correctly.
 
 ### Staging (suggested)
 
@@ -626,8 +741,9 @@ only needed for "never BADMODEL" and completeness.
 3. ✅ Layer 1 plus I1–I5 (and watch membership), and the specs for `enqueue`,
    `propagate`, `backtrack`, `analyze`, `learn`, `search` and `load`, which
    give **UNSAT soundness** (`SolverRepr.v`, `SolverInv.v`, `SolverUnsat.v`).
-4. Memory safety: all events in bounds, all handles live. See
-   "Stage 4 plan" below.
+4. ✅ Memory safety: all events in bounds, all handles live, on every input,
+   with DIMACS parsing in Rocq and the exact answer spec
+   (`VecSafe.v`, `SolverSafe.v`, `DimacsSpec.v`, `SolverMain.v`).
 5. Optional: I6, which gives "never BADMODEL" (completeness of propagation).
 
 Prior work to borrow structure from:
