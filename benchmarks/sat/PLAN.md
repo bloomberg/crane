@@ -199,7 +199,18 @@ Reading:
 4. **Unchecked indexing.** `get`/`set` are unchecked on both sides (C++
    `operator[]`, OCaml `-unsafe`). Out-of-bounds is undefined behaviour in
    C++. The proof must establish in-bounds access, or the header should
-   assert in debug builds.
+   assert in debug builds. With well-formed input every access is believed
+   in bounds (argument in "Stage 4 plan"), but this is not yet proved.
+5. **The drivers do not validate input.** `read_dimacs` (`dimacs.h`) and
+   `solver_main_common.ml` never check literals against the `p cnf` header.
+   A literal with `|x| > nv`, a missing header (`nv = 0`), or a final clause
+   without its terminating `0` produces input outside `encodes`/the
+   well-formedness precondition. The solver then indexes `assigns`/`watches`
+   out of bounds: undefined behaviour in C++ and memory-unsafe in OCaml
+   built with `-unsafe`. The theorems do not cover this, because stuck runs
+   satisfy every `wp` vacuously. Fix: reject such files in both drivers
+   (exit with an error, don't print UNKNOWN). This is the first item of
+   stage 4.
 
 ## Tuning ideas
 
@@ -334,6 +345,93 @@ Reading:
   live handles; stuck runs currently satisfy every `wp` vacuously); the
   "2WL implies" half of I6 (step 5); bounds of `nat` values below 2^62; and
   everything in Layer 4.
+
+## Stage 4 plan: memory safety
+
+Goal: with well-formed input, no run of `solve` gets stuck. Every event it
+performs has a `step`, so in-bounds indexing and live handles are guaranteed
+by the semantics `sat_vec.h`/`vec_impl.ml` are trusted to implement. Today
+the theorems are partial correctness only: a run that would index out of
+bounds simply has no `runs` derivation and satisfies every `wp` vacuously.
+
+**Precondition (to state and use).** `wf_input xs0 ninput nvars F`:
+`encodes xs0 ninput 0 F`, and every literal of `F` is `< 2 * nvars`. Also
+`ninput <= length xs0`, which `encodes` already implies for the positions
+it reads. Duplicate and complementary literals within a clause stay allowed;
+the soundness proof already handles them.
+
+**Step 0: drivers (known issue 5).** Make both DIMACS readers reject
+literals with `|x| > nv`, a missing header, and an unterminated last clause,
+so that every input the solver sees satisfies `wf_input`. Rebuild with
+`./build.sh` and rerun the cross-check (same answers and conflict counts).
+
+**Step 1: a safety judgement.** Add to `VecSem.v` something like
+`safe h t Q`: coinductive, or inductive over finite prefixes. Every reachable
+`Vis e k` has some `x, h'` with `step h e x h'`, except `VAbort`, which is
+allowed (it is the intended give-up). Every finished run satisfies `Q`.
+Derive the same rules as for `wp` (`ret`, `bind`, `conseq`, one per event,
+each now with an obligation that the step exists: index `< length`, `n <=
+length`, handle allocated at the right type). Option: replace `wp` by
+`safe` entirely, since a total-correctness-minus-termination `wp` subsumes
+the current one, and re-run the existing proofs through it. Decide by
+checking how much of `SolverRepr.v`'s event lemmas changes: they already
+receive the bound (`i < length xs`) as a *hypothesis* from `wp_vset`, and
+would instead have to *prove* it.
+
+**Step 2: the extra invariants.** All are cheap on top of `Core`/`Wch`/`AInv`:
+- the vector lengths are fixed: `assigns`, `level`, `reason`, `phase`,
+  `stamp`, `seen` have length `nvars`; `watches` and `hwl`/`wl` have length
+  `2 * nvars`; `misc` has length 4;
+- every database literal is `< 2 * nvars`: input clauses by `wf_input`;
+  learnt literals because each is the negation of a trail literal, and
+  trail literals come from clauses or from `lit_of v _` with `v < nvars`;
+- every watch-list entry is `< |db|`, and every watched clause has length
+  `>= 2`. Both follow from `Wch` (`expect` is 0 otherwise);
+- `phase` values are in `{1, 2}` (written from `assigns` of assigned vars;
+  initially 2), so `lit_of` gives a literal of `v`.
+  This one is cosmetic, since `lit_of` works for any value.
+
+**Step 3: per-access obligations (checklist).** Each should be discharged
+by facts already proved in Stage 3 or by step 2:
+- `lit_value`, `enqueue`, `unassign`, `analyze_lits`, `finish_learnt`: `lvar l
+  < nvars` for literals from clauses or the trail;
+- `vget (watches s) l`, `attach`: `l < 2 * nvars`;
+- `prop_watch`: `ws[i]` with `i < n = |ws|` (guard); `clauses[ci]` with `ci <
+  |db|` (watch entries); `c[0]`, `c[1]` with `|c| >= 2` (watched); `c[k]` for
+  `2 <= k < len` (`find_watch`); `vset ws j` with `j <= i < n`; `vshrink ws j`
+  and `copy_rest` with `j <= |ws|`;
+- `propagate`: `trail[qh]` guarded by `qh < |trail|`; `misc[QHEAD]`;
+- `backtrack`: `trail_lim[lvl]` guarded by `lvl < dl`; `vshrink trail lim`
+  with `lim <= |trail|` (`i_limq`, `i_qtr`); `vshrink trail_lim lvl`, with
+  `lvl < dl`;
+- `next_seen`: `trail[i]` with `i <= index < |trail|`. The `index - 1`
+  saturation never matters, because a marked position `>= base` lies below
+  `index` (`AInv`, `ainv_pop`);
+- `analyze_loop`: `clauses[r - 1]` with `r >= 1` when `pathC' >= 2`
+  (`reason_exists`) and `r - 1 < |db|` (`i_rsn`). The conflict index comes
+  from `conflict`;
+- `learn`: `vset learnt 0` (length 1 after `vmake 1 0`); `finish_learnt`'s
+  `learnt[best]`, `learnt[1]` with `1 < best < len`;
+- `search`: `phase[v]` with `v < nvars` from `pick`; `misc[1..3]`;
+- `load`, `read_lits`, `check_model`, `clause_sat`: input positions in range
+  by `encodes`. `c[0]` for unit clauses, length 1;
+- `solve`: `vset m RLIMIT` with `|m| = 4`; `fresh_vecs` pushes `2 * nvars`
+  handles (this needs the `length W' = n` fact that `fresh_vecs_sp` does not
+  currently state).
+
+**Step 4: theorem.** `solve_safe`: under `wf_input` (and `h0 input = xs0`),
+`safe h0 (solve ...) (fun _ _ => True)`. Ideally combine the three results
+into one statement: safe, and on termination the answer is correct for both
+SAT and UNSAT.
+
+**Out of scope for stage 4 but worth noting:** `nat` values stay below 2^62
+(drivers' budgets; the conflict and stamp counters are bounded by the
+budget), and the `shrink`/`resize` difference (known issue 3), which is
+harmless once `n <= length` is proved for every shrink.
+
+**Cheap empirical check, any time:** build `sat_vec.h` with bounds
+assertions, or `-fsanitize=address,undefined`, and run the suite. Also run
+a few malformed files to confirm the step-0 driver checks fire.
 
 ## Correctness proof sketch
 
@@ -515,7 +613,8 @@ only needed for "never BADMODEL" and completeness.
 3. ✅ Layer 1 plus I1–I5 (and watch membership), and the specs for `enqueue`,
    `propagate`, `backtrack`, `analyze`, `learn`, `search` and `load`, which
    give **UNSAT soundness** (`SolverRepr.v`, `SolverInv.v`, `SolverUnsat.v`).
-4. Memory safety: all events in bounds, all handles live.
+4. Memory safety: all events in bounds, all handles live. See
+   "Stage 4 plan" below.
 5. Optional: I6, which gives "never BADMODEL" (completeness of propagation).
 
 Prior work to borrow structure from:
