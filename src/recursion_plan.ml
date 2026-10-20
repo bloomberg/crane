@@ -37,12 +37,20 @@ type local_group = {
   adoptable : Occurrence.t list list;  (* per member, {!flow_fixpoints} calling the group *)
 }
 
+(* A call a function resumes after. *)
+type target =
+  | Function of Names.GlobRef.t
+  | Member of Occurrence.t * int
+  | Entering of Occurrence.t
+
 (* Where a function goes on once a recursive call returns: the binder the
-   call's result is bound to, and the binders bound before it that what
-   follows reads, which a frame keeps across the call. *)
+   call's result is bound to, the binders bound before it that what follows
+   reads, which a frame keeps across the call, and the calls it resumes
+   after. *)
 type resume = {
   binder : Core_binder.t;
   live : Core_binder.t list;
+  after : target list;
 }
 
 type t = {
@@ -352,23 +360,24 @@ let free_levels ~depth e =
    recursive call returns: a let whose right-hand side is the call, or ends
    in one in some branch, and a sequential bind whose action is the call,
    its continuation's parameter binding the result.  In the body itself a
-   recursive call is one [calls] recognises; in a local fixpoint's bodies it
-   is a call of a member of that fixpoint, or of an enclosing group, whose
-   machine Loopify may make the fixpoint a second entry of.  A call under a
-   lambda is made where the closure runs, not here. *)
-let resumes_of ~effects ~origin ~calls lex body =
+   recursive call is one [targets] names; in a local fixpoint's bodies a
+   call of a member of that fixpoint is one too.  A call under a lambda is
+   made where the closure runs, not here. *)
+let resumes_of ~effects ~origin ~targets lex body =
   let effect = sequential effects in
   let found = ref [] in
   let binder level = Core_binder.make ~origin ~level () in
-  let resume ~site depth rest =
+  let resume ~site ~after depth rest =
     let live = List.filter (fun l -> l <> depth) (free_levels ~depth:(depth + 1) rest) in
-    found := {binder = Core_binder.make ~origin ~level:depth ~site (); live = List.map binder live} :: !found
+    found :=
+      {binder = Core_binder.make ~origin ~level:depth ~site (); live = List.map binder live; after}
+      :: !found
   in
-  let rec walk ~calls depth e =
+  let rec walk ~targets depth e =
     (* A local fixpoint applied where it is written, reaching a recursive
        call, is bound as one ({!Normalize}). *)
     let rec reaches depth e =
-      calls ~depth e
+      targets ~depth e <> []
       ||
       match e with
       | MLfix (_, ids, funs, _, _) ->
@@ -387,50 +396,59 @@ let resumes_of ~effects ~origin ~calls lex body =
         Mlutil.ast_iter (fun c -> if reaches depth c then found := true) e;
         !found
     in
-    let rec ends_in_call depth e =
-      calls ~depth e
-      ||
-      match e with
-      | MLapp ((MLfix _ as fix), _) -> reaches depth fix
-      | MLcase (_, _, branches) ->
-        Array.exists (fun (ids, _, _, b) -> ends_in_call (depth + List.length ids) b) branches
-      | MLletin (_, _, _, b, _) -> ends_in_call (depth + 1) b
-      | MLmagic (_, b) -> ends_in_call depth b
-      | _ -> false
+    (* What a right-hand side ends in: the recursive calls its branches end
+       in, and a local fixpoint applied there that reaches one. *)
+    let rec ending depth e =
+      match targets ~depth e with
+      | _ :: _ as called -> called
+      | [] -> (
+        match e with
+        | MLapp ((MLfix (_, _, _, _, occ) as fix), _) when reaches depth fix -> [Entering occ]
+        | MLcase (_, _, branches) ->
+          List.concat_map
+            (fun (ids, _, _, b) -> ending (depth + List.length ids) b)
+            (Array.to_list branches)
+        | MLletin (_, _, _, b, _) -> ending (depth + 1) b
+        | MLmagic (_, b) -> ending depth b
+        | _ -> [] )
     in
-    let go = walk ~calls in
+    let go = walk ~targets in
     match e with
     | MLletin (_, _, a, b, site) ->
-      if ends_in_call depth a then resume ~site depth b;
+      (match ending depth a with [] -> () | after -> resume ~site ~after depth b);
       go depth a;
       go (depth + 1) b
     | MLapp (MLglob use, args) when effect use = Some Core_effects.Bind -> (
       match List.rev args with
       | MLlam (_, _, k) :: action :: rest ->
-        if calls ~depth action then resume ~site:(Global_use.occurrence use) depth k;
+        ( match targets ~depth action with
+        | [] -> ()
+        | after -> resume ~site:(Global_use.occurrence use) ~after depth k );
         List.iter (go depth) (action :: rest);
         go (depth + 1) k
       | _ -> List.iter (go depth) args )
     | MLcase (_, s, branches) ->
       go depth s;
       Array.iter (fun (ids, _, _, b) -> go (depth + List.length ids) b) branches
-    | MLfix (_, ids, funs, _, _) ->
+    | MLfix (_, ids, funs, _, occ) ->
       (* The member [m] is bound at level [depth + m], the last innermost. *)
       let first = depth and n = Array.length ids in
       let rec member ~depth = function
         | MLmagic (_, e) -> member ~depth e
-        | MLapp (MLrel k, _) -> first <= depth - k && depth - k < first + n
-        | _ -> false
+        | MLapp (MLrel k, _) when first <= depth - k && depth - k < first + n ->
+          [Member (occ, depth - k - first)]
+        | _ -> []
       in
+      let targets ~depth e = match member ~depth e with [] -> targets ~depth e | called -> called in
       Array.iter
         (fun f ->
           let arity, b = split_params 0 f in
-          walk ~calls:(fun ~depth e -> member ~depth e || calls ~depth e) (depth + n + arity) b )
+          walk ~targets (depth + n + arity) b )
         funs
     | MLlam _ -> ()
     | e -> Mlutil.ast_iter (go depth) e
   in
-  walk ~calls:(fun ~depth:_ e -> calls e) (Lexenv.depth lex) body;
+  walk ~targets:(fun ~depth:_ e -> targets e) (Lexenv.depth lex) body;
   List.rev !found
 
 (* The local fixpoints in the flow of [body], standing under [depth]
@@ -621,13 +639,23 @@ let analyze groups struc =
           | Some g when g.kind = Nontail -> g.members
           | Some _ | None -> []
         in
-        let rec calls = function
-          | MLmagic (_, e) -> calls e
-          | MLapp (MLglob use, _) -> List.exists (Common.globref_equal use.callee) members
-          | _ -> false
+        (* A call with fewer arguments than its callee's parameters is a
+           closure the C++ makes, whose call runs where the closure does. *)
+        let parameters g =
+          match Ref.User.Map.find_opt g defs with
+          | Some fd -> List.length (Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type))
+          | None -> 0
+        in
+        let rec targets = function
+          | MLmagic (_, e) -> targets e
+          | MLapp (MLglob use, args)
+            when List.exists (Common.globref_equal use.callee) members
+                 && List.length args >= parameters use.callee ->
+            [Function use.callee]
+          | _ -> []
         in
         let lex, body = Core_elaborate.generated_scope fd.fd_type fd.fd_body in
-        resumes_of ~effects ~origin:r ~calls lex body )
+        resumes_of ~effects ~origin:r ~targets lex body )
       defs
   in
   let adoptable =
@@ -657,6 +685,13 @@ let same_chains =
   List.equal (fun c c' ->
       List.equal same_cell c.around c'.around && same_cell c.innermost c'.innermost )
 
+let same_target t t' =
+  match (t, t') with
+  | Function g, Function g' -> Common.globref_equal g g'
+  | Member (o, m), Member (o', m') -> Occurrence.equal o o' && Int.equal m m'
+  | Entering o, Entering o' -> Occurrence.equal o o'
+  | (Function _ | Member _ | Entering _), _ -> false
+
 let equal a b =
   List.equal
     (fun g g' -> List.equal Common.globref_equal g.members g'.members && g.kind = g'.kind)
@@ -676,7 +711,8 @@ let equal a b =
        (List.equal (fun r r' ->
             Core_binder.equal r.binder r'.binder
             && Core_binder.same_site r.binder r'.binder
-            && List.equal Core_binder.equal r.live r'.live ) )
+            && List.equal Core_binder.equal r.live r'.live
+            && List.equal same_target r.after r'.after ) )
        a.resumes b.resumes
   && Ref.User.Map.equal (List.equal Occurrence.equal) a.adoptable b.adoptable
 

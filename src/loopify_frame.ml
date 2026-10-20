@@ -898,6 +898,9 @@ type adopted = {
           gets the function reported as declined even though its machine is
           correct. *)
   ad_what : string;  (** The body, named concretely enough to act on *)
+  ad_fixpoint : Miniml.Occurrence.t option;
+      (** The local fixpoint adopted, by its Core occurrence; [None] for an
+          inlined body, which the recursion plan does not name *)
 }
 
 (** The synthetic name calls entering an entry called [name] are routed
@@ -1032,7 +1035,8 @@ let adopt_local_fix ~stmts ~planned = function
             ad_captures = captures;
             ad_body = install_calls cl_body;
             ad_install = install;
-            ad_what = "the local fixpoint " ^ name } )
+            ad_what = "the local fixpoint " ^ name;
+            ad_fixpoint = Some (fst fixpoint.lf_member) } )
   | _ -> None
 
 (** Adopt the body of an immediately-invoked lambda that still calls this
@@ -1077,7 +1081,8 @@ let adopt_invocation check e =
           ad_captures = captures;
           ad_body = rewrite_exprs reroute cl_body;
           ad_install = rewrite_exprs reroute;
-          ad_what = "an inlined body" }
+          ad_what = "an inlined body";
+          ad_fixpoint = None }
   | _ -> None
 
 (** The body this machine should adopt, if any.
@@ -1165,6 +1170,10 @@ type enter_rewrite_ctx = {
           nothing -- an alias of a static member, say.  A continuation binds
           them again rather than saving them in its frame, where a type the
           binding left to [auto] has no spelling. *)
+  er_entered_by : (Recursion_plan.target -> bool) option;
+      (** The calls that enter the machine, as the recursion plan names
+          what a point resumes after; [None] where the plan does not
+          describe the machine: one partners were inlined into. *)
 }
 
 (** The entry point a call site targets. *)
@@ -1295,6 +1304,27 @@ let frame_locals ctx planned read =
         (Pp.str "a frame keeps other binders than the recursion plan finds live there");
     planned @ List.filter (fun v -> not (identified v)) read
   | None -> read
+
+(** Whether the statement binding a call's result to the Core binder [tgt]
+    declares is a point the machine resumes at once the call returns, as
+    the recursion plan has it: whether the point resuming at that binder
+    ({!Recursion_plan.resumes_binding}) resumes after a call that enters
+    the machine ({!enter_rewrite_ctx.er_entered_by}).  [None] where the plan
+    does not say: the statement assigns a local declared before it -- once
+    in each branch of a match the Core binds as one let -- or binds a local
+    of the backend's own, or the machine is not one the plan describes. *)
+let planned_resume ctx tgt =
+  match (tgt, ctx.er_entered_by) with
+  | Declare (_, Some b), Some entered_by ->
+    Some
+      ( match Recursion_plan.resumes_binding b with
+      | [p] -> List.exists entered_by p.after
+      | _ -> false )
+  | _ -> None
+
+let resume_violation () =
+  Probe.violation "resume plan"
+    (Pp.str "the recursion plan and the finished body disagree on whether a statement resumes after a recursive call")
 
 (** Rewrite a single return statement for the [CraneEnter] handler in frame-based
     non-tail recursion transformation.
@@ -1562,11 +1592,22 @@ and rewrite_enter_stmts ctx stmts =
         make_stack_push enter;
       ]
     in
-    (* {!Normalize} binds each recursive call on its own, so a right-hand
-       side holding one is exactly that call. *)
-    ( match (if n_calls = 1 then check e else None) with
-    | Some cs -> make_cont_handler (make_enter_for ctx cs)
-    | None -> Sasgn (id, tgt, e) :: rewrite_enter_stmts ctx rest )
+    (* Whether the statement resumes is the plan's, where it says
+       ({!planned_resume}); the call the frame re-enters by is the one
+       {!Normalize} bound there, the whole right-hand side.  Under
+       [CRANE_CHECK_IR] the plan is checked against the C++, one call the
+       machine's checker recognises. *)
+    let call = if n_calls = 1 then check e else None in
+    let resumes =
+      match planned_resume ctx tgt with
+      | Some planned ->
+        if Probe.checking () && planned <> Option.has_some call then resume_violation ();
+        planned
+      | None -> Option.has_some call
+    in
+    ( match call with
+    | Some cs when resumes -> make_cont_handler (make_enter_for ctx cs)
+    | Some _ | None -> Sasgn (id, tgt, e) :: rewrite_enter_stmts ctx rest )
   (* Conditional recursion: at least one branch has a recursive call and there
      are continuation statements after.  Merge the continuation into each branch
      so the recursive branch captures it via the Sasgn::rest CraneCont pattern while
@@ -1616,6 +1657,10 @@ and rewrite_enter_stmts ctx stmts =
       (Smatch (scrut, merged_brs, merged_default))
 
   | stmt :: rest ->
+    ( match stmt with
+    | Sasgn (_, tgt, _) when Probe.checking () && planned_resume ctx tgt = Some true ->
+      resume_violation ()
+    | _ -> () );
     (* Extend the environment with any variable bound by this statement so
        that [infer_saved_type] can resolve its type when processing [rest].
        This is important when a local [std::function] (e.g. from [let fix])
@@ -2560,8 +2605,8 @@ let fix_handler_bindings field_names cf_ps handler =
     @return Transformed body with frame-based stack structure, or the original
             [body] unchanged when the transformation is unsafe (branch
             dependencies on recursive calls) *)
-let transform_nontail ?(fn_name : string option) ?adopted ?(outer_env = []) ?(binders = [])
-    check tparams params ret_ty body =
+let transform_nontail ?(fn_name : string option) ?adopted ?entered_by ?(outer_env = [])
+    ?(binders = []) check tparams params ret_ty body =
   (* An adopted body becomes a second entry point of this machine rather than
      a machine of its own: two machines cannot unwind each other's stack, so
      loopifying them separately leaves the recursion in place.  The calls that
@@ -2621,6 +2666,22 @@ let transform_nontail ?(fn_name : string option) ?adopted ?(outer_env = []) ?(bi
     match adopted with
     | None -> check
     | Some (ad, _) -> any_checker [check; adopted_checker ~entry:1 ad]
+  in
+  (* A machine adopting a local fixpoint is entered by its members too; one
+     adopting a partner's inlined body by calls the plan has no name for. *)
+  let entered_by =
+    match adopted with
+    | None -> entered_by
+    | Some ({ad_fixpoint = Some fixpoint; _}, _) ->
+      Option.map
+        (fun entered_by (t : Recursion_plan.target) ->
+          entered_by t
+          ||
+          match t with
+          | Member (o, _) | Entering o -> Miniml.Occurrence.equal o fixpoint
+          | Function _ -> false )
+        entered_by
+    | Some ({ad_fixpoint = None; _}, _) -> None
   in
   let body =
     match adopted with
@@ -2686,7 +2747,8 @@ let transform_nontail ?(fn_name : string option) ?adopted ?(outer_env = []) ?(bi
                er_branch_ctx = None;
                er_seen_frame_names = Hashtbl.create 16;
                er_invariant_params = invariant_params;
-               er_rematerialized = [] }
+               er_rematerialized = [];
+               er_entered_by = entered_by }
   in
   (* Each top-level statement is rewritten on its own, but a binding it makes
      is still one a later statement's continuation may rebuild. *)

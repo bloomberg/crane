@@ -310,7 +310,7 @@ let on_cycle_with self_refs r =
                  function (used to skip self-calls and detect back-calls)
     @param body  The function body to transform
     @return The body with mutual calls inlined, or the original body if no
-            mutual partner was found *)
+            mutual partner was found, and the partners inlined *)
 let try_inline_mutual_into names body =
   (* For each ref this function is known by, skip it (self-call). For each call
      in the body, check if the callee is registered AND lies on a recursion
@@ -433,7 +433,7 @@ let try_inline_mutual_into names body =
      registered when this one is transformed. *)
   let rec loop inlined body =
     match find_callee_in_stmts inlined body with
-    | None -> body
+    | None -> (body, inlined)
     | Some ((r, _, _, _) as callee) -> loop (r :: inlined) (inline_one callee body)
   in
   loop [] body
@@ -482,6 +482,18 @@ let planned_local_strategy fixpoint check body =
       (Pp.str "a local fixpoint's body was reached with no Core fixpoint recorded on it");
     classified_strategy (classified ())
 
+(** The calls the machine of the function [r] is entered by, as the
+    recursion plan names what a point resumes after: its own. *)
+let entered_by_function r : Recursion_plan.target -> bool = function
+  | Function g -> Common.globref_equal g r
+  | Member _ | Entering _ -> false
+
+(** The calls the machine of the function [member] of a local fixpoint is
+    entered by: that member's. *)
+let entered_by_member (occurrence, member) : Recursion_plan.target -> bool = function
+  | Member (o, m) -> Miniml.Occurrence.equal o occurrence && Int.equal m member
+  | Function _ | Entering _ -> false
+
 (** {2 Inner lambda loopification}
 
     Transforms the local fixpoints within function bodies into iterative
@@ -526,7 +538,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
   let try_loopify_ycomb ~fixpoint lparams ret_ty_opt lbody =
     match (fixpoint, fixpoint_self fixpoint lparams) with
     | None, _ | _, None -> None
-    | Some {lf_name; lf_binders; _}, Some self_id -> (
+    | Some {lf_name; lf_binders; lf_member; _}, Some self_id -> (
       let check = self_checker self_id in
       let lbody = expose_tail_calls check lbody in
       match planned_local_strategy fixpoint check lbody with
@@ -559,7 +571,8 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
              a local fixpoint gets it only through a helper lifted out of it. *)
           | Modulo_cons _ | Frame_stack ->
             report_outcome ~name ~check ~strategy:Lp_frame
-              (transform_nontail ~fn_name:name ~outer_env ~binders:lf_binders check tparams
+              (transform_nontail ~fn_name:name ~outer_env ~binders:lf_binders
+                 ~entered_by:(entered_by_member lf_member) check tparams
                  params ret_ty lbody)
           | No_loop | Suspended _ ->
             CErrors.anomaly (Pp.str "loopify: no loop cannot appear here")
@@ -755,8 +768,8 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
     @param ret_ty      Return type
     @param body        Function body statements
     @return what the transform did; see {!nontail_result}. *)
-let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?modulo_cons ?binders
-    check tparams params ret_ty body =
+let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_by ?modulo_cons
+    ?binders check tparams params ret_ty body =
   let declined reason =
     {nt_body = body; nt_outcome = Lp_declined reason; nt_used_param_inits = false}
   in
@@ -765,7 +778,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?modulo_co
   else
   let frame () =
     { nt_body =
-        transform_nontail ?fn_name ?adopted ?binders check tparams params ret_ty body;
+        transform_nontail ?fn_name ?adopted ?entered_by ?binders check tparams params ret_ty body;
       nt_outcome = Lp_frame;
       nt_used_param_inits = false }
   in
@@ -1185,7 +1198,18 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
   let ret_ty = f.df_ret in
   (* Try to inline mutual recursion partners, every function of the unit
      registered before any was finished ({!register_decl}). *)
-  let body = try_inline_mutual_into names body in
+  let body, inlined = try_inline_mutual_into names body in
+  (* What the machine is entered by in the plan's terms: the function's
+     calls, or a lifted helper's local fixpoint member's -- unless partners
+     were inlined into it, which the plan does not describe. *)
+  let entered_by =
+    if inlined <> [] then None
+    else
+      let r = fst f.df_path.dp_outer in
+      match Lifted.of_ref r with
+      | Some h -> Option.map entered_by_member (Lifted.fixpoint h)
+      | None -> Some (entered_by_function r)
+  in
   (* Inline an Equations-style functional applied to itself so its hidden
      recursion becomes ordinary self-recursion that loopifies. *)
   let body = try_inline_functional_into names body in
@@ -1229,7 +1253,7 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
           (transform_tail tparams check params ret_ty body, Some Lp_tail)
         | Modulo_cons _ | Frame_stack ->
           let r =
-            apply_nontail_loopification ~fn_name:name ?adopted ~binders:f.df_binders
+            apply_nontail_loopification ~fn_name:name ?adopted ?entered_by ~binders:f.df_binders
               ?modulo_cons:(modulo_cons_chains strategy)
               check tparams params ret_ty body
           in
@@ -1490,6 +1514,7 @@ let transform_method ~tparams ~self_ty mf =
           let fn_name = Some name in
           let r =
             apply_nontail_loopification
+              ?entered_by:(Option.map entered_by_function mf.mf_globref)
               ~param_inits:[(self_id, CPPthis)]
               ~binders:
                 ( (match mf.mf_receiver_binder with Some b -> [(self_id, b)] | None -> [])

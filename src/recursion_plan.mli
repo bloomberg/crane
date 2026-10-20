@@ -123,20 +123,34 @@ val adoptable : Names.GlobRef.t -> Miniml.Occurrence.t list
     fixpoints in its flow naming a member of its group. *)
 val adoptable_at : Miniml.Occurrence.t * int -> Miniml.Occurrence.t list
 
+(** A recursive call a function resumes after: a call of the function of
+    the group [Function g], with no fewer arguments than its parameters --
+    one with fewer is a closure, and calls where it runs; a call of the
+    member [m] of the local fixpoint at [Member (occurrence, m)]; or that
+    fixpoint applied where it is written, reaching a recursive call, at
+    [Entering occurrence].  Which of them a machine is entered by is the
+    machine's: a function's own calls, the members of a fixpoint it
+    adopts. *)
+type target =
+  | Function of Names.GlobRef.t
+  | Member of Miniml.Occurrence.t * int
+  | Entering of Miniml.Occurrence.t
+
 (** Where a function goes on once a recursive call returns: [binder], the
-    binder the call's result is bound to, and [live], the binders bound
-    before it that what follows reads -- what a frame keeps across the
-    call. *)
+    binder the call's result is bound to, [live], the binders bound before
+    it that what follows reads -- what a frame keeps across the call -- and
+    [after], the calls its right-hand side ends in. *)
 type resume = private {
   binder : Core_binder.t;
   live : Core_binder.t list;
+  after : target list;
 }
 
 (** The points binding [b] at which its definition, a member of a group that
-    does not recurse only by tail calls, resumes after a call into the
-    group: a let whose right-hand side is the call, or ends in one in every
-    branch that recurses, and a sequential bind's continuation.  A call
-    under a lambda or in a local fixpoint is not one.  A point's binder
+    does not recurse only by tail calls, resumes after a recursive call: a
+    let whose right-hand side is the call, or ends in one in some branch,
+    and a sequential bind's continuation, in the definition's body or a
+    local fixpoint's.  A call under a lambda is not one.  A point's binder
     records its let or bind ({!Core_binder.site}): two lets of one
     definition at one level, in two branches, both bind [b] only where [b]
     records neither. *)
