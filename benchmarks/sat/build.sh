@@ -6,7 +6,7 @@ CRANE="$(cd "$HERE/../.." && pwd)"
 (cd "$CRANE" && dune build benchmarks/sat 2>&1 | grep -v -i "deprecat\|Hint:\|warnings (\|Please upgrade" || true)
 mkdir -p "$HERE/build"
 cd "$HERE/build"
-cp "$HERE"/out/SatBench/solver.{h,cpp} "$HERE"/{sat_vec.h,dimacs.h,solver_main.cpp,solver_checked.cpp} .
+cp "$HERE"/out/SatBench/solver.{h,cpp} "$HERE"/{sat_vec.h,solver_main.cpp,solver_checked.cpp} .
 CRANE_CPP_OPTIMIZATION="${OPT:-O2}" "$CRANE/scripts/compile-std.sh" "$CRANE" solver_cpp.exe solver.cpp solver_main.cpp
 # Not benchmarked: bounds checks plus ASan/UBSan, for testing memory safety.
 CRANE_CPP_OPTIMIZATION=O1 CRANE_CPP_SANITIZE=1 "$CRANE/scripts/compile-std.sh" "$CRANE" solver_cpp_checked.exe solver_checked.cpp

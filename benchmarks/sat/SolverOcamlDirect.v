@@ -18,4 +18,4 @@ Extract Inlined Constant vlen => "(fun _ v -> Vec_impl.len v)".
 Extract Inlined Constant vpush => "(fun _ v x -> Vec_impl.push v x)".
 Extract Inlined Constant vshrink => "(fun _ v n -> Vec_impl.shrink v n)".
 Extract Inlined Constant vabort => "(fun _ site -> Vec_impl.abort site)".
-Extraction "solver_direct_ml.ml" Solver.solve.
+Extraction "solver_direct_ml.ml" Solver.solve Solver.solve_dimacs.

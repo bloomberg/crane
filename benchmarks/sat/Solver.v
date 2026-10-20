@@ -9,7 +9,8 @@
     Encoding: variable [v] has literals [2v] (positive) and [2v+1]
     (negative).  A variable's value is 0 (unassigned), 1 (true) or
     2 (false); a literal's value is read off the same three. *)
-From Stdlib Require Import PeanoNat Bool.
+From Stdlib Require Import PeanoNat Bool List.
+Import ListNotations.
 Local Open Scope bool_scope.
 From Crane Require Import Monads.ITree.
 Require Import SatVec.
@@ -464,5 +465,176 @@ Definition solve (fuel budget nvars : nat) (input : vec nat) (ninput : nat)
   ok <- (if Nat.leb ninput len then valid_clauses fuel input (2 * nvars) 0 ninput
          else Ret false) ;;
   if ok then run fuel budget nvars input ninput else Ret 4.
+
+
+(** * Reading DIMACS
+
+    [solve_dimacs] is the entry point the drivers call: it takes the bytes
+    of a DIMACS file, parses them in Rocq, and either answers 4 (not a CNF
+    file in the accepted format, see [DimacsSpec.dimacs]) or runs the solver
+    on the parsed formula over exactly the variables it mentions.  The
+    parser is pure and every list function on its path is tail-recursive,
+    so the extracted code needs constant stack whatever the input. *)
+
+Definition is_space (b : nat) : bool := Nat.eqb b 32 || (Nat.leb 9 b && Nat.leb b 13).
+Definition is_digit (b : nat) : bool := Nat.leb 48 b && Nat.leb b 57.
+
+(** The length of [l], plus [n]. *)
+Fixpoint tlen {A} (l : list A) (n : nat) : nat :=
+  match l with [] => n | _ :: l' => tlen l' (S n) end.
+
+(** [bs] cut at every byte [sep] accepts, the pieces in order: [rev acc]
+    then [rev cur ++] the first piece of [bs] and the rest. *)
+Fixpoint split_tr (sep : nat -> bool) (bs cur : list nat) (acc : list (list nat))
+  : list (list nat) :=
+  match bs with
+  | [] => rev_append acc [rev_append cur []]
+  | b :: bs' =>
+    if sep b then split_tr sep bs' [] (rev_append cur [] :: acc)
+    else split_tr sep bs' (b :: cur) acc
+  end.
+
+(** The lines up to the first one starting with ['%'], without the ones
+    starting with ['c']. *)
+Fixpoint content_tr (ls acc : list (list nat)) : list (list nat) :=
+  match ls with
+  | [] => rev_append acc []
+  | l :: ls' =>
+    match l with
+    | b :: _ =>
+      if Nat.eqb b 37 then rev_append acc []
+      else if Nat.eqb b 99 then content_tr ls' acc
+      else content_tr ls' (l :: acc)
+    | [] => content_tr ls' (l :: acc)
+    end
+  end.
+
+(** The non-empty pieces of [ws], reversed onto [acc]. *)
+Fixpoint nonempty_tr (ws acc : list (list nat)) : list (list nat) :=
+  match ws with
+  | [] => acc
+  | [] :: ws' => nonempty_tr ws' acc
+  | w :: ws' => nonempty_tr ws' (w :: acc)
+  end.
+
+(** The words of the content lines, reversed onto [acc]. *)
+Fixpoint words_tr (ls acc : list (list nat)) : list (list nat) :=
+  match ls with
+  | [] => acc
+  | l :: ls' => words_tr ls' (nonempty_tr (split_tr is_space l [] []) acc)
+  end.
+
+Definition tokens_tr (bs : list nat) : list (list nat) :=
+  rev_append (words_tr (content_tr (split_tr (Nat.eqb 10) bs [] []) []) []) [].
+
+(** The largest variable a file may mention. *)
+Definition MAXVAR : nat := Nat.pow 2 32.
+
+(** The value of the decimal digits [w] after [acc], if it is at most
+    [cap].  Accumulation stops once [cap] is passed, so it never grows
+    beyond [10 * cap + 9]. *)
+Fixpoint sdigits (cap acc : nat) (w : list nat) : option nat :=
+  match w with
+  | [] => if Nat.leb acc cap then Some acc else None
+  | d :: w' =>
+    if is_digit d then sdigits cap (if Nat.ltb cap acc then acc else 10 * acc + (d - 48)) w'
+    else None
+  end.
+
+Definition snum (cap : nat) (w : list nat) : option nat :=
+  match w with [] => None | _ :: _ => sdigits cap 0 w end.
+
+(** The literal a word spells, given at most [nv] variables: DIMACS [x]
+    becomes [2 * (x - 1)], and [-x] becomes [2 * (x - 1) + 1]. *)
+Definition slit (nv : nat) (w : list nat) : option nat :=
+  let nw := match w with
+            | b :: w' => if Nat.eqb b 45 then (1, w') else (0, w)
+            | [] => (0, w)
+            end in
+  match snum nv (snd nw) with
+  | Some (S v) => Some (2 * v + fst nw)
+  | _ => None
+  end.
+
+Definition is_zero (w : list nat) : bool :=
+  match snum 0 w with Some _ => true | None => false end.
+
+(** The clauses the words [ts] spell, after the reversed clauses [acc] and
+    with the reversed literals [cur] of an unfinished clause; also their
+    number after [cnt], and the largest variable after [maxv]. *)
+Fixpoint pclauses (nv : nat) (ts : list (list nat)) (cur : list nat)
+    (acc : list (list nat)) (cnt maxv : nat) : option (list (list nat) * nat * nat) :=
+  match ts with
+  | [] => match cur with [] => Some (rev_append acc [], cnt, maxv) | _ :: _ => None end
+  | t :: ts' =>
+    if is_zero t then pclauses nv ts' [] (rev_append cur [] :: acc) (cnt + 1) maxv
+    else
+      match slit nv t with
+      | Some l => pclauses nv ts' (l :: cur) acc cnt (Nat.max maxv (Nat.div l 2 + 1))
+      | None => None
+      end
+  end.
+
+(** The number of variables the formula mentions, and its clauses. *)
+Definition parse (bs : list nat) : option (nat * list (list nat)) :=
+  match tokens_tr bs with
+  | tp :: tc :: tnv :: tnc :: ts =>
+    let hdr := match tp, tc with
+               | [p], [c; n; f] => Nat.eqb p 112 && Nat.eqb c 99 && Nat.eqb n 110 && Nat.eqb f 102
+               | _, _ => false
+               end in
+    if hdr then
+      match snum MAXVAR tnv with
+      | Some nv =>
+        match pclauses nv ts [] [] 0 0 with
+        | Some (F, cnt, maxv) =>
+          match snum cnt tnc with
+          | Some k => if Nat.eqb k cnt then Some (maxv, F) else None
+          | None => None
+          end
+        | None => None
+        end
+      | None => None
+      end
+    else None
+  | _ => None
+  end.
+
+(** The first [i] elements of [bytes], onto [acc]. *)
+Fixpoint read_bytes (bytes : vec nat) (i : nat) (acc : list nat) : itree vecE (list nat) :=
+  match i with
+  | O => Ret acc
+  | S i' => b <- vget bytes i' ;; read_bytes bytes i' (b :: acc)
+  end.
+
+Fixpoint write_lits (input : vec nat) (c : list nat) : itree vecE unit :=
+  match c with
+  | [] => Ret tt
+  | l :: c' => vpush input l ;; write_lits input c'
+  end.
+
+(** Append [F] to [input], each clause as its length and then its
+    literals; the length [input] ends up with, starting from [pos]. *)
+Fixpoint write_cnf (input : vec nat) (F : list (list nat)) (pos : nat) : itree vecE nat :=
+  match F with
+  | [] => Ret pos
+  | c :: F' =>
+    let n := tlen c 0 in
+    vpush input n ;; write_lits input c ;; write_cnf input F' (pos + 1 + n)
+  end.
+
+(** Solve the DIMACS file whose bytes are [bytes], taking at most [budget]
+    steps.  Result: [code + 8 * conflicts], with [code] as for [solve]; 4
+    exactly when the bytes are not a DIMACS CNF file. *)
+Definition solve_dimacs (fuel budget : nat) (bytes : vec nat) : itree vecE nat :=
+  n <- vlen bytes ;;
+  bs <- read_bytes bytes n [] ;;
+  match parse bs with
+  | None => Ret 4
+  | Some (nvars, F) =>
+    input <- vmake 0 0 ;;
+    ninput <- write_cnf input F 0 ;;
+    run fuel budget nvars input ninput
+  end.
 
 End Solver.

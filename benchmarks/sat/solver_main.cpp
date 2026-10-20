@@ -1,22 +1,29 @@
-// Crane side: read a DIMACS file, run the extracted solver, report.
-#include "dimacs.h"
+// Crane side: hand the bytes of a DIMACS file to the extracted solver, which
+// parses and solves them, and report.  Everything but reading the file and
+// printing the answer happens in Rocq (Solver.solve_dimacs).
 #include "solver.h"
 #include <chrono>
+#include <cstdio>
 
 int main(int argc, char **argv) {
   if (argc < 2) return 2;
-  uint64_t nvars;
-  std::vector<uint64_t> flat;
-  if (!read_dimacs(argv[1], nvars, flat)) return 2;
-  auto input = satbench::make_vec<uint64_t>(0, 0);
-  for (uint64_t x : flat) input.push(x);
+  std::FILE *f = std::fopen(argv[1], "rb");
+  if (!f) { std::perror(argv[1]); return 2; }
+  auto bytes = satbench::make_vec<uint64_t>(0, 0);
+  unsigned char buf[1 << 16];
+  size_t n;
+  while ((n = std::fread(buf, 1, sizeof buf, f)) > 0)
+    for (size_t i = 0; i < n; i++) bytes.push(buf[i]);
+  bool err = std::ferror(f);
+  std::fclose(f);
+  if (err) { std::perror(argv[1]); return 2; }
   const uint64_t big = uint64_t(1) << 62;
   // At most one conflict per step, so code + 8 * conflicts stays below 2^62.
   const uint64_t budget = uint64_t(1) << 58;
   auto t0 = std::chrono::steady_clock::now();
   uint64_t r;
   try {
-    r = Solver::solve(big, budget, nvars, input, input.len());
+    r = Solver::solve_dimacs(big, budget, bytes);
   } catch (const satbench::out_of_fuel &) {
     r = 2;
   }
