@@ -17,7 +17,8 @@
     part is still to be read, nor moving a part while the whole is, though
     two parts are independent.  A let-bound lambda or local fixpoint may
     read what it closes over wherever it is used, so nothing it closes over
-    is read last in the let's scope.
+    is read last in the let's scope.  An argument an inline custom's template
+    splices twice is read twice, and one it never splices is not read.
 
     This is not yet the plan's OwnershipIR: it decides no use's mode, only
     which reads a move may be made at. *)
@@ -35,10 +36,14 @@ val region : Miniml.ml_ast -> t
 type fate =
   | Last_use
   | Read_again  (** a later or concurrent read, or a closure, may read it *)
+  | Inspected
+      (** a last use where translation reads the value in place: the
+          scrutinee of a variant match, which binds its alternatives by
+          reference, or of a custom match spelling it twice; a field of a
+          record being constructed *)
   | Unplanned  (** not a read of the region [p] was made of *)
 
 (** A term copied to two places -- an eta argument pushed into both branches
     of a conditional -- holds one read twice; it is a last use where every
     copy is one. *)
-
 val fate : t -> Miniml.Occurrence.t -> fate

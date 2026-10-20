@@ -8,8 +8,14 @@ open Miniml
 module Levels = Set.Make (Int)
 module Parents = Map.Make (Int)
 
-(* Every read the region holds, with whether it is a last use; in no order. *)
-type t = (Occurrence.t * bool) list
+(* Every read the region holds, in no order. *)
+type read = {
+  occurrence : Occurrence.t;
+  last : bool;  (* nothing after it or beside it reads the variable *)
+  consumed : bool;  (* where it stands, its value may be taken *)
+}
+
+type t = read list
 
 let empty = []
 
@@ -95,19 +101,55 @@ let reads_at_uses ty a =
   | MLlam _ -> not (Mlutil.IntSet.is_empty (Mlutil.ml_tvars ty))
   | _ -> false
 
+(* Whether a match may take its scrutinee's value, as translation generates
+   it.  A variant's alternatives are bound by reference into the scrutinee,
+   which a variable that is matched keeps; a custom match whose template
+   spells the scrutinee twice would move it twice.  An enum is a value, a
+   record's fields are read one at a time, and any other custom match
+   evaluates its scrutinee once. *)
+let scrutinee_consumed ty scrut branches =
+  if Table.is_custom_match branches then
+    let uses =
+      List.length
+        (List.filter (( = ) Foreign_template.CCscrut)
+           (Foreign_template.match_template (Table.find_custom_match branches)) )
+    in
+    uses <= 1 || (match strip scrut with MLrel _ -> false | _ -> true)
+  else if Table.record_fields_of_type ty <> [] && Array.length branches = 1 then true
+  else
+    Array.for_all
+      (fun (_, _, pat, _) ->
+        match pat with
+        | Pusual (Names.GlobRef.ConstructRef (ip, _)) | Pcons (Names.GlobRef.ConstructRef (ip, _), _) ->
+          Table.is_enum_inductive (Names.GlobRef.IndRef ip)
+        | _ -> true )
+      branches
+
+(* How many times an argument of [r] is evaluated: an inline custom splices
+   it as often as its template names it. *)
+let evaluations r =
+  match Table.inline_custom_text r with
+  | Some s when Table.is_inline_custom r -> Foreign_template.arg_mentions s
+  | _ -> fun _ -> 1
+
 let region t =
   let reads = ref [] in
-  (* [walk ~pinned parents d live t] records [t]'s reads and is what is live
-     before [t], given [live] after it: both sets of variables in scope at
-     [t], [d] binders deep. *)
-  let rec walk ~pinned parents d live t =
+  (* [walk ~consumed ~pinned parents d live t] records [t]'s reads and is
+     what is live before [t], given [live] after it: both sets of variables
+     in scope at [t], [d] binders deep.  [consumed] is whether [t] stands
+     where its value may be taken. *)
+  let rec walk ?(consumed = true) ~pinned parents d live t =
+    let walk ?(consumed = consumed) = walk ~consumed in
+    let unsequenced ?(consumed = consumed) ?evaluated = unsequenced ~consumed ?evaluated in
     match t with
-    | MLrel (i, occ) ->
+    | MLrel (i, occurrence) ->
       let l = d - i in
       let shared = Levels.exists (overlap parents l) in
-      reads := (occ, not (shared live || shared pinned)) :: !reads;
+      reads := {occurrence; last = not (shared live || shared pinned); consumed} :: !reads;
       Levels.add l live
     | MLmagic (_, t) -> walk ~pinned parents d live t
+    | MLapp (MLglob {callee = r; _}, args) when Table.is_inline_custom r ->
+      unsequenced ~evaluated:(evaluations r) ~pinned parents d live args
     (* A bind generated as sequencing runs its action and then its
        continuation's body, inline. *)
     | MLapp (MLglob use, (_ :: _ :: _ as args))
@@ -121,6 +163,9 @@ let region t =
         let live_body = walk ~pinned parents' (d + n) live body in
         walk ~pinned parents d (leave parents' d live_body) action )
     | MLapp (f, args) -> unsequenced ~pinned parents d live (f :: args)
+    (* A record's fields are copied into it. *)
+    | MLcons (ty, _, args) when Table.record_fields_of_type ty <> [] ->
+      unsequenced ~consumed:false ~pinned parents d live args
     | MLcons (_, _, args) | MLtuple args -> unsequenced ~pinned parents d live args
     | MLparray (elems, default) ->
       unsequenced ~pinned parents d live (default :: Array.to_list elems)
@@ -136,7 +181,7 @@ let region t =
        evaluation -- a field of the record it names, a component of the pair
        it hands over -- so what follows the scrutinee is what the branches
        read besides them. *)
-    | MLcase (_, scrut, branches) ->
+    | MLcase (ty, scrut, branches) ->
       let after_scrut =
         Array.fold_left
           (fun acc (ids, _, _, body) ->
@@ -145,25 +190,34 @@ let region t =
             Levels.union acc (leave (bind parents d ~n) d live_body) )
           Levels.empty branches
       in
-      walk ~pinned parents d after_scrut scrut
+      walk
+        ~consumed:(consumed && scrutinee_consumed ty scrut branches)
+        ~pinned parents d after_scrut scrut
     | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> live
   (* The terms of [ts] are evaluated in no fixed order: each is followed by
-     whatever the others read. *)
-  and unsequenced ~pinned parents d live ts =
+     whatever the others read, and by what it reads itself when it is
+     evaluated twice.  One evaluated not at all reads nothing. *)
+  and unsequenced ~consumed ?(evaluated = fun _ -> 1) ~pinned parents d live ts =
     let reads_of = List.map (free parents d) ts in
     List.mapi
       (fun k t ->
-        let others = List.filteri (fun j _ -> j <> k) reads_of in
-        walk ~pinned parents d (List.fold_left Levels.union live others) t )
+        match evaluated k with
+        | 0 -> live
+        | m ->
+          let others = List.filteri (fun j _ -> j <> k || m > 1) reads_of in
+          walk ~consumed ~pinned parents d (List.fold_left Levels.union live others) t )
       ts
     |> List.fold_left Levels.union live
   in
   ignore (walk ~pinned:Levels.empty Parents.empty 0 Levels.empty t);
   !reads
 
-type fate = Last_use | Read_again | Unplanned
+type fate = Last_use | Read_again | Inspected | Unplanned
 
 let fate p o =
-  match List.filter_map (fun (o', last) -> if Occurrence.equal o o' then Some last else None) p with
+  match List.filter (fun r -> Occurrence.equal o r.occurrence) p with
   | [] -> Unplanned
-  | copies -> if List.for_all Fun.id copies then Last_use else Read_again
+  | copies ->
+    if not (List.for_all (fun r -> r.last) copies) then Read_again
+    else if List.for_all (fun r -> r.consumed) copies then Last_use
+    else Inspected
