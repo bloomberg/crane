@@ -43,7 +43,6 @@ type local_group = {
 type resume = {
   binder : Core_binder.t;
   live : Core_binder.t list;
-  calls : Occurrence.t list;  (* the recursive calls of globals it resumes after *)
 }
 
 type t = {
@@ -361,16 +360,9 @@ let resumes_of ~effects ~origin ~calls lex body =
   let effect = sequential effects in
   let found = ref [] in
   let binder level = Core_binder.make ~origin ~level () in
-  let resume ?(calls = []) ~site depth rest =
+  let resume ~site depth rest =
     let live = List.filter (fun l -> l <> depth) (free_levels ~depth:(depth + 1) rest) in
-    found :=
-      {binder = Core_binder.make ~origin ~level:depth ~site (); live = List.map binder live; calls}
-      :: !found
-  in
-  let rec occurrence = function
-    | MLmagic (_, e) -> occurrence e
-    | MLapp (MLglob use, _) -> [Global_use.occurrence use]
-    | _ -> []
+    found := {binder = Core_binder.make ~origin ~level:depth ~site (); live = List.map binder live} :: !found
   in
   let rec walk ~calls depth e =
     (* A local fixpoint applied where it is written, reaching a recursive
@@ -406,30 +398,16 @@ let resumes_of ~effects ~origin ~calls lex body =
       | MLmagic (_, b) -> ends_in_call depth b
       | _ -> false
     in
-    (* The calls of globals a right-hand side ends in. *)
-    let rec ending_calls depth e =
-      if calls ~depth e then occurrence e
-      else
-        match e with
-        | MLcase (_, _, branches) ->
-          List.concat_map
-            (fun (ids, _, _, b) -> ending_calls (depth + List.length ids) b)
-            (Array.to_list branches)
-        | MLletin (_, _, _, b, _) -> ending_calls (depth + 1) b
-        | MLmagic (_, b) -> ending_calls depth b
-        | _ -> []
-    in
     let go = walk ~calls in
     match e with
     | MLletin (_, _, a, b, site) ->
-      if ends_in_call depth a then resume ~calls:(ending_calls depth a) ~site depth b;
+      if ends_in_call depth a then resume ~site depth b;
       go depth a;
       go (depth + 1) b
     | MLapp (MLglob use, args) when effect use = Some Core_effects.Bind -> (
       match List.rev args with
       | MLlam (_, _, k) :: action :: rest ->
-        if calls ~depth action then
-          resume ~calls:(occurrence action) ~site:(Global_use.occurrence use) depth k;
+        if calls ~depth action then resume ~site:(Global_use.occurrence use) depth k;
         List.iter (go depth) (action :: rest);
         go (depth + 1) k
       | _ -> List.iter (go depth) args )
@@ -698,8 +676,7 @@ let equal a b =
        (List.equal (fun r r' ->
             Core_binder.equal r.binder r'.binder
             && Core_binder.same_site r.binder r'.binder
-            && List.equal Core_binder.equal r.live r'.live
-            && List.equal Occurrence.equal r.calls r'.calls ) )
+            && List.equal Core_binder.equal r.live r'.live ) )
        a.resumes b.resumes
   && Ref.User.Map.equal (List.equal Occurrence.equal) a.adoptable b.adoptable
 

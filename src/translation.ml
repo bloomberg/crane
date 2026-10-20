@@ -1595,13 +1595,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       then unbox_into expected_ty result
       else result
     in
-    (* A call of the global [f] names is that use, which the recursion plan
-       knows a resume point by. *)
-    ( match (f, record_call_sig env callee_ty_inst result) with
-    | MLglob use, CPPfun_call (cs, (CPPglob (r, _, _) as callee), args)
-      when Common.globref_equal r use.callee ->
-      CPPfun_call ({cs with cs_occurrence = Some (Global_use.occurrence use)}, callee, args)
-    | _, result -> result )
+    record_call_sig env callee_ty_inst result
   | MLlam _ as a ->
     (* Where the slot is a definitional class -- an alias for a function
        type -- which of its domains the declaration takes as values.  Read

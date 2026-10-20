@@ -130,9 +130,6 @@ val adoptable_at : Miniml.Occurrence.t * int -> Miniml.Occurrence.t list
 type resume = private {
   binder : Core_binder.t;
   live : Core_binder.t list;
-  calls : Miniml.Occurrence.t list;
-      (** the uses of the globals whose calls it resumes after, where they
-          are calls of globals *)
 }
 
 (** The points binding [b] at which its definition, a member of a group that

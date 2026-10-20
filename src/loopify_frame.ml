@@ -1247,87 +1247,55 @@ let planned_frame binders ~kept_elsewhere (p : Recursion_plan.resume) =
         binders )
     p.live
 
-(** The occurrence of the Core global use the recursive call [check]
-    recognises in [e] is made of, where translation recorded one. *)
-let call_occurrence check e =
-  let found = ref None in
-  let rec fe e =
-    ( match e with
-    | CPPfun_call ({cs_occurrence = Some o; _}, _, _) when check e <> None && !found = None ->
-      found := Some o
-    | _ -> () );
-    iter_expr_children ~on_expr:fe ~on_stmts:(fun _ -> ()) e
-  in
-  fe e;
-  !found
-
-(** The points the plan resumes at that bind [r] after the call whose use
-    is [occurrence]: of the sibling points binding [r], those resuming
-    after that use, when one does. *)
-let resumes_after r occurrence =
-  let points = Recursion_plan.resumes_binding r in
-  match occurrence with
-  | Some o -> (
-    match
-      List.filter
-        (fun (p : Recursion_plan.resume) -> List.exists (Miniml.Occurrence.equal o) p.calls)
-        points
-    with
-    | [] -> points
-    | after -> after )
-  | None -> points
-
-(** The frames the plan has for the call whose result [tgt] binds to [id]
-    and whose use is [occurrence], each sorted, without repetition: one per
-    distinct {!planned_frame} of the points resuming after that call
-    ({!resumes_after}).  [None] where the result stands for no Core binder:
-    a call the backend bound to a local of its own.  [kept_elsewhere] are
-    the locals the frame leaves out by design: what the handler rebuilds,
-    the machine's entries, the parameters no re-entry changes. *)
-let planned_frames ctx id tgt ~occurrence ~kept_elsewhere =
-  let resume =
+(** The frame the plan has for the call whose result [tgt] binds to [id],
+    sorted: the {!planned_frame} of the one point resuming there, which its
+    binder's site picks out from its siblings ({!Core_binder.site}).  [None]
+    where the result stands for no Core binder -- a call the backend bound
+    to a local of its own -- and, a violation, where the plan has no one
+    point for it.  [kept_elsewhere] are the locals the frame leaves out by
+    design: what the handler rebuilds, the machine's entries, the parameters
+    no re-entry changes. *)
+let planned_frame_at ctx id tgt ~kept_elsewhere =
+  let binder =
     match tgt with
     | Declare (_, b) -> b
     | Existing -> Option.flatten (List.assoc_opt id ctx.er_binders)
     | Declare_static _ -> None
   in
-  Option.map
-    (fun r ->
-      List.sort_uniq (List.compare Id.compare)
-        (List.map
-           (fun p ->
-             List.sort Id.compare
-               (planned_frame ctx.er_binders
-                  ~kept_elsewhere:(fun x -> Id.equal x id || kept_elsewhere x)
-                  p ) )
-           (resumes_after r occurrence) ) )
-    resume
+  Option.bind binder (fun b ->
+      match Recursion_plan.resumes_binding b with
+      | [p] ->
+        Some
+          (List.sort Id.compare
+             (planned_frame ctx.er_binders
+                ~kept_elsewhere:(fun x -> Id.equal x id || kept_elsewhere x)
+                p ) )
+      | points ->
+        Probe.violation "frame plan"
+          Pp.(str "the recursion plan has " ++ int (List.length points)
+              ++ str " resume points for a call's result");
+        None )
 
 (** The locals the frame for that call keeps, given [read], the locals the
     continuation reads, in the order it keeps them: of those standing for a
-    Core binder, the ones the plan finds live there, where it plans one
-    frame ({!planned_frames}); every local the backend made that the
-    continuation reads.  Where the plan has several frames for the call --
-    sibling points resuming after a call of a local fixpoint, which has no
-    global use to tell them apart -- what the continuation reads decides.
+    Core binder, the ones the plan finds live there ({!planned_frame_at});
+    every local the backend made that the continuation reads.
 
-    Under [CRANE_CHECK_IR], the locals standing for a Core binder that the
-    continuation reads are checked to be some planned frame. *)
-let frame_locals ctx frames read =
+    Under [CRANE_CHECK_IR] the locals standing for a Core binder that the
+    continuation reads are checked to be the planned frame. *)
+let frame_locals ctx planned read =
   let identified v = Option.has_some (Option.flatten (List.assoc_opt v ctx.er_binders)) in
-  Option.iter
-    (fun frames ->
-      let read = List.sort Id.compare (List.filter identified read) in
-      if Probe.checking () && not (List.exists (List.equal Id.equal read) frames) then
-        Probe.violation "frame plan"
-          (Pp.str "a frame keeps other binders than the recursion plan finds live there") )
-    frames;
-  match frames with
-  | Some [planned] ->
+  match planned with
+  | Some planned ->
+    if Probe.checking ()
+       && not (List.equal Id.equal (List.sort Id.compare (List.filter identified read)) planned)
+    then
+      Probe.violation "frame plan"
+        (Pp.str "a frame keeps other binders than the recursion plan finds live there");
     let planned_has v = List.exists (Id.equal v) planned in
     List.filter (fun v -> (not (identified v)) || planned_has v) read
     @ List.filter (fun v -> not (List.exists (Id.equal v) read)) planned
-  | Some _ | None -> read
+  | None -> read
 
 (** Rewrite a single return statement for the [CraneEnter] handler in frame-based
     non-tail recursion transformation.
@@ -1527,9 +1495,7 @@ and rewrite_enter_stmts ctx stmts =
       (* Which Core values cross the call is the plan's; the order the frame
          keeps them in, and the backend's own locals, are the C++'s. *)
       let cont_vars =
-        frame_locals ctx
-          (planned_frames ctx id tgt ~occurrence:(call_occurrence check e) ~kept_elsewhere)
-          read
+        frame_locals ctx (planned_frame_at ctx id tgt ~kept_elsewhere) read
       in
       let cont_saved = List.map (fun cid -> CPPvar cid) cont_vars in
       let cont_types = infer_saved_types tparams env cont_saved in
