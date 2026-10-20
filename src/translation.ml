@@ -9386,7 +9386,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           with_shifted_move_tracking 1 (fun () -> gen_stmts ~slot env' k b)
         in
         (* Generate the assignment with reified type *)
-        [Sasgn (x_renamed, Declare (reified_ty, core_binder env' 1), iife)] @ cont
+        [Sasgn (x_renamed, Declare (reified_ty, core_binder ~site:let_occ env' 1), iife)] @ cont
       end else
         let afun v = Sasgn (x_renamed, Existing, v) in
         let asgn = gen_stmts env afun a in
@@ -9407,12 +9407,12 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         | [Sasgn (_, Existing, e)] ->
           Sasgn
             ( x_renamed,
-              Declare (cpp_of_ml env t, core_binder env' 1),
+              Declare (cpp_of_ml env t, core_binder ~site:let_occ env' 1),
               e )
           :: gen_cont ()
         | _ ->
           Sdecl
-            (x_renamed, cpp_of_ml env t, core_binder env' 1)
+            (x_renamed, cpp_of_ml env t, core_binder ~site:let_occ env' 1)
           :: asgn
           @ gen_cont ()
     in
@@ -9733,7 +9733,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
            (mk_cppglob lifted_ref call_type_args)
            free_var_cpps )
         cont )
-  | MLletin (x, t, a, b, _) ->
+  | MLletin (x, t, a, b, let_occ) ->
     let x' = cpp_id_of_id (id_of_mlid x) in
     let ids_renamed, env' = push_vars' [(x', t)] env in
     let x_renamed = fst (List.hd ids_renamed) in
@@ -9772,7 +9772,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       let decl =
         if stmts_reference_var x_renamed body then
           let cpp_ty = cpp_of_ml env t in
-          [Sasgn (x_renamed, Declare (cpp_ty, core_binder env' 1), mk_tt_expr ())]
+          [Sasgn (x_renamed, Declare (cpp_ty, core_binder ~site:let_occ env' 1), mk_tt_expr ())]
         else []
       in
       rhs @ decl @ body )
@@ -10082,11 +10082,13 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               Sblock_custom (ref, tmpl, x_renamed, cpp_ty, args, tys)
               :: gen_stmts ~slot env' k b
             | None ->
-              Sasgn (x_renamed, Declare (cpp_ty, core_binder env' 1), e) :: gen_stmts ~slot env' k b
+              Sasgn (x_renamed, Declare (cpp_ty, core_binder ~site:let_occ env' 1), e)
+              :: gen_stmts ~slot env' k b
             end
           | _ ->
             let cpp_ty = cpp_of_ml env t in
-            (Sdecl (x_renamed, cpp_ty, core_binder env' 1) :: asgn) @ gen_stmts ~slot env' k b
+            (Sdecl (x_renamed, cpp_ty, core_binder ~site:let_occ env' 1) :: asgn)
+            @ gen_stmts ~slot env' k b
       in
       tctx := { !tctx with move_owned_vars = saved_owned };
       result
@@ -10328,6 +10330,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         env
     in
     push_binders env ids;
+    let bound_by_bind env = core_binder ~site:(Global_use.occurrence use) env 1 in
     (* The continuation's lambda parameter adds one de Bruijn level.
        Shift move tracking sets so that parent-scope owned-variable indices
        stay in sync with the body's coordinate system.  Without this shift,
@@ -10368,7 +10371,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           else if ml_type_is_unit ml_ty && not (is_cpp_unit_type cpp_ty) then
             []
           else if ml_type_is_unit ml_ty then
-            [Sasgn (x, Declare (cpp_ty, core_binder env 1), mk_tt_expr ())]
+            [Sasgn (x, Declare (cpp_ty, bound_by_bind env), mk_tt_expr ())]
           else
             []
         in
@@ -10379,7 +10382,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           Sblock_custom (ref, tmpl, x, ty, args, tys)
           :: gen_stmts ~slot env k f
         | None ->
-          Sasgn (x, Declare (ty, core_binder env 1), a) :: gen_stmts ~slot env k f
+          Sasgn (x, Declare (ty, bound_by_bind env), a) :: gen_stmts ~slot env k f
       end
     | _ ->
       (* No lambda parameters (eta-reduced continuation like bare Ret).

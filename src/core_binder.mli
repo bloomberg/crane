@@ -14,13 +14,25 @@
     binding through the scope it is read in needs, and all it needs.  The C++
     spelling of the local is not part of it: translation renames a binder to
     avoid a clash and names a constructor field after the field, not after
-    the pattern variable. *)
+    the pattern variable.
+
+    A binder a let or a sequential bind introduces also records that term
+    ({!site}), which tells two such binders apart where the scope does not:
+    one at one level in each of two branches. *)
 
 type t = private {
   origin : Names.GlobRef.t;
   level : int;
+  site : Miniml.Occurrence.t option;
+      (** the let binding it, or the use of the bind whose continuation's
+          parameter it is, where one does *)
 }
 
-val make : origin:Names.GlobRef.t -> level:int -> t
+val make : origin:Names.GlobRef.t -> level:int -> ?site:Miniml.Occurrence.t -> unit -> t
 
+(** The same binder among the binders in scope: origin and level. *)
 val equal : t -> t -> bool
+
+(** Whether no site tells [b] and [b'] apart: either records none, or both
+    record the same one. *)
+val same_site : t -> t -> bool

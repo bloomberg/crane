@@ -532,10 +532,11 @@ let current_lexenv () : Lexenv.t = (!tctx).env_types
 (** The Core binder of the variable at de Bruijn index [db] in [env], in the
     definition whose body is being generated ({!Core_binder}): [env] binds
     the definition's Core binders, its parameters first, so the variable's
-    level is the number bound outside it. *)
-let core_binder env db =
+    level is the number bound outside it.  [site] is the let or bind
+    binding it, where one does. *)
+let core_binder ?site env db =
   Option.map
-    (fun origin -> Core_binder.make ~origin ~level:(List.length (fst env) - db))
+    (fun origin -> Core_binder.make ~origin ~level:(List.length (fst env) - db) ?site ())
     (!tctx).body_owner
 
 (** The Core binders of [params], parameters of a function whose body is

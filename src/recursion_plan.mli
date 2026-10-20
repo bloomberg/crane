@@ -124,6 +124,8 @@ type resume = private {
     does not recurse only by tail calls, resumes after a call into the
     group: a let whose right-hand side is the call, or ends in one in every
     branch that recurses, and a sequential bind's continuation.  A call
-    under a lambda or in a local fixpoint is not one.  Two lets of one
-    definition at one level, in two branches, both bind [b]. *)
+    under a lambda or in a local fixpoint is not one.  A point's binder
+    records its let or bind ({!Core_binder.site}): two lets of one
+    definition at one level, in two branches, both bind [b] only where [b]
+    records neither. *)
 val resumes_binding : Core_binder.t -> resume list
