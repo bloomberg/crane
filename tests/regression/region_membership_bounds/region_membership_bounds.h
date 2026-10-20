@@ -12,13 +12,11 @@ struct RegionMembershipBounds {
 
   static bool addr_in_regionb(uint64_t addr, const layout &l);
   static inline const uint64_t t = []() {
-    return []() {
-      layout l = layout{UINT64_C(100), UINT64_C(20)};
-      return ((addr_in_regionb(UINT64_C(110), std::move(l)) ? UINT64_C(1)
-                                                            : UINT64_C(0)) +
-              (addr_in_regionb(UINT64_C(121), std::move(l)) ? UINT64_C(1)
-                                                            : UINT64_C(0)));
-    }();
+    layout l = layout{UINT64_C(100), UINT64_C(20)};
+    return ((addr_in_regionb(UINT64_C(110), std::move(l)) ? UINT64_C(1)
+                                                          : UINT64_C(0)) +
+            (addr_in_regionb(UINT64_C(121), std::move(l)) ? UINT64_C(1)
+                                                          : UINT64_C(0)));
   }();
 };
 

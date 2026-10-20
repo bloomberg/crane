@@ -203,62 +203,58 @@ struct PromOps {
   static state3 set_prom_params3(const state3 &s, uint64_t addr, uint64_t data,
                                  bool enable);
   static inline const uint64_t test3 = []() {
-    return []() {
-      state3 s =
-          state3{UINT64_C(1),
-                 List<uint64_t>::cons(
-                     UINT64_C(2),
-                     List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())),
-                 false,
-                 UINT64_C(4),
-                 List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()),
-                 List<uint64_t>::cons(UINT64_C(6), List<uint64_t>::nil()),
-                 UINT64_C(0),
-                 UINT64_C(0),
-                 List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()),
-                 UINT64_C(0),
-                 List<uint64_t>::cons(
-                     UINT64_C(8),
-                     List<uint64_t>::cons(UINT64_C(9), List<uint64_t>::nil())),
-                 true,
-                 UINT64_C(0),
-                 UINT64_C(0),
-                 false};
-      state3 s_ =
-          set_prom_params3(std::move(s), UINT64_C(21), UINT64_C(144), true);
-      return ((s_.prom_addr3 +
-               (s_.prom_enable3 ? std::move(s_).prom_data3 : UINT64_C(0))) +
-              s_.regs3.length());
-    }();
+    state3 s =
+        state3{UINT64_C(1),
+               List<uint64_t>::cons(
+                   UINT64_C(2),
+                   List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())),
+               false,
+               UINT64_C(4),
+               List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()),
+               List<uint64_t>::cons(UINT64_C(6), List<uint64_t>::nil()),
+               UINT64_C(0),
+               UINT64_C(0),
+               List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()),
+               UINT64_C(0),
+               List<uint64_t>::cons(
+                   UINT64_C(8),
+                   List<uint64_t>::cons(UINT64_C(9), List<uint64_t>::nil())),
+               true,
+               UINT64_C(0),
+               UINT64_C(0),
+               false};
+    state3 s_ =
+        set_prom_params3(std::move(s), UINT64_C(21), UINT64_C(144), true);
+    return ((s_.prom_addr3 +
+             (s_.prom_enable3 ? std::move(s_).prom_data3 : UINT64_C(0))) +
+            s_.regs3.length());
   }();
   static inline const uint64_t test4 = []() {
-    return []() {
-      state3 s =
-          state3{UINT64_C(1),
-                 List<uint64_t>::cons(
-                     UINT64_C(2),
-                     List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())),
-                 false,
-                 UINT64_C(4),
-                 List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()),
-                 List<uint64_t>::cons(UINT64_C(6), List<uint64_t>::nil()),
-                 UINT64_C(0),
-                 UINT64_C(0),
-                 List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()),
-                 UINT64_C(0),
-                 List<uint64_t>::cons(
-                     UINT64_C(8),
-                     List<uint64_t>::cons(UINT64_C(9), List<uint64_t>::nil())),
-                 true,
-                 UINT64_C(0),
-                 UINT64_C(0),
-                 false};
-      state3 s_ =
-          set_prom_params3(std::move(s), UINT64_C(21), UINT64_C(144), true);
-      return ((s_.prom_addr3 +
-               (s_.prom_enable3 ? std::move(s_).prom_data3 : UINT64_C(0))) +
-              s_.regs3.length());
-    }();
+    state3 s =
+        state3{UINT64_C(1),
+               List<uint64_t>::cons(
+                   UINT64_C(2),
+                   List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())),
+               false,
+               UINT64_C(4),
+               List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()),
+               List<uint64_t>::cons(UINT64_C(6), List<uint64_t>::nil()),
+               UINT64_C(0),
+               UINT64_C(0),
+               List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()),
+               UINT64_C(0),
+               List<uint64_t>::cons(
+                   UINT64_C(8),
+                   List<uint64_t>::cons(UINT64_C(9), List<uint64_t>::nil())),
+               true,
+               UINT64_C(0),
+               UINT64_C(0),
+               false};
+    state3 s_ =
+        set_prom_params3(std::move(s), UINT64_C(21), UINT64_C(144), true);
+    return ((s_.prom_addr3 +
+             (s_.prom_enable3 ? std::move(s_).prom_data3 : UINT64_C(0))) +
+            s_.regs3.length());
   }();
 
   struct state5 {
@@ -273,25 +269,23 @@ struct PromOps {
   static state5 set_prom_params5(const state5 &s, uint64_t addr, uint64_t data,
                                  bool enable);
   static inline const uint64_t test5 = []() {
-    return []() {
-      state5 s = state5{
-          UINT64_C(3),
-          List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
-          List<uint64_t>::cons(
-              UINT64_C(9),
-              List<uint64_t>::cons(
-                  UINT64_C(8),
-                  List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()))),
-          UINT64_C(0),
-          UINT64_C(0),
-          false};
-      state5 s_ =
-          set_prom_params5(std::move(s), UINT64_C(23), UINT64_C(77), true);
-      return ((s_.acc5 + s_.prom_addr5) +
-              (s_.prom_enable5 ? std::move(s_).prom_data5 : UINT64_C(0)));
-    }();
+    state5 s = state5{
+        UINT64_C(3),
+        List<uint64_t>::cons(
+            UINT64_C(1),
+            List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
+        List<uint64_t>::cons(
+            UINT64_C(9),
+            List<uint64_t>::cons(
+                UINT64_C(8),
+                List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()))),
+        UINT64_C(0),
+        UINT64_C(0),
+        false};
+    state5 s_ =
+        set_prom_params5(std::move(s), UINT64_C(23), UINT64_C(77), true);
+    return ((s_.acc5 + s_.prom_addr5) +
+            (s_.prom_enable5 ? std::move(s_).prom_data5 : UINT64_C(0)));
   }();
 
   struct state6 {

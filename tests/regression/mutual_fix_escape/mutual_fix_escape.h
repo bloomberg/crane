@@ -11,20 +11,16 @@ struct MutualFixEscape {
   static std::pair<crane::fn<bool(uint64_t)>, crane::fn<bool(uint64_t)>>
   make_even_odd(uint64_t _x);
   /// test1: even(4) = true, odd(3) = true. 1+1=2.
-  static inline const uint64_t test1 = []() {
-    return []() -> uint64_t {
-      auto [ev, od] = make_even_odd(UINT64_C(0));
-      return ((ev(UINT64_C(4)) ? UINT64_C(1) : UINT64_C(0)) +
-              (od(UINT64_C(3)) ? UINT64_C(1) : UINT64_C(0)));
-    }();
+  static inline const uint64_t test1 = []() -> uint64_t {
+    auto [ev, od] = make_even_odd(UINT64_C(0));
+    return ((ev(UINT64_C(4)) ? UINT64_C(1) : UINT64_C(0)) +
+            (od(UINT64_C(3)) ? UINT64_C(1) : UINT64_C(0)));
   }();
   /// test2: even(5) = false, odd(6) = false. 0+0=0.
-  static inline const uint64_t test2 = []() {
-    return []() -> uint64_t {
-      auto [ev, od] = make_even_odd(UINT64_C(0));
-      return ((ev(UINT64_C(5)) ? UINT64_C(1) : UINT64_C(0)) +
-              (od(UINT64_C(6)) ? UINT64_C(1) : UINT64_C(0)));
-    }();
+  static inline const uint64_t test2 = []() -> uint64_t {
+    auto [ev, od] = make_even_odd(UINT64_C(0));
+    return ((ev(UINT64_C(5)) ? UINT64_C(1) : UINT64_C(0)) +
+            (od(UINT64_C(6)) ? UINT64_C(1) : UINT64_C(0)));
   }();
   /// A mutual fixpoint that captures a parameter base.
   static std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>

@@ -167,7 +167,9 @@ let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
        the printer spells the call it is given. *)
     pass "method_calls" Cpp_erasure.lower_method_calls;
     (* So does a projection, applied or named as a value. *)
-    pass "projections" Cpp_erasure.lower_projections ]
+    pass "projections" Cpp_erasure.lower_projections;
+    (* A lambda invoked only to choose between two values is the choice. *)
+    pass "conditionals" Cpp_erasure.lower_conditionals ]
 
 let pass_names =
   Pipeline_trace.names minicpp_passes @ [seam] @ Pipeline_trace.names settled_passes

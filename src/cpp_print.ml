@@ -911,21 +911,6 @@ let projection_field_name (r : GlobRef.t) : string =
   Common.modular_rename Term (Label.to_id (label_of_r r))
 
 
-(** Check if a C++ expression tree contains a string literal ([CPPstring]).
-    Used to guard ternary simplification: ternary with string-literal branches
-    loses the implicit [const char* → std::string] conversion that an IIFE
-    with explicit return type provides. *)
-let rec expr_contains_string e =
-  match e with
-  | CPPstring _ -> true
-  | _ ->
-    let found = ref false in
-    iter_expr_children
-      ~on_expr:(fun e -> if expr_contains_string e then found := true)
-      ~on_stmts:(fun _ -> ())
-      e;
-    !found
-
 (** Check if a C++ type is a literal type eligible for [constexpr] context.
 
     Excludes allocation ([shared_ptr]), side effects ([void]), types unknown
@@ -1974,96 +1959,6 @@ and pp_cpp_expr env args t =
        dereference the function pointer before invoking. *)
     let args_s = pp_list (pp_cpp_expr env args) (call_args ts) in
     str "(*" ++ pp_cpp_expr env args e ++ str ")(" ++ args_s ++ str ")"
-  | CPPfun_call
-      (_,  CPPlambda
-        { cl_params = {rev = []};
-          cl_body = [Smatch (scrut, branches, wildcard)];
-          cl_capture = Immediate;
-          _ },
-        {rev = []} )
-    when (* Detect simple IIFE-wrapped matches that can be printed as ternary.
-            Eligible: exactly 2 return-only branches (no wildcard), or 1 branch
-            + a return-only wildcard; no structured bindings, no extra conditions. *)
-      ( match branches, wildcard with
-      | [br1; br2], None ->
-        br1.smb_field_bindings = [] && br2.smb_field_bindings = []
-        && br1.smb_extra_conds = [] && br2.smb_extra_conds = []
-        && ( match br1.smb_body, br2.smb_body with
-             | [Sreturn (Some _)], [Sreturn (Some _)] -> true
-             | _ -> false )
-      | [br1], Some [Sreturn (Some _)] ->
-        br1.smb_field_bindings = []
-        && br1.smb_extra_conds = []
-        && ( match br1.smb_body with
-             | [Sreturn (Some _)] -> true
-             | _ -> false )
-      | _ -> false ) ->
-    writes_variant ();
-    let pp = pp_cpp_expr env args in
-    let cond_pp, then_e, else_e =
-      match branches, wildcard with
-      | [br1; br2], None ->
-        let cond =
-          str (sn ()).holds_alternative ++ str "<"
-          ++ pp_cpp_type false [] br1.smb_ctor_type ++ str ">("
-          ++ pp scrut.sc_expr ++ str ")"
-        in
-        let e1 = match br1.smb_body with [Sreturn (Some e)] -> e
-          | _ -> CErrors.anomaly (Pp.str "ternary: expected single Sreturn in branch") in
-        let e2 = match br2.smb_body with [Sreturn (Some e)] -> e
-          | _ -> CErrors.anomaly (Pp.str "ternary: expected single Sreturn in branch") in
-        (cond, e1, e2)
-      | [br1], Some [Sreturn (Some e2)] ->
-        let cond =
-          str (sn ()).holds_alternative ++ str "<"
-          ++ pp_cpp_type false [] br1.smb_ctor_type ++ str ">("
-          ++ pp scrut.sc_expr ++ str ")"
-        in
-        let e1 = match br1.smb_body with [Sreturn (Some e)] -> e
-          | _ -> CErrors.anomaly (Pp.str "ternary: expected single Sreturn in branch") in
-        (cond, e1, e2)
-      | _ -> CErrors.anomaly (Pp.str "ternary: unexpected branch structure")
-    in
-    str "(" ++ cond_pp ++ str " ? " ++ pp then_e ++ str " : " ++ pp else_e ++ str ")"
-  | CPPfun_call
-      (_,  CPPlambda
-        { cl_params = {rev = []};
-          cl_body = [Sif (cond, [Sreturn (Some e1)], [Sreturn (Some e2)])];
-          _ },
-        {rev = []} )
-    when not (expr_contains_string e1 || expr_contains_string e2) ->
-    (* IIFE wrapping a simple if/else with single-expression returns in both
-       branches → emit as ternary.  Skip when branches contain string literals
-       to preserve implicit const char* → std::string conversion. *)
-    let pp = pp_cpp_expr env args in
-    str "(" ++ pp cond ++ str " ? " ++ pp e1 ++ str " : " ++ pp e2 ++ str ")"
-  | CPPfun_call
-      (_,  CPPlambda
-        { cl_params = {rev = []};
-          cl_body = [Scustom_case (_, scrut, _, branches, cmatch)];
-          _ },
-        {rev = []} )
-    when (* Custom case with exactly 2 return-only branches and the standard
-            bool-like if/else template → emit ternary.  Skip when branches
-            contain string literals (const char* → std::string coercion). *)
-      String.trim cmatch.cm_template = "if (%scrut) { %br0 } else { %br1 }"
-      && List.length branches = 2
-      && List.for_all
-           (fun (_, _, stmts) ->
-             match stmts with
-             | [Sreturn (Some e)] -> not (expr_contains_string e)
-             | _ -> false)
-           branches ->
-    let pp = pp_cpp_expr env args in
-    let e1 = match branches with
-      | (_, _, [Sreturn (Some e)]) :: _ -> e
-      | _ -> CErrors.anomaly (Pp.str "ternary: unexpected custom_case branch structure")
-    in
-    let e2 = match branches with
-      | _ :: (_, _, [Sreturn (Some e)]) :: _ -> e
-      | _ -> CErrors.anomaly (Pp.str "ternary: unexpected custom_case branch structure")
-    in
-    str "(" ++ pp scrut ++ str " ? " ++ pp e1 ++ str " : " ++ pp e2 ++ str ")"
   | CPPprojection {pj_projection; pj_record; pj_args} ->
     pp_cpp_expr env args pj_record ++ str "." ++ str (projection_field_name pj_projection)
     ++ (if pj_args = [] then mt () else str "(" ++ pp_list (pp_cpp_expr env args) pj_args ++ str ")")
@@ -2433,9 +2328,8 @@ and pp_cpp_expr env args t =
     ++ str " "
     ++ paren_child rhs
   | CPPcond (cond, then_expr, else_expr) ->
-    (* Wrap the whole ternary in parentheses like the other ternary sites, so a
-       conditional used as a subexpression cannot bind incorrectly against a
-       surrounding operator. *)
+    (* Wrap the whole ternary in parentheses, so a conditional used as a
+       subexpression cannot bind incorrectly against a surrounding operator. *)
     str "("
     ++ pp_cpp_expr env args cond
     ++ str " ? "
