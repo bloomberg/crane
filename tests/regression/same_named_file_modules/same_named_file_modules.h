@@ -1667,11 +1667,11 @@ struct Coq_Pos {
         Positive _x;
       };
 
-      /// CraneCont_PeanoSucc: saves [a1, p2], resumes after recursive call,
+      /// CraneCont_PeanoSucc: saves [p2, a1], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_PeanoSucc {
-        std::shared_ptr<PeanoView> a1;
         Positive p2;
+        std::shared_ptr<PeanoView> a1;
       };
 
       using CraneFrame = std::variant<CraneEnter, CraneCont_PeanoSucc>;
@@ -1692,13 +1692,13 @@ struct Coq_Pos {
           } else {
             const auto &[p2, a1] =
                 std::get<typename PeanoView::PeanoSucc>(_sv.v());
-            _stack.emplace_back(CraneCont_PeanoSucc{a1, p2});
+            _stack.emplace_back(CraneCont_PeanoSucc{p2, a1});
             _stack.emplace_back(CraneEnter{crane_raw(a1), p2});
           }
         } else {
           auto _f = std::move(std::get<CraneCont_PeanoSucc>(_frame));
-          std::shared_ptr<PeanoView> a1 = std::move(_f.a1);
           Positive p2 = std::move(_f.p2);
+          std::shared_ptr<PeanoView> a1 = std::move(_f.a1);
           _result = f0(p2, *a1, std::move(_result));
         }
       }

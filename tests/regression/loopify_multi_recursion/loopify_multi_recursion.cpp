@@ -9,26 +9,26 @@ uint64_t LoopifyMultiRecursion::mixed_arith_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont1: saves [fuel_, n], resumes after recursive call, then processes
+  /// CraneCont1: saves [n, fuel_], resumes after recursive call, then processes
   /// rest.
   struct CraneCont1 {
-    uint64_t fuel_;
     uint64_t n;
+    uint64_t fuel_;
   };
 
-  /// CraneCont2: saves [_tmp3, fuel_, n], resumes after recursive call, then
+  /// CraneCont2: saves [n, fuel_, _tmp3], resumes after recursive call, then
   /// processes rest.
   struct CraneCont2 {
-    uint64_t _tmp3;
-    uint64_t fuel_;
     uint64_t n;
+    uint64_t fuel_;
+    uint64_t _tmp3;
   };
 
-  /// CraneCont3: saves [_tmp2, _tmp3], resumes after recursive call, then
+  /// CraneCont3: saves [_tmp3, _tmp2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont3 {
-    uint64_t _tmp2;
     uint64_t _tmp3;
+    uint64_t _tmp2;
   };
 
   using CraneFrame =
@@ -58,7 +58,7 @@ uint64_t LoopifyMultiRecursion::mixed_arith_fuel(
             if (n == UINT64_C(2)) {
               _result = UINT64_C(1);
             } else {
-              _stack.emplace_back(CraneCont1{fuel_, n});
+              _stack.emplace_back(CraneCont1{n, fuel_});
               _stack.emplace_back(CraneEnter{
                   (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
             }
@@ -67,16 +67,16 @@ uint64_t LoopifyMultiRecursion::mixed_arith_fuel(
       }
     } else if (std::holds_alternative<CraneCont1>(_frame)) {
       auto _f = std::move(std::get<CraneCont1>(_frame));
-      uint64_t fuel_ = _f.fuel_;
       uint64_t n = _f.n;
-      _stack.emplace_back(CraneCont2{std::move(_result), fuel_, n});
+      uint64_t fuel_ = _f.fuel_;
+      _stack.emplace_back(CraneCont2{n, fuel_, std::move(_result)});
       _stack.emplace_back(
           CraneEnter{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), fuel_});
     } else if (std::holds_alternative<CraneCont2>(_frame)) {
       auto _f = std::move(std::get<CraneCont2>(_frame));
-      uint64_t fuel_ = _f.fuel_;
       uint64_t n = _f.n;
-      _stack.emplace_back(CraneCont3{std::move(_result), _f._tmp3});
+      uint64_t fuel_ = _f.fuel_;
+      _stack.emplace_back(CraneCont3{_f._tmp3, std::move(_result)});
       _stack.emplace_back(
           CraneEnter{(((n - UINT64_C(3)) > n ? 0 : (n - UINT64_C(3)))), fuel_});
     } else {
@@ -101,18 +101,18 @@ bool LoopifyMultiRecursion::bool_or_chain_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont1: saves [fuel_, n], resumes after recursive call, then processes
+  /// CraneCont1: saves [n, fuel_], resumes after recursive call, then processes
   /// rest.
   struct CraneCont1 {
-    uint64_t fuel_;
     uint64_t n;
+    uint64_t fuel_;
   };
 
-  /// CraneCont2: saves [_tmp2, n], resumes after recursive call, then processes
+  /// CraneCont2: saves [n, _tmp2], resumes after recursive call, then processes
   /// rest.
   struct CraneCont2 {
-    bool _tmp2;
     uint64_t n;
+    bool _tmp2;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont1, CraneCont2>;
@@ -134,16 +134,16 @@ bool LoopifyMultiRecursion::bool_or_chain_fuel(
         if (n <= UINT64_C(0)) {
           _result = false;
         } else {
-          _stack.emplace_back(CraneCont1{fuel_, n});
+          _stack.emplace_back(CraneCont1{n, fuel_});
           _stack.emplace_back(CraneEnter{
               (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
         }
       }
     } else if (std::holds_alternative<CraneCont1>(_frame)) {
       auto _f = std::move(std::get<CraneCont1>(_frame));
-      uint64_t fuel_ = _f.fuel_;
       uint64_t n = _f.n;
-      _stack.emplace_back(CraneCont2{std::move(_result), n});
+      uint64_t fuel_ = _f.fuel_;
+      _stack.emplace_back(CraneCont2{n, std::move(_result)});
       _stack.emplace_back(
           CraneEnter{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), fuel_});
     } else {
@@ -172,11 +172,11 @@ bool LoopifyMultiRecursion::bool_and_chain_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont1: saves [fuel_, n], resumes after recursive call, then processes
+  /// CraneCont1: saves [n, fuel_], resumes after recursive call, then processes
   /// rest.
   struct CraneCont1 {
-    uint64_t fuel_;
     uint64_t n;
+    uint64_t fuel_;
   };
 
   /// CraneCont2: saves [_tmp2], resumes after recursive call, then processes
@@ -204,15 +204,15 @@ bool LoopifyMultiRecursion::bool_and_chain_fuel(
         if (n <= UINT64_C(2)) {
           _result = true;
         } else {
-          _stack.emplace_back(CraneCont1{fuel_, n});
+          _stack.emplace_back(CraneCont1{n, fuel_});
           _stack.emplace_back(CraneEnter{
               (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
         }
       }
     } else if (std::holds_alternative<CraneCont1>(_frame)) {
       auto _f = std::move(std::get<CraneCont1>(_frame));
-      uint64_t fuel_ = _f.fuel_;
       uint64_t n = _f.n;
+      uint64_t fuel_ = _f.fuel_;
       _stack.emplace_back(CraneCont2{std::move(_result)});
       _stack.emplace_back(
           CraneEnter{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), fuel_});
@@ -249,28 +249,28 @@ uint64_t LoopifyMultiRecursion::quad_count_leaves(
     const LoopifyMultiRecursion::quadtree *a3;
   };
 
-  /// CraneCont_QQuad_1: saves [_tmp4, a2, a3], resumes after recursive call,
+  /// CraneCont_QQuad_1: saves [a2, a3, _tmp4], resumes after recursive call,
   /// then processes rest.
   struct CraneCont_QQuad_1 {
-    uint64_t _tmp4;
     const LoopifyMultiRecursion::quadtree *a2;
     const LoopifyMultiRecursion::quadtree *a3;
+    uint64_t _tmp4;
   };
 
-  /// CraneCont_QQuad_2: saves [_tmp3, _tmp4, a3], resumes after recursive call,
+  /// CraneCont_QQuad_2: saves [a3, _tmp4, _tmp3], resumes after recursive call,
   /// then processes rest.
   struct CraneCont_QQuad_2 {
-    uint64_t _tmp3;
-    uint64_t _tmp4;
     const LoopifyMultiRecursion::quadtree *a3;
+    uint64_t _tmp4;
+    uint64_t _tmp3;
   };
 
-  /// CraneCont_QQuad_3: saves [_tmp2, _tmp3, _tmp4], resumes after recursive
+  /// CraneCont_QQuad_3: saves [_tmp4, _tmp3, _tmp2], resumes after recursive
   /// call, then processes rest.
   struct CraneCont_QQuad_3 {
-    uint64_t _tmp2;
-    uint64_t _tmp3;
     uint64_t _tmp4;
+    uint64_t _tmp3;
+    uint64_t _tmp2;
   };
 
   using CraneFrame =
@@ -302,19 +302,19 @@ uint64_t LoopifyMultiRecursion::quad_count_leaves(
       const LoopifyMultiRecursion::quadtree &a1 = *_f.a1;
       const LoopifyMultiRecursion::quadtree &a2 = *_f.a2;
       const LoopifyMultiRecursion::quadtree &a3 = *_f.a3;
-      _stack.emplace_back(CraneCont_QQuad_1{std::move(_result), &a2, &a3});
+      _stack.emplace_back(CraneCont_QQuad_1{&a2, &a3, std::move(_result)});
       _stack.emplace_back(CraneEnter{&a1});
     } else if (std::holds_alternative<CraneCont_QQuad_1>(_frame)) {
       auto _f = std::move(std::get<CraneCont_QQuad_1>(_frame));
       const LoopifyMultiRecursion::quadtree &a2 = *_f.a2;
       const LoopifyMultiRecursion::quadtree &a3 = *_f.a3;
-      _stack.emplace_back(CraneCont_QQuad_2{std::move(_result), _f._tmp4, &a3});
+      _stack.emplace_back(CraneCont_QQuad_2{&a3, _f._tmp4, std::move(_result)});
       _stack.emplace_back(CraneEnter{&a2});
     } else if (std::holds_alternative<CraneCont_QQuad_2>(_frame)) {
       auto _f = std::move(std::get<CraneCont_QQuad_2>(_frame));
       const LoopifyMultiRecursion::quadtree &a3 = *_f.a3;
       _stack.emplace_back(
-          CraneCont_QQuad_3{std::move(_result), _f._tmp3, _f._tmp4});
+          CraneCont_QQuad_3{_f._tmp4, _f._tmp3, std::move(_result)});
       _stack.emplace_back(CraneEnter{&a3});
     } else {
       auto _f = std::move(std::get<CraneCont_QQuad_3>(_frame));
@@ -341,28 +341,28 @@ uint64_t LoopifyMultiRecursion::quad_depth(
     const LoopifyMultiRecursion::quadtree *a3;
   };
 
-  /// CraneCont_QQuad_1: saves [_tmp4, a2, a3], resumes after recursive call,
+  /// CraneCont_QQuad_1: saves [a2, a3, _tmp4], resumes after recursive call,
   /// then processes rest.
   struct CraneCont_QQuad_1 {
-    uint64_t _tmp4;
     const LoopifyMultiRecursion::quadtree *a2;
     const LoopifyMultiRecursion::quadtree *a3;
+    uint64_t _tmp4;
   };
 
-  /// CraneCont_QQuad_2: saves [_tmp3, _tmp4, a3], resumes after recursive call,
+  /// CraneCont_QQuad_2: saves [a3, _tmp4, _tmp3], resumes after recursive call,
   /// then processes rest.
   struct CraneCont_QQuad_2 {
-    uint64_t _tmp3;
-    uint64_t _tmp4;
     const LoopifyMultiRecursion::quadtree *a3;
+    uint64_t _tmp4;
+    uint64_t _tmp3;
   };
 
-  /// CraneCont_QQuad_3: saves [_tmp2, _tmp3, _tmp4], resumes after recursive
+  /// CraneCont_QQuad_3: saves [_tmp4, _tmp3, _tmp2], resumes after recursive
   /// call, then processes rest.
   struct CraneCont_QQuad_3 {
-    uint64_t _tmp2;
-    uint64_t _tmp3;
     uint64_t _tmp4;
+    uint64_t _tmp3;
+    uint64_t _tmp2;
   };
 
   using CraneFrame =
@@ -394,19 +394,19 @@ uint64_t LoopifyMultiRecursion::quad_depth(
       const LoopifyMultiRecursion::quadtree &a1 = *_f.a1;
       const LoopifyMultiRecursion::quadtree &a2 = *_f.a2;
       const LoopifyMultiRecursion::quadtree &a3 = *_f.a3;
-      _stack.emplace_back(CraneCont_QQuad_1{std::move(_result), &a2, &a3});
+      _stack.emplace_back(CraneCont_QQuad_1{&a2, &a3, std::move(_result)});
       _stack.emplace_back(CraneEnter{&a1});
     } else if (std::holds_alternative<CraneCont_QQuad_1>(_frame)) {
       auto _f = std::move(std::get<CraneCont_QQuad_1>(_frame));
       const LoopifyMultiRecursion::quadtree &a2 = *_f.a2;
       const LoopifyMultiRecursion::quadtree &a3 = *_f.a3;
-      _stack.emplace_back(CraneCont_QQuad_2{std::move(_result), _f._tmp4, &a3});
+      _stack.emplace_back(CraneCont_QQuad_2{&a3, _f._tmp4, std::move(_result)});
       _stack.emplace_back(CraneEnter{&a2});
     } else if (std::holds_alternative<CraneCont_QQuad_2>(_frame)) {
       auto _f = std::move(std::get<CraneCont_QQuad_2>(_frame));
       const LoopifyMultiRecursion::quadtree &a3 = *_f.a3;
       _stack.emplace_back(
-          CraneCont_QQuad_3{std::move(_result), _f._tmp3, _f._tmp4});
+          CraneCont_QQuad_3{_f._tmp4, _f._tmp3, std::move(_result)});
       _stack.emplace_back(CraneEnter{&a3});
     } else {
       auto _f = std::move(std::get<CraneCont_QQuad_3>(_frame));
@@ -427,26 +427,26 @@ uint64_t LoopifyMultiRecursion::hofstadter_q_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont1: saves [fuel_, n], resumes after recursive call, then processes
+  /// CraneCont1: saves [n, fuel_], resumes after recursive call, then processes
   /// rest.
   struct CraneCont1 {
-    uint64_t fuel_;
     uint64_t n;
+    uint64_t fuel_;
   };
 
-  /// CraneCont2: saves [fuel_, n, q1], resumes after recursive call, then
+  /// CraneCont2: saves [n, fuel_, q1], resumes after recursive call, then
   /// processes rest.
   struct CraneCont2 {
-    uint64_t fuel_;
     uint64_t n;
+    uint64_t fuel_;
     uint64_t q1;
   };
 
-  /// CraneCont3: saves [fuel_, n, q2], resumes after recursive call, then
+  /// CraneCont3: saves [n, fuel_, q2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont3 {
-    uint64_t fuel_;
     uint64_t n;
+    uint64_t fuel_;
     uint64_t q2;
   };
 
@@ -483,7 +483,7 @@ uint64_t LoopifyMultiRecursion::hofstadter_q_fuel(
             if (n == UINT64_C(2)) {
               _result = UINT64_C(1);
             } else {
-              _stack.emplace_back(CraneCont1{fuel_, n});
+              _stack.emplace_back(CraneCont1{n, fuel_});
               _stack.emplace_back(CraneEnter{
                   (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
             }
@@ -492,24 +492,24 @@ uint64_t LoopifyMultiRecursion::hofstadter_q_fuel(
       }
     } else if (std::holds_alternative<CraneCont1>(_frame)) {
       auto _f = std::move(std::get<CraneCont1>(_frame));
-      uint64_t fuel_ = _f.fuel_;
       uint64_t n = _f.n;
+      uint64_t fuel_ = _f.fuel_;
       uint64_t q1 = std::move(_result);
-      _stack.emplace_back(CraneCont2{fuel_, n, q1});
+      _stack.emplace_back(CraneCont2{n, fuel_, q1});
       _stack.emplace_back(
           CraneEnter{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), fuel_});
     } else if (std::holds_alternative<CraneCont2>(_frame)) {
       auto _f = std::move(std::get<CraneCont2>(_frame));
-      uint64_t fuel_ = _f.fuel_;
       uint64_t n = _f.n;
+      uint64_t fuel_ = _f.fuel_;
       uint64_t q1 = _f.q1;
       uint64_t q2 = std::move(_result);
-      _stack.emplace_back(CraneCont3{fuel_, n, q2});
+      _stack.emplace_back(CraneCont3{n, fuel_, q2});
       _stack.emplace_back(CraneEnter{(((n - q1) > n ? 0 : (n - q1))), fuel_});
     } else if (std::holds_alternative<CraneCont3>(_frame)) {
       auto _f = std::move(std::get<CraneCont3>(_frame));
-      uint64_t fuel_ = _f.fuel_;
       uint64_t n = _f.n;
+      uint64_t fuel_ = _f.fuel_;
       uint64_t q2 = _f.q2;
       _stack.emplace_back(CraneCont4{std::move(_result)});
       _stack.emplace_back(CraneEnter{(((n - q2) > n ? 0 : (n - q2))), fuel_});

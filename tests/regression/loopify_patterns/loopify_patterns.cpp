@@ -135,11 +135,11 @@ bool LoopifyPatterns::bool_chain_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont1: saves [f, n], resumes after recursive call, then processes
+  /// CraneCont1: saves [n, f], resumes after recursive call, then processes
   /// rest.
   struct CraneCont1 {
-    uint64_t f;
     uint64_t n;
+    uint64_t f;
   };
 
   /// CraneCont2: saves [_tmp2], resumes after recursive call, then processes
@@ -173,7 +173,7 @@ bool LoopifyPatterns::bool_chain_fuel(
             if (n == UINT64_C(1)) {
               _result = false;
             } else {
-              _stack.emplace_back(CraneCont1{f, n});
+              _stack.emplace_back(CraneCont1{n, f});
               _stack.emplace_back(CraneEnter{
                   (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), f});
             }
@@ -182,8 +182,8 @@ bool LoopifyPatterns::bool_chain_fuel(
       }
     } else if (std::holds_alternative<CraneCont1>(_frame)) {
       auto _f = std::move(std::get<CraneCont1>(_frame));
-      uint64_t f = _f.f;
       uint64_t n = _f.n;
+      uint64_t f = _f.f;
       _stack.emplace_back(CraneCont2{std::move(_result)});
       _stack.emplace_back(
           CraneEnter{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), f});
@@ -601,12 +601,12 @@ uint64_t LoopifyPatterns::nested_pattern(
         std::pair<std::pair<uint64_t, uint64_t>, uint64_t>> *l;
   };
 
-  /// CraneCont_a: saves [a, b, c], resumes after recursive call, then processes
+  /// CraneCont_a: saves [c, a, b], resumes after recursive call, then processes
   /// rest.
   struct CraneCont_a {
+    uint64_t c;
     uint64_t a;
     uint64_t b;
-    uint64_t c;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_a>;
@@ -630,14 +630,14 @@ uint64_t LoopifyPatterns::nested_pattern(
             std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>::Cons>(l.v());
         const auto &[p0, c] = a0;
         const auto &[a, b] = p0;
-        _stack.emplace_back(CraneCont_a{a, b, c});
+        _stack.emplace_back(CraneCont_a{c, a, b});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
     } else {
       auto _f = std::move(std::get<CraneCont_a>(_frame));
+      uint64_t c = _f.c;
       uint64_t a = _f.a;
       uint64_t b = _f.b;
-      uint64_t c = _f.c;
       _result = (a + (b + (c + std::move(_result))));
     }
   }
@@ -738,11 +738,11 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::process_twice_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont_Cons: saves [a0, f], resumes after recursive call, then
+  /// CraneCont_Cons: saves [f, a0], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_Cons {
-    uint64_t a0;
     uint64_t f;
+    uint64_t a0;
   };
 
   /// CraneCont_Cons_1: saves [a0], resumes after recursive call, then processes
@@ -774,14 +774,14 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::process_twice_fuel(
         } else {
           const auto &[a0, a1] =
               std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(l.v());
-          _stack.emplace_back(CraneCont_Cons{a0, f});
+          _stack.emplace_back(CraneCont_Cons{f, a0});
           _stack.emplace_back(CraneEnter{*a1, f});
         }
       }
     } else if (std::holds_alternative<CraneCont_Cons>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-      uint64_t a0 = _f.a0;
       uint64_t f = _f.f;
+      uint64_t a0 = _f.a0;
       LoopifyPatterns::list<uint64_t> first = std::move(_result);
       _stack.emplace_back(CraneCont_Cons_1{a0});
       _stack.emplace_back(CraneEnter{std::move(first), f});

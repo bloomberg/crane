@@ -19,11 +19,11 @@ uint64_t LoopifyStructures::sum_nested_list_fuel(
     uint64_t a00;
   };
 
-  /// CraneCont_NList: saves [a1, f], resumes after recursive call, then
+  /// CraneCont_NList: saves [f, a1], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_NList {
-    const List<LoopifyStructures::nested> *a1;
     uint64_t f;
+    const List<LoopifyStructures::nested> *a1;
   };
 
   /// CraneCont_NList_1: saves [_tmp3], resumes after recursive call, then
@@ -65,7 +65,7 @@ uint64_t LoopifyStructures::sum_nested_list_fuel(
           } else {
             const auto &[a00] =
                 std::get<typename LoopifyStructures::nested::NList>(a0.v());
-            _stack.emplace_back(CraneCont_NList{crane_raw(a1), f});
+            _stack.emplace_back(CraneCont_NList{f, crane_raw(a1)});
             _stack.emplace_back(CraneEnter{crane_raw(a00), f});
           }
         }
@@ -76,8 +76,8 @@ uint64_t LoopifyStructures::sum_nested_list_fuel(
       _result = (a00 + std::move(_result));
     } else if (std::holds_alternative<CraneCont_NList>(_frame)) {
       auto _f = std::move(std::get<CraneCont_NList>(_frame));
-      const List<LoopifyStructures::nested> &a1 = *_f.a1;
       uint64_t f = _f.f;
+      const List<LoopifyStructures::nested> &a1 = *_f.a1;
       _stack.emplace_back(CraneCont_NList_1{std::move(_result)});
       _stack.emplace_back(CraneEnter{&a1, f});
     } else {
@@ -102,11 +102,11 @@ uint64_t LoopifyStructures::depth_nested_list_fuel(
   /// CraneCont_Elem: resumes after recursive call, then processes rest.
   struct CraneCont_Elem {};
 
-  /// CraneCont_NList: saves [a1, f], resumes after recursive call, then
+  /// CraneCont_NList: saves [f, a1], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_NList {
-    const List<LoopifyStructures::nested> *a1;
     uint64_t f;
+    const List<LoopifyStructures::nested> *a1;
   };
 
   /// CraneCont_NList_1: saves [d], resumes after recursive call, then processes
@@ -146,7 +146,7 @@ uint64_t LoopifyStructures::depth_nested_list_fuel(
           } else {
             const auto &[a00] =
                 std::get<typename LoopifyStructures::nested::NList>(a0.v());
-            _stack.emplace_back(CraneCont_NList{crane_raw(a1), f});
+            _stack.emplace_back(CraneCont_NList{f, crane_raw(a1)});
             _stack.emplace_back(CraneEnter{crane_raw(a00), f});
           }
         }
@@ -161,8 +161,8 @@ uint64_t LoopifyStructures::depth_nested_list_fuel(
       }
     } else if (std::holds_alternative<CraneCont_NList>(_frame)) {
       auto _f = std::move(std::get<CraneCont_NList>(_frame));
-      const List<LoopifyStructures::nested> &a1 = *_f.a1;
       uint64_t f = _f.f;
+      const List<LoopifyStructures::nested> &a1 = *_f.a1;
       uint64_t d = (std::move(_result) + 1);
       _stack.emplace_back(CraneCont_NList_1{d});
       _stack.emplace_back(CraneEnter{&a1, f});
@@ -197,11 +197,11 @@ List<uint64_t> LoopifyStructures::flatten_nested_list_fuel(
     uint64_t a00;
   };
 
-  /// CraneCont_NList: saves [a1, f], resumes after recursive call, then
+  /// CraneCont_NList: saves [f, a1], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_NList {
-    const List<LoopifyStructures::nested> *a1;
     uint64_t f;
+    const List<LoopifyStructures::nested> *a1;
   };
 
   /// CraneCont_NList_1: saves [_tmp3], resumes after recursive call, then
@@ -243,7 +243,7 @@ List<uint64_t> LoopifyStructures::flatten_nested_list_fuel(
           } else {
             const auto &[a00] =
                 std::get<typename LoopifyStructures::nested::NList>(a0.v());
-            _stack.emplace_back(CraneCont_NList{crane_raw(a1), f});
+            _stack.emplace_back(CraneCont_NList{f, crane_raw(a1)});
             _stack.emplace_back(CraneEnter{crane_raw(a00), f});
           }
         }
@@ -254,8 +254,8 @@ List<uint64_t> LoopifyStructures::flatten_nested_list_fuel(
       _result = List<uint64_t>::cons(a00, std::move(_result));
     } else if (std::holds_alternative<CraneCont_NList>(_frame)) {
       auto _f = std::move(std::get<CraneCont_NList>(_frame));
-      const List<LoopifyStructures::nested> &a1 = *_f.a1;
       uint64_t f = _f.f;
+      const List<LoopifyStructures::nested> &a1 = *_f.a1;
       _stack.emplace_back(CraneCont_NList_1{std::move(_result)});
       _stack.emplace_back(CraneEnter{&a1, f});
     } else {

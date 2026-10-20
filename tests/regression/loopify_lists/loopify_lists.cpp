@@ -417,11 +417,11 @@ LoopifyLists::weighted_sum(uint64_t i,
     uint64_t i;
   };
 
-  /// CraneCont_Cons: saves [a0, i], resumes after recursive call, then
+  /// CraneCont_Cons: saves [i, a0], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_Cons {
-    uint64_t a0;
     uint64_t i;
+    uint64_t a0;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
@@ -442,13 +442,13 @@ LoopifyLists::weighted_sum(uint64_t i,
       } else {
         const auto &[a0, a1] =
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{a0, i});
+        _stack.emplace_back(CraneCont_Cons{i, a0});
         _stack.emplace_back(CraneEnter{crane_raw(a1), (i + 1)});
       }
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-      uint64_t a0 = _f.a0;
       uint64_t i = _f.i;
+      uint64_t a0 = _f.a0;
       _result = ((i * a0) + std::move(_result));
     }
   }

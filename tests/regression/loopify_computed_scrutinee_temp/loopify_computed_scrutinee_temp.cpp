@@ -49,11 +49,11 @@ uint64_t LoopifyComputedScrutineeTemp::walk(
     uint64_t n;
   };
 
-  /// CraneCont_Cons: saves [a0, l], resumes after recursive call, then
+  /// CraneCont_Cons: saves [l, a0], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_Cons {
-    uint64_t a0;
     LoopifyComputedScrutineeTemp::lst l;
+    uint64_t a0;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
@@ -80,14 +80,14 @@ uint64_t LoopifyComputedScrutineeTemp::walk(
           const auto &[a0, a1] =
               std::get<typename LoopifyComputedScrutineeTemp::lst::Cons>(
                   _sv.v());
-          _stack.emplace_back(CraneCont_Cons{a0, l});
+          _stack.emplace_back(CraneCont_Cons{l, a0});
           _stack.emplace_back(CraneEnter{*a1, m});
         }
       }
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-      uint64_t a0 = _f.a0;
       const LoopifyComputedScrutineeTemp::lst &l = std::move(_f.l);
+      uint64_t a0 = _f.a0;
       _result = ((a0 + hd(l)) + std::move(_result));
     }
   }

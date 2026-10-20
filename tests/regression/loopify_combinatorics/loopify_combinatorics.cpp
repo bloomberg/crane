@@ -84,20 +84,20 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont_Cons: saves [a0, a1, f, orig], resumes after recursive call,
+  /// CraneCont_Cons: saves [orig, f, a0, a1], resumes after recursive call,
   /// then processes rest.
   struct CraneCont_Cons {
+    List<uint64_t> orig;
+    uint64_t f;
     uint64_t a0;
     std::shared_ptr<List<uint64_t>> a1;
-    uint64_t f;
-    List<uint64_t> orig;
   };
 
-  /// CraneCont_Cons_1: saves [_tmp3, a0], resumes after recursive call, then
+  /// CraneCont_Cons_1: saves [a0, _tmp3], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_Cons_1 {
-    List<List<uint64_t>> _tmp3;
     uint64_t a0;
+    List<List<uint64_t>> _tmp3;
   };
 
   /// CraneCont_Nil: saves [a0], resumes after recursive call, then processes
@@ -136,18 +136,18 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
             _stack.emplace_back(CraneCont_Nil{a0});
             _stack.emplace_back(CraneEnter{orig, *a1, f});
           } else {
-            _stack.emplace_back(CraneCont_Cons{a0, a1, f, orig});
+            _stack.emplace_back(CraneCont_Cons{orig, f, a0, a1});
             _stack.emplace_back(CraneEnter{remaining, remaining, f});
           }
         }
       }
     } else if (std::holds_alternative<CraneCont_Cons>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      const List<uint64_t> &orig = std::move(_f.orig);
+      uint64_t f = _f.f;
       uint64_t a0 = _f.a0;
       std::shared_ptr<List<uint64_t>> a1 = std::move(_f.a1);
-      uint64_t f = _f.f;
-      const List<uint64_t> &orig = std::move(_f.orig);
-      _stack.emplace_back(CraneCont_Cons_1{std::move(_result), a0});
+      _stack.emplace_back(CraneCont_Cons_1{a0, std::move(_result)});
       _stack.emplace_back(CraneEnter{orig, *a1, f});
     } else if (std::holds_alternative<CraneCont_Cons_1>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Cons_1>(_frame));
@@ -435,11 +435,11 @@ List<List<uint64_t>> LoopifyCombinatorics::insert_everywhere(
     const List<uint64_t> *l;
   };
 
-  /// CraneCont_Cons: saves [a0, l], resumes after recursive call, then
+  /// CraneCont_Cons: saves [l, a0], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_Cons {
-    uint64_t a0;
     List<uint64_t> l;
+    uint64_t a0;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
@@ -459,13 +459,13 @@ List<List<uint64_t>> LoopifyCombinatorics::insert_everywhere(
             List<List<uint64_t>>::nil());
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{a0, l});
+        _stack.emplace_back(CraneCont_Cons{l, a0});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-      uint64_t a0 = _f.a0;
       const List<uint64_t> &l = std::move(_f.l);
+      uint64_t a0 = _f.a0;
       List<List<uint64_t>> rest = std::move(_result);
       auto prepend_y =
           [&](const List<List<uint64_t>> &lsts) -> List<List<uint64_t>> {

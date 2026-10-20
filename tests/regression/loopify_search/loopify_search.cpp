@@ -15,25 +15,25 @@ uint64_t LoopifySearch::knapsack_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont1: saves [a1, capacity, f, value, weight], resumes after
+  /// CraneCont1: saves [capacity, f, a1, weight, value], resumes after
   /// recursive call, then processes rest.
   struct CraneCont1 {
-    const List<std::pair<uint64_t, uint64_t>> *a1;
     uint64_t capacity;
     uint64_t f;
-    uint64_t value;
+    const List<std::pair<uint64_t, uint64_t>> *a1;
     uint64_t weight;
+    uint64_t value;
   };
 
-  /// CraneCont2: saves [_tmp3, a1, capacity, f, value, weight], resumes after
+  /// CraneCont2: saves [capacity, f, a1, weight, value, _tmp3], resumes after
   /// recursive call, then processes rest.
   struct CraneCont2 {
-    uint64_t _tmp3;
-    const List<std::pair<uint64_t, uint64_t>> *a1;
     uint64_t capacity;
     uint64_t f;
-    uint64_t value;
+    const List<std::pair<uint64_t, uint64_t>> *a1;
     uint64_t weight;
+    uint64_t value;
+    uint64_t _tmp3;
   };
 
   /// CraneCont3: saves [value], resumes after recursive call, then processes
@@ -73,30 +73,30 @@ uint64_t LoopifySearch::knapsack_fuel(
             _stack.emplace_back(CraneEnter{crane_raw(a1), capacity, f});
           } else {
             _stack.emplace_back(
-                CraneCont1{crane_raw(a1), capacity, f, value, weight});
+                CraneCont1{capacity, f, crane_raw(a1), weight, value});
             _stack.emplace_back(CraneEnter{crane_raw(a1), capacity, f});
           }
         }
       }
     } else if (std::holds_alternative<CraneCont1>(_frame)) {
       auto _f = std::move(std::get<CraneCont1>(_frame));
-      const List<std::pair<uint64_t, uint64_t>> &a1 = *_f.a1;
       uint64_t capacity = _f.capacity;
       uint64_t f = _f.f;
-      uint64_t value = _f.value;
+      const List<std::pair<uint64_t, uint64_t>> &a1 = *_f.a1;
       uint64_t weight = _f.weight;
+      uint64_t value = _f.value;
       _stack.emplace_back(
-          CraneCont2{std::move(_result), &a1, capacity, f, value, weight});
+          CraneCont2{capacity, f, &a1, weight, value, std::move(_result)});
       _stack.emplace_back(CraneEnter{
           &a1, (((capacity - weight) > capacity ? 0 : (capacity - weight))),
           f});
     } else if (std::holds_alternative<CraneCont2>(_frame)) {
       auto _f = std::move(std::get<CraneCont2>(_frame));
-      const List<std::pair<uint64_t, uint64_t>> &a1 = *_f.a1;
       uint64_t capacity = _f.capacity;
       uint64_t f = _f.f;
-      uint64_t value = _f.value;
+      const List<std::pair<uint64_t, uint64_t>> &a1 = *_f.a1;
       uint64_t weight = _f.weight;
+      uint64_t value = _f.value;
       uint64_t _tmp3 = _f._tmp3;
       uint64_t _tmp2 = std::move(_result);
       if (_tmp3 <= (value + _tmp2)) {
@@ -480,13 +480,13 @@ bool LoopifySearch::subset_sum_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont_Cons: saves [a0, a1, f, target], resumes after recursive call,
+  /// CraneCont_Cons: saves [target, f, a0, a1], resumes after recursive call,
   /// then processes rest.
   struct CraneCont_Cons {
+    uint64_t target;
+    uint64_t f;
     uint64_t a0;
     const List<uint64_t> *a1;
-    uint64_t f;
-    uint64_t target;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
@@ -510,16 +510,16 @@ bool LoopifySearch::subset_sum_fuel(
           _result = target == UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-          _stack.emplace_back(CraneCont_Cons{a0, crane_raw(a1), f, target});
+          _stack.emplace_back(CraneCont_Cons{target, f, a0, crane_raw(a1)});
           _stack.emplace_back(CraneEnter{crane_raw(a1), target, f});
         }
       }
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      uint64_t target = _f.target;
+      uint64_t f = _f.f;
       uint64_t a0 = _f.a0;
       const List<uint64_t> &a1 = *_f.a1;
-      uint64_t f = _f.f;
-      uint64_t target = _f.target;
       bool without = std::move(_result);
       if (without) {
         _result = true;
@@ -714,19 +714,19 @@ List<uint64_t> LoopifySearch::quicksort_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont_Cons: saves [a0, f, greater], resumes after recursive call, then
+  /// CraneCont_Cons: saves [f, a0, greater], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_Cons {
-    uint64_t a0;
     uint64_t f;
+    uint64_t a0;
     List<uint64_t> greater;
   };
 
-  /// CraneCont_Cons_1: saves [_tmp2, a0], resumes after recursive call, then
+  /// CraneCont_Cons_1: saves [a0, _tmp2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_Cons_1 {
-    List<uint64_t> _tmp2;
     uint64_t a0;
+    List<uint64_t> _tmp2;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Cons, CraneCont_Cons_1>;
@@ -755,16 +755,16 @@ List<uint64_t> LoopifySearch::quicksort_fuel(
               filter_impl([=](uint64_t y) { return y < a0; }, a1_value);
           List<uint64_t> greater =
               filter_impl([=](uint64_t y) { return a0 <= y; }, a1_value);
-          _stack.emplace_back(CraneCont_Cons{a0, f, std::move(greater)});
+          _stack.emplace_back(CraneCont_Cons{f, a0, std::move(greater)});
           _stack.emplace_back(CraneEnter{std::move(smaller), f});
         }
       }
     } else if (std::holds_alternative<CraneCont_Cons>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-      uint64_t a0 = _f.a0;
       uint64_t f = _f.f;
+      uint64_t a0 = _f.a0;
       List<uint64_t> greater = std::move(_f.greater);
-      _stack.emplace_back(CraneCont_Cons_1{std::move(_result), a0});
+      _stack.emplace_back(CraneCont_Cons_1{a0, std::move(_result)});
       _stack.emplace_back(CraneEnter{std::move(greater), f});
     } else {
       auto _f = std::move(std::get<CraneCont_Cons_1>(_frame));
@@ -917,11 +917,11 @@ List<uint64_t> LoopifySearch::merge_sort_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont_a: saves [b, f], resumes after recursive call, then processes
+  /// CraneCont_a: saves [f, b], resumes after recursive call, then processes
   /// rest.
   struct CraneCont_a {
-    List<uint64_t> b;
     uint64_t f;
+    List<uint64_t> b;
   };
 
   /// CraneCont_a_1: saves [_tmp2], resumes after recursive call, then processes
@@ -955,15 +955,15 @@ List<uint64_t> LoopifySearch::merge_sort_fuel(
             _result = std::move(l);
           } else {
             auto [a, b] = split_list(l);
-            _stack.emplace_back(CraneCont_a{b, f});
+            _stack.emplace_back(CraneCont_a{f, b});
             _stack.emplace_back(CraneEnter{std::move(a), f});
           }
         }
       }
     } else if (std::holds_alternative<CraneCont_a>(_frame)) {
       auto _f = std::move(std::get<CraneCont_a>(_frame));
-      List<uint64_t> b = std::move(_f.b);
       uint64_t f = _f.f;
+      List<uint64_t> b = std::move(_f.b);
       _stack.emplace_back(CraneCont_a_1{std::move(_result)});
       _stack.emplace_back(CraneEnter{std::move(b), f});
     } else {
@@ -1059,20 +1059,20 @@ List<List<uint64_t>> LoopifySearch::perms_choices_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont_Cons: saves [a0, a1, f, orig], resumes after recursive call,
+  /// CraneCont_Cons: saves [orig, f, a0, a1], resumes after recursive call,
   /// then processes rest.
   struct CraneCont_Cons {
+    List<uint64_t> orig;
+    uint64_t f;
     uint64_t a0;
     std::shared_ptr<List<uint64_t>> a1;
-    uint64_t f;
-    List<uint64_t> orig;
   };
 
-  /// CraneCont_Cons_1: saves [_tmp3, a0], resumes after recursive call, then
+  /// CraneCont_Cons_1: saves [a0, _tmp3], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_Cons_1 {
-    List<List<uint64_t>> _tmp3;
     uint64_t a0;
+    List<List<uint64_t>> _tmp3;
   };
 
   /// CraneCont_Nil: saves [a0], resumes after recursive call, then processes
@@ -1111,18 +1111,18 @@ List<List<uint64_t>> LoopifySearch::perms_choices_fuel(
             _stack.emplace_back(CraneCont_Nil{a0});
             _stack.emplace_back(CraneEnter{orig, *a1, f});
           } else {
-            _stack.emplace_back(CraneCont_Cons{a0, a1, f, orig});
+            _stack.emplace_back(CraneCont_Cons{orig, f, a0, a1});
             _stack.emplace_back(CraneEnter{remaining, remaining, f});
           }
         }
       }
     } else if (std::holds_alternative<CraneCont_Cons>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      const List<uint64_t> &orig = std::move(_f.orig);
+      uint64_t f = _f.f;
       uint64_t a0 = _f.a0;
       std::shared_ptr<List<uint64_t>> a1 = std::move(_f.a1);
-      uint64_t f = _f.f;
-      const List<uint64_t> &orig = std::move(_f.orig);
-      _stack.emplace_back(CraneCont_Cons_1{std::move(_result), a0});
+      _stack.emplace_back(CraneCont_Cons_1{a0, std::move(_result)});
       _stack.emplace_back(CraneEnter{orig, *a1, f});
     } else if (std::holds_alternative<CraneCont_Cons_1>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Cons_1>(_frame));

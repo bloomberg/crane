@@ -103,13 +103,13 @@ struct PartialAppMove {
       const tree *a2;
     };
 
-    /// CraneCont_Node_1: saves [_tmp2, a0, a1, a2], resumes after recursive
+    /// CraneCont_Node_1: saves [a0, a1, a2, _tmp2], resumes after recursive
     /// call, then processes rest.
     struct CraneCont_Node_1 {
-      T1 _tmp2;
       std::shared_ptr<tree> a0;
       uint64_t a1;
       const tree *a2;
+      T1 _tmp2;
     };
 
     using CraneFrame =
@@ -137,7 +137,7 @@ struct PartialAppMove {
         uint64_t a1 = _f.a1;
         const tree &a2 = *_f.a2;
         _stack.emplace_back(
-            CraneCont_Node_1{std::move(_result), std::move(a0), a1, &a2});
+            CraneCont_Node_1{std::move(a0), a1, &a2, std::move(_result)});
         _stack.emplace_back(CraneEnter{&a2});
       } else {
         auto _f = std::move(std::get<CraneCont_Node_1>(_frame));

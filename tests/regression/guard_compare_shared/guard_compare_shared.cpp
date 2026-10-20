@@ -34,12 +34,12 @@ Comparison GuardCompareShared::tcompare(
     const GuardCompareShared::tree *a;
   };
 
-  /// CraneCont_Node: saves [a1, a10, a2, a20], resumes after recursive call,
+  /// CraneCont_Node: saves [a1, a2, a10, a20], resumes after recursive call,
   /// then processes rest.
   struct CraneCont_Node {
     uint64_t a1;
-    uint64_t a10;
     const GuardCompareShared::tree *a2;
+    uint64_t a10;
     const GuardCompareShared::tree *a20;
   };
 
@@ -76,7 +76,7 @@ Comparison GuardCompareShared::tcompare(
             const auto &[a00, a10, a20] =
                 crane::get<typename GuardCompareShared::tree::Node>(b.v());
             _stack.emplace_back(
-                CraneCont_Node{a1, a10, crane_raw(a2), crane_raw(a20)});
+                CraneCont_Node{a1, crane_raw(a2), a10, crane_raw(a20)});
             _stack.emplace_back(CraneEnter{crane_raw(a00), crane_raw(a0)});
           }
         }
@@ -84,8 +84,8 @@ Comparison GuardCompareShared::tcompare(
     } else {
       auto _f = std::move(crane::get<CraneCont_Node>(_frame));
       uint64_t a1 = _f.a1;
-      uint64_t a10 = _f.a10;
       const GuardCompareShared::tree &a2 = *_f.a2;
+      uint64_t a10 = _f.a10;
       const GuardCompareShared::tree &a20 = *_f.a20;
       Comparison _tmp1 = std::move(_result);
       switch (_tmp1) {

@@ -209,11 +209,11 @@ struct DepElim {
         uint64_t _x;
       };
 
-      /// CraneCont_FS: saves [a1, n0], resumes after recursive call, then
+      /// CraneCont_FS: saves [n0, a1], resumes after recursive call, then
       /// processes rest.
       struct CraneCont_FS {
-        std::shared_ptr<fin> a1;
         uint64_t n0;
+        std::shared_ptr<fin> a1;
       };
 
       using CraneFrame = std::variant<CraneEnter, CraneCont_FS>;
@@ -234,13 +234,13 @@ struct DepElim {
             _result = f(n0);
           } else {
             const auto &[n0, a1] = std::get<typename fin::FS>(_sv.v());
-            _stack.emplace_back(CraneCont_FS{a1, n0});
+            _stack.emplace_back(CraneCont_FS{n0, a1});
             _stack.emplace_back(CraneEnter{crane_raw(a1), n0});
           }
         } else {
           auto _f = std::move(std::get<CraneCont_FS>(_frame));
-          std::shared_ptr<fin> a1 = std::move(_f.a1);
           uint64_t n0 = _f.n0;
+          std::shared_ptr<fin> a1 = std::move(_f.a1);
           _result = f0(n0, *a1, std::move(_result));
         }
       }
@@ -418,12 +418,12 @@ struct DepElim {
         uint64_t _x;
       };
 
-      /// CraneCont_Vcons: saves [a1, a2, n0], resumes after recursive call,
+      /// CraneCont_Vcons: saves [n0, a1, a2], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_Vcons {
+        uint64_t n0;
         A a1;
         std::shared_ptr<vec<A>> a2;
-        uint64_t n0;
       };
 
       using CraneFrame = std::variant<CraneEnter, CraneCont_Vcons>;
@@ -444,14 +444,14 @@ struct DepElim {
           } else {
             const auto &[n0, a1, a2] =
                 std::get<typename vec<A>::Vcons>(_sv.v());
-            _stack.emplace_back(CraneCont_Vcons{a1, a2, n0});
+            _stack.emplace_back(CraneCont_Vcons{n0, a1, a2});
             _stack.emplace_back(CraneEnter{crane_raw(a2), n0});
           }
         } else {
           auto _f = std::move(std::get<CraneCont_Vcons>(_frame));
+          uint64_t n0 = _f.n0;
           auto a1 = std::move(_f.a1);
           std::shared_ptr<vec<A>> a2 = std::move(_f.a2);
-          uint64_t n0 = _f.n0;
           _result = f0(n0, a1, *a2, std::move(_result));
         }
       }

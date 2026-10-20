@@ -222,13 +222,13 @@ struct FunctionVernac {
         uint64_t _x0;
       };
 
-      /// CraneCont_R_div2_2: saves [_res, a2, n0, p0], resumes after recursive
+      /// CraneCont_R_div2_2: saves [n0, p0, a2, _res], resumes after recursive
       /// call, then processes rest.
       struct CraneCont_R_div2_2 {
-        std::shared_ptr<R_div2> _res;
-        uint64_t a2;
         uint64_t n0;
         uint64_t p0;
+        uint64_t a2;
+        std::shared_ptr<R_div2> _res;
       };
 
       using CraneFrame = std::variant<CraneEnter, CraneCont_R_div2_2>;
@@ -255,15 +255,15 @@ struct FunctionVernac {
           } else {
             const auto &[n0, p0, a2, _res] =
                 std::get<typename R_div2::R_div2_2>(_sv.v());
-            _stack.emplace_back(CraneCont_R_div2_2{_res, a2, n0, p0});
+            _stack.emplace_back(CraneCont_R_div2_2{n0, p0, a2, _res});
             _stack.emplace_back(CraneEnter{crane_raw(_res), p0, a2});
           }
         } else {
           auto _f = std::move(std::get<CraneCont_R_div2_2>(_frame));
-          std::shared_ptr<R_div2> _res = std::move(_f._res);
-          uint64_t a2 = _f.a2;
           uint64_t n0 = _f.n0;
           uint64_t p0 = _f.p0;
+          uint64_t a2 = _f.a2;
+          std::shared_ptr<R_div2> _res = std::move(_f._res);
           _result = f1(n0, p0, a2, *_res, std::move(_result));
         }
       }
@@ -401,14 +401,14 @@ struct FunctionVernac {
         uint64_t _x0;
       };
 
-      /// CraneCont_R_list_sum_1: saves [_res, a3, l0, x0, xs0], resumes after
+      /// CraneCont_R_list_sum_1: saves [l0, x0, xs0, a3, _res], resumes after
       /// recursive call, then processes rest.
       struct CraneCont_R_list_sum_1 {
-        std::shared_ptr<R_list_sum> _res;
-        uint64_t a3;
         List<uint64_t> l0;
         uint64_t x0;
         List<uint64_t> xs0;
+        uint64_t a3;
+        std::shared_ptr<R_list_sum> _res;
       };
 
       using CraneFrame = std::variant<CraneEnter, CraneCont_R_list_sum_1>;
@@ -433,16 +433,16 @@ struct FunctionVernac {
           } else {
             const auto &[l0, x0, xs0, a3, _res] =
                 std::get<typename R_list_sum::R_list_sum_1>(_sv.v());
-            _stack.emplace_back(CraneCont_R_list_sum_1{_res, a3, l0, x0, xs0});
+            _stack.emplace_back(CraneCont_R_list_sum_1{l0, x0, xs0, a3, _res});
             _stack.emplace_back(CraneEnter{crane_raw(_res), xs0, a3});
           }
         } else {
           auto _f = std::move(std::get<CraneCont_R_list_sum_1>(_frame));
-          std::shared_ptr<R_list_sum> _res = std::move(_f._res);
-          uint64_t a3 = _f.a3;
           List<uint64_t> l0 = std::move(_f.l0);
           uint64_t x0 = _f.x0;
           List<uint64_t> xs0 = std::move(_f.xs0);
+          uint64_t a3 = _f.a3;
+          std::shared_ptr<R_list_sum> _res = std::move(_f._res);
           _result = f0(l0, x0, xs0, a3, *_res, std::move(_result));
         }
       }

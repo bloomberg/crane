@@ -115,21 +115,21 @@ uint64_t LoopifySearchOpt::knapsack_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont1: saves [a1, capacity, fuel_, value, weight], resumes after
+  /// CraneCont1: saves [capacity, fuel_, a1, weight, value], resumes after
   /// recursive call, then processes rest.
   struct CraneCont1 {
-    const List<std::pair<uint64_t, uint64_t>> *a1;
     uint64_t capacity;
     uint64_t fuel_;
-    uint64_t value;
+    const List<std::pair<uint64_t, uint64_t>> *a1;
     uint64_t weight;
+    uint64_t value;
   };
 
-  /// CraneCont2: saves [_tmp2, value], resumes after recursive call, then
+  /// CraneCont2: saves [value, _tmp2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont2 {
-    uint64_t _tmp2;
     uint64_t value;
+    uint64_t _tmp2;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont1, CraneCont2>;
@@ -161,19 +161,19 @@ uint64_t LoopifySearchOpt::knapsack_fuel(
             _stack.emplace_back(CraneEnter{crane_raw(a1), capacity, fuel_});
           } else {
             _stack.emplace_back(
-                CraneCont1{crane_raw(a1), capacity, fuel_, value, weight});
+                CraneCont1{capacity, fuel_, crane_raw(a1), weight, value});
             _stack.emplace_back(CraneEnter{crane_raw(a1), capacity, fuel_});
           }
         }
       }
     } else if (std::holds_alternative<CraneCont1>(_frame)) {
       auto _f = std::move(std::get<CraneCont1>(_frame));
-      const List<std::pair<uint64_t, uint64_t>> &a1 = *_f.a1;
       uint64_t capacity = _f.capacity;
       uint64_t fuel_ = _f.fuel_;
-      uint64_t value = _f.value;
+      const List<std::pair<uint64_t, uint64_t>> &a1 = *_f.a1;
       uint64_t weight = _f.weight;
-      _stack.emplace_back(CraneCont2{std::move(_result), value});
+      uint64_t value = _f.value;
+      _stack.emplace_back(CraneCont2{value, std::move(_result)});
       _stack.emplace_back(CraneEnter{
           &a1, (((capacity - weight) > capacity ? 0 : (capacity - weight))),
           fuel_});
@@ -203,13 +203,13 @@ bool LoopifySearchOpt::subset_sum_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont1: saves [a0, a1, fuel_, target], resumes after recursive call,
+  /// CraneCont1: saves [target, fuel_, a0, a1], resumes after recursive call,
   /// then processes rest.
   struct CraneCont1 {
+    uint64_t target;
+    uint64_t fuel_;
     uint64_t a0;
     const List<uint64_t> *a1;
-    uint64_t fuel_;
-    uint64_t target;
   };
 
   /// CraneCont2: saves [_tmp2], resumes after recursive call, then processes
@@ -242,17 +242,17 @@ bool LoopifySearchOpt::subset_sum_fuel(
           if (target < a0) {
             _stack.emplace_back(CraneEnter{crane_raw(a1), target, fuel_});
           } else {
-            _stack.emplace_back(CraneCont1{a0, crane_raw(a1), fuel_, target});
+            _stack.emplace_back(CraneCont1{target, fuel_, a0, crane_raw(a1)});
             _stack.emplace_back(CraneEnter{crane_raw(a1), target, fuel_});
           }
         }
       }
     } else if (std::holds_alternative<CraneCont1>(_frame)) {
       auto _f = std::move(std::get<CraneCont1>(_frame));
+      uint64_t target = _f.target;
+      uint64_t fuel_ = _f.fuel_;
       uint64_t a0 = _f.a0;
       const List<uint64_t> &a1 = *_f.a1;
-      uint64_t fuel_ = _f.fuel_;
-      uint64_t target = _f.target;
       _stack.emplace_back(CraneCont2{std::move(_result)});
       _stack.emplace_back(CraneEnter{
           &a1, (((target - a0) > target ? 0 : (target - a0))), fuel_});

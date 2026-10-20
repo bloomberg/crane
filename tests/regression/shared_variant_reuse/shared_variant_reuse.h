@@ -105,14 +105,14 @@ struct SharedVariantReuse {
         const tree *a3;
       };
 
-      /// CraneCont_Node_1: saves [_tmp2, a0, a1, a2, a3], resumes after
+      /// CraneCont_Node_1: saves [a0, a1, a2, a3, _tmp2], resumes after
       /// recursive call, then processes rest.
       struct CraneCont_Node_1 {
-        T1 _tmp2;
         crane::shared_box<tree> a0;
         uint64_t a1;
         uint64_t a2;
         const tree *a3;
+        T1 _tmp2;
       };
 
       using CraneFrame =
@@ -143,7 +143,7 @@ struct SharedVariantReuse {
           uint64_t a2 = _f.a2;
           const tree &a3 = *_f.a3;
           _stack.emplace_back(
-              CraneCont_Node_1{std::move(_result), std::move(a0), a1, a2, &a3});
+              CraneCont_Node_1{std::move(a0), a1, a2, &a3, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a3});
         } else {
           auto _f = std::move(crane::get<CraneCont_Node_1>(_frame));

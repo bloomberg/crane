@@ -310,12 +310,12 @@ struct Comp {
         const expr *a1;
       };
 
-      /// CraneCont_Add_1: saves [_tmp2, a0, a1], resumes after recursive call,
+      /// CraneCont_Add_1: saves [a0, a1, _tmp2], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_Add_1 {
-        T1 _tmp2;
         std::shared_ptr<expr> a0;
         const expr *a1;
+        T1 _tmp2;
       };
 
       using CraneFrame =
@@ -344,7 +344,7 @@ struct Comp {
           std::shared_ptr<expr> a0 = std::move(_f.a0);
           const expr &a1 = *_f.a1;
           _stack.emplace_back(
-              CraneCont_Add_1{std::move(_result), std::move(a0), &a1});
+              CraneCont_Add_1{std::move(a0), &a1, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a1});
         } else {
           auto _f = std::move(std::get<CraneCont_Add_1>(_frame));
@@ -692,15 +692,15 @@ struct Comp {
         Nat a6;
       };
 
-      /// CraneCont_Node_1: saves [_tmp2, a2, a3, a4, a5, a6], resumes after
+      /// CraneCont_Node_1: saves [a2, a3, a4, a5, a6, _tmp2], resumes after
       /// recursive call, then processes rest.
       struct CraneCont_Node_1 {
-        T1 _tmp2;
         std::shared_ptr<avl> a2;
         Nat a3;
         expr a4;
         const avl *a5;
         Nat a6;
+        T1 _tmp2;
       };
 
       using CraneFrame =
@@ -732,8 +732,8 @@ struct Comp {
           const avl &a5 = *_f.a5;
           Nat a6 = std::move(_f.a6);
           _stack.emplace_back(
-              CraneCont_Node_1{std::move(_result), std::move(a2), std::move(a3),
-                               std::move(a4), &a5, std::move(a6)});
+              CraneCont_Node_1{std::move(a2), std::move(a3), std::move(a4), &a5,
+                               std::move(a6), std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a5});
         } else {
           auto _f = std::move(std::get<CraneCont_Node_1>(_frame));

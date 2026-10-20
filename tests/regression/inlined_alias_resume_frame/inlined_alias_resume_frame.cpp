@@ -8,11 +8,11 @@ InlinedAliasResumeFrame::h(uint64_t n) { /// CraneEnter: captures varying
     uint64_t n;
   };
 
-  /// CraneCont_m: saves [m, n], resumes after recursive call, then processes
+  /// CraneCont_m: saves [n, m], resumes after recursive call, then processes
   /// rest.
   struct CraneCont_m {
-    uint64_t m;
     uint64_t n;
+    uint64_t m;
   };
 
   /// CraneCont_m_1: saves [n, r1], resumes after recursive call, then processes
@@ -37,13 +37,13 @@ InlinedAliasResumeFrame::h(uint64_t n) { /// CraneEnter: captures varying
         _result = UINT64_C(1);
       } else {
         uint64_t m = n - 1;
-        _stack.emplace_back(CraneCont_m{m, n});
+        _stack.emplace_back(CraneCont_m{n, m});
         _stack.emplace_back(CraneEnter{m});
       }
     } else if (std::holds_alternative<CraneCont_m>(_frame)) {
       auto _f = std::move(std::get<CraneCont_m>(_frame));
-      uint64_t m = _f.m;
       uint64_t n = _f.n;
+      uint64_t m = _f.m;
       uint64_t r1 = std::move(_result);
       _stack.emplace_back(CraneCont_m_1{n, r1});
       _stack.emplace_back(CraneEnter{m});

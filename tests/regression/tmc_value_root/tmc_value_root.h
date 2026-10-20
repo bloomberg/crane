@@ -80,11 +80,11 @@ struct TmcValueRoot {
       const lst *l;
     };
 
-    /// CraneCont_Cons: saves [l1, x0], resumes after recursive call, then
+    /// CraneCont_Cons: saves [x0, l1], resumes after recursive call, then
     /// processes rest.
     struct CraneCont_Cons {
-      std::shared_ptr<lst> l1;
       uint64_t x0;
+      std::shared_ptr<lst> l1;
     };
 
     using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
@@ -102,13 +102,13 @@ struct TmcValueRoot {
           _result = f;
         } else {
           const auto &[x0, l1] = std::get<typename lst::Cons>(l.v());
-          _stack.emplace_back(CraneCont_Cons{l1, x0});
+          _stack.emplace_back(CraneCont_Cons{x0, l1});
           _stack.emplace_back(CraneEnter{crane_raw(l1)});
         }
       } else {
         auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-        std::shared_ptr<lst> l1 = std::move(_f.l1);
         uint64_t x0 = _f.x0;
+        std::shared_ptr<lst> l1 = std::move(_f.l1);
         _result = f0(x0, *l1, std::move(_result));
       }
     }

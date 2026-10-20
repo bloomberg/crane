@@ -1248,7 +1248,8 @@ let planned_frame binders ~kept_elsewhere (p : Recursion_plan.resume) =
     p.live
 
 (** The frame the plan has for the call whose result [tgt] binds to [id],
-    sorted: the {!planned_frame} of the one point resuming there, which its
+    in the order the Core binds what it keeps: the {!planned_frame} of the
+    one point resuming there, which its
     binder's site picks out from its siblings ({!Core_binder.site}).  [None]
     where the result stands for no Core binder -- a call the backend bound
     to a local of its own -- and, a violation, where the plan has no one
@@ -1266,10 +1267,9 @@ let planned_frame_at ctx id tgt ~kept_elsewhere =
       match Recursion_plan.resumes_binding b with
       | [p] ->
         Some
-          (List.sort Id.compare
-             (planned_frame ctx.er_binders
-                ~kept_elsewhere:(fun x -> Id.equal x id || kept_elsewhere x)
-                p ) )
+          (planned_frame ctx.er_binders
+             ~kept_elsewhere:(fun x -> Id.equal x id || kept_elsewhere x)
+             p )
       | points ->
         Probe.violation "frame plan"
           Pp.(str "the recursion plan has " ++ int (List.length points)
@@ -1277,9 +1277,10 @@ let planned_frame_at ctx id tgt ~kept_elsewhere =
         None )
 
 (** The locals the frame for that call keeps, given [read], the locals the
-    continuation reads, in the order it keeps them: of those standing for a
-    Core binder, the ones the plan finds live there ({!planned_frame_at});
-    every local the backend made that the continuation reads.
+    continuation reads, in the order it keeps them: the ones the plan finds
+    live there, in the order the Core binds them ({!planned_frame_at}), then
+    every local the backend made that the continuation reads, in the order
+    it reads them.
 
     Under [CRANE_CHECK_IR] the locals standing for a Core binder that the
     continuation reads are checked to be the planned frame. *)
@@ -1287,14 +1288,12 @@ let frame_locals ctx planned read =
   let identified v = Option.has_some (Option.flatten (List.assoc_opt v ctx.er_binders)) in
   match planned with
   | Some planned ->
-    if Probe.checking ()
-       && not (List.equal Id.equal (List.sort Id.compare (List.filter identified read)) planned)
+    let sorted = List.sort Id.compare in
+    if Probe.checking () && not (List.equal Id.equal (sorted (List.filter identified read)) (sorted planned))
     then
       Probe.violation "frame plan"
         (Pp.str "a frame keeps other binders than the recursion plan finds live there");
-    let planned_has v = List.exists (Id.equal v) planned in
-    List.filter (fun v -> (not (identified v)) || planned_has v) read
-    @ List.filter (fun v -> not (List.exists (Id.equal v) read)) planned
+    planned @ List.filter (fun v -> not (identified v)) read
   | None -> read
 
 (** Rewrite a single return statement for the [CraneEnter] handler in frame-based

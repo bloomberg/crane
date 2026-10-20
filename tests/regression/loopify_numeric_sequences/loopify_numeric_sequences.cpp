@@ -121,26 +121,26 @@ uint64_t LoopifyNumericSequences::tribonacci_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont1: saves [fuel_, n], resumes after recursive call, then processes
+  /// CraneCont1: saves [n, fuel_], resumes after recursive call, then processes
   /// rest.
   struct CraneCont1 {
-    uint64_t fuel_;
     uint64_t n;
+    uint64_t fuel_;
   };
 
-  /// CraneCont2: saves [_tmp3, fuel_, n], resumes after recursive call, then
+  /// CraneCont2: saves [n, fuel_, _tmp3], resumes after recursive call, then
   /// processes rest.
   struct CraneCont2 {
-    uint64_t _tmp3;
-    uint64_t fuel_;
     uint64_t n;
+    uint64_t fuel_;
+    uint64_t _tmp3;
   };
 
-  /// CraneCont3: saves [_tmp2, _tmp3], resumes after recursive call, then
+  /// CraneCont3: saves [_tmp3, _tmp2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont3 {
-    uint64_t _tmp2;
     uint64_t _tmp3;
+    uint64_t _tmp2;
   };
 
   using CraneFrame =
@@ -170,7 +170,7 @@ uint64_t LoopifyNumericSequences::tribonacci_fuel(
             if (n == UINT64_C(2)) {
               _result = UINT64_C(1);
             } else {
-              _stack.emplace_back(CraneCont1{fuel_, n});
+              _stack.emplace_back(CraneCont1{n, fuel_});
               _stack.emplace_back(CraneEnter{
                   (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
             }
@@ -179,16 +179,16 @@ uint64_t LoopifyNumericSequences::tribonacci_fuel(
       }
     } else if (std::holds_alternative<CraneCont1>(_frame)) {
       auto _f = std::move(std::get<CraneCont1>(_frame));
-      uint64_t fuel_ = _f.fuel_;
       uint64_t n = _f.n;
-      _stack.emplace_back(CraneCont2{std::move(_result), fuel_, n});
+      uint64_t fuel_ = _f.fuel_;
+      _stack.emplace_back(CraneCont2{n, fuel_, std::move(_result)});
       _stack.emplace_back(
           CraneEnter{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), fuel_});
     } else if (std::holds_alternative<CraneCont2>(_frame)) {
       auto _f = std::move(std::get<CraneCont2>(_frame));
-      uint64_t fuel_ = _f.fuel_;
       uint64_t n = _f.n;
-      _stack.emplace_back(CraneCont3{std::move(_result), _f._tmp3});
+      uint64_t fuel_ = _f.fuel_;
+      _stack.emplace_back(CraneCont3{_f._tmp3, std::move(_result)});
       _stack.emplace_back(
           CraneEnter{(((n - UINT64_C(3)) > n ? 0 : (n - UINT64_C(3)))), fuel_});
     } else {
@@ -212,26 +212,26 @@ uint64_t LoopifyNumericSequences::staircase_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont1: saves [fuel_, n], resumes after recursive call, then processes
+  /// CraneCont1: saves [n, fuel_], resumes after recursive call, then processes
   /// rest.
   struct CraneCont1 {
-    uint64_t fuel_;
     uint64_t n;
+    uint64_t fuel_;
   };
 
-  /// CraneCont2: saves [_tmp3, fuel_, n], resumes after recursive call, then
+  /// CraneCont2: saves [n, fuel_, _tmp3], resumes after recursive call, then
   /// processes rest.
   struct CraneCont2 {
-    uint64_t _tmp3;
-    uint64_t fuel_;
     uint64_t n;
+    uint64_t fuel_;
+    uint64_t _tmp3;
   };
 
-  /// CraneCont3: saves [_tmp2, _tmp3], resumes after recursive call, then
+  /// CraneCont3: saves [_tmp3, _tmp2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont3 {
-    uint64_t _tmp2;
     uint64_t _tmp3;
+    uint64_t _tmp2;
   };
 
   using CraneFrame =
@@ -258,7 +258,7 @@ uint64_t LoopifyNumericSequences::staircase_fuel(
           if (n == UINT64_C(1)) {
             _result = UINT64_C(1);
           } else {
-            _stack.emplace_back(CraneCont1{fuel_, n});
+            _stack.emplace_back(CraneCont1{n, fuel_});
             _stack.emplace_back(CraneEnter{
                 (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
           }
@@ -266,16 +266,16 @@ uint64_t LoopifyNumericSequences::staircase_fuel(
       }
     } else if (std::holds_alternative<CraneCont1>(_frame)) {
       auto _f = std::move(std::get<CraneCont1>(_frame));
-      uint64_t fuel_ = _f.fuel_;
       uint64_t n = _f.n;
-      _stack.emplace_back(CraneCont2{std::move(_result), fuel_, n});
+      uint64_t fuel_ = _f.fuel_;
+      _stack.emplace_back(CraneCont2{n, fuel_, std::move(_result)});
       _stack.emplace_back(
           CraneEnter{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), fuel_});
     } else if (std::holds_alternative<CraneCont2>(_frame)) {
       auto _f = std::move(std::get<CraneCont2>(_frame));
-      uint64_t fuel_ = _f.fuel_;
       uint64_t n = _f.n;
-      _stack.emplace_back(CraneCont3{std::move(_result), _f._tmp3});
+      uint64_t fuel_ = _f.fuel_;
+      _stack.emplace_back(CraneCont3{_f._tmp3, std::move(_result)});
       _stack.emplace_back(
           CraneEnter{(((n - UINT64_C(3)) > n ? 0 : (n - UINT64_C(3)))), fuel_});
     } else {

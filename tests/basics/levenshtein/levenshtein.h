@@ -470,25 +470,25 @@ struct Levenshtein {
         Nat _x1;
       };
 
-      /// CraneCont_Change: saves [a4, a5, n0, s0, t0, u0], resumes after
+      /// CraneCont_Change: saves [s0, t0, u0, n0, a4, a5], resumes after
       /// recursive call, then processes rest.
       struct CraneCont_Change {
-        edit a4;
-        std::shared_ptr<chain> a5;
-        Nat n0;
         String s0;
         String t0;
         String u0;
+        Nat n0;
+        edit a4;
+        std::shared_ptr<chain> a5;
       };
 
-      /// CraneCont_Skip: saves [a0, a4, n0, s0, t0], resumes after recursive
+      /// CraneCont_Skip: saves [a0, s0, t0, n0, a4], resumes after recursive
       /// call, then processes rest.
       struct CraneCont_Skip {
         Ascii a0;
-        std::shared_ptr<chain> a4;
-        Nat n0;
         String s0;
         String t0;
+        Nat n0;
+        std::shared_ptr<chain> a4;
       };
 
       using CraneFrame =
@@ -513,30 +513,30 @@ struct Levenshtein {
           } else if (std::holds_alternative<typename chain::Skip>(_sv.v())) {
             const auto &[a0, s0, t0, n0, a4] =
                 std::get<typename chain::Skip>(_sv.v());
-            _stack.emplace_back(CraneCont_Skip{a0, a4, n0, s0, t0});
+            _stack.emplace_back(CraneCont_Skip{a0, s0, t0, n0, a4});
             _stack.emplace_back(CraneEnter{crane_raw(a4), s0, t0, n0});
           } else {
             const auto &[s0, t0, u0, n0, a4, a5] =
                 std::get<typename chain::Change>(_sv.v());
-            _stack.emplace_back(CraneCont_Change{a4, a5, n0, s0, t0, u0});
+            _stack.emplace_back(CraneCont_Change{s0, t0, u0, n0, a4, a5});
             _stack.emplace_back(CraneEnter{crane_raw(a5), t0, u0, n0});
           }
         } else if (std::holds_alternative<CraneCont_Change>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Change>(_frame));
-          edit a4 = std::move(_f.a4);
-          std::shared_ptr<chain> a5 = std::move(_f.a5);
-          Nat n0 = std::move(_f.n0);
           String s0 = std::move(_f.s0);
           String t0 = std::move(_f.t0);
           String u0 = std::move(_f.u0);
+          Nat n0 = std::move(_f.n0);
+          edit a4 = std::move(_f.a4);
+          std::shared_ptr<chain> a5 = std::move(_f.a5);
           _result = f1(s0, t0, u0, n0, a4, *a5, std::move(_result));
         } else {
           auto _f = std::move(std::get<CraneCont_Skip>(_frame));
           Ascii a0 = std::move(_f.a0);
-          std::shared_ptr<chain> a4 = std::move(_f.a4);
-          Nat n0 = std::move(_f.n0);
           String s0 = std::move(_f.s0);
           String t0 = std::move(_f.t0);
+          Nat n0 = std::move(_f.n0);
+          std::shared_ptr<chain> a4 = std::move(_f.a4);
           _result = f0(a0, s0, t0, n0, *a4, std::move(_result));
         }
       }

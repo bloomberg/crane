@@ -194,12 +194,12 @@ struct MethodReturnsFunctionAlias {
           const tree *r0;
         };
 
-        /// CraneCont_Node_1: saves [_tmp2, l0, r0], resumes after recursive
+        /// CraneCont_Node_1: saves [l0, r0, _tmp2], resumes after recursive
         /// call, then processes rest.
         struct CraneCont_Node_1 {
-          T1 _tmp2;
           std::shared_ptr<tree> l0;
           const tree *r0;
+          T1 _tmp2;
         };
 
         using CraneFrame =
@@ -228,7 +228,7 @@ struct MethodReturnsFunctionAlias {
             std::shared_ptr<tree> l0 = std::move(_f.l0);
             const tree &r0 = *_f.r0;
             _stack.emplace_back(
-                CraneCont_Node_1{std::move(_result), std::move(l0), &r0});
+                CraneCont_Node_1{std::move(l0), &r0, std::move(_result)});
             _stack.emplace_back(CraneEnter{_f.r0});
           } else {
             auto _f = std::move(std::get<CraneCont_Node_1>(_frame));

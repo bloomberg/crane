@@ -201,12 +201,12 @@ uint64_t LoopifyAdvancedPatterns::nested_pattern(
     const List<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>> *l;
   };
 
-  /// CraneCont_a: saves [a, b, c], resumes after recursive call, then processes
+  /// CraneCont_a: saves [c, a, b], resumes after recursive call, then processes
   /// rest.
   struct CraneCont_a {
+    uint64_t c;
     uint64_t a;
     uint64_t b;
-    uint64_t c;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_a>;
@@ -229,14 +229,14 @@ uint64_t LoopifyAdvancedPatterns::nested_pattern(
             std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>::Cons>(l.v());
         const auto &[p0, c] = a0;
         const auto &[a, b] = p0;
-        _stack.emplace_back(CraneCont_a{a, b, c});
+        _stack.emplace_back(CraneCont_a{c, a, b});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
     } else {
       auto _f = std::move(std::get<CraneCont_a>(_frame));
+      uint64_t c = _f.c;
       uint64_t a = _f.a;
       uint64_t b = _f.b;
-      uint64_t c = _f.c;
       _result = (((a + b) + c) + std::move(_result));
     }
   }

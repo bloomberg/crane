@@ -293,12 +293,12 @@ struct WhereClause {
         const Expr *a1;
       };
 
-      /// CraneCont_Plus_1: saves [_tmp2, a0, a1], resumes after recursive call,
+      /// CraneCont_Plus_1: saves [a0, a1, _tmp2], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_Plus_1 {
-        T1 _tmp2;
         std::shared_ptr<Expr> a0;
         const Expr *a1;
+        T1 _tmp2;
       };
 
       /// CraneCont_Times: saves [a0, a1], resumes after recursive call, then
@@ -308,12 +308,12 @@ struct WhereClause {
         const Expr *a1;
       };
 
-      /// CraneCont_Times_1: saves [_tmp4, a0, a1], resumes after recursive
+      /// CraneCont_Times_1: saves [a0, a1, _tmp4], resumes after recursive
       /// call, then processes rest.
       struct CraneCont_Times_1 {
-        T1 _tmp4;
         std::shared_ptr<Expr> a0;
         const Expr *a1;
+        T1 _tmp4;
       };
 
       using CraneFrame =
@@ -348,7 +348,7 @@ struct WhereClause {
           std::shared_ptr<Expr> a0 = std::move(_f.a0);
           const Expr &a1 = *_f.a1;
           _stack.emplace_back(
-              CraneCont_Plus_1{std::move(_result), std::move(a0), &a1});
+              CraneCont_Plus_1{std::move(a0), &a1, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a1});
         } else if (std::holds_alternative<CraneCont_Plus_1>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Plus_1>(_frame));
@@ -360,7 +360,7 @@ struct WhereClause {
           std::shared_ptr<Expr> a0 = std::move(_f.a0);
           const Expr &a1 = *_f.a1;
           _stack.emplace_back(
-              CraneCont_Times_1{std::move(_result), std::move(a0), &a1});
+              CraneCont_Times_1{std::move(a0), &a1, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a1});
         } else {
           auto _f = std::move(std::get<CraneCont_Times_1>(_frame));
@@ -614,12 +614,12 @@ struct WhereClause {
         const BExpr *a1;
       };
 
-      /// CraneCont_BAnd_1: saves [_tmp2, a0, a1], resumes after recursive call,
+      /// CraneCont_BAnd_1: saves [a0, a1, _tmp2], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_BAnd_1 {
-        T1 _tmp2;
         std::shared_ptr<BExpr> a0;
         const BExpr *a1;
+        T1 _tmp2;
       };
 
       /// CraneCont_BNot: saves [a0], resumes after recursive call, then
@@ -635,12 +635,12 @@ struct WhereClause {
         const BExpr *a1;
       };
 
-      /// CraneCont_BOr_1: saves [_tmp4, a0, a1], resumes after recursive call,
+      /// CraneCont_BOr_1: saves [a0, a1, _tmp4], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_BOr_1 {
-        T1 _tmp4;
         std::shared_ptr<BExpr> a0;
         const BExpr *a1;
+        T1 _tmp4;
       };
 
       using CraneFrame =
@@ -680,7 +680,7 @@ struct WhereClause {
           std::shared_ptr<BExpr> a0 = std::move(_f.a0);
           const BExpr &a1 = *_f.a1;
           _stack.emplace_back(
-              CraneCont_BAnd_1{std::move(_result), std::move(a0), &a1});
+              CraneCont_BAnd_1{std::move(a0), &a1, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a1});
         } else if (std::holds_alternative<CraneCont_BAnd_1>(_frame)) {
           auto _f = std::move(std::get<CraneCont_BAnd_1>(_frame));
@@ -696,7 +696,7 @@ struct WhereClause {
           std::shared_ptr<BExpr> a0 = std::move(_f.a0);
           const BExpr &a1 = *_f.a1;
           _stack.emplace_back(
-              CraneCont_BOr_1{std::move(_result), std::move(a0), &a1});
+              CraneCont_BOr_1{std::move(a0), &a1, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a1});
         } else {
           auto _f = std::move(std::get<CraneCont_BOr_1>(_frame));
@@ -895,13 +895,13 @@ struct WhereClause {
         const AExpr *a4;
       };
 
-      /// CraneCont_AIf_1: saves [_tmp4, a2, a3, a4], resumes after recursive
+      /// CraneCont_AIf_1: saves [a2, a3, a4, _tmp4], resumes after recursive
       /// call, then processes rest.
       struct CraneCont_AIf_1 {
-        T1 _tmp4;
         BExpr a2;
         std::shared_ptr<AExpr> a3;
         const AExpr *a4;
+        T1 _tmp4;
       };
 
       /// CraneCont_APlus: saves [a2, a3], resumes after recursive call, then
@@ -911,12 +911,12 @@ struct WhereClause {
         const AExpr *a3;
       };
 
-      /// CraneCont_APlus_1: saves [_tmp2, a2, a3], resumes after recursive
+      /// CraneCont_APlus_1: saves [a2, a3, _tmp2], resumes after recursive
       /// call, then processes rest.
       struct CraneCont_APlus_1 {
-        T1 _tmp2;
         std::shared_ptr<AExpr> a2;
         const AExpr *a3;
+        T1 _tmp2;
       };
 
       using CraneFrame =
@@ -951,8 +951,8 @@ struct WhereClause {
           BExpr a2 = std::move(_f.a2);
           std::shared_ptr<AExpr> a3 = std::move(_f.a3);
           const AExpr &a4 = *_f.a4;
-          _stack.emplace_back(CraneCont_AIf_1{std::move(_result), std::move(a2),
-                                              std::move(a3), &a4});
+          _stack.emplace_back(CraneCont_AIf_1{std::move(a2), std::move(a3), &a4,
+                                              std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a4});
         } else if (std::holds_alternative<CraneCont_AIf_1>(_frame)) {
           auto _f = std::move(std::get<CraneCont_AIf_1>(_frame));
@@ -965,7 +965,7 @@ struct WhereClause {
           std::shared_ptr<AExpr> a2 = std::move(_f.a2);
           const AExpr &a3 = *_f.a3;
           _stack.emplace_back(
-              CraneCont_APlus_1{std::move(_result), std::move(a2), &a3});
+              CraneCont_APlus_1{std::move(a2), &a3, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a3});
         } else {
           auto _f = std::move(std::get<CraneCont_APlus_1>(_frame));

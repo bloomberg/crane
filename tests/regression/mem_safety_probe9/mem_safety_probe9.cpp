@@ -207,11 +207,11 @@ MemSafetyProbe9::tree MemSafetyProbe9::make_balanced(
     uint64_t n_;
   };
 
-  /// CraneCont_n__1: saves [_tmp2, n], resumes after recursive call, then
+  /// CraneCont_n__1: saves [n, _tmp2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_n__1 {
-    MemSafetyProbe9::tree _tmp2;
     uint64_t n;
+    MemSafetyProbe9::tree _tmp2;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_n_, CraneCont_n__1>;
@@ -236,7 +236,7 @@ MemSafetyProbe9::tree MemSafetyProbe9::make_balanced(
       auto _f = std::move(std::get<CraneCont_n_>(_frame));
       uint64_t n = _f.n;
       uint64_t n_ = _f.n_;
-      _stack.emplace_back(CraneCont_n__1{std::move(_result), n});
+      _stack.emplace_back(CraneCont_n__1{n, std::move(_result)});
       _stack.emplace_back(CraneEnter{n_});
     } else {
       auto _f = std::move(std::get<CraneCont_n__1>(_frame));

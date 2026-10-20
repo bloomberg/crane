@@ -244,12 +244,12 @@ struct LoopifyMutualResultTypes {
       const e *b0;
     };
 
-    /// CraneCont_Add_1: saves [_tmp2, a0, b0], resumes after recursive call,
+    /// CraneCont_Add_1: saves [a0, b0, _tmp2], resumes after recursive call,
     /// then processes rest.
     struct CraneCont_Add_1 {
-      T1 _tmp2;
       std::shared_ptr<e> a0;
       const e *b0;
+      T1 _tmp2;
     };
 
     using CraneFrame = std::variant<CraneEnter, CraneCont_Add, CraneCont_Add_1>;
@@ -279,7 +279,7 @@ struct LoopifyMutualResultTypes {
         std::shared_ptr<e> a0 = std::move(_f.a0);
         const e &b0 = *_f.b0;
         _stack.emplace_back(
-            CraneCont_Add_1{std::move(_result), std::move(a0), &b0});
+            CraneCont_Add_1{std::move(a0), &b0, std::move(_result)});
         _stack.emplace_back(CraneEnter{&b0});
       } else {
         auto _f = std::move(std::get<CraneCont_Add_1>(_frame));
@@ -312,12 +312,12 @@ struct LoopifyMutualResultTypes {
       const md *b0;
     };
 
-    /// CraneCont_MPair_1: saves [_tmp2, a0, b0], resumes after recursive call,
+    /// CraneCont_MPair_1: saves [a0, b0, _tmp2], resumes after recursive call,
     /// then processes rest.
     struct CraneCont_MPair_1 {
-      T1 _tmp2;
       std::shared_ptr<md> a0;
       const md *b0;
+      T1 _tmp2;
     };
 
     using CraneFrame =
@@ -347,7 +347,7 @@ struct LoopifyMutualResultTypes {
         std::shared_ptr<md> a0 = std::move(_f.a0);
         const md &b0 = *_f.b0;
         _stack.emplace_back(
-            CraneCont_MPair_1{std::move(_result), std::move(a0), &b0});
+            CraneCont_MPair_1{std::move(a0), &b0, std::move(_result)});
         _stack.emplace_back(CraneEnter{&b0});
       } else {
         auto _f = std::move(std::get<CraneCont_MPair_1>(_frame));

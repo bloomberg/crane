@@ -16,11 +16,11 @@ uint64_t LoopifyTrees::tree_sum(const LoopifyTrees::tree<uint64_t> &
     const LoopifyTrees::tree<uint64_t> *a2;
   };
 
-  /// CraneCont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
+  /// CraneCont_Node_1: saves [a1, _tmp2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_Node_1 {
-    uint64_t _tmp2;
     uint64_t a1;
+    uint64_t _tmp2;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
@@ -47,7 +47,7 @@ uint64_t LoopifyTrees::tree_sum(const LoopifyTrees::tree<uint64_t> &
       auto _f = std::move(std::get<CraneCont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
-      _stack.emplace_back(CraneCont_Node_1{std::move(_result), a1});
+      _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
       _stack.emplace_back(CraneEnter{&a2});
     } else {
       auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
@@ -382,19 +382,19 @@ uint64_t LoopifyTrees::sum_rose_list_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont_RNode: saves [a00, a1, f], resumes after recursive call, then
+  /// CraneCont_RNode: saves [f, a1, a00], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_RNode {
-    uint64_t a00;
-    const List<LoopifyTrees::rose> *a1;
     uint64_t f;
+    const List<LoopifyTrees::rose> *a1;
+    uint64_t a00;
   };
 
-  /// CraneCont_RNode_1: saves [_tmp2, a00], resumes after recursive call, then
+  /// CraneCont_RNode_1: saves [a00, _tmp2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_RNode_1 {
-    uint64_t _tmp2;
     uint64_t a00;
+    uint64_t _tmp2;
   };
 
   using CraneFrame =
@@ -423,16 +423,16 @@ uint64_t LoopifyTrees::sum_rose_list_fuel(
               std::get<typename List<LoopifyTrees::rose>::Cons>(cs.v());
           const auto &[a00, a10] =
               std::get<typename LoopifyTrees::rose::RNode>(a0.v());
-          _stack.emplace_back(CraneCont_RNode{a00, crane_raw(a1), f});
+          _stack.emplace_back(CraneCont_RNode{f, crane_raw(a1), a00});
           _stack.emplace_back(CraneEnter{crane_raw(a10), f});
         }
       }
     } else if (std::holds_alternative<CraneCont_RNode>(_frame)) {
       auto _f = std::move(std::get<CraneCont_RNode>(_frame));
-      uint64_t a00 = _f.a00;
-      const List<LoopifyTrees::rose> &a1 = *_f.a1;
       uint64_t f = _f.f;
-      _stack.emplace_back(CraneCont_RNode_1{std::move(_result), a00});
+      const List<LoopifyTrees::rose> &a1 = *_f.a1;
+      uint64_t a00 = _f.a00;
+      _stack.emplace_back(CraneCont_RNode_1{a00, std::move(_result)});
       _stack.emplace_back(CraneEnter{&a1, f});
     } else {
       auto _f = std::move(std::get<CraneCont_RNode_1>(_frame));
@@ -454,19 +454,19 @@ List<uint64_t> LoopifyTrees::flatten_rose_list_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont_RNode: saves [a00, a1, f], resumes after recursive call, then
+  /// CraneCont_RNode: saves [f, a1, a00], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_RNode {
-    uint64_t a00;
-    const List<LoopifyTrees::rose> *a1;
     uint64_t f;
+    const List<LoopifyTrees::rose> *a1;
+    uint64_t a00;
   };
 
-  /// CraneCont_RNode_1: saves [_tmp2, a00], resumes after recursive call, then
+  /// CraneCont_RNode_1: saves [a00, _tmp2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_RNode_1 {
-    List<uint64_t> _tmp2;
     uint64_t a00;
+    List<uint64_t> _tmp2;
   };
 
   using CraneFrame =
@@ -495,16 +495,16 @@ List<uint64_t> LoopifyTrees::flatten_rose_list_fuel(
               std::get<typename List<LoopifyTrees::rose>::Cons>(cs.v());
           const auto &[a00, a10] =
               std::get<typename LoopifyTrees::rose::RNode>(a0.v());
-          _stack.emplace_back(CraneCont_RNode{a00, crane_raw(a1), f});
+          _stack.emplace_back(CraneCont_RNode{f, crane_raw(a1), a00});
           _stack.emplace_back(CraneEnter{crane_raw(a10), f});
         }
       }
     } else if (std::holds_alternative<CraneCont_RNode>(_frame)) {
       auto _f = std::move(std::get<CraneCont_RNode>(_frame));
-      uint64_t a00 = _f.a00;
-      const List<LoopifyTrees::rose> &a1 = *_f.a1;
       uint64_t f = _f.f;
-      _stack.emplace_back(CraneCont_RNode_1{std::move(_result), a00});
+      const List<LoopifyTrees::rose> &a1 = *_f.a1;
+      uint64_t a00 = _f.a00;
+      _stack.emplace_back(CraneCont_RNode_1{a00, std::move(_result)});
       _stack.emplace_back(CraneEnter{&a1, f});
     } else {
       auto _f = std::move(std::get<CraneCont_RNode_1>(_frame));
@@ -527,11 +527,11 @@ uint64_t LoopifyTrees::depth_rose_list_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont_RNode: saves [a1, f], resumes after recursive call, then
+  /// CraneCont_RNode: saves [f, a1], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_RNode {
-    const List<LoopifyTrees::rose> *a1;
     uint64_t f;
+    const List<LoopifyTrees::rose> *a1;
   };
 
   /// CraneCont_RNode_1: saves [d], resumes after recursive call, then processes
@@ -566,14 +566,14 @@ uint64_t LoopifyTrees::depth_rose_list_fuel(
               std::get<typename List<LoopifyTrees::rose>::Cons>(cs.v());
           const auto &[a00, a10] =
               std::get<typename LoopifyTrees::rose::RNode>(a0.v());
-          _stack.emplace_back(CraneCont_RNode{crane_raw(a1), f});
+          _stack.emplace_back(CraneCont_RNode{f, crane_raw(a1)});
           _stack.emplace_back(CraneEnter{crane_raw(a10), f});
         }
       }
     } else if (std::holds_alternative<CraneCont_RNode>(_frame)) {
       auto _f = std::move(std::get<CraneCont_RNode>(_frame));
-      const List<LoopifyTrees::rose> &a1 = *_f.a1;
       uint64_t f = _f.f;
+      const List<LoopifyTrees::rose> &a1 = *_f.a1;
       uint64_t d = (std::move(_result) + 1);
       _stack.emplace_back(CraneCont_RNode_1{d});
       _stack.emplace_back(CraneEnter{&a1, f});
@@ -611,11 +611,11 @@ LoopifyTrees::tree_max(const LoopifyTrees::tree<uint64_t> &t1,
     uint64_t max_val;
   };
 
-  /// CraneCont_Node_1: saves [_tmp2, max_val], resumes after recursive call,
+  /// CraneCont_Node_1: saves [max_val, _tmp2], resumes after recursive call,
   /// then processes rest.
   struct CraneCont_Node_1 {
-    LoopifyTrees::tree<uint64_t> _tmp2;
     uint64_t max_val;
+    LoopifyTrees::tree<uint64_t> _tmp2;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
@@ -663,7 +663,7 @@ LoopifyTrees::tree_max(const LoopifyTrees::tree<uint64_t> &t1,
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
       const LoopifyTrees::tree<uint64_t> &a20 = *_f.a20;
       uint64_t max_val = _f.max_val;
-      _stack.emplace_back(CraneCont_Node_1{std::move(_result), max_val});
+      _stack.emplace_back(CraneCont_Node_1{max_val, std::move(_result)});
       _stack.emplace_back(CraneEnter{&a20, &a2});
     } else {
       auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
@@ -957,11 +957,11 @@ LoopifyTrees::paths(const LoopifyTrees::tree<uint64_t>
     const LoopifyTrees::tree<uint64_t> *a2;
   };
 
-  /// CraneCont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
+  /// CraneCont_Node_1: saves [a1, _tmp2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_Node_1 {
-    List<List<uint64_t>> _tmp2;
     uint64_t a1;
+    List<List<uint64_t>> _tmp2;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
@@ -989,7 +989,7 @@ LoopifyTrees::paths(const LoopifyTrees::tree<uint64_t>
       auto _f = std::move(std::get<CraneCont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
-      _stack.emplace_back(CraneCont_Node_1{std::move(_result), a1});
+      _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
       _stack.emplace_back(CraneEnter{&a2});
     } else {
       auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
@@ -1018,11 +1018,11 @@ LoopifyTrees::collect_unsorted(const LoopifyTrees::tree<uint64_t>
     const LoopifyTrees::tree<uint64_t> *a2;
   };
 
-  /// CraneCont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
+  /// CraneCont_Node_1: saves [a1, _tmp2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_Node_1 {
-    List<uint64_t> _tmp2;
     uint64_t a1;
+    List<uint64_t> _tmp2;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
@@ -1050,7 +1050,7 @@ LoopifyTrees::collect_unsorted(const LoopifyTrees::tree<uint64_t>
       auto _f = std::move(std::get<CraneCont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
-      _stack.emplace_back(CraneCont_Node_1{std::move(_result), a1});
+      _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
       _stack.emplace_back(CraneEnter{&a2});
     } else {
       auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
@@ -1213,12 +1213,12 @@ LoopifyTrees::tree_min_max(const LoopifyTrees::tree<uint64_t>
     const LoopifyTrees::tree<uint64_t> *a2;
   };
 
-  /// CraneCont_lmin: saves [a1, lmax, lmin], resumes after recursive call, then
+  /// CraneCont_lmin: saves [a1, lmin, lmax], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_lmin {
     uint64_t a1;
-    uint64_t lmax;
     uint64_t lmin;
+    uint64_t lmax;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Node, CraneCont_lmin>;
@@ -1246,13 +1246,13 @@ LoopifyTrees::tree_min_max(const LoopifyTrees::tree<uint64_t>
       uint64_t a1 = _f.a1;
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
       auto [lmin, lmax] = std::move(_result);
-      _stack.emplace_back(CraneCont_lmin{a1, lmax, lmin});
+      _stack.emplace_back(CraneCont_lmin{a1, lmin, lmax});
       _stack.emplace_back(CraneEnter{&a2});
     } else {
       auto _f = std::move(std::get<CraneCont_lmin>(_frame));
       uint64_t a1 = _f.a1;
-      uint64_t lmax = _f.lmax;
       uint64_t lmin = _f.lmin;
+      uint64_t lmax = _f.lmax;
       auto [rmin, rmax] = std::move(_result);
       _result = std::make_pair(min3((lmin == UINT64_C(0) ? a1 : lmin),
                                     (rmin == UINT64_C(0) ? a1 : rmin), a1),
@@ -1344,11 +1344,11 @@ bool LoopifyTrees::tree_contains(
     const LoopifyTrees::tree<uint64_t> *a2;
   };
 
-  /// CraneCont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
+  /// CraneCont_Node_1: saves [a1, _tmp2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_Node_1 {
-    bool _tmp2;
     uint64_t a1;
+    bool _tmp2;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
@@ -1375,7 +1375,7 @@ bool LoopifyTrees::tree_contains(
       auto _f = std::move(std::get<CraneCont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
-      _stack.emplace_back(CraneCont_Node_1{std::move(_result), a1});
+      _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
       _stack.emplace_back(CraneEnter{&a2});
     } else {
       auto _f = std::move(std::get<CraneCont_Node_1>(_frame));

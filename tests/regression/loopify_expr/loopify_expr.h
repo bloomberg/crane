@@ -298,18 +298,18 @@ struct LoopifyExpr {
         const expr *a2;
       };
 
-      /// CraneCont_Cond_3: saves [_tmp16, a2], resumes after recursive call,
+      /// CraneCont_Cond_3: saves [a2, _tmp16], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_Cond_3 {
-        expr _tmp16;
         const expr *a2;
+        expr _tmp16;
       };
 
-      /// CraneCont_Cond_4: saves [_tmp15, _tmp16], resumes after recursive
+      /// CraneCont_Cond_4: saves [_tmp16, _tmp15], resumes after recursive
       /// call, then processes rest.
       struct CraneCont_Cond_4 {
-        expr _tmp15;
         expr _tmp16;
+        expr _tmp15;
       };
 
       /// CraneCont_Mul: saves [s1], resumes after recursive call, then
@@ -567,13 +567,13 @@ struct LoopifyExpr {
           auto _f = std::move(std::get<CraneCont_Cond_2>(_frame));
           const expr &a1 = *_f.a1;
           const expr &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_Cond_3{std::move(_result), &a2});
+          _stack.emplace_back(CraneCont_Cond_3{&a2, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a1});
         } else if (std::holds_alternative<CraneCont_Cond_3>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Cond_3>(_frame));
           const expr &a2 = *_f.a2;
           _stack.emplace_back(
-              CraneCont_Cond_4{std::move(_result), std::move(_f._tmp16)});
+              CraneCont_Cond_4{std::move(_f._tmp16), std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else if (std::holds_alternative<CraneCont_Cond_4>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Cond_4>(_frame));
@@ -860,18 +860,18 @@ struct LoopifyExpr {
         const expr *a2;
       };
 
-      /// CraneCont_Cond_1: saves [_tmp8, a2], resumes after recursive call,
+      /// CraneCont_Cond_1: saves [a2, _tmp8], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_Cond_1 {
-        uint64_t _tmp8;
         const expr *a2;
+        uint64_t _tmp8;
       };
 
-      /// CraneCont_Cond_2: saves [_tmp7, _tmp8], resumes after recursive call,
+      /// CraneCont_Cond_2: saves [_tmp8, _tmp7], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_Cond_2 {
-        uint64_t _tmp7;
         uint64_t _tmp8;
+        uint64_t _tmp7;
       };
 
       /// CraneCont_Mul: saves [a1], resumes after recursive call, then
@@ -937,12 +937,12 @@ struct LoopifyExpr {
           auto _f = std::move(std::get<CraneCont_Cond>(_frame));
           const expr &a1 = *_f.a1;
           const expr &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_Cond_1{std::move(_result), &a2});
+          _stack.emplace_back(CraneCont_Cond_1{&a2, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a1});
         } else if (std::holds_alternative<CraneCont_Cond_1>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Cond_1>(_frame));
           const expr &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_Cond_2{std::move(_result), _f._tmp8});
+          _stack.emplace_back(CraneCont_Cond_2{_f._tmp8, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else if (std::holds_alternative<CraneCont_Cond_2>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Cond_2>(_frame));
@@ -991,18 +991,18 @@ struct LoopifyExpr {
         const expr *a2;
       };
 
-      /// CraneCont_Cond_1: saves [_tmp7, a2], resumes after recursive call,
+      /// CraneCont_Cond_1: saves [a2, _tmp7], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_Cond_1 {
-        uint64_t _tmp7;
         const expr *a2;
+        uint64_t _tmp7;
       };
 
-      /// CraneCont_Cond_2: saves [_tmp6, _tmp7], resumes after recursive call,
+      /// CraneCont_Cond_2: saves [_tmp7, _tmp6], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_Cond_2 {
-        uint64_t _tmp6;
         uint64_t _tmp7;
+        uint64_t _tmp6;
       };
 
       /// CraneCont_Mul: saves [a1], resumes after recursive call, then
@@ -1064,12 +1064,12 @@ struct LoopifyExpr {
           auto _f = std::move(std::get<CraneCont_Cond>(_frame));
           const expr &a1 = *_f.a1;
           const expr &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_Cond_1{std::move(_result), &a2});
+          _stack.emplace_back(CraneCont_Cond_1{&a2, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a1});
         } else if (std::holds_alternative<CraneCont_Cond_1>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Cond_1>(_frame));
           const expr &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_Cond_2{std::move(_result), _f._tmp7});
+          _stack.emplace_back(CraneCont_Cond_2{_f._tmp7, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else if (std::holds_alternative<CraneCont_Cond_2>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Cond_2>(_frame));
@@ -1115,18 +1115,18 @@ struct LoopifyExpr {
         const expr *a2;
       };
 
-      /// CraneCont_Cond_1: saves [_tmp8, a2], resumes after recursive call,
+      /// CraneCont_Cond_1: saves [a2, _tmp8], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_Cond_1 {
-        uint64_t _tmp8;
         const expr *a2;
+        uint64_t _tmp8;
       };
 
-      /// CraneCont_Cond_2: saves [_tmp7, _tmp8], resumes after recursive call,
+      /// CraneCont_Cond_2: saves [_tmp8, _tmp7], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_Cond_2 {
-        uint64_t _tmp7;
         uint64_t _tmp8;
+        uint64_t _tmp7;
       };
 
       /// CraneCont_Mul: saves [a1], resumes after recursive call, then
@@ -1192,12 +1192,12 @@ struct LoopifyExpr {
           auto _f = std::move(std::get<CraneCont_Cond>(_frame));
           const expr &a1 = *_f.a1;
           const expr &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_Cond_1{std::move(_result), &a2});
+          _stack.emplace_back(CraneCont_Cond_1{&a2, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a1});
         } else if (std::holds_alternative<CraneCont_Cond_1>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Cond_1>(_frame));
           const expr &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_Cond_2{std::move(_result), _f._tmp8});
+          _stack.emplace_back(CraneCont_Cond_2{_f._tmp8, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else if (std::holds_alternative<CraneCont_Cond_2>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Cond_2>(_frame));
@@ -1356,12 +1356,12 @@ struct LoopifyExpr {
         const expr *a1;
       };
 
-      /// CraneCont_Add_1: saves [_tmp3, a0, a1], resumes after recursive call,
+      /// CraneCont_Add_1: saves [a0, a1, _tmp3], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_Add_1 {
-        T1 _tmp3;
         std::shared_ptr<expr> a0;
         const expr *a1;
+        T1 _tmp3;
       };
 
       /// CraneCont_Cond: saves [a0, a1, a2], resumes after recursive call, then
@@ -1372,23 +1372,23 @@ struct LoopifyExpr {
         const expr *a2;
       };
 
-      /// CraneCont_Cond_1: saves [_tmp8, a0, a1, a2], resumes after recursive
+      /// CraneCont_Cond_1: saves [a0, a1, a2, _tmp8], resumes after recursive
       /// call, then processes rest.
       struct CraneCont_Cond_1 {
-        T1 _tmp8;
         std::shared_ptr<expr> a0;
         const expr *a1;
         const expr *a2;
+        T1 _tmp8;
       };
 
-      /// CraneCont_Cond_2: saves [_tmp7, _tmp8, a0, a1, a2], resumes after
+      /// CraneCont_Cond_2: saves [a0, a1, a2, _tmp8, _tmp7], resumes after
       /// recursive call, then processes rest.
       struct CraneCont_Cond_2 {
-        T1 _tmp7;
-        T1 _tmp8;
         std::shared_ptr<expr> a0;
         const expr *a1;
         const expr *a2;
+        T1 _tmp8;
+        T1 _tmp7;
       };
 
       /// CraneCont_Mul: saves [a0, a1], resumes after recursive call, then
@@ -1398,12 +1398,12 @@ struct LoopifyExpr {
         const expr *a1;
       };
 
-      /// CraneCont_Mul_1: saves [_tmp5, a0, a1], resumes after recursive call,
+      /// CraneCont_Mul_1: saves [a0, a1, _tmp5], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_Mul_1 {
-        T1 _tmp5;
         std::shared_ptr<expr> a0;
         const expr *a1;
+        T1 _tmp5;
       };
 
       /// CraneCont_Succ: saves [a0], resumes after recursive call, then
@@ -1455,7 +1455,7 @@ struct LoopifyExpr {
           std::shared_ptr<expr> a0 = std::move(_f.a0);
           const expr &a1 = *_f.a1;
           _stack.emplace_back(
-              CraneCont_Add_1{std::move(_result), std::move(a0), &a1});
+              CraneCont_Add_1{std::move(a0), &a1, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a1});
         } else if (std::holds_alternative<CraneCont_Add_1>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Add_1>(_frame));
@@ -1468,16 +1468,16 @@ struct LoopifyExpr {
           const expr &a1 = *_f.a1;
           const expr &a2 = *_f.a2;
           _stack.emplace_back(
-              CraneCont_Cond_1{std::move(_result), std::move(a0), &a1, &a2});
+              CraneCont_Cond_1{std::move(a0), &a1, &a2, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a1});
         } else if (std::holds_alternative<CraneCont_Cond_1>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Cond_1>(_frame));
           std::shared_ptr<expr> a0 = std::move(_f.a0);
           const expr &a1 = *_f.a1;
           const expr &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_Cond_2{std::move(_result),
+          _stack.emplace_back(CraneCont_Cond_2{std::move(a0), &a1, &a2,
                                                std::move(_f._tmp8),
-                                               std::move(a0), &a1, &a2});
+                                               std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else if (std::holds_alternative<CraneCont_Cond_2>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Cond_2>(_frame));
@@ -1491,7 +1491,7 @@ struct LoopifyExpr {
           std::shared_ptr<expr> a0 = std::move(_f.a0);
           const expr &a1 = *_f.a1;
           _stack.emplace_back(
-              CraneCont_Mul_1{std::move(_result), std::move(a0), &a1});
+              CraneCont_Mul_1{std::move(a0), &a1, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a1});
         } else if (std::holds_alternative<CraneCont_Mul_1>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Mul_1>(_frame));
@@ -1632,18 +1632,18 @@ struct LoopifyExpr {
         const simple_expr *a2;
       };
 
-      /// CraneCont_IfPos_1: saves [_tmp5, a2], resumes after recursive call,
+      /// CraneCont_IfPos_1: saves [a2, _tmp5], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_IfPos_1 {
-        uint64_t _tmp5;
         const simple_expr *a2;
+        uint64_t _tmp5;
       };
 
-      /// CraneCont_IfPos_2: saves [_tmp4, _tmp5], resumes after recursive call,
+      /// CraneCont_IfPos_2: saves [_tmp5, _tmp4], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_IfPos_2 {
-        uint64_t _tmp4;
         uint64_t _tmp5;
+        uint64_t _tmp4;
       };
 
       /// CraneCont_Plus: saves [a1], resumes after recursive call, then
@@ -1692,12 +1692,12 @@ struct LoopifyExpr {
           auto _f = std::move(std::get<CraneCont_IfPos>(_frame));
           const simple_expr &a1 = *_f.a1;
           const simple_expr &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_IfPos_1{std::move(_result), &a2});
+          _stack.emplace_back(CraneCont_IfPos_1{&a2, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a1});
         } else if (std::holds_alternative<CraneCont_IfPos_1>(_frame)) {
           auto _f = std::move(std::get<CraneCont_IfPos_1>(_frame));
           const simple_expr &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_IfPos_2{std::move(_result), _f._tmp5});
+          _stack.emplace_back(CraneCont_IfPos_2{_f._tmp5, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else if (std::holds_alternative<CraneCont_IfPos_2>(_frame)) {
           auto _f = std::move(std::get<CraneCont_IfPos_2>(_frame));
@@ -1819,23 +1819,23 @@ struct LoopifyExpr {
         const simple_expr *a2;
       };
 
-      /// CraneCont_IfPos_1: saves [_tmp5, a0, a1, a2], resumes after recursive
+      /// CraneCont_IfPos_1: saves [a0, a1, a2, _tmp5], resumes after recursive
       /// call, then processes rest.
       struct CraneCont_IfPos_1 {
-        T1 _tmp5;
         std::shared_ptr<simple_expr> a0;
         const simple_expr *a1;
         const simple_expr *a2;
+        T1 _tmp5;
       };
 
-      /// CraneCont_IfPos_2: saves [_tmp4, _tmp5, a0, a1, a2], resumes after
+      /// CraneCont_IfPos_2: saves [a0, a1, a2, _tmp5, _tmp4], resumes after
       /// recursive call, then processes rest.
       struct CraneCont_IfPos_2 {
-        T1 _tmp4;
-        T1 _tmp5;
         std::shared_ptr<simple_expr> a0;
         const simple_expr *a1;
         const simple_expr *a2;
+        T1 _tmp5;
+        T1 _tmp4;
       };
 
       /// CraneCont_Plus: saves [a0, a1], resumes after recursive call, then
@@ -1845,12 +1845,12 @@ struct LoopifyExpr {
         const simple_expr *a1;
       };
 
-      /// CraneCont_Plus_1: saves [_tmp2, a0, a1], resumes after recursive call,
+      /// CraneCont_Plus_1: saves [a0, a1, _tmp2], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_Plus_1 {
-        T1 _tmp2;
         std::shared_ptr<simple_expr> a0;
         const simple_expr *a1;
+        T1 _tmp2;
       };
 
       using CraneFrame =
@@ -1891,16 +1891,16 @@ struct LoopifyExpr {
           const simple_expr &a1 = *_f.a1;
           const simple_expr &a2 = *_f.a2;
           _stack.emplace_back(
-              CraneCont_IfPos_1{std::move(_result), std::move(a0), &a1, &a2});
+              CraneCont_IfPos_1{std::move(a0), &a1, &a2, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a1});
         } else if (std::holds_alternative<CraneCont_IfPos_1>(_frame)) {
           auto _f = std::move(std::get<CraneCont_IfPos_1>(_frame));
           std::shared_ptr<simple_expr> a0 = std::move(_f.a0);
           const simple_expr &a1 = *_f.a1;
           const simple_expr &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_IfPos_2{std::move(_result),
+          _stack.emplace_back(CraneCont_IfPos_2{std::move(a0), &a1, &a2,
                                                 std::move(_f._tmp5),
-                                                std::move(a0), &a1, &a2});
+                                                std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else if (std::holds_alternative<CraneCont_IfPos_2>(_frame)) {
           auto _f = std::move(std::get<CraneCont_IfPos_2>(_frame));
@@ -1914,7 +1914,7 @@ struct LoopifyExpr {
           std::shared_ptr<simple_expr> a0 = std::move(_f.a0);
           const simple_expr &a1 = *_f.a1;
           _stack.emplace_back(
-              CraneCont_Plus_1{std::move(_result), std::move(a0), &a1});
+              CraneCont_Plus_1{std::move(a0), &a1, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a1});
         } else {
           auto _f = std::move(std::get<CraneCont_Plus_1>(_frame));
@@ -2125,18 +2125,18 @@ struct LoopifyExpr {
         const cond_expr *a2;
       };
 
-      /// CraneCont_CCond_1: saves [_tmp5, a2], resumes after recursive call,
+      /// CraneCont_CCond_1: saves [a2, _tmp5], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_CCond_1 {
-        uint64_t _tmp5;
         const cond_expr *a2;
+        uint64_t _tmp5;
       };
 
-      /// CraneCont_CCond_2: saves [_tmp4, _tmp5], resumes after recursive call,
+      /// CraneCont_CCond_2: saves [_tmp5, _tmp4], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_CCond_2 {
-        uint64_t _tmp4;
         uint64_t _tmp5;
+        uint64_t _tmp4;
       };
 
       /// CraneCont_CPlus: saves [a1], resumes after recursive call, then
@@ -2184,12 +2184,12 @@ struct LoopifyExpr {
           auto _f = std::move(std::get<CraneCont_CCond>(_frame));
           const cond_expr &a1 = *_f.a1;
           const cond_expr &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_CCond_1{std::move(_result), &a2});
+          _stack.emplace_back(CraneCont_CCond_1{&a2, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a1});
         } else if (std::holds_alternative<CraneCont_CCond_1>(_frame)) {
           auto _f = std::move(std::get<CraneCont_CCond_1>(_frame));
           const cond_expr &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_CCond_2{std::move(_result), _f._tmp5});
+          _stack.emplace_back(CraneCont_CCond_2{_f._tmp5, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else if (std::holds_alternative<CraneCont_CCond_2>(_frame)) {
           auto _f = std::move(std::get<CraneCont_CCond_2>(_frame));
@@ -2310,23 +2310,23 @@ struct LoopifyExpr {
         const cond_expr *a2;
       };
 
-      /// CraneCont_CCond_1: saves [_tmp5, a0, a1, a2], resumes after recursive
+      /// CraneCont_CCond_1: saves [a0, a1, a2, _tmp5], resumes after recursive
       /// call, then processes rest.
       struct CraneCont_CCond_1 {
-        T1 _tmp5;
         std::shared_ptr<cond_expr> a0;
         const cond_expr *a1;
         const cond_expr *a2;
+        T1 _tmp5;
       };
 
-      /// CraneCont_CCond_2: saves [_tmp4, _tmp5, a0, a1, a2], resumes after
+      /// CraneCont_CCond_2: saves [a0, a1, a2, _tmp5, _tmp4], resumes after
       /// recursive call, then processes rest.
       struct CraneCont_CCond_2 {
-        T1 _tmp4;
-        T1 _tmp5;
         std::shared_ptr<cond_expr> a0;
         const cond_expr *a1;
         const cond_expr *a2;
+        T1 _tmp5;
+        T1 _tmp4;
       };
 
       /// CraneCont_CPlus: saves [a0, a1], resumes after recursive call, then
@@ -2336,12 +2336,12 @@ struct LoopifyExpr {
         const cond_expr *a1;
       };
 
-      /// CraneCont_CPlus_1: saves [_tmp2, a0, a1], resumes after recursive
+      /// CraneCont_CPlus_1: saves [a0, a1, _tmp2], resumes after recursive
       /// call, then processes rest.
       struct CraneCont_CPlus_1 {
-        T1 _tmp2;
         std::shared_ptr<cond_expr> a0;
         const cond_expr *a1;
+        T1 _tmp2;
       };
 
       using CraneFrame =
@@ -2381,16 +2381,16 @@ struct LoopifyExpr {
           const cond_expr &a1 = *_f.a1;
           const cond_expr &a2 = *_f.a2;
           _stack.emplace_back(
-              CraneCont_CCond_1{std::move(_result), std::move(a0), &a1, &a2});
+              CraneCont_CCond_1{std::move(a0), &a1, &a2, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a1});
         } else if (std::holds_alternative<CraneCont_CCond_1>(_frame)) {
           auto _f = std::move(std::get<CraneCont_CCond_1>(_frame));
           std::shared_ptr<cond_expr> a0 = std::move(_f.a0);
           const cond_expr &a1 = *_f.a1;
           const cond_expr &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_CCond_2{std::move(_result),
+          _stack.emplace_back(CraneCont_CCond_2{std::move(a0), &a1, &a2,
                                                 std::move(_f._tmp5),
-                                                std::move(a0), &a1, &a2});
+                                                std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else if (std::holds_alternative<CraneCont_CCond_2>(_frame)) {
           auto _f = std::move(std::get<CraneCont_CCond_2>(_frame));
@@ -2404,7 +2404,7 @@ struct LoopifyExpr {
           std::shared_ptr<cond_expr> a0 = std::move(_f.a0);
           const cond_expr &a1 = *_f.a1;
           _stack.emplace_back(
-              CraneCont_CPlus_1{std::move(_result), std::move(a0), &a1});
+              CraneCont_CPlus_1{std::move(a0), &a1, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a1});
         } else {
           auto _f = std::move(std::get<CraneCont_CPlus_1>(_frame));

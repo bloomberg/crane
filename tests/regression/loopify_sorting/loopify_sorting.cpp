@@ -276,19 +276,19 @@ List<uint64_t> LoopifySorting::quicksort_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont_lo: saves [a0, f, hi], resumes after recursive call, then
+  /// CraneCont_lo: saves [f, a0, hi], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_lo {
-    uint64_t a0;
     uint64_t f;
+    uint64_t a0;
     List<uint64_t> hi;
   };
 
-  /// CraneCont_lo_1: saves [_tmp2, a0], resumes after recursive call, then
+  /// CraneCont_lo_1: saves [a0, _tmp2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_lo_1 {
-    List<uint64_t> _tmp2;
     uint64_t a0;
+    List<uint64_t> _tmp2;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_lo, CraneCont_lo_1>;
@@ -312,16 +312,16 @@ List<uint64_t> LoopifySorting::quicksort_fuel(
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           auto [lo, hi] = partition(a0, *a1);
-          _stack.emplace_back(CraneCont_lo{a0, f, hi});
+          _stack.emplace_back(CraneCont_lo{f, a0, hi});
           _stack.emplace_back(CraneEnter{std::move(lo), f});
         }
       }
     } else if (std::holds_alternative<CraneCont_lo>(_frame)) {
       auto _f = std::move(std::get<CraneCont_lo>(_frame));
-      uint64_t a0 = _f.a0;
       uint64_t f = _f.f;
+      uint64_t a0 = _f.a0;
       List<uint64_t> hi = std::move(_f.hi);
-      _stack.emplace_back(CraneCont_lo_1{std::move(_result), a0});
+      _stack.emplace_back(CraneCont_lo_1{a0, std::move(_result)});
       _stack.emplace_back(CraneEnter{std::move(hi), f});
     } else {
       auto _f = std::move(std::get<CraneCont_lo_1>(_frame));

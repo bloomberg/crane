@@ -133,13 +133,13 @@ struct HofTreeLoopify {
       const tree<T1> *a2;
     };
 
-    /// CraneCont_Node_1: saves [_tmp2, a0, a1, a2], resumes after recursive
+    /// CraneCont_Node_1: saves [a0, a1, a2, _tmp2], resumes after recursive
     /// call, then processes rest.
     struct CraneCont_Node_1 {
-      T2 _tmp2;
       std::shared_ptr<tree<T1>> a0;
       T1 a1;
       const tree<T1> *a2;
+      T2 _tmp2;
     };
 
     using CraneFrame =
@@ -167,7 +167,7 @@ struct HofTreeLoopify {
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
         _stack.emplace_back(
-            CraneCont_Node_1{std::move(_result), std::move(a0), a1, &a2});
+            CraneCont_Node_1{std::move(a0), a1, &a2, std::move(_result)});
         _stack.emplace_back(CraneEnter{&a2});
       } else {
         auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
@@ -204,11 +204,11 @@ struct HofTreeLoopify {
       const tree<T1> *a2;
     };
 
-    /// CraneCont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
+    /// CraneCont_Node_1: saves [a1, _tmp2], resumes after recursive call, then
     /// processes rest.
     struct CraneCont_Node_1 {
-      tree<T2> _tmp2;
       T1 a1;
+      tree<T2> _tmp2;
     };
 
     using CraneFrame =
@@ -234,7 +234,7 @@ struct HofTreeLoopify {
         auto _f = std::move(std::get<CraneCont_Node>(_frame));
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
-        _stack.emplace_back(CraneCont_Node_1{std::move(_result), a1});
+        _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
         _stack.emplace_back(CraneEnter{&a2});
       } else {
         auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
@@ -264,11 +264,11 @@ struct HofTreeLoopify {
       const tree<T1> *a2;
     };
 
-    /// CraneCont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
+    /// CraneCont_Node_1: saves [a1, _tmp2], resumes after recursive call, then
     /// processes rest.
     struct CraneCont_Node_1 {
-      T2 _tmp2;
       T1 a1;
+      T2 _tmp2;
     };
 
     using CraneFrame =
@@ -294,7 +294,7 @@ struct HofTreeLoopify {
         auto _f = std::move(std::get<CraneCont_Node>(_frame));
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
-        _stack.emplace_back(CraneCont_Node_1{std::move(_result), a1});
+        _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
         _stack.emplace_back(CraneEnter{&a2});
       } else {
         auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
@@ -317,21 +317,21 @@ struct HofTreeLoopify {
       const tree<T1> *t1;
     };
 
-    /// CraneCont_Node: saves [a1, a10, a2, a20], resumes after recursive call,
+    /// CraneCont_Node: saves [a1, a2, a10, a20], resumes after recursive call,
     /// then processes rest.
     struct CraneCont_Node {
       T1 a1;
-      T2 a10;
       const tree<T1> *a2;
+      T2 a10;
       const tree<T2> *a20;
     };
 
-    /// CraneCont_Node_1: saves [_tmp2, a1, a10], resumes after recursive call,
+    /// CraneCont_Node_1: saves [a1, a10, _tmp2], resumes after recursive call,
     /// then processes rest.
     struct CraneCont_Node_1 {
-      tree<T3> _tmp2;
       T1 a1;
       T2 a10;
+      tree<T3> _tmp2;
     };
 
     using CraneFrame =
@@ -358,17 +358,17 @@ struct HofTreeLoopify {
             const auto &[a00, a10, a20] =
                 std::get<typename tree<T2>::Node>(t2.v());
             _stack.emplace_back(
-                CraneCont_Node{a1, a10, crane_raw(a2), crane_raw(a20)});
+                CraneCont_Node{a1, crane_raw(a2), a10, crane_raw(a20)});
             _stack.emplace_back(CraneEnter{crane_raw(a00), crane_raw(a0)});
           }
         }
       } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
         auto _f = std::move(std::get<CraneCont_Node>(_frame));
         auto a1 = std::move(_f.a1);
-        auto a10 = std::move(_f.a10);
         const tree<T1> &a2 = *_f.a2;
+        auto a10 = std::move(_f.a10);
         const tree<T2> &a20 = *_f.a20;
-        _stack.emplace_back(CraneCont_Node_1{std::move(_result), a1, a10});
+        _stack.emplace_back(CraneCont_Node_1{a1, a10, std::move(_result)});
         _stack.emplace_back(CraneEnter{&a20, &a2});
       } else {
         auto _f = std::move(std::get<CraneCont_Node_1>(_frame));

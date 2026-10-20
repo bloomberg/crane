@@ -9,18 +9,18 @@ LoopifyPairOptionChild::sum(const LoopifyPairOptionChild::tree
     LoopifyPairOptionChild::tree t;
   };
 
-  /// CraneCont_u: saves [_tmp2, x], resumes after recursive call, then
+  /// CraneCont_u: saves [x, _tmp2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_u {
-    uint64_t _tmp2;
     uint64_t x;
+    uint64_t _tmp2;
   };
 
-  /// CraneCont_x: saves [o, x], resumes after recursive call, then processes
+  /// CraneCont_x: saves [x, o], resumes after recursive call, then processes
   /// rest.
   struct CraneCont_x {
-    std::optional<LoopifyPairOptionChild::tree> o;
     uint64_t x;
+    std::optional<LoopifyPairOptionChild::tree> o;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_u, CraneCont_x>;
@@ -41,7 +41,7 @@ LoopifyPairOptionChild::sum(const LoopifyPairOptionChild::tree
         const auto &[a0, a1] =
             std::get<typename LoopifyPairOptionChild::tree::Node>(t.v());
         const auto &[x, o] = (*a1);
-        _stack.emplace_back(CraneCont_x{o, x});
+        _stack.emplace_back(CraneCont_x{x, o});
         _stack.emplace_back(CraneEnter{*a0});
       }
     } else if (std::holds_alternative<CraneCont_u>(_frame)) {
@@ -50,13 +50,13 @@ LoopifyPairOptionChild::sum(const LoopifyPairOptionChild::tree
       _result = ((_f._tmp2 + x) + std::move(_result));
     } else {
       auto _f = std::move(std::get<CraneCont_x>(_frame));
-      std::optional<LoopifyPairOptionChild::tree> o = std::move(_f.o);
       uint64_t x = _f.x;
+      std::optional<LoopifyPairOptionChild::tree> o = std::move(_f.o);
       uint64_t _tmp2 = std::move(_result);
       uint64_t _tmp1;
       if (o.has_value()) {
         const LoopifyPairOptionChild::tree &u = *o;
-        _stack.emplace_back(CraneCont_u{_tmp2, x});
+        _stack.emplace_back(CraneCont_u{x, _tmp2});
         _stack.emplace_back(CraneEnter{u});
       } else {
         _tmp1 = UINT64_C(0);

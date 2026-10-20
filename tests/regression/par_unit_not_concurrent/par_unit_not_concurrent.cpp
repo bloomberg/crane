@@ -16,11 +16,11 @@ ParUnitNotConcurrent::sum(const ParUnitNotConcurrent::tree
     const ParUnitNotConcurrent::tree *a2;
   };
 
-  /// CraneCont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
+  /// CraneCont_Node_1: saves [a1, _tmp2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_Node_1 {
-    uint64_t _tmp2;
     uint64_t a1;
+    uint64_t _tmp2;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
@@ -47,7 +47,7 @@ ParUnitNotConcurrent::sum(const ParUnitNotConcurrent::tree
       auto _f = std::move(crane::get<CraneCont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const ParUnitNotConcurrent::tree &a2 = *_f.a2;
-      _stack.emplace_back(CraneCont_Node_1{std::move(_result), a1});
+      _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
       _stack.emplace_back(CraneEnter{&a2});
     } else {
       auto _f = std::move(crane::get<CraneCont_Node_1>(_frame));
@@ -105,11 +105,11 @@ ParUnitNotConcurrent::mirror(const ParUnitNotConcurrent::tree
     uint64_t a1;
   };
 
-  /// CraneCont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
+  /// CraneCont_Node_1: saves [a1, _tmp2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_Node_1 {
-    ParUnitNotConcurrent::tree _tmp2;
     uint64_t a1;
+    ParUnitNotConcurrent::tree _tmp2;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
@@ -136,7 +136,7 @@ ParUnitNotConcurrent::mirror(const ParUnitNotConcurrent::tree
       auto _f = std::move(crane::get<CraneCont_Node>(_frame));
       const ParUnitNotConcurrent::tree &a0 = *_f.a0;
       uint64_t a1 = _f.a1;
-      _stack.emplace_back(CraneCont_Node_1{std::move(_result), a1});
+      _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
       _stack.emplace_back(CraneEnter{&a0});
     } else {
       auto _f = std::move(crane::get<CraneCont_Node_1>(_frame));

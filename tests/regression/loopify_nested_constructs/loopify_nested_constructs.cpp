@@ -325,11 +325,11 @@ bool LoopifyNestedConstructs::chained_comp_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont1: saves [fuel_, n], resumes after recursive call, then processes
+  /// CraneCont1: saves [n, fuel_], resumes after recursive call, then processes
   /// rest.
   struct CraneCont1 {
-    uint64_t fuel_;
     uint64_t n;
+    uint64_t fuel_;
   };
 
   /// CraneCont2: saves [_tmp2], resumes after recursive call, then processes
@@ -357,15 +357,15 @@ bool LoopifyNestedConstructs::chained_comp_fuel(
         if (n <= UINT64_C(2)) {
           _result = true;
         } else {
-          _stack.emplace_back(CraneCont1{fuel_, n});
+          _stack.emplace_back(CraneCont1{n, fuel_});
           _stack.emplace_back(CraneEnter{
               (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
         }
       }
     } else if (std::holds_alternative<CraneCont1>(_frame)) {
       auto _f = std::move(std::get<CraneCont1>(_frame));
-      uint64_t fuel_ = _f.fuel_;
       uint64_t n = _f.n;
+      uint64_t fuel_ = _f.fuel_;
       _stack.emplace_back(CraneCont2{std::move(_result)});
       _stack.emplace_back(
           CraneEnter{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), fuel_});

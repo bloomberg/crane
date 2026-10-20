@@ -167,11 +167,11 @@ uint64_t MemSafetyProbe4::weighted_sum(
     const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> *l;
   };
 
-  /// CraneCont_Mycons: saves [f, w], resumes after recursive call, then
+  /// CraneCont_Mycons: saves [w, f], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_Mycons {
-    crane::fn<uint64_t(uint64_t)> f;
     uint64_t w;
+    crane::fn<uint64_t(uint64_t)> f;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
@@ -198,13 +198,13 @@ uint64_t MemSafetyProbe4::weighted_sum(
         crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
           return a0.sum_values(_x0);
         };
-        _stack.emplace_back(CraneCont_Mycons{f, w});
+        _stack.emplace_back(CraneCont_Mycons{w, f});
         _stack.emplace_back(CraneEnter{f(UINT64_C(0)), crane_raw(a1)});
       }
     } else {
       auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
-      crane::fn<uint64_t(uint64_t)> f = std::move(_f.f);
       uint64_t w = _f.w;
+      crane::fn<uint64_t(uint64_t)> f = std::move(_f.f);
       _result = (f(w) + std::move(_result));
     }
   }

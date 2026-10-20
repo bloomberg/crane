@@ -10,11 +10,11 @@ List<uint64_t> LoopifySpecialRecursion::process_twice_fuel(
     uint64_t fuel;
   };
 
-  /// CraneCont_Cons: saves [a0, fuel_], resumes after recursive call, then
+  /// CraneCont_Cons: saves [fuel_, a0], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_Cons {
-    uint64_t a0;
     uint64_t fuel_;
+    uint64_t a0;
   };
 
   /// CraneCont_Cons_1: saves [a0], resumes after recursive call, then processes
@@ -44,14 +44,14 @@ List<uint64_t> LoopifySpecialRecursion::process_twice_fuel(
           _result = List<uint64_t>::nil();
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-          _stack.emplace_back(CraneCont_Cons{a0, fuel_});
+          _stack.emplace_back(CraneCont_Cons{fuel_, a0});
           _stack.emplace_back(CraneEnter{*a1, fuel_});
         }
       }
     } else if (std::holds_alternative<CraneCont_Cons>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-      uint64_t a0 = _f.a0;
       uint64_t fuel_ = _f.fuel_;
+      uint64_t a0 = _f.a0;
       List<uint64_t> first = std::move(_result);
       _stack.emplace_back(CraneCont_Cons_1{a0});
       _stack.emplace_back(CraneEnter{std::move(first), fuel_});
@@ -208,11 +208,11 @@ List<uint64_t> LoopifySpecialRecursion::collect_sorted(
     const LoopifySpecialRecursion::tree *a2;
   };
 
-  /// CraneCont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
+  /// CraneCont_Node_1: saves [a1, _tmp2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_Node_1 {
-    List<uint64_t> _tmp2;
     uint64_t a1;
+    List<uint64_t> _tmp2;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
@@ -240,7 +240,7 @@ List<uint64_t> LoopifySpecialRecursion::collect_sorted(
       auto _f = std::move(std::get<CraneCont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const LoopifySpecialRecursion::tree &a2 = *_f.a2;
-      _stack.emplace_back(CraneCont_Node_1{std::move(_result), a1});
+      _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
       _stack.emplace_back(CraneEnter{&a2});
     } else {
       auto _f = std::move(std::get<CraneCont_Node_1>(_frame));

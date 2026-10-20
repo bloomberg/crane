@@ -508,12 +508,12 @@ struct LoopifyMutualPartialApp {
       const e<T1> *b0;
     };
 
-    /// CraneCont_Add_1: saves [_tmp2, a0, b0], resumes after recursive call,
+    /// CraneCont_Add_1: saves [a0, b0, _tmp2], resumes after recursive call,
     /// then processes rest.
     struct CraneCont_Add_1 {
-      T2 _tmp2;
       std::shared_ptr<e<T1>> a0;
       const e<T1> *b0;
+      T2 _tmp2;
     };
 
     using CraneFrame = std::variant<CraneEnter, CraneCont_Add, CraneCont_Add_1>;
@@ -546,7 +546,7 @@ struct LoopifyMutualPartialApp {
         std::shared_ptr<e<T1>> a0 = std::move(_f.a0);
         const e<T1> &b0 = *_f.b0;
         _stack.emplace_back(
-            CraneCont_Add_1{std::move(_result), std::move(a0), &b0});
+            CraneCont_Add_1{std::move(a0), &b0, std::move(_result)});
         _stack.emplace_back(CraneEnter{&b0});
       } else {
         auto _f = std::move(std::get<CraneCont_Add_1>(_frame));
@@ -580,12 +580,12 @@ struct LoopifyMutualPartialApp {
       const md<T1> *b0;
     };
 
-    /// CraneCont_MPair_1: saves [_tmp2, a0, b0], resumes after recursive call,
+    /// CraneCont_MPair_1: saves [a0, b0, _tmp2], resumes after recursive call,
     /// then processes rest.
     struct CraneCont_MPair_1 {
-      T2 _tmp2;
       std::shared_ptr<md<T1>> a0;
       const md<T1> *b0;
+      T2 _tmp2;
     };
 
     using CraneFrame =
@@ -618,7 +618,7 @@ struct LoopifyMutualPartialApp {
         std::shared_ptr<md<T1>> a0 = std::move(_f.a0);
         const md<T1> &b0 = *_f.b0;
         _stack.emplace_back(
-            CraneCont_MPair_1{std::move(_result), std::move(a0), &b0});
+            CraneCont_MPair_1{std::move(a0), &b0, std::move(_result)});
         _stack.emplace_back(CraneEnter{&b0});
       } else {
         auto _f = std::move(std::get<CraneCont_MPair_1>(_frame));
@@ -647,11 +647,11 @@ struct LoopifyMutualPartialApp {
       std::decay_t<F0> f;
     };
 
-    /// CraneCont_Add: saves [b0, f], resumes after recursive call, then
+    /// CraneCont_Add: saves [f, b0], resumes after recursive call, then
     /// processes rest.
     struct CraneCont_Add {
-      std::shared_ptr<e<T1>> b0;
       std::decay_t<F0> f;
+      std::shared_ptr<e<T1>> b0;
     };
 
     /// CraneCont_Add_1: saves [_tmp2], resumes after recursive call, then
@@ -680,7 +680,7 @@ struct LoopifyMutualPartialApp {
           _result = e<T2>::tag(f(u0));
         } else if (std::holds_alternative<typename e<T1>::Add>(x.v())) {
           const auto &[a0, b0] = std::get<typename e<T1>::Add>(x.v());
-          _stack.emplace_back(CraneCont_Add{b0, f});
+          _stack.emplace_back(CraneCont_Add{f, b0});
           _stack.emplace_back(CraneEnter{*a0, std::move(f)});
         } else {
           const auto &[m0] = std::get<typename e<T1>::Meta>(x.v());
@@ -714,8 +714,8 @@ struct LoopifyMutualPartialApp {
         }
       } else if (std::holds_alternative<CraneCont_Add>(_frame)) {
         auto _f = std::move(std::get<CraneCont_Add>(_frame));
-        std::shared_ptr<e<T1>> b0 = std::move(_f.b0);
         std::decay_t<F0> f = std::move(_f.f);
+        std::shared_ptr<e<T1>> b0 = std::move(_f.b0);
         _stack.emplace_back(CraneCont_Add_1{std::move(_result)});
         _stack.emplace_back(CraneEnter{*b0, std::move(f)});
       } else {
@@ -738,11 +738,11 @@ struct LoopifyMutualPartialApp {
       std::decay_t<F0> f;
     };
 
-    /// CraneCont_MPair: saves [b0, f], resumes after recursive call, then
+    /// CraneCont_MPair: saves [f, b0], resumes after recursive call, then
     /// processes rest.
     struct CraneCont_MPair {
-      std::shared_ptr<md<T1>> b0;
       std::decay_t<F0> f;
+      std::shared_ptr<md<T1>> b0;
     };
 
     /// CraneCont_MPair_1: saves [_tmp3], resumes after recursive call, then
@@ -802,13 +802,13 @@ struct LoopifyMutualPartialApp {
               }));
         } else {
           const auto &[a0, b0] = std::get<typename md<T1>::MPair>(m.v());
-          _stack.emplace_back(CraneCont_MPair{b0, f});
+          _stack.emplace_back(CraneCont_MPair{f, b0});
           _stack.emplace_back(CraneEnter{*a0, std::move(f)});
         }
       } else if (std::holds_alternative<CraneCont_MPair>(_frame)) {
         auto _f = std::move(std::get<CraneCont_MPair>(_frame));
-        std::shared_ptr<md<T1>> b0 = std::move(_f.b0);
         std::decay_t<F0> f = std::move(_f.f);
+        std::shared_ptr<md<T1>> b0 = std::move(_f.b0);
         _stack.emplace_back(CraneCont_MPair_1{std::move(_result)});
         _stack.emplace_back(CraneEnter{*b0, std::move(f)});
       } else {

@@ -62,31 +62,31 @@ MemSafetyProbe17::mylist<uint64_t> MemSafetyProbe17::qtree_flatten(
     const MemSafetyProbe17::qtree *a4;
   };
 
-  /// CraneCont_QNode_1: saves [_tmp4, a2, a3, a4], resumes after recursive
+  /// CraneCont_QNode_1: saves [a2, a3, a4, _tmp4], resumes after recursive
   /// call, then processes rest.
   struct CraneCont_QNode_1 {
-    MemSafetyProbe17::mylist<uint64_t> _tmp4;
     uint64_t a2;
     const MemSafetyProbe17::qtree *a3;
     const MemSafetyProbe17::qtree *a4;
+    MemSafetyProbe17::mylist<uint64_t> _tmp4;
   };
 
-  /// CraneCont_QNode_2: saves [_tmp3, _tmp4, a2, a4], resumes after recursive
+  /// CraneCont_QNode_2: saves [a2, a4, _tmp4, _tmp3], resumes after recursive
   /// call, then processes rest.
   struct CraneCont_QNode_2 {
-    MemSafetyProbe17::mylist<uint64_t> _tmp3;
-    MemSafetyProbe17::mylist<uint64_t> _tmp4;
     uint64_t a2;
     const MemSafetyProbe17::qtree *a4;
+    MemSafetyProbe17::mylist<uint64_t> _tmp4;
+    MemSafetyProbe17::mylist<uint64_t> _tmp3;
   };
 
-  /// CraneCont_QNode_3: saves [_tmp2, _tmp3, _tmp4, a2], resumes after
+  /// CraneCont_QNode_3: saves [a2, _tmp4, _tmp3, _tmp2], resumes after
   /// recursive call, then processes rest.
   struct CraneCont_QNode_3 {
-    MemSafetyProbe17::mylist<uint64_t> _tmp2;
-    MemSafetyProbe17::mylist<uint64_t> _tmp3;
-    MemSafetyProbe17::mylist<uint64_t> _tmp4;
     uint64_t a2;
+    MemSafetyProbe17::mylist<uint64_t> _tmp4;
+    MemSafetyProbe17::mylist<uint64_t> _tmp3;
+    MemSafetyProbe17::mylist<uint64_t> _tmp2;
   };
 
   using CraneFrame =
@@ -119,7 +119,7 @@ MemSafetyProbe17::mylist<uint64_t> MemSafetyProbe17::qtree_flatten(
       uint64_t a2 = _f.a2;
       const MemSafetyProbe17::qtree &a3 = *_f.a3;
       const MemSafetyProbe17::qtree &a4 = *_f.a4;
-      _stack.emplace_back(CraneCont_QNode_1{std::move(_result), a2, &a3, &a4});
+      _stack.emplace_back(CraneCont_QNode_1{a2, &a3, &a4, std::move(_result)});
       _stack.emplace_back(CraneEnter{&a1});
     } else if (std::holds_alternative<CraneCont_QNode_1>(_frame)) {
       auto _f = std::move(std::get<CraneCont_QNode_1>(_frame));
@@ -127,14 +127,14 @@ MemSafetyProbe17::mylist<uint64_t> MemSafetyProbe17::qtree_flatten(
       const MemSafetyProbe17::qtree &a3 = *_f.a3;
       const MemSafetyProbe17::qtree &a4 = *_f.a4;
       _stack.emplace_back(
-          CraneCont_QNode_2{std::move(_result), std::move(_f._tmp4), a2, &a4});
+          CraneCont_QNode_2{a2, &a4, std::move(_f._tmp4), std::move(_result)});
       _stack.emplace_back(CraneEnter{&a3});
     } else if (std::holds_alternative<CraneCont_QNode_2>(_frame)) {
       auto _f = std::move(std::get<CraneCont_QNode_2>(_frame));
       uint64_t a2 = _f.a2;
       const MemSafetyProbe17::qtree &a4 = *_f.a4;
       _stack.emplace_back(CraneCont_QNode_3{
-          std::move(_result), std::move(_f._tmp3), std::move(_f._tmp4), a2});
+          a2, std::move(_f._tmp4), std::move(_f._tmp3), std::move(_result)});
       _stack.emplace_back(CraneEnter{&a4});
     } else {
       auto _f = std::move(std::get<CraneCont_QNode_3>(_frame));
@@ -163,11 +163,11 @@ MemSafetyProbe17::qtree MemSafetyProbe17::make_qtree(
     uint64_t n_;
   };
 
-  /// CraneCont_n__1: saves [_tmp2, n], resumes after recursive call, then
+  /// CraneCont_n__1: saves [n, _tmp2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_n__1 {
-    MemSafetyProbe17::qtree _tmp2;
     uint64_t n;
+    MemSafetyProbe17::qtree _tmp2;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_n_, CraneCont_n__1>;
@@ -192,7 +192,7 @@ MemSafetyProbe17::qtree MemSafetyProbe17::make_qtree(
       auto _f = std::move(std::get<CraneCont_n_>(_frame));
       uint64_t n = _f.n;
       uint64_t n_ = _f.n_;
-      _stack.emplace_back(CraneCont_n__1{std::move(_result), n});
+      _stack.emplace_back(CraneCont_n__1{n, std::move(_result)});
       _stack.emplace_back(CraneEnter{n_});
     } else {
       auto _f = std::move(std::get<CraneCont_n__1>(_frame));

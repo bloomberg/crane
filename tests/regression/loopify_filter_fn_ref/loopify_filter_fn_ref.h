@@ -133,13 +133,13 @@ struct LoopifyFilterFnRef {
       const tree<T1> *a2;
     };
 
-    /// CraneCont_Node_1: saves [_tmp2, a0, a1, a2], resumes after recursive
+    /// CraneCont_Node_1: saves [a0, a1, a2, _tmp2], resumes after recursive
     /// call, then processes rest.
     struct CraneCont_Node_1 {
-      T2 _tmp2;
       std::shared_ptr<tree<T1>> a0;
       T1 a1;
       const tree<T1> *a2;
+      T2 _tmp2;
     };
 
     using CraneFrame =
@@ -167,7 +167,7 @@ struct LoopifyFilterFnRef {
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
         _stack.emplace_back(
-            CraneCont_Node_1{std::move(_result), std::move(a0), a1, &a2});
+            CraneCont_Node_1{std::move(a0), a1, &a2, std::move(_result)});
         _stack.emplace_back(CraneEnter{&a2});
       } else {
         auto _f = std::move(std::get<CraneCont_Node_1>(_frame));

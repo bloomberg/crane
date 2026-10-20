@@ -113,19 +113,19 @@ uint64_t LoopifyNumbers::tribonacci_fuel(
     uint64_t m;
   };
 
-  /// CraneCont_m_1: saves [_tmp3, f, m], resumes after recursive call, then
+  /// CraneCont_m_1: saves [f, m, _tmp3], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_m_1 {
-    uint64_t _tmp3;
     uint64_t f;
     uint64_t m;
+    uint64_t _tmp3;
   };
 
-  /// CraneCont_m_2: saves [_tmp2, _tmp3], resumes after recursive call, then
+  /// CraneCont_m_2: saves [_tmp3, _tmp2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_m_2 {
-    uint64_t _tmp2;
     uint64_t _tmp3;
+    uint64_t _tmp2;
   };
 
   using CraneFrame =
@@ -168,13 +168,13 @@ uint64_t LoopifyNumbers::tribonacci_fuel(
       auto _f = std::move(std::get<CraneCont_m>(_frame));
       uint64_t f = _f.f;
       uint64_t m = _f.m;
-      _stack.emplace_back(CraneCont_m_1{std::move(_result), f, m});
+      _stack.emplace_back(CraneCont_m_1{f, m, std::move(_result)});
       _stack.emplace_back(CraneEnter{(m + 1), f});
     } else if (std::holds_alternative<CraneCont_m_1>(_frame)) {
       auto _f = std::move(std::get<CraneCont_m_1>(_frame));
       uint64_t f = _f.f;
       uint64_t m = _f.m;
-      _stack.emplace_back(CraneCont_m_2{std::move(_result), _f._tmp3});
+      _stack.emplace_back(CraneCont_m_2{_f._tmp3, std::move(_result)});
       _stack.emplace_back(CraneEnter{m, f});
     } else {
       auto _f = std::move(std::get<CraneCont_m_2>(_frame));
@@ -691,19 +691,19 @@ uint64_t LoopifyNumbers::staircase_fuel(
     uint64_t m;
   };
 
-  /// CraneCont_m_1: saves [_tmp3, f, m], resumes after recursive call, then
+  /// CraneCont_m_1: saves [f, m, _tmp3], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_m_1 {
-    uint64_t _tmp3;
     uint64_t f;
     uint64_t m;
+    uint64_t _tmp3;
   };
 
-  /// CraneCont_m_2: saves [_tmp2, _tmp3], resumes after recursive call, then
+  /// CraneCont_m_2: saves [_tmp3, _tmp2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_m_2 {
-    uint64_t _tmp2;
     uint64_t _tmp3;
+    uint64_t _tmp2;
   };
 
   using CraneFrame =
@@ -746,13 +746,13 @@ uint64_t LoopifyNumbers::staircase_fuel(
       auto _f = std::move(std::get<CraneCont_m>(_frame));
       uint64_t f = _f.f;
       uint64_t m = _f.m;
-      _stack.emplace_back(CraneCont_m_1{std::move(_result), f, m});
+      _stack.emplace_back(CraneCont_m_1{f, m, std::move(_result)});
       _stack.emplace_back(CraneEnter{(m + 1), f});
     } else if (std::holds_alternative<CraneCont_m_1>(_frame)) {
       auto _f = std::move(std::get<CraneCont_m_1>(_frame));
       uint64_t f = _f.f;
       uint64_t m = _f.m;
-      _stack.emplace_back(CraneCont_m_2{std::move(_result), _f._tmp3});
+      _stack.emplace_back(CraneCont_m_2{_f._tmp3, std::move(_result)});
       _stack.emplace_back(CraneEnter{m, f});
     } else {
       auto _f = std::move(std::get<CraneCont_m_2>(_frame));
@@ -858,19 +858,19 @@ uint64_t LoopifyNumbers::mixed_arith_fuel(
     uint64_t m;
   };
 
-  /// CraneCont_m_1: saves [_tmp3, f, m], resumes after recursive call, then
+  /// CraneCont_m_1: saves [f, m, _tmp3], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_m_1 {
-    uint64_t _tmp3;
     uint64_t f;
     uint64_t m;
+    uint64_t _tmp3;
   };
 
-  /// CraneCont_m_2: saves [_tmp2, _tmp3], resumes after recursive call, then
+  /// CraneCont_m_2: saves [_tmp3, _tmp2], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_m_2 {
-    uint64_t _tmp2;
     uint64_t _tmp3;
+    uint64_t _tmp2;
   };
 
   using CraneFrame =
@@ -913,13 +913,13 @@ uint64_t LoopifyNumbers::mixed_arith_fuel(
       auto _f = std::move(std::get<CraneCont_m>(_frame));
       uint64_t f = _f.f;
       uint64_t m = _f.m;
-      _stack.emplace_back(CraneCont_m_1{std::move(_result), f, m});
+      _stack.emplace_back(CraneCont_m_1{f, m, std::move(_result)});
       _stack.emplace_back(CraneEnter{m, f});
     } else if (std::holds_alternative<CraneCont_m_1>(_frame)) {
       auto _f = std::move(std::get<CraneCont_m_1>(_frame));
       uint64_t f = _f.f;
       uint64_t m = _f.m;
-      _stack.emplace_back(CraneCont_m_2{std::move(_result), _f._tmp3});
+      _stack.emplace_back(CraneCont_m_2{_f._tmp3, std::move(_result)});
       _stack.emplace_back(
           CraneEnter{(m == UINT64_C(0)
                           ? UINT64_C(0)

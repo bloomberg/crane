@@ -23,20 +23,20 @@ MemSafetyProbe29::tree3 MemSafetyProbe29::build_tree3(
     uint64_t n_;
   };
 
-  /// CraneCont_n__1: saves [_tmp3, n, n_], resumes after recursive call, then
+  /// CraneCont_n__1: saves [n, n_, _tmp3], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_n__1 {
-    MemSafetyProbe29::tree3 _tmp3;
     uint64_t n;
     uint64_t n_;
+    MemSafetyProbe29::tree3 _tmp3;
   };
 
-  /// CraneCont_n__2: saves [_tmp2, _tmp3, n], resumes after recursive call,
+  /// CraneCont_n__2: saves [n, _tmp3, _tmp2], resumes after recursive call,
   /// then processes rest.
   struct CraneCont_n__2 {
-    MemSafetyProbe29::tree3 _tmp2;
-    MemSafetyProbe29::tree3 _tmp3;
     uint64_t n;
+    MemSafetyProbe29::tree3 _tmp3;
+    MemSafetyProbe29::tree3 _tmp2;
   };
 
   using CraneFrame =
@@ -63,14 +63,14 @@ MemSafetyProbe29::tree3 MemSafetyProbe29::build_tree3(
       auto _f = std::move(std::get<CraneCont_n_>(_frame));
       uint64_t n = _f.n;
       uint64_t n_ = _f.n_;
-      _stack.emplace_back(CraneCont_n__1{std::move(_result), n, n_});
+      _stack.emplace_back(CraneCont_n__1{n, n_, std::move(_result)});
       _stack.emplace_back(CraneEnter{n_});
     } else if (std::holds_alternative<CraneCont_n__1>(_frame)) {
       auto _f = std::move(std::get<CraneCont_n__1>(_frame));
       uint64_t n = _f.n;
       uint64_t n_ = _f.n_;
       _stack.emplace_back(
-          CraneCont_n__2{std::move(_result), std::move(_f._tmp3), n});
+          CraneCont_n__2{n, std::move(_f._tmp3), std::move(_result)});
       _stack.emplace_back(CraneEnter{n_});
     } else {
       auto _f = std::move(std::get<CraneCont_n__2>(_frame));

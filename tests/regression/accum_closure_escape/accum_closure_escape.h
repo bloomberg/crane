@@ -273,11 +273,11 @@ struct AccumClosureEscape {
         const tree *a2;
       };
 
-      /// CraneCont_TNode_1: saves [_tmp2, a1], resumes after recursive call,
+      /// CraneCont_TNode_1: saves [a1, _tmp2], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_TNode_1 {
-        mylist<crane::fn<uint64_t(uint64_t)>> _tmp2;
         uint64_t a1;
+        mylist<crane::fn<uint64_t(uint64_t)>> _tmp2;
       };
 
       using CraneFrame =
@@ -308,7 +308,7 @@ struct AccumClosureEscape {
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
           const tree &a2_value = a2;
-          _stack.emplace_back(CraneCont_TNode_1{std::move(_result), a1});
+          _stack.emplace_back(CraneCont_TNode_1{a1, std::move(_result)});
           _stack.emplace_back(CraneEnter{&a2_value});
         } else {
           auto _f = std::move(std::get<CraneCont_TNode_1>(_frame));
@@ -336,11 +336,11 @@ struct AccumClosureEscape {
         const tree *a2;
       };
 
-      /// CraneCont_TNode_1: saves [_tmp2, a1], resumes after recursive call,
+      /// CraneCont_TNode_1: saves [a1, _tmp2], resumes after recursive call,
       /// then processes rest.
       struct CraneCont_TNode_1 {
-        mylist<uint64_t> _tmp2;
         uint64_t a1;
+        mylist<uint64_t> _tmp2;
       };
 
       using CraneFrame =
@@ -368,7 +368,7 @@ struct AccumClosureEscape {
           auto _f = std::move(std::get<CraneCont_TNode>(_frame));
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_TNode_1{std::move(_result), a1});
+          _stack.emplace_back(CraneCont_TNode_1{a1, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else {
           auto _f = std::move(std::get<CraneCont_TNode_1>(_frame));
@@ -400,13 +400,13 @@ struct AccumClosureEscape {
         const tree *a2;
       };
 
-      /// CraneCont_TNode_1: saves [_tmp2, a0, a1, a2], resumes after recursive
+      /// CraneCont_TNode_1: saves [a0, a1, a2, _tmp2], resumes after recursive
       /// call, then processes rest.
       struct CraneCont_TNode_1 {
-        T1 _tmp2;
         std::shared_ptr<tree> a0;
         uint64_t a1;
         const tree *a2;
+        T1 _tmp2;
       };
 
       using CraneFrame =
@@ -436,7 +436,7 @@ struct AccumClosureEscape {
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
           _stack.emplace_back(
-              CraneCont_TNode_1{std::move(_result), std::move(a0), a1, &a2});
+              CraneCont_TNode_1{std::move(a0), a1, &a2, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else {
           auto _f = std::move(std::get<CraneCont_TNode_1>(_frame));
