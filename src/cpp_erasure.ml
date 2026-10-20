@@ -592,9 +592,13 @@ let lower_method_calls (d : settled) : settled =
         | Some receiver, rest ->
           (* Every inductive is a value type, reached with a dot; [this] is a
              raw pointer and a [CPPderef] dereferences a smart one, and both
-             are reached with an arrow instead. *)
+             are reached with an arrow instead.  A method takes its receiver
+             as a const [this], so moving it gives the method nothing, and
+             on a coinductive's projection picks the overload that copies the
+             field out ({!Borrow_projection}). *)
+          let receiver = match fe receiver with CPPmove r -> r | r -> r in
           let access, receiver =
-            match fe receiver with
+            match receiver with
             | CPPthis -> (Aarrow, CPPthis)
             | CPPderef p -> (Aarrow, p)
             | receiver -> (Adot, receiver)

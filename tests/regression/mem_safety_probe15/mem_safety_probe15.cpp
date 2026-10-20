@@ -100,8 +100,8 @@ MemSafetyProbe15::mylist<uint64_t> MemSafetyProbe15::flatten(
     } else {
       auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
-      _result = std::move(_f._tmp2).myapp(
-          mylist<uint64_t>::mycons(a1, std::move(_result)));
+      _result =
+          _f._tmp2.myapp(mylist<uint64_t>::mycons(a1, std::move(_result)));
     }
   }
   return _result;
@@ -167,9 +167,9 @@ MemSafetyProbe15::mylist<uint64_t> MemSafetyProbe15::subtree_sums(
       std::shared_ptr<MemSafetyProbe15::tree> a0 = std::move(_f.a0);
       uint64_t a1 = _f.a1;
       const MemSafetyProbe15::tree &a2 = *_f.a2;
-      _result = mylist<uint64_t>::mycons(
-          ((a0->tree_sum() + a1) + a2.tree_sum()),
-          std::move(_f._tmp2).myapp(std::move(_result)));
+      _result =
+          mylist<uint64_t>::mycons(((a0->tree_sum() + a1) + a2.tree_sum()),
+                                   _f._tmp2.myapp(std::move(_result)));
     }
   }
   return _result;

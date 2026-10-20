@@ -314,7 +314,7 @@ struct LoopifyListGenerators {
           } else {
             auto _f = std::move(std::get<CraneCont_idx_>(_frame));
             uint64_t idx = _f.idx;
-            _result = std::move(_result).app(
+            _result = _result.app(
                 List<uint64_t>::cons(f(idx), List<uint64_t>::nil()));
           }
         }

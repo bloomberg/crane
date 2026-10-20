@@ -129,9 +129,9 @@ MemSafetyProbe13::tree_vals_and_fns(
         return ((a0_value.tree_sum() + a2_value.tree_sum()) + n);
       };
       _result = std::make_pair(
-          mylist<uint64_t>::mycons(a1, std::move(lvals).app(std::move(rvals))),
+          mylist<uint64_t>::mycons(a1, lvals.app(std::move(rvals))),
           mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-              std::move(f), std::move(lfns).app(std::move(rfns))));
+              std::move(f), lfns.app(std::move(rfns))));
     }
   }
   return _result;
@@ -333,9 +333,8 @@ MemSafetyProbe13::flatten_tree_fns(
     } else {
       auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
-      _result =
-          std::move(_f._tmp2).app(mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-              [=](uint64_t n) { return (a1 + n); }, std::move(_result)));
+      _result = _f._tmp2.app(mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
+          [=](uint64_t n) { return (a1 + n); }, std::move(_result)));
     }
   }
   return _result;

@@ -260,7 +260,7 @@ struct MemSafetyProbe20 {
   static inline const uint64_t test_wrap_if = []() {
     wrapped w =
         wrap_if(tree::node(tree::leaf(), UINT64_C(42), tree::leaf()), true);
-    return std::move(w).unwrap(UINT64_C(0));
+    return w.unwrap(UINT64_C(0));
   }();
   /// TEST 2: Return wrapped closure from match on custom type.
   enum class Choice { CLEFT, CRIGHT };
@@ -288,7 +288,7 @@ struct MemSafetyProbe20 {
         tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
                    UINT64_C(7), tree::leaf()),
         Choice::CLEFT);
-    return std::move(w).unwrap(UINT64_C(0));
+    return w.unwrap(UINT64_C(0));
   }();
   /// TEST 3: Pair of closure and value, returned from if.
   /// Uses prod to wrap the closure.
@@ -298,14 +298,14 @@ struct MemSafetyProbe20 {
         tree::node(tree::leaf(), UINT64_C(15), tree::leaf()), true);
     wrapped w = p.first;
     uint64_t v = std::move(p).second;
-    return std::move(w).unwrap(v);
+    return w.unwrap(v);
   }();
   /// TEST 4: Wrapped closure captured in a locally-constructed tree.
   /// The let-bound tree is stack-allocated.
   static wrapped wrap_local(uint64_t n, bool b);
   static inline const uint64_t test_wrap_local = []() {
     wrapped w = wrap_local(UINT64_C(20), true);
-    return std::move(w).unwrap(UINT64_C(5));
+    return w.unwrap(UINT64_C(5));
   }();
   /// TEST 5: Double use of unwrapped closure.
   static inline const uint64_t test_double_unwrap = []() {
@@ -318,7 +318,7 @@ struct MemSafetyProbe20 {
   static inline const uint64_t test_nested_wrap = []() {
     wrapped w = nested_wrap(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
                             true, false);
-    return std::move(w).unwrap(UINT64_C(0));
+    return w.unwrap(UINT64_C(0));
   }();
 
   /// TEST 7: List of wrapped closures from if branches.

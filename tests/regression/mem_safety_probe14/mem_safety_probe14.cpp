@@ -140,7 +140,7 @@ MemSafetyProbe14::tree_level_fns(
               [=](uint64_t n) {
                 return ((a0_value.tree_sum() + a2_value.tree_sum()) + n);
               },
-              std::move(_f._tmp2).mylist_append(std::move(_result))));
+              _f._tmp2.mylist_append(std::move(_result))));
     }
   }
   return _result;
@@ -234,7 +234,7 @@ MemSafetyProbe14::collect_closures(
       uint64_t a1 = _f.a1;
       _result = mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
           [=](uint64_t n) { return (a1 + n); },
-          std::move(_f._tmp2).mylist_append(std::move(_result)));
+          _f._tmp2.mylist_append(std::move(_result)));
     }
   }
   return _result;

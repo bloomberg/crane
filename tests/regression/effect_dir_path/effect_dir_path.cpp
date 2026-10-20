@@ -119,7 +119,7 @@ uint64_t EffectDirPath::count_entries(const List<std::string> &dirs,
       }
       return result;
     }();
-    uint64_t n = std::move(files).length();
+    uint64_t n = files.length();
     return count_entries(*a1, (acc + n));
   }
 }

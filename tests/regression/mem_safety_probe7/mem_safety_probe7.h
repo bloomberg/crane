@@ -462,8 +462,7 @@ struct MemSafetyProbe7 {
     tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                         UINT64_C(20),
                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-    mylist<crane::fn<uint64_t(std::monostate)>> fns =
-        std::move(t).tree_sum_closures();
+    mylist<crane::fn<uint64_t(std::monostate)>> fns = t.tree_sum_closures();
     return sum_fns(std::move(fns));
   }();
   /// TEST 4: Each closure captures the tail AND the current value.
@@ -489,7 +488,7 @@ struct MemSafetyProbe7 {
                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     std::pair<crane::fn<uint64_t(std::monostate)>,
               crane::fn<uint64_t(std::monostate)>>
-        p = std::move(t).make_subtree_getters();
+        p = t.make_subtree_getters();
     return (p.first(std::monostate{}) + p.second(std::monostate{}));
   }();
   /// TEST 6: Stress test — large list, each closure captures

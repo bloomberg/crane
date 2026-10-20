@@ -365,7 +365,7 @@ struct LoopifyFixCapturesClassParam {
             _stack.emplace_back(CraneEnter{std::move(k), a0});
           } else {
             _stack.emplace_back(CraneEnter_loop{
-                std::move(k).sub(_tcI0::size(Nat::s(Nat::s(Nat::o())))), *a1});
+                k.sub(_tcI0::size(Nat::s(Nat::s(Nat::o())))), *a1});
           }
         }
       }

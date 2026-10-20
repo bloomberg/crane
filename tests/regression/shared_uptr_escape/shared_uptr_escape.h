@@ -245,7 +245,7 @@ struct SharedUptrEscape {
     tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                         UINT64_C(20),
                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-    tree sub = std::move(t).extract_subtree(UINT64_C(0));
+    tree sub = t.extract_subtree(UINT64_C(0));
     return (sub.tree_sum() + sub.tree_sum());
   }();
 

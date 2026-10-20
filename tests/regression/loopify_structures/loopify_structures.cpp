@@ -260,7 +260,7 @@ List<uint64_t> LoopifyStructures::flatten_nested_list_fuel(
       _stack.emplace_back(CraneEnter{&a1, f});
     } else {
       auto _f = std::move(std::get<CraneCont_NList_1>(_frame));
-      _result = std::move(_f._tmp3).app(std::move(_result));
+      _result = _f._tmp3.app(std::move(_result));
     }
   }
   return _result;

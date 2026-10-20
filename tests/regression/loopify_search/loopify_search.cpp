@@ -769,8 +769,7 @@ List<uint64_t> LoopifySearch::quicksort_fuel(
     } else {
       auto _f = std::move(std::get<CraneCont_Cons_1>(_frame));
       uint64_t a0 = _f.a0;
-      _result =
-          std::move(_f._tmp2).app(List<uint64_t>::cons(a0, std::move(_result)));
+      _result = _f._tmp2.app(List<uint64_t>::cons(a0, std::move(_result)));
     }
   }
   return _result;

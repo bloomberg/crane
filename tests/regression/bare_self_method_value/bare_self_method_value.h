@@ -417,7 +417,7 @@ struct BareSelfMethodValue {
           _stack.emplace_back(CraneEnter{_f.a2});
         } else {
           auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
-          _result = Nat::s(std::move(_f._tmp2).add(std::move(_result)));
+          _result = Nat::s(_f._tmp2.add(std::move(_result)));
         }
       }
       return _result;

@@ -105,7 +105,7 @@ struct MemSafetyProbe18 {
     uint64_t triple_use() const {
       uint64_t s1 = this->tree_sum();
       tree t2 = tree::node(*this, s1, *this);
-      uint64_t s2 = std::move(t2).tree_sum();
+      uint64_t s2 = t2.tree_sum();
       return (s1 + s2);
     }
 
@@ -115,7 +115,7 @@ struct MemSafetyProbe18 {
       tree t1 = tree::node(*this, UINT64_C(0), tree::leaf());
       tree t2 = tree::node(tree::leaf(), UINT64_C(0), std::move(t1));
       tree t3 = tree::node(std::move(t2), UINT64_C(0), *this);
-      return std::move(t3).tree_sum();
+      return t3.tree_sum();
     }
 
     /// TEST 4: Build a tree from a tree, using it at multiple levels.
@@ -452,7 +452,7 @@ struct MemSafetyProbe18 {
   static uint64_t sum_list(const mylist<uint64_t> &l);
   static inline const uint64_t test_dup = []() {
     tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
-    return std::move(t).dup_tree().tree_sum();
+    return t.dup_tree().tree_sum();
   }();
   static inline const uint64_t test_let_reuse =
       tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
@@ -480,7 +480,7 @@ struct MemSafetyProbe18 {
   }();
   static inline const uint64_t test_tree_from_tree = []() {
     tree t = tree::node(tree::leaf(), UINT64_C(5), tree::leaf());
-    return std::move(t).tree_from_tree().tree_sum();
+    return t.tree_from_tree().tree_sum();
   }();
   /// TEST 5: Complex fold that builds a tree from a list.
   static tree fold_left_tree(const mylist<uint64_t> &l, tree acc);
@@ -558,7 +558,7 @@ struct MemSafetyProbe18 {
   }();
   static inline const uint64_t test_chain = []() {
     tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
-    return std::move(t).chain_transforms();
+    return t.chain_transforms();
   }();
   /// TEST 8: Nested constructor building: build a list of trees
   /// using the same tree in different positions.

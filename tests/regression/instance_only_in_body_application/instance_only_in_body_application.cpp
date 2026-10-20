@@ -16,6 +16,6 @@ return std::move(a0);
 auto& [a0] = std::get<typename Sum<Nat,
 Dval<typename ParamsV<natIPtr>::PTR::ptr,
 typename ParamsV<natIPtr>::IPTR::iptr>>::Inr>(r.v_mut());
-return std::move(a0).template to_nat<ParamsV<natIPtr>>();
+return a0.template to_nat<ParamsV<natIPtr>>();
 }}
 

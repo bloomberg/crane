@@ -315,7 +315,7 @@ struct AccumClosureEscape {
           uint64_t a1 = _f.a1;
           _result = mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
               [=](uint64_t x) { return (a1 + x); },
-              std::move(_f._tmp2).mylist_append(std::move(_result)));
+              _f._tmp2.mylist_append(std::move(_result)));
         }
       }
       return _result;
@@ -374,7 +374,7 @@ struct AccumClosureEscape {
           auto _f = std::move(std::get<CraneCont_TNode_1>(_frame));
           uint64_t a1 = _f.a1;
           _result = mylist<uint64_t>::mycons(
-              a1, std::move(_f._tmp2).mylist_append(std::move(_result)));
+              a1, _f._tmp2.mylist_append(std::move(_result)));
         }
       }
       return _result;
@@ -521,14 +521,14 @@ struct AccumClosureEscape {
     tree t = tree::tnode(
         tree::tnode(tree::tleaf(), UINT64_C(10), tree::tleaf()), UINT64_C(20),
         tree::tnode(tree::tleaf(), UINT64_C(30), tree::tleaf()));
-    return apply_all_sum(std::move(t).tree_to_adders(), UINT64_C(5));
+    return apply_all_sum(t.tree_to_adders(), UINT64_C(5));
   }();
   /// Store a closure and then clobber the stack before using it.
   static inline const uint64_t test5 = []() {
     tree t =
         tree::tnode(tree::tnode(tree::tleaf(), UINT64_C(42), tree::tleaf()),
                     UINT64_C(100), tree::tleaf());
-    mylist<crane::fn<uint64_t(uint64_t)>> fns = std::move(t).tree_to_adders();
+    mylist<crane::fn<uint64_t(uint64_t)>> fns = t.tree_to_adders();
     return apply_first(std::move(fns), UINT64_C(0));
   }();
 };

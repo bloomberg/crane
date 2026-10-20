@@ -36,7 +36,7 @@ uint64_t MemSafetyProbe19::choice_fn(const MemSafetyProbe19::tree &t,
 uint64_t MemSafetyProbe19::make_adder(uint64_t n, bool b, uint64_t x0_) {
   MemSafetyProbe19::tree t = tree::node(tree::leaf(), n, tree::leaf());
   if (b) {
-    return (std::move(t).tree_sum() + x0_);
+    return (t.tree_sum() + x0_);
   } else {
     return x0_;
   }

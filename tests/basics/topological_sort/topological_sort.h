@@ -489,7 +489,7 @@ struct TopologicalSort {
   make_graph(std::type_identity_t<crane::fn<bool(T1, T1)>> eqb_node,
              List<std::pair<T1, T1>> l) {
     List<T1> elems = get_elems<T1>(eqb_node, l);
-    return std::move(elems).template fold_right<List<entry<T1>>>(
+    return elems.template fold_right<List<entry<T1>>>(
         [=, eqb_node = std::move(eqb_node),
          l = std::move(l)](T1 e, const List<std::pair<T1, List<T1>>> &ret) {
           return List<entry<T1>>::cons(make_entry<T1>(eqb_node, l, e), ret);
@@ -636,7 +636,7 @@ struct TopologicalSort {
               return !(contains<T1>(eqb_node, entry0.first, mins_));
             });
         List<std::pair<T1, List<T1>>> rest_ =
-            std::move(rest).template map<std::pair<T1, List<T1>>>(
+            rest.template map<std::pair<T1, List<T1>>>(
                 [=](const std::pair<T1, List<T1>> &entry0) {
                   return std::make_pair(
                       entry0.first, entry0.second.filter([=](const T1 &e) {

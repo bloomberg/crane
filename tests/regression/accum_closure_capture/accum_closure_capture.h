@@ -365,7 +365,7 @@ struct AccumClosureCapture {
                    UINT64_C(20),
                    tree::node(tree::leaf(), UINT64_C(12), tree::leaf()))
             .extract_closures();
-    return std::move(fs).apply_all(UINT64_C(0));
+    return fs.apply_all(UINT64_C(0));
   }();
   /// test2: Allocate a noise tree between extracting closures and applying
   /// them. Increases memory pressure on freed region.
@@ -374,7 +374,7 @@ struct AccumClosureCapture {
                      .extract_closures();
     uint64_t noise =
         tree::node(tree::leaf(), UINT64_C(999), tree::leaf()).tree_sum();
-    return std::move(fs).apply_all(noise);
+    return fs.apply_all(noise);
   }();
 };
 

@@ -143,7 +143,7 @@ List<uint64_t> LoopifyListGenerators::replicate_each(
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       List<uint64_t> reps = std::move(_f.reps);
-      _result = std::move(reps).app(std::move(_result));
+      _result = reps.app(std::move(_result));
     }
   }
   return _result;

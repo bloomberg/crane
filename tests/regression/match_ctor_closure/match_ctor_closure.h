@@ -218,7 +218,7 @@ struct MatchCtorClosure {
                         UINT64_C(20),
                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     fn_box b = match_and_box(std::move(t));
-    return std::move(b).apply_box(UINT64_C(5));
+    return b.apply_box(UINT64_C(5));
   }();
 };
 

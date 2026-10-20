@@ -534,7 +534,7 @@ struct MemSafetyProbe11 {
     mylist<uint64_t> l = mylist<uint64_t>::mycons(
         UINT64_C(5),
         mylist<uint64_t>::mycons(UINT64_C(99), mylist<uint64_t>::mynil()));
-    return std::move(t).nested_capture(std::move(l), UINT64_C(7));
+    return t.nested_capture(std::move(l), UINT64_C(7));
   }();
   /// TEST 5: Tail-recursive function with two accumulators,
   /// one of which stores closures that capture the other.
@@ -557,10 +557,10 @@ struct MemSafetyProbe11 {
                           UINT64_C(10),
                           tree::node(tree::leaf(), UINT64_C(15), tree::leaf()));
       crane::fn<tree(uint64_t)> f = [&](uint64_t _x0) -> tree {
-        return std::move(t).tree_transformer(_x0);
+        return t.tree_transformer(_x0);
       };
       tree t2 = f(UINT64_C(100));
-      return std::move(t2).tree_sum();
+      return t2.tree_sum();
     }();
   }();
 };

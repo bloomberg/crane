@@ -21,7 +21,7 @@ uint64_t MoveReadOutsideRegion::if_in_let(List<uint64_t> l, bool b) {
   } else {
     x = UINT64_C(0);
   }
-  return (x + std::move(s).length());
+  return (x + s.length());
 }
 
 /// A match in a let's right-hand side, read again after the let.
@@ -35,7 +35,7 @@ uint64_t MoveReadOutsideRegion::match_in_let(List<uint64_t> l) {
       return (z.length() + z.length());
     }
   }();
-  return (x + std::move(s).length());
+  return (x + s.length());
 }
 
 /// A two-way case beside a read in the same call.
