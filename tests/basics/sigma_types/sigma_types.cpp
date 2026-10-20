@@ -18,11 +18,11 @@ Sig<uint64_t> SigmaTypes::double_positive(uint64_t n) {
   Sig<uint64_t> p = positive_succ(n);
   return Sig<uint64_t>::exist(([&]() {
     auto &[x] = p;
-    return std::move(x);
+    return x;
   }() +
                                [&]() {
                                  auto &[x0] = p;
-                                 return std::move(x0);
+                                 return x0;
                                }()));
 }
 

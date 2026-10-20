@@ -112,6 +112,10 @@ type translation_ctx = {
      scopes that start a fresh {!Translation.slot} -- which is why it is
      context state rather than a slot property. *)
   move_suppress_tail : bool;
+  (* Which reads of the region being generated are last uses: a move is made
+     only at one of them ({!Ownership_plan}).  Set where the region's body is
+     generated ({!with_region}), and emptied with [move_owned_vars]. *)
+  move_plan : Ownership_plan.t;
   (* Number of function parameters (offset for de Bruijn indices). *)
   move_n_params : int;
   (* Counter for generating unique match scrutinee variable names
@@ -206,6 +210,7 @@ let tctx =
         move_owned_vars = Escape.IntSet.empty;
         move_dead_after = Escape.IntSet.empty;
         move_suppress_tail = false;
+        move_plan = Ownership_plan.empty;
         move_n_params = 0;
         match_param_counter = 0;
         promoted_var_map = [];
@@ -360,6 +365,14 @@ let with_move_suppress_tail (b : bool) (f : unit -> 'a) : 'a =
     (fun c -> c.move_suppress_tail)
     (fun b -> tctx := { !tctx with move_suppress_tail = b })
     b f
+
+(** [with_region body f] runs [f], which generates [body] as one C++ body,
+    with the moves planned over [body]. *)
+let with_region (body : ml_ast) (f : unit -> 'a) : 'a =
+  with_field
+    (fun c -> c.move_plan)
+    (fun p -> tctx := { !tctx with move_plan = p })
+    (Ownership_plan.region body) f
 
 (** [with_reuse_token tok f] runs [f] with [tok] as the pending Perceus reuse
     token.  The token is linear, and [f] clears it if it consumes it; the

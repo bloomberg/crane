@@ -225,8 +225,7 @@ struct PromOps {
                false};
     state3 s_ =
         set_prom_params3(std::move(s), UINT64_C(21), UINT64_C(144), true);
-    return ((s_.prom_addr3 +
-             (s_.prom_enable3 ? std::move(s_).prom_data3 : UINT64_C(0))) +
+    return ((s_.prom_addr3 + (s_.prom_enable3 ? s_.prom_data3 : UINT64_C(0))) +
             s_.regs3.length());
   }();
   static inline const uint64_t test4 = []() {
@@ -252,8 +251,7 @@ struct PromOps {
                false};
     state3 s_ =
         set_prom_params3(std::move(s), UINT64_C(21), UINT64_C(144), true);
-    return ((s_.prom_addr3 +
-             (s_.prom_enable3 ? std::move(s_).prom_data3 : UINT64_C(0))) +
+    return ((s_.prom_addr3 + (s_.prom_enable3 ? s_.prom_data3 : UINT64_C(0))) +
             s_.regs3.length());
   }();
 
@@ -285,7 +283,7 @@ struct PromOps {
     state5 s_ =
         set_prom_params5(std::move(s), UINT64_C(23), UINT64_C(77), true);
     return ((s_.acc5 + s_.prom_addr5) +
-            (s_.prom_enable5 ? std::move(s_).prom_data5 : UINT64_C(0)));
+            (s_.prom_enable5 ? s_.prom_data5 : UINT64_C(0)));
   }();
 
   struct state6 {

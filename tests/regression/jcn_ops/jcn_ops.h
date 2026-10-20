@@ -44,10 +44,9 @@ struct JcnOps {
   static constexpr uint64_t JCN_JNZ = UINT64_C(12);
   static inline const uint64_t test_constants = []() {
     state s = state{UINT64_C(0), true, false, UINT64_C(0)};
-    return (
-        ((jcn_condition(std::move(s), JCN_JC) ? UINT64_C(1) : UINT64_C(0)) +
-         (jcn_condition(std::move(s), JCN_JZ) ? UINT64_C(1) : UINT64_C(0))) +
-        (jcn_condition(std::move(s), JCN_JNT) ? UINT64_C(1) : UINT64_C(0)));
+    return (((jcn_condition(s, JCN_JC) ? UINT64_C(1) : UINT64_C(0)) +
+             (jcn_condition(s, JCN_JZ) ? UINT64_C(1) : UINT64_C(0))) +
+            (jcn_condition(s, JCN_JNT) ? UINT64_C(1) : UINT64_C(0)));
   }();
   static inline const std::pair<std::pair<uint64_t, bool>, uint64_t> t =
       std::make_pair(std::make_pair(test_branch_target, test_condition),

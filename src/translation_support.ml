@@ -1559,6 +1559,7 @@ let with_escape_analysis f =
       current_letin_depth = 0;
       move_dead_after = Escape.IntSet.empty;
       move_owned_vars = Escape.IntSet.empty;
+      move_plan = Ownership_plan.empty;
       move_n_params = 0;
       match_param_counter = 0;
       cs_counter = 0;

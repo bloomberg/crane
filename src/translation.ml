@@ -1290,15 +1290,19 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
 and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     (ml_e : ml_ast) : cpp_expr =
   match ml_e with
-  | MLrel (i, _) ->
+  | MLrel (i, occ) ->
     check_binder_scopes env i;
     let var_expr =
       try CPPvar (get_db_name i env)
       with Failure _ -> CPPvar (db_fallback_id i)
     in
     (* Phase 2: move on last use. Emit std::move if: (1) the variable is dead
-       after this point, (2) it's an owned variable (not borrowed), and (3) this
-       is its only occurrence in the current RHS expression.
+       after this point, (2) it's an owned variable (not borrowed), (3) this
+       is its only occurrence in the current RHS expression, and (4) the
+       region's plan has this read as a last use.  The sets see only the
+       continuation in front of them, and a let's right-hand side or a match
+       standing in an argument does not know what reads the variable after
+       the let or beside the argument; the plan reads the whole region.
        Never move a typeclass instance -- it is a type reference in the concept
        paradigm, not an owned value, and wrapping it produces invalid C++ like
        [std::move(_tcI0)::method()].  Recognised by identity rather than by ML
@@ -1312,6 +1316,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       (not is_tc_param)
       && Escape.IntSet.mem i (!tctx).move_dead_after
       && Escape.IntSet.mem i (!tctx).move_owned_vars
+      && Ownership_plan.fate (!tctx).move_plan occ = Last_use
     in
     let result = if move_candidate then CPPmove var_expr else var_expr in
     if binder_is_boxed i then begin
@@ -1437,14 +1442,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
   | MLapp (MLglob use, _ :: _ :: _) as a when is_sequential_effect Core_effects.Bind use ->
     (* Sequential mode: bind in expression context (e.g., nested inside
        another expression). Wrap in IIFE so gen_stmts can sequentialize. *)
-    with_escape_analysis (fun () ->
-      mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) )
+    with_escape_analysis (fun () -> with_region a (fun () ->
+      mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) ) )
   | MLapp (MLfix _, _) as a ->
     (* Nested fix application in expression context (e.g., S((fix aux ...) es)).
        Wrap in an IIFE, delegating to gen_stmts which handles MLapp(MLfix
        ...). *)
-    with_escape_analysis (fun () ->
-      mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) )
+    with_escape_analysis (fun () -> with_region a (fun () ->
+      mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) ) )
   | MLapp (MLapp ((MLglob _ as g), inner_args), outer_args) ->
     (* Flatten nested MLapp when inner callee is a global reference. This arises
        from Rocq partial applications like: div_conq_split x f1 f2 l which
@@ -2366,11 +2371,12 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            | Some _ -> with_rank2_carrier carrier)
             (fun () ->
               with_lam_return_type (fun () ->
-                gen_stmts
-                  ~slot:{slot with expected_ml_ty = body_expected_ml_ty}
-                  env
-                  (fun x -> Sreturn (Some x))
-                  a ) )
+                with_region a (fun () ->
+                  gen_stmts
+                    ~slot:{slot with expected_ml_ty = body_expected_ml_ty}
+                    env
+                    (fun x -> Sreturn (Some x))
+                    a ) ) )
         in
         let body_stmts =
           List.fold_left
@@ -5016,14 +5022,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
   | MLcase (typ, t, pv) when lang () == Cpp ->
     gen_cpp_case typ t env pv
   | MLletin (_, ty, _, _) as a ->
-    with_escape_analysis (fun () ->
+    with_escape_analysis (fun () -> with_region a (fun () ->
       with_iife_return_type expected_ty (fun () ->
-        mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) ) )
+        mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) ) ) )
   | MLfix _ as a ->
     (* Bare fixpoint in expression context — wrap in IIFE, delegate to
        gen_stmts. *)
-    with_escape_analysis (fun () ->
-      mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) )
+    with_escape_analysis (fun () -> with_region a (fun () ->
+      mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) ) )
   | MLstring s -> CPPstring s
   | MLuint x -> CPPuint x
   | MLfloat f -> CPPfloat f
@@ -9623,8 +9629,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                not even name the same variables, being indexed from outside
                the lambda's binders. *)
             let compiled_body =
-              with_escape_analysis (fun () ->
-                  gen_stmts lam_env (fun x -> Sreturn (Some x)) body )
+              with_escape_analysis (fun () -> with_region body (fun () ->
+                  gen_stmts lam_env (fun x -> Sreturn (Some x)) body ) )
             in
             restore_env_types saved_env_types;
             (free_var_params, lam_param_ids, lam_env, compiled_body) )
@@ -10769,7 +10775,7 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
     ( (renamed_n, ty),
       ids,
       with_cpp_return_type fix_return_type (fun () ->
-          gen_stmts env (fun x -> Sreturn (Some x)) f ),
+          with_region f (fun () -> gen_stmts env (fun x -> Sreturn (Some x)) f) ),
       parameter_binders env ids )
   in
   restore_env_types saved_env_types;

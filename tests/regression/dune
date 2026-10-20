@@ -13183,3 +13183,14 @@
   (alias runtest)
   (deps sigma_assertion_after_implicit.t.exe)
   (action (run ./sigma_assertion_after_implicit.t.exe))))
+
+(subdir move_read_outside_region
+ (rule
+  (targets move_read_outside_region.t.exe)
+  (deps MoveReadOutsideRegion.vo move_read_outside_region.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} move_read_outside_region.t.exe move_read_outside_region.cpp move_read_outside_region.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps move_read_outside_region.t.exe)
+  (action (run ./move_read_outside_region.t.exe))))

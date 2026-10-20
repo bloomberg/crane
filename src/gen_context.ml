@@ -47,6 +47,7 @@ let begin_body ~owner () =
       body_owner = Some owner;
       current_letin_depth = 0;
       move_owned_vars = Escape.IntSet.empty;
+      move_plan = Ownership_plan.empty;
       move_n_params = 0;
       move_dead_after = Escape.IntSet.empty }
 

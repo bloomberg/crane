@@ -1218,7 +1218,8 @@ let gen_dfun n b cty ty temps =
         | Some stmts -> stmts
         | None ->
           let b =
-            List.map (glob_subst_stmt n rec_call) (gen_body_stmts env cofix_wrap b)
+            List.map (glob_subst_stmt n rec_call)
+              (with_region b (fun () -> gen_body_stmts env cofix_wrap b))
           in
           return_captures_by_value b
       in
@@ -1284,9 +1285,10 @@ let gen_dfun n b cty ty temps =
           let args = List.rev (List.filter_map
             (fun (i, (_, t)) -> if erased_by_extraction t then None else Some (fresh_rel (i + 1)))
             (List.mapi (fun i x -> (i, x)) missing)) in
+          let body = apply_eta_args lifted_b args in
           List.map
             (glob_subst_stmt n rec_call)
-            (gen_body_stmts env cofix_wrap (apply_eta_args lifted_b args))
+            (with_region body (fun () -> gen_body_stmts env cofix_wrap body))
       in
       let b = return_captures_by_value b in
       (* let b = List.map forward_fun_args b in *)
@@ -1547,14 +1549,16 @@ let gen_decl__inner n b ty =
       (* A body that only throws becomes a zero-arg function, so the throw
          happens when the value is asked for rather than during static
          initialisation (which terminates the program before main). *)
-      let body_expr = gen_expr (empty_env ()) b in
+      let body_expr = with_region b (fun () -> gen_expr (empty_env ()) b) in
       let inner = Dfun (mk_dfun n ~ret:cty (Ddef ([], [Sreturn (Some body_expr)]))) in
       ( match temps with
       | [] -> (inner, empty_env (), tvars)
       | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
     | _ ->
       begin_body ~owner:n ();
-      let body_expr = with_cpp_return_type (Some cty) (fun () -> gen_constant_value b) in
+      let body_expr =
+        with_cpp_return_type (Some cty) (fun () -> with_region b (fun () -> gen_constant_value b))
+      in
       (* When a unit-typed constant's body calls a void-ified function,
          the call produces no value.  Wrap in an IIFE that executes the
          body for side effects and returns Unit::e_TT. *)
@@ -1751,7 +1755,7 @@ let gen_spec__inner n b ty =
       (* The constant's own type is also the expected type of its body, so an
          IIFE standing in for a let-in tail expression re-bases onto it rather
          than onto nothing. *)
-      let b_expr = gen_constant_value ~expected_ty:ty inner_body in
+      let b_expr = with_region inner_body (fun () -> gen_constant_value ~expected_ty:ty inner_body) in
       (* Wrap with std::any_cast when the C++ expression returns std::any but the
          declared type is concrete.  Two detection paths:
          (a) MLmagic — the extraction explicitly flagged a type coercion.

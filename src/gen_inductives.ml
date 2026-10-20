@@ -817,7 +817,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
            type arguments get shared_ptr wrapping to match struct field
            types. *)
         with_method_ns_for_locals ~base:method_ns (fun () ->
-            gen_stmts env method_k inner_body ) )
+            with_region inner_body (fun () -> gen_stmts env method_k inner_body) ) )
   in
   tctx := { !tctx with move_dead_after = saved_dead };
   tctx := { !tctx with move_owned_vars = saved_owned };
