@@ -793,8 +793,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
                       && i = method_n_params - 1 - this_pos )
               then
                 let ml_ty = snd (List.nth ids_with_types i) in
-                if Escape.is_shared_ptr_type ml_ty
-                   || is_nontrivial_value_ml_type ml_ty then
+                if Translation_support.worth_moving ml_ty then
                   Escape.IntSet.add (i + 1) acc
                 else acc
               else acc )

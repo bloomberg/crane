@@ -8780,8 +8780,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
           let ids_rev = List.rev ids in
           List.fold_left (fun acc j ->
             let (_, ty) = List.nth ids_rev j in
-            if is_nontrivial_value_ml_type ty
-               || Escape.is_shared_ptr_type ty then
+            if worth_moving ty then
               Escape.IntSet.add (j + 1) acc
             else acc)
             Escape.IntSet.empty (List.init n_pat_vars Fun.id)
@@ -9949,7 +9948,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           | _ -> false )
       in
       let new_is_tracked =
-        (Escape.is_shared_ptr_type t || is_nontrivial_value_ml_type t)
+        worth_moving t
         && not use_const_ref
       in
       let owned_for_b =
@@ -10256,8 +10255,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
        collisions that produce incorrect std::move (use-after-move). *)
     let add_owned =
       match ids with
-      | (_, ty) :: _ when Escape.is_shared_ptr_type ty
-                          || is_nontrivial_value_ml_type ty -> Some 1
+      | (_, ty) :: _ when worth_moving ty -> Some 1
       | _ -> None
     in
     with_shifted_move_tracking 1 ?add_owned (fun () ->
@@ -10600,8 +10598,7 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
               let ml_ty = snd (List.nth ids i) in
               let owned = base_owned
                 || (sub_esc && is_prod_ml_type ml_ty) in
-              if owned && (Escape.is_shared_ptr_type ml_ty
-                           || is_nontrivial_value_ml_type ml_ty) then
+              if owned && worth_moving ml_ty then
                 Escape.IntSet.add db acc
               else
                 acc )

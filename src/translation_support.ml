@@ -1575,6 +1575,11 @@ let with_escape_analysis f =
     caller then projects with [.first.first]. *)
 let with_iife_return_type expected_ty f = with_cpp_return_type expected_ty f
 
+(** Whether a body owning a value of ML type [ty] moves it at its last use:
+    a [shared_ptr], or a value-type inductive a copy of which copies more
+    than a word. *)
+let worth_moving ty = Escape.is_shared_ptr_type ty || is_nontrivial_value_ml_type ty
+
 (** Shift the owned set by [n] binders, run [f], then restore it.  This is
     the standard bracket for code that introduces [n] pattern variables or let
     bindings: [move_owned_vars] tracks variables by de Bruijn index, so when

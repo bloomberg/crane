@@ -1184,8 +1184,7 @@ let gen_dfun n b cty ty temps =
             (fun acc (i, owned) ->
               if owned then
                 let ml_ty = snd (List.nth all_params i) in
-                if Escape.is_shared_ptr_type ml_ty
-                   || is_nontrivial_value_ml_type ml_ty then
+                if Translation_support.worth_moving ml_ty then
                   Escape.IntSet.add (i + 1) acc
                 else acc
               else acc )
