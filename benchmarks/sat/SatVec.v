@@ -7,7 +7,16 @@
 From Stdlib Require Import List.
 From Crane Require Import Monads.ITree.
 
-Axiom vec : Type -> Type.
+(** A vector is a location in the heap the events act on.  Both extractions
+    replace [vec] wholesale, so this only matters to the proofs, which need
+    handles they can compare and allocate.  It is a record rather than a
+    definition so that [vec A] stays a type constructor of its own: OCaml
+    extraction would otherwise unfold [vec int] and [vec Obj.t] to the same
+    [int] and leave out the [Obj.magic] between them. *)
+Definition loc := nat.
+Record vec (A : Type) : Type := mk_vec { vloc : loc }.
+Arguments mk_vec {A}.
+Arguments vloc {A}.
 
 Inductive vecE : Type -> Type :=
 | VMake : forall {A}, nat -> A -> vecE (vec A)
@@ -15,7 +24,10 @@ Inductive vecE : Type -> Type :=
 | VSet : forall {A}, vec A -> nat -> A -> vecE unit
 | VLen : forall {A}, vec A -> vecE nat
 | VPush : forall {A}, vec A -> A -> vecE unit
-| VShrink : forall {A}, vec A -> nat -> vecE unit.
+| VShrink : forall {A}, vec A -> nat -> vecE unit
+(** Give up: the loop numbered [site] ran out of fuel.  No answer ever comes back, so a run
+    that aborts has no result to be wrong about. *)
+| VAbort : forall {A}, nat -> vecE A.
 
 Section Ops.
 Context {E : Type -> Type} `{vecE -< E}.
@@ -25,4 +37,5 @@ Definition vset {A} (v : vec A) (i : nat) (x : A) : itree E unit := embed (VSet 
 Definition vlen {A} (v : vec A) : itree E nat := embed (VLen v).
 Definition vpush {A} (v : vec A) (x : A) : itree E unit := embed (VPush v x).
 Definition vshrink {A} (v : vec A) (n : nat) : itree E unit := embed (VShrink v n).
+Definition vabort {A} (site : nat) : itree E A := embed (VAbort site).
 End Ops.

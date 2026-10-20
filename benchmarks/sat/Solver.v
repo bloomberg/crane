@@ -63,7 +63,7 @@ Definition enqueue (l : nat) (r : nat) : itree vecE unit :=
 (** The first [k >= 2] at which [c] has a literal that is not false, + 1. *)
 Fixpoint find_watch (fuel : nat) (c : vec nat) (k len : nat) : itree vecE nat :=
   match fuel with
-  | O => Ret 0
+  | O => vabort 1
   | S f =>
     if Nat.leb len k then Ret 0
     else
@@ -75,7 +75,7 @@ Fixpoint find_watch (fuel : nat) (c : vec nat) (k len : nat) : itree vecE nat :=
 (** Slide [ws[i..n)] down to [ws[j..)] and cut the list there. *)
 Fixpoint copy_rest (fuel : nat) (ws : vec nat) (i j n : nat) : itree vecE unit :=
   match fuel with
-  | O => Ret tt
+  | O => vabort 2
   | S f =>
     if Nat.leb n i then vshrink ws j
     else x <- vget ws i ;; vset ws j x ;; copy_rest f ws (i + 1) (j + 1) n
@@ -87,7 +87,7 @@ Fixpoint copy_rest (fuel : nat) (ws : vec nat) (i j n : nat) : itree vecE unit :
 Fixpoint prop_watch (fuel : nat) (fl : nat) (ws : vec nat) (i j n : nat)
   : itree vecE nat :=
   match fuel with
-  | O => Ret 0
+  | O => vabort 3
   | S f =>
     if Nat.leb n i then vshrink ws j ;; Ret 0
     else
@@ -123,7 +123,7 @@ Fixpoint prop_watch (fuel : nat) (fl : nat) (ws : vec nat) (i j n : nat)
 (** Unit propagation to a fixpoint; the conflict clause's index + 1, or 0. *)
 Fixpoint propagate (fuel : nat) : itree vecE nat :=
   match fuel with
-  | O => Ret 0
+  | O => vabort 4
   | S f =>
     qh <- vget (misc s) QHEAD ;;
     tl <- vlen (trail s) ;;
@@ -141,7 +141,7 @@ Fixpoint propagate (fuel : nat) : itree vecE nat :=
 (** Undo the trail from [lim] up, saving each variable's phase. *)
 Fixpoint unassign (fuel : nat) (i lim : nat) : itree vecE unit :=
   match fuel with
-  | O => Ret tt
+  | O => vabort 5
   | S f =>
     if Nat.leb i lim then Ret tt
     else
@@ -170,7 +170,7 @@ Definition backtrack (fuel lvl : nat) : itree vecE unit :=
 Fixpoint analyze_lits (fuel : nat) (c : vec nat) (j len dl pathC : nat)
     (learnt : vec nat) (now : nat) : itree vecE nat :=
   match fuel with
-  | O => Ret pathC
+  | O => vabort 6
   | S f =>
     if Nat.leb len j then Ret pathC
     else
@@ -189,7 +189,7 @@ Fixpoint analyze_lits (fuel : nat) (c : vec nat) (j len dl pathC : nat)
 (** The highest trail position at or below [i] whose variable is marked. *)
 Fixpoint next_seen (fuel : nat) (i : nat) : itree vecE nat :=
   match fuel with
-  | O => Ret i
+  | O => vabort 7
   | S f =>
     l <- vget (trail s) i ;;
     sv <- vget (seen s) (lvar l) ;;
@@ -201,7 +201,7 @@ Fixpoint next_seen (fuel : nat) (i : nat) : itree vecE nat :=
 Fixpoint analyze_loop (fuel : nat) (confl : nat) (start : nat) (index : nat)
     (pathC dl : nat) (learnt : vec nat) (now : nat) : itree vecE nat :=
   match fuel with
-  | O => Ret 0
+  | O => vabort 8
   | S f =>
     c <- vget (clauses s) confl ;;
     len <- vlen c ;;
@@ -220,7 +220,7 @@ Fixpoint analyze_loop (fuel : nat) (confl : nat) (start : nat) (index : nat)
 Fixpoint finish_learnt (fuel : nat) (learnt : vec nat) (i len best bestlv : nat)
   : itree vecE nat :=
   match fuel with
-  | O => Ret 0
+  | O => vabort 9
   | S f =>
     if Nat.leb len i then
       (if Nat.ltb 1 best then
@@ -265,7 +265,7 @@ Definition learn (fuel confl : nat) : itree vecE unit :=
     every variable is assigned. *)
 Fixpoint pick (fuel : nat) (v n best beststamp : nat) : itree vecE nat :=
   match fuel with
-  | O => Ret best
+  | O => vabort 10
   | S f =>
     if Nat.leb n v then Ret best
     else
@@ -311,36 +311,40 @@ Fixpoint search (fuel : nat) (budget nvars : nat) : itree vecE nat :=
         search fuel b nvars
   end.
 
-(** Whether some literal of clause [c] from [k] on is true. *)
-Fixpoint clause_sat (fuel : nat) (c : vec nat) (k len : nat) : itree vecE bool :=
+(** Whether one of the [len] literals of [input] from [pos] on is true. *)
+Fixpoint clause_sat (fuel : nat) (input : vec nat) (pos len : nat) : itree vecE bool :=
   match fuel with
-  | O => Ret false
+  | O => vabort 11
   | S f =>
-    if Nat.leb len k then Ret false
-    else
-      l <- vget c k ;;
+    match len with
+    | O => Ret false
+    | S len' =>
+      l <- vget input pos ;;
       v <- lit_value l ;;
-      if Nat.eqb v 1 then Ret true else clause_sat f c (k + 1) len
+      if Nat.eqb v 1 then Ret true else clause_sat f input (pos + 1) len'
+    end
   end.
 
-(** Whether the assignment satisfies clauses [i..n) of the database. *)
-Fixpoint check_model (fuel : nat) (i n : nat) : itree vecE bool :=
+(** Whether the assignment satisfies the clauses of [input] from [pos] up
+    to [n].  It reads the caller's clauses rather than the database, whose
+    clauses propagation has reordered in place, so that trusting a model
+    needs nothing from the search beyond its leaving [input] alone. *)
+Fixpoint check_model (fuel : nat) (input : vec nat) (pos n : nat) : itree vecE bool :=
   match fuel with
-  | O => Ret false
+  | O => vabort 12
   | S f =>
-    if Nat.leb n i then Ret true
+    if Nat.leb n pos then Ret true
     else
-      c <- vget (clauses s) i ;;
-      len <- vlen c ;;
-      ok <- clause_sat fuel c 0 len ;;
-      if ok then check_model f (i + 1) n else Ret false
+      len <- vget input pos ;;
+      ok <- clause_sat fuel input (pos + 1) len ;;
+      if ok then check_model f input (pos + 1 + len) n else Ret false
   end.
 
 (** Copy [len] literals of [input] from [pos] into a fresh clause. *)
 Fixpoint read_lits (fuel : nat) (input : vec nat) (c : vec nat) (pos len : nat)
   : itree vecE unit :=
   match fuel with
-  | O => Ret tt
+  | O => vabort 13
   | S f =>
     match len with
     | O => Ret tt
@@ -353,7 +357,7 @@ Fixpoint read_lits (fuel : nat) (input : vec nat) (c : vec nat) (pos len : nat)
     already contradictory. *)
 Fixpoint load (fuel : nat) (input : vec nat) (pos n : nat) : itree vecE bool :=
   match fuel with
-  | O => Ret true
+  | O => vabort 14
   | S f =>
     if Nat.leb n pos then Ret true
     else
@@ -377,7 +381,7 @@ End Ops.
 (** [n] distinct empty vectors, pushed onto [acc]. *)
 Fixpoint fresh_vecs (fuel : nat) (acc : vec (vec nat)) (n : nat) : itree vecE unit :=
   match fuel with
-  | O => Ret tt
+  | O => vabort 15
   | S f =>
     match n with
     | O => Ret tt
@@ -388,7 +392,7 @@ Fixpoint fresh_vecs (fuel : nat) (acc : vec (vec nat)) (n : nat) : itree vecE un
 (** Solve the [ninput]-long clause list [input] over [nvars] variables,
     taking at most [budget] propagate-decide-or-learn steps.  Result:
     [code + 4 * conflicts], where [code] is 1 for a model the solver has
-    checked against every input clause, 3 for a model that failed that
+    checked against every clause of [input], 3 for a model that failed that
     check, 0 for unsatisfiable and 2 for out of budget. *)
 Definition solve (fuel budget nvars : nat) (input : vec nat) (ninput : nat)
   : itree vecE nat :=
@@ -408,12 +412,11 @@ Definition solve (fuel budget nvars : nat) (input : vec nat) (ninput : nat)
   vset m RLIMIT 100 ;;
   let s := mk_state cs ws asg lvl rsn ph st sn tr tlim m in
   ok <- load s fuel input 0 ninput ;;
-  norig <- vlen cs ;;
   code <-
     (if ok then
        r <- search s fuel budget nvars ;;
        if Nat.eqb r 1 then
-         good <- check_model s fuel 0 norig ;;
+         good <- check_model s fuel input 0 ninput ;;
          Ret (if good then 1 else 3)
        else Ret r
      else Ret 0) ;;

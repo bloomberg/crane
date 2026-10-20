@@ -10,6 +10,7 @@ module Make (M : sig
     | VLen of Obj.t Vec_impl.t
     | VPush of Obj.t Vec_impl.t * Obj.t
     | VShrink of Obj.t Vec_impl.t * int
+    | VAbort of int
   type ('e, 'r, 'itree) itreeF =
     | RetF of 'r
     | TauF of 'itree
@@ -25,6 +26,7 @@ end) = struct
     | VLen v -> Obj.repr (Vec_impl.len v)
     | VPush (v, x) -> Vec_impl.push v x; Obj.repr ()
     | VShrink (v, n) -> Vec_impl.shrink v n; Obj.repr ()
+    | VAbort site -> Vec_impl.abort site
 
   let rec run : type r. (Obj.t vecE, r) itree -> r = fun t ->
     match Lazy.force t with
