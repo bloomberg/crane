@@ -1043,6 +1043,14 @@ let gen_single_method name vars ((func_ref, _, _, _) as candidate) =
       Pp.(str "Crane: the method " ++ GlobRef.print func_ref
           ++ str " was not generated ahead of the files.")
 
+(** The methods made of [candidates] in the inductive [name], as its struct
+    declares them ({!Borrow_projection.lend}). *)
+let gen_methods name vars candidates =
+  List.concat_map
+    (fun c ->
+      Borrow_projection.lend ~coinductive:(Table.is_coinductive name) (gen_single_method name vars c) )
+    candidates
+
 (** Generate C++ header for an inductive type (v2 style: encapsulated struct
     with methods).
 
@@ -1267,7 +1275,7 @@ let gen_ind_header_v2
        empty { empty() = delete; }; This type cannot be constructed, matching
        the semantics of empty types. *)
     let method_fields =
-      List.map (gen_single_method name vars) method_candidates
+      gen_methods name vars method_candidates
     in
     Dstruct
       {
@@ -1400,7 +1408,7 @@ let gen_ind_header_v2
                  ~params:factory_params ~body:factory_body),
             VPublic, SCreators )
         in
-        let method_fields = List.map (gen_single_method name vars) method_candidates in
+        let method_fields = gen_methods name vars method_candidates in
         let all_flat_fields =
           flat_fields @ [clone_field] @ conversion_field @ [factory_field]
           @ method_fields
@@ -3370,7 +3378,7 @@ let gen_ind_header_v2
 
       (* 6. Generate methods from method candidates using shared helper *)
       let method_fields =
-        List.map (gen_single_method name vars) method_candidates
+        gen_methods name vars method_candidates
       in
 
       (* Detect if any method contains shared_from_this (i.e., returns 'this').
@@ -3461,5 +3469,5 @@ let gen_ind_header_v2
     for CHT) vars: the type variables of the record (e.g., [K; V] for CHT<K, V>)
     method_candidates: list of (func_ref, body, type, this_position) tuples *)
 let gen_record_methods (name : GlobRef.t) (vars : Id.t list) method_candidates =
-  List.map (gen_single_method name vars) method_candidates
+  gen_methods name vars method_candidates
  

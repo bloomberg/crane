@@ -139,9 +139,6 @@ let minicpp_passes : cpp_decl Pipeline_trace.pass list =
     (* A returned value is moved by the language; writing the move there
        only suppresses copy elision. *)
     pass "return_moves" Last_use.drop_return_moves;
-    (* A coinductive's field projection hands out a reference into an lvalue
-       receiver, and a copy only to a temporary one. *)
-    pass "borrow_projection" Borrow_projection.transform_decl;
     (* Which callable parameters keep a constraint is decided here, with the
        body that decides it in hand; the printer writes what it is given. *)
     pass "constraints" Minicpp.settle_constraints ]
@@ -201,7 +198,10 @@ let finish decl =
   let decl =
     run (fun (d : Cpp_erasure.settled) -> (d :> cpp_decl)) settled_passes settled
   in
-  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then check_settled decl;
+  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
+    check_settled decl;
+    Borrow_projection.check_decl (decl :> cpp_decl)
+  end;
   Option.iter
     (fun name ->
       Feedback.msg_notice
