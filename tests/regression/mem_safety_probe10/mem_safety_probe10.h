@@ -418,7 +418,7 @@ struct MemSafetyProbe10 {
     tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                         UINT64_C(20),
                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-    return std::move(t).tree_to_adder(UINT64_C(5));
+    return t.tree_to_adder(UINT64_C(5));
   }();
 
   /// TEST 2: Build closures during list traversal,
@@ -486,7 +486,7 @@ struct MemSafetyProbe10 {
         return t.nested_match_closure(true, _x0);
       };
       crane::fn<uint64_t(uint64_t)> f2 = [&](uint64_t _x0) -> uint64_t {
-        return std::move(t).nested_match_closure(false, _x0);
+        return t.nested_match_closure(false, _x0);
       };
       return (f1(UINT64_C(0)) + f2(UINT64_C(0)));
     }();
@@ -514,7 +514,7 @@ struct MemSafetyProbe10 {
     tree t = tree::node(tree::node(tree::leaf(), UINT64_C(100), tree::leaf()),
                         UINT64_C(200),
                         tree::node(tree::leaf(), UINT64_C(300), tree::leaf()));
-    return std::move(t).make_tree_summer(UINT64_C(0));
+    return t.make_tree_summer(UINT64_C(0));
   }();
 };
 

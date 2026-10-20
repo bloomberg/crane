@@ -20,7 +20,7 @@ std::optional<std::string> EffectDirPath::first_file(std::string path) {
     return std::optional<std::string>();
   } else {
     auto &[a0, a1] = std::get<typename List<std::string>::Cons>(files.v_mut());
-    return std::make_optional<std::string>(a0);
+    return std::make_optional<std::string>(std::move(a0));
   }
 }
 
@@ -119,7 +119,7 @@ uint64_t EffectDirPath::count_entries(const List<std::string> &dirs,
       }
       return result;
     }();
-    uint64_t n = std::move(files).length();
+    uint64_t n = files.length();
     return count_entries(*a1, (acc + n));
   }
 }

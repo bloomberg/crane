@@ -490,7 +490,7 @@ struct MemSafetyProbe13 {
                         tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
     auto [vals, fns] = tree_vals_and_fns(std::move(t));
     uint64_t val_sum = sum_list(std::move(vals));
-    uint64_t fn_sum = sum_list(std::move(fns).template map_list<uint64_t>(
+    uint64_t fn_sum = sum_list(fns.template map_list<uint64_t>(
         [](const crane::fn<uint64_t(uint64_t)> &f) { return f(UINT64_C(0)); }));
     return (val_sum + fn_sum);
   }();
@@ -500,7 +500,7 @@ struct MemSafetyProbe13 {
                    UINT64_C(2),
                    tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
         UINT64_C(10), tree::node(tree::leaf(), UINT64_C(20), tree::leaf()));
-    return std::move(t).double_match();
+    return t.double_match();
   }();
   /// TEST 4: Deeply nested tree with closures at EVERY level.
   /// Each closure captures values from its level AND from the parent.
@@ -512,7 +512,7 @@ struct MemSafetyProbe13 {
     tree t = make_deep(UINT64_C(5));
     mylist<crane::fn<uint64_t(uint64_t)>> fns =
         depth_fns(std::move(t), UINT64_C(0));
-    return sum_list(std::move(fns).template map_list<uint64_t>(
+    return sum_list(fns.template map_list<uint64_t>(
         [](const crane::fn<uint64_t(uint64_t)> &f) { return f(UINT64_C(0)); }));
   }();
 
@@ -728,7 +728,7 @@ struct MemSafetyProbe13 {
                         UINT64_C(7),
                         tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
     ftree ft = tree_to_ftree(std::move(t));
-    return std::move(ft).eval_ftree(UINT64_C(100));
+    return ft.eval_ftree(UINT64_C(100));
   }();
   /// TEST 6: Flatten a tree of lists into a single list,
   /// where each list element is a closure.
@@ -738,7 +738,7 @@ struct MemSafetyProbe13 {
                         UINT64_C(7),
                         tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
     mylist<crane::fn<uint64_t(uint64_t)>> fns = flatten_tree_fns(std::move(t));
-    return sum_list(std::move(fns).template map_list<uint64_t>(
+    return sum_list(fns.template map_list<uint64_t>(
         [](const crane::fn<uint64_t(uint64_t)> &f) { return f(UINT64_C(1)); }));
   }();
 };

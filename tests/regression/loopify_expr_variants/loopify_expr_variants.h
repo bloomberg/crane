@@ -1985,7 +1985,7 @@ struct LoopifyExprVariants {
           _stack.emplace_back(CraneEnter{_f.a1});
         } else if (std::holds_alternative<CraneCont_LAppend_1>(_frame)) {
           auto _f = std::move(std::get<CraneCont_LAppend_1>(_frame));
-          _result = std::move(_f._tmp3).app(std::move(_result));
+          _result = _f._tmp3.app(std::move(_result));
         } else {
           auto _f = std::move(std::get<CraneCont_LCons>(_frame));
           uint64_t a0 = _f.a0;

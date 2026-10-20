@@ -602,7 +602,7 @@ struct MemSafetyProbe16 {
       tree t2 = tree::node(tree::node(tree::leaf(), UINT64_C(50), tree::leaf()),
                            UINT64_C(25), tree::leaf());
       crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
-        return std::move(t1).pair_closure(std::move(t2), _x0);
+        return t1.pair_closure(std::move(t2), _x0);
       };
       return (f(UINT64_C(0)) + f(UINT64_C(0)));
     }();
@@ -616,7 +616,7 @@ struct MemSafetyProbe16 {
         tree::node(tree::node(tree::leaf(), UINT64_C(4), tree::leaf()),
                    UINT64_C(5),
                    tree::node(tree::leaf(), UINT64_C(6), tree::leaf())));
-    return std::move(t).deep_nested_closure(UINT64_C(0));
+    return t.deep_nested_closure(UINT64_C(0));
   }();
   /// TEST 7: Map + apply pattern: build closures from tree children,
   /// apply them to values from another list.
@@ -640,7 +640,7 @@ struct MemSafetyProbe16 {
     tree t = tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
                         UINT64_C(2),
                         tree::node(tree::leaf(), UINT64_C(3), tree::leaf()));
-    return std::move(t).tree_map_val().tree_sum();
+    return t.tree_map_val().tree_sum();
   }();
 
   /// TEST 9: CPS-style flattening where each step builds a continuation

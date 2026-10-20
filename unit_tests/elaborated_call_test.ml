@@ -62,13 +62,13 @@ let () =
   let h = r "h" in
   Table.add_type h (Tarr (class_ty, Tarr (nat, nat)));
   let lex = Lexenv.push [binder "x" nat; binder ~role:Lexenv.Dictionary "inst" class_ty] Lexenv.empty in
-  let call = elaborate ~lex h [MLrel 2; MLrel 1] in
+  let call = elaborate ~lex h [fresh_rel 2; fresh_rel 1] in
   check "a declaration's class-typed parameter is passed as its dictionary"
-    (call.instances = [MLrel 2] && call.regular = [MLrel 1]
+    (call.instances = [fresh_rel 2] && call.regular = [fresh_rel 1]
     && call.roles = [Elaborated_call.Dictionary; Regular]);
   check "the dictionary occupies the leading parameter" (Elaborated_call.leading_params call = 1);
   let lex = Lexenv.push [binder "inst" class_ty; binder "x" nat] Lexenv.empty in
-  let local = elaborate ~lex h [MLrel 1; MLrel 2] in
+  let local = elaborate ~lex h [fresh_rel 1; fresh_rel 2] in
   check "a class-typed binder bound in a body is a value" (local.instances = [])
 
 (* A call is found among the ones planned from Core by its use's occurrence,

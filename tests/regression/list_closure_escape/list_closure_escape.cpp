@@ -8,9 +8,9 @@ ListClosureEscape::build_fns(ListClosureEscape::tree t1,
                              ListClosureEscape::tree t2) {
   return fn_list::fcons(
       [=, t1 = std::move(t1)](uint64_t _x0) -> uint64_t {
-        return std::move(t1).sum_values(_x0);
+        return t1.sum_values(_x0);
       },
       fn_list::fcons([=, t2 = std::move(t2)](uint64_t _x0)
-                         -> uint64_t { return std::move(t2).sum_values(_x0); },
+                         -> uint64_t { return t2.sum_values(_x0); },
                      fn_list::fnil()));
 }

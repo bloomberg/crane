@@ -586,9 +586,8 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                             },
                             UINT64_C(0));
                     uint64_t tdd_limit;
-                    auto _cs = std::move(input).pi_weight_kg;
-                    if (_cs.has_value()) {
-                      const uint64_t &w = *_cs;
+                    if (input.pi_weight_kg.has_value()) {
+                      const uint64_t &w = *input.pi_weight_kg;
                       tdd_limit = (w * ONE_UNIT);
                     } else {
                       tdd_limit = UINT64_C(5000);
@@ -633,9 +632,8 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                       ValidatedPumpDeliveryTraceCase::Insulin_twentieth
                           adult_capped = cap_twentieths(std::move(suspended));
                       ValidatedPumpDeliveryTraceCase::Insulin_twentieth capped;
-                      auto _cs1 = std::move(input).pi_weight_kg;
-                      if (_cs1.has_value()) {
-                        const uint64_t &w = *_cs1;
+                      if (input.pi_weight_kg.has_value()) {
+                        const uint64_t &w = *input.pi_weight_kg;
                         capped = cap_pediatric(std::move(adult_capped), w);
                       } else {
                         capped = std::move(adult_capped);

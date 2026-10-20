@@ -160,7 +160,7 @@ public:
       } else {
         auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
-        _result = std::move(_result).app(List<A>::cons(a0, List<A>::nil()));
+        _result = _result.app(List<A>::cons(a0, List<A>::nil()));
       }
     }
     return _result;

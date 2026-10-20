@@ -133,13 +133,13 @@ template <typename K, typename V> struct CHT {
     bsl::pair<bsl::optional<V>, List<bsl::pair<K, V>>> p =
         CHT<int, int>::template assoc_remove<K, V>(this->cht_eqb, k,
                                                    bsl::move(xs));
-    const auto &_cs = p.first;
+    auto _cs = p.first;
     if (_cs.has_value()) {
       V _x = *_cs;
       stm::writeTVar(bsl::move(b), p.second);
-      return p.first;
+      return bsl::move(p).first;
     } else {
-      return p.first;
+      return bsl::move(p).first;
     }
   }
   template <typename F1>

@@ -559,7 +559,7 @@ struct Levenshtein {
     Nat n3 = f(z);
     switch (n1.leb(n2)) {
     case Bool0::TRUE_: {
-      switch (std::move(n1).leb(std::move(n3))) {
+      switch (n1.leb(std::move(n3))) {
       case Bool0::TRUE_: {
         return x;
       }
@@ -572,7 +572,7 @@ struct Levenshtein {
       break;
     }
     case Bool0::FALSE_: {
-      switch (std::move(n2).leb(std::move(n3))) {
+      switch (n2.leb(std::move(n3))) {
       case Bool0::TRUE_: {
         return y;
       }

@@ -173,7 +173,7 @@ static inline const Dval<typename boolIPtr::iptr> b0 = inner<boolIPtr>();
 static inline const Nat run = []() {
 auto x = inner<natIPtr>();
 auto y = inner<boolIPtr>();
-return std::move(x).template to_nat<natIPtr>().add(std::move(y).template to_nat<boolIPtr>()).add(a0.template to_nat<natIPtr>()).add(b0.template to_nat<boolIPtr>());
+return x.template to_nat<natIPtr>().add(y.template to_nat<boolIPtr>()).add(a0.template to_nat<natIPtr>()).add(b0.template to_nat<boolIPtr>());
 }();
 };
 

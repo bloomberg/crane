@@ -65,26 +65,23 @@ PendantSumtreeRoundtripCase::decode_multi(uint64_t n,
                   -> std::optional<T0<PendantSumtreeRoundtripCase::digit>> {
                 return list_to_vector_opt(n, _x0);
               });
-  return std::move(decoded)
-      .template fold_right<
-          std::optional<List<T0<PendantSumtreeRoundtripCase::digit>>>>(
-          [](const std::optional<T0<T>> &ov,
-             const std::optional<List<T0<T>>> &acc)
-              -> std::optional<List<T0<PendantSumtreeRoundtripCase::digit>>> {
-            if (ov.has_value()) {
-              const T0<T> &v = *ov;
-              if (acc.has_value()) {
-                const List<T0<T>> &vs = *acc;
-                return std::make_optional<List<T0<T>>>(
-                    List<T0<T>>::cons(v, vs));
-              } else {
-                return std::optional<List<T0<T>>>();
-              }
-            } else {
-              return std::optional<List<T0<T>>>();
-            }
-          },
-          std::make_optional<List<T0<T>>>(List<T0<T>>::nil()));
+  return decoded.template fold_right<
+      std::optional<List<T0<PendantSumtreeRoundtripCase::digit>>>>(
+      [](const std::optional<T0<T>> &ov, const std::optional<List<T0<T>>> &acc)
+          -> std::optional<List<T0<PendantSumtreeRoundtripCase::digit>>> {
+        if (ov.has_value()) {
+          const T0<T> &v = *ov;
+          if (acc.has_value()) {
+            const List<T0<T>> &vs = *acc;
+            return std::make_optional<List<T0<T>>>(List<T0<T>>::cons(v, vs));
+          } else {
+            return std::optional<List<T0<T>>>();
+          }
+        } else {
+          return std::optional<List<T0<T>>>();
+        }
+      },
+      std::make_optional<List<T0<T>>>(List<T0<T>>::nil()));
 }
 
 std::optional<T0<PendantSumtreeRoundtripCase::digit>>
@@ -147,24 +144,22 @@ bool PendantSumtreeRoundtripCase::group_sums_validb(
             [=](PendantSumtreeRoundtripCase::CertifiedPendant _x0)
                 -> std::optional<uint64_t> { return pendant_value(n, _x0); });
     std::optional<uint64_t> sum_opt =
-        std::move(pendant_vals)
-            .template fold_right<std::optional<uint64_t>>(
-                [](const std::optional<uint64_t> &ov,
-                   const std::optional<uint64_t> &acc)
-                    -> std::optional<uint64_t> {
-                  if (ov.has_value()) {
-                    const uint64_t &v = *ov;
-                    if (acc.has_value()) {
-                      const uint64_t &a = *acc;
-                      return std::make_optional<uint64_t>((v + a));
-                    } else {
-                      return std::optional<uint64_t>();
-                    }
-                  } else {
-                    return std::optional<uint64_t>();
-                  }
-                },
-                std::make_optional<uint64_t>(UINT64_C(0)));
+        pendant_vals.template fold_right<std::optional<uint64_t>>(
+            [](const std::optional<uint64_t> &ov,
+               const std::optional<uint64_t> &acc) -> std::optional<uint64_t> {
+              if (ov.has_value()) {
+                const uint64_t &v = *ov;
+                if (acc.has_value()) {
+                  const uint64_t &a = *acc;
+                  return std::make_optional<uint64_t>((v + a));
+                } else {
+                  return std::optional<uint64_t>();
+                }
+              } else {
+                return std::optional<uint64_t>();
+              }
+            },
+            std::make_optional<uint64_t>(UINT64_C(0)));
     if (sum_opt.has_value()) {
       const uint64_t &s = *sum_opt;
       return top_val == s;
@@ -284,7 +279,7 @@ std::optional<uint64_t> PendantSumtreeRoundtripCase::sumtree_leaf_total(
       sumtree_leaves(n, st).template map<std::optional<uint64_t>>(
           [=](PendantSumtreeRoundtripCase::CertifiedPendant _x0)
               -> std::optional<uint64_t> { return pendant_value(n, _x0); });
-  return std::move(vals).template fold_right<std::optional<uint64_t>>(
+  return vals.template fold_right<std::optional<uint64_t>>(
       [](const std::optional<uint64_t> &ov,
          const std::optional<uint64_t> &acc) -> std::optional<uint64_t> {
         if (ov.has_value()) {

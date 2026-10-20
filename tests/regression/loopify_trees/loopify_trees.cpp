@@ -509,8 +509,7 @@ List<uint64_t> LoopifyTrees::flatten_rose_list_fuel(
     } else {
       auto _f = std::move(std::get<CraneCont_RNode_1>(_frame));
       uint64_t a00 = _f.a00;
-      _result = List<uint64_t>::cons(
-          a00, std::move(_f._tmp2).app(std::move(_result)));
+      _result = List<uint64_t>::cons(a00, _f._tmp2.app(std::move(_result)));
     }
   }
   return _result;
@@ -1055,8 +1054,7 @@ LoopifyTrees::collect_unsorted(const LoopifyTrees::tree<uint64_t>
     } else {
       auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
-      _result =
-          std::move(_f._tmp2).app(List<uint64_t>::cons(a1, std::move(_result)));
+      _result = _f._tmp2.app(List<uint64_t>::cons(a1, std::move(_result)));
     }
   }
   return _result;

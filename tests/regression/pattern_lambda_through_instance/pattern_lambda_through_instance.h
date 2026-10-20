@@ -300,18 +300,16 @@ struct PatternLambdaThroughInstance {
       TFunctor_phi<Endo_nat, TFunctor_exp>::template tfmap<uint64_t, bool>(
           [](uint64_t n) { return n == UINT64_C(3); }, p0);
   static inline const uint64_t result = []() {
-    return []() {
-      const auto &_sv = p1;
-      const auto &[a0, a1] = _sv;
-      return ((a0 ? UINT64_C(100) : UINT64_C(0)) +
-              a1.template fold_left<uint64_t>(
-                  [](uint64_t acc, const std::pair<uint64_t, exp<bool>> &pat) {
-                    const auto &[id, e] = pat;
-                    const auto &[a2] = e;
-                    return ((acc + id) + (a2 ? UINT64_C(10) : UINT64_C(0)));
-                  },
-                  UINT64_C(0)));
-    }();
+    const auto &_sv = p1;
+    const auto &[a0, a1] = _sv;
+    return ((a0 ? UINT64_C(100) : UINT64_C(0)) +
+            a1.template fold_left<uint64_t>(
+                [](uint64_t acc, const std::pair<uint64_t, exp<bool>> &pat) {
+                  const auto &[id, e] = pat;
+                  const auto &[a2] = e;
+                  return ((acc + id) + (a2 ? UINT64_C(10) : UINT64_C(0)));
+                },
+                UINT64_C(0)));
   }();
 };
 

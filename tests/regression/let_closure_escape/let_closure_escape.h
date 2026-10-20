@@ -218,7 +218,7 @@ struct LetClosureEscape {
                          UINT64_C(20),
                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     fn_box b1 = let_escape(std::move(t1));
-    return std::move(b1).apply_box(UINT64_C(0));
+    return b1.apply_box(UINT64_C(0));
   }();
 };
 

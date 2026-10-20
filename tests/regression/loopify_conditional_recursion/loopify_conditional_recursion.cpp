@@ -138,8 +138,7 @@ uint64_t LoopifyConditionalRecursion::nested_cond(
           if (a0 <= hi) {
             sub = std::make_pair(a0, true);
             {
-              _result = (sub.first +
-                         (std::move(sub).second ? UINT64_C(1) : UINT64_C(0)));
+              _result = (sub.first + (sub.second ? UINT64_C(1) : UINT64_C(0)));
             }
           } else {
             if (a0 <= threshold) {
@@ -148,24 +147,22 @@ uint64_t LoopifyConditionalRecursion::nested_cond(
             } else {
               sub = std::make_pair(UINT64_C(0), true);
               {
-                _result = (sub.first +
-                           (std::move(sub).second ? UINT64_C(1) : UINT64_C(0)));
+                _result =
+                    (sub.first + (sub.second ? UINT64_C(1) : UINT64_C(0)));
               }
             }
           }
         } else {
           sub = std::make_pair(UINT64_C(0), true);
           {
-            _result = (sub.first +
-                       (std::move(sub).second ? UINT64_C(1) : UINT64_C(0)));
+            _result = (sub.first + (sub.second ? UINT64_C(1) : UINT64_C(0)));
           }
         }
       }
     } else {
       auto _f = std::move(std::get<CraneCont1>(_frame));
       std::pair<uint64_t, bool> sub = std::make_pair(std::move(_result), false);
-      _result =
-          (sub.first + (std::move(sub).second ? UINT64_C(1) : UINT64_C(0)));
+      _result = (sub.first + (sub.second ? UINT64_C(1) : UINT64_C(0)));
     }
   }
   return _result;

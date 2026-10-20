@@ -304,7 +304,7 @@ struct ListClosureEscape {
                          UINT64_C(88),
                          tree::node(tree::leaf(), UINT64_C(99), tree::leaf()));
     fn_list fns = build_fns(std::move(t1), std::move(t2));
-    return std::move(fns).apply_first(UINT64_C(0));
+    return fns.apply_first(UINT64_C(0));
   }();
 };
 

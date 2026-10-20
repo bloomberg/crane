@@ -402,7 +402,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
         List.rev
           (List.filter_map
              (fun (i, (_, t)) ->
-               if erased_by_extraction t then None else Some (MLrel (i + 1)) )
+               if erased_by_extraction t then None else Some (fresh_rel (i + 1)) )
              (List.mapi (fun i x -> (i, x)) missing) )
       in
       (missing @ ids_with_types, apply_eta_args lifted_b args)
@@ -766,15 +766,12 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   in
   (* Generate method body. Initialize move tracking for owned parameters.
      'this' is always borrowed (const method). *)
-  let saved_dead = (!tctx).move_dead_after in
   let saved_owned = (!tctx).move_owned_vars in
-  let saved_nparams = (!tctx).move_n_params in
   begin_body ~owner:func_ref ();
   (* Initialize owned-variable tracking for method parameters.
      The de Bruijn environment has parameters in reverse order:
      ids_normal_order has outermost-first, push_vars' reverses them. *)
   let method_n_params = List.length ids_with_types in
-  tctx := { !tctx with move_n_params = method_n_params };
   (* method_owned_flags[i] corresponds to de Bruijn index i+1.
      db index i+1 maps to ids_with_types[i] (outermost-first, same order
      as push_vars' which prepends in list order).
@@ -796,8 +793,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
                       && i = method_n_params - 1 - this_pos )
               then
                 let ml_ty = snd (List.nth ids_with_types i) in
-                if Escape.is_shared_ptr_type ml_ty
-                   || is_nontrivial_value_ml_type ml_ty then
+                if Translation_support.worth_moving ml_ty then
                   Escape.IntSet.add (i + 1) acc
                 else acc
               else acc )
@@ -817,11 +813,9 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
            type arguments get shared_ptr wrapping to match struct field
            types. *)
         with_method_ns_for_locals ~base:method_ns (fun () ->
-            gen_stmts env method_k inner_body ) )
+            with_region inner_body (fun () -> gen_stmts env method_k inner_body) ) )
   in
-  tctx := { !tctx with move_dead_after = saved_dead };
   tctx := { !tctx with move_owned_vars = saved_owned };
-  tctx := { !tctx with move_n_params = saved_nparams };
   (* Add type args to recursive self-calls. Inside fixpoint bodies, the
      extraction produces a self reference whose variables stand for themselves
      and are written nowhere ({!Mlutil.self_reference}). When the function is a
@@ -1048,6 +1042,14 @@ let gen_single_method name vars ((func_ref, _, _, _) as candidate) =
       Pp.(str "Crane: the method " ++ GlobRef.print func_ref
           ++ str " was not generated ahead of the files.")
 
+(** The methods made of [candidates] in the inductive [name], as its struct
+    declares them ({!Borrow_projection.lend}). *)
+let gen_methods name vars candidates =
+  List.concat_map
+    (fun c ->
+      Borrow_projection.lend ~coinductive:(Table.is_coinductive name) (gen_single_method name vars c) )
+    candidates
+
 (** Generate C++ header for an inductive type (v2 style: encapsulated struct
     with methods).
 
@@ -1272,7 +1274,7 @@ let gen_ind_header_v2
        empty { empty() = delete; }; This type cannot be constructed, matching
        the semantics of empty types. *)
     let method_fields =
-      List.map (gen_single_method name vars) method_candidates
+      gen_methods name vars method_candidates
     in
     Dstruct
       {
@@ -1405,7 +1407,7 @@ let gen_ind_header_v2
                  ~params:factory_params ~body:factory_body),
             VPublic, SCreators )
         in
-        let method_fields = List.map (gen_single_method name vars) method_candidates in
+        let method_fields = gen_methods name vars method_candidates in
         let all_flat_fields =
           flat_fields @ [clone_field] @ conversion_field @ [factory_field]
           @ method_fields
@@ -3375,7 +3377,7 @@ let gen_ind_header_v2
 
       (* 6. Generate methods from method candidates using shared helper *)
       let method_fields =
-        List.map (gen_single_method name vars) method_candidates
+        gen_methods name vars method_candidates
       in
 
       (* Detect if any method contains shared_from_this (i.e., returns 'this').
@@ -3466,5 +3468,5 @@ let gen_ind_header_v2
     for CHT) vars: the type variables of the record (e.g., [K; V] for CHT<K, V>)
     method_candidates: list of (func_ref, body, type, this_position) tuples *)
 let gen_record_methods (name : GlobRef.t) (vars : Id.t list) method_candidates =
-  List.map (gen_single_method name vars) method_candidates
+  gen_methods name vars method_candidates
  

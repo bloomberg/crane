@@ -1312,7 +1312,7 @@ struct MemSafetyProbe29 {
         outer::onode(outer::oleaf(),
                      inner::inode(inner::ileaf(), UINT64_C(20), inner::ileaf()),
                      outer::oleaf()));
-    return std::move(o).outer_sum();
+    return o.outer_sum();
   }();
   /// TEST 2: Dup pattern — use inner tree twice in outer construction.
   static outer dup_inner(const inner &i);
@@ -1329,7 +1329,7 @@ struct MemSafetyProbe29 {
         outer::onode(outer::oleaf(),
                      inner::inode(inner::ileaf(), UINT64_C(10), inner::ileaf()),
                      outer::oleaf()));
-    return std::move(o).transform_outer().outer_sum();
+    return o.transform_outer().outer_sum();
   }();
   /// TEST 4: Build and evaluate a complex expression tree.
   static inline const uint64_t test_expr = []() {
@@ -1337,7 +1337,7 @@ struct MemSafetyProbe29 {
         expr::mul(expr::add(expr::lit(UINT64_C(2)), expr::lit(UINT64_C(3))),
                   expr::lit(UINT64_C(4))),
         expr::neg(expr::add(expr::lit(UINT64_C(10)), expr::lit(UINT64_C(5)))));
-    return std::move(e).eval_expr();
+    return e.eval_expr();
   }();
   /// TEST 5: Deep 3-child tree to stress clone/destructor.
   static tree3 build_tree3(uint64_t n);
@@ -1348,7 +1348,7 @@ struct MemSafetyProbe29 {
         outer::onode(outer::oleaf(),
                      inner::inode(inner::ileaf(), UINT64_C(42), inner::ileaf()),
                      outer::oleaf());
-    std::pair<outer, outer> p = std::move(o).dup_outer();
+    std::pair<outer, outer> p = o.dup_outer();
     return (p.first.outer_sum() + p.second.outer_sum());
   }();
   static inline const uint64_t test_double_expr =
@@ -1360,9 +1360,9 @@ struct MemSafetyProbe29 {
     expr e =
         expr::add(expr::lit(UINT64_C(5)),
                   expr::mul(expr::lit(UINT64_C(3)), expr::lit(UINT64_C(7))));
-    inner i = std::move(e).expr_to_inner();
+    inner i = e.expr_to_inner();
     outer o = outer::onode(outer::oleaf(), i, outer::oleaf());
-    return (std::move(o).outer_sum() + std::move(i).inner_sum());
+    return (o.outer_sum() + i.inner_sum());
   }();
 };
 

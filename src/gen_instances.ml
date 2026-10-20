@@ -701,7 +701,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
             let type_args = List.filter_map ml_expr_to_cpp_type_opt args in
             Tglob (r, existing @ type_args, es)
           | other -> other )
-        | MLrel i -> (
+        | MLrel (i, _) -> (
           try
             let name = get_db_name i base_env in
             named_tvar name
@@ -715,7 +715,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
           let (binds, _, _, br_body) = branches.(0) in
           let base_ty = ml_expr_to_cpp_type scrutinee in
           ( match br_body with
-          | MLrel j when j >= 1 && j <= List.length binds ->
+          | MLrel (j, _) when j >= 1 && j <= List.length binds ->
             (* de Bruijn: 1 = last binding, n = first binding *)
             let idx = List.length binds - j in
             let (field_id, _) = List.nth binds idx in

@@ -154,12 +154,22 @@ public:
 
   const crane::lazy<variant_t> &lazy_cell() const { return lazy_v_; }
 
-  A shead() const {
+  const A &shead() const & {
     const auto &[shead1, stail0] = std::get<typename Sseq<A>::SCons>(this->v());
     return shead1;
   }
 
-  Sseq<A> stail() const {
+  A shead() const && {
+    const auto &[shead1, stail0] = std::get<typename Sseq<A>::SCons>(this->v());
+    return shead1;
+  }
+
+  const Sseq<A> &stail() const & {
+    const auto &[shead0, stail1] = std::get<typename Sseq<A>::SCons>(this->v());
+    return stail1;
+  }
+
+  Sseq<A> stail() const && {
     const auto &[shead0, stail1] = std::get<typename Sseq<A>::SCons>(this->v());
     return stail1;
   }

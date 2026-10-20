@@ -81,19 +81,24 @@ let split m =
         mf_receiver = with_ref_qual Rq_lvalue };
     Fmethod {m with mf_receiver = with_ref_qual Rq_rvalue} ]
 
-let fields fs =
-  List.concat_map
-    (fun (f, vis, tag) ->
-      match f with
-      | Fmethod m when is_projection m ->
-        List.map (fun f -> (f, vis, tag)) (split m)
-      | _ -> [(f, vis, tag)] )
-    fs
+(* [field] as the struct declares it: a coinductive's projection as its two
+   overloads, in its place. *)
+let lend ~coinductive ((f, vis, tag) as field) =
+  match f with
+  | Fmethod m when coinductive && is_projection m -> List.map (fun f -> (f, vis, tag)) (split m)
+  | _ -> [field]
 
-let rec transform_decl d =
+let rec check_decl d =
   match d with
-  | Dtemplate (tps, c, inner) -> Dtemplate (tps, c, transform_decl inner)
-  | Dnspace (r, ds) -> Dnspace (r, List.map transform_decl ds)
-  | Dstruct s when Table.is_coinductive s.ds_ref ->
-    Dstruct {s with ds_fields = fields s.ds_fields}
-  | d -> d
+  | Dtemplate (_, _, inner) -> check_decl inner
+  | Dnspace (_, ds) -> List.iter check_decl ds
+  | (Dstruct s | Dfields s) when Table.is_coinductive s.ds_ref ->
+    List.iter
+      (fun (f, _, _) ->
+        match f with
+        | Fmethod m when lends_field m ->
+          Probe.violation "borrowed projection"
+            Pp.(str "the projection " ++ Id.print m.mf_name ++ str " reached the printer unsplit")
+        | _ -> () )
+      s.ds_fields
+  | _ -> ()

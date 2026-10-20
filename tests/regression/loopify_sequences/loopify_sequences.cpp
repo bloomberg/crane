@@ -308,7 +308,7 @@ List<uint64_t> LoopifySequences::string_chain_fuel(
       }
     } else {
       auto _f = std::move(std::get<CraneCont1>(_frame));
-      _result = s.app(sep.app(std::move(_result).app(sep.app(end_marker))));
+      _result = s.app(sep.app(_result.app(sep.app(end_marker))));
     }
   }
   return _result;

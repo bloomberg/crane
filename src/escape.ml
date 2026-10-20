@@ -29,7 +29,7 @@ open Table
     evaluates its argument twice, so a variable passed to it is read twice. *)
 let nb_occur_match =
   let rec nb k = function
-    | MLrel i -> if i = k then 1 else 0
+    | MLrel (i, _) -> if i = k then 1 else 0
     | MLcase (_, scrut, branches) ->
       nb k scrut
       + Array.fold_left
@@ -72,7 +72,7 @@ let nb_occur_match =
 (** Simple occurrence check: does [MLrel k] appear anywhere in [t]? Used by both
     escape analysis and the combined analysis below. *)
 let rec occurs k = function
-  | MLrel i -> i = k
+  | MLrel (i, _) -> i = k
   | MLcase (_, scrut, branches) ->
     occurs k scrut
     || Array.exists
@@ -177,7 +177,7 @@ let passed_to_owned g k args =
   | None -> false
   | Some flags ->
     let n = List.length flags in
-    let rec direct = function MLrel i -> i = k | MLmagic (_, a) -> direct a | _ -> false in
+    let rec direct = function MLrel (i, _) -> i = k | MLmagic (_, a) -> direct a | _ -> false in
     List.exists
       (fun (j, a) -> j < n && direct a && List.nth flags (n - 1 - j))
       (List.mapi (fun j a -> (j, a)) args)
@@ -186,10 +186,10 @@ let escapes ?(query = Conservative) ?(return_escapes = true) k t =
   let refined = query <> Conservative in
   let cons_escapes = query <> Of_param in
   let rec check k in_tail in_fn_arg = function
-    | MLrel i -> i = k && in_tail && return_escapes
+    | MLrel (i, _) -> i = k && in_tail && return_escapes
     | MLcase (_, scrut, branches) ->
       ( match scrut with
-      | MLrel i when i = k -> false
+      | MLrel (i, _) when i = k -> false
       | _ -> check k false false scrut )
       || Array.exists
            (fun (ids, _, _, body) ->
@@ -249,7 +249,7 @@ let escapes ?(query = Conservative) ?(return_escapes = true) k t =
     the parameter should be owned so sub-bindings can be moved. *)
 let sub_bindings_escape k body =
   let rec check k = function
-    | MLcase (_, MLrel i, branches) when i = k ->
+    | MLcase (_, MLrel (i, _), branches) when i = k ->
       Array.exists (fun (ids, _, _, branch_body) ->
         let n = List.length ids in
         List.exists (fun j ->
@@ -332,7 +332,7 @@ let is_reuse_scrutinee k body =
   let rec scan d = function
     | MLcase (typ, scrut, branches) ->
       ( match scrut with
-      | MLrel j | MLmagic (_, MLrel j) ->
+      | MLrel (j, _) | MLmagic (_, MLrel (j, _)) ->
         if j > d && j - d = k && recyclable typ
            && find_reuse_candidates typ branches <> []
         then found := true
@@ -357,7 +357,7 @@ let is_reuse_scrutinee k body =
 (* Whether [MLrel k] is matched on in [t]. *)
 let rec matched k = function
   | MLcase (_, scrut, branches) ->
-    (match scrut with MLrel i | MLmagic (_, MLrel i) -> i = k | _ -> false)
+    (match scrut with MLrel (i, _) | MLmagic (_, MLrel (i, _)) -> i = k | _ -> false)
     || matched k scrut
     || Array.exists (fun (ids, _, _, b) -> matched (k + List.length ids) b) branches
   | MLletin (_, _, rhs, cont, _) -> matched k rhs || matched (k + 1) cont
@@ -407,8 +407,8 @@ let returns_receiver_field ~this_pos fn =
   &&
   match bare body with
   | MLcase (_, scrut, [| (ids, _, (Pcons _ | Pusual _), result) |]) -> (
-    (match bare scrut with MLrel i -> i = receiver | _ -> false)
-    && match bare result with MLrel j -> j <= List.length ids | _ -> false )
+    (match bare scrut with MLrel (i, _) -> i = receiver | _ -> false)
+    && match bare result with MLrel (j, _) -> j <= List.length ids | _ -> false )
   | _ -> false
 
 (** {2 Utility functions} *)
@@ -421,7 +421,7 @@ module IntSet = Mlutil.IntSet
 let free_rels depth t =
   let free = ref IntSet.empty in
   let rec collect d = function
-    | MLrel i when i > d -> free := IntSet.add (i - d) !free
+    | MLrel (i, _) when i > d -> free := IntSet.add (i - d) !free
     | MLrel _ -> ()
     | MLcase (_, scrut, branches) ->
       collect d scrut;
@@ -460,7 +460,7 @@ let free_rels depth t =
 let single_use_nargs k t =
   let result = ref 0 in
   let rec search k = function
-    | MLapp ((MLrel i | MLmagic (_, MLrel i)), args) when i = k ->
+    | MLapp ((MLrel (i, _) | MLmagic (_, MLrel (i, _))), args) when i = k ->
       result :=
         List.length
           (List.filter (function MLdummy _ -> false | _ -> true) args)

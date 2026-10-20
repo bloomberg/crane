@@ -17,7 +17,7 @@ std::string iotest::test4() {
   std::string s2;
   std::getline(std::cin, s2);
   std::cout << std::string("hello ") + s2 << '\n';
-  return std::string("I read the name ") + s2 +
+  return std::string("I read the name ") + std::move(s2) +
          std::string(" from the command line!");
 }
 

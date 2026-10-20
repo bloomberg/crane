@@ -779,7 +779,7 @@ public:
       return aux_impl(aux_impl, d_rev);
     };
     auto [r, n] = aux(this->rev());
-    return std::make_pair(std::move(r).rev(), n);
+    return std::make_pair(r.rev(), n);
   }
 
   Uint del_head(uint64_t n) const {

@@ -965,7 +965,7 @@ let eq_ml_ident i1 i2 =
 
 let rec eq_ml_ast t1 t2 =
   match (t1, t2) with
-  | MLrel i1, MLrel i2 -> Int.equal i1 i2
+  | MLrel (i1, _), MLrel (i2, _) -> Int.equal i1 i2
   | MLapp (f1, t1), MLapp (f2, t2) ->
     eq_ml_ast f1 f2 && List.equal eq_ml_ast t1 t2
   | MLlam (na1, _, t1), MLlam (na2, _, t2) ->
@@ -1035,8 +1035,8 @@ and eq_ml_branch (id1, _, p1, t1) (id2, _, p2, t2) =
     arguments it is applied to there, if any. *)
 let ast_iter_rel_applied f =
   let rec iter n = function
-    | MLrel i -> f n i []
-    | MLapp (MLrel i, l) ->
+    | MLrel (i, _) -> f n i []
+    | MLapp (MLrel (i, _), l) ->
       f n i l;
       List.iter (iter n) l
     | MLlam (_, _, a) -> iter (n + 1) a
@@ -1338,7 +1338,7 @@ let recover_erased_types ?only ?(refine_only = false) (expected : ml_type)
       (* The head type is the scrutinee's, and the scrutinee is usually a
          binder whose type the signature has already pinned down. *)
       let ty = better ~have:ty ~from:(match scrut with
-        | MLrel n -> type_of_rel env n
+        | MLrel (n, _) -> type_of_rel env n
         | _ -> None )
       in
       let branch (binds, bty, pat, body) =
@@ -1448,7 +1448,7 @@ let ast_occurs_itvl k k' t =
 
 let nb_occur_match =
   let rec nb k = function
-    | MLrel i -> if Int.equal i k then 1 else 0
+    | MLrel (i, _) -> if Int.equal i k then 1 else 0
     | MLcase (_, a, v) ->
       nb k a
       + Array.fold_left
@@ -1479,7 +1479,7 @@ let nb_occur_match =
 let dump_unused_vars a =
   let rec ren env a =
     match a with
-    | MLrel i ->
+    | MLrel (i, _) ->
       let () = List.nth env (i - 1) := true in
       a
     | MLlam (id, t, b) ->
@@ -1552,7 +1552,7 @@ let dump_unused_vars a =
 
 let ast_lift k t =
   let rec liftrec n = function
-    | MLrel i as a -> if i - n < 1 then a else MLrel (i + k)
+    | MLrel (i, occ) as a -> if i - n < 1 then a else MLrel (i + k, occ)
     | a -> ast_map_lift liftrec n a
   in
   if Int.equal k 0 then t else liftrec 0 t
@@ -1565,31 +1565,36 @@ let ast_pop t = ast_lift (-1) t
 
 let permut_rels k k' =
   let rec permut n = function
-    | MLrel i as a ->
+    | MLrel (i, occ) as a ->
       let i' = i - n in
       if i' < 1 || i' > k + k' then
         a
       else if i' <= k then
-        MLrel (i + k')
+        MLrel (i + k', occ)
       else
-        MLrel (i - k)
+        MLrel (i - k, occ)
     | a -> ast_map_lift permut n a
   in
   permut 0
+
+(* What a read substituted by [e] becomes: a variable put for a variable
+   renames the read, which stays the occurrence it was; any other term is
+   copied there, keeping the occurrences of its own reads. *)
+let renamed occ = function MLrel (j, _) -> MLrel (j, occ) | e -> e
 
 (** {2 Substitution. [ml_subst e t] substitutes [e] for [Rel 1] in [t]. Lifting
     (of one binder) is done at the same time} *)
 
 let ast_subst e =
   let rec subst n = function
-    | MLrel i as a ->
+    | MLrel (i, occ) as a ->
       let i' = i - n in
       if Int.equal i' 1 then
-        ast_lift n e
+        renamed occ (ast_lift n e)
       else if i' < 1 then
         a
       else
-        MLrel (i - 1)
+        MLrel (i - 1, occ)
     | a -> ast_map_lift subst n a
   in
   subst 0
@@ -1600,7 +1605,7 @@ let ast_subst e =
 
 let gen_subst v d t =
   let rec subst n = function
-    | MLrel i as a ->
+    | MLrel (i, occ) as a ->
       let i' = i - n in
       if i' < 1 then
         a
@@ -1609,9 +1614,9 @@ let gen_subst v d t =
           v.(i' - 1)
         with
         | None -> assert false
-        | Some u -> ast_lift n u
+        | Some u -> renamed occ (ast_lift n u)
       else
-        MLrel (i + d)
+        MLrel (i + d, occ)
     | a -> ast_map_lift subst n a
   in
   subst 0 t
@@ -1771,20 +1776,20 @@ let rec anonym_or_dummy_lams_typed a types = function
 
 (** {2 The following function creates [MLrel n;...;MLrel 1]} *)
 
-let rec eta_args n = if Int.equal n 0 then [] else MLrel n :: eta_args (pred n)
+let rec eta_args n = if Int.equal n 0 then [] else fresh_rel n :: eta_args (pred n)
 
 (** {2 Same, but filtered by a signature} *)
 
 let rec eta_args_sign n = function
   | [] -> []
-  | Keep :: s -> MLrel n :: eta_args_sign (n - 1) s
+  | Keep :: s -> fresh_rel n :: eta_args_sign (n - 1) s
   | Kill _ :: s -> eta_args_sign (n - 1) s
 
 (** {2 This one tests [MLrel (n+k); ... ;MLrel (1+k)]} *)
 
 let rec test_eta_args_lift k n = function
   | [] -> Int.equal n 0
-  | MLrel m :: q -> Int.equal (k + n) m && test_eta_args_lift k (pred n) q
+  | MLrel (m, _) :: q -> Int.equal (k + n) m && test_eta_args_lift k (pred n) q
   | _ -> false
 
 (** {2 Computes an eta-reduction} *)
@@ -1825,7 +1830,7 @@ let atomic_eta_red e =
   match t with
   | MLapp (f, a) when test_eta_args_lift 0 n a ->
     ( match f with
-    | MLrel k when k > n -> Some (MLrel (k - n))
+    | MLrel (k, occ) when k > n -> Some (MLrel (k - n, occ))
     | MLglob _ | MLdummy _ -> Some f
     | _ -> None )
   | _ -> None
@@ -1922,22 +1927,22 @@ let branch_as_fun typ (l, p, c) =
     | Pusual r -> MLcons (typ, r, eta_args nargs)
     | Pcons (r, pl) ->
       let pat2rel = function
-        | Prel i -> MLrel i
+        | Prel i -> fresh_rel i
         | _ -> raise Impossible
       in
       MLcons (typ, r, List.map pat2rel pl)
     | _ -> raise Impossible
   in
   let rec genrec n = function
-    | MLrel i as c ->
+    | MLrel (i, occ) as c ->
       let i' = i - n in
       if i' < 1 then
         c
       else if i' > nargs then
-        MLrel (i - nargs + 1)
+        MLrel (i - nargs + 1, occ)
       else
         raise Impossible
-    | MLcons _ as cons' when eq_ml_ast cons' (ast_lift n cons) -> MLrel (n + 1)
+    | MLcons _ as cons' when eq_ml_ast cons' (ast_lift n cons) -> fresh_rel (n + 1)
     | a -> ast_map_lift genrec n a
   in
   genrec 0 c
@@ -2131,7 +2136,7 @@ let is_atomic = function
 
 (** Checks if an expression is an immediate application of Rel 1. *)
 let is_imm_apply = function
-  | MLapp (MLrel 1, _) -> true
+  | MLapp (MLrel (1, _), _) -> true
   | _ -> false
 
 (** Checks if an identifier is a Program-generated branch (named
@@ -2333,7 +2338,7 @@ let kill_some_lams bl (ids, c) =
     let rec parse_ids i j = function
       | [] -> ()
       | Keep :: l ->
-        v.(i) <- Some (MLrel j);
+        v.(i) <- Some (fresh_rel j);
         parse_ids (i + 1) (j + 1) l
       | Kill (Kimplicit _ as k) :: l ->
         v.(i) <- Some (MLdummy k);
@@ -2393,7 +2398,7 @@ let eta_expansion_sign ?(types = []) s (ids, c) =
       let a =
         List.rev_map
           (function
-            | MLrel x -> MLrel (i - x)
+            | MLrel (x, occ) -> MLrel (i - x, occ)
             | a -> a )
           rels
       in
@@ -2408,7 +2413,7 @@ let eta_expansion_sign ?(types = []) s (ids, c) =
         | t :: ts -> (t, ts)
         | [] -> (Tunknown, [])
       in
-      abs ((anonymous, ty) :: ids) (MLrel i :: rels) (i + 1) rest l
+      abs ((anonymous, ty) :: ids) (fresh_rel i :: rels) (i + 1) rest l
     | Kill k :: l ->
       let rest = match types with _ :: ts -> ts | [] -> [] in
       abs ((Dummy, Tdummy k) :: ids) (MLdummy k :: rels) (i + 1) rest l
@@ -2447,7 +2452,7 @@ let kill_dummy_args (ids, bl) r t =
   let m = List.length ids in
   let sign = List.rev bl in
   let rec found n = function
-    | MLrel r' when Int.equal r' (r + n) -> true
+    | MLrel (r', _) when Int.equal r' (r + n) -> true
     | MLmagic (_, e) -> found n e
     | _ -> false
   in
@@ -2478,7 +2483,7 @@ let rec kill_dummy = function
   | MLfix (i, fi, c, is_cofix, occ) ->
     ( try
         let k, c = kill_dummy_fix i c [] in
-        ast_subst (MLfix (i, fi, c, is_cofix, occ)) (kill_dummy_args k 1 (MLrel 1))
+        ast_subst (MLfix (i, fi, c, is_cofix, occ)) (kill_dummy_args k 1 (fresh_rel 1))
       with Impossible -> MLfix (i, fi, Array.map kill_dummy c, is_cofix, occ) )
   | MLapp (MLfix (i, fi, c, is_cofix, occ), a) ->
     let a = List.map kill_dummy a in
@@ -2486,7 +2491,7 @@ let rec kill_dummy = function
        corresponding arguments of the fixpoint *)
     ( try
         let k, c = kill_dummy_fix i c (sign_of_args a) in
-        let fake = MLapp (MLrel 1, List.map (ast_lift 1) a) in
+        let fake = MLapp (fresh_rel 1, List.map (ast_lift 1) a) in
         let fake' = kill_dummy_args k 1 fake in
         ast_subst (MLfix (i, fi, c, is_cofix, occ)) fake'
       with Impossible ->
@@ -2564,12 +2569,12 @@ let apply_eta_args f args =
 let general_optimize_fix f ids n args m c occ =
   let v = Array.init n (fun i -> i) in
   let aux i = function
-    | MLrel j when v.(j - 1) >= 0 ->
+    | MLrel (j, _) when v.(j - 1) >= 0 ->
       if ast_occurs (j + 1) c then raise Impossible else v.(j - 1) <- -i - 1
     | _ -> raise Impossible
   in
   List.iteri aux args;
-  let args_f = List.rev_map (fun i -> MLrel (i + m + 1)) (Array.to_list v) in
+  let args_f = List.rev_map (fun i -> fresh_rel (i + m + 1)) (Array.to_list v) in
   (* The [m] binders introduced here stand for [args], one each, so a binder's
      type is the type of the outer binder its argument names -- [aux] above has
      already established that every argument is such an [MLrel].  Binder [d]
@@ -2582,7 +2587,7 @@ let general_optimize_fix f ids n args m c occ =
      self-reference is no redex, the lambdas survive, and [Taxiom] prints as
      the undeclared C++ type [axiom]. *)
   let arg_ty = function
-    | MLrel j -> (
+    | MLrel (j, _) -> (
       match List.nth_opt ids (j - 1) with Some (_, ty) -> ty | None -> Tunknown
       )
     | _ -> Tunknown
@@ -2593,7 +2598,7 @@ let general_optimize_fix f ids n args m c occ =
         | Some arg -> arg_ty arg
         | None -> Tunknown )
   in
-  let new_f = anonym_tmp_lams (MLapp (MLrel (n + m + 1), args_f)) new_tys in
+  let new_f = anonym_tmp_lams (MLapp (fresh_rel (n + m + 1), args_f)) new_tys in
   let new_c = named_lams ids (normalize (MLapp (ast_subst new_f c, args))) in
   MLfix (0, [|f|], [|new_c|], false, occ)
 
@@ -2612,7 +2617,7 @@ let optimize_fix a =
         a'
       with
       | MLfix (_, [|f|], [|c|], _, occ) ->
-        let new_f = MLapp (MLrel (n + 1), eta_args n) in
+        let new_f = MLapp (fresh_rel (n + 1), eta_args n) in
         let new_c = named_lams ids (normalize (ast_subst new_f c)) in
         MLfix (0, [|f|], [|new_c|], false, occ)
       | MLapp (a', args) ->
@@ -2689,7 +2694,7 @@ let rec non_stricts add cand = function
     let cand = lift 1 cand in
     let cand = if add then 1 :: cand else cand in
     pop 1 (non_stricts add cand t)
-  | MLrel n -> List.filter (fun m -> not (Int.equal m n)) cand
+  | MLrel (n, _) -> List.filter (fun m -> not (Int.equal m n)) cand
   | MLapp (t, l) ->
     let cand = non_stricts false cand t in
     List.fold_left (non_stricts false) cand l

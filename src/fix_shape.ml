@@ -24,7 +24,7 @@ let thunk_nullary_cofix x ids funs occ =
     (* Under the new binder the block's functions are [MLrel (k + 1)] to
        [MLrel (k + n)] at [k] binders deeper still. *)
     let rec call_self k = function
-      | MLrel i when i > k && i <= k + n -> MLapp (MLrel i, [tt_v])
+      | MLrel (i, _) as f when i > k && i <= k + n -> MLapp (f, [tt_v])
       | t -> Mlutil.ast_map_lift call_self k t
     in
     let thunk f = MLlam (Id (Id.of_string "u"), unit_ty, call_self 1 (Mlutil.ast_lift 1 f)) in

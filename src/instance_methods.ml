@@ -46,7 +46,7 @@ let layers ty body =
       when erased_by_extraction arg_ty || Table.is_typeclass_type arg_ty ->
       (* An instance eta-reduced past its own parameters -- [TFunctor_pair
          := ft_pair] -- takes them all the same. *)
-      let arg = if erased_by_extraction arg_ty then MLdummy Ktype else MLrel 1 in
+      let arg = if erased_by_extraction arg_ty then MLdummy Ktype else fresh_rel 1 in
       let applied =
         match Mlutil.ast_lift 1 body with
         | MLapp (f, args) -> MLapp (f, args @ [arg])
@@ -431,7 +431,7 @@ let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instan
         | inner ->
           let inner = Mlutil.ast_lift missing inner in
           let args =
-            List.init missing (fun i -> MLrel (missing - i))
+            List.init missing (fun i -> fresh_rel (missing - i))
           in
           List.fold_left
             (fun acc (i, ty) ->
@@ -519,7 +519,7 @@ let eta_call m inner_body =
         (fun t ->
           if erased_by_extraction t || Table.is_typeclass_type t then MLdummy Ktype
           else begin
-            let r = MLrel !real_idx in
+            let r = fresh_rel !real_idx in
             decr real_idx;
             r
           end )

@@ -402,7 +402,7 @@ let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
           with
           | Some arg -> (
             match strip_magic arg with
-            | MLrel j -> (
+            | MLrel (j, _) -> (
               match Option.map unwrap (binder_cpp_type_or_derive env j) with
               | Some (Tglob (g', [x], _)) when GlobRef.UserOrd.equal g g'
                 && not (prints_as_any x) ->
@@ -980,7 +980,7 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
              | Some args -> args
              | None -> instance_type_args r ts ),
              [] ))
-  | MLrel i ->
+  | MLrel (i, _) ->
     (* The instance is a lambda parameter - look up its name in the env and
        create a Tvar reference to the template parameter *)
     let db, _ = env in
@@ -1012,7 +1012,7 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
     Option.map
       (fun base_ty ->
         match br_body with
-        | MLrel j when j >= 1 && j <= List.length binds -> (
+        | MLrel (j, _) when j >= 1 && j <= List.length binds -> (
           let idx = List.length binds - j in
           let field_id, _ = List.nth binds idx in
           match field_id with
@@ -1530,7 +1530,7 @@ let plan_call ~caller ~lex ?expected_ty env (call : Elaborated_call.t) =
               List.filter_map
                 (fun ml_arg ->
                   match ml_arg with
-                  | MLrel i -> Option.map (convert_ml_type_to_cpp_type env tvars) (parameter_type env i)
+                  | MLrel (i, _) -> Option.map (convert_ml_type_to_cpp_type env tvars) (parameter_type env i)
                   | _ -> None )
                 excess_args
             in

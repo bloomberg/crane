@@ -50,5 +50,5 @@ std::string EffectHigherOrder::process_input() {
   };
   std::string line;
   std::getline(std::cin, line);
-  return format(line);
+  return format(std::move(line));
 }

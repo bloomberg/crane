@@ -58,7 +58,7 @@ let full_result = function Some (Tarr _) -> None | ty -> ty
 let group_call group ~depth = function
   | MLapp ((MLglob {callee = r; _} as f), args) when List.exists (GlobRef.UserOrd.equal r) group.globals ->
     full_result (Translation_types.ml_app_result_type f args)
-  | MLapp (MLrel k, args) -> (
+  | MLapp (MLrel (k, _), args) -> (
     match
       List.find_map
         (fun (root, fns) ->
@@ -210,9 +210,9 @@ let rec scope ~group ~depth e =
   let k = List.length calls in
   (* The [i]th let sees the [i - 1] before it; the body sees all [k]. *)
   let rec wrap i = function
-    | [] -> replace_placeholders (fun j -> MLrel (k - j + 1)) (Mlutil.ast_lift k body)
+    | [] -> replace_placeholders (fun j -> fresh_rel (k - j + 1)) (Mlutil.ast_lift k body)
     | (call, ty) :: rest ->
-      let rhs = replace_placeholders (fun j -> MLrel (i - j)) (Mlutil.ast_lift (i - 1) call) in
+      let rhs = replace_placeholders (fun j -> fresh_rel (i - j)) (Mlutil.ast_lift (i - 1) call) in
       MLletin (group.fresh (), ty, rhs, wrap (i + 1) rest, Occurrence.fresh ())
   in
   if k = 0 then body else wrap 1 calls

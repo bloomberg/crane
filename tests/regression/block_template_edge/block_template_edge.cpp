@@ -18,7 +18,7 @@ int64_t BlockTemplateEdge::block_in_arith() {
   std::string n;
   std::getline(std::cin, n);
   return static_cast<int64_t>(
-      (static_cast<uint64_t>(static_cast<int64_t>(n.length())) +
+      (static_cast<uint64_t>(static_cast<int64_t>(std::move(n).length())) +
        static_cast<uint64_t>(INT64_C(1))) &
       0x7FFFFFFFFFFFFFFFULL);
 }
@@ -29,7 +29,7 @@ std::string BlockTemplateEdge::two_strings() {
   std::getline(std::cin, a);
   std::string b;
   std::getline(std::cin, b);
-  return a + b;
+  return std::move(a) + std::move(b);
 }
 
 /// 4. Block template result bound but unused

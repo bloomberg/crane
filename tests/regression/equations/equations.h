@@ -342,7 +342,7 @@ struct Equations {
                   const gcd_clause_3_graph &g) -> T2 {
       return f5_impl(f4_impl, f5_impl, _x, _x0, _x1, _x2, g);
     };
-    return f4(x0_, x1_, std::move(x2_));
+    return f4(std::move(x0_), x1_, std::move(x2_));
   }
 
   template <typename T1, typename T2>
@@ -429,7 +429,7 @@ struct Equations {
       uint64_t _lc1_x0 = x1_;
       bool _lc1_x1 = x2_;
       uint64_t _lc1_x2 = x3_;
-      const gcd_clause_3_graph &_lc1_g = x4_;
+      const gcd_clause_3_graph &_lc1_g = std::move(x4_);
       return f5_impl(f4_impl, f5_impl, _lc1_x, _lc1_x0, _lc1_x1, _lc1_x2,
                      _lc1_g);
     }
@@ -853,7 +853,7 @@ struct Equations {
       uint64_t _lc1_x = x0_;
       bool _lc1_x0 = x1_;
       uint64_t _lc1_x1 = x2_;
-      const collatz_steps_clause_3_graph &_lc1_c = x3_;
+      const collatz_steps_clause_3_graph &_lc1_c = std::move(x3_);
       return f5_impl(f4_impl, f5_impl, _lc1_x, _lc1_x0, _lc1_x1, _lc1_c);
     }
   }

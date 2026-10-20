@@ -639,7 +639,7 @@ struct MemSafetyProbe15 {
         tree::node(tree::leaf(), UINT64_C(1),
                    tree::node(tree::leaf(), UINT64_C(2), tree::leaf())),
         UINT64_C(3), tree::node(tree::leaf(), UINT64_C(4), tree::leaf()));
-    return std::move(t).mirror().tree_sum();
+    return t.mirror().tree_sum();
   }();
   static inline const uint64_t test_zip = []() {
     tree t1 = tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
@@ -648,7 +648,7 @@ struct MemSafetyProbe15 {
     tree t2 = tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
                          UINT64_C(20),
                          tree::node(tree::leaf(), UINT64_C(4), tree::leaf()));
-    return std::move(t1).zip_trees(std::move(t2)).tree_sum();
+    return t1.zip_trees(std::move(t2)).tree_sum();
   }();
   /// TEST 5: Deep left-spine tree.
   /// Stresses the frame stack depth.
@@ -663,7 +663,7 @@ struct MemSafetyProbe15 {
             mylist<uint64_t>::mycons(
                 UINT64_C(3), mylist<uint64_t>::mycons(
                                  UINT64_C(4), mylist<uint64_t>::mynil()))));
-    mylist<uint64_t> r = std::move(l).rev_aux(mylist<uint64_t>::mynil());
+    mylist<uint64_t> r = l.rev_aux(mylist<uint64_t>::mynil());
     return sum_list(std::move(r));
   }();
   static inline const uint64_t test_two_pass =
@@ -677,7 +677,7 @@ struct MemSafetyProbe15 {
         mylist<uint64_t>::mycons(
             UINT64_C(20),
             mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil())));
-    mylist<uint64_t> l2 = std::move(l).template map_list<uint64_t>(
+    mylist<uint64_t> l2 = l.template map_list<uint64_t>(
         [](uint64_t x) { return (x + UINT64_C(1)); });
     return sum_list(std::move(l2));
   }();

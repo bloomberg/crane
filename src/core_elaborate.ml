@@ -43,7 +43,7 @@ let classify ~lex id written =
       (* A variable bound at an erased type carries no more than a dummy:
          under [Conservative Types] a definition keeps its type binders and
          passes them on ([length A l']). *)
-      | MLrel i -> (
+      | MLrel (i, _) -> (
         match Lexenv.type_opt lex i with
         | Some t -> not (erased_by_extraction t)
         | None -> true )
@@ -347,7 +347,7 @@ let declaration_scope ty body =
       let args =
         List.rev
           (List.filter_map
-             (fun (i, t) -> if erased_by_extraction t then None else Some (MLrel (i + 1)))
+             (fun (i, t) -> if erased_by_extraction t then None else Some (fresh_rel (i + 1)))
              (List.mapi (fun i t -> (i, t)) (List.firstn n_missing doms)) )
       in
       Mlutil.apply_eta_args (Mlutil.ast_lift n_missing b) args

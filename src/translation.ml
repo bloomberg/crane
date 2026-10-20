@@ -612,9 +612,6 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
   (* Convert value arguments to C++ expressions.  An erased proof or type
      argument ([MLdummy]) is the empty box its erased slot takes; see that
      case of {!gen_expr}. *)
-  (* Generate constructor arguments with live move_dead_after so the move
-     analysis can fire for single-use variables (nb_occur_match = 1 already
-     prevents moving variables that appear more than once across all args). *)
   let gen_ctor_arg ?expected_ty ?(slot = slot) e =
     gen_stored_value ?expected_ty ~slot env e
   in
@@ -1290,15 +1287,19 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
 and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     (ml_e : ml_ast) : cpp_expr =
   match ml_e with
-  | MLrel i ->
+  | MLrel (i, occ) ->
     check_binder_scopes env i;
     let var_expr =
       try CPPvar (get_db_name i env)
       with Failure _ -> CPPvar (db_fallback_id i)
     in
     (* Phase 2: move on last use. Emit std::move if: (1) the variable is dead
-       after this point, (2) it's an owned variable (not borrowed), and (3) this
-       is its only occurrence in the current RHS expression.
+       after this point, (2) it's an owned variable (not borrowed), (3) this
+       is its only occurrence in the current RHS expression, and (4) the
+       region's plan has this read as a last use.  The sets see only the
+       continuation in front of them, and a let's right-hand side or a match
+       standing in an argument does not know what reads the variable after
+       the let or beside the argument; the plan reads the whole region.
        Never move a typeclass instance -- it is a type reference in the concept
        paradigm, not an owned value, and wrapping it produces invalid C++ like
        [std::move(_tcI0)::method()].  Recognised by identity rather than by ML
@@ -1310,8 +1311,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     in
     let move_candidate =
       (not is_tc_param)
-      && Escape.IntSet.mem i (!tctx).move_dead_after
       && Escape.IntSet.mem i (!tctx).move_owned_vars
+      && Ownership_plan.fate (!tctx).move_plan occ = Last_use
     in
     let result = if move_candidate then CPPmove var_expr else var_expr in
     if binder_is_boxed i then begin
@@ -1437,14 +1438,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
   | MLapp (MLglob use, _ :: _ :: _) as a when is_sequential_effect Core_effects.Bind use ->
     (* Sequential mode: bind in expression context (e.g., nested inside
        another expression). Wrap in IIFE so gen_stmts can sequentialize. *)
-    with_escape_analysis (fun () ->
-      mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) )
+    with_escape_analysis (fun () -> with_region a (fun () ->
+      mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) ) )
   | MLapp (MLfix _, _) as a ->
     (* Nested fix application in expression context (e.g., S((fix aux ...) es)).
        Wrap in an IIFE, delegating to gen_stmts which handles MLapp(MLfix
        ...). *)
-    with_escape_analysis (fun () ->
-      mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) )
+    with_escape_analysis (fun () -> with_region a (fun () ->
+      mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) ) )
   | MLapp (MLapp ((MLglob _ as g), inner_args), outer_args) ->
     (* Flatten nested MLapp when inner callee is a global reference. This arises
        from Rocq partial applications like: div_conq_split x f1 f2 l which
@@ -1500,7 +1501,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       let call =
         MLapp
           ( MLglob use,
-            List.map (Mlutil.ast_lift k) args @ List.init k (fun i -> MLrel (k - i)) )
+            List.map (Mlutil.ast_lift k) args @ List.init k (fun i -> fresh_rel (k - i)) )
       in
       gen_expr ?expected_ty ~slot env
         (Mlutil.named_lams
@@ -1530,7 +1531,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let callee_ty =
       match f with
       | MLglob {callee = r; _} -> find_type_opt r
-      | MLrel i -> get_env_type_opt i
+      | MLrel (i, _) -> get_env_type_opt i
       | _ -> None
     in
     (* The same type, at the instantiation this call uses: what the call
@@ -1565,7 +1566,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        codomain it names. *)
     let binder_result_is_boxed =
       match f with
-      | MLrel i ->
+      | MLrel (i, _) ->
         ( match
             Option.map
               (fun t -> unfold_cpp_typedef env (strip_cpp_ref_const t))
@@ -1792,7 +1793,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           in
           Some
             ( fresh @ args,
-              MLapp (ast_lift k a, List.init k (fun i -> MLrel (k - i))) )
+              MLapp (ast_lift k a, List.init k (fun i -> fresh_rel (k - i))) )
       in
       match Option.bind expected_ty fun_ty_of with
       | Some (n, cod) when n > 0 && fun_ty_of cod <> None ->
@@ -2011,7 +2012,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           in
           let rec reads depth e =
             match e with
-            | MLapp (MLglob {callee = g; _}, MLrel k :: _)
+            | MLapp (MLglob {callee = g; _}, MLrel (k, _) :: _)
               when k = depth + 1 && member_access g ->
               true
             | MLlam (_, _, b) -> reads (depth + 1) b
@@ -2029,7 +2030,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               !found
           in
           (match body with
-           | MLcase (_, MLrel 1, pv) -> is_custom_match pv
+           | MLcase (_, MLrel (1, _), pv) -> is_custom_match pv
            | _ -> false)
           || reads 0 body
         in
@@ -2042,7 +2043,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           let rec walk depth e =
             match e with
             | MLcase ((Miniml.Tglob (_, [], _) as t), sc, _)
-              when strip_magic sc = MLrel (depth + 1) && !found = None ->
+              when (match strip_magic sc with MLrel (j, _) -> j = depth + 1 | _ -> false)
+                   && !found = None ->
               found := Some t
             | MLlam (_, _, b) -> walk (depth + 1) b
             | MLletin (_, _, x, b, _) -> walk depth x; walk (depth + 1) b
@@ -2359,11 +2361,12 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            | Some _ -> with_rank2_carrier carrier)
             (fun () ->
               with_lam_return_type (fun () ->
-                gen_stmts
-                  ~slot:{slot with expected_ml_ty = body_expected_ml_ty}
-                  env
-                  (fun x -> Sreturn (Some x))
-                  a ) )
+                with_region a (fun () ->
+                  gen_stmts
+                    ~slot:{slot with expected_ml_ty = body_expected_ml_ty}
+                    env
+                    (fun x -> Sreturn (Some x))
+                    a ) ) )
         in
         let body_stmts =
           List.fold_left
@@ -3048,7 +3051,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let container_cast_erased_field ml_ft ml_arg expr =
       let is_erased_rel =
         match ml_arg with
-        | MLrel j | MLmagic (_, MLrel j) ->
+        | MLrel (j, _) | MLmagic (_, MLrel (j, _)) ->
           binder_is_boxed j
         | _ -> false
       in
@@ -3486,11 +3489,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               of_reversed args )
       in
       (* [CPPfun_call] stores args reversed; [List.rev_map] compensates. *)
-      (* Generate constructor arguments with live move_dead_after so the move
-         analysis from gen_tail_expr flows through.  Safety note: gen_tail_expr
-         only marks variables that occur exactly once in the entire tail
-         expression (nb_occur_match = 1), so a variable appearing in multiple
-         constructor args is NOT in move_dead_after and cannot be moved twice. *)
       let gen_ctor_arg ?expected_ty ?(slot = slot) e =
         gen_stored_value ?expected_ty ~slot env e
       in
@@ -4098,7 +4096,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             | Some ft ->
               let is_erased_rel =
                 match e with
-                | MLrel j | MLmagic (_, MLrel j) ->
+                | MLrel (j, _) | MLmagic (_, MLrel (j, _)) ->
                   binder_is_boxed j
                 | _ -> false
               in
@@ -4385,9 +4383,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             (Pp.str
                "gen_expr: non-record MLcons with matching type expected Tglob" )
       in
-      (* Defense-in-depth: same safeguard as for non-record constructors above *)
-      let saved_dead = (!tctx).move_dead_after in
-      tctx := { !tctx with move_dead_after = Escape.IntSet.empty };
       let record_arg_exprs =
         (* A record's erased fields (a promoted [Type] field such as [dyn]'s
            [dty]) carry no argument, so the declared field types are aligned
@@ -4413,7 +4408,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           | Some ft ->
             let is_erased_rel =
               match e with
-              | MLrel j | MLmagic (_, MLrel j) ->
+              | MLrel (j, _) | MLmagic (_, MLrel (j, _)) ->
                 binder_is_boxed j
               | _ -> false
             in
@@ -4564,9 +4559,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             base_args
         | _ -> base_args
       in
-      let result = nstempmod record_arg_exprs in
-      tctx := { !tctx with move_dead_after = saved_dead };
-      result
+      nstempmod record_arg_exprs
     in
     cons_result
   | MLcase (typ, t, pv) when is_custom_match pv ->
@@ -4644,7 +4637,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       | b -> b
     in
     ( match body' with
-    | MLrel i when i <= n ->
+    | MLrel (i, _) when i <= n ->
       let fld =
         try Some (List.nth non_erased_fields (n - i)) with _ -> None
       in
@@ -4694,7 +4687,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           access
       | _ ->
         CErrors.anomaly (Pp.str "record field index out of bounds") )
-    | MLapp ((MLrel i | MLmagic (_, MLrel i)), args) when i <= n ->
+    | MLapp ((MLrel (i, _) | MLmagic (_, MLrel (i, _))), args) when i <= n ->
       let fld =
         try Some (List.nth non_erased_fields (n - i)) with _ -> None
       in
@@ -5009,14 +5002,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
   | MLcase (typ, t, pv) when lang () == Cpp ->
     gen_cpp_case typ t env pv
   | MLletin (_, ty, _, _, _) as a ->
-    with_escape_analysis (fun () ->
+    with_escape_analysis (fun () -> with_region a (fun () ->
       with_iife_return_type expected_ty (fun () ->
-        mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) ) )
+        mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) ) ) )
   | MLfix _ as a ->
     (* Bare fixpoint in expression context — wrap in IIFE, delegate to
        gen_stmts. *)
-    with_escape_analysis (fun () ->
-      mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) )
+    with_escape_analysis (fun () -> with_region a (fun () ->
+      mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) ) )
   | MLstring s -> CPPstring s
   | MLuint x -> CPPuint x
   | MLfloat f -> CPPfloat f
@@ -5069,7 +5062,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
          carrier application the coercion recorded for it. *)
       | Mcoerce (from, _) -> (
         match t with
-        | MLrel i -> (
+        | MLrel (i, _) -> (
           match binder_cpp_type i with
           | Some ty when not (prints_as_any ty) -> Some ty
           | _ -> Some (cpp_of_ml env from) )
@@ -5081,7 +5074,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
          the binder was assigned and there is no box to open. *)
       | Mboxed -> (
         match t with
-        | MLrel i -> ( match binder_cpp_type i with
+        | MLrel (i, _) -> ( match binder_cpp_type i with
           | Some ty -> Some ty
           | None -> Some Tany )
         | _ -> Some Tany )
@@ -5091,7 +5084,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       | Some ty when not (prints_as_any ty) && ty <> Tvoid
                     && not (match ty with Tglob (g, _, _) -> Table.is_erased_type_const g | _ -> false) ->
         let rec is_cpp_erased_var_rec = function
-          | MLrel i -> binder_is_boxed i
+          | MLrel (i, _) -> binder_is_boxed i
           | MLmagic (_, t') -> is_cpp_erased_var_rec t'
           | _ -> false
         in
@@ -5123,7 +5116,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              Say so rather than assert [Tany]: {!coerce} recovers from a box
              and must not invent one. *)
           let rec binder_is_opaque = function
-            | MLrel i -> binder_cpp_type i = Some Topaque
+            | MLrel (i, _) -> binder_cpp_type i = Some Topaque
             | MLmagic (_, t') -> binder_is_opaque t'
             | _ -> false
           in
@@ -5503,7 +5496,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
          not to the callable it expects. *)
       | MLglob _ -> param_expected_at fn_param_ml_tys_orig param_index
       (* So may a local function, for the same reason. *)
-      | MLrel j
+      | MLrel (j, _)
         when (match Option.map (unfold_cpp_typedef env) (binder_cpp_type_or_derive env j) with
               | Some (Tfun _ | Tconst (Tfun _) | Tref (_, (Tfun _ | Tconst (Tfun _)))) -> true
               | _ -> false) ->
@@ -5739,7 +5732,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
            says: an argument that is already a box is left alone. *)
         let from =
           match ml_arg with
-          | MLrel j -> binder_cpp_type_or_derive env j
+          | MLrel (j, _) -> binder_cpp_type_or_derive env j
           | _ -> None
         in
         coerce ~term:ml_arg ?from ~into:Tany expr
@@ -5765,7 +5758,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
        non-global callees (~[MLrel j when Escape.IntSet.mem ...] above). *)
     let ml_arg_is_erased_rel =
       match ml_arg with
-      | MLrel j | MLmagic (_, MLrel j) -> binder_is_boxed j
+      | MLrel (j, _) | MLmagic (_, MLrel (j, _)) -> binder_is_boxed j
       | _ -> false
     in
     match param_ml_ty with
@@ -6225,7 +6218,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           | Some (Tfun (_, c)), Some exp when prints_as_any c && not (prints_as_any exp) ->
             let arg_ty a =
               match a with
-              | MLrel j -> binder_cpp_type_or_derive env j
+              | MLrel (j, _) -> binder_cpp_type_or_derive env j
               | _ -> Option.map (cpp_of_ml env) (ml_ast_type_hint a)
             in
             let rest_tys = List.map arg_ty rest_ml in
@@ -6281,7 +6274,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           List.mapi
             (fun i e ->
               match (List.nth_opt doms i, List.nth_opt excess_args i) with
-              | Some d, Some (MLrel j) when prints_as_any d -> (
+              | Some d, Some (MLrel (j, _)) when prints_as_any d -> (
                 match
                   Option.map
                     (fun t -> strip_ns_tglob (unfold_cpp_typedef env t))
@@ -6779,7 +6772,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                specialised, so the variable holds the concrete pair.  Judge by
                the variable's type when it is known; a coercion is still the
                only evidence available when it is not. *)
-            | MLmagic (_, MLrel i) -> (
+            | MLmagic (_, MLrel (i, _)) -> (
               match get_env_type_opt i with
               | Some ty -> rel_is_erased ty
               | None -> true )
@@ -6810,7 +6803,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                    | None -> false )
             | MLglob {callee = r; _} -> glob_declared_cod_erases r
             | MLapp (MLmagic (_, _), _) -> true
-            | MLrel i -> (
+            | MLrel (i, _) -> (
               match get_env_type_opt i with
               | Some ty -> rel_is_erased ty
               | None -> false )
@@ -6930,7 +6923,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                is generalised into a deduced callable, which takes each
                argument at the type the argument already has. *)
             ( match f with
-            | MLrel i | MLmagic (_, MLrel i) -> (
+            | MLrel (i, _) | MLmagic (_, MLrel (i, _)) -> (
               match get_env_type_opt i with
               | Some (Miniml.Tglob (GlobRef.ConstRef _, _, _) as ty) -> (
                 match expand_ml_fun_alias ty with
@@ -6954,7 +6947,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       match callee_fun_ml_ty with Some fty -> extract_params fty | None -> []
     in
     let callee_rel_idx = match f with
-      | MLrel i | MLmagic (_, MLrel i) -> Some i
+      | MLrel (i, _) | MLmagic (_, MLrel (i, _)) -> Some i
       | _ -> None
     in
     let callee_env_ty =
@@ -7072,7 +7065,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         | MLmagic (_, _) ->
           let expected = param_expected_cpp_ty env callee_param_tys i in
           gen_expr ?expected_ty:expected ~slot:arg_slot env x
-        | MLrel j when binder_is_boxed j ->
+        | MLrel (j, _) when binder_is_boxed j ->
           let inner = gen_expr ~slot:arg_slot env x in
           let expected = param_expected_cpp_ty env callee_param_tys i in
           ( match expected with
@@ -7093,7 +7086,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        : A -> State S B] applied as [f(a, s')] becomes [f(a)(s')]. *)
     let n_value_dom =
       let rel_idx_f = match f with
-        | MLrel i | MLmagic (_, MLrel i) -> Some i
+        | MLrel (i, _) | MLmagic (_, MLrel (i, _)) -> Some i
         | _ -> None
       in
       match rel_idx_f with
@@ -7144,7 +7137,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
          [[&](T1 _pa0) { return f2(n1, _pa0); }]. *)
       let remaining_ml_tys =
         match f with
-        | MLrel i ->
+        | MLrel (i, _) ->
           ( try
               let ml_ty = get_env_type i in
               (* Skip [n_args] non-dummy domain entries to find the
@@ -7222,8 +7215,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           let n_binds = List.length binds in
           let proj_idx =
             match br_body with
-            | MLrel i when i >= 1 && i <= n_binds -> Some (n_binds - i)
-            | MLmagic (_, MLrel i) when i >= 1 && i <= n_binds -> Some (n_binds - i)
+            | MLrel (i, _) when i >= 1 && i <= n_binds -> Some (n_binds - i)
+            | MLmagic (_, MLrel (i, _)) when i >= 1 && i <= n_binds -> Some (n_binds - i)
             | _ -> None
           in
           ( match proj_idx with
@@ -7236,7 +7229,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                 with _ -> false )
             | _ -> false )
           | None -> false )
-        | MLrel i ->
+        | MLrel (i, _) ->
           (match get_env_type_opt i with Some ty -> ml_codomain_erases_to_any n ty | None -> false)
         | _ -> false
       in
@@ -7435,7 +7428,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     (fst env, binding_avoid)
   in
   let body_stmts =
-    with_shifted_move_tracking n_pat_vars ~clear_dead:true
+    with_shifted_move_tracking n_pat_vars
       ~add_owned_set:pat_var_owned ?exclude_owned:exclude_scrutinee
       (fun () ->
       let inner_ret =
@@ -7849,7 +7842,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
   in
   let typ =
     match t with
-    | MLrel i | MLmagic (_, MLrel i) ->
+    | MLrel (i, _) | MLmagic (_, MLrel (i, _)) ->
       (* Scrutinee is a variable reference — use its concrete type, the one
          its binder was given, a parameter's as much as a let's.  Unwrap Tmeta
          wrappers since env_types may store types in Tmeta form. *)
@@ -8014,13 +8007,9 @@ and gen_cpp_case (typ : ml_type) t env pv =
         ( if match_i = 0 then "_m"
           else "_m" ^ string_of_int (match_i - 1) )
     in
-    (* Generate scrutinee expression.  Clear [move_dead_after] to prevent
-       [std::move(x)->v()] use-after-move — the scrutinee is referenced
-       across all branches. *)
-    let saved_dead_visit = (!tctx).move_dead_after in
-    tctx := { !tctx with move_dead_after = Escape.IntSet.empty };
+    (* The scrutinee is referenced across all branches, so the plan has a
+       read of it as one in place, never moved ({!Ownership_plan.Inspected}). *)
     let scrut_expr = gen_expr env t in
-    tctx := { !tctx with move_dead_after = saved_dead_visit };
     let scrut_expr =
       recover_erased_scrutinee env ~is_magic:scrut_is_mlmagic_case typ scrut_expr
     in
@@ -8332,7 +8321,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
             in
             let body_stmts =
               with_reuse_token (Some (tok, tail_ctor)) (fun () ->
-                  with_shifted_move_tracking n ~clear_dead:true ~add_owned_set:bound
+                  with_shifted_move_tracking n ~add_owned_set:bound
                     ?exclude_owned:(Option.map (fun db -> db + n) scrut_db)
                     (fun () -> gen_stmts env' (fun x -> Sreturn (Some x)) body) )
             in
@@ -8405,9 +8394,9 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt =
     | Tvar _ ->
       let body_is_erased =
         match body with
-        | MLrel i ->
+        | MLrel (i, _) ->
           not (binder_is_boxed i) && is_env_var_erased env tvars i
-        | Miniml.MLmagic (_, MLrel i) ->
+        | Miniml.MLmagic (_, MLrel (i, _)) ->
           not (binder_is_boxed i) && is_env_var_erased env tvars i
         | _ -> false
       in
@@ -8432,12 +8421,12 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
      by an outer [fix_a_fired] pair match (detected via [env_types]). *)
   let scrut_is_mlmagic = match t with MLmagic (m, _) -> magic_is_boxed env m | _ -> false in
   let scrut_is_cpp_erased = match t with
-    | MLrel i -> binder_is_boxed i
+    | MLrel (i, _) -> binder_is_boxed i
     | _ -> false
   in
   let scrut_is_magic = match t with
     | MLmagic (m, _) -> magic_is_boxed env m
-    | MLrel i ->
+    | MLrel (i, _) ->
       binder_is_boxed i
       || (match get_env_type_opt i with
           (* An ML type that erases on its own may still have been written
@@ -8511,9 +8500,9 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   in
   (* Custom match templates may use %scrut multiple times (e.g., option: "if
      (%scrut.has_value()) { ... *%scrut; ... }"). Each occurrence re-prints the
-     scrutinee C++ expression, so any std::move in the scrutinee would fire
-     multiple times. Suppress moves when the template duplicates the
-     scrutinee. *)
+     scrutinee C++ expression: a variable is then read in place (the plan has
+     no move of it, {!Ownership_plan.Inspected}), and anything else is bound
+     once to a temporary below. *)
   let cmatch = find_custom_match pv in
   let scrut_uses =
     List.length
@@ -8527,7 +8516,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
      is dead after destructuring — enables by-value structured binding to move
      the fields out instead of taking a const reference. *)
   let scrut_is_owned_pair = match t with
-    | MLrel i | MLmagic (_, MLrel i) ->
+    | MLrel (i, _) | MLmagic (_, MLrel (i, _)) ->
       Escape.IntSet.mem i (!tctx).move_owned_vars
       && Array.length pv = 1
       && (let (ids, _, _, body) = pv.(0) in
@@ -8537,36 +8526,10 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       Array.length pv = 1
       && pair_g_opt_early <> None
   in
-  (* Before generating the scrutinee, mark owned vars that are dead after
-     the scrutinee (not used in any branch body) so they get std::move.  What
-     the enclosing context found dead is dead after the scrutinee only if no
-     branch reads it either. *)
-  let branch_free =
-    Array.fold_left (fun acc (ids, _, _, body) ->
-      let n = List.length ids in
-      Escape.IntSet.union acc (Escape.free_rels n body))
-      Escape.IntSet.empty pv
-  in
-  let saved_dead = (!tctx).move_dead_after in
-  let dead_in_scrut =
-    Escape.IntSet.filter (fun i ->
-      not (Escape.IntSet.mem i branch_free)
-      && Escape.nb_occur_match i t = 1)
-      (!tctx).move_owned_vars
-  in
   let scrut_is_trivial_ml = match t with
     | MLrel _ | MLmagic (_, MLrel _) -> true
     | _ -> false
   in
-  if scrut_uses > 1 && scrut_is_trivial_ml then
-    tctx := { !tctx with move_dead_after = Escape.IntSet.empty }
-  else
-    tctx :=
-      { !tctx with
-        move_dead_after =
-          Escape.IntSet.union
-            (Escape.IntSet.diff saved_dead branch_free)
-            dead_in_scrut };
   (* A scrutinee whose result is only pinned down by a type index arrives
      boxed, and a match cannot inspect a [std::any].  Telling the call what
      type this position wants is what makes it recover the value. *)
@@ -8594,7 +8557,6 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     tctx := { !tctx with current_cpp_return_type = saved_ret };
     t
   in
-  tctx := { !tctx with move_dead_after = saved_dead };
   let pair_g_opt = match concrete_match_type with
     | Tglob (g, _, _) when is_prod_global g -> Some g
     | _ -> None
@@ -8812,8 +8774,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
           let ids_rev = List.rev ids in
           List.fold_left (fun acc j ->
             let (_, ty) = List.nth ids_rev j in
-            if is_nontrivial_value_ml_type ty
-               || Escape.is_shared_ptr_type ty then
+            if worth_moving ty then
               Escape.IntSet.add (j + 1) acc
             else acc)
             Escape.IntSet.empty (List.init n_pat_vars Fun.id)
@@ -9244,7 +9205,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       let captured_shifted =
         Escape.IntSet.map (fun i -> i + 1) fix_captured
       in
-      (* Phase 2: shift owned vars and dead-after for the single let binding.
+      (* Phase 2: shift owned vars for the single let binding.
          Remove captured variables from owned set to prevent moves. *)
       let cont =
         with_shifted_move_tracking 1 ~exclude_owned_set:captured_shifted
@@ -9347,7 +9308,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               in
               (* Args applied to the (lifted) body: the innermost new binder is
                  [MLrel 1], the outermost is [MLrel d]. *)
-              let args = List.init d (fun i -> MLrel (d - i)) in
+              let args = List.init d (fun i -> fresh_rel (d - i)) in
               let lifted_body = ast_lift d body in
               let applied =
                 match lifted_body with
@@ -9375,7 +9336,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         let ret_k v = Sreturn (Some (mk_itree_ret_for_value r_cpp r_ml v)) in
         let body_stmts = gen_stmts env ret_k a in
         let iife = mk_iife (Some reified_ty) body_stmts in
-        (* Shift owned vars and dead-after for the continuation *)
+        (* Shift owned vars for the continuation *)
         let cont =
           with_shifted_move_tracking 1 (fun () -> gen_stmts ~slot env' k b)
         in
@@ -9391,7 +9352,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         let t_for_env = if stmts_yield_boxed asgn then Miniml.Tdummy Ktype else t in
         (* Push env_types AFTER generating the value expression [a]. *)
         push_binders env [(x_renamed, t_for_env)];
-        (* Phase 2: shift owned vars and dead-after for lambda let binding.
+        (* Phase 2: shift owned vars for lambda let binding.
            The body [b] has one more de Bruijn binder, so all indices must
            be shifted +1. *)
         let gen_cont () =
@@ -9616,8 +9577,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                not even name the same variables, being indexed from outside
                the lambda's binders. *)
             let compiled_body =
-              with_escape_analysis (fun () ->
-                  gen_stmts lam_env (fun x -> Sreturn (Some x)) body )
+              with_escape_analysis (fun () -> with_region body (fun () ->
+                  gen_stmts lam_env (fun x -> Sreturn (Some x)) body ) )
             in
             restore_env_types saved_env_types;
             (free_var_params, lam_param_ids, lam_env, compiled_body) )
@@ -9773,220 +9734,184 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     else
       let depth = (!tctx).current_letin_depth in
       tctx := { !tctx with current_letin_depth = depth + 1 };
-      (* Phase 2: set up dead-after info for move insertion. Compute free vars
-         of the continuation [b] (shifted by 1 because [b] is under the let
-         binder). A variable at de Bruijn index [i] in [a] is dead-after if
-         [i+1] is not free in [b] (since [b] has one extra binder). Only move if
-         the variable has exactly 1 occurrence in [a]. *)
-      let saved_dead = (!tctx).move_dead_after in
       let saved_owned = (!tctx).move_owned_vars in
+      (* What the continuation reads, in the right-hand side's coordinates. *)
       let cont_free = Escape.free_rels 1 b in
-      (* free in b, shifted past let binder *)
-      let dead_in_a =
-        Escape.IntSet.filter
-          (fun i ->
-            (* i is dead after [a] if i is not free in [b] AND occurs exactly
-               once in [a] *)
-            (not (Escape.IntSet.mem i cont_free))
-            && Escape.nb_occur_match i a = 1 )
-          (!tctx).move_owned_vars
-      in
-      (* Also add any vars from our current dead set that have single occurrence
-         in a -- and that [b] does not read: dead after the whole [let] is not
-         dead after [a] when the continuation still reads the variable. *)
-      let dead_from_above =
-        Escape.IntSet.filter
-          (fun i ->
-            Escape.IntSet.mem i (!tctx).move_dead_after
-            && (not (Escape.IntSet.mem i cont_free))
-            && Escape.nb_occur_match i a = 1 )
-          (!tctx).move_owned_vars
-      in
-      tctx :=
-        { !tctx with
-          move_dead_after = Escape.IntSet.union dead_in_a dead_from_above };
       let asgn =
-        with_move_suppress_tail true (fun () ->
-          (* Single-use partial application optimization: when the RHS is a partial
-             application and the bound variable is used at most once in the
-             continuation without escaping, AND all free variables of the RHS are
-             dead in the continuation (so [&] capture references stay valid),
-             tell eta_fun to keep CPPmove wrappers and use [&] capture for
-             zero-copy closure generation. *)
-          let is_single_use_partial_app =
-            match a with
-            | MLapp (head, ml_args) | MLmagic (_, MLapp (head, ml_args)) ->
-              (match Escape.partial_app_remaining head ml_args with
-               | Some remaining ->
-                 Escape.nb_occur_match 1 b <= 1
-                 && not (Escape.escapes 1 b)
-                 && Escape.IntSet.is_empty
-                      (Escape.IntSet.inter (Escape.free_rels 0 a) cont_free)
-                 && Escape.single_use_nargs 1 b >= remaining
-               | None -> false)
-            | _ -> false
-          in
-          let afun v = Sasgn (x_renamed, Existing, v) in
-          (* Thread the let-binding's type annotation as the expected ML type
-             so that gen_ctor_call can recover the concrete element type for
-             constructors (like nil) whose ML annotation has unresolved metas or
-             erased type args.  For example: let sk = [] : list parser_frame — the
-             let-binding knows the element type even when the nil's own annotation
-             has Tdummy Ktype. *)
-          (* Look ahead: if t has erased type args, look at the body b to see if the
-             bound var (MLrel 1 in b) is used as the i-th arg of a constructor call
-             with a non-erased corresponding type arg. If so, use that type instead of t.
-             This recovers the correct element type for nils bound before pair constructors:
-               let empty_stack : list(Tmeta) = [] in make_pair(fr, empty_stack)
-             where the pair type says the second arg is list(parser_frame). *)
-          let t_effective =
-            let t_has_erased = ml_type_contains_erased t in
-            if not t_has_erased then t
-            else begin
-              (* Try to infer from an MLcons that immediately follows in the body.
-                 The body b may be directly an MLcons, or wrapped in one more MLletin. *)
-              let try_cons_body (b_inner : Miniml.ml_ast) db_offset =
-                (* db_offset: how many let-bindings above b_inner, so MLrel (1+db_offset) = x *)
-                let target_rel = 1 + db_offset in
-                (* Resolve t to get the underlying inductive (through metas) *)
-                let t_ind_opt = match resolve_tmeta t with
-                  | Miniml.Tglob (t_ind, _, _) -> Some t_ind
-                  | _ -> None
-                in
-                match b_inner with
-                | Miniml.MLcons (ctor_ty, _, ts) ->
-                  let result = ref None in
-                  List.iteri (fun i (ti : Miniml.ml_ast) ->
-                    match ti with
-                    | Miniml.MLrel r when r = target_rel ->
-                      (match resolve_tmeta ctor_ty with
-                       | Miniml.Tglob (_, ctor_tys, _) ->
-                         (match List.nth_opt ctor_tys i with
-                          | Some raw_candidate ->
-                            (match resolve_tmeta raw_candidate with
-                            | Miniml.Tglob (ind, sub_tys, _) as candidate ->
-                              (* Check that candidate's inductive matches t's inductive.
-                                 When t is fully erased (Tmeta{None}), accept any concrete type. *)
-                              let matches_t = match t_ind_opt with
-                                | Some t_ind -> GlobRef.CanOrd.equal ind t_ind
-                                | None -> true
-                              in
-                              if matches_t && not (List.exists is_erased_ml_type sub_tys) then
-                                result := Some candidate
-                            | _ -> ())
+        (* Single-use partial application optimization: when the RHS is a partial
+           application and the bound variable is used at most once in the
+           continuation without escaping, AND all free variables of the RHS are
+           dead in the continuation (so [&] capture references stay valid),
+           tell eta_fun to keep CPPmove wrappers and use [&] capture for
+           zero-copy closure generation. *)
+        let is_single_use_partial_app =
+          match a with
+          | MLapp (head, ml_args) | MLmagic (_, MLapp (head, ml_args)) ->
+            (match Escape.partial_app_remaining head ml_args with
+             | Some remaining ->
+               Escape.nb_occur_match 1 b <= 1
+               && not (Escape.escapes 1 b)
+               && Escape.IntSet.is_empty
+                    (Escape.IntSet.inter (Escape.free_rels 0 a) cont_free)
+               && Escape.single_use_nargs 1 b >= remaining
+             | None -> false)
+          | _ -> false
+        in
+        let afun v = Sasgn (x_renamed, Existing, v) in
+        (* Thread the let-binding's type annotation as the expected ML type
+           so that gen_ctor_call can recover the concrete element type for
+           constructors (like nil) whose ML annotation has unresolved metas or
+           erased type args.  For example: let sk = [] : list parser_frame — the
+           let-binding knows the element type even when the nil's own annotation
+           has Tdummy Ktype. *)
+        (* Look ahead: if t has erased type args, look at the body b to see if the
+           bound var (MLrel 1 in b) is used as the i-th arg of a constructor call
+           with a non-erased corresponding type arg. If so, use that type instead of t.
+           This recovers the correct element type for nils bound before pair constructors:
+             let empty_stack : list(Tmeta) = [] in make_pair(fr, empty_stack)
+           where the pair type says the second arg is list(parser_frame). *)
+        let t_effective =
+          let t_has_erased = ml_type_contains_erased t in
+          if not t_has_erased then t
+          else begin
+            (* Try to infer from an MLcons that immediately follows in the body.
+               The body b may be directly an MLcons, or wrapped in one more MLletin. *)
+            let try_cons_body (b_inner : Miniml.ml_ast) db_offset =
+              (* db_offset: how many let-bindings above b_inner, so MLrel (1+db_offset) = x *)
+              let target_rel = 1 + db_offset in
+              (* Resolve t to get the underlying inductive (through metas) *)
+              let t_ind_opt = match resolve_tmeta t with
+                | Miniml.Tglob (t_ind, _, _) -> Some t_ind
+                | _ -> None
+              in
+              match b_inner with
+              | Miniml.MLcons (ctor_ty, _, ts) ->
+                let result = ref None in
+                List.iteri (fun i (ti : Miniml.ml_ast) ->
+                  match ti with
+                  | Miniml.MLrel (r, _) when r = target_rel ->
+                    (match resolve_tmeta ctor_ty with
+                     | Miniml.Tglob (_, ctor_tys, _) ->
+                       (match List.nth_opt ctor_tys i with
+                        | Some raw_candidate ->
+                          (match resolve_tmeta raw_candidate with
+                          | Miniml.Tglob (ind, sub_tys, _) as candidate ->
+                            (* Check that candidate's inductive matches t's inductive.
+                               When t is fully erased (Tmeta{None}), accept any concrete type. *)
+                            let matches_t = match t_ind_opt with
+                              | Some t_ind -> GlobRef.CanOrd.equal ind t_ind
+                              | None -> true
+                            in
+                            if matches_t && not (List.exists is_erased_ml_type sub_tys) then
+                              result := Some candidate
                           | _ -> ())
-                       | _ -> ())
-                    | _ -> ()
-                  ) ts;
-                  !result
-                | _ -> None
-              in
-              (* Try to infer t from an MLapp body: find the position of target_rel
-                 in the application args, look up the function's ML type, and extract
-                 the type of that arg.  This handles the pattern:
-                   let sk0 : Tmeta = (fr, nil) in multistep(..., sk0, ...)
-                 where multistep's type tells us sk0 has type parser_frame × list(parser_frame). *)
-              let try_app_body (b_inner : Miniml.ml_ast) db_offset =
-                let target_rel = 1 + db_offset in
-                match b_inner with
-                | Miniml.MLapp (Miniml.MLglob {callee = func_ref; _}, app_args)
-                | Miniml.MLapp (Miniml.MLmagic (_, Miniml.MLglob {callee = func_ref; _}), app_args) ->
-                  let rec find_pos args i =
-                    match args with
-                    | [] -> None
-                    | (Miniml.MLrel r) :: _ when r = target_rel -> Some i
-                    | (Miniml.MLmagic (_, Miniml.MLrel r)) :: _ when r = target_rel -> Some i
-                    | _ :: rest -> find_pos rest (i + 1)
-                  in
-                  (match find_pos app_args 0 with
+                        | _ -> ())
+                     | _ -> ())
+                  | _ -> ()
+                ) ts;
+                !result
+              | _ -> None
+            in
+            (* Try to infer t from an MLapp body: find the position of target_rel
+               in the application args, look up the function's ML type, and extract
+               the type of that arg.  This handles the pattern:
+                 let sk0 : Tmeta = (fr, nil) in multistep(..., sk0, ...)
+               where multistep's type tells us sk0 has type parser_frame × list(parser_frame). *)
+            let try_app_body (b_inner : Miniml.ml_ast) db_offset =
+              let target_rel = 1 + db_offset in
+              match b_inner with
+              | Miniml.MLapp (Miniml.MLglob {callee = func_ref; _}, app_args)
+              | Miniml.MLapp (Miniml.MLmagic (_, Miniml.MLglob {callee = func_ref; _}), app_args) ->
+                let rec find_pos args i =
+                  match args with
+                  | [] -> None
+                  | (Miniml.MLrel (r, _)) :: _ when r = target_rel -> Some i
+                  | (Miniml.MLmagic (_, Miniml.MLrel (r, _))) :: _ when r = target_rel -> Some i
+                  | _ :: rest -> find_pos rest (i + 1)
+                in
+                (match find_pos app_args 0 with
+                | None -> None
+                | Some idx ->
+                  (match find_type_opt func_ref with
                   | None -> None
-                  | Some idx ->
-                    (match find_type_opt func_ref with
-                    | None -> None
-                    | Some func_ty ->
-                      let rec nth_arg ty n =
-                        match ty with
-                        | Miniml.Tarr (Miniml.Tdummy _, cod) -> nth_arg cod n
-                        | Miniml.Tarr (dom, _) when n = 0 -> Some dom
-                        | Miniml.Tarr (_, cod) -> nth_arg cod (n - 1)
-                        | Miniml.Tmeta {contents = Some t2} -> nth_arg t2 n
-                        | _ -> None
-                      in
-                      let try_unfold_typedef resolved =
-                        match resolved with
-                        | Miniml.Tglob (GlobRef.ConstRef kn, _, _) ->
-                          (match Table.lookup_typedef_unchecked kn with
-                           | Some expanded -> expanded
-                           | None -> resolved)
-                        | _ -> resolved
-                      in
-                      (match nth_arg func_ty idx with
-                      | Some arg_ty ->
-                        let resolved = resolve_tmeta arg_ty in
-                        let resolved = try_unfold_typedef resolved in
-                        (match resolve_tmeta t, resolved with
-                        | _, Miniml.Tglob (_, r_sub, _)
-                          when not (List.exists is_erased_ml_type r_sub) ->
-                          Some resolved
-                        | _ -> None)
-                      | None -> None)))
-                | _ -> None
-              in
-              let inferred = match (b : Miniml.ml_ast) with
-                | Miniml.MLcons _ -> try_cons_body b 0
-                | Miniml.MLletin (_, _, a', _, _) ->
-                  (* In body = MLletin(sk0, pair_expr, ...), nil is at MLrel 1 in pair_expr.
-                     db_offset=0 because pair_expr is evaluated before sk0 is bound. *)
-                  (match try_cons_body a' 0 with
-                   | Some _ as r -> r
-                   | None -> try_cons_body b 0)
-                | Miniml.MLapp _ ->
-                  (* Body is a function application — look up the function type to find
-                     the type expected for the bound variable at its argument position. *)
-                  try_app_body b 0
-                | _ -> None
-              in
-              match inferred with Some ty -> ty | None -> t
-            end
-          in
-          (* The bound value is not the enclosing function's result, so the
-             result a position falls back to when it states nothing is the
-             binder's own type, where it says one: [let t := x <- arg ;; ...]
-             is a tree over [arg]'s family, whatever family the function
-             returns into. *)
-          let rhs_result =
-            let c = cpp_of_ml env t_effective in
-            (* A binder erasure took the whole type from -- [nt_semty x], a
-               type computed from a value -- holds a box, and its value is
-               one; read at the function's result instead, it is cast to a
-               type it does not have. *)
-            if prints_as_any c then Some c
-            else if ml_type_contains_erased t_effective then (!tctx).current_cpp_return_type
-            else
-              match spell_in_scope c with
-              | Some _ as t -> t
-              | None -> (!tctx).current_cpp_return_type
-          in
-          with_cpp_return_type rhs_result (fun () ->
-            gen_stmts
-              ~slot:
-                { slot with
-                  repr = Native;
-                  expected_ml_ty = Some t_effective;
-                  eta_keep_moves = is_single_use_partial_app }
-              env_rhs afun a ) )
+                  | Some func_ty ->
+                    let rec nth_arg ty n =
+                      match ty with
+                      | Miniml.Tarr (Miniml.Tdummy _, cod) -> nth_arg cod n
+                      | Miniml.Tarr (dom, _) when n = 0 -> Some dom
+                      | Miniml.Tarr (_, cod) -> nth_arg cod (n - 1)
+                      | Miniml.Tmeta {contents = Some t2} -> nth_arg t2 n
+                      | _ -> None
+                    in
+                    let try_unfold_typedef resolved =
+                      match resolved with
+                      | Miniml.Tglob (GlobRef.ConstRef kn, _, _) ->
+                        (match Table.lookup_typedef_unchecked kn with
+                         | Some expanded -> expanded
+                         | None -> resolved)
+                      | _ -> resolved
+                    in
+                    (match nth_arg func_ty idx with
+                    | Some arg_ty ->
+                      let resolved = resolve_tmeta arg_ty in
+                      let resolved = try_unfold_typedef resolved in
+                      (match resolve_tmeta t, resolved with
+                      | _, Miniml.Tglob (_, r_sub, _)
+                        when not (List.exists is_erased_ml_type r_sub) ->
+                        Some resolved
+                      | _ -> None)
+                    | None -> None)))
+              | _ -> None
+            in
+            let inferred = match (b : Miniml.ml_ast) with
+              | Miniml.MLcons _ -> try_cons_body b 0
+              | Miniml.MLletin (_, _, a', _, _) ->
+                (* In body = MLletin(sk0, pair_expr, ...), nil is at MLrel 1 in pair_expr.
+                   db_offset=0 because pair_expr is evaluated before sk0 is bound. *)
+                (match try_cons_body a' 0 with
+                 | Some _ as r -> r
+                 | None -> try_cons_body b 0)
+              | Miniml.MLapp _ ->
+                (* Body is a function application — look up the function type to find
+                   the type expected for the bound variable at its argument position. *)
+                try_app_body b 0
+              | _ -> None
+            in
+            match inferred with Some ty -> ty | None -> t
+          end
+        in
+        (* The bound value is not the enclosing function's result, so the
+           result a position falls back to when it states nothing is the
+           binder's own type, where it says one: [let t := x <- arg ;; ...]
+           is a tree over [arg]'s family, whatever family the function
+           returns into. *)
+        let rhs_result =
+          let c = cpp_of_ml env t_effective in
+          (* A binder erasure took the whole type from -- [nt_semty x], a
+             type computed from a value -- holds a box, and its value is
+             one; read at the function's result instead, it is cast to a
+             type it does not have. *)
+          if prints_as_any c then Some c
+          else if ml_type_contains_erased t_effective then (!tctx).current_cpp_return_type
+          else
+            match spell_in_scope c with
+            | Some _ as t -> t
+            | None -> (!tctx).current_cpp_return_type
+        in
+        with_cpp_return_type rhs_result (fun () ->
+          gen_stmts
+            ~slot:
+              { slot with
+                repr = Native;
+                expected_ml_ty = Some t_effective;
+                eta_keep_moves = is_single_use_partial_app }
+            env_rhs afun a )
       in
       (* Push env_types AFTER generating the value expression [a] — [a] uses de
          Bruijn indices that don't include the new let binding.  The body [b]
          (generated below) does include it. *)
       let t_for_env = if stmts_yield_boxed asgn then Miniml.Tdummy Ktype else t in
       push_binders env [(x_renamed, t_for_env)];
-      (* Shift saved_dead +1 for the body [b]: the new let binding adds one
-         de Bruijn level, so all parent-scope indices must be shifted to stay
-         in sync with the body's coordinate system. *)
-      tctx :=
-        { !tctx with
-          move_dead_after = Escape.IntSet.map (fun i -> i + 1) saved_dead };
       (* The new let binding is owned (it's a local variable). Update
          move_owned_vars for processing [b]: shift all existing indices by 1
          (because [b] has one more binder) and add index 1 if the type is
@@ -10000,25 +9925,24 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          [T].  This avoids an unnecessary shared_ptr refcount increment at the
          binding site; any subsequent owned uses still copy from the reference.
 
-         A variable k is moved only when it is in BOTH [move_owned_vars] (owned
-         value semantics) AND [move_dead_after] (last use at this point).  When
-         the source has further uses in the let body it will not be moved, so
-         the const-ref remains valid.  We only apply this when the type is a
+         The read of k is moved only when k is owned and the plan has the read
+         as a last use.  When the source has further uses in the let body it
+         is not moved here, so the const-ref remains valid.  We only apply this when the type is a
          shared_ptr so that primitive types (int, bool) are left unchanged. *)
       let use_const_ref =
         Escape.is_shared_ptr_type t
         &&
         ( match a with
-          | MLcase (_, MLrel k, pv)
+          | MLcase (_, MLrel (k, occ), pv)
             when Array.length pv = 1
                  && (match pv.(0) with (_, _, _, MLrel _) -> true | _ -> false)
                  && not (Escape.IntSet.mem k (!tctx).move_owned_vars
-                         && Escape.IntSet.mem k (!tctx).move_dead_after) ->
+                         && Ownership_plan.fate (!tctx).move_plan occ = Last_use) ->
             true
           | _ -> false )
       in
       let new_is_tracked =
-        (Escape.is_shared_ptr_type t || is_nontrivial_value_ml_type t)
+        worth_moving t
         && not use_const_ref
       in
       let owned_for_b =
@@ -10308,11 +10232,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     in
     (* Reified mode: bind is a real function call, not desugared. *)
     if not (is_sequential_effect Core_effects.Bind use) then
-      let saved_dead = (!tctx).move_dead_after in
-      let e = gen_tail_expr ~slot env ast in
-      let result = inline_iife k e in
-      tctx := { !tctx with move_dead_after = saved_dead };
-      result
+      inline_iife k (gen_expr ~slot env ast)
     else begin
       (* Sequential mode: desugar bind into sequential statements. *)
       let a_ml, f = Common.last_two (a1 :: a2 :: l) in
@@ -10332,8 +10252,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
        collisions that produce incorrect std::move (use-after-move). *)
     let add_owned =
       match ids with
-      | (_, ty) :: _ when Escape.is_shared_ptr_type ty
-                          || is_nontrivial_value_ml_type ty -> Some 1
+      | (_, ty) :: _ when worth_moving ty -> Some 1
       | _ -> None
     in
     with_shifted_move_tracking 1 ?add_owned (fun () ->
@@ -10420,11 +10339,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
   | MLapp (MLglob use, a1 :: l) when is_effect Core_effects.Return use ->
     if not (is_sequential_effect Core_effects.Return use) then begin
       (* Reified mode: Ret is a constructor call, not desugared. *)
-      let saved_dead = (!tctx).move_dead_after in
-      let e = gen_tail_expr ~slot env ast in
-      let result = inline_iife k e in
-      tctx := { !tctx with move_dead_after = saved_dead };
-      result
+      inline_iife k (gen_expr ~slot env ast)
     end
     else begin
       (* Sequential mode: eliminate Ret, just use the value. *)
@@ -10435,25 +10350,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       else
         [k (gen_expr ?expected_ty:(position_cpp_ty None) env t)]
     end
-  | MLcase (typ, t, pv) when is_custom_match pv ->
-    (* Set up dead-after for owned variables at their last use, same as the
-       default tail-position case below. Without this, owned variables
-       passed as function arguments in the scrutinee would not get std::move.
-       Suppress when processing a let-binding RHS to avoid use-after-move. *)
-    let saved_dead = (!tctx).move_dead_after in
-    ( if not (!tctx).move_suppress_tail then
-        let tail_dead =
-          Escape.IntSet.filter
-            (fun i -> Escape.nb_occur_match i ast = 1)
-            (!tctx).move_owned_vars
-        in
-        tctx :=
-          { !tctx with
-            move_dead_after =
-                Escape.IntSet.union (!tctx).move_dead_after tail_dead } );
-    let result = gen_custom_cpp_case env k typ t pv in
-    tctx := { !tctx with move_dead_after = saved_dead };
-    result
+  | MLcase (typ, t, pv) when is_custom_match pv -> gen_custom_cpp_case env k typ t pv
   | MLcons (_, r, []) when Table.is_tt_constructor r
       && (!tctx).current_cpp_return_type = Some Tvoid ->
     (* tt (unit constructor) in tail position of a void-returning function *)
@@ -10482,25 +10379,14 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     let body' = match body with MLmagic (_, b) -> b | b -> b in
     let is_simple =
       match body' with
-      | MLrel i when i <= n -> true
-      | MLapp (MLrel i, _) when i <= n -> true
-      | MLapp (MLmagic (_, MLrel i), _) when i <= n -> true
+      | MLrel (i, _) when i <= n -> true
+      | MLapp (MLrel (i, _), _) when i <= n -> true
+      | MLapp (MLmagic (_, MLrel (i, _)), _) when i <= n -> true
       | _ -> false
     in
     if is_simple then
       (* Simple body: gen_expr handles these as direct field access (no IIFE),
          so delegate to the default path. *)
-      let saved_dead = (!tctx).move_dead_after in
-      ( if not (!tctx).move_suppress_tail then
-          let tail_dead =
-            Escape.IntSet.filter
-              (fun i -> Escape.nb_occur_match i ast = 1)
-              (!tctx).move_owned_vars
-          in
-          tctx :=
-            { !tctx with
-              move_dead_after =
-                  Escape.IntSet.union (!tctx).move_dead_after tail_dead } );
       let value =
         gen_expr ?expected_ty:(position_cpp_ty None) env ast
       in
@@ -10513,9 +10399,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         | Some (Boxed kind) -> box_for_any_slot kind ast value
         | Some Native | None -> value
       in
-      let result = inline_iife k value in
-      tctx := { !tctx with move_dead_after = saved_dead };
-      result
+      inline_iife k value
     else
       (* Complex body: emit field extraction assignments as flat statements
          instead of wrapping in an IIFE. This produces clean code for all
@@ -10582,11 +10466,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       push_binders env (retype_dependent_params typ renamed_ids);
       asgns @ gen_stmts ~slot env' k body
   | t ->
-    (* Tail position: generate expression with dead-after tracking.
-       No deref_reified needed: in sequential mode, monadic variables are
-       direct values (bind desugars to let-binding); in reified mode,
-       they are trees returned as-is. *)
-    let saved_dead = (!tctx).move_dead_after in
+    (* Tail position.  No deref_reified needed: in sequential mode, monadic
+       variables are direct values (bind desugars to let-binding); in
+       reified mode, they are trees returned as-is. *)
     let is_void_tail = match t with
       | MLapp (f, args) | MLmagic (_, MLapp (f, args)) ->
         ml_callee_is_void f
@@ -10606,10 +10488,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       | _ -> false
     in
     if is_void_tail then begin
-      let e =
-        gen_tail_expr ~slot ?expected_ty:(position_cpp_ty None) env t
-      in
-      tctx := { !tctx with move_dead_after = saved_dead };
+      let e = gen_expr ~slot ?expected_ty:(position_cpp_ty None) env t in
       if (!tctx).current_cpp_return_type = Some Tvoid then
         [Sexpr e; Sreturn None]
       else
@@ -10626,9 +10505,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       (* Whether this continuation is the function's result rather than a
          binding.  Probing [k] is how the void case above already asks. *)
       let k_returns = match k (CPPint 0) with Sreturn _ -> true | _ -> false in
-      let e =
-        gen_tail_expr ~slot ?expected_ty:(position_cpp_ty None) env t
-      in
+      let e = gen_expr ~slot ?expected_ty:(position_cpp_ty None) env t in
       (* A pair accessor applied to an erased pair yields a [std::any] at run
          time even though its ML type is concrete.  In tail position that value
          is the result, so cast it back to the declared return type -- the same
@@ -10643,9 +10520,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           | Native -> recover_boxed_component rt e )
         | _ -> e
       in
-      let result = inline_iife k e in
-      tctx := { !tctx with move_dead_after = saved_dead };
-      result
+      inline_iife k e
     end
 
 (** A value a constructor stores: an argument of a constructor or a custom
@@ -10660,26 +10535,6 @@ and gen_stored_value ?expected_ty ~slot env e =
   | e when ml_value_is_void_call e -> wrap_void_call_as_value (gen_expr ~slot env e)
   | _ -> gen_expr ?expected_ty ~slot env e
 
-
-(** Generate a C++ expression for [t] in tail position.
-    Marks owned variables that occur exactly once as dead-after (for
-    last-use move semantics).  Callers are responsible for saving and
-    restoring [move_dead_after].
-
-    Used by the default tail case and by reified-mode bind/ret handlers
-    (which bypass monadic desugaring and treat bind/Ret as plain calls). *)
-and gen_tail_expr ?expected_ty ?(slot = empty_slot) env t =
-  ( if not (!tctx).move_suppress_tail then
-      let tail_dead =
-        Escape.IntSet.filter
-          (fun i -> Escape.nb_occur_match i t = 1)
-          (!tctx).move_owned_vars
-      in
-      tctx :=
-        { !tctx with
-          move_dead_after =
-              Escape.IntSet.union (!tctx).move_dead_after tail_dead } );
-  gen_expr ?expected_ty ~slot env t
 
 (** Generate a fixpoint (recursive function) definition. Handles both single and
     mutually recursive functions. [all_fix_ids] contains names of all mutual
@@ -10716,9 +10571,7 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
      fix_names), de Bruijn indices in f are: ids[0] → db 1, ..., ids[k-1] → db
      k, fix_names[0] → db k+1, ..., fix_names[m-1] → db k+m. We only mark lambda
      params as owned (not the fix self-references). *)
-  let saved_dead = (!tctx).move_dead_after in
   let saved_owned = (!tctx).move_owned_vars in
-  let saved_nparams = (!tctx).move_n_params in
   let n_fix_params = List.length ids in
   let n_total = n_fix_params + n_fix_funs in
   let fix_owned_base = Escape.infer_owned_params n_total f in
@@ -10742,15 +10595,12 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
               let ml_ty = snd (List.nth ids i) in
               let owned = base_owned
                 || (sub_esc && is_prod_ml_type ml_ty) in
-              if owned && (Escape.is_shared_ptr_type ml_ty
-                           || is_nontrivial_value_ml_type ml_ty) then
+              if owned && worth_moving ml_ty then
                 Escape.IntSet.add db acc
               else
                 acc )
             Escape.IntSet.empty
             (List.init n_fix_params (fun i -> i)) };
-  tctx := { !tctx with move_dead_after = Escape.IntSet.empty };
-  tctx := { !tctx with move_n_params = n_fix_params + n_fix_funs };
   (* The body returns the fixpoint's own codomain, not the enclosing
      function's: a result recovered from a box inside it is recovered at
      the [T1] a [fix F (m : list A) : P A m] returns, not at the pair the
@@ -10765,13 +10615,11 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
     ( (renamed_n, ty),
       ids,
       with_cpp_return_type fix_return_type (fun () ->
-          gen_stmts env (fun x -> Sreturn (Some x)) f ),
+          with_region f (fun () -> gen_stmts env (fun x -> Sreturn (Some x)) f) ),
       parameter_binders env ids )
   in
   restore_env_types saved_env_types;
-  tctx := { !tctx with move_dead_after = saved_dead };
   tctx := { !tctx with move_owned_vars = saved_owned };
-  tctx := { !tctx with move_n_params = saved_nparams };
   result
 
 let () = type_term_arg := fun env a -> gen_expr env a

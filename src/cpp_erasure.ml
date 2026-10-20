@@ -592,9 +592,13 @@ let lower_method_calls (d : settled) : settled =
         | Some receiver, rest ->
           (* Every inductive is a value type, reached with a dot; [this] is a
              raw pointer and a [CPPderef] dereferences a smart one, and both
-             are reached with an arrow instead. *)
+             are reached with an arrow instead.  A method takes its receiver
+             as a const [this], so moving it gives the method nothing, and
+             on a coinductive's projection picks the overload that copies the
+             field out ({!Borrow_projection}). *)
+          let receiver = match fe receiver with CPPmove r -> r | r -> r in
           let access, receiver =
-            match fe receiver with
+            match receiver with
             | CPPthis -> (Aarrow, CPPthis)
             | CPPderef p -> (Aarrow, p)
             | receiver -> (Adot, receiver)
@@ -630,6 +634,62 @@ let lower_projections (d : settled) : settled =
       | [] -> assert false )
     | CPPglob (r, _, (None | Some {ci_inline = None; _})) when Table.is_projection r ->
       CPPprojection_value r
+    | e -> map_expr fe fs Fun.id e
+  and fs s = map_stmt fe fs Fun.id s in
+  map_decl fe fs Fun.id d
+
+(* A string literal outside any nested statement: as a [?:] branch it stays a
+   [const char*], where the lambda's declared return type converted it. *)
+let rec reads_string_literal e =
+  match e with
+  | CPPstring _ -> true
+  | _ -> fold_expr_children ~on_expr:(fun found e -> found || reads_string_literal e)
+           ~on_stmts:(fun found _ -> found) false e
+
+(* The two values a lambda's body chooses between, when all it does is choose:
+   a match of one alternative against the rest, an [if], or a mapped two-way
+   case whose template is an [if]. *)
+let chosen_values = function
+  | { cl_params = {rev = []}; cl_body = [Smatch (scrut, branches, wildcard)];
+      cl_capture = Immediate; _ } -> (
+    let returns_only br =
+      match br with
+      | { smb_field_bindings = []; smb_extra_conds = []; smb_body = [Sreturn (Some e)]; _ } ->
+        Some e
+      | _ -> None
+    in
+    let tested br e1 e2 =
+      Some (mk_call (CPPstd_holds_alternative br.smb_ctor_type) [scrut.sc_expr], e1, e2)
+    in
+    match branches, wildcard with
+    | [br1; br2], None -> (
+      match returns_only br1, returns_only br2 with
+      | Some e1, Some e2 -> tested br1 e1 e2
+      | _ -> None )
+    | [br1], Some [Sreturn (Some e2)] -> (
+      match returns_only br1 with Some e1 -> tested br1 e1 e2 | None -> None )
+    | _ -> None )
+  | { cl_params = {rev = []}; cl_body = [Sif (cond, [Sreturn (Some e1)], [Sreturn (Some e2)])]; _ }
+    when not (reads_string_literal e1 || reads_string_literal e2) ->
+    Some (cond, e1, e2)
+  | { cl_params = {rev = []};
+      cl_body = [Scustom_case (_, scrut, _, [(_, _, [Sreturn (Some e1)]); (_, _, [Sreturn (Some e2)])], cmatch)];
+      _ }
+    when String.trim cmatch.cm_template = "if (%scrut) { %br0 } else { %br1 }"
+         && not (reads_string_literal e1 || reads_string_literal e2) ->
+    Some (scrut, e1, e2)
+  | _ -> None
+
+(* The guards read the lambda as written, before anything nested inside it is
+   rewritten: a nested conditional exposes the string literals its own lambda
+   kept inside a statement. *)
+let lower_conditionals (d : settled) : settled =
+  let rec fe e =
+    match e with
+    | CPPfun_call (_, CPPlambda l, {rev = []}) -> (
+      match chosen_values l with
+      | Some (c, e1, e2) -> CPPcond (fe c, fe e1, fe e2)
+      | None -> map_expr fe fs Fun.id e )
     | e -> map_expr fe fs Fun.id e
   and fs s = map_stmt fe fs Fun.id s in
   map_decl fe fs Fun.id d

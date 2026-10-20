@@ -124,7 +124,7 @@ struct MemSafetyProbe14 {
           [=, _self_val = std::move(_self_val)](uint64_t n) {
             return (_self_val.tree_sum() + n);
           };
-      uint64_t v = std::move(*this).consume_tree();
+      uint64_t v = this->consume_tree();
       return (f(UINT64_C(0)) + v);
     }
 
@@ -452,7 +452,7 @@ struct MemSafetyProbe14 {
     tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                         UINT64_C(20),
                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-    return std::move(t).make_adder(UINT64_C(5));
+    return t.make_adder(UINT64_C(5));
   }();
   static inline const uint64_t test_use_twice =
       tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
@@ -489,8 +489,7 @@ struct MemSafetyProbe14 {
     tree t = tree::node(tree::node(tree::leaf(), UINT64_C(100), tree::leaf()),
                         UINT64_C(200),
                         tree::node(tree::leaf(), UINT64_C(300), tree::leaf()));
-    std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> p =
-        std::move(t).fn_and_val();
+    std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> p = t.fn_and_val();
     return (p.first(UINT64_C(5)) + p.second);
   }();
   /// TEST 8: Large tree stress test. Many closures, deep recursion.

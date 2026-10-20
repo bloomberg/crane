@@ -57,7 +57,7 @@ struct ErasedMultiIndex {
 
   static inline const uint64_t test_tagged = []() {
     tagged t = tagged::mktagged(UINT64_C(42), true);
-    return std::move(t).template get_key<uint64_t>();
+    return t.template get_key<uint64_t>();
   }();
 
   /// Heterogeneous list using type-indexed existential
@@ -208,7 +208,7 @@ struct ErasedMultiIndex {
     hlist l = hlist::hcons(
         UINT64_C(42),
         hlist::hcons(true, hlist::hcons(UINT64_C(7), hlist::hnil())));
-    return std::move(l).hlist_length();
+    return l.hlist_length();
   }();
 };
 

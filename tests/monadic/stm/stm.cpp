@@ -33,8 +33,8 @@ uint64_t stmtest::io_add_self(uint64_t x) {
 
 void stmtest::stm_enqueue(stm::TVar<List<uint64_t>> q, uint64_t x) {
   List<uint64_t> xs = stm::readTVar(q);
-  stm::writeTVar(std::move(q), std::move(xs).app(List<uint64_t>::cons(
-                                   x, List<uint64_t>::nil())));
+  stm::writeTVar(std::move(q),
+                 xs.app(List<uint64_t>::cons(x, List<uint64_t>::nil())));
   return;
 }
 
@@ -45,7 +45,7 @@ uint64_t stmtest::stm_dequeue(stm::TVar<List<uint64_t>> q) {
   } else {
     auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v_mut());
     stm::writeTVar(std::move(q), *a1);
-    return a0;
+    return std::move(a0);
   }
 }
 

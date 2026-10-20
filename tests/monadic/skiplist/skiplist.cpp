@@ -267,7 +267,7 @@ bool skiplist_test::stm_test_navigation() {
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<uint64_t, uint64_t>> &second = *nextOpt;
       std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>> prevOpt =
-          std::move(sl).previous(nat_eq, second);
+          sl.previous(nat_eq, second);
       bool c1 = SkipList<int, int>::template key<uint64_t, uint64_t>(first) ==
                 UINT64_C(1);
       bool c2 = SkipList<int, int>::template key<uint64_t, uint64_t>(second) ==
@@ -389,7 +389,7 @@ bool skiplist_test::stm_test_bde_api() {
   }
   std::pair<uint64_t,
             std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>>>
-      backResult = std::move(sl).bde_back();
+      backResult = sl.bde_back();
   auto [status5, backItem] = std::move(backResult);
   bool c9 = status5 == SkipList<int, int>::e_SUCCESS;
   bool c10;

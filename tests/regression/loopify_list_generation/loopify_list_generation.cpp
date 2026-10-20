@@ -161,7 +161,7 @@ List<uint64_t> LoopifyListGeneration::replicate_list(
     } else {
       auto _f = std::move(std::get<CraneCont_n>(_frame));
       List<uint64_t> rep = std::move(_f.rep);
-      _result = std::move(rep).app(std::move(_result));
+      _result = rep.app(std::move(_result));
     }
   }
   return _result;

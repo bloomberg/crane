@@ -342,7 +342,7 @@ let definition_suspends self ty body =
 let free_levels ~depth e =
   let found = ref [] in
   let rec go d = function
-    | MLrel i -> if i > d then found := (depth + d - i) :: !found
+    | MLrel (i, _) -> if i > d then found := (depth + d - i) :: !found
     | MLlam (_, _, b) -> go (d + 1) b
     | MLletin (_, _, a, b, _) ->
       go d a;
@@ -435,7 +435,7 @@ let resumes_of ~effects ~origin ~targets lex body =
       let first = depth and n = Array.length ids in
       let rec member ~depth = function
         | MLmagic (_, e) -> member ~depth e
-        | MLapp (MLrel k, _) when first <= depth - k && depth - k < first + n ->
+        | MLapp (MLrel (k, _), _) when first <= depth - k && depth - k < first + n ->
           [Member (occ, depth - k - first)]
         | _ -> []
       in
@@ -498,7 +498,7 @@ let local_groups ~effects defs =
     let rec strip = function MLmagic (_, e) -> strip e | e -> e in
     let member ~within ~depth f =
       match strip f with
-      | MLrel db ->
+      | MLrel (db, _) ->
         let k = arities.(within) + n + depth - db in
         if 0 <= k && k < n then Some k else None
       | _ -> None
@@ -525,7 +525,7 @@ let local_groups ~effects defs =
     let adoptable =
       List.init n (fun j ->
           let names ~depth = function
-            | MLrel db -> Option.has_some (member ~within:j ~depth:(depth - arities.(j)) (MLrel db))
+            | MLrel _ as read -> Option.has_some (member ~within:j ~depth:(depth - arities.(j)) read)
             | _ -> false
           in
           let arity, body = split_params 0 funs.(j) in

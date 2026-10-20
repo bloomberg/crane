@@ -282,7 +282,7 @@ struct Comp {
           _stack.emplace_back(CraneEnter{_f.a1});
         } else {
           auto _f = std::move(std::get<CraneCont_Add_1>(_frame));
-          _result = std::move(_f._tmp2).add(std::move(_result));
+          _result = _f._tmp2.add(std::move(_result));
         }
       }
       return _result;
@@ -598,7 +598,7 @@ struct Comp {
           Nat a1 = std::move(_f.a1);
           expr a2 = std::move(_f.a2);
           std::shared_ptr<avl> a3 = std::move(_f.a3);
-          _result = std::move(_result).balance(a1, a2, *a3);
+          _result = _result.balance(a1, a2, *a3);
         } else {
           auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
           std::shared_ptr<avl> a0 = std::move(_f.a0);

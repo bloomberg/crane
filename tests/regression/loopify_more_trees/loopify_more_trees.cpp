@@ -178,9 +178,8 @@ List<uint64_t> LoopifyMoreTrees::tree_to_list(
     } else {
       auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
-      _result = std::move(_f._tmp2).app(
-          List<uint64_t>::cons(a1, List<uint64_t>::nil())
-              .app(std::move(_result)));
+      _result = _f._tmp2.app(List<uint64_t>::cons(a1, List<uint64_t>::nil())
+                                 .app(std::move(_result)));
     }
   }
   return _result;

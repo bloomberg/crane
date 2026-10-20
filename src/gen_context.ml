@@ -47,8 +47,7 @@ let begin_body ~owner () =
       body_owner = Some owner;
       current_letin_depth = 0;
       move_owned_vars = Escape.IntSet.empty;
-      move_n_params = 0;
-      move_dead_after = Escape.IntSet.empty }
+      move_plan = Ownership_plan.empty }
 
 (** [with_method_env_types env params f] runs [f] with the de Bruijn type
     stack holding exactly [params] (innermost binder first, as returned by
@@ -477,7 +476,7 @@ let promoted_resolutions_of_body ?r ?ty b =
     let ok = ref true in
     let rec go depth t =
       ( match t with
-      | MLrel i when i > depth ->
+      | MLrel (i, _) when i > depth ->
         let k = i - depth - d - 1 in
         ( match if k >= 0 then List.nth_opt leading k else None with
         | Some (Some _) -> ()
@@ -568,7 +567,7 @@ let promoted_resolutions_of_body ?r ?ty b =
           let names = List.map Option.get names in
           let n = List.length names in
           let app =
-            MLapp (MLglob (Mlutil.open_reference inst), List.init n (fun i -> MLrel (n - i)))
+            MLapp (MLglob (Mlutil.open_reference inst), List.init n (fun i -> fresh_rel (n - i)))
           in
           Option.iter (add_at class_ref inst)
             (ml_arg_to_template_type

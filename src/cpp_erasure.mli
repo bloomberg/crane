@@ -154,6 +154,13 @@ val lower_method_calls : settled -> settled
     method of its record is called as one. *)
 val lower_projections : settled -> settled
 
+(** [lower_conditionals decl] writes a lambda invoked at once that only
+    chooses between two values -- a match of one alternative against the
+    rest, an [if], or a mapped two-way case whose template is an [if] -- as
+    the {!Minicpp.CPPcond} it computes.  A choice with a string literal in a
+    branch keeps its lambda, whose return type converts the literal. *)
+val lower_conditionals : settled -> settled
+
 (** [materialise decl] replaces every {!Minicpp.Topaque} in [decl] with
     {!Minicpp.Tany}.
 

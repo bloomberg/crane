@@ -58,8 +58,7 @@ LoopifyAdoptedFixNameShared::f(const LoopifyAdoptedFixNameShared::tree &t,
                 if (_loop_k.ltb(Nat::s(Nat::s(Nat::s(Nat::o()))))) {
                   return f(a0, std::move(_loop_k));
                 } else {
-                  _loop_k =
-                      std::move(_loop_k).sub(Nat::s(Nat::s(Nat::s(Nat::o()))));
+                  _loop_k = _loop_k.sub(Nat::s(Nat::s(Nat::s(Nat::o()))));
                   _loop_ts = crane_raw(a1);
                 }
               }
@@ -83,7 +82,7 @@ LoopifyAdoptedFixNameShared::f(const LoopifyAdoptedFixNameShared::tree &t,
           if (_loop_k.ltb(Nat::s(Nat::s(Nat::o())))) {
             return f(a0, std::move(_loop_k));
           } else {
-            _loop_k = std::move(_loop_k).sub(Nat::s(Nat::s(Nat::o())));
+            _loop_k = _loop_k.sub(Nat::s(Nat::s(Nat::o())));
             _loop_ts = crane_raw(a1);
           }
         }

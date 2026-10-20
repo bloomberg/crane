@@ -252,7 +252,7 @@ struct MemSafetyProbe6 {
         mylist<uint64_t>::mycons(
             UINT64_C(2),
             mylist<uint64_t>::mycons(UINT64_C(3), mylist<uint64_t>::mynil())));
-    return std::move(l).tail_adder(UINT64_C(0), UINT64_C(100));
+    return l.tail_adder(UINT64_C(0), UINT64_C(100));
   }();
   static inline const uint64_t test_head_and_tail = []() {
     return []() {
@@ -261,10 +261,10 @@ struct MemSafetyProbe6 {
           mylist<uint64_t>::mycons(UINT64_C(20), mylist<uint64_t>::mynil()));
       crane::fn<mylist<uint64_t>(uint64_t)> f =
           [&](uint64_t _x0) -> mylist<uint64_t> {
-        return std::move(l).head_and_tail(UINT64_C(0), UINT64_C(0), _x0);
+        return l.head_and_tail(UINT64_C(0), UINT64_C(0), _x0);
       };
       mylist<uint64_t> l2 = f(UINT64_C(99));
-      return std::move(l2).length();
+      return l2.length();
     }();
   }();
 
@@ -507,7 +507,7 @@ struct MemSafetyProbe6 {
         return tail_mapper(UINT64_C(0), std::move(l), _x0);
       };
       mylist<uint64_t> l2 = f([](uint64_t n) { return (n * UINT64_C(10)); });
-      return std::move(l2).length();
+      return l2.length();
     }();
   }();
   static inline const uint64_t test_both_subtrees = []() {
@@ -516,7 +516,7 @@ struct MemSafetyProbe6 {
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
       crane::fn<tree(bool)> sel = [=](bool _x0) -> tree {
-        return std::move(t).both_subtrees(UINT64_C(0), _x0);
+        return t.both_subtrees(UINT64_C(0), _x0);
       };
       return (sel(true).tree_sum() + sel(false).tree_sum());
     }();

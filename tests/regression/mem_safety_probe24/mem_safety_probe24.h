@@ -106,8 +106,8 @@ struct MemSafetyProbe24 {
       std::pair<tree, uint64_t> p = std::make_pair(*this, this->tree_sum());
       tree t2 = p.first;
       uint64_t s = std::move(p).second;
-      tree t3 = std::move(t2).map_tree([=](uint64_t n) { return (n + s); });
-      return std::move(t3).tree_sum();
+      tree t3 = t2.map_tree([=](uint64_t n) { return (n + s); });
+      return t3.tree_sum();
     }
 
     /// TEST 5: Nested value type — list of trees stored in a tree-like
@@ -615,7 +615,7 @@ struct MemSafetyProbe24 {
                         tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
     tree doubled = t.map_tree([](uint64_t n) { return (n * UINT64_C(2)); });
     mylist<uint64_t> flat = tree_to_list(std::move(doubled));
-    return (sum_list(std::move(flat)) + std::move(t).tree_sum());
+    return (sum_list(std::move(flat)) + t.tree_sum());
   }();
   static inline const uint64_t test_clone_and_transform =
       tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),

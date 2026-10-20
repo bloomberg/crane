@@ -533,7 +533,7 @@ struct ComprehensivePatterns {
 
     Tree nested_reuse() const {
       Tree t2 = this->transform_tree();
-      return std::move(t2).transform_tree();
+      return t2.transform_tree();
     }
 
     Tree flip_tree() const {

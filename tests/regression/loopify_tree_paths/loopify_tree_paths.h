@@ -248,8 +248,7 @@ struct LoopifyTreePaths {
         } else {
           auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
           uint64_t a1 = _f.a1;
-          _result = List<uint64_t>::cons(
-              a1, std::move(_f._tmp2).app(std::move(_result)));
+          _result = List<uint64_t>::cons(a1, _f._tmp2.app(std::move(_result)));
         }
       }
       return _result;

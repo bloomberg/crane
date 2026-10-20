@@ -16,8 +16,17 @@
     its receiver ({!Escape.returns_receiver_field}).  Under [CRANE_CHECK_IR]
     the body is checked to agree.
 
-    Input: a declaration whose struct methods are all {!Minicpp.Rq_any}.
-    Output: the same declaration, with each projection of a coinductive split
-    in two. *)
+    The split is made where the method is generated, so every pass after
+    that sees the overloads the struct declares. *)
 
-val transform_decl : Minicpp.cpp_decl -> Minicpp.cpp_decl
+(** [lend ~coinductive field] is the struct field [field] as declared: a
+    projection of a coinductive, still {!Minicpp.Rq_any}, as its two
+    overloads; any other field as it is. *)
+val lend :
+  coinductive:bool ->
+  Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag ->
+  (Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag) list
+
+(** [check_decl d] -- a {!Probe.violation} for each projection of a
+    coinductive [d] declares unsplit. *)
+val check_decl : Minicpp.cpp_decl -> unit

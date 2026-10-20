@@ -139,9 +139,8 @@ MemSafetyProbe17::mylist<uint64_t> MemSafetyProbe17::qtree_flatten(
     } else {
       auto _f = std::move(std::get<CraneCont_QNode_3>(_frame));
       uint64_t a2 = _f.a2;
-      _result = std::move(_f._tmp4).myapp(
-          std::move(_f._tmp3).myapp(mylist<uint64_t>::mycons(
-              a2, std::move(_f._tmp2).myapp(std::move(_result)))));
+      _result = _f._tmp4.myapp(_f._tmp3.myapp(
+          mylist<uint64_t>::mycons(a2, _f._tmp2.myapp(std::move(_result)))));
     }
   }
   return _result;

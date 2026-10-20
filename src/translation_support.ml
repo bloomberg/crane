@@ -466,7 +466,7 @@ let rec ml_callee_is_void = function
     try ml_type_is_void_call (Table.find_type r) with Not_found -> false )
   | MLglob {callee = r; _} -> is_void_ified_ref r
   | MLmagic (_, inner) -> ml_callee_is_void inner
-  | MLrel i -> ( try ml_type_is_void_call (get_env_type i) with _ -> false )
+  | MLrel (i, _) -> ( try ml_type_is_void_call (get_env_type i) with _ -> false )
   | _ -> false
 
 (** Whether the C++ for an ML expression is a statement rather than a value:
@@ -488,7 +488,7 @@ let rec ml_value_is_void_call = function
     && Array.for_all
          (fun (binds, _, _, body) ->
            let applies_void_binder = function
-             | MLapp (MLrel k, _) when k >= 1 && k <= List.length binds -> (
+             | MLapp (MLrel (k, _), _) when k >= 1 && k <= List.length binds -> (
                match List.nth_opt binds (List.length binds - k) with
                | Some (_, ty) -> ml_type_is_void_call ty
                | None -> false )
@@ -1306,9 +1306,9 @@ let rec is_reified_monadic_expr ml_expr =
      tree: the question is asked of what is under it. *)
   | MLmagic (_, e) -> is_reified_monadic_expr e
   | MLapp (MLmagic (_, f), args) -> is_reified_monadic_expr (MLapp (f, args))
-  | MLrel i ->
+  | MLrel (i, _) ->
     (match get_env_type_opt i with Some ty -> says_monadic ty | None -> false)
-  | MLapp (MLrel i, args) ->
+  | MLapp (MLrel (i, _), args) ->
     (match get_env_type_opt i with
      | Some ty -> says_monadic (ml_result_after (List.length args) ty)
      | None -> false)
@@ -1487,7 +1487,7 @@ let args_may_corecurse ~self ~binder_type ts =
        | Some self -> globref_equal g self
        | None -> false)
       || match find_type_opt g with Some ty -> yields_coinductive ty | None -> false )
-    | MLrel i when i > depth -> (
+    | MLrel (i, _) when i > depth -> (
       match binder_type (i - depth) with
       | Some (Tunknown | Taxiom) | None -> true
       | Some ty -> yields_coinductive ty )
@@ -1557,9 +1557,8 @@ let with_escape_analysis f =
   tctx :=
     { !tctx with
       current_letin_depth = 0;
-      move_dead_after = Escape.IntSet.empty;
       move_owned_vars = Escape.IntSet.empty;
-      move_n_params = 0;
+      move_plan = Ownership_plan.empty;
       match_param_counter = 0;
       cs_counter = 0;
       in_constructor_expr = false;
@@ -1576,19 +1575,17 @@ let with_escape_analysis f =
     caller then projects with [.first.first]. *)
 let with_iife_return_type expected_ty f = with_cpp_return_type expected_ty f
 
-(** Save move-tracking state, shift de Bruijn indices by [n] binders, run [f],
-    then restore the original state.  This is the standard bracket for code
-    that introduces [n] pattern variables or let bindings.
+(** Whether a body owning a value of ML type [ty] moves it at its last use:
+    a [shared_ptr], or a value-type inductive a copy of which copies more
+    than a word. *)
+let worth_moving ty = Escape.is_shared_ptr_type ty || is_nontrivial_value_ml_type ty
 
-    {b Why shift.}  [move_owned_vars] and [move_dead_after] track variables by
-    de Bruijn index.  When entering a scope with [n] new binders, all existing
-    indices must be shifted up by [n] so they continue to refer to the same
-    outer variables.
+(** Shift the owned set by [n] binders, run [f], then restore it.  This is
+    the standard bracket for code that introduces [n] pattern variables or let
+    bindings: [move_owned_vars] tracks variables by de Bruijn index, so when
+    entering a scope with [n] new binders every existing index is shifted up by
+    [n] to keep referring to the same outer variable.
 
-    @param clear_dead  If [true], empty [move_dead_after] instead of shifting.
-      Used inside match branches, which are independent scopes: the outer
-      dead-after set must not leak in, because a variable dead after one branch
-      may still be live in another.
     @param add_owned  Optional de Bruijn index to add to the owned set after
       shifting.  Used for monadic bind continuation parameters that receive an
       owned [shared_ptr] value (e.g. [>>=] callback arguments).
@@ -1602,43 +1599,19 @@ let with_iife_return_type expected_ty f = with_cpp_return_type expected_ty f
       [std::move(scrutinee)] from being emitted inside the branch while
       pattern-variable structured bindings ([const auto& [d_a0, d_a1] = ...])
       still hold const references into it — which would cause use-after-move. *)
-let with_shifted_move_tracking n ?(clear_dead = false) ?add_owned
+let with_shifted_move_tracking n ?add_owned
     ?(add_owned_set = Escape.IntSet.empty)
     ?(exclude_owned_set = Escape.IntSet.empty) ?exclude_owned f =
-  let saved_owned = (!tctx).move_owned_vars in
-  let saved_dead = (!tctx).move_dead_after in
-  tctx :=
-    { !tctx with
-      move_owned_vars =
-          Escape.IntSet.diff
-            (Escape.IntSet.map (fun i -> i + n) (!tctx).move_owned_vars)
-            exclude_owned_set };
-  ( match add_owned with
-  | Some idx ->
-    tctx :=
-      { !tctx with
-        move_owned_vars = Escape.IntSet.add idx (!tctx).move_owned_vars }
-  | None -> () );
-  tctx :=
-    { !tctx with
-      move_owned_vars =
-          Escape.IntSet.union (!tctx).move_owned_vars add_owned_set };
-  ( match exclude_owned with
-  | Some idx ->
-    tctx :=
-      { !tctx with
-        move_owned_vars = Escape.IntSet.remove idx (!tctx).move_owned_vars }
-  | None -> () );
-  tctx :=
-    { !tctx with
-      move_dead_after =
-          ( if clear_dead then Escape.IntSet.empty
-            else Escape.IntSet.map (fun i -> i + n) (!tctx).move_dead_after ) };
-  Fun.protect
-    ~finally:(fun () ->
-      tctx := { !tctx with move_owned_vars = saved_owned };
-      tctx := { !tctx with move_dead_after = saved_dead } )
-    f
+  let owned =
+    Escape.IntSet.diff (Escape.IntSet.map (fun i -> i + n) (!tctx).move_owned_vars) exclude_owned_set
+  in
+  let owned = match add_owned with Some i -> Escape.IntSet.add i owned | None -> owned in
+  let owned = Escape.IntSet.union owned add_owned_set in
+  let owned = match exclude_owned with Some i -> Escape.IntSet.remove i owned | None -> owned in
+  with_field
+    (fun c -> c.move_owned_vars)
+    (fun o -> tctx := { !tctx with move_owned_vars = o })
+    owned f
 
 (* ============================================================================
    Shared helpers for method generation (used by gen_ind_header_v2 and
@@ -1994,7 +1967,7 @@ let detect_non_forwarded_params_generic ~is_self_call n_params body =
   let is_forwarded depth i arg =
     let expected_db = n_params - i + depth in
     match arg with
-    | MLmagic (_, MLrel db) | MLrel db -> db = expected_db
+    | MLmagic (_, MLrel (db, _)) | MLrel (db, _) -> db = expected_db
     | _ -> false
   in
   let rec walk depth = function
@@ -2052,7 +2025,7 @@ let escaping_params ~suspended n_params body =
   let escaping = Hashtbl.create 4 in
   let rec walk under depth e =
     match e with
-    | MLrel db ->
+    | MLrel (db, _) ->
       let i = n_params - db + depth in
       if under && db > depth && i >= 0 && i < n_params then
         Hashtbl.replace escaping i ()
@@ -2129,7 +2102,7 @@ let detect_non_forwarded_params_fix n_params n_fix fix_idx body =
          fixpoint's type was generalised) must not hide the recursive call. *)
       let rec strip = function MLmagic (_, e) -> strip e | e -> e in
       match strip f with
-      | MLrel db -> db = base_self_db + depth
+      | MLrel (db, _) -> db = base_self_db + depth
       | _ -> false )
     n_params body
 
@@ -2522,7 +2495,7 @@ and tvar_instantiation_found
     | Some _ as t -> t
     | None -> (
       match (a, lex) with
-      | MLrel i, Some lex -> Lexenv.type_opt lex i
+      | MLrel (i, _), Some lex -> Lexenv.type_opt lex i
       | _ -> None )
   in
   let found = Hashtbl.create 7 in
@@ -2892,7 +2865,7 @@ let make_subst_extra_tvars num_ind_vars extra_tvar_map =
     Returns indices relative to the outer scope (i.e., i - n_bound for each free
     MLrel i). *)
 let rec collect_free_rels_set n_bound acc = function
-  | MLrel i -> if i > n_bound then IntSet.add (i - n_bound) acc else acc
+  | MLrel (i, _) -> if i > n_bound then IntSet.add (i - n_bound) acc else acc
   | MLlam (_, _, body) -> collect_free_rels_set (n_bound + 1) acc body
   | MLletin (_, _, a, b, _) ->
     collect_free_rels_set n_bound (collect_free_rels_set (n_bound + 1) acc b) a
@@ -3049,9 +3022,9 @@ let ml_projection_field_type = function
     let ids, _, _, proj_body = pv.(0) in
     let n = List.length ids in
     let projected = function
-      | Miniml.MLrel i | MLmagic (_, MLrel i) when i >= 1 && i <= n ->
+      | Miniml.MLrel (i, _) | MLmagic (_, MLrel (i, _)) when i >= 1 && i <= n ->
         Some (n - i, 0)
-      | MLapp ((MLrel i | MLmagic (_, MLrel i)), args) when i >= 1 && i <= n ->
+      | MLapp ((MLrel (i, _) | MLmagic (_, MLrel (i, _))), args) when i >= 1 && i <= n ->
         Some (n - i, count_real_ml_args args)
       | _ -> None
     in

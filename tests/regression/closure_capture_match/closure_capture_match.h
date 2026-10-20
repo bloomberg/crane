@@ -90,7 +90,7 @@ struct ClosureCaptureMatch {
     /// the original data structure is dropped.
     uint64_t capture_and_drop() const {
       crane::fn<tree(uint64_t)> f = [&](uint64_t _x0) -> tree {
-        return std::move(*this).make_inserter(_x0);
+        return this->make_inserter(_x0);
       };
       auto &&_sv = f(UINT64_C(42));
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
@@ -249,7 +249,7 @@ struct ClosureCaptureMatch {
         return t.deep_capture(_x0);
       };
       fn_box b = box_from_match(std::move(t));
-      return (f(UINT64_C(5)) + std::move(b).unbox(UINT64_C(7)));
+      return (f(UINT64_C(5)) + b.unbox(UINT64_C(7)));
     }();
   }();
 };

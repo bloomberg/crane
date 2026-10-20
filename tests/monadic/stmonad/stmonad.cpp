@@ -7,7 +7,7 @@ uint64_t STMonadTests::array_simp_fixed_init() {
           nat_idx::suc(nat_idx::suc(nat_idx::suc(nat_idx::zero()))))) -
           nat_idx::zero() + 1,
       UINT64_C(5));
-  return (*arr)[nat_idx::suc(nat_idx::zero())];
+  return (*std::move(arr))[nat_idx::suc(nat_idx::zero())];
 }
 
 std::pair<std::pair<uint64_t, uint64_t>, List<uint64_t>>
@@ -36,12 +36,13 @@ STMonadTests::array_simp_list() {
     }
   };
   uint64_t elem = (*arr)[nat_idx::zero()];
+  auto &&_once1 = std::move(arr);
   List<uint64_t> lst = [&]() {
     using _E = typename std::remove_pointer_t<
-        std::remove_cvref_t<decltype(arr)>>::value_type;
+        std::remove_cvref_t<decltype(_once1)>>::value_type;
     List<_E> _r = List<_E>::nil();
-    for (size_t _i = arr->size(); _i > 0; _i--) {
-      _r = List<_E>::cons((*arr)[_i - 1], std::move(_r));
+    for (size_t _i = _once1->size(); _i > 0; _i--) {
+      _r = List<_E>::cons((*_once1)[_i - 1], std::move(_r));
     }
     return _r;
   }();
@@ -304,12 +305,13 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
       }
     }();
     ;
+    auto &&_once9 = std::move(arr);
     return [&]() {
       using _E = typename std::remove_pointer_t<
-          std::remove_cvref_t<decltype(arr)>>::value_type;
+          std::remove_cvref_t<decltype(_once9)>>::value_type;
       List<_E> _r = List<_E>::nil();
-      for (size_t _i = arr->size(); _i > 0; _i--) {
-        _r = List<_E>::cons((*arr)[_i - 1], std::move(_r));
+      for (size_t _i = _once9->size(); _i > 0; _i--) {
+        _r = List<_E>::cons((*_once9)[_i - 1], std::move(_r));
       }
       return _r;
     }();

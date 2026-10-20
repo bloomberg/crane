@@ -13,7 +13,7 @@ open Miniml
 let rec canonical self body =
   let anon = Dummy in
   match body with
-  | MLglob {callee = r; _} when GlobRef.CanOrd.equal r self -> MLrel 0
+  | MLglob {callee = r; _} when GlobRef.CanOrd.equal r self -> fresh_rel 0
   | MLglob {callee = r; _} -> MLglob (Global_use.monomorphic r)
   | MLlam (_, _, b) -> MLlam (anon, Tunknown, canonical self b)
   | MLletin (_, _, a, b, occ) -> MLletin (anon, Tunknown, canonical self a, canonical self b, occ)
@@ -41,7 +41,7 @@ let forwarder body target =
   let params, _ = Mlutil.collect_lams body in
   let n = List.length params in
   Mlutil.named_lams params
-    (MLapp (MLglob (Mlutil.forwarding_use target), List.init n (fun i -> MLrel (n - i))))
+    (MLapp (MLglob (Mlutil.forwarding_use target), List.init n (fun i -> fresh_rel (n - i))))
 
 (* A function definition: a fixpoint, or a term that is a lambda, emitted
    as a function.  A constant is left alone -- a forwarder would compute it

@@ -904,7 +904,7 @@ struct MemSafetyProbe17 {
                                   qtree::qleaf(), qtree::qleaf()),
                      qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(4),
                                   qtree::qleaf(), qtree::qleaf()));
-    return std::move(t).qtree_sum();
+    return t.qtree_sum();
   }();
   /// TEST 2: Depth of a deep 4-ary tree.
   static inline const uint64_t test_qtree_depth = []() {
@@ -914,7 +914,7 @@ struct MemSafetyProbe17 {
                            qtree::qnode(inner, qtree::qleaf(), UINT64_C(2),
                                         qtree::qleaf(), qtree::qleaf()),
                            UINT64_C(3), qtree::qleaf(), qtree::qleaf());
-    return std::move(t).qtree_depth();
+    return t.qtree_depth();
   }();
   static inline const uint64_t test_qtree_mirror = []() {
     qtree t =
@@ -924,7 +924,7 @@ struct MemSafetyProbe17 {
                      qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(3),
                                   qtree::qleaf(), qtree::qleaf()),
                      qtree::qleaf());
-    return std::move(t).qtree_mirror().qtree_sum();
+    return t.qtree_mirror().qtree_sum();
   }();
 
   /// TEST 4: Flatten a 4-ary tree to a list (inorder traversal).
@@ -1108,7 +1108,7 @@ struct MemSafetyProbe17 {
                             qtree::qleaf(), qtree::qleaf());
     qtree t2 = qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(20),
                             qtree::qleaf(), qtree::qleaf());
-    return std::move(t1).qtree_zip(std::move(t2)).qtree_sum();
+    return t1.qtree_zip(std::move(t2)).qtree_sum();
   }();
   static inline const uint64_t test_weighted = []() {
     qtree t =
@@ -1121,7 +1121,7 @@ struct MemSafetyProbe17 {
                                   qtree::qleaf(), qtree::qleaf()),
                      qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(5),
                                   qtree::qleaf(), qtree::qleaf()));
-    return std::move(t).weighted_sum();
+    return t.weighted_sum();
   }();
   /// TEST 7: Build a 4-ary tree programmatically and check.
   static qtree make_qtree(uint64_t n);
