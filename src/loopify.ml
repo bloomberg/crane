@@ -791,15 +791,23 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
      {!Normalize} took out into temporaries; it reads the body with them put
      back.  Everything else reads the normalized body. *)
   let restored = Cpp_temporaries.own_stmts body in
-  (* The loop, if the transform leaves no self-call behind.  It rewrites
-     only calls directly under a constructor, so a body mixing a branch that
-     conses onto the recursive result with one that scrutinises it keeps a
-     real C++ self-call in the second, and falls back to the frame stack. *)
+  (* The loop, where the plan lowers the function tail modulo cons: every
+     call that is not a tail call is the one call of one of its chains
+     ({!Recursion_plan.Modulo_cons}), so the transform, which rewrites calls
+     directly under a constructor, leaves none behind -- a body mixing a
+     branch that conses onto the recursive result with one that scrutinises
+     it has no plan to be.  A self-call left behind is the finished body
+     disagreeing with the plan, a violation under [CRANE_CHECK_IR]; the
+     function falls back to the frame stack. *)
   let tmc =
     match modulo_cons with
     | Some chains ->
       let tmc = transform_tmc ~param_inits ~chains tparams check params ret_ty restored in
-      if classify check tmc = No_recursion then Some tmc else None
+      if classify check tmc = No_recursion then Some tmc
+      else (
+        Probe.violation "tail modulo cons plan"
+          (Pp.str "a self-call survived the transform the recursion plan's chains describe");
+        None )
     | None -> None
   in
   match tmc with
