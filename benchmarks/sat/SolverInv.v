@@ -1352,3 +1352,29 @@ Proof.
   - lia.
   - pose proof (H ci' a Hal) as H'. unfold cnt in H'. rewrite (nth_of_error W a Wa [] Ha) in H'. lia.
 Qed.
+
+(** A decision opens a new level at the end of the trail. *)
+Lemma core_decide val st :
+  Core val st -> qhead st = length (tr st) -> Core val (fset st FLim (lim st ++ [length (tr st)])).
+Proof.
+  intros C Hq. pose proof (i_limq _ _ C) as F. rewrite Hq in F.
+  destruct C. constructor; cbn [fv fset fld_eqb db]; auto.
+  - intros k l Hk. rewrite count_le_snoc. assert (k < length (tr st)) by (apply nth_error_Some; congruence).
+    destruct (Nat.leb_spec (length (tr st)) k); [lia|]. rewrite Nat.add_0_r. eauto.
+  - now apply sorted_snoc.
+  - rewrite Hq. apply Forall_app. split; [exact F | constructor; auto].
+  - intros k l Hk Hr. assert (k < length (tr st)) by (apply nth_error_Some; congruence).
+    destruct (i_dec0 k l Hk Hr) as [G | G].
+    + left. apply Forall_app. split; [exact G | constructor; [lia | constructor]].
+    + right. apply in_or_app. now left.
+Qed.
+
+Lemma inv_misc_other val st i x : i <> QHEAD -> Inv val st -> Inv val (fset st FMisc (lset (fv st FMisc) i x)).
+Proof.
+  intros Hi (C & W & S0). split; [|split; [exact W | exact S0]].
+  apply core_fset_misc; [exact C|]. unfold QHEAD in *. rewrite nth_lset.
+  destruct (Nat.eqb_spec i 0); [lia|]. split; [lia | apply (i_qtr _ _ C)].
+Qed.
+
+Lemma lvar_lit_of v a : lvar (lit_of v a) = v.
+Proof. unfold lit_of. destruct (Nat.eqb a 1); [apply lvar_2v | apply lvar_2v1]. Qed.

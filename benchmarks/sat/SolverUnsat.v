@@ -863,4 +863,333 @@ Proof.
     + intros v. unfold enq. cbn [fv fset fld_eqb]. rewrite E7f. exact (S5 v).
 Qed.
 
+
+(** ** Search *)
+
+Lemma pick_sp fuel : forall h st v n best bs Q,
+  R h st -> (best = 0 \/ nth (best - 1) (asg st) 0 = 0) ->
+  (forall r, (r = 0 \/ nth (r - 1) (asg st) 0 = 0) -> Q r h) ->
+  wp (pick s fuel v n best bs) Q h.
+Proof.
+  induction fuel as [|f IH]; intros h st v n best bs Q Hr Hb HQ; cbn [pick].
+  { apply wp_vabort. }
+  destruct (Nat.leb_spec n v); [apply wp_ret, HQ, Hb|].
+  ev. ev. intros a Ha. apply nth_error_nth_eq in Ha. subst a.
+  destruct (Nat.eqb_spec (nth v (asg st) 0) 0) as [E | E].
+  - ev. ev. intros st' _.
+    destruct (Nat.eqb best 0 || Nat.ltb bs st').
+    + eapply IH; [exact Hr | right; now replace (v + 1 - 1) with v by lia | exact HQ].
+    + eapply IH; [exact Hr | exact Hb | exact HQ].
+  - eapply IH; [exact Hr | exact Hb | exact HQ].
+Qed.
+
+Lemma search_sp fuel budget : forall nvars h st Q,
+  R h st -> Inv val st -> (forall r h', r <> 0 -> r <= 2 -> Q r h') ->
+  wp (search s fuel budget nvars) Q h.
+Proof.
+  induction budget as [|b IH]; intros nvars h st Q Hr I HQ; cbn [search].
+  { apply wp_ret, HQ; lia. }
+  ev. eapply propagate_sp; [exact Hr | exact I |]. intros confl h1 st1 Hr1 I1 H0 Hc.
+  pose proof I1 as (C1 & W1 & S1).
+  destruct (Nat.eqb_spec confl 0) as [-> | Hne].
+  - (* no conflict: decide *)
+    specialize (H0 eq_refl).
+    ev. eapply pick_sp; [exact Hr1 | now left |]. intros v1 Hv1.
+    destruct (Nat.eqb_spec v1 0) as [-> | Hv1nz]; [apply wp_ret, HQ; lia|].
+    destruct Hv1 as [|Hv0]; [lia|]. cbv zeta.
+    ev. ev. intros ph _. ev. ev. ev. ev. intros h2 Hr2 _.
+    ev. eapply enqueue_sp; [exact Hr2 |]. intros h3 Ha3 Hl3 Hrs3 Hr3 _.
+    assert (Hq : qhead st1 = length (tr st1)) by (pose proof (i_qtr _ _ C1); lia).
+    eapply IH; [exact Hr3 | | exact HQ].
+    split; [|split].
+    + apply core_enq; fvs; auto.
+      * now apply core_decide.
+      * apply lval_zero; [apply (i_asg _ _ C1)|]. now rewrite lvar_lit_of.
+      * intros _. right. apply in_or_app. right. now left.
+      * intros; lia.
+      * rewrite length_app. cbn. lia.
+    + exact W1.
+    + exact S1.
+  - (* a conflict *)
+    destruct (Hc Hne) as (ci & cl & Eci & Hd & Hfalse & Hcur). subst confl.
+    unfold decision_level. ev. ev. destruct (Nat.eqb_spec (length (lim st1)) 0) as [Hl0 | Hl0].
+    { exfalso. eapply (no_false_clause_l0 val st1 C1 cl Hl0); [eapply nth_error_In; eauto | exact Hfalse]. }
+    ev. ev. intros k _. ev. ev. intros h2 _ Hr2 _.
+    assert (I2 : Inv val (fset st1 FMisc (lset (fv st1 FMisc) CONFLICTS (k + 1))))
+      by (apply inv_misc_other; [discriminate | exact I1]).
+    ev. eapply learn_sp; [exact Hr2 | exact I2 | | cbn [fv fset fld_eqb]; intros E; rewrite E in Hl0; cbn in Hl0; lia |].
+    { exists ci, cl. replace (S ci - 1) with ci by lia. auto. }
+    replace (S ci - 1) with ci by lia.
+    intros h3 st3 Hr3 I3.
+    ev. ev. intros rc _. ev. ev. intros rl _.
+    eapply wp_seq with (P := fun _ h4 => exists st4, R h4 st4 /\ Inv val st4).
+    + destruct (Nat.leb_spec rl (rc + 1)).
+      * ev. ev. intros h4 _ Hr4 _. ev. ev. intros h5 _ Hr5 _.
+        assert (I4 : Inv val (fset st3 FMisc (lset (fv st3 FMisc) RCOUNT 0)))
+          by (apply inv_misc_other; [discriminate | exact I3]).
+        eapply backtrack_sp; [exact Hr5 | apply inv_misc_other; [discriminate | exact I4] |].
+        intros h6 st6 Hr6 _ I6 _ _ _ _. exists st6. auto.
+      * ev. intros h4 _ Hr4 _. eexists. split; [exact Hr4|].
+        apply inv_misc_other; [discriminate | exact I3].
+    + intros _ h4 (st4 & Hr4 & I4). eapply IH; [exact Hr4 | exact I4 | exact HQ].
+Qed.
+
+
+(** ** Loading *)
+
+Lemma read_lits_sp fuel : forall h st c xs pos ys Q,
+  R h st -> ~ In (vloc c) (locs s inp st) -> pts h c xs ->
+  (forall j, j < length ys -> nth_error xs0 (pos + j) = nth_error ys j) ->
+  (forall h', R h' st -> pts h' c (xs ++ ys) -> Q tt h') ->
+  wp (read_lits fuel inp c pos (length ys)) Q h.
+Proof.
+  induction fuel as [|f IH]; intros h st c xs pos ys Q Hr Hc Hp Hys HQ; cbn [read_lits].
+  { apply wp_vabort. }
+  destruct ys as [|y ys]; cbn [length].
+  { apply wp_ret, HQ; [exact Hr | now rewrite app_nil_r]. }
+  ev. eapply (get_inp s inp xs0 h st Hr). intros x Hx.
+  assert (x = y) as -> by (specialize (Hys 0 ltac:(cbn; lia)); rewrite Nat.add_0_r in Hys; cbn in Hys; congruence).
+  ev. eapply (push_scr s inp xs0 h st Hr c xs y); [exact Hc | exact Hp |]. intros h1 Hr1 Hp1 _.
+  eapply IH; [exact Hr1 | exact Hc | exact Hp1 | |].
+  - intros j Hj. rewrite <- Nat.add_assoc. apply (Hys (S j)). cbn. lia.
+  - intros h' Hr' Hp'. apply HQ; [exact Hr'|]. now rewrite <- app_assoc in Hp'.
+Qed.
+
+Lemma load_sp fuel n : forall F pos h st Q,
+  R h st -> Inv val st -> lim st = [] -> encodes xs0 n pos F -> Forall (Exists (lit_true val)) F ->
+  (forall h' st', R h' st' -> Inv val st' -> Q true h') ->
+  wp (load s fuel inp pos n) Q h.
+Proof.
+  induction fuel as [|f IH]; intros F pos h st Q Hr I Hlim HF Hsat HQ; cbn [load].
+  { apply wp_vabort. }
+  pose proof I as (C & W & S0).
+  destruct (Nat.leb_spec n pos).
+  { apply wp_ret. now apply (HQ h st). }
+  inversion HF as [? Hle | ? c F' Hlt Hlen Hc HF']; subst; [lia|].
+  inversion Hsat as [|? ? Hcsat HF'sat]; subst.
+  ev. eapply (get_inp s inp xs0 h st Hr). intros len Hl. rewrite Hlen in Hl. injection Hl as <-.
+  ev. eapply (make_scr s inp xs0 h st Hr). intros v h1 Hfresh Hp1 Hr1 _ _ _. cbn [repeat] in Hp1.
+  ev. eapply read_lits_sp; [exact Hr1 | exact Hfresh | exact Hp1 | exact Hc |]. intros h2 Hr2 Hp2. cbn [app] in Hp2.
+  ev. ev. ev. eapply (push_cls s inp xs0 h2 st Hr2 v c); [exact Hfresh | exact Hp2 |]. intros h3 Hr3.
+  set (st3 := cpush st v c) in *.
+  assert (I3 : Inv val st3).
+  { split; [|split]; [apply core_cpush; auto | apply wch_snoc, W | exact S0]. }
+  assert (Hci : nth_error (hcls st3) (length (db st)) = Some v).
+  { unfold st3. cbn [hcls cpush]. rewrite <- (repr_len_db s inp xs0 h st Hr), nth_error_app2, Nat.sub_diag by lia.
+    reflexivity. }
+  assert (Hcd : nth_error (db st3) (length (db st)) = Some c).
+  { unfold st3. cbn [db cpush]. now rewrite nth_error_app2, Nat.sub_diag by lia. }
+  destruct (Nat.eqb_spec (length c) 0) as [H0 | H0].
+  { exfalso. destruct c; [inversion Hcsat | cbn in H0; lia]. }
+  destruct (Nat.eqb_spec (length c) 1) as [H1 | H1].
+  - (* a unit clause: assign its literal at level 0, or find the input contradictory *)
+    destruct c as [|l [|l' c]]; [cbn in H1; lia | | cbn in H1; lia].
+    ev. eapply (get_cl s inp xs0 h3 st3 Hr3 _ v); [exact Hci | exact Hcd |]. intros x Hx. cbn in Hx.
+    injection Hx as <-.
+    ev. eapply lit_value_sp; [exact Hr3 |]. intros _. cbv beta.
+    assert (Hltv : lit_true val l) by (apply Exists_exists in Hcsat as (x & [<- | []] & Hx); exact Hx).
+    destruct (Nat.eqb_spec (lval (asg st3) l) 2) as [E2 | E2].
+    { exfalso. eapply (no_false_clause_l0 val st3 (proj1 I3) [l]); [unfold st3; cbn [fv cpush]; now rewrite Hlim | |].
+      - unfold st3. cbn [db cpush]. apply in_or_app. right. now left.
+      - constructor; [exact E2 | constructor]. }
+    eapply wp_seq with (P := fun _ h4 => exists st4, R h4 st4 /\ Inv val st4 /\ lim st4 = []).
+    + destruct (Nat.eqb_spec (lval (asg st3) l) 0) as [E0 | E0].
+      * eapply enqueue_sp; [exact Hr3 |]. intros h4 Ha4 Hl4 Hrs4 Hr4 _.
+        exists (enq st3 l 0). split; [exact Hr4|]. split; [split; [|split]|].
+        -- apply core_enq; [apply (proj1 I3) | exact E0 | exact Ha4 | exact Hl4 | exact Hrs4 | | intros; lia | intros _; exact Hltv].
+           intros _. left. unfold st3. cbn [fv cpush]. rewrite Hlim. constructor.
+        -- exact (proj1 (proj2 I3)).
+        -- exact S0.
+        -- unfold enq, st3. cbn [fv fset fld_eqb cpush]. exact Hlim.
+      * apply wp_ret. exists st3. auto.
+    + intros _ h4 (st4 & Hr4 & I4 & Hlim4).
+      eapply IH; [exact Hr4 | exact I4 | exact Hlim4 | exact HF' | exact HF'sat | exact HQ].
+  - (* watch two of its literals *)
+    ev. eapply attach_sp; [exact Hr3 | exact Hci | exact Hcd | lia | apply I3 | |].
+    { intros l Hl. apply (wch_fresh _ _ l W). exact Hl. }
+    intros h4 st4 Hr4 _ E1 E3 E2 Ef W4.
+    eapply IH; [exact Hr4 | | | exact HF' | exact HF'sat | exact HQ].
+    + split; [|split].
+      * eapply core_ext; [| | | | | | | apply (proj1 I3)]; rewrite ?E2, ?Ef; reflexivity.
+      * exact W4.
+      * intros u. rewrite Ef. apply S0.
+    + rewrite Ef. exact Hlim.
+Qed.
+
 End Spec.
+
+(** * Initialization *)
+
+Local Notation cellof := (fun T : Type => list T).
+
+(** The locations [L] are allocated and pairwise distinct. *)
+Definition Alloc (h : heap) (L : list loc) : Prop := NoDup L /\ forall l, In l L -> h l <> None.
+
+Lemma alloc_fresh h L l c : Alloc h L -> h l = None -> Alloc (upd h l c) (L ++ [l]).
+Proof.
+  intros [Hn Ha] Hl. split.
+  - apply nodup_snoc'; [exact Hn|]. intros Hi. exact (Ha l Hi Hl).
+  - intros x Hx. apply in_app_or in Hx as [Hx | [<- | []]].
+    + destruct (Nat.eq_dec x l) as [-> | Hne]; [rewrite upd_eq; discriminate|].
+      rewrite upd_neq by exact Hne. now apply Ha.
+    + rewrite upd_eq. discriminate.
+Qed.
+
+Lemma alloc_upd h L l c : Alloc h L -> h l <> None -> Alloc (upd h l c) L.
+Proof.
+  intros [Hn Ha] Hl. split; [exact Hn|]. intros x Hx.
+  destruct (Nat.eq_dec x l) as [-> | Hne]; [rewrite upd_eq; discriminate | rewrite upd_neq by exact Hne; auto].
+Qed.
+
+Lemma keep_fresh h l c x c' : h l = None -> h x = Some c' -> upd h l c x = Some c'.
+Proof. intros Hl Hx. rewrite upd_neq; [exact Hx | congruence]. Qed.
+
+Lemma keep_fresh_all h l c W xs : h l = None -> Forall (fun w => pts h w xs) W -> Forall (fun w => pts (upd h l c) w xs) W.
+Proof. intros Hl. apply Forall_impl. intros w Hw. unfold pts in *. now apply keep_fresh. Qed.
+
+Lemma fresh_vecs_sp fuel : forall (acc : vec (vec nat)) n h L W Q,
+  Alloc h L -> h (vloc acc) = Some (existT cellof (vec nat) W) ->
+  (forall h' W', Alloc h' (L ++ map vloc W') -> h' (vloc acc) = Some (existT cellof (vec nat) (W ++ W')) ->
+     Forall (fun w => pts h' w []) W' -> (forall x c, x <> vloc acc -> h x = Some c -> h' x = Some c) ->
+     Q tt h') ->
+  wp (fresh_vecs fuel acc n) Q h.
+Proof.
+  induction fuel as [|f IH]; intros acc n h L W Q HA Hacc HQ; cbn [fresh_vecs].
+  { apply wp_vabort. }
+  destruct n as [|n].
+  { apply wp_ret. apply (HQ h []); [now rewrite app_nil_r | now rewrite app_nil_r | constructor | auto]. }
+  apply wp_bind, wp_vmake. intros w Hw.
+  assert (Hne : vloc acc <> vloc w) by congruence.
+  apply wp_bind, wp_vpush. intros ws Hws.
+  rewrite (cell_inj _ _ _ _ Hws (keep_fresh _ _ _ _ _ Hw Hacc)).
+  eapply IH with (L := L ++ [vloc w]).
+  - apply alloc_upd; [apply alloc_fresh; assumption |]. rewrite upd_neq by exact Hne. congruence.
+  - apply upd_eq.
+  - intros h' W'' HA' Hacc' HW'' Hfr. apply (HQ h' (w :: W'')).
+    + now rewrite <- app_assoc in HA'.
+    + now rewrite <- app_assoc in Hacc'.
+    + constructor; [|exact HW'']. apply Hfr; [congruence|]. rewrite upd_neq by congruence. apply upd_eq.
+    + intros x c Hx Hc. apply Hfr; [exact Hx|]. rewrite upd_neq by exact Hx. now apply keep_fresh.
+Qed.
+
+
+Definition init_st (W : list (vec nat)) (nv : nat) : astate :=
+  AS [] [] W (map (fun _ => []) W)
+     (fun f => match f with
+               | FPh => repeat 2 nv | FTr | FLim => [] | FMisc => repeat 0 4 | _ => repeat 0 nv
+               end).
+
+Lemma nth_repeat0 v n : nth v (repeat 0 n) 0 = 0.
+Proof. apply nth_repeat. Qed.
+
+Lemma nth_map_nil {A} (W : list A) l : nth l (map (fun _ => @nil nat) W) [] = [].
+Proof. revert l; induction W; intros [|l]; cbn; auto. Qed.
+
+Lemma init_inv val W nv : Inv val (fset (init_st W nv) FMisc (lset (repeat 0 4) RLIMIT 100)).
+Proof.
+  split; [|split].
+  - constructor; cbn [fv fset fld_eqb init_st db].
+    + constructor.
+    + intros v. rewrite nth_repeat0. lia.
+    + constructor.
+    + intros v. rewrite nth_repeat0. cbn. tauto.
+    + constructor.
+    + intros k l Hk. destruct k; discriminate.
+    + intros i j H. cbn in H. lia.
+    + constructor.
+    + vm_compute. lia.
+    + intros k l r Hk. destruct k; discriminate.
+    + intros k l Hk. destruct k; discriminate.
+    + intros l [].
+  - intros ci l _. unfold cnt. cbn [wl fset init_st]. rewrite nth_map_nil. cbn. lia.
+  - intros v. cbn [fv fset fld_eqb init_st]. apply nth_repeat0.
+Qed.
+
+Lemma F2_init h W : Forall (fun w => pts h w []) W -> Forall2 (pts h) W (map (fun _ => []) W).
+Proof. induction 1; constructor; auto. Qed.
+
+Lemma nodup_drop2 (a b : loc) l : NoDup (a :: b :: l) -> NoDup (a :: l).
+Proof.
+  intros H. inversion H as [|? ? Ha Hn]; subst. inversion Hn; subst.
+  constructor; [intros Hi; apply Ha; now right | assumption].
+Qed.
+
+Lemma mod4_ne c k : c = 1 \/ c = 2 \/ c = 3 -> (c + 4 * k) mod 4 <> 0.
+Proof. intros H. rewrite Nat.mul_comm, Nat.Div0.mod_add. destruct H as [-> | [-> | ->]]; cbn; lia. Qed.
+
+(** After allocating [v] in [h], carry every fact about [h] over to the new heap. *)
+Ltac bump :=
+  match goal with
+  | Hn : ?h (vloc ?v) = None |- wp _ _ (upd ?h (vloc ?v) ?c) =>
+    repeat match goal with
+      | H : h ?x = Some ?c' |- _ =>
+        let H' := fresh "K" in pose proof (keep_fresh h (vloc v) c x c' Hn H) as H'; clear H
+      | H : Forall (fun w => pts h w ?xs) ?W |- _ =>
+        let H' := fresh "KW" in pose proof (keep_fresh_all h (vloc v) c W xs Hn H) as H'; clear H
+      end;
+    match goal with
+    | HA : Alloc h ?L |- _ =>
+      let H' := fresh "A" in pose proof (alloc_fresh h L (vloc v) c HA Hn) as H'; clear HA
+    end;
+    let Hv := fresh "P" in assert (Hv : upd h (vloc v) c (vloc v) = Some c) by apply upd_eq;
+    clear Hn
+  end.
+
+(** If [solve] finishes and answers "unsatisfiable" ([code] 0), the formula
+    encoded in [input] when it started has no model. *)
+Theorem solve_unsat_sound fuel budget nvars inp ninput xs0 F h0 r h1 :
+  h0 (vloc inp) = Some (existT cellof nat xs0) ->
+  encodes xs0 ninput 0 F ->
+  runs h0 (Solver.solve fuel budget nvars inp ninput) r h1 ->
+  r mod 4 = 0 ->
+  ~ exists val, satisfies val F.
+Proof.
+  intros Hinp HF Hrun Hr0 (val & Hval). revert r h1 Hrun Hr0.
+  change (wp (Solver.solve fuel budget nvars inp ninput) (fun r _ => r mod 4 <> 0) h0).
+  assert (HA : Alloc h0 [vloc inp]) by (split; [constructor; [intros [] | constructor] | intros l [<- | []]; congruence]).
+  unfold Solver.solve.
+  apply wp_bind, wp_vmake. intros e He. bump.
+  apply wp_bind, wp_vmake. intros cs Hcs. bump.
+  apply wp_bind, wp_vmake. intros ws Hws. bump.
+  apply wp_bind. eapply fresh_vecs_sp; [eassumption | eassumption |]. cbn [app].
+  intros h2 W HA2 Hws2 HW Hfr.
+  pose proof HA2 as [ND2 _]. inversion ND2 as [|? ? N1 ND3]; subst. inversion ND3 as [|? ? N2 ND4]; subst.
+  inversion ND4 as [|? ? N3 _]; subst.
+  assert (Dinp : vloc inp <> vloc ws) by (intros E; apply N1; rewrite E; cbn; tauto).
+  assert (Dcs : vloc cs <> vloc ws) by (intros E; apply N3; rewrite E; cbn; tauto).
+  pose proof (Hfr _ _ Dinp K2) as Kinp. pose proof (Hfr _ _ Dcs K) as Kcs.
+  clear K K1 K2 P A Hfr N1 N2 N3 ND2 ND3 ND4.
+  apply wp_bind, wp_vmake. intros asg Hasg. bump.
+  apply wp_bind, wp_vmake. intros lvl Hlvl. bump.
+  apply wp_bind, wp_vmake. intros rsn Hrsn. bump.
+  apply wp_bind, wp_vmake. intros ph Hph. bump.
+  apply wp_bind, wp_vmake. intros stp Hstp. bump.
+  apply wp_bind, wp_vmake. intros sn Hsn. bump.
+  apply wp_bind, wp_vmake. intros tr Htr. bump.
+  apply wp_bind, wp_vmake. intros tlim Htlim. bump.
+  apply wp_bind, wp_vmake. intros m Hm. bump.
+  set (s := mk_state cs ws asg lvl rsn ph stp sn tr tlim m).
+  match goal with |- wp _ _ ?h => set (h9 := h) in * end.
+  assert (R9 : repr s inp xs0 h9 (init_st W nvars)).
+  { constructor; cbn [init_st hcls hwl db wl fv].
+    - assumption.
+    - assumption.
+    - constructor.
+    - now apply F2_init.
+    - intros f. destruct f; unfold pts; cbn [floc s]; assumption.
+    - unfold pts; assumption.
+    - match goal with H : Alloc h9 _ |- _ => destruct H as [ND _] end.
+      rewrite <- !app_assoc in ND. cbn [app] in ND. apply nodup_drop2 in ND.
+      eapply Permutation_NoDup; [| exact ND]. unfold locs. cbn [map all_flds floc hcls hwl init_st s app].
+      do 3 apply perm_skip. apply Permutation_app_comm. }
+  apply wp_bind. eapply (set_f s inp xs0 h9 _ R9 FMisc RLIMIT 100). intros h10 _ R10 _. cbv zeta. fold s.
+  apply wp_bind. eapply (load_sp s inp xs0 val fuel ninput F 0 h10); [exact R10 | apply init_inv | reflexivity | exact HF | exact Hval |].
+  intros h11 st11 R11 I11. cbv beta iota.
+  eapply wp_seq with (P := fun code _ => code = 1 \/ code = 2 \/ code = 3).
+  - apply wp_bind. eapply search_sp; [exact R11 | exact I11 |]. intros r1 h12 Hr1 Hr2.
+    destruct (Nat.eqb_spec r1 1) as [-> | Hne].
+    + apply wp_bind. intros b h13 _. apply wp_ret. destruct b; auto.
+    + apply wp_ret. lia.
+  - intros code h12 Hcode. apply wp_bind, wp_vget. intros _ k _ _. apply wp_ret. now apply mod4_ne.
+Qed.
+

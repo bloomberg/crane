@@ -1,8 +1,10 @@
 # SAT benchmark: Crane vs. OCaml extraction of direct-style ITrees
 
-Status: working prototype with preliminary numbers. Staging steps 1–2 are
-done: fuel-outs abort, `vec` is a record, and **SAT soundness is proved**
-(`SolverSat.v`, `solve_sat_sound`). UNSAT soundness (step 3) is next.
+Status: working prototype with preliminary numbers. Staging steps 1–3 are
+done: fuel-outs abort, `vec` is a record, **SAT soundness is proved**
+(`SolverSat.v`, `solve_sat_sound`) and **UNSAT soundness is proved**
+(`SolverUnsat.v`, `solve_unsat_sound`). Both rest only on the axiom
+`eq_rect_eq`. Memory safety (step 4) and I6 (step 5) remain.
 Branch: `joom/refactor`.
 
 ## Goal
@@ -38,6 +40,9 @@ Decision: write our own solver directly in `itree vecE`.
 | `SatVec.v` | `vec A`, a phantom-typed record around a `loc := nat`, and the `vecE` effect: `VMake n x`, `VGet v i`, `VSet v i x`, `VLen v`, `VPush v x`, `VShrink v n`, `VAbort site`; smart constructors `vmake`/`vget`/.../`vabort` via `embed` |
 | `VecSem.v` | Layer 0: relational heap semantics `step`, finite runs `runs`, partial-correctness `wp`, and the rules for `Ret`, `bind` and each event |
 | `SolverSat.v` | SAT soundness: the input spec `encodes`/`satisfies`, the frame invariant, `check_model_spec`, and `solve_sat_sound` |
+| `SolverRepr.v` | Layer 1: the abstract state `astate`, `repr` (heap ↔ abstract state, separation as one `NoDup`), and a `wp` rule per event in abstract terms |
+| `SolverInv.v` | Layer 2: the invariants `Core`/`Wch`/`Seen0` (against a fixed model `val`), their preservation lemmas, and the first-UIP analysis invariant `AInv` |
+| `SolverUnsat.v` | Layer 3: `wp` specs for every solver function, the initialization glue, and `solve_unsat_sound` |
 | `Solver.v` | the CDCL solver, module `Solver`, entry point `Solver.solve` |
 | `CraneVec.v` | Crane mappings: `vec` → `satbench::vec<T>`, events → method calls, `vabort` → `satbench::abort<T>(site)` |
 | `sat_vec.h` | `satbench::vec<T>`: `shared_ptr<std::vector<T>>`, so vectors are reference-semantics handles; `abort` throws `out_of_fuel`, which the driver reports as UNKNOWN |
@@ -255,6 +260,81 @@ Reading:
   that style, an adequacy lemma `runs h t r h' ↔ interp_vec t h ≈ Ret (h',
   r)` can bridge the two.
 
+## Stage 3 log (2026-10-20)
+
+- **Result.** `solve_unsat_sound`: if `solve` finishes with `r mod 4 = 0`
+  from a heap where `input` holds `encodes xs0 ninput 0 F`, then no valuation
+  satisfies `F`. `Print Assumptions` shows only `Eqdep.Eq_rect_eq.eq_rect_eq`,
+  the same as `solve_sat_sound`. About 3.2k lines across `SolverRepr.v` (650),
+  `SolverInv.v` (1380) and `SolverUnsat.v` (1195). `Solver.v` is unchanged, so
+  the extractions and benchmark numbers are unaffected.
+- **Heap representation: kept untyped cells.** A type-code universe would only
+  separate `nat` cells from `vec nat` cells. Nearly all the separation Stage 3
+  needs is between cells of the *same* type: clause vs. clause, clause vs.
+  `assigns`, watch list vs. clause. So it would have cost a rewrite of
+  `VecSem.v`/`SolverSat.v` and bought little, except removing the axiom.
+  Instead `repr` carries one `NoDup` over `[input; clauses; watches]`, the nine
+  field locations, every clause handle and every watch handle. Each write then
+  changes exactly one component of the abstract state (`repr_fset`,
+  `repr_dset`, `repr_wset`, `repr_cpush`, ...). Vectors outside that list (the
+  learnt clause while it is built, a clause while `load` reads it) are scratch
+  cells, and `keeps` says that state writes leave them alone.
+- **Abstract state.** `astate` holds clause handles and contents, watch
+  handles and contents, and the nine fields as a function `fv : fld -> list
+  nat`, so one lemma per event kind covers all nine fields. Nested `fset`s
+  are not convertible to a single `fset`, and there is no funext. Results of
+  loops that write several fields (`unassign`, analysis) are therefore stated
+  as field-wise agreement (`unas`, `only_sn`, `bt_rel`), not as equations.
+- **Fixing a model instead of an abstract CDCL system.** The proof fixes a
+  `val` with `satisfies val F` and shows that `search` never answers 0 and
+  `load` never answers false. "Entailed by `F`" becomes "true under `val`", so
+  no resolution proofs or transition system are needed. ParaCDCL's `rproof.v`
+  went unused. Resolution steps in the analysis become: the marked variable
+  `val` disagrees with is either the one being popped (then its reason clause
+  has another `val`-true literal) or stays marked.
+- **Surprise: the plan was wrong about I6.** It claimed a reported conflict is
+  all-false whatever I6 says. `prop_watch` never reads `c[1]`'s value: for
+  unit/conflict it assumes `c[1] = fl`. When re-homing, `vset c 1 ck; vset c k
+  fl` overwrites `c[k]` instead of swapping, which is a permutation only if
+  `c[1] = fl`. So soundness needs watch membership. With duplicate literals
+  (allowed in the input, e.g. `[a, b, a]`) a clause can sit in one watch list
+  twice. The invariant is therefore a count: `cnt watches[l] ci ≤
+  expect db ci l`, with `≤` so the stale region of an in-place compaction
+  needs no exact bookkeeping. It is proved for the *logical* list
+  `ws[0,j) ++ ws[i,n)` during `prop_watch`. The `ck ≠ fl` fact needed when
+  pushing onto `watches[ck]` follows from `ck` not being false while `fl` is.
+- **Invariants actually used (`Core`).** DB true under `val`; values ≤ 2;
+  trail lists exactly the assigned variables, once each, all true; the level
+  of a trail position is `count_le lim k` (the number of decisions at or
+  before it), with `lim` sorted; `lim ≤ qhead ≤ |trail|`; reasons have their
+  literal at 0 and every other literal false and *earlier on the trail*;
+  reason-less literals are decisions (`k ∈ lim`) or before the first
+  decision; level-0 literals are true under `val`. `qhead ≥` the last
+  decision is what guarantees a conflict clause has a current-level literal,
+  so `pathC ≥ 1` in the first analysis round.
+- **Analysis (`AInv`).** Marks are counted over trail *positions*, `cntm`, so
+  the trail's NoDup makes "the variable at position k" a bijection.
+  `pathC = cntm marks base (index+1)`; every current-level mark is at a
+  position ≤ `index`; lower-level marks are exactly the learnt literals.
+  `next_seen` never saturates at 0 because a marked position ≥ `base` is
+  below `index`. When `pathC ≥ 2` the popped literal is above `base`, so
+  `i_dec` gives it a reason (`reason_exists`). When `pathC ≤ 1` the
+  remaining marks are all learnt (`ainv_final`), so `finish_learnt` clears
+  every mark.
+- **Gotcha: never `cbn in *` with heaps in context.** `cbn` unfolds `upd`
+  chains of concrete heaps and runs for minutes: one `cbn in *` in
+  `finish_learnt_sp` made the file take over 9 minutes instead of seconds. Keep `cbn` restricted to
+  named constants (`fvs` = `cbn [fv fset dset wset cpush wpush fld_eqb ...]`)
+  or to specific hypotheses. Also `lvar`, `lneg`, `lval`, `lset` are
+  `simpl never` in `SolverInv.v`, so use the `lset_cons*` rewrite lemmas.
+- **Gotcha: section variables.** Lemmas in a `Section` only take the section
+  hypotheses they use (`ainv_init` takes no `val`/`Core`, `finish_learnt_sp`
+  no `now`/`Core`). Use `eapply` or `About` before applying them positionally.
+- **Still trusted / not proved:** memory safety (step 4: in-bounds indices,
+  live handles; stuck runs currently satisfy every `wp` vacuously); the
+  "2WL implies" half of I6 (step 5); bounds of `nat` values below 2^62; and
+  everything in Layer 4.
+
 ## Correctness proof sketch
 
 Target theorem, for well-formed input encoding CNF `F` over `nvars`
@@ -344,9 +424,12 @@ an abstract solver state `σ`:
     other watched literal is true (the standard 2WL invariant with respect to
     the propagation queue; cf. IsaSAT).
 
-UNSAT soundness needs only I1–I5 plus local facts. A conflict is detected
-when `c0` and `c1` are false and `find_watch` found no non-false literal, so
-the clause is all-false whatever I6 says. I6 is a separate, later milestone.
+~~UNSAT soundness needs only I1–I5 plus local facts.~~ Wrong: see the Stage 3
+log. `prop_watch` never reads the value of `c[1]`; it relies on `c[1]` being
+the literal just made false. So UNSAT soundness also needs the *membership*
+half of I6, in counting form (`Wch`): a clause occurs in `watches[l]` at most
+as often as it has `l` at position 0 or 1. The "2WL implies" half is still
+only needed for "never BADMODEL" and completeness.
 
 ### Layer 3: per-function specifications (WP style)
 
@@ -429,9 +512,9 @@ the clause is all-false whatever I6 says. I6 is a separate, later milestone.
    and, in C++, `const&` handle parameters.
 2. ✅ Layer 0 semantics and WP rules, the `check_model` spec and the frame
    invariant, which give **SAT soundness** (`SolverSat.v`).
-3. Layer 1 plus I1–I5, and the specs for `enqueue`, `propagate`, `backtrack`,
-   `analyze`, `learn`, `search` and `load`, which give **UNSAT soundness**.
-   This is the bulk of the work; analysis is the hardest part.
+3. ✅ Layer 1 plus I1–I5 (and watch membership), and the specs for `enqueue`,
+   `propagate`, `backtrack`, `analyze`, `learn`, `search` and `load`, which
+   give **UNSAT soundness** (`SolverRepr.v`, `SolverInv.v`, `SolverUnsat.v`).
 4. Memory safety: all events in bounds, all handles live.
 5. Optional: I6, which gives "never BADMODEL" (completeness of propagation).
 
