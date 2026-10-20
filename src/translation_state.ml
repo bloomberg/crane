@@ -101,23 +101,13 @@ type translation_ctx = {
   (* Nesting depth of let ... in expressions; used for unique name
      generation in nested scopes. *)
   current_letin_depth : int;
-  (* Escape analysis results: variables whose values are consumed (moved)
-     exactly once, so they can be std::move'd. *)
+  (* The variables, by de Bruijn index, whose values this body owns: a read
+     of one moves at a last use. *)
   move_owned_vars : Escape.IntSet.t;
-  (* Variables that are dead after this point (last use was in a move). *)
-  move_dead_after : Escape.IntSet.t;
-  (* True while generating a let-bound right-hand side: nothing nested in it
-     is in the enclosing function's tail position, so tail-position moves must
-     not fire.  Monotone within a function body -- inherited even by nested
-     scopes that start a fresh {!Translation.slot} -- which is why it is
-     context state rather than a slot property. *)
-  move_suppress_tail : bool;
-  (* Which reads of the region being generated are last uses: a move is made
-     only at one of them ({!Ownership_plan}).  Set where the region's body is
+  (* Which reads of the region being generated are last uses where their
+     value may be taken ({!Ownership_plan}).  Set where the region's body is
      generated ({!with_region}), and emptied with [move_owned_vars]. *)
   move_plan : Ownership_plan.t;
-  (* Number of function parameters (offset for de Bruijn indices). *)
-  move_n_params : int;
   (* Counter for generating unique match scrutinee variable names
      (_mp0, _mp1, ...). Reset at function boundaries. *)
   match_param_counter : int;
@@ -208,10 +198,7 @@ let tctx =
         body_owner = None;
         current_letin_depth = 0;
         move_owned_vars = Escape.IntSet.empty;
-        move_dead_after = Escape.IntSet.empty;
-        move_suppress_tail = false;
         move_plan = Ownership_plan.empty;
-        move_n_params = 0;
         match_param_counter = 0;
         promoted_var_map = [];
         in_constructor_expr = false;
@@ -357,14 +344,6 @@ let with_itree_mode (m : itree_extraction_mode) (f : unit -> 'a) : 'a =
     (fun c -> c.itree_mode)
     (fun m -> tctx := { !tctx with itree_mode = m })
     m f
-
-(** [with_move_suppress_tail b f] runs [f] with
-    {!translation_ctx.move_suppress_tail} set to [b]. *)
-let with_move_suppress_tail (b : bool) (f : unit -> 'a) : 'a =
-  with_field
-    (fun c -> c.move_suppress_tail)
-    (fun b -> tctx := { !tctx with move_suppress_tail = b })
-    b f
 
 (** [with_region body f] runs [f], which generates [body] as one C++ body,
     with the moves planned over [body]. *)

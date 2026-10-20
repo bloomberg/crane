@@ -1177,8 +1177,6 @@ let gen_dfun n b cty ty temps =
   set_current_parameters (List.map snd (parameter_binders env all_ids));
   (* Phase 2: Initialize owned-variable tracking for move insertion. Parameters
      at de Bruijn indices 1..n_params; owned ones get added to the set. *)
-  let n_all_params = List.length all_params in
-  tctx := { !tctx with move_n_params = n_all_params };
   tctx :=
     { !tctx with
       move_owned_vars =
@@ -1193,7 +1191,6 @@ let gen_dfun n b cty ty temps =
               else acc )
             Escape.IntSet.empty
             (List.mapi (fun i o -> (i, o)) owned_flags) };
-  tctx := { !tctx with move_dead_after = Escape.IntSet.empty };
   (* Expose the C++ return type to inner call sites so they can recover erased
      template type args (see try_recover_erased_return_type). *)
   let saved_return_type = (!tctx).current_cpp_return_type in

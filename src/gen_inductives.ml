@@ -766,15 +766,12 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   in
   (* Generate method body. Initialize move tracking for owned parameters.
      'this' is always borrowed (const method). *)
-  let saved_dead = (!tctx).move_dead_after in
   let saved_owned = (!tctx).move_owned_vars in
-  let saved_nparams = (!tctx).move_n_params in
   begin_body ~owner:func_ref ();
   (* Initialize owned-variable tracking for method parameters.
      The de Bruijn environment has parameters in reverse order:
      ids_normal_order has outermost-first, push_vars' reverses them. *)
   let method_n_params = List.length ids_with_types in
-  tctx := { !tctx with move_n_params = method_n_params };
   (* method_owned_flags[i] corresponds to de Bruijn index i+1.
      db index i+1 maps to ids_with_types[i] (outermost-first, same order
      as push_vars' which prepends in list order).
@@ -819,9 +816,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
         with_method_ns_for_locals ~base:method_ns (fun () ->
             with_region inner_body (fun () -> gen_stmts env method_k inner_body) ) )
   in
-  tctx := { !tctx with move_dead_after = saved_dead };
   tctx := { !tctx with move_owned_vars = saved_owned };
-  tctx := { !tctx with move_n_params = saved_nparams };
   (* Add type args to recursive self-calls. Inside fixpoint bodies, the
      extraction produces a self reference whose variables stand for themselves
      and are written nowhere ({!Mlutil.self_reference}). When the function is a

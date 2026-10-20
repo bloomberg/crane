@@ -1557,10 +1557,8 @@ let with_escape_analysis f =
   tctx :=
     { !tctx with
       current_letin_depth = 0;
-      move_dead_after = Escape.IntSet.empty;
       move_owned_vars = Escape.IntSet.empty;
       move_plan = Ownership_plan.empty;
-      move_n_params = 0;
       match_param_counter = 0;
       cs_counter = 0;
       in_constructor_expr = false;
@@ -1577,19 +1575,12 @@ let with_escape_analysis f =
     caller then projects with [.first.first]. *)
 let with_iife_return_type expected_ty f = with_cpp_return_type expected_ty f
 
-(** Save move-tracking state, shift de Bruijn indices by [n] binders, run [f],
-    then restore the original state.  This is the standard bracket for code
-    that introduces [n] pattern variables or let bindings.
+(** Shift the owned set by [n] binders, run [f], then restore it.  This is
+    the standard bracket for code that introduces [n] pattern variables or let
+    bindings: [move_owned_vars] tracks variables by de Bruijn index, so when
+    entering a scope with [n] new binders every existing index is shifted up by
+    [n] to keep referring to the same outer variable.
 
-    {b Why shift.}  [move_owned_vars] and [move_dead_after] track variables by
-    de Bruijn index.  When entering a scope with [n] new binders, all existing
-    indices must be shifted up by [n] so they continue to refer to the same
-    outer variables.
-
-    @param clear_dead  If [true], empty [move_dead_after] instead of shifting.
-      Used inside match branches, which are independent scopes: the outer
-      dead-after set must not leak in, because a variable dead after one branch
-      may still be live in another.
     @param add_owned  Optional de Bruijn index to add to the owned set after
       shifting.  Used for monadic bind continuation parameters that receive an
       owned [shared_ptr] value (e.g. [>>=] callback arguments).
@@ -1603,43 +1594,19 @@ let with_iife_return_type expected_ty f = with_cpp_return_type expected_ty f
       [std::move(scrutinee)] from being emitted inside the branch while
       pattern-variable structured bindings ([const auto& [d_a0, d_a1] = ...])
       still hold const references into it — which would cause use-after-move. *)
-let with_shifted_move_tracking n ?(clear_dead = false) ?add_owned
+let with_shifted_move_tracking n ?add_owned
     ?(add_owned_set = Escape.IntSet.empty)
     ?(exclude_owned_set = Escape.IntSet.empty) ?exclude_owned f =
-  let saved_owned = (!tctx).move_owned_vars in
-  let saved_dead = (!tctx).move_dead_after in
-  tctx :=
-    { !tctx with
-      move_owned_vars =
-          Escape.IntSet.diff
-            (Escape.IntSet.map (fun i -> i + n) (!tctx).move_owned_vars)
-            exclude_owned_set };
-  ( match add_owned with
-  | Some idx ->
-    tctx :=
-      { !tctx with
-        move_owned_vars = Escape.IntSet.add idx (!tctx).move_owned_vars }
-  | None -> () );
-  tctx :=
-    { !tctx with
-      move_owned_vars =
-          Escape.IntSet.union (!tctx).move_owned_vars add_owned_set };
-  ( match exclude_owned with
-  | Some idx ->
-    tctx :=
-      { !tctx with
-        move_owned_vars = Escape.IntSet.remove idx (!tctx).move_owned_vars }
-  | None -> () );
-  tctx :=
-    { !tctx with
-      move_dead_after =
-          ( if clear_dead then Escape.IntSet.empty
-            else Escape.IntSet.map (fun i -> i + n) (!tctx).move_dead_after ) };
-  Fun.protect
-    ~finally:(fun () ->
-      tctx := { !tctx with move_owned_vars = saved_owned };
-      tctx := { !tctx with move_dead_after = saved_dead } )
-    f
+  let owned =
+    Escape.IntSet.diff (Escape.IntSet.map (fun i -> i + n) (!tctx).move_owned_vars) exclude_owned_set
+  in
+  let owned = match add_owned with Some i -> Escape.IntSet.add i owned | None -> owned in
+  let owned = Escape.IntSet.union owned add_owned_set in
+  let owned = match exclude_owned with Some i -> Escape.IntSet.remove i owned | None -> owned in
+  with_field
+    (fun c -> c.move_owned_vars)
+    (fun o -> tctx := { !tctx with move_owned_vars = o })
+    owned f
 
 (* ============================================================================
    Shared helpers for method generation (used by gen_ind_header_v2 and
