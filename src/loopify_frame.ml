@@ -1305,22 +1305,36 @@ let frame_locals ctx planned read =
     planned @ List.filter (fun v -> not (identified v)) read
   | None -> read
 
-(** Whether the statement binding a call's result to the Core binder [tgt]
-    declares is a point the machine resumes at once the call returns, as
-    the recursion plan has it: whether the point resuming at that binder
-    ({!Recursion_plan.resumes_binding}) resumes after a call that enters
-    the machine ({!enter_rewrite_ctx.er_entered_by}).  [None] where the plan
-    does not say: the statement assigns a local declared before it -- once
-    in each branch of a match the Core binds as one let -- or binds a local
-    of the backend's own, or the machine is not one the plan describes. *)
-let planned_resume ctx tgt =
-  match (tgt, ctx.er_entered_by) with
-  | Declare (_, Some b), Some entered_by ->
-    Some
-      ( match Recursion_plan.resumes_binding b with
-      | [p] -> List.exists entered_by p.after
-      | _ -> false )
-  | _ -> None
+(** Whether the statement binding [e] to [id] by [tgt] is a point the
+    machine resumes at once a call returns, as the recursion plan has it:
+    whether the point resuming at the Core binder [id] stands for
+    ({!Recursion_plan.resumes_binding}) resumes after a call that enters the
+    machine ({!enter_rewrite_ctx.er_entered_by}).  A statement assigning a
+    local declared before it is one branch of a match the Core binds as one
+    let, and resumes only if [e] is itself such a call, which the call the
+    C++ made of it records ({!Minicpp.call_sig.cs_occurrence}).  [None]
+    where the plan does not say: the statement binds a local of the
+    backend's own, or the machine is not one the plan describes. *)
+let planned_resume ctx id tgt e =
+  let point b = match Recursion_plan.resumes_binding b with [p] -> Some p | _ -> None in
+  match ctx.er_entered_by with
+  | None -> None
+  | Some entered_by -> (
+    let enters (c : Recursion_plan.call) = entered_by c.target in
+    match tgt with
+    | Declare (_, Some b) ->
+      Some (match point b with Some p -> List.exists enters p.after | None -> false)
+    | Existing ->
+      Option.map
+        (fun b ->
+          match (point b, e) with
+          | Some p, CPPfun_call ({cs_occurrence = Some o; _}, _, _) ->
+            List.exists
+              (fun (c : Recursion_plan.call) -> enters c && Miniml.Occurrence.equal c.occurrence o)
+              p.after
+          | _ -> false )
+        (Option.flatten (List.assoc_opt id ctx.er_binders))
+    | Declare (_, None) | Declare_static _ -> None )
 
 let resume_violation () =
   Probe.violation "resume plan"
@@ -1599,7 +1613,7 @@ and rewrite_enter_stmts ctx stmts =
        machine's checker recognises. *)
     let call = if n_calls = 1 then check e else None in
     let resumes =
-      match planned_resume ctx tgt with
+      match planned_resume ctx id tgt e with
       | Some planned ->
         if Probe.checking () && planned <> Option.has_some call then resume_violation ();
         planned
@@ -1658,7 +1672,7 @@ and rewrite_enter_stmts ctx stmts =
 
   | stmt :: rest ->
     ( match stmt with
-    | Sasgn (_, tgt, _) when Probe.checking () && planned_resume ctx tgt = Some true ->
+    | Sasgn (id, tgt, e) when Probe.checking () && planned_resume ctx id tgt e = Some true ->
       resume_violation ()
     | _ -> () );
     (* Extend the environment with any variable bound by this statement so

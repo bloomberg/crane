@@ -1596,7 +1596,15 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       then unbox_into expected_ty result
       else result
     in
-    record_call_sig env callee_ty_inst result
+    (* A call of what [f] names is made of this application, which the
+       recursion plan knows by its head: a global's use, or the read of a
+       local function. *)
+    ( match (f, record_call_sig env callee_ty_inst result) with
+    | MLglob use, (CPPfun_call (_, CPPglob (r, _, _), _) as call)
+      when Common.globref_equal r use.callee ->
+      made_of (Global_use.occurrence use) call
+    | MLrel (_, occ), (CPPfun_call (_, CPPvar _, _) as call) -> made_of occ call
+    | _, result -> result )
   | MLlam _ as a ->
     (* Where the slot is a definitional class -- an alias for a function
        type -- which of its domains the declaration takes as values.  Read
@@ -10107,7 +10115,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             | None -> [] )
       in
       let cpp_args = List.rev_map (gen_expr env) args in
-      [k (CPPfun_call (call_opaque, mk_cppglob lifted_ref call_type_args, of_reversed cpp_args))] )
+      [k (made_of occ (CPPfun_call (call_opaque, mk_cppglob lifted_ref call_type_args, of_reversed cpp_args)))] )
     else (* No extra Tvars - proceed with by-ref local fixpoint (immediately applied) *)
       let all_fix_ids_list = Array.to_list ids in
       let funs_compiled =
@@ -10163,7 +10171,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         in
         decls @ defs
         @ deref_subst
-            [k (CPPfun_call (call_opaque, CPPvar (fst (List.nth renamed_ids x)), of_reversed args))]
+            [k (made_of occ (CPPfun_call (call_opaque, CPPvar (fst (List.nth renamed_ids x)), of_reversed args)))]
       else begin
         let owned_flags_per_fun =
           Array.to_list (Array.map (fun f ->
@@ -10186,7 +10194,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             owned_flags_per_fun
         in
         decls @ defs
-        @ [k (CPPfun_call (call_opaque, CPPvar (fst (List.nth renamed_ids x)), of_reversed args))]
+        @ [k (made_of occ (CPPfun_call (call_opaque, CPPvar (fst (List.nth renamed_ids x)), of_reversed args)))]
       end
   | MLfix (x, ids, funs, _, occ) ->
     (* Standalone fixpoint (not immediately applied) — e.g., appearing as the

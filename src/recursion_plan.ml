@@ -43,6 +43,14 @@ type target =
   | Member of Occurrence.t * int
   | Entering of Occurrence.t
 
+(* A call a function resumes after, and the occurrence it is made of: the
+   global's use, the read of the member at its head, or the fixpoint
+   applied. *)
+type call = {
+  target : target;
+  occurrence : Occurrence.t;
+}
+
 (* Where a function goes on once a recursive call returns: the binder the
    call's result is bound to, the binders bound before it that what follows
    reads, which a frame keeps across the call, and the calls it resumes
@@ -50,7 +58,7 @@ type target =
 type resume = {
   binder : Core_binder.t;
   live : Core_binder.t list;
-  after : target list;
+  after : call list;
 }
 
 type t = {
@@ -403,7 +411,8 @@ let resumes_of ~effects ~origin ~targets lex body =
       | _ :: _ as called -> called
       | [] -> (
         match e with
-        | MLapp ((MLfix (_, _, _, _, occ) as fix), _) when reaches depth fix -> [Entering occ]
+        | MLapp ((MLfix (_, _, _, _, occ) as fix), _) when reaches depth fix ->
+          [{target = Entering occ; occurrence = occ}]
         | MLcase (_, _, branches) ->
           List.concat_map
             (fun (ids, _, _, b) -> ending (depth + List.length ids) b)
@@ -435,8 +444,8 @@ let resumes_of ~effects ~origin ~targets lex body =
       let first = depth and n = Array.length ids in
       let rec member ~depth = function
         | MLmagic (_, e) -> member ~depth e
-        | MLapp (MLrel (k, _), _) when first <= depth - k && depth - k < first + n ->
-          [Member (occ, depth - k - first)]
+        | MLapp (MLrel (k, read), _) when first <= depth - k && depth - k < first + n ->
+          [{target = Member (occ, depth - k - first); occurrence = read}]
         | _ -> []
       in
       let targets ~depth e = match member ~depth e with [] -> targets ~depth e | called -> called in
@@ -651,7 +660,7 @@ let analyze groups struc =
           | MLapp (MLglob use, args)
             when List.exists (Common.globref_equal use.callee) members
                  && List.length args >= parameters use.callee ->
-            [Function use.callee]
+            [{target = Function use.callee; occurrence = Global_use.occurrence use}]
           | _ -> []
         in
         let lex, body = Core_elaborate.generated_scope fd.fd_type fd.fd_body in
@@ -692,13 +701,15 @@ let same_target t t' =
   | Entering o, Entering o' -> Occurrence.equal o o'
   | (Function _ | Member _ | Entering _), _ -> false
 
+let same_call c c' = same_target c.target c'.target && Occurrence.equal c.occurrence c'.occurrence
+
 let equal a b =
   List.equal
     (fun g g' -> List.equal Common.globref_equal g.members g'.members && g.kind = g'.kind)
     a.groups b.groups
   && Ref.User.Set.equal a.defined b.defined
   && List.equal
-       (fun l l' ->
+       (fun (l : local_group) (l' : local_group) ->
          Occurrence.equal l.occurrence l'.occurrence
          && l.local_kind = l'.local_kind
          && List.equal (Option.equal same_chains) l.chains l'.chains
@@ -712,7 +723,7 @@ let equal a b =
             Core_binder.equal r.binder r'.binder
             && Core_binder.same_site r.binder r'.binder
             && List.equal Core_binder.equal r.live r'.live
-            && List.equal same_target r.after r'.after ) )
+            && List.equal same_call r.after r'.after ) )
        a.resumes b.resumes
   && Ref.User.Map.equal (List.equal Occurrence.equal) a.adoptable b.adoptable
 
@@ -782,7 +793,7 @@ let both a b =
    copies plans it twice: the copies are lowered by one strategy. *)
 let strategy_at ~pointer_fields (occurrence, member) =
   List.fold_left
-    (fun found l ->
+    (fun found (l : local_group) ->
       if Occurrence.equal l.occurrence occurrence then
         match List.nth_opt l.chains member with
         | Some chains ->
@@ -798,7 +809,7 @@ let adoptable r =
 (* Copies of a fixpoint share its occurrence, and plan alike. *)
 let adoptable_at (occurrence, member) =
   List.find_map
-    (fun l ->
+    (fun (l : local_group) ->
       if Occurrence.equal l.occurrence occurrence then List.nth_opt l.adoptable member else None )
     !installed.locals
   |> Option.default []

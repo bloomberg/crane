@@ -204,12 +204,14 @@ and generic_inline_stmt spec = function
     wrapped in an immediately-invoked lambda (IIFE). *)
 and generic_inline_expr spec expr =
   if spec.is_target expr then
-    (* Non-tail call — wrap inlined body in immediately-invoked lambda *)
+    (* Non-tail call — wrap inlined body in immediately-invoked lambda, which
+       is still the Core call it replaces. *)
     let lparams =
       List.map (fun (pid, ty) -> (ty, Some pid)) spec.params
     in
+    let occurrence = match expr with CPPfun_call (cs, _, _) -> cs.cs_occurrence | _ -> None in
     CPPfun_call
-      ( call_opaque,
+      ( {call_opaque with cs_occurrence = occurrence},
         CPPlambda
           { cl_params = of_reversed lparams;
             cl_tparams = [];

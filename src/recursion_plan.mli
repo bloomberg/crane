@@ -136,6 +136,16 @@ type target =
   | Member of Miniml.Occurrence.t * int
   | Entering of Miniml.Occurrence.t
 
+(** A call a function resumes after: what it calls, and the occurrence the
+    C++ call made of it records ({!Minicpp.call_sig.cs_occurrence}) -- the
+    global's use, the read of the member at its head, or the fixpoint's
+    own where it is applied as written.  Two calls ending two branches of
+    one right-hand side are told apart by it. *)
+type call = private {
+  target : target;
+  occurrence : Miniml.Occurrence.t;
+}
+
 (** Where a function goes on once a recursive call returns: [binder], the
     binder the call's result is bound to, [live], the binders bound before
     it that what follows reads -- what a frame keeps across the call -- and
@@ -143,7 +153,7 @@ type target =
 type resume = private {
   binder : Core_binder.t;
   live : Core_binder.t list;
-  after : target list;
+  after : call list;
 }
 
 (** The points binding [b] at which its definition, a member of a group that
