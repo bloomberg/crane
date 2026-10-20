@@ -370,7 +370,7 @@ let dfix_to_mlfix fds i =
   let rec subst n t =
     match t with
     | MLglob {callee = (GlobRef.ConstRef kn as refe); _} ->
-      (try MLrel (n + Ref.User.Map.find refe s) with Not_found -> t)
+      (try fresh_rel (n + Ref.User.Map.find refe s) with Not_found -> t)
     | _ -> ast_map_lift subst n t
   in
   let ids =

@@ -429,7 +429,7 @@ let dict_carrier_ml_type id args =
       (* The instance's method returns [T1] applied: [TFunctor_box]'s codomain
          is [box B]. *)
       Option.map (fun t -> resolve_tmeta (ml_codomain t)) (find_type_opt r)
-    | Miniml.MLrel i ->
+    | Miniml.MLrel (i, _) ->
       let i = i - depth in
       let constraint_arg t =
         match Option.map resolve_tmeta t with
@@ -509,7 +509,7 @@ let ml_app_result_type (f : ml_ast) (args : ml_ast list) : ml_type option =
     of non-function type is no callable: the application names the binder
     itself, and that is where the value's C++ type was pinned down. *)
 let rec scrutinee_binder = function
-  | MLrel i -> Some i
+  | MLrel (i, _) -> Some i
   | MLmagic (_, e) -> scrutinee_binder e
   | MLapp (h, _) when not (scrutinee_head_is_callable h) ->
     scrutinee_binder h
@@ -997,7 +997,7 @@ let binder_is_instance lex i =
     parameter it is, the class, and the class's one method. *)
 let singleton_dictionary env head =
   match strip_magic head with
-  | MLrel i -> (
+  | MLrel (i, _) -> (
     match (Common.get_db_name_opt i env, get_env_type_opt i) with
     | Some id, Some (Tglob (c, _, _)) when Common.is_tc_instance_id id ->
       Option.map (fun m -> (id, c, m)) (Table.singleton_class_method c)
@@ -1021,7 +1021,7 @@ let is_typeclass_instance_arg ~lex ml_arg =
        application case below does, or such an instance is left in value
        position and the call names the instance struct as if it were one. *)
     ref_is_instance r
-  | MLrel i -> binder_is_instance lex i
+  | MLrel (i, _) -> binder_is_instance lex i
   | MLapp (MLglob {callee = r; _}, _) ->
     (* Parameterized instance application, e.g. numList A H. Check if r's
        return type (after stripping Tarr) is a typeclass type, or if it
@@ -1037,7 +1037,7 @@ let is_typeclass_instance_arg ~lex ml_arg =
        relying on branch binding types (which may be Tunresolved). *)
     let (binds, _, _, br_body) = branches.(0) in
     ( match br_body with
-    | MLrel j when j >= 1 && j <= List.length binds ->
+    | MLrel (j, _) when j >= 1 && j <= List.length binds ->
       let idx = List.length binds - j in
       (* Try to get the field type from the record definition *)
       let field_is_tc =
@@ -1074,7 +1074,7 @@ let instance_arg_is_erased ~lex ml_arg =
        the instance is how a mode says its carrier's operations are named by
        their mappings and not by a dictionary. *)
     ref_returns_skipped r || ref_is_skipped r
-  | MLrel i -> (
+  | MLrel (i, _) -> (
     match Lexenv.type_opt lex i with
     | Some ty -> ml_ret_is_skipped ty
     | None -> false )
@@ -1207,8 +1207,8 @@ let promoted_tys_of_arity n =
     bindings are not valid on [std::any]). *)
 let rec mark_own_param_for_pair_erasure n body =
   match body with
-  | MLcase (ty, MLrel i, pv) when i = n && is_custom_match pv ->
-    MLcase (ty, MLmagic (Mboxed, MLrel i), pv)
+  | MLcase (ty, (MLrel (i, _) as scrut), pv) when i = n && is_custom_match pv ->
+    MLcase (ty, MLmagic (Mboxed, scrut), pv)
   | MLmagic (m, a) -> MLmagic (m, mark_own_param_for_pair_erasure n a)
   | other -> other
 
@@ -1307,7 +1307,7 @@ let instance_class_ty env ml_arg =
   in
   match strip_dictionary ml_arg with
   | MLglob {callee = r; _} | MLapp (MLglob {callee = r; _}, _) -> of_ref r
-  | MLrel i -> (
+  | MLrel (i, _) -> (
     match get_env_type_opt i with
     | Some ty -> ml_return_type ty
     | None -> Miniml.Tunknown )
@@ -2319,7 +2319,7 @@ let app_reads_erased_value env args =
       if is_dictionary a then false
       else
       match strip_magic a with
-      | MLrel i -> (
+      | MLrel (i, _) -> (
         match binder_cpp_type_or_derive env i with
         | Some t -> carries (strip_cpp_ref_const t)
         | None -> false )
@@ -2767,7 +2767,7 @@ let dict_carrier_type_args env tvars id args =
     would miscompile. *)
 let ml_expr_is_function_value e =
   match strip_magic e with
-  | MLrel i ->
+  | MLrel (i, _) ->
     (not (binder_is_boxed i))
     && ( match get_env_type_opt i with
        | Some t -> count_ml_value_arrows t >= 1
@@ -3006,7 +3006,7 @@ let regroup_crossing ~from ~into expr =
     for anything else. *)
 let value_cpp_type env e =
   match strip_magic e with
-  | MLrel j -> binder_cpp_type_or_derive env j
+  | MLrel (j, _) -> binder_cpp_type_or_derive env j
   | MLglob ({callee = r; _} as use) when Mlutil.Var_types.is_empty (Mlutil.written_type_args use) ->
     Option.map (cpp_of_ml env) (find_type_opt r)
   | _ -> None
@@ -3088,7 +3088,7 @@ let is_env_var_erased env tvars i =
 let rec ml_expr_is_erased env (t : ml_ast) : bool =
   let tvars = get_current_type_vars () in
   match t with
-  | MLrel i -> is_env_var_erased env tvars i
+  | MLrel (i, _) -> is_env_var_erased env tvars i
   | MLapp (f, args) ->
     let n_value_args =
       List.length (List.filter (fun a ->
@@ -3096,7 +3096,7 @@ let rec ml_expr_is_erased env (t : ml_ast) : bool =
     in
     let ml_ty_opt = match f with
       | MLglob {callee = r; _} -> find_type_opt r
-      | MLrel i -> get_env_type_opt i
+      | MLrel (i, _) -> get_env_type_opt i
       | _ -> None
     in
     ( match ml_ty_opt with

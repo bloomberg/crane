@@ -268,7 +268,11 @@ and ml_branch = (ml_ident * ml_type) list * ml_type * ml_pattern * ml_ast
     general patterns come from P.N. Tollitte's Relation Extraction plugin;
     [MLtuple] and deep patterns are unused by the main extraction. *)
 and ml_ast =
-  | MLrel of int
+  | MLrel of int * Occurrence.t
+      (** The de Bruijn index of the binder read, and the occurrence telling
+          this read apart from every other one: a pass moving a read under
+          other binders keeps it, so what is decided of a read in Core is
+          found again where the read is generated. *)
   | MLapp of ml_ast * ml_ast list
   | MLlam of ml_ident * ml_type * ml_ast
   | MLletin of ml_ident * ml_type * ml_ast * ml_ast
@@ -469,6 +473,10 @@ type language_descr = {
   (* for an isolated declaration print, an element of the module given *)
   pp_decl : module_:ModPath.t -> ml_decl -> Pp.t;
 }
+
+(** A read of the [i]th enclosing binder, for a term built rather than
+    copied. *)
+val fresh_rel : int -> ml_ast
 
 (** Building and reading {!global_use}. *)
 module Global_use : sig

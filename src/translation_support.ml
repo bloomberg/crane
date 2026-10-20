@@ -466,7 +466,7 @@ let rec ml_callee_is_void = function
     try ml_type_is_void_call (Table.find_type r) with Not_found -> false )
   | MLglob {callee = r; _} -> is_void_ified_ref r
   | MLmagic (_, inner) -> ml_callee_is_void inner
-  | MLrel i -> ( try ml_type_is_void_call (get_env_type i) with _ -> false )
+  | MLrel (i, _) -> ( try ml_type_is_void_call (get_env_type i) with _ -> false )
   | _ -> false
 
 (** Whether the C++ for an ML expression is a statement rather than a value:
@@ -488,7 +488,7 @@ let rec ml_value_is_void_call = function
     && Array.for_all
          (fun (binds, _, _, body) ->
            let applies_void_binder = function
-             | MLapp (MLrel k, _) when k >= 1 && k <= List.length binds -> (
+             | MLapp (MLrel (k, _), _) when k >= 1 && k <= List.length binds -> (
                match List.nth_opt binds (List.length binds - k) with
                | Some (_, ty) -> ml_type_is_void_call ty
                | None -> false )
@@ -1306,9 +1306,9 @@ let rec is_reified_monadic_expr ml_expr =
      tree: the question is asked of what is under it. *)
   | MLmagic (_, e) -> is_reified_monadic_expr e
   | MLapp (MLmagic (_, f), args) -> is_reified_monadic_expr (MLapp (f, args))
-  | MLrel i ->
+  | MLrel (i, _) ->
     (match get_env_type_opt i with Some ty -> says_monadic ty | None -> false)
-  | MLapp (MLrel i, args) ->
+  | MLapp (MLrel (i, _), args) ->
     (match get_env_type_opt i with
      | Some ty -> says_monadic (ml_result_after (List.length args) ty)
      | None -> false)
@@ -1487,7 +1487,7 @@ let args_may_corecurse ~self ~binder_type ts =
        | Some self -> globref_equal g self
        | None -> false)
       || match find_type_opt g with Some ty -> yields_coinductive ty | None -> false )
-    | MLrel i when i > depth -> (
+    | MLrel (i, _) when i > depth -> (
       match binder_type (i - depth) with
       | Some (Tunknown | Taxiom) | None -> true
       | Some ty -> yields_coinductive ty )
@@ -1994,7 +1994,7 @@ let detect_non_forwarded_params_generic ~is_self_call n_params body =
   let is_forwarded depth i arg =
     let expected_db = n_params - i + depth in
     match arg with
-    | MLmagic (_, MLrel db) | MLrel db -> db = expected_db
+    | MLmagic (_, MLrel (db, _)) | MLrel (db, _) -> db = expected_db
     | _ -> false
   in
   let rec walk depth = function
@@ -2052,7 +2052,7 @@ let escaping_params ~suspended n_params body =
   let escaping = Hashtbl.create 4 in
   let rec walk under depth e =
     match e with
-    | MLrel db ->
+    | MLrel (db, _) ->
       let i = n_params - db + depth in
       if under && db > depth && i >= 0 && i < n_params then
         Hashtbl.replace escaping i ()
@@ -2129,7 +2129,7 @@ let detect_non_forwarded_params_fix n_params n_fix fix_idx body =
          fixpoint's type was generalised) must not hide the recursive call. *)
       let rec strip = function MLmagic (_, e) -> strip e | e -> e in
       match strip f with
-      | MLrel db -> db = base_self_db + depth
+      | MLrel (db, _) -> db = base_self_db + depth
       | _ -> false )
     n_params body
 
@@ -2522,7 +2522,7 @@ and tvar_instantiation_found
     | Some _ as t -> t
     | None -> (
       match (a, lex) with
-      | MLrel i, Some lex -> Lexenv.type_opt lex i
+      | MLrel (i, _), Some lex -> Lexenv.type_opt lex i
       | _ -> None )
   in
   let found = Hashtbl.create 7 in
@@ -2892,7 +2892,7 @@ let make_subst_extra_tvars num_ind_vars extra_tvar_map =
     Returns indices relative to the outer scope (i.e., i - n_bound for each free
     MLrel i). *)
 let rec collect_free_rels_set n_bound acc = function
-  | MLrel i -> if i > n_bound then IntSet.add (i - n_bound) acc else acc
+  | MLrel (i, _) -> if i > n_bound then IntSet.add (i - n_bound) acc else acc
   | MLlam (_, _, body) -> collect_free_rels_set (n_bound + 1) acc body
   | MLletin (_, _, a, b) ->
     collect_free_rels_set n_bound (collect_free_rels_set (n_bound + 1) acc b) a
@@ -3049,9 +3049,9 @@ let ml_projection_field_type = function
     let ids, _, _, proj_body = pv.(0) in
     let n = List.length ids in
     let projected = function
-      | Miniml.MLrel i | MLmagic (_, MLrel i) when i >= 1 && i <= n ->
+      | Miniml.MLrel (i, _) | MLmagic (_, MLrel (i, _)) when i >= 1 && i <= n ->
         Some (n - i, 0)
-      | MLapp ((MLrel i | MLmagic (_, MLrel i)), args) when i >= 1 && i <= n ->
+      | MLapp ((MLrel (i, _) | MLmagic (_, MLrel (i, _))), args) when i >= 1 && i <= n ->
         Some (n - i, count_real_ml_args args)
       | _ -> None
     in

@@ -169,7 +169,7 @@ and ml_branch = (ml_ident * ml_type) list * ml_type * ml_pattern * ml_ast
 
 (** ML abstract syntax tree. *)
 and ml_ast =
-  | MLrel of int
+  | MLrel of int * Occurrence.t
   | MLapp of ml_ast * ml_ast list
   | MLlam of ml_ident * ml_type * ml_ast
   | MLletin of ml_ident * ml_type * ml_ast * ml_ast
@@ -323,6 +323,8 @@ type language_descr = {
   (* for an isolated declaration print, an element of the module given *)
   pp_decl : module_:ModPath.t -> ml_decl -> Pp.t;
 }
+
+let fresh_rel i = MLrel (i, Occurrence.fresh ())
 
 module Global_use = struct
   let callee g = g.callee

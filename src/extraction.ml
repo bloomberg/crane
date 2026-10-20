@@ -1597,7 +1597,7 @@ and extract_term env sg mle mlt c args =
     (* As soon as the expected [mlt] for the head is known, *)
     (* we unify it with an fresh copy of the stored type of [Rel n]. *)
     let extract_rel mlt =
-      put_magic ~from:(Mlenv.get mle n) ~into:mlt (MLrel n)
+      put_magic ~from:(Mlenv.get mle n) ~into:mlt (fresh_rel n)
     in
     extract_app env sg mle mlt extract_rel args
   | Case (ci, u, pms, r, iv, c0, br) ->

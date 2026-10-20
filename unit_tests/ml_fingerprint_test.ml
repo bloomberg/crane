@@ -16,12 +16,12 @@ let fp d = Ml_fingerprint.decl d
 let same a b = Ml_fingerprint.equal (fp a) (fp b)
 let term ty body = Dterm (r "f", body, ty)
 let id_ty = Tarr (Tvar (Schematic, 1), Tvar (Schematic, 1))
-let lam = MLlam (Id (Names.Id.of_string "x"), Tvar (Schematic, 1), MLrel 1)
+let lam = MLlam (Id (Names.Id.of_string "x"), Tvar (Schematic, 1), fresh_rel 1)
 
 let () =
   let d = term id_ty lam in
   check "deterministic" (same d (term id_ty lam));
-  check "body matters" (not (same d (term id_ty (MLlam (Dummy, Tvar (Schematic, 1), MLrel 1)))));
+  check "body matters" (not (same d (term id_ty (MLlam (Dummy, Tvar (Schematic, 1), fresh_rel 1)))));
   check "type matters" (not (same d (term (Tarr (Tvar (Schematic, 1), Tstring)) lam)));
   check "rigidity matters" (not (same d (term (Tarr (Tvar (Rigid, 1), Tvar (Schematic, 1))) lam)));
   check "name matters" (not (same d (Dterm (r "g", lam, id_ty))));
@@ -42,8 +42,8 @@ let () =
   check "list boundaries are encoded"
     (not
        (same
-          (term id_ty (MLapp (MLrel 1, [MLtuple [MLrel 2]; MLrel 3])))
-          (term id_ty (MLapp (MLrel 1, [MLtuple [MLrel 2; MLrel 3]])))));
+          (term id_ty (MLapp (fresh_rel 1, [MLtuple [fresh_rel 2]; fresh_rel 3])))
+          (term id_ty (MLapp (fresh_rel 1, [MLtuple [fresh_rel 2; fresh_rel 3]])))));
   let s1 = [(Names.ModPath.MPfile (Names.DirPath.make [Names.Id.of_string "M"]),
              [(Names.Label.make "f", SEdecl d)])] in
   check "structure deterministic"

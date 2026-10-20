@@ -25,7 +25,7 @@ let refused sel =
 let () =
   Unix.putenv "CRANE_CHECK_IR" "1";
   let nat = Tglob (r "nat", [], []) in
-  let lam = MLlam (Dummy, nat, MLrel 1) in
+  let lam = MLlam (Dummy, nat, fresh_rel 1) in
   let fine = [term "f" lam (Tarr (nat, nat))] in
   check "a well-formed program freezes" (not (refused fine));
   check "an empty recursive group is refused"
@@ -58,7 +58,7 @@ let () =
     (refused [term "w" (use_at (Scheme.Id.fresh (r "g") ~arity:1) (Tmeta (Meta.fresh 3))) nat]);
   let shared = Tmeta (Meta.fresh 1) in
   let solved = Tmeta (Meta.solved 2 nat) in
-  let open_term = term "k" (MLlam (Dummy, shared, MLrel 1)) (Tarr (shared, solved)) in
+  let open_term = term "k" (MLlam (Dummy, shared, fresh_rel 1)) (Tarr (shared, solved)) in
   let zonked = frozen [open_term] in
   check "each unsolved metavariable becomes one open annotation"
     (Core.open_annotations zonked = 1);
@@ -100,11 +100,11 @@ let () =
   in
   check "a hole met twice is filled once" (refined = pair nat nat);
   check "the fill is reported" (List.length !fills = 1);
-  let body = MLlam (Dummy, Topen o, MLrel 1) in
+  let body = MLlam (Dummy, Topen o, fresh_rel 1) in
   check "a term mentioning the hole is generated with it filled"
-    (Ml_type_util.fill_holes !fills body = MLlam (Dummy, nat, MLrel 1));
+    (Ml_type_util.fill_holes !fills body = MLlam (Dummy, nat, fresh_rel 1));
   check "another hole of the same number is not filled"
-    (Ml_type_util.fill_holes !fills (MLlam (Dummy, Topen other, MLrel 1)) = MLlam (Dummy, Topen other, MLrel 1))
+    (Ml_type_util.fill_holes !fills (MLlam (Dummy, Topen other, fresh_rel 1)) = MLlam (Dummy, Topen other, fresh_rel 1))
 
 (* A local definition's open types are minted before freezing, rigid: each
    recursive group's from 1, a let-bound lambda's, its groups' included,
@@ -114,7 +114,7 @@ let () =
   let list t = Tglob (r "list", [t], []) in
   let go = Id.of_string "go" in
   let group m =
-    MLfix (0, [|(go, Tarr (list (Tmeta m), nat))|], [|MLlam (Dummy, list (Tmeta m), MLrel 1)|], false, Occurrence.fresh ())
+    MLfix (0, [|(go, Tarr (list (Tmeta m), nat))|], [|MLlam (Dummy, list (Tmeta m), fresh_rel 1)|], false, Occurrence.fresh ())
   in
   let a = Meta.fresh 11 and b = Meta.fresh 12 and c = Meta.fresh 13 and d = Meta.fresh 14 in
   let body =
@@ -122,7 +122,7 @@ let () =
       ( Id go, nat, group a,
         MLletin
           ( Dummy, Tarr (Tmeta d, nat), MLlam (Dummy, Tmeta d, group c),
-            MLapp (group b, [MLrel 1]) ) )
+            MLapp (group b, [fresh_rel 1]) ) )
   in
   Local_types.structure [(mp "M", [term "f" body (Tarr (Tvar (Schematic, 1), nat))])];
   check "a let-bound group's open type is its first rigid variable" (a.contents = Some (Tvar (Rigid, 1)));

@@ -228,7 +228,7 @@ let eta_expand_to ty b =
             t ) )
         (List.rev missing)
     in
-    let args = List.init k (fun i -> Miniml.MLrel (k - i)) in
+    let args = List.init k (fun i -> Miniml.fresh_rel (k - i)) in
     Mlutil.named_lams (extra @ ids)
       (Mlutil.apply_eta_args (Mlutil.ast_lift k inner) args)
 

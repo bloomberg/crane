@@ -477,7 +477,7 @@ let promoted_resolutions_of_body ?r ?ty b =
     let ok = ref true in
     let rec go depth t =
       ( match t with
-      | MLrel i when i > depth ->
+      | MLrel (i, _) when i > depth ->
         let k = i - depth - d - 1 in
         ( match if k >= 0 then List.nth_opt leading k else None with
         | Some (Some _) -> ()
@@ -568,7 +568,7 @@ let promoted_resolutions_of_body ?r ?ty b =
           let names = List.map Option.get names in
           let n = List.length names in
           let app =
-            MLapp (MLglob (Mlutil.open_reference inst), List.init n (fun i -> MLrel (n - i)))
+            MLapp (MLglob (Mlutil.open_reference inst), List.init n (fun i -> fresh_rel (n - i)))
           in
           Option.iter (add_at class_ref inst)
             (ml_arg_to_template_type

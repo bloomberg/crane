@@ -208,7 +208,7 @@ and push defs shrunk fuel use args =
             ( ids, bty, p,
               MLletin
                 ( Id (Id.of_string "step"), bty, b,
-                  MLapp (MLglob use, lift1 before @ [MLrel 1] @ lift1 after) ) ) )
+                  MLapp (MLglob use, lift1 before @ [fresh_rel 1] @ lift1 after) ) ) )
         brs
     in
     if !any then (
@@ -231,7 +231,7 @@ let static_param f k j b =
     match e with
     | MLapp (MLglob {callee = g; _}, a) when same g f ->
       ( match List.nth_opt a j with
-      | Some (MLrel i) when i = k - j + d -> ()
+      | Some (MLrel (i, _)) when i = k - j + d -> ()
       | _ -> raise_notrace No );
       List.iter (walk d) a
     | MLglob {callee = g; _} when same g f -> raise_notrace No
@@ -275,13 +275,13 @@ let specialize f fd use args =
           match e with
           | MLapp (MLglob {callee = g; _}, a) when same g f ->
             let a = List.map (self d) a in
-            MLapp (MLrel (d + k), List.filteri (fun i _ -> i <> j) a)
+            MLapp (fresh_rel (d + k), List.filteri (fun i _ -> i <> j) a)
           | _ -> Mlutil.ast_map_lift self d e
         in
         let b_rec =
           Mlutil.instantiate_body ~reader:"ml_specialize.specialize" use (self 0 fd.fd_body)
         in
-        let q i = MLrel (k - 1 - i) in
+        let q i = fresh_rel (k - 1 - i) in
         let args_b =
           List.init k (fun i ->
               if i < j then q i else if i = j then Mlutil.ast_lift k lam else q (i - 1))
