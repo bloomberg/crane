@@ -9,7 +9,7 @@ List<std::string> EffectRecursiveList::read_n_lines(uint64_t n) {
     std::string line;
     std::getline(std::cin, line);
     List<std::string> rest = read_n_lines(n_);
-    return List<std::string>::cons(line, std::move(rest));
+    return List<std::string>::cons(std::move(line), std::move(rest));
   }
 }
 
@@ -33,7 +33,7 @@ uint64_t EffectRecursiveList::store_lines(std::string prefix, uint64_t n) {
     uint64_t n_ = n - 1;
     std::string line;
     std::getline(std::cin, line);
-    setenv(prefix.c_str(), line.c_str(), 1);
+    setenv(prefix.c_str(), std::move(line).c_str(), 1);
     uint64_t rest = store_lines(std::move(prefix), n_);
     return (rest + 1);
   }
@@ -62,5 +62,5 @@ List<std::string>
 EffectRecursiveList::read_and_prepend(const List<std::string> &xs) {
   std::string line;
   std::getline(std::cin, line);
-  return List<std::string>::cons(line, xs);
+  return List<std::string>::cons(std::move(line), xs);
 }

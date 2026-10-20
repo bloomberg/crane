@@ -41,7 +41,7 @@ void CountDown::echo_loop(uint64_t n) {
       uint64_t n_ = _loop_n - 1;
       std::string line;
       std::getline(std::cin, line);
-      std::cout << std::string("echo: ") + line << '\n';
+      std::cout << std::string("echo: ") + std::move(line) << '\n';
       _loop_n = n_;
     }
   }
@@ -121,7 +121,7 @@ void CountDown::co_two_prints() {
     if (string_eq(line, "stop")) {
       return;
     } else {
-      std::cout << std::string("got: ") + line << '\n';
+      std::cout << std::string("got: ") + std::move(line) << '\n';
       std::cout << std::string("---") << '\n';
     }
   }
@@ -135,7 +135,7 @@ void CountDown::co_echo_loop() {
     if (string_eq(line, "quit")) {
       return;
     } else {
-      std::cout << std::string("echo: ") + line << '\n';
+      std::cout << std::string("echo: ") + std::move(line) << '\n';
     }
   }
   return;

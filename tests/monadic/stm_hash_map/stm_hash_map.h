@@ -138,13 +138,13 @@ template <typename K, typename V> struct CHT {
     std::pair<std::optional<V>, List<std::pair<K, V>>> p =
         CHT<int, int>::template assoc_remove<K, V>(this->cht_eqb, k,
                                                    std::move(xs));
-    const auto &_cs = p.first;
+    auto _cs = p.first;
     if (_cs.has_value()) {
       const V &_x = *_cs;
       stm::writeTVar(std::move(b), p.second);
-      return p.first;
+      return std::move(p).first;
     } else {
-      return p.first;
+      return std::move(p).first;
     }
   }
 

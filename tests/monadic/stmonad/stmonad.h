@@ -358,7 +358,8 @@ struct STMonadTests {
           }
         }
       };
-      return fib_loop(n, x, y, _tcI1::zero(), _tcI1::suc(_tcI1::zero()));
+      return fib_loop(n, std::move(x), std::move(y), _tcI1::zero(),
+                      _tcI1::suc(_tcI1::zero()));
     }
   }
 
@@ -372,8 +373,8 @@ struct STMonadTests {
     r1 = std::make_shared<decltype(false)>(false);
     std::shared_ptr<bool> r2;
     r2 = std::make_shared<decltype(true)>(true);
-    bool x1 = *r1;
-    bool x2 = *r2;
+    bool x1 = *std::move(r1);
+    bool x2 = *std::move(r2);
     return std::make_pair(x1, x2);
   }
 
@@ -384,8 +385,8 @@ struct STMonadTests {
     r1 = std::make_shared<decltype(UINT64_C(5))>(UINT64_C(5));
     std::shared_ptr<uint64_t> r2;
     r2 = std::make_shared<decltype(UINT64_C(6))>(UINT64_C(6));
-    uint64_t x1 = *r1;
-    uint64_t x2 = *r2;
+    uint64_t x1 = *std::move(r1);
+    uint64_t x2 = *std::move(r2);
     return std::make_pair(x1, x2);
   }
 
@@ -395,7 +396,7 @@ struct STMonadTests {
     std::shared_ptr<uint64_t> v;
     v = std::make_shared<decltype(UINT64_C(5))>(UINT64_C(5));
     *v = UINT64_C(6);
-    return *v;
+    return *std::move(v);
   }
 
   template <typename _tcI0, typename _tcI1>

@@ -7,6 +7,7 @@
 #include <iostream>
 #include <string>
 #include <system_error>
+#include <utility>
 
 struct BlockTemplateSemicolon {
   /// String argument with semicolons in expression position (monad right

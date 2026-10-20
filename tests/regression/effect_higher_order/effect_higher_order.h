@@ -131,10 +131,12 @@ struct EffectHigherOrder {
   }
 
   /// 4. Nested bind in callback
-  template <typename F0> static std::string transform_input(F0 &&f) {
+  template <typename F0>
+    requires std::is_invocable_r_v<std::string, F0 &, std::string &&>
+  static std::string transform_input(F0 &&f) {
     std::string line;
     std::getline(std::cin, line);
-    return f(line);
+    return f(std::move(line));
   }
 
   /// 5. Effectful callback passed as argument

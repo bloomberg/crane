@@ -602,7 +602,7 @@ struct TopologicalSort {
         if (null<T1>(mins)) {
           mins_ = cycle_extract<T1>(eqb_node, graph0);
         } else {
-          mins_ = mins;
+          mins_ = bsl::move(mins);
         }
         List<bsl::pair<T1, List<T1>>> rest =
             graph0.filter([=](const bsl::pair<T1, List<T1>> &entry0) {

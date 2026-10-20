@@ -7,6 +7,7 @@
 #include <iostream>
 #include <string>
 #include <system_error>
+#include <type_traits>
 #include <utility>
 
 struct BindEtaReduced {
@@ -23,10 +24,12 @@ struct BindEtaReduced {
   }
 
   /// Bug case 2: same with a pure callback.
-  template <typename F0> static std::string transform(F0 &&f) {
+  template <typename F0>
+    requires std::is_invocable_r_v<std::string, F0 &, std::string &&>
+  static std::string transform(F0 &&f) {
     std::string line;
     std::getline(std::cin, line);
-    return f(line);
+    return f(std::move(line));
   }
 
   /// Control case: explicit lambda prevents eta-reduction.

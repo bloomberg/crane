@@ -102,7 +102,7 @@ NameClashNestedDeep::multi_match_same(const NameClashNestedDeep::mylist &xs) {
     } else {
       auto &[a01, a11] =
           std::get<typename NameClashNestedDeep::mylist::MyCons>(tail.v_mut());
-      return a01;
+      return std::move(a01);
     }
   }();
   return (first + second);

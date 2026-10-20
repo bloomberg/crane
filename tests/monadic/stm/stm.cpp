@@ -45,7 +45,7 @@ uint64_t stmtest::stm_dequeue(stm::TVar<List<uint64_t>> q) {
   } else {
     auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v_mut());
     stm::writeTVar(std::move(q), *a1);
-    return a0;
+    return std::move(a0);
   }
 }
 

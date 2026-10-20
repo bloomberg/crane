@@ -16,7 +16,8 @@ bool skiplist_test::stm_test_insert_lookup() {
   std::optional<uint64_t> v3 = sl.lookup(nat_lt, nat_eq, UINT64_C(3));
   std::optional<uint64_t> v7 = sl.lookup(nat_lt, nat_eq, UINT64_C(7));
   std::optional<uint64_t> v1 = sl.lookup(nat_lt, nat_eq, UINT64_C(1));
-  std::optional<uint64_t> v9 = sl.lookup(nat_lt, nat_eq, UINT64_C(9));
+  std::optional<uint64_t> v9 =
+      std::move(sl).lookup(nat_lt, nat_eq, UINT64_C(9));
   bool c1;
   if (v5.has_value()) {
     const uint64_t &n = *v5;
@@ -65,7 +66,8 @@ bool skiplist_test::stm_test_delete() {
   sl.remove(nat_lt, nat_eq, UINT64_C(5));
   std::optional<uint64_t> v5 = sl.lookup(nat_lt, nat_eq, UINT64_C(5));
   std::optional<uint64_t> v3 = sl.lookup(nat_lt, nat_eq, UINT64_C(3));
-  std::optional<uint64_t> v7 = sl.lookup(nat_lt, nat_eq, UINT64_C(7));
+  std::optional<uint64_t> v7 =
+      std::move(sl).lookup(nat_lt, nat_eq, UINT64_C(7));
   bool c1;
   if (v5.has_value()) {
     const uint64_t &_x3 = *v5;
@@ -96,7 +98,7 @@ bool skiplist_test::stm_test_update() {
                                                               UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(5), 500u, UINT64_C(0));
-  std::optional<uint64_t> v = sl.lookup(nat_lt, nat_eq, UINT64_C(5));
+  std::optional<uint64_t> v = std::move(sl).lookup(nat_lt, nat_eq, UINT64_C(5));
   return [&]() -> bool {
     if (v.has_value()) {
       const uint64_t &n = *v;
@@ -114,7 +116,7 @@ bool skiplist_test::stm_test_minimum() {
   sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(7), UINT64_C(70), UINT64_C(0));
-  std::optional<std::pair<uint64_t, uint64_t>> minOpt = sl.minimum();
+  std::optional<std::pair<uint64_t, uint64_t>> minOpt = std::move(sl).minimum();
   return [&]() -> bool {
     if (minOpt.has_value()) {
       const std::pair<uint64_t, uint64_t> &p = *minOpt;
@@ -135,7 +137,7 @@ bool skiplist_test::stm_test_length_isEmpty() {
   sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(0));
   bool empty2 = sl.isEmpty();
-  uint64_t len2 = sl.length();
+  uint64_t len2 = std::move(sl).length();
   bool c2 = len1 == UINT64_C(0);
   bool c3 = !(empty2);
   bool c4 = len2 == UINT64_C(2);
@@ -152,7 +154,7 @@ bool skiplist_test::stm_test_front_back() {
   std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>> frontOpt =
       sl.front();
   std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>> backOpt =
-      sl.back();
+      std::move(sl).back();
   bool c1;
   if (frontOpt.has_value()) {
     const std::shared_ptr<SkipNode<uint64_t, uint64_t>> &p = *frontOpt;
@@ -179,7 +181,7 @@ bool skiplist_test::stm_test_popFront() {
   sl.insert(nat_lt, nat_eq, UINT64_C(7), UINT64_C(70), UINT64_C(0));
   std::optional<std::pair<uint64_t, uint64_t>> pop1 = sl.popFront();
   std::optional<std::pair<uint64_t, uint64_t>> pop2 = sl.popFront();
-  uint64_t len = sl.length();
+  uint64_t len = std::move(sl).length();
   bool c1;
   if (pop1.has_value()) {
     const std::pair<uint64_t, uint64_t> &p = *pop1;
@@ -210,7 +212,7 @@ bool skiplist_test::stm_test_addUnique() {
   bool r3 =
       sl.addUnique(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(0));
   std::optional<uint64_t> v5 = sl.lookup(nat_lt, nat_eq, UINT64_C(5));
-  uint64_t len = sl.length();
+  uint64_t len = std::move(sl).length();
   bool c2 = !(r2);
   bool c4;
   if (v5.has_value()) {
@@ -232,7 +234,7 @@ bool skiplist_test::stm_test_find() {
   std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>> pairOpt =
       sl.find(nat_lt, nat_eq, UINT64_C(5));
   std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>> noneOpt =
-      sl.find(nat_lt, nat_eq, UINT64_C(9));
+      std::move(sl).find(nat_lt, nat_eq, UINT64_C(9));
   bool c1;
   if (pairOpt.has_value()) {
     const std::shared_ptr<SkipNode<uint64_t, uint64_t>> &p = *pairOpt;
@@ -301,7 +303,7 @@ bool skiplist_test::stm_test_bounds() {
   std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>> lb4 =
       sl.findLowerBound(nat_lt, UINT64_C(4));
   std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>> ub4 =
-      sl.findUpperBound(nat_lt, nat_eq, UINT64_C(4));
+      std::move(sl).findUpperBound(nat_lt, nat_eq, UINT64_C(4));
   bool c1;
   if (lb3.has_value()) {
     const std::shared_ptr<SkipNode<uint64_t, uint64_t>> &p = *lb3;
@@ -335,7 +337,7 @@ bool skiplist_test::stm_test_removeAll() {
   sl.insert(nat_lt, nat_eq, UINT64_C(7), UINT64_C(70), UINT64_C(0));
   uint64_t count = sl.removeAll();
   bool empty = sl.isEmpty();
-  uint64_t len = sl.length();
+  uint64_t len = std::move(sl).length();
   bool c1 = count == UINT64_C(3);
   bool c3 = len == UINT64_C(0);
   return (c1 && (empty && c3));

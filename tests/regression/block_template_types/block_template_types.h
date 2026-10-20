@@ -8,6 +8,7 @@
 #include <iostream>
 #include <string>
 #include <system_error>
+#include <utility>
 
 struct BlockTemplateTypes {
   /// %result inferred as unsigned int.

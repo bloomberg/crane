@@ -20,7 +20,7 @@ std::optional<std::string> EffectDirPath::first_file(std::string path) {
     return std::optional<std::string>();
   } else {
     auto &[a0, a1] = std::get<typename List<std::string>::Cons>(files.v_mut());
-    return std::make_optional<std::string>(a0);
+    return std::make_optional<std::string>(std::move(a0));
   }
 }
 

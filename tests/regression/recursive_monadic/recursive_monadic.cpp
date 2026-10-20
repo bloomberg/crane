@@ -57,7 +57,7 @@ List<std::string> RecursiveMonadic::read_n_lines(uint64_t n) {
     std::string line;
     std::getline(std::cin, line);
     List<std::string> rest = read_n_lines(n_);
-    return List<std::string>::cons(line, std::move(rest));
+    return List<std::string>::cons(std::move(line), std::move(rest));
   }
 }
 

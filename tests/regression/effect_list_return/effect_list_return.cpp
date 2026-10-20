@@ -36,7 +36,7 @@ std::pair<int64_t, std::string> EffectListReturn::timestamped_line() {
           .count());
   std::string line;
   std::getline(std::cin, line);
-  return std::make_pair(t, line);
+  return std::make_pair(t, std::move(line));
 }
 
 /// 4. current_path as a no-arg effect

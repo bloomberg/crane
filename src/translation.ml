@@ -1314,7 +1314,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     in
     let move_candidate =
       (not is_tc_param)
-      && Escape.IntSet.mem i (!tctx).move_dead_after
       && Escape.IntSet.mem i (!tctx).move_owned_vars
       && Ownership_plan.fate (!tctx).move_plan occ = Last_use
     in
@@ -10022,11 +10021,11 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         Escape.is_shared_ptr_type t
         &&
         ( match a with
-          | MLcase (_, MLrel (k, _), pv)
+          | MLcase (_, MLrel (k, occ), pv)
             when Array.length pv = 1
                  && (match pv.(0) with (_, _, _, MLrel _) -> true | _ -> false)
                  && not (Escape.IntSet.mem k (!tctx).move_owned_vars
-                         && Escape.IntSet.mem k (!tctx).move_dead_after) ->
+                         && Ownership_plan.fate (!tctx).move_plan occ = Last_use) ->
             true
           | _ -> false )
       in

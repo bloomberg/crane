@@ -119,7 +119,7 @@ SigT<Nat, Levenshtein::chain> Levenshtein::levenshtein_chain(const String &s,
     }
   };
   {
-    const String &_lc1_t = x0_;
+    const String &_lc1_t = std::move(x0_);
     return levenshtein_chain1_impl(levenshtein_chain1_impl, _lc1_t);
   }
 }

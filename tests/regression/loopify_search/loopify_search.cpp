@@ -385,9 +385,9 @@ List<uint64_t> LoopifySearch::longest_run_aux(List<uint64_t> current_run,
           List<uint64_t> new_best;
           if (len_impl<uint64_t>(new_run) <=
               len_impl<uint64_t>(_loop_best_run)) {
-            new_best = _loop_best_run;
+            new_best = std::move(_loop_best_run);
           } else {
-            new_best = new_run;
+            new_best = std::move(new_run);
           }
           _loop_l = crane_raw(a1);
           _loop_best_run = std::move(new_best);

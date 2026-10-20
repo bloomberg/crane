@@ -117,7 +117,7 @@ std::pair<std::string, std::string> EffectWorkflow::double_read() {
   std::getline(std::cin, a);
   std::string b;
   std::getline(std::cin, b);
-  return std::make_pair(a, b);
+  return std::make_pair(std::move(a), std::move(b));
 }
 
 /// 8. Return int literal in monadic context

@@ -104,7 +104,7 @@ std::pair<std::string, std::string> EffectPoly::read_two_lines() {
   std::getline(std::cin, a);
   std::string b;
   std::getline(std::cin, b);
-  return std::make_pair(a, b);
+  return std::make_pair(std::move(a), std::move(b));
 }
 
 /// 8. Chaining monadic functions with different return types
