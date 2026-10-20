@@ -413,25 +413,25 @@ End Search.
 Lemma alloc_neq (h : heap) l l' : h l = None -> h l' <> None -> l <> l'.
 Proof. congruence. Qed.
 
-Lemma mod4 c k : (c + 4 * k) mod 4 = c mod 4.
+Lemma mod8 c k : (c + 8 * k) mod 8 = c mod 8.
 Proof. rewrite Nat.mul_comm. apply Nat.Div0.mod_add. Qed.
 
 Lemma upd_some (h : heap) l c l' : h l' <> None -> upd h l c l' <> None.
 Proof. unfold upd. destruct (Nat.eqb l' l); congruence. Qed.
 
-(** If [solve] finishes and answers "satisfiable" ([code] 1), the formula
+(** If [run] finishes and answers "satisfiable" ([code] 1), the formula
     encoded in [input] when it started has a model. *)
-Theorem solve_sat_sound fuel budget nvars inp ninput xs0 F h0 r h1 :
+Theorem run_sat_sound fuel budget nvars inp ninput xs0 F h0 r h1 :
   h0 (vloc inp) = Some (existT cellof nat xs0) ->
   encodes xs0 ninput 0 F ->
-  runs h0 (solve fuel budget nvars inp ninput) r h1 ->
-  r mod 4 = 1 ->
+  runs h0 (run fuel budget nvars inp ninput) r h1 ->
+  r mod 8 = 1 ->
   exists val, satisfies val F.
 Proof.
   intros Hinp HF Hrun. revert r h1 Hrun.
-  change (wp (solve fuel budget nvars inp ninput)
-            (fun r _ => r mod 4 = 1 -> exists val, satisfies val F) h0).
-  unfold solve.
+  change (wp (run fuel budget nvars inp ninput)
+            (fun r _ => r mod 8 = 1 -> exists val, satisfies val F) h0).
+  unfold run.
   (* The empty vector, then the two vectors of handles. *)
   apply wp_bind, wp_vmake. intros e He. set (h0e := upd h0 _ _).
   apply wp_bind, wp_vmake. intros cs Hcs. set (h0c := upd h0e _ _).
@@ -472,10 +472,108 @@ Proof.
       intros b Hb. apply wp_ret. apply wp_bind, wp_vget. intros _ k _ _. apply wp_ret.
       destruct b; intros Hm.
       * exists (val_of asl). auto.
-      * assert (H3 : (3 + 4 * k) mod 4 = 1) by exact Hm. rewrite mod4 in H3. discriminate.
+      * assert (H3 : (3 + 8 * k) mod 8 = 1) by exact Hm. rewrite mod8 in H3. discriminate.
     + apply wp_ret. apply wp_bind, wp_vget. intros _ k _ _. apply wp_ret.
-      intros Hm. assert (H3 : (r1 + 4 * k) mod 4 = 1) by exact Hm.
-      rewrite mod4, Nat.mod_small in H3 by lia. lia.
+      intros Hm. assert (H3 : (r1 + 8 * k) mod 8 = 1) by exact Hm.
+      rewrite mod8, Nat.mod_small in H3 by lia. lia.
   - apply wp_ret. apply wp_bind, wp_vget. intros _ k _ _. apply wp_ret.
-    intros Hm. assert (H3 : (0 + 4 * k) mod 4 = 1) by exact Hm. rewrite mod4 in H3. discriminate.
+    intros Hm. assert (H3 : (0 + 8 * k) mod 8 = 1) by exact Hm. rewrite mod8 in H3. discriminate.
+Qed.
+
+(** * Input validation *)
+
+(** Every literal of [F] is below [lim]. *)
+Definition lits_below (lim : nat) (F : list (list nat)) : Prop :=
+  Forall (Forall (fun l => l < lim)) F.
+
+Lemma valid_lits_spec inp xs0 lim fuel : forall len pos Q h,
+  h (vloc inp) = Some (existT cellof nat xs0) ->
+  (forall b, (b = true -> forall j, j < len ->
+                exists l, nth_error xs0 (pos + j) = Some l /\ l < lim) -> Q b h) ->
+  wp (valid_lits fuel inp lim pos len) Q h.
+Proof.
+  induction fuel as [|f IH]; intros len pos Q h Hi HQ; cbn [valid_lits].
+  - apply wp_vabort.
+  - destruct len as [|len'].
+    + apply wp_ret, HQ. intros _ j Hj. lia.
+    + apply wp_bind, wp_vget. intros xs l Hx Hn.
+      rewrite (cell_inj _ _ _ _ Hx Hi) in Hn.
+      destruct (Nat.ltb_spec l lim).
+      * apply IH; [exact Hi|]. intros b Hb. apply HQ. intros Hbt j Hj.
+        destruct j as [|j]; [exists l; rewrite Nat.add_0_r; auto|].
+        destruct (Hb Hbt j) as (l' & Hl' & Hlt); [lia|].
+        exists l'. split; [| exact Hlt]. rewrite <- Hl'. f_equal. lia.
+      * apply wp_ret, HQ. discriminate.
+Qed.
+
+(** If [valid_clauses] accepts [input] from [pos] to [n], it encodes a
+    formula there whose literals are all below [lim].  It leaves the heap
+    alone either way. *)
+Lemma valid_clauses_spec inp xs0 lim fuel : forall pos n Q h,
+  h (vloc inp) = Some (existT cellof nat xs0) -> n <= length xs0 ->
+  (forall b, (b = true -> exists F, encodes xs0 n pos F /\ lits_below lim F) -> Q b h) ->
+  wp (valid_clauses fuel inp lim pos n) Q h.
+Proof.
+  induction fuel as [|f IH]; intros pos n Q h Hi Hn HQ; cbn [valid_clauses].
+  - apply wp_vabort.
+  - destruct (Nat.leb_spec n pos).
+    + apply wp_ret, HQ. intros _. exists []. split; [now constructor | constructor].
+    + apply wp_bind, wp_vget. intros xs len Hx Hlen.
+      rewrite (cell_inj _ _ _ _ Hx Hi) in Hlen.
+      destruct (Nat.leb_spec (pos + 1 + len) n); [| apply wp_ret, HQ; discriminate].
+      apply wp_bind. eapply valid_lits_spec; [exact Hi|].
+      intros [|] Hb; [| apply wp_ret, HQ; discriminate].
+      specialize (Hb eq_refl).
+      apply IH; [exact Hi | exact Hn |]. intros b Hb'. apply HQ. intros Hbt.
+      destruct (Hb' Hbt) as (F & HF & HB).
+      set (c := firstn len (skipn (pos + 1) xs0)).
+      assert (Hc : length c = len) by (unfold c; rewrite length_firstn, length_skipn; lia).
+      assert (Hcj : forall j, nth_error c j =
+                     if Nat.ltb j len then nth_error xs0 (pos + 1 + j) else None)
+        by (intros j; unfold c; now rewrite nth_error_firstn, nth_error_skipn).
+      exists (c :: F). split.
+      * apply enc_cons; [lia | now rewrite Hc | | now rewrite Hc].
+        intros j Hj. rewrite Hc in Hj. rewrite Hcj. destruct (Nat.ltb_spec j len); [reflexivity | lia].
+      * constructor; [| exact HB]. apply Forall_forall. intros l Hl.
+        apply In_nth_error in Hl as (j & Hj). rewrite Hcj in Hj.
+        destruct (Nat.ltb_spec j len); [| discriminate].
+        destruct (Hb j) as (l' & Hl' & Hlt); [lia|].
+        rewrite Hl' in Hj. injection Hj as <-. exact Hlt.
+Qed.
+
+(** [solve] checks its input, then either answers 4 in the heap it started
+    in or is [run] on a well-formed encoding.  So a property of [run] on
+    well-formed input, which also holds of 4, holds of [solve] on any
+    input. *)
+Lemma solve_wp fuel budget nvars inp ninput xs0 Q h0 :
+  h0 (vloc inp) = Some (existT cellof nat xs0) ->
+  Q 4 h0 ->
+  (forall F, encodes xs0 ninput 0 F -> lits_below (2 * nvars) F ->
+     wp (run fuel budget nvars inp ninput) Q h0) ->
+  wp (solve fuel budget nvars inp ninput) Q h0.
+Proof.
+  intros Hi H4 Hrun. unfold solve.
+  apply wp_bind, wp_vlen. intros xs Hx. rewrite (cell_inj _ _ _ _ Hx Hi).
+  apply wp_bind. destruct (Nat.leb_spec ninput (length xs0)).
+  - eapply valid_clauses_spec; [exact Hi | assumption |].
+    intros [|] Hb; cbv beta iota.
+    + destruct (Hb eq_refl) as (F & HF & HB). eauto.
+    + apply wp_ret, H4.
+  - apply wp_ret. cbv beta iota. apply wp_ret, H4.
+Qed.
+
+(** If [solve] finishes and answers "satisfiable" ([code] 1), the formula
+    encoded in [input] when it started has a model. *)
+Theorem solve_sat_sound fuel budget nvars inp ninput xs0 F h0 r h1 :
+  h0 (vloc inp) = Some (existT cellof nat xs0) ->
+  encodes xs0 ninput 0 F ->
+  runs h0 (solve fuel budget nvars inp ninput) r h1 ->
+  r mod 8 = 1 ->
+  exists val, satisfies val F.
+Proof.
+  intros Hinp HF Hrun. revert r h1 Hrun.
+  change (wp (solve fuel budget nvars inp ninput)
+            (fun r _ => r mod 8 = 1 -> exists val, satisfies val F) h0).
+  apply (solve_wp _ _ _ _ _ xs0); [exact Hinp | intros H; cbv in H; discriminate |].
+  intros F' _ _ r h1 Hr. eapply run_sat_sound; eassumption.
 Qed.

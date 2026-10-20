@@ -26,5 +26,5 @@ let read_dimacs path =
   (!nvars, flat)
 
 let report r secs =
-  let names = [| "UNSAT"; "SAT"; "UNKNOWN"; "BADMODEL" |] in
-  Printf.printf "%s conflicts=%d time=%.4f\n" names.(r mod 4) (r / 4) secs
+  let names = [| "UNSAT"; "SAT"; "UNKNOWN"; "BADMODEL"; "INVALID"; "?"; "?"; "?" |] in
+  Printf.printf "%s conflicts=%d time=%.4f\n" names.(r mod 8) (r / 8) secs

@@ -96,13 +96,19 @@ part of the test suite; build it with `dune build benchmarks/sat`.
   under the Itanium ABI.
 - Input: a flat `vec nat` of `[len, lits...]*`, built by the driver, so no
   list conversion is needed on either side.
-- Result: `code + 4 * conflicts`, where `code` is:
+- Input validation: `solve` first checks, in Rocq, that `ninput <= |input|`
+  and that `input[0, ninput)` is a list of length-prefixed clauses whose
+  literals are all `< 2 * nvars` (`valid_clauses`/`valid_lits`), and
+  answers 4 otherwise. The solver body is `run`. `solve_wp` (SolverSat.v)
+  lifts any property of `run` on validated input to `solve` on any input.
+- Result: `code + 8 * conflicts`, where `code` is:
   - 1: SAT, with the model checked in Rocq by `check_model` against every
     clause of the caller's `input` vector (not the database, whose clauses
     propagation reorders in place);
   - 3: SAT, but the model failed that check (never observed);
   - 0: UNSAT;
-  - 2: out of budget.
+  - 2: out of budget;
+  - 4: invalid input (rejected by the validator).
 
 ## Methodology
 
@@ -190,8 +196,8 @@ Reading:
 1. ~~**Fuel-out defaults are unsound.**~~ Fixed: every fuel-out is
    `vabort site`.
 2. ~~**Result overflow on the OCaml side.**~~ Fixed in the drivers: the step
-   budget is 2^59 (at most one conflict per step), so
-   `code + 4 * conflicts < 2^61`.
+   budget is 2^58 (at most one conflict per step), so
+   `code + 8 * conflicts < 2^62`.
 3. **`shrink` semantics differ.** `satbench::vec::shrink` uses `resize`, which
    *grows* when `n > len`; `Vec_impl.shrink` is a no-op then. All current
    calls have `n ≤ len`. The proof's semantics should only define
@@ -201,7 +207,14 @@ Reading:
    C++. The proof must establish in-bounds access, or the header should
    assert in debug builds. With well-formed input every access is believed
    in bounds (argument in "Stage 4 plan"), but this is not yet proved.
-5. **The drivers do not validate input.** `read_dimacs` (`dimacs.h`) and
+5. ~~**The drivers do not validate input.**~~ Partly fixed: `solve`
+   validates the flat encoding in Rocq (code 4), so out-of-range literals and
+   malformed length prefixes can no longer reach the solver. Still open:
+   `nvars` comes from the driver unchecked (`p cnf -1 0` makes both drivers
+   allocate until killed), and the lenient parsers can produce a different
+   formula than the file (the SATLIB `%`/`0` trailer becomes an empty clause;
+   junk tokens are skipped in C++; an unterminated last clause is dropped).
+   Stage 4 moves parsing into Rocq. Original text: `read_dimacs` (`dimacs.h`) and
    `solver_main_common.ml` never check literals against the `p cnf` header.
    A literal with `|x| > nv`, a missing header (`nv = 0`), or a final clause
    without its terminating `0` produces input outside `encodes`/the

@@ -389,12 +389,40 @@ Fixpoint fresh_vecs (fuel : nat) (acc : vec (vec nat)) (n : nat) : itree vecE un
     end
   end.
 
-(** Solve the [ninput]-long clause list [input] over [nvars] variables,
-    taking at most [budget] propagate-decide-or-learn steps.  Result:
-    [code + 4 * conflicts], where [code] is 1 for a model the solver has
-    checked against every clause of [input], 3 for a model that failed that
-    check, 0 for unsatisfiable and 2 for out of budget. *)
-Definition solve (fuel budget nvars : nat) (input : vec nat) (ninput : nat)
+(** Whether the [len] literals of [input] from [pos] are all below [lim]. *)
+Fixpoint valid_lits (fuel : nat) (input : vec nat) (lim pos len : nat)
+  : itree vecE bool :=
+  match fuel with
+  | O => vabort 16
+  | S f =>
+    match len with
+    | O => Ret true
+    | S len' =>
+      l <- vget input pos ;;
+      if Nat.ltb l lim then valid_lits f input lim (pos + 1) len' else Ret false
+    end
+  end.
+
+(** Whether [input] from [pos] up to [n], which is at most its length, is a
+    list of clauses, each its length and then its literals, all below
+    [lim], with the last clause ending exactly at [n]. *)
+Fixpoint valid_clauses (fuel : nat) (input : vec nat) (lim pos n : nat)
+  : itree vecE bool :=
+  match fuel with
+  | O => vabort 17
+  | S f =>
+    if Nat.leb n pos then Ret true
+    else
+      len <- vget input pos ;;
+      if Nat.leb (pos + 1 + len) n then
+        ok <- valid_lits fuel input lim (pos + 1) len ;;
+        if ok then valid_clauses f input lim (pos + 1 + len) n else Ret false
+      else Ret false
+  end.
+
+(** [solve] on input that [valid_clauses] has accepted.  Result:
+    [code + 8 * conflicts], with [code] as for [solve]. *)
+Definition run (fuel budget nvars : nat) (input : vec nat) (ninput : nat)
   : itree vecE nat :=
   e <- vmake 0 0 ;;
   cs <- vmake 0 e ;;
@@ -421,6 +449,20 @@ Definition solve (fuel budget nvars : nat) (input : vec nat) (ninput : nat)
        else Ret r
      else Ret 0) ;;
   k <- vget m CONFLICTS ;;
-  Ret (code + 4 * k).
+  Ret (code + 8 * k).
+
+(** Solve the [ninput]-long clause list [input] over [nvars] variables,
+    taking at most [budget] propagate-decide-or-learn steps.  Result:
+    [code + 8 * conflicts], where [code] is 1 for a model the solver has
+    checked against every clause of [input], 3 for a model that failed that
+    check, 0 for unsatisfiable, 2 for out of budget and 4 for input that is
+    not a clause list over [nvars] variables. The check makes the input
+    safe to index, so no caller has to be trusted to validate it. *)
+Definition solve (fuel budget nvars : nat) (input : vec nat) (ninput : nat)
+  : itree vecE nat :=
+  len <- vlen input ;;
+  ok <- (if Nat.leb ninput len then valid_clauses fuel input (2 * nvars) 0 ninput
+         else Ret false) ;;
+  if ok then run fuel budget nvars input ninput else Ret 4.
 
 End Solver.

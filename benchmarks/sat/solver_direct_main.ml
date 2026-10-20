@@ -2,8 +2,8 @@
 let () =
   let nvars, input = Solver_main_common.read_dimacs Sys.argv.(1) in
   let big = 1 lsl 61 in
-  (* At most one conflict per step: code + 4 * conflicts stays below max_int. *)
-  let budget = 1 lsl 59 in
+  (* At most one conflict per step: code + 8 * conflicts stays below max_int. *)
+  let budget = 1 lsl 58 in
   let t0 = Unix.gettimeofday () in
   let r =
     try Solver_direct_ml.Solver.solve big budget nvars input (Vec_impl.len input)

@@ -1114,7 +1114,7 @@ Proof.
   constructor; [intros Hi; apply Ha; now right | assumption].
 Qed.
 
-Lemma mod4_ne c k : c = 1 \/ c = 2 \/ c = 3 -> (c + 4 * k) mod 4 <> 0.
+Lemma mod8_ne c k : c = 1 \/ c = 2 \/ c = 3 -> (c + 8 * k) mod 8 <> 0.
 Proof. intros H. rewrite Nat.mul_comm, Nat.Div0.mod_add. destruct H as [-> | [-> | ->]]; cbn; lia. Qed.
 
 (** After allocating [v] in [h], carry every fact about [h] over to the new heap. *)
@@ -1135,19 +1135,19 @@ Ltac bump :=
     clear Hn
   end.
 
-(** If [solve] finishes and answers "unsatisfiable" ([code] 0), the formula
+(** If [run] finishes and answers "unsatisfiable" ([code] 0), the formula
     encoded in [input] when it started has no model. *)
-Theorem solve_unsat_sound fuel budget nvars inp ninput xs0 F h0 r h1 :
+Theorem run_unsat_sound fuel budget nvars inp ninput xs0 F h0 r h1 :
   h0 (vloc inp) = Some (existT cellof nat xs0) ->
   encodes xs0 ninput 0 F ->
-  runs h0 (Solver.solve fuel budget nvars inp ninput) r h1 ->
-  r mod 4 = 0 ->
+  runs h0 (Solver.run fuel budget nvars inp ninput) r h1 ->
+  r mod 8 = 0 ->
   ~ exists val, satisfies val F.
 Proof.
   intros Hinp HF Hrun Hr0 (val & Hval). revert r h1 Hrun Hr0.
-  change (wp (Solver.solve fuel budget nvars inp ninput) (fun r _ => r mod 4 <> 0) h0).
+  change (wp (Solver.run fuel budget nvars inp ninput) (fun r _ => r mod 8 <> 0) h0).
   assert (HA : Alloc h0 [vloc inp]) by (split; [constructor; [intros [] | constructor] | intros l [<- | []]; congruence]).
-  unfold Solver.solve.
+  unfold Solver.run.
   apply wp_bind, wp_vmake. intros e He. bump.
   apply wp_bind, wp_vmake. intros cs Hcs. bump.
   apply wp_bind, wp_vmake. intros ws Hws. bump.
@@ -1190,6 +1190,22 @@ Proof.
     destruct (Nat.eqb_spec r1 1) as [-> | Hne].
     + apply wp_bind. intros b h13 _. apply wp_ret. destruct b; auto.
     + apply wp_ret. lia.
-  - intros code h12 Hcode. apply wp_bind, wp_vget. intros _ k _ _. apply wp_ret. now apply mod4_ne.
+  - intros code h12 Hcode. apply wp_bind, wp_vget. intros _ k _ _. apply wp_ret. now apply mod8_ne.
+Qed.
+
+(** If [solve] finishes and answers "unsatisfiable" ([code] 0), the formula
+    encoded in [input] when it started has no model. *)
+Theorem solve_unsat_sound fuel budget nvars inp ninput xs0 F h0 r h1 :
+  h0 (vloc inp) = Some (existT cellof nat xs0) ->
+  encodes xs0 ninput 0 F ->
+  runs h0 (Solver.solve fuel budget nvars inp ninput) r h1 ->
+  r mod 8 = 0 ->
+  ~ exists val, satisfies val F.
+Proof.
+  intros Hinp HF Hrun. revert r h1 Hrun.
+  change (wp (Solver.solve fuel budget nvars inp ninput)
+            (fun r _ => r mod 8 = 0 -> ~ exists val, satisfies val F) h0).
+  apply (solve_wp _ _ _ _ _ xs0); [exact Hinp | intros H; cbv in H; discriminate |].
+  intros F' _ _ r h1 Hr. eapply run_unsat_sound; eassumption.
 Qed.
 
