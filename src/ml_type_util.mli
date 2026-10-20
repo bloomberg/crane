@@ -456,6 +456,41 @@ val boxes_field : Miniml.ml_type -> bool
     inside it would be a second allocation sharing nothing more. *)
 val boxes_param_field : owner:Names.GlobRef.t -> Miniml.ml_type -> bool
 
+(** How a constructor stores its fields, as its declaration types them.  A
+    pattern on the constructor binds its non-erased fields, numbered from 0. *)
+module Ctor_fields : sig
+  type t = private {
+    inductive : Names.GlobRef.t;
+    types : Miniml.ml_type list;  (** the non-erased fields, in order *)
+  }
+
+  val of_ctor : Names.GlobRef.t -> t
+
+  (** The inductive itself, or one of its mutual siblings. *)
+  val is_self_or_mutual : t -> Names.GlobRef.t -> bool
+
+  (** Field [i] is typed by the inductive or a sibling. *)
+  val self_or_mutual_ref : t -> int -> bool
+
+  (** Field [i] is another type applied to one mentioning the inductive. *)
+  val nested_self_ref : t -> int -> bool
+
+  (** Field [i] reaches the inductive through a container whose elements are
+      boxed, which breaks the completeness cycle: it is stored by value. *)
+  val recurses_through_boxed : t -> int -> bool
+
+  (** Under [Crane BoxedFields], field [i] is boxed for its own type
+      ({!boxes_field}) or for being typed by a parameter
+      ({!boxes_param_field}). *)
+  val boxed : t -> int -> bool
+
+  val param_boxed : t -> int -> bool
+
+  (** Field [i] is held behind a pointer, so a pattern binds the pointer
+      rather than the value. *)
+  val behind_pointer : t -> int -> bool
+end
+
 (** Whether a C++ type is an inductive value type. *)
 val is_inductive_value_type : Minicpp.cpp_type -> bool
 

@@ -1139,6 +1139,77 @@ let boxes_param_field ~owner ty =
   && (not (Table.is_shared_variant owner))
   && match resolve_tmeta ty with Miniml.Tvar _ -> true | _ -> false
 
+module Ctor_fields = struct
+  type t = {
+    inductive : GlobRef.t;
+    types : ml_type list;
+  }
+
+  let of_ctor cname =
+    let inductive =
+      match cname with GlobRef.ConstructRef (ind, _) -> GlobRef.IndRef ind | r -> r
+    in
+    let types =
+      List.filter (fun t -> not (isTdummy t)) (Option.default [] (Table.get_ctor_ip_types_opt cname))
+    in
+    {inductive; types}
+
+  let field f i p = match List.nth_opt f.types i with Some ty -> p ty | None -> false
+
+  let is_self_or_mutual f r =
+    globref_equal r f.inductive
+    ||
+    match (r, f.inductive) with
+    | GlobRef.IndRef (kn2, _), GlobRef.IndRef (kn, _) -> MutInd.CanOrd.equal kn2 kn
+    | _ -> false
+
+  let rec mentions_self f = function
+    | Miniml.Tglob (r, args, _) -> is_self_or_mutual f r || List.exists (mentions_self f) args
+    | Miniml.Tmeta {contents = Some t} -> mentions_self f t
+    | Miniml.Tarr (t1, t2) -> mentions_self f t1 || mentions_self f t2
+    | _ -> false
+
+  let self_or_mutual_ref f i =
+    field f i (function
+      | Miniml.Tglob (r, _, _) | Miniml.Tmeta {contents = Some (Miniml.Tglob (r, _, _))} ->
+        is_self_or_mutual f r
+      | _ -> false )
+
+  let nested_self_ref f i =
+    field f i (function
+      | Miniml.Tglob (r, args, _) | Miniml.Tmeta {contents = Some (Miniml.Tglob (r, args, _))}
+        when not (is_self_or_mutual f r) ->
+        List.exists (mentions_self f) args
+      | _ -> false )
+
+  (* A field recurses THROUGH a boxed-element container (e.g. [list <self>] ->
+     [immer::flex_vector<immer::box<self>>]) when the container carries a
+     [Boxed Element] wrapper and a self/mutual ref appears in its type args.
+     The element box breaks the completeness cycle, so such a field is stored
+     by VALUE (matching gen_decls) -- it is not shared_ptr-wrapped and must not
+     be dereferenced when bound in a match arm. *)
+  let recurses_through_boxed f i =
+    let rec go = function
+      | Miniml.Tglob (g, args, _) -> (
+        match Table.find_boxed_wrapper_opt g with
+        | Some _ when List.exists (mentions_self f) args -> true
+        | _ -> List.exists go args )
+      | Miniml.Tmeta {contents = Some t'} -> go t'
+      | Miniml.Tarr (a, b) -> go a || go b
+      | _ -> false
+    in
+    field f i go
+
+  let boxed f i = field f i boxes_field
+
+  let param_boxed f i = field f i (boxes_param_field ~owner:f.inductive)
+
+  let behind_pointer f i =
+    (not (Table.is_coinductive f.inductive))
+    && ( (not (recurses_through_boxed f i)) && (self_or_mutual_ref f i || nested_self_ref f i)
+       || boxed f i || param_boxed f i )
+end
+
 (** Check if an ML type maps to a non-trivially-copyable C++ value type.
     These are custom-extracted inductives (e.g., prod → std::pair) that are
     NOT shared_ptr-wrapped but still benefit from move semantics.

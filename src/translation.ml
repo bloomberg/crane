@@ -7290,85 +7290,15 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     | GlobRef.ConstructRef ((kn, i), _) -> GlobRef.IndRef (kn, i)
     | r -> r
   in
-  let def_site_field_tys =
-    match Table.get_ctor_ip_types_opt cname with
-    | Some tys -> tys
-    | None -> []
-  in
-  let non_erased_def_site_field_tys =
-    List.filter (fun t -> not (isTdummy t)) def_site_field_tys
-  in
-  let ind_kn_opt =
-    match ind_ref with
-    | GlobRef.IndRef (kn, _) -> Some kn
-    | _ -> None
-  in
-  let is_self_or_mutual r =
-    globref_equal r ind_ref
-    || match r, ind_kn_opt with
-       | GlobRef.IndRef (kn2, _), Some kn ->
-         MutInd.CanOrd.equal kn2 kn
-       | _ -> false
-  in
-  let field_is_self_or_mutual_ref_at_def i =
-    match List.nth_opt non_erased_def_site_field_tys i with
-    | Some (Miniml.Tglob (r, _, _)) -> is_self_or_mutual r
-    | Some (Miniml.Tmeta {contents = Some (Miniml.Tglob (r, _, _))}) ->
-      is_self_or_mutual r
-    | _ -> false
-  in
-  let rec ml_has_self_ref = function
-    | Miniml.Tglob (r, args, _) ->
-      is_self_or_mutual r || List.exists ml_has_self_ref args
-    | Miniml.Tmeta {contents = Some t} -> ml_has_self_ref t
-    | Miniml.Tarr (t1, t2) ->
-      ml_has_self_ref t1 || ml_has_self_ref t2
-    | _ -> false
-  in
-  let field_has_nested_self_ref_at_def i =
-    match List.nth_opt non_erased_def_site_field_tys i with
-    | Some (Miniml.Tglob (r, args, _)) when not (is_self_or_mutual r) ->
-      List.exists ml_has_self_ref args
-    | Some (Miniml.Tmeta {contents = Some (Miniml.Tglob (r, args, _))})
-      when not (is_self_or_mutual r) ->
-      List.exists ml_has_self_ref args
-    | _ -> false
-  in
-  (* A field recurses THROUGH a boxed-element container (e.g. [list <self>] ->
-     [immer::flex_vector<immer::box<self>>]) when the container carries a
-     [Boxed Element] wrapper and a self/mutual ref appears in its type args.
-     The element box breaks the completeness cycle, so such a field is stored by
-     VALUE (matching gen_decls) — it is not shared_ptr-wrapped and must not be
-     dereferenced when bound in a match arm. *)
-  let rec ml_recurses_through_boxed = function
-    | Miniml.Tglob (g, args, _) ->
-      ( match Table.find_boxed_wrapper_opt g with
-      | Some _ when List.exists ml_has_self_ref args -> true
-      | _ -> List.exists ml_recurses_through_boxed args )
-    | Miniml.Tmeta {contents = Some t'} -> ml_recurses_through_boxed t'
-    | Miniml.Tarr (a, b) ->
-      ml_recurses_through_boxed a || ml_recurses_through_boxed b
-    | _ -> false
-  in
-  let field_recurses_through_boxed_at_def i =
-    match List.nth_opt non_erased_def_site_field_tys i with
-    | Some ty -> ml_recurses_through_boxed ty
-    | None -> false
-  in
-  (* [Crane BoxedFields]: a field boxed for its own type (see
-     [Ml_type_util.boxes_field]), and one typed by a parameter. *)
-  let def_site_field i p =
-    match List.nth_opt non_erased_def_site_field_tys i with Some ty -> p ty | None -> false
-  in
-  let is_boxed_at_def i = def_site_field i boxes_field in
-  let is_param_boxed_at_def i = def_site_field i (boxes_param_field ~owner:ind_ref) in
-  let field_is_uptr i =
-    not (Table.is_coinductive ind_ref)
-    && ( not (field_recurses_through_boxed_at_def i)
-         && (field_is_self_or_mutual_ref_at_def i
-             || field_has_nested_self_ref_at_def i)
-       || is_boxed_at_def i || is_param_boxed_at_def i )
-  in
+  let fields = Ml_type_util.Ctor_fields.of_ctor cname in
+  let non_erased_def_site_field_tys = fields.types in
+  let is_self_or_mutual = Ml_type_util.Ctor_fields.is_self_or_mutual fields in
+  let field_is_self_or_mutual_ref_at_def = Ml_type_util.Ctor_fields.self_or_mutual_ref fields in
+  let field_has_nested_self_ref_at_def = Ml_type_util.Ctor_fields.nested_self_ref fields in
+  let field_recurses_through_boxed_at_def = Ml_type_util.Ctor_fields.recurses_through_boxed fields in
+  let is_boxed_at_def = Ml_type_util.Ctor_fields.boxed fields in
+  let is_param_boxed_at_def = Ml_type_util.Ctor_fields.param_boxed fields in
+  let field_is_uptr = Ml_type_util.Ctor_fields.behind_pointer fields in
   (* Converse of [exclude_scrutinee]: the structured bindings alias subobjects
      of the owned scrutinee, so moving a field out hollows out part of [o].  If
      the branch body still reads [o] itself, that read may observe the
