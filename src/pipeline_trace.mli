@@ -18,7 +18,7 @@ val pass : string -> ('a -> 'a) -> 'a pass
 
 (** [effect name f] is a pass that observes its input without rewriting it:
     an analysis that records its result elsewhere. *)
-val effect : string -> ('a -> unit) -> 'a pass
+val effect_ : string -> ('a -> unit) -> 'a pass
 
 (** The names of [passes], in order. *)
 val names : 'a pass list -> string list

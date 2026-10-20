@@ -103,7 +103,7 @@ let identity r =
 let classify ~effects ~callee fd_body =
   let _, body = split_params 0 fd_body in
   let tail_call = ref false and nontail_call = ref false in
-  let effect = sequential effects in
+  let effect_ = sequential effects in
   let rec walk ~depth ~tail e =
     let walk_under n ~tail e = walk ~depth:(depth + n) ~tail e in
     let walk ~tail e = walk ~depth ~tail e in
@@ -115,7 +115,7 @@ let classify ~effects ~callee fd_body =
       List.iter (walk ~tail:false) args;
       if tail && Some (List.length args) = callee ~depth f then tail_call := true
       else nontail_call := true
-    | MLapp (MLglob use, args) when effect use = Some Core_effects.Bind -> (
+    | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Bind -> (
       (* The action runs, and the continuation's body goes on where the bind
          stands. *)
       match List.rev args with
@@ -124,7 +124,7 @@ let classify ~effects ~callee fd_body =
         walk ~tail:false action;
         continuation ~depth ~tail k
       | _ -> List.iter (walk ~tail:false) args )
-    | MLapp (MLglob use, args) when effect use = Some Core_effects.Return -> (
+    | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Return -> (
       match List.rev args with
       | value :: rest ->
         List.iter (walk ~tail:false) rest;
@@ -196,7 +196,7 @@ let rec restore_temporaries e =
    inlined is called as any function is. *)
 let modulo_cons_chains ~effects ~member ~bodies self =
   let bodies = Array.map (fun b -> split_params 0 (restore_temporaries b)) bodies in
-  let effect = sequential effects in
+  let effect_ = sequential effects in
   let chains = ref [] and general = ref false in
   let general_if b = if b then general := true in
   let rec walk ~within ~inlined ~depth e =
@@ -258,14 +258,14 @@ let modulo_cons_chains ~effects ~member ~bodies self =
     | MLmagic (_, a) -> general_if ((not (self_call ~depth a)) && calls ~depth a > 0)
     | MLcons (_, c, [a]) when identity c -> walk_under 0 a
     | MLapp (MLglob use, [a]) when identity use.callee && Table.to_inline use.callee -> walk_under 0 a
-    | MLapp (MLglob use, args) when effect use = Some Core_effects.Bind -> (
+    | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Bind -> (
       match List.rev args with
       | (MLlam _ as k) :: action :: rest ->
         general_if (List.exists (fun a -> calls ~depth a > 0) (action :: rest));
         let n, b = split_params 0 k in
         walk_under n b
       | _ -> general_if (calls ~depth e > 0) )
-    | MLapp (MLglob use, args) when effect use = Some Core_effects.Return -> (
+    | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Return -> (
       match List.rev args with
       | value :: rest ->
         general_if (List.exists (fun a -> calls ~depth a > 0) rest);
@@ -364,7 +364,7 @@ let free_levels ~depth e =
    call of a member of that fixpoint is one too.  A call under a lambda is
    made where the closure runs, not here. *)
 let resumes_of ~effects ~origin ~targets lex body =
-  let effect = sequential effects in
+  let effect_ = sequential effects in
   let found = ref [] in
   let binder level = Core_binder.make ~origin ~level () in
   let resume ~site ~after depth rest =
@@ -418,7 +418,7 @@ let resumes_of ~effects ~origin ~targets lex body =
       (match ending depth a with [] -> () | after -> resume ~site ~after depth b);
       go depth a;
       go (depth + 1) b
-    | MLapp (MLglob use, args) when effect use = Some Core_effects.Bind -> (
+    | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Bind -> (
       match List.rev args with
       | MLlam (_, _, k) :: action :: rest ->
         ( match targets ~depth action with

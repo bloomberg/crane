@@ -1369,13 +1369,13 @@ let core_passes to_appear : ml_structure Pipeline_trace.pass list =
     (* Which inductives are shared variants is a property of their
        declarations, final from here; the method registry {!Normalize} builds
        already asks. *)
-    effect "shared_variants" Structure_analysis.register_shared_variants;
+    effect_ "shared_variants" Structure_analysis.register_shared_variants;
     pass "dedup" Ml_dedup.structure;
     pass "specialize" Ml_specialize.structure;
     pass "fix_shape" Fix_shape.structure;
     pass "normalize" Normalize.structure;
-    effect "local_types" Local_types.structure;
-    effect "ir_check" Ml_ir_check.structure ]
+    effect_ "local_types" Local_types.structure;
+    effect_ "ir_check" Ml_ir_check.structure ]
 
 let core_pass_names = Pipeline_trace.names (core_passes ([], []))
 
@@ -1466,13 +1466,13 @@ let unit_passes ~namespace : ml_structure Pipeline_trace.pass list =
   [ (* The used customs decide whether this unit can spawn a thread, which is
        what resolves a [Crane NonAtomicRc] or [Crane SingleThreaded]
        request. *)
-    effect "non_atomic_rc" (fun _ -> Table.check_non_atomic_rc_request ());
+    effect_ "non_atomic_rc" (fun _ -> Table.check_non_atomic_rc_request ());
     (* This file's demands start from nothing, so that one file's needs don't
        leak into a later file of a separate extraction. *)
-    effect "reset_demands" (fun _ -> Table.reset_demands ());
+    effect_ "reset_demands" (fun _ -> Table.reset_demands ());
     (* In separate extraction, cross-module references are fully qualified
        ([Datatypes::List] rather than [List]). *)
-    effect "cross_file_qualification" (fun _ ->
+    effect_ "cross_file_qualification" (fun _ ->
         if namespace <> None then Common.set_force_cross_file_qualification () ) ]
 
 let unit_pass_names = Pipeline_trace.names (unit_passes ~namespace:None)

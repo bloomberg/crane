@@ -27,7 +27,7 @@ type operation =
   | Bind
   | Return
 
-type effect = {operation : operation; mode : mode}
+type effect_ = {operation : operation; mode : mode}
 
 (** The mode a monad's computations are generated in: {!Reified} for one
     extracted as a tree ({!Table.is_monad_reified}). *)
@@ -53,10 +53,10 @@ val install : t -> unit
 (** [lookup t use] -- the operation of the use [use] among [t], if the
     analysis reached it; [None] for a use it did not, or one whose copies a
     rewrite duplicated were found in two modes. *)
-val lookup : t -> Miniml.global_use -> effect option
+val lookup : t -> Miniml.global_use -> effect_ option
 
 (** [find use] -- {!lookup} among the installed operations. *)
-val find : Miniml.global_use -> effect option
+val find : Miniml.global_use -> effect_ option
 
 (** Record that translation took an operation from the installed ones, for
     {!report}. *)

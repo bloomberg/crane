@@ -11,7 +11,7 @@ type operation =
   | Bind
   | Return
 
-type effect = {operation : operation; mode : mode}
+type effect_ = {operation : operation; mode : mode}
 
 let mode_of_monad m = if Table.is_monad_reified m then Reified else Sequential
 
@@ -26,7 +26,7 @@ let declaration_mode ty =
 let operation_of r =
   if Table.is_bind r then Some Bind else if Table.is_ret r then Some Return else None
 
-type entry = {occurrence : Occurrence.t; effect : effect}
+type entry = {occurrence : Occurrence.t; effect_ : effect_}
 
 type t = entry list Ref.User.Map.t
 
@@ -38,7 +38,7 @@ let analyze struc =
     match operation_of use.callee with
     | None -> ()
     | Some operation ->
-      let e = {occurrence = Global_use.occurrence use; effect = {operation; mode}} in
+      let e = {occurrence = Global_use.occurrence use; effect_ = {operation; mode}} in
       found :=
         Ref.User.Map.update use.callee
           (fun l -> Some (e :: Option.default [] l))
@@ -57,7 +57,7 @@ let analyze struc =
 
 let equal =
   Ref.User.Map.equal
-    (List.equal (fun a b -> Occurrence.equal a.occurrence b.occurrence && a.effect = b.effect))
+    (List.equal (fun a b -> Occurrence.equal a.occurrence b.occurrence && a.effect_ = b.effect_))
 
 let installed = State.cell State.Unit empty
 
@@ -76,7 +76,7 @@ let lookup t use =
     let occurrence = Global_use.occurrence use in
     match List.filter (fun e -> Occurrence.equal e.occurrence occurrence) entries with
     | [] -> None
-    | e :: rest when List.for_all (fun e' -> e'.effect = e.effect) rest -> Some e.effect
+    | e :: rest when List.for_all (fun e' -> e'.effect_ = e.effect_) rest -> Some e.effect_
     | _ -> None )
 
 let find use = lookup !installed use

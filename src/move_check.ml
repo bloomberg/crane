@@ -19,7 +19,7 @@ let conflict p q =
 
 (* What evaluating an expression reads and moves, as a later or a concurrent
    evaluation sees it. *)
-type effect = {reads : place list; moves : place list}
+type effect_ = {reads : place list; moves : place list}
 
 let none = {reads = []; moves = []}
 let union a b = {reads = a.reads @ b.reads; moves = a.moves @ b.moves}
@@ -84,7 +84,7 @@ let named ss =
   fl ss;
   !acc
 
-let rec expr report e : effect =
+let rec expr report e : effect_ =
   match (member e, e) with
   | Some (CPPvar x, f), _ -> {none with reads = [Member (x, f)]}
   | Some (CPPmove (CPPvar x), f), _ -> {none with moves = [Member (x, f)]}

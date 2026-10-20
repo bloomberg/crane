@@ -1,0 +1,9 @@
+; SAT benchmark: one ITree program, extracted by Crane (C++) and by stock
+; OCaml extraction.  Not part of the test suite; build with
+;   dune build benchmarks/sat
+; and see run.sh for compiling and timing the two executables.
+(coq.theory
+ (name SatBench)
+ (modules :standard)
+ (theories Stdlib Crane ITree ExtLib Paco)
+ (flags (:standard -output-directory %{project_root}/benchmarks/sat/out)))

@@ -4,7 +4,7 @@
 type 'a pass = { name : string; run : 'a -> 'a }
 
 let pass name run = { name; run }
-let effect name f = { name; run = (fun x -> f x; x) }
+let effect_ name f = { name; run = (fun x -> f x; x) }
 let names passes = List.map (fun p -> p.name) passes
 
 let enabled =
