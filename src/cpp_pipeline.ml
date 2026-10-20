@@ -200,7 +200,8 @@ let finish decl =
   in
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
     check_settled decl;
-    Borrow_projection.check_decl (decl :> cpp_decl)
+    Borrow_projection.check_decl (decl :> cpp_decl);
+    Move_check.check_decl (decl :> cpp_decl)
   end;
   Option.iter
     (fun name ->
