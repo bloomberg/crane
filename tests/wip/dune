@@ -249,3 +249,14 @@
   (alias runtest)
   (deps tyarg_implicit_type_binder.t.exe)
   (action (run ./tyarg_implicit_type_binder.t.exe))))
+
+(subdir nullary_unit_effect_dropped
+ (rule
+  (targets nullary_unit_effect_dropped.t.exe)
+  (deps NullaryUnitEffectDropped.vo nullary_unit_effect_dropped.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nullary_unit_effect_dropped.t.exe nullary_unit_effect_dropped.cpp nullary_unit_effect_dropped.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nullary_unit_effect_dropped.t.exe)
+  (action (run ./nullary_unit_effect_dropped.t.exe))))
