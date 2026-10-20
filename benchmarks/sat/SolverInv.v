@@ -887,7 +887,7 @@ Proof.
   - rewrite lset_consS. now rewrite IH.
 Qed.
 
-Lemma nth_error_nth' {A} (xs : list A) i x d : nth_error xs i = Some x -> nth i xs d = x.
+Lemma nth_of_error {A} (xs : list A) i x d : nth_error xs i = Some x -> nth i xs d = x.
 Proof. intros H. now apply nth_error_nth. Qed.
 
 Lemma count_occ_keep L i j ci x : nth_error L i = Some x ->
@@ -911,7 +911,7 @@ Proof.
   intros ci' l Hl. rewrite lset_length in Hl.
   rewrite !cnt_lset by (rewrite ?lset_length; lia).
   rewrite (count_occ_keep L i j ci' ci Hi).
-  assert (Ek : cnt W ck ci' = count_occ Nat.eq_dec Wck ci') by (unfold cnt; now rewrite (nth_error_nth' W ck Wck [] HWck)).
+  assert (Ek : cnt W ck ci' = count_occ Nat.eq_dec Wck ci') by (unfold cnt; now rewrite (nth_of_error W ck Wck [] HWck)).
   rewrite count_occ_app in *. cbn [count_occ] in *.
   destruct (Nat.eq_dec ci' ci) as [-> | Hne'].
   - rewrite !expect_lset_same by exact Hci. specialize (He l).
@@ -970,7 +970,7 @@ Proof.
   apply Exists_exists in Hex as (q & Hq & Ht).
   apply In_nth with (d := 0) in Hq as (p & Hp & <-).
   destruct p as [|p].
-  - rewrite (nth_error_nth' cl 0 first 0 Hf) in Ht. exact Ht.
+  - rewrite (nth_of_error cl 0 first 0 Hf) in Ht. exact Ht.
   - exfalso. assert (Hq : lval (asg st) (nth (S p) cl 0) = 2) by (apply Hrest; lia).
     apply (false_l0 val st C _ Hq); [|exact Ht].
     destruct (false_trail val st C _ Hq) as (k & Hk).
@@ -1004,3 +1004,351 @@ Qed.
 
 Lemma skipn_snoc {A} (xs : list A) m x : m <= length xs -> skipn m (xs ++ [x]) = skipn m xs ++ [x].
 Proof. intros H. rewrite skipn_app. now replace (m - length xs) with 0 by lia. Qed.
+
+(** * Counting marks over trail positions *)
+
+Definition marked (M : list nat) (u : nat) : Prop := nth u M 0 <> 0.
+
+Definition markedb (M : list nat) (u : nat) : bool := negb (Nat.eqb (nth u M 0) 0).
+
+Lemma markedb_iff M u : markedb M u = true <-> marked M u.
+Proof. unfold markedb, marked. destruct (Nat.eqb_spec (nth u M 0) 0); cbn; intuition congruence. Qed.
+
+(** The marked variables among trail positions [lo, hi). *)
+Definition cntm (T M : list nat) (lo hi : nat) : nat :=
+  length (filter (fun k => markedb M (lvar (nth k T 0))) (seq lo (hi - lo))).
+
+Lemma cntm_split T M lo m hi : lo <= m <= hi -> cntm T M lo hi = cntm T M lo m + cntm T M m hi.
+Proof.
+  intros H. unfold cntm. replace (hi - lo) with ((m - lo) + (hi - m)) by lia.
+  rewrite seq_app, filter_app, length_app. now replace (lo + (m - lo)) with m by lia.
+Qed.
+
+Lemma cntm_one T M k : cntm T M k (S k) = if markedb M (lvar (nth k T 0)) then 1 else 0.
+Proof. unfold cntm. replace (S k - k) with 1 by lia. cbn. now destruct (markedb _ _). Qed.
+
+Lemma cntm_empty T M lo hi : hi <= lo -> cntm T M lo hi = 0.
+Proof. intros H. unfold cntm. now replace (hi - lo) with 0 by lia. Qed.
+
+Lemma cntm_ext T M M' lo hi :
+  (forall k, lo <= k < hi -> markedb M (lvar (nth k T 0)) = markedb M' (lvar (nth k T 0))) ->
+  cntm T M lo hi = cntm T M' lo hi.
+Proof.
+  intros H. unfold cntm. f_equal. apply filter_ext_in. intros k Hk. apply in_seq in Hk. apply H. lia.
+Qed.
+
+Lemma cntm_mono T M M' lo hi : (forall u, marked M u -> marked M' u) -> cntm T M lo hi <= cntm T M' lo hi.
+Proof.
+  intros H. unfold cntm. generalize (seq lo (hi - lo)). induction l as [|k l IH]; cbn; [lia|].
+  destruct (markedb M _) eqn:E1, (markedb M' _) eqn:E2; cbn; try lia.
+  apply markedb_iff, H, markedb_iff in E1. congruence.
+Qed.
+
+Lemma cntm_pos T M lo hi k : lo <= k < hi -> marked M (lvar (nth k T 0)) -> 1 <= cntm T M lo hi.
+Proof.
+  intros Hk Hm. rewrite (cntm_split T M lo k hi) by lia. rewrite (cntm_split T M k (S k) hi) by lia.
+  rewrite cntm_one. apply markedb_iff in Hm. rewrite Hm. lia.
+Qed.
+
+Lemma cntm_zero T M lo hi : (forall k, lo <= k < hi -> ~ marked M (lvar (nth k T 0))) -> cntm T M lo hi = 0.
+Proof.
+  intros H. unfold cntm.
+  assert (Hl : forall k, In k (seq lo (hi - lo)) -> markedb M (lvar (nth k T 0)) = false).
+  { intros k Hk. apply in_seq in Hk. destruct (markedb _ _) eqn:E; [|reflexivity].
+    apply markedb_iff in E. exfalso. apply (H k); [lia | exact E]. }
+  revert Hl. generalize (seq lo (hi - lo)). intros l Hl.
+  induction l as [|k l IH]; cbn; [reflexivity|].
+  rewrite (Hl k (or_introl eq_refl)). apply IH. intros; apply Hl; now right.
+Qed.
+
+Lemma cntm_two T M lo hi k1 k2 : lo <= k1 -> k1 < k2 -> k2 < hi ->
+  marked M (lvar (nth k1 T 0)) -> marked M (lvar (nth k2 T 0)) -> 2 <= cntm T M lo hi.
+Proof.
+  intros H1 H12 H2 M1 M2. rewrite (cntm_split T M lo k2 hi) by lia.
+  pose proof (cntm_pos T M lo k2 k1 ltac:(lia) M1). pose proof (cntm_pos T M k2 hi k2 ltac:(lia) M2). lia.
+Qed.
+
+Lemma cntm_exists T M lo hi : cntm T M lo hi <> 0 -> exists k, lo <= k < hi /\ marked M (lvar (nth k T 0)).
+Proof.
+  intros H. destruct (filter (fun k => markedb M (lvar (nth k T 0))) (seq lo (hi - lo))) as [|k l] eqn:E.
+  - unfold cntm in H. rewrite E in H. contradiction.
+  - assert (Hk : In k (filter (fun k => markedb M (lvar (nth k T 0))) (seq lo (hi - lo)))) by (rewrite E; now left).
+    apply filter_In in Hk as [Hk Hm]. apply in_seq in Hk. exists k. split; [lia | now apply markedb_iff].
+Qed.
+
+Lemma marked_lset M v x u : v < length M ->
+  marked (lset M v x) u <-> (if Nat.eqb v u then x <> 0 else marked M u).
+Proof.
+  intros Hv. unfold marked. rewrite nth_lset. destruct (Nat.eqb v u); [|tauto].
+  destruct (Nat.ltb_spec v (length M)); [tauto | lia].
+Qed.
+
+Lemma markedb_lset_neq M v x u : v <> u -> markedb (lset M v x) u = markedb M u.
+Proof. intros. unfold markedb. rewrite nth_lset. destruct (Nat.eqb_spec v u); [congruence | reflexivity]. Qed.
+
+Lemma at_pos_nth T k u : at_pos T k u <-> k < length T /\ lvar (nth k T 0) = u.
+Proof.
+  split.
+  - intros (l & Hl & E). split; [apply nth_error_Some; congruence|]. now rewrite (nth_of_error T k l 0 Hl).
+  - intros [Hk E]. exists (nth k T 0). split; [now apply nth_error_nth' | exact E].
+Qed.
+
+(** * First-UIP analysis *)
+
+(** The trail position of the current level's decision. *)
+Definition base (st : astate) : nat := nth (length (lim st) - 1) (lim st) 0.
+
+Lemma le_base L x : sorted L -> In x L -> x <= nth (length L - 1) L 0.
+Proof.
+  intros Hs Hx. apply In_nth with (d := 0) in Hx as (i & Hi & <-).
+  destruct (Nat.eq_dec i (length L - 1)) as [-> | Hne]; [lia|]. apply Hs. lia.
+Qed.
+
+Lemma base_in L : L <> [] -> In (nth (length L - 1) L 0) L.
+Proof. intros H. apply nth_In. destruct L; [congruence | cbn; lia]. Qed.
+
+(** The analysis state: the marks [M], the learnt literals [tl Lr], the
+    trail position [index] the next marked literal is looked for at or below,
+    and [pathC], the number of marked literals at the current level. *)
+Record AInv (st : astate) (M Lr : list nat) (index pathC : nat) : Prop := {
+  a_mark : forall u, marked M u -> exists k, at_pos (tr st) k u /\ 0 < count_le (lim st) k;
+  a_lr_ne : Lr <> [];
+  a_lr : Forall (fun q => lval (asg st) q = 2 /\ marked M (lvar q) /\
+                           0 < nth (lvar q) (lvl st) 0 < length (lim st)) (tl Lr);
+  a_low : forall u k, marked M u -> at_pos (tr st) k u -> count_le (lim st) k < length (lim st) ->
+            exists q, In q (tl Lr) /\ lvar q = u;
+  a_cur : forall k, base st <= k < length (tr st) -> marked M (lvar (nth k (tr st) 0)) -> k <= index;
+  a_cnt : pathC = cntm (tr st) M (base st) (S index);
+  a_idx : index < length (tr st)
+}.
+
+Section Analysis.
+Variables (val : nat -> bool) (st : astate).
+Hypothesis C : Core val st.
+Hypothesis Hne : lim st <> [].
+
+Lemma cur_iff k : count_le (lim st) k = length (lim st) <-> base st <= k.
+Proof. apply count_le_cur; [apply (i_sorted _ _ C) | exact Hne]. Qed.
+
+Lemma lvl_at k u : at_pos (tr st) k u -> nth u (lvl st) 0 = count_le (lim st) k.
+Proof. intros (l & Hl & <-). apply (i_lvl _ _ C k l Hl). Qed.
+
+Lemma pos_unique k k' u : at_pos (tr st) k u -> at_pos (tr st) k' u -> k = k'.
+Proof. apply at_pos_unique, (i_nd _ _ C). Qed.
+
+Lemma at_pos_self k : k < length (tr st) -> at_pos (tr st) k (lvar (nth k (tr st) 0)).
+Proof. intros Hk. exists (nth k (tr st) 0). split; [now apply nth_error_nth' | reflexivity]. Qed.
+
+Lemma marked_mono1 M u w : u < length M -> marked M w -> marked (lset M u 1) w.
+Proof. intros Hu Hw. apply marked_lset; [exact Hu|]. destruct (Nat.eqb u w); auto. Qed.
+
+Lemma ainv_init M : tr st <> [] -> (forall u, nth u M 0 = 0) -> AInv st M [0] (length (tr st) - 1) 0.
+Proof.
+  intros Ht HM. assert (Hm : forall u, ~ marked M u) by (intros u; unfold marked; rewrite HM; lia).
+  constructor.
+  - intros u H. now apply Hm in H.
+  - discriminate.
+  - constructor.
+  - intros u k H. now apply Hm in H.
+  - intros k _ H. now apply Hm in H.
+  - symmetry. apply cntm_zero. intros k _. apply Hm.
+  - destruct (tr st); [congruence | cbn; lia].
+Qed.
+
+(** Outside [u]'s own position, writing [u]'s mark changes no count. *)
+Lemma cntm_lset_out M u x k lo hi : at_pos (tr st) k u -> (k < lo \/ hi <= k) -> hi <= length (tr st) ->
+  cntm (tr st) (lset M u x) lo hi = cntm (tr st) M lo hi.
+Proof.
+  intros Hk Hout Hhi. apply cntm_ext. intros k' Hk'.
+  apply markedb_lset_neq. intros E. assert (Hk2 := at_pos_self k' ltac:(lia)). rewrite <- E in Hk2.
+  pose proof (pos_unique _ _ _ Hk Hk2). lia.
+Qed.
+
+Lemma cntm_lset_at M u x k lo hi : at_pos (tr st) k u -> lo <= k < hi -> hi <= length (tr st) ->
+  cntm (tr st) (lset M u x) lo hi + (if markedb M u then 1 else 0) =
+  cntm (tr st) M lo hi + (if markedb (lset M u x) u then 1 else 0).
+Proof.
+  intros Hk Hr Hhi.
+  rewrite (cntm_split _ (lset M u x) lo k hi), (cntm_split _ (lset M u x) k (S k) hi) by lia.
+  rewrite (cntm_split _ M lo k hi), (cntm_split _ M k (S k) hi) by lia.
+  rewrite !(cntm_lset_out M u x k lo k), !(cntm_lset_out M u x k (S k) hi) by (auto; lia).
+  rewrite !cntm_one. destruct Hk as (l & Hl & El). rewrite (nth_of_error _ k l 0 Hl), El.
+  destruct (markedb M u), (markedb (lset M u x) u); lia.
+Qed.
+
+Lemma ainv_mark_cur M Lr index pathC k u :
+  AInv st M Lr index pathC -> at_pos (tr st) k u -> k <= index -> base st <= k -> ~ marked M u ->
+  u < length M -> AInv st (lset M u 1) Lr index (S pathC).
+Proof.
+  intros A Hk Hki Hbk Hu Hlen. destruct A as [Am Ane Alr Alow Acur Acnt Aidx].
+  assert (Hcur : count_le (lim st) k = length (lim st)) by (now apply cur_iff).
+  assert (HD : 0 < length (lim st)) by (destruct (lim st); [congruence | cbn; lia]).
+  constructor.
+  - intros w Hw. apply marked_lset in Hw; [|exact Hlen]. destruct (Nat.eqb_spec u w) as [E | _]; [subst w|].
+    + exists k. split; [exact Hk | lia].
+    + now apply Am.
+  - exact Ane.
+  - eapply Forall_impl; [|exact Alr]. intros q (H1 & H2 & H3). split; [exact H1|]. split; [|exact H3].
+    now apply marked_mono1.
+  - intros w k' Hw Hk' Hlt. apply marked_lset in Hw; [|exact Hlen]. destruct (Nat.eqb_spec u w) as [E | _]; [subst w|].
+    + rewrite (pos_unique _ _ _ Hk' Hk) in Hlt. lia.
+    + eapply Alow; eauto.
+  - intros k' Hk' Hm. apply marked_lset in Hm; [|exact Hlen].
+    destruct (Nat.eqb_spec u (lvar (nth k' (tr st) 0))) as [E | _].
+    + assert (Hk2 := at_pos_self k' ltac:(lia)). rewrite <- E in Hk2.
+      rewrite (pos_unique _ _ _ Hk2 Hk). exact Hki.
+    + now apply Acur.
+  - pose proof (cntm_lset_at M u 1 k (base st) (S index) Hk ltac:(lia) ltac:(lia)) as E.
+    assert (markedb M u = false) as E1 by (destruct (markedb M u) eqn:X; [apply markedb_iff in X; contradiction | reflexivity]).
+    assert (markedb (lset M u 1) u = true) as E2 by (apply markedb_iff, marked_lset; [exact Hlen | rewrite Nat.eqb_refl; lia]).
+    rewrite E1, E2 in E. lia.
+  - exact Aidx.
+Qed.
+
+Lemma ainv_mark_low M Lr index pathC k q :
+  AInv st M Lr index pathC -> at_pos (tr st) k (lvar q) -> count_le (lim st) k < length (lim st) ->
+  0 < count_le (lim st) k -> lval (asg st) q = 2 -> lvar q < length M ->
+  AInv st (lset M (lvar q) 1) (Lr ++ [q]) index pathC.
+Proof.
+  intros A Hk Hlow Hpos Hq Hlen. destruct A as [Am Ane Alr Alow Acur Acnt Aidx].
+  assert (Hbk : k < base st) by (destruct (Nat.ltb_spec k (base st)); [lia|]; apply cur_iff in H; lia).
+  assert (Htl : tl (Lr ++ [q]) = tl Lr ++ [q]) by (destruct Lr; [congruence | reflexivity]).
+  constructor.
+  - intros w Hw. apply marked_lset in Hw; [|exact Hlen]. destruct (Nat.eqb_spec (lvar q) w) as [E | _]; [subst w|].
+    + exists k. auto.
+    + now apply Am.
+  - destruct Lr; discriminate.
+  - rewrite Htl. apply Forall_app. split.
+    + eapply Forall_impl; [|exact Alr]. intros q' (H1 & H2 & H3). split; [exact H1|]. split; [|exact H3].
+      now apply marked_mono1.
+    + constructor; [|constructor]. split; [exact Hq|]. split.
+      * apply marked_lset; [exact Hlen|]. rewrite Nat.eqb_refl. lia.
+      * rewrite (lvl_at _ _ Hk). lia.
+  - intros w k' Hw Hk' Hlt. rewrite Htl. apply marked_lset in Hw; [|exact Hlen].
+    destruct (Nat.eqb_spec (lvar q) w) as [E | _]; [subst w|].
+    + exists q. split; [apply in_or_app; right; now left | reflexivity].
+    + destruct (Alow w k' Hw Hk' Hlt) as (q' & Hq' & E). exists q'. split; [apply in_or_app; now left | exact E].
+  - intros k' Hk' Hm. apply marked_lset in Hm; [|exact Hlen].
+    destruct (Nat.eqb_spec (lvar q) (lvar (nth k' (tr st) 0))) as [E | _].
+    + exfalso. assert (Hk2 := at_pos_self k' ltac:(lia)). rewrite <- E in Hk2.
+      pose proof (pos_unique _ _ _ Hk Hk2). lia.
+    + now apply Acur.
+  - rewrite Acnt. symmetry. apply (cntm_lset_out M (lvar q) 1 k); auto; lia.
+  - exact Aidx.
+Qed.
+
+(** Popping the marked literal at [idx], when more remain at the current level. *)
+Lemma ainv_pop M Lr index pathC idx :
+  AInv st M Lr index pathC -> base st <= idx <= index ->
+  marked M (lvar (nth idx (tr st) 0)) ->
+  (forall k, idx < k <= index -> ~ marked M (lvar (nth k (tr st) 0))) ->
+  2 <= pathC -> lvar (nth idx (tr st) 0) < length M ->
+  base st < idx /\ AInv st (lset M (lvar (nth idx (tr st) 0)) 0) Lr (idx - 1) (pathC - 1).
+Proof.
+  intros A Hidx Hm Hnone H2 Hlen. pose proof A as [Am Ane Alr Alow Acur Acnt Aidx].
+  set (v := lvar (nth idx (tr st) 0)) in *.
+  assert (Hv : at_pos (tr st) idx v) by (apply at_pos_self; lia).
+  assert (Hvl : nth v (lvl st) 0 = length (lim st)) by (rewrite (lvl_at _ _ Hv); now apply cur_iff).
+  assert (E1 : cntm (tr st) M (S idx) (S index) = 0).
+  { apply cntm_zero. intros k Hk. apply Hnone. lia. }
+  assert (E2 : cntm (tr st) M (base st) (S idx) = cntm (tr st) M (base st) idx + 1).
+  { rewrite (cntm_split _ _ (base st) idx (S idx)), cntm_one by lia. fold v.
+    apply markedb_iff in Hm. now rewrite Hm. }
+  assert (E3 : pathC = cntm (tr st) M (base st) idx + 1).
+  { rewrite Acnt, (cntm_split _ _ (base st) (S idx) (S index)) by lia. lia. }
+  assert (Hb : base st < idx).
+  { destruct (cntm_exists (tr st) M (base st) idx ltac:(lia)) as (k & Hk & _). lia. }
+  split; [exact Hb|].
+  assert (Hmv : forall w, marked (lset M v 0) w <-> w <> v /\ marked M w).
+  { intros w. rewrite marked_lset by exact Hlen. destruct (Nat.eqb_spec v w); intuition. }
+  constructor.
+  - intros w Hw. apply Hmv in Hw as [_ Hw]. now apply Am.
+  - exact Ane.
+  - eapply Forall_impl; [|exact Alr]. intros q (H1' & H2' & H3'). split; [exact H1'|]. split; [|exact H3'].
+    apply Hmv. split; [|exact H2']. intros E. rewrite E, Hvl in H3'. lia.
+  - intros w k Hw Hk Hlt. apply Hmv in Hw as [_ Hw]. eapply Alow; eauto.
+  - intros k Hk Hmk. apply Hmv in Hmk as [Hne' Hmk].
+    pose proof (Acur k Hk Hmk). destruct (Nat.ltb_spec idx k) as [Hlt | Hge].
+    + exfalso. eapply Hnone; [|exact Hmk]. lia.
+    + destruct (Nat.eq_dec k idx) as [-> | ?]; [contradiction | lia].
+  - replace (S (idx - 1)) with idx by lia. rewrite (cntm_lset_out M v 0 idx) by (auto; lia). lia.
+  - lia.
+Qed.
+
+(** Popping the last marked literal at the current level: what stays marked is learnt. *)
+Lemma ainv_final M Lr index pathC idx :
+  AInv st M Lr index pathC -> base st <= idx <= index ->
+  marked M (lvar (nth idx (tr st) 0)) ->
+  (forall k, idx < k <= index -> ~ marked M (lvar (nth k (tr st) 0))) ->
+  pathC <= 1 -> lvar (nth idx (tr st) 0) < length M ->
+  forall w, marked (lset M (lvar (nth idx (tr st) 0)) 0) w -> exists q, In q (tl Lr) /\ lvar q = w.
+Proof.
+  intros A Hidx Hm Hnone H1 Hlen w Hw. pose proof A as [Am Ane Alr Alow Acur Acnt Aidx].
+  set (v := lvar (nth idx (tr st) 0)) in *.
+  apply marked_lset in Hw; [|exact Hlen]. destruct (Nat.eqb_spec v w) as [E | Hne']; [lia|].
+  destruct (Am w Hw) as (k & Hk & Hpos).
+  destruct (Nat.ltb_spec (count_le (lim st) k) (length (lim st))) as [Hlow | Hhi].
+  - eapply Alow; eauto.
+  - exfalso. pose proof (count_le_max (lim st) k).
+    assert (Hbk : base st <= k) by (apply cur_iff; lia).
+    assert (Hkt : k < length (tr st)) by (eapply at_pos_lt; eauto).
+    destruct Hk as (l & Hl & El).
+    assert (Hmk : marked M (lvar (nth k (tr st) 0))) by (rewrite (nth_of_error _ k l 0 Hl), El; exact Hw).
+    pose proof (Acur k ltac:(lia) Hmk) as Hki.
+    destruct (Nat.ltb_spec idx k) as [Hlt | Hge]; [eapply Hnone; [|exact Hmk]; lia|].
+    destruct (Nat.eq_dec k idx) as [-> | Hne2].
+    + apply Hne'. unfold v. rewrite (nth_of_error _ idx l 0 Hl). exact El.
+    + pose proof (cntm_two (tr st) M (base st) (S index) k idx ltac:(lia) ltac:(lia) ltac:(lia) Hmk Hm). lia.
+Qed.
+
+(** A literal above the last decision has a reason. *)
+Lemma reason_exists idx : base st < idx -> idx < length (tr st) ->
+  nth (lvar (nth idx (tr st) 0)) (rsn st) 0 <> 0.
+Proof.
+  intros Hb Hidx H0. pose proof (base_in (lim st) Hne) as Hin.
+  destruct (i_dec _ _ C idx (nth idx (tr st) 0) (nth_error_nth' _ _ Hidx) H0) as [F | Hi].
+  - rewrite Forall_forall in F. specialize (F _ Hin). unfold base in Hb. lia.
+  - pose proof (le_base (lim st) idx (i_sorted _ _ C) Hi). unfold base in Hb. lia.
+Qed.
+
+End Analysis.
+
+Lemma in_tl_nth (L : list nat) p : 1 <= p < length L -> In (nth p L 0) (tl L).
+Proof.
+  intros H. destruct L as [|a L]; cbn in H; [lia|]. cbn [tl]. destruct p as [|p]; [lia|]. cbn [nth].
+  apply nth_In. lia.
+Qed.
+
+Lemma in_skipn_nth (L : list nat) start q : In q (skipn start L) -> exists p, start <= p < length L /\ nth p L 0 = q.
+Proof.
+  intros H. apply In_nth with (d := 0) in H as (p & Hp & <-). rewrite length_skipn in Hp.
+  exists (start + p). split; [lia|]. now rewrite nth_skipn.
+Qed.
+
+(** A new clause, not yet in any watch list. *)
+Lemma wch_snoc D W cl : Wch D W -> Wch (D ++ [cl]) W.
+Proof.
+  intros H ci l Hl. specialize (H ci l Hl). unfold expect in *.
+  destruct (Nat.ltb_spec ci (length D)).
+  - now rewrite nth_error_app1.
+  - rewrite (proj2 (nth_error_None D ci)) in H by lia. lia.
+Qed.
+
+Lemma wch_fresh D W l : Wch D W -> l < length W -> cnt W l (length D) = 0.
+Proof.
+  intros H Hl. specialize (H (length D) l Hl). unfold expect in H.
+  rewrite (proj2 (nth_error_None D (length D))) in H by lia. lia.
+Qed.
+
+(** Adding [ci] to the list of [a], which it may still join. *)
+Lemma wch_push D W a Wa ci : Wch D W -> nth_error W a = Some Wa -> cnt W a ci + 1 <= expect D ci a ->
+  Wch D (lset W a (Wa ++ [ci])).
+Proof.
+  intros H Ha Hle ci' l Hl. rewrite lset_length in Hl.
+  assert (Hal : a < length W) by (apply nth_error_Some; congruence).
+  rewrite cnt_lset by exact Hal. destruct (Nat.eqb_spec a l) as [<- | Hne]; [|now apply H].
+  unfold cnt in Hle. rewrite (nth_of_error W a Wa [] Ha) in Hle.
+  rewrite count_occ_app. cbn [count_occ]. destruct (Nat.eq_dec ci ci') as [<- | Hne'].
+  - lia.
+  - pose proof (H ci' a Hal) as H'. unfold cnt in H'. rewrite (nth_of_error W a Wa [] Ha) in H'. lia.
+Qed.

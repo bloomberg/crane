@@ -179,7 +179,7 @@ Proof.
       split; [|split; [|split]].
       + eapply core_dset; [exact C | exact Hd | rewrite <- E0; apply perm_swap; lia |].
         eapply not_reason; [exact C | exact Hd |]. intros x Hx.
-        rewrite (nth_error_nth' cl 0 x 0 Hx) in E0. subst x. lia.
+        rewrite (nth_of_error cl 0 x 0 Hx) in E0. subst x. lia.
       + eapply wch_same_expect; [exact W | exact Hd |]. intros l. rewrite <- E0. now apply expect_swap01.
       + now rewrite !lset_length.
       + rewrite nth_lset, lset_length. cbn [Nat.eqb]. destruct (Nat.ltb_spec 1 (length cl)); [reflexivity | lia].
@@ -231,7 +231,7 @@ Proof.
       + right. exists ci, cl1. split; [lia|]. split; [exact Hd1|]. split.
         * rewrite <- (skipn_O cl1). apply all_false_cl. intros p Hp.
           destruct p as [|p]; [|apply Hrest; lia].
-          rewrite (nth_error_nth' cl1 0 first 0 Hfirst). exact Efalse.
+          rewrite (nth_of_error cl1 0 first 0 Hfirst). exact Efalse.
         * apply Exists_exists. exists fl. split; [rewrite <- H11; apply nth_In; lia | exact Hcur].
     - (* unit: propagate [first] *)
       assert (Hfv0 : fv1 = 0) by lia.
@@ -407,4 +407,460 @@ Proof.
   - unfold st4. fvs. exact E2.
   - intros _. exact Hbt.
 Qed.
+
+(** ** First-UIP analysis *)
+
+(** A state that differs from [st0] only in the marks and the stamps. *)
+Definition only_sn (st0 st : astate) : Prop :=
+  hcls st = hcls st0 /\ db st = db st0 /\ hwl st = hwl st0 /\ wl st = wl st0 /\
+  (forall f, f <> FSn -> f <> FSt -> fv st f = fv st0 f).
+
+Lemma only_sn_refl st : only_sn st st.
+Proof. repeat split; auto. Qed.
+
+Lemma only_sn_fset st0 st f xs : f = FSn \/ f = FSt -> only_sn st0 st -> only_sn st0 (fset st f xs).
+Proof.
+  intros Hf (E1 & E2 & E3 & E4 & Ef). repeat split; auto. intros g H1 H2. cbn.
+  destruct (fld_eqb g f) eqn:E; [apply fld_eqb_eq in E; subst; destruct Hf; congruence | auto].
+Qed.
+
+Section Analyze.
+Variables (st0 : astate) (learnt : vec nat) (now : nat).
+Hypotheses (C0 : Core val st0) (Hne0 : lim st0 <> []) (Hfresh : ~ In (vloc learnt) (locs s inp st0)).
+
+Lemma learnt_kept st h h' Lr : only_sn st0 st -> keeps st h h' -> pts h learnt Lr -> pts h' learnt Lr.
+Proof.
+  intros (E1 & _ & E3 & _) Hk Hp. apply Hk; [|exact Hp]. now rewrite (locs_eq st0 st E1 E3).
+Qed.
+
+Lemma analyze_lits_sp fuel : forall h stc ci c cl j pathC Lr index Q,
+  R h stc -> only_sn st0 stc -> nth_error (hcls st0) ci = Some c -> nth_error (db st0) ci = Some cl ->
+  pts h learnt Lr -> AInv st0 (sn stc) Lr index pathC ->
+  (forall p, j <= p < length cl -> lval (asg st0) (nth p cl 0) = 2 /\
+                                    exists k, at_pos (tr st0) k (lvar (nth p cl 0)) /\ k <= index) ->
+  (forall r h' stc' Lr', R h' stc' -> only_sn st0 stc' -> pts h' learnt Lr' -> AInv st0 (sn stc') Lr' index r ->
+     (forall u, marked (sn stc) u -> marked (sn stc') u) ->
+     (forall p, j <= p < length cl -> 0 < nth (lvar (nth p cl 0)) (lvl st0) 0 ->
+                marked (sn stc') (lvar (nth p cl 0))) ->
+     Q r h') ->
+  wp (analyze_lits s fuel c j (length cl) (length (lim st0)) pathC learnt now) Q h.
+Proof.
+  induction fuel as [|f IH]; intros h stc ci c cl j pathC Lr index Q Hr Hos Hc Hd Hp A Hpend HQ;
+    cbn [analyze_lits].
+  { apply wp_vabort. }
+  destruct (Nat.leb_spec (length cl) j).
+  { apply wp_ret. apply (HQ pathC h stc Lr Hr Hos Hp A); [auto | intros; lia]. }
+  pose proof Hos as (E1 & E2 & E3 & E4 & Ef).
+  ev. eapply (get_cl s inp xs0 h stc Hr ci c cl); [now rewrite E1 | now rewrite E2 |]. intros q Hq.
+  apply nth_error_nth_eq in Hq. subst q. cbv zeta.
+  set (q := nth j cl 0) in *.
+  destruct (Hpend j ltac:(lia)) as [Hqf (k & Hk & Hki)].
+  assert (Hlv : nth (lvar q) (lvl st0) 0 = count_le (lim st0) k) by (eapply lvl_at; eauto).
+  ev. ev. intros sv Hsv. pose proof (nth_error_lt _ _ _ Hsv) as Hvlen. apply nth_error_nth_eq in Hsv. subst sv.
+  ev. ev. intros lv Hlv'. apply nth_error_nth_eq in Hlv'. subst lv. rewrite (Ef FLvl) by discriminate.
+  rewrite Hlv.
+  (* every later step keeps the marks this one leaves, so the first literal's obligation is met *)
+  assert (Hrest : forall h1 stc1 Lr1 pathC1, R h1 stc1 -> only_sn st0 stc1 -> pts h1 learnt Lr1 ->
+            AInv st0 (sn stc1) Lr1 index pathC1 -> (forall u, marked (sn stc) u -> marked (sn stc1) u) ->
+            (0 < count_le (lim st0) k -> marked (sn stc1) (lvar q)) ->
+            wp (analyze_lits s f c (j + 1) (length cl) (length (lim st0)) pathC1 learnt now) Q h1).
+  { intros h1 stc1 Lr1 pathC1 Hr1 Hos1 Hp1 A1 Hmono1 Hq1.
+    eapply IH; [exact Hr1 | exact Hos1 | exact Hc | exact Hd | exact Hp1 | exact A1 | |].
+    - intros p' Hp'. apply Hpend. lia.
+    - intros r h' stc' Lr' Hr' Hos' Hp' A' Hmono' Hpend'. apply (HQ r h' stc' Lr' Hr' Hos' Hp' A').
+      + intros u Hu. auto.
+      + intros p' Hp'' Hlvp. destruct (Nat.eq_dec p' j) as [-> | Hne].
+        * apply Hmono'. apply Hq1. fold q in Hlvp. lia.
+        * apply Hpend'; [lia | exact Hlvp]. }
+  destruct (Nat.eqb_spec (nth (lvar q) (sn stc) 0) 0) as [Hs0 | Hs0];
+    destruct (Nat.ltb_spec 0 (count_le (lim st0) k)) as [Hl0 | Hl0]; cbn [andb].
+  - (* a new mark *)
+    ev. ev. intros h1 _ Hr1 Hk1.
+    ev. ev. intros h2 _ Hr2 Hk2.
+    assert (Hos2 : only_sn st0 (fset (fset stc FSn (lset (fv stc FSn) (lvar q) 1)) FSt
+                     (lset (fv (fset stc FSn (lset (fv stc FSn) (lvar q) 1)) FSt) (lvar q) now)))
+      by (apply only_sn_fset; [auto|]; apply only_sn_fset; auto).
+    assert (Hp2 : pts h2 learnt Lr).
+    { eapply learnt_kept; [| exact Hk2 |]; [apply only_sn_fset; auto|].
+      exact (learnt_kept stc h h1 Lr Hos Hk1 Hp). }
+    assert (Hnm : ~ marked (sn stc) (lvar q)) by (unfold marked; lia).
+    assert (Hmono : forall u, marked (sn stc) u -> marked (lset (sn stc) (lvar q) 1) u)
+      by (intros; now apply marked_mono1).
+    assert (Hqm : marked (lset (sn stc) (lvar q) 1) (lvar q))
+      by (apply marked_lset; [exact Hvlen | rewrite Nat.eqb_refl; lia]).
+    destruct (Nat.leb_spec (length (lim st0)) (count_le (lim st0) k)) as [Hcur | Hlow].
+    + (* current level: one more path *)
+      pose proof (count_le_max (lim st0) k).
+      assert (Hbk : base st0 <= k) by (apply (cur_iff val st0 C0 Hne0); lia).
+      eapply Hrest; [exact Hr2 | exact Hos2 | exact Hp2 | | | ].
+      * fvs. rewrite Nat.add_1_r. eapply ainv_mark_cur; eauto.
+      * fvs. exact Hmono.
+      * fvs. intros _. exact Hqm.
+    + (* lower level: into the learnt clause *)
+      ev. eapply (push_scr s inp xs0 h2 _ Hr2 learnt Lr q); [rewrite (locs_eq st0); destruct Hos2 as (? & _ & ? & _); auto | exact Hp2 |].
+      intros h3 Hr3 Hp3 _.
+      eapply Hrest; [exact Hr3 | exact Hos2 | exact Hp3 | | | ].
+      * fvs. eapply ainv_mark_low; eauto.
+      * fvs. exact Hmono.
+      * fvs. intros _. exact Hqm.
+  - (* level 0: nothing to do *)
+    eapply Hrest; [exact Hr | exact Hos | exact Hp | exact A | auto | intros; lia].
+  - (* already marked *)
+    eapply Hrest; [exact Hr | exact Hos | exact Hp | exact A | auto | intros _; exact Hs0].
+  - eapply Hrest; [exact Hr | exact Hos | exact Hp | exact A | auto | intros; lia].
+Qed.
+
+
+Lemma next_seen_sp fuel : forall h stc i Q,
+  R h stc -> only_sn st0 stc -> i < length (tr st0) ->
+  (exists k, base st0 <= k <= i /\ marked (sn stc) (lvar (nth k (tr st0) 0))) ->
+  (forall idx, base st0 <= idx <= i -> marked (sn stc) (lvar (nth idx (tr st0) 0)) ->
+     (forall k, idx < k <= i -> ~ marked (sn stc) (lvar (nth k (tr st0) 0))) -> Q idx h) ->
+  wp (next_seen s fuel i) Q h.
+Proof.
+  induction fuel as [|f IH]; intros h stc i Q Hr Hos Hi Hex HQ; cbn [next_seen].
+  { apply wp_vabort. }
+  pose proof Hos as (_ & _ & _ & _ & Ef).
+  ev. ev. intros l Hl. apply nth_error_nth_eq in Hl. subst l. rewrite (Ef FTr) by discriminate.
+  ev. ev. intros sv Hsv. apply nth_error_nth_eq in Hsv. subst sv.
+  destruct (Nat.eqb_spec (nth (lvar (nth i (tr st0) 0)) (sn stc) 0) 0) as [E | E].
+  - destruct Hex as (k & Hk & Hm).
+    assert (Hki : k <> i) by (intros ->; unfold marked in Hm; lia).
+    eapply IH; [exact Hr | exact Hos | lia | exists k; split; [lia | exact Hm] |].
+    intros idx Hidx Hmi Hnone. apply HQ; [lia | exact Hmi |].
+    intros k' Hk'. destruct (Nat.eq_dec k' i) as [-> | ?]; [unfold marked; lia | apply Hnone; lia].
+  - apply wp_ret. destruct Hex as (k & Hk & _). apply HQ; [lia | exact E | intros; lia].
+Qed.
+
+Lemma analyze_loop_sp fuel : forall h stc confl cl start index pathC Lr Q,
+  R h stc -> only_sn st0 stc -> nth_error (db st0) confl = Some cl -> pts h learnt Lr ->
+  AInv st0 (sn stc) Lr index pathC ->
+  (forall p, start <= p < length cl -> lval (asg st0) (nth p cl 0) = 2 /\
+                                       exists k, at_pos (tr st0) k (lvar (nth p cl 0)) /\ k <= index) ->
+  (1 <= pathC \/ exists p k, start <= p < length cl /\ at_pos (tr st0) k (lvar (nth p cl 0)) /\ base st0 <= k) ->
+  ((exists u, marked (sn stc) u /\ disagree val (asg st0) u) \/ Exists (lit_true val) (skipn start cl)) ->
+  (forall p h' stc' Lr', R h' stc' -> only_sn st0 stc' -> pts h' learnt Lr' ->
+     (exists idx, nth_error (tr st0) idx = Some p /\ base st0 <= idx) ->
+     (forall u, marked (sn stc') u -> exists q, In q (tl Lr') /\ lvar q = u) ->
+     Lr' <> [] ->
+     Forall (fun q => lval (asg st0) q = 2 /\ 0 < nth (lvar q) (lvl st0) 0 < length (lim st0)) (tl Lr') ->
+     (lit_true val (lneg p) \/ Exists (lit_true val) (tl Lr')) ->
+     Q p h') ->
+  wp (analyze_loop s fuel confl start index pathC (length (lim st0)) learnt now) Q h.
+Proof.
+  induction fuel as [|f IH]; intros h stc confl cl start index pathC Lr Q Hr Hos Hd Hp A Hpend Hpath Hsound HQ;
+    cbn [analyze_loop].
+  { apply wp_vabort. }
+  pose proof Hos as (E1 & E2 & E3 & E4 & Ef).
+  assert (Hasg : forall u, nth u (asg st0) 0 <= 2) by apply (i_asg _ _ C0).
+  ev. ev. intros c Hc. rewrite E1 in Hc.
+  ev. eapply (len_cl s inp xs0 h stc Hr confl c cl); [now rewrite E1 | now rewrite E2 |].
+  ev. eapply analyze_lits_sp; [exact Hr | exact Hos | exact Hc | exact Hd | exact Hp | exact A | exact Hpend |].
+  intros pathC1 h1 stc1 Lr1 Hr1 Hos1 Hp1 A1 Hmono Hmarked.
+  pose proof Hos1 as (F1 & F2 & F3 & F4 & Ff).
+  (* at least one marked literal at the current level *)
+  assert (Hpc1 : 1 <= pathC1).
+  { rewrite (a_cnt _ _ _ _ _ A1). destruct Hpath as [Hpc | (p & k & Hp' & Hk & Hbk)].
+    - rewrite (a_cnt _ _ _ _ _ A) in Hpc. etransitivity; [exact Hpc | now apply cntm_mono].
+    - destruct (Hpend p Hp') as [_ (k' & Hk' & Hk'i)].
+      rewrite <- (pos_unique val st0 C0 _ _ _ Hk Hk') in Hk'i.
+      apply (cntm_pos _ _ _ _ k); [lia|].
+      apply at_pos_nth in Hk as [Hkt Ek]. rewrite Ek. apply Hmarked; [lia|].
+      rewrite (lvl_at val st0 C0 k) by (apply at_pos_nth; auto).
+      pose proof (proj2 (cur_iff val st0 C0 Hne0 k) Hbk). destruct (lim st0); [congruence | cbn [length] in *; lia]. }
+  (* a marked literal [val] disagrees with *)
+  assert (Hdis : exists u, marked (sn stc1) u /\ disagree val (asg st0) u).
+  { destruct Hsound as [(u & Hu & Hdu) | Hex].
+    - exists u. auto.
+    - apply Exists_exists in Hex as (q & Hq & Ht). apply in_skipn_nth in Hq as (p & Hp' & <-).
+      destruct (Hpend p Hp') as [Hf (k & Hk & _)].
+      exists (lvar (nth p cl 0)). split; [|now apply false_true_disagree].
+      apply Hmarked; [exact Hp'|]. destruct (Nat.eq_dec (nth (lvar (nth p cl 0)) (lvl st0) 0) 0) as [E0 | ?]; [|lia].
+      exfalso. exact (false_l0 val st0 C0 _ Hf E0 Ht). }
+  assert (Hidx_ok : index < length (tr st0)) by apply (a_idx _ _ _ _ _ A1).
+  ev. eapply next_seen_sp; [exact Hr1 | exact Hos1 | exact Hidx_ok | |].
+  { destruct (cntm_exists (tr st0) (sn stc1) (base st0) (S index)) as (k & Hk & Hm);
+      [rewrite <- (a_cnt _ _ _ _ _ A1); lia|].
+    exists k. split; [lia | exact Hm]. }
+  intros idx Hidx Hmi Hnone.
+  ev. ev. intros p Hp'. rewrite (Ff FTr) in Hp' by discriminate.
+  pose proof (nth_error_lt _ _ _ Hp') as Hidxt.
+  pose proof Hp' as Hpn. apply nth_error_nth_eq in Hpn. subst p. cbv zeta.
+  set (p := nth idx (tr st0) 0) in *.
+  ev. ev. intros r Hrr. apply nth_error_nth_eq in Hrr. subst r. rewrite (Ff FRsn) by discriminate.
+  ev. ev. intros h2 Hv2 Hr2 Hk2.
+  assert (Hos2 : only_sn st0 (fset stc1 FSn (lset (fv stc1 FSn) (lvar p) 0))) by (apply only_sn_fset; auto).
+  assert (Hp2 : pts h2 learnt Lr1) by exact (learnt_kept stc1 h1 h2 Lr1 Hos1 Hk2 Hp1).
+  assert (Hptrue : lval (asg st0) p = 1) by (apply (true_on_trail val st0 C0); eapply nth_error_In; eauto).
+  destruct (Nat.leb_spec pathC1 1) as [Hle | Hgt].
+  - (* the first UIP *)
+    apply wp_ret. apply (HQ p h2 _ Lr1 Hr2 Hos2 Hp2).
+    + exists idx. split; [exact Hp' | lia].
+    + fvs. eapply ainv_final; eauto.
+    + apply (a_lr_ne _ _ _ _ _ A1).
+    + eapply Forall_impl; [|apply (a_lr _ _ _ _ _ A1)]. intros q (H1 & _ & H3). auto.
+    + destruct Hdis as (u & Hu & Hdu). destruct (Nat.eq_dec u (lvar p)) as [-> | Hne].
+      * left. eapply true_disagree_false; eauto.
+      * right. destruct (ainv_final val st0 C0 Hne0 _ _ _ _ idx A1 ltac:(lia) Hmi Hnone Hle Hv2 u)
+          as (q & Hq & Eq).
+        { apply marked_lset; [exact Hv2|]. fold p. destruct (Nat.eqb_spec (lvar p) u); [congruence | exact Hu]. }
+        apply Exists_exists. exists q. split; [exact Hq|].
+        pose proof (proj1 (Forall_forall _ _) (a_lr _ _ _ _ _ A1) q Hq) as (Hqf & _).
+        subst u. eapply false_disagree_true; eauto.
+  - (* resolve with the reason of [p] *)
+    destruct (ainv_pop val st0 C0 Hne0 _ _ _ _ idx A1 ltac:(lia) Hmi Hnone ltac:(lia) Hv2) as [Hb A2].
+    pose proof (reason_exists val st0 C0 Hne0 idx Hb Hidxt) as Hrnz.
+    destruct (nth (lvar p) (rsn st0) 0) as [|r'] eqn:Er; [contradiction|].
+    destruct (i_rsn _ _ C0 idx p r' Hp' Er) as (c' & Hc' & Hc0 & Hrest).
+    replace (S r' - 1) with r' by lia.
+    eapply IH; [exact Hr2 | exact Hos2 | exact Hc' | exact Hp2 | fvs; exact A2 | | left; lia | | exact HQ].
+    + intros p' Hp''. rewrite Forall_forall in Hrest.
+      destruct (Hrest (nth p' c' 0) (in_tl_nth c' p' Hp'')) as [Hf (k' & Hk' & Hpos)].
+      split; [exact Hf|]. exists k'. split; [exact Hpos | lia].
+    + destruct Hdis as (u & Hu & Hdu). destruct (Nat.eq_dec u (lvar p)) as [-> | Hne].
+      * right. pose proof (true_disagree_false val _ _ Hptrue Hdu) as Hneg.
+        apply lit_true_lneg in Hneg.
+        pose proof (Forall_nth_error _ _ _ _ (i_db _ _ C0) Hc') as Hex.
+        destruct c' as [|a c']; [discriminate|]. cbn in Hc0. injection Hc0 as ->.
+        inversion Hex; subst; [contradiction | cbn; assumption].
+      * left. exists u. split; [|exact Hdu]. fvs. apply marked_lset; [exact Hv2|].
+        destruct (Nat.eqb_spec (lvar p) u); [congruence | exact Hu].
+Qed.
+
+
+Lemma finish_learnt_sp fuel : forall h stc Lr i best bestlv Q,
+  R h stc -> only_sn st0 stc -> pts h learnt Lr -> 1 <= i <= length Lr ->
+  (forall k, 1 <= k < i -> nth (lvar (nth k Lr 0)) (lvl st0) 0 <= bestlv) ->
+  ((best = 0 /\ bestlv = 0) \/ (1 <= best < i /\ nth (lvar (nth best Lr 0)) (lvl st0) 0 = bestlv)) ->
+  (forall u, marked (sn stc) u -> exists k, i <= k < length Lr /\ lvar (nth k Lr 0) = u) ->
+  (forall r h' stc' Lr', R h' stc' -> only_sn st0 stc' -> pts h' learnt Lr' ->
+     (forall u, nth u (sn stc') 0 = 0) ->
+     (exists a t t', Lr = a :: t /\ Lr' = a :: t' /\ Permutation t t') ->
+     (forall q, In q (tl Lr) -> nth (lvar q) (lvl st0) 0 <= r) ->
+     (r = 0 \/ exists q, In q (tl Lr) /\ nth (lvar q) (lvl st0) 0 = r) ->
+     Q r h') ->
+  wp (finish_learnt s fuel learnt i (length Lr) best bestlv) Q h.
+Proof.
+  induction fuel as [|f IH]; intros h stc Lr i best bestlv Q Hr Hos Hp Hi Hle Hbest Hmarks HQ;
+    cbn [finish_learnt].
+  { apply wp_vabort. }
+  pose proof Hos as (E1 & E2 & E3 & E4 & Ef).
+  assert (Hfr : ~ In (vloc learnt) (locs s inp stc)) by (now rewrite (locs_eq st0 stc E1 E3)).
+  destruct Lr as [|a t]; [cbn in Hi; lia|].
+  destruct (Nat.leb_spec (length (a :: t)) i).
+  { (* move the deepest literal to position 1 *)
+    eapply wp_seq with (P := fun _ h1 => exists t', R h1 stc /\ pts h1 learnt (a :: t') /\ Permutation t t').
+    - destruct (Nat.ltb_spec 1 best).
+      + destruct Hbest as [[-> _] | [Hb _]]; [lia|].
+        ev. eapply wp_get_pts; [exact Hp|]. intros b Hb'.
+        ev. eapply wp_get_pts; [exact Hp|]. intros x Hx.
+        ev. eapply (set_scr s inp xs0 h stc Hr learnt); [exact Hfr | exact Hp |]. intros h1 _ Hr1 Hp1 _.
+        eapply (set_scr s inp xs0 h1 stc Hr1 learnt); [exact Hfr | exact Hp1 |]. intros h2 _ Hr2 Hp2 _.
+        exists (lset (lset t 0 b) (best - 1) x). split; [exact Hr2|]. split.
+        * destruct best as [|best]; [lia|].
+          replace (S best - 1) with best by lia.
+          assert (E : lset (lset (a :: t) 1 b) (S best) x = a :: lset (lset t 0 b) best x) by reflexivity.
+          exact (eq_rect _ (pts h2 learnt) Hp2 _ E).
+        * apply nth_error_nth_eq in Hb'. apply nth_error_nth_eq in Hx. subst b x.
+          destruct best as [|best]; [lia|]. replace (S best - 1) with best by lia. cbn [nth].
+          assert (best < length t) by (cbn [length] in H, Hi; lia).
+          apply perm_swap; lia.
+      + apply wp_ret. exists t. split; [exact Hr|]. split; [exact Hp | reflexivity].
+    - intros _ h1 (t' & Hr1 & Hp1 & Hperm). apply wp_ret.
+      apply (HQ bestlv h1 stc (a :: t') Hr1 Hos Hp1).
+      + intros u. destruct (Nat.eq_dec (nth u (sn stc) 0) 0) as [E | E]; [exact E|].
+        destruct (Hmarks u E) as (k & Hk & _). lia.
+      + exists a, t, t'. auto.
+      + intros q Hq. apply In_nth with (d := 0) in Hq as (k & Hk & <-).
+        apply (Hle (S k)). cbn [length tl] in Hk, H |- *. lia.
+      + destruct Hbest as [[_ ->] | [Hb Hlv]]; [now left|]. right.
+        exists (nth best (a :: t) 0). split; [apply in_tl_nth; lia | exact Hlv]. }
+  ev. eapply wp_get_pts; [exact Hp|]. intros q Hq. apply nth_error_nth_eq in Hq. subst q. cbv zeta.
+  ev. ev. intros h1 Hv1 Hr1 Hk1.
+  assert (Hos1 : only_sn st0 (fset stc FSn (lset (sn stc) (lvar (nth i (a :: t) 0)) 0)))
+    by (apply only_sn_fset; auto).
+  pose proof (learnt_kept stc h h1 _ Hos Hk1 Hp) as Hp1.
+  ev. ev. intros lv Hlv. apply nth_error_nth_eq in Hlv. subst lv. fvs. rewrite (Ef FLvl) by discriminate.
+  assert (Hmarks1 : forall u, marked (lset (sn stc) (lvar (nth i (a :: t) 0)) 0) u ->
+            exists k, i + 1 <= k < length (a :: t) /\ lvar (nth k (a :: t) 0) = u).
+  { intros u Hu. apply marked_lset in Hu; [|exact Hv1].
+    destruct (Nat.eqb_spec (lvar (nth i (a :: t) 0)) u); [lia|].
+    destruct (Hmarks u Hu) as (k & Hk & Ek). exists k. split; [|exact Ek].
+    destruct (Nat.eq_dec k i) as [-> | ?]; [congruence | lia]. }
+  destruct (Nat.ltb_spec bestlv (nth (lvar (nth i (a :: t) 0)) (lvl st0) 0)).
+  - eapply IH; [exact Hr1 | exact Hos1 | exact Hp1 | lia | | | fvs; exact Hmarks1 | exact HQ].
+    + intros k Hk. destruct (Nat.eq_dec k i) as [-> | ?]; [lia|]. specialize (Hle k ltac:(lia)). lia.
+    + right. split; [lia | reflexivity].
+  - eapply IH; [exact Hr1 | exact Hos1 | exact Hp1 | lia | | | fvs; exact Hmarks1 | exact HQ].
+    + intros k Hk. destruct (Nat.eq_dec k i) as [-> | ?]; [lia|]. apply Hle. lia.
+    + destruct Hbest as [? | [? ?]]; [now left | right; split; [lia | assumption]].
+Qed.
+
+
+End Analyze.
+
+(** ** Learning *)
+
+Lemma attach_sp h st ci c cl Q :
+  R h st -> nth_error (hcls st) ci = Some c -> nth_error (db st) ci = Some cl -> 2 <= length cl ->
+  Wch (db st) (wl st) -> (forall l, l < length (wl st) -> cnt (wl st) l ci = 0) ->
+  (forall h' st', R h' st' -> keeps st h h' -> hcls st' = hcls st -> hwl st' = hwl st -> db st' = db st ->
+     (forall f, fv st' f = fv st f) -> Wch (db st') (wl st') -> Q tt h') ->
+  wp (attach s ci c) Q h.
+Proof.
+  intros Hr Hc Hd Hlen W W0 HQ. unfold attach.
+  ev. eapply (get_cl s inp xs0 h st Hr ci c cl); [exact Hc | exact Hd |]. intros c0 H0.
+  ev. eapply (get_cl s inp xs0 h st Hr ci c cl); [exact Hc | exact Hd |]. intros c1 H1.
+  apply nth_error_nth_eq in H0, H1. subst c0 c1.
+  assert (He : forall l, expect (db st) ci l = expect_cl cl l) by (intros; now apply expect_nth).
+  ev. ev. intros w0 Hw0. destruct (repr_w s inp xs0 h st _ _ Hr Hw0) as (W0l & HW0 & _).
+  assert (Ha0 : nth 0 cl 0 < length (wl st)) by (eapply nth_error_lt; eauto).
+  ev. eapply (push_w s inp xs0 h st Hr _ w0 W0l); [exact Hw0 | exact HW0 |]. intros h1 Hr1 Hk1.
+  ev. ev. intros w1 Hw1. destruct (repr_w s inp xs0 h1 _ _ _ Hr1 Hw1) as (W1l & HW1 & _). fvs.
+  assert (Ha1 : nth 1 cl 0 < length (wl st)) by (rewrite <- (lset_length (wl st) (nth 0 cl 0) (W0l ++ [ci])); eapply nth_error_lt; eauto).
+  eapply (push_w s inp xs0 h1 _ Hr1 _ w1 W1l); [exact Hw1 | exact HW1 |]. intros h2 Hr2 Hk2.
+  apply (HQ h2 _ Hr2); fvs; try reflexivity.
+  - eapply keeps_trans; eassumption.
+  - assert (W1 : Wch (db st) (lset (wl st) (nth 0 cl 0) (W0l ++ [ci]))).
+    { apply wch_push; [exact W | exact HW0 |]. rewrite W0, He by exact Ha0. unfold expect_cl.
+      destruct (Nat.leb_spec 2 (length cl)); [|lia]. rewrite Nat.eqb_refl. lia. }
+    apply wch_push; [exact W1 | exact HW1 |]. rewrite He. unfold expect_cl.
+    destruct (Nat.leb_spec 2 (length cl)); [|lia].
+    rewrite cnt_lset by exact Ha0.
+    assert (Hc0 : count_occ Nat.eq_dec W0l ci = 0)
+      by (pose proof (W0 _ Ha0) as X; unfold cnt in X; now rewrite (nth_of_error _ _ _ [] HW0) in X).
+    destruct (Nat.eqb_spec (nth 0 cl 0) (nth 1 cl 0)) as [E | E]; rewrite Nat.eqb_refl.
+    + rewrite count_occ_app. cbn [count_occ]. destruct (Nat.eq_dec ci ci); [lia | congruence].
+    + rewrite (W0 _ Ha1). lia.
+Qed.
+
+
+Lemma learn_sp fuel h st confl Q :
+  R h st -> Inv val st -> conflict st (S confl) -> lim st <> [] ->
+  (forall h' st', R h' st' -> Inv val st' -> Q tt h') ->
+  wp (learn s fuel confl) Q h.
+Proof.
+  intros Hr (C & W & S0) Hconf Hne HQ. unfold learn, decision_level.
+  destruct Hconf as (ci & cl & Eci & Hd & Hfalse & Hcur). injection Eci as <-.
+  assert (Hasg : forall u, nth u (asg st) 0 <= 2) by apply (i_asg _ _ C).
+  ev. ev. ev. ev. intros now Hnow.
+  ev. eapply (make_scr s inp xs0 h st Hr). intros lr h1 Hfresh Hp1 Hr1 Hk1 _ _. cbn [repeat] in Hp1.
+  ev. ev.
+  (* the conflict clause has a literal at the current level, so the trail is not empty *)
+  destruct (proj1 (Exists_exists _ _) Hcur) as (q0 & Hq0 & (k0 & Hk0 & Hk0lim)).
+  assert (Htr : tr st <> []) by (intros E; apply at_pos_lt in Hk0; rewrite E in Hk0; cbn in Hk0; lia).
+  ev. eapply (analyze_loop_sp st lr now C Hne Hfresh fuel h1 st confl cl 0 (length (tr st) - 1) 0 [0]);
+    [exact Hr1 | apply only_sn_refl | exact Hd | exact Hp1 | | | | |].
+  { apply ainv_init; [exact Htr | exact S0]. }
+  { intros p Hp. rewrite Forall_forall in Hfalse. pose proof (Hfalse _ (nth_In cl 0 (proj2 Hp))) as Hf.
+    split; [exact Hf|]. destruct (false_at_pos val st C _ Hf) as (k & Hk). exists k. split; [exact Hk|].
+    pose proof (at_pos_lt _ _ _ Hk). lia. }
+  { right. apply In_nth with (d := 0) in Hq0 as (p & Hp & Ep). exists p, k0. split; [lia|].
+    rewrite Ep. split; [exact Hk0|]. rewrite Forall_forall in Hk0lim. apply Hk0lim, base_in, Hne. }
+  { right. rewrite skipn_O. apply (Forall_nth_error _ _ _ _ (i_db _ _ C) Hd). }
+  intros p h2 stc2 Lr1 Hr2 Hos2 Hp2 (idx & Hidx & Hbidx) Hmarks2 Hne1 Hlr1 Hsound. cbv zeta.
+  destruct Lr1 as [|a t]; [congruence|]. cbn [tl] in *.
+  pose proof Hos2 as (F1 & F2 & F3 & F4 & Ff).
+  assert (Hfr2 : ~ In (vloc lr) (locs s inp stc2)) by (now rewrite (locs_eq st stc2 F1 F3)).
+  ev. eapply (set_scr s inp xs0 h2 stc2 Hr2 lr); [exact Hfr2 | exact Hp2 |]. intros h3 _ Hr3 Hp3 _.
+  rewrite lset_cons0 in Hp3.
+  ev. eapply wp_len_pts; [exact Hp3|].
+  ev. eapply (finish_learnt_sp st lr Hfresh fuel h3 stc2 (lneg p :: t) 1 0 0);
+    [exact Hr3 | exact Hos2 | exact Hp3 | cbn; lia | intros; lia | now left | |].
+  { intros u Hu. destruct (Hmarks2 u Hu) as (q & Hq & <-). apply In_nth with (d := 0) in Hq as (k & Hk & <-).
+    exists (S k). cbn. split; [lia | reflexivity]. }
+  intros bt h4 stc4 Lr3 Hr4 Hos4 Hp4 Hz4 (a' & t0 & t' & Ea & ELr3 & Hperm) Hbt_le Hbt. injection Ea as <- <-.
+  subst Lr3. cbn [tl] in Hbt_le, Hbt.
+  pose proof Hos4 as (G1 & G2 & G3 & G4 & Gf).
+  assert (Hlvl : forall q, In q t -> 0 < nth (lvar q) (lvl st) 0 < length (lim st)).
+  { intros q Hq. rewrite Forall_forall in Hlr1. apply Hlr1, Hq. }
+  assert (Hbt_lt : bt < length (lim st)).
+  { destruct Hbt as [-> | (q & Hq & <-)]; [destruct (lim st); [congruence | cbn; lia] | now apply Hlvl]. }
+  assert (I4 : Inv val stc4).
+  { split; [|split].
+    - eapply core_ext; [| | | | | | | exact C]; rewrite ?G2, ?Gf by discriminate; reflexivity.
+    - rewrite G2, G4. exact W.
+    - exact Hz4. }
+  ev. eapply backtrack_sp; [exact Hr4 | exact I4 |].
+  intros h5 st5 Hr5 Hk5 I5 H1 H3 H2 Hbtr.
+  rewrite (Gf FLim) in Hbtr by discriminate. specialize (Hbtr Hbt_lt).
+  destruct Hbtr as (Edb & Az & Ak & Elv & Rk & Etr & Elim & Eq).
+  rewrite (Gf FTr), (Gf FLim) in * by discriminate.
+  set (m := nth bt (lim st) 0) in *.
+  pose proof I5 as (C5 & W5 & S5).
+  assert (Hp5 : pts h5 lr (lneg p :: t')).
+  { apply Hk5; [|exact Hp4]. now rewrite (locs_eq st stc4 G1 G3). }
+  assert (Hfr5 : ~ In (vloc lr) (locs s inp st5)) by (now rewrite (locs_eq st st5); [| rewrite H1 | rewrite H3]).
+  (* the learnt literals stay false, the UIP becomes unassigned *)
+  assert (Hlow : forall q, In q t -> lval (asg st5) q = 2).
+  { intros q Hq. pose proof (proj1 (Forall_forall _ _) Hlr1 q Hq) as (Hqf & _).
+    destruct (false_at_pos val st C q Hqf) as (k & Hk).
+    assert (Hkm : k < m).
+    { apply (count_le_lt_iff (lim st) bt k (i_sorted _ _ C) Hbt_lt). rewrite <- (lvl_at val st C k (lvar q) Hk).
+      now apply Hbt_le. }
+    rewrite lval_ext with (A := asg st); [exact Hqf|].
+    rewrite Ak; [rewrite (Gf FAsg) by discriminate; reflexivity|].
+    eapply at_pos_not_skipn; eauto. apply (i_nd _ _ C). }
+  assert (Hlow' : Forall (fun q => lval (asg st5) q = 2) t').
+  { apply Forall_forall. intros q Hq. apply Hlow. eapply Permutation_in; [symmetry; exact Hperm | exact Hq]. }
+  assert (Huip : lval (asg st5) (lneg p) = 0).
+  { apply lval_zero; [apply (i_asg _ _ C5)|]. rewrite lvar_lneg. apply Az.
+    assert (Hidxm : m <= idx).
+    { destruct (Nat.leb_spec m idx) as [|Hlt]; [assumption|]. exfalso.
+      apply (count_le_lt_iff (lim st) bt idx (i_sorted _ _ C) Hbt_lt) in Hlt.
+      pose proof (proj2 (cur_iff val st C Hne idx) Hbidx). lia. }
+    apply in_map_iff. exists p. split; [reflexivity|].
+    rewrite <- (firstn_skipn m (tr st)) in Hidx. rewrite nth_error_app2 in Hidx.
+    - eapply nth_error_In. exact Hidx.
+    - rewrite length_firstn. lia. }
+  assert (Hlim5 : length (lim st5) = bt) by (rewrite Elim, length_firstn; lia).
+  assert (Hsat : Exists (lit_true val) (lneg p :: t')).
+  { destruct Hsound as [Ht | Hex]; [now left | right].
+    apply Exists_exists in Hex as (q & Hq & Ht). apply Exists_exists. exists q. split; [|exact Ht].
+    eapply Permutation_in; [exact Hperm | exact Hq]. }
+  assert (Hv5 : lvar (lneg p) < length (asg st5) -> True) by auto.
+  cbn [length]. destruct (Nat.eqb_spec (S (length t)) 1) as [Hl1 | Hl1].
+  - (* a unit clause: learnt at level 0 *)
+    assert (t = []) as -> by (destruct t; [reflexivity | cbn in Hl1; lia]).
+    assert (bt = 0) as Hbt0 by (destruct Hbt as [-> | (q & [] & _)]; reflexivity).
+    eapply enqueue_sp; [exact Hr5 |]. intros h6 Ha6 Hl6 Hrs6 Hr6 _.
+    apply (HQ h6 _ Hr6). split; [|split].
+    + apply core_enq; auto.
+      * intros _. left. rewrite Elim, Hbt0. constructor.
+      * intros; lia.
+      * intros _. destruct Hsound as [Ht | Hex]; [exact Ht | inversion Hex].
+    + exact W5.
+    + exact S5.
+  - (* store and watch the clause, then propagate the UIP from it *)
+    assert (Ht' : t' <> []) by (intros ->; apply Permutation_sym, Permutation_nil in Hperm; subst t; cbn in Hl1; lia).
+    assert (Hbt1 : 1 <= bt).
+    { destruct t as [|q t]; [cbn in Hl1; lia|].
+      pose proof (Hbt_le q (or_introl eq_refl)). pose proof (Hlvl q (or_introl eq_refl)). lia. }
+    ev. ev.
+    ev. eapply (push_cls s inp xs0 h5 st5 Hr5 lr (lneg p :: t')); [exact Hfr5 | exact Hp5 |]. intros h6 Hr6.
+    assert (Hci : nth_error (hcls (cpush st5 lr (lneg p :: t'))) (length (db st5)) = Some lr).
+    { cbn [hcls cpush]. rewrite <- (repr_len_db s inp xs0 h5 st5 Hr5), nth_error_app2, Nat.sub_diag by lia.
+      reflexivity. }
+    assert (Hcd : nth_error (db (cpush st5 lr (lneg p :: t'))) (length (db st5)) = Some (lneg p :: t')).
+    { cbn [db cpush]. now rewrite nth_error_app2, Nat.sub_diag by lia. }
+    ev. eapply attach_sp; [exact Hr6 | exact Hci | exact Hcd | destruct t'; [congruence | cbn; lia] | | |].
+    { cbn [db wl cpush]. apply wch_snoc, W5. }
+    { intros l Hl. apply (wch_fresh _ _ l W5). exact Hl. }
+    intros h7 st7 Hr7 _ E71 E73 E72 E7f W7.
+    eapply enqueue_sp; [exact Hr7 |]. intros h8 Ha8 Hl8 Hrs8 Hr8 _.
+    apply (HQ h8 _ Hr8).
+    assert (C7 : Core val st7).
+    { eapply core_ext; [| | | | | | | apply (core_cpush val st5 lr _ C5 Hsat)];
+        rewrite ?E72, ?E7f; reflexivity. }
+    split; [|split].
+    + apply core_enq; auto.
+      * rewrite E7f. exact Huip.
+      * intros; lia.
+      * intros ci' E. assert (ci' = length (db st5)) as -> by lia. exists (lneg p :: t').
+        rewrite E72. split; [exact Hcd|]. split; [reflexivity|]. cbn [tl]. rewrite E7f. exact Hlow'.
+      * rewrite E7f. cbn [fv cpush]. rewrite Hlim5. lia.
+    + unfold enq. cbn [fv fset fld_eqb db wl]. exact W7.
+    + intros v. unfold enq. cbn [fv fset fld_eqb]. rewrite E7f. exact (S5 v).
+Qed.
+
 End Spec.
