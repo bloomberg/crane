@@ -1361,7 +1361,9 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
       let adopted =
         match strategy with
         | Modulo_cons _ | Frame_stack ->
-          find_adopted ~adoptable:(planned_adoptable (fst f.df_path.dp_outer)) check body
+          find_adopted ~adoptable:(planned_adoptable (fst f.df_path.dp_outer))
+            ~invocations:(Recursion_plan.adopted_invocations (fst f.df_path.dp_outer))
+            check body
         | No_loop | Tail_loop | Suspended _ -> None
       in
       let survived = Option.map decline_reason adopted in

@@ -1045,17 +1045,29 @@ let adopt_local_fix ~stmts ~planned = function
             ad_source = Fixpoint (fst fixpoint.lf_member) } )
   | _ -> None
 
+(** Whether [e] is a lambda invoked in place of one of the calls
+    [invocations] are the occurrences of: a partner's body inlined there
+    ({!Loopify.inline_partner}). *)
+let invocation_of invocations = function
+  | CPPfun_call ({cs_occurrence = Some o; _}, CPPlambda _, _) ->
+    List.exists (Miniml.Occurrence.equal o) invocations
+  | _ -> false
+
 (** Adopt the body of an immediately-invoked lambda that still calls this
     function -- what {!generic_inline_expr} leaves behind when a mutual
-    recursion partner is inlined in a non-tail position.
+    recursion partner is inlined in a non-tail position -- as the
+    recursion plan has it: the lambda invoked in place of one of the calls
+    [invocations] are the occurrences of
+    ({!Recursion_plan.adopted_invocations}).
 
     Unlike a fixpoint the lambda has no name to key calls on, so installation
-    recognises the invocation by its body and replaces it with a call on
-    {!ad_entry_id}, which the body itself then no longer appears in. *)
-let adopt_invocation ~stmts check e =
+    recognises each invocation by the Core call it is made of and replaces
+    it with a call on {!ad_entry_id}, which the body itself then no longer
+    appears in. *)
+let adopt_invocation ~invocations e =
   match e with
   | CPPfun_call (_, CPPlambda {cl_params; cl_body; cl_ret; _}, args)
-    when collect_stmts check ~in_visitor:false cl_body <> [] ->
+    when invocation_of invocations e ->
     let params =
       List.filter_map
         (fun (ty, id_opt) ->
@@ -1065,7 +1077,6 @@ let adopt_invocation ~stmts check e =
     if params = [] || List.length params <> List.length (call_args args) then
       None
     else
-      let invoked = cl_body in
       let bound = List.map fst params in
       let captures =
         free_vars_body cl_body
@@ -1073,18 +1084,12 @@ let adopt_invocation ~stmts check e =
         |> List.sort_uniq Id.compare
       in
       let entry_id = adopted_entry_id "inl" in
-      let rerouted = ref [] in
       let reroute e' =
         match e' with
-        | CPPfun_call (res, CPPlambda l', args') when l'.cl_body = invoked ->
-          rerouted := res.cs_occurrence :: !rerouted;
+        | CPPfun_call (res, CPPlambda _, args') when invocation_of invocations e' ->
           CPPfun_call (res, CPPvar entry_id, args')
         | _ -> e'
       in
-      (* The calls the entry stands for are the invocations installation
-         reroutes, each the inlined call of the partner it was made of. *)
-      ignore (rewrite_exprs reroute stmts);
-      let invocations = List.filter_map Fun.id !rerouted in
       Some
         { ad_name = "inl";
           ad_entry_id = entry_id;
@@ -1097,18 +1102,45 @@ let adopt_invocation ~stmts check e =
           ad_source = Invocations invocations }
   | _ -> None
 
+(** The invocation {!adopt_invocation} adopted before the recursion plan
+    said which ({!Recursion_plan.adopted_invocations}): the first invoked
+    lambda in the flow whose body holds a call [check] recognises, and with
+    it every invocation of a lambda of the same body, kept to check the plan
+    against under [CRANE_CHECK_IR].  The occurrences the invocations were
+    made of, if one is adopted. *)
+let read_adopted_invocations check stmts =
+  find_in_flow stmts ~on_expr:(function
+    | CPPfun_call (_, CPPlambda {cl_params; cl_body; _}, args)
+      when collect_stmts check ~in_visitor:false cl_body <> []
+           && (let named = List.filter (fun (_, id) -> Option.has_some id) (to_reversed cl_params) in
+               named <> [] && List.length named = List.length (call_args args)) ->
+      let found = ref [] in
+      ignore
+        (rewrite_exprs
+           (fun e' ->
+             ( match e' with
+             | CPPfun_call (res, CPPlambda l', _) when l'.cl_body = cl_body ->
+               found := res.cs_occurrence :: !found
+             | _ -> () );
+             e' )
+           stmts);
+      Some !found
+    | _ -> None )
+
 (** The body this machine should adopt, if any.
 
     A local fixpoint is preferred: it is the shape translation emits for Coq's
     [let fix], and it names itself.  Which of them call back into the function
     is the recursion plan's, [adoptable]; the first in the flow lowering can
-    take is adopted.  Failing that, an invoked lambda in the function's flow
-    -- the residue of inlining a mutual-recursion partner.
+    take is adopted.  Failing that, the lambda invoked in place of the calls
+    of a mutual-recursion partner the plan has the machine adopt,
+    [invocations], the residue of inlining it.
 
     Under [CRANE_CHECK_IR] the fixpoints in the flow the plan finds calling
     back are checked to be those whose body holds a call [check]
-    recognises. *)
-let find_adopted ~adoptable check stmts =
+    recognises, and the invocations adopted to be those the reading of the
+    finished body adopted ({!read_adopted_invocations}). *)
+let find_adopted ~adoptable ~invocations check stmts =
   let planned (lf : local_fixpoint) =
     List.exists (Miniml.Occurrence.equal (fst lf.lf_member)) adoptable
   in
@@ -1125,7 +1157,26 @@ let find_adopted ~adoptable check stmts =
         | _ -> None ));
   match find_in_flow stmts ~on_stmt:(adopt_local_fix ~stmts ~planned) with
   | Some _ as found -> found
-  | None -> find_in_flow stmts ~on_expr:(adopt_invocation ~stmts check)
+  | None ->
+    let adopted =
+      Option.bind invocations (fun invocations -> find_in_flow stmts ~on_expr:(adopt_invocation ~invocations))
+    in
+    ( if Probe.checking () then
+        let made = Option.map (fun ad -> match ad.ad_source with Invocations o -> o | Fixpoint _ -> []) adopted in
+        let same a b =
+          List.length a = List.length b
+          && List.for_all (fun o -> List.length (List.filter (Option.equal Miniml.Occurrence.equal (Some o)) b) = 1) a
+        in
+        let agree =
+          match (made, read_adopted_invocations check stmts) with
+          | Some occs, Some read -> same occs read
+          | None, None -> true
+          | Some _, None | None, Some _ -> false
+        in
+        if not agree then
+          Probe.violation "adoption plan"
+            (Pp.str "the recursion plan and the finished body disagree on the invocations a machine adopts") );
+    adopted
 
 (** [only_entry n check] reports just the calls [check] finds against entry
     [n].
