@@ -109,46 +109,39 @@ Ltac simp_interp_leaf_refl :=
 Ltac simp_interp_leaf :=
   autounfold with monadsimp; rewrite interp_st_trigger; cbn.
 
+(* stforward_inner takes a "forward step" and interprets one portion of the tree
+  , with simp_interp_fun being applied to
+  the head of bind expressions. *)
 Ltac stforward_inner simp_interp_fun :=
   match goal with
   | [ |- context[ eutt eq (interp_st ?R ?t (ITree.bind ?head ?k) ?lmem) ?goal ] ] =>
-    idtac "bind with head:"; idtac head;
     bind_split_intros
       ltac:(eapply (eutt_eq_bind_interp_st _ ltac:(refine_prod)))
       ltac:(simp_interp_fun)
   | [ |- context[ eutt eq (interp_st ?R ?t (bind (ret ?v) ?k) ?lmem) ?goal ] ] =>
-    idtac "bind (ret v;...)"; (* TODO: try Monad.bind_ret*? *)
     bind_split_intros
-      ltac:(eapply (eutt_eq_bind_interp_st ltac:(refine_prod)))
+      ltac:(eapply (eutt_eq_bind_interp_st _ ltac:(refine_prod)))
       ltac:(rewrite interp_st_ret)
+  | [ |- context[ eutt eq (interp_st ?R ?t (bind (Ret ?v) ?k) ?lmem) ?goal ] ] =>
+    bind_split_intros
+      ltac:(eapply (eutt_eq_bind_interp_st _ ltac:(refine_prod)))
+      ltac:(rewrite interp_st_Ret)
   | [ |- context[ eutt eq (interp_st ?R ?t (Ret ?v) ?lmem) ?goal] ] =>
-    idtac "Ret v"; (* TODO: try Monad.bind_ret*? *)
     setoid_rewrite interp_st_Ret
   | [ |- context[ eutt eq (interp_st ?R ?t (ret ?v) ?lmem) ?goal ] ] =>
-    idtac "ret v"; (* TODO: try Monad.bind_ret*? *)
     setoid_rewrite interp_st_ret
   | [ |- context[eutt eq (ret ?v) ?goal] ] =>
-    idtac "pure value reflexivity";
     reflexivity
   | [ |- context[ eutt eq (Ret ?v) ?goal] ] =>
-    idtac "pure value reflexivity";
     reflexivity
-  | [ |- context[ eutt eq (interp_st _ _ (newSTRef _ _ ) _ ) ] ] =>
-    idtac "newSTRef"; simp_interp_fun
-  | [ |- context[ eutt eq (interp_st _ _ (readSTRef _ ) _ ) _ ] ] =>
-    idtac "readSTRef"; simp_interp_fun
-  | [ |- context[ eutt eq (interp_st _ _ (writeSTRef _ _ ) _ ) _ ] ] =>
-    idtac "writeSTRef"; simp_interp_fun
-  | [ |- context[ eutt eq (interp_st _ _ (newArray _ _ _ _ ) _ ) _ ] ] =>
-    idtac "newArray"; simp_interp_fun
-  | [ |- context[ eutt eq (interp_st _ _ (newListArray _ _ _ _ ) _ ) _ ] ] =>
-    idtac "newListArray"; simp_interp_fun
-  | [ |- context[ eutt eq (interp_st _ _ (readArray _ _ ) _ ) _ ] ] =>
-    idtac "readArray"; simp_interp_fun
-  | [ |- context[ eutt eq (interp_st _ _ (writeArray _ _ _ ) _ ) _ ] ] =>
-    idtac "writeArray"; simp_interp_fun
-  | [ |- context[ eutt eq (interp_st _ _ (getElems _) _ ) _ ] ] =>
-    idtac "getElems"; simp_interp_fun
+  | [ |- context[ eutt eq (interp_st _ _ (newSTRef _ _ ) _ ) ] ] => simp_interp_fun
+  | [ |- context[ eutt eq (interp_st _ _ (readSTRef _ ) _ ) _ ] ] => simp_interp_fun
+  | [ |- context[ eutt eq (interp_st _ _ (writeSTRef _ _ ) _ ) _ ] ] => simp_interp_fun
+  | [ |- context[ eutt eq (interp_st _ _ (newArray _ _ _ _ ) _ ) _ ] ] => simp_interp_fun
+  | [ |- context[ eutt eq (interp_st _ _ (newListArray _ _ _ _ ) _ ) _ ] ] => simp_interp_fun
+  | [ |- context[ eutt eq (interp_st _ _ (readArray _ _ ) _ ) _ ] ] => simp_interp_fun
+  | [ |- context[ eutt eq (interp_st _ _ (writeArray _ _ _ ) _ ) _ ] ] => simp_interp_fun
+  | [ |- context[ eutt eq (interp_st _ _ (getElems _) _ ) _ ] ] => simp_interp_fun
   end.
 
 Ltac stforward_refine := stforward_inner simp_interp_leaf_refl.
