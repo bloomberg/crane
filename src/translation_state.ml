@@ -349,7 +349,8 @@ let with_region ?(owned = []) (body : ml_ast) (f : unit -> 'a) : 'a =
   with_field
     (fun c -> c.move_plan)
     (fun p -> tctx := { !tctx with move_plan = p })
-    (Ownership_plan.region ~owned body) f
+    (Ownership_plan.region ~owned ~n_outer:(List.length (!tctx).current_type_vars) body)
+    f
 
 (** [with_plan p f] runs [f] with the moves planned by [p], an alternative
     plan of the region being generated ({!Ownership_plan.reuse_arm}). *)

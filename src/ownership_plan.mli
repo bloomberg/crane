@@ -15,9 +15,11 @@
     neither.  A pattern variable of a match on a variable is a part of it,
     which C++ binds by reference: moving the whole is not a last use while a
     part is still to be read, nor moving a part while the whole is, though
-    two parts are independent.  A let-bound lambda or local fixpoint may
-    read what it closes over wherever it is used, so nothing it closes over
-    is read last in the let's scope.  An argument an inline custom's template
+    two parts are independent.  A let-bound local fixpoint, or a lambda
+    with a type variable of its own, which may be lifted to a function
+    template or inlined, may read what it closes over wherever it is used,
+    so nothing it closes over is read last in the let's scope; a lambda
+    bound to a local copies it where it is made.  An argument an inline custom's template
     splices twice is read twice, and one it never splices is not read.
 
     This is not yet the plan's OwnershipIR: it decides no use's mode, only
@@ -36,10 +38,17 @@ val empty : t
     scalar or declared trivially copyable with arguments that are too. *)
 val worth_moving : Miniml.ml_type -> bool
 
-(** [region ~owned t] is the plan of [t]'s reads, [t] standing under binders
-    it reads but does not bind, of which it owns those at the de Bruijn
-    indices [owned]. *)
-val region : ?owned:int list -> Miniml.ml_ast -> t
+(** [region ~owned ~n_outer t] is the plan of [t]'s reads, [t] standing
+    under binders it reads but does not bind, of which it owns those at the
+    de Bruijn indices [owned], and generated under a head of [n_outer] type
+    variables. *)
+val region : ?owned:int list -> n_outer:int -> Miniml.ml_ast -> t
+
+(** Whether, as [p] plans it, [let x : ty := a] binds the closure [a] to a
+    C++ local, which the region owns: [a] is a local fixpoint or a lambda
+    with no type variable of its own past the head's
+    ({!Ml_type_util.own_type_variables}).  [None] where nothing is planned. *)
+val closure_local : t -> Miniml.ml_type -> Miniml.ml_ast -> bool option
 
 (** [reuse_arm p ~scrutinee ~branch] is [p] for the branch numbered [branch]
     of the match on the variable [scrutinee], generated to rebuild

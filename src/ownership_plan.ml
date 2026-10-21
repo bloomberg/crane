@@ -21,6 +21,7 @@ type arm = {scrutinee : Occurrence.t; branch : int}
 
 type t = {
   root : ml_ast;
+  n_outer : int;  (* the type variables of the head the region is generated under *)
   root_owned : Levels.t;
   arms : arm list;
   reads : read list;
@@ -31,6 +32,7 @@ type t = {
 
 let empty =
   { root = MLdummy Kprop;
+    n_outer = 0;
     root_owned = Levels.empty;
     arms = [];
     reads = [];
@@ -140,15 +142,26 @@ and under parents d ~n body =
   let parents' = bind parents d ~n in
   leave parents' d (free parents' (d + n) body)
 
+(* Whether a let binds the closure [a] to a C++ local, under a head of
+   [n_outer] type variables: one with a type variable of its own is lifted to
+   a function template, or inlined at its uses, instead. *)
+let closure_local ~n_outer ty a =
+  match a with
+  | MLfix (_, ids, _, _, _) ->
+    not (Ml_type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)))
+  | MLlam _ -> not (Ml_type_util.own_type_variables ~n_outer [ty])
+  | _ -> false
+
 (* Whether the closure a let binds may read what it closes over at its uses
    rather than where it is made: a local fixpoint closes over its
-   surroundings by reference, and a lambda polymorphic in a type variable may
-   be lifted to a function template, to which each use passes them, or
-   inlined at each use.  A monomorphic lambda is a value holding copies. *)
-let reads_at_uses ty a =
+   surroundings by reference, and a lambda with a type variable of its own
+   may be lifted to a function template, to which each use passes them, or
+   inlined at each use.  A lambda bound to a local is a value holding
+   copies. *)
+let reads_at_uses ~n_outer ty a =
   match strip a with
   | MLfix _ -> true
-  | MLlam _ -> not (Mlutil.IntSet.is_empty (Mlutil.ml_tvars ty))
+  | MLlam _ -> Ml_type_util.own_type_variables ~n_outer [ty]
   | _ -> false
 
 (* Whether a match may take its scrutinee's value, as translation generates
@@ -182,7 +195,7 @@ let evaluations r =
   | Some s when Table.is_inline_custom r -> Foreign_template.arg_mentions s
   | _ -> fun _ -> 1
 
-let liveness t =
+let liveness ~n_outer t =
   let reads = ref [] in
   let captures = ref [] in
   (* [walk ~consumed ~pinned parents d live t] records [t]'s reads and is
@@ -237,7 +250,7 @@ let liveness t =
       | _ -> () );
       Levels.union live captured
     | MLletin (_, ty, a, b, _) ->
-      let pinned_b = if reads_at_uses ty a then Levels.union pinned (free parents d a) else pinned in
+      let pinned_b = if reads_at_uses ~n_outer ty a then Levels.union pinned (free parents d a) else pinned in
       let parents_b = bind parents d ~n:1 in
       let live_b = walk ~consumed ~pinned:pinned_b parents_b (d + 1) live b in
       walk ~pinned parents d (leave parents_b d live_b) a
@@ -352,7 +365,7 @@ end
    variable it reads is owned where it is read: bound by value, so that the
    region may take its value.  [owned] holds the levels of the variables the
    region owns at its root. *)
-let ownership ~reads ~arms ~owned t =
+let ownership ~n_outer ~reads ~arms ~owned t =
   let out = ref [] in
   let captured = ref [] in
   let rec own owned d t =
@@ -394,7 +407,9 @@ let ownership ~reads ~arms ~owned t =
   and owned_var owned d i _ = Levels.mem (d - i) owned
   and let_owned owned d x ty a =
     match (x, a) with
-    | Dummy, _ | _, (MLfix _ | MLlam _) -> false
+    | Dummy, _ -> false
+    (* A closure bound to a local is a value like any other. *)
+    | _, (MLfix _ | MLlam _) -> closure_local ~n_outer ty a
     | _ ->
       (not (Ml_type_util.ml_type_is_unit ty))
       && worth_moving ty
@@ -442,16 +457,20 @@ let ownership ~reads ~arms ~owned t =
   own owned 0 t;
   (!out, !captured)
 
-let plan root root_owned arms (reads, captures) =
-  let owned, captured_owned = ownership ~reads ~arms ~owned:root_owned root in
-  {root; root_owned; arms; reads; owned; captures; captured_owned}
+let plan ~n_outer root root_owned arms (reads, captures) =
+  let owned, captured_owned = ownership ~n_outer ~reads ~arms ~owned:root_owned root in
+  {root; n_outer; root_owned; arms; reads; owned; captures; captured_owned}
 
-let region ?(owned = []) t = plan t (Levels.of_list (List.map (fun i -> -i) owned)) [] (liveness t)
+let region ?(owned = []) ~n_outer t =
+  plan ~n_outer t (Levels.of_list (List.map (fun i -> -i) owned)) [] (liveness ~n_outer t)
 
 let reuse_arm p ~scrutinee ~branch =
   match scrutinee_var scrutinee with
-  | Some (_, scrutinee) -> plan p.root p.root_owned ({scrutinee; branch} :: p.arms) (p.reads, p.captures)
+  | Some (_, scrutinee) ->
+    plan ~n_outer:p.n_outer p.root p.root_owned ({scrutinee; branch} :: p.arms) (p.reads, p.captures)
   | None -> p
+
+let closure_local p ty a = if p == empty then None else Some (closure_local ~n_outer:p.n_outer ty a)
 
 let owned_at p o =
   match List.filter (fun (o', _) -> Occurrence.equal o o') p.owned with

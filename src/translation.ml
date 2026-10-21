@@ -280,6 +280,20 @@ let gen_local_fix_by_ref env ~binders renamed_ids funs_with_params owned_flags_p
   (impl_stmts @ wrapper_stmts, [])
 
 
+(* Under [CRANE_CHECK_IR], the region's plan must have decided as translation
+   does whether [let _ : ty := a] binds the closure [a] to a local, which the
+   plan owns and moves. *)
+let check_closure_local ty a ~local =
+  if Probe.checking () then
+    match Ownership_plan.closure_local (!tctx).move_plan ty a with
+    | Some planned when planned <> local ->
+      Probe.violation "ownership plan"
+        (Pp.str
+           (Printf.sprintf "a let-bound closure the plan takes for %s is generated as %s"
+              (if planned then "a local" else "no local")
+              (if local then "a local" else "no local") ) )
+    | _ -> ()
+
 (* Whether [e] is a closed constructor term of a shared variant with fields:
    built from constructors, literals and erased arguments only, so its value
    is the same every time it is evaluated. *)
@@ -8859,7 +8873,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
      statement lands in is {!with_cpp_return_type}, which
      {!position_cpp_ty} falls back to. *)
   match ast with
-  | MLletin (_, _, (MLfix (x, ids, funs, _, occ) as fix_term), b, _) as _whole ->
+  | MLletin (_, let_ty, (MLfix (x, ids, funs, _, occ) as fix_term), b, _) as _whole ->
     (* Special case for let-fix: the let binding name is the fix function name *)
     Local_types.check_minted ids;
     let ids, funs = Local_types.recover_fix_codomains ids funs in
@@ -8871,6 +8885,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     let outer_tvars = get_current_type_vars () in
     let n_outer = List.length outer_tvars in
     let has_extra_tvars = Ml_type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) in
+    check_closure_local let_ty fix_term ~local:(not has_extra_tvars);
     if has_extra_tvars then (
       (* Lift the polymorphic inner fixpoint to a top-level function. Build tvar
          names for all Tvars used in the fixpoint type: - Tvars 1..n_outer reuse
@@ -9192,7 +9207,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           :: asgn
           @ gen_cont ()
     in
-    (match let_lambda ~lex:(current_lexenv ()) ~n_outer t a b with
+    let decision = let_lambda ~lex:(current_lexenv ()) ~n_outer t a b in
+    check_closure_local t a ~local:(match decision with Bound -> true | _ -> false);
+    (match decision with
     | Bound -> gen_normal_letin ()
     | At_instance inst ->
       let subst = Mlutil.type_subst_list inst in
