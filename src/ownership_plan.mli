@@ -89,9 +89,10 @@ module Use : sig
     | Borrow  (** reads it in place ({!Inspected}) *)
 end
 
-(** [use ~whole p o]: with [~whole], of a read that takes its whole
-    variable even where Core reads one component of it -- a pair held boxed
-    is unboxed whole, and a closure captures the pair. *)
+(** [use ~whole p o]: with [~whole], of a read that takes its variable's
+    whole value even where Core reads one component of it, or reads it in
+    place ({!Inspected}): a closure captures the whole of what it reads, and
+    a variable held boxed is unboxed whole by a cast. *)
 val use : ?whole:bool -> t -> Miniml.Occurrence.t -> Use.t
 
 (** Whether a variant match takes apart a scrutinee the region owns, binding

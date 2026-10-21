@@ -544,9 +544,10 @@ module Use = struct
   type t = Move | Copy | Borrow
 end
 
-let use ?whole p o : Use.t =
-  match fate ?whole p o with
+let use ?(whole = false) p o : Use.t =
+  match fate ~whole p o with
   | Last_use when owned p 0 o -> Move
+  | Inspected when whole && owned p 0 o -> Move
   | Inspected -> Borrow
   | Last_use | Read_again | Unplanned -> Copy
 
