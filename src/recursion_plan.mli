@@ -118,6 +118,37 @@ val strategy_at :
     ({!Loopify_frame.find_adopted}). *)
 val adoptable : Names.GlobRef.t -> Miniml.Occurrence.t list
 
+(** The calls of one partner of a function that Loopify inlines into it,
+    by the occurrences of the global's uses they are made of
+    ({!Minicpp.call_sig.cs_occurrence}): [continued], the tail calls, which
+    continue in the partner's body, and [invoked], the others, each running
+    the partner's body in its place. *)
+type inlining = private {
+  partner : Names.GlobRef.t;
+  continued : Miniml.Occurrence.t list;
+  invoked : Miniml.Occurrence.t list;
+}
+
+(** The partners of the function [r] in its recursive group that Loopify
+    inlines into it, in the order it inlines them, read off the Core bodies
+    as translation generates them.  The first partner whose call runs in
+    [r]'s statements is inlined at every such call at once, then the next,
+    each once, until no partner's call runs there.  A call runs in the
+    statements unless it stands in a lambda -- a closure's body, a local
+    fixpoint's, a suspended constructor argument, or a match, let,
+    fixpoint or bind standing as an operand, or a match bound by a let,
+    which translation runs in a lambda invoked in place -- or in an enum's
+    match.  A tail call continues in the partner's body, where the next
+    partners' calls run too, unless [r] returns unit and so nothing.  A
+    function on no cycle with another inlines none. *)
+val inlinings : Names.GlobRef.t -> inlining list
+
+(** The calls of the partner whose body the machine of the function [r]
+    adopts as a second entry, if it adopts one ({!Loopify_frame.adopted}):
+    the [invoked] calls of the first of {!inlinings} that has some, whose
+    partner takes parameters and whose body calls [r]. *)
+val adopted_invocations : Names.GlobRef.t -> Miniml.Occurrence.t list option
+
 (** {!adoptable} for the function [member] of the local fixpoint
     [occurrence], lowered as a helper of its own ({!Lifted.fixpoint}): the
     fixpoints in its flow naming a member of its group. *)

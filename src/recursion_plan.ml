@@ -39,6 +39,14 @@ type local_group = {
       (* per member, the reads heading its calls in the group's bodies *)
 }
 
+(* The calls of one partner a function inlines: those that continue in the
+   partner's body, and those that run it in their place. *)
+type inlining = {
+  partner : Names.GlobRef.t;
+  continued : Occurrence.t list;
+  invoked : Occurrence.t list;
+}
+
 (* A call a function resumes after. *)
 type target =
   | Function of Names.GlobRef.t
@@ -72,6 +80,8 @@ type t = {
   suspended : Ref.User.Set.t;  (* the definitions whose body suspends *)
   resumes : resume list Ref.User.Map.t;
   adoptable : Occurrence.t list Ref.User.Map.t;
+  inlinings : inlining list Ref.User.Map.t;
+  adopted_invocations : Occurrence.t list Ref.User.Map.t;
 }
 
 let empty =
@@ -82,7 +92,9 @@ let empty =
     modulo_cons = Ref.User.Map.empty;
     suspended = Ref.User.Set.empty;
     resumes = Ref.User.Map.empty;
-    adoptable = Ref.User.Map.empty }
+    adoptable = Ref.User.Map.empty;
+    inlinings = Ref.User.Map.empty;
+    adopted_invocations = Ref.User.Map.empty }
 
 let rec split_params n = function
   | MLlam (_, _, b) -> split_params (n + 1) b
@@ -601,6 +613,180 @@ let local_groups ~effects defs =
     defs;
   List.rev !plans
 
+(* Where a term stands in the C++ translation makes of a body: a statement
+   whose value the function returns, a statement whose value is bound or
+   dropped, an operand of an expression, or the expression a statement
+   returns as it is. *)
+type position =
+  | Returning
+  | Binding
+  | Operand
+  | Returned
+
+(* A partner's call inlined, and whether it continues in the partner's
+   body. *)
+type inlined_call = {
+  callee : Names.GlobRef.t;
+  continues : bool;
+  made_of : Occurrence.t;
+}
+
+(* The partners' calls [inlines] names that run in [body] as translation
+   generates it, the body of the function [self], in the order Loopify
+   meets them: [continued] holds the calls an earlier partner's inlining
+   continued in, whose arguments are bound and whose callee's body runs in
+   their place.  A call runs there unless it stands in a lambda: a
+   closure's body, a local fixpoint's, a suspended coinductive constructor's
+   arguments or a body suspended whole, and a match, let, fixpoint or bind
+   that is an operand, which translation runs in a lambda invoked in place,
+   as it does a match bound by a let that is no custom or record match.
+   Loopify neither rewrites an enum's match, a switch.  A call of a custom
+   is its text, not a call.  A call with fewer arguments than its callee's
+   parameters is a closure; one with more is an operand of the call it
+   heads.  A saturated call continues in the partner's body where its
+   result is the function's, unless the function returns unit, which it
+   is generated returning nothing: it ends in the call's statement.
+   [parameters g] is the number of parameters of [g], and [flow_body g]
+   its body as generated, [None] where it is suspended whole. *)
+let inlined_calls ~self ~effects ~parameters ~flow_body ~void ~inlines ~continued body =
+  let effect_ = sequential effects in
+  let found = ref [] in
+  let continued_call use = List.exists (Occurrence.equal (Global_use.occurrence use)) continued in
+  let rec go pos e =
+    let operand = go Operand in
+    match e with
+    | MLapp (MLglob use, args) when Table.is_custom use.callee -> List.iter operand args
+    | MLapp (MLglob use, args) when continued_call use ->
+      List.iter operand args;
+      Option.iter (go Returning) (flow_body use.callee)
+    | MLapp (MLglob use, args) when inlines use.callee ->
+      let n = List.length args and k = parameters use.callee in
+      if n >= k then
+        found :=
+          { callee = use.callee;
+            continues = n = k && (pos = Returning || pos = Returned) && not void;
+            made_of = Global_use.occurrence use }
+          :: !found;
+      List.iter operand args
+    | MLmagic (_, a) -> go pos a
+    | MLcons (_, c, [a]) when identity c -> go pos a
+    | MLapp (MLglob use, [a]) when identity use.callee && Table.to_inline use.callee -> go pos a
+    | MLcons (Tglob (n, _, _), c, args)
+      when (not (Table.is_custom c))
+           && Translation_support.suspends_constructor ~self:(Some self) ~binder_type:(fun _ -> None) n
+                args ->
+      ()
+    | MLletin (x, _, a, b, _) -> (
+      match pos with
+      | Operand | Returned -> ()
+      | Returning | Binding ->
+        if x != Dummy then go Binding a;
+        go pos b )
+    | MLcase (ty, s, branches) -> (
+      let custom = Table.is_custom_match branches in
+      let record = Table.record_fields_of_type ty <> [] && Array.length branches = 1 in
+      let enum =
+        match ty with
+        | Tglob ((Names.GlobRef.IndRef _ as r), _, _) -> Table.is_enum_inductive r
+        | _ -> false
+      in
+      match pos with
+      | Operand | Returned -> ()
+      | Binding when (not custom) && not record -> ()
+      | (Returning | Binding) when enum && not custom -> ()
+      | Returning | Binding ->
+        operand s;
+        Array.iter (fun (_, _, _, b) -> go pos b) branches )
+    | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Bind -> (
+      match (pos, List.rev args) with
+      | (Returning | Binding), MLlam (_, _, k) :: action :: rest ->
+        List.iter operand (List.rev rest);
+        operand action;
+        go pos k
+      | _ -> () )
+    | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Return -> (
+      match List.rev args with
+      | value :: rest ->
+        List.iter operand (List.rev rest);
+        go (match pos with Returning | Returned -> Returned | Binding | Operand -> Operand) value
+      | [] -> () )
+    | MLapp (MLfix _, args) -> (
+      match pos with Operand | Returned -> () | Returning | Binding -> List.iter operand args )
+    | MLfix _ | MLlam _ -> ()
+    | MLapp (f, args) ->
+      operand f;
+      List.iter operand args
+    | MLcons (_, _, args) | MLtuple args -> List.iter operand args
+    | MLparray (a, d) ->
+      Array.iter operand a;
+      operand d
+    | MLrel _ | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> ()
+  in
+  go Returning body;
+  List.rev !found
+
+(* The partners of [self] in its group [members] that Loopify inlines into
+   it, in order, with the calls of each it inlines ({!inlined_calls}): the
+   partner of the first call met that is of a partner not yet inlined,
+   whose calls are all inlined at once, until none is met.  The calls that
+   continue in a partner's body leave its calls in the body that later
+   partners' are met in.  Each partner is inlined once: its calls in its own
+   body stay calls. *)
+let inlinings_of ~effects ~defs ~members self fd =
+  let parameters g =
+    match Ref.User.Map.find_opt g defs with
+    | Some fd -> List.length (Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type))
+    | None -> 0
+  in
+  let flow_body g =
+    Option.bind (Ref.User.Map.find_opt g defs) (fun fd ->
+        let _, body = Core_elaborate.generated_scope fd.fd_type fd.fd_body in
+        if Translation_support.suspends_whole g (Ml_type_util.ml_return_type fd.fd_type) body then None
+        else Some body )
+  in
+  let void = Ml_type_util.ml_type_is_unit (Ml_type_util.ml_return_type fd.fd_type) in
+  let calls ~inlines ~continued body =
+    inlined_calls ~self ~effects ~parameters ~flow_body ~void ~inlines ~continued body
+  in
+  let is_partner g =
+    (not (Common.globref_equal g self)) && List.exists (Common.globref_equal g) members
+  in
+  let rec plan inlined continued body =
+    let pending g = is_partner g && not (List.exists (Common.globref_equal g) inlined) in
+    match calls ~inlines:pending ~continued body with
+    | [] -> []
+    | {callee = partner; _} :: _ ->
+      let found = calls ~inlines:(Common.globref_equal partner) ~continued body in
+      let these continues = List.filter_map (fun c -> if c.continues = continues then Some c.made_of else None) found in
+      let inlining = {partner; continued = these true; invoked = these false} in
+      inlining :: plan (partner :: inlined) (continued @ inlining.continued) body
+  in
+  match flow_body self with Some body -> plan [] [] body | None -> []
+
+(* The invocations the machine of [self] adopts, of those its [inlinings]
+   leave: the first partner's that has some, and parameters, and whose body
+   calls [self]. *)
+let adopted_invocations_of ~defs self inlinings =
+  let calls_self g =
+    match Ref.User.Map.find_opt g defs with
+    | None -> false
+    | Some fd ->
+      let exception Found in
+      let rec walk = function
+        | MLapp (MLglob use, _) when Common.globref_equal use.callee self -> raise Found
+        | e -> Mlutil.ast_iter walk e
+      in
+      ( try walk (snd (Core_elaborate.generated_scope fd.fd_type fd.fd_body)); false with Found -> true )
+  in
+  let has_parameters g =
+    match Ref.User.Map.find_opt g defs with
+    | Some fd -> Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type) <> []
+    | None -> false
+  in
+  List.find_map
+    (fun i -> if i.invoked <> [] && has_parameters i.partner && calls_self i.partner then Some i.invoked else None)
+    inlinings
+
 (* A group with partners is planned as one: Loopify inlines the partners
    into a member before reading it, where a tail call to one continues in
    that partner's body and any other call is wrapped in a closure, so the
@@ -727,6 +913,20 @@ let analyze groups struc =
         flow_fixpoints ~names (Lexenv.depth lex) body )
       defs
   in
+  let inlinings =
+    Ref.User.Map.mapi
+      (fun r fd ->
+        match Ref.User.Map.find_opt r by_member with
+        | Some g -> inlinings_of ~effects ~defs ~members:g.members r fd
+        | None -> [] )
+      defs
+  in
+  let adopted_invocations =
+    Ref.User.Map.fold
+      (fun r is m ->
+        match adopted_invocations_of ~defs r is with Some occs -> Ref.User.Map.add r occs m | None -> m )
+      inlinings Ref.User.Map.empty
+  in
   { groups = plans;
     by_member;
     defined;
@@ -734,7 +934,9 @@ let analyze groups struc =
     modulo_cons;
     suspended;
     resumes;
-    adoptable }
+    adoptable;
+    inlinings;
+    adopted_invocations }
 
 let same_cell c c' = Common.globref_equal c.constructor c'.constructor && c.hole = c'.hole
 
@@ -775,6 +977,13 @@ let equal a b =
             && List.equal same_call r.after r'.after ) )
        a.resumes b.resumes
   && Ref.User.Map.equal (List.equal Occurrence.equal) a.adoptable b.adoptable
+  && Ref.User.Map.equal
+       (List.equal (fun i i' ->
+            Common.globref_equal i.partner i'.partner
+            && List.equal Occurrence.equal i.continued i'.continued
+            && List.equal Occurrence.equal i.invoked i'.invoked ) )
+       a.inlinings b.inlinings
+  && Ref.User.Map.equal (List.equal Occurrence.equal) a.adopted_invocations b.adopted_invocations
 
 let installed : t ref = State.cell State.Extraction empty
 
@@ -875,3 +1084,7 @@ let resumes_binding (b : Core_binder.t) =
   match Ref.User.Map.find_opt b.origin !installed.resumes with
   | Some rs -> List.filter (fun r -> Core_binder.equal r.binder b && Core_binder.same_site r.binder b) rs
   | None -> []
+
+let inlinings r = Option.default [] (Ref.User.Map.find_opt r !installed.inlinings)
+
+let adopted_invocations r = Ref.User.Map.find_opt r !installed.adopted_invocations
