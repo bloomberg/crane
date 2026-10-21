@@ -8594,8 +8594,10 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     end
   in
   (* When the scrutinee is an owned pair (last use), override the template
-     with a by-value structured binding to move the fields out. *)
-  let binds_by_value = scrut_is_owned_pair && pair_g_opt <> None && not fix_a_fired in
+     with a by-value structured binding to move the fields out.  A pair
+     recovered from a box is bound by value too: it is a fresh
+     [pair<any, any>] the cast returns. *)
+  let binds_by_value = scrut_is_owned_pair && pair_g_opt <> None in
   let cmatch = if binds_by_value then "auto [%b0a0, %b0a1] = %scrut; %br0" else cmatch in
   (* Generate [(params, ret_ty, body)] triples for each branch.  Handles env
      retyping for [fix_a_fired], move tracking for owned pairs, use-site
