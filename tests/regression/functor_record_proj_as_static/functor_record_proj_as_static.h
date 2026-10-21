@@ -1435,7 +1435,8 @@ template <Int I, OrderedType X> struct Raw {
         const auto &[a00, a10, a20, a30, a40] =
             std::get<typename tree<T1>::Node>(m2.v());
         auto [m2_, xd] = remove_min<T1>(*a00, a10, a20, *a30);
-        return join<T1>(m1, xd.first, xd.second, std::move(m2_));
+        return join<T1>(m1, std::move(xd).first, std::move(xd).second,
+                        std::move(m2_));
       }
     }
   }

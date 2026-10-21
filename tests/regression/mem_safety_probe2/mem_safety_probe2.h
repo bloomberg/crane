@@ -136,7 +136,7 @@ struct MemSafetyProbe2 {
     uint64_t clone_and_close() const {
       std::pair<tree, tree> p = std::make_pair(*this, *this);
       crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
-        return p.first.sum_values(_x0);
+        return std::move(p).first.sum_values(_x0);
       };
       crane::fn<uint64_t(uint64_t)> g = [&](uint64_t _x0) -> uint64_t {
         return std::move(p).second.sum_values(_x0);
@@ -515,7 +515,7 @@ struct MemSafetyProbe2 {
   static inline const uint64_t test_dup_tree = []() {
     tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
     std::pair<tree, uint64_t> p = t.dup_tree();
-    return (p.first.sum_values(UINT64_C(0)) + p.second);
+    return (std::move(p).first.sum_values(UINT64_C(0)) + std::move(p).second);
   }();
   static inline const uint64_t test_cps = []() {
     tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
@@ -550,7 +550,8 @@ struct MemSafetyProbe2 {
                         UINT64_C(20),
                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     std::pair<tree, tree> p = t.tree_pair();
-    return (p.first.sum_values(UINT64_C(0)) + p.second.sum_values(UINT64_C(0)));
+    return (std::move(p).first.sum_values(UINT64_C(0)) +
+            std::move(p).second.sum_values(UINT64_C(0)));
   }();
   /// TEST 7: Closure escaping through a list, then applied.
   static mylist<uint64_t>

@@ -120,7 +120,7 @@ Tokenizer::list_tokens(std::basic_string_view<char> input,
       std::pair<std::optional<std::basic_string_view<char>>,
                 std::basic_string_view<char>>
           t = next_token(std::move(rest), soft, hard);
-      auto _cs = t.first;
+      auto _cs = std::move(t).first;
       if (_cs.has_value()) {
         const std::basic_string_view<char> &t_ = *_cs;
         return List<std::basic_string_view<char>>::cons(

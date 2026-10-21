@@ -572,7 +572,7 @@ struct MemSafetyProbe3 {
         uint64_t>
         p = t.nested_pair();
     return (((p.first).first(UINT64_C(10)) + (p.first).second(UINT64_C(10))) +
-            p.second);
+            std::move(p).second);
   }();
   static inline const uint64_t test_map_with_captured = []() {
     return []() {
@@ -594,7 +594,7 @@ struct MemSafetyProbe3 {
     tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
     std::pair<std::optional<crane::fn<uint64_t(uint64_t)>>, tree> p =
         t.opt_pair(true);
-    auto _cs = p.first;
+    auto _cs = std::move(p).first;
     if (_cs.has_value()) {
       const crane::fn<uint64_t(uint64_t)> &f = *_cs;
       return (f(UINT64_C(10)) + std::move(p).second.sum_values(UINT64_C(0)));

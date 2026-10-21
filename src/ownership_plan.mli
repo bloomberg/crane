@@ -15,7 +15,8 @@
     neither.  A pattern variable of a match on a variable is a part of it,
     which C++ binds by reference: moving the whole is not a last use while a
     part is still to be read, nor moving a part while the whole is, though
-    two parts are independent.  A let-bound local fixpoint, or a lambda
+    two parts are independent; so is a component of a pair read through its
+    projection, unless the read takes the whole pair ({!use}).  A let-bound local fixpoint, or a lambda
     with a type variable of its own, which may be lifted to a function
     template or inlined, may read what it closes over wherever it is used,
     so nothing it closes over is read last in the let's scope; a lambda
@@ -82,7 +83,10 @@ module Use : sig
     | Borrow  (** reads it in place ({!Inspected}) *)
 end
 
-val use : t -> Miniml.Occurrence.t -> Use.t
+(** [use ~whole p o]: with [~whole], of a read that takes its whole
+    variable even where Core reads one component of it -- a pair held boxed
+    is unboxed whole, and a closure captures the pair. *)
+val use : ?whole:bool -> t -> Miniml.Occurrence.t -> Use.t
 
 (** Whether a variant match takes apart a scrutinee the region owns, binding
     its fields by mutable reference: the scrutinee is a variable owned there.
@@ -114,4 +118,4 @@ val moved_reads : t -> Miniml.ml_ast list -> int list
 (** A term copied to two places -- an eta argument pushed into both branches
     of a conditional -- holds one read twice; it is a last use where every
     copy is one. *)
-val fate : t -> Miniml.Occurrence.t -> fate
+val fate : ?whole:bool -> t -> Miniml.Occurrence.t -> fate

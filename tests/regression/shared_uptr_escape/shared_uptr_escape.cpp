@@ -13,7 +13,7 @@ uint64_t SharedUptrEscape::conditional_share(uint64_t flag) {
   } else {
     uint64_t _x = flag - 1;
     std::pair<SharedUptrEscape::tree, SharedUptrEscape::tree> p = t.dup();
-    return (p.first.tree_sum() + p.second.tree_sum());
+    return (std::move(p).first.tree_sum() + std::move(p).second.tree_sum());
   }
 }
 

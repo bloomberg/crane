@@ -1325,7 +1325,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       with Failure _ -> CPPvar (db_fallback_id i)
     in
     (* Move on a last use of a variable the region owns, as its plan says
-       ({!Ownership_plan.use}).  Never move a typeclass instance -- it is a type reference in the concept
+       ({!Ownership_plan.use}); a boxed variable is unboxed whole, whatever
+       component of it Core reads.  Never move a typeclass instance -- it is a type reference in the concept
        paradigm, not an owned value, and wrapping it produces invalid C++ like
        [std::move(_tcI0)::method()].  Recognised by identity rather than by ML
        type: this binder is synthesised by {!Common.tc_instance_id}, and inside
@@ -1335,7 +1336,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       match var_expr with CPPvar id -> Common.is_tc_instance_id id | _ -> false
     in
     let move_candidate =
-      (not is_tc_param) && Ownership_plan.use (!tctx).move_plan occ = Move
+      (not is_tc_param) && Ownership_plan.use ~whole:(binder_is_boxed i) (!tctx).move_plan occ = Move
     in
     let result = if move_candidate then CPPmove var_expr else var_expr in
     if binder_is_boxed i then begin

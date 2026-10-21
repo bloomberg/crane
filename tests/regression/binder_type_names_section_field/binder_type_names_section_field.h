@@ -540,7 +540,7 @@ struct BinderTypeNamesSectionField {
   }
 
   template <Params _tcI0> static Nat size_of(FusedS<typename _tcI0::ptr> s) {
-    return MemStateV<_tcI0>::sz(s.first).add(std::move(s).second);
+    return MemStateV<_tcI0>::sz(std::move(s).first).add(std::move(s).second);
   }
 
   template <Params _tcI0>
