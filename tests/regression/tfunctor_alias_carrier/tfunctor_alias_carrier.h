@@ -96,11 +96,10 @@ public:
     std::optional<Nat> _root{};
     std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        auto _value = std::move(_loop_m);
+        auto _value = std::move(m);
         (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
@@ -250,11 +249,11 @@ struct TfunctorAliasCarrier {
 
     template <typename CraneA0, typename CraneA1>
     static exp<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, exp<CraneA0> e) {
-      if (std::holds_alternative<typename exp<CraneA0>::Lit>(e.v())) {
-        const auto &[t0] = std::get<typename exp<CraneA0>::Lit>(e.v());
-        return exp<CraneA1>::lit(f(t0));
+      if (std::holds_alternative<typename exp<CraneA0>::Lit>(e.v_mut())) {
+        auto &[t0] = std::get<typename exp<CraneA0>::Lit>(e.v_mut());
+        return exp<CraneA1>::lit(f(std::move(t0)));
       } else {
-        const auto &[e0] = std::get<typename exp<CraneA0>::Neg>(e.v());
+        auto &[e0] = std::get<typename exp<CraneA0>::Neg>(e.v_mut());
         return exp<CraneA1>::neg(TFunctor_exp::tfmap(std::move(f), *e0));
       }
     }
@@ -268,9 +267,10 @@ struct TfunctorAliasCarrier {
     template <typename CraneA0, typename CraneA1>
     static texp<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f,
                                texp<CraneA0> pat) {
-      const auto &[t, e] = pat;
-      return std::make_pair(f(t),
-                            _tcI0::template tfmap<CraneA0, CraneA1>(f, e));
+      auto [t, e] = std::move(pat);
+      return std::make_pair(
+          f(std::move(t)),
+          _tcI0::template tfmap<CraneA0, CraneA1>(f, std::move(e)));
     }
   };
 

@@ -28,9 +28,26 @@ type t
 (** Nothing planned: no read is a last use. *)
 val empty : t
 
-(** [region t] is the plan of [t]'s reads, [t] standing under binders it
-    reads but does not bind. *)
-val region : Miniml.ml_ast -> t
+(** Whether a body owning a value of ML type [ty] moves it at its last use:
+    one a copy of which costs more than a move.  This is the C++ reading
+    {!Loopify_analysis.worthwhile_move_type} makes, read off the ML type: an
+    inductive that is not an enum or coinductive, a closure, a type
+    variable or one applied to arguments, and a mapped type unless it is a
+    scalar or declared trivially copyable with arguments that are too. *)
+val worth_moving : Miniml.ml_type -> bool
+
+(** [region ~owned t] is the plan of [t]'s reads, [t] standing under binders
+    it reads but does not bind, of which it owns those at the de Bruijn
+    indices [owned]. *)
+val region : ?owned:int list -> Miniml.ml_ast -> t
+
+(** [reuse_arm p ~scrutinee ~branch] is [p] for the branch numbered [branch]
+    of the match on the variable [scrutinee], generated to rebuild
+    in the scrutinee's storage: the fields it binds are moved out into locals
+    of its own, and the scrutinee, which keeps the storage, is not read by
+    value. *)
+val reuse_arm : t -> scrutinee:Miniml.ml_ast -> branch:int -> t
+
 
 (** What [p] says of a read. *)
 type fate =
@@ -39,9 +56,44 @@ type fate =
   | Inspected
       (** a last use where translation reads the value in place: the
           scrutinee of a variant match, which binds its alternatives by
-          reference, or of a custom match spelling it twice; a field of a
-          record being constructed *)
+          reference, or of a custom match spelling it twice; the function an
+          application calls.  Only the read standing in that position:
+          the arguments of a call it makes are taken by value. *)
   | Unplanned  (** not a read of the region [p] was made of *)
+
+(** What a read does with its variable's value. *)
+module Use : sig
+  type t =
+    | Move
+        (** takes it: the variable is owned where it is read, and the read is
+            its last use where its value may be taken *)
+    | Copy
+        (** reads it by value and leaves it: the variable is read again, is
+            not owned there, or the read is one the plan was not made of *)
+    | Borrow  (** reads it in place ({!Inspected}) *)
+end
+
+val use : t -> Miniml.Occurrence.t -> Use.t
+
+(** Whether a variant match takes apart a scrutinee the region owns, binding
+    its fields by mutable reference: the scrutinee is a variable owned there.
+    One named through an application is read in place. *)
+val owns_scrutinee : t -> Miniml.ml_ast -> bool
+
+(** Whether a custom match on a pair binds its components by value, being
+    the pair's last reader: the pair its scrutinee has just built, or a
+    variable owned there that its one branch does not read whole. *)
+val pair_by_value : t -> Miniml.ml_ast -> Miniml.ml_branch array -> bool
+
+(** Whether a let of type [ty] bound to [a] binds by reference the field [a]
+    projects out of a record that is not moved there. *)
+val projects_in_place : t -> Miniml.ml_type -> Miniml.ml_ast -> bool
+
+(** The de Bruijn indices, at [closure], of the variables the lambda
+    [closure] takes by move when it is made: each is owned there, and the
+    capture is its last use -- nothing after the lambda, beside it, or
+    captured with it reads it. *)
+val moved_captures : t -> Miniml.ml_ast -> int list
 
 (** A term copied to two places -- an eta argument pushed into both branches
     of a conditional -- holds one read twice; it is a last use where every

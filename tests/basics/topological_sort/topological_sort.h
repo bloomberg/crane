@@ -344,11 +344,10 @@ public:
     std::optional<List<A>> _root{};
     std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
-    List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        auto _value = std::move(_loop_m);
+        auto _value = std::move(m);
         (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
@@ -474,7 +473,8 @@ struct TopologicalSort {
              const List<std::pair<T1, T1>> &l, T1 e) {
     return std::make_pair(
         e, l.template fold_right<List<T1>>(
-               [=](const std::pair<T1, T1> &x, List<T1> ret) -> List<T1> {
+               [=, eqb_node = std::move(eqb_node)](const std::pair<T1, T1> &x,
+                                                   List<T1> ret) -> List<T1> {
                  if (eqb_node(e, x.first)) {
                    return List<T1>::cons(x.second, ret);
                  } else {
@@ -542,8 +542,9 @@ struct TopologicalSort {
           return elem;
         } else {
           auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v_mut());
-          return cycle_entry_aux<T1>(
-              eqb_node, graph0, List<T1>::cons(elem, seens), std::move(a0), c);
+          return cycle_entry_aux<T1>(eqb_node, graph0,
+                                     List<T1>::cons(std::move(elem), seens),
+                                     std::move(a0), c);
         }
       }
     }

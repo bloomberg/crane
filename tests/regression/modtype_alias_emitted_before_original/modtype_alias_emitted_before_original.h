@@ -81,7 +81,7 @@ concept Dec = DecOrig<M>;
 
 template <Dec X> struct Make {
   static bool same(typename X::t a, typename X::t b) {
-    if (X::eq_dec(a, b)) {
+    if (X::eq_dec(std::move(a), std::move(b))) {
       return true;
     } else {
       return false;

@@ -230,12 +230,12 @@ struct Denot {
   static Sum<Nat, T1> handle_bot(CFGEtop<typename _tcI0::ptr, T1> e) {
     if (std::holds_alternative<
             typename Sum1<OtherE, FailE<typename _tcI0::ptr>, T1>::Inl1>(
-            e.v())) {
-      const auto &[a0] =
+            e.v_mut())) {
+      auto &[a0] =
           std::get<typename Sum1<OtherE, FailE<typename _tcI0::ptr>, T1>::Inl1>(
-              e.v());
-      const auto &[a00] = a0;
-      return Sum<Nat, T1>::inr(a00);
+              e.v_mut());
+      auto &[a00] = a0;
+      return Sum<Nat, T1>::inr(std::move(a00));
     } else {
       return Sum<Nat, T1>::inl(Nat::o());
     }

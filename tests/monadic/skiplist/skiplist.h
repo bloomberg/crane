@@ -294,7 +294,7 @@ template <typename K, typename V> struct SkipList {
         return std::optional<std::shared_ptr<SkipNode<K, V>>>();
       } else {
         return SkipList<int, int>::template findPrev_aux<K, V>(
-            eqK, 10000u, first, this->slHead, pair->key);
+            eqK, 10000u, first, this->slHead, std::move(pair)->key);
       }
     } else {
       return std::optional<std::shared_ptr<SkipNode<K, V>>>();
@@ -350,7 +350,7 @@ template <typename K, typename V> struct SkipList {
             std::move(pred0)->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
-      if (eqK(node->key, k)) {
+      if (eqK(node->key, std::move(k))) {
         SkipList<int, int>::template extendPath<K, V>(
             path, this->slHead, (node->level + 1), curLvl);
         SkipList<int, int>::template unlinkNode<K, V>(std::move(path), node);
@@ -679,8 +679,8 @@ template <typename K, typename V> struct SkipList {
     std::shared_ptr<SkipNode<T1, T2>> _loop_curr = std::move(curr);
     while (true) {
       std::shared_ptr<SkipNode<T1, T2>> pred =
-          SkipList<int, int>::template findPred<T1, T2>(ltK, _loop_curr, target,
-                                                        _loop_level);
+          SkipList<int, int>::template findPred<T1, T2>(
+              ltK, std::move(_loop_curr), target, _loop_level);
       path.set(_loop_level, pred);
       if (_loop_level <= 0) {
         return path;
@@ -733,7 +733,7 @@ template <typename K, typename V> struct SkipList {
     uint64_t _loop_level = level;
     while (true) {
       if (_loop_level <= 0) {
-        path.set(UINT64_C(0), head);
+        std::move(path).set(UINT64_C(0), std::move(head));
         return;
       } else {
         uint64_t level_ = _loop_level - 1;
@@ -821,8 +821,8 @@ template <typename K, typename V> struct SkipList {
     std::shared_ptr<SkipNode<T1, T2>> _loop_curr = std::move(curr);
     while (true) {
       std::shared_ptr<SkipNode<T1, T2>> pred =
-          SkipList<int, int>::template findPred<T1, T2>(ltK, _loop_curr, target,
-                                                        _loop_level);
+          SkipList<int, int>::template findPred<T1, T2>(
+              ltK, std::move(_loop_curr), target, _loop_level);
       if (_loop_level <= 0) {
         std::optional<std::shared_ptr<SkipNode<T1, T2>>> nextOpt =
             ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
@@ -877,7 +877,7 @@ template <typename K, typename V> struct SkipList {
     while (true) {
       if (_loop_fuel <= 0) {
         return std::make_optional<std::shared_ptr<SkipNode<T1, T2>>>(
-            _loop_curr);
+            std::move(_loop_curr));
       } else {
         uint64_t fuel_ = _loop_fuel - 1;
         std::optional<std::shared_ptr<SkipNode<T1, T2>>> nextOpt =
@@ -889,7 +889,7 @@ template <typename K, typename V> struct SkipList {
           _loop_fuel = fuel_;
         } else {
           return std::make_optional<std::shared_ptr<SkipNode<T1, T2>>>(
-              _loop_curr);
+              std::move(_loop_curr));
         }
       }
     }
@@ -977,7 +977,7 @@ template <typename K, typename V> struct SkipList {
           const std::shared_ptr<SkipNode<T1, T2>> &next0 = *nextOpt;
           if (eqK(next0->key, target)) {
             return std::make_optional<std::shared_ptr<SkipNode<T1, T2>>>(
-                _loop_curr);
+                std::move(_loop_curr));
           } else {
             std::shared_ptr<SkipNode<T1, T2>> _next_curr = next0;
             _loop_fuel = fuel_;

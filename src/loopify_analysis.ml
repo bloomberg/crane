@@ -1185,8 +1185,9 @@ let report_outcome ?survived ~name ~check ~strategy body =
 
     A parameter is invariant if every recursive call site passes it unchanged
     (i.e., the argument at that position is [CPPvar id] where [id] is the
-    parameter name). Invariant parameters need not appear in frame structs or
-    shadow variables — they can be referenced directly from function scope. *)
+    parameter name, moved or not: the call that would take it goes away).
+    Invariant parameters need not appear in frame structs or shadow
+    variables — they can be referenced directly from function scope. *)
 
 (** Determine which parameters vary across recursive calls.
 
@@ -1212,7 +1213,7 @@ let find_varying_params check params body =
           (List.for_all
              (fun cs ->
                match List.nth_opt cs.cs_args i with
-               | Some (CPPvar arg_id) -> Id.equal arg_id id
+               | Some (CPPvar arg_id | CPPmove (CPPvar arg_id)) -> Id.equal arg_id id
                | _ -> false )
              calls ) )
       params

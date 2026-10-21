@@ -32,12 +32,11 @@ TmcValueRoot::lst TmcValueRoot::app(const TmcValueRoot::lst &xs,
                                     TmcValueRoot::lst ys) {
   std::optional<TmcValueRoot::lst> _root{};
   std::shared_ptr<TmcValueRoot::lst> *_write = nullptr;
-  TmcValueRoot::lst _loop_ys = std::move(ys);
   const TmcValueRoot::lst *_loop_xs = &xs;
   while (true) {
     if (std::holds_alternative<typename TmcValueRoot::lst::Nil>(
             _loop_xs->v())) {
-      auto _value = std::move(_loop_ys);
+      auto _value = std::move(ys);
       (_write
            ? *(*_write = std::make_shared<TmcValueRoot::lst>(std::move(_value)))
            : _root.emplace(std::move(_value)));

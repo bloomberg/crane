@@ -90,11 +90,10 @@ public:
     std::optional<Nat> _root{};
     std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        auto _value = std::move(_loop_m);
+        auto _value = std::move(m);
         (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
@@ -181,11 +180,11 @@ struct opt_monad {
 
   template <typename CraneA0, typename CraneA1>
   static Opt<CraneA1> bind(Opt<CraneA0> c, crane::fn<Opt<CraneA1>(CraneA0)> k) {
-    if (std::holds_alternative<typename Opt<CraneA0>::None>(c.v())) {
+    if (std::holds_alternative<typename Opt<CraneA0>::None>(c.v_mut())) {
       return Opt<CraneA1>::none();
     } else {
-      const auto &[x0] = std::get<typename Opt<CraneA0>::Some>(c.v());
-      return k(x0);
+      auto &[x0] = std::get<typename Opt<CraneA0>::Some>(c.v_mut());
+      return k(std::move(x0));
     }
   }
 };

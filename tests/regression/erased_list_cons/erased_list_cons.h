@@ -284,7 +284,7 @@ template <SYM Ty> struct DefsFn {
             symbols_semty x0_) {
     const auto &[x0, a1] = e;
     production x1 = x0;
-    const auto &[_x, _x0] = x1;
+    auto [_x, _x0] = std::move(x1);
     const auto &[_x1, a] = a1;
     action_semty act = a;
     return crane::any_cast<crane::fn<crane::obj(crane::obj)>>(std::move(act))(

@@ -37,12 +37,7 @@ std::optional<std::monostate> UnitVoidEdge::return_some_tt(uint64_t n) {
   }
 }
 
-void UnitVoidEdge::unit_chain(std::monostate u) {
-  {
-    std::move(u);
-    return;
-  }
-}
+void UnitVoidEdge::unit_chain(std::monostate) { return; }
 
 void UnitVoidEdge::helper_void(uint64_t _x) {
   return_unit(_x);

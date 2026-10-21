@@ -242,7 +242,9 @@ template <Params _tcI0> struct StateV {
     return IuMemImpl::template empty_st<_tcI0>();
   }
 
-  static Nat size_of(St<typename _tcI0::ptr> s) { return s.mem.length(); }
+  static Nat size_of(St<typename _tcI0::ptr> s) {
+    return std::move(s).mem.length();
+  }
 };
 
 struct natParams {

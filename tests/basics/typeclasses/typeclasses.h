@@ -151,7 +151,7 @@ struct Typeclasses {
         }
       };
       {
-        const List<T1> &_lc1_l = a0;
+        const List<T1> &_lc1_l = std::move(a0);
         return sum_impl(sum_impl, _lc1_l);
       }
     }

@@ -282,9 +282,9 @@ struct DirectedGraph {
   static List<T1> nodes(Directed<T1> g) { return std::move(g).directed_nodes; }
 
   static List<edge> edges(Directed<T1> g, T1 n) {
-    return g.directed_edges.filter(
+    return std::move(g).directed_edges.filter(
         [=, n = std::move(n)](DirectedEdge<T1> _x0) -> bool {
-          return directed_originates<_tcI0, T1>(n, _x0);
+          return directed_originates<_tcI0, T1>(std::move(n), _x0);
         });
   }
 };
@@ -358,9 +358,9 @@ struct UndirectedGraph {
   }
 
   static List<edge> edges(Undirected<T1> g, T1 n) {
-    return g.undirected_edges.filter(
+    return std::move(g).undirected_edges.filter(
         [=, n = std::move(n)](UndirectedEdge<T1> _x0) -> bool {
-          return undirected_originates<_tcI0, T1>(n, _x0);
+          return undirected_originates<_tcI0, T1>(std::move(n), _x0);
         });
   }
 };

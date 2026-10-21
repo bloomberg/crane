@@ -386,7 +386,7 @@ struct MemSafetyProbe19 {
       return tree::node(tree::leaf(), UINT64_C(15), tree::leaf())
           .choose_fn(true, _x0);
     };
-    return apply_to(f, UINT64_C(10));
+    return apply_to(std::move(f), UINT64_C(10));
   }();
   static inline const uint64_t test_nested_match =
       tree::node(tree::leaf(), UINT64_C(4), tree::leaf())

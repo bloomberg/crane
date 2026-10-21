@@ -97,11 +97,10 @@ public:
     std::optional<List<A>> _root{};
     std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
-    List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        auto _value = std::move(_loop_m);
+        auto _value = std::move(m);
         (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
@@ -205,11 +204,10 @@ struct LoopifyPolymorphic {
   static List<T1> poly_append(const List<T1> &l1, List<T1> l2) {
     std::optional<List<T1>> _root{};
     std::shared_ptr<List<T1>> *_write = nullptr;
-    List<T1> _loop_l2 = std::move(l2);
     const List<T1> *_loop_l1 = &l1;
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l1->v())) {
-        auto _value = std::move(_loop_l2);
+        auto _value = std::move(l2);
         (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;

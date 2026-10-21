@@ -481,8 +481,7 @@ std::pair<uint64_t, uint64_t> MemSafetyProbe23::interleaved_ops(
       uint64_t sr = _f.sr;
       std::pair<uint64_t, uint64_t> pl = _f.pl;
       std::pair<uint64_t, uint64_t> pr = std::move(_result);
-      _result = std::make_pair(
-          ((sl + a1) + sr), ((std::move(pl).first + a1) + std::move(pr).first));
+      _result = std::make_pair(((sl + a1) + sr), ((pl.first + a1) + pr.first));
     }
   }
   return _result;

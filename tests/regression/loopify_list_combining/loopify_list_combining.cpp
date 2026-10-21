@@ -4,11 +4,10 @@ List<uint64_t> LoopifyListCombining::append(const List<uint64_t> &a,
                                             List<uint64_t> b) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  List<uint64_t> _loop_b = std::move(b);
   const List<uint64_t> *_loop_a = &a;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_a->v())) {
-      auto _value = std::move(_loop_b);
+      auto _value = std::move(b);
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;

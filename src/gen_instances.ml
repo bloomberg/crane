@@ -461,7 +461,8 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                    static value with a nullary accessor method. *)
                 let stmts =
                   with_method_env_types ~outer:outer_binders base_env [] (fun () ->
-                      gen_stmts base_env (fun x -> Sreturn (Some x)) inner_body )
+                      with_region inner_body (fun () ->
+                          gen_stmts base_env (fun x -> Sreturn (Some x)) inner_body ) )
                 in
                 ([], method_ret_ty, stmts, [])
               | Some (eta_params, call_expr) ->
@@ -536,9 +537,20 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                   ) params)
                 in
                 let renamed_eta, env = push_vars' ml_vars base_env in
+                (* A parameter cast out of a box is a local of its own. *)
+                let owned =
+                  let params_db = Array.of_list (List.rev params) in
+                  Translation_support.owned_parameters (Array.length params_db)
+                    ~owned:(fun i ->
+                      let name, _, cpp_ty = params_db.(i) in
+                      List.exists (fun (n, _, _) -> Id.equal n name) cast_info
+                      || not (Translation_support.declared_by_reference cpp_ty) )
+                    ~ty:(fun i -> snd (List.nth ml_vars i))
+                in
                 let stmts =
                   with_method_env_types ~outer:outer_binders env renamed_eta (fun () ->
-                    gen_stmts env (fun x -> Sreturn (Some x)) call_expr )
+                    with_region ~owned call_expr (fun () ->
+                        gen_stmts env (fun x -> Sreturn (Some x)) call_expr ) )
                 in
                 let stmts =
                   List.fold_left (fun acc (name, _body_ty, body_cpp) ->
@@ -618,7 +630,16 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                   ~cpp:(List.rev_map (fun b -> Some b.mb_cpp_ty) binders)
                   env renamed_ml
                   (fun () ->
-                    gen_stmts env (fun x -> Sreturn (Some x)) inner_body )
+                    let binders_db = Array.of_list (List.rev binders) in
+                    let owned =
+                      Translation_support.owned_parameters (Array.length binders_db)
+                        ~owned:(fun i ->
+                          binders_db.(i).mb_kind = `Value
+                          && not (Translation_support.declared_by_reference binders_db.(i).mb_cpp_ty) )
+                        ~ty:(fun i -> binders_db.(i).mb_ml_ty)
+                    in
+                    with_region ~owned inner_body (fun () ->
+                        gen_stmts env (fun x -> Sreturn (Some x)) inner_body ) )
               in
               (cpp_params, method_ret_ty, stmts, tc_tparams)
           in

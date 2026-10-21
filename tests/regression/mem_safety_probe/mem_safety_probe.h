@@ -445,7 +445,7 @@ struct MemSafetyProbe {
       crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
         return t.sum_values(_x0);
       };
-      return apply_twice(f, UINT64_C(0));
+      return apply_twice(std::move(f), UINT64_C(0));
     }();
   }();
   /// ---- TEST 2: Build list of closures from tree branches ----

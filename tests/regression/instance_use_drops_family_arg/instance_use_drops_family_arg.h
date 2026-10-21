@@ -228,8 +228,8 @@ struct InstanceUseDropsFamilyArg {
     template <typename CraneA0, typename CraneA1>
     static box<T1, CraneA1> bind(box<T1, CraneA0> m,
                                  crane::fn<box<T1, CraneA1>(CraneA0)> k) {
-      const auto &[a0] = m;
-      return k(a0);
+      auto &[a0] = m;
+      return k(std::move(a0));
     }
   };
 

@@ -109,11 +109,10 @@ public:
     std::optional<Nat> _root{};
     std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        auto _value = std::move(_loop_m);
+        auto _value = std::move(m);
         (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
@@ -174,8 +173,8 @@ struct InstanceChainConstraint {
                          typename _tcI1::ptr a2, Nat sz2) {
       Nat s1 = _tcI2::ptr_to_int(std::move(a1));
       Nat s2 = _tcI2::ptr_to_int(std::move(a2));
-      return (s1.leb(s2.add(sz2).sub(Nat::s(Nat::o()))) &&
-              s2.leb(s1.add(sz1).sub(Nat::s(Nat::o()))));
+      return (s1.leb(s2.add(std::move(sz2)).sub(Nat::s(Nat::o()))) &&
+              s2.leb(s1.add(std::move(sz1)).sub(Nat::s(Nat::o()))));
     }
   };
 

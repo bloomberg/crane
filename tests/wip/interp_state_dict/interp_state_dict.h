@@ -223,12 +223,12 @@ template <Monad _tcI0, MonadIter _tcI1, typename T1> struct MonadIter_stateT0 {
       return _tcI1::template iter<std::pair<T1, CraneA0>,
                                   std::pair<T1, CraneA1>>(
           [=](const std::pair<T1, CraneA1> &si) {
-            const T1 &s0 = si.first;
-            const CraneA1 &i0 = si.second;
+            T1 s0 = si.first;
+            CraneA1 i0 = si.second;
             return _tcI0::template bind<
                 std::pair<T1, Sum<CraneA1, CraneA0>>,
                 Sum<std::pair<T1, CraneA1>, std::pair<T1, CraneA0>>>(
-                crane::apply2(step, i0, s0),
+                crane::apply2(step, std::move(i0), std::move(s0)),
                 [](const std::pair<T1, Sum<CraneA1, CraneA0>> &si_) {
                   return _tcI0::template ret<Sum<
                       std::pair<T1, CraneA1>, std::pair<T1, CraneA0>>>([&]() {
@@ -444,10 +444,11 @@ struct ITree {
                    typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v())) {
       const auto &[t0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v());
-      return Itree<T1, T3>::lazy_([=, k = std::move(
-                                          k)]() -> typename Itree<T1, T3>::Go {
-        return {ItreeF<T1, T3, Itree<T1, T3>>::tauf(subst<T1, T2, T3>(k, t0))};
-      });
+      return Itree<T1, T3>::lazy_([=, k = std::move(k)]() ->
+                                  typename Itree<T1, T3>::Go {
+                                    return {ItreeF<T1, T3, Itree<T1, T3>>::tauf(
+                                        subst<T1, T2, T3>(std::move(k), t0))};
+                                  });
     } else {
       const auto &[x, e0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::VisF>(_sv.v());
@@ -645,8 +646,8 @@ template <typename T1, typename T2, typename T3>
 crane::rebind_t<T2, T3>
 Subevent::subevent(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h,
                    crane::rebind_t<T1, T3> x) {
-  return crane_any_cast<crane::rebind_t<T2, T3>>(
-      CategoryOps::resum(crane::obj(), crane::obj(), h)(std::move(x)));
+  return crane_any_cast<crane::rebind_t<T2, T3>>(CategoryOps::resum(
+      crane::obj(), crane::obj(), std::move(h))(std::move(x)));
 }
 
 template <MonadIter _tcI0, Monad _tcI1, Functor _tcI2, typename T1, typename T3>

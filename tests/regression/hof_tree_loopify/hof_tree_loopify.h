@@ -431,16 +431,17 @@ struct HofTreeLoopify {
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
         auto [acc1, l_] = std::move(_result);
-        auto [acc2, x_] = f(acc1, a1);
+        auto [acc2, x_] = f(std::move(acc1), a1);
         _stack.emplace_back(CraneCont_acc2{l_, x_});
-        _stack.emplace_back(CraneEnter{&a2, acc2});
+        _stack.emplace_back(CraneEnter{&a2, std::move(acc2)});
       } else {
         auto _f = std::move(std::get<CraneCont_acc2>(_frame));
         tree<T2> l_ = std::move(_f.l_);
         auto x_ = std::move(_f.x_);
         auto [acc3, r_] = std::move(_result);
         _result = std::make_pair(
-            acc3, tree<T2>::node(std::move(l_), x_, std::move(r_)));
+            std::move(acc3),
+            tree<T2>::node(std::move(l_), std::move(x_), std::move(r_)));
       }
     }
     return _result;

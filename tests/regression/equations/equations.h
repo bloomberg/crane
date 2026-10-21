@@ -44,7 +44,7 @@ struct Equations {
 
   template <typename F1>
   static uint64_t gcd_functional(std::pair<uint64_t, uint64_t> p, F1 &&gcd0) {
-    auto [n, n0] = std::move(p);
+    const auto &[n, n0] = p;
     if (n <= 0) {
       return n0;
     } else {
@@ -342,7 +342,7 @@ struct Equations {
                   const gcd_clause_3_graph &g) -> T2 {
       return f5_impl(f4_impl, f5_impl, _x, _x0, _x1, _x2, g);
     };
-    return f4(std::move(x0_), x1_, std::move(x2_));
+    return f4(x0_, x1_, std::move(x2_));
   }
 
   template <typename T1, typename T2>

@@ -13216,3 +13216,14 @@
   (alias runtest)
   (deps move_read_outside_region.t.exe)
   (action (run ./move_read_outside_region.t.exe))))
+
+(subdir record_destructure_once
+ (rule
+  (targets record_destructure_once.t.exe)
+  (deps RecordDestructureOnce.vo record_destructure_once.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_destructure_once.t.exe record_destructure_once.cpp record_destructure_once.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_destructure_once.t.exe)
+  (action (run ./record_destructure_once.t.exe))))

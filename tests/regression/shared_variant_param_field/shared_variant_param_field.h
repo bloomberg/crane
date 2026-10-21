@@ -126,11 +126,10 @@ public:
     std::optional<List<A>> _root{};
     crane::shared_box<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
-    List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (crane::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        auto _value = std::move(_loop_m);
+        auto _value = std::move(m);
         (_write
              ? *(*_write = crane::shared_box<List<A>>::make(std::move(_value)))
              : _root.emplace(std::move(_value)));

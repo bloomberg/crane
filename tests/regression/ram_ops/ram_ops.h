@@ -158,13 +158,13 @@ struct RamOps {
         List<uint64_t>::cons(
             UINT64_C(0),
             List<uint64_t>::cons(UINT64_C(0), List<uint64_t>::nil())))};
-    ram_chip_main ch0 =
-        ram_chip_main{List<ram_reg_main>::cons(rg0, List<ram_reg_main>::nil())};
+    ram_chip_main ch0 = ram_chip_main{
+        List<ram_reg_main>::cons(std::move(rg0), List<ram_reg_main>::nil())};
     ram_bank_main bk0 = ram_bank_main{
-        List<ram_chip_main>::cons(ch0, List<ram_chip_main>::nil())};
-    state_main s =
-        state_main{List<ram_bank_main>::cons(bk0, List<ram_bank_main>::nil()),
-                   UINT64_C(0), UINT64_C(0), UINT64_C(0), UINT64_C(1)};
+        List<ram_chip_main>::cons(std::move(ch0), List<ram_chip_main>::nil())};
+    state_main s = state_main{
+        List<ram_bank_main>::cons(std::move(bk0), List<ram_bank_main>::nil()),
+        UINT64_C(0), UINT64_C(0), UINT64_C(0), UINT64_C(1)};
     List<ram_bank_main> sys_ = ram_write_main_sys(std::move(s), UINT64_C(19));
     ram_bank_main bk_ = ListDef::template nth<ram_bank_main>(
         UINT64_C(0), std::move(sys_),
@@ -208,11 +208,11 @@ struct RamOps {
   static List<bank_port> ram_write_port_sys(const state_port &s, uint64_t v);
   static inline const uint64_t test_port_write_chain = []() {
     chip_port ch0 = chip_port{UINT64_C(0)};
-    bank_port bk0 =
-        bank_port{List<chip_port>::cons(ch0, List<chip_port>::nil())};
-    state_port s =
-        state_port{List<bank_port>::cons(bk0, List<bank_port>::nil()),
-                   UINT64_C(0), UINT64_C(0)};
+    bank_port bk0 = bank_port{
+        List<chip_port>::cons(std::move(ch0), List<chip_port>::nil())};
+    state_port s = state_port{
+        List<bank_port>::cons(std::move(bk0), List<bank_port>::nil()),
+        UINT64_C(0), UINT64_C(0)};
     List<bank_port> sys_ = ram_write_port_sys(std::move(s), UINT64_C(17));
     bank_port bk_ = ListDef::template nth<bank_port>(
         UINT64_C(0), std::move(sys_), bank_port{List<chip_port>::nil()});
@@ -270,13 +270,14 @@ struct RamOps {
             List<uint64_t>::cons(
                 UINT64_C(0),
                 List<uint64_t>::cons(UINT64_C(0), List<uint64_t>::nil()))))};
-    ram_chip_status ch0 = ram_chip_status{
-        List<ram_reg_status>::cons(rg0, List<ram_reg_status>::nil())};
-    ram_bank_status bk0 = ram_bank_status{
-        List<ram_chip_status>::cons(ch0, List<ram_chip_status>::nil())};
-    state_status s = state_status{
-        List<ram_bank_status>::cons(bk0, List<ram_bank_status>::nil()),
-        UINT64_C(0), UINT64_C(0), UINT64_C(0)};
+    ram_chip_status ch0 = ram_chip_status{List<ram_reg_status>::cons(
+        std::move(rg0), List<ram_reg_status>::nil())};
+    ram_bank_status bk0 = ram_bank_status{List<ram_chip_status>::cons(
+        std::move(ch0), List<ram_chip_status>::nil())};
+    state_status s =
+        state_status{List<ram_bank_status>::cons(std::move(bk0),
+                                                 List<ram_bank_status>::nil()),
+                     UINT64_C(0), UINT64_C(0), UINT64_C(0)};
     List<ram_bank_status> sys_ =
         ram_write_status_sys(std::move(s), UINT64_C(2), UINT64_C(25));
     ram_bank_status bk_ = ListDef::template nth<ram_bank_status>(
@@ -479,9 +480,12 @@ struct RamOps {
         UINT64_C(0), sample_bank_frame, List<crane::obj>::nil());
     reg_frame rg = ListDef::template nth<reg_frame>(UINT64_C(1), ch,
                                                     List<crane::obj>::nil());
-    reg_frame rg_ = upd_main_in_reg_frame(rg, UINT64_C(2), UINT64_C(99));
-    chip_frame ch_ = upd_reg_in_chip_frame(ch, UINT64_C(1), rg_);
-    return upd_chip_in_bank_frame(sample_bank_frame, UINT64_C(0), ch_);
+    reg_frame rg_ =
+        upd_main_in_reg_frame(std::move(rg), UINT64_C(2), UINT64_C(99));
+    chip_frame ch_ =
+        upd_reg_in_chip_frame(std::move(ch), UINT64_C(1), std::move(rg_));
+    return upd_chip_in_bank_frame(sample_bank_frame, UINT64_C(0),
+                                  std::move(ch_));
   }();
   static inline const bool test_write_frame_different_chip =
       ListDef::template nth<uint64_t>(

@@ -224,7 +224,7 @@ struct LoopifyCoindStream {
          const T2 &seed) {
     auto [a, s_] = f(seed);
     return stream<T1>::lazy_([=]() -> typename stream<T1>::Scons {
-      return {a, unfold<T1, T2>(f, s_)};
+      return {std::move(a), unfold<T1, T2>(f, std::move(s_))};
     });
   }
 

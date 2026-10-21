@@ -331,11 +331,10 @@ public:
     bsl::optional<List<t_A>> _root{};
     bsl::shared_ptr<List<t_A>> *_write = nullptr;
     const List<t_A> *_loop_self = this;
-    List<t_A> _loop_m = bsl::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        auto _value = bsl::move(_loop_m);
+        auto _value = bsl::move(m);
         (_write ? *(*_write = bsl::make_shared<List<t_A>>(bsl::move(_value)))
                 : _root.emplace(bsl::move(_value)));
         break;
@@ -455,7 +454,8 @@ struct TopologicalSort {
              const List<bsl::pair<T1, T1>> &l, T1 e) {
     return bsl::make_pair(
         e, l.template fold_right<List<T1>>(
-               [=](const bsl::pair<T1, T1> &x, List<T1> ret) -> List<T1> {
+               [=, eqb_node = std::move(eqb_node)](const bsl::pair<T1, T1> &x,
+                                                   List<T1> ret) -> List<T1> {
                  if (eqb_node(e, x.first)) {
                    return List<T1>::cons(x.second, ret);
                  } else {
@@ -520,7 +520,7 @@ struct TopologicalSort {
         } else {
           auto &[d_a0, d_a1] = bsl::get<typename List<T1>::Cons>(l.v_mut());
           return cycle_entry_aux<T1>(eqb_node, graph0,
-                                     List<T1>::cons(elem, seens),
+                                     List<T1>::cons(bsl::move(elem), seens),
                                      bsl::move(d_a0), c);
         }
       }

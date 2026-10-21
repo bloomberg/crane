@@ -17,7 +17,7 @@ uint64_t FamilyCallResultDeepShape::sz(const FamilyCallResultDeepShape::ty &t,
         std::get<typename FamilyCallResultDeepShape::ty::TList>(t.v());
     const FamilyCallResultDeepShape::ty &a0_value = *a0;
     return List<FamilyCallResultDeepShape::den>(
-               crane::any_cast<List<crane::obj>>(n))
+               crane::any_cast<List<crane::obj>>(std::move(n)))
         .template fold_left<uint64_t>(
             [=](uint64_t acc, FamilyCallResultDeepShape::den x) {
               return (acc + sz(a0_value, x));

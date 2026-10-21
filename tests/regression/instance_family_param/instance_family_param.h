@@ -150,8 +150,8 @@ struct InstanceFamilyParam {
     template <typename CraneA0, typename CraneA1>
     static box<T1, CraneA1> fmap(crane::fn<CraneA1(CraneA0)> f,
                                  box<T1, CraneA0> b0) {
-      const auto &[a0] = b0;
-      return box<T1, CraneA1>::box0(f(a0));
+      auto &[a0] = b0;
+      return box<T1, CraneA1>::box0(f(std::move(a0)));
     }
   };
 

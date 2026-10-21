@@ -97,11 +97,10 @@ public:
     std::optional<Nat> _root{};
     std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        auto _value = std::move(_loop_m);
+        auto _value = std::move(m);
         (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
@@ -191,12 +190,13 @@ struct EOU_monad {
 
   static EOU<crane::obj> bind(EOU<crane::obj> c,
                               crane::fn<EOU<crane::obj>(crane::obj)> k) {
-    if (std::holds_alternative<typename EOU<crane::obj>::Raise_error>(c.v())) {
-      const auto &[s0] = std::get<typename EOU<crane::obj>::Raise_error>(c.v());
-      return EOU<crane::obj>::raise_error(s0);
+    if (std::holds_alternative<typename EOU<crane::obj>::Raise_error>(
+            c.v_mut())) {
+      auto &[s0] = std::get<typename EOU<crane::obj>::Raise_error>(c.v_mut());
+      return EOU<crane::obj>::raise_error(std::move(s0));
     } else {
-      const auto &[x0] = std::get<typename EOU<crane::obj>::Raise_ret>(c.v());
-      return k(x0);
+      auto &[x0] = std::get<typename EOU<crane::obj>::Raise_ret>(c.v_mut());
+      return k(std::move(x0));
     }
   }
 };

@@ -197,7 +197,7 @@ struct CoindGuard {
          const T2 &seed) {
     auto [a, s_] = f(seed);
     return Stream<T1>::lazy_([=]() -> typename Stream<T1>::Cons {
-      return {a, unfold<T1, T2>(f, s_)};
+      return {std::move(a), unfold<T1, T2>(f, std::move(s_))};
     });
   }
 

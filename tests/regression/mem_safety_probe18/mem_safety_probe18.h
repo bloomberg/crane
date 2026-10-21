@@ -376,11 +376,10 @@ struct MemSafetyProbe18 {
       std::optional<mylist<A>> _root{};
       std::shared_ptr<mylist<A>> *_write = nullptr;
       const mylist<A> *_loop_self = this;
-      mylist<A> _loop_l2 = std::move(l2);
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-          auto _value = std::move(_loop_l2);
+          auto _value = std::move(l2);
           (_write ? *(*_write = std::make_shared<mylist<A>>(std::move(_value)))
                   : _root.emplace(std::move(_value)));
           break;
@@ -472,7 +471,7 @@ struct MemSafetyProbe18 {
   static inline const uint64_t test_apply_twice = []() {
     return []() {
       tree t = tree::node(tree::leaf(), UINT64_C(7), tree::leaf());
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t n) {
+      crane::fn<uint64_t(uint64_t)> f = [=, t = std::move(t)](uint64_t n) {
         return (t.tree_sum() + n);
       };
       return apply_twice(f, UINT64_C(0));

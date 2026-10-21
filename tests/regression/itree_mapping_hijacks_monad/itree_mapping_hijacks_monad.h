@@ -91,11 +91,10 @@ public:
     std::optional<Nat> _root{};
     std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        auto _value = std::move(_loop_m);
+        auto _value = std::move(m);
         (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
@@ -174,9 +173,9 @@ struct Monad_Err {
 
   template <typename CraneA0, typename CraneA1>
   static Err<CraneA1> bind(Err<CraneA0> c, crane::fn<Err<CraneA1>(CraneA0)> k) {
-    if (std::holds_alternative<typename Err<CraneA0>::Ok>(c.v())) {
-      const auto &[x0] = std::get<typename Err<CraneA0>::Ok>(c.v());
-      return k(x0);
+    if (std::holds_alternative<typename Err<CraneA0>::Ok>(c.v_mut())) {
+      auto &[x0] = std::get<typename Err<CraneA0>::Ok>(c.v_mut());
+      return k(std::move(x0));
     } else {
       return Err<CraneA1>::bad();
     }

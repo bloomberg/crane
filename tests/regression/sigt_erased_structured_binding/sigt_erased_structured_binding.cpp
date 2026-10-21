@@ -2,8 +2,7 @@
 
 Nat SigtErasedStructuredBinding::score(
     const SigT<crane::obj, std::pair<crane::obj, crane::obj>> &i) {
-  const auto &[x, f] =
-      crane::any_cast<std::pair<crane::obj, crane::obj>>(i.projT2());
+  auto [x, f] = crane::any_cast<std::pair<crane::obj, crane::obj>>(i.projT2());
   return crane::any_cast<Nat>(
       crane::any_cast<crane::fn<crane::obj(crane::obj)>>(f)(x));
 }

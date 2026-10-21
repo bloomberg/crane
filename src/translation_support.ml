@@ -1557,7 +1557,6 @@ let with_escape_analysis f =
   tctx :=
     { !tctx with
       current_letin_depth = 0;
-      move_owned_vars = Escape.IntSet.empty;
       move_plan = Ownership_plan.empty;
       match_param_counter = 0;
       cs_counter = 0;
@@ -1575,43 +1574,29 @@ let with_escape_analysis f =
     caller then projects with [.first.first]. *)
 let with_iife_return_type expected_ty f = with_cpp_return_type expected_ty f
 
-(** Whether a body owning a value of ML type [ty] moves it at its last use:
-    a [shared_ptr], or a value-type inductive a copy of which copies more
-    than a word. *)
-let worth_moving ty = Escape.is_shared_ptr_type ty || is_nontrivial_value_ml_type ty
+(** Whether a parameter declared at C++ type [ty] is a reference the body
+    does not own: a [const T &], or the [F &&] a deduced callable is, which
+    may name the caller's own object. *)
+let rec declared_by_reference = function
+  | Tref _ | Tconst _ -> true
+  | Tnamespace (_, t) -> declared_by_reference t
+  | _ -> false
 
-(** Shift the owned set by [n] binders, run [f], then restore it.  This is
-    the standard bracket for code that introduces [n] pattern variables or let
-    bindings: [move_owned_vars] tracks variables by de Bruijn index, so when
-    entering a scope with [n] new binders every existing index is shifted up by
-    [n] to keep referring to the same outer variable.
+(** Whether a body owns a parameter the head declares at [declared]: when
+    it declares it by value, which it does for one the ownership summary
+    marks owned and for one whose type it never passes by reference.  A
+    parameter the head does not declare -- a receiver, an instance -- is
+    owned as the summary says. *)
+let declared_by_value declared ~summary =
+  match declared with Some ty -> not (declared_by_reference ty) | None -> summary
 
-    @param add_owned  Optional de Bruijn index to add to the owned set after
-      shifting.  Used for monadic bind continuation parameters that receive an
-      owned [shared_ptr] value (e.g. [>>=] callback arguments).
-    @param exclude_owned_set  Indices to REMOVE from the owned set after
-      shifting.  Used for the variables a local fixpoint captures: the
-      continuation still reads them through the fixpoint's closure, so moving
-      out of them would leave the closure holding a moved-from value.
-    @param exclude_owned  Optional de Bruijn index to REMOVE from the owned set
-      after shifting.  Used for match scrutinees: after shifting by [n], the
-      scrutinee's outer index [db] becomes [db + n].  Excluding it prevents
-      [std::move(scrutinee)] from being emitted inside the branch while
-      pattern-variable structured bindings ([const auto& [d_a0, d_a1] = ...])
-      still hold const references into it — which would cause use-after-move. *)
-let with_shifted_move_tracking n ?add_owned
-    ?(add_owned_set = Escape.IntSet.empty)
-    ?(exclude_owned_set = Escape.IntSet.empty) ?exclude_owned f =
-  let owned =
-    Escape.IntSet.diff (Escape.IntSet.map (fun i -> i + n) (!tctx).move_owned_vars) exclude_owned_set
-  in
-  let owned = match add_owned with Some i -> Escape.IntSet.add i owned | None -> owned in
-  let owned = Escape.IntSet.union owned add_owned_set in
-  let owned = match exclude_owned with Some i -> Escape.IntSet.remove i owned | None -> owned in
-  with_field
-    (fun c -> c.move_owned_vars)
-    (fun o -> tctx := { !tctx with move_owned_vars = o })
-    owned f
+(** The de Bruijn indices of the [n] innermost parameters a body owns: those
+    [owned] says are passed by value, of a type {!Ownership_plan.worth_moving}
+    accepts as reading [ty]. *)
+let owned_parameters n ~owned ~ty =
+  List.filter_map
+    (fun i -> if owned i && Ownership_plan.worth_moving (ty i) then Some (i + 1) else None)
+    (List.init n Fun.id)
 
 (* ============================================================================
    Shared helpers for method generation (used by gen_ind_header_v2 and

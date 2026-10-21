@@ -66,7 +66,7 @@ template <typename T1> T1 eq_ex_rect_ex_intro(const T1 &x0_) {
 }
 
 template <typename T1> T1 eq_ex_rect_uncurried(T1 f) {
-  return eq_ex_rect<T1>([=]() { return f; }());
+  return eq_ex_rect<T1>([=, f = std::move(f)]() { return f; }());
 }
 
 template <typename T1> T1 eq_ex_rec_uncurried(const T1 &x0_) {
@@ -96,7 +96,7 @@ template <typename T1> T1 eq_ex2_rect_ex_intro2(const T1 &x0_) {
 }
 
 template <typename T1> T1 eq_ex2_rect_uncurried(T1 f) {
-  return eq_ex2_rect<T1>([=]() { return f; }());
+  return eq_ex2_rect<T1>([=, f = std::move(f)]() { return f; }());
 }
 
 template <typename T1> T1 eq_ex2_rec_uncurried(const T1 &x0_) {

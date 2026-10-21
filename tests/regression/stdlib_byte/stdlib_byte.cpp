@@ -3228,19 +3228,19 @@ bool Bool::eqb(bool b1, bool b2) {
 
 bool Byte1::eqb0(Byte a, Byte b0) {
   auto [a0, p] = Byte0::to_bits(a);
-  auto [a1, p0] = std::move(p);
-  auto [a2, p1] = std::move(p0);
-  auto [a3, p2] = std::move(p1);
-  auto [a4, p3] = std::move(p2);
-  auto [a5, p4] = std::move(p3);
-  auto [a6, a7] = std::move(p4);
+  const auto &[a1, p0] = p;
+  const auto &[a2, p1] = p0;
+  const auto &[a3, p2] = p1;
+  const auto &[a4, p3] = p2;
+  const auto &[a5, p4] = p3;
+  const auto &[a6, a7] = p4;
   auto [b1, p5] = Byte0::to_bits(b0);
-  auto [b2, p6] = std::move(p5);
-  auto [b3, p7] = std::move(p6);
-  auto [b4, p8] = std::move(p7);
-  auto [b5, p9] = std::move(p8);
-  auto [b6, p10] = std::move(p9);
-  auto [b7, b8] = std::move(p10);
+  const auto &[b2, p6] = p5;
+  const auto &[b3, p7] = p6;
+  const auto &[b4, p8] = p7;
+  const auto &[b5, p9] = p8;
+  const auto &[b6, p10] = p9;
+  const auto &[b7, b8] = p10;
   return (((((((Bool::eqb(a0, b1) && Bool::eqb(a1, b2)) && Bool::eqb(a2, b3)) &&
               Bool::eqb(a3, b4)) &&
              Bool::eqb(a4, b5)) &&

@@ -622,7 +622,7 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                       }
                       ValidatedPumpDeliveryTraceCase::SuspendDecision
                           suspend_decision = suspend_check_tenths_with_cob(
-                              default_config, std::move(eff_bg), iob,
+                              default_config, std::move(eff_bg), std::move(iob),
                               input.pi_carbs_g.grams_val, activity_isf,
                               tdd_capped);
                       ValidatedPumpDeliveryTraceCase::Insulin_twentieth
@@ -638,7 +638,7 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                       } else {
                         capped = std::move(adult_capped);
                       }
-                      bool was_modified = !(raw == capped);
+                      bool was_modified = !(std::move(raw) == capped);
                       return PrecisionResult::precok(std::move(capped),
                                                      was_modified);
                     }

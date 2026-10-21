@@ -157,9 +157,9 @@ struct HktInstanceAnyMismatch {
     template <typename CraneA0, typename CraneA1>
     static Option<CraneA1> bind(Option<CraneA0> m,
                                 crane::fn<Option<CraneA1>(CraneA0)> f) {
-      if (std::holds_alternative<typename Option<CraneA0>::Some>(m.v())) {
-        const auto &[a0] = std::get<typename Option<CraneA0>::Some>(m.v());
-        return f(a0);
+      if (std::holds_alternative<typename Option<CraneA0>::Some>(m.v_mut())) {
+        auto &[a0] = std::get<typename Option<CraneA0>::Some>(m.v_mut());
+        return f(std::move(a0));
       } else {
         return Option<CraneA1>::none();
       }

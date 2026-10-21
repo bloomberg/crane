@@ -111,6 +111,16 @@ and glob_subst_stmt (id : GlobRef.t) (repl : cpp_expr) (s : cpp_stmt) =
 let rec var_subst_expr (id : Id.t) (repl : cpp_expr) (e : cpp_expr) =
   match e with
   | CPPvar id' when Id.equal id id' -> repl
+  (* A lambda moving [id] into its captures moves the variable it is
+     replaced by, or, replaced by anything else -- a method's receiver
+     becoming [this] -- captures nothing of that name. *)
+  | CPPlambda l when List.exists (Id.equal id) l.cl_moved ->
+    let cl_moved =
+      List.concat_map
+        (fun x -> if not (Id.equal x id) then [x] else match repl with CPPvar y -> [y] | _ -> [])
+        l.cl_moved
+    in
+    var_subst_expr id repl (CPPlambda {l with cl_moved})
   | _ -> map_expr (var_subst_expr id repl) (var_subst_stmt id repl) Fun.id e
 
 (** Statement-level case of {!var_subst_expr}. *)
@@ -1175,21 +1185,16 @@ let gen_dfun n b cty ty temps =
   in
   begin_body ~owner:n ();
   set_current_parameters (List.map snd (parameter_binders env all_ids));
-  (* Phase 2: Initialize owned-variable tracking for move insertion. Parameters
-     at de Bruijn indices 1..n_params; owned ones get added to the set. *)
-  tctx :=
-    { !tctx with
-      move_owned_vars =
-          List.fold_left
-            (fun acc (i, owned) ->
-              if owned then
-                let ml_ty = snd (List.nth all_params i) in
-                if Translation_support.worth_moving ml_ty then
-                  Escape.IntSet.add (i + 1) acc
-                else acc
-              else acc )
-            Escape.IntSet.empty
-            (List.mapi (fun i o -> (i, o)) owned_flags) };
+  (* The parameters the body owns, at de Bruijn indices 1..n_params: those
+     the head declares by value. *)
+  let owned_params =
+    Translation_support.owned_parameters (List.length owned_flags)
+      ~owned:(fun i ->
+        Translation_support.declared_by_value
+          (List.assoc_opt (fst (List.nth all_ids i)) ids)
+          ~summary:(List.nth owned_flags i) )
+      ~ty:(fun i -> snd (List.nth all_params i))
+  in
   (* Expose the C++ return type to inner call sites so they can recover erased
      template type args (see try_recover_erased_return_type). *)
   let saved_return_type = (!tctx).current_cpp_return_type in
@@ -1215,7 +1220,7 @@ let gen_dfun n b cty ty temps =
         | None ->
           let b =
             List.map (glob_subst_stmt n rec_call)
-              (with_region b (fun () -> gen_body_stmts env cofix_wrap b))
+              (with_region ~owned:owned_params b (fun () -> gen_body_stmts env cofix_wrap b))
           in
           return_captures_by_value b
       in
@@ -1284,7 +1289,7 @@ let gen_dfun n b cty ty temps =
           let body = apply_eta_args lifted_b args in
           List.map
             (glob_subst_stmt n rec_call)
-            (with_region body (fun () -> gen_body_stmts env cofix_wrap body))
+            (with_region ~owned:owned_params body (fun () -> gen_body_stmts env cofix_wrap body))
       in
       let b = return_captures_by_value b in
       (* let b = List.map forward_fun_args b in *)

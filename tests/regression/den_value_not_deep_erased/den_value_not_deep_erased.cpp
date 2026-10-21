@@ -9,7 +9,7 @@ uint64_t DenValueNotDeepErased::size(const DenValueNotDeepErased::ty &t,
         std::get<typename DenValueNotDeepErased::ty::TList>(t.v());
     const DenValueNotDeepErased::ty &a0_value = *a0;
     return List<DenValueNotDeepErased::den>(
-               crane::any_cast<List<crane::obj>>(n))
+               crane::any_cast<List<crane::obj>>(std::move(n)))
         .template fold_left<uint64_t>(
             [=](uint64_t acc, DenValueNotDeepErased::den x) {
               return (acc + size(a0_value, x));

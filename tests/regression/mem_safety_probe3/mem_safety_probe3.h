@@ -580,8 +580,9 @@ struct MemSafetyProbe3 {
                           UINT64_C(10),
                           tree::node(tree::leaf(), UINT64_C(15), tree::leaf()));
       tree t2 = tree::node(tree::leaf(), UINT64_C(100), tree::leaf());
-      tree mapped = t.map_tree(
-          [=](uint64_t v) { return (v + t2.sum_values(UINT64_C(0))); });
+      tree mapped = t.map_tree([=, t2 = std::move(t2)](uint64_t v) {
+        return (v + t2.sum_values(UINT64_C(0)));
+      });
       return mapped.tree_sum();
     }();
   }();

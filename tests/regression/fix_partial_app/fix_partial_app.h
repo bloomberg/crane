@@ -156,7 +156,7 @@ struct FixPartialApp {
         return count_nodes(std::move(t), _x0);
       };
       std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> p =
-          std::make_pair(f, UINT64_C(42));
+          std::make_pair(std::move(f), UINT64_C(42));
       return (p.first(UINT64_C(0)) + p.first(UINT64_C(100)));
     }();
   }();

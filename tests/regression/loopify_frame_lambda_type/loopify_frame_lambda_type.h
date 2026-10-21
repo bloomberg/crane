@@ -248,11 +248,11 @@ struct LoopifyFrameLambdaType {
     template <typename CraneA0, typename CraneA1>
     static res<CraneA1> bind(res<CraneA0> c,
                              crane::fn<res<CraneA1>(CraneA0)> k) {
-      if (std::holds_alternative<typename res<CraneA0>::Err>(c.v())) {
+      if (std::holds_alternative<typename res<CraneA0>::Err>(c.v_mut())) {
         return res<CraneA1>::err();
       } else {
-        const auto &[x0] = std::get<typename res<CraneA0>::Ok>(c.v());
-        return k(x0);
+        auto &[x0] = std::get<typename res<CraneA0>::Ok>(c.v_mut());
+        return k(std::move(x0));
       }
     }
   };

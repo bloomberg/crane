@@ -164,12 +164,12 @@ CraneA0>
 static EOU<CraneA0> ret(CraneA0 a) {
 return EOU<CraneA0>::ok(std::move(a));}
 static EOU<crane::obj> bind(EOU<crane::obj> m, crane::fn<EOU<crane::obj>(crane::obj)> k) {
-if (std::holds_alternative<typename EOU<crane::obj>::Ok>(m.v())) {
-const auto& [a0] = std::get<typename EOU<crane::obj>::Ok>(m.v());
-return k(a0);
+if (std::holds_alternative<typename EOU<crane::obj>::Ok>(m.v_mut())) {
+auto& [a0] = std::get<typename EOU<crane::obj>::Ok>(m.v_mut());
+return k(std::move(a0));
 } else {
-const auto& [a0] = std::get<typename EOU<crane::obj>::Err>(m.v());
-return EOU<crane::obj>::err(a0);
+auto& [a0] = std::get<typename EOU<crane::obj>::Err>(m.v_mut());
+return EOU<crane::obj>::err(std::move(a0));
 }}
 };
 static_assert(Monad<EOU_monad>);template <typename ptr, typename iptr,

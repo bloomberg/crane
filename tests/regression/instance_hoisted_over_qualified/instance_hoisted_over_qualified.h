@@ -91,11 +91,10 @@ public:
     std::optional<Nat> _root{};
     std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        auto _value = std::move(_loop_m);
+        auto _value = std::move(m);
         (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
@@ -287,12 +286,12 @@ struct EOUP_Monad {
   template <typename CraneA0, typename CraneA1>
   static Sum<Nat, CraneA1> bind(Sum<Nat, CraneA0> m,
                                 crane::fn<Sum<Nat, CraneA1>(CraneA0)> k) {
-    if (std::holds_alternative<typename Sum<Nat, CraneA0>::Inl>(m.v())) {
-      const auto &[a0] = std::get<typename Sum<Nat, CraneA0>::Inl>(m.v());
-      return Sum<Nat, CraneA1>::inl(a0);
+    if (std::holds_alternative<typename Sum<Nat, CraneA0>::Inl>(m.v_mut())) {
+      auto &[a0] = std::get<typename Sum<Nat, CraneA0>::Inl>(m.v_mut());
+      return Sum<Nat, CraneA1>::inl(std::move(a0));
     } else {
-      const auto &[a0] = std::get<typename Sum<Nat, CraneA0>::Inr>(m.v());
-      return k(a0);
+      auto &[a0] = std::get<typename Sum<Nat, CraneA0>::Inr>(m.v_mut());
+      return k(std::move(a0));
     }
   }
 };

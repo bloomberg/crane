@@ -277,11 +277,11 @@ struct EOU_monad {
   template <typename CraneA0, typename CraneA1>
   static EOU<CraneA1> mbind(EOU<CraneA0> c,
                             crane::fn<EOU<CraneA1>(CraneA0)> k) {
-    if (std::holds_alternative<typename EOU<CraneA0>::Eou_err>(c.v())) {
+    if (std::holds_alternative<typename EOU<CraneA0>::Eou_err>(c.v_mut())) {
       return EOU<CraneA1>::eou_err();
     } else {
-      const auto &[a0] = std::get<typename EOU<CraneA0>::Eou_ret>(c.v());
-      return k(a0);
+      auto &[a0] = std::get<typename EOU<CraneA0>::Eou_ret>(c.v_mut());
+      return k(std::move(a0));
     }
   }
 };

@@ -271,12 +271,12 @@ struct TFunctor_exp {
 
   template <typename CraneA0, typename CraneA1>
   static Exp0<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, Exp0<CraneA0> e) {
-    if (std::holds_alternative<typename Exp0<CraneA0>::Var>(e.v())) {
-      const auto &[t0] = std::get<typename Exp0<CraneA0>::Var>(e.v());
-      return Exp0<CraneA1>::var(f(t0));
+    if (std::holds_alternative<typename Exp0<CraneA0>::Var>(e.v_mut())) {
+      auto &[t0] = std::get<typename Exp0<CraneA0>::Var>(e.v_mut());
+      return Exp0<CraneA1>::var(f(std::move(t0)));
     } else {
-      const auto &[n0] = std::get<typename Exp0<CraneA0>::Lit>(e.v());
-      return Exp0<CraneA1>::lit(n0);
+      auto &[n0] = std::get<typename Exp0<CraneA0>::Lit>(e.v_mut());
+      return Exp0<CraneA1>::lit(std::move(n0));
     }
   }
 };
@@ -305,7 +305,7 @@ template <TFunctor _tcI0> struct TFunctor_phi {
 
   template <typename CraneA0, typename CraneA1>
   static Phi<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, Phi<CraneA0> p) {
-    const auto &[es0] = p;
+    auto &[es0] = p;
     return Phi<CraneA1>::phi0(
         TFunctor_list::template tfmap<std::pair<Nat, Exp0<CraneA0>>,
                                       std::pair<Nat, Exp0<CraneA1>>>(
@@ -314,7 +314,7 @@ template <TFunctor _tcI0> struct TFunctor_phi {
               return std::make_pair(
                   i, _tcI0::template tfmap<CraneA0, CraneA1>(f, e));
             },
-            es0));
+            std::move(es0)));
   }
 };
 
