@@ -4994,6 +4994,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       (* renamed_ids is in reversed order (from List.rev_map above). Reverse it
          back so it aligns with ids (constructor / field order). *)
       let renamed_ids_fwd = List.rev renamed_ids in
+      let base, cache = record_read_once env ~is_typeclass t in
       let asgns =
         List.concat_map
           (fun (i, ((renamed_name, _), (_, ty))) ->
@@ -5002,7 +5003,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             in
             let e =
               match fld with
-              | Some fld -> make_field_access (gen_expr env t) fld
+              | Some fld -> make_field_access base fld
               | _ -> CErrors.anomaly (Pp.str "record field index out of bounds")
             in
             let e =
@@ -5028,7 +5029,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
       in
       mk_iife None
-        (asgns
+        (cache @ asgns
          @ with_binders env renamed_ids (fun () ->
                with_iife_return_type expected_ty (fun () ->
                    gen_stmts ~slot env' (fun x -> Sreturn (Some x)) body))) )
@@ -8888,6 +8889,24 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
 (** Generate C++ statements from an ML AST. The continuation [k] transforms the
     final expression into a statement (e.g., return, assignment). Handles
     let-bindings, pattern matching, fix expressions, and monadic operations. *)
+(* The record [t] a match takes apart into its fields, read once however many
+   fields are bound out of it: a call standing in its place is evaluated into
+   a temporary first, rather than once per field -- which a recursive call
+   taken apart into three fields made three calls per level.  The temporary
+   is read for nothing else, so each field is moved out of it.  Returns what
+   the fields are read out of, and the statements evaluating it. *)
+and record_read_once env ~is_typeclass t =
+  let scrut = gen_expr env t in
+  if is_typeclass || is_trivial_scrut scrut then (scrut, [])
+  else
+    let n = (!tctx).cs_counter in
+    tctx := { !tctx with cs_counter = n + 1 };
+    let cache_id = Common.scrutinee_cache_id n in
+    ( CPPmove (CPPvar cache_id),
+      match lift_iife_assignment cache_id None scrut with
+      | Some stmts -> stmts
+      | None -> [Sasgn (cache_id, Declare (Tauto, None), scrut)] )
+
 and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
   (* Statements open a position of their own and state no type for it: the
      value a [return] here carries goes to the enclosing function, not to the
@@ -10230,23 +10249,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       in
       let renamed_ids_fwd = List.rev renamed_ids in
       let tvars = get_current_type_vars () in
-      (* The record is read once, however many fields are bound out of it: a
-         call standing in its place is evaluated into a temporary first,
-         rather than once per field -- which a recursive call taken apart into
-         three fields made three calls per level.  The temporary is read for
-         nothing else, so each field is moved out of it. *)
-      let base, cache =
-        let scrut = gen_expr env t in
-        if is_typeclass || is_trivial_scrut scrut then (scrut, [])
-        else
-          let n = (!tctx).cs_counter in
-          tctx := { !tctx with cs_counter = n + 1 };
-          let cache_id = Common.scrutinee_cache_id n in
-          ( CPPmove (CPPvar cache_id),
-            match lift_iife_assignment cache_id None scrut with
-            | Some stmts -> stmts
-            | None -> [Sasgn (cache_id, Declare (Tauto, None), scrut)] )
-      in
+      let base, cache = record_read_once env ~is_typeclass t in
       let asgns =
         List.concat_map
           (fun (i, ((renamed_name, _), (_, ty))) ->
