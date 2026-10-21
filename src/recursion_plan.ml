@@ -82,6 +82,7 @@ type t = {
   adoptable : Occurrence.t list Ref.User.Map.t;
   inlinings : inlining list Ref.User.Map.t;
   adopted_invocations : Occurrence.t list Ref.User.Map.t;
+  kinds : kind Ref.User.Map.t;  (* per definition, its own calls *)
 }
 
 let empty =
@@ -94,7 +95,8 @@ let empty =
     resumes = Ref.User.Map.empty;
     adoptable = Ref.User.Map.empty;
     inlinings = Ref.User.Map.empty;
-    adopted_invocations = Ref.User.Map.empty }
+    adopted_invocations = Ref.User.Map.empty;
+    kinds = Ref.User.Map.empty }
 
 let rec split_params n = function
   | MLlam (_, _, b) -> split_params (n + 1) b
@@ -114,6 +116,12 @@ let sequential effects use =
 let identity r =
   Table.is_custom r && Minicpp.inline_shape_of_text (Table.find_custom r) = Minicpp.Inline_identity
 
+(* A partner's body Loopify inlines at a call: continued where the call
+   was, or run in a lambda invoked in its place. *)
+type inlined_body =
+  | Continues of ml_ast
+  | Invokes of ml_ast
+
 (* How [body], a function's body inside its parameters, calls the members
    of its recursive group, as the C++ it becomes does: a call is a tail call
    where its result is the function's, and one applied to more arguments
@@ -125,15 +133,25 @@ let identity r =
    under [depth] binders inside the function's parameters, and [None] where
    [f] names none.  A bind or a ret is sequencing where [effects], the
    analysis of the program [body] is taken from, says it is generated
-   sequentially. *)
-let classify ~effects ~callee body =
+   sequentially.  [inlined use] is the body of a partner Loopify inlines at
+   the call [use] heads ({!inlinings_of}), which is read in its place: a
+   body continued where the call was, and one invoked as an operand, where
+   nothing more is inlined. *)
+let classify ?(inlined = fun _ -> None) ~effects ~callee body =
   let tail_call = ref false and nontail_call = ref false in
   let effect_ = sequential effects in
-  let rec walk ~depth ~tail e =
-    let walk_under n ~tail e = walk ~depth:(depth + n) ~tail e in
-    let walk ~tail e = walk ~depth ~tail e in
+  let rec walk ~inlining ~depth ~tail e =
+    let walk_under n ~tail e = walk ~inlining ~depth:(depth + n) ~tail e in
+    let walk ~tail e = walk ~inlining ~depth ~tail e in
+    let continuation = continuation ~inlining in
     match e with
     | f when callee ~depth f = Some 0 -> if tail then tail_call := true else nontail_call := true
+    | MLapp (MLglob use, args) when inlining && Option.has_some (inlined use) -> (
+      List.iter (walk ~tail:false) args;
+      match inlined use with
+      | Some (Continues b) -> walk ~tail b
+      | Some (Invokes b) -> walk_body ~inlining:false ~tail:false b
+      | None -> () )
     | MLcons (_, c, [a]) when identity c -> walk ~tail a
     | MLapp (MLglob use, [a]) when identity use.callee && Table.to_inline use.callee -> walk ~tail a
     | MLapp (f, args) when Option.has_some (callee ~depth f) ->
@@ -187,13 +205,13 @@ let classify ~effects ~callee body =
       walk ~tail:false d
     | MLrel _ | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ ->
       ()
-  and continuation ~depth ~tail = function
+  and continuation ~inlining ~depth ~tail = function
     | MLlam _ as k ->
       let n, b = split_params 0 k in
-      walk ~depth:(depth + n) ~tail b
-    | k -> walk ~depth ~tail:false k
-  in
-  walk ~depth:0 ~tail:true body;
+      walk ~inlining ~depth:(depth + n) ~tail b
+    | k -> walk ~inlining ~depth ~tail:false k
+  and walk_body ~inlining ~tail b = walk ~inlining ~depth:0 ~tail b in
+  walk ~inlining:true ~depth:0 ~tail:true body;
   if !nontail_call then Nontail else if !tail_call then Tail else No_recursion
 
 let combine a b =
@@ -788,10 +806,12 @@ let adopted_invocations_of ~defs self inlinings =
     inlinings
 
 (* A group with partners is planned as one: Loopify inlines the partners
-   into a member before reading it, where a tail call to one continues in
-   that partner's body and any other call is wrapped in a closure, so the
-   calls it then reads are every call between members.  A function on no
-   cycle calls no function it could recurse through. *)
+   into a member before reading it ({!inlinings_of}), so a loop of the
+   member takes the calls of itself it then reads, in its body and in the
+   partners' bodies inlined there, and only those: a partner's call it
+   could not inline, or one of a third member in a partner's body run as
+   an operand, stays a call of another function.  A function on no cycle
+   calls no function it could recurse through. *)
 let analyze groups struc =
   let effects = Core_effects.analyze struc in
   let defs = ref Ref.User.Map.empty in
@@ -806,22 +826,48 @@ let analyze groups struc =
      its calls are read there, a call with fewer arguments than that being
      the closure the C++ makes of it. *)
   let parameters fd = List.length (Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type)) in
-  let kind_of members =
+  let inlinings =
+    Ref.User.Map.mapi
+      (fun r fd ->
+        match Recursive_groups.group groups r with
+        | Some members -> inlinings_of ~effects ~defs ~members r fd
+        | None -> [] )
+      defs
+  in
+  (* A member's own calls, its partners inlined as Loopify inlines them:
+     what a loop of the member can take. *)
+  let member_kind r fd =
     let callee ~depth:_ = function
-      | MLglob use when List.exists (Common.globref_equal use.callee) members ->
+      | MLglob use when Common.globref_equal use.callee r ->
         Option.map parameters (Ref.User.Map.find_opt use.callee defs)
       | _ -> None
     in
-    List.fold_left
-      (fun k m ->
-        match Ref.User.Map.find_opt m defs with
-        | Some fd ->
-          combine k (classify ~effects ~callee (snd (Core_elaborate.generated_scope fd.fd_type fd.fd_body)))
-        | None -> k )
-      No_recursion members
+    let planned = Ref.User.Map.find r inlinings in
+    let inlined (use : global_use) =
+      let occurrence = Global_use.occurrence use in
+      List.find_map
+        (fun i ->
+          let body () =
+            Option.map
+              (fun fd -> snd (Core_elaborate.generated_scope fd.fd_type fd.fd_body))
+              (Ref.User.Map.find_opt i.partner defs)
+          in
+          if List.exists (Occurrence.equal occurrence) i.continued then
+            Option.map (fun b -> Continues b) (body ())
+          else if List.exists (Occurrence.equal occurrence) i.invoked then
+            Option.map (fun b -> Invokes b) (body ())
+          else None )
+        planned
+    in
+    classify ~inlined ~effects ~callee (snd (Core_elaborate.generated_scope fd.fd_type fd.fd_body))
   in
+  let kinds = Ref.User.Map.mapi member_kind defs in
   let plans =
-    List.map (fun members -> {members; kind = kind_of members}) (Recursive_groups.groups groups)
+    List.map
+      (fun members ->
+        let kind m = Option.default No_recursion (Ref.User.Map.find_opt m kinds) in
+        {members; kind = List.fold_left (fun k m -> combine k (kind m)) No_recursion members} )
+      (Recursive_groups.groups groups)
   in
   let by_member =
     List.fold_left
@@ -836,7 +882,7 @@ let analyze groups struc =
       (fun r _ ->
         let planned = Option.map (fun g -> g.members) (Ref.User.Map.find_opt r by_member) in
         let grouped = Recursive_groups.group groups r in
-        let off_cycle_recurses () = kind_of [r] <> No_recursion in
+        let off_cycle_recurses () = Ref.User.Map.find r kinds <> No_recursion in
         if (not (Option.equal (List.equal Common.globref_equal) planned grouped))
            || (grouped = None && off_cycle_recurses ())
         then
@@ -859,7 +905,10 @@ let analyze groups struc =
             Array.of_list (List.map (fun r -> (Ref.User.Map.find r defs).fd_body) g.members)
           in
           let member ~within:_ ~depth:_ = function MLglob use -> index use.callee | _ -> None in
-          let chains_of r = Option.bind (index r) (modulo_cons_chains ~effects ~member ~bodies) in
+          let chains_of r =
+            if Ref.User.Map.find_opt r kinds <> Some Nontail then None
+            else Option.bind (index r) (modulo_cons_chains ~effects ~member ~bodies)
+          in
           List.fold_left
             (fun m r ->
               match chains_of r with Some chains -> Ref.User.Map.add r chains m | None -> m )
@@ -913,14 +962,6 @@ let analyze groups struc =
         flow_fixpoints ~names (Lexenv.depth lex) body )
       defs
   in
-  let inlinings =
-    Ref.User.Map.mapi
-      (fun r fd ->
-        match Ref.User.Map.find_opt r by_member with
-        | Some g -> inlinings_of ~effects ~defs ~members:g.members r fd
-        | None -> [] )
-      defs
-  in
   let adopted_invocations =
     Ref.User.Map.fold
       (fun r is m ->
@@ -936,7 +977,8 @@ let analyze groups struc =
     resumes;
     adoptable;
     inlinings;
-    adopted_invocations }
+    adopted_invocations;
+    kinds }
 
 let same_cell c c' = Common.globref_equal c.constructor c'.constructor && c.hole = c'.hole
 
@@ -984,6 +1026,7 @@ let equal a b =
             && List.equal Occurrence.equal i.invoked i'.invoked ) )
        a.inlinings b.inlinings
   && Ref.User.Map.equal (List.equal Occurrence.equal) a.adopted_invocations b.adopted_invocations
+  && Ref.User.Map.equal ( = ) a.kinds b.kinds
 
 let installed : t ref = State.cell State.Extraction empty
 
@@ -1025,12 +1068,12 @@ let strategy_of ~pointer_fields ~suspends kind chains =
     Modulo_cons chains
   | Nontail, _ -> Frame_stack
 
-(* A partner is inlined into a member, its suspensions with it. *)
+(* A member's kind is its own calls', its partners inlined; a partner is
+   inlined into a member, its suspensions with it. *)
 let strategy ~pointer_fields r =
   if Ref.User.Set.mem r !installed.defined then
-    let kind, members =
-      match group_of r with Some g -> (g.kind, g.members) | None -> (No_recursion, [r])
-    in
+    let kind = Option.default No_recursion (Ref.User.Map.find_opt r !installed.kinds) in
+    let members = match group_of r with Some g -> g.members | None -> [r] in
     let suspends = List.exists (fun m -> Ref.User.Set.mem m !installed.suspended) members in
     Some
       (strategy_of ~pointer_fields ~suspends kind (Ref.User.Map.find_opt r !installed.modulo_cons))

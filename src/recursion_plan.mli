@@ -12,9 +12,10 @@
     sequential computation the continuation of a [bind] and the value of a
     [ret] stand where the operation does.  A custom whose replacement text is
     just its one argument stands for that argument.  The plan is per
-    recursive group ({!Recursive_groups}), exactly one each: every call
-    between members counts, as it does once Loopify has inlined the partners
-    into a member.  A function on no cycle does not recurse.
+    recursive group ({!Recursive_groups}), exactly one each, and a member
+    recurses by the calls of itself it makes once Loopify has inlined its
+    partners into it ({!inlinings}).  A function on no cycle does not
+    recurse.
 
     For a function that does not recurse only by tail calls, the plan also
     reads the constructors its result is built of around its calls, which
@@ -26,7 +27,7 @@ type kind =
   | Nontail  (** some recursive call is not *)
 
 (** A recursive group's plan: its members, in definition order, and how
-    the group recurses. *)
+    the group recurses: as the member that recurses most. *)
 type group = private {
   members : Names.GlobRef.t list;
   kind : kind;
@@ -82,10 +83,10 @@ type strategy =
 (** The kind of recursion a strategy lowers. *)
 val kind_of_strategy : strategy -> kind
 
-(** The strategy of the function [r], if the program defines it: its
-    group's kind, [No_recursion] off every cycle, whether the group suspends
-    ({!Suspended}), and for a member that does not recurse only by tail calls
-    whether it is lowered tail modulo cons.
+(** The strategy of the function [r], if the program defines it: the kind
+    of its own calls, its partners inlined into it ({!inlinings}), whether
+    the group suspends ({!Suspended}), and for a member that does not
+    recurse only by tail calls whether it is lowered tail modulo cons.
     It is, where each call that is not a tail call is the one call of a
     chain of constructor applications in tail position, the innermost
     holding it directly, read off [r]'s Core body with {!Normalize}'s

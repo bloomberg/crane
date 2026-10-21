@@ -2658,6 +2658,17 @@
   (deps loopify_gap_mutual3.t.exe)
   (action (run ./loopify_gap_mutual3.t.exe))))
 
+(subdir loopify_member_own_calls
+ (rule
+  (targets loopify_member_own_calls.t.exe)
+  (deps LoopifyMemberOwnCalls.vo loopify_member_own_calls.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_member_own_calls.t.exe loopify_member_own_calls.cpp loopify_member_own_calls.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_member_own_calls.t.exe)
+  (action (run ./loopify_member_own_calls.t.exe))))
+
 (subdir coalition_bid_honor_trace
  (rule
   (targets coalition_bid_honor_trace.t.exe)
