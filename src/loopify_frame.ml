@@ -1617,18 +1617,22 @@ and rewrite_enter_stmts ctx stmts =
         make_stack_push enter;
       ]
     in
-    (* Whether the statement resumes is the plan's, where it says
-       ({!planned_resume}); the call the frame re-enters by is the one
-       {!Normalize} bound there, the whole right-hand side.  Under
-       [CRANE_CHECK_IR] the plan is checked against the C++, one call the
-       machine's checker recognises. *)
+    (* Whether the statement resumes is the plan's ({!planned_resume}); the
+       call the frame re-enters by is the one {!Normalize} bound there, the
+       whole right-hand side.  Under [CRANE_CHECK_IR] the plan is checked
+       against the C++, one call the machine's checker recognises, and a
+       statement the plan says nothing of is a violation. *)
     let call = if n_calls = 1 then check e else None in
     let resumes =
       match planned_resume ctx id tgt e with
       | Some planned ->
         if Probe.checking () && planned <> Option.has_some call then resume_violation ();
         planned
-      | None -> Option.has_some call
+      | None ->
+        if Probe.checking () then
+          Probe.violation "resume plan"
+            (Pp.str "the recursion plan does not say whether a statement making a recursive call resumes after it");
+        Option.has_some call
     in
     ( match call with
     | Some cs when resumes -> make_cont_handler (make_enter_for ctx cs)
