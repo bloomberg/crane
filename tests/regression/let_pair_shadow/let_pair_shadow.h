@@ -141,8 +141,10 @@ struct LetPairShadow {
     } else {
       const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
       auto [new_acc, y] = f(acc, a0);
-      auto [rest, final_acc] = map_accum<T1, T2, T3>(f, new_acc, *a1);
-      return std::make_pair(mylist<T2>::mycons(y, std::move(rest)), final_acc);
+      auto [rest, final_acc] =
+          map_accum<T1, T2, T3>(f, std::move(new_acc), *a1);
+      return std::make_pair(mylist<T2>::mycons(std::move(y), std::move(rest)),
+                            std::move(final_acc));
     }
   }
 

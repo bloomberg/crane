@@ -25,7 +25,7 @@ uint64_t MonadicVoidEdge::let_bind_monadic_void() {
 /// 4. Passing unit through a chain of binds
 void MonadicVoidEdge::unit_chain() {
   std::monostate x = std::monostate{};
-  std::move(x);
+  x;
   return;
 }
 
@@ -85,8 +85,7 @@ List<std::monostate> MonadicVoidEdge::unit_in_list() {
   std::monostate x = std::monostate{};
   std::monostate y = std::monostate{};
   return List<std::monostate>::cons(
-      std::move(x),
-      List<std::monostate>::cons(std::move(y), List<std::monostate>::nil()));
+      x, List<std::monostate>::cons(y, List<std::monostate>::nil()));
 }
 
 /// 12. Mixed: some binds void, some value, interleaved

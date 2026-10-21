@@ -45,5 +45,5 @@ uint64_t check(uint64_t n) {
       std::make_pair(crane::obj(n),
                      crane::obj(std::make_pair(
                          crane::obj(n), crane::obj(std::monostate{}))))));
-  return crane::any_cast<uint64_t>(v);
+  return crane::any_cast<uint64_t>(std::move(v));
 }

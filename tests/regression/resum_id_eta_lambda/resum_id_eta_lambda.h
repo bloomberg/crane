@@ -293,10 +293,11 @@ struct ITree {
                    typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v())) {
       const auto &[t0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v());
-      return Itree<T1, T3>::lazy_([=, k = std::move(
-                                          k)]() -> typename Itree<T1, T3>::Go {
-        return {ItreeF<T1, T3, Itree<T1, T3>>::tauf(subst<T1, T2, T3>(k, t0))};
-      });
+      return Itree<T1, T3>::lazy_([=, k = std::move(k)]() ->
+                                  typename Itree<T1, T3>::Go {
+                                    return {ItreeF<T1, T3, Itree<T1, T3>>::tauf(
+                                        subst<T1, T2, T3>(std::move(k), t0))};
+                                  });
     } else {
       const auto &[x, e0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::VisF>(_sv.v());
@@ -795,8 +796,8 @@ template <typename T1, typename T2, typename T3>
 crane::rebind_t<T2, T3>
 Subevent::subevent(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h0,
                    crane::rebind_t<T1, T3> x) {
-  return crane_any_cast<crane::rebind_t<T2, T3>>(
-      CategoryOps::resum(crane::obj(), crane::obj(), h0)(std::move(x)));
+  return crane_any_cast<crane::rebind_t<T2, T3>>(CategoryOps::resum(
+      crane::obj(), crane::obj(), std::move(h0))(std::move(x)));
 }
 
 #endif // INCLUDED_RESUM_ID_ETA_LAMBDA

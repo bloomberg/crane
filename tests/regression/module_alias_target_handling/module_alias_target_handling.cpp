@@ -738,13 +738,13 @@ Coq_Pos::ggcdn(uint64_t n, unsigned int a, unsigned int b) {
         }
         case Comparison::LT: {
           auto [g, p] = ggcdn(n0, (b_ - a_), a);
-          auto [ba, aa] = std::move(p);
+          const auto &[ba, aa] = p;
           return std::make_pair(g, std::make_pair(aa, (aa + (2u * ba))));
           break;
         }
         case Comparison::GT: {
           auto [g, p] = ggcdn(n0, (a_ - b_), std::move(b));
-          auto [ab, bb] = std::move(p);
+          const auto &[ab, bb] = p;
           return std::make_pair(g, std::make_pair((bb + (2u * ab)), bb));
           break;
         }
@@ -754,8 +754,8 @@ Coq_Pos::ggcdn(uint64_t n, unsigned int a, unsigned int b) {
       } else {
         unsigned int b0 = b / 2u;
         auto [g, p] = ggcdn(n0, a, b0);
-        auto [aa, bb] = std::move(p);
-        return std::make_pair(g, std::make_pair(aa, (2u * bb)));
+        const auto &[aa, bb] = p;
+        return std::make_pair(g, std::make_pair(std::move(p.first), (2u * bb)));
       }
     } else {
       unsigned int a0 = a / 2u;
@@ -764,12 +764,12 @@ Coq_Pos::ggcdn(uint64_t n, unsigned int a, unsigned int b) {
       } else if (b % 2u != 0u) {
         unsigned int _x = (b - 1u) / 2u;
         auto [g, p] = ggcdn(n0, a0, std::move(b));
-        auto [aa, bb] = std::move(p);
+        const auto &[aa, bb] = p;
         return std::make_pair(g, std::make_pair((2u * aa), bb));
       } else {
         unsigned int b0 = b / 2u;
         auto [g, p] = ggcdn(n0, a0, b0);
-        return std::make_pair((2u * g), std::move(p));
+        return std::make_pair((2u * g), p);
       }
     }
   }
@@ -1374,7 +1374,7 @@ N::ggcd(unsigned int a, unsigned int b) {
     } else {
       unsigned int q = b;
       auto [g, p0] = Coq_Pos::ggcd(p, q);
-      auto [aa, bb] = std::move(p0);
+      const auto &[aa, bb] = p0;
       return std::make_pair(g, std::make_pair(aa, bb));
     }
   }

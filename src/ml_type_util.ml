@@ -1210,20 +1210,6 @@ module Ctor_fields = struct
        || boxed f i || param_boxed f i )
 end
 
-(** Check if an ML type maps to a non-trivially-copyable C++ value type.
-    These are custom-extracted inductives (e.g., prod → std::pair) that are
-    NOT shared_ptr-wrapped but still benefit from move semantics.
-    Excluded: list (Datatypes::List contains shared_ptr<List> in Cons.l —
-    moving a list value invalidates shared_ptr aliases to inner nodes). *)
-let is_nontrivial_value_ml_type ty =
-  match resolve_tmeta ty with
-  | Miniml.Tglob (r, _, _) ->
-    Table.is_custom r
-    && not (Table.is_custom_scalar_ref r)
-    && not (Escape.is_shared_ptr_type ty)
-    && not (is_list_global r)
-  | _ -> false
-
 let is_prod_ml_type ty =
   match resolve_tmeta ty with
   | Miniml.Tglob (r, _, _) -> is_prod_global r

@@ -380,7 +380,7 @@ std::optional<T2> HAList0::halist_lookup(std::type_identity_t<EqDec<T1>> eq,
     if (EquivDec::template equiv_dec<T1>(eq, x0, k)) {
       return std::make_optional<T2>(a10);
     } else {
-      return HAList0::template halist_lookup<T1, T2>(eq, k, *a1);
+      return HAList0::template halist_lookup<T1, T2>(std::move(eq), k, *a1);
     }
   }
 }

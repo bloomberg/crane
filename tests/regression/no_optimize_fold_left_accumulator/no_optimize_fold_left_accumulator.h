@@ -92,7 +92,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, const A &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
   T1 fold_left(F0 &&f, const T1 &x1_) const {
     auto fold_left0_impl = [&](auto &_self_fold_left0, const List<A> &l,
                                T1 a0) -> T1 {
@@ -100,7 +100,7 @@ public:
         return a0;
       } else {
         const auto &[a1, a2] = std::get<typename List<A>::Cons>(l.v());
-        return _self_fold_left0(_self_fold_left0, *a2, f(a0, a1));
+        return _self_fold_left0(_self_fold_left0, *a2, f(std::move(a0), a1));
       }
     };
     {

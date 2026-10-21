@@ -292,8 +292,10 @@ LoopifyPatterns::tuple_constr(
     } else {
       auto _f = std::move(std::get<CraneCont_m>(_frame));
       uint64_t n = _f.n;
-      auto [p, c] = std::move(_result);
-      auto [a, b] = std::move(p);
+      std::pair<std::pair<uint64_t, uint64_t>, uint64_t> _tmp1 =
+          std::move(_result);
+      const auto &[p, c] = _tmp1;
+      const auto &[a, b] = p;
       _result = std::make_pair(std::make_pair((a + 1), (b + n)), (c + (n * n)));
     }
   }

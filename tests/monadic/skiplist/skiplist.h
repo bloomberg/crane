@@ -350,7 +350,7 @@ template <typename K, typename V> struct SkipList {
             std::move(pred0)->forward[UINT64_C(0)]));
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
-      if (eqK(node->key, k)) {
+      if (eqK(node->key, std::move(k))) {
         SkipList<int, int>::template extendPath<K, V>(
             path, this->slHead, (node->level + 1), curLvl);
         SkipList<int, int>::template unlinkNode<K, V>(std::move(path), node);

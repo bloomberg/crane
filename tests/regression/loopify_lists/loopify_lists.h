@@ -1293,13 +1293,14 @@ struct LoopifyLists {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
           auto [acc_, y] = f(acc, a0);
           _stack.emplace_back(CraneCont_acc_{y});
-          _stack.emplace_back(CraneEnter{crane_raw(a1), acc_});
+          _stack.emplace_back(CraneEnter{crane_raw(a1), std::move(acc_)});
         }
       } else {
         auto _f = std::move(std::get<CraneCont_acc_>(_frame));
         auto y = std::move(_f.y);
         auto [acc_p, ys] = std::move(_result);
-        _result = std::make_pair(acc_p, list<T2>::cons(y, std::move(ys)));
+        _result = std::make_pair(std::move(acc_p),
+                                 list<T2>::cons(std::move(y), std::move(ys)));
       }
     }
     return _result;

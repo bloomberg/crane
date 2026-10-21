@@ -29,8 +29,11 @@ type t
 val empty : t
 
 (** Whether a body owning a value of ML type [ty] moves it at its last use:
-    a [shared_ptr], or a value-type inductive a copy of which copies more
-    than a word. *)
+    one a copy of which costs more than a move.  This is the C++ reading
+    {!Loopify_analysis.worthwhile_move_type} makes, read off the ML type: an
+    inductive that is not an enum or coinductive, a closure, a type
+    variable, and a mapped type unless it is a scalar or declared trivially
+    copyable with arguments that are too. *)
 val worth_moving : Miniml.ml_type -> bool
 
 (** [region ~owned t] is the plan of [t]'s reads, [t] standing under binders

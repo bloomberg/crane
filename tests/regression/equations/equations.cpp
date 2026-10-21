@@ -48,7 +48,7 @@ uint64_t Equations::gcd_unfold_clause_3(uint64_t n, uint64_t n0, bool refine) {
 }
 
 uint64_t Equations::gcd_unfold(std::pair<uint64_t, uint64_t> p) {
-  auto [n, n0] = std::move(p);
+  const auto &[n, n0] = p;
   if (n <= 0) {
     return n0;
   } else {
@@ -64,7 +64,7 @@ uint64_t Equations::gcd_unfold(std::pair<uint64_t, uint64_t> p) {
 
 Equations::gcd_graph
 Equations::gcd_graph_correct(std::pair<uint64_t, uint64_t> x) {
-  auto [n, n0] = std::move(x);
+  const auto &[n, n0] = x;
   if (n <= 0) {
     return gcd_graph::gcd_graph_equation_1(n0);
   } else {
@@ -83,7 +83,7 @@ Equations::gcd_graph_correct(std::pair<uint64_t, uint64_t> x) {
                 std::pair<uint64_t, uint64_t> y = std::make_pair(
                     (n1 + 1),
                     (((_once1 - _once2) > _once1 ? 0 : (_once1 - _once2))));
-                return gcd_graph_correct(std::move(y));
+                return gcd_graph_correct(y);
               }());
         } else {
           return gcd_clause_3_graph::gcd_clause_3_graph_equation_2(
@@ -93,7 +93,7 @@ Equations::gcd_graph_correct(std::pair<uint64_t, uint64_t> x) {
                 std::pair<uint64_t, uint64_t> y = std::make_pair(
                     (((_once3 - _once4) > _once3 ? 0 : (_once3 - _once4))),
                     (n2 + 1));
-                return gcd_graph_correct(std::move(y));
+                return gcd_graph_correct(y);
               }());
         }
       }());

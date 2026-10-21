@@ -263,7 +263,7 @@ struct CpsEscape {
       crane::fn<uint64_t(uint64_t)> adder = [=](uint64_t _x0) -> uint64_t {
         return t.make_adder(_x0);
       };
-      box b = store_in_box(adder);
+      box b = store_in_box(std::move(adder));
       auto &[a0] = b;
       return a0(UINT64_C(5));
     }();

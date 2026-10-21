@@ -341,7 +341,7 @@ template <typename K, typename V> struct SkipList {
             bsl::move(pred0)->forward[0u]));
     if (nextOpt.has_value()) {
       bsl::shared_ptr<SkipNode<K, V>> node = *nextOpt;
-      if (eqK(node->key, k)) {
+      if (eqK(node->key, bsl::move(k))) {
         SkipList<int, int>::template extendPath<K, V>(
             path, this->slHead, (node->level + 1), curLvl);
         SkipList<int, int>::template unlinkNode<K, V>(bsl::move(path), node);

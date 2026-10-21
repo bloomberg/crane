@@ -258,7 +258,7 @@ struct MapPartialApp {
         return wrap(std::move(t), _x0);
       };
       std::pair<crane::fn<tree(uint64_t)>, uint64_t> p =
-          std::make_pair(f, UINT64_C(0));
+          std::make_pair(std::move(f), UINT64_C(0));
       List<uint64_t> results =
           List<uint64_t>::cons(
               UINT64_C(1),

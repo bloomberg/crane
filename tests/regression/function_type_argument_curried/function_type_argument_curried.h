@@ -217,7 +217,7 @@ struct FunctionTypeArgumentCurried {
 
   template <typename T1, typename T2> static T1 myfst(std::pair<T1, T2> p) {
     auto [a, _x] = std::move(p);
-    return a;
+    return std::move(a);
   }
 
   static inline const std::pair<crane::fn<uint64_t(uint64_t, uint64_t)>,

@@ -541,8 +541,9 @@ struct TopologicalSort {
           return elem;
         } else {
           auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v_mut());
-          return cycle_entry_aux<T1>(
-              eqb_node, graph0, List<T1>::cons(elem, seens), std::move(a0), c);
+          return cycle_entry_aux<T1>(eqb_node, graph0,
+                                     List<T1>::cons(std::move(elem), seens),
+                                     std::move(a0), c);
         }
       }
     }

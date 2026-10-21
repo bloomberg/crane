@@ -1246,7 +1246,7 @@ template <Int I, OrderedType X> struct Raw {
         }
       }
     } else {
-      if (I::gt_le_dec(hr, I::add(hl, I::_2))) {
+      if (I::gt_le_dec(std::move(hr), I::add(std::move(hl), I::_2))) {
         if (std::holds_alternative<typename tree<T1>::Leaf>(r.v())) {
           return assert_false<T1>(l, std::move(x), d, r);
         } else {
@@ -1320,7 +1320,7 @@ template <Int I, OrderedType X> struct Raw {
             std::get<typename tree<T1>::Node>(s2.v());
         auto [s2_, p] = remove_min<T1>(*a00, a10, a20, *a30);
         auto [x, d] = std::move(p);
-        return bal<T1>(s1, x, d, std::move(s2_));
+        return bal<T1>(s1, std::move(x), std::move(d), std::move(s2_));
       }
     }
   }

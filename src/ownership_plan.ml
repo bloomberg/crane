@@ -30,7 +30,16 @@ type t = {
 let empty =
   {root = MLdummy Kprop; root_owned = Levels.empty; arms = []; reads = []; owned = []}
 
-let worth_moving ty = Escape.is_shared_ptr_type ty || Ml_type_util.is_nontrivial_value_ml_type ty
+let rec worth_moving = function
+  | Tglob (r, args, _) ->
+    (not (Table.is_enum_inductive r))
+    && (not (Table.is_coinductive r))
+    && ( (not (Table.is_custom r))
+       || List.exists worth_moving args
+       || not (Table.is_custom_scalar_ref r || Table.is_trivially_copyable_ref r) )
+  | Tarr _ | Tvar _ -> true
+  | Tmeta {contents = Some t} -> worth_moving t
+  | _ -> false
 
 (* A variable is named by its de Bruijn level in the region: the number of
    binders around its binding site, counted from the region's root, so that

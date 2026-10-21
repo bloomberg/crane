@@ -479,9 +479,12 @@ struct RamOps {
         UINT64_C(0), sample_bank_frame, List<crane::obj>::nil());
     reg_frame rg = ListDef::template nth<reg_frame>(UINT64_C(1), ch,
                                                     List<crane::obj>::nil());
-    reg_frame rg_ = upd_main_in_reg_frame(rg, UINT64_C(2), UINT64_C(99));
-    chip_frame ch_ = upd_reg_in_chip_frame(ch, UINT64_C(1), rg_);
-    return upd_chip_in_bank_frame(sample_bank_frame, UINT64_C(0), ch_);
+    reg_frame rg_ =
+        upd_main_in_reg_frame(std::move(rg), UINT64_C(2), UINT64_C(99));
+    chip_frame ch_ =
+        upd_reg_in_chip_frame(std::move(ch), UINT64_C(1), std::move(rg_));
+    return upd_chip_in_bank_frame(sample_bank_frame, UINT64_C(0),
+                                  std::move(ch_));
   }();
   static inline const bool test_write_frame_different_chip =
       ListDef::template nth<uint64_t>(

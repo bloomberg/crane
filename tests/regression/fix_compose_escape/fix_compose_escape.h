@@ -3,6 +3,7 @@
 
 #include "fn.h"
 #include <cstdint>
+#include <utility>
 
 struct FixComposeEscape {
   /// A local fixpoint is composed with another function.
@@ -43,7 +44,7 @@ struct FixComposeEscape {
     crane::fn<uint64_t(uint64_t)> inner = [](uint64_t _x0) -> uint64_t {
       return compose_add(UINT64_C(50), [](uint64_t x) { return x; }, _x0);
     };
-    return compose_add(UINT64_C(100), inner, UINT64_C(7));
+    return compose_add(UINT64_C(100), std::move(inner), UINT64_C(7));
   }();
 };
 

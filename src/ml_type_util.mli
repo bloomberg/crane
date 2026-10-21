@@ -499,9 +499,6 @@ val is_inductive_value_type : Minicpp.cpp_type -> bool
     are themselves trivially copyable. *)
 val is_trivially_copyable_type : Minicpp.cpp_type -> bool
 
-(** Whether a MiniML type is a non-trivial value type. *)
-val is_nontrivial_value_ml_type : Miniml.ml_type -> bool
-
 (** Whether a MiniML type is a product type. *)
 val is_prod_ml_type : Miniml.ml_type -> bool
 

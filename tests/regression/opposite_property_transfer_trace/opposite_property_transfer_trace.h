@@ -95,7 +95,7 @@ struct OppositePropertyTransferTraceCase {
               e = triangle_identity_duality(opposite_prestable_category(pS));
           auto [_x, s] = std::move(e);
           satisfies_triangle_2 h_tri2_ = h_tri2;
-          return s(h_tri2_);
+          return s(std::move(h_tri2_));
         }());
   }
 

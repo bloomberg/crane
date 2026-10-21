@@ -160,7 +160,8 @@ std::pair<uint64_t, uint64_t> LoopifySearch::majority(
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      auto [cand, count] = std::move(_result);
+      std::pair<uint64_t, uint64_t> _tmp1 = std::move(_result);
+      const auto &[cand, count] = _tmp1;
       if (a0 == cand) {
         _result = std::make_pair(cand, (count + 1));
       } else {
