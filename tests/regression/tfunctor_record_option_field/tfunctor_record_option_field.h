@@ -272,11 +272,11 @@ struct TfunctorRecordOptionField {
 
     template <typename CraneA0, typename CraneA1>
     static exp<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, exp<CraneA0> e) {
-      if (std::holds_alternative<typename exp<CraneA0>::Lit>(e.v())) {
-        const auto &[t0] = std::get<typename exp<CraneA0>::Lit>(e.v());
-        return exp<CraneA1>::lit(f(t0));
+      if (std::holds_alternative<typename exp<CraneA0>::Lit>(e.v_mut())) {
+        auto &[t0] = std::get<typename exp<CraneA0>::Lit>(e.v_mut());
+        return exp<CraneA1>::lit(f(std::move(t0)));
       } else {
-        const auto &[e0] = std::get<typename exp<CraneA0>::Neg>(e.v());
+        auto &[e0] = std::get<typename exp<CraneA0>::Neg>(e.v_mut());
         return exp<CraneA1>::neg(TFunctor_exp::tfmap(std::move(f), *e0));
       }
     }

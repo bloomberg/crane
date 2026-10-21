@@ -351,8 +351,8 @@ struct TfunctorListOfTriples {
 
     template <typename CraneA0, typename CraneA1>
     static phi<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, phi<CraneA0> p) {
-      const auto &[t0] = p;
-      return phi<CraneA1>::phi0(f(t0));
+      auto &[t0] = p;
+      return phi<CraneA1>::phi0(f(std::move(t0)));
     }
   };
 
@@ -364,8 +364,8 @@ struct TfunctorListOfTriples {
     template <typename CraneA0, typename CraneA1>
     static metadata<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f,
                                    metadata<CraneA0> p) {
-      const auto &[t0] = p;
-      return metadata<CraneA1>::md(f(t0));
+      auto &[t0] = p;
+      return metadata<CraneA1>::md(f(std::move(t0)));
     }
   };
 

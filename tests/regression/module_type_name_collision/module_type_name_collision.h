@@ -180,11 +180,11 @@ struct opt_monad {
 
   template <typename CraneA0, typename CraneA1>
   static Opt<CraneA1> bind(Opt<CraneA0> c, crane::fn<Opt<CraneA1>(CraneA0)> k) {
-    if (std::holds_alternative<typename Opt<CraneA0>::None>(c.v())) {
+    if (std::holds_alternative<typename Opt<CraneA0>::None>(c.v_mut())) {
       return Opt<CraneA1>::none();
     } else {
-      const auto &[x0] = std::get<typename Opt<CraneA0>::Some>(c.v());
-      return k(x0);
+      auto &[x0] = std::get<typename Opt<CraneA0>::Some>(c.v_mut());
+      return k(std::move(x0));
     }
   }
 };

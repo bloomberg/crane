@@ -406,7 +406,7 @@ struct TFunctor_boxedlist {
                                     List<boxed<CraneA0>> l) {
     return l.template map<boxed<CraneA1>>(
         [=, f = std::move(f)](boxed<CraneA0> _x0) -> boxed<CraneA1> {
-          return bump<CraneA0, CraneA1>(f, _x0);
+          return bump<CraneA0, CraneA1>(std::move(f), _x0);
         });
   }
 };

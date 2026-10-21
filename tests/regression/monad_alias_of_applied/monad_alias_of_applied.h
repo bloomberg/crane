@@ -182,12 +182,13 @@ struct MonadAliasOfApplied {
     template <typename CraneA0, typename CraneA1>
     static EOU<CraneA1> bind(EOU<CraneA0> c,
                              crane::fn<EOU<CraneA1>(CraneA0)> k) {
-      if (std::holds_alternative<typename EOU<CraneA0>::Raise_error>(c.v())) {
-        const auto &[n] = std::get<typename EOU<CraneA0>::Raise_error>(c.v());
-        return EOU<CraneA1>::raise_error(n);
+      if (std::holds_alternative<typename EOU<CraneA0>::Raise_error>(
+              c.v_mut())) {
+        auto &[n] = std::get<typename EOU<CraneA0>::Raise_error>(c.v_mut());
+        return EOU<CraneA1>::raise_error(std::move(n));
       } else {
-        const auto &[x0] = std::get<typename EOU<CraneA0>::Raise_ret>(c.v());
-        return k(x0);
+        auto &[x0] = std::get<typename EOU<CraneA0>::Raise_ret>(c.v_mut());
+        return k(std::move(x0));
       }
     }
   };

@@ -173,8 +173,8 @@ struct InstanceChainConstraint {
                          typename _tcI1::ptr a2, Nat sz2) {
       Nat s1 = _tcI2::ptr_to_int(std::move(a1));
       Nat s2 = _tcI2::ptr_to_int(std::move(a2));
-      return (s1.leb(s2.add(sz2).sub(Nat::s(Nat::o()))) &&
-              s2.leb(s1.add(sz1).sub(Nat::s(Nat::o()))));
+      return (s1.leb(s2.add(std::move(sz2)).sub(Nat::s(Nat::o()))) &&
+              s2.leb(s1.add(std::move(sz1)).sub(Nat::s(Nat::o()))));
     }
   };
 

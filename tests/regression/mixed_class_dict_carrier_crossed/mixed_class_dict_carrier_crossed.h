@@ -424,8 +424,8 @@ struct TFunctor_decl {
 
   template <typename CraneA0, typename CraneA1>
   static Decl<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, Decl<CraneA0> d) {
-    const auto &[a0] = d;
-    return Decl<CraneA1>::d_mk(f(a0));
+    auto &[a0] = d;
+    return Decl<CraneA1>::d_mk(f(std::move(a0)));
   }
 };
 

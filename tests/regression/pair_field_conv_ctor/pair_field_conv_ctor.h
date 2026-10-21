@@ -286,9 +286,9 @@ struct TFunctor_exp {
 
   template <typename CraneA0, typename CraneA1>
   static Exp0<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, Exp0<CraneA0> e) {
-    if (std::holds_alternative<typename Exp0<CraneA0>::EV>(e.v())) {
-      const auto &[a0] = std::get<typename Exp0<CraneA0>::EV>(e.v());
-      return Exp0<CraneA1>::ev(f(a0));
+    if (std::holds_alternative<typename Exp0<CraneA0>::EV>(e.v_mut())) {
+      auto &[a0] = std::get<typename Exp0<CraneA0>::EV>(e.v_mut());
+      return Exp0<CraneA1>::ev(f(std::move(a0)));
     } else {
       return Exp0<CraneA1>::en();
     }
@@ -359,14 +359,16 @@ struct TFunctor_ann {
 
   template <typename CraneA0, typename CraneA1>
   static Ann<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, Ann<CraneA0> a) {
-    if (std::holds_alternative<typename Ann<CraneA0>::ANN_metadata>(a.v())) {
-      const auto &[a0] = std::get<typename Ann<CraneA0>::ANN_metadata>(a.v());
+    if (std::holds_alternative<typename Ann<CraneA0>::ANN_metadata>(
+            a.v_mut())) {
+      auto &[a0] = std::get<typename Ann<CraneA0>::ANN_metadata>(a.v_mut());
       return Ann<CraneA1>::ann_metadata(a0.template map<CraneA1>(std::move(f)));
     } else {
-      const auto &[a0] = std::get<typename Ann<CraneA0>::ANN_prefix>(a.v());
-      const auto &[t, e] = a0;
+      auto &[a0] = std::get<typename Ann<CraneA0>::ANN_prefix>(a.v_mut());
+      auto [t, e] = std::move(a0);
       return Ann<CraneA1>::ann_prefix(std::make_pair(
-          f(t), TFunctor_exp::template tfmap<CraneA0, CraneA1>(f, e)));
+          f(std::move(t)),
+          TFunctor_exp::template tfmap<CraneA0, CraneA1>(f, std::move(e))));
     }
   }
 };

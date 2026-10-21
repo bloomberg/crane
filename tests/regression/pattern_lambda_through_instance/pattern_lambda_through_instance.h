@@ -216,8 +216,8 @@ struct PatternLambdaThroughInstance {
 
     template <typename CraneA0, typename CraneA1>
     static exp<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, exp<CraneA0> e) {
-      const auto &[a0] = e;
-      return exp<CraneA1>::lit(f(a0));
+      auto &[a0] = e;
+      return exp<CraneA1>::lit(f(std::move(a0)));
     }
   };
 
@@ -269,9 +269,9 @@ struct PatternLambdaThroughInstance {
 
     template <typename CraneA0, typename CraneA1>
     static phi<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, phi<CraneA0> pat) {
-      const auto &[a0, a1] = pat;
+      auto &[a0, a1] = pat;
       return phi<CraneA1>::phi0(
-          f(a0),
+          f(std::move(a0)),
           TFunctor_list::template tfmap<std::pair<uint64_t, exp<CraneA0>>,
                                         std::pair<uint64_t, exp<CraneA1>>>(
               [=](const std::pair<uint64_t, exp<CraneA0>> &pat0) {
@@ -280,7 +280,7 @@ struct PatternLambdaThroughInstance {
                     _tcI0::endo(id),
                     _tcI1::template tfmap<CraneA0, CraneA1>(f, e));
               },
-              a1));
+              std::move(a1)));
     }
   };
 

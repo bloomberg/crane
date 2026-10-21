@@ -286,12 +286,12 @@ struct EOUP_Monad {
   template <typename CraneA0, typename CraneA1>
   static Sum<Nat, CraneA1> bind(Sum<Nat, CraneA0> m,
                                 crane::fn<Sum<Nat, CraneA1>(CraneA0)> k) {
-    if (std::holds_alternative<typename Sum<Nat, CraneA0>::Inl>(m.v())) {
-      const auto &[a0] = std::get<typename Sum<Nat, CraneA0>::Inl>(m.v());
-      return Sum<Nat, CraneA1>::inl(a0);
+    if (std::holds_alternative<typename Sum<Nat, CraneA0>::Inl>(m.v_mut())) {
+      auto &[a0] = std::get<typename Sum<Nat, CraneA0>::Inl>(m.v_mut());
+      return Sum<Nat, CraneA1>::inl(std::move(a0));
     } else {
-      const auto &[a0] = std::get<typename Sum<Nat, CraneA0>::Inr>(m.v());
-      return k(a0);
+      auto &[a0] = std::get<typename Sum<Nat, CraneA0>::Inr>(m.v_mut());
+      return k(std::move(a0));
     }
   }
 };

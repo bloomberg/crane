@@ -504,7 +504,9 @@ struct BinderTypeNamesSectionField {
       return St<typename _tcI0::ptr>{List<typename _tcI0::ptr>::nil()};
     }
 
-    static Nat sz(St<typename _tcI0::ptr> s) { return s.mem.length(); }
+    static Nat sz(St<typename _tcI0::ptr> s) {
+      return std::move(s).mem.length();
+    }
   };
 
   template <typename ptr> using FusedS = std::pair<St<ptr>, Nat>;

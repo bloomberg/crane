@@ -122,8 +122,8 @@ struct HktSingleCtorInstanceBody {
 
     static box<crane::obj> fmap(crane::fn<crane::obj(crane::obj)> f,
                                 box<crane::obj> b) {
-      const auto &[a0] = b;
-      return box<crane::obj>::mkbox(f(a0));
+      auto &[a0] = b;
+      return box<crane::obj>::mkbox(f(std::move(a0)));
     }
   };
 

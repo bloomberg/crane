@@ -173,9 +173,9 @@ struct Monad_Err {
 
   template <typename CraneA0, typename CraneA1>
   static Err<CraneA1> bind(Err<CraneA0> c, crane::fn<Err<CraneA1>(CraneA0)> k) {
-    if (std::holds_alternative<typename Err<CraneA0>::Ok>(c.v())) {
-      const auto &[x0] = std::get<typename Err<CraneA0>::Ok>(c.v());
-      return k(x0);
+    if (std::holds_alternative<typename Err<CraneA0>::Ok>(c.v_mut())) {
+      auto &[x0] = std::get<typename Err<CraneA0>::Ok>(c.v_mut());
+      return k(std::move(x0));
     } else {
       return Err<CraneA1>::bad();
     }

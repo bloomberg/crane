@@ -466,14 +466,15 @@ struct TFunctor_instr {
 
   template <typename CraneA0, typename CraneA1>
   static Instr<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, Instr<CraneA0> i) {
-    if (std::holds_alternative<typename Instr<CraneA0>::I_op>(i.v())) {
-      const auto &[a0] = std::get<typename Instr<CraneA0>::I_op>(i.v());
+    if (std::holds_alternative<typename Instr<CraneA0>::I_op>(i.v_mut())) {
+      auto &[a0] = std::get<typename Instr<CraneA0>::I_op>(i.v_mut());
       return Instr<CraneA1>::i_op(
-          TFunctor_exp::template tfmap<CraneA0, CraneA1>(std::move(f), a0));
+          TFunctor_exp::template tfmap<CraneA0, CraneA1>(std::move(f),
+                                                         std::move(a0)));
     } else {
-      const auto &[a0, a1] = std::get<typename Instr<CraneA0>::I_call>(i.v());
+      auto &[a0, a1] = std::get<typename Instr<CraneA0>::I_call>(i.v_mut());
       return Instr<CraneA1>::i_call(
-          TFunctor_texp::template tfmap<CraneA0, CraneA1>(f, a0),
+          TFunctor_texp::template tfmap<CraneA0, CraneA1>(f, std::move(a0)),
           a1.template map<std::pair<texp<CraneA1>, Nat>>(
               [=](std::pair<std::pair<CraneA0, Exp<CraneA0>>, Nat> pat) {
                 const auto &[te, a] = pat;

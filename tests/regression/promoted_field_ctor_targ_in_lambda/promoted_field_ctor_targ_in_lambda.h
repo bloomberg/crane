@@ -393,7 +393,9 @@ struct PromotedFieldCtorTargInLambda {
       return St<typename _tcI0::ptr>{List<typename _tcI0::ptr>::nil()};
     }
 
-    static Nat size_of(St<typename _tcI0::ptr> s) { return s.mem.length(); }
+    static Nat size_of(St<typename _tcI0::ptr> s) {
+      return std::move(s).mem.length();
+    }
   };
 
   template <Params _tcI0>

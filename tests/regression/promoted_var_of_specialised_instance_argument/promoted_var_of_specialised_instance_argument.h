@@ -158,12 +158,12 @@ return EOU<CraneA0>::ok(std::move(a));}
 template <typename CraneA0, typename
 CraneA1>
 static EOU<CraneA1> bind(EOU<CraneA0> m, crane::fn<EOU<CraneA1>(CraneA0)> k) {
-if (std::holds_alternative<typename EOU<CraneA0>::Ok>(m.v())) {
-const auto& [a0] = std::get<typename EOU<CraneA0>::Ok>(m.v());
-return k(a0);
+if (std::holds_alternative<typename EOU<CraneA0>::Ok>(m.v_mut())) {
+auto& [a0] = std::get<typename EOU<CraneA0>::Ok>(m.v_mut());
+return k(std::move(a0));
 } else {
-const auto& [a0] = std::get<typename EOU<CraneA0>::Err>(m.v());
-return EOU<CraneA1>::err(a0);
+auto& [a0] = std::get<typename EOU<CraneA0>::Err>(m.v_mut());
+return EOU<CraneA1>::err(std::move(a0));
 }}
 };
 static_assert(Monad<EOU_monad>);

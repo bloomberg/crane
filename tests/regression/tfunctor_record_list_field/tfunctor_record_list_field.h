@@ -324,8 +324,8 @@ struct TfunctorRecordListField {
     template <typename CraneA0, typename CraneA1>
     static operand<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f,
                                   operand<CraneA0> o) {
-      const auto &[t0] = o;
-      return operand<CraneA1>::op(f(t0));
+      auto &[t0] = o;
+      return operand<CraneA1>::op(f(std::move(t0)));
     }
   };
 
