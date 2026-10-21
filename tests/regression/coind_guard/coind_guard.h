@@ -196,7 +196,8 @@ struct CoindGuard {
   unfold(const std::type_identity_t<crane::fn<std::pair<T1, T2>(T2)>> &f,
          const T2 &seed) {
     auto [a, s_] = f(seed);
-    return Stream<T1>::lazy_([=]() -> typename Stream<T1>::Cons {
+    return Stream<T1>::lazy_([=, s_ = std::move(s_),
+                              a = std::move(a)]() -> typename Stream<T1>::Cons {
       return {std::move(a), unfold<T1, T2>(f, std::move(s_))};
     });
   }

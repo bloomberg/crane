@@ -1528,12 +1528,18 @@ let suspends_constructor ~self ~binder_type n ts =
     call under a constructor, so a constructor whose arguments only compute
     -- [Ret (f x)] -- holds no call to delay, and is built directly: a lazy
     cell already holding its value, where a suspension would be a closure
-    to allocate, run and free. *)
-let suspend_ctor ty ctor args =
-  CPPsuspend
-    ( ty,
+    to allocate, run and free.  The thunk takes the variables [moved] by
+    move where it is made. *)
+let suspend_ctor ~moved ty ctor args =
+  let thunk =
+    match
       mk_lambda [] (Some (Tqualified (ty, ctor)))
-        [Sreturn (Some (CPPbraced (call_args args)))] ~capture:Closure )
+        [Sreturn (Some (CPPbraced (call_args args)))] ~capture:Closure
+    with
+    | CPPlambda l -> CPPlambda {l with cl_moved = moved}
+    | e -> e
+  in
+  CPPsuspend (ty, thunk)
 
 (** Run [f] in a fresh escape-analysis scope, restoring the enclosing one
     afterwards.  Escape analysis runs at several nesting levels (lambdas,

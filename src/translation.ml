@@ -3509,7 +3509,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             if
               suspends_constructor ~self:(!tctx).body_owner ~binder_type:get_env_type_opt n ts
             then
-              suspend_ctor type_expr (Id.of_string ctor_struct) (of_reversed args)
+              (* The arguments are read where the thunk is made, and taken
+                 by move there when the plan moves them. *)
+              let moved = capture_names env (Ownership_plan.moved_reads (!tctx).move_plan ts) in
+              suspend_ctor ~moved type_expr (Id.of_string ctor_struct) (of_reversed args)
             else
               CPPfun_call
                 ( ctor_sig ~constructs:r args,
