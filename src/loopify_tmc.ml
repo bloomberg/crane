@@ -363,14 +363,41 @@ let borrow_cursor_matches shadow_params stmts =
 
     Dropping a move only ever copies where it could have moved, so the pass
     cannot change meaning. *)
+let unmove_in invariant_params ~block stmts =
+  let rec expr = function
+    | CPPmove (CPPvar id) when Id.Set.mem id invariant_params -> CPPvar id
+    | CPPlambda l when List.exists (fun x -> Id.Set.mem x invariant_params) l.cl_moved ->
+      expr
+        (CPPlambda {l with cl_moved = List.filter (fun x -> not (Id.Set.mem x invariant_params)) l.cl_moved})
+    | e -> map_expr ~fl:(block stmt) expr stmt Fun.id e
+  and stmt s = map_stmt ~fl:(block stmt) expr stmt Fun.id s in
+  if Id.Set.is_empty invariant_params then stmts else block stmt stmts
+
 let unmove_invariant_params invariant_params stmts =
-  if Id.Set.is_empty invariant_params then stmts
-  else
-    let rec expr = function
-      | CPPmove (CPPvar id) when Id.Set.mem id invariant_params -> CPPvar id
-      | e -> map_expr expr stmt Fun.id e
-    and stmt s = map_stmt expr stmt Fun.id s in
-    List.map stmt stmts
+  unmove_in invariant_params ~block:List.map stmts
+
+(** Drop the moves of a loop-invariant parameter from every path that goes
+    round the loop again: a read the source program's single activation
+    takes last -- a closure capturing it after the recursive call, in a tail
+    modulo cons -- is read again by the next iteration.  A path that leaves
+    the loop, by [break] or [return], is its last reader, and keeps its moves. *)
+let unmove_invariant_on_continue invariant_params stmts =
+  let rec mentions_continue l =
+    List.exists
+      (fun s ->
+        s = Scontinue
+        || fold_stmt_children ~on_expr:(fun acc _ -> acc)
+             ~on_stmts:(fun acc l -> acc || mentions_continue l)
+             false s )
+      l
+  in
+  let leaves l =
+    (match List.rev l with (Sbreak | Sreturn _ | Sthrow _) :: _ -> true | _ -> false)
+    && not (mentions_continue l)
+  in
+  unmove_in invariant_params
+    ~block:(fun stmt l -> if leaves l then l else List.map stmt l)
+    stmts
 
 (** {2:reuse-cursor Perceus reuse cursor}
 
@@ -754,6 +781,10 @@ let transform_tmc ?(param_inits = []) ~chains tparams check params ret_ty body =
   in
   let shadow_decls, body'' = drop_unread_shadows shadow_decls body'' in
   let body'' = strip_unnecessary_blocks body'' in
+  let invariant_params =
+    Id.Set.of_list (List.filteri (fun i _ -> not (List.nth varying i)) (List.map fst params))
+  in
+  let body'' = unmove_invariant_on_continue invariant_params body'' in
   root_decls
   @ cursor_decls
   @ shadow_decls
