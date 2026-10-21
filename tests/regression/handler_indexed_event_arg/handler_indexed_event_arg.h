@@ -133,7 +133,7 @@ using itree_tc_609e8855cd7ad294 = std::shared_ptr<ITree<CraneTcArg>>;
 
 template <Params _tcI0, typename T1, typename T2>
 Monads::template stateT<st, itree_tc_609e8855cd7ad294, T2> base(MemM<T2> m) {
-  return [=](const Nat &s) {
+  return [=, m = std::move(m)](const Nat &s) {
     const auto &[a0] = m;
     return itree_ret(std::make_pair(s.add(_tcI0::width()), a0));
   };

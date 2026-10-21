@@ -25,10 +25,38 @@ type t = {
   arms : arm list;
   reads : read list;
   owned : (Occurrence.t * bool) list;  (* whether the variable a read reads is owned there *)
+  captures : read list;  (* a lambda's capture of a variable, by the reads inside it *)
+  captured_owned : (Occurrence.t * bool) list;
 }
 
 let empty =
-  {root = MLdummy Kprop; root_owned = Levels.empty; arms = []; reads = []; owned = []}
+  { root = MLdummy Kprop;
+    root_owned = Levels.empty;
+    arms = [];
+    reads = [];
+    owned = [];
+    captures = [];
+    captured_owned = [] }
+
+(* The reads in [t] of variables bound outside it, by level, [t] standing [d]
+   binders deep. *)
+let closure_reads d t =
+  let rec go d' acc = function
+    | MLrel (i, o) -> if d' - i < d then (d' - i, o) :: acc else acc
+    | MLmagic (_, t) -> go d' acc t
+    | MLapp (f, args) -> List.fold_left (go d') acc (f :: args)
+    | MLcons (_, _, args) | MLtuple args -> List.fold_left (go d') acc args
+    | MLparray (elems, default) -> List.fold_left (go d') acc (default :: Array.to_list elems)
+    | MLlam (_, _, b) -> go (d' + 1) acc b
+    | MLletin (_, _, a, b, _) -> go (d' + 1) (go d' acc a) b
+    | MLfix (_, fs, defs, _, _) -> Array.fold_left (go (d' + Array.length fs)) acc defs
+    | MLcase (_, scrut, branches) ->
+      Array.fold_left
+        (fun acc (ids, _, _, body) -> go (d' + List.length ids) acc body)
+        (go d' acc scrut) branches
+    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> acc
+  in
+  go d [] t
 
 let rec worth_moving = function
   | Tglob (r, args, _) ->
@@ -156,6 +184,7 @@ let evaluations r =
 
 let liveness t =
   let reads = ref [] in
+  let captures = ref [] in
   (* [walk ~consumed ~pinned parents d live t] records [t]'s reads and is
      what is live before [t], given [live] after it: both sets of variables
      in scope at [t], [d] binders deep.  [consumed] is whether [t] stands
@@ -197,7 +226,20 @@ let liveness t =
       unsequenced ~pinned parents d live (default :: Array.to_list elems)
     (* A closure reads what it closes over where it is made; its own body
        is a region of its own. *)
-    | MLlam _ | MLfix _ -> Levels.union live (free parents d t)
+    | MLlam _ | MLfix _ ->
+      let captured = free parents d t in
+      (* A lambda copies what it captures when it is made, all at once; a
+         local fixpoint refers to it. *)
+      ( match t with
+      | MLlam _ ->
+        List.iter
+          (fun (l, occurrence) ->
+            let shared = Levels.exists (overlap parents l) in
+            let last = not (shared live || shared pinned || shared (Levels.remove l captured)) in
+            captures := {occurrence; last; consumed} :: !captures )
+          (closure_reads d t)
+      | _ -> () );
+      Levels.union live captured
     | MLletin (_, ty, a, b, _) ->
       let pinned_b = if reads_at_uses ty a then Levels.union pinned (free parents d a) else pinned in
       let parents_b = bind parents d ~n:1 in
@@ -240,7 +282,7 @@ let liveness t =
     |> List.fold_left Levels.union live
   in
   ignore (walk ~pinned:Levels.empty Parents.empty 0 Levels.empty t);
-  !reads
+  (!reads, !captures)
 
 type fate = Last_use | Read_again | Inspected | Unplanned
 
@@ -319,6 +361,7 @@ end
    region owns at its root. *)
 let ownership ~reads ~arms ~owned t =
   let out = ref [] in
+  let captured = ref [] in
   let rec own owned d t =
     let all = List.iter (own owned d) in
     match t with
@@ -338,7 +381,9 @@ let ownership ~reads ~arms ~owned t =
     | MLcons (_, _, args) | MLtuple args -> all args
     | MLparray (elems, default) -> all (default :: Array.to_list elems)
     (* A closure's body is a region of its own. *)
-    | MLlam _ | MLfix _ -> ()
+    | MLlam _ ->
+      List.iter (fun (l, o) -> captured := (o, Levels.mem l owned) :: !captured) (closure_reads d t)
+    | MLfix _ -> ()
     | MLletin (x, ty, a, b, _) ->
       own owned d a;
       (* What a local fixpoint closes over, it reads by reference. *)
@@ -402,16 +447,17 @@ let ownership ~reads ~arms ~owned t =
         | _ -> owned
   in
   own owned 0 t;
-  !out
+  (!out, !captured)
 
-let plan root root_owned arms reads =
-  {root; root_owned; arms; reads; owned = ownership ~reads ~arms ~owned:root_owned root}
+let plan root root_owned arms (reads, captures) =
+  let owned, captured_owned = ownership ~reads ~arms ~owned:root_owned root in
+  {root; root_owned; arms; reads; owned; captures; captured_owned}
 
 let region ?(owned = []) t = plan t (Levels.of_list (List.map (fun i -> -i) owned)) [] (liveness t)
 
 let reuse_arm p ~scrutinee ~branch =
   match scrutinee_var scrutinee with
-  | Some (_, scrutinee) -> plan p.root p.root_owned ({scrutinee; branch} :: p.arms) p.reads
+  | Some (_, scrutinee) -> plan p.root p.root_owned ({scrutinee; branch} :: p.arms) (p.reads, p.captures)
   | None -> p
 
 let owned_at p o =
@@ -428,3 +474,19 @@ let owns_scrutinee p = Binding.owns_scrutinee ~owned:(owned p)
 let pair_by_value p = Binding.pair_by_value ~owned:(owned p)
 
 let projects_in_place p = Binding.projects_in_place ~owned:(owned p) ~fate:(fate p)
+
+let moved_captures p closure =
+  let every l o = match List.filter (fun (o', _) -> Occurrence.equal o o') l with
+    | [] -> false
+    | copies -> List.for_all snd copies
+  in
+  let moves o =
+    fate_in p.captures o = Last_use
+    && every p.captured_owned o
+  in
+  let reads = closure_reads 0 closure in
+  List.sort_uniq Int.compare
+    (List.filter_map
+       (fun (l, _) ->
+         if List.for_all (fun (l', o) -> l' <> l || moves o) reads then Some (-l) else None )
+       reads )

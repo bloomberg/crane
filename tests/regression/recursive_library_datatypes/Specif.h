@@ -78,7 +78,8 @@ template <typename A> struct Sig {
   }
 
   template <typename T1> T1 eq_sig_rect_uncurried(const Sig<A> &v, T1 f) const {
-    return this->template eq_sig_rect<T1>(v, [=]() { return f; }());
+    return this->template eq_sig_rect<T1>(
+        v, [=, f = std::move(f)]() { return f; }());
   }
 
   template <typename T1>
@@ -147,7 +148,8 @@ template <typename A> struct Sig2 {
 
   template <typename T1>
   T1 eq_sig2_rect_uncurried(const Sig2<A> &v, T1 f) const {
-    return this->template eq_sig2_rect<T1>(v, [=]() { return f; }());
+    return this->template eq_sig2_rect<T1>(
+        v, [=, f = std::move(f)]() { return f; }());
   }
 
   template <typename T1>
@@ -236,7 +238,8 @@ template <typename A, typename P> struct SigT {
 
   template <typename T1>
   T1 eq_sigT_rect_uncurried(const SigT<A, P> &v, T1 f) const {
-    return this->template eq_sigT_rect<T1>(v, [=]() { return f; }());
+    return this->template eq_sigT_rect<T1>(
+        v, [=, f = std::move(f)]() { return f; }());
   }
 
   template <typename T1>
@@ -345,7 +348,8 @@ template <typename A, typename P, typename Q> struct SigT2 {
 
   template <typename T1>
   T1 eq_sigT2_rect_uncurried(const SigT2<A, P, Q> &v, T1 f) const {
-    return this->template eq_sigT2_rect<T1>(v, [=]() { return f; }());
+    return this->template eq_sigT2_rect<T1>(
+        v, [=, f = std::move(f)]() { return f; }());
   }
 
   template <typename T1>
@@ -487,7 +491,7 @@ public:
 
 template <typename T1, typename T2>
 Sig<crane::fn<T2(T1)>> Choice(std::type_identity_t<crane::fn<Sig<T2>(T1)>> h) {
-  return Sig<crane::fn<T2(T1)>>::exist([=](const T1 &z) {
+  return Sig<crane::fn<T2(T1)>>::exist([=, h = std::move(h)](const T1 &z) {
     const auto &_sv = h(z);
     const auto &[x] = _sv;
     return x;
@@ -509,7 +513,7 @@ Choice2(std::type_identity_t<crane::fn<SigT<T2, T3>(T1)>> h) {
 template <typename T1>
 Sig<crane::fn<bool(T1)>>
 bool_choice(std::type_identity_t<crane::fn<bool(T1)>> h) {
-  return Sig<crane::fn<bool(T1)>>::exist([=](const T1 &z) {
+  return Sig<crane::fn<bool(T1)>>::exist([=, h = std::move(h)](const T1 &z) {
     if (h(z)) {
       return true;
     } else {

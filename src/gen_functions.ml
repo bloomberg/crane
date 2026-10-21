@@ -111,6 +111,16 @@ and glob_subst_stmt (id : GlobRef.t) (repl : cpp_expr) (s : cpp_stmt) =
 let rec var_subst_expr (id : Id.t) (repl : cpp_expr) (e : cpp_expr) =
   match e with
   | CPPvar id' when Id.equal id id' -> repl
+  (* A lambda moving [id] into its captures moves the variable it is
+     replaced by, or, replaced by anything else -- a method's receiver
+     becoming [this] -- captures nothing of that name. *)
+  | CPPlambda l when List.exists (Id.equal id) l.cl_moved ->
+    let cl_moved =
+      List.concat_map
+        (fun x -> if not (Id.equal x id) then [x] else match repl with CPPvar y -> [y] | _ -> [])
+        l.cl_moved
+    in
+    var_subst_expr id repl (CPPlambda {l with cl_moved})
   | _ -> map_expr (var_subst_expr id repl) (var_subst_stmt id repl) Fun.id e
 
 (** Statement-level case of {!var_subst_expr}. *)

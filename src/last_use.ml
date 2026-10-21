@@ -246,7 +246,7 @@ let rec move_reads moved e =
     let taken =
       IdSet.filter (fun x -> transfer x = Some Move_whole) (captured l)
     in
-    CPPlambda {l with cl_moved = IdSet.elements taken}
+    CPPlambda {l with cl_moved = IdSet.elements (IdSet.union taken (IdSet.of_list l.cl_moved))}
   (* A template that may splice an argument twice would evaluate a move
      written into it twice. *)
   | CPPfun_call (_, CPPglob (_, _, Some {ci_inline = Some {it_linear = false; _}; _}), _) ->

@@ -144,7 +144,7 @@ struct Monadic {
   static State<T1, T3>
   state_bind(std::type_identity_t<State<T1, T2>> ma,
              std::type_identity_t<crane::fn<State<T1, T3>(T2)>> f) {
-    return [=, f = std::move(f)](const T1 &s) {
+    return [=, f = std::move(f), ma = std::move(ma)](const T1 &s) {
       auto [a, s_] = ma(s);
       return crane::apply2(f, std::move(a), std::move(s_));
     };

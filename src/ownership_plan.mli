@@ -78,6 +78,12 @@ val pair_by_value : t -> Miniml.ml_ast -> Miniml.ml_branch array -> bool
     projects out of a record that is not moved there. *)
 val projects_in_place : t -> Miniml.ml_type -> Miniml.ml_ast -> bool
 
+(** The de Bruijn indices, at [closure], of the variables the lambda
+    [closure] takes by move when it is made: each is owned there, and the
+    capture is its last use -- nothing after the lambda, beside it, or
+    captured with it reads it. *)
+val moved_captures : t -> Miniml.ml_ast -> int list
+
 (** A term copied to two places -- an eta argument pushed into both branches
     of a conditional -- holds one read twice; it is a last use where every
     copy is one. *)

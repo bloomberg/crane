@@ -349,7 +349,7 @@ template <typename T1, typename T2>
 halist<T1, T2> HAList0::halist_remove(std::type_identity_t<EqDec<T1>> eq,
                                       const T1 &k,
                                       const List<SigT<T1, T2>> &m) {
-  return m.filter([=](const SigT<T1, T2> &k_v) {
+  return m.filter([=, eq = std::move(eq)](const SigT<T1, T2> &k_v) {
     return !([&]() {
       const auto &_sv = Sumbool::bool_of_sumbool(
           EquivDec::template equiv_dec<T1>(eq, k_v.projT1(), k));

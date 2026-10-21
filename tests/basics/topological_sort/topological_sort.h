@@ -473,7 +473,8 @@ struct TopologicalSort {
              const List<std::pair<T1, T1>> &l, T1 e) {
     return std::make_pair(
         e, l.template fold_right<List<T1>>(
-               [=](const std::pair<T1, T1> &x, List<T1> ret) -> List<T1> {
+               [=, eqb_node = std::move(eqb_node)](const std::pair<T1, T1> &x,
+                                                   List<T1> ret) -> List<T1> {
                  if (eqb_node(e, x.first)) {
                    return List<T1>::cons(x.second, ret);
                  } else {

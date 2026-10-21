@@ -56,7 +56,7 @@ struct BorrowConstructionArgument {
     static crane::fn<std::pair<big, crane::obj>(big)>
     bind(crane::fn<std::pair<big, crane::obj>(big)> t,
          crane::fn<crane::fn<std::pair<big, crane::obj>(big)>(crane::obj)> k) {
-      return [=, k = std::move(k)](const big &s) {
+      return [=, k = std::move(k), t = std::move(t)](const big &s) {
         auto [s_, v] = t(s);
         return crane::apply2(k, v, std::move(s_));
       };

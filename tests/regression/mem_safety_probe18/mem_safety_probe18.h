@@ -471,7 +471,7 @@ struct MemSafetyProbe18 {
   static inline const uint64_t test_apply_twice = []() {
     return []() {
       tree t = tree::node(tree::leaf(), UINT64_C(7), tree::leaf());
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t n) {
+      crane::fn<uint64_t(uint64_t)> f = [=, t = std::move(t)](uint64_t n) {
         return (t.tree_sum() + n);
       };
       return apply_twice(f, UINT64_C(0));

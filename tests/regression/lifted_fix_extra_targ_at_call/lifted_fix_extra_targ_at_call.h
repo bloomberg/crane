@@ -424,7 +424,8 @@ std::optional<Dvalue<typename _tcI0::ptr>> to_dvalue(const List<Nat> &dbs,
             return Monad_option::template bind<
                 Dvalue<typename _tcI0::ptr>, List<Dvalue<typename _tcI0::ptr>>>(
                 to_dvalue<_tcI0>(dbs0, a0),
-                [=](const Dvalue<typename _tcI0::ptr> &f) {
+                [=, padding = std::move(padding)](
+                    const Dvalue<typename _tcI0::ptr> &f) {
                   return Monad_option::template bind<
                       List<Dvalue<typename _tcI0::ptr>>,
                       List<Dvalue<typename _tcI0::ptr>>>(

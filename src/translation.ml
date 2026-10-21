@@ -1588,6 +1588,15 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     in
     record_call_sig env callee_ty_inst result
   | MLlam _ as a ->
+    (* What the lambda takes by move as it is made; a class instance is a
+       template parameter, not a value it captures. *)
+    let moved_captures =
+      List.filter
+        (fun id -> not (Common.is_tc_instance_id id))
+        (List.filter_map
+           (fun i -> Common.get_db_name_opt i env)
+           (Ownership_plan.moved_captures (!tctx).move_plan a) )
+    in
     (* Where the slot is a definitional class -- an alias for a function
        type -- which of its domains the declaration takes as values.  Read
        off the alias's own definition, before this call instantiated it:
@@ -2519,9 +2528,13 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             | Some _ as j -> j
             | None -> slot_result_on_disagreement () )
         in
-        mk_lambda
-          ?tparams:(Option.map (fun x -> [x]) carrier)
-          (List.rev cpp_args) ret_ann body_stmts ~capture:Closure )
+        match
+          mk_lambda
+            ?tparams:(Option.map (fun x -> [x]) carrier)
+            (List.rev cpp_args) ret_ann body_stmts ~capture:Closure
+        with
+        | CPPlambda l -> CPPlambda {l with cl_moved = moved_captures}
+        | f -> f )
     in
     restore_env_types saved_env_types;
     ( match filtered_args with
