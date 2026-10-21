@@ -1210,7 +1210,7 @@ template <OrderedType O> struct OrderedTypeFacts {
   }
 
   static bool eqb(typename O::t x, typename O::t y) {
-    if (eq_dec(x, y)) {
+    if (eq_dec(std::move(x), std::move(y))) {
       return true;
     } else {
       return false;
@@ -1842,7 +1842,7 @@ template <OrderedType X> struct Raw {
                      _sv.v())) {
         return true;
       } else {
-        return mem<T1>(k, *a1);
+        return mem<T1>(std::move(k), *a1);
       }
     }
   }
@@ -1865,7 +1865,7 @@ template <OrderedType X> struct Raw {
                      _sv.v())) {
         return std::make_optional<T1>(x);
       } else {
-        return find<T1>(k, *a1);
+        return find<T1>(std::move(k), *a1);
       }
     }
   }
@@ -1876,7 +1876,8 @@ template <OrderedType X> struct Raw {
     if (std::holds_alternative<
             typename List<std::pair<typename X::t, T1>>::Nil>(s.v())) {
       return List<std::pair<typename X::t, T1>>::cons(
-          std::make_pair(k, x), List<std::pair<typename X::t, T1>>::nil());
+          std::make_pair(std::move(k), x),
+          List<std::pair<typename X::t, T1>>::nil());
     } else {
       const auto &[a0, a1] =
           std::get<typename List<std::pair<typename X::t, T1>>::Cons>(s.v());
@@ -1884,15 +1885,15 @@ template <OrderedType X> struct Raw {
       auto &&_sv = X::compare(k, k_);
       if (std::holds_alternative<typename Compare<typename X::t>::LT>(
               _sv.v())) {
-        return List<std::pair<typename X::t, T1>>::cons(std::make_pair(k, x),
-                                                        s);
+        return List<std::pair<typename X::t, T1>>::cons(
+            std::make_pair(std::move(k), x), s);
       } else if (std::holds_alternative<typename Compare<typename X::t>::EQ>(
                      _sv.v())) {
-        return List<std::pair<typename X::t, T1>>::cons(std::make_pair(k, x),
-                                                        *a1);
+        return List<std::pair<typename X::t, T1>>::cons(
+            std::make_pair(std::move(k), x), *a1);
       } else {
-        return List<std::pair<typename X::t, T1>>::cons(std::make_pair(k_, y),
-                                                        add<T1>(k, x, *a1));
+        return List<std::pair<typename X::t, T1>>::cons(
+            std::make_pair(k_, y), add<T1>(std::move(k), x, *a1));
       }
     }
   }
@@ -1915,8 +1916,8 @@ template <OrderedType X> struct Raw {
                      _sv.v())) {
         return *a1;
       } else {
-        return List<std::pair<typename X::t, T1>>::cons(std::make_pair(k_, x),
-                                                        remove<T1>(k, *a1));
+        return List<std::pair<typename X::t, T1>>::cons(
+            std::make_pair(k_, x), remove<T1>(std::move(k), *a1));
       }
     }
   }

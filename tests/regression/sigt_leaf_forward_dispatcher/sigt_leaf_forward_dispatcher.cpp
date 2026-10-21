@@ -23,13 +23,13 @@ bool wrap_string(const std::string &s) { return String0::eqb1(s, s); }
 
 bool mk_action(uint64_t n, domty tup) {
   if (n <= 0) {
-    const auto &[v, _x] =
-        crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-    return wrap_string(crane::any_cast<std::string>(v));
+    auto [v, _x] =
+        crane::any_cast<std::pair<crane::obj, crane::obj>>(std::move(tup));
+    return wrap_string(crane::any_cast<std::string>(std::move(v)));
   } else {
     uint64_t _x = n - 1;
-    const auto &[v, _x0] =
-        crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+    auto [v, _x0] =
+        crane::any_cast<std::pair<crane::obj, crane::obj>>(std::move(tup));
     return crane::any_cast<uint64_t>(v) < (crane::any_cast<uint64_t>(v) + 1);
   }
 }

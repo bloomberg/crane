@@ -162,31 +162,31 @@ exc_of_event(CFGEtop<typename _tcI0::ptr, T1> e) {
           AE,
           Sum1<BE, Sum1<CE, FailE<typename _tcI0::ptr>, crane::obj>,
                crane::obj>,
-          T1>::Inl1>(e.v())) {
+          T1>::Inl1>(e.v_mut())) {
     return std::optional<Dvalue<typename _tcI0::ptr>>();
   } else {
-    const auto &[a0] = std::get<typename Sum1<
+    auto &[a0] = std::get<typename Sum1<
         AE,
         Sum1<BE, Sum1<CE, FailE<typename _tcI0::ptr>, crane::obj>, crane::obj>,
-        T1>::Inr1>(e.v());
+        T1>::Inr1>(e.v_mut());
     if (std::holds_alternative<
             typename Sum1<BE, Sum1<CE, FailE<typename _tcI0::ptr>, crane::obj>,
-                          crane::obj>::Inl1>(a0.v())) {
+                          crane::obj>::Inl1>(a0.v_mut())) {
       return std::optional<Dvalue<typename _tcI0::ptr>>();
     } else {
-      const auto &[a00] = std::get<
+      auto &[a00] = std::get<
           typename Sum1<BE, Sum1<CE, FailE<typename _tcI0::ptr>, crane::obj>,
-                        crane::obj>::Inr1>(a0.v());
+                        crane::obj>::Inr1>(a0.v_mut());
       if (std::holds_alternative<
               typename Sum1<CE, FailE<typename _tcI0::ptr>, crane::obj>::Inl1>(
-              a00.v())) {
+              a00.v_mut())) {
         return std::optional<Dvalue<typename _tcI0::ptr>>();
       } else {
-        const auto &[a01] = std::get<
+        auto &[a01] = std::get<
             typename Sum1<CE, FailE<typename _tcI0::ptr>, crane::obj>::Inr1>(
-            a00.v());
-        const auto &[a02] = a01;
-        return std::make_optional<Dvalue<typename _tcI0::ptr>>(a02);
+            a00.v_mut());
+        auto &[a02] = a01;
+        return std::make_optional<Dvalue<typename _tcI0::ptr>>(std::move(a02));
       }
     }
   }

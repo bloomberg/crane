@@ -1582,6 +1582,14 @@ let rec declared_by_reference = function
   | Tnamespace (_, t) -> declared_by_reference t
   | _ -> false
 
+(** Whether a body owns a parameter the head declares at [declared]: when
+    it declares it by value, which it does for one the ownership summary
+    marks owned and for one whose type it never passes by reference.  A
+    parameter the head does not declare -- a receiver, an instance -- is
+    owned as the summary says. *)
+let declared_by_value declared ~summary =
+  match declared with Some ty -> not (declared_by_reference ty) | None -> summary
+
 (** The de Bruijn indices of the [n] innermost parameters a body owns: those
     [owned] says are passed by value, of a type {!Ownership_plan.worth_moving}
     accepts as reading [ty]. *)

@@ -98,7 +98,7 @@ struct ErasedLetNotResultType {
 
     static result finish(uint64_t x, uint64_t x_, bool un, crane::obj v_) {
       if (Nat::eq_dec(x_, x)) {
-        auto v = S::cast(x_, x, v_);
+        auto v = S::cast(x_, x, std::move(v_));
         if (un) {
           return result::unique(std::move(v));
         } else {

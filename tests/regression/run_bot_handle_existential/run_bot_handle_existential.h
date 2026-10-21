@@ -426,7 +426,8 @@ struct RunBotHandleExistential {
   template <Params _tcI0, typename T1>
   static Sum<Run_error, T1> handle_bot(BotE<typename _tcI0::ptr, T1> e) {
     if (std::holds_alternative<
-            typename Sum1<outE<typename _tcI0::ptr>, FailE, T1>::Inl1>(e.v())) {
+            typename Sum1<outE<typename _tcI0::ptr>, FailE, T1>::Inl1>(
+            e.v_mut())) {
       return Sum<Run_error, T1>::inr([]() -> T1 {
         if constexpr (crane_convertible<T1, const std::monostate &>) {
           return crane_convert<T1>(std::monostate{});

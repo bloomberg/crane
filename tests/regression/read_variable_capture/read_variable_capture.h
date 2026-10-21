@@ -7,6 +7,7 @@
 #include <iostream>
 #include <string>
 #include <system_error>
+#include <utility>
 
 struct ReadVariableCapture {
   /// Works: literal argument — no capture needed

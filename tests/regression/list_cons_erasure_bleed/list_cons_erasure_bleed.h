@@ -23,10 +23,11 @@ syms_semty concat_tuple_rec_case(Sym, const std::deque<Sym> &xs_,
                                  const std::deque<Sym> &,
                                  const std::deque<Sym> &ys, syms_semty vs,
                                  syms_semty vs_, F6 &&f) {
-  const auto &[s, t] = crane::any_cast<std::pair<crane::obj, crane::obj>>(vs);
+  auto [s, t] =
+      crane::any_cast<std::pair<crane::obj, crane::obj>>(std::move(vs));
   return std::make_pair(
-      crane::obj(crane::any_cast<sym_semty>(s)),
-      crane::obj(crane_call_erased(f, xs_, ys, t, std::move(vs_))));
+      crane::obj(crane::any_cast<sym_semty>(std::move(s))),
+      crane::obj(crane_call_erased(f, xs_, ys, std::move(t), std::move(vs_))));
 }
 
 syms_semty concat_tuple(const std::deque<Sym> &xs, const std::deque<Sym> &ys,
@@ -37,7 +38,8 @@ template <typename F4>
 syms_semty rev_tuple_cons_case(const std::deque<Sym> &, Sym x,
                                const std::deque<Sym> &xs_, syms_semty vs,
                                F4 &&f) {
-  const auto &[s, t] = crane::any_cast<std::pair<crane::obj, crane::obj>>(vs);
+  auto [s, t] =
+      crane::any_cast<std::pair<crane::obj, crane::obj>>(std::move(vs));
   return concat_tuple(
       [](auto _r) {
         std::reverse(_r.begin(), _r.end());
@@ -47,8 +49,8 @@ syms_semty rev_tuple_cons_case(const std::deque<Sym> &, Sym x,
         _a1.push_front(_a0);
         return _a1;
       }(x, std::deque<Sym>{}),
-      crane_call_erased(f, xs_, t),
-      std::make_pair(crane::obj(crane::any_cast<sym_semty>(s)),
+      crane_call_erased(f, xs_, std::move(t)),
+      std::make_pair(crane::obj(crane::any_cast<sym_semty>(std::move(s))),
                      crane::obj(std::monostate{})));
 }
 

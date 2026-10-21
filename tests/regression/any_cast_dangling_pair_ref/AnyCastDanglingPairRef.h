@@ -23,10 +23,11 @@ template <SymTypes Ty> struct Destruct {
   swap_pair(typename Ty::sym, typename Ty::sym,
             const typename Datatypes::template List<typename Ty::sym> &,
             symbols_semty vs) {
-    const auto &[a, t] = crane::any_cast<std::pair<crane::obj, crane::obj>>(vs);
-    const auto &[b, _x2] =
-        crane::any_cast<std::pair<crane::obj, crane::obj>>(t);
-    return std::make_pair(crane::obj(b), crane::obj(a));
+    auto [a, t] =
+        crane::any_cast<std::pair<crane::obj, crane::obj>>(std::move(vs));
+    auto [b, _x2] =
+        crane::any_cast<std::pair<crane::obj, crane::obj>>(std::move(t));
+    return std::make_pair(crane::obj(std::move(b)), crane::obj(std::move(a)));
   }
 
   static std::pair<crane::obj, crane::obj>

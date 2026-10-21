@@ -44,13 +44,13 @@ uint64_t
 ErasedLetNotResultType::Syms::size(uint64_t n,
                                    ErasedLetNotResultType::Syms::semty b) {
   if (n <= 0) {
-    if (crane::any_cast<bool>(b)) {
+    if (crane::any_cast<bool>(std::move(b))) {
       return UINT64_C(1);
     } else {
       return UINT64_C(0);
     }
   } else {
     uint64_t _x = n - 1;
-    return crane::any_cast<uint64_t>(b);
+    return crane::any_cast<uint64_t>(std::move(b));
   }
 }
