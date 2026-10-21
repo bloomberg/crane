@@ -75,7 +75,6 @@ List<uint64_t> LoopifySpecialRecursion::double_append(
                          /// recursive call.
 
   struct CraneEnter {
-    List<uint64_t> l2;
     const List<uint64_t> *l1;
   };
 
@@ -88,21 +87,20 @@ List<uint64_t> LoopifySpecialRecursion::double_append(
   using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
   List<uint64_t> _result{};
   crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{std::move(l2), &l1});
+  _stack.emplace_back(CraneEnter{&l1});
   /// Loopified double_append: CraneEnter -> CraneCont_Cons.
   while (!_stack.empty()) {
     CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      List<uint64_t> l2 = std::move(_f.l2);
       const List<uint64_t> &l1 = *_f.l1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l1.v())) {
-        _result = std::move(l2);
+        _result = l2;
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l1.v());
         _stack.emplace_back(CraneCont_Cons{a0});
-        _stack.emplace_back(CraneEnter{std::move(l2), crane_raw(a1)});
+        _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));

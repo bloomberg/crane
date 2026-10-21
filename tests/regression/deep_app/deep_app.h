@@ -157,11 +157,10 @@ struct DeepApp {
   static mylist<T1> app(const mylist<T1> &l1, mylist<T1> l2) {
     std::optional<mylist<T1>> _root{};
     std::shared_ptr<mylist<T1>> *_write = nullptr;
-    mylist<T1> _loop_l2 = std::move(l2);
     const mylist<T1> *_loop_l1 = &l1;
     while (true) {
       if (std::holds_alternative<typename mylist<T1>::Mynil>(_loop_l1->v())) {
-        auto _value = std::move(_loop_l2);
+        auto _value = std::move(l2);
         (_write ? *(*_write = std::make_shared<mylist<T1>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;

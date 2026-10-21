@@ -153,11 +153,10 @@ struct LoopifyTmc {
   template <typename T1> static list<T1> app(const list<T1> &l1, list<T1> l2) {
     std::optional<list<T1>> _root{};
     std::shared_ptr<list<T1>> *_write = nullptr;
-    list<T1> _loop_l2 = std::move(l2);
     const list<T1> *_loop_l1 = &l1;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l1->v())) {
-        auto _value = std::move(_loop_l2);
+        auto _value = std::move(l2);
         (_write ? *(*_write = std::make_shared<list<T1>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;

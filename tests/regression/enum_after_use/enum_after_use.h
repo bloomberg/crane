@@ -70,11 +70,10 @@ struct Nat {
       std::optional<Nat::nat> _root{};
       std::shared_ptr<Nat::nat> *_write = nullptr;
       const Nat::nat *_loop_self = this;
-      Nat::nat _loop_m = std::move(m);
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename Nat::nat::O>(_sv.v())) {
-          auto _value = std::move(_loop_m);
+          auto _value = std::move(m);
           (_write ? *(*_write = std::make_shared<Nat::nat>(std::move(_value)))
                   : _root.emplace(std::move(_value)));
           break;

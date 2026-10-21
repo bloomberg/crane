@@ -483,11 +483,10 @@ List<uint64_t> LoopifyMoreTrees::append_lists(const List<uint64_t> &l1,
                                               List<uint64_t> l2) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
-  List<uint64_t> _loop_l2 = std::move(l2);
   const List<uint64_t> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
-      auto _value = std::move(_loop_l2);
+      auto _value = std::move(l2);
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
@@ -597,12 +596,11 @@ LoopifyMoreTrees::append_trees(const List<LoopifyMoreTrees::tree> &l1,
                                List<LoopifyMoreTrees::tree> l2) {
   std::optional<List<LoopifyMoreTrees::tree>> _root{};
   std::shared_ptr<List<LoopifyMoreTrees::tree>> *_write = nullptr;
-  List<LoopifyMoreTrees::tree> _loop_l2 = std::move(l2);
   const List<LoopifyMoreTrees::tree> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename List<LoopifyMoreTrees::tree>::Nil>(
             _loop_l1->v())) {
-      auto _value = std::move(_loop_l2);
+      auto _value = std::move(l2);
       (_write ? *(*_write = std::make_shared<List<LoopifyMoreTrees::tree>>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));

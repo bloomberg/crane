@@ -997,12 +997,11 @@ LoopifyPatterns::append_lists(const LoopifyPatterns::list<uint64_t> &l1,
                               LoopifyPatterns::list<uint64_t> l2) {
   std::optional<LoopifyPatterns::list<uint64_t>> _root{};
   std::shared_ptr<LoopifyPatterns::list<uint64_t>> *_write = nullptr;
-  LoopifyPatterns::list<uint64_t> _loop_l2 = std::move(l2);
   const LoopifyPatterns::list<uint64_t> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
             _loop_l1->v())) {
-      auto _value = std::move(_loop_l2);
+      auto _value = std::move(l2);
       (_write ? *(*_write = std::make_shared<LoopifyPatterns::list<uint64_t>>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
@@ -1035,7 +1034,6 @@ LoopifyPatterns::double_append(const LoopifyPatterns::list<uint64_t> &l1,
                                          /// parameters for each recursive call.
 
   struct CraneEnter {
-    LoopifyPatterns::list<uint64_t> l2;
     const LoopifyPatterns::list<uint64_t> *l1;
   };
 
@@ -1048,23 +1046,22 @@ LoopifyPatterns::double_append(const LoopifyPatterns::list<uint64_t> &l1,
   using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
   LoopifyPatterns::list<uint64_t> _result{};
   crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{std::move(l2), &l1});
+  _stack.emplace_back(CraneEnter{&l1});
   /// Loopified double_append: CraneEnter -> CraneCont_Cons.
   while (!_stack.empty()) {
     CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      LoopifyPatterns::list<uint64_t> l2 = std::move(_f.l2);
       const LoopifyPatterns::list<uint64_t> &l1 = *_f.l1;
       if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
               l1.v())) {
-        _result = std::move(l2);
+        _result = l2;
       } else {
         const auto &[a0, a1] =
             std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(l1.v());
         _stack.emplace_back(CraneCont_Cons{a0});
-        _stack.emplace_back(CraneEnter{std::move(l2), crane_raw(a1)});
+        _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));

@@ -882,12 +882,11 @@ LoopifyTrees::append_list_lists(const List<List<uint64_t>> &l1,
                                 List<List<uint64_t>> l2) {
   std::optional<List<List<uint64_t>>> _root{};
   std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
-  List<List<uint64_t>> _loop_l2 = std::move(l2);
   const List<List<uint64_t>> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
             _loop_l1->v())) {
-      auto _value = std::move(_loop_l2);
+      auto _value = std::move(l2);
       (_write ? *(*_write =
                       std::make_shared<List<List<uint64_t>>>(std::move(_value)))
               : _root.emplace(std::move(_value)));

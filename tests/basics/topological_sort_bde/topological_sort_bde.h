@@ -331,11 +331,10 @@ public:
     bsl::optional<List<t_A>> _root{};
     bsl::shared_ptr<List<t_A>> *_write = nullptr;
     const List<t_A> *_loop_self = this;
-    List<t_A> _loop_m = bsl::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        auto _value = bsl::move(_loop_m);
+        auto _value = bsl::move(m);
         (_write ? *(*_write = bsl::make_shared<List<t_A>>(bsl::move(_value)))
                 : _root.emplace(bsl::move(_value)));
         break;

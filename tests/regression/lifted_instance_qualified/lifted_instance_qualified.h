@@ -159,11 +159,10 @@ public:
     std::optional<String> _root{};
     std::shared_ptr<String> *_write = nullptr;
     const String *_loop_self = this;
-    String _loop_s2 = std::move(s2);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename String::EmptyString>(_sv.v())) {
-        auto _value = std::move(_loop_s2);
+        auto _value = std::move(s2);
         (_write ? *(*_write = std::make_shared<String>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
