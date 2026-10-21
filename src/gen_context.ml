@@ -46,7 +46,6 @@ let begin_body ~owner () =
       cs_counter = 0;
       body_owner = Some owner;
       current_letin_depth = 0;
-      move_owned_vars = Escape.IntSet.empty;
       move_plan = Ownership_plan.empty }
 
 (** [with_method_env_types env params f] runs [f] with the de Bruijn type

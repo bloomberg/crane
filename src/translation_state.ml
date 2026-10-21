@@ -101,12 +101,10 @@ type translation_ctx = {
   (* Nesting depth of let ... in expressions; used for unique name
      generation in nested scopes. *)
   current_letin_depth : int;
-  (* The variables, by de Bruijn index, whose values this body owns: a read
-     of one moves at a last use. *)
-  move_owned_vars : Escape.IntSet.t;
-  (* Which reads of the region being generated are last uses where their
-     value may be taken ({!Ownership_plan}).  Set where the region's body is
-     generated ({!with_region}), and emptied with [move_owned_vars]. *)
+  (* Which binders the region being generated owns where each is read, and
+     which reads are last uses where their value may be taken
+     ({!Ownership_plan}).  Set where the region's body is generated
+     ({!with_region}), and emptied where a body or a closure begins. *)
   move_plan : Ownership_plan.t;
   (* Counter for generating unique match scrutinee variable names
      (_mp0, _mp1, ...). Reset at function boundaries. *)
@@ -197,7 +195,6 @@ let tctx =
         env_types = Lexenv.empty;
         body_owner = None;
         current_letin_depth = 0;
-        move_owned_vars = Escape.IntSet.empty;
         move_plan = Ownership_plan.empty;
         match_param_counter = 0;
         promoted_var_map = [];
@@ -345,13 +342,14 @@ let with_itree_mode (m : itree_extraction_mode) (f : unit -> 'a) : 'a =
     (fun m -> tctx := { !tctx with itree_mode = m })
     m f
 
-(** [with_region body f] runs [f], which generates [body] as one C++ body,
-    with the moves planned over [body]. *)
-let with_region (body : ml_ast) (f : unit -> 'a) : 'a =
+(** [with_region ~owned body f] runs [f], which generates [body] as one C++
+    body owning the variables at the de Bruijn indices [owned], with the
+    moves planned over [body]. *)
+let with_region ?(owned = []) (body : ml_ast) (f : unit -> 'a) : 'a =
   with_field
     (fun c -> c.move_plan)
     (fun p -> tctx := { !tctx with move_plan = p })
-    (Ownership_plan.region ~owned:(Escape.IntSet.elements (!tctx).move_owned_vars) body) f
+    (Ownership_plan.region ~owned body) f
 
 (** [with_plan p f] runs [f] with the moves planned by [p], an alternative
     plan of the region being generated ({!Ownership_plan.reuse_arm}). *)

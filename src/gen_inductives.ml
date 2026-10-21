@@ -764,41 +764,28 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
     else
       Sreturn (Some x)
   in
-  (* Generate method body. Initialize move tracking for owned parameters.
-     'this' is always borrowed (const method). *)
-  let saved_owned = (!tctx).move_owned_vars in
+  (* Generate the method body, owning its owned parameters.  The de Bruijn
+     environment has parameters in reverse order: ids_normal_order has
+     outermost-first, push_vars' reverses them. *)
   begin_body ~owner:func_ref ();
-  (* Initialize owned-variable tracking for method parameters.
-     The de Bruijn environment has parameters in reverse order:
-     ids_normal_order has outermost-first, push_vars' reverses them. *)
   let method_n_params = List.length ids_with_types in
   (* method_owned_flags[i] corresponds to de Bruijn index i+1.
      db index i+1 maps to ids_with_types[i] (outermost-first, same order
      as push_vars' which prepends in list order).
      Only track ownership for non-trivial types (inductives). *)
-  tctx :=
-    { !tctx with
-      move_owned_vars =
-          List.fold_left
-            (fun acc (i, owned) ->
-              (* Under [Crane Reuse], the receiver at [this_pos] is a const [this]
-                 (borrowed) and must never be treated as owned, or a reuse arm would
-                 try to consume it via v_mut() on a const method.  Gated on reuse so
-                 reuse-off output stays byte-identical to the pre-reuse baseline.
-                 [this_pos] counts the parameters outermost first, [i] innermost
-                 first. *)
-              if owned
-                 && not
-                      ( Table.reuse () && Table.reuse_loopify_ok ()
-                      && i = method_n_params - 1 - this_pos )
-              then
-                let ml_ty = snd (List.nth ids_with_types i) in
-                if Translation_support.worth_moving ml_ty then
-                  Escape.IntSet.add (i + 1) acc
-                else acc
-              else acc )
-            Escape.IntSet.empty
-            (List.mapi (fun i o -> (i, o)) method_owned_flags) };
+  let owned_params =
+    Translation_support.owned_parameters (List.length method_owned_flags)
+      ~owned:(fun i ->
+        (* Under [Crane Reuse], the receiver at [this_pos] is a const [this]
+           (borrowed) and must never be treated as owned, or a reuse arm would
+           try to consume it via v_mut() on a const method.  Gated on reuse so
+           reuse-off output stays byte-identical to the pre-reuse baseline.
+           [this_pos] counts the parameters outermost first, [i] innermost
+           first. *)
+        List.nth method_owned_flags i
+        && not (Table.reuse () && Table.reuse_loopify_ok () && i = method_n_params - 1 - this_pos) )
+      ~ty:(fun i -> snd (List.nth ids_with_types i))
+  in
   (* The scope covers both the inductive's type vars and the extra ones, so
      that gen_expr/eta_fun convert Tvars to the named C++ types the method
      body expects (e.g. recursive calls carry type args).  The return type is
@@ -813,9 +800,9 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
            type arguments get shared_ptr wrapping to match struct field
            types. *)
         with_method_ns_for_locals ~base:method_ns (fun () ->
-            with_region inner_body (fun () -> gen_stmts env method_k inner_body) ) )
+            with_region ~owned:owned_params inner_body (fun () ->
+                gen_stmts env method_k inner_body ) ) )
   in
-  tctx := { !tctx with move_owned_vars = saved_owned };
   (* Add type args to recursive self-calls. Inside fixpoint bodies, the
      extraction produces a self reference whose variables stand for themselves
      and are written nowhere ({!Mlutil.self_reference}). When the function is a

@@ -1293,14 +1293,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       try CPPvar (get_db_name i env)
       with Failure _ -> CPPvar (db_fallback_id i)
     in
-    (* Phase 2: move on last use. Emit std::move if: (1) the variable is dead
-       after this point, (2) it's an owned variable (not borrowed), (3) this
-       is its only occurrence in the current RHS expression, and (4) the
-       region's plan has this read as a last use.  The sets see only the
-       continuation in front of them, and a let's right-hand side or a match
-       standing in an argument does not know what reads the variable after
-       the let or beside the argument; the plan reads the whole region.
-       Never move a typeclass instance -- it is a type reference in the concept
+    (* Move on a last use of a variable the region owns, as its plan says
+       ({!Ownership_plan.moves}).  Never move a typeclass instance -- it is a type reference in the concept
        paradigm, not an owned value, and wrapping it produces invalid C++ like
        [std::move(_tcI0)::method()].  Recognised by identity rather than by ML
        type: this binder is synthesised by {!Common.tc_instance_id}, and inside
@@ -4849,14 +4843,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           under_branch_binders (fun () -> split_instance_args ~lex:(current_lexenv ()) value_args)
         in
         let call =
-          (* Source order, as {!mk_arity_call} takes them.  Under the
-             branch's binders the move-tracking indices are too: unshifted, an
-             argument's index names whatever outer variable sits that many
-             binders further out -- the borrowed field [ta] read as the owned
-             local [k], and moved out of the node it shares. *)
+          (* Source order, as {!mk_arity_call} takes them. *)
           let arg_exprs =
             under_branch_binders @@ fun () ->
-            with_shifted_move_tracking (List.length branch_binders) @@ fun () ->
             List.mapi
               (fun j a ->
                 let e = gen_stored_value ~slot env' a in
@@ -7265,22 +7254,10 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     @param scrut    the value being matched, shared by every branch *)
 and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     match_i (scrut : smatch_scrutinee) ~scrut_db =
-  let is_owned = scrut.sc_owned in
   let ctor_type = ctor_type_of_match env typ cname in
   let ctor_name = ctor_struct_id_of_ref cname in
   let ctor_struct_name = Id.to_string ctor_name in
   let n_pat_vars = List.length ids in
-  (* When the scrutinee is an owned variable (is_owned = true) and we create
-     const-ref structured bindings into it ([const auto& [d_a0, d_a1] = ...]),
-     moving the scrutinee inside the branch would leave those references
-     dangling.  Exclude the shifted scrutinee index from move_owned_vars for
-     the duration of the branch so move insertion cannot fire on it. *)
-  let exclude_scrutinee =
-    if is_owned then Option.map (fun db -> db + n_pat_vars) scrut_db
-    else None
-  in
-  (* Compute ind_ref and field self-reference info early so pat_var_owned
-     can exclude shared_ptr-wrapped fields from move tracking. *)
   let ind_ref =
     match cname with
     | GlobRef.ConstructRef ((kn, i), _) -> GlobRef.IndRef (kn, i)
@@ -7294,33 +7271,6 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
   let field_recurses_through_boxed_at_def = Ml_type_util.Ctor_fields.recurses_through_boxed fields in
   let is_boxed_at_def = Ml_type_util.Ctor_fields.boxed fields in
   let is_param_boxed_at_def = Ml_type_util.Ctor_fields.param_boxed fields in
-  let field_is_uptr = Ml_type_util.Ctor_fields.behind_pointer fields in
-  (* Converse of [exclude_scrutinee]: the structured bindings alias subobjects
-     of the owned scrutinee, so moving a field out hollows out part of [o].  If
-     the branch body still reads [o] itself, that read may observe the
-     moved-from field — sibling arguments of one call are unsequenced, so even
-     [Ctor(std::move(a0), f(o))] is wrong.  Drop the whole owned set in that
-     case so no field move is emitted. *)
-  let scrut_read_in_body =
-    match scrut_db with
-    | Some db -> Escape.nb_occur_match (db + n_pat_vars) body > 0
-    | None -> false
-  in
-  let pat_var_owned =
-    if is_owned && not scrut_read_in_body then
-      List.fold_left (fun (acc, j) _ ->
-          let db = j + 1 in
-          let def_field_idx = n_pat_vars - 1 - j in
-          let acc' =
-            if not (field_is_uptr def_field_idx) then
-              Escape.IntSet.add db acc
-            else acc
-          in
-          (acc', j + 1))
-        (Escape.IntSet.empty, 0) ids
-      |> fst
-    else Escape.IntSet.empty
-  in
   (* Compute structured binding names BEFORE the body, so that inner nested
      matches see these names in their avoid set and won't produce shadowing
      C++ variable names (e.g. two nested [Char] branches both naming [t0]).
@@ -7354,9 +7304,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     (fst env, binding_avoid)
   in
   let body_stmts =
-    with_shifted_move_tracking n_pat_vars
-      ~add_owned_set:pat_var_owned ?exclude_owned:exclude_scrutinee
-      (fun () ->
+    (
       let inner_ret =
         match (!tctx).current_cpp_return_type with
         | Some Tvoid -> None
@@ -8229,24 +8177,11 @@ and gen_cpp_case (typ : ml_type) t env pv =
                       mk_call (CPPaccess (Adot, rf k, Id.of_string "use_count")) [],
                       CPPint 1 ) )
             in
-            (* The body is under the pattern's binders, so the move sets are
-               too: every field the arm binds is a local of its own, owned,
-               and nothing is dead before the body says so. *)
-            let n = List.length ids in
-            let bound =
-              List.fold_left
-                (fun acc (i, read) ->
-                  match read with
-                  | Some `Unused | None -> acc
-                  | Some _ -> Escape.IntSet.add (n - i) acc )
-                Escape.IntSet.empty
-                (List.mapi (fun i r -> (i, r)) reads)
-            in
+            (* Every field the arm binds is a local of its own, owned: the
+               plan of the arm says so. *)
             let body_stmts =
               with_reuse_token (Some (tok, tail_ctor)) (fun () ->
-                  with_plan (Ownership_plan.reuse_arm (!tctx).move_plan ~scrutinee:t ~branch:branch_idx) @@ fun () ->
-                  with_shifted_move_tracking n ~add_owned_set:bound
-                    ?exclude_owned:(Option.map (fun db -> db + n) scrut_db)
+                  with_plan (Ownership_plan.reuse_arm (!tctx).move_plan ~scrutinee:t ~branch:branch_idx)
                     (fun () -> gen_stmts env' (fun x -> Sreturn (Some x)) body) )
             in
             restore_env_types saved_env_types;
@@ -8579,7 +8514,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   let binds_by_value = pair_by_value in
   let cmatch = if binds_by_value then "auto [%b0a0, %b0a1] = %scrut; %br0" else cmatch in
   (* Generate [(params, ret_ty, body)] triples for each branch.  Handles env
-     retyping for [fix_a_fired], move tracking for owned pairs, use-site
+     retyping for [fix_a_fired], use-site
      [any_cast] insertion, and template-arg stripping for erased arguments. *)
   let alternatives = begin_alternatives () in
   let rec gen_cases = function
@@ -8639,7 +8574,6 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       let ids' = retype_dependent_params ml_typ ids' in
       let n_pat_vars = List.length ids in
       let saved_env_types = (!tctx).env_types in
-      let saved_owned = (!tctx).move_owned_vars in
       push_binders env ids';
       (* When [fix_a_fired] and the outer scrutinee was truly [pair<any,any>]
          at runtime (i.e. outer [typ] was erased, not just magic-wrapped),
@@ -8680,28 +8614,15 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
           end)
           (List.init n_fields Fun.id)
       end;
-      let pat_owned =
-        if binds_by_value then
-          let ids_rev = List.rev ids in
-          List.fold_left (fun acc j ->
-            let (_, ty) = List.nth ids_rev j in
-            if worth_moving ty then
-              Escape.IntSet.add (j + 1) acc
-            else acc)
-            Escape.IntSet.empty (List.init n_pat_vars Fun.id)
-        else Escape.IntSet.empty
-      in
       let scrut_ind_opt =
         match ml_typ with
         | Tglob (GlobRef.IndRef _ as g, _, _) -> Some g
         | _ -> None
       in
       let (br_ids, br_ret, br_stmts) =
-        with_shifted_move_tracking n_pat_vars ~add_owned_set:pat_owned (fun () ->
-          gen_cpp_custom_body env' k rty ids' t scrut_ind_opt)
+        gen_cpp_custom_body env' k rty ids' t scrut_ind_opt
       in
       restore_env_types saved_env_types;
-      tctx := { !tctx with move_owned_vars = saved_owned };
       (* Use-site [any_cast] insertion: when [fix_a_fired], pair fields are all
          [std::any] at the binding site.  Pattern variables whose C++ type is
          concrete need [any_cast<T>] at each use site so the body compiles.
@@ -9037,10 +8958,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             | None -> [] )
       in
       let lifted_call = mk_cppglob lifted_ref call_type_args in
-      (* Phase 2: shift move tracking for the single let binding *)
-      let result =
-        with_shifted_move_tracking 1 (fun () -> gen_stmts ~slot env_with_fix k b)
-      in
+      let result = gen_stmts ~slot env_with_fix k b in
       List.map
         (local_var_subst_stmt ~extra_args:free_args fix_name lifted_call)
         result )
@@ -9058,10 +8976,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             ({!gen_local_fix_by_ref}) and the [shared_ptr] pattern
             ({!gen_local_fix_shared_ptr}).
 
-         Move tracking: variables captured by the fixpoint bodies
-         ({!Escape.free_rels}) are removed from [move_owned_vars] so
-         that [dead_in_a] does not [std::move] them while the fixpoint's
-         [\[&\]] lambda still holds references ([fix_move_capture]). *)
+         The variables the fixpoint bodies capture are not moved in the
+         continuation while a [\[&\]] lambda may still refer to them: the
+         plan pins them ({!Ownership_plan}). *)
       let all_fix_ids_list = Array.to_list ids in
       let funs_compiled =
         Array.to_list
@@ -9098,30 +9015,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       in
       let _, env_with_fix = push_vars' [projected_id] env_for_cont in
       push_binders env [projected_id];
-      (* Compute outer variables captured by the fixpoint bodies.
-         If the fixpoint ends up using [&] capture, these variables must
-         not be moved in the continuation — the fixpoint holds references
-         to them. Even if the fixpoint later uses [=] (escape path),
-         suppressing moves is safe (just conservative: copies instead
-         of moves for those vars). *)
-      let fix_captured =
-        Array.fold_left
-          (fun acc body ->
-            Escape.IntSet.union acc
-              (Escape.free_rels (Array.length ids) body))
-          Escape.IntSet.empty funs
-      in
-      (* Shift captured indices: free var at index i in the fix scope
-         becomes i+1 in the continuation (one let-binding added). *)
-      let captured_shifted =
-        Escape.IntSet.map (fun i -> i + 1) fix_captured
-      in
-      (* Phase 2: shift owned vars for the single let binding.
-         Remove captured variables from owned set to prevent moves. *)
-      let cont =
-        with_shifted_move_tracking 1 ~exclude_owned_set:captured_shifted
-          (fun () -> gen_stmts ~slot env_with_fix k b)
-      in
+      let cont = gen_stmts ~slot env_with_fix k b in
       (* Check if any fixpoint variable escapes in the continuation.
          If so, use shared_ptr + [=] to prevent dangling references.
          Otherwise, use the simpler [&] capture pattern. *)
@@ -9249,7 +9143,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         let iife = mk_iife (Some reified_ty) body_stmts in
         (* Shift owned vars for the continuation *)
         let cont =
-          with_shifted_move_tracking 1 (fun () -> gen_stmts ~slot env' k b)
+          gen_stmts ~slot env' k b
         in
         (* Generate the assignment with reified type *)
         [Sasgn (x_renamed, Declare (reified_ty, core_binder ~site:let_occ env' 1), iife)] @ cont
@@ -9263,12 +9157,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         let t_for_env = if stmts_yield_boxed asgn then Miniml.Tdummy Ktype else t in
         (* Push env_types AFTER generating the value expression [a]. *)
         push_binders env [(x_renamed, t_for_env)];
-        (* Phase 2: shift owned vars for lambda let binding.
-           The body [b] has one more de Bruijn binder, so all indices must
-           be shifted +1. *)
-        let gen_cont () =
-          with_shifted_move_tracking 1 (fun () -> gen_stmts ~slot env' k b)
-        in
+        let gen_cont () = gen_stmts ~slot env' k b in
         match asgn with
         | [Sasgn (_, Existing, e)] ->
           Sasgn
@@ -9575,10 +9464,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       let lifted_ids, env' = push_vars' [(x', t)] env in
       let x_lifted = fst (List.hd lifted_ids) in
       push_binders env [(x_lifted, t)];
-      (* Phase 2: shift move tracking for lifted lambda binding *)
-      let cont =
-        with_shifted_move_tracking 1 (fun () -> gen_stmts ~slot env' k b)
-      in
+      let cont = gen_stmts ~slot env' k b in
       (* Build the free variable argument expressions *)
       let free_var_cpps =
         List.map (fun (name, _, _) -> CPPvar name) free_vars
@@ -9613,8 +9499,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     let env_rhs = (fst env, snd env') in
     if x == Dummy then (
       push_binders env [(x_renamed, t)];
-      with_shifted_move_tracking 1 (fun () ->
-        gen_stmts ~slot env' k b) )
+      gen_stmts ~slot env' k b )
     else if ml_type_is_unit t then (
       (* Unit-typed let bindings: the RHS may call a void-ified function,
          so we can't assign its result to a variable.  Execute the RHS for
@@ -9628,12 +9513,11 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         | Sexpr (CPPenum_val _) -> false
         | Sexpr (CPPvar _) -> false
         | _ -> true) rhs in
-      (* Generate the body first (under shifted move tracking for the new
-         binder), then check if the variable is actually referenced in the
+      (* Generate the body first, then check if the variable is actually referenced in the
          generated C++ (not just the ML AST, since optimizations like
          unit-match elimination may drop references). *)
       let body =
-        with_shifted_move_tracking 1 (fun () -> gen_stmts ~slot env' k b)
+        gen_stmts ~slot env' k b
       in
       let decl =
         if stmts_reference_var x_renamed body then
@@ -9645,7 +9529,6 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     else
       let depth = (!tctx).current_letin_depth in
       tctx := { !tctx with current_letin_depth = depth + 1 };
-      let saved_owned = (!tctx).move_owned_vars in
       (* What the continuation reads, in the right-hand side's coordinates. *)
       let cont_free = Escape.free_rels 1 b in
       let asgn =
@@ -9823,35 +9706,11 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          (generated below) does include it. *)
       let t_for_env = if stmts_yield_boxed asgn then Miniml.Tdummy Ktype else t in
       push_binders env [(x_renamed, t_for_env)];
-      (* The new let binding is owned (it's a local variable). Update
-         move_owned_vars for processing [b]: shift all existing indices by 1
-         (because [b] has one more binder) and add index 1 if the type is
-         shared_ptr. *)
-      let shifted_owned =
-        Escape.IntSet.map (fun i -> i + 1) (!tctx).move_owned_vars
-      in
-      (* Const-ref binding optimisation: when the RHS [a] is a record-field
-         access (single-branch MLcase) on a source variable that is NOT being
-         moved at this point, we can bind the result as [const T&] instead of
-         [T].  This avoids an unnecessary shared_ptr refcount increment at the
-         binding site; any subsequent owned uses still copy from the reference.
-
-         The read of k is moved only when k is owned and the plan has the read
-         as a last use.  When the source has further uses in the let body it
-         is not moved here, so the const-ref remains valid.  We only apply this when the type is a
-         shared_ptr so that primitive types (int, bool) are left unchanged. *)
+      (* Const-ref binding: a record field projected out of a variable not
+         moved there is bound as [const T&], saving a [shared_ptr] count
+         bump; the plan does not own such a binder, so it is never moved
+         from.  Only for [shared_ptr] types. *)
       let use_const_ref = Ownership_plan.projects_in_place (!tctx).move_plan t a in
-      let new_is_tracked =
-        worth_moving t
-        && not use_const_ref
-      in
-      let owned_for_b =
-        if new_is_tracked then
-          Escape.IntSet.add 1 shifted_owned
-        else
-          shifted_owned
-      in
-      tctx := { !tctx with move_owned_vars = owned_for_b };
       let result =
         match asgn with
           | [Sasgn (_, Existing, e)] ->
@@ -9908,7 +9767,6 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             (Sdecl (x_renamed, cpp_ty, core_binder ~site:let_occ env' 1) :: asgn)
             @ gen_stmts ~slot env' k b
       in
-      tctx := { !tctx with move_owned_vars = saved_owned };
       result
   | MLapp (MLfix (x, ids, funs, _, occ), args) ->
     Local_types.check_minted ids;
@@ -10145,17 +10003,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     in
     push_binders env ids;
     let bound_by_bind env = core_binder ~site:(Global_use.occurrence use) env 1 in
-    (* The continuation's lambda parameter adds one de Bruijn level.
-       Shift move tracking sets so that parent-scope owned-variable indices
-       stay in sync with the body's coordinate system.  Without this shift,
-       after N bind continuations the indices drift by N, causing spurious
-       collisions that produce incorrect std::move (use-after-move). *)
-    let add_owned =
-      match ids with
-      | (_, ty) :: _ when worth_moving ty -> Some 1
-      | _ -> None
-    in
-    with_shifted_move_tracking 1 ?add_owned (fun () ->
+    (
     match ids with
     | (x, ml_ty) :: _ ->
       let ty = cpp_of_ml env ml_ty in
@@ -10466,41 +10314,20 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
     fst (List.nth renamed_fix_ids
            (n_lam_params + (n_fix_funs - 1 - fix_idx))) in
   let ids = List.filter (fun (_, ty) -> not (void_binder ty)) ids in
-  (* Phase 2: set up move state for fixpoint body. Fix params are owned (passed
-     by value in the generated std::function lambda). After push_vars'(ids @
-     fix_names), de Bruijn indices in f are: ids[0] → db 1, ..., ids[k-1] → db
-     k, fix_names[0] → db k+1, ..., fix_names[m-1] → db k+m. We only mark lambda
-     params as owned (not the fix self-references). *)
-  let saved_owned = (!tctx).move_owned_vars in
+  (* The parameters the body owns, passed by value in the generated lambda.
+     After push_vars'(ids @ fix_names), ids[0] is db 1, ..., ids[k-1] db k,
+     and the fixpoints follow; only parameters are owned. *)
   let n_fix_params = List.length ids in
   let n_total = n_fix_params + n_fix_funs in
   let fix_owned_base = Escape.infer_owned_params n_total f in
   let fix_sub_esc = Escape.infer_sub_bindings_escape_params n_total f in
-  tctx :=
-    { !tctx with
-      move_owned_vars =
-          List.fold_left
-            (fun acc i ->
-              let db = i + 1 in
-              let base_owned =
-                match List.nth_opt fix_owned_base i with
-                | Some b -> b
-                | None -> false
-              in
-              let sub_esc =
-                match List.nth_opt fix_sub_esc i with
-                | Some b -> b
-                | None -> false
-              in
-              let ml_ty = snd (List.nth ids i) in
-              let owned = base_owned
-                || (sub_esc && is_prod_ml_type ml_ty) in
-              if owned && worth_moving ml_ty then
-                Escape.IntSet.add db acc
-              else
-                acc )
-            Escape.IntSet.empty
-            (List.init n_fix_params (fun i -> i)) };
+  let owned_params =
+    owned_parameters n_fix_params
+      ~owned:(fun i ->
+        let flag l = Option.default false (List.nth_opt l i) in
+        flag fix_owned_base || (flag fix_sub_esc && is_prod_ml_type (snd (List.nth ids i))) )
+      ~ty:(fun i -> snd (List.nth ids i))
+  in
   (* The body returns the fixpoint's own codomain, not the enclosing
      function's: a result recovered from a box inside it is recovered at
      the [T1] a [fix F (m : list A) : P A m] returns, not at the pair the
@@ -10515,11 +10342,10 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
     ( (renamed_n, ty),
       ids,
       with_cpp_return_type fix_return_type (fun () ->
-          with_region f (fun () -> gen_stmts env (fun x -> Sreturn (Some x)) f) ),
+          with_region ~owned:owned_params f (fun () -> gen_stmts env (fun x -> Sreturn (Some x)) f) ),
       parameter_binders env ids )
   in
   restore_env_types saved_env_types;
-  tctx := { !tctx with move_owned_vars = saved_owned };
   result
 
 let () = type_term_arg := fun env a -> gen_expr env a
