@@ -100,16 +100,16 @@ let sequential effects use =
 let identity r =
   Table.is_custom r && Minicpp.inline_shape_of_text (Table.find_custom r) = Minicpp.Inline_identity
 
-(* How [fd_body] calls the members of its recursive group, as the C++ it
-   becomes does: a call is a tail call where its result is the function's,
-   and a call the C++ wraps in a closure, or one applied to more arguments
-   than its parameters, is not.  [callee ~depth f] is the number of
-   parameters of the member [f] names, under [depth] binders inside the
-   function's parameters, and [None] where [f] names none.  A bind or a ret
-   is sequencing where [effects], the analysis of the program [fd_body] is
-   taken from, says it is generated sequentially. *)
-let classify ~effects ~callee fd_body =
-  let _, body = split_params 0 fd_body in
+(* How [body], a function's body inside its parameters, calls the members
+   of its recursive group, as the C++ it becomes does: a call is a tail call
+   where its result is the function's, and a call the C++ wraps in a
+   closure, or one applied to more arguments than its parameters, is not.
+   [callee ~depth f] is the number of parameters of the member [f] names,
+   under [depth] binders inside the function's parameters, and [None] where
+   [f] names none.  A bind or a ret is sequencing where [effects], the
+   analysis of the program [body] is taken from, says it is generated
+   sequentially. *)
+let classify ~effects ~callee body =
   let tail_call = ref false and nontail_call = ref false in
   let effect = sequential effects in
   let rec walk ~depth ~tail e =
@@ -514,7 +514,7 @@ let local_groups ~effects defs =
     in
     let kind_of j =
       let callee ~depth f = Option.map (Array.get arities) (member ~within:j ~depth f) in
-      classify ~effects ~callee funs.(j)
+      classify ~effects ~callee (snd (split_params 0 funs.(j)))
     in
     let kind = Array.fold_left combine No_recursion (Array.init n kind_of) in
     let chains =
@@ -571,18 +571,22 @@ let analyze groups struc =
     (fun _ -> ())
     struc;
   let defs = !defs in
-  let arity fd = fst (split_params 0 fd.fd_body) in
+  (* A function is generated taking every parameter its type declares, its
+     body applied to those it does not bind ({!Core_elaborate.generated_scope}):
+     its calls are read there, a call with fewer arguments than that being
+     the closure the C++ makes of it. *)
+  let parameters fd = List.length (Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type)) in
   let kind_of members =
     let callee ~depth:_ = function
       | MLglob use when List.exists (Common.globref_equal use.callee) members ->
-        Option.map arity (Ref.User.Map.find_opt use.callee defs)
+        Option.map parameters (Ref.User.Map.find_opt use.callee defs)
       | _ -> None
     in
     List.fold_left
       (fun k m ->
         match Ref.User.Map.find_opt m defs with
         | Some fd ->
-          combine k (classify ~effects ~callee fd.fd_body)
+          combine k (classify ~effects ~callee (snd (Core_elaborate.generated_scope fd.fd_type fd.fd_body)))
         | None -> k )
       No_recursion members
   in
