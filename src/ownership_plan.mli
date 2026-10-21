@@ -61,9 +61,19 @@ type fate =
           the arguments of a call it makes are taken by value. *)
   | Unplanned  (** not a read of the region [p] was made of *)
 
-(** Whether a read takes its variable's value: the variable is owned where
-    it is read, and the read is its last use where it may be taken. *)
-val moves : t -> Miniml.Occurrence.t -> bool
+(** What a read does with its variable's value. *)
+module Use : sig
+  type t =
+    | Move
+        (** takes it: the variable is owned where it is read, and the read is
+            its last use where its value may be taken *)
+    | Copy
+        (** reads it by value and leaves it: the variable is read again, is
+            not owned there, or the read is one the plan was not made of *)
+    | Borrow  (** reads it in place ({!Inspected}) *)
+end
+
+val use : t -> Miniml.Occurrence.t -> Use.t
 
 (** Whether a variant match takes apart a scrutinee the region owns, binding
     its fields by mutable reference: the scrutinee is a variable owned there.

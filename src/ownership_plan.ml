@@ -460,7 +460,15 @@ let owned_at p o =
 
 let owned p _ o = owned_at p o = Some true
 
-let moves p o = owned p 0 o && fate p o = Last_use
+module Use = struct
+  type t = Move | Copy | Borrow
+end
+
+let use p o : Use.t =
+  match fate p o with
+  | Last_use when owned p 0 o -> Move
+  | Inspected -> Borrow
+  | Last_use | Read_again | Unplanned -> Copy
 
 let owns_scrutinee p = Binding.owns_scrutinee ~owned:(owned p)
 
