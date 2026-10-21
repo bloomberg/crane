@@ -470,6 +470,11 @@ and call_sig = {
           constructor struct's, lowercased and possibly escaped, which no
           reading of the name undoes: Loopify recognises the cells it
           rewrites by this. *)
+  cs_occurrence : Miniml.Occurrence.t option;
+      (** The Core call the call is made of, by the occurrence the recursion
+          plan names it by: a global's use, the read of a local function at
+          the head of the application, or a local fixpoint applied where it
+          is written.  [None] for a call the backend builds of its own. *)
 }
 
 (** What a call yields. *)
@@ -1216,6 +1221,10 @@ val call_sig :
     is a factory call.  [params] is recorded only when its length matches
     [nargs]: a misaligned list is worse than none, so alignment holds by
     construction rather than by convention. *)
+
+val made_of : Miniml.Occurrence.t -> cpp_expr -> cpp_expr
+(** [made_of occurrence e] is the call [e] recording the Core call it is
+    made of ({!call_sig.cs_occurrence}); any other expression unchanged. *)
 
 val mk_call :
   ?yields:cpp_type ->

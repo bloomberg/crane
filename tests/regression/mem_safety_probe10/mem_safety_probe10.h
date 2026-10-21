@@ -119,40 +119,18 @@ struct MemSafetyProbe10 {
     /// After loopification, these closures are assigned to _result,
     /// not returned via Sreturn.
     uint64_t tree_to_adder(uint64_t x0_) const {
-      const tree *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const tree *_self;
-        uint64_t x0_;
-      };
-
-      using CraneFrame = std::variant<CraneEnter>;
-      uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self, x0_});
-      /// Loopified tree_to_adder: CraneEnter.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        auto _f = std::move(std::get<CraneEnter>(_frame));
-        const tree *_self = _f._self;
-        uint64_t x0_ = _f.x0_;
-        auto &&_sv = *_self;
-        if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-          _result = std::move(x0_);
-        } else {
-          const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
-          crane::fn<uint64_t(uint64_t)> fl = [&](uint64_t _x0) -> uint64_t {
-            return a0->tree_to_adder(_x0);
-          };
-          crane::fn<uint64_t(uint64_t)> fr = [&](uint64_t _x0) -> uint64_t {
-            return a2->tree_to_adder(_x0);
-          };
-          _result = fl((a1 + fr(x0_)));
-        }
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        return x0_;
+      } else {
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        crane::fn<uint64_t(uint64_t)> fl = [&](uint64_t _x0) -> uint64_t {
+          return a0->tree_to_adder(_x0);
+        };
+        crane::fn<uint64_t(uint64_t)> fr = [&](uint64_t _x0) -> uint64_t {
+          return a2->tree_to_adder(_x0);
+        };
+        return fl((a1 + fr(x0_)));
       }
-      return _result;
     }
 
     uint64_t tree_sum() const {

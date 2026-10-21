@@ -131,28 +131,9 @@ uint64_t STMonadTests::nth(uint64_t n, const List<uint64_t> &l,
   }
 }
 
-List<uint64_t> STMonadTests::quicksort_fun(
-    const List<uint64_t> &x) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
-  struct CraneEnter {
-    List<uint64_t> x;
-  };
-
-  using CraneFrame = std::variant<CraneEnter>;
-  List<uint64_t> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{x});
-  /// Loopified quicksort_fun: CraneEnter.
-  while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    auto _f = std::move(std::get<CraneEnter>(_frame));
-    const List<uint64_t> &x = std::move(_f.x);
-    _result = STMonadExamples::quicksort_fun_functional(
-        x, [](const List<uint64_t> &y) { return quicksort_fun(y); });
-  }
-  return _result;
+List<uint64_t> STMonadTests::quicksort_fun(const List<uint64_t> &x) {
+  return STMonadExamples::quicksort_fun_functional(
+      x, [](const List<uint64_t> &y) { return quicksort_fun(y); });
 }
 
 List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {

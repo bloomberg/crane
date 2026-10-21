@@ -162,33 +162,13 @@ struct SharedVariantNested {
     }
 
     uint64_t rsum() const {
-      const rose *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const rose *_self;
-      };
-
-      using CraneFrame = std::variant<CraneEnter>;
-      uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified rsum: CraneEnter.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        auto _f = std::move(crane::get<CraneEnter>(_frame));
-        const rose *_self = _f._self;
-        auto &&_sv = *_self;
-        const auto &[a0, a1] = crane::get<typename rose::RNode>(_sv.v());
-        const List<rose> &a1_value = *a1;
-        _result = (a0 + a1_value.template fold_left<uint64_t>(
-                            [](uint64_t acc, const rose &t0) {
-                              return (acc + t0.rsum());
-                            },
-                            UINT64_C(0)));
-      }
-      return _result;
+      const auto &[a0, a1] = crane::get<typename rose::RNode>(this->v());
+      const List<rose> &a1_value = *a1;
+      return (a0 + a1_value.template fold_left<uint64_t>(
+                       [](uint64_t acc, const rose &t0) {
+                         return (acc + t0.rsum());
+                       },
+                       UINT64_C(0)));
     }
 
     template <typename T1, typename F0> T1 rose_rec(F0 &&f) const {

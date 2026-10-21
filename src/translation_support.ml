@@ -3184,21 +3184,22 @@ let self_call_rewriter (selves : local_fix_self list) :
   let find_self_id id = Option.map fst (find_self id) in
   (* The self id this application spine calls, with every argument along it
      in one reversed list -- an outer application's arguments come after an
-     inner one's, so they go first once reversed. *)
+     inner one's, so they go first once reversed -- and the Core call the
+     spine is made of, which its innermost call records. *)
   let rec self_call_spine = function
-    | CPPfun_call (_, CPPvar id, args) ->
-      Option.map (fun self_id -> (self_id, to_reversed args)) (find_self_id id)
+    | CPPfun_call (cs, CPPvar id, args) ->
+      Option.map (fun self_id -> (self_id, to_reversed args, cs.cs_occurrence)) (find_self_id id)
     | CPPfun_call (_, callee, args) ->
       Option.map
-        (fun (self_id, inner) -> (self_id, to_reversed args @ inner))
+        (fun (self_id, inner, occurrence) -> (self_id, to_reversed args @ inner, occurrence))
         (self_call_spine callee)
     | _ -> None
   in
   let rec rewrite_expr e =
     match self_call_spine e with
-    | Some (self_id, args_rev) ->
+    | Some (self_id, args_rev, occurrence) ->
       CPPfun_call
-        ( call_opaque, CPPvar self_id,
+        ( {call_opaque with cs_occurrence = occurrence}, CPPvar self_id,
           of_reversed (List.map rewrite_expr args_rev @ self_vars_rev) )
     | None -> (
       match e with

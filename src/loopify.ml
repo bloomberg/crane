@@ -204,12 +204,14 @@ and generic_inline_stmt spec = function
     wrapped in an immediately-invoked lambda (IIFE). *)
 and generic_inline_expr spec expr =
   if spec.is_target expr then
-    (* Non-tail call — wrap inlined body in immediately-invoked lambda *)
+    (* Non-tail call — wrap inlined body in immediately-invoked lambda, which
+       is still the Core call it replaces. *)
     let lparams =
       List.map (fun (pid, ty) -> (ty, Some pid)) spec.params
     in
+    let occurrence = match expr with CPPfun_call (cs, _, _) -> cs.cs_occurrence | _ -> None in
     CPPfun_call
-      ( call_opaque,
+      ( {call_opaque with cs_occurrence = occurrence},
         CPPlambda
           { cl_params = of_reversed lparams;
             cl_tparams = [];
@@ -310,7 +312,7 @@ let on_cycle_with self_refs r =
                  function (used to skip self-calls and detect back-calls)
     @param body  The function body to transform
     @return The body with mutual calls inlined, or the original body if no
-            mutual partner was found, and the partners inlined *)
+            mutual partner was found *)
 let try_inline_mutual_into names body =
   (* For each ref this function is known by, skip it (self-call). For each call
      in the body, check if the callee is registered AND lies on a recursion
@@ -433,7 +435,7 @@ let try_inline_mutual_into names body =
      registered when this one is transformed. *)
   let rec loop inlined body =
     match find_callee_in_stmts inlined body with
-    | None -> (body, inlined)
+    | None -> body
     | Some ((r, _, _, _) as callee) -> loop (r :: inlined) (inline_one callee body)
   in
   loop [] body
@@ -451,14 +453,21 @@ let classified_strategy = function
   | Tail_recursion -> Tail_loop
   | Nontail_recursion -> Frame_stack
 
-(** [checked_plan planned ~what classified] is the strategy [planned] of the
+(** [checked_plan planned ~what check body] is the strategy [planned] of the
     function [what ()] names, as the program's recursion plan has it
     ({!Recursion_plan}).  Under [CRANE_CHECK_IR] the kind of recursion it
-    lowers is checked against [classified ()], the reading of the finished
-    body that decided this before. *)
-let checked_plan planned ~what classified =
+    lowers is checked against the reading of [body], the finished body,
+    that decided this before: the calls it makes where it runs
+    ({!classify_in_flow}), and for a function whose calls are suspended,
+    every call, those in the suspensions it builds too ({!classify}). *)
+let checked_plan planned ~what check body =
   ( if Probe.checking () then
-      if plan_kind (classified ()) <> Recursion_plan.kind_of_strategy planned then
+      let classified =
+        match planned with
+        | Recursion_plan.Suspended _ -> classify check body
+        | No_loop | Tail_loop | Modulo_cons _ | Frame_stack -> classify_in_flow check body
+      in
+      if plan_kind classified <> Recursion_plan.kind_of_strategy planned then
         Probe.violation "recursion plan"
           Pp.(str "the recursion plan disagrees with the finished body of " ++ what ()) );
   planned
@@ -468,12 +477,12 @@ let checked_plan planned ~what classified =
     A body with no fixpoint recorded on it, or one the plan does not know, is
     classified here, which is a violation. *)
 let planned_local_strategy fixpoint check body =
-  let classified () = classify check body in
+  let classified () = classify_in_flow check body in
   match fixpoint with
   | Some {lf_member; lf_binder; _} -> (
     let what () = Pp.(str "the local fixpoint " ++ Id.print lf_binder) in
     match Recursion_plan.strategy_at ~pointer_fields:constructor_pointer_fields lf_member with
-    | Some planned -> checked_plan planned ~what classified
+    | Some planned -> checked_plan planned ~what check body
     | None ->
       Probe.violation "recursion plan" Pp.(str "the recursion plan does not know " ++ what ());
       classified_strategy (classified ()) )
@@ -484,13 +493,15 @@ let planned_local_strategy fixpoint check body =
 
 (** The calls the machine of the function [r] is entered by, as the
     recursion plan names what a point resumes after: its own. *)
-let entered_by_function r : Recursion_plan.target -> bool = function
+let entered_by_function r (c : Recursion_plan.call) =
+  match c.target with
   | Function g -> Common.globref_equal g r
   | Member _ | Entering _ -> false
 
 (** The calls the machine of the function [member] of a local fixpoint is
     entered by: that member's. *)
-let entered_by_member (occurrence, member) : Recursion_plan.target -> bool = function
+let entered_by_member (occurrence, member) (c : Recursion_plan.call) =
+  match c.target with
   | Member (o, m) -> Miniml.Occurrence.equal o occurrence && Int.equal m member
   | Function _ | Entering _ -> false
 
@@ -539,7 +550,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
     match (fixpoint, fixpoint_self fixpoint lparams) with
     | None, _ | _, None -> None
     | Some {lf_name; lf_binders; lf_member; _}, Some self_id -> (
-      let check = self_checker self_id in
+      let check = planned_self_checker lf_member self_id in
       let lbody = expose_tail_calls check lbody in
       match planned_local_strategy fixpoint check lbody with
       | No_loop -> None
@@ -1142,7 +1153,7 @@ let fundef_display_name path =
     is a violation.  A member the backend generates itself -- a factory, a
     deep copy -- has no Core body and no reference, and is classified here. *)
 let planned_strategy r check body =
-  let classified () = classify check body in
+  let classified () = classify_in_flow check body in
   match r with
   | None -> classified_strategy (classified ())
   | Some r -> (
@@ -1154,7 +1165,7 @@ let planned_strategy r check body =
     in
     let what () = Pp.str (Table.kername_of_global r) in
     match planned with
-    | Some planned -> checked_plan planned ~what classified
+    | Some planned -> checked_plan planned ~what check body
     | None ->
       Probe.violation "recursion plan" Pp.(str "the recursion plan does not know " ++ what ());
       classified_strategy (classified ()) )
@@ -1206,17 +1217,17 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
   let ret_ty = f.df_ret in
   (* Try to inline mutual recursion partners, every function of the unit
      registered before any was finished ({!register_decl}). *)
-  let body, inlined = try_inline_mutual_into names body in
+  let body = try_inline_mutual_into names body in
   (* What the machine is entered by in the plan's terms: the function's
-     calls, or a lifted helper's local fixpoint member's -- unless partners
-     were inlined into it, which the plan does not describe. *)
+     calls, or a lifted helper's local fixpoint member's.  A partner inlined
+     into it leaves no call of its own: a tail call continues in its body,
+     whose statements the plan has resume points for as the partner's, and
+     any other is an invocation, entering the machine only if adopted. *)
   let entered_by =
-    if inlined <> [] then None
-    else
-      let r = fst f.df_path.dp_outer in
-      match Lifted.of_ref r with
-      | Some h -> Option.map entered_by_member (Lifted.fixpoint h)
-      | None -> Some (entered_by_function r)
+    let r = fst f.df_path.dp_outer in
+    match Lifted.of_ref r with
+    | Some h -> Option.map entered_by_member (Lifted.fixpoint h)
+    | None -> Some (entered_by_function r)
   in
   (* Inline an Equations-style functional applied to itself so its hidden
      recursion becomes ordinary self-recursion that loopifies. *)

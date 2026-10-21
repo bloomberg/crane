@@ -898,10 +898,16 @@ type adopted = {
           gets the function reported as declined even though its machine is
           correct. *)
   ad_what : string;  (** The body, named concretely enough to act on *)
-  ad_fixpoint : Miniml.Occurrence.t option;
-      (** The local fixpoint adopted, by its Core occurrence; [None] for an
-          inlined body, which the recursion plan does not name *)
+  ad_source : adopted_source;  (** What the body is in Core *)
 }
+
+(** What an adopted body is in Core: a local fixpoint, by its occurrence,
+    or a partner's body inlined in place at each of the calls of it the
+    entry reroutes, by those calls' occurrences
+    ({!Minicpp.call_sig.cs_occurrence}). *)
+and adopted_source =
+  | Fixpoint of Miniml.Occurrence.t
+  | Invocations of Miniml.Occurrence.t list
 
 (** The synthetic name calls entering an entry called [name] are routed
     through.  Lowercase and prefixed, so it cannot collide with the [CraneEnter_]
@@ -1036,7 +1042,7 @@ let adopt_local_fix ~stmts ~planned = function
             ad_body = install_calls cl_body;
             ad_install = install;
             ad_what = "the local fixpoint " ^ name;
-            ad_fixpoint = Some (fst fixpoint.lf_member) } )
+            ad_source = Fixpoint (fst fixpoint.lf_member) } )
   | _ -> None
 
 (** Adopt the body of an immediately-invoked lambda that still calls this
@@ -1046,7 +1052,7 @@ let adopt_local_fix ~stmts ~planned = function
     Unlike a fixpoint the lambda has no name to key calls on, so installation
     recognises the invocation by its body and replaces it with a call on
     {!ad_entry_id}, which the body itself then no longer appears in. *)
-let adopt_invocation check e =
+let adopt_invocation ~stmts check e =
   match e with
   | CPPfun_call (_, CPPlambda {cl_params; cl_body; cl_ret; _}, args)
     when collect_stmts check ~in_visitor:false cl_body <> [] ->
@@ -1067,12 +1073,18 @@ let adopt_invocation check e =
         |> List.sort_uniq Id.compare
       in
       let entry_id = adopted_entry_id "inl" in
+      let rerouted = ref [] in
       let reroute e' =
         match e' with
         | CPPfun_call (res, CPPlambda l', args') when l'.cl_body = invoked ->
+          rerouted := res.cs_occurrence :: !rerouted;
           CPPfun_call (res, CPPvar entry_id, args')
         | _ -> e'
       in
+      (* The calls the entry stands for are the invocations installation
+         reroutes, each the inlined call of the partner it was made of. *)
+      ignore (rewrite_exprs reroute stmts);
+      let invocations = List.filter_map Fun.id !rerouted in
       Some
         { ad_name = "inl";
           ad_entry_id = entry_id;
@@ -1082,7 +1094,7 @@ let adopt_invocation check e =
           ad_body = rewrite_exprs reroute cl_body;
           ad_install = rewrite_exprs reroute;
           ad_what = "an inlined body";
-          ad_fixpoint = None }
+          ad_source = Invocations invocations }
   | _ -> None
 
 (** The body this machine should adopt, if any.
@@ -1113,7 +1125,7 @@ let find_adopted ~adoptable check stmts =
         | _ -> None ));
   match find_in_flow stmts ~on_stmt:(adopt_local_fix ~stmts ~planned) with
   | Some _ as found -> found
-  | None -> find_in_flow stmts ~on_expr:(adopt_invocation check)
+  | None -> find_in_flow stmts ~on_expr:(adopt_invocation ~stmts check)
 
 (** [only_entry n check] reports just the calls [check] finds against entry
     [n].
@@ -1170,10 +1182,10 @@ type enter_rewrite_ctx = {
           nothing -- an alias of a static member, say.  A continuation binds
           them again rather than saving them in its frame, where a type the
           binding left to [auto] has no spelling. *)
-  er_entered_by : (Recursion_plan.target -> bool) option;
+  er_entered_by : (Recursion_plan.call -> bool) option;
       (** The calls that enter the machine, as the recursion plan names
           what a point resumes after; [None] where the plan does not
-          describe the machine: one partners were inlined into. *)
+          describe the machine. *)
 }
 
 (** The entry point a call site targets. *)
@@ -1305,22 +1317,35 @@ let frame_locals ctx planned read =
     planned @ List.filter (fun v -> not (identified v)) read
   | None -> read
 
-(** Whether the statement binding a call's result to the Core binder [tgt]
-    declares is a point the machine resumes at once the call returns, as
-    the recursion plan has it: whether the point resuming at that binder
-    ({!Recursion_plan.resumes_binding}) resumes after a call that enters
-    the machine ({!enter_rewrite_ctx.er_entered_by}).  [None] where the plan
-    does not say: the statement assigns a local declared before it -- once
-    in each branch of a match the Core binds as one let -- or binds a local
-    of the backend's own, or the machine is not one the plan describes. *)
-let planned_resume ctx tgt =
-  match (tgt, ctx.er_entered_by) with
-  | Declare (_, Some b), Some entered_by ->
-    Some
-      ( match Recursion_plan.resumes_binding b with
-      | [p] -> List.exists entered_by p.after
-      | _ -> false )
-  | _ -> None
+(** Whether the statement binding [e] to [id] by [tgt] is a point the
+    machine resumes at once a call returns, as the recursion plan has it:
+    whether the point resuming at the Core binder [id] stands for
+    ({!Recursion_plan.resumes_binding}) resumes after a call that enters the
+    machine ({!enter_rewrite_ctx.er_entered_by}).  A statement assigning a
+    local declared before it is one branch of a match the Core binds as one
+    let, and resumes only if [e] is itself such a call, which the call the
+    C++ made of it records ({!Minicpp.call_sig.cs_occurrence}).  [None]
+    where the plan does not say: the statement binds a local of the
+    backend's own, or the machine is not one the plan describes. *)
+let planned_resume ctx id tgt e =
+  let point b = match Recursion_plan.resumes_binding b with [p] -> Some p | _ -> None in
+  match ctx.er_entered_by with
+  | None -> None
+  | Some entered_by -> (
+    match tgt with
+    | Declare (_, Some b) ->
+      Some (match point b with Some p -> List.exists entered_by p.after | None -> false)
+    | Existing ->
+      Option.map
+        (fun b ->
+          match (point b, e) with
+          | Some p, CPPfun_call ({cs_occurrence = Some o; _}, _, _) ->
+            List.exists
+              (fun (c : Recursion_plan.call) -> entered_by c && Miniml.Occurrence.equal c.occurrence o)
+              p.after
+          | _ -> false )
+        (Option.flatten (List.assoc_opt id ctx.er_binders))
+    | Declare (_, None) | Declare_static _ -> None )
 
 let resume_violation () =
   Probe.violation "resume plan"
@@ -1592,18 +1617,22 @@ and rewrite_enter_stmts ctx stmts =
         make_stack_push enter;
       ]
     in
-    (* Whether the statement resumes is the plan's, where it says
-       ({!planned_resume}); the call the frame re-enters by is the one
-       {!Normalize} bound there, the whole right-hand side.  Under
-       [CRANE_CHECK_IR] the plan is checked against the C++, one call the
-       machine's checker recognises. *)
+    (* Whether the statement resumes is the plan's ({!planned_resume}); the
+       call the frame re-enters by is the one {!Normalize} bound there, the
+       whole right-hand side.  Under [CRANE_CHECK_IR] the plan is checked
+       against the C++, one call the machine's checker recognises, and a
+       statement the plan says nothing of is a violation. *)
     let call = if n_calls = 1 then check e else None in
     let resumes =
-      match planned_resume ctx tgt with
+      match planned_resume ctx id tgt e with
       | Some planned ->
         if Probe.checking () && planned <> Option.has_some call then resume_violation ();
         planned
-      | None -> Option.has_some call
+      | None ->
+        if Probe.checking () then
+          Probe.violation "resume plan"
+            (Pp.str "the recursion plan does not say whether a statement making a recursive call resumes after it");
+        Option.has_some call
     in
     ( match call with
     | Some cs when resumes -> make_cont_handler (make_enter_for ctx cs)
@@ -1658,7 +1687,7 @@ and rewrite_enter_stmts ctx stmts =
 
   | stmt :: rest ->
     ( match stmt with
-    | Sasgn (_, tgt, _) when Probe.checking () && planned_resume ctx tgt = Some true ->
+    | Sasgn (id, tgt, e) when Probe.checking () && planned_resume ctx id tgt e = Some true ->
       resume_violation ()
     | _ -> () );
     (* Extend the environment with any variable bound by this statement so
@@ -2668,20 +2697,19 @@ let transform_nontail ?(fn_name : string option) ?adopted ?entered_by ?(outer_en
     | Some (ad, _) -> any_checker [check; adopted_checker ~entry:1 ad]
   in
   (* A machine adopting a local fixpoint is entered by its members too; one
-     adopting a partner's inlined body by calls the plan has no name for. *)
+     adopting a partner's inlined body by the calls of the partner it
+     reroutes. *)
   let entered_by =
     match adopted with
     | None -> entered_by
-    | Some ({ad_fixpoint = Some fixpoint; _}, _) ->
-      Option.map
-        (fun entered_by (t : Recursion_plan.target) ->
-          entered_by t
-          ||
-          match t with
-          | Member (o, _) | Entering o -> Miniml.Occurrence.equal o fixpoint
-          | Function _ -> false )
-        entered_by
-    | Some ({ad_fixpoint = None; _}, _) -> None
+    | Some (ad, _) ->
+      let adopted_enters (c : Recursion_plan.call) =
+        match (ad.ad_source, c.target) with
+        | Fixpoint fixpoint, (Member (o, _) | Entering o) -> Miniml.Occurrence.equal o fixpoint
+        | Fixpoint _, Function _ -> false
+        | Invocations calls, _ -> List.exists (Miniml.Occurrence.equal c.occurrence) calls
+      in
+      Option.map (fun entered_by c -> entered_by c || adopted_enters c) entered_by
   in
   let body =
     match adopted with

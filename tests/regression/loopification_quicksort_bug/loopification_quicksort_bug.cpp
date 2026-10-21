@@ -1,27 +1,8 @@
 #include "loopification_quicksort_bug.h"
 
-List<uint64_t> QuicksortFun::quicksort_fun(
-    const List<uint64_t> &x) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
-  struct CraneEnter {
-    List<uint64_t> x;
-  };
-
-  using CraneFrame = std::variant<CraneEnter>;
-  List<uint64_t> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{x});
-  /// Loopified quicksort_fun: CraneEnter.
-  while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    auto _f = std::move(std::get<CraneEnter>(_frame));
-    const List<uint64_t> &x = std::move(_f.x);
-    _result = quicksort_fun_functional(
-        x, [](const List<uint64_t> &y) { return quicksort_fun(y); });
-  }
-  return _result;
+List<uint64_t> QuicksortFun::quicksort_fun(const List<uint64_t> &x) {
+  return quicksort_fun_functional(
+      x, [](const List<uint64_t> &y) { return quicksort_fun(y); });
 }
 
 std::string QuicksortFun::list_to_string_helper(

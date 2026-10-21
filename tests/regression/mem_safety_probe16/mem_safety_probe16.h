@@ -647,42 +647,24 @@ struct MemSafetyProbe16 {
   /// that captures tree structure.
   static mylist<uint64_t>
   flatten_cps_aux(const tree &t,
-                  const crane::fn<mylist<uint64_t>(mylist<uint64_t>)>
-                      &k) { /// CraneEnter: captures varying parameters for each
-                            /// recursive call.
-
-    struct CraneEnter {
-      crane::fn<mylist<uint64_t>(mylist<uint64_t>)> k;
-      const tree *t;
-    };
-
-    using CraneFrame = std::variant<CraneEnter>;
-    mylist<uint64_t> _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{k, &t});
-    /// Loopified flatten_cps_aux: CraneEnter.
-    while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      auto _f = std::move(std::get<CraneEnter>(_frame));
-      const crane::fn<mylist<uint64_t>(mylist<uint64_t>)> &k = std::move(_f.k);
-      const tree &t = *_f.t;
-      if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-        _result = k(mylist<uint64_t>::mynil());
+                  const crane::fn<mylist<uint64_t>(mylist<uint64_t>)> &k) {
+    crane::fn<mylist<uint64_t>(mylist<uint64_t>)> _loop_k = k;
+    tree _loop_t = t;
+    while (true) {
+      if (std::holds_alternative<typename tree::Leaf>(_loop_t.v())) {
+        return _loop_k(mylist<uint64_t>::mynil());
       } else {
-        const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(_loop_t.v());
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
-        _stack.emplace_back(CraneEnter{
-            [=](const mylist<uint64_t> &ll) {
-              return flatten_cps_aux(a2_value, [=](const mylist<uint64_t> &rl) {
-                return k(ll.myapp(mylist<uint64_t>::mycons(a1, rl)));
-              });
-            },
-            crane_raw(a0)});
+        _loop_k = [=](const mylist<uint64_t> &ll) {
+          return flatten_cps_aux(a2_value, [=](const mylist<uint64_t> &rl) {
+            return _loop_k(ll.myapp(mylist<uint64_t>::mycons(a1, rl)));
+          });
+        };
+        _loop_t = a0_value;
       }
     }
-    return _result;
   }
 
   static mylist<uint64_t> flatten_cps(const tree &t);

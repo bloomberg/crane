@@ -35,6 +35,8 @@ type local_group = {
          is not a tail call *)
   suspends : bool;  (* some member's body suspends ({!suspends_within}) *)
   adoptable : Occurrence.t list list;  (* per member, {!flow_fixpoints} calling the group *)
+  calls : Occurrence.t list list;
+      (* per member, the reads heading its calls in the group's bodies *)
 }
 
 (* A call a function resumes after. *)
@@ -43,6 +45,14 @@ type target =
   | Member of Occurrence.t * int
   | Entering of Occurrence.t
 
+(* A call a function resumes after, and the occurrence it is made of: the
+   global's use, the read of the member at its head, or the fixpoint
+   applied. *)
+type call = {
+  target : target;
+  occurrence : Occurrence.t;
+}
+
 (* Where a function goes on once a recursive call returns: the binder the
    call's result is bound to, the binders bound before it that what follows
    reads, which a frame keeps across the call, and the calls it resumes
@@ -50,7 +60,7 @@ type target =
 type resume = {
   binder : Core_binder.t;
   live : Core_binder.t list;
-  after : target list;
+  after : call list;
 }
 
 type t = {
@@ -92,16 +102,19 @@ let sequential effects use =
 let identity r =
   Table.is_custom r && Minicpp.inline_shape_of_text (Table.find_custom r) = Minicpp.Inline_identity
 
-(* How [fd_body] calls the members of its recursive group, as the C++ it
-   becomes does: a call is a tail call where its result is the function's,
-   and a call the C++ wraps in a closure, or one applied to more arguments
-   than its parameters, is not.  [callee ~depth f] is the number of
-   parameters of the member [f] names, under [depth] binders inside the
-   function's parameters, and [None] where [f] names none.  A bind or a ret
-   is sequencing where [effects], the analysis of the program [fd_body] is
-   taken from, says it is generated sequentially. *)
-let classify ~effects ~callee fd_body =
-  let _, body = split_params 0 fd_body in
+(* How [body], a function's body inside its parameters, calls the members
+   of its recursive group, as the C++ it becomes does: a call is a tail call
+   where its result is the function's, and one applied to more arguments
+   than its parameters is not.  A call in a closure the body builds -- a
+   lambda's body, or a member applied to fewer arguments than its
+   parameters, which the C++ makes a closure of -- is made where the
+   closure runs, not here: no loop of this function can take it.
+   [callee ~depth f] is the number of parameters of the member [f] names,
+   under [depth] binders inside the function's parameters, and [None] where
+   [f] names none.  A bind or a ret is sequencing where [effects], the
+   analysis of the program [body] is taken from, says it is generated
+   sequentially. *)
+let classify ~effects ~callee body =
   let tail_call = ref false and nontail_call = ref false in
   let effect_ = sequential effects in
   let rec walk ~depth ~tail e =
@@ -113,7 +126,9 @@ let classify ~effects ~callee fd_body =
     | MLapp (MLglob use, [a]) when identity use.callee && Table.to_inline use.callee -> walk ~tail a
     | MLapp (f, args) when Option.has_some (callee ~depth f) ->
       List.iter (walk ~tail:false) args;
-      if tail && Some (List.length args) = callee ~depth f then tail_call := true
+      let n = List.length args and parameters = Option.get (callee ~depth f) in
+      if n < parameters then ()
+      else if tail && n = parameters then tail_call := true
       else nontail_call := true
     | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Bind -> (
       (* The action runs, and the continuation's body goes on where the bind
@@ -147,8 +162,13 @@ let classify ~effects ~callee fd_body =
       walk ~tail:false s;
       Array.iter (fun (ids, _, _, b) -> walk_under (List.length ids) ~tail b) branches
     | MLmagic (_, a) -> walk ~tail a
-    | MLlam (_, _, b) -> walk_under 1 ~tail:false b
-    | MLfix (_, ids, bodies, _, _) -> Array.iter (walk_under (Array.length ids) ~tail:false) bodies
+    | MLlam _ -> ()
+    | MLfix (_, ids, bodies, _, _) ->
+      Array.iter
+        (fun f ->
+          let n, b = split_params 0 f in
+          walk_under (Array.length ids + n) ~tail:false b )
+        bodies
     | MLcons (_, _, l) | MLtuple l -> List.iter (walk ~tail:false) l
     | MLparray (a, d) ->
       Array.iter (walk ~tail:false) a;
@@ -403,7 +423,8 @@ let resumes_of ~effects ~origin ~targets lex body =
       | _ :: _ as called -> called
       | [] -> (
         match e with
-        | MLapp ((MLfix (_, _, _, _, occ) as fix), _) when reaches depth fix -> [Entering occ]
+        | MLapp ((MLfix (_, _, _, _, occ) as fix), _) when reaches depth fix ->
+          [{target = Entering occ; occurrence = occ}]
         | MLcase (_, _, branches) ->
           List.concat_map
             (fun (ids, _, _, b) -> ending (depth + List.length ids) b)
@@ -435,8 +456,8 @@ let resumes_of ~effects ~origin ~targets lex body =
       let first = depth and n = Array.length ids in
       let rec member ~depth = function
         | MLmagic (_, e) -> member ~depth e
-        | MLapp (MLrel (k, _), _) when first <= depth - k && depth - k < first + n ->
-          [Member (occ, depth - k - first)]
+        | MLapp (MLrel (k, read), _) when first <= depth - k && depth - k < first + n ->
+          [{target = Member (occ, depth - k - first); occurrence = read}]
         | _ -> []
       in
       let targets ~depth e = match member ~depth e with [] -> targets ~depth e | called -> called in
@@ -487,6 +508,21 @@ let flow_fixpoints ~names depth body =
   flow depth body;
   List.rev !found
 
+(* [f depth e'] for [e] and every term [e'] in it, under [depth] binders
+   more than [e]. *)
+let rec iter_under f depth e =
+  f depth e;
+  match e with
+  | MLlam (_, _, b) -> iter_under f (depth + 1) b
+  | MLletin (_, _, a, b, _) ->
+    iter_under f depth a;
+    iter_under f (depth + 1) b
+  | MLcase (_, s, branches) ->
+    iter_under f depth s;
+    Array.iter (fun (ids, _, _, b) -> iter_under f (depth + List.length ids) b) branches
+  | MLfix (_, ids, funs, _, _) -> Array.iter (iter_under f (depth + Array.length ids)) funs
+  | e -> Mlutil.ast_iter (iter_under f depth) e
+
 (* The plan of every local fixpoint in [defs], one per fixpoint, under its
    occurrence.  Inside a member's body, before its parameters,
    the member [k] of [n] is the variable [n - k]. *)
@@ -505,7 +541,7 @@ let local_groups ~effects defs =
     in
     let kind_of j =
       let callee ~depth f = Option.map (Array.get arities) (member ~within:j ~depth f) in
-      classify ~effects ~callee funs.(j)
+      classify ~effects ~callee (snd (split_params 0 funs.(j)))
     in
     let kind = Array.fold_left combine No_recursion (Array.init n kind_of) in
     let chains =
@@ -531,12 +567,29 @@ let local_groups ~effects defs =
           let arity, body = split_params 0 funs.(j) in
           flow_fixpoints ~names arity body )
     in
+    let calls =
+      let found = Array.make n [] in
+      Array.iteri
+        (fun j f ->
+          iter_under
+            (fun depth -> function
+              | MLapp (head, _) -> (
+                match (member ~within:j ~depth head, strip head) with
+                | Some k, MLrel (_, read) -> found.(k) <- read :: found.(k)
+                | _ -> () )
+              | _ -> () )
+            0
+            (snd (split_params 0 f)) )
+        funs;
+      Array.to_list found
+    in
     plans :=
       { occurrence;
         local_kind = kind;
         chains;
         suspends;
-        adoptable }
+        adoptable;
+        calls }
       :: !plans
   in
   Ref.User.Map.iter
@@ -562,18 +615,22 @@ let analyze groups struc =
     (fun _ -> ())
     struc;
   let defs = !defs in
-  let arity fd = fst (split_params 0 fd.fd_body) in
+  (* A function is generated taking every parameter its type declares, its
+     body applied to those it does not bind ({!Core_elaborate.generated_scope}):
+     its calls are read there, a call with fewer arguments than that being
+     the closure the C++ makes of it. *)
+  let parameters fd = List.length (Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type)) in
   let kind_of members =
     let callee ~depth:_ = function
       | MLglob use when List.exists (Common.globref_equal use.callee) members ->
-        Option.map arity (Ref.User.Map.find_opt use.callee defs)
+        Option.map parameters (Ref.User.Map.find_opt use.callee defs)
       | _ -> None
     in
     List.fold_left
       (fun k m ->
         match Ref.User.Map.find_opt m defs with
         | Some fd ->
-          combine k (classify ~effects ~callee fd.fd_body)
+          combine k (classify ~effects ~callee (snd (Core_elaborate.generated_scope fd.fd_type fd.fd_body)))
         | None -> k )
       No_recursion members
   in
@@ -651,7 +708,7 @@ let analyze groups struc =
           | MLapp (MLglob use, args)
             when List.exists (Common.globref_equal use.callee) members
                  && List.length args >= parameters use.callee ->
-            [Function use.callee]
+            [{target = Function use.callee; occurrence = Global_use.occurrence use}]
           | _ -> []
         in
         let lex, body = Core_elaborate.generated_scope fd.fd_type fd.fd_body in
@@ -692,18 +749,21 @@ let same_target t t' =
   | Entering o, Entering o' -> Occurrence.equal o o'
   | (Function _ | Member _ | Entering _), _ -> false
 
+let same_call c c' = same_target c.target c'.target && Occurrence.equal c.occurrence c'.occurrence
+
 let equal a b =
   List.equal
     (fun g g' -> List.equal Common.globref_equal g.members g'.members && g.kind = g'.kind)
     a.groups b.groups
   && Ref.User.Set.equal a.defined b.defined
   && List.equal
-       (fun l l' ->
+       (fun (l : local_group) (l' : local_group) ->
          Occurrence.equal l.occurrence l'.occurrence
          && l.local_kind = l'.local_kind
          && List.equal (Option.equal same_chains) l.chains l'.chains
          && l.suspends = l'.suspends
-         && List.equal (List.equal Occurrence.equal) l.adoptable l'.adoptable )
+         && List.equal (List.equal Occurrence.equal) l.adoptable l'.adoptable
+         && List.equal (List.equal Occurrence.equal) l.calls l'.calls )
        a.locals b.locals
   && Ref.User.Map.equal same_chains a.modulo_cons b.modulo_cons
   && Ref.User.Set.equal a.suspended b.suspended
@@ -712,7 +772,7 @@ let equal a b =
             Core_binder.equal r.binder r'.binder
             && Core_binder.same_site r.binder r'.binder
             && List.equal Core_binder.equal r.live r'.live
-            && List.equal same_target r.after r'.after ) )
+            && List.equal same_call r.after r'.after ) )
        a.resumes b.resumes
   && Ref.User.Map.equal (List.equal Occurrence.equal) a.adoptable b.adoptable
 
@@ -782,7 +842,7 @@ let both a b =
    copies plans it twice: the copies are lowered by one strategy. *)
 let strategy_at ~pointer_fields (occurrence, member) =
   List.fold_left
-    (fun found l ->
+    (fun found (l : local_group) ->
       if Occurrence.equal l.occurrence occurrence then
         match List.nth_opt l.chains member with
         | Some chains ->
@@ -798,10 +858,18 @@ let adoptable r =
 (* Copies of a fixpoint share its occurrence, and plan alike. *)
 let adoptable_at (occurrence, member) =
   List.find_map
-    (fun l ->
+    (fun (l : local_group) ->
       if Occurrence.equal l.occurrence occurrence then List.nth_opt l.adoptable member else None )
     !installed.locals
   |> Option.default []
+
+(* Copies of a fixpoint share its occurrence, and so do their calls. *)
+let member_calls (occurrence, member) =
+  List.concat_map
+    (fun (l : local_group) ->
+      if Occurrence.equal l.occurrence occurrence then Option.default [] (List.nth_opt l.calls member)
+      else [] )
+    !installed.locals
 
 let resumes_binding (b : Core_binder.t) =
   match Ref.User.Map.find_opt b.origin !installed.resumes with

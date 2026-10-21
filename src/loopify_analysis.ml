@@ -621,6 +621,29 @@ let self_checker self_id : call_checker =
     | [] -> None )
   | _ -> None
 
+(** A checker matching the calls of the function [member] of a local
+    fixpoint to itself, as the recursion plan has them
+    ({!Recursion_plan.member_calls}), each forwarding the self-parameter as
+    its last argument, which the call site drops.  Under [CRANE_CHECK_IR]
+    each call is checked against {!self_checker}'s reading, a call through
+    [self_id], both ways. *)
+let planned_self_checker member self_id : call_checker =
+  let calls = Recursion_plan.member_calls member in
+  fun e ->
+    let planned =
+      match e with
+      | CPPfun_call ({cs_occurrence = Some o; _}, _, _) -> List.exists (Miniml.Occurrence.equal o) calls
+      | _ -> false
+    in
+    if Probe.checking () && planned <> Option.has_some (self_checker self_id e) then
+      Probe.violation "self-call plan"
+        (Pp.str "the recursion plan and the finished body disagree on whether a call is a local fixpoint's self-call");
+    match e with
+    | CPPfun_call (_, _, args) when planned -> (
+      match call_args args with
+      | _self_arg :: rest_rev -> Some (mk_call_site (List.rev rest_rev))
+      | [] -> None )
+    | _ -> None
 
 (** The receiver of a recursive call, with the wrappers that only re-spell an
     object stripped off.  [std::move] is one: it is a cast, so moving out of
@@ -1107,6 +1130,28 @@ let classify check body =
       Tail_recursion
     else
       Nontail_recursion
+
+(** [body] with the body of every closure it builds emptied: a lambda
+    neither invoked where it is written nor a local fixpoint's, whose calls
+    are made where the closure runs. *)
+let rec drop_closure_bodies body = List.map drop_closure_bodies_stmt body
+
+and drop_closure_bodies_stmt s =
+  map_stmt drop_closure_bodies_expr drop_closure_bodies_stmt Fun.id s
+
+and drop_closure_bodies_expr e =
+  let enter l = CPPlambda {l with cl_body = drop_closure_bodies l.cl_body} in
+  match e with
+  | CPPfun_call (cs, CPPlambda l, args) ->
+    CPPfun_call (cs, enter l, of_reversed (List.map drop_closure_bodies_expr (to_reversed args)))
+  | CPPlambda ({cl_fixpoint = Some _; _} as l) -> enter l
+  | CPPlambda l -> CPPlambda {l with cl_body = []}
+  | e -> map_expr drop_closure_bodies_expr drop_closure_bodies_stmt Fun.id e
+
+(** How [body] recurses where it runs ({!classify}), the calls in the
+    closures it builds left to where those run: the reading the recursion
+    plan's kind is checked against. *)
+let classify_in_flow check body = classify check (drop_closure_bodies body)
 
 (** Record what happened to one recursive function, checking the postcondition.
 
