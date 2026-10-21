@@ -3479,8 +3479,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 of_reversed args )
           | _ ->
             if
-              suspends_constructor ~self:!Table.current_decl_ref ~binder_type:get_env_type_opt n
-                ts
+              suspends_constructor ~self:(!tctx).body_owner ~binder_type:get_env_type_opt n ts
             then
               suspend_ctor type_expr (Id.of_string ctor_struct) (of_reversed args)
             else
