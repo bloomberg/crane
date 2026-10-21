@@ -65,7 +65,7 @@ let rec worth_moving = function
     && ( (not (Table.is_custom r))
        || List.exists worth_moving args
        || not (Table.is_custom_scalar_ref r || Table.is_trivially_copyable_ref r) )
-  | Tarr _ | Tvar _ -> true
+  | Tarr _ | Tvar _ | Tapp _ -> true
   | Tmeta {contents = Some t} -> worth_moving t
   | _ -> false
 
