@@ -510,3 +510,13 @@ let moved_captures p closure =
        (fun (l, _) ->
          if List.for_all (fun (l', o) -> l' <> l || moves o) reads then Some (-l) else None )
        reads )
+
+let moved_reads p ts =
+  let rec go acc = function
+    | MLrel (i, o) -> if use p o = Move then i :: acc else acc
+    | MLmagic (_, t) -> go acc t
+    | MLapp (f, args) -> List.fold_left go acc (f :: args)
+    | MLcons (_, _, args) | MLtuple args -> List.fold_left go acc args
+    | _ -> acc
+  in
+  List.sort_uniq Int.compare (List.fold_left go [] ts)

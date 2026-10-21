@@ -288,6 +288,14 @@ let gen_local_fix_by_ref env ~binders renamed_ids funs_with_params owned_flags_p
   (impl_stmts @ wrapper_stmts, [])
 
 
+(* The names of the variables at the de Bruijn indices [is] a closure
+   captures; a class instance is a template parameter, not a value it
+   captures. *)
+let capture_names env is =
+  List.filter
+    (fun id -> not (Common.is_tc_instance_id id))
+    (List.filter_map (fun i -> Common.get_db_name_opt i env) is)
+
 (* Under [CRANE_CHECK_IR], the region's plan must have decided as translation
    does whether [let _ : ty := a] binds the closure [a] to a local, which the
    plan owns and moves. *)
@@ -1620,15 +1628,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     | MLrel (_, occ), (CPPfun_call (_, CPPvar _, _) as call) -> made_of occ call
     | _, result -> result )
   | MLlam _ as a ->
-    (* What the lambda takes by move as it is made; a class instance is a
-       template parameter, not a value it captures. *)
-    let moved_captures =
-      List.filter
-        (fun id -> not (Common.is_tc_instance_id id))
-        (List.filter_map
-           (fun i -> Common.get_db_name_opt i env)
-           (Ownership_plan.moved_captures (!tctx).move_plan a) )
-    in
+    (* What the lambda takes by move as it is made. *)
+    let moved_captures = capture_names env (Ownership_plan.moved_captures (!tctx).move_plan a) in
     (* Where the slot is a definitional class -- an alias for a function
        type -- which of its domains the declaration takes as values.  Read
        off the alias's own definition, before this call instantiated it:
@@ -5989,6 +5990,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
   ) regular_ml_args
 
 and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
+  let ml_args = args in
 
   let rec get_eta_args dom args =
     match (dom, args) with
@@ -6746,9 +6748,16 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                      (mk_lambda ~tparams:eta_tparams inner ret_ty body
                         ~capture:Closure ) ) ]
               ~capture:Closure
-          | _ ->
-            mk_lambda ~tparams:eta_tparams eta_args ret_ty body
-              ~capture:(if eta_keep_moves then Immediate else Closure) )
+          | _ when eta_keep_moves ->
+            mk_lambda ~tparams:eta_tparams eta_args ret_ty body ~capture:Immediate
+          | _ -> (
+            (* The arguments are read where the closure is made, and taken
+               by move there when the plan moves them. *)
+            match mk_lambda ~tparams:eta_tparams eta_args ret_ty body ~capture:Closure with
+            | CPPlambda l ->
+              CPPlambda
+                {l with cl_moved = capture_names env (Ownership_plan.moved_reads (!tctx).move_plan ml_args)}
+            | e -> e ) )
       | _ ->
         if id_is_typeclass_instance && args = [] then
           cglob

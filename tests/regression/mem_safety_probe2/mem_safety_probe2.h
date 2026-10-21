@@ -562,9 +562,13 @@ struct MemSafetyProbe2 {
       tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
       mylist<crane::fn<uint64_t(uint64_t)>> fs =
           mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-              [=](uint64_t _x0) -> uint64_t { return t1.sum_values(_x0); },
+              [=, t1 = std::move(t1)](uint64_t _x0) -> uint64_t {
+                return t1.sum_values(_x0);
+              },
               mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-                  [=](uint64_t _x0) -> uint64_t { return t2.sum_values(_x0); },
+                  [=, t2 = std::move(t2)](uint64_t _x0) -> uint64_t {
+                    return t2.sum_values(_x0);
+                  },
                   mylist<crane::fn<uint64_t(uint64_t)>>::mynil()));
       return mysum(map_apply(std::move(fs), UINT64_C(5)));
     }();
@@ -622,9 +626,13 @@ struct MemSafetyProbe2 {
       tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
       mylist<crane::fn<uint64_t(uint64_t)>> fs =
           mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-              [=](uint64_t _x0) -> uint64_t { return t1.sum_values(_x0); },
+              [=, t1 = std::move(t1)](uint64_t _x0) -> uint64_t {
+                return t1.sum_values(_x0);
+              },
               mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-                  [=](uint64_t _x0) -> uint64_t { return t2.sum_values(_x0); },
+                  [=, t2 = std::move(t2)](uint64_t _x0) -> uint64_t {
+                    return t2.sum_values(_x0);
+                  },
                   mylist<crane::fn<uint64_t(uint64_t)>>::mynil()));
       tree result = fold_tree_build(std::move(fs), UINT64_C(5));
       return result.sum_values(UINT64_C(0));
@@ -656,11 +664,15 @@ struct MemSafetyProbe2 {
       tree t3 = tree::node(tree::leaf(), UINT64_C(30), tree::leaf());
       mylist<crane::fn<uint64_t(uint64_t)>> fs =
           mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-              [=](uint64_t _x0) -> uint64_t { return t1.sum_values(_x0); },
+              [=, t1 = std::move(t1)](uint64_t _x0) -> uint64_t {
+                return t1.sum_values(_x0);
+              },
               mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-                  [=](uint64_t _x0) -> uint64_t { return t2.sum_values(_x0); },
+                  [=, t2 = std::move(t2)](uint64_t _x0) -> uint64_t {
+                    return t2.sum_values(_x0);
+                  },
                   mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-                      [=](uint64_t _x0) -> uint64_t {
+                      [=, t3 = std::move(t3)](uint64_t _x0) -> uint64_t {
                         return t3.sum_values(_x0);
                       },
                       mylist<crane::fn<uint64_t(uint64_t)>>::mynil())));

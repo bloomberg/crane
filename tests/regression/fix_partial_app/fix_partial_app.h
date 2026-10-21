@@ -140,7 +140,8 @@ struct FixPartialApp {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(0), tree::leaf()),
                           UINT64_C(0),
                           tree::node(tree::leaf(), UINT64_C(0), tree::leaf()));
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+      crane::fn<uint64_t(uint64_t)> f =
+          [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
         return count_nodes(std::move(t), _x0);
       };
       return (f(UINT64_C(0)) + f(UINT64_C(100)));
@@ -152,7 +153,8 @@ struct FixPartialApp {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(0), tree::leaf()),
                           UINT64_C(0),
                           tree::node(tree::leaf(), UINT64_C(0), tree::leaf()));
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+      crane::fn<uint64_t(uint64_t)> f =
+          [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
         return count_nodes(std::move(t), _x0);
       };
       std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> p =

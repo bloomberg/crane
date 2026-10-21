@@ -235,7 +235,8 @@ struct MapPartialApp {
   static inline const uint64_t map_partial_bug = []() {
     return []() {
       tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
-      crane::fn<tree(uint64_t)> f = [=](uint64_t _x0) -> tree {
+      crane::fn<tree(uint64_t)> f = [=,
+                                     t = std::move(t)](uint64_t _x0) -> tree {
         return wrap(std::move(t), _x0);
       };
       List<uint64_t> results =
@@ -254,7 +255,8 @@ struct MapPartialApp {
   static inline const uint64_t map_partial_pair = []() {
     return []() {
       tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
-      crane::fn<tree(uint64_t)> f = [=](uint64_t _x0) -> tree {
+      crane::fn<tree(uint64_t)> f = [=,
+                                     t = std::move(t)](uint64_t _x0) -> tree {
         return wrap(std::move(t), _x0);
       };
       std::pair<crane::fn<tree(uint64_t)>, uint64_t> p =
@@ -276,10 +278,12 @@ struct MapPartialApp {
     return []() {
       tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
       tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
-      crane::fn<tree(uint64_t)> f1 = [=](uint64_t _x0) -> tree {
+      crane::fn<tree(uint64_t)> f1 =
+          [=, t1 = std::move(t1)](uint64_t _x0) -> tree {
         return wrap(std::move(t1), _x0);
       };
-      crane::fn<tree(uint64_t)> f2 = [=](uint64_t _x0) -> tree {
+      crane::fn<tree(uint64_t)> f2 =
+          [=, t2 = std::move(t2)](uint64_t _x0) -> tree {
         return wrap(std::move(t2), _x0);
       };
       List<uint64_t> r1 =

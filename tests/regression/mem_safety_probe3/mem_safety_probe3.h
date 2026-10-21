@@ -656,7 +656,9 @@ struct MemSafetyProbe3 {
     return []() {
       tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
       return apply_n_times(
-          [=](uint64_t _x0) -> uint64_t { return t.sum_values(_x0); },
+          [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
+            return t.sum_values(_x0);
+          },
           UINT64_C(5), UINT64_C(0));
     }();
   }();
@@ -665,9 +667,12 @@ struct MemSafetyProbe3 {
   static inline const uint64_t test_partial_fix = []() {
     return []() {
       tree t = tree::node(tree::leaf(), UINT64_C(5), tree::leaf());
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+      crane::fn<uint64_t(uint64_t)> f =
+          [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
         return apply_n_times(
-            [=](uint64_t _x0) -> uint64_t { return t.sum_values(_x0); },
+            [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
+              return t.sum_values(_x0);
+            },
             UINT64_C(3), _x0);
       };
       return (f(UINT64_C(0)) + f(UINT64_C(10)));

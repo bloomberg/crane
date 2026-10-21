@@ -134,7 +134,8 @@ struct ClosureChain {
   static inline const uint64_t chain_double_call = []() {
     return []() {
       tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+      crane::fn<uint64_t(uint64_t)> f =
+          [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
         return make_chain(UINT64_C(2), std::move(t), _x0);
       };
       return (f(UINT64_C(0)) + f(UINT64_C(100)));

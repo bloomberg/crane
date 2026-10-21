@@ -104,6 +104,13 @@ val projects_in_place : t -> Miniml.ml_type -> Miniml.ml_ast -> bool
     captured with it reads it. *)
 val moved_captures : t -> Miniml.ml_ast -> int list
 
+(** The de Bruijn indices, at [ts], of the variables [ts] read by move
+    ({!use}) directly -- not inside a closure, a let or a match they
+    contain: what a closure made around them, the eta-expansion of a partial
+    application of which they are the arguments, takes by move when it is
+    made. *)
+val moved_reads : t -> Miniml.ml_ast list -> int list
+
 (** A term copied to two places -- an eta argument pushed into both branches
     of a conditional -- holds one read twice; it is a last use where every
     copy is one. *)

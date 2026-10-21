@@ -442,7 +442,8 @@ struct MemSafetyProbe {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+      crane::fn<uint64_t(uint64_t)> f =
+          [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
         return t.sum_values(_x0);
       };
       return apply_twice(std::move(f), UINT64_C(0));
