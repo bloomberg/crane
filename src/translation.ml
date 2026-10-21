@@ -8870,8 +8870,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     let fix_tvar_indices = List.sort Int.compare fix_tvar_indices in
     let outer_tvars = get_current_type_vars () in
     let n_outer = List.length outer_tvars in
-    (* Check if fixpoint introduces Tvars beyond the outer scope *)
-    let has_extra_tvars = List.exists (fun i -> i > n_outer) fix_tvar_indices in
+    let has_extra_tvars = Ml_type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) in
     if has_extra_tvars then (
       (* Lift the polymorphic inner fixpoint to a top-level function. Build tvar
          names for all Tvars used in the fixpoint type: - Tvars 1..n_outer reuse
@@ -9803,8 +9802,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     let fix_tvar_indices = List.sort Int.compare fix_tvar_indices in
     let outer_tvars = get_current_type_vars () in
     let n_outer = List.length outer_tvars in
-    (* Check if fixpoint introduces Tvars beyond the outer scope *)
-    let has_extra_tvars = List.exists (fun i -> i > n_outer) fix_tvar_indices in
+    let has_extra_tvars = Ml_type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) in
     if has_extra_tvars then (
       (* Lift the polymorphic inner fixpoint to a top-level function *)
       let all_tvar_names = build_tvar_names ~outer_tvars fix_tvar_indices in

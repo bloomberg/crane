@@ -2778,8 +2778,7 @@ type let_lambda =
     the one owner of it, read by translation to generate the binding and by
     {!Core_elaborate} to elaborate the calls an inlined alias makes. *)
 let let_lambda ~lex ~n_outer t a b =
-  let has_extra = IntSet.exists (fun i -> i > n_outer) (Mlutil.ml_tvars t) in
-  if not has_extra then Bound
+  if not (Ml_type_util.own_type_variables ~n_outer [t]) then Bound
   else
     match sole_instance ~lex ~n_outer t b with
     | Some inst -> At_instance inst
