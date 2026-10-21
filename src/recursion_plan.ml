@@ -102,8 +102,11 @@ let identity r =
 
 (* How [body], a function's body inside its parameters, calls the members
    of its recursive group, as the C++ it becomes does: a call is a tail call
-   where its result is the function's, and a call the C++ wraps in a
-   closure, or one applied to more arguments than its parameters, is not.
+   where its result is the function's, and one applied to more arguments
+   than its parameters is not.  A call in a closure the body builds -- a
+   lambda's body, or a member applied to fewer arguments than its
+   parameters, which the C++ makes a closure of -- is made where the
+   closure runs, not here: no loop of this function can take it.
    [callee ~depth f] is the number of parameters of the member [f] names,
    under [depth] binders inside the function's parameters, and [None] where
    [f] names none.  A bind or a ret is sequencing where [effects], the
@@ -121,7 +124,9 @@ let classify ~effects ~callee body =
     | MLapp (MLglob use, [a]) when identity use.callee && Table.to_inline use.callee -> walk ~tail a
     | MLapp (f, args) when Option.has_some (callee ~depth f) ->
       List.iter (walk ~tail:false) args;
-      if tail && Some (List.length args) = callee ~depth f then tail_call := true
+      let n = List.length args and parameters = Option.get (callee ~depth f) in
+      if n < parameters then ()
+      else if tail && n = parameters then tail_call := true
       else nontail_call := true
     | MLapp (MLglob use, args) when effect use = Some Core_effects.Bind -> (
       (* The action runs, and the continuation's body goes on where the bind
@@ -155,8 +160,13 @@ let classify ~effects ~callee body =
       walk ~tail:false s;
       Array.iter (fun (ids, _, _, b) -> walk_under (List.length ids) ~tail b) branches
     | MLmagic (_, a) -> walk ~tail a
-    | MLlam (_, _, b) -> walk_under 1 ~tail:false b
-    | MLfix (_, ids, bodies, _, _) -> Array.iter (walk_under (Array.length ids) ~tail:false) bodies
+    | MLlam _ -> ()
+    | MLfix (_, ids, bodies, _, _) ->
+      Array.iter
+        (fun f ->
+          let n, b = split_params 0 f in
+          walk_under (Array.length ids + n) ~tail:false b )
+        bodies
     | MLcons (_, _, l) | MLtuple l -> List.iter (walk ~tail:false) l
     | MLparray (a, d) ->
       Array.iter (walk ~tail:false) a;

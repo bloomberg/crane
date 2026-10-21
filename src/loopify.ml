@@ -453,14 +453,21 @@ let classified_strategy = function
   | Tail_recursion -> Tail_loop
   | Nontail_recursion -> Frame_stack
 
-(** [checked_plan planned ~what classified] is the strategy [planned] of the
+(** [checked_plan planned ~what check body] is the strategy [planned] of the
     function [what ()] names, as the program's recursion plan has it
     ({!Recursion_plan}).  Under [CRANE_CHECK_IR] the kind of recursion it
-    lowers is checked against [classified ()], the reading of the finished
-    body that decided this before. *)
-let checked_plan planned ~what classified =
+    lowers is checked against the reading of [body], the finished body,
+    that decided this before: the calls it makes where it runs
+    ({!classify_in_flow}), and for a function whose calls are suspended,
+    every call, those in the suspensions it builds too ({!classify}). *)
+let checked_plan planned ~what check body =
   ( if Probe.checking () then
-      if plan_kind (classified ()) <> Recursion_plan.kind_of_strategy planned then
+      let classified =
+        match planned with
+        | Recursion_plan.Suspended _ -> classify check body
+        | No_loop | Tail_loop | Modulo_cons _ | Frame_stack -> classify_in_flow check body
+      in
+      if plan_kind classified <> Recursion_plan.kind_of_strategy planned then
         Probe.violation "recursion plan"
           Pp.(str "the recursion plan disagrees with the finished body of " ++ what ()) );
   planned
@@ -470,12 +477,12 @@ let checked_plan planned ~what classified =
     A body with no fixpoint recorded on it, or one the plan does not know, is
     classified here, which is a violation. *)
 let planned_local_strategy fixpoint check body =
-  let classified () = classify check body in
+  let classified () = classify_in_flow check body in
   match fixpoint with
   | Some {lf_member; lf_binder; _} -> (
     let what () = Pp.(str "the local fixpoint " ++ Id.print lf_binder) in
     match Recursion_plan.strategy_at ~pointer_fields:constructor_pointer_fields lf_member with
-    | Some planned -> checked_plan planned ~what classified
+    | Some planned -> checked_plan planned ~what check body
     | None ->
       Probe.violation "recursion plan" Pp.(str "the recursion plan does not know " ++ what ());
       classified_strategy (classified ()) )
@@ -1146,7 +1153,7 @@ let fundef_display_name path =
     is a violation.  A member the backend generates itself -- a factory, a
     deep copy -- has no Core body and no reference, and is classified here. *)
 let planned_strategy r check body =
-  let classified () = classify check body in
+  let classified () = classify_in_flow check body in
   match r with
   | None -> classified_strategy (classified ())
   | Some r -> (
@@ -1158,7 +1165,7 @@ let planned_strategy r check body =
     in
     let what () = Pp.str (Table.kername_of_global r) in
     match planned with
-    | Some planned -> checked_plan planned ~what classified
+    | Some planned -> checked_plan planned ~what check body
     | None ->
       Probe.violation "recursion plan" Pp.(str "the recursion plan does not know " ++ what ());
       classified_strategy (classified ()) )

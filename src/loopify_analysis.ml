@@ -1108,6 +1108,28 @@ let classify check body =
     else
       Nontail_recursion
 
+(** [body] with the body of every closure it builds emptied: a lambda
+    neither invoked where it is written nor a local fixpoint's, whose calls
+    are made where the closure runs. *)
+let rec drop_closure_bodies body = List.map drop_closure_bodies_stmt body
+
+and drop_closure_bodies_stmt s =
+  map_stmt drop_closure_bodies_expr drop_closure_bodies_stmt Fun.id s
+
+and drop_closure_bodies_expr e =
+  let enter l = CPPlambda {l with cl_body = drop_closure_bodies l.cl_body} in
+  match e with
+  | CPPfun_call (cs, CPPlambda l, args) ->
+    CPPfun_call (cs, enter l, of_reversed (List.map drop_closure_bodies_expr (to_reversed args)))
+  | CPPlambda ({cl_fixpoint = Some _; _} as l) -> enter l
+  | CPPlambda l -> CPPlambda {l with cl_body = []}
+  | e -> map_expr drop_closure_bodies_expr drop_closure_bodies_stmt Fun.id e
+
+(** How [body] recurses where it runs ({!classify}), the calls in the
+    closures it builds left to where those run: the reading the recursion
+    plan's kind is checked against. *)
+let classify_in_flow check body = classify check (drop_closure_bodies body)
+
 (** Record what happened to one recursive function, checking the postcondition.
 
     [strategy] is the outcome the pass {e believes} it achieved.  Before
