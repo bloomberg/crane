@@ -58,6 +58,12 @@ val closure_local : t -> Miniml.ml_type -> Miniml.ml_ast -> bool option
     value. *)
 val reuse_arm : t -> scrutinee:Miniml.ml_ast -> branch:int -> t
 
+(** [fields_by_value p ~case ~by_value] is [p] for the body of [case], a
+    match taking a record apart, whose fields translation binds as locals of
+    their own where [by_value] says so, in the order the pattern binds them:
+    those are the body's own. *)
+val fields_by_value : t -> case:Miniml.ml_ast -> by_value:bool list -> t
+
 
 (** What [p] says of a read. *)
 type fate =

@@ -297,6 +297,9 @@ let capture_names env is =
        (fun id -> not (Common.is_tc_instance_id id))
        (List.filter_map (fun i -> Common.get_db_name_opt i env) is) )
 
+(* Whether a record's fields are moved out of what [base] reads it from. *)
+let moved_out base = match base with CPPmove _ -> true | _ -> false
+
 (* Under [CRANE_CHECK_IR], the region's plan must have decided as translation
    does whether [let _ : ty := a] binds the closure [a] to a local, which the
    plan owns and moves. *)
@@ -4996,7 +4999,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       let renamed_ids_fwd = List.rev renamed_ids in
       let base, cache = record_read_once env ~is_typeclass t in
       let asgns =
-        List.concat_map
+        List.map
           (fun (i, ((renamed_name, _), (_, ty))) ->
             let fld =
               try Some (List.nth non_erased_fields i) with _ -> None
@@ -5023,16 +5026,20 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             let decl_ty =
               convert_ml_type_to_cpp_type env [] ty
             in
-            match lift_iife_assignment renamed_name (Some decl_ty) e with
-            | Some stmts -> stmts
-            | None -> [Sasgn (renamed_name, Declare (decl_ty, None), e)])
+            let stmts =
+              match lift_iife_assignment renamed_name (Some decl_ty) e with
+              | Some stmts -> stmts
+              | None -> [Sasgn (renamed_name, Declare (decl_ty, None), e)]
+            in
+            (stmts, moved_out base) )
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
       in
       mk_iife None
-        (cache @ asgns
+        (cache @ List.concat_map fst asgns
          @ with_binders env renamed_ids (fun () ->
                with_iife_return_type expected_ty (fun () ->
-                   gen_stmts ~slot env' (fun x -> Sreturn (Some x)) body))) )
+                   with_fields_plan ml_e asgns (fun () ->
+                       gen_stmts ~slot env' (fun x -> Sreturn (Some x)) body ) ) ) ) )
     (* Known limitation: simultaneous pattern matching on record fields is not
        supported — each field is destructured individually. *)
   | MLcase (typ, t, pv) when lang () == Cpp ->
@@ -8895,6 +8902,13 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
    taken apart into three fields made three calls per level.  The temporary
    is read for nothing else, so each field is moved out of it.  Returns what
    the fields are read out of, and the statements evaluating it. *)
+(* Runs [f], which generates the body of [case], a match taking a record
+   apart into the fields [asgns] declares, under the plan in which each field
+   moved out of the record into a local of its own is the body's.  A field
+   copied out of a record still held is not: it may be read in place. *)
+and with_fields_plan case asgns f =
+  with_plan (Ownership_plan.fields_by_value (!tctx).move_plan ~case ~by_value:(List.map snd asgns)) f
+
 and record_read_once env ~is_typeclass t =
   let scrut = gen_expr env t in
   if is_typeclass || is_trivial_scrut scrut then (scrut, [])
@@ -10251,7 +10265,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       let tvars = get_current_type_vars () in
       let base, cache = record_read_once env ~is_typeclass t in
       let asgns =
-        List.concat_map
+        List.map
           (fun (i, ((renamed_name, _), (_, ty))) ->
             let fld =
               try Some (List.nth non_erased_fields i) with _ -> None
@@ -10285,13 +10299,19 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               else
                 api_ty_for_decl
             in
-            match lift_iife_assignment renamed_name (Some decl_ty) e with
-            | Some stmts -> stmts
-            | None -> [Sasgn (renamed_name, Declare (decl_ty, None), e)])
+            let stmts =
+              match lift_iife_assignment renamed_name (Some decl_ty) e with
+              | Some stmts -> stmts
+              | None -> [Sasgn (renamed_name, Declare (decl_ty, None), e)]
+            in
+            (stmts, moved_out base && match decl_ty with Tref _ -> false | _ -> true) )
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
       in
       push_binders env (retype_dependent_params typ renamed_ids);
-      cache @ asgns @ gen_stmts ~slot env' k body
+      let body_stmts =
+        with_fields_plan ast asgns (fun () -> gen_stmts ~slot env' k body)
+      in
+      cache @ List.concat_map fst asgns @ body_stmts
   | t ->
     (* Tail position.  No deref_reified needed: in sequential mode, monadic
        variables are direct values (bind desugars to let-binding); in

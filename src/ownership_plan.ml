@@ -16,9 +16,14 @@ type read = {
   consumed : bool;  (* where it stands, its value may be taken *)
 }
 
-(* A branch generated to rebuild in its scrutinee's storage, named by the
-   scrutinee's read and the branch's index. *)
-type arm = {scrutinee : Occurrence.t; branch : int}
+(* How translation binds a match's pattern variables, where the plan cannot
+   tell: a branch generated to rebuild in its scrutinee's storage, named by
+   the scrutinee's read and the branch's index; and the fields of a record
+   taken apart, named by the match itself, which are locals of their own
+   where [by_value] says so. *)
+type arm =
+  | Rebuild of {scrutinee : Occurrence.t; branch : int}
+  | Fields of {case : ml_ast; by_value : bool list}
 
 type t = {
   root : ml_ast;
@@ -444,7 +449,7 @@ let ownership ~n_outer ~reads ~arms ~owned t =
       own owned d scrut;
       Array.iteri
         (fun k ((ids, _, _, body) as branch) ->
-          own (branch_owned owned d ty scrut branches k branch) (d + List.length ids) body )
+          own (branch_owned owned d t ty scrut branches k branch) (d + List.length ids) body )
         branches
     | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> ()
   and owned_var owned d i _ = Levels.mem (d - i) owned
@@ -457,7 +462,7 @@ let ownership ~n_outer ~reads ~arms ~owned t =
       (not (Ml_type_util.ml_type_is_unit ty))
       && worth_moving ty
       && not (Binding.projects_in_place ~owned:(owned_var owned d) ~fate:(fate_in reads) ty a)
-  and branch_owned owned d ty scrut branches k (ids, _, pat, body) =
+  and branch_owned owned d case ty scrut branches k (ids, _, pat, body) =
     let n = List.length ids in
     let fields p =
       Levels.of_list (List.filteri (fun i _ -> p i (List.nth ids i)) (List.init n (fun i -> d + i)))
@@ -469,7 +474,12 @@ let ownership ~n_outer ~reads ~arms ~owned t =
     in
     let ind = matched_inductive branches in
     match scrutinee_var scrut with
-    | Some (i, o) when List.exists (fun a -> a.branch = k && Occurrence.equal a.scrutinee o) arms ->
+    | Some (i, o)
+      when List.exists
+             (function
+               | Rebuild a -> a.branch = k && Occurrence.equal a.scrutinee o
+               | Fields _ -> false )
+             arms ->
       (* Rebuilding in the scrutinee's storage moves every field out of it. *)
       Levels.union (Levels.remove (d - i) owned) (fields (fun _ _ -> true))
     | _ ->
@@ -477,7 +487,11 @@ let ownership ~n_outer ~reads ~arms ~owned t =
         if Binding.pair_by_value ~owned:(owned_var owned d) scrut branches then
           Levels.union owned (fields (fun _ (_, ty) -> worth_moving ty))
         else owned
-      else if Table.record_fields_of_type ty <> [] && Array.length branches = 1 then owned
+      else if Table.record_fields_of_type ty <> [] && Array.length branches = 1 then
+        match List.find_map (function Fields f when f.case == case -> Some f.by_value | _ -> None) arms with
+        | Some by_value ->
+          Levels.union owned (fields (fun i (_, ty) -> List.nth_opt by_value i = Some true && worth_moving ty))
+        | None -> owned
       else
         match (pat, ind) with
         | (Pusual r | Pcons (r, _)), Some ind
@@ -510,8 +524,12 @@ let region ?(owned = []) ~n_outer t =
 let reuse_arm p ~scrutinee ~branch =
   match scrutinee_var scrutinee with
   | Some (_, scrutinee) ->
-    plan ~n_outer:p.n_outer p.root p.root_owned ({scrutinee; branch} :: p.arms) (p.reads, p.captures)
+    plan ~n_outer:p.n_outer p.root p.root_owned (Rebuild {scrutinee; branch} :: p.arms) (p.reads, p.captures)
   | None -> p
+
+let fields_by_value p ~case ~by_value =
+  if p == empty then p
+  else plan ~n_outer:p.n_outer p.root p.root_owned (Fields {case; by_value} :: p.arms) (p.reads, p.captures)
 
 let closure_local p ty a = if p == empty then None else Some (closure_local ~n_outer:p.n_outer ty a)
 
