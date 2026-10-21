@@ -351,7 +351,12 @@ let with_region (body : ml_ast) (f : unit -> 'a) : 'a =
   with_field
     (fun c -> c.move_plan)
     (fun p -> tctx := { !tctx with move_plan = p })
-    (Ownership_plan.region body) f
+    (Ownership_plan.region ~owned:(Escape.IntSet.elements (!tctx).move_owned_vars) body) f
+
+(** [with_plan p f] runs [f] with the moves planned by [p], an alternative
+    plan of the region being generated ({!Ownership_plan.reuse_arm}). *)
+let with_plan (p : Ownership_plan.t) (f : unit -> 'a) : 'a =
+  with_field (fun c -> c.move_plan) (fun p -> tctx := { !tctx with move_plan = p }) p f
 
 (** [with_reuse_token tok f] runs [f] with [tok] as the pending Perceus reuse
     token.  The token is linear, and [f] clears it if it consumes it; the

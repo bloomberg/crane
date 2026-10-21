@@ -28,9 +28,23 @@ type t
 (** Nothing planned: no read is a last use. *)
 val empty : t
 
-(** [region t] is the plan of [t]'s reads, [t] standing under binders it
-    reads but does not bind. *)
-val region : Miniml.ml_ast -> t
+(** Whether a body owning a value of ML type [ty] moves it at its last use:
+    a [shared_ptr], or a value-type inductive a copy of which copies more
+    than a word. *)
+val worth_moving : Miniml.ml_type -> bool
+
+(** [region ~owned t] is the plan of [t]'s reads, [t] standing under binders
+    it reads but does not bind, of which it owns those at the de Bruijn
+    indices [owned]. *)
+val region : ?owned:int list -> Miniml.ml_ast -> t
+
+(** [reuse_arm p ~scrutinee ~branch] is [p] for the branch numbered [branch]
+    of the match on the variable [scrutinee], generated to rebuild
+    in the scrutinee's storage: the fields it binds are moved out into locals
+    of its own, and the scrutinee, which keeps the storage, is not read by
+    value. *)
+val reuse_arm : t -> scrutinee:Miniml.ml_ast -> branch:int -> t
+
 
 (** What [p] says of a read. *)
 type fate =
@@ -42,6 +56,24 @@ type fate =
           reference, or of a custom match spelling it twice; a field of a
           record being constructed *)
   | Unplanned  (** not a read of the region [p] was made of *)
+
+(** Whether a read takes its variable's value: the variable is owned where
+    it is read, and the read is its last use where it may be taken. *)
+val moves : t -> Miniml.Occurrence.t -> bool
+
+(** Whether a variant match takes apart a scrutinee the region owns, binding
+    its fields by mutable reference: the scrutinee is a variable owned there.
+    One named through an application is read in place. *)
+val owns_scrutinee : t -> Miniml.ml_ast -> bool
+
+(** Whether a custom match on a pair binds its components by value, being
+    the pair's last reader: the pair its scrutinee has just built, or a
+    variable owned there that its one branch does not read whole. *)
+val pair_by_value : t -> Miniml.ml_ast -> Miniml.ml_branch array -> bool
+
+(** Whether a let of type [ty] bound to [a] binds by reference the field [a]
+    projects out of a record that is not moved there. *)
+val projects_in_place : t -> Miniml.ml_type -> Miniml.ml_ast -> bool
 
 (** A term copied to two places -- an eta argument pushed into both branches
     of a conditional -- holds one read twice; it is a last use where every

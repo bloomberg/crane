@@ -1309,11 +1309,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let is_tc_param =
       match var_expr with CPPvar id -> Common.is_tc_instance_id id | _ -> false
     in
-    let move_candidate =
-      (not is_tc_param)
-      && Escape.IntSet.mem i (!tctx).move_owned_vars
-      && Ownership_plan.fate (!tctx).move_plan occ = Last_use
-    in
+    let move_candidate = (not is_tc_param) && Ownership_plan.moves (!tctx).move_plan occ in
     let result = if move_candidate then CPPmove var_expr else var_expr in
     if binder_is_boxed i then begin
       match expected_ty with
@@ -7960,10 +7956,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
     let scrut_consumable =
       match scrut_expr with
       | CPPthis | CPPderef CPPthis -> false
-      | _ -> (
-        match scrut_db with
-        | Some i -> Escape.IntSet.mem i (!tctx).move_owned_vars
-        | None -> false )
+      | _ -> Ownership_plan.owns_scrutinee (!tctx).move_plan t
     in
     let scrut_is_owned = scrut_consumable && not scrut_is_shared in
     (* Build variant accessor.  All inductives (including coinductives)
@@ -8251,6 +8244,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
             in
             let body_stmts =
               with_reuse_token (Some (tok, tail_ctor)) (fun () ->
+                  with_plan (Ownership_plan.reuse_arm (!tctx).move_plan ~scrutinee:t ~branch:branch_idx) @@ fun () ->
                   with_shifted_move_tracking n ~add_owned_set:bound
                     ?exclude_owned:(Option.map (fun db -> db + n) scrut_db)
                     (fun () -> gen_stmts env' (fun x -> Sreturn (Some x)) body) )
@@ -8438,24 +8432,9 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     List.length
       (List.filter (( = ) Foreign_template.CCscrut) (Foreign_template.match_template cmatch))
   in
-  let pair_g_opt_early = match concrete_match_type with
-    | Tglob (g, _, _) when is_prod_global g -> Some g
-    | _ -> None
-  in
-  (* [scrut_is_owned_pair]: true when the scrutinee is a pair whose binding
-     is dead after destructuring — enables by-value structured binding to move
-     the fields out instead of taking a const reference. *)
-  let scrut_is_owned_pair = match t with
-    | MLrel (i, _) | MLmagic (_, MLrel (i, _)) ->
-      Escape.IntSet.mem i (!tctx).move_owned_vars
-      && Array.length pv = 1
-      && (let (ids, _, _, body) = pv.(0) in
-          let n = List.length ids in
-          Escape.nb_occur_match (i + n) body = 0)
-    | _ ->
-      Array.length pv = 1
-      && pair_g_opt_early <> None
-  in
+  (* Whether the match binds the pair's components by value, moving them out:
+     asked while [t] is still the Core scrutinee. *)
+  let pair_by_value = Ownership_plan.pair_by_value (!tctx).move_plan t pv in
   let scrut_is_trivial_ml = match t with
     | MLrel _ | MLmagic (_, MLrel _) -> true
     | _ -> false
@@ -8597,7 +8576,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
      with a by-value structured binding to move the fields out.  A pair
      recovered from a box is bound by value too: it is a fresh
      [pair<any, any>] the cast returns. *)
-  let binds_by_value = scrut_is_owned_pair && pair_g_opt <> None in
+  let binds_by_value = pair_by_value in
   let cmatch = if binds_by_value then "auto [%b0a0, %b0a1] = %scrut; %br0" else cmatch in
   (* Generate [(params, ret_ty, body)] triples for each branch.  Handles env
      retyping for [fix_a_fired], move tracking for owned pairs, use-site
@@ -9861,18 +9840,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          as a last use.  When the source has further uses in the let body it
          is not moved here, so the const-ref remains valid.  We only apply this when the type is a
          shared_ptr so that primitive types (int, bool) are left unchanged. *)
-      let use_const_ref =
-        Escape.is_shared_ptr_type t
-        &&
-        ( match a with
-          | MLcase (_, MLrel (k, occ), pv)
-            when Array.length pv = 1
-                 && (match pv.(0) with (_, _, _, MLrel _) -> true | _ -> false)
-                 && not (Escape.IntSet.mem k (!tctx).move_owned_vars
-                         && Ownership_plan.fate (!tctx).move_plan occ = Last_use) ->
-            true
-          | _ -> false )
-      in
+      let use_const_ref = Ownership_plan.projects_in_place (!tctx).move_plan t a in
       let new_is_tracked =
         worth_moving t
         && not use_const_ref
