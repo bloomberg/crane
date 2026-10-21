@@ -35,6 +35,8 @@ type local_group = {
          is not a tail call *)
   suspends : bool;  (* some member's body suspends ({!suspends_within}) *)
   adoptable : Occurrence.t list list;  (* per member, {!flow_fixpoints} calling the group *)
+  calls : Occurrence.t list list;
+      (* per member, the reads heading its calls in the group's bodies *)
 }
 
 (* A call a function resumes after. *)
@@ -506,6 +508,21 @@ let flow_fixpoints ~names depth body =
   flow depth body;
   List.rev !found
 
+(* [f depth e'] for [e] and every term [e'] in it, under [depth] binders
+   more than [e]. *)
+let rec iter_under f depth e =
+  f depth e;
+  match e with
+  | MLlam (_, _, b) -> iter_under f (depth + 1) b
+  | MLletin (_, _, a, b, _) ->
+    iter_under f depth a;
+    iter_under f (depth + 1) b
+  | MLcase (_, s, branches) ->
+    iter_under f depth s;
+    Array.iter (fun (ids, _, _, b) -> iter_under f (depth + List.length ids) b) branches
+  | MLfix (_, ids, funs, _, _) -> Array.iter (iter_under f (depth + Array.length ids)) funs
+  | e -> Mlutil.ast_iter (iter_under f depth) e
+
 (* The plan of every local fixpoint in [defs], one per fixpoint, under its
    occurrence.  Inside a member's body, before its parameters,
    the member [k] of [n] is the variable [n - k]. *)
@@ -550,12 +567,29 @@ let local_groups ~effects defs =
           let arity, body = split_params 0 funs.(j) in
           flow_fixpoints ~names arity body )
     in
+    let calls =
+      let found = Array.make n [] in
+      Array.iteri
+        (fun j f ->
+          iter_under
+            (fun depth -> function
+              | MLapp (head, _) -> (
+                match (member ~within:j ~depth head, strip head) with
+                | Some k, MLrel (_, read) -> found.(k) <- read :: found.(k)
+                | _ -> () )
+              | _ -> () )
+            0
+            (snd (split_params 0 f)) )
+        funs;
+      Array.to_list found
+    in
     plans :=
       { occurrence;
         local_kind = kind;
         chains;
         suspends;
-        adoptable }
+        adoptable;
+        calls }
       :: !plans
   in
   Ref.User.Map.iter
@@ -728,7 +762,8 @@ let equal a b =
          && l.local_kind = l'.local_kind
          && List.equal (Option.equal same_chains) l.chains l'.chains
          && l.suspends = l'.suspends
-         && List.equal (List.equal Occurrence.equal) l.adoptable l'.adoptable )
+         && List.equal (List.equal Occurrence.equal) l.adoptable l'.adoptable
+         && List.equal (List.equal Occurrence.equal) l.calls l'.calls )
        a.locals b.locals
   && Ref.User.Map.equal same_chains a.modulo_cons b.modulo_cons
   && Ref.User.Set.equal a.suspended b.suspended
@@ -827,6 +862,14 @@ let adoptable_at (occurrence, member) =
       if Occurrence.equal l.occurrence occurrence then List.nth_opt l.adoptable member else None )
     !installed.locals
   |> Option.default []
+
+(* Copies of a fixpoint share its occurrence, and so do their calls. *)
+let member_calls (occurrence, member) =
+  List.concat_map
+    (fun (l : local_group) ->
+      if Occurrence.equal l.occurrence occurrence then Option.default [] (List.nth_opt l.calls member)
+      else [] )
+    !installed.locals
 
 let resumes_binding (b : Core_binder.t) =
   match Ref.User.Map.find_opt b.origin !installed.resumes with

@@ -123,6 +123,13 @@ val adoptable : Names.GlobRef.t -> Miniml.Occurrence.t list
     fixpoints in its flow naming a member of its group. *)
 val adoptable_at : Miniml.Occurrence.t * int -> Miniml.Occurrence.t list
 
+(** The calls of the function [member] of the local fixpoint [occurrence]
+    made in its group's bodies, each by the occurrence of the read at its
+    head, which the C++ call made of it records
+    ({!Minicpp.call_sig.cs_occurrence}): the recursive calls a loop of that
+    function takes. *)
+val member_calls : Miniml.Occurrence.t * int -> Miniml.Occurrence.t list
+
 (** A recursive call a function resumes after: a call of the function of
     the group [Function g], with no fewer arguments than its parameters --
     one with fewer is a closure, and calls where it runs; a call of the

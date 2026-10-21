@@ -621,6 +621,29 @@ let self_checker self_id : call_checker =
     | [] -> None )
   | _ -> None
 
+(** A checker matching the calls of the function [member] of a local
+    fixpoint to itself, as the recursion plan has them
+    ({!Recursion_plan.member_calls}), each forwarding the self-parameter as
+    its last argument, which the call site drops.  Under [CRANE_CHECK_IR]
+    each call is checked against {!self_checker}'s reading, a call through
+    [self_id], both ways. *)
+let planned_self_checker member self_id : call_checker =
+  let calls = Recursion_plan.member_calls member in
+  fun e ->
+    let planned =
+      match e with
+      | CPPfun_call ({cs_occurrence = Some o; _}, _, _) -> List.exists (Miniml.Occurrence.equal o) calls
+      | _ -> false
+    in
+    if Probe.checking () && planned <> Option.has_some (self_checker self_id e) then
+      Probe.violation "self-call plan"
+        (Pp.str "the recursion plan and the finished body disagree on whether a call is a local fixpoint's self-call");
+    match e with
+    | CPPfun_call (_, _, args) when planned -> (
+      match call_args args with
+      | _self_arg :: rest_rev -> Some (mk_call_site (List.rev rest_rev))
+      | [] -> None )
+    | _ -> None
 
 (** The receiver of a recursive call, with the wrappers that only re-spell an
     object stripped off.  [std::move] is one: it is a cast, so moving out of

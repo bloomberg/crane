@@ -550,7 +550,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
     match (fixpoint, fixpoint_self fixpoint lparams) with
     | None, _ | _, None -> None
     | Some {lf_name; lf_binders; lf_member; _}, Some self_id -> (
-      let check = self_checker self_id in
+      let check = planned_self_checker lf_member self_id in
       let lbody = expose_tail_calls check lbody in
       match planned_local_strategy fixpoint check lbody with
       | No_loop -> None
