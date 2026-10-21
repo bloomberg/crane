@@ -500,9 +500,13 @@ let moved_captures p closure =
     | [] -> false
     | copies -> List.for_all snd copies
   in
+  (* A read the region makes outside any closure, inside one translation
+     made around it -- a partial application eta-expanded -- is taken where
+     that closure is made, which is where the read stood. *)
   let moves o =
-    fate_in p.captures o = Last_use
-    && every p.captured_owned o
+    match fate_in p.captures o with
+    | Unplanned -> use p o = Move
+    | fate -> fate = Last_use && every p.captured_owned o
   in
   let reads = closure_reads 0 closure in
   List.sort_uniq Int.compare
@@ -520,3 +524,4 @@ let moved_reads p ts =
     | _ -> acc
   in
   List.sort_uniq Int.compare (List.fold_left go [] ts)
+
