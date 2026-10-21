@@ -1402,18 +1402,20 @@ template <Int I, OrderedType X> struct Raw {
       auto &&_sv = X::compare(x, a1);
       if (std::holds_alternative<typename Compare<typename X::t>::LT>(
               _sv.v())) {
-        tree<T1> ll = split<T1>(x, *a0).t_left;
-        std::optional<T1> o = split<T1>(x, *a0).t_opt;
-        tree<T1> rl = split<T1>(x, *a0).t_right;
+        auto _cs = split<T1>(x, *a0);
+        tree<T1> ll = std::move(_cs).t_left;
+        std::optional<T1> o = std::move(_cs).t_opt;
+        tree<T1> rl = std::move(_cs).t_right;
         return triple<T1>{std::move(ll), std::move(o),
                           join<T1>(std::move(rl), a1, a2, *a3)};
       } else if (std::holds_alternative<typename Compare<typename X::t>::EQ>(
                      _sv.v())) {
         return triple<T1>{*a0, std::make_optional<T1>(a2), *a3};
       } else {
-        tree<T1> rl = split<T1>(x, *a3).t_left;
-        std::optional<T1> o = split<T1>(x, *a3).t_opt;
-        tree<T1> rr = split<T1>(x, *a3).t_right;
+        auto _cs = split<T1>(x, *a3);
+        tree<T1> rl = std::move(_cs).t_left;
+        std::optional<T1> o = std::move(_cs).t_opt;
+        tree<T1> rr = std::move(_cs).t_right;
         return triple<T1>{join<T1>(*a0, a1, a2, std::move(rl)), std::move(o),
                           std::move(rr)};
       }
@@ -1706,12 +1708,13 @@ template <Int I, OrderedType X> struct Raw {
       if (std::holds_alternative<typename tree<T2>::Leaf>(m2.v())) {
         return mapl(m1);
       } else {
-        tree<T2> l2_ = split<T2>(a1, m2).t_left;
-        std::optional<T2> o2 = split<T2>(a1, m2).t_opt;
-        tree<T2> r2_ = split<T2>(a1, m2).t_right;
-        auto _cs = f(a1, a2, std::move(o2));
-        if (_cs.has_value()) {
-          const T3 &e = *_cs;
+        auto _cs = split<T2>(a1, m2);
+        tree<T2> l2_ = std::move(_cs).t_left;
+        std::optional<T2> o2 = std::move(_cs).t_opt;
+        tree<T2> r2_ = std::move(_cs).t_right;
+        auto _cs1 = f(a1, a2, std::move(o2));
+        if (_cs1.has_value()) {
+          const T3 &e = *_cs1;
           return join<T3>(
               map2_opt<T1, T2, T3>(f, mapl, mapr, *a0, std::move(l2_)), a1, e,
               map2_opt<T1, T2, T3>(f, mapl, mapr, *a3, std::move(r2_)));

@@ -10171,6 +10171,23 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       in
       let renamed_ids_fwd = List.rev renamed_ids in
       let tvars = get_current_type_vars () in
+      (* The record is read once, however many fields are bound out of it: a
+         call standing in its place is evaluated into a temporary first,
+         rather than once per field -- which a recursive call taken apart into
+         three fields made three calls per level.  The temporary is read for
+         nothing else, so each field is moved out of it. *)
+      let base, cache =
+        let scrut = gen_expr env t in
+        if is_typeclass || is_trivial_scrut scrut then (scrut, [])
+        else
+          let n = (!tctx).cs_counter in
+          tctx := { !tctx with cs_counter = n + 1 };
+          let cache_id = Common.scrutinee_cache_id n in
+          ( CPPmove (CPPvar cache_id),
+            match lift_iife_assignment cache_id None scrut with
+            | Some stmts -> stmts
+            | None -> [Sasgn (cache_id, Declare (Tauto, None), scrut)] )
+      in
       let asgns =
         List.concat_map
           (fun (i, ((renamed_name, _), (_, ty))) ->
@@ -10179,7 +10196,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             in
             let e =
               match fld with
-              | Some fld -> make_field_access (gen_expr env t) fld
+              | Some fld -> make_field_access base fld
               | _ ->
                 CErrors.anomaly (Pp.str "record field index out of bounds")
             in
@@ -10212,7 +10229,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
       in
       push_binders env (retype_dependent_params typ renamed_ids);
-      asgns @ gen_stmts ~slot env' k body
+      cache @ asgns @ gen_stmts ~slot env' k body
   | t ->
     (* Tail position.  No deref_reified needed: in sequential mode, monadic
        variables are direct values (bind desugars to let-binding); in
