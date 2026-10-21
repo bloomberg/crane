@@ -783,7 +783,11 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
            [this_pos] counts the parameters outermost first, [i] innermost
            first. *)
         List.nth method_owned_flags i
-        && not (Table.reuse () && Table.reuse_loopify_ok () && i = method_n_params - 1 - this_pos) )
+        && (not (Table.reuse () && Table.reuse_loopify_ok () && i = method_n_params - 1 - this_pos))
+        && not
+             ( match List.assoc_opt (Common.get_db_name (i + 1) env) params with
+             | Some declared -> Translation_support.declared_by_reference declared
+             | None -> false ) )
       ~ty:(fun i -> snd (List.nth ids_with_types i))
   in
   (* The scope covers both the inductive's type vars and the extra ones, so

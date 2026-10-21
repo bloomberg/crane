@@ -1175,9 +1175,16 @@ let gen_dfun n b cty ty temps =
   in
   begin_body ~owner:n ();
   set_current_parameters (List.map snd (parameter_binders env all_ids));
-  (* The parameters the body owns, at de Bruijn indices 1..n_params. *)
+  (* The parameters the body owns, at de Bruijn indices 1..n_params: never
+     one the head declares by reference. *)
   let owned_params =
-    Translation_support.owned_parameters (List.length owned_flags) ~owned:(List.nth owned_flags)
+    Translation_support.owned_parameters (List.length owned_flags)
+      ~owned:(fun i ->
+        List.nth owned_flags i
+        && not
+             ( match List.assoc_opt (fst (List.nth all_ids i)) ids with
+             | Some declared -> Translation_support.declared_by_reference declared
+             | None -> false ) )
       ~ty:(fun i -> snd (List.nth all_params i))
   in
   (* Expose the C++ return type to inner call sites so they can recover erased

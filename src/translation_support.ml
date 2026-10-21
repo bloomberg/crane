@@ -1574,6 +1574,14 @@ let with_escape_analysis f =
     caller then projects with [.first.first]. *)
 let with_iife_return_type expected_ty f = with_cpp_return_type expected_ty f
 
+(** Whether a parameter declared at C++ type [ty] is a reference the body
+    does not own: a [const T &], or the [F &&] a deduced callable is, which
+    may name the caller's own object. *)
+let rec declared_by_reference = function
+  | Tref _ | Tconst _ -> true
+  | Tnamespace (_, t) -> declared_by_reference t
+  | _ -> false
+
 (** The de Bruijn indices of the [n] innermost parameters a body owns: those
     [owned] says are passed by value, of a type {!Ownership_plan.worth_moving}
     accepts as reading [ty]. *)
