@@ -170,6 +170,3 @@ Ltac change_to_monad :=
   change (@ITree.bind ?E) with (@Monad.bind (itree E) _);
   try setoid_rewrite Ret_is_ret.
 
-Ltac bind_split_refl_intros split_tactic :=
-  split_tactic ;[ reflexivity | intros]
-  ;cbv beta match.
