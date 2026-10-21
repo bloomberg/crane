@@ -65,7 +65,8 @@ LocalCofixWithoutParameters::ones_then(const List<uint64_t> &l) {
                 return {UINT64_C(1), _self_o(_self_o, std::monostate{})};
               });
         };
-        auto o = [=](std::monostate u) -> LocalCofixWithoutParameters::stream {
+        auto o = [=, o_impl = std::move(o_impl)](
+                     std::monostate u) -> LocalCofixWithoutParameters::stream {
           return o_impl(o_impl, u);
         };
         return o(std::monostate{});

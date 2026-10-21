@@ -438,7 +438,8 @@ std::optional<Dvalue<typename _tcI0::ptr>> to_dvalue(const List<Nat> &dbs,
                 });
           }
         };
-        auto go = [=](Nat offset, List<Dtyp> dts, List<Nat> dbs0)
+        auto go = [=, go_impl = std::move(go_impl)](Nat offset, List<Dtyp> dts,
+                                                    List<Nat> dbs0)
             -> std::optional<List<Dvalue<typename _tcI0::ptr>>> {
           return go_impl(go_impl, offset, dts, dbs0);
         };

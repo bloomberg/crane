@@ -163,6 +163,14 @@ let gen_local_fix_ycomb env ~binders renamed_ids funs_with_params =
       (List.combine (List.combine renamed_ids impl_ids) binders)
       funs_with_params
   in
+  (* The wrappers are the impls' only readers, and each captures them all:
+     the last one made takes them. *)
+  let wrapper_stmts =
+    match List.rev wrapper_stmts with
+    | Sasgn (id, d, CPPlambda l) :: rest ->
+      List.rev (Sasgn (id, d, CPPlambda {l with cl_moved = impl_ids}) :: rest)
+    | _ -> wrapper_stmts
+  in
   let deref_subst stmts = stmts in
   (impl_stmts @ wrapper_stmts, [], deref_subst)
 
