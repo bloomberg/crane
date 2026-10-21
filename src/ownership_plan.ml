@@ -153,7 +153,9 @@ let liveness t =
      where its value may be taken. *)
   let rec walk ?(consumed = true) ~pinned parents d live t =
     let walk ?(consumed = consumed) = walk ~consumed in
-    let unsequenced ?(consumed = consumed) ?evaluated = unsequenced ~consumed ?evaluated in
+    let unsequenced ?(consumed = consumed) ?evaluated ?inspected =
+      unsequenced ~consumed ?evaluated ?inspected
+    in
     match t with
     | MLrel (i, occurrence) ->
       let l = d - i in
@@ -175,7 +177,9 @@ let liveness t =
         let parents' = bind parents d ~n in
         let live_body = walk ~pinned parents' (d + n) live body in
         walk ~pinned parents d (leave parents' d live_body) action )
-    | MLapp (f, args) -> unsequenced ~pinned parents d live (f :: args)
+    (* A function is called through: [std::move(f)(x)] still calls [f]. *)
+    | MLapp (f, args) ->
+      unsequenced ~inspected:(fun k -> k = 0) ~pinned parents d live (f :: args)
     (* A record's fields are copied into it. *)
     | MLcons (ty, _, args) when Table.record_fields_of_type ty <> [] ->
       unsequenced ~consumed:false ~pinned parents d live args
@@ -209,8 +213,10 @@ let liveness t =
     | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> live
   (* The terms of [ts] are evaluated in no fixed order: each is followed by
      whatever the others read, and by what it reads itself when it is
-     evaluated twice.  One evaluated not at all reads nothing. *)
-  and unsequenced ~consumed ?(evaluated = fun _ -> 1) ~pinned parents d live ts =
+     evaluated twice.  One evaluated not at all reads nothing; one
+     [inspected] is read in place. *)
+  and unsequenced ~consumed ?(evaluated = fun _ -> 1) ?(inspected = fun _ -> false) ~pinned parents
+      d live ts =
     let reads_of = List.map (free parents d) ts in
     List.mapi
       (fun k t ->
@@ -218,7 +224,9 @@ let liveness t =
         | 0 -> live
         | m ->
           let others = List.filteri (fun j _ -> j <> k || m > 1) reads_of in
-          walk ~consumed ~pinned parents d (List.fold_left Levels.union live others) t )
+          walk
+            ~consumed:(consumed && not (inspected k))
+            ~pinned parents d (List.fold_left Levels.union live others) t )
       ts
     |> List.fold_left Levels.union live
   in

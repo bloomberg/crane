@@ -265,7 +265,7 @@ struct CpsEscape {
       };
       box b = store_in_box(adder);
       auto &[a0] = b;
-      return std::move(a0)(UINT64_C(5));
+      return a0(UINT64_C(5));
     }();
   }();
   /// Same but inline: no intermediate let for adder.
@@ -278,7 +278,7 @@ struct CpsEscape {
       box b = store_in_box(
           [=](uint64_t _x0) -> uint64_t { return t.make_adder(_x0); });
       auto &[a0] = b;
-      return std::move(a0)(UINT64_C(5));
+      return a0(UINT64_C(5));
     }();
   }();
   /// CPS with two stored continuations.
@@ -295,7 +295,7 @@ struct CpsEscape {
           [=](uint64_t _x0) -> uint64_t { return t2.make_adder(_x0); });
       auto &[a0] = b1;
       auto &[a00] = b2;
-      return (std::move(a0)(UINT64_C(0)) + std::move(a00)(UINT64_C(0)));
+      return (a0(UINT64_C(0)) + a00(UINT64_C(0)));
     }();
   }();
 };
