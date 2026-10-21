@@ -56,8 +56,9 @@ type fate =
   | Inspected
       (** a last use where translation reads the value in place: the
           scrutinee of a variant match, which binds its alternatives by
-          reference, or of a custom match spelling it twice; a field of a
-          record being constructed; the function an application calls *)
+          reference, or of a custom match spelling it twice; the function an
+          application calls.  Only the read standing in that position:
+          the arguments of a call it makes are taken by value. *)
   | Unplanned  (** not a read of the region [p] was made of *)
 
 (** Whether a read takes its variable's value: the variable is owned where

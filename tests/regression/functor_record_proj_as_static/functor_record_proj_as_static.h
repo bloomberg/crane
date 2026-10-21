@@ -448,7 +448,7 @@ template <OrderedType O> struct OrderedTypeFacts {
   }
 
   static bool lt_dec(typename O::t x, typename O::t y) {
-    auto &&_sv = O::compare(x, y);
+    auto &&_sv = O::compare(std::move(x), std::move(y));
     if (std::holds_alternative<typename Compare<typename O::t>::LT>(_sv.v())) {
       return true;
     } else {
@@ -1599,7 +1599,7 @@ template <Int I, OrderedType X> struct Raw {
     } else {
       const auto &[a0, a1, a2, a3] =
           std::get<typename enumeration<T1>::More>(e2.v());
-      auto &&_sv = X::compare(x1, a0);
+      auto &&_sv = X::compare(std::move(x1), a0);
       if (std::holds_alternative<typename Compare<typename X::t>::EQ>(
               _sv.v())) {
         if (cmp(d1, a1)) {

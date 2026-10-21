@@ -188,19 +188,18 @@ let liveness t =
   (* [walk ~consumed ~pinned parents d live t] records [t]'s reads and is
      what is live before [t], given [live] after it: both sets of variables
      in scope at [t], [d] binders deep.  [consumed] is whether [t] stands
-     where its value may be taken. *)
+     where its value may be taken.  It describes [t]'s own position: a
+     subterm whose value is [t]'s -- a cast's operand, a let's body, a
+     branch -- stands where [t] does, and any other takes its value, unless
+     it is read in place. *)
   let rec walk ?(consumed = true) ~pinned parents d live t =
-    let walk ?(consumed = consumed) = walk ~consumed in
-    let unsequenced ?(consumed = consumed) ?evaluated ?inspected =
-      unsequenced ~consumed ?evaluated ?inspected
-    in
     match t with
     | MLrel (i, occurrence) ->
       let l = d - i in
       let shared = Levels.exists (overlap parents l) in
       reads := {occurrence; last = not (shared live || shared pinned); consumed} :: !reads;
       Levels.add l live
-    | MLmagic (_, t) -> walk ~pinned parents d live t
+    | MLmagic (_, t) -> walk ~consumed ~pinned parents d live t
     | MLapp (MLglob {callee = r; _}, args) when Table.is_inline_custom r ->
       unsequenced ~evaluated:(evaluations r) ~pinned parents d live args
     (* A bind generated as sequencing runs its action and then its
@@ -209,18 +208,15 @@ let liveness t =
       when Core_effects.find use = Some {operation = Bind; mode = Sequential} -> (
       let action, k = Common.last_two args in
       match Mlutil.collect_lams k with
-      | [], _ -> walk ~pinned parents d (walk ~pinned parents d live k) action
+      | [], _ -> walk ~pinned parents d (walk ~consumed:false ~pinned parents d live k) action
       | ids, body ->
         let n = List.length ids in
         let parents' = bind parents d ~n in
-        let live_body = walk ~pinned parents' (d + n) live body in
+        let live_body = walk ~consumed ~pinned parents' (d + n) live body in
         walk ~pinned parents d (leave parents' d live_body) action )
     (* A function is called through: [std::move(f)(x)] still calls [f]. *)
     | MLapp (f, args) ->
       unsequenced ~inspected:(fun k -> k = 0) ~pinned parents d live (f :: args)
-    (* A record's fields are copied into it. *)
-    | MLcons (ty, _, args) when Table.record_fields_of_type ty <> [] ->
-      unsequenced ~consumed:false ~pinned parents d live args
     | MLcons (_, _, args) | MLtuple args -> unsequenced ~pinned parents d live args
     | MLparray (elems, default) ->
       unsequenced ~pinned parents d live (default :: Array.to_list elems)
@@ -236,14 +232,14 @@ let liveness t =
           (fun (l, occurrence) ->
             let shared = Levels.exists (overlap parents l) in
             let last = not (shared live || shared pinned || shared (Levels.remove l captured)) in
-            captures := {occurrence; last; consumed} :: !captures )
+            captures := {occurrence; last; consumed = true} :: !captures )
           (closure_reads d t)
       | _ -> () );
       Levels.union live captured
     | MLletin (_, ty, a, b, _) ->
       let pinned_b = if reads_at_uses ty a then Levels.union pinned (free parents d a) else pinned in
       let parents_b = bind parents d ~n:1 in
-      let live_b = walk ~pinned:pinned_b parents_b (d + 1) live b in
+      let live_b = walk ~consumed ~pinned:pinned_b parents_b (d + 1) live b in
       walk ~pinned parents d (leave parents_b d live_b) a
     (* A branch reads its pattern variables through the scrutinee's own
        evaluation -- a field of the record it names, a component of the pair
@@ -254,20 +250,19 @@ let liveness t =
         Array.fold_left
           (fun acc (ids, _, _, body) ->
             let n = List.length ids in
-            let live_body = walk ~pinned (bind_parts parents d ~n scrut) (d + n) live body in
+            let live_body = walk ~consumed ~pinned (bind_parts parents d ~n scrut) (d + n) live body in
             Levels.union acc (leave (bind parents d ~n) d live_body) )
           Levels.empty branches
       in
       walk
-        ~consumed:(consumed && scrutinee_consumed ty scrut branches)
+        ~consumed:(scrutinee_consumed ty scrut branches)
         ~pinned parents d after_scrut scrut
     | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> live
   (* The terms of [ts] are evaluated in no fixed order: each is followed by
      whatever the others read, and by what it reads itself when it is
      evaluated twice.  One evaluated not at all reads nothing; one
      [inspected] is read in place. *)
-  and unsequenced ~consumed ?(evaluated = fun _ -> 1) ?(inspected = fun _ -> false) ~pinned parents
-      d live ts =
+  and unsequenced ?(evaluated = fun _ -> 1) ?(inspected = fun _ -> false) ~pinned parents d live ts =
     let reads_of = List.map (free parents d) ts in
     List.mapi
       (fun k t ->
@@ -275,9 +270,7 @@ let liveness t =
         | 0 -> live
         | m ->
           let others = List.filteri (fun j _ -> j <> k || m > 1) reads_of in
-          walk
-            ~consumed:(consumed && not (inspected k))
-            ~pinned parents d (List.fold_left Levels.union live others) t )
+          walk ~consumed:(not (inspected k)) ~pinned parents d (List.fold_left Levels.union live others) t )
       ts
     |> List.fold_left Levels.union live
   in

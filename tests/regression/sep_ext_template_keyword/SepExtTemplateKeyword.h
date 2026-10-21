@@ -32,7 +32,7 @@ template <RawSig Raw> struct MakeOps {
   }
 
   static bool is_empty(typename Raw::tree t) {
-    auto &&_sv = Raw::elements(t);
+    auto &&_sv = Raw::elements(std::move(t));
     if (std::holds_alternative<
             typename Datatypes::template List<typename Raw::elt>::Nil>(
             _sv.v())) {

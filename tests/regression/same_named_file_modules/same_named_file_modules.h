@@ -1201,7 +1201,7 @@ template <OrderedType O> struct OrderedTypeFacts {
   }
 
   static bool lt_dec(typename O::t x, typename O::t y) {
-    auto &&_sv = O::compare(x, y);
+    auto &&_sv = O::compare(std::move(x), std::move(y));
     if (std::holds_alternative<typename Compare<typename O::t>::LT>(_sv.v())) {
       return true;
     } else {
