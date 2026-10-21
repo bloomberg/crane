@@ -312,7 +312,7 @@ let on_cycle_with self_refs r =
                  function (used to skip self-calls and detect back-calls)
     @param body  The function body to transform
     @return The body with mutual calls inlined, or the original body if no
-            mutual partner was found, and the partners inlined *)
+            mutual partner was found *)
 let try_inline_mutual_into names body =
   (* For each ref this function is known by, skip it (self-call). For each call
      in the body, check if the callee is registered AND lies on a recursion
@@ -435,7 +435,7 @@ let try_inline_mutual_into names body =
      registered when this one is transformed. *)
   let rec loop inlined body =
     match find_callee_in_stmts inlined body with
-    | None -> (body, inlined)
+    | None -> body
     | Some ((r, _, _, _) as callee) -> loop (r :: inlined) (inline_one callee body)
   in
   loop [] body
@@ -486,13 +486,15 @@ let planned_local_strategy fixpoint check body =
 
 (** The calls the machine of the function [r] is entered by, as the
     recursion plan names what a point resumes after: its own. *)
-let entered_by_function r : Recursion_plan.target -> bool = function
+let entered_by_function r (c : Recursion_plan.call) =
+  match c.target with
   | Function g -> Common.globref_equal g r
   | Member _ | Entering _ -> false
 
 (** The calls the machine of the function [member] of a local fixpoint is
     entered by: that member's. *)
-let entered_by_member (occurrence, member) : Recursion_plan.target -> bool = function
+let entered_by_member (occurrence, member) (c : Recursion_plan.call) =
+  match c.target with
   | Member (o, m) -> Miniml.Occurrence.equal o occurrence && Int.equal m member
   | Function _ | Entering _ -> false
 
@@ -1208,17 +1210,17 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
   let ret_ty = f.df_ret in
   (* Try to inline mutual recursion partners, every function of the unit
      registered before any was finished ({!register_decl}). *)
-  let body, inlined = try_inline_mutual_into names body in
+  let body = try_inline_mutual_into names body in
   (* What the machine is entered by in the plan's terms: the function's
-     calls, or a lifted helper's local fixpoint member's -- unless partners
-     were inlined into it, which the plan does not describe. *)
+     calls, or a lifted helper's local fixpoint member's.  A partner inlined
+     into it leaves no call of its own: a tail call continues in its body,
+     whose statements the plan has resume points for as the partner's, and
+     any other is an invocation, entering the machine only if adopted. *)
   let entered_by =
-    if inlined <> [] then None
-    else
-      let r = fst f.df_path.dp_outer in
-      match Lifted.of_ref r with
-      | Some h -> Option.map entered_by_member (Lifted.fixpoint h)
-      | None -> Some (entered_by_function r)
+    let r = fst f.df_path.dp_outer in
+    match Lifted.of_ref r with
+    | Some h -> Option.map entered_by_member (Lifted.fixpoint h)
+    | None -> Some (entered_by_function r)
   in
   (* Inline an Equations-style functional applied to itself so its hidden
      recursion becomes ordinary self-recursion that loopifies. *)
