@@ -1,9 +1,16 @@
-loopify_gap_ackermann.cpp ack: DECLINED: a self-call survived the transform
-loopify_gap_nested_fix.cpp rose_sum: DECLINED: a self-call survived the transform
-loopify_multi_recursion.cpp quadtree_rec: DECLINED: a self-call survived the transform
-loopify_multi_recursion.cpp quadtree_rect: DECLINED: a self-call survived the transform
-mem_safety_probe.cpp fold_compose: DECLINED: a self-call survived the transform
-mem_safety_probe10.cpp chain_adders: DECLINED: a self-call survived the transform
-mem_safety_probe16.cpp compose_summers: DECLINED: a self-call survived the transform
+conservative_types_kept_parameter.cpp length: DECLINED: a self-call survived the transform
+loopify_adopted_fix_name_shared.cpp f: DECLINED: a self-call survived the transform
+loopify_mutual_partial_app.cpp ft_e: DECLINED: a self-call survived the transform: it is inside an inlined body (2 parameter(s)), which needs a second machine entry
+loopify_mutual_partial_app.cpp ft_md: DECLINED: a self-call survived the transform: it is inside an inlined body (2 parameter(s)), which needs a second machine entry
+loopify_mutual_partial_app.cpp sum_md: DECLINED: a self-call survived the transform: it is inside an inlined body (1 parameter(s)), which needs a second machine entry
+loopify_mutual_result_types.cpp dbl_e: DECLINED: a self-call survived the transform: it is inside an inlined body (1 parameter(s)), which needs a second machine entry
+loopify_mutual_result_types.cpp dbl_md: DECLINED: a self-call survived the transform: it is inside an inlined body (1 parameter(s)), which needs a second machine entry
 mem_safety_probe16.cpp flatten_cps_aux: DECLINED: a self-call survived the transform
 mem_safety_probe21.cpp cps_sum: DECLINED: a self-call survived the transform
+nested_ind.cpp eval: DECLINED: a self-call survived the transform
+nested_ind.cpp expr_depth: DECLINED: a self-call survived the transform
+nested_ind.cpp expr_size: DECLINED: a self-call survived the transform
+nested_ind.cpp lit_map: DECLINED: a self-call survived the transform
+nested_ind.cpp literals: DECLINED: a self-call survived the transform
+nested_inductive_no_drain.cpp tsum: DECLINED: a self-call survived the transform
+rec_record.cpp rnode_depth: DECLINED: recursive call passes a value-type receiver, whose address cannot be stored in a frame
