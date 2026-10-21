@@ -168,7 +168,7 @@ let gen_local_fix_ycomb env ~binders renamed_ids funs_with_params =
   let wrapper_stmts =
     match List.rev wrapper_stmts with
     | Sasgn (id, d, CPPlambda l) :: rest ->
-      List.rev (Sasgn (id, d, CPPlambda {l with cl_moved = impl_ids}) :: rest)
+      List.rev (Sasgn (id, d, CPPlambda {l with cl_moved = List.sort Id.compare impl_ids}) :: rest)
     | _ -> wrapper_stmts
   in
   let deref_subst stmts = stmts in
@@ -289,12 +289,13 @@ let gen_local_fix_by_ref env ~binders renamed_ids funs_with_params owned_flags_p
 
 
 (* The names of the variables at the de Bruijn indices [is] a closure
-   captures; a class instance is a template parameter, not a value it
-   captures. *)
+   captures, in the order a capture list spells them; a class instance is a
+   template parameter, not a value it captures. *)
 let capture_names env is =
-  List.filter
-    (fun id -> not (Common.is_tc_instance_id id))
-    (List.filter_map (fun i -> Common.get_db_name_opt i env) is)
+  List.sort_uniq Id.compare
+    (List.filter
+       (fun id -> not (Common.is_tc_instance_id id))
+       (List.filter_map (fun i -> Common.get_db_name_opt i env) is) )
 
 (* Under [CRANE_CHECK_IR], the region's plan must have decided as translation
    does whether [let _ : ty := a] binds the closure [a] to a local, which the
