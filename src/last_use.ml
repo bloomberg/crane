@@ -129,6 +129,12 @@ let bind_other_opt scope = function
   | Some id -> bind_other scope id
   | None -> ()
 
+(* A name declared somewhere at a type not worth moving: the walk works on
+   names, not declarations, so another declaration of it -- Loopify
+   redeclares a split [let] as [auto] -- must not make this one's reads
+   moves. *)
+let not_worth scope id = scope.banned <- IdSet.add id scope.banned
+
 (* Every construct that gives a value a second name the liveness walk does not
    follow, or that may emit one expression twice. *)
 let rec scan_expr scope e =
@@ -160,8 +166,9 @@ and scan_stmt scope s =
       bind_other scope id )
     else if movable ty then
       scope.cands <- IdSet.add id scope.cands
+    else not_worth scope id
   | Sdecl (id, ty, _) | Sdecl_init (id, ty) ->
-    if movable ty then scope.cands <- IdSet.add id scope.cands
+    if movable ty then scope.cands <- IdSet.add id scope.cands else not_worth scope id
   | Sif_decl (id, ty, cond, _, _) ->
     if is_borrowed ty then (
       ban scope cond;

@@ -36,8 +36,8 @@ std::pair<uint64_t, uint64_t> LoopifyConditionalRecursion::cached_sum(
           const uint64_t &v = *cache;
           sub = std::make_pair(v, UINT64_C(0));
           {
-            _result = std::make_pair((a0 + std::move(sub).first),
-                                     (std::move(sub).second + UINT64_C(1)));
+            _result =
+                std::make_pair((a0 + sub.first), (sub.second + UINT64_C(1)));
           }
         } else {
           _stack.emplace_back(CraneCont1{a0});
@@ -49,8 +49,7 @@ std::pair<uint64_t, uint64_t> LoopifyConditionalRecursion::cached_sum(
       auto _f = std::move(std::get<CraneCont1>(_frame));
       uint64_t a0 = _f.a0;
       auto sub = std::move(_result);
-      _result = std::make_pair((a0 + std::move(sub).first),
-                               (std::move(sub).second + UINT64_C(1)));
+      _result = std::make_pair((a0 + sub.first), (sub.second + UINT64_C(1)));
     }
   }
   return _result;
@@ -209,8 +208,7 @@ LoopifyConditionalRecursion::multi_return(
               std::make_optional<std::pair<uint64_t, uint64_t>>(p));
           {
             uint64_t count = sub.first;
-            std::optional<std::pair<uint64_t, uint64_t>> payload =
-                std::move(sub).second;
+            std::optional<std::pair<uint64_t, uint64_t>> payload = sub.second;
             if (payload.has_value()) {
               const std::pair<uint64_t, uint64_t> &p = *payload;
               const auto &[a, b] = p;
@@ -235,8 +233,7 @@ LoopifyConditionalRecursion::multi_return(
       uint64_t a0 = _f.a0;
       auto sub = std::move(_result);
       uint64_t count = sub.first;
-      std::optional<std::pair<uint64_t, uint64_t>> payload =
-          std::move(sub).second;
+      std::optional<std::pair<uint64_t, uint64_t>> payload = sub.second;
       if (payload.has_value()) {
         const std::pair<uint64_t, uint64_t> &p = *payload;
         const auto &[a, b] = p;
@@ -294,8 +291,8 @@ std::pair<uint64_t, uint64_t> LoopifyConditionalRecursion::accum_with_cache(
           const uint64_t &v = *cached;
           sub = std::make_pair(v, UINT64_C(0));
           {
-            _result = std::make_pair((std::move(sub).first + a0),
-                                     (std::move(sub).second + UINT64_C(1)));
+            _result =
+                std::make_pair((sub.first + a0), (sub.second + UINT64_C(1)));
           }
         } else {
           _stack.emplace_back(CraneCont1{a0});
@@ -306,8 +303,7 @@ std::pair<uint64_t, uint64_t> LoopifyConditionalRecursion::accum_with_cache(
       auto _f = std::move(std::get<CraneCont1>(_frame));
       uint64_t a0 = _f.a0;
       auto sub = std::move(_result);
-      _result = std::make_pair((std::move(sub).first + a0),
-                               (std::move(sub).second + UINT64_C(1)));
+      _result = std::make_pair((sub.first + a0), (sub.second + UINT64_C(1)));
     }
   }
   return _result;
