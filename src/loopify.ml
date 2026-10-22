@@ -137,24 +137,40 @@ type inline_spec = {
           a lambda around [body]; this is that lambda's return type. *)
 }
 
+(** Whether every path through [stmts] ends in a return or a throw. *)
+let rec leaves stmts =
+  match List.rev stmts with
+  | (Sreturn _ | Sthrow _) :: _ -> true
+  | Sif (_, t, e) :: _ -> leaves t && leaves e
+  | Scustom_case (_, _, _, branches, _) :: _ ->
+    branches <> [] && List.for_all (fun (_, _, b) -> leaves b) branches
+  | Smatch (_, branches, Some default) :: _ ->
+    leaves default && List.for_all (fun br -> leaves br.smb_body) branches
+  | Sblock ss :: _ -> leaves ss
+  | _ -> false
+
 (** Inline all calls matching [spec] in a statement list.  Tail calls are
     expanded to parameter bindings plus body; non-tail calls become IIFEs.
-    {!generic_inline_stmt} handles individual statements; this is just
-    [concat_map]. *)
-let rec generic_inline_stmts spec stmts =
-  List.concat_map (generic_inline_stmt spec) stmts
+    {!generic_inline_stmt} handles individual statements. *)
+let rec generic_inline_stmts spec = function
+  (* A tail call of a function returning nothing is its statement and a
+     return.  It continues in a body every path of which ends in a return
+     or a throw, as such a function's body is generated: nothing may follow
+     a call the transforms read as the function's last. *)
+  | Sexpr e :: Sreturn None :: _ when spec.continues e && leaves spec.body -> generic_continue spec e
+  | s :: rest -> generic_inline_stmt spec s @ generic_inline_stmts spec rest
+  | [] -> []
+
+(** The tail call [e], continued in the body inlined: its parameters bound to
+    its arguments, then the body. *)
+and generic_continue spec e =
+  spec.inlined Continued e;
+  List.map2 (fun (pid, ty) arg -> Sasgn (pid, Declare (ty, None), arg)) spec.params (spec.get_args e)
+  @ spec.body
 
 (** Inline all calls matching [spec] in a single statement. *)
 and generic_inline_stmt spec = function
-  | Sreturn (Some e) when spec.continues e ->
-    spec.inlined Continued e;
-    (* Tail call — substitute parameters and splice body inline *)
-    let bindings =
-      List.map2
-        (fun (pid, ty) arg -> Sasgn (pid, Declare (ty, None), arg))
-        spec.params (spec.get_args e)
-    in
-    bindings @ spec.body
+  | Sreturn (Some e) when spec.continues e -> generic_continue spec e
   | Sif (cond, then_br, else_br) ->
     [Sif (cond,
           generic_inline_stmts spec then_br,

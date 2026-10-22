@@ -675,11 +675,11 @@ type inlined_call = {
    is its text, not a call.  A call with fewer arguments than its callee's
    parameters is a closure; one with more is an operand of the call it
    heads.  A saturated call continues in the partner's body where its
-   result is the function's, unless the function returns unit, which it
-   is generated returning nothing: it ends in the call's statement.
-   [parameters g] is the number of parameters of [g], and [flow_body g]
-   its body as generated, [None] where it is suspended whole. *)
-let inlined_calls ~self ~effects ~parameters ~flow_body ~void ~inlines ~continued body =
+   result is the function's -- in one returning unit, the call's statement
+   and the return after it.  [parameters g] is the number of parameters of
+   [g], and [flow_body g] its body as generated, [None] where it is
+   suspended whole. *)
+let inlined_calls ~self ~effects ~parameters ~flow_body ~inlines ~continued body =
   let effect_ = sequential effects in
   let found = ref [] in
   let continued_call use = List.exists (Occurrence.equal (Global_use.occurrence use)) continued in
@@ -695,7 +695,7 @@ let inlined_calls ~self ~effects ~parameters ~flow_body ~void ~inlines ~continue
       if n >= k then
         found :=
           { callee = use.callee;
-            continues = n = k && (pos = Returning || pos = Returned) && not void;
+            continues = n = k && (pos = Returning || pos = Returned);
             made_of = Global_use.occurrence use }
           :: !found;
       List.iter operand args
@@ -773,9 +773,8 @@ let inlinings_of ~effects ~defs ~members self fd =
         if Translation_support.suspends_whole g (Ml_type_util.ml_return_type fd.fd_type) body then None
         else Some body )
   in
-  let void = Ml_type_util.ml_type_is_unit (Ml_type_util.ml_return_type fd.fd_type) in
   let calls ~inlines ~continued body =
-    inlined_calls ~self ~effects ~parameters ~flow_body ~void ~inlines ~continued body
+    inlined_calls ~self ~effects ~parameters ~flow_body ~inlines ~continued body
   in
   let is_partner g =
     (not (Common.globref_equal g self)) && List.exists (Common.globref_equal g) members

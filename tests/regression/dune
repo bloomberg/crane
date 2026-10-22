@@ -13293,3 +13293,14 @@
   (alias runtest)
   (deps loopify_coerced_scrutinee.t.exe)
   (action (run ./loopify_coerced_scrutinee.t.exe))))
+
+(subdir loopify_mutual_void
+ (rule
+  (targets loopify_mutual_void.t.exe)
+  (deps LoopifyMutualVoid.vo loopify_mutual_void.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_mutual_void.t.exe loopify_mutual_void.cpp loopify_mutual_void.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_mutual_void.t.exe)
+  (action (run ./loopify_mutual_void.t.exe))))
