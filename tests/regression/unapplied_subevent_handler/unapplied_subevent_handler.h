@@ -492,9 +492,12 @@ struct UnappliedSubeventHandler {
             [](const auto &, const auto &) { return crane::obj(); },
             [](crane::obj, crane::obj, crane::obj, const auto &x,
                crane::fn<crane::obj(crane::obj)> x0) {
-              return [=](crane::obj _x0) -> crane::obj {
+              return [=, x0 = std::move(x0)](crane::obj _x0) -> crane::obj {
                 return Function::Cat_IFun(
-                    x, crane::any_cast<IFun<crane::obj, crane::obj>>(x0), _x0);
+                    x,
+                    crane::any_cast<IFun<crane::obj, crane::obj>>(
+                        std::move(x0)),
+                    _x0);
               };
             },
             [](crane::obj, crane::obj) {

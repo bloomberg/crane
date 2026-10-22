@@ -847,9 +847,12 @@ struct InterpChainPerf {
             [](const auto &, const auto &) { return crane::obj(); },
             [](crane::obj, crane::obj, crane::obj, const auto &x1,
                crane::fn<crane::obj(crane::obj)> x2) {
-              return [=](crane::obj _x0) -> crane::obj {
+              return [=, x2 = std::move(x2)](crane::obj _x0) -> crane::obj {
                 return Function::Case_sum1(
-                    x1, crane::any_cast<IFun<crane::obj, crane::obj>>(x2), _x0);
+                    x1,
+                    crane::any_cast<IFun<crane::obj, crane::obj>>(
+                        std::move(x2)),
+                    _x0);
               };
             },
             crane::obj(), crane::obj(), crane::obj(),
@@ -869,11 +872,12 @@ struct InterpChainPerf {
                         [](const auto &, const auto &) { return crane::obj(); },
                         [](crane::obj, crane::obj, crane::obj, const auto &x1,
                            crane::fn<crane::obj(crane::obj)> x2) {
-                          return [=](crane::obj _x0) -> crane::obj {
+                          return [=, x2 = std::move(x2)](
+                                     crane::obj _x0) -> crane::obj {
                             return Function::Cat_IFun(
                                 x1,
                                 crane::any_cast<IFun<crane::obj, crane::obj>>(
-                                    x2),
+                                    std::move(x2)),
                                 _x0);
                           };
                         },

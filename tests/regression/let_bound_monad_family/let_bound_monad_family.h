@@ -690,9 +690,12 @@ struct LetBoundMonadFamily {
             [](const auto &, const auto &) { return crane::obj(); },
             [](crane::obj, crane::obj, crane::obj, const auto &x,
                crane::fn<crane::obj(crane::obj)> x0) {
-              return [=](crane::obj _x0) -> crane::obj {
+              return [=, x0 = std::move(x0)](crane::obj _x0) -> crane::obj {
                 return Function::Cat_IFun(
-                    x, crane::any_cast<IFun<crane::obj, crane::obj>>(x0), _x0);
+                    x,
+                    crane::any_cast<IFun<crane::obj, crane::obj>>(
+                        std::move(x0)),
+                    _x0);
               };
             },
             [](crane::obj, crane::obj) {
@@ -718,9 +721,12 @@ struct LetBoundMonadFamily {
             [](const auto &, const auto &) { return crane::obj(); },
             [](crane::obj, crane::obj, crane::obj, const auto &x0,
                crane::fn<Itree<crane::obj, crane::obj>(crane::obj)> x1) {
-              return [=](crane::obj _x0) -> Itree<crane::obj, crane::obj> {
+              return [=, x1 = std::move(x1)](
+                         crane::obj _x0) -> Itree<crane::obj, crane::obj> {
                 return Case_sum1_Handler(
-                    x0, crane::any_cast<Handler<crane::obj, crane::obj>>(x1),
+                    x0,
+                    crane::any_cast<Handler<crane::obj, crane::obj>>(
+                        std::move(x1)),
                     _x0);
               };
             },
@@ -746,9 +752,11 @@ struct LetBoundMonadFamily {
                 [](const auto &, const auto &) { return crane::obj(); },
                 [](crane::obj, crane::obj, crane::obj, const auto &x,
                    crane::fn<crane::obj(crane::obj)> x0) {
-                  return [=](crane::obj _x0) -> crane::obj {
+                  return [=, x0 = std::move(x0)](crane::obj _x0) -> crane::obj {
                     return Function::Cat_IFun(
-                        x, crane::any_cast<IFun<crane::obj, crane::obj>>(x0),
+                        x,
+                        crane::any_cast<IFun<crane::obj, crane::obj>>(
+                            std::move(x0)),
                         _x0);
                   };
                 },

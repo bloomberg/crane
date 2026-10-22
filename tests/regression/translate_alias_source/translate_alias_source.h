@@ -274,7 +274,7 @@ struct TranslateAliasSource {
     return Interp::template translate<Sum1<AE, BE, crane::obj>,
                                       DstE<crane::obj>, T1>(
         [](crane::obj x0) {
-          return Sum1<crane::obj, crane::obj, crane::obj>::inr1(x0);
+          return Sum1<crane::obj, crane::obj, crane::obj>::inr1(std::move(x0));
         },
         x);
   }

@@ -798,10 +798,12 @@ struct InterpStateCaseHandler {
                     [](const auto &, const auto &) { return crane::obj(); },
                     [](crane::obj, crane::obj, crane::obj, const auto &x,
                        crane::fn<crane::obj(crane::obj)> x0) {
-                      return [=](crane::obj _x0) -> crane::obj {
+                      return [=, x0 = std::move(x0)](
+                                 crane::obj _x0) -> crane::obj {
                         return Function::Cat_IFun(
                             x,
-                            crane::any_cast<IFun<crane::obj, crane::obj>>(x0),
+                            crane::any_cast<IFun<crane::obj, crane::obj>>(
+                                std::move(x0)),
                             _x0);
                       };
                     },
@@ -825,11 +827,14 @@ struct InterpStateCaseHandler {
                   [](const auto &, const auto &) { return crane::obj(); },
                   [](crane::obj, crane::obj, crane::obj, const auto &x0,
                      crane::fn<crane::obj(crane::obj)> x1) {
-                    return [=](crane::obj _x0) -> crane::obj {
-                      return Function::Cat_IFun(
-                          x0, crane::any_cast<IFun<crane::obj, crane::obj>>(x1),
-                          _x0);
-                    };
+                    return
+                        [=, x1 = std::move(x1)](crane::obj _x0) -> crane::obj {
+                          return Function::Cat_IFun(
+                              x0,
+                              crane::any_cast<IFun<crane::obj, crane::obj>>(
+                                  std::move(x1)),
+                              _x0);
+                        };
                   },
                   [](crane::obj, crane::obj) {
                     return crane_erase_global<Function::Inl_sum1, crane::obj>();
@@ -848,11 +853,14 @@ struct InterpStateCaseHandler {
                   [](const auto &, const auto &) { return crane::obj(); },
                   [](crane::obj, crane::obj, crane::obj, const auto &x0,
                      crane::fn<crane::obj(crane::obj)> x1) {
-                    return [=](crane::obj _x0) -> crane::obj {
-                      return Function::Cat_IFun(
-                          x0, crane::any_cast<IFun<crane::obj, crane::obj>>(x1),
-                          _x0);
-                    };
+                    return
+                        [=, x1 = std::move(x1)](crane::obj _x0) -> crane::obj {
+                          return Function::Cat_IFun(
+                              x0,
+                              crane::any_cast<IFun<crane::obj, crane::obj>>(
+                                  std::move(x1)),
+                              _x0);
+                        };
                   },
                   [](crane::obj, crane::obj) {
                     return crane_erase_global<Function::Inr_sum1, crane::obj>();
@@ -871,11 +879,14 @@ struct InterpStateCaseHandler {
                   [](const auto &, const auto &) { return crane::obj(); },
                   [](crane::obj, crane::obj, crane::obj, const auto &x,
                      crane::fn<crane::obj(crane::obj)> x0) {
-                    return [=](crane::obj _x0) -> crane::obj {
-                      return Function::Cat_IFun(
-                          x, crane::any_cast<IFun<crane::obj, crane::obj>>(x0),
-                          _x0);
-                    };
+                    return
+                        [=, x0 = std::move(x0)](crane::obj _x0) -> crane::obj {
+                          return Function::Cat_IFun(
+                              x,
+                              crane::any_cast<IFun<crane::obj, crane::obj>>(
+                                  std::move(x0)),
+                              _x0);
+                        };
                   },
                   [](crane::obj, crane::obj) {
                     return crane_erase_global<Function::Inl_sum1, crane::obj>();
@@ -958,9 +969,12 @@ struct InterpStateCaseHandler {
             [](const auto &, const auto &) { return crane::obj(); },
             [](crane::obj, crane::obj, crane::obj, const auto &x1,
                crane::fn<crane::obj(crane::obj)> x2) {
-              return [=](crane::obj _x0) -> crane::obj {
+              return [=, x2 = std::move(x2)](crane::obj _x0) -> crane::obj {
                 return Function::Case_sum1(
-                    x1, crane::any_cast<IFun<crane::obj, crane::obj>>(x2), _x0);
+                    x1,
+                    crane::any_cast<IFun<crane::obj, crane::obj>>(
+                        std::move(x2)),
+                    _x0);
               };
             },
             crane::obj(), crane::obj(), crane::obj(),

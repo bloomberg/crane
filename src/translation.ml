@@ -2315,6 +2315,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           in
           owned_parameters (List.length args_with_owned)
             ~owned:(fun i -> match declared i with Some ty -> not (declared_by_reference ty) | None -> false)
+            ~declared
             ~ty:(fun i -> let _, ty, _ = List.nth args_with_owned i in ty)
         in
         (* A template parameter C++ cannot deduce is worse than the erasure

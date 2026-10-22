@@ -641,9 +641,12 @@ struct ItreeCaseHandler {
             [](const auto &, const auto &) { return crane::obj(); },
             [](crane::obj, crane::obj, crane::obj, const auto &x0,
                crane::fn<Itree<crane::obj, crane::obj>(crane::obj)> x1) {
-              return [=](crane::obj _x0) -> Itree<crane::obj, crane::obj> {
+              return [=, x1 = std::move(x1)](
+                         crane::obj _x0) -> Itree<crane::obj, crane::obj> {
                 return Case_sum1_Handler(
-                    x0, crane::any_cast<Handler<crane::obj, crane::obj>>(x1),
+                    x0,
+                    crane::any_cast<Handler<crane::obj, crane::obj>>(
+                        std::move(x1)),
                     _x0);
               };
             },
