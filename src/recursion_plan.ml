@@ -83,6 +83,7 @@ type t = {
   inlinings : inlining list Ref.User.Map.t;
   adopted_invocations : Occurrence.t list Ref.User.Map.t;
   kinds : kind Ref.User.Map.t;  (* per definition, its own calls *)
+  let_lambdas : Occurrence.t list;  (* the lets binding a lambda *)
 }
 
 let empty =
@@ -96,7 +97,8 @@ let empty =
     adoptable = Ref.User.Map.empty;
     inlinings = Ref.User.Map.empty;
     adopted_invocations = Ref.User.Map.empty;
-    kinds = Ref.User.Map.empty }
+    kinds = Ref.User.Map.empty;
+    let_lambdas = [] }
 
 let rec split_params n = function
   | MLlam (_, _, b) -> split_params (n + 1) b
@@ -986,7 +988,18 @@ let analyze groups struc =
     adoptable;
     inlinings;
     adopted_invocations;
-    kinds }
+    kinds;
+    let_lambdas =
+      Ref.User.Map.fold
+        (fun _ fd found ->
+          let found = ref found in
+          let rec walk e =
+            ( match e with MLletin (_, _, MLlam _, _, occ) -> found := occ :: !found | _ -> () );
+            Mlutil.ast_iter walk e
+          in
+          walk fd.fd_body;
+          !found )
+        defs [] }
 
 let same_cell c c' = Common.globref_equal c.constructor c'.constructor && c.hole = c'.hole
 
@@ -1035,6 +1048,7 @@ let equal a b =
        a.inlinings b.inlinings
   && Ref.User.Map.equal (List.equal Occurrence.equal) a.adopted_invocations b.adopted_invocations
   && Ref.User.Map.equal ( = ) a.kinds b.kinds
+  && List.equal Occurrence.equal a.let_lambdas b.let_lambdas
 
 let installed : t ref = State.cell State.Extraction empty
 
@@ -1139,3 +1153,7 @@ let resumes_binding (b : Core_binder.t) =
 let inlinings r = Option.default [] (Ref.User.Map.find_opt r !installed.inlinings)
 
 let adopted_invocations r = Ref.User.Map.find_opt r !installed.adopted_invocations
+
+(* A lambda a let binds does not call itself. *)
+let strategy_of_let occurrence =
+  if List.exists (Occurrence.equal occurrence) !installed.let_lambdas then Some No_loop else None

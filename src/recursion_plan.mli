@@ -109,6 +109,11 @@ val strategy_at :
   Miniml.Occurrence.t * int ->
   strategy option
 
+(** The strategy of a helper lifted for the lambda the let [occurrence]
+    binds, if the program has that let: no loop, for a lambda bound by a
+    let does not call itself. *)
+val strategy_of_let : Miniml.Occurrence.t -> strategy option
+
 (** The local fixpoints the machine of the function [r], lowered by an
     explicit stack, may adopt as a second entry: those in its flow -- run
     where its body runs, not under a lambda nor in another local fixpoint --

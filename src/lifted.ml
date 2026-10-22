@@ -105,6 +105,8 @@ let origin t = t.origin
 let binder t = t.binder
 let fixpoint t = match t.site with Fixpoint (o, m) -> Some (o, m) | Let _ -> None
 
+let site t = t.site
+
 let compare a b =
   let c = compare_origin a.origin b.origin in
   if c <> 0 then c

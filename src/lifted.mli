@@ -61,6 +61,9 @@ val origin : t -> Names.GlobRef.t option
 (** The binder the helper was bound to in {!origin}. *)
 val binder : t -> Names.Id.t
 
+(** The Core term that bound the helper. *)
+val site : t -> site
+
 (** The Core fixpoint, and the member of it, the helper lowers, if it
     lowers one. *)
 val fixpoint : t -> (Miniml.Occurrence.t * int) option

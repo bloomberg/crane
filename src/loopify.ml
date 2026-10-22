@@ -1188,7 +1188,8 @@ let fundef_display_name path =
     program's recursion plan has it ({!Recursion_plan.strategy}), read off its
     Core body and its recursive group's before any of them was lowered, given
     the constructor fields planned behind the pointer.  A helper lifted out of
-    a definition for one of its local fixpoints is planned by that fixpoint.
+    a definition for one of its local fixpoints is planned by that fixpoint,
+    and one lifted for a lambda a let binds by that let.
 
     Under [CRANE_CHECK_IR] the plan is checked against [classify check body],
     the reading of the finished body, mutual partners inlined, that decided
@@ -1202,8 +1203,9 @@ let planned_strategy r check body =
   | Some r -> (
     let pointer_fields = constructor_pointer_fields in
     let planned =
-      match Lifted.of_ref r with
-      | Some h -> Option.bind (Lifted.fixpoint h) (Recursion_plan.strategy_at ~pointer_fields)
+      match Option.map Lifted.site (Lifted.of_ref r) with
+      | Some (Fixpoint (occurrence, member)) -> Recursion_plan.strategy_at ~pointer_fields (occurrence, member)
+      | Some (Let occurrence) -> Recursion_plan.strategy_of_let occurrence
       | None -> Recursion_plan.strategy ~pointer_fields r
     in
     let what () = Pp.str (Table.kername_of_global r) in
