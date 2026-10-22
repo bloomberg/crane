@@ -84,13 +84,43 @@ let is_temporary = function
   | Sasgn (y, Declare _, _) -> Mlutil.is_temporary_id y
   | _ -> false
 
+(* Every local [e] names. *)
+let rec names_expr acc e =
+  let acc = match e with CPPvar y -> Id.Set.add y acc | _ -> acc in
+  fold_expr_children ~on_expr:names_expr ~on_stmts:names_stmts acc e
+
+and names_stmts acc l =
+  List.fold_left
+    (fun acc s -> fold_stmt_children ~on_expr:names_expr ~on_stmts:names_stmts acc s)
+    acc l
+
+(* [s] with its moves of the locals [xs], a capture's included, made reads. *)
+let rec read_not_moved xs s =
+  let rec expr e =
+    match e with
+    | CPPmove (CPPvar y) when Id.Set.mem y xs -> CPPvar y
+    | CPPlambda l when List.exists (fun y -> Id.Set.mem y xs) l.cl_moved ->
+      expr (CPPlambda {l with cl_moved = List.filter (fun y -> not (Id.Set.mem y xs)) l.cl_moved})
+    | _ -> map_expr expr (read_not_moved xs) Fun.id e
+  in
+  map_stmt expr (read_not_moved xs) Fun.id s
+
 (* [rest] with [x] replaced by [v] in the first statement past the leading
-   temporaries, if that is where [x] is read. *)
-let rec inline_into x v = function
-  | s :: rest when is_temporary s && count_stmt x 0 s = 0 ->
-    Option.map (fun rest -> s :: rest) (inline_into x v rest)
-  | s :: rest -> Option.map (fun s -> s :: rest) (subst_stmt x v s)
-  | [] -> None
+   temporaries, if that is where [x] is read.  [v] is then evaluated after
+   the temporaries it passes and with the rest of that statement, in an
+   order C++ leaves open, where it was evaluated before them: what any of
+   them moved that [v] reads is read there instead.  The ownership plan,
+   reading the temporaries in sequence, may have taken a later one's read
+   for a variable's last. *)
+let inline_into x v rest =
+  let read_by_v = read_not_moved (names_expr Id.Set.empty v) in
+  let rec go = function
+    | s :: rest when is_temporary s && count_stmt x 0 s = 0 ->
+      Option.map (fun rest -> read_by_v s :: rest) (go rest)
+    | s :: rest -> Option.map (fun s -> s :: rest) (subst_stmt x v (read_by_v s))
+    | [] -> None
+  in
+  go rest
 
 (* The mappers putting temporaries back in a statement list and in an
    expression, the last first: by the time a temporary is considered, every
