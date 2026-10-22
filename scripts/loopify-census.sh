@@ -24,6 +24,8 @@ cd "$(dirname "$0")/.."
 GOLDEN=tests/loopify-census.golden
 # dune takes a build directory inside _build only as an absolute path.
 BUILD=$PWD/_build/census
+# Nor does it make the directory that build directory is in.
+mkdir -p "$PWD/_build"
 LOG=$(mktemp)
 OUT=$(mktemp)
 ACTUAL=$(mktemp)
