@@ -13326,3 +13326,14 @@
   (alias runtest)
   (deps loopify_mutual_void.t.exe)
   (action (run ./loopify_mutual_void.t.exe))))
+
+(subdir loopify_shadow_in_scrutinee_call
+ (rule
+  (targets loopify_shadow_in_scrutinee_call.t.exe)
+  (deps LoopifyShadowInScrutineeCall.vo loopify_shadow_in_scrutinee_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_shadow_in_scrutinee_call.t.exe loopify_shadow_in_scrutinee_call.cpp loopify_shadow_in_scrutinee_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_shadow_in_scrutinee_call.t.exe)
+  (action (run ./loopify_shadow_in_scrutinee_call.t.exe))))

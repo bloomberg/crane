@@ -305,9 +305,6 @@ let rewrite_borrowed_shadow_uses shadow_params stmts =
       shadow_params
   in
   let is_ptr_shadow id = List.exists (Id.equal id) ptr_shadows in
-  let expr_mentions_ptr_shadow e =
-    expr_exists (function CPPvar id when is_ptr_shadow id -> true | _ -> false) e
-  in
   let rec expr = function
     | CPPfun_call (_, CPPaccess (Adot, CPPvar id, meth), args)
       when is_ptr_shadow id ->
@@ -322,9 +319,18 @@ let rewrite_borrowed_shadow_uses shadow_params stmts =
          (don't dereference it), only rewrite the RHS. *)
       Sexpr (CPPbinop (Bassign, CPPvar id, expr rhs))
     | Smatch (scrut, branches, default) ->
-      (* A scrutinee already reached through a pointer shadow keeps its own
-         spelling, and is a pointer rather than a value. *)
-      let ptr_scrutinee = expr_mentions_ptr_shadow scrut.sc_expr in
+      (* A scrutinee whose object is a pointer shadow -- [xs.v()] -- is
+         matched through it, as a pointer rather than a value.  One whose
+         object only mentions a shadow -- a call taking it as an argument --
+         is a value like any other, the shadow read in it dereferenced. *)
+      let ptr_scrutinee =
+        match scrut.sc_expr with
+        | CPPvar id
+        | CPPaccess_call (_, CPPvar id, _, [])
+        | CPPfun_call (_, CPPaccess (_, CPPvar id, _), {rev = []}) ->
+          is_ptr_shadow id
+        | _ -> false
+      in
       Smatch
         ( { scrut with
             sc_expr =
