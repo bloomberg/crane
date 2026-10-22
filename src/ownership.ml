@@ -7,10 +7,17 @@ let flags : bool list Ref.User.Map.t ref = State.cell State.Extraction Ref.User.
 
 let () = Escape.callee_flags := fun r -> Ref.User.Map.find_opt r !flags
 
-let summarize struc =
+let summarize ?(receiver = fun _ -> None) struc =
   (* A custom constant is not generated from its body: what it does with its
      arguments is its mapping's, which a call to it spells. *)
   let fns = List.filter (fun (r, _, _) -> not (Table.is_custom r)) (Modutil.struct_functions struc) in
+  (* A method takes its receiver as the const [this], whatever its body does
+     with it: a call hands it nothing to keep.  [receiver] counts parameters
+     outermost first, the flags innermost first. *)
+  let unless_receiver r flags =
+    let n = List.length flags in
+    List.mapi (fun i owned -> owned && receiver r <> Some (n - 1 - i)) flags
+  in
   (* The fixed point is computed apart from the installed flags, which
      {!Escape} reads in the meantime as each round leaves them. *)
   let installed = !flags in
@@ -21,7 +28,7 @@ let summarize struc =
     List.iter
       (fun (r, b, ty) ->
         let params, body = Ml_type_util.declared_parameters ty b in
-        let f = Escape.infer_owned_params (List.length params) body in
+        let f = unless_receiver r (Escape.infer_owned_params (List.length params) body) in
         if Ref.User.Map.find_opt r !flags <> Some f then (
           changed := true;
           flags := Ref.User.Map.add r f !flags ))

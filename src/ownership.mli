@@ -18,8 +18,11 @@
     function's, innermost first, for the parameters its head declares,
     eta-expansion's included ({!Ml_type_util.declared_parameters}).  A
     custom constant has none: its mapping, not its body, is what a call to
-    it runs. *)
-val summarize : Miniml.ml_structure -> (Names.GlobRef.t * bool list) list
+    it runs.  [receiver r] is the position, outermost first, of the
+    parameter the function [r] generated as a method takes as its receiver,
+    which is borrowed. *)
+val summarize :
+  ?receiver:(Names.GlobRef.t -> int option) -> Miniml.ml_structure -> (Names.GlobRef.t * bool list) list
 
 (** Install a {!summarize}d program's flags for {!Escape} to consult. *)
 val install : (Names.GlobRef.t * bool list) list -> unit
