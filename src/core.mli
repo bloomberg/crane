@@ -4,10 +4,10 @@
 (** Crane's functional Core IR: an extracted program, at a named phase.
 
     The phases share MiniML's grammar.  What tells them apart is which passes
-    have run, and the type says it: a backend entry point takes a [frozen
-    program], and a structure only becomes one through {!optimize} and then
-    {!freeze}.  Selecting whole top-level modules keeps the phase; nothing
-    else builds a program.
+    have run, and the type says it: a backend entry point takes a
+    [normalized program], and a structure only becomes one through
+    {!optimize}, {!freeze} and then {!normalize}.  Selecting whole top-level
+    modules keeps the phase; nothing else builds a program.
 
     Transitional.  {!freeze} checks the structural invariants that hold
     today.  It leaves no metavariable in the program: each solved one is
@@ -22,6 +22,7 @@
 type extracted
 type optimized
 type frozen
+type normalized
 
 type 'phase program
 
@@ -40,6 +41,14 @@ val optimize : (Miniml.ml_structure -> Miniml.ml_structure) -> extracted program
     is made or solved.  Under [CRANE_TRACE_PIPELINE] it reports how many open
     annotations the program holds. *)
 val freeze : optimized program -> frozen program
+
+(** [normalize pass p] is [p] in the form control lowering reads: [pass]
+    ({!Normalize.structure}) binds each call a function Loopify transforms
+    makes to its own recursive group, where it is evaluated strictly and not
+    in tail position, to a temporary of its own, in evaluation order.  It
+    runs on the frozen program and so solves nothing: a temporary whose type
+    the call does not say is given an open annotation. *)
+val normalize : (Miniml.ml_structure -> Miniml.ml_structure) -> frozen program -> normalized program
 
 (** The structure, for the consumers not converted to the phase types. *)
 val structure : 'phase program -> Miniml.ml_structure

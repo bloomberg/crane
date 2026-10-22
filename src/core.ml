@@ -6,6 +6,7 @@ open Miniml
 type extracted
 type optimized
 type frozen
+type normalized
 
 type 'phase program = { structure : ml_structure }
 
@@ -205,3 +206,5 @@ let freeze p =
   if Pipeline_trace.enabled () then
     Pipeline_trace.event "freeze" (Printf.sprintf "open annotations: %d" (open_annotations p));
   { structure = p.structure }
+
+let normalize pass p = { structure = pass p.structure }

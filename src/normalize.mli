@@ -13,5 +13,6 @@
     preserves meaning; nothing is taken out of a branch, a lambda body or a
     let body, which may not run. *)
 
-(** [structure s] normalizes every loopified fixpoint group in [s]. *)
+(** [structure s] normalizes every loopified fixpoint group in [s], a frozen
+    program ({!Core.normalize}). *)
 val structure : Miniml.ml_structure -> Miniml.ml_structure

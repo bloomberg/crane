@@ -143,6 +143,10 @@ val show_extraction : pstate:Declare.Proof.t -> unit
 (** Rewrites and analyses of the extracted structure, once per extraction. *)
 val core_pass_names : string list
 
+(** Putting the frozen program in the form control lowering reads, once per
+    extraction ({!Core.normalize}). *)
+val normalize_pass_names : string list
+
 (** Analysing and planning one unit, before anything else of it runs. *)
 val plan_pass_names : string list
 

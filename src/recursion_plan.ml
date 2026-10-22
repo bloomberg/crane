@@ -822,7 +822,8 @@ let adopted_invocations_of ~defs self inlinings =
    could not inline, or one of a third member in a partner's body run as
    an operand, stays a call of another function.  A function on no cycle
    calls no function it could recurse through. *)
-let analyze groups struc =
+let analyze groups program =
+  let struc = Core.structure program in
   let effects = Core_effects.analyze struc in
   (* Every body is read with its applications whole, as translation reads
      them ({!Mlutil.read_spine}): [(magic f) x] and [(f x) y] are calls of

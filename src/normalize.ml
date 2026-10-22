@@ -24,8 +24,8 @@ let rec replace_placeholders f e =
   | None -> Mlutil.ast_map (replace_placeholders f) e
 
 (* A local fixpoint function: its declared type, and its arity, the
-   lambdas its body starts with.  The type may still be a meta translation
-   has yet to fill; the arity is what says a call is a full one. *)
+   lambdas its body starts with.  The type may leave its result open; the
+   arity is what says a call is a full one. *)
 type local = {l_type : ml_type; l_arity : int}
 
 (* The functions whose calls are bound: a top-level fixpoint group, by
@@ -71,8 +71,8 @@ let group_call group ~depth e =
     with
     | Some l when List.length args = l.l_arity ->
       let value_args = List.filter (function MLdummy _ -> false | _ -> true) args in
-      (* What it yields, or, while translation has yet to say, a meta of its
-         own for the temporary. *)
+      (* What it yields, or, where the fixpoint's type does not say, an open
+         annotation of the temporary's own: the program is frozen. *)
       Some
         (Option.default (Mlutil.new_meta ())
            (Ml_type_util.ml_codomain_after (List.length value_args) l.l_type))
