@@ -13403,3 +13403,14 @@
   (alias runtest)
   (deps reuse_token_in_closure.t.exe)
   (action (run ./reuse_token_in_closure.t.exe))))
+
+(subdir loopify_reuse_cursor_reads_field
+ (rule
+  (targets loopify_reuse_cursor_reads_field.t.exe)
+  (deps LoopifyReuseCursorReadsField.vo loopify_reuse_cursor_reads_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_reuse_cursor_reads_field.t.exe loopify_reuse_cursor_reads_field.cpp loopify_reuse_cursor_reads_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_reuse_cursor_reads_field.t.exe)
+  (action (run ./loopify_reuse_cursor_reads_field.t.exe))))

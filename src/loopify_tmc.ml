@@ -419,6 +419,49 @@ let return_from_switches ret stmts =
   in
   block ~in_switch:false stmts
 
+(** Whether [e] reads a variable the recursive field [field] is reached
+    through. *)
+let reads_field field =
+  let through = free_vars_expr field in
+  fun e -> List.exists (fun v -> List.exists (Id.equal v) through) (free_vars_expr e)
+
+(** The branch [br] with every read of [field] other than the cursor's own
+    advance -- an argument of a cell, the next value of a shadow other than
+    [cursor_id] -- bound to a temporary, and the declarations of those
+    temporaries.  [reuse_step] moves the field out of a unique cell, so a read
+    evaluated after it sees a null handle; the cell's constructor cannot run
+    before it, since recycling destroys the old payload the field lives in. *)
+let read_before_step ~cursor_id ~field varying shadow_params br =
+  let reads = reads_field field in
+  let decls = ref [] in
+  let bind e =
+    if not (reads e) then e
+    else
+      let n = List.length !decls in
+      let id = Id.of_string (if n = 0 then "_read" else "_read" ^ string_of_int n) in
+      decls := Sasgn (id, Declare (Tauto, None), e) :: !decls;
+      CPPvar id
+  in
+  let cells =
+    List.map
+      (fun cell -> {cell with tca_non_rec_args = List.map (fun (i, e) -> (i, bind e)) cell.tca_non_rec_args})
+      br.tmc_cells
+  in
+  let shadows = ref shadow_params in
+  let rec_args =
+    List.map2
+      (fun is_varying e ->
+        if not is_varying then e
+        else
+          match !shadows with
+          | (sid, _) :: rest ->
+            shadows := rest;
+            if Id.equal sid cursor_id then e else bind e
+          | [] -> e)
+      varying br.tmc_rec_args
+  in
+  (List.rev !decls, {tmc_cells = cells; tmc_rec_args = rec_args})
+
 (** {2:reuse-cursor Perceus reuse cursor}
 
     A TMC loop walks its input by borrowed pointer and allocates a fresh output
@@ -461,7 +504,13 @@ let return_from_switches ret stmts =
     [list (A * B)], and no cell of either input is the right size for its
     output.  Everything else -- accumulators, unchanged parameters, several
     pointer-walked parameters at once -- yields [None] and the ordinary
-    allocating path. *)
+    allocating path.
+
+    [reuse_step] steals the recursive field, so whatever else the iteration
+    reads of it is read first ({!read_before_step}); a temporary can hold a
+    cell's argument or a value shadow's next value, but not another pointer
+    shadow's, which would then point into the temporary -- such a walk
+    declines the cursor. *)
 let tmc_reuse_cursor ~storage varying shadow_params br =
   match storage with
   | Value_root _ | Pointer_result _ -> None
@@ -470,6 +519,7 @@ let tmc_reuse_cursor ~storage varying shadow_params br =
     if List.length rec_args <> List.length shadow_params then None
     else
       let rec pointee = function Tconst t -> pointee t | t -> t in
+      let updates = List.combine shadow_params rec_args in
       let candidates =
         List.filter_map
           (fun ((sid, sty), arg) ->
@@ -477,9 +527,21 @@ let tmc_reuse_cursor ~storage varying shadow_params br =
             | Tptr t, CPPderef inner when Ml_type_util.cpp_ty_eq (pointee t) ret_ty ->
               Some (sid, inner)
             | _ -> None)
-          (List.combine shadow_params rec_args)
+          updates
       in
-      match candidates with [c] -> Some c | _ -> None
+      match candidates with
+      | [((cursor_id, field) as c)] ->
+        let reads = reads_field field in
+        if
+          List.exists
+            (fun ((sid, sty), arg) ->
+              (not (Id.equal sid cursor_id))
+              && (match sty with Tptr _ -> true | _ -> false)
+              && reads arg)
+            updates
+        then None
+        else Some c
+      | _ -> None
 
 (** Generate statements for a TMC branch with possibly nested constructor cells.
     Allocates all cells with [nullptr] holes, links consecutive pairs via
@@ -505,15 +567,18 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~storage br
         output instead of being freed and a fresh one allocated. *)
   let cursor = tmc_reuse_cursor ~storage varying shadow_params br in
   if cursor <> None then cursor_used := true;
-  let step_decl =
+  let step_decl, br =
     match cursor with
-    | Some (_, rec_field) ->
+    | Some (cursor_id, rec_field) ->
+      let reads, br = read_before_step ~cursor_id ~field:rec_field varying shadow_params br in
       (* CPPfun_call holds its arguments reversed (see translation.ml:1776),
          so [reuse_step(_own, _uniq, a1)] is written innermost-first here. *)
-      [ Sasgn (id_rstep, Declare (Tauto, None),
-               CPPfun_call (call_opaque, CPPrt Crane_rt.Reuse_step,
-                            of_reversed ([rec_field; CPPvar id_uniq; CPPvar id_own]))) ]
-    | None -> []
+      ( reads
+        @ [ Sasgn (id_rstep, Declare (Tauto, None),
+                   CPPfun_call (call_opaque, CPPrt Crane_rt.Reuse_step,
+                                of_reversed ([rec_field; CPPvar id_uniq; CPPvar id_own]))) ],
+        br )
+    | None -> ([], br)
   in
   let token =
     Option.map
