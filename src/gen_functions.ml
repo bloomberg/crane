@@ -572,20 +572,19 @@ let dfun_body_scope n b cty ty temps =
     | [] -> b
     | subst -> map_types_in_ast (subst_tvars_type subst) b
   in
+  let all_params = missing @ ids in
+  let b = eta_applied missing b in
   (* The callable parameters kept as [crane::fn] rather than promoted to
      template parameters below; they keep their [Tconst (Tfun(dom, cod))]
-     type.  The indices are source order (param 0 = first Rocq parameter),
-     while [ids] is in de Bruijn order (innermost first), so a loop over it
-     asks about source index [List.length ids - 1 - i] -- the length of the
-     list it is iterating, which by then also holds the eta-expanded
-     parameters. *)
+     type.  Asked of the body as it is generated, over every parameter it
+     binds, so that one the definition leaves to eta-expansion is decided as
+     it would be if written.  The indices are source order (param 0 = first
+     Rocq parameter). *)
   let non_fwd_set =
     ungeneralised_callable_params ~self_ref:n
       ~suspended:(Table.is_coinductive_type (ml_return_type ty))
-      (List.length ids) b
+      (List.length all_params) b
   in
-  let all_params = missing @ ids in
-  let b = eta_applied missing b in
   (* Type class instance parameters become C++ template type parameters. We
      assign unique names (_tcI0, _tcI1, ...) to avoid collision with: - User
      variable names like 'i', 'j', etc. - Other generated names in the same

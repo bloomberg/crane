@@ -2179,13 +2179,14 @@ let reconcile_parameter_type body_ty sig_ty =
   else body_ty
 
 (** {!ungeneralised_callable_params} for the definition of [r] at type [ty]
-    with body [b], over the parameters {!collect_typed_lams} finds: the ones
-    its function is generated with. *)
+    with body [b], over the parameters {!Ml_type_util.declared_parameters}
+    finds, written or eta-expanded: the ones its function is generated
+    with. *)
 let ungeneralised_callables_of_definition r ty b =
-  let ids, body = collect_typed_lams ty b in
+  let params, body = declared_parameters ty b in
   ungeneralised_callable_params ~self_ref:r
     ~suspended:(Table.is_coinductive_type (ml_return_type ty))
-    (List.length ids) body
+    (List.length params) body
 
 (** Whether a function takes a callable parameter of C++ type [f] as a
     deduced [F &&] rather than a [crane::fn]: unless the parameter is

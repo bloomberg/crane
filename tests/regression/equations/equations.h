@@ -8,6 +8,7 @@
 #include <concepts>
 #include <cstdint>
 #include <memory>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -262,13 +263,11 @@ struct Equations {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename T2>
+  template <typename T1, typename T2, typename F0, typename F1, typename F2>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 gcd_graph_mut(
-      std::type_identity_t<crane::fn<T1(uint64_t)>> f,
-      std::type_identity_t<crane::fn<T1(uint64_t)>> f0,
-      std::type_identity_t<
-          crane::fn<T1(uint64_t, uint64_t, gcd_clause_3_graph, T2)>>
-          f1,
+      F0 &&f, F1 &&f0, F2 &&f1,
       std::type_identity_t<crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> f2,
       std::type_identity_t<crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> f3,
       const std::pair<uint64_t, uint64_t> &x0_, uint64_t x1_,
@@ -347,17 +346,14 @@ struct Equations {
     return f4(x0_, x1_, x2_);
   }
 
-  template <typename T1, typename T2>
-  static T2 gcd_clause_3_graph_mut(
-      std::type_identity_t<crane::fn<T1(uint64_t)>> f,
-      std::type_identity_t<crane::fn<T1(uint64_t)>> f0,
-      std::type_identity_t<
-          crane::fn<T1(uint64_t, uint64_t, gcd_clause_3_graph, T2)>>
-          f1,
-      std::type_identity_t<crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> f2,
-      std::type_identity_t<crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> f3,
-      uint64_t x0_, uint64_t x1_, bool x2_, uint64_t x3_,
-      const gcd_clause_3_graph &x4_) {
+  template <typename T1, typename T2, typename F0, typename F1, typename F2,
+            typename F3, typename F4>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, const uint64_t &>
+  static T2 gcd_clause_3_graph_mut(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
+                                   uint64_t x0_, uint64_t x1_, bool x2_,
+                                   uint64_t x3_,
+                                   const gcd_clause_3_graph &x4_) {
     auto f4_impl = [&](auto &_self_f4, auto &_self_f5,
                        const std::pair<uint64_t, uint64_t> &, uint64_t,
                        const gcd_graph &g) -> T1 {
@@ -732,12 +728,9 @@ struct Equations {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename T2>
+  template <typename T1, typename T2, typename F2>
   static T1 collatz_steps_graph_mut(
-      T1 f, T1 f0,
-      std::type_identity_t<
-          crane::fn<T1(uint64_t, collatz_steps_clause_3_graph, T2)>>
-          f1,
+      T1 f, T1 f0, F2 &&f1,
       std::type_identity_t<crane::fn<T2(uint64_t, collatz_steps_graph, T1)>> f2,
       std::type_identity_t<crane::fn<T2(uint64_t, collatz_steps_graph, T1)>> f3,
       uint64_t x0_, uint64_t x1_, const collatz_steps_graph &x2_) {
@@ -795,16 +788,11 @@ struct Equations {
     return f4(x0_, x1_, x2_);
   }
 
-  template <typename T1, typename T2>
-  static T2 collatz_steps_clause_3_graph_mut(
-      T1 f, T1 f0,
-      std::type_identity_t<
-          crane::fn<T1(uint64_t, collatz_steps_clause_3_graph, T2)>>
-          f1,
-      std::type_identity_t<crane::fn<T2(uint64_t, collatz_steps_graph, T1)>> f2,
-      std::type_identity_t<crane::fn<T2(uint64_t, collatz_steps_graph, T1)>> f3,
-      uint64_t x0_, bool x1_, uint64_t x2_,
-      const collatz_steps_clause_3_graph &x3_) {
+  template <typename T1, typename T2, typename F2, typename F3, typename F4>
+  static T2
+  collatz_steps_clause_3_graph_mut(T1 f, T1 f0, F2 &&f1, F3 &&f2, F4 &&f3,
+                                   uint64_t x0_, bool x1_, uint64_t x2_,
+                                   const collatz_steps_clause_3_graph &x3_) {
     auto f4_impl = [&](auto &_self_f4, auto &_self_f5, uint64_t, uint64_t,
                        const collatz_steps_graph &c) -> T1 {
       if (std::holds_alternative<
