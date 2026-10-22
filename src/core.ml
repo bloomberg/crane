@@ -6,6 +6,7 @@ open Miniml
 type extracted
 type optimized
 type frozen
+type normalized
 
 type 'phase program = { structure : ml_structure }
 
@@ -58,7 +59,10 @@ let open_annotations p =
   iter_types walk p;
   Opens.length seen
 
-let fail what = CErrors.anomaly Pp.(str ("Crane: the frozen Core program " ^ what ^ "."))
+let failure phase what =
+  CErrors.anomaly Pp.(str ("Crane: the " ^ phase ^ " Core program " ^ what ^ "."))
+
+let fail = failure "frozen"
 
 (** [zonk p]: [p] with every metavariable gone from its annotations -- a
     solved one replaced by its solution, an unsolved one by an open
@@ -205,3 +209,22 @@ let freeze p =
   if Pipeline_trace.enabled () then
     Pipeline_trace.event "freeze" (Printf.sprintf "open annotations: %d" (open_annotations p));
   { structure = p.structure }
+
+(** The top-level elements of [struc] that normalizing [struc] again would
+    rewrite. *)
+let not_normal pass struc =
+  let again = Mlutil.preserving_meta_supply (fun () -> pass struc) in
+  List.filter_map
+    (fun ((l, fp), (_, fp')) -> if Ml_fingerprint.equal fp fp' then None else Some l)
+    (List.combine (Ml_fingerprint.elements struc) (Ml_fingerprint.elements again))
+
+let normalize pass p =
+  let structure = pass p.structure in
+  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
+    match not_normal pass structure with
+    | [] -> ()
+    | l :: _ ->
+      failure "normalized"
+        ("is not in normal form: normalizing " ^ Names.Label.to_string l ^ " again rewrites it")
+  end;
+  { structure }

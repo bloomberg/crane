@@ -16,15 +16,15 @@ type program = {
   recursion : Recursion_plan.t;
 }
 
-let analyze_program frozen =
-  let struc = Core.structure frozen in
+let analyze_program normalized =
+  let struc = Core.structure normalized in
   let recursive_groups = Recursive_groups.analyze struc in
   let methods = Method_registry.create ~ret_is_erased:Translation.return_type_is_erased struc in
   let receiver r = Option.map snd (Method_registry.is_registered_method methods r) in
   { throwing_values = Structure_analysis.throwing_values struc;
     parameter_ownership = Ownership.summarize ~receiver struc;
     recursive_groups;
-    recursion = Recursion_plan.analyze recursive_groups struc }
+    recursion = Recursion_plan.analyze recursive_groups normalized }
 
 let used_customs struc =
   let used = ref Ref.User.Set.empty in

@@ -1,7 +1,7 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** How each function of a frozen program recurses
+(** How each function of a normalized program recurses
     (docs/Pipeline-Disentangling-Plan.md, Milestone 6), read off its Core
     body before any function is lowered: a fact about the program
     ({!Program_facts.analyze_program}), and what Loopify transforms a
@@ -37,9 +37,9 @@ type t
 
 val empty : t
 
-(** [analyze groups s] plans every function [s] defines, in the recursive
-    groups [groups]. *)
-val analyze : Recursive_groups.t -> Miniml.ml_structure -> t
+(** [analyze groups p] plans every function the normalized program [p]
+    defines, in the recursive groups [groups]. *)
+val analyze : Recursive_groups.t -> Core.normalized Core.program -> t
 
 val equal : t -> t -> bool
 

@@ -135,6 +135,14 @@ let reset_meta_count () =
   meta_count := 0;
   pending_applications := []
 
+let preserving_meta_supply f =
+  let count = !meta_count and pending = !pending_applications in
+  Fun.protect
+    ~finally:(fun () ->
+      meta_count := count;
+      pending_applications := pending )
+    f
+
 (** Creates a fresh type metavariable for unification.  Once the program is
     frozen nothing can solve one, so what is made instead is the open
     annotation an unsolved metavariable becomes ({!Miniml.Topen}). *)

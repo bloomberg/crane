@@ -17,13 +17,23 @@ let hit tag detail =
     output_string oc (tag ^ " " ^ detail () ^ "\n");
     flush oc
 
-let census_log =
+(* The census log, and whether the census writes the files it extracts:
+   [write:<log>] does, for the census that compiles them. *)
+let census_mode =
   lazy
     ( match Sys.getenv_opt "CRANE_LOOPIFY_CENSUS" with
     | None | Some "" -> None
-    | Some path -> Some (open_out_gen [Open_wronly; Open_append; Open_creat] 0o644 path) )
+    | Some v ->
+      let writes, path =
+        match String.split_on_char ':' v with
+        | "write" :: (_ :: _ as rest) -> (true, String.concat ":" rest)
+        | _ -> (false, v)
+      in
+      Some (open_out_gen [Open_wronly; Open_append; Open_creat] 0o644 path, writes) )
 
-let census () = Option.has_some (Lazy.force census_log)
+let census_log = lazy (Option.map fst (Lazy.force census_mode))
+let census () = Option.has_some (Lazy.force census_mode)
+let census_dry () = match Lazy.force census_mode with Some (_, writes) -> not writes | None -> false
 
 (* One line per record, written whole, so that the coqc runs dune starts in
    parallel interleave lines rather than characters. *)

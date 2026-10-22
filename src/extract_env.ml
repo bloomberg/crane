@@ -1358,11 +1358,9 @@ let report_body_generations fn =
              (Gen_decls.body_generation_counts ()) )
 
 (** [Modutil.optimize_struct], one body for coinciding definitions, a
-    recursive function specialized to the lambda a definition passes it, and
-    then {!Normalize}, so that every consumer of the structure (the
-    method registry built before printing as much as the printer) sees the
-    same bodies, and a body a rewrite introduces meets Normalize's contract
-    like any other. *)
+    recursive function specialized to the lambda a definition passes it,
+    every read of a local its own, and the open types of local definitions
+    minted: the rewrites the program goes through before it is frozen. *)
 let core_passes to_appear : ml_structure Pipeline_trace.pass list =
   let open Pipeline_trace in
   [ pass "modutil" (Modutil.optimize_struct to_appear);
@@ -1373,12 +1371,20 @@ let core_passes to_appear : ml_structure Pipeline_trace.pass list =
     pass "dedup" Ml_dedup.structure;
     pass "specialize" Ml_specialize.structure;
     pass "fix_shape" Fix_shape.structure;
-    pass "normalize" Normalize.structure;
     pass "fresh_reads" Fresh_reads.structure;
     effect_ "local_types" Local_types.structure;
     effect_ "ir_check" Ml_ir_check.structure ]
 
 let core_pass_names = Pipeline_trace.names (core_passes ([], []))
+
+(** {!Normalize}, on the frozen program ({!Core.normalize}), before it is
+    analysed: every consumer of the structure (the method registry built
+    before printing as much as the printer) sees the same bodies, and a body
+    an optimization introduces meets Normalize's contract like any other. *)
+let normalize_passes : ml_structure Pipeline_trace.pass list =
+  Pipeline_trace.[pass "normalize" Normalize.structure]
+
+let normalize_pass_names = Pipeline_trace.names normalize_passes
 
 (** Under [CRANE_TRACE_PIPELINE], report the fingerprint of [struc]; under
     it or [CRANE_CHECK_IR], keep its elements' for
@@ -1415,15 +1421,18 @@ let check_structure_unchanged planned struc =
             ++ prlist_with_sep pr_comma Label.print changed) )
     planned
 
-(** [freeze core]: the frozen program ({!Core.freeze}), with the facts the
-    whole of it is analysed for -- which definitions only throw, which
-    parameters are owned, settled across calls -- installed before any unit
-    is planned ({!Program_facts.analyze_program}). *)
+(** [freeze core]: the frozen program ({!Core.freeze}), normalized
+    ({!Core.normalize}), with the facts the whole of it is analysed for --
+    which definitions only throw, which parameters are owned, settled across
+    calls, how each function recurses -- installed before any unit is
+    planned ({!Program_facts.analyze_program}). *)
 let freeze core =
-  let frozen = Core.freeze core in
+  let normalized =
+    Core.normalize (Pipeline_trace.run ~stage:"normalize" normalize_passes) (Core.freeze core)
+  in
   Pipeline_trace.event "core" "analyze_program";
-  Install_legacy_plan.install_program (Program_facts.analyze_program frozen);
-  frozen
+  Install_legacy_plan.install_program (Program_facts.analyze_program normalized);
+  normalized
 
 let optimize_struct to_appear struc =
   let core =
@@ -1547,8 +1556,8 @@ let declares struc =
 (** Renders an entire ML structure to C++ header and implementation files:
     plans the unit, renders each file once, then writes and formats them. *)
 let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
-    (fn, si, mo) dry core =
-  let dry = dry || Probe.census () in
+    (fn, si, mo) dry (core : Core.normalized Core.program) =
+  let dry = dry || Probe.census_dry () in
   Probe.census_unit ();
   let struc = Core.structure core in
   Buffer.clear buf;
@@ -1962,7 +1971,7 @@ let full_extraction_exports ?(validate = true) ~opaque_access f lr =
     each in a namespace of its own: [Separate Extraction]'s layout, and
     [Extraction Library]'s.  The file of a library [dry] says is rendered but
     not written. *)
-let print_per_library ~dry core =
+let print_per_library ~dry (core : Core.normalized Core.program) =
   let struc = Core.structure core in
   (* Run all per-unit cleanup in [~finally] so state is reset even when the
      body aborts. *)
@@ -2510,9 +2519,9 @@ let show_extraction ~pstate =
     let l = Label.of_id (Declare.Proof.get_name pstate) in
     let fake_ref = GlobRef.ConstRef (Constant.make2 mp l) in
     let decl = Dterm (fake_ref, ast, ty) in
-    (* Frozen unoptimised, as it is shown: freezing is what installs the
-       facts about the whole program -- its recursion plan among them --
-       that lowering the term reads. *)
+    (* Frozen and normalized unoptimised, as it is shown: that is what
+       installs the facts about the whole program -- its recursion plan
+       among them -- that lowering the term reads. *)
     let frozen = freeze (Core.optimize Fun.id (Core.extracted [(mp, [(l, SEdecl decl)])])) in
     print_one_decl (Core.structure frozen) mp decl
   in

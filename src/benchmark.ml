@@ -550,8 +550,8 @@ let run_hyperfine benchmarks =
     A fresh temporary directory owns every generated source, driver, compiler
     artifact, and executable; it is recursively removed on success or failure. *)
 let run ~opaque_access requested_subjects configurations =
-  (* A census extracts the subjects but writes no files, so there is nothing
-     to compile or time. *)
+  (* A census extracts the subjects to check what extracting them reports;
+     it compiles and times nothing. *)
   let census = Probe.census () in
   if (not census) && not (Subprocess.executable_available "hyperfine") then
     benchmark_error "Hyperfine is not available: cannot run benchmarks.";

@@ -45,6 +45,12 @@ val ml_tvars : ml_type -> IntSet.t
 (** Reset the meta variable counter. *)
 val reset_meta_count : unit -> unit
 
+(** [preserving_meta_supply f] is [f ()], with the metavariable counter and
+    the pending applications put back as they were: open annotations are
+    compared by number, so a check that reruns a pass must not move the
+    numbers the run it checks goes on to make. *)
+val preserving_meta_supply : (unit -> 'a) -> 'a
+
 (** Create a fresh meta variable. *)
 val new_meta : 'a -> ml_type
 

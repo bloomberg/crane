@@ -115,7 +115,7 @@ let rec collect_type_env (stmts : cpp_stmt list) : (Id.t * cpp_type) list =
         in
         [(id, Tfun (param_types, ret_ty))]
       | Sasgn (id, Declare (ty, _), _) -> [(id, ty)]
-      | Sdecl (id, ty, _) -> [(id, ty)]
+      | Sdecl (id, ty, _) | Sblock_custom (_, _, id, ty, _, _) -> [(id, ty)]
       | Scustom_case (_, _, _, branches, _) ->
         List.concat_map
           (fun (ps, _, body) -> List.map (fun p -> (p.cp_name, p.cp_type)) ps @ collect_type_env body)
@@ -1109,26 +1109,11 @@ let adopt_invocation ~invocations e =
     is the recursion plan's, [adoptable]; the first in the flow lowering can
     take is adopted.  Failing that, the lambda invoked in place of the calls
     of a mutual-recursion partner the plan has the machine adopt,
-    [invocations], the residue of inlining it.
-
-    Under [CRANE_CHECK_IR] the fixpoints in the flow the plan finds calling
-    back are checked to be those whose body holds a call [check]
-    recognises. *)
-let find_adopted ~adoptable ~invocations check stmts =
+    [invocations], the residue of inlining it. *)
+let find_adopted ~adoptable ~invocations stmts =
   let planned (lf : local_fixpoint) =
     List.exists (Miniml.Occurrence.equal (fst lf.lf_member)) adoptable
   in
-  if Probe.checking () then
-    ignore
-      (find_in_flow stmts ~on_stmt:(function
-        | Sasgn (_, Declare (Tauto, _), CPPlambda ({cl_fixpoint = Some lf; _} as l))
-          when Option.has_some (fixpoint_self l.cl_fixpoint (to_reversed l.cl_params)) ->
-          if planned lf <> (collect_stmts check ~in_visitor:false l.cl_body <> []) then
-            Probe.violation "adoption plan"
-              Pp.(str "the recursion plan and the finished body disagree on whether "
-                  ++ Id.print lf.lf_name ++ str " calls back");
-          None
-        | _ -> None ));
   match find_in_flow stmts ~on_stmt:(adopt_local_fix ~stmts ~planned) with
   | Some _ as found -> found
   | None ->
@@ -1724,7 +1709,7 @@ and rewrite_enter_stmts ctx stmts =
         in
         (id, Tfun (param_types, ret_ty)) :: ctx.er_env
       | Sasgn (id, Declare (ty, _), _) -> (id, ty) :: ctx.er_env
-      | Sdecl (id, ty, _) -> (id, ty) :: ctx.er_env
+      | Sdecl (id, ty, _) | Sblock_custom (_, _, id, ty, _, _) -> (id, ty) :: ctx.er_env
       | _ -> ctx.er_env
     in
     rewrite_enter_lambda_return ctx stmt
@@ -2793,17 +2778,10 @@ let transform_nontail ?(fn_name : string option) ?adopted ?entered_by ?(outer_en
                er_rematerialized = [];
                er_entered_by = entered_by }
   in
-  (* Each top-level statement is rewritten on its own, but a binding it makes
-     is still one a later statement's continuation may rebuild. *)
-  let rewritten_body =
-    List.rev
-      (fst
-         (List.fold_left
-            (fun (acc, ctx) st ->
-              ( rewrite_enter_stmt ctx st :: acc,
-                {(with_rematerialized ctx st) with er_binders = declared_binders ctx.er_binders st} ) )
-            ([], ctx) body ))
-  in
+  (* The body is a sequence like any other: a recursive call bound at its top
+     level -- a temporary {!Normalize} made of a call in the function's
+     result -- resumes into the statements after it. *)
+  let rewritten_body = rewrite_enter_stmts ctx body in
   (* The adopted entry's handler is that body, rewritten under a context
      describing its parameters rather than this function's.  Both handlers
      share the frame accumulator and the call counter, so the resume frames

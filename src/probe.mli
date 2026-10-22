@@ -31,8 +31,13 @@ val changed : string -> Names.GlobRef.t -> before:'a -> 'a -> 'a
     recursion plan is checked against the few functions that ask for it.  A
     census turns Loopify on for every function not excluded by name, records
     each violation in the log instead of failing, and writes no files: what
-    it extracts is not what the tests compile. *)
+    it extracts is not what the tests compile.  Named [write:<log>], it does
+    write them, into the directories the tests name, for
+    [scripts/loopify-census.sh --compile] to compile. *)
 val census : unit -> bool
+
+(** Whether a census is being taken that writes no files. *)
+val census_dry : unit -> bool
 
 (** [census_unit ()] records in the census log that the library being
     compiled extracted a unit, so that a census that reached nothing does

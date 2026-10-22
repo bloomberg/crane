@@ -368,45 +368,12 @@ let try_inline_mutual_into r body =
   end;
   inlined
 
-(** The plan's name for the way {!classify} reads a body as recursing. *)
-let plan_kind = function
-  | No_recursion -> Recursion_plan.No_recursion
-  | Tail_recursion -> Tail
-  | Nontail_recursion -> Nontail
-
 (** The strategy for a body {!classify} reads as recursing so, where no plan
     says: a loop for tail recursion, an explicit stack for any other. *)
 let classified_strategy = function
   | No_recursion -> Recursion_plan.No_loop
   | Tail_recursion -> Tail_loop
   | Nontail_recursion -> Frame_stack
-
-(** [checked_plan planned ~what check body] is the strategy [planned] of the
-    function [what ()] names, as the program's recursion plan has it
-    ({!Recursion_plan}).  Under [CRANE_CHECK_IR] the kind of recursion it
-    lowers is checked against the reading of [body], the finished body,
-    that decided this before: the calls it makes where it runs
-    ({!classify_in_flow}), and for a function whose calls are suspended,
-    every call, those in the suspensions it builds too ({!classify}). *)
-let checked_plan planned ~what check body =
-  ( if Probe.checking () then
-      let classified =
-        match planned with
-        | Recursion_plan.Suspended _ -> classify check body
-        | No_loop | Tail_loop | Modulo_cons _ | Frame_stack -> classify_in_flow check body
-      in
-      let kind = Recursion_plan.kind_of_strategy planned in
-      if plan_kind classified <> kind then
-        let name = function
-          | Recursion_plan.No_recursion -> "no recursion"
-          | Tail -> "tail calls only"
-          | Nontail -> "a call not in tail position"
-        in
-        Probe.violation "recursion plan"
-          Pp.(
-            str "the recursion plan disagrees with the finished body of " ++ what () ++ str ": planned "
-            ++ str (name kind) ++ str ", read " ++ str (name (plan_kind classified))) );
-  planned
 
 (** The strategy of the local fixpoint [fixpoint], whose body is [body], as
     planned for the Core fixpoint it lowers ({!Recursion_plan.strategy_at}).
@@ -418,7 +385,7 @@ let planned_local_strategy fixpoint check body =
   | Some {lf_member; lf_binder; _} -> (
     let what () = Pp.(str "the local fixpoint " ++ Id.print lf_binder) in
     match Recursion_plan.strategy_at ~pointer_fields:constructor_pointer_fields lf_member with
-    | Some planned -> checked_plan planned ~what check body
+    | Some planned -> planned
     | None ->
       Probe.violation "recursion plan" Pp.(str "the recursion plan does not know " ++ what ());
       classified_strategy (classified ()) )
@@ -525,10 +492,15 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
           | No_loop | Suspended _ ->
             CErrors.anomaly (Pp.str "loopify: no loop cannot appear here")
         in
-        (* Params the loop body no longer mentions keep their names here; the
-           lambda printer drops the name of any param its body does not
-           reference, so unused ones do not trip [-Wunused-parameter]. *)
-        Some (lparams, body') )
+        (* A call the transform left -- one in a closure, say a fixpoint in
+           the body that calls back, which a local machine does not adopt --
+           recurses through the self-parameter the loop drops, so the
+           fixpoint is left as it was: the decline {!report_outcome}
+           recorded.  Params the loop body no longer mentions keep their
+           names here; the lambda printer drops the name of any param its
+           body does not reference, so unused ones do not trip
+           [-Wunused-parameter]. *)
+        if classify check body' = No_recursion then Some (lparams, body') else None )
   in
   let rec process_stmts stmts =
     match stmts with
@@ -963,11 +935,10 @@ let fundef_display_name path =
     a definition for one of its local fixpoints is planned by that fixpoint,
     and one lifted for a lambda a let binds by that let.
 
-    Under [CRANE_CHECK_IR] the plan is checked against [classify check body],
-    the reading of the finished body, mutual partners inlined, that decided
-    this before; a function the plan does not know is classified here, which
-    is a violation.  A member the backend generates itself -- a factory, a
-    deep copy -- has no Core body and no reference, and is classified here. *)
+    A function the plan does not know is classified here, from [body], the
+    finished body, which is a violation.  A member the backend generates
+    itself -- a factory, a deep copy -- has no Core body and no reference,
+    and is classified here. *)
 let planned_strategy r check body =
   let classified () = classify_in_flow check body in
   match r with
@@ -982,7 +953,7 @@ let planned_strategy r check body =
     in
     let what () = Pp.str (Table.kername_of_global r) in
     match planned with
-    | Some planned -> checked_plan planned ~what check body
+    | Some planned -> planned
     | None ->
       Probe.violation "recursion plan" Pp.(str "the recursion plan does not know " ++ what ());
       classified_strategy (classified ()) )
@@ -1077,7 +1048,7 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
         | Modulo_cons _ | Frame_stack ->
           find_adopted ~adoptable:(planned_adoptable (fst f.df_path.dp_outer))
             ~invocations:(Recursion_plan.adopted_invocations (fst f.df_path.dp_outer))
-            check body
+            body
         | No_loop | Tail_loop | Suspended _ -> None
       in
       let survived = Option.map decline_reason adopted in

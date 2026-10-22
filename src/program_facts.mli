@@ -23,7 +23,7 @@ type t = {
 
 val analyze : Miniml.ml_structure -> t
 
-(** What analysing the whole frozen program observed, before it is split into
+(** What analysing the whole normalized program observed, before it is split into
     units: interprocedural summaries, fixed points over every function. *)
 type program = {
   throwing_values : Names.GlobRef.t list;
@@ -37,6 +37,6 @@ type program = {
       (** How each function recurses through itself. *)
 }
 
-(** [analyze_program p] analyses the frozen program [p]; it writes nothing. *)
-val analyze_program : Core.frozen Core.program -> program
+(** [analyze_program p] analyses the normalized program [p]; it writes nothing. *)
+val analyze_program : Core.normalized Core.program -> program
 val equal : t -> t -> bool

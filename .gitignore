@@ -77,3 +77,4 @@ tests/monadic/skiplist_bde/BDE_TEST_ADAPTATION.md
 !/tests/dune
 !/tests/loopify-coverage.golden
 !/tests/loopify-census.golden
+!/tests/loopify-compile-census.golden

@@ -24,8 +24,8 @@ let rec replace_placeholders f e =
   | None -> Mlutil.ast_map (replace_placeholders f) e
 
 (* A local fixpoint function: its declared type, and its arity, the
-   lambdas its body starts with.  The type may still be a meta translation
-   has yet to fill; the arity is what says a call is a full one. *)
+   lambdas its body starts with.  The type may leave its result open; the
+   arity is what says a call is a full one. *)
 type local = {l_type : ml_type; l_arity : int}
 
 (* The functions whose calls are bound: a top-level fixpoint group, by
@@ -71,8 +71,8 @@ let group_call group ~depth e =
     with
     | Some l when List.length args = l.l_arity ->
       let value_args = List.filter (function MLdummy _ -> false | _ -> true) args in
-      (* What it yields, or, while translation has yet to say, a meta of its
-         own for the temporary. *)
+      (* What it yields, or, where the fixpoint's type does not say, an open
+         annotation of the temporary's own: the program is frozen. *)
       Some
         (Option.default (Mlutil.new_meta ())
            (Ml_type_util.ml_codomain_after (List.length value_args) l.l_type))
@@ -131,6 +131,10 @@ let rec scope ~group ~depth e =
     taken := (call, ty) :: !taken;
     placeholder !count
   in
+  let enters_group = function
+    | MLfix (_, ids, bodies, false, _) -> fix_reaches_call group ~depth ids bodies
+    | _ -> false
+  in
   let rec strict ~tail e =
     match e with
     | MLapp ((MLglob use as f), args)
@@ -144,8 +148,7 @@ let rec scope ~group ~depth e =
       let e' = MLapp (strict ~tail:false f, List.map (strict ~tail:false) args) in
       match group_call e', f with
       | Some ty, _ when not tail -> take e' ty
-      | None, MLfix (i, ids, bodies, false, _)
-        when (not tail) && fix_reaches_call group ~depth ids bodies ->
+      | None, MLfix (i, ids, _, false, _) when (not tail) && enters_group f ->
         (* A local fixpoint applied here that recurses into the group is a
            call into it. *)
         let value_args = List.filter (function MLdummy _ -> false | _ -> true) args in
@@ -191,11 +194,12 @@ let rec scope ~group ~depth e =
         take e' rty
       else e' 
     | MLletin (id, ty, rhs, body, occ) ->
-      (* A right-hand side that is the call, or a match ending in one, is
-         already bound. *)
+      (* A right-hand side that is the call, a local fixpoint applied there
+         that recurses into the group, or a match ending in one, is already
+         bound. *)
       let rhs =
         match rhs with
-        | MLapp (f, args) when group_call rhs <> None ->
+        | MLapp (f, args) when group_call rhs <> None || enters_group f ->
           MLapp (strict ~tail:false f, List.map (strict ~tail:false) args)
         | MLcase _ -> strict ~tail:true rhs
         | _ -> strict ~tail:false rhs
