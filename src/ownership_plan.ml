@@ -293,6 +293,8 @@ let evaluations r =
   | Some s when Table.is_inline_custom r -> Foreign_template.arg_mentions s
   | _ -> fun _ -> 1
 
+let sequential_bind use = Core_effects.find use = Some {operation = Bind; mode = Sequential}
+
 let liveness ~n_outer ~copied ~arms t =
   let reads = ref [] in
   let captures = ref [] in
@@ -322,12 +324,10 @@ let liveness ~n_outer ~copied ~arms t =
     (* A field is read out of its record where the projection stands. *)
     | MLapp (MLglob {callee = r; _}, [arg]) when Table.is_projection r -> walk ~consumed ~pinned parents d live arg
     | MLcase (_, scrut, _) when field_of t <> None -> walk ~consumed ~pinned parents d live scrut
-    | MLapp (MLglob {callee = r; _}, args) when Table.is_inline_custom r ->
-      unsequenced ~evaluated:(evaluations r) ~pinned parents d live args
     (* A bind generated as sequencing runs its action and then its
-       continuation's body, inline. *)
-    | MLapp (MLglob use, (_ :: _ :: _ as args))
-      when Core_effects.find use = Some {operation = Bind; mode = Sequential} -> (
+       continuation's body, inline, though a mapping spells the same bind as
+       an inline custom where it is generated as a call. *)
+    | MLapp (MLglob use, (_ :: _ :: _ as args)) when sequential_bind use -> (
       let action, k = Common.last_two args in
       match Mlutil.collect_lams k with
       | [], _ -> walk ~pinned parents d (walk ~consumed:false ~pinned parents d live k) action
@@ -336,6 +336,8 @@ let liveness ~n_outer ~copied ~arms t =
         let parents' = bind parents d ~n in
         let live_body = walk ~consumed ~pinned parents' (d + n) live body in
         walk ~pinned parents d (leave parents' d live_body) action )
+    | MLapp (MLglob {callee = r; _}, args) when Table.is_inline_custom r ->
+      unsequenced ~evaluated:(evaluations r) ~pinned parents d live args
     (* A function is called through: [std::move(f)(x)] still calls [f]. *)
     | MLapp (f, args) ->
       unsequenced ~inspected:(fun k -> k = 0) ~pinned parents d live (f :: args)
@@ -408,8 +410,6 @@ let fate_in ?(whole = false) reads o =
     else Inspected
 
 let fate ?whole p o = fate_in ?whole p.reads o
-
-let sequential_bind use = Core_effects.find use = Some {operation = Bind; mode = Sequential}
 
 (* The inductive a match's branches take apart, if one names a constructor. *)
 let matched_inductive branches =
