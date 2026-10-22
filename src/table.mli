@@ -794,8 +794,8 @@ val conservative_types : unit -> bool
 
 (** {2 Loopify pass} *)
 
-(** Check if the loopify pass is enabled (recursive → iterative transformation).
-*)
+(** Check if the loopify pass is enabled (recursive → iterative transformation):
+    by [Crane Loopify], or for a {!Probe.census}. *)
 val loopify : unit -> bool
 
 (** Whether the loopify pass should report, for every recursive function it

@@ -1961,11 +1961,15 @@ let {Goptions.get = output_directory} =
     ~key:output_directory_key
     ()
 
+(* A census writes no files, so it creates no directory for them either: its
+   coqc runs start in parallel, and System.mkdir checks for a directory before
+   creating it, so two of them making the same new one fail at random. *)
+let ensure_directory dir = if not (Probe.census ()) then System.mkdir dir
+
 let output_directory () =
   match (output_directory (), !Flags.output_directory) with
   | Some dir, _ | None, Some dir ->
-    (* Ensure that the directory exists *)
-    System.mkdir dir;
+    ensure_directory dir;
     dir
   | None, None ->
     let pwd = Sys.getcwd () in
@@ -1997,7 +2001,7 @@ let output_directory_for_module () =
     | _mod_name :: subdir :: _rest when List.length parts >= 2 ->
       let subdir_name = Names.Id.to_string subdir in
       let full_path = Filename.concat base_dir subdir_name in
-      System.mkdir full_path;
+      ensure_directory full_path;
       full_path
     | _ -> base_dir
   with _ -> base_dir
@@ -2184,8 +2188,10 @@ let {Goptions.get = conservative_types} =
 
 (* This option enables the loopify pass, which converts recursive functions into
    iterative while loops to prevent stack overflow on deep inputs. *)
-let {Goptions.get = loopify} =
+let {Goptions.get = loopify_option} =
   declare_bool_option_and_ref ~key:["Crane"; "Loopify"] ~value:false ()
+
+let loopify () = loopify_option () || Probe.census ()
 
 (* When set, the loopify pass reports the outcome it reached for every
    recursive function it saw: the strategy that fired, or the reason it
