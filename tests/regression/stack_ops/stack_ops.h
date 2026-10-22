@@ -164,7 +164,7 @@ struct StackOps {
       const uint64_t &a = *o;
       return ((a + s_.stack_with_acc.length()) + s_.acc);
     } else {
-      return s_.acc;
+      return std::move(s_).acc;
     }
   }();
   static state_basic push_stack(const state_basic &s, uint64_t addr);

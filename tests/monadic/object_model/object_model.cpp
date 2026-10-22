@@ -63,7 +63,7 @@ acc_test1_ext() {
   int64_t a = acc.getBalance(std::monostate{});
   int64_t b = acc.deposit(UINT64_C(50));
   std::optional<int64_t> c = acc.withdraw(INT64_C(160));
-  int64_t d = acc.getBalance(std::monostate{});
+  int64_t d = std::move(acc).getBalance(std::monostate{});
   return std::make_pair(std::make_pair(std::make_pair(a, b),
                                        [&]() -> bool {
                                          if (c.has_value()) {
@@ -134,22 +134,22 @@ acc_test2_ext() {
     const int64_t &z = *result;
     if (z == 0) {
       int64_t b = std::move(acc2).deposit(static_cast<uint64_t>(a < 0 ? 0 : a));
-      int64_t c = acc1.getBalance(std::monostate{});
+      int64_t c = std::move(acc1).getBalance(std::monostate{});
       return std::make_pair(std::make_pair(std::make_pair(a, true), b), c);
     } else if (z > 0) {
       unsigned int _x = static_cast<unsigned int>(z);
-      int64_t b = acc2.getBalance(std::monostate{});
-      int64_t c = acc1.getBalance(std::monostate{});
+      int64_t b = std::move(acc2).getBalance(std::monostate{});
+      int64_t c = std::move(acc1).getBalance(std::monostate{});
       return std::make_pair(std::make_pair(std::make_pair(a, false), b), c);
     } else {
       unsigned int _x = static_cast<unsigned int>(-z);
-      int64_t b = acc2.getBalance(std::monostate{});
-      int64_t c = acc1.getBalance(std::monostate{});
+      int64_t b = std::move(acc2).getBalance(std::monostate{});
+      int64_t c = std::move(acc1).getBalance(std::monostate{});
       return std::make_pair(std::make_pair(std::make_pair(a, false), b), c);
     }
   } else {
-    int64_t b = acc2.getBalance(std::monostate{});
-    int64_t c = acc1.getBalance(std::monostate{});
+    int64_t b = std::move(acc2).getBalance(std::monostate{});
+    int64_t c = std::move(acc1).getBalance(std::monostate{});
     return std::make_pair(std::make_pair(std::make_pair(a, false), b), c);
   }
 }
@@ -215,22 +215,22 @@ bankacc_test1_ext() {
     const int64_t &z = *result;
     if (z == 0) {
       int64_t b = acc.saving.deposit(static_cast<uint64_t>(a < 0 ? 0 : a));
-      int64_t c = acc.checking.getBalance(std::monostate{});
+      int64_t c = std::move(acc).checking.getBalance(std::monostate{});
       return std::make_pair(std::make_pair(std::make_pair(a, true), b), c);
     } else if (z > 0) {
       unsigned int _x = static_cast<unsigned int>(z);
       int64_t b = acc.checking.getBalance(std::monostate{});
-      int64_t c = acc.saving.getBalance(std::monostate{});
+      int64_t c = std::move(acc).saving.getBalance(std::monostate{});
       return std::make_pair(std::make_pair(std::make_pair(a, false), b), c);
     } else {
       unsigned int _x = static_cast<unsigned int>(-z);
       int64_t b = acc.checking.getBalance(std::monostate{});
-      int64_t c = acc.saving.getBalance(std::monostate{});
+      int64_t c = std::move(acc).saving.getBalance(std::monostate{});
       return std::make_pair(std::make_pair(std::make_pair(a, false), b), c);
     }
   } else {
     int64_t b = acc.checking.getBalance(std::monostate{});
-    int64_t c = acc.saving.getBalance(std::monostate{});
+    int64_t c = std::move(acc).saving.getBalance(std::monostate{});
     return std::make_pair(std::make_pair(std::make_pair(a, false), b), c);
   }
 }
