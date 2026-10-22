@@ -8,7 +8,9 @@ let flags : bool list Ref.User.Map.t ref = State.cell State.Extraction Ref.User.
 let () = Escape.callee_flags := fun r -> Ref.User.Map.find_opt r !flags
 
 let summarize struc =
-  let fns = Modutil.struct_functions struc in
+  (* A custom constant is not generated from its body: what it does with its
+     arguments is its mapping's, which a call to it spells. *)
+  let fns = List.filter (fun (r, _, _) -> not (Table.is_custom r)) (Modutil.struct_functions struc) in
   (* The fixed point is computed apart from the installed flags, which
      {!Escape} reads in the meantime as each round leaves them. *)
   let installed = !flags in

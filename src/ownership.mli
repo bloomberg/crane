@@ -16,7 +16,9 @@
 
 (** The flags of [struc]'s functions, settled across calls: each
     function's, innermost first, for the parameters its head declares,
-    eta-expansion's included ({!Ml_type_util.declared_parameters}). *)
+    eta-expansion's included ({!Ml_type_util.declared_parameters}).  A
+    custom constant has none: its mapping, not its body, is what a call to
+    it runs. *)
 val summarize : Miniml.ml_structure -> (Names.GlobRef.t * bool list) list
 
 (** Install a {!summarize}d program's flags for {!Escape} to consult. *)
