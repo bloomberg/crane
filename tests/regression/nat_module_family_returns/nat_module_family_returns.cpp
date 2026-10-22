@@ -700,15 +700,13 @@ Nat::OddT_2(uint64_t,
 Nat::OddT
 Nat::EvenT_S_OddT(uint64_t,
                   const Sig<uint64_t> &h) { // Precondition: (S n) == (2 * m)
-  return [&]() {
-    const auto &[x0] = h;
-    if (x0 <= 0) {
-      throw std::logic_error("absurd case");
-    } else {
-      uint64_t n = x0 - 1;
-      return Sig<uint64_t>::exist(n);
-    }
-  }();
+  const auto &[x0] = h;
+  if (x0 <= 0) {
+    throw std::logic_error("absurd case");
+  } else {
+    uint64_t n = x0 - 1;
+    return Sig<uint64_t>::exist(n);
+  }
 }
 
 Nat::EvenT Nat::OddT_S_EvenT(

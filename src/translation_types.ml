@@ -187,6 +187,7 @@ let inline_iife (k : cpp_expr -> cpp_stmt) = function
     let rec replace_last_return = function
       | [Sreturn (Some v)] -> Some [k v]
       | [Sreturn None] -> None  (* void return — cannot apply k *)
+      | [Sthrow _] as stmts -> Some stmts  (* a throw ends its path: nothing to continue *)
       | [Sif (c, then_br, else_br)] ->
         ( match (replace_last_return then_br, replace_last_return else_br) with
         | Some then_br', Some else_br' -> Some [Sif (c, then_br', else_br')]

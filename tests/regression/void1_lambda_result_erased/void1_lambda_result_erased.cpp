@@ -7,30 +7,28 @@ std::optional<Nat> Void1LambdaResultErased::run(
     return std::optional<Nat>();
   } else {
     const auto &[a0] = std::get<typename Nat::S>(fuel.v());
-    return [&]() {
-      auto &&_sv0 = observe<Void1LambdaResultErased::noE, Nat>(t);
-      if (std::holds_alternative<typename Void1LambdaResultErased::treeF<
-              Void1LambdaResultErased::noE, Nat,
-              Void1LambdaResultErased::tree<Void1LambdaResultErased::noE,
-                                            Nat>>::RetF>(_sv0.v())) {
-        const auto &[r0] = std::get<typename Void1LambdaResultErased::treeF<
+    auto &&_sv0 = observe<Void1LambdaResultErased::noE, Nat>(t);
+    if (std::holds_alternative<typename Void1LambdaResultErased::treeF<
             Void1LambdaResultErased::noE, Nat,
             Void1LambdaResultErased::tree<Void1LambdaResultErased::noE,
-                                          Nat>>::RetF>(_sv0.v());
-        return std::make_optional<Nat>(r0);
-      } else if (std::holds_alternative<typename Void1LambdaResultErased::treeF<
-                     Void1LambdaResultErased::noE, Nat,
-                     Void1LambdaResultErased::tree<Void1LambdaResultErased::noE,
-                                                   Nat>>::TauF>(_sv0.v())) {
-        const auto &[t0] = std::get<typename Void1LambdaResultErased::treeF<
-            Void1LambdaResultErased::noE, Nat,
-            Void1LambdaResultErased::tree<Void1LambdaResultErased::noE,
-                                          Nat>>::TauF>(_sv0.v());
-        return run(*a0, t0);
-      } else {
-        throw std::logic_error("absurd case");
-      }
-    }();
+                                          Nat>>::RetF>(_sv0.v())) {
+      const auto &[r0] = std::get<typename Void1LambdaResultErased::treeF<
+          Void1LambdaResultErased::noE, Nat,
+          Void1LambdaResultErased::tree<Void1LambdaResultErased::noE,
+                                        Nat>>::RetF>(_sv0.v());
+      return std::make_optional<Nat>(r0);
+    } else if (std::holds_alternative<typename Void1LambdaResultErased::treeF<
+                   Void1LambdaResultErased::noE, Nat,
+                   Void1LambdaResultErased::tree<Void1LambdaResultErased::noE,
+                                                 Nat>>::TauF>(_sv0.v())) {
+      const auto &[t0] = std::get<typename Void1LambdaResultErased::treeF<
+          Void1LambdaResultErased::noE, Nat,
+          Void1LambdaResultErased::tree<Void1LambdaResultErased::noE,
+                                        Nat>>::TauF>(_sv0.v());
+      return run(*a0, t0);
+    } else {
+      throw std::logic_error("absurd case");
+    }
   }
 }
 

@@ -1437,15 +1437,13 @@ struct Nat {
   OddT_EvenT_rect(F0 &&hQP, T2 hQ0, F2 &&hPQ, uint64_t n0,
                   const Sig<uint64_t> &h) { // Precondition: n == (2 * m + 1)
     if (n0 <= 0) {
-      return [&]() {
-        const auto &[x0] = h;
-        if (x0 <= 0) {
-          throw std::logic_error("absurd case");
-        } else {
-          uint64_t _x = x0 - 1;
-          throw std::logic_error("absurd case");
-        }
-      }();
+      const auto &[x0] = h;
+      if (x0 <= 0) {
+        throw std::logic_error("absurd case");
+      } else {
+        uint64_t _x = x0 - 1;
+        throw std::logic_error("absurd case");
+      }
     } else {
       uint64_t n = n0 - 1;
       if (n <= 0) {

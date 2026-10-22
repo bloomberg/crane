@@ -161,21 +161,19 @@ struct DependentVectorNth {
 };
 
 template <typename T1> T1 Vector::nth(uint64_t, const T0<T1> &v0, const T &p) {
-  return [&]() {
-    if (std::holds_alternative<typename T0<T1>::Nil>(v0.v())) {
-      throw std::logic_error("absurd case");
+  if (std::holds_alternative<typename T0<T1>::Nil>(v0.v())) {
+    throw std::logic_error("absurd case");
+  } else {
+    const auto &[h, n, a2] = std::get<typename T0<T1>::Cons>(v0.v());
+    if (std::holds_alternative<typename T::F1>(p.v())) {
+      return h;
     } else {
-      const auto &[h, n, a2] = std::get<typename T0<T1>::Cons>(v0.v());
-      if (std::holds_alternative<typename T::F1>(p.v())) {
-        return h;
-      } else {
-        const auto &[n1, a10] = std::get<typename T::FS>(p.v());
-        auto &&_once1 = (n1 + 1);
-        return Vector::template nth<T1>((_once1 ? _once1 - 1 : _once1), *a2,
-                                        *a10);
-      }
+      const auto &[n1, a10] = std::get<typename T::FS>(p.v());
+      auto &&_once1 = (n1 + 1);
+      return Vector::template nth<T1>((_once1 ? _once1 - 1 : _once1), *a2,
+                                      *a10);
     }
-  }();
+  }
 }
 
 template <typename T1, typename T2, typename F0>

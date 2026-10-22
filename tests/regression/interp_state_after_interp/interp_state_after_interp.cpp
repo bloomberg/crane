@@ -40,21 +40,19 @@ std::optional<Nat> InterpStateAfterInterp::first_out(
                           Itree<Sum1<InterpStateAfterInterp::outE,
                                      InterpStateAfterInterp::noE, crane::obj>,
                                 std::pair<Nat, Nat>>>::VisF>(_sv0.v());
-      return [&]() {
-        if (std::holds_alternative<
-                typename Sum1<InterpStateAfterInterp::outE,
-                              InterpStateAfterInterp::noE, crane::obj>::Inl1>(
-                x0.v())) {
-          const auto &[a01] = std::get<
+      if (std::holds_alternative<
               typename Sum1<InterpStateAfterInterp::outE,
                             InterpStateAfterInterp::noE, crane::obj>::Inl1>(
-              x0.v());
-          const auto &[a02] = a01;
-          return std::make_optional<Nat>(a02);
-        } else {
-          throw std::logic_error("absurd case");
-        }
-      }();
+              x0.v())) {
+        const auto &[a01] = std::get<
+            typename Sum1<InterpStateAfterInterp::outE,
+                          InterpStateAfterInterp::noE, crane::obj>::Inl1>(
+            x0.v());
+        const auto &[a02] = a01;
+        return std::make_optional<Nat>(a02);
+      } else {
+        throw std::logic_error("absurd case");
+      }
     }
   }
 }
