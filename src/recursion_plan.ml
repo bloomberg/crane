@@ -421,7 +421,8 @@ let match_bound_in_place ty branches =
    its continuation's parameter binding the result.  In the body itself a
    recursive call is one [targets] names; in a local fixpoint's bodies a
    call of a member of that fixpoint is one too.  A call under a lambda is
-   made where the closure runs, not here. *)
+   made where the closure runs, not here, but a local fixpoint in the
+   lambda's body is lowered on its own, and resumes after its own calls. *)
 let resumes_of ~effects ~origin ~targets lex body =
   let effect_ = sequential effects in
   let found = ref [] in
@@ -508,7 +509,7 @@ let resumes_of ~effects ~origin ~targets lex body =
           let arity, b = split_params 0 f in
           walk ~targets (depth + n + arity) b )
         funs
-    | MLlam _ -> ()
+    | MLlam (_, _, b) -> walk ~targets:(fun ~depth:_ _ -> []) (depth + 1) b
     | e -> Mlutil.ast_iter (go depth) e
   in
   walk ~targets:(fun ~depth:_ e -> targets e) (Lexenv.depth lex) body;
