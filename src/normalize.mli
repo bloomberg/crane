@@ -13,6 +13,13 @@
     preserves meaning; nothing is taken out of a branch, a lambda body or a
     let body, which may not run. *)
 
+(** [eta_expand s] gives every definition in [s] a parameter at each arrow
+    of its type, applying the body it writes to the ones it leaves out: the
+    body translation generates, here once for every consumer instead of
+    re-derived by each.  It runs first in {!Core.normalize}, so the calls
+    {!structure} names are those of that body. *)
+val eta_expand : Miniml.ml_structure -> Miniml.ml_structure
+
 (** [structure s] normalizes every loopified fixpoint group in [s], a frozen
     program ({!Core.normalize}). *)
 val structure : Miniml.ml_structure -> Miniml.ml_structure

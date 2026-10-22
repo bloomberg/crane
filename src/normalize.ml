@@ -255,6 +255,22 @@ let decl ~effects ~methods = function
     Dterm (r, body ~effects ~globals:[] b, ty)
   | d -> d
 
+(* A definition of type [ty] as it is generated: binding a parameter at each
+   of its type's arrows, the ones it does not write applied to the rest
+   ({!Ml_type_util.declared_parameters}). *)
+let eta_body ty b =
+  match b with
+  | MLaxiom _ | MLexn _ -> b
+  | _ ->
+    let params, body = Ml_type_util.declared_parameters (Mlutil.type_simpl ty) b in
+    Mlutil.named_lams params body
+
+let eta_expand =
+  Modutil.map_struct_decls (function
+    | Dterm (r, b, ty) -> Dterm (r, eta_body ty b, ty)
+    | Dfix fds -> Dfix (List.map (fun fd -> {fd with fd_body = eta_body fd.fd_type fd.fd_body}) fds)
+    | d -> d )
+
 (* The methods the structure's functions become. *)
 let methods_of struc = Method_registry.create ~ret_is_erased:Translation.return_type_is_erased struc
 
