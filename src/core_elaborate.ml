@@ -496,6 +496,18 @@ let roles t use n =
       Some e.roles
     | _ -> None )
 
+(* Whether [t] reached the use, as an application to fewer than [n]
+   arguments: translation applied it to the rest itself, extending it to the
+   arity its context expects -- [fun _ no => length no], simplified to [fun _
+   => length], gets its [no] back -- and a call translation built is
+   elaborated where it is translated. *)
+let extended t use n =
+  match Ref.User.Map.find_opt use.callee t.calls with
+  | None -> false
+  | Some entries ->
+    let occurrence = Global_use.occurrence use in
+    List.exists (fun e -> Occurrence.equal e.occurrence occurrence && List.length e.roles < n) entries
+
 let elaboration ~lex use args =
   let elaborate () = elaborate_arguments ~lex use args in
   match Common.get_phase () with
@@ -513,10 +525,11 @@ let elaboration ~lex use args =
       call
     | None ->
       tally := {!tally with recomputed = !tally.recomputed + 1};
-      Probe.violation "elaborated calls"
-        Pp.(
-          str "a call to " ++ str (Table.kername_of_global use.callee)
-          ++ str " is translated where Core elaboration did not reach it.");
+      if not (extended !installed use (List.length args)) then
+        Probe.violation "elaborated calls"
+          Pp.(
+            str "a call to " ++ str (Table.kername_of_global use.callee)
+            ++ str " is translated where Core elaboration did not reach it." );
       elaborate () )
 
 let report () =

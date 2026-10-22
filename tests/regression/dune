@@ -13271,3 +13271,14 @@
   (alias runtest)
   (deps record_destructure_once_expr.t.exe)
   (action (run ./record_destructure_once_expr.t.exe))))
+
+(subdir eta_extended_global_elaborated
+ (rule
+  (targets eta_extended_global_elaborated.t.exe)
+  (deps EtaExtendedGlobalElaborated.vo eta_extended_global_elaborated.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_extended_global_elaborated.t.exe eta_extended_global_elaborated.cpp eta_extended_global_elaborated.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps eta_extended_global_elaborated.t.exe)
+  (action (run ./eta_extended_global_elaborated.t.exe))))
