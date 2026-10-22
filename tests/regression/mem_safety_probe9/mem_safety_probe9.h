@@ -116,7 +116,7 @@ struct MemSafetyProbe9 {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return UINT64_C(0);
       } else {
-        auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
         crane::fn<uint64_t(uint64_t)> f1 = [=](uint64_t) {

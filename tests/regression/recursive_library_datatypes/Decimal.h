@@ -840,7 +840,7 @@ public:
 
   Uint del_tail(uint64_t n) const { return this->rev().del_head(n).rev(); }
 
-  Uint uint_of_uint() const { return std::move(*this); }
+  Uint uint_of_uint() const { return *this; }
 };
 
 struct Signed_int {
@@ -1017,7 +1017,7 @@ public:
     }
   }
 
-  Signed_int int_of_int() const { return std::move(*this); }
+  Signed_int int_of_int() const { return *this; }
 };
 
 struct Decimal {

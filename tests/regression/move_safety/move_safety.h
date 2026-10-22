@@ -88,7 +88,7 @@ struct MoveSafety {
 
     /// TEST 4: Partial application followed by identity function
     /// that takes by value (returns its argument).
-    tree tree_id() const { return std::move(*this); }
+    tree tree_id() const { return *this; }
 
     /// A function that stores its tree argument inside a constructor.
     /// This causes the parameter to be passed by value (it "escapes").

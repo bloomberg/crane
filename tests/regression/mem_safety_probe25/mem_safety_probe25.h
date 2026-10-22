@@ -104,7 +104,7 @@ struct MemSafetyProbe25 {
       tree _self_val = *this;
       if (b) {
         return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-            [=](uint64_t x) -> uint64_t {
+            [=, _self_val = std::move(_self_val)](uint64_t x) -> uint64_t {
               if (std::holds_alternative<typename tree::Leaf>(_self_val.v())) {
                 return x;
               } else {

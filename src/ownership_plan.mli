@@ -39,11 +39,14 @@ val empty : t
     scalar or declared trivially copyable with arguments that are too. *)
 val worth_moving : Miniml.ml_type -> bool
 
-(** [region ~owned ~n_outer t] is the plan of [t]'s reads, [t] standing
-    under binders it reads but does not bind, of which it owns those at the
-    de Bruijn indices [owned], and generated under a head of [n_outer] type
-    variables. *)
-val region : ?owned:int list -> n_outer:int -> Miniml.ml_ast -> t
+(** [region ~owned ~copied ~n_outer t] is the plan of [t]'s reads, [t]
+    standing under binders it reads but does not bind, of which it owns
+    those at the de Bruijn indices [owned], and generated under a head of
+    [n_outer] type variables.  The closures it makes capture a copy of each
+    variable at [copied] -- a method's receiver, which they capture as a
+    copy of the object -- and own that copy: it is theirs to move, and a
+    read outside them reads the original. *)
+val region : ?owned:int list -> ?copied:int list -> n_outer:int -> Miniml.ml_ast -> t
 
 (** Whether, as [p] plans it, [let x : ty := a] binds the closure [a] to a
     C++ local, which the region owns: [a] is a local fixpoint or a lambda

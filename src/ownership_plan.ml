@@ -29,22 +29,26 @@ type t = {
   root : ml_ast;
   n_outer : int;  (* the type variables of the head the region is generated under *)
   root_owned : Levels.t;
+  root_copied : Levels.t;  (* variables closures capture a copy of, owned by them alone *)
   arms : arm list;
   reads : read list;
   owned : (Occurrence.t * bool) list;  (* whether the variable a read reads is owned there *)
   captures : read list;  (* a lambda's capture of a variable, by the reads inside it *)
   captured_owned : (Occurrence.t * bool) list;
+  copied_reads : Occurrence.t list;  (* reads of a variable closures copy *)
 }
 
 let empty =
   { root = MLdummy Kprop;
     n_outer = 0;
     root_owned = Levels.empty;
+    root_copied = Levels.empty;
     arms = [];
     reads = [];
     owned = [];
     captures = [];
-    captured_owned = [] }
+    captured_owned = [];
+    copied_reads = [] }
 
 (* The reads in [t] of variables bound outside it, by level, [t] standing [d]
    binders deep. *)
@@ -254,7 +258,7 @@ let evaluations r =
   | Some s when Table.is_inline_custom r -> Foreign_template.arg_mentions s
   | _ -> fun _ -> 1
 
-let liveness ~n_outer t =
+let liveness ~n_outer ~copied t =
   let reads = ref [] in
   let captures = ref [] in
   (* [walk ~consumed ~pinned parents d live t] records [t]'s reads and is
@@ -268,7 +272,9 @@ let liveness ~n_outer t =
     let read l occurrence =
       let last_of m = not (Levels.exists (overlap parents m) (Levels.union live pinned)) in
       reads := {occurrence; last = last_of l; last_whole = last_of (storage l); consumed} :: !reads;
-      Levels.add l live
+      (* Of a variable closures copy, a read outside them reads the original,
+         not the copy. *)
+      if Levels.mem (storage l) copied then live else Levels.add l live
     in
     match t with
     | MLrel (i, occurrence) -> read (d - i) occurrence
@@ -431,13 +437,16 @@ end
    variable it reads is owned where it is read: bound by value, so that the
    region may take its value.  [owned] holds the levels of the variables the
    region owns at its root. *)
-let ownership ~n_outer ~reads ~arms ~owned t =
+let ownership ~n_outer ~reads ~arms ~owned ~copied t =
   let out = ref [] in
   let captured = ref [] in
+  let copied_reads = ref [] in
   let rec own owned d t =
     let all = List.iter (own owned d) in
     match t with
-    | MLrel (i, occurrence) -> out := (occurrence, Levels.mem (d - i) owned) :: !out
+    | MLrel (i, occurrence) ->
+      out := (occurrence, Levels.mem (d - i) owned) :: !out;
+      if Levels.mem (d - i) copied then copied_reads := occurrence :: !copied_reads
     | MLmagic (_, t) -> own owned d t
     (* A bind generated as sequencing binds its continuation's parameter to
        the action's value. *)
@@ -454,7 +463,9 @@ let ownership ~n_outer ~reads ~arms ~owned t =
     | MLparray (elems, default) -> all (default :: Array.to_list elems)
     (* A closure's body is a region of its own. *)
     | MLlam _ | MLfix _ ->
-      List.iter (fun (l, o) -> captured := (o, Levels.mem l owned) :: !captured) (closure_reads d t)
+      List.iter
+        (fun (l, o) -> captured := (o, Levels.mem l owned || Levels.mem l copied) :: !captured)
+        (closure_reads d t)
     | MLletin (x, ty, a, b, _) ->
       own owned d a;
       (* What a local fixpoint closes over, it reads by reference. *)
@@ -529,24 +540,30 @@ let ownership ~n_outer ~reads ~arms ~owned t =
         | _ -> owned
   in
   own owned 0 t;
-  (!out, !captured)
+  (!out, !captured, !copied_reads)
 
-let plan ~n_outer root root_owned arms (reads, captures) =
-  let owned, captured_owned = ownership ~n_outer ~reads ~arms ~owned:root_owned root in
-  {root; n_outer; root_owned; arms; reads; owned; captures; captured_owned}
+let plan ~n_outer root root_owned root_copied arms (reads, captures) =
+  let owned, captured_owned, copied_reads =
+    ownership ~n_outer ~reads ~arms ~owned:root_owned ~copied:root_copied root
+  in
+  {root; n_outer; root_owned; root_copied; arms; reads; owned; captures; captured_owned; copied_reads}
 
-let region ?(owned = []) ~n_outer t =
-  plan ~n_outer t (Levels.of_list (List.map (fun i -> -i) owned)) [] (liveness ~n_outer t)
+let region ?(owned = []) ?(copied = []) ~n_outer t =
+  let levels is = Levels.of_list (List.map (fun i -> -i) is) in
+  plan ~n_outer t (levels owned) (levels copied) [] (liveness ~n_outer ~copied:(levels copied) t)
 
 let reuse_arm p ~scrutinee ~branch =
   match scrutinee_var scrutinee with
   | Some (_, scrutinee) ->
-    plan ~n_outer:p.n_outer p.root p.root_owned (Rebuild {scrutinee; branch} :: p.arms) (p.reads, p.captures)
+    plan ~n_outer:p.n_outer p.root p.root_owned p.root_copied (Rebuild {scrutinee; branch} :: p.arms)
+      (p.reads, p.captures)
   | None -> p
 
 let fields_by_value p ~case ~by_value =
   if p == empty then p
-  else plan ~n_outer:p.n_outer p.root p.root_owned (Fields {case; by_value} :: p.arms) (p.reads, p.captures)
+  else
+    plan ~n_outer:p.n_outer p.root p.root_owned p.root_copied (Fields {case; by_value} :: p.arms)
+      (p.reads, p.captures)
 
 let closure_local p ty a = if p == empty then None else Some (closure_local ~n_outer:p.n_outer ty a)
 
@@ -574,6 +591,14 @@ let pair_by_value p = Binding.pair_by_value ~owned:(owned p)
 
 let projects_in_place p = Binding.projects_in_place ~owned:(owned p) ~fate:(fate p)
 
+(* Whether a closure made around the read [o] -- one Core does not contain,
+   or an eta closure around an argument -- takes its variable by move: the
+   read takes the whole value, and the variable, or the copy closures take
+   of it, is owned. *)
+let taken_by_closure p o =
+  ( match fate ~whole:true p o with Last_use | Inspected -> true | Read_again | Unplanned -> false )
+  && (owned p 0 o || List.exists (Occurrence.equal o) p.copied_reads)
+
 let moved_captures p closure =
   let every l o = match List.filter (fun (o', _) -> Occurrence.equal o o') l with
     | [] -> false
@@ -584,7 +609,7 @@ let moved_captures p closure =
      that closure is made, which is where the read stood. *)
   let moves o =
     match fate_in p.captures o with
-    | Unplanned -> use ~whole:true p o = Move
+    | Unplanned -> taken_by_closure p o
     | fate -> fate = Last_use && every p.captured_owned o
   in
   let reads = closure_reads 0 closure in
@@ -596,7 +621,7 @@ let moved_captures p closure =
 
 let moved_reads p ts =
   let rec go acc = function
-    | MLrel (i, o) -> if use ~whole:true p o = Move then i :: acc else acc
+    | MLrel (i, o) -> if taken_by_closure p o then i :: acc else acc
     | MLmagic (_, t) -> go acc t
     | MLapp (f, args) -> List.fold_left go acc (f :: args)
     | MLcons (_, _, args) | MLtuple args -> List.fold_left go acc args

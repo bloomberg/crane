@@ -251,12 +251,11 @@ struct NestedInductiveNoDrain {
       uint64_t _loop_n = n;
       while (true) {
         if (_loop_n <= 0) {
-          return std::move(*_loop_self);
+          return *_loop_self;
         } else {
           uint64_t m = _loop_n - 1;
-          _self_store =
-              tree::node(_loop_n, lst<tree>::cons(std::move(*_loop_self),
-                                                  lst<tree>::nil()));
+          _self_store = tree::node(
+              _loop_n, lst<tree>::cons(*_loop_self, lst<tree>::nil()));
           _loop_self = &_self_store;
           _loop_n = m;
         }

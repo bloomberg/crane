@@ -219,7 +219,7 @@ struct MethodifiedTmcNoLoopify {
       uint64_t _loop_n = n;
       while (true) {
         if (_loop_n <= 0) {
-          auto _value = std::move(*_loop_self);
+          auto _value = *_loop_self;
           (_write ? *(*_write = std::make_shared<wrap>(std::move(_value)))
                   : _root.emplace(std::move(_value)));
           break;

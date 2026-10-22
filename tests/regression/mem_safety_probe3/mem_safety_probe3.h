@@ -200,8 +200,8 @@ struct MemSafetyProbe3 {
         if (std::holds_alternative<typename tree::Leaf>(this->v())) {
           return UINT64_C(0);
         } else {
-          auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
-          return std::move(a1);
+          const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+          return a1;
         }
       }();
       return f(r);

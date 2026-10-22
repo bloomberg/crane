@@ -164,13 +164,13 @@ template <typename A, typename B> struct Prod {
   static Prod<A, B> pair(A a0, B a1) { return {std::move(a0), std::move(a1)}; }
 
   A fst() const {
-    auto &[a0, a1] = *this;
-    return std::move(a0);
+    const auto &[a0, a1] = *this;
+    return a0;
   }
 
   B snd() const {
-    auto &[a0, a1] = *this;
-    return std::move(a1);
+    const auto &[a0, a1] = *this;
+    return a1;
   }
 };
 

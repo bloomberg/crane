@@ -196,7 +196,7 @@ struct DeepPattern {
       return _result;
     }
 
-    tree as_pattern_test() const { return std::move(*this); }
+    tree as_pattern_test() const { return *this; }
 
     uint64_t wildcard_with_bindings() const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
