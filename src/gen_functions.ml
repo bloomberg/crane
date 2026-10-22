@@ -410,35 +410,10 @@ let dfun_body_scope n b cty ty temps =
   (* Reversed: the lambda collection below peels the innermost arrow first. *)
   let mldom = List.rev (Ml_type_util.ml_domains ty) in
   let ids, b = collect_typed_lams ty b in
-  (* get_missing computes the types for eta-expansion parameters. mldom contains
-     domain types in reversed order (innermost type first). ids contains
-     explicit lambdas in reversed order (innermost lambda first).
-
-     The explicit lambdas bind the OUTERMOST types (at the END of mldom). The
-     missing parameters should have the INNERMOST types (at the START of mldom).
-
-     Example: For type R -> nat -> nat -> nat with body λr. <match>: mldom =
-     [nat; nat; R] (innermost nat is first, outermost R is last) ids = [(r, R)]
-     (one lambda binding the outermost type R) missing types = [nat; nat] (the
-     first 2 elements of mldom)
-
-     The old code consumed from HEAD of both lists, incorrectly pairing the
-     innermost type (nat) with the outermost lambda (r), causing eta-expansion
-     parameters to get wrong types. *)
-  let get_missing d a =
-    let n_missing = max 0 (List.length d - List.length a) in
-    safe_firstn n_missing d
-  in
-  let missing_types = get_missing mldom ids in
-  let n_miss = List.length missing_types in
-  (* Assign names so that _x0 gets the outermost missing type (closest to the
-     explicit lambdas) and _x(n-1) gets the innermost (= last source param).
-     get_missing returns types innermost-first from mldom, so index i maps to
-     name _x(n_miss - 1 - i). The resulting list is already in de Bruijn order
-     (innermost first) because mapi iterates innermost-first. *)
-  let missing =
-    List.mapi (fun i t -> (Id (eta_param_id (n_miss - 1 - i)), t)) missing_types
-  in
+  (* The explicit lambdas bind the outermost domains; the eta-expansion
+     parameters, the innermost ones -- for [R -> nat -> nat -> nat] with body
+     [λr. <match>], [_x1 : nat; _x0 : nat], innermost first. *)
+  let missing = eta_parameters ty ids in
   (* A body's lambda parameter types agree with the signature's by now: the
      one Core rewrite that broke that, promoting a polymorphic let-fix to a
      top-level Dfix, unifies them where it promotes ([Modutil.decl_of_term]),
@@ -1262,21 +1237,9 @@ let gen_dfun n b cty ty temps =
               ( ids,
                 finish_fn_body cod (guard_compare n ids (sigma_asserts @ b)) ) ) ) )
     else
-      (* Eta-expansion: the body 'b' references original params starting at
-         MLrel 1. After adding k=|missing| new params to the environment, the
-         original params are now at indices k+1, k+2, etc. We must lift 'b' by k
-         to adjust its references.
-
-         Example: For accessor f : R -> nat -> nat -> nat with body λr. match
-         r... - Original body references r as MLrel 1 - After adding 2
-         eta-params (_x0, _x1), environment is [_x1; _x0; r] - r is now at index
-         3, so we lift b by 2: MLrel 1 -> MLrel 3
-
-         Then we apply the lifted body to the eta-expansion arguments.
-
-         Exception: axiom/exn bodies always throw — applying them to arguments
-         produces invalid C++ (calling a void result). Generate the body
-         directly. *)
+      (* Eta-expansion: the body, applied to the parameters it stops short
+         of ({!Ml_type_util.eta_applied}).  An axiom or exception body always
+         throws, and is generated as it stands. *)
       let b =
         match custom_forwarding_body with
         | Some stmts -> stmts
@@ -1285,18 +1248,7 @@ let gen_dfun n b cty ty temps =
         | MLaxiom _ | MLexn _ ->
           List.map (glob_subst_stmt n rec_call) (gen_stmts env cofix_wrap b)
         | _ ->
-          let k = List.length missing in
-          let lifted_b = ast_lift k b in
-          (* Only pass value-typed (non-dummy) eta args to the body.
-             Dummy-typed entries in [missing] represent erased type parameters
-             (e.g. [A : Type] in [apply : forall A, A -> A]).  Passing
-             [MLrel (i+1)] for them would generate a [CPPabort "unreachable"]
-             IIFE as an extra argument to a [std::function] field that only
-             takes one value argument. *)
-          let args = List.rev (List.filter_map
-            (fun (i, (_, t)) -> if erased_by_extraction t then None else Some (fresh_rel (i + 1)))
-            (List.mapi (fun i x -> (i, x)) missing)) in
-          let body = apply_eta_args lifted_b args in
+          let body = eta_applied missing b in
           List.map
             (glob_subst_stmt n rec_call)
             (with_region ~owned:owned_params body (fun () -> gen_body_stmts env cofix_wrap body))

@@ -314,10 +314,7 @@ let head_variables ty = Mlutil.IntSet.fold max (Mlutil.ml_tvars ty) 0
    function, [add := Z.add], calls it. *)
 let declaration_scope ty body =
   let ty = Mlutil.type_simpl ty in
-  let params, body = collect_typed_lams ty body in
-  let doms = List.rev (Ml_type_util.ml_domains ty) in
-  let n_missing = max 0 (List.length doms - List.length params) in
-  let declared = List.skipn n_missing doms in
+  let params, body = declared_parameters ty body in
   let parameter (x, body_ty) sig_ty =
     let body_ty =
       match resolve_tmeta body_ty with Tmeta {contents = None} | Topen _ -> sig_ty | t -> t
@@ -325,24 +322,7 @@ let declaration_scope ty body =
     let ty = reconcile_parameter_type body_ty sig_ty in
     binder (parameter_role ty) (x, ty)
   in
-  let missing =
-    List.mapi
-      (fun i t -> binder (parameter_role t) (Id (Common.eta_param_id (n_missing - 1 - i)), t))
-      (List.firstn n_missing doms)
-  in
-  let body =
-    match body with
-    | (MLaxiom _ | MLexn _) as b -> b
-    | b ->
-      let args =
-        List.rev
-          (List.filter_map
-             (fun (i, t) -> if erased_by_extraction t then None else Some (fresh_rel (i + 1)))
-             (List.mapi (fun i t -> (i, t)) (List.firstn n_missing doms)) )
-      in
-      Mlutil.apply_eta_args (Mlutil.ast_lift n_missing b) args
-  in
-  (Lexenv.push missing (Lexenv.push (List.map2 parameter params declared) Lexenv.empty), body)
+  (Lexenv.push (List.map2 parameter params (List.rev (Ml_type_util.ml_domains ty))) Lexenv.empty, body)
 
 (* [e], standing in [lex] under a head of [n_outer] type variables, with
    every let-bound lambda as translation generates it

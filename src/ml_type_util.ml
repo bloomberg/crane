@@ -204,6 +204,36 @@ let rec ml_domains t =
 let ml_value_domains t =
   List.filter (fun d -> not (erased_by_extraction d)) (ml_domains t)
 
+let collect_typed_lams ty b =
+  let n_type_dom = List.length (ml_domains ty) in
+  let all_ids, inner = collect_lams b in
+  let n_excess = List.length all_ids - n_type_dom in
+  if n_excess > 0 then
+    (Util.List.skipn n_excess all_ids, named_lams (Util.List.firstn n_excess all_ids) inner)
+  else (all_ids, inner)
+
+let eta_parameters ty params =
+  let doms = List.rev (ml_domains ty) in
+  let n_missing = max 0 (List.length doms - List.length params) in
+  List.mapi (fun i t -> (Id (eta_param_id (n_missing - 1 - i)), t)) (Util.List.firstn n_missing doms)
+
+let eta_applied missing body =
+  match body with
+  | MLaxiom _ | MLexn _ -> body
+  | _ ->
+    let args =
+      List.rev
+        (List.filter_map
+           (fun (i, (_, t)) -> if erased_by_extraction t then None else Some (fresh_rel (i + 1)))
+           (List.mapi (fun i x -> (i, x)) missing) )
+    in
+    apply_eta_args (ast_lift (List.length missing) body) args
+
+let declared_parameters ty b =
+  let params, body = collect_typed_lams ty b in
+  let missing = eta_parameters ty params in
+  (missing @ params, eta_applied missing body)
+
 (** Give [b] as many binders as [ty] has value arrows.
 
     A body that stops short of its type -- [fun n => tfmap f] where the type

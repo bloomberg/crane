@@ -124,6 +124,34 @@ val erased_by_extraction : Miniml.ml_type -> bool
     extraction erased dropped -- one entry per argument a C++ call passes. *)
 val ml_value_domains : Miniml.ml_type -> Miniml.ml_type list
 
+(** A definition's parameters as its function takes them: the leading
+    lambdas of [b], innermost first, as many as its type [ty] has domains.
+    Extraction may uncurry a body whose codomain is an alias for a function
+    type ([State S A]); the lambdas past the type's arrows stay in the body,
+    as the closure it returns. *)
+val collect_typed_lams :
+  Miniml.ml_type -> Miniml.ml_ast -> (Miniml.ml_ident * Miniml.ml_type) list * Miniml.ml_ast
+
+(** [eta_parameters ty params]: the parameters, innermost first, a function
+    of type [ty] whose leading lambdas bind [params] ({!collect_typed_lams})
+    is given past them -- an [_xI] at each domain the lambdas stop short
+    of. *)
+val eta_parameters :
+  Miniml.ml_type -> (Miniml.ml_ident * Miniml.ml_type) list -> (Miniml.ml_ident * Miniml.ml_type) list
+
+(** [eta_applied missing body]: [body], standing under the lambdas, put under
+    the {!eta_parameters} [missing] too and applied to each of them that
+    extraction did not erase.  An axiom or an exception, which never
+    returns, is not applied. *)
+val eta_applied : (Miniml.ml_ident * Miniml.ml_type) list -> Miniml.ml_ast -> Miniml.ml_ast
+
+(** The parameters a function of type [ty] defined by [b] is generated with,
+    innermost first -- its {!eta_parameters}, then the lambdas
+    {!collect_typed_lams} finds -- and the body it is generated from, under
+    them, {!eta_applied}. *)
+val declared_parameters :
+  Miniml.ml_type -> Miniml.ml_ast -> (Miniml.ml_ident * Miniml.ml_type) list * Miniml.ml_ast
+
 (** [eta_expand_to ty b] gives [b] as many binders as [ty] has value arrows,
     added innermost so the lambdas already written keep their names. A body
     that stops short of its type is a partial application, which no C++ slot of

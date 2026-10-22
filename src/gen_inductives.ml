@@ -379,41 +379,10 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
      them -- under a result that is an alias of a function type -- is the
      closure the method returns, which is how its callers, reading the
      type, call it. *)
-  let ids_with_types, inner_body = collect_typed_lams ty body in
-  (* Eta-expansion: if the body has fewer lambdas than the ML type's domain,
-     add missing parameters (innermost first, named _x0, _x1, ...).
-     This handles functions like [tree_to_adder : tree -> nat -> nat] where
-     the body is a match expression returning closures rather than being
-     directly lambda-wrapped.  Mirrors the same logic in gen_dfun. *)
-  let rec get_method_dom l ty =
-    match ty with
-    | Tarr (t1, t2) -> get_method_dom (t1 :: l) t2
-    | _ -> l
-  in
-  let mldom_for_eta = get_method_dom [] ty in
-  let n_type_dom_eta = List.length mldom_for_eta in
-  let n_body_dom_eta = List.length ids_with_types in
-  let n_missing_eta = max 0 (n_type_dom_eta - n_body_dom_eta) in
-  let ids_with_types, inner_body =
-    if n_missing_eta = 0 then (ids_with_types, inner_body)
-    else
-      let missing_types = safe_firstn n_missing_eta mldom_for_eta in
-      let n_miss = List.length missing_types in
-      let missing =
-        List.mapi
-          (fun i t -> (Id (eta_param_id (n_miss - 1 - i)), t))
-          missing_types
-      in
-      let lifted_b = ast_lift n_missing_eta inner_body in
-      let args =
-        List.rev
-          (List.filter_map
-             (fun (i, (_, t)) ->
-               if erased_by_extraction t then None else Some (fresh_rel (i + 1)) )
-             (List.mapi (fun i x -> (i, x)) missing) )
-      in
-      (missing @ ids_with_types, apply_eta_args lifted_b args)
-  in
+  (* A body with fewer lambdas than the type has domains -- [tree_to_adder :
+     tree -> nat -> nat] matching and returning closures -- is eta-expanded,
+     as a function's is. *)
+  let ids_with_types, inner_body = declared_parameters ty body in
   let ids_converted, typeclass_temps =
     promote_typeclass_params
       (List.map (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty)) ids_with_types)

@@ -2142,19 +2142,6 @@ let ungeneralised_callable_params ~self_ref ~suspended n_params body =
     (detect_non_forwarded_params self_ref n_params body
     @ escaping_params ~suspended n_params body)
 
-(** A definition's parameters as its function takes them: the leading
-    lambdas of [b], innermost first, as many as its type [ty] has domains.
-    Extraction may uncurry a body whose codomain is an alias for a function
-    type ([State S A]); the lambdas past the type's arrows stay in the body,
-    as the closure it returns. *)
-let collect_typed_lams ty b =
-  let n_type_dom = List.length (Ml_type_util.ml_domains ty) in
-  let all_ids, inner = collect_lams b in
-  let n_excess = List.length all_ids - n_type_dom in
-  if n_excess > 0 then
-    (List.skipn n_excess all_ids, named_lams (safe_firstn n_excess all_ids) inner)
-  else (all_ids, inner)
-
 (** [reconcile_parameter_type body_ty sig_ty] -- the type a definition's
     parameter is bound at in its body, from the type its lambda is annotated
     with, [body_ty] (unified with the signature's), and the type the
