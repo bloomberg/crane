@@ -630,6 +630,9 @@ let moved_reads p ts =
     | MLmagic (_, t) -> go acc t
     | MLapp (f, args) -> List.fold_left go acc (f :: args)
     | MLcons (_, _, args) | MLtuple args -> List.fold_left go acc args
+    (* What a closure among them takes by move, the closure made around
+       them takes by move first, to hand it on. *)
+    | (MLlam _ | MLfix _) as closure -> moved_captures p closure @ acc
     | _ -> acc
   in
   List.sort_uniq Int.compare (List.fold_left go [] ts)
