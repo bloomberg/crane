@@ -10201,14 +10201,16 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             if cpp_ty = Tvoid || cpp_ty = Tunresolved || ml_type_is_unit ty then
               None
             else
-              Some cpp_ty
+              Some (cpp_ty, Ownership_plan.worth_moving ty)
           | None -> None
         in
         ( match non_void_ty with
-        | Some cpp_ty ->
+        | Some (cpp_ty, worth_moving) ->
           let temp_id = Id.of_string "_bind_result" in
           let f_expr = gen_expr env f in
-          let app = mk_call f_expr [CPPvar temp_id] in
+          (* The continuation is the temporary's one reader. *)
+          let result = if worth_moving then CPPmove (CPPvar temp_id) else CPPvar temp_id in
+          let app = mk_call f_expr [result] in
           [Sasgn (temp_id, Declare (cpp_ty, None), a); k app]
         | None ->
           side_effect @ gen_stmts ~slot env k f ) ) )
