@@ -146,6 +146,11 @@ val is_shared_ptr_type : ml_type -> bool
 
 (** {2 Phase 2: reuse candidate discovery} *)
 
+(** The [MLcons] nodes [body] returns, wherever it returns one: under its
+    [let]s and coercions, and in each branch of a match it ends in.  At most
+    one of them is reached on any path through [body]. *)
+val tail_constructions : ml_ast -> ml_ast list
+
 (** [find_reuse_candidates typ pv] returns the match branches whose body builds
     an [MLcons] of the same inductive type as the matched constructor, as
     [(branch_idx, matched_ctor, matched_arity, tail_ctor, tail_args)] tuples.

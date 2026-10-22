@@ -270,6 +270,17 @@ let sub_bindings_escape k body =
 
 (** {2 Phase 2: reuse candidate discovery} *)
 
+(* The constructions [body] returns, wherever it returns one: under its
+   [let]s, and in each branch of a match it ends in -- a map's update
+   rebuilds its node in whichever branch the key comparison picks. *)
+let rec tail_constructions = function
+  | MLmagic (_, a) -> tail_constructions a
+  | MLletin (_, _, _, b, _) -> tail_constructions b
+  | MLcons _ as c -> [c]
+  | MLcase (_, _, brs) ->
+    List.concat_map (fun (_, _, _, b) -> tail_constructions b) (Array.to_list brs)
+  | _ -> []
+
 (** [find_reuse_candidates typ pv]: match branches whose body builds an [MLcons]
     of the same inductive type as the matched constructor, as
     [(branch_idx, matched_ctor, matched_arity, tail_ctor, tail_args)]. *)
@@ -284,16 +295,8 @@ let find_reuse_candidates (_typ : ml_type) (pv : ml_branch array) =
       Names.MutInd.CanOrd.equal m1 m2 && Int.equal i1 i2
     | _ -> false
   in
-  (* The constructors [body] returns, wherever it returns one: under its
-     [let]s, and in each branch of a match it ends in -- a map's update
-     rebuilds its node in whichever branch the key comparison picks. *)
-  let rec tail_conses = function
-    | MLmagic (_, a) -> tail_conses a
-    | MLletin (_, _, _, b, _) -> tail_conses b
-    | MLcons (_, r, args) -> [(r, args)]
-    | MLcase (_, _, brs) ->
-      List.concat_map (fun (_, _, _, b) -> tail_conses b) (Array.to_list brs)
-    | _ -> []
+  let tail_conses body =
+    List.filter_map (function MLcons (_, r, args) -> Some (r, args) | _ -> None) (tail_constructions body)
   in
   let cands = ref [] in
   Array.iteri

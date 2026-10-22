@@ -18,13 +18,14 @@ type read = {
 
 (* How translation binds a match's pattern variables, where the plan cannot
    tell: a branch generated to rebuild in its scrutinee's storage, named by
-   the scrutinee's read and the branch's index; and the fields of a record
+   the scrutinee's read and the branch's index, with the constructions that
+   may take the storage it frees; and the fields of a record
    taken apart, named by the match itself, which are locals of their own
    where [by_value] says so.  And how it binds a let-bound function with a
    type variable of its own: to a local, at the one instance its uses agree
    on, where the let named by its occurrence is an [Instance] one. *)
 type arm =
-  | Rebuild of {scrutinee : Occurrence.t; branch : int}
+  | Rebuild of {scrutinee : Occurrence.t; branch : int; consumers : ml_ast list}
   | Fields of {case : ml_ast; by_value : bool list}
   | Instance of Occurrence.t
 
@@ -590,12 +591,43 @@ let region ?(owned = []) ?(copied = []) ~n_outer t =
   let levels is = Levels.of_list (List.map (fun i -> -i) is) in
   plan ~n_outer t (levels owned) (levels copied) [] (liveness ~n_outer ~copied:(levels copied) ~arms:[] t)
 
-let reuse_arm p ~scrutinee ~branch =
+(* The branches of the match in [root] on the variable read at [o]. *)
+let branches_at root o =
+  let exception Found of ml_branch array in
+  let rec find = function
+    | MLcase (_, scrut, brs) when Option.equal Occurrence.equal (Option.map snd (scrutinee_var scrut)) (Some o) ->
+      raise (Found brs)
+    | a -> Mlutil.ast_iter find a
+  in
+  match find root with () -> None | exception Found brs -> Some brs
+
+(* The storage a rebuilding branch frees is taken by a construction of
+   [constructor] the branch returns -- one per path, so the token is spent
+   at most once -- and by nothing it merely passes to a call or a closure. *)
+let reuse_arm p ~scrutinee ~branch ~constructor =
   match scrutinee_var scrutinee with
   | Some (_, scrutinee) ->
-    plan ~n_outer:p.n_outer p.root p.root_owned p.root_copied (Rebuild {scrutinee; branch} :: p.arms)
+    let consumers =
+      match branches_at p.root scrutinee with
+      | Some brs when branch < Array.length brs ->
+        let _, _, _, body = brs.(branch) in
+        List.filter
+          (function MLcons (_, r, _) -> Common.globref_equal r constructor | _ -> false)
+          (Escape.tail_constructions body)
+      | _ -> []
+    in
+    if consumers = [] && Probe.checking () then
+      Probe.violation "reuse plan"
+        Pp.(str "a branch rebuilding in its scrutinee's storage returns no construction to take it");
+    plan ~n_outer:p.n_outer p.root p.root_owned p.root_copied
+      (Rebuild {scrutinee; branch; consumers} :: p.arms)
       (p.reads, p.captures)
   | None -> p
+
+let reuses p construction =
+  match List.find_map (function Rebuild a -> Some a.consumers | Fields _ | Instance _ -> None) p.arms with
+  | Some consumers -> List.memq construction consumers
+  | None -> false
 
 let fields_by_value p ~case ~by_value =
   if p == empty then p

@@ -3087,18 +3087,16 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
      runtime makes every block it holds immortal too.  Only where the term
      comes out as its factory call: a conversion into another slot type is
      left as it is. *)
-  | MLcons (_, r, ts) as e
+  | MLcons (_, _, ts) as e
     when (not slot.building_constant) && is_shared_constant_term e
-         && not (match (!tctx).pending_reuse_token with
-                 | Some (_, ctor) -> globref_equal r ctor
-                 | None -> false) -> (
+         && not (takes_reuse_token e) -> (
     let built = gen_expr ?expected_ty ~slot:{slot with building_constant = true} env e in
     match built with
     | CPPfun_call (_, CPPqualified_t (Tglob (n, _, _), _), _)
       when Table.is_shared_variant n && ts <> [] ->
       mk_call (CPPrt (Crane_rt.Constant (constant_name e))) [built]
     | _ -> built )
-  | MLcons (ty, r, ts) ->
+  | MLcons (ty, r, ts) as construction ->
     let slot = into_erased_return slot in
     (* The annotation carries this producer's own instantiation, and a stored
        closure whose arrows extraction never unified leaves it erased -- a
@@ -3558,12 +3556,13 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           let ctor_sig ?constructs args =
             Minicpp.call_sig ~yields:type_expr ?constructs ~nargs:(List.length args) ()
           in
-          (* Perceus reuse: if a reuse token is pending for this constructor
-             (set by a use_count()==1-guarded arm in gen_cpp_case), call the
-             [<factory>__reuse] variant with the token appended (stored last =
-             printed first, matching the [_tok] leading parameter). *)
+          (* Perceus reuse: where the plan gives this construction the token
+             of the use_count()==1-guarded arm it is returned from
+             ({!Ownership_plan.reuses}), call the [<factory>__reuse] variant
+             with the token appended (stored last = printed first, matching
+             the [_tok] leading parameter). *)
           ( match (!tctx).pending_reuse_token with
-          | Some (tok, ctor) when globref_equal r ctor ->
+          | Some tok when Ownership_plan.reuses (!tctx).move_plan construction ->
             tctx := { !tctx with pending_reuse_token = None };
             let args = args @ [CPPmove tok] in
             CPPfun_call
@@ -8315,8 +8314,10 @@ and gen_cpp_case (typ : ml_type) t env pv =
             (* Every field the arm binds is a local of its own, owned: the
                plan of the arm says so. *)
             let body_stmts =
-              with_reuse_token (Some (tok, tail_ctor)) (fun () ->
-                  with_plan (Ownership_plan.reuse_arm (!tctx).move_plan ~scrutinee:t ~branch:branch_idx)
+              with_reuse_token (Some tok) (fun () ->
+                  with_plan
+                    (Ownership_plan.reuse_arm (!tctx).move_plan ~scrutinee:t ~branch:branch_idx
+                       ~constructor:tail_ctor)
                     (fun () -> gen_stmts env' (fun x -> Sreturn (Some x)) body) )
             in
             restore_env_types saved_env_types;

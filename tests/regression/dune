@@ -13392,3 +13392,14 @@
   (alias runtest)
   (deps state_t_alias_reified.t.exe)
   (action (run ./state_t_alias_reified.t.exe))))
+
+(subdir reuse_token_in_closure
+ (rule
+  (targets reuse_token_in_closure.t.exe)
+  (deps ReuseTokenInClosure.vo reuse_token_in_closure.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_token_in_closure.t.exe reuse_token_in_closure.cpp reuse_token_in_closure.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_token_in_closure.t.exe)
+  (action (run ./reuse_token_in_closure.t.exe))))
