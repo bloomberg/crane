@@ -47,7 +47,10 @@ val freeze : optimized program -> frozen program
     makes to its own recursive group, where it is evaluated strictly and not
     in tail position, to a temporary of its own, in evaluation order.  It
     runs on the frozen program and so solves nothing: a temporary whose type
-    the call does not say is given an open annotation. *)
+    the call does not say is given an open annotation.  Under
+    [CRANE_CHECK_IR] the result is a fixed point of [pass] -- normalizing it
+    again rewrites no top-level element -- which is what says that no such
+    call was left unbound. *)
 val normalize : (Miniml.ml_structure -> Miniml.ml_structure) -> frozen program -> normalized program
 
 (** The structure, for the consumers not converted to the phase types. *)

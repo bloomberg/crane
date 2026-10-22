@@ -75,6 +75,31 @@ let () =
   check "modules keep each module with its own program"
     (List.map fst (Core.modules two) = [mp "A"; mp "B"])
 
+(* Normalizing the frozen program checks that the result is a fixed point of
+   the pass, and leaves the metavariable supply where the pass left it. *)
+let () =
+  let nat = Tglob (r "nat", [], []) in
+  let fine = [term "n" (MLlam (Dummy, nat, fresh_rel 1)) (Tarr (nat, nat))] in
+  let normalizes pass =
+    match Core.normalize pass (frozen fine) with
+    | _ -> true
+    | exception e when CErrors.is_anomaly e -> false
+  in
+  let coerce =
+    Modutil.map_struct_decls (function
+      | Dterm (r, b, t) -> Dterm (r, MLmagic (Mcoerce (t, t), b), t)
+      | d -> d )
+  in
+  check "a pass its result is a fixed point of normalizes" (normalizes Fun.id);
+  check "a pass that would rewrite its own result is refused" (not (normalizes coerce));
+  let minting s = ignore (Mlutil.new_meta ()); s in
+  let before = Mlutil.new_meta () in
+  ignore (Core.normalize minting (frozen fine));
+  ( match (before, Mlutil.new_meta ()) with
+  | Topen o, Topen o' -> check "checking a normal form makes no number" (Open.id o' = Open.id o + 2)
+  | _ -> check "a frozen program makes open annotations" false );
+  Meta.thaw ()
+
 (* After freezing, nothing solves a metavariable. *)
 let () =
   let nat = Tglob (r "nat", [], []) in
