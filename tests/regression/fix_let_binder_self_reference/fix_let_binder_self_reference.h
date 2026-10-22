@@ -117,7 +117,7 @@ struct FixLetBinderSelfReference {
           };
           auto f = [=,
                     f_impl = std::move(f_impl)](List<uint64_t> l) -> uint64_t {
-            return f_impl(f_impl, l);
+            return f_impl(f_impl, std::move(l));
           };
           return std::make_pair(
               f, [=](List<uint64_t> _pa0) { return h(f, _pa0); });

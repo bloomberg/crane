@@ -880,7 +880,7 @@ struct RocqBug14174 {
         }
       };
       auto f = [=, f_impl = std::move(f_impl)](Nat n) -> T1 {
-        return f_impl(f_impl, n);
+        return f_impl(f_impl, std::move(n));
       };
       return sig<crane::fn<T1(Nat)>>::exist(std::move(f));
     }

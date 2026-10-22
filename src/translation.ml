@@ -81,6 +81,11 @@ let local_fixpoint ~name ~selves (binder, member, params) =
     @return [(decls, defs, deref_subst)] where [defs] is empty and
     [deref_subst] is the identity function (no dereferencing needed).
     @see gen_local_fix_by_ref for the non-escaping alternative. *)
+(* A local fixpoint's wrapper parameter, of ML type [ty], forwarded to the
+   impl: its one read, a move where the wrapper takes it by value. *)
+let forwarded ~by_value ty v =
+  if by_value && Ownership_plan.worth_moving ty && not (ml_type_is_unit ty) then CPPmove v else v
+
 let gen_local_fix_ycomb env ~binders ~moved renamed_ids funs_with_params =
   let ret_ty ty =
     match cpp_of_ml env ty with
@@ -163,8 +168,9 @@ let gen_local_fix_ycomb env ~binders ~moved renamed_ids funs_with_params =
               (cpp_of_ml env ty, Some id))
             args
         in
+        (* The wrapper reads each parameter once, to forward it. *)
         let fwd_args =
-          List.map (fun (id, _) -> CPPvar id) args @ impl_vars_rev
+          List.map (fun (id, ty) -> forwarded ~by_value:true ty (CPPvar id)) args @ impl_vars_rev
         in
         let rty = ret_ty fty in
         let call = CPPfun_call (call_opaque, CPPvar impl_id, of_reversed fwd_args) in
@@ -286,7 +292,11 @@ let gen_local_fix_by_ref env ~binders renamed_ids funs_with_params owned_flags_p
             args owned_flags
         in
         let fwd_args =
-          List.map (fun (id, _) -> CPPvar id) args @ impl_vars_rev
+          List.map2
+            (fun (id, ty) (param_ty, _) ->
+              forwarded ~by_value:(not (declared_by_reference param_ty)) ty (CPPvar id) )
+            args orig_params
+          @ impl_vars_rev
         in
         let rty = ret_ty fty in
         let call = CPPfun_call (call_opaque, CPPvar _impl_id, of_reversed fwd_args) in
