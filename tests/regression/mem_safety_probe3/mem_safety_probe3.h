@@ -95,9 +95,8 @@ struct MemSafetyProbe3 {
       tree _self_val = *this;
       return std::make_pair(
           (b ? std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-                   [=](uint64_t _x0) -> uint64_t {
-                     return _self_val.sum_values(_x0);
-                   })
+                   [=, _self_val = std::move(_self_val)](uint64_t _x0)
+                       -> uint64_t { return _self_val.sum_values(_x0); })
              : std::optional<crane::fn<uint64_t(uint64_t)>>()),
           *this);
     }

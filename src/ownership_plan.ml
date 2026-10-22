@@ -152,23 +152,27 @@ let bind parents d ~n =
 
 (* The variables bound outside [t] that [t] reads, [t] standing [d] binders
    deep: the components it reads of a pair, or, under a closure, which
-   copies what it captures whole, the pair. *)
-let rec free ?(parts = true) parents d t =
-  let free = free ~parts and frees = frees ~parts and under = under ~parts in
+   copies what it captures whole, the pair.  A variable at a level of
+   [outside] is counted only where a closure reads it: a variable closures
+   copy is read outside them in the original. *)
+let rec free ?(parts = true) ?(outside = Levels.empty) parents d t =
+  let closure_frees = frees ~parts and closure_under = under ~parts in
+  let free = free ~parts ~outside and frees = frees ~parts ~outside and under = under ~parts ~outside in
   match t with
-  | MLrel (i, _) -> if i > 0 then Levels.singleton (d - i) else Levels.empty
+  | MLrel (i, _) ->
+    if i > 0 && not (Levels.mem (d - i) outside) then Levels.singleton (d - i) else Levels.empty
   | MLmagic (_, t) -> free parents d t
   | MLapp (MLglob {callee = r; _}, [arg]) when parts && projected d r (strip arg) <> None ->
     Levels.singleton (fst (Option.get (projected d r (strip arg))))
   | MLapp (f, args) -> frees parents d (f :: args)
   | MLcons (_, _, args) | MLtuple args -> frees parents d args
   | MLparray (elems, default) -> frees parents d (default :: Array.to_list elems)
-  | MLlam (_, _, body) -> whole (under parents d ~n:1 body)
+  | MLlam (_, _, body) -> whole (closure_under parents d ~n:1 body)
   | MLletin (_, _, a, b, _) -> Levels.union (free parents d a) (under parents d ~n:1 b)
   | MLfix (_, fs, defs, _, _) ->
     let n = Array.length fs in
     let parents' = bind parents d ~n in
-    whole (leave parents' d (frees parents' (d + n) (Array.to_list defs)))
+    whole (leave parents' d (closure_frees parents' (d + n) (Array.to_list defs)))
   | MLcase (_, scrut, branches) ->
     Array.fold_left
       (fun acc (ids, _, _, body) ->
@@ -178,11 +182,12 @@ let rec free ?(parts = true) parents d t =
       (free parents d scrut) branches
   | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> Levels.empty
 
-and frees ?parts parents d ts = List.fold_left (fun acc t -> Levels.union acc (free ?parts parents d t)) Levels.empty ts
+and frees ?parts ?outside parents d ts =
+  List.fold_left (fun acc t -> Levels.union acc (free ?parts ?outside parents d t)) Levels.empty ts
 
-and under ?parts parents d ~n body =
+and under ?parts ?outside parents d ~n body =
   let parents' = bind parents d ~n in
-  leave parents' d (free ?parts parents' (d + n) body)
+  leave parents' d (free ?parts ?outside parents' (d + n) body)
 
 (* What a closure reading [s] captures: every component it reads is read
    whole. *)
@@ -348,7 +353,7 @@ let liveness ~n_outer ~copied t =
      evaluated twice.  One evaluated not at all reads nothing; one
      [inspected] is read in place. *)
   and unsequenced ?(evaluated = fun _ -> 1) ?(inspected = fun _ -> false) ~pinned parents d live ts =
-    let reads_of = List.map (free parents d) ts in
+    let reads_of = List.map (free ~outside:copied parents d) ts in
     List.mapi
       (fun k t ->
         match evaluated k with

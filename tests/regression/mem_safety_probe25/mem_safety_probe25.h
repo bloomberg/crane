@@ -122,15 +122,16 @@ struct MemSafetyProbe25 {
     /// then store it in a pair. Double-wrapping test.
     std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> match_then_pair() const {
       tree _self_val = *this;
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t x) {
-        if (std::holds_alternative<typename tree::Leaf>(_self_val.v())) {
-          return x;
-        } else {
-          const auto &[a0, a1, a2] =
-              std::get<typename tree::Node>(_self_val.v());
-          return ((x + a0->tree_sum()) + a1);
-        }
-      };
+      crane::fn<uint64_t(uint64_t)> f =
+          [=, _self_val = std::move(_self_val)](uint64_t x) {
+            if (std::holds_alternative<typename tree::Leaf>(_self_val.v())) {
+              return x;
+            } else {
+              const auto &[a0, a1, a2] =
+                  std::get<typename tree::Node>(_self_val.v());
+              return ((x + a0->tree_sum()) + a1);
+            }
+          };
       return std::make_pair(std::move(f), this->tree_sum());
     }
 

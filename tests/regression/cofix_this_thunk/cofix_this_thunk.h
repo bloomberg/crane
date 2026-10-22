@@ -184,16 +184,18 @@ public:
 
   Sseq<A> smap(const crane::fn<A(A)> &f) const {
     Sseq<A> _self_val = *this;
-    return Sseq<A>::lazy_([=]() -> typename Sseq<A>::SCons {
-      return {_self_val.double_head(f), _self_val.stail().smap(f)};
-    });
+    return Sseq<A>::lazy_(
+        [=, _self_val = std::move(_self_val)]() -> typename Sseq<A>::SCons {
+          return {_self_val.double_head(f), _self_val.stail().smap(f)};
+        });
   }
 
   Sseq<A> smap_direct(const crane::fn<A(A)> &f) const {
     Sseq<A> _self_val = *this;
-    return Sseq<A>::lazy_([=]() -> typename Sseq<A>::SCons {
-      return {f(_self_val.shead()), _self_val.stail().smap_direct(f)};
-    });
+    return Sseq<A>::lazy_(
+        [=, _self_val = std::move(_self_val)]() -> typename Sseq<A>::SCons {
+          return {f(_self_val.shead()), _self_val.stail().smap_direct(f)};
+        });
   }
 
   /// Take n elements
