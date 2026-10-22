@@ -303,13 +303,6 @@ let is_sequential_effect op use =
   | Some {Core_effects.operation; mode = Sequential} -> operation = op
   | _ -> false
 
-(** If the codomain of [ty] is a registered monad, return its reference. *)
-let extract_monad_from_codomain ty =
-  match ml_codomain ty with
-  | Miniml.Tglob (monad_ref, _, _) when Table.is_monad monad_ref ->
-    Some monad_ref
-  | _ -> None
-
 (* [ref_is_skipped] and [ml_ret_is_skipped] live in {!Ml_type_util}, which
    {!Method_registry} also asks. *)
 
@@ -1228,7 +1221,8 @@ let reify_monadic_param_type ml_ty cpp_ty =
 let rec is_reified_monadic_expr ml_expr =
   (* The result of applying [n] arguments to something of ML type [ty].  A
      dummy domain is an erased type parameter, which the term does not pass, so
-     it is stepped over without spending an argument. *)
+     it is stepped over without spending an argument; an alias still owed
+     arguments is the arrows it names ([stateT S M T] is [S -> M (S * T)]). *)
   let rec ml_result_after n ty =
     match Ml_type_util.resolve_tmeta ty with
     | Miniml.Tarr (dom, res) when (match Ml_type_util.resolve_tmeta dom with
@@ -1236,6 +1230,10 @@ let rec is_reified_monadic_expr ml_expr =
             | _ -> false) ->
       ml_result_after n res
     | Miniml.Tarr (_, res) when n > 0 -> ml_result_after (n - 1) res
+    | Miniml.Tglob _ as t when n > 0 -> (
+      match Ml_type_util.expand_ml_fun_alias t with
+      | Miniml.Tarr _ as f -> ml_result_after n f
+      | _ -> t )
     | t -> t
   in
   (* A callee generic over a monad class returns [m (list B)]: a [Tapp] headed
@@ -1295,7 +1293,7 @@ let rec is_reified_monadic_expr ml_expr =
      monad is a tree.  Only a type that says something else is evidence of a
      plain value. *)
   let says_monadic ty =
-    is_monadic_ml_type ty
+    Option.has_some (Ml_type_util.type_monad ty)
     ||
     match Ml_type_util.resolve_tmeta ty with
     | Miniml.Tvar _ | Miniml.Tunknown | Miniml.Tmeta {contents = None} | Miniml.Topen _ -> true
@@ -1325,12 +1323,10 @@ let rec is_reified_monadic_expr ml_expr =
          | Miniml.Tapp (head, _) ->
            let args = match ml_expr with MLapp (_, args) -> args | _ -> [] in
            reified_via_dictionary ty args head
-         | _ ->
-           is_monadic_ml_type res
-           && ( (not (Table.is_inline_custom r))
-              || match Ml_type_util.resolve_tmeta res with
-                 | Miniml.Tglob (m, _, _) -> is_monad_reified m
-                 | _ -> false ) )
+         | _ -> (
+           match Ml_type_util.type_monad res with
+           | Some m -> (not (Table.is_inline_custom r)) || is_monad_reified m
+           | None -> false ) )
        | None -> false )
   | MLcons (ty, _, _) -> is_monadic_ml_type ty
   | _ -> false

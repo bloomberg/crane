@@ -86,6 +86,17 @@ val ml_type_contains_tvar : Miniml.ml_type -> bool
 (** The codomain (final result type) of a MiniML arrow type. *)
 val ml_codomain : Miniml.ml_type -> Miniml.ml_type
 
+(** The registered monad ({!Table.is_monad}) a computation of this type runs
+    in: its codomain's head, seen through type aliases -- [stateT S (itree E)
+    T] is [S -> itree E (S * T)], a computation in [itree]. *)
+val codomain_monad : Miniml.ml_type -> Names.GlobRef.t option
+
+(** The registered monad heading the type itself, seen through aliases --
+    [CFGtop A] for [itree CFGEtop A] -- or [None] for one that is not a
+    computation (a function type among them, however it is spelled).
+    {!is_monadic_ml_type} reads the spelling alone. *)
+val type_monad : Miniml.ml_type -> Names.GlobRef.t option
+
 (** The domains of a MiniML arrow type, in argument order -- every arrow,
     erased ones included, so a position in the result is a position in the
     type. Only the arrow spine is chased through metavariables. *)

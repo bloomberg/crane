@@ -154,6 +154,22 @@ let rec ml_codomain = function
   | Miniml.Tmeta {contents = Some t} -> ml_codomain t
   | t -> t
 
+(* The registered monad heading [ty] seen through aliases, after [codomain]
+   (arrows peeled, at every alias's expansion) or [resolve_tmeta] (a function
+   type is no monad, however it is spelled). *)
+let rec monad_heading view ty =
+  match view ty with
+  | Miniml.Tglob (m, _, _) when Table.is_monad m -> Some m
+  | Miniml.Tglob (GlobRef.ConstRef kn, args, _) -> (
+    match Table.lookup_typedef_unchecked kn with
+    | Some body -> monad_heading view (if args = [] then body else Mlutil.type_subst_list args body)
+    | None -> None )
+  | _ -> None
+
+let codomain_monad = monad_heading ml_codomain
+
+let type_monad = monad_heading resolve_tmeta
+
 (** Why a binder -- a lambda's, a fixpoint's, a declaration's domain -- is
     not a parameter at run time.  Extraction erases a binder whose type is a
     type, a proof, or an argument declared implicit ([Crane Extraction

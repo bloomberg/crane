@@ -210,9 +210,6 @@ val ml_result_type : ml_type -> ml_type
 (** Check if a monad reference uses the reified ITree extraction mode. *)
 val is_monad_reified : GlobRef.t -> bool
 
-(** If the codomain of [ty] is a registered monad, return its reference. *)
-val extract_monad_from_codomain : ml_type -> GlobRef.t option
-
 (** Collect [Id.t]s for typeclass-typed parameters in an ML arrow type. *)
 val collect_typeclass_param_ids : ml_type -> Id.t list
 

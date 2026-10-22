@@ -19,9 +19,9 @@ let mode_of_monad m = if Table.is_monad_reified m then Reified else Sequential
    monad's, and [Sequential], the mode a generation starts in, for a
    codomain that is no monad. *)
 let declaration_mode ty =
-  match Ml_type_util.ml_codomain ty with
-  | Tglob (m, _, _) when Table.is_monad m -> mode_of_monad m
-  | _ -> Sequential
+  match Ml_type_util.codomain_monad ty with
+  | Some m -> mode_of_monad m
+  | None -> Sequential
 
 let operation_of r =
   if Table.is_bind r then Some Bind else if Table.is_ret r then Some Return else None

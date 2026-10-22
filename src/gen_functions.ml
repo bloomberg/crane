@@ -278,7 +278,7 @@ let sig_witness_expr name (ml_ty : ml_type) =
     read the mode.  We detect reified by the monad template mentioning "ITree",
     e.g. ["std::shared_ptr<ITree<%t1>>"]. *)
 let with_itree_mode_for ty f =
-  match extract_monad_from_codomain ty with
+  match Ml_type_util.codomain_monad ty with
   | Some monad_ref -> with_itree_mode (Core_effects.mode_of_monad monad_ref) f
   | None -> f ()
 
@@ -1662,6 +1662,7 @@ let gen_dfun_def n b ty =
 (** Generate C++ function specification (for header files) *)
 let gen_spec__inner n b ty =
   with_body_resolutions n b @@ fun () ->
+  with_itree_mode_for ty @@ fun () ->
   let ty = type_simpl ty in
   let ml_ty = ty in  (* preserve ML type before C++ conversion *)
   let unit_void = ml_type_is_void_call ty in

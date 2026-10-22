@@ -13381,3 +13381,14 @@
   (alias runtest)
   (deps loopify_shadow_update_reads_binding.t.exe)
   (action (run ./loopify_shadow_update_reads_binding.t.exe))))
+
+(subdir state_t_alias_reified
+ (rule
+  (targets state_t_alias_reified.t.exe)
+  (deps StateTAliasReified.vo state_t_alias_reified.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} state_t_alias_reified.t.exe state_t_alias_reified.cpp state_t_alias_reified.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps state_t_alias_reified.t.exe)
+  (action (run ./state_t_alias_reified.t.exe))))
