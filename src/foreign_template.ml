@@ -297,3 +297,30 @@ let mentions_each_arg_once s =
     | _ :: rest -> go seen rest
   in
   go [] (term_template s)
+
+type binding = By_reference | By_value
+
+(* A structured binding of the scrutinee in front of the branch:
+   [<declarator> [%b0a0, ..., %b0aN] = %scrut; %br0], read with its spacing
+   ignored. *)
+let structured_binding s =
+  let squeeze t = String.of_seq (Seq.filter (fun c -> not (List.mem c [' '; '\t'; '\n'; '\r'])) (String.to_seq t)) in
+  let tokens =
+    List.filter_map
+      (function CCstring t -> if squeeze t = "" then None else Some (CCstring (squeeze t)) | t -> Some t)
+      (match_template s)
+  in
+  let rec binders j = function
+    | CCbr_var (0, j') :: rest when j' = j -> (
+      match rest with CCstring "," :: rest -> binders (j + 1) rest | _ -> Some rest )
+    | _ -> None
+  in
+  let mode = function "constauto&[" -> Some By_reference | "auto[" -> Some By_value | _ -> None in
+  match tokens with
+  | CCstring declarator :: rest -> (
+    match (mode declarator, binders 0 rest) with
+    | Some m, Some [CCstring "]="; CCscrut; CCstring ";"; CCbody 0] -> Some m
+    | _ -> None )
+  | _ -> None
+
+let bound_by_value s = "auto " ^ String.sub s (String.index s '[') (String.length s - String.index s '[')

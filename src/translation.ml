@@ -8640,12 +8640,6 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       (t, [])
     end
   in
-  (* When the scrutinee is an owned pair (last use), override the template
-     with a by-value structured binding to move the fields out.  A pair
-     recovered from a box is bound by value too: it is a fresh
-     [pair<any, any>] the cast returns. *)
-  let binds_by_value = pair_by_value in
-  let cmatch = if binds_by_value then "auto [%b0a0, %b0a1] = %scrut; %br0" else cmatch in
   (* Generate [(params, ret_ty, body)] triples for each branch.  Handles env
      retyping for [fix_a_fired], use-site
      [any_cast] insertion, and template-arg stripping for erased arguments. *)
@@ -8935,7 +8929,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
         cases,
         { cm_template = cmatch;
           cm_inductive = Table.indref_of_match pv;
-          cm_scrutinee = (if binds_by_value then Scrut_owned else Scrut_borrowed) } ) ]
+          cm_scrutinee = (if pair_by_value then Scrut_owned else Scrut_borrowed) } ) ]
 
 (** {2 IIFE Inlining}
 

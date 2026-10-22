@@ -24,4 +24,13 @@ let () =
   check "drain"
     (drain_template "while (!%scrut.empty()) { %yield(f(x)); }"
      = [Drain_text "while (!%scrut.empty()) { "; Drain_yield "f(x)"; Drain_text "; }"]);
-  check "implicit arguments" (custom_template_with_args "Sum1" 2 = "Sum1<%t0, %t1>")
+  check "implicit arguments" (custom_template_with_args "Sum1" 2 = "Sum1<%t0, %t1>");
+  let std_pair = "const auto& [%b0a0, %b0a1] = %scrut; %br0" in
+  check "binding by reference" (structured_binding std_pair = Some By_reference);
+  check "binding by value" (structured_binding "auto [%b0a0, %b0a1] = %scrut; %br0" = Some By_value);
+  check "binding, spaced" (structured_binding "const auto &[ %b0a0 , %b0a1 ] =\n  %scrut;\n  %br0" = Some By_reference);
+  check "binding of three" (structured_binding "auto [%b0a0, %b0a1, %b0a2] = %scrut; %br0" = Some By_value);
+  check "binders out of order" (structured_binding "auto [%b0a1, %b0a0] = %scrut; %br0" = None);
+  check "not a binding" (structured_binding "auto& p = %scrut; auto %b0a0 = p.first; %br0" = None);
+  check "something after the branch" (structured_binding "auto [%b0a0] = %scrut; %br0 f();" = None);
+  check "bound by value" (bound_by_value std_pair = "auto [%b0a0, %b0a1] = %scrut; %br0")

@@ -792,6 +792,12 @@ let inline_template s =
 
 let inline_shape ci = Option.map (fun t -> t.it_shape) ci.ci_inline
 
+let custom_match_text cm =
+  match cm.cm_scrutinee with
+  | Scrut_owned when Foreign_template.structured_binding cm.cm_template <> None ->
+    Foreign_template.bound_by_value cm.cm_template
+  | Scrut_owned | Scrut_borrowed -> cm.cm_template
+
 (** C++ type schema. The integer is the number of variables in the schema. *)
 type cpp_schema = int * cpp_type
 

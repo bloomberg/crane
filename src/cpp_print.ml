@@ -2705,12 +2705,13 @@ and pp_cpp_stmt env args = function
        in gen_custom_cpp_case, which prepends an Sasgn before this node
        when the template uses %scrut more than once with a non-trivial
        scrutinee.  The printer just expands the template. *)
-    let cmds = match_template cmatch.cm_template in
+    let text = custom_match_text cmatch in
+    let cmds = match_template text in
     pp_custom
       ( "custom match for "
       ^ Pp.string_of_ppcmds (pp_cpp_type false [] typ)
       ^ " := "
-      ^ cmatch.cm_template )
+      ^ text )
       env
       (Some typ)
       (Some t)

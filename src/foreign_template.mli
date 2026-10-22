@@ -61,3 +61,17 @@ val with_result : string -> string -> string
 (** A mapping that names a template without saying where its arguments go
     takes them in order: ["Sum1"] at two arguments is ["Sum1<%t0, %t1>"]. *)
 val custom_template_with_args : string -> int -> string
+
+(** How a match template binds its one branch's binders. *)
+type binding = By_reference | By_value
+
+(** The binding mode of a match template that is a structured binding of the
+    scrutinee in front of the branch -- [const auto& [%b0a0, %b0a1] = %scrut;
+    %br0] binds by reference, [auto [%b0a0, %b0a1] = %scrut; %br0] by value
+    -- the one shape whose binding mode is not the mapping's to fix: whoever
+    takes the scrutinee apart may bind it either way.  [None] for any other
+    template. *)
+val structured_binding : string -> binding option
+
+(** [bound_by_value s] is the structured binding [s] binding by value. *)
+val bound_by_value : string -> string

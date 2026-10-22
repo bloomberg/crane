@@ -438,7 +438,8 @@ let scrutinee_var scrut = match strip scrut with MLrel (i, o) -> Some (i, o) | _
    whether a read's variable is owned where it is read ([owned]) and of the
    read's fate ([fate]). *)
 module Binding = struct
-  (* A custom match takes a pair apart by value when it is the pair's last
+  (* A custom match takes a pair apart by value when its template is a
+     structured binding, which may bind either way, and it is the pair's last
      reader: a pair the scrutinee has just built, or a variable owned there
      that the branch does not read whole. *)
   let pair_by_value ~owned scrut branches =
@@ -446,6 +447,8 @@ module Binding = struct
     && (match matched_inductive branches with
        | Some r -> Ml_type_util.is_prod_global r
        | None -> false )
+    && Table.is_custom_match branches
+    && Foreign_template.structured_binding (Table.find_custom_match branches) <> None
     &&
     match scrutinee_var scrut with
     | Some (i, o) ->

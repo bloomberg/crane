@@ -963,19 +963,22 @@ and ref_qual =
   | Rq_lvalue  (** [&] *)
   | Rq_rvalue  (** [&&] *)
 
-(** A custom match: the mapping's template, the inductive it matches, and
-    how the template holds its scrutinee. *)
+(** A custom match: the mapping's template, as the mapping writes it, the
+    inductive it matches, and how the match holds its scrutinee; it is
+    printed from {!custom_match_text}. *)
 and custom_match = {
   cm_template : string;
   cm_inductive : GlobRef.t;
   cm_scrutinee : scrutinee_hold;
 }
 
-(** How a custom match's template holds its scrutinee. *)
+(** How a custom match holds its scrutinee. *)
 and scrutinee_hold =
   | Scrut_owned
       (** By value ([auto [a, b] = %scrut]): any expression may stand there,
-          a temporary included. *)
+          a temporary included.  A template that is a structured binding
+          binds by value, whatever declarator the mapping wrote
+          ({!Foreign_template.structured_binding}). *)
   | Scrut_borrowed
       (** It may keep references into the scrutinee, so the scrutinee must
           outlive the match. *)
@@ -1022,6 +1025,11 @@ val inline_template : string -> inline_template
 
 (** The shape of [ci]'s replacement text, [None] where it is not inlined. *)
 val inline_shape : custom_info -> inline_shape option
+
+(** The text a custom match is printed from: its template, binding by value
+    where it holds its scrutinee so and the template is a structured binding
+    ({!Foreign_template.bound_by_value}). *)
+val custom_match_text : custom_match -> string
 
 (** C++ type schema: number of type variables and the type expression. *)
 type cpp_schema = int * cpp_type
