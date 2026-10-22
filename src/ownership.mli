@@ -14,6 +14,13 @@
     the least fixed point over every function of the structure, starting
     from every parameter borrowed. *)
 
+(** [read_off params body]: of each parameter of [params], innermost first,
+    whether [body], standing under them, owns it, as the flags installed so
+    far say of its callees: it lets the parameter escape
+    ({!Escape.infer_owned_params}), or the parameter is a pair whose
+    components it lets escape, which a pair taken by value moves out. *)
+val read_off : ('name * Miniml.ml_type) list -> Miniml.ml_ast -> bool list
+
 (** The flags of [struc]'s functions, settled across calls: each
     function's, innermost first, for the parameters its head declares,
     eta-expansion's included ({!Ml_type_util.declared_parameters}).  A

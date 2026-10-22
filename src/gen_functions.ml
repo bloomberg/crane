@@ -685,7 +685,7 @@ let dfun_body_scope n b cty ty temps =
   reset_env_types ();
   push_parameters env all_ids;
   let n_params = List.length all_params in
-  let owned_flags = infer_owned_flags ~owner:n n_params b all_ids in
+  let owned_flags = infer_owned_flags ~owner:n b all_ids in
   (* Zip all_ids with ownership flags. all_ids and all_params have the same
      length (push_vars' preserves length), so owned_flags aligns 1:1. *)
   let all_ids_with_owned =
@@ -1363,8 +1363,7 @@ let gen_dfun n b cty ty temps =
 
 let gen_sfun n b dom cod temps =
   let all_params, b = collect_lams b in
-  let n_params = List.length all_params in
-  let owned_flags = infer_owned_flags ~owner:n n_params b all_params in
+  let owned_flags = infer_owned_flags ~owner:n b all_params in
   let ids, env =
     push_vars'
       (List.map

@@ -28,9 +28,9 @@ uint64_t Nat::div2(uint64_t n) {
   }
 }
 
-uint64_t Equations::gcd(const std::pair<uint64_t, uint64_t> &x) {
-  return gcd_functional(
-      x, [](const std::pair<uint64_t, uint64_t> &y) { return gcd(y); });
+uint64_t Equations::gcd(std::pair<uint64_t, uint64_t> x) {
+  return gcd_functional(x,
+                        [](std::pair<uint64_t, uint64_t> y) { return gcd(y); });
 }
 
 uint64_t Equations::gcd_unfold_clause_3(uint64_t n, uint64_t n0, bool refine) {

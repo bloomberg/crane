@@ -58,7 +58,7 @@ struct Equations {
     }
   }
 
-  static uint64_t gcd(const std::pair<uint64_t, uint64_t> &x);
+  static uint64_t gcd(std::pair<uint64_t, uint64_t> x);
   static uint64_t gcd_unfold_clause_3(uint64_t n, uint64_t n0, bool refine);
   static uint64_t gcd_unfold(std::pair<uint64_t, uint64_t> p);
   struct gcd_graph;

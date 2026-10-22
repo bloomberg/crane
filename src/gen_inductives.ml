@@ -393,13 +393,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   (* Infer owned/borrowed for method parameters. Note: method 'this' is always
      borrowed (const method). *)
   let n_method_params = List.length ids_with_types in
-  let method_owned_flags =
-    let base = Escape.infer_owned_params n_method_params inner_body in
-    let sub_esc = Escape.infer_sub_bindings_escape_params n_method_params inner_body in
-    List.map2 (fun (b, s) (_, ty) ->
-      b || (s && is_prod_ml_type ty))
-      (List.combine base sub_esc) ids_with_types
-  in
+  let method_owned_flags = Ownership.read_off ids_with_types inner_body in
 
   (* Extract 'this' argument at this_pos - use renamed ids for consistency with
      body *)

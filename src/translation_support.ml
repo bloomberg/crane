@@ -2957,33 +2957,21 @@ let lifted_free_vars ~class_temps env free_indices =
         Some (name, ty, i) )
     free_indices
 
-(** Compute ownership flags for function parameters.  Combines escape analysis
-    with sub-binding escape for value-typed (prod) params: a param is owned if
-    it escapes the body, or if its sub-bindings escape and its ML type is a
-    product type (enabling move-from-.first/.second).
-
-    The escape flags of a function's parameters are those {!Ownership}
-    settled for the global [owner] where they cover the parameters its head
-    declares; a head declaring parameters an eta-expansion added, or a global
-    nothing settled, reads its own body. *)
-let infer_owned_flags ?owner n_params body params_with_types =
-  let read_off_body () = Escape.infer_owned_params n_params body in
-  let base =
-    match Option.bind owner Ownership.settled with
-    | Some settled when List.length settled = n_params ->
-      if Probe.checking () && settled <> read_off_body () then
-        Probe.violation "ownership summary"
-          Pp.(
-            str "the parameters of " ++ Names.GlobRef.print (Option.get owner)
-            ++ str " are not owned as their body reads them" );
-      settled
-    | _ -> read_off_body ()
-  in
-  let sub_esc = Escape.infer_sub_bindings_escape_params n_params body in
-  List.map2
-    (fun (b, se) (_, ty) -> b || (se && is_prod_ml_type ty))
-    (List.combine base sub_esc)
-    params_with_types
+(** Which of [params], innermost first, the function whose [body] stands
+    under them owns ({!Ownership.read_off}): those {!Ownership} settled for
+    the global [owner] where they cover [params], and otherwise -- a global
+    nothing settled, a lambda -- what its own body reads. *)
+let infer_owned_flags ?owner body params =
+  let read_off_body () = Ownership.read_off params body in
+  match Option.bind owner Ownership.settled with
+  | Some settled when List.length settled = List.length params ->
+    if Probe.checking () && settled <> read_off_body () then
+      Probe.violation "ownership summary"
+        Pp.(
+          str "the parameters of " ++ Names.GlobRef.print (Option.get owner)
+          ++ str " are not owned as their body reads them" );
+    settled
+  | _ -> read_off_body ()
 
 (** Wraps a C++ parameter type with const/ref based on ownership semantics.
     Owned inductive/shared_ptr params are passed by value (moved in);

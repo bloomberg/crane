@@ -7,6 +7,13 @@ let flags : bool list Ref.User.Map.t ref = State.cell State.Extraction Ref.User.
 
 let () = Escape.callee_flags := fun r -> Ref.User.Map.find_opt r !flags
 
+let read_off params body =
+  let n = List.length params in
+  List.map2
+    (fun (escapes, parts_escape) (_, ty) -> escapes || (parts_escape && Ml_type_util.is_prod_ml_type ty))
+    (List.combine (Escape.infer_owned_params n body) (Escape.infer_sub_bindings_escape_params n body))
+    params
+
 let summarize ?(receiver = fun _ -> None) struc =
   (* A custom constant is not generated from its body: what it does with its
      arguments is its mapping's, which a call to it spells. *)
@@ -28,7 +35,7 @@ let summarize ?(receiver = fun _ -> None) struc =
     List.iter
       (fun (r, b, ty) ->
         let params, body = Ml_type_util.declared_parameters ty b in
-        let f = unless_receiver r (Escape.infer_owned_params (List.length params) body) in
+        let f = unless_receiver r (read_off params body) in
         if Ref.User.Map.find_opt r !flags <> Some f then (
           changed := true;
           flags := Ref.User.Map.add r f !flags ))

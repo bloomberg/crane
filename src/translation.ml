@@ -1979,7 +1979,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        (e.g. captured by a closure, stored in a constructor, or returned), it
        is marked as owned.  See {!Escape.infer_owned_params}. *)
     let n_all_params = List.length lam_params in
-    let owned_flags = infer_owned_flags n_all_params a args
+    let owned_flags = infer_owned_flags a args
     in
     let args_with_owned =
       List.map2 (fun (id, ty) owned -> (id, ty, owned)) args owned_flags
