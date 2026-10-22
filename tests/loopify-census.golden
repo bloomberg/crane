@@ -1,4 +1,2 @@
 CraneTestsBasics.binomial_heap.BinomialHeap: moved value read: in CraneTestsBasics.binomial_heap.BinomialHeap.BinomialHeap.unzip, cont is read after it is moved
 CraneTestsRegression.cps.CPS: moved value read: in CraneTestsRegression.cps.CPS.CPS.partition_cps, k is read after it is moved
-CraneTestsRegression.inline_inner_fix_writes_instance.InlineInnerFixWritesInstance: resume plan: the recursion plan does not say whether a statement making a recursive call resumes after it
-CraneTestsRegression.lifted_inner_fix_drops_class_param.LiftedInnerFixDropsClassParam: resume plan: the recursion plan does not say whether a statement making a recursive call resumes after it
