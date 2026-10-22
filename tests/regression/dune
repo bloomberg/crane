@@ -13359,3 +13359,14 @@
   (alias runtest)
   (deps loopify_local_fix_inner_callback.t.exe)
   (action (run ./loopify_local_fix_inner_callback.t.exe))))
+
+(subdir loopify_top_level_call_binding
+ (rule
+  (targets loopify_top_level_call_binding.t.exe)
+  (deps LoopifyTopLevelCallBinding.vo loopify_top_level_call_binding.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_top_level_call_binding.t.exe loopify_top_level_call_binding.cpp loopify_top_level_call_binding.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_top_level_call_binding.t.exe)
+  (action (run ./loopify_top_level_call_binding.t.exe))))

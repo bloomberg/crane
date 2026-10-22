@@ -2778,17 +2778,10 @@ let transform_nontail ?(fn_name : string option) ?adopted ?entered_by ?(outer_en
                er_rematerialized = [];
                er_entered_by = entered_by }
   in
-  (* Each top-level statement is rewritten on its own, but a binding it makes
-     is still one a later statement's continuation may rebuild. *)
-  let rewritten_body =
-    List.rev
-      (fst
-         (List.fold_left
-            (fun (acc, ctx) st ->
-              ( rewrite_enter_stmt ctx st :: acc,
-                {(with_rematerialized ctx st) with er_binders = declared_binders ctx.er_binders st} ) )
-            ([], ctx) body ))
-  in
+  (* The body is a sequence like any other: a recursive call bound at its top
+     level -- a temporary {!Normalize} made of a call in the function's
+     result -- resumes into the statements after it. *)
+  let rewritten_body = rewrite_enter_stmts ctx body in
   (* The adopted entry's handler is that body, rewritten under a context
      describing its parameters rather than this function's.  Both handlers
      share the frame accumulator and the call counter, so the resume frames
