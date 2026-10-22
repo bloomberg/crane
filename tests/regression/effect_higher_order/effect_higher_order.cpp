@@ -4,7 +4,7 @@
 void EffectHigherOrder::greet_all(const List<std::string> &names) {
   for_each_str(
       [](std::string name) {
-        std::cout << std::string("Hello, ") + name << '\n';
+        std::cout << std::string("Hello, ") + std::move(name) << '\n';
         return std::monostate{};
       },
       names);
@@ -46,7 +46,7 @@ EffectHigherOrder::lookup_all(const List<std::string> &names) {
 /// 8. Effect in let-bound function
 std::string EffectHigherOrder::process_input() {
   crane::fn<std::string(std::string)> format = [](std::string s) {
-    return std::string("[") + s + std::string("]");
+    return std::string("[") + std::move(s) + std::string("]");
   };
   std::string line;
   std::getline(std::cin, line);

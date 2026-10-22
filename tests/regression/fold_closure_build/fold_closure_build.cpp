@@ -16,7 +16,7 @@ FoldClosureBuild::compose_adders(const FoldClosureBuild::mylist<uint64_t> &l,
                                  uint64_t x0_) {
   return fold_left<crane::fn<uint64_t(uint64_t)>, uint64_t>(
       [](crane::fn<uint64_t(uint64_t)> acc, uint64_t h) {
-        return [=](uint64_t x) { return acc((h + x)); };
+        return [=, acc = std::move(acc)](uint64_t x) { return acc((h + x)); };
       },
       [](uint64_t x) { return x; }, l)(x0_);
 }
@@ -62,7 +62,8 @@ FoldClosureBuild::compose_with_fix(const FoldClosureBuild::mylist<uint64_t> &l,
                                    uint64_t x0_) {
   return fold_left<crane::fn<uint64_t(uint64_t)>, uint64_t>(
       [](crane::fn<uint64_t(uint64_t)> acc, uint64_t h) {
-        auto go_impl = [=](auto &_self_go, uint64_t x) -> uint64_t {
+        auto go_impl = [=, acc = std::move(acc)](auto &_self_go,
+                                                 uint64_t x) -> uint64_t {
           if (x <= 0) {
             return acc(h);
           } else {

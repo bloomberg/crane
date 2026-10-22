@@ -13,7 +13,8 @@ uint64_t FamilyWithTypeBinderAtFunction::clos(const List<uint64_t> &l,
   return grect<crane::fn<uint64_t(uint64_t)>, uint64_t>(
       []() { return [](uint64_t x) { return x; }; }(),
       [](const auto &, const auto &, crane::fn<uint64_t(uint64_t)> k) {
-        return [=](uint64_t x) { return k((x + UINT64_C(1))); };
+        return
+            [=, k = std::move(k)](uint64_t x) { return k((x + UINT64_C(1))); };
       },
       l)(x0_);
 }

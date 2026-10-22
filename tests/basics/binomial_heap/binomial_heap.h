@@ -203,7 +203,7 @@ struct BinomialHeap {
       crane::fn<List<tree>(priqueue)> f = [=,
                                            cont = std::move(cont)](priqueue q) {
         return List<tree>::cons(tree::node(a0, a1_value, tree::leaf()),
-                                cont(q));
+                                cont(std::move(q)));
       };
       return unzip(a2_value, std::move(f));
     } else {

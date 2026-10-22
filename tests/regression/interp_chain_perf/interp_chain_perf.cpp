@@ -27,7 +27,7 @@ InterpChainPerf::prog(const Nat &n) {
                               std::pair<Nat, Nat>>(
       [=](std::pair<Nat, Nat> pat) -> Itree<InterpChainPerf::TopE<crane::obj>,
                                             Sum<std::pair<Nat, Nat>, Nat>> {
-        const auto &[i, acc] = pat;
+        auto [i, acc] = std::move(pat);
         if (i.eqb(n)) {
           return Itree<InterpChainPerf::TopE<crane::obj>,
                        Sum<std::pair<Nat, Nat>, Nat>>::
@@ -35,7 +35,7 @@ InterpChainPerf::prog(const Nat &n) {
                         Sum<std::pair<Nat, Nat>, Nat>,
                         Itree<InterpChainPerf::TopE<crane::obj>,
                               Sum<std::pair<Nat, Nat>, Nat>>>::
-                     retf(Sum<std::pair<Nat, Nat>, Nat>::inr(acc)));
+                     retf(Sum<std::pair<Nat, Nat>, Nat>::inr(std::move(acc))));
         } else {
           return ITree::template bind<InterpChainPerf::TopE<crane::obj>, Nat,
                                       Sum<std::pair<Nat, Nat>, Nat>>(
@@ -45,7 +45,7 @@ InterpChainPerf::prog(const Nat &n) {
                       Sum1<InterpChainPerf::GetE, InterpChainPerf::outE,
                            crane::obj>,
                       Nat>(resum_inl, GetE::GET)),
-              [=](Nat x) {
+              [=, acc = std::move(acc), i = std::move(i)](Nat x) {
                 return Itree<InterpChainPerf::TopE<crane::obj>,
                              Sum<std::pair<Nat, Nat>, Nat>>::
                     go(ItreeF<InterpChainPerf::TopE<crane::obj>,
@@ -53,7 +53,8 @@ InterpChainPerf::prog(const Nat &n) {
                               Itree<InterpChainPerf::TopE<crane::obj>,
                                     Sum<std::pair<Nat, Nat>, Nat>>>::
                            retf(Sum<std::pair<Nat, Nat>, Nat>::inl(
-                               std::make_pair(Nat::s(i), acc.add(x)))));
+                               std::make_pair(Nat::s(i),
+                                              acc.add(std::move(x))))));
               });
         }
       },

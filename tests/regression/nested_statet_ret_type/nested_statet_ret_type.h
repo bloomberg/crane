@@ -274,7 +274,7 @@ struct NestedStatetRetType {
   static inline const stateT<Nat, crane_carrier_tc_f7ac3d5701e8f328, Nat>
       stacked = []() {
         return [](Nat n) {
-          return [=](bool b) {
+          return [=, n = std::move(n)](bool b) {
             return Itree<noE, std::pair<bool, std::pair<Nat, Nat>>>::go(
                 ItreeF<noE, std::pair<bool, std::pair<Nat, Nat>>,
                        Itree<noE, std::pair<bool, std::pair<Nat, Nat>>>>::

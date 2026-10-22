@@ -700,7 +700,8 @@ struct ItreeInterpState {
                                                                GetE::GET)),
               [=](Nat y) {
                 return Itree<GetE, Nat>::go(
-                    ItreeF<GetE, Nat, Itree<GetE, Nat>>::retf(x.add(y)));
+                    ItreeF<GetE, Nat, Itree<GetE, Nat>>::retf(
+                        x.add(std::move(y))));
               });
         });
   }();

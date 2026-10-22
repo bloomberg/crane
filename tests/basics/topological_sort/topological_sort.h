@@ -476,7 +476,7 @@ struct TopologicalSort {
                [=, eqb_node = std::move(eqb_node)](const std::pair<T1, T1> &x,
                                                    List<T1> ret) -> List<T1> {
                  if (eqb_node(e, x.first)) {
-                   return List<T1>::cons(x.second, ret);
+                   return List<T1>::cons(x.second, std::move(ret));
                  } else {
                    return ret;
                  }
@@ -492,7 +492,8 @@ struct TopologicalSort {
     return elems.template fold_right<List<entry<T1>>>(
         [=, eqb_node = std::move(eqb_node),
          l = std::move(l)](T1 e, const List<std::pair<T1, List<T1>>> &ret) {
-          return List<entry<T1>>::cons(make_entry<T1>(eqb_node, l, e), ret);
+          return List<entry<T1>>::cons(
+              make_entry<T1>(eqb_node, l, std::move(e)), ret);
         },
         List<entry<T1>>::nil());
   }
@@ -674,7 +675,7 @@ struct TopologicalSort {
         .template combine<uint64_t>(ListDef::seq(UINT64_C(0), lorder.length()))
         .template map<List<std::pair<T1, uint64_t>>>(
             [](std::pair<List<T1>, uint64_t> x) {
-              const auto &[fs, rk] = x;
+              auto [fs, rk] = std::move(x);
               return fs.template map<std::pair<T1, uint64_t>>(
                   [=](const T1 &f) { return std::make_pair(f, rk); });
             })

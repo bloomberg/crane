@@ -761,7 +761,7 @@ struct InterpParamsFamily {
                 return Itree<InE<typename _tcI0::ptr, crane::obj>, Nat>::go(
                     ItreeF<InE<typename _tcI0::ptr, crane::obj>, Nat,
                            Itree<InE<typename _tcI0::ptr, crane::obj>,
-                                 Nat>>::retf(x.add(y)));
+                                 Nat>>::retf(x.add(std::move(y))));
               });
         });
   }

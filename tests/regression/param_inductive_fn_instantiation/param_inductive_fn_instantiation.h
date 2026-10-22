@@ -48,7 +48,7 @@ struct ParamInductiveFnInstantiation {
   static inline const endo<crane::fn<uint64_t(uint64_t)>> d = []() {
     return endo<crane::fn<uint64_t(uint64_t)>>::e(
         [](crane::fn<uint64_t(uint64_t)> g) {
-          return [=](uint64_t n) { return g(g(n)); };
+          return [=, g = std::move(g)](uint64_t n) { return g(g(n)); };
         });
   }();
   static inline const uint64_t go = run<crane::fn<uint64_t(uint64_t)>>(

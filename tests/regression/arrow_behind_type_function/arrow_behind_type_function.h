@@ -115,7 +115,11 @@ struct ArrowBehindTypeFunction {
           f) {
     return [=, f = std::move(f)](crane::fn<T1(T2)> k) {
       return crane::apply2(
-          f, [=](T2 a) { return [=](crane::fn<T1(T3)>) { return k(a); }; }, k);
+          f,
+          [=](T2 a) {
+            return [=, a = std::move(a)](crane::fn<T1(T3)>) { return k(a); };
+          },
+          k);
     };
   }
 

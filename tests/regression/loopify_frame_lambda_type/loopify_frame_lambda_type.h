@@ -321,11 +321,12 @@ struct LoopifyFrameLambdaType {
             std::pair<List<std::pair<T1, T2>>, List<T2>>>(
             std::move(_result),
             [=](std::pair<List<std::pair<T1, T2>>, List<T2>> x0) {
-              const auto &[l, rest] = x0;
+              auto [l, rest] = std::move(x0);
               return Monad_res::template ret<
-                  std::pair<List<std::pair<T1, T2>>, List<T2>>>(std::make_pair(
-                  List<std::pair<T1, T2>>::cons(std::make_pair(a0, a00), l),
-                  rest));
+                  std::pair<List<std::pair<T1, T2>>, List<T2>>>(
+                  std::make_pair(List<std::pair<T1, T2>>::cons(
+                                     std::make_pair(a0, a00), std::move(l)),
+                                 std::move(rest)));
             });
       }
     }

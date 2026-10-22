@@ -283,9 +283,10 @@ const std::deque<grammar_entry> entries =
                        crane_erase_fn([](const crane::obj &_any_ss) {
                          Prod<symbol_semty, Unit> ss =
                              crane::any_cast<Prod<symbol_semty, Unit>>(_any_ss);
-                         const auto &[a0, a1] = ss;
+                         auto &[a0, a1] = ss;
                          return R::rarr(crane_container_cast<std::deque<R>>(
-                             crane::any_cast<std::deque<crane::obj>>(a0)));
+                             crane::any_cast<std::deque<crane::obj>>(
+                                 std::move(a0))));
                        }))),
         std::deque<SigT<Prod<Nonterminal, std::deque<Symbol>>,
                         Prod<crane::obj, crane::obj>>>{}));

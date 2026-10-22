@@ -291,8 +291,8 @@ template <TFunctor _tcI0> struct TFunctor_pairs {
         TFunctor_list::template tfmap<std::pair<ident, CraneA0>,
                                       std::pair<ident, CraneA1>>(
             [=](std::pair<ident, CraneA0> pat) {
-              const auto &[id, t] = pat;
-              return std::make_pair(id, f(t));
+              auto [id, t] = std::move(pat);
+              return std::make_pair(std::move(id), f(std::move(t)));
             },
             m.p_defs),
         _tcI0::template tfmap<CraneA0, CraneA1>(f, m.p_body)};

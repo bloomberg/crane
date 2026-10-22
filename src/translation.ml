@@ -2288,6 +2288,21 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               (ty, if List.exists (( == ) orig) arity_only then None else id) )
             cpp_arg_info filtered_args_with_owned
         in
+        (* The body owns the parameters the lambda declares by value, as a
+           function's does. *)
+        let lambda_owned =
+          let declared i =
+            let rec position j = function
+              | [] -> None
+              | i' :: rest -> if i' = i then Some j else position (j + 1) rest
+            in
+            Option.map (fun j -> let ty, _, _ = List.nth cpp_arg_info j in ty)
+              (position 0 emitted_binder_indices)
+          in
+          owned_parameters (List.length args_with_owned)
+            ~owned:(fun i -> match declared i with Some ty -> not (declared_by_reference ty) | None -> false)
+            ~ty:(fun i -> let _, ty, _ = List.nth args_with_owned i in ty)
+        in
         (* A template parameter C++ cannot deduce is worse than the erasure
            it replaces, so the function object is polymorphic only where the
            carrier reaches a parameter: an erased position the body alone
@@ -2427,7 +2442,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            | Some _ -> with_rank2_carrier carrier)
             (fun () ->
               with_lam_return_type (fun () ->
-                with_region a (fun () ->
+                with_region ~owned:lambda_owned a (fun () ->
                   gen_stmts
                     ~slot:{slot with expected_ml_ty = body_expected_ml_ty}
                     env

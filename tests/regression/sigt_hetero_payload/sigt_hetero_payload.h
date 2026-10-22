@@ -279,7 +279,7 @@ struct SigtHeteroPayload {
         const auto &[v, f] = a1;
         return crane::any_cast<Nat>(
                    crane::any_cast<crane::fn<crane::obj(crane::obj)>>(f)(v))
-            .add(acc);
+            .add(std::move(acc));
       },
       Nat::o());
 };

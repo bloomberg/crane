@@ -759,16 +759,16 @@ struct LiftedHelperFamilyGeneralised {
             [](std::pair<Nat, Nat> pat)
                 -> Itree<AllE<typename _tcI0::ptr, crane::obj>,
                          Sum<std::pair<Nat, Nat>, Nat>> {
-              const auto &[c0, off] = pat;
+              auto [c0, off] = std::move(pat);
               if (c0.eqb(Nat::o())) {
                 return Monad_itree<AllE<typename _tcI0::ptr, crane::obj>>::
                     template ret<Sum<std::pair<Nat, Nat>, Nat>>(
-                        Sum<std::pair<Nat, Nat>, Nat>::inr(off));
+                        Sum<std::pair<Nat, Nat>, Nat>::inr(std::move(off)));
               } else {
                 return Monad_itree<AllE<typename _tcI0::ptr, crane::obj>>::
                     template ret<Sum<std::pair<Nat, Nat>, Nat>>(
                         Sum<std::pair<Nat, Nat>, Nat>::inl(
-                            std::make_pair(c0.pred(), Nat::s(off))));
+                            std::make_pair(c0.pred(), Nat::s(std::move(off)))));
               }
             },
             std::make_pair(a0_value, Nat::o()));

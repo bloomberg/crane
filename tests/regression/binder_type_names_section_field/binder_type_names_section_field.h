@@ -530,7 +530,7 @@ struct BinderTypeNamesSectionField {
                                   std::pair<FusedS<typename _tcI0::ptr>, T1>>(
           ITree::template trigger<CntE, T1>(
               Subevent::template subevent<CntE, CntE, T1>(resum_id, e)),
-          [=](const T1 &r) {
+          [=, s = std::move(s)](const T1 &r) {
             return Itree<CntE, std::pair<FusedS<typename _tcI0::ptr>, T1>>::go(
                 ItreeF<CntE, std::pair<FusedS<typename _tcI0::ptr>, T1>,
                        Itree<CntE, std::pair<FusedS<typename _tcI0::ptr>,
