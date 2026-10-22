@@ -13282,3 +13282,14 @@
   (alias runtest)
   (deps eta_extended_global_elaborated.t.exe)
   (action (run ./eta_extended_global_elaborated.t.exe))))
+
+(subdir loopify_capture_move_renamed
+ (rule
+  (targets loopify_capture_move_renamed.t.exe)
+  (deps LoopifyCaptureMoveRenamed.vo loopify_capture_move_renamed.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_capture_move_renamed.t.exe loopify_capture_move_renamed.cpp loopify_capture_move_renamed.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_capture_move_renamed.t.exe)
+  (action (run ./loopify_capture_move_renamed.t.exe))))

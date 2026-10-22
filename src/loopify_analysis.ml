@@ -1233,16 +1233,18 @@ and this_to_self_stmt (self_id : Id.t) (s : cpp_stmt) : cpp_stmt =
 (** {2 Variable substitution} *)
 
 (** Substitute variable names in an expression using a mapping
-    [(old_id, new_id)]. *)
+    [(old_id, new_id)].  A closure taking a renamed variable by move takes
+    the variable by its new name: the move was planned of the variable, not
+    of the name it had. *)
 let rec subst_expr (subs : (Id.t * Id.t) list) e =
+  let rename id =
+    List.fold_left (fun id (old_id, new_id) -> if Id.equal id old_id then new_id else id) id subs
+  in
   let e' =
-    List.fold_left
-      (fun acc (old_id, new_id) ->
-        match acc with
-        | CPPvar id when Id.equal id old_id -> CPPvar new_id
-        | _ -> acc )
-      e
-      subs
+    match e with
+    | CPPvar id -> CPPvar (rename id)
+    | CPPlambda l when l.cl_moved <> [] -> CPPlambda {l with cl_moved = List.map rename l.cl_moved}
+    | _ -> e
   in
   map_expr (subst_expr subs) (subst_stmt subs) (fun t -> t) e'
 
