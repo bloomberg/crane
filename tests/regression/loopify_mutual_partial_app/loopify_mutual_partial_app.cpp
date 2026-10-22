@@ -99,17 +99,14 @@ LoopifyMutualPartialApp::sum_e(const LoopifyMutualPartialApp::e<uint64_t>
           _result = _inl_l0_value.template fold_left<uint64_t>(
               [](uint64_t _inl_acc,
                  const LoopifyMutualPartialApp::md<uint64_t> &_inl_m0) {
-                uint64_t _inl_tmp2 = sum_md(_inl_m0);
-                return (_inl_acc + _inl_tmp2);
+                return (_inl_acc + sum_md(_inl_m0));
               },
               UINT64_C(0));
         } else {
           const auto &[_inl_a0, _inl_b0] =
               std::get<typename LoopifyMutualPartialApp::md<uint64_t>::MPair>(
                   _inl_m.v());
-          uint64_t _inl_tmp4 = sum_md(*_inl_a0);
-          uint64_t _inl_tmp3 = sum_md(*_inl_b0);
-          _result = (_inl_tmp4 + _inl_tmp3);
+          _result = (sum_md(*_inl_a0) + sum_md(*_inl_b0));
         }
       }
     } else if (std::holds_alternative<CraneCont_Add>(_frame)) {
@@ -123,8 +120,7 @@ LoopifyMutualPartialApp::sum_e(const LoopifyMutualPartialApp::e<uint64_t>
     } else {
       auto _f = std::move(std::get<CraneCont_MConst>(_frame));
       uint64_t _inl_u0 = _f._inl_u0;
-      uint64_t _inl_tmp1 = std::move(_result);
-      _result = (_inl_u0 + _inl_tmp1);
+      _result = (_inl_u0 + std::move(_result));
     }
   }
   return _result;
@@ -228,9 +224,7 @@ LoopifyMutualPartialApp::sum_md(const LoopifyMutualPartialApp::md<uint64_t> &
         const auto &[_inl_a0, _inl_b0] =
             std::get<typename LoopifyMutualPartialApp::e<uint64_t>::Add>(
                 _inl_x.v());
-        uint64_t _inl_tmp2 = sum_e(*_inl_a0);
-        uint64_t _inl_tmp1 = sum_e(*_inl_b0);
-        _result = (_inl_tmp2 + _inl_tmp1);
+        _result = (sum_e(*_inl_a0) + sum_e(*_inl_b0));
       } else {
         const auto &[_inl_m0] =
             std::get<typename LoopifyMutualPartialApp::e<uint64_t>::Meta>(

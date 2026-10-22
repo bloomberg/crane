@@ -67,15 +67,12 @@ LoopifyMutualResultTypes::dbl_e(const LoopifyMutualResultTypes::e &
             const auto &[_inl_x0] =
                 std::get<typename LoopifyMutualResultTypes::md::MConst>(
                     _inl_m.v());
-            LoopifyMutualResultTypes::e _inl_tmp1 = dbl_e(*_inl_x0);
-            return md::mconst(std::move(_inl_tmp1));
+            return md::mconst(dbl_e(*_inl_x0));
           } else {
             const auto &[_inl_a0, _inl_b0] =
                 std::get<typename LoopifyMutualResultTypes::md::MPair>(
                     _inl_m.v());
-            LoopifyMutualResultTypes::md _inl_tmp3 = dbl_md(*_inl_a0);
-            LoopifyMutualResultTypes::md _inl_tmp2 = dbl_md(*_inl_b0);
-            return md::mpair(std::move(_inl_tmp3), std::move(_inl_tmp2));
+            return md::mpair(dbl_md(*_inl_a0), dbl_md(*_inl_b0));
           }
         }(*m0));
       }
@@ -145,15 +142,12 @@ LoopifyMutualResultTypes::md LoopifyMutualResultTypes::dbl_md(
                          _inl_x.v())) {
             const auto &[_inl_a0, _inl_b0] =
                 std::get<typename LoopifyMutualResultTypes::e::Add>(_inl_x.v());
-            LoopifyMutualResultTypes::e _inl_tmp2 = dbl_e(*_inl_a0);
-            LoopifyMutualResultTypes::e _inl_tmp1 = dbl_e(*_inl_b0);
-            return e::add(std::move(_inl_tmp2), std::move(_inl_tmp1));
+            return e::add(dbl_e(*_inl_a0), dbl_e(*_inl_b0));
           } else {
             const auto &[_inl_m0] =
                 std::get<typename LoopifyMutualResultTypes::e::Meta>(
                     _inl_x.v());
-            LoopifyMutualResultTypes::md _inl_tmp3 = dbl_md(*_inl_m0);
-            return e::meta(std::move(_inl_tmp3));
+            return e::meta(dbl_md(*_inl_m0));
           }
         }(*x0));
       } else {
@@ -236,9 +230,7 @@ LoopifyMutualResultTypes::sum_e(const LoopifyMutualResultTypes::e &
           const auto &[_inl_a0, _inl_b0] =
               std::get<typename LoopifyMutualResultTypes::md::MPair>(
                   _inl_m.v());
-          uint64_t _inl_tmp2 = sum_md(*_inl_a0);
-          uint64_t _inl_tmp1 = sum_md(*_inl_b0);
-          _result = (_inl_tmp2 + _inl_tmp1);
+          _result = (sum_md(*_inl_a0) + sum_md(*_inl_b0));
         }
       }
     } else if (std::holds_alternative<CraneCont_Add>(_frame)) {
@@ -304,9 +296,7 @@ uint64_t LoopifyMutualResultTypes::sum_md(
                        typename LoopifyMutualResultTypes::e::Add>(_inl_x.v())) {
           const auto &[_inl_a0, _inl_b0] =
               std::get<typename LoopifyMutualResultTypes::e::Add>(_inl_x.v());
-          uint64_t _inl_tmp2 = sum_e(*_inl_a0);
-          uint64_t _inl_tmp1 = sum_e(*_inl_b0);
-          _result = (_inl_tmp2 + _inl_tmp1);
+          _result = (sum_e(*_inl_a0) + sum_e(*_inl_b0));
         } else {
           const auto &[_inl_m0] =
               std::get<typename LoopifyMutualResultTypes::e::Meta>(_inl_x.v());

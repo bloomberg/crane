@@ -60,8 +60,7 @@ MutualTmcLoopify::evens(const Nat &n) { /// CraneEnter: captures varying
     } else {
       auto _f = std::move(std::get<CraneCont_S_1>(_frame));
       const Nat &_inl_n = std::move(_f._inl_n);
-      MutualTmcLoopify::mylist _inl_tmp1 = std::move(_result);
-      _result = mylist::mcons(_inl_n, std::move(_inl_tmp1));
+      _result = mylist::mcons(_inl_n, std::move(_result));
     }
   }
   return _result;

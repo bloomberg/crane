@@ -62,8 +62,7 @@ uint64_t LoopifyMemberOwnCalls::f1(uint64_t n) {
         return UINT64_C(0);
       } else {
         uint64_t _inl_n_ = _inl_n - 1;
-        uint64_t _inl_tmp1 = f3(_inl_n_);
-        return (UINT64_C(2) + _inl_tmp1);
+        return (UINT64_C(2) + f3(_inl_n_));
       }
     }(n_));
   }
@@ -79,8 +78,7 @@ uint64_t LoopifyMemberOwnCalls::f2(uint64_t n) {
         return UINT64_C(0);
       } else {
         uint64_t _inl_n_ = _inl_n - 1;
-        uint64_t _inl_tmp1 = f1(_inl_n_);
-        return (UINT64_C(3) + _inl_tmp1);
+        return (UINT64_C(3) + f1(_inl_n_));
       }
     }(n_));
   }
@@ -96,8 +94,7 @@ uint64_t LoopifyMemberOwnCalls::f3(uint64_t n) {
         return UINT64_C(0);
       } else {
         uint64_t _inl_n_ = _inl_n - 1;
-        uint64_t _inl_tmp1 = f2(_inl_n_);
-        return (UINT64_C(1) + _inl_tmp1);
+        return (UINT64_C(1) + f2(_inl_n_));
       }
     }(n_));
   }

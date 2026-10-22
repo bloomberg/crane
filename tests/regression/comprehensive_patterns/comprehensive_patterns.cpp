@@ -1103,8 +1103,7 @@ uint64_t ComprehensivePatterns::even_count(
       _result = (UINT64_C(1) + std::move(_result));
     } else {
       auto _f = std::move(std::get<CraneCont_pinl_m>(_frame));
-      uint64_t _inl_tmp1 = std::move(_result);
-      _result = (UINT64_C(1) + _inl_tmp1);
+      _result = (UINT64_C(1) + std::move(_result));
     }
   }
   return _result;
@@ -1168,8 +1167,7 @@ uint64_t ComprehensivePatterns::odd_count(
       _result = (UINT64_C(1) + std::move(_result));
     } else {
       auto _f = std::move(std::get<CraneCont_pinl_m>(_frame));
-      uint64_t _inl_tmp1 = std::move(_result);
-      _result = (UINT64_C(1) + _inl_tmp1);
+      _result = (UINT64_C(1) + std::move(_result));
     }
   }
   return _result;

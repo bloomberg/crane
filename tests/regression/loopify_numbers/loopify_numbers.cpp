@@ -1310,8 +1310,7 @@ uint64_t LoopifyNumbers::sum_even_indices_fuel(
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       uint64_t _inl_a0 = _f._inl_a0;
-      uint64_t _inl_tmp1 = std::move(_result);
-      _result = (_inl_a0 + _inl_tmp1);
+      _result = (_inl_a0 + std::move(_result));
     }
   }
   return _result;

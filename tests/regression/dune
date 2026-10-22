@@ -2680,6 +2680,17 @@
   (deps loopify_tmc_switch_base.t.exe)
   (action (run ./loopify_tmc_switch_base.t.exe))))
 
+(subdir loopify_mutual_tmc_temporary
+ (rule
+  (targets loopify_mutual_tmc_temporary.t.exe)
+  (deps LoopifyMutualTmcTemporary.vo loopify_mutual_tmc_temporary.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_mutual_tmc_temporary.t.exe loopify_mutual_tmc_temporary.cpp loopify_mutual_tmc_temporary.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_mutual_tmc_temporary.t.exe)
+  (action (run ./loopify_mutual_tmc_temporary.t.exe))))
+
 (subdir coalition_bid_honor_trace
  (rule
   (targets coalition_bid_honor_trace.t.exe)

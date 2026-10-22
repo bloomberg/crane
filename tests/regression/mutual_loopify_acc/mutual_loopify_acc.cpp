@@ -51,8 +51,7 @@ uint64_t MutualLoopifyAcc::tsum(
     } else {
       auto _f = std::move(std::get<CraneCont_Fcons>(_frame));
       std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1 = std::move(_f._inl_a1);
-      uint64_t _inl_tmp1 = std::move(_result);
-      _result = fsum(_inl_tmp1, *_inl_a1);
+      _result = fsum(std::move(_result), *_inl_a1);
     }
   }
   return _result;

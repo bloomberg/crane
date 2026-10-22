@@ -692,8 +692,8 @@ struct LoopifyMutualPartialApp {
                            _inl_m.v())) {
               const auto &[_inl_u0, _inl_x0] =
                   std::get<typename md<T1>::MConst>(_inl_m.v());
-              e<T2> _inl_tmp1 = ft_e<_tcI0, T1, T2>(_inl_f, *_inl_x0);
-              return md<T2>::mconst(_inl_f(_inl_u0), std::move(_inl_tmp1));
+              return md<T2>::mconst(_inl_f(_inl_u0),
+                                    ft_e<_tcI0, T1, T2>(_inl_f, *_inl_x0));
             } else if (std::holds_alternative<typename md<T1>::MNode>(
                            _inl_m.v())) {
               const auto &[_inl_l0] =
@@ -706,9 +706,8 @@ struct LoopifyMutualPartialApp {
             } else {
               const auto &[_inl_a0, _inl_b0] =
                   std::get<typename md<T1>::MPair>(_inl_m.v());
-              md<T2> _inl_tmp3 = ft_md<_tcI0, T1, T2>(_inl_f, *_inl_a0);
-              md<T2> _inl_tmp2 = ft_md<_tcI0, T1, T2>(_inl_f, *_inl_b0);
-              return md<T2>::mpair(std::move(_inl_tmp3), std::move(_inl_tmp2));
+              return md<T2>::mpair(ft_md<_tcI0, T1, T2>(_inl_f, *_inl_a0),
+                                   ft_md<_tcI0, T1, T2>(_inl_f, *_inl_b0));
             }
           }(std::move(f), *m0));
         }
@@ -783,14 +782,12 @@ struct LoopifyMutualPartialApp {
                                _inl_x.v())) {
                   const auto &[_inl_a0, _inl_b0] =
                       std::get<typename e<T1>::Add>(_inl_x.v());
-                  e<T2> _inl_tmp2 = ft_e<_tcI0, T1, T2>(_inl_f, *_inl_a0);
-                  e<T2> _inl_tmp1 = ft_e<_tcI0, T1, T2>(_inl_f, *_inl_b0);
-                  return e<T2>::add(std::move(_inl_tmp2), std::move(_inl_tmp1));
+                  return e<T2>::add(ft_e<_tcI0, T1, T2>(_inl_f, *_inl_a0),
+                                    ft_e<_tcI0, T1, T2>(_inl_f, *_inl_b0));
                 } else {
                   const auto &[_inl_m0] =
                       std::get<typename e<T1>::Meta>(_inl_x.v());
-                  md<T2> _inl_tmp3 = ft_md<_tcI0, T1, T2>(_inl_f, *_inl_m0);
-                  return e<T2>::meta(std::move(_inl_tmp3));
+                  return e<T2>::meta(ft_md<_tcI0, T1, T2>(_inl_f, *_inl_m0));
                 }
               }(f, *x0));
         } else if (std::holds_alternative<typename md<T1>::MNode>(m.v())) {

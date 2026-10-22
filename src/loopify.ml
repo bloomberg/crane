@@ -302,6 +302,14 @@ let on_cycle_with self_refs r =
 (** The occurrence of the Core call a C++ call is made of. *)
 let made_of = function CPPfun_call (cs, _, _) -> cs.cs_occurrence | _ -> None
 
+(** The name a local of a body inlined into another takes there: prefixed,
+    so that it collides with none of the other body's, and a temporary
+    still where it was one ({!Mlutil.is_temporary_id}), so that
+    {!Cpp_temporaries} puts it back where it is read. *)
+let inlined_local_name id =
+  if Mlutil.is_temporary_id id then Id.of_string (Id.to_string id ^ "_inl")
+  else Generated_name.prefixed "_inl" id
+
 (** [inline_partner ~continues ~invokes callee body] is [body] with the
     calls [continues] and [invokes] recognise replaced by the body of
     [callee], registered in {!mutual_fn_table}: a returned call that
@@ -325,7 +333,7 @@ let inline_partner ~continues ~invokes
   let local_rename_map =
     List.filter_map (fun id ->
       if List.mem_assoc id param_rename_map then None
-      else Some (id, Generated_name.prefixed "_inl" id))
+      else Some (id, inlined_local_name id))
       local_ids
   in
   let rename_map = param_rename_map @ local_rename_map in
@@ -1053,7 +1061,7 @@ let try_inline_functional_into names body =
         in
         let rename_map =
           List.map
-            (fun id -> (id, Generated_name.prefixed "_inl" id))
+            (fun id -> (id, inlined_local_name id))
             (List.map fst keep_params @ declared_ids g_body)
         in
         let rename_var id =
