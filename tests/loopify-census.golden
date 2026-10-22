@@ -1,6 +1,5 @@
 CraneTestsBasics.binomial_heap.BinomialHeap: moved value read: in CraneTestsBasics.binomial_heap.BinomialHeap.BinomialHeap.unzip, cont is read after it is moved
 CraneTestsRegression.cps.CPS: moved value read: in CraneTestsRegression.cps.CPS.CPS.partition_cps, k is read after it is moved
-CraneTestsRegression.functor_field_forwards_to_param.FunctorFieldForwardsToParam: recursion plan: the recursion plan disagrees with the finished body of CraneTestsRegression.functor_field_forwards_to_param.FunctorFieldForwardsToParam.FunctorFieldForwardsToParam.Make.eq_dec: planned no recursion, read tail calls only
 CraneTestsRegression.gadt_eval_branch_type.GadtEvalBranchType: resume plan: the recursion plan does not say whether a statement making a recursive call resumes after it
 CraneTestsRegression.gadt_index_erasure.GadtIndexErasure: resume plan: the recursion plan does not say whether a statement making a recursive call resumes after it
 CraneTestsRegression.inline_inner_fix_writes_instance.InlineInnerFixWritesInstance: resume plan: the recursion plan does not say whether a statement making a recursive call resumes after it

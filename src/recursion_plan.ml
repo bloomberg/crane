@@ -853,7 +853,7 @@ let analyze groups struc =
      what a loop of the member can take. *)
   let member_kind r fd =
     let callee ~depth:_ = function
-      | MLglob use when Common.globref_equal use.callee r ->
+      | MLglob use when Names.GlobRef.UserOrd.equal use.callee r ->
         Option.map parameters (Ref.User.Map.find_opt use.callee defs)
       | _ -> None
     in
