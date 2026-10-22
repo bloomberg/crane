@@ -104,38 +104,6 @@ include Loopify_frame
 
 (** {2 Main transformation dispatch} *)
 
-(** {3 GlobRef-based mutual recursion} *)
-
-(** Check if a function body calls any function whose [GlobRef.t] appears in
-    [refs]. Searches through all statements and nested expressions for a
-    [CPPfun_call (call_opaque, CPPglob (r, _, _), of_reversed (_))] where [r] matches any element of [refs].
-
-    Used in mutual recursion detection to determine whether a callee calls back
-    into the current function.
-
-    @param refs List of [GlobRef.t] values to check for
-    @param body The statement list (function body) to search
-    @return [true] if any call to a ref in [refs] is found *)
-let body_calls_any_ref refs body =
-  let eq r sr = Common.globref_equal r sr in
-  let label_of = function
-    | GlobRef.ConstRef c -> Some (Label.to_id (Constant.label c))
-    | GlobRef.VarRef v -> Some v
-    | _ -> None
-  in
-  body_exists
-    (function
-      | CPPfun_call (_, CPPglob (r, _, _), _) when List.exists (eq r) refs -> true
-      | CPPfun_call (_, CPPvar id, _) ->
-        List.exists
-          (fun r ->
-            match label_of r with
-            | Some label -> Id.equal id label
-            | None -> false )
-          refs
-      | _ -> false )
-    body
-
 (** {3 Generic mutual recursion inlining}
 
     Every inlining Loopify does is one operation: find every call to a
@@ -257,47 +225,13 @@ let rec lifted_origin r =
   | Some h -> ( match Lifted.origin h with Some o -> lifted_origin o | None -> r )
   | None -> r
 
-(** Whether the body registered for [start] reaches the function known by
-    [self_refs] through the call graph of the registered bodies: how Loopify
-    found a cycle partner before the program's recursive groups said, kept
-    to check them against ({!on_cycle_with}).  Cycles are broken with a
-    visited set. *)
-let reaches_through_bodies self_refs start =
-  let is_self r = List.exists (Common.globref_equal r) self_refs in
-  let visited = ref [] in
-  let rec go r =
-    if List.exists (Common.globref_equal r) !visited then false
-    else begin
-      visited := r :: !visited;
-      match Ref.User.Tbl.find_opt mutual_fn_table r with
-      | None -> false
-      | Some {rf_body = b; _} ->
-        body_calls_any_ref self_refs b
-        || Ref.User.Tbl.fold
-             (fun r2 _ acc -> acc || ((not (is_self r2)) && body_calls_any_ref [r2] b && go r2))
-             mutual_fn_table false
-    end
-  in
-  go start
-
 (** Whether [r] is on a cycle through the function known by [self_refs] by
     the program's recursive groups ({!Recursive_groups}), a helper's body
     being part of the declaration it was lifted out of: inlining it moves
-    the function towards calling itself.  Under [CRANE_CHECK_IR], the
-    registered bodies must say the same ({!reaches_through_bodies}). *)
+    the function towards calling itself. *)
 let on_cycle_with self_refs r =
   let groups = Recursive_groups.installed () in
-  let planned =
-    List.exists (fun s -> Recursive_groups.in_group groups (lifted_origin s) (lifted_origin r)) self_refs
-  in
-  if Probe.checking () && planned <> reaches_through_bodies self_refs r then
-    Probe.violation "recursive groups"
-      Pp.(
-        str "the program's recursive groups " ++ str (if planned then "put " else "do not put ")
-        ++ GlobRef.print r ++ str " on a cycle with "
-        ++ prlist_with_sep pr_comma GlobRef.print self_refs
-        ++ str ", and its registered body says otherwise");
-  planned
+  List.exists (fun s -> Recursive_groups.in_group groups (lifted_origin s) (lifted_origin r)) self_refs
 
 (** The occurrence of the Core call a C++ call is made of. *)
 let made_of = function CPPfun_call (cs, _, _) -> cs.cs_occurrence | _ -> None
@@ -644,9 +578,10 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
      miss this shape: they key on the lambda's own name and on [Tfun] /
      [mk_shared] init exprs, whereas this is [Some Tauto] + [CPPlambda] and
      recurses through the self-parameter.  Recognise it here and, for tail
-     recursion, reuse {!transform_tail} with a checker keyed on the self-param
-     (dropping the trailing self-forward argument so the remaining args align
-     positionally with the non-self loop params).  After transformation the
+     recursion, reuse {!transform_tail} with a checker taking the calls the
+     recursion plan finds of the member ({!planned_self_checker}), dropping
+     the trailing self-forward argument so the remaining args align
+     positionally with the non-self loop params.  After transformation the
      self-parameter is unreferenced; the {!Cpp_print} lambda printer emits
      unreferenced params without a name, so there is no [-Wunused-parameter].
      Only single (non-mutual) fixpoints are handled; mutual ones (multiple
@@ -655,7 +590,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
     match (fixpoint, fixpoint_self fixpoint lparams) with
     | None, _ | _, None -> None
     | Some {lf_name; lf_binders; lf_member; _}, Some self_id -> (
-      let check = planned_self_checker lf_member self_id in
+      let check = planned_self_checker lf_member in
       let lbody = expose_tail_calls check lbody in
       match planned_local_strategy fixpoint check lbody with
       | No_loop -> None
