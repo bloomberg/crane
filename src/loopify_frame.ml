@@ -1550,7 +1550,7 @@ and rewrite_enter_stmts ctx stmts =
     (* The continuation of [id = f(args)]: a frame saving what the rest
        reads, whose handler binds [id] to the call's result and runs the
        rest, pushed under [enter], the call's re-entry. *)
-    let make_cont_handler enter =
+    let make_cont_handler ~result enter =
       (* The bindings the rest reads, with the ones they read in turn, in
          the order they were made. *)
       let remat =
@@ -1658,7 +1658,7 @@ and rewrite_enter_stmts ctx stmts =
       let handler_ty = match tgt with Existing -> Declare (Tauto, None) | t -> t in
       let handler =
         early @ remat_stmts @ late
-        @ (Sasgn (id, handler_ty, CPPmove (CPPvar id_result)) :: rest_processed)
+        @ (Sasgn (id, handler_ty, result (CPPmove (CPPvar id_result))) :: rest_processed)
       in
       let saved_conv = move_for_frame_list cont_types cont_saved in
       register_frame frames_ref ~name:call_name ~saved_types:cont_types
@@ -1673,7 +1673,15 @@ and rewrite_enter_stmts ctx stmts =
        whole right-hand side.  Under [CRANE_CHECK_IR] the plan is checked
        against the C++, one call the machine's checker recognises, and a
        statement the plan says nothing of is a violation. *)
-    let call = if n_calls = 1 then check e else None in
+    (* A temporary Normalize bound at the type the Core gives the call, of
+       a function returning it erased, is the call cast: the frame re-enters
+       by the call, and the handler casts its result. *)
+    let result, called =
+      match e with
+      | CPPany_cast (ty, called) -> ((fun r -> CPPany_cast (ty, r)), called)
+      | _ -> (Fun.id, e)
+    in
+    let call = if n_calls = 1 then check called else None in
     let resumes =
       match planned_resume ctx id tgt e with
       | Some planned ->
@@ -1686,7 +1694,7 @@ and rewrite_enter_stmts ctx stmts =
         Option.has_some call
     in
     ( match call with
-    | Some cs when resumes -> make_cont_handler (make_enter_for ctx cs)
+    | Some cs when resumes -> make_cont_handler ~result (make_enter_for ctx cs)
     | Some _ | None -> Sasgn (id, tgt, e) :: rewrite_enter_stmts ctx rest )
   (* Conditional recursion: at least one branch has a recursive call and there
      are continuation statements after.  Merge the continuation into each branch

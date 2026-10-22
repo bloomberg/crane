@@ -937,6 +937,9 @@ let rec count_calls_expr (check : call_checker) expr =
     + List.fold_left (fun acc a -> acc + count_calls_expr check a) 0 args
   | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) ->
     count_calls_expr check e
+  (* A cast evaluates the call it reads, as {!collect_expr} counts it. *)
+  | CPPany_cast (_, e) | CPPany_cast_tolerant (_, e) | CPPunbox (_, e) | CPPconvert (_, e) ->
+    count_calls_expr check e
   | CPPbinop (_, e1, e2) ->
     count_calls_expr check e1 + count_calls_expr check e2
   | CPPget (e, _)

@@ -165,10 +165,17 @@ let rec scope ~group ~depth e =
       MLcons (ty, r, List.mapi (fun i a -> strict ~tail:(tail && through = Some i) a) args)
     | MLtuple args -> MLtuple (List.map (strict ~tail:false) args)
     | MLcase (ty, scrut, branches) ->
+      (* A call matched through a coercion -- [if eval c] in a type-indexed
+         evaluator -- is bound like one matched directly. *)
+      let scrut =
+        match scrut with
+        | MLmagic (mty, a) when group_call a <> None -> MLmagic (mty, strict ~tail:false a)
+        | _ -> strict ~tail:false scrut
+      in
       let e' =
         MLcase
           ( ty,
-            strict ~tail:false scrut,
+            scrut,
             Array.map
               (fun (ids, rty, p, body) -> (ids, rty, p, inner (List.length ids) body))
               branches )
