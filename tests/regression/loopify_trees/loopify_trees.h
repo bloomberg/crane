@@ -560,8 +560,7 @@ struct LoopifyTrees {
           auto _f = std::move(std::get<CraneCont_Node>(_frame));
           const tree<A> &a2 = *_f.a2;
           const tree<T1> &a20 = *_f.a20;
-          bool _tmp1 = std::move(_result);
-          if (_tmp1) {
+          if (std::move(_result)) {
             _stack.emplace_back(CraneEnter{_f.a2, &a20});
           } else {
             _result = false;

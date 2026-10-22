@@ -1310,8 +1310,7 @@ struct LoopifyExpr {
           auto _f = std::move(std::get<CraneCont_Cond>(_frame));
           const expr &a1 = *_f.a1;
           const expr &a2 = *_f.a2;
-          uint64_t _tmp6 = std::move(_result);
-          if (UINT64_C(0) < _tmp6) {
+          if (UINT64_C(0) < std::move(_result)) {
             _stack.emplace_back(CraneEnter{_f.a1});
           } else {
             _stack.emplace_back(CraneEnter{_f.a2});
@@ -1777,8 +1776,7 @@ struct LoopifyExpr {
           auto _f = std::move(std::get<CraneCont_IfPos>(_frame));
           const simple_expr &a1 = *_f.a1;
           const simple_expr &a2 = *_f.a2;
-          uint64_t _tmp3 = std::move(_result);
-          if (UINT64_C(0) < _tmp3) {
+          if (UINT64_C(0) < std::move(_result)) {
             _stack.emplace_back(CraneEnter{_f.a1});
           } else {
             _stack.emplace_back(CraneEnter{_f.a2});
@@ -2268,8 +2266,7 @@ struct LoopifyExpr {
           auto _f = std::move(std::get<CraneCont_CCond>(_frame));
           const cond_expr &a1 = *_f.a1;
           const cond_expr &a2 = *_f.a2;
-          uint64_t _tmp3 = std::move(_result);
-          if (UINT64_C(0) < _tmp3) {
+          if (UINT64_C(0) < std::move(_result)) {
             _stack.emplace_back(CraneEnter{_f.a1});
           } else {
             _stack.emplace_back(CraneEnter{_f.a2});
