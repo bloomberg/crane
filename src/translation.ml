@@ -1362,10 +1362,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
   match ml_e with
   | MLrel (i, occ) ->
     check_binder_scopes env i;
-    let var_expr =
-      try CPPvar (get_db_name i env)
-      with Failure _ -> CPPvar (db_fallback_id i)
-    in
+    let x = try get_db_name i env with Failure _ -> db_fallback_id i in
+    let var_expr = CPPvar x in
     (* Move on a last use of a variable the region owns, as its plan says
        ({!Ownership_plan.use}); a boxed variable is unboxed whole, whatever
        component of it Core reads.  Never move a typeclass instance -- it is a type reference in the concept
@@ -1374,11 +1372,15 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        type: this binder is synthesised by {!Common.tc_instance_id}, and inside
        a generated instance method it is a template parameter of the enclosing
        struct, with no entry of its own in [env_types]. *)
-    let is_tc_param =
-      match var_expr with CPPvar id -> Common.is_tc_instance_id id | _ -> false
-    in
     let move_candidate =
-      (not is_tc_param) && Ownership_plan.use ~whole:(binder_is_boxed i) (!tctx).move_plan occ = Move
+      (not (Common.is_tc_instance_id x))
+      &&
+      match Ownership_plan.use ~whole:(binder_is_boxed i) (!tctx).move_plan occ with
+      | Some use -> use = Move
+      | None ->
+        Probe.violation "unplanned read"
+          Pp.(str "the read of " ++ Id.print x ++ str " is in no plan of the region it is lowered in");
+        false
     in
     let result = if move_candidate then CPPmove var_expr else var_expr in
     if binder_is_boxed i then begin

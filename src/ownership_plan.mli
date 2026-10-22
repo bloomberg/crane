@@ -100,16 +100,18 @@ module Use : sig
         (** takes it: the variable is owned where it is read, and the read is
             its last use where its value may be taken *)
     | Copy
-        (** reads it by value and leaves it: the variable is read again, is
-            not owned there, or the read is one the plan was not made of *)
+        (** reads it by value and leaves it: the variable is read again, or
+            is not owned there *)
     | Borrow  (** reads it in place ({!Inspected}) *)
 end
 
 (** [use ~whole p o]: with [~whole], of a read that takes its variable's
     whole value even where Core reads one component of it, or reads it in
     place ({!Inspected}): a closure captures the whole of what it reads, and
-    a variable held boxed is unboxed whole by a cast. *)
-val use : ?whole:bool -> t -> Miniml.Occurrence.t -> Use.t
+    a variable held boxed is unboxed whole by a cast.  [None] of a read the
+    plan was not made of: translation lowering it reached a term the region
+    it planned does not contain. *)
+val use : ?whole:bool -> t -> Miniml.Occurrence.t -> Use.t option
 
 (** Whether a variant match takes apart a scrutinee the region owns, binding
     its fields by mutable reference: the scrutinee is a variable owned there.
