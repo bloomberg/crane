@@ -304,7 +304,7 @@ template <typename obj, typename c> using ReSum = c;
 
 struct CategoryOps {
   template <typename T1, typename T2>
-  static T2 id_(std::type_identity_t<Id_<T1, T2>> id_0, T1 x0_);
+  static T2 id_(std::type_identity_t<Id_<T1, T2>> id_0, const T1 &x0_);
   template <typename T1, typename T2>
   static T2 resum(const T1 &_x, const T1 &_x0, T2 reSum);
   template <typename T1, typename T2>
@@ -729,8 +729,8 @@ struct IntrinsicTableCurry {
 };
 
 template <typename T1, typename T2>
-T2 CategoryOps::id_(std::type_identity_t<Id_<T1, T2>> id_0, T1 x0_) {
-  return id_0(std::move(x0_));
+T2 CategoryOps::id_(std::type_identity_t<Id_<T1, T2>> id_0, const T1 &x0_) {
+  return id_0(x0_);
 }
 
 template <typename T1, typename T2>

@@ -19,9 +19,9 @@ struct ImplicitArgs {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &&>
-  static T2 apply(F0 &&f, T1 x0_) {
-    return f(std::move(x0_));
+    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
+  static T2 apply(F0 &&f, const T1 &x0_) {
+    return f(x0_);
   }
 
   template <typename T1, typename T2, typename T3, typename F0, typename F1>

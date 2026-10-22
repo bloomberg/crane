@@ -141,7 +141,7 @@ struct Tally {
 
 Box<Nat> roundtrip(Box<Nat> x);
 bool sz_is(const Box<Nat> &b, const Nat &n);
-Box<Nat> round(const Box<Nat> &x0_);
+Box<Nat> round(Box<Nat> x0_);
 
 template <typename A> Nat Box<A>::size() const {
   return Tally::bump(this->raw_size());

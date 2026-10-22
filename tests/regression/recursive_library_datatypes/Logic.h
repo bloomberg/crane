@@ -69,8 +69,8 @@ template <typename T1> T1 eq_ex_rect_uncurried(T1 f) {
   return eq_ex_rect<T1>([=, f = std::move(f)]() { return f; }());
 }
 
-template <typename T1> T1 eq_ex_rec_uncurried(const T1 &x0_) {
-  return eq_ex_rect_uncurried<T1>(x0_);
+template <typename T1> T1 eq_ex_rec_uncurried(T1 x0_) {
+  return eq_ex_rect_uncurried<T1>(std::move(x0_));
 }
 
 template <typename T1> T1 ex2_rect(const T1 &f) { return f; }
@@ -99,8 +99,8 @@ template <typename T1> T1 eq_ex2_rect_uncurried(T1 f) {
   return eq_ex2_rect<T1>([=, f = std::move(f)]() { return f; }());
 }
 
-template <typename T1> T1 eq_ex2_rec_uncurried(const T1 &x0_) {
-  return eq_ex2_rect_uncurried<T1>(x0_);
+template <typename T1> T1 eq_ex2_rec_uncurried(T1 x0_) {
+  return eq_ex2_rect_uncurried<T1>(std::move(x0_));
 }
 
 } // namespace Logic

@@ -589,9 +589,9 @@ struct Levenshtein {
     }
   }
 
-  static SigT<Nat, chain> levenshtein_chain(const String &s, String x0_);
+  static SigT<Nat, chain> levenshtein_chain(String s, const String &x0_);
   static Nat levenshtein_computed(String s, const String &t);
-  static Nat levenshtein(const String &x0_, const String &x1_);
+  static Nat levenshtein(String x0_, const String &x1_);
 };
 
 inline Sumbool Ascii::ascii_dec(const Ascii &b) const {

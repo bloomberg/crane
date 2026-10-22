@@ -218,8 +218,8 @@ let eta_parameters ty params =
   List.mapi (fun i t -> (Id (eta_param_id (n_missing - 1 - i)), t)) (Util.List.firstn n_missing doms)
 
 let eta_applied missing body =
-  match body with
-  | MLaxiom _ | MLexn _ -> body
+  match (missing, body) with
+  | [], _ | _, (MLaxiom _ | MLexn _) -> body
   | _ ->
     let args =
       List.rev

@@ -58,8 +58,8 @@ bool viaQualified(const Raw_id &a, const Raw_id &b) {
   }
 }
 
-Nat viaColliding(const Nat &x0_, const Nat &x1_) {
-  return AstLib::pick(x0_, x1_);
+Nat viaColliding(Nat x0_, Nat x1_) {
+  return AstLib::pick(std::move(x0_), std::move(x1_));
 }
 
 Nat keepColl(const Collider &r) {

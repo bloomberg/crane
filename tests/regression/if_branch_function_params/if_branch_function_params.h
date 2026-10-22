@@ -100,15 +100,15 @@ public:
 /// binders do not.
 struct IfBranchFunctionParams {
   template <typename F1, typename F2>
-    requires std::is_invocable_r_v<Nat, F1 &, Nat &&> &&
-             std::is_invocable_r_v<Nat, F2 &, Nat &&>
-  static Nat h(Bool0 b, F1 &&f, F2 &&g, Nat x0_) {
+    requires std::is_invocable_r_v<Nat, F1 &, const Nat &> &&
+             std::is_invocable_r_v<Nat, F2 &, const Nat &>
+  static Nat h(Bool0 b, F1 &&f, F2 &&g, const Nat &x0_) {
     switch (b) {
     case Bool0::TRUE_: {
-      return f(std::move(x0_));
+      return f(x0_);
     }
     case Bool0::FALSE_: {
-      return g(std::move(x0_));
+      return g(x0_);
     }
     default:
       std::unreachable();

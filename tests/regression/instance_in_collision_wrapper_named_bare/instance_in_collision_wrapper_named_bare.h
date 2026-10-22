@@ -301,7 +301,7 @@ struct AstLike {
   };
 
   static_assert(Dec<eq_dec_raw_id, AstLike::Raw_id>);
-  static Nat combine(const Nat &x0_, const Nat &x1_);
+  static Nat combine(const Nat &x0_, Nat x1_);
 };
 
 Ident to_ident(const AstLike::Raw_id &k);

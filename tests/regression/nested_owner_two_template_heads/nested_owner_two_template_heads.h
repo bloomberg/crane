@@ -176,7 +176,7 @@ struct Tally {
 Bag::bag<Nat> roundtrip(Bag::bag<Nat> b);
 bool count_odd_is(const Bag::bag<Nat> &b, const Nat &n);
 const Nat limit = Bag::depth_limit;
-Bag::bag<Nat> round(const Bag::bag<Nat> &x0_);
+Bag::bag<Nat> round(Bag::bag<Nat> x0_);
 
 template <typename A>
 template <typename F0>

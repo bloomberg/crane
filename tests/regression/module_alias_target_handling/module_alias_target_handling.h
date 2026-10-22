@@ -1375,8 +1375,8 @@ struct N {
   }
 
   template <typename T1, typename F1, typename F2>
-  static T1 binary_rec(const T1 &x0_, F1 &&x1_, F2 &&x2_, unsigned int x3_) {
-    return binary_rect<T1>(x0_, x1_, x2_, x3_);
+  static T1 binary_rec(T1 x0_, F1 &&x1_, F2 &&x2_, unsigned int x3_) {
+    return binary_rect<T1>(std::move(x0_), x1_, x2_, x3_);
   }
 
   template <typename T1>
@@ -1396,13 +1396,13 @@ struct N {
   }
 
   template <typename T1, typename F1>
-  static T1 peano_rec(const T1 &x0_, F1 &&x1_, unsigned int x2_) {
-    return peano_rect<T1>(x0_, x1_, x2_);
+  static T1 peano_rec(T1 x0_, F1 &&x1_, unsigned int x2_) {
+    return peano_rect<T1>(std::move(x0_), x1_, x2_);
   }
 
   template <typename T1, typename F1>
-  static T1 recursion(const T1 &x0_, F1 &&x1_, unsigned int x2_) {
-    return peano_rect<T1>(x0_, x1_, x2_);
+  static T1 recursion(T1 x0_, F1 &&x1_, unsigned int x2_) {
+    return peano_rect<T1>(std::move(x0_), x1_, x2_);
   }
 
   static Reflect leb_spec0(unsigned int x, unsigned int y);

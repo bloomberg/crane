@@ -232,7 +232,7 @@ template <typename a> using EqDec = crane::fn<bool(a, a)>;
 struct EquivDec {
   template <typename T1>
   static bool equiv_dec(std::type_identity_t<EqDec<T1>> eqDec, const T1 &x0_,
-                        T1 x1_);
+                        const T1 &x1_);
 };
 
 template <typename k, typename v> using halist = List<SigT<k, v>>;
@@ -341,8 +341,8 @@ struct HalistDependentValue {
 
 template <typename T1>
 bool EquivDec::equiv_dec(std::type_identity_t<EqDec<T1>> eqDec, const T1 &x0_,
-                         T1 x1_) {
-  return eqDec(x0_, std::move(x1_));
+                         const T1 &x1_) {
+  return eqDec(x0_, x1_);
 }
 
 template <typename T1, typename T2>

@@ -264,13 +264,15 @@ struct Equations {
 
   template <typename T1, typename T2>
   static T1 gcd_graph_mut(
-      const std::type_identity_t<crane::fn<T1(uint64_t)>> &f,
-      const std::type_identity_t<crane::fn<T1(uint64_t)>> &f0,
-      const std::type_identity_t<
-          crane::fn<T1(uint64_t, uint64_t, gcd_clause_3_graph, T2)>> &f1,
+      std::type_identity_t<crane::fn<T1(uint64_t)>> f,
+      std::type_identity_t<crane::fn<T1(uint64_t)>> f0,
+      std::type_identity_t<
+          crane::fn<T1(uint64_t, uint64_t, gcd_clause_3_graph, T2)>>
+          f1,
       std::type_identity_t<crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> f2,
       std::type_identity_t<crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> f3,
-      std::pair<uint64_t, uint64_t> x0_, uint64_t x1_, gcd_graph x2_) {
+      const std::pair<uint64_t, uint64_t> &x0_, uint64_t x1_,
+      const gcd_graph &x2_) {
     auto f4_impl = [&](auto &_self_f4, auto &_self_f5,
                        const std::pair<uint64_t, uint64_t> &, uint64_t,
                        const gcd_graph &g) -> T1 {
@@ -342,21 +344,20 @@ struct Equations {
                   const gcd_clause_3_graph &g) -> T2 {
       return f5_impl(f4_impl, f5_impl, _x, _x0, _x1, _x2, g);
     };
-    return f4(x0_, x1_, std::move(x2_));
+    return f4(x0_, x1_, x2_);
   }
 
   template <typename T1, typename T2>
   static T2 gcd_clause_3_graph_mut(
-      const std::type_identity_t<crane::fn<T1(uint64_t)>> &f,
-      const std::type_identity_t<crane::fn<T1(uint64_t)>> &f0,
-      const std::type_identity_t<
-          crane::fn<T1(uint64_t, uint64_t, gcd_clause_3_graph, T2)>> &f1,
-      const std::type_identity_t<
-          crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> &f2,
-      const std::type_identity_t<
-          crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> &f3,
+      std::type_identity_t<crane::fn<T1(uint64_t)>> f,
+      std::type_identity_t<crane::fn<T1(uint64_t)>> f0,
+      std::type_identity_t<
+          crane::fn<T1(uint64_t, uint64_t, gcd_clause_3_graph, T2)>>
+          f1,
+      std::type_identity_t<crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> f2,
+      std::type_identity_t<crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> f3,
       uint64_t x0_, uint64_t x1_, bool x2_, uint64_t x3_,
-      gcd_clause_3_graph x4_) {
+      const gcd_clause_3_graph &x4_) {
     auto f4_impl = [&](auto &_self_f4, auto &_self_f5,
                        const std::pair<uint64_t, uint64_t> &, uint64_t,
                        const gcd_graph &g) -> T1 {
@@ -429,7 +430,7 @@ struct Equations {
       uint64_t _lc1_x0 = x1_;
       bool _lc1_x1 = x2_;
       uint64_t _lc1_x2 = x3_;
-      const gcd_clause_3_graph &_lc1_g = std::move(x4_);
+      const gcd_clause_3_graph &_lc1_g = x4_;
       return f5_impl(f4_impl, f5_impl, _lc1_x, _lc1_x0, _lc1_x1, _lc1_x2,
                      _lc1_g);
     }
@@ -473,7 +474,7 @@ struct Equations {
   template <typename F0, typename F1, typename F2, typename F3>
   static crane::obj
   FunctionalElimination_gcd(F0 &&x0_, F1 &&x1_, F2 &&x2_, F3 &&x3_,
-                            const std::pair<uint64_t, uint64_t> &x4_) {
+                            std::pair<uint64_t, uint64_t> x4_) {
     return gcd_elim(x0_, x1_, x2_, x3_, x4_);
   }
 
@@ -733,12 +734,13 @@ struct Equations {
 
   template <typename T1, typename T2>
   static T1 collatz_steps_graph_mut(
-      const T1 &f, const T1 &f0,
-      const std::type_identity_t<
-          crane::fn<T1(uint64_t, collatz_steps_clause_3_graph, T2)>> &f1,
+      T1 f, T1 f0,
+      std::type_identity_t<
+          crane::fn<T1(uint64_t, collatz_steps_clause_3_graph, T2)>>
+          f1,
       std::type_identity_t<crane::fn<T2(uint64_t, collatz_steps_graph, T1)>> f2,
       std::type_identity_t<crane::fn<T2(uint64_t, collatz_steps_graph, T1)>> f3,
-      uint64_t x0_, uint64_t x1_, collatz_steps_graph x2_) {
+      uint64_t x0_, uint64_t x1_, const collatz_steps_graph &x2_) {
     auto f4_impl = [&](auto &_self_f4, auto &_self_f5, uint64_t, uint64_t,
                        const collatz_steps_graph &c) -> T1 {
       if (std::holds_alternative<
@@ -790,18 +792,19 @@ struct Equations {
                   const collatz_steps_clause_3_graph &c) -> T2 {
       return f5_impl(f4_impl, f5_impl, _x, _x0, _x1, c);
     };
-    return f4(x0_, x1_, std::move(x2_));
+    return f4(x0_, x1_, x2_);
   }
 
   template <typename T1, typename T2>
   static T2 collatz_steps_clause_3_graph_mut(
-      const T1 &f, const T1 &f0,
-      const std::type_identity_t<
-          crane::fn<T1(uint64_t, collatz_steps_clause_3_graph, T2)>> &f1,
-      const std::type_identity_t<
-          crane::fn<T2(uint64_t, collatz_steps_graph, T1)>> &f2,
+      T1 f, T1 f0,
+      std::type_identity_t<
+          crane::fn<T1(uint64_t, collatz_steps_clause_3_graph, T2)>>
+          f1,
+      std::type_identity_t<crane::fn<T2(uint64_t, collatz_steps_graph, T1)>> f2,
       std::type_identity_t<crane::fn<T2(uint64_t, collatz_steps_graph, T1)>> f3,
-      uint64_t x0_, bool x1_, uint64_t x2_, collatz_steps_clause_3_graph x3_) {
+      uint64_t x0_, bool x1_, uint64_t x2_,
+      const collatz_steps_clause_3_graph &x3_) {
     auto f4_impl = [&](auto &_self_f4, auto &_self_f5, uint64_t, uint64_t,
                        const collatz_steps_graph &c) -> T1 {
       if (std::holds_alternative<
@@ -853,18 +856,17 @@ struct Equations {
       uint64_t _lc1_x = x0_;
       bool _lc1_x0 = x1_;
       uint64_t _lc1_x1 = x2_;
-      const collatz_steps_clause_3_graph &_lc1_c = std::move(x3_);
+      const collatz_steps_clause_3_graph &_lc1_c = x3_;
       return f5_impl(f4_impl, f5_impl, _lc1_x, _lc1_x0, _lc1_x1, _lc1_c);
     }
   }
 
   template <typename T1, typename T2, typename F2, typename F3, typename F4>
-  static T1 collatz_steps_graph_rect(const T1 &x0_, const T1 &x1_, F2 &&x2_,
-                                     F3 &&x3_, F4 &&x4_, uint64_t x5_,
-                                     uint64_t x6_,
+  static T1 collatz_steps_graph_rect(T1 x0_, T1 x1_, F2 &&x2_, F3 &&x3_,
+                                     F4 &&x4_, uint64_t x5_, uint64_t x6_,
                                      const collatz_steps_graph &x7_) {
-    return collatz_steps_graph_mut<T1, T2>(x0_, x1_, x2_, x3_, x4_, x5_, x6_,
-                                           x7_);
+    return collatz_steps_graph_mut<T1, T2>(std::move(x0_), std::move(x1_), x2_,
+                                           x3_, x4_, x5_, x6_, x7_);
   }
 
   static collatz_steps_graph collatz_steps_graph_correct(uint64_t x);

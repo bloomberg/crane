@@ -22,7 +22,9 @@ bool AstLike::eq(const Nat &x0_, const Nat &x1_) {
   return PeanoNat::eqb(x0_, x1_);
 }
 
-Nat AstLike::combine(const Nat &x0_, const Nat &x1_) { return x0_.add(x1_); }
+Nat AstLike::combine(const Nat &x0_, Nat x1_) {
+  return x0_.add(std::move(x1_));
+}
 
 Ident to_ident(const AstLike::Raw_id &k) {
   if (std::holds_alternative<typename AstLike::Raw_id::Name>(k.v())) {

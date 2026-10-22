@@ -109,9 +109,10 @@ using stateT = crane::fn<m<std::pair<a, s>>(s)>;
 
 template <Monad _tcI0, typename T2>
 typename _tcI0::template m<std::pair<Nat, T2>>
-run(std::type_identity_t<stateT<T2, _tcI0::template m, Nat>> step, T2 x0_) {
+run(std::type_identity_t<stateT<T2, _tcI0::template m, Nat>> step,
+    const T2 &x0_) {
   return crane_container_cast<typename _tcI0::template m<std::pair<Nat, T2>>>(
-      step(std::move(x0_)));
+      step(x0_));
 }
 
 #endif // INCLUDED_MEMBER_ALIAS_AS_TT_ARG

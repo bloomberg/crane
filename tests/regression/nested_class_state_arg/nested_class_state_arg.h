@@ -219,9 +219,9 @@ struct NestedClassStateArg {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<Nat, F0 &, T1 &&>
-  static Nat run_st(F0 &&f, T1 x0_) {
-    return f(std::move(x0_));
+    requires std::is_invocable_r_v<Nat, F0 &, const T1 &>
+  static Nat run_st(F0 &&f, const T1 &x0_) {
+    return f(x0_);
   }
 
   template <typename ptr>

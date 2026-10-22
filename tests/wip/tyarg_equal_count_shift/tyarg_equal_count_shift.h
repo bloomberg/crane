@@ -2,14 +2,15 @@
 #define INCLUDED_TYARG_EQUAL_COUNT_SHIFT
 
 #include <cstdint>
+#include <utility>
 
 struct TyargEqualCountShift {
   template <typename T1, typename T2> static T2 pick_second(const T1 &, T2 b) {
     return b;
   }
 
-  template <typename T1> static T1 partial_pick(uint64_t x0_, const T1 &x1_) {
-    return pick_second<uint64_t, T1>(x0_, x1_);
+  template <typename T1> static T1 partial_pick(uint64_t x0_, T1 x1_) {
+    return pick_second<uint64_t, T1>(x0_, std::move(x1_));
   }
 
   static inline const bool chosen = partial_pick<bool>(UINT64_C(3), true);

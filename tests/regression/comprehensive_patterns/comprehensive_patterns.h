@@ -364,9 +364,9 @@ struct ComprehensivePatterns {
   static uint64_t sum_proj(uint64_t n, const NC &r);
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, NC &&>
-  static uint64_t apply(F0 &&f, NC x0_) {
-    return f(std::move(x0_));
+    requires std::is_invocable_r_v<uint64_t, F0 &, const NC &>
+  static uint64_t apply(F0 &&f, const NC &x0_) {
+    return f(x0_);
   }
 
   static uint64_t hof_test(const NC &r);

@@ -113,7 +113,7 @@ struct Arith {
 };
 
 bool le(const Zed &x0_, const Zed &x1_);
-Zed round(const Zed &x0_);
+Zed round(Zed x0_);
 
 inline bool Zed::le_dec(const Zed &y) const {
   switch (Arith::norm(this->raw_cmp(y))) {

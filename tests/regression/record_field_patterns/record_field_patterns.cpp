@@ -36,8 +36,8 @@ uint64_t RecordFieldPatterns::zero_x(const RecordFieldPatterns::Point &p) {
 /// Apply a polymorphic function to a record — the record type flows
 /// through a type variable.
 RecordFieldPatterns::Point
-RecordFieldPatterns::id_point(const RecordFieldPatterns::Point &x0_) {
-  return identity<RecordFieldPatterns::Point>(x0_);
+RecordFieldPatterns::id_point(RecordFieldPatterns::Point x0_) {
+  return identity<RecordFieldPatterns::Point>(std::move(x0_));
 }
 
 std::pair<uint64_t, uint64_t>

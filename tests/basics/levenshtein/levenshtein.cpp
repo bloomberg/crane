@@ -64,8 +64,8 @@ Levenshtein::chain Levenshtein::aux_both_empty(const String &, const String &) {
   return chain::empty();
 }
 
-SigT<Nat, Levenshtein::chain> Levenshtein::levenshtein_chain(const String &s,
-                                                             String x0_) {
+SigT<Nat, Levenshtein::chain>
+Levenshtein::levenshtein_chain(String s, const String &x0_) {
   auto levenshtein_chain1_impl =
       [&](auto &_self_levenshtein_chain1,
           const String &t) -> SigT<Nat, Levenshtein::chain> {
@@ -119,7 +119,7 @@ SigT<Nat, Levenshtein::chain> Levenshtein::levenshtein_chain(const String &s,
     }
   };
   {
-    const String &_lc1_t = std::move(x0_);
+    const String &_lc1_t = x0_;
     return levenshtein_chain1_impl(levenshtein_chain1_impl, _lc1_t);
   }
 }
@@ -128,8 +128,8 @@ Nat Levenshtein::levenshtein_computed(String s, const String &t) {
   return levenshtein_chain(std::move(s), t).projT1();
 }
 
-Nat Levenshtein::levenshtein(const String &x0_, const String &x1_) {
-  return levenshtein_computed(x0_, x1_);
+Nat Levenshtein::levenshtein(String x0_, const String &x1_) {
+  return levenshtein_computed(std::move(x0_), x1_);
 }
 
 Sumbool Bool::bool_dec(Bool0 b1, Bool0 b2) {

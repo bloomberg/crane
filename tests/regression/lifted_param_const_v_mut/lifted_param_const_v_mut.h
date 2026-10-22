@@ -425,13 +425,13 @@ den_crane_body(const T1 tag, const Dvalue<typename _tcI0::ptr> u) {
 
 template <Params _tcI0>
 std::optional<Sum<Nat, Dvalue<typename _tcI0::ptr>>>
-den(List<Dvalue<typename _tcI0::ptr>> x0_) {
+den(const List<Dvalue<typename _tcI0::ptr>> &x0_) {
   if (std::holds_alternative<typename List<Dvalue<typename _tcI0::ptr>>::Nil>(
-          x0_.v_mut())) {
+          x0_.v())) {
     return std::optional<Sum<Nat, Dvalue<typename _tcI0::ptr>>>();
   } else {
-    auto &[a0, a1] =
-        std::get<typename List<Dvalue<typename _tcI0::ptr>>::Cons>(x0_.v_mut());
+    const auto &[a0, a1] =
+        std::get<typename List<Dvalue<typename _tcI0::ptr>>::Cons>(x0_.v());
     const List<Dvalue<typename _tcI0::ptr>> &a1_value = *a1;
     if (std::holds_alternative<typename List<Dvalue<typename _tcI0::ptr>>::Nil>(
             a1_value.v())) {
@@ -441,7 +441,7 @@ den(List<Dvalue<typename _tcI0::ptr>> x0_) {
           [](const std::pair<Nat, Dvalue<typename _tcI0::ptr>> &p) {
             return Sum<Nat, Dvalue<typename _tcI0::ptr>>::inr(p.second);
           },
-          den_crane_body<_tcI0>(Nat::o(), std::move(a0)));
+          den_crane_body<_tcI0>(Nat::o(), a0));
     } else {
       return std::optional<Sum<Nat, Dvalue<typename _tcI0::ptr>>>();
     }

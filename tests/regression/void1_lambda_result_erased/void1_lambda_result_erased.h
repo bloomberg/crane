@@ -326,8 +326,8 @@ struct Void1LambdaResultErased {
   template <typename T1, typename T2, typename T3>
   static tree<T1, Sum<T2, T3>> apply_step(
       const std::type_identity_t<crane::fn<tree<T1, Sum<T2, T3>>(T2)>> &f,
-      T2 x0_) {
-    return f(std::move(x0_));
+      const T2 &x0_) {
+    return f(x0_);
   }
 
   static tree<crane::obj, Sum<std::pair<Nat, Nat>, Nat>>

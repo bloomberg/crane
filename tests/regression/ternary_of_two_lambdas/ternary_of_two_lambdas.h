@@ -132,11 +132,11 @@ struct PeanoNat {
   static bool even(const Nat &n);
 };
 
-Nat f_even(const Nat &x0_, const Nat &x1_);
+Nat f_even(const Nat &x0_, Nat x1_);
 Nat f_odd(const Nat &x0_, const Nat &x1_);
 /// Point-free: the body is an if whose branches are functions, and no
 /// argument is written.
-Nat pick(const Nat &n, Nat x0_);
+Nat pick(const Nat &n, const Nat &x0_);
 Nat go(const Nat &x0_, const Nat &x1_);
 
 #endif // INCLUDED_TERNARY_OF_TWO_LAMBDAS

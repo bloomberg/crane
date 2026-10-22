@@ -102,8 +102,8 @@ concept Sized = requires {
 
 template <typename _tcI0, typename T1>
   requires Sized<_tcI0, T1>
-Nat size(T1 x0_) {
-  return _tcI0::size(std::move(x0_));
+Nat size(const T1 &x0_) {
+  return _tcI0::size(x0_);
 }
 
 struct Sized_nat_ {

@@ -174,9 +174,9 @@ struct VoidCallback {
 
   /// 6. Void function as argument to polymorphic function
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &&>
-  static T2 apply_to(F0 &&f, T1 x0_) {
-    return f(std::move(x0_));
+    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
+  static T2 apply_to(F0 &&f, const T1 &x0_) {
+    return f(x0_);
   }
 
   static inline const std::monostate test_apply_to_void = []() {

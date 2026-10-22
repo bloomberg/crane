@@ -17,8 +17,8 @@ let summarize struc =
   let rec round () =
     let changed = ref false in
     List.iter
-      (fun (r, b, _) ->
-        let params, body = Mlutil.collect_lams b in
+      (fun (r, b, ty) ->
+        let params, body = Ml_type_util.declared_parameters ty b in
         let f = Escape.infer_owned_params (List.length params) body in
         if Ref.User.Map.find_opt r !flags <> Some f then (
           changed := true;

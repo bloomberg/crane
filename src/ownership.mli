@@ -15,7 +15,8 @@
     from every parameter borrowed. *)
 
 (** The flags of [struc]'s functions, settled across calls: each
-    function's, innermost first. *)
+    function's, innermost first, for the parameters its head declares,
+    eta-expansion's included ({!Ml_type_util.declared_parameters}). *)
 val summarize : Miniml.ml_structure -> (Names.GlobRef.t * bool list) list
 
 (** Install a {!summarize}d program's flags for {!Escape} to consult. *)

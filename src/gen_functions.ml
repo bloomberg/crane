@@ -347,7 +347,8 @@ let plan_function_head ?deduced_callables ?passing n ty temps signature =
 
 (** What a function's body is generated under, settled before the body:
     its return type, its parameters and the environment that names them, the
-    body as the signature renumbers it, and the head before the relaxations
+    body as the signature renumbers it, under every parameter
+    ({!Ml_type_util.eta_applied}), and the head before the relaxations
     ({!plan_function_head}). *)
 type body_scope = {
   bs_cod : cpp_type;
@@ -584,6 +585,7 @@ let dfun_body_scope n b cty ty temps =
       (List.length ids) b
   in
   let all_params = missing @ ids in
+  let b = eta_applied missing b in
   (* Type class instance parameters become C++ template type parameters. We
      assign unique names (_tcI0, _tcI1, ...) to avoid collision with: - User
      variable names like 'i', 'j', etc. - Other generated names in the same
@@ -1237,9 +1239,9 @@ let gen_dfun n b cty ty temps =
               ( ids,
                 finish_fn_body cod (guard_compare n ids (sigma_asserts @ b)) ) ) ) )
     else
-      (* Eta-expansion: the body, applied to the parameters it stops short
-         of ({!Ml_type_util.eta_applied}).  An axiom or exception body always
-         throws, and is generated as it stands. *)
+      (* Eta-expansion: the body is applied to the parameters it stops short
+         of ({!Ml_type_util.eta_applied}), but for an axiom or exception
+         body, which always throws. *)
       let b =
         match custom_forwarding_body with
         | Some stmts -> stmts
@@ -1248,10 +1250,9 @@ let gen_dfun n b cty ty temps =
         | MLaxiom _ | MLexn _ ->
           List.map (glob_subst_stmt n rec_call) (gen_stmts env cofix_wrap b)
         | _ ->
-          let body = eta_applied missing b in
           List.map
             (glob_subst_stmt n rec_call)
-            (with_region ~owned:owned_params body (fun () -> gen_body_stmts env cofix_wrap body))
+            (with_region ~owned:owned_params b (fun () -> gen_body_stmts env cofix_wrap b))
       in
       let b = return_captures_by_value b in
       (* let b = List.map forward_fun_args b in *)

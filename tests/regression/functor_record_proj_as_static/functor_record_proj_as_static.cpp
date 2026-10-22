@@ -476,7 +476,9 @@ Z Z_as_Int::sub(const Z &x0_, const Z &x1_) { return BinInt::sub(x0_, x1_); }
 
 Z Z_as_Int::mul(const Z &x0_, const Z &x1_) { return BinInt::mul(x0_, x1_); }
 
-Z Z_as_Int::max(const Z &x0_, const Z &x1_) { return BinInt::max(x0_, x1_); }
+Z Z_as_Int::max(Z x0_, Z x1_) {
+  return BinInt::max(std::move(x0_), std::move(x1_));
+}
 
 bool Z_as_Int::eqb(const Z &x0_, const Z &x1_) { return BinInt::eqb(x0_, x1_); }
 

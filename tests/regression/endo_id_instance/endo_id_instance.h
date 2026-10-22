@@ -127,8 +127,8 @@ concept Endo = requires {
 struct EndoIdInstance {
   template <typename _tcI0, typename T1>
     requires Endo<_tcI0, T1>
-  static T1 endo(T1 x0_) {
-    return _tcI0::endo(std::move(x0_));
+  static T1 endo(const T1 &x0_) {
+    return _tcI0::endo(x0_);
   }
 
   struct lit {

@@ -218,9 +218,10 @@ List<std::pair<Nat, Nat>> build_saturated(const List<std::pair<Nat, Nat>> &l);
 
 template <typename F0>
   requires std::is_invocable_r_v<List<std::pair<Nat, Nat>>, F0 &,
-                                 List<std::pair<Nat, Nat>> &&>
-List<std::pair<Nat, Nat>> apply_it(F0 &&f, List<std::pair<Nat, Nat>> x0_) {
-  return f(std::move(x0_));
+                                 const List<std::pair<Nat, Nat>> &>
+List<std::pair<Nat, Nat>> apply_it(F0 &&f,
+                                   const List<std::pair<Nat, Nat>> &x0_) {
+  return f(x0_);
 }
 
 List<std::pair<Nat, Nat>> partial(const Nat &k, const Nat &v,

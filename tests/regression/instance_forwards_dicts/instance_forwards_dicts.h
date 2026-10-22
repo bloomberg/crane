@@ -31,8 +31,8 @@ concept TFunctor = requires {
 struct InstanceForwardsDicts {
   template <typename _tcI0, typename T1>
     requires Endo<_tcI0, T1>
-  static T1 endo(T1 x0_) {
-    return _tcI0::endo(std::move(x0_));
+  static T1 endo(const T1 &x0_) {
+    return _tcI0::endo(x0_);
   }
 
   template <TFunctor _tcI0, typename T2, typename T3, typename F0>

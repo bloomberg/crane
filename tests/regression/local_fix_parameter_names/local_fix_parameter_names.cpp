@@ -1,6 +1,6 @@
 #include "local_fix_parameter_names.h"
 
-uint64_t LocalFixParameterNames::walk2(uint64_t f, List<uint64_t> x0_) {
+uint64_t LocalFixParameterNames::walk2(uint64_t f, const List<uint64_t> &x0_) {
   auto f0_impl = [&](auto &_self_f0, auto &_self_g,
                      const List<uint64_t> &l) -> uint64_t {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
@@ -25,5 +25,5 @@ uint64_t LocalFixParameterNames::walk2(uint64_t f, List<uint64_t> x0_) {
   auto g = [&](const List<uint64_t> &f1) -> uint64_t {
     return g_impl(f0_impl, g_impl, f1);
   };
-  return f0(std::move(x0_));
+  return f0(x0_);
 }

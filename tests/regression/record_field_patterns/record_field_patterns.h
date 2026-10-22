@@ -161,7 +161,7 @@ struct RecordFieldPatterns {
 
   /// Apply a polymorphic function to a record — the record type flows
   /// through a type variable.
-  static Point id_point(const Point &x0_);
+  static Point id_point(Point x0_);
 
   /// Polymorphic projection: the match happens inside a polymorphic context
   /// where the scrutinee's type might not be Tglob.

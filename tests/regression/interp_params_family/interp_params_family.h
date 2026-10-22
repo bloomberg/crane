@@ -249,17 +249,17 @@ template <typename obj, typename c> using ReSum = c;
 
 struct CategoryOps {
   template <typename T1, typename T2>
-  static T2 id_(std::type_identity_t<Id_<T1, T2>> id_0, T1 x0_);
+  static T2 id_(std::type_identity_t<Id_<T1, T2>> id_0, const T1 &x0_);
   template <typename T1, typename T2>
   static T2 cat(std::type_identity_t<Cat<T1, T2>> cat0, const T1 &x0_,
-                const T1 &x1_, const T1 &x2_, const T2 &x3_, T2 x4_);
+                const T1 &x1_, const T1 &x2_, const T2 &x3_, const T2 &x4_);
   template <typename T1, typename T2, typename F0>
   static T2 case_(F0 &&_x, std::type_identity_t<Case<T1, T2>> case0,
                   const T1 &x0_, const T1 &x1_, const T1 &x2_, const T2 &x3_,
-                  T2 x4_);
+                  const T2 &x4_);
   template <typename T1, typename T2, typename F0>
   static T2 inl_(F0 &&_x, std::type_identity_t<Inl<T1, T2>> inl0, const T1 &x0_,
-                 T1 x1_);
+                 const T1 &x1_);
   template <typename T1, typename T2>
   static T2 resum(const T1 &_x, const T1 &_x0, T2 reSum);
   template <typename T1, typename T2>
@@ -635,7 +635,7 @@ struct Interp {
   interp(std::type_identity_t<
              crane::fn<typename _tcI0::template M<crane::obj>(T1)>>
              h0,
-         Itree<T1, T3> x0_);
+         const Itree<T1, T3> &x0_);
 };
 
 struct Handler_Mod {
@@ -921,27 +921,28 @@ typename _tcI0::template M<T2> Basics::iter(F0 &&x, const T3 &x0) {
 }
 
 template <typename T1, typename T2>
-T2 CategoryOps::id_(std::type_identity_t<Id_<T1, T2>> id_0, T1 x0_) {
-  return id_0(std::move(x0_));
+T2 CategoryOps::id_(std::type_identity_t<Id_<T1, T2>> id_0, const T1 &x0_) {
+  return id_0(x0_);
 }
 
 template <typename T1, typename T2>
 T2 CategoryOps::cat(std::type_identity_t<Cat<T1, T2>> cat0, const T1 &x0_,
-                    const T1 &x1_, const T1 &x2_, const T2 &x3_, T2 x4_) {
-  return cat0(x0_, x1_, x2_, x3_, std::move(x4_));
+                    const T1 &x1_, const T1 &x2_, const T2 &x3_,
+                    const T2 &x4_) {
+  return cat0(x0_, x1_, x2_, x3_, x4_);
 }
 
 template <typename T1, typename T2, typename F0>
 T2 CategoryOps::case_(F0 &&, std::type_identity_t<Case<T1, T2>> case0,
                       const T1 &x0_, const T1 &x1_, const T1 &x2_,
-                      const T2 &x3_, T2 x4_) {
-  return case0(x0_, x1_, x2_, x3_, std::move(x4_));
+                      const T2 &x3_, const T2 &x4_) {
+  return case0(x0_, x1_, x2_, x3_, x4_);
 }
 
 template <typename T1, typename T2, typename F0>
 T2 CategoryOps::inl_(F0 &&, std::type_identity_t<Inl<T1, T2>> inl0,
-                     const T1 &x0_, T1 x1_) {
-  return inl0(x0_, std::move(x1_));
+                     const T1 &x0_, const T1 &x1_) {
+  return inl0(x0_, x1_);
 }
 
 template <typename T1, typename T2>
@@ -971,7 +972,7 @@ template <MonadIter _tcI0, Monad _tcI1, Functor _tcI2, typename T1, typename T3>
 typename _tcI0::template M<T3> Interp::interp(
     std::type_identity_t<crane::fn<typename _tcI0::template M<crane::obj>(T1)>>
         h0,
-    Itree<T1, T3> x0_) {
+    const Itree<T1, T3> &x0_) {
   return _tcI0::template iter<T3, Itree<T1, T3>>(
       [=, h0 = std::move(h0)](const Itree<T1, T3> &t) ->
       typename _tcI0::template M<Sum<Itree<T1, T3>, T3>> {

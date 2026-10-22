@@ -703,9 +703,12 @@ Positive Coq_Pos::pred(const Positive &x) {
   }
 }
 
-Positive Coq_Pos::pow(const Positive &x, Positive x0_) {
-  return iter<Positive>([=](Positive _x0) -> Positive { return mul(x, _x0); },
-                        Positive::xh(), std::move(x0_));
+Positive Coq_Pos::pow(Positive x, const Positive &x0_) {
+  return iter<Positive>(
+      [=, x = std::move(x)](Positive _x0) -> Positive {
+        return mul(std::move(x), _x0);
+      },
+      Positive::xh(), x0_);
 }
 
 Positive Coq_Pos::square(const Positive &p) {
@@ -1487,12 +1490,12 @@ bool Coq_Pos::Private_Dec::min_dec(Positive n, Positive m0) {
       true, false);
 }
 
-bool Coq_Pos::max_dec(const Positive &x0_, const Positive &x1_) {
-  return Private_Dec::max_dec(x0_, x1_);
+bool Coq_Pos::max_dec(Positive x0_, Positive x1_) {
+  return Private_Dec::max_dec(std::move(x0_), std::move(x1_));
 }
 
-bool Coq_Pos::min_dec(const Positive &x0_, const Positive &x1_) {
-  return Private_Dec::min_dec(x0_, x1_);
+bool Coq_Pos::min_dec(Positive x0_, Positive x1_) {
+  return Private_Dec::min_dec(std::move(x0_), std::move(x1_));
 }
 
 Compare<Positive> Positive_as_OT::compare(const Positive &x,

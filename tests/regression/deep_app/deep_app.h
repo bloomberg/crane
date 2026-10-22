@@ -213,7 +213,7 @@ struct DeepApp {
   static mylist<uint64_t> map_id(const mylist<uint64_t> &l);
   /// Append two lists.
   static mylist<uint64_t> append_lists(const mylist<uint64_t> &x0_,
-                                       const mylist<uint64_t> &x1_);
+                                       mylist<uint64_t> x1_);
   static uint64_t head_or_zero(const mylist<uint64_t> &l);
 
   template <typename T1>

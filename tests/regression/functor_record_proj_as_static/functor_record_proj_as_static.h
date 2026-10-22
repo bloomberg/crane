@@ -728,12 +728,14 @@ template <OrderedType X> struct Coq_Raw {
   }
 
   template <typename T1, typename T2, typename T3>
-  static t<T3> map2(const std::type_identity_t<crane::fn<std::optional<T3>(
-                        std::optional<T1>, std::optional<T2>)>> &f,
-                    List<std::pair<typename X::t, T1>> m, t<T2> x0_) {
+  static t<T3>
+  map2(std::type_identity_t<
+           crane::fn<std::optional<T3>(std::optional<T1>, std::optional<T2>)>>
+           f,
+       List<std::pair<typename X::t, T1>> m, t<T2> x0_) {
     if (std::holds_alternative<
             typename List<std::pair<typename X::t, T1>>::Nil>(m.v_mut())) {
-      return map2_r<T1, T2, T3>(f, std::move(x0_));
+      return map2_r<T1, T2, T3>(std::move(f), std::move(x0_));
     } else {
       auto &[a0, a1] =
           std::get<typename List<std::pair<typename X::t, T1>>::Cons>(
@@ -778,9 +780,9 @@ template <OrderedType X> struct Coq_Raw {
 
   template <typename T1, typename T2>
   static t<std::pair<std::optional<T1>, std::optional<T2>>>
-  combine(const List<std::pair<typename X::t, T1>> &m, t<T2> x0_) {
+  combine(List<std::pair<typename X::t, T1>> m, t<T2> x0_) {
     if (std::holds_alternative<
-            typename List<std::pair<typename X::t, T1>>::Nil>(m.v())) {
+            typename List<std::pair<typename X::t, T1>>::Nil>(m.v_mut())) {
       return map<T2, std::pair<std::optional<T1>, std::optional<T2>>>(
           [](const T2 &e_) {
             return std::make_pair(std::optional<T1>(),
@@ -788,8 +790,9 @@ template <OrderedType X> struct Coq_Raw {
           },
           std::move(x0_));
     } else {
-      const auto &[a0, a1] =
-          std::get<typename List<std::pair<typename X::t, T1>>::Cons>(m.v());
+      auto &[a0, a1] =
+          std::get<typename List<std::pair<typename X::t, T1>>::Cons>(
+              m.v_mut());
       const List<std::pair<typename X::t, T1>> &a1_value = *a1;
       const auto &[k, e] = a0;
       auto combine_aux_impl = [&](auto &_self_combine_aux,
@@ -990,7 +993,7 @@ struct Z_as_Int {
   static Z opp(const Z &x0_);
   static Z sub(const Z &x0_, const Z &x1_);
   static Z mul(const Z &x0_, const Z &x1_);
-  static Z max(const Z &x0_, const Z &x1_);
+  static Z max(Z x0_, Z x1_);
   static bool eqb(const Z &x0_, const Z &x1_);
   static bool ltb(const Z &x0_, const Z &x1_);
   static bool leb(const Z &x0_, const Z &x1_);
@@ -1348,13 +1351,11 @@ template <Int I, OrderedType X> struct Raw {
   }
 
   template <typename T1>
-  static tree<T1> join(const tree<T1> &l, key x0_, const T1 &x1_,
-                       tree<T1> x2_) {
-    if (std::holds_alternative<typename tree<T1>::Leaf>(l.v())) {
-      return add<T1>(std::move(x0_), x1_, std::move(x2_));
+  static tree<T1> join(tree<T1> l, key x0_, T1 x1_, const tree<T1> &x2_) {
+    if (std::holds_alternative<typename tree<T1>::Leaf>(l.v_mut())) {
+      return add<T1>(std::move(x0_), std::move(x1_), x2_);
     } else {
-      const auto &[a0, a1, a2, a3, a4] =
-          std::get<typename tree<T1>::Node>(l.v());
+      auto &[a0, a1, a2, a3, a4] = std::get<typename tree<T1>::Node>(l.v_mut());
       auto join_aux_impl = [&](auto &_self_join_aux,
                                const tree<T1> &r) -> tree<T1> {
         if (std::holds_alternative<typename tree<T1>::Leaf>(r.v())) {
@@ -1377,7 +1378,7 @@ template <Int I, OrderedType X> struct Raw {
       auto join_aux = [&](const tree<T1> &r) -> tree<T1> {
         return join_aux_impl(join_aux_impl, r);
       };
-      return join_aux(std::move(x2_));
+      return join_aux(x2_);
     }
   }
 
@@ -1731,9 +1732,11 @@ template <Int I, OrderedType X> struct Raw {
   }
 
   template <typename T1, typename T2, typename T3>
-  static tree<T3> map2(const std::type_identity_t<crane::fn<std::optional<T3>(
-                           std::optional<T1>, std::optional<T2>)>> &f,
-                       const tree<T1> &x0_, tree<T2> x1_) {
+  static tree<T3>
+  map2(std::type_identity_t<
+           crane::fn<std::optional<T3>(std::optional<T1>, std::optional<T2>)>>
+           f,
+       const tree<T1> &x0_, const tree<T2> &x1_) {
     return map2_opt<T1, T2, T3>(
         [=](key, const T1 &d, const std::optional<T2> &o) {
           return f(std::make_optional<T1>(d), o);
@@ -1752,7 +1755,7 @@ template <Int I, OrderedType X> struct Raw {
               },
               _x0);
         },
-        x0_, std::move(x1_));
+        x0_, x1_);
   }
 
   struct Proofs {
@@ -1761,9 +1764,8 @@ template <Int I, OrderedType X> struct Raw {
     using L = Coq_Raw<X>;
 
     template <typename T1, typename T2, typename F0>
-    static T2 fold_(F0 &&f, tree<T1> s, T2 x0_) {
-      return L::template fold<T1, T2>(f, elements<T1>(std::move(s)),
-                                      std::move(x0_));
+    static T2 fold_(F0 &&f, tree<T1> s, const T2 &x0_) {
+      return L::template fold<T1, T2>(f, elements<T1>(std::move(s)), x0_);
     }
 
     template <typename T1>

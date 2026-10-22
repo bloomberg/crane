@@ -66,8 +66,8 @@ bool via_non_colliding(const Raw_id &a, const Raw_id &b) {
   }
 }
 
-Nat via_colliding(const Nat &x0_, const Nat &x1_) {
-  return AstLib::pick(x0_, x1_);
+Nat via_colliding(Nat x0_, Nat x1_) {
+  return AstLib::pick(std::move(x0_), std::move(x1_));
 }
 
 bool via_file(const Raw_id &x0_, const Raw_id &x1_) {

@@ -128,7 +128,7 @@ struct Interp {
   interp(std::type_identity_t<
              crane::fn<typename _tcI0::template M<crane::obj>(T1)>>
              h,
-         std::shared_ptr<ITree<T3>> x0_);
+         const std::shared_ptr<ITree<T3>> &x0_);
 };
 enum class AE { A0 };
 
@@ -189,7 +189,7 @@ template <MonadIter _tcI0, Monad _tcI1, Functor _tcI2, typename T1, typename T3>
 typename _tcI0::template M<T3> Interp::interp(
     std::type_identity_t<crane::fn<typename _tcI0::template M<crane::obj>(T1)>>
         h,
-    std::shared_ptr<ITree<T3>> x0_) {
+    const std::shared_ptr<ITree<T3>> &x0_) {
   return _tcI0::template iter<T3, std::shared_ptr<ITree<T3>>>(
       [=, h = std::move(h)](const std::shared_ptr<ITree<T3>> &t) ->
       typename _tcI0::template M<Sum<std::shared_ptr<ITree<T3>>, T3>> {
@@ -216,7 +216,7 @@ typename _tcI0::template M<T3> Interp::interp(
               h(e));
         }
       },
-      std::move(x0_));
+      x0_);
 }
 
 #endif // INCLUDED_CASE_HANDLER_CONCRETE_RESULT

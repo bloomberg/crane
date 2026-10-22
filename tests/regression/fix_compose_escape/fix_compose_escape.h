@@ -14,7 +14,8 @@ struct FixComposeEscape {
   /// variable that is destroyed when compose_add returns.  The =
   /// capture copies the std::function VALUE, including its dangling
   /// & references.
-  static uint64_t compose_add(uint64_t base, crane::fn<uint64_t(uint64_t)> g,
+  static uint64_t compose_add(uint64_t base,
+                              const crane::fn<uint64_t(uint64_t)> &g,
                               uint64_t x0_) {
     auto add_impl = [&](auto &_self_add, uint64_t x) -> uint64_t {
       if (x <= 0) {

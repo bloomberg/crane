@@ -196,8 +196,8 @@ struct Sort {
   }
 
   template <typename T1, typename T2, typename F1, typename F2>
-  static T2 div_conq_split(const T2 &x, F1 &&x0_, F2 &&x1_, List<T1> x2_) {
-    return div_conq<T1, T2>(split<T1>, x, x0_, x1_, std::move(x2_));
+  static T2 div_conq_split(T2 x, F1 &&x0_, F2 &&x1_, const List<T1> &x2_) {
+    return div_conq<T1, T2>(split<T1>, std::move(x), x0_, x1_, x2_);
   }
 
   template <typename T1, typename T2, typename F1, typename F2, typename F3>

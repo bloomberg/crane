@@ -135,10 +135,12 @@ struct LiftedLetLambdaPolymorphic {
               UINT64_C(1));
 
   template <typename T1>
-  static T1 quad(const std::type_identity_t<crane::fn<T1(T1, T1)>> &op,
-                 T1 x0_) {
-    crane::fn<T1(T1)> twice = [=](const T1 &x) { return op(x, x); };
-    return twice(twice(std::move(x0_)));
+  static T1 quad(std::type_identity_t<crane::fn<T1(T1, T1)>> op,
+                 const T1 &x0_) {
+    crane::fn<T1(T1)> twice = [=, op = std::move(op)](const T1 &x) {
+      return op(x, x);
+    };
+    return twice(twice(x0_));
   }
 
   static inline const uint64_t from_section = quad<uint64_t>(

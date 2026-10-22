@@ -565,7 +565,7 @@ struct LoopifyPolymorphic {
   static uint64_t nat_length(const List<uint64_t> &x0_);
   static List<uint64_t> nat_reverse(const List<uint64_t> &x0_);
   static List<uint64_t> nat_append(const List<uint64_t> &x0_,
-                                   const List<uint64_t> &x1_);
+                                   List<uint64_t> x1_);
   static std::optional<uint64_t> nat_last(const List<uint64_t> &x0_);
   static List<uint64_t> nat_take(uint64_t x0_, const List<uint64_t> &x1_);
   static List<uint64_t> nat_drop(uint64_t x0_, const List<uint64_t> &x1_);

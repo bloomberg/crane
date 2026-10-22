@@ -24,4 +24,4 @@ Zed Arith::roundtrip(Zed x) { return x; }
 
 bool le(const Zed &x0_, const Zed &x1_) { return x0_.le_dec(x1_); }
 
-Zed round(const Zed &x0_) { return Arith::roundtrip(x0_); }
+Zed round(Zed x0_) { return Arith::roundtrip(std::move(x0_)); }

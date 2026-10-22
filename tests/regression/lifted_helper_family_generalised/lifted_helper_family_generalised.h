@@ -298,13 +298,13 @@ template <typename obj, typename c> using ReSum = c;
 
 struct CategoryOps {
   template <typename T1, typename T2>
-  static T2 id_(std::type_identity_t<Id_<T1, T2>> id_0, T1 x0_);
+  static T2 id_(std::type_identity_t<Id_<T1, T2>> id_0, const T1 &x0_);
   template <typename T1, typename T2>
   static T2 cat(std::type_identity_t<Cat<T1, T2>> cat0, const T1 &x0_,
-                const T1 &x1_, const T1 &x2_, const T2 &x3_, T2 x4_);
+                const T1 &x1_, const T1 &x2_, const T2 &x3_, const T2 &x4_);
   template <typename T1, typename T2, typename F0>
   static T2 inr_(F0 &&_x, std::type_identity_t<Inr<T1, T2>> inr0, const T1 &x0_,
-                 T1 x1_);
+                 const T1 &x1_);
   template <typename T1, typename T2>
   static T2 resum(const T1 &_x, const T1 &_x0, T2 reSum);
   template <typename T1, typename T2>
@@ -822,20 +822,21 @@ typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
 }
 
 template <typename T1, typename T2>
-T2 CategoryOps::id_(std::type_identity_t<Id_<T1, T2>> id_0, T1 x0_) {
-  return id_0(std::move(x0_));
+T2 CategoryOps::id_(std::type_identity_t<Id_<T1, T2>> id_0, const T1 &x0_) {
+  return id_0(x0_);
 }
 
 template <typename T1, typename T2>
 T2 CategoryOps::cat(std::type_identity_t<Cat<T1, T2>> cat0, const T1 &x0_,
-                    const T1 &x1_, const T1 &x2_, const T2 &x3_, T2 x4_) {
-  return cat0(x0_, x1_, x2_, x3_, std::move(x4_));
+                    const T1 &x1_, const T1 &x2_, const T2 &x3_,
+                    const T2 &x4_) {
+  return cat0(x0_, x1_, x2_, x3_, x4_);
 }
 
 template <typename T1, typename T2, typename F0>
 T2 CategoryOps::inr_(F0 &&, std::type_identity_t<Inr<T1, T2>> inr0,
-                     const T1 &x0_, T1 x1_) {
-  return inr0(x0_, std::move(x1_));
+                     const T1 &x0_, const T1 &x1_) {
+  return inr0(x0_, x1_);
 }
 
 template <typename T1, typename T2>

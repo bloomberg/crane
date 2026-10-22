@@ -161,7 +161,7 @@ struct LoopifyInnerFixSelfCall {
   static tree add(uint64_t x, const tree &r);
   /// As FMapAVL.join: each branch is a function of the remaining
   /// arguments, and the Node branch is the inner fixpoint itself.
-  static tree join(const tree &l, uint64_t x0_, tree x1_);
+  static tree join(tree l, uint64_t x0_, const tree &x1_);
 };
 
 #endif // INCLUDED_LOOPIFY_INNER_FIX_SELF_CALL

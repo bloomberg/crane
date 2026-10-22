@@ -1411,7 +1411,7 @@ struct Coq_Pos {
   static Positive of_succ_nat(uint64_t n);
   using t = Positive;
   static Positive pred(const Positive &x);
-  static Positive pow(const Positive &x, Positive x0_);
+  static Positive pow(Positive x, const Positive &x0_);
   static Positive square(const Positive &p);
   static uint64_t size_nat(const Positive &p);
   static Positive size(const Positive &p);
@@ -1475,8 +1475,8 @@ struct Coq_Pos {
   }
 
   template <typename T1, typename F1>
-  static T1 peano_rec(const T1 &x0_, F1 &&x1_, const Positive &x2_) {
-    return peano_rect<T1>(x0_, x1_, x2_);
+  static T1 peano_rec(T1 x0_, F1 &&x1_, const Positive &x2_) {
+    return peano_rect<T1>(std::move(x0_), x1_, x2_);
   }
 
   struct PeanoView {
@@ -1783,7 +1783,7 @@ struct Coq_Pos {
         [=]() { return x0; }());
   }
 
-  static bool max_dec(const Positive &x0_, const Positive &x1_);
+  static bool max_dec(Positive x0_, Positive x1_);
 
   template <typename T1>
   static T1 min_case_strong(Positive n, Positive m0, const T1 &x,
@@ -1800,7 +1800,7 @@ struct Coq_Pos {
         [=]() { return x0; }());
   }
 
-  static bool min_dec(const Positive &x0_, const Positive &x1_);
+  static bool min_dec(Positive x0_, Positive x1_);
 };
 
 template <OrderedType X> struct Raw {
@@ -2045,12 +2045,14 @@ template <OrderedType X> struct Raw {
   }
 
   template <typename T1, typename T2, typename T3>
-  static t<T3> map2(const std::type_identity_t<crane::fn<std::optional<T3>(
-                        std::optional<T1>, std::optional<T2>)>> &f,
-                    List<std::pair<typename X::t, T1>> m0, t<T2> x0_) {
+  static t<T3>
+  map2(std::type_identity_t<
+           crane::fn<std::optional<T3>(std::optional<T1>, std::optional<T2>)>>
+           f,
+       List<std::pair<typename X::t, T1>> m0, t<T2> x0_) {
     if (std::holds_alternative<
             typename List<std::pair<typename X::t, T1>>::Nil>(m0.v_mut())) {
-      return map2_r<T1, T2, T3>(f, std::move(x0_));
+      return map2_r<T1, T2, T3>(std::move(f), std::move(x0_));
     } else {
       auto &[a0, a1] =
           std::get<typename List<std::pair<typename X::t, T1>>::Cons>(
@@ -2095,9 +2097,9 @@ template <OrderedType X> struct Raw {
 
   template <typename T1, typename T2>
   static t<std::pair<std::optional<T1>, std::optional<T2>>>
-  combine(const List<std::pair<typename X::t, T1>> &m0, t<T2> x0_) {
+  combine(List<std::pair<typename X::t, T1>> m0, t<T2> x0_) {
     if (std::holds_alternative<
-            typename List<std::pair<typename X::t, T1>>::Nil>(m0.v())) {
+            typename List<std::pair<typename X::t, T1>>::Nil>(m0.v_mut())) {
       return map<T2, std::pair<std::optional<T1>, std::optional<T2>>>(
           [](const T2 &e_) {
             return std::make_pair(std::optional<T1>(),
@@ -2105,8 +2107,9 @@ template <OrderedType X> struct Raw {
           },
           std::move(x0_));
     } else {
-      const auto &[a0, a1] =
-          std::get<typename List<std::pair<typename X::t, T1>>::Cons>(m0.v());
+      auto &[a0, a1] =
+          std::get<typename List<std::pair<typename X::t, T1>>::Cons>(
+              m0.v_mut());
       const List<std::pair<typename X::t, T1>> &a1_value = *a1;
       const auto &[k, e] = a0;
       auto combine_aux_impl = [&](auto &_self_combine_aux,
