@@ -1961,9 +1961,7 @@ let {Goptions.get = output_directory} =
     ~key:output_directory_key
     ()
 
-(* A census writes no files, so it creates no directory for them either: its
-   coqc runs start in parallel, and System.mkdir checks for a directory before
-   creating it, so two of them making the same new one fail at random. *)
+(* A census writes no files, so it creates no directory for them either. *)
 let ensure_directory dir = if not (Probe.census ()) then System.mkdir dir
 
 let output_directory () =

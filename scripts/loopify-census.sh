@@ -35,6 +35,13 @@ targets=$(echo "$sources" | sed 's/\.v$/.vo/')
 find "$BUILD/default/tests" -name '*.vo' -delete 2>/dev/null
 
 echo "Extracting the test corpus with Loopify on everywhere..." >&2
+# The plugin is installed first, on its own: a test's coqc loads it from the
+# install directory, which its rule does not wait for, so a test started
+# while a changed plugin was being installed found none there.
+if ! dune build --build-dir "$BUILD" @install > "$OUT" 2>&1; then
+  cat "$OUT" >&2
+  exit 1
+fi
 # shellcheck disable=SC2086
 CRANE_LOOPIFY_CENSUS=$LOG dune build --build-dir "$BUILD" --cache=disabled \
   $targets > "$OUT" 2>&1
