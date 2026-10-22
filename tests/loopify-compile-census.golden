@@ -1,2 +1,1 @@
-does not compile: tests/regression/pendant_sumtree_roundtrip
 fails: tests/regression/shared_variant_reuse

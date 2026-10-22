@@ -13414,3 +13414,14 @@
   (alias runtest)
   (deps loopify_reuse_cursor_reads_field.t.exe)
   (action (run ./loopify_reuse_cursor_reads_field.t.exe))))
+
+(subdir loopify_tmc_library_inductive
+ (rule
+  (targets loopify_tmc_library_inductive.t.exe)
+  (deps LoopifyTmcLibraryInductive.vo loopify_tmc_library_inductive.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_tmc_library_inductive.t.exe loopify_tmc_library_inductive.cpp loopify_tmc_library_inductive.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_tmc_library_inductive.t.exe)
+  (action (run ./loopify_tmc_library_inductive.t.exe))))
