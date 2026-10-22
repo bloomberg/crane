@@ -1,8 +1,5 @@
 does not compile: tests/monadic/parallel
-does not compile: tests/regression/block_template_stress
-does not compile: tests/regression/effect_recursive_list
 does not compile: tests/regression/pendant_sumtree_roundtrip
-does not compile: tests/regression/recursive_monadic
 does not compile: tests/regression/recursive_record_incomplete_type
 fails: tests/regression/arrow_behind_type_function
 fails: tests/regression/reuse_arm_field_used_twice

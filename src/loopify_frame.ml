@@ -115,7 +115,7 @@ let rec collect_type_env (stmts : cpp_stmt list) : (Id.t * cpp_type) list =
         in
         [(id, Tfun (param_types, ret_ty))]
       | Sasgn (id, Declare (ty, _), _) -> [(id, ty)]
-      | Sdecl (id, ty, _) -> [(id, ty)]
+      | Sdecl (id, ty, _) | Sblock_custom (_, _, id, ty, _, _) -> [(id, ty)]
       | Scustom_case (_, _, _, branches, _) ->
         List.concat_map
           (fun (ps, _, body) -> List.map (fun p -> (p.cp_name, p.cp_type)) ps @ collect_type_env body)
@@ -1709,7 +1709,7 @@ and rewrite_enter_stmts ctx stmts =
         in
         (id, Tfun (param_types, ret_ty)) :: ctx.er_env
       | Sasgn (id, Declare (ty, _), _) -> (id, ty) :: ctx.er_env
-      | Sdecl (id, ty, _) -> (id, ty) :: ctx.er_env
+      | Sdecl (id, ty, _) | Sblock_custom (_, _, id, ty, _, _) -> (id, ty) :: ctx.er_env
       | _ -> ctx.er_env
     in
     rewrite_enter_lambda_return ctx stmt

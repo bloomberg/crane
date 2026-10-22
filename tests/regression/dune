@@ -13337,3 +13337,14 @@
   (alias runtest)
   (deps loopify_shadow_in_scrutinee_call.t.exe)
   (action (run ./loopify_shadow_in_scrutinee_call.t.exe))))
+
+(subdir loopify_block_template_frame
+ (rule
+  (targets loopify_block_template_frame.t.exe)
+  (deps LoopifyBlockTemplateFrame.vo loopify_block_template_frame.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_block_template_frame.t.exe loopify_block_template_frame.cpp loopify_block_template_frame.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_block_template_frame.t.exe)
+  (action (run ./loopify_block_template_frame.t.exe))))
