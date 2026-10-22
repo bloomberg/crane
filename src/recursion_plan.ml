@@ -406,6 +406,13 @@ let free_levels ~depth e =
   go 0 e;
   List.sort_uniq Int.compare !found
 
+(* Whether translation generates a match standing as a let's right-hand
+   side as statements, each branch assigning the binder -- a custom match,
+   or a record's -- rather than in a lambda invoked in place, as it does
+   any other. *)
+let match_bound_in_place ty branches =
+  Table.is_custom_match branches || (Table.record_fields_of_type ty <> [] && Array.length branches = 1)
+
 (* The points the body of [origin], standing in [lex], resumes at once a
    recursive call returns: a let whose right-hand side is the call, or ends
    in one in some branch, and a sequential bind whose action is the call,
@@ -447,7 +454,10 @@ let resumes_of ~effects ~origin ~targets lex body =
         !found
     in
     (* What a right-hand side ends in: the recursive calls its branches end
-       in, and a local fixpoint applied there that reaches one. *)
+       in, and a local fixpoint applied there that reaches one.  A match
+       ends in its branches' only where they assign the binder; any other is
+       run in a lambda, and the right-hand side ends in that lambda's
+       invocation. *)
     let rec ending depth e =
       match targets ~depth e with
       | _ :: _ as called -> called
@@ -455,7 +465,7 @@ let resumes_of ~effects ~origin ~targets lex body =
         match e with
         | MLapp ((MLfix (_, _, _, _, occ) as fix), _) when reaches depth fix ->
           [{target = Entering occ; occurrence = occ}]
-        | MLcase (_, _, branches) ->
+        | MLcase (ty, _, branches) when match_bound_in_place ty branches ->
           List.concat_map
             (fun (ids, _, _, b) -> ending (depth + List.length ids) b)
             (Array.to_list branches)
@@ -701,8 +711,6 @@ let inlined_calls ~self ~effects ~parameters ~flow_body ~void ~inlines ~continue
         if x != Dummy then go Binding a;
         go pos b )
     | MLcase (ty, s, branches) -> (
-      let custom = Table.is_custom_match branches in
-      let record = Table.record_fields_of_type ty <> [] && Array.length branches = 1 in
       let enum =
         match ty with
         | Tglob ((Names.GlobRef.IndRef _ as r), _, _) -> Table.is_enum_inductive r
@@ -710,8 +718,8 @@ let inlined_calls ~self ~effects ~parameters ~flow_body ~void ~inlines ~continue
       in
       match pos with
       | Operand | Returned -> ()
-      | Binding when (not custom) && not record -> ()
-      | (Returning | Binding) when enum && not custom -> ()
+      | Binding when not (match_bound_in_place ty branches) -> ()
+      | (Returning | Binding) when enum && not (Table.is_custom_match branches) -> ()
       | Returning | Binding ->
         operand s;
         Array.iter (fun (_, _, _, b) -> go pos b) branches )
