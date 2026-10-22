@@ -474,7 +474,7 @@ struct MemSafetyProbe18 {
       crane::fn<uint64_t(uint64_t)> f = [=, t = std::move(t)](uint64_t n) {
         return (t.tree_sum() + n);
       };
-      return apply_twice(f, UINT64_C(0));
+      return apply_twice(std::move(f), UINT64_C(0));
     }();
   }();
   static inline const uint64_t test_tree_from_tree = []() {

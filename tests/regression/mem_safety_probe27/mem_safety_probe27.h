@@ -246,7 +246,7 @@ struct MemSafetyProbe27 {
             tree::node(tree::leaf(), UINT64_C(3), tree::leaf())));
     return (
         ((tr.first).first(UINT64_C(100)) + (tr.first).second(UINT64_C(200))) +
-        tr.second);
+        std::move(tr).second);
   }();
   /// TEST 7: Closure and tree value stored together in a pair.
   /// Tests whether the closure's capture and the tree return
@@ -269,7 +269,7 @@ struct MemSafetyProbe27 {
                        UINT64_C(4),
                        tree::node(tree::leaf(), UINT64_C(6), tree::leaf())),
             true);
-    auto _cs = p.first;
+    auto _cs = std::move(p).first;
     if (_cs.has_value()) {
       const crane::fn<uint64_t(uint64_t)> &f = *_cs;
       return (f(UINT64_C(100)) + std::move(p).second);

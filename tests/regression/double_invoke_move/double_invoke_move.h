@@ -129,7 +129,8 @@ struct DoubleInvokeMove {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      crane::fn<tree(uint64_t)> f = [=](uint64_t _x0) -> tree {
+      crane::fn<tree(uint64_t)> f = [=,
+                                     t = std::move(t)](uint64_t _x0) -> tree {
         return wrap_with(std::move(t), _x0);
       };
       tree w1 = f(UINT64_C(0));

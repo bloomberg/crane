@@ -1447,7 +1447,8 @@ struct N {
     return measure_right_induction<T1, T2>(
         f0, 0u,
         [=, iH = std::move(iH)](const T1 &y, crane::fn<T2(T1)> iH_) {
-          return iH(y, [=](const T1 &y0) { return iH_(y0); });
+          return iH(
+              y, [=, iH_ = std::move(iH_)](const T1 &y0) { return iH_(y0); });
         },
         x);
   }

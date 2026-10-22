@@ -21,10 +21,11 @@ FixFoldEscape::collect_adders(const List<uint64_t> &l) {
             return (_self_adder(_self_adder, x_) + 1);
           }
         };
-        auto adder = [=](uint64_t x) -> uint64_t {
+        auto adder = [=, adder_impl =
+                             std::move(adder_impl)](uint64_t x) -> uint64_t {
           return adder_impl(adder_impl, x);
         };
-        return List<crane::fn<uint64_t(uint64_t)>>::cons(adder, acc);
+        return List<crane::fn<uint64_t(uint64_t)>>::cons(std::move(adder), acc);
       },
       List<crane::fn<uint64_t(uint64_t)>>::nil(), l);
 }

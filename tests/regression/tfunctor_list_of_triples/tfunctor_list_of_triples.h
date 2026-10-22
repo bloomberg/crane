@@ -264,7 +264,7 @@ struct TfunctorListOfTriples {
           List<typename _tcI0::template T<CraneA0>> a0) {
       return a0.template map<typename _tcI0::template T<CraneA1>>(
           [=, f = std::move(f)](typename _tcI0::template T<CraneA0> a1) {
-            return _tcI0::template tfmap<CraneA0, CraneA1>(f, a1);
+            return _tcI0::template tfmap<CraneA0, CraneA1>(f, std::move(a1));
           });
     }
   };

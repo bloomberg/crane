@@ -108,7 +108,7 @@ struct SharedUptrEscape {
 
     /// identity: takes a tree and returns it unchanged.
     /// The tree enters as owned and leaves as owned.
-    tree identity() const { return std::move(*this); }
+    tree identity() const { return *this; }
 
     uint64_t tree_sum() const {
       const tree *_self = this;

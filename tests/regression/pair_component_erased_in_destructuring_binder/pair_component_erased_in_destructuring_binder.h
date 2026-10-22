@@ -250,10 +250,11 @@ EOU<std::pair<List<std::pair<T1, T2>>, List<T2>>> go(const T1 &a, const T2 &b,
   return EOU_monad::template bind<std::pair<List<std::pair<T1, T2>>, List<T2>>,
                                   std::pair<List<std::pair<T1, T2>>, List<T2>>>(
       combine<T1, T2>(l), [=](std::pair<List<std::pair<T1, T2>>, List<T2>> x) {
-        const auto &[p, vargs] = x;
+        auto [p, vargs] = std::move(x);
         return EOU_monad::template ret<
             std::pair<List<std::pair<T1, T2>>, List<T2>>>(std::make_pair(
-            List<std::pair<T1, T2>>::cons(std::make_pair(a, b), p), vargs));
+            List<std::pair<T1, T2>>::cons(std::make_pair(a, b), std::move(p)),
+            std::move(vargs)));
       });
 }
 

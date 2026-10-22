@@ -179,9 +179,9 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
             std::pair<std::pair<std::vector<uint64_t> *, uint64_t>, uint64_t>,
             uint64_t>
                args) {
-          const auto &[p, r] = args;
-          const auto &[p0, l] = p;
-          const auto &[arr0, arr_idx] = p0;
+          auto [p, r] = std::move(args);
+          auto [p0, l] = std::move(p);
+          auto [arr0, arr_idx] = std::move(p0);
           if (nat_idx::toNat(l) < nat_idx::toNat(r)) {
             uint64_t newPivot = [&]() {
               auto &&_once1 = nat_idx::toNat(r);
@@ -274,7 +274,7 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
              std::monostate{});
             return (
                 _stack.push_back(std::make_pair(
-                    std::make_pair(std::make_pair(arr0, arr_idx),
+                    std::make_pair(std::make_pair(std::move(arr0), arr_idx),
                                    nat_idx::fromNat((nat_idx::toNat(newPivot) +
                                                      UINT64_C(1)))),
                     r)),

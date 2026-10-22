@@ -155,7 +155,7 @@ stateT<env, std::shared_ptr<ITree<crane::obj>>, Nat> twice(Nat n) {
   return Monad_stateT<Monad_itree<crane::obj>, env>::template bind<Nat, Nat>(
       step<crane::obj>(std::move(n)), [](Nat a) {
         return Monad_stateT<Monad_itree<crane::obj>, env>::template bind<
-            Nat, Nat>(step<crane::obj>(a), [](const Nat &b) {
+            Nat, Nat>(step<crane::obj>(std::move(a)), [](const Nat &b) {
           return Monad_stateT<Monad_itree<crane::obj>, env>::template ret<Nat>(
               b);
         });

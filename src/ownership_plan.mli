@@ -15,9 +15,12 @@
     neither.  A pattern variable of a match on a variable is a part of it,
     which C++ binds by reference: moving the whole is not a last use while a
     part is still to be read, nor moving a part while the whole is, though
-    two parts are independent.  A let-bound lambda or local fixpoint may
-    read what it closes over wherever it is used, so nothing it closes over
-    is read last in the let's scope.  An argument an inline custom's template
+    two parts are independent; so is a component of a pair read through its
+    projection, unless the read takes the whole pair ({!use}).  A let-bound local fixpoint, or a lambda
+    with a type variable of its own, which may be lifted to a function
+    template or inlined, may read what it closes over wherever it is used,
+    so nothing it closes over is read last in the let's scope; a lambda
+    bound to a local copies it where it is made.  An argument an inline custom's template
     splices twice is read twice, and one it never splices is not read.
 
     This is not yet the plan's OwnershipIR: it decides no use's mode, only
@@ -36,10 +39,20 @@ val empty : t
     scalar or declared trivially copyable with arguments that are too. *)
 val worth_moving : Miniml.ml_type -> bool
 
-(** [region ~owned t] is the plan of [t]'s reads, [t] standing under binders
-    it reads but does not bind, of which it owns those at the de Bruijn
-    indices [owned]. *)
-val region : ?owned:int list -> Miniml.ml_ast -> t
+(** [region ~owned ~copied ~n_outer t] is the plan of [t]'s reads, [t]
+    standing under binders it reads but does not bind, of which it owns
+    those at the de Bruijn indices [owned], and generated under a head of
+    [n_outer] type variables.  The closures it makes capture a copy of each
+    variable at [copied] -- a method's receiver, which they capture as a
+    copy of the object -- and own that copy: it is theirs to move, and a
+    read outside them reads the original. *)
+val region : ?owned:int list -> ?copied:int list -> n_outer:int -> Miniml.ml_ast -> t
+
+(** Whether, as [p] plans it, [let x : ty := a] binds the closure [a] to a
+    C++ local, which the region owns: [a] is a local fixpoint or a lambda
+    with no type variable of its own past the head's
+    ({!Ml_type_util.own_type_variables}).  [None] where nothing is planned. *)
+val closure_local : t -> Miniml.ml_type -> Miniml.ml_ast -> bool option
 
 (** [reuse_arm p ~scrutinee ~branch] is [p] for the branch numbered [branch]
     of the match on the variable [scrutinee], generated to rebuild
@@ -47,6 +60,12 @@ val region : ?owned:int list -> Miniml.ml_ast -> t
     of its own, and the scrutinee, which keeps the storage, is not read by
     value. *)
 val reuse_arm : t -> scrutinee:Miniml.ml_ast -> branch:int -> t
+
+(** [fields_by_value p ~case ~by_value] is [p] for the body of [case], a
+    match taking a record apart, whose fields translation binds as locals of
+    their own where [by_value] says so, in the order the pattern binds them:
+    those are the body's own. *)
+val fields_by_value : t -> case:Miniml.ml_ast -> by_value:bool list -> t
 
 
 (** What [p] says of a read. *)
@@ -73,7 +92,11 @@ module Use : sig
     | Borrow  (** reads it in place ({!Inspected}) *)
 end
 
-val use : t -> Miniml.Occurrence.t -> Use.t
+(** [use ~whole p o]: with [~whole], of a read that takes its variable's
+    whole value even where Core reads one component of it, or reads it in
+    place ({!Inspected}): a closure captures the whole of what it reads, and
+    a variable held boxed is unboxed whole by a cast. *)
+val use : ?whole:bool -> t -> Miniml.Occurrence.t -> Use.t
 
 (** Whether a variant match takes apart a scrutinee the region owns, binding
     its fields by mutable reference: the scrutinee is a variable owned there.
@@ -89,13 +112,21 @@ val pair_by_value : t -> Miniml.ml_ast -> Miniml.ml_branch array -> bool
     projects out of a record that is not moved there. *)
 val projects_in_place : t -> Miniml.ml_type -> Miniml.ml_ast -> bool
 
-(** The de Bruijn indices, at [closure], of the variables the lambda
-    [closure] takes by move when it is made: each is owned there, and the
-    capture is its last use -- nothing after the lambda, beside it, or
-    captured with it reads it. *)
+(** The de Bruijn indices, at [closure], of the variables the lambda or
+    local fixpoint [closure] takes by move when it is made, as closures that
+    copy what they capture: each is owned there, and the capture is its last
+    use -- nothing after the closure, beside it, or captured with it reads
+    it. *)
 val moved_captures : t -> Miniml.ml_ast -> int list
+
+(** The de Bruijn indices, at [ts], of the variables [ts] read by move
+    ({!use}) directly -- not inside a closure, a let or a match they
+    contain: what a closure made around them, the eta-expansion of a partial
+    application of which they are the arguments, takes by move when it is
+    made. *)
+val moved_reads : t -> Miniml.ml_ast list -> int list
 
 (** A term copied to two places -- an eta argument pushed into both branches
     of a conditional -- holds one read twice; it is a last use where every
     copy is one. *)
-val fate : t -> Miniml.Occurrence.t -> fate
+val fate : ?whole:bool -> t -> Miniml.Occurrence.t -> fate

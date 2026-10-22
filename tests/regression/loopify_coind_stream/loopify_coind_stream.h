@@ -223,9 +223,11 @@ struct LoopifyCoindStream {
   unfold(const std::type_identity_t<crane::fn<std::pair<T1, T2>(T2)>> &f,
          const T2 &seed) {
     auto [a, s_] = f(seed);
-    return stream<T1>::lazy_([=]() -> typename stream<T1>::Scons {
-      return {std::move(a), unfold<T1, T2>(f, std::move(s_))};
-    });
+    return stream<T1>::lazy_([=, a = std::move(a), s_ = std::move(s_)]() ->
+                             typename stream<T1>::Scons {
+                               return {std::move(a),
+                                       unfold<T1, T2>(f, std::move(s_))};
+                             });
   }
 
   static inline const stream<uint64_t> nats =

@@ -385,6 +385,9 @@ let ml_type_is_unit (ty : ml_type) : bool =
   | Tglob (r, _, _) -> Table.is_unit_type r
   | _ -> false
 
+let own_type_variables ~n_outer tys =
+  List.exists (fun ty -> Mlutil.IntSet.exists (fun i -> i > n_outer) (Mlutil.ml_tvars ty)) tys
+
 (** Check if a C++ type is the Unit enum (from Rocq's [unit]).
     After [convert_ml_type_to_cpp_type], Rocq's [unit] becomes a [Tnamespace]
     wrapping a [Tglob] referencing the unit inductive, or a bare [Tglob] for

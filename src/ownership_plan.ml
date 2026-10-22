@@ -11,32 +11,44 @@ module Parents = Map.Make (Int)
 (* Every read the region holds, in no order. *)
 type read = {
   occurrence : Occurrence.t;
-  last : bool;  (* nothing after it or beside it reads the variable *)
+  last : bool;  (* nothing after it or beside it reads the variable, or the component it reads *)
+  last_whole : bool;  (* nothing after it or beside it reads the variable *)
   consumed : bool;  (* where it stands, its value may be taken *)
 }
 
-(* A branch generated to rebuild in its scrutinee's storage, named by the
-   scrutinee's read and the branch's index. *)
-type arm = {scrutinee : Occurrence.t; branch : int}
+(* How translation binds a match's pattern variables, where the plan cannot
+   tell: a branch generated to rebuild in its scrutinee's storage, named by
+   the scrutinee's read and the branch's index; and the fields of a record
+   taken apart, named by the match itself, which are locals of their own
+   where [by_value] says so. *)
+type arm =
+  | Rebuild of {scrutinee : Occurrence.t; branch : int}
+  | Fields of {case : ml_ast; by_value : bool list}
 
 type t = {
   root : ml_ast;
+  n_outer : int;  (* the type variables of the head the region is generated under *)
   root_owned : Levels.t;
+  root_copied : Levels.t;  (* variables closures capture a copy of, owned by them alone *)
   arms : arm list;
   reads : read list;
   owned : (Occurrence.t * bool) list;  (* whether the variable a read reads is owned there *)
   captures : read list;  (* a lambda's capture of a variable, by the reads inside it *)
   captured_owned : (Occurrence.t * bool) list;
+  copied_reads : Occurrence.t list;  (* reads of a variable closures copy *)
 }
 
 let empty =
   { root = MLdummy Kprop;
+    n_outer = 0;
     root_owned = Levels.empty;
+    root_copied = Levels.empty;
     arms = [];
     reads = [];
     owned = [];
     captures = [];
-    captured_owned = [] }
+    captured_owned = [];
+    copied_reads = [] }
 
 (* The reads in [t] of variables bound outside it, by level, [t] standing [d]
    binders deep. *)
@@ -72,10 +84,26 @@ let rec worth_moving = function
 (* A variable is named by its de Bruijn level in the region: the number of
    binders around its binding site, counted from the region's root, so that
    one the region does not bind has a negative level.  [parents] maps a
-   pattern variable to the variable its match took apart. *)
+   pattern variable to the variable its match took apart.
+
+   A component of a pair variable read through its projection mapping is a
+   part of it too, named by a level of its own below every variable's: the
+   [first] and [second] components of the variable at [base] are [component
+   base 0] and [component base 1].  Being a part of [base] without being a
+   binder, it is in scope exactly where [base] is. *)
+
+let component_floor = -(1 lsl 50)
+let component base field = component_floor + ((base + (1 lsl 30)) * 2) + field
+let component_base l = if l < component_floor / 2 then Some (((l - component_floor) / 2) - (1 lsl 30)) else None
+
+(* The variable a level names storage of: a component's pair, or itself. *)
+let storage l = match component_base l with Some base -> base | None -> l
 
 let rec ancestors parents l =
-  match Parents.find_opt l parents with Some p -> p :: ancestors parents p | None -> []
+  match component_base l with
+  | Some base -> base :: ancestors parents base
+  | None -> (
+    match Parents.find_opt l parents with Some p -> p :: ancestors parents p | None -> [])
 
 (* Two variables share storage when one is the other, or a part of it. *)
 let overlap parents l m = l = m || List.mem m (ancestors parents l) || List.mem l (ancestors parents m)
@@ -86,8 +114,20 @@ let overlap parents l m = l = m || List.mem m (ancestors parents l) || List.mem 
 let leave parents d s =
   Levels.filter_map
     (fun l ->
-      if l < d then Some l else List.find_opt (fun p -> p < d) (ancestors parents l) )
+      if storage l < d then Some l else List.find_opt (fun p -> p < d) (ancestors parents l) )
     s
+
+(* The component of the pair variable [MLrel i] that [r] applied to it reads,
+   [t] standing [d] binders deep: [r] is an inline custom spelled as the
+   projection of its argument's [first] or [second] member. *)
+let projected d r t =
+  match (Table.inline_custom_text r, t) with
+  | Some s, MLrel (i, o) when Table.is_inline_custom r -> (
+    match Foreign_template.pair_projection_field s with
+    | Some "first" -> Some (component (d - i) 0, o)
+    | Some "second" -> Some (component (d - i) 1, o)
+    | _ -> None )
+  | _ -> None
 
 let rec strip = function MLmagic (_, t) -> strip t | t -> t
 
@@ -111,20 +151,28 @@ let bind parents d ~n =
   go parents d
 
 (* The variables bound outside [t] that [t] reads, [t] standing [d] binders
-   deep. *)
-let rec free parents d t =
+   deep: the components it reads of a pair, or, under a closure, which
+   copies what it captures whole, the pair.  A variable at a level of
+   [outside] is counted only where a closure reads it: a variable closures
+   copy is read outside them in the original. *)
+let rec free ?(parts = true) ?(outside = Levels.empty) parents d t =
+  let closure_frees = frees ~parts and closure_under = under ~parts in
+  let free = free ~parts ~outside and frees = frees ~parts ~outside and under = under ~parts ~outside in
   match t with
-  | MLrel (i, _) -> if i > 0 then Levels.singleton (d - i) else Levels.empty
+  | MLrel (i, _) ->
+    if i > 0 && not (Levels.mem (d - i) outside) then Levels.singleton (d - i) else Levels.empty
   | MLmagic (_, t) -> free parents d t
+  | MLapp (MLglob {callee = r; _}, [arg]) when parts && projected d r (strip arg) <> None ->
+    Levels.singleton (fst (Option.get (projected d r (strip arg))))
   | MLapp (f, args) -> frees parents d (f :: args)
   | MLcons (_, _, args) | MLtuple args -> frees parents d args
   | MLparray (elems, default) -> frees parents d (default :: Array.to_list elems)
-  | MLlam (_, _, body) -> under parents d ~n:1 body
+  | MLlam (_, _, body) -> whole (closure_under parents d ~n:1 body)
   | MLletin (_, _, a, b, _) -> Levels.union (free parents d a) (under parents d ~n:1 b)
   | MLfix (_, fs, defs, _, _) ->
     let n = Array.length fs in
     let parents' = bind parents d ~n in
-    leave parents' d (frees parents' (d + n) (Array.to_list defs))
+    whole (leave parents' d (closure_frees parents' (d + n) (Array.to_list defs)))
   | MLcase (_, scrut, branches) ->
     Array.fold_left
       (fun acc (ids, _, _, body) ->
@@ -134,28 +182,61 @@ let rec free parents d t =
       (free parents d scrut) branches
   | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> Levels.empty
 
-and frees parents d ts = List.fold_left (fun acc t -> Levels.union acc (free parents d t)) Levels.empty ts
+and frees ?parts ?outside parents d ts =
+  List.fold_left (fun acc t -> Levels.union acc (free ?parts ?outside parents d t)) Levels.empty ts
 
-and under parents d ~n body =
+and under ?parts ?outside parents d ~n body =
   let parents' = bind parents d ~n in
-  leave parents' d (free parents' (d + n) body)
+  leave parents' d (free ?parts ?outside parents' (d + n) body)
+
+(* What a closure reading [s] captures: every component it reads is read
+   whole. *)
+and whole s = Levels.map storage s
+
+(* Whether a let binds the closure [a] to a C++ local, under a head of
+   [n_outer] type variables: one with a type variable of its own is lifted to
+   a function template, or inlined at its uses, instead. *)
+let closure_local ~n_outer ty a =
+  match a with
+  | MLfix (_, ids, _, _, _) ->
+    not (Ml_type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)))
+  | MLlam _ -> not (Ml_type_util.own_type_variables ~n_outer [ty])
+  | _ -> false
 
 (* Whether the closure a let binds may read what it closes over at its uses
    rather than where it is made: a local fixpoint closes over its
-   surroundings by reference, and a lambda polymorphic in a type variable may
-   be lifted to a function template, to which each use passes them, or
-   inlined at each use.  A monomorphic lambda is a value holding copies. *)
-let reads_at_uses ty a =
+   surroundings by reference, and a lambda with a type variable of its own
+   may be lifted to a function template, to which each use passes them, or
+   inlined at each use.  A lambda bound to a local is a value holding
+   copies. *)
+let reads_at_uses ~n_outer ty a =
   match strip a with
   | MLfix _ -> true
-  | MLlam _ -> not (Mlutil.IntSet.is_empty (Mlutil.ml_tvars ty))
+  | MLlam _ -> Ml_type_util.own_type_variables ~n_outer [ty]
   | _ -> false
+
+(* A record's field read out of it, by its projection or by the match
+   taking the record apart that returns one field: the record read. *)
+let field_of = function
+  | MLapp (MLglob {callee = r; _}, [t]) when Table.is_projection r -> Some t
+  | MLcase (ty, t, [|(ids, _, _, MLrel (k, _))|])
+    when Table.record_fields_of_type ty <> [] && k <= List.length ids ->
+    Some t
+  | _ -> None
+
+(* Whether translation spells [t] as often as it is mentioned, being a
+   variable or a record field of one. *)
+let rec spelled_in_place = function
+  | MLrel _ -> true
+  | MLmagic (_, t) -> spelled_in_place t
+  | t -> ( match field_of t with Some t -> spelled_in_place t | None -> false )
 
 (* Whether a match may take its scrutinee's value, as translation generates
    it.  A variant's alternatives are bound by reference into the scrutinee,
    which a variable that is matched keeps; a custom match whose template
-   spells the scrutinee twice would move it twice.  An enum is a value, a
-   record's fields are read one at a time, and any other custom match
+   spells the scrutinee twice reads a variable or a field of one in place,
+   and evaluates anything else once into a temporary.  An enum is a value,
+   a record's fields are read one at a time, and any other custom match
    evaluates its scrutinee once. *)
 let scrutinee_consumed ty scrut branches =
   if Table.is_custom_match branches then
@@ -164,7 +245,7 @@ let scrutinee_consumed ty scrut branches =
         (List.filter (( = ) Foreign_template.CCscrut)
            (Foreign_template.match_template (Table.find_custom_match branches)) )
     in
-    uses <= 1 || (match strip scrut with MLrel _ -> false | _ -> true)
+    uses <= 1 || not (spelled_in_place scrut)
   else if Table.record_fields_of_type ty <> [] && Array.length branches = 1 then true
   else
     Array.for_all
@@ -182,7 +263,7 @@ let evaluations r =
   | Some s when Table.is_inline_custom r -> Foreign_template.arg_mentions s
   | _ -> fun _ -> 1
 
-let liveness t =
+let liveness ~n_outer ~copied t =
   let reads = ref [] in
   let captures = ref [] in
   (* [walk ~consumed ~pinned parents d live t] records [t]'s reads and is
@@ -193,13 +274,24 @@ let liveness t =
      branch -- stands where [t] does, and any other takes its value, unless
      it is read in place. *)
   let rec walk ?(consumed = true) ~pinned parents d live t =
+    let read l occurrence =
+      let last_of m = not (Levels.exists (overlap parents m) (Levels.union live pinned)) in
+      reads := {occurrence; last = last_of l; last_whole = last_of (storage l); consumed} :: !reads;
+      (* Of a variable closures copy, a read outside them reads the original,
+         not the copy. *)
+      if Levels.mem (storage l) copied then live else Levels.add l live
+    in
     match t with
-    | MLrel (i, occurrence) ->
-      let l = d - i in
-      let shared = Levels.exists (overlap parents l) in
-      reads := {occurrence; last = not (shared live || shared pinned); consumed} :: !reads;
-      Levels.add l live
+    | MLrel (i, occurrence) -> read (d - i) occurrence
     | MLmagic (_, t) -> walk ~consumed ~pinned parents d live t
+    (* A component read through its projection is a part of the pair: a read
+       of the other component is not a later read of it. *)
+    | MLapp (MLglob {callee = r; _}, [arg]) when projected d r (strip arg) <> None ->
+      let l, occurrence = Option.get (projected d r (strip arg)) in
+      read l occurrence
+    (* A field is read out of its record where the projection stands. *)
+    | MLapp (MLglob {callee = r; _}, [arg]) when Table.is_projection r -> walk ~consumed ~pinned parents d live arg
+    | MLcase (_, scrut, _) when field_of t <> None -> walk ~consumed ~pinned parents d live scrut
     | MLapp (MLglob {callee = r; _}, args) when Table.is_inline_custom r ->
       unsequenced ~evaluated:(evaluations r) ~pinned parents d live args
     (* A bind generated as sequencing runs its action and then its
@@ -224,20 +316,18 @@ let liveness t =
        is a region of its own. *)
     | MLlam _ | MLfix _ ->
       let captured = free parents d t in
-      (* A lambda copies what it captures when it is made, all at once; a
-         local fixpoint refers to it. *)
-      ( match t with
-      | MLlam _ ->
-        List.iter
-          (fun (l, occurrence) ->
-            let shared = Levels.exists (overlap parents l) in
-            let last = not (shared live || shared pinned || shared (Levels.remove l captured)) in
-            captures := {occurrence; last; consumed = true} :: !captures )
-          (closure_reads d t)
-      | _ -> () );
+      (* A lambda copies what it captures when it is made, all at once; so
+         does a local fixpoint generated as closures, though one generated
+         by reference refers to it instead and is given no capture moves. *)
+      List.iter
+        (fun (l, occurrence) ->
+          let shared = Levels.exists (overlap parents l) in
+          let last = not (shared live || shared pinned || shared (Levels.remove l captured)) in
+          captures := {occurrence; last; last_whole = last; consumed = true} :: !captures )
+        (closure_reads d t);
       Levels.union live captured
     | MLletin (_, ty, a, b, _) ->
-      let pinned_b = if reads_at_uses ty a then Levels.union pinned (free parents d a) else pinned in
+      let pinned_b = if reads_at_uses ~n_outer ty a then Levels.union pinned (free parents d a) else pinned in
       let parents_b = bind parents d ~n:1 in
       let live_b = walk ~consumed ~pinned:pinned_b parents_b (d + 1) live b in
       walk ~pinned parents d (leave parents_b d live_b) a
@@ -263,7 +353,7 @@ let liveness t =
      evaluated twice.  One evaluated not at all reads nothing; one
      [inspected] is read in place. *)
   and unsequenced ?(evaluated = fun _ -> 1) ?(inspected = fun _ -> false) ~pinned parents d live ts =
-    let reads_of = List.map (free parents d) ts in
+    let reads_of = List.map (free ~outside:copied parents d) ts in
     List.mapi
       (fun k t ->
         match evaluated k with
@@ -279,15 +369,15 @@ let liveness t =
 
 type fate = Last_use | Read_again | Inspected | Unplanned
 
-let fate_in reads o =
+let fate_in ?(whole = false) reads o =
   match List.filter (fun r -> Occurrence.equal o r.occurrence) reads with
   | [] -> Unplanned
   | copies ->
-    if not (List.for_all (fun r -> r.last) copies) then Read_again
+    if not (List.for_all (fun r -> if whole then r.last_whole else r.last) copies) then Read_again
     else if List.for_all (fun r -> r.consumed) copies then Last_use
     else Inspected
 
-let fate p o = fate_in p.reads o
+let fate ?whole p o = fate_in ?whole p.reads o
 
 let sequential_bind use = Core_effects.find use = Some {operation = Bind; mode = Sequential}
 
@@ -352,13 +442,16 @@ end
    variable it reads is owned where it is read: bound by value, so that the
    region may take its value.  [owned] holds the levels of the variables the
    region owns at its root. *)
-let ownership ~reads ~arms ~owned t =
+let ownership ~n_outer ~reads ~arms ~owned ~copied t =
   let out = ref [] in
   let captured = ref [] in
+  let copied_reads = ref [] in
   let rec own owned d t =
     let all = List.iter (own owned d) in
     match t with
-    | MLrel (i, occurrence) -> out := (occurrence, Levels.mem (d - i) owned) :: !out
+    | MLrel (i, occurrence) ->
+      out := (occurrence, Levels.mem (d - i) owned) :: !out;
+      if Levels.mem (d - i) copied then copied_reads := occurrence :: !copied_reads
     | MLmagic (_, t) -> own owned d t
     (* A bind generated as sequencing binds its continuation's parameter to
        the action's value. *)
@@ -374,9 +467,10 @@ let ownership ~reads ~arms ~owned t =
     | MLcons (_, _, args) | MLtuple args -> all args
     | MLparray (elems, default) -> all (default :: Array.to_list elems)
     (* A closure's body is a region of its own. *)
-    | MLlam _ ->
-      List.iter (fun (l, o) -> captured := (o, Levels.mem l owned) :: !captured) (closure_reads d t)
-    | MLfix _ -> ()
+    | MLlam _ | MLfix _ ->
+      List.iter
+        (fun (l, o) -> captured := (o, Levels.mem l owned || Levels.mem l copied) :: !captured)
+        (closure_reads d t)
     | MLletin (x, ty, a, b, _) ->
       own owned d a;
       (* What a local fixpoint closes over, it reads by reference. *)
@@ -388,18 +482,20 @@ let ownership ~reads ~arms ~owned t =
       own owned d scrut;
       Array.iteri
         (fun k ((ids, _, _, body) as branch) ->
-          own (branch_owned owned d ty scrut branches k branch) (d + List.length ids) body )
+          own (branch_owned owned d t ty scrut branches k branch) (d + List.length ids) body )
         branches
     | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> ()
   and owned_var owned d i _ = Levels.mem (d - i) owned
   and let_owned owned d x ty a =
     match (x, a) with
-    | Dummy, _ | _, (MLfix _ | MLlam _) -> false
+    | Dummy, _ -> false
+    (* A closure bound to a local is a value like any other. *)
+    | _, (MLfix _ | MLlam _) -> closure_local ~n_outer ty a
     | _ ->
       (not (Ml_type_util.ml_type_is_unit ty))
       && worth_moving ty
       && not (Binding.projects_in_place ~owned:(owned_var owned d) ~fate:(fate_in reads) ty a)
-  and branch_owned owned d ty scrut branches k (ids, _, pat, body) =
+  and branch_owned owned d case ty scrut branches k (ids, _, pat, body) =
     let n = List.length ids in
     let fields p =
       Levels.of_list (List.filteri (fun i _ -> p i (List.nth ids i)) (List.init n (fun i -> d + i)))
@@ -411,7 +507,12 @@ let ownership ~reads ~arms ~owned t =
     in
     let ind = matched_inductive branches in
     match scrutinee_var scrut with
-    | Some (i, o) when List.exists (fun a -> a.branch = k && Occurrence.equal a.scrutinee o) arms ->
+    | Some (i, o)
+      when List.exists
+             (function
+               | Rebuild a -> a.branch = k && Occurrence.equal a.scrutinee o
+               | Fields _ -> false )
+             arms ->
       (* Rebuilding in the scrutinee's storage moves every field out of it. *)
       Levels.union (Levels.remove (d - i) owned) (fields (fun _ _ -> true))
     | _ ->
@@ -419,7 +520,11 @@ let ownership ~reads ~arms ~owned t =
         if Binding.pair_by_value ~owned:(owned_var owned d) scrut branches then
           Levels.union owned (fields (fun _ (_, ty) -> worth_moving ty))
         else owned
-      else if Table.record_fields_of_type ty <> [] && Array.length branches = 1 then owned
+      else if Table.record_fields_of_type ty <> [] && Array.length branches = 1 then
+        match List.find_map (function Fields f when f.case == case -> Some f.by_value | _ -> None) arms with
+        | Some by_value ->
+          Levels.union owned (fields (fun i (_, ty) -> List.nth_opt by_value i = Some true && worth_moving ty))
+        | None -> owned
       else
         match (pat, ind) with
         | (Pusual r | Pcons (r, _)), Some ind
@@ -440,18 +545,32 @@ let ownership ~reads ~arms ~owned t =
         | _ -> owned
   in
   own owned 0 t;
-  (!out, !captured)
+  (!out, !captured, !copied_reads)
 
-let plan root root_owned arms (reads, captures) =
-  let owned, captured_owned = ownership ~reads ~arms ~owned:root_owned root in
-  {root; root_owned; arms; reads; owned; captures; captured_owned}
+let plan ~n_outer root root_owned root_copied arms (reads, captures) =
+  let owned, captured_owned, copied_reads =
+    ownership ~n_outer ~reads ~arms ~owned:root_owned ~copied:root_copied root
+  in
+  {root; n_outer; root_owned; root_copied; arms; reads; owned; captures; captured_owned; copied_reads}
 
-let region ?(owned = []) t = plan t (Levels.of_list (List.map (fun i -> -i) owned)) [] (liveness t)
+let region ?(owned = []) ?(copied = []) ~n_outer t =
+  let levels is = Levels.of_list (List.map (fun i -> -i) is) in
+  plan ~n_outer t (levels owned) (levels copied) [] (liveness ~n_outer ~copied:(levels copied) t)
 
 let reuse_arm p ~scrutinee ~branch =
   match scrutinee_var scrutinee with
-  | Some (_, scrutinee) -> plan p.root p.root_owned ({scrutinee; branch} :: p.arms) (p.reads, p.captures)
+  | Some (_, scrutinee) ->
+    plan ~n_outer:p.n_outer p.root p.root_owned p.root_copied (Rebuild {scrutinee; branch} :: p.arms)
+      (p.reads, p.captures)
   | None -> p
+
+let fields_by_value p ~case ~by_value =
+  if p == empty then p
+  else
+    plan ~n_outer:p.n_outer p.root p.root_owned p.root_copied (Fields {case; by_value} :: p.arms)
+      (p.reads, p.captures)
+
+let closure_local p ty a = if p == empty then None else Some (closure_local ~n_outer:p.n_outer ty a)
 
 let owned_at p o =
   match List.filter (fun (o', _) -> Occurrence.equal o o') p.owned with
@@ -464,9 +583,10 @@ module Use = struct
   type t = Move | Copy | Borrow
 end
 
-let use p o : Use.t =
-  match fate p o with
+let use ?(whole = false) p o : Use.t =
+  match fate ~whole p o with
   | Last_use when owned p 0 o -> Move
+  | Inspected when whole && owned p 0 o -> Move
   | Inspected -> Borrow
   | Last_use | Read_again | Unplanned -> Copy
 
@@ -476,14 +596,26 @@ let pair_by_value p = Binding.pair_by_value ~owned:(owned p)
 
 let projects_in_place p = Binding.projects_in_place ~owned:(owned p) ~fate:(fate p)
 
+(* Whether a closure made around the read [o] -- one Core does not contain,
+   or an eta closure around an argument -- takes its variable by move: the
+   read takes the whole value, and the variable, or the copy closures take
+   of it, is owned. *)
+let taken_by_closure p o =
+  ( match fate ~whole:true p o with Last_use | Inspected -> true | Read_again | Unplanned -> false )
+  && (owned p 0 o || List.exists (Occurrence.equal o) p.copied_reads)
+
 let moved_captures p closure =
   let every l o = match List.filter (fun (o', _) -> Occurrence.equal o o') l with
     | [] -> false
     | copies -> List.for_all snd copies
   in
+  (* A read the region makes outside any closure, inside one translation
+     made around it -- a partial application eta-expanded -- is taken where
+     that closure is made, which is where the read stood. *)
   let moves o =
-    fate_in p.captures o = Last_use
-    && every p.captured_owned o
+    match fate_in p.captures o with
+    | Unplanned -> taken_by_closure p o
+    | fate -> fate = Last_use && every p.captured_owned o
   in
   let reads = closure_reads 0 closure in
   List.sort_uniq Int.compare
@@ -491,3 +623,13 @@ let moved_captures p closure =
        (fun (l, _) ->
          if List.for_all (fun (l', o) -> l' <> l || moves o) reads then Some (-l) else None )
        reads )
+
+let moved_reads p ts =
+  let rec go acc = function
+    | MLrel (i, o) -> if taken_by_closure p o then i :: acc else acc
+    | MLmagic (_, t) -> go acc t
+    | MLapp (f, args) -> List.fold_left go acc (f :: args)
+    | MLcons (_, _, args) | MLtuple args -> List.fold_left go acc args
+    | _ -> acc
+  in
+  List.sort_uniq Int.compare (List.fold_left go [] ts)

@@ -194,6 +194,12 @@ val void_binder : Miniml.ml_type -> bool
 (** Whether a MiniML type is unit. *)
 val ml_type_is_unit : Miniml.ml_type -> bool
 
+(** [own_type_variables ~n_outer tys] -- whether a local definition whose
+    types are [tys], lowered under a head of [n_outer] type variables, has a
+    variable of its own: one past the head's.  Such a definition is lifted
+    to a function template, or inlined, rather than bound to a local. *)
+val own_type_variables : n_outer:int -> Miniml.ml_type list -> bool
+
 (** Whether a C++ type is the unit type. *)
 val is_cpp_unit_type : Minicpp.cpp_type -> bool
 

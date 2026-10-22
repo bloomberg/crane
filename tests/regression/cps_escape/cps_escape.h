@@ -260,7 +260,8 @@ struct CpsEscape {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      crane::fn<uint64_t(uint64_t)> adder = [=](uint64_t _x0) -> uint64_t {
+      crane::fn<uint64_t(uint64_t)> adder =
+          [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
         return t.make_adder(_x0);
       };
       box b = store_in_box(std::move(adder));
@@ -275,8 +276,9 @@ struct CpsEscape {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      box b = store_in_box(
-          [=](uint64_t _x0) -> uint64_t { return t.make_adder(_x0); });
+      box b = store_in_box([=, t = std::move(t)](uint64_t _x0) -> uint64_t {
+        return t.make_adder(_x0);
+      });
       auto &[a0] = b;
       return a0(UINT64_C(5));
     }();
@@ -289,10 +291,12 @@ struct CpsEscape {
           tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(20),
           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
       tree t2 = tree::node(tree::leaf(), UINT64_C(100), tree::leaf());
-      box b1 = store_in_box(
-          [=](uint64_t _x0) -> uint64_t { return t1.make_adder(_x0); });
-      box b2 = store_in_box(
-          [=](uint64_t _x0) -> uint64_t { return t2.make_adder(_x0); });
+      box b1 = store_in_box([=, t1 = std::move(t1)](uint64_t _x0) -> uint64_t {
+        return t1.make_adder(_x0);
+      });
+      box b2 = store_in_box([=, t2 = std::move(t2)](uint64_t _x0) -> uint64_t {
+        return t2.make_adder(_x0);
+      });
       auto &[a0] = b1;
       auto &[a00] = b2;
       return (a0(UINT64_C(0)) + a00(UINT64_C(0)));

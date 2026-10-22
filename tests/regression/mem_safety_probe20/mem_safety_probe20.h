@@ -296,7 +296,7 @@ struct MemSafetyProbe20 {
   static inline const uint64_t test_pair_if = []() {
     std::pair<wrapped, uint64_t> p = pair_from_if(
         tree::node(tree::leaf(), UINT64_C(15), tree::leaf()), true);
-    wrapped w = p.first;
+    wrapped w = std::move(p).first;
     uint64_t v = std::move(p).second;
     return w.unwrap(v);
   }();

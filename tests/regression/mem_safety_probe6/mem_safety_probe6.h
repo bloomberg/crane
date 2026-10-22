@@ -515,7 +515,7 @@ struct MemSafetyProbe6 {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      crane::fn<tree(bool)> sel = [=](bool _x0) -> tree {
+      crane::fn<tree(bool)> sel = [=, t = std::move(t)](bool _x0) -> tree {
         return t.both_subtrees(UINT64_C(0), _x0);
       };
       return (sel(true).tree_sum() + sel(false).tree_sum());

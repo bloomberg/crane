@@ -122,7 +122,7 @@ struct InlinePolymorphicFunctionAsElement {
     return List<crane::fn<uint64_t(uint64_t)>>::cons(
         []() {
           crane::fn<uint64_t(uint64_t)> f = [](uint64_t x) { return (x + 1); };
-          return [=](uint64_t x) { return f(f(x)); };
+          return [=, f = std::move(f)](uint64_t x) { return f(f(x)); };
         }(),
         List<crane::fn<uint64_t(uint64_t)>>::nil());
   }();

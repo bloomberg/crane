@@ -255,7 +255,7 @@ struct SigArgMatch {
                 const auto &[x] = p;
                 return x;
               }()
-                         .add(acc);
+                         .add(std::move(acc));
             },
             Nat::o())
         .add(addp(one, one));

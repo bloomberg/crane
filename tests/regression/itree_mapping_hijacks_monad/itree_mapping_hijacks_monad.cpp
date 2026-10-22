@@ -2,8 +2,9 @@
 
 Err<Nat> twice(const Err<Nat> &x) {
   return Monad_Err::template bind<Nat, Nat>(x, [=](const Nat &a) {
-    return Monad_Err::template bind<Nat, Nat>(
-        x, [=](Nat b) { return Monad_Err::template ret<Nat>(a.add(b)); });
+    return Monad_Err::template bind<Nat, Nat>(x, [=](Nat b) {
+      return Monad_Err::template ret<Nat>(a.add(std::move(b)));
+    });
   });
 }
 

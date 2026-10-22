@@ -13,7 +13,7 @@ EOUP<List<Nat>> MemoryBytes::bump_all(const List<Nat> &bs) {
   return MemoryBytes::template map_monad<EOUP_Monad, Nat, Nat>(
       [](Nat b) {
         return EOUP_Monad::template ret<Nat>(
-            MemoryBytes::helper0(b).add(Nat::s(Nat::o())));
+            MemoryBytes::helper0(std::move(b)).add(Nat::s(Nat::o())));
       },
       bs);
 }

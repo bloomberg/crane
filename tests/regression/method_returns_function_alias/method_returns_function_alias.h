@@ -246,7 +246,7 @@ struct MethodReturnsFunctionAlias {
 
       pred<Nat> is_leaf() const {
         tree _self_val = *this;
-        return [=](Nat) -> bool {
+        return [=, _self_val = std::move(_self_val)](Nat) -> bool {
           if (std::holds_alternative<typename tree::Leaf>(_self_val.v())) {
             return true;
           } else {

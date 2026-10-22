@@ -421,14 +421,15 @@ struct PatternBinderStateBoxed {
           Monads::template stateT<Nat, crane_carrier_tc_73ef07e9f18b86f9, T1>>
               f) {
     return [=, f = std::move(f)](FusedS<typename _tcI0::ptr> pat) {
-      const auto &[m, p] = pat;
-      const auto &[ls, g] = p;
+      auto [m, p] = std::move(pat);
+      auto [ls, g] = std::move(p);
       return ITree::template bind<
           noE, std::pair<Nat, T1>,
           std::pair<
               std::pair<St<typename _tcI0::ptr>, std::pair<List<Nat>, Nat>>,
-              T1>>(f(g), [=](std::pair<Nat, T1> x_) {
-        const auto &[g_, r] = x_;
+              T1>>(f(std::move(g)), [=, ls = std::move(ls),
+                                     m = std::move(m)](std::pair<Nat, T1> x_) {
+        auto [g_, r] = std::move(x_);
         return Itree<noE, std::pair<std::pair<St<typename _tcI0::ptr>,
                                               std::pair<List<Nat>, Nat>>,
                                     T1>>::
@@ -440,7 +441,8 @@ struct PatternBinderStateBoxed {
                                                      std::pair<List<Nat>, Nat>>,
                                            T1>>>::
                    retf(std::make_pair(
-                       std::make_pair(m, std::make_pair(ls, g_)), r)));
+                       std::make_pair(m, std::make_pair(ls, std::move(g_))),
+                       std::move(r))));
       });
     };
   }

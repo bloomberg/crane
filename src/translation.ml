@@ -81,7 +81,12 @@ let local_fixpoint ~name ~selves (binder, member, params) =
     @return [(decls, defs, deref_subst)] where [defs] is empty and
     [deref_subst] is the identity function (no dereferencing needed).
     @see gen_local_fix_by_ref for the non-escaping alternative. *)
-let gen_local_fix_ycomb env ~binders renamed_ids funs_with_params =
+(* A local fixpoint's wrapper parameter, of ML type [ty], forwarded to the
+   impl: its one read, a move where the wrapper takes it by value. *)
+let forwarded ~by_value ty v =
+  if by_value && Ownership_plan.worth_moving ty && not (ml_type_is_unit ty) then CPPmove v else v
+
+let gen_local_fix_ycomb env ~binders ~moved renamed_ids funs_with_params =
   let ret_ty ty =
     match cpp_of_ml env ty with
     | Tfun (_, t) ->
@@ -128,6 +133,30 @@ let gen_local_fix_ycomb env ~binders renamed_ids funs_with_params =
       (List.combine (List.combine renamed_ids impl_ids) binders)
       funs_with_params
   in
+  (* Each variable the group takes by move goes to the last impl that
+     captures it; the impls before it still copy it. *)
+  let impl_stmts =
+    let captures = function
+      | Sasgn (_, _, (CPPlambda _ as l)) -> free_vars_expr l
+      | _ -> []
+    in
+    let rec give = function
+      | [] -> []
+      | s :: rest ->
+        let taken_later = List.concat_map captures rest in
+        let ts =
+          List.filter (fun x -> List.mem x (captures s) && not (List.mem x taken_later)) moved
+        in
+        let s =
+          match s with
+          | Sasgn (id, d, CPPlambda l) when ts <> [] ->
+            Sasgn (id, d, CPPlambda {l with cl_moved = List.sort Id.compare ts})
+          | _ -> s
+        in
+        s :: give rest
+    in
+    give impl_stmts
+  in
   (* Generate wrapper lambdas: forward to impl with all impl_ids prepended. *)
   let impl_vars_rev = List.rev_map (fun id -> CPPvar id) impl_ids in
   let wrapper_stmts =
@@ -139,8 +168,9 @@ let gen_local_fix_ycomb env ~binders renamed_ids funs_with_params =
               (cpp_of_ml env ty, Some id))
             args
         in
+        (* The wrapper reads each parameter once, to forward it. *)
         let fwd_args =
-          List.map (fun (id, _) -> CPPvar id) args @ impl_vars_rev
+          List.map (fun (id, ty) -> forwarded ~by_value:true ty (CPPvar id)) args @ impl_vars_rev
         in
         let rty = ret_ty fty in
         let call = CPPfun_call (call_opaque, CPPvar impl_id, of_reversed fwd_args) in
@@ -162,6 +192,14 @@ let gen_local_fix_ycomb env ~binders renamed_ids funs_with_params =
                 cl_capture = Closure } ))
       (List.combine (List.combine renamed_ids impl_ids) binders)
       funs_with_params
+  in
+  (* The wrappers are the impls' only readers, and each captures them all:
+     the last one made takes them. *)
+  let wrapper_stmts =
+    match List.rev wrapper_stmts with
+    | Sasgn (id, d, CPPlambda l) :: rest ->
+      List.rev (Sasgn (id, d, CPPlambda {l with cl_moved = List.sort Id.compare impl_ids}) :: rest)
+    | _ -> wrapper_stmts
   in
   let deref_subst stmts = stmts in
   (impl_stmts @ wrapper_stmts, [], deref_subst)
@@ -254,7 +292,11 @@ let gen_local_fix_by_ref env ~binders renamed_ids funs_with_params owned_flags_p
             args owned_flags
         in
         let fwd_args =
-          List.map (fun (id, _) -> CPPvar id) args @ impl_vars_rev
+          List.map2
+            (fun (id, ty) (param_ty, _) ->
+              forwarded ~by_value:(not (declared_by_reference param_ty)) ty (CPPvar id) )
+            args orig_params
+          @ impl_vars_rev
         in
         let rty = ret_ty fty in
         let call = CPPfun_call (call_opaque, CPPvar _impl_id, of_reversed fwd_args) in
@@ -279,6 +321,37 @@ let gen_local_fix_by_ref env ~binders renamed_ids funs_with_params owned_flags_p
   in
   (impl_stmts @ wrapper_stmts, [])
 
+
+(* The names of the variables at the de Bruijn indices [is] a closure
+   captures, in the order a capture list spells them; a class instance is a
+   template parameter, not a value it captures. *)
+let capture_names env is =
+  List.sort_uniq Id.compare
+    (List.filter
+       (fun id -> not (Common.is_tc_instance_id id))
+       (List.filter_map (fun i -> Common.get_db_name_opt i env) is) )
+
+(* What the closures a local fixpoint [fix] is generated as take by move
+   where they are made. *)
+let fix_moved_captures env fix =
+  capture_names env (Ownership_plan.moved_captures (!tctx).move_plan fix)
+
+(* Whether a record's fields are moved out of what [base] reads it from. *)
+let moved_out base = match base with CPPmove _ -> true | _ -> false
+
+(* Under [CRANE_CHECK_IR], the region's plan must have decided as translation
+   does whether [let _ : ty := a] binds the closure [a] to a local, which the
+   plan owns and moves. *)
+let check_closure_local ty a ~local =
+  if Probe.checking () then
+    match Ownership_plan.closure_local (!tctx).move_plan ty a with
+    | Some planned when planned <> local ->
+      Probe.violation "ownership plan"
+        (Pp.str
+           (Printf.sprintf "a let-bound closure the plan takes for %s is generated as %s"
+              (if planned then "a local" else "no local")
+              (if local then "a local" else "no local") ) )
+    | _ -> ()
 
 (* Whether [e] is a closed constructor term of a shared variant with fields:
    built from constructors, literals and erased arguments only, so its value
@@ -1294,7 +1367,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       with Failure _ -> CPPvar (db_fallback_id i)
     in
     (* Move on a last use of a variable the region owns, as its plan says
-       ({!Ownership_plan.use}).  Never move a typeclass instance -- it is a type reference in the concept
+       ({!Ownership_plan.use}); a boxed variable is unboxed whole, whatever
+       component of it Core reads.  Never move a typeclass instance -- it is a type reference in the concept
        paradigm, not an owned value, and wrapping it produces invalid C++ like
        [std::move(_tcI0)::method()].  Recognised by identity rather than by ML
        type: this binder is synthesised by {!Common.tc_instance_id}, and inside
@@ -1304,7 +1378,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       match var_expr with CPPvar id -> Common.is_tc_instance_id id | _ -> false
     in
     let move_candidate =
-      (not is_tc_param) && Ownership_plan.use (!tctx).move_plan occ = Move
+      (not is_tc_param) && Ownership_plan.use ~whole:(binder_is_boxed i) (!tctx).move_plan occ = Move
     in
     let result = if move_candidate then CPPmove var_expr else var_expr in
     if binder_is_boxed i then begin
@@ -1368,8 +1442,12 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             (binder_cpp_type_or_derive env i) )
       with
       | Some (Tfun ((_ :: _ as exp_dom), _)), Some (Tfun (dom, _))
-        when List.length dom > List.length exp_dom ->
-        curry_value_to_expected env ?expected_ty (get_env_type_opt i) var_expr
+        when List.length dom > List.length exp_dom -> (
+        (* The closure reads the function where it is made, and takes it
+           there where this read moves it. *)
+        match (curry_value_to_expected env ?expected_ty (get_env_type_opt i) var_expr, var_expr) with
+        | CPPlambda l, CPPvar x when move_candidate -> CPPlambda {l with cl_moved = [x]}
+        | e, _ -> e )
       | _ -> result )
   (* A singleton class's dictionary applied, which is the body of the class's
      projection: the method, called on the instance -- a template parameter,
@@ -1598,15 +1676,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     | MLrel (_, occ), (CPPfun_call (_, CPPvar _, _) as call) -> made_of occ call
     | _, result -> result )
   | MLlam _ as a ->
-    (* What the lambda takes by move as it is made; a class instance is a
-       template parameter, not a value it captures. *)
-    let moved_captures =
-      List.filter
-        (fun id -> not (Common.is_tc_instance_id id))
-        (List.filter_map
-           (fun i -> Common.get_db_name_opt i env)
-           (Ownership_plan.moved_captures (!tctx).move_plan a) )
-    in
+    (* What the lambda takes by move as it is made. *)
+    let moved_captures = capture_names env (Ownership_plan.moved_captures (!tctx).move_plan a) in
     (* Where the slot is a definitional class -- an alias for a function
        type -- which of its domains the declaration takes as values.  Read
        off the alias's own definition, before this call instantiated it:
@@ -2231,6 +2302,21 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               (ty, if List.exists (( == ) orig) arity_only then None else id) )
             cpp_arg_info filtered_args_with_owned
         in
+        (* The body owns the parameters the lambda declares by value, as a
+           function's does. *)
+        let lambda_owned =
+          let declared i =
+            let rec position j = function
+              | [] -> None
+              | i' :: rest -> if i' = i then Some j else position (j + 1) rest
+            in
+            Option.map (fun j -> let ty, _, _ = List.nth cpp_arg_info j in ty)
+              (position 0 emitted_binder_indices)
+          in
+          owned_parameters (List.length args_with_owned)
+            ~owned:(fun i -> match declared i with Some ty -> not (declared_by_reference ty) | None -> false)
+            ~ty:(fun i -> let _, ty, _ = List.nth args_with_owned i in ty)
+        in
         (* A template parameter C++ cannot deduce is worse than the erasure
            it replaces, so the function object is polymorphic only where the
            carrier reaches a parameter: an erased position the body alone
@@ -2370,7 +2456,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            | Some _ -> with_rank2_carrier carrier)
             (fun () ->
               with_lam_return_type (fun () ->
-                with_region a (fun () ->
+                with_region ~owned:lambda_owned a (fun () ->
                   gen_stmts
                     ~slot:{slot with expected_ml_ty = body_expected_ml_ty}
                     env
@@ -3486,7 +3572,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             if
               suspends_constructor ~self:(!tctx).body_owner ~binder_type:get_env_type_opt n ts
             then
-              suspend_ctor type_expr (Id.of_string ctor_struct) (of_reversed args)
+              (* The arguments are read where the thunk is made, and taken
+                 by move there when the plan moves them. *)
+              let moved = capture_names env (Ownership_plan.moved_reads (!tctx).move_plan ts) in
+              suspend_ctor ~moved type_expr (Id.of_string ctor_struct) (of_reversed args)
             else
               CPPfun_call
                 ( ctor_sig ~constructs:r args,
@@ -4966,15 +5055,16 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       (* renamed_ids is in reversed order (from List.rev_map above). Reverse it
          back so it aligns with ids (constructor / field order). *)
       let renamed_ids_fwd = List.rev renamed_ids in
+      let base, cache = record_read_once env ~is_typeclass t in
       let asgns =
-        List.concat_map
+        List.map
           (fun (i, ((renamed_name, _), (_, ty))) ->
             let fld =
               try Some (List.nth non_erased_fields i) with _ -> None
             in
             let e =
               match fld with
-              | Some fld -> make_field_access (gen_expr env t) fld
+              | Some fld -> make_field_access base fld
               | _ -> CErrors.anomaly (Pp.str "record field index out of bounds")
             in
             let e =
@@ -4994,16 +5084,20 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             let decl_ty =
               convert_ml_type_to_cpp_type env [] ty
             in
-            match lift_iife_assignment renamed_name (Some decl_ty) e with
-            | Some stmts -> stmts
-            | None -> [Sasgn (renamed_name, Declare (decl_ty, None), e)])
+            let stmts =
+              match lift_iife_assignment renamed_name (Some decl_ty) e with
+              | Some stmts -> stmts
+              | None -> [Sasgn (renamed_name, Declare (decl_ty, None), e)]
+            in
+            (stmts, moved_out base) )
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
       in
       mk_iife None
-        (asgns
+        (cache @ List.concat_map fst asgns
          @ with_binders env renamed_ids (fun () ->
                with_iife_return_type expected_ty (fun () ->
-                   gen_stmts ~slot env' (fun x -> Sreturn (Some x)) body))) )
+                   with_fields_plan ml_e asgns (fun () ->
+                       gen_stmts ~slot env' (fun x -> Sreturn (Some x)) body ) ) ) ) )
     (* Known limitation: simultaneous pattern matching on record fields is not
        supported — each field is destructured individually. *)
   | MLcase (typ, t, pv) when lang () == Cpp ->
@@ -5967,6 +6061,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
   ) regular_ml_args
 
 and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
+  let ml_args = args in
 
   let rec get_eta_args dom args =
     match (dom, args) with
@@ -6724,9 +6819,16 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                      (mk_lambda ~tparams:eta_tparams inner ret_ty body
                         ~capture:Closure ) ) ]
               ~capture:Closure
-          | _ ->
-            mk_lambda ~tparams:eta_tparams eta_args ret_ty body
-              ~capture:(if eta_keep_moves then Immediate else Closure) )
+          | _ when eta_keep_moves ->
+            mk_lambda ~tparams:eta_tparams eta_args ret_ty body ~capture:Immediate
+          | _ -> (
+            (* The arguments are read where the closure is made, and taken
+               by move there when the plan moves them. *)
+            match mk_lambda ~tparams:eta_tparams eta_args ret_ty body ~capture:Closure with
+            | CPPlambda l ->
+              CPPlambda
+                {l with cl_moved = capture_names env (Ownership_plan.moved_reads (!tctx).move_plan ml_args)}
+            | e -> e ) )
       | _ ->
         if id_is_typeclass_instance && args = [] then
           cglob
@@ -7172,9 +7274,17 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         in
         let pa_exprs = List.map (fun (_, id_opt) ->
           CPPvar (Option.get id_opt)) pa_params in
-        mk_lambda pa_params None
-          [Sreturn (Some (mk_call callee (args @ pa_exprs)))]
-          ~capture:Closure
+        (* What the call reads, the function included, is read where the
+           closure is made, and taken by move there when the plan moves it. *)
+        ( match
+            mk_lambda pa_params None
+              [Sreturn (Some (mk_call callee (args @ pa_exprs)))]
+              ~capture:Closure
+          with
+          | CPPlambda l ->
+            CPPlambda
+              {l with cl_moved = capture_names env (Ownership_plan.moved_reads (!tctx).move_plan (f :: ml_args))}
+          | e -> e )
       else
         mk_call (gen_callee ()) args
     else if n_args > n_value_dom && n_value_dom > 0 then
@@ -8852,6 +8962,31 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
 (** Generate C++ statements from an ML AST. The continuation [k] transforms the
     final expression into a statement (e.g., return, assignment). Handles
     let-bindings, pattern matching, fix expressions, and monadic operations. *)
+(* The record [t] a match takes apart into its fields, read once however many
+   fields are bound out of it: a call standing in its place is evaluated into
+   a temporary first, rather than once per field -- which a recursive call
+   taken apart into three fields made three calls per level.  The temporary
+   is read for nothing else, so each field is moved out of it.  Returns what
+   the fields are read out of, and the statements evaluating it. *)
+(* Runs [f], which generates the body of [case], a match taking a record
+   apart into the fields [asgns] declares, under the plan in which each field
+   moved out of the record into a local of its own is the body's.  A field
+   copied out of a record still held is not: it may be read in place. *)
+and with_fields_plan case asgns f =
+  with_plan (Ownership_plan.fields_by_value (!tctx).move_plan ~case ~by_value:(List.map snd asgns)) f
+
+and record_read_once env ~is_typeclass t =
+  let scrut = gen_expr env t in
+  if is_typeclass || is_trivial_scrut scrut then (scrut, [])
+  else
+    let n = (!tctx).cs_counter in
+    tctx := { !tctx with cs_counter = n + 1 };
+    let cache_id = Common.scrutinee_cache_id n in
+    ( CPPmove (CPPvar cache_id),
+      match lift_iife_assignment cache_id None scrut with
+      | Some stmts -> stmts
+      | None -> [Sasgn (cache_id, Declare (Tauto, None), scrut)] )
+
 and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
   (* Statements open a position of their own and state no type for it: the
      value a [return] here carries goes to the enclosing function, not to the
@@ -8859,7 +8994,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
      statement lands in is {!with_cpp_return_type}, which
      {!position_cpp_ty} falls back to. *)
   match ast with
-  | MLletin (_, _, (MLfix (x, ids, funs, _, occ) as fix_term), b, _) as _whole ->
+  | MLletin (_, let_ty, (MLfix (x, ids, funs, _, occ) as fix_term), b, _) as _whole ->
     (* Special case for let-fix: the let binding name is the fix function name *)
     Local_types.check_minted ids;
     let ids, funs = Local_types.recover_fix_codomains ids funs in
@@ -8870,8 +9005,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     let fix_tvar_indices = List.sort Int.compare fix_tvar_indices in
     let outer_tvars = get_current_type_vars () in
     let n_outer = List.length outer_tvars in
-    (* Check if fixpoint introduces Tvars beyond the outer scope *)
-    let has_extra_tvars = List.exists (fun i -> i > n_outer) fix_tvar_indices in
+    let has_extra_tvars = Ml_type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) in
+    check_closure_local let_ty fix_term ~local:(not has_extra_tvars);
     if has_extra_tvars then (
       (* Lift the polymorphic inner fixpoint to a top-level function. Build tvar
          names for all Tvars used in the fixpoint type: - Tvars 1..n_outer reuse
@@ -9050,7 +9185,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       in
       if any_escapes then
         let decls, defs, deref_subst =
-          gen_local_fix_ycomb env ~binders:(local_fix_binders occ ids funs_compiled) renamed_ids funs_with_params
+          gen_local_fix_ycomb env ~binders:(local_fix_binders occ ids funs_compiled)
+            ~moved:(fix_moved_captures env fix_term)
+            renamed_ids funs_with_params
         in
         decls @ defs @ deref_subst cont
       else
@@ -9193,7 +9330,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           :: asgn
           @ gen_cont ()
     in
-    (match let_lambda ~lex:(current_lexenv ()) ~n_outer t a b with
+    let decision = let_lambda ~lex:(current_lexenv ()) ~n_outer t a b in
+    check_closure_local t a ~local:(match decision with Bound -> true | _ -> false);
+    (match decision with
     | Bound -> gen_normal_letin ()
     | At_instance inst ->
       let subst = Mlutil.type_subst_list inst in
@@ -9790,7 +9929,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             @ gen_stmts ~slot env' k b
       in
       result
-  | MLapp (MLfix (x, ids, funs, _, occ), args) ->
+  | MLapp ((MLfix (x, ids, funs, _, occ) as fix_term), args) ->
     Local_types.check_minted ids;
     let ids, funs = Local_types.recover_fix_codomains ids funs in
     (* Collect Tvars from bodies too *)
@@ -9803,8 +9942,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     let fix_tvar_indices = List.sort Int.compare fix_tvar_indices in
     let outer_tvars = get_current_type_vars () in
     let n_outer = List.length outer_tvars in
-    (* Check if fixpoint introduces Tvars beyond the outer scope *)
-    let has_extra_tvars = List.exists (fun i -> i > n_outer) fix_tvar_indices in
+    let has_extra_tvars = Ml_type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) in
     if has_extra_tvars then (
       (* Lift the polymorphic inner fixpoint to a top-level function *)
       let all_tvar_names = build_tvar_names ~outer_tvars fix_tvar_indices in
@@ -9912,7 +10050,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
            Use Y-combinator pattern so the fixpoint body doesn't capture
            a stack-local std::function by reference. *)
         let decls, defs, deref_subst =
-          gen_local_fix_ycomb env ~binders:(local_fix_binders occ ids funs_compiled) renamed_ids funs_with_params
+          gen_local_fix_ycomb env ~binders:(local_fix_binders occ ids funs_compiled)
+            ~moved:(fix_moved_captures env fix_term)
+            renamed_ids funs_with_params
         in
         let remaining_params =
           (* [fix_params] is in de Bruijn order -- last parameter first -- so
@@ -9939,7 +10079,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         @ deref_subst [k (mk_lambda pa_params None [Sreturn (Some full_call)] ~capture:Closure)]
       end else if fix_escapes_in_own_bodies renamed_ids funs_with_params then
         let decls, defs, deref_subst =
-          gen_local_fix_ycomb env ~binders:(local_fix_binders occ ids funs_compiled) renamed_ids funs_with_params
+          gen_local_fix_ycomb env ~binders:(local_fix_binders occ ids funs_compiled)
+            ~moved:(fix_moved_captures env fix_term)
+            renamed_ids funs_with_params
         in
         decls @ defs
         @ deref_subst
@@ -9968,7 +10110,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         decls @ defs
         @ [k (made_of occ (CPPfun_call (call_opaque, CPPvar (fst (List.nth renamed_ids x)), of_reversed args)))]
       end
-  | MLfix (x, ids, funs, _, occ) ->
+  | MLfix (x, ids, funs, _, occ) as fix_term ->
     (* Standalone fixpoint (not immediately applied) — e.g., appearing as the
        RHS of a let-binding.  Since the fixpoint value itself is returned (not
        called in place), it will always escape.  Use the Y-combinator pattern:
@@ -9990,7 +10132,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       List.map (fun (_, params, body, _) -> (params, body)) funs_compiled
     in
     let decls, defs, _deref_subst =
-      gen_local_fix_ycomb env ~binders:(local_fix_binders occ ids funs_compiled) renamed_ids funs_with_params
+      gen_local_fix_ycomb env ~binders:(local_fix_binders occ ids funs_compiled)
+            ~moved:(fix_moved_captures env fix_term)
+            renamed_ids funs_with_params
     in
     let fix_id = fst (List.nth renamed_ids x) in
     decls @ defs @ [k (CPPvar fix_id)]
@@ -10094,14 +10238,16 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             if cpp_ty = Tvoid || cpp_ty = Tunresolved || ml_type_is_unit ty then
               None
             else
-              Some cpp_ty
+              Some (cpp_ty, Ownership_plan.worth_moving ty)
           | None -> None
         in
         ( match non_void_ty with
-        | Some cpp_ty ->
+        | Some (cpp_ty, worth_moving) ->
           let temp_id = Id.of_string "_bind_result" in
           let f_expr = gen_expr env f in
-          let app = mk_call f_expr [CPPvar temp_id] in
+          (* The continuation is the temporary's one reader. *)
+          let result = if worth_moving then CPPmove (CPPvar temp_id) else CPPvar temp_id in
+          let app = mk_call f_expr [result] in
           [Sasgn (temp_id, Declare (cpp_ty, None), a); k app]
         | None ->
           side_effect @ gen_stmts ~slot env k f ) ) )
@@ -10193,25 +10339,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       in
       let renamed_ids_fwd = List.rev renamed_ids in
       let tvars = get_current_type_vars () in
-      (* The record is read once, however many fields are bound out of it: a
-         call standing in its place is evaluated into a temporary first,
-         rather than once per field -- which a recursive call taken apart into
-         three fields made three calls per level.  The temporary is read for
-         nothing else, so each field is moved out of it. *)
-      let base, cache =
-        let scrut = gen_expr env t in
-        if is_typeclass || is_trivial_scrut scrut then (scrut, [])
-        else
-          let n = (!tctx).cs_counter in
-          tctx := { !tctx with cs_counter = n + 1 };
-          let cache_id = Common.scrutinee_cache_id n in
-          ( CPPmove (CPPvar cache_id),
-            match lift_iife_assignment cache_id None scrut with
-            | Some stmts -> stmts
-            | None -> [Sasgn (cache_id, Declare (Tauto, None), scrut)] )
-      in
+      let base, cache = record_read_once env ~is_typeclass t in
       let asgns =
-        List.concat_map
+        List.map
           (fun (i, ((renamed_name, _), (_, ty))) ->
             let fld =
               try Some (List.nth non_erased_fields i) with _ -> None
@@ -10245,13 +10375,19 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               else
                 api_ty_for_decl
             in
-            match lift_iife_assignment renamed_name (Some decl_ty) e with
-            | Some stmts -> stmts
-            | None -> [Sasgn (renamed_name, Declare (decl_ty, None), e)])
+            let stmts =
+              match lift_iife_assignment renamed_name (Some decl_ty) e with
+              | Some stmts -> stmts
+              | None -> [Sasgn (renamed_name, Declare (decl_ty, None), e)]
+            in
+            (stmts, moved_out base && match decl_ty with Tref _ -> false | _ -> true) )
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
       in
       push_binders env (retype_dependent_params typ renamed_ids);
-      cache @ asgns @ gen_stmts ~slot env' k body
+      let body_stmts =
+        with_fields_plan ast asgns (fun () -> gen_stmts ~slot env' k body)
+      in
+      cache @ List.concat_map fst asgns @ body_stmts
   | t ->
     (* Tail position.  No deref_reified needed: in sequential mode, monadic
        variables are direct values (bind desugars to let-binding); in

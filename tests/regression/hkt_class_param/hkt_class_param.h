@@ -237,7 +237,7 @@ struct HktClassParam {
   static typename _tcI0::template C<uint64_t> build(const List<uint64_t> &l) {
     return l.template fold_right<typename _tcI0::template C<uint64_t>>(
         [](uint64_t n, typename _tcI0::template C<uint64_t> acc) {
-          return _tcI0::template insert<uint64_t>(n, acc);
+          return _tcI0::template insert<uint64_t>(n, std::move(acc));
         },
         _tcI0::template empty<uint64_t>());
   }

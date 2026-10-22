@@ -404,8 +404,8 @@ std::optional<Dvalue<typename _tcI0::ptr>> to_dvalue(const List<Nat> &dbs,
       std::optional<Nat>, Nat, List<Dtyp>, List<Nat>)>
       list_to_dvalue = [](std::optional<Nat> pad, const Nat &x,
                           const List<Dtyp> &x0, const List<Nat> &x1) {
-        auto go_impl = [=](auto &_self_go, Nat offset, List<Dtyp> dts,
-                           List<Nat> dbs0)
+        auto go_impl = [=, pad = std::move(pad)](auto &_self_go, Nat offset,
+                                                 List<Dtyp> dts, List<Nat> dbs0)
             -> std::optional<List<Dvalue<typename _tcI0::ptr>>> {
           if (std::holds_alternative<typename List<Dtyp>::Nil>(dts.v())) {
             return Monad_option::template ret<
@@ -438,9 +438,11 @@ std::optional<Dvalue<typename _tcI0::ptr>> to_dvalue(const List<Nat> &dbs,
                 });
           }
         };
-        auto go = [=](Nat offset, List<Dtyp> dts, List<Nat> dbs0)
+        auto go = [=, go_impl = std::move(go_impl)](Nat offset, List<Dtyp> dts,
+                                                    List<Nat> dbs0)
             -> std::optional<List<Dvalue<typename _tcI0::ptr>>> {
-          return go_impl(go_impl, offset, dts, dbs0);
+          return go_impl(go_impl, std::move(offset), std::move(dts),
+                         std::move(dbs0));
         };
         return go(x, x0, x1);
       };

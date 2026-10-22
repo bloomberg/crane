@@ -401,7 +401,7 @@ struct TFunctor_texp {
   template <typename CraneA0, typename CraneA1>
   static texp<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, texp<CraneA0> p) {
     return std::make_pair(f(std::move(p).first),
-                          p.second.template exp_map<CraneA1>(f));
+                          std::move(p).second.template exp_map<CraneA1>(f));
   }
 };
 
@@ -477,9 +477,11 @@ struct TFunctor_instr {
           TFunctor_texp::template tfmap<CraneA0, CraneA1>(f, std::move(a0)),
           a1.template map<std::pair<texp<CraneA1>, Nat>>(
               [=](std::pair<std::pair<CraneA0, Exp<CraneA0>>, Nat> pat) {
-                const auto &[te, a] = pat;
+                auto [te, a] = std::move(pat);
                 return std::make_pair(
-                    TFunctor_texp::template tfmap<CraneA0, CraneA1>(f, te), a);
+                    TFunctor_texp::template tfmap<CraneA0, CraneA1>(
+                        f, std::move(te)),
+                    std::move(a));
               }));
     }
   }

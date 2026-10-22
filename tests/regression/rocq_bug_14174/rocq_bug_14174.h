@@ -164,13 +164,13 @@ template <typename A, typename B> struct Prod {
   static Prod<A, B> pair(A a0, B a1) { return {std::move(a0), std::move(a1)}; }
 
   A fst() const {
-    auto &[a0, a1] = *this;
-    return std::move(a0);
+    const auto &[a0, a1] = *this;
+    return a0;
   }
 
   B snd() const {
-    auto &[a0, a1] = *this;
-    return std::move(a1);
+    const auto &[a0, a1] = *this;
+    return a1;
   }
 };
 
@@ -880,7 +880,7 @@ struct RocqBug14174 {
         }
       };
       auto f = [=, f_impl = std::move(f_impl)](Nat n) -> T1 {
-        return f_impl(f_impl, n);
+        return f_impl(f_impl, std::move(n));
       };
       return sig<crane::fn<T1(Nat)>>::exist(std::move(f));
     }

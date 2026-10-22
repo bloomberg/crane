@@ -13260,3 +13260,14 @@
   (alias runtest)
   (deps record_destructure_once.t.exe)
   (action (run ./record_destructure_once.t.exe))))
+
+(subdir record_destructure_once_expr
+ (rule
+  (targets record_destructure_once_expr.t.exe)
+  (deps RecordDestructureOnceExpr.vo record_destructure_once_expr.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_destructure_once_expr.t.exe record_destructure_once_expr.cpp record_destructure_once_expr.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_destructure_once_expr.t.exe)
+  (action (run ./record_destructure_once_expr.t.exe))))

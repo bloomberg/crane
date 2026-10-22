@@ -656,9 +656,16 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
               cl_body = lbody;
               cl_capture = cap;
               cl_fixpoint = fixpoint;
+              cl_moved = moved;
               _ } )
       :: rest
       when Option.has_some (fixpoint_self fixpoint (to_reversed lparams)) ->
+      (* The loop is made where the impl was, or just after it where the
+         wrapper was, nothing reading in between: it takes by move what the
+         impl took that it still captures. *)
+      let keep_moves l =
+        CPPlambda {l with cl_moved = List.filter (fun x -> List.mem x (free_vars_expr (CPPlambda l))) moved}
+      in
       ( match try_loopify_ycomb ~fixpoint (to_reversed lparams) ret_ty_opt lbody with
       | Some (lparams', lbody') -> (
         (* The loop no longer recurses, so the self-parameter and the wrapper
@@ -672,7 +679,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
           Sasgn
             ( wid,
               wtgt,
-              CPPlambda
+              keep_moves
                 { cl_params =
                     of_reversed
                       (List.filter (fun (_, x) -> x <> self) lparams');
@@ -685,7 +692,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
           :: process_stmts rest'
         | _ ->
           Sasgn
-            (id, tgt, CPPlambda
+            (id, tgt, keep_moves
               { cl_params = of_reversed lparams';
               cl_tparams = [];
               cl_fixpoint = fixpoint;
@@ -696,7 +703,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
           :: process_stmts rest )
       | None ->
         let lbody' = process_stmts lbody in
-        Sasgn (id, tgt, CPPlambda
+        Sasgn (id, tgt, keep_moves
           { cl_params = lparams;
           cl_tparams = [];
           cl_fixpoint = fixpoint;

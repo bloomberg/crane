@@ -1349,7 +1349,7 @@ struct MemSafetyProbe29 {
                      inner::inode(inner::ileaf(), UINT64_C(42), inner::ileaf()),
                      outer::oleaf());
     std::pair<outer, outer> p = o.dup_outer();
-    return (p.first.outer_sum() + p.second.outer_sum());
+    return (std::move(p).first.outer_sum() + std::move(p).second.outer_sum());
   }();
   static inline const uint64_t test_double_expr =
       expr::add(expr::lit(UINT64_C(5)),

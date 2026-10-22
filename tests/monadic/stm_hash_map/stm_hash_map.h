@@ -141,7 +141,7 @@ template <typename K, typename V> struct CHT {
     auto _cs = p.first;
     if (_cs.has_value()) {
       const V &_x = *_cs;
-      stm::writeTVar(std::move(b), p.second);
+      stm::writeTVar(std::move(b), std::move(p).second);
       return std::move(p).first;
     } else {
       return std::move(p).first;

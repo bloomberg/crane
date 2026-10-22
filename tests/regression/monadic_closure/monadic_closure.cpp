@@ -29,7 +29,7 @@ crane::fn<std::string(std::string)> MonadicClosure::make_greeter() {
   std::string prefix;
   std::getline(std::cin, prefix);
   return [=, prefix = std::move(prefix)](std::string name) {
-    return prefix + name;
+    return prefix + std::move(name);
   };
 }
 
@@ -57,7 +57,7 @@ int64_t MonadicClosure::nested_capture() {
 uint64_t MonadicClosure::test_count() {
   return count_matching(
       [](std::string s) {
-        return static_cast<int64_t>(s.length()) == INT64_C(0);
+        return static_cast<int64_t>(std::move(s).length()) == INT64_C(0);
       },
       List<std::string>::cons(
           "a",

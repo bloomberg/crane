@@ -136,7 +136,7 @@ template <typename K, typename V> struct CHT {
     auto _cs = p.first;
     if (_cs.has_value()) {
       V _x = *_cs;
-      stm::writeTVar(bsl::move(b), p.second);
+      stm::writeTVar(bsl::move(b), bsl::move(p).second);
       return bsl::move(p).first;
     } else {
       return bsl::move(p).first;

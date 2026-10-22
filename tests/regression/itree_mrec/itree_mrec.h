@@ -602,7 +602,7 @@ struct ItreeMrec {
             return Itree<Sum1<callE, noE, crane::obj>, T1>::go(
                 ItreeF<Sum1<callE, noE, crane::obj>, T1,
                        Itree<Sum1<callE, noE, crane::obj>,
-                             T1>>::retf(Nat::s(a00_value).add(r)));
+                             T1>>::retf(Nat::s(a00_value).add(std::move(r))));
           });
     }
   }

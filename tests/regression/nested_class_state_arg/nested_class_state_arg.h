@@ -229,7 +229,9 @@ struct NestedClassStateArg {
 
   template <Params _tcI0> static Nat interp_it(FusedS<typename _tcI0::ptr> s) {
     return run_st<FusedS<typename _tcI0::ptr>>(
-        [](FusedS<typename _tcI0::ptr> st) { return (st.second).second; },
+        [](FusedS<typename _tcI0::ptr> st) {
+          return (std::move(st).second).second;
+        },
         std::move(s));
   }
 

@@ -86,7 +86,7 @@ public:
     }
   }
 
-  Uint uint_of_uint() const { return std::move(*this); }
+  Uint uint_of_uint() const { return *this; }
 };
 
 struct Signed_int {
@@ -163,7 +163,7 @@ public:
     }
   }
 
-  Signed_int int_of_int() const { return std::move(*this); }
+  Signed_int int_of_int() const { return *this; }
 };
 
 struct Number {

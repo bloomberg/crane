@@ -86,7 +86,7 @@ and replace_return_this_stmt inner_ty = function
     a [shared_ptr] copy that keeps the object alive.  The outer method
     body keeps raw [CPPthis] for direct method calls (safe because the
     method is invoked on a live object). *)
-let replace_this_in_lambdas self_type stmts =
+let replace_this_in_lambdas ?receiver self_type stmts =
   let id_type ty = ty in
   let self_id = Id.of_string "_self" in
   (* Check if CPPthis or CPPshared_from_this appears in an expression. *)
@@ -154,9 +154,16 @@ let replace_this_in_lambdas self_type stmts =
     and subst_stmt s =
       map_stmt subst_expr subst_stmt id_type s
     in
+    (* A closure taking the receiver by move takes the copy by move. *)
+    let copy_moved l =
+      match receiver with
+      | Some r when List.exists (Id.equal r) l.cl_moved ->
+        {l with cl_moved = List.sort Id.compare (self_id :: List.filter (fun x -> not (Id.equal x r)) l.cl_moved)}
+      | _ -> l
+    in
     let rec walk_expr = function
       | CPPlambda ({cl_capture = Closure; _} as l) ->
-        CPPlambda (map_lambda subst_stmt Fun.id l)
+        CPPlambda (copy_moved (map_lambda subst_stmt Fun.id l))
       | e -> map_expr walk_expr walk_stmt id_type e
     and walk_stmt s =
       map_stmt walk_expr walk_stmt id_type s
@@ -776,18 +783,20 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   let owned_params =
     Translation_support.owned_parameters (List.length method_owned_flags)
       ~owned:(fun i ->
-        (* Under [Crane Reuse], the receiver at [this_pos] is a const [this]
-           (borrowed) and must never be treated as owned, or a reuse arm would
-           try to consume it via v_mut() on a const method.  Gated on reuse so
-           reuse-off output stays byte-identical to the pre-reuse baseline.
-           [this_pos] counts the parameters outermost first, [i] innermost
-           first. *)
-        (not (Table.reuse () && Table.reuse_loopify_ok () && i = method_n_params - 1 - this_pos))
+        (* The receiver at [this_pos] is the const [this], borrowed: a move of
+           it copies, and a reuse arm would try to consume it via v_mut() on a
+           const method.  Its closures own the copy they capture
+           ([closures_copy]).  [this_pos] counts the parameters outermost
+           first, [i] innermost first. *)
+        (not (this_arg_id <> None && i = method_n_params - 1 - this_pos))
         && Translation_support.declared_by_value
              (List.assoc_opt (Common.get_db_name (i + 1) env) params)
              ~summary:(List.nth method_owned_flags i) )
       ~ty:(fun i -> snd (List.nth ids_with_types i))
   in
+  (* The receiver becomes [this]; a closure reading it captures a copy of
+     the object ({!replace_this_in_lambdas}), which the closures own. *)
+  let closures_copy = if this_arg_id <> None then [method_n_params - this_pos] else [] in
   (* The scope covers both the inductive's type vars and the extra ones, so
      that gen_expr/eta_fun convert Tvars to the named C++ types the method
      body expects (e.g. recursive calls carry type args).  The return type is
@@ -802,7 +811,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
            type arguments get shared_ptr wrapping to match struct field
            types. *)
         with_method_ns_for_locals ~base:method_ns (fun () ->
-            with_region ~owned:owned_params inner_body (fun () ->
+            with_region ~owned:owned_params ~copied:closures_copy inner_body (fun () ->
                 gen_stmts env method_k inner_body ) ) )
   in
   (* Add type args to recursive self-calls. Inside fixpoint bodies, the
@@ -874,7 +883,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      Using [shared_from_this()] inside the lambda ensures the closure keeps
      the object alive. *)
   let stmts = return_captures_by_value stmts in
-  let stmts = replace_this_in_lambdas self_type stmts in
+  let stmts = replace_this_in_lambdas ?receiver:this_arg_id self_type stmts in
   (* Apply tvar_subst_stmt with the extended vars list (defined above).
      extended_vars covers positions 1..num_ind_vars (inductive vars) and
      num_ind_vars+1, num_ind_vars+2, etc. (extra vars) so tvar_subst_stmt can
@@ -2741,6 +2750,31 @@ let gen_ind_header_v2
               (param_name_of j, param_ty) )
             cpp_tys
         in
+        (* A conversion between the parameter and its field reads the
+           parameter for the last time, and takes it by move where it reads
+           it once, outside any closure. *)
+        let sink_converted api_ty var e =
+          (* The parameter's reads in [e], each in a closure or a statement
+             counting as two. *)
+          let rec reads ~weight n e =
+            match e with
+            | CPPvar _ when e = var -> n + weight
+            | CPPlambda _ -> fold_expr_children ~on_expr:(reads ~weight:2) ~on_stmts:(stmt_reads ~weight:2) n e
+            | _ -> fold_expr_children ~on_expr:(reads ~weight) ~on_stmts:(stmt_reads ~weight:2) n e
+          and stmt_reads ~weight n ss =
+            List.fold_left
+              (fun n s -> fold_stmt_children ~on_expr:(reads ~weight) ~on_stmts:(stmt_reads ~weight) n s)
+              n ss
+          in
+          if is_trivially_copyable_type api_ty || reads ~weight:1 0 e <> 1 then e
+          else
+            let rec moved e =
+              match e with
+              | CPPvar _ when e = var -> CPPmove var
+              | _ -> map_expr moved Fun.id Fun.id e
+            in
+            moved e
+        in
         let ctor_args =
           List.map
             (fun (j, storage_ty, api_ty) ->
@@ -2788,8 +2822,8 @@ let gen_ind_header_v2
                     [Sreturn (Some ret)] ~capture:Closure
                 | _ when storage_ty = api_ty -> CPPmove var
                 | _ ->
-                  gen_type_conversion_expr
-                    ~src_ty:api_ty ~dst_ty:storage_ty var
+                  sink_converted api_ty var
+                    (gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var)
               end
               | Tshared_ptr inner ->
                 let arg = if is_coinductive then var else CPPmove var in
@@ -2811,8 +2845,8 @@ let gen_ind_header_v2
                 if is_trivially_copyable_type api_ty then var
                 else CPPmove var
               | _ ->
-                gen_type_conversion_expr
-                  ~src_ty:api_ty ~dst_ty:storage_ty var )
+                sink_converted api_ty var
+                  (gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var) )
             cpp_tys
         in
         (* Under [Crane NonAtomicRc], a field holding the inductive itself

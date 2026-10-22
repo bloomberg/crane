@@ -16,7 +16,7 @@ FamilyCallResultMappedList::size(const FamilyCallResultMappedList::ty &t,
       return _a;
     }(crane_erase_fn<uint64_t>(
                [=](uint64_t acc, FamilyCallResultMappedList::den x) {
-                 return (acc + size(a0_value, x));
+                 return (acc + size(a0_value, std::move(x)));
                }),
            crane::any_cast<std::deque<crane::obj>>(std::move(n)), UINT64_C(0));
   }

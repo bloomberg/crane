@@ -913,7 +913,7 @@ struct InterpStateCaseHandler {
                             return Itree<Sum1<GetE, IncE, crane::obj>, Nat>::go(
                                 ItreeF<Sum1<GetE, IncE, crane::obj>, Nat,
                                        Itree<Sum1<GetE, IncE, crane::obj>,
-                                             Nat>>::retf(x.add(y)));
+                                             Nat>>::retf(x.add(std::move(y))));
                           });
                     });
               });
@@ -979,8 +979,8 @@ struct InterpStateCaseHandler {
     return [=, x = std::move(x)](Nat x0) {
       return crane_convert<Itree<noE, std::pair<Nat, T1>>>(
           crane::any_cast<
-              crane::fn<Itree<noE, std::pair<Nat, crane::obj>>(Nat)>>(
-              case_1(Sum1<crane::obj, crane::obj, crane::obj>(x)))(x0));
+              crane::fn<Itree<noE, std::pair<Nat, crane::obj>>(Nat)>>(case_1(
+              Sum1<crane::obj, crane::obj, crane::obj>(x)))(std::move(x0)));
     };
   }
 

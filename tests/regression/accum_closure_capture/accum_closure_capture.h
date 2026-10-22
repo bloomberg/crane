@@ -219,7 +219,7 @@ struct AccumClosureCapture {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return fn_list::fnil();
       } else {
-        auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         return fn_list::fcons(
             [=](uint64_t x) { return (x + _self_val.tree_sum()); },
             fn_list::fcons(

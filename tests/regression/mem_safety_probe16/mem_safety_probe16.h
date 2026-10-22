@@ -600,7 +600,9 @@ struct MemSafetyProbe16 {
       tree t1 = tree::node(tree::leaf(), UINT64_C(100), tree::leaf());
       tree t2 = tree::node(tree::node(tree::leaf(), UINT64_C(50), tree::leaf()),
                            UINT64_C(25), tree::leaf());
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
+      crane::fn<uint64_t(uint64_t)> f =
+          [=, t1 = std::move(t1),
+           t2 = std::move(t2)](uint64_t _x0) -> uint64_t {
         return t1.pair_closure(std::move(t2), _x0);
       };
       return (f(UINT64_C(0)) + f(UINT64_C(0)));

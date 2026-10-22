@@ -70,7 +70,8 @@ CapturedRecordCopiedPerEvent::steps(const Nat &n, const Nat &k,
     const auto &[a0] = std::get<typename Nat::S>(n.v());
     const Nat &a0_value = *a0;
     return ITree::template bind<CapturedRecordCopiedPerEvent::TickE, Nat, Nat>(
-        step(b, k), [=](Nat x) { return steps(a0_value, k, b, acc.add(x)); });
+        step(b, k),
+        [=](Nat x) { return steps(a0_value, k, b, acc.add(std::move(x))); });
   }
 }
 

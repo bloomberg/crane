@@ -441,7 +441,7 @@ template <TFunctor _tcI0> struct TFunctor_list {
         List<typename _tcI0::template T<CraneA0>> l) {
     return l.template map<typename _tcI0::template T<CraneA1>>(
         [=, f = std::move(f)](typename _tcI0::template T<CraneA0> a0) {
-          return _tcI0::template tfmap<CraneA0, CraneA1>(f, a0);
+          return _tcI0::template tfmap<CraneA0, CraneA1>(f, std::move(a0));
         });
   }
 };
