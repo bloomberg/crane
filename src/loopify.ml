@@ -492,10 +492,15 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
           | No_loop | Suspended _ ->
             CErrors.anomaly (Pp.str "loopify: no loop cannot appear here")
         in
-        (* Params the loop body no longer mentions keep their names here; the
-           lambda printer drops the name of any param its body does not
-           reference, so unused ones do not trip [-Wunused-parameter]. *)
-        Some (lparams, body') )
+        (* A call the transform left -- one in a closure, say a fixpoint in
+           the body that calls back, which a local machine does not adopt --
+           recurses through the self-parameter the loop drops, so the
+           fixpoint is left as it was: the decline {!report_outcome}
+           recorded.  Params the loop body no longer mentions keep their
+           names here; the lambda printer drops the name of any param its
+           body does not reference, so unused ones do not trip
+           [-Wunused-parameter]. *)
+        if classify check body' = No_recursion then Some (lparams, body') else None )
   in
   let rec process_stmts stmts =
     match stmts with

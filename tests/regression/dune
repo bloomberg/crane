@@ -13348,3 +13348,14 @@
   (alias runtest)
   (deps loopify_block_template_frame.t.exe)
   (action (run ./loopify_block_template_frame.t.exe))))
+
+(subdir loopify_local_fix_inner_callback
+ (rule
+  (targets loopify_local_fix_inner_callback.t.exe)
+  (deps LoopifyLocalFixInnerCallback.vo loopify_local_fix_inner_callback.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_local_fix_inner_callback.t.exe loopify_local_fix_inner_callback.cpp loopify_local_fix_inner_callback.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_local_fix_inner_callback.t.exe)
+  (action (run ./loopify_local_fix_inner_callback.t.exe))))

@@ -1,4 +1,3 @@
-does not compile: tests/monadic/parallel
 does not compile: tests/regression/pendant_sumtree_roundtrip
 does not compile: tests/regression/recursive_record_incomplete_type
 fails: tests/regression/arrow_behind_type_function
