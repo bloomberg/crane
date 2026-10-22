@@ -9336,7 +9336,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     | Bound -> gen_normal_letin ()
     | At_instance inst ->
       let subst = Mlutil.type_subst_list inst in
-      gen_stmts ~slot env k (MLletin (x, subst t, Mlutil.ast_map_types subst a, b, let_occ))
+      with_plan (Ownership_plan.bound_at_instance (!tctx).move_plan ~let_:let_occ) (fun () ->
+          gen_stmts ~slot env k (MLletin (x, subst t, Mlutil.ast_map_types subst a, b, let_occ)) )
     | Inlined b -> gen_stmts ~slot env k b
     | Lifted ->
       (* Lift the polymorphic lambda to a top-level template function. *)

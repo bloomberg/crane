@@ -67,6 +67,13 @@ val reuse_arm : t -> scrutinee:Miniml.ml_ast -> branch:int -> t
     those are the body's own. *)
 val fields_by_value : t -> case:Miniml.ml_ast -> by_value:bool list -> t
 
+(** [bound_at_instance p ~let_] is [p] for the let at the occurrence [let_],
+    binding a lambda with a type variable of its own that translation binds
+    to a local all the same, at the one instance its uses agree on
+    ({!Translation_support.let_lambda}): the local is the region's own, and
+    copies what it closes over where it is made. *)
+val bound_at_instance : t -> let_:Miniml.Occurrence.t -> t
+
 
 (** What [p] says of a read. *)
 type fate =

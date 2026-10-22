@@ -20,10 +20,13 @@ type read = {
    tell: a branch generated to rebuild in its scrutinee's storage, named by
    the scrutinee's read and the branch's index; and the fields of a record
    taken apart, named by the match itself, which are locals of their own
-   where [by_value] says so. *)
+   where [by_value] says so.  And how it binds a let-bound function with a
+   type variable of its own: to a local, at the one instance its uses agree
+   on, where the let named by its occurrence is an [Instance] one. *)
 type arm =
   | Rebuild of {scrutinee : Occurrence.t; branch : int}
   | Fields of {case : ml_ast; by_value : bool list}
+  | Instance of Occurrence.t
 
 type t = {
   root : ml_ast;
@@ -203,16 +206,19 @@ let closure_local ~n_outer ty a =
   | MLlam _ -> not (Ml_type_util.own_type_variables ~n_outer [ty])
   | _ -> false
 
+let at_instance arms occurrence =
+  List.exists (function Instance o -> Occurrence.equal o occurrence | Rebuild _ | Fields _ -> false) arms
+
 (* Whether the closure a let binds may read what it closes over at its uses
    rather than where it is made: a local fixpoint closes over its
    surroundings by reference, and a lambda with a type variable of its own
    may be lifted to a function template, to which each use passes them, or
-   inlined at each use.  A lambda bound to a local is a value holding
-   copies. *)
-let reads_at_uses ~n_outer ty a =
+   inlined at each use.  A lambda bound to a local, an [Instance] one
+   included, is a value holding copies. *)
+let reads_at_uses ~n_outer ~arms ty a occurrence =
   match strip a with
   | MLfix _ -> true
-  | MLlam _ -> Ml_type_util.own_type_variables ~n_outer [ty]
+  | MLlam _ -> Ml_type_util.own_type_variables ~n_outer [ty] && not (at_instance arms occurrence)
   | _ -> false
 
 (* A record's field read out of it, by its projection or by the match
@@ -263,7 +269,7 @@ let evaluations r =
   | Some s when Table.is_inline_custom r -> Foreign_template.arg_mentions s
   | _ -> fun _ -> 1
 
-let liveness ~n_outer ~copied t =
+let liveness ~n_outer ~copied ~arms t =
   let reads = ref [] in
   let captures = ref [] in
   (* [walk ~consumed ~pinned parents d live t] records [t]'s reads and is
@@ -326,8 +332,8 @@ let liveness ~n_outer ~copied t =
           captures := {occurrence; last; last_whole = last; consumed = true} :: !captures )
         (closure_reads d t);
       Levels.union live captured
-    | MLletin (_, ty, a, b, _) ->
-      let pinned_b = if reads_at_uses ~n_outer ty a then Levels.union pinned (free parents d a) else pinned in
+    | MLletin (_, ty, a, b, occurrence) ->
+      let pinned_b = if reads_at_uses ~n_outer ~arms ty a occurrence then Levels.union pinned (free parents d a) else pinned in
       let parents_b = bind parents d ~n:1 in
       let live_b = walk ~consumed ~pinned:pinned_b parents_b (d + 1) live b in
       walk ~pinned parents d (leave parents_b d live_b) a
@@ -471,13 +477,13 @@ let ownership ~n_outer ~reads ~arms ~owned ~copied t =
       List.iter
         (fun (l, o) -> captured := (o, Levels.mem l owned || Levels.mem l copied) :: !captured)
         (closure_reads d t)
-    | MLletin (x, ty, a, b, _) ->
+    | MLletin (x, ty, a, b, occurrence) ->
       own owned d a;
       (* What a local fixpoint closes over, it reads by reference. *)
       let owned_b =
         match a with MLfix _ -> Levels.diff owned (free Parents.empty d a) | _ -> owned
       in
-      own (if let_owned owned d x ty a then Levels.add d owned_b else owned_b) (d + 1) b
+      own (if let_owned owned d x ty a occurrence then Levels.add d owned_b else owned_b) (d + 1) b
     | MLcase (ty, scrut, branches) ->
       own owned d scrut;
       Array.iteri
@@ -486,11 +492,11 @@ let ownership ~n_outer ~reads ~arms ~owned ~copied t =
         branches
     | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> ()
   and owned_var owned d i _ = Levels.mem (d - i) owned
-  and let_owned owned d x ty a =
+  and let_owned owned d x ty a occurrence =
     match (x, a) with
     | Dummy, _ -> false
     (* A closure bound to a local is a value like any other. *)
-    | _, (MLfix _ | MLlam _) -> closure_local ~n_outer ty a
+    | _, (MLfix _ | MLlam _) -> at_instance arms occurrence || closure_local ~n_outer ty a
     | _ ->
       (not (Ml_type_util.ml_type_is_unit ty))
       && worth_moving ty
@@ -511,7 +517,7 @@ let ownership ~n_outer ~reads ~arms ~owned ~copied t =
       when List.exists
              (function
                | Rebuild a -> a.branch = k && Occurrence.equal a.scrutinee o
-               | Fields _ -> false )
+               | Fields _ | Instance _ -> false )
              arms ->
       (* Rebuilding in the scrutinee's storage moves every field out of it. *)
       Levels.union (Levels.remove (d - i) owned) (fields (fun _ _ -> true))
@@ -555,7 +561,7 @@ let plan ~n_outer root root_owned root_copied arms (reads, captures) =
 
 let region ?(owned = []) ?(copied = []) ~n_outer t =
   let levels is = Levels.of_list (List.map (fun i -> -i) is) in
-  plan ~n_outer t (levels owned) (levels copied) [] (liveness ~n_outer ~copied:(levels copied) t)
+  plan ~n_outer t (levels owned) (levels copied) [] (liveness ~n_outer ~copied:(levels copied) ~arms:[] t)
 
 let reuse_arm p ~scrutinee ~branch =
   match scrutinee_var scrutinee with
@@ -569,6 +575,15 @@ let fields_by_value p ~case ~by_value =
   else
     plan ~n_outer:p.n_outer p.root p.root_owned p.root_copied (Fields {case; by_value} :: p.arms)
       (p.reads, p.captures)
+
+(* Unlike the other arms, this one changes what a closure reads where it is
+   made, so the reads are planned again. *)
+let bound_at_instance p ~let_ =
+  if p == empty then p
+  else
+    let arms = Instance let_ :: p.arms in
+    plan ~n_outer:p.n_outer p.root p.root_owned p.root_copied arms
+      (liveness ~n_outer:p.n_outer ~copied:p.root_copied ~arms p.root)
 
 let closure_local p ty a = if p == empty then None else Some (closure_local ~n_outer:p.n_outer ty a)
 
