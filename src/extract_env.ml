@@ -2510,6 +2510,10 @@ let show_extraction ~pstate =
     let l = Label.of_id (Declare.Proof.get_name pstate) in
     let fake_ref = GlobRef.ConstRef (Constant.make2 mp l) in
     let decl = Dterm (fake_ref, ast, ty) in
-    print_one_decl [(mp, [(l, SEdecl decl)])] mp decl
+    (* Frozen unoptimised, as it is shown: freezing is what installs the
+       facts about the whole program -- its recursion plan among them --
+       that lowering the term reads. *)
+    let frozen = freeze (Core.optimize Fun.id (Core.extracted [(mp, [(l, SEdecl decl)])])) in
+    print_one_decl (Core.structure frozen) mp decl
   in
   Feedback.msg_notice (Pp.prlist_with_sep Pp.fnl extr_term trms)
