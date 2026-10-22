@@ -6,7 +6,4 @@ CraneTestsRegression.gadt_index_erasure.GadtIndexErasure: resume plan: the recur
 CraneTestsRegression.inline_inner_fix_writes_instance.InlineInnerFixWritesInstance: resume plan: the recursion plan does not say whether a statement making a recursive call resumes after it
 CraneTestsRegression.inner_fix_codomain_from_class.InnerFixCodomainFromClass: resume plan: the recursion plan and the finished body disagree on whether a statement resumes after a recursive call
 CraneTestsRegression.lifted_inner_fix_drops_class_param.LiftedInnerFixDropsClassParam: resume plan: the recursion plan does not say whether a statement making a recursive call resumes after it
-CraneTestsRegression.nat_module_family_returns.NatModuleFamilyReturns: recursion plan: the recursion plan disagrees with the finished body of Stdlib.Arith.PeanoNat.Nat.even_EvenT: planned no recursion, read a call not in tail position
-CraneTestsRegression.nat_module_family_returns.NatModuleFamilyReturns: recursion plan: the recursion plan disagrees with the finished body of Stdlib.Arith.PeanoNat.Nat.odd_OddT: planned no recursion, read a call not in tail position
-CraneTestsRegression.nat_module_family_returns.NatModuleFamilyReturns: recursion plan: the recursion plan disagrees with the finished body of Stdlib.Arith.PeanoNat.Nat.OddT_EvenT_rect: planned no recursion, read a call not in tail position
 CraneTestsRegression.show_extraction_planned.ShowExtractionPlanned: recursion plan: the recursion plan does not know CraneTestsRegression.show_extraction_planned.ShowExtractionPlanned.shown

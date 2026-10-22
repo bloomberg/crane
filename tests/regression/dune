@@ -13271,3 +13271,14 @@
   (alias runtest)
   (deps record_destructure_once_expr.t.exe)
   (action (run ./record_destructure_once_expr.t.exe))))
+
+(subdir loopify_coerced_self_call
+ (rule
+  (targets loopify_coerced_self_call.t.exe)
+  (deps LoopifyCoercedSelfCall.vo loopify_coerced_self_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_coerced_self_call.t.exe loopify_coerced_self_call.cpp loopify_coerced_self_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_coerced_self_call.t.exe)
+  (action (run ./loopify_coerced_self_call.t.exe))))

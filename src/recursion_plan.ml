@@ -825,9 +825,13 @@ let adopted_invocations_of ~defs self inlinings =
    calls no function it could recurse through. *)
 let analyze groups struc =
   let effects = Core_effects.analyze struc in
+  (* Every body is read with its applications whole, as translation reads
+     them ({!Mlutil.read_spine}): [(magic f) x] and [(f x) y] are calls of
+     [f] the C++ makes with every argument. *)
   let defs = ref Ref.User.Map.empty in
+  let add fd = defs := Ref.User.Map.add fd.fd_ref {fd with fd_body = Mlutil.read_spines fd.fd_body} !defs in
   Modutil.struct_iter
-    (fun d -> List.iter (fun fd -> defs := Ref.User.Map.add fd.fd_ref fd !defs) (Mlutil.term_defs d))
+    (fun d -> List.iter add (Mlutil.term_defs d))
     (fun _ -> ())
     (fun _ -> ())
     struc;

@@ -1559,6 +1559,21 @@ let ast_lift k t =
 
 let ast_pop t = ast_lift (-1) t
 
+let rec read_spine = function
+  | MLapp (MLapp ((MLglob _ as g), inner), outer) -> read_spine (MLapp (g, inner @ outer))
+  | MLapp (MLmagic (_, f), args) -> read_spine (MLapp (f, args))
+  | MLapp (MLcase (ty, scrut, [|(ids, rty, pat, body)|]), outer) ->
+    let outer = List.map (ast_lift (List.length ids)) outer in
+    let body =
+      match body with
+      | MLapp (f, inner) -> MLapp (f, inner @ outer)
+      | _ -> MLapp (body, outer)
+    in
+    MLcase (ty, scrut, [|(ids, rty, pat, body)|])
+  | e -> e
+
+let rec read_spines e = ast_map read_spines (read_spine e)
+
 (** {2 [permut_rels k k' c] translates [Rel 1 ... Rel k] to
     [Rel (k'+1) ... Rel (k'+k)] and [Rel (k+1) ... Rel (k+k')] to
     [Rel 1 ... Rel k']} *)

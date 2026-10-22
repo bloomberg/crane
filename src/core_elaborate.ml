@@ -216,21 +216,11 @@ let binder role (x, ty) = {Lexenv.eb_id = Mlutil.id_of_mlid x; eb_type = ty; eb_
 let push role ids lex = Lexenv.push (List.map (binder role) ids) lex
 
 let rec walk b ~n_outer lex = function
-  (* A spine is read whole, as translation reads it: a global applied in
-     stages is called once with every argument, and applying a one-branch
-     match applies its branch.  A coercion of the callee is seen through:
-     what is called is what it coerces, at every argument -- [not] applied
-     to the proposition it erases, in a type written [{P} + {~P}]. *)
-  | MLapp (MLapp ((MLglob _ as g), inner), outer) -> walk b ~n_outer lex (MLapp (g, inner @ outer))
-  | MLapp (MLmagic (_, f), args) -> walk b ~n_outer lex (MLapp (f, args))
-  | MLapp (MLcase (ty, scrut, [|(ids, rty, pat, body)|]), outer) ->
-    let outer = List.map (Mlutil.ast_lift (List.length ids)) outer in
-    let body =
-      match body with
-      | MLapp (f, inner) -> MLapp (f, inner @ outer)
-      | _ -> MLapp (body, outer)
-    in
-    walk b ~n_outer lex (MLcase (ty, scrut, [|(ids, rty, pat, body)|]))
+  (* A spine is read whole, as translation reads it.  A coercion of the
+     callee is seen through at every argument -- [not] applied to the
+     proposition it erases, in a type written [{P} + {~P}]. *)
+  | MLapp ((MLapp (MLglob _, _) | MLmagic _ | MLcase (_, _, [|_|])), _) as e ->
+    walk b ~n_outer lex (Mlutil.read_spine e)
   | MLapp (MLglob use, args) ->
     walk_use b ~n_outer lex use;
     record b lex use args;
