@@ -20,3 +20,7 @@ val summarize : Miniml.ml_structure -> (Names.GlobRef.t * bool list) list
 
 (** Install a {!summarize}d program's flags for {!Escape} to consult. *)
 val install : (Names.GlobRef.t * bool list) list -> unit
+
+(** The installed flags of a global's parameters, innermost first: [None]
+    for one {!summarize} did not settle. *)
+val settled : Names.GlobRef.t -> bool list option

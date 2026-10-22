@@ -327,9 +327,10 @@ val generalises_callable :
   kept_as_fn:bool -> primary:Escape.IntSet.t -> cpp_type -> bool
 
 (** Infer, for each of [n_params] parameters, whether it is "owned" (should be
-    passed by value / moved) based on escape analysis of [body]. *)
+    passed by value / moved): as {!Ownership} settled them for the global
+    [owner] where that covers them, by escape analysis of [body] otherwise. *)
 val infer_owned_flags :
-  int -> ml_ast -> ('a * ml_type) list -> bool list
+  ?owner:Names.GlobRef.t -> int -> ml_ast -> ('a * ml_type) list -> bool list
 
 (** Wrap a C++ parameter type with const/ref based on ownership semantics. *)
 val wrap_param_by_ownership : ?is_owned:bool -> cpp_type -> cpp_type

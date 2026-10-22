@@ -31,6 +31,8 @@ let summarize struc =
   flags := installed;
   summary
 
+let settled r = Ref.User.Map.find_opt r !flags
+
 let install summary =
   flags := List.fold_left (fun m (r, f) -> Ref.User.Map.add r f m) Ref.User.Map.empty summary
 
