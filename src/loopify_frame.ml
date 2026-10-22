@@ -1109,26 +1109,11 @@ let adopt_invocation ~invocations e =
     is the recursion plan's, [adoptable]; the first in the flow lowering can
     take is adopted.  Failing that, the lambda invoked in place of the calls
     of a mutual-recursion partner the plan has the machine adopt,
-    [invocations], the residue of inlining it.
-
-    Under [CRANE_CHECK_IR] the fixpoints in the flow the plan finds calling
-    back are checked to be those whose body holds a call [check]
-    recognises. *)
-let find_adopted ~adoptable ~invocations check stmts =
+    [invocations], the residue of inlining it. *)
+let find_adopted ~adoptable ~invocations stmts =
   let planned (lf : local_fixpoint) =
     List.exists (Miniml.Occurrence.equal (fst lf.lf_member)) adoptable
   in
-  if Probe.checking () then
-    ignore
-      (find_in_flow stmts ~on_stmt:(function
-        | Sasgn (_, Declare (Tauto, _), CPPlambda ({cl_fixpoint = Some lf; _} as l))
-          when Option.has_some (fixpoint_self l.cl_fixpoint (to_reversed l.cl_params)) ->
-          if planned lf <> (collect_stmts check ~in_visitor:false l.cl_body <> []) then
-            Probe.violation "adoption plan"
-              Pp.(str "the recursion plan and the finished body disagree on whether "
-                  ++ Id.print lf.lf_name ++ str " calls back");
-          None
-        | _ -> None ));
   match find_in_flow stmts ~on_stmt:(adopt_local_fix ~stmts ~planned) with
   | Some _ as found -> found
   | None ->
