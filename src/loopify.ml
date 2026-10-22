@@ -1055,138 +1055,6 @@ let try_inline_functional_into names body =
     match inline_into body knot with Some body' -> body' | None -> body )
   | None -> body
 
-(** Hoist recursive calls out of [if]-conditions into preceding let-bindings.
-
-    Loopify's [has_recursive_branch_dependency] guard leaves a function fully
-    recursive when a recursive call appears in a branch condition, because the
-    frame rewriter cannot keep a move-only cloned subtree alive across the
-    branch.  For value-typed results that danger does not apply, and once the
-    call is bound to a temporary the condition merely reads a scalar — exactly
-    the shape [transform_nontail] already linearises with a resume frame (as it
-    does for a recursive [let r := f m in if ... r ...]).
-
-    So, when the return type is trivially copyable, rewrite each
-    [if cond[f(x)] then A else B] into [let r := f(x) in if cond[r] then A
-    else B].  Binding once also de-duplicates a call that the condition and a
-    branch both use.  Only conditions are rewritten (recursive scrutinees are
-    already let-bound during match lowering); lambda bodies are not descended
-    into, since their calls are not evaluated as part of the condition. *)
-let hoist_rec_conditions (check : call_checker)
-    (params : (Id.t * cpp_type) list) (ret_ty : cpp_type)
-    (stmts : cpp_stmt list) : cpp_stmt list =
-  (* The hazard [has_recursive_branch_dependency] guards against is a raw
-     pointer stored in the [CraneEnter] frame that dangles once the smart pointer
-     it was derived from is moved from.  So the gate is precisely that no
-     parameter is a raw pointer: every other parameter shape — scalars, and
-     smart pointers or values, which own their referent — stays alive in the
-     frame for as long as the frame does.
-
-     Requiring *trivial copyability* instead, as this gate used to, excluded
-     every recursion over an inductive type, since those are passed as smart
-     pointers. That is the common case and not the dangerous one. *)
-  let rec is_raw_ptr = function
-    | Tptr _ -> true
-    | Tconst t | Tnamespace (_, t) | Tqualified (t, _) -> is_raw_ptr t
-    | _ -> false
-  in
-  if List.exists (fun (_, ty) -> is_raw_ptr ty) params then stmts
-  else
-    let counter = ref 0 in
-    let fresh () =
-      incr counter;
-      Id.of_string (Printf.sprintf "_rc%d" !counter)
-    in
-    let bindings = ref [] in
-    (* Bind every recursive-call subexpression of [e] to a fresh temporary and
-       replace it with a variable reference.  Used for expressions that are
-       always evaluated (branch conditions). *)
-    let rec hoist_calls e =
-      match check e with
-      | Some _ ->
-        let f = fresh () in
-        bindings := (f, e) :: !bindings;
-        CPPvar f
-      | None -> map_expr hoist_calls (fun s -> s) Fun.id e
-    in
-    (* Within an always-evaluated expression, hoist recursive calls out of any
-       ternary *condition* (which is itself always evaluated) but leave the
-       branches — and any other non-condition calls — untouched, so we never
-       eagerly evaluate a call the original code guarded. *)
-    let rec hoist_ternaries e =
-      match e with
-      | CPPcond (c, t, f) ->
-        CPPcond (hoist_calls c, hoist_ternaries t, hoist_ternaries f)
-      | _ -> map_expr hoist_ternaries (fun s -> s) Fun.id e
-    in
-    let hoist_cond cond =
-      bindings := [];
-      let cond' = hoist_calls cond in
-      (List.rev !bindings, cond')
-    in
-    (* A scrutinee or condition that {e is} the recursive call loses, on being
-       bound to a temporary of the function's return type, whatever cast the
-       call carried in expression position.  When that type is the erased
-       [std::any], put the cast back: the surrounding construct needs the
-       concrete type [want] it dispatches on. *)
-    let hoist_cond_as want cond =
-      let binds, cond' = hoist_cond cond in
-      (* The temporary is declared with the return type, so a [Topaque] in it
-         has been written down as [std::any] and the value really is boxed. *)
-      match (Ml_type_util.materialise_opaque ret_ty, cond') with
-      | Tany, CPPvar _ when want <> Tany ->
-        (binds, Cpp_erasure.unbox want cond')
-      | _ -> (binds, cond')
-    in
-    let hoist_expr e =
-      bindings := [];
-      let e' = hoist_ternaries e in
-      (List.rev !bindings, e')
-    in
-    let binds_to_stmts binds =
-      List.map (fun (f, c) -> Sasgn (f, Declare (ret_ty, None), c)) binds
-    in
-    let rec hs stmts = List.concat_map hstmt stmts
-    and hstmt s =
-      match s with
-      | Sif (cond, t, e) ->
-        let binds, cond' = hoist_cond_as ty_bool cond in
-        binds_to_stmts binds @ [Sif (cond', hs t, hs e)]
-      | Sreturn (Some e) ->
-        let binds, e' = hoist_expr e in
-        binds_to_stmts binds @ [Sreturn (Some e')]
-      | Sasgn (id, ty, e) ->
-        let binds, e' = hoist_expr e in
-        binds_to_stmts binds @ [Sasgn (id, ty, e')]
-      | Sblock ss -> [Sblock (hs ss)]
-      | Swhile (c, ss) -> [Swhile (c, hs ss)]
-      | Sswitch (e, r, branches, def) ->
-        let binds, e' = hoist_cond e in
-        binds_to_stmts binds
-        @ [ Sswitch
-              ( e', r,
-                List.map (fun (p, b) -> (p, hs b)) branches,
-                Option.map hs def ) ]
-      | Scustom_case (ty, scrut, tyargs, branches, err) ->
-        let binds, scrut' = hoist_cond_as ty scrut in
-        binds_to_stmts binds
-        @ [ Scustom_case
-              ( ty, scrut', tyargs,
-                List.map (fun (ps, rty, b) -> (ps, rty, hs b)) branches,
-                err ) ]
-      | Smatch (scrut, branches, default) ->
-        (* Hoist a recursive call out of the scrutinee (e.g. [let (a,b) := f m
-           in ...] destructuring a recursive result). *)
-        let binds, scrut_expr' = hoist_cond scrut.sc_expr in
-        binds_to_stmts binds
-        @ [ Smatch
-              ( { scrut with sc_expr = scrut_expr' },
-                List.map (fun br -> {br with smb_body = hs br.smb_body})
-                  branches,
-                Option.map hs default ) ]
-      | _ -> [s]
-    in
-    hs stmts
-
 (** The name to show for a [Dfun] in the loopification report: the label of
     the outermost reference of its qualified name. *)
 let fundef_display_name path =
@@ -1293,9 +1161,6 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
      recursion becomes ordinary self-recursion that loopifies. *)
   let body = try_inline_functional_into names body in
   let check = fn_checker names in
-  (* Hoist recursive calls out of if-conditions/scrutinees so a value-typed
-     condition-dependent recursion can loopify instead of bailing. *)
-  let body = hoist_rec_conditions check params ret_ty body in
   let body = expose_tail_calls check body in
   (* A suspended cofixpoint's calls are captured inside closures and never
      executed at call time -- the function returns a thunk in O(1) stack
@@ -1420,21 +1285,6 @@ let transform_method ~tparams ~self_ty mf =
     match mf.mf_receiver with Instance r -> r.this_pos | Static -> 0
   in
   let name = Id.to_string mf.mf_name in
-  (* Hoist recursive calls out of conditions and dispatch scrutinees, exactly
-     as {!transform_fundef} does. Methods went without this, so a method whose
-     recursion fed a branch condition bailed out where the equivalent free
-     function loopified. Hoisting runs on the pre-[_self] parameter list: the
-     synthetic [_self] raw pointer is added later and would otherwise trip
-     the hoister's own raw-pointer gate. *)
-  let mf =
-    let n_params = List.length mf.mf_params in
-    let check =
-      method_checker ~n_params ~has_self_param:false ~this_pos mf.mf_globref
-    in
-    { mf with
-      mf_body =
-        hoist_rec_conditions check mf.mf_params mf.mf_ret_type mf.mf_body }
-  in
   let basic_check =
     method_checker ~n_params ~has_self_param:false ~this_pos mf.mf_globref
   in

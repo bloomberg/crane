@@ -277,7 +277,7 @@ struct LoopifyCoercedScrutinee {
         auto _f = std::move(std::get<CraneCont_Ite>(_frame));
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
-        if (crane::any_cast<bool>(crane::any_cast<bool>(std::move(_result)))) {
+        if (crane::any_cast<bool>(std::move(_result))) {
           _stack.emplace_back(CraneEnter{&a1});
         } else {
           _stack.emplace_back(CraneEnter{&a2});
