@@ -506,9 +506,17 @@ let checked_plan planned ~what check body =
         | Recursion_plan.Suspended _ -> classify check body
         | No_loop | Tail_loop | Modulo_cons _ | Frame_stack -> classify_in_flow check body
       in
-      if plan_kind classified <> Recursion_plan.kind_of_strategy planned then
+      let kind = Recursion_plan.kind_of_strategy planned in
+      if plan_kind classified <> kind then
+        let name = function
+          | Recursion_plan.No_recursion -> "no recursion"
+          | Tail -> "tail calls only"
+          | Nontail -> "a call not in tail position"
+        in
         Probe.violation "recursion plan"
-          Pp.(str "the recursion plan disagrees with the finished body of " ++ what ()) );
+          Pp.(
+            str "the recursion plan disagrees with the finished body of " ++ what () ++ str ": planned "
+            ++ str (name kind) ++ str ", read " ++ str (name (plan_kind classified))) );
   planned
 
 (** The strategy of the local fixpoint [fixpoint], whose body is [body], as
