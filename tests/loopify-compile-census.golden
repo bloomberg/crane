@@ -1,0 +1,14 @@
+does not compile: tests/monadic/parallel
+does not compile: tests/regression/block_template_stress
+does not compile: tests/regression/effect_recursive_list
+does not compile: tests/regression/inner_fix_codomain_from_class
+does not compile: tests/regression/pendant_sumtree_roundtrip
+does not compile: tests/regression/recursive_monadic
+does not compile: tests/regression/recursive_record_incomplete_type
+fails: tests/regression/arrow_behind_type_function
+fails: tests/regression/reuse_arm_field_used_twice
+fails: tests/regression/shared_variant_reuse
+times out: tests/regression/itree_iter_long_pure_loop
+times out: tests/regression/lifted_local_fix_loopify
+times out: tests/regression/nonatomic_rc_thread_race
+times out: tests/regression/par_unit_not_concurrent

@@ -1557,7 +1557,7 @@ let declares struc =
     plans the unit, renders each file once, then writes and formats them. *)
 let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
     (fn, si, mo) dry (core : Core.normalized Core.program) =
-  let dry = dry || Probe.census () in
+  let dry = dry || Probe.census_dry () in
   Probe.census_unit ();
   let struc = Core.structure core in
   Buffer.clear buf;
