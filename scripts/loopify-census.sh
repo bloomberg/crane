@@ -35,10 +35,13 @@ targets=$(echo "$sources" | sed 's/\.v$/.vo/')
 find "$BUILD/default/tests" -name '*.vo' -delete 2>/dev/null
 
 echo "Extracting the test corpus with Loopify on everywhere..." >&2
-# The plugin is installed first, on its own: a test's coqc loads it from the
-# install directory, which its rule does not wait for, so a test started
-# while a changed plugin was being installed found none there.
-if ! dune build --build-dir "$BUILD" @install > "$OUT" 2>&1; then
+# The plugin is installed first, on its own: coqc loads it from the install
+# directory, which dune's rules for the theories and the tests do not wait
+# for in a build directory of its own.  A run that started one too early
+# reports the plugin unavailable but still installs it, so the install is
+# tried twice; a real failure fails both times.
+if ! dune build --build-dir "$BUILD" @install > "$OUT" 2>&1 &&
+  ! dune build --build-dir "$BUILD" @install > "$OUT" 2>&1; then
   cat "$OUT" >&2
   exit 1
 fi
