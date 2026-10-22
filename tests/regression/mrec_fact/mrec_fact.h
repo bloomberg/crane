@@ -587,26 +587,24 @@ Itree<T2, T3> Recursion::interp_mrec(
                     })));
       }
     }();
-    return ITree::template bind<
-        T2, Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>, T3>(
-        std::move(step), [=](const auto &lr) -> Itree<T2, T3> {
-          if (std::holds_alternative<
-                  typename Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>::Inl>(
-                  lr.v())) {
-            const auto &[a0] = std::get<
-                typename Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>::Inl>(
-                lr.v());
-            return Itree<T2, T3>::lazy_([=]() -> typename Itree<T2, T3>::Go {
-              return {ItreeF<T2, T3, Itree<T2, T3>>::tauf(
-                  Recursion::template interp_mrec<T1, T2, T3>(ctx, a0))};
-            });
-          } else {
-            const auto &[a0] = std::get<
-                typename Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>::Inr>(
-                lr.v());
-            return Itree<T2, T3>::go(ItreeF<T2, T3, Itree<T2, T3>>::retf(a0));
-          }
+    return ITree::template bind<T2,
+                                Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>,
+                                T3>(step, [=](const auto &lr) -> Itree<T2, T3> {
+      if (std::holds_alternative<
+              typename Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>::Inl>(
+              lr.v())) {
+        const auto &[a0] = std::get<
+            typename Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>::Inl>(lr.v());
+        return Itree<T2, T3>::lazy_([=]() -> typename Itree<T2, T3>::Go {
+          return {ItreeF<T2, T3, Itree<T2, T3>>::tauf(
+              Recursion::template interp_mrec<T1, T2, T3>(ctx, a0))};
         });
+      } else {
+        const auto &[a0] = std::get<
+            typename Sum<Itree<Sum1<T1, T2, crane::obj>, T3>, T3>::Inr>(lr.v());
+        return Itree<T2, T3>::go(ItreeF<T2, T3, Itree<T2, T3>>::retf(a0));
+      }
+    });
   }
 }
 

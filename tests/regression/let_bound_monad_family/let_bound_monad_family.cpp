@@ -31,7 +31,7 @@ Itree<LetBoundMonadFamily::BotE<crane::obj>, Nat> LetBoundMonadFamily::gen(
         return h<crane::obj>(
             crane_convert<LetBoundMonadFamily::TopE<crane::obj>>(a0));
       },
-      std::move(t));
+      t);
 }
 
 std::optional<Nat> LetBoundMonadFamily::run(
