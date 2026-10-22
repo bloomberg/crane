@@ -399,6 +399,26 @@ let unmove_invariant_on_continue invariant_params stmts =
     ~block:(fun stmt l -> if leaves l then l else List.map stmt l)
     stmts
 
+(** [stmts], the loop's body, with every [break] that would leave only a
+    [switch] replaced by [return ret], what follows the loop.  A base case
+    leaves the loop by [break], and inside an enum's match, a [switch], that
+    leaves the switch alone: the loop then goes round again on the same
+    input, for ever.  An inner loop's [break] is its own, and a lambda's
+    body is not this loop's. *)
+let return_from_switches ret stmts =
+  let rec block ~in_switch l = List.map (stmt ~in_switch) l
+  and stmt ~in_switch = function
+    | Sbreak when in_switch -> Sreturn (Some ret)
+    | Sswitch (scrut, r, branches, default) ->
+      Sswitch
+        ( scrut, r,
+          List.map (fun (p, b) -> (p, block ~in_switch:true b)) branches,
+          Option.map (block ~in_switch:true) default )
+    | (Swhile _ | Sfor_range _) as s -> s
+    | s -> map_stmt Fun.id (stmt ~in_switch) Fun.id s
+  in
+  block ~in_switch:false stmts
+
 (** {2:reuse-cursor Perceus reuse cursor}
 
     A TMC loop walks its input by borrowed pointer and allocates a fresh output
@@ -785,6 +805,7 @@ let transform_tmc ?(param_inits = []) ~chains tparams check params ret_ty body =
     Id.Set.of_list (List.filteri (fun i _ -> not (List.nth varying i)) (List.map fst params))
   in
   let body'' = unmove_invariant_on_continue invariant_params body'' in
+  let body'' = return_from_switches ret_expr body'' in
   root_decls
   @ cursor_decls
   @ shadow_decls
