@@ -67,11 +67,19 @@ val closure_local : t -> Miniml.ml_type -> Miniml.ml_ast -> bool option
     storage, is not read by value. *)
 val reuse_arm : t -> scrutinee:Miniml.ml_ast -> branch:int -> constructor:Names.GlobRef.t -> t
 
-(** [reuses p e] -- whether the construction [e] takes the storage the
-    innermost rebuilding branch of [p] frees ({!reuse_arm}): one of the
-    constructions of the rebuilt constructor that branch returns, never one
-    it passes to a call or builds inside a closure. *)
-val reuses : t -> Miniml.ml_ast -> bool
+module Allocation : sig
+  type t =
+    | Fresh  (** allocates the storage it is built in *)
+    | Reuse
+        (** is built in the storage the innermost rebuilding branch frees
+            ({!reuse_arm}): one of the constructions of the rebuilt
+            constructor that branch returns, never one it passes to a call
+            or builds inside a closure *)
+end
+
+(** [allocation p e] -- where, as [p] plans it, the construction [e] is
+    built. *)
+val allocation : t -> Miniml.ml_ast -> Allocation.t
 
 (** [fields_by_value p ~case ~by_value] is [p] for the body of [case], a
     match taking a record apart, whose fields translation binds as locals of

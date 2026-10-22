@@ -624,10 +624,14 @@ let reuse_arm p ~scrutinee ~branch ~constructor =
       (p.reads, p.captures)
   | None -> p
 
-let reuses p construction =
+module Allocation = struct
+  type t = Fresh | Reuse
+end
+
+let allocation p construction : Allocation.t =
   match List.find_map (function Rebuild a -> Some a.consumers | Fields _ | Instance _ -> None) p.arms with
-  | Some consumers -> List.memq construction consumers
-  | None -> false
+  | Some consumers when List.memq construction consumers -> Reuse
+  | _ -> Fresh
 
 let fields_by_value p ~case ~by_value =
   if p == empty then p

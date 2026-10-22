@@ -136,7 +136,7 @@ type translation_ctx = {
   (* Perceus reuse: inside a use_count()==1-guarded reuse arm in
      gen_cpp_case, the token [tok] (the moved, uniquely-owned storage the
      match frees) the constructions the arm's plan names
-     ({!Ownership_plan.reuses}) are built in, as [<ctor>__reuse(tok, ...)]
+     ({!Ownership_plan.allocation}) are built in, as [<ctor>__reuse(tok, ...)]
      instead of the normal factory.  The plan names at most one on any path,
      so nothing here tracks whether it has been taken. *)
   reuse_token : cpp_expr option;
@@ -356,7 +356,7 @@ let with_plan (p : Ownership_plan.t) (f : unit -> 'a) : 'a =
 
 (** Whether the construction [e] takes the reuse token. *)
 let takes_reuse_token e =
-  Option.has_some (!tctx).reuse_token && Ownership_plan.reuses (!tctx).move_plan e
+  Option.has_some (!tctx).reuse_token && Ownership_plan.allocation (!tctx).move_plan e = Reuse
 
 (** [with_reuse_token tok f] runs [f] with [tok] as the Perceus reuse token
     of the arm it generates. *)

@@ -3558,11 +3558,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           in
           (* Perceus reuse: where the plan gives this construction the token
              of the use_count()==1-guarded arm it is returned from
-             ({!Ownership_plan.reuses}), call the [<factory>__reuse] variant
+             ({!Ownership_plan.allocation}), call the [<factory>__reuse] variant
              with the token appended (stored last = printed first, matching
              the [_tok] leading parameter). *)
           ( match (!tctx).reuse_token with
-          | Some tok when Ownership_plan.reuses (!tctx).move_plan construction ->
+          | Some tok when Ownership_plan.allocation (!tctx).move_plan construction = Reuse ->
             let args = args @ [CPPmove tok] in
             CPPfun_call
               ( ctor_sig args,

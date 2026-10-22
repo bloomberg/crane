@@ -20,6 +20,7 @@ let lst = Tglob (GlobRef.IndRef ind, [], [])
 let call f args = MLapp (MLglob (Global_use.monomorphic (GlobRef.VarRef (Id.of_string f))), args)
 let x = Id (Id.of_string "x")
 let t = Id (Id.of_string "t")
+let reused p e = Ownership_plan.allocation p e = Ownership_plan.Allocation.Reuse
 
 (* [fun l => match l with nil => nil | cons x t => body], [body] under
    [l], [x] and [t]; and the plan of its cons branch rebuilding a cons. *)
@@ -43,14 +44,14 @@ let () =
   let closure = MLlam (Id (Id.of_string "y"), nat, call "suml" [inner]) in
   let tail = MLcons (lst, cons, [call "twice" [closure; fresh_rel 2]; call "g" [fresh_rel 1]]) in
   let region, p = arm tail in
-  check "the construction returned takes the storage" (Ownership_plan.reuses p tail);
-  check "a construction inside a closure does not" (not (Ownership_plan.reuses p inner));
-  check "nothing is reused outside the rebuilding branch" (not (Ownership_plan.reuses region tail));
+  check "the construction returned takes the storage" (reused p tail);
+  check "a construction inside a closure does not" (not (reused p inner));
+  check "nothing is reused outside the rebuilding branch" (not (reused region tail));
   let temporary = MLcons (lst, cons, [fresh_rel 2; MLcons (lst, nil, [])]) in
   let tail = MLcons (lst, cons, [call "suml" [temporary]; fresh_rel 1]) in
   let _, p = arm tail in
-  check "a construction passed to a call does not" (not (Ownership_plan.reuses p temporary));
-  check "the one returned around it does" (Ownership_plan.reuses p tail);
+  check "a construction passed to a call does not" (not (reused p temporary));
+  check "the one returned around it does" (reused p tail);
   let left = MLcons (lst, cons, [fresh_rel 3; fresh_rel 2]) in
   let right = MLcons (lst, cons, [fresh_rel 3; MLcons (lst, nil, [])]) in
   let ended = MLcons (lst, nil, []) in
@@ -68,5 +69,5 @@ let () =
   in
   let _, p = arm tail in
   check "each branch of a match the arm ends in returns its own"
-    (Ownership_plan.reuses p left && Ownership_plan.reuses p right);
-  check "a construction of another constructor does not" (not (Ownership_plan.reuses p ended))
+    (reused p left && reused p right);
+  check "a construction of another constructor does not" (not (reused p ended))
