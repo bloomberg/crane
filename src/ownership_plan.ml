@@ -206,11 +206,28 @@ let reads_at_uses ~n_outer ty a =
   | MLlam _ -> Ml_type_util.own_type_variables ~n_outer [ty]
   | _ -> false
 
+(* A record's field read out of it, by its projection or by the match
+   taking the record apart that returns one field: the record read. *)
+let field_of = function
+  | MLapp (MLglob {callee = r; _}, [t]) when Table.is_projection r -> Some t
+  | MLcase (ty, t, [|(ids, _, _, MLrel (k, _))|])
+    when Table.record_fields_of_type ty <> [] && k <= List.length ids ->
+    Some t
+  | _ -> None
+
+(* Whether translation spells [t] as often as it is mentioned, being a
+   variable or a record field of one. *)
+let rec spelled_in_place = function
+  | MLrel _ -> true
+  | MLmagic (_, t) -> spelled_in_place t
+  | t -> ( match field_of t with Some t -> spelled_in_place t | None -> false )
+
 (* Whether a match may take its scrutinee's value, as translation generates
    it.  A variant's alternatives are bound by reference into the scrutinee,
    which a variable that is matched keeps; a custom match whose template
-   spells the scrutinee twice would move it twice.  An enum is a value, a
-   record's fields are read one at a time, and any other custom match
+   spells the scrutinee twice reads a variable or a field of one in place,
+   and evaluates anything else once into a temporary.  An enum is a value,
+   a record's fields are read one at a time, and any other custom match
    evaluates its scrutinee once. *)
 let scrutinee_consumed ty scrut branches =
   if Table.is_custom_match branches then
@@ -219,7 +236,7 @@ let scrutinee_consumed ty scrut branches =
         (List.filter (( = ) Foreign_template.CCscrut)
            (Foreign_template.match_template (Table.find_custom_match branches)) )
     in
-    uses <= 1 || (match strip scrut with MLrel _ -> false | _ -> true)
+    uses <= 1 || not (spelled_in_place scrut)
   else if Table.record_fields_of_type ty <> [] && Array.length branches = 1 then true
   else
     Array.for_all
@@ -261,6 +278,9 @@ let liveness ~n_outer t =
     | MLapp (MLglob {callee = r; _}, [arg]) when projected d r (strip arg) <> None ->
       let l, occurrence = Option.get (projected d r (strip arg)) in
       read l occurrence
+    (* A field is read out of its record where the projection stands. *)
+    | MLapp (MLglob {callee = r; _}, [arg]) when Table.is_projection r -> walk ~consumed ~pinned parents d live arg
+    | MLcase (_, scrut, _) when field_of t <> None -> walk ~consumed ~pinned parents d live scrut
     | MLapp (MLglob {callee = r; _}, args) when Table.is_inline_custom r ->
       unsequenced ~evaluated:(evaluations r) ~pinned parents d live args
     (* A bind generated as sequencing runs its action and then its
@@ -586,4 +606,3 @@ let moved_reads p ts =
     | _ -> acc
   in
   List.sort_uniq Int.compare (List.fold_left go [] ts)
-
