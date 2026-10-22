@@ -44,4 +44,11 @@ End SharedVariantReuse.
 
 Set Crane SharedVariant.
 Set Crane Reuse.
+
+(** The test watches the blocks [insert] and [bump] write into, and a
+    loopified function does not reuse ([Crane Reuse] in the reference
+    manual), so it holds only where they are not loopified, whatever
+    [Crane Loopify] says. *)
+Crane NoLoopify SharedVariantReuse.insert SharedVariantReuse.bump.
+
 Crane Extraction "shared_variant_reuse" SharedVariantReuse.
