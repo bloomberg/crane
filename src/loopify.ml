@@ -234,21 +234,6 @@ and generic_inline_expr spec expr =
       Fun.id
       expr
 
-(** The declaration a function was lifted out of, through every lift: the
-    function itself unless it is a lifted helper. *)
-let rec lifted_origin r =
-  match Lifted.of_ref r with
-  | Some h -> ( match Lifted.origin h with Some o -> lifted_origin o | None -> r )
-  | None -> r
-
-(** Whether [r] is on a cycle through the function known by [self_refs] by
-    the program's recursive groups ({!Recursive_groups}), a helper's body
-    being part of the declaration it was lifted out of: inlining it moves
-    the function towards calling itself. *)
-let on_cycle_with self_refs r =
-  let groups = Recursive_groups.installed () in
-  List.exists (fun s -> Recursive_groups.in_group groups (lifted_origin s) (lifted_origin r)) self_refs
-
 (** The occurrence of the Core call a C++ call is made of. *)
 let made_of = function CPPfun_call (cs, _, _) -> cs.cs_occurrence | _ -> None
 
@@ -332,112 +317,6 @@ let inline_partner ~continues ~invokes
   in
   (body, List.rev !continued, List.rev !invoked)
 
-(** The partners {!try_inline_mutual_into} inlined into a function before
-    the recursion plan said which ({!Recursion_plan.inlinings}), in order,
-    each with the occurrences of the calls of it that continued in its body
-    and of those that ran it in their place; kept to check the plan against
-    under [CRANE_CHECK_IR].
-
-    Scans [body] for calls to functions registered in {!mutual_fn_table} that
-    the program's recursive groups put on a cycle with the current function
-    ({!on_cycle_with}). If such a callee is found, its body is inlined at
-    each call site:
-
-    - {b Tail calls} ([return callee(args)]) are replaced by parameter bindings
-      followed by the callee's body directly.
-    - {b Non-tail calls} ([let x = callee(args) in ...]) are wrapped in an
-      immediately-invoked lambda (IIFE) so the callee's body can use [return].
-
-    Parameter names in the inlined body are prefixed with [_inl_] to avoid
-    collisions with the outer function's variables. After inlining, the function
-    becomes self-recursive (the callee's calls back to the current function are
-    now direct self-calls) and can be loopified by {!transform_fundef}.
-
-    Each partner is inlined at most once.  A partner that is itself
-    recursive leaves a call to itself in the body it was inlined into, and
-    inlining it again only unrolls that recursion by one more level without
-    bringing this function any closer to self-recursion.
-
-    @param names List of [(GlobRef.t, Id.t)] pairs identifying the current
-                 function (used to skip self-calls and detect back-calls)
-    @param body  The function body to transform
-    @return The partners inlined, a partner found only where nothing could
-            be inlined left out *)
-let read_mutual_inlinings names body =
-  (* For each ref this function is known by, skip it (self-call). For each call
-     in the body, check if the callee is registered AND lies on a recursion
-     cycle back to this function.  A directly-mutual partner (2-way) calls this
-     function outright; a longer cycle (e.g. 3-way [a -> b -> c -> a]) reaches
-     it only transitively, and the whole cycle is inlined one hop at a time. *)
-  let self_refs = List.map fst names in
-  let is_self r = List.exists (Common.globref_equal r) self_refs in
-  (* Whether a callee is a registered function on a cycle, not yet inlined. *)
-  let find_registered_callee_by_ref inlined r =
-    if is_self r || List.exists (Common.globref_equal r) inlined then None
-    else
-      match Ref.User.Tbl.find_opt mutual_fn_table r with
-      | Some registered when on_cycle_with self_refs r -> Some (r, registered)
-      | _ -> None
-  in
-  let find_callee_in_stmts inlined stmts =
-    let rec find_callee_in_expr expr =
-      match expr with
-      | CPPfun_call (_, CPPglob (r, _, _), _) ->
-        ( match find_registered_callee_by_ref inlined r with
-        | Some _ as result -> result
-        | None -> None )
-      | CPPfun_call (_, _, args) ->
-        List.find_map find_callee_in_expr (to_reversed args)
-      | CPPbinop (_, e1, e2) ->
-        ( match find_callee_in_expr e1 with
-        | Some _ as r -> r
-        | None -> find_callee_in_expr e2 )
-      | CPPmove e | CPPderef e | CPPnamespace (_, e) -> find_callee_in_expr e
-      | CPPlambda {cl_body = stmts; _} -> find_callee_in_stmts stmts
-      | _ -> None
-    and find_callee_in_stmts stmts = List.find_map find_callee_in_stmt stmts
-    and find_callee_in_stmt = function
-      | Sreturn (Some e) -> find_callee_in_expr e
-      | Sasgn (_, _, e) | Sexpr e -> find_callee_in_expr e
-      | Sif (_, t, e) ->
-        ( match find_callee_in_stmts t with
-        | Some _ as r -> r
-        | None -> find_callee_in_stmts e )
-      | Scustom_case (_, scrut, _, branches, _) ->
-        ( match find_callee_in_expr scrut with
-        | Some _ as r -> r
-        | None -> List.find_map (fun (_, _, b) -> find_callee_in_stmts b) branches
-        )
-      | Smatch (scrut, branches, default) ->
-        ( match List.find_map (fun br -> find_callee_in_stmts br.smb_body) branches with
-        | Some _ as r -> r
-        | None -> match default with Some ss -> find_callee_in_stmts ss | None -> None )
-      | Sblock ss -> find_callee_in_stmts ss
-      | _ -> None
-    in
-    find_callee_in_stmts stmts
-  in
-  (* Inline cycle partners one hop at a time until self-recursive.  Each is
-     inlined once, so this ends after at most as many hops as there are
-     partners on a cycle through this function -- a number fixed by the
-     recursive group, not by how many other functions happen to be
-     registered when this one is transformed. *)
-  let rec loop inlined body =
-    match find_callee_in_stmts inlined body with
-    | None -> []
-    | Some (r, registered) ->
-      let is_callee_call = function
-        | CPPfun_call (_, CPPglob (r', _, _), _) -> Common.globref_equal r' r
-        | _ -> false
-      in
-      let body, continued, invoked =
-        inline_partner ~continues:is_callee_call ~invokes:is_callee_call registered body
-      in
-      (if continued = [] && invoked = [] then [] else [(r, continued, invoked)])
-      @ loop (r :: inlined) body
-  in
-  loop [] body
-
 (** Inline mutual recursion partners into the body of the function [r],
     known by [names], as the recursion plan has them
     ({!Recursion_plan.inlinings}): each partner registered in
@@ -446,10 +325,8 @@ let read_mutual_inlinings names body =
     a lambda invoked in place.  The function then calls itself where it
     called them, and can be loopified by {!transform_fundef}.
 
-    Under [CRANE_CHECK_IR] the calls inlined must be those planned, and the
-    partners those the reading of the finished bodies inlined before
-    ({!read_mutual_inlinings}). *)
-let try_inline_mutual_into r names body =
+    Under [CRANE_CHECK_IR] the calls inlined must be those planned. *)
+let try_inline_mutual_into r body =
   let planned = Recursion_plan.inlinings r in
   let made = ref [] in
   let inline_one body (i : Recursion_plan.inlining) =
@@ -487,11 +364,7 @@ let try_inline_mutual_into r names body =
     let what () = Pp.str (Table.kername_of_global r) in
     if not (agree (List.rev !made)) then
       Probe.violation "partner inlining plan"
-        Pp.(str "the calls of its partners inlined into " ++ what () ++ str " are not those planned");
-    if not (agree (read_mutual_inlinings names body)) then
-      Probe.violation "partner inlining plan"
-        Pp.(str "the recursion plan and the finished bodies disagree on the partners inlined into "
-            ++ what ())
+        Pp.(str "the calls of its partners inlined into " ++ what () ++ str " are not those planned")
   end;
   inlined
 
@@ -1161,7 +1034,7 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
   let ret_ty = f.df_ret in
   (* Try to inline mutual recursion partners, every function of the unit
      registered before any was finished ({!register_decl}). *)
-  let body = try_inline_mutual_into (fst f.df_path.dp_outer) names body in
+  let body = try_inline_mutual_into (fst f.df_path.dp_outer) body in
   (* What the machine is entered by in the plan's terms: the function's
      calls, or a lifted helper's local fixpoint member's.  A partner inlined
      into it leaves no call of its own: a tail call continues in its body,

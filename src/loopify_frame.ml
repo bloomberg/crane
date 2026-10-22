@@ -1102,31 +1102,6 @@ let adopt_invocation ~invocations e =
           ad_source = Invocations invocations }
   | _ -> None
 
-(** The invocation {!adopt_invocation} adopted before the recursion plan
-    said which ({!Recursion_plan.adopted_invocations}): the first invoked
-    lambda in the flow whose body holds a call [check] recognises, and with
-    it every invocation of a lambda of the same body, kept to check the plan
-    against under [CRANE_CHECK_IR].  The occurrences the invocations were
-    made of, if one is adopted. *)
-let read_adopted_invocations check stmts =
-  find_in_flow stmts ~on_expr:(function
-    | CPPfun_call (_, CPPlambda {cl_params; cl_body; _}, args)
-      when collect_stmts check ~in_visitor:false cl_body <> []
-           && (let named = List.filter (fun (_, id) -> Option.has_some id) (to_reversed cl_params) in
-               named <> [] && List.length named = List.length (call_args args)) ->
-      let found = ref [] in
-      ignore
-        (rewrite_exprs
-           (fun e' ->
-             ( match e' with
-             | CPPfun_call (res, CPPlambda l', _) when l'.cl_body = cl_body ->
-               found := res.cs_occurrence :: !found
-             | _ -> () );
-             e' )
-           stmts);
-      Some !found
-    | _ -> None )
-
 (** The body this machine should adopt, if any.
 
     A local fixpoint is preferred: it is the shape translation emits for Coq's
@@ -1138,8 +1113,7 @@ let read_adopted_invocations check stmts =
 
     Under [CRANE_CHECK_IR] the fixpoints in the flow the plan finds calling
     back are checked to be those whose body holds a call [check]
-    recognises, and the invocations adopted to be those the reading of the
-    finished body adopted ({!read_adopted_invocations}). *)
+    recognises. *)
 let find_adopted ~adoptable ~invocations check stmts =
   let planned (lf : local_fixpoint) =
     List.exists (Miniml.Occurrence.equal (fst lf.lf_member)) adoptable
@@ -1158,25 +1132,7 @@ let find_adopted ~adoptable ~invocations check stmts =
   match find_in_flow stmts ~on_stmt:(adopt_local_fix ~stmts ~planned) with
   | Some _ as found -> found
   | None ->
-    let adopted =
-      Option.bind invocations (fun invocations -> find_in_flow stmts ~on_expr:(adopt_invocation ~invocations))
-    in
-    ( if Probe.checking () then
-        let made = Option.map (fun ad -> match ad.ad_source with Invocations o -> o | Fixpoint _ -> []) adopted in
-        let same a b =
-          List.length a = List.length b
-          && List.for_all (fun o -> List.length (List.filter (Option.equal Miniml.Occurrence.equal (Some o)) b) = 1) a
-        in
-        let agree =
-          match (made, read_adopted_invocations check stmts) with
-          | Some occs, Some read -> same occs read
-          | None, None -> true
-          | Some _, None | None, Some _ -> false
-        in
-        if not agree then
-          Probe.violation "adoption plan"
-            (Pp.str "the recursion plan and the finished body disagree on the invocations a machine adopts") );
-    adopted
+    Option.bind invocations (fun invocations -> find_in_flow stmts ~on_expr:(adopt_invocation ~invocations))
 
 (** [only_entry n check] reports just the calls [check] finds against entry
     [n].
