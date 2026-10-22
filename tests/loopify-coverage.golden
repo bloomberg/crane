@@ -1,5 +1,8 @@
 conservative_types_kept_parameter.cpp length: DECLINED: a self-call survived the transform
 loopify_adopted_fix_name_shared.cpp f: DECLINED: a self-call survived the transform
+loopify_coerced_scrutinee.cpp eval: DECLINED: a self-call survived the transform
+loopify_coerced_scrutinee.cpp expr_rec: DECLINED: a self-call survived the transform
+loopify_coerced_scrutinee.cpp expr_rect: DECLINED: a self-call survived the transform
 loopify_mutual_partial_app.cpp ft_e: DECLINED: a self-call survived the transform: it is inside an inlined body (2 parameter(s)), which needs a second machine entry
 loopify_mutual_partial_app.cpp ft_md: DECLINED: a self-call survived the transform: it is inside an inlined body (2 parameter(s)), which needs a second machine entry
 loopify_mutual_partial_app.cpp sum_md: DECLINED: a self-call survived the transform: it is inside an inlined body (1 parameter(s)), which needs a second machine entry

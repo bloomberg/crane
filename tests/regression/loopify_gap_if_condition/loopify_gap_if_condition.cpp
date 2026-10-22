@@ -31,8 +31,7 @@ uint64_t LoopifyGapIfCondition::parity(
       }
     } else {
       auto _f = std::move(std::get<CraneCont_m>(_frame));
-      uint64_t _tmp1 = std::move(_result);
-      if (_tmp1 == UINT64_C(0)) {
+      if (std::move(_result) == UINT64_C(0)) {
         _result = UINT64_C(1);
       } else {
         _result = UINT64_C(0);

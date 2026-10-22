@@ -675,11 +675,11 @@ type inlined_call = {
    is its text, not a call.  A call with fewer arguments than its callee's
    parameters is a closure; one with more is an operand of the call it
    heads.  A saturated call continues in the partner's body where its
-   result is the function's, unless the function returns unit, which it
-   is generated returning nothing: it ends in the call's statement.
-   [parameters g] is the number of parameters of [g], and [flow_body g]
-   its body as generated, [None] where it is suspended whole. *)
-let inlined_calls ~self ~effects ~parameters ~flow_body ~void ~inlines ~continued body =
+   result is the function's -- in one returning unit, the call's statement
+   and the return after it.  [parameters g] is the number of parameters of
+   [g], and [flow_body g] its body as generated, [None] where it is
+   suspended whole. *)
+let inlined_calls ~self ~effects ~parameters ~flow_body ~inlines ~continued body =
   let effect_ = sequential effects in
   let found = ref [] in
   let continued_call use = List.exists (Occurrence.equal (Global_use.occurrence use)) continued in
@@ -695,7 +695,7 @@ let inlined_calls ~self ~effects ~parameters ~flow_body ~void ~inlines ~continue
       if n >= k then
         found :=
           { callee = use.callee;
-            continues = n = k && (pos = Returning || pos = Returned) && not void;
+            continues = n = k && (pos = Returning || pos = Returned);
             made_of = Global_use.occurrence use }
           :: !found;
       List.iter operand args
@@ -773,9 +773,8 @@ let inlinings_of ~effects ~defs ~members self fd =
         if Translation_support.suspends_whole g (Ml_type_util.ml_return_type fd.fd_type) body then None
         else Some body )
   in
-  let void = Ml_type_util.ml_type_is_unit (Ml_type_util.ml_return_type fd.fd_type) in
   let calls ~inlines ~continued body =
-    inlined_calls ~self ~effects ~parameters ~flow_body ~void ~inlines ~continued body
+    inlined_calls ~self ~effects ~parameters ~flow_body ~inlines ~continued body
   in
   let is_partner g =
     (not (Common.globref_equal g self)) && List.exists (Common.globref_equal g) members
@@ -825,9 +824,13 @@ let adopted_invocations_of ~defs self inlinings =
    calls no function it could recurse through. *)
 let analyze groups struc =
   let effects = Core_effects.analyze struc in
+  (* Every body is read with its applications whole, as translation reads
+     them ({!Mlutil.read_spine}): [(magic f) x] and [(f x) y] are calls of
+     [f] the C++ makes with every argument. *)
   let defs = ref Ref.User.Map.empty in
+  let add fd = defs := Ref.User.Map.add fd.fd_ref {fd with fd_body = Mlutil.read_spines fd.fd_body} !defs in
   Modutil.struct_iter
-    (fun d -> List.iter (fun fd -> defs := Ref.User.Map.add fd.fd_ref fd !defs) (Mlutil.term_defs d))
+    (fun d -> List.iter add (Mlutil.term_defs d))
     (fun _ -> ())
     (fun _ -> ())
     struc;
@@ -849,7 +852,7 @@ let analyze groups struc =
      what a loop of the member can take. *)
   let member_kind r fd =
     let callee ~depth:_ = function
-      | MLglob use when Common.globref_equal use.callee r ->
+      | MLglob use when Names.GlobRef.UserOrd.equal use.callee r ->
         Option.map parameters (Ref.User.Map.find_opt use.callee defs)
       | _ -> None
     in

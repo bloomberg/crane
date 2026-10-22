@@ -47,8 +47,7 @@ bool NatKey::key_eq_dec(
       }
     } else {
       auto _f = std::move(std::get<CraneCont_S>(_frame));
-      bool _tmp1 = std::move(_result);
-      if (_tmp1) {
+      if (std::move(_result)) {
         _result = true;
       } else {
         _result = false;

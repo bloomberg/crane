@@ -216,21 +216,11 @@ let binder role (x, ty) = {Lexenv.eb_id = Mlutil.id_of_mlid x; eb_type = ty; eb_
 let push role ids lex = Lexenv.push (List.map (binder role) ids) lex
 
 let rec walk b ~n_outer lex = function
-  (* A spine is read whole, as translation reads it: a global applied in
-     stages is called once with every argument, and applying a one-branch
-     match applies its branch.  A coercion of the callee is seen through:
-     what is called is what it coerces, at every argument -- [not] applied
-     to the proposition it erases, in a type written [{P} + {~P}]. *)
-  | MLapp (MLapp ((MLglob _ as g), inner), outer) -> walk b ~n_outer lex (MLapp (g, inner @ outer))
-  | MLapp (MLmagic (_, f), args) -> walk b ~n_outer lex (MLapp (f, args))
-  | MLapp (MLcase (ty, scrut, [|(ids, rty, pat, body)|]), outer) ->
-    let outer = List.map (Mlutil.ast_lift (List.length ids)) outer in
-    let body =
-      match body with
-      | MLapp (f, inner) -> MLapp (f, inner @ outer)
-      | _ -> MLapp (body, outer)
-    in
-    walk b ~n_outer lex (MLcase (ty, scrut, [|(ids, rty, pat, body)|]))
+  (* A spine is read whole, as translation reads it.  A coercion of the
+     callee is seen through at every argument -- [not] applied to the
+     proposition it erases, in a type written [{P} + {~P}]. *)
+  | MLapp ((MLapp (MLglob _, _) | MLmagic _ | MLcase (_, _, [|_|])), _) as e ->
+    walk b ~n_outer lex (Mlutil.read_spine e)
   | MLapp (MLglob use, args) ->
     walk_use b ~n_outer lex use;
     record b lex use args;
@@ -355,8 +345,11 @@ let declaration_scope ty body =
   (Lexenv.push missing (Lexenv.push (List.map2 parameter params declared) Lexenv.empty), body)
 
 (* [e], standing in [lex] under a head of [n_outer] type variables, with
-   every alias {!Translation_support.let_lambda} inlines put in place of its
-   uses, as translation generates it. *)
+   every let-bound lambda as translation generates it
+   ({!Translation_support.let_lambda}): an alias it inlines put in place of
+   its uses, one used at a single instance bound at it, and one bound as a
+   value given a binder for every value arrow of its type
+   ({!Translation_support.eta_bound_lambda}). *)
 let rec inline_aliases ~n_outer lex e =
   let go = inline_aliases ~n_outer in
   let under ids body = go (push Lexenv.Value ids lex) body in
@@ -364,7 +357,11 @@ let rec inline_aliases ~n_outer lex e =
   | MLletin (x, ty, (MLlam _ as a), body, occ) -> (
     match let_lambda ~lex ~n_outer ty a body with
     | Inlined body -> go lex body
-    | Bound | At_instance _ | Lifted -> MLletin (x, ty, go lex a, under [(x, ty)] body, occ) )
+    | At_instance inst ->
+      let subst = Mlutil.type_subst_list inst in
+      go lex (MLletin (x, subst ty, Mlutil.ast_map_types subst a, body, occ))
+    | Bound -> MLletin (x, ty, go lex (Translation_support.eta_bound_lambda ty a), under [(x, ty)] body, occ)
+    | Lifted -> MLletin (x, ty, go lex a, under [(x, ty)] body, occ) )
   | MLletin (x, ty, a, body, occ) -> MLletin (x, ty, go lex a, under [(x, ty)] body, occ)
   | MLlam (x, ty, body) -> MLlam (x, ty, under [(x, ty)] body)
   | MLcase (ty, scrut, branches) ->

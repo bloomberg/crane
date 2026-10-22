@@ -97,9 +97,7 @@ uint64_t LoopifySearch::knapsack_fuel(
       const List<std::pair<uint64_t, uint64_t>> &a1 = *_f.a1;
       uint64_t weight = _f.weight;
       uint64_t value = _f.value;
-      uint64_t _tmp3 = _f._tmp3;
-      uint64_t _tmp2 = std::move(_result);
-      if (_tmp3 <= (value + _tmp2)) {
+      if (_f._tmp3 <= (value + std::move(_result))) {
         _stack.emplace_back(CraneCont3{value});
         _stack.emplace_back(CraneEnter{
             &a1, (((capacity - weight) > capacity ? 0 : (capacity - weight))),

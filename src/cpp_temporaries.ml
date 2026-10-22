@@ -66,7 +66,7 @@ let rec subst_expr x v e =
 (* [s] with its read of [x] replaced by [v], if [s] evaluates that read
    unconditionally and holds on to no reference into it: a value
    declaration, not a reference, and a match only if it takes its scrutinee
-   by value. *)
+   by value or binds nothing of it, as a [bool]'s does. *)
 let subst_stmt x v s =
   let in_expr rebuild e = Option.map rebuild (subst_expr x v e) in
   match s with
@@ -76,7 +76,8 @@ let subst_stmt x v s =
     in_expr (fun e -> Sasgn (y, t, e)) e
   | Sasgn (y, Existing, e) -> in_expr (fun e -> Sasgn (y, Existing, e)) e
   | Sif (c, a, b) -> in_expr (fun c -> Sif (c, a, b)) c
-  | Scustom_case (ty, scrut, tys, brs, ({cm_scrutinee = Scrut_owned; _} as cm)) ->
+  | Scustom_case (ty, scrut, tys, brs, cm)
+    when cm.cm_scrutinee = Scrut_owned || List.for_all (fun (binders, _, _) -> binders = []) brs ->
     in_expr (fun scrut -> Scustom_case (ty, scrut, tys, brs, cm)) scrut
   | _ -> None
 

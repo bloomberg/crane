@@ -39,12 +39,16 @@ val structure : Miniml.ml_structure -> t
     them, and the body as generated: applied to the added parameters. *)
 val declaration_scope : Miniml.ml_type -> Miniml.ml_ast -> Lexenv.t * Miniml.ml_ast
 
-(** [generated_scope ty body] is {!declaration_scope}, with every alias of a
-    polymorphic function in the body put in place of its uses
-    ({!Translation_support.let_lambda}): the term translation generates,
-    whose binders are the ones it declares.  An inlined alias binds nothing,
-    so a binder after one is at a level the body as written puts it one
-    deeper. *)
+(** [generated_scope ty body] is {!declaration_scope}, with every
+    let-bound lambda in the body as translation generates it
+    ({!Translation_support.let_lambda}): an alias of a polymorphic function
+    put in place of its uses, and a lambda bound as a value given a binder
+    for each value arrow of its type
+    ({!Translation_support.eta_bound_lambda}).  This is the term translation
+    generates, whose binders are the ones it declares: an inlined alias binds
+    nothing, so a binder after one is at a level the body as written puts it
+    one deeper, and the binders an eta-expansion adds put those inside it
+    deeper still. *)
 val generated_scope : Miniml.ml_type -> Miniml.ml_ast -> Lexenv.t * Miniml.ml_ast
 
 (** Every global the declarations walked name, applied or not, in their

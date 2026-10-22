@@ -561,6 +561,16 @@ val ast_lift : int -> ml_ast -> ml_ast
 (** Pop the outermost de Bruijn level (equivalent to [ast_lift (-1)]). *)
 val ast_pop : ml_ast -> ml_ast
 
+(** The application [e] is, read whole as translation reads it: a global
+    applied in stages is called once with every argument, a coercion of the
+    head is seen through -- what is called is what it coerces -- and
+    applying a one-branch match applies its branch.  Any other term is
+    itself. *)
+val read_spine : ml_ast -> ml_ast
+
+(** [e] with every application in it read whole ({!read_spine}). *)
+val read_spines : ml_ast -> ml_ast
+
 (** [permut_rels k k' c] exchanges two adjacent runs of binders: [Rel 1 ...
     Rel k] become [Rel (k'+1) ... Rel (k'+k)], and [Rel (k+1) ... Rel (k+k')]
     become [Rel 1 ... Rel k']. *)

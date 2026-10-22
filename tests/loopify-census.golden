@@ -1,0 +1,2 @@
+CraneTestsBasics.binomial_heap.BinomialHeap: moved value read: in CraneTestsBasics.binomial_heap.BinomialHeap.BinomialHeap.unzip, cont is read after it is moved
+CraneTestsRegression.cps.CPS: moved value read: in CraneTestsRegression.cps.CPS.CPS.partition_cps, k is read after it is moved

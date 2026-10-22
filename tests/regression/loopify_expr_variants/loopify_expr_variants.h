@@ -393,8 +393,7 @@ struct LoopifyExprVariants {
           auto _f = std::move(std::get<CraneCont_Cond>(_frame));
           const cond_expr &a1 = *_f.a1;
           const cond_expr &a2 = *_f.a2;
-          uint64_t _tmp3 = std::move(_result);
-          if (UINT64_C(0) < _tmp3) {
+          if (UINT64_C(0) < std::move(_result)) {
             _stack.emplace_back(CraneEnter{_f.a1});
           } else {
             _stack.emplace_back(CraneEnter{_f.a2});

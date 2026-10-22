@@ -2773,6 +2773,37 @@ let sole_instance ~lex ~n_outer t body =
       Some (List.init n (fun j -> if List.mem (j + 1) vars then instance (j + 1) else Miniml.Tvar (Miniml.Schematic, j + 1)))
   with Not_sole -> None
 
+(** [a], a lambda bound by a let at type [t], with a binder for each value
+    arrow of [t] it stops short of, its body applied to them: the lambda a
+    {!Bound} let generates.  [convert_ml_type_to_cpp_type] uncurries the
+    binding's type fully, so [unit -> State bool unit] is a function of two
+    parameters, and [fun u => state_bind ...], whose body is a unary
+    function rather than a lambda, would be a lambda of one, which no slot of
+    that type holds.  The binders added are anonymous, so they are named as
+    every anonymous parameter is ([_x0], [_x1], ...); a lambda abstracting
+    every value arrow is itself. *)
+let eta_bound_lambda t a =
+  match a with
+  | MLlam _ ->
+    let binders, body = collect_lams a in
+    let n_have = List.length (List.filter (fun (_, ty) -> not (erased_by_extraction ty)) binders) in
+    (* The domains of the value arrows the lambda does not abstract, outermost
+       first. *)
+    let new_doms = List.filteri (fun i _ -> i >= n_have) (ml_value_domains t) in
+    let d = List.length new_doms in
+    if d = 0 then a
+    else
+      let new_binders = List.map (fun dom -> (Id anonymous_name, dom)) new_doms in
+      (* The innermost new binder is [MLrel 1], the outermost [MLrel d]. *)
+      let args = List.init d (fun i -> fresh_rel (d - i)) in
+      let applied =
+        match ast_lift d body with
+        | MLapp (f, xs) -> MLapp (f, xs @ args)
+        | lifted -> MLapp (lifted, args)
+      in
+      named_lams binders (named_lams (List.rev new_binders) applied)
+  | _ -> a
+
 (** How [let x : t := a in b], [a] a lambda, is generated under a head of
     [n_outer] type variables, [lex] being the enclosing scope's environment. *)
 type let_lambda =

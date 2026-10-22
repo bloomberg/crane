@@ -43,6 +43,7 @@ install:
 test: extract
 	@dune build @unit_tests/runtest
 	@scripts/check-module-deps.sh
+	@scripts/loopify-census.sh
 	@dune build bin/test_runner/main.exe
 	@./_build/default/bin/test_runner/main.exe
 

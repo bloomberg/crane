@@ -550,7 +550,10 @@ let run_hyperfine benchmarks =
     A fresh temporary directory owns every generated source, driver, compiler
     artifact, and executable; it is recursively removed on success or failure. *)
 let run ~opaque_access requested_subjects configurations =
-  if not (Subprocess.executable_available "hyperfine") then
+  (* A census extracts the subjects but writes no files, so there is nothing
+     to compile or time. *)
+  let census = Probe.census () in
+  if (not census) && not (Subprocess.executable_available "hyperfine") then
     benchmark_error "Hyperfine is not available: cannot run benchmarks.";
   let subjects = List.map validate_subject requested_subjects in
   validate_unique_labels subjects;
@@ -561,8 +564,10 @@ let run ~opaque_access requested_subjects configurations =
       let artifacts =
         materialize_managed ~opaque_access ~temp_dir subjects configurations
       in
-      let benchmarks =
-        compile_matrix ~temp_dir ~artifacts subjects configurations
-      in
-      verify_outputs benchmarks;
-      run_hyperfine benchmarks )
+      if not census then begin
+        let benchmarks =
+          compile_matrix ~temp_dir ~artifacts subjects configurations
+        in
+        verify_outputs benchmarks;
+        run_hyperfine benchmarks
+      end )

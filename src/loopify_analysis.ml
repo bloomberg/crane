@@ -456,10 +456,14 @@ type nontail_result = {
     returns [Some call_site] if it is a direct recursive call, [None] otherwise. *)
 type call_checker = cpp_expr -> call_site option
 
-(** Check whether a [GlobRef.t] matches any of the given function refs. *)
+(** Check whether a [GlobRef.t] names one of the given functions.  A
+    function is emitted once per constant, so the constant's own name
+    decides it: [Make.eq_dec], included from its functor's parameter, has
+    [M.eq_dec]'s canonical name and is another C++ function, calling which
+    is no recursion. *)
 let ref_matches fn_refs r =
   List.exists
-    (fun (fn_r, _) -> Common.globref_equal r fn_r)
+    (fun (fn_r, _) -> GlobRef.UserOrd.equal r fn_r)
     fn_refs
 
 (** Build a call checker for top-level function definitions: a call is
@@ -904,6 +908,9 @@ let rec count_calls_expr (check : call_checker) expr =
     count_calls_expr check obj
     + List.fold_left (fun acc a -> acc + count_calls_expr check a) 0 args
   | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) ->
+    count_calls_expr check e
+  (* A cast evaluates the call it reads, as {!collect_expr} counts it. *)
+  | CPPany_cast (_, e) | CPPany_cast_tolerant (_, e) | CPPunbox (_, e) | CPPconvert (_, e) ->
     count_calls_expr check e
   | CPPbinop (_, e1, e2) ->
     count_calls_expr check e1 + count_calls_expr check e2
