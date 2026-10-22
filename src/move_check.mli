@@ -9,10 +9,14 @@
     last uses its region's plan finds ({!Ownership_plan}), Loopify's frames
     and loops, {!Last_use}, the depth flattening -- and this checks all of
     them against the C++ they ended up in, independently of how each was
-    decided.  A move reaches a whole local or one member of it; a later read
-    of the same local, or of the same member, is a violation, and so is a
-    read beside it in an expression whose parts C++ evaluates in no fixed
-    order.  An assignment gives a local, or a member, a new value; a [return]
+    decided.  A move reaches a whole local or one member of it -- a field
+    of the alternative its variant holds among them; a later read of the
+    same local, or of the same member, is a violation, and so is a read
+    beside it in an expression whose parts C++ evaluates in no fixed order.
+    A method is called on the whole local.  A reuse arm's token is checked
+    as a linear one (section 4.10): the reuse factory it is handed to
+    consumes the token's storage, which nothing may read or consume again,
+    though what the arm moved out of the local before is not read of it.  An assignment gives a local, or a member, a new value; a [return]
     or a [throw] ends the path; a loop's body is followed by its head; the
     arms of a conditional are alternatives.  A closure reads what it closes
     over where it is made, and its own body is checked as a body.  A body
@@ -21,3 +25,7 @@
     Under [CRANE_CHECK_IR] each violation is reported ({!Probe.violation}). *)
 
 val check_decl : Minicpp.cpp_decl -> unit
+
+(** The locals [ss], a body, reads after it moves them, the backend's own
+    storage aside. *)
+val moved_reads : Minicpp.cpp_stmt list -> Names.Id.t list

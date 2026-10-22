@@ -44,6 +44,9 @@ val member : string -> of_:int -> int -> Names.Id.t
     collide. *)
 val companion : Names.Id.t -> string -> Names.Id.t
 
+(** Whether [y] is a {!companion} in role [r]. *)
+val is_companion : string -> Names.Id.t -> bool
+
 (** [prefixed p x] is a local derived from [x] and marked by [p] (a prefix
     such as ["_loop"], with no trailing underscore): [_loop_x], or [_loop_self]
     for [x = _self] rather than [_loop__self]. *)

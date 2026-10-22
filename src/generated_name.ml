@@ -26,6 +26,8 @@ let member r ~of_ i = if of_ = 1 then id r else indexed r i
 let companion x r =
   Id.of_string (separate_underscores (Id.to_string x ^ "_crane_" ^ r))
 
+let is_companion r y = String.ends_with ~suffix:("_crane_" ^ r) (Id.to_string y)
+
 let prefixed p x =
   let s = Id.to_string x in
   Id.of_string (if s <> "" && s.[0] = '_' then p ^ s else p ^ "_" ^ s)

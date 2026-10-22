@@ -6,16 +6,23 @@
 open Names
 open Minicpp
 
-(* What a read or a move reaches: a whole local, or one member of it. *)
-type place = Whole of Id.t | Member of Id.t * string
+(* What a read or a move reaches: a whole local, or one member of it; or the
+   storage of a local, which a reuse arm hands its constructor as the token,
+   to be rebuilt in place. *)
+type place = Whole of Id.t | Member of Id.t * string | Storage of Id.t
 
-let var = function Whole x | Member (x, _) -> x
+let var = function Whole x | Member (x, _) | Storage x -> x
 
 (* A move of one place takes what a read of the other needs: the same local,
-   unless they are two different members of it. *)
+   unless they are two different members of it, or a value taken out of a
+   local before its storage is rebuilt. *)
 let conflict p q =
   Id.equal (var p) (var q)
-  && match (p, q) with Member (_, f), Member (_, g) -> String.equal f g | _ -> true
+  &&
+  match (p, q) with
+  | Member (_, f), Member (_, g) -> String.equal f g
+  | (Whole _ | Member _), Storage _ -> false
+  | _ -> true
 
 (* What evaluating an expression reads and moves, as a later or a concurrent
    evaluation sees it. *)
@@ -39,10 +46,19 @@ let check_after report a b =
     (fun m -> if List.exists (conflict m) (b.reads @ b.moves) then report.found <- var m :: report.found)
     a.moves
 
-(* The member a read reaches when it reads one: a field, or a pair component
-   through the projection mapping. *)
+(* The local whose variant [e] reaches into: [x.v_mut()], [x->v()]. *)
+let variant_of = function
+  | CPPfun_call (_, CPPaccess (Adot, (CPPvar _ as x), _), {rev = []}) | CPPaccess_call (_, (CPPvar _ as x), _, []) ->
+    Some x
+  | _ -> None
+
+(* The member a read reaches when it reads one: a field, a field of the
+   alternative a variant holds -- the cell a reuse arm hands its constructor
+   as the token -- or a pair component through the projection mapping. *)
 let member e =
   match e with
+  | CPPaccess (Adot, CPPstd_get (_, Some holder), f) when variant_of holder <> None ->
+    Some (Option.get (variant_of holder), Id.to_string f)
   | CPPaccess (Adot, x, f) | CPPget (x, f) -> Some (x, Id.to_string f)
   | CPPfun_call
       (_, CPPglob (_, _, Some {ci_inline = Some {it_shape = Inline_pair_projection f; _}; _}), {rev = [x]}) ->
@@ -88,9 +104,22 @@ let rec expr report e : effect_ =
   match (member e, e) with
   | Some (CPPvar x, f), _ -> {none with reads = [Member (x, f)]}
   | Some (CPPmove (CPPvar x), f), _ -> {none with moves = [Member (x, f)]}
+  | _, CPPmove m when (match member m with Some (CPPvar _, _) -> true | _ -> false) -> (
+    match member m with Some (CPPvar x, f) -> {none with moves = [Member (x, f)]} | _ -> none )
   | _, CPPraw _ -> raise Opaque
   | _, CPPvar x -> {none with reads = [Whole x]}
   | _, CPPmove (CPPvar x) -> {none with moves = [Whole x]}
+  (* A reuse factory takes the storage of the local it is handed as its
+     token, first, to rebuild it in place. *)
+  | _, CPPfun_call (_, CPPqualified_t (_, f), args) when Generated_name.is_companion "reuse" f -> (
+    match call_args args with
+    | CPPmove (CPPvar x) :: rest ->
+      unsequenced report ({none with moves = [Storage x]} :: List.map (expr report) rest)
+    | args -> unsequenced report (List.map (expr report) args) )
+  (* A method is called on the whole object, a variant's accessor included. *)
+  | _, CPPfun_call (_, CPPaccess (Adot, CPPvar x, _), args) ->
+    let args = List.map (expr report) (call_args args) in
+    unsequenced report ({none with reads = [Whole x]} :: args)
   (* A condition runs first, and one arm after it. *)
   | _, CPPcond (c, a, b) ->
     let c = expr report c and arms = union (expr report a) (expr report b) in
@@ -116,10 +145,11 @@ let rec expr report e : effect_ =
     (* Everything else evaluates its parts in an order C++ does not fix. *)
     let parts = ref [] in
     iter_expr_children ~on_expr:(fun e -> parts := expr report e :: !parts) ~on_stmts:(body report) e;
-    List.iteri
-      (fun i p -> List.iteri (fun j q -> if i <> j then check_after report p q) !parts)
-      !parts;
-    List.fold_left union none !parts
+    unsequenced report !parts
+
+and unsequenced report parts =
+  List.iteri (fun i p -> List.iteri (fun j q -> if i <> j then check_after report p q) parts) parts;
+  List.fold_left union none parts
 
 and body report ss = try ignore (walk report {continue_ = []; break_ = []} [] ss) with Opaque -> ()
 
@@ -133,7 +163,10 @@ and at report live e =
   check_after report eff {none with reads = live};
   eff.reads @ eff.moves @ live
 
-and kill p live = List.filter (fun q -> not (conflict p q && (match p with Whole _ -> true | Member _ -> q = p))) live
+and kill p live =
+  List.filter
+    (fun q -> not (Id.equal (var p) (var q) && match p with Whole _ -> true | Member _ | Storage _ -> q = p))
+    live
 
 and kill_all xs live = List.fold_left (fun l x -> kill (Whole x) l) live xs
 
@@ -208,14 +241,17 @@ and loop report after head_of ss =
    the recursion plan; this checks the program's locals. *)
 let backend x = String.length (Id.to_string x) > 0 && (Id.to_string x).[0] = '_'
 
-let check_body owner ss =
+let moved_reads ss =
   let report = {found = []} in
   body report ss;
+  List.sort_uniq Id.compare (List.filter (fun x -> not (backend x)) report.found)
+
+let check_body owner ss =
   List.iter
     (fun x ->
       Probe.violation "moved value read"
         Pp.(str "in " ++ owner ++ str ", " ++ Id.print x ++ str " is read after it is moved") )
-    (List.sort_uniq Id.compare (List.filter (fun x -> not (backend x)) report.found))
+    (moved_reads ss)
 
 let rec check_decl d =
   let rec field (f, _, _) =
