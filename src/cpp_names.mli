@@ -83,6 +83,11 @@ val is_record_inductive : Names.GlobRef.t -> bool
 (** Whether the inductive is local. *)
 val is_local_inductive : Names.GlobRef.t -> bool
 
+(** [Tglob (r, args, es)], the inductive [r] applied, as a type: a local
+    inductive is in scope under its own name, any other is written in its own
+    scope ([Tnamespace]), which the printer places where its struct was put. *)
+val inductive_type : Names.GlobRef.t -> Minicpp.cpp_type list -> Minicpp.cpp_expr list -> Minicpp.cpp_type
+
 (** The name with its final component capitalized. *)
 val capitalize_base : Cpp_name.t -> Cpp_name.t
 

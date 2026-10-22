@@ -3552,9 +3552,13 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           (* A factory returns the inductive value at the very instantiation
              the qualifier spells (see [mk_factory_methods] in {!Gen_decls}),
              so the call knows its own result -- and loopify can type a frame
-             field holding one instead of falling back on [decltype]. *)
+             field holding one instead of falling back on [decltype], and
+             spell a cell's constructor struct.  The qualifier is a value's
+             spelling; the result is recorded as a type, which only here,
+             where the inductives in scope are known, can be written. *)
           let ctor_sig ?constructs args =
-            Minicpp.call_sig ~yields:type_expr ?constructs ~nargs:(List.length args) ()
+            Minicpp.call_sig ~yields:(Cpp_names.inductive_type n temps []) ?constructs
+              ~nargs:(List.length args) ()
           in
           (* Perceus reuse: where the plan gives this construction the token
              of the use_count()==1-guarded arm it is returned from
