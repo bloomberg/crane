@@ -109,10 +109,11 @@ val pair_by_value : t -> Miniml.ml_ast -> Miniml.ml_branch array -> bool
     projects out of a record that is not moved there. *)
 val projects_in_place : t -> Miniml.ml_type -> Miniml.ml_ast -> bool
 
-(** The de Bruijn indices, at [closure], of the variables the lambda
-    [closure] takes by move when it is made: each is owned there, and the
-    capture is its last use -- nothing after the lambda, beside it, or
-    captured with it reads it. *)
+(** The de Bruijn indices, at [closure], of the variables the lambda or
+    local fixpoint [closure] takes by move when it is made, as closures that
+    copy what they capture: each is owned there, and the capture is its last
+    use -- nothing after the closure, beside it, or captured with it reads
+    it. *)
 val moved_captures : t -> Miniml.ml_ast -> int list
 
 (** The de Bruijn indices, at [ts], of the variables [ts] read by move

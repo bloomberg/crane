@@ -525,7 +525,8 @@ bool_choice(std::type_identity_t<crane::fn<bool(T1)>> h) {
 template <typename T1>
 Sig<crane::fn<T1(uint64_t)>>
 dependent_choice(std::type_identity_t<crane::fn<Sig<T1>(T1)>> h, T1 x0) {
-  auto f_impl = [=, x0 = std::move(x0)](auto &_self_f, uint64_t n) -> T1 {
+  auto f_impl = [=, h = std::move(h), x0 = std::move(x0)](auto &_self_f,
+                                                          uint64_t n) -> T1 {
     if (n <= 0) {
       return x0;
     } else {

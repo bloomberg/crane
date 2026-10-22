@@ -305,17 +305,15 @@ let liveness ~n_outer t =
        is a region of its own. *)
     | MLlam _ | MLfix _ ->
       let captured = free parents d t in
-      (* A lambda copies what it captures when it is made, all at once; a
-         local fixpoint refers to it. *)
-      ( match t with
-      | MLlam _ ->
-        List.iter
-          (fun (l, occurrence) ->
-            let shared = Levels.exists (overlap parents l) in
-            let last = not (shared live || shared pinned || shared (Levels.remove l captured)) in
-            captures := {occurrence; last; last_whole = last; consumed = true} :: !captures )
-          (closure_reads d t)
-      | _ -> () );
+      (* A lambda copies what it captures when it is made, all at once; so
+         does a local fixpoint generated as closures, though one generated
+         by reference refers to it instead and is given no capture moves. *)
+      List.iter
+        (fun (l, occurrence) ->
+          let shared = Levels.exists (overlap parents l) in
+          let last = not (shared live || shared pinned || shared (Levels.remove l captured)) in
+          captures := {occurrence; last; last_whole = last; consumed = true} :: !captures )
+        (closure_reads d t);
       Levels.union live captured
     | MLletin (_, ty, a, b, _) ->
       let pinned_b = if reads_at_uses ~n_outer ty a then Levels.union pinned (free parents d a) else pinned in
@@ -455,9 +453,8 @@ let ownership ~n_outer ~reads ~arms ~owned t =
     | MLcons (_, _, args) | MLtuple args -> all args
     | MLparray (elems, default) -> all (default :: Array.to_list elems)
     (* A closure's body is a region of its own. *)
-    | MLlam _ ->
+    | MLlam _ | MLfix _ ->
       List.iter (fun (l, o) -> captured := (o, Levels.mem l owned) :: !captured) (closure_reads d t)
-    | MLfix _ -> ()
     | MLletin (x, ty, a, b, _) ->
       own owned d a;
       (* What a local fixpoint closes over, it reads by reference. *)
