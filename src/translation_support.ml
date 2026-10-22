@@ -1597,12 +1597,19 @@ let declared_by_value declared ~summary =
   match declared with Some ty -> not (declared_by_reference ty) | None -> summary
 
 (** The de Bruijn indices of the [n] innermost parameters a body owns: those
-    [owned] says are passed by value, of a type {!Ownership_plan.worth_moving}
-    accepts as reading [ty]. *)
-let owned_parameters n ~owned ~ty =
-  List.filter_map
-    (fun i -> if owned i && Ownership_plan.worth_moving (ty i) then Some (i + 1) else None)
-    (List.init n Fun.id)
+    [owned] says are passed by value, of a type worth moving.  That is one
+    {!Ownership_plan.worth_moving} accepts as reading [ty]; but an erased ML
+    type says nothing of how the value is held, and there the type the head
+    [declared] it at is read instead ({!Ownership_plan.worth_moving_cpp}):
+    [x] in an instance's [fun (A : Type) (x : A) => Some x] is a boxed
+    [crane::obj]. *)
+let owned_parameters ?(declared = fun _ -> None) n ~owned ~ty =
+  let worth i =
+    match (resolve_tmeta (ty i), declared i) with
+    | (Tdummy _ | Tunknown | Taxiom), Some cty -> Ownership_plan.worth_moving_cpp cty
+    | ty, _ -> Ownership_plan.worth_moving ty
+  in
+  List.filter_map (fun i -> if owned i && worth i then Some (i + 1) else None) (List.init n Fun.id)
 
 (* ============================================================================
    Shared helpers for method generation (used by gen_ind_header_v2 and

@@ -792,6 +792,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
         && Translation_support.declared_by_value
              (List.assoc_opt (Common.get_db_name (i + 1) env) params)
              ~summary:(List.nth method_owned_flags i) )
+      ~declared:(fun i -> List.assoc_opt (Common.get_db_name (i + 1) env) params)
       ~ty:(fun i -> snd (List.nth ids_with_types i))
   in
   (* The receiver becomes [this]; a closure reading it captures a copy of

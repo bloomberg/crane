@@ -84,6 +84,30 @@ let rec worth_moving = function
   | Tmeta {contents = Some t} -> worth_moving t
   | _ -> false
 
+let rec worth_moving_cpp (ty : Minicpp.cpp_type) =
+  let open Minicpp in
+  match ty with
+  | Tglob (r, tparams, _) ->
+    (not (Table.is_enum_inductive r))
+    && (not (Table.is_coinductive r))
+    && ( (not (Table.is_custom r))
+       || List.exists worth_moving_cpp tparams
+       || not (Table.is_custom_scalar_ref r || Table.is_trivially_copyable_ref r) )
+  | Tshared_ptr _ | Tfun _ | Terased _ -> true
+  | Tvariant (_, ts) | Tid (_, ts) | Tid_external (_, ts) -> List.exists worth_moving_cpp ts
+  | Tnondeduced t -> worth_moving_cpp t
+  | Trebind (h, x) -> worth_moving_cpp h || worth_moving_cpp x
+  | Thole -> false
+  | Tref (Forwarding, t) -> worth_moving_cpp t
+  | Texpr_type _ | Tdecltype_auto -> false
+  | Tconst t | Tnamespace (_, t) | Tqualified (t, _) | Tapply (t, _)
+  | Tref (Lvalue, t) ->
+    worth_moving_cpp t
+  | Tvar _ | Tinstance _ | Tpromoted _ -> true
+  | Tdecay t -> worth_moving_cpp t
+  | Ttyctor _ | Tptr _ | Tvoid | Tauto | Tunresolved | Tany | Topaque ->
+    false
+
 (* A variable is named by its de Bruijn level in the region: the number of
    binders around its binding site, counted from the region's root, so that
    one the region does not bind has a negative level.  [parents] maps a

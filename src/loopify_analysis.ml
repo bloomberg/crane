@@ -186,35 +186,7 @@ and is_trivially_copyable_named s ts =
   Table.is_trivially_copyable_cpp_name s
   && List.for_all is_trivially_copyable_type ts
 
-(** Returns [true] for types that are expensive to copy and benefit from
-    [std::move]: [shared_ptr], value-type inductives, type variables, and
-    types parameterized by such types.  A mapped type is one of them unless
-    it is known to copy for free -- a scalar, or a type declared
-    [Crane TriviallyCopyable] -- since its replacement text says nothing about
-    what a copy costs: [Big] may be a class that owns a buffer. *)
-let rec worthwhile_move_type = function
-  | Tglob (r, tparams, _) -> not (Table.is_enum_inductive r)
-                         && not (Table.is_coinductive r)
-                         && (not (Table.is_custom r)
-                             || List.exists worthwhile_move_type tparams
-                             || not (Table.is_custom_scalar_ref r
-                                     || Table.is_trivially_copyable_ref r))
-  | Tshared_ptr _ | Tfun _ | Terased _ -> true
-  | Tvariant (_, ts) -> List.exists worthwhile_move_type ts
-  | Tid (_, ts) | Tid_external (_, ts) ->
-    List.exists worthwhile_move_type ts
-  | Tnondeduced t -> worthwhile_move_type t
-  | Trebind (h, x) -> worthwhile_move_type h || worthwhile_move_type x
-  | Thole -> false
-  | Tref (Forwarding, t) -> worthwhile_move_type t
-  | Texpr_type _ | Tdecltype_auto -> false
-  | Tconst t | Tnamespace (_, t) | Tqualified (t, _) | Tapply (t, _)
-  | Tref (Lvalue, t) ->
-    worthwhile_move_type t
-  | Tvar _ | Tinstance _ | Tpromoted _ -> true
-  | Tdecay t -> worthwhile_move_type t
-  | Ttyctor _ | Tptr _ | Tvoid | Tauto | Tunresolved | Tany | Topaque ->
-    false
+let worthwhile_move_type = Ownership_plan.worth_moving_cpp
 
 (* Global mutable state in this file and their reset granularity:
    - mutual_fn_table, outcomes : reset per generated file (State.Unit)
