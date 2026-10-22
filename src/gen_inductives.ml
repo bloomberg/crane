@@ -2741,6 +2741,31 @@ let gen_ind_header_v2
               (param_name_of j, param_ty) )
             cpp_tys
         in
+        (* A conversion between the parameter and its field reads the
+           parameter for the last time, and takes it by move where it reads
+           it once, outside any closure. *)
+        let sink_converted api_ty var e =
+          (* The parameter's reads in [e], each in a closure or a statement
+             counting as two. *)
+          let rec reads ~weight n e =
+            match e with
+            | CPPvar _ when e = var -> n + weight
+            | CPPlambda _ -> fold_expr_children ~on_expr:(reads ~weight:2) ~on_stmts:(stmt_reads ~weight:2) n e
+            | _ -> fold_expr_children ~on_expr:(reads ~weight) ~on_stmts:(stmt_reads ~weight:2) n e
+          and stmt_reads ~weight n ss =
+            List.fold_left
+              (fun n s -> fold_stmt_children ~on_expr:(reads ~weight) ~on_stmts:(stmt_reads ~weight) n s)
+              n ss
+          in
+          if is_trivially_copyable_type api_ty || reads ~weight:1 0 e <> 1 then e
+          else
+            let rec moved e =
+              match e with
+              | CPPvar _ when e = var -> CPPmove var
+              | _ -> map_expr moved Fun.id Fun.id e
+            in
+            moved e
+        in
         let ctor_args =
           List.map
             (fun (j, storage_ty, api_ty) ->
@@ -2788,8 +2813,8 @@ let gen_ind_header_v2
                     [Sreturn (Some ret)] ~capture:Closure
                 | _ when storage_ty = api_ty -> CPPmove var
                 | _ ->
-                  gen_type_conversion_expr
-                    ~src_ty:api_ty ~dst_ty:storage_ty var
+                  sink_converted api_ty var
+                    (gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var)
               end
               | Tshared_ptr inner ->
                 let arg = if is_coinductive then var else CPPmove var in
@@ -2811,8 +2836,8 @@ let gen_ind_header_v2
                 if is_trivially_copyable_type api_ty then var
                 else CPPmove var
               | _ ->
-                gen_type_conversion_expr
-                  ~src_ty:api_ty ~dst_ty:storage_ty var )
+                sink_converted api_ty var
+                  (gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var) )
             cpp_tys
         in
         (* Under [Crane NonAtomicRc], a field holding the inductive itself
