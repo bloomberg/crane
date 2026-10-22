@@ -123,7 +123,7 @@ struct NestedPartialApp {
           [=, t1 = std::move(t1)](uint64_t _x0, tree _x1) -> tree {
         return build_node(std::move(t1), _x0, _x1);
       };
-      crane::fn<tree(tree)> h = [=](tree _pa0) {
+      crane::fn<tree(tree)> h = [=, g = std::move(g)](tree _pa0) {
         return g(UINT64_C(42), _pa0);
       };
       tree r1 = h(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()));
@@ -143,7 +143,7 @@ struct NestedPartialApp {
       crane::fn<tree(tree)> h1 = [=](tree _pa0) {
         return g(UINT64_C(42), _pa0);
       };
-      crane::fn<tree(tree)> h2 = [=](tree _pa0) {
+      crane::fn<tree(tree)> h2 = [=, g = std::move(g)](tree _pa0) {
         return g(UINT64_C(99), _pa0);
       };
       tree r1 = h1(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()));
@@ -161,10 +161,11 @@ struct NestedPartialApp {
                                 tree _x2) -> uint64_t {
         return quad_fn(std::move(t), _x0, _x1, _x2);
       };
-      crane::fn<uint64_t(uint64_t, tree)> f2 = [=](uint64_t _pa0, tree _pa1) {
-        return f1(UINT64_C(20), _pa0, _pa1);
-      };
-      crane::fn<uint64_t(tree)> f3 = [=](tree _pa0) {
+      crane::fn<uint64_t(uint64_t, tree)> f2 =
+          [=, f1 = std::move(f1)](uint64_t _pa0, tree _pa1) {
+            return f1(UINT64_C(20), _pa0, _pa1);
+          };
+      crane::fn<uint64_t(tree)> f3 = [=, f2 = std::move(f2)](tree _pa0) {
         return f2(UINT64_C(30), _pa0);
       };
       uint64_t r1 = f3(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()));

@@ -7270,9 +7270,17 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         in
         let pa_exprs = List.map (fun (_, id_opt) ->
           CPPvar (Option.get id_opt)) pa_params in
-        mk_lambda pa_params None
-          [Sreturn (Some (mk_call callee (args @ pa_exprs)))]
-          ~capture:Closure
+        (* What the call reads, the function included, is read where the
+           closure is made, and taken by move there when the plan moves it. *)
+        ( match
+            mk_lambda pa_params None
+              [Sreturn (Some (mk_call callee (args @ pa_exprs)))]
+              ~capture:Closure
+          with
+          | CPPlambda l ->
+            CPPlambda
+              {l with cl_moved = capture_names env (Ownership_plan.moved_reads (!tctx).move_plan (f :: ml_args))}
+          | e -> e )
       else
         mk_call (gen_callee ()) args
     else if n_args > n_value_dom && n_value_dom > 0 then
