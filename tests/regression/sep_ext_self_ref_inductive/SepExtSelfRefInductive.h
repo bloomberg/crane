@@ -135,8 +135,8 @@ template <S X> struct HashTrie {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 Trie_rec(const T2 &f, F1 &&f0, const Trie<T1> &t0) {
-    return Trie_rect<T1, T2>(f, f0, t0);
+  static T2 Trie_rec(T2 f, F1 &&f0, const Trie<T1> &t0) {
+    return Trie_rect<T1, T2>(std::move(f), f0, t0);
   }
 
   template <typename T1> static const Trie<T1> &empty() {

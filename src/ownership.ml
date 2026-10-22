@@ -14,10 +14,25 @@ let read_off params body =
     (List.combine (Escape.infer_owned_params n body) (Escape.infer_sub_bindings_escape_params n body))
     params
 
+(* Every function [struc] defines, in a functor or not, with its body and
+   type: a constant with a parameter, and each member of a recursive group.
+   A custom constant is not generated from its body: what it does with its
+   arguments is its mapping's, which a call to it spells. *)
+let functions struc =
+  let acc = ref [] in
+  let add r b ty = if not (Table.is_custom r) then acc := (r, b, ty) :: !acc in
+  Modutil.struct_iter
+    (function
+      | Miniml.Dterm (r, b, ty) when Ml_type_util.ml_domains ty <> [] -> add r b ty
+      | Miniml.Dfix fds -> List.iter (fun (fd : Miniml.ml_fix_def) -> add fd.fd_ref fd.fd_body fd.fd_type) fds
+      | _ -> () )
+    (fun _ -> ())
+    (fun _ -> ())
+    struc;
+  List.rev !acc
+
 let summarize ?(receiver = fun _ -> None) struc =
-  (* A custom constant is not generated from its body: what it does with its
-     arguments is its mapping's, which a call to it spells. *)
-  let fns = List.filter (fun (r, _, _) -> not (Table.is_custom r)) (Modutil.struct_functions struc) in
+  let fns = functions struc in
   (* A method takes its receiver as the const [this], whatever its body does
      with it: a call hands it nothing to keep.  [receiver] counts parameters
      outermost first, the flags innermost first. *)

@@ -110,8 +110,8 @@ template <OrderedType X> struct Make {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 fmap_rec(const T2 &f, F1 &&f0, const Fmap<T1> &f1) {
-    return fmap_rect<T1, T2>(f, f0, f1);
+  static T2 fmap_rec(T2 f, F1 &&f0, const Fmap<T1> &f1) {
+    return fmap_rect<T1, T2>(std::move(f), f0, f1);
   }
 
   template <typename T1> static bool is_empty(const Fmap<T1> &m) {

@@ -2182,11 +2182,11 @@ template <OrderedType X> struct Raw {
   static List<std::pair<key, T3>>
   map2_alt(const std::type_identity_t<crane::fn<
                std::optional<T3>(std::optional<T1>, std::optional<T2>)>> &f,
-           const List<std::pair<typename X::t, T1>> &m0,
+           List<std::pair<typename X::t, T1>> m0,
            const List<std::pair<typename X::t, T2>> &m_) {
     List<std::pair<typename X::t,
                    std::pair<std::optional<T1>, std::optional<T2>>>>
-        m1 = combine<T1, T2>(m0, m_);
+        m1 = combine<T1, T2>(std::move(m0), m_);
     List<std::pair<typename X::t, std::optional<T3>>> m2 =
         map<std::pair<std::optional<T1>, std::optional<T2>>, std::optional<T3>>(
             [=](const std::pair<std::optional<T1>, std::optional<T2>> &p) {

@@ -21,12 +21,12 @@ Nat f_odd(const Nat &x0_, const Nat &x1_) { return x0_.mul(x1_); }
 
 /// Point-free: the body is an if whose branches are functions, and no
 /// argument is written.
-Nat pick(const Nat &n, const Nat &x0_) {
+Nat pick(const Nat &n, Nat x0_) {
   if (PeanoNat::even(n)) {
-    return f_even(n, x0_);
+    return f_even(n, std::move(x0_));
   } else {
-    return f_odd(n, x0_);
+    return f_odd(n, std::move(x0_));
   }
 }
 
-Nat go(const Nat &x0_, const Nat &x1_) { return pick(x0_, x1_); }
+Nat go(const Nat &x0_, Nat x1_) { return pick(x0_, std::move(x1_)); }

@@ -67,8 +67,8 @@ template <Elem E> struct Container {
   }
 
   template <typename T1, typename F1>
-  static T1 maybe_rec(const T1 &f, F1 &&f0, const maybe &m) {
-    return maybe_rect<T1>(f, f0, m);
+  static T1 maybe_rec(T1 f, F1 &&f0, const maybe &m) {
+    return maybe_rect<T1>(std::move(f), f0, m);
   }
 
   struct mlist {
@@ -140,8 +140,8 @@ template <Elem E> struct Container {
   }
 
   template <typename T1, typename F1>
-  static T1 mlist_rec(const T1 &f, F1 &&f0, const mlist &m) {
-    return mlist_rect<T1>(f, f0, m);
+  static T1 mlist_rec(T1 f, F1 &&f0, const mlist &m) {
+    return mlist_rect<T1>(std::move(f), f0, m);
   }
 
   struct mtree {

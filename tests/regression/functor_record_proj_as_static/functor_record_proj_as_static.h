@@ -865,11 +865,11 @@ template <OrderedType X> struct Coq_Raw {
   static List<std::pair<key, T3>>
   map2_alt(const std::type_identity_t<crane::fn<
                std::optional<T3>(std::optional<T1>, std::optional<T2>)>> &f,
-           const List<std::pair<typename X::t, T1>> &m,
+           List<std::pair<typename X::t, T1>> m,
            const List<std::pair<typename X::t, T2>> &m_) {
     List<std::pair<typename X::t,
                    std::pair<std::optional<T1>, std::optional<T2>>>>
-        m0 = combine<T1, T2>(m, m_);
+        m0 = combine<T1, T2>(std::move(m), m_);
     List<std::pair<typename X::t, std::optional<T3>>> m1 =
         map<std::pair<std::optional<T1>, std::optional<T2>>, std::optional<T3>>(
             [=](const std::pair<std::optional<T1>, std::optional<T2>> &p) {
@@ -1135,8 +1135,8 @@ template <Int I, OrderedType X> struct Raw {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 tree_rec(const T2 &f, F1 &&f0, const tree<T1> &t0) {
-    return tree_rect<T1, T2>(f, f0, t0);
+  static T2 tree_rec(T2 f, F1 &&f0, const tree<T1> &t0) {
+    return tree_rect<T1, T2>(std::move(f), f0, t0);
   }
 
   template <typename T1> static typename I::t height(const tree<T1> &m) {
@@ -1426,8 +1426,8 @@ template <Int I, OrderedType X> struct Raw {
   }
 
   template <typename T1>
-  static tree<T1> concat(const tree<T1> &m1, const tree<T1> &m2) {
-    if (std::holds_alternative<typename tree<T1>::Leaf>(m1.v())) {
+  static tree<T1> concat(tree<T1> m1, const tree<T1> &m2) {
+    if (std::holds_alternative<typename tree<T1>::Leaf>(m1.v_mut())) {
       return m2;
     } else {
       if (std::holds_alternative<typename tree<T1>::Leaf>(m2.v())) {
@@ -1578,8 +1578,8 @@ template <Int I, OrderedType X> struct Raw {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T2 enumeration_rec(const T2 &f, F1 &&f0, const enumeration<T1> &e) {
-    return enumeration_rect<T1, T2>(f, f0, e);
+  static T2 enumeration_rec(T2 f, F1 &&f0, const enumeration<T1> &e) {
+    return enumeration_rect<T1, T2>(std::move(f), f0, e);
   }
 
   template <typename T1>
