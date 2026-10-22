@@ -1442,8 +1442,12 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             (binder_cpp_type_or_derive env i) )
       with
       | Some (Tfun ((_ :: _ as exp_dom), _)), Some (Tfun (dom, _))
-        when List.length dom > List.length exp_dom ->
-        curry_value_to_expected env ?expected_ty (get_env_type_opt i) var_expr
+        when List.length dom > List.length exp_dom -> (
+        (* The closure reads the function where it is made, and takes it
+           there where this read moves it. *)
+        match (curry_value_to_expected env ?expected_ty (get_env_type_opt i) var_expr, var_expr) with
+        | CPPlambda l, CPPvar x when move_candidate -> CPPlambda {l with cl_moved = [x]}
+        | e, _ -> e )
       | _ -> result )
   (* A singleton class's dictionary applied, which is the body of the class's
      projection: the method, called on the instance -- a template parameter,
