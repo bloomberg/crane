@@ -13370,3 +13370,14 @@
   (alias runtest)
   (deps loopify_top_level_call_binding.t.exe)
   (action (run ./loopify_top_level_call_binding.t.exe))))
+
+(subdir loopify_shadow_update_reads_binding
+ (rule
+  (targets loopify_shadow_update_reads_binding.t.exe)
+  (deps LoopifyShadowUpdateReadsBinding.vo loopify_shadow_update_reads_binding.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_shadow_update_reads_binding.t.exe loopify_shadow_update_reads_binding.cpp loopify_shadow_update_reads_binding.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_shadow_update_reads_binding.t.exe)
+  (action (run ./loopify_shadow_update_reads_binding.t.exe))))

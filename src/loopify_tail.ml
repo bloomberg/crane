@@ -167,6 +167,22 @@ let tail_shadow_arg ~shadow_ids shadow_ty arg =
   | Tptr _, CPPvar _ -> CPPunop (Uaddr, arg)
   | _ -> arg
 
+(** The variable whose storage [e] stays inside, through dereferences, moves,
+    member accesses and variant projections ([x.v()], [std::get<K>(e)]): one
+    [root] accepts, or the one a binder [bound] maps to. *)
+let rec storage_root ~root ~bound e =
+  let inside = storage_root ~root ~bound in
+  match e with
+  | CPPvar x -> if root x then Some x else bound x
+  | CPPderef e | CPPmove e | CPPaccess (Adot, e, _) | CPPaccess (Aarrow, e, _)
+  | CPPget (e, _) | CPPget' (e, _, _) | CPPunop (_, e) ->
+    inside e
+  | CPPfun_call (_, CPPrt Crane_rt.Raw, {rev = [e]}) -> inside e
+  | CPPfun_call (_, CPPaccess (Adot, e, _), {rev = []}) | CPPaccess_call (Aarrow, e, _, []) ->
+    inside e
+  | CPPstd_get (_, Some e) -> inside e
+  | _ -> None
+
 (** Provenance of a local binder: the loop *parameter* whose storage the binder
     lives inside, or [None] when the binder was produced locally (a freshly
     built value, a computed match scrutinee, an inlined callee's temporary...).
@@ -195,20 +211,10 @@ let compute_binder_provenance params body =
       if not (Option.equal Id.equal q p) then
         tbl := (id, None) :: List.remove_assoc id !tbl
   in
-  let rec prov_of = function
-    | CPPvar x ->
-      if is_param x then Some x
-      else (match List.assoc_opt x !tbl with Some p -> p | None -> None)
-    | CPPderef e | CPPmove e | CPPaccess (Adot, e, _) | CPPaccess (Aarrow, e, _)
-    | CPPget (e, _) | CPPget' (e, _, _) | CPPunop (_, e) ->
-      prov_of e
-    | CPPfun_call (_, CPPrt Crane_rt.Raw, {rev = [e]}) -> prov_of e
-    (* [x.v()] / [std::get<K>(e)]: projections that stay inside [e]'s storage. *)
-    | CPPfun_call (_, CPPaccess (Adot, e, _), {rev = []})
-     |CPPaccess_call (Aarrow, e, _, []) ->
-      prov_of e
-    | CPPstd_get (_, Some e) -> prov_of e
-    | _ -> None
+  let prov_of e =
+    storage_root ~root:is_param
+      ~bound:(fun x -> match List.assoc_opt x !tbl with Some p -> p | None -> None)
+      e
   in
   let rec walk_stmt s =
     match s with
@@ -376,8 +382,14 @@ let assign_result_and_stop expr =
 
     [CPPderef] arguments (advancing a list tail via [*(d_a1)]) are NOT moved
     because the deref target may be through a shared_ptr whose pointee is
-    aliased by the caller. *)
-let make_shadow_updates shadow_params args =
+    aliased by the caller.
+
+    [aliases] are the binders that lie inside the storage of a shadow kept
+    by value, each with its shadow: a structured binding of a match on
+    [_loop_l.v()].  Reading one reads the shadow, so an update reading [a0]
+    of [_loop_l] is evaluated before [_loop_l] is overwritten, which
+    overwrites [a0] with the next cell's field. *)
+let make_shadow_updates ?(aliases = []) shadow_params args =
   let shadow_ids = List.map (fun (id, _) -> id) shadow_params in
   let is_self_assign shadow_id arg =
     match arg with
@@ -441,26 +453,47 @@ let make_shadow_updates shadow_params args =
         else Some (Sasgn (shadow_id, Existing, make_rhs ty arg)) )
       pairs
   else (* 2+ assignments — use temporaries only where needed *)
-    (* Check if expression [e] references variable [id]. *)
-    let rec expr_mentions id e =
+    (* Whether [e] reads one of the variables [names]. *)
+    let rec mentions names e =
       match e with
-      | CPPvar v -> Id.equal v id
+      | CPPvar v -> List.exists (Id.equal v) names
       | _ ->
         let found = ref false in
         iter_expr_children
-          ~on_expr:(fun e' -> if expr_mentions id e' then found := true)
+          ~on_expr:(fun e' -> if mentions names e' then found := true)
           ~on_stmts:(fun _ -> ())
           e;
         !found
     in
     (* A variable needs a temporary iff some OTHER non-trivial assignment reads
-       it in its RHS. *)
-    let needs_temp shadow_id =
+       it in its RHS by name, or one made after it, not itself through a
+       temporary, reads a binder inside it.  A right-hand side put in a
+       temporary is evaluated before any variable is assigned, and one
+       assigned before the variable reads what it still holds; the staged
+       variables are therefore settled last first. *)
+    let by_name ((shadow_id, _), _) =
       List.exists
         (fun ((other_id, _), arg) ->
           not (Id.equal other_id shadow_id)
-          && expr_mentions shadow_id arg)
+          && mentions [shadow_id] arg)
         non_trivial
+    in
+    let inside shadow_id =
+      List.filter_map (fun (b, s) -> if Id.equal s shadow_id then Some b else None) aliases
+    in
+    let staged =
+      List.fold_right
+        (fun (((shadow_id, _), _) as update) later ->
+          let read_later =
+            match inside shadow_id with
+            | [] -> false
+            | names -> List.exists (fun ((_, arg), staged) -> (not staged) && mentions names arg) later
+          in
+          (update, by_name update || read_later) :: later)
+        non_trivial []
+    in
+    let needs_temp shadow_id =
+      List.exists (fun (((id, _), _), staged) -> staged && Id.equal id shadow_id) staged
     in
     let temp_name (id : Id.t) : Id.t =
       let s = Id.to_string id in
@@ -578,39 +611,62 @@ type top_rewrite_config = {
     - Handles [Sswitch] (only present at the top level of visitor bodies).
     - Uses {!generic_rewrite_stmts} for list-level recursion, which
       optionally detects the void tail-call pattern. *)
-let rec generic_rewrite_stmt trc = function
+let rec generic_rewrite_stmt ?(aliases = []) trc = function
   | Sreturn (Some e) ->
     ( match trc.trc_inner.rc_check e with
     | Some cs ->
       Sblock
-        (make_shadow_updates trc.trc_inner.rc_shadow_params
+        (make_shadow_updates ~aliases trc.trc_inner.rc_shadow_params
            (filter_by_mask trc.trc_inner.rc_varying cs.cs_args)
          @ trc.trc_tail_suffix)
     | None -> trc.trc_on_other e )
   | Sif (cond, then_br, else_br) ->
-    let rw = generic_rewrite_stmts trc in
+    let rw = generic_rewrite_stmts ~aliases trc in
     Sif (cond, rw then_br, rw else_br)
   | Sswitch (scrut, r, branches, default) ->
-    let rw = generic_rewrite_stmts trc in
+    let rw = generic_rewrite_stmts ~aliases trc in
     Sswitch
       (scrut, r, List.map (fun (id, body) -> (id, rw body)) branches, default)
   | Scustom_case (ty, scrut, tyargs, branches, err) ->
-    let rw = generic_rewrite_stmts trc in
+    let rw = generic_rewrite_stmts ~aliases trc in
     Scustom_case (ty, scrut, tyargs,
       List.map (fun (ps, ret_ty, body) -> (ps, ret_ty, rw body))
         branches, err)
   | Smatch (scrut, branches, default) ->
-    let rw = generic_rewrite_stmts trc in
+    (* A match on the storage of a shadow kept by value binds into it: its
+       bindings are aliases of the shadow while the branch runs, and
+       overwriting the shadow overwrites them.  A pointer shadow is only
+       repointed; what it pointed at stays where it was. *)
+    let rec pointer = function Tptr _ -> true | Tconst t | Tref (_, t) -> pointer t | _ -> false in
+    let by_value =
+      List.filter_map
+        (fun (id, ty) -> if pointer ty then None else Some id)
+        trc.trc_inner.rc_shadow_params
+    in
+    let root =
+      storage_root
+        ~root:(fun x -> List.exists (Id.equal x) by_value)
+        ~bound:(fun x -> List.assoc_opt x aliases)
+        scrut.sc_expr
+    in
+    let inside br =
+      match root with
+      | None -> aliases
+      | Some s ->
+        let bound = List.map (fun fb -> fb.fb_name) br.smb_field_bindings in
+        let bound = match br.smb_var with Some v -> v :: bound | None -> bound in
+        List.map (fun b -> (b, s)) bound @ aliases
+    in
     Smatch (
       scrut,
       List.map
         (fun br ->
           let br' = trc.trc_rewrite_branch br in
-          { br' with smb_body = rw br'.smb_body })
+          { br' with smb_body = generic_rewrite_stmts ~aliases:(inside br') trc br'.smb_body })
         branches,
-      Option.map rw default)
+      Option.map (generic_rewrite_stmts ~aliases trc) default)
   | Sblock stmts ->
-    Sblock (generic_rewrite_stmts trc stmts)
+    Sblock (generic_rewrite_stmts ~aliases trc stmts)
   | s -> s
 
 (** List-level top-level rewriter.
@@ -622,13 +678,13 @@ let rec generic_rewrite_stmt trc = function
     Both forms are rewritten as [Sreturn (Some call)] so the statement-level
     rewriter can handle them as ordinary tail calls.  This pattern is produced
     by [cofix_wrap] and [gen_stmts] for void-returning recursive functions. *)
-and generic_rewrite_stmts trc = function
+and generic_rewrite_stmts ?(aliases = []) trc = function
   | Sexpr e :: Sreturn _ :: rest
     when trc.trc_detect_void_tail && trc.trc_inner.rc_check e <> None ->
-    generic_rewrite_stmt trc (Sreturn (Some e))
-    :: generic_rewrite_stmts trc rest
+    generic_rewrite_stmt ~aliases trc (Sreturn (Some e))
+    :: generic_rewrite_stmts ~aliases trc rest
   | s :: rest ->
-    generic_rewrite_stmt trc s :: generic_rewrite_stmts trc rest
+    generic_rewrite_stmt ~aliases trc s :: generic_rewrite_stmts ~aliases trc rest
   | [] -> []
 
 (** Wrap a statement list as a single statement. *)

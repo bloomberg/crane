@@ -1,8 +1,3 @@
 does not compile: tests/regression/pendant_sumtree_roundtrip
-fails: tests/regression/arrow_behind_type_function
 fails: tests/regression/reuse_arm_field_used_twice
 fails: tests/regression/shared_variant_reuse
-times out: tests/regression/itree_iter_long_pure_loop
-times out: tests/regression/lifted_local_fix_loopify
-times out: tests/regression/nonatomic_rc_thread_race
-times out: tests/regression/par_unit_not_concurrent
