@@ -3561,9 +3561,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              ({!Ownership_plan.reuses}), call the [<factory>__reuse] variant
              with the token appended (stored last = printed first, matching
              the [_tok] leading parameter). *)
-          ( match (!tctx).pending_reuse_token with
+          ( match (!tctx).reuse_token with
           | Some tok when Ownership_plan.reuses (!tctx).move_plan construction ->
-            tctx := { !tctx with pending_reuse_token = None };
             let args = args @ [CPPmove tok] in
             CPPfun_call
               ( ctor_sig args,
@@ -8082,7 +8081,6 @@ and gen_cpp_case (typ : ml_type) t env pv =
     in
     (* Generate one {!smatch_branch} per constructor pattern, collecting
        a wildcard body from [Pwild] / [Prel]. *)
-    let alternatives = begin_alternatives () in
     let rec gen_branches = function
       | [] -> ([], None)
       | (ids, rty, p, body) :: cs ->
@@ -8091,27 +8089,22 @@ and gen_cpp_case (typ : ml_type) t env pv =
         let saved_env_types = (!tctx).env_types in
         let saved_erased = save_erased_env () in
         let ids', env', dummies = process_match_pattern_vars ids env in
-        enter_alternative alternatives;
         let br =
           gen_match_branch env' typ rty r ids' dummies body sname
             match_i scrut ~scrut_db
         in
-        leave_alternative alternatives;
         restore_env_types saved_env_types;
         restore_erased_env saved_erased;
         let rest, wild = gen_branches cs in
         (br :: rest, wild)
       | Pwild | Prel _ ->
-        enter_alternative alternatives;
         let body_stmts =
           gen_stmts env (fun x -> Sreturn (Some x)) body
         in
-        leave_alternative alternatives;
         ([], Some body_stmts)
       | Ptuple _ -> gen_branches cs
     in
     let branches, wildcard = gen_branches (Array.to_list pv) in
-    end_alternatives alternatives;
     let iife_ret_opt =
       match iife_void_return env typ pv with
       | Some _ as v -> v
@@ -8646,13 +8639,11 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   (* Generate [(params, ret_ty, body)] triples for each branch.  Handles env
      retyping for [fix_a_fired], use-site
      [any_cast] insertion, and template-arg stripping for erased arguments. *)
-  let alternatives = begin_alternatives () in
   let rec gen_cases = function
     | [] -> []
     | (ids, rty, p, t) :: cs ->
     match p with
     | Pusual r | Pcons (r, _) ->
-      enter_alternative alternatives;
       let ids', env' =
         push_vars'
           (List.rev_map
@@ -8918,12 +8909,10 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
               br_stmts
         | _ -> br_stmts
       in
-      leave_alternative alternatives;
       (br_ids, br_ret, br_stmts) :: gen_cases cs
     | Pwild | Prel _ | Ptuple _ -> gen_cases cs
   in
   let cases = gen_cases (Array.to_list pv) in
-  end_alternatives alternatives;
   cache_prefix @
   [ Scustom_case
       ( case_typ,

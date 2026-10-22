@@ -133,14 +133,13 @@ type translation_ctx = {
   (* Counter for generating unique _cs / _cs1 / _cs2 cache variable names
      for Scustom_case scrutinee caching. Reset at function boundaries. *)
   cs_counter : int;
-  (* Perceus reuse: when [Some tok] a reuse token [tok] (a moved,
-     uniquely-owned matched recursive child) is available to the MLcons the
-     plan gives it ({!Ownership_plan.reuses}); that MLcons emits
-     [<ctor>__reuse(tok, ...)] instead of the normal factory, then clears
-     this. Set only inside a use_count()==1-guarded reuse arm in
-     gen_cpp_case.  Which construction takes the token is the plan's; that
-     it is taken at most once on a path is this linear state's. *)
-  pending_reuse_token : cpp_expr option;
+  (* Perceus reuse: inside a use_count()==1-guarded reuse arm in
+     gen_cpp_case, the token [tok] (the moved, uniquely-owned storage the
+     match frees) the constructions the arm's plan names
+     ({!Ownership_plan.reuses}) are built in, as [<ctor>__reuse(tok, ...)]
+     instead of the normal factory.  The plan names at most one on any path,
+     so nothing here tracks whether it has been taken. *)
+  reuse_token : cpp_expr option;
   (* When generating a method body, holds the set of self-references
      (the inductive type(s) this method belongs to). Merged into the ns
      argument of convert_ml_type_to_cpp_type so that self-refs inside
@@ -199,7 +198,7 @@ let tctx =
         rank2_carrier = None;
         itree_mode = Sequential;
         cs_counter = 0;
-        pending_reuse_token = None;
+        reuse_token = None;
         method_self_ns = Ref.User.Set.empty;
         cpp_binder_types = IntMap.empty;
     }
@@ -355,45 +354,18 @@ let with_region ?(owned = []) ?(copied = []) (body : ml_ast) (f : unit -> 'a) : 
 let with_plan (p : Ownership_plan.t) (f : unit -> 'a) : 'a =
   with_field (fun c -> c.move_plan) (fun p -> tctx := { !tctx with move_plan = p }) p f
 
-(** Whether the construction [e] takes the pending reuse token. *)
+(** Whether the construction [e] takes the reuse token. *)
 let takes_reuse_token e =
-  Option.has_some (!tctx).pending_reuse_token && Ownership_plan.reuses (!tctx).move_plan e
+  Option.has_some (!tctx).reuse_token && Ownership_plan.reuses (!tctx).move_plan e
 
-(** [with_reuse_token tok f] runs [f] with [tok] as the pending Perceus reuse
-    token.  The token is linear, and [f] clears it if it consumes it; the
-    restore puts back whatever the enclosing scope had, consumed or not. *)
+(** [with_reuse_token tok f] runs [f] with [tok] as the Perceus reuse token
+    of the arm it generates. *)
 let with_reuse_token (tok : cpp_expr option) (f : unit -> 'a) : 'a
     =
   with_field
-    (fun c -> c.pending_reuse_token)
-    (fun t -> tctx := { !tctx with pending_reuse_token = t })
+    (fun c -> c.reuse_token)
+    (fun t -> tctx := { !tctx with reuse_token = t })
     tok f
-
-(** A match's branches are alternatives: each may consume the pending reuse
-    token, since at most one of them runs.  [begin_alternatives] notes the
-    token they start from, [enter_alternative] gives it to the next branch,
-    [leave_alternative] notes whether that branch consumed it, and
-    [end_alternatives] leaves it pending after the match only if none did --
-    a later constructor on a path through a consuming branch would use it a
-    second time. *)
-type alternatives = {
-  alt_start : cpp_expr option;
-  mutable alt_consumed : bool;
-}
-
-let begin_alternatives () =
-  {alt_start = (!tctx).pending_reuse_token; alt_consumed = false}
-
-let enter_alternative a = tctx := { !tctx with pending_reuse_token = a.alt_start }
-
-let leave_alternative a =
-  if a.alt_start <> None && (!tctx).pending_reuse_token = None then
-    a.alt_consumed <- true
-
-let end_alternatives a =
-  tctx :=
-    { !tctx with
-      pending_reuse_token = (if a.alt_consumed then None else a.alt_start) }
 
 (** Set {!translation_ctx.current_parameters}. *)
 let set_current_parameters (bs : Core_binder.t list) =
