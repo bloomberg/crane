@@ -350,20 +350,20 @@ let inline_partner ~continues ~invokes
   in
   (body, List.rev !continued, List.rev !invoked)
 
-(** Inline mutual recursion partners into the body of the function [r],
-    known by [names], as the recursion plan has them
-    ({!Recursion_plan.inlinings}): each partner registered in
-    {!mutual_fn_table}, at the calls whose occurrences the plan lists, a
-    tail call continuing in the partner's body and any other running it in
-    a lambda invoked in place.  The function then calls itself where it
-    called them, and can be loopified by {!transform_fundef}.
+(** Inline mutual recursion partners into the body of the function [r] as
+    the recursion plan has them ({!Recursion_plan.inlinings}): each partner
+    as [partner] has it -- registered in {!mutual_fn_table}, unless given --
+    at the calls whose occurrences the plan lists, a tail call continuing in
+    the partner's body and any other running it in a lambda invoked in
+    place.  The function then calls itself where it called them, and can be
+    loopified by {!transform_fundef}.
 
     Under [CRANE_CHECK_IR] the calls inlined must be those planned. *)
-let try_inline_mutual_into r body =
+let try_inline_mutual_into ?(partner = Ref.User.Tbl.find_opt mutual_fn_table) r body =
   let planned = Recursion_plan.inlinings r in
   let made = ref [] in
   let inline_one body (i : Recursion_plan.inlining) =
-    match Ref.User.Tbl.find_opt mutual_fn_table i.partner with
+    match partner i.partner with
     | None -> body
     | Some registered ->
       let call_in occurrences = function
@@ -1009,10 +1009,11 @@ let modulo_cons_chains = function
   | Recursion_plan.Modulo_cons chains -> Some chains
   | No_loop | Tail_loop | Frame_stack | Suspended _ -> None
 
-let checker_tail_loop ~tparams (f : dfun) params body =
+let checker_tail_loop ~partner ~tparams (f : dfun) params body =
+  let r = fst f.df_path.dp_outer in
   let check = fn_checker (dfun_path_list f.df_path) in
-  let loop = function_loop (fst f.df_path.dp_outer) in
-  transform_tail tparams (planned_jumps loop check) params f.df_ret (expose_tail_calls check body)
+  let body = expose_tail_calls check (try_inline_mutual_into ~partner r body) in
+  transform_tail tparams (planned_jumps (function_loop r) check) params f.df_ret body
 
 let after_tail_loop ~tparams (f : dfun) params loop =
   report_outcome ~name:(fundef_display_name f.df_path) ~check:(fn_checker (dfun_path_list f.df_path))

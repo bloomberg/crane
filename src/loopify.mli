@@ -23,14 +23,29 @@ val transform_decl :
 val transform_local_tail_loops :
   ?tparams:(template_type * Id.t) list -> cpp_decl -> cpp_decl
 
+(** [try_inline_mutual_into ~partner r body] is the body [body] of the
+    function [r] with the partners the recursion plan inlines into it
+    inlined ({!Recursion_plan.inlinings}), each read as [partner] has it --
+    registered with {!register_decl}, unless given -- at the calls the plan
+    lists by occurrence: a tail call continuing in the partner's body, any
+    other running it in a lambda invoked in place. *)
+val try_inline_mutual_into :
+  ?partner:(GlobRef.t -> Loopify_analysis.registered_fn option) -> GlobRef.t -> cpp_stmt list -> cpp_stmt list
+
 (** The tail loop Loopify's own transform makes of the body [body] of the
     function [f], whose parameters are [params], under the template
-    parameters [tparams]: its jumps found by a checker of the C++ calls and
-    its varying parameters read off them.  {!Control_to_legacy_minicpp},
-    which lowers the loop from the function's ControlIR instead, is compared
-    with it under [CRANE_CHECK_IR]. *)
+    parameters [tparams], its partners read as [partner] has them: its
+    jumps found by a checker of the C++ calls and its varying parameters
+    read off them.  {!Control_to_legacy_minicpp}, which lowers the loop from
+    the function's ControlIR instead, is compared with it under
+    [CRANE_CHECK_IR]. *)
 val checker_tail_loop :
-  tparams:(template_type * Id.t) list -> dfun -> (Id.t * cpp_type) list -> cpp_stmt list -> cpp_stmt list
+  partner:(GlobRef.t -> Loopify_analysis.registered_fn option) ->
+  tparams:(template_type * Id.t) list ->
+  dfun ->
+  (Id.t * cpp_type) list ->
+  cpp_stmt list ->
+  cpp_stmt list
 
 (** [after_tail_loop ~tparams f params loop] is the body of the function
     [f] once Loopify's transform has made [loop] of it: the local fixpoints

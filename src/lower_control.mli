@@ -15,10 +15,10 @@
     recursive calls there is a [Continue]; a term no recursive call is made
     in is a [Return] of it as it is.
 
-    The loop of a top-level function that inlines no partner, and is
-    inlined into none, is made from here as the function is generated
-    ({!Control_to_legacy_minicpp}).  Loopify still makes the others; under
-    [CRANE_CHECK_IR] it compares the calls it turns into jumps with the
+    The loop of a top-level function is made from here as its recursive
+    group is generated ({!Control_to_legacy_minicpp}).  Loopify still makes
+    the others -- a method's, a local fixpoint's, a lifted helper's -- and
+    under [CRANE_CHECK_IR] compares the calls it turns into jumps with the
     [Continue]s here ({!Loopify.transform_decl}). *)
 
 type t
