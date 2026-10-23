@@ -13,54 +13,6 @@ let should_loopify decl =
   | Some r -> Table.should_loopify r
   | None -> Table.loopify ()
 
-(** The name a type has here when it has no C++ spelling, and [None] for every
-    type that has one.
-
-    {!Minicpp.Tunresolved} is the back end's bottom, and {!Minicpp.Topaque} is
-    an admission of ignorance that {!Cpp_erasure.materialise} is supposed to
-    have settled.  Neither has an honest spelling, and neither announces
-    itself: [Topaque] prints as [std::any] and so quietly says the wrong
-    thing, and [Tunresolved] aborts extraction with a message about Crane
-    rather than about the user's code. *)
-let unspellable = function
-  | Tunresolved -> Some "Tunresolved"
-  | Topaque -> Some "Topaque"
-  | _ -> None
-
-(** [check_settled decl] fails if [decl] still writes down a type that has no
-    C++ spelling, which the {!Cpp_erasure.settled} type claims it does not.
-
-    That claim is about the {e whole} declaration and so cannot be carried by
-    the type of its root, which is why it is checked here rather than enforced
-    by construction.  The check runs only under [CRANE_CHECK_IR], set by the
-    test suite: it is a second traversal of every declaration, and it protects
-    an invariant the compiler is meant to establish rather than one a user's
-    input can break.  The declaration is named as {!Table} names any global,
-    since one a pass generated -- a lifted helper -- is not in the name table
-    [Printer.pr_global] reads, and would fail the report itself. *)
-let check_settled (decl : Cpp_erasure.settled) =
-  let found = ref [] in
-  let note t =
-    ( match unspellable t with
-    | Some name when not (List.mem name !found) -> found := name :: !found
-    | _ -> () );
-    t
-  in
-  let ft t = map_cpp_type note t in
-  let rec fe e = map_expr fe fs ft e
-  and fs s = map_stmt fe fs ft s in
-  ignore (map_decl fe fs ft (decl :> cpp_decl));
-  if !found <> [] then
-    CErrors.user_err
-      Pp.(
-        str "Crane: unspellable type reaching the printer ("
-        ++ prlist_with_sep (fun () -> str ", ") str (List.rev !found)
-        ++ str ")"
-        ++
-        match decl_globref (decl :> cpp_decl) with
-        | Some r -> str " in " ++ Table.safe_pr_global r
-        | None -> mt () )
-
 (** {2 Tracing}
 
     [CRANE_TRACE_PASSES] names declarations to trace through {!finish}: all
@@ -123,6 +75,15 @@ let lowering name f =
       let d = f u.decl in
       {decl = d; control_lowered = u.control_lowered || not (d == u.decl || compare d u.decl = 0)} )
 
+(** The passes below that discharge an {!obligation}, named once so that
+    the list of obligations refers to the pass rather than to its name. *)
+let constraints = on_decl "constraints" Minicpp.settle_constraints
+
+let casts = Pipeline_trace.pass "casts" Cpp_erasure.resolve_casts
+let free_tvars = Pipeline_trace.pass "free_tvars" Cpp_erasure.bind_free_tvars
+let method_calls = Pipeline_trace.pass "method_calls" Cpp_erasure.lower_method_calls
+let projections = Pipeline_trace.pass "projections" Cpp_erasure.lower_projections
+
 (** Every pass before the {!Cpp_erasure} seam, in the order they run. *)
 let minicpp_passes : unsettled Pipeline_trace.pass list =
   [ lowering "loopify" (fun d ->
@@ -159,7 +120,7 @@ let minicpp_passes : unsettled Pipeline_trace.pass list =
     on_decl "return_moves" Last_use.drop_return_moves;
     (* Which callable parameters keep a constraint is decided here, with the
        body that decides it in hand; the printer writes what it is given. *)
-    on_decl "constraints" Minicpp.settle_constraints ]
+    constraints ]
 
 (** Writing a type down is what decides its representation, so the [Topaque]
     slots are settled before anything reads the declaration as final.
@@ -170,24 +131,105 @@ let seam = "materialise"
 (** Every pass after the seam, in the order they run. *)
 let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
   let open Pipeline_trace in
-  [ pass "casts" Cpp_erasure.resolve_casts;
+  [ casts;
     (* With the heads final, a body naming a type variable no head declares
        is a name nothing in scope introduces; spell it [std::any] rather than
        emit it. *)
-    pass "free_tvars" Cpp_erasure.bind_free_tvars;
+    free_tvars;
     (* With every type final, a read of a boxed value the context needs at a
        concrete type is written down. *)
     pass "boxed_reads" Cpp_erasure.lower_boxed_reads;
     (* A call of a methodified function becomes the member call it is, so
        the printer spells the call it is given. *)
-    pass "method_calls" Cpp_erasure.lower_method_calls;
+    method_calls;
     (* So does a projection, applied or named as a value. *)
-    pass "projections" Cpp_erasure.lower_projections;
+    projections;
     (* A lambda invoked only to choose between two values is the choice. *)
     pass "conditionals" Cpp_erasure.lower_conditionals ]
 
 let pass_names =
   Pipeline_trace.names minicpp_passes @ [seam] @ Pipeline_trace.names settled_passes
+
+(** {2 What the printer is not owed}
+
+    A declaration leaves translation owing the printer decisions C++ cannot be
+    handed undecided: a type with no spelling, a callable parameter whose
+    constraint the body has not settled, a cast whose caster is not chosen, a
+    type variable nothing declares, a call of a method or a projection written
+    as a call of a function.  Each is discharged by one pass above, and
+    {!Cpp_erasure.settled} claims that by the end none is outstanding.  The
+    list is closed: a new kind of debt the printer must not see is a new
+    constructor here, with the pass that pays it. *)
+type obligation =
+  | Unresolved_type
+      (** {!Minicpp.Tunresolved}: no pass determined the type, so no pass
+          below can discharge it; whatever wrote it owes it. *)
+  | Opaque_type  (** {!Minicpp.Topaque}, settled by the seam. *)
+  | Unsettled_callable  (** a {!Minicpp.TTfun} parameter *)
+  | Unresolved_cast  (** an [any_cast] whose caster is still to choose *)
+  | Free_type_variable  (** a type variable no enclosing head declares *)
+  | Unlowered_method_call
+  | Unlowered_projection
+
+let obligations =
+  [ Unresolved_type; Opaque_type; Unsettled_callable; Unresolved_cast; Free_type_variable;
+    Unlowered_method_call; Unlowered_projection ]
+
+let describe = function
+  | Unresolved_type -> "an undetermined type (Tunresolved), owed by the pass that wrote it"
+  | Opaque_type -> "an unsettled representation (Topaque), owed by " ^ seam
+  | Unsettled_callable -> "an unsettled callable constraint, owed by " ^ constraints.name
+  | Unresolved_cast -> "an unresolved cast, owed by " ^ casts.name
+  | Free_type_variable -> "an undeclared type variable, owed by " ^ free_tvars.name
+  | Unlowered_method_call -> "a method called as a function, owed by " ^ method_calls.name
+  | Unlowered_projection -> "a projection called as a function, owed by " ^ projections.name
+
+(** Whether [decl] writes down a type [p] holds of. *)
+let mentions p (decl : cpp_decl) =
+  let exception Found in
+  let ft t = map_cpp_type (fun t -> if p t then raise_notrace Found else t) t in
+  let rec fe e = map_expr fe fs ft e
+  and fs s = map_stmt fe fs ft s in
+  match ignore (map_decl fe fs ft decl) with () -> false | exception Found -> true
+
+(** Whether [decl] still owes [o].  Every pass that discharges an obligation
+    leaves nothing for a second run to do, so a declaration that has paid one
+    is a fixed point of the pass that pays it -- a check that cannot drift
+    from what the pass decides. *)
+let owes (decl : Cpp_erasure.settled) o =
+  let d = (decl :> cpp_decl) in
+  let rewrites (p : Cpp_erasure.settled Pipeline_trace.pass) = compare (p.run decl) decl <> 0 in
+  match o with
+  | Unresolved_type -> mentions (function Tunresolved -> true | _ -> false) d
+  | Opaque_type -> mentions (function Topaque -> true | _ -> false) d
+  | Unsettled_callable -> compare (constraints.run {decl = d; control_lowered = false}).decl d <> 0
+  | Unresolved_cast -> rewrites casts
+  | Free_type_variable -> rewrites free_tvars
+  | Unlowered_method_call -> rewrites method_calls
+  | Unlowered_projection -> rewrites projections
+
+(** [check_settled decl] fails if [decl] still owes the printer anything.
+
+    The claim is about the {e whole} declaration and so cannot be carried by
+    the type of its root, which is why it is checked here rather than enforced
+    by construction.  The check runs only under [CRANE_CHECK_IR], set by the
+    test suite: it re-runs the discharging passes over every declaration, and
+    it protects an invariant the compiler is meant to establish rather than
+    one a user's input can break.  The declaration is named as {!Table} names
+    any global, since one a pass generated -- a lifted helper -- is not in the
+    name table [Printer.pr_global] reads, and would fail the report itself. *)
+let check_settled (decl : Cpp_erasure.settled) =
+  match List.filter (owes decl) obligations with
+  | [] -> ()
+  | owed ->
+    CErrors.user_err
+      Pp.(
+        str "Crane: a declaration reached the printer owing "
+        ++ prlist_with_sep (fun () -> str "; ") (fun o -> str (describe o)) owed
+        ++
+        match decl_globref (decl :> cpp_decl) with
+        | Some r -> str " in " ++ Table.safe_pr_global r
+        | None -> mt () )
 
 let finish decl =
   let trace = traced decl in

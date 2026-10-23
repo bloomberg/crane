@@ -20,7 +20,11 @@ val should_loopify : Minicpp.cpp_decl -> bool
     loopifying where {!should_loopify} says so -- and hands back the printable
     declaration.  Under [CRANE_TRACE_PASSES] ([1], or a substring of the
     declaration's name) it reports which passes changed [decl] and its node
-    count before and after each. *)
+    count before and after each.  Under [CRANE_CHECK_IR] it fails if the
+    result still owes the printer a decision one of its passes makes: an
+    unspellable type, an unsettled constraint, an unresolved cast, an
+    undeclared type variable, or a method or projection called as a
+    function. *)
 val finish : Minicpp.cpp_decl -> Cpp_erasure.settled
 
 

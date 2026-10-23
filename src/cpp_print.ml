@@ -3144,13 +3144,9 @@ let pp_type t = pp_cpp_type false [] t
 
 (* A callable parameter whose constraint was never settled from its body
    ({!Minicpp.settle_constraints}) is printed unconstrained -- a constraint
-   guessed from its declared type could name the wrong operands -- and is an
-   error under [CRANE_CHECK_IR], since some path skipped the pipeline. *)
-let unsettled_callable () =
-  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then
-    CErrors.anomaly
-      (Pp.str "Crane: a callable template parameter reached the printer unsettled.")
-
+   guessed from its declared type could name the wrong operands.  Under
+   [CRANE_CHECK_IR] none gets here: the seam checks that the constraints were
+   settled ({!Cpp_pipeline.finish}). *)
 (** Print a template parameter type keyword (typename or concept constraint). *)
 let pp_template_type = function
   | TTtypename -> str "typename"
@@ -3160,10 +3156,7 @@ let pp_template_type = function
     ++ prlist_with_sep (fun () -> str ", ") (fun _ -> str "typename")
          (List.init arity Fun.id)
     ++ str "> class"
-  | TTfun _ ->
-    unsettled_callable ();
-    str "typename"
-  | TTinvocable _ -> str "typename"
+  | TTfun _ | TTinvocable _ -> str "typename"
   | TTconcept (concept, _) when class_concept_held_back concept ->
     str "typename"
   | TTconcept (concept, []) -> pp_concept_name_of_ref concept
@@ -3236,9 +3229,7 @@ let pp_requires_of_tparams tparams =
             ++ str ">"
           in
           Some (prlist_with_sep (fun () -> str " && ") clause invs)
-        | TTfun _ ->
-          unsettled_callable ();
-          None
+        | TTfun _ -> None
         | TTconcept (concept, _) when class_concept_held_back concept -> None
         | TTconcept (concept, (_ :: _ as args)) ->
           (* Multi-parameter concept constraint: [C<_tcI0, T1, …>].  The
