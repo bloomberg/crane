@@ -13436,3 +13436,14 @@
   (alias runtest)
   (deps boxed_element_rose_tree.t.exe)
   (action (run ./boxed_element_rose_tree.t.exe))))
+
+(subdir boxed_element_drain
+ (rule
+  (targets boxed_element_drain.t.exe)
+  (deps BoxedElementDrain.vo boxed_element_drain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} boxed_element_drain.t.exe boxed_element_drain.cpp boxed_element_drain.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps boxed_element_drain.t.exe)
+  (action (run ./boxed_element_drain.t.exe))))
