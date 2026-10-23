@@ -84,6 +84,7 @@ let free_tvars = Pipeline_trace.pass "free_tvars" Cpp_erasure.bind_free_tvars
 let template_args = Pipeline_trace.pass "template_args" Cpp_erasure.supply_template_args
 let method_calls = Pipeline_trace.pass "method_calls" Cpp_erasure.lower_method_calls
 let projections = Pipeline_trace.pass "projections" Cpp_erasure.lower_projections
+let access_moves = Pipeline_trace.pass "access_moves" Cpp_erasure.lower_access_moves
 
 (** Every pass before the {!Cpp_erasure} seam, in the order they run. *)
 let minicpp_passes : unsettled Pipeline_trace.pass list =
@@ -149,7 +150,9 @@ let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
     (* So does a projection, applied or named as a value. *)
     projections;
     (* A lambda invoked only to choose between two values is the choice. *)
-    pass "conditionals" Cpp_erasure.lower_conditionals ]
+    pass "conditionals" Cpp_erasure.lower_conditionals;
+    (* A member read moves the member, not the object it is read from. *)
+    access_moves ]
 
 let pass_names =
   Pipeline_trace.names minicpp_passes @ [seam] @ Pipeline_trace.names settled_passes
@@ -161,7 +164,7 @@ let pass_names =
     constraint the body has not settled, a cast whose caster is not chosen, a
     type variable nothing declares, a type argument a mapping's template names
     and its application leaves out, a call of a method or a projection
-    written as a call of a function.  Each is discharged by one pass above, and
+    written as a call of a function, a member read of a moved object.  Each is discharged by one pass above, and
     {!Cpp_erasure.settled} claims that by the end none is outstanding.  The
     list is closed: a new kind of debt the printer must not see is a new
     constructor here, with the pass that pays it. *)
@@ -178,10 +181,11 @@ type obligation =
           application does not supply *)
   | Unlowered_method_call
   | Unlowered_projection
+  | Move_under_access  (** a member read of a moved object *)
 
 let obligations =
   [ Unresolved_type; Opaque_type; Unsettled_callable; Unresolved_cast; Free_type_variable;
-    Missing_template_argument; Unlowered_method_call; Unlowered_projection ]
+    Missing_template_argument; Unlowered_method_call; Unlowered_projection; Move_under_access ]
 
 let describe = function
   | Unresolved_type -> "an undetermined type (Tunresolved), owed by the pass that wrote it"
@@ -192,6 +196,7 @@ let describe = function
   | Missing_template_argument -> "a mapping's unsupplied type argument, owed by " ^ template_args.name
   | Unlowered_method_call -> "a method called as a function, owed by " ^ method_calls.name
   | Unlowered_projection -> "a projection called as a function, owed by " ^ projections.name
+  | Move_under_access -> "a member read of a moved object, owed by " ^ access_moves.name
 
 (** Whether [decl] writes down a type [p] holds of. *)
 let mentions p (decl : cpp_decl) =
@@ -217,6 +222,7 @@ let owes (decl : Cpp_erasure.settled) o =
   | Missing_template_argument -> rewrites template_args
   | Unlowered_method_call -> rewrites method_calls
   | Unlowered_projection -> rewrites projections
+  | Move_under_access -> rewrites access_moves
 
 (** [check_settled decl] fails if [decl] still owes the printer anything.
 

@@ -2181,25 +2181,12 @@ and pp_cpp_expr env args t =
       ++ pp_cpp_type false [] ty
       ++ str ">(this->shared_from_this())"
   | CPPaccess (acc, e, id) ->
-    (* Rewrite std::move(x).field → std::move(x.field): access the field
-       first, then move its value.  This is semantically equivalent and:
-       - Fixes Infer Use-After-Delete (moving a pointer then accessing it is flagged)
-       - Enables the Unnecessary-Copy-Intermediate fix (field value is moved, not copied)
-       For method calls we strip the move instead since methods need a live object. *)
     ( match (acc, e) with
-    | Adot, CPPmove inner ->
-      str (sn ()).move ++ str "(" ++ pp_cpp_expr env args inner ++ str "."
-      ++ Id.print id ++ str ")"
-    | Aarrow, CPPmove inner ->
-      (* std::move(ptr)->field → std::move(ptr->field) *)
-      str (sn ()).move ++ str "(" ++ pp_object env args inner ++ str "->"
-      ++ Id.print id ++ str ")"
     | Adot, CPPderef inner ->
       (* Dot access on a dereferenced pointer is arrow access on the pointer. *)
       pp_object env args inner ++ str "->" ++ Id.print id
     | _ -> pp_object env args e ++ str (pp_obj_access acc) ++ Id.print id )
   | CPPaccess_call (acc, obj, method_name, call_args) ->
-    let obj = match obj with CPPmove inner -> inner | _ -> obj in
     pp_object env args obj ++ str (pp_obj_access acc) ++ Id.print method_name
     ++ str "(" ++ pp_list (pp_cpp_expr env args) call_args ++ str ")"
   | CPPscope (e, id, []) ->
