@@ -2532,102 +2532,167 @@ let rec is_reference_type = function
   | Tconst t -> is_reference_type t
   | _ -> false
 
-(** Collect free variables from an expression.
-    Mutually recursive with [free_vars_stmt] and [free_vars_body]. *)
-let rec free_vars_expr = function
+(* The identifiers a fragment of C++ text spells, as whole words: what raw
+   code and a checked precondition read, since no pass looks inside them. *)
+let identifiers_of_text s =
+  let n = String.length s in
+  let is_word c =
+    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c = '_'
+  in
+  let rec word_end j = if j < n && is_word s.[j] then word_end (j + 1) else j in
+  let rec go i acc =
+    if i >= n then acc
+    else if is_word s.[i] then
+      let j = word_end i in
+      let w = String.sub s i (j - i) in
+      go j (if Id.is_valid w then Id.of_string w :: acc else acc)
+    else go (i + 1) acc
+  in
+  go 0 []
+
+(* Whether an inline mapping, as printed, spells its value argument [i]: a
+   callee is printed applied to all of them, a template spells exactly the
+   [%a{i}] it names and drops the rest. *)
+let inline_spells_arg it =
+  match it.it_form with
+  | Bare_callee -> fun _ -> true
+  | Templated | Block_iife ->
+    let tokens = Foreign_template.term_template it.it_text in
+    fun i -> List.mem (Foreign_template.CCarg i) tokens
+
+(** The variables an expression, a statement or a statement list refers to
+    without binding them.  With [printed], the variables its printed text
+    reads instead: a foreign template's unspliced scrutinee, branch or
+    argument does not reach the text, while raw code, a checked
+    precondition and a [decltype] in a type do.
+    Mutually recursive over expressions, statements and bodies. *)
+let rec vars_expr ~printed e =
+  let expr = vars_expr ~printed and body = vars_body ~printed in
+  let in_types =
+    if printed then vars_in_types ~printed (fun ft -> ignore (map_expr Fun.id Fun.id ft e))
+    else []
+  in
+  in_types
+  @
+  match e with
   | CPPvar id -> [id]
+  | CPPraw s when printed -> identifiers_of_text s
+  | CPPfun_call (_, (CPPglob (_, _, Some {ci_inline = Some it; _}) as f), args) when printed ->
+    let spells = inline_spells_arg it in
+    expr f @ List.concat (List.mapi (fun i a -> if spells i then expr a else []) (call_args args))
   | CPPfun_call (_, f, args) ->
-    free_vars_expr f @ List.concat_map free_vars_expr (to_reversed args)
+    expr f @ List.concat_map expr (to_reversed args)
   | CPPaccess_call (_, obj, _, args) ->
-    free_vars_expr obj @ List.concat_map free_vars_expr args
+    expr obj @ List.concat_map expr args
   | CPPmethod_call m ->
-    free_vars_expr m.mc_receiver @ List.concat_map free_vars_expr m.mc_args
-  | CPPprojection p -> free_vars_expr p.pj_record @ List.concat_map free_vars_expr p.pj_args
+    expr m.mc_receiver @ List.concat_map expr m.mc_args
+  | CPPprojection p -> expr p.pj_record @ List.concat_map expr p.pj_args
   | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) ->
-    free_vars_expr e
-  | CPPbinop (_, e1, e2) -> free_vars_expr e1 @ free_vars_expr e2
+    expr e
+  | CPPbinop (_, e1, e2) -> expr e1 @ expr e2
   | CPPget (e, _)
    |CPPget' (e, _, _)
    |CPPaccess (_, e, _)
-   |CPPscope (e, _, _) -> free_vars_expr e
+   |CPPscope (e, _, _) -> expr e
   | CPPstructmk (_, _, args)
    |CPPstruct (_, _, args)
    |CPPstruct_id (_, _, args)
-   |CPPnew (_, args) -> List.concat_map free_vars_expr args
-  | CPPshared_ptr_ctor (_, e) -> free_vars_expr e
-  | CPPlambda {cl_params = params; cl_body = body; _} ->
+   |CPPnew (_, args) -> List.concat_map expr args
+  | CPPshared_ptr_ctor (_, e) -> expr e
+  | CPPlambda {cl_params = params; cl_body = b; _} ->
     let bound = List.filter_map (fun (_, id_opt) -> id_opt) (to_reversed params) in
-    let body_fv = free_vars_body body in
-    List.filter (fun v -> not (List.exists (Id.equal v) bound)) body_fv
+    List.filter (fun v -> not (List.exists (Id.equal v) bound)) (body b)
   (* Every other expression binds nothing: what is free in it is what is
      free in its children. *)
   | e ->
     fold_expr_children
-      ~on_expr:(fun acc e -> acc @ free_vars_expr e)
-      ~on_stmts:(fun acc b -> acc @ free_vars_body b)
+      ~on_expr:(fun acc e -> acc @ expr e)
+      ~on_stmts:(fun acc b -> acc @ body b)
       [] e
 
-(** Collect free variables from a single statement. Statement-level companion
-    of {!free_vars_expr}; recurses into branches and sub-expressions. *)
-and free_vars_stmt = function
-  | Sreturn (Some e) -> free_vars_expr e
+(* What the [decltype]s in the types [visit] hands to its argument read. *)
+and vars_in_types ~printed visit =
+  let acc = ref [] in
+  visit (fun t ->
+      ignore
+        (map_cpp_type
+           (fun t ->
+             (match t with Texpr_type e -> acc := vars_expr ~printed e @ !acc | _ -> ());
+             t )
+           t );
+      t );
+  !acc
+
+and vars_stmt ~printed s =
+  let expr = vars_expr ~printed and body = vars_body ~printed in
+  let in_types =
+    if printed then vars_in_types ~printed (fun ft -> ignore (map_stmt Fun.id Fun.id ft s))
+    else []
+  in
+  in_types
+  @
+  match s with
+  | Sreturn (Some e) -> expr e
   | Sreturn None -> []
-  | Sexpr e -> free_vars_expr e
-  | Sasgn (_, _, e) -> free_vars_expr e
-  | Sassign_expr (lhs, e) -> free_vars_expr lhs @ free_vars_expr e
-  | Sif (c, t, f) ->
-    free_vars_expr c @ free_vars_body t @ free_vars_body f
-  | Scustom_case (_, s, _, bs, _) ->
-    free_vars_expr s
-    @ List.concat_map
-        (fun (ps, _, b) ->
-          let pat_bound = List.map (fun p -> p.cp_name) ps in
-          let body_fv = free_vars_body b in
-          List.filter
-            (fun id -> not (List.exists (Id.equal id) pat_bound))
-            body_fv )
-        bs
-  | Sswitch (s, _, bs, _) ->
-    free_vars_expr s
-    @ List.concat_map (fun (_, b) -> free_vars_body b) bs
+  | Sexpr e -> expr e
+  | Sasgn (_, _, e) -> expr e
+  | Sassign_expr (lhs, e) -> expr lhs @ expr e
+  | Sif (c, t, f) -> expr c @ body t @ body f
+  | Sraw text | Sassert (Pchecked text) when printed -> identifiers_of_text text
+  | Sblock_custom (_, tmpl, _, _, args, _) when printed ->
+    let tokens = Foreign_template.term_template tmpl in
+    List.concat
+      (List.mapi (fun i a -> if List.mem (Foreign_template.CCarg i) tokens then expr a else []) args)
+  | Scustom_case (_, sc, _, bs, cm) ->
+    let spells =
+      if printed then
+        let tokens = Foreign_template.match_template (custom_match_text cm) in
+        fun token -> List.mem token tokens
+      else fun _ -> true
+    in
+    (if spells Foreign_template.CCscrut then expr sc else [])
+    @ List.concat
+        (List.mapi
+           (fun i (ps, _, b) ->
+             if spells (Foreign_template.CCbody i) then
+               let pat_bound = List.map (fun p -> p.cp_name) ps in
+               List.filter (fun id -> not (List.exists (Id.equal id) pat_bound)) (body b)
+             else [] )
+           bs )
+  | Sswitch (s, _, bs, default) ->
+    expr s
+    @ List.concat_map (fun (_, b) -> body b) bs
+    @ (match default with Some ss -> body ss | None -> [])
   | Smatch (scrut, branches, default) ->
-    free_vars_expr scrut.sc_expr
+    expr scrut.sc_expr
     @ List.concat_map
       (fun br ->
-        let fv =
-          List.concat_map free_vars_expr br.smb_extra_conds
-          @ free_vars_body br.smb_body in
+        let fv = List.concat_map expr br.smb_extra_conds @ body br.smb_body in
         (* Filter out variables bound by this branch: structured-binding
            field names and/or the aggregate binding variable. *)
         let bound_ids =
           List.map (fun fb -> fb.fb_name) br.smb_field_bindings
           @ (match br.smb_var with Some id -> [id] | None -> [])
         in
-        List.filter
-          (fun v -> not (List.exists (Id.equal v) bound_ids))
-          fv )
+        List.filter (fun v -> not (List.exists (Id.equal v) bound_ids)) fv )
       branches
-    @ (match default with Some ss -> free_vars_body ss | None -> [])
-  | Sblock ss -> free_vars_body ss
+    @ (match default with Some ss -> body ss | None -> [])
+  | Sblock ss -> body ss
   | Sif_decl (id, _, e, t, f) ->
-    free_vars_expr e
-    @ List.filter (fun v -> not (Id.equal v id)) (free_vars_body t)
-    @ free_vars_body f
-  | Sfor_range (id, e, body) ->
-    free_vars_expr e @ List.filter (fun v -> not (Id.equal v id)) (free_vars_body body)
+    expr e @ List.filter (fun v -> not (Id.equal v id)) (body t) @ body f
+  | Sfor_range (id, e, b) ->
+    expr e @ List.filter (fun v -> not (Id.equal v id)) (body b)
   (* Every other statement binds nothing its own children see: what is free
      in it is what is free in them. *)
   | s ->
     fold_stmt_children
-      ~on_expr:(fun acc e -> acc @ free_vars_expr e)
-      ~on_stmts:(fun acc b -> acc @ free_vars_body b)
+      ~on_expr:(fun acc e -> acc @ expr e)
+      ~on_stmts:(fun acc b -> acc @ body b)
       [] s
 
-(** Collect free variables from a list of statements, properly excluding
-    variables defined by [Sasgn] or [Sdecl] bindings in preceding statements.
-    Tracks sequential scoping so that a variable defined in statement [i] is
-    not considered free when referenced in statement [j > i]. *)
-and free_vars_body (stmts : cpp_stmt list) : Id.t list =
+(* A statement list, excluding variables an [Sasgn] or [Sdecl] defines from
+   the statements after it. *)
+and vars_body ~printed (stmts : cpp_stmt list) : Id.t list =
   let rec go defined = function
     | [] -> []
     | stmt :: rest ->
@@ -2638,15 +2703,22 @@ and free_vars_body (stmts : cpp_stmt list) : Id.t list =
         | Sbind (ids, _) -> ids
         | _ -> []
       in
-      let stmt_fvs = free_vars_stmt stmt in
       let filtered =
         List.filter
           (fun v -> not (List.exists (Id.equal v) defined))
-          stmt_fvs
+          (vars_stmt ~printed stmt)
       in
       filtered @ go (newly_defined @ defined) rest
   in
   go [] stmts
+
+let free_vars_expr = vars_expr ~printed:false
+let free_vars_stmt = vars_stmt ~printed:false
+let free_vars_body = vars_body ~printed:false
+
+let reads_as_printed body =
+  let read = vars_body ~printed:true body in
+  fun id -> List.exists (Id.equal id) read
 
 let rec pure_expr e =
   match e with

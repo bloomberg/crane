@@ -738,6 +738,15 @@ let lower_conditionals (d : settled) : settled =
   and fs s = map_stmt fe fs Fun.id s in
   map_decl fe fs Fun.id d
 
+let lower_access_moves (d : settled) : settled =
+  let rec fe e =
+    match e with
+    | CPPaccess (acc, CPPmove inner, id) -> CPPmove (fe (CPPaccess (acc, inner, id)))
+    | CPPaccess_call (acc, CPPmove inner, m, args) -> fe (CPPaccess_call (acc, inner, m, args))
+    | e -> map_expr fe fs Fun.id e
+  and fs s = map_stmt fe fs Fun.id s in
+  map_decl fe fs Fun.id d
+
 (** [bind_free_tvars decl] spells [std::any] every type variable a body names
     that nothing in scope declares.
 

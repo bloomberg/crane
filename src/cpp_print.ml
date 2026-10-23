@@ -58,38 +58,6 @@ let escape_cpp_string (s : string) : string =
     throws [std::logic_error]. *)
 let is_axiom_type_ref = Cpp_erasure.is_axiom_type_ref
 
-(** [output_mentions body_s] is the test "does the printed body [body_s]
-    contain this identifier, as a whole word".
-
-    Whether a parameter may keep its name is a question about the {e output}:
-    a name the body never mentions is a [-Wunused-parameter] error, and the
-    AST is no proxy for what gets printed -- a custom-extraction template
-    drops arguments when it prints a call, so a [CPPvar] node can stand for a
-    name that never reaches the file.  The printer therefore asks the question
-    of the text it has just produced, which is the text the C++ compiler will
-    read.  Render the body first; the answer is only as good as the string it
-    is given. *)
-let output_mentions body_s =
-  let s = Pp.string_of_ppcmds body_s in
-  let len = String.length s in
-  let is_word_char c =
-    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
-    || (c >= '0' && c <= '9') || c = '_'
-  in
-  fun id ->
-    let name = Id.to_string id in
-    let n = String.length name in
-    let rec scan i =
-      if i + n > len then false
-      else if
-        String.sub s i n = name
-        && (i = 0 || not (is_word_char s.[i - 1]))
-        && (i + n >= len || not (is_word_char s.[i + n]))
-      then true
-      else scan (i + 1)
-    in
-    n > 0 && scan 0
-
 (** Check if a lambda needs to capture variables from enclosing scope.
     A lambda needs [&] capture if its body references variables that are
     not lambda parameters and not locally declared within the body.
@@ -118,12 +86,6 @@ let lambda_needs_capture
     match e with
     | CPPvar id -> (IdSet.add id refs, decls)
     | CPPderef e -> collect_from_expr (refs, decls) e
-    | CPPraw s
-      when String.length s > 3
-           && String.sub s 0 2 = "(*"
-           && s.[String.length s - 1] = ')' ->
-      let name = String.sub s 2 (String.length s - 3) in
-      (try (IdSet.add (Id.of_string name) refs, decls) with _ -> (refs, decls))
     | CPPthis | CPPshared_from_this _ ->
       uses_this := true;
       (refs, decls)
@@ -2015,7 +1977,7 @@ and pp_cpp_expr env args t =
     in
     (* Never [mutable]: a closure's captures are [const] in its body, which
        is what lets every copy of a [crane::fn] share one closure. *)
-    let capture_str =
+    let capture =
       ( if not needs_capture then str "[]"
         else match capture with
           | Closure ->
@@ -2030,20 +1992,14 @@ and pp_cpp_expr env args t =
       ++ tparams_str ++ str "("
     in
     let body_s = pp_list_stmt (pp_cpp_stmt env args) body in
-    let params_s, capture =
-      match params with
-      | [] -> (mt (), capture_str)
-      | _ ->
-        let mentioned = output_mentions body_s in
-        ( pp_list
-            (fun (ty, id_opt) ->
-              match id_opt with
-              | None -> pp_cpp_type false [] ty
-              | Some id when not (mentioned id) -> pp_cpp_type false [] ty
-              | Some id ->
-                pp_cpp_type false [] ty ++ spc () ++ Id.print id )
-            (List.rev params),
-          capture_str )
+    let read = Minicpp.reads_as_printed body in
+    let params_s =
+      pp_list
+        (fun (ty, id_opt) ->
+          match id_opt with
+          | Some id when read id -> pp_cpp_type false [] ty ++ spc () ++ Id.print id
+          | _ -> pp_cpp_type false [] ty )
+        (List.rev params)
     in
     ( match ret_ty with
     | Some ty ->
@@ -2219,25 +2175,12 @@ and pp_cpp_expr env args t =
       ++ pp_cpp_type false [] ty
       ++ str ">(this->shared_from_this())"
   | CPPaccess (acc, e, id) ->
-    (* Rewrite std::move(x).field → std::move(x.field): access the field
-       first, then move its value.  This is semantically equivalent and:
-       - Fixes Infer Use-After-Delete (moving a pointer then accessing it is flagged)
-       - Enables the Unnecessary-Copy-Intermediate fix (field value is moved, not copied)
-       For method calls we strip the move instead since methods need a live object. *)
     ( match (acc, e) with
-    | Adot, CPPmove inner ->
-      str (sn ()).move ++ str "(" ++ pp_cpp_expr env args inner ++ str "."
-      ++ Id.print id ++ str ")"
-    | Aarrow, CPPmove inner ->
-      (* std::move(ptr)->field → std::move(ptr->field) *)
-      str (sn ()).move ++ str "(" ++ pp_object env args inner ++ str "->"
-      ++ Id.print id ++ str ")"
     | Adot, CPPderef inner ->
       (* Dot access on a dereferenced pointer is arrow access on the pointer. *)
       pp_object env args inner ++ str "->" ++ Id.print id
     | _ -> pp_object env args e ++ str (pp_obj_access acc) ++ Id.print id )
   | CPPaccess_call (acc, obj, method_name, call_args) ->
-    let obj = match obj with CPPmove inner -> inner | _ -> obj in
     pp_object env args obj ++ str (pp_obj_access acc) ++ Id.print method_name
     ++ str "(" ++ pp_list (pp_cpp_expr env args) call_args ++ str ")"
   | CPPscope (e, id, []) ->
@@ -2305,12 +2248,7 @@ and pp_cpp_expr env args t =
     match Table.get_numeral_info r with
     | Some info -> str (Common.render_template [("%n", Z.to_string n)] info.Table.num_fmt)
     | None -> CErrors.anomaly Pp.(str "a numeral of a type with no numeral format") )
-  | CPPraw code ->
-    str
-      (Str.global_replace
-         (Str.regexp_string "*(this).")
-         "(*(this))."
-         code)
+  | CPPraw code -> str code
   | CPPbinop (op, lhs, rhs) ->
     (* Parenthesize && subexpressions inside || to avoid
        -Wlogical-op-parentheses warnings. *)
@@ -3517,12 +3455,12 @@ let rec pp_cpp_field
         if owner_tps = [] && mf_tparams = [] then str "inline " else mt ()
     in
     let body_s = pp_list_stmt (pp_cpp_stmt env []) mf_body in
-    let mentioned = output_mentions body_s in
+    let read = Minicpp.reads_as_printed mf_body in
     let params_s =
       pp_list
         (fun (id, ty) ->
           if
-            (not (mentioned id))
+            (not (read id))
             && not (String.equal (Id.to_string mf_name) "operator=")
           then pp_type ty
           else pp_type ty ++ str " " ++ Id.print id)
@@ -4235,11 +4173,11 @@ and pp_leaf_decl env (d : cpp_decl) =
       match shape with
       | Ddef (params, body) ->
         let body_s = pp_list_stmt (pp_cpp_stmt env []) body in
-        let mentioned = output_mentions body_s in
+        let read = Minicpp.reads_as_printed body in
         let params_s =
           pp_list
             (fun (id, ty) ->
-              if not (mentioned id) then pp_type ty
+              if not (read id) then pp_type ty
               else pp_type ty ++ str " " ++ Id.print id)
             (List.rev params)
         in

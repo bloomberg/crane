@@ -170,6 +170,13 @@ val lower_projections : settled -> settled
     branch keeps its lambda, whose return type converts the literal. *)
 val lower_conditionals : settled -> settled
 
+(** [lower_access_moves decl] moves what a member read reads rather than
+    the object it reads it from: [std::move(x).f] is [std::move(x.f)],
+    through [.] and [->] alike, and a member function is called on the
+    object itself, so a move of its receiver goes.  Last, after every pass
+    that writes a move or a member read. *)
+val lower_access_moves : settled -> settled
+
 (** [materialise decl] replaces every {!Minicpp.Topaque} in [decl] with
     {!Minicpp.Tany}.
 
