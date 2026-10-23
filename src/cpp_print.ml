@@ -86,12 +86,6 @@ let lambda_needs_capture
     match e with
     | CPPvar id -> (IdSet.add id refs, decls)
     | CPPderef e -> collect_from_expr (refs, decls) e
-    | CPPraw s
-      when String.length s > 3
-           && String.sub s 0 2 = "(*"
-           && s.[String.length s - 1] = ')' ->
-      let name = String.sub s 2 (String.length s - 3) in
-      (try (IdSet.add (Id.of_string name) refs, decls) with _ -> (refs, decls))
     | CPPthis | CPPshared_from_this _ ->
       uses_this := true;
       (refs, decls)
@@ -2254,12 +2248,7 @@ and pp_cpp_expr env args t =
     match Table.get_numeral_info r with
     | Some info -> str (Common.render_template [("%n", Z.to_string n)] info.Table.num_fmt)
     | None -> CErrors.anomaly Pp.(str "a numeral of a type with no numeral format") )
-  | CPPraw code ->
-    str
-      (Str.global_replace
-         (Str.regexp_string "*(this).")
-         "(*(this))."
-         code)
+  | CPPraw code -> str code
   | CPPbinop (op, lhs, rhs) ->
     (* Parenthesize && subexpressions inside || to avoid
        -Wlogical-op-parentheses warnings. *)
