@@ -255,6 +255,40 @@ let decl ~effects ~methods = function
     Dterm (r, body ~effects ~globals:[] b, ty)
   | d -> d
 
+(* A definition of type [ty] as it is generated: binding a parameter at each
+   of its type's arrows ({!Ml_type_util.eta_parameters}), the body it writes
+   applied to the ones it does not, at each that extraction did not erase. *)
+let eta_body ty b =
+  match b with
+  | MLaxiom _ | MLexn _ -> b
+  | _ ->
+    let ty = Mlutil.type_simpl ty in
+    let params, body = Ml_type_util.collect_typed_lams ty b in
+    match Ml_type_util.eta_parameters ty params with
+    | [] -> b
+    | missing ->
+      let args =
+        List.rev
+          (List.filter_map
+             (fun (i, (_, t)) -> if Ml_type_util.erased_by_extraction t then None else Some (fresh_rel (i + 1)))
+             (List.mapi (fun i x -> (i, x)) missing) )
+      in
+      Mlutil.named_lams (missing @ params)
+        (Mlutil.apply_eta_args (Mlutil.ast_lift (List.length missing) body) args)
+
+let eta_expand =
+  Modutil.map_struct_decls (function
+    | Dterm (r, b, ty) -> Dterm (r, eta_body ty b, ty)
+    | Dfix fds -> Dfix (List.map (fun fd -> {fd with fd_body = eta_body fd.fd_type fd.fd_body}) fds)
+    | d -> d )
+
+let let_lambdas =
+  Modutil.map_struct_decls (function
+    | Dterm (r, b, ty) -> Dterm (r, Core_elaborate.generated_definition ty b, ty)
+    | Dfix fds ->
+      Dfix (List.map (fun fd -> {fd with fd_body = Core_elaborate.generated_definition fd.fd_type fd.fd_body}) fds)
+    | d -> d )
+
 (* The methods the structure's functions become. *)
 let methods_of struc = Method_registry.create ~ret_is_erased:Translation.return_type_is_erased struc
 

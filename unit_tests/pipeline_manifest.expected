@@ -1,5 +1,5 @@
 core: modutil shared_variants dedup specialize fix_shape fresh_reads local_types ir_check
-normalize: normalize
+normalize: eta_expand let_lambdas normalize
 plan: analyze_program plan_target install_legacy_plan
 unit: non_atomic_rc reset_demands cross_file_qualification
 represent: template_kinds install_template_kinds

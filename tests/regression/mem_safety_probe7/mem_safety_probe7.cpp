@@ -78,7 +78,7 @@ MemSafetyProbe7::build_len_closures(
       _write = &std::get<typename MemSafetyProbe7::mylist<
           crane::fn<uint64_t(std::monostate)>>::Mycons>(_node.v_mut())
                     .a1;
-      _loop_l = a1_value;
+      _loop_l = MemSafetyProbe7::mylist<uint64_t>(a1_value);
       continue;
     }
   }
@@ -164,7 +164,7 @@ MemSafetyProbe7::build_sum_closures(
       _write = &std::get<typename MemSafetyProbe7::mylist<
           crane::fn<uint64_t(std::monostate)>>::Mycons>(_node.v_mut())
                     .a1;
-      _loop_l = a1_value;
+      _loop_l = MemSafetyProbe7::mylist<uint64_t>(a1_value);
       continue;
     }
   }
@@ -208,7 +208,7 @@ MemSafetyProbe7::build_accum_closures(
       _write = &std::get<typename MemSafetyProbe7::mylist<
           crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut())
                     .a1;
-      _loop_l = a1_value;
+      _loop_l = MemSafetyProbe7::mylist<uint64_t>(a1_value);
       continue;
     }
   }

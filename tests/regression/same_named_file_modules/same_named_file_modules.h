@@ -2044,15 +2044,11 @@ template <OrderedType X> struct Raw {
     }
   }
 
-  template <typename T1, typename T2, typename T3>
-  static t<T3>
-  map2(std::type_identity_t<
-           crane::fn<std::optional<T3>(std::optional<T1>, std::optional<T2>)>>
-           f,
-       List<std::pair<typename X::t, T1>> m0, t<T2> x0_) {
+  template <typename T1, typename T2, typename T3, typename F0>
+  static t<T3> map2(F0 &&f, List<std::pair<typename X::t, T1>> m0, t<T2> x0_) {
     if (std::holds_alternative<
             typename List<std::pair<typename X::t, T1>>::Nil>(m0.v_mut())) {
-      return map2_r<T1, T2, T3>(std::move(f), std::move(x0_));
+      return map2_r<T1, T2, T3>(f, std::move(x0_));
     } else {
       auto &[a0, a1] =
           std::get<typename List<std::pair<typename X::t, T1>>::Cons>(

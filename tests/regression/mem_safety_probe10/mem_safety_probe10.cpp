@@ -99,7 +99,7 @@ MemSafetyProbe10::collect_adders(const MemSafetyProbe10::tree &t) {
                        .a1->v_mut())
                    .a1->v_mut())
                .a1;
-      _loop_t = a0_value;
+      _loop_t = MemSafetyProbe10::tree(a0_value);
       continue;
     }
   }
@@ -188,7 +188,7 @@ MemSafetyProbe10::build_tree_fns(const MemSafetyProbe10::tree &t,
                           .a1->v_mut())
                       .a1;
         _loop_depth = d;
-        _loop_t = a0_value;
+        _loop_t = MemSafetyProbe10::tree(a0_value);
         continue;
       }
     }

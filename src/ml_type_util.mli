@@ -150,16 +150,18 @@ val collect_typed_lams :
 val eta_parameters :
   Miniml.ml_type -> (Miniml.ml_ident * Miniml.ml_type) list -> (Miniml.ml_ident * Miniml.ml_type) list
 
-(** [eta_applied missing body]: [body], standing under the lambdas, put under
-    the {!eta_parameters} [missing] too and applied to each of them that
-    extraction did not erase.  An axiom or an exception, which never
-    returns, is not applied. *)
-val eta_applied : (Miniml.ml_ident * Miniml.ml_type) list -> Miniml.ml_ast -> Miniml.ml_ast
+(** [unwritten_parameters ty params body]: the {!eta_parameters} of a
+    definition whose leading lambdas bind [params] over [body].  In a
+    normalized program ({!Core.normalize}) every definition binds every
+    parameter its type declares, so these are the parameters of an axiom or
+    an exception, which has no body to bind them; under [CRANE_CHECK_IR] any
+    other definition missing one is a violation. *)
+val unwritten_parameters :
+  Miniml.ml_type -> (Miniml.ml_ident * Miniml.ml_type) list -> Miniml.ml_ast -> (Miniml.ml_ident * Miniml.ml_type) list
 
 (** The parameters a function of type [ty] defined by [b] is generated with,
-    innermost first -- its {!eta_parameters}, then the lambdas
-    {!collect_typed_lams} finds -- and the body it is generated from, under
-    them, {!eta_applied}. *)
+    innermost first -- its {!unwritten_parameters}, then the lambdas
+    {!collect_typed_lams} finds -- and the body under them. *)
 val declared_parameters :
   Miniml.ml_type -> Miniml.ml_ast -> (Miniml.ml_ident * Miniml.ml_type) list * Miniml.ml_ast
 

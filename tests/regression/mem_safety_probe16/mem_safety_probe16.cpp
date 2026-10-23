@@ -81,7 +81,7 @@ MemSafetyProbe16::build_summers(
       _write = &std::get<typename MemSafetyProbe16::mylist<
           crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut())
                     .a1;
-      _loop_trees = a1_value;
+      _loop_trees = MemSafetyProbe16::mylist<MemSafetyProbe16::tree>(a1_value);
       continue;
     }
   }

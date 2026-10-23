@@ -348,7 +348,7 @@ let plan_function_head ?deduced_callables ?passing n ty temps signature =
 (** What a function's body is generated under, settled before the body:
     its return type, its parameters and the environment that names them, the
     body as the signature renumbers it, under every parameter
-    ({!Ml_type_util.eta_applied}), and the head before the relaxations
+    ({!Normalize.eta_expand}), and the head before the relaxations
     ({!plan_function_head}). *)
 type body_scope = {
   bs_cod : cpp_type;
@@ -414,7 +414,7 @@ let dfun_body_scope n b cty ty temps =
   (* The explicit lambdas bind the outermost domains; the eta-expansion
      parameters, the innermost ones -- for [R -> nat -> nat -> nat] with body
      [λr. <match>], [_x1 : nat; _x0 : nat], innermost first. *)
-  let missing = eta_parameters ty ids in
+  let missing = unwritten_parameters ty ids b in
   (* A body's lambda parameter types agree with the signature's by now: the
      one Core rewrite that broke that, promoting a polymorphic let-fix to a
      top-level Dfix, unifies them where it promotes ([Modutil.decl_of_term]),
@@ -572,20 +572,18 @@ let dfun_body_scope n b cty ty temps =
     | [] -> b
     | subst -> map_types_in_ast (subst_tvars_type subst) b
   in
+  let all_params = missing @ ids in
   (* The callable parameters kept as [crane::fn] rather than promoted to
      template parameters below; they keep their [Tconst (Tfun(dom, cod))]
-     type.  The indices are source order (param 0 = first Rocq parameter),
-     while [ids] is in de Bruijn order (innermost first), so a loop over it
-     asks about source index [List.length ids - 1 - i] -- the length of the
-     list it is iterating, which by then also holds the eta-expanded
-     parameters. *)
+     type.  Asked of the body as it is generated, over every parameter it
+     binds, so that one the definition leaves to eta-expansion is decided as
+     it would be if written.  The indices are source order (param 0 = first
+     Rocq parameter). *)
   let non_fwd_set =
     ungeneralised_callable_params ~self_ref:n
       ~suspended:(Table.is_coinductive_type (ml_return_type ty))
-      (List.length ids) b
+      (List.length all_params) b
   in
-  let all_params = missing @ ids in
-  let b = eta_applied missing b in
   (* Type class instance parameters become C++ template type parameters. We
      assign unique names (_tcI0, _tcI1, ...) to avoid collision with: - User
      variable names like 'i', 'j', etc. - Other generated names in the same
@@ -1239,9 +1237,9 @@ let gen_dfun n b cty ty temps =
               ( ids,
                 finish_fn_body cod (guard_compare n ids (sigma_asserts @ b)) ) ) ) )
     else
-      (* Eta-expansion: the body is applied to the parameters it stops short
-         of ({!Ml_type_util.eta_applied}), but for an axiom or exception
-         body, which always throws. *)
+      (* An axiom or exception body, which always throws, is the one that
+         binds fewer parameters than the head declares
+         ({!Ml_type_util.unwritten_parameters}). *)
       let b =
         match custom_forwarding_body with
         | Some stmts -> stmts

@@ -168,6 +168,10 @@ let is_record_inductive r =
 let is_local_inductive r =
   List.exists (globref_equal r) (Translation_state.get_local_inductives ())
 
+let inductive_type r args es =
+  let t = Tglob (r, args, es) in
+  if is_local_inductive r then t else Tnamespace (r, t)
+
 (** [String.capitalize_ascii] of the name's text: the first character of its
     outermost qualifier, or of its base when it has none. *)
 let capitalize_initial n =

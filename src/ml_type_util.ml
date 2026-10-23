@@ -233,22 +233,22 @@ let eta_parameters ty params =
   let n_missing = max 0 (List.length doms - List.length params) in
   List.mapi (fun i t -> (Id (eta_param_id (n_missing - 1 - i)), t)) (Util.List.firstn n_missing doms)
 
-let eta_applied missing body =
-  match (missing, body) with
-  | [], _ | _, (MLaxiom _ | MLexn _) -> body
+let unwritten_parameters ty params body =
+  let missing = eta_parameters ty params in
+  ( match body with
+  | MLaxiom _ | MLexn _ -> ()
   | _ ->
-    let args =
-      List.rev
-        (List.filter_map
-           (fun (i, (_, t)) -> if erased_by_extraction t then None else Some (fresh_rel (i + 1)))
-           (List.mapi (fun i x -> (i, x)) missing) )
-    in
-    apply_eta_args (ast_lift (List.length missing) body) args
+    if missing <> [] && Probe.checking () then
+      Probe.violation "eta-expanded"
+        Pp.(
+          str "a definition binds " ++ int (List.length params) ++ str " of the "
+          ++ int (List.length params + List.length missing)
+          ++ str " parameters its type declares; Core.normalize eta-expands every one" ) );
+  missing
 
 let declared_parameters ty b =
   let params, body = collect_typed_lams ty b in
-  let missing = eta_parameters ty params in
-  (missing @ params, eta_applied missing body)
+  (unwritten_parameters ty params body @ params, body)
 
 (** Give [b] as many binders as [ty] has value arrows.
 

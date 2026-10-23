@@ -237,6 +237,51 @@ and generic_inline_expr spec expr =
 (** The occurrence of the Core call a C++ call is made of. *)
 let made_of = function CPPfun_call (cs, _, _) -> cs.cs_occurrence | _ -> None
 
+(** Whether the calls [made], each by the occurrence it is made of
+    ({!made_of}), are the calls [planned], as many times each. *)
+let made_as_planned planned made =
+  let made_occs = List.filter_map Fun.id made in
+  let count o l = List.length (List.filter (Miniml.Occurrence.equal o) l) in
+  List.length made_occs = List.length made
+  && List.length planned = List.length made_occs
+  && List.for_all (fun o -> count o planned = count o made_occs) planned
+
+(** [check], narrowed to the calls the tail loop of [loop] jumps at, as its
+    ControlIR has them ({!Lower_control.loop}): a call made of one of its
+    Continues.  [check] still reads the call's arguments and receiver. *)
+let planned_jumps loop check =
+  match Option.bind loop Lower_control.loop with
+  | None -> check
+  | Some t ->
+    let continues = Control_ir.continues t in
+    fun e ->
+      match made_of e with
+      | Some o when List.exists (Miniml.Occurrence.equal o) continues -> check e
+      | Some _ | None -> None
+
+(** [transform jumped], the tail loop of [loop] the transform makes, telling
+    [jumped] each call it rewrites into a jump.  Under [CRANE_CHECK_IR] those
+    calls must be the [Continue]s of the loop's ControlIR
+    ({!Lower_control.loop}), which every tail loop has. *)
+let checked_tail_loop loop transform =
+  let jumps = ref [] in
+  let body = transform (fun e -> jumps := made_of e :: !jumps) in
+  ( match loop with
+  | Some l when Probe.checking () -> (
+    let what () =
+      match l with
+      | Control_ir.Loop.Function r -> Pp.str (Table.kername_of_global r)
+      | Control_ir.Loop.Member _ -> Pp.str "a local fixpoint"
+    in
+    match Lower_control.loop l with
+    | None -> Probe.violation "control IR" Pp.(str "no ControlIR for the tail loop of " ++ what ())
+    | Some t when not (made_as_planned (Control_ir.continues t) (List.rev !jumps)) ->
+      Probe.violation "control IR"
+        Pp.(str "the calls the tail loop of " ++ what () ++ str " jumps at are not its Continues")
+    | Some _ -> () )
+  | Some _ | None -> () );
+  body
+
 (** The name a local of a body inlined into another takes there: prefixed,
     so that it collides with none of the other body's, and a temporary
     still where it was one ({!Mlutil.is_temporary_id}), so that
@@ -346,13 +391,7 @@ let try_inline_mutual_into r body =
   in
   let inlined = List.fold_left inline_one body planned in
   if Probe.checking () then begin
-    let same_calls planned_occs made_occs =
-      let made = List.filter_map Fun.id made_occs in
-      let count o l = List.length (List.filter (Miniml.Occurrence.equal o) l) in
-      List.length made = List.length made_occs
-      && List.length planned_occs = List.length made
-      && List.for_all (fun o -> count o planned_occs = count o made) planned_occs
-    in
+    let same_calls = made_as_planned in
     let agree hops =
       List.length planned = List.length hops
       && List.for_all2
@@ -481,7 +520,9 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
           match strategy with
           | Tail_loop ->
             report_outcome ~name ~check ~strategy:Lp_tail
-              (transform_tail tparams check params ret_ty lbody)
+              (let loop = Some (Control_ir.Loop.Member (fst lf_member, snd lf_member)) in
+               checked_tail_loop loop (fun jumped ->
+                   transform_tail ~jumped tparams (planned_jumps loop check) params ret_ty lbody ) )
           (* The tail-modulo-cons loop is built for a function, not a lambda:
              a local fixpoint gets it only through a helper lifted out of it. *)
           | Modulo_cons _ | Frame_stack ->
@@ -928,6 +969,14 @@ let fundef_display_name path =
   in
   Id.to_string label
 
+(** The loop a tail loop of the function [r] is: a local fixpoint's member,
+    for a helper lifted for one; none for one lifted for a lambda. *)
+let function_loop r =
+  match Option.map Lifted.site (Lifted.of_ref r) with
+  | Some (Fixpoint (occurrence, member)) -> Some (Control_ir.Loop.Member (occurrence, member))
+  | Some (Let _) -> None
+  | None -> Some (Control_ir.Loop.Function r)
+
 (** The strategy of the function [r], whose body is [body]: as the
     program's recursion plan has it ({!Recursion_plan.strategy}), read off its
     Core body and its recursive group's before any of them was lowered, given
@@ -1056,7 +1105,10 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
         match strategy with
         | No_loop | Suspended _ -> (body, None)
         | Tail_loop ->
-          (transform_tail tparams check params ret_ty body, Some Lp_tail)
+          ( (let loop = function_loop (fst f.df_path.dp_outer) in
+             checked_tail_loop loop (fun jumped ->
+                 transform_tail ~jumped tparams (planned_jumps loop check) params ret_ty body ) ),
+            Some Lp_tail )
         | Modulo_cons _ | Frame_stack ->
           let r =
             apply_nontail_loopification ~fn_name:name ?adopted ?entered_by ~binders:f.df_binders
@@ -1231,7 +1283,7 @@ let transform_method ~tparams ~self_ty mf =
         in
         let park e =
           match e with
-          | CPPfun_call (_, CPPglob (r, targs, x), args)
+          | CPPfun_call (cs, CPPglob (r, targs, x), args)
             when is_self r && List.length (to_reversed args) > n_params ->
             let args_normal = call_args args in
             let recv = List.nth args_normal this_pos in
@@ -1244,7 +1296,7 @@ let transform_method ~tparams ~self_ty mf =
               let args' =
                 List.rev (replace_at this_pos (CPPvar id_self_store) args_normal)
               in
-              Some (recv, CPPfun_call (call_opaque, CPPglob (r, targs, x), of_reversed (args')))
+              Some (recv, CPPfun_call (cs, CPPglob (r, targs, x), of_reversed args'))
             else None
           | _ -> None
         in
@@ -1293,13 +1345,10 @@ let transform_method ~tparams ~self_ty mf =
         match strategy with
         | Tail_loop ->
           ( report_outcome ~name ~check:self_check ~strategy:Lp_tail
-              (transform_tail
-                 ~param_inits:[(self_id, CPPthis)]
-                 tparams
-                 self_check
-                 augmented_params
-                 mf.mf_ret_type
-                 body_with_self),
+              (let loop = Option.bind mf.mf_globref function_loop in
+               checked_tail_loop loop (fun jumped ->
+                   transform_tail ~param_inits:[(self_id, CPPthis)] ~jumped tparams
+                     (planned_jumps loop self_check) augmented_params mf.mf_ret_type body_with_self ) ),
             false )
         | Modulo_cons _ | Frame_stack ->
           let fn_name = Some name in

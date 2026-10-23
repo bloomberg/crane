@@ -1380,9 +1380,13 @@ let core_pass_names = Pipeline_trace.names (core_passes ([], []))
 (** {!Normalize}, on the frozen program ({!Core.normalize}), before it is
     analysed: every consumer of the structure (the method registry built
     before printing as much as the printer) sees the same bodies, and a body
-    an optimization introduces meets Normalize's contract like any other. *)
+    an optimization introduces meets Normalize's contract like any other.
+    Each definition is first eta-expanded to its type's arity and its
+    let-bound lambdas put as they are generated, which is the body
+    translation generates, so that is the body Normalize names the calls
+    of. *)
 let normalize_passes : ml_structure Pipeline_trace.pass list =
-  Pipeline_trace.[pass "normalize" Normalize.structure]
+  Pipeline_trace.[pass "eta_expand" Normalize.eta_expand; pass "let_lambdas" Normalize.let_lambdas; pass "normalize" Normalize.structure]
 
 let normalize_pass_names = Pipeline_trace.names normalize_passes
 

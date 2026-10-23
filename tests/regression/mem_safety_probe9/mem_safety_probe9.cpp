@@ -186,7 +186,7 @@ MemSafetyProbe9::list_accum_closures(
       };
       _loop_acc = mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
           std::move(f), std::move(_loop_acc));
-      _loop_l = a1_value;
+      _loop_l = MemSafetyProbe9::mylist<uint64_t>(a1_value);
     }
   }
 }

@@ -29,14 +29,12 @@ Datatypes::List<T2> map(F0 &&f, const Datatypes::List<T1> &l) {
     } else {
       const auto &[a0, a1] =
           std::get<typename Datatypes::List<T1>::Cons>(_loop_l->v());
-      auto _cell = typename Datatypes::template List<T2>::Cons(f(a0), nullptr);
+      auto _cell = typename Datatypes::List<T2>::Cons(f(a0), nullptr);
       Datatypes::List<T2> &_node =
           (_write ? *(*_write = std::make_shared<Datatypes::List<T2>>(
                           std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
-      _write =
-          &std::get<typename Datatypes::template List<T2>::Cons>(_node.v_mut())
-               .l;
+      _write = &std::get<typename Datatypes::List<T2>::Cons>(_node.v_mut()).l;
       _loop_l = crane_raw(a1);
       continue;
     }

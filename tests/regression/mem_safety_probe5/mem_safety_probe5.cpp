@@ -85,7 +85,7 @@ MemSafetyProbe5::build_getters(
       _write = &std::get<typename MemSafetyProbe5::mylist<
           crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut())
                     .a1;
-      _loop_l = a1_value;
+      _loop_l = MemSafetyProbe5::mylist<MemSafetyProbe5::tree>(a1_value);
       continue;
     }
   }

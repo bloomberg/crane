@@ -3213,16 +3213,7 @@ let ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : cpp_type =
       ind_promoted_type_args r
       @ apply_hkt_tyctors r (template_params_of_ml ~site:Declared env tys)
     in
-    let is_local_ind =
-      List.exists
-        (globref_equal r)
-        (get_local_inductives ())
-    in
-    let ind_type =
-      if is_local_ind then Tglob (r, temps, [])
-      else Tnamespace (r, Tglob (r, temps, []))
-    in
-    Tqualified (ind_type, ctor_name)
+    Tqualified (Cpp_names.inductive_type r temps [], ctor_name)
   | _ -> Tid (ctor_name, [])
 
 (** [recover_boxed_result ~boxed ~expected expr] casts the result of a call

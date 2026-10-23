@@ -388,8 +388,11 @@ let assign_result_and_stop expr =
     by value, each with its shadow: a structured binding of a match on
     [_loop_l.v()].  Reading one reads the shadow, so an update reading [a0]
     of [_loop_l] is evaluated before [_loop_l] is overwritten, which
-    overwrites [a0] with the next cell's field. *)
-let make_shadow_updates ?(aliases = []) shadow_params args =
+    overwrites [a0] with the next cell's field.
+
+    [derefs] are the variables declared as references to a dereference
+    ([const T &a1_value = *a1]): one stands for that dereference. *)
+let make_shadow_updates ?(aliases = []) ?(derefs = []) shadow_params args =
   let shadow_ids = List.map (fun (id, _) -> id) shadow_params in
   let is_self_assign shadow_id arg =
     match arg with
@@ -439,9 +442,14 @@ let make_shadow_updates ?(aliases = []) shadow_params args =
     (* The shadow's declared type still carries the parameter's [const &]; the
        shadow itself is an owning value of the stripped type. *)
     let vty = strip_ref_and_const_type ty in
+    let dereference = function
+      | CPPderef _ -> true
+      | CPPvar v -> List.exists (Id.equal v) derefs
+      | _ -> false
+    in
     match (ty, core) with
     | Tptr _, _ -> arg
-    | _, CPPderef _ when is_value_type_ret vty ->
+    | _, core when dereference core && is_value_type_ret vty ->
       Cpp_erasure.converting_ctor vty [core]
     | _ -> arg
   in
@@ -576,6 +584,9 @@ type loop_rewrite_config = {
   rc_shadow_params : (Id.t * cpp_type) list;
   (** Shadow variable bindings [(name, type)] for varying parameters.
       Used by {!make_shadow_updates} when rewriting tail calls. *)
+
+  rc_jumped : cpp_expr -> unit;
+  (** Told each recursive call rewritten into a jump. *)
 }
 
 (** Top-level rewrite configuration.  Combines a {!loop_rewrite_config}
@@ -589,9 +600,10 @@ type top_rewrite_config = {
       Empty [[]] for plain tail recursion (control falls through to the
       [while (true)] test); [[Scontinue]] for TMC. *)
 
-  trc_on_other : cpp_expr -> cpp_stmt;
-  (** Emit code for a non-tail, non-visit return at the top level.
-      Wraps in [Sblock] as needed. *)
+  trc_on_other : derefs:Id.t list -> cpp_expr -> cpp_stmt;
+  (** Emit code for a non-tail, non-visit return at the top level, under
+      the references to a dereference [derefs] declared before it
+      ({!make_shadow_updates}).  Wraps in [Sblock] as needed. *)
 
   trc_rewrite_branch : smatch_branch -> smatch_branch;
   (** Transform a match branch at the top level. *)
@@ -611,24 +623,25 @@ type top_rewrite_config = {
     - Handles [Sswitch] (only present at the top level of visitor bodies).
     - Uses {!generic_rewrite_stmts} for list-level recursion, which
       optionally detects the void tail-call pattern. *)
-let rec generic_rewrite_stmt ?(aliases = []) trc = function
+let rec generic_rewrite_stmt ?(aliases = []) ?(derefs = []) trc = function
   | Sreturn (Some e) ->
     ( match trc.trc_inner.rc_check e with
     | Some cs ->
+      trc.trc_inner.rc_jumped e;
       Sblock
-        (make_shadow_updates ~aliases trc.trc_inner.rc_shadow_params
+        (make_shadow_updates ~aliases ~derefs trc.trc_inner.rc_shadow_params
            (filter_by_mask trc.trc_inner.rc_varying cs.cs_args)
          @ trc.trc_tail_suffix)
-    | None -> trc.trc_on_other e )
+    | None -> trc.trc_on_other ~derefs e )
   | Sif (cond, then_br, else_br) ->
-    let rw = generic_rewrite_stmts ~aliases trc in
+    let rw = generic_rewrite_stmts ~aliases ~derefs trc in
     Sif (cond, rw then_br, rw else_br)
   | Sswitch (scrut, r, branches, default) ->
-    let rw = generic_rewrite_stmts ~aliases trc in
+    let rw = generic_rewrite_stmts ~aliases ~derefs trc in
     Sswitch
       (scrut, r, List.map (fun (id, body) -> (id, rw body)) branches, default)
   | Scustom_case (ty, scrut, tyargs, branches, err) ->
-    let rw = generic_rewrite_stmts ~aliases trc in
+    let rw = generic_rewrite_stmts ~aliases ~derefs trc in
     Scustom_case (ty, scrut, tyargs,
       List.map (fun (ps, ret_ty, body) -> (ps, ret_ty, rw body))
         branches, err)
@@ -662,11 +675,11 @@ let rec generic_rewrite_stmt ?(aliases = []) trc = function
       List.map
         (fun br ->
           let br' = trc.trc_rewrite_branch br in
-          { br' with smb_body = generic_rewrite_stmts ~aliases:(inside br') trc br'.smb_body })
+          { br' with smb_body = generic_rewrite_stmts ~aliases:(inside br') ~derefs trc br'.smb_body })
         branches,
-      Option.map (generic_rewrite_stmts ~aliases trc) default)
+      Option.map (generic_rewrite_stmts ~aliases ~derefs trc) default)
   | Sblock stmts ->
-    Sblock (generic_rewrite_stmts ~aliases trc stmts)
+    Sblock (generic_rewrite_stmts ~aliases ~derefs trc stmts)
   | s -> s
 
 (** List-level top-level rewriter.
@@ -678,13 +691,19 @@ let rec generic_rewrite_stmt ?(aliases = []) trc = function
     Both forms are rewritten as [Sreturn (Some call)] so the statement-level
     rewriter can handle them as ordinary tail calls.  This pattern is produced
     by [cofix_wrap] and [gen_stmts] for void-returning recursive functions. *)
-and generic_rewrite_stmts ?(aliases = []) trc = function
+and generic_rewrite_stmts ?(aliases = []) ?(derefs = []) trc = function
   | Sexpr e :: Sreturn _ :: rest
     when trc.trc_detect_void_tail && trc.trc_inner.rc_check e <> None ->
-    generic_rewrite_stmt ~aliases trc (Sreturn (Some e))
-    :: generic_rewrite_stmts ~aliases trc rest
+    generic_rewrite_stmt ~aliases ~derefs trc (Sreturn (Some e))
+    :: generic_rewrite_stmts ~aliases ~derefs trc rest
   | s :: rest ->
-    generic_rewrite_stmt ~aliases trc s :: generic_rewrite_stmts ~aliases trc rest
+    let s' = generic_rewrite_stmt ~aliases ~derefs trc s in
+    let derefs =
+      match s with
+      | Sasgn (id, Declare (ty, _), CPPderef _) when is_reference_type ty -> id :: derefs
+      | _ -> derefs
+    in
+    s' :: generic_rewrite_stmts ~aliases ~derefs trc rest
   | [] -> []
 
 (** Wrap a statement list as a single statement. *)
@@ -697,17 +716,19 @@ let wrap_as_block = function
     Constructs a tail-recursion {!top_rewrite_config} and delegates to
     {!generic_rewrite_stmts}.  Base returns assign [_result] and break;
     tail calls update shadow variables with no suffix (control falls through
-    to the [while (true)] test).  Void tail-call detection is enabled. *)
-let rewrite_visit_stmts check varying shadow_params =
+    to the [while (true)] test).  Void tail-call detection is enabled.
+    [jumped] is told each call rewritten into a jump. *)
+let rewrite_visit_stmts ~jumped check varying shadow_params =
   let inner_rc =
     { rc_check = check;
       rc_varying = varying;
-      rc_shadow_params = shadow_params }
+      rc_shadow_params = shadow_params;
+      rc_jumped = jumped }
   in
   generic_rewrite_stmts
     { trc_inner = inner_rc;
       trc_tail_suffix = [];
-      trc_on_other = (fun e -> wrap_as_block (assign_result_and_stop e));
+      trc_on_other = (fun ~derefs:_ e -> wrap_as_block (assign_result_and_stop e));
       trc_rewrite_branch = Fun.id;
       trc_detect_void_tail = true }
 
@@ -1097,12 +1118,13 @@ let drop_unread_shadows shadow_decls body =
 
     @param param_inits Optional custom initializers for shadow variables
                        (default: copy from original parameter)
+    @param jumped Told each recursive call rewritten into a jump
     @param check Call checker for identifying recursive calls
     @param params Function parameters [(id, type)] list
     @param ret_ty Return type of the function
     @param body Function body statements
     @return Transformed body with while loop structure *)
-let transform_tail ?(param_inits = []) tparams check params ret_ty body =
+let transform_tail ?(param_inits = []) ?(jumped = ignore) tparams check params ret_ty body =
   let { ss_varying = varying; ss_varying_params = varying_params;
         ss_shadow_params = shadow_params; ss_subs = subs } =
     build_shadow_setup tparams check params body
@@ -1132,7 +1154,7 @@ let transform_tail ?(param_inits = []) tparams check params ret_ty body =
   (* Rewrite recursive calls (list-level rewrite handles void tail-call
      pattern [Sexpr call; Sreturn None] → [Sreturn (Some call)]) *)
   let body'' =
-    rewrite_visit_stmts check varying shadow_params body'
+    rewrite_visit_stmts ~jumped check varying shadow_params body'
   in
   let body'' = strip_unnecessary_blocks body'' in
   (* Move loop accumulators at self-referencing assignment sites:

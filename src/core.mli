@@ -43,9 +43,11 @@ val optimize : (Miniml.ml_structure -> Miniml.ml_structure) -> extracted program
 val freeze : optimized program -> frozen program
 
 (** [normalize pass p] is [p] in the form control lowering reads: [pass]
-    ({!Normalize.structure}) binds each call a function Loopify transforms
-    makes to its own recursive group, where it is evaluated strictly and not
-    in tail position, to a temporary of its own, in evaluation order.  It
+    gives each definition a parameter at every arrow of its type
+    ({!Normalize.eta_expand}), then ({!Normalize.structure}) binds each call
+    a function Loopify transforms makes to its own recursive group, where it
+    is evaluated strictly and not in tail position, to a temporary of its
+    own, in evaluation order.  It
     runs on the frozen program and so solves nothing: a temporary whose type
     the call does not say is given an open annotation.  Under
     [CRANE_CHECK_IR] the result is a fixed point of [pass] -- normalizing it

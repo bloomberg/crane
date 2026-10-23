@@ -307,11 +307,10 @@ let head_variables ty = Mlutil.IntSet.fold max (Mlutil.ml_tvars ty) 0
    annotation with the declaration's type when it generates the head; an
    annotation that is still a bare metavariable is solved to the declared
    type there, so that is the type read here, without solving anything.  The
-   lambdas bind the declaration's outermost domains; a body short of the
-   rest is generated eta-expanded, applied to a parameter at each of them
-   that is not erased ({!Gen_functions.dfun_body_scope}), and that
-   application is what is elaborated: a definition that is another
-   function, [add := Z.add], calls it. *)
+   lambdas bind every domain: Core eta-expands each definition
+   ({!Normalize.eta_expand}), so a definition that is another function,
+   [add := Z.add], calls it; only an axiom's or exception's parameters are
+   named here, with no body to bind them. *)
 let declaration_scope ty body =
   let ty = Mlutil.type_simpl ty in
   let params, body = declared_parameters ty body in
@@ -352,9 +351,14 @@ let rec inline_aliases ~n_outer lex e =
     MLfix (i, fs, Array.map (under fs') defs, cofix, occ)
   | e -> Mlutil.ast_map (go lex) e
 
-let generated_scope ty body =
-  let lex, body = declaration_scope ty body in
-  (lex, inline_aliases ~n_outer:(head_variables (Mlutil.type_simpl ty)) lex body)
+let generated_definition ty body =
+  match body with
+  | MLaxiom _ | MLexn _ -> body
+  | _ ->
+    let ty' = Mlutil.type_simpl ty in
+    let params, _ = collect_typed_lams ty' body in
+    let lex, inner = declaration_scope ty body in
+    Mlutil.named_lams params (inline_aliases ~n_outer:(head_variables ty') lex inner)
 
 (* A declaration's calls, read in that scope. *)
 let declaration b ty body =

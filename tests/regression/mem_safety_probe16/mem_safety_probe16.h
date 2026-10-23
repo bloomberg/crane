@@ -553,7 +553,7 @@ struct MemSafetyProbe16 {
             std::get<typename mylist<tree>::Mycons>(_loop_trees.v());
         const mylist<tree> &a1_value = *a1;
         _loop_acc = [=](uint64_t n) { return _loop_acc((a0.tree_sum() + n)); };
-        _loop_trees = a1_value;
+        _loop_trees = mylist<tree>(a1_value);
       }
     }
   }
@@ -663,7 +663,7 @@ struct MemSafetyProbe16 {
             return _loop_k(ll.myapp(mylist<uint64_t>::mycons(a1, rl)));
           });
         };
-        _loop_t = a0_value;
+        _loop_t = tree(a0_value);
       }
     }
   }

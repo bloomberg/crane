@@ -2179,13 +2179,14 @@ let reconcile_parameter_type body_ty sig_ty =
   else body_ty
 
 (** {!ungeneralised_callable_params} for the definition of [r] at type [ty]
-    with body [b], over the parameters {!collect_typed_lams} finds: the ones
-    its function is generated with. *)
+    with body [b], over the parameters {!Ml_type_util.declared_parameters}
+    finds, written or eta-expanded: the ones its function is generated
+    with. *)
 let ungeneralised_callables_of_definition r ty b =
-  let ids, body = collect_typed_lams ty b in
+  let params, body = declared_parameters ty b in
   ungeneralised_callable_params ~self_ref:r
     ~suspended:(Table.is_coinductive_type (ml_return_type ty))
-    (List.length ids) body
+    (List.length params) body
 
 (** Whether a function takes a callable parameter of C++ type [f] as a
     deduced [F &&] rather than a [crane::fn]: unless the parameter is
@@ -2802,8 +2803,9 @@ type let_lambda =
   | Lifted  (** Lifted out to a function template of its own. *)
 
 (** The decision {!let_lambda} names, made from the Core term alone: it is
-    the one owner of it, read by translation to generate the binding and by
-    {!Core_elaborate} to elaborate the calls an inlined alias makes. *)
+    the one owner of it, applied once in Core
+    ({!Core_elaborate.generated_definition}), after which translation meets
+    only lambdas it binds or lifts. *)
 let let_lambda ~lex ~n_outer t a b =
   if not (Ml_type_util.own_type_variables ~n_outer [t]) then Bound
   else

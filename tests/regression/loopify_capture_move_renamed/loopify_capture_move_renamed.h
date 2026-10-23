@@ -166,7 +166,7 @@ struct LoopifyCaptureMoveRenamed {
             return _loop_k(yes, List<uint64_t>::cons(a0, no));
           }
         };
-        _loop_l = a1_value;
+        _loop_l = List<uint64_t>(a1_value);
       }
     }
   }

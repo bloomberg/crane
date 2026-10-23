@@ -34,7 +34,7 @@ MemSafetyProbe6::build_chain(const MemSafetyProbe6::mylist<uint64_t> &l) {
       _write = &std::get<typename MemSafetyProbe6::mylist<
           crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut())
                     .a1;
-      _loop_l = a1_value;
+      _loop_l = MemSafetyProbe6::mylist<uint64_t>(a1_value);
       continue;
     }
   }

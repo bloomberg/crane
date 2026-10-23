@@ -35,6 +35,8 @@ type program = {
       (** Which functions recurse through which. *)
   recursion : Recursion_plan.t;
       (** How each function recurses through itself. *)
+  control : Lower_control.t;
+      (** The control the recursion plan lowers to ({!Control_ir}). *)
 }
 
 (** [analyze_program p] analyses the normalized program [p]; it writes nothing. *)

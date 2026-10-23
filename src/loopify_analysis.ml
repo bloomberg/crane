@@ -289,18 +289,6 @@ let agree_ptr_fields owner ctor_name fields =
         str "the struct " ++ str ctor_name ++ str " of " ++ GlobRef.print owner
         ++ str " stores other fields behind the pointer than planned" )
 
-(** The inductive a TMC cell belongs to, read off the cell's own type.  A
-    factory call is always qualified by that type ([Type<...>::cons]), which
-    is what makes the owner recoverable from the C++ AST alone. *)
-let cell_owner = function Tglob (g, _, _) -> Some g | _ -> None
-
-(** The registered name of field [field_idx] of a cell's constructor struct,
-    or the positional fallback when the owner cannot be recovered. *)
-let cell_field_name ~cell_ty ~ctor_name field_idx =
-  match cell_owner cell_ty with
-  | Some owner -> Common.lookup_ctor_field_name ~owner ctor_name field_idx
-  | None -> Common.field_param_id field_idx
-
 (** {2 Recursion classification} *)
 
 (** Information about a single recursive call site. *)

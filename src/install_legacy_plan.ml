@@ -22,7 +22,8 @@ let install_program (facts : Program_facts.program) =
   List.iter Table.add_throwing_value facts.throwing_values;
   Ownership.install facts.parameter_ownership;
   Recursive_groups.install facts.recursive_groups;
-  Recursion_plan.install facts.recursion
+  Recursion_plan.install facts.recursion;
+  Lower_control.install facts.control
 
 let install_template_kinds (plan : Target_plan.t) =
   List.iter (fun (r, kinds) -> Tparam_kinds.record r kinds) plan.template_kinds
