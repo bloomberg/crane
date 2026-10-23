@@ -81,6 +81,7 @@ let constraints = on_decl "constraints" Minicpp.settle_constraints
 
 let casts = Pipeline_trace.pass "casts" Cpp_erasure.resolve_casts
 let free_tvars = Pipeline_trace.pass "free_tvars" Cpp_erasure.bind_free_tvars
+let template_args = Pipeline_trace.pass "template_args" Cpp_erasure.supply_template_args
 let method_calls = Pipeline_trace.pass "method_calls" Cpp_erasure.lower_method_calls
 let projections = Pipeline_trace.pass "projections" Cpp_erasure.lower_projections
 
@@ -139,6 +140,9 @@ let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
     (* With every type final, a read of a boxed value the context needs at a
        concrete type is written down. *)
     pass "boxed_reads" Cpp_erasure.lower_boxed_reads;
+    (* A type argument a mapping's template names and the call does not
+       supply was erased, and is written down as one. *)
+    template_args;
     (* A call of a methodified function becomes the member call it is, so
        the printer spells the call it is given. *)
     method_calls;
@@ -155,8 +159,9 @@ let pass_names =
     A declaration leaves translation owing the printer decisions C++ cannot be
     handed undecided: a type with no spelling, a callable parameter whose
     constraint the body has not settled, a cast whose caster is not chosen, a
-    type variable nothing declares, a call of a method or a projection written
-    as a call of a function.  Each is discharged by one pass above, and
+    type variable nothing declares, a type argument a mapping's template names
+    and its application leaves out, a call of a method or a projection
+    written as a call of a function.  Each is discharged by one pass above, and
     {!Cpp_erasure.settled} claims that by the end none is outstanding.  The
     list is closed: a new kind of debt the printer must not see is a new
     constructor here, with the pass that pays it. *)
@@ -168,12 +173,15 @@ type obligation =
   | Unsettled_callable  (** a {!Minicpp.TTfun} parameter *)
   | Unresolved_cast  (** an [any_cast] whose caster is still to choose *)
   | Free_type_variable  (** a type variable no enclosing head declares *)
+  | Missing_template_argument
+      (** a type argument an inline mapping's template names and its
+          application does not supply *)
   | Unlowered_method_call
   | Unlowered_projection
 
 let obligations =
   [ Unresolved_type; Opaque_type; Unsettled_callable; Unresolved_cast; Free_type_variable;
-    Unlowered_method_call; Unlowered_projection ]
+    Missing_template_argument; Unlowered_method_call; Unlowered_projection ]
 
 let describe = function
   | Unresolved_type -> "an undetermined type (Tunresolved), owed by the pass that wrote it"
@@ -181,6 +189,7 @@ let describe = function
   | Unsettled_callable -> "an unsettled callable constraint, owed by " ^ constraints.name
   | Unresolved_cast -> "an unresolved cast, owed by " ^ casts.name
   | Free_type_variable -> "an undeclared type variable, owed by " ^ free_tvars.name
+  | Missing_template_argument -> "a mapping's unsupplied type argument, owed by " ^ template_args.name
   | Unlowered_method_call -> "a method called as a function, owed by " ^ method_calls.name
   | Unlowered_projection -> "a projection called as a function, owed by " ^ projections.name
 
@@ -205,6 +214,7 @@ let owes (decl : Cpp_erasure.settled) o =
   | Unsettled_callable -> compare (constraints.run {decl = d; control_lowered = false}).decl d <> 0
   | Unresolved_cast -> rewrites casts
   | Free_type_variable -> rewrites free_tvars
+  | Missing_template_argument -> rewrites template_args
   | Unlowered_method_call -> rewrites method_calls
   | Unlowered_projection -> rewrites projections
 

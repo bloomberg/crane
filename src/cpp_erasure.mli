@@ -137,6 +137,15 @@ val bind_free_tvars : settled -> settled
     boxes is read off their declared types. *)
 val lower_boxed_reads : settled -> settled
 
+(** [supply_template_args decl] gives every inline mapping applied in
+    [decl] -- a mapped type or global, a block template, a custom match --
+    each type argument its template names.  Translation supplies those the
+    application writes; where erasure dropped them, the ones it does not
+    supply are erased, and are written down here as {!Minicpp.Tany} rather
+    than left for the printer to assume.  A type constructor named unapplied
+    ({!Minicpp.Ttyctor}) is not an application, and is left alone. *)
+val supply_template_args : settled -> settled
+
 (** [lower_method_calls decl] writes each call of a function the method
     registry made a member of its receiver's struct as the
     {!Minicpp.CPPmethod_call} it is: the receiver taken out of the argument

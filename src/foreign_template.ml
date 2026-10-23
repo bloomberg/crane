@@ -191,6 +191,9 @@ let custom_template_with_args s nargs =
     ^ String.concat ", " (List.init nargs (fun i -> Printf.sprintf "%%t%d" i))
     ^ ">"
 
+let type_arity tokens =
+  List.fold_left (fun n -> function CCty_arg i | CCelem i -> max n (i + 1) | _ -> n) 0 tokens
+
 (** Parse a custom {e term} template: {!parse_type_template} plus the [%a{i}]
     holes that splice value arguments. *)
 let parse_term_template s =

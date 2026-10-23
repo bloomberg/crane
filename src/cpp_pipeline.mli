@@ -23,8 +23,8 @@ val should_loopify : Minicpp.cpp_decl -> bool
     count before and after each.  Under [CRANE_CHECK_IR] it fails if the
     result still owes the printer a decision one of its passes makes: an
     unspellable type, an unsettled constraint, an unresolved cast, an
-    undeclared type variable, or a method or projection called as a
-    function. *)
+    undeclared type variable, a mapping's unsupplied type argument, or a
+    method or projection called as a function. *)
 val finish : Minicpp.cpp_decl -> Cpp_erasure.settled
 
 

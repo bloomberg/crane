@@ -544,6 +544,50 @@ let rec reads_decl (d : settled) : settled =
 
 let lower_boxed_reads (d : settled) : settled = reads_decl d
 
+(* [tys] extended with [std::any] for each argument past its end that a
+   template parsed into [tokens] names. *)
+let supplied tokens tys =
+  let missing = Foreign_template.type_arity tokens - List.length tys in
+  if missing > 0 then tys @ List.init missing (fun _ -> Tany) else tys
+
+(* A mapped type takes its arguments as the printer reads them: a mapping
+   that does not say where they go takes those it is given
+   ({!Foreign_template.custom_template_with_args}).  A type constructor named
+   unapplied ({!Minicpp.Ttyctor}) is left as it is: the printer names it by
+   the arguments it has, positionally. *)
+let rec supply_type_args t =
+  rewrite_cpp_type
+    (function
+      | Ttyctor _ as t -> Some t
+      | Tglob (r, tys, args) when Table.to_inline r -> (
+        match Table.find_custom_opt r with
+        | Some s ->
+          let tokens =
+            Foreign_template.term_template
+              (Foreign_template.custom_template_with_args s (List.length tys))
+          in
+          Some (Tglob (r, supplied tokens (List.map supply_type_args tys), args))
+        | None -> None )
+      | _ -> None)
+    t
+
+let supply_template_args (d : settled) : settled =
+  let rec fe e =
+    match e with
+    | CPPglob (r, tys, (Some {ci_inline = Some tmpl; _} as ci)) ->
+      CPPglob (r, supplied (Foreign_template.term_template tmpl.it_text) (List.map supply_type_args tys), ci)
+    | e -> map_expr fe fs supply_type_args e
+  and fs s =
+    match map_stmt fe fs supply_type_args s with
+    | Sblock_custom (r, tmpl, result, ty, args, tyargs) ->
+      Sblock_custom (r, tmpl, result, ty, args, supplied (Foreign_template.term_template tmpl) tyargs)
+    | Scustom_case (ty, scrut, tyargs, branches, cm) ->
+      let tokens = Foreign_template.match_template (custom_match_text cm) in
+      Scustom_case (ty, scrut, supplied tokens tyargs, branches, cm)
+    | s -> s
+  in
+  map_decl fe fs supply_type_args d
+
 (* The lambda a methodified function [n] is written as where it is a value,
    its receiver at [pos].  It takes the function's parameters at the types the
    method was declared at, not [const auto &]: a generic lambda has no

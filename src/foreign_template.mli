@@ -62,6 +62,11 @@ val with_result : string -> string -> string
     takes them in order: ["Sum1"] at two arguments is ["Sum1<%t0, %t1>"]. *)
 val custom_template_with_args : string -> int -> string
 
+(** [type_arity tokens] is how many type arguments the template parsed into
+    [tokens] names: one more than the highest [%t{i}] or [%elem{i}] it
+    holds, and 0 when it holds none. *)
+val type_arity : custom_case list -> int
+
 (** How a match template binds its one branch's binders. *)
 type binding = By_reference | By_value
 
