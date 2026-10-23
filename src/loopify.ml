@@ -1231,7 +1231,7 @@ let transform_method ~tparams ~self_ty mf =
         in
         let park e =
           match e with
-          | CPPfun_call (_, CPPglob (r, targs, x), args)
+          | CPPfun_call (cs, CPPglob (r, targs, x), args)
             when is_self r && List.length (to_reversed args) > n_params ->
             let args_normal = call_args args in
             let recv = List.nth args_normal this_pos in
@@ -1244,7 +1244,7 @@ let transform_method ~tparams ~self_ty mf =
               let args' =
                 List.rev (replace_at this_pos (CPPvar id_self_store) args_normal)
               in
-              Some (recv, CPPfun_call (call_opaque, CPPglob (r, targs, x), of_reversed (args')))
+              Some (recv, CPPfun_call (cs, CPPglob (r, targs, x), of_reversed args'))
             else None
           | _ -> None
         in

@@ -2982,7 +2982,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     in
     let cglob = mk_cppglob ?yields x (written_at_variables x (filter_erased_keyed by_var)) in
     if naming_calls ~cpp_of:(cpp_of_ml env) x then
-      mk_call cglob []
+      (* A function of no parameters named is called, a call made of this
+         use. *)
+      made_of (Global_use.occurrence use) (mk_call cglob [])
     else
       ( match
           Option.map
