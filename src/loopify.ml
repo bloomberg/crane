@@ -246,6 +246,19 @@ let made_as_planned planned made =
   && List.length planned = List.length made_occs
   && List.for_all (fun o -> count o planned = count o made_occs) planned
 
+(** [check], narrowed to the calls the tail loop of [loop] jumps at, as its
+    ControlIR has them ({!Lower_control.loop}): a call made of one of its
+    Continues.  [check] still reads the call's arguments and receiver. *)
+let planned_jumps loop check =
+  match Option.bind loop Lower_control.loop with
+  | None -> check
+  | Some t ->
+    let continues = Control_ir.continues t in
+    fun e ->
+      match made_of e with
+      | Some o when List.exists (Miniml.Occurrence.equal o) continues -> check e
+      | Some _ | None -> None
+
 (** [transform jumped], the tail loop of [loop] the transform makes, telling
     [jumped] each call it rewrites into a jump.  Under [CRANE_CHECK_IR] those
     calls must be the [Continue]s of the loop's ControlIR
@@ -507,9 +520,9 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
           match strategy with
           | Tail_loop ->
             report_outcome ~name ~check ~strategy:Lp_tail
-              (checked_tail_loop
-                 (Some (Control_ir.Loop.Member (fst lf_member, snd lf_member)))
-                 (fun jumped -> transform_tail ~jumped tparams check params ret_ty lbody))
+              (let loop = Some (Control_ir.Loop.Member (fst lf_member, snd lf_member)) in
+               checked_tail_loop loop (fun jumped ->
+                   transform_tail ~jumped tparams (planned_jumps loop check) params ret_ty lbody ) )
           (* The tail-modulo-cons loop is built for a function, not a lambda:
              a local fixpoint gets it only through a helper lifted out of it. *)
           | Modulo_cons _ | Frame_stack ->
@@ -1092,8 +1105,9 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
         match strategy with
         | No_loop | Suspended _ -> (body, None)
         | Tail_loop ->
-          ( checked_tail_loop (function_loop (fst f.df_path.dp_outer))
-              (fun jumped -> transform_tail ~jumped tparams check params ret_ty body),
+          ( (let loop = function_loop (fst f.df_path.dp_outer) in
+             checked_tail_loop loop (fun jumped ->
+                 transform_tail ~jumped tparams (planned_jumps loop check) params ret_ty body ) ),
             Some Lp_tail )
         | Modulo_cons _ | Frame_stack ->
           let r =
@@ -1331,9 +1345,10 @@ let transform_method ~tparams ~self_ty mf =
         match strategy with
         | Tail_loop ->
           ( report_outcome ~name ~check:self_check ~strategy:Lp_tail
-              (checked_tail_loop (Option.bind mf.mf_globref function_loop) (fun jumped ->
-                   transform_tail ~param_inits:[(self_id, CPPthis)] ~jumped tparams self_check
-                     augmented_params mf.mf_ret_type body_with_self ) ),
+              (let loop = Option.bind mf.mf_globref function_loop in
+               checked_tail_loop loop (fun jumped ->
+                   transform_tail ~param_inits:[(self_id, CPPthis)] ~jumped tparams
+                     (planned_jumps loop self_check) augmented_params mf.mf_ret_type body_with_self ) ),
             false )
         | Modulo_cons _ | Frame_stack ->
           let fn_name = Some name in
