@@ -256,14 +256,25 @@ let decl ~effects ~methods = function
   | d -> d
 
 (* A definition of type [ty] as it is generated: binding a parameter at each
-   of its type's arrows, the ones it does not write applied to the rest
-   ({!Ml_type_util.declared_parameters}). *)
+   of its type's arrows ({!Ml_type_util.eta_parameters}), the body it writes
+   applied to the ones it does not, at each that extraction did not erase. *)
 let eta_body ty b =
   match b with
   | MLaxiom _ | MLexn _ -> b
   | _ ->
-    let params, body = Ml_type_util.declared_parameters (Mlutil.type_simpl ty) b in
-    Mlutil.named_lams params body
+    let ty = Mlutil.type_simpl ty in
+    let params, body = Ml_type_util.collect_typed_lams ty b in
+    match Ml_type_util.eta_parameters ty params with
+    | [] -> b
+    | missing ->
+      let args =
+        List.rev
+          (List.filter_map
+             (fun (i, (_, t)) -> if Ml_type_util.erased_by_extraction t then None else Some (fresh_rel (i + 1)))
+             (List.mapi (fun i x -> (i, x)) missing) )
+      in
+      Mlutil.named_lams (missing @ params)
+        (Mlutil.apply_eta_args (Mlutil.ast_lift (List.length missing) body) args)
 
 let eta_expand =
   Modutil.map_struct_decls (function
