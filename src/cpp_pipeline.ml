@@ -35,7 +35,9 @@ let unspellable = function
     by construction.  The check runs only under [CRANE_CHECK_IR], set by the
     test suite: it is a second traversal of every declaration, and it protects
     an invariant the compiler is meant to establish rather than one a user's
-    input can break. *)
+    input can break.  The declaration is named as {!Table} names any global,
+    since one a pass generated -- a lifted helper -- is not in the name table
+    [Printer.pr_global] reads, and would fail the report itself. *)
 let check_settled (decl : Cpp_erasure.settled) =
   let found = ref [] in
   let note t =
@@ -56,7 +58,7 @@ let check_settled (decl : Cpp_erasure.settled) =
         ++ str ")"
         ++
         match decl_globref (decl :> cpp_decl) with
-        | Some r -> str " in " ++ Printer.pr_global r
+        | Some r -> str " in " ++ Table.safe_pr_global r
         | None -> mt () )
 
 (** {2 Tracing}
