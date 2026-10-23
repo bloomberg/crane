@@ -20,6 +20,14 @@
     {!structure} names are those of that body. *)
 val eta_expand : Miniml.ml_structure -> Miniml.ml_structure
 
+(** [let_lambdas s] puts every let-bound lambda in [s]'s definitions as it is
+    generated ({!Core_elaborate.generated_definition}): an alias of a
+    polymorphic function inlined, one used at a single instance bound at it,
+    one bound as a value eta-expanded.  It runs after {!eta_expand} and
+    before {!structure}, which then names the calls an inlined alias
+    makes. *)
+val let_lambdas : Miniml.ml_structure -> Miniml.ml_structure
+
 (** [structure s] normalizes every loopified fixpoint group in [s], a frozen
     program ({!Core.normalize}). *)
 val structure : Miniml.ml_structure -> Miniml.ml_structure

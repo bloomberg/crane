@@ -2803,8 +2803,9 @@ type let_lambda =
   | Lifted  (** Lifted out to a function template of its own. *)
 
 (** The decision {!let_lambda} names, made from the Core term alone: it is
-    the one owner of it, read by translation to generate the binding and by
-    {!Core_elaborate} to elaborate the calls an inlined alias makes. *)
+    the one owner of it, applied once in Core
+    ({!Core_elaborate.generated_definition}), after which translation meets
+    only lambdas it binds or lifts. *)
 let let_lambda ~lex ~n_outer t a b =
   if not (Ml_type_util.own_type_variables ~n_outer [t]) then Bound
   else

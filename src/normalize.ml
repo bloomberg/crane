@@ -282,6 +282,13 @@ let eta_expand =
     | Dfix fds -> Dfix (List.map (fun fd -> {fd with fd_body = eta_body fd.fd_type fd.fd_body}) fds)
     | d -> d )
 
+let let_lambdas =
+  Modutil.map_struct_decls (function
+    | Dterm (r, b, ty) -> Dterm (r, Core_elaborate.generated_definition ty b, ty)
+    | Dfix fds ->
+      Dfix (List.map (fun fd -> {fd with fd_body = Core_elaborate.generated_definition fd.fd_type fd.fd_body}) fds)
+    | d -> d )
+
 (* The methods the structure's functions become. *)
 let methods_of struc = Method_registry.create ~ret_is_erased:Translation.return_type_is_erased struc
 

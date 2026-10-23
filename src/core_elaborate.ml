@@ -351,9 +351,14 @@ let rec inline_aliases ~n_outer lex e =
     MLfix (i, fs, Array.map (under fs') defs, cofix, occ)
   | e -> Mlutil.ast_map (go lex) e
 
-let generated_scope ty body =
-  let lex, body = declaration_scope ty body in
-  (lex, inline_aliases ~n_outer:(head_variables (Mlutil.type_simpl ty)) lex body)
+let generated_definition ty body =
+  match body with
+  | MLaxiom _ | MLexn _ -> body
+  | _ ->
+    let ty' = Mlutil.type_simpl ty in
+    let params, _ = collect_typed_lams ty' body in
+    let lex, inner = declaration_scope ty body in
+    Mlutil.named_lams params (inline_aliases ~n_outer:(head_variables ty') lex inner)
 
 (* A declaration's calls, read in that scope. *)
 let declaration b ty body =

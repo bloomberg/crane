@@ -769,7 +769,7 @@ let inlinings_of ~effects ~defs ~members self fd =
   in
   let flow_body g =
     Option.bind (Ref.User.Map.find_opt g defs) (fun fd ->
-        let _, body = Core_elaborate.generated_scope fd.fd_type fd.fd_body in
+        let _, body = Core_elaborate.declaration_scope fd.fd_type fd.fd_body in
         if Translation_support.suspends_whole g (Ml_type_util.ml_return_type fd.fd_type) body then None
         else Some body )
   in
@@ -804,7 +804,7 @@ let adopted_invocations_of ~defs self inlinings =
         | MLapp (MLglob use, _) when Common.globref_equal use.callee self -> raise Found
         | e -> Mlutil.ast_iter walk e
       in
-      ( try walk (snd (Core_elaborate.generated_scope fd.fd_type fd.fd_body)); false with Found -> true )
+      ( try walk (snd (Core_elaborate.declaration_scope fd.fd_type fd.fd_body)); false with Found -> true )
   in
   let has_parameters g =
     match Ref.User.Map.find_opt g defs with
@@ -837,7 +837,7 @@ let analyze groups program =
     struc;
   let defs = !defs in
   (* A function is generated taking every parameter its type declares, its
-     body applied to those it does not bind ({!Core_elaborate.generated_scope}):
+     body applied to those it does not bind ({!Core_elaborate.declaration_scope}):
      its calls are read there, a call with fewer arguments than that being
      the closure the C++ makes of it. *)
   let parameters fd = List.length (Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type)) in
@@ -864,7 +864,7 @@ let analyze groups program =
         (fun i ->
           let body () =
             Option.map
-              (fun fd -> snd (Core_elaborate.generated_scope fd.fd_type fd.fd_body))
+              (fun fd -> snd (Core_elaborate.declaration_scope fd.fd_type fd.fd_body))
               (Ref.User.Map.find_opt i.partner defs)
           in
           if List.exists (Occurrence.equal occurrence) i.continued then
@@ -874,7 +874,7 @@ let analyze groups program =
           else None )
         planned
     in
-    classify ~inlined ~effects ~callee (snd (Core_elaborate.generated_scope fd.fd_type fd.fd_body))
+    classify ~inlined ~effects ~callee (snd (Core_elaborate.declaration_scope fd.fd_type fd.fd_body))
   in
   let kinds = Ref.User.Map.mapi member_kind defs in
   let plans =
@@ -961,7 +961,7 @@ let analyze groups program =
             [{target = Function use.callee; occurrence = Global_use.occurrence use}]
           | _ -> []
         in
-        let lex, body = Core_elaborate.generated_scope fd.fd_type fd.fd_body in
+        let lex, body = Core_elaborate.declaration_scope fd.fd_type fd.fd_body in
         resumes_of ~effects ~origin:r ~targets lex body )
       defs
   in
@@ -973,7 +973,7 @@ let analyze groups program =
           | MLglob use -> List.exists (Common.globref_equal use.callee) members
           | _ -> false
         in
-        let lex, body = Core_elaborate.generated_scope fd.fd_type fd.fd_body in
+        let lex, body = Core_elaborate.declaration_scope fd.fd_type fd.fd_body in
         flow_fixpoints ~names (Lexenv.depth lex) body )
       defs
   in

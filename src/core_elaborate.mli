@@ -35,21 +35,21 @@ val structure : Miniml.ml_structure -> t
 
 (** [declaration_scope ty body] is the lexical environment a definition of
     type [ty] generates its body [body] in, its parameters bound at the
-    types the body is generated with and those an eta-expansion adds after
-    them, and the body as generated: applied to the added parameters. *)
+    types the body is generated with, and the body under them.  In a
+    normalized program ({!Core.normalize}) that body is the one generated:
+    eta-expanded, its let-bound lambdas as {!generated_definition} puts
+    them. *)
 val declaration_scope : Miniml.ml_type -> Miniml.ml_ast -> Lexenv.t * Miniml.ml_ast
 
-(** [generated_scope ty body] is {!declaration_scope}, with every
-    let-bound lambda in the body as translation generates it
-    ({!Translation_support.let_lambda}): an alias of a polymorphic function
-    put in place of its uses, and a lambda bound as a value given a binder
-    for each value arrow of its type
-    ({!Translation_support.eta_bound_lambda}).  This is the term translation
-    generates, whose binders are the ones it declares: an inlined alias binds
-    nothing, so a binder after one is at a level the body as written puts it
-    one deeper, and the binders an eta-expansion adds put those inside it
-    deeper still. *)
-val generated_scope : Miniml.ml_type -> Miniml.ml_ast -> Lexenv.t * Miniml.ml_ast
+(** [generated_definition ty body] is the definition [body] of type [ty],
+    eta-expanded ({!Normalize.eta_expand}), with every let-bound lambda in
+    it as it is generated ({!Translation_support.let_lambda}): an alias of a
+    polymorphic function put in place of its uses, one used at a single
+    instance bound at it, and one bound as a value given a binder for each
+    value arrow of its type ({!Translation_support.eta_bound_lambda}).  An
+    inlined alias binds nothing, so a binder after one is a level shallower
+    than in the body as written. *)
+val generated_definition : Miniml.ml_type -> Miniml.ml_ast -> Miniml.ml_ast
 
 (** Every global the declarations walked name, applied or not, in their
     bodies or in a term a custom type is applied to in any type the unit

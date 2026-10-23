@@ -342,6 +342,14 @@ let moved_out base = match base with CPPmove _ -> true | _ -> false
 (* Under [CRANE_CHECK_IR], the region's plan must have decided as translation
    does whether [let _ : ty := a] binds the closure [a] to a local, which the
    plan owns and moves. *)
+(** Report, under [CRANE_CHECK_IR], a let-bound lambda [what] that reached
+    translation other than as it is generated: Core puts every one so
+    before ({!Normalize.let_lambdas}), and translation only binds or lifts
+    them. *)
+let ungenerated_let_lambda what =
+  if Probe.checking () then
+    Probe.violation "let-bound lambda" Pp.(str "Core.normalize left " ++ str what ++ str " to translation")
+
 let check_closure_local ty a ~local =
   if Probe.checking () then
     match Ownership_plan.closure_local (!tctx).move_plan ty a with
@@ -9221,7 +9229,11 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     (* Normal MLletin fallback (shared by no-extra-tvars and
        thunk-with-free-vars cases) *)
     let gen_normal_letin () =
-      let a = eta_bound_lambda t a in
+      let a =
+        let expanded = eta_bound_lambda t a in
+        if expanded != a then ungenerated_let_lambda "a lambda bound as a value short of its type's arrows";
+        expanded
+      in
       let x' = cpp_id_of_id (id_of_mlid x) in
       let renamed_ids, env' = push_vars' [(x', t)] env in
       let x_renamed = fst (List.hd renamed_ids) in
@@ -9275,9 +9287,12 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     | Bound -> gen_normal_letin ()
     | At_instance inst ->
       let subst = Mlutil.type_subst_list inst in
+      ungenerated_let_lambda "a lambda used at one instance";
       with_plan (Ownership_plan.bound_at_instance (!tctx).move_plan ~let_:let_occ) (fun () ->
           gen_stmts ~slot env k (MLletin (x, subst t, Mlutil.ast_map_types subst a, b, let_occ)) )
-    | Inlined b -> gen_stmts ~slot env k b
+    | Inlined b ->
+      ungenerated_let_lambda "an alias to inline";
+      gen_stmts ~slot env k b
     | Lifted ->
       (* Lift the polymorphic lambda to a top-level template function. *)
       let params, body = collect_lams a in
