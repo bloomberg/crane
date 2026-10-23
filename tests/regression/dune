@@ -13447,3 +13447,14 @@
   (alias runtest)
   (deps loopify_method_local_fix.t.exe)
   (action (run ./loopify_method_local_fix.t.exe))))
+
+(subdir loopify_nested_local_fix
+ (rule
+  (targets loopify_nested_local_fix.t.exe)
+  (deps LoopifyNestedLocalFix.vo loopify_nested_local_fix.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_nested_local_fix.t.exe loopify_nested_local_fix.cpp loopify_nested_local_fix.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_nested_local_fix.t.exe)
+  (action (run ./loopify_nested_local_fix.t.exe))))

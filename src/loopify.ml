@@ -561,8 +561,10 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         (* The loop no longer recurses, so the self-parameter and the wrapper
            that supplied it are scaffolding: the wrapper [go] becomes the loop
            itself, an ordinary lambda.  Only when the next statement is that
-           wrapper ({!wraps}) and nothing after it names [go_impl]. *)
+           wrapper ({!wraps}) and nothing after it names [go_impl].  The local
+           fixpoints in the loop are lowered too, as in any other body. *)
         let self = fixpoint_self fixpoint (to_reversed lparams) in
+        let lbody' = process_stmts lbody' in
         match rest with
         | Sasgn (wid, (Declare (Tauto, _) as wtgt), CPPlambda w) :: rest'
           when wraps fixpoint w && not (List.exists (Id.equal id) (free_vars_body rest')) ->
