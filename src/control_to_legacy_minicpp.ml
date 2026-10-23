@@ -4,18 +4,22 @@
 open Names
 open Minicpp
 
-(* The tail loop of the function [r], where it is one this module lowers. *)
-let planned_loop r =
-  let tail_loop () =
+(* The tail loop the recursion plan lowers the function [r] to, where it
+   lowers it to one. *)
+let tail_loop r =
+  let tail =
     match Recursion_plan.strategy ~pointer_fields:Loopify_analysis.constructor_pointer_fields r with
     | Some Tail_loop -> true
     | Some (No_loop | Modulo_cons _ | Frame_stack | Suspended _) | None -> false
   in
-  if Table.should_loopify r && (not (Option.has_some (Lifted.of_ref r))) && tail_loop () then
+  if tail && not (Option.has_some (Lifted.of_ref r)) then
     match Lower_control.loop (Control_ir.Loop.Function r) with
     | Some (Loop l) when Control_ir.continues l.body <> [] -> Some l
     | Some _ | None -> None
   else None
+
+(* The tail loop of the function [r], where it is one this module lowers. *)
+let planned_loop r = if Table.should_loopify r then tail_loop r else None
 
 (* Whether each of the C++ parameters [params] of the function [r] is one
    its loop [l] varies: one standing for a parameter of [l] some Continue
@@ -190,6 +194,61 @@ let local_loop ~owner ~member:((occurrence, _) as member) ~tparams ~name ~self_p
           Some stmt
         end )
   | Some _ | None -> None
+
+(* Whether each of the receiver and the parameters of the method [m], made
+   of the function [r], is one its loop [l] varies, as {!varying} reads a
+   function's. *)
+let method_varying r (l : Control_ir.Term.loop) (m : method_field) =
+  let invariant = Control_ir.invariant_parameters l in
+  let at (b : Core_binder.t) =
+    if GlobRef.UserOrd.equal b.origin r then Option.map not (List.nth_opt invariant b.level) else None
+  in
+  let param (id, _) =
+    Option.bind (List.find_map (fun (x, b) -> if Id.equal x id then Some b else None) m.mf_binders) at
+  in
+  List.fold_right
+    (fun v acc -> match (v, acc) with Some v, Some vs -> Some (v :: vs) | _ -> None)
+    (Option.bind m.mf_receiver_binder at :: List.map param m.mf_params)
+    (Some [])
+
+(* The method [m] lowered to its tail loop, where it is one: the struct it is
+   a member of declared under [tparams], its receiver a [self_ty]. *)
+let lower_method ~tparams ~self_ty (m : method_field) =
+  match m.mf_globref with
+  | Some r when Recursion_plan.inlinings r = [] && not (Recursion_plan.inlined r) -> (
+    let plan = Option.bind (tail_loop r) (fun l -> Option.map (fun v -> (l, v)) (method_varying r l m)) in
+    match plan with
+    | None -> None
+    | Some (l, varying) -> (
+      match Loopify.transform_method_own ~varying ~tparams ~self_ty m with
+      | exception Loopify_analysis.Not_linearisable _ -> None
+      | Fmethod m' when m' != m ->
+        if Probe.checking () && compare (Loopify.transform_method_own ~tparams ~self_ty m) (Fmethod m') <> 0 then
+          Probe.violation "control lowering"
+            Pp.(
+              str "the tail loop of the method " ++ str (Table.kername_of_global r)
+              ++ str " lowered from its ControlIR is not the loop Loopify makes" );
+        Some
+          { m' with
+            mf_body = Loopify.lower_local_tail_loops ~tparams:(tparams @ m.mf_tparams) m'.mf_body;
+            mf_loop = Some l.loop }
+      (* Declined: a receiver a frame cannot point at. *)
+      | _ -> None ) )
+  | Some _ | None -> None
+
+let lower_methods ~merged inductive vars fields =
+  let tparams = List.map (fun v -> (TTtypename, v)) vars in
+  let self_ty = Tconst (Tptr (Tglob (inductive, List.map named_tvar vars, []))) in
+  let loopified r =
+    (if merged then Table.loopify () else Table.loopifies_methods_of inductive) && Table.loopifies_method r
+  in
+  List.map
+    (fun ((f, vis, tag) as field) ->
+      match f with
+      | Fmethod ({mf_globref = Some r; _} as m) when loopified r -> (
+        match lower_method ~tparams ~self_ty m with Some m -> (Fmethod m, vis, tag) | None -> field )
+      | _ -> field )
+    fields
 
 let lower_group decls =
   let functions = List.filter_map function_of decls in

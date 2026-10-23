@@ -935,6 +935,10 @@ and method_field = {
   mf_receiver_binder : Core_binder.t option;
       (** The Core binder the receiver stands for, where translation bound
           it for one *)
+  mf_loop : Control_ir.Loop.t option;
+      (** The loop of its {!Control_ir} the body already is, where it was
+          lowered from there when the method was generated
+          ({!Control_to_legacy_minicpp}): no later pass lowers its control *)
 }
 
 (** A method's receiver.  A static method has none, so it has no position for

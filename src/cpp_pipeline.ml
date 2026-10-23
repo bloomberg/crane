@@ -67,10 +67,28 @@ let node_count (d : cpp_decl) =
     not see the last uses they create. *)
 type unsettled = {decl : cpp_decl; control_lowered : bool}
 
+(** Whether [decl] holds a method whose loop was lowered from its ControlIR
+    as it was generated ({!Control_to_legacy_minicpp}). *)
+let rec holds_lowered_method decl =
+  let rec in_fields fs =
+    List.exists
+      (fun (f, _, _) ->
+        match f with
+        | Fmethod {mf_loop; _} -> Option.has_some mf_loop
+        | Fnested_struct (_, fs) -> in_fields fs
+        | _ -> false )
+      fs
+  in
+  match decl with
+  | Dtemplate (_, _, d) -> holds_lowered_method d
+  | Dstruct ds | Dfields ds -> in_fields ds.ds_fields
+  | Dnspace (_, ds) -> List.exists holds_lowered_method ds
+  | _ -> false
+
 (** Whether [decl] holds control lowered from its ControlIR as it was
-    generated ({!Control_to_legacy_minicpp}): a function whose body is its
-    loop, or a local fixpoint's lambda that is, which before Loopify has run
-    no other pass can have made. *)
+    generated ({!Control_to_legacy_minicpp}): a function or a method whose
+    body is its loop, or a local fixpoint's lambda that is, which before
+    Loopify has run no other pass can have made. *)
 let lowered_at_generation decl =
   let exception Found in
   let fe e =
@@ -90,7 +108,7 @@ let lowered_at_generation decl =
     functions decl;
     ignore (map_decl fe' fs Fun.id decl)
   with
-  | () -> false
+  | () -> holds_lowered_method decl
   | exception Found -> true
 
 (** Whether [decl] is a function whose control was lowered as it was
@@ -126,7 +144,13 @@ let minicpp_passes : unsettled Pipeline_trace.pass list =
           if Probe.checking () then Loopify.check_lowered d;
           d )
         else if should_loopify d then Loopify.transform_decl d
-        else Loopify.transform_local_tail_loops d );
+        else (
+          (* A method is lowered as it is generated only where Loopify would
+             have transformed it. *)
+          if Probe.checking () && holds_lowered_method d then
+            Probe.violation "control lowering"
+              (Pp.str "a method was lowered as it was generated in a declaration Loopify does not loopify");
+          Loopify.transform_local_tail_loops d ) );
     (* Closures made and used in one place become the code they stand for,
        before ownership is decided, so what they captured is seen as local. *)
     lowering "local_closures" Cpp_local_closures.transform_decl;

@@ -735,6 +735,7 @@ and method_field = {
   mf_is_conversion : bool;
   mf_binders : (Id.t * Core_binder.t) list;
   mf_receiver_binder : Core_binder.t option;
+  mf_loop : Control_ir.Loop.t option;
 }
 
 and receiver =
@@ -828,7 +829,8 @@ let static_fun ~name ~ret ~params ~body =
     mf_is_noexcept = false;
     mf_is_conversion = false;
     mf_binders = [];
-    mf_receiver_binder = None }
+    mf_receiver_binder = None;
+    mf_loop = None }
 
 (** Rvalue reference type [T&&]. *)
 let rval_ref ty = Tref (Forwarding, ty)

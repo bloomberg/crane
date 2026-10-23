@@ -27,7 +27,10 @@
     The loop of a local fixpoint of one member ({!Control_ir.Loop.Member})
     is lowered so too, as translation generates the fixpoint: the lambda it
     is declared as is that loop, where it was the pair of lambdas tying the
-    knot of a Y-combinator that Loopify recognised ({!local_loop}).
+    knot of a Y-combinator that Loopify recognised ({!local_loop}).  So is a
+    method's, once its struct's methods are generated: its receiver is the
+    loop's first variable, the parameters a jump leaves alone read off the
+    Core binders of the receiver and the parameters ({!lower_methods}).
 
     Under [CRANE_CHECK_IR] Loopify's own transform runs beside it, and must
     make the same loop ({!Loopify.checker_tail_loop},
@@ -54,6 +57,22 @@ val local_loop :
   self_passing:(unit -> Minicpp.cpp_stmt list) ->
   Minicpp.cpp_lambda ->
   Minicpp.cpp_stmt option
+
+(** [lower_methods ~merged r vars fields] is [fields], members of the struct
+    of the inductive [r] of variables [vars], with each method made of a
+    function the recursion plan lowers to a tail loop, and Loopify would
+    loopify, lowered to that loop, recording it ({!Minicpp.method_field.mf_loop}),
+    as Loopify lowers a method: its receiver the loop's first variable.
+    [merged] says whether the struct is merged into its module's, whose
+    members Loopify loopifies only where it loopifies everything.  Under
+    [CRANE_CHECK_IR] Loopify's own transform runs beside it and must make the
+    same method. *)
+val lower_methods :
+  merged:bool ->
+  Names.GlobRef.t ->
+  Names.Id.t list ->
+  (Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag) list ->
+  (Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag) list
 
 (** [lower_group ds] is the declarations [ds], generated for the members of
     one recursive group, in its order, with each function lowered as above

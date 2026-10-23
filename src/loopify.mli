@@ -55,6 +55,18 @@ val checker_tail_loop :
 val after_tail_loop :
   tparams:(template_type * Id.t) list -> dfun -> (Id.t * cpp_type) list -> cpp_stmt list -> cpp_stmt list
 
+(** [transform_method_own ~varying ~tparams ~self_ty m] is Loopify's
+    transform of the method [m] of a struct whose receiver pointer type is
+    [self_ty], under the struct's template parameters [tparams], before the
+    local fixpoints in it are lowered: [m] itself where it declines.  A tail
+    loop varies the receiver and parameters [varying], where given. *)
+val transform_method_own :
+  ?varying:bool list ->
+  tparams:(template_type * Id.t) list ->
+  self_ty:cpp_type ->
+  method_field ->
+  cpp_field
+
 (** [lower_local_tail_loops ~tparams stmts] is [stmts] with the
     tail-recursive local fixpoints in them turned into loops, under the
     template parameters [tparams], as {!transform_local_tail_loops} turns

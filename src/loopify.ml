@@ -1201,8 +1201,11 @@ let transform_fundef ~tparams (f : dfun) params body =
     @param self_ty        C++ type for the struct pointer (e.g.,
                           [Tconst (Tptr (Tglob (...)))])
     @param mf             The method record to transform
+    @param varying        Which of the receiver and the parameters a tail
+                          loop varies, where the caller knows; read off its
+                          calls otherwise
     @return An [Fmethod] field with the loopified body *)
-let transform_method_own ~tparams ~self_ty mf =
+let transform_method_own ?varying ~tparams ~self_ty mf =
   (* [tparams] arrives holding only the enclosing struct's parameters.  A
      method's body is written under its own template header too, and a
      parameter declared there is the one most likely to constrain how the body
@@ -1367,7 +1370,7 @@ let transform_method_own ~tparams ~self_ty mf =
           ( report_outcome ~name ~check:self_check ~strategy:Lp_tail
               (let loop = Option.bind mf.mf_globref function_loop in
                checked_tail_loop loop (fun jumped ->
-                   transform_tail ~param_inits:[(self_id, CPPthis)] ~jumped tparams
+                   transform_tail ~param_inits:[(self_id, CPPthis)] ~jumped ?varying tparams
                      (planned_jumps loop self_check) augmented_params mf.mf_ret_type body_with_self ) ),
             false )
         | Modulo_cons _ | Frame_stack ->
@@ -1439,6 +1442,9 @@ let rec transform_field ~tparams ~self_ty (fld, vis, tag) =
 
 and transform_field_exn ~tparams ~self_ty (fld, vis, tag) =
   match fld with
+  (* A method lowered from its ControlIR as it was generated
+     ({!Control_to_legacy_minicpp}). *)
+  | Fmethod {mf_loop = Some _; _} -> (fld, vis, tag)
   | Fmethod mf
     when (match mf.mf_globref with Some r -> Table.loopifies_method r | None -> true) ->
     (transform_method ~tparams ~self_ty mf, vis, tag)

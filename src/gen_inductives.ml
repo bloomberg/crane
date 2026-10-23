@@ -944,6 +944,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
         mf_receiver_binder =
           Option.bind this_arg_id (fun id ->
               Option.map snd (List.nth_opt (parameter_binders env [(id, ())]) 0) );
+        mf_loop = None;
       },
     VPublic,
     SNoTag )
@@ -1005,12 +1006,20 @@ let gen_single_method name vars ((func_ref, _, _, _) as candidate) =
           ++ str " was not generated ahead of the files.")
 
 (** The methods made of [candidates] in the inductive [name], as its struct
-    declares them ({!Borrow_projection.lend}). *)
-let gen_methods name vars candidates =
-  List.concat_map
-    (fun c ->
-      Borrow_projection.lend ~coinductive:(Table.is_coinductive name) (gen_single_method name vars c) )
-    candidates
+    declares them ({!Borrow_projection.lend}), with their control lowered
+    from their ControlIR where that is the bridge's to lower
+    ({!Control_to_legacy_minicpp.lower_methods}).  The struct is merged into
+    its module's where it is the one the module is promoting, or [merged]
+    says so. *)
+let gen_methods ?(merged = false) name vars candidates =
+  let merged =
+    merged || Option.cata (fun r -> globref_equal r name) false !Cpp_state.eponymous_promote_ref
+  in
+  Control_to_legacy_minicpp.lower_methods ~merged name vars
+    (List.concat_map
+       (fun c ->
+         Borrow_projection.lend ~coinductive:(Table.is_coinductive name) (gen_single_method name vars c) )
+       candidates )
 
 (** Generate C++ header for an inductive type (v2 style: encapsulated struct
     with methods).
@@ -1338,7 +1347,8 @@ let gen_ind_header_v2
                 mf_is_noexcept = false;
                 mf_is_conversion = false;
                 mf_binders = [];
-                mf_receiver_binder = None },
+                mf_receiver_binder = None;
+                mf_loop = None },
             VPublic, SAccessors )
         in
         let conversion_field =
@@ -3260,6 +3270,7 @@ let gen_ind_header_v2
                   mf_is_conversion = false;
                   mf_binders = [];
                   mf_receiver_binder = None;
+                  mf_loop = None;
                 },
               VPublic,
               SAccessors ) ]
@@ -3298,6 +3309,7 @@ let gen_ind_header_v2
                 mf_is_conversion = false;
                 mf_binders = [];
                 mf_receiver_binder = None;
+                mf_loop = None;
               },
             VPublic,
             SAccessors )
@@ -3323,6 +3335,7 @@ let gen_ind_header_v2
                 mf_is_conversion = false;
                 mf_binders = [];
                 mf_receiver_binder = None;
+                mf_loop = None;
               },
             VPublic,
             SAccessors )
@@ -3356,6 +3369,7 @@ let gen_ind_header_v2
                   mf_is_conversion = false;
                   mf_binders = [];
                   mf_receiver_binder = None;
+                  mf_loop = None;
                 },
               VPublic,
               SManipulators );
@@ -3455,5 +3469,5 @@ let gen_ind_header_v2
     for CHT) vars: the type variables of the record (e.g., [K; V] for CHT<K, V>)
     method_candidates: list of (func_ref, body, type, this_position) tuples *)
 let gen_record_methods (name : GlobRef.t) (vars : Id.t list) method_candidates =
-  gen_methods name vars method_candidates
+  gen_methods ~merged:true name vars method_candidates
  
