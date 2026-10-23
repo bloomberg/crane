@@ -13403,3 +13403,14 @@
   (alias runtest)
   (deps reuse_token_in_closure.t.exe)
   (action (run ./reuse_token_in_closure.t.exe))))
+
+(subdir switch_default_reads_binding
+ (rule
+  (targets switch_default_reads_binding.t.exe)
+  (deps SwitchDefaultReadsBinding.vo switch_default_reads_binding.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} switch_default_reads_binding.t.exe switch_default_reads_binding.cpp switch_default_reads_binding.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps switch_default_reads_binding.t.exe)
+  (action (run ./switch_default_reads_binding.t.exe))))

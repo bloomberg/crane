@@ -2587,9 +2587,10 @@ and free_vars_stmt = function
             (fun id -> not (List.exists (Id.equal id) pat_bound))
             body_fv )
         bs
-  | Sswitch (s, _, bs, _) ->
+  | Sswitch (s, _, bs, default) ->
     free_vars_expr s
     @ List.concat_map (fun (_, b) -> free_vars_body b) bs
+    @ (match default with Some ss -> free_vars_body ss | None -> [])
   | Smatch (scrut, branches, default) ->
     free_vars_expr scrut.sc_expr
     @ List.concat_map
