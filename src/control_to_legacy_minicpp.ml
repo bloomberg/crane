@@ -73,13 +73,16 @@ let lower_function ~tparams (f : dfun) =
       let jumped e = jumps := Loopify_analysis.made_of e :: !jumps in
       let exposed = Loopify_analysis.expose_tail_calls (jump continues) body in
       match Loopify_tail.transform_tail ~jumped ~varying tparams (jump continues) params f.df_ret exposed with
-      (* A call that passes the loop other arguments than it has parameters:
-         Loopify declines it, and is left to. *)
+      (* A function Loopify declines whole -- a call passing the loop other
+         arguments than it has parameters, say -- is left to it, and is
+         declined as before. *)
       | exception Loopify_analysis.Not_linearisable _ -> None
-      | loop ->
+      | loop -> (
         if Probe.checking () then
           check ~tparams f params body ~varying ~continues ~jumped:(List.rev !jumps) loop;
-        Some {f with df_shape = Ddef (params, loop); df_loop = Some l.loop} ) )
+        match Loopify.after_tail_loop ~tparams f params loop with
+        | exception Loopify_analysis.Not_linearisable _ -> None
+        | body -> Some {f with df_shape = Ddef (params, body); df_loop = Some l.loop} ) ) )
   | (Ddef _ | Ddecl _), _ -> None
 
 let lower_decl d =

@@ -75,6 +75,13 @@ let rec lowered_at_generation = function
   | Dnspace (_, ds) -> List.exists lowered_at_generation ds
   | _ -> false
 
+(** Whether [decl] is a function whose control was lowered as it was
+    generated, and so is not Loopify's to lower. *)
+let rec lowered_function = function
+  | Dtemplate (_, _, d) -> lowered_function d
+  | Dfun {df_loop; _} -> Option.has_some df_loop
+  | _ -> false
+
 (** A pass over the declaration alone. *)
 let on_decl name f = Pipeline_trace.pass name (fun u -> {u with decl = f u.decl})
 
@@ -97,7 +104,10 @@ let projections = Pipeline_trace.pass "projections" Cpp_erasure.lower_projection
 (** Every pass before the {!Cpp_erasure} seam, in the order they run. *)
 let minicpp_passes : unsettled Pipeline_trace.pass list =
   [ lowering "loopify" (fun d ->
-        if should_loopify d then Loopify.transform_decl d
+        if lowered_function d then (
+          if Probe.checking () then Loopify.check_lowered d;
+          d )
+        else if should_loopify d then Loopify.transform_decl d
         else Loopify.transform_local_tail_loops d );
     (* Closures made and used in one place become the code they stand for,
        before ownership is decided, so what they captured is seen as local. *)

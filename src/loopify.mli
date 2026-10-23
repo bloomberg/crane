@@ -32,6 +32,20 @@ val transform_local_tail_loops :
 val checker_tail_loop :
   tparams:(template_type * Id.t) list -> dfun -> (Id.t * cpp_type) list -> cpp_stmt list -> cpp_stmt list
 
+(** [after_tail_loop ~tparams f params loop] is the body of the function
+    [f] once Loopify's transform has made [loop] of it: the local fixpoints
+    in [loop] lowered, and the outcome recorded.  It raises
+    [Loopify_analysis.Not_linearisable] where that transform declines the
+    function whole. *)
+val after_tail_loop :
+  tparams:(template_type * Id.t) list -> dfun -> (Id.t * cpp_type) list -> cpp_stmt list -> cpp_stmt list
+
+(** Under [CRANE_CHECK_IR], the function [decl] is, if its loop was lowered
+    as it was generated, must not tie the knot of an Equations functional:
+    Loopify inlines one before its transform, reading the unit's functions,
+    which are known only once every one is generated. *)
+val check_lowered : cpp_decl -> unit
+
 val worthwhile_move_type : cpp_type -> bool
 (** Whether a value of this type is expensive enough to copy that writing
     [std::move] around it earns its keep: a reference count to bump, an
