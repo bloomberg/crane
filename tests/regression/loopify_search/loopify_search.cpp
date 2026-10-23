@@ -677,7 +677,7 @@ List<uint64_t> LoopifySearch::remove_duplicates_fuel(uint64_t fuel,
             std::get<typename List<uint64_t>::Cons>(_loop_l.v());
         const List<uint64_t> &a1_value = *a1;
         if (elem_impl(a0, a1_value)) {
-          _loop_l = a1_value;
+          _loop_l = List<uint64_t>(a1_value);
           _loop_fuel = f;
           continue;
         } else {

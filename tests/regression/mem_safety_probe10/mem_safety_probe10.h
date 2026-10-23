@@ -416,7 +416,7 @@ struct MemSafetyProbe10 {
             std::get<typename mylist<uint64_t>::Mycons>(_loop_l.v());
         const mylist<uint64_t> &a1_value = *a1;
         _loop_acc = [=](uint64_t n) { return _loop_acc((a0 + n)); };
-        _loop_l = a1_value;
+        _loop_l = mylist<uint64_t>(a1_value);
       }
     }
   }

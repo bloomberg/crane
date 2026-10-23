@@ -208,7 +208,7 @@ struct MemSafetyProbe21 {
             return _loop_k(((lsum + a1) + rsum));
           });
         };
-        _loop_t = a0_value;
+        _loop_t = tree(a0_value);
       }
     }
   }

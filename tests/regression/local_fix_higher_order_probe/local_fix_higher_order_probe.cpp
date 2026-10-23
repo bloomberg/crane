@@ -12,7 +12,7 @@ Nat LocalFixHigherOrderProbe::sample(const Nat &n) {
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_lc1_loop_n0.v());
         const Nat &a0_value = *a0;
-        _lc1_loop_n0 = a0_value;
+        _lc1_loop_n0 = Nat(a0_value);
         _lc1_loop_k = [=](const Nat &x) { return _lc1_loop_k(Nat::s(x)); };
       }
     }

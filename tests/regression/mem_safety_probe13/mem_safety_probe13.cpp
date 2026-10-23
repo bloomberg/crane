@@ -206,7 +206,7 @@ MemSafetyProbe13::depth_fns(const MemSafetyProbe13::tree &t,
           crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut())
                     .a1;
       _loop_parent_val = a1;
-      _loop_t = a0_value;
+      _loop_t = MemSafetyProbe13::tree(a0_value);
       continue;
     }
   }

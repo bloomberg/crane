@@ -1,0 +1,138 @@
+#ifndef INCLUDED_LOOPIFY_SHADOW_FROM_REFERENCE
+#define INCLUDED_LOOPIFY_SHADOW_FROM_REFERENCE
+
+#include <cstdint>
+#include <memory>
+#include <type_traits>
+#include <utility>
+#include <variant>
+#define CRANE_NON_ATOMIC_RC 1
+#include "crane_fn.h"
+#include "rc.h"
+#include "small_vector.h"
+
+struct LoopifyShadowFromReference {
+  struct lst {
+    // TYPES
+    struct Nil {};
+
+    struct Cons {
+      uint64_t a0;
+      crane::rc<lst> a1;
+    };
+
+    using variant_t = std::variant<Nil, Cons>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    lst() {}
+
+    explicit lst(Nil _v) : v_(_v) {}
+
+    explicit lst(Cons _v) : v_(std::move(_v)) {}
+
+    static lst nil() { return lst(Nil{}); }
+
+    static lst cons(uint64_t a0, crane::child_slot<lst> a1) {
+      return lst(Cons{a0, a1.take()});
+    }
+
+    static lst cons_crane_reuse(crane::rc<lst> _tok, uint64_t a0, lst a1) {
+      return lst(Cons{
+          a0, crane::make_rc_reusing<lst>(std::move(_tok), std::move(a1))});
+    }
+
+    // MANIPULATORS
+    ~lst() {
+      auto _next = [&](variant_t &_v) -> crane::rc<lst> {
+        if (auto *_alt = std::get_if<Cons>(&_v)) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            return std::move(_alt->a1);
+          }
+        }
+        return nullptr;
+      };
+      crane::rc<lst> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
+      }
+    }
+
+    lst(const lst &) = default;
+    lst &operator=(const lst &) = default;
+    lst(lst &&) = default;
+    lst &operator=(lst &&) = default;
+
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+  };
+
+  template <typename T1, typename F1>
+  static T1 lst_rect(T1 f, F1 &&f0,
+                     const lst &l) { /// CraneEnter: captures varying parameters
+                                     /// for each recursive call.
+
+    struct CraneEnter {
+      const lst *l;
+    };
+
+    /// CraneCont_Cons: saves [a0, a1], resumes after recursive call, then
+    /// processes rest.
+    struct CraneCont_Cons {
+      uint64_t a0;
+      crane::rc<lst> a1;
+    };
+
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+    T1 _result{};
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{&l});
+    /// Loopified lst_rect: CraneEnter -> CraneCont_Cons.
+    while (!_stack.empty()) {
+      CraneFrame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
+        const lst &l = *_f.l;
+        if (std::holds_alternative<typename lst::Nil>(l.v())) {
+          _result = f;
+        } else {
+          const auto &[a0, a1] = std::get<typename lst::Cons>(l.v());
+          _stack.emplace_back(CraneCont_Cons{a0, a1});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        }
+      } else {
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+        uint64_t a0 = _f.a0;
+        crane::rc<lst> a1 = std::move(_f.a1);
+        _result = f0(a0, *a1, std::move(_result));
+      }
+    }
+    return _result;
+  }
+
+  template <typename T1, typename F1>
+  static T1 lst_rec(T1 f, F1 &&f0, const lst &l) {
+    return lst_rect<T1>(std::move(f), f0, l);
+  }
+
+  static uint64_t suml(const lst &l);
+
+  template <typename F0>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t> &&
+             std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+  static uint64_t twice(F0 &&f, uint64_t x) {
+    return f(f(x));
+  }
+
+  static lst g(lst l);
+  static lst upto(uint64_t n);
+};
+
+#endif // INCLUDED_LOOPIFY_SHADOW_FROM_REFERENCE

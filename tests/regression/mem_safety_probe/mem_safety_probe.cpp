@@ -38,7 +38,7 @@ MemSafetyProbe::build_adders(
       _write = &std::get<typename MemSafetyProbe::mylist<
           crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut())
                     .a1;
-      _loop_trees = a1_value;
+      _loop_trees = MemSafetyProbe::mylist<MemSafetyProbe::tree>(a1_value);
       continue;
     }
   }

@@ -13425,3 +13425,14 @@
   (alias runtest)
   (deps loopify_tmc_library_inductive.t.exe)
   (action (run ./loopify_tmc_library_inductive.t.exe))))
+
+(subdir loopify_shadow_from_reference
+ (rule
+  (targets loopify_shadow_from_reference.t.exe)
+  (deps LoopifyShadowFromReference.vo loopify_shadow_from_reference.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_shadow_from_reference.t.exe loopify_shadow_from_reference.cpp loopify_shadow_from_reference.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_shadow_from_reference.t.exe)
+  (action (run ./loopify_shadow_from_reference.t.exe))))

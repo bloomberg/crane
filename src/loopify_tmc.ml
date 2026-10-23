@@ -563,7 +563,7 @@ let tmc_reuse_cursor ~storage varying shadow_params br =
       _last = _cell1;                     // advance
       <shadow updates>
     ]} *)
-let build_tmc_branch_stmts ?(cursor_used = ref false) ~storage br
+let build_tmc_branch_stmts ?(cursor_used = ref false) ?(derefs = []) ~storage br
     varying shadow_params =
   let vt_ret = cell_value_type storage in
   (* 0. Perceus reuse cursor.  See {!section:reuse-cursor}: when the loop walks
@@ -696,7 +696,7 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~storage br
      in may since have been recycled), and [_own] is what keeps the next cell
      alive now that the current one is gone. *)
   let shadow_updates =
-    make_shadow_updates shadow_params (filter_by_mask varying br.tmc_rec_args)
+    make_shadow_updates ~derefs shadow_params (filter_by_mask varying br.tmc_rec_args)
   in
   let shadow_updates =
     match cursor with
@@ -733,7 +733,7 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~storage ~branch check
   (* Emit code for a non-tail return in the TMC context.
      [suffix] is appended after TMC branches: empty inside visitor lambdas,
      [[Scontinue]] at the top level. *)
-  let tmc_on_other_return ~suffix e =
+  let tmc_on_other_return ~derefs ~suffix e =
     let n = count_calls_expr check e in
     if n = 0 then
       (* Base case — patch destination and stop *)
@@ -742,7 +742,7 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~storage ~branch check
       (* TMC branch — allocate cell(s) with holes, patch, continue *)
       match branch e with
       | Some br ->
-        build_tmc_branch_stmts ~cursor_used ~storage br varying shadow_params
+        build_tmc_branch_stmts ~cursor_used ~derefs ~storage br varying shadow_params
         @ suffix
       | None ->
         (* A call the plan's chains do not reach stays a call; the loop is
@@ -759,7 +759,7 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~storage ~branch check
     { trc_inner = inner_rc;
       trc_tail_suffix = [Scontinue];
       trc_on_other =
-        (fun e -> wrap_as_block (tmc_on_other_return ~suffix:[Scontinue] e));
+        (fun ~derefs e -> wrap_as_block (tmc_on_other_return ~derefs ~suffix:[Scontinue] e));
       trc_rewrite_branch = Fun.id;
       trc_detect_void_tail = false }
 
