@@ -90,6 +90,20 @@ let output_mentions body_s =
     in
     n > 0 && scan 0
 
+(* Under CRANE_CHECK_IR, that the IR says of each parameter in [ids] what the
+   printed body [body_s] says: whether it is read. *)
+let check_reads site body body_s ids =
+  if Probe.checking () then begin
+    let mentioned = output_mentions body_s and read = Minicpp.reads_as_printed body in
+    List.iter
+      (fun id ->
+        if mentioned id <> read id then
+          Probe.violation "parameter reads"
+            Pp.(str site ++ str " parameter " ++ Id.print id
+                ++ str (if read id then " read by the IR, not the text" else " read by the text, not the IR")))
+      ids
+  end
+
 (** Check if a lambda needs to capture variables from enclosing scope.
     A lambda needs [&] capture if its body references variables that are
     not lambda parameters and not locally declared within the body.
@@ -2035,6 +2049,7 @@ and pp_cpp_expr env args t =
       | [] -> (mt (), capture_str)
       | _ ->
         let mentioned = output_mentions body_s in
+        check_reads "lambda" body body_s (List.filter_map snd params);
         ( pp_list
             (fun (ty, id_opt) ->
               match id_opt with
@@ -3518,6 +3533,8 @@ let rec pp_cpp_field
     in
     let body_s = pp_list_stmt (pp_cpp_stmt env []) mf_body in
     let mentioned = output_mentions body_s in
+    if not (String.equal (Id.to_string mf_name) "operator=") then
+      check_reads "method" mf_body body_s (List.map fst mf_params);
     let params_s =
       pp_list
         (fun (id, ty) ->
@@ -4236,6 +4253,7 @@ and pp_leaf_decl env (d : cpp_decl) =
       | Ddef (params, body) ->
         let body_s = pp_list_stmt (pp_cpp_stmt env []) body in
         let mentioned = output_mentions body_s in
+        check_reads "dfun" body body_s (List.map fst params);
         let params_s =
           pp_list
             (fun (id, ty) ->

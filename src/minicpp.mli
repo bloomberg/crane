@@ -1714,6 +1714,15 @@ val free_vars_expr : cpp_expr -> Id.t list
 val free_vars_stmt : cpp_stmt -> Id.t list
 val free_vars_body : cpp_stmt list -> Id.t list
 
+(** [reads_as_printed body x]: whether [body], as the printer spells it,
+    reads [x] -- which decides whether a parameter is written with a name.
+    Its free variables, except where a foreign template drops what holds
+    them (a custom match's scrutinee or branch it does not splice, a
+    mapping's argument it does not name), and the identifiers raw code, a
+    checked precondition and a [decltype] spell.  A stated precondition is a
+    comment and reads nothing. *)
+val reads_as_printed : cpp_stmt list -> Id.t -> bool
+
 (** Whether evaluating [e] can do nothing but produce its value: a variable,
     a literal, a constructor or an operator applied to such things.  A mapped
     constant is not one -- its replacement text may do anything. *)
