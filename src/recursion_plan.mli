@@ -166,6 +166,9 @@ val inlinings_in : t -> Names.GlobRef.t -> inlining list
     function on no cycle with another inlines none. *)
 val inlinings : Names.GlobRef.t -> inlining list
 
+(** Whether some function inlines [r] into it ({!inlinings}). *)
+val inlined : Names.GlobRef.t -> bool
+
 (** The calls of the partner whose body the machine of the function [r]
     adopts as a second entry, if it adopts one ({!Loopify_frame.adopted}):
     the [invoked] calls of the first of {!inlinings} that has some, whose

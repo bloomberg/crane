@@ -1932,6 +1932,7 @@ and dfun = {
           and axiom stubs are neither. *)
   df_shape : dfun_shape;
   df_binders : (Id.t * Core_binder.t) list;
+  df_loop : Control_ir.Loop.t option;
 }
 
 (** The qualified name a function is written under.
@@ -2225,6 +2226,7 @@ let mk_dfun ?inner ?(targs = []) ?(no_pure = false) ?(binders = []) ~ret r shape
     df_no_pure = no_pure;
     df_shape = shape;
     df_binders = binders;
+    df_loop = None;
   }
 
 (** The member as a field, to be written where a field is written. *)

@@ -1355,9 +1355,10 @@ let gen_dfun n b cty ty temps =
     (inner, env)
   in
   let inner = Head_relaxation.apply_all relaxations inner in
-  match temps with
-  | [] -> (inner, env)
-  | l -> (Dtemplate (l, None, inner), env)
+  (* The function generated, its control lowered from its ControlIR where
+     that is the bridge's to lower. *)
+  let d = match temps with [] -> inner | l -> Dtemplate (l, None, inner) in
+  (Control_to_legacy_minicpp.lower_decl d, env)
 
 let gen_sfun n b dom cod temps =
   let all_params, b = collect_lams b in

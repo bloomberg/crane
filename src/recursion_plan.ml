@@ -1175,6 +1175,11 @@ let inlinings_in t r = Option.default [] (Ref.User.Map.find_opt r t.inlinings)
 
 let inlinings r = inlinings_in !installed r
 
+let inlined r =
+  Ref.User.Map.exists
+    (fun _ is -> List.exists (fun i -> Names.GlobRef.UserOrd.equal i.partner r) is)
+    !installed.inlinings
+
 let adopted_invocations r = Ref.User.Map.find_opt r !installed.adopted_invocations
 
 (* A lambda a let binds does not call itself. *)

@@ -1001,8 +1001,10 @@ let optimize_last_use_moves ~self_ref_candidate ~last_use_candidate stmts =
   in
   process stmts
 
-let build_shadow_setup tparams check params body =
-  let varying = find_varying_params check params body in
+let build_shadow_setup ?varying tparams check params body =
+  let varying =
+    match varying with Some v -> v | None -> find_varying_params check params body
+  in
   let pointer_safe = tail_pointer_safe_flags check params body () in
   let varying_params = filter_by_mask varying params in
   let varying_pointer_safe = filter_by_mask varying pointer_safe in
@@ -1119,15 +1121,17 @@ let drop_unread_shadows shadow_decls body =
     @param param_inits Optional custom initializers for shadow variables
                        (default: copy from original parameter)
     @param jumped Told each recursive call rewritten into a jump
+    @param varying Which parameters the recursive calls change, where the
+                   caller knows; read off the calls [check] finds otherwise
     @param check Call checker for identifying recursive calls
     @param params Function parameters [(id, type)] list
     @param ret_ty Return type of the function
     @param body Function body statements
     @return Transformed body with while loop structure *)
-let transform_tail ?(param_inits = []) ?(jumped = ignore) tparams check params ret_ty body =
+let transform_tail ?(param_inits = []) ?(jumped = ignore) ?varying tparams check params ret_ty body =
   let { ss_varying = varying; ss_varying_params = varying_params;
         ss_shadow_params = shadow_params; ss_subs = subs } =
-    build_shadow_setup tparams check params body
+    build_shadow_setup ?varying tparams check params body
   in
   let is_void = ret_ty = Tvoid in
   (* Shadow variable declarations (only for varying params) *)

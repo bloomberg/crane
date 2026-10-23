@@ -234,18 +234,6 @@ and generic_inline_expr spec expr =
       Fun.id
       expr
 
-(** The occurrence of the Core call a C++ call is made of. *)
-let made_of = function CPPfun_call (cs, _, _) -> cs.cs_occurrence | _ -> None
-
-(** Whether the calls [made], each by the occurrence it is made of
-    ({!made_of}), are the calls [planned], as many times each. *)
-let made_as_planned planned made =
-  let made_occs = List.filter_map Fun.id made in
-  let count o l = List.length (List.filter (Miniml.Occurrence.equal o) l) in
-  List.length made_occs = List.length made
-  && List.length planned = List.length made_occs
-  && List.for_all (fun o -> count o planned = count o made_occs) planned
-
 (** [check], narrowed to the calls the tail loop of [loop] jumps at, as its
     ControlIR has them ({!Lower_control.loop}): a call made of one of its
     Continues.  [check] still reads the call's arguments and receiver. *)
@@ -1021,6 +1009,34 @@ let modulo_cons_chains = function
   | Recursion_plan.Modulo_cons chains -> Some chains
   | No_loop | Tail_loop | Frame_stack | Suspended _ -> None
 
+let checker_tail_loop ~tparams (f : dfun) params body =
+  let check = fn_checker (dfun_path_list f.df_path) in
+  let loop = function_loop (fst f.df_path.dp_outer) in
+  transform_tail tparams (planned_jumps loop check) params f.df_ret (expose_tail_calls check body)
+
+(** The function [f], whose body [body] is the tail loop lowered from its
+    ControlIR as it was generated ({!Control_to_legacy_minicpp}): of it,
+    only the local fixpoints in that body are lowered here, as
+    {!transform_fundef_exn} lowers them after its own transform.  It inlines
+    no partner and none inlines it, so the steps before that transform have
+    nothing to do; under [CRANE_CHECK_IR] it must not tie the knot of an
+    Equations functional either, which the first of them would inline. *)
+let lowered_fundef ~tparams (f : dfun) params body =
+  let names = dfun_path_list f.df_path in
+  if Probe.checking () && try_inline_functional_into names body != body then
+    Probe.violation "control lowering"
+      Pp.(
+        str "the tail loop of " ++ str (Table.kername_of_global (fst f.df_path.dp_outer))
+        ++ str ", lowered from its ControlIR, ties the knot of a functional Loopify inlines" );
+  let body = loopify_inner_lambdas ~tparams ~outer_env:params body in
+  Dfun
+    { f with
+      df_shape =
+        Ddef
+          ( params,
+            report_outcome ~name:(fundef_display_name f.df_path) ~check:(fn_checker names)
+              ~strategy:Lp_tail body ) }
+
 (** Transform a top-level function definition by loopifying its body.
 
     This is the main entry point for loopifying a [Dfun]. The transformation
@@ -1143,10 +1159,12 @@ let naming name f =
     CErrors.anomaly ~info
       Pp.(str "loopify, transforming " ++ str (name ()) ++ str ": " ++ CErrors.print e)
 
-(** {!transform_fundef_exn}, but a {!Not_linearisable} raised anywhere inside a
-    transform is turned into a decline for this one function: the original body
-    is emitted unchanged and the outcome is recorded, so a shape the pass cannot
-    linearise never aborts the surrounding extraction. *)
+(** {!transform_fundef_exn} -- {!lowered_fundef} for a function whose loop
+    was lowered as it was generated -- but a {!Not_linearisable} raised
+    anywhere inside a transform is turned into a decline for this one
+    function: the body it was given is emitted unchanged and the outcome is
+    recorded, so a shape the pass cannot linearise never aborts the
+    surrounding extraction. *)
 let transform_fundef ~tparams (f : dfun) params body =
   let qualified () =
     String.concat "::"
@@ -1154,7 +1172,10 @@ let transform_fundef ~tparams (f : dfun) params body =
          (fun (r, _) -> Table.kername_of_global r)
          (f.df_path.dp_outer :: f.df_path.dp_inner))
   in
-  try naming qualified (fun () -> transform_fundef_exn ~tparams f params body)
+  let transform =
+    match f.df_loop with Some _ -> lowered_fundef | None -> transform_fundef_exn
+  in
+  try naming qualified (fun () -> transform ~tparams f params body)
   with Not_linearisable reason ->
     record_outcome (fundef_display_name f.df_path) (Lp_declined reason);
     Dfun {f with df_shape = Ddef (params, body)}

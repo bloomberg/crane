@@ -23,6 +23,15 @@ val transform_decl :
 val transform_local_tail_loops :
   ?tparams:(template_type * Id.t) list -> cpp_decl -> cpp_decl
 
+(** The tail loop Loopify's own transform makes of the body [body] of the
+    function [f], whose parameters are [params], under the template
+    parameters [tparams]: its jumps found by a checker of the C++ calls and
+    its varying parameters read off them.  {!Control_to_legacy_minicpp},
+    which lowers the loop from the function's ControlIR instead, is compared
+    with it under [CRANE_CHECK_IR]. *)
+val checker_tail_loop :
+  tparams:(template_type * Id.t) list -> dfun -> (Id.t * cpp_type) list -> cpp_stmt list -> cpp_stmt list
+
 val worthwhile_move_type : cpp_type -> bool
 (** Whether a value of this type is expensive enough to copy that writing
     [std::move] around it earns its keep: a reference count to bump, an

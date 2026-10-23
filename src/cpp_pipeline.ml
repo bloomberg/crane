@@ -60,11 +60,20 @@ let node_count (d : cpp_decl) =
   ignore (map_decl fe fs ft d);
   !n
 
-(** A declaration on its way to the seam, and whether a pass lowering control
-    has rewritten it: the plan of its moves was made over Core, before the
-    loops, frames and sequenced bindings those passes make, and does not
-    see the last uses they create. *)
+(** A declaration on its way to the seam, and whether its control was
+    lowered -- as it was generated, from its ControlIR, or by a pass lowering
+    control that rewrote it: the plan of its moves was made over Core, before
+    the loops, frames and sequenced bindings that lowering makes, and does
+    not see the last uses they create. *)
 type unsettled = {decl : cpp_decl; control_lowered : bool}
+
+(** Whether [decl] holds a function whose loop was lowered from its ControlIR
+    as it was generated ({!Control_to_legacy_minicpp}). *)
+let rec lowered_at_generation = function
+  | Dtemplate (_, _, d) -> lowered_at_generation d
+  | Dfun {df_loop; _} -> Option.has_some df_loop
+  | Dnspace (_, ds) -> List.exists lowered_at_generation ds
+  | _ -> false
 
 (** A pass over the declaration alone. *)
 let on_decl name f = Pipeline_trace.pass name (fun u -> {u with decl = f u.decl})
@@ -262,7 +271,9 @@ let finish decl =
         d' )
       d passes
   in
-  let {decl; _} = run (fun u -> u.decl) minicpp_passes {decl; control_lowered = false} in
+  let {decl; _} =
+    run (fun u -> u.decl) minicpp_passes {decl; control_lowered = lowered_at_generation decl}
+  in
   let settled = Cpp_erasure.materialise decl in
   note seam decl (settled :> cpp_decl);
   let decl =
