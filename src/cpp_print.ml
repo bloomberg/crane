@@ -58,52 +58,6 @@ let escape_cpp_string (s : string) : string =
     throws [std::logic_error]. *)
 let is_axiom_type_ref = Cpp_erasure.is_axiom_type_ref
 
-(** [output_mentions body_s] is the test "does the printed body [body_s]
-    contain this identifier, as a whole word".
-
-    Whether a parameter may keep its name is a question about the {e output}:
-    a name the body never mentions is a [-Wunused-parameter] error, and the
-    AST is no proxy for what gets printed -- a custom-extraction template
-    drops arguments when it prints a call, so a [CPPvar] node can stand for a
-    name that never reaches the file.  The printer therefore asks the question
-    of the text it has just produced, which is the text the C++ compiler will
-    read.  Render the body first; the answer is only as good as the string it
-    is given. *)
-let output_mentions body_s =
-  let s = Pp.string_of_ppcmds body_s in
-  let len = String.length s in
-  let is_word_char c =
-    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
-    || (c >= '0' && c <= '9') || c = '_'
-  in
-  fun id ->
-    let name = Id.to_string id in
-    let n = String.length name in
-    let rec scan i =
-      if i + n > len then false
-      else if
-        String.sub s i n = name
-        && (i = 0 || not (is_word_char s.[i - 1]))
-        && (i + n >= len || not (is_word_char s.[i + n]))
-      then true
-      else scan (i + 1)
-    in
-    n > 0 && scan 0
-
-(* Under CRANE_CHECK_IR, that the IR says of each parameter in [ids] what the
-   printed body [body_s] says: whether it is read. *)
-let check_reads site body body_s ids =
-  if Probe.checking () then begin
-    let mentioned = output_mentions body_s and read = Minicpp.reads_as_printed body in
-    List.iter
-      (fun id ->
-        if mentioned id <> read id then
-          Probe.violation "parameter reads"
-            Pp.(str site ++ str " parameter " ++ Id.print id
-                ++ str (if read id then " read by the IR, not the text" else " read by the text, not the IR")))
-      ids
-  end
-
 (** Check if a lambda needs to capture variables from enclosing scope.
     A lambda needs [&] capture if its body references variables that are
     not lambda parameters and not locally declared within the body.
@@ -2029,7 +1983,7 @@ and pp_cpp_expr env args t =
     in
     (* Never [mutable]: a closure's captures are [const] in its body, which
        is what lets every copy of a [crane::fn] share one closure. *)
-    let capture_str =
+    let capture =
       ( if not needs_capture then str "[]"
         else match capture with
           | Closure ->
@@ -2044,21 +1998,14 @@ and pp_cpp_expr env args t =
       ++ tparams_str ++ str "("
     in
     let body_s = pp_list_stmt (pp_cpp_stmt env args) body in
-    let params_s, capture =
-      match params with
-      | [] -> (mt (), capture_str)
-      | _ ->
-        let mentioned = output_mentions body_s in
-        check_reads "lambda" body body_s (List.filter_map snd params);
-        ( pp_list
-            (fun (ty, id_opt) ->
-              match id_opt with
-              | None -> pp_cpp_type false [] ty
-              | Some id when not (mentioned id) -> pp_cpp_type false [] ty
-              | Some id ->
-                pp_cpp_type false [] ty ++ spc () ++ Id.print id )
-            (List.rev params),
-          capture_str )
+    let read = Minicpp.reads_as_printed body in
+    let params_s =
+      pp_list
+        (fun (ty, id_opt) ->
+          match id_opt with
+          | Some id when read id -> pp_cpp_type false [] ty ++ spc () ++ Id.print id
+          | _ -> pp_cpp_type false [] ty )
+        (List.rev params)
     in
     ( match ret_ty with
     | Some ty ->
@@ -3532,14 +3479,12 @@ let rec pp_cpp_field
         if owner_tps = [] && mf_tparams = [] then str "inline " else mt ()
     in
     let body_s = pp_list_stmt (pp_cpp_stmt env []) mf_body in
-    let mentioned = output_mentions body_s in
-    if not (String.equal (Id.to_string mf_name) "operator=") then
-      check_reads "method" mf_body body_s (List.map fst mf_params);
+    let read = Minicpp.reads_as_printed mf_body in
     let params_s =
       pp_list
         (fun (id, ty) ->
           if
-            (not (mentioned id))
+            (not (read id))
             && not (String.equal (Id.to_string mf_name) "operator=")
           then pp_type ty
           else pp_type ty ++ str " " ++ Id.print id)
@@ -4252,12 +4197,11 @@ and pp_leaf_decl env (d : cpp_decl) =
       match shape with
       | Ddef (params, body) ->
         let body_s = pp_list_stmt (pp_cpp_stmt env []) body in
-        let mentioned = output_mentions body_s in
-        check_reads "dfun" body body_s (List.map fst params);
+        let read = Minicpp.reads_as_printed body in
         let params_s =
           pp_list
             (fun (id, ty) ->
-              if not (mentioned id) then pp_type ty
+              if not (read id) then pp_type ty
               else pp_type ty ++ str " " ++ Id.print id)
             (List.rev params)
         in

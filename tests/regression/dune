@@ -13414,3 +13414,14 @@
   (alias runtest)
   (deps switch_default_reads_binding.t.exe)
   (action (run ./switch_default_reads_binding.t.exe))))
+
+(subdir stated_precondition_param_unused
+ (rule
+  (targets stated_precondition_param_unused.t.exe)
+  (deps StatedPreconditionParamUnused.vo stated_precondition_param_unused.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} stated_precondition_param_unused.t.exe stated_precondition_param_unused.cpp stated_precondition_param_unused.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps stated_precondition_param_unused.t.exe)
+  (action (run ./stated_precondition_param_unused.t.exe))))
