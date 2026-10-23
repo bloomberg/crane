@@ -88,3 +88,20 @@ let () =
     check "the partner's parameter is bound" (binder = id "p");
     check "the partner's call back continues" (Occurrence.equal c.occurrence (Global_use.occurrence back))
   | _ -> check "a continued partner is inlined" false )
+
+(* The parameters a loop keeps: those every Continue passes on as they
+   are, read at the depth the Continue is under. *)
+let invariant body =
+  invariant_parameters {loop = target; parameters = [(id "n", nat); (id "acc", nat)]; body = lower body}
+
+let () =
+  (* match n with O => acc | S m => count n m *)
+  let step =
+    MLcase
+      ( nat,
+        fresh_rel 2,
+        [| ([], nat, Pwild, fresh_rel 1); ([(id "m", nat)], nat, Pwild, call (use ()) [fresh_rel 3; fresh_rel 1]) |] )
+  in
+  check "a parameter passed on under a binder is kept, one passed the binder is not" (invariant step = [true; false]);
+  check "parameters passed on as they are are kept" (invariant (call (use ()) [fresh_rel 2; fresh_rel 1]) = [true; true]);
+  check "parameters passed each other are not" (invariant (call (use ()) [fresh_rel 1; fresh_rel 2]) = [false; false])

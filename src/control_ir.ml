@@ -72,3 +72,24 @@ let rec map_returns f = function
   | Match m -> Match {m with branches = List.map (fun (b : branch) -> {b with body = map_returns f b.body}) m.branches}
   | Return v -> Return (f v)
   | Continue _ as c -> c
+
+let invariant_parameters (l : loop) =
+  let n = List.length l.parameters in
+  (* Each Continue of [l], with the number of binders between it and the
+     loop's parameters. *)
+  let rec turns depth acc = function
+    | Loop inner -> turns depth acc inner.body
+    | Let b -> turns (depth + 1) acc b.body
+    | Match m ->
+      List.fold_left (fun acc (b : branch) -> turns (depth + List.length b.binders) acc b.body) acc m.branches
+    | Return _ -> acc
+    | Continue c -> if Loop.equal c.target l.loop then (depth, c.arguments) :: acc else acc
+  in
+  let turns = turns 0 [] l.body in
+  List.init n (fun i ->
+      List.for_all
+        (fun (depth, arguments) ->
+          match List.nth_opt arguments i with
+          | Some (Miniml.MLrel (db, _)) -> Int.equal db (n - i + depth)
+          | Some _ | None -> false )
+        turns )

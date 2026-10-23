@@ -1797,15 +1797,19 @@ let definition_file_of tvars = if tvars = [] then Implementation else Header
 let defined d tvars = Defined (d, definition_file_of tvars)
 
 (** Generate each function of a mutually recursive group, translating each
-    body once. *)
+    body once, then lower the group's control from its ControlIR where that
+    is the bridge's to lower ({!Control_to_legacy_minicpp}): a member
+    continues in its partners' bodies as they were generated. *)
 let gen_dfuns_dual fds =
-  List.map
-    (fun {fd_ref; fd_body; fd_type} ->
-      let (ds, env, tvars), lifted =
-        collecting_lifted (fun () -> gen_dfun_def fd_ref fd_body fd_type)
-      in
-      {gf_entity = defined ds tvars; gf_env = env; gf_lifted = lifted} )
-    fds
+  let generated =
+    List.map
+      (fun {fd_ref; fd_body; fd_type} -> collecting_lifted (fun () -> gen_dfun_def fd_ref fd_body fd_type))
+      fds
+  in
+  let lowered = Control_to_legacy_minicpp.lower_group (List.map (fun ((ds, _, _), _) -> ds) generated) in
+  List.map2
+    (fun ds ((_, env, tvars), lifted) -> {gf_entity = defined ds tvars; gf_env = env; gf_lifted = lifted})
+    lowered generated
 
 (** Generate a single Dterm function, translating its body once. *)
 let gen_decl_for_pp_dual__inner n b ty =

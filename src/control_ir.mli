@@ -73,3 +73,9 @@ val continues : Term.t -> Miniml.Occurrence.t list
 
 (** [t] with [f] applied to the value of every [Return] in it. *)
 val map_returns : (Miniml.ml_ast -> Miniml.ml_ast) -> Term.t -> Term.t
+
+(** For each parameter of the loop [l], outermost first, whether every
+    [Continue] of [l] passes it on unchanged: its argument there is a read of
+    that parameter.  Such a parameter keeps its value for as long as the loop
+    runs. *)
+val invariant_parameters : Term.loop -> bool list

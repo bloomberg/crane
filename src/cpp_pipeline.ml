@@ -60,11 +60,63 @@ let node_count (d : cpp_decl) =
   ignore (map_decl fe fs ft d);
   !n
 
-(** A declaration on its way to the seam, and whether a pass lowering control
-    has rewritten it: the plan of its moves was made over Core, before the
-    loops, frames and sequenced bindings those passes make, and does not
-    see the last uses they create. *)
+(** A declaration on its way to the seam, and whether its control was
+    lowered -- as it was generated, from its ControlIR, or by a pass lowering
+    control that rewrote it: the plan of its moves was made over Core, before
+    the loops, frames and sequenced bindings that lowering makes, and does
+    not see the last uses they create. *)
 type unsettled = {decl : cpp_decl; control_lowered : bool}
+
+(** Whether [decl] holds a method whose loop was lowered from its ControlIR
+    as it was generated ({!Control_to_legacy_minicpp}). *)
+let rec holds_lowered_method decl =
+  let rec in_fields fs =
+    List.exists
+      (fun (f, _, _) ->
+        match f with
+        | Fmethod {mf_loop; _} -> Option.has_some mf_loop
+        | Fnested_struct (_, fs) -> in_fields fs
+        | _ -> false )
+      fs
+  in
+  match decl with
+  | Dtemplate (_, _, d) -> holds_lowered_method d
+  | Dstruct ds | Dfields ds -> in_fields ds.ds_fields
+  | Dnspace (_, ds) -> List.exists holds_lowered_method ds
+  | _ -> false
+
+(** Whether [decl] holds control lowered from its ControlIR as it was
+    generated ({!Control_to_legacy_minicpp}): a function or a method whose
+    body is its loop, or a local fixpoint's lambda that is, which before
+    Loopify has run no other pass can have made. *)
+let lowered_at_generation decl =
+  let exception Found in
+  let fe e =
+    match e with
+    | CPPlambda {cl_fixpoint = Some {lf_encoding = Lowered; _}; _} -> raise_notrace Found
+    | e -> e
+  in
+  let rec fe' e = map_expr fe' fs Fun.id (fe e)
+  and fs s = map_stmt fe' fs Fun.id s in
+  let rec functions = function
+    | Dtemplate (_, _, d) -> functions d
+    | Dfun {df_loop = Some _; _} -> raise_notrace Found
+    | Dnspace (_, ds) -> List.iter functions ds
+    | _ -> ()
+  in
+  match
+    functions decl;
+    ignore (map_decl fe' fs Fun.id decl)
+  with
+  | () -> holds_lowered_method decl
+  | exception Found -> true
+
+(** Whether [decl] is a function whose control was lowered as it was
+    generated, and so is not Loopify's to lower. *)
+let rec lowered_function = function
+  | Dtemplate (_, _, d) -> lowered_function d
+  | Dfun {df_loop; _} -> Option.has_some df_loop
+  | _ -> false
 
 (** A pass over the declaration alone. *)
 let on_decl name f = Pipeline_trace.pass name (fun u -> {u with decl = f u.decl})
@@ -89,8 +141,17 @@ let access_moves = Pipeline_trace.pass "access_moves" Cpp_erasure.lower_access_m
 (** Every pass before the {!Cpp_erasure} seam, in the order they run. *)
 let minicpp_passes : unsettled Pipeline_trace.pass list =
   [ lowering "loopify" (fun d ->
-        if should_loopify d then Loopify.transform_decl d
-        else Loopify.transform_local_tail_loops d );
+        if lowered_function d then (
+          if Probe.checking () then Loopify.check_lowered d;
+          d )
+        else if should_loopify d then Loopify.transform_decl d
+        else (
+          (* A method is lowered as it is generated only where Loopify would
+             have transformed it. *)
+          if Probe.checking () && holds_lowered_method d then
+            Probe.violation "control lowering"
+              (Pp.str "a method was lowered as it was generated in a declaration Loopify does not loopify");
+          Loopify.transform_local_tail_loops d ) );
     (* Closures made and used in one place become the code they stand for,
        before ownership is decided, so what they captured is seen as local. *)
     lowering "local_closures" Cpp_local_closures.transform_decl;
@@ -268,7 +329,9 @@ let finish decl =
         d' )
       d passes
   in
-  let {decl; _} = run (fun u -> u.decl) minicpp_passes {decl; control_lowered = false} in
+  let {decl; _} =
+    run (fun u -> u.decl) minicpp_passes {decl; control_lowered = lowered_at_generation decl}
+  in
   let settled = Cpp_erasure.materialise decl in
   note seam decl (settled :> cpp_decl);
   let decl =

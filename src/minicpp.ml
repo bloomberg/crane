@@ -594,8 +594,13 @@ and local_fixpoint = {
   lf_name : Id.t;
   lf_member : Miniml.Occurrence.t * int;
   lf_binders : (Id.t * Core_binder.t) list;
-  lf_selves : Id.t list;
+  lf_encoding : local_fixpoint_encoding;
 }
+
+and local_fixpoint_encoding =
+  | Self_passing of Id.t list
+  | Knot
+  | Lowered
 
 (** A C++ constraint expression (used in requires clauses). *)
 and cpp_constraint = cpp_expr
@@ -730,6 +735,7 @@ and method_field = {
   mf_is_conversion : bool;
   mf_binders : (Id.t * Core_binder.t) list;
   mf_receiver_binder : Core_binder.t option;
+  mf_loop : Control_ir.Loop.t option;
 }
 
 and receiver =
@@ -823,7 +829,8 @@ let static_fun ~name ~ret ~params ~body =
     mf_is_noexcept = false;
     mf_is_conversion = false;
     mf_binders = [];
-    mf_receiver_binder = None }
+    mf_receiver_binder = None;
+    mf_loop = None }
 
 (** Rvalue reference type [T&&]. *)
 let rval_ref ty = Tref (Forwarding, ty)
@@ -1932,6 +1939,7 @@ and dfun = {
           and axiom stubs are neither. *)
   df_shape : dfun_shape;
   df_binders : (Id.t * Core_binder.t) list;
+  df_loop : Control_ir.Loop.t option;
 }
 
 (** The qualified name a function is written under.
@@ -2225,6 +2233,7 @@ let mk_dfun ?inner ?(targs = []) ?(no_pure = false) ?(binders = []) ~ret r shape
     df_no_pure = no_pure;
     df_shape = shape;
     df_binders = binders;
+    df_loop = None;
   }
 
 (** The member as a field, to be written where a field is written. *)

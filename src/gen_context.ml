@@ -751,6 +751,7 @@ let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
             mf_is_noexcept = false;
             mf_is_conversion = true;
             mf_binders = [];
-            mf_receiver_binder = None },
+            mf_receiver_binder = None;
+            mf_loop = None },
         VPublic,
         SAccessors ) ]

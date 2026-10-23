@@ -1158,6 +1158,11 @@ let adoptable_at (occurrence, member) =
     !installed.locals
   |> Option.default []
 
+let adoptable_somewhere occurrence =
+  let mem = List.exists (Occurrence.equal occurrence) in
+  Ref.User.Map.exists (fun _ os -> mem os) !installed.adoptable
+  || List.exists (fun (l : local_group) -> List.exists mem l.adoptable) !installed.locals
+
 (* Copies of a fixpoint share its occurrence, and so do their calls. *)
 let member_calls (occurrence, member) =
   List.concat_map
@@ -1174,6 +1179,11 @@ let resumes_binding (b : Core_binder.t) =
 let inlinings_in t r = Option.default [] (Ref.User.Map.find_opt r t.inlinings)
 
 let inlinings r = inlinings_in !installed r
+
+let inlined r =
+  Ref.User.Map.exists
+    (fun _ is -> List.exists (fun i -> Names.GlobRef.UserOrd.equal i.partner r) is)
+    !installed.inlinings
 
 let adopted_invocations r = Ref.User.Map.find_opt r !installed.adopted_invocations
 

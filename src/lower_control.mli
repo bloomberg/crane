@@ -15,9 +15,13 @@
     recursive calls there is a [Continue]; a term no recursive call is made
     in is a [Return] of it as it is.
 
-    Loopify still makes the loop.  Under [CRANE_CHECK_IR] it compares the
-    calls it turns into jumps with the [Continue]s here
-    ({!Loopify.transform_decl}). *)
+    The loop of a top-level function is made from here as its recursive
+    group is generated, that of a method as its struct's methods are, and
+    that of a local fixpoint as translation generates it
+    ({!Control_to_legacy_minicpp}).  Loopify still makes the others -- a
+    lifted helper's, a local fixpoint's that a machine may adopt or is
+    lowered inside -- and under [CRANE_CHECK_IR] compares the calls it turns
+    into jumps with the [Continue]s here ({!Loopify.transform_decl}). *)
 
 type t
 

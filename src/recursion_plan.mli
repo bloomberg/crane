@@ -166,6 +166,9 @@ val inlinings_in : t -> Names.GlobRef.t -> inlining list
     function on no cycle with another inlines none. *)
 val inlinings : Names.GlobRef.t -> inlining list
 
+(** Whether some function inlines [r] into it ({!inlinings}). *)
+val inlined : Names.GlobRef.t -> bool
+
 (** The calls of the partner whose body the machine of the function [r]
     adopts as a second entry, if it adopts one ({!Loopify_frame.adopted}):
     the [invoked] calls of the first of {!inlinings} that has some, whose
@@ -176,6 +179,10 @@ val adopted_invocations : Names.GlobRef.t -> Miniml.Occurrence.t list option
     [occurrence], lowered as a helper of its own ({!Lifted.fixpoint}): the
     fixpoints in its flow naming a member of its group. *)
 val adoptable_at : Miniml.Occurrence.t * int -> Miniml.Occurrence.t list
+
+(** Whether some machine may adopt the local fixpoint [occurrence]: a
+    function's ({!adoptable}) or a lifted helper's ({!adoptable_at}). *)
+val adoptable_somewhere : Miniml.Occurrence.t -> bool
 
 (** The calls of the function [member] of the local fixpoint [occurrence]
     made in its group's bodies, each by the occurrence of the read at its

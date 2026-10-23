@@ -557,7 +557,7 @@ let unstable_locals ~(stable : Id.Set.t) (body : cpp_stmt list) : Id.Set.t =
     same Core fixpoint through no self-parameter. *)
 let wraps fixpoint (w : cpp_lambda) =
   match (fixpoint, w.cl_fixpoint) with
-  | Some {lf_member = occ, j; _}, Some {lf_member = occ', j'; lf_selves = []; _} ->
+  | Some {lf_member = occ, j; _}, Some {lf_member = occ', j'; lf_encoding = Knot; _} ->
     Miniml.Occurrence.equal occ occ' && Int.equal j j'
   | _ -> false
 
@@ -570,7 +570,7 @@ let wraps fixpoint (w : cpp_lambda) =
     locals of its own in that space too ([_self_val]). *)
 let fixpoint_self fixpoint lparams =
   match (fixpoint, List.rev lparams) with
-  | Some {lf_selves = [self]; _}, (_, Some last) :: _ when Id.equal self last -> Some self
+  | Some {lf_encoding = Self_passing [self]; _}, (_, Some last) :: _ when Id.equal self last -> Some self
   | _ -> None
 
 (** A checker matching the calls of the function [member] of a local
@@ -677,6 +677,18 @@ let method_checker
      else
        None
    | _ -> None
+
+(** The occurrence of the Core call a C++ call is made of. *)
+let made_of = function CPPfun_call (cs, _, _) -> cs.cs_occurrence | _ -> None
+
+(** Whether the calls [made], each by the occurrence it is made of
+    ({!made_of}), are the calls [planned], as many times each. *)
+let made_as_planned planned made =
+  let made_occs = List.filter_map Fun.id made in
+  let count o l = List.length (List.filter (Miniml.Occurrence.equal o) l) in
+  List.length made_occs = List.length made
+  && List.length planned = List.length made_occs
+  && List.for_all (fun o -> count o planned = count o made_occs) planned
 
 (** {2 Call collection} *)
 
