@@ -2303,6 +2303,16 @@ let gen_ind_header_v2
                     in
                     match effective_cls with
                     | `Direct -> Some (field_id, `Direct)
+                    (* A container whose elements are boxed holds the field
+                       by value, not behind the pointer the fallback walk
+                       takes apart, and a box gives its element out only to
+                       read: with no [Drain] to say otherwise, the container
+                       frees its children itself. *)
+                    | `List g
+                      when Table.is_custom g
+                           && Table.find_custom_drain_opt g = None
+                           && Table.find_boxed_wrapper_opt g <> None ->
+                      None
                     | `List g -> Some (field_id, `List g)
                     | `Wrapper fs -> Some (field_id, `Wrapper fs)
                     | `Nested ml_ty ->

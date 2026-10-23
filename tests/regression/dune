@@ -13425,3 +13425,14 @@
   (alias runtest)
   (deps stated_precondition_param_unused.t.exe)
   (action (run ./stated_precondition_param_unused.t.exe))))
+
+(subdir boxed_element_rose_tree
+ (rule
+  (targets boxed_element_rose_tree.t.exe)
+  (deps BoxedElementRoseTree.vo boxed_element_rose_tree.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} boxed_element_rose_tree.t.exe boxed_element_rose_tree.cpp boxed_element_rose_tree.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps boxed_element_rose_tree.t.exe)
+  (action (run ./boxed_element_rose_tree.t.exe))))
