@@ -1198,7 +1198,7 @@ let transform_fundef ~tparams (f : dfun) params body =
                           [Tconst (Tptr (Tglob (...)))])
     @param mf             The method record to transform
     @return An [Fmethod] field with the loopified body *)
-let transform_method ~tparams ~self_ty mf =
+let transform_method_own ~tparams ~self_ty mf =
   (* [tparams] arrives holding only the enclosing struct's parameters.  A
      method's body is written under its own template header too, and a
      parameter declared there is the one most likely to constrain how the body
@@ -1398,6 +1398,20 @@ let transform_method ~tparams ~self_ty mf =
         Fmethod {mf with mf_body = init_self :: body'}
       else
         Fmethod {mf with mf_body = body'} )
+
+(** {!transform_method_own}, then the tail-recursive local fixpoints in the
+    method's body turned into loops: the part of loopification every
+    declaration gets ({!transform_local_tail_loops}), which a method of a
+    struct whose methods are loopified did not. *)
+let transform_method ~tparams ~self_ty mf =
+  match transform_method_own ~tparams ~self_ty mf with
+  | Fmethod m ->
+    Fmethod
+      { m with
+        mf_body =
+          loopify_inner_lambdas ~tail_only:true ~tparams:(tparams @ mf.mf_tparams) ~outer_env:mf.mf_params
+            m.mf_body }
+  | f -> f
 
 (** Transform a single struct field, loopifying it if it is a method.
 

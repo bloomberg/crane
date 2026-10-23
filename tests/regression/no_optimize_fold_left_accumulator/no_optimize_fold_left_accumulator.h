@@ -94,19 +94,21 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
   T1 fold_left(F0 &&f, const T1 &x1_) const {
-    auto fold_left0_impl = [&](auto &_self_fold_left0, const List<A> &l,
-                               T1 a0) -> T1 {
-      if (std::holds_alternative<typename List<A>::Nil>(l.v())) {
-        return a0;
-      } else {
-        const auto &[a1, a2] = std::get<typename List<A>::Cons>(l.v());
-        return _self_fold_left0(_self_fold_left0, *a2, f(std::move(a0), a1));
-      }
-    };
     {
       const List<A> &_lc1_l = *this;
       T1 _lc1_a0 = x1_;
-      return fold_left0_impl(fold_left0_impl, _lc1_l, std::move(_lc1_a0));
+      T1 _lc1_loop_a0 = std::move(_lc1_a0);
+      const List<A> *_lc1_loop_l = &_lc1_l;
+      while (true) {
+        if (std::holds_alternative<typename List<A>::Nil>(_lc1_loop_l->v())) {
+          return _lc1_loop_a0;
+        } else {
+          const auto &[a1, a2] =
+              std::get<typename List<A>::Cons>(_lc1_loop_l->v());
+          _lc1_loop_a0 = f(std::move(_lc1_loop_a0), a1);
+          _lc1_loop_l = crane_raw(a2);
+        }
+      }
     }
   }
 

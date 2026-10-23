@@ -13436,3 +13436,14 @@
   (alias runtest)
   (deps loopify_shadow_from_reference.t.exe)
   (action (run ./loopify_shadow_from_reference.t.exe))))
+
+(subdir loopify_method_local_fix
+ (rule
+  (targets loopify_method_local_fix.t.exe)
+  (deps LoopifyMethodLocalFix.vo loopify_method_local_fix.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_method_local_fix.t.exe loopify_method_local_fix.cpp loopify_method_local_fix.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_method_local_fix.t.exe)
+  (action (run ./loopify_method_local_fix.t.exe))))
