@@ -594,8 +594,13 @@ and local_fixpoint = {
   lf_name : Id.t;
   lf_member : Miniml.Occurrence.t * int;
   lf_binders : (Id.t * Core_binder.t) list;
-  lf_selves : Id.t list;
+  lf_encoding : local_fixpoint_encoding;
 }
+
+and local_fixpoint_encoding =
+  | Self_passing of Id.t list
+  | Knot
+  | Lowered
 
 (** A C++ constraint expression (used in requires clauses). *)
 and cpp_constraint = cpp_expr

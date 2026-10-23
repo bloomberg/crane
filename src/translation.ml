@@ -43,15 +43,14 @@ let local_fix_binders occ ids compiled =
 
 (* The local fixpoint bound to [binder], the function [member] of a Core
    fixpoint whose parameters stand for the Core binders [params], in the
-   declaration being generated, called [name] and recursing through the
-   self-parameters [selves]. *)
-let local_fixpoint ~name ~selves (binder, member, params) =
+   declaration being generated, called [name] and encoded as [encoding]. *)
+let local_fixpoint ~name ~encoding (binder, member, params) =
   Some
     { lf_binder = binder;
       lf_name = name;
       lf_member = member;
       lf_binders = params;
-      lf_selves = selves }
+      lf_encoding = encoding }
 
 (** Generate local fixpoint declarations using the Y-combinator pattern
     for escaping fixpoints.
@@ -124,7 +123,7 @@ let gen_local_fix_ycomb env ~binders ~moved renamed_ids funs_with_params =
             Declare (Tauto, None),
             CPPlambda
               { cl_tparams = [];
-                cl_fixpoint = local_fixpoint ~name:fix_id ~selves:self_ids binder;
+                cl_fixpoint = local_fixpoint ~name:fix_id ~encoding:(Self_passing self_ids) binder;
                 cl_moved = [];
                 cl_params = of_reversed (orig_params @ self_params);
                 cl_ret = ret_ty fty;
@@ -185,7 +184,7 @@ let gen_local_fix_ycomb env ~binders ~moved renamed_ids funs_with_params =
             CPPlambda
               { cl_params = of_reversed orig_params;
               cl_tparams = [];
-              cl_fixpoint = local_fixpoint ~name:fix_id ~selves:[] binder;
+              cl_fixpoint = local_fixpoint ~name:fix_id ~encoding:Knot binder;
               cl_moved = [];
                 cl_ret = rty;
                 cl_body = wrapper_body;
@@ -269,7 +268,7 @@ let gen_local_fix_by_ref env ~binders renamed_ids funs_with_params owned_flags_p
             CPPlambda
               { cl_params = of_reversed (orig_params @ self_params);
               cl_tparams = [];
-              cl_fixpoint = local_fixpoint ~name:fix_id ~selves:self_ids binder;
+              cl_fixpoint = local_fixpoint ~name:fix_id ~encoding:(Self_passing self_ids) binder;
               cl_moved = [];
                 cl_ret = ret_ty fty;
                 cl_body = List.map rewrite_stmt body;
@@ -311,7 +310,7 @@ let gen_local_fix_by_ref env ~binders renamed_ids funs_with_params owned_flags_p
             CPPlambda
               { cl_params = of_reversed orig_params;
               cl_tparams = [];
-              cl_fixpoint = local_fixpoint ~name:fix_id ~selves:[] binder;
+              cl_fixpoint = local_fixpoint ~name:fix_id ~encoding:Knot binder;
               cl_moved = [];
                 cl_ret = rty;
                 cl_body = wrapper_body;

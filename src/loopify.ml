@@ -574,7 +574,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
                     of_reversed
                       (List.filter (fun (_, x) -> x <> self) lparams');
                   cl_tparams = [];
-                  cl_fixpoint = Option.map (fun f -> {f with lf_selves = []}) fixpoint;
+                  cl_fixpoint = Option.map (fun f -> {f with lf_encoding = Lowered}) fixpoint;
                   cl_moved = [];
                   cl_ret = ret_ty_opt;
                   cl_body = lbody';

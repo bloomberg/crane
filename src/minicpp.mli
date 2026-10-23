@@ -765,12 +765,18 @@ and local_fixpoint = {
   lf_binders : (Id.t * Core_binder.t) list;
       (** The Core binder each of the lambda's own parameters stands for, by
           the parameter's name *)
-  lf_selves : Id.t list;
-      (** The parameters through which the lambda calls its group's members,
-          one per member, in the group's order: the knot its encoding ties.
-          A lambda that no longer recurses through them has none, and so has
-          the wrapper that ties the knot for its callers. *)
+  lf_encoding : local_fixpoint_encoding;
 }
+
+(** How the lambda of a local fixpoint is encoded. *)
+and local_fixpoint_encoding =
+  | Self_passing of Id.t list
+      (** It calls its group's members through these parameters, one per
+          member, in the group's order: the knot its encoding ties. *)
+  | Knot  (** It ties that knot for the fixpoint's callers, who call it. *)
+  | Lowered
+      (** Its control is lowered -- a loop, or a machine with a stack of its
+          own -- and it calls itself through nothing. *)
 
 (** Alias for constraint expressions in requires clauses. *)
 and cpp_constraint = cpp_expr

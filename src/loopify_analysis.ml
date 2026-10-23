@@ -557,7 +557,7 @@ let unstable_locals ~(stable : Id.Set.t) (body : cpp_stmt list) : Id.Set.t =
     same Core fixpoint through no self-parameter. *)
 let wraps fixpoint (w : cpp_lambda) =
   match (fixpoint, w.cl_fixpoint) with
-  | Some {lf_member = occ, j; _}, Some {lf_member = occ', j'; lf_selves = []; _} ->
+  | Some {lf_member = occ, j; _}, Some {lf_member = occ', j'; lf_encoding = Knot; _} ->
     Miniml.Occurrence.equal occ occ' && Int.equal j j'
   | _ -> false
 
@@ -570,7 +570,7 @@ let wraps fixpoint (w : cpp_lambda) =
     locals of its own in that space too ([_self_val]). *)
 let fixpoint_self fixpoint lparams =
   match (fixpoint, List.rev lparams) with
-  | Some {lf_selves = [self]; _}, (_, Some last) :: _ when Id.equal self last -> Some self
+  | Some {lf_encoding = Self_passing [self]; _}, (_, Some last) :: _ when Id.equal self last -> Some self
   | _ -> None
 
 (** A checker matching the calls of the function [member] of a local
