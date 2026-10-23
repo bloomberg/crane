@@ -3188,14 +3188,19 @@ let local_fix_selves cpp_of renamed_ids funs_with_params =
     the wrapper is not yet declared: a closure over its parameters, of the
     C++ types [param_tys_rev] gives in reverse, calling the self-parameter.
 
+    Unless [passing], no self-parameter is passed: each call is flattened and
+    still calls the fixpoint by its own name, as a loop lowered from the
+    fixpoint's ControlIR takes it ({!Control_to_legacy_minicpp.local_loop}),
+    and a fixpoint named as a value is left as it is.
+
     @return the expression and statement rewriters, which are mutually
       recursive and must be taken together. *)
-let self_call_rewriter (selves : local_fix_self list) :
+let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
     (cpp_expr -> cpp_expr) * (cpp_stmt -> cpp_stmt) =
-  let self_vars_rev = List.rev_map (fun s -> CPPvar s.self_id) selves in
+  let self_vars_rev = if passing then List.rev_map (fun s -> CPPvar s.self_id) selves else [] in
   let find_self id =
     Option.map
-      (fun s -> (s.self_id, s.param_tys_rev))
+      (fun s -> ((if passing then s.self_id else s.fix_id), s.param_tys_rev))
       (List.find_opt (fun s -> Id.equal id s.fix_id) selves)
   in
   let find_self_id id = Option.map fst (find_self id) in
@@ -3220,7 +3225,7 @@ let self_call_rewriter (selves : local_fix_self list) :
           of_reversed (List.map rewrite_expr args_rev @ self_vars_rev) )
     | None -> (
       match e with
-      | CPPvar id when Option.has_some (find_self id) ->
+      | CPPvar id when passing && Option.has_some (find_self id) ->
         let self_id, tys_rev = Option.get (find_self id) in
         let n = List.length tys_rev in
         let params_rev =

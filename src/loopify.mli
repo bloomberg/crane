@@ -55,6 +55,12 @@ val checker_tail_loop :
 val after_tail_loop :
   tparams:(template_type * Id.t) list -> dfun -> (Id.t * cpp_type) list -> cpp_stmt list -> cpp_stmt list
 
+(** [lower_local_tail_loops ~tparams stmts] is [stmts] with the
+    tail-recursive local fixpoints in them turned into loops, under the
+    template parameters [tparams], as {!transform_local_tail_loops} turns
+    those of a declaration. *)
+val lower_local_tail_loops : tparams:(template_type * Id.t) list -> cpp_stmt list -> cpp_stmt list
+
 (** Under [CRANE_CHECK_IR], the function [decl] is, if its loop was lowered
     as it was generated, must not tie the knot of an Equations functional:
     Loopify inlines one before its transform, reading the unit's functions,

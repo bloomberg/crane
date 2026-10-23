@@ -16,10 +16,12 @@
     in is a [Return] of it as it is.
 
     The loop of a top-level function is made from here as its recursive
-    group is generated ({!Control_to_legacy_minicpp}).  Loopify still makes
-    the others -- a method's, a local fixpoint's, a lifted helper's -- and
-    under [CRANE_CHECK_IR] compares the calls it turns into jumps with the
-    [Continue]s here ({!Loopify.transform_decl}). *)
+    group is generated, and that of a local fixpoint as translation
+    generates it ({!Control_to_legacy_minicpp}).  Loopify still makes the
+    others -- a method's, a lifted helper's, a local fixpoint's that a
+    machine may adopt or is lowered inside -- and under [CRANE_CHECK_IR]
+    compares the calls it turns into jumps with the [Continue]s here
+    ({!Loopify.transform_decl}). *)
 
 type t
 

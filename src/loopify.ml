@@ -1022,6 +1022,8 @@ let after_tail_loop ~tparams (f : dfun) params loop =
     ~strategy:Lp_tail
     (loopify_inner_lambdas ~tparams ~outer_env:params loop)
 
+let lower_local_tail_loops ~tparams stmts = loopify_inner_lambdas ~tail_only:true ~tparams stmts
+
 let check_lowered decl =
   let rec check = function
     | Dtemplate (_, _, d) -> check d

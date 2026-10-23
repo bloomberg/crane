@@ -108,6 +108,89 @@ let registered (f : dfun) =
   | Ddef (params, body) -> Some {Loopify_analysis.rf_ret_ty = f.df_ret; rf_params = params; rf_body = body}
   | Ddecl _ -> None
 
+(* The parameters of the loop [l] the C++ parameters of a local fixpoint's
+   lambda stand for, by position, in the order a lambda stores its
+   parameters, the last first ({!Minicpp.to_reversed}): those not void,
+   which the lambda does not take ({!Ml_type_util.void_binder}). *)
+let kept_positions (l : Control_ir.Term.loop) =
+  List.filteri (fun _ (_, ty) -> not (Ml_type_util.void_binder ty)) (List.mapi (fun i (_, ty) -> (i, ty)) l.parameters)
+  |> List.rev_map fst
+
+(* Under [CRANE_CHECK_IR]: the statement [loop] a local fixpoint is generated
+   as, against the one Loopify makes of the Y-combinator [self_passing] it
+   was generated as before. *)
+let check_local ~tparams ~name ~self_passing loop =
+  if compare (Loopify.lower_local_tail_loops ~tparams (self_passing ())) [loop] <> 0 then
+    Probe.violation "control lowering"
+      Pp.(
+        str "the local fixpoint " ++ Id.print name
+        ++ str " lowered from its ControlIR is not the loop Loopify makes of its Y-combinator" )
+
+(* Whether Loopify makes a machine with a stack of its own of the definition
+   [r] -- a method as its struct's methods are loopified -- and lowers the
+   local fixpoints in its body only around that machine. *)
+let machine r =
+  let loopified =
+    match Cpp_state.is_registered_method r with
+    | Some (inductive, _) -> Table.loopifies_methods_of inductive && Table.loopifies_method r
+    | None -> Table.should_loopify r
+  in
+  loopified
+  &&
+  match Recursion_plan.strategy ~pointer_fields:Loopify_analysis.constructor_pointer_fields r with
+  | Some (Modulo_cons _ | Frame_stack) -> true
+  | Some (No_loop | Tail_loop | Suspended _) | None -> false
+
+let local_loop ~owner ~member:((occurrence, _) as member) ~tparams ~name ~self_passing (lam : cpp_lambda) =
+  let tail_loop =
+    match Recursion_plan.strategy_at ~pointer_fields:Loopify_analysis.constructor_pointer_fields member with
+    | Some Tail_loop ->
+      (not (Recursion_plan.adoptable_somewhere occurrence)) && not (Option.cata machine false owner)
+    | Some (No_loop | Modulo_cons _ | Frame_stack | Suspended _) | None -> false
+  in
+  match Lower_control.loop (Control_ir.Loop.Member (fst member, snd member)) with
+  | Some (Loop l) when tail_loop && Control_ir.continues l.body <> [] -> (
+    let params = List.filter_map (fun (ty, x) -> Option.map (fun x -> (x, ty)) x) (to_reversed lam.cl_params) in
+    let invariant = Control_ir.invariant_parameters l in
+    let kept = kept_positions l in
+    if List.compare_lengths kept params <> 0 then None
+    else
+      let varying = List.map (fun i -> not (List.nth invariant i)) kept in
+      let continues = Control_ir.continues l.body in
+      let jumps = ref [] in
+      let jumped e = jumps := Loopify_analysis.made_of e :: !jumps in
+      let exposed = Loopify_analysis.expose_tail_calls (jump continues) lam.cl_body in
+      let ret_ty = Option.default Tvoid lam.cl_ret in
+      match Loopify_tail.transform_tail ~jumped ~varying tparams (jump continues) params ret_ty exposed with
+      | exception Loopify_analysis.Not_linearisable _ -> None
+      | body ->
+        (* A call of the fixpoint the loop does not take -- one in a closure
+           it builds -- or the fixpoint named as a value calls a lambda that
+           is no longer there: it stays the Y-combinator Loopify declines. *)
+        let calls = Recursion_plan.member_calls member in
+        let left = function
+          | CPPvar x -> Id.equal x name
+          | e -> ( match Loopify_analysis.made_of e with Some o -> List.exists (Miniml.Occurrence.equal o) calls | None -> false )
+        in
+        if Loopify_analysis.body_exists left body then None
+        else begin
+          if Probe.checking () then begin
+            if not (Loopify_analysis.made_as_planned continues (List.rev !jumps)) then
+              Probe.violation "control IR"
+                Pp.(str "the calls the tail loop of the local fixpoint " ++ Id.print name ++ str " jumps at are not its Continues");
+            if Loopify_analysis.find_varying_params (jump continues) params exposed <> varying then
+              Probe.violation "control lowering"
+                Pp.(str "the calls of the local fixpoint " ++ Id.print name ++ str " change other parameters than its ControlIR's Continues")
+          end;
+          Loopify_analysis.record_outcome (Id.to_string name) Lp_tail;
+          let loop = {lam with cl_body = body; cl_moved = []} in
+          let moved = List.filter (fun x -> List.mem x (free_vars_expr (CPPlambda loop))) lam.cl_moved in
+          let stmt = Sasgn (name, Declare (Tauto, None), CPPlambda {loop with cl_moved = moved}) in
+          if Probe.checking () then check_local ~tparams ~name ~self_passing stmt;
+          Some stmt
+        end )
+  | Some _ | None -> None
+
 let lower_group decls =
   let functions = List.filter_map function_of decls in
   let partner g =

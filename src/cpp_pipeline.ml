@@ -67,13 +67,31 @@ let node_count (d : cpp_decl) =
     not see the last uses they create. *)
 type unsettled = {decl : cpp_decl; control_lowered : bool}
 
-(** Whether [decl] holds a function whose loop was lowered from its ControlIR
-    as it was generated ({!Control_to_legacy_minicpp}). *)
-let rec lowered_at_generation = function
-  | Dtemplate (_, _, d) -> lowered_at_generation d
-  | Dfun {df_loop; _} -> Option.has_some df_loop
-  | Dnspace (_, ds) -> List.exists lowered_at_generation ds
-  | _ -> false
+(** Whether [decl] holds control lowered from its ControlIR as it was
+    generated ({!Control_to_legacy_minicpp}): a function whose body is its
+    loop, or a local fixpoint's lambda that is, which before Loopify has run
+    no other pass can have made. *)
+let lowered_at_generation decl =
+  let exception Found in
+  let fe e =
+    match e with
+    | CPPlambda {cl_fixpoint = Some {lf_encoding = Lowered; _}; _} -> raise_notrace Found
+    | e -> e
+  in
+  let rec fe' e = map_expr fe' fs Fun.id (fe e)
+  and fs s = map_stmt fe' fs Fun.id s in
+  let rec functions = function
+    | Dtemplate (_, _, d) -> functions d
+    | Dfun {df_loop = Some _; _} -> raise_notrace Found
+    | Dnspace (_, ds) -> List.iter functions ds
+    | _ -> ()
+  in
+  match
+    functions decl;
+    ignore (map_decl fe' fs Fun.id decl)
+  with
+  | () -> false
+  | exception Found -> true
 
 (** Whether [decl] is a function whose control was lowered as it was
     generated, and so is not Loopify's to lower. *)

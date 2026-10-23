@@ -24,8 +24,36 @@
     loop are lowered as Loopify lowers them after its own transform
     ({!Loopify.after_tail_loop}).
 
+    The loop of a local fixpoint of one member ({!Control_ir.Loop.Member})
+    is lowered so too, as translation generates the fixpoint: the lambda it
+    is declared as is that loop, where it was the pair of lambdas tying the
+    knot of a Y-combinator that Loopify recognised ({!local_loop}).
+
     Under [CRANE_CHECK_IR] Loopify's own transform runs beside it, and must
-    make the same loop ({!Loopify.checker_tail_loop}). *)
+    make the same loop ({!Loopify.checker_tail_loop},
+    {!Loopify.lower_local_tail_loops}). *)
+
+(** [local_loop ~owner ~member ~tparams ~name ~self_passing l] is the
+    statement declaring the local fixpoint [name], the function [member] of
+    a Core fixpoint of one member, generated in the body of the definition
+    [owner], as the loop of its ControlIR, where the recursion plan lowers it
+    so and Loopify would: [l] its lambda, its body calling the fixpoint by
+    [name] and its type parameters [tparams], with the loop as its body.
+    [None] where it is not one: a fixpoint that may be adopted into a
+    machine ({!Recursion_plan.adoptable_somewhere}), one in a definition
+    Loopify makes a machine with a stack of its own of, whose loop leaves
+    one of its calls behind, or that Loopify declines; it is then generated
+    as the Y-combinator [self_passing ()] Loopify recognises.  Under
+    [CRANE_CHECK_IR] the statement must be the one Loopify makes of that
+    Y-combinator. *)
+val local_loop :
+  owner:Names.GlobRef.t option ->
+  member:Miniml.Occurrence.t * int ->
+  tparams:(Minicpp.template_type * Names.Id.t) list ->
+  name:Names.Id.t ->
+  self_passing:(unit -> Minicpp.cpp_stmt list) ->
+  Minicpp.cpp_lambda ->
+  Minicpp.cpp_stmt option
 
 (** [lower_group ds] is the declarations [ds], generated for the members of
     one recursive group, in its order, with each function lowered as above

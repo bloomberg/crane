@@ -180,6 +180,10 @@ val adopted_invocations : Names.GlobRef.t -> Miniml.Occurrence.t list option
     fixpoints in its flow naming a member of its group. *)
 val adoptable_at : Miniml.Occurrence.t * int -> Miniml.Occurrence.t list
 
+(** Whether some machine may adopt the local fixpoint [occurrence]: a
+    function's ({!adoptable}) or a lifted helper's ({!adoptable_at}). *)
+val adoptable_somewhere : Miniml.Occurrence.t -> bool
+
 (** The calls of the function [member] of the local fixpoint [occurrence]
     made in its group's bodies, each by the occurrence of the read at its
     head, which the C++ call made of it records

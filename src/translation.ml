@@ -52,6 +52,32 @@ let local_fixpoint ~name ~encoding (binder, member, params) =
       lf_binders = params;
       lf_encoding = encoding }
 
+(* The statements a local fixpoint is declared by: for a fixpoint of one
+   member, its loop, lowered from its ControlIR, where it is one
+   ({!Control_to_legacy_minicpp.local_loop}), and otherwise the Y-combinator
+   [self_passing ()] -- the impl lambdas [impl_stmts], taking their
+   self-parameters [selves], and the wrappers.  The loop is the impl lambda
+   without the self-parameter, its body, the one of [funs_with_params],
+   calling the fixpoint by its own name ({!self_call_rewriter}). *)
+let local_fix_stmts selves ~binders ~self_passing impl_stmts funs_with_params =
+  match (selves, binders, impl_stmts, funs_with_params) with
+  | [{fix_id; _}], [((_, member, _) as binder)], [Sasgn (_, _, CPPlambda impl)], [(_, body)] -> (
+    let self_ids = List.map (fun s -> Some s.self_id) selves in
+    let _, flat = self_call_rewriter ~passing:false selves in
+    let lam =
+      { impl with
+        cl_params = of_reversed (List.filter (fun (_, x) -> not (List.mem x self_ids)) (to_reversed impl.cl_params));
+        cl_fixpoint = local_fixpoint ~name:fix_id ~encoding:Lowered binder;
+        cl_body = List.map flat body }
+    in
+    match
+      Control_to_legacy_minicpp.local_loop ~owner:(!tctx).body_owner ~member
+        ~tparams:(get_current_template_head ()) ~name:fix_id ~self_passing lam
+    with
+    | Some loop -> [loop]
+    | None -> self_passing () )
+  | _ -> self_passing ()
+
 (** Generate local fixpoint declarations using the Y-combinator pattern
     for escaping fixpoints.
 
@@ -201,7 +227,8 @@ let gen_local_fix_ycomb env ~binders ~moved renamed_ids funs_with_params =
     | _ -> wrapper_stmts
   in
   let deref_subst stmts = stmts in
-  (impl_stmts @ wrapper_stmts, [], deref_subst)
+  let self_passing () = impl_stmts @ wrapper_stmts in
+  (local_fix_stmts selves ~binders ~self_passing impl_stmts funs_with_params, [], deref_subst)
 
 (** Generate local fixpoint declarations using the [\[&\]]-capture pattern.
 
@@ -318,7 +345,8 @@ let gen_local_fix_by_ref env ~binders renamed_ids funs_with_params owned_flags_p
       (List.combine (List.combine (List.combine renamed_ids impl_ids) binders) owned_flags_per_fun)
       funs_with_params
   in
-  (impl_stmts @ wrapper_stmts, [])
+  let self_passing () = impl_stmts @ wrapper_stmts in
+  (local_fix_stmts selves ~binders ~self_passing impl_stmts funs_with_params, [])
 
 
 (* The names of the variables at the de Bruijn indices [is] a closure
