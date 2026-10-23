@@ -576,6 +576,9 @@ type loop_rewrite_config = {
   rc_shadow_params : (Id.t * cpp_type) list;
   (** Shadow variable bindings [(name, type)] for varying parameters.
       Used by {!make_shadow_updates} when rewriting tail calls. *)
+
+  rc_jumped : cpp_expr -> unit;
+  (** Told each recursive call rewritten into a jump. *)
 }
 
 (** Top-level rewrite configuration.  Combines a {!loop_rewrite_config}
@@ -615,6 +618,7 @@ let rec generic_rewrite_stmt ?(aliases = []) trc = function
   | Sreturn (Some e) ->
     ( match trc.trc_inner.rc_check e with
     | Some cs ->
+      trc.trc_inner.rc_jumped e;
       Sblock
         (make_shadow_updates ~aliases trc.trc_inner.rc_shadow_params
            (filter_by_mask trc.trc_inner.rc_varying cs.cs_args)
@@ -697,12 +701,14 @@ let wrap_as_block = function
     Constructs a tail-recursion {!top_rewrite_config} and delegates to
     {!generic_rewrite_stmts}.  Base returns assign [_result] and break;
     tail calls update shadow variables with no suffix (control falls through
-    to the [while (true)] test).  Void tail-call detection is enabled. *)
-let rewrite_visit_stmts check varying shadow_params =
+    to the [while (true)] test).  Void tail-call detection is enabled.
+    [jumped] is told each call rewritten into a jump. *)
+let rewrite_visit_stmts ~jumped check varying shadow_params =
   let inner_rc =
     { rc_check = check;
       rc_varying = varying;
-      rc_shadow_params = shadow_params }
+      rc_shadow_params = shadow_params;
+      rc_jumped = jumped }
   in
   generic_rewrite_stmts
     { trc_inner = inner_rc;
@@ -1097,12 +1103,13 @@ let drop_unread_shadows shadow_decls body =
 
     @param param_inits Optional custom initializers for shadow variables
                        (default: copy from original parameter)
+    @param jumped Told each recursive call rewritten into a jump
     @param check Call checker for identifying recursive calls
     @param params Function parameters [(id, type)] list
     @param ret_ty Return type of the function
     @param body Function body statements
     @return Transformed body with while loop structure *)
-let transform_tail ?(param_inits = []) tparams check params ret_ty body =
+let transform_tail ?(param_inits = []) ?(jumped = ignore) tparams check params ret_ty body =
   let { ss_varying = varying; ss_varying_params = varying_params;
         ss_shadow_params = shadow_params; ss_subs = subs } =
     build_shadow_setup tparams check params body
@@ -1132,7 +1139,7 @@ let transform_tail ?(param_inits = []) tparams check params ret_ty body =
   (* Rewrite recursive calls (list-level rewrite handles void tail-call
      pattern [Sexpr call; Sreturn None] → [Sreturn (Some call)]) *)
   let body'' =
-    rewrite_visit_stmts check varying shadow_params body'
+    rewrite_visit_stmts ~jumped check varying shadow_params body'
   in
   let body'' = strip_unnecessary_blocks body'' in
   (* Move loop accumulators at self-referencing assignment sites:

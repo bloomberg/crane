@@ -1055,6 +1055,22 @@ let equal a b =
   && Ref.User.Map.equal ( = ) a.kinds b.kinds
   && List.equal Occurrence.equal a.let_lambdas b.let_lambdas
 
+let tail_loops t =
+  let suspends r =
+    let members = match Ref.User.Map.find_opt r t.by_member with Some g -> g.members | None -> [r] in
+    List.exists (fun m -> Ref.User.Set.mem m t.suspended) members
+  in
+  let functions =
+    Ref.User.Map.fold (fun r kind acc -> if kind = Tail && not (suspends r) then r :: acc else acc) t.kinds []
+  in
+  let locals =
+    List.filter_map
+      (fun (l : local_group) ->
+        if l.local_kind = Tail && (not l.suspends) && List.length l.chains = 1 then Some l.occurrence else None )
+      t.locals
+  in
+  (List.rev functions, locals)
+
 let installed : t ref = State.cell State.Extraction empty
 
 let install t = installed := t
@@ -1155,7 +1171,9 @@ let resumes_binding (b : Core_binder.t) =
   | Some rs -> List.filter (fun r -> Core_binder.equal r.binder b && Core_binder.same_site r.binder b) rs
   | None -> []
 
-let inlinings r = Option.default [] (Ref.User.Map.find_opt r !installed.inlinings)
+let inlinings_in t r = Option.default [] (Ref.User.Map.find_opt r t.inlinings)
+
+let inlinings r = inlinings_in !installed r
 
 let adopted_invocations r = Ref.User.Map.find_opt r !installed.adopted_invocations
 

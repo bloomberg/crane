@@ -752,7 +752,8 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~storage ~branch check
   let inner_rc =
     { rc_check = check;
       rc_varying = varying;
-      rc_shadow_params = shadow_params }
+      rc_shadow_params = shadow_params;
+      rc_jumped = ignore }
   in
   generic_rewrite_stmt
     { trc_inner = inner_rc;

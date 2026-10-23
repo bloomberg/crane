@@ -1,6 +1,6 @@
 ; OCaml unit tests for the plugin's IR utilities.  Run with
 ; `dune build @unit_tests/runtest`; `make test` runs them first.
 (tests
- (names minicpp_traversal foreign_template_test scheme_test instantiation_test callable_abi_test template_application_test call_tyargs_test pipeline_manifest ml_fingerprint_test generated_program_test target_plan_test core_test elaborated_call_test instance_methods_test head_relaxation_test recursive_groups_test cpp_ast_test move_check_test reuse_plan_test)
+ (names minicpp_traversal foreign_template_test scheme_test instantiation_test callable_abi_test template_application_test call_tyargs_test pipeline_manifest ml_fingerprint_test generated_program_test target_plan_test core_test elaborated_call_test instance_methods_test head_relaxation_test recursive_groups_test cpp_ast_test move_check_test reuse_plan_test lower_control_test)
  (flags :standard -rectypes)
  (libraries rocq-crane.plugin))

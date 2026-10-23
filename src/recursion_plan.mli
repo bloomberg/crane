@@ -43,6 +43,20 @@ val analyze : Recursive_groups.t -> Core.normalized Core.program -> t
 
 val equal : t -> t -> bool
 
+(** The effect operation the use [use] is, where [effects] says it is
+    generated sequentially: a bind's continuation and a ret's value then
+    stand where the operation does. *)
+val sequential : Core_effects.t -> Miniml.global_use -> Core_effects.operation option
+
+(** Whether the custom [r]'s replacement text is its one argument, which is
+    then where the custom is. *)
+val identity : Names.GlobRef.t -> bool
+
+(** What [t] lowers to loops of tail calls alone: the functions planned
+    {!Tail_loop}, and the local fixpoints of one member planned so, by
+    occurrence. *)
+val tail_loops : t -> Names.GlobRef.t list * Miniml.Occurrence.t list
+
 (** Make [t] the extraction's plan, the one {!strategy} reads. *)
 val install : t -> unit
 
@@ -134,6 +148,9 @@ type inlining = private {
   continued : Miniml.Occurrence.t list;
   invoked : Miniml.Occurrence.t list;
 }
+
+(** {!inlinings} of the function [r] in the plan [t]. *)
+val inlinings_in : t -> Names.GlobRef.t -> inlining list
 
 (** The partners of the function [r] in its recursive group that Loopify
     inlines into it, in the order it inlines them, read off the Core bodies
