@@ -483,6 +483,14 @@ let entered_by_member (occurrence, member) (c : Recursion_plan.call) =
   | Member (o, m) -> Miniml.Occurrence.equal o occurrence && Int.equal m member
   | Function _ | Entering _ -> false
 
+(** The calls the machine of the definition [r] is entered by: a
+    function's own, or those of the member of the local fixpoint a helper
+    lifted out for it lowers. *)
+let entered_by_definition r =
+  match Lifted.of_ref r with
+  | Some h -> Option.map entered_by_member (Lifted.fixpoint h)
+  | None -> Some (entered_by_function r)
+
 (** {2 Inner lambda loopification}
 
     Transforms the local fixpoints within function bodies into iterative
@@ -1112,7 +1120,7 @@ let checker_frame_machine ~partner ~tparams (f : dfun) params body =
   let check = fn_checker (dfun_path_list f.df_path) in
   let body = expose_tail_calls check (try_inline_mutual_into ~partner r body) in
   let adopted = find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body in
-  (apply_nontail_loopification ~fn_name:(fundef_display_name f.df_path) ?adopted ~entered_by:(entered_by_function r)
+  (apply_nontail_loopification ~fn_name:(fundef_display_name f.df_path) ?adopted ?entered_by:(entered_by_definition r)
      ~binders:f.df_binders check tparams params f.df_ret body )
     .nt_body
 
@@ -1150,7 +1158,7 @@ let frame_machine ~loop ?entry ~tparams check (f : dfun) params body =
     let survivors = fn_checker names in
     let machine check =
       checked_frame_machine (Some loop) survivors (fun entered ->
-          transform_nontail ~fn_name:(fundef_display_name f.df_path) ?adopted ~entered_by:(entered_by_function r)
+          transform_nontail ~fn_name:(fundef_display_name f.df_path) ?adopted ?entered_by:(entered_by_definition r)
             ~entered ~binders:f.df_binders check tparams params f.df_ret body )
     in
     let survived = Option.map decline_reason adopted in
@@ -1241,12 +1249,7 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
      into it leaves no call of its own: a tail call continues in its body,
      whose statements the plan has resume points for as the partner's, and
      any other is an invocation, entering the machine only if adopted. *)
-  let entered_by =
-    let r = fst f.df_path.dp_outer in
-    match Lifted.of_ref r with
-    | Some h -> Option.map entered_by_member (Lifted.fixpoint h)
-    | None -> Some (entered_by_function r)
-  in
+  let entered_by = entered_by_definition (fst f.df_path.dp_outer) in
   (* Inline an Equations-style functional applied to itself so its hidden
      recursion becomes ordinary self-recursion that loopifies. *)
   let body = try_inline_functional_into names body in

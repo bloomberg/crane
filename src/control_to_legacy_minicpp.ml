@@ -11,22 +11,23 @@ type lowering =
   | Modulo_cons
   | Frames
 
-(* The loop the recursion plan lowers the function [r] to, and how, where
-   it lowers it in one of the ways [lowerings]: a tail loop's turns build
-   nothing and one tail modulo cons builds in some turn; a machine's
-   ControlIR may be either, for a function whose chains its constructors'
-   fields do not allow is a machine too. *)
-let loop_of ~lowerings r =
-  let planned =
-    match Recursion_plan.strategy ~pointer_fields:Loopify_analysis.constructor_pointer_fields r with
-    | Some Tail_loop -> Some Tail
-    | Some (Modulo_cons _) -> Some Modulo_cons
-    | Some Frame_stack -> Some Frames
-    | Some (No_loop | Suspended _) | None -> None
-  in
+(* How the recursion plan's [strategy] lowers a loop. *)
+let lowering_of (strategy : Recursion_plan.strategy option) =
+  match strategy with
+  | Some Tail_loop -> Some Tail
+  | Some (Modulo_cons _) -> Some Modulo_cons
+  | Some Frame_stack -> Some Frames
+  | Some (No_loop | Suspended _) | None -> None
+
+(* The loop [target] of the definition [r], lowered as [planned], where
+   that is one of the ways [lowerings]: a tail loop's turns build nothing
+   and one tail modulo cons builds in some turn; a machine's ControlIR may
+   be either, for a function whose chains its constructors' fields do not
+   allow is a machine too, and a machine alone has entries. *)
+let shaped_loop ~lowerings r planned target =
   match planned with
-  | Some lowering when List.mem lowering lowerings && not (Option.has_some (Lifted.of_ref r)) -> (
-    match Lower_control.loop (Control_ir.Loop.Function r) with
+  | Some lowering when List.mem lowering lowerings -> (
+    match Lower_control.loop target with
     | Some (Loop l) when Control_ir.continues l.body <> [] && (Control_ir.entries l.body = [] || lowering = Frames) ->
       let builds = Control_ir.continues_into l.body <> [] in
       let shaped = match lowering with Tail -> not builds | Modulo_cons -> builds | Frames -> true in
@@ -40,6 +41,15 @@ let loop_of ~lowerings r =
       end
     | Some _ | None -> None )
   | Some _ | None -> None
+
+(* The loop the recursion plan lowers the function [r] to, and how, where
+   it lowers it in one of the ways [lowerings]. *)
+let loop_of ~lowerings r =
+  if Option.has_some (Lifted.of_ref r) then None
+  else
+    shaped_loop ~lowerings r
+      (lowering_of (Recursion_plan.strategy ~pointer_fields:Loopify_analysis.constructor_pointer_fields r))
+      (Control_ir.Loop.Function r)
 
 (* The loop of the function [r], and how it is lowered, where it is one
    this module lowers. *)
@@ -373,6 +383,44 @@ let lower_methods ~merged inductive vars fields =
         match lower_method ~tparams ~self_ty m with Some m -> (Fmethod m, vis, tag) | None -> field )
       | _ -> field )
     fields
+
+(* Whether each of the C++ parameters [params] of a helper lifted out for
+   the function of a local fixpoint, whose loop is [l], is one [l] varies:
+   the variables the helper captures, its first parameters, which every
+   call passes on as they are, then the parameters of [l] that are not void
+   ({!Ml_type_util.void_binder}), in order.  [None] where they are not so
+   many. *)
+let lifted_varying (l : Control_ir.Term.loop) params =
+  let invariant = Control_ir.invariant_parameters l in
+  let kept =
+    List.filter_map
+      (fun (i, (_, ty)) -> if Ml_type_util.void_binder ty then None else Some i)
+      (List.mapi (fun i p -> (i, p)) l.parameters)
+  in
+  let captured = List.length params - List.length kept in
+  if captured < 0 then None
+  else Some (List.init captured (fun _ -> false) @ List.map (fun i -> not (List.nth invariant i)) kept)
+
+let lower_lifted d =
+  match function_of d with
+  | Some (tparams, f) -> (
+    let r = fst f.df_path.dp_outer in
+    match (f.df_shape, Option.bind (Lifted.of_ref r) Lifted.fixpoint) with
+    | Ddef (params, _), Some member when Table.should_loopify r -> (
+      let planned =
+        lowering_of (Recursion_plan.strategy_at ~pointer_fields:Loopify_analysis.constructor_pointer_fields member)
+      in
+      match shaped_loop ~lowerings:[Tail; Modulo_cons; Frames] r planned (Control_ir.Loop.Member (fst member, snd member)) with
+      | Some (l, lowering) -> (
+        match
+          Option.bind (lifted_varying l params) (fun varying ->
+              lower_function ~partner:(fun _ -> None) ~tparams f (l, lowering, varying) )
+        with
+        | Some f' -> with_function f' d
+        | None -> d )
+      | None -> d )
+    | (Ddef _ | Ddecl _), _ -> d )
+  | None -> d
 
 let lower_group decls =
   let functions = List.filter_map function_of decls in

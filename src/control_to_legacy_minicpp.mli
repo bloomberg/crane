@@ -102,6 +102,14 @@ val lower_methods :
   (Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag) list ->
   (Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag) list
 
+(** [lower_lifted d] is the helper [d], lifted out of a body for the
+    function of a local fixpoint ({!Lifted.fixpoint}), lowered as a
+    function is above, where Loopify would loopify it: to the loop of that
+    member's ControlIR ({!Control_ir.Loop.Member}), entered by the member's
+    calls, the variables the helper captures, its first parameters, passed
+    on unchanged by every one of them. *)
+val lower_lifted : Minicpp.cpp_decl -> Minicpp.cpp_decl
+
 (** [lower_group ds] is the declarations [ds], generated for the members of
     one recursive group, in its order, with each function lowered as above
     where it is one, recording its loop ({!Minicpp.dfun.df_loop}).  The

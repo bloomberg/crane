@@ -9127,7 +9127,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           let lifted_decl =
             Dtemplate (class_temps @ all_temps_with_funs, None, inner)
           in
-          add_lifted_decl lifted_decl )
+          add_lifted_decl (Control_to_legacy_minicpp.lower_lifted lifted_decl) )
         funs_compiled;
       (* In the continuation body b, the fixpoint name should resolve to a call
          to the lifted function with appropriate type arguments. We push the fix
@@ -10003,7 +10003,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           let lifted_decl =
             Dtemplate (class_temps @ all_temps_with_funs, None, inner)
           in
-          add_lifted_decl lifted_decl )
+          add_lifted_decl (Control_to_legacy_minicpp.lower_lifted lifted_decl) )
         funs_compiled;
       let call_type_args =
         lifted_call_type_args ~class_args ~env ~outer_tvars
