@@ -1203,7 +1203,8 @@ let check_lowered decl =
     of the unit was registered before any was finished:
 
     + Try to inline mutual recursion partners via {!try_inline_mutual_into},
-      converting mutual recursion into self-recursion.
+      converting mutual recursion into self-recursion, where the plan lowers
+      the function to a loop.
     + Classify the recursion pattern with {!classify} and apply the appropriate
       strategy: {!transform_tail} for tail recursion, or {!transform_nontail}
       for the general case (including multi-call patterns).
@@ -1228,8 +1229,13 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
   let names = dfun_path_list f.df_path in
   let ret_ty = f.df_ret in
   (* Try to inline mutual recursion partners, every function of the unit
-     registered before any was finished ({!register_decl}). *)
-  let body = try_inline_mutual_into (fst f.df_path.dp_outer) body in
+     registered before any was finished ({!register_decl}), where the plan
+     lowers the function to a loop: one lowered to none continues in no
+     partner's body, and a partner run in place of a call is that call. *)
+  let body =
+    if planned_strategy (Some (fst f.df_path.dp_outer)) (fn_checker names) body = No_loop then body
+    else try_inline_mutual_into (fst f.df_path.dp_outer) body
+  in
   (* What the machine is entered by in the plan's terms: the function's
      calls, or a lifted helper's local fixpoint member's.  A partner inlined
      into it leaves no call of its own: a tail call continues in its body,

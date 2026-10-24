@@ -32,23 +32,7 @@ uint64_t LoopifyMemberOwnCalls::jb(uint64_t n, uint64_t x) {
     return x;
   } else {
     uint64_t m = n - 1;
-    return (x + [](uint64_t _inl_n) -> uint64_t {
-      if (_inl_n <= 0) {
-        return UINT64_C(0);
-      } else {
-        uint64_t _inl_m = _inl_n - 1;
-        return List<uint64_t>::cons(
-                   _inl_m, List<uint64_t>::cons(_inl_m, List<uint64_t>::nil()))
-            .template map<uint64_t>([=](uint64_t _inl_x0) -> uint64_t {
-              return jb(_inl_m, _inl_x0);
-            })
-            .template fold_left<uint64_t>(
-                [](uint64_t _inl_x0, uint64_t _inl_x1) -> uint64_t {
-                  return (_inl_x0 + _inl_x1);
-                },
-                UINT64_C(0));
-      }
-    }(m));
+    return (x + ja(m));
   }
 }
 
@@ -57,14 +41,7 @@ uint64_t LoopifyMemberOwnCalls::f1(uint64_t n) {
     return UINT64_C(0);
   } else {
     uint64_t n_ = n - 1;
-    return (UINT64_C(1) + [](uint64_t _inl_n) -> uint64_t {
-      if (_inl_n <= 0) {
-        return UINT64_C(0);
-      } else {
-        uint64_t _inl_n_ = _inl_n - 1;
-        return (UINT64_C(2) + f3(_inl_n_));
-      }
-    }(n_));
+    return (UINT64_C(1) + f2(n_));
   }
 }
 
@@ -73,14 +50,7 @@ uint64_t LoopifyMemberOwnCalls::f2(uint64_t n) {
     return UINT64_C(0);
   } else {
     uint64_t n_ = n - 1;
-    return (UINT64_C(2) + [](uint64_t _inl_n) -> uint64_t {
-      if (_inl_n <= 0) {
-        return UINT64_C(0);
-      } else {
-        uint64_t _inl_n_ = _inl_n - 1;
-        return (UINT64_C(3) + f1(_inl_n_));
-      }
-    }(n_));
+    return (UINT64_C(2) + f3(n_));
   }
 }
 
@@ -89,13 +59,6 @@ uint64_t LoopifyMemberOwnCalls::f3(uint64_t n) {
     return UINT64_C(0);
   } else {
     uint64_t n_ = n - 1;
-    return (UINT64_C(3) + [](uint64_t _inl_n) -> uint64_t {
-      if (_inl_n <= 0) {
-        return UINT64_C(0);
-      } else {
-        uint64_t _inl_n_ = _inl_n - 1;
-        return (UINT64_C(1) + f2(_inl_n_));
-      }
-    }(n_));
+    return (UINT64_C(3) + f1(n_));
   }
 }
