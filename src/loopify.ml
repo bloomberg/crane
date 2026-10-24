@@ -1093,6 +1093,32 @@ let modulo_cons_loop ~jumped ~varying ~shapes ~tparams check (f : dfun) params b
     in
     if classify (fn_checker names) loop = No_recursion then Some loop else None
 
+let checker_frame_machine ~partner ~tparams (f : dfun) params body =
+  let r = fst f.df_path.dp_outer in
+  let check = fn_checker (dfun_path_list f.df_path) in
+  let body = expose_tail_calls check (try_inline_mutual_into ~partner r body) in
+  (apply_nontail_loopification ~fn_name:(fundef_display_name f.df_path) ~entered_by:(entered_by_function r)
+     ~binders:f.df_binders check tparams params f.df_ret body )
+    .nt_body
+
+let frame_machine ~loop ~tparams check (f : dfun) params body =
+  let names = dfun_path_list f.df_path in
+  let r = fst f.df_path.dp_outer in
+  let adopted () =
+    find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body
+  in
+  if try_inline_functional_into names body != body || Option.has_some (adopted ())
+     || has_recursive_branch_dependency check body
+  then None
+  else
+    let survivors = fn_checker names in
+    let machine =
+      checked_frame_machine (Some loop) survivors (fun entered ->
+          transform_nontail ~fn_name:(fundef_display_name f.df_path) ~entered_by:(entered_by_function r) ~entered
+            ~binders:f.df_binders check tparams params f.df_ret body )
+    in
+    if classify survivors machine = No_recursion then Some machine else None
+
 let lower_local_tail_loops ~tparams stmts = loopify_inner_lambdas ~tail_only:true ~tparams stmts
 
 let check_lowered decl =

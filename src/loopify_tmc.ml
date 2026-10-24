@@ -177,6 +177,15 @@ let chain_shapes chains =
         call = None } )
     chains
 
+(** The shapes of the turns [into] of a loop's ControlIR that build what
+    they return, each around the call it continues by. *)
+let control_shapes into =
+  List.map
+    (fun (c : Control_ir.Term.continue_into) ->
+      { constructors = List.map (fun (cell : Control_ir.Term.cell) -> (cell.constructor, cell.hole)) c.cells;
+        call = Some c.next.occurrence } )
+    into
+
 (** The return expression [expr] as the branch of the first of [shapes] it
     has: the factory calls it nests, each building its cell's constructor,
     holding the next in the cell's hole, the innermost a recursive call,

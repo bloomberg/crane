@@ -73,6 +73,35 @@ val checker_modulo_cons :
   cpp_stmt list ->
   cpp_stmt list
 
+(** The machine with a stack Loopify's own transform makes of the body
+    [body] of the function [f], as {!checker_tail_loop} makes a tail loop:
+    its calls recognised by a checker of the C++ calls. *)
+val checker_frame_machine :
+  partner:(GlobRef.t -> Loopify_analysis.registered_fn option) ->
+  tparams:(template_type * Id.t) list ->
+  dfun ->
+  (Id.t * cpp_type) list ->
+  cpp_stmt list ->
+  cpp_stmt list
+
+(** [frame_machine ~loop ~tparams check f params body] is the machine with
+    a stack of frames of the function [f], the loop [loop] of its ControlIR,
+    whose body [body] has its partners inlined and its tail calls exposed:
+    [check] recognises the calls that enter it.  [None] where Loopify would
+    do anything else with [f]: tie an Equations knot, adopt a fixpoint,
+    decline a branch depending on a recursive call, or leave a call the
+    machine does not take.  Under [CRANE_CHECK_IR] the calls entering it
+    must be the loop's [Continue]s.  It raises
+    [Loopify_analysis.Not_linearisable] where the transform declines. *)
+val frame_machine :
+  loop:Control_ir.Loop.t ->
+  tparams:(template_type * Id.t) list ->
+  Loopify_analysis.call_checker ->
+  dfun ->
+  (Id.t * cpp_type) list ->
+  cpp_stmt list ->
+  cpp_stmt list option
+
 (** [modulo_cons_loop ~jumped ~varying ~shapes ~tparams check f params
     body] is the tail-modulo-cons loop of the function [f], whose body
     [body] has its partners inlined and its tail calls exposed: [check]

@@ -32,6 +32,12 @@
     jumps.  It is left to Loopify where Loopify would do anything else with
     the function ({!Loopify.modulo_cons_loop}): tie an Equations knot,
     adopt a local fixpoint into a machine, or fall back to a frame stack.
+    So is the machine with a stack of frames of a function the plan lowers
+    so ({!Recursion_plan.Frame_stack}): the calls entering it are those made
+    of its loop's [Continue]s, those it resumes after the [Continue]s in a
+    [Resume]'s value ({!Loopify.frame_machine}); it is left to Loopify where
+    Loopify would adopt a local fixpoint into it, tie an Equations knot, or
+    leave a call behind.
 
     The loop of a local fixpoint of one member ({!Control_ir.Loop.Member})
     is lowered so too, as translation generates the fixpoint: the lambda it
@@ -70,7 +76,8 @@ val local_loop :
 (** [lower_methods ~merged r vars fields] is [fields], members of the struct
     of the inductive [r] of variables [vars], with each method made of a
     function the recursion plan lowers to a tail loop, and Loopify would
-    loopify, lowered to that loop, recording it ({!Minicpp.method_field.mf_loop}),
+    loopify,
+    lowered to that loop, recording it ({!Minicpp.method_field.mf_loop}),
     as Loopify lowers a method: its receiver the loop's first variable.
     [merged] says whether the struct is merged into its module's, whose
     members Loopify loopifies only where it loopifies everything.  Under
