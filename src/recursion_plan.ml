@@ -1072,6 +1072,23 @@ let tail_loops t =
   in
   (List.rev functions, locals)
 
+let frame_loops t =
+  let functions =
+    Ref.User.Map.fold
+      (fun r kind acc ->
+        if kind = Nontail && (not (suspends t r)) && not (Ref.User.Map.mem r t.modulo_cons) then r :: acc else acc )
+      t.kinds []
+  in
+  let locals =
+    List.filter_map
+      (fun (l : local_group) ->
+        match l.chains with
+        | [(None | Some [])] when l.local_kind = Nontail && not l.suspends -> Some l.occurrence
+        | _ -> None )
+      t.locals
+  in
+  (List.rev functions, locals)
+
 let modulo_cons_loops t =
   let functions = Ref.User.Map.fold (fun r _ acc -> if suspends t r then acc else r :: acc) t.modulo_cons [] in
   let locals =

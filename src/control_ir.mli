@@ -11,7 +11,10 @@
     recursive calls a [Continue] of it, and every other way out a [Return].
     And those of tail modulo cons: a recursive call held in a chain of
     constructors returned is a [Continue_into], whose constructors are made
-    around a hole the next turn fills.  {!Lower_control} produces them. *)
+    around a hole the next turn fills.  And those of a machine with a
+    stack: a recursive call whose result a let or a sequential bind binds
+    is a [Resume], where the machine resumes once the call has returned.
+    {!Lower_control} produces them. *)
 
 (** What a loop is the loop of: a function of the program, or the member
     [m] of the local fixpoint [occurrence]. *)
@@ -31,6 +34,7 @@ module Term : sig
     | Return of Miniml.ml_ast
     | Continue of continue_
     | Continue_into of continue_into
+    | Resume of resume
 
   (** The loop [loop] over [parameters], outermost first, running [body]. *)
   and loop = {
@@ -86,10 +90,26 @@ module Term : sig
     hole : int;
     arguments : Miniml.ml_ast list;
   }
+
+  (** [value] run for the value [binder] takes while [body] runs, where
+      [value] makes recursive calls: each [Continue] in it enters the loop
+      afresh, and [body] resumes once that turn returns, its result bound to
+      [binder]; each [Return] in it is the value bound so. *)
+  and resume = {
+    binder : Miniml.ml_ident;
+    binder_type : Miniml.ml_type;
+    value : t;
+    body : t;
+  }
 end
 
-(** The occurrences of the calls [t] continues a loop by, in order. *)
+(** The occurrences of the calls [t] continues a loop by, in order, those
+    resumed after included. *)
 val continues : Term.t -> Miniml.Occurrence.t list
+
+(** The occurrences of the calls [t] enters its loop by afresh and resumes
+    after, in order: the [Continue]s in the value of a [Resume]. *)
+val resumed : Term.t -> Miniml.Occurrence.t list
 
 (** The turns of [t] that build what they return, tail modulo cons, in
     order. *)

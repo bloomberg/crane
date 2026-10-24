@@ -131,3 +131,31 @@ let () =
   check "a chain's call counts as a turn"
     (invariant_parameters {loop = target; parameters = [(id "n", nat); (id "acc", nat)]; body = lower_cons kept}
     = [true; true] )
+
+(* A machine with a stack: a recursive call a let binds resumes into the
+   let's body once it returns. *)
+let lower_frames body = Lower_control.tail_loop ~frames:true ~effects:Core_effects.empty ~target ~callee body
+
+let () =
+  (* let x := count n acc in plus x x *)
+  let u = use () in
+  let body = MLletin (id "x", nat, call u [fresh_rel 2; fresh_rel 1], plus (fresh_rel 1) (fresh_rel 1), Occurrence.fresh ()) in
+  ( match lower_frames body with
+  | Term.Resume {binder; value = Continue c; body = Return _; _} ->
+    check "the call's result is bound to the let's binder" (binder = id "x");
+    check "the call enters the loop afresh" (Occurrence.equal c.occurrence (Global_use.occurrence u))
+  | _ -> check "a let binding a recursive call resumes" false );
+  check "the call is resumed after" (List.equal Occurrence.equal (resumed (lower_frames body)) [Global_use.occurrence u]);
+  check "and continues the loop" (continues_at [u] (lower_frames body));
+  check "without frames a let binding a call is returned with it" (lower body = Term.Return body);
+  (* let x := (match n with O => acc | S m => count m acc) in count x acc:
+     the call in a branch resumes, the tail call continues. *)
+  let inner = use () and tail = use () in
+  let rhs = MLcase (nat, fresh_rel 2, [| ([], nat, Pwild, fresh_rel 1); ([(id "m", nat)], nat, Pwild, call inner [fresh_rel 1; fresh_rel 2]) |]) in
+  let body = MLletin (id "x", nat, rhs, call tail [fresh_rel 1; fresh_rel 2], Occurrence.fresh ()) in
+  let t = lower_frames body in
+  check "a call ending a branch of a let's right-hand side is resumed after"
+    (List.equal Occurrence.equal (resumed t) [Global_use.occurrence inner]);
+  check "the tail call after it continues" (continues_at [inner; tail] t);
+  check "a parameter passed on under the resumed binder is kept"
+    (invariant_parameters {loop = target; parameters = [(id "n", nat); (id "acc", nat)]; body = t} = [false; true])

@@ -25,7 +25,7 @@ let occurrence f =
    the parameters, innermost first, and body of the partner whose call
    [use] heads, where Loopify continues in the partner's body
    ({!Recursion_plan.inlinings}). *)
-let tail_loop ?(inlined = fun _ -> None) ?(modulo_cons = false) ~effects ~target ~callee body =
+let tail_loop ?(inlined = fun _ -> None) ?(modulo_cons = false) ?(frames = false) ~effects ~target ~callee body =
   let effect_ = Recursion_plan.sequential effects in
   let call ~depth = function
     | MLapp (f, args) when callee ~depth f = Some (List.length args) -> Option.map (fun o -> (o, args)) (occurrence f)
@@ -106,6 +106,8 @@ let tail_loop ?(inlined = fun _ -> None) ?(modulo_cons = false) ~effects ~target
       lower depth a
     | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Bind -> (
       match List.rev args with
+      | MLlam (x, ty, k) :: action :: _ when frames && calls ~depth action > 0 ->
+        Resume {binder = x; binder_type = ty; value = lower depth action; body = lower (depth + 1) k}
       | MLlam (x, ty, k) :: action :: _ ->
         Let {binder = x; binder_type = ty; value = action; body = lower (depth + 1) k}
       | _ -> Return e )
@@ -121,6 +123,8 @@ let tail_loop ?(inlined = fun _ -> None) ?(modulo_cons = false) ~effects ~target
         | _, _ :: _ -> Return e
       in
       enter depth f args
+    | MLletin (x, ty, a, b, _) when frames && calls ~depth a > 0 ->
+      Resume {binder = x; binder_type = ty; value = lower depth a; body = lower (depth + 1) b}
     | MLletin (x, ty, a, b, _) -> Let {binder = x; binder_type = ty; value = a; body = lower (depth + 1) b}
     | MLcase (ty, s, branches) ->
       Match
@@ -155,6 +159,7 @@ let lower plan program =
   let effects = Core_effects.analyze struc in
   let functions, locals = Recursion_plan.tail_loops plan in
   let modulo_cons, local_modulo_cons = Recursion_plan.modulo_cons_loops plan in
+  let frame_functions, frame_locals = Recursion_plan.frame_loops plan in
   let defs = ref Names.GlobRef.Map_env.empty in
   Modutil.struct_iter
     (fun d ->
@@ -194,7 +199,8 @@ let lower plan program =
         (fun (fd : ml_fix_def) ->
           let body = Mlutil.read_spines fd.fd_body in
           let builds = List.exists (Names.GlobRef.UserOrd.equal fd.fd_ref) modulo_cons in
-          if builds || List.exists (Names.GlobRef.UserOrd.equal fd.fd_ref) functions then begin
+          let frames = List.exists (Names.GlobRef.UserOrd.equal fd.fd_ref) frame_functions in
+          if builds || frames || List.exists (Names.GlobRef.UserOrd.equal fd.fd_ref) functions then begin
             let parameters, inner = read ~builds fd in
             let arity = List.length parameters in
             let callee ~depth:_ = function
@@ -203,11 +209,13 @@ let lower plan program =
             in
             let target = Loop.Function fd.fd_ref in
             add target parameters
-              (tail_loop ~inlined:(inlined ~builds fd.fd_ref) ~modulo_cons:builds ~effects ~target ~callee inner)
+              (tail_loop ~inlined:(inlined ~builds fd.fd_ref) ~modulo_cons:builds ~frames ~effects ~target ~callee
+                 inner )
           end;
           List.iter
             (fun (occ, funs) ->
               let builds = List.exists (Occurrence.equal occ) local_modulo_cons in
+              let frames = List.exists (Occurrence.equal occ) frame_locals in
               let parameters, inner = Mlutil.collect_lams funs.(0) in
               let inner = if builds then Recursion_plan.restore_temporaries inner else inner in
               let arity = List.length parameters in
@@ -217,8 +225,8 @@ let lower plan program =
                 | _ -> None
               in
               let target = Loop.Member (occ, 0) in
-              add target parameters (tail_loop ~modulo_cons:builds ~effects ~target ~callee inner) )
-            (List.rev (fixpoints (locals @ local_modulo_cons) [] body)) )
+              add target parameters (tail_loop ~modulo_cons:builds ~frames ~effects ~target ~callee inner) )
+            (List.rev (fixpoints (locals @ local_modulo_cons @ frame_locals) [] body)) )
         (Mlutil.term_defs d) )
     (fun _ -> ())
     (fun _ -> ())

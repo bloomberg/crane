@@ -21,6 +21,7 @@ module Term = struct
     | Return of Miniml.ml_ast
     | Continue of continue_
     | Continue_into of continue_into
+    | Resume of resume
 
   and loop = {
     loop : Loop.t;
@@ -64,6 +65,13 @@ module Term = struct
     hole : int;
     arguments : Miniml.ml_ast list;
   }
+
+  and resume = {
+    binder : Miniml.ml_ident;
+    binder_type : Miniml.ml_type;
+    value : t;
+    body : t;
+  }
 end
 
 open Term
@@ -75,6 +83,17 @@ let continues t =
     | Match m -> List.fold_left (fun acc (b : branch) -> go acc b.body) acc m.branches
     | Return _ -> acc
     | Continue c | Continue_into {next = c; _} -> c.occurrence :: acc
+    | Resume r -> go (go acc r.value) r.body
+  in
+  List.rev (go [] t)
+
+let resumed t =
+  let rec go acc = function
+    | Loop l -> go acc l.body
+    | Let l -> go acc l.body
+    | Match m -> List.fold_left (fun acc (b : branch) -> go acc b.body) acc m.branches
+    | Return _ | Continue _ | Continue_into _ -> acc
+    | Resume r -> go (List.rev_append (continues r.value) acc) r.body
   in
   List.rev (go [] t)
 
@@ -85,6 +104,7 @@ let continues_into t =
     | Match m -> List.fold_left (fun acc (b : branch) -> go acc b.body) acc m.branches
     | Return _ | Continue _ -> acc
     | Continue_into c -> c :: acc
+    | Resume r -> go (go acc r.value) r.body
   in
   List.rev (go [] t)
 
@@ -94,6 +114,7 @@ let rec map_returns f = function
   | Match m -> Match {m with branches = List.map (fun (b : branch) -> {b with body = map_returns f b.body}) m.branches}
   | Return v -> Return (f v)
   | (Continue _ | Continue_into _) as c -> c
+  | Resume r -> Resume {r with body = map_returns f r.body}
 
 let invariant_parameters (l : loop) =
   let n = List.length l.parameters in
@@ -107,6 +128,7 @@ let invariant_parameters (l : loop) =
     | Return _ -> acc
     | Continue c | Continue_into {next = c; _} ->
       if Loop.equal c.target l.loop then (depth, c.arguments) :: acc else acc
+    | Resume r -> turns (depth + 1) (turns depth acc r.value) r.body
   in
   let turns = turns 0 [] l.body in
   List.init n (fun i ->

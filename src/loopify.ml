@@ -271,6 +271,43 @@ let checked_tail_loop loop transform =
   | Some _ | None -> () );
   body
 
+(** [transform entered], the machine with a stack of [loop] the frame
+    transform makes, telling [entered] each call it enters the machine by and
+    whether it resumes after it.  Under [CRANE_CHECK_IR] those calls must be
+    the [Continue]s of the loop's ControlIR ({!Lower_control.loop}), and, where
+    it builds nothing tail modulo cons, those resumed after the [Continue]s
+    in a [Resume]'s value.  A call is entered from every branch a
+    continuation is merged into, so they are compared as sets.  A machine
+    leaving a call [check] recognises is not one: its decline is reported
+    with the outcome ({!report_outcome}). *)
+let checked_frame_machine loop check transform =
+  let entries = ref [] in
+  let body = transform (fun ~resumes e -> entries := (resumes, made_of e) :: !entries) in
+  ( match loop with
+  | Some l when Probe.checking () && classify check body = No_recursion -> (
+    let what () =
+      match l with
+      | Control_ir.Loop.Function r -> Pp.str (Table.kername_of_global r)
+      | Control_ir.Loop.Member _ -> Pp.str "a local fixpoint"
+    in
+    let within a b = List.for_all (fun o -> List.exists (Miniml.Occurrence.equal o) b) a in
+    let same a b = within a b && within b a in
+    let made resumed = List.filter_map (fun (r, o) -> if resumed r then o else None) !entries in
+    match Lower_control.loop l with
+    | None -> Probe.violation "control IR" Pp.(str "no ControlIR for the machine of " ++ what ())
+    | Some _ when List.exists (fun (_, o) -> not (Option.has_some o)) !entries ->
+      Probe.violation "control IR"
+        Pp.(str "the machine of " ++ what () ++ str " is entered by a call made of no Core call")
+    | Some t ->
+      if not (same (made (fun _ -> true)) (Control_ir.continues t)) then
+        Probe.violation "control IR"
+          Pp.(str "the calls the machine of " ++ what () ++ str " is entered by are not its Continues");
+      if Control_ir.continues_into t = [] && not (same (made Fun.id) (Control_ir.resumed t)) then
+        Probe.violation "control IR"
+          Pp.(str "the calls the machine of " ++ what () ++ str " resumes after are not its Resumes' Continues") )
+  | Some _ | None -> () );
+  body
+
 (** The name a local of a body inlined into another takes there: prefixed,
     so that it collides with none of the other body's, and a temporary
     still where it was one ({!Mlutil.is_temporary_id}), so that
@@ -717,8 +754,9 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
                        initialised directly from [this].
     @param fn_name     Optional function name for loop-comment annotations
                        (forwarded to {!transform_nontail}).
-    @param loop        The loop a tail-modulo-cons transform makes, whose
-                       ControlIR it must agree with ({!checked_tail_loop})
+    @param loop        The loop the transform makes, whose ControlIR it must
+                       agree with ({!checked_tail_loop},
+                       {!checked_frame_machine})
     @param modulo_cons The chains the recursion is lowered tail modulo cons
                        around, where it is so planned ({!planned_strategy})
     @param check       Call checker for identifying recursive calls
@@ -738,8 +776,12 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
     declined "recursive call in a branch condition or dispatch scrutinee"
   else
   let frame () =
+    (* An adopted body enters the machine by calls of its own, which the
+       loop's ControlIR does not hold. *)
+    let loop = if Option.has_some adopted then None else loop in
     { nt_body =
-        transform_nontail ?fn_name ?adopted ?entered_by ?binders check tparams params ret_ty body;
+        checked_frame_machine loop check (fun entered ->
+            transform_nontail ?fn_name ?adopted ?entered_by ~entered ?binders check tparams params ret_ty body );
       nt_outcome = Lp_frame;
       nt_used_param_inits = false }
   in
