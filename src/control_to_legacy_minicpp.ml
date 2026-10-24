@@ -4,22 +4,35 @@
 open Names
 open Minicpp
 
-(* The tail loop the recursion plan lowers the function [r] to, where it
-   lowers it to one. *)
-let tail_loop r =
-  let tail =
+(* The loop the recursion plan lowers the function [r] to, where it lowers
+   it to a tail loop, or with [modulo_cons] one tail modulo cons: a loop
+   whose turns build nothing, or one some turn of which does. *)
+let loop_of ~modulo_cons r =
+  let planned =
     match Recursion_plan.strategy ~pointer_fields:Loopify_analysis.constructor_pointer_fields r with
-    | Some Tail_loop -> true
-    | Some (No_loop | Modulo_cons _ | Frame_stack | Suspended _) | None -> false
+    | Some Tail_loop -> Some false
+    | Some (Modulo_cons _) when modulo_cons -> Some true
+    | Some (No_loop | Modulo_cons _ | Frame_stack | Suspended _) | None -> None
   in
-  if tail && not (Option.has_some (Lifted.of_ref r)) then
+  match planned with
+  | Some builds when not (Option.has_some (Lifted.of_ref r)) -> (
     match Lower_control.loop (Control_ir.Loop.Function r) with
-    | Some (Loop l) when Control_ir.continues l.body <> [] -> Some l
-    | Some _ | None -> None
-  else None
+    | Some (Loop l) when Control_ir.continues l.body <> [] ->
+      if Bool.equal builds (Control_ir.continues_into l.body <> []) then Some l
+      else begin
+        Probe.violation "control IR"
+          Pp.(
+            str "the ControlIR of " ++ str (Table.kername_of_global r)
+            ++ str (if builds then " builds no constructor the plan's chains do" else " builds what a tail loop does not") );
+        None
+      end
+    | Some _ | None -> None )
+  | Some _ | None -> None
 
-(* The tail loop of the function [r], where it is one this module lowers. *)
-let planned_loop r = if Table.should_loopify r then tail_loop r else None
+let tail_loop = loop_of ~modulo_cons:false
+
+(* The loop of the function [r], where it is one this module lowers. *)
+let planned_loop r = if Table.should_loopify r then loop_of ~modulo_cons:true r else None
 
 (* Whether each of the C++ parameters [params] of the function [r] is one
    its loop [l] varies: one standing for a parameter of [l] some Continue
@@ -73,10 +86,11 @@ let check ~partner ~tparams (f : dfun) params body exposed ~varying ~continues ~
    inlines read as [partner] has it; [None] where Loopify declines it
    whole -- a call passing the loop other arguments than it has
    parameters, say -- and is left to, to decline it as before. *)
-let lower_function ~partner ~tparams (f : dfun) ((l : Control_ir.Term.loop), varying) =
-  match f.df_shape with
-  | Ddecl _ -> None
-  | Ddef (params, body) -> (
+let rec lower_function ~partner ~tparams (f : dfun) ((l : Control_ir.Term.loop), varying) =
+  match (f.df_shape, Control_ir.continues_into l.body) with
+  | Ddecl _, _ -> None
+  | Ddef (params, body), (_ :: _ as into) -> lower_modulo_cons ~partner ~tparams f params body l varying into
+  | Ddef (params, body), [] -> (
     let continues = Control_ir.continues l.body in
     let jumps = ref [] in
     let jumped e = jumps := Loopify_analysis.made_of e :: !jumps in
@@ -92,6 +106,46 @@ let lower_function ~partner ~tparams (f : dfun) ((l : Control_ir.Term.loop), var
       match Loopify.after_tail_loop ~tparams f params loop with
       | exception Loopify_analysis.Not_linearisable _ -> None
       | body -> Some {f with df_shape = Ddef (params, body); df_loop = Some l.loop} ) )
+
+(* Under [CRANE_CHECK_IR]: as {!check}, for a loop built tail modulo cons. *)
+and check_modulo_cons ~partner ~tparams (f : dfun) params body exposed ~varying ~continues ~jumped loop =
+  let what = Pp.str (Table.kername_of_global (fst f.df_path.dp_outer)) in
+  if not (Loopify_analysis.made_as_planned continues jumped) then
+    Probe.violation "control IR"
+      Pp.(str "the calls the loop of " ++ what ++ str " takes are not its Continues and Continue_intos");
+  if Loopify_analysis.find_varying_params (jump continues) params exposed <> varying then
+    Probe.violation "control lowering"
+      Pp.(str "the calls of " ++ what ++ str " change other parameters than its ControlIR's Continues");
+  if compare (Loopify.checker_modulo_cons ~partner ~tparams f params body) loop <> 0 then
+    Probe.violation "control lowering"
+      Pp.(str "the tail-modulo-cons loop of " ++ what ++ str " lowered from its ControlIR is not the loop Loopify makes")
+
+(* The function [f] lowered to the loop [l] tail modulo cons, building the
+   cells of its turns [into] around the calls they continue by. *)
+and lower_modulo_cons ~partner ~tparams (f : dfun) params body l varying into =
+  let continues = Control_ir.continues l.body in
+  let shapes =
+    List.map
+      (fun (c : Control_ir.Term.continue_into) ->
+        { Loopify_tmc.constructors = List.map (fun (cell : Control_ir.Term.cell) -> (cell.constructor, cell.hole)) c.cells;
+          call = Some c.next.occurrence } )
+      into
+  in
+  let jumps = ref [] in
+  let jumped e = jumps := Loopify_analysis.made_of e :: !jumps in
+  let r = fst f.df_path.dp_outer in
+  let exposed =
+    Loopify_analysis.expose_tail_calls (jump continues) (Loopify.try_inline_mutual_into ~partner r body)
+  in
+  match Loopify.modulo_cons_loop ~jumped ~varying ~shapes ~tparams (jump continues) f params exposed with
+  | exception Loopify_analysis.Not_linearisable _ -> None
+  | None -> None
+  | Some loop -> (
+    if Probe.checking () then
+      check_modulo_cons ~partner ~tparams f params body exposed ~varying ~continues ~jumped:(List.rev !jumps) loop;
+    match Loopify.after_tail_loop ~strategy:Lp_tmc ~tparams f params loop with
+    | exception Loopify_analysis.Not_linearisable _ -> None
+    | body -> Some {f with df_shape = Ddef (params, body); df_loop = Some l.loop} )
 
 (* The function a generated declaration is, with the template parameters
    it is generated under. *)

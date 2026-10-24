@@ -24,6 +24,15 @@
     loop are lowered as Loopify lowers them after its own transform
     ({!Loopify.after_tail_loop}).
 
+    So is the loop of a top-level function the plan lowers tail modulo cons
+    ({!Recursion_plan.Modulo_cons}): its turns that build what they return
+    ({!Control_ir.Term.Continue_into}) are the branches its cells are made
+    in, each read along the constructors of its chain around the call its
+    occurrence names ({!Loopify_tmc.branch_along}), and the others its
+    jumps.  It is left to Loopify where Loopify would do anything else with
+    the function ({!Loopify.modulo_cons_loop}): tie an Equations knot,
+    adopt a local fixpoint into a machine, or fall back to a frame stack.
+
     The loop of a local fixpoint of one member ({!Control_ir.Loop.Member})
     is lowered so too, as translation generates the fixpoint: the lambda it
     is declared as is that loop, where it was the pair of lambdas tying the
@@ -34,7 +43,7 @@
 
     Under [CRANE_CHECK_IR] Loopify's own transform runs beside it, and must
     make the same loop ({!Loopify.checker_tail_loop},
-    {!Loopify.lower_local_tail_loops}). *)
+    {!Loopify.checker_modulo_cons}, {!Loopify.lower_local_tail_loops}). *)
 
 (** [local_loop ~owner ~member ~tparams ~name ~self_passing l] is the
     statement declaring the local fixpoint [name], the function [member] of

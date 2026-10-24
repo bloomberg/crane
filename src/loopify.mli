@@ -49,11 +49,50 @@ val checker_tail_loop :
 
 (** [after_tail_loop ~tparams f params loop] is the body of the function
     [f] once Loopify's transform has made [loop] of it: the local fixpoints
-    in [loop] lowered, and the outcome recorded.  It raises
-    [Loopify_analysis.Not_linearisable] where that transform declines the
-    function whole. *)
+    in [loop] lowered, and the outcome recorded, [strategy] -- a tail loop
+    unless given.  It raises [Loopify_analysis.Not_linearisable] where that
+    transform declines the function whole. *)
 val after_tail_loop :
-  tparams:(template_type * Id.t) list -> dfun -> (Id.t * cpp_type) list -> cpp_stmt list -> cpp_stmt list
+  ?strategy:Loopify_analysis.loopify_outcome ->
+  tparams:(template_type * Id.t) list ->
+  dfun ->
+  (Id.t * cpp_type) list ->
+  cpp_stmt list ->
+  cpp_stmt list
+
+(** The loop Loopify's own transform makes of the body [body] of the
+    function [f], planned tail modulo cons, as {!checker_tail_loop} makes a
+    tail loop: its branches read off the plan's chains, its calls and
+    varying parameters off the C++ calls.  [body] itself where it is not so
+    planned. *)
+val checker_modulo_cons :
+  partner:(GlobRef.t -> Loopify_analysis.registered_fn option) ->
+  tparams:(template_type * Id.t) list ->
+  dfun ->
+  (Id.t * cpp_type) list ->
+  cpp_stmt list ->
+  cpp_stmt list
+
+(** [modulo_cons_loop ~jumped ~varying ~shapes ~tparams check f params
+    body] is the tail-modulo-cons loop of the function [f], whose body
+    [body] has its partners inlined and its tail calls exposed: [check]
+    recognises the calls the loop takes, [shapes] the branches it builds
+    cells in ({!Loopify_tmc.branch_along}), [varying] the parameters it
+    changes, and [jumped] is told each call it takes.  [None] where
+    Loopify would do anything else with [f]: tie an Equations knot, adopt a
+    fixpoint, decline a branch depending on a recursive call, or fall back
+    to a frame stack for a call the loop leaves.  It raises
+    [Loopify_analysis.Not_linearisable] where the transform declines. *)
+val modulo_cons_loop :
+  jumped:(cpp_expr -> unit) ->
+  varying:bool list ->
+  shapes:Loopify_tmc.shape list ->
+  tparams:(template_type * Id.t) list ->
+  Loopify_analysis.call_checker ->
+  dfun ->
+  (Id.t * cpp_type) list ->
+  cpp_stmt list ->
+  cpp_stmt list option
 
 (** [transform_method_own ~varying ~tparams ~self_ty m] is Loopify's
     transform of the method [m] of a struct whose receiver pointer type is

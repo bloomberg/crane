@@ -78,6 +78,16 @@ let continues t =
   in
   List.rev (go [] t)
 
+let continues_into t =
+  let rec go acc = function
+    | Loop l -> go acc l.body
+    | Let l -> go acc l.body
+    | Match m -> List.fold_left (fun acc (b : branch) -> go acc b.body) acc m.branches
+    | Return _ | Continue _ -> acc
+    | Continue_into c -> c :: acc
+  in
+  List.rev (go [] t)
+
 let rec map_returns f = function
   | Loop l -> Loop {l with body = map_returns f l.body}
   | Let l -> Let {l with body = map_returns f l.body}

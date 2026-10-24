@@ -1023,10 +1023,33 @@ let checker_tail_loop ~partner ~tparams (f : dfun) params body =
   let body = expose_tail_calls check (try_inline_mutual_into ~partner r body) in
   transform_tail tparams (planned_jumps (function_loop r) check) params f.df_ret body
 
-let after_tail_loop ~tparams (f : dfun) params loop =
+let after_tail_loop ?(strategy = Lp_tail) ~tparams (f : dfun) params loop =
   report_outcome ~name:(fundef_display_name f.df_path) ~check:(fn_checker (dfun_path_list f.df_path))
-    ~strategy:Lp_tail
+    ~strategy
     (loopify_inner_lambdas ~tparams ~outer_env:params loop)
+
+let checker_modulo_cons ~partner ~tparams (f : dfun) params body =
+  let r = fst f.df_path.dp_outer in
+  let check = fn_checker (dfun_path_list f.df_path) in
+  let body = expose_tail_calls check (try_inline_mutual_into ~partner r body) in
+  match planned_strategy (Some r) check body with
+  | Modulo_cons chains -> (apply_nontail_loopification ~modulo_cons:chains check tparams params f.df_ret body).nt_body
+  | No_loop | Tail_loop | Frame_stack | Suspended _ -> body
+
+let modulo_cons_loop ~jumped ~varying ~shapes ~tparams check (f : dfun) params body =
+  let names = dfun_path_list f.df_path in
+  let r = fst f.df_path.dp_outer in
+  let adopted () =
+    find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body
+  in
+  if try_inline_functional_into names body != body || Option.has_some (adopted ())
+     || has_recursive_branch_dependency check body
+  then None
+  else
+    let loop =
+      transform_tmc ~jumped ~varying ~shapes tparams check params f.df_ret (Cpp_temporaries.own_stmts body)
+    in
+    if classify (fn_checker names) loop = No_recursion then Some loop else None
 
 let lower_local_tail_loops ~tparams stmts = loopify_inner_lambdas ~tail_only:true ~tparams stmts
 

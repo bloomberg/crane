@@ -91,6 +91,10 @@ end
 (** The occurrences of the calls [t] continues a loop by, in order. *)
 val continues : Term.t -> Miniml.Occurrence.t list
 
+(** The turns of [t] that build what they return, tail modulo cons, in
+    order. *)
+val continues_into : Term.t -> Term.continue_into list
+
 (** [t] with [f] applied to the value of every [Return] in it. *)
 val map_returns : (Miniml.ml_ast -> Miniml.ml_ast) -> Term.t -> Term.t
 
