@@ -680,12 +680,28 @@ inline Sumbool Ascii::ascii_dec(const Ascii &b) const {
 }
 
 inline String String::append(String s2) const {
-  if (std::holds_alternative<typename String::EmptyString>(this->v())) {
-    return s2;
-  } else {
-    const auto &[a0, a1] = std::get<typename String::String0>(this->v());
-    return String::string0(a0, a1->append(std::move(s2)));
+  std::optional<String> _root{};
+  std::shared_ptr<String> *_write = nullptr;
+  const String *_loop_self = this;
+  while (true) {
+    auto &&_sv = *_loop_self;
+    if (std::holds_alternative<typename String::EmptyString>(_sv.v())) {
+      auto _value = std::move(s2);
+      (_write ? *(*_write = std::make_shared<String>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
+      break;
+    } else {
+      const auto &[a0, a1] = std::get<typename String::String0>(_sv.v());
+      auto _cell = typename String::String0(a0, nullptr);
+      String &_node =
+          (_write ? *(*_write = std::make_shared<String>(std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
+      _write = &std::get<typename String::String0>(_node.v_mut()).a1;
+      _loop_self = crane_raw(a1);
+      continue;
+    }
   }
+  return std::move(*_root);
 }
 
 #endif // INCLUDED_LEVENSHTEIN

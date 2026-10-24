@@ -3,6 +3,7 @@
 
 #include "crane_fn.h"
 #include "obj.h"
+#include "small_vector.h"
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -181,16 +182,45 @@ Bag::bag<Nat> round(Bag::bag<Nat> x0_);
 template <typename A>
 template <typename F0>
 Nat Bag::bag<A>::countIf(F0 &&p) const {
-  if (std::holds_alternative<typename Bag::bag<A>::Empty>(this->v())) {
-    return Nat::o();
-  } else {
-    const auto &[a0, a1] = std::get<typename Bag::bag<A>::Add>(this->v());
-    if (p(a0)) {
-      return Tally::bump(a1->countIf(p));
+  const typename Bag::template bag<A> *_self = this;
+
+  /// CraneEnter: captures varying parameters for each recursive call.
+  struct CraneEnter {
+    const typename Bag::template bag<A> *_self;
+  };
+
+  /// CraneCont1: resumes after recursive call, then processes rest.
+  struct CraneCont1 {};
+
+  using CraneFrame = std::variant<CraneEnter, CraneCont1>;
+  Nat _result{};
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{_self});
+  /// Loopified countIf: CraneEnter -> CraneCont1.
+  while (!_stack.empty()) {
+    CraneFrame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
+      const typename Bag::template bag<A> *_self = _f._self;
+      auto &&_sv = *_self;
+      if (std::holds_alternative<typename Bag::bag<A>::Empty>(_sv.v())) {
+        _result = Nat::o();
+      } else {
+        const auto &[a0, a1] = std::get<typename Bag::bag<A>::Add>(_sv.v());
+        if (p(a0)) {
+          _stack.emplace_back(CraneCont1{});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        } else {
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        }
+      }
     } else {
-      return a1->countIf(p);
+      auto _f = std::move(std::get<CraneCont1>(_frame));
+      _result = Tally::bump(std::move(_result));
     }
   }
+  return _result;
 }
 
 #endif // INCLUDED_NESTED_OWNER_TWO_TEMPLATE_HEADS

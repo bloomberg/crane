@@ -13501,3 +13501,14 @@
   (alias runtest)
   (deps loopify_nested_local_fix.t.exe)
   (action (run ./loopify_nested_local_fix.t.exe))))
+
+(subdir loopify_out_of_line_method
+ (rule
+  (targets loopify_out_of_line_method.t.exe)
+  (deps LoopifyOutOfLineMethod.vo loopify_out_of_line_method.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_out_of_line_method.t.exe loopify_out_of_line_method.cpp loopify_out_of_line_method.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_out_of_line_method.t.exe)
+  (action (run ./loopify_out_of_line_method.t.exe))))

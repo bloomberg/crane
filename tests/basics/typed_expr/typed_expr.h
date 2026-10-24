@@ -1,6 +1,7 @@
 #ifndef INCLUDED_TYPED_EXPR
 #define INCLUDED_TYPED_EXPR
 
+#include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
@@ -158,32 +159,71 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  crane::obj eval(Ty) const;
+  crane::obj eval(Ty _x) const;
 };
 
-inline crane::obj Expr::eval(Ty) const {
-  if (std::holds_alternative<typename Expr::ENat>(this->v())) {
-    const auto &[a0] = std::get<typename Expr::ENat>(this->v());
-    return a0;
-  } else if (std::holds_alternative<typename Expr::EBool>(this->v())) {
-    const auto &[a0] = std::get<typename Expr::EBool>(this->v());
-    return a0;
-  } else if (std::holds_alternative<typename Expr::EAdd>(this->v())) {
-    const auto &[a0, a1] = std::get<typename Expr::EAdd>(this->v());
-    return (crane::any_cast<uint64_t>(a0->eval(Ty::TNAT)) +
-            crane::any_cast<uint64_t>(a1->eval(Ty::TNAT)));
-  } else if (std::holds_alternative<typename Expr::EEq>(this->v())) {
-    const auto &[a0, a1] = std::get<typename Expr::EEq>(this->v());
-    return crane::any_cast<uint64_t>(a0->eval(Ty::TNAT)) ==
-           crane::any_cast<uint64_t>(a1->eval(Ty::TNAT));
-  } else {
-    const auto &[t, a1, a2, a3] = std::get<typename Expr::EIf>(this->v());
-    if (crane::any_cast<bool>(a1->eval(Ty::TBOOL))) {
-      return a2->eval(t);
+inline crane::obj Expr::eval(Ty _x) const {
+  const Expr *_self = this;
+
+  /// CraneEnter: captures varying parameters for each recursive call.
+  struct CraneEnter {
+    const Expr *_self;
+    Ty _x;
+  };
+
+  /// CraneCont_EIf: saves [t, a2, a3], resumes after recursive call, then
+  /// processes rest.
+  struct CraneCont_EIf {
+    Ty t;
+    const Expr *a2;
+    const Expr *a3;
+  };
+
+  using CraneFrame = std::variant<CraneEnter, CraneCont_EIf>;
+  crane::obj _result{};
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{_self, _x});
+  /// Loopified eval: CraneEnter -> CraneCont_EIf.
+  while (!_stack.empty()) {
+    CraneFrame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
+      const Expr *_self = _f._self;
+      Ty _x = _f._x;
+      auto &&_sv = *_self;
+      if (std::holds_alternative<typename Expr::ENat>(_sv.v())) {
+        const auto &[a0] = std::get<typename Expr::ENat>(_sv.v());
+        _result = std::move(a0);
+      } else if (std::holds_alternative<typename Expr::EBool>(_sv.v())) {
+        const auto &[a0] = std::get<typename Expr::EBool>(_sv.v());
+        _result = std::move(a0);
+      } else if (std::holds_alternative<typename Expr::EAdd>(_sv.v())) {
+        const auto &[a0, a1] = std::get<typename Expr::EAdd>(_sv.v());
+        _result = (crane::any_cast<uint64_t>(a0->eval(Ty::TNAT)) +
+                   crane::any_cast<uint64_t>(a1->eval(Ty::TNAT)));
+      } else if (std::holds_alternative<typename Expr::EEq>(_sv.v())) {
+        const auto &[a0, a1] = std::get<typename Expr::EEq>(_sv.v());
+        _result = crane::any_cast<uint64_t>(a0->eval(Ty::TNAT)) ==
+                  crane::any_cast<uint64_t>(a1->eval(Ty::TNAT));
+      } else {
+        const auto &[t, a1, a2, a3] = std::get<typename Expr::EIf>(_sv.v());
+        _stack.emplace_back(CraneCont_EIf{t, crane_raw(a2), crane_raw(a3)});
+        _stack.emplace_back(CraneEnter{crane_raw(a1), Ty::TBOOL});
+      }
     } else {
-      return a3->eval(t);
+      auto _f = std::move(std::get<CraneCont_EIf>(_frame));
+      Ty t = _f.t;
+      const Expr &a2 = *_f.a2;
+      const Expr &a3 = *_f.a3;
+      if (crane::any_cast<bool>(std::move(_result))) {
+        _stack.emplace_back(CraneEnter{_f.a2, t});
+      } else {
+        _stack.emplace_back(CraneEnter{_f.a3, t});
+      }
     }
   }
+  return _result;
 }
 
 #endif // INCLUDED_TYPED_EXPR

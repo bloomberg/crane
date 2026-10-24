@@ -1521,12 +1521,37 @@ and transform_field_exn ~tparams ~self_ty (fld, vis, tag) =
   | Fmethod mf
     when (match mf.mf_globref with Some r -> Table.loopifies_method r | None -> true) ->
     (transform_method ~tparams ~self_ty mf, vis, tag)
+  (* A method the struct only declares is the method its out-of-line
+     definition holds, and is transformed as that one is: the two halves
+     stay one value. *)
+  | Fmember_decl (OLmethod mf) -> (
+    match transform_field_exn ~tparams ~self_ty (Fmethod mf, vis, tag) with
+    | Fmethod mf', vis, tag -> (Fmember_decl (OLmethod mf'), vis, tag)
+    | field -> field )
   | Fnested_struct (id, fields) ->
     let fields' =
       List.map (transform_field ~tparams ~self_ty) fields
     in
     (Fnested_struct (id, fields'), vis, tag)
   | _ -> (fld, vis, tag)
+
+(** The receiver type of a method of the struct [r] declared under
+    [tparams]: its own template arguments named, since inside a nested
+    inductive the receiver is spelled through its module
+    ([typename List::template list<A>]) and the bare template name there is
+    not a type. *)
+let receiver_type r tparams = Tconst (Tptr (Tglob (r, List.map (fun (_, id) -> named_tvar id) tparams, [])))
+
+(** The out-of-line definition [dm] of a member its struct declares
+    ({!Minicpp.Dmember_def}) with the method in it transformed by [f], given
+    its struct's template parameters, as it would be inside the struct:
+    the definition is the member's body, which the struct no longer holds. *)
+let on_member_def ~tparams f dm =
+  match dm.dm_field with
+  | OLmethod mf ->
+    let tparams = if dm.dm_tparams = [] then tparams else dm.dm_tparams in
+    Dmember_def {dm with dm_field = OLmethod (f ~tparams ~self_ty:(receiver_type dm.dm_owner tparams) mf)}
+  | OLdestructor _ -> Dmember_def dm
 
 (** [transform_local_tail_loops decl] turns the tail-recursive local
     fixpoints in [decl]'s bodies into loops, and leaves everything else as it
@@ -1539,6 +1564,7 @@ let rec transform_local_tail_loops ?(tparams = []) decl =
     let f =
       match f with
       | Fmethod m -> Fmethod {m with mf_body = body m.mf_params m.mf_body}
+      | Fmember_decl (OLmethod m) -> Fmember_decl (OLmethod {m with mf_body = body m.mf_params m.mf_body})
       | Fnested_struct (id, fs) -> Fnested_struct (id, List.map field fs)
       | f -> f
     in
@@ -1552,12 +1578,15 @@ let rec transform_local_tail_loops ?(tparams = []) decl =
   | Dstruct ds -> Dstruct {ds with ds_fields = List.map field ds.ds_fields}
   | Dfields ds -> Dfields {ds with ds_fields = List.map field ds.ds_fields}
   | Dnspace (r, ds) -> Dnspace (r, List.map (transform_local_tail_loops ~tparams) ds)
+  | Dmember_def dm ->
+    on_member_def ~tparams (fun ~tparams:_ ~self_ty:_ m -> {m with mf_body = body m.mf_params m.mf_body}) dm
   | d -> d
 
 (** Top-level entry point: transform a declaration and all its nested
     declarations (templates, structs, namespaces). Dispatches to
     {!transform_fundef}, {!transform_method}, or recurses for composite
-    declarations. *)
+    declarations.  A method its struct only declares is transformed where it
+    is defined, after the struct. *)
 let rec transform_decl ?(tparams = []) = function
   | Dtemplate (tparams, constraint_opt, inner) ->
     Dtemplate
@@ -1565,15 +1594,7 @@ let rec transform_decl ?(tparams = []) = function
   | Dfun ({df_shape = Ddef (params, body); _} as f) ->
     transform_fundef ~tparams f params body
   | Dstruct ds ->
-    (* Name the struct's own template arguments: inside a nested inductive the
-       receiver type is spelled through its module ([typename List::template
-       list<A>]), and the bare template name there is not a type. *)
-    let self_args =
-      List.map
-        (fun (_, id) -> named_tvar id)
-        (if ds.ds_tparams = [] then tparams else ds.ds_tparams)
-    in
-    let self_ty = Tconst (Tptr (Tglob (ds.ds_ref, self_args, []))) in
+    let self_ty = receiver_type ds.ds_ref (if ds.ds_tparams = [] then tparams else ds.ds_tparams) in
     let fields = ds.ds_fields in
     (* Collect smart-pointer field indices from variant structs for TMC *)
     let rec collect_uptr_fields (fld, _vis, _tag) =
@@ -1616,4 +1637,11 @@ let rec transform_decl ?(tparams = []) = function
     | Dstruct ds' -> Dfields ds'
     | d -> d )
   | Dnspace (r, decls) -> Dnspace (r, List.map (transform_decl ~tparams) decls)
+  | Dmember_def dm ->
+    on_member_def ~tparams
+      (fun ~tparams ~self_ty m ->
+        match transform_field ~tparams ~self_ty (Fmethod m, VPublic, SManipulators) with
+        | Fmethod m', _, _ -> m'
+        | _ -> m )
+      dm
   | d -> d

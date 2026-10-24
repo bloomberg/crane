@@ -74,7 +74,7 @@ let rec holds_lowered_method decl =
     List.exists
       (fun (f, _, _) ->
         match f with
-        | Fmethod {mf_loop; _} -> Option.has_some mf_loop
+        | Fmethod {mf_loop; _} | Fmember_decl (OLmethod {mf_loop; _}) -> Option.has_some mf_loop
         | Fnested_struct (_, fs) -> in_fields fs
         | _ -> false )
       fs
@@ -82,6 +82,7 @@ let rec holds_lowered_method decl =
   match decl with
   | Dtemplate (_, _, d) -> holds_lowered_method d
   | Dstruct ds | Dfields ds -> in_fields ds.ds_fields
+  | Dmember_def {dm_field = OLmethod {mf_loop; _}; _} -> Option.has_some mf_loop
   | Dnspace (_, ds) -> List.exists holds_lowered_method ds
   | _ -> false
 
