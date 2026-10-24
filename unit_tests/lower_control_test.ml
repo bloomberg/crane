@@ -105,3 +105,29 @@ let () =
   check "a parameter passed on under a binder is kept, one passed the binder is not" (invariant step = [true; false]);
   check "parameters passed on as they are are kept" (invariant (call (use ()) [fresh_rel 2; fresh_rel 1]) = [true; true]);
   check "parameters passed each other are not" (invariant (call (use ()) [fresh_rel 1; fresh_rel 2]) = [false; false])
+
+(* Tail modulo cons: a recursive call held in a chain of constructors
+   returned continues into the hole the chain leaves. *)
+let cons = r "cons"
+let lower_cons body = Lower_control.tail_loop ~modulo_cons:true ~effects:Core_effects.empty ~target ~callee body
+
+let () =
+  (* cons n (cons acc (count n acc)): two cells, the call in the second's hole. *)
+  let u = use () in
+  let body = MLcons (nat, cons, [fresh_rel 2; MLcons (nat, cons, [fresh_rel 1; call u [fresh_rel 2; fresh_rel 1]])]) in
+  ( match lower_cons body with
+  | Term.Continue_into {cells = [outer; inner]; next} ->
+    check "each cell's hole is the argument holding the call" (outer.hole = 1 && inner.hole = 1);
+    check "a cell keeps its other arguments" (List.length outer.arguments = 1);
+    check "the chain continues by the call" (Occurrence.equal next.occurrence (Global_use.occurrence u))
+  | _ -> check "a chain around a call continues into its hole" false );
+  check "a chain's call is among the loop's continues" (continues_at [u] (lower_cons body));
+  check "without modulo cons a chain is returned" (lower body = Term.Return body);
+  (* cons (count n acc) (count n acc): two calls, no chain. *)
+  let twice = MLcons (nat, cons, [call (use ()) [fresh_rel 2; fresh_rel 1]; call (use ()) [fresh_rel 2; fresh_rel 1]]) in
+  check "a constructor holding two calls is returned" (lower_cons twice = Term.Return twice);
+  (* A chain's call passing the parameters on keeps them. *)
+  let kept = MLcons (nat, cons, [fresh_rel 2; call (use ()) [fresh_rel 2; fresh_rel 1]]) in
+  check "a chain's call counts as a turn"
+    (invariant_parameters {loop = target; parameters = [(id "n", nat); (id "acc", nat)]; body = lower_cons kept}
+    = [true; true] )

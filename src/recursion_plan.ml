@@ -1055,18 +1055,31 @@ let equal a b =
   && Ref.User.Map.equal ( = ) a.kinds b.kinds
   && List.equal Occurrence.equal a.let_lambdas b.let_lambdas
 
+(* Whether some member of the group of [r] suspends. *)
+let suspends t r =
+  let members = match Ref.User.Map.find_opt r t.by_member with Some g -> g.members | None -> [r] in
+  List.exists (fun m -> Ref.User.Set.mem m t.suspended) members
+
 let tail_loops t =
-  let suspends r =
-    let members = match Ref.User.Map.find_opt r t.by_member with Some g -> g.members | None -> [r] in
-    List.exists (fun m -> Ref.User.Set.mem m t.suspended) members
-  in
   let functions =
-    Ref.User.Map.fold (fun r kind acc -> if kind = Tail && not (suspends r) then r :: acc else acc) t.kinds []
+    Ref.User.Map.fold (fun r kind acc -> if kind = Tail && not (suspends t r) then r :: acc else acc) t.kinds []
   in
   let locals =
     List.filter_map
       (fun (l : local_group) ->
         if l.local_kind = Tail && (not l.suspends) && List.length l.chains = 1 then Some l.occurrence else None )
+      t.locals
+  in
+  (List.rev functions, locals)
+
+let modulo_cons_loops t =
+  let functions = Ref.User.Map.fold (fun r _ acc -> if suspends t r then acc else r :: acc) t.modulo_cons [] in
+  let locals =
+    List.filter_map
+      (fun (l : local_group) ->
+        match l.chains with
+        | [Some (_ :: _)] when l.local_kind = Nontail && not l.suspends -> Some l.occurrence
+        | _ -> None )
       t.locals
   in
   (List.rev functions, locals)

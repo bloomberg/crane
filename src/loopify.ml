@@ -247,10 +247,11 @@ let planned_jumps loop check =
       | Some o when List.exists (Miniml.Occurrence.equal o) continues -> check e
       | Some _ | None -> None
 
-(** [transform jumped], the tail loop of [loop] the transform makes, telling
-    [jumped] each call it rewrites into a jump.  Under [CRANE_CHECK_IR] those
-    calls must be the [Continue]s of the loop's ControlIR
-    ({!Lower_control.loop}), which every tail loop has. *)
+(** [transform jumped], the loop [loop] the transform makes, telling
+    [jumped] each call it rewrites into a jump, or, tail modulo cons, builds
+    a branch's cells around.  Under [CRANE_CHECK_IR] those calls must be the
+    [Continue]s and [Continue_into]s of the loop's ControlIR
+    ({!Lower_control.loop}), which every such loop has. *)
 let checked_tail_loop loop transform =
   let jumps = ref [] in
   let body = transform (fun e -> jumps := made_of e :: !jumps) in
@@ -262,10 +263,10 @@ let checked_tail_loop loop transform =
       | Control_ir.Loop.Member _ -> Pp.str "a local fixpoint"
     in
     match Lower_control.loop l with
-    | None -> Probe.violation "control IR" Pp.(str "no ControlIR for the tail loop of " ++ what ())
+    | None -> Probe.violation "control IR" Pp.(str "no ControlIR for the loop of " ++ what ())
     | Some t when not (made_as_planned (Control_ir.continues t) (List.rev !jumps)) ->
       Probe.violation "control IR"
-        Pp.(str "the calls the tail loop of " ++ what () ++ str " jumps at are not its Continues")
+        Pp.(str "the calls the loop of " ++ what () ++ str " jumps at are not its Continues")
     | Some _ -> () )
   | Some _ | None -> () );
   body
@@ -706,7 +707,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
       {- {b TMC} ({!transform_tmc}) — if the recursion plan lowers it "tail
          modulo cons" (each non-tail call the one call of a constructor
          chain), each return read as one of the plan's chains
-         ({!planned_branch}).}
+         ({!branch_along}).}
       {- {b General nontail} ({!transform_nontail}) — frame-based stack for all
          other patterns, including multi-call (e.g. fibonacci, tree traversal).}}
 
@@ -716,6 +717,8 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
                        initialised directly from [this].
     @param fn_name     Optional function name for loop-comment annotations
                        (forwarded to {!transform_nontail}).
+    @param loop        The loop a tail-modulo-cons transform makes, whose
+                       ControlIR it must agree with ({!checked_tail_loop})
     @param modulo_cons The chains the recursion is lowered tail modulo cons
                        around, where it is so planned ({!planned_strategy})
     @param check       Call checker for identifying recursive calls
@@ -726,7 +729,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
     @param ret_ty      Return type
     @param body        Function body statements
     @return what the transform did; see {!nontail_result}. *)
-let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_by ?modulo_cons
+let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_by ?modulo_cons ?loop
     ?binders check tparams params ret_ty body =
   let declined reason =
     {nt_body = body; nt_outcome = Lp_declined reason; nt_used_param_inits = false}
@@ -760,7 +763,10 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
   let tmc =
     match modulo_cons with
     | Some chains ->
-      let tmc = transform_tmc ~param_inits ~chains tparams check params ret_ty restored in
+      let tmc =
+        checked_tail_loop loop (fun jumped ->
+            transform_tmc ~param_inits ~jumped ~shapes:(chain_shapes chains) tparams check params ret_ty restored )
+      in
       if classify check tmc = No_recursion then Some tmc
       else (
         Probe.violation "tail modulo cons plan"
@@ -1128,6 +1134,7 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
         | Modulo_cons _ | Frame_stack ->
           let r =
             apply_nontail_loopification ~fn_name:name ?adopted ?entered_by ~binders:f.df_binders
+              ?loop:(function_loop (fst f.df_path.dp_outer))
               ?modulo_cons:(modulo_cons_chains strategy)
               check tparams params ret_ty body
           in
@@ -1383,6 +1390,7 @@ let transform_method_own ?varying ~tparams ~self_ty mf =
                 ( (match mf.mf_receiver_binder with Some b -> [(self_id, b)] | None -> [])
                 @ mf.mf_binders )
               ?fn_name ?modulo_cons:(modulo_cons_chains strategy)
+              ?loop:(Option.bind mf.mf_globref function_loop)
               self_check tparams
               augmented_params mf.mf_ret_type body_with_self
           in

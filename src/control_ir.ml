@@ -20,6 +20,7 @@ module Term = struct
     | Match of match_
     | Return of Miniml.ml_ast
     | Continue of continue_
+    | Continue_into of continue_into
 
   and loop = {
     loop : Loop.t;
@@ -52,6 +53,17 @@ module Term = struct
     occurrence : Miniml.Occurrence.t;
     arguments : Miniml.ml_ast list;
   }
+
+  and continue_into = {
+    cells : cell list;
+    next : continue_;
+  }
+
+  and cell = {
+    constructor : Names.GlobRef.t;
+    hole : int;
+    arguments : Miniml.ml_ast list;
+  }
 end
 
 open Term
@@ -62,7 +74,7 @@ let continues t =
     | Let l -> go acc l.body
     | Match m -> List.fold_left (fun acc (b : branch) -> go acc b.body) acc m.branches
     | Return _ -> acc
-    | Continue c -> c.occurrence :: acc
+    | Continue c | Continue_into {next = c; _} -> c.occurrence :: acc
   in
   List.rev (go [] t)
 
@@ -71,7 +83,7 @@ let rec map_returns f = function
   | Let l -> Let {l with body = map_returns f l.body}
   | Match m -> Match {m with branches = List.map (fun (b : branch) -> {b with body = map_returns f b.body}) m.branches}
   | Return v -> Return (f v)
-  | Continue _ as c -> c
+  | (Continue _ | Continue_into _) as c -> c
 
 let invariant_parameters (l : loop) =
   let n = List.length l.parameters in
@@ -83,7 +95,8 @@ let invariant_parameters (l : loop) =
     | Match m ->
       List.fold_left (fun acc (b : branch) -> turns (depth + List.length b.binders) acc b.body) acc m.branches
     | Return _ -> acc
-    | Continue c -> if Loop.equal c.target l.loop then (depth, c.arguments) :: acc else acc
+    | Continue c | Continue_into {next = c; _} ->
+      if Loop.equal c.target l.loop then (depth, c.arguments) :: acc else acc
   in
   let turns = turns 0 [] l.body in
   List.init n (fun i ->
