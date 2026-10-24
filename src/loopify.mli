@@ -19,7 +19,10 @@ val transform_decl :
 
 (** Turn only the tail-recursive local fixpoints in a declaration's bodies
     into loops: the part of loopification that needs no frame and changes no
-    evaluation order, applied whatever the loopification policy says. *)
+    evaluation order, which translation lowers as it generates them in every
+    declaration ({!Control_to_legacy_minicpp.local_loop}).  It is what
+    [CRANE_CHECK_IR] holds a declaration Loopify does not loopify to: one
+    this would change is a loop translation did not lower. *)
 val transform_local_tail_loops :
   ?tparams:(template_type * Id.t) list -> cpp_decl -> cpp_decl
 

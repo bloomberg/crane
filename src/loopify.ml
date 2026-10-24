@@ -1671,7 +1671,8 @@ let on_member_def ~tparams f dm =
     fixpoints in [decl]'s bodies into loops, and leaves everything else as it
     was.  A tail loop needs no frame and changes no evaluation order, so it is
     the part of loopification every declaration gets, whatever
-    {!Cpp_pipeline.should_loopify} says about the rest. *)
+    {!Cpp_pipeline.should_loopify} says about the rest; translation lowers
+    them as it generates them, and this is the check that it did. *)
 let rec transform_local_tail_loops ?(tparams = []) decl =
   let body ps b = loopify_inner_lambdas ~tail_only:true ~tparams ~outer_env:ps b in
   let rec field (f, vis, tag) =

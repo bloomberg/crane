@@ -147,12 +147,19 @@ let minicpp_passes : unsettled Pipeline_trace.pass list =
           d )
         else if should_loopify d then Loopify.transform_decl d
         else (
-          (* A method is lowered as it is generated only where Loopify would
-             have transformed it. *)
-          if Probe.checking () && holds_lowered_method d then
-            Probe.violation "control lowering"
-              (Pp.str "a method was lowered as it was generated in a declaration Loopify does not loopify");
-          Loopify.transform_local_tail_loops d ) );
+          (* A declaration Loopify does not loopify has its local tail loops
+             lowered as they were generated, and nothing else: a method is
+             lowered as it is generated only where Loopify would have
+             transformed it. *)
+          if Probe.checking () then begin
+            if holds_lowered_method d then
+              Probe.violation "control lowering"
+                (Pp.str "a method was lowered as it was generated in a declaration Loopify does not loopify");
+            if compare (Loopify.transform_local_tail_loops d) d <> 0 then
+              Probe.violation "control lowering"
+                (Pp.str "a local tail loop of a declaration Loopify does not loopify was not lowered as it was generated")
+          end;
+          d ) );
     (* Closures made and used in one place become the code they stand for,
        before ownership is decided, so what they captured is seen as local. *)
     lowering "local_closures" Cpp_local_closures.transform_decl;
