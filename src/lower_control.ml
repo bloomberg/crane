@@ -268,18 +268,20 @@ let lower ~methods plan program =
   (* What the machine of the function [r], whose body is [inner], adopts:
      the first fixpoint of one member the plan has it adopt, and failing
      that the partner run in place of the calls the plan has it adopt,
-     read as generated ({!Loopify_frame.find_adopted}). *)
+     read as generated ({!Loopify_frame.find_adopted}), where it returns
+     what [r] does: a machine has one result. *)
+  let returns fd = Ml_type_util.ml_return_type (Mlutil.type_simpl fd.fd_type) in
   let adoption r inner =
     let single (_, funs) = Array.length funs = 1 in
     match List.find_opt (fun o -> List.exists single (fixpoints [o] [] inner)) (Recursion_plan.adoptable_in plan r) with
     | Some o -> Some (Fixpoint o)
     | None ->
       Option.bind (Recursion_plan.adopted_partner_in plan r) (fun (i : Recursion_plan.inlining) ->
-          Option.map
-            (fun fd ->
-              let parameters, body = read ~builds:false fd in
-              Partner {partner = i.partner; invoked = i.invoked; parameters; body} )
-            (Names.GlobRef.Map_env.find_opt i.partner !defs) )
+          match (Names.GlobRef.Map_env.find_opt r !defs, Names.GlobRef.Map_env.find_opt i.partner !defs) with
+          | Some own, Some fd when Mlutil.eq_ml_type (returns own) (returns fd) ->
+            let parameters, body = read ~builds:false fd in
+            Some (Partner {partner = i.partner; invoked = i.invoked; parameters; body})
+          | _ -> None )
   in
   let loops = ref [] in
   let add target parameters body =

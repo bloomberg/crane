@@ -93,7 +93,9 @@ val tail_loop :
 (** [lower ~methods plan p] lowers the loops the plan [plan] of the
     normalized program [p] takes.  A function generated as a method,
     [methods] says, adopts nothing into its machine, as Loopify lowers a
-    method ({!Loopify.transform_method_own}). *)
+    method ({!Loopify.transform_method_own}); nor does a machine adopt a
+    partner returning another type than its function: a machine has one
+    result. *)
 val lower : methods:(Names.GlobRef.t -> bool) -> Recursion_plan.t -> Core.normalized Core.program -> t
 
 (** Make [t] the extraction's, the one {!loop} reads. *)

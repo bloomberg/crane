@@ -1132,11 +1132,17 @@ let frame_machine ~loop ?entry ~tparams check (f : dfun) params body =
   let names = dfun_path_list f.df_path in
   let r = fst f.df_path.dp_outer in
   let adopted = find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body in
+  (* A body found where ControlIR has no entry is one the transform does
+     not adopt -- a partner yielding another type than the function's --
+     where the calls entering the machine are its loop's Continues. *)
   let as_planned =
     match (adopted, entry) with
-    | None, None -> true
+    | (None | Some _), None -> true
     | Some ad, Some entry -> adopts_entry r ad entry
-    | Some _, None | None, Some _ -> false
+    | None, Some _ -> false
+  in
+  let unadopted entries =
+    Option.has_some entry || Option.is_empty adopted || Option.is_empty (machine_disagreement loop entries)
   in
   if try_inline_functional_into names body != body || (not as_planned) || has_recursive_branch_dependency check body
   then None
@@ -1149,7 +1155,8 @@ let frame_machine ~loop ?entry ~tparams check (f : dfun) params body =
     in
     let survived = Option.map decline_reason adopted in
     match machine check with
-    | Some (made, _) when classify survivors made = No_recursion -> Some (made, survived)
+    | Some (made, entries) when classify survivors made = No_recursion ->
+      if unadopted entries then Some (made, survived) else None
     | Some _ when not (has_recursive_branch_dependency survivors body) -> (
       (* A machine leaving a call behind is made reading every call of the
          function, as Loopify makes it -- its frames are laid out for the
