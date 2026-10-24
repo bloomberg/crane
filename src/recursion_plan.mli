@@ -57,6 +57,24 @@ val identity : Names.GlobRef.t -> bool
     occurrence. *)
 val tail_loops : t -> Names.GlobRef.t list * Miniml.Occurrence.t list
 
+(** The functions [t] reads constructor chains around the calls of, for
+    them to be lowered tail modulo cons ({!Modulo_cons}), in a group none of
+    whose members suspends, and the local fixpoints of one member it reads
+    so, by occurrence.  Whether one is so lowered also depends on how its
+    constructors store their fields ({!strategy}). *)
+val modulo_cons_loops : t -> Names.GlobRef.t list * Miniml.Occurrence.t list
+
+(** The functions [t] finds recursing by a call that is not a tail call, in
+    a group none of whose members suspends, that it reads no constructor
+    chains for: those lowered with a stack of frames ({!Frame_stack}); and
+    the local fixpoints of one member it finds so, by occurrence. *)
+val frame_loops : t -> Names.GlobRef.t list * Miniml.Occurrence.t list
+
+(** [e] with each temporary {!Normalize} bound a call, where it is read
+    once, put back where it is read: the body the constructor chains are
+    read off. *)
+val restore_temporaries : Miniml.ml_ast -> Miniml.ml_ast
+
 (** Make [t] the extraction's plan, the one {!strategy} reads. *)
 val install : t -> unit
 

@@ -1178,6 +1178,9 @@ type enter_rewrite_ctx = {
       (** The calls that enter the machine, as the recursion plan names
           what a point resumes after; [None] where the plan does not
           describe the machine. *)
+  er_entered : resumes:bool -> cpp_expr -> unit;
+      (** Told each call that enters the machine, and whether the machine
+          resumes after it. *)
 }
 
 (** The entry point a call site targets. *)
@@ -1368,6 +1371,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
       match check e with
       | Some cs when List.for_all (fun a -> count_calls_expr check a = 0) cs.cs_args ->
         (* Tail call: re-enter. *)
+        ctx.er_entered ~resumes:false e;
         [make_stack_push (make_enter_for ctx cs)]
       | _ ->
         (* {!Normalize} leaves a returned expression no call but a tail
@@ -1635,7 +1639,9 @@ and rewrite_enter_stmts ctx stmts =
         Option.has_some call
     in
     ( match call with
-    | Some cs when resumes -> make_cont_handler ~result (make_enter_for ctx cs)
+    | Some cs when resumes ->
+      ctx.er_entered ~resumes:true called;
+      make_cont_handler ~result (make_enter_for ctx cs)
     | Some _ | None -> Sasgn (id, tgt, e) :: rewrite_enter_stmts ctx rest )
   (* Conditional recursion: at least one branch has a recursive call and there
      are continuation statements after.  Merge the continuation into each branch
@@ -2629,13 +2635,15 @@ let fix_handler_bindings field_names cf_ps handler =
     @param params   Function parameters [(id, type)]
     @param binders  The Core binder each parameter, or capture, stands for, by
                     name ({!Core_binder})
+    @param entered  Told each call entering the machine, and whether it
+                    resumes after it
     @param ret_ty   Return type of the function
     @param body     Function body statements
     @return Transformed body with frame-based stack structure, or the original
             [body] unchanged when the transformation is unsafe (branch
             dependencies on recursive calls) *)
-let transform_nontail ?(fn_name : string option) ?adopted ?entered_by ?(outer_env = [])
-    ?(binders = []) check tparams params ret_ty body =
+let transform_nontail ?(fn_name : string option) ?adopted ?entered_by ?(entered = fun ~resumes:_ _ -> ())
+    ?(outer_env = []) ?(binders = []) check tparams params ret_ty body =
   (* An adopted body becomes a second entry point of this machine rather than
      a machine of its own: two machines cannot unwind each other's stack, so
      loopifying them separately leaves the recursion in place.  The calls that
@@ -2776,7 +2784,8 @@ let transform_nontail ?(fn_name : string option) ?adopted ?entered_by ?(outer_en
                er_seen_frame_names = Hashtbl.create 16;
                er_invariant_params = invariant_params;
                er_rematerialized = [];
-               er_entered_by = entered_by }
+               er_entered_by = entered_by;
+               er_entered = entered }
   in
   (* The body is a sequence like any other: a recursive call bound at its top
      level -- a temporary {!Normalize} made of a call in the function's

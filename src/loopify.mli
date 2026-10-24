@@ -49,19 +49,91 @@ val checker_tail_loop :
 
 (** [after_tail_loop ~tparams f params loop] is the body of the function
     [f] once Loopify's transform has made [loop] of it: the local fixpoints
-    in [loop] lowered, and the outcome recorded.  It raises
-    [Loopify_analysis.Not_linearisable] where that transform declines the
-    function whole. *)
+    in [loop] lowered, and the outcome recorded, [strategy] -- a tail loop
+    unless given.  It raises [Loopify_analysis.Not_linearisable] where that
+    transform declines the function whole. *)
 val after_tail_loop :
-  tparams:(template_type * Id.t) list -> dfun -> (Id.t * cpp_type) list -> cpp_stmt list -> cpp_stmt list
+  ?strategy:Loopify_analysis.loopify_outcome ->
+  tparams:(template_type * Id.t) list ->
+  dfun ->
+  (Id.t * cpp_type) list ->
+  cpp_stmt list ->
+  cpp_stmt list
+
+(** The loop Loopify's own transform makes of the body [body] of the
+    function [f], planned tail modulo cons, as {!checker_tail_loop} makes a
+    tail loop: its branches read off the plan's chains, its calls and
+    varying parameters off the C++ calls.  [body] itself where it is not so
+    planned. *)
+val checker_modulo_cons :
+  partner:(GlobRef.t -> Loopify_analysis.registered_fn option) ->
+  tparams:(template_type * Id.t) list ->
+  dfun ->
+  (Id.t * cpp_type) list ->
+  cpp_stmt list ->
+  cpp_stmt list
+
+(** The machine with a stack Loopify's own transform makes of the body
+    [body] of the function [f], as {!checker_tail_loop} makes a tail loop:
+    its calls recognised by a checker of the C++ calls. *)
+val checker_frame_machine :
+  partner:(GlobRef.t -> Loopify_analysis.registered_fn option) ->
+  tparams:(template_type * Id.t) list ->
+  dfun ->
+  (Id.t * cpp_type) list ->
+  cpp_stmt list ->
+  cpp_stmt list
+
+(** [frame_machine ~loop ~tparams check f params body] is the machine with
+    a stack of frames of the function [f], the loop [loop] of its ControlIR,
+    whose body [body] has its partners inlined and its tail calls exposed:
+    [check] recognises the calls that enter it.  [None] where Loopify would
+    do anything else with [f]: tie an Equations knot, adopt a fixpoint,
+    decline a branch depending on a recursive call, or leave a call the
+    machine does not take.  Under [CRANE_CHECK_IR] the calls entering it
+    must be the loop's [Continue]s.  It raises
+    [Loopify_analysis.Not_linearisable] where the transform declines. *)
+val frame_machine :
+  loop:Control_ir.Loop.t ->
+  tparams:(template_type * Id.t) list ->
+  Loopify_analysis.call_checker ->
+  dfun ->
+  (Id.t * cpp_type) list ->
+  cpp_stmt list ->
+  cpp_stmt list option
+
+(** [modulo_cons_loop ~jumped ~varying ~shapes ~tparams check f params
+    body] is the tail-modulo-cons loop of the function [f], whose body
+    [body] has its partners inlined and its tail calls exposed: [check]
+    recognises the calls the loop takes, [shapes] the branches it builds
+    cells in ({!Loopify_tmc.branch_along}), [varying] the parameters it
+    changes, and [jumped] is told each call it takes.  [None] where
+    Loopify would do anything else with [f]: tie an Equations knot, adopt a
+    fixpoint, decline a branch depending on a recursive call, or fall back
+    to a frame stack for a call the loop leaves.  It raises
+    [Loopify_analysis.Not_linearisable] where the transform declines. *)
+val modulo_cons_loop :
+  jumped:(cpp_expr -> unit) ->
+  varying:bool list ->
+  shapes:Loopify_tmc.shape list ->
+  tparams:(template_type * Id.t) list ->
+  Loopify_analysis.call_checker ->
+  dfun ->
+  (Id.t * cpp_type) list ->
+  cpp_stmt list ->
+  cpp_stmt list option
 
 (** [transform_method_own ~varying ~tparams ~self_ty m] is Loopify's
     transform of the method [m] of a struct whose receiver pointer type is
     [self_ty], under the struct's template parameters [tparams], before the
     local fixpoints in it are lowered: [m] itself where it declines.  A tail
-    loop varies the receiver and parameters [varying], where given. *)
+    loop varies the receiver and parameters [varying], where given.  With
+    [controlled], a loop tail modulo cons or a machine takes the calls the
+    method's ControlIR continues by, and builds its cells along its turns
+    ({!Loopify_tmc.control_shapes}). *)
 val transform_method_own :
   ?varying:bool list ->
+  ?controlled:bool ->
   tparams:(template_type * Id.t) list ->
   self_ty:cpp_type ->
   method_field ->

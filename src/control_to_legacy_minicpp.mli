@@ -24,17 +24,34 @@
     loop are lowered as Loopify lowers them after its own transform
     ({!Loopify.after_tail_loop}).
 
+    So is the loop of a top-level function the plan lowers tail modulo cons
+    ({!Recursion_plan.Modulo_cons}): its turns that build what they return
+    ({!Control_ir.Term.Continue_into}) are the branches its cells are made
+    in, each read along the constructors of its chain around the call its
+    occurrence names ({!Loopify_tmc.branch_along}), and the others its
+    jumps.  It is left to Loopify where Loopify would do anything else with
+    the function ({!Loopify.modulo_cons_loop}): tie an Equations knot,
+    adopt a local fixpoint into a machine, or fall back to a frame stack.
+    So is the machine with a stack of frames of a function the plan lowers
+    so ({!Recursion_plan.Frame_stack}): the calls entering it are those made
+    of its loop's [Continue]s, those it resumes after the [Continue]s in a
+    [Resume]'s value ({!Loopify.frame_machine}); it is left to Loopify where
+    Loopify would adopt a local fixpoint into it, tie an Equations knot, or
+    leave a call behind.
+
     The loop of a local fixpoint of one member ({!Control_ir.Loop.Member})
     is lowered so too, as translation generates the fixpoint: the lambda it
     is declared as is that loop, where it was the pair of lambdas tying the
     knot of a Y-combinator that Loopify recognised ({!local_loop}).  So is a
     method's, once its struct's methods are generated: its receiver is the
-    loop's first variable, the parameters a jump leaves alone read off the
-    Core binders of the receiver and the parameters ({!lower_methods}).
+    loop's first variable; a tail loop's parameters a jump leaves alone are
+    read off the Core binders of the receiver and the parameters, and a loop
+    tail modulo cons or a machine takes the calls its ControlIR continues by
+    ({!lower_methods}).
 
     Under [CRANE_CHECK_IR] Loopify's own transform runs beside it, and must
     make the same loop ({!Loopify.checker_tail_loop},
-    {!Loopify.lower_local_tail_loops}). *)
+    {!Loopify.checker_modulo_cons}, {!Loopify.lower_local_tail_loops}). *)
 
 (** [local_loop ~owner ~member ~tparams ~name ~self_passing l] is the
     statement declaring the local fixpoint [name], the function [member] of
@@ -60,8 +77,9 @@ val local_loop :
 
 (** [lower_methods ~merged r vars fields] is [fields], members of the struct
     of the inductive [r] of variables [vars], with each method made of a
-    function the recursion plan lowers to a tail loop, and Loopify would
-    loopify, lowered to that loop, recording it ({!Minicpp.method_field.mf_loop}),
+    function the recursion plan lowers to a loop -- a tail loop, one tail
+    modulo cons, or a machine with a stack -- and Loopify would loopify,
+    lowered to that loop, recording it ({!Minicpp.method_field.mf_loop}),
     as Loopify lowers a method: its receiver the loop's first variable.
     [merged] says whether the struct is merged into its module's, whose
     members Loopify loopifies only where it loopifies everything.  Under

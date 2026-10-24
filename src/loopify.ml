@@ -247,10 +247,11 @@ let planned_jumps loop check =
       | Some o when List.exists (Miniml.Occurrence.equal o) continues -> check e
       | Some _ | None -> None
 
-(** [transform jumped], the tail loop of [loop] the transform makes, telling
-    [jumped] each call it rewrites into a jump.  Under [CRANE_CHECK_IR] those
-    calls must be the [Continue]s of the loop's ControlIR
-    ({!Lower_control.loop}), which every tail loop has. *)
+(** [transform jumped], the loop [loop] the transform makes, telling
+    [jumped] each call it rewrites into a jump, or, tail modulo cons, builds
+    a branch's cells around.  Under [CRANE_CHECK_IR] those calls must be the
+    [Continue]s and [Continue_into]s of the loop's ControlIR
+    ({!Lower_control.loop}), which every such loop has. *)
 let checked_tail_loop loop transform =
   let jumps = ref [] in
   let body = transform (fun e -> jumps := made_of e :: !jumps) in
@@ -262,11 +263,48 @@ let checked_tail_loop loop transform =
       | Control_ir.Loop.Member _ -> Pp.str "a local fixpoint"
     in
     match Lower_control.loop l with
-    | None -> Probe.violation "control IR" Pp.(str "no ControlIR for the tail loop of " ++ what ())
+    | None -> Probe.violation "control IR" Pp.(str "no ControlIR for the loop of " ++ what ())
     | Some t when not (made_as_planned (Control_ir.continues t) (List.rev !jumps)) ->
       Probe.violation "control IR"
-        Pp.(str "the calls the tail loop of " ++ what () ++ str " jumps at are not its Continues")
+        Pp.(str "the calls the loop of " ++ what () ++ str " jumps at are not its Continues")
     | Some _ -> () )
+  | Some _ | None -> () );
+  body
+
+(** [transform entered], the machine with a stack of [loop] the frame
+    transform makes, telling [entered] each call it enters the machine by and
+    whether it resumes after it.  Under [CRANE_CHECK_IR] those calls must be
+    the [Continue]s of the loop's ControlIR ({!Lower_control.loop}), and, where
+    it builds nothing tail modulo cons, those resumed after the [Continue]s
+    in a [Resume]'s value.  A call is entered from every branch a
+    continuation is merged into, so they are compared as sets.  A machine
+    leaving a call [check] recognises is not one: its decline is reported
+    with the outcome ({!report_outcome}). *)
+let checked_frame_machine loop check transform =
+  let entries = ref [] in
+  let body = transform (fun ~resumes e -> entries := (resumes, made_of e) :: !entries) in
+  ( match loop with
+  | Some l when Probe.checking () && classify check body = No_recursion -> (
+    let what () =
+      match l with
+      | Control_ir.Loop.Function r -> Pp.str (Table.kername_of_global r)
+      | Control_ir.Loop.Member _ -> Pp.str "a local fixpoint"
+    in
+    let within a b = List.for_all (fun o -> List.exists (Miniml.Occurrence.equal o) b) a in
+    let same a b = within a b && within b a in
+    let made resumed = List.filter_map (fun (r, o) -> if resumed r then o else None) !entries in
+    match Lower_control.loop l with
+    | None -> Probe.violation "control IR" Pp.(str "no ControlIR for the machine of " ++ what ())
+    | Some _ when List.exists (fun (_, o) -> not (Option.has_some o)) !entries ->
+      Probe.violation "control IR"
+        Pp.(str "the machine of " ++ what () ++ str " is entered by a call made of no Core call")
+    | Some t ->
+      if not (same (made (fun _ -> true)) (Control_ir.continues t)) then
+        Probe.violation "control IR"
+          Pp.(str "the calls the machine of " ++ what () ++ str " is entered by are not its Continues");
+      if Control_ir.continues_into t = [] && not (same (made Fun.id) (Control_ir.resumed t)) then
+        Probe.violation "control IR"
+          Pp.(str "the calls the machine of " ++ what () ++ str " resumes after are not its Resumes' Continues") )
   | Some _ | None -> () );
   body
 
@@ -706,7 +744,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
       {- {b TMC} ({!transform_tmc}) — if the recursion plan lowers it "tail
          modulo cons" (each non-tail call the one call of a constructor
          chain), each return read as one of the plan's chains
-         ({!planned_branch}).}
+         ({!branch_along}).}
       {- {b General nontail} ({!transform_nontail}) — frame-based stack for all
          other patterns, including multi-call (e.g. fibonacci, tree traversal).}}
 
@@ -716,8 +754,13 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
                        initialised directly from [this].
     @param fn_name     Optional function name for loop-comment annotations
                        (forwarded to {!transform_nontail}).
+    @param loop        The loop the transform makes, whose ControlIR it must
+                       agree with ({!checked_tail_loop},
+                       {!checked_frame_machine})
     @param modulo_cons The chains the recursion is lowered tail modulo cons
                        around, where it is so planned ({!planned_strategy})
+    @param shapes      The branches of that loop, where they are known
+                       otherwise than from the chains ({!Loopify_tmc.branch_along})
     @param check       Call checker for identifying recursive calls
     @param tparams     Template parameter context
     @param adopted     A body calling back into this function, to adopt as a
@@ -726,7 +769,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
     @param ret_ty      Return type
     @param body        Function body statements
     @return what the transform did; see {!nontail_result}. *)
-let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_by ?modulo_cons
+let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_by ?modulo_cons ?shapes ?loop
     ?binders check tparams params ret_ty body =
   let declined reason =
     {nt_body = body; nt_outcome = Lp_declined reason; nt_used_param_inits = false}
@@ -735,8 +778,12 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
     declined "recursive call in a branch condition or dispatch scrutinee"
   else
   let frame () =
+    (* An adopted body enters the machine by calls of its own, which the
+       loop's ControlIR does not hold. *)
+    let loop = if Option.has_some adopted then None else loop in
     { nt_body =
-        transform_nontail ?fn_name ?adopted ?entered_by ?binders check tparams params ret_ty body;
+        checked_frame_machine loop check (fun entered ->
+            transform_nontail ?fn_name ?adopted ?entered_by ~entered ?binders check tparams params ret_ty body );
       nt_outcome = Lp_frame;
       nt_used_param_inits = false }
   in
@@ -760,7 +807,12 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
   let tmc =
     match modulo_cons with
     | Some chains ->
-      let tmc = transform_tmc ~param_inits ~chains tparams check params ret_ty restored in
+      let tmc =
+        checked_tail_loop loop (fun jumped ->
+            transform_tmc ~param_inits ~jumped
+              ~shapes:(Option.default (chain_shapes chains) shapes)
+              tparams check params ret_ty restored )
+      in
       if classify check tmc = No_recursion then Some tmc
       else (
         Probe.violation "tail modulo cons plan"
@@ -1017,10 +1069,59 @@ let checker_tail_loop ~partner ~tparams (f : dfun) params body =
   let body = expose_tail_calls check (try_inline_mutual_into ~partner r body) in
   transform_tail tparams (planned_jumps (function_loop r) check) params f.df_ret body
 
-let after_tail_loop ~tparams (f : dfun) params loop =
+let after_tail_loop ?(strategy = Lp_tail) ~tparams (f : dfun) params loop =
   report_outcome ~name:(fundef_display_name f.df_path) ~check:(fn_checker (dfun_path_list f.df_path))
-    ~strategy:Lp_tail
+    ~strategy
     (loopify_inner_lambdas ~tparams ~outer_env:params loop)
+
+let checker_modulo_cons ~partner ~tparams (f : dfun) params body =
+  let r = fst f.df_path.dp_outer in
+  let check = fn_checker (dfun_path_list f.df_path) in
+  let body = expose_tail_calls check (try_inline_mutual_into ~partner r body) in
+  match planned_strategy (Some r) check body with
+  | Modulo_cons chains -> (apply_nontail_loopification ~modulo_cons:chains check tparams params f.df_ret body).nt_body
+  | No_loop | Tail_loop | Frame_stack | Suspended _ -> body
+
+let modulo_cons_loop ~jumped ~varying ~shapes ~tparams check (f : dfun) params body =
+  let names = dfun_path_list f.df_path in
+  let r = fst f.df_path.dp_outer in
+  let adopted () =
+    find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body
+  in
+  if try_inline_functional_into names body != body || Option.has_some (adopted ())
+     || has_recursive_branch_dependency check body
+  then None
+  else
+    let loop =
+      transform_tmc ~jumped ~varying ~shapes tparams check params f.df_ret (Cpp_temporaries.own_stmts body)
+    in
+    if classify (fn_checker names) loop = No_recursion then Some loop else None
+
+let checker_frame_machine ~partner ~tparams (f : dfun) params body =
+  let r = fst f.df_path.dp_outer in
+  let check = fn_checker (dfun_path_list f.df_path) in
+  let body = expose_tail_calls check (try_inline_mutual_into ~partner r body) in
+  (apply_nontail_loopification ~fn_name:(fundef_display_name f.df_path) ~entered_by:(entered_by_function r)
+     ~binders:f.df_binders check tparams params f.df_ret body )
+    .nt_body
+
+let frame_machine ~loop ~tparams check (f : dfun) params body =
+  let names = dfun_path_list f.df_path in
+  let r = fst f.df_path.dp_outer in
+  let adopted () =
+    find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body
+  in
+  if try_inline_functional_into names body != body || Option.has_some (adopted ())
+     || has_recursive_branch_dependency check body
+  then None
+  else
+    let survivors = fn_checker names in
+    let machine =
+      checked_frame_machine (Some loop) survivors (fun entered ->
+          transform_nontail ~fn_name:(fundef_display_name f.df_path) ~entered_by:(entered_by_function r) ~entered
+            ~binders:f.df_binders check tparams params f.df_ret body )
+    in
+    if classify survivors machine = No_recursion then Some machine else None
 
 let lower_local_tail_loops ~tparams stmts = loopify_inner_lambdas ~tail_only:true ~tparams stmts
 
@@ -1128,6 +1229,7 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
         | Modulo_cons _ | Frame_stack ->
           let r =
             apply_nontail_loopification ~fn_name:name ?adopted ?entered_by ~binders:f.df_binders
+              ?loop:(function_loop (fst f.df_path.dp_outer))
               ?modulo_cons:(modulo_cons_chains strategy)
               check tparams params ret_ty body
           in
@@ -1204,8 +1306,12 @@ let transform_fundef ~tparams (f : dfun) params body =
     @param varying        Which of the receiver and the parameters a tail
                           loop varies, where the caller knows; read off its
                           calls otherwise
+    @param controlled     Whether a loop tail modulo cons or a machine takes
+                          the calls its ControlIR continues by, and builds
+                          its cells as its turns do, rather than every call
+                          of the method's
     @return An [Fmethod] field with the loopified body *)
-let transform_method_own ?varying ~tparams ~self_ty mf =
+let transform_method_own ?varying ?(controlled = false) ~tparams ~self_ty mf =
   (* [tparams] arrives holding only the enclosing struct's parameters.  A
      method's body is written under its own template header too, and a
      parameter declared there is the one most likely to constrain how the body
@@ -1375,6 +1481,16 @@ let transform_method_own ?varying ~tparams ~self_ty mf =
             false )
         | Modulo_cons _ | Frame_stack ->
           let fn_name = Some name in
+          let loop = Option.bind mf.mf_globref function_loop in
+          (* Lowered from its ControlIR, a method's calls taken are those its
+             loop continues by, and the cells built around them its turns'. *)
+          let check, shapes =
+            if controlled then
+              ( planned_jumps loop self_check,
+                Option.map (fun t -> Loopify_tmc.control_shapes (Control_ir.continues_into t))
+                  (Option.bind loop Lower_control.loop) )
+            else (self_check, None)
+          in
           let r =
             apply_nontail_loopification
               ?entered_by:(Option.map entered_by_function mf.mf_globref)
@@ -1382,8 +1498,8 @@ let transform_method_own ?varying ~tparams ~self_ty mf =
               ~binders:
                 ( (match mf.mf_receiver_binder with Some b -> [(self_id, b)] | None -> [])
                 @ mf.mf_binders )
-              ?fn_name ?modulo_cons:(modulo_cons_chains strategy)
-              self_check tparams
+              ?fn_name ?modulo_cons:(modulo_cons_chains strategy) ?shapes ?loop
+              check tparams
               augmented_params mf.mf_ret_type body_with_self
           in
           let body' =
@@ -1448,12 +1564,37 @@ and transform_field_exn ~tparams ~self_ty (fld, vis, tag) =
   | Fmethod mf
     when (match mf.mf_globref with Some r -> Table.loopifies_method r | None -> true) ->
     (transform_method ~tparams ~self_ty mf, vis, tag)
+  (* A method the struct only declares is the method its out-of-line
+     definition holds, and is transformed as that one is: the two halves
+     stay one value. *)
+  | Fmember_decl (OLmethod mf) -> (
+    match transform_field_exn ~tparams ~self_ty (Fmethod mf, vis, tag) with
+    | Fmethod mf', vis, tag -> (Fmember_decl (OLmethod mf'), vis, tag)
+    | field -> field )
   | Fnested_struct (id, fields) ->
     let fields' =
       List.map (transform_field ~tparams ~self_ty) fields
     in
     (Fnested_struct (id, fields'), vis, tag)
   | _ -> (fld, vis, tag)
+
+(** The receiver type of a method of the struct [r] declared under
+    [tparams]: its own template arguments named, since inside a nested
+    inductive the receiver is spelled through its module
+    ([typename List::template list<A>]) and the bare template name there is
+    not a type. *)
+let receiver_type r tparams = Tconst (Tptr (Tglob (r, List.map (fun (_, id) -> named_tvar id) tparams, [])))
+
+(** The out-of-line definition [dm] of a member its struct declares
+    ({!Minicpp.Dmember_def}) with the method in it transformed by [f], given
+    its struct's template parameters, as it would be inside the struct:
+    the definition is the member's body, which the struct no longer holds. *)
+let on_member_def ~tparams f dm =
+  match dm.dm_field with
+  | OLmethod mf ->
+    let tparams = if dm.dm_tparams = [] then tparams else dm.dm_tparams in
+    Dmember_def {dm with dm_field = OLmethod (f ~tparams ~self_ty:(receiver_type dm.dm_owner tparams) mf)}
+  | OLdestructor _ -> Dmember_def dm
 
 (** [transform_local_tail_loops decl] turns the tail-recursive local
     fixpoints in [decl]'s bodies into loops, and leaves everything else as it
@@ -1466,6 +1607,7 @@ let rec transform_local_tail_loops ?(tparams = []) decl =
     let f =
       match f with
       | Fmethod m -> Fmethod {m with mf_body = body m.mf_params m.mf_body}
+      | Fmember_decl (OLmethod m) -> Fmember_decl (OLmethod {m with mf_body = body m.mf_params m.mf_body})
       | Fnested_struct (id, fs) -> Fnested_struct (id, List.map field fs)
       | f -> f
     in
@@ -1479,12 +1621,15 @@ let rec transform_local_tail_loops ?(tparams = []) decl =
   | Dstruct ds -> Dstruct {ds with ds_fields = List.map field ds.ds_fields}
   | Dfields ds -> Dfields {ds with ds_fields = List.map field ds.ds_fields}
   | Dnspace (r, ds) -> Dnspace (r, List.map (transform_local_tail_loops ~tparams) ds)
+  | Dmember_def dm ->
+    on_member_def ~tparams (fun ~tparams:_ ~self_ty:_ m -> {m with mf_body = body m.mf_params m.mf_body}) dm
   | d -> d
 
 (** Top-level entry point: transform a declaration and all its nested
     declarations (templates, structs, namespaces). Dispatches to
     {!transform_fundef}, {!transform_method}, or recurses for composite
-    declarations. *)
+    declarations.  A method its struct only declares is transformed where it
+    is defined, after the struct. *)
 let rec transform_decl ?(tparams = []) = function
   | Dtemplate (tparams, constraint_opt, inner) ->
     Dtemplate
@@ -1492,15 +1637,7 @@ let rec transform_decl ?(tparams = []) = function
   | Dfun ({df_shape = Ddef (params, body); _} as f) ->
     transform_fundef ~tparams f params body
   | Dstruct ds ->
-    (* Name the struct's own template arguments: inside a nested inductive the
-       receiver type is spelled through its module ([typename List::template
-       list<A>]), and the bare template name there is not a type. *)
-    let self_args =
-      List.map
-        (fun (_, id) -> named_tvar id)
-        (if ds.ds_tparams = [] then tparams else ds.ds_tparams)
-    in
-    let self_ty = Tconst (Tptr (Tglob (ds.ds_ref, self_args, []))) in
+    let self_ty = receiver_type ds.ds_ref (if ds.ds_tparams = [] then tparams else ds.ds_tparams) in
     let fields = ds.ds_fields in
     (* Collect smart-pointer field indices from variant structs for TMC *)
     let rec collect_uptr_fields (fld, _vis, _tag) =
@@ -1543,4 +1680,11 @@ let rec transform_decl ?(tparams = []) = function
     | Dstruct ds' -> Dfields ds'
     | d -> d )
   | Dnspace (r, decls) -> Dnspace (r, List.map (transform_decl ~tparams) decls)
+  | Dmember_def dm ->
+    on_member_def ~tparams
+      (fun ~tparams ~self_ty m ->
+        match transform_field ~tparams ~self_ty (Fmethod m, VPublic, SManipulators) with
+        | Fmethod m', _, _ -> m'
+        | _ -> m )
+      dm
   | d -> d

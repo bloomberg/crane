@@ -15,6 +15,24 @@
     recursive calls there is a [Continue]; a term no recursive call is made
     in is a [Return] of it as it is.
 
+    It also lowers the loops of tail modulo cons
+    ({!Recursion_plan.modulo_cons_loops}): a function, or a local fixpoint
+    of one member, whose every recursive
+    call that is not a tail call is held in the hole of a chain of
+    constructors returned is a loop whose turn there is a [Continue_into],
+    its body read with Normalize's temporaries put back as the plan reads
+    it.  Loopify lowers these, and under [CRANE_CHECK_IR] the calls its
+    tail-modulo-cons transform rewrites must be their [Continue]s and
+    [Continue_into]s.
+
+    And the loops of the machines with a stack of frames
+    ({!Recursion_plan.frame_loops}): a function recursing by a call that is
+    not a tail call is a loop where each let, or sequential bind, whose
+    right-hand side makes a recursive call is a [Resume].  Loopify lowers
+    these, and under [CRANE_CHECK_IR] the calls its frame transform enters
+    the machine by must be their [Continue]s, those it resumes after the
+    [Continue]s in a [Resume]'s value.
+
     The loop of a top-level function is made from here as its recursive
     group is generated, that of a method as its struct's methods are, and
     that of a local fixpoint as translation generates it
@@ -33,9 +51,16 @@ val empty : t
     [depth] binders inside them, names it, [effects] says which binds and
     rets are sequential, and [inlined use] is the parameters, innermost
     first, and the body of the partner whose call [use] heads, where Loopify
-    continues in that partner's body. *)
+    continues in that partner's body.  With [modulo_cons], a constructor
+    application holding a recursive call as the one call of a chain of
+    them is a [Continue_into], the chain read as
+    {!Recursion_plan.strategy} reads it.  With [frames], a let or a
+    sequential bind whose right-hand side calls the function is a [Resume]
+    of its continuation, the right-hand side read as a body is. *)
 val tail_loop :
   ?inlined:(Miniml.global_use -> ((Miniml.ml_ident * Miniml.ml_type) list * Miniml.ml_ast) option) ->
+  ?modulo_cons:bool ->
+  ?frames:bool ->
   effects:Core_effects.t ->
   target:Control_ir.Loop.t ->
   callee:(depth:int -> Miniml.ml_ast -> int option) ->

@@ -25,8 +25,51 @@ let occurrence f =
    the parameters, innermost first, and body of the partner whose call
    [use] heads, where Loopify continues in the partner's body
    ({!Recursion_plan.inlinings}). *)
-let tail_loop ?(inlined = fun _ -> None) ~effects ~target ~callee body =
+let tail_loop ?(inlined = fun _ -> None) ?(modulo_cons = false) ?(frames = false) ~effects ~target ~callee body =
   let effect_ = Recursion_plan.sequential effects in
+  let call ~depth = function
+    | MLapp (f, args) when callee ~depth f = Some (List.length args) -> Option.map (fun o -> (o, args)) (occurrence f)
+    | _ -> None
+  in
+  (* The constructors [e] builds around one call of the loop's function,
+     outermost first, as {!Recursion_plan.strategy} reads a chain: each
+     holds the next in the one argument that calls the function, the
+     innermost holding the call itself, and none calls it elsewhere. *)
+  let rec chain depth e =
+    match e with
+    | MLcons (_, constructor, args) -> (
+      let calling = List.filteri (fun _ (_, a) -> calls ~depth a > 0) (List.mapi (fun i a -> (i, a)) args) in
+      match calling with
+      | [(hole, a)] when calls ~depth a = 1 -> (
+        let cell = {constructor; hole; arguments = List.filteri (fun i _ -> i <> hole) args} in
+        match call ~depth a with
+        | Some (occurrence, arguments) -> Some {cells = [cell]; next = {target; occurrence; arguments}}
+        | None -> Option.map (fun c -> {c with cells = cell :: c.cells}) (chain depth a) )
+      | _ -> None )
+    | _ -> None
+  (* The calls of the loop's function in [e], under [depth] binders. *)
+  and calls ~depth e =
+    let n = ref 0 in
+    let rec walk depth e =
+      if Option.has_some (callee ~depth e) then incr n
+      else
+        match e with
+        | MLapp (f, args) ->
+          walk depth f;
+          List.iter (walk depth) args
+        | MLlam (_, _, b) -> walk (depth + 1) b
+        | MLletin (_, _, a, b, _) ->
+          walk depth a;
+          walk (depth + 1) b
+        | MLcase (_, s, branches) ->
+          walk depth s;
+          Array.iter (fun (ids, _, _, b) -> walk (depth + List.length ids) b) branches
+        | MLfix (_, ids, funs, _, _) -> Array.iter (walk (depth + Array.length ids)) funs
+        | e -> Mlutil.ast_iter (walk depth) e
+    in
+    walk depth e;
+    !n
+  in
   let rec lower depth e =
     match recognise depth e with
     | t when continues t = [] -> Return e
@@ -63,6 +106,8 @@ let tail_loop ?(inlined = fun _ -> None) ~effects ~target ~callee body =
       lower depth a
     | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Bind -> (
       match List.rev args with
+      | MLlam (x, ty, k) :: action :: _ when frames && calls ~depth action > 0 ->
+        Resume {binder = x; binder_type = ty; value = lower depth action; body = lower (depth + 1) k}
       | MLlam (x, ty, k) :: action :: _ ->
         Let {binder = x; binder_type = ty; value = action; body = lower (depth + 1) k}
       | _ -> Return e )
@@ -78,6 +123,8 @@ let tail_loop ?(inlined = fun _ -> None) ~effects ~target ~callee body =
         | _, _ :: _ -> Return e
       in
       enter depth f args
+    | MLletin (x, ty, a, b, _) when frames && calls ~depth a > 0 ->
+      Resume {binder = x; binder_type = ty; value = lower depth a; body = lower (depth + 1) b}
     | MLletin (x, ty, a, b, _) -> Let {binder = x; binder_type = ty; value = a; body = lower (depth + 1) b}
     | MLcase (ty, s, branches) ->
       Match
@@ -90,6 +137,8 @@ let tail_loop ?(inlined = fun _ -> None) ~effects ~target ~callee body =
                    {binders = ids; result_type; pattern; body = lower (depth + List.length ids) b} )
                  branches ) }
     | MLmagic (m, a) -> map_returns (fun v -> MLmagic (m, v)) (lower depth a)
+    | MLcons _ when modulo_cons -> (
+      match chain depth e with Some c -> Continue_into c | None -> Return e )
     | e -> Return e
   in
   lower 0 body
@@ -109,6 +158,8 @@ let lower plan program =
   let struc = Core.structure program in
   let effects = Core_effects.analyze struc in
   let functions, locals = Recursion_plan.tail_loops plan in
+  let modulo_cons, local_modulo_cons = Recursion_plan.modulo_cons_loops plan in
+  let frame_functions, frame_locals = Recursion_plan.frame_loops plan in
   let defs = ref Names.GlobRef.Map_env.empty in
   Modutil.struct_iter
     (fun d ->
@@ -121,12 +172,19 @@ let lower plan program =
   let generated (fd : ml_fix_def) =
     Ml_type_util.declared_parameters (Mlutil.type_simpl fd.fd_type) (Mlutil.read_spines fd.fd_body)
   in
-  let inlined r (use : global_use) =
+  (* The body of a function lowered tail modulo cons, its partners' as they
+     are inlined into it, are read with Normalize's temporaries put back, as
+     the plan reads its chains. *)
+  let read ~builds fd =
+    let parameters, inner = generated fd in
+    (parameters, if builds then Recursion_plan.restore_temporaries inner else inner)
+  in
+  let inlined ~builds r (use : global_use) =
     let occurrence = Global_use.occurrence use in
     List.find_map
       (fun (i : Recursion_plan.inlining) ->
         if List.exists (Occurrence.equal occurrence) i.continued then
-          Option.map generated (Names.GlobRef.Map_env.find_opt i.partner !defs)
+          Option.map (read ~builds) (Names.GlobRef.Map_env.find_opt i.partner !defs)
         else None )
       (Recursion_plan.inlinings_in plan r)
   in
@@ -140,19 +198,26 @@ let lower plan program =
       List.iter
         (fun (fd : ml_fix_def) ->
           let body = Mlutil.read_spines fd.fd_body in
-          if List.exists (Names.GlobRef.UserOrd.equal fd.fd_ref) functions then begin
-            let parameters, inner = generated fd in
+          let builds = List.exists (Names.GlobRef.UserOrd.equal fd.fd_ref) modulo_cons in
+          let frames = List.exists (Names.GlobRef.UserOrd.equal fd.fd_ref) frame_functions in
+          if builds || frames || List.exists (Names.GlobRef.UserOrd.equal fd.fd_ref) functions then begin
+            let parameters, inner = read ~builds fd in
             let arity = List.length parameters in
             let callee ~depth:_ = function
               | MLglob use when Names.GlobRef.UserOrd.equal use.callee fd.fd_ref -> Some arity
               | _ -> None
             in
             let target = Loop.Function fd.fd_ref in
-            add target parameters (tail_loop ~inlined:(inlined fd.fd_ref) ~effects ~target ~callee inner)
+            add target parameters
+              (tail_loop ~inlined:(inlined ~builds fd.fd_ref) ~modulo_cons:builds ~frames ~effects ~target ~callee
+                 inner )
           end;
           List.iter
             (fun (occ, funs) ->
+              let builds = List.exists (Occurrence.equal occ) local_modulo_cons in
+              let frames = List.exists (Occurrence.equal occ) frame_locals in
               let parameters, inner = Mlutil.collect_lams funs.(0) in
+              let inner = if builds then Recursion_plan.restore_temporaries inner else inner in
               let arity = List.length parameters in
               let callee ~depth f =
                 match strip f with
@@ -160,8 +225,8 @@ let lower plan program =
                 | _ -> None
               in
               let target = Loop.Member (occ, 0) in
-              add target parameters (tail_loop ~effects ~target ~callee inner) )
-            (List.rev (fixpoints locals [] body)) )
+              add target parameters (tail_loop ~modulo_cons:builds ~frames ~effects ~target ~callee inner) )
+            (List.rev (fixpoints (locals @ local_modulo_cons @ frame_locals) [] body)) )
         (Mlutil.term_defs d) )
     (fun _ -> ())
     (fun _ -> ())

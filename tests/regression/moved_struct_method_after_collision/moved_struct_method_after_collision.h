@@ -3,6 +3,7 @@
 
 #include "crane_fn.h"
 #include "obj.h"
+#include "small_vector.h"
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -259,13 +260,46 @@ struct MovedStructMethodAfterCollision {
 };
 
 inline Nat Shape::size() const {
-  if (std::holds_alternative<typename Shape::Circle>(this->v())) {
-    const auto &[r0] = std::get<typename Shape::Circle>(this->v());
-    return MovedStructMethodAfterCollision::Helpers::inc(r0);
-  } else {
-    const auto &[s0, t0] = std::get<typename Shape::Square>(this->v());
-    return s0.add(t0->size());
+  const Shape *_self = this;
+
+  /// CraneEnter: captures varying parameters for each recursive call.
+  struct CraneEnter {
+    const Shape *_self;
+  };
+
+  /// CraneCont_Square: saves [s0], resumes after recursive call, then processes
+  /// rest.
+  struct CraneCont_Square {
+    Nat s0;
+  };
+
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Square>;
+  Nat _result{};
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{_self});
+  /// Loopified size: CraneEnter -> CraneCont_Square.
+  while (!_stack.empty()) {
+    CraneFrame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
+      const Shape *_self = _f._self;
+      auto &&_sv = *_self;
+      if (std::holds_alternative<typename Shape::Circle>(_sv.v())) {
+        const auto &[r0] = std::get<typename Shape::Circle>(_sv.v());
+        _result = MovedStructMethodAfterCollision::Helpers::inc(r0);
+      } else {
+        const auto &[s0, t0] = std::get<typename Shape::Square>(_sv.v());
+        _stack.emplace_back(CraneCont_Square{s0});
+        _stack.emplace_back(CraneEnter{crane_raw(t0)});
+      }
+    } else {
+      auto _f = std::move(std::get<CraneCont_Square>(_frame));
+      Nat s0 = std::move(_f.s0);
+      _result = s0.add(std::move(_result));
+    }
   }
+  return _result;
 }
 
 #endif // INCLUDED_MOVED_STRUCT_METHOD_AFTER_COLLISION

@@ -54,6 +54,7 @@ type tmc_branch_info = {
       (** Constructor cells, outermost first, innermost last *)
   tmc_rec_args : cpp_expr list;
       (** Arguments to the innermost recursive call *)
+  tmc_call : cpp_expr;  (** The innermost recursive call *)
 }
 
 (** Where a loop assembles its result, decided once per function from the
@@ -159,30 +160,63 @@ let make_cell ~constructor ~factory ~cell_ty ~ctor_name args idx =
     tca_n_args = n_args;
     tca_ptr_fields = uptr_idxs }
 
-(** The return expression [expr] as the branch of one of the recursion plan's
-    [chains] ({!Recursion_plan.strategy}): the factory calls it nests, each
-    building its chain cell's constructor, holding the next in the cell's
-    hole, the innermost a recursive call.  The plan counts a hole among the
-    constructor's declared arguments; a factory call stores them reversed. *)
-let planned_branch chains check expr =
-  let rec follow expr cells =
-    let expr = match expr with CPPmove e -> e | e -> e in
-    match (cells, is_ctor_factory_call expr) with
-    | (cell : Recursion_plan.cell) :: inner, Some (c, factory, cell_ty, ctor_name, args)
-      when Common.globref_equal c cell.constructor ->
-      let idx = List.length args - 1 - cell.hole in
-      let held = if idx < 0 then None else List.nth_opt args idx in
-      let this = make_cell ~constructor:c ~factory ~cell_ty ~ctor_name args idx in
-      Option.bind held (fun held ->
-          match inner with
-          | [] -> Option.map (fun cs -> {tmc_cells = [this]; tmc_rec_args = cs.cs_args}) (check held)
-          | _ ->
-            Option.map (fun br -> {br with tmc_cells = this :: br.tmc_cells}) (follow held inner) )
-    | _ -> None
-  in
-  List.find_map
-    (fun (ch : Recursion_plan.chain) -> follow expr (ch.around @ [ch.innermost]))
+(** The constructors a branch builds around a recursive call, outermost
+    first, each with the argument, in its declared order, that is its hole;
+    and the occurrence the call is made of, where it is known. *)
+type shape = {
+  constructors : (GlobRef.t * int) list;
+  call : Miniml.Occurrence.t option;
+}
+
+(** The shapes of the recursion plan's [chains] ({!Recursion_plan.strategy}),
+    which do not say which call each is around. *)
+let chain_shapes chains =
+  List.map
+    (fun (ch : Recursion_plan.chain) ->
+      { constructors = List.map (fun (c : Recursion_plan.cell) -> (c.constructor, c.hole)) (ch.around @ [ch.innermost]);
+        call = None } )
     chains
+
+(** The shapes of the turns [into] of a loop's ControlIR that build what
+    they return, each around the call it continues by. *)
+let control_shapes into =
+  List.map
+    (fun (c : Control_ir.Term.continue_into) ->
+      { constructors = List.map (fun (cell : Control_ir.Term.cell) -> (cell.constructor, cell.hole)) c.cells;
+        call = Some c.next.occurrence } )
+    into
+
+(** The return expression [expr] as the branch of the first of [shapes] it
+    has: the factory calls it nests, each building its cell's constructor,
+    holding the next in the cell's hole, the innermost a recursive call,
+    made of the shape's call where it says.  A hole is counted among the
+    constructor's declared arguments; a factory call stores them reversed. *)
+let branch_along shapes check expr =
+  let rec follow expr call = function
+    | [] -> None
+    | (constructor, hole) :: inner -> (
+      let expr = match expr with CPPmove e -> e | e -> e in
+      match is_ctor_factory_call expr with
+      | Some (c, factory, cell_ty, ctor_name, args) when Common.globref_equal c constructor ->
+        let idx = List.length args - 1 - hole in
+        let held = if idx < 0 then None else List.nth_opt args idx in
+        let this = make_cell ~constructor:c ~factory ~cell_ty ~ctor_name args idx in
+        Option.bind held (fun held ->
+            match inner with
+            | [] ->
+              let made_of_call =
+                match (call, Loopify_analysis.made_of held) with
+                | None, _ -> true
+                | Some o, Some o' -> Miniml.Occurrence.equal o o'
+                | Some _, None -> false
+              in
+              if made_of_call then
+                Option.map (fun cs -> {tmc_cells = [this]; tmc_rec_args = cs.cs_args; tmc_call = held}) (check held)
+              else None
+            | _ -> Option.map (fun br -> {br with tmc_cells = this :: br.tmc_cells}) (follow held call inner) )
+      | Some _ | None -> None )
+  in
+  List.find_map (fun sh -> follow expr sh.call sh.constructors) shapes
 (** {3 TMC transformation}
 
     Converts non-tail recursive functions where the recursive call is wrapped
@@ -465,7 +499,7 @@ let read_before_step ~cursor_id ~field varying shadow_params br =
           | [] -> e)
       varying br.tmc_rec_args
   in
-  (List.rev !decls, {tmc_cells = cells; tmc_rec_args = rec_args})
+  (List.rev !decls, {br with tmc_cells = cells; tmc_rec_args = rec_args})
 
 (** {2:reuse-cursor Perceus reuse cursor}
 
@@ -726,9 +760,9 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ?(derefs = []) ~storage br
     (the lambda returns and the [while] loop naturally continues).
 
     @param storage where the result is assembled
-    @param branch  a returned expression as a TMC branch ({!planned_branch})
+    @param branch  a returned expression as a TMC branch ({!branch_along})
     @param check   Call checker for identifying recursive calls *)
-let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~storage ~branch check
+let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~jumped ~storage ~branch check
     varying shadow_params =
   (* Emit code for a non-tail return in the TMC context.
      [suffix] is appended after TMC branches: empty inside visitor lambdas,
@@ -742,6 +776,7 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~storage ~branch check
       (* TMC branch — allocate cell(s) with holes, patch, continue *)
       match branch e with
       | Some br ->
+        jumped br.tmc_call;
         build_tmc_branch_stmts ~cursor_used ~derefs ~storage br varying shadow_params
         @ suffix
       | None ->
@@ -753,7 +788,7 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~storage ~branch check
     { rc_check = check;
       rc_varying = varying;
       rc_shadow_params = shadow_params;
-      rc_jumped = ignore }
+      rc_jumped = jumped }
   in
   generic_rewrite_stmt
     { trc_inner = inner_rc;
@@ -767,18 +802,22 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~storage ~branch check
     destination-passing style.
 
     @param param_inits Optional custom initializers for shadow variables
-    @param chains the recursion plan's chains ({!Recursion_plan.strategy})
+    @param jumped told each recursive call rewritten: a tail call into a jump,
+                  and the call a branch's cells are built around
+    @param varying which parameters the loop varies, where the caller knows;
+                   read off the calls otherwise
+    @param shapes the branches' shapes ({!branch_along})
     @param check Call checker for identifying recursive calls
     @param params Function parameters
     @param ret_ty Return type
     @param body Function body
     @return Transformed body with TMC while loop *)
-let transform_tmc ?(param_inits = []) ~chains tparams check params ret_ty body =
-  let branch = planned_branch chains check in
+let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?varying ~shapes tparams check params ret_ty body =
+  let branch = branch_along shapes check in
   let storage = storage_of ret_ty in
   let { ss_varying = varying; ss_varying_params = varying_params;
         ss_shadow_params = shadow_params; ss_subs = subs } =
-    build_shadow_setup tparams check params body
+    build_shadow_setup ?varying tparams check params body
   in
   (* Where the result is assembled, and the hole [_write] starts at. *)
   let head_ty = match storage with
@@ -827,7 +866,7 @@ let transform_tmc ?(param_inits = []) ~chains tparams check params ret_ty body =
   let cursor_used = ref false in
   let body'' =
     List.map
-      (rewrite_tmc_visit_stmt ~cursor_used ~storage ~branch check varying shadow_params)
+      (rewrite_tmc_visit_stmt ~cursor_used ~jumped ~storage ~branch check varying shadow_params)
       body'
     |> strip_unnecessary_blocks
     |> rewrite_borrowed_shadow_uses shadow_params

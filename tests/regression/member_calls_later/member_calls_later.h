@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MEMBER_CALLS_LATER
 #define INCLUDED_MEMBER_CALLS_LATER
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <atomic>
 #include <memory>
@@ -149,12 +150,55 @@ public:
 };
 
 inline Nat Tree::deeper() const {
-  if (std::holds_alternative<typename Tree::Leaf>(this->v())) {
-    return Nat::o();
-  } else {
-    const auto &[a0, a1] = std::get<typename Tree::Node>(this->v());
-    return Nat::s(Helper::pick(a0->deeper(), a1->deeper()));
+  const Tree *_self = this;
+
+  /// CraneEnter: captures varying parameters for each recursive call.
+  struct CraneEnter {
+    const Tree *_self;
+  };
+
+  /// CraneCont_Node: saves [a1], resumes after recursive call, then processes
+  /// rest.
+  struct CraneCont_Node {
+    const Tree *a1;
+  };
+
+  /// CraneCont_Node_1: saves [_tmp2], resumes after recursive call, then
+  /// processes rest.
+  struct CraneCont_Node_1 {
+    Nat _tmp2;
+  };
+
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
+  Nat _result{};
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{_self});
+  /// Loopified deeper: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
+  while (!_stack.empty()) {
+    CraneFrame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
+      const Tree *_self = _f._self;
+      auto &&_sv = *_self;
+      if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
+        _result = Nat::o();
+      } else {
+        const auto &[a0, a1] = std::get<typename Tree::Node>(_sv.v());
+        _stack.emplace_back(CraneCont_Node{crane_raw(a1)});
+        _stack.emplace_back(CraneEnter{crane_raw(a0)});
+      }
+    } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
+      auto _f = std::move(std::get<CraneCont_Node>(_frame));
+      const Tree &a1 = *_f.a1;
+      _stack.emplace_back(CraneCont_Node_1{std::move(_result)});
+      _stack.emplace_back(CraneEnter{_f.a1});
+    } else {
+      auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
+      _result = Nat::s(Helper::pick(std::move(_f._tmp2), std::move(_result)));
+    }
   }
+  return _result;
 }
 
 #endif // INCLUDED_MEMBER_CALLS_LATER
