@@ -156,6 +156,9 @@ val strategy_of_let : Miniml.Occurrence.t -> strategy option
     ({!Loopify_frame.find_adopted}). *)
 val adoptable : Names.GlobRef.t -> Miniml.Occurrence.t list
 
+(** {!adoptable} in the plan [t]. *)
+val adoptable_in : t -> Names.GlobRef.t -> Miniml.Occurrence.t list
+
 (** The calls of one partner of a function that Loopify inlines into it,
     by the occurrences of the global's uses they are made of
     ({!Minicpp.call_sig.cs_occurrence}): [continued], the tail calls, which
@@ -192,6 +195,10 @@ val inlined : Names.GlobRef.t -> bool
     the [invoked] calls of the first of {!inlinings} that has some, whose
     partner takes parameters and whose body calls [r]. *)
 val adopted_invocations : Names.GlobRef.t -> Miniml.Occurrence.t list option
+
+(** The inlining of the partner whose invoked calls the machine of the
+    function [r] adopts in the plan [t] ({!adopted_invocations}). *)
+val adopted_partner_in : t -> Names.GlobRef.t -> inlining option
 
 (** {!adoptable} for the function [member] of the local fixpoint
     [occurrence], lowered as a helper of its own ({!Lifted.fixpoint}): the

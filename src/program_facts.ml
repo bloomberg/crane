@@ -27,7 +27,10 @@ let analyze_program normalized =
     parameter_ownership = Ownership.summarize ~receiver struc;
     recursive_groups;
     recursion;
-    control = Lower_control.lower recursion normalized }
+    control =
+      Lower_control.lower
+        ~methods:(fun r -> Option.has_some (Method_registry.is_registered_method methods r))
+        recursion normalized }
 
 let used_customs struc =
   let used = ref Ref.User.Set.empty in

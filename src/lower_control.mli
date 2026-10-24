@@ -28,7 +28,9 @@
     And the loops of the machines with a stack of frames
     ({!Recursion_plan.frame_loops}): a function recursing by a call that is
     not a tail call is a loop where each let, or sequential bind, whose
-    right-hand side makes a recursive call is a [Resume].  Loopify lowers
+    right-hand side makes a recursive call is a [Resume].  What its machine
+    adopts, a local fixpoint calling back into it or a partner's body run
+    in place of a call, is an [Entry] of it.  Loopify lowers
     these, and under [CRANE_CHECK_IR] the calls its frame transform enters
     the machine by must be their [Continue]s, those it resumes after the
     [Continue]s in a [Resume]'s value.
@@ -45,6 +47,21 @@ type t
 
 val empty : t
 
+(** What the machine of a loop adopts as a further entry
+    ({!Control_ir.Term.entry}), as the recursion plan has it: the local
+    fixpoint of one member at an occurrence ({!Recursion_plan.adoptable}),
+    or the body of the partner [partner], its [parameters] innermost first,
+    run in place of its calls [invoked]
+    ({!Recursion_plan.adopted_invocations}). *)
+type adoption =
+  | Fixpoint of Miniml.Occurrence.t
+  | Partner of {
+      partner : Names.GlobRef.t;
+      invoked : Miniml.Occurrence.t list;
+      parameters : (Miniml.ml_ident * Miniml.ml_type) list;
+      body : Miniml.ml_ast;
+    }
+
 (** [tail_loop ~effects ~target ~callee body] is [body], standing under the
     parameters of the loop [target], as that loop's body: [callee ~depth f]
     is the number of parameters of the loop's function where [f], under
@@ -56,20 +73,28 @@ val empty : t
     them is a [Continue_into], the chain read as
     {!Recursion_plan.strategy} reads it.  With [frames], a let or a
     sequential bind whose right-hand side calls the function is a [Resume]
-    of its continuation, the right-hand side read as a body is. *)
+    of its continuation, the right-hand side read as a body is.  A machine
+    [adopted] has a further entry: the adopted fixpoint is an [Entry] where
+    it is applied, entered by a [Continue] of it, or where a let binds it,
+    the reads of the let's binder in its scope continuing it; the adopted
+    partner's body is an [Entry] around the whole body, its calls run in
+    place continuing it.  An entry's body continues the loop too. *)
 val tail_loop :
   ?inlined:(Miniml.global_use -> ((Miniml.ml_ident * Miniml.ml_type) list * Miniml.ml_ast) option) ->
   ?modulo_cons:bool ->
   ?frames:bool ->
+  ?adopted:adoption ->
   effects:Core_effects.t ->
   target:Control_ir.Loop.t ->
   callee:(depth:int -> Miniml.ml_ast -> int option) ->
   Miniml.ml_ast ->
   Control_ir.Term.t
 
-(** [lower plan p] lowers the loops the plan [plan] of the normalized
-    program [p] takes. *)
-val lower : Recursion_plan.t -> Core.normalized Core.program -> t
+(** [lower ~methods plan p] lowers the loops the plan [plan] of the
+    normalized program [p] takes.  A function generated as a method,
+    [methods] says, adopts nothing into its machine, as Loopify lowers a
+    method ({!Loopify.transform_method_own}). *)
+val lower : methods:(Names.GlobRef.t -> bool) -> Recursion_plan.t -> Core.normalized Core.program -> t
 
 (** Make [t] the extraction's, the one {!loop} reads. *)
 val install : t -> unit

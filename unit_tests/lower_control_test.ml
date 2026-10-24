@@ -159,3 +159,75 @@ let () =
   check "the tail call after it continues" (continues_at [inner; tail] t);
   check "a parameter passed on under the resumed binder is kept"
     (invariant_parameters {loop = target; parameters = [(id "n", nat); (id "acc", nat)]; body = t} = [false; true])
+
+(* A machine adopting a local fixpoint of one member: where it is applied,
+   an Entry of its function, entered by a Continue of it; its body
+   continues both the fixpoint and the function. *)
+let lower_adopting adopted body =
+  Lower_control.tail_loop ~frames:true ~adopted ~effects:Core_effects.empty ~target ~callee body
+
+let () =
+  (* (fix go k := match k with O => count n acc | S j => let y := go j in count n y) acc,
+     under [n; acc]. *)
+  let fix = Occurrence.fresh () and go_read = Occurrence.fresh () in
+  let back = use () and back' = use () in
+  let go_body =
+    MLcase
+      ( nat,
+        fresh_rel 1,
+        [| ([], nat, Pwild, call back [fresh_rel 4; fresh_rel 3]);
+           ( [(id "j", nat)],
+             nat,
+             Pwild,
+             MLletin
+               (id "y", nat, MLapp (MLrel (3, go_read), [fresh_rel 1]), call back' [fresh_rel 6; fresh_rel 1], Occurrence.fresh ())
+           ) |] )
+  in
+  let fixpoint = MLfix (0, [|(Id.of_string "go", Tarr (nat, nat))|], [|MLlam (id "k", nat, go_body)|], false, fix) in
+  let t = lower_adopting (Lower_control.Fixpoint fix) (MLapp (fixpoint, [fresh_rel 1])) in
+  ( match t with
+  | Term.Entry {entered; name = None; scope = Continue c} ->
+    check "the entry is the fixpoint's function" (Loop.equal entered.loop (Loop.Member (fix, 0)));
+    check "over its parameters" (List.length entered.parameters = 1);
+    check "the fixpoint applied enters it" (Loop.equal c.target entered.loop && Occurrence.equal c.occurrence fix)
+  | _ -> check "an adopted fixpoint applied is an entry" false );
+  check "an entry's body continues the function and the fixpoint"
+    (List.equal Occurrence.equal (continues t)
+       [Global_use.occurrence back; go_read; Global_use.occurrence back'; fix] );
+  check "only the call a let binds is resumed after" (List.equal Occurrence.equal (resumed t) [go_read]);
+  check "the function's parameters are read under the entry's binders"
+    (invariant_parameters {loop = target; parameters = [(id "n", nat); (id "acc", nat)]; body = t} = [true; false]);
+  check "a fixpoint not adopted is returned" (lower_frames (MLapp (fixpoint, [fresh_rel 1])) = Term.Return (MLapp (fixpoint, [fresh_rel 1])));
+  (* let g := fix go k := ... in g n: the let's binder names the entry. *)
+  let g_read = Occurrence.fresh () in
+  let t = lower_adopting (Lower_control.Fixpoint fix) (MLletin (id "g", Tarr (nat, nat), fixpoint, MLapp (MLrel (1, g_read), [fresh_rel 3]), Occurrence.fresh ())) in
+  match t with
+  | Term.Entry {name = Some (x, _); scope = Continue c; _} ->
+    check "the let's binder is the entry's name" (x = id "g");
+    check "a call by that name enters it" (Occurrence.equal c.occurrence g_read)
+  | _ -> check "a let binding an adopted fixpoint is an entry" false
+
+(* A machine adopting a partner's body run in place of its calls: an Entry
+   around the whole body, entered where a call is run in place. *)
+let () =
+  let partner = r "partner" in
+  let invoked = Global_use.monomorphic partner and other = Global_use.monomorphic partner and back = use () in
+  let adopted =
+    Lower_control.Partner
+      { partner;
+        invoked = [Global_use.occurrence invoked];
+        parameters = [(id "p", nat)];
+        body = call back [fresh_rel 1; fresh_rel 1] }
+  in
+  (* let x := partner n in plus x (partner acc), only the first adopted. *)
+  let body =
+    MLletin (id "x", nat, call invoked [fresh_rel 2], plus (fresh_rel 1) (call other [fresh_rel 2]), Occurrence.fresh ())
+  in
+  ( match lower_adopting adopted body with
+  | Term.Entry {entered; name = None; scope = Resume {value = Continue c; body = Return _; _}} ->
+    check "the entry is the partner's body" (Loop.equal entered.loop (Loop.Function partner));
+    check "the call run in place enters it" (Occurrence.equal c.occurrence (Global_use.occurrence invoked));
+    check "and the partner's call of the function continues the function's loop"
+      (continues entered.body = [Global_use.occurrence back])
+  | _ -> check "an adopted partner is an entry around the body" false );
+  check "a body running no adopted call has no entry" (lower_adopting adopted (call other [fresh_rel 1]) = lower_frames (call other [fresh_rel 1]))

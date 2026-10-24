@@ -14,7 +14,11 @@
     around a hole the next turn fills.  And those of a machine with a
     stack: a recursive call whose result a let or a sequential bind binds
     is a [Resume], where the machine resumes once the call has returned.
-    {!Lower_control} produces them. *)
+    A machine may have more than one way in: a local fixpoint calling back
+    into the function, or the body of a partner run in place of a call
+    that is not a tail call, is an [Entry] of the function's machine rather
+    than a machine of its own, for two machines cannot unwind each other's
+    stack.  {!Lower_control} produces them. *)
 
 (** What a loop is the loop of: a function of the program, or the member
     [m] of the local fixpoint [occurrence]. *)
@@ -35,6 +39,7 @@ module Term : sig
     | Continue of continue_
     | Continue_into of continue_into
     | Resume of resume
+    | Entry of entry
 
   (** The loop [loop] over [parameters], outermost first, running [body]. *)
   and loop = {
@@ -101,10 +106,25 @@ module Term : sig
     value : t;
     body : t;
   }
+
+  (** A further way into the machine of the loop it stands in, while
+      [scope] runs: the loop [entered], a [Continue] of which enters the
+      machine there as one of the enclosing loop does.  It is the function
+      of a local fixpoint of one member ({!Loop.Member}), its body under
+      the fixpoint's name and its parameters, [name] the binder [scope]
+      reads it by where a let binds it; or the body of a partner of the
+      function ({!Loop.Function}), under its parameters alone, entered by
+      the calls of the partner run in place.  Its [Continue]s of the
+      enclosing loop re-enter that loop. *)
+  and entry = {
+    entered : loop;
+    name : (Miniml.ml_ident * Miniml.ml_type) option;
+    scope : t;
+  }
 end
 
 (** The occurrences of the calls [t] continues a loop by, in order, those
-    resumed after included. *)
+    resumed after and those of its entries' loops included. *)
 val continues : Term.t -> Miniml.Occurrence.t list
 
 (** The occurrences of the calls [t] enters its loop by afresh and resumes
@@ -114,6 +134,9 @@ val resumed : Term.t -> Miniml.Occurrence.t list
 (** The turns of [t] that build what they return, tail modulo cons, in
     order. *)
 val continues_into : Term.t -> Term.continue_into list
+
+(** The loops the entries in [t] enter, in order. *)
+val entries : Term.t -> Term.loop list
 
 (** [t] with [f] applied to the value of every [Return] in it. *)
 val map_returns : (Miniml.ml_ast -> Miniml.ml_ast) -> Term.t -> Term.t

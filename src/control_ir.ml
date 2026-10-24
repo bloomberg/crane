@@ -22,6 +22,7 @@ module Term = struct
     | Continue of continue_
     | Continue_into of continue_into
     | Resume of resume
+    | Entry of entry
 
   and loop = {
     loop : Loop.t;
@@ -72,6 +73,12 @@ module Term = struct
     value : t;
     body : t;
   }
+
+  and entry = {
+    entered : loop;
+    name : (Miniml.ml_ident * Miniml.ml_type) option;
+    scope : t;
+  }
 end
 
 open Term
@@ -84,18 +91,24 @@ let continues t =
     | Return _ -> acc
     | Continue c | Continue_into {next = c; _} -> c.occurrence :: acc
     | Resume r -> go (go acc r.value) r.body
+    | Entry e -> go (go acc e.entered.body) e.scope
   in
   List.rev (go [] t)
 
 let resumed t =
-  let rec go acc = function
-    | Loop l -> go acc l.body
-    | Let l -> go acc l.body
-    | Match m -> List.fold_left (fun acc (b : branch) -> go acc b.body) acc m.branches
-    | Return _ | Continue _ | Continue_into _ -> acc
-    | Resume r -> go (List.rev_append (continues r.value) acc) r.body
+  (* [valued]: whether [t] is run for a Resume's value, where every turn it
+     ends in is resumed after.  The loop an entry enters returns to the call
+     entering it, and is resumed after only where that call is. *)
+  let rec go valued acc = function
+    | Loop l -> go valued acc l.body
+    | Let l -> go valued acc l.body
+    | Match m -> List.fold_left (fun acc (b : branch) -> go valued acc b.body) acc m.branches
+    | Return _ -> acc
+    | Continue c | Continue_into {next = c; _} -> if valued then c.occurrence :: acc else acc
+    | Resume r -> go valued (go true acc r.value) r.body
+    | Entry e -> go valued (go false acc e.entered.body) e.scope
   in
-  List.rev (go [] t)
+  List.rev (go false [] t)
 
 let continues_into t =
   let rec go acc = function
@@ -105,6 +118,18 @@ let continues_into t =
     | Return _ | Continue _ -> acc
     | Continue_into c -> c :: acc
     | Resume r -> go (go acc r.value) r.body
+    | Entry e -> go (go acc e.entered.body) e.scope
+  in
+  List.rev (go [] t)
+
+let entries t =
+  let rec go acc = function
+    | Loop l -> go acc l.body
+    | Let l -> go acc l.body
+    | Match m -> List.fold_left (fun acc (b : branch) -> go acc b.body) acc m.branches
+    | Return _ | Continue _ | Continue_into _ -> acc
+    | Resume r -> go (go acc r.value) r.body
+    | Entry e -> go (go (e.entered :: acc) e.entered.body) e.scope
   in
   List.rev (go [] t)
 
@@ -115,6 +140,13 @@ let rec map_returns f = function
   | Return v -> Return (f v)
   | (Continue _ | Continue_into _) as c -> c
   | Resume r -> Resume {r with body = map_returns f r.body}
+  | Entry e -> Entry {e with scope = map_returns f e.scope}
+
+(* The binders the body of the loop an entry enters stands under, inside
+   the scope the entry stands in: a local fixpoint's name, and the loop's
+   parameters. *)
+let entered_binders (l : loop) =
+  (match l.loop with Loop.Member _ -> 1 | Loop.Function _ -> 0) + List.length l.parameters
 
 let invariant_parameters (l : loop) =
   let n = List.length l.parameters in
@@ -129,6 +161,9 @@ let invariant_parameters (l : loop) =
     | Continue c | Continue_into {next = c; _} ->
       if Loop.equal c.target l.loop then (depth, c.arguments) :: acc else acc
     | Resume r -> turns (depth + 1) (turns depth acc r.value) r.body
+    | Entry e ->
+      let within = turns (depth + entered_binders e.entered) acc e.entered.body in
+      turns (depth + Option.cata (fun _ -> 1) 0 e.name) within e.scope
   in
   let turns = turns 0 [] l.body in
   List.init n (fun i ->

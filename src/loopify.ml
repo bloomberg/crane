@@ -778,9 +778,6 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
     declined "recursive call in a branch condition or dispatch scrutinee"
   else
   let frame () =
-    (* An adopted body enters the machine by calls of its own, which the
-       loop's ControlIR does not hold. *)
-    let loop = if Option.has_some adopted then None else loop in
     { nt_body =
         checked_frame_machine loop check (fun entered ->
             transform_nontail ?fn_name ?adopted ?entered_by ~entered ?binders check tparams params ret_ty body );

@@ -81,7 +81,7 @@ type t = {
   resumes : resume list Ref.User.Map.t;
   adoptable : Occurrence.t list Ref.User.Map.t;
   inlinings : inlining list Ref.User.Map.t;
-  adopted_invocations : Occurrence.t list Ref.User.Map.t;
+  adopted : inlining Ref.User.Map.t;  (* the partner whose invoked body the machine adopts *)
   kinds : kind Ref.User.Map.t;  (* per definition, its own calls *)
   let_lambdas : Occurrence.t list;  (* the lets binding a lambda *)
 }
@@ -96,7 +96,7 @@ let empty =
     resumes = Ref.User.Map.empty;
     adoptable = Ref.User.Map.empty;
     inlinings = Ref.User.Map.empty;
-    adopted_invocations = Ref.User.Map.empty;
+    adopted = Ref.User.Map.empty;
     kinds = Ref.User.Map.empty;
     let_lambdas = [] }
 
@@ -791,10 +791,10 @@ let inlinings_of ~effects ~defs ~members self fd =
   in
   match flow_body self with Some body -> plan [] [] body | None -> []
 
-(* The invocations the machine of [self] adopts, of those its [inlinings]
-   leave: the first partner's that has some, and parameters, and whose body
-   calls [self]. *)
-let adopted_invocations_of ~defs self inlinings =
+(* The partner whose invocations the machine of [self] adopts, of those its
+   [inlinings] leave: the first that has some, and parameters, and whose
+   body calls [self]. *)
+let adopted_of ~defs self inlinings =
   let calls_self g =
     match Ref.User.Map.find_opt g defs with
     | None -> false
@@ -812,7 +812,7 @@ let adopted_invocations_of ~defs self inlinings =
     | None -> false
   in
   List.find_map
-    (fun i -> if i.invoked <> [] && has_parameters i.partner && calls_self i.partner then Some i.invoked else None)
+    (fun i -> if i.invoked <> [] && has_parameters i.partner && calls_self i.partner then Some i else None)
     inlinings
 
 (* A group with partners is planned as one: Loopify inlines the partners
@@ -977,10 +977,9 @@ let analyze groups program =
         flow_fixpoints ~names (Lexenv.depth lex) body )
       defs
   in
-  let adopted_invocations =
+  let adopted =
     Ref.User.Map.fold
-      (fun r is m ->
-        match adopted_invocations_of ~defs r is with Some occs -> Ref.User.Map.add r occs m | None -> m )
+      (fun r is m -> match adopted_of ~defs r is with Some i -> Ref.User.Map.add r i m | None -> m)
       inlinings Ref.User.Map.empty
   in
   { groups = plans;
@@ -992,7 +991,7 @@ let analyze groups program =
     resumes;
     adoptable;
     inlinings;
-    adopted_invocations;
+    adopted;
     kinds;
     let_lambdas =
       Ref.User.Map.fold
@@ -1011,6 +1010,11 @@ let same_cell c c' = Common.globref_equal c.constructor c'.constructor && c.hole
 let same_chains =
   List.equal (fun c c' ->
       List.equal same_cell c.around c'.around && same_cell c.innermost c'.innermost )
+
+let same_inlining i i' =
+  Common.globref_equal i.partner i'.partner
+  && List.equal Occurrence.equal i.continued i'.continued
+  && List.equal Occurrence.equal i.invoked i'.invoked
 
 let same_target t t' =
   match (t, t') with
@@ -1045,13 +1049,8 @@ let equal a b =
             && List.equal same_call r.after r'.after ) )
        a.resumes b.resumes
   && Ref.User.Map.equal (List.equal Occurrence.equal) a.adoptable b.adoptable
-  && Ref.User.Map.equal
-       (List.equal (fun i i' ->
-            Common.globref_equal i.partner i'.partner
-            && List.equal Occurrence.equal i.continued i'.continued
-            && List.equal Occurrence.equal i.invoked i'.invoked ) )
-       a.inlinings b.inlinings
-  && Ref.User.Map.equal (List.equal Occurrence.equal) a.adopted_invocations b.adopted_invocations
+  && Ref.User.Map.equal (List.equal same_inlining) a.inlinings b.inlinings
+  && Ref.User.Map.equal same_inlining a.adopted b.adopted
   && Ref.User.Map.equal ( = ) a.kinds b.kinds
   && List.equal Occurrence.equal a.let_lambdas b.let_lambdas
 
@@ -1177,8 +1176,9 @@ let strategy_at ~pointer_fields (occurrence, member) =
       else found )
     None !installed.locals
 
-let adoptable r =
-  Option.default [] (Ref.User.Map.find_opt r !installed.adoptable)
+let adoptable_in t r = Option.default [] (Ref.User.Map.find_opt r t.adoptable)
+
+let adoptable r = adoptable_in !installed r
 
 (* Copies of a fixpoint share its occurrence, and plan alike. *)
 let adoptable_at (occurrence, member) =
@@ -1215,7 +1215,9 @@ let inlined r =
     (fun _ is -> List.exists (fun i -> Names.GlobRef.UserOrd.equal i.partner r) is)
     !installed.inlinings
 
-let adopted_invocations r = Ref.User.Map.find_opt r !installed.adopted_invocations
+let adopted_partner_in t r = Ref.User.Map.find_opt r t.adopted
+
+let adopted_invocations r = Option.map (fun i -> i.invoked) (adopted_partner_in !installed r)
 
 (* A lambda a let binds does not call itself. *)
 let strategy_of_let occurrence =

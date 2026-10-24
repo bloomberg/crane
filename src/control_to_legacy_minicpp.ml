@@ -27,7 +27,7 @@ let loop_of ~lowerings r =
   match planned with
   | Some lowering when List.mem lowering lowerings && not (Option.has_some (Lifted.of_ref r)) -> (
     match Lower_control.loop (Control_ir.Loop.Function r) with
-    | Some (Loop l) when Control_ir.continues l.body <> [] ->
+    | Some (Loop l) when Control_ir.continues l.body <> [] && Control_ir.entries l.body = [] ->
       let builds = Control_ir.continues_into l.body <> [] in
       let shaped = match lowering with Tail -> not builds | Modulo_cons -> builds | Frames -> true in
       if shaped then Some (l, lowering)
