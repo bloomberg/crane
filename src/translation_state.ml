@@ -98,6 +98,10 @@ type translation_ctx = {
      ({!Gen_context.begin_body}): what its Core binders are binders of
      ({!Core_binder}). *)
   body_owner : GlobRef.t option;
+  (* Whether that body is a function's, generated as one, rather than a
+     constant's initialiser or a member's: Loopify lowers every local
+     fixpoint of a function's body, and only the tail loops of others. *)
+  body_function : bool;
   (* Nesting depth of let ... in expressions; used for unique name
      generation in nested scopes. *)
   current_letin_depth : int;
@@ -190,6 +194,7 @@ let tctx =
         current_cpp_return_type = None;
         env_types = Lexenv.empty;
         body_owner = None;
+        body_function = false;
         current_letin_depth = 0;
         move_plan = Ownership_plan.empty;
         match_param_counter = 0;

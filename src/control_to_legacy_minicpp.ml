@@ -211,9 +211,9 @@ let kept_positions (l : Control_ir.Term.loop) =
 
 (* Under [CRANE_CHECK_IR]: the statement [loop] a local fixpoint is generated
    as, against the one Loopify makes of the Y-combinator [self_passing] it
-   was generated as before. *)
-let check_local ~tparams ~name ~self_passing loop =
-  if compare (Loopify.lower_local_tail_loops ~tparams (self_passing ())) [loop] <> 0 then
+   was generated as before, [lower] lowering its local fixpoints. *)
+let check_local ~lower ~name ~self_passing loop =
+  if compare (lower (self_passing ())) [loop] <> 0 then
     Probe.violation "control lowering"
       Pp.(
         str "the local fixpoint " ++ Id.print name
@@ -234,15 +234,25 @@ let machine r =
   | Some (Modulo_cons _ | Frame_stack) -> true
   | Some (No_loop | Tail_loop | Suspended _) | None -> false
 
-let local_loop ~owner ~member:((occurrence, _) as member) ~tparams ~name ~self_passing (lam : cpp_lambda) =
-  let tail_loop =
-    match Recursion_plan.strategy_at ~pointer_fields:Loopify_analysis.constructor_pointer_fields member with
-    | Some Tail_loop ->
-      (not (Recursion_plan.adoptable_somewhere occurrence)) && not (Option.cata machine false owner)
-    | Some (No_loop | Modulo_cons _ | Frame_stack | Suspended _) | None -> false
+(* Whether Loopify lowers every local fixpoint in the body of the
+   definition [r], machines included, [function_] saying whether that body
+   is a function's: a function it loopifies, as it finishes it or as the
+   bridge lowers its loop ({!Loopify.after_tail_loop}), not a helper lifted
+   out of another definition.  Of any other body it lowers the local tail
+   loops alone. *)
+let lowers_local_machines ~function_ r = function_ && Table.should_loopify r && not (Option.has_some (Lifted.of_ref r))
+
+let local_loop ~owner ~function_ ~member:((occurrence, _) as member) ~tparams ~name ~self_passing (lam : cpp_lambda) =
+  let lowering =
+    if Recursion_plan.adoptable_somewhere occurrence || Option.cata machine false owner then None
+    else
+      match Recursion_plan.strategy_at ~pointer_fields:Loopify_analysis.constructor_pointer_fields member with
+      | Some Tail_loop -> Some Tail
+      | Some (Modulo_cons _ | Frame_stack) when Option.cata (lowers_local_machines ~function_) false owner -> Some Frames
+      | Some (No_loop | Modulo_cons _ | Frame_stack | Suspended _) | None -> None
   in
-  match Lower_control.loop (Control_ir.Loop.Member (fst member, snd member)) with
-  | Some (Loop l) when tail_loop && Control_ir.continues l.body <> [] -> (
+  match (Lower_control.loop (Control_ir.Loop.Member (fst member, snd member)), lowering) with
+  | Some (Loop l), Some lowering when Control_ir.continues l.body <> [] -> (
     let params = List.filter_map (fun (ty, x) -> Option.map (fun x -> (x, ty)) x) (to_reversed lam.cl_params) in
     let invariant = Control_ir.invariant_parameters l in
     let kept = kept_positions l in
@@ -254,9 +264,17 @@ let local_loop ~owner ~member:((occurrence, _) as member) ~tparams ~name ~self_p
       let jumped e = jumps := Loopify_analysis.made_of e :: !jumps in
       let exposed = Loopify_analysis.expose_tail_calls (jump continues) lam.cl_body in
       let ret_ty = Option.default Tvoid lam.cl_ret in
-      match Loopify_tail.transform_tail ~jumped ~varying tparams (jump continues) params ret_ty exposed with
+      let body () =
+        match lowering with
+        | Tail | Modulo_cons -> Some (Loopify_tail.transform_tail ~jumped ~varying tparams (jump continues) params ret_ty exposed)
+        | Frames ->
+          let binders = Option.cata (fun (f : local_fixpoint) -> f.lf_binders) [] lam.cl_fixpoint in
+          Loopify.local_frame_machine ~member ~name ~binders ~tparams (jump continues) params ret_ty exposed
+      in
+      match body () with
       | exception Loopify_analysis.Not_linearisable _ -> None
-      | body ->
+      | None -> None
+      | Some body ->
         (* A call of the fixpoint the loop does not take -- one in a closure
            it builds -- or the fixpoint named as a value calls a lambda that
            is no longer there: it stays the Y-combinator Loopify declines. *)
@@ -267,7 +285,7 @@ let local_loop ~owner ~member:((occurrence, _) as member) ~tparams ~name ~self_p
         in
         if Loopify_analysis.body_exists left body then None
         else begin
-          if Probe.checking () then begin
+          if Probe.checking () && lowering = Tail then begin
             if not (Loopify_analysis.made_as_planned continues (List.rev !jumps)) then
               Probe.violation "control IR"
                 Pp.(str "the calls the tail loop of the local fixpoint " ++ Id.print name ++ str " jumps at are not its Continues");
@@ -275,14 +293,17 @@ let local_loop ~owner ~member:((occurrence, _) as member) ~tparams ~name ~self_p
               Probe.violation "control lowering"
                 Pp.(str "the calls of the local fixpoint " ++ Id.print name ++ str " change other parameters than its ControlIR's Continues")
           end;
-          Loopify_analysis.record_outcome (Id.to_string name) Lp_tail;
+          if lowering = Tail then Loopify_analysis.record_outcome (Id.to_string name) Lp_tail;
           let loop = {lam with cl_body = body; cl_moved = []} in
           let moved = List.filter (fun x -> List.mem x (free_vars_expr (CPPlambda loop))) lam.cl_moved in
           let stmt = Sasgn (name, Declare (Tauto, None), CPPlambda {loop with cl_moved = moved}) in
-          if Probe.checking () then check_local ~tparams ~name ~self_passing stmt;
+          if Probe.checking () then begin
+            let lower = match lowering with Tail | Modulo_cons -> Loopify.lower_local_tail_loops | Frames -> Loopify.lower_local_loops in
+            check_local ~lower:(lower ~tparams) ~name ~self_passing stmt
+          end;
           Some stmt
         end )
-  | Some _ | None -> None
+  | (Some _ | None), _ -> None
 
 (* Whether each of the receiver and the parameters of the method [m], made
    of the function [r], is one its loop [l] varies, as {!varying} reads a

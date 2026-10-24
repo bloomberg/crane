@@ -1138,6 +1138,19 @@ let frame_machine ~loop ?entry ~tparams check (f : dfun) params body =
 
 let lower_local_tail_loops ~tparams stmts = loopify_inner_lambdas ~tail_only:true ~tparams stmts
 
+let lower_local_loops ~tparams stmts = loopify_inner_lambdas ~tparams stmts
+
+let local_frame_machine ~member ~name ~binders ~tparams check params ret_ty body =
+  let name = Id.to_string name in
+  let machine =
+    checked_frame_machine (Some (Control_ir.Loop.Member (fst member, snd member))) check (fun entered ->
+        transform_nontail ~fn_name:name ~binders ~entered_by:(entered_by_member member) ~entered check tparams params
+          ret_ty body )
+  in
+  if classify check machine = No_recursion then
+    Some (loopify_inner_lambdas ~tparams (report_outcome ~name ~check ~strategy:Lp_frame machine))
+  else None
+
 let check_lowered decl =
   let rec check = function
     | Dtemplate (_, _, d) -> check d

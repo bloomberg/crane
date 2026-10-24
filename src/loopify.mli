@@ -149,6 +149,32 @@ val transform_method_own :
     those of a declaration. *)
 val lower_local_tail_loops : tparams:(template_type * Id.t) list -> cpp_stmt list -> cpp_stmt list
 
+(** [lower_local_loops ~tparams stmts] is [stmts] with every local fixpoint
+    in them that Loopify lowers turned into its loop or its machine, as
+    {!transform_decl} turns those of a function. *)
+val lower_local_loops : tparams:(template_type * Id.t) list -> cpp_stmt list -> cpp_stmt list
+
+(** [local_frame_machine ~member ~name ~binders ~tparams check params ret_ty
+    body] is the body of the machine with a stack of frames of the local
+    fixpoint [name], the function [member] of a Core fixpoint, its body
+    [body] over its parameters [params], standing for the Core binders
+    [binders], with its tail calls exposed: [check] recognises the calls
+    entering it.  The local fixpoints in it are lowered after it, as Loopify
+    lowers them.  [None] where the machine leaves a call behind.  Under
+    [CRANE_CHECK_IR] the calls entering it must be its loop's [Continue]s.
+    It raises [Loopify_analysis.Not_linearisable] where the transform
+    declines. *)
+val local_frame_machine :
+  member:Miniml.Occurrence.t * int ->
+  name:Id.t ->
+  binders:(Id.t * Core_binder.t) list ->
+  tparams:(template_type * Id.t) list ->
+  Loopify_analysis.call_checker ->
+  (Id.t * cpp_type) list ->
+  cpp_type ->
+  cpp_stmt list ->
+  cpp_stmt list option
+
 (** Under [CRANE_CHECK_IR], the function [decl] is, if its loop was lowered
     as it was generated, must not tie the knot of an Equations functional:
     Loopify inlines one before its transform, reading the unit's functions,

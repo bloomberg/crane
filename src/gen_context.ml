@@ -33,7 +33,7 @@ let body_generation_counts () =
 
     [owner] is the declaration the body belongs to, which
     [CRANE_TRACE_PIPELINE] reports with the phase. *)
-let begin_body ~owner () =
+let begin_body ~owner ?(function_ = false) () =
   let phase = get_phase () in
   Hashtbl.replace body_generations phase
     (1 + Option.default 0 (Hashtbl.find_opt body_generations phase));
@@ -45,6 +45,7 @@ let begin_body ~owner () =
       match_param_counter = 0;
       cs_counter = 0;
       body_owner = Some owner;
+      body_function = function_;
       current_letin_depth = 0;
       move_plan = Ownership_plan.empty }
 

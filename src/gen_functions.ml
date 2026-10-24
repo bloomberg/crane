@@ -1167,7 +1167,7 @@ let gen_dfun n b cty ty temps =
             | Table.AssertComment comment -> Some (Sassert (Pstated comment)) )
         assertions
   in
-  begin_body ~owner:n ();
+  begin_body ~owner:n ~function_:true ();
   set_current_parameters (List.map snd (parameter_binders env all_ids));
   (* The parameters the body owns, at de Bruijn indices 1..n_params: those
      the head declares by value. *)

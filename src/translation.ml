@@ -71,7 +71,7 @@ let local_fix_stmts selves ~binders ~self_passing impl_stmts funs_with_params =
         cl_body = List.map flat body }
     in
     match
-      Control_to_legacy_minicpp.local_loop ~owner:(!tctx).body_owner ~member
+      Control_to_legacy_minicpp.local_loop ~owner:(!tctx).body_owner ~function_:(!tctx).body_function ~member
         ~tparams:(get_current_template_head ()) ~name:fix_id ~self_passing lam
     with
     | Some loop -> [loop]
