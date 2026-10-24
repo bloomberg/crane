@@ -1188,10 +1188,12 @@ let adoptable_at (occurrence, member) =
     !installed.locals
   |> Option.default []
 
+let adoptable_by_fixpoint occurrence =
+  List.exists (fun (l : local_group) -> List.exists (List.exists (Occurrence.equal occurrence)) l.adoptable) !installed.locals
+
 let adoptable_somewhere occurrence =
-  let mem = List.exists (Occurrence.equal occurrence) in
-  Ref.User.Map.exists (fun _ os -> mem os) !installed.adoptable
-  || List.exists (fun (l : local_group) -> List.exists mem l.adoptable) !installed.locals
+  Ref.User.Map.exists (fun _ os -> List.exists (Occurrence.equal occurrence) os) !installed.adoptable
+  || adoptable_by_fixpoint occurrence
 
 (* Copies of a fixpoint share its occurrence, and so do their calls. *)
 let member_calls (occurrence, member) =

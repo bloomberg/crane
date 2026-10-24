@@ -13522,3 +13522,13 @@
   (alias runtest)
   (deps loopify_out_of_line_method.t.exe)
   (action (run ./loopify_out_of_line_method.t.exe))))
+(subdir local_tail_loop_calls_back
+ (rule
+  (targets local_tail_loop_calls_back.t.exe)
+  (deps LocalTailLoopCallsBack.vo local_tail_loop_calls_back.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_tail_loop_calls_back.t.exe local_tail_loop_calls_back.cpp local_tail_loop_calls_back.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_tail_loop_calls_back.t.exe)
+  (action (run ./local_tail_loop_calls_back.t.exe))))

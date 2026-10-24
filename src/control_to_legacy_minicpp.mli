@@ -72,9 +72,10 @@
     definition Loopify makes a machine with a stack of its own of, one whose
     loop leaves one of its calls behind, or that Loopify declines; it is
     then generated as the Y-combinator [self_passing ()] Loopify
-    recognises.  Under
-    [CRANE_CHECK_IR] the statement must be the one Loopify makes of that
-    Y-combinator. *)
+    recognises.  A tail loop that only the function it is in the flow of
+    may adopt is lowered so too: that function adopts it only where it is
+    a machine.  Under [CRANE_CHECK_IR] the statement must be the one Loopify
+    makes of that Y-combinator. *)
 val local_loop :
   owner:Names.GlobRef.t option ->
   function_:bool ->

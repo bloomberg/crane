@@ -253,13 +253,17 @@ let machine r =
 let lowers_local_machines ~function_ r = function_ && Table.should_loopify r && not (Option.has_some (Lifted.of_ref r))
 
 let local_loop ~owner ~function_ ~member:((occurrence, _) as member) ~tparams ~name ~self_passing (lam : cpp_lambda) =
+  (* The function a fixpoint is in the flow of adopts it only where it is
+     a machine itself, which a local tail loop is never lowered inside. *)
   let lowering =
-    if Recursion_plan.adoptable_somewhere occurrence then None
-    else
-      match Recursion_plan.strategy_at ~pointer_fields:Loopify_analysis.constructor_pointer_fields member with
-      | Some Tail_loop -> if Option.cata machine false owner then None else Some Tail
-      | Some (Modulo_cons _ | Frame_stack) when Option.cata (lowers_local_machines ~function_) false owner -> Some Frames
-      | Some (No_loop | Modulo_cons _ | Frame_stack | Suspended _) | None -> None
+    match Recursion_plan.strategy_at ~pointer_fields:Loopify_analysis.constructor_pointer_fields member with
+    | Some Tail_loop ->
+      if Recursion_plan.adoptable_by_fixpoint occurrence || Option.cata machine false owner then None else Some Tail
+    | Some (Modulo_cons _ | Frame_stack)
+      when (not (Recursion_plan.adoptable_somewhere occurrence))
+           && Option.cata (lowers_local_machines ~function_) false owner ->
+      Some Frames
+    | Some (No_loop | Modulo_cons _ | Frame_stack | Suspended _) | None -> None
   in
   match (Lower_control.loop (Control_ir.Loop.Member (fst member, snd member)), lowering) with
   | Some (Loop l), Some lowering when Control_ir.continues l.body <> [] -> (
