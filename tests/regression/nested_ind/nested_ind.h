@@ -531,306 +531,194 @@ struct NestedInd {
     template <typename F0>
       requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &>
     expr lit_map(F0 &&f) const {
-      const expr *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const expr *_self;
-      };
-
-      using CraneFrame = std::variant<CraneEnter>;
-      expr _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified lit_map: CraneEnter.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        auto _f = std::move(std::get<CraneEnter>(_frame));
-        const expr *_self = _f._self;
-        auto &&_sv = *_self;
-        if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
-          const auto &[a0] = std::get<typename expr::Lit>(_sv.v());
-          _result = expr::lit(f(a0));
-        } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
-          const auto &[a0] = std::get<typename expr::Add>(_sv.v());
-          List<expr> _tmp3;
-          auto aux_impl = [&](auto &_self_aux,
-                              const List<expr> &l) -> List<expr> {
-            if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
-              return List<expr>::nil();
-            } else {
-              const auto &[a00, a10] =
-                  std::get<typename List<expr>::Cons>(l.v());
-              return List<expr>::cons(a00.lit_map(f),
-                                      _self_aux(_self_aux, *a10));
-            }
-          };
-          auto aux = [&](const List<expr> &l) -> List<expr> {
-            return aux_impl(aux_impl, l);
-          };
-          _tmp3 = aux(*a0);
-          _result = expr::add(std::move(_tmp3));
-        } else {
-          const auto &[a0] = std::get<typename expr::Mul>(_sv.v());
-          List<expr> _tmp6;
-          auto aux_impl = [&](auto &_self_aux,
-                              const List<expr> &l) -> List<expr> {
-            if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
-              return List<expr>::nil();
-            } else {
-              const auto &[a00, a10] =
-                  std::get<typename List<expr>::Cons>(l.v());
-              return List<expr>::cons(a00.lit_map(f),
-                                      _self_aux(_self_aux, *a10));
-            }
-          };
-          auto aux = [&](const List<expr> &l) -> List<expr> {
-            return aux_impl(aux_impl, l);
-          };
-          _tmp6 = aux(*a0);
-          _result = expr::mul(std::move(_tmp6));
-        }
+      if (std::holds_alternative<typename expr::Lit>(this->v())) {
+        const auto &[a0] = std::get<typename expr::Lit>(this->v());
+        return expr::lit(f(a0));
+      } else if (std::holds_alternative<typename expr::Add>(this->v())) {
+        const auto &[a0] = std::get<typename expr::Add>(this->v());
+        List<expr> _tmp3;
+        auto aux_impl = [&](auto &_self_aux,
+                            const List<expr> &l) -> List<expr> {
+          if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
+            return List<expr>::nil();
+          } else {
+            const auto &[a00, a10] = std::get<typename List<expr>::Cons>(l.v());
+            return List<expr>::cons(a00.lit_map(f), _self_aux(_self_aux, *a10));
+          }
+        };
+        auto aux = [&](const List<expr> &l) -> List<expr> {
+          return aux_impl(aux_impl, l);
+        };
+        _tmp3 = aux(*a0);
+        return expr::add(std::move(_tmp3));
+      } else {
+        const auto &[a0] = std::get<typename expr::Mul>(this->v());
+        List<expr> _tmp6;
+        auto aux_impl = [&](auto &_self_aux,
+                            const List<expr> &l) -> List<expr> {
+          if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
+            return List<expr>::nil();
+          } else {
+            const auto &[a00, a10] = std::get<typename List<expr>::Cons>(l.v());
+            return List<expr>::cons(a00.lit_map(f), _self_aux(_self_aux, *a10));
+          }
+        };
+        auto aux = [&](const List<expr> &l) -> List<expr> {
+          return aux_impl(aux_impl, l);
+        };
+        _tmp6 = aux(*a0);
+        return expr::mul(std::move(_tmp6));
       }
-      return _result;
     }
 
     List<uint64_t> literals() const {
-      const expr *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const expr *_self;
-      };
-
-      using CraneFrame = std::variant<CraneEnter>;
-      List<uint64_t> _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified literals: CraneEnter.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        auto _f = std::move(std::get<CraneEnter>(_frame));
-        const expr *_self = _f._self;
-        auto &&_sv = *_self;
-        if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
-          const auto &[a0] = std::get<typename expr::Lit>(_sv.v());
-          _result = List<uint64_t>::cons(a0, List<uint64_t>::nil());
-        } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
-          const auto &[a0] = std::get<typename expr::Add>(_sv.v());
-          auto aux_impl = [](auto &_self_aux,
-                             const List<expr> &l) -> List<uint64_t> {
-            if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
-              return List<uint64_t>::nil();
-            } else {
-              const auto &[a00, a10] =
-                  std::get<typename List<expr>::Cons>(l.v());
-              return a00.literals().app(_self_aux(_self_aux, *a10));
-            }
-          };
-          auto aux = [&](const List<expr> &l) -> List<uint64_t> {
-            return aux_impl(aux_impl, l);
-          };
-          _result = aux(*a0);
-        } else {
-          const auto &[a0] = std::get<typename expr::Mul>(_sv.v());
-          auto aux_impl = [](auto &_self_aux,
-                             const List<expr> &l) -> List<uint64_t> {
-            if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
-              return List<uint64_t>::nil();
-            } else {
-              const auto &[a00, a10] =
-                  std::get<typename List<expr>::Cons>(l.v());
-              return a00.literals().app(_self_aux(_self_aux, *a10));
-            }
-          };
-          auto aux = [&](const List<expr> &l) -> List<uint64_t> {
-            return aux_impl(aux_impl, l);
-          };
-          _result = aux(*a0);
-        }
+      if (std::holds_alternative<typename expr::Lit>(this->v())) {
+        const auto &[a0] = std::get<typename expr::Lit>(this->v());
+        return List<uint64_t>::cons(a0, List<uint64_t>::nil());
+      } else if (std::holds_alternative<typename expr::Add>(this->v())) {
+        const auto &[a0] = std::get<typename expr::Add>(this->v());
+        auto aux_impl = [](auto &_self_aux,
+                           const List<expr> &l) -> List<uint64_t> {
+          if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
+            return List<uint64_t>::nil();
+          } else {
+            const auto &[a00, a10] = std::get<typename List<expr>::Cons>(l.v());
+            return a00.literals().app(_self_aux(_self_aux, *a10));
+          }
+        };
+        auto aux = [&](const List<expr> &l) -> List<uint64_t> {
+          return aux_impl(aux_impl, l);
+        };
+        return aux(*a0);
+      } else {
+        const auto &[a0] = std::get<typename expr::Mul>(this->v());
+        auto aux_impl = [](auto &_self_aux,
+                           const List<expr> &l) -> List<uint64_t> {
+          if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
+            return List<uint64_t>::nil();
+          } else {
+            const auto &[a00, a10] = std::get<typename List<expr>::Cons>(l.v());
+            return a00.literals().app(_self_aux(_self_aux, *a10));
+          }
+        };
+        auto aux = [&](const List<expr> &l) -> List<uint64_t> {
+          return aux_impl(aux_impl, l);
+        };
+        return aux(*a0);
       }
-      return _result;
     }
 
     uint64_t expr_depth() const {
-      const expr *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const expr *_self;
-      };
-
-      using CraneFrame = std::variant<CraneEnter>;
-      uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified expr_depth: CraneEnter.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        auto _f = std::move(std::get<CraneEnter>(_frame));
-        const expr *_self = _f._self;
-        auto &&_sv = *_self;
-        if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
-          _result = UINT64_C(0);
-        } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
-          const auto &[a0] = std::get<typename expr::Add>(_sv.v());
-          uint64_t _tmp3;
-          auto aux_impl = [](auto &_self_aux, const List<expr> &l) -> uint64_t {
-            if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
-              return UINT64_C(0);
-            } else {
-              const auto &[a00, a10] =
-                  std::get<typename List<expr>::Cons>(l.v());
-              return std::max(a00.expr_depth(), _self_aux(_self_aux, *a10));
-            }
-          };
-          auto aux = [&](const List<expr> &l) -> uint64_t {
-            return aux_impl(aux_impl, l);
-          };
-          _tmp3 = aux(*a0);
-          _result = (_tmp3 + 1);
-        } else {
-          const auto &[a0] = std::get<typename expr::Mul>(_sv.v());
-          uint64_t _tmp6;
-          auto aux_impl = [](auto &_self_aux, const List<expr> &l) -> uint64_t {
-            if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
-              return UINT64_C(0);
-            } else {
-              const auto &[a00, a10] =
-                  std::get<typename List<expr>::Cons>(l.v());
-              return std::max(a00.expr_depth(), _self_aux(_self_aux, *a10));
-            }
-          };
-          auto aux = [&](const List<expr> &l) -> uint64_t {
-            return aux_impl(aux_impl, l);
-          };
-          _tmp6 = aux(*a0);
-          _result = (_tmp6 + 1);
-        }
+      if (std::holds_alternative<typename expr::Lit>(this->v())) {
+        return UINT64_C(0);
+      } else if (std::holds_alternative<typename expr::Add>(this->v())) {
+        const auto &[a0] = std::get<typename expr::Add>(this->v());
+        uint64_t _tmp3;
+        auto aux_impl = [](auto &_self_aux, const List<expr> &l) -> uint64_t {
+          if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
+            return UINT64_C(0);
+          } else {
+            const auto &[a00, a10] = std::get<typename List<expr>::Cons>(l.v());
+            return std::max(a00.expr_depth(), _self_aux(_self_aux, *a10));
+          }
+        };
+        auto aux = [&](const List<expr> &l) -> uint64_t {
+          return aux_impl(aux_impl, l);
+        };
+        _tmp3 = aux(*a0);
+        return (_tmp3 + 1);
+      } else {
+        const auto &[a0] = std::get<typename expr::Mul>(this->v());
+        uint64_t _tmp6;
+        auto aux_impl = [](auto &_self_aux, const List<expr> &l) -> uint64_t {
+          if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
+            return UINT64_C(0);
+          } else {
+            const auto &[a00, a10] = std::get<typename List<expr>::Cons>(l.v());
+            return std::max(a00.expr_depth(), _self_aux(_self_aux, *a10));
+          }
+        };
+        auto aux = [&](const List<expr> &l) -> uint64_t {
+          return aux_impl(aux_impl, l);
+        };
+        _tmp6 = aux(*a0);
+        return (_tmp6 + 1);
       }
-      return _result;
     }
 
     uint64_t expr_size() const {
-      const expr *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const expr *_self;
-      };
-
-      using CraneFrame = std::variant<CraneEnter>;
-      uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified expr_size: CraneEnter.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        auto _f = std::move(std::get<CraneEnter>(_frame));
-        const expr *_self = _f._self;
-        auto &&_sv = *_self;
-        if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
-          _result = UINT64_C(1);
-        } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
-          const auto &[a0] = std::get<typename expr::Add>(_sv.v());
-          uint64_t _tmp3;
-          auto aux_impl = [](auto &_self_aux, const List<expr> &l) -> uint64_t {
-            if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
-              return UINT64_C(0);
-            } else {
-              const auto &[a00, a10] =
-                  std::get<typename List<expr>::Cons>(l.v());
-              return (a00.expr_size() + _self_aux(_self_aux, *a10));
-            }
-          };
-          auto aux = [&](const List<expr> &l) -> uint64_t {
-            return aux_impl(aux_impl, l);
-          };
-          _tmp3 = aux(*a0);
-          _result = (_tmp3 + 1);
-        } else {
-          const auto &[a0] = std::get<typename expr::Mul>(_sv.v());
-          uint64_t _tmp6;
-          auto aux_impl = [](auto &_self_aux, const List<expr> &l) -> uint64_t {
-            if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
-              return UINT64_C(0);
-            } else {
-              const auto &[a00, a10] =
-                  std::get<typename List<expr>::Cons>(l.v());
-              return (a00.expr_size() + _self_aux(_self_aux, *a10));
-            }
-          };
-          auto aux = [&](const List<expr> &l) -> uint64_t {
-            return aux_impl(aux_impl, l);
-          };
-          _tmp6 = aux(*a0);
-          _result = (_tmp6 + 1);
-        }
+      if (std::holds_alternative<typename expr::Lit>(this->v())) {
+        return UINT64_C(1);
+      } else if (std::holds_alternative<typename expr::Add>(this->v())) {
+        const auto &[a0] = std::get<typename expr::Add>(this->v());
+        uint64_t _tmp3;
+        auto aux_impl = [](auto &_self_aux, const List<expr> &l) -> uint64_t {
+          if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
+            return UINT64_C(0);
+          } else {
+            const auto &[a00, a10] = std::get<typename List<expr>::Cons>(l.v());
+            return (a00.expr_size() + _self_aux(_self_aux, *a10));
+          }
+        };
+        auto aux = [&](const List<expr> &l) -> uint64_t {
+          return aux_impl(aux_impl, l);
+        };
+        _tmp3 = aux(*a0);
+        return (_tmp3 + 1);
+      } else {
+        const auto &[a0] = std::get<typename expr::Mul>(this->v());
+        uint64_t _tmp6;
+        auto aux_impl = [](auto &_self_aux, const List<expr> &l) -> uint64_t {
+          if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
+            return UINT64_C(0);
+          } else {
+            const auto &[a00, a10] = std::get<typename List<expr>::Cons>(l.v());
+            return (a00.expr_size() + _self_aux(_self_aux, *a10));
+          }
+        };
+        auto aux = [&](const List<expr> &l) -> uint64_t {
+          return aux_impl(aux_impl, l);
+        };
+        _tmp6 = aux(*a0);
+        return (_tmp6 + 1);
       }
-      return _result;
     }
 
     uint64_t eval() const {
-      const expr *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const expr *_self;
-      };
-
-      using CraneFrame = std::variant<CraneEnter>;
-      uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified eval: CraneEnter.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        auto _f = std::move(std::get<CraneEnter>(_frame));
-        const expr *_self = _f._self;
-        auto &&_sv = *_self;
-        if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
-          const auto &[a0] = std::get<typename expr::Lit>(_sv.v());
-          _result = std::move(a0);
-        } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
-          const auto &[a0] = std::get<typename expr::Add>(_sv.v());
-          auto sum_all_impl = [](auto &_self_sum_all,
-                                 const List<expr> &l) -> uint64_t {
-            if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
-              return UINT64_C(0);
-            } else {
-              const auto &[a00, a10] =
-                  std::get<typename List<expr>::Cons>(l.v());
-              return (a00.eval() + _self_sum_all(_self_sum_all, *a10));
-            }
-          };
-          auto sum_all = [&](const List<expr> &l) -> uint64_t {
-            return sum_all_impl(sum_all_impl, l);
-          };
-          _result = sum_all(*a0);
-        } else {
-          const auto &[a0] = std::get<typename expr::Mul>(_sv.v());
-          auto prod_all_impl = [](auto &_self_prod_all,
-                                  const List<expr> &l) -> uint64_t {
-            if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
-              return UINT64_C(1);
-            } else {
-              const auto &[a00, a10] =
-                  std::get<typename List<expr>::Cons>(l.v());
-              return (a00.eval() * _self_prod_all(_self_prod_all, *a10));
-            }
-          };
-          auto prod_all = [&](const List<expr> &l) -> uint64_t {
-            return prod_all_impl(prod_all_impl, l);
-          };
-          _result = prod_all(*a0);
-        }
+      if (std::holds_alternative<typename expr::Lit>(this->v())) {
+        const auto &[a0] = std::get<typename expr::Lit>(this->v());
+        return a0;
+      } else if (std::holds_alternative<typename expr::Add>(this->v())) {
+        const auto &[a0] = std::get<typename expr::Add>(this->v());
+        auto sum_all_impl = [](auto &_self_sum_all,
+                               const List<expr> &l) -> uint64_t {
+          if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
+            return UINT64_C(0);
+          } else {
+            const auto &[a00, a10] = std::get<typename List<expr>::Cons>(l.v());
+            return (a00.eval() + _self_sum_all(_self_sum_all, *a10));
+          }
+        };
+        auto sum_all = [&](const List<expr> &l) -> uint64_t {
+          return sum_all_impl(sum_all_impl, l);
+        };
+        return sum_all(*a0);
+      } else {
+        const auto &[a0] = std::get<typename expr::Mul>(this->v());
+        auto prod_all_impl = [](auto &_self_prod_all,
+                                const List<expr> &l) -> uint64_t {
+          if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
+            return UINT64_C(1);
+          } else {
+            const auto &[a00, a10] = std::get<typename List<expr>::Cons>(l.v());
+            return (a00.eval() * _self_prod_all(_self_prod_all, *a10));
+          }
+        };
+        auto prod_all = [&](const List<expr> &l) -> uint64_t {
+          return prod_all_impl(prod_all_impl, l);
+        };
+        return prod_all(*a0);
       }
-      return _result;
     }
 
     template <typename T1, typename F0, typename F1, typename F2>

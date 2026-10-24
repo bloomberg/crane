@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include "small_vector.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -92,32 +91,12 @@ public:
   const variant_t &v() const { return v_; }
 
   uint64_t length() const {
-    const List<A> *_self = this;
-
-    /// CraneEnter: captures varying parameters for each recursive call.
-    struct CraneEnter {
-      const List<A> *_self;
-    };
-
-    using CraneFrame = std::variant<CraneEnter>;
-    uint64_t _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{_self});
-    /// Loopified length: CraneEnter.
-    while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      auto _f = std::move(std::get<CraneEnter>(_frame));
-      const List<A> *_self = _f._self;
-      auto &&_sv = *_self;
-      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        _result = UINT64_C(0);
-      } else {
-        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        _result = (a1->length() + 1);
-      }
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
+      return UINT64_C(0);
+    } else {
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return (a1->length() + 1);
     }
-    return _result;
   }
 };
 

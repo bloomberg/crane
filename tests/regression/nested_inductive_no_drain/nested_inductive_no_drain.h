@@ -208,41 +208,21 @@ struct NestedInductiveNoDrain {
     const variant_t &v() const { return v_; }
 
     uint64_t tsum() const {
-      const tree *_self = this;
-
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
-        const tree *_self;
+      const auto &[a0, a1] = std::get<typename tree::Node>(this->v());
+      uint64_t _tmp3;
+      auto go0_impl = [](auto &_self_go0, const lst<tree> &m) -> uint64_t {
+        if (std::holds_alternative<typename lst<tree>::Nil>(m.v())) {
+          return UINT64_C(0);
+        } else {
+          const auto &[a00, a10] = std::get<typename lst<tree>::Cons>(m.v());
+          return (a00.tsum() + _self_go0(_self_go0, *a10));
+        }
       };
-
-      using CraneFrame = std::variant<CraneEnter>;
-      uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified tsum: CraneEnter.
-      while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        auto _f = std::move(std::get<CraneEnter>(_frame));
-        const tree *_self = _f._self;
-        auto &&_sv = *_self;
-        const auto &[a0, a1] = std::get<typename tree::Node>(_sv.v());
-        uint64_t _tmp3;
-        auto go0_impl = [](auto &_self_go0, const lst<tree> &m) -> uint64_t {
-          if (std::holds_alternative<typename lst<tree>::Nil>(m.v())) {
-            return UINT64_C(0);
-          } else {
-            const auto &[a00, a10] = std::get<typename lst<tree>::Cons>(m.v());
-            return (a00.tsum() + _self_go0(_self_go0, *a10));
-          }
-        };
-        auto go0 = [&](const lst<tree> &m) -> uint64_t {
-          return go0_impl(go0_impl, m);
-        };
-        _tmp3 = go0(*a1);
-        _result = (a0 + _tmp3);
-      }
-      return _result;
+      auto go0 = [&](const lst<tree> &m) -> uint64_t {
+        return go0_impl(go0_impl, m);
+      };
+      _tmp3 = go0(*a1);
+      return (a0 + _tmp3);
     }
 
     tree spine(uint64_t n) const {

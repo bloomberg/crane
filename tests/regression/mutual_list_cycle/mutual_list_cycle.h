@@ -329,28 +329,8 @@ inline Branch::~Branch() {
 }
 
 inline Nat Branch::branch_size() const {
-  const Branch *_self = this;
-
-  /// CraneEnter: captures varying parameters for each recursive call.
-  struct CraneEnter {
-    const Branch *_self;
-  };
-
-  using CraneFrame = std::variant<CraneEnter>;
-  Nat _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{_self});
-  /// Loopified branch_size: CraneEnter.
-  while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    auto _f = std::move(std::get<CraneEnter>(_frame));
-    const Branch *_self = _f._self;
-    auto &&_sv = *_self;
-    const auto &[a0, a1] = std::get<typename Branch::Branch0>(_sv.v());
-    _result = Nat::s(a1->tree_size());
-  }
-  return _result;
+  const auto &[a0, a1] = std::get<typename Branch::Branch0>(this->v());
+  return Nat::s(a1->tree_size());
 }
 
 #endif // INCLUDED_MUTUAL_LIST_CYCLE

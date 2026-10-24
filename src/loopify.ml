@@ -273,16 +273,20 @@ let checked_tail_loop loop transform =
 
 (** [transform entered], the machine with a stack of [loop] the frame
     transform makes, telling [entered] each call it enters the machine by and
-    whether it resumes after it.  Under [CRANE_CHECK_IR] those calls must be
-    the [Continue]s of the loop's ControlIR ({!Lower_control.loop}), and, where
-    it builds nothing tail modulo cons, those resumed after the [Continue]s
-    in a [Resume]'s value.  A call is entered from every branch a
+    whether it resumes after it; [None] where it enters it by none, and the
+    machine, which would run its body once, is not made.  A recursion it
+    does not take is then left where it was.  Under [CRANE_CHECK_IR] those
+    calls must be the [Continue]s of the loop's ControlIR
+    ({!Lower_control.loop}), and, where it builds nothing tail modulo cons,
+    those resumed after the [Continue]s in a [Resume]'s value.  A call is entered from every branch a
     continuation is merged into, so they are compared as sets.  A machine
     leaving a call [check] recognises is not one: its decline is reported
     with the outcome ({!report_outcome}). *)
 let checked_frame_machine loop check transform =
   let entries = ref [] in
   let body = transform (fun ~resumes e -> entries := (resumes, made_of e) :: !entries) in
+  if !entries = [] then None
+  else begin
   ( match loop with
   | Some l when Probe.checking () && classify check body = No_recursion -> (
     let what () =
@@ -306,7 +310,8 @@ let checked_frame_machine loop check transform =
         Probe.violation "control IR"
           Pp.(str "the calls the machine of " ++ what () ++ str " resumes after are not its Resumes' Continues") )
   | Some _ | None -> () );
-  body
+  Some body
+  end
 
 (** The name a local of a body inlined into another takes there: prefixed,
     so that it collides with none of the other body's, and a temporary
@@ -772,17 +777,20 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
 let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_by ?modulo_cons ?shapes ?loop
     ?binders check tparams params ret_ty body =
   let declined reason =
-    {nt_body = body; nt_outcome = Lp_declined reason; nt_used_param_inits = false}
+    {nt_body = body; nt_outcome = Lp_declined reason; nt_used_param_inits = false; nt_machine = false}
   in
   if has_recursive_branch_dependency check body then
     declined "recursive call in a branch condition or dispatch scrutinee"
   else
   let frame () =
-    { nt_body =
-        checked_frame_machine loop check (fun entered ->
-            transform_nontail ?fn_name ?adopted ?entered_by ~entered ?binders check tparams params ret_ty body );
+    let machine =
+      checked_frame_machine loop check (fun entered ->
+          transform_nontail ?fn_name ?adopted ?entered_by ~entered ?binders check tparams params ret_ty body )
+    in
+    { nt_body = Option.default body machine;
       nt_outcome = Lp_frame;
-      nt_used_param_inits = false }
+      nt_used_param_inits = false;
+      nt_machine = Option.has_some machine }
   in
   (* A transform may discover mid-flight that the body's shape has no
      per-parameter correspondence to linearise (see {!Not_linearisable}).  That
@@ -818,7 +826,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
     | None -> None
   in
   match tmc with
-  | Some tmc -> {nt_body = tmc; nt_outcome = Lp_tmc; nt_used_param_inits = true}
+  | Some tmc -> {nt_body = tmc; nt_outcome = Lp_tmc; nt_used_param_inits = true; nt_machine = true}
   | None -> frame ()
   with Not_linearisable reason -> declined reason
 
@@ -1129,12 +1137,11 @@ let frame_machine ~loop ?entry ~tparams check (f : dfun) params body =
   then None
   else
     let survivors = fn_checker names in
-    let machine =
-      checked_frame_machine (Some loop) survivors (fun entered ->
-          transform_nontail ~fn_name:(fundef_display_name f.df_path) ?adopted ~entered_by:(entered_by_function r)
-            ~entered ~binders:f.df_binders check tparams params f.df_ret body )
-    in
-    if classify survivors machine = No_recursion then Some machine else None
+    Option.bind
+      (checked_frame_machine (Some loop) survivors (fun entered ->
+           transform_nontail ~fn_name:(fundef_display_name f.df_path) ?adopted ~entered_by:(entered_by_function r)
+             ~entered ~binders:f.df_binders check tparams params f.df_ret body ) )
+      (fun machine -> if classify survivors machine = No_recursion then Some machine else None)
 
 let lower_local_tail_loops ~tparams stmts = loopify_inner_lambdas ~tail_only:true ~tparams stmts
 
@@ -1142,14 +1149,14 @@ let lower_local_loops ~tparams stmts = loopify_inner_lambdas ~tparams stmts
 
 let local_frame_machine ~member ~name ~binders ~tparams check params ret_ty body =
   let name = Id.to_string name in
-  let machine =
-    checked_frame_machine (Some (Control_ir.Loop.Member (fst member, snd member))) check (fun entered ->
-        transform_nontail ~fn_name:name ~binders ~entered_by:(entered_by_member member) ~entered check tparams params
-          ret_ty body )
-  in
-  if classify check machine = No_recursion then
-    Some (loopify_inner_lambdas ~tparams (report_outcome ~name ~check ~strategy:Lp_frame machine))
-  else None
+  Option.bind
+    (checked_frame_machine (Some (Control_ir.Loop.Member (fst member, snd member))) check (fun entered ->
+         transform_nontail ~fn_name:name ~binders ~entered_by:(entered_by_member member) ~entered check tparams params
+           ret_ty body ) )
+    (fun machine ->
+      if classify check machine = No_recursion then
+        Some (loopify_inner_lambdas ~tparams (report_outcome ~name ~check ~strategy:Lp_frame machine))
+      else None )
 
 let check_lowered decl =
   let rec check = function
@@ -1496,15 +1503,16 @@ let transform_method_own ?varying ?(controlled = false) ~tparams ~self_ty mf =
       end else
       let self_param = (self_id, self_ty) in
       let augmented_params = self_param :: mf.mf_params in
-      let body', needs_init_self =
+      let lowered =
         match strategy with
         | Tail_loop ->
-          ( report_outcome ~name ~check:self_check ~strategy:Lp_tail
-              (let loop = Option.bind mf.mf_globref function_loop in
-               checked_tail_loop loop (fun jumped ->
-                   transform_tail ~param_inits:[(self_id, CPPthis)] ~jumped ?varying tparams
-                     (planned_jumps loop self_check) augmented_params mf.mf_ret_type body_with_self ) ),
-            false )
+          Some
+            ( report_outcome ~name ~check:self_check ~strategy:Lp_tail
+                (let loop = Option.bind mf.mf_globref function_loop in
+                 checked_tail_loop loop (fun jumped ->
+                     transform_tail ~param_inits:[(self_id, CPPthis)] ~jumped ?varying tparams
+                       (planned_jumps loop self_check) augmented_params mf.mf_ret_type body_with_self ) ),
+              false )
         | Modulo_cons _ | Frame_stack ->
           let fn_name = Some name in
           let loop = Option.bind mf.mf_globref function_loop in
@@ -1532,9 +1540,12 @@ let transform_method_own ?varying ?(controlled = false) ~tparams ~self_ty mf =
             report_outcome ~name ~check:self_check ~strategy:r.nt_outcome
               r.nt_body
           in
-          (body', not r.nt_used_param_inits)
+          if r.nt_outcome = Lp_frame && not r.nt_machine then None else Some (body', not r.nt_used_param_inits)
         | No_loop | Suspended _ -> CErrors.anomaly (Pp.str "loopify: no loop cannot appear here")
       in
+      match lowered with
+      | None -> Fmethod mf
+      | Some (body', needs_init_self) ->
       (* Declare the parking slot outside the loop so the pointer taken to it
          on the back-edge stays valid for the next iteration. *)
       let body' =

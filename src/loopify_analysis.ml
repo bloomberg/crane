@@ -430,6 +430,9 @@ type nontail_result = {
       (** [true] when [param_inits] were consumed by the transform (TMC uses
           them for method-self initialisation), meaning the caller does not
           need a separate initialiser statement. *)
+  nt_machine : bool;
+      (** Whether a call enters the loop or machine the transform made: one
+          none enters is not made, and the body is the one given. *)
 }
 
 (** {2 Call checker abstraction}
