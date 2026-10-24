@@ -294,21 +294,25 @@ let method_varying r (l : Control_ir.Term.loop) (m : method_field) =
     (Option.bind m.mf_receiver_binder at :: List.map param m.mf_params)
     (Some [])
 
-(* The method [m] lowered to its tail loop, where it is one: the struct it
-   is a member of declared under [tparams], its receiver a [self_ty].  It is
-   Loopify's method transform, varying the receiver and the parameters its
-   ControlIR varies ({!Loopify.transform_method_own}).  A method the
-   transform leaves as it was is declined -- a receiver a frame cannot point
-   at -- and left to Loopify, which declines it. *)
+(* The method [m] lowered to its loop, where it is one: the struct it is a
+   member of declared under [tparams], its receiver a [self_ty].  It is
+   Loopify's method transform: a tail loop varying the receiver and the
+   parameters its ControlIR varies, a loop tail modulo cons or a machine
+   taking the calls its ControlIR continues by
+   ({!Loopify.transform_method_own}).  A method the transform leaves as it
+   was is declined -- a receiver a frame cannot point at -- and left to
+   Loopify, which declines it. *)
 let lower_method ~tparams ~self_ty (m : method_field) =
   match m.mf_globref with
   | Some r when Recursion_plan.inlinings r = [] && not (Recursion_plan.inlined r) -> (
     let lowering =
-      match loop_of ~lowerings:[Tail] r with
-      | Some (l, _) ->
+      match loop_of ~lowerings:[Tail; Modulo_cons; Frames] r with
+      | Some (l, Tail) ->
         Option.map
           (fun varying -> (l, fun () -> Loopify.transform_method_own ~varying ~tparams ~self_ty m))
           (method_varying r l m)
+      | Some (l, (Modulo_cons | Frames)) ->
+        Some (l, fun () -> Loopify.transform_method_own ~controlled:true ~tparams ~self_ty m)
       | None -> None
     in
     match lowering with

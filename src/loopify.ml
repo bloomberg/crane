@@ -759,6 +759,8 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
                        {!checked_frame_machine})
     @param modulo_cons The chains the recursion is lowered tail modulo cons
                        around, where it is so planned ({!planned_strategy})
+    @param shapes      The branches of that loop, where they are known
+                       otherwise than from the chains ({!Loopify_tmc.branch_along})
     @param check       Call checker for identifying recursive calls
     @param tparams     Template parameter context
     @param adopted     A body calling back into this function, to adopt as a
@@ -767,7 +769,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
     @param ret_ty      Return type
     @param body        Function body statements
     @return what the transform did; see {!nontail_result}. *)
-let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_by ?modulo_cons ?loop
+let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_by ?modulo_cons ?shapes ?loop
     ?binders check tparams params ret_ty body =
   let declined reason =
     {nt_body = body; nt_outcome = Lp_declined reason; nt_used_param_inits = false}
@@ -807,7 +809,9 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
     | Some chains ->
       let tmc =
         checked_tail_loop loop (fun jumped ->
-            transform_tmc ~param_inits ~jumped ~shapes:(chain_shapes chains) tparams check params ret_ty restored )
+            transform_tmc ~param_inits ~jumped
+              ~shapes:(Option.default (chain_shapes chains) shapes)
+              tparams check params ret_ty restored )
       in
       if classify check tmc = No_recursion then Some tmc
       else (
@@ -1302,8 +1306,12 @@ let transform_fundef ~tparams (f : dfun) params body =
     @param varying        Which of the receiver and the parameters a tail
                           loop varies, where the caller knows; read off its
                           calls otherwise
+    @param controlled     Whether a loop tail modulo cons or a machine takes
+                          the calls its ControlIR continues by, and builds
+                          its cells as its turns do, rather than every call
+                          of the method's
     @return An [Fmethod] field with the loopified body *)
-let transform_method_own ?varying ~tparams ~self_ty mf =
+let transform_method_own ?varying ?(controlled = false) ~tparams ~self_ty mf =
   (* [tparams] arrives holding only the enclosing struct's parameters.  A
      method's body is written under its own template header too, and a
      parameter declared there is the one most likely to constrain how the body
@@ -1473,6 +1481,16 @@ let transform_method_own ?varying ~tparams ~self_ty mf =
             false )
         | Modulo_cons _ | Frame_stack ->
           let fn_name = Some name in
+          let loop = Option.bind mf.mf_globref function_loop in
+          (* Lowered from its ControlIR, a method's calls taken are those its
+             loop continues by, and the cells built around them its turns'. *)
+          let check, shapes =
+            if controlled then
+              ( planned_jumps loop self_check,
+                Option.map (fun t -> Loopify_tmc.control_shapes (Control_ir.continues_into t))
+                  (Option.bind loop Lower_control.loop) )
+            else (self_check, None)
+          in
           let r =
             apply_nontail_loopification
               ?entered_by:(Option.map entered_by_function mf.mf_globref)
@@ -1480,9 +1498,8 @@ let transform_method_own ?varying ~tparams ~self_ty mf =
               ~binders:
                 ( (match mf.mf_receiver_binder with Some b -> [(self_id, b)] | None -> [])
                 @ mf.mf_binders )
-              ?fn_name ?modulo_cons:(modulo_cons_chains strategy)
-              ?loop:(Option.bind mf.mf_globref function_loop)
-              self_check tparams
+              ?fn_name ?modulo_cons:(modulo_cons_chains strategy) ?shapes ?loop
+              check tparams
               augmented_params mf.mf_ret_type body_with_self
           in
           let body' =

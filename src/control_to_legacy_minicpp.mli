@@ -44,8 +44,10 @@
     is declared as is that loop, where it was the pair of lambdas tying the
     knot of a Y-combinator that Loopify recognised ({!local_loop}).  So is a
     method's, once its struct's methods are generated: its receiver is the
-    loop's first variable, the parameters a jump leaves alone read off the
-    Core binders of the receiver and the parameters ({!lower_methods}).
+    loop's first variable; a tail loop's parameters a jump leaves alone are
+    read off the Core binders of the receiver and the parameters, and a loop
+    tail modulo cons or a machine takes the calls its ControlIR continues by
+    ({!lower_methods}).
 
     Under [CRANE_CHECK_IR] Loopify's own transform runs beside it, and must
     make the same loop ({!Loopify.checker_tail_loop},
@@ -75,8 +77,8 @@ val local_loop :
 
 (** [lower_methods ~merged r vars fields] is [fields], members of the struct
     of the inductive [r] of variables [vars], with each method made of a
-    function the recursion plan lowers to a tail loop, and Loopify would
-    loopify,
+    function the recursion plan lowers to a loop -- a tail loop, one tail
+    modulo cons, or a machine with a stack -- and Loopify would loopify,
     lowered to that loop, recording it ({!Minicpp.method_field.mf_loop}),
     as Loopify lowers a method: its receiver the loop's first variable.
     [merged] says whether the struct is merged into its module's, whose

@@ -127,9 +127,13 @@ val modulo_cons_loop :
     transform of the method [m] of a struct whose receiver pointer type is
     [self_ty], under the struct's template parameters [tparams], before the
     local fixpoints in it are lowered: [m] itself where it declines.  A tail
-    loop varies the receiver and parameters [varying], where given. *)
+    loop varies the receiver and parameters [varying], where given.  With
+    [controlled], a loop tail modulo cons or a machine takes the calls the
+    method's ControlIR continues by, and builds its cells along its turns
+    ({!Loopify_tmc.control_shapes}). *)
 val transform_method_own :
   ?varying:bool list ->
+  ?controlled:bool ->
   tparams:(template_type * Id.t) list ->
   self_ty:cpp_type ->
   method_field ->
