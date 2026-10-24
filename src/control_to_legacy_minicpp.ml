@@ -172,13 +172,13 @@ and lower_frames ~partner ~tparams (f : dfun) params body (l : Control_ir.Term.l
   match machine () with
   | exception Loopify_analysis.Not_linearisable _ -> None
   | None -> None
-  | Some machine -> (
+  | Some (machine, survived) -> (
     if Probe.checking () && compare (Loopify.checker_frame_machine ~partner ~tparams f params body) machine <> 0 then
       Probe.violation "control lowering"
         Pp.(
           str "the machine of " ++ str (Table.kername_of_global r)
           ++ str " lowered from its ControlIR is not the machine Loopify makes" );
-    match Loopify.after_tail_loop ~strategy:Lp_frame ~tparams f params machine with
+    match Loopify.after_tail_loop ~strategy:Lp_frame ?survived ~tparams f params machine with
     | exception Loopify_analysis.Not_linearisable _ -> None
     | body -> Some {f with df_shape = Ddef (params, body); df_loop = Some l.loop} )
 

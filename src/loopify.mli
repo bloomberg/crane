@@ -50,10 +50,12 @@ val checker_tail_loop :
 (** [after_tail_loop ~tparams f params loop] is the body of the function
     [f] once Loopify's transform has made [loop] of it: the local fixpoints
     in [loop] lowered, and the outcome recorded, [strategy] -- a tail loop
-    unless given.  It raises [Loopify_analysis.Not_linearisable] where that
-    transform declines the function whole. *)
+    unless given -- or, where a call survived, a decline for [survived].
+    It raises [Loopify_analysis.Not_linearisable] where that transform
+    declines the function whole. *)
 val after_tail_loop :
   ?strategy:Loopify_analysis.loopify_outcome ->
+  ?survived:string ->
   tparams:(template_type * Id.t) list ->
   dfun ->
   (Id.t * cpp_type) list ->
@@ -89,13 +91,17 @@ val checker_frame_machine :
     its ControlIR, whose body [body] has its partners inlined and its tail
     calls exposed: [check] recognises the calls that enter it at [f], and
     the body Loopify adopts, where its ControlIR has the entry [entry], is
-    a second entry of it ({!Loopify_frame.find_adopted}).  [None] where
-    Loopify would do anything else with [f]: tie an Equations knot, adopt
-    another body than the entry or one where there is none, decline a
-    branch depending on a recursive call, or leave a call the machine does
-    not take.  Under [CRANE_CHECK_IR] the calls entering it must be the
-    loop's [Continue]s, its entry's included.  It raises
-    [Loopify_analysis.Not_linearisable] where the transform declines. *)
+    a second entry of it ({!Loopify_frame.find_adopted}).  With it comes
+    the reason a call it leaves behind survived, where it adopted a body.
+    [None] where Loopify would do anything else with [f]: tie an Equations
+    knot, adopt another body than the entry or one where there is none,
+    decline a branch depending on a recursive call, or make a machine
+    disagreeing with its ControlIR.  A machine may leave a call behind that
+    its ControlIR holds as an ordinary recursive call: the calls entering it
+    are then those its loop's [Continue]s, its entry's included, are made
+    of.  Under [CRANE_CHECK_IR] the calls entering a machine leaving none
+    must be those.  It raises [Loopify_analysis.Not_linearisable] where the
+    transform declines. *)
 val frame_machine :
   loop:Control_ir.Loop.t ->
   ?entry:Control_ir.Loop.t ->
@@ -104,7 +110,7 @@ val frame_machine :
   dfun ->
   (Id.t * cpp_type) list ->
   cpp_stmt list ->
-  cpp_stmt list option
+  (cpp_stmt list * string option) option
 
 (** [modulo_cons_loop ~jumped ~varying ~shapes ~tparams check f params
     body] is the tail-modulo-cons loop of the function [f], whose body

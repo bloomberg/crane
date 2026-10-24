@@ -271,46 +271,51 @@ let checked_tail_loop loop transform =
   | Some _ | None -> () );
   body
 
+(** How the calls the machine of the loop [l] is entered by, [entries],
+    each with whether it resumes after it, disagree with its ControlIR, if
+    they do ({!Lower_control.loop}): they must be its [Continue]s, and,
+    where it builds nothing tail modulo cons, those resumed after the
+    [Continue]s in a [Resume]'s value.  A call is entered from every branch
+    a continuation is merged into, so they are compared as sets. *)
+let machine_disagreement l entries =
+  let what () =
+    match l with
+    | Control_ir.Loop.Function r -> Pp.str (Table.kername_of_global r)
+    | Control_ir.Loop.Member _ -> Pp.str "a local fixpoint"
+  in
+  let within a b = List.for_all (fun o -> List.exists (Miniml.Occurrence.equal o) b) a in
+  let same a b = within a b && within b a in
+  let made resumed = List.filter_map (fun (r, o) -> if resumed r then o else None) entries in
+  match Lower_control.loop l with
+  | None -> Some Pp.(str "no ControlIR for the machine of " ++ what ())
+  | Some _ when List.exists (fun (_, o) -> not (Option.has_some o)) entries ->
+    Some Pp.(str "the machine of " ++ what () ++ str " is entered by a call made of no Core call")
+  | Some t ->
+    if not (same (made (fun _ -> true)) (Control_ir.continues t)) then
+      Some Pp.(str "the calls the machine of " ++ what () ++ str " is entered by are not its Continues")
+    else if Control_ir.continues_into t = [] && not (same (made Fun.id) (Control_ir.resumed t)) then
+      Some Pp.(str "the calls the machine of " ++ what () ++ str " resumes after are not its Resumes' Continues")
+    else None
+
 (** [transform entered], the machine with a stack of [loop] the frame
     transform makes, telling [entered] each call it enters the machine by and
-    whether it resumes after it; [None] where it enters it by none, and the
-    machine, which would run its body once, is not made.  A recursion it
-    does not take is then left where it was.  Under [CRANE_CHECK_IR] those
-    calls must be the [Continue]s of the loop's ControlIR
-    ({!Lower_control.loop}), and, where it builds nothing tail modulo cons,
-    those resumed after the [Continue]s in a [Resume]'s value.  A call is entered from every branch a
-    continuation is merged into, so they are compared as sets.  A machine
-    leaving a call [check] recognises is not one: its decline is reported
-    with the outcome ({!report_outcome}). *)
+    whether it resumes after it, with those calls; [None] where it enters it
+    by none, and the machine, which would run its body once, is not made.  A
+    recursion it does not take is then left where it was.  Under
+    [CRANE_CHECK_IR] the calls must agree with the loop's ControlIR
+    ({!machine_disagreement}).  A machine leaving a call [check] recognises
+    is not judged: its decline is reported with the outcome
+    ({!report_outcome}). *)
 let checked_frame_machine loop check transform =
   let entries = ref [] in
   let body = transform (fun ~resumes e -> entries := (resumes, made_of e) :: !entries) in
   if !entries = [] then None
   else begin
-  ( match loop with
-  | Some l when Probe.checking () && classify check body = No_recursion -> (
-    let what () =
-      match l with
-      | Control_ir.Loop.Function r -> Pp.str (Table.kername_of_global r)
-      | Control_ir.Loop.Member _ -> Pp.str "a local fixpoint"
-    in
-    let within a b = List.for_all (fun o -> List.exists (Miniml.Occurrence.equal o) b) a in
-    let same a b = within a b && within b a in
-    let made resumed = List.filter_map (fun (r, o) -> if resumed r then o else None) !entries in
-    match Lower_control.loop l with
-    | None -> Probe.violation "control IR" Pp.(str "no ControlIR for the machine of " ++ what ())
-    | Some _ when List.exists (fun (_, o) -> not (Option.has_some o)) !entries ->
-      Probe.violation "control IR"
-        Pp.(str "the machine of " ++ what () ++ str " is entered by a call made of no Core call")
-    | Some t ->
-      if not (same (made (fun _ -> true)) (Control_ir.continues t)) then
-        Probe.violation "control IR"
-          Pp.(str "the calls the machine of " ++ what () ++ str " is entered by are not its Continues");
-      if Control_ir.continues_into t = [] && not (same (made Fun.id) (Control_ir.resumed t)) then
-        Probe.violation "control IR"
-          Pp.(str "the calls the machine of " ++ what () ++ str " resumes after are not its Resumes' Continues") )
-  | Some _ | None -> () );
-  Some body
+    ( match loop with
+    | Some l when Probe.checking () && classify check body = No_recursion ->
+      Option.iter (Probe.violation "control IR") (machine_disagreement l !entries)
+    | Some _ | None -> () );
+    Some (body, !entries)
   end
 
 (** The name a local of a body inlined into another takes there: prefixed,
@@ -787,7 +792,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
       checked_frame_machine loop check (fun entered ->
           transform_nontail ?fn_name ?adopted ?entered_by ~entered ?binders check tparams params ret_ty body )
     in
-    { nt_body = Option.default body machine;
+    { nt_body = Option.cata fst body machine;
       nt_outcome = Lp_frame;
       nt_used_param_inits = false;
       nt_machine = Option.has_some machine }
@@ -1074,8 +1079,8 @@ let checker_tail_loop ~partner ~tparams (f : dfun) params body =
   let body = expose_tail_calls check (try_inline_mutual_into ~partner r body) in
   transform_tail tparams (planned_jumps (function_loop r) check) params f.df_ret body
 
-let after_tail_loop ?(strategy = Lp_tail) ~tparams (f : dfun) params loop =
-  report_outcome ~name:(fundef_display_name f.df_path) ~check:(fn_checker (dfun_path_list f.df_path))
+let after_tail_loop ?(strategy = Lp_tail) ?survived ~tparams (f : dfun) params loop =
+  report_outcome ?survived ~name:(fundef_display_name f.df_path) ~check:(fn_checker (dfun_path_list f.df_path))
     ~strategy
     (loopify_inner_lambdas ~tparams ~outer_env:params loop)
 
@@ -1137,11 +1142,24 @@ let frame_machine ~loop ?entry ~tparams check (f : dfun) params body =
   then None
   else
     let survivors = fn_checker names in
-    Option.bind
-      (checked_frame_machine (Some loop) survivors (fun entered ->
-           transform_nontail ~fn_name:(fundef_display_name f.df_path) ?adopted ~entered_by:(entered_by_function r)
-             ~entered ~binders:f.df_binders check tparams params f.df_ret body ) )
-      (fun machine -> if classify survivors machine = No_recursion then Some machine else None)
+    let machine check =
+      checked_frame_machine (Some loop) survivors (fun entered ->
+          transform_nontail ~fn_name:(fundef_display_name f.df_path) ?adopted ~entered_by:(entered_by_function r)
+            ~entered ~binders:f.df_binders check tparams params f.df_ret body )
+    in
+    let survived = Option.map decline_reason adopted in
+    match machine check with
+    | Some (made, _) when classify survivors made = No_recursion -> Some (made, survived)
+    | Some _ when not (has_recursive_branch_dependency survivors body) -> (
+      (* A machine leaving a call behind is made reading every call of the
+         function, as Loopify makes it -- its frames are laid out for the
+         arguments of the calls it leaves too -- and is the machine of its
+         ControlIR where the calls entering it are its loop's: those it
+         leaves are ordinary recursive calls there. *)
+      match machine survivors with
+      | Some (made, entries) when Option.is_empty (machine_disagreement loop entries) -> Some (made, survived)
+      | Some _ | None -> None )
+    | Some _ | None -> None
 
 let lower_local_tail_loops ~tparams stmts = loopify_inner_lambdas ~tail_only:true ~tparams stmts
 
@@ -1153,7 +1171,7 @@ let local_frame_machine ~member ~name ~binders ~tparams check params ret_ty body
     (checked_frame_machine (Some (Control_ir.Loop.Member (fst member, snd member))) check (fun entered ->
          transform_nontail ~fn_name:name ~binders ~entered_by:(entered_by_member member) ~entered check tparams params
            ret_ty body ) )
-    (fun machine ->
+    (fun (machine, _) ->
       if classify check machine = No_recursion then
         Some (loopify_inner_lambdas ~tparams (report_outcome ~name ~check ~strategy:Lp_frame machine))
       else None )
