@@ -244,10 +244,10 @@ let lowers_local_machines ~function_ r = function_ && Table.should_loopify r && 
 
 let local_loop ~owner ~function_ ~member:((occurrence, _) as member) ~tparams ~name ~self_passing (lam : cpp_lambda) =
   let lowering =
-    if Recursion_plan.adoptable_somewhere occurrence || Option.cata machine false owner then None
+    if Recursion_plan.adoptable_somewhere occurrence then None
     else
       match Recursion_plan.strategy_at ~pointer_fields:Loopify_analysis.constructor_pointer_fields member with
-      | Some Tail_loop -> Some Tail
+      | Some Tail_loop -> if Option.cata machine false owner then None else Some Tail
       | Some (Modulo_cons _ | Frame_stack) when Option.cata (lowers_local_machines ~function_) false owner -> Some Frames
       | Some (No_loop | Modulo_cons _ | Frame_stack | Suspended _) | None -> None
   in

@@ -65,12 +65,14 @@
     parameters [tparams], with the loop as its body.  A tail loop is
     lowered so in any body; a machine with a stack of frames in the body of
     a function Loopify loopifies, as Loopify lowers it
-    ({!Loopify.local_frame_machine}).  [None] where it is not one: a
-    fixpoint that may be adopted into a machine
-    ({!Recursion_plan.adoptable_somewhere}), one in a definition Loopify
-    makes a machine with a stack of its own of, whose loop leaves one of its
-    calls behind, or that Loopify declines; it is then generated as the
-    Y-combinator [self_passing ()] Loopify recognises.  Under
+    ({!Loopify.local_frame_machine}), even where that function is a
+    machine itself, whose transform takes the local machine as the closure
+    it is.  [None] where it is not one: a fixpoint that may be adopted into
+    a machine ({!Recursion_plan.adoptable_somewhere}), a tail loop in a
+    definition Loopify makes a machine with a stack of its own of, one whose
+    loop leaves one of its calls behind, or that Loopify declines; it is
+    then generated as the Y-combinator [self_passing ()] Loopify
+    recognises.  Under
     [CRANE_CHECK_IR] the statement must be the one Loopify makes of that
     Y-combinator. *)
 val local_loop :
