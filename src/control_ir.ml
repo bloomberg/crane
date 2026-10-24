@@ -83,17 +83,22 @@ end
 
 open Term
 
-let continues t =
+(* The turns [t] continues a loop by, in order. *)
+let turns t =
   let rec go acc = function
     | Loop l -> go acc l.body
     | Let l -> go acc l.body
     | Match m -> List.fold_left (fun acc (b : branch) -> go acc b.body) acc m.branches
     | Return _ -> acc
-    | Continue c | Continue_into {next = c; _} -> c.occurrence :: acc
+    | Continue c | Continue_into {next = c; _} -> c :: acc
     | Resume r -> go (go acc r.value) r.body
     | Entry e -> go (go acc e.entered.body) e.scope
   in
   List.rev (go [] t)
+
+let continues t = List.map (fun c -> c.occurrence) (turns t)
+
+let continues_of l t = List.filter_map (fun c -> if Loop.equal c.target l then Some c.occurrence else None) (turns t)
 
 let resumed t =
   (* [valued]: whether [t] is run for a Resume's value, where every turn it

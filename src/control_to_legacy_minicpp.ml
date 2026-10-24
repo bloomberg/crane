@@ -27,7 +27,7 @@ let loop_of ~lowerings r =
   match planned with
   | Some lowering when List.mem lowering lowerings && not (Option.has_some (Lifted.of_ref r)) -> (
     match Lower_control.loop (Control_ir.Loop.Function r) with
-    | Some (Loop l) when Control_ir.continues l.body <> [] && Control_ir.entries l.body = [] ->
+    | Some (Loop l) when Control_ir.continues l.body <> [] && (Control_ir.entries l.body = [] || lowering = Frames) ->
       let builds = Control_ir.continues_into l.body <> [] in
       let shaped = match lowering with Tail -> not builds | Modulo_cons -> builds | Frames -> true in
       if shaped then Some (l, lowering)
@@ -156,14 +156,20 @@ and lower_modulo_cons ~partner ~tparams (f : dfun) params body l varying into =
     | body -> Some {f with df_shape = Ddef (params, body); df_loop = Some l.loop} )
 
 (* The function [f] lowered to the machine with a stack of frames of its
-   loop [l], entered by the calls made of [l]'s Continues. *)
+   loop [l], entered by the calls made of [l]'s Continues of it, and by
+   those of the entry it adopts, if it has one: the body Loopify finds of
+   it ({!Loopify.frame_machine}). *)
 and lower_frames ~partner ~tparams (f : dfun) params body (l : Control_ir.Term.loop) =
-  let continues = Control_ir.continues l.body in
+  let own = Control_ir.continues_of l.loop l.body in
   let r = fst f.df_path.dp_outer in
-  let exposed =
-    Loopify_analysis.expose_tail_calls (jump continues) (Loopify.try_inline_mutual_into ~partner r body)
+  let exposed = Loopify_analysis.expose_tail_calls (jump own) (Loopify.try_inline_mutual_into ~partner r body) in
+  let machine () =
+    match Control_ir.entries l.body with
+    | [] -> Loopify.frame_machine ~loop:l.loop ~tparams (jump own) f params exposed
+    | [entry] -> Loopify.frame_machine ~loop:l.loop ~entry:entry.loop ~tparams (jump own) f params exposed
+    | _ :: _ :: _ -> None
   in
-  match Loopify.frame_machine ~loop:l.loop ~tparams (jump continues) f params exposed with
+  match machine () with
   | exception Loopify_analysis.Not_linearisable _ -> None
   | None -> None
   | Some machine -> (

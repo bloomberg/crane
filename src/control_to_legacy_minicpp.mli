@@ -35,9 +35,12 @@
     So is the machine with a stack of frames of a function the plan lowers
     so ({!Recursion_plan.Frame_stack}): the calls entering it are those made
     of its loop's [Continue]s, those it resumes after the [Continue]s in a
-    [Resume]'s value ({!Loopify.frame_machine}); it is left to Loopify where
-    Loopify would adopt a local fixpoint into it, tie an Equations knot, or
-    leave a call behind.
+    [Resume]'s value ({!Loopify.frame_machine}).  A machine whose ControlIR
+    has an entry ({!Control_ir.Term.Entry}) takes the body Loopify finds
+    for it -- the adopted local fixpoint's lambdas, or the partner's body
+    invoked in place -- as its second entry, where that body is the
+    entry's.  It is left to Loopify where Loopify would adopt another body,
+    tie an Equations knot, or leave a call behind.
 
     The loop of a local fixpoint of one member ({!Control_ir.Loop.Member})
     is lowered so too, as translation generates the fixpoint: the lambda it

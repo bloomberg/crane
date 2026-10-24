@@ -127,6 +127,10 @@ end
     resumed after and those of its entries' loops included. *)
 val continues : Term.t -> Miniml.Occurrence.t list
 
+(** {!continues} of the loop [l] alone: those continuing it rather than
+    the loop of one of [t]'s entries. *)
+val continues_of : Loop.t -> Term.t -> Miniml.Occurrence.t list
+
 (** The occurrences of the calls [t] enters its loop by afresh and resumes
     after, in order: the [Continue]s in the value of a [Resume]. *)
 val resumed : Term.t -> Miniml.Occurrence.t list

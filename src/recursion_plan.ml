@@ -1217,7 +1217,9 @@ let inlined r =
 
 let adopted_partner_in t r = Ref.User.Map.find_opt r t.adopted
 
-let adopted_invocations r = Option.map (fun i -> i.invoked) (adopted_partner_in !installed r)
+let adopted_partner r = adopted_partner_in !installed r
+
+let adopted_invocations r = Option.map (fun i -> i.invoked) (adopted_partner r)
 
 (* A lambda a let binds does not call itself. *)
 let strategy_of_let occurrence =

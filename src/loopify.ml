@@ -1098,25 +1098,41 @@ let checker_frame_machine ~partner ~tparams (f : dfun) params body =
   let r = fst f.df_path.dp_outer in
   let check = fn_checker (dfun_path_list f.df_path) in
   let body = expose_tail_calls check (try_inline_mutual_into ~partner r body) in
-  (apply_nontail_loopification ~fn_name:(fundef_display_name f.df_path) ~entered_by:(entered_by_function r)
+  let adopted = find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body in
+  (apply_nontail_loopification ~fn_name:(fundef_display_name f.df_path) ?adopted ~entered_by:(entered_by_function r)
      ~binders:f.df_binders check tparams params f.df_ret body )
     .nt_body
 
-let frame_machine ~loop ~tparams check (f : dfun) params body =
+(** Whether the body [ad] the machine of the function [r] adopts is the
+    loop [entry] its ControlIR enters: the local fixpoint's function, or
+    the partner whose calls are run in place. *)
+let adopts_entry r ad (entry : Control_ir.Loop.t) =
+  match (ad.ad_source, entry) with
+  | Fixpoint o, Member (o', 0) -> Miniml.Occurrence.equal o o'
+  | Invocations _, Function g -> (
+    match Recursion_plan.adopted_partner r with
+    | Some i -> Common.globref_equal i.partner g
+    | None -> false )
+  | (Fixpoint _ | Invocations _), _ -> false
+
+let frame_machine ~loop ?entry ~tparams check (f : dfun) params body =
   let names = dfun_path_list f.df_path in
   let r = fst f.df_path.dp_outer in
-  let adopted () =
-    find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body
+  let adopted = find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body in
+  let as_planned =
+    match (adopted, entry) with
+    | None, None -> true
+    | Some ad, Some entry -> adopts_entry r ad entry
+    | Some _, None | None, Some _ -> false
   in
-  if try_inline_functional_into names body != body || Option.has_some (adopted ())
-     || has_recursive_branch_dependency check body
+  if try_inline_functional_into names body != body || (not as_planned) || has_recursive_branch_dependency check body
   then None
   else
     let survivors = fn_checker names in
     let machine =
       checked_frame_machine (Some loop) survivors (fun entered ->
-          transform_nontail ~fn_name:(fundef_display_name f.df_path) ~entered_by:(entered_by_function r) ~entered
-            ~binders:f.df_binders check tparams params f.df_ret body )
+          transform_nontail ~fn_name:(fundef_display_name f.df_path) ?adopted ~entered_by:(entered_by_function r)
+            ~entered ~binders:f.df_binders check tparams params f.df_ret body )
     in
     if classify survivors machine = No_recursion then Some machine else None
 

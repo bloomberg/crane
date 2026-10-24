@@ -84,17 +84,21 @@ val checker_frame_machine :
   cpp_stmt list ->
   cpp_stmt list
 
-(** [frame_machine ~loop ~tparams check f params body] is the machine with
-    a stack of frames of the function [f], the loop [loop] of its ControlIR,
-    whose body [body] has its partners inlined and its tail calls exposed:
-    [check] recognises the calls that enter it.  [None] where Loopify would
-    do anything else with [f]: tie an Equations knot, adopt a fixpoint,
-    decline a branch depending on a recursive call, or leave a call the
-    machine does not take.  Under [CRANE_CHECK_IR] the calls entering it
-    must be the loop's [Continue]s.  It raises
+(** [frame_machine ~loop ?entry ~tparams check f params body] is the
+    machine with a stack of frames of the function [f], the loop [loop] of
+    its ControlIR, whose body [body] has its partners inlined and its tail
+    calls exposed: [check] recognises the calls that enter it at [f], and
+    the body Loopify adopts, where its ControlIR has the entry [entry], is
+    a second entry of it ({!Loopify_frame.find_adopted}).  [None] where
+    Loopify would do anything else with [f]: tie an Equations knot, adopt
+    another body than the entry or one where there is none, decline a
+    branch depending on a recursive call, or leave a call the machine does
+    not take.  Under [CRANE_CHECK_IR] the calls entering it must be the
+    loop's [Continue]s, its entry's included.  It raises
     [Loopify_analysis.Not_linearisable] where the transform declines. *)
 val frame_machine :
   loop:Control_ir.Loop.t ->
+  ?entry:Control_ir.Loop.t ->
   tparams:(template_type * Id.t) list ->
   Loopify_analysis.call_checker ->
   dfun ->

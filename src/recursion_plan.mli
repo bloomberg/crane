@@ -200,6 +200,9 @@ val adopted_invocations : Names.GlobRef.t -> Miniml.Occurrence.t list option
     function [r] adopts in the plan [t] ({!adopted_invocations}). *)
 val adopted_partner_in : t -> Names.GlobRef.t -> inlining option
 
+(** {!adopted_partner_in} in the extraction's plan. *)
+val adopted_partner : Names.GlobRef.t -> inlining option
+
 (** {!adoptable} for the function [member] of the local fixpoint
     [occurrence], lowered as a helper of its own ({!Lifted.fixpoint}): the
     fixpoints in its flow naming a member of its group. *)
