@@ -260,14 +260,3 @@
   (alias runtest)
   (deps nullary_unit_effect_dropped.t.exe)
   (action (run ./nullary_unit_effect_dropped.t.exe))))
-
-(subdir sequential_monad_alias
- (rule
-  (targets sequential_monad_alias.t.exe)
-  (deps SequentialMonadAlias.vo sequential_monad_alias.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sequential_monad_alias.t.exe sequential_monad_alias.cpp sequential_monad_alias.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sequential_monad_alias.t.exe)
-  (action (run ./sequential_monad_alias.t.exe))))

@@ -10,14 +10,10 @@
 #include <variant>
 
 struct SequentialMonadAlias {
-  static inline const IOt<std::monostate> aliased =
-      std::cout << std::string("aliased") << '\n';
+  static void aliased();
   static void direct();
-  static inline const IOt<std::monostate> both = []() {
-    aliased;
-    return direct();
-  }();
-  static IOt<std::monostate> twice(const std::monostate &m);
+  static void both();
+  static void twice(const std::monostate &m);
 };
 
 #endif // INCLUDED_SEQUENTIAL_MONAD_ALIAS

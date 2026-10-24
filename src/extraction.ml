@@ -741,9 +741,10 @@ and extract_spine env sg db j c args =
           extract_type_app env sg db (r, type_sign env sg typ) args
         else
           extract_type env sg db 0 reduced []
-      else
-        let mlt = extract_type_app env sg db (r, type_sign env sg typ) args in
-        mlt
+      else (
+        match sequential_monad_alias env sg (kn, u) args with
+        | Some monad -> extract_type env sg db 0 monad []
+        | None -> extract_type_app env sg db (r, type_sign env sg typ) args )
     | Info, Default ->
     (* Not an ML type, for example [(c:forall X, X->X) Type nat] *)
     match (lookup_constant kn env).const_body with
@@ -788,6 +789,30 @@ and extract_spine env sg db j c args =
 (** {2 Auxiliary function dealing with type application. Precondition: [r] is a
     type scheme represented by the signature [s], and is completely applied:
     [List.length args = List.length s]} *)
+
+(** The type constant [c] applied to [args], unfolded, where it stands for a
+    monad Crane runs sequentially.  Such a monad's value is the running of
+    its effects, spelled as what it yields, so an alias of one has no C++
+    spelling of its own: every reader of the type -- whether a declaration
+    is run when performed, whether a call returns [void], how the monad is
+    erased -- must see the monad itself, as it does where the source writes
+    it.  A reified monad is a tree, a value C++ spells; its alias is kept. *)
+and sequential_monad_alias env sg (kn, u) args =
+  if lang () != Cpp || Table.is_monad (GlobRef.ConstRef kn) then None
+  else
+    let full = EConstr.applist (EConstr.mkConstU (kn, u), args) in
+    match whd_all env sg full with
+    | exception e when CErrors.noncritical e -> None
+    | unfolded -> (
+      let head =
+        match EConstr.kind sg (fst (EConstr.decompose_app sg unfolded)) with
+        | Ind (ind, _) -> Some (GlobRef.IndRef ind)
+        | Const (kn', _) when not (Constant.CanOrd.equal kn kn') -> Some (GlobRef.ConstRef kn')
+        | _ -> None
+      in
+      match head with
+      | Some m when Table.is_monad m && not (Table.is_monad_reified m) -> Some unfolded
+      | Some _ | None -> None )
 
 (** Extracts a type application (inductive applied to arguments), given a type
     scheme and its signature. *)
