@@ -1705,13 +1705,18 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     in
     (* A call of what [f] names is made of this application, which the
        recursion plan knows by its head: a global's use, or the read of a
-       local function. *)
-    ( match (f, record_call_sig env callee_ty_inst result) with
-    | MLglob use, (CPPfun_call (_, CPPglob (r, _, _), _) as call)
-      when Common.globref_equal r use.callee ->
-      made_of (Global_use.occurrence use) call
-    | MLrel (_, occ), (CPPfun_call (_, CPPvar _, _) as call) -> made_of occ call
-    | _, result -> result )
+       local function -- read as it is, or through the cast unboxing what
+       it returns. *)
+    let made_of_application call =
+      match (f, call) with
+      | MLglob use, CPPfun_call (_, CPPglob (r, _, _), _) when Common.globref_equal r use.callee ->
+        made_of (Global_use.occurrence use) call
+      | MLrel (_, occ), CPPfun_call (_, CPPvar _, _) -> made_of occ call
+      | _ -> call
+    in
+    ( match record_call_sig env callee_ty_inst result with
+    | CPPany_cast (ty, call) -> CPPany_cast (ty, made_of_application call)
+    | result -> made_of_application result )
   | MLlam _ as a ->
     (* What the lambda takes by move as it is made. *)
     let moved_captures = capture_names env (Ownership_plan.moved_captures (!tctx).move_plan a) in
