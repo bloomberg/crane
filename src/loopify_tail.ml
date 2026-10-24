@@ -539,14 +539,17 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) shadow_params args =
             Some (Sasgn (shadow_id, Existing, make_rhs ty arg)))
         non_trivial
     in
-    (* Phase 2: copy from temps back to loop variables. *)
+    (* Phase 2: copy from temps back to loop variables.  A temporary is dead
+       once copied, so it is moved unless copying it is known to cost
+       nothing: a trivially copyable type, but not a type parameter, which
+       may stand for one worth moving. *)
     let temp_updates =
       List.filter_map
         (fun ((shadow_id, ty), _arg) ->
           if needs_temp shadow_id then
             let rhs =
               let stripped = strip_ref_and_const_type ty in
-              if is_trivially_copyable_type stripped then
+              if is_trivially_copyable_type stripped && not (worthwhile_move_type stripped) then
                 CPPvar (temp_name shadow_id)
               else
                 CPPmove (CPPvar (temp_name shadow_id))
