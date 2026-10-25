@@ -4,8 +4,10 @@
 (** The passes a MiniCpp declaration goes through between translation and the
     printer.
 
-    Loopification, depth flattening and the {!Cpp_erasure} seam have to run in
-    that order, and every one of them has to run: a declaration that skipped
+    Control was lowered as the declaration was generated
+    ({!Control_to_legacy_minicpp}); Loopify's own transform runs here only as
+    [CRANE_CHECK_IR]'s oracle.  Depth flattening and the {!Cpp_erasure} seam
+    have to run in that order, and both have to run: a declaration that skipped
     flattening crashes the C++ parser, and one that skipped the seam is not a
     {!Cpp_erasure.settled} declaration at all.  So the sequence is a single
     function rather than a sequence its callers spell out -- there are no
@@ -16,12 +18,13 @@
     asked for and what kind of declaration it is. *)
 val should_loopify : Minicpp.cpp_decl -> bool
 
-(** [finish decl] runs every pass between translation and printing --
-    loopifying where {!should_loopify} says so -- and hands back the printable
-    declaration.  Under [CRANE_TRACE_PASSES] ([1], or a substring of the
+(** [finish decl] runs every pass between translation and printing and
+    hands back the printable declaration.  Under [CRANE_TRACE_PASSES] ([1], or a substring of the
     declaration's name) it reports which passes changed [decl] and its node
-    count before and after each.  Under [CRANE_CHECK_IR] it fails if the
-    result still owes the printer a decision one of its passes makes: an
+    count before and after each.  Under [CRANE_CHECK_IR] it fails if Loopify
+    would still lower control in [decl] -- all of it where {!should_loopify}
+    says so, its local tail loops elsewhere -- or if the result still owes
+    the printer a decision one of its passes makes: an
     unspellable type, an unsettled constraint, an unresolved cast, an
     undeclared type variable, a mapping's unsupplied type argument, or a
     method or projection called as a function. *)

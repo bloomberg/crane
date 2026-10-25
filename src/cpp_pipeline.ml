@@ -88,8 +88,8 @@ let rec holds_lowered_method decl =
 
 (** Whether [decl] holds control lowered from its ControlIR as it was
     generated ({!Control_to_legacy_minicpp}): a function or a method whose
-    body is its loop, or a local fixpoint's lambda that is, which before
-    Loopify has run no other pass can have made. *)
+    body is its loop, or a local fixpoint's lambda that is, which no pass
+    before the loopify check can have made. *)
 let lowered_at_generation decl =
   let exception Found in
   let fe e =
@@ -112,8 +112,8 @@ let lowered_at_generation decl =
   | () -> holds_lowered_method decl
   | exception Found -> true
 
-(** Whether [decl] is a function whose control was lowered as it was
-    generated, and so is not Loopify's to lower. *)
+(** Whether [decl] is a function whose own loop was made as it was
+    generated, which Loopify's transform would leave as it is. *)
 let rec lowered_function = function
   | Dtemplate (_, _, d) -> lowered_function d
   | Dfun {df_loop; _} -> Option.has_some df_loop
@@ -141,17 +141,22 @@ let access_moves = Pipeline_trace.pass "access_moves" Cpp_erasure.lower_access_m
 
 (** Every pass before the {!Cpp_erasure} seam, in the order they run. *)
 let minicpp_passes : unsettled Pipeline_trace.pass list =
-  [ lowering "loopify" (fun d ->
-        if lowered_function d then (
-          if Probe.checking () then Loopify.check_lowered d;
-          d )
-        else if should_loopify d then Loopify.transform_decl d
-        else (
-          (* A declaration Loopify does not loopify has its local tail loops
-             lowered as they were generated, and nothing else: a method is
-             lowered as it is generated only where Loopify would have
-             transformed it. *)
-          if Probe.checking () then begin
+  [ (* Control is lowered as it is generated, from its ControlIR
+       ({!Control_to_legacy_minicpp}): nothing is left here to lower.  Under
+       [CRANE_CHECK_IR] Loopify's own transform is the oracle -- of a
+       declaration it loopifies, all of it; of any other, its local tail
+       loops -- and what it would change is control translation did not
+       lower.  A method is lowered as it is generated only where Loopify
+       would have transformed it. *)
+    on_decl "loopify" (fun d ->
+        if Probe.checking () then
+          if lowered_function d then Loopify.check_lowered d
+          else if should_loopify d then begin
+            if compare (Loopify.transform_decl d) d <> 0 then
+              Probe.violation "control lowering"
+                (Pp.str "a declaration Loopify loopifies was not lowered as it was generated")
+          end
+          else begin
             if holds_lowered_method d then
               Probe.violation "control lowering"
                 (Pp.str "a method was lowered as it was generated in a declaration Loopify does not loopify");
@@ -159,7 +164,7 @@ let minicpp_passes : unsettled Pipeline_trace.pass list =
               Probe.violation "control lowering"
                 (Pp.str "a local tail loop of a declaration Loopify does not loopify was not lowered as it was generated")
           end;
-          d ) );
+        d );
     (* Closures made and used in one place become the code they stand for,
        before ownership is decided, so what they captured is seen as local. *)
     lowering "local_closures" Cpp_local_closures.transform_decl;
