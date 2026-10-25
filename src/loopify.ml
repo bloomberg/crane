@@ -861,180 +861,6 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
   | None -> frame ()
   with Not_linearisable reason -> declined reason
 
-(** Inline an Equations-style "functional" into its knot-tying wrapper.
-
-    Well-founded recursion defined with [Equations] (or the [Fix]/[Wf]
-    combinators) extracts as two sibling definitions: a {e functional}
-    [f_functional l rec] that performs the real recursion by calling its
-    [rec] parameter, and the tied knot [f l = f_functional l f] that passes
-    [f] itself as [rec].  At the C++ level this becomes
-
-    {v
-      f(x) { return f_functional(x, [](y){ return f(y); }); }
-    v}
-
-    Loopify cannot linearise this on its own: the actual recursion is hidden
-    behind an opaque helper and an argument lambda it does not control, so the
-    frame transform degenerates into a single [CraneEnter] loop that just re-runs
-    the body.  We repair it {e before} loopification by inlining the
-    functional's body into [f], rewriting every call to the [rec] parameter
-    into a direct self-call to [f].  The result is ordinary self-recursion
-    (here, two non-tail calls combined with [++]) that {!transform_nontail}
-    turns into a proper explicit-stack loop.
-
-    Detection is deliberately narrow — the wrapper's body must contain a call
-    to a sibling field whose argument at some position is exactly an
-    eta-expansion [fun y => f(y)] of the wrapper itself — so only the knot
-    pattern is rewritten.  The functional field is left in place (now unused);
-    it is a template and instantiates only on demand. *)
-let try_inline_functional_into names body =
-  let self_refs = List.map fst names in
-  let is_self_ref r = List.exists (Common.globref_equal r) self_refs in
-  (* Whether a call head is one of the functions being defined: by its
-     global.  A local of the same name -- a recursor's own parameter [f] -- is
-     not the function. *)
-  let is_self_call = function
-    | CPPglob (r, _, _) -> is_self_ref r
-    | _ -> false
-  in
-  (* Is [e] the eta-expansion [fun y => self(y)] of the function being defined?
-     Return the call head so the exact self-call form (with its type args) can
-     be reused when rewriting the functional's recursive parameter. *)
-  let eta_self_head = function
-    | CPPlambda
-      { cl_params = {rev = [(_, Some y)]};
-        cl_body =
-          [ Sreturn
-              (Some
-                 (CPPfun_call
-                    ({cs_yields = Ropaque; _}, head, {rev = [CPPvar y']}) ) ) ];
-        _ }
-      when Id.equal y y' && is_self_call head ->
-      Some head
-    | _ -> None
-  in
-  (* Resolve a call target to a registered functional [(params, body)], skipping
-     self. *)
-  let lookup_functional callee =
-    match callee with
-    | CPPglob (r, _, _) when not (is_self_call callee) ->
-      Ref.User.Tbl.find_opt mutual_fn_table r
-    | _ -> None
-  in
-  (* Find, anywhere in [body], a call to a registered functional with an
-     eta-self argument.  Returns (g_ret_ty, g_params, g_body, args, k, self_head). *)
-  let find_knot body =
-    let result = ref None in
-    let consider callee args =
-      if !result = None then
-        match lookup_functional callee with
-        | Some {rf_ret_ty = g_ret_ty; rf_params = g_params; rf_body = g_body} ->
-          List.iteri
-            (fun k a ->
-              if !result = None then
-                match eta_self_head a with
-                | Some head ->
-                  result := Some (g_ret_ty, g_params, g_body, args, k, head)
-                | None -> () )
-            args
-        | None -> ()
-    in
-    let rec ve e =
-      ( match e with
-      | CPPfun_call (_, callee, args) -> consider callee (to_reversed args)
-      | _ -> () );
-      ignore (map_expr (fun e' -> ve e'; e') (fun s -> vs s; s) Fun.id e)
-    and vs s = ignore (map_stmt (fun e -> ve e; e) (fun s' -> vs s'; s') Fun.id s) in
-    List.iter vs body;
-    !result
-  in
-  let inline_into a_body (g_ret_ty, g_params, g_body, args, k, self_head) =
-    if List.length g_params <> List.length args then None
-    else
-      let rec_param_id = fst (List.nth g_params k) in
-      (* The parameter at the eta-argument's position must be the one the
-         functional recurses through; if it is never called, the args and
-         params are misaligned (or this is not the knot pattern) — bail. *)
-      let rec_param_called =
-        body_exists
-          (function
-            | CPPfun_call (_, CPPvar id, _) -> Id.equal id rec_param_id
-            | _ -> false)
-          g_body
-      in
-      if not rec_param_called then None
-      else
-      (* Rewrite calls to the [rec] parameter into direct self-calls. *)
-      let rec subst_rec e =
-        match e with
-        | CPPfun_call (res, CPPvar id, cargs) when Id.equal id rec_param_id ->
-          CPPfun_call (res, self_head, map_args subst_rec cargs)
-        | _ -> map_expr subst_rec subst_stmt Fun.id e
-      and subst_stmt s = map_stmt subst_rec subst_stmt Fun.id s in
-      let g_body = List.map subst_stmt g_body in
-      (* Bail if the [rec] parameter is used in any non-call position we did
-         not rewrite — the simple self-call substitution would be unsound. *)
-      let uses_rec_param =
-        body_exists (function CPPvar id -> Id.equal id rec_param_id | _ -> false)
-          g_body
-      in
-      if uses_rec_param then None
-      else
-        (* Freshen every identifier the functional binds — parameters, locals,
-           match bindings, and lambda parameters — to avoid capturing (or being
-           shadowed by) the wrapper's own variables once spliced in.  Lambda
-           parameters matter in particular: a filter predicate [fun x => x < p]
-           would otherwise collide with a wrapper parameter also named [x],
-           confusing the decltype-based frame-field typing. *)
-        let keep_params =
-          List.filteri (fun i _ -> i <> k) g_params
-        in
-        let rename_map =
-          List.map
-            (fun id -> (id, inlined_local_name id))
-            (List.map fst keep_params @ declared_ids g_body)
-        in
-        let rename_var id =
-          match List.assoc_opt id rename_map with Some f -> f | None -> id
-        in
-        let fresh_params =
-          List.map (fun (pid, ty) -> (rename_var pid, ty)) keep_params
-        in
-        let fresh_body = rename_ids rename_var g_body in
-        (* Match exactly the knot call: a call to a registered functional whose
-           argument at position [k] is the eta-self lambda. *)
-        let knot_call = function
-          | CPPfun_call (_, callee, cargs) ->
-            let cargs = to_reversed cargs in
-            lookup_functional callee <> None
-            && List.length cargs = List.length args
-            && (match List.nth_opt cargs k with
-               | Some a -> eta_self_head a <> None
-               | None -> false)
-          | _ -> false
-        in
-        let spec =
-          {
-            continues = knot_call;
-            invokes = knot_call;
-            inlined = (fun _ _ -> ());
-            get_args =
-              (function
-              | CPPfun_call (_, _, cargs) ->
-                List.filteri (fun i _ -> i <> k) (to_reversed cargs)
-              | _ -> []);
-            params = fresh_params;
-            body = fresh_body;
-            ret_ty = g_ret_ty;
-          }
-        in
-        Some (generic_inline_stmts spec a_body)
-  in
-  match find_knot body with
-  | Some knot -> (
-    match inline_into body knot with Some body' -> body' | None -> body )
-  | None -> body
-
 (** The name to show for a [Dfun] in the loopification report: the label of
     the outermost reference of its qualified name. *)
 let fundef_display_name path =
@@ -1138,9 +964,7 @@ let modulo_cons_loop ~jumped ~varying ?parts ~shapes ~tparams check (f : dfun) p
   let adopted () =
     find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body
   in
-  if try_inline_functional_into names body != body || Option.has_some (adopted ())
-     || has_recursive_branch_dependency check body
-  then None
+  if Option.has_some (adopted ()) || has_recursive_branch_dependency check body then None
   else
     let loop =
       transform_tmc ~jumped ~varying ?parts ~shapes tparams check params f.df_ret (Cpp_temporaries.own_stmts body)
@@ -1187,7 +1011,7 @@ let frame_machine ~loop ?entry ?parts ~tparams check (f : dfun) params body =
   let survived = Option.map decline_reason adopted in
   let declined = Error (Left survived) in
   if has_recursive_branch_dependency check body then Error (Declined branch_dependency)
-  else if try_inline_functional_into names body != body || not as_planned then declined
+  else if not as_planned then declined
   else
     let survivors = fn_checker names in
     match
@@ -1236,19 +1060,6 @@ let local_frame_machine ~member ~name ~binders ?parts ~tparams check params ret_
         Some (loopify_inner_lambdas ~tparams (report_outcome ~name ~check ~strategy:Lp_frame machine))
       else None )
 
-let check_lowered decl =
-  let rec check = function
-    | Dtemplate (_, _, d) -> check d
-    | Dfun ({df_loop = Some _; df_shape = Ddef (_, body); _} as f)
-      when try_inline_functional_into (dfun_path_list f.df_path) body != body ->
-      Probe.violation "control lowering"
-        Pp.(
-          str "the tail loop of " ++ str (Table.kername_of_global (fst f.df_path.dp_outer))
-          ++ str ", lowered from its ControlIR, ties the knot of a functional Loopify inlines" )
-    | _ -> ()
-  in
-  check decl
-
 (** Transform a top-level function definition by loopifying its body.
 
     This is the main entry point for loopifying a [Dfun]. The transformation
@@ -1295,9 +1106,6 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
      whose statements the plan has resume points for as the partner's, and
      any other is an invocation, entering the machine only if adopted. *)
   let entered_by = entered_by_definition (fst f.df_path.dp_outer) in
-  (* Inline an Equations-style functional applied to itself so its hidden
-     recursion becomes ordinary self-recursion that loopifies. *)
-  let body = try_inline_functional_into names body in
   let check = fn_checker names in
   let body = expose_tail_calls check body in
   (* A suspended cofixpoint's calls are captured inside closures and never

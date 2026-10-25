@@ -114,9 +114,9 @@ type unlowered =
     the body Loopify adopts, where its ControlIR has the entry [entry], is
     a second entry of it ({!Loopify_frame.find_adopted}).  With it comes
     the reason a call it leaves behind survived, where it adopted a body.
-    [Error why] where Loopify would do anything else with [f]: tie an
-    Equations knot, adopt another body than the entry or one where there is
-    none, decline a branch depending on a recursive call, or make a machine
+    [Error why] where Loopify would do anything else with [f]: adopt
+    another body than the entry or one where there is none, decline a
+    branch depending on a recursive call, or make a machine
     disagreeing with its ControlIR; [why] is what Loopify records of the
     function it makes no machine of.  A machine may leave a call behind that
     its ControlIR holds as an ordinary recursive call: the calls entering it
@@ -158,8 +158,8 @@ val record_unlowered_method : method_field -> unit
     recognises the calls the loop takes, [shapes] the branches it builds
     cells in ({!Loopify_tmc.branch_along}), [varying] the parameters it
     changes, and [jumped] is told each call it takes.  [None] where
-    Loopify would do anything else with [f]: tie an Equations knot, adopt a
-    fixpoint, decline a branch depending on a recursive call, or fall back
+    Loopify would do anything else with [f]: adopt a fixpoint, decline a
+    branch depending on a recursive call, or fall back
     to a frame stack for a call the loop leaves.  It raises
     [Loopify_analysis.Not_linearisable] where the transform declines. *)
 val modulo_cons_loop :
@@ -231,12 +231,6 @@ val local_frame_machine :
   cpp_type ->
   cpp_stmt list ->
   cpp_stmt list option
-
-(** Under [CRANE_CHECK_IR], the function [decl] is, if its loop was lowered
-    as it was generated, must not tie the knot of an Equations functional:
-    Loopify inlines one before its transform, reading the unit's functions,
-    which are known only once every one is generated. *)
-val check_lowered : cpp_decl -> unit
 
 val worthwhile_move_type : cpp_type -> bool
 (** Whether a value of this type is expensive enough to copy that writing

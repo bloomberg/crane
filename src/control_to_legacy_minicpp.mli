@@ -30,8 +30,8 @@
     in, each read along the constructors of its chain around the call its
     occurrence names ({!Loopify_tmc.branch_along}), and the others its
     jumps.  It is left to Loopify where Loopify would do anything else with
-    the function ({!Loopify.modulo_cons_loop}): tie an Equations knot,
-    adopt a local fixpoint into a machine, or fall back to a frame stack.
+    the function ({!Loopify.modulo_cons_loop}): adopt a local fixpoint
+    into a machine, or fall back to a frame stack.
     So is the machine with a stack of frames of a function the plan lowers
     so ({!Recursion_plan.Frame_stack}): the calls entering it are those made
     of its loop's [Continue]s, those it resumes after the [Continue]s in a
@@ -39,8 +39,8 @@
     has an entry ({!Control_ir.Term.Entry}) takes the body Loopify finds
     for it -- the adopted local fixpoint's lambdas, or the partner's body
     invoked in place -- as its second entry, where that body is the
-    entry's.  It is left to Loopify where Loopify would adopt another body,
-    tie an Equations knot, or leave a call behind.
+    entry's.  It is left to Loopify where Loopify would adopt another body
+    or leave a call behind.
 
     The loop of a local fixpoint of one member ({!Control_ir.Loop.Member})
     is lowered so too, as translation generates the fixpoint: the lambda it

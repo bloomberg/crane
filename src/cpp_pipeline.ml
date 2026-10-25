@@ -149,9 +149,8 @@ let minicpp_passes : unsettled Pipeline_trace.pass list =
        lower.  A method is lowered as it is generated only where Loopify
        would have transformed it. *)
     on_decl "loopify" (fun d ->
-        if Probe.checking () then
-          if lowered_function d then Loopify.check_lowered d
-          else if should_loopify d then begin
+        if Probe.checking () && not (lowered_function d) then
+          if should_loopify d then begin
             if compare (Loopify.transform_decl d) d <> 0 then
               Probe.violation "control lowering"
                 (Pp.str "a declaration Loopify loopifies was not lowered as it was generated")
