@@ -587,8 +587,8 @@ let loopify_inner_lambdas ?(tail_only = false) ?parts ~tparams ?(outer_env = [])
              a local fixpoint gets it only through a helper lifted out of it. *)
           | Modulo_cons _ | Frame_stack ->
             report_outcome ~name ~check ~strategy:Lp_frame
-              (transform_nontail ~fn_name:name ~outer_env ~binders
-                 ~entered_by:(entered_by_member lf_member) ?parts check tparams
+              (transform_nontail ~fn_name:name ~loop:(Control_ir.Loop.Member (fst lf_member, snd lf_member)) ~outer_env
+                 ~binders ~entered_by:(entered_by_member lf_member) ?parts check tparams
                  params ret_ty lbody)
           | No_loop | Suspended _ ->
             CErrors.anomaly (Pp.str "loopify: no loop cannot appear here")
@@ -826,7 +826,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
   let frame () =
     let machine =
       checked_frame_machine loop check (fun entered ->
-          transform_nontail ?fn_name ?adopted ?entered_by ~entered ?binders ?parts check tparams params ret_ty body )
+          transform_nontail ?fn_name ?loop ?adopted ?entered_by ~entered ?binders ?parts check tparams params ret_ty body )
     in
     { nt_body = Option.cata fst body machine;
       nt_outcome = Lp_frame;
@@ -987,7 +987,7 @@ let checker_frame_machine ~partner ?parts ~tparams (f : dfun) params body =
   let body = expose_tail_calls check (try_inline_mutual_into ~partner r body) in
   let adopted = find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body in
   (apply_nontail_loopification ~fn_name:(fundef_display_name f.df_path) ?adopted ?entered_by:(entered_by_definition r)
-     ~binders:f.df_binders ?parts check tparams params f.df_ret body )
+     ?loop:(function_loop r) ~binders:f.df_binders ?parts check tparams params f.df_ret body )
     .nt_body
 
 (** Whether the body [ad] the machine of the function [r] adopts is the
@@ -1026,7 +1026,7 @@ let frame_machine ~loop ?entry ?parts ~tparams check (f : dfun) params body =
     let survivors = fn_checker names in
     match
       checked_frame_machine (Some loop) survivors (fun entered ->
-          transform_nontail ~fn_name:(fundef_display_name f.df_path) ?adopted ?entered_by:(entered_by_definition r)
+          transform_nontail ~fn_name:(fundef_display_name f.df_path) ~loop ?adopted ?entered_by:(entered_by_definition r)
             ~entered ~binders:f.df_binders ?parts check tparams params f.df_ret body )
     with
     | Some (made, entries) when classify survivors made = No_recursion ->
@@ -1063,7 +1063,8 @@ let local_frame_machine ~member ~name ~binders ?parts ~tparams check params ret_
   let name = Id.to_string name in
   Option.bind
     (checked_frame_machine (Some (Control_ir.Loop.Member (fst member, snd member))) check (fun entered ->
-         transform_nontail ~fn_name:name ~binders ~entered_by:(entered_by_member member) ~entered ?parts check tparams
+         transform_nontail ~fn_name:name ~loop:(Control_ir.Loop.Member (fst member, snd member)) ~binders
+           ~entered_by:(entered_by_member member) ~entered ?parts check tparams
            params ret_ty body ) )
     (fun (machine, _) ->
       if classify check machine = No_recursion then

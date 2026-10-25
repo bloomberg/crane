@@ -266,6 +266,21 @@ type resume = private {
   binder : Core_binder.t;
   live : Core_binder.t list;
   after : call list;
+  passes : passing list;
+}
+
+(** A binder of [live] that what follows passes on, as it is, to the
+    recursive call [call], one entering the machine there -- its value what
+    a let or a bind binds, or what follows returns: [passed], the argument,
+    for [into], the parameter of the function called.  What follows an
+    enclosing point keeping the binder too passes it on here as well, the
+    frames of the two keeping it alike.  A call whose value goes into some
+    other term, or under a lambda, or in a local fixpoint's bodies, passes
+    nothing here. *)
+and passing = private {
+  passed : Core_binder.t;
+  into : Core_binder.t;
+  call : call;
 }
 
 (** The points binding [b] at which its definition, a member of a group that

@@ -72,6 +72,14 @@ type resume = {
   binder : Core_binder.t;
   live : Core_binder.t list;
   after : call list;
+  passes : passing list;
+}
+
+(* A live binder passed on, as it is, for a parameter of a recursive call. *)
+and passing = {
+  passed : Core_binder.t;
+  into : Core_binder.t;
+  call : call;
 }
 
 type t = {
@@ -442,15 +450,90 @@ let resumes_of ~effects ~origin ~targets lex body =
     | Some {eb_role = Dictionary; _} -> true
     | Some {eb_role = Value; _} | None -> false
   in
-  let resume ~heads ~site ~after depth rest =
+  let dedup_passings ps =
+    let same p p' =
+      Core_binder.equal p.passed p'.passed && Core_binder.equal p.into p'.into
+      && Occurrence.equal p.call.occurrence p'.call.occurrence
+    in
+    List.fold_left (fun acc p -> if List.exists (same p) acc then acc else acc @ [p]) [] ps
+  in
+  (* The parameter the [i]th argument of the recursive call [c] is passed
+     for: the [i]th of the function's, or of the fixpoint's member, its
+     members bound from level [first] of [fixpoints] on. *)
+  let into ~fixpoints (c : call) i =
+    match c.target with
+    | Function g -> Some (Core_binder.make ~origin:g ~level:i ())
+    | Member (o, _) ->
+      Option.map
+        (fun (first, n) -> binder (first + n + i))
+        (List.find_map (fun (o', fn) -> if Occurrence.equal o o' then Some fn else None) fixpoints)
+    | Entering _ -> None
+  in
+  (* The live binders [rest], standing under [depth] binders, passes on to
+     a recursive call [targets] names that enters the machine: one whose
+     value is what a let or a bind binds, or what [rest] returns.  A call
+     whose value goes into some other term stays a call. *)
+  let passings ~fixpoints ~targets ~live depth rest =
+    let found = ref [] in
+    let rec arguments = function MLmagic (_, e) -> arguments e | MLapp (_, args) -> args | _ -> [] in
+    let rec go ~enters d e =
+      ( match targets ~depth:(depth + d) e with
+      | [c] when enters ->
+        List.iteri
+          (fun i a ->
+            match a with
+            | MLrel (j, _) when j > d && List.mem (depth + d - j) live ->
+              Option.iter
+                (fun p -> found := {passed = binder (depth + d - j); into = p; call = c} :: !found)
+                (into ~fixpoints c i)
+            | _ -> () )
+          (arguments e)
+      | _ -> () );
+      match e with
+      | MLlam _ | MLfix _ -> ()
+      | MLletin (_, _, a, b, _) ->
+        go ~enters:true d a;
+        go ~enters (d + 1) b
+      | MLcase (_, s, branches) ->
+        go ~enters:false d s;
+        Array.iter (fun (ids, _, _, b) -> go ~enters (d + List.length ids) b) branches
+      | MLmagic (_, e) -> go ~enters d e
+      | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Bind -> (
+        match List.rev args with
+        | MLlam (_, _, k) :: action :: others ->
+          go ~enters:true d action;
+          List.iter (go ~enters:false d) others;
+          go ~enters (d + 1) k
+        | _ -> List.iter (go ~enters:false d) args )
+      | e -> Mlutil.ast_iter (go ~enters:false d) e
+    in
+    go ~enters:true 0 rest;
+    List.rev !found
+  in
+  (* A local the frames of consecutive points keep is kept alike in all of
+     them, each handler passing it to the next frame as it holds it: what
+     follows a point passes it on as what follows the outermost of them,
+     [enclosing], does too. *)
+  let resume ~heads ~fixpoints ~targets ~enclosing ~site ~after depth rest =
     let live =
       List.filter (fun l -> l <> depth && not (dictionary l)) (value_levels ~heads ~depth:(depth + 1) rest)
     in
-    found :=
-      {binder = Core_binder.make ~origin ~level:depth ~site (); live = List.map binder live; after}
-      :: !found
+    let live_binders = List.map binder live in
+    let inherited =
+      List.concat_map
+        (fun r -> List.filter (fun q -> List.exists (Core_binder.equal q.passed) live_binders) r.passes)
+        enclosing
+    in
+    let r =
+      { binder = Core_binder.make ~origin ~level:depth ~site ();
+        live = live_binders;
+        after;
+        passes = dedup_passings (inherited @ passings ~fixpoints ~targets ~live (depth + 1) rest) }
+    in
+    found := r :: !found;
+    r
   in
-  let rec walk ~targets ~heads depth e =
+  let rec walk ~targets ~heads ~fixpoints ~enclosing depth e =
     (* A local fixpoint applied where it is written, reaching a recursive
        call, is bound as one ({!Normalize}). *)
     let rec reaches depth e =
@@ -493,20 +576,23 @@ let resumes_of ~effects ~origin ~targets lex body =
         | MLmagic (_, b) -> ending depth b
         | _ -> [] )
     in
-    let go = walk ~targets ~heads in
+    let go = walk ~targets ~heads ~fixpoints ~enclosing in
+    let resuming ~site ~after depth rest =
+      match after with
+      | [] -> enclosing
+      | after -> resume ~heads ~fixpoints ~targets ~enclosing ~site ~after depth rest :: enclosing
+    in
     match e with
     | MLletin (_, _, a, b, site) ->
-      (match ending depth a with [] -> () | after -> resume ~heads ~site ~after depth b);
+      let enclosing = resuming ~site ~after:(ending depth a) depth b in
       go depth a;
-      go (depth + 1) b
+      walk ~targets ~heads ~fixpoints ~enclosing (depth + 1) b
     | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Bind -> (
       match List.rev args with
       | MLlam (_, _, k) :: action :: rest ->
-        ( match targets ~depth action with
-        | [] -> ()
-        | after -> resume ~heads ~site:(Global_use.occurrence use) ~after depth k );
+        let enclosing = resuming ~site:(Global_use.occurrence use) ~after:(targets ~depth action) depth k in
         List.iter (go depth) (action :: rest);
-        go (depth + 1) k
+        walk ~targets ~heads ~fixpoints ~enclosing (depth + 1) k
       | _ -> List.iter (go depth) args )
     | MLcase (_, s, branches) ->
       go depth s;
@@ -522,15 +608,16 @@ let resumes_of ~effects ~origin ~targets lex body =
       in
       let targets ~depth e = match member ~depth e with [] -> targets ~depth e | called -> called in
       let heads = heads @ List.init n (fun m -> first + m) in
+      let fixpoints = (occ, (first, n)) :: fixpoints in
       Array.iter
         (fun f ->
           let arity, b = split_params 0 f in
-          walk ~targets ~heads (depth + n + arity) b )
+          walk ~targets ~heads ~fixpoints ~enclosing:[] (depth + n + arity) b )
         funs
-    | MLlam (_, _, b) -> walk ~targets:(fun ~depth:_ _ -> []) ~heads:[] (depth + 1) b
+    | MLlam (_, _, b) -> walk ~targets:(fun ~depth:_ _ -> []) ~heads:[] ~fixpoints ~enclosing:[] (depth + 1) b
     | e -> Mlutil.ast_iter (go depth) e
   in
-  walk ~targets:(fun ~depth:_ e -> targets e) ~heads:[] (Lexenv.depth lex) body;
+  walk ~targets:(fun ~depth:_ e -> targets e) ~heads:[] ~fixpoints:[] ~enclosing:[] (Lexenv.depth lex) body;
   List.rev !found
 
 (* The local fixpoints in the flow of [body], standing under [depth]
@@ -1085,7 +1172,11 @@ let equal a b =
             Core_binder.equal r.binder r'.binder
             && Core_binder.same_site r.binder r'.binder
             && List.equal Core_binder.equal r.live r'.live
-            && List.equal same_call r.after r'.after ) )
+            && List.equal same_call r.after r'.after
+            && List.equal
+                 (fun p p' ->
+                   Core_binder.equal p.passed p'.passed && Core_binder.equal p.into p'.into && same_call p.call p'.call )
+                 r.passes r'.passes ) )
        a.resumes b.resumes
   && Ref.User.Map.equal (List.equal Occurrence.equal) a.adoptable b.adoptable
   && Ref.User.Map.equal (List.equal same_inlining) a.inlinings b.inlinings

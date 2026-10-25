@@ -73,6 +73,9 @@ type call_frame_info = {
   cf_env : (Id.t * cpp_type) list;
       (** type env at frame creation, for decltype resolution *)
   cf_handler : cpp_stmt list;
+  cf_pointers : bool list option;
+      (** Which slots the frame keeps as pointers, as the recursion plan has
+          it: [None] where the plan does not describe the frame *)
 }
 
 (** [make_slots ~types ~exprs] pairs a frame's saved types with the
@@ -433,12 +436,12 @@ let make_cont_env cont_vars cont_types env =
     @param saved_exprs The saved expressions (for decltype fallback)
     @param env Type environment at frame creation point
     @param handler The handler body statements *)
-let register_frame frames_ref ~name ~saved_types ~saved_exprs ~env ~handler =
+let register_frame frames_ref ~name ~saved_types ~saved_exprs ~env ~handler ~pointers =
   frames_ref :=
     !frames_ref
     @ [{cf_name = name;
         cf_slots = make_slots ~types:saved_types ~exprs:saved_exprs;
-        cf_env = env; cf_handler = handler}]
+        cf_env = env; cf_handler = handler; cf_pointers = pointers}]
 
 (** {3 Frame-based non-tail rewrite}
 
@@ -1191,6 +1194,13 @@ type enter_rewrite_ctx = {
   er_entered : resumes:bool -> cpp_expr -> unit;
       (** Told each call that enters the machine, and whether the machine
           resumes after it. *)
+  er_points_into : Core_binder.t -> bool;
+      (** Whether the machine's own entry takes a value passed for the
+          parameter standing for this Core binder as a pointer to it *)
+  er_entering : Miniml.Occurrence.t list option;
+      (** The calls that enter the machine at its own entry: its loop's
+          Continues ({!Control_ir.continues_of}); [None] where it has no
+          ControlIR *)
 }
 
 (** The entry point a call site targets. *)
@@ -1294,7 +1304,7 @@ let planned_frame_at ctx id tgt ~kept_elsewhere =
   in
   match Option.map Recursion_plan.resumes_binding binder with
   | Some [p] ->
-    Some (planned_frame ctx.er_binders ~kept_elsewhere:(fun x -> Id.equal x id || kept_elsewhere x) p)
+    Some (p, planned_frame ctx.er_binders ~kept_elsewhere:(fun x -> Id.equal x id || kept_elsewhere x) p)
   | Some points ->
     Probe.violation "frame plan"
       Pp.(str "the recursion plan has " ++ int (List.length points) ++ str " resume points for a call's result");
@@ -1557,8 +1567,27 @@ and rewrite_enter_stmts ctx stmts =
       in
       (* Which Core values cross the call, and in what order the frame keeps
          them, is the plan's. *)
-      let cont_vars =
-        frame_locals ctx (planned_frame_at ctx id tgt ~kept_elsewhere) read
+      let planned = planned_frame_at ctx id tgt ~kept_elsewhere in
+      let cont_vars = frame_locals ctx (Option.map snd planned) read in
+      (* A local is kept as a pointer where what follows passes it on, as
+         it is, for a parameter the machine's entry takes a pointer for: a
+         copy in the frame would die with the handler that pushed the
+         pointer to it. *)
+      let pointers =
+        match (planned, ctx.er_entering) with
+        | Some ((p : Recursion_plan.resume), _), Some entering ->
+          let passed b =
+            List.exists
+              (fun (q : Recursion_plan.passing) ->
+                Core_binder.equal q.passed b && ctx.er_points_into q.into
+                && List.exists (Miniml.Occurrence.equal q.call.occurrence) entering )
+              p.passes
+          in
+          Some
+            (List.map
+               (fun x -> Option.cata passed false (Option.flatten (List.assoc_opt x ctx.er_binders)))
+               cont_vars )
+        | None, _ | _, None -> None
       in
       let cont_saved = List.map (fun cid -> CPPvar cid) cont_vars in
       (* Each kept at the type its local was declared at: the binder's. *)
@@ -1623,7 +1652,7 @@ and rewrite_enter_stmts ctx stmts =
       in
       let saved_conv = move_for_frame_list cont_types cont_saved in
       register_frame frames_ref ~name:call_name ~saved_types:cont_types
-        ~saved_exprs:saved_conv ~env ~handler;
+        ~saved_exprs:saved_conv ~env ~handler ~pointers;
       [
         make_stack_push (CPPstruct_id (Id.of_string call_name, [], saved_conv));
         make_stack_push enter;
@@ -2659,7 +2688,7 @@ let fix_handler_bindings field_names cf_ps handler =
     @return Transformed body with frame-based stack structure, or the original
             [body] unchanged when the transformation is unsafe (branch
             dependencies on recursive calls) *)
-let transform_nontail ?(fn_name : string option) ?adopted ?entered_by ?(entered = fun ~resumes:_ _ -> ())
+let transform_nontail ?(fn_name : string option) ?loop ?adopted ?entered_by ?(entered = fun ~resumes:_ _ -> ())
     ?(outer_env = []) ?(binders = []) ?parts check tparams params ret_ty body =
   (* An adopted body becomes a second entry point of this machine rather than
      a machine of its own: two machines cannot unwind each other's stack, so
@@ -2757,6 +2786,17 @@ let transform_nontail ?(fn_name : string option) ?adopted ?entered_by ?(entered 
      rewrite passes it.  A name the body declares in two sibling scopes is
      then never read at the other one's type. *)
   let env = params @ outer_env in
+  (* A parameter that is a raw pointer already -- a method's receiver,
+     [_self] -- takes a pointer at every entry. *)
+  let is_pointer_param (_, ty) = match ty with Tptr _ | Tconst (Tptr _) -> true | _ -> false in
+  let entry_pointers = List.map2 ( || ) pointer_safe (List.map is_pointer_param params) in
+  let points_into b =
+    List.exists2
+      (fun (id, _) (varies, pointer) ->
+        varies && pointer
+        && match List.assoc_opt id binders with Some b' -> Core_binder.equal b b' | None -> false )
+      params (List.combine varying entry_pointers)
+  in
   (
   (* Rewrite body for Enter handler and collect call frame info *)
   let call_counter = ref 1 in
@@ -2798,7 +2838,9 @@ let transform_nontail ?(fn_name : string option) ?adopted ?entered_by ?(entered 
                er_invariant_params = invariant_params;
                er_rematerialized = [];
                er_entered_by = entered_by;
-               er_entered = entered }
+               er_entered = entered;
+               er_points_into = points_into;
+               er_entering = Option.bind loop (fun l -> Option.map (Control_ir.continues_of l) (Lower_control.loop l)) }
   in
   (* The body is a sequence like any other: a recursive call bound at its top
      level -- a temporary {!Normalize} made of a call in the function's
@@ -2826,15 +2868,28 @@ let transform_nontail ?(fn_name : string option) ?adopted ?entered_by ?(entered 
   let frames =
     List.sort (fun a b -> String.compare a.cf_name b.cf_name) !frames_ref
   in
-  (* Compute pointer-safe flags for Call frames.  A parameter that is a raw
-     pointer already -- a method's receiver, [_self] -- takes a pointer at
-     every entry, so what a frame saves to compute it is saved as the
-     pointer it was taken from too. *)
+  (* Which slots each frame keeps as pointers is the recursion plan's
+     ({!call_frame_info.cf_pointers}).  The pushes the handlers make are
+     the C++'s account of the same: under [CRANE_CHECK_IR] the slots they
+     need as pointers must be those.  A machine the plan does not describe
+     keeps what its pushes need. *)
   let frame_ps_map =
-    let is_pointer_param (_, ty) = match ty with Tptr _ | Tconst (Tptr _) -> true | _ -> false in
-    compute_frame_pointer_safe
-      (List.map2 ( || ) pointer_safe_varying (filter_by_mask varying (List.map is_pointer_param params)))
-      frames
+    let pushed () = compute_frame_pointer_safe (filter_by_mask varying entry_pointers) frames in
+    let planned =
+      List.fold_right
+        (fun cf acc ->
+          match (cf.cf_pointers, acc) with
+          | Some ps, Some acc -> Some (if List.exists Fun.id ps then (cf.cf_name, ps) :: acc else acc)
+          | None, _ | _, None -> None )
+        frames (Some [])
+    in
+    match planned with
+    | Some planned ->
+      if Probe.checking () && not (List.equal ( = ) planned (pushed ())) then
+        Probe.violation "frame plan"
+          (Pp.str "a frame keeps other locals as pointers than the pushes of the machine's handlers need");
+      planned
+    | None -> pushed ()
   in
   (* One emission per entry point, in {!entries} order. *)
   let emissions =
