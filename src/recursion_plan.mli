@@ -226,6 +226,13 @@ val adoptable_by_fixpoint : lifted:Miniml.Occurrence.t list -> Miniml.Occurrence
     function takes. *)
 val member_calls : Miniml.Occurrence.t * int -> Miniml.Occurrence.t list
 
+(** The calls entering the local fixpoint of one member at [occurrence],
+    each by the occurrence its C++ call records: its own ({!member_calls}),
+    and those made where it is bound -- the fixpoint applied there, by its
+    occurrence, or the reads of the let binding it.  What a machine
+    adopting the fixpoint reroutes to its entry. *)
+val entering : Miniml.Occurrence.t -> Miniml.Occurrence.t list
+
 (** A recursive call a function resumes after: a call of the function of
     the group [Function g], with no fewer arguments than its parameters --
     one with fewer is a closure, and calls where it runs; a call of the

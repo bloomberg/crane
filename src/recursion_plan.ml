@@ -37,6 +37,9 @@ type local_group = {
   adoptable : Occurrence.t list list;  (* per member, {!flow_fixpoints} calling the group *)
   calls : Occurrence.t list list;
       (* per member, the reads heading its calls in the group's bodies *)
+  entered : Occurrence.t list;
+      (* the calls of the member the fixpoint stands for made where it is
+         bound: the fixpoint applied, or the reads of the let binding it *)
 }
 
 (* The calls of one partner a function inlines: those that continue in the
@@ -566,12 +569,30 @@ let rec iter_under f depth e =
   | MLfix (_, ids, funs, _, _) -> Array.iter (iter_under f (depth + Array.length ids)) funs
   | e -> Mlutil.ast_iter (iter_under f depth) e
 
+(* The calls of each local fixpoint in [body] made where it is bound, under
+   its occurrence: the fixpoint applied there, by its occurrence, or the
+   reads of the let binding it. *)
+let bound_calls body =
+  let found = ref [] in
+  let rec walk e =
+    ( match e with
+    | MLletin (_, _, MLfix (_, _, _, _, occurrence), b, _) ->
+      let reads = ref [] in
+      iter_under (fun depth -> function MLrel (k, read) when k = depth + 1 -> reads := read :: !reads | _ -> ()) 0 b;
+      found := (occurrence, List.rev !reads) :: !found
+    | MLapp (MLfix (_, _, _, _, occurrence), _) -> found := (occurrence, [occurrence]) :: !found
+    | _ -> () );
+    Mlutil.ast_iter walk e
+  in
+  walk body;
+  !found
+
 (* The plan of every local fixpoint in [defs], one per fixpoint, under its
    occurrence.  Inside a member's body, before its parameters,
    the member [k] of [n] is the variable [n - k]. *)
 let local_groups ~effects defs =
   let plans = ref [] in
-  let plan origin lex ids funs occurrence =
+  let plan ~bound origin lex ids funs occurrence =
     let n = Array.length ids in
     let arities = Array.map (fun f -> fst (split_params 0 f)) funs in
     let rec strip = function MLmagic (_, e) -> strip e | e -> e in
@@ -632,14 +653,16 @@ let local_groups ~effects defs =
         chains;
         suspends;
         adoptable;
-        calls }
+        calls;
+        entered = List.concat_map (fun (o, calls) -> if Occurrence.equal o occurrence then calls else []) bound }
       :: !plans
   in
   Ref.User.Map.iter
     (fun r fd ->
       let lex, body = Core_elaborate.declaration_scope fd.fd_type fd.fd_body in
+      let bound = bound_calls body in
       iter_scoped
-        (fun lex -> function MLfix (_, ids, funs, _, occ) -> plan r lex ids funs occ | _ -> ())
+        (fun lex -> function MLfix (_, ids, funs, _, occ) -> plan ~bound r lex ids funs occ | _ -> ())
         lex body )
     defs;
   List.rev !plans
@@ -1037,7 +1060,8 @@ let equal a b =
          && List.equal (Option.equal same_chains) l.chains l'.chains
          && l.suspends = l'.suspends
          && List.equal (List.equal Occurrence.equal) l.adoptable l'.adoptable
-         && List.equal (List.equal Occurrence.equal) l.calls l'.calls )
+         && List.equal (List.equal Occurrence.equal) l.calls l'.calls
+         && List.equal Occurrence.equal l.entered l'.entered )
        a.locals b.locals
   && Ref.User.Map.equal same_chains a.modulo_cons b.modulo_cons
   && Ref.User.Set.equal a.suspended b.suspended
@@ -1206,6 +1230,12 @@ let member_calls (occurrence, member) =
       if Occurrence.equal l.occurrence occurrence then Option.default [] (List.nth_opt l.calls member)
       else [] )
     !installed.locals
+
+let entering occurrence =
+  member_calls (occurrence, 0)
+  @ List.concat_map
+      (fun (l : local_group) -> if Occurrence.equal l.occurrence occurrence then l.entered else [])
+      !installed.locals
 
 let resumes_binding (b : Core_binder.t) =
   match Ref.User.Map.find_opt b.origin !installed.resumes with

@@ -818,28 +818,24 @@ let find_in_flow ?on_stmt ?on_expr stmts =
   List.iter (fun s -> ignore (visit s)) stmts;
   !found
 
-(** Drop the bindings of [ids] wherever they occur in [stmts].
+(** Drop the bindings [dropped] holds of wherever they occur in [stmts].
 
     Once a local fixpoint becomes an entry point of the enclosing machine, the
     lambdas that used to implement it are dead -- and not merely untidy: they
     still hold a call the loopification postcondition would see, so leaving
     them in gets the function reported as declined even though its machine is
     correct. *)
-let rec drop_bindings ids stmts =
-  let dropped id = List.exists (Id.equal id) ids in
+let rec drop_bindings dropped stmts =
   List.filter_map
     (fun st ->
-      match st with
-      | Sasgn (id, Declare _, _) when dropped id -> None
-      | Sdecl (id, _, _) when dropped id -> None
-      | _ -> Some (map_stmt (drop_bindings_expr ids) (drop_bindings_stmt ids)
-                     Fun.id st) )
+      if dropped st then None
+      else Some (map_stmt (drop_bindings_expr dropped) (drop_bindings_stmt dropped) Fun.id st) )
     stmts
 
 (** [drop_bindings] on a single statement, collapsing a list result into a
     block so that it fits where one statement is expected. *)
-and drop_bindings_stmt ids s =
-  match drop_bindings ids [s] with
+and drop_bindings_stmt dropped s =
+  match drop_bindings dropped [s] with
   | [] -> Sblock []
   | [one] -> one
   | many -> Sblock many
@@ -847,10 +843,21 @@ and drop_bindings_stmt ids s =
 (** [drop_bindings] reaching through expressions into the bodies of
     {!invoked_body} lambdas -- the statements the searches above look in, so
     the same ones a dropped binding can hide in. *)
-and drop_bindings_expr ids e =
+and drop_bindings_expr dropped e =
   match invoked_body e with
-  | Some (body, rebuild) -> rebuild (drop_bindings ids body)
-  | None -> map_expr (drop_bindings_expr ids) Fun.id Fun.id e
+  | Some (body, rebuild) -> rebuild (drop_bindings dropped body)
+  | None -> map_expr (drop_bindings_expr dropped) Fun.id Fun.id e
+
+(** Whether [st] binds a lambda the local fixpoint [fixpoint] is generated
+    as: the one taking its self-parameter, or the wrapper tying the knot
+    ({!wraps}) -- by the Core fixpoint it was made of, not by its name, which
+    another fixpoint may share. *)
+let binds_fixpoint ?(knot = true) (fixpoint : local_fixpoint) = function
+  | Sasgn (_, Declare _, CPPlambda {cl_fixpoint = Some {lf_member = (o, j); lf_encoding; _}; _}) -> (
+    let (o', j') = fixpoint.lf_member in
+    Miniml.Occurrence.equal o o' && Int.equal j j'
+    && match lf_encoding with Self_passing _ -> true | Knot -> knot | Lowered -> false )
+  | _ -> false
 
 (** The binder of the wrapper lambda for the local fixpoint [fixpoint]
     ({!wraps}).  Searched over the same flow the fixpoint itself is, since
@@ -984,23 +991,28 @@ let adopt_local_fix ~stmts ~planned = function
         let name = Id.to_string lf_name in
         let entry_id = adopted_entry_id name in
         let wrapper = find_fix_wrapper cl_fixpoint stmts in
+        (* A call enters the fixpoint where it is made of one of the calls
+           the plan has entering it -- not where it names the fixpoint,
+           whose names another fixpoint may share.  How it is rerouted is
+           its shape: one through the self-parameter forwards it as a
+           leading argument the entry does not take. *)
+        let entering = Recursion_plan.entering (fst fixpoint.lf_member) in
         let reroute e =
           match e with
-          | CPPfun_call (res, CPPvar id, args) when Id.equal id self_id -> (
-            match call_args args with
-            | _self_arg :: rest ->
-              CPPfun_call (res, CPPvar entry_id, of_reversed (List.rev rest))
-            | [] -> e )
-          | CPPfun_call (res, CPPvar id, args)
-            when Option.equal Id.equal (Some id) wrapper ->
-            CPPfun_call (res, CPPvar entry_id, args)
+          | CPPfun_call (({cs_occurrence = Some o; _} as res), CPPvar id, args)
+            when List.exists (Miniml.Occurrence.equal o) entering -> (
+            if not (Id.equal id self_id) then CPPfun_call (res, CPPvar entry_id, args)
+            else
+              match call_args args with
+              | _self_arg :: rest -> CPPfun_call (res, CPPvar entry_id, of_reversed (List.rev rest))
+              | [] -> e )
           | _ -> e
         in
         let install_calls = rewrite_exprs reroute in
         let bindings =
           impl_id :: (match wrapper with Some w -> [w] | None -> [])
         in
-        let install ss = install_calls (drop_bindings bindings ss) in
+        let install ss = install_calls (drop_bindings (binds_fixpoint fixpoint) ss) in
         (* [reroute] only knows how to redirect a *call* on the fixpoint.  A
            program that passes it around as a value -- Coq's [FMapList.map2]
            returns it from a branch and applies it outside -- keeps a mention
@@ -1013,25 +1025,19 @@ let adopt_local_fix ~stmts ~planned = function
             (fun id -> List.exists (Id.equal id) free)
             bindings
         in
-        (* [reroute] goes by name, which is only sound while the names denote
-           this fixpoint alone.  Two local fixpoints both called [loop] -- one
-           of them inside a lambda -- share [loop_impl], [loop] and
-           [_self_loop], and rerouting would send the other one's calls to an
-           entry that never handles them. *)
-        let shared_name =
+        (* Two copies of one fixpoint keep its occurrence, and so do their
+           calls: rerouting would send the other copy's calls to an entry
+           that never handles them. *)
+        let copied =
           let rec count_stmt n st =
-            let n =
-              match st with
-              | Sasgn (id, Declare _, _) when Id.equal id impl_id -> n + 1
-              | _ -> n
-            in
+            let n = if binds_fixpoint ~knot:false fixpoint st then n + 1 else n in
             fold_stmt_children ~on_expr:count_expr ~on_stmts:count_stmts n st
           and count_expr n e =
             fold_expr_children ~on_expr:count_expr ~on_stmts:count_stmts n e
           and count_stmts n l = List.fold_left count_stmt n l in
           count_stmts 0 stmts > 1
         in
-        if survives || shared_name then None
+        if survives || copied then None
         else
         Some
           { ad_name = name;
