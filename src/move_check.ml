@@ -65,41 +65,6 @@ let member e =
     Some (x, f)
   | _ -> None
 
-(* Every name a statement list declares, wherever. *)
-let declared ss =
-  let acc = ref [] in
-  let rec fe e = iter_expr_children ~on_expr:fe ~on_stmts:fl e
-  and fl l =
-    List.iter
-      (fun s ->
-        ( match s with
-        | Sasgn (x, Declare _, _) | Sdecl (x, _, _) | Sdecl_init (x, _) | Sif_decl (x, _, _, _, _)
-        | Sfor_range (x, _, _) ->
-          acc := x :: !acc
-        | Sbind (xs, _) -> acc := xs @ !acc
-        | Smatch (_, bs, _) ->
-          List.iter
-            (fun b -> acc := (match b.smb_var with Some v -> [v] | None -> []) @ List.map (fun fb -> fb.fb_name) b.smb_field_bindings @ !acc)
-            bs
-        | Scustom_case (_, _, _, bs, _) ->
-          List.iter (fun (ps, _, _) -> acc := List.map (fun p -> p.cp_name) ps @ !acc) bs
-        | _ -> () );
-        iter_stmt_children ~on_expr:fe ~on_stmts:fl s )
-      l
-  in
-  fl ss;
-  !acc
-
-(* Every local a statement list names. *)
-let named ss =
-  let acc = ref [] in
-  let rec fe e =
-    (match e with CPPvar x -> acc := x :: !acc | _ -> ());
-    iter_expr_children ~on_expr:fe ~on_stmts:fl e
-  and fl l = List.iter (iter_stmt_children ~on_expr:fe ~on_stmts:fl) l in
-  fl ss;
-  !acc
-
 let rec expr report e : effect_ =
   match (member e, e) with
   | Some (CPPvar x, f), _ -> {none with reads = [Member (x, f)]}
@@ -135,12 +100,12 @@ let rec expr report e : effect_ =
     check_after report r l;
     union l r
   (* A closure reads what it closes over where it is made, and takes there
-     what it moves; its body is a body of its own. *)
+     what it moves; its body is a body of its own.  What it closes over is
+     what is free in it, scope by scope: a parameter of a lambda inside it
+     is that lambda's, not a local of the scope the closure is made in. *)
   | _, CPPlambda l ->
     body report l.cl_body;
-    let own = List.filter_map snd (lambda_params l.cl_params) @ declared l.cl_body in
-    let free = List.filter (fun x -> not (List.exists (Id.equal x) own)) (named l.cl_body) in
-    {reads = List.map (fun x -> Whole x) free; moves = List.map (fun x -> Whole x) l.cl_moved}
+    {reads = List.map (fun x -> Whole x) (free_vars_expr e); moves = List.map (fun x -> Whole x) l.cl_moved}
   | _ ->
     (* Everything else evaluates its parts in an order C++ does not fix. *)
     let parts = ref [] in
