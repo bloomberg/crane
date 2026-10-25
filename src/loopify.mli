@@ -89,6 +89,15 @@ val checker_frame_machine :
   cpp_stmt list ->
   cpp_stmt list
 
+(** Why no loop of a function Loopify loopifies was made: the transform
+    declined it, [Declined why] recording [why] whatever the body holds; or
+    it made none, [Left survived], and a call of the function left in the
+    body is a decline for [survived], where something sharper is known than
+    {!Loopify_analysis.survived_generically}. *)
+type unlowered =
+  | Declined of string
+  | Left of string option
+
 (** [frame_machine ~loop ?entry ~tparams check f params body] is the
     machine with a stack of frames of the function [f], the loop [loop] of
     its ControlIR, whose body [body] has its partners inlined and its tail
@@ -96,10 +105,11 @@ val checker_frame_machine :
     the body Loopify adopts, where its ControlIR has the entry [entry], is
     a second entry of it ({!Loopify_frame.find_adopted}).  With it comes
     the reason a call it leaves behind survived, where it adopted a body.
-    [None] where Loopify would do anything else with [f]: tie an Equations
-    knot, adopt another body than the entry or one where there is none,
-    decline a branch depending on a recursive call, or make a machine
-    disagreeing with its ControlIR.  A machine may leave a call behind that
+    [Error why] where Loopify would do anything else with [f]: tie an
+    Equations knot, adopt another body than the entry or one where there is
+    none, decline a branch depending on a recursive call, or make a machine
+    disagreeing with its ControlIR; [why] is what Loopify records of the
+    function it makes no machine of.  A machine may leave a call behind that
     its ControlIR holds as an ordinary recursive call: the calls entering it
     are then those its loop's [Continue]s, its entry's included, are made
     of.  Under [CRANE_CHECK_IR] the calls entering a machine leaving none
@@ -113,7 +123,20 @@ val frame_machine :
   dfun ->
   (Id.t * cpp_type) list ->
   cpp_stmt list ->
-  (cpp_stmt list * string option) option
+  (cpp_stmt list * string option, unlowered) result
+
+(** [record_unlowered ?unlowered f body] records the outcome of the
+    function [f], whose body is [body], of which no loop of its own is made
+    for the reason [unlowered] -- none made, unless given -- as Loopify
+    records it of such a function it loopifies: nothing where the plan
+    lowers it to none, a deferral for a suspended cofixpoint, and otherwise
+    the decline, or the planned strategy read off [body]: a decline where a
+    call of [f] is left in it ({!Loopify_analysis.report_outcome}). *)
+val record_unlowered : ?unlowered:unlowered -> dfun -> cpp_stmt list -> unit
+
+(** [record_unlowered_method m] is {!record_unlowered} for the method [m],
+    of which no loop is attempted: its calls those of the method. *)
+val record_unlowered_method : method_field -> unit
 
 (** [modulo_cons_loop ~jumped ~varying ~shapes ~tparams check f params
     body] is the tail-modulo-cons loop of the function [f], whose body

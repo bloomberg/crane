@@ -393,6 +393,14 @@ let get_outcomes () =
     (List.rev !outcomes);
   List.rev_map (fun name -> (name, Hashtbl.find best name)) !order
 
+(** What a suspended cofixpoint's function is: its calls run when a thunk is
+    forced, and need no loop. *)
+let deferred_cofixpoint = Lp_deferred "cofixpoint body is lazy_-wrapped"
+
+(** Why a function a self-call is left in was declined, where nothing
+    sharper is known. *)
+let survived_generically = "a self-call survived the transform"
+
 (** Record one outcome.  Nothing is printed here: an outcome is only meaningful
     once every attempt at the same function has been seen, so reporting waits
     for {!report_outcomes} at the end of the unit. *)
@@ -1140,7 +1148,7 @@ let report_outcome ?survived ~name ~check ~strategy body =
     | Lp_declined _ -> strategy
     | _ when classify check body <> No_recursion ->
       Lp_declined
-        (Option.default "a self-call survived the transform" survived)
+        (Option.default survived_generically survived)
     | _ -> strategy
   in
   record_outcome name outcome;

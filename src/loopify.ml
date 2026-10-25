@@ -787,13 +787,21 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
     @param ret_ty      Return type
     @param body        Function body statements
     @return what the transform did; see {!nontail_result}. *)
+type unlowered =
+  | Declined of string
+  | Left of string option
+
+(** Why a function whose recursive call decides a branch is not made a
+    machine. *)
+let branch_dependency = "recursive call in a branch condition or dispatch scrutinee"
+
 let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_by ?modulo_cons ?shapes ?loop
     ?binders check tparams params ret_ty body =
   let declined reason =
     {nt_body = body; nt_outcome = Lp_declined reason; nt_used_param_inits = false; nt_machine = false}
   in
   if has_recursive_branch_dependency check body then
-    declined "recursive call in a branch condition or dispatch scrutinee"
+    declined branch_dependency
   else
   let frame () =
     let machine =
@@ -1166,8 +1174,10 @@ let frame_machine ~loop ?entry ~tparams check (f : dfun) params body =
   let unadopted entries =
     Option.has_some entry || Option.is_empty adopted || Option.is_empty (machine_disagreement loop entries)
   in
-  if try_inline_functional_into names body != body || (not as_planned) || has_recursive_branch_dependency check body
-  then None
+  let survived = Option.map decline_reason adopted in
+  let declined = Error (Left survived) in
+  if has_recursive_branch_dependency check body then Error (Declined branch_dependency)
+  else if try_inline_functional_into names body != body || not as_planned then declined
   else
     let survivors = fn_checker names in
     let machine check =
@@ -1175,10 +1185,9 @@ let frame_machine ~loop ?entry ~tparams check (f : dfun) params body =
           transform_nontail ~fn_name:(fundef_display_name f.df_path) ?adopted ?entered_by:(entered_by_definition r)
             ~entered ~binders:f.df_binders check tparams params f.df_ret body )
     in
-    let survived = Option.map decline_reason adopted in
     match machine check with
     | Some (made, entries) when classify survivors made = No_recursion ->
-      if unadopted entries then Some (made, survived) else None
+      if unadopted entries then Ok (made, survived) else declined
     | Some _ when not (has_recursive_branch_dependency survivors body) -> (
       (* A machine leaving a call behind is made reading every call of the
          function, as Loopify makes it -- its frames are laid out for the
@@ -1186,9 +1195,20 @@ let frame_machine ~loop ?entry ~tparams check (f : dfun) params body =
          ControlIR where the calls entering it are its loop's: those it
          leaves are ordinary recursive calls there. *)
       match machine survivors with
-      | Some (made, entries) when Option.is_empty (machine_disagreement loop entries) -> Some (made, survived)
-      | Some _ | None -> None )
-    | Some _ | None -> None
+      | Some (made, entries) when Option.is_empty (machine_disagreement loop entries) -> Ok (made, survived)
+      | Some _ | None -> declined )
+    | Some _ -> Error (Declined branch_dependency)
+    | None -> declined
+
+let record_unlowered ?(unlowered = Left None) (f : dfun) body =
+  let name = fundef_display_name f.df_path in
+  let check = fn_checker (dfun_path_list f.df_path) in
+  match (planned_strategy (Some (fst f.df_path.dp_outer)) check body, unlowered) with
+  | No_loop, _ -> ()
+  | Suspended _, _ -> record_outcome name deferred_cofixpoint
+  | (Tail_loop | Modulo_cons _ | Frame_stack), Declined why -> record_outcome name (Lp_declined why)
+  | Tail_loop, Left survived -> ignore (report_outcome ?survived ~name ~check ~strategy:Lp_tail body)
+  | (Modulo_cons _ | Frame_stack), Left survived -> ignore (report_outcome ?survived ~name ~check ~strategy:Lp_frame body)
 
 let lower_local_tail_loops ~tparams stmts = loopify_inner_lambdas ~tail_only:true ~tparams stmts
 
@@ -1282,7 +1302,7 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
     let strategy = planned_strategy (Some (fst f.df_path.dp_outer)) check body in
     match strategy with
     | Suspended _ ->
-      record_outcome name (Lp_deferred "cofixpoint body is lazy_-wrapped");
+      record_outcome name deferred_cofixpoint;
       loopify_inner_lambdas ~tparams ~outer_env:params body
     | No_loop | Tail_loop | Modulo_cons _ | Frame_stack ->
       (* Recursion that lives inside a lambda -- a local fixpoint, or an
@@ -1417,7 +1437,7 @@ let transform_method_own ?varying ?(controlled = false) ~tparams ~self_ty mf =
     (* A suspended method returns in O(1) stack frames, as a function does
        ({!transform_fundef_exn}). *)
     | Suspended _ ->
-      record_outcome name (Lp_deferred "cofixpoint body is lazy_-wrapped");
+      record_outcome name deferred_cofixpoint;
       Fmethod mf
     | No_loop ->
       Fmethod mf
@@ -1613,6 +1633,16 @@ let transform_method_own ?varying ?(controlled = false) ~tparams ~self_ty mf =
     method's body turned into loops: the part of loopification every
     declaration gets ({!transform_local_tail_loops}), which a method of a
     struct whose methods are loopified did not. *)
+let record_unlowered_method mf =
+  let this_pos = match mf.mf_receiver with Instance r -> r.this_pos | Static -> 0 in
+  let check = method_checker ~n_params:(List.length mf.mf_params) ~has_self_param:false ~this_pos mf.mf_globref in
+  let name = Id.to_string mf.mf_name in
+  match planned_strategy mf.mf_globref check mf.mf_body with
+  | No_loop -> ()
+  | Suspended _ -> record_outcome name deferred_cofixpoint
+  | Tail_loop -> ignore (report_outcome ~name ~check ~strategy:Lp_tail mf.mf_body)
+  | Modulo_cons _ | Frame_stack -> ignore (report_outcome ~name ~check ~strategy:Lp_frame mf.mf_body)
+
 let transform_method ~tparams ~self_ty mf =
   match transform_method_own ~tparams ~self_ty mf with
   | Fmethod m ->
