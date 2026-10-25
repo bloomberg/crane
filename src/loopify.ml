@@ -1067,6 +1067,20 @@ let planned_strategy r check body =
       Probe.violation "recursion plan" Pp.(str "the recursion plan does not know " ++ what ());
       classified_strategy (classified ()) )
 
+(** Whether the function [r], whose body is [body], is lowered to no loop:
+    planned so, or planned to a loop of its own its ControlIR has no call
+    continue, as a machine none of its calls enters ({!checked_frame_machine}).
+    A suspended cofixpoint makes no loop either, but runs its partners'
+    bodies in its thunk as before. *)
+let makes_no_loop r check body =
+  match planned_strategy (Some r) check body with
+  | No_loop -> true
+  | Suspended _ -> false
+  | Tail_loop | Modulo_cons _ | Frame_stack -> (
+    match Option.bind (function_loop r) Lower_control.loop with
+    | Some t -> Control_ir.continues t = []
+    | None -> false )
+
 (** The local fixpoints the machine of [r] may adopt, as the recursion plan
     has them ({!Recursion_plan.adoptable}): a helper lifted for a local
     fixpoint's function is planned by it. *)
@@ -1243,7 +1257,7 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
      lowers the function to a loop: one lowered to none continues in no
      partner's body, and a partner run in place of a call is that call. *)
   let body =
-    if planned_strategy (Some (fst f.df_path.dp_outer)) (fn_checker names) body = No_loop then body
+    if makes_no_loop (fst f.df_path.dp_outer) (fn_checker names) body then body
     else try_inline_mutual_into (fst f.df_path.dp_outer) body
   in
   (* What the machine is entered by in the plan's terms: the function's

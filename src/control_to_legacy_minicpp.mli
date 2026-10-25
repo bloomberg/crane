@@ -119,7 +119,7 @@ val lower_lifted : Minicpp.cpp_decl -> Minicpp.cpp_decl
 (** [lower_group ds] is the declarations [ds], generated for the members of
     one recursive group, in its order, with each function lowered as above
     where it is one, recording its loop ({!Minicpp.dfun.df_loop}).  The
-    members that inline one another and that Loopify would loopify are
+    members that inline one another and that Loopify makes a loop of are
     lowered all of them or none: Loopify inlines a partner as it was
     generated.  A member Loopify loopifies of which no loop is made has the
     local fixpoints in its body lowered as {!lower_lifted} lowers a

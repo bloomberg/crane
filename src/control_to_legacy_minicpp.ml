@@ -452,9 +452,11 @@ let lower_group decls =
   in
   (* Loopify inlines a member's partners when the unit is finished, as they
      were registered then: as generated, not lowered.  So the members that
-     inline one another, those Loopify would loopify, are lowered here all
-     of them or none. *)
-  let loopified d = match decl_globref d with Some r -> Table.should_loopify r | None -> false in
+     inline one another, those Loopify makes a loop of, are lowered here all
+     of them or none.  A member it makes no loop of, its ControlIR's loop
+     continued by no call, it inlines nothing into, and leaves as it was
+     generated, as this does. *)
+  let loopified d = match decl_globref d with Some r -> Option.has_some (planned_loop r) | None -> false in
   let all_planned = List.for_all (fun (d, p) -> Option.has_some p || not (involved d && loopified d)) plans in
   let lowered =
     List.map
