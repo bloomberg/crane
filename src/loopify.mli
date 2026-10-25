@@ -112,7 +112,7 @@ type unlowered =
     function it makes no machine of.  A machine may leave a call behind that
     its ControlIR holds as an ordinary recursive call: the calls entering it
     are then those its loop's [Continue]s, its entry's included, are made
-    of.  Under [CRANE_CHECK_IR] the calls entering a machine leaving none
+    of, and its frames are laid out for those alone.  Under [CRANE_CHECK_IR] the calls entering a machine leaving none
     must be those.  It raises [Loopify_analysis.Not_linearisable] where the
     transform declines. *)
 val frame_machine :
@@ -124,6 +124,10 @@ val frame_machine :
   (Id.t * cpp_type) list ->
   cpp_stmt list ->
   (cpp_stmt list * string option, unlowered) result
+
+(** Whether the body [body] of the function [f] still calls it, as Loopify
+    reads its calls: a machine made of it leaves a call behind. *)
+val leaves_calls : dfun -> cpp_stmt list -> bool
 
 (** [record_unlowered ?unlowered f body] records the outcome of the
     function [f], whose body is [body], of which no loop of its own is made

@@ -1180,25 +1180,24 @@ let frame_machine ~loop ?entry ~tparams check (f : dfun) params body =
   else if try_inline_functional_into names body != body || not as_planned then declined
   else
     let survivors = fn_checker names in
-    let machine check =
+    match
       checked_frame_machine (Some loop) survivors (fun entered ->
           transform_nontail ~fn_name:(fundef_display_name f.df_path) ?adopted ?entered_by:(entered_by_definition r)
             ~entered ~binders:f.df_binders check tparams params f.df_ret body )
-    in
-    match machine check with
+    with
     | Some (made, entries) when classify survivors made = No_recursion ->
       if unadopted entries then Ok (made, survived) else declined
-    | Some _ when not (has_recursive_branch_dependency survivors body) -> (
-      (* A machine leaving a call behind is made reading every call of the
-         function, as Loopify makes it -- its frames are laid out for the
-         arguments of the calls it leaves too -- and is the machine of its
-         ControlIR where the calls entering it are its loop's: those it
-         leaves are ordinary recursive calls there. *)
-      match machine survivors with
-      | Some (made, entries) when Option.is_empty (machine_disagreement loop entries) -> Ok (made, survived)
-      | Some _ | None -> declined )
+    | Some (made, entries) when not (has_recursive_branch_dependency survivors body) ->
+      (* A machine leaving a call behind is the machine of its ControlIR
+         where the calls entering it are its loop's: those it leaves are
+         ordinary recursive calls there, each running a machine of its own,
+         and its frames are laid out for the calls it takes alone, as a
+         method's are ({!transform_method_own}). *)
+      if Option.is_empty (machine_disagreement loop entries) then Ok (made, survived) else declined
     | Some _ -> Error (Declined branch_dependency)
     | None -> declined
+
+let leaves_calls (f : dfun) body = classify (fn_checker (dfun_path_list f.df_path)) body <> No_recursion
 
 let record_unlowered ?(unlowered = Left None) (f : dfun) body =
   let name = fundef_display_name f.df_path in

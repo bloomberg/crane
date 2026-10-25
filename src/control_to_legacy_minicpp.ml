@@ -183,7 +183,11 @@ and lower_frames ~partner ~tparams (f : dfun) params body (l : Control_ir.Term.l
   | exception Loopify_analysis.Not_linearisable why -> Error (Loopify.Declined why)
   | Error why -> Error why
   | Ok (machine, survived) -> (
-    if Probe.checking () && compare (Loopify.checker_frame_machine ~partner ~tparams f params body) machine <> 0 then
+    (* A machine leaving a call behind lays its frames out for the calls it
+       takes, where Loopify's lays them out for every call. *)
+    if Probe.checking () && (not (Loopify.leaves_calls f machine))
+       && compare (Loopify.checker_frame_machine ~partner ~tparams f params body) machine <> 0
+    then
       Probe.violation "control lowering"
         Pp.(
           str "the machine of " ++ str (Table.kername_of_global r)
