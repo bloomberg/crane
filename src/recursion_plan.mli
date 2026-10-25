@@ -209,12 +209,15 @@ val adopted_partner : Names.GlobRef.t -> inlining option
 val adoptable_at : Miniml.Occurrence.t * int -> Miniml.Occurrence.t list
 
 (** Whether some machine may adopt the local fixpoint [occurrence]: a
-    function's ({!adoptable}) or a lifted helper's ({!adoptable_at}). *)
-val adoptable_somewhere : Miniml.Occurrence.t -> bool
+    function's ({!adoptable}) or that of a helper lifted for a fixpoint of
+    [lifted] ({!adoptable_by_fixpoint}). *)
+val adoptable_somewhere : lifted:Miniml.Occurrence.t list -> Miniml.Occurrence.t -> bool
 
-(** Whether the machine of a helper lifted for the function of a local
-    fixpoint may adopt the local fixpoint [occurrence] ({!adoptable_at}). *)
-val adoptable_by_fixpoint : Miniml.Occurrence.t -> bool
+(** Whether the machine of a helper lifted for the function of one of the
+    local fixpoints [lifted] may adopt the local fixpoint [occurrence]
+    ({!adoptable_at}).  A fixpoint generated as a lambda adopts nothing: its
+    machine has one entry. *)
+val adoptable_by_fixpoint : lifted:Miniml.Occurrence.t list -> Miniml.Occurrence.t -> bool
 
 (** The calls of the function [member] of the local fixpoint [occurrence]
     made in its group's bodies, each by the occurrence of the read at its

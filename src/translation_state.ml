@@ -102,6 +102,11 @@ type translation_ctx = {
      constant's initialiser or a member's: Loopify lowers every local
      fixpoint of a function's body, and only the tail loops of others. *)
   body_function : bool;
+  (* The local fixpoints, by occurrence, whose members are being generated
+     as helpers lifted out of that body, around the point being generated:
+     a helper's machine may adopt a fixpoint in its flow, a local
+     fixpoint's lambda never does. *)
+  lifted_fixpoints : Miniml.Occurrence.t list;
   (* Nesting depth of let ... in expressions; used for unique name
      generation in nested scopes. *)
   current_letin_depth : int;
@@ -195,6 +200,7 @@ let tctx =
         env_types = Lexenv.empty;
         body_owner = None;
         body_function = false;
+        lifted_fixpoints = [];
         current_letin_depth = 0;
         move_plan = Ownership_plan.empty;
         match_param_counter = 0;
@@ -305,6 +311,16 @@ let with_method_self_ns (ns : Ref.User.Set.t) (f : unit -> 'a) : 'a =
     (fun c -> c.method_self_ns)
     (fun ns -> tctx := { !tctx with method_self_ns = ns })
     ns f
+
+(** [with_lifted_fixpoint occurrence f] runs [f] generating the members of
+    the local fixpoint at [occurrence] as lifted helpers
+    ({!translation_ctx.lifted_fixpoints}). *)
+let with_lifted_fixpoint (occurrence : Miniml.Occurrence.t) (f : unit -> 'a) : 'a =
+  with_field
+    (fun c -> c.lifted_fixpoints)
+    (fun os -> tctx := { !tctx with lifted_fixpoints = os })
+    (occurrence :: (!tctx).lifted_fixpoints)
+    f
 
 (** [with_promoted_var_map m f] runs [f] with [m] as the resolution for the
     promoted type variables in scope -- see {!translation_ctx.promoted_var_map}. *)

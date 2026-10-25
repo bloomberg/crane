@@ -71,7 +71,8 @@ let local_fix_stmts selves ~binders ~self_passing impl_stmts funs_with_params =
         cl_body = List.map flat body }
     in
     match
-      Control_to_legacy_minicpp.local_loop ~owner:(!tctx).body_owner ~function_:(!tctx).body_function ~member
+      Control_to_legacy_minicpp.local_loop ~owner:(!tctx).body_owner ~function_:(!tctx).body_function
+        ~lifted:(!tctx).lifted_fixpoints ~member
         ~tparams:(get_current_template_head ()) ~name:fix_id ~self_passing lam
     with
     | Some loop -> [loop]
@@ -9071,6 +9072,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          own tvar scope, passing all mutual fixpoint names *)
       let all_fix_ids_list = Array.to_list ids in
       let funs_compiled =
+        with_lifted_fixpoint occ @@ fun () ->
         with_type_vars all_tvar_names (fun () ->
             Array.to_list
               (Array.mapi
@@ -9953,6 +9955,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          both signature and body Tvar indices. *)
       let all_fix_ids_list = Array.to_list ids in
       let funs_compiled =
+        with_lifted_fixpoint occ @@ fun () ->
         with_type_vars extended_tvar_names (fun () ->
             Array.to_list
               (Array.mapi
