@@ -375,52 +375,52 @@ let local_loop ~owner ~function_ ~lifted ~member:((occurrence, _) as member) ~tp
   | Some _, Some _ when Option.cata loopified false owner -> declined ()
   | (Some _ | None), _ -> None
 
-(* Whether each of the receiver and the parameters of the method [m], made
-   of the function [r], is one its loop [l] varies, as {!varying} reads a
-   function's. *)
-let method_varying r (l : Control_ir.Term.loop) (m : method_field) =
-  let invariant = Control_ir.invariant_parameters l in
-  let at (b : Core_binder.t) =
-    if GlobRef.UserOrd.equal b.origin r then Option.map not (List.nth_opt invariant b.level) else None
+(* The positions among the parameters of the loop [l] of those the
+   receiver and the parameters of the method [m], made of the function
+   [r], stand for, as {!planned} reads a function's: [None] where one
+   stands for none of [l]'s. *)
+let method_positions r (l : Control_ir.Term.loop) (m : method_field) =
+  let positions =
+    position r l m.mf_receiver_binder :: List.map (fun p -> position r l (binder_of m.mf_binders p)) m.mf_params
   in
-  let param (id, _) =
-    Option.bind (List.find_map (fun (x, b) -> if Id.equal x id then Some b else None) m.mf_binders) at
-  in
-  List.fold_right
-    (fun v acc -> match (v, acc) with Some v, Some vs -> Some (v :: vs) | _ -> None)
-    (Option.bind m.mf_receiver_binder at :: List.map param m.mf_params)
-    (Some [])
+  if List.for_all Option.has_some positions then Some positions else None
 
 (* The method [m] lowered to its loop, where it is one: the struct it is a
    member of declared under [tparams], its receiver a [self_ty].  It is
    Loopify's method transform: a tail loop varying the receiver and the
    parameters its ControlIR varies, a loop tail modulo cons or a machine
    taking the calls its ControlIR continues by
-   ({!Loopify.transform_method_own}).  A method the transform leaves as it
-   was is declined -- a receiver a frame cannot point at -- and left to
-   Loopify, which declines it. *)
+   ({!Loopify.transform_method_own}), pointing where every call passes a
+   value stored in what the caller passed ({!parts_passed}) wherever its
+   receiver and parameters each stand for a parameter of the loop.  A
+   method the transform leaves as it was is declined -- a receiver a frame
+   cannot point at -- and left to Loopify, which declines it. *)
 let lower_method ~tparams ~self_ty (m : method_field) =
   match m.mf_globref with
   | Some r when Recursion_plan.inlinings r = [] && not (Recursion_plan.inlined r) -> (
     let lowering =
       match loop_of ~lowerings:[Tail; Modulo_cons; Frames] r with
-      | Some (l, Tail) ->
-        Option.map
-          (fun varying -> (l, fun () -> Loopify.transform_method_own ~varying ~tparams ~self_ty m))
-          (method_varying r l m)
-      | Some (l, (Modulo_cons | Frames)) ->
-        Some (l, fun () -> Loopify.transform_method_own ~controlled:true ~tparams ~self_ty m)
+      | Some (l, lowering) -> (
+        let planned = Option.map (planned_at l lowering) (method_positions r l m) in
+        let parts = Option.map (fun p -> p.parts) planned in
+        match (lowering, planned) with
+        | Tail, Some {varying; _} ->
+          Some (l, parts, fun () -> Loopify.transform_method_own ~varying ?parts ~tparams ~self_ty m)
+        | Tail, None -> None
+        | (Modulo_cons | Frames), _ ->
+          Some (l, parts, fun () -> Loopify.transform_method_own ~controlled:true ?parts ~tparams ~self_ty m) )
       | None -> None
     in
     match lowering with
     | None ->
       Loopify.record_unlowered_method m;
       None
-    | Some (l, transform) -> (
+    | Some (l, parts, transform) -> (
       match transform () with
       | exception Loopify_analysis.Not_linearisable _ -> None
       | Fmethod m' when compare m' m <> 0 ->
-        if Probe.checking () && compare (Loopify.transform_method_own ~tparams ~self_ty m) (Fmethod m') <> 0 then
+        if Probe.checking () && compare (Loopify.transform_method_own ?parts ~tparams ~self_ty m) (Fmethod m') <> 0
+        then
           Probe.violation "control lowering"
             Pp.(
               str "the method " ++ str (Table.kername_of_global r)

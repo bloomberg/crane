@@ -1231,7 +1231,7 @@ let transform_fundef ~tparams (f : dfun) params body =
                           its cells as its turns do, rather than every call
                           of the method's
     @return An [Fmethod] field with the loopified body *)
-let transform_method_own ?varying ?(controlled = false) ~tparams ~self_ty mf =
+let transform_method_own ?varying ?parts ?(controlled = false) ~tparams ~self_ty mf =
   (* [tparams] arrives holding only the enclosing struct's parameters.  A
      method's body is written under its own template header too, and a
      parameter declared there is the one most likely to constrain how the body
@@ -1397,7 +1397,7 @@ let transform_method_own ?varying ?(controlled = false) ~tparams ~self_ty mf =
             ( report_outcome ~name ~check:self_check ~strategy:Lp_tail
                 (let loop = Option.bind mf.mf_globref function_loop in
                  checked_tail_loop loop (fun jumped ->
-                     transform_tail ~param_inits:[(self_id, CPPthis)] ~jumped ?varying tparams
+                     transform_tail ~param_inits:[(self_id, CPPthis)] ~jumped ?varying ?parts tparams
                        (planned_jumps loop self_check) augmented_params mf.mf_ret_type body_with_self ) ),
               false )
         | Modulo_cons _ | Frame_stack ->
@@ -1419,7 +1419,7 @@ let transform_method_own ?varying ?(controlled = false) ~tparams ~self_ty mf =
               ~binders:
                 ( (match mf.mf_receiver_binder with Some b -> [(self_id, b)] | None -> [])
                 @ mf.mf_binders )
-              ?fn_name ?modulo_cons:(modulo_cons_chains strategy) ?shapes ?loop
+              ?fn_name ?modulo_cons:(modulo_cons_chains strategy) ?shapes ?loop ?parts
               check tparams
               augmented_params mf.mf_ret_type body_with_self
           in
