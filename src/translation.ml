@@ -36,21 +36,44 @@ type field_read = Read_as_bound | Read_through_pointer | Read_unboxed
 (* The binders of the local fixpoint [occ], as the source has them, each
    with the member of the fixpoint it binds and the Core binders of that
    member's parameters, as [compiled], what {!gen_fix} made of each member,
-   has them. *)
-let local_fix_binders occ ids compiled =
-  List.mapi (fun j ((x, _), (_, _, _, params)) -> (x, (occ, j), params))
+   has them, and with them the Core binders of the locals of [env] the fixpoint
+   [fix], generated under [env], reads, by name. *)
+let local_fix_binders env fix occ ids compiled =
+  let read = ref [] in
+  Mlutil.ast_iter_rel_applied (fun n i _ -> if i > n then read := (i - n) :: !read) fix;
+  let captured =
+    List.filter_map
+      (fun db ->
+        match (get_db_name_opt db env, core_binder env db) with
+        | Some x, Some b -> Some (x, b)
+        | _ -> None )
+      (List.sort_uniq Int.compare !read)
+  in
+  List.mapi (fun j ((x, _), (_, _, _, params)) -> (x, (occ, j), params, captured))
     (List.combine (Array.to_list ids) compiled)
 
 (* The local fixpoint bound to [binder], the function [member] of a Core
-   fixpoint whose parameters stand for the Core binders [params], in the
-   declaration being generated, called [name] and encoded as [encoding]. *)
-let local_fixpoint ~name ~encoding (binder, member, params) =
+   fixpoint whose parameters stand for the Core binders [params] and that
+   reads the locals [captured] stand for, in the declaration being
+   generated, called [name] and encoded as [encoding]. *)
+let local_fixpoint ~name ~encoding (binder, member, _, captured) =
   Some
     { lf_binder = binder;
       lf_name = name;
       lf_member = member;
-      lf_binders = params;
+      lf_captured = captured;
       lf_encoding = encoding }
+
+let fixpoint_parameters (_, _, params, _) = params
+
+(* [stmts] with the declaration of the local [id] standing for the Core
+   binder [b]. *)
+let declaring id b stmts =
+  List.map
+    (function
+      | Sasgn (x, Declare (ty, None), e) when Id.equal x id -> Sasgn (x, Declare (ty, b), e)
+      | s -> s )
+    stmts
 
 (* The statements a local fixpoint is declared by: for a fixpoint of one
    member, its loop, lowered from its ControlIR, where it is one
@@ -61,7 +84,7 @@ let local_fixpoint ~name ~encoding (binder, member, params) =
    calling the fixpoint by its own name ({!self_call_rewriter}). *)
 let local_fix_stmts selves ~binders ~self_passing impl_stmts funs_with_params =
   match (selves, binders, impl_stmts, funs_with_params) with
-  | [{fix_id; _}], [((_, member, _) as binder)], [Sasgn (_, _, CPPlambda impl)], [(_, body)] -> (
+  | [{fix_id; _}], [((_, member, _, _) as binder)], [Sasgn (_, _, CPPlambda impl)], [(_, body)] -> (
     let self_ids = List.map (fun s -> Some s.self_id) selves in
     let _, flat = self_call_rewriter ~passing:false selves in
     let lam =
@@ -151,6 +174,7 @@ let gen_local_fix_ycomb env ~binders ~moved renamed_ids funs_with_params =
             CPPlambda
               { cl_tparams = [];
                 cl_fixpoint = local_fixpoint ~name:fix_id ~encoding:(Self_passing self_ids) binder;
+                cl_binders = fixpoint_parameters binder;
                 cl_moved = [];
                 cl_params = of_reversed (orig_params @ self_params);
                 cl_ret = ret_ty fty;
@@ -212,6 +236,7 @@ let gen_local_fix_ycomb env ~binders ~moved renamed_ids funs_with_params =
               { cl_params = of_reversed orig_params;
               cl_tparams = [];
               cl_fixpoint = local_fixpoint ~name:fix_id ~encoding:Knot binder;
+              cl_binders = fixpoint_parameters binder;
               cl_moved = [];
                 cl_ret = rty;
                 cl_body = wrapper_body;
@@ -297,6 +322,7 @@ let gen_local_fix_by_ref env ~binders renamed_ids funs_with_params owned_flags_p
               { cl_params = of_reversed (orig_params @ self_params);
               cl_tparams = [];
               cl_fixpoint = local_fixpoint ~name:fix_id ~encoding:(Self_passing self_ids) binder;
+              cl_binders = fixpoint_parameters binder;
               cl_moved = [];
                 cl_ret = ret_ty fty;
                 cl_body = List.map rewrite_stmt body;
@@ -339,6 +365,7 @@ let gen_local_fix_by_ref env ~binders renamed_ids funs_with_params owned_flags_p
               { cl_params = of_reversed orig_params;
               cl_tparams = [];
               cl_fixpoint = local_fixpoint ~name:fix_id ~encoding:Knot binder;
+              cl_binders = fixpoint_parameters binder;
               cl_moved = [];
                 cl_ret = rty;
                 cl_body = wrapper_body;
@@ -5135,7 +5162,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             let stmts =
               match lift_iife_assignment renamed_name (Some decl_ty) e with
               | Some stmts -> stmts
-              | None -> [Sasgn (renamed_name, Declare (decl_ty, None), e)]
+              | None -> [Sasgn (renamed_name, Declare (decl_ty, local_binder env' renamed_name), e)]
             in
             (stmts, moved_out base) )
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
@@ -7696,7 +7723,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     | Sassign_expr (obj, e) -> expr_has_lambda obj || expr_has_lambda e
     | Swhile (c, body) -> expr_has_lambda c || List.exists stmt_has_lambda body
     | Sblock body -> List.exists stmt_has_lambda body
-    | Sblock_custom (_, _, _, _, args, _) -> List.exists expr_has_lambda args
+    | Sblock_custom (_, _, _, _, args, _, _) -> List.exists expr_has_lambda args
     | _ -> false
   in
   let branch_has_lambda = List.exists stmt_has_lambda body_stmts in
@@ -8327,7 +8354,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
               List.concat
                 (List.map2
                    (fun (i, (var_name, ml_ty)) read ->
-                     let bind e = [Sasgn (var_name, Declare (cpp_of_ml env ml_ty, None), e)] in
+                     let bind e = [Sasgn (var_name, Declare (cpp_of_ml env ml_ty, local_binder env' var_name), e)] in
                      match read with
                      | Some `Unused | None -> []
                      (* The token: its value is moved out, owned, so the
@@ -9028,7 +9055,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
      statement lands in is {!with_cpp_return_type}, which
      {!position_cpp_ty} falls back to. *)
   match ast with
-  | MLletin (_, let_ty, (MLfix (x, ids, funs, _, occ) as fix_term), b, _) as _whole ->
+  | MLletin (_, let_ty, (MLfix (x, ids, funs, _, occ) as fix_term), b, let_occ) as _whole ->
     (* Special case for let-fix: the let binding name is the fix function name *)
     Local_types.check_minted ids;
     let ids, funs = Local_types.recover_fix_codomains ids funs in
@@ -9207,6 +9234,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       in
       let _, env_with_fix = push_vars' [projected_id] env_for_cont in
       push_binders env [projected_id];
+      let declared = declaring (fst projected_id) (core_binder ~site:let_occ env_with_fix 1) in
       let cont = gen_stmts ~slot env_with_fix k b in
       (* Check if any fixpoint variable escapes in the continuation.
          If so, use shared_ptr + [=] to prevent dangling references.
@@ -9220,11 +9248,11 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       in
       if any_escapes then
         let decls, defs, deref_subst =
-          gen_local_fix_ycomb env ~binders:(local_fix_binders occ ids funs_compiled)
+          gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
             ~moved:(fix_moved_captures env fix_term)
             renamed_ids funs_with_params
         in
-        decls @ defs @ deref_subst cont
+        declared (decls @ defs) @ deref_subst cont
       else
         let owned_flags_per_fun =
           Array.to_list (Array.map (fun f ->
@@ -9243,10 +9271,10 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           ) funs)
         in
         let decls, defs =
-          gen_local_fix_by_ref env ~binders:(local_fix_binders occ ids funs_compiled) renamed_ids funs_with_params
+          gen_local_fix_by_ref env ~binders:(local_fix_binders env fix_term occ ids funs_compiled) renamed_ids funs_with_params
             owned_flags_per_fun
         in
-        decls @ defs @ cont
+        declared (decls @ defs) @ cont
   | MLletin (x, t, (MLlam _ as a), b, let_occ) ->
     (* Check if this is a polymorphic lambda that should be lifted to a
        top-level template function. *)
@@ -9439,6 +9467,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             CPPlambda
               { cl_params = of_reversed wrapper_params;
               cl_tparams = [];
+              cl_binders = [];
               cl_fixpoint = None;
               cl_moved = [];
                 cl_ret = None;
@@ -9908,7 +9937,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             in
             begin match extract_block_template e with
             | Some (ref, tmpl, args, tys) ->
-              Sblock_custom (ref, tmpl, x_renamed, cpp_ty, args, tys)
+              Sblock_custom (ref, tmpl, x_renamed, cpp_ty, args, tys, core_binder ~site:let_occ env' 1)
               :: gen_stmts ~slot env' k b
             | None ->
               Sasgn (x_renamed, Declare (cpp_ty, core_binder ~site:let_occ env' 1), e)
@@ -10042,7 +10071,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
            Use Y-combinator pattern so the fixpoint body doesn't capture
            a stack-local std::function by reference. *)
         let decls, defs, deref_subst =
-          gen_local_fix_ycomb env ~binders:(local_fix_binders occ ids funs_compiled)
+          gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
             ~moved:(fix_moved_captures env fix_term)
             renamed_ids funs_with_params
         in
@@ -10071,7 +10100,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         @ deref_subst [k (mk_lambda pa_params None [Sreturn (Some full_call)] ~capture:Closure)]
       end else if fix_escapes_in_own_bodies renamed_ids funs_with_params then
         let decls, defs, deref_subst =
-          gen_local_fix_ycomb env ~binders:(local_fix_binders occ ids funs_compiled)
+          gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
             ~moved:(fix_moved_captures env fix_term)
             renamed_ids funs_with_params
         in
@@ -10096,7 +10125,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           ) funs)
         in
         let decls, defs =
-          gen_local_fix_by_ref env ~binders:(local_fix_binders occ ids funs_compiled) renamed_ids funs_with_params
+          gen_local_fix_by_ref env ~binders:(local_fix_binders env fix_term occ ids funs_compiled) renamed_ids funs_with_params
             owned_flags_per_fun
         in
         decls @ defs
@@ -10124,7 +10153,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       List.map (fun (_, params, body, _) -> (params, body)) funs_compiled
     in
     let decls, defs, _deref_subst =
-      gen_local_fix_ycomb env ~binders:(local_fix_binders occ ids funs_compiled)
+      gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
             ~moved:(fix_moved_captures env fix_term)
             renamed_ids funs_with_params
     in
@@ -10198,7 +10227,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       else begin
         match extract_block_template a with
         | Some (ref, tmpl, args, tys) ->
-          Sblock_custom (ref, tmpl, x, ty, args, tys)
+          Sblock_custom (ref, tmpl, x, ty, args, tys, bound_by_bind env)
           :: gen_stmts ~slot env k f
         | None ->
           Sasgn (x, Declare (ty, bound_by_bind env), a) :: gen_stmts ~slot env k f
@@ -10370,7 +10399,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             let stmts =
               match lift_iife_assignment renamed_name (Some decl_ty) e with
               | Some stmts -> stmts
-              | None -> [Sasgn (renamed_name, Declare (decl_ty, None), e)]
+              | None -> [Sasgn (renamed_name, Declare (decl_ty, local_binder env' renamed_name), e)]
             in
             (stmts, moved_out base && match decl_ty with Tref _ -> false | _ -> true) )
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))

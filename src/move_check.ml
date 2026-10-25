@@ -173,7 +173,7 @@ and stmt report jumps live s =
     at report (List.concat_map branch branches) scrut
   | Sbind (xs, e) -> at report (kill_all xs live) e
   (* A block template declares the variable it binds. *)
-  | Sblock_custom (_, _, x, _, args, _) ->
+  | Sblock_custom (_, _, x, _, args, _, _) ->
     let eff = List.fold_left (fun acc a -> union acc (expr report a)) none args in
     let live = kill (Whole x) live in
     check_after report eff {none with reads = live};

@@ -1859,6 +1859,13 @@ let rec local_var_subst_expr ?(keep_cast = false) ?(extra_args = [])
       (o, repl, of_reversed (extra_args @ List.map sub (to_reversed args)))
   | CPPvar id when Id.equal id target -> repl
   | _ ->
+    (* A lambda's body then reads the local [repl] reads in place of
+       [target], and so do the Core binders it records by name. *)
+    let e =
+      match (e, free_vars_expr repl) with
+      | CPPlambda l, [v] -> CPPlambda (rekey_lambda_binders target v l)
+      | _ -> e
+    in
     map_expr
       sub
       (local_var_subst_stmt ~keep_cast ~extra_args target repl)
@@ -3234,6 +3241,7 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
         let args_rev = List.map (fun (_, x) -> CPPvar (Option.get x)) params_rev in
         CPPlambda
           { cl_tparams = [];
+            cl_binders = [];
             cl_fixpoint = None;
             cl_moved = [];
             cl_params = of_reversed params_rev;

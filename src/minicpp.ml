@@ -265,6 +265,7 @@ and cpp_stmt =
       * cpp_type (* result variable type *)
       * cpp_expr list (* value args for %a0, %a1, ... *)
       * cpp_type list (* type args for %t0, %t1, ... *)
+      * Core_binder.t option (* the Core binder the result variable stands for *)
     (* Block template expansion: multi-statement inline custom that
        substitutes %result with the bind target variable name. *)
   | Smatch of smatch_scrutinee * smatch_branch list * cpp_stmt list option
@@ -581,6 +582,7 @@ and cpp_lambda = {
       (** The variables a {!Closure} takes by move, at their last use --
           [\[=, x = std::move(x)\]]; the rest it copies.  Set by
           {!Last_use} only. *)
+  cl_binders : (Id.t * Core_binder.t) list;
   cl_fixpoint : local_fixpoint option;
       (** The local fixpoint whose body this lambda is, as the source has
           it: what the recursion plan knows it by.  Set by the encodings of
@@ -593,7 +595,7 @@ and local_fixpoint = {
   lf_binder : Id.t;
   lf_name : Id.t;
   lf_member : Miniml.Occurrence.t * int;
-  lf_binders : (Id.t * Core_binder.t) list;
+  lf_captured : (Id.t * Core_binder.t) list;
   lf_encoding : local_fixpoint_encoding;
 }
 
@@ -1403,6 +1405,14 @@ let map_args f (args : cpp_expr revd) = {rev = List.map f args.rev}
 (** The parameters of a {!CPPlambda}, in source order. *)
 let lambda_params (params : 'a revd) = List.rev params.rev
 
+let lambda_binders l = l.cl_binders @ Option.cata (fun f -> f.lf_captured) [] l.cl_fixpoint
+
+let rekey_lambda_binders x y l =
+  let rekey = List.map (fun (z, b) -> ((if Id.equal z x then y else z), b)) in
+  { l with
+    cl_binders = rekey l.cl_binders;
+    cl_fixpoint = Option.map (fun f -> {f with lf_captured = rekey f.lf_captured}) l.cl_fixpoint }
+
 (** [map_tparams ft tps] maps the types a template parameter list carries: a
     default, a callable constraint, a concept's extra arguments. *)
 let map_tparams ft =
@@ -1604,8 +1614,8 @@ let map_stmt ?fl
   | Sblock stmts -> Sblock (fl stmts)
   | Scontinue -> s
   | Sbreak -> s
-  | Sblock_custom (r, tmpl, id, ty, args, tys) ->
-    Sblock_custom (r, tmpl, id, ft ty, List.map fe args, List.map ft tys)
+  | Sblock_custom (r, tmpl, id, ty, args, tys, b) ->
+    Sblock_custom (r, tmpl, id, ft ty, List.map fe args, List.map ft tys, b)
   | Smatch (scrut, branches, default) ->
     Smatch
       ( { scrut with sc_expr = fe scrut.sc_expr },
@@ -1689,7 +1699,7 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
   | Sfor_range (_, e, body) -> on_expr e; on_stmts body
   | Swhile (cond, body) -> on_expr cond; on_stmts body
   | Sblock stmts -> on_stmts stmts
-  | Sblock_custom (_, _, _, _, args, _) -> List.iter on_expr args
+  | Sblock_custom (_, _, _, _, args, _, _) -> List.iter on_expr args
   | Smatch (scrut, branches, default) ->
     on_expr scrut.sc_expr;
     List.iter (fun br ->
@@ -1835,7 +1845,7 @@ let fold_stmt_children ~on_expr ~on_stmts (acc : 'a) (s : cpp_stmt) : 'a =
   | Sfor_range (_, e, body) -> on_stmts (on_expr acc e) body
   | Swhile (cond, body) -> on_stmts (on_expr acc cond) body
   | Sblock stmts -> on_stmts acc stmts
-  | Sblock_custom (_, _, _, _, args, _) -> List.fold_left on_expr acc args
+  | Sblock_custom (_, _, _, _, args, _, _) -> List.fold_left on_expr acc args
   | Smatch (scrut, branches, default) ->
     let acc = on_expr acc scrut.sc_expr in
     let acc =
@@ -2343,6 +2353,7 @@ let rec lambda ?(tparams = []) params ret body ~capture =
       cl_body = body;
       cl_capture = capture;
       cl_moved = [];
+      cl_binders = [];
       cl_fixpoint = None }
   in
   settle_lambda_tparams l
@@ -2648,7 +2659,7 @@ and vars_stmt ~printed s =
   | Sassign_expr (lhs, e) -> expr lhs @ expr e
   | Sif (c, t, f) -> expr c @ body t @ body f
   | Sraw text | Sassert (Pchecked text) when printed -> identifiers_of_text text
-  | Sblock_custom (_, tmpl, _, _, args, _) when printed ->
+  | Sblock_custom (_, tmpl, _, _, args, _, _) when printed ->
     let tokens = Foreign_template.term_template tmpl in
     List.concat
       (List.mapi (fun i a -> if List.mem (Foreign_template.CCarg i) tokens then expr a else []) args)
@@ -2708,7 +2719,7 @@ and vars_body ~printed (stmts : cpp_stmt list) : Id.t list =
       let newly_defined =
         match stmt with
         | Sasgn (id, Declare _, _) | Sdecl (id, _, _) | Sdecl_init (id, _)
-        | Sblock_custom (_, _, id, _, _, _) -> [id]
+        | Sblock_custom (_, _, id, _, _, _, _) -> [id]
         | Sbind (ids, _) -> ids
         | _ -> []
       in
@@ -2773,12 +2784,25 @@ and rename_expr_ids f e =
   match e with
   | CPPvar id -> CPPvar (f id)
   | CPPlambda l ->
+    let keys = List.map (fun (x, b) -> (f x, b)) in
     CPPlambda
       { l with
         cl_params =
           of_reversed
             (List.map (fun (ty, x) -> (ty, Option.map f x)) (to_reversed l.cl_params));
-        cl_body = rename_ids f l.cl_body }
+        cl_body = rename_ids f l.cl_body;
+        cl_binders = keys l.cl_binders;
+        cl_fixpoint =
+          Option.map
+            (fun lf ->
+              { lf with
+                lf_name = f lf.lf_name;
+                lf_captured = keys lf.lf_captured;
+                lf_encoding =
+                  (match lf.lf_encoding with
+                   | Self_passing selves -> Self_passing (List.map f selves)
+                   | (Knot | Lowered) as e -> e) } )
+            l.cl_fixpoint }
   | _ -> map_expr (rename_expr_ids f) (rename_stmt_ids f) Fun.id e
 
 and rename_stmt_ids f s =
@@ -2790,8 +2814,8 @@ and rename_stmt_ids f s =
   | Sbind (ids, e) -> Sbind (List.map f ids, fe e)
   | Sif_decl (id, ty, e, a, b) -> Sif_decl (f id, ty, fe e, fl a, fl b)
   | Sfor_range (id, e, b) -> Sfor_range (f id, fe e, fl b)
-  | Sblock_custom (r, tmpl, id, ty, args, tys) ->
-    Sblock_custom (r, tmpl, f id, ty, List.map fe args, tys)
+  | Sblock_custom (r, tmpl, id, ty, args, tys, b) ->
+    Sblock_custom (r, tmpl, f id, ty, List.map fe args, tys, b)
   | Smatch (scrut, branches, default) ->
     Smatch
       ( {scrut with sc_expr = fe scrut.sc_expr},
@@ -2827,7 +2851,7 @@ let declared_ids stmts =
     | Sif_decl (id, _, _, _, _) | Sfor_range (id, _, _) ->
       note id
     | Sbind (ids, _) -> List.iter note ids
-    | Sblock_custom (_, _, id, _, _, _) -> note id
+    | Sblock_custom (_, _, id, _, _, _, _) -> note id
     | Smatch (_, branches, _) ->
       List.iter
         (fun br ->

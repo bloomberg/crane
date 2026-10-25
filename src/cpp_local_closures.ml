@@ -51,7 +51,7 @@ let declared_here stmts =
     (function
       | Sasgn (id, Declare _, _) | Sdecl (id, _, _) | Sdecl_init (id, _) -> [id]
       | Sbind (ids, _) -> ids
-      | Sblock_custom (_, _, id, _, _, _) -> [id]
+      | Sblock_custom (_, _, id, _, _, _, _) -> [id]
       | _ -> [])
     stmts
 

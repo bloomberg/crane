@@ -226,7 +226,7 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
     | Scustom_case (typ, scrut, tyargs, cases, cm) ->
       custom {typ = Some typ; scrut = Some scrut; tyargs; cases; args = []}
         (Foreign_template.match_template cm.cm_template)
-    | Sblock_custom (_, text, _, result_ty, args, tyargs) ->
+    | Sblock_custom (_, text, _, result_ty, args, tyargs, _) ->
       block_template ~yields:result_ty {no_holes with tyargs; args} text
     | Smatch (scrut, branches, default) ->
       expr scrut.sc_expr;

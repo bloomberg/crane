@@ -544,6 +544,10 @@ let parameter_binders env params =
           Option.map (fun b -> (id, b)) (core_binder env db) ) )
     params
 
+(** The Core binder of the local [id] in scope in [env], by name, as
+    {!parameter_binders} has a parameter's. *)
+let local_binder env id = Option.map snd (List.nth_opt (parameter_binders env [(id, ())]) 0)
+
 (** The ML type of the variable at de Bruijn index [i] in [env], where it is
     a parameter of the declaration whose body is being generated
     ({!translation_ctx.current_parameters}). *)

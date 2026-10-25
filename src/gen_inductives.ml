@@ -941,9 +941,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
         mf_is_noexcept = false;
         mf_is_conversion = false;
         mf_binders = parameter_binders env params;
-        mf_receiver_binder =
-          Option.bind this_arg_id (fun id ->
-              Option.map snd (List.nth_opt (parameter_binders env [(id, ())]) 0) );
+        mf_receiver_binder = Option.bind this_arg_id (local_binder env);
         mf_loop = None;
       },
     VPublic,

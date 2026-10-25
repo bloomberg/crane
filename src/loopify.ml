@@ -130,6 +130,8 @@ type inline_spec = {
       (** Extract the argument list from a target call expression *)
   params : (Id.t * cpp_type) list;
       (** Formal parameters of the function being inlined (possibly renamed) *)
+  binders : (Id.t * Core_binder.t) list;
+      (** The Core binder each of them stands for, by name *)
   body : cpp_stmt list;
       (** Body of the function being inlined (possibly with renamed variables) *)
   ret_ty : cpp_type;
@@ -165,7 +167,9 @@ let rec generic_inline_stmts spec = function
     its arguments, then the body. *)
 and generic_continue spec e =
   spec.inlined Continued e;
-  List.map2 (fun (pid, ty) arg -> Sasgn (pid, Declare (ty, None), arg)) spec.params (spec.get_args e)
+  List.map2
+    (fun (pid, ty) arg -> Sasgn (pid, Declare (ty, List.assoc_opt pid spec.binders), arg))
+    spec.params (spec.get_args e)
   @ spec.body
 
 (** Inline all calls matching [spec] in a single statement. *)
@@ -212,6 +216,7 @@ and generic_inline_expr spec expr =
         CPPlambda
           { cl_params = of_reversed lparams;
             cl_tparams = [];
+            cl_binders = spec.binders;
             cl_fixpoint = None;
             cl_moved = [];
             cl_ret = Some spec.ret_ty;
@@ -337,7 +342,7 @@ let inlined_local_name id =
     Parameter names in the inlined body are prefixed with [_inl_] to avoid
     collisions with the outer function's variables, and so are its locals. *)
 let inline_partner ~continues ~invokes
-    {rf_ret_ty = callee_ret_ty; rf_params = callee_params; rf_body = callee_body} body =
+    {rf_ret_ty = callee_ret_ty; rf_params = callee_params; rf_binders = callee_binders; rf_body = callee_body} body =
   (* Generate fresh names for parameters AND all local variables to avoid
      collision with the outer function's bindings. *)
   let param_rename_map =
@@ -392,6 +397,7 @@ let inline_partner ~continues ~invokes
         inlined;
         get_args = get_call_args;
         params = fresh_params;
+        binders = List.map (fun (pid, b) -> (rename_var pid, b)) callee_binders;
         body = rename_ids rename_var callee_body;
         ret_ty = callee_ret_ty }
       body
@@ -533,10 +539,10 @@ let loopify_inner_lambdas ?(tail_only = false) ?parts ~tparams ?(outer_env = [])
      unreferenced params without a name, so there is no [-Wunused-parameter].
      Only single (non-mutual) fixpoints are handled; mutual ones (multiple
      self-params) and non-tail recursion are left unchanged. *)
-  let try_loopify_ycomb ~fixpoint lparams ret_ty_opt lbody =
+  let try_loopify_ycomb ~fixpoint ~binders lparams ret_ty_opt lbody =
     match (fixpoint, fixpoint_self fixpoint lparams) with
     | None, _ | _, None -> None
-    | Some {lf_name; lf_binders; lf_member; _}, Some self_id -> (
+    | Some {lf_name; lf_member; _}, Some self_id -> (
       let check = planned_self_checker lf_member in
       let lbody = expose_tail_calls check lbody in
       match planned_local_strategy fixpoint check lbody with
@@ -581,7 +587,7 @@ let loopify_inner_lambdas ?(tail_only = false) ?parts ~tparams ?(outer_env = [])
              a local fixpoint gets it only through a helper lifted out of it. *)
           | Modulo_cons _ | Frame_stack ->
             report_outcome ~name ~check ~strategy:Lp_frame
-              (transform_nontail ~fn_name:name ~outer_env ~binders:lf_binders
+              (transform_nontail ~fn_name:name ~outer_env ~binders
                  ~entered_by:(entered_by_member lf_member) ?parts check tparams
                  params ret_ty lbody)
           | No_loop | Suspended _ ->
@@ -607,13 +613,14 @@ let loopify_inner_lambdas ?(tail_only = false) ?parts ~tparams ?(outer_env = [])
         ( id,
           (Declare (Tauto, _) as tgt),
           CPPlambda
-            { cl_params = lparams;
+            ({ cl_params = lparams;
               cl_ret = ret_ty_opt;
               cl_body = lbody;
               cl_capture = cap;
               cl_fixpoint = fixpoint;
+              cl_binders = binders;
               cl_moved = moved;
-              _ } )
+              _ } as l) )
       :: rest
       when Option.has_some (fixpoint_self fixpoint (to_reversed lparams)) ->
       (* The loop is made where the impl was, or just after it where the
@@ -622,7 +629,7 @@ let loopify_inner_lambdas ?(tail_only = false) ?parts ~tparams ?(outer_env = [])
       let keep_moves l =
         CPPlambda {l with cl_moved = List.filter (fun x -> List.mem x (free_vars_expr (CPPlambda l))) moved}
       in
-      ( match try_loopify_ycomb ~fixpoint (to_reversed lparams) ret_ty_opt lbody with
+      ( match try_loopify_ycomb ~fixpoint ~binders:(lambda_binders l) (to_reversed lparams) ret_ty_opt lbody with
       | Some (lparams', lbody') -> (
         (* The loop no longer recurses, so the self-parameter and the wrapper
            that supplied it are scaffolding: the wrapper [go] becomes the loop
@@ -643,6 +650,7 @@ let loopify_inner_lambdas ?(tail_only = false) ?parts ~tparams ?(outer_env = [])
                       (List.filter (fun (_, x) -> x <> self) lparams');
                   cl_tparams = [];
                   cl_fixpoint = Option.map (fun f -> {f with lf_encoding = Lowered}) fixpoint;
+                  cl_binders = binders;
                   cl_moved = [];
                   cl_ret = ret_ty_opt;
                   cl_body = lbody';
@@ -654,6 +662,7 @@ let loopify_inner_lambdas ?(tail_only = false) ?parts ~tparams ?(outer_env = [])
               { cl_params = of_reversed lparams';
               cl_tparams = [];
               cl_fixpoint = fixpoint;
+              cl_binders = binders;
               cl_moved = [];
                 cl_ret = ret_ty_opt;
                 cl_body = lbody';
@@ -665,6 +674,7 @@ let loopify_inner_lambdas ?(tail_only = false) ?parts ~tparams ?(outer_env = [])
           { cl_params = lparams;
           cl_tparams = [];
           cl_fixpoint = fixpoint;
+          cl_binders = binders;
           cl_moved = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';

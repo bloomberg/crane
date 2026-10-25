@@ -205,33 +205,32 @@ let worthwhile_move_type = Ownership_plan.worth_moving_cpp
 type registered_fn = {
   rf_ret_ty : cpp_type;  (** the function's declared return type *)
   rf_params : (Id.t * cpp_type) list;  (** its formal parameters *)
+  rf_binders : (Id.t * Core_binder.t) list;
+      (** the Core binder each parameter stands for, by name *)
   rf_body : cpp_stmt list;  (** its body *)
 }
+
+(** The definition [f], as an inlining site reads it; [None] for a
+    declaration. *)
+let registered (f : dfun) =
+  match f.df_shape with
+  | Ddef (params, body) -> Some {rf_ret_ty = f.df_ret; rf_params = params; rf_binders = f.df_binders; rf_body = body}
+  | Ddecl _ -> None
 
 (** Table mapping GlobRef → definition, for function definitions. *)
 let mutual_fn_table : registered_fn Ref.User.Tbl.t = Ref.User.Tbl.create 32
 
-(** Register a function definition for mutual recursion detection. Each
-    [GlobRef.t] in [refs] maps to the function's definition. *)
-let register_fundef
-    (refs : (GlobRef.t * cpp_type list) list)
-    (ret_ty : cpp_type)
-    (params : (Id.t * cpp_type) list)
-    (body : cpp_stmt list) =
-  List.iter
-    (fun (r, _) -> Ref.User.Tbl.replace mutual_fn_table r {rf_ret_ty = ret_ty; rf_params = params; rf_body = body})
-    refs
-
-(** [register_decl d] registers [d] with {!register_fundef} if it is a
-    function definition, and does nothing otherwise.
+(** [register_decl d] registers [d], under each of the globals it defines,
+    if it is a function definition, and does nothing otherwise.
 
     Every function of a unit is registered before any is finished
     ({!Cpp.finish_ahead}), so that what a function sees in the mutual table
     does not depend on which functions were finished before it. *)
 let register_decl = function
-  | Dfun {df_path; df_ret; df_shape = Ddef (params, body)}
-  | Dtemplate (_, _, Dfun {df_path; df_ret; df_shape = Ddef (params, body)}) ->
-    register_fundef (dfun_path_list df_path) df_ret params body
+  | Dfun f | Dtemplate (_, _, Dfun f) ->
+    Option.iter
+      (fun rf -> List.iter (fun (r, _) -> Ref.User.Tbl.replace mutual_fn_table r rf) (dfun_path_list f.df_path))
+      (registered f)
   | _ -> ()
 
 (** Clear the mutual recursion table. Called between extraction units. *)
@@ -890,7 +889,7 @@ and collect_stmt check ~in_visitor = function
     @ List.concat_map
         (fun (_, _, body) -> collect_stmts check ~in_visitor body)
         branches
-  | Sblock_custom (_, _, _, _, args, _) ->
+  | Sblock_custom (_, _, _, _, args, _, _) ->
     List.concat_map (collect_expr check) args
   | Smatch (scrut, branches, default) ->
     collect_expr check scrut.sc_expr
@@ -1059,7 +1058,7 @@ and has_recursive_branch_dependency check stmts =
         | None -> false)
       | Sblock body | Swhile (_, body) | Sfor_range (_, _, body) ->
     has_recursive_branch_dependency check body
-      | Sblock_custom (_, _, _, _, args, _) ->
+      | Sblock_custom (_, _, _, _, args, _, _) ->
         List.exists (expr_has_recursive_branch_dependency check) args
       | _ -> false)
     stmts

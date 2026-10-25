@@ -320,8 +320,10 @@ and cpp_stmt =
       * cpp_type
       * cpp_expr list
       * cpp_type list
+      * Core_binder.t option
       (** Block template expansion: multi-statement inline custom that
-          substitutes [%result] with the bind target variable name. *)
+          substitutes [%result] with the bind target variable name, the
+          Core binder it stands for last ({!Core_binder}). *)
   | Smatch of smatch_scrutinee * smatch_branch list * cpp_stmt list option
       (** If/else-if pattern match chain using [std::holds_alternative] and
           [std::get].  Branches are checked in order.  The optional else
@@ -749,6 +751,10 @@ and cpp_lambda = {
       (** The variables a {!Closure} takes by move, at their last use --
           [\[=, x = std::move(x)\]]; the rest it copies.  Set by
           {!Last_use} only. *)
+  cl_binders : (Id.t * Core_binder.t) list;
+      (** The Core binder each parameter stands for, by the parameter's name,
+          where the lambda is the body of a Core function: a local
+          fixpoint's, or a partner's run in place of a call of it. *)
   cl_fixpoint : local_fixpoint option;
       (** The local fixpoint whose body this lambda is, as the source has
           it: what the recursion plan knows it by.  Set by the encodings of
@@ -762,9 +768,9 @@ and local_fixpoint = {
   lf_member : Miniml.Occurrence.t * int;
       (** The Core fixpoint it lowers, by the fixpoint's occurrence, and the
           index of its function among the fixpoint's *)
-  lf_binders : (Id.t * Core_binder.t) list;
-      (** The Core binder each of the lambda's own parameters stands for, by
-          the parameter's name *)
+  lf_captured : (Id.t * Core_binder.t) list;
+      (** The Core binder each local of the enclosing scope its Core
+          fixpoint reads stands for, by the local's name *)
   lf_encoding : local_fixpoint_encoding;
 }
 
@@ -1296,6 +1302,15 @@ val map_args : (cpp_expr -> cpp_expr) -> cpp_expr revd -> cpp_expr revd
 (** The parameters of a {!CPPlambda}, in source order. *)
 val lambda_params :
   (cpp_type * Id.t option) revd -> (cpp_type * Id.t option) list
+
+(** The Core binder each local a lambda's body reads as its own stands for,
+    by name: its parameters, and the locals its local fixpoint captures. *)
+val lambda_binders : cpp_lambda -> (Id.t * Core_binder.t) list
+
+(** [rekey_lambda_binders x y l] is [l] recording by [y] the Core binders it
+    records by [x] ({!lambda_binders}): the local [y] now stands where [x]
+    did. *)
+val rekey_lambda_binders : Id.t -> Id.t -> cpp_lambda -> cpp_lambda
 
 (** The member as a field, to be written where a field is written. *)
 val field_of_member : out_of_line_member -> cpp_field

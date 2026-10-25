@@ -191,7 +191,7 @@ and scan_stmt scope s =
     List.iter
       (fun (ps, _, _) -> List.iter (fun p -> bind_other scope p.cp_name) ps)
       branches
-  | Sblock_custom (_, _, _, _, args, _) -> List.iter (ban scope) args
+  | Sblock_custom (_, _, _, _, args, _, _) -> List.iter (ban scope) args
   | _ -> () );
   iter_stmt_children ~on_expr:(scan_expr scope) ~on_stmts:(scan_stmts scope) s
 

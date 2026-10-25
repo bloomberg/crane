@@ -115,7 +115,7 @@ let rec collect_type_env (stmts : cpp_stmt list) : (Id.t * cpp_type) list =
         in
         [(id, Tfun (param_types, ret_ty))]
       | Sasgn (id, Declare (ty, _), _) -> [(id, ty)]
-      | Sdecl (id, ty, _) | Sblock_custom (_, _, id, ty, _, _) -> [(id, ty)]
+      | Sdecl (id, ty, _) | Sblock_custom (_, _, id, ty, _, _, _) -> [(id, ty)]
       | Scustom_case (_, _, _, branches, _) ->
         List.concat_map
           (fun (ps, _, body) -> List.map (fun p -> (p.cp_name, p.cp_type)) ps @ collect_type_env body)
@@ -894,6 +894,8 @@ type adopted = {
           frame carries these alongside {!ad_params}: they are in scope for a
           lambda but not for a dispatch loop re-entering it from a popped
           frame. *)
+  ad_binders : (Id.t * Core_binder.t) list;
+      (** The Core binder each parameter and capture stands for, by name *)
   ad_body : cpp_stmt list;
       (** The entry's handler, already installed: its own recursive calls go
           through {!ad_entry_id} like every other call into this entry. *)
@@ -964,7 +966,7 @@ let decline_reason ad =
     {!ad_entry_id}.  The self-call forwards the fixpoint as a leading argument
     that the entry does not need, so installation drops it. *)
 let adopt_local_fix ~stmts ~planned = function
-  | Sasgn (impl_id, Declare (Tauto, _), CPPlambda {cl_params; cl_body; cl_ret; cl_fixpoint; _}) -> (
+  | Sasgn (impl_id, Declare (Tauto, _), CPPlambda {cl_params; cl_body; cl_ret; cl_fixpoint; cl_binders; _}) -> (
     let lparams = to_reversed cl_params in
     match (cl_fixpoint, fixpoint_self cl_fixpoint lparams) with
     | None, _ | _, None -> None
@@ -1045,6 +1047,7 @@ let adopt_local_fix ~stmts ~planned = function
             ad_params = params;
             ad_ret = cl_ret;
             ad_captures = captures;
+            ad_binders = cl_binders @ fixpoint.lf_captured;
             ad_body = install_calls cl_body;
             ad_install = install;
             ad_what = "the local fixpoint " ^ name;
@@ -1072,7 +1075,7 @@ let invocation_of invocations = function
     appears in. *)
 let adopt_invocation ~invocations e =
   match e with
-  | CPPfun_call (_, CPPlambda {cl_params; cl_body; cl_ret; _}, args)
+  | CPPfun_call (_, CPPlambda {cl_params; cl_body; cl_ret; cl_binders; _}, args)
     when invocation_of invocations e ->
     let params =
       List.filter_map
@@ -1102,6 +1105,7 @@ let adopt_invocation ~invocations e =
           ad_params = params;
           ad_ret = cl_ret;
           ad_captures = captures;
+          ad_binders = cl_binders;
           ad_body = rewrite_exprs reroute cl_body;
           ad_install = rewrite_exprs reroute;
           ad_what = "an inlined body";
@@ -1245,7 +1249,7 @@ let with_rematerialized ctx stmt =
 
 (** [binders] once [stmt] has run: the local it declares joins them. *)
 let declared_binders binders = function
-  | Sasgn (id, Declare (_, b), _) | Sdecl (id, _, b) -> (id, b) :: binders
+  | Sasgn (id, Declare (_, b), _) | Sdecl (id, _, b) | Sblock_custom (_, _, id, _, _, _, b) -> (id, b) :: binders
   | Sasgn (id, Declare_static _, _) | Sdecl_init (id, _) -> (id, None) :: binders
   | Sbind (ids, _) -> List.map (fun id -> (id, None)) ids @ binders
   | _ -> binders
@@ -1721,7 +1725,7 @@ and rewrite_enter_stmts ctx stmts =
         in
         (id, Tfun (param_types, ret_ty)) :: ctx.er_env
       | Sasgn (id, Declare (ty, _), _) -> (id, ty) :: ctx.er_env
-      | Sdecl (id, ty, _) | Sblock_custom (_, _, id, ty, _, _) -> (id, ty) :: ctx.er_env
+      | Sdecl (id, ty, _) | Sblock_custom (_, _, id, ty, _, _, _) -> (id, ty) :: ctx.er_env
       | _ -> ctx.er_env
     in
     rewrite_enter_lambda_return ctx stmt
@@ -2445,6 +2449,7 @@ let rec rewrite_field_access_for_decltype env expr =
       (call_opaque, CPPlambda
         { cl_params = of_reversed (extra @ to_reversed params);
           cl_tparams = [];
+          cl_binders = [];
           cl_fixpoint = None;
           cl_moved = [];
           cl_ret = rt;
@@ -2780,11 +2785,7 @@ let transform_nontail ?(fn_name : string option) ?adopted ?entered_by ?(entered 
   let ctx = { er_check = check; er_entries = entries;
                er_tparams = tparams;
                er_env = env;
-               er_binders =
-                 List.map
-                   (fun (id, _) ->
-                     (id, List.find_map (fun (p, b) -> if Id.equal p id then Some b else None) binders) )
-                   env;
+               er_binders = List.map (fun (id, b) -> (id, Some b)) binders;
                er_call_counter = call_counter; er_frames_ref = frames_ref;
                er_branch_ctx = None;
                er_seen_frame_names = Hashtbl.create 16;
@@ -2809,6 +2810,8 @@ let transform_nontail ?(fn_name : string option) ?adopted ?entered_by ?(entered 
       let ctx1 =
         { ctx with
           er_env = env @ en.en_params;
+          er_binders =
+            List.map (fun (id, _) -> (id, List.assoc_opt id ad.ad_binders)) en.en_params @ ctx.er_binders;
           er_invariant_params = Id.Set.empty }
       in
       [entry_emission en (rewrite_enter_stmts ctx1 ad.ad_body)]

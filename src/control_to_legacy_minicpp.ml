@@ -244,13 +244,6 @@ let rec with_function f = function
   | Dfun _ -> Dfun f
   | d -> d
 
-(* A member inlined into another is read as Loopify reads one it registered
-   ({!Loopify.register_decl}). *)
-let registered (f : dfun) =
-  match f.df_shape with
-  | Ddef (params, body) -> Some {Loopify_analysis.rf_ret_ty = f.df_ret; rf_params = params; rf_body = body}
-  | Ddecl _ -> None
-
 (* The parameters of the loop [l] the C++ parameters of a local fixpoint's
    lambda stand for, by position, in the order a lambda stores its
    parameters, the last first ({!Minicpp.to_reversed}): those not void,
@@ -334,8 +327,7 @@ let local_loop ~owner ~function_ ~lifted ~member:((occurrence, _) as member) ~tp
         | Tail | Modulo_cons ->
           Some (Loopify_tail.transform_tail ~jumped ~varying ~parts tparams (jump continues) params ret_ty exposed)
         | Frames ->
-          let binders = Option.cata (fun (f : local_fixpoint) -> f.lf_binders) [] lam.cl_fixpoint in
-          Loopify.local_frame_machine ~member ~name ~binders ~parts ~tparams (jump continues) params ret_ty exposed
+          Loopify.local_frame_machine ~member ~name ~binders:(lambda_binders lam) ~parts ~tparams (jump continues) params ret_ty exposed
       in
       match body () with
       | exception Loopify_analysis.Not_linearisable _ -> None
@@ -508,7 +500,7 @@ let lower_group decls =
   let partner g =
     List.find_map
       (fun (_, (f : dfun)) ->
-        if List.exists (fun (r, _) -> GlobRef.UserOrd.equal r g) (dfun_path_list f.df_path) then registered f
+        if List.exists (fun (r, _) -> GlobRef.UserOrd.equal r g) (dfun_path_list f.df_path) then Loopify_analysis.registered f
         else None )
       functions
   in

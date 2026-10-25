@@ -579,8 +579,8 @@ let supply_template_args (d : settled) : settled =
     | e -> map_expr fe fs supply_type_args e
   and fs s =
     match map_stmt fe fs supply_type_args s with
-    | Sblock_custom (r, tmpl, result, ty, args, tyargs) ->
-      Sblock_custom (r, tmpl, result, ty, args, supplied (Foreign_template.term_template tmpl) tyargs)
+    | Sblock_custom (r, tmpl, result, ty, args, tyargs, b) ->
+      Sblock_custom (r, tmpl, result, ty, args, supplied (Foreign_template.term_template tmpl) tyargs, b)
     | Scustom_case (ty, scrut, tyargs, branches, cm) ->
       let tokens = Foreign_template.match_template (custom_match_text cm) in
       Scustom_case (ty, scrut, supplied tokens tyargs, branches, cm)

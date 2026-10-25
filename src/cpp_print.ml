@@ -134,7 +134,7 @@ let lambda_needs_capture
           List.fold_left collect_from_stmt (r, branch_decls) stmts)
         (collect_from_expr (refs, decls) scrut)
         branches
-    | Sblock_custom (_, _, id, _, args, _) ->
+    | Sblock_custom (_, _, id, _, args, _, _) ->
       let refs', decls' =
         List.fold_left collect_from_expr (refs, decls) args
       in
@@ -2607,7 +2607,7 @@ and pp_cpp_stmt env args = function
     ++ str " = "
     ++ pp_cpp_expr env args e
     ++ str ";"
-  | Sblock_custom (_ref, tmpl, result_var, result_ty, args, tyargs) ->
+  | Sblock_custom (_ref, tmpl, result_var, result_ty, args, tyargs, _) ->
     (* Block template: emit a declaration + template-substituted statements.
        %result → result_var, %aN → value args, %tN → type args *)
     let result_str = Pp.string_of_ppcmds (Id.print result_var) in
