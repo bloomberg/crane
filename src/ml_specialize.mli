@@ -29,3 +29,24 @@
     other.  A definition no rewrite shrinks is left exactly as it was. *)
 
 val structure : Miniml.ml_structure -> Miniml.ml_structure
+
+(** A definition of the structure: a term and its type, or a fixpoint of
+    one function. *)
+type def =
+  | Term of Miniml.ml_ast * Miniml.ml_type
+  | Fix of Miniml.ml_fix_def
+
+(** The structure's definitions, those inside its modules included. *)
+val definitions : Miniml.ml_structure -> def Ref.User.Map.t
+
+(** The body of the global a use names, where it may be unfolded, at the
+    type arguments the use wrote: [None] for a mapped global, and where the
+    use did not write an argument for every variable its type mentions. *)
+val body_of : def Ref.User.Map.t -> Miniml.global_use -> Miniml.ml_ast option
+
+(** [instantiate b args]: [b] applied to [args], its leading lambdas
+    instantiated: a value argument substituted, any other bound once by a
+    [let] where its parameter is read more than once.  Arguments past [b]'s
+    lambdas stay applied; [None] where there are fewer arguments than
+    lambdas. *)
+val instantiate : Miniml.ml_ast -> Miniml.ml_ast list -> Miniml.ml_ast option

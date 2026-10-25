@@ -1359,7 +1359,8 @@ let report_body_generations fn =
 
 (** [Modutil.optimize_struct], one body for coinciding definitions, a
     recursive function specialized to the lambda a definition passes it,
-    every read of a local its own, and the open types of local definitions
+    the knot of a well-founded recursion tied directly, every read of a
+    local its own, and the open types of local definitions
     minted: the rewrites the program goes through before it is frozen. *)
 let core_passes to_appear : ml_structure Pipeline_trace.pass list =
   let open Pipeline_trace in
@@ -1370,6 +1371,7 @@ let core_passes to_appear : ml_structure Pipeline_trace.pass list =
     effect_ "shared_variants" Structure_analysis.register_shared_variants;
     pass "dedup" Ml_dedup.structure;
     pass "specialize" Ml_specialize.structure;
+    pass "knot" Ml_knot.structure;
     pass "fix_shape" Fix_shape.structure;
     pass "fresh_reads" Fresh_reads.structure;
     effect_ "local_types" Local_types.structure;
