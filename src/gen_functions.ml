@@ -1209,26 +1209,6 @@ let gen_dfun n b cty ty temps =
           in
           return_captures_by_value b
       in
-      (* State-threading optimization: when the return type is [pair<S, R>]
-         and there is a value parameter of type [S], insert [std::move] at
-         every recursive self-call and every [make_pair] return so that the
-         state value is moved rather than deep-copied at each recursion level.
-         This turns O(L * N) total copies into O(L) moves. *)
-      let ids, b =
-        let rec strip_ns = function Tconst t | Tnamespace (_, t) -> strip_ns t | t -> t in
-        match strip_ns cod with
-        | Tglob (g, s_ty :: _, _) when is_prod_global g -> (
-          match
-            List.find_opt
-              (fun (_, ty) -> cpp_ty_eq (match ty with Tconst t -> t | t -> t) s_ty)
-              ids
-          with
-          | Some (state_id, _) when state_threads_linearly n state_id b ->
-            rewrite_state_threading_moves n state_id s_ty ids b
-          | Some _
-          | None -> (ids, b) )
-        | _ -> (ids, b)
-      in
       clear_current_type_vars ();
       set_current_parameters [];
       Dfun

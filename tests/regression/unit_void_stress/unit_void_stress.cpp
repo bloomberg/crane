@@ -91,7 +91,7 @@ UnitVoidStress::option_pair_void(uint64_t n) {
 }
 
 std::pair<uint64_t, uint64_t> UnitVoidStress::let_void_then_pair(uint64_t n) {
-  return std::make_pair(std::move(n), UINT64_C(42));
+  return std::make_pair(n, UINT64_C(42));
 }
 
 uint64_t UnitVoidStress::seq_voids_value(uint64_t) { return UINT64_C(42); }
