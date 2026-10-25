@@ -422,15 +422,15 @@ struct TopologicalSort {
       const List<std::pair<T1, T1>> &_lc1_l0 = l;
       List<T1> _lc1_h = List<T1>::nil();
       List<T1> _lc1_loop_h = std::move(_lc1_h);
-      List<std::pair<T1, T1>> _lc1_loop_l0 = _lc1_l0;
+      const List<std::pair<T1, T1>> *_lc1_loop_l0 = &_lc1_l0;
       while (true) {
         if (std::holds_alternative<typename List<std::pair<T1, T1>>::Nil>(
-                _lc1_loop_l0.v())) {
+                _lc1_loop_l0->v())) {
           return _lc1_loop_h;
         } else {
           const auto &[a0, a1] =
               std::get<typename List<std::pair<T1, T1>>::Cons>(
-                  _lc1_loop_l0.v());
+                  _lc1_loop_l0->v());
           const List<std::pair<T1, T1>> &a1_value = *a1;
           const auto &[e1, e2] = a0;
           std::optional<T1> f1 =
@@ -441,24 +441,24 @@ struct TopologicalSort {
             const T1 &_x = *f1;
             if (f2.has_value()) {
               const T1 &_x0 = *f2;
-              _lc1_loop_l0 = List<std::pair<T1, T1>>(a1_value);
+              _lc1_loop_l0 = &a1_value;
             } else {
               _lc1_loop_h = List<T1>::cons(e2, std::move(_lc1_loop_h));
-              _lc1_loop_l0 = List<std::pair<T1, T1>>(a1_value);
+              _lc1_loop_l0 = &a1_value;
             }
           } else {
             if (f2.has_value()) {
               const T1 &_x = *f2;
               _lc1_loop_h = List<T1>::cons(e1, std::move(_lc1_loop_h));
-              _lc1_loop_l0 = List<std::pair<T1, T1>>(a1_value);
+              _lc1_loop_l0 = &a1_value;
             } else {
               if (eqb_node(e1, e2)) {
                 _lc1_loop_h = List<T1>::cons(e1, std::move(_lc1_loop_h));
-                _lc1_loop_l0 = List<std::pair<T1, T1>>(a1_value);
+                _lc1_loop_l0 = &a1_value;
               } else {
                 _lc1_loop_h = List<T1>::cons(
                     e1, List<T1>::cons(e2, std::move(_lc1_loop_h)));
-                _lc1_loop_l0 = List<std::pair<T1, T1>>(a1_value);
+                _lc1_loop_l0 = &a1_value;
               }
             }
           }

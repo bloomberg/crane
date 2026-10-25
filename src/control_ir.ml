@@ -153,6 +153,107 @@ let rec map_returns f = function
 let entered_binders (l : loop) =
   (match l.loop with Loop.Member _ -> 1 | Loop.Function _ -> 0) + List.length l.parameters
 
+(* Where a value a binder inside a loop's parameters names comes from, as
+   far as it comes from a parameter: stored in what the caller passed for
+   it -- the parameter itself, or a constructor's field held behind the
+   pointer of a value derived from it -- or merely derived from it, by
+   fields, lets and coercions keeping its representation, and so perhaps
+   held in a copy, which shares those pointers. *)
+type provenance =
+  | Stored of int
+  | Derived of int
+
+let parts_passed ~pointer_fields ~in_place (l : loop) =
+  let n = List.length l.parameters in
+  (* [env]: the provenance of each binder inside the loop's parameters,
+     innermost first. *)
+  let rec provenance env = function
+    | Miniml.MLrel (db, _) -> Option.flatten (List.nth_opt env (db - 1))
+    | Miniml.MLmagic (Miniml.Mcoerce (from, into), e) when in_place from into -> provenance env e
+    | _ -> None
+  in
+  let derived env e = match provenance env e with Some (Stored i | Derived i) -> Some (Derived i) | None -> None in
+  let unrelated k env = List.init k (fun _ -> None) @ env in
+  (* The binders of a branch, [Prel 1] first, of its pattern matching a
+     value derived from the parameter [whole]: one bound at a field its
+     constructor stores behind the pointer is stored in what the caller
+     passed, any other derived from it. *)
+  let branch_provenance whole (b : branch) =
+    let count = List.length b.binders in
+    let bound = Array.make count None in
+    let at fields j k =
+      if k >= 1 && k <= count then bound.(k - 1) <- Some (if List.mem j fields then Stored whole else Derived whole)
+    in
+    let rec bind fields j = function
+      | Miniml.Prel k -> at fields j k
+      | Miniml.Pcons (r, ps) -> List.iteri (bind (Option.default [] (pointer_fields r))) ps
+      | Miniml.Ptuple ps -> List.iteri (bind []) ps
+      | Miniml.Pusual r -> List.iteri (at (Option.default [] (pointer_fields r))) (List.init count (fun i -> count - i))
+      | Miniml.Pwild -> ()
+    in
+    bind [] (-1) b.pattern;
+    Array.to_list bound
+  in
+  (* The provenance of the arguments of each Continue of [target] in [t]. *)
+  let rec turns target env acc = function
+    | Loop inner -> turns target env acc inner.body
+    | Let b -> turns target (derived env b.value :: env) acc b.body
+    | Match m ->
+      List.fold_left
+        (fun acc (b : branch) ->
+          let binders =
+            match derived env m.scrutinee with
+            | Some (Stored i | Derived i) -> branch_provenance i b
+            | None -> List.map (fun _ -> None) b.binders
+          in
+          turns target (binders @ env) acc b.body )
+        acc m.branches
+    | Return _ -> acc
+    | Continue c | Continue_into {next = c; _} ->
+      if Loop.equal c.target target then List.map (provenance env) c.arguments :: acc else acc
+    | Resume r -> turns target (unrelated 1 env) (turns target env acc r.value) r.body
+    | Entry e ->
+      let scope = unrelated (Option.cata (fun _ -> 1) 0 e.name) env in
+      let within = turns target (entered_env env scope e) acc e.entered.body in
+      turns target scope within e.scope
+  (* The binders the body of the loop [e] enters stands under, the entry
+     standing under [env] and its scope under [scope]: each parameter
+     derived from the parameter every Continue of the loop passes it a
+     value derived from, the calls entering it and its own, the fixpoint's
+     name from none. *)
+  and entered_env env scope (e : entry) =
+    let k = List.length e.entered.parameters in
+    let within parameters = List.rev parameters @ unrelated (entered_binders e.entered - k) env in
+    let origin arguments j =
+      match List.nth_opt arguments j with Some (Some (Stored i | Derived i)) -> Some i | _ -> None
+    in
+    let entering = turns e.entered.loop scope [] e.scope in
+    let agreed parameters =
+      let arguments = entering @ turns e.entered.loop (within parameters) [] e.entered.body in
+      List.mapi
+        (fun j p ->
+          match p with
+          | Some (Derived i) when List.for_all (fun a -> Option.equal Int.equal (origin a j) (Some i)) arguments -> p
+          | _ -> None )
+        parameters
+    in
+    let rec settle parameters =
+      let parameters' = agreed parameters in
+      if parameters' = parameters then parameters else settle parameters'
+    in
+    let guessed j =
+      match entering with a :: _ -> Option.map (fun i -> Derived i) (origin a j) | [] -> None
+    in
+    within (settle (List.init k guessed))
+  in
+  match turns l.loop (List.init n (fun k -> Some (Stored (n - 1 - k)))) [] l.body with
+  | [] -> List.init n (fun _ -> false)
+  | turns ->
+    List.init n (fun i ->
+        List.for_all
+          (fun arguments -> match List.nth_opt arguments i with Some (Some (Stored j)) -> Int.equal i j | _ -> false)
+          turns )
+
 let invariant_parameters (l : loop) =
   let n = List.length l.parameters in
   (* Each Continue of [l], with the number of binders between it and the

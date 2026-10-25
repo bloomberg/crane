@@ -149,13 +149,13 @@ struct LoopifyCaptureMoveRenamed {
   partition_cps(crane::fn<bool(uint64_t)> p, const List<uint64_t> &l,
                 crane::fn<uint64_t(List<uint64_t>, List<uint64_t>)> k) {
     crane::fn<uint64_t(List<uint64_t>, List<uint64_t>)> _loop_k = std::move(k);
-    List<uint64_t> _loop_l = l;
+    const List<uint64_t> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         return _loop_k(List<uint64_t>::nil(), List<uint64_t>::nil());
       } else {
         const auto &[a0, a1] =
-            std::get<typename List<uint64_t>::Cons>(_loop_l.v());
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         const List<uint64_t> &a1_value = *a1;
         _loop_k = [=, _loop_k = std::move(_loop_k)](
                       const List<uint64_t> &yes,
@@ -166,7 +166,7 @@ struct LoopifyCaptureMoveRenamed {
             return _loop_k(yes, List<uint64_t>::cons(a0, no));
           }
         };
-        _loop_l = List<uint64_t>(a1_value);
+        _loop_l = &a1_value;
       }
     }
   }

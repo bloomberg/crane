@@ -41,9 +41,16 @@ val try_inline_mutual_into :
     jumps found by a checker of the C++ calls and its varying parameters
     read off them.  {!Control_to_legacy_minicpp}, which lowers the loop from
     the function's ControlIR instead, is compared with it under
-    [CRANE_CHECK_IR]. *)
+    [CRANE_CHECK_IR].  Where given, [parts] says which parameters every
+    call passes a value stored in what the caller passed for it, which its
+    shadows may point at ({!Loopify_tail.pointer_safe_flags}); so for
+    {!checker_modulo_cons}, {!checker_frame_machine}, {!frame_machine},
+    {!modulo_cons_loop}, {!local_frame_machine}, and for the fixpoint of
+    the member it names, {!lower_local_tail_loops} and
+    {!lower_local_loops}. *)
 val checker_tail_loop :
   partner:(GlobRef.t -> Loopify_analysis.registered_fn option) ->
+  ?parts:bool list ->
   tparams:(template_type * Id.t) list ->
   dfun ->
   (Id.t * cpp_type) list ->
@@ -72,6 +79,7 @@ val after_tail_loop :
     planned. *)
 val checker_modulo_cons :
   partner:(GlobRef.t -> Loopify_analysis.registered_fn option) ->
+  ?parts:bool list ->
   tparams:(template_type * Id.t) list ->
   dfun ->
   (Id.t * cpp_type) list ->
@@ -83,6 +91,7 @@ val checker_modulo_cons :
     its calls recognised by a checker of the C++ calls. *)
 val checker_frame_machine :
   partner:(GlobRef.t -> Loopify_analysis.registered_fn option) ->
+  ?parts:bool list ->
   tparams:(template_type * Id.t) list ->
   dfun ->
   (Id.t * cpp_type) list ->
@@ -118,6 +127,7 @@ type unlowered =
 val frame_machine :
   loop:Control_ir.Loop.t ->
   ?entry:Control_ir.Loop.t ->
+  ?parts:bool list ->
   tparams:(template_type * Id.t) list ->
   Loopify_analysis.call_checker ->
   dfun ->
@@ -155,6 +165,7 @@ val record_unlowered_method : method_field -> unit
 val modulo_cons_loop :
   jumped:(cpp_expr -> unit) ->
   varying:bool list ->
+  ?parts:bool list ->
   shapes:Loopify_tmc.shape list ->
   tparams:(template_type * Id.t) list ->
   Loopify_analysis.call_checker ->
@@ -183,12 +194,14 @@ val transform_method_own :
     tail-recursive local fixpoints in them turned into loops, under the
     template parameters [tparams], as {!transform_local_tail_loops} turns
     those of a declaration. *)
-val lower_local_tail_loops : tparams:(template_type * Id.t) list -> cpp_stmt list -> cpp_stmt list
+val lower_local_tail_loops :
+  ?parts:(Miniml.Occurrence.t * int) * bool list -> tparams:(template_type * Id.t) list -> cpp_stmt list -> cpp_stmt list
 
 (** [lower_local_loops ~tparams stmts] is [stmts] with every local fixpoint
     in them that Loopify lowers turned into its loop or its machine, as
     {!transform_decl} turns those of a function. *)
-val lower_local_loops : tparams:(template_type * Id.t) list -> cpp_stmt list -> cpp_stmt list
+val lower_local_loops :
+  ?parts:(Miniml.Occurrence.t * int) * bool list -> tparams:(template_type * Id.t) list -> cpp_stmt list -> cpp_stmt list
 
 (** [lower_function_locals ~tparams params body] is the body [body] of a
     function taking [params], of which Loopify makes no loop of its own,
@@ -211,6 +224,7 @@ val local_frame_machine :
   member:Miniml.Occurrence.t * int ->
   name:Id.t ->
   binders:(Id.t * Core_binder.t) list ->
+  ?parts:bool list ->
   tparams:(template_type * Id.t) list ->
   Loopify_analysis.call_checker ->
   (Id.t * cpp_type) list ->

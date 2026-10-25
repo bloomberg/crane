@@ -543,17 +543,17 @@ struct MemSafetyProbe16 {
                                   const crane::fn<uint64_t(uint64_t)> &acc,
                                   uint64_t x0_) {
     crane::fn<uint64_t(uint64_t)> _loop_acc = acc;
-    mylist<tree> _loop_trees = trees;
+    const mylist<tree> *_loop_trees = &trees;
     while (true) {
       if (std::holds_alternative<typename mylist<tree>::Mynil>(
-              _loop_trees.v())) {
+              _loop_trees->v())) {
         return _loop_acc(x0_);
       } else {
         const auto &[a0, a1] =
-            std::get<typename mylist<tree>::Mycons>(_loop_trees.v());
+            std::get<typename mylist<tree>::Mycons>(_loop_trees->v());
         const mylist<tree> &a1_value = *a1;
         _loop_acc = [=](uint64_t n) { return _loop_acc((a0.tree_sum() + n)); };
-        _loop_trees = mylist<tree>(a1_value);
+        _loop_trees = &a1_value;
       }
     }
   }
@@ -650,12 +650,12 @@ struct MemSafetyProbe16 {
   flatten_cps_aux(const tree &t,
                   const crane::fn<mylist<uint64_t>(mylist<uint64_t>)> &k) {
     crane::fn<mylist<uint64_t>(mylist<uint64_t>)> _loop_k = k;
-    tree _loop_t = t;
+    const tree *_loop_t = &t;
     while (true) {
-      if (std::holds_alternative<typename tree::Leaf>(_loop_t.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(_loop_t->v())) {
         return _loop_k(mylist<uint64_t>::mynil());
       } else {
-        const auto &[a0, a1, a2] = std::get<typename tree::Node>(_loop_t.v());
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(_loop_t->v());
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
         _loop_k = [=](const mylist<uint64_t> &ll) {
@@ -663,7 +663,7 @@ struct MemSafetyProbe16 {
             return _loop_k(ll.myapp(mylist<uint64_t>::mycons(a1, rl)));
           });
         };
-        _loop_t = tree(a0_value);
+        _loop_t = &a0_value;
       }
     }
   }

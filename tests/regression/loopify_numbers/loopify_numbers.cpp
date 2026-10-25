@@ -1188,7 +1188,7 @@ uint64_t LoopifyNumbers::sum_odd_indices_fuel(
                                /// each recursive call.
 
   struct CraneEnter {
-    List<uint64_t> l;
+    const List<uint64_t> *l;
     uint64_t fuel;
   };
 
@@ -1207,14 +1207,14 @@ uint64_t LoopifyNumbers::sum_odd_indices_fuel(
   using CraneFrame = std::variant<CraneEnter, CraneEnter_inl, CraneCont_Cons>;
   uint64_t _result{};
   crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{l, fuel});
+  _stack.emplace_back(CraneEnter{&l, fuel});
   /// Loopified sum_odd_indices_fuel: CraneEnter -> CraneCont_Cons.
   while (!_stack.empty()) {
     CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      const List<uint64_t> &l = std::move(_f.l);
+      const List<uint64_t> &l = *_f.l;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
         _result = UINT64_C(0);
@@ -1241,7 +1241,7 @@ uint64_t LoopifyNumbers::sum_odd_indices_fuel(
         } else {
           const auto &[_inl_a0, _inl_a1] =
               std::get<typename List<uint64_t>::Cons>(_inl_l.v());
-          _stack.emplace_back(CraneEnter{*_inl_a1, _inl_f});
+          _stack.emplace_back(CraneEnter{crane_raw(_inl_a1), _inl_f});
         }
       }
     } else {

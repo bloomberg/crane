@@ -6,10 +6,10 @@ MemSafetyProbe6::build_chain(const MemSafetyProbe6::mylist<uint64_t> &l) {
   std::optional<MemSafetyProbe6::mylist<crane::fn<uint64_t(uint64_t)>>> _root{};
   std::shared_ptr<MemSafetyProbe6::mylist<crane::fn<uint64_t(uint64_t)>>>
       *_write = nullptr;
-  MemSafetyProbe6::mylist<uint64_t> _loop_l = l;
+  const MemSafetyProbe6::mylist<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
-            typename MemSafetyProbe6::mylist<uint64_t>::Mynil>(_loop_l.v())) {
+            typename MemSafetyProbe6::mylist<uint64_t>::Mynil>(_loop_l->v())) {
       auto _value = mylist<crane::fn<uint64_t(uint64_t)>>::mynil();
       (_write ? *(*_write = std::make_shared<
                       MemSafetyProbe6::mylist<crane::fn<uint64_t(uint64_t)>>>(
@@ -19,7 +19,7 @@ MemSafetyProbe6::build_chain(const MemSafetyProbe6::mylist<uint64_t> &l) {
     } else {
       const auto &[a0, a1] =
           std::get<typename MemSafetyProbe6::mylist<uint64_t>::Mycons>(
-              _loop_l.v());
+              _loop_l->v());
       const MemSafetyProbe6::mylist<uint64_t> &a1_value = *a1;
       uint64_t rest_len = a1_value.length();
       auto _cell = typename MemSafetyProbe6::
@@ -34,7 +34,7 @@ MemSafetyProbe6::build_chain(const MemSafetyProbe6::mylist<uint64_t> &l) {
       _write = &std::get<typename MemSafetyProbe6::mylist<
           crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut())
                     .a1;
-      _loop_l = MemSafetyProbe6::mylist<uint64_t>(a1_value);
+      _loop_l = &a1_value;
       continue;
     }
   }

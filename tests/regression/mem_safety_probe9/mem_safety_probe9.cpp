@@ -170,15 +170,15 @@ MemSafetyProbe9::list_accum_closures(
     MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>> acc) {
   MemSafetyProbe9::mylist<crane::fn<uint64_t(uint64_t)>> _loop_acc =
       std::move(acc);
-  MemSafetyProbe9::mylist<uint64_t> _loop_l = l;
+  const MemSafetyProbe9::mylist<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
-            typename MemSafetyProbe9::mylist<uint64_t>::Mynil>(_loop_l.v())) {
+            typename MemSafetyProbe9::mylist<uint64_t>::Mynil>(_loop_l->v())) {
       return _loop_acc;
     } else {
       const auto &[a0, a1] =
           std::get<typename MemSafetyProbe9::mylist<uint64_t>::Mycons>(
-              _loop_l.v());
+              _loop_l->v());
       const MemSafetyProbe9::mylist<uint64_t> &a1_value = *a1;
       uint64_t tail_len = a1_value.length();
       crane::fn<uint64_t(uint64_t)> f = [=](uint64_t) {
@@ -186,7 +186,7 @@ MemSafetyProbe9::list_accum_closures(
       };
       _loop_acc = mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
           std::move(f), std::move(_loop_acc));
-      _loop_l = MemSafetyProbe9::mylist<uint64_t>(a1_value);
+      _loop_l = &a1_value;
     }
   }
 }

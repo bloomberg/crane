@@ -406,17 +406,17 @@ struct MemSafetyProbe10 {
                                const crane::fn<uint64_t(uint64_t)> &acc,
                                uint64_t x0_) {
     crane::fn<uint64_t(uint64_t)> _loop_acc = acc;
-    mylist<uint64_t> _loop_l = l;
+    const mylist<uint64_t> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename mylist<uint64_t>::Mynil>(
-              _loop_l.v())) {
+              _loop_l->v())) {
         return _loop_acc(x0_);
       } else {
         const auto &[a0, a1] =
-            std::get<typename mylist<uint64_t>::Mycons>(_loop_l.v());
+            std::get<typename mylist<uint64_t>::Mycons>(_loop_l->v());
         const mylist<uint64_t> &a1_value = *a1;
         _loop_acc = [=](uint64_t n) { return _loop_acc((a0 + n)); };
-        _loop_l = mylist<uint64_t>(a1_value);
+        _loop_l = &a1_value;
       }
     }
   }

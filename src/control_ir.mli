@@ -150,3 +150,19 @@ val map_returns : (Miniml.ml_ast -> Miniml.ml_ast) -> Term.t -> Term.t
     that parameter.  Such a parameter keeps its value for as long as the loop
     runs. *)
 val invariant_parameters : Term.loop -> bool list
+
+(** For each parameter of the loop [l], outermost first, whether every
+    [Continue] of [l] passes it a value stored in what the caller passed
+    for it, which outlives every turn of the loop: the parameter itself, or
+    a binder a pattern binds at a field its constructor stores behind the
+    pointer ([pointer_fields] gives those of each constructor), in a match
+    of a value derived from the parameter -- by such patterns' binders,
+    lets, and coercions [in_place] says keep the value's representation --
+    each perhaps through a coercion so.  A copy of a derived value shares
+    the pointers it holds.  [false] for each where no call continues
+    [l]. *)
+val parts_passed :
+  pointer_fields:(Names.GlobRef.t -> int list option) ->
+  in_place:(Miniml.ml_type -> Miniml.ml_type -> bool) ->
+  Term.loop ->
+  bool list

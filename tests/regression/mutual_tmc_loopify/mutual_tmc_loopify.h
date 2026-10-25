@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MUTUAL_TMC_LOOPIFY
 #define INCLUDED_MUTUAL_TMC_LOOPIFY
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <atomic>
 #include <memory>

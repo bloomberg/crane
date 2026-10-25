@@ -482,17 +482,17 @@ struct MemSafetyProbe {
                                const crane::fn<uint64_t(uint64_t)> &acc,
                                uint64_t x0_) {
     crane::fn<uint64_t(uint64_t)> _loop_acc = acc;
-    mylist<tree> _loop_trees = trees;
+    const mylist<tree> *_loop_trees = &trees;
     while (true) {
       if (std::holds_alternative<typename mylist<tree>::Mynil>(
-              _loop_trees.v())) {
+              _loop_trees->v())) {
         return _loop_acc(x0_);
       } else {
         const auto &[a0, a1] =
-            std::get<typename mylist<tree>::Mycons>(_loop_trees.v());
+            std::get<typename mylist<tree>::Mycons>(_loop_trees->v());
         const mylist<tree> &a1_value = *a1;
         _loop_acc = [=](uint64_t n) { return _loop_acc(a0.sum_values(n)); };
-        _loop_trees = mylist<tree>(a1_value);
+        _loop_trees = &a1_value;
       }
     }
   }

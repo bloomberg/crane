@@ -812,12 +812,12 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~jumped ~storage ~branch c
     @param ret_ty Return type
     @param body Function body
     @return Transformed body with TMC while loop *)
-let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?varying ~shapes tparams check params ret_ty body =
+let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?varying ?parts ~shapes tparams check params ret_ty body =
   let branch = branch_along shapes check in
   let storage = storage_of ret_ty in
   let { ss_varying = varying; ss_varying_params = varying_params;
         ss_shadow_params = shadow_params; ss_subs = subs } =
-    build_shadow_setup ?varying tparams check params body
+    build_shadow_setup ?varying ?parts tparams check params body
   in
   (* Where the result is assembled, and the hole [_write] starts at. *)
   let head_ty = match storage with

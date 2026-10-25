@@ -287,6 +287,17 @@ let tail_pointer_safe_flags check params body ?(binding_env = []) () =
             calls)
       params
 
+(** Pointer-safety flags for [params]: where the caller knows which of them
+    every recursive call passes a value stored in what the caller passed
+    for it ({!Control_ir.parts_passed}), [parts], those of them a borrowed
+    value type; read off the calls [check] finds otherwise
+    ({!tail_pointer_safe_flags}). *)
+let pointer_safe_flags ?parts ?binding_env check params body =
+  match parts with
+  | Some parts ->
+    List.map2 (fun part (_, ty) -> part && Option.has_some (borrowed_value_param_pointee ty)) parts params
+  | None -> tail_pointer_safe_flags check params body ?binding_env ()
+
 (** Rewrite references to pointer-safe shadow variables ([const T*]) so that
     reads dereference the pointer and method calls use [->] via
     [CPPaccess_call].
@@ -1004,11 +1015,11 @@ let optimize_last_use_moves ~self_ref_candidate ~last_use_candidate stmts =
   in
   process stmts
 
-let build_shadow_setup ?varying tparams check params body =
+let build_shadow_setup ?varying ?parts tparams check params body =
   let varying =
     match varying with Some v -> v | None -> find_varying_params check params body
   in
-  let pointer_safe = tail_pointer_safe_flags check params body () in
+  let pointer_safe = pointer_safe_flags ?parts check params body in
   let varying_params = filter_by_mask varying params in
   let varying_pointer_safe = filter_by_mask varying pointer_safe in
   let shadow_params =
@@ -1131,10 +1142,10 @@ let drop_unread_shadows shadow_decls body =
     @param ret_ty Return type of the function
     @param body Function body statements
     @return Transformed body with while loop structure *)
-let transform_tail ?(param_inits = []) ?(jumped = ignore) ?varying tparams check params ret_ty body =
+let transform_tail ?(param_inits = []) ?(jumped = ignore) ?varying ?parts tparams check params ret_ty body =
   let { ss_varying = varying; ss_varying_params = varying_params;
         ss_shadow_params = shadow_params; ss_subs = subs } =
-    build_shadow_setup ?varying tparams check params body
+    build_shadow_setup ?varying ?parts tparams check params body
   in
   let is_void = ret_ty = Tvoid in
   (* Shadow variable declarations (only for varying params) *)

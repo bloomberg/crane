@@ -48,26 +48,27 @@ LoopifyShadowFromReference::lst
 LoopifyShadowFromReference::g(LoopifyShadowFromReference::lst l) {
   crane::rc<LoopifyShadowFromReference::lst> _head{};
   crane::rc<LoopifyShadowFromReference::lst> *_write = &_head;
-  LoopifyShadowFromReference::lst _loop_l = std::move(l);
+  const LoopifyShadowFromReference::lst *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyShadowFromReference::lst::Nil>(
-            _loop_l.v_mut())) {
+            _loop_l->v())) {
       *_write = crane::make_rc<LoopifyShadowFromReference::lst>(lst::nil());
       break;
     } else {
-      auto &[a0, a1] = std::get<typename LoopifyShadowFromReference::lst::Cons>(
-          _loop_l.v_mut());
+      const auto &[a0, a1] =
+          std::get<typename LoopifyShadowFromReference::lst::Cons>(
+              _loop_l->v());
       const LoopifyShadowFromReference::lst &a1_value = *a1;
       auto _cell = crane::make_rc<LoopifyShadowFromReference::lst>(
           typename LoopifyShadowFromReference::lst::Cons(
               twice([=](uint64_t y) { return suml(lst::cons(y, a1_value)); },
-                    std::move(a0)),
+                    a0),
               nullptr));
       *_write = std::move(_cell);
       _write = &std::get<typename LoopifyShadowFromReference::lst::Cons>(
                     (*_write)->v_mut())
                     .a1;
-      _loop_l = LoopifyShadowFromReference::lst(a1_value);
+      _loop_l = &a1_value;
       continue;
     }
   }

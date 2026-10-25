@@ -195,12 +195,12 @@ struct MemSafetyProbe21 {
   static uint64_t cps_sum(const tree &t,
                           const crane::fn<uint64_t(uint64_t)> &k) {
     crane::fn<uint64_t(uint64_t)> _loop_k = k;
-    tree _loop_t = t;
+    const tree *_loop_t = &t;
     while (true) {
-      if (std::holds_alternative<typename tree::Leaf>(_loop_t.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(_loop_t->v())) {
         return _loop_k(UINT64_C(0));
       } else {
-        const auto &[a0, a1, a2] = std::get<typename tree::Node>(_loop_t.v());
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(_loop_t->v());
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
         _loop_k = [=](uint64_t lsum) {
@@ -208,7 +208,7 @@ struct MemSafetyProbe21 {
             return _loop_k(((lsum + a1) + rsum));
           });
         };
-        _loop_t = tree(a0_value);
+        _loop_t = &a0_value;
       }
     }
   }

@@ -52,11 +52,11 @@ MemSafetyProbe16::build_summers(
       _root{};
   std::shared_ptr<MemSafetyProbe16::mylist<crane::fn<uint64_t(uint64_t)>>>
       *_write = nullptr;
-  MemSafetyProbe16::mylist<MemSafetyProbe16::tree> _loop_trees = trees;
+  const MemSafetyProbe16::mylist<MemSafetyProbe16::tree> *_loop_trees = &trees;
   while (true) {
     if (std::holds_alternative<
             typename MemSafetyProbe16::mylist<MemSafetyProbe16::tree>::Mynil>(
-            _loop_trees.v())) {
+            _loop_trees->v())) {
       auto _value = mylist<crane::fn<uint64_t(uint64_t)>>::mynil();
       (_write ? *(*_write = std::make_shared<
                       MemSafetyProbe16::mylist<crane::fn<uint64_t(uint64_t)>>>(
@@ -66,7 +66,7 @@ MemSafetyProbe16::build_summers(
     } else {
       const auto &[a0, a1] = std::get<
           typename MemSafetyProbe16::mylist<MemSafetyProbe16::tree>::Mycons>(
-          _loop_trees.v());
+          _loop_trees->v());
       const MemSafetyProbe16::mylist<MemSafetyProbe16::tree> &a1_value = *a1;
       auto _cell = typename MemSafetyProbe16::
           mylist<crane::fn<uint64_t(uint64_t)>>::Mycons(
@@ -81,7 +81,7 @@ MemSafetyProbe16::build_summers(
       _write = &std::get<typename MemSafetyProbe16::mylist<
           crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut())
                     .a1;
-      _loop_trees = MemSafetyProbe16::mylist<MemSafetyProbe16::tree>(a1_value);
+      _loop_trees = &a1_value;
       continue;
     }
   }

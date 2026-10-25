@@ -2649,7 +2649,7 @@ let fix_handler_bindings field_names cf_ps handler =
             [body] unchanged when the transformation is unsafe (branch
             dependencies on recursive calls) *)
 let transform_nontail ?(fn_name : string option) ?adopted ?entered_by ?(entered = fun ~resumes:_ _ -> ())
-    ?(outer_env = []) ?(binders = []) check tparams params ret_ty body =
+    ?(outer_env = []) ?(binders = []) ?parts check tparams params ret_ty body =
   (* An adopted body becomes a second entry point of this machine rather than
      a machine of its own: two machines cannot unwind each other's stack, so
      loopifying them separately leaves the recursion in place.  The calls that
@@ -2735,7 +2735,7 @@ let transform_nontail ?(fn_name : string option) ?adopted ?entered_by ?(entered 
   let own = only_entry 0 check in
   let varying = find_varying_params own params body in
   let binding_env = collect_binding_env body in
-  let pointer_safe = tail_pointer_safe_flags own params body ~binding_env () in
+  let pointer_safe = pointer_safe_flags ?parts ~binding_env own params body in
   (* Loopifying a function on its own gives a machine with one entry: the
      function itself, entered through [CraneEnter]. *)
   let own_entry = machine_entry ~enter_id:id_enter ~params ~varying in
