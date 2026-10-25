@@ -110,13 +110,18 @@ val lower_methods :
     function is above, where Loopify would loopify it: to the loop of that
     member's ControlIR ({!Control_ir.Loop.Member}), entered by the member's
     calls, the variables the helper captures, its first parameters, passed
-    on unchanged by every one of them. *)
+    on unchanged by every one of them.  A helper Loopify loopifies of which
+    no loop is made has the local fixpoints in its body lowered as Loopify
+    lowers them ({!Loopify.lower_function_locals}): those translation left
+    for the helper's machine to adopt. *)
 val lower_lifted : Minicpp.cpp_decl -> Minicpp.cpp_decl
 
 (** [lower_group ds] is the declarations [ds], generated for the members of
     one recursive group, in its order, with each function lowered as above
     where it is one, recording its loop ({!Minicpp.dfun.df_loop}).  The
     members that inline one another and that Loopify would loopify are
-    lowered all of them or none: Loopify, which lowers the others when the
-    unit is finished, inlines a partner as it was generated. *)
+    lowered all of them or none: Loopify inlines a partner as it was
+    generated.  A member Loopify loopifies of which no loop is made has the
+    local fixpoints in its body lowered as {!lower_lifted} lowers a
+    helper's. *)
 val lower_group : Minicpp.cpp_decl list -> Minicpp.cpp_decl list

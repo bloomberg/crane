@@ -163,6 +163,13 @@ val lower_local_tail_loops : tparams:(template_type * Id.t) list -> cpp_stmt lis
     {!transform_decl} turns those of a function. *)
 val lower_local_loops : tparams:(template_type * Id.t) list -> cpp_stmt list -> cpp_stmt list
 
+(** [lower_function_locals ~tparams params body] is the body [body] of a
+    function taking [params], of which Loopify makes no loop of its own,
+    with every local fixpoint in it Loopify lowers turned into its loop or
+    its machine, as {!transform_decl} turns those of such a function. *)
+val lower_function_locals :
+  tparams:(template_type * Id.t) list -> (Id.t * cpp_type) list -> cpp_stmt list -> cpp_stmt list
+
 (** [local_frame_machine ~member ~name ~binders ~tparams check params ret_ty
     body] is the body of the machine with a stack of frames of the local
     fixpoint [name], the function [member] of a Core fixpoint, its body

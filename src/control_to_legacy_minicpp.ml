@@ -407,26 +407,33 @@ let lifted_varying (l : Control_ir.Term.loop) params =
   if captured < 0 then None
   else Some (List.init captured (fun _ -> false) @ List.map (fun i -> not (List.nth invariant i)) kept)
 
-let lower_lifted d =
+(* The definition [d], a function Loopify loopifies of which no loop of
+   its own is made here, with the local fixpoints in its body lowered as
+   Loopify lowers those of such a function: the ones translation left for
+   the function's machine to adopt, which there is none of to adopt them. *)
+let lower_locals d =
   match function_of d with
-  | Some (tparams, f) -> (
-    let r = fst f.df_path.dp_outer in
-    match (f.df_shape, Option.bind (Lifted.of_ref r) Lifted.fixpoint) with
-    | Ddef (params, _), Some member when Table.should_loopify r -> (
-      let planned =
-        lowering_of (Recursion_plan.strategy_at ~pointer_fields:Loopify_analysis.constructor_pointer_fields member)
-      in
-      match shaped_loop ~lowerings:[Tail; Modulo_cons; Frames] r planned (Control_ir.Loop.Member (fst member, snd member)) with
-      | Some (l, lowering) -> (
-        match
-          Option.bind (lifted_varying l params) (fun varying ->
-              lower_function ~partner:(fun _ -> None) ~tparams f (l, lowering, varying) )
-        with
-        | Some f' -> with_function f' d
-        | None -> d )
-      | None -> d )
-    | (Ddef _ | Ddecl _), _ -> d )
-  | None -> d
+  | Some (tparams, ({df_shape = Ddef (params, body); _} as f)) when Table.should_loopify (fst f.df_path.dp_outer) ->
+    with_function {f with df_shape = Ddef (params, Loopify.lower_function_locals ~tparams params body)} d
+  | Some _ | None -> d
+
+let lower_lifted d =
+  let lowered =
+    Option.bind (function_of d) (fun (tparams, f) ->
+        let r = fst f.df_path.dp_outer in
+        match (f.df_shape, Option.bind (Lifted.of_ref r) Lifted.fixpoint) with
+        | Ddef (params, _), Some member when Table.should_loopify r ->
+          let planned =
+            lowering_of (Recursion_plan.strategy_at ~pointer_fields:Loopify_analysis.constructor_pointer_fields member)
+          in
+          Option.bind
+            (shaped_loop ~lowerings:[Tail; Modulo_cons; Frames] r planned (Control_ir.Loop.Member (fst member, snd member)))
+            (fun (l, lowering) ->
+              Option.bind (lifted_varying l params) (fun varying ->
+                  lower_function ~partner:(fun _ -> None) ~tparams f (l, lowering, varying) ) )
+        | (Ddef _ | Ddecl _), _ -> None )
+  in
+  match lowered with Some f' -> with_function f' d | None -> lower_locals d
 
 let lower_group decls =
   let functions = List.filter_map function_of decls in
@@ -467,5 +474,5 @@ let lower_group decls =
     (fun (d, l) ->
       match l with
       | Some f when all_lowered || not (involved d) -> with_function f d
-      | Some _ | None -> d )
+      | Some _ | None -> lower_locals d )
     lowered

@@ -1180,6 +1180,8 @@ let lower_local_tail_loops ~tparams stmts = loopify_inner_lambdas ~tail_only:tru
 
 let lower_local_loops ~tparams stmts = loopify_inner_lambdas ~tparams stmts
 
+let lower_function_locals ~tparams params body = loopify_inner_lambdas ~tparams ~outer_env:params body
+
 let local_frame_machine ~member ~name ~binders ~tparams check params ret_ty body =
   let name = Id.to_string name in
   Option.bind
