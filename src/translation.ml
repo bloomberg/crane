@@ -233,9 +233,9 @@ let gen_local_fix_ycomb env ~binders ~moved renamed_ids funs_with_params =
 
 (** Generate local fixpoint declarations using the [\[&\]]-capture pattern.
 
-    Used when {!fixpoint_escapes_in_stmts} returns [false], meaning the
-    fixpoint variable is only used in direct call position and never
-    escapes into a closure or data structure.  The [\[&\]] capture is
+    Used for a group Core generates {!Analyze_closures.In_place}: no member
+    is used other than in direct call position or escapes into a closure or
+    data structure.  The [\[&\]] capture is
     lightweight (no heap allocation, no indirection) but creates dangling
     references if the closure outlives the enclosing scope.
 
@@ -254,7 +254,7 @@ let gen_local_fix_ycomb env ~binders ~moved renamed_ids funs_with_params =
     v}
 
     @return [(decls, defs)] — declaration and definition statement lists.
-    @see gen_local_fix_shared_ptr for the escaping-fixpoint alternative. *)
+    @see gen_local_fix_ycomb for the escaping-fixpoint alternative. *)
 let gen_local_fix_by_ref env ~binders renamed_ids funs_with_params owned_flags_per_fun =
   let ret_ty ty =
     match cpp_of_ml env ty with
@@ -388,6 +388,20 @@ let check_closure_local ty a ~local =
               (if planned then "a local" else "no local")
               (if local then "a local" else "no local") ) )
     | _ -> ()
+
+(* Under [CRANE_CHECK_IR], the local fixpoint [name], whose group Core takes
+   to hold copies where [closures] says so ({!Analyze_closures}), must be
+   one its generated code lets escape just as much: named, after its binding
+   or in its own bodies, other than as the function a call applies, or
+   inside a closure. *)
+let check_fixpoint_escape name ~closures generated_escapes =
+  if Probe.checking () && closures <> generated_escapes () then
+    Probe.violation "closure escape"
+      Pp.(
+        str "the local fixpoint " ++ Id.print name
+        ++ str
+             ( if closures then " escapes in Core but nowhere in its generated code"
+               else " escapes in its generated code but nowhere in Core" ) )
 
 (* Whether [e] is a closed constructor term of a shared variant with fields:
    built from constructors, literals and erased arguments only, so its value
@@ -9028,7 +9042,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
      statement lands in is {!with_cpp_return_type}, which
      {!position_cpp_ty} falls back to. *)
   match ast with
-  | MLletin (_, let_ty, (MLfix (x, ids, funs, _, occ) as fix_term), b, _) as _whole ->
+  | MLletin (_, let_ty, (MLfix (x, ids, funs, cofix, occ) as fix_term), b, _) as _whole ->
     (* Special case for let-fix: the let binding name is the fix function name *)
     Local_types.check_minted ids;
     let ids, funs = Local_types.recover_fix_codomains ids funs in
@@ -9163,10 +9177,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             binds) into the continuation environment — not all mutual
             fix names, which would shift de Bruijn indices by [n]
             instead of the correct [1].
-         3. Run escape analysis ({!fixpoint_escapes_in_stmts}) on the
-            compiled continuation to decide between the [\[&\]] pattern
-            ({!gen_local_fix_by_ref}) and the [shared_ptr] pattern
-            ({!gen_local_fix_shared_ptr}).
+         3. Generate the group by reference ({!gen_local_fix_by_ref}) or as
+            closures holding copies ({!gen_local_fix_ycomb}), as Core decides
+            whether a member escapes ({!Analyze_closures}).
 
          The variables the fixpoint bodies capture are not moved in the
          continuation while a [\[&\]] lambda may still refer to them: the
@@ -9208,17 +9221,11 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       let _, env_with_fix = push_vars' [projected_id] env_for_cont in
       push_binders env [projected_id];
       let cont = gen_stmts ~slot env_with_fix k b in
-      (* Check if any fixpoint variable escapes in the continuation.
-         If so, use shared_ptr + [=] to prevent dangling references.
-         Otherwise, use the simpler [&] capture pattern. *)
-      (* Where the fixpoint is used afterwards, and inside its own bodies:
-         a self-call in a closure that one of them returns -- a monadic
-         [bind]'s continuation -- runs after this scope has gone. *)
-      let any_escapes =
-        List.exists (fun (id, _) -> fixpoint_escapes_in_stmts id cont) renamed_ids
-        || fix_escapes_in_own_bodies renamed_ids funs_with_params
-      in
-      if any_escapes then
+      let closures = Analyze_closures.group ~n_outer ~continuation:b ~cofix ids funs = Closures in
+      check_fixpoint_escape (fst projected_id) ~closures (fun () ->
+          List.exists (fun (id, _) -> fixpoint_escapes_in_stmts id cont) renamed_ids
+          || fix_escapes_in_own_bodies renamed_ids funs_with_params );
+      if closures then
         let decls, defs, deref_subst =
           gen_local_fix_ycomb env ~binders:(local_fix_binders occ ids funs_compiled)
             ~moved:(fix_moved_captures env fix_term)
@@ -9920,7 +9927,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             @ gen_stmts ~slot env' k b
       in
       result
-  | MLapp ((MLfix (x, ids, funs, _, occ) as fix_term), args) ->
+  | MLapp ((MLfix (x, ids, funs, cofix, occ) as fix_term), args) ->
     Local_types.check_minted ids;
     let ids, funs = Local_types.recover_fix_codomains ids funs in
     (* Collect Tvars from bodies too *)
@@ -10069,7 +10076,13 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         let full_call = mk_call (CPPvar fix_id) (args @ pa_exprs) in
         decls @ defs
         @ deref_subst [k (mk_lambda pa_params None [Sreturn (Some full_call)] ~capture:Closure)]
-      end else if fix_escapes_in_own_bodies renamed_ids funs_with_params then
+      end
+      else if
+        let closures = Analyze_closures.group ~n_outer ~cofix ids funs = Closures in
+        check_fixpoint_escape (fst (List.nth renamed_ids x)) ~closures (fun () ->
+            fix_escapes_in_own_bodies renamed_ids funs_with_params );
+        closures
+      then
         let decls, defs, deref_subst =
           gen_local_fix_ycomb env ~binders:(local_fix_binders occ ids funs_compiled)
             ~moved:(fix_moved_captures env fix_term)
