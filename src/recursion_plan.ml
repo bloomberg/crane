@@ -392,12 +392,14 @@ let definition_suspends self ty body =
   Translation_support.suspends_whole self (Ml_type_util.ml_return_type ty) body
   || suspends_within ~self lex body
 
-(* The levels of the binders outside [e] that [e] reads, [e] standing under
-   [depth] binders. *)
-let free_levels ~depth e =
+(* The levels of the binders outside [e] that [e] reads as values, [e]
+   standing under [depth] binders: one at a level of [heads] read only to
+   call it is not. *)
+let value_levels ~heads ~depth e =
   let found = ref [] in
   let rec go d = function
     | MLrel (i, _) -> if i > d then found := (depth + d - i) :: !found
+    | MLapp (MLrel (i, _), args) when i > d && List.mem (depth + d - i) heads -> List.iter (go d) args
     | MLlam (_, _, b) -> go (d + 1) b
     | MLletin (_, _, a, b, _) ->
       go d a;
@@ -425,18 +427,30 @@ let match_bound_in_place ty branches =
    recursive call is one [targets] names; in a local fixpoint's bodies a
    call of a member of that fixpoint is one too.  A call under a lambda is
    made where the closure runs, not here, but a local fixpoint in the
-   lambda's body is lowered on its own, and resumes after its own calls. *)
+   lambda's body is lowered on its own, and resumes after its own calls.
+
+   What a point keeps is what follows reads as a value: not a dictionary
+   the declaration takes, which C++ takes as a template argument, nor a
+   member of a local fixpoint whose calls the point is among -- [heads],
+   those whose bodies it is in -- called, which enters the machine again. *)
 let resumes_of ~effects ~origin ~targets lex body =
   let effect_ = sequential effects in
   let found = ref [] in
   let binder level = Core_binder.make ~origin ~level () in
-  let resume ~site ~after depth rest =
-    let live = List.filter (fun l -> l <> depth) (free_levels ~depth:(depth + 1) rest) in
+  let dictionary level =
+    match Lexenv.binder lex (Lexenv.depth lex - level) with
+    | Some {eb_role = Dictionary; _} -> true
+    | Some {eb_role = Value; _} | None -> false
+  in
+  let resume ~heads ~site ~after depth rest =
+    let live =
+      List.filter (fun l -> l <> depth && not (dictionary l)) (value_levels ~heads ~depth:(depth + 1) rest)
+    in
     found :=
       {binder = Core_binder.make ~origin ~level:depth ~site (); live = List.map binder live; after}
       :: !found
   in
-  let rec walk ~targets depth e =
+  let rec walk ~targets ~heads depth e =
     (* A local fixpoint applied where it is written, reaching a recursive
        call, is bound as one ({!Normalize}). *)
     let rec reaches depth e =
@@ -479,10 +493,10 @@ let resumes_of ~effects ~origin ~targets lex body =
         | MLmagic (_, b) -> ending depth b
         | _ -> [] )
     in
-    let go = walk ~targets in
+    let go = walk ~targets ~heads in
     match e with
     | MLletin (_, _, a, b, site) ->
-      (match ending depth a with [] -> () | after -> resume ~site ~after depth b);
+      (match ending depth a with [] -> () | after -> resume ~heads ~site ~after depth b);
       go depth a;
       go (depth + 1) b
     | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Bind -> (
@@ -490,7 +504,7 @@ let resumes_of ~effects ~origin ~targets lex body =
       | MLlam (_, _, k) :: action :: rest ->
         ( match targets ~depth action with
         | [] -> ()
-        | after -> resume ~site:(Global_use.occurrence use) ~after depth k );
+        | after -> resume ~heads ~site:(Global_use.occurrence use) ~after depth k );
         List.iter (go depth) (action :: rest);
         go (depth + 1) k
       | _ -> List.iter (go depth) args )
@@ -507,15 +521,16 @@ let resumes_of ~effects ~origin ~targets lex body =
         | _ -> []
       in
       let targets ~depth e = match member ~depth e with [] -> targets ~depth e | called -> called in
+      let heads = heads @ List.init n (fun m -> first + m) in
       Array.iter
         (fun f ->
           let arity, b = split_params 0 f in
-          walk ~targets (depth + n + arity) b )
+          walk ~targets ~heads (depth + n + arity) b )
         funs
-    | MLlam (_, _, b) -> walk ~targets:(fun ~depth:_ _ -> []) (depth + 1) b
+    | MLlam (_, _, b) -> walk ~targets:(fun ~depth:_ _ -> []) ~heads:[] (depth + 1) b
     | e -> Mlutil.ast_iter (go depth) e
   in
-  walk ~targets:(fun ~depth:_ e -> targets e) (Lexenv.depth lex) body;
+  walk ~targets:(fun ~depth:_ e -> targets e) ~heads:[] (Lexenv.depth lex) body;
   List.rev !found
 
 (* The local fixpoints in the flow of [body], standing under [depth]

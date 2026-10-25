@@ -258,8 +258,10 @@ type call = private {
 
 (** Where a function goes on once a recursive call returns: [binder], the
     binder the call's result is bound to, [live], the binders bound before
-    it that what follows reads -- what a frame keeps across the call -- and
-    [after], the calls its right-hand side ends in. *)
+    it that what follows reads as values -- what a frame keeps across the
+    call: not a dictionary the declaration takes, nor a member of a local
+    fixpoint the point is in that what follows only calls -- and [after],
+    the calls its right-hand side ends in. *)
 type resume = private {
   binder : Core_binder.t;
   live : Core_binder.t list;

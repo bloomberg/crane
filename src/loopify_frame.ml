@@ -1259,7 +1259,8 @@ let declared_binders binders = function
     the innermost local in scope standing for it that the frame carries --
     one [kept_elsewhere] does not leave out, such as a reference to a field
     the handler binds again from the field, which the frame carries
-    instead. *)
+    instead.  Under [CRANE_CHECK_IR] every binder it finds live has a local
+    in scope standing for it: the frame would otherwise lose it. *)
 let planned_frame binders ~kept_elsewhere (p : Recursion_plan.resume) =
   let stands_for b x =
     match List.assoc_opt x binders with
@@ -1268,20 +1269,22 @@ let planned_frame binders ~kept_elsewhere (p : Recursion_plan.resume) =
   in
   List.filter_map
     (fun b ->
-      List.find_map
-        (fun (x, _) -> if stands_for b x && not (kept_elsewhere x) then Some x else None)
-        binders )
+      match List.filter (fun (x, _) -> stands_for b x) binders with
+      | [] ->
+        Probe.violation "frame plan"
+          (Pp.str "a binder the recursion plan finds live across a call has no local in scope standing for it");
+        None
+      | standing -> List.find_map (fun (x, _) -> if kept_elsewhere x then None else Some x) standing )
     p.live
 
 (** The frame the plan has for the call whose result [tgt] binds to [id],
     in the order the Core binds what it keeps: the {!planned_frame} of the
     one point resuming there, which its
-    binder's site picks out from its siblings ({!Core_binder.site}).  [None]
-    where the result stands for no Core binder -- a call the backend bound
-    to a local of its own -- and, a violation, where the plan has no one
-    point for it.  [kept_elsewhere] are the locals the frame leaves out by
-    design: what the handler rebuilds, the machine's entries, the parameters
-    no re-entry changes. *)
+    binder's site picks out from its siblings ({!Core_binder.site}).  [None],
+    a violation, where the result stands for no Core binder or the plan has
+    no one point for it.  [kept_elsewhere] are the locals the frame leaves
+    out by design: what the handler rebuilds, the machine's entries, the
+    parameters no re-entry changes. *)
 let planned_frame_at ctx id tgt ~kept_elsewhere =
   let binder =
     match tgt with
@@ -1289,37 +1292,37 @@ let planned_frame_at ctx id tgt ~kept_elsewhere =
     | Existing -> Option.flatten (List.assoc_opt id ctx.er_binders)
     | Declare_static _ -> None
   in
-  Option.bind binder (fun b ->
-      match Recursion_plan.resumes_binding b with
-      | [p] ->
-        Some
-          (planned_frame ctx.er_binders
-             ~kept_elsewhere:(fun x -> Id.equal x id || kept_elsewhere x)
-             p )
-      | points ->
-        Probe.violation "frame plan"
-          Pp.(str "the recursion plan has " ++ int (List.length points)
-              ++ str " resume points for a call's result");
-        None )
+  match Option.map Recursion_plan.resumes_binding binder with
+  | Some [p] ->
+    Some (planned_frame ctx.er_binders ~kept_elsewhere:(fun x -> Id.equal x id || kept_elsewhere x) p)
+  | Some points ->
+    Probe.violation "frame plan"
+      Pp.(str "the recursion plan has " ++ int (List.length points) ++ str " resume points for a call's result");
+    None
+  | None ->
+    Probe.violation "frame plan" (Pp.str "a call the machine resumes after binds a local standing for no Core binder");
+    None
 
-(** The locals the frame for that call keeps, given [read], the locals the
-    continuation reads, in the order it keeps them: the ones the plan finds
-    live there, in the order the Core binds them ({!planned_frame_at}), then
-    every local the backend made that the continuation reads, in the order
-    it reads them.
-
-    Under [CRANE_CHECK_IR] the locals standing for a Core binder that the
-    continuation reads are checked to be the planned frame. *)
+(** The locals the frame for that call keeps, in the order it keeps them:
+    the ones the plan finds live there, in the order the Core binds them
+    ({!planned_frame_at}).  [read], the locals the continuation reads that
+    the frame does not leave out by design, is the C++'s account of the
+    same: under [CRANE_CHECK_IR] it must be that frame, every local in it
+    standing for a Core binder.  Where the plan has no frame, a violation,
+    it is the frame. *)
 let frame_locals ctx planned read =
-  let identified v = Option.has_some (Option.flatten (List.assoc_opt v ctx.er_binders)) in
   match planned with
   | Some planned ->
-    let sorted = List.sort Id.compare in
-    if Probe.checking () && not (List.equal Id.equal (sorted (List.filter identified read)) (sorted planned))
-    then
-      Probe.violation "frame plan"
-        (Pp.str "a frame keeps other binders than the recursion plan finds live there");
-    planned @ List.filter (fun v -> not (identified v)) read
+    if Probe.checking () then begin
+      let identified v = Option.has_some (Option.flatten (List.assoc_opt v ctx.er_binders)) in
+      if not (List.for_all identified read) then
+        Probe.violation "frame plan"
+          (Pp.str "a continuation reads a local standing for no Core binder, which no frame keeps");
+      let sorted = List.sort Id.compare in
+      if not (List.equal Id.equal (sorted read) (sorted planned)) then
+        Probe.violation "frame plan" (Pp.str "a frame keeps other binders than the recursion plan finds live there")
+    end;
+    planned
   | None -> read
 
 (** Whether the statement binding [e] to [id] by [tgt] is a point the
@@ -1552,13 +1555,16 @@ and rewrite_enter_stmts ctx stmts =
              rest_free remat_free)
         |> List.filter (fun cid -> not (kept_elsewhere cid))
       in
-      (* Which Core values cross the call is the plan's; the order the frame
-         keeps them in, and the backend's own locals, are the C++'s. *)
+      (* Which Core values cross the call, and in what order the frame keeps
+         them, is the plan's. *)
       let cont_vars =
         frame_locals ctx (planned_frame_at ctx id tgt ~kept_elsewhere) read
       in
       let cont_saved = List.map (fun cid -> CPPvar cid) cont_vars in
+      (* Each kept at the type its local was declared at: the binder's. *)
       let cont_types = infer_saved_types tparams env cont_saved in
+      if Probe.checking () && List.exists (function Tunresolved | Tauto -> true | _ -> false) cont_types then
+        Probe.violation "frame plan" (Pp.str "a frame keeps a binder whose local was declared at no type");
       let call_name = make_call_frame_name (Generated_name.role "Cont") call_counter seen ?branch_ctx () in
       let field_names = derive_field_names cont_saved in
       let bindings = make_cont_bindings ~field_names cont_vars cont_types in
