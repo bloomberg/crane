@@ -469,7 +469,9 @@ let reads_field field =
     [cursor_id] -- bound to a temporary, and the declarations of those
     temporaries.  [reuse_step] moves the field out of a unique cell, so a read
     evaluated after it sees a null handle; the cell's constructor cannot run
-    before it, since recycling destroys the old payload the field lives in. *)
+    before it, since recycling destroys the old payload the field lives in.
+    Each temporary is read once, where the read it holds was, and moved
+    there. *)
 let read_before_step ~cursor_id ~field varying shadow_params br =
   let reads = reads_field field in
   let decls = ref [] in
@@ -479,7 +481,7 @@ let read_before_step ~cursor_id ~field varying shadow_params br =
       let n = List.length !decls in
       let id = Id.of_string (if n = 0 then "_read" else "_read" ^ string_of_int n) in
       decls := Sasgn (id, Declare (Tauto, None), e) :: !decls;
-      CPPvar id
+      CPPmove (CPPvar id)
   in
   let cells =
     List.map
