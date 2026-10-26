@@ -250,6 +250,9 @@ type obligation =
       (** {!Minicpp.Tunresolved}: no pass determined the type, so no pass
           below can discharge it; whatever wrote it owes it. *)
   | Opaque_type  (** {!Minicpp.Topaque}, settled by the seam. *)
+  | Unspellable_binder
+      (** a binder's type a custom match writes and C++ cannot spell,
+          settled by the seam *)
   | Unsettled_callable  (** a {!Minicpp.TTfun} parameter *)
   | Unresolved_cast  (** an [any_cast] whose caster is still to choose *)
   | Free_type_variable  (** a type variable no enclosing head declares *)
@@ -264,13 +267,14 @@ type obligation =
           decided *)
 
 let obligations =
-  [ Unresolved_type; Opaque_type; Unsettled_callable; Unresolved_cast; Free_type_variable;
+  [ Unresolved_type; Opaque_type; Unspellable_binder; Unsettled_callable; Unresolved_cast; Free_type_variable;
     Missing_template_argument; Unlowered_method_call; Unlowered_projection; Move_under_access;
     Undecided_constexpr ]
 
 let describe = function
   | Unresolved_type -> "an undetermined type (Tunresolved), owed by the pass that wrote it"
   | Opaque_type -> "an unsettled representation (Topaque), owed by " ^ seam
+  | Unspellable_binder -> "a custom match binder's unspellable type, owed by " ^ seam
   | Unsettled_callable -> "an unsettled callable constraint, owed by " ^ constraints.name
   | Unresolved_cast -> "an unresolved cast, owed by " ^ casts.name
   | Free_type_variable -> "an undeclared type variable, owed by " ^ free_tvars.name
@@ -298,6 +302,7 @@ let owes (decl : Cpp_erasure.settled) o =
   match o with
   | Unresolved_type -> mentions (function Tunresolved -> true | _ -> false) d
   | Opaque_type -> mentions (function Topaque -> true | _ -> false) d
+  | Unspellable_binder -> Cpp_erasure.writes_unspellable_binder decl
   | Unsettled_callable -> compare (constraints.run {decl = d; control_lowered = false}).decl d <> 0
   | Unresolved_cast -> rewrites casts
   | Free_type_variable -> rewrites free_tvars

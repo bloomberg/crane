@@ -949,6 +949,85 @@ let bind_free_tvars (d : settled) : settled =
   in
   go Id.Set.empty d
 
+(** Report what {!Ml_type_util.has_no_cpp_spelling} saw of a custom match's
+    binder.
+
+    Two audiences.  A [Crane Extract Skip] on a constant that a custom
+    template later needs {e by name} degrades silently: the binder becomes
+    [std::any] and the only symptom is a type error a long way downstream, so
+    that one is always warned about, naming the directive to remove.  A module
+    left out by [Crane Extract Skip Module] was left out wholesale and on
+    purpose, so it is not worth a word unless asked.
+
+    [CRANE_DBG_UNSPELLABLE] adds the full shape.  The ordinal is the
+    discriminator: firings are reported in the order declarations are
+    finished, which is the only handle on {e which} site fired when several
+    share a custom template, and the alternative -- a table of the
+    declaration being finished -- is the thing that must not be built. *)
+let unspellable_firings = ref 0
+
+let unspellable_warned : (string, unit) Hashtbl.t = Hashtbl.create 7
+
+let report_unspellable where ty =
+  let empty_custom = ref [] and skipped_mod = ref [] in
+  ignore
+    (Minicpp.exists_cpp_type
+       (function
+         | Tglob (r, _, _) when Ml_type_util.ref_has_no_cpp_name r ->
+           let n = Pp.string_of_ppcmds (GlobRef.print r) in
+           if Ml_type_util.ref_has_no_spelling r then
+             empty_custom := n :: !empty_custom
+           else skipped_mod := n :: !skipped_mod;
+           false
+         | _ -> false )
+       ty );
+  incr unspellable_firings;
+  List.iter
+    (fun n ->
+      if not (Hashtbl.mem unspellable_warned n) then begin
+        Hashtbl.add unspellable_warned n ();
+        Feedback.msg_warning
+          (Pp.str
+             (Printf.sprintf
+                "crane: a custom template needs %s by name, but [Crane \
+                 Extract Skip] removed it, so the binder is typed std::any \
+                 and the type is lost here.  If %s is still reachable, drop \
+                 the directive that skips it."
+                n n ) )
+      end )
+    (List.rev !empty_custom);
+  if Sys.getenv_opt "CRANE_DBG_UNSPELLABLE" <> None then begin
+    let shape = function
+      | Tglob _ -> "Tglob"
+      | Tapply _ -> "Tapply"
+      | Tqualified _ -> "Tqualified"
+      | Tvar _ -> "Tvar"
+      | Tinstance _ -> "Tinstance"
+      | Tpromoted _ -> "Tpromoted"
+      | Tid _ -> "Tid"
+      | Tid_external _ -> "Tid_external"
+      | Tnondeduced _ -> "Tnondeduced"
+      | Trebind _ -> "Trebind"
+      | Thole -> "Thole"
+      | Tref (Forwarding, _) -> "Tfwd_ref"
+      | Texpr_type _ -> "Texpr_type"
+      | Tdecltype_auto -> "Tdecltype_auto"
+      | Ttyctor _ -> "Ttyctor"
+      | Tany -> "Tany"
+      | _ -> "other"
+    in
+    let tagged tag l = List.map (fun n -> n ^ " [" ^ tag ^ "]") l in
+    Feedback.msg_warning
+      (Pp.str
+         (Printf.sprintf
+            "crane: firing %d: %s yields std::any; outermost %s; nameless \
+             globs: %s"
+            !unspellable_firings where (shape ty)
+            (String.concat ", "
+               ( tagged "empty custom" (List.rev !empty_custom)
+               @ tagged "skipped module" (List.rev !skipped_mod) ) ) ) )
+  end
+
 (** [materialise decl] replaces every {!Minicpp.Topaque} in [decl] with
     {!Minicpp.Tany}.
 
@@ -963,11 +1042,49 @@ let bind_free_tvars (d : settled) : settled =
     {!Ml_type_util.materialise_opaque}, apply it once to the whole declaration
     on the way out of translation.  Print-neutral by construction: [Topaque] and
     [Tany] have the same C++ spelling. *)
+(* Whether the template of [cm] writes down the type of branch [i]'s binder
+   [j], [p], which C++ cannot spell. *)
+let unspellable_binder cm =
+  let written = Foreign_template.match_template (custom_match_text cm) in
+  fun i j p -> List.mem (Foreign_template.CCbr_var_ty (i, j)) written && Ml_type_util.has_no_cpp_spelling p.cp_type
+
 let materialise (d : cpp_decl) : settled =
   let ft = Ml_type_util.materialise_opaque in
+  let spelled cm =
+    let unspellable = unspellable_binder cm in
+    fun i (params, ty, body) ->
+      ( List.mapi
+          (fun j p ->
+            if unspellable i j p then begin
+              report_unspellable
+                (Printf.sprintf "branch %d var %d of %s" i j (custom_match_text cm))
+                p.cp_type;
+              {p with cp_type = Tany}
+            end
+            else p )
+          params,
+        ty,
+        body )
+  in
   let rec fe e = map_expr fe fs ft e
-  and fs s = map_stmt fe fs ft s in
+  and fs = function
+    | Scustom_case (ty, scrut, targs, branches, cm) ->
+      map_stmt fe fs ft (Scustom_case (ty, scrut, targs, List.mapi (spelled cm) branches, cm))
+    | s -> map_stmt fe fs ft s
+  in
   map_decl fe fs ft d
+
+let writes_unspellable_binder (d : settled) =
+  let exception Found in
+  let rec fe e = map_expr fe fs Fun.id e
+  and fs = function
+    | Scustom_case (_, _, _, branches, cm) as s ->
+      let unspellable = unspellable_binder cm in
+      List.iteri (fun i (params, _, _) -> List.iteri (fun j p -> if unspellable i j p then raise_notrace Found) params) branches;
+      map_stmt fe fs Fun.id s
+    | s -> map_stmt fe fs Fun.id s
+  in
+  match ignore (map_decl fe fs Fun.id d) with () -> false | exception Found -> true
 
 type view =
   | Template of (template_type * Id.t) list * cpp_constraint option * settled
