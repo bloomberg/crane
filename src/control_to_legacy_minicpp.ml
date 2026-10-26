@@ -87,6 +87,11 @@ let in_place from into =
 let parts_passed l =
   Control_ir.parts_passed ~pointer_fields:Loopify_analysis.constructor_pointer_fields ~in_place l
 
+(* Whether every Continue of the loop [l] passes each of its parameters a
+   value derived from one of them ({!Control_ir.derived_passed}). *)
+let derived_passed l =
+  Control_ir.derived_passed ~pointer_fields:Loopify_analysis.constructor_pointer_fields ~in_place l
+
 (* A loop as it is lowered, and for each C++ parameter of what it is
    lowered from, whether the loop varies it -- some Continue changes the
    parameter of the loop it stands for -- and whether every Continue passes
@@ -403,17 +408,32 @@ let lower_method ~tparams ~self_ty (m : method_field) =
       Loop_verdicts.record l.loop (Unlowered why);
       None
     in
-    let planned = Option.map (planned_at l lowering) (method_positions r l m) in
+    let positions = method_positions r l m in
+    let planned = Option.map (planned_at l lowering) positions in
     let parts = Option.map (fun p -> p.parts) planned in
+    (* A frame or a cell keeps a pointer to the receiver across turns, which
+       one made in a turn -- a call's result, a binder of a match on one --
+       does not outlive.  A tail loop parks such a receiver where it can. *)
+    let value_receiver =
+      match (lowering, positions) with
+      | (Modulo_cons | Frames), Some (Some i :: _) -> not (List.nth (derived_passed l) i)
+      | (Modulo_cons | Frames | Tail), _ -> false
+    in
     let transform =
       match (lowering, planned) with
+      | _ when value_receiver -> None
       | Tail, Some {varying; _} -> Some (fun () -> Loopify.transform_method_own ~varying ?parts ~tparams ~self_ty m)
       | Tail, None -> None
       | (Modulo_cons | Frames), _ ->
         let varying = Option.map (fun p -> p.varying) planned in
-        Some (fun () -> Loopify.transform_method_own ~controlled:true ?varying ?parts ~tparams ~self_ty m)
+        let receiver_derived = Option.has_some positions in
+        Some
+          (fun () -> Loopify.transform_method_own ~controlled:true ~receiver_derived ?varying ?parts ~tparams ~self_ty m)
     in
     match transform with
+    | None when value_receiver ->
+      Loopify_analysis.record_outcome (Id.to_string m.mf_name) (Lp_declined Loopify.value_receiver);
+      unlowered Loopify.value_receiver
     | None ->
       Loopify.record_unlowered_method m;
       unlowered "its receiver and parameters stand for none of its loop's"

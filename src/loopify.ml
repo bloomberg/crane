@@ -1097,7 +1097,9 @@ let local_frame_machine ~member ~name ~binders ?varying ?parts ~tparams check pa
                           its cells as its turns do, rather than every call
                           of the method's
     @return An [Fmethod] field with the loopified body *)
-let transform_method_own ?varying ?parts ?(controlled = false) ~tparams ~self_ty mf =
+let value_receiver = "recursive call passes a value-type receiver, whose address cannot be stored in a frame"
+
+let transform_method_own ?varying ?parts ?(controlled = false) ?(receiver_derived = false) ~tparams ~self_ty mf =
   (* [tparams] arrives holding only the enclosing struct's parameters.  A
      method's body is written under its own template header too, and a
      parameter declared there is the one most likely to constrain how the body
@@ -1247,10 +1249,10 @@ let transform_method_own ?varying ?parts ?(controlled = false) ~tparams ~self_ty
           else (b, false, self_store_ty)
       in
       if has_value_receiver then begin
-        record_outcome name
-          (Lp_declined
-             "recursive call passes a value-type receiver, whose address \
-              cannot be stored in a frame");
+        if receiver_derived then
+          Probe.violation "control lowering"
+            Pp.(str "the method " ++ str name ++ str " passes a value receiver its ControlIR's turns do not");
+        record_outcome name (Lp_declined value_receiver);
         Fmethod mf
       end else
       let self_param = (self_id, self_ty) in

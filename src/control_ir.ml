@@ -163,7 +163,10 @@ type provenance =
   | Stored of int
   | Derived of int
 
-let parts_passed ~pointer_fields ~in_place (l : loop) =
+(* For each parameter of the loop [l], whether every Continue of [l] passes
+   it an argument whose provenance [accepted] accepts of its position;
+   [false] for each where none continues [l]. *)
+let passed ~accepted ~pointer_fields ~in_place (l : loop) =
   let n = List.length l.parameters in
   (* [env]: the provenance of each binder inside the loop's parameters,
      innermost first. *)
@@ -251,8 +254,12 @@ let parts_passed ~pointer_fields ~in_place (l : loop) =
   | turns ->
     List.init n (fun i ->
         List.for_all
-          (fun arguments -> match List.nth_opt arguments i with Some (Some (Stored j)) -> Int.equal i j | _ -> false)
+          (fun arguments -> match List.nth_opt arguments i with Some (Some p) -> accepted i p | _ -> false)
           turns )
+
+let parts_passed = passed ~accepted:(fun i -> function Stored j -> Int.equal i j | Derived _ -> false)
+
+let derived_passed = passed ~accepted:(fun _ (Stored _ | Derived _) -> true)
 
 let invariant_parameters (l : loop) =
   let n = List.length l.parameters in

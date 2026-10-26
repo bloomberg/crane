@@ -170,15 +170,24 @@ val modulo_cons_loop :
     the caller passed for it, where given ({!Loopify_tail.pointer_safe_flags}).
     With [controlled], a loop tail modulo cons or a machine takes the calls
     the method's ControlIR continues by, and builds its cells along its
-    turns ({!Loopify_tmc.control_shapes}). *)
+    turns ({!Loopify_tmc.control_shapes}).  With [receiver_derived], its
+    ControlIR's turns pass the receiver a value derived from a parameter
+    ({!Control_ir.derived_passed}): under [CRANE_CHECK_IR] no call may pass
+    one made in a turn, which it declines ({!value_receiver}). *)
 val transform_method_own :
   ?varying:bool list ->
   ?parts:bool list ->
   ?controlled:bool ->
+  ?receiver_derived:bool ->
   tparams:(template_type * Id.t) list ->
   self_ty:cpp_type ->
   method_field ->
   cpp_field
+
+(** Why a method is not lowered to a machine or a loop tail modulo cons
+    whose recursive call passes a receiver made in a turn: a frame or a cell
+    keeps a pointer to the receiver, which that value does not outlive. *)
+val value_receiver : string
 
 (** [lower_local_tail_loops ~tparams stmts] is [stmts] with the
     tail-recursive local fixpoints in them turned into loops, under the

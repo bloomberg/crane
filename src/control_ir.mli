@@ -166,3 +166,15 @@ val parts_passed :
   in_place:(Miniml.ml_type -> Miniml.ml_type -> bool) ->
   Term.loop ->
   bool list
+
+(** For each parameter of the loop [l], outermost first, whether every
+    [Continue] of [l] passes it a value derived from one of [l]'s
+    parameters, as {!parts_passed} derives one: the parameter, a field of
+    it, either stored in what the caller passed or held inside such a value.
+    A value made in a turn -- a call's result, a binder of a match on one --
+    is derived from none.  [false] for each where no call continues [l]. *)
+val derived_passed :
+  pointer_fields:(Names.GlobRef.t -> int list option) ->
+  in_place:(Miniml.ml_type -> Miniml.ml_type -> bool) ->
+  Term.loop ->
+  bool list
