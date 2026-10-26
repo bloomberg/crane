@@ -29,9 +29,14 @@ type arm =
   | Fields of {case : ml_ast; by_value : bool list}
   | Instance of Occurrence.t
 
+type resume = {calls : Occurrence.t list; kept : Core_binder.t list}
+
+type resumes = {origin : Names.GlobRef.t; depth : int; resume_at : Core_binder.t -> resume option}
+
 type t = {
   root : ml_ast;
   n_outer : int;  (* the type variables of the head the region is generated under *)
+  resumes : resumes option;
   root_owned : Levels.t;
   root_copied : Levels.t;  (* variables closures capture a copy of, owned by them alone *)
   arms : arm list;
@@ -45,6 +50,7 @@ type t = {
 let empty =
   { root = MLdummy Kprop;
     n_outer = 0;
+    resumes = None;
     root_owned = Levels.empty;
     root_copied = Levels.empty;
     arms = [];
@@ -296,7 +302,21 @@ let evaluations r =
 
 let sequential_bind use = Core_effects.find use = Some {operation = Bind; mode = Sequential}
 
-let liveness ~n_outer ~copied ~arms t =
+(* The variables, by level, that a frame keeps across the call [a] makes,
+   [let _ := a in _] at [occurrence] standing [d] binders deep: where the
+   let is a point a frame machine resumes at and [a] is the call itself, the
+   frame saving them is made before [a]'s arguments are evaluated, and what
+   follows reads them in the frame. *)
+let kept_across resumes d a occurrence =
+  match (resumes, strip a) with
+  | Some {origin; depth; resume_at}, MLapp (MLglob {occurrence = call; _}, _) -> (
+    match resume_at (Core_binder.make ~origin ~level:(depth + d) ~site:occurrence ()) with
+    | Some {calls; kept} when List.exists (Occurrence.equal call) calls ->
+      Levels.of_list (List.map (fun (b : Core_binder.t) -> b.level - depth) kept)
+    | Some _ | None -> Levels.empty )
+  | _ -> Levels.empty
+
+let liveness ~n_outer ~copied ~arms ~resumes t =
   let reads = ref [] in
   let captures = ref [] in
   (* [walk ~consumed ~pinned parents d live t] records [t]'s reads and is
@@ -363,7 +383,8 @@ let liveness ~n_outer ~copied ~arms t =
       let pinned_b = if reads_at_uses ~n_outer ~arms ty a occurrence then Levels.union pinned (free parents d a) else pinned in
       let parents_b = bind parents d ~n:1 in
       let live_b = walk ~consumed ~pinned:pinned_b parents_b (d + 1) live b in
-      walk ~pinned parents d (leave parents_b d live_b) a
+      let kept = kept_across resumes d a occurrence in
+      walk ~pinned parents d (Levels.filter (fun l -> not (Levels.mem (storage l) kept)) (leave parents_b d live_b)) a
     (* A branch reads its pattern variables through the scrutinee's own
        evaluation -- a field of the record it names, a component of the pair
        it hands over -- so what follows the scrutinee is what the branches
@@ -581,15 +602,16 @@ let ownership ~n_outer ~reads ~arms ~owned ~copied t =
   own owned 0 t;
   (!out, !captured, !copied_reads)
 
-let plan ~n_outer root root_owned root_copied arms (reads, captures) =
+let plan ~n_outer ~resumes root root_owned root_copied arms (reads, captures) =
   let owned, captured_owned, copied_reads =
     ownership ~n_outer ~reads ~arms ~owned:root_owned ~copied:root_copied root
   in
-  {root; n_outer; root_owned; root_copied; arms; reads; owned; captures; captured_owned; copied_reads}
+  {root; n_outer; resumes; root_owned; root_copied; arms; reads; owned; captures; captured_owned; copied_reads}
 
-let region ?(owned = []) ?(copied = []) ~n_outer t =
+let region ?(owned = []) ?(copied = []) ?resumes ~n_outer t =
   let levels is = Levels.of_list (List.map (fun i -> -i) is) in
-  plan ~n_outer t (levels owned) (levels copied) [] (liveness ~n_outer ~copied:(levels copied) ~arms:[] t)
+  plan ~n_outer ~resumes t (levels owned) (levels copied) []
+    (liveness ~n_outer ~copied:(levels copied) ~arms:[] ~resumes t)
 
 (* The branches of the match in [root] on the variable read at [o]. *)
 let branches_at root o =
@@ -619,7 +641,7 @@ let reuse_arm p ~scrutinee ~branch ~constructor =
     if consumers = [] && Probe.checking () then
       Probe.violation "reuse plan"
         Pp.(str "a branch rebuilding in its scrutinee's storage returns no construction to take it");
-    plan ~n_outer:p.n_outer p.root p.root_owned p.root_copied
+    plan ~n_outer:p.n_outer ~resumes:p.resumes p.root p.root_owned p.root_copied
       (Rebuild {scrutinee; branch; consumers} :: p.arms)
       (p.reads, p.captures)
   | None -> p
@@ -636,7 +658,7 @@ let allocation p construction : Allocation.t =
 let fields_by_value p ~case ~by_value =
   if p == empty then p
   else
-    plan ~n_outer:p.n_outer p.root p.root_owned p.root_copied (Fields {case; by_value} :: p.arms)
+    plan ~n_outer:p.n_outer ~resumes:p.resumes p.root p.root_owned p.root_copied (Fields {case; by_value} :: p.arms)
       (p.reads, p.captures)
 
 (* Unlike the other arms, this one changes what a closure reads where it is
@@ -645,8 +667,8 @@ let bound_at_instance p ~let_ =
   if p == empty then p
   else
     let arms = Instance let_ :: p.arms in
-    plan ~n_outer:p.n_outer p.root p.root_owned p.root_copied arms
-      (liveness ~n_outer:p.n_outer ~copied:p.root_copied ~arms p.root)
+    plan ~n_outer:p.n_outer ~resumes:p.resumes p.root p.root_owned p.root_copied arms
+      (liveness ~n_outer:p.n_outer ~copied:p.root_copied ~arms ~resumes:p.resumes p.root)
 
 let closure_local p ty a = if p == empty then None else Some (closure_local ~n_outer:p.n_outer ty a)
 

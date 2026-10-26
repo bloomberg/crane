@@ -71,3 +71,29 @@ let () =
   check "each branch of a match the arm ends in returns its own"
     (reused p left && reused p right);
   check "a construction of another constructor does not" (not (reused p ended))
+
+(* [let r := weigh s in g s r], [s] an owned parameter: the call's argument
+   is [s]'s last use only where a machine resumes at the let with a frame
+   keeping [s], saved before the call's arguments are evaluated. *)
+let () =
+  let origin = GlobRef.VarRef (Id.of_string "weigh") in
+  let arg = fresh_rel 1 in
+  let value = call "weigh" [arg] in
+  let site = Occurrence.fresh () in
+  let root = MLletin (Id (Id.of_string "r"), nat, value, call "g" [fresh_rel 2; fresh_rel 1], site) in
+  let read = match arg with MLrel (_, o) -> o | _ -> assert false in
+  let call_site = match value with MLapp (MLglob g, _) -> g.occurrence | _ -> assert false in
+  let s = Core_binder.make ~origin ~level:0 () in
+  let resumes calls : Ownership_plan.resumes =
+    { origin;
+      depth = 1;
+      resume_at =
+        (fun b ->
+          if Core_binder.equal b (Core_binder.make ~origin ~level:1 ()) && Core_binder.same_site b (Core_binder.make ~origin ~level:1 ~site ())
+          then Some {calls; kept = [s]}
+          else None ) }
+  in
+  let use resumes = Ownership_plan.use (Ownership_plan.region ~owned:[1] ?resumes ~n_outer:0 root) read in
+  check "an argument read again after the call is copied" (use None = Some Ownership_plan.Use.Copy);
+  check "one a frame keeps across the call is moved" (use (Some (resumes [call_site])) = Some Ownership_plan.Use.Move);
+  check "not where the let resumes after another call" (use (Some (resumes [Occurrence.fresh ()])) = Some Ownership_plan.Use.Copy)

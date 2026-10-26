@@ -1015,6 +1015,41 @@ let planned_scope_head n ty scope =
     Callable_abi.check decided );
   (Callable_abi.declared_head abi, Callable_abi.relaxations abi)
 
+(** The points the function [r], its body standing under [depth] of its
+    binders, resumes at, where the body is lowered as a machine with a
+    stack of frames as it is generated ({!Control_to_legacy_minicpp.lower_group}):
+    one the configuration loopifies and the recursion plan lowers so, whose
+    machine adopts nothing and that inlines no partner nor is inlined, so
+    that nothing decided after the plan leaves its calls as generated.  A
+    frame keeps the binders bound before a point that what follows reads,
+    except the parameters every turn passes on unchanged, which the machine
+    holds outside its frames. *)
+let frame_resumes r ~depth : Ownership_plan.resumes option =
+  let frames =
+    Table.should_loopify r
+    && Option.is_empty (Lifted.of_ref r)
+    && Recursion_plan.inlinings r = []
+    && (not (Recursion_plan.inlined r))
+    && Recursion_plan.strategy ~pointer_fields:Loopify_analysis.constructor_pointer_fields r
+       = Some Recursion_plan.Frame_stack
+  in
+  match (frames, if frames then Lower_control.loop (Control_ir.Loop.Function r) else None) with
+  | true, Some (Control_ir.Term.Loop l) when Control_ir.entries l.body = [] ->
+    let invariant = Control_ir.invariant_parameters l in
+    let kept (b : Core_binder.t) = not (Option.default false (List.nth_opt invariant b.level)) in
+    Some
+      { origin = r;
+        depth;
+        resume_at =
+          (fun b ->
+            match Recursion_plan.resumes_binding b with
+            | [p] ->
+              Some
+                { calls = List.map (fun (c : Recursion_plan.call) -> c.occurrence) p.after;
+                  kept = List.filter kept p.live }
+            | _ -> None ) }
+  | _ -> None
+
 let gen_dfun n b cty ty temps =
   let scope = dfun_body_scope n b cty ty temps in
   let temps, relaxations = planned_scope_head n ty scope in
@@ -1169,6 +1204,7 @@ let gen_dfun n b cty ty temps =
   in
   begin_body ~owner:n ~function_:true ();
   set_current_parameters (List.map snd (parameter_binders env all_ids));
+  let resumes = frame_resumes n ~depth:(List.length all_ids) in
   (* The parameters the body owns, at de Bruijn indices 1..n_params: those
      the head declares by value. *)
   let owned_params =
@@ -1205,7 +1241,7 @@ let gen_dfun n b cty ty temps =
         | None ->
           let b =
             List.map (glob_subst_stmt n rec_call)
-              (with_region ~owned:owned_params b (fun () -> gen_body_stmts env cofix_wrap b))
+              (with_region ~owned:owned_params ?resumes b (fun () -> gen_body_stmts env cofix_wrap b))
           in
           return_captures_by_value b
       in
@@ -1230,7 +1266,7 @@ let gen_dfun n b cty ty temps =
         | _ ->
           List.map
             (glob_subst_stmt n rec_call)
-            (with_region ~owned:owned_params b (fun () -> gen_body_stmts env cofix_wrap b))
+            (with_region ~owned:owned_params ?resumes b (fun () -> gen_body_stmts env cofix_wrap b))
       in
       let b = return_captures_by_value b in
       (* let b = List.map forward_fun_args b in *)

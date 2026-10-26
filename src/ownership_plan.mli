@@ -45,14 +45,31 @@ val worth_moving : Miniml.ml_type -> bool
     frame fields it declares itself. *)
 val worth_moving_cpp : Minicpp.cpp_type -> bool
 
-(** [region ~owned ~copied ~n_outer t] is the plan of [t]'s reads, [t]
-    standing under binders it reads but does not bind, of which it owns
+(** A let a machine with a stack of frames resumes at: [calls], the
+    occurrences of the recursive calls its right-hand side ends in, and
+    [kept], the binders the frame saved for them keeps across them, which
+    what follows the let reads in the frame rather than where they were
+    bound. *)
+type resume = {calls : Miniml.Occurrence.t list; kept : Core_binder.t list}
+
+(** The points the definition [origin], whose body is lowered as a machine
+    with a stack of frames, resumes at, as [resume_at] finds them by the
+    Core binder each binds: the region is that body, standing under
+    [depth] of the definition's binders. *)
+type resumes = {origin : Names.GlobRef.t; depth : int; resume_at : Core_binder.t -> resume option}
+
+(** [region ~owned ~copied ~resumes ~n_outer t] is the plan of [t]'s reads,
+    [t] standing under binders it reads but does not bind, of which it owns
     those at the de Bruijn indices [owned], and generated under a head of
     [n_outer] type variables.  The closures it makes capture a copy of each
     variable at [copied] -- a method's receiver, which they capture as a
     copy of the object -- and own that copy: it is theirs to move, and a
-    read outside them reads the original. *)
-val region : ?owned:int list -> ?copied:int list -> n_outer:int -> Miniml.ml_ast -> t
+    read outside them reads the original.  Where [t] is lowered as a
+    machine resuming at [resumes], a let whose right-hand side is one of
+    the calls a point resumes after saves its frame before evaluating the
+    call's arguments: the binders the frame keeps are not read after them,
+    so an argument may be their last use. *)
+val region : ?owned:int list -> ?copied:int list -> ?resumes:resumes -> n_outer:int -> Miniml.ml_ast -> t
 
 (** Whether, as [p] plans it, [let x : ty := a] binds the closure [a] to a
     C++ local, which the region owns: [a] is a local fixpoint or a lambda
