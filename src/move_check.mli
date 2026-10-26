@@ -12,7 +12,13 @@
     decided.  A move reaches a whole local or one member of it -- a field
     of the alternative its variant holds among them; a later read of the
     same local, or of the same member, is a violation, and so is a read
-    beside it in an expression whose parts C++ evaluates in no fixed order.
+    beside it in an expression whose parts C++ evaluates in no fixed order;
+    a braced initialiser evaluates its elements in order.  A reference
+    bound into a local -- a structured binding, a match's field or
+    alternative, a declared reference -- reads and moves the part of the
+    local it names: a move of the local is a move of every such part, so a
+    read through the reference after it is a violation, and so is a read of
+    the whole after a part is moved out through one.
     A method is called on the whole local.  A reuse arm's token is checked
     as a linear one (section 4.10): the reuse factory it is handed to
     consumes the token's storage, which nothing may read or consume again,
