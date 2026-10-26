@@ -431,15 +431,16 @@ let rec decl_type_name = function
 
 let note_file_scope_type d = Option.iter note_file_scope_name (decl_type_name d)
 
-(** The types [d] declares under a name no struct qualifies, each with the
-    template parameters it is declared over, which an alias of it written
-    elsewhere repeats: an alias, an enum, and a struct planned at namespace
-    scope. *)
+(** The types [d] declares under a name no struct qualifies, each with how
+    it is declared and the template parameters it is declared over, which an
+    alias of it written elsewhere repeats: an alias, an enum, and a struct
+    planned at namespace scope. *)
 let rec declared_types ?(outer = []) = function
   | Dtemplate (tparams, _, inner) -> declared_types ~outer:(outer @ tparams) inner
-  | Dusing u -> [(u.du_name, outer @ u.du_tparams)]
-  | Denum {de_ref; _} -> [(de_ref, outer)]
-  | Dstruct {ds_ref; ds_tparams; _} when Module_plan.is_namespace_scope_ref ds_ref -> [(ds_ref, outer @ ds_tparams)]
+  | Dusing u -> [(u.du_name, Cpp_ast.Alias_definition, outer @ u.du_tparams)]
+  | Denum {de_ref; _} -> [(de_ref, Cpp_ast.Enum_definition, outer)]
+  | Dstruct {ds_ref; ds_tparams; _} when Module_plan.is_namespace_scope_ref ds_ref ->
+    [(ds_ref, Cpp_ast.Struct_definition, outer @ ds_tparams)]
   | Dnspace (Some r, ds) when Module_plan.is_namespace_scope_ref r -> List.concat_map (declared_types ~outer) ds
   | _ -> []
 
@@ -448,7 +449,8 @@ let stand_ins t =
     (function
       | Cpp_ast.Declared (Declaration {settled; _} | Absorbed {settled; _}) ->
         List.map
-          (fun (target, tparams) -> Cpp_ast.(global_alias (Alias_of_type {target; tparams})))
+          (fun (target, definition, tparams) ->
+            Cpp_ast.(global_alias (Alias_of_type {target; definition; tparams})) )
           (declared_types (settled :> cpp_decl))
       | Declared (Fields _ | Modtype_concept _ | Global_alias _ | Assertion _ | Module_alias _ | Functor_alias _ | Derived_functor _) -> []
       | Struct_of mp -> [Cpp_ast.(global_alias (Alias_of_module mp))] )
@@ -4519,12 +4521,12 @@ let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
     | Global_alias a ->
       let tparams, name =
         match a with
-        | Alias_of_type {target; tparams} ->
+        | Alias_of_type {target; definition; tparams} ->
           ( tparams,
-            match target with
-            | GlobRef.IndRef _ when Table.is_enum_inductive target -> enum_definition_name target
-            | GlobRef.IndRef _ -> struct_definition_name target
-            | _ -> pp_global Type target )
+            match definition with
+            | Enum_definition -> enum_definition_name target
+            | Struct_definition -> struct_definition_name target
+            | Alias_definition -> pp_global Type target )
         | Alias_of_module mp -> ([], Cpp_names.module_struct_name mp)
       in
       let args =

@@ -124,11 +124,23 @@ and subject =
 
 (** What a {!Global_alias} stands in for. *)
 and global_alias =
-  | Alias_of_type of {target : GlobRef.t; tparams : (Minicpp.template_type * Id.t) list}
-      (** The type [target] declares, over [tparams], which the alias
-          repeats: [template <tparams> using N = ::N<tparams>;]. *)
+  | Alias_of_type of {
+      target : GlobRef.t;
+      definition : definition;
+      tparams : (Minicpp.template_type * Id.t) list;
+    }
+      (** The type [target] declares, as [definition] declares it, over
+          [tparams], which the alias repeats:
+          [template <tparams> using N = ::N<tparams>;]. *)
   | Alias_of_module of ModPath.t
       (** The struct a module is written as. *)
+
+(** How the type an {!Alias_of_type} stands in for is declared, which is
+    the name it is declared under. *)
+and definition =
+  | Enum_definition  (** A scoped enum. *)
+  | Struct_definition  (** A struct. *)
+  | Alias_definition  (** A [using] declaration. *)
 
 (** A declaration not yet printed, with what placing the declarations it
     needs reads -- planned, so known before it is printed. *)
