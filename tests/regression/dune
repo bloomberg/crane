@@ -13228,6 +13228,17 @@
   (deps lifted_helper_same_binder_name.t.exe)
   (action (run ./lifted_helper_same_binder_name.t.exe))))
 
+(subdir method_invariant_receiver
+ (rule
+  (targets method_invariant_receiver.t.exe)
+  (deps MethodInvariantReceiver.vo method_invariant_receiver.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} method_invariant_receiver.t.exe method_invariant_receiver.cpp method_invariant_receiver.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps method_invariant_receiver.t.exe)
+  (action (run ./method_invariant_receiver.t.exe))))
+
 (subdir method_lifted_helper_same_name
  (rule
   (targets method_lifted_helper_same_name.t.exe)

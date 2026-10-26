@@ -213,13 +213,13 @@ struct MethodifiedTmcNoLoopify {
     }
 
     wrap wraps(uint64_t n) const {
+      const wrap *_self = this;
       std::optional<wrap> _root{};
       std::shared_ptr<wrap> *_write = nullptr;
-      const wrap *_loop_self = this;
       uint64_t _loop_n = n;
       while (true) {
         if (_loop_n <= 0) {
-          auto _value = *_loop_self;
+          auto _value = *_self;
           (_write ? *(*_write = std::make_shared<wrap>(std::move(_value)))
                   : _root.emplace(std::move(_value)));
           break;
@@ -230,7 +230,6 @@ struct MethodifiedTmcNoLoopify {
               (_write ? *(*_write = std::make_shared<wrap>(std::move(_cell)))
                       : _root.emplace(std::move(_cell)));
           _write = &std::get<typename wrap::WW>(_node.v_mut()).a0;
-          _loop_self = crane_raw(_loop_self);
           _loop_n = k;
           continue;
         }

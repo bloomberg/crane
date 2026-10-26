@@ -206,28 +206,25 @@ public:
 
     /// CraneEnter: captures varying parameters for each recursive call.
     struct CraneEnter {
-      const String *_self;
       const List<String> *ls;
     };
 
-    /// CraneCont_Cons: saves [_self, a0], resumes after recursive call, then
-    /// processes rest.
+    /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
+    /// rest.
     struct CraneCont_Cons {
-      const String *_self;
       String a0;
     };
 
     using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     String _result{};
     crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{_self, &ls});
+    _stack.emplace_back(CraneEnter{&ls});
     /// Loopified concat: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
       CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<CraneEnter>(_frame)) {
         auto _f = std::move(std::get<CraneEnter>(_frame));
-        const String *_self = _f._self;
         const List<String> &ls = *_f.ls;
         if (std::holds_alternative<typename List<String>::Nil>(ls.v())) {
           _result = String::emptystring();
@@ -237,13 +234,12 @@ public:
           if (std::holds_alternative<typename List<String>::Nil>(_sv.v())) {
             _result = std::move(a0);
           } else {
-            _stack.emplace_back(CraneCont_Cons{_self, a0});
-            _stack.emplace_back(CraneEnter{crane_raw(_self), crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Cons{a0});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         }
       } else {
         auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-        const String *_self = _f._self;
         String a0 = std::move(_f.a0);
         _result = a0.append(_self->append(std::move(_result)));
       }

@@ -4,7 +4,11 @@
     {v
       no viable conversion from 'const String' to 'const String *'
       member reference type 'const String *' is a pointer; did you mean to use '->'?
-    v} *)
+    v}
+
+    [concat]'s calls pass its receiver back unchanged, so its frames no
+    longer save it at all; [mem_safety_probe24] saves a receiver that
+    varies. *)
 
 From Crane.Mapping Require Import Std.
 Require Import String List.

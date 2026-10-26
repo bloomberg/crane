@@ -2811,9 +2811,10 @@ let transform_nontail ?(fn_name : string option) ?loop ?adopted ?entered_by ?(en
     | Some (ad, _) -> ad.ad_install body
   in
   (* This function's own parameters are described by the calls that re-enter
-     it, not by those targeting an adopted fixpoint. *)
+     it, not by those targeting an adopted fixpoint -- wherever they are made,
+     the adopted body, which installation took out of [body], included. *)
   let own = only_entry 0 check in
-  let varying = find_varying_params own params body in
+  let varying = find_varying_params own params (match adopted with Some (ad, _) -> body @ ad.ad_body | None -> body) in
   let binding_env = collect_binding_env body in
   let pointer_safe = pointer_safe_flags ?parts ~binding_env own params body in
   (* Loopifying a function on its own gives a machine with one entry: the
