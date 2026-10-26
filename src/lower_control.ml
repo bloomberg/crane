@@ -125,16 +125,20 @@ let tail_loop ?(inlined = fun _ -> None) ?(modulo_cons = false) ?(frames = false
       let entered = entered callee depth o fix in
       if List.compare_lengths args entered.parameters <> 0 then Return e
       else Entry {entered; name = None; scope = Continue {target = entered.loop; occurrence = o; arguments = args}}
-    | MLletin (x, ty, MLfix (0, [|_|], [|fix|], _, o), b, _) when adopts o ->
+    | MLletin (x, ty, (MLfix (0, [|_|], [|fix|], _, o) as a), b, _) when adopts o -> (
       let entered = entered callee depth o fix in
       let arity = List.length entered.parameters in
       (* The let's binder, under [d] binders, names the entry. *)
-      let callee ~depth:d f =
+      let entering ~depth:d f =
         match strip f with
         | MLrel (db, _) when db = d - depth -> Some (entered.loop, arity)
         | _ -> callee ~depth:d f
       in
-      Entry {entered; name = Some (x, ty); scope = lower callee (depth + 1) b}
+      (* A fixpoint the scope enters by no turn -- applied only in a
+         closure, or named as a value -- is no way into the machine. *)
+      match lower entering (depth + 1) b with
+      | scope when Control_ir.continues_of entered.loop scope <> [] -> Entry {entered; name = Some (x, ty); scope}
+      | _ -> Let {binder = x; binder_type = ty; value = a; body = lower callee (depth + 1) b} )
     | f when Option.has_some (named callee ~depth f 0) -> continue_ f (Option.get (named callee ~depth f 0)) []
     | MLapp (f, args) when Option.has_some (named callee ~depth f (List.length args)) ->
       continue_ f (Option.get (named callee ~depth f (List.length args))) args
