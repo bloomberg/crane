@@ -111,7 +111,7 @@ LoopifyReuseCursorReadsField::pairs(LoopifyReuseCursorReadsField::lst l) {
       _write = &std::get<typename LoopifyReuseCursorReadsField::lst::Cons>(
                     (*_write)->v_mut())
                     .a1;
-      _own = std::move(std::move(_rs.next));
+      _own = std::move(_rs.next);
       _loop_l = _own.get();
       continue;
     }
@@ -149,7 +149,7 @@ LoopifyReuseCursorReadsField::weigh(uint64_t acc,
                     (*_write)->v_mut())
                     .a1;
       _loop_acc = std::move(_read);
-      _own = std::move(std::move(_rs.next));
+      _own = std::move(_rs.next);
       _loop_l = _own.get();
       continue;
     }

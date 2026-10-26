@@ -316,7 +316,7 @@ List<uint64_t> ReuseListShapes::bump(List<uint64_t> l) {
           typename List<uint64_t>::Cons((crane::unbox(a0) + 1), nullptr));
       *_write = std::move(_cell);
       _write = &crane::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-      _own = std::move(std::move(_rs.next));
+      _own = std::move(_rs.next);
       _loop_l = _own.get();
       continue;
     }

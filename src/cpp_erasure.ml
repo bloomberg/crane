@@ -738,12 +738,16 @@ let lower_conditionals (d : settled) : settled =
   and fs s = map_stmt fe fs Fun.id s in
   map_decl fe fs Fun.id d
 
+(* Bottom-up, so that a move hoisted out of an inner access reaches the outer
+   one, and one hoisted into a move already there is that move: the member
+   read was moved already. *)
 let lower_access_moves (d : settled) : settled =
   let rec fe e =
-    match e with
-    | CPPaccess (acc, CPPmove inner, id) -> CPPmove (fe (CPPaccess (acc, inner, id)))
-    | CPPaccess_call (acc, CPPmove inner, m, args) -> fe (CPPaccess_call (acc, inner, m, args))
-    | e -> map_expr fe fs Fun.id e
+    match map_expr fe fs Fun.id e with
+    | CPPaccess (acc, CPPmove inner, id) -> CPPmove (CPPaccess (acc, inner, id))
+    | CPPaccess_call (acc, CPPmove inner, m, args) -> CPPaccess_call (acc, inner, m, args)
+    | CPPmove (CPPmove _ as moved) -> moved
+    | e -> e
   and fs s = map_stmt fe fs Fun.id s in
   map_decl fe fs Fun.id d
 
