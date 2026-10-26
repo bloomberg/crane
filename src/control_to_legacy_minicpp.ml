@@ -137,17 +137,13 @@ let jump continues : Loopify_analysis.call_checker = function
   | _ -> None
 
 (* Under [CRANE_CHECK_IR]: the loop [loop] of the function [f], whose
-   generated body is [body], lowered from [exposed], its partners inlined
-   and its tail calls exposed, jumping at the calls [jumped]; against the
+   generated body is [body], jumping at the calls [jumped]; against the
    loop's Continues [continues] and the loop Loopify's own transform makes. *)
-let check ~partner ~parts ~tparams (f : dfun) params body exposed ~varying ~continues ~jumped loop =
+let check ~partner ~parts ~tparams (f : dfun) params body ~continues ~jumped loop =
   let what = Pp.str (Table.kername_of_global (fst f.df_path.dp_outer)) in
   if not (Loopify_analysis.made_as_planned continues jumped) then
     Probe.violation "control IR"
       Pp.(str "the calls the tail loop of " ++ what ++ str " jumps at are not its Continues");
-  if Loopify_analysis.find_varying_params (jump continues) params exposed <> varying then
-    Probe.violation "control lowering"
-      Pp.(str "the calls of " ++ what ++ str " change other parameters than its ControlIR's Continues");
   if compare (Loopify.checker_tail_loop ~partner ~parts ~tparams f params body) loop <> 0 then
     Probe.violation "control lowering"
       Pp.(str "the tail loop of " ++ what ++ str " lowered from its ControlIR is not the loop Loopify makes")
@@ -162,7 +158,7 @@ let rec lower_function ~partner ~tparams (f : dfun) {loop = l; lowering; varying
   | Ddecl _, _ -> Error (Loopify.Left None)
   | Ddef (params, body), Modulo_cons ->
     lower_modulo_cons ~partner ~tparams f params body l ~varying ~parts (Control_ir.continues_into l.body)
-  | Ddef (params, body), Frames -> lower_frames ~partner ~tparams f params body l ~parts
+  | Ddef (params, body), Frames -> lower_frames ~partner ~tparams f params body l ~varying ~parts
   | Ddef (params, body), Tail -> (
     let continues = Control_ir.continues l.body in
     let jumps = ref [] in
@@ -175,20 +171,17 @@ let rec lower_function ~partner ~tparams (f : dfun) {loop = l; lowering; varying
     | exception Loopify_analysis.Not_linearisable why -> Error (Loopify.Declined why)
     | loop -> (
       if Probe.checking () then
-        check ~partner ~parts ~tparams f params body exposed ~varying ~continues ~jumped:(List.rev !jumps) loop;
+        check ~partner ~parts ~tparams f params body ~continues ~jumped:(List.rev !jumps) loop;
       match Loopify.after_tail_loop ~tparams f params loop with
       | exception Loopify_analysis.Not_linearisable why -> Error (Loopify.Declined why)
       | body -> Ok {f with df_shape = Ddef (params, body); df_loop = Some l.loop} ) )
 
 (* Under [CRANE_CHECK_IR]: as {!check}, for a loop built tail modulo cons. *)
-and check_modulo_cons ~partner ~parts ~tparams (f : dfun) params body exposed ~varying ~continues ~jumped loop =
+and check_modulo_cons ~partner ~parts ~tparams (f : dfun) params body ~continues ~jumped loop =
   let what = Pp.str (Table.kername_of_global (fst f.df_path.dp_outer)) in
   if not (Loopify_analysis.made_as_planned continues jumped) then
     Probe.violation "control IR"
       Pp.(str "the calls the loop of " ++ what ++ str " takes are not its Continues and Continue_intos");
-  if Loopify_analysis.find_varying_params (jump continues) params exposed <> varying then
-    Probe.violation "control lowering"
-      Pp.(str "the calls of " ++ what ++ str " change other parameters than its ControlIR's Continues");
   if compare (Loopify.checker_modulo_cons ~partner ~parts ~tparams f params body) loop <> 0 then
     Probe.violation "control lowering"
       Pp.(str "the tail-modulo-cons loop of " ++ what ++ str " lowered from its ControlIR is not the loop Loopify makes")
@@ -209,7 +202,7 @@ and lower_modulo_cons ~partner ~tparams (f : dfun) params body l ~varying ~parts
   | None -> Error (Loopify.Left None)
   | Some loop -> (
     if Probe.checking () then
-      check_modulo_cons ~partner ~parts ~tparams f params body exposed ~varying ~continues ~jumped:(List.rev !jumps) loop;
+      check_modulo_cons ~partner ~parts ~tparams f params body ~continues ~jumped:(List.rev !jumps) loop;
     match Loopify.after_tail_loop ~strategy:Lp_tmc ~tparams f params loop with
     | exception Loopify_analysis.Not_linearisable why -> Error (Loopify.Declined why)
     | body -> Ok {f with df_shape = Ddef (params, body); df_loop = Some l.loop} )
@@ -218,14 +211,14 @@ and lower_modulo_cons ~partner ~tparams (f : dfun) params body l ~varying ~parts
    loop [l], entered by the calls made of [l]'s Continues of it, and by
    those of the entry it adopts, if it has one: the body Loopify finds of
    it ({!Loopify.frame_machine}). *)
-and lower_frames ~partner ~tparams (f : dfun) params body (l : Control_ir.Term.loop) ~parts =
+and lower_frames ~partner ~tparams (f : dfun) params body (l : Control_ir.Term.loop) ~varying ~parts =
   let own = Control_ir.continues_of l.loop l.body in
   let r = fst f.df_path.dp_outer in
   let exposed = Loopify_analysis.expose_tail_calls (jump own) (Loopify.try_inline_mutual_into ~partner r body) in
   let machine () =
     match Control_ir.entries l.body with
-    | [] -> Loopify.frame_machine ~loop:l.loop ~parts ~tparams (jump own) f params exposed
-    | [entry] -> Loopify.frame_machine ~loop:l.loop ~entry:entry.loop ~parts ~tparams (jump own) f params exposed
+    | [] -> Loopify.frame_machine ~loop:l.loop ~varying ~parts ~tparams (jump own) f params exposed
+    | [entry] -> Loopify.frame_machine ~loop:l.loop ~entry:entry.loop ~varying ~parts ~tparams (jump own) f params exposed
     | _ :: _ :: _ -> Error (Loopify.Left None)
   in
   match machine () with
@@ -256,14 +249,6 @@ let rec with_function f = function
   | Dtemplate (tparams, c, d) -> Dtemplate (tparams, c, with_function f d)
   | Dfun _ -> Dfun f
   | d -> d
-
-(* The parameters of the loop [l] the C++ parameters of a local fixpoint's
-   lambda stand for, by position, in the order a lambda stores its
-   parameters, the last first ({!Minicpp.to_reversed}): those not void,
-   which the lambda does not take ({!Ml_type_util.void_binder}). *)
-let kept_positions (l : Control_ir.Term.loop) =
-  List.filteri (fun _ (_, ty) -> not (Ml_type_util.void_binder ty)) (List.mapi (fun i (_, ty) -> (i, ty)) l.parameters)
-  |> List.rev_map fst
 
 (* Under [CRANE_CHECK_IR]: the statement [loop] a local fixpoint is generated
    as, against the one Loopify makes of the Y-combinator [self_passing] it
@@ -330,7 +315,7 @@ let local_loop ~owner ~function_ ~lifted ~member:((occurrence, _) as member) ~tp
   | Some (Loop l), Some lowering when Control_ir.continues l.body <> [] -> (
     let params = List.filter_map (fun (ty, x) -> Option.map (fun x -> (x, ty)) x) (to_reversed lam.cl_params) in
     let invariant = Control_ir.invariant_parameters l in
-    let kept = kept_positions l in
+    let kept = Loopify.kept_positions l in
     if List.compare_lengths kept params <> 0 then unlowered "its lambda takes other parameters than its loop"
     else
       let varying = List.map (fun i -> not (List.nth invariant i)) kept in
@@ -345,7 +330,7 @@ let local_loop ~owner ~function_ ~lifted ~member:((occurrence, _) as member) ~tp
         | Tail | Modulo_cons ->
           Some (Loopify_tail.transform_tail ~jumped ~varying ~parts tparams (jump continues) params ret_ty exposed)
         | Frames ->
-          Loopify.local_frame_machine ~member ~name ~binders:(lambda_binders lam) ~parts ~tparams (jump continues) params ret_ty exposed
+          Loopify.local_frame_machine ~member ~name ~binders:(lambda_binders lam) ~varying ~parts ~tparams (jump continues) params ret_ty exposed
       in
       match body () with
       | exception Loopify_analysis.Not_linearisable why -> unlowered why
@@ -361,14 +346,11 @@ let local_loop ~owner ~function_ ~lifted ~member:((occurrence, _) as member) ~tp
         in
         if Loopify_analysis.body_exists left body then declined ()
         else begin
-          if Probe.checking () && lowering = Tail then begin
-            if not (Loopify_analysis.made_as_planned continues (List.rev !jumps)) then
-              Probe.violation "control IR"
-                Pp.(str "the calls the tail loop of the local fixpoint " ++ Id.print name ++ str " jumps at are not its Continues");
-            if Loopify_analysis.find_varying_params (jump continues) params exposed <> varying then
-              Probe.violation "control lowering"
-                Pp.(str "the calls of the local fixpoint " ++ Id.print name ++ str " change other parameters than its ControlIR's Continues")
-          end;
+          if Probe.checking () && lowering = Tail
+             && not (Loopify_analysis.made_as_planned continues (List.rev !jumps))
+          then
+            Probe.violation "control IR"
+              Pp.(str "the calls the tail loop of the local fixpoint " ++ Id.print name ++ str " jumps at are not its Continues");
           if lowering = Tail then Loopify_analysis.record_outcome (Id.to_string name) Lp_tail;
           let loop = {lam with cl_body = body; cl_moved = []} in
           let moved = List.filter (fun x -> List.mem x (free_vars_expr (CPPlambda loop))) lam.cl_moved in
@@ -428,7 +410,8 @@ let lower_method ~tparams ~self_ty (m : method_field) =
       | Tail, Some {varying; _} -> Some (fun () -> Loopify.transform_method_own ~varying ?parts ~tparams ~self_ty m)
       | Tail, None -> None
       | (Modulo_cons | Frames), _ ->
-        Some (fun () -> Loopify.transform_method_own ~controlled:true ?parts ~tparams ~self_ty m)
+        let varying = Option.map (fun p -> p.varying) planned in
+        Some (fun () -> Loopify.transform_method_own ~controlled:true ?varying ?parts ~tparams ~self_ty m)
     in
     match transform with
     | None ->

@@ -96,7 +96,8 @@ type unlowered =
     its ControlIR, whose body [body] has its partners inlined and its tail
     calls exposed: [check] recognises the calls that enter it at [f], and
     the body Loopify adopts, where its ControlIR has the entry [entry], is
-    a second entry of it ({!Loopify_frame.find_adopted}).  With it comes
+    a second entry of it ({!Loopify_frame.find_adopted}); its frames save
+    the parameters [varying], where given, of [f]'s.  With it comes
     the reason a call it leaves behind survived, where it adopted a body.
     [Error why] where Loopify would do anything else with [f]: adopt
     another body than the entry or one where there is none, decline a
@@ -111,6 +112,7 @@ type unlowered =
 val frame_machine :
   loop:Control_ir.Loop.t ->
   ?entry:Control_ir.Loop.t ->
+  ?varying:bool list ->
   ?parts:bool list ->
   tparams:(template_type * Id.t) list ->
   Loopify_analysis.call_checker ->
@@ -162,7 +164,8 @@ val modulo_cons_loop :
     transform of the method [m] of a struct whose receiver pointer type is
     [self_ty], under the struct's template parameters [tparams], before the
     local fixpoints in it are lowered: [m] itself where it declines.  A tail
-    loop varies the receiver and parameters [varying], where given, and
+    loop or a machine varies the receiver and parameters [varying], where
+    given, and
     points at those [parts] says every call passes a value stored in what
     the caller passed for it, where given ({!Loopify_tail.pointer_safe_flags}).
     With [controlled], a loop tail modulo cons or a machine takes the calls
@@ -200,7 +203,8 @@ val lower_function_locals :
     fixpoint [name], the function [member] of a Core fixpoint, its body
     [body] over its parameters [params], standing for the Core binders
     [binders], with its tail calls exposed: [check] recognises the calls
-    entering it.  The local fixpoints in it are lowered after it, as Loopify
+    entering it, and its frames save the parameters [varying], where given.
+    The local fixpoints in it are lowered after it, as Loopify
     lowers them.  [None] where the machine leaves a call behind.  Under
     [CRANE_CHECK_IR] the calls entering it must be its loop's [Continue]s.
     It raises [Loopify_analysis.Not_linearisable] where the transform
@@ -209,6 +213,7 @@ val local_frame_machine :
   member:Miniml.Occurrence.t * int ->
   name:Id.t ->
   binders:(Id.t * Core_binder.t) list ->
+  ?varying:bool list ->
   ?parts:bool list ->
   tparams:(template_type * Id.t) list ->
   Loopify_analysis.call_checker ->
@@ -216,6 +221,18 @@ val local_frame_machine :
   cpp_type ->
   cpp_stmt list ->
   cpp_stmt list option
+
+(** [kept_positions l] are the positions among the parameters of the loop
+    [l] of those a local fixpoint's lambda takes -- the ones not void
+    ({!Ml_type_util.void_binder}) -- in the order a lambda stores its
+    parameters, the last first ({!Minicpp.to_reversed}). *)
+val kept_positions : Control_ir.Term.loop -> int list
+
+(** [member_varying member params] is, for each of the parameters [params]
+    of the lambda of the local fixpoint function [member], as {!kept_positions}
+    orders them, whether its loop varies it ({!Control_ir.invariant_parameters});
+    [None] where the lambda takes other parameters than the loop. *)
+val member_varying : Miniml.Occurrence.t * int -> 'a list -> bool list option
 
 val worthwhile_move_type : cpp_type -> bool
 (** Whether a value of this type is expensive enough to copy that writing

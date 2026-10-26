@@ -1016,9 +1016,7 @@ let optimize_last_use_moves ~self_ref_candidate ~last_use_candidate stmts =
   process stmts
 
 let build_shadow_setup ?varying ?parts tparams check params body =
-  let varying =
-    match varying with Some v -> v | None -> find_varying_params check params body
-  in
+  let varying = varying_params ?planned:varying check params body in
   let pointer_safe = pointer_safe_flags ?parts check params body in
   let varying_params = filter_by_mask varying params in
   let varying_pointer_safe = filter_by_mask varying pointer_safe in

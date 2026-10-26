@@ -35,7 +35,9 @@
     So is the machine with a stack of frames of a function the plan lowers
     so ({!Recursion_plan.Frame_stack}): the calls entering it are those made
     of its loop's [Continue]s, those it resumes after the [Continue]s in a
-    [Resume]'s value ({!Loopify.frame_machine}).  A machine whose ControlIR
+    [Resume]'s value ({!Loopify.frame_machine}), and the parameters its
+    re-entries leave alone, which its frames do not save, those every
+    [Continue] of its own passes on unchanged.  A machine whose ControlIR
     has an entry ({!Control_ir.Term.Entry}) takes the body Loopify finds
     for it -- the adopted local fixpoint's lambdas, or the partner's body
     invoked in place -- as its second entry, where that body is the
@@ -47,10 +49,12 @@
     is declared as is that loop, where it was the pair of lambdas tying the
     knot of a Y-combinator that Loopify recognised ({!local_loop}).  So is a
     method's, once its struct's methods are generated: its receiver is the
-    loop's first variable; a tail loop's parameters a jump leaves alone are
-    read off the Core binders of the receiver and the parameters, and a loop
-    tail modulo cons or a machine takes the calls its ControlIR continues by
-    ({!lower_methods}).
+    loop's first variable; the parameters a jump or a re-entry leaves alone
+    are read off the Core binders of the receiver and the parameters, and a
+    loop tail modulo cons or a machine takes the calls its ControlIR
+    continues by ({!lower_methods}).  Under [CRANE_CHECK_IR] the calls a
+    loop takes must change the parameters its ControlIR varies and no other
+    ({!Loopify_analysis.varying_params}).
 
     Under [CRANE_CHECK_IR] Loopify's own transform runs beside it, and must
     make the same loop ({!Loopify.checker_tail_loop},

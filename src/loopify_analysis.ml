@@ -1180,6 +1180,23 @@ let find_varying_params check params body =
              calls ) )
       params
 
+(** The parameters [params] a loop varies: [planned], ControlIR's
+    ({!Control_ir.invariant_parameters}), where the caller has it, and
+    otherwise those the calls [check] recognises in [body] change
+    ({!find_varying_params}).  Under [CRANE_CHECK_IR] those calls must change
+    the planned ones and no other. *)
+let varying_params ?planned check params body =
+  match planned with
+  | None -> find_varying_params check params body
+  | Some varying ->
+    if Probe.checking () && find_varying_params check params body <> varying then
+      Probe.violation "control lowering"
+        Pp.(
+          str "the calls of the loop over "
+          ++ prlist_with_sep pr_comma (fun (id, _) -> Id.print id) params
+          ++ str " change other parameters than its ControlIR's Continues" );
+    varying
+
 (** Filter a list keeping only elements at positions where [mask] is [true].
 
     [mask] is indexed by the function's parameters, so [lst] is expected to be
