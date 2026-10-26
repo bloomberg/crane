@@ -4,13 +4,14 @@
 open Names
 
 type wrapper_role = Own | Flattened | Bystander
+type eponymous_record = {record : GlobRef.t; type_params : int}
 
 type t = {
   global_scope_enums : GlobRef.t list;
   concept_names : (GlobRef.t * string) list;
   modtype_concept_names : (ModPath.t * string) list;
   functor_app_sources : (ModPath.t * ModPath.t) list;
-  eponymous_records : GlobRef.t list;
+  eponymous_records : eponymous_record list;
   namespace_scope_refs : GlobRef.t list;
   wrappers : (ModPath.t * string * wrapper_role option) list;
   global_scope_types : GlobRef.t list;
@@ -39,7 +40,7 @@ let concepts : string Ref.User.Tbl.t = ref_table "concept_name_table"
 let modtype_concepts : (ModPath.t, string) Hashtbl.t = table "modtype_concept_name_table"
 let app_sources : (ModPath.t, ModPath.t) Hashtbl.t = table "functor_app_sources"
 let eponymous : unit Ref.User.Tbl.t = ref_table "global_eponymous_record_registry"
-let eponymous_by_modpath : (ModPath.t, GlobRef.t) Hashtbl.t =
+let eponymous_by_modpath : (ModPath.t, eponymous_record) Hashtbl.t =
   table "eponymous_record_by_modpath"
 let namespace_scope : unit Ref.User.Tbl.t =
   ref_table ~scope:State.Unit "namespace_scope_refs"
@@ -65,7 +66,9 @@ let equal a b =
   && pairs GlobRef.UserOrd.equal String.equal a.concept_names b.concept_names
   && pairs ModPath.equal String.equal a.modtype_concept_names b.modtype_concept_names
   && pairs ModPath.equal ModPath.equal a.functor_app_sources b.functor_app_sources
-  && refs a.eponymous_records b.eponymous_records
+  && List.equal
+       (fun e e' -> GlobRef.UserOrd.equal e.record e'.record && Int.equal e.type_params e'.type_params)
+       a.eponymous_records b.eponymous_records
   && refs a.namespace_scope_refs b.namespace_scope_refs
   && List.equal
        (fun (mp, n, r) (mp', n', r') -> ModPath.equal mp mp' && String.equal n n' && r = r')
@@ -80,11 +83,11 @@ let install f =
   List.iter (fun (mp, name) -> Hashtbl.replace modtype_concepts mp name) f.modtype_concept_names;
   List.iter (fun (mp, src) -> Hashtbl.replace app_sources mp src) f.functor_app_sources;
   List.iter
-    (fun r ->
-      Ref.User.Tbl.replace eponymous r ();
-      match r with
+    (fun e ->
+      Ref.User.Tbl.replace eponymous e.record ();
+      match e.record with
       | GlobRef.IndRef (ind, _) ->
-        Hashtbl.replace eponymous_by_modpath (MutInd.modpath ind) r
+        Hashtbl.replace eponymous_by_modpath (MutInd.modpath ind) e
       | _ -> () )
     f.eponymous_records;
   List.iter (fun r -> Ref.User.Tbl.replace namespace_scope r ()) f.namespace_scope_refs;
@@ -136,7 +139,7 @@ let installed f =
   && List.for_all
        (fun (mp, src) -> Option.equal ModPath.equal (functor_app_source mp) (Some src))
        (last_answers mp_equal f.functor_app_sources)
-  && List.for_all is_eponymous_record f.eponymous_records
+  && List.for_all (fun e -> is_eponymous_record e.record) f.eponymous_records
   && List.for_all is_namespace_scope_ref f.namespace_scope_refs
   && List.for_all
        (fun (mp, (name, role)) ->

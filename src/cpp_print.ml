@@ -363,14 +363,6 @@ let subst_wrapper_t0 wrapper elem_str =
        ~hole:(fun i -> if i = 0 then Some (str elem_str) else None)
        wrapper)
 
-(** Get the number of template type parameters for an inductive reference,
-    defaulting to 2 when unavailable. *)
-let num_ind_params = function
-  | GlobRef.IndRef (kn, _) ->
-    (match Table.get_ind_num_param_vars_opt kn with
-     | Some n -> n | None -> 2)
-  | _ -> 2
-
 (** Generate N placeholder type arguments (comma-separated ["int"]s). *)
 let gen_placeholder_args n =
   String.concat ", " (List.init n (fun _ -> "int"))
@@ -1578,18 +1570,18 @@ and pp_cpp_expr env args t =
          no parameters merges into a struct that is no template, whose
          functions are spelled as any module's are. *)
       let template_record = function
-        | Some record_ref when num_ind_params record_ref > 0 -> Some record_ref
+        | Some {Module_plan.record; type_params} when type_params > 0 -> Some (record, type_params)
         | Some _ | None -> None
       in
       match (template_record (Module_plan.eponymous_record_containing x), tys) with
-      | Some record_ref, _ :: _ ->
+      | Some (record_ref, type_params), _ :: _ ->
         (* Function inside eponymous template struct with type args: Generate
            StructName<int, ...>::template funcName<Args> for static methods. We
            use placeholder types for the struct and actual args for the
            method. *)
         let struct_name = Common.pp_global_name Type record_ref in
         let func_name = Common.pp_global_name Term x in
-        let placeholder_args = gen_placeholder_args (num_ind_params record_ref) in
+        let placeholder_args = gen_placeholder_args type_params in
         let ty_args = pp_list (pp_cpp_type false []) tys in
         `Written
           ( Cpp_name.pp_type_qualifier class_
@@ -1599,10 +1591,10 @@ and pp_cpp_expr env args t =
           ++ str "<"
           ++ ty_args
           ++ str ">" )
-      | Some record_ref, [] ->
+      | Some (record_ref, type_params), [] ->
         let struct_name = Common.pp_global_name Type record_ref in
         let func_name = Common.pp_global_name Term x in
-        let placeholder_args = gen_placeholder_args (num_ind_params record_ref) in
+        let placeholder_args = gen_placeholder_args type_params in
         `Written
           ( Cpp_name.pp_type_qualifier class_
               (str (String.capitalize_ascii struct_name) ++ str "<" ++ str placeholder_args ++ str ">")

@@ -1327,7 +1327,16 @@ let module_plan_of_analysis
       concept_names = concept_renames;
       modtype_concept_names = modtype_concept_renames;
       functor_app_sources;
-      eponymous_records;
+      eponymous_records =
+        List.map
+          (fun record ->
+            let type_params =
+              match record with
+              | GlobRef.IndRef (kn, _) -> Option.default 2 (Table.get_ind_num_param_vars_opt kn)
+              | _ -> 2
+            in
+            {Module_plan.record; type_params} )
+          eponymous_records;
       namespace_scope_refs = lifted_instances;
       wrappers =
         List.map (fun (mp, name) -> (mp, name, Some Module_plan.Flattened)) collision_wrappers
