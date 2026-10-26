@@ -633,10 +633,10 @@ and cpp_expr =
   | CPPtype_name of cpp_type
       (** A type named where an expression is expected: the head of an
           aggregate initialisation, [typename T::Ctor{...}]. *)
-  | CPPnumeral of GlobRef.t * Z.t
-      (** The numeral [n] of an inductive with a [Crane Extract Numeral]
-          format: its type is the inductive, and its spelling the format
-          applied to [n] ([UINT64_C(1)]), written by the printer.
+  | CPPnumeral of GlobRef.t * numeral
+      (** A numeral of an inductive with a [Crane Extract Numeral] format:
+          its type is the inductive, and its spelling the format applied to
+          its value ([UINT64_C(1)]), decided where the format is read.
 
           Distinct from {!CPPraw}, which is an arbitrary snippet whose type
           nothing knows: here both the type and the value are known, and a
@@ -1025,6 +1025,9 @@ and unbox =
   | Unbox_list of cpp_type * cpp_type
       (** [Unbox_list (list, flat)]: the box holds the list at its erased,
           flat instantiation [flat] ([List<std::any>]); converted to [list]. *)
+
+(** The value of a {!CPPnumeral} and how it is spelled. *)
+and numeral = {nl_value : Z.t; nl_text : string}
 
 (** Custom extraction metadata for manually mapped entities.  Resolved once
     during translation. *)

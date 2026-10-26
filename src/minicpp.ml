@@ -473,7 +473,7 @@ and cpp_expr =
   | CPPtype_name of cpp_type
     (* typename T::Nested, usable where a dependent nested struct name is
        required as an expression/type-name token. *)
-  | CPPnumeral of GlobRef.t * Z.t
+  | CPPnumeral of GlobRef.t * numeral
     (* The numeral of an inductive with a numeral format. *)
   | CPPraw of string
   | CPPrt of Crane_rt.helper
@@ -773,6 +773,8 @@ and unbox =
           flat instantiation [flat] ([List<std::any>]); converted to [list]. *)
 
 (** Custom extraction info, resolved once during translation. *)
+and numeral = {nl_value : Z.t; nl_text : string}
+
 and custom_info = {
   ci_inline : inline_template option;
   (* For a [%result] block template used as a value: what the block evaluates

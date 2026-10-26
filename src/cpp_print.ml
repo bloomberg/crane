@@ -2066,10 +2066,7 @@ and pp_cpp_expr env args t =
      | Crane_rt.Make_rc_reusing_unchecked | Crane_rt.Reuse_step
      | Crane_rt.Share_child -> ());
     str (Crane_rt.name h)
-  | CPPnumeral (r, n) -> (
-    match Table.get_numeral_info r with
-    | Some info -> str (Common.render_template [("%n", Z.to_string n)] info.Table.num_fmt)
-    | None -> CErrors.anomaly Pp.(str "a numeral of a type with no numeral format") )
+  | CPPnumeral (_, n) -> str n.nl_text
   | CPPraw code -> str code
   | CPPbinop (op, lhs, rhs) ->
     (* Parenthesize && subexpressions inside || to avoid
