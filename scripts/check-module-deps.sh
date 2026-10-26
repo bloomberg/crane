@@ -3,7 +3,8 @@
 # depend on any pass, the finishing passes do not depend on translation or on
 # the printer, and the printer depends on neither translation nor the passes
 # that run before it.  Direct dependencies are checked; each layer obeying the
-# rule keeps the transitive closure obeying it too.
+# rule keeps the transitive closure obeying it too.  The printer also asks
+# Table nothing about the program beyond a list that only shrinks.
 #
 # Usage: scripts/check-module-deps.sh   (from the repository root)
 set -euo pipefail
@@ -22,7 +23,29 @@ rules=(
   "cpp_print : $TRANSLATION ${FINISHING/ Cpp_erasure/}"
 )
 
+# The printer reads Table for configuration, and to record the headers it
+# writes for CRANE_CHECK_IR to compare with the planned demands; a fact about
+# the program it is handed in the declaration, decided by a plan or a pass.
+# The facts it still asks Table for are listed, and the list only shrinks: a
+# read that goes is deleted from it, and a new one is an error.
+PRINTER_TABLE_CONFIGURATION="Runtime erase_fn_header is_modfile std_lib modular non_atomic_rc arena_header"
+PRINTER_TABLE_PENDING="promoted_type_var_field is_boxed_recursive_ind find_boxed_wrapper_opt get_numeral_info num_fmt get_ind_num_param_vars_opt get_ind_nb_ctors_opt escape_reserved_struct_name custom_info"
+
 status=0
+printer_reads=$(grep -o 'Table\.[a-zA-Z_]*' src/cpp_print.ml | sed 's/^Table\.//' | sort -u)
+for r in $printer_reads; do
+  if [[ " $PRINTER_TABLE_CONFIGURATION $PRINTER_TABLE_PENDING " != *" $r "* ]]; then
+    echo "src/cpp_print.ml reads Table.$r, a fact the declaration it prints should carry"
+    status=1
+  fi
+done
+for r in $PRINTER_TABLE_PENDING; do
+  if [[ $'\n'"$printer_reads"$'\n' != *$'\n'"$r"$'\n'* ]]; then
+    echo "src/cpp_print.ml no longer reads Table.$r: delete it from PRINTER_TABLE_PENDING"
+    status=1
+  fi
+done
+
 for rule in "${rules[@]}"; do
   modules=${rule%% : *}
   forbidden=" ${rule##* : } "
