@@ -84,13 +84,9 @@
     The pass is split by responsibility: {!Loopify_analysis} finds and
     classifies recursive calls, {!Loopify_tail}, {!Loopify_tmc} and
     {!Loopify_frame} are the rewrite strategies, and this module dispatches
-    between them, inlines mutual recursion, and walks declarations.
-
-    {2 Entry Points}
-
-    - {!transform_fundef}: Transform a top-level function definition
-    - {!transform_method}: Transform a struct method
-    - {!loopify_decl}: Main dispatch for all declaration types
+    between them and inlines mutual recursion.  What it lowers, and where,
+    is the recursion plan's, read off the ControlIR of each loop as the
+    definition is generated ({!Control_to_legacy_minicpp}).
 
     @since Crane 1.0 *)
 
@@ -333,7 +329,7 @@ let inlined_local_name id =
 
 (** [inline_partner ~continues ~invokes callee body] is [body] with the
     calls [continues] and [invokes] recognise replaced by the body of
-    [callee], registered in {!mutual_fn_table}: a returned call that
+    [callee], as it was generated: a returned call that
     continues in it by parameter bindings and the body, any other by a
     lambda invoked in its place, which is still the Core call it replaces.
     With it come the occurrences of the calls replaced so, those that
@@ -406,14 +402,13 @@ let inline_partner ~continues ~invokes
 
 (** Inline mutual recursion partners into the body of the function [r] as
     the recursion plan has them ({!Recursion_plan.inlinings}): each partner
-    as [partner] has it -- registered in {!mutual_fn_table}, unless given --
-    at the calls whose occurrences the plan lists, a tail call continuing in
-    the partner's body and any other running it in a lambda invoked in
-    place.  The function then calls itself where it called them, and can be
-    loopified by {!transform_fundef}.
+    as [partner] has it, at the calls whose occurrences the plan lists, a
+    tail call continuing in the partner's body and any other running it in a
+    lambda invoked in place.  The function then calls itself where it
+    called them, and its loop is lowered as a function's is.
 
     Under [CRANE_CHECK_IR] the calls inlined must be those planned. *)
-let try_inline_mutual_into ?(partner = Ref.User.Tbl.find_opt mutual_fn_table) r body =
+let try_inline_mutual_into ~partner r body =
   let planned = Recursion_plan.inlinings r in
   let made = ref [] in
   let inline_one body (i : Recursion_plan.inlining) =
@@ -548,7 +543,7 @@ let loopify_inner_lambdas ?(tail_only = false) ?parts ~tparams ?(outer_env = [])
       match planned_local_strategy fixpoint check lbody with
       | No_loop -> None
       (* A local cofixpoint: its calls run when a thunk is forced, after it
-         has returned, as a top-level one's do ({!transform_fundef_exn}). *)
+         has returned, as a top-level one's do. *)
       | Suspended _ -> None
       | (Modulo_cons _ | Frame_stack) when tail_only -> None
       | (Tail_loop | Modulo_cons _ | Frame_stack) as strategy ->
@@ -921,20 +916,6 @@ let planned_strategy r check body =
       Probe.violation "recursion plan" Pp.(str "the recursion plan does not know " ++ what ());
       classified_strategy (classified ()) )
 
-(** Whether the function [r], whose body is [body], is lowered to no loop:
-    planned so, or planned to a loop of its own its ControlIR has no call
-    continue, as a machine none of its calls enters ({!checked_frame_machine}).
-    A suspended cofixpoint makes no loop either, but runs its partners'
-    bodies in its thunk as before. *)
-let makes_no_loop r check body =
-  match planned_strategy (Some r) check body with
-  | No_loop -> true
-  | Suspended _ -> false
-  | Tail_loop | Modulo_cons _ | Frame_stack -> (
-    match Option.bind (function_loop r) Lower_control.loop with
-    | Some t -> Control_ir.continues t = []
-    | None -> false )
-
 (** The local fixpoints the machine of [r] may adopt, as the recursion plan
     has them ({!Recursion_plan.adoptable}): a helper lifted for a local
     fixpoint's function is planned by it. *)
@@ -1071,147 +1052,6 @@ let local_frame_machine ~member ~name ~binders ?parts ~tparams check params ret_
         Some (loopify_inner_lambdas ~tparams (report_outcome ~name ~check ~strategy:Lp_frame machine))
       else None )
 
-(** Transform a top-level function definition by loopifying its body.
-
-    This is the main entry point for loopifying a [Dfun]. The transformation
-    proceeds in three steps, reading {!mutual_fn_table}, where every function
-    of the unit was registered before any was finished:
-
-    + Try to inline mutual recursion partners via {!try_inline_mutual_into},
-      converting mutual recursion into self-recursion, where the plan lowers
-      the function to a loop.
-    + Classify the recursion pattern with {!classify} and apply the appropriate
-      strategy: {!transform_tail} for tail recursion, or {!transform_nontail}
-      for the general case (including multi-call patterns).
-    + Post-pass with {!loopify_inner_lambdas} to loopify any local
-      fixpoints nested within the body.
-
-    A cofixpoint returning a coinductive type is suspended: its recursive
-    calls are captured inside closures and never executed at call time, so
-    the function returns in O(1) stack frames and loopification is
-    unnecessary.  The plan says so ({!Recursion_plan.Suspended}) and the
-    main loopification pass is skipped; see the {!section-cofixpoints}
-    section for the full rationale.
-
-                     passes and [decltype] generation)
-    @param tparams Template parameters of the enclosing declaration
-    @param f       The function node; everything but its body is passed
-                   through to the result unchanged
-    @param params  Parameter list [(Id.t * cpp_type)]
-    @param body    Original function body (statement list)
-    @return A [Dfun] declaration with the loopified body *)
-let transform_fundef_exn ~tparams (f : dfun) params body =
-  let names = dfun_path_list f.df_path in
-  let ret_ty = f.df_ret in
-  (* Try to inline mutual recursion partners, every function of the unit
-     registered before any was finished ({!register_decl}), where the plan
-     lowers the function to a loop: one lowered to none continues in no
-     partner's body, and a partner run in place of a call is that call. *)
-  let body =
-    if makes_no_loop (fst f.df_path.dp_outer) (fn_checker names) body then body
-    else try_inline_mutual_into (fst f.df_path.dp_outer) body
-  in
-  (* What the machine is entered by in the plan's terms: the function's
-     calls, or a lifted helper's local fixpoint member's.  A partner inlined
-     into it leaves no call of its own: a tail call continues in its body,
-     whose statements the plan has resume points for as the partner's, and
-     any other is an invocation, entering the machine only if adopted. *)
-  let entered_by = entered_by_definition (fst f.df_path.dp_outer) in
-  let check = fn_checker names in
-  let body = expose_tail_calls check body in
-  (* A suspended cofixpoint's calls are captured inside closures and never
-     executed at call time -- the function returns a thunk in O(1) stack
-     frames.  Loopification is unnecessary and TMC would generate invalid
-     [v_mut()] calls (see {!section-cofixpoints}).  We still run
-     [loopify_inner_lambdas] to handle any local fixpoints nested inside the
-     thunk. *)
-  let body =
-    let name = fundef_display_name f.df_path in
-    let strategy = planned_strategy (Some (fst f.df_path.dp_outer)) check body in
-    match strategy with
-    | Suspended _ ->
-      record_outcome name deferred_cofixpoint;
-      loopify_inner_lambdas ~tparams ~outer_env:params body
-    | No_loop | Tail_loop | Modulo_cons _ | Frame_stack ->
-      (* Recursion that lives inside a lambda -- a local fixpoint, or an
-         inlined mutual partner -- is visible to {!classify} but out of reach
-         of the transforms, which never rewrite through a lambda: the machine
-         they emit for it pushes nothing and its loop runs once.  Note the
-         body now, while it still has the shape the search recognises, so the
-         decline names it instead of reporting the generic "a self-call
-         survived". *)
-      let adopted =
-        match strategy with
-        | Modulo_cons _ | Frame_stack ->
-          find_adopted ~adoptable:(planned_adoptable (fst f.df_path.dp_outer))
-            ~invocations:(Recursion_plan.adopted_invocations (fst f.df_path.dp_outer))
-            body
-        | No_loop | Tail_loop | Suspended _ -> None
-      in
-      let survived = Option.map decline_reason adopted in
-      let body, outcome =
-        match strategy with
-        | No_loop | Suspended _ -> (body, None)
-        | Tail_loop ->
-          ( (let loop = function_loop (fst f.df_path.dp_outer) in
-             checked_tail_loop loop (fun jumped ->
-                 transform_tail ~jumped tparams (planned_jumps loop check) params ret_ty body ) ),
-            Some Lp_tail )
-        | Modulo_cons _ | Frame_stack ->
-          let r =
-            apply_nontail_loopification ~fn_name:name ?adopted ?entered_by ~binders:f.df_binders
-              ?loop:(function_loop (fst f.df_path.dp_outer))
-              ?modulo_cons:(modulo_cons_chains strategy)
-              check tparams params ret_ty body
-          in
-          (r.nt_body, Some r.nt_outcome)
-      in
-      (* A self-call can sit inside an inner lambda, where the transforms above
-         deliberately leave it alone; [loopify_inner_lambdas] is what removes
-         it.  Judge the postcondition only once that has run, or every such
-         function is reported as declined even though the emitted code holds no
-         self-call. *)
-      let body = loopify_inner_lambdas ~tparams ~outer_env:params body in
-      (match outcome with
-       | None -> body
-       | Some s -> report_outcome ?survived ~name ~check ~strategy:s body)
-  in
-  Dfun {f with df_shape = Ddef (params, body)}
-
-(** [naming name f] is [f ()], with [name ()] -- the function being
-    transformed -- written into any failure other than a decline.  The name is
-    built only then, and spelled by {!Table.kername_of_global}, which cannot
-    fail: a lifted helper is not in the nametab.  An internal error in the
-    pass otherwise surfaces as a bare [Failure "nth"], which says nothing of
-    where in a large development to look. *)
-let naming name f =
-  try f () with
-  | Not_linearisable _ as e -> raise e
-  | e when CErrors.noncritical e ->
-    let e, info = Exninfo.capture e in
-    CErrors.anomaly ~info
-      Pp.(str "loopify, transforming " ++ str (name ()) ++ str ": " ++ CErrors.print e)
-
-(** {!transform_fundef_exn}, but a {!Not_linearisable} raised anywhere inside a
-    transform is turned into a decline for this one function: the original body
-    is emitted unchanged and the outcome is recorded, so a shape the pass cannot
-    linearise never aborts the surrounding extraction.  A function whose loop
-    was lowered as it was generated ({!Control_to_legacy_minicpp}) is left
-    as it is. *)
-let transform_fundef ~tparams (f : dfun) params body =
-  let qualified () =
-    String.concat "::"
-      (List.map
-         (fun (r, _) -> Table.kername_of_global r)
-         (f.df_path.dp_outer :: f.df_path.dp_inner))
-  in
-  if Option.has_some f.df_loop then Dfun f
-  else
-  try naming qualified (fun () -> transform_fundef_exn ~tparams f params body)
-  with Not_linearisable reason ->
-    record_outcome (fundef_display_name f.df_path) (Lp_declined reason);
-    Dfun {f with df_shape = Ddef (params, body)}
-
 (** Transform a struct method by loopifying its body.
 
     Methods differ from free functions because recursive calls use
@@ -1262,8 +1102,7 @@ let transform_method_own ?varying ?parts ?(controlled = false) ~tparams ~self_ty
   in
   let strategy = planned_strategy mf.mf_globref basic_check mf.mf_body in
     ( match strategy with
-    (* A suspended method returns in O(1) stack frames, as a function does
-       ({!transform_fundef_exn}). *)
+    (* A suspended method returns in O(1) stack frames, as a function does. *)
     | Suspended _ ->
       record_outcome name deferred_cofixpoint;
       Fmethod mf
@@ -1457,10 +1296,6 @@ let transform_method_own ?varying ?parts ?(controlled = false) ~tparams ~self_ty
       else
         Fmethod {mf with mf_body = body'} )
 
-(** {!transform_method_own}, then the tail-recursive local fixpoints in the
-    method's body turned into loops: the part of loopification every
-    declaration gets ({!transform_local_tail_loops}), which a method of a
-    struct whose methods are loopified did not. *)
 let record_unlowered_method mf =
   let this_pos = match mf.mf_receiver with Instance r -> r.this_pos | Static -> 0 in
   let check = method_checker ~n_params:(List.length mf.mf_params) ~has_self_param:false ~this_pos mf.mf_globref in
@@ -1471,166 +1306,25 @@ let record_unlowered_method mf =
   | Tail_loop -> ignore (report_outcome ~name ~check ~strategy:Lp_tail mf.mf_body)
   | Modulo_cons _ | Frame_stack -> ignore (report_outcome ~name ~check ~strategy:Lp_frame mf.mf_body)
 
-let transform_method ~tparams ~self_ty mf =
-  match transform_method_own ~tparams ~self_ty mf with
-  | Fmethod m ->
-    Fmethod
-      { m with
-        mf_body =
-          loopify_inner_lambdas ~tail_only:true ~tparams:(tparams @ mf.mf_tparams) ~outer_env:mf.mf_params
-            m.mf_body }
-  | f -> f
-
-(** Transform a single struct field, loopifying it if it is a method.
-
-    Non-method fields (e.g., [Ffield], [Ftype]) are returned unchanged. For
-    [Fmethod] fields, delegates to {!transform_method}.
-
-    @param tparams        Type parameters
-    @param self_ty        C++ type for the struct pointer (e.g., [Tconst (Tptr (Tglob (...)))])
-    @param (fld, vis, tag) The field, its visibility, and optional tag
-    @return The (possibly transformed) field triple *)
-let rec transform_field ~tparams ~self_ty (fld, vis, tag) =
-  (* Same contract as {!transform_fundef}: a shape the pass cannot linearise
-     declines this one field instead of aborting the extraction. *)
-  let name = match fld with Fmethod mf -> Id.to_string mf.mf_name | _ -> "a field" in
-  try naming (fun () -> name) (fun () -> transform_field_exn ~tparams ~self_ty (fld, vis, tag))
-  with Not_linearisable reason ->
-    ( match fld with
-    | Fmethod _ -> record_outcome name (Lp_declined reason)
-    | _ -> () );
-    (fld, vis, tag)
-
-and transform_field_exn ~tparams ~self_ty (fld, vis, tag) =
-  match fld with
-  (* A method lowered from its ControlIR as it was generated
-     ({!Control_to_legacy_minicpp}). *)
-  | Fmethod {mf_loop = Some _; _} -> (fld, vis, tag)
-  | Fmethod mf
-    when (match mf.mf_globref with Some r -> Table.loopifies_method r | None -> true) ->
-    (transform_method ~tparams ~self_ty mf, vis, tag)
-  (* A method the struct only declares is the method its out-of-line
-     definition holds, and is transformed as that one is: the two halves
-     stay one value. *)
-  | Fmember_decl (OLmethod mf) -> (
-    match transform_field_exn ~tparams ~self_ty (Fmethod mf, vis, tag) with
-    | Fmethod mf', vis, tag -> (Fmember_decl (OLmethod mf'), vis, tag)
-    | field -> field )
-  | Fnested_struct (id, fields) ->
-    let fields' =
-      List.map (transform_field ~tparams ~self_ty) fields
-    in
-    (Fnested_struct (id, fields'), vis, tag)
-  | _ -> (fld, vis, tag)
-
-(** The receiver type of a method of the struct [r] declared under
-    [tparams]: its own template arguments named, since inside a nested
-    inductive the receiver is spelled through its module
-    ([typename List::template list<A>]) and the bare template name there is
-    not a type. *)
-let receiver_type r tparams = Tconst (Tptr (Tglob (r, List.map (fun (_, id) -> named_tvar id) tparams, [])))
-
-(** The out-of-line definition [dm] of a member its struct declares
-    ({!Minicpp.Dmember_def}) with the method in it transformed by [f], given
-    its struct's template parameters, as it would be inside the struct:
-    the definition is the member's body, which the struct no longer holds. *)
-let on_member_def ~tparams f dm =
-  match dm.dm_field with
-  | OLmethod mf ->
-    let tparams = if dm.dm_tparams = [] then tparams else dm.dm_tparams in
-    Dmember_def {dm with dm_field = OLmethod (f ~tparams ~self_ty:(receiver_type dm.dm_owner tparams) mf)}
-  | OLdestructor _ -> Dmember_def dm
-
-(** [transform_local_tail_loops decl] turns the tail-recursive local
-    fixpoints in [decl]'s bodies into loops, and leaves everything else as it
-    was.  A tail loop needs no frame and changes no evaluation order, so it is
-    the part of loopification every declaration gets, whatever
-    {!Cpp_pipeline.should_loopify} says about the rest; translation lowers
-    them as it generates them, and this is the check that it did. *)
-let rec transform_local_tail_loops ?(tparams = []) decl =
-  let body ps b = loopify_inner_lambdas ~tail_only:true ~tparams ~outer_env:ps b in
-  let rec field (f, vis, tag) =
-    let f =
-      match f with
-      | Fmethod m -> Fmethod {m with mf_body = body m.mf_params m.mf_body}
-      | Fmember_decl (OLmethod m) -> Fmember_decl (OLmethod {m with mf_body = body m.mf_params m.mf_body})
-      | Fnested_struct (id, fs) -> Fnested_struct (id, List.map field fs)
-      | f -> f
-    in
-    (f, vis, tag)
+(** Check the pointer fields of each constructor struct of [ds] against
+    those planned before rendering ({!Loopify_analysis.agree_ptr_fields}). *)
+let check_pointer_fields ds =
+  let rec fields (fld, _, _) =
+    match fld with
+    | Fnested_struct (id, sub_fields) ->
+      let var_fields = List.filter_map (fun (f, _, _) -> match f with Fvar (_, ty) -> Some ty | _ -> None) sub_fields in
+      let ptr_fields =
+        List.filter_map Fun.id
+          (List.mapi
+             (fun i ty ->
+               match ty with
+               | Tshared_ptr (Tglob (r, _, _)) when Common.globref_equal r ds.ds_ref -> Some (Recursive i)
+               | Tshared_ptr _ -> Some (Boxed i)
+               | _ -> None )
+             var_fields )
+      in
+      if ptr_fields <> [] then agree_ptr_fields ds.ds_ref (Id.to_string id) ptr_fields;
+      List.iter fields sub_fields
+    | _ -> ()
   in
-  match decl with
-  | Dtemplate (tparams, c, inner) ->
-    Dtemplate (tparams, c, transform_local_tail_loops ~tparams inner)
-  | Dfun ({df_shape = Ddef (ps, b); _} as f) ->
-    Dfun {f with df_shape = Ddef (ps, body ps b)}
-  | Dstruct ds -> Dstruct {ds with ds_fields = List.map field ds.ds_fields}
-  | Dfields ds -> Dfields {ds with ds_fields = List.map field ds.ds_fields}
-  | Dnspace (r, ds) -> Dnspace (r, List.map (transform_local_tail_loops ~tparams) ds)
-  | Dmember_def dm ->
-    on_member_def ~tparams (fun ~tparams:_ ~self_ty:_ m -> {m with mf_body = body m.mf_params m.mf_body}) dm
-  | d -> d
-
-(** Top-level entry point: transform a declaration and all its nested
-    declarations (templates, structs, namespaces). Dispatches to
-    {!transform_fundef}, {!transform_method}, or recurses for composite
-    declarations.  A method its struct only declares is transformed where it
-    is defined, after the struct. *)
-let rec transform_decl ?(tparams = []) = function
-  | Dtemplate (tparams, constraint_opt, inner) ->
-    Dtemplate
-      (tparams, constraint_opt, transform_decl ~tparams inner)
-  | Dfun ({df_shape = Ddef (params, body); _} as f) ->
-    transform_fundef ~tparams f params body
-  | Dstruct ds ->
-    let self_ty = receiver_type ds.ds_ref (if ds.ds_tparams = [] then tparams else ds.ds_tparams) in
-    let fields = ds.ds_fields in
-    (* Collect smart-pointer field indices from variant structs for TMC *)
-    let rec collect_uptr_fields (fld, _vis, _tag) =
-      match fld with
-      | Fnested_struct (id, sub_fields) ->
-        let ctor_name = Id.to_string id in
-        let var_fields =
-          List.filter_map
-            (fun (f, _, _) -> match f with Fvar (_, ty) -> Some ty | _ -> None)
-            sub_fields
-        in
-        let ptr_fields =
-          List.mapi
-            (fun i ty ->
-              match ty with
-              | Tshared_ptr (Tglob (r, _, _)) when Common.globref_equal r ds.ds_ref ->
-                Some (Recursive i)
-              | Tshared_ptr _ -> Some (Boxed i)
-              | _ -> None)
-            var_fields
-          |> List.filter_map Fun.id
-        in
-        if ptr_fields <> [] then agree_ptr_fields ds.ds_ref ctor_name ptr_fields;
-        List.iter collect_uptr_fields sub_fields
-      | _ -> ()
-    in
-    List.iter collect_uptr_fields fields;
-    Dstruct
-      {
-        ds with
-        ds_fields =
-          List.map
-            (transform_field ~tparams ~self_ty)
-            fields;
-      }
-  | Dfields ds ->
-    (* A promoted inductive's members are transformed exactly as they would be
-       inside their own struct; only the wrapper differs. *)
-    ( match transform_decl ~tparams (Dstruct ds) with
-    | Dstruct ds' -> Dfields ds'
-    | d -> d )
-  | Dnspace (r, decls) -> Dnspace (r, List.map (transform_decl ~tparams) decls)
-  | Dmember_def dm ->
-    on_member_def ~tparams
-      (fun ~tparams ~self_ty m ->
-        match transform_field ~tparams ~self_ty (Fmethod m, VPublic, SManipulators) with
-        | Fmethod m', _, _ -> m'
-        | _ -> m )
-      dm
-  | d -> d
+  List.iter fields ds.ds_fields

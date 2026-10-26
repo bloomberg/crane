@@ -5,8 +5,8 @@
     printer.
 
     Control was lowered as the declaration was generated
-    ({!Control_to_legacy_minicpp}); Loopify's own transform runs here only as
-    [CRANE_CHECK_IR]'s oracle.  Depth flattening and the {!Cpp_erasure} seam
+    ({!Control_to_legacy_minicpp}), and is only checked here, under
+    [CRANE_CHECK_IR] ({!Control_to_legacy_minicpp.check_lowered}).  Depth flattening and the {!Cpp_erasure} seam
     have to run in that order, and both have to run: a declaration that skipped
     flattening crashes the C++ parser, and one that skipped the seam is not a
     {!Cpp_erasure.settled} declaration at all.  So the sequence is a single
@@ -14,16 +14,11 @@
     intermediate declarations to hand to the wrong pass, because none of them
     is nameable from outside. *)
 
-(** [should_loopify decl] -- whether [decl] is loopified, given what the user
-    asked for and what kind of declaration it is. *)
-val should_loopify : Minicpp.cpp_decl -> bool
-
 (** [finish decl] runs every pass between translation and printing and
     hands back the printable declaration.  Under [CRANE_TRACE_PASSES] ([1], or a substring of the
     declaration's name) it reports which passes changed [decl] and its node
-    count before and after each.  Under [CRANE_CHECK_IR] it fails if Loopify
-    would still lower control in [decl] -- all of it where {!should_loopify}
-    says so, its local tail loops elsewhere -- or if the result still owes
+    count before and after each.  Under [CRANE_CHECK_IR] it fails if [decl]
+    is not what control lowering recorded deciding of it, or if the result still owes
     the printer a decision one of its passes makes: an
     unspellable type, an unsettled constraint, an unresolved cast, an
     undeclared type variable, a mapping's unsupplied type argument, or a

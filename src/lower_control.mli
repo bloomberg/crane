@@ -41,8 +41,9 @@
     ({!Control_to_legacy_minicpp}), a machine's entry with it, and that of
     a helper lifted for a local fixpoint's function where translation makes
     the helper.  Loopify still makes the others -- a local fixpoint's that a
-    machine may adopt or is lowered inside -- and under [CRANE_CHECK_IR] compares the calls it turns
-    into jumps with the [Continue]s here ({!Loopify.transform_decl}). *)
+    machine may adopt or is lowered inside -- and under [CRANE_CHECK_IR]
+    compares the calls it turns into jumps with the [Continue]s here
+    ({!Loopify.checker_tail_loop}). *)
 
 type t
 
@@ -104,3 +105,11 @@ val install : t -> unit
 
 (** The loop [l], if it is lowered: a [Control_ir.Term.Loop]. *)
 val loop : Control_ir.Loop.t -> Control_ir.Term.t option
+
+(** The {!Control_ir.continues} of [t] the code made of it keeps no call of: those
+    made of an occurrence no other [Continue] shares, nor any Core term [t]
+    holds -- what it returns, binds, matches on, or passes a turn or a cell.
+    A call Core copied shares its occurrence with its copies, any of which
+    may stay a call where the others are turns: only by position is it
+    told apart from them, and these are the occurrences that are not. *)
+val taken_continues : Control_ir.Term.t -> Miniml.Occurrence.t list

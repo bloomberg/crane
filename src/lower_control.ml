@@ -334,3 +334,47 @@ let installed : t ref = State.cell State.Extraction empty
 let install t = installed := t
 
 let loop l = List.find_map (fun (l', t) -> if Loop.equal l l' then Some t else None) !installed
+
+(* The occurrences of the global uses and variable reads in the Core terms
+   [t] holds -- what it returns, binds, matches on, and passes a turn or a
+   cell -- each once per copy: what stays a call in the code made of [t]
+   where it is one. *)
+let held_occurrences t =
+  let found = ref [] in
+  let rec ast = function
+    | Miniml.MLrel (_, o) -> found := o :: !found
+    | Miniml.MLglob {occurrence; _} -> found := occurrence :: !found
+    | e -> Mlutil.ast_iter ast e
+  in
+  let continue_ (c : Control_ir.Term.continue_) = List.iter ast c.arguments in
+  let rec go : Control_ir.Term.t -> unit = function
+    | Loop l -> go l.body
+    | Let l ->
+      ast l.value;
+      go l.body
+    | Match m ->
+      ast m.scrutinee;
+      List.iter (fun (b : Control_ir.Term.branch) -> go b.body) m.branches
+    | Return v -> ast v
+    | Continue c -> continue_ c
+    | Continue_into c ->
+      List.iter (fun (cell : Control_ir.Term.cell) -> List.iter ast cell.arguments) c.cells;
+      continue_ c.next
+    | Resume r ->
+      go r.value;
+      go r.body
+    | Entry e ->
+      go e.entered.body;
+      go e.scope
+  in
+  go t;
+  !found
+
+(* The Continues of [t] no code made of [t] keeps a call of: each made of an
+   occurrence no other Continue and no term [t] holds shares
+   (held_occurrences).  A copied call shares its occurrence with its
+   copies, and only these are told apart from them. *)
+let taken_continues t =
+  let continues = Control_ir.continues t and held = held_occurrences t in
+  let count o l = List.length (List.filter (Miniml.Occurrence.equal o) l) in
+  List.filter (fun o -> count o continues = 1 && count o held = 0) continues

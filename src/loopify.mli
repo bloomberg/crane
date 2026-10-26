@@ -11,29 +11,13 @@
 open Names
 open Minicpp
 
-(** Transform a single top-level declaration. Recursion through [Dtemplate]
-    wrappers to find inner [Dfun] nodes. Also transforms recursive methods
-    inside [Dstruct] fields ([Fmethod]). *)
-val transform_decl :
-  ?tparams:(template_type * Id.t) list -> cpp_decl -> cpp_decl
-
-(** Turn only the tail-recursive local fixpoints in a declaration's bodies
-    into loops: the part of loopification that needs no frame and changes no
-    evaluation order, which translation lowers as it generates them in every
-    declaration ({!Control_to_legacy_minicpp.local_loop}).  It is what
-    [CRANE_CHECK_IR] holds a declaration Loopify does not loopify to: one
-    this would change is a loop translation did not lower. *)
-val transform_local_tail_loops :
-  ?tparams:(template_type * Id.t) list -> cpp_decl -> cpp_decl
-
 (** [try_inline_mutual_into ~partner r body] is the body [body] of the
     function [r] with the partners the recursion plan inlines into it
-    inlined ({!Recursion_plan.inlinings}), each read as [partner] has it --
-    registered with {!register_decl}, unless given -- at the calls the plan
-    lists by occurrence: a tail call continuing in the partner's body, any
-    other running it in a lambda invoked in place. *)
+    inlined ({!Recursion_plan.inlinings}), each read as [partner] has it, at
+    the calls the plan lists by occurrence: a tail call continuing in the
+    partner's body, any other running it in a lambda invoked in place. *)
 val try_inline_mutual_into :
-  ?partner:(GlobRef.t -> Loopify_analysis.registered_fn option) -> GlobRef.t -> cpp_stmt list -> cpp_stmt list
+  partner:(GlobRef.t -> Loopify_analysis.registered_fn option) -> GlobRef.t -> cpp_stmt list -> cpp_stmt list
 
 (** The tail loop Loopify's own transform makes of the body [body] of the
     function [f], whose parameters are [params], under the template
@@ -195,21 +179,19 @@ val transform_method_own :
 
 (** [lower_local_tail_loops ~tparams stmts] is [stmts] with the
     tail-recursive local fixpoints in them turned into loops, under the
-    template parameters [tparams], as {!transform_local_tail_loops} turns
-    those of a declaration. *)
+    template parameters [tparams]. *)
 val lower_local_tail_loops :
   ?parts:(Miniml.Occurrence.t * int) * bool list -> tparams:(template_type * Id.t) list -> cpp_stmt list -> cpp_stmt list
 
 (** [lower_local_loops ~tparams stmts] is [stmts] with every local fixpoint
-    in them that Loopify lowers turned into its loop or its machine, as
-    {!transform_decl} turns those of a function. *)
+    in them that Loopify lowers turned into its loop or its machine. *)
 val lower_local_loops :
   ?parts:(Miniml.Occurrence.t * int) * bool list -> tparams:(template_type * Id.t) list -> cpp_stmt list -> cpp_stmt list
 
 (** [lower_function_locals ~tparams params body] is the body [body] of a
     function taking [params], of which Loopify makes no loop of its own,
     with every local fixpoint in it Loopify lowers turned into its loop or
-    its machine, as {!transform_decl} turns those of such a function. *)
+    its machine. *)
 val lower_function_locals :
   tparams:(template_type * Id.t) list -> (Id.t * cpp_type) list -> cpp_stmt list -> cpp_stmt list
 
@@ -242,12 +224,11 @@ val worthwhile_move_type : cpp_type -> bool
     {!Last_use}, which asks the same question of a local as loopify asks of a
     frame field. *)
 
-(** [register_decl d] makes [d], if it is a function definition, known to
-    mutual-recursion inlining before any function is transformed: called on
-    every function of a unit, and every helper loopification transforms,
-    before any is finished ({!Cpp.finish_ahead}), so that a mutual partner
-    is seen whichever is finished first. *)
-val register_decl : cpp_decl -> unit
+(** [check_pointer_fields ds] checks, under [CRANE_CHECK_IR], the fields
+    each constructor struct of the struct [ds] stores behind the pointer
+    against those planned before rendering, which the recursion plan's
+    tail-modulo-cons chains were read with. *)
+val check_pointer_fields : dstruct -> unit
 
 (** {2 Diagnostics}
 

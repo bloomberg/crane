@@ -1664,19 +1664,14 @@ let finishing (aheads : Cpp_ind.ahead list) =
 
 (** Record the unit's program ({!Generated_program.record_ahead}) and finish
     what was generated ahead, [aheads] in the order generated, all at once
-    ({!Finished_program.finish}), installing the program: every function,
-    and every helper Loopify transforms, registered with Loopify before any
-    is finished, so that what it sees of the unit does not depend on which
-    were finished before.  Then demand every header the files will need for
-    what they write ({!Cpp_demands}): the finished program's, and those of
-    the module-type concepts and eponymous record fields generated ahead of
-    them. *)
+    ({!Finished_program.finish}), installing the program.  Then demand every
+    header the files will need for what they write ({!Cpp_demands}): the
+    finished program's, and those of the module-type concepts and eponymous
+    record fields generated ahead of them. *)
 let finish_ahead (aheads : Cpp_ind.ahead list) =
   List.iter (fun (a : Cpp_ind.ahead) -> List.iter Generated_program.record_ahead a.entities) aheads;
   let helpers = List.concat_map (fun (a : Cpp_ind.ahead) -> a.helpers) aheads in
   Generated_program.record_lifted_ahead helpers;
-  List.iter (fun (a : Cpp_ind.ahead) -> List.iter Loopify.register_decl a.functions) aheads;
-  List.iter (fun h -> if Cpp_pipeline.should_loopify h then Loopify.register_decl h) helpers;
   let program = Finished_program.finish (finishing aheads) in
   Finished_program.install program;
   List.iter Table.demand_header

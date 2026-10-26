@@ -2309,7 +2309,7 @@ let reset_extraction_loopify () = Lib.add_leaf (reset_loopify ())
 (* GlobRef of the top-level declaration currently being translated, when known.
    Reuse and loopify rewrite the same tail-recursive-modulo-cons match, so they
    must not both fire on one declaration.  Loopify is applied per declaration
-   (see Cpp_pipeline.should_loopify), so the reuse gates ask the same
+   ({!should_loopify}), so the reuse gates ask the same
    per-declaration question here instead of consulting the global flag, which
    would disable reuse everywhere as soon as loopify is set globally. *)
 let current_decl_ref : GlobRef.t option ref = ref None

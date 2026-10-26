@@ -125,3 +125,15 @@ val lower_lifted : Minicpp.cpp_decl -> Minicpp.cpp_decl
     local fixpoints in its body lowered as {!lower_lifted} lowers a
     helper's. *)
 val lower_group : Minicpp.cpp_decl list -> Minicpp.cpp_decl list
+
+(** [check_lowered d] checks, under [CRANE_CHECK_IR], the finished
+    declaration [d] against what control lowering recorded deciding of its
+    loops ({!Loop_verdicts}): every loop emitted -- a function's, a
+    method's, a local fixpoint's -- one it lowered, or, a local fixpoint's,
+    one it kept for the machine it was lowered with; every definition
+    emitted as generated, one it did not lower, and one it decided on where
+    the recursion plan commits it to a loop; and no loop emitted still
+    making a call of an occurrence one of its turns alone is made of
+    ({!Lower_control.taken_continues}).  It checks the constructor structs'
+    pointer fields too ({!Loopify.check_pointer_fields}). *)
+val check_lowered : Minicpp.cpp_decl -> unit

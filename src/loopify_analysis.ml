@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** Recursive-call analysis for {!Loopify}: the named constants and utilities the
-    strategies share, the mutual-recursion table, outcome diagnostics, call
+    strategies share, the definitions partners are inlined from, outcome diagnostics, call
     checkers and call collection, invariant-parameter detection, and the
     substitutions the rewrites use. *)
 
@@ -208,14 +208,14 @@ let rec is_borrowed = function
 let movable ty = (not (is_borrowed ty)) && (ty = Tauto || worthwhile_move_type ty)
 
 (* Global mutable state in this file and their reset granularity:
-   - mutual_fn_table, outcomes : reset per generated file (State.Unit)
+   - outcomes : reset per generated file (State.Unit)
    - ctor_ptr_fields : accumulates across the full session; never cleared because
      struct shapes don't change within a Rocq session *)
 
-(** {2 Mutual recursion table}
+(** {2 Partners}
 
-    Functions register their bodies here so mutual pairs can be detected and
-    inlined during the loopify pass. Keyed by GlobRef. *)
+    A mutual-recursion partner is inlined from its definition as it was
+    generated. *)
 
 (** A registered function definition, as an inlining site needs it.  The
     return type is carried because inlining a non-tail call builds a lambda
@@ -236,29 +236,8 @@ let registered (f : dfun) =
   | Ddef (params, body) -> Some {rf_ret_ty = f.df_ret; rf_params = params; rf_binders = f.df_binders; rf_body = body}
   | Ddecl _ -> None
 
-(** Table mapping GlobRef → definition, for function definitions. *)
-let mutual_fn_table : registered_fn Ref.User.Tbl.t = Ref.User.Tbl.create 32
-
-(** [register_decl d] registers [d], under each of the globals it defines,
-    if it is a function definition, and does nothing otherwise.
-
-    Every function of a unit is registered before any is finished
-    ({!Cpp.finish_ahead}), so that what a function sees in the mutual table
-    does not depend on which functions were finished before it. *)
-let register_decl = function
-  | Dfun f | Dtemplate (_, _, Dfun f) ->
-    Option.iter
-      (fun rf -> List.iter (fun (r, _) -> Ref.User.Tbl.replace mutual_fn_table r rf) (dfun_path_list f.df_path))
-      (registered f)
-  | _ -> ()
-
-(** Clear the mutual recursion table. Called between extraction units. *)
-let clear_mutual_table () = Ref.User.Tbl.clear mutual_fn_table
-
-let () = State.on_reset State.Unit clear_mutual_table
-
 (** Table mapping constructor struct names to their shared_ptr field indices.
-    Populated from [Dstruct] definitions in {!transform_decl} and queried by
+    Installed before rendering ({!install_ctor_ptr_fields}) and queried by
     {!Loopify_tmc.make_cell} to determine which fields need [make_shared] wrapping
     in the direct-struct-construction path.
 
