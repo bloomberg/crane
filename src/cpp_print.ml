@@ -53,11 +53,6 @@ let escape_cpp_string (s : string) : string =
     s;
   Buffer.contents buf
 
-(** Functions whose return type involves an axiom type must not be marked
-    [__attribute__((pure))]: they may transitively call an axiom stub that
-    throws [std::logic_error]. *)
-let is_axiom_type_ref = Cpp_erasure.is_axiom_type_ref
-
 (** Check if a lambda needs to capture variables from enclosing scope.
     A lambda needs [&] capture if its body references variables that are
     not lambda parameters and not locally declared within the body.
@@ -395,11 +390,6 @@ let print_cpp_type_var vl i =
   | Some name -> pp_tvar name
   | None -> str "T" ++ int i
 
-
-(** Whether a type is spelled [std::any] -- owned by {!Cpp_erasure}, which
-    also records the aliases to it, so that the pass that decides how to cross
-    an erasure boundary and the printer cannot disagree. *)
-let is_any_type = Cpp_erasure.is_any_shaped
 
 (** The type names the header introduces at file scope, planned with its
     layout ({!file_scope_types}); none in the implementation, which defines
@@ -873,89 +863,13 @@ let projection_field_name (r : GlobRef.t) : string =
   Common.modular_rename Term (Label.to_id (label_of_r r))
 
 
-(** Check if a C++ type is a literal type eligible for [constexpr] context.
-
-    Excludes allocation ([shared_ptr]), side effects ([void]), types unknown
-    at definition time, axiom types (whose stubs throw), and also:
-    - [Tfun]: [std::function] uses type-erased internal storage
-    - [decltype]: the expression may reference non-constexpr entities
-    - Composite types where any component is non-literal
-
-    The check is recursive for container types ([Tvariant], [Tglob], [Tid],
-    [Tnamespace], [Tqualified]) — a [std::variant<A, B>] is constexpr only
-    if both [A] and [B] are. *)
-let rec is_constexpr_type ty =
-  if is_any_type ty then false else
-  match ty with
-  | Tshared_ptr _ -> false
-  | Tvoid | Tvar _ | Tinstance _ | Tpromoted _ | Tany | Topaque | Tauto
-  | Tunresolved -> false
-  | Tfun _ -> false  (* std::function uses type erasure *)
-  | Tdecay _ -> false
-  | Tglob (r, _, _) when is_axiom_type_ref r -> false
-  (* A type mapped to a C++ scalar is that scalar. *)
-  | Tglob (r, [], _) when Table.is_custom_scalar_ref r -> true
-  | Tglob (GlobRef.IndRef _ as r, tys, _) ->
-    (* Crane-generated non-enum inductives have user-provided constructors
-       (T() {}, explicit T(Ctor _v) : d_v_(_v) {}) that are not constexpr,
-       so the types are not literal.  Only enum inductives (generated as
-       [enum class]) are literal types. *)
-    Table.is_enum_inductive r && List.for_all is_constexpr_type tys
-  | Tconst t | Tref (Lvalue, t) | Tptr t -> is_constexpr_type t
-  | Tvariant (_, tys) -> List.for_all is_constexpr_type tys
-  | Tglob (GlobRef.ConstRef _, [], _) -> false  (* defined constant with no type args — opaque alias *)
-  | Tglob (_, tys, _) -> List.for_all is_constexpr_type tys
-  | Tid (_, []) -> false  (* unresolved type alias — conservatively non-literal *)
-  | Tid (_, tys) | Tid_external (_, tys) -> List.for_all is_constexpr_type tys
-  | Tnondeduced t -> is_constexpr_type t
-  | Trebind (h, x) -> is_constexpr_type h && is_constexpr_type x
-  | Thole | Terased _ -> true
-  | Tref (Forwarding, t) -> is_constexpr_type t
-  | Texpr_type _ | Tdecltype_auto -> false
-  | Tnamespace (_, t) -> is_constexpr_type t
-  | Tqualified (t, _) -> is_constexpr_type t
-  (* An applied associated type is whatever the instance makes it; nothing
-     here can establish it is a literal type. *)
-  | Ttyctor _ | Tapply _ -> false
-
-(** Check if a function is constexpr-eligible: all param types AND return
-    type must be constexpr-eligible literal types.
-
-    @param ret_ty  the C++ return type to test
-    @param params  list of [(name, type)] pairs for all formal parameters *)
-let is_constexpr_eligible ret_ty params =
-  is_constexpr_type ret_ty
-  && List.for_all (fun (_, ty) -> is_constexpr_type ty) params
-
-(** Check if a function body consists solely of throwing an abort/axiom error.
-    Such functions must not be marked [pure] or [constexpr] because the compiler
-    may optimise away the throw. *)
-let body_is_throw = function
-  | [Sreturn (Some (CPPabort _))] -> true
-  | _ -> false
-
-(** Compute the C++ function qualifier prefix as a three-way decision:
-    - [constexpr] when the function is constexpr-eligible and [can_constexpr]
-      is [true] (i.e. the definition is visible in the header);
-    - nothing otherwise.
-
-    @param can_constexpr  whether this call site may use [constexpr]
-    @param throws         whether the body unconditionally throws
-    @param no_pure        when [true], suppress [constexpr] even if the
-                          function would otherwise qualify (used for functions
-                          that operate on [std::any] or axiom types)
-    @param ret_ty         the C++ return type
-    @param params         [(name, type)] pairs for all formal parameters *)
-let check_constexpr what decided computed =
-  if Probe.checking () && decided <> (if computed then Eligible else Ineligible) then
-    Probe.violation "constexpr"
-      (str ("the seam's constexpr eligibility of a " ^ what ^ " is not the printer's"))
-
-let fun_qualifier ~can_constexpr ~throws ~no_pure ret_ty params =
-  if can_constexpr && not throws && not no_pure && is_constexpr_eligible ret_ty params then
-    str "constexpr "
-  else
-    mt ()
+(** Whether a definition whose eligibility the seam decided
+    ({!Cpp_erasure.decide_constexpr}) may be [constexpr]. *)
+let may_be_constexpr = function
+  | Eligible -> true
+  | Ineligible -> false
+  | Undecided ->
+    CErrors.anomaly (str "a definition reached the printer with its constexpr eligibility undecided")
 
 (** Whether a rendered document writes a qualifier anywhere in it, its
     template arguments included. *)
@@ -3427,13 +3341,10 @@ let rec pp_cpp_field
         mf_body;
         mf_receiver;
         mf_is_inline;
-        mf_no_pure;
         mf_constexpr;
         mf_is_noexcept;
         mf_is_conversion;
       } ->
-    check_constexpr "method" mf_constexpr
-      (mf_receiver = Static && (not mf_no_pure) && is_constexpr_eligible mf_ret_type mf_params);
     let const_s =
       match mf_receiver with
       | Static -> mt ()
@@ -3486,10 +3397,7 @@ let rec pp_cpp_field
            | Some r -> r ++ fnl () )
     in
     let doc_comment = pp_doc_comment_for_name (Id.to_string mf_name) in
-    let qualifier =
-      fun_qualifier ~can_constexpr:mf_is_static ~throws:false ~no_pure:mf_no_pure
-        mf_ret_type mf_params
-    in
+    let qualifier = if may_be_constexpr mf_constexpr then str "constexpr " else mt () in
     let owner_template_s, qual_s =
       match mode with
       | Mm_defined (qual, owner_tps) ->
@@ -3497,8 +3405,7 @@ let rec pp_cpp_field
       | Mm_inline | Mm_declared -> (mt (), mt ())
     in
     (* A conversion function has no return type of its own -- its name is the
-       type it converts to -- and none of the qualifiers [fun_qualifier]
-       computes from a return type apply. *)
+       type it converts to -- and none of the qualifiers apply. *)
     let head =
       h
         ( inline_s
@@ -4124,12 +4031,7 @@ and pp_leaf_decl env (d : cpp_decl) =
   (* Taken apart by {!Cpp_erasure.view}, which hands out their children
      settled. *)
   | Dtemplate _ | Dnspace _ -> assert false
-  | Dfun {df_path; df_ret = ret_ty; df_no_pure = no_pure; df_constexpr; df_shape = shape} ->
-    ( match shape with
-    | Ddef (params, body) ->
-      check_constexpr "function" df_constexpr
-        ((not (body_is_throw body)) && (not no_pure) && is_constexpr_eligible ret_ty params)
-    | Ddecl _ -> () );
+  | Dfun {df_path; df_ret = ret_ty; df_constexpr; df_shape = shape} ->
     let ids = dfun_path_list df_path in
     (* A definition is either out-of-line in a .cpp file or inline in a
        template struct; a declaration is always the forward declaration of an
@@ -4195,10 +4097,9 @@ and pp_leaf_decl env (d : cpp_decl) =
             (List.rev params)
         in
         let qualifier =
-          fun_qualifier
-            ~can_constexpr:
-              ((!render_ctx).rc_in_struct && not is_out_of_struct_def)
-            ~throws:(body_is_throw body) ~no_pure ret_ty params
+          if may_be_constexpr df_constexpr && (!render_ctx).rc_in_struct && not is_out_of_struct_def
+          then str "constexpr "
+          else mt ()
         in
         (params_s, qualifier, str "{" ++ body_s ++ str "}")
       | Ddecl params ->
@@ -4281,16 +4182,8 @@ and pp_leaf_decl env (d : cpp_decl) =
     else
       (* A value written as a literal of a literal type is a constant
          expression: [constexpr] says so, and lets it stand in a
-         [static_assert] or a template argument.  A mapped constant
-         constructor of such a type ([true]) is that type's literal. *)
-      let literal =
-        (match e with
-         | CPPnumeral _ | CPPuint _ | CPPint _ | CPPbool _ | CPPenum_val _ -> true
-         | CPPglob ((GlobRef.ConstructRef _ as r), [], _) -> Table.is_custom r
-         | _ -> false)
-        && is_constexpr_type ty
-      in
-      check_constexpr "variable" da_constexpr literal;
+         [static_assert] or a template argument. *)
+      let literal = may_be_constexpr da_constexpr in
       let ty = match ty with Tconst t when literal -> t | t -> t in
       let static_kw =
         match ((!render_ctx).rc_in_struct, literal) with

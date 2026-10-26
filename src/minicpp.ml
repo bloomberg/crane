@@ -2454,12 +2454,7 @@ let rec strip_template_defaults = function
   | d -> d
 
 let rec split_definition = function
-  | Dfun ({df_shape = Ddef (params, body); _} as f) ->
-    let no_pure =
-      f.df_no_pure
-      || match body with [Sreturn (Some (CPPabort _))] -> true | _ -> false
-    in
-    let f = {f with df_no_pure = no_pure} in
+  | Dfun ({df_shape = Ddef (params, _); _} as f) ->
     let decl_params = List.map (fun (id, ty) -> (Some id, ty)) params in
     Some (Dfun {f with df_shape = Ddecl decl_params}, Dfun f)
   | Dtemplate (temps, cstr, inner) ->

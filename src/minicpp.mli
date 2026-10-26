@@ -1737,8 +1737,8 @@ val strip_template_defaults : cpp_decl -> cpp_decl
 
 (** [split_definition d] is [d], a function definition, as the declaration
     and the definition a file writes: the same head, with and without the
-    body, through any template head.  A body that only throws marks both
-    [df_no_pure].  [None] when [d] defines no function. *)
+    body, through any template head.  [None] when [d] defines no
+    function. *)
 val split_definition : cpp_decl -> (cpp_decl * cpp_decl) option
 
 (** [map_decl fe fs ft d] applies [fe] to sub-expressions, [fs] to
