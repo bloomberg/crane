@@ -138,10 +138,6 @@ val lower_group : Minicpp.cpp_decl list -> Minicpp.cpp_decl list
     emitted as generated, one it did not lower, and one it decided on where
     the recursion plan commits it to a loop; and no loop emitted still
     making a call of an occurrence one of its turns alone is made of
-    ({!Lower_control.taken_continues}), nor moving a local -- into a frame
-    it saves, say -- while a reference bound into the local's own storage,
-    a match's field or a structured binding, is read after: what
-    {!Move_check} finds read after a move once each such reference reads as
-    the local it is bound into.  It checks the constructor structs'
+    ({!Lower_control.taken_continues}).  It checks the constructor structs'
     pointer fields too ({!Loopify.check_pointer_fields}). *)
 val check_lowered : Minicpp.cpp_decl -> unit

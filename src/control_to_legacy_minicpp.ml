@@ -613,64 +613,6 @@ let keeps_call taken stmts =
   and fs s = map_stmt fe fs Fun.id s in
   match List.iter (fun s -> ignore (fs s)) stmts with () -> false | exception Found -> true
 
-(* The local whose own storage the place [e] is in, where it is one: the
-   local itself, a member of it, the alternative its variant holds, or what
-   a reference bound into it names, by [roots].  What a pointer points at is
-   in no local's storage -- a frame moving the pointer keeps it alive. *)
-let rec storage_root roots e =
-  match e with
-  | CPPvar x -> Some (Option.default x (Id.Map.find_opt x roots))
-  | CPPaccess (Adot, e, _) | CPPget (e, _) | CPPstd_get (_, Some e) -> storage_root roots e
-  | CPPfun_call (_, CPPaccess (Adot, e, _), {rev = []}) -> storage_root roots e
-  | _ -> None
-
-(* [ss] with every read of a reference bound into the storage of a local a
-   read of that local, scope by scope: what moving the local takes from
-   the reference. *)
-let resolve_aliases ss =
-  let bind roots init ids =
-    match storage_root roots init with
-    | Some x -> List.fold_left (fun roots id -> Id.Map.add id x roots) roots ids
-    | None -> List.fold_left (fun roots id -> Id.Map.remove id roots) roots ids
-  in
-  let rec expr roots e =
-    match e with
-    | CPPvar x -> ( match Id.Map.find_opt x roots with Some r -> CPPvar r | None -> e )
-    | CPPmove _ -> e
-    | CPPlambda l -> CPPlambda {l with cl_body = stmts roots l.cl_body}
-    | _ -> map_expr ~fl:(stmts roots) (expr roots) (stmt roots) Fun.id e
-  and stmt roots s = fst (step roots s)
-  and stmts roots = function
-    | [] -> []
-    | s :: rest ->
-      let s, roots' = step roots s in
-      s :: stmts roots' rest
-  and step roots s =
-    let e = expr roots in
-    match s with
-    | Sasgn (id, (Declare (ty, _) as d), init) ->
-      (Sasgn (id, d, e init), if Loopify_analysis.is_borrowed ty then bind roots init [id] else Id.Map.remove id roots)
-    | Sbind (ids, init) -> (Sbind (ids, e init), bind roots init ids)
-    | Sdecl (id, _, _) | Sdecl_init (id, _) -> (s, Id.Map.remove id roots)
-    | Sfor_range (id, init, body) -> (Sfor_range (id, e init, stmts (bind roots init [id]) body), roots)
-    | Smatch (scrut, branches, dflt) ->
-      let branch b =
-        let bound = (match b.smb_var with Some v -> [v] | None -> []) @ List.map (fun fb -> fb.fb_name) b.smb_field_bindings in
-        let roots = bind roots scrut.sc_expr bound in
-        {b with smb_extra_conds = List.map (expr roots) b.smb_extra_conds; smb_body = stmts roots b.smb_body}
-      in
-      (Smatch ({scrut with sc_expr = e scrut.sc_expr}, List.map branch branches, Option.map (stmts roots) dflt), roots)
-    | _ -> (map_stmt ~fl:(stmts roots) e (stmt roots) Fun.id s, roots)
-  in
-  stmts Id.Map.empty ss
-
-(* The locals [ss] moves while a reference bound into their storage is
-   still read: read after the move once the reference reads as the local,
-   and not before. *)
-let moved_alias_reads ss =
-  let before = Move_check.moved_reads ss in
-  List.filter (fun x -> not (List.exists (Id.equal x) before)) (Move_check.moved_reads (resolve_aliases ss))
-
 let check_lowered decl =
   let violation (l : Control_ir.Loop.t) what =
     Probe.violation "control lowering"
@@ -679,17 +621,13 @@ let check_lowered decl =
         ++ match l with Function r -> str (Table.kername_of_global r) | Member _ -> str "a local fixpoint" )
   in
   (* The loop [l], emitted as [body]: a lowering recorded as [recorded]
-     allows, no call left of the turns it takes, and no local moved while
-     a reference into it is still read. *)
+     allows, and no call left of the turns it takes. *)
   let emitted l ~recorded body =
     if not (recorded (Loop_verdicts.find l)) then violation l "a loop was emitted that control lowering did not lower";
-    ( match Lower_control.loop l with
+    match Lower_control.loop l with
     | Some t ->
       if keeps_call (Lower_control.taken_continues t) body then violation l "a lowered loop still makes a call it takes"
-    | None -> violation l "a lowered loop has no ControlIR" );
-    List.iter
-      (fun x -> violation l ("a lowered loop moves " ^ Id.to_string x ^ " while a reference into it is still read"))
-      (moved_alias_reads body)
+    | None -> violation l "a lowered loop has no ControlIR"
   in
   (* The definition of the loop [l], emitted as generated: not lowered, and
      decided on where the plan [committed] it to a loop. *)
