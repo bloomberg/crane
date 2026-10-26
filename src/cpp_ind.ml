@@ -978,10 +978,6 @@ let finished_of ~what (job : finishing) =
     a lifted helper. *)
 let finished_alone d = finished_of ~what:"a declaration" (finishing d)
 
-(** [render_decl env d] prints [d] finished ahead of the files
-    ({!finished_alone}). *)
-let render_decl env d = Cpp_print.write_decl env (finished_alone d)
-
 (** [finished_group ~what ds] is [ds], each finished ahead of the files. *)
 let finished_group ~what (ds : generated) : rendered =
   List.map (fun (env, d) -> (env, finished_of ~what (finishing d))) ds
