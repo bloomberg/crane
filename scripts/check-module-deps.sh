@@ -23,13 +23,14 @@ rules=(
   "cpp_print : $TRANSLATION ${FINISHING/ Cpp_erasure/}"
 )
 
-# The printer reads Table for configuration, and to record the headers it
-# writes for CRANE_CHECK_IR to compare with the planned demands; a fact about
-# the program it is handed in the declaration, decided by a plan or a pass.
-# The facts it still asks Table for are listed, and the list only shrinks: a
-# read that goes is deleted from it, and a new one is an error.
-PRINTER_TABLE_CONFIGURATION="Runtime erase_fn_header is_modfile std_lib modular non_atomic_rc arena_header"
-PRINTER_TABLE_PENDING="is_boxed_recursive_ind find_boxed_wrapper_opt get_numeral_info num_fmt get_ind_num_param_vars_opt get_ind_nb_ctors_opt escape_reserved_struct_name custom_info"
+# The printer reads Table for configuration and for spelling rules that are
+# functions of a name alone, and to record the headers it writes for
+# CRANE_CHECK_IR to compare with the planned demands; a fact about the
+# program it is handed in the declaration, decided by a plan or a pass.  The
+# facts it still asks Table for are listed, and the list only shrinks: a read
+# that goes is deleted from it, and a new one is an error.
+PRINTER_TABLE_CONFIGURATION="Runtime erase_fn_header is_modfile std_lib modular non_atomic_rc arena_header escape_reserved_struct_name"
+PRINTER_TABLE_PENDING="is_boxed_recursive_ind find_boxed_wrapper_opt get_numeral_info num_fmt get_ind_num_param_vars_opt get_ind_nb_ctors_opt custom_info"
 
 status=0
 printer_reads=$(grep -o 'Table\.[a-zA-Z_]*' src/cpp_print.ml | sed 's/^Table\.//' | sort -u)
