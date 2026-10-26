@@ -462,39 +462,6 @@ let make_stack_push arg =
        (call_opaque, CPPaccess (Adot, CPPvar (id_stack), id_emplace_back),
          of_reversed [arg] ) )
 
-(** Prepare an expression for saving in a continuation frame.
-    [shared_ptr] values are ref-counted and can be copied directly.
-    Other non-trivially-copyable lvalues (e.g. [std::function], value-type
-    inductives) are std::moved into the frame, except bare variables.
-    Trivially-copyable types are copied cheaply. *)
-let move_for_frame ty expr =
-  (* [std::move] is only meaningful on an lvalue.  Wrapping a prvalue -- a call
-     result, a constructor call, a lambda -- cannot save a copy and actively
-     blocks copy elision, which clang reports as -Wpessimizing-move (an error
-     under the test suite's -Werror).  Moves of such expressions used to slip
-     through unnoticed on types whose drain destructor had suppressed the move
-     constructor, because the "move" silently resolved to the copy. *)
-  let is_lvalue = function
-    | CPPvar _ | CPPderef _ | CPPaccess (Adot, _, _) -> true
-    | _ -> false
-  in
-  match ty with
-  | Tshared_ptr _ -> expr
-  | Tconst _ -> expr
-  | t when not (is_trivially_copyable_type t) ->
-    (match expr with
-    (* A bare variable is left alone: a later push may still read it, and
-       [optimize_frame_push_args] moves it at its last push.  A dereferenced
-       pointer is a borrow of someone else's cell. *)
-    | CPPvar _ | CPPderef _ -> expr
-    | e when is_lvalue e -> CPPmove e
-    | _ -> expr)
-  | _ -> expr
-
-(** Apply [move_for_frame] to parallel type and expression lists. *)
-let move_for_frame_list types exprs =
-  List.map2 move_for_frame types exprs
-
 (** {4 Frame construction helpers}
 
     These helpers reduce code duplication when constructing frame instances and
@@ -1201,7 +1168,29 @@ type enter_rewrite_ctx = {
       (** The calls that enter the machine at its own entry: its loop's
           Continues ({!Control_ir.continues_of}); [None] where it has no
           ControlIR *)
+  er_aliased : Id.Set.t;
+      (** The locals in scope that are references, or that a reference
+          names: one bound to a matched value's field, to what a pointer the
+          frame holds points at, or declared as a reference; and one a
+          reference was bound into -- a match's scrutinee, what a reference
+          declaration or a structured binding names.  A frame saving the
+          first copies what it names; moving the second would empty what a
+          reference still reads. *)
 }
+
+(** [aliased] with [ids] among them. *)
+let with_aliased aliased ids = List.fold_left (fun s id -> Id.Set.add id s) aliased ids
+
+(** [aliased] once [stmt] has run ({!enter_rewrite_ctx.er_aliased}): what it
+    declares joins them, as a reference, with what it names, or leaves them,
+    held by value. *)
+let aliased_after aliased = function
+  | Sasgn (id, Declare (ty, _), e) ->
+    if is_borrowed ty then with_aliased aliased (id :: free_vars_expr e) else Id.Set.remove id aliased
+  | Sasgn (id, Declare_static _, _) -> Id.Set.add id aliased
+  | Sdecl (id, _, _) | Sdecl_init (id, _) | Sblock_custom (_, _, id, _, _, _, _) -> Id.Set.remove id aliased
+  | Sbind (ids, e) -> with_aliased aliased (ids @ free_vars_expr e)
+  | _ -> aliased
 
 (** The entry point a call site targets. *)
 let entry_of ctx cs = List.nth ctx.er_entries cs.cs_entry
@@ -1424,7 +1413,10 @@ let rec rewrite_enter_lambda_return ctx stmt =
               ( ps, ret_ty2,
                 rewrite_enter_stmts { ctx with er_env = lenv;
                                                er_binders = List.map (fun p -> (p.cp_name, p.cp_binder)) ps @ ctx.er_binders;
-                                               er_branch_ctx = br_ctx } body ) )
+                                               er_branch_ctx = br_ctx;
+                                               er_aliased =
+                                                 with_aliased ctx.er_aliased
+                                                   (free_vars_expr scrut @ List.map (fun p -> p.cp_name) ps) } body ) )
             branches,
           err );
     ]
@@ -1452,9 +1444,15 @@ let rec rewrite_enter_lambda_return ctx stmt =
         @ ctx.er_binders
       in
       let br_ctx = ctor_type_short_name br.smb_ctor_type in
+      let branch_aliased =
+        with_aliased ctx.er_aliased
+          (free_vars_expr scrut.sc_expr
+          @ Option.List.cons br.smb_var (List.map (fun fb -> fb.fb_name) br.smb_field_bindings))
+      in
       let rw = rewrite_enter_stmts { ctx with er_env = branch_env;
                                               er_binders = branch_binders;
-                                              er_branch_ctx = br_ctx } in
+                                              er_branch_ctx = br_ctx;
+                                              er_aliased = branch_aliased } in
       { br with smb_body = rw br.smb_body }
     in
     let rw_default = rewrite_enter_stmts { ctx with er_branch_ctx = None } in
@@ -1603,6 +1601,11 @@ and rewrite_enter_stmts ctx stmts =
         let bound = match tgt with Declare (ty, _) when ty <> Tauto -> [(id, ty)] | _ -> [] in
         bound @ make_cont_env cont_vars cont_types env
       in
+      (* When tgt is Existing (a bare assignment), the variable was declared
+         in the CraneEnter handler scope and does not exist in the CraneCont handler
+         scope.  Promote to [auto] so the handler declares it. *)
+      let handler_ty = match tgt with Existing -> Declare (Tauto, None) | t -> t in
+      let remat_stmts = List.map snd remat in
       (* A variable the rest assigns before reading it was declared in the
          scope the call was made in, which the handler is not: its first
          assignment declares it there, at the type it was declared with. *)
@@ -1625,14 +1628,16 @@ and rewrite_enter_stmts ctx stmts =
                  (match tgt with
                   | Declare (_, b) -> (id, b) :: ctx.er_binders
                   | Existing -> ctx.er_binders
-                  | Declare_static _ -> (id, None) :: ctx.er_binders) }
+                  | Declare_static _ -> (id, None) :: ctx.er_binders);
+               er_aliased =
+                 List.fold_left aliased_after ctx.er_aliased
+                   (bindings @ remat_stmts @ [Sasgn (id, handler_ty, CPPvar id_result)]) }
              rest)
       in
       (* The handler restores what it saved and rebuilds what it did not,
          then binds the call's result.  The temporaries among the restores
          come last, next to the result: what reads them follows, so
          {!Cpp_temporaries} can put each back where it is read. *)
-      let remat_stmts = List.map snd remat in
       let early, late =
         let read_by_remat = List.concat_map free_vars_stmt remat_stmts in
         List.partition
@@ -1642,17 +1647,51 @@ and rewrite_enter_stmts ctx stmts =
             | _ -> true )
           bindings
       in
-      (* When tgt is Existing (a bare assignment), the variable was declared
-         in the CraneEnter handler scope and does not exist in the CraneCont handler
-         scope.  Promote to [auto] so the handler declares it. *)
-      let handler_ty = match tgt with Existing -> Declare (Tauto, None) | t -> t in
       let handler =
         early @ remat_stmts @ late
         @ (Sasgn (id, handler_ty, result (CPPmove (CPPvar id_result))) :: rest_processed)
       in
-      let saved_conv = move_for_frame_list cont_types cont_saved in
+      (* A local the frame keeps is read for the last time where it is
+         saved, unless the call the frame is saved for reads it, which the
+         plan says ({!Recursion_plan.resume.read_by_call}); one held by value
+         is moved into the frame there.  One the frame keeps as a pointer is
+         pointed at.  Under [CRANE_CHECK_IR] the call's arguments must read
+         none of those the plan says they do not. *)
+      let saved_conv =
+        match (planned, pointers) with
+        | Some ((p : Recursion_plan.resume), _), Some pointers ->
+          let read_by_call cid =
+            match Option.flatten (List.assoc_opt cid ctx.er_binders) with
+            | Some b -> Some (List.exists (Core_binder.equal b) p.read_by_call)
+            | None -> None
+          in
+          if Probe.checking () then begin
+            (* A read of a binding the handler rebuilds -- a reference to a
+               field, a closure -- reads what it is rebuilt from. *)
+            let rec through v =
+              v
+              :: ( match List.assoc_opt v ctx.er_rematerialized with
+                 | Some (Sasgn (_, _, e)) -> List.concat_map through (free_vars_expr e)
+                 | Some _ | None -> [] )
+            in
+            let read = List.concat_map through (free_vars_expr enter) in
+            if List.exists (fun cid -> read_by_call cid = Some false && List.exists (Id.equal cid) read) cont_vars then
+              Probe.violation "frame plan"
+                (Pp.str "the call a frame is saved for reads a local the frame keeps the recursion plan says it does not")
+          end;
+          let owned cid =
+            (not (Id.Set.mem cid ctx.er_aliased))
+            && (not (Id.Set.mem cid ctx.er_invariant_params))
+            && match List.assoc_opt cid env with Some ty -> movable ty | None -> false
+          in
+          List.map2
+            (fun cid pointer ->
+              if (not pointer) && owned cid && read_by_call cid = Some false then CPPmove (CPPvar cid) else CPPvar cid )
+            cont_vars pointers
+        | Some _, None | None, _ -> cont_saved
+      in
       register_frame frames_ref ~name:call_name ~saved_types:cont_types
-        ~saved_exprs:saved_conv ~env ~handler ~pointers;
+        ~saved_exprs:cont_saved ~env ~handler ~pointers;
       [
         make_stack_push (CPPstruct_id (Id.of_string call_name, [], saved_conv));
         make_stack_push enter;
@@ -1767,7 +1806,8 @@ and rewrite_enter_stmts ctx stmts =
     @ rewrite_enter_stmts
         { (with_rematerialized ctx stmt) with
           er_env = updated_env;
-          er_binders = declared_binders ctx.er_binders stmt }
+          er_binders = declared_binders ctx.er_binders stmt;
+          er_aliased = aliased_after ctx.er_aliased stmt }
         rest
 
 (** Rewrite a single non-tail recursive statement for the Enter handler.
@@ -2828,6 +2868,11 @@ let transform_nontail ?(fn_name : string option) ?loop ?adopted ?entered_by ?(en
     own_entry
     :: (match adopted_entry with Some (_, en) -> [en] | None -> [])
   in
+  (* The parameters an entry's handler binds as references, with what they
+     name, as it binds them ({!make_param_copies}). *)
+  let aliased_params ?pointer_safe en =
+    List.fold_left aliased_after Id.Set.empty (make_param_copies (entry_emission ?pointer_safe en []).ee_params)
+  in
   let ctx = { er_check = check; er_entries = entries;
                er_tparams = tparams;
                er_env = env;
@@ -2840,7 +2885,8 @@ let transform_nontail ?(fn_name : string option) ?loop ?adopted ?entered_by ?(en
                er_entered_by = entered_by;
                er_entered = entered;
                er_points_into = points_into;
-               er_entering = Option.bind loop (fun l -> Option.map (Control_ir.continues_of l) (Lower_control.loop l)) }
+               er_entering = Option.bind loop (fun l -> Option.map (Control_ir.continues_of l) (Lower_control.loop l));
+               er_aliased = aliased_params ~pointer_safe:pointer_safe_varying own_entry }
   in
   (* The body is a sequence like any other: a recursive call bound at its top
      level -- a temporary {!Normalize} made of a call in the function's
@@ -2860,7 +2906,8 @@ let transform_nontail ?(fn_name : string option) ?loop ?adopted ?entered_by ?(en
           er_env = env @ en.en_params;
           er_binders =
             List.map (fun (id, _) -> (id, List.assoc_opt id ad.ad_binders)) en.en_params @ ctx.er_binders;
-          er_invariant_params = Id.Set.empty }
+          er_invariant_params = Id.Set.empty;
+          er_aliased = aliased_params en }
       in
       [entry_emission en (rewrite_enter_stmts ctx1 ad.ad_body)]
   in

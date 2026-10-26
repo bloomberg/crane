@@ -148,7 +148,7 @@ LoopifyInnerFixSelfCall::join(LoopifyInnerFixSelfCall::tree l, uint64_t x0_,
         const auto &[a00, a10, a20] =
             std::get<typename LoopifyInnerFixSelfCall::tree::Node>(r.v());
         if (size(*a20) < a1) {
-          _stack.emplace_back(CraneCont1{a0, a1});
+          _stack.emplace_back(CraneCont1{std::move(a0), a1});
           _stack.emplace_back(CraneEnter{r, x0_, *a2});
         } else {
           if (a1 < size(*a00)) {

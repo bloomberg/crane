@@ -271,7 +271,8 @@ struct LoopifyTrees {
           auto _f = std::move(std::get<CraneCont_Node>(_frame));
           auto a1 = std::move(_f.a1);
           const tree<A> &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
+          _stack.emplace_back(
+              CraneCont_Node_1{std::move(a1), std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else {
           auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
@@ -403,7 +404,8 @@ struct LoopifyTrees {
           auto _f = std::move(std::get<CraneCont_Node>(_frame));
           auto a1 = std::move(_f.a1);
           const tree<A> &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
+          _stack.emplace_back(
+              CraneCont_Node_1{std::move(a1), std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else {
           auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
@@ -617,7 +619,8 @@ struct LoopifyTrees {
           auto _f = std::move(std::get<CraneCont_Node>(_frame));
           const tree<A> &a0 = *_f.a0;
           auto a1 = std::move(_f.a1);
-          _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
+          _stack.emplace_back(
+              CraneCont_Node_1{std::move(a1), std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a0});
         } else {
           auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
@@ -795,8 +798,8 @@ struct LoopifyTrees {
           std::shared_ptr<tree<A>> a0 = std::move(_f.a0);
           auto a1 = std::move(_f.a1);
           const tree<A> &a2 = *_f.a2;
-          _stack.emplace_back(
-              CraneCont_Node_1{std::move(a0), a1, &a2, std::move(_result)});
+          _stack.emplace_back(CraneCont_Node_1{std::move(a0), std::move(a1),
+                                               &a2, std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else {
           auto _f = std::move(std::get<CraneCont_Node_1>(_frame));

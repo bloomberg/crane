@@ -90,19 +90,8 @@ let reads_stmts l = named (occ_stmts IdMap.empty l)
 
 (** {1 Which variables may be moved from at all} *)
 
-(* A [const T] or a [const T &] is not a variable this pass owns: moving from
-   the first is silently a copy, and the second names something the caller
-   still holds. *)
-let rec is_borrowed = function
-  | Tref _ | Tconst _ -> true
-  | Tnamespace (_, t) -> is_borrowed t
-  | _ -> false
-
-(* [Tauto] is by value -- [auto] never deduces a reference -- and is how most
-   of translation's temporaries are declared, so it is worth moving even
-   though its eventual type is not written down here. *)
-let movable ty =
-  (not (is_borrowed ty)) && (ty = Tauto || Loopify.worthwhile_move_type ty)
+let is_borrowed = Loopify_analysis.is_borrowed
+let movable = Loopify_analysis.movable
 
 (** What one function body offers the liveness walk: the variables it declares
     by value, the ones it must not touch, and whether it can be analysed at

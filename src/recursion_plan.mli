@@ -260,13 +260,19 @@ type call = private {
     binder the call's result is bound to, [live], the binders bound before
     it that what follows reads as values -- what a frame keeps across the
     call: not a dictionary the declaration takes, nor a member of a local
-    fixpoint the point is in that what follows only calls -- and [after],
-    the calls its right-hand side ends in. *)
+    fixpoint the point is in that what follows only calls -- [after], the
+    calls its right-hand side ends in, and [read_by_call], those of [live]
+    those calls read: their arguments, directly or through a closure a let
+    binds, and what a local fixpoint called captures -- a closure reads what
+    it captures when it is called, and a machine adopting the fixpoint takes
+    its captures as arguments.  They are still read where the frame for the
+    call is saved, the call being made after. *)
 type resume = private {
   binder : Core_binder.t;
   live : Core_binder.t list;
   after : call list;
   passes : passing list;
+  read_by_call : Core_binder.t list;
 }
 
 (** A binder of [live] that what follows passes on, as it is, to the

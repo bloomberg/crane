@@ -166,8 +166,8 @@ struct HofTreeLoopify {
         std::shared_ptr<tree<T1>> a0 = std::move(_f.a0);
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
-        _stack.emplace_back(
-            CraneCont_Node_1{std::move(a0), a1, &a2, std::move(_result)});
+        _stack.emplace_back(CraneCont_Node_1{std::move(a0), std::move(a1), &a2,
+                                             std::move(_result)});
         _stack.emplace_back(CraneEnter{&a2});
       } else {
         auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
@@ -234,7 +234,8 @@ struct HofTreeLoopify {
         auto _f = std::move(std::get<CraneCont_Node>(_frame));
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
-        _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
+        _stack.emplace_back(
+            CraneCont_Node_1{std::move(a1), std::move(_result)});
         _stack.emplace_back(CraneEnter{&a2});
       } else {
         auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
@@ -294,7 +295,8 @@ struct HofTreeLoopify {
         auto _f = std::move(std::get<CraneCont_Node>(_frame));
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
-        _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
+        _stack.emplace_back(
+            CraneCont_Node_1{std::move(a1), std::move(_result)});
         _stack.emplace_back(CraneEnter{&a2});
       } else {
         auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
@@ -368,7 +370,8 @@ struct HofTreeLoopify {
         const tree<T1> &a2 = *_f.a2;
         auto a10 = std::move(_f.a10);
         const tree<T2> &a20 = *_f.a20;
-        _stack.emplace_back(CraneCont_Node_1{a1, a10, std::move(_result)});
+        _stack.emplace_back(CraneCont_Node_1{std::move(a1), std::move(a10),
+                                             std::move(_result)});
         _stack.emplace_back(CraneEnter{&a20, &a2});
       } else {
         auto _f = std::move(std::get<CraneCont_Node_1>(_frame));

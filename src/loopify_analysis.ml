@@ -193,6 +193,20 @@ let worthwhile_move_type = Ownership_plan.worth_moving_cpp
     trivially copyable here, and may stand for any type. *)
 let copies_cheaply t = is_trivially_copyable_type t && not (worthwhile_move_type t)
 
+(** Whether a local declared at [ty] names a value it does not own: a
+    [const T] moved from is silently copied, and a [const T &] names what
+    another holds. *)
+let rec is_borrowed = function
+  | Tref _ | Tconst _ -> true
+  | Tnamespace (_, t) -> is_borrowed t
+  | _ -> false
+
+(** Whether a local declared at [ty] is one to move from at its last read:
+    held by value, at a type worth moving.  [auto] never deduces a
+    reference, and is how most temporaries are declared, so it is worth
+    moving though its type is not written down. *)
+let movable ty = (not (is_borrowed ty)) && (ty = Tauto || worthwhile_move_type ty)
+
 (* Global mutable state in this file and their reset granularity:
    - mutual_fn_table, outcomes : reset per generated file (State.Unit)
    - ctor_ptr_fields : accumulates across the full session; never cleared because
