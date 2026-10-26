@@ -252,12 +252,10 @@ type loopify_outcome =
 (** Render an outcome for the diagnostic report. *)
 val string_of_outcome : loopify_outcome -> string
 
-(** Outcomes recorded so far, in the order the functions were first processed.
-
-    A function may be transformed more than once per unit — the
-    header/implementation passes each invoke {!transform_decl} — so each name is
-    collapsed to its best outcome, which is the one describing the emitted C++.
-*)
+(** Outcomes recorded so far, in the order the functions were first
+    processed, each name collapsed to the last outcome recorded of it, the
+    one describing the emitted C++: a member of a recursive group lowered
+    and then left with its partners is recorded as left last. *)
 val get_outcomes : unit -> (string * loopify_outcome) list
 
 (** Print the collapsed outcomes ([Crane Loopify Diagnostics]) and raise on any

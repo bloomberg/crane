@@ -365,30 +365,20 @@ let clear_outcomes () = outcomes := []
 
 let () = State.on_reset State.Unit clear_outcomes
 
-(** How good an outcome is.  A function can be transformed more than once —
-    {!transform_decl} is invoked independently from [Cpp_ind] and [Cpp_print],
-    and only one of those results is emitted — so the same name can produce
-    several outcomes per unit.  Only the best one describes the emitted code:
-    if any attempt linearised the function, the C++ holds no self-call. *)
-let outcome_rank = function
-  | Lp_declined _ -> 0
-  | Lp_deferred _ -> 1
-  | Lp_tail | Lp_tmc | Lp_frame -> 2
-
+(* A function generated again is lowered again, alike, and one lowered and
+   then left -- a member of a recursive group whose partners were not all
+   lowered -- is recorded as left after it was recorded lowered: the last
+   outcome recorded describes the emitted code. *)
 let get_outcomes () =
-  (* Keep first-seen order, but collapse each name to its best outcome. *)
-  let best = Hashtbl.create 64 in
+  (* Keep first-seen order, but collapse each name to its last outcome. *)
+  let last = Hashtbl.create 64 in
   let order = ref [] in
   List.iter
     (fun (name, outcome) ->
-      match Hashtbl.find_opt best name with
-      | Some prev when outcome_rank prev >= outcome_rank outcome -> ()
-      | Some _ -> Hashtbl.replace best name outcome
-      | None ->
-        Hashtbl.add best name outcome;
-        order := name :: !order)
+      if not (Hashtbl.mem last name) then order := name :: !order;
+      Hashtbl.replace last name outcome )
     (List.rev !outcomes);
-  List.rev_map (fun name -> (name, Hashtbl.find best name)) !order
+  List.rev_map (fun name -> (name, Hashtbl.find last name)) !order
 
 (** What a suspended cofixpoint's function is: its calls run when a thunk is
     forced, and need no loop. *)

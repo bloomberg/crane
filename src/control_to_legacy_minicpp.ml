@@ -588,8 +588,9 @@ let lower_group decls =
         verdict Lowered;
         with_function f d
       | Ok _ ->
-        verdict (Unlowered "a member it inlines into, or one inlined into it, is left");
-        lower_locals d
+        let why = "a member it inlines into, or one inlined into it, is left" in
+        verdict (Unlowered why);
+        lower_locals ~unlowered:(Left (Some why)) d
       | Error unlowered ->
         verdict (Unlowered (reason unlowered));
         lower_locals ~unlowered d )
