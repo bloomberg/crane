@@ -2229,15 +2229,30 @@ let optimize_frame_push_args frame_field_types stmts =
       else
         args
     in
-    let owned_bindings_of_branch ~owned br =
-      if owned then
+    (* The bindings of an owned match's branch, each with the local whose
+       storage it is bound into: reading that local reads the binding. *)
+    let owned_bindings_of_branch scrut br =
+      let into =
+        match scrut.sc_expr with
+        | CPPvar x | CPPfun_call (_, CPPaccess (Adot, CPPvar x, _), {rev = []}) -> Some x
+        | _ -> None
+      in
+      if scrut.sc_owned then
         List.filter_map
           (fun fb ->
             match fb.fb_type with
             | Tshared_ptr _ -> None
-            | _ -> Some fb.fb_name)
+            | _ -> Some (fb.fb_name, into))
           br.smb_field_bindings
       else []
+    in
+    (* The bindings among [match_owned] the expressions [args] read, through
+       the local they are bound into. *)
+    let read_through match_owned args =
+      let read = List.concat_map free_vars_expr args in
+      List.filter_map
+        (fun (b, into) -> match into with Some x when List.exists (Id.equal x) read -> Some b | _ -> None)
+        match_owned
     in
     let is_owned_decl_type ty =
       let rec has_ref = function
@@ -2259,7 +2274,7 @@ let optimize_frame_push_args frame_field_types stmts =
       | rest -> ([], rest)
     in
     let process_push_group ~decl_owned match_owned pushes =
-      let owned_vars = decl_owned @ match_owned in
+      let owned_vars = decl_owned @ List.map fst match_owned in
       let push_data = List.map (function
         | Sexpr (CPPfun_call (_, callee, {rev = [CPPstruct_id (name, targs, args)]})) ->
           (callee, name, targs, args)
@@ -2276,6 +2291,15 @@ let optimize_frame_push_args frame_field_types stmts =
             (free_vars_expr arg)
         ) args
       ) push_data;
+      (* A binding is read where the local it is bound into is, and not
+         moved in the push that reads that local too. *)
+      let through = List.map (fun (_, _, _, args) -> read_through match_owned args) push_data in
+      let note idx b =
+        match Hashtbl.find_opt last_push_of (Id.to_string b) with
+        | Some i when i > idx -> ()
+        | Some _ | None -> Hashtbl.replace last_push_of (Id.to_string b) idx
+      in
+      List.iteri (fun idx -> List.iter (note idx)) through;
       let should_move_in_group ~is_enter idx ty arg =
         let stripped = strip_ref_and_const_type ty in
         worthwhile_move_type stripped
@@ -2286,6 +2310,7 @@ let optimize_frame_push_args frame_field_types stmts =
         | CPPvar id when Id.equal id id_result -> true
         | CPPvar id when List.exists (Id.equal id) owned_vars ->
           Hashtbl.find_opt last_push_of (Id.to_string id) = Some idx
+          && not (List.exists (Id.equal id) (List.nth through idx))
         | _ -> false
       in
       List.mapi (fun idx (callee, name, targs, args) ->
@@ -2320,7 +2345,10 @@ let optimize_frame_push_args frame_field_types stmts =
         :: on_stmts ~decl_owned match_owned rest
     and on_stmt ~decl_owned match_owned = function
       | Sexpr (CPPfun_call (_, callee, {rev = [CPPstruct_id (name, targs, args)]})) as s -> (
-        let owned_vars = decl_owned @ match_owned in
+        let through = read_through match_owned args in
+        let owned_vars =
+          decl_owned @ List.filter_map (fun (b, _) -> if List.exists (Id.equal b) through then None else Some b) match_owned
+        in
         match lookup (Id.to_string name) with
         | Some types ->
           let is_enter = Id.equal name id_enter in
@@ -2335,9 +2363,7 @@ let optimize_frame_push_args frame_field_types stmts =
         let branches' =
           List.map
             (fun br ->
-              let new_owned =
-                owned_bindings_of_branch ~owned:scrut.sc_owned br
-              in
+              let new_owned = owned_bindings_of_branch scrut br in
               { br with smb_body =
                 on_stmts ~decl_owned:[] (new_owned @ match_owned) br.smb_body })
             branches

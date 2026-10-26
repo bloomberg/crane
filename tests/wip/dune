@@ -260,14 +260,3 @@
   (alias runtest)
   (deps nullary_unit_effect_dropped.t.exe)
   (action (run ./nullary_unit_effect_dropped.t.exe))))
-
-(subdir frame_push_moves_scrutinee_field
- (rule
-  (targets frame_push_moves_scrutinee_field.t.exe)
-  (deps FramePushMovesScrutineeField.vo frame_push_moves_scrutinee_field.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} frame_push_moves_scrutinee_field.t.exe frame_push_moves_scrutinee_field.cpp frame_push_moves_scrutinee_field.t.cpp)))
- (rule
-  (alias runtest)
-  (deps frame_push_moves_scrutinee_field.t.exe)
-  (action (run ./frame_push_moves_scrutinee_field.t.exe))))

@@ -7,8 +7,9 @@ Import ListNotations.
 Module FramePushMovesScrutineeField.
   (** The inner fixpoint's machine matches [s], which it owns, binding its
       head [x] by reference into it.  The frame saved for [weigh1 ys] keeps
-      [x], which what follows reads; the call passes [s] on whole.  Moving
-      [x] into the frame leaves the [s] the call is given without its head. *)
+      [x], which what follows reads; the call passes [s] on whole, so the
+      frame copies [x].  It used to move it, leaving the [s] the call is
+      given without its head. *)
   Fixpoint weigh (s : list (list nat)) : list nat -> nat :=
     fix weigh1 (t : list nat) : nat :=
       match s, t with

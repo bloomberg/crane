@@ -1173,6 +1173,17 @@
   (deps keyword_class_global.t.exe)
   (action (run ./keyword_class_global.t.exe))))
 
+(subdir frame_push_moves_scrutinee_field
+ (rule
+  (targets frame_push_moves_scrutinee_field.t.exe)
+  (deps FramePushMovesScrutineeField.vo frame_push_moves_scrutinee_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} frame_push_moves_scrutinee_field.t.exe frame_push_moves_scrutinee_field.cpp frame_push_moves_scrutinee_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps frame_push_moves_scrutinee_field.t.exe)
+  (action (run ./frame_push_moves_scrutinee_field.t.exe))))
+
 (subdir func_only_submodule_ab
  (rule
   (targets func_only_submodule_ab.t.exe)
