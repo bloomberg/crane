@@ -456,18 +456,6 @@ let stand_ins t =
       | Struct_of mp -> [Cpp_ast.(global_alias (Alias_of_module mp))] )
     (Cpp_ast.declared t)
 
-(** The using-declaration a unit needs for the promoted type variable [id]
-    when its file-scope alias is another file's: under separate extraction
-    that alias sits in its class's namespace, which a bare name in this one
-    does not reach; the [using] gives the name the lookup it has in a
-    single-file extraction, a struct's own member still first. *)
-let promoted_alias_import id =
-  if Common.get_force_cross_file_qualification () then
-    match Table.promoted_type_var_field id with
-    | Some g when Option.has_some (Common.file_qualifier Type g) -> Some ("using " ^ Common.pp_global Type g ^ ";")
-    | _ -> None
-  else None
-
 (** The C++ token an {!Minicpp.obj_access} prints as. *)
 let pp_obj_access = function Adot -> "." | Aarrow -> "->"
 

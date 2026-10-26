@@ -29,7 +29,7 @@ rules=(
 # The facts it still asks Table for are listed, and the list only shrinks: a
 # read that goes is deleted from it, and a new one is an error.
 PRINTER_TABLE_CONFIGURATION="Runtime erase_fn_header is_modfile std_lib modular non_atomic_rc arena_header"
-PRINTER_TABLE_PENDING="promoted_type_var_field is_boxed_recursive_ind find_boxed_wrapper_opt get_numeral_info num_fmt get_ind_num_param_vars_opt get_ind_nb_ctors_opt escape_reserved_struct_name custom_info"
+PRINTER_TABLE_PENDING="is_boxed_recursive_ind find_boxed_wrapper_opt get_numeral_info num_fmt get_ind_num_param_vars_opt get_ind_nb_ctors_opt escape_reserved_struct_name custom_info"
 
 status=0
 printer_reads=$(grep -o 'Table\.[a-zA-Z_]*' src/cpp_print.ml | sed 's/^Table\.//' | sort -u)

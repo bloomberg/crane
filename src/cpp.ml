@@ -317,7 +317,7 @@ type file_layout = {
   promoted_imports : string list;
       (** The using-declarations, at the top of the header, of the promoted
           type variables the unit's declarations write whose class field
-          another file declares ({!Cpp_print.promoted_alias_import}), in
+          another file declares ({!promoted_alias_import}), in
           alphabetical order: the implementation file includes the header,
           and so sees them too. *)
   wrapper_homes : (string * ml_decl) list;
@@ -1836,6 +1836,18 @@ let struct_members ~wrapper mp sel =
             | {helpers = _ :: _; _} -> None ) )
         (Some []) sel
 
+(** The using-declaration a unit needs for the promoted type variable [id]
+    when its file-scope alias is another file's: under separate extraction
+    that alias sits in its class's namespace, which a bare name in this one
+    does not reach; the [using] gives the name the lookup it has in a
+    single-file extraction, a struct's own member still first. *)
+let promoted_alias_import id =
+  if Common.get_force_cross_file_qualification () then
+    match Table.promoted_type_var_field id with
+    | Some g when Option.has_some (Common.file_qualifier Type g) -> Some ("using " ^ Common.pp_global Type g ^ ";")
+    | _ -> None
+  else None
+
 (** Plan where the header writes what it does not write in place
     ({!file_layout}), and which modules' structs it declares ahead of the
     file ({!hoisted_structs}).
@@ -1955,7 +1967,7 @@ let plan_file_layout s =
     with_visibility (toplevel_visibility (List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s))
     @@ fun () ->
     List.sort_uniq String.compare
-      (List.filter_map Cpp_print.promoted_alias_import
+      (List.filter_map promoted_alias_import
          ( Finished_program.installed_promoted ()
          @ List.concat_map Cpp_demands.promoted_of_type (Cpp_ind.generated_record_field_types ()) ))
   in
