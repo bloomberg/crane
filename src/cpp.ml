@@ -3413,10 +3413,21 @@ let do_struct_with_decl_tracking ~is_header f s =
     else []
   in
   let written = if is_header then Common.Intf else Common.Impl in
-  let file =
-    Cpp_ast.print ~write:(Cpp_ind.write_unprinted ~file:written)
-      (Cpp_ast.schedule ~templates ~forwards unit)
-  in
+  let scheduled = Cpp_ast.schedule ~templates ~forwards unit in
+  let print () = Cpp_ast.print ~write:(Cpp_ind.write_unprinted ~file:written) scheduled in
+  let file = print () in
+  (* Printing a scheduled unit is a function of it: printed again, with
+     nothing reset in between, it gives the same document and decides
+     nothing -- no table grows, no name is decided (the plan's Milestone
+     9). *)
+  if Sys.getenv_opt "CRANE_RENDER_TWICE" <> None then begin
+    let state () = (Table.census (), List.length (Common.names_decided_while_emitting ())) in
+    let before = state () in
+    if Stdlib.compare (print ()) file <> 0 then
+      CErrors.anomaly (str "Crane: printing a scheduled translation unit again gave another document.");
+    if state () <> before then
+      CErrors.anomaly (str "Crane: printing a scheduled translation unit decided something.")
+  end;
   Cpp_print.check_ctor_alias_plan ~file:written;
   Cpp_print.check_file_scope_types ~file:written;
   file ++ fnl ()
