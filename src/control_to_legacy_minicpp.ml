@@ -472,11 +472,12 @@ let lower_methods ~merged inductive vars fields =
 
 (* The positions among the parameters of the loop [l] of those the C++
    parameters [params] of a helper lifted out for the function of a local
-   fixpoint stand for: the variables the helper captures, its first
-   parameters, stand for none, every call passing them on as they are; the
-   rest for the parameters of [l] that are not void
-   ({!Ml_type_util.void_binder}), in order.  [None] where they are not so
-   many. *)
+   fixpoint stand for, as a definition stores them, the last first
+   ({!Minicpp.dfun_shape}): the variables the helper captures, stored
+   first, stand for none, every call passing them on as they are; the rest
+   for the parameters of [l] that are not void
+   ({!Ml_type_util.void_binder}), the last first.  [None] where they are
+   not so many. *)
 let lifted_positions (l : Control_ir.Term.loop) params =
   let kept =
     List.filter_map
@@ -484,7 +485,7 @@ let lifted_positions (l : Control_ir.Term.loop) params =
       (List.mapi (fun i p -> (i, p)) l.parameters)
   in
   let captured = List.length params - List.length kept in
-  if captured < 0 then None else Some (List.init captured (fun _ -> None) @ List.map (fun i -> Some i) kept)
+  if captured < 0 then None else Some (List.init captured (fun _ -> None) @ List.rev_map (fun i -> Some i) kept)
 
 (* The definition [d], a function Loopify loopifies of which no loop of
    its own is made here, for the reason [unlowered], with the local
