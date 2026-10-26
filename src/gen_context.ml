@@ -749,6 +749,7 @@ let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
                   returns_field = false };
             mf_is_inline = false;
             mf_no_pure = true;
+            mf_constexpr = Undecided;
             mf_is_noexcept = false;
             mf_is_conversion = true;
             mf_binders = [];

@@ -25,7 +25,7 @@ let traced decl =
     let rec names = function
       | Dnspace (None, ds) -> List.concat_map names ds
       | Dtemplate (_, _, d) -> names d
-      | Dfields {ds_ref = r; _} | Denum {de_ref = r; _} | Dasgn (r, _, _) -> [r]
+      | Dfields {ds_ref = r; _} | Denum {de_ref = r; _} | Dasgn {da_ref = r; _} -> [r]
       | Dusing {du_name = r; _} -> [r]
       | d -> Option.List.cons (decl_globref d) []
     in
@@ -123,6 +123,7 @@ let template_args = Pipeline_trace.pass "template_args" Cpp_erasure.supply_templ
 let method_calls = Pipeline_trace.pass "method_calls" Cpp_erasure.lower_method_calls
 let projections = Pipeline_trace.pass "projections" Cpp_erasure.lower_projections
 let access_moves = Pipeline_trace.pass "access_moves" Cpp_erasure.lower_access_moves
+let constexpr = Pipeline_trace.pass "constexpr" Cpp_erasure.decide_constexpr
 
 (** Every pass before the {!Cpp_erasure} seam, in the order they run. *)
 let minicpp_passes : unsettled Pipeline_trace.pass list =
@@ -195,7 +196,9 @@ let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
     (* A lambda invoked only to choose between two values is the choice. *)
     pass "conditionals" Cpp_erasure.lower_conditionals;
     (* A member read moves the member, not the object it is read from. *)
-    access_moves ]
+    access_moves;
+    (* With every type final, which definitions may be [constexpr]. *)
+    constexpr ]
 
 let pass_names =
   Pipeline_trace.names minicpp_passes @ [seam] @ Pipeline_trace.names settled_passes
@@ -207,7 +210,8 @@ let pass_names =
     constraint the body has not settled, a cast whose caster is not chosen, a
     type variable nothing declares, a type argument a mapping's template names
     and its application leaves out, a call of a method or a projection
-    written as a call of a function, a member read of a moved object.  Each is discharged by one pass above, and
+    written as a call of a function, a member read of a moved object, a
+    definition not yet known to be [constexpr] or not.  Each is discharged by one pass above, and
     {!Cpp_erasure.settled} claims that by the end none is outstanding.  The
     list is closed: a new kind of debt the printer must not see is a new
     constructor here, with the pass that pays it. *)
@@ -216,6 +220,9 @@ type obligation =
       (** {!Minicpp.Tunresolved}: no pass determined the type, so no pass
           below can discharge it; whatever wrote it owes it. *)
   | Opaque_type  (** {!Minicpp.Topaque}, settled by the seam. *)
+  | Unspellable_binder
+      (** a binder's type a custom match writes and C++ cannot spell,
+          settled by the seam *)
   | Unsettled_callable  (** a {!Minicpp.TTfun} parameter *)
   | Unresolved_cast  (** an [any_cast] whose caster is still to choose *)
   | Free_type_variable  (** a type variable no enclosing head declares *)
@@ -225,14 +232,19 @@ type obligation =
   | Unlowered_method_call
   | Unlowered_projection
   | Move_under_access  (** a member read of a moved object *)
+  | Undecided_constexpr
+      (** a definition whose {!Minicpp.constexpr_eligibility} is not
+          decided *)
 
 let obligations =
-  [ Unresolved_type; Opaque_type; Unsettled_callable; Unresolved_cast; Free_type_variable;
-    Missing_template_argument; Unlowered_method_call; Unlowered_projection; Move_under_access ]
+  [ Unresolved_type; Opaque_type; Unspellable_binder; Unsettled_callable; Unresolved_cast; Free_type_variable;
+    Missing_template_argument; Unlowered_method_call; Unlowered_projection; Move_under_access;
+    Undecided_constexpr ]
 
 let describe = function
   | Unresolved_type -> "an undetermined type (Tunresolved), owed by the pass that wrote it"
   | Opaque_type -> "an unsettled representation (Topaque), owed by " ^ seam
+  | Unspellable_binder -> "a custom match binder's unspellable type, owed by " ^ seam
   | Unsettled_callable -> "an unsettled callable constraint, owed by " ^ constraints.name
   | Unresolved_cast -> "an unresolved cast, owed by " ^ casts.name
   | Free_type_variable -> "an undeclared type variable, owed by " ^ free_tvars.name
@@ -240,6 +252,7 @@ let describe = function
   | Unlowered_method_call -> "a method called as a function, owed by " ^ method_calls.name
   | Unlowered_projection -> "a projection called as a function, owed by " ^ projections.name
   | Move_under_access -> "a member read of a moved object, owed by " ^ access_moves.name
+  | Undecided_constexpr -> "an undecided constexpr eligibility, owed by " ^ constexpr.name
 
 (** Whether [decl] writes down a type [p] holds of. *)
 let mentions p (decl : cpp_decl) =
@@ -259,6 +272,7 @@ let owes (decl : Cpp_erasure.settled) o =
   match o with
   | Unresolved_type -> mentions (function Tunresolved -> true | _ -> false) d
   | Opaque_type -> mentions (function Topaque -> true | _ -> false) d
+  | Unspellable_binder -> Cpp_erasure.writes_unspellable_binder decl
   | Unsettled_callable -> compare (constraints.run {decl = d; control_lowered = false}).decl d <> 0
   | Unresolved_cast -> rewrites casts
   | Free_type_variable -> rewrites free_tvars
@@ -266,6 +280,7 @@ let owes (decl : Cpp_erasure.settled) o =
   | Unlowered_method_call -> rewrites method_calls
   | Unlowered_projection -> rewrites projections
   | Move_under_access -> rewrites access_moves
+  | Undecided_constexpr -> rewrites constexpr
 
 (** [check_settled decl] fails if [decl] still owes the printer anything.
 

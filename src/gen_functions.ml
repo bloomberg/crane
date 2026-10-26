@@ -1518,7 +1518,7 @@ let gen_decl__inner n b ty =
         | Boxed kind -> box_for_any_slot kind b body_expr
         | Native -> body_expr
       in
-      let inner = deapply_plain_tvars temps (Dasgn (n, cty, body_expr)) in
+      let inner = deapply_plain_tvars temps (mk_dasgn n cty body_expr) in
       ( match temps with
       | [] -> (inner, empty_env (), tvars)
       | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
@@ -1748,7 +1748,7 @@ let gen_spec__inner n b ty =
       let ty = if mentions_unresolved_promoted ty then Tauto else ty in
       (* A polymorphic constant's family parameter is plain, as a
          function's is, and written applied until deapplied. *)
-      let inner = deapply_plain_tvars temps (Dasgn (n, Tconst ty, b_expr)) in
+      let inner = deapply_plain_tvars temps (mk_dasgn n (Tconst ty) b_expr) in
       ( match temps with
       | [] -> (inner, empty_env ())
       | l -> (Dtemplate (l, None, inner), empty_env ()) )

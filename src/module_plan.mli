@@ -23,6 +23,10 @@ type wrapper_role =
           it keeps its own nesting, so the wrapper's name goes in front of its
           own rather than in place of it. *)
 
+(** A record merged into the module struct of the same name, and how many
+    type parameters that struct is a template over. *)
+type eponymous_record = {record : GlobRef.t; type_params : int}
+
 (** The facts one unit's preparation decided. *)
 type t = {
   global_scope_enums : GlobRef.t list;
@@ -35,7 +39,7 @@ type t = {
   functor_app_sources : (ModPath.t * ModPath.t) list;
       (** The functor body each functor application's declarations are
           copies of. *)
-  eponymous_records : GlobRef.t list;
+  eponymous_records : eponymous_record list;
       (** Records merged into the module struct of the same name. *)
   namespace_scope_refs : GlobRef.t list;
       (** Declarations lifted out of their wrapper struct to namespace scope:
@@ -79,7 +83,7 @@ val is_eponymous_record : GlobRef.t -> bool
 (** The eponymous record of the module a constant is declared in, if any: at
     most one record shares its module's name.  A function there is spelled
     [Record<Args>::f()]. *)
-val eponymous_record_containing : GlobRef.t -> GlobRef.t option
+val eponymous_record_containing : GlobRef.t -> eponymous_record option
 
 val is_namespace_scope_ref : GlobRef.t -> bool
 val wrapper : ModPath.t -> (string * wrapper_role) option

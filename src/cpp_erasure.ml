@@ -28,9 +28,9 @@ open Minicpp
     A Rocq axiom has no computational content, so its type extracts to
     [std::any].  The classification is global to a session — the registry is
     populated from each unit's declarations before anything about the unit
-    is planned ({!Cpp.prepare_structure}) and read here and by
-    {!Cpp_print} (which suppresses [__attribute__((pure))] on functions whose
-    type mentions one, since they may call a throwing axiom stub). *)
+    is planned ({!Cpp.prepare_structure}) and read here: a function whose
+    type mentions one is never [constexpr], since it may call a throwing
+    axiom stub ({!decide_constexpr}). *)
 
 let axiom_type_refs : unit Ref.User.Tbl.t = Ref.User.Tbl.create 16
 
@@ -320,8 +320,8 @@ let rec resolve_casts (d : settled) : settled =
      declared type.  The printer used to decide this while rendering; saying it
      in the IR means the cast goes through the normalisation above like every
      other one. *)
-  | Dasgn (id, ty, e) when returns_a_box e && castable_to ty ->
-    Dasgn (id, ty, resolve_expr (unbox (Ml_type_util.resolve_tvars_to_any ty) e))
+  | Dasgn ({da_type = ty; da_init = e; _} as a) when returns_a_box e && castable_to ty ->
+    Dasgn {a with da_init = resolve_expr (unbox (Ml_type_util.resolve_tvars_to_any ty) e)}
   | _ -> map_decl resolve_expr resolve_stmt (fun t -> t) d
 
 (** {2 Reading boxed values}
@@ -751,6 +751,88 @@ let lower_access_moves (d : settled) : settled =
   and fs s = map_stmt fe fs Fun.id s in
   map_decl fe fs Fun.id d
 
+(** {2 Literal types} *)
+
+let rec is_literal_type ty =
+  (not (is_any_shaped ty))
+  &&
+  match ty with
+  | Tshared_ptr _ | Tvoid | Tvar _ | Tinstance _ | Tpromoted _ | Tany | Topaque | Tauto
+  | Tunresolved ->
+    false
+  (* [std::function] erases what it holds. *)
+  | Tfun _ | Tdecay _ -> false
+  | Tglob (r, _, _) when is_axiom_type_ref r -> false
+  | Tglob (r, [], _) when Table.is_custom_scalar_ref r -> true
+  (* A generated inductive other than an enum has user-provided constructors
+     that are not [constexpr], so it is not a literal type. *)
+  | Tglob ((GlobRef.IndRef _ as r), tys, _) ->
+    Table.is_enum_inductive r && List.for_all is_literal_type tys
+  | Tconst t | Tref (_, t) | Tptr t | Tnondeduced t | Tnamespace (_, t) | Tqualified (t, _) ->
+    is_literal_type t
+  | Tvariant (_, tys) -> List.for_all is_literal_type tys
+  (* A defined constant with no arguments is an alias nothing here sees
+     through, as is a [Tid] with none. *)
+  | Tglob (GlobRef.ConstRef _, [], _) | Tid (_, []) -> false
+  | Tglob (_, tys, _) | Tid (_, tys) | Tid_external (_, tys) -> List.for_all is_literal_type tys
+  | Trebind (h, x) -> is_literal_type h && is_literal_type x
+  | Thole | Terased _ -> true
+  | Texpr_type _ | Tdecltype_auto -> false
+  (* An applied associated type is whatever the instance makes it. *)
+  | Ttyctor _ | Tapply _ -> false
+
+let literal_signature ret params = List.for_all is_literal_type (ret :: List.map snd params)
+
+let eligible b = if b then Eligible else Ineligible
+
+let decide_constexpr (d : settled) : settled =
+  let method_ mf =
+    { mf with
+      mf_constexpr =
+        eligible
+          ( mf.mf_receiver = Static && (not mf.mf_no_pure)
+          && literal_signature mf.mf_ret_type mf.mf_params ) }
+  in
+  let rec fields fs = List.map (fun (f, vis, tag) -> (field f, vis, tag)) fs
+  and field = function
+    | Fmethod mf -> Fmethod (method_ mf)
+    | Fmember_decl (OLmethod mf) -> Fmember_decl (OLmethod (method_ mf))
+    | Fnested_struct (id, fs) -> Fnested_struct (id, fields fs)
+    | f -> f
+  in
+  let struct_ ds = {ds with ds_fields = fields ds.ds_fields} in
+  let rec decl = function
+    | Dtemplate (tps, c, d) -> Dtemplate (tps, c, decl d)
+    | Dnspace (r, ds) -> Dnspace (r, List.map decl ds)
+    | Dfun f ->
+      let types, throws =
+        match f.df_shape with
+        | Ddef (params, body) ->
+          (List.map snd params, match body with [Sreturn (Some (CPPabort _))] -> true | _ -> false)
+        | Ddecl params -> (List.map snd params, false)
+      in
+      Dfun
+        { f with
+          df_constexpr =
+            eligible ((not (throws || f.df_no_pure)) && List.for_all is_literal_type (f.df_ret :: types)) }
+    | Dasgn a ->
+      let literal =
+        match a.da_init with
+        | CPPnumeral _ | CPPuint _ | CPPint _ | CPPbool _ | CPPenum_val _ -> true
+        (* A mapped constant constructor of a literal type ([true]) is that
+           type's literal. *)
+        | CPPglob ((GlobRef.ConstructRef _ as r), [], _) -> Table.is_custom r
+        | _ -> false
+      in
+      Dasgn {a with da_constexpr = eligible (literal && is_literal_type a.da_type)}
+    | Dstruct ds -> Dstruct (struct_ ds)
+    | Dfields ds -> Dfields (struct_ ds)
+    | Dmember_def ({dm_field = OLmethod mf; _} as m) ->
+      Dmember_def {m with dm_field = OLmethod (method_ mf)}
+    | d -> d
+  in
+  decl d
+
 (** [bind_free_tvars decl] spells [std::any] every type variable a body names
     that nothing in scope declares.
 
@@ -863,13 +945,92 @@ let bind_free_tvars (d : settled) : settled =
       Dfun {f with df_shape = Ddef (params, body bound stmts)}
     (* A global's initialiser is a body like any other, and its declared type
        is as much a signature as a function's return type. *)
-    | Dasgn (r, ty, e) -> Dasgn (r, ty, fe (add_ty ty bound) e)
+    | Dasgn a -> Dasgn {a with da_init = fe (add_ty a.da_type bound) a.da_init}
     | _ -> d
   and struct_ bound st =
     let bound = add_ids (List.map snd st.ds_tparams) bound in
     {st with ds_fields = List.map (field bound) st.ds_fields}
   in
   go Id.Set.empty d
+
+(** Report what {!Ml_type_util.has_no_cpp_spelling} saw of a custom match's
+    binder.
+
+    Two audiences.  A [Crane Extract Skip] on a constant that a custom
+    template later needs {e by name} degrades silently: the binder becomes
+    [std::any] and the only symptom is a type error a long way downstream, so
+    that one is always warned about, naming the directive to remove.  A module
+    left out by [Crane Extract Skip Module] was left out wholesale and on
+    purpose, so it is not worth a word unless asked.
+
+    [CRANE_DBG_UNSPELLABLE] adds the full shape.  The ordinal is the
+    discriminator: firings are reported in the order declarations are
+    finished, which is the only handle on {e which} site fired when several
+    share a custom template, and the alternative -- a table of the
+    declaration being finished -- is the thing that must not be built. *)
+let unspellable_firings = ref 0
+
+let unspellable_warned : (string, unit) Hashtbl.t = Hashtbl.create 7
+
+let report_unspellable where ty =
+  let empty_custom = ref [] and skipped_mod = ref [] in
+  ignore
+    (Minicpp.exists_cpp_type
+       (function
+         | Tglob (r, _, _) when Ml_type_util.ref_has_no_cpp_name r ->
+           let n = Pp.string_of_ppcmds (GlobRef.print r) in
+           if Ml_type_util.ref_has_no_spelling r then
+             empty_custom := n :: !empty_custom
+           else skipped_mod := n :: !skipped_mod;
+           false
+         | _ -> false )
+       ty );
+  incr unspellable_firings;
+  List.iter
+    (fun n ->
+      if not (Hashtbl.mem unspellable_warned n) then begin
+        Hashtbl.add unspellable_warned n ();
+        Feedback.msg_warning
+          (Pp.str
+             (Printf.sprintf
+                "crane: a custom template needs %s by name, but [Crane \
+                 Extract Skip] removed it, so the binder is typed std::any \
+                 and the type is lost here.  If %s is still reachable, drop \
+                 the directive that skips it."
+                n n ) )
+      end )
+    (List.rev !empty_custom);
+  if Sys.getenv_opt "CRANE_DBG_UNSPELLABLE" <> None then begin
+    let shape = function
+      | Tglob _ -> "Tglob"
+      | Tapply _ -> "Tapply"
+      | Tqualified _ -> "Tqualified"
+      | Tvar _ -> "Tvar"
+      | Tinstance _ -> "Tinstance"
+      | Tpromoted _ -> "Tpromoted"
+      | Tid _ -> "Tid"
+      | Tid_external _ -> "Tid_external"
+      | Tnondeduced _ -> "Tnondeduced"
+      | Trebind _ -> "Trebind"
+      | Thole -> "Thole"
+      | Tref (Forwarding, _) -> "Tfwd_ref"
+      | Texpr_type _ -> "Texpr_type"
+      | Tdecltype_auto -> "Tdecltype_auto"
+      | Ttyctor _ -> "Ttyctor"
+      | Tany -> "Tany"
+      | _ -> "other"
+    in
+    let tagged tag l = List.map (fun n -> n ^ " [" ^ tag ^ "]") l in
+    Feedback.msg_warning
+      (Pp.str
+         (Printf.sprintf
+            "crane: firing %d: %s yields std::any; outermost %s; nameless \
+             globs: %s"
+            !unspellable_firings where (shape ty)
+            (String.concat ", "
+               ( tagged "empty custom" (List.rev !empty_custom)
+               @ tagged "skipped module" (List.rev !skipped_mod) ) ) ) )
+  end
 
 (** [materialise decl] replaces every {!Minicpp.Topaque} in [decl] with
     {!Minicpp.Tany}.
@@ -885,11 +1046,49 @@ let bind_free_tvars (d : settled) : settled =
     {!Ml_type_util.materialise_opaque}, apply it once to the whole declaration
     on the way out of translation.  Print-neutral by construction: [Topaque] and
     [Tany] have the same C++ spelling. *)
+(* Whether the template of [cm] writes down the type of branch [i]'s binder
+   [j], [p], which C++ cannot spell. *)
+let unspellable_binder cm =
+  let written = Foreign_template.match_template (custom_match_text cm) in
+  fun i j p -> List.mem (Foreign_template.CCbr_var_ty (i, j)) written && Ml_type_util.has_no_cpp_spelling p.cp_type
+
 let materialise (d : cpp_decl) : settled =
   let ft = Ml_type_util.materialise_opaque in
+  let spelled cm =
+    let unspellable = unspellable_binder cm in
+    fun i (params, ty, body) ->
+      ( List.mapi
+          (fun j p ->
+            if unspellable i j p then begin
+              report_unspellable
+                (Printf.sprintf "branch %d var %d of %s" i j (custom_match_text cm))
+                p.cp_type;
+              {p with cp_type = Tany}
+            end
+            else p )
+          params,
+        ty,
+        body )
+  in
   let rec fe e = map_expr fe fs ft e
-  and fs s = map_stmt fe fs ft s in
+  and fs = function
+    | Scustom_case (ty, scrut, targs, branches, cm) ->
+      map_stmt fe fs ft (Scustom_case (ty, scrut, targs, List.mapi (spelled cm) branches, cm))
+    | s -> map_stmt fe fs ft s
+  in
   map_decl fe fs ft d
+
+let writes_unspellable_binder (d : settled) =
+  let exception Found in
+  let rec fe e = map_expr fe fs Fun.id e
+  and fs = function
+    | Scustom_case (_, _, _, branches, cm) as s ->
+      let unspellable = unspellable_binder cm in
+      List.iteri (fun i (params, _, _) -> List.iteri (fun j p -> if unspellable i j p then raise_notrace Found) params) branches;
+      map_stmt fe fs Fun.id s
+    | s -> map_stmt fe fs Fun.id s
+  in
+  match ignore (map_decl fe fs Fun.id d) with () -> false | exception Found -> true
 
 type view =
   | Template of (template_type * Id.t) list * cpp_constraint option * settled

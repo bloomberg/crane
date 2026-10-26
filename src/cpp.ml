@@ -317,7 +317,7 @@ type file_layout = {
   promoted_imports : string list;
       (** The using-declarations, at the top of the header, of the promoted
           type variables the unit's declarations write whose class field
-          another file declares ({!Cpp_print.promoted_alias_import}), in
+          another file declares ({!promoted_alias_import}), in
           alphabetical order: the implementation file includes the header,
           and so sees them too. *)
   wrapper_homes : (string * ml_decl) list;
@@ -1327,7 +1327,16 @@ let module_plan_of_analysis
       concept_names = concept_renames;
       modtype_concept_names = modtype_concept_renames;
       functor_app_sources;
-      eponymous_records;
+      eponymous_records =
+        List.map
+          (fun record ->
+            let type_params =
+              match record with
+              | GlobRef.IndRef (kn, _) -> Option.default 2 (Table.get_ind_num_param_vars_opt kn)
+              | _ -> 2
+            in
+            {Module_plan.record; type_params} )
+          eponymous_records;
       namespace_scope_refs = lifted_instances;
       wrappers =
         List.map (fun (mp, name) -> (mp, name, Some Module_plan.Flattened)) collision_wrappers
@@ -1831,6 +1840,18 @@ let struct_members ~wrapper mp sel =
             | {helpers = _ :: _; _} -> None ) )
         (Some []) sel
 
+(** The using-declaration a unit needs for the promoted type variable [id]
+    when its file-scope alias is another file's: under separate extraction
+    that alias sits in its class's namespace, which a bare name in this one
+    does not reach; the [using] gives the name the lookup it has in a
+    single-file extraction, a struct's own member still first. *)
+let promoted_alias_import id =
+  if Common.get_force_cross_file_qualification () then
+    match Table.promoted_type_var_field id with
+    | Some g when Option.has_some (Common.file_qualifier Type g) -> Some ("using " ^ Common.pp_global Type g ^ ";")
+    | _ -> None
+  else None
+
 (** Plan where the header writes what it does not write in place
     ({!file_layout}), and which modules' structs it declares ahead of the
     file ({!hoisted_structs}).
@@ -1950,7 +1971,7 @@ let plan_file_layout s =
     with_visibility (toplevel_visibility (List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s))
     @@ fun () ->
     List.sort_uniq String.compare
-      (List.filter_map Cpp_print.promoted_alias_import
+      (List.filter_map promoted_alias_import
          ( Finished_program.installed_promoted ()
          @ List.concat_map Cpp_demands.promoted_of_type (Cpp_ind.generated_record_field_types ()) ))
   in
@@ -3396,10 +3417,21 @@ let do_struct_with_decl_tracking ~is_header f s =
     else []
   in
   let written = if is_header then Common.Intf else Common.Impl in
-  let file =
-    Cpp_ast.print ~write:(Cpp_ind.write_unprinted ~file:written)
-      (Cpp_ast.schedule ~templates ~forwards unit)
-  in
+  let scheduled = Cpp_ast.schedule ~templates ~forwards unit in
+  let print () = Cpp_ast.print ~write:(Cpp_ind.write_unprinted ~file:written) scheduled in
+  let file = print () in
+  (* Printing a scheduled unit is a function of it: printed again, with
+     nothing reset in between, it gives the same document and decides
+     nothing -- no table grows, no name is decided (the plan's Milestone
+     9). *)
+  if Sys.getenv_opt "CRANE_RENDER_TWICE" <> None then begin
+    let state () = (Table.census (), List.length (Common.names_decided_while_emitting ())) in
+    let before = state () in
+    if Stdlib.compare (print ()) file <> 0 then
+      CErrors.anomaly (str "Crane: printing a scheduled translation unit again gave another document.");
+    if state () <> before then
+      CErrors.anomaly (str "Crane: printing a scheduled translation unit decided something.")
+  end;
   Cpp_print.check_ctor_alias_plan ~file:written;
   Cpp_print.check_file_scope_types ~file:written;
   file ++ fnl ()

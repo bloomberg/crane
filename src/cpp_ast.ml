@@ -35,8 +35,14 @@ and asserted = Of_module_type of ModPath.t | Of_class of GlobRef.t
 and subject = Module of ModPath.t | Instance of {instance : GlobRef.t; args : Minicpp.cpp_type list}
 
 and global_alias =
-  | Alias_of_type of {target : GlobRef.t; tparams : (Minicpp.template_type * Id.t) list}
+  | Alias_of_type of {
+      target : GlobRef.t;
+      definition : definition;
+      tparams : (Minicpp.template_type * Id.t) list;
+    }
   | Alias_of_module of ModPath.t
+
+and definition = Enum_definition | Struct_definition | Alias_definition
 
 type unprinted = {declaration : declaration; needs : Needs.t}
 

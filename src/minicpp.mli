@@ -133,6 +133,20 @@ type inline_template = {
     argument -- [Tdummy Ktype], [Kprop] and [Kimplicit] in the ML AST. *)
 type erased_kind = Ek_type | Ek_prop | Ek_implicit
 
+(** Whether a function or a variable may be written [constexpr] where it is
+    defined in a place that allows it.  That needs every type it is written
+    with to be a literal type, which turns on facts about the unit's globals
+    -- an enum inductive, a type mapped to a scalar, an axiom's type -- all
+    fixed before any declaration is finished, and a body that can be a
+    constant expression.  So it is decided once, past the seam
+    ({!Cpp_erasure.decide_constexpr}), and the printer adds only whether the
+    place it writes the definition in lets it say so. *)
+type constexpr_eligibility =
+  | Undecided  (** Not yet decided: what translation and every pass before
+                   the seam build. *)
+  | Eligible
+  | Ineligible
+
 (** A C++ type variable. *)
 type tvar =
   | Tv_index of int * Id.t option
@@ -923,10 +937,12 @@ and method_field = {
   mf_receiver : receiver;  (** Whether, and how, the method takes [this] *)
   mf_is_inline : bool;  (** True to emit explicit [inline] keyword *)
   mf_no_pure : bool;
-      (** When true, suppress [__attribute__((pure))] / [constexpr] for this
-          method.  Set for methods whose ML return type is monadic — they
-          perform side effects even though the C++ return type may look pure
-          after type erasure. *)
+      (** When true, the method is never [constexpr].  Set for methods whose
+          ML return type is monadic — they perform side effects even though
+          the C++ return type may look pure after type erasure. *)
+  mf_constexpr : constexpr_eligibility;
+      (** Whether it is written [constexpr]: a static method whose signature
+          is of literal types and is not [mf_no_pure]. *)
   mf_is_noexcept : bool;
       (** When true, emit [noexcept] after the parameter list.  Set for
           move assignment operators. *)
@@ -1514,8 +1530,7 @@ type cpp_decl =
       (** Namespace with optional reference and declarations *)
   | Dfun of dfun
   | Dstruct of dstruct
-  | Dasgn of GlobRef.t * cpp_type * cpp_expr
-      (** Global variable definition with initializer *)
+  | Dasgn of dasgn
   | Dconcept of GlobRef.t * cpp_expr
       (** Concept definition (template params from outer Dtemplate) *)
   | Dstatic_assert of cpp_expr * string option
@@ -1598,13 +1613,26 @@ and dusing = {
   du_note : string option;
 }
 
+(** A global variable and its initialiser. *)
+and dasgn = {
+  da_ref : GlobRef.t;
+  da_type : cpp_type;
+  da_init : cpp_expr;
+  da_constexpr : constexpr_eligibility;
+      (** Whether it may be [constexpr]: its initialiser is a literal of a
+          literal type. *)
+}
+
 (** A function declaration or definition. *)
 and dfun = {
   df_path : dfun_path;  (** The [::]-separated name it is written under *)
   df_ret : cpp_type;
   df_no_pure : bool;
-      (** Suppress [__attribute__((pure))] / [constexpr]: monadic functions
-          and axiom stubs are neither. *)
+      (** Never [constexpr]: monadic functions and axiom stubs are not. *)
+  df_constexpr : constexpr_eligibility;
+      (** Whether a definition of it may be [constexpr]: its signature is of
+          literal types, it is not [df_no_pure], and its body does not only
+          throw. *)
   df_shape : dfun_shape;
   df_binders : (Id.t * Core_binder.t) list;
       (** The Core binder each parameter stands for, by the parameter's name,
@@ -1688,6 +1716,10 @@ val mk_dfun :
   dfun_shape ->
   dfun
 
+(** [mk_dasgn r ty e] is the global variable [r] of type [ty] initialised to
+    [e]. *)
+val mk_dasgn : GlobRef.t -> cpp_type -> cpp_expr -> cpp_decl
+
 (** [map_field fe fs ft f] applies [fe] to sub-expressions, [fs] to
     sub-statements and [ft] to sub-types of a visibility-annotated field,
     performing one level of structural descent.  Nested structs recurse. *)
@@ -1705,8 +1737,8 @@ val strip_template_defaults : cpp_decl -> cpp_decl
 
 (** [split_definition d] is [d], a function definition, as the declaration
     and the definition a file writes: the same head, with and without the
-    body, through any template head.  A body that only throws marks both
-    [df_no_pure].  [None] when [d] defines no function. *)
+    body, through any template head.  [None] when [d] defines no
+    function. *)
 val split_definition : cpp_decl -> (cpp_decl * cpp_decl) option
 
 (** [map_decl fe fs ft d] applies [fe] to sub-expressions, [fs] to

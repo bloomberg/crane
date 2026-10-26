@@ -53,11 +53,6 @@ let escape_cpp_string (s : string) : string =
     s;
   Buffer.contents buf
 
-(** Functions whose return type involves an axiom type must not be marked
-    [__attribute__((pure))]: they may transitively call an axiom stub that
-    throws [std::logic_error]. *)
-let is_axiom_type_ref = Cpp_erasure.is_axiom_type_ref
-
 (** Check if a lambda needs to capture variables from enclosing scope.
     A lambda needs [&] capture if its body references variables that are
     not lambda parameters and not locally declared within the body.
@@ -368,14 +363,6 @@ let subst_wrapper_t0 wrapper elem_str =
        ~hole:(fun i -> if i = 0 then Some (str elem_str) else None)
        wrapper)
 
-(** Get the number of template type parameters for an inductive reference,
-    defaulting to 2 when unavailable. *)
-let num_ind_params = function
-  | GlobRef.IndRef (kn, _) ->
-    (match Table.get_ind_num_param_vars_opt kn with
-     | Some n -> n | None -> 2)
-  | _ -> 2
-
 (** Generate N placeholder type arguments (comma-separated ["int"]s). *)
 let gen_placeholder_args n =
   String.concat ", " (List.init n (fun _ -> "int"))
@@ -395,11 +382,6 @@ let print_cpp_type_var vl i =
   | Some name -> pp_tvar name
   | None -> str "T" ++ int i
 
-
-(** Whether a type is spelled [std::any] -- owned by {!Cpp_erasure}, which
-    also records the aliases to it, so that the pass that decides how to cross
-    an erasure boundary and the printer cannot disagree. *)
-let is_any_type = Cpp_erasure.is_any_shaped
 
 (** The type names the header introduces at file scope, planned with its
     layout ({!file_scope_types}); none in the implementation, which defines
@@ -441,15 +423,16 @@ let rec decl_type_name = function
 
 let note_file_scope_type d = Option.iter note_file_scope_name (decl_type_name d)
 
-(** The types [d] declares under a name no struct qualifies, each with the
-    template parameters it is declared over, which an alias of it written
-    elsewhere repeats: an alias, an enum, and a struct planned at namespace
-    scope. *)
+(** The types [d] declares under a name no struct qualifies, each with how
+    it is declared and the template parameters it is declared over, which an
+    alias of it written elsewhere repeats: an alias, an enum, and a struct
+    planned at namespace scope. *)
 let rec declared_types ?(outer = []) = function
   | Dtemplate (tparams, _, inner) -> declared_types ~outer:(outer @ tparams) inner
-  | Dusing u -> [(u.du_name, outer @ u.du_tparams)]
-  | Denum {de_ref; _} -> [(de_ref, outer)]
-  | Dstruct {ds_ref; ds_tparams; _} when Module_plan.is_namespace_scope_ref ds_ref -> [(ds_ref, outer @ ds_tparams)]
+  | Dusing u -> [(u.du_name, Cpp_ast.Alias_definition, outer @ u.du_tparams)]
+  | Denum {de_ref; _} -> [(de_ref, Cpp_ast.Enum_definition, outer)]
+  | Dstruct {ds_ref; ds_tparams; _} when Module_plan.is_namespace_scope_ref ds_ref ->
+    [(ds_ref, Cpp_ast.Struct_definition, outer @ ds_tparams)]
   | Dnspace (Some r, ds) when Module_plan.is_namespace_scope_ref r -> List.concat_map (declared_types ~outer) ds
   | _ -> []
 
@@ -458,107 +441,17 @@ let stand_ins t =
     (function
       | Cpp_ast.Declared (Declaration {settled; _} | Absorbed {settled; _}) ->
         List.map
-          (fun (target, tparams) -> Cpp_ast.(global_alias (Alias_of_type {target; tparams})))
+          (fun (target, definition, tparams) ->
+            Cpp_ast.(global_alias (Alias_of_type {target; definition; tparams})) )
           (declared_types (settled :> cpp_decl))
       | Declared (Fields _ | Modtype_concept _ | Global_alias _ | Assertion _ | Module_alias _ | Functor_alias _ | Derived_functor _) -> []
       | Struct_of mp -> [Cpp_ast.(global_alias (Alias_of_module mp))] )
     (Cpp_ast.declared t)
 
-(** The using-declaration a unit needs for the promoted type variable [id]
-    when its file-scope alias is another file's: under separate extraction
-    that alias sits in its class's namespace, which a bare name in this one
-    does not reach; the [using] gives the name the lookup it has in a
-    single-file extraction, a struct's own member still first. *)
-let promoted_alias_import id =
-  if Common.get_force_cross_file_qualification () then
-    match Table.promoted_type_var_field id with
-    | Some g when Option.has_some (Common.file_qualifier Type g) -> Some ("using " ^ Common.pp_global Type g ^ ";")
-    | _ -> None
-  else None
-
 (** The C++ token an {!Minicpp.obj_access} prints as. *)
 let pp_obj_access = function Adot -> "." | Aarrow -> "->"
 
 let ref_has_no_cpp_name = Ml_type_util.ref_has_no_cpp_name
-let has_no_cpp_spelling = Ml_type_util.has_no_cpp_spelling
-
-(** Report what {!has_no_cpp_spelling} saw.
-
-    Two audiences.  A [Crane Extract Skip] on a constant that a custom
-    template later needs {e by name} degrades silently: the binder becomes
-    [std::any] and the only symptom is a type error a long way downstream, so
-    that one is always warned about, naming the directive to remove.  A module
-    left out by [Crane Extract Skip Module] was left out wholesale and on
-    purpose, so it is not worth a word unless asked.
-
-    [CRANE_DBG_UNSPELLABLE] adds the full shape.  The ordinal is the
-    discriminator: firings are reported in emission order, which is the only
-    handle on {e which} site fired when several share a custom template, and
-    the alternative -- a printer-filled table of the declaration being emitted
-    -- is the thing that must not be built. *)
-let unspellable_firings = ref 0
-
-let unspellable_warned : (string, unit) Hashtbl.t = Hashtbl.create 7
-
-let report_unspellable where ty =
-  let empty_custom = ref [] and skipped_mod = ref [] in
-  ignore
-    (Minicpp.exists_cpp_type
-       (function
-         | Tglob (r, _, _) when ref_has_no_cpp_name r ->
-           let n = Pp.string_of_ppcmds (GlobRef.print r) in
-           if Ml_type_util.ref_has_no_spelling r then
-             empty_custom := n :: !empty_custom
-           else skipped_mod := n :: !skipped_mod;
-           false
-         | _ -> false )
-       ty );
-  incr unspellable_firings;
-  List.iter
-    (fun n ->
-      if not (Hashtbl.mem unspellable_warned n) then begin
-        Hashtbl.add unspellable_warned n ();
-        Feedback.msg_warning
-          (Pp.str
-             (Printf.sprintf
-                "crane: a custom template needs %s by name, but [Crane \
-                 Extract Skip] removed it, so the binder is typed std::any \
-                 and the type is lost here.  If %s is still reachable, drop \
-                 the directive that skips it."
-                n n ) )
-      end )
-    (List.rev !empty_custom);
-  if Sys.getenv_opt "CRANE_DBG_UNSPELLABLE" <> None then begin
-    let shape = function
-      | Tglob _ -> "Tglob"
-      | Tapply _ -> "Tapply"
-      | Tqualified _ -> "Tqualified"
-      | Tvar _ -> "Tvar"
-      | Tinstance _ -> "Tinstance"
-      | Tpromoted _ -> "Tpromoted"
-      | Tid _ -> "Tid"
-      | Tid_external _ -> "Tid_external"
-      | Tnondeduced _ -> "Tnondeduced"
-      | Trebind _ -> "Trebind"
-      | Thole -> "Thole"
-      | Tref (Forwarding, _) -> "Tfwd_ref"
-      | Texpr_type _ -> "Texpr_type"
-      | Tdecltype_auto -> "Tdecltype_auto"
-      | Ttyctor _ -> "Ttyctor"
-      | Tany -> "Tany"
-      | _ -> "other"
-    in
-    let tagged tag l = List.map (fun n -> n ^ " [" ^ tag ^ "]") l in
-    Feedback.msg_warning
-      (Pp.str
-         (Printf.sprintf
-            "crane: firing %d: %s yields std::any; outermost %s; nameless \
-             globs: %s"
-            !unspellable_firings where (shape ty)
-            (String.concat ", "
-               ( tagged "empty custom" (List.rev !empty_custom)
-               @ tagged "skipped module" (List.rev !skipped_mod) ) ) ) )
-  end
 
 (** The C++ identifiers appearing in [text], as whole tokens.  Used to tell
     whether a rendered type body really names a template parameter, which a
@@ -873,84 +766,13 @@ let projection_field_name (r : GlobRef.t) : string =
   Common.modular_rename Term (Label.to_id (label_of_r r))
 
 
-(** Check if a C++ type is a literal type eligible for [constexpr] context.
-
-    Excludes allocation ([shared_ptr]), side effects ([void]), types unknown
-    at definition time, axiom types (whose stubs throw), and also:
-    - [Tfun]: [std::function] uses type-erased internal storage
-    - [decltype]: the expression may reference non-constexpr entities
-    - Composite types where any component is non-literal
-
-    The check is recursive for container types ([Tvariant], [Tglob], [Tid],
-    [Tnamespace], [Tqualified]) — a [std::variant<A, B>] is constexpr only
-    if both [A] and [B] are. *)
-let rec is_constexpr_type ty =
-  if is_any_type ty then false else
-  match ty with
-  | Tshared_ptr _ -> false
-  | Tvoid | Tvar _ | Tinstance _ | Tpromoted _ | Tany | Topaque | Tauto
-  | Tunresolved -> false
-  | Tfun _ -> false  (* std::function uses type erasure *)
-  | Tdecay _ -> false
-  | Tglob (r, _, _) when is_axiom_type_ref r -> false
-  (* A type mapped to a C++ scalar is that scalar. *)
-  | Tglob (r, [], _) when Table.is_custom_scalar_ref r -> true
-  | Tglob (GlobRef.IndRef _ as r, tys, _) ->
-    (* Crane-generated non-enum inductives have user-provided constructors
-       (T() {}, explicit T(Ctor _v) : d_v_(_v) {}) that are not constexpr,
-       so the types are not literal.  Only enum inductives (generated as
-       [enum class]) are literal types. *)
-    Table.is_enum_inductive r && List.for_all is_constexpr_type tys
-  | Tconst t | Tref (Lvalue, t) | Tptr t -> is_constexpr_type t
-  | Tvariant (_, tys) -> List.for_all is_constexpr_type tys
-  | Tglob (GlobRef.ConstRef _, [], _) -> false  (* defined constant with no type args — opaque alias *)
-  | Tglob (_, tys, _) -> List.for_all is_constexpr_type tys
-  | Tid (_, []) -> false  (* unresolved type alias — conservatively non-literal *)
-  | Tid (_, tys) | Tid_external (_, tys) -> List.for_all is_constexpr_type tys
-  | Tnondeduced t -> is_constexpr_type t
-  | Trebind (h, x) -> is_constexpr_type h && is_constexpr_type x
-  | Thole | Terased _ -> true
-  | Tref (Forwarding, t) -> is_constexpr_type t
-  | Texpr_type _ | Tdecltype_auto -> false
-  | Tnamespace (_, t) -> is_constexpr_type t
-  | Tqualified (t, _) -> is_constexpr_type t
-  (* An applied associated type is whatever the instance makes it; nothing
-     here can establish it is a literal type. *)
-  | Ttyctor _ | Tapply _ -> false
-
-(** Check if a function is constexpr-eligible: all param types AND return
-    type must be constexpr-eligible literal types.
-
-    @param ret_ty  the C++ return type to test
-    @param params  list of [(name, type)] pairs for all formal parameters *)
-let is_constexpr_eligible ret_ty params =
-  is_constexpr_type ret_ty
-  && List.for_all (fun (_, ty) -> is_constexpr_type ty) params
-
-(** Check if a function body consists solely of throwing an abort/axiom error.
-    Such functions must not be marked [pure] or [constexpr] because the compiler
-    may optimise away the throw. *)
-let body_is_throw = function
-  | [Sreturn (Some (CPPabort _))] -> true
-  | _ -> false
-
-(** Compute the C++ function qualifier prefix as a three-way decision:
-    - [constexpr] when the function is constexpr-eligible and [can_constexpr]
-      is [true] (i.e. the definition is visible in the header);
-    - nothing otherwise.
-
-    @param can_constexpr  whether this call site may use [constexpr]
-    @param throws         whether the body unconditionally throws
-    @param no_pure        when [true], suppress [constexpr] even if the
-                          function would otherwise qualify (used for functions
-                          that operate on [std::any] or axiom types)
-    @param ret_ty         the C++ return type
-    @param params         [(name, type)] pairs for all formal parameters *)
-let fun_qualifier ~can_constexpr ~throws ~no_pure ret_ty params =
-  if can_constexpr && not throws && not no_pure && is_constexpr_eligible ret_ty params then
-    str "constexpr "
-  else
-    mt ()
+(** Whether a definition whose eligibility the seam decided
+    ({!Cpp_erasure.decide_constexpr}) may be [constexpr]. *)
+let may_be_constexpr = function
+  | Eligible -> true
+  | Ineligible -> false
+  | Undecided ->
+    CErrors.anomaly (str "a definition reached the printer with its constexpr eligibility undecided")
 
 (** Whether a rendered document writes a qualifier anywhere in it, its
     template arguments included. *)
@@ -1748,18 +1570,18 @@ and pp_cpp_expr env args t =
          no parameters merges into a struct that is no template, whose
          functions are spelled as any module's are. *)
       let template_record = function
-        | Some record_ref when num_ind_params record_ref > 0 -> Some record_ref
+        | Some {Module_plan.record; type_params} when type_params > 0 -> Some (record, type_params)
         | Some _ | None -> None
       in
       match (template_record (Module_plan.eponymous_record_containing x), tys) with
-      | Some record_ref, _ :: _ ->
+      | Some (record_ref, type_params), _ :: _ ->
         (* Function inside eponymous template struct with type args: Generate
            StructName<int, ...>::template funcName<Args> for static methods. We
            use placeholder types for the struct and actual args for the
            method. *)
         let struct_name = Common.pp_global_name Type record_ref in
         let func_name = Common.pp_global_name Term x in
-        let placeholder_args = gen_placeholder_args (num_ind_params record_ref) in
+        let placeholder_args = gen_placeholder_args type_params in
         let ty_args = pp_list (pp_cpp_type false []) tys in
         `Written
           ( Cpp_name.pp_type_qualifier class_
@@ -1769,10 +1591,10 @@ and pp_cpp_expr env args t =
           ++ str "<"
           ++ ty_args
           ++ str ">" )
-      | Some record_ref, [] ->
+      | Some (record_ref, type_params), [] ->
         let struct_name = Common.pp_global_name Type record_ref in
         let func_name = Common.pp_global_name Term x in
-        let placeholder_args = gen_placeholder_args (num_ind_params record_ref) in
+        let placeholder_args = gen_placeholder_args type_params in
         `Written
           ( Cpp_name.pp_type_qualifier class_
               (str (String.capitalize_ascii struct_name) ++ str "<" ++ str placeholder_args ++ str ">")
@@ -2380,10 +2202,9 @@ and pp_cpp_expr env args t =
     ++ str ")"
   | CPPcontainer_cast (ty, e, suppress_boxing) ->
     writes Table.erase_fn_header;
-    let saved = !suppress_elem_boxing in
-    if suppress_boxing then suppress_elem_boxing := true;
-    let ty_pp = pp_cpp_type false [] ty in
-    suppress_elem_boxing := saved;
+    let ty_pp =
+      setting suppress_elem_boxing (suppress_boxing || !suppress_elem_boxing) (fun () -> pp_cpp_type false [] ty)
+    in
     str Crane_rt.container_cast ++ str "<"
     ++ ty_pp
     ++ str ">("
@@ -3008,21 +2829,9 @@ and pp_custom ?container custom env typ t tyargs cases args _arg_types vl cmds =
     | CCbr_var_ty (i, j) ->
       ( try
           let ids, _, _ = List.nth cases i in
-          let ty = (List.nth ids j).cp_type in
-          (* The generator's belief is only worth printing if this file can
-             spell it.  A type from a module [Crane Extract Skip Module] left
-             out has no declaration to name -- the binder would read
-             [IO_axioms::ioE], an identifier nothing introduces -- so the
-             honest answer is that the type is not known here, which is what
-             [std::any] says.  A template reading this placeholder can then
-             treat the two cases alike. *)
-          if has_no_cpp_spelling ty then (
-            report_unspellable
-              (Printf.sprintf "branch %d var %d of %s" i j custom)
-              ty;
-            writes_obj ();
-            str Crane_rt.obj )
-          else pp_cpp_type false vl ty
+          (* Spellable: one that is not was materialised at the seam
+             ({!Cpp_erasure.materialise}). *)
+          pp_cpp_type false vl (List.nth ids j).cp_type
         with Failure _ ->
           CErrors.anomaly
             Pp.(
@@ -3422,7 +3231,7 @@ let rec pp_cpp_field
         mf_body;
         mf_receiver;
         mf_is_inline;
-        mf_no_pure;
+        mf_constexpr;
         mf_is_noexcept;
         mf_is_conversion;
       } ->
@@ -3478,10 +3287,7 @@ let rec pp_cpp_field
            | Some r -> r ++ fnl () )
     in
     let doc_comment = pp_doc_comment_for_name (Id.to_string mf_name) in
-    let qualifier =
-      fun_qualifier ~can_constexpr:mf_is_static ~throws:false ~no_pure:mf_no_pure
-        mf_ret_type mf_params
-    in
+    let qualifier = if may_be_constexpr mf_constexpr then str "constexpr " else mt () in
     let owner_template_s, qual_s =
       match mode with
       | Mm_defined (qual, owner_tps) ->
@@ -3489,8 +3295,7 @@ let rec pp_cpp_field
       | Mm_inline | Mm_declared -> (mt (), mt ())
     in
     (* A conversion function has no return type of its own -- its name is the
-       type it converts to -- and none of the qualifiers [fun_qualifier]
-       computes from a return type apply. *)
+       type it converts to -- and none of the qualifiers apply. *)
     let head =
       h
         ( inline_s
@@ -3979,7 +3784,7 @@ and pp_cpp_decl env (settled : Cpp_erasure.settled) =
 (** A template head and the declaration it introduces. *)
 and pp_template_decl env temps cstr (inner : Cpp_erasure.settled) =
   match (inner :> cpp_decl) with
-  | Dasgn (id, ty, e) when (!render_ctx).rc_in_struct ->
+  | Dasgn {da_ref = id; da_type = ty; da_init = e; _} when (!render_ctx).rc_in_struct ->
     let expr_pp = pp_initialiser env ty e in
     template_head env temps cstr ++ pp_meyers_singleton env id ty expr_pp
   | _ -> template_head env temps cstr ++ pp_cpp_decl env inner
@@ -4116,7 +3921,7 @@ and pp_leaf_decl env (d : cpp_decl) =
   (* Taken apart by {!Cpp_erasure.view}, which hands out their children
      settled. *)
   | Dtemplate _ | Dnspace _ -> assert false
-  | Dfun {df_path; df_ret = ret_ty; df_no_pure = no_pure; df_shape = shape} ->
+  | Dfun {df_path; df_ret = ret_ty; df_constexpr; df_shape = shape} ->
     let ids = dfun_path_list df_path in
     (* A definition is either out-of-line in a .cpp file or inline in a
        template struct; a declaration is always the forward declaration of an
@@ -4182,10 +3987,9 @@ and pp_leaf_decl env (d : cpp_decl) =
             (List.rev params)
         in
         let qualifier =
-          fun_qualifier
-            ~can_constexpr:
-              ((!render_ctx).rc_in_struct && not is_out_of_struct_def)
-            ~throws:(body_is_throw body) ~no_pure ret_ty params
+          if may_be_constexpr df_constexpr && (!render_ctx).rc_in_struct && not is_out_of_struct_def
+          then str "constexpr "
+          else mt ()
         in
         (params_s, qualifier, str "{" ++ body_s ++ str "}")
       | Ddecl params ->
@@ -4256,7 +4060,7 @@ and pp_leaf_decl env (d : cpp_decl) =
     ++ f_s
     ++ fnl ()
     ++ str "};"
-  | Dasgn (id, ty, e) ->
+  | Dasgn {da_ref = id; da_type = ty; da_init = e; da_constexpr} ->
     let expr_pp = pp_initialiser env ty e in
     if (!render_ctx).rc_in_template
        || ((!render_ctx).rc_in_struct
@@ -4268,15 +4072,8 @@ and pp_leaf_decl env (d : cpp_decl) =
     else
       (* A value written as a literal of a literal type is a constant
          expression: [constexpr] says so, and lets it stand in a
-         [static_assert] or a template argument.  A mapped constant
-         constructor of such a type ([true]) is that type's literal. *)
-      let literal =
-        (match e with
-         | CPPnumeral _ | CPPuint _ | CPPint _ | CPPbool _ | CPPenum_val _ -> true
-         | CPPglob ((GlobRef.ConstructRef _ as r), [], _) -> Table.is_custom r
-         | _ -> false)
-        && is_constexpr_type ty
-      in
+         [static_assert] or a template argument. *)
+      let literal = may_be_constexpr da_constexpr in
       let ty = match ty with Tconst t when literal -> t | t -> t in
       let static_kw =
         match ((!render_ctx).rc_in_struct, literal) with
@@ -4612,12 +4409,12 @@ let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
     | Global_alias a ->
       let tparams, name =
         match a with
-        | Alias_of_type {target; tparams} ->
+        | Alias_of_type {target; definition; tparams} ->
           ( tparams,
-            match target with
-            | GlobRef.IndRef _ when Table.is_enum_inductive target -> enum_definition_name target
-            | GlobRef.IndRef _ -> struct_definition_name target
-            | _ -> pp_global Type target )
+            match definition with
+            | Enum_definition -> enum_definition_name target
+            | Struct_definition -> struct_definition_name target
+            | Alias_definition -> pp_global Type target )
         | Alias_of_module mp -> ([], Cpp_names.module_struct_name mp)
       in
       let args =

@@ -113,7 +113,7 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
           Option.iter
             (fun (ids, _, _) ->
               Option.iter
-                (fun p -> if Ml_type_util.has_no_cpp_spelling p.cp_type then obj () else ty p.cp_type)
+                (fun p -> ty p.cp_type)
                 (nth ids j) )
             (nth holes.cases i)
         | CCarg i ->
@@ -262,7 +262,7 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
       decl inner
     | Dnspace (_, ds) -> List.iter decl ds
     (* Initialised by a lambda that throws, of the declared type. *)
-    | Dasgn (_, t, CPPabort _) ->
+    | Dasgn {da_type = t; da_init = CPPabort _; _} ->
       ty t;
       std "stdexcept"
     | d -> (

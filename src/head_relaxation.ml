@@ -107,7 +107,7 @@ let apply relaxation decl =
           df_shape = Ddef (List.map (fun (n, ty) -> (n, ft ty)) params, List.map fs body) }
     | Dfun ({df_ret = ret; df_shape = Ddecl params; _} as f) ->
       Dfun {f with df_ret = ft ret; df_shape = Ddecl (List.map (fun (n, ty) -> (n, ft ty)) params)}
-    | Dasgn (n, ty, e) -> Dasgn (n, ft ty, fe e)
+    | Dasgn a -> Dasgn {a with da_type = ft a.da_type; da_init = fe a.da_init}
     | Dstruct _ | Dnspace _ | Dtemplate _ ->
       (* An inductive's own fields and members, for the same reason: a family
          parameter left plain is applied in its payloads. *)

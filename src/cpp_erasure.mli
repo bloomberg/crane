@@ -177,6 +177,18 @@ val lower_conditionals : settled -> settled
     that writes a move or a member read. *)
 val lower_access_moves : settled -> settled
 
+(** [is_literal_type ty] holds when [ty] is a C++ literal type, so a value of
+    it can be a constant expression: not an allocation ([shared_ptr]), not
+    [void], not a type known only at instantiation, not an axiom's type
+    (whose stubs throw), not [std::function] or [decltype], and no type it is
+    made of fails to be one. *)
+val is_literal_type : Minicpp.cpp_type -> bool
+
+(** [decide_constexpr decl] decides, for every function, method and variable
+    [decl] defines, whether it may be [constexpr]
+    ({!Minicpp.constexpr_eligibility}).  Last, once every type is final. *)
+val decide_constexpr : settled -> settled
+
 (** [materialise decl] replaces every {!Minicpp.Topaque} in [decl] with
     {!Minicpp.Tany}.
 
@@ -186,5 +198,16 @@ val lower_access_moves : settled -> settled
     header is the act that decides the representation, and from then on the
     value {e is} boxed.  Running this once on the way out of translation saves
     every declaration emitter from having to remember
-    {!Ml_type_util.materialise_opaque}, and is print-neutral by construction. *)
+    {!Ml_type_util.materialise_opaque}, and is print-neutral by construction.
+
+    So is the type of a variable a branch of a custom match binds, where it
+    has no C++ spelling ({!Ml_type_util.has_no_cpp_spelling}): a type from a
+    module [Crane Extract Skip Module] left out has no declaration to name,
+    and the honest answer is that the type is not known, which [std::any]
+    says.  A template reading the binder's type can then treat the two cases
+    alike.  A [Crane Extract Skip] behind it is warned about. *)
 val materialise : cpp_decl -> settled
+
+(** Whether a custom match in [decl] writes down a binder's type that C++
+    cannot spell, which {!materialise} would have made [std::any]. *)
+val writes_unspellable_binder : settled -> bool
