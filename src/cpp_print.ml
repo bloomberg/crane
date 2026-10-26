@@ -2210,10 +2210,9 @@ and pp_cpp_expr env args t =
     ++ str ")"
   | CPPcontainer_cast (ty, e, suppress_boxing) ->
     writes Table.erase_fn_header;
-    let saved = !suppress_elem_boxing in
-    if suppress_boxing then suppress_elem_boxing := true;
-    let ty_pp = pp_cpp_type false [] ty in
-    suppress_elem_boxing := saved;
+    let ty_pp =
+      setting suppress_elem_boxing (suppress_boxing || !suppress_elem_boxing) (fun () -> pp_cpp_type false [] ty)
+    in
     str Crane_rt.container_cast ++ str "<"
     ++ ty_pp
     ++ str ">("
