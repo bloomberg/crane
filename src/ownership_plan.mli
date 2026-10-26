@@ -127,6 +127,14 @@ end
     it planned does not contain. *)
 val use : ?whole:bool -> t -> Miniml.Occurrence.t -> Use.t option
 
+(** Whether a match taking the record [t] apart takes its value, as [p]
+    plans it, rather than reading it in place: [t] is not a variable read by
+    copy or in place, a global naming which reads it, or a field of one.
+    What else it is, a value computed, a variable moved, or a global named by
+    calling it -- a cofixpoint, or one that only throws -- is evaluated once
+    into a local of its own, which the fields are moved out of. *)
+val takes_record : t -> Miniml.ml_ast -> bool
+
 (** Whether a variant match takes apart a scrutinee the region owns, binding
     its fields by mutable reference: the scrutinee is a variable owned there.
     One named through an application is read in place. *)

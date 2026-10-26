@@ -506,7 +506,7 @@ struct LoopifyPairs {
         const list<uint64_t> &l = *_f.l;
         uint64_t acc = _f.acc;
         if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
-          _result = std::make_pair(std::move(acc), list<uint64_t>::nil());
+          _result = std::make_pair(acc, list<uint64_t>::nil());
         } else {
           const auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v());
           auto [acc_, y] = f(acc, a0);

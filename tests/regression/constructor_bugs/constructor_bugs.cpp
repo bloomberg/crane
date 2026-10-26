@@ -108,7 +108,7 @@ ConstructorBugs::multi_call_tuple(uint64_t n) {
 std::pair<uint64_t, std::pair<ConstructorBugs::state, uint64_t>>
 ConstructorBugs::pair_test(uint64_t n) {
   ConstructorBugs::state s = get_state(n);
-  return std::make_pair(std::move(n), std::make_pair(s, s.value));
+  return std::make_pair(n, std::make_pair(s, s.value));
 }
 
 std::optional<std::pair<ConstructorBugs::state, uint64_t>>
