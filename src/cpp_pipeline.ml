@@ -52,57 +52,12 @@ let node_count (d : cpp_decl) =
   ignore (map_decl fe fs ft d);
   !n
 
-(** A declaration on its way to the seam, and whether its control was
-    lowered -- as it was generated, from its ControlIR, or by a pass lowering
-    control that rewrote it: the plan of its moves was made over Core, before
-    the loops, frames and sequenced bindings that lowering makes, and does
-    not see the last uses they create. *)
+(** A declaration on its way to the seam, and whether a pass lowering
+    control rewrote it: the plan of its moves was made over Core, before the
+    sequenced bindings that pass makes, and does not see the last uses they
+    create.  Control lowered from ControlIR as it is generated needs no such
+    pass: its loops make their own moves, at construction. *)
 type unsettled = {decl : cpp_decl; control_lowered : bool}
-
-(** Whether [decl] holds a method whose loop was lowered from its ControlIR
-    as it was generated ({!Control_to_legacy_minicpp}). *)
-let rec holds_lowered_method decl =
-  let rec in_fields fs =
-    List.exists
-      (fun (f, _, _) ->
-        match f with
-        | Fmethod {mf_loop; _} | Fmember_decl (OLmethod {mf_loop; _}) -> Option.has_some mf_loop
-        | Fnested_struct (_, fs) -> in_fields fs
-        | _ -> false )
-      fs
-  in
-  match decl with
-  | Dtemplate (_, _, d) -> holds_lowered_method d
-  | Dstruct ds | Dfields ds -> in_fields ds.ds_fields
-  | Dmember_def {dm_field = OLmethod {mf_loop; _}; _} -> Option.has_some mf_loop
-  | Dnspace (_, ds) -> List.exists holds_lowered_method ds
-  | _ -> false
-
-(** Whether [decl] holds control lowered from its ControlIR as it was
-    generated ({!Control_to_legacy_minicpp}): a function or a method whose
-    body is its loop, or a local fixpoint's lambda that is, which no pass
-    before the loopify check can have made. *)
-let lowered_at_generation decl =
-  let exception Found in
-  let fe e =
-    match e with
-    | CPPlambda {cl_fixpoint = Some {lf_encoding = Lowered; _}; _} -> raise_notrace Found
-    | e -> e
-  in
-  let rec fe' e = map_expr fe' fs Fun.id (fe e)
-  and fs s = map_stmt fe' fs Fun.id s in
-  let rec functions = function
-    | Dtemplate (_, _, d) -> functions d
-    | Dfun {df_loop = Some _; _} -> raise_notrace Found
-    | Dnspace (_, ds) -> List.iter functions ds
-    | _ -> ()
-  in
-  match
-    functions decl;
-    ignore (map_decl fe' fs Fun.id decl)
-  with
-  | () -> holds_lowered_method decl
-  | exception Found -> true
 
 (** A pass over the declaration alone. *)
 let on_decl name f = Pipeline_trace.pass name (fun u -> {u with decl = f u.decl})
@@ -155,9 +110,9 @@ let minicpp_passes : unsettled Pipeline_trace.pass list =
     (* An initialiser nested deeper than a compiler will parse becomes a run of
        bindings; everything shallower is left as it stands. *)
     on_decl "depth" Cpp_depth.flatten;
-    (* Where control was lowered after the plan, with the frames and
-       temporaries in their final places, a local's last read is visible, and
-       becomes a move.  Elsewhere the plan moved every read it could. *)
+    (* Where control was lowered after the plan, with the temporaries in
+       their final places, a local's last read is visible, and becomes a
+       move.  Elsewhere the plan moved every read it could. *)
     Pipeline_trace.pass "last_use" (fun u ->
         if u.control_lowered && Table.move_last_use () then {u with decl = Last_use.transform_decl u.decl}
         else u );
@@ -327,7 +282,7 @@ let finish decl =
       d passes
   in
   let {decl; _} =
-    run (fun u -> u.decl) minicpp_passes {decl; control_lowered = lowered_at_generation decl}
+    run (fun u -> u.decl) minicpp_passes {decl; control_lowered = false}
   in
   let settled = Cpp_erasure.materialise decl in
   note seam decl (settled :> cpp_decl);
