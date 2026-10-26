@@ -262,7 +262,7 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
       decl inner
     | Dnspace (_, ds) -> List.iter decl ds
     (* Initialised by a lambda that throws, of the declared type. *)
-    | Dasgn (_, t, CPPabort _) ->
+    | Dasgn {da_type = t; da_init = CPPabort _; _} ->
       ty t;
       std "stdexcept"
     | d -> (

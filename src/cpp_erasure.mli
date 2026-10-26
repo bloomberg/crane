@@ -177,6 +177,18 @@ val lower_conditionals : settled -> settled
     that writes a move or a member read. *)
 val lower_access_moves : settled -> settled
 
+(** [is_literal_type ty] holds when [ty] is a C++ literal type, so a value of
+    it can be a constant expression: not an allocation ([shared_ptr]), not
+    [void], not a type known only at instantiation, not an axiom's type
+    (whose stubs throw), not [std::function] or [decltype], and no type it is
+    made of fails to be one. *)
+val is_literal_type : Minicpp.cpp_type -> bool
+
+(** [decide_constexpr decl] decides, for every function, method and variable
+    [decl] defines, whether it may be [constexpr]
+    ({!Minicpp.constexpr_eligibility}).  Last, once every type is final. *)
+val decide_constexpr : settled -> settled
+
 (** [materialise decl] replaces every {!Minicpp.Topaque} in [decl] with
     {!Minicpp.Tany}.
 

@@ -675,6 +675,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                   mf_receiver = Static;
                   mf_is_inline = false;
                   mf_no_pure = false;
+                  mf_constexpr = Undecided;
                   mf_is_noexcept = false;
                   mf_is_conversion = false;
                   mf_binders = [];

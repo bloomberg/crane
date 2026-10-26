@@ -125,6 +125,8 @@ type inline_template = {
 
 type erased_kind = Ek_type | Ek_prop | Ek_implicit
 
+type constexpr_eligibility = Undecided | Eligible | Ineligible
+
 type tvar = Tv_index of int * Id.t option | Tv_named of Id.t
 
 type cpp_type =
@@ -733,6 +735,7 @@ and method_field = {
   mf_receiver : receiver;
   mf_is_inline : bool;
   mf_no_pure : bool;
+  mf_constexpr : constexpr_eligibility;
   mf_is_noexcept : bool;
   mf_is_conversion : bool;
   mf_binders : (Id.t * Core_binder.t) list;
@@ -828,6 +831,7 @@ let static_fun ~name ~ret ~params ~body =
     mf_receiver = Static;
     mf_is_inline = false;
     mf_no_pure = false;
+    mf_constexpr = Undecided;
     mf_is_noexcept = false;
     mf_is_conversion = false;
     mf_binders = [];
@@ -1861,7 +1865,7 @@ type cpp_decl =
   | Dnspace of GlobRef.t option * cpp_decl list
   | Dfun of dfun
   | Dstruct of dstruct
-  | Dasgn of GlobRef.t * cpp_type * cpp_expr
+  | Dasgn of dasgn
   | Dconcept of
       GlobRef.t
       * cpp_expr (* template params are provided by an outer Dtemplate *)
@@ -1940,13 +1944,19 @@ and dusing = {
   du_note : string option;
 }
 
+and dasgn = {
+  da_ref : GlobRef.t;
+  da_type : cpp_type;
+  da_init : cpp_expr;
+  da_constexpr : constexpr_eligibility;
+}
+
 (** A function declaration or definition. *)
 and dfun = {
   df_path : dfun_path;  (** The [::]-separated name it is written under *)
   df_ret : cpp_type;
   df_no_pure : bool;
-      (** Suppress [__attribute__((pure))] / [constexpr]: monadic functions
-          and axiom stubs are neither. *)
+  df_constexpr : constexpr_eligibility;
   df_shape : dfun_shape;
   df_binders : (Id.t * Core_binder.t) list;
   df_loop : Control_ir.Loop.t option;
@@ -2000,7 +2010,7 @@ let rec decl_globref = function
 let rec decl_body = function
   | Dtemplate (_, _, inner) -> decl_body inner
   | Dfun {df_shape = Ddef (params, body); _} -> (params, body)
-  | Dasgn (_, _, e) -> ([], [Sreturn (Some e)])
+  | Dasgn {da_init = e; _} -> ([], [Sreturn (Some e)])
   | _ -> ([], [])
 
 (** The invocations a body performs of the callable parameter of template
@@ -2241,10 +2251,13 @@ let mk_dfun ?inner ?(targs = []) ?(no_pure = false) ?(binders = []) ~ret r shape
     df_path = dfun_path ?inner (r, targs);
     df_ret = ret;
     df_no_pure = no_pure;
+    df_constexpr = Undecided;
     df_shape = shape;
     df_binders = binders;
     df_loop = None;
   }
+
+let mk_dasgn r ty e = Dasgn {da_ref = r; da_type = ty; da_init = e; da_constexpr = Undecided}
 
 (** The member as a field, to be written where a field is written. *)
 let field_of_member = function
@@ -2487,7 +2500,7 @@ let rec map_decl ?fl
         df_ret = ft f.df_ret;
         df_shape = shape' }
   | Dstruct s -> Dstruct (map_dstruct ?fl fe fs ft s)
-  | Dasgn (r, ty, e) -> Dasgn (r, ft ty, fe e)
+  | Dasgn a -> Dasgn {a with da_type = ft a.da_type; da_init = fe a.da_init}
   | Dconcept (r, e) -> Dconcept (r, fe e)
   | Dstatic_assert (e, msg) -> Dstatic_assert (fe e, msg)
   | Dusing u ->

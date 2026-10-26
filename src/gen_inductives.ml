@@ -938,6 +938,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
               returns_field = Escape.returns_receiver_field ~this_pos body };
         mf_is_inline = false;
         mf_no_pure = no_pure;
+        mf_constexpr = Undecided;
         mf_is_noexcept = false;
         mf_is_conversion = false;
         mf_binders = parameter_binders env params;
@@ -1342,6 +1343,7 @@ let gen_ind_header_v2
                       returns_field = false };
                 mf_is_inline = false;
                 mf_no_pure = true;
+                mf_constexpr = Undecided;
                 mf_is_noexcept = false;
                 mf_is_conversion = false;
                 mf_binders = [];
@@ -3274,6 +3276,7 @@ let gen_ind_header_v2
                         returns_field = false };
                   mf_is_inline = false;
                   mf_no_pure = false;
+                  mf_constexpr = Undecided;
                   mf_is_noexcept = false;
                   mf_is_conversion = false;
                   mf_binders = [];
@@ -3313,6 +3316,7 @@ let gen_ind_header_v2
                       returns_field = false };
                 mf_is_inline = false;
                 mf_no_pure = false;
+                mf_constexpr = Undecided;
                 mf_is_noexcept = false;
                 mf_is_conversion = false;
                 mf_binders = [];
@@ -3339,6 +3343,7 @@ let gen_ind_header_v2
                       returns_field = false };
                 mf_is_inline = false;
                 mf_no_pure = false;
+                mf_constexpr = Undecided;
                 mf_is_noexcept = false;
                 mf_is_conversion = false;
                 mf_binders = [];
@@ -3373,6 +3378,7 @@ let gen_ind_header_v2
                         returns_field = false };
                   mf_is_inline = true;
                   mf_no_pure = true;
+                  mf_constexpr = Undecided;
                   mf_is_noexcept = false;
                   mf_is_conversion = false;
                   mf_binders = [];

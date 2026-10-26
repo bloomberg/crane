@@ -320,8 +320,8 @@ let rec resolve_casts (d : settled) : settled =
      declared type.  The printer used to decide this while rendering; saying it
      in the IR means the cast goes through the normalisation above like every
      other one. *)
-  | Dasgn (id, ty, e) when returns_a_box e && castable_to ty ->
-    Dasgn (id, ty, resolve_expr (unbox (Ml_type_util.resolve_tvars_to_any ty) e))
+  | Dasgn ({da_type = ty; da_init = e; _} as a) when returns_a_box e && castable_to ty ->
+    Dasgn {a with da_init = resolve_expr (unbox (Ml_type_util.resolve_tvars_to_any ty) e)}
   | _ -> map_decl resolve_expr resolve_stmt (fun t -> t) d
 
 (** {2 Reading boxed values}
@@ -747,6 +747,88 @@ let lower_access_moves (d : settled) : settled =
   and fs s = map_stmt fe fs Fun.id s in
   map_decl fe fs Fun.id d
 
+(** {2 Literal types} *)
+
+let rec is_literal_type ty =
+  (not (is_any_shaped ty))
+  &&
+  match ty with
+  | Tshared_ptr _ | Tvoid | Tvar _ | Tinstance _ | Tpromoted _ | Tany | Topaque | Tauto
+  | Tunresolved ->
+    false
+  (* [std::function] erases what it holds. *)
+  | Tfun _ | Tdecay _ -> false
+  | Tglob (r, _, _) when is_axiom_type_ref r -> false
+  | Tglob (r, [], _) when Table.is_custom_scalar_ref r -> true
+  (* A generated inductive other than an enum has user-provided constructors
+     that are not [constexpr], so it is not a literal type. *)
+  | Tglob ((GlobRef.IndRef _ as r), tys, _) ->
+    Table.is_enum_inductive r && List.for_all is_literal_type tys
+  | Tconst t | Tref (_, t) | Tptr t | Tnondeduced t | Tnamespace (_, t) | Tqualified (t, _) ->
+    is_literal_type t
+  | Tvariant (_, tys) -> List.for_all is_literal_type tys
+  (* A defined constant with no arguments is an alias nothing here sees
+     through, as is a [Tid] with none. *)
+  | Tglob (GlobRef.ConstRef _, [], _) | Tid (_, []) -> false
+  | Tglob (_, tys, _) | Tid (_, tys) | Tid_external (_, tys) -> List.for_all is_literal_type tys
+  | Trebind (h, x) -> is_literal_type h && is_literal_type x
+  | Thole | Terased _ -> true
+  | Texpr_type _ | Tdecltype_auto -> false
+  (* An applied associated type is whatever the instance makes it. *)
+  | Ttyctor _ | Tapply _ -> false
+
+let literal_signature ret params = List.for_all is_literal_type (ret :: List.map snd params)
+
+let eligible b = if b then Eligible else Ineligible
+
+let decide_constexpr (d : settled) : settled =
+  let method_ mf =
+    { mf with
+      mf_constexpr =
+        eligible
+          ( mf.mf_receiver = Static && (not mf.mf_no_pure)
+          && literal_signature mf.mf_ret_type mf.mf_params ) }
+  in
+  let rec fields fs = List.map (fun (f, vis, tag) -> (field f, vis, tag)) fs
+  and field = function
+    | Fmethod mf -> Fmethod (method_ mf)
+    | Fmember_decl (OLmethod mf) -> Fmember_decl (OLmethod (method_ mf))
+    | Fnested_struct (id, fs) -> Fnested_struct (id, fields fs)
+    | f -> f
+  in
+  let struct_ ds = {ds with ds_fields = fields ds.ds_fields} in
+  let rec decl = function
+    | Dtemplate (tps, c, d) -> Dtemplate (tps, c, decl d)
+    | Dnspace (r, ds) -> Dnspace (r, List.map decl ds)
+    | Dfun f ->
+      let types, throws =
+        match f.df_shape with
+        | Ddef (params, body) ->
+          (List.map snd params, match body with [Sreturn (Some (CPPabort _))] -> true | _ -> false)
+        | Ddecl params -> (List.map snd params, false)
+      in
+      Dfun
+        { f with
+          df_constexpr =
+            eligible ((not (throws || f.df_no_pure)) && List.for_all is_literal_type (f.df_ret :: types)) }
+    | Dasgn a ->
+      let literal =
+        match a.da_init with
+        | CPPnumeral _ | CPPuint _ | CPPint _ | CPPbool _ | CPPenum_val _ -> true
+        (* A mapped constant constructor of a literal type ([true]) is that
+           type's literal. *)
+        | CPPglob ((GlobRef.ConstructRef _ as r), [], _) -> Table.is_custom r
+        | _ -> false
+      in
+      Dasgn {a with da_constexpr = eligible (literal && is_literal_type a.da_type)}
+    | Dstruct ds -> Dstruct (struct_ ds)
+    | Dfields ds -> Dfields (struct_ ds)
+    | Dmember_def ({dm_field = OLmethod mf; _} as m) ->
+      Dmember_def {m with dm_field = OLmethod (method_ mf)}
+    | d -> d
+  in
+  decl d
+
 (** [bind_free_tvars decl] spells [std::any] every type variable a body names
     that nothing in scope declares.
 
@@ -859,7 +941,7 @@ let bind_free_tvars (d : settled) : settled =
       Dfun {f with df_shape = Ddef (params, body bound stmts)}
     (* A global's initialiser is a body like any other, and its declared type
        is as much a signature as a function's return type. *)
-    | Dasgn (r, ty, e) -> Dasgn (r, ty, fe (add_ty ty bound) e)
+    | Dasgn a -> Dasgn {a with da_init = fe (add_ty a.da_type bound) a.da_init}
     | _ -> d
   and struct_ bound st =
     let bound = add_ids (List.map snd st.ds_tparams) bound in

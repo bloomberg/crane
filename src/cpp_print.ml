@@ -946,6 +946,11 @@ let body_is_throw = function
                           that operate on [std::any] or axiom types)
     @param ret_ty         the C++ return type
     @param params         [(name, type)] pairs for all formal parameters *)
+let check_constexpr what decided computed =
+  if Probe.checking () && decided <> (if computed then Eligible else Ineligible) then
+    Probe.violation "constexpr"
+      (str ("the seam's constexpr eligibility of a " ^ what ^ " is not the printer's"))
+
 let fun_qualifier ~can_constexpr ~throws ~no_pure ret_ty params =
   if can_constexpr && not throws && not no_pure && is_constexpr_eligible ret_ty params then
     str "constexpr "
@@ -3423,9 +3428,12 @@ let rec pp_cpp_field
         mf_receiver;
         mf_is_inline;
         mf_no_pure;
+        mf_constexpr;
         mf_is_noexcept;
         mf_is_conversion;
       } ->
+    check_constexpr "method" mf_constexpr
+      (mf_receiver = Static && (not mf_no_pure) && is_constexpr_eligible mf_ret_type mf_params);
     let const_s =
       match mf_receiver with
       | Static -> mt ()
@@ -3979,7 +3987,7 @@ and pp_cpp_decl env (settled : Cpp_erasure.settled) =
 (** A template head and the declaration it introduces. *)
 and pp_template_decl env temps cstr (inner : Cpp_erasure.settled) =
   match (inner :> cpp_decl) with
-  | Dasgn (id, ty, e) when (!render_ctx).rc_in_struct ->
+  | Dasgn {da_ref = id; da_type = ty; da_init = e; _} when (!render_ctx).rc_in_struct ->
     let expr_pp = pp_initialiser env ty e in
     template_head env temps cstr ++ pp_meyers_singleton env id ty expr_pp
   | _ -> template_head env temps cstr ++ pp_cpp_decl env inner
@@ -4116,7 +4124,12 @@ and pp_leaf_decl env (d : cpp_decl) =
   (* Taken apart by {!Cpp_erasure.view}, which hands out their children
      settled. *)
   | Dtemplate _ | Dnspace _ -> assert false
-  | Dfun {df_path; df_ret = ret_ty; df_no_pure = no_pure; df_shape = shape} ->
+  | Dfun {df_path; df_ret = ret_ty; df_no_pure = no_pure; df_constexpr; df_shape = shape} ->
+    ( match shape with
+    | Ddef (params, body) ->
+      check_constexpr "function" df_constexpr
+        ((not (body_is_throw body)) && (not no_pure) && is_constexpr_eligible ret_ty params)
+    | Ddecl _ -> () );
     let ids = dfun_path_list df_path in
     (* A definition is either out-of-line in a .cpp file or inline in a
        template struct; a declaration is always the forward declaration of an
@@ -4256,7 +4269,7 @@ and pp_leaf_decl env (d : cpp_decl) =
     ++ f_s
     ++ fnl ()
     ++ str "};"
-  | Dasgn (id, ty, e) ->
+  | Dasgn {da_ref = id; da_type = ty; da_init = e; da_constexpr} ->
     let expr_pp = pp_initialiser env ty e in
     if (!render_ctx).rc_in_template
        || ((!render_ctx).rc_in_struct
@@ -4277,6 +4290,7 @@ and pp_leaf_decl env (d : cpp_decl) =
          | _ -> false)
         && is_constexpr_type ty
       in
+      check_constexpr "variable" da_constexpr literal;
       let ty = match ty with Tconst t when literal -> t | t -> t in
       let static_kw =
         match ((!render_ctx).rc_in_struct, literal) with
