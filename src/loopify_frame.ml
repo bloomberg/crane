@@ -403,11 +403,6 @@ let make_cont_bindings ~field_names cont_vars cont_types =
       | Tunresolved -> Sasgn (id, Existing, field_expr)
       | Tconst inner when not (is_trivially_copyable_type inner) ->
         Sasgn (id, Declare (Tref (Lvalue, Tconst inner), None), field_expr)
-      | t when not (is_trivially_copyable_type t) ->
-        (* Move from frame field to avoid O(n) deep copy of owned value types
-           (e.g. [List<T>]).  Safe because [_f] was obtained via
-           [std::move(std::get<...>(_frame))] and this field is not used again. *)
-        Sasgn (id, Declare (ty, None), CPPmove field_expr)
       | Tvar _ ->
         (* Template type parameter (e.g. [F0] from [F0 &&f]).  When [F0] is
            deduced as a reference type, [F0 f = std::move(_f.f)] would be
@@ -415,6 +410,11 @@ let make_cont_bindings ~field_names cont_vars cont_types =
            Use [auto] so the declared type is always deduced as a value type,
            regardless of whether [F0] was a reference or function type. *)
         Sasgn (id, Declare (Tauto, None), CPPmove field_expr)
+      | t when not (copies_cheaply t) ->
+        (* Move from frame field to avoid O(n) deep copy of owned value types
+           (e.g. [List<T>]).  Safe because [_f] was obtained via
+           [std::move(std::get<...>(_frame))] and this field is not used again. *)
+        Sasgn (id, Declare (ty, None), CPPmove field_expr)
       | _ -> Sasgn (id, Declare (ty, None), field_expr))
     cont_vars
 
@@ -1799,7 +1799,7 @@ let make_stack_init varying_params =
   let move_if_needed ty v =
     match ty with
     | Tconst _ | Tref _ -> v
-    | t when not (is_trivially_copyable_type t) -> CPPmove v
+    | t when not (copies_cheaply t) -> CPPmove v
     | _ -> v
   in
   make_stack_push
@@ -1833,11 +1833,6 @@ let make_param_copies varying_params =
       (* Const-ref param stored in frame: bind by [const T&] reference, cheaper
          than cloning. *)
       Sasgn (id, Declare (Tref (Lvalue, Tconst inner), None), f)
-    | t when not (is_trivially_copyable_type t) ->
-      (* Owned non-trivial type (e.g. [List<T>]): move from frame field to avoid
-         an O(n) deep-copy.  [_f] was obtained via [std::move(std::get<...>(_frame))]
-         so the field is safe to consume. *)
-      Sasgn (id, Declare (t, None), CPPmove f)
     | Tvar _ ->
       (* Template type parameter (e.g. [F0] from [F0 &&f]).  When [F0] is
          deduced as a reference type, [F0 f = std::move(_f.f)] would be
@@ -1845,6 +1840,11 @@ let make_param_copies varying_params =
          Use [auto] so the declared type is always deduced as a value type,
          regardless of whether [F0] was a reference or function type. *)
       Sasgn (id, Declare (Tauto, None), CPPmove f)
+    | t when not (copies_cheaply t) ->
+      (* Owned non-trivial type (e.g. [List<T>]): move from frame field to avoid
+         an O(n) deep-copy.  [_f] was obtained via [std::move(std::get<...>(_frame))]
+         so the field is safe to consume. *)
+      Sasgn (id, Declare (t, None), CPPmove f)
     | _ ->
       (* Trivially copyable (scalar, pointer, enum): plain copy is fine. *)
       Sasgn (id, Declare (stripped, None), f)
@@ -3062,7 +3062,7 @@ let transform_nontail ?(fn_name : string option) ?loop ?adopted ?entered_by ?(en
           match strip_ref_type p.fp_ty with
           | Tconst _ -> None  (* const-ref bind: not owned *)
           | Tglob (r, _, _) when Table.is_coinductive r -> None
-          | t when not (is_trivially_copyable_type t) -> Some p.fp_name
+          | t when not (copies_cheaply t) -> Some p.fp_name
           | _ -> None )
       ee.ee_params
   in

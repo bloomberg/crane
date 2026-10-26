@@ -188,6 +188,11 @@ and is_trivially_copyable_named s ts =
 
 let worthwhile_move_type = Ownership_plan.worth_moving_cpp
 
+(** Whether a value of the C++ type [t] is copied as cheaply as it is moved:
+    trivially copyable, and not worth a move -- a template type variable is
+    trivially copyable here, and may stand for any type. *)
+let copies_cheaply t = is_trivially_copyable_type t && not (worthwhile_move_type t)
+
 (* Global mutable state in this file and their reset granularity:
    - mutual_fn_table, outcomes : reset per generated file (State.Unit)
    - ctor_ptr_fields : accumulates across the full session; never cleared because
