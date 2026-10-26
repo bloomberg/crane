@@ -813,7 +813,7 @@ let branch_dependency = "recursive call in a branch condition or dispatch scruti
 let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_by ?modulo_cons ?shapes ?loop
     ?binders ?parts check tparams params ret_ty body =
   let declined reason =
-    {nt_body = body; nt_outcome = Lp_declined reason; nt_used_param_inits = false; nt_machine = false}
+    {nt_body = body; nt_outcome = Lp_declined reason; nt_machine = false}
   in
   if has_recursive_branch_dependency check body then
     declined branch_dependency
@@ -825,7 +825,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
     in
     { nt_body = Option.cata fst body machine;
       nt_outcome = Lp_frame;
-      nt_used_param_inits = false;
+     
       nt_machine = Option.has_some machine }
   in
   (* A transform may discover mid-flight that the body's shape has no
@@ -862,7 +862,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
     | None -> None
   in
   match tmc with
-  | Some tmc -> {nt_body = tmc; nt_outcome = Lp_tmc; nt_used_param_inits = true; nt_machine = true}
+  | Some tmc -> {nt_body = tmc; nt_outcome = Lp_tmc; nt_machine = true}
   | None -> frame ()
   with Not_linearisable reason -> declined reason
 
@@ -1244,12 +1244,11 @@ let transform_method_own ?varying ?parts ?(controlled = false) ~tparams ~self_ty
         match strategy with
         | Tail_loop ->
           Some
-            ( report_outcome ~name ~check:self_check ~strategy:Lp_tail
-                (let loop = Option.bind mf.mf_globref function_loop in
-                 checked_tail_loop loop (fun jumped ->
-                     transform_tail ~param_inits:[(self_id, CPPthis)] ~jumped ?varying ?parts tparams
-                       (planned_jumps loop self_check) augmented_params mf.mf_ret_type body_with_self ) ),
-              false )
+            (report_outcome ~name ~check:self_check ~strategy:Lp_tail
+               (let loop = Option.bind mf.mf_globref function_loop in
+                checked_tail_loop loop (fun jumped ->
+                    transform_tail ~param_inits:[(self_id, CPPthis)] ~jumped ?varying ?parts tparams
+                      (planned_jumps loop self_check) augmented_params mf.mf_ret_type body_with_self ) ) )
         | Modulo_cons _ | Frame_stack ->
           let fn_name = Some name in
           let loop = Option.bind mf.mf_globref function_loop in
@@ -1277,12 +1276,12 @@ let transform_method_own ?varying ?parts ?(controlled = false) ~tparams ~self_ty
             report_outcome ~name ~check:self_check ~strategy:r.nt_outcome
               r.nt_body
           in
-          if r.nt_outcome = Lp_frame && not r.nt_machine then None else Some (body', not r.nt_used_param_inits)
+          if r.nt_outcome = Lp_frame && not r.nt_machine then None else Some body'
         | No_loop | Suspended _ -> CErrors.anomaly (Pp.str "loopify: no loop cannot appear here")
       in
       match lowered with
       | None -> Fmethod mf
-      | Some (body', needs_init_self) ->
+      | Some body' ->
       (* Declare the parking slot outside the loop so the pointer taken to it
          on the back-edge stays valid for the next iteration. *)
       let body' =
@@ -1290,7 +1289,9 @@ let transform_method_own ?varying ?parts ?(controlled = false) ~tparams ~self_ty
         | Some ty -> Sdecl (id_self_store, ty, None) :: body'
         | None -> body'
       in
-      if needs_init_self then
+      (* A loop varying the receiver initialises its own copy of it from
+         [this]; any other reads [_self] as it was on entry. *)
+      if List.exists (Id.equal self_id) (free_vars_body body') then
         let init_self = Sasgn (self_id, Declare (self_ty, None), CPPthis) in
         Fmethod {mf with mf_body = init_self :: body'}
       else

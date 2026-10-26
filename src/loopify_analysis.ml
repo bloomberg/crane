@@ -421,10 +421,6 @@ let report_outcomes ?(unit_name = "") () =
 type nontail_result = {
   nt_body : cpp_stmt list;  (** The body to emit, transformed or original. *)
   nt_outcome : loopify_outcome;  (** Which transform fired, or why none did. *)
-  nt_used_param_inits : bool;
-      (** [true] when [param_inits] were consumed by the transform (TMC uses
-          them for method-self initialisation), meaning the caller does not
-          need a separate initialiser statement. *)
   nt_machine : bool;
       (** Whether a call enters the loop or machine the transform made: one
           none enters is not made, and the body is the one given. *)
