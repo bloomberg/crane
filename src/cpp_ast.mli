@@ -171,6 +171,13 @@ type t = private
           [enclosure] writes, if any, which closes them on a line of its
           own.  Empty only where no struct is written and there is nothing
           in it. *)
+  | Wrapper_struct of {name : string; module_ : ModPath.t; fields : t}
+      (** The struct [name] a declaration writes around the declarations of
+          the wrapper module [module_]: its own members, [fields], then that
+          module's body, which the translation unit holds
+          ({!translation_unit.wrapper_bodies}) and {!schedule} writes in.  The
+          body is built apart from the declaration, which only knows, from the
+          plan, that it is written into it. *)
   | Concept_group of {position : concept_position; concepts : t list}
       (** Concepts a module's struct is written beside, each on a line of
           its own, laid out as [position] says.  At least one. *)
@@ -259,6 +266,9 @@ val functor_alias : name:Pp.t -> ModPath.t -> (template_param * ModPath.t) list 
     where the tree puts it.  It needs nothing placed in front of it. *)
 val derived_functor : template:template_param list -> name:Pp.t -> module_expr -> t
 
+(** [wrapper_struct ~name ~module_ ~fields] is {!Wrapper_struct}. *)
+val wrapper_struct : name:string -> module_:ModPath.t -> fields:t -> t
+
 (** [elements ~source t] is [t], spelled as the elements of [source] are. *)
 val elements : source:ModPath.t -> t -> t
 val seq : t list -> t
@@ -306,6 +316,16 @@ val needs : t -> Needs.t
 type declared = Declared of declaration | Struct_of of ModPath.t
 
 val declared : t -> declared list
+
+(** The names of the {!Wrapper_struct}s in [t], in the order written. *)
+val wrapper_structs : t -> string list
+
+(** [fill_wrappers bodies t] is [t] with each {!Wrapper_struct} written as
+    {!module_} writes the struct around its fields and the body [bodies]
+    gives under its name.
+    @raise Invalid_argument if [bodies] gives none, or one of another
+    module. *)
+val fill_wrappers : (string * body) list -> t -> t
 
 (** [t] as a document, for reading.
     @raise Invalid_argument if it holds a declaration not yet printed. *)
@@ -357,6 +377,9 @@ type translation_unit = {
   deferred_members : t list;
       (** Datatype members whose bodies name a module's struct, last of
           all, after a break. *)
+  wrapper_bodies : (string * body) list;
+      (** The body of each wrapper module a {!Wrapper_struct} writes, by the
+          struct's name. *)
 }
 
 (** A translation unit with every due declaration placed. *)
@@ -373,7 +396,8 @@ type scheduled
     front of aliases.  One nothing writes is declared nowhere.
     A forward declaration goes in front of the innermost chunk at namespace
     scope holding the first declaration that names its struct, unless that
-    chunk defines the struct. *)
+    chunk defines the struct.  Each {!Wrapper_struct} is filled in first
+    ({!fill_wrappers}). *)
 val schedule : templates:template list -> forwards:forward list -> translation_unit -> scheduled
 
 (** The scheduled unit as a document, as {!print_tree} writes each

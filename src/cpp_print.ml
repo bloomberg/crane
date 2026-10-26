@@ -3642,22 +3642,6 @@ let rec unmerged_wrappers_written (d : Cpp_erasure.settled) =
     else List.concat_map unmerged_wrappers_written members @ [nspace_wrapper_name id]
   | Decl _ -> []
 
-(** The declarations of the wrapper modules the element being written
-    writes into a wrapper struct of the same name, by that name, as planned
-    ({!Cpp.file_layout}). *)
-let wrapper_members : (string * Cpp_ast.body) list ref = ref []
-
-let writing_wrapper_members members f = setting wrapper_members members f
-
-(** The wrapper structs that took a wrapper module's declarations, in the
-    order they did, under [CRANE_CHECK_IR]. *)
-let absorbed_wrappers : string list ref = ref []
-
-let take_absorbed_wrappers () =
-  let l = List.rev !absorbed_wrappers in
-  absorbed_wrappers := [];
-  l
-
 (** The assertions [d] holds back, in the order it writes them: those that
     a class's concept holds of an instance where the concept is declared
     after the struct being written, because its requirements name the
@@ -4228,18 +4212,19 @@ let constrained_structs : (GlobRef.t * string) list ref = State.cell State.Unit 
 
 let read_cpp_decl = pp_cpp_decl
 
-(** Whether [d] writes a wrapper struct that holds a wrapper module's
-    declarations ({!wrapper_members}). *)
-let absorbs (d : Cpp_erasure.settled) =
-  List.exists (fun name -> List.mem_assoc name !wrapper_members) (unmerged_wrappers_written d)
+(** The wrapper structs [d] writes that hold a wrapper module's
+    declarations: those [homed] names, each with the module. *)
+let absorbed_by ~homed (d : Cpp_erasure.settled) = List.filter (fun name -> List.mem_assoc name homed) (unmerged_wrappers_written d)
+
+let absorbs ~homed d = absorbed_by ~homed d <> []
 
 (** [d], which {!absorbs}, as written: each wrapper struct holding a wrapper
-    module's declarations the body of that module in a struct of its own
-    name, the wrapper's own members first, as fields, each printed where
-    the tree puts it ({!Cpp_ast.Absorbed}). *)
-let rec absorbing_decl env (d : Cpp_erasure.settled) =
+    module's declarations a {!Cpp_ast.Wrapper_struct}, the wrapper's own
+    members its fields, each printed where the tree puts it
+    ({!Cpp_ast.Absorbed}). *)
+let rec absorbing_decl ~homed env (d : Cpp_erasure.settled) =
   note_file_scope_type (d :> cpp_decl);
-  let written d = if absorbs d then absorbing_decl env d else Cpp_ast.absorbed env d in
+  let written d = if absorbs ~homed d then absorbing_decl ~homed env d else Cpp_ast.absorbed env d in
   match Cpp_erasure.view d with
   | Template (temps, cstr, inner) -> Cpp_ast.seq [Cpp_ast.text (template_head env temps cstr); written inner]
   | Namespace (None, decls) ->
@@ -4248,13 +4233,8 @@ let rec absorbing_decl env (d : Cpp_erasure.settled) =
   | Namespace (Some id, members) -> (
     let name = nspace_wrapper_name id in
     let ds = with_render_ctx (fun c -> {c with rc_in_struct = true}) (fun () -> Cpp_ast.concat fnl (List.map written members)) in
-    match List.assoc_opt name !wrapper_members with
-    | Some body ->
-      if Probe.checking () then absorbed_wrappers := name :: !absorbed_wrappers;
-      Cpp_ast.module_
-        (Struct {head = {template = []; name = str name; base = None}; layout = Block})
-        ~fields:Cpp_ast.(seq [ds; text (fnl ())])
-        body
+    match List.assoc_opt name homed with
+    | Some module_ -> Cpp_ast.wrapper_struct ~name ~module_ ~fields:Cpp_ast.(seq [ds; text (fnl ())])
     | None -> Cpp_ast.(seq [text (str "struct " ++ str name ++ str " {" ++ fnl ()); ds; text (fnl () ++ str "};")]) )
   | Decl _ -> Cpp_ast.text (pp_cpp_decl env d)
 
@@ -4283,8 +4263,8 @@ let constrained_named ~names ~defined =
     ({!planned_ctor_aliases}); and, of the structs the file has constrained
     forward declarations of, those it names or defines, and those it
     defines.  The declarations of a wrapper module it writes into a struct
-    of its own ({!wrapper_members}) are members of that struct, and need
-    what they need themselves. *)
+    of its own ({!Cpp_ast.Wrapper_struct}) are members of that struct, and
+    need what they need themselves. *)
 let needs_of ~templates (settled : Cpp_erasure.settled) =
   let names, defines =
     constrained_named
@@ -4306,33 +4286,34 @@ let fields_needs ~module_ ~vl r types =
   in
   {Cpp_ast.Needs.templates = List.map ctor_alias_name aliases; names; defines = []}
 
-let printed_decl ~print env settled =
-  let absorbed_before = List.length !absorbed_wrappers in
-  let text = print env settled in
-  let needs = needs_of ~templates:(List.map ctor_alias_name (ctor_aliases_planned settled)) settled in
-  let absorbing = List.filter (fun name -> List.mem_assoc name !wrapper_members) (unmerged_wrappers_written settled) in
+let printed_needs settled = needs_of ~templates:(List.map ctor_alias_name (ctor_aliases_planned settled)) settled
+
+let printed_decl env settled =
+  let text = pp_cpp_decl env settled in
+  (text, printed_needs settled)
+
+(** [settled], printed where it is made, with what placing the declarations
+    it needs reads ({!needs_of}). *)
+let write_decl env settled =
+  let text, needs = printed_decl env settled in
+  Cpp_ast.decl ~needs text
+
+(** [settled], which {!absorbs}, written where it is made ({!absorbing_decl}),
+    behind what placing the declarations it needs reads. *)
+let write_absorbing ~homed env settled =
+  let tree = absorbing_decl ~homed env settled in
+  let needs = printed_needs settled in
   ( if Probe.checking () then
-      let printed = List.filteri (fun i _ -> i < List.length !absorbed_wrappers - absorbed_before) !absorbed_wrappers in
-      if List.sort String.compare printed <> List.sort String.compare absorbing then
+      let written = Cpp_ast.wrapper_structs tree and absorbing = absorbed_by ~homed settled in
+      if List.sort String.compare written <> List.sort String.compare absorbing then
         Probe.violation "wrapper homes"
           Pp.(
             str "a declaration wrote the declarations of the wrappers "
-            ++ prlist_with_sep pr_comma str printed
+            ++ prlist_with_sep pr_comma str written
             ++ str " into its structs, and needs what those of "
             ++ prlist_with_sep pr_comma str absorbing
             ++ str " need" ) );
-  (text, needs)
-
-(** [settled], printed where it is made, with what placing the declarations
-    it needs reads ({!needs_of}), ahead of a wrapper struct it writes holding
-    a wrapper module's declarations. *)
-let write_decl env settled =
-  if absorbs settled then
-    let tree, needs = printed_decl ~print:absorbing_decl env settled in
-    Cpp_ast.seq [Cpp_ast.decl ~needs (Pp.mt ()); tree]
-  else
-    let text, needs = printed_decl ~print:pp_cpp_decl env settled in
-    Cpp_ast.decl ~needs text
+  Cpp_ast.seq [Cpp_ast.decl ~needs (Pp.mt ()); tree]
 
 let planned_needs ~module_ settled =
   needs_of ~templates:(List.map ctor_alias_name (planned_ctor_aliases ~module_ settled)) settled
@@ -4399,7 +4380,7 @@ let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
     | Module_alias {name; target} -> (pp_module_alias name target, u.needs)
     | Functor_alias {name; functor_; params} -> (pp_functor_alias name functor_ params, u.needs)
     | Derived_functor {template; name; base} -> (pp_derived_functor template name base, u.needs)
-    | Declaration {env; settled} -> printed_decl ~print:pp_cpp_decl env settled
+    | Declaration {env; settled} -> printed_decl env settled
     | Absorbed {env; settled} -> (pp_cpp_decl env settled, u.needs)
     | Fields {record; vars; fields} ->
       ( prlist_with_sep fnl (fun (name, ty) -> pp_cpp_type false vars ty ++ spc () ++ str name ++ str ";") fields

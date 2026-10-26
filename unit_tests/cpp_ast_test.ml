@@ -27,7 +27,7 @@ let template ?(homed = false) ?(holder = false) name = {Cpp_ast.name; homed; hol
 let forward s = {Cpp_ast.struct_ = s; forward_declaration = Pp.str ("fwd:" ^ s)}
 
 (* A unit whose body is [sections], nothing in any other section. *)
-let unit_of ?(prologue = []) sections =
+let unit_of ?(prologue = []) ?(wrapper_bodies = []) sections =
   { Cpp_ast.forward_declarations = prologue;
     erased_aliases = [];
     concept_prerequisites = [];
@@ -36,7 +36,8 @@ let unit_of ?(prologue = []) sections =
     lifted_specs = [];
     body = Cpp_ast.seq sections;
     deferred_definitions = [];
-    deferred_members = [] }
+    deferred_members = [];
+    wrapper_bodies }
 
 (* The text, without whitespace: breaks and separators are formatting. *)
 let text ?(templates = []) ?(forwards = []) sections =
@@ -203,7 +204,8 @@ let () =
       lifted_specs = [Cpp_ast.empty];
       body = t "b";
       deferred_definitions = [t "d1"; Cpp_ast.empty; t "d2"];
-      deferred_members = [t "m"] }
+      deferred_members = [t "m"];
+      wrapper_bodies = [] }
   in
   let printed u = Pp.string_of_ppcmds (Cpp_ast.print ~write:(fun _ _ -> Pp.str "?") (Cpp_ast.schedule ~templates:[] ~forwards:[] u)) in
   let squeezed u = String.of_seq (Seq.filter (fun c -> not (List.mem c [' '; '\n'])) (String.to_seq (printed u))) in
@@ -218,4 +220,19 @@ let () =
   check_text "classes' concepts ahead of a struct follow a line break" (group Classes_ahead) "\nc1\nc2\n\n";
   check_text "module types' concepts ahead of a struct follow nothing" (group Module_types_ahead) "c1\nc2\n\n";
   check_text "concepts after a struct follow a blank line" (group After_struct) "\n\nc1\nc2\n\n";
-  check "no concepts are no group" (Cpp_ast.is_empty (Cpp_ast.concept_group After_struct []))
+  check "no concepts are no group" (Cpp_ast.is_empty (Cpp_ast.concept_group After_struct []));
+  let wrapper = Cpp_ast.wrapper_struct ~name:"W" ~module_:inner ~fields:(t "f;") in
+  let filled bodies = Pp.string_of_ppcmds (Cpp_ast.print ~write:(fun _ _ -> Pp.str "?")
+      (Cpp_ast.schedule ~templates:[template ~homed:true "T"] ~forwards:[] (unit_of ~wrapper_bodies:bodies [top wrapper]))) in
+  check_text "a wrapper struct is filled in with its module's body, after its own members"
+    (filled [("W", Cpp_ast.module_body inner [t "y;"; leaf ~templates:["T"] "z;"])])
+    "struct W {\nf;y;<T>z;\n};";
+  let refused_fill bodies = match filled bodies with exception Invalid_argument _ -> true | _ -> false in
+  check "a wrapper struct with no body is refused" (refused_fill []);
+  check "a wrapper struct given another module's body is refused" (refused_fill [("W", Cpp_ast.module_body m [t "y;"])]);
+  check "a wrapper struct is a struct its module declares"
+    (match Cpp_ast.declared wrapper with [Struct_of mp] -> ModPath.equal mp inner | _ -> false);
+  check "the wrapper structs of a tree are listed in the order written"
+    (Cpp_ast.wrapper_structs (Cpp_ast.seq [wrapper; top (Cpp_ast.wrapper_struct ~name:"V" ~module_:m ~fields:Cpp_ast.empty)]) = ["W"; "V"]);
+  check "a wrapper struct not filled in is not printed"
+    (match Cpp_ast.to_pp wrapper with exception Invalid_argument _ -> true | _ -> false)
