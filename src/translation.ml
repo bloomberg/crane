@@ -367,6 +367,19 @@ let fix_moved_captures env fix =
 (* Whether a record's fields are moved out of what [base] reads it from. *)
 let moved_out base = match base with CPPmove _ -> true | _ -> false
 
+(* Whether a match taking the record [t] apart, a class instance's fields
+   unless [is_typeclass], takes its value, as the plan says
+   ({!Ownership_plan.takes_record}); under [CRANE_CHECK_IR], the code reading
+   it from [base] must agree. *)
+let record_taken ~is_typeclass t base =
+  let taken = (not is_typeclass) && Ownership_plan.takes_record (!tctx).move_plan t in
+  if Probe.checking () && taken <> moved_out base then
+    Probe.violation "ownership plan"
+      (Pp.str
+         ( if taken then "a record the plan takes apart by value is read in place"
+           else "a record the plan reads in place is taken apart by value" ) );
+  taken
+
 (* Under [CRANE_CHECK_IR], the region's plan must have decided as translation
    does whether [let _ : ty := a] binds the closure [a] to a local, which the
    plan owns and moves. *)
@@ -5118,6 +5131,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
          back so it aligns with ids (constructor / field order). *)
       let renamed_ids_fwd = List.rev renamed_ids in
       let base, cache = record_read_once env ~is_typeclass t in
+      let taken = record_taken ~is_typeclass t base in
       let asgns =
         List.map
           (fun (i, ((renamed_name, _), (_, ty))) ->
@@ -5151,7 +5165,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               | Some stmts -> stmts
               | None -> [Sasgn (renamed_name, Declare (decl_ty, None), e)]
             in
-            (stmts, moved_out base) )
+            (stmts, taken) )
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
       in
       mk_iife None
@@ -10345,6 +10359,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       let renamed_ids_fwd = List.rev renamed_ids in
       let tvars = get_current_type_vars () in
       let base, cache = record_read_once env ~is_typeclass t in
+      let taken = record_taken ~is_typeclass t base in
       let asgns =
         List.map
           (fun (i, ((renamed_name, _), (_, ty))) ->
@@ -10385,7 +10400,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               | Some stmts -> stmts
               | None -> [Sasgn (renamed_name, Declare (decl_ty, None), e)]
             in
-            (stmts, moved_out base && match decl_ty with Tref _ -> false | _ -> true) )
+            (stmts, taken && match decl_ty with Tref _ -> false | _ -> true) )
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
       in
       push_binders env (retype_dependent_params typ renamed_ids);

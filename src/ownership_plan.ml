@@ -669,6 +669,12 @@ let use ?(whole = false) p o : Use.t option =
   | Last_use | Read_again -> Some Copy
   | Unplanned -> None
 
+let rec takes_record p t =
+  match t with
+  | MLrel (_, o) -> use p o = Some Move
+  | MLglob {callee = r; _} -> Table.is_cofixpoint r || Table.is_throwing_value r
+  | t -> ( match field_of t with Some r -> takes_record p r | None -> true )
+
 let owns_scrutinee p = Binding.owns_scrutinee ~owned:(owned p)
 
 let pair_by_value p = Binding.pair_by_value ~owned:(owned p)
