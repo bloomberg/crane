@@ -1,8 +1,9 @@
 conservative_types_kept_parameter.cpp length: DECLINED: a self-call survived the transform
-loopify_adopted_fix_name_shared.cpp f: DECLINED: a self-call survived the transform
+loopify_adopted_fix_name_shared.cpp f: DECLINED: a self-call survived the transform: it is inside the local fixpoint loop (2 parameter(s)), which needs a second machine entry
 loopify_coerced_scrutinee.cpp eval: DECLINED: a self-call survived the transform
 loopify_coerced_scrutinee.cpp expr_rec: DECLINED: a self-call survived the transform
 loopify_coerced_scrutinee.cpp expr_rect: DECLINED: a self-call survived the transform
+loopify_local_fix_inner_callback.cpp f: DECLINED: a self-call survived the transform
 loopify_mutual_partial_app.cpp ft_e: DECLINED: a self-call survived the transform: it is inside an inlined body (2 parameter(s)), which needs a second machine entry
 loopify_mutual_partial_app.cpp ft_md: DECLINED: a self-call survived the transform: it is inside an inlined body (2 parameter(s)), which needs a second machine entry
 loopify_mutual_partial_app.cpp sum_md: DECLINED: a self-call survived the transform: it is inside an inlined body (1 parameter(s)), which needs a second machine entry
@@ -17,3 +18,4 @@ nested_ind.cpp lit_map: DECLINED: a self-call survived the transform
 nested_ind.cpp literals: DECLINED: a self-call survived the transform
 nested_inductive_no_drain.cpp tsum: DECLINED: a self-call survived the transform
 rec_record.cpp rnode_depth: DECLINED: recursive call passes a value-type receiver, whose address cannot be stored in a frame
+typed_expr.cpp eval: DECLINED: a self-call survived the transform
