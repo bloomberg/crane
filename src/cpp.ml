@@ -86,7 +86,7 @@ let concept_assertion mp mty =
   match concept_of_mt mty with
   | None -> (Cpp_ast.empty, [])
   | Some (mt_mp, _) ->
-    let a = {Cpp_ast.concept = Of_module_type mt_mp; subject = Module mp} in
+    let a = {Cpp_ast.concept = Of_module_type mt_mp; subject = Module (Cpp_ast.module_ref mp)} in
     if concept_held_back (held_concept_of a) then (Cpp_ast.empty, [a]) else (Cpp_ast.assertion a, [])
 
 (** Render a functor parameter as a C++ template parameter.
@@ -119,8 +119,8 @@ let template_param (mbid, mt) : Cpp_ast.template_param =
     or an application is applied. *)
 let application_of me =
   let rec flatten args = function
-    | MEapply (g, MEident arg) -> flatten (arg :: args) g
-    | MEident functor_ -> {Cpp_ast.functor_; args}
+    | MEapply (g, MEident arg) -> flatten (Cpp_ast.module_ref arg :: args) g
+    | MEident functor_ -> {Cpp_ast.functor_ = Cpp_ast.module_ref functor_; args}
     | _ -> CErrors.anomaly (Pp.str "Crane: a functor application whose functor or argument is not a path.")
   in
   flatten [] me
@@ -274,7 +274,12 @@ let hoisted_structs : MPset.t ref = State.cell State.Unit MPset.empty
     written, its declarations printed as the tree spells them. *)
 let struct_hoists mp t =
   let planned = MPset.mem mp !hoisted_structs in
-  if Probe.checking () && planned && names_into_a_struct (Cpp_ast.print_tree ~write:(Cpp_ind.write_unprinted ~file:Intf) t) then
+  if
+    Probe.checking () && planned
+    && names_into_a_struct
+         (Cpp_ast.print_tree ~write:(Cpp_ind.write_unprinted ~file:Intf)
+            (Cpp_ast.resolve_tree ~resolve:(Cpp_ind.resolve_module_at ~file:Intf) t) )
+  then
     Probe.violation "hoisted structs"
       Pp.(
         str "the struct of the module " ++ str (ModPath.to_string mp)
@@ -770,7 +775,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                 (* A functor that is another module is a struct deriving
                    from it, as one applying another functor is. *)
                 | MEapply _ -> written (Cpp_ast.derived_functor ~template ~name (Applied (application_of body)))
-                | MEident mp -> written (Cpp_ast.derived_functor ~template ~name (Module_named mp))
+                | MEident mp -> written (Cpp_ast.derived_functor ~template ~name (Module_named (Cpp_ast.module_ref mp)))
                 | MEfunctor _ -> CErrors.anomaly (Pp.str "Crane: a functor's parameters were not all collected.") )
           in
           { text = struct_def; concepts = concepts @ body_concepts; asserts }
@@ -1087,16 +1092,17 @@ let rec pp_structure_elem ~is_header f ~module_ = function
              [MEident WFacts] with a functor's type: the alias is a template
              over the functor's parameters, [WFacts] being one too. *)
           let rec functor_params = function
-            | MTfunsig (mbid, mt, rest) -> (template_param (mbid, mt), MPbound mbid) :: functor_params rest
+            | MTfunsig (mbid, mt, rest) ->
+              (template_param (mbid, mt), Cpp_ast.module_ref (MPbound mbid)) :: functor_params rest
             | _ -> []
           in
           match functor_params m.ml_mod_type with
           (* A file module is a namespace, which no alias in a struct can
              name. *)
           | [] when is_modfile target && (!render_ctx).rc_in_struct -> written Cpp_ast.empty
-          | [] -> written (Cpp_ast.module_alias ~name (Module_named target))
+          | [] -> written (Cpp_ast.module_alias ~name (Module_named (Cpp_ast.module_ref target)))
           | params ->
-            written (Cpp_ast.functor_alias ~name target params)
+            written (Cpp_ast.functor_alias ~name (Cpp_ast.module_ref target) params)
     in
     { mod_pp with
       text =
@@ -3442,7 +3448,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     else []
   in
   let written = if is_header then Common.Intf else Common.Impl in
-  let scheduled = Cpp_ast.schedule ~templates ~forwards unit in
+  let scheduled = Cpp_ast.resolve ~resolve:(Cpp_ind.resolve_module_at ~file:written) (Cpp_ast.schedule ~templates ~forwards unit) in
   let print () = Cpp_ast.print ~write:(Cpp_ind.write_unprinted ~file:written) scheduled in
   let file = print () in
   (* Printing a scheduled unit is a function of it: printed again, with

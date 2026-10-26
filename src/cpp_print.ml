@@ -445,7 +445,7 @@ let stand_ins t =
             Cpp_ast.(global_alias (Alias_of_type {target; definition; tparams})) )
           (declared_types (settled :> cpp_decl))
       | Declared (Fields _ | Modtype_concept _ | Global_alias _ | Assertion _ | Module_alias _ | Functor_alias _ | Derived_functor _) -> []
-      | Struct_of mp -> [Cpp_ast.(global_alias (Alias_of_module mp))] )
+      | Struct_of mp -> [Cpp_ast.(global_alias (Alias_of_module (module_ref mp)))] )
     (Cpp_ast.declared t)
 
 (** The C++ token an {!Minicpp.obj_access} prints as. *)
@@ -4320,10 +4320,29 @@ let unprinted ~module_ env settled = Cpp_ast.unprinted ~needs:(planned_needs ~mo
 let unprinted_fields ~module_ ~vl r fields =
   Cpp_ast.fields ~needs:(fields_needs ~module_ ~vl r (List.map snd fields)) ~record:r ~vars:vl fields
 
+(** The name of a module a declaration of the tree names, as
+    {!Cpp_ast.resolve} resolved it where the declaration is written; under
+    [CRANE_CHECK_IR], the name resolution gives it where it is printed,
+    too. *)
+let resolved_module (m : Cpp_ast.module_ref) =
+  match m.name with
+  | Resolved n ->
+    ( if Probe.checking () then
+        let here = resolve_module m.path in
+        if not (Cpp_name.equal n here) then
+          Probe.violation "module names"
+            Pp.(
+              str "the module " ++ str (ModPath.to_string m.path) ++ str " was resolved as " ++ str (Cpp_name.to_string n)
+              ++ str " where the declaration naming it is written, and is named " ++ str (Cpp_name.to_string here)
+              ++ str " where it is printed" ) );
+    n
+  | Unresolved ->
+    CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string m.path) ++ str " was printed before it was resolved.")
+
 (* A module named in a module expression, and its resolution. *)
-let pp_module_name mp =
-  let r = resolve_module mp in
-  (str (wrapper_qualify_modname mp (resolved_string r)), r)
+let pp_module_name (m : Cpp_ast.module_ref) =
+  let r = resolved_module m in
+  (str (wrapper_qualify_modname m.path (resolved_string r)), r)
 
 (* Inside a class template a qualified module is a dependent name: an
    argument is preceded by [typename], and a functor applied is named
@@ -4335,8 +4354,8 @@ let pp_application {Cpp_ast.functor_; args} =
     | _, r when in_template && resolved_is_qualified r -> Cpp_name.pp ~template_keyword:true r
     | head, _ -> head
   in
-  let arg mp =
-    match pp_module_name mp with
+  let arg m =
+    match pp_module_name m with
     | a, r when in_template && resolved_is_qualified r -> str "typename " ++ a
     | a, _ -> a
   in
@@ -4345,8 +4364,8 @@ let pp_application {Cpp_ast.functor_; args} =
 let pp_module_alias name (target : Cpp_ast.module_expr) =
   let target =
     match target with
-    | Module_named mp ->
-      let r = resolve_module mp in
+    | Module_named m ->
+      let r = resolved_module m in
       let named = str (resolved_string r) in
       if (!render_ctx).rc_in_template && resolved_is_qualified r then str "typename " ++ named else named
     | Applied a -> pp_application a
@@ -4356,8 +4375,8 @@ let pp_module_alias name (target : Cpp_ast.module_expr) =
 let pp_functor_alias name functor_ params =
   Cpp_ast.pp_template_head (List.map fst params)
   ++ str "using " ++ name ++ str " = "
-  ++ str (resolved_string (resolve_module functor_))
-  ++ str "<" ++ prlist_with_sep (fun () -> str ", ") (fun (_, mp) -> pp_modname mp) params ++ str ">;"
+  ++ str (resolved_string (resolved_module functor_))
+  ++ str "<" ++ prlist_with_sep (fun () -> str ", ") (fun (_, m) -> Cpp_name.pp (resolved_module m)) params ++ str ">;"
 
 (* The base is written inside the functor's template; a base specifier
    names a type, so a dependent one takes no [typename]. *)
@@ -4365,7 +4384,7 @@ let pp_derived_functor template name (base : Cpp_ast.module_expr) =
   let base =
     with_render_ctx
       (fun c -> {c with rc_in_struct = true; rc_in_template = true})
-      (fun () -> match base with Module_named mp -> fst (pp_module_name mp) | Applied a -> pp_application a)
+      (fun () -> match base with Module_named m -> fst (pp_module_name m) | Applied a -> pp_application a)
   in
   Cpp_ast.pp_template_head template ++ str "struct " ++ name ++ str " : " ++ base ++ str " {};"
 
@@ -4393,7 +4412,7 @@ let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
             | Enum_definition -> enum_definition_name target
             | Struct_definition -> struct_definition_name target
             | Alias_definition -> pp_global Type target )
-        | Alias_of_module mp -> ([], Cpp_names.module_struct_name mp)
+        | Alias_of_module m -> ([], Cpp_names.module_struct_name_of (resolved_module m))
       in
       let args =
         if tparams = [] then mt () else str "<" ++ prlist_with_sep (fun () -> str ", ") (fun (_, v) -> Id.print v) tparams ++ str ">"

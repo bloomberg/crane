@@ -235,4 +235,28 @@ let () =
   check "the wrapper structs of a tree are listed in the order written"
     (Cpp_ast.wrapper_structs (Cpp_ast.seq [wrapper; top (Cpp_ast.wrapper_struct ~name:"V" ~module_:m ~fields:Cpp_ast.empty)]) = ["W"; "V"]);
   check "a wrapper struct not filled in is not printed"
-    (match Cpp_ast.to_pp wrapper with exception Invalid_argument _ -> true | _ -> false)
+    (match Cpp_ast.to_pp wrapper with exception Invalid_argument _ -> true | _ -> false);
+  let spelling_text = function Cpp_ast.Element_of mp -> "E(" ^ ModPath.to_string mp ^ ")" | Member_of mp -> "M(" ^ ModPath.to_string mp ^ ")" in
+  let resolve spelling mp = Cpp_name.unqualified (ModPath.to_string mp ^ "@" ^ spelling_text spelling) in
+  let resolved_text sections =
+    let write spelling (u : Cpp_ast.unprinted) =
+      match u.declaration with
+      | Module_alias {target = Module_named {name = Resolved n; _}; _} -> Pp.str (spelling_text spelling ^ "=" ^ Cpp_name.to_string n)
+      | Module_alias {target = Module_named {name = Unresolved; _}; _} -> Pp.str "unresolved"
+      | _ -> Pp.str (spelling_text spelling)
+    in
+    Pp.string_of_ppcmds (Cpp_ast.print_tree ~write (Cpp_ast.resolve_tree ~resolve (Cpp_ast.seq sections)))
+  in
+  check_text "resolving keeps how each declaration is spelled"
+    (resolved_text [top (Cpp_ast.elements ~source:m (unprinted ()))]) "E(F.M)";
+  let alias = Cpp_ast.module_alias ~name:(Pp.str "A") (Module_named (Cpp_ast.module_ref inner)) in
+  check_text "a module a declaration names is resolved where the declaration is written"
+    (resolved_text [top (Cpp_ast.elements ~source:m (Cpp_ast.module_ struct_ (Cpp_ast.module_body inner [alias])))])
+    "struct M {\nM(F.M.N)=F.M.N@M(F.M.N)\n};";
+  check_text "a module a declaration names is unresolved until resolved"
+    (Pp.string_of_ppcmds
+       (Cpp_ast.print_tree
+          ~write:(fun _ (u : Cpp_ast.unprinted) ->
+            match u.declaration with Module_alias {target = Module_named {name = Unresolved; _}; _} -> Pp.str "u" | _ -> Pp.str "r")
+          (Cpp_ast.elements ~source:m alias) ))
+    "u"

@@ -172,6 +172,11 @@ type section = group list
     source module is spelled ({!Cpp_ast.Elements}). *)
 val render_section : section -> Cpp_ast.t list
 
+(** [resolve_module_at ~file spelling mp] is the name of the module at [mp]
+    where a declaration spelled [spelling] is written in [file], in the
+    visibility planned there ({!Cpp_ast.resolve}). *)
+val resolve_module_at : file:Common.file -> Cpp_ast.spelling -> Names.ModPath.t -> Cpp_name.t
+
 (** Print a declaration not yet printed as the tree spells it
     ({!Cpp_ast.print}). *)
 val write_unprinted : file:Common.file -> Cpp_ast.spelling -> Cpp_ast.unprinted -> Pp.t

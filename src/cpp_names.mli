@@ -56,6 +56,9 @@ val pp_modname : Names.ModPath.t -> Pp.t
     declaration: {!pp_modname}, escaped where it is reserved. *)
 val module_struct_name : Names.ModPath.t -> Pp.t
 
+(** {!module_struct_name} of the module resolution names [name]. *)
+val module_struct_name_of : Cpp_name.t -> Pp.t
+
 (** {2 Inductive references} *)
 
 (** Whether the given global is a merged inductive. *)

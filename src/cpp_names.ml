@@ -81,11 +81,13 @@ let pp_global_name k r = Cpp_name.pp (Common.global_name k r)
 (** Pretty-print a module path as a Pp.t. *)
 let pp_modname mp = Cpp_name.pp (Common.resolve_module mp)
 
-let module_struct_name mp =
-  let raw = pp_modname mp in
+let module_struct_name_of name =
+  let raw = Cpp_name.pp name in
   let s = Pp.string_of_ppcmds raw in
   let escaped = Table.escape_reserved_struct_name s in
   if String.equal s escaped then raw else Pp.str escaped
+
+let module_struct_name mp = module_struct_name_of (Common.resolve_module mp)
 
 (** Check if a non-local inductive's Dnspace wrapper was merged with its inner
     struct. Returns true if the wrapper WAS merged (no pending declarations →

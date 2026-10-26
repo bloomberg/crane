@@ -27,6 +27,12 @@ val absorbs : homed:(string * ModPath.t) list -> Cpp_erasure.settled -> bool
     {!Cpp_ast.Wrapper_struct}. *)
 val write_absorbing : homed:(string * ModPath.t) list -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
 
+(** The name of a module a declaration of the tree names, as
+    {!Cpp_ast.resolve} resolved it where the declaration is written; under
+    [CRANE_CHECK_IR], checked against the name resolution gives it where it
+    is printed.  A module not yet resolved is an anomaly. *)
+val resolved_module : Cpp_ast.module_ref -> Cpp_name.t
+
 (** Whether [d] is an assertion the struct being written holds back until
     after it, writing nothing for it here. *)
 val is_held_back_assertion : Cpp_erasure.settled -> bool

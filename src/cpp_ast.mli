@@ -62,6 +62,17 @@ type template_param =
   | Constrained of {concept : Pp.t; param : Pp.t}
       (** [C<..> M], the concept applied to any further arguments. *)
 
+(** The name a reference is written with where the declaration holding it
+    is written, once {!resolve} has resolved it there. *)
+type resolution = Unresolved | Resolved of Cpp_name.t
+
+(** A module a declaration names, by its path, and its name where the
+    declaration is written. *)
+type module_ref = {path : ModPath.t; name : resolution}
+
+(** [module_ref path] is the module at [path], not yet resolved. *)
+val module_ref : ModPath.t -> module_ref
+
 (** What a declaration not yet printed declares. *)
 type declaration =
   | Declaration of {env : Common.env; settled : Cpp_erasure.settled}
@@ -90,21 +101,21 @@ type declaration =
       (** [using name = target;]: a module defined as another, inside a
           class template a qualified name in [target] being a dependent
           one. *)
-  | Functor_alias of {name : Pp.t; functor_ : ModPath.t; params : (template_param * ModPath.t) list}
+  | Functor_alias of {name : Pp.t; functor_ : module_ref; params : (template_param * module_ref) list}
       (** [template <params> using name = functor_<params>;]: a functor
           defined as another, which Rocq reduces to the other's name, over
-          its own parameters, each as declared and by its path. *)
+          its own parameters, each as declared and as a module. *)
   | Derived_functor of {template : template_param list; name : Pp.t; base : module_expr}
       (** [template <template> struct name : base {};]: a functor whose body
           is another module, its own parameters visible to [base]. *)
 
-(** A module a declaration names. *)
+(** A module expression a declaration writes. *)
 and module_expr =
-  | Module_named of ModPath.t  (** The module at the path. *)
+  | Module_named of module_ref  (** The module. *)
   | Applied of application
 
-(** A functor applied to modules, each by its path. *)
-and application = {functor_ : ModPath.t; args : ModPath.t list}
+(** A functor applied to modules. *)
+and application = {functor_ : module_ref; args : module_ref list}
 
 (** That [subject] satisfies [concept], each named as written where the
     assertion is: a subject declared in a struct the assertion follows is
@@ -118,7 +129,7 @@ and asserted =
 
 (** What an {!assertion} asserts it of. *)
 and subject =
-  | Module of ModPath.t  (** The struct the module is written as. *)
+  | Module of module_ref  (** The struct the module is written as. *)
   | Instance of {instance : GlobRef.t; args : Minicpp.cpp_type list}
       (** The instance, as a type, with the class's further arguments. *)
 
@@ -132,7 +143,7 @@ and global_alias =
       (** The type [target] declares, as [definition] declares it, over
           [tparams], which the alias repeats:
           [template <tparams> using N = ::N<tparams>;]. *)
-  | Alias_of_module of ModPath.t
+  | Alias_of_module of module_ref
       (** The struct a module is written as. *)
 
 (** How the type an {!Alias_of_type} stands in for is declared, which is
@@ -260,7 +271,7 @@ val module_alias : name:Pp.t -> module_expr -> t
 
 (** [functor_alias ~name functor_ params] is {!Functor_alias}, printed where
     the tree puts it.  It needs nothing placed in front of it. *)
-val functor_alias : name:Pp.t -> ModPath.t -> (template_param * ModPath.t) list -> t
+val functor_alias : name:Pp.t -> module_ref -> (template_param * module_ref) list -> t
 
 (** [derived_functor ~template ~name base] is {!Derived_functor}, printed
     where the tree puts it.  It needs nothing placed in front of it. *)
@@ -331,6 +342,12 @@ val fill_wrappers : (string * body) list -> t -> t
     @raise Invalid_argument if it holds a declaration not yet printed. *)
 val to_pp : t -> Pp.t
 
+(** [resolve_tree ~resolve t] is [t] with the modules each declaration not
+    yet printed names resolved: [resolve spelling path] is the name of the
+    module at [path] where a declaration spelled [spelling] is written.
+    @raise Invalid_argument as {!print_tree} does. *)
+val resolve_tree : resolve:(spelling -> ModPath.t -> Cpp_name.t) -> t -> t
+
 (** [t] as a document, each declaration not yet printed printed by [write],
     in the order written, as the tree spells it.
     @raise Invalid_argument if one is outside every {!Elements} and struct
@@ -399,6 +416,9 @@ type scheduled
     chunk defines the struct.  Each {!Wrapper_struct} is filled in first
     ({!fill_wrappers}). *)
 val schedule : templates:template list -> forwards:forward list -> translation_unit -> scheduled
+
+(** {!resolve_tree} over each section of a scheduled unit. *)
+val resolve : resolve:(spelling -> ModPath.t -> Cpp_name.t) -> scheduled -> scheduled
 
 (** The scheduled unit as a document, as {!print_tree} writes each
     section. *)

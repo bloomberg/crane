@@ -352,7 +352,7 @@ let pp_assertion (a : Cpp_ast.assertion) =
   in
   let subject =
     match a.subject with
-    | Module mp -> module_struct_name mp
+    | Module m -> module_struct_name_of (resolved_module m)
     | Instance {instance; args} -> pp_global Type instance ++ prlist (fun ty -> str ", " ++ pp_cpp_type false [] ty) args
   in
   fnl () ++ str "static_assert(" ++ concept ++ str "<" ++ subject ++ str ">);"
