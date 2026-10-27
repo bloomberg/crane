@@ -176,6 +176,12 @@ val plan_written_files : ModPath.t list -> unit
     through are exactly the planned ones. *)
 val check_written_files : unit -> unit
 
+(** [without_noting_written_files f] is [f ()], the files it resolves a name
+    through recorded as written by none: a name resolved ahead of being
+    printed is written only where it is printed, which, under
+    [CRANE_CHECK_IR], resolves it again. *)
+val without_noting_written_files : (unit -> 'a) -> 'a
+
 (** The file a reference to the global, written in the unit of the files
     [unit_files], names: its own, unless that is one of the unit's, or the
     global is reached through a functor parameter, is in a module not output,

@@ -174,7 +174,7 @@ val render_section : section -> Cpp_ast.t list
 val resolver_at : file:Common.file -> Cpp_ast.spelling -> Cpp_ast.resolver
 
 (** {!Cpp_ast.resolve_tree} by {!resolver_at}, a declaration naming what
-    {!Cpp_concepts.names_requested} says. *)
+    {!Cpp_print.unprinted_names} and {!Cpp_concepts.names_requested} say. *)
 val resolve_tree : file:Common.file -> Cpp_ast.t -> Cpp_ast.t
 
 (** {!Cpp_ast.resolve} as {!resolve_tree} resolves each section. *)

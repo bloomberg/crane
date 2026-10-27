@@ -643,6 +643,10 @@ let note_written_file file =
     | Emit -> rendered_files := MPset.add file !rendered_files
     | Plan -> ()
 
+let without_noting_written_files f =
+  let noted = !rendered_files in
+  Fun.protect ~finally:(fun () -> rendered_files := noted) f
+
 let check_written_files () =
   if Probe.checking () && not (MPset.equal !planned_files !rendered_files) then
     let show s = Pp.prlist_with_sep Pp.pr_comma ModPath.print (MPset.elements s) in

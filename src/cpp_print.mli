@@ -71,6 +71,20 @@ val unprinted : module_:Names.ModPath.t -> Common.env -> Cpp_erasure.settled -> 
 val unprinted_fields :
   module_:ModPath.t -> vl:Id.t list -> GlobRef.t -> (string * cpp_type) list -> Cpp_ast.t
 
+(** [global_names frames globals] asks for [globals] by name at each of
+    [frames]: each whose name is decided -- printing decides none -- as a
+    type, as a term and as a type class's concept, an inductive as a value
+    too. *)
+val global_names :
+  Cpp_resolution.frame list -> GlobRef.t list -> (Cpp_resolution.frame * Cpp_resolution.key) list
+
+(** What printing a declaration not yet printed names through the type and
+    expression printers, at the frames inside it it names them at, for
+    {!Cpp_ast.resolve} to resolve before it is printed: of a declaration of
+    the program, every global it holds, at every frame its printing
+    enters. *)
+val unprinted_names : Cpp_ast.declaration -> (Cpp_resolution.frame * Cpp_resolution.key) list
+
 (** The text of a declaration not yet printed, printed in the render
     context and visibility its spelling enters, a module type's concept by
     [modtype_concept] and an assertion by [assertion].  Under

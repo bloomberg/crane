@@ -1251,7 +1251,7 @@ let in_spelling ~file spelling k =
   let k =
     match spelling with
     | Cpp_ast.Element_of mp | Member_of mp ->
-      fun () -> with_render_ctx (fun c -> {c with rc_module = Some mp; rc_frame = []}) k
+      fun () -> with_render_ctx (fun c -> {c with rc_module = Some mp; rc_frame = []; rc_names = None}) k
   in
   let in_body mp k =
     match Scope_plan.visibility mp with
@@ -1276,10 +1276,13 @@ let in_spelling ~file spelling k =
           ++ str ", which it does not write.")
 
 let resolver_at ~file spelling frame key =
-  in_spelling ~file spelling (fun () -> Cpp_names.at_frame frame (fun () -> Cpp_names.live_name key))
+  Common.without_noting_written_files (fun () ->
+      in_spelling ~file spelling (fun () -> Cpp_names.at_frame frame (fun () -> Cpp_names.live_name key)) )
 
-let resolve_tree ~file = Cpp_ast.resolve_tree ~requested:Cpp_concepts.names_requested ~resolve:(resolver_at ~file)
-let resolve ~file = Cpp_ast.resolve ~requested:Cpp_concepts.names_requested ~resolve:(resolver_at ~file)
+let requested d = Cpp_print.unprinted_names d @ Cpp_concepts.names_requested d
+
+let resolve_tree ~file = Cpp_ast.resolve_tree ~requested ~resolve:(resolver_at ~file)
+let resolve ~file = Cpp_ast.resolve ~requested ~resolve:(resolver_at ~file)
 
 let write_unprinted ~file spelling u =
   in_spelling ~file spelling (fun () ->

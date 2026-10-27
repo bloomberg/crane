@@ -104,15 +104,10 @@ type declaration =
       (** The fields of the eponymous record [record] merged into its
           module's struct, each by its name and type, the type variables
           they name named [vars]: no declaration holds them. *)
-  | Modtype_concept of {
-      path : ModPath.t;
-      params : ModPath.t list;
-      concept : Modtype_concept.t;
-      names : Cpp_resolution.table;
-    }
+  | Modtype_concept of {path : ModPath.t; params : ModPath.t list; concept : Modtype_concept.t}
       (** The concept the module type at [path] becomes, generated as
           [concept], over the parameters [params] of a functor declaring
-          it, naming what [names] names. *)
+          it. *)
   | Global_alias of global_alias
       (** [using N = ::N;]: a member standing in for a type declared under
           the same name at namespace scope, where the file moved it, so that
@@ -175,8 +170,9 @@ and global_alias =
 and definition = Cpp_resolution.definition = Enum_definition | Struct_definition | Alias_definition
 
 (** A declaration not yet printed, with what placing the declarations it
-    needs reads -- planned, so known before it is printed. *)
-type unprinted = {declaration : declaration; needs : Needs.t}
+    needs reads -- planned, so known before it is printed -- and the names it
+    is printed with, resolved before it is printed ({!resolve_tree}). *)
+type unprinted = {declaration : declaration; needs : Needs.t; names : Cpp_resolution.table}
 
 type t = private
   | Text of Pp.t  (** Written as it is; nothing is placed by it. *)

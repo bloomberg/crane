@@ -16,6 +16,7 @@ type key =
   | Module of ModPath.t
   | Global of Common.kind * GlobRef.t
   | Unmapped of Common.kind * GlobRef.t
+  | Inductive_value of GlobRef.t
   | Short of Common.kind * GlobRef.t
   | Class_concept of GlobRef.t
   | Modtype_concept of ModPath.t
@@ -29,6 +30,7 @@ let pp_key k =
   | Module mp -> path "the module" mp
   | Global (_, r) -> global "the global" r
   | Unmapped (_, r) -> global "the unmapped global" r
+  | Inductive_value r -> global "the value of the inductive" r
   | Short (_, r) -> global "the short name of" r
   | Class_concept r -> global "the concept of" r
   | Modtype_concept mp -> path "the concept of the module type" mp
@@ -54,11 +56,12 @@ let compare_key a b =
     | Module _ -> 0
     | Global _ -> 1
     | Unmapped _ -> 2
-    | Short _ -> 3
-    | Class_concept _ -> 4
-    | Modtype_concept _ -> 5
-    | Modtype_concept_declared _ -> 6
-    | Definition _ -> 7
+    | Inductive_value _ -> 3
+    | Short _ -> 4
+    | Class_concept _ -> 5
+    | Modtype_concept _ -> 6
+    | Modtype_concept_declared _ -> 7
+    | Definition _ -> 8
   in
   let global ka ra kb rb = match compare_kind ka kb with 0 -> GlobRef.UserOrd.compare ra rb | c -> c in
   match (a, b) with
@@ -66,7 +69,7 @@ let compare_key a b =
     ModPath.compare a b
   | Global (ka, ra), Global (kb, rb) | Unmapped (ka, ra), Unmapped (kb, rb) | Short (ka, ra), Short (kb, rb) ->
     global ka ra kb rb
-  | Class_concept a, Class_concept b -> GlobRef.UserOrd.compare a b
+  | Class_concept a, Class_concept b | Inductive_value a, Inductive_value b -> GlobRef.UserOrd.compare a b
   | Definition (da, a), Definition (db, b) -> ( match compare da db with 0 -> GlobRef.UserOrd.compare a b | c -> c )
   | _ -> Int.compare (rank a) (rank b)
 

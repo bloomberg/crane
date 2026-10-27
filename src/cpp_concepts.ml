@@ -83,15 +83,19 @@ let pp_member_type ~enum name r args =
     ++ str ">"
 
 (* What printing a module type's concept names, at the frames it names them
-   in: {!pp_modtype_concept}, read without printing it.  Types written by
-   the type printer are not among them. *)
+   in: {!pp_modtype_concept}, read without printing it.  The type printer
+   names the globals of the types it writes ({!Cpp_print.global_names}). *)
+
+let type_names frame ty = global_names [frame] (Cpp_demands.globals_of_type ty)
 
 let rec concept_type_names frame : Modtype_concept.concept_type -> _ = function
   | Member {member; arguments; _} -> (frame, Cpp_resolution.Global (Type, member)) :: concept_types_names frame arguments
-  | Foreign (_, args) | Global (_, args) | Namespaced (_, _, _, args) | Variant (_, args) -> concept_types_names frame args
+  | Global (r, args) -> type_names frame (Tglob (r, [], [])) @ concept_types_names frame args
+  | Namespaced (r, r', e, args) -> type_names frame (Tnamespace (r, Tglob (r', [], e))) @ concept_types_names frame args
+  | Foreign (_, args) | Variant (_, args) -> concept_types_names frame args
   | Shared_pointer ty -> concept_type_names frame ty
   | Function (dom, cod) -> concept_types_names frame (cod :: dom)
-  | Parameter _ | Plain _ -> []
+  | Parameter ty | Plain ty -> type_names frame ty
 
 and concept_types_names frame tys = List.concat_map (concept_type_names frame) tys
 
@@ -120,7 +124,9 @@ let modtype_concept_names ~path ~params (c : Modtype_concept.t) =
   (([], Cpp_resolution.Modtype_concept_declared path) :: modules [] params)
   @
   match c with
-  | Alias {base; _} -> ([], Cpp_resolution.Modtype_concept base) :: modules [] (concept_extra_args base)
+  | Alias {base; refinements} ->
+    (([], Cpp_resolution.Modtype_concept base) :: modules [] (concept_extra_args base))
+    @ List.concat_map (fun (_, ty) -> type_names [] ty) refinements
   | Constraint c -> constraint_names [] c
 
 (** A type of a module-type concept's requirements, spelled from inside the

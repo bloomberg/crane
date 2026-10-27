@@ -48,6 +48,9 @@ type key =
       (** The global: an inline custom mapping's text, or its name. *)
   | Unmapped of Common.kind * GlobRef.t
       (** The global's name, whatever an inline custom mapping says. *)
+  | Inductive_value of GlobRef.t
+      (** The inductive type, written as a value: the struct a constructor's
+          value is built through. *)
   | Short of Common.kind * GlobRef.t  (** Its name in its own scope, unqualified. *)
   | Class_concept of GlobRef.t  (** The concept of the type class. *)
   | Modtype_concept of ModPath.t  (** The concept of the module type, named. *)

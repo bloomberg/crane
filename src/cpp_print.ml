@@ -1568,34 +1568,7 @@ and pp_cpp_expr env args t =
        already written. *)
     let base =
       match x with
-      | GlobRef.IndRef _ ->
-        let ns_name, needs_ns = inductive_name x in
-        let type_name = global_name Type x in
-        let force = Common.get_force_cross_file_qualification () in
-        `Named
-          ( (* Check eponymous record FIRST because they can also be local *)
-            if is_eponymous_record_cached x then
-              Cpp_name.unqualified (Common.pp_type_name_capitalized x)
-            else if Ref.User.Tbl.mem promoted_inductives x then
-              dedup_tail (if force then capitalize_base type_name else capitalize_initial type_name)
-            else if Cpp_name.is_qualified type_name then
-              let cap = if force then capitalize_base type_name else type_name in
-              if is_merged_inductive x then
-                let allow_bare =
-                  let ref_base = base_mp (modpath_of_r x) in
-                  List.exists (ModPath.equal ref_base) (visible_mps (current_visibility ()))
-                in
-                dedup_tail ~allow_bare cap
-              else cap
-            else if needs_ns then
-              if is_merged_inductive x then
-                (* Merged non-local inductive: use capitalized name directly *)
-                List.fold_right Cpp_name.within (global_scopes_for x ns_name) ns_name
-              else (* Unmerged non-local inductive: Wrapper::inner *)
-                Cpp_name.inside ns_name class_ type_name
-            else if force then capitalize_initial type_name
-            else (* Local inductive: use original name directly *)
-              type_name )
+      | GlobRef.IndRef _ -> `Named (inductive_value x)
       | GlobRef.VarRef v -> `Named (Cpp_name.unqualified (Id.to_string v))
       | _ ->
       (* Check if this function is inside an eponymous template struct. If so,
@@ -4253,6 +4226,103 @@ let fields_needs ~module_ ~vl r types =
 
 let printed_needs settled = needs_of ~templates:(List.map ctor_alias_name (ctor_aliases_planned settled)) settled
 
+(* The frames printing [d] enters names at: {!pp_cpp_decl}'s scopes, read
+   without printing. *)
+let declaration_frames (d : Cpp_erasure.settled) =
+  let entered frame l = List.rev_append l frame in
+  let template_body tps = if tps = [] then [] else [Cpp_resolution.In_template] in
+  let rec decl frame (d : Cpp_erasure.settled) =
+    match Cpp_erasure.view d with
+    | Template (_, _, inner) -> frame :: decl frame inner
+    | Namespace (None, decls) -> List.concat_map (decl frame) decls
+    | Namespace (Some id, members) -> (
+      match (members :> cpp_decl list) with
+      | [Dstruct {ds_ref; ds_tparams; _}] when nspace_merges {dw_ref = id; dw_sole_child = true} ->
+        [frame; entered frame ((Cpp_resolution.In_struct :: template_body ds_tparams) @ [Inductive_struct ds_ref])]
+      | _ -> frame :: List.concat_map (decl (Cpp_resolution.In_struct :: frame)) members )
+    | Decl (Dfun {df_path; df_shape; _}) ->
+      let defines = match df_shape with Ddef _ -> true | Ddecl _ -> false in
+      [Cpp_resolution.Function {owner = fst df_path.dp_outer; defines} :: frame]
+    | Decl (Dstruct {ds_ref; ds_tparams; _}) ->
+      [frame; entered frame (Cpp_resolution.Inductive_struct ds_ref :: template_body ds_tparams)]
+    | Decl (Dmember_def {dm_owner; dm_tparams; _}) ->
+      [frame; entered frame (template_body dm_tparams @ [Cpp_resolution.Inductive_struct dm_owner])]
+    | Decl (Dfields {ds_ref; ds_tparams; _}) ->
+      [frame; entered frame ((Cpp_resolution.In_struct :: template_body ds_tparams) @ [Inductive_struct ds_ref])]
+    | Decl _ -> [frame]
+  in
+  decl [] d
+
+(* The globals [d] declares, which it names where it declares them, and the
+   classes its template parameters are constrained by: no expression or type
+   of it names them. *)
+let rec declared_globals (d : cpp_decl) =
+  let concepts tps = List.filter_map (function TTconcept (r, _), _ -> Some r | _ -> None) tps in
+  let rec field (f, _, _) =
+    match f with
+    | Fmethod {mf_tparams = tps; _} | Fconstructor {fc_tparams = tps; _} | Fnested_using (tps, _, _) -> concepts tps
+    | Fnested_struct (_, fs) -> List.concat_map field fs
+    | Fmember_decl m -> field (field_of_member m, VPublic, SNoTag)
+    | _ -> []
+  in
+  match d with
+  | Dtemplate (tps, _, inner) -> concepts tps @ declared_globals inner
+  | Dnspace (id, ds) -> (match id with Some r -> [r] | None -> []) @ List.concat_map declared_globals ds
+  | Dfun {df_path; _} -> List.map fst (dfun_path_list df_path)
+  | Dstruct {ds_ref; ds_tparams; ds_fields; _} | Dfields {ds_ref; ds_tparams; ds_fields; _} ->
+    (ds_ref :: concepts ds_tparams) @ List.concat_map field ds_fields
+  | Dasgn {da_ref; _} -> [da_ref]
+  | Dusing {du_name; du_tparams; _} -> du_name :: concepts du_tparams
+  | Dstruct_fwd (tps, r) -> r :: concepts tps
+  | Dmember_def {dm_owner; dm_enclosing; dm_tparams; dm_field} ->
+    (dm_owner :: Option.cata (fun w -> [w.dw_ref]) [] dm_enclosing)
+    @ concepts dm_tparams
+    @ field (field_of_member dm_field, VPublic, SNoTag)
+  | Denum {de_ref; _} -> [de_ref]
+  | Dconcept (id, _) -> [id]
+  | Dstatic_assert _ -> []
+
+(* Of [globals], those whose name is decided -- printing decides none --
+   asked for at each of [frames], each as the type and the expression
+   printers may name it. *)
+let global_names frames globals =
+  let decided r = Option.has_some (Common.decided_global_name r) in
+  let globals =
+    List.sort_uniq GlobRef.UserOrd.compare
+      (List.filter decided
+         (List.concat_map (function GlobRef.ConstructRef (ind, _) as r -> [r; GlobRef.IndRef ind] | r -> [r]) globals) )
+  in
+  let keys =
+    List.concat_map
+      (fun r ->
+        Cpp_resolution.[Unmapped (Type, r); Unmapped (Term, r); Class_concept r]
+        @ match r with GlobRef.IndRef _ -> [Cpp_resolution.Inductive_value r] | _ -> [] )
+      globals
+  in
+  List.concat_map (fun frame -> List.map (fun key -> (frame, key)) keys) frames
+
+let template_param_globals tps =
+  let types = ref [] in
+  ignore (map_tparams (fun t -> types := t :: !types; t) tps);
+  List.filter_map (function TTconcept (r, _), _ -> Some r | _ -> None) tps
+  @ List.concat_map Cpp_demands.globals_of_type !types
+
+let declaration_names (d : Cpp_erasure.settled) =
+  let globals = ref [] in
+  Minicpp.iter_globrefs (fun r -> globals := r :: !globals) (d :> cpp_decl);
+  global_names (declaration_frames d) (!globals @ declared_globals (d :> cpp_decl))
+
+let unprinted_names : Cpp_ast.declaration -> _ = function
+  | Declaration {settled; _} | Absorbed {settled; _} -> declaration_names settled
+  | Fields {fields; _} -> global_names [[]] (List.concat_map (fun (_, ty) -> Cpp_demands.globals_of_type ty) fields)
+  | Assertion {subject = Instance {args; _}; _} -> global_names [[]] (List.concat_map Cpp_demands.globals_of_type args)
+  | Global_alias (Alias_of_type {tparams; _}) -> global_names [[]] (template_param_globals tparams)
+  | Assertion {subject = Module _; _} | Global_alias (Alias_of_module _) | Modtype_concept _ | Module_alias _
+  | Functor_alias _ | Derived_functor _ ->
+    []
+
+let naming names k = with_render_ctx (fun c -> {c with rc_names = Some names}) k
+
 let printed_decl env settled =
   let text = pp_cpp_decl env settled in
   (text, printed_needs settled)
@@ -4288,37 +4358,15 @@ let unprinted ~module_ env settled = Cpp_ast.unprinted ~needs:(planned_needs ~mo
 let unprinted_fields ~module_ ~vl r fields =
   Cpp_ast.fields ~needs:(fields_needs ~module_ ~vl r (List.map snd fields)) ~record:r ~vars:vl fields
 
-(* [n], the name the resolution pass gave [key] where the declaration naming
-   it is written; under [CRANE_CHECK_IR], the one it has where it is printed
-   must be the same. *)
-let checked_name key n =
-  ( if Probe.checking () then
-      let here = live_name key in
-      if not (Cpp_name.equal n here) then
-        Probe.violation "names resolved"
-          Pp.(
-            Cpp_resolution.pp_key key ++ str " was resolved as " ++ str (Cpp_name.to_string n)
-            ++ str " where the declaration naming it is written, and is named " ++ str (Cpp_name.to_string here)
-            ++ str " where it is printed" ) );
-  n
-
 let resolved key (resolution : Cpp_ast.resolution) =
-  match resolution with
-  | Resolved n -> checked_name key n
-  | Unresolved -> CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " was printed before it was resolved.")
+  match resolution with Resolved n -> checked key ~live:(fun () -> live_name key) n | Unresolved -> unresolved key
 
 let resolved_module (m : Cpp_ast.module_ref) = resolved (Module m.path) m.name
 let resolved_class_concept (c : Cpp_ast.global_ref) = resolved (Class_concept c.global) c.name
 let resolved_type_name (g : Cpp_ast.global_ref) = resolved (Global (Type, g.global)) g.name
 let resolved_concept (c : Cpp_ast.concept_ref) = resolved (Modtype_concept c.module_type) c.name
 
-let name_in names frame key =
-  match Cpp_resolution.find names frame key with
-  | Found n -> checked_name key n
-  | Unresolved -> CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " was printed before it was resolved.")
-  | Not_requested ->
-    CErrors.anomaly
-      Pp.(str "Crane: a declaration names " ++ Cpp_resolution.pp_key key ++ str ", which resolving it did not ask for.")
+let name_in names frame key = name_from names frame key ~live:(fun () -> live_name key)
 
 (* A module named in a module expression, and its resolution. *)
 let pp_module_name (m : Cpp_ast.module_ref) =
@@ -4370,9 +4418,10 @@ let pp_derived_functor template name (base : Cpp_ast.module_expr) =
   Cpp_ast.pp_template_head template ++ str "struct " ++ name ++ str " : " ++ base ++ str " {};"
 
 let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
+  naming u.names @@ fun () ->
   let text, needs =
     match u.declaration with
-    | Modtype_concept {path; params; concept; names} -> (modtype_concept ~names ~params path concept, u.needs)
+    | Modtype_concept {path; params; concept} -> (modtype_concept ~names:u.names ~params path concept, u.needs)
     | Assertion a -> (assertion a, u.needs)
     | Module_alias {name; target} -> (pp_module_alias name target, u.needs)
     | Functor_alias {name; functor_; params} -> (pp_functor_alias name functor_ params, u.needs)

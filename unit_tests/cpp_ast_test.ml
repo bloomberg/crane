@@ -258,9 +258,9 @@ let () =
       | Module_alias {target = Module_named {name = Unresolved; _}; _} -> Pp.str "unresolved"
       | Assertion {concept = Of_class {name = Resolved c; _}; subject = Instance {instance = {name = Resolved i; _}; _}} ->
         Pp.str (Cpp_name.to_string c ^ "<" ^ Cpp_name.to_string i ^ ">")
-      | Modtype_concept {names; _} ->
+      | Modtype_concept _ ->
         let at frame =
-          match Cpp_resolution.find names frame (Module inner) with
+          match Cpp_resolution.find u.names frame (Module inner) with
           | Found n -> Cpp_name.to_string n
           | Unresolved -> "unresolved"
           | Not_requested -> "not requested"
@@ -301,8 +301,8 @@ let () =
        (Cpp_ast.print_tree
           ~write:(fun _ (u : Cpp_ast.unprinted) ->
             match u.declaration with
-            | Modtype_concept {names; _} -> (
-              match Cpp_resolution.find names [] (Module inner) with Unresolved -> Pp.str "u" | _ -> Pp.str "r" )
+            | Modtype_concept _ -> (
+              match Cpp_resolution.find u.names [] (Module inner) with Unresolved -> Pp.str "u" | _ -> Pp.str "r" )
             | _ -> Pp.str "?" )
           (Cpp_ast.elements ~source:m concept) ))
     "u"

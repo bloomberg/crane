@@ -29,6 +29,39 @@ open Cpp_state
     update table of content for modules. Many [let] below should not be altered
     since they force evaluation order. *)
 
+let checked key ~live n =
+  ( if Probe.checking () then
+      let here = live () in
+      if not (Cpp_name.equal n here) then
+        Probe.violation "names resolved"
+          Pp.(
+            Cpp_resolution.pp_key key ++ str " was resolved as " ++ str (Cpp_name.to_string n)
+            ++ str " where the declaration naming it is written, and is named " ++ str (Cpp_name.to_string here)
+            ++ str " where it is printed" ) );
+  n
+
+let unresolved key = CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " was printed before it was resolved.")
+
+let name_from names frame key ~live =
+  match Cpp_resolution.find names frame key with
+  | Found n -> checked key ~live n
+  | Unresolved -> unresolved key
+  | Not_requested ->
+    CErrors.anomaly
+      Pp.(str "Crane: a declaration names " ++ Cpp_resolution.pp_key key ++ str ", which resolving it did not ask for.")
+
+(* [key]'s name where the printer is: from the names of the declaration of
+   the tree being written, at the frame printing it has entered, if one is
+   being written; [live ()] where none is. *)
+let named key live =
+  match (!render_ctx).rc_names with None -> live () | Some names -> name_from names (!render_ctx).rc_frame key ~live
+
+(** [r]'s name, whatever an inline custom mapping says ({!Common.global_name}). *)
+let unmapped_name k r = named (Unmapped (k, r)) (fun () -> Common.global_name k r)
+
+(** [mp]'s name ({!Common.resolve_module}). *)
+let module_name mp = named (Module mp) (fun () -> Common.resolve_module mp)
+
 (** The name of a global reference: the replacement text of an inline custom
     mapping, otherwise as resolution settles it where the printer is.
     @param k  the extraction key category (e.g. [Type] or [Term])
@@ -37,6 +70,10 @@ open Cpp_state
 let global_name_with_key k key r =
   match find_custom_opt r with
   | Some custom_str when to_inline r -> Cpp_name.foreign custom_str
+  | _ when KerName.equal key (repr_of_r r) -> unmapped_name k r
+  | _ when Option.has_some (!render_ctx).rc_names ->
+    CErrors.anomaly
+      Pp.(str "Crane: a declaration names " ++ GlobRef.print r ++ str " through another's kernel name, which it is not resolved by.")
   | _ -> Common.global_name_with_key k key r
 
 (** {!global_name_with_key} using the default key. *)
@@ -60,6 +97,7 @@ let pp_global k r = Cpp_name.pp (global_name k r)
     declaration nor at its uses.  A use in another file still names the file's
     namespace. *)
 let concept_name r =
+  named (Class_concept r) @@ fun () ->
   let name =
     match Module_plan.concept_name r with
     | Some name -> name
@@ -76,10 +114,10 @@ let concept_name_of_ref r = Cpp_name.to_string (concept_name r)
 let pp_concept_name_of_ref r = Cpp_name.pp (concept_name r)
 
 (** Pretty-print a global name (without custom mapping) as a Pp.t. *)
-let pp_global_name k r = Cpp_name.pp (Common.global_name k r)
+let pp_global_name k r = Cpp_name.pp (unmapped_name k r)
 
 (** Pretty-print a module path as a Pp.t. *)
-let pp_modname mp = Cpp_name.pp (Common.resolve_module mp)
+let pp_modname mp = Cpp_name.pp (module_name mp)
 
 let module_struct_name_of name =
   let raw = Cpp_name.pp name in
@@ -87,7 +125,7 @@ let module_struct_name_of name =
   let escaped = Table.escape_reserved_struct_name s in
   if String.equal s escaped then raw else Pp.str escaped
 
-let module_struct_name mp = module_struct_name_of (Common.resolve_module mp)
+let module_struct_name mp = module_struct_name_of (module_name mp)
 
 (** Check if a non-local inductive's Dnspace wrapper was merged with its inner
     struct. Returns true if the wrapper WAS merged (no pending declarations →
@@ -707,10 +745,44 @@ let entering l k = List.fold_right (fun entered k () -> enter entered k) l k ()
 let rec at_frame (frame : Cpp_resolution.frame) k =
   match frame with [] -> k () | entered :: outer -> at_frame outer (fun () -> enter entered k)
 
-let live_name : Cpp_resolution.key -> Cpp_name.t = function
+(* The name the inductive type [x] is written under as a value: the
+   struct a constructor's value is built through. *)
+let inductive_value_name x =
+  let ns_name, needs_ns = inductive_name x in
+  let type_name = global_name Type x in
+  let force = Common.get_force_cross_file_qualification () in
+  (* Check eponymous record FIRST because they can also be local *)
+  if is_eponymous_record_cached x then Cpp_name.unqualified (Common.pp_type_name_capitalized x)
+  else if Ref.User.Tbl.mem promoted_inductives x then
+    dedup_tail (if force then capitalize_base type_name else capitalize_initial type_name)
+  else if Cpp_name.is_qualified type_name then
+    let cap = if force then capitalize_base type_name else type_name in
+    if is_merged_inductive x then
+      let allow_bare =
+        let ref_base = base_mp (modpath_of_r x) in
+        List.exists (ModPath.equal ref_base) (visible_mps (current_visibility ()))
+      in
+      dedup_tail ~allow_bare cap
+    else cap
+  else if needs_ns then
+    if is_merged_inductive x then
+      (* Merged non-local inductive: use capitalized name directly *)
+      List.fold_right Cpp_name.within (global_scopes_for x ns_name) ns_name
+    else (* Unmerged non-local inductive: Wrapper::inner *)
+      Cpp_name.inside ns_name (fun s -> Cpp_name.Class s) type_name
+  else if force then capitalize_initial type_name
+  else (* Local inductive: use original name directly *)
+    type_name
+
+let inductive_value x = named (Inductive_value x) (fun () -> inductive_value_name x)
+
+let live_name (key : Cpp_resolution.key) =
+  with_render_ctx (fun c -> {c with rc_names = None}) @@ fun () ->
+  match key with
   | Module mp -> Common.resolve_module mp
   | Global (k, r) -> global_name k r
   | Unmapped (k, r) -> Common.global_name k r
+  | Inductive_value r -> inductive_value_name r
   | Short (k, r) -> Cpp_name.unqualified (Common.pp_global_name k r)
   | Class_concept r -> concept_name r
   | Modtype_concept mp -> modtype_concept_ref mp

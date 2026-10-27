@@ -487,6 +487,9 @@ type render_ctx = {
   (* The scopes printing the declaration being written has entered inside
      the one it is written in, innermost first ({!Cpp_names.enter}). *)
   rc_frame : Cpp_resolution.frame;
+  (* The names of the declaration of the tree being written, resolved before
+     it is printed; none where what is written is no such declaration. *)
+  rc_names : Cpp_resolution.table option;
 }
 
 (** The context at the start of the file [file]: file scope, outside every
@@ -500,6 +503,7 @@ let file_start rc_file =
     rc_in_template = false;
     rc_module = None;
     rc_frame = [];
+    rc_names = None;
   }
 
 (** The context at file scope in the file [c] is written in. *)

@@ -31,12 +31,7 @@ type declaration =
   | Declaration of {env : Common.env; settled : Cpp_erasure.settled}
   | Absorbed of {env : Common.env; settled : Cpp_erasure.settled}
   | Fields of {record : GlobRef.t; vars : Id.t list; fields : (string * Minicpp.cpp_type) list}
-  | Modtype_concept of {
-      path : ModPath.t;
-      params : ModPath.t list;
-      concept : Modtype_concept.t;
-      names : Cpp_resolution.table;
-    }
+  | Modtype_concept of {path : ModPath.t; params : ModPath.t list; concept : Modtype_concept.t}
   | Global_alias of global_alias
   | Assertion of assertion
   | Module_alias of {name : Pp.t; target : module_expr}
@@ -61,7 +56,7 @@ and global_alias =
 
 and definition = Cpp_resolution.definition = Enum_definition | Struct_definition | Alias_definition
 
-type unprinted = {declaration : declaration; needs : Needs.t}
+type unprinted = {declaration : declaration; needs : Needs.t; names : Cpp_resolution.table}
 
 type t =
   | Text of Pp.t
@@ -119,20 +114,16 @@ let pp_struct_head {template; name; base} =
     ++ (match base with Some b -> str " : public " ++ b | None -> mt ())
     ++ str " {")
 let decl ~needs text = Decl {text; needs}
-let unprinted ~needs env settled = Unprinted {declaration = Declaration {env; settled}; needs}
-let absorbed env settled = Unprinted {declaration = Absorbed {env; settled}; needs = Needs.none}
-let fields ~needs ~record ~vars fields = Unprinted {declaration = Fields {record; vars; fields}; needs}
-let modtype_concept ~path ~params concept =
-  Unprinted {declaration = Modtype_concept {path; params; concept; names = Cpp_resolution.unresolved}; needs = Needs.none}
-let global_alias a = Unprinted {declaration = Global_alias a; needs = Needs.none}
-let assertion a = Unprinted {declaration = Assertion a; needs = Needs.none}
-let module_alias ~name target = Unprinted {declaration = Module_alias {name; target}; needs = Needs.none}
-
-let functor_alias ~name functor_ params =
-  Unprinted {declaration = Functor_alias {name; functor_; params}; needs = Needs.none}
-
-let derived_functor ~template ~name base =
-  Unprinted {declaration = Derived_functor {template; name; base}; needs = Needs.none}
+let leaf ?(needs = Needs.none) declaration = Unprinted {declaration; needs; names = Cpp_resolution.unresolved}
+let unprinted ~needs env settled = leaf ~needs (Declaration {env; settled})
+let absorbed env settled = leaf (Absorbed {env; settled})
+let fields ~needs ~record ~vars fields = leaf ~needs (Fields {record; vars; fields})
+let modtype_concept ~path ~params concept = leaf (Modtype_concept {path; params; concept})
+let global_alias a = leaf (Global_alias a)
+let assertion a = leaf (Assertion a)
+let module_alias ~name target = leaf (Module_alias {name; target})
+let functor_alias ~name functor_ params = leaf (Functor_alias {name; functor_; params})
+let derived_functor ~template ~name base = leaf (Derived_functor {template; name; base})
 let wrapper_struct ~name ~module_ ~fields = Wrapper_struct {name; module_; fields}
 let elements ~source elements = Elements {source; elements}
 let seq l = Seq l
@@ -443,7 +434,7 @@ let map_leaves f t =
   in
   map None t
 
-let resolve_declaration ~requested (resolve : resolver) declaration =
+let resolve_declaration (resolve : resolver) declaration =
   let here key = resolve [] key in
   let module_ref (m : module_ref) = {m with name = Resolved (here (Module m.path))} in
   let global_ref key (g : global_ref) = {g with name = Resolved (here (key g.global))} in
@@ -468,12 +459,16 @@ let resolve_declaration ~requested (resolve : resolver) declaration =
   | Global_alias (Alias_of_module m) -> Global_alias (Alias_of_module (module_ref m))
   | Global_alias (Alias_of_type a) ->
     Global_alias (Alias_of_type {a with target = global_ref (fun r -> Definition (a.definition, r)) a.target})
-  | Modtype_concept c -> Modtype_concept {c with names = Cpp_resolution.resolve resolve (requested declaration)}
-  | Declaration _ | Absorbed _ | Fields _ -> declaration
+  | Declaration _ | Absorbed _ | Fields _ | Modtype_concept _ -> declaration
 
 let resolve_tree ~requested ~resolve t =
   map_leaves
-    (fun spelling u -> Unprinted {u with declaration = resolve_declaration ~requested (resolve spelling) u.declaration})
+    (fun spelling u ->
+      let resolve = resolve spelling in
+      Unprinted
+        { u with
+          declaration = resolve_declaration resolve u.declaration;
+          names = Cpp_resolution.resolve resolve (requested u.declaration) } )
     t
 
 let resolve ~requested ~resolve s = {s with body = List.map (resolve_tree ~requested ~resolve) s.body}

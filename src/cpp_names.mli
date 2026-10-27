@@ -249,6 +249,24 @@ val struct_definition_name : Names.GlobRef.t -> Cpp_name.t
 (** The name the scoped enum of [r] is defined under. *)
 val enum_definition_name : Names.GlobRef.t -> Cpp_name.t
 
+(** The name the inductive type [x] is written under as a value: the struct
+    a constructor's value is built through, where the printer is. *)
+val inductive_value : Names.GlobRef.t -> Cpp_name.t
+
+(** [checked key ~live n] is [n], the name the resolution pass gave [key];
+    under [CRANE_CHECK_IR], [live ()], the name resolution gives it where it
+    is printed, must be the same. *)
+val checked : Cpp_resolution.key -> live:(unit -> Cpp_name.t) -> Cpp_name.t -> Cpp_name.t
+
+(** An anomaly: [key] was printed before it was resolved. *)
+val unresolved : Cpp_resolution.key -> 'a
+
+(** [name_from names frame key ~live] is the name [names] gives [key] at
+    [frame], {!checked}.  A table not yet resolved, or one that was but not
+    for this, is an anomaly. *)
+val name_from :
+  Cpp_resolution.table -> Cpp_resolution.frame -> Cpp_resolution.key -> live:(unit -> Cpp_name.t) -> Cpp_name.t
+
 (** [enter entered k] is [k ()] in the scope [entered], inside the one the
     printer is in: how printing a declaration enters it, and how resolving
     what the declaration names there does. *)
@@ -261,6 +279,7 @@ val at_frame : Cpp_resolution.frame -> (unit -> 'a) -> 'a
 (** [entering l k] is [k ()] with each scope of [l] entered, in order. *)
 val entering : Cpp_resolution.entered list -> (unit -> 'a) -> 'a
 
-(** [key] named where the printer is: what {!Cpp_resolution.resolve} is
+(** [key] named where the printer is, from its visibility, whatever
+    declaration is being written: what {!Cpp_resolution.resolve} is
     given, at each frame, and what a printed name is checked against. *)
 val live_name : Cpp_resolution.key -> Cpp_name.t

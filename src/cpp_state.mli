@@ -141,6 +141,12 @@ type render_ctx = {
       (** The scopes printing the declaration being written has entered
           inside the one it is written in, innermost first
           ({!Cpp_names.enter}). *)
+  rc_names : Cpp_resolution.table option;
+      (** The names of the declaration of the tree being written
+          ({!Cpp_ast.Declaration}), resolved before it is printed; none
+          where what is written is no such declaration -- planning, the
+          driver's own text, a synthesised template's body -- whose names
+          are resolved where they are written. *)
 }
 
 (** The context at the start of the file [file]: file scope, outside every
