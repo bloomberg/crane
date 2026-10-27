@@ -17,8 +17,16 @@ type template_param = Typename of Pp.t | Constrained of {concept : Pp.t; param :
 
 type resolution = Unresolved | Resolved of Cpp_name.t
 type module_ref = {path : ModPath.t; name : resolution}
+type global_ref = {global : GlobRef.t; name : resolution}
 
 let module_ref path = {path; name = Unresolved}
+let global_ref global = {global; name = Unresolved}
+
+type resolver = {
+  module_name : ModPath.t -> Cpp_name.t;
+  class_concept : GlobRef.t -> Cpp_name.t;
+  type_name : GlobRef.t -> Cpp_name.t;
+}
 
 type declaration =
   | Declaration of {env : Common.env; settled : Cpp_erasure.settled}
@@ -36,8 +44,8 @@ and module_expr = Module_named of module_ref | Applied of application
 and application = {functor_ : module_ref; args : module_ref list}
 
 and assertion = {concept : asserted; subject : subject}
-and asserted = Of_module_type of ModPath.t | Of_class of GlobRef.t
-and subject = Module of module_ref | Instance of {instance : GlobRef.t; args : Minicpp.cpp_type list}
+and asserted = Of_module_type of ModPath.t | Of_class of global_ref
+and subject = Module of module_ref | Instance of {instance : global_ref; args : Minicpp.cpp_type list}
 
 and global_alias =
   | Alias_of_type of {
@@ -432,7 +440,16 @@ let map_leaves f t =
   map None t
 
 let resolve_declaration resolve declaration =
-  let module_ref (m : module_ref) = {m with name = Resolved (resolve m.path)} in
+  let module_ref (m : module_ref) = {m with name = Resolved (resolve.module_name m.path)} in
+  let global_ref resolve (g : global_ref) = {g with name = Resolved (resolve g.global)} in
+  let concept : asserted -> asserted = function
+    | Of_class g -> Of_class (global_ref resolve.class_concept g)
+    | Of_module_type _ as c -> c
+  in
+  let subject : subject -> subject = function
+    | Module m -> Module (module_ref m)
+    | Instance i -> Instance {i with instance = global_ref resolve.type_name i.instance}
+  in
   let module_expr = function
     | Module_named m -> Module_named (module_ref m)
     | Applied {functor_; args} -> Applied {functor_ = module_ref functor_; args = List.map module_ref args}
@@ -442,9 +459,8 @@ let resolve_declaration resolve declaration =
   | Functor_alias a ->
     Functor_alias {a with functor_ = module_ref a.functor_; params = List.map (fun (p, m) -> (p, module_ref m)) a.params}
   | Derived_functor a -> Derived_functor {a with base = module_expr a.base}
-  | Assertion ({subject = Module m; _} as a) -> Assertion {a with subject = Module (module_ref m)}
+  | Assertion a -> Assertion {concept = concept a.concept; subject = subject a.subject}
   | Global_alias (Alias_of_module m) -> Global_alias (Alias_of_module (module_ref m))
-  | Assertion {subject = Instance _; _}
   | Global_alias (Alias_of_type _)
   | Declaration _ | Absorbed _ | Fields _ | Modtype_concept _ ->
     declaration

@@ -237,12 +237,20 @@ let () =
   check "a wrapper struct not filled in is not printed"
     (match Cpp_ast.to_pp wrapper with exception Invalid_argument _ -> true | _ -> false);
   let spelling_text = function Cpp_ast.Element_of mp -> "E(" ^ ModPath.to_string mp ^ ")" | Member_of mp -> "M(" ^ ModPath.to_string mp ^ ")" in
-  let resolve spelling mp = Cpp_name.unqualified (ModPath.to_string mp ^ "@" ^ spelling_text spelling) in
+  let ref_text = function GlobRef.VarRef id -> Id.to_string id | _ -> "?" in
+  let resolve spelling =
+    let named what = Cpp_name.unqualified (what ^ "@" ^ spelling_text spelling) in
+    { Cpp_ast.module_name = (fun mp -> named (ModPath.to_string mp));
+      class_concept = (fun r -> named ("concept " ^ ref_text r));
+      type_name = (fun r -> named ("type " ^ ref_text r)) }
+  in
   let resolved_text sections =
     let write spelling (u : Cpp_ast.unprinted) =
       match u.declaration with
       | Module_alias {target = Module_named {name = Resolved n; _}; _} -> Pp.str (spelling_text spelling ^ "=" ^ Cpp_name.to_string n)
       | Module_alias {target = Module_named {name = Unresolved; _}; _} -> Pp.str "unresolved"
+      | Assertion {concept = Of_class {name = Resolved c; _}; subject = Instance {instance = {name = Resolved i; _}; _}} ->
+        Pp.str (Cpp_name.to_string c ^ "<" ^ Cpp_name.to_string i ^ ">")
       | _ -> Pp.str (spelling_text spelling)
     in
     Pp.string_of_ppcmds (Cpp_ast.print_tree ~write (Cpp_ast.resolve_tree ~resolve (Cpp_ast.seq sections)))
@@ -259,4 +267,12 @@ let () =
           ~write:(fun _ (u : Cpp_ast.unprinted) ->
             match u.declaration with Module_alias {target = Module_named {name = Unresolved; _}; _} -> Pp.str "u" | _ -> Pp.str "r")
           (Cpp_ast.elements ~source:m alias) ))
-    "u"
+    "u";
+  let var s = GlobRef.VarRef (Id.of_string s) in
+  let assertion =
+    Cpp_ast.assertion
+      {concept = Of_class (Cpp_ast.global_ref (var "C")); subject = Instance {instance = Cpp_ast.global_ref (var "I"); args = []}}
+  in
+  check_text "the class concept and the instance an assertion names are resolved where it is written"
+    (resolved_text [top (Cpp_ast.elements ~source:m assertion)])
+    "concept C@E(F.M)<type I@E(F.M)>"

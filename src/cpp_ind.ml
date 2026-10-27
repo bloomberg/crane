@@ -1271,7 +1271,9 @@ let in_spelling ~file spelling k =
       Pp.(str "Crane: the implementation writes a member of the struct of " ++ str (ModPath.to_string mp)
           ++ str ", which it does not write.")
 
-let resolve_module_at ~file spelling mp = in_spelling ~file spelling (fun () -> Common.resolve_module mp)
+let resolver_at ~file spelling =
+  let at f x = in_spelling ~file spelling (fun () -> f x) in
+  {Cpp_ast.module_name = at Common.resolve_module; class_concept = at Cpp_names.concept_name; type_name = at (Cpp_names.global_name Type)}
 
 let write_unprinted ~file spelling u =
   let modtype_concept ~path ~params c =

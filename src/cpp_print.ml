@@ -3685,8 +3685,8 @@ let rec held_back_assertions (d : Cpp_erasure.settled) =
     if nspace_merges {dw_ref = id; dw_sole_child = sole_child} then []
     else List.concat_map held_back_assertions members
   | Decl (Dstatic_assert (CPPconcept_app (class_ref, subject, tys), None)) when class_concept_held_back class_ref ->
-    [ { Cpp_ast.concept = Of_class class_ref;
-        subject = Instance {instance = subject; args = tys} } ]
+    [ { Cpp_ast.concept = Of_class (Cpp_ast.global_ref class_ref);
+        subject = Instance {instance = Cpp_ast.global_ref subject; args = tys} } ]
   | Decl _ -> []
 
 (** The structs and scoped enums [d] defines at namespace scope, written
@@ -4353,24 +4353,31 @@ let unprinted ~module_ env settled = Cpp_ast.unprinted ~needs:(planned_needs ~mo
 let unprinted_fields ~module_ ~vl r fields =
   Cpp_ast.fields ~needs:(fields_needs ~module_ ~vl r (List.map snd fields)) ~record:r ~vars:vl fields
 
-(** The name of a module a declaration of the tree names, as
-    {!Cpp_ast.resolve} resolved it where the declaration is written; under
-    [CRANE_CHECK_IR], the name resolution gives it where it is printed,
-    too. *)
-let resolved_module (m : Cpp_ast.module_ref) =
-  match m.name with
+(* The name {!Cpp_ast.resolve} gave [what ()] where the declaration naming
+   it is written; under [CRANE_CHECK_IR], the one [here ()] gives it where it
+   is printed, too. *)
+let resolved ~what ~here (resolution : Cpp_ast.resolution) =
+  match resolution with
   | Resolved n ->
     ( if Probe.checking () then
-        let here = resolve_module m.path in
+        let here = here () in
         if not (Cpp_name.equal n here) then
-          Probe.violation "module names"
+          Probe.violation "names resolved"
             Pp.(
-              str "the module " ++ str (ModPath.to_string m.path) ++ str " was resolved as " ++ str (Cpp_name.to_string n)
+              what () ++ str " was resolved as " ++ str (Cpp_name.to_string n)
               ++ str " where the declaration naming it is written, and is named " ++ str (Cpp_name.to_string here)
               ++ str " where it is printed" ) );
     n
-  | Unresolved ->
-    CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string m.path) ++ str " was printed before it was resolved.")
+  | Unresolved -> CErrors.anomaly Pp.(str "Crane: " ++ what () ++ str " was printed before it was resolved.")
+
+let resolved_module (m : Cpp_ast.module_ref) =
+  resolved ~what:(fun () -> Pp.(str "the module " ++ str (ModPath.to_string m.path))) ~here:(fun () -> resolve_module m.path) m.name
+
+let resolved_class_concept (c : Cpp_ast.global_ref) =
+  resolved ~what:(fun () -> Pp.(str "the concept of " ++ Printer.pr_global c.global)) ~here:(fun () -> concept_name c.global) c.name
+
+let resolved_type_name (g : Cpp_ast.global_ref) =
+  resolved ~what:(fun () -> Pp.(str "the type " ++ Printer.pr_global g.global)) ~here:(fun () -> global_name Type g.global) g.name
 
 (* A module named in a module expression, and its resolution. *)
 let pp_module_name (m : Cpp_ast.module_ref) =

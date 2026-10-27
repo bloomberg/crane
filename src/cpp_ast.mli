@@ -70,8 +70,23 @@ type resolution = Unresolved | Resolved of Cpp_name.t
     declaration is written. *)
 type module_ref = {path : ModPath.t; name : resolution}
 
+(** A global a declaration names, and its name where the declaration is
+    written. *)
+type global_ref = {global : GlobRef.t; name : resolution}
+
 (** [module_ref path] is the module at [path], not yet resolved. *)
 val module_ref : ModPath.t -> module_ref
+
+(** [global_ref r] is the global [r], not yet resolved. *)
+val global_ref : GlobRef.t -> global_ref
+
+(** How {!resolve} names what a declaration names where it is written: a
+    module, the concept of a type class, a type. *)
+type resolver = {
+  module_name : ModPath.t -> Cpp_name.t;
+  class_concept : GlobRef.t -> Cpp_name.t;
+  type_name : GlobRef.t -> Cpp_name.t;
+}
 
 (** What a declaration not yet printed declares. *)
 type declaration =
@@ -125,12 +140,12 @@ and assertion = {concept : asserted; subject : subject}
 (** The concept an {!assertion} asserts. *)
 and asserted =
   | Of_module_type of ModPath.t  (** That of the module type at the path. *)
-  | Of_class of GlobRef.t  (** That of the type class. *)
+  | Of_class of global_ref  (** That of the type class. *)
 
 (** What an {!assertion} asserts it of. *)
 and subject =
   | Module of module_ref  (** The struct the module is written as. *)
-  | Instance of {instance : GlobRef.t; args : Minicpp.cpp_type list}
+  | Instance of {instance : global_ref; args : Minicpp.cpp_type list}
       (** The instance, as a type, with the class's further arguments. *)
 
 (** What a {!Global_alias} stands in for. *)
@@ -342,11 +357,12 @@ val fill_wrappers : (string * body) list -> t -> t
     @raise Invalid_argument if it holds a declaration not yet printed. *)
 val to_pp : t -> Pp.t
 
-(** [resolve_tree ~resolve t] is [t] with the modules each declaration not
-    yet printed names resolved: [resolve spelling path] is the name of the
-    module at [path] where a declaration spelled [spelling] is written.
+(** [resolve_tree ~resolve t] is [t] with what each declaration not yet
+    printed names resolved -- its modules, the class concept and the instance
+    an assertion names -- each as [resolve spelling] names it where a
+    declaration spelled [spelling] is written.
     @raise Invalid_argument as {!print_tree} does. *)
-val resolve_tree : resolve:(spelling -> ModPath.t -> Cpp_name.t) -> t -> t
+val resolve_tree : resolve:(spelling -> resolver) -> t -> t
 
 (** [t] as a document, each declaration not yet printed printed by [write],
     in the order written, as the tree spells it.
@@ -418,7 +434,7 @@ type scheduled
 val schedule : templates:template list -> forwards:forward list -> translation_unit -> scheduled
 
 (** {!resolve_tree} over each section of a scheduled unit. *)
-val resolve : resolve:(spelling -> ModPath.t -> Cpp_name.t) -> scheduled -> scheduled
+val resolve : resolve:(spelling -> resolver) -> scheduled -> scheduled
 
 (** The scheduled unit as a document, as {!print_tree} writes each
     section. *)

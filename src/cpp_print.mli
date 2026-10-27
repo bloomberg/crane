@@ -33,6 +33,12 @@ val write_absorbing : homed:(string * ModPath.t) list -> Common.env -> Cpp_erasu
     is printed.  A module not yet resolved is an anomaly. *)
 val resolved_module : Cpp_ast.module_ref -> Cpp_name.t
 
+(** {!resolved_module} for the concept of a type class. *)
+val resolved_class_concept : Cpp_ast.global_ref -> Cpp_name.t
+
+(** {!resolved_module} for a type. *)
+val resolved_type_name : Cpp_ast.global_ref -> Cpp_name.t
+
 (** Whether [d] is an assertion the struct being written holds back until
     after it, writing nothing for it here. *)
 val is_held_back_assertion : Cpp_erasure.settled -> bool
