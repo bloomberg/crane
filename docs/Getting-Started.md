@@ -5,6 +5,7 @@
 Once you clone the repo, if you have [opam](https://opam.ocaml.org/) and [dune](https://dune.build/), you can run
 
 ```bash
+opam repo add rocq-released https://rocq-prover.org/opam/released # Make the rocq packages repository available for 'opam install'
 opam install . --deps-only
 ```
 
