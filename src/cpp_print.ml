@@ -3116,34 +3116,11 @@ let enum_forward_declaration ~ref name =
     indented contexts such as enum values).  Defaults to [""]. *)
 let pp_doc_comment_for_name = Doc_comments.pp
 
-(** Run [f] in the scope an inductive [r]'s struct opens.  The struct is a
-    scope of its own between its module and its members: a constructor's
-    struct declared in it hides a name the module declares, so a body that
-    reaches the module's [Node] from inside [tree] has to qualify it.  The
-    scope is a visibility layer whose path names nothing a reference could
-    be declared in, holding the constructors' struct names. *)
-let with_struct_scope r f =
-  match r with
-  | GlobRef.IndRef ((kn, i) as ind) ->
-    let ctors =
-      List.init (Option.default 0 (Table.get_ind_nb_ctors_opt kn i)) (fun j ->
-          Ml_type_util.ctor_struct_id_of_ref (GlobRef.ConstructRef (ind, j + 1)))
-    in
-    let scope =
-      Label.make
-        (Printf.sprintf "%sstruct_%s_%d" Common.crane_local_prefix
-           (Label.to_string (MutInd.label kn)) i)
-    in
-    let outer = current_visibility () in
-    let mp = ModPath.MPdot (top_visible_mp (), scope) in
-    with_visibility (inside ~members:(Id.Set.of_list ctors) mp [] outer) f
-  | _ -> f ()
-
 (** The synthesised templates spelled, in [file], at the type constructors
     [visit] calls its argument at, in the order spelled -- one written in
     another's body ahead of it -- each spelled as the printer spells it in
     that file, inside the struct of the inductive whose members are written
-    around it, if any ({!with_struct_scope}). *)
+    around it, if any ({!Cpp_resolution.Inductive_struct}). *)
 let ctor_aliases_found ~file visit =
   writing_file file @@ fun () ->
   setting collecting_ctor_aliases true @@ fun () ->
@@ -3152,7 +3129,7 @@ let ctor_aliases_found ~file visit =
       match t with
       | Ttyctor _ ->
         let spell () = ignore (pp_cpp_type false vl t) in
-        ( match owner with Some r -> with_struct_scope r spell | None -> spell () )
+        ( match owner with Some r -> enter (Inductive_struct r) spell | None -> spell () )
       | _ -> () );
   !ctor_aliases_spelled
 
@@ -3830,12 +3807,7 @@ and pp_wrapper_nspace env id (members : Cpp_erasure.settled list) =
       true ) ->
     (* MERGE non-template: struct Nat { ... } *)
     let struct_name = str struct_name_str in
-    let f_s =
-      with_render_ctx
-        (fun c -> { c with rc_in_struct = true })
-        (fun () ->
-          with_struct_scope ds_ref (fun () -> pp_cpp_fields_with_vis ~struct_name env fields) )
-    in
+    let f_s = entering [In_struct; Inductive_struct ds_ref] (fun () -> pp_cpp_fields_with_vis ~struct_name env fields) in
     let inherit_clause =
       if sft then
         str " : public " ++ str (sn ()).enable_from_this ++ str "<"
@@ -3867,10 +3839,7 @@ and pp_wrapper_nspace env id (members : Cpp_erasure.settled list) =
     (* MERGE template: template<typename A> struct List { ... } *)
     let struct_name = str struct_name_str in
     let f_s =
-      with_render_ctx
-        (fun c -> { c with rc_in_struct = true; rc_in_template = true })
-        (fun () ->
-          with_struct_scope ds_ref (fun () -> pp_cpp_fields_with_vis ~struct_name env fields) )
+      entering [In_struct; In_template; Inductive_struct ds_ref] (fun () -> pp_cpp_fields_with_vis ~struct_name env fields)
     in
     let args = pp_list pp_template_param temps in
     let req = pp_requires_of_tparams temps in
@@ -3904,11 +3873,7 @@ and pp_wrapper_nspace env id (members : Cpp_erasure.settled list) =
   | _ ->
     (* No merge: keep wrapper struct (has pending decls or multiple
        children) *)
-    let ds =
-      with_render_ctx
-        (fun c -> { c with rc_in_struct = true })
-        (fun () -> pp_list_stmt (pp_cpp_decl env) members)
-    in
+    let ds = enter In_struct (fun () -> pp_list_stmt (pp_cpp_decl env) members) in
     (str "struct " ++ str struct_name_str ++ str " {")
     ++ fnl ()
     ++ ds
@@ -3933,12 +3898,8 @@ and pp_leaf_decl env (d : cpp_decl) =
     (* A definition outside every struct body is a member of the struct its
        declaration's scope names, as planned; so is every name written in it
        that the struct declares. *)
-    let scope =
-      if is_def && not (!render_ctx).rc_in_struct then
-        Scope_plan.of_declaration (fst df_path.dp_outer)
-      else None
-    in
-    with_render_ctx (fun c -> {c with rc_scope = scope}) @@ fun () ->
+    enter (Function {owner = fst df_path.dp_outer; defines = is_def}) @@ fun () ->
+    let scope = (!render_ctx).rc_scope in
     let pp_fun_name n =
       match n with
       | GlobRef.VarRef v when is_def -> str (Id.to_string v)
@@ -4023,13 +3984,9 @@ and pp_leaf_decl env (d : cpp_decl) =
     note_file_scope_name struct_name;
     if (!render_ctx).rc_in_struct then printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref id);
     let f_s =
-      with_struct_scope id (fun () ->
-          match tparams with
-          | [] -> pp_cpp_fields_with_vis ~struct_name env fields
-          | _ ->
-            with_render_ctx
-              (fun c -> { c with rc_in_template = true })
-              (fun () -> pp_cpp_fields_with_vis ~struct_name env fields) )
+      entering
+        (Cpp_resolution.Inductive_struct id :: (if tparams = [] then [] else [In_template]))
+        (fun () -> pp_cpp_fields_with_vis ~struct_name env fields)
     in
     let tmpl = struct_template_head ~pp_param:pp_template_param env tparams cstr in
     let inherit_clause =
@@ -4159,25 +4116,17 @@ and pp_leaf_decl env (d : cpp_decl) =
       | tps ->
         sname ++ str "<" ++ pp_list (fun (_, id) -> Id.print id) tps ++ str ">"
     in
-    with_render_ctx
-      (fun c -> {c with rc_in_template = c.rc_in_template || dm_tparams <> []})
+    entering
+      ((if dm_tparams = [] then [] else [Cpp_resolution.In_template]) @ [Inductive_struct dm_owner])
       (fun () ->
-        with_struct_scope dm_owner (fun () ->
-            pp_cpp_field ~struct_name:(str own_name)
-              ~mode:(Mm_defined (qual, dm_tparams))
-              env (field_of_member dm_field) ) )
+        pp_cpp_field ~struct_name:(str own_name) ~mode:(Mm_defined (qual, dm_tparams)) env (field_of_member dm_field) )
   | Dfields ds ->
     let struct_name =
       str (String.capitalize_ascii (str_global Type ds.ds_ref))
     in
-    with_render_ctx
-      (fun c ->
-        { c with
-          rc_in_struct = true;
-          rc_in_template = c.rc_in_template || ds.ds_tparams <> [] } )
-      (fun () ->
-        with_struct_scope ds.ds_ref (fun () ->
-            pp_cpp_fields_with_vis ~struct_name env ds.ds_fields ) )
+    entering
+      ((Cpp_resolution.In_struct :: (if ds.ds_tparams = [] then [] else [In_template])) @ [Inductive_struct ds.ds_ref])
+      (fun () -> pp_cpp_fields_with_vis ~struct_name env ds.ds_fields)
   | Dstatic_assert (CPPconcept_app (class_ref, _, _), None) when class_concept_held_back class_ref ->
     (* The concept is declared after the struct being rendered, because its
        requirements name the struct's own types.  The assertion goes with it
@@ -4248,7 +4197,7 @@ let rec absorbing_decl ~homed env (d : Cpp_erasure.settled) =
       [Cpp_ast.text (str "namespace {" ++ fnl ()); Cpp_ast.concat fnl (List.map written decls); Cpp_ast.text (fnl () ++ str "};")]
   | Namespace (Some id, members) -> (
     let name = nspace_wrapper_name id in
-    let ds = with_render_ctx (fun c -> {c with rc_in_struct = true}) (fun () -> Cpp_ast.concat fnl (List.map written members)) in
+    let ds = enter In_struct (fun () -> Cpp_ast.concat fnl (List.map written members)) in
     match List.assoc_opt name homed with
     | Some module_ -> Cpp_ast.wrapper_struct ~name ~module_ ~fields:Cpp_ast.(seq [ds; text (fnl ())])
     | None -> Cpp_ast.(seq [text (str "struct " ++ str name ++ str " {" ++ fnl ()); ds; text (fnl () ++ str "};")]) )

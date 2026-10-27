@@ -672,9 +672,37 @@ let struct_definition_name id =
 let enum_definition_name r =
   match r with GlobRef.IndRef _ -> inductive_type_name r | _ -> global_name Type r
 
+(* The visibility inside the struct of the inductive [r]: a layer whose path
+   names nothing a reference could be declared in, holding the
+   constructors' struct names. *)
+let inductive_struct_visibility r =
+  match r with
+  | GlobRef.IndRef ((kn, i) as ind) ->
+    let ctors =
+      List.init (Option.default 0 (Table.get_ind_nb_ctors_opt kn i)) (fun j ->
+          Ml_type_util.ctor_struct_id_of_ref (GlobRef.ConstructRef (ind, j + 1)) )
+    in
+    let scope =
+      Label.make (Printf.sprintf "%sstruct_%s_%d" Common.crane_local_prefix (Label.to_string (MutInd.label kn)) i)
+    in
+    let mp = ModPath.MPdot (top_visible_mp (), scope) in
+    inside ~members:(Id.Set.of_list ctors) mp [] (current_visibility ())
+  | _ -> current_visibility ()
+
 let enter (entered : Cpp_resolution.entered) k =
+  let entering update = with_render_ctx (fun c -> {(update c) with rc_frame = entered :: c.rc_frame}) in
   match entered with
-  | Signature {signature; parameters} -> with_visibility (inside signature parameters (current_visibility ())) k
+  | Signature {signature; parameters} ->
+    entering Fun.id (fun () -> with_visibility (inside signature parameters (current_visibility ())) k)
+  | Inductive_struct r -> entering Fun.id (fun () -> with_visibility (inductive_struct_visibility r) k)
+  | In_struct -> entering (fun c -> {c with rc_in_struct = true}) k
+  | In_template -> entering (fun c -> {c with rc_in_template = true}) k
+  | Function {owner; defines} ->
+    entering
+      (fun c -> {c with rc_scope = (if defines && not c.rc_in_struct then Scope_plan.of_declaration owner else None)})
+      k
+
+let entering l k = List.fold_right (fun entered k () -> enter entered k) l k ()
 
 let rec at_frame (frame : Cpp_resolution.frame) k =
   match frame with [] -> k () | entered :: outer -> at_frame outer (fun () -> enter entered k)

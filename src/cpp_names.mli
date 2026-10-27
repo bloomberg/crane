@@ -258,6 +258,9 @@ val enter : Cpp_resolution.entered -> (unit -> 'a) -> 'a
     outermost first ({!enter}). *)
 val at_frame : Cpp_resolution.frame -> (unit -> 'a) -> 'a
 
+(** [entering l k] is [k ()] with each scope of [l] entered, in order. *)
+val entering : Cpp_resolution.entered list -> (unit -> 'a) -> 'a
+
 (** [key] named where the printer is: what {!Cpp_resolution.resolve} is
     given, at each frame, and what a printed name is checked against. *)
 val live_name : Cpp_resolution.key -> Cpp_name.t

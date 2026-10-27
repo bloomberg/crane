@@ -137,6 +137,10 @@ type render_ctx = {
       (** The module whose element is being written, if one is: the one
           whose struct a synthesised template it writes may be declared in
           ({!Cpp_print.ctor_alias_home}). *)
+  rc_frame : Cpp_resolution.frame;
+      (** The scopes printing the declaration being written has entered
+          inside the one it is written in, innermost first
+          ({!Cpp_names.enter}). *)
 }
 
 (** The context at the start of the file [file]: file scope, outside every

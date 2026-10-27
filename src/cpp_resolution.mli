@@ -19,6 +19,16 @@ type entered =
   | Signature of {signature : ModPath.t; parameters : ModPath.t list}
       (** An anonymous signature's requirements, its own path and the functor
           parameters visible in it visible. *)
+  | Inductive_struct of GlobRef.t
+      (** The scope the struct of the inductive opens, between its module and
+          its members: the constructors' structs declared in it hide what the
+          module declares under their names. *)
+  | In_struct  (** A struct's body. *)
+  | In_template  (** A class template's body. *)
+  | Function of {owner : GlobRef.t; defines : bool}
+      (** A function of the declaration [owner] -- defined, if [defines] --
+          which outside every struct body is defined out of line, as a member
+          of the struct its plan's scope names. *)
 
 (** The scopes entered, innermost first; [[]] is where the declaration is
     written. *)

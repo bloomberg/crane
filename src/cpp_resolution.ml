@@ -3,7 +3,12 @@
 
 open Names
 
-type entered = Signature of {signature : ModPath.t; parameters : ModPath.t list}
+type entered =
+  | Signature of {signature : ModPath.t; parameters : ModPath.t list}
+  | Inductive_struct of GlobRef.t
+  | In_struct
+  | In_template
+  | Function of {owner : GlobRef.t; defines : bool}
 type frame = entered list
 type definition = Enum_definition | Struct_definition | Alias_definition
 
@@ -30,10 +35,17 @@ let pp_key k =
   | Modtype_concept_declared mp -> path "the declared concept of the module type" mp
   | Definition (_, r) -> global "the definition of" r
 
-let compare_entered (Signature a) (Signature b) =
-  match ModPath.compare a.signature b.signature with
-  | 0 -> List.compare ModPath.compare a.parameters b.parameters
-  | c -> c
+let compare_entered a b =
+  let rank = function Signature _ -> 0 | Inductive_struct _ -> 1 | In_struct -> 2 | In_template -> 3 | Function _ -> 4 in
+  match (a, b) with
+  | Signature a, Signature b -> (
+    match ModPath.compare a.signature b.signature with
+    | 0 -> List.compare ModPath.compare a.parameters b.parameters
+    | c -> c )
+  | Inductive_struct a, Inductive_struct b -> GlobRef.UserOrd.compare a b
+  | Function a, Function b -> (
+    match GlobRef.UserOrd.compare a.owner b.owner with 0 -> Bool.compare a.defines b.defines | c -> c )
+  | _ -> Int.compare (rank a) (rank b)
 
 let compare_kind (a : Common.kind) b = compare a b
 

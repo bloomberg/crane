@@ -484,6 +484,9 @@ type render_ctx = {
   (* The module whose element is being written, if one is: said by whatever
      writes or plans it, from the module it is an element of. *)
   rc_module : Names.ModPath.t option;
+  (* The scopes printing the declaration being written has entered inside
+     the one it is written in, innermost first ({!Cpp_names.enter}). *)
+  rc_frame : Cpp_resolution.frame;
 }
 
 (** The context at the start of the file [file]: file scope, outside every
@@ -496,6 +499,7 @@ let file_start rc_file =
     rc_scope = None;
     rc_in_template = false;
     rc_module = None;
+    rc_frame = [];
   }
 
 (** The context at file scope in the file [c] is written in. *)
