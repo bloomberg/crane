@@ -397,9 +397,9 @@ let names_through n quals =
     @param n the name [r] is otherwise written under
     @return the qualifiers, outermost first, when qualification is required,
             or none otherwise *)
-let struct_scopes_for r n =
-  match (!render_ctx).rc_scope with
-  | Some scope when not (!render_ctx).rc_in_struct ->
+let struct_scopes_for (ctx : render_ctx) r n =
+  match ctx.rc_scope with
+  | Some scope when not ctx.rc_in_struct ->
     let classes = List.map (fun s -> Cpp_name.Class s) in
     let struct_scopes = classes scope.Scope_plan.qualifier in
     (* How [r]'s module stands to the struct's, by kernel path: the textual
@@ -516,12 +516,12 @@ let wrapper_qualify = Cpp_state.wrapper_qualify
     Inside the struct the qualifier must not be written at all.  The class is
     incomplete while its own body is being printed, so [Wrapper::member] there
     names nothing -- and the member is in scope unqualified anyway. *)
-let wrapper_qualified_type_name r n =
+let wrapper_qualified_type_name (ctx : render_ctx) r n =
   match r with
   | GlobRef.IndRef _ | GlobRef.ConstructRef _ -> n
   | _ when Table.is_typeclass r -> n
   | _ when Module_plan.is_global_scope_type r -> n
-  | _ -> if (!render_ctx).rc_in_struct then n else wrapper_qualify r n
+  | _ -> if ctx.rc_in_struct then n else wrapper_qualify r n
 
 (** Check if a global function needs :: prefix to avoid name collision. When
     generating out-of-struct definitions, we add :: to call external functions

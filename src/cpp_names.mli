@@ -162,8 +162,9 @@ val typename_prefix_for : Cpp_name.t -> Pp.t
 (** {2 Struct and namespace qualification} *)
 
 (** The struct qualifiers needed in front of a global's type name, written
-    otherwise as given, from the given context. *)
-val struct_scopes_for : Names.GlobRef.t -> Cpp_name.t -> Cpp_name.scope list
+    otherwise as given, at the position the render context says: outside a
+    struct's body, in the out-of-line definition of one of its members. *)
+val struct_scopes_for : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t -> Cpp_name.scope list
 
 (** The global-scope qualifier needed in front of an inductive's type name,
     written otherwise as given, where a nested struct shadows it. *)
@@ -173,8 +174,9 @@ val global_scopes_for : Names.GlobRef.t -> Cpp_name.t -> Cpp_name.scope list
 val wrapper_qualify : Names.GlobRef.t -> Cpp_name.t -> Cpp_name.t
 
 (** The name a type is written under from outside the wrapper struct that owns
-    it; the name unchanged while that struct's own body is being printed. *)
-val wrapper_qualified_type_name : Names.GlobRef.t -> Cpp_name.t -> Cpp_name.t
+    it; the name unchanged while that struct's own body is being printed, as
+    the render context says. *)
+val wrapper_qualified_type_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t -> Cpp_name.t
 
 (** Whether the global must be referenced with a global-scope qualifier. *)
 val needs_global_qualifier : Names.GlobRef.t -> bool

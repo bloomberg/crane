@@ -813,9 +813,9 @@ let rec member_kind = function
 (** The qualifiers a member of the struct being defined out of line is
     written with when it is named outside that struct's body ([Tid] and
     [Tpromoted]), or [None] where it is written bare. *)
-let member_scopes id =
-  match (!render_ctx).rc_scope with
-  | Some sc when (not (!render_ctx).rc_in_struct) && not (is_file_scope_type id) ->
+let member_scopes (ctx : render_ctx) id =
+  match ctx.rc_scope with
+  | Some sc when (not ctx.rc_in_struct) && not (is_file_scope_type id) ->
     Some (List.map (fun s -> Cpp_name.Class s) sc.Scope_plan.qualifier)
   | _ -> None
 
@@ -832,18 +832,18 @@ type written_head = {
 
 let unqualified_head head = {outer = []; head; typename = false; template_keyword = false}
 
-let needs_typename n = (!render_ctx).rc_in_template && Cpp_name.is_qualified n
+let needs_typename (ctx : render_ctx) n = ctx.rc_in_template && Cpp_name.is_qualified n
 
 (** The head of the type [Tglob (r, tys, _)] that no custom mapping inlines,
     [applied] when [tys] is not empty. *)
-let glob_head r ~applied =
+let glob_head ctx r ~applied =
   let bare = inductive_type_name r in
-  let enclosing = struct_scopes_for r bare @ global_scopes_for r bare in
+  let enclosing = struct_scopes_for ctx r bare @ global_scopes_for r bare in
   (* The wrapper qualifier is the last resort: the two qualifiers above say
      where the name lives whenever they say anything, and stacking this one
      on top of them spells the same struct twice. *)
-  let name = if enclosing = [] then wrapper_qualified_type_name r bare else bare in
-  {outer = enclosing; head = name; typename = needs_typename name; template_keyword = applied}
+  let name = if enclosing = [] then wrapper_qualified_type_name ctx r bare else bare in
+  {outer = enclosing; head = name; typename = needs_typename ctx name; template_keyword = applied}
 
 (** The head of the inductive type [Tnamespace (r, Tglob (r, args, _))],
     [applied] when [args] is not empty.
@@ -854,7 +854,7 @@ let glob_head r ~applied =
     prefix. EXCEPTION: Eponymous records are merged into the module struct,
     so we use just the capitalized name without namespace qualification
     (CHT, not CHT::cHT). *)
-let inductive_head r ~applied =
+let inductive_head ctx r ~applied =
   let name, needs_ns = inductive_name r in
   let class_ s = Cpp_name.Class s in
   let type_name = global_name Type r in
@@ -867,7 +867,7 @@ let inductive_head r ~applied =
   else if is_enum_cached r then
     (* Enum types at global scope need no struct qualification. Enums inside
        structs (e.g., Comparison::cmp) need it. *)
-    let qualifier = if is_global_scope_enum_cached r then [] else struct_scopes_for r type_name in
+    let qualifier = if is_global_scope_enum_cached r then [] else struct_scopes_for ctx r type_name in
     {(unqualified_head (enum_name type_name r)) with outer = qualifier}
   else if Cpp_name.is_qualified type_name then
     let cap =
@@ -881,10 +881,10 @@ let inductive_head r ~applied =
        out-of-line definitions -- whose return type precedes the qualified
        function name, and so sits outside that struct's scope -- need the
        struct prefix in front of it. *)
-    { outer = struct_scopes_for r cap;
+    { outer = struct_scopes_for ctx r cap;
       head = cap;
-      typename = needs_typename cap;
-      template_keyword = applied && (!render_ctx).rc_in_template }
+      typename = needs_typename ctx cap;
+      template_keyword = applied && ctx.rc_in_template }
   else if is_merged_inductive r && not (is_local_inductive r) then
     (* A local inductive is a sibling member of the enclosing module struct,
        so it is in scope under its own name; the merged-wrapper spelling
@@ -954,33 +954,37 @@ let external_type_name id_s =
     the caller has set.  [None] where only the rendering can tell -- an
     expression's type, and a type constructor named as a template argument,
     which may be written through a synthesised alias ({!ctor_alias_at}). *)
-let rec type_names_into_a_struct t =
+let type_names_into_a_struct t =
+  let ctx = !render_ctx in
+  let rec names_into t =
   let any ts =
     List.fold_left
-      (fun acc t -> match acc with Some true | None -> acc | Some false -> type_names_into_a_struct t)
+      (fun acc t -> match acc with Some true | None -> acc | Some false -> names_into t)
       (Some false) ts
   in
   let ( ||? ) b rest = if b then Some true else rest in
   match t with
   | Tvar _ | Tinstance _ | Tvoid | Thole | Tdecltype_auto | Terased _ | Tany | Topaque -> Some false
   | Tunresolved -> None
-  | Tpromoted id -> Some (scopes_name_into_a_struct (Option.default [] (member_scopes id)))
-  | Tid (id, args) -> scopes_name_into_a_struct (Option.default [] (member_scopes id)) ||? any args
+  | Tpromoted id -> Some (scopes_name_into_a_struct (Option.default [] (member_scopes ctx id)))
+  | Tid (id, args) -> scopes_name_into_a_struct (Option.default [] (member_scopes ctx id)) ||? any args
   | Tid_external (id_s, args) -> text_names_into_a_struct (external_type_name id_s) ||? any args
   | Tglob (r, tys, _) -> (
     match find_custom_opt r with
     | Some s when to_inline r -> text_names_into_a_struct s ||? any tys
     | _ ->
-      head_names_into_a_struct (glob_head r ~applied:(tys <> [])) ||? any tys )
+      head_names_into_a_struct (glob_head ctx r ~applied:(tys <> [])) ||? any tys )
   | Tnamespace ((GlobRef.IndRef _ as r), Tglob (r', args, _)) when globref_equal r r' ->
-    head_names_into_a_struct (inductive_head r' ~applied:(args <> [])) ||? any args
+    head_names_into_a_struct (inductive_head ctx r' ~applied:(args <> [])) ||? any args
   | Tnamespace _ | Tqualified _ | Tapply (Tqualified _, _) -> Some true
   | Tapply (head, args) -> any (head :: args)
   | Tfun (dom, cod) -> any (cod :: dom)
-  | Tnondeduced t | Tref (_, t) | Tptr t | Tconst t | Tshared_ptr t -> type_names_into_a_struct t
+  | Tnondeduced t | Tref (_, t) | Tptr t | Tconst t | Tshared_ptr t -> names_into t
   | Trebind (h, x) -> any [h; x]
   | Tvariant (_, tys) -> any tys
   | Texpr_type _ | Ttyctor _ | Tdecay _ | Tauto -> None
+  in
+  names_into t
 
 (** Whether [d], written as a member of a struct body, is a static function
     declaration ending at its semicolon: no body, no initialiser, no
@@ -1033,6 +1037,7 @@ let rec declaration_names_into_a_struct (d : cpp_decl) =
     claimed, so it is rendered as a member of the enclosing struct: the bare
     name inside a struct body, [StructName::id] outside one. *)
 let rec pp_cpp_type ?(lead = true) par vl t =
+  let ctx = !render_ctx in
   let rec pp_rec ?(lead = true) par t =
     (* The [typename] a dependent qualifier needs, unless the caller is placing
        this type somewhere the keyword would be wrong: as the base of a longer
@@ -1057,7 +1062,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
          An erased field also gets a file-scope [using] of the same name, and a
          hoisted body whose owner is some other struct must resolve to that
          one, not to a member that does not exist. *)
-      ( match member_scopes id with
+      ( match member_scopes ctx id with
       | Some scopes -> Cpp_name.pp_scopes scopes ++ Id.print id
       | None -> Id.print id )
     | Tvar (Tv_index (_, Some id) | Tv_named id) -> Id.print id
@@ -1066,7 +1071,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
        parameterized like generic types: Leaf<int>. When generating
        out-of-struct definitions, prepend struct name. *)
     | Tid (id, args) ->
-      let scopes = Option.default [] (member_scopes id) in
+      let scopes = Option.default [] (member_scopes ctx id) in
       Cpp_name.pp_scopes scopes ++ Id.print id
       ++ (match args with [] -> mt () | _ -> str "<" ++ pp_list (pp_rec false) args ++ str ">")
     | Tnondeduced t ->
@@ -1116,7 +1121,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
           vl
           cmds
       | _ ->
-        pp_written_head ~lead (glob_head r ~applied:(tys <> []))
+        pp_written_head ~lead (glob_head ctx r ~applied:(tys <> []))
         ++ (match tys with [] -> mt () | l -> str "<" ++ pp_list (pp_rec false) l ++ str ">") )
     | Tfun (d, c) ->
       writes (Table.Runtime Crane_rt.fn_header);
@@ -1130,7 +1135,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       ( match (r, t) with
       | GlobRef.IndRef _, Tglob (r', args, _)
         when globref_equal r r' ->
-        pp_written_head ~lead (inductive_head r' ~applied:(args <> []))
+        pp_written_head ~lead (inductive_head ctx r' ~applied:(args <> []))
         ++ (match args with [] -> mt () | args -> str "<" ++ pp_list (pp_rec false) args ++ str ">")
       | _ ->
         (* Fallback: generic namespace-qualified type *)
