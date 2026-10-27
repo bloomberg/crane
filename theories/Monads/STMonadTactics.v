@@ -63,27 +63,6 @@ From Corelib Require Derive.
 (* Tactics for 'stepping through STMonad' instances *)
 (* Bind Split tactics *)
 
-
-(* Ltac bind_split_intros2_refl split_tactic pre_tactic :=
- *   split_tactic ;[ pre_tactic; reflexivity | intros (?, ?) ]
- *   ;cbv beta match.
- * 
- * Ltac bind_split_intros2_refl split_tactic :=
- *   split_tactic ;[ reflexivity | intros (?, ?)]
- *   ;cbv beta match.
- * 
- * Ltac bind_split_intros2 split_tactic pre_tactic :=
- *   split_tactic ;[ pre_tactic | intros (?, ?)]
- *   ;cbv beta match.
- * 
- * Ltac bind_split_intros split_tactic pre_tactic :=
- *   split_tactic ;[ pre_tactic; reflexivity | intros ]
- *   ;cbv beta match.
- * 
- * Ltac bind_split_refl_intros split_tactic :=
- *   split_tactic ;[ reflexivity | intros]
- *   ;cbv beta match. *)
-
 Ltac bind_split_intros split_tactic pre_tactic :=
   split_tactic ;[ pre_tactic | intros ]
   ;cbv beta match.
@@ -99,6 +78,7 @@ Hint Unfold
   writeArray
   getElems
   : monadsimp. 
+
 
 (* simplify a "leaf" of an itree and apply reflexivity.
    This could be a single event or ret of a pure node, but not tau.
