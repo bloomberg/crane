@@ -492,6 +492,23 @@ let entered_by_definition r =
   | Some h -> Option.map entered_by_member (Lifted.fixpoint h)
   | None -> Some (entered_by_function r)
 
+(** The recursive calls of the definition [r], each by the occurrence the
+    C++ call made of it records: a function's own, in its recursive group's
+    bodies ({!Recursion_plan.calls}), or those of the member of the local
+    fixpoint a helper lifted for it lowers.  A call of one of them left in
+    its finished body is one it still recurses by. *)
+let definition_calls r =
+  match Lifted.of_ref r with
+  | Some h -> Option.cata Recursion_plan.member_calls [] (Lifted.fixpoint h)
+  | None -> Recursion_plan.calls r
+
+(** The calls a finished body of the function [f] still recurses by
+    ({!definition_calls}), whatever C++ heads them. *)
+let survivors (f : dfun) = calls_checker (List.concat_map (fun (r, _) -> definition_calls r) (dfun_path_list f.df_path))
+
+(** {!survivors} of the method [mf]. *)
+let method_survivors mf = calls_checker (Option.cata definition_calls [] mf.mf_globref)
+
 (** {2 Inner lambda loopification}
 
     Transforms the local fixpoints within function bodies into iterative
@@ -952,8 +969,7 @@ let checker_tail_loop ~partner ?parts ~tparams (f : dfun) params body =
   transform_tail ?parts tparams (planned_jumps (function_loop r) check) params f.df_ret body
 
 let after_tail_loop ?(strategy = Lp_tail) ?survived ~tparams (f : dfun) params loop =
-  report_outcome ?survived ~name:(fundef_display_name f.df_path) ~check:(fn_checker (dfun_path_list f.df_path))
-    ~strategy
+  report_outcome ?survived ~name:(fundef_display_name f.df_path) ~check:(survivors f) ~strategy
     (loopify_inner_lambdas ~tparams ~outer_env:params loop)
 
 let checker_modulo_cons ~partner ?parts ~tparams (f : dfun) params body =
@@ -965,7 +981,6 @@ let checker_modulo_cons ~partner ?parts ~tparams (f : dfun) params body =
   | No_loop | Tail_loop | Frame_stack | Suspended _ -> body
 
 let modulo_cons_loop ~jumped ~varying ?parts ~shapes ~tparams check (f : dfun) params body =
-  let names = dfun_path_list f.df_path in
   let r = fst f.df_path.dp_outer in
   let adopted () =
     find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body
@@ -975,7 +990,7 @@ let modulo_cons_loop ~jumped ~varying ?parts ~shapes ~tparams check (f : dfun) p
     let loop =
       transform_tmc ~jumped ~varying ?parts ~shapes tparams check params f.df_ret (Cpp_temporaries.own_stmts body)
     in
-    if classify (fn_checker names) loop = No_recursion then Some loop else None
+    if classify (survivors f) loop = No_recursion then Some loop else None
 
 (** Whether the body [ad] the machine of the function [r] adopts is the
     loop [entry] its ControlIR enters: the local fixpoint's function, or
@@ -1009,7 +1024,6 @@ let checker_frame_machine ~partner ?parts ~tparams (f : dfun) params body =
     .nt_body
 
 let frame_machine ~loop ?entry ?varying ?parts ~tparams check (f : dfun) params body =
-  let names = dfun_path_list f.df_path in
   let r = fst f.df_path.dp_outer in
   let found = find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body in
   (* What the machine adopts is its ControlIR's entry: a body found where
@@ -1028,7 +1042,7 @@ let frame_machine ~loop ?entry ?varying ?parts ~tparams check (f : dfun) params 
   if has_recursive_branch_dependency check body then Error (Declined branch_dependency)
   else if not as_planned then declined
   else
-    let survivors = fn_checker names in
+    let survivors = survivors f in
     match
       checked_frame_machine (Some loop) survivors (fun entered ->
           transform_nontail ~fn_name:(fundef_display_name f.df_path) ~loop ?varying ?adopted ?entered_by:(entered_by_definition r)
@@ -1045,11 +1059,11 @@ let frame_machine ~loop ?entry ?varying ?parts ~tparams check (f : dfun) params 
     | Some _ -> Error (Declined branch_dependency)
     | None -> declined
 
-let leaves_calls (f : dfun) body = classify (fn_checker (dfun_path_list f.df_path)) body <> No_recursion
+let leaves_calls (f : dfun) body = classify (survivors f) body <> No_recursion
 
 let record_unlowered ?(unlowered = Left None) (f : dfun) body =
   let name = fundef_display_name f.df_path in
-  let check = fn_checker (dfun_path_list f.df_path) in
+  let check = survivors f in
   match (planned_strategy (Some (fst f.df_path.dp_outer)) check body, unlowered) with
   | No_loop, _ -> ()
   | Suspended _, _ -> record_outcome name deferred_cofixpoint
@@ -1309,7 +1323,7 @@ let transform_method_own ?varying ?parts ?park ?(controlled = false) ?(receiver_
         match strategy with
         | Tail_loop ->
           Some
-            (report_outcome ~name ~check:self_check ~strategy:Lp_tail
+            (report_outcome ~name ~check:(method_survivors mf) ~strategy:Lp_tail
                (let loop = Option.bind mf.mf_globref function_loop in
                 checked_tail_loop loop (fun jumped ->
                     transform_tail ~param_inits:[(self_id, CPPthis)] ~jumped ?varying ?parts tparams
@@ -1338,7 +1352,7 @@ let transform_method_own ?varying ?parts ?park ?(controlled = false) ?(receiver_
               augmented_params mf.mf_ret_type body_with_self
           in
           let body' =
-            report_outcome ~name ~check:self_check ~strategy:r.nt_outcome
+            report_outcome ~name ~check:(method_survivors mf) ~strategy:r.nt_outcome
               r.nt_body
           in
           if r.nt_outcome = Lp_frame && not r.nt_machine then None else Some body'
@@ -1363,10 +1377,7 @@ let transform_method_own ?varying ?parts ?park ?(controlled = false) ?(receiver_
         Fmethod {mf with mf_body = body'} )
 
 let record_unlowered_method mf =
-  let check =
-    method_checker ~n_params:(List.length mf.mf_params) ~has_self_param:false ~this_pos:(receiver_position mf)
-      mf.mf_globref
-  in
+  let check = method_survivors mf in
   let name = Id.to_string mf.mf_name in
   match planned_strategy mf.mf_globref check mf.mf_body with
   | No_loop -> ()

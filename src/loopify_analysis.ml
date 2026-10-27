@@ -586,6 +586,13 @@ let planned_self_checker member : call_checker =
       | [] -> None )
     | _ -> None
 
+(** The calls [calls] as a checker: a C++ call made of one of them, by the
+    occurrence it records, whatever heads it. *)
+let calls_checker calls : call_checker = function
+  | CPPfun_call ({cs_occurrence = Some o; _}, _, args) when List.exists (Miniml.Occurrence.equal o) calls ->
+    Some (mk_call_site (to_reversed args))
+  | _ -> None
+
 (** The receiver of a recursive call, with the wrappers that only re-spell an
     object stripped off.  [std::move] is one: it is a cast, so moving out of
     [this] still names the storage of [this] rather than making a temporary of

@@ -226,6 +226,19 @@ val adoptable_by_fixpoint : lifted:Miniml.Occurrence.t list -> Miniml.Occurrence
     function takes. *)
 val member_calls : Miniml.Occurrence.t * int -> Miniml.Occurrence.t list
 
+(** The calls of the function [r] made in its recursive group's bodies,
+    each by the occurrence of the use heading it, which the C++ call made
+    of it records ({!Minicpp.call_sig.cs_occurrence}): the recursive calls
+    of [r], wherever a body inlined into its own puts them.  None for a
+    function on no cycle. *)
+val calls : Names.GlobRef.t -> Miniml.Occurrence.t list
+
+(** Whether the bodies of the group of the local fixpoint [occurrence] read
+    its function [member] other than at the head of a call: the function
+    named as a value, which a loop made of it, no longer a function, cannot
+    stand for. *)
+val named_as_value : Miniml.Occurrence.t * int -> bool
+
 (** The calls entering the local fixpoint of one member at [occurrence],
     each by the occurrence its C++ call records: its own ({!member_calls}),
     and those made where it is bound -- the fixpoint applied there, by its

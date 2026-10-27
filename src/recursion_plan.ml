@@ -37,6 +37,7 @@ type local_group = {
   adoptable : Occurrence.t list list;  (* per member, {!flow_fixpoints} calling the group *)
   calls : Occurrence.t list list;
       (* per member, the reads heading its calls in the group's bodies *)
+  named : bool list;  (* per member, whether the group's bodies read it other than at a call's head *)
   entered : Occurrence.t list;
       (* the calls of the member the fixpoint stands for made where it is
          bound: the fixpoint applied, or the reads of the let binding it *)
@@ -95,6 +96,7 @@ type t = {
   inlinings : inlining list Ref.User.Map.t;
   adopted : inlining Ref.User.Map.t;  (* the partner whose invoked body the machine adopts *)
   kinds : kind Ref.User.Map.t;  (* per definition, its own calls *)
+  calls : Occurrence.t list Ref.User.Map.t;  (* per member, the uses heading its calls in its group's bodies *)
   let_lambdas : Occurrence.t list;  (* the lets binding a lambda *)
 }
 
@@ -110,6 +112,7 @@ let empty =
     inlinings = Ref.User.Map.empty;
     adopted = Ref.User.Map.empty;
     kinds = Ref.User.Map.empty;
+    calls = Ref.User.Map.empty;
     let_lambdas = [] }
 
 let rec split_params n = function
@@ -790,21 +793,28 @@ let local_groups ~effects defs =
           let arity, body = split_params 0 funs.(j) in
           flow_fixpoints ~names arity body )
     in
-    let calls =
-      let found = Array.make n [] in
+    let calls, reads =
+      let calls = Array.make n [] and reads = Array.make n [] in
       Array.iteri
         (fun j f ->
           iter_under
-            (fun depth -> function
-              | MLapp (head, _) -> (
-                match (member ~within:j ~depth head, strip head) with
-                | Some k, MLrel (_, read) -> found.(k) <- read :: found.(k)
-                | _ -> () )
-              | _ -> () )
+            (fun depth e ->
+              match (member ~within:j ~depth e, e) with
+              | Some k, MLrel (_, read) -> reads.(k) <- read :: reads.(k)
+              | _ -> (
+                match e with
+                | MLapp (head, _) -> (
+                  match (member ~within:j ~depth head, strip head) with
+                  | Some k, MLrel (_, read) -> calls.(k) <- read :: calls.(k)
+                  | _ -> () )
+                | _ -> () ) )
             0
             (snd (split_params 0 f)) )
         funs;
-      Array.to_list found
+      (Array.to_list calls, Array.to_list reads)
+    in
+    let named =
+      List.map2 (fun calls reads -> List.exists (fun r -> not (List.exists (Occurrence.equal r) calls)) reads) calls reads
     in
     plans :=
       { occurrence;
@@ -813,6 +823,7 @@ let local_groups ~effects defs =
         suspends;
         adoptable;
         calls;
+        named;
         entered = List.concat_map (fun (o, calls) -> if Occurrence.equal o occurrence then calls else []) bound }
       :: !plans
   in
@@ -1164,6 +1175,24 @@ let analyze groups program =
       (fun r is m -> match adopted_of ~defs r is with Some i -> Ref.User.Map.add r i m | None -> m)
       inlinings Ref.User.Map.empty
   in
+  let calls =
+    List.fold_left
+      (fun m g ->
+        let uses = ref [] in
+        let rec walk = function
+          | MLglob use when List.exists (Common.globref_equal use.callee) g.members ->
+            uses := (use.callee, Global_use.occurrence use) :: !uses
+          | e -> Mlutil.ast_iter walk e
+        in
+        List.iter (fun r -> Option.iter (fun fd -> walk fd.fd_body) (Ref.User.Map.find_opt r defs)) g.members;
+        List.fold_left
+          (fun m r ->
+            Ref.User.Map.add r
+              (List.rev (List.filter_map (fun (c, o) -> if Common.globref_equal c r then Some o else None) !uses))
+              m )
+          m g.members )
+      Ref.User.Map.empty plans
+  in
   { groups = plans;
     by_member;
     defined;
@@ -1175,6 +1204,7 @@ let analyze groups program =
     inlinings;
     adopted;
     kinds;
+    calls;
     let_lambdas =
       Ref.User.Map.fold
         (fun _ fd found ->
@@ -1220,6 +1250,7 @@ let equal a b =
          && l.suspends = l'.suspends
          && List.equal (List.equal Occurrence.equal) l.adoptable l'.adoptable
          && List.equal (List.equal Occurrence.equal) l.calls l'.calls
+         && List.equal Bool.equal l.named l'.named
          && List.equal Occurrence.equal l.entered l'.entered )
        a.locals b.locals
   && Ref.User.Map.equal same_chains a.modulo_cons b.modulo_cons
@@ -1240,6 +1271,7 @@ let equal a b =
   && Ref.User.Map.equal (List.equal same_inlining) a.inlinings b.inlinings
   && Ref.User.Map.equal same_inlining a.adopted b.adopted
   && Ref.User.Map.equal ( = ) a.kinds b.kinds
+  && Ref.User.Map.equal (List.equal Occurrence.equal) a.calls b.calls
   && List.equal Occurrence.equal a.let_lambdas b.let_lambdas
 
 (* Whether some member of the group of [r] suspends. *)
@@ -1387,12 +1419,19 @@ let adoptable_somewhere ~lifted occurrence =
   Ref.User.Map.exists (fun _ os -> List.exists (Occurrence.equal occurrence) os) !installed.adoptable
   || adoptable_by_fixpoint ~lifted occurrence
 
+let calls r = Option.default [] (Ref.User.Map.find_opt r !installed.calls)
+
 (* Copies of a fixpoint share its occurrence, and so do their calls. *)
 let member_calls (occurrence, member) =
   List.concat_map
     (fun (l : local_group) ->
       if Occurrence.equal l.occurrence occurrence then Option.default [] (List.nth_opt l.calls member)
       else [] )
+    !installed.locals
+
+let named_as_value (occurrence, member) =
+  List.exists
+    (fun (l : local_group) -> Occurrence.equal l.occurrence occurrence && List.nth_opt l.named member = Some true)
     !installed.locals
 
 let entering occurrence =

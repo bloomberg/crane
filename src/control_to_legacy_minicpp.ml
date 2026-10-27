@@ -344,12 +344,9 @@ let local_loop ~owner ~function_ ~lifted ~member:((occurrence, _) as member) ~tp
         (* A call of the fixpoint the loop does not take -- one in a closure
            it builds -- or the fixpoint named as a value calls a lambda that
            is no longer there: it stays the Y-combinator Loopify declines. *)
-        let calls = Recursion_plan.member_calls member in
-        let left = function
-          | CPPvar x -> Id.equal x name
-          | e -> ( match Loopify_analysis.made_of e with Some o -> List.exists (Miniml.Occurrence.equal o) calls | None -> false )
-        in
-        if Loopify_analysis.body_exists left body then declined ()
+        let left = Loopify_analysis.calls_checker (Recursion_plan.member_calls member) in
+        if Recursion_plan.named_as_value member || Loopify_analysis.body_exists (fun e -> Option.has_some (left e)) body
+        then declined ()
         else begin
           if Probe.checking () && lowering = Tail
              && not (Loopify_analysis.made_as_planned continues (List.rev !jumps))
