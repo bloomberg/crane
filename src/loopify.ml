@@ -962,23 +962,9 @@ let modulo_cons_chains = function
   | Recursion_plan.Modulo_cons chains -> Some chains
   | No_loop | Tail_loop | Frame_stack | Suspended _ -> None
 
-let checker_tail_loop ~partner ?parts ~tparams (f : dfun) params body =
-  let r = fst f.df_path.dp_outer in
-  let check = fn_checker (dfun_path_list f.df_path) in
-  let body = expose_tail_calls check (try_inline_mutual_into ~partner r body) in
-  transform_tail ?parts tparams (planned_jumps (function_loop r) check) params f.df_ret body
-
 let after_tail_loop ?(strategy = Lp_tail) ?survived ~tparams (f : dfun) params loop =
   report_outcome ?survived ~name:(fundef_display_name f.df_path) ~check:(survivors f) ~strategy
     (loopify_inner_lambdas ~tparams ~outer_env:params loop)
-
-let checker_modulo_cons ~partner ?parts ~tparams (f : dfun) params body =
-  let r = fst f.df_path.dp_outer in
-  let check = fn_checker (dfun_path_list f.df_path) in
-  let body = expose_tail_calls check (try_inline_mutual_into ~partner r body) in
-  match planned_strategy (Some r) check body with
-  | Modulo_cons chains -> (apply_nontail_loopification ~modulo_cons:chains ?parts check tparams params f.df_ret body).nt_body
-  | No_loop | Tail_loop | Frame_stack | Suspended _ -> body
 
 let modulo_cons_loop ~jumped ~varying ?parts ~shapes ~tparams check (f : dfun) params body =
   let r = fst f.df_path.dp_outer in
@@ -1003,25 +989,6 @@ let adopts_entry r ad (entry : Control_ir.Loop.t) =
     | Some i -> Common.globref_equal i.partner g
     | None -> false )
   | (Fixpoint _ | Invocations _), _ -> false
-
-let checker_frame_machine ~partner ?parts ~tparams (f : dfun) params body =
-  let r = fst f.df_path.dp_outer in
-  let check = fn_checker (dfun_path_list f.df_path) in
-  let body = expose_tail_calls check (try_inline_mutual_into ~partner r body) in
-  (* What the machine adopts is its ControlIR's entry, as {!frame_machine}
-     has it. *)
-  let entered ad =
-    match Option.bind (function_loop r) Lower_control.loop with
-    | Some (Loop l) -> List.exists (fun (e : Control_ir.Term.loop) -> adopts_entry r ad e.loop) (Control_ir.entries l.body)
-    | Some _ | None -> false
-  in
-  let adopted =
-    Option.filter entered
-      (find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body)
-  in
-  (apply_nontail_loopification ~fn_name:(fundef_display_name f.df_path) ?adopted ?entered_by:(entered_by_definition r)
-     ?loop:(function_loop r) ~binders:f.df_binders ?parts check tparams params f.df_ret body )
-    .nt_body
 
 let frame_machine ~loop ?entry ?varying ?parts ~tparams check (f : dfun) params body =
   let r = fst f.df_path.dp_outer in
@@ -1059,8 +1026,6 @@ let frame_machine ~loop ?entry ?varying ?parts ~tparams check (f : dfun) params 
     | Some _ -> Error (Declined branch_dependency)
     | None -> declined
 
-let leaves_calls (f : dfun) body = classify (survivors f) body <> No_recursion
-
 let record_unlowered ?(unlowered = Left None) (f : dfun) body =
   let name = fundef_display_name f.df_path in
   let check = survivors f in
@@ -1072,8 +1037,6 @@ let record_unlowered ?(unlowered = Left None) (f : dfun) body =
   | (Modulo_cons _ | Frame_stack), Left survived -> ignore (report_outcome ?survived ~name ~check ~strategy:Lp_frame body)
 
 let lower_local_tail_loops ?parts ~tparams stmts = loopify_inner_lambdas ~tail_only:true ?parts ~tparams stmts
-
-let lower_local_loops ?parts ~tparams stmts = loopify_inner_lambdas ?parts ~tparams stmts
 
 let lower_function_locals ~tparams params body = loopify_inner_lambdas ~tparams ~outer_env:params body
 
@@ -1140,7 +1103,7 @@ let receiver_position mf =
     | Some (_, pos) -> pos
     | None -> r.this_pos )
 
-let transform_method_own ?varying ?parts ?park ?(controlled = false) ?(receiver_derived = false) ~tparams ~self_ty mf =
+let transform_method_own ?varying ?parts ?park ?(receiver_derived = false) ~tparams ~self_ty mf =
   (* [tparams] arrives holding only the enclosing struct's parameters.  A
      method's body is written under its own template header too, and a
      parameter declared there is the one most likely to constrain how the body
@@ -1333,12 +1296,9 @@ let transform_method_own ?varying ?parts ?park ?(controlled = false) ?(receiver_
           let loop = Option.bind mf.mf_globref function_loop in
           (* Lowered from its ControlIR, a method's calls taken are those its
              loop continues by, and the cells built around them its turns'. *)
-          let check, shapes =
-            if controlled then
-              ( planned_jumps loop self_check,
-                Option.map (fun t -> Loopify_tmc.control_shapes (Control_ir.continues_into t))
-                  (Option.bind loop Lower_control.loop) )
-            else (self_check, None)
+          let check = planned_jumps loop self_check in
+          let shapes =
+            Option.map (fun t -> Loopify_tmc.control_shapes (Control_ir.continues_into t)) (Option.bind loop Lower_control.loop)
           in
           let r =
             apply_nontail_loopification

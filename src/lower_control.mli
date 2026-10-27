@@ -43,7 +43,7 @@
     the helper.  Loopify still makes the others -- a local fixpoint's that a
     machine may adopt or is lowered inside -- and under [CRANE_CHECK_IR]
     compares the calls it turns into jumps with the [Continue]s here
-    ({!Loopify.checker_tail_loop}). *)
+    ({!Loopify.lower_local_tail_loops}). *)
 
 type t
 

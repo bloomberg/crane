@@ -19,28 +19,6 @@ open Minicpp
 val try_inline_mutual_into :
   partner:(GlobRef.t -> Loopify_analysis.registered_fn option) -> GlobRef.t -> cpp_stmt list -> cpp_stmt list
 
-(** The tail loop Loopify's own transform makes of the body [body] of the
-    function [f], whose parameters are [params], under the template
-    parameters [tparams], its partners read as [partner] has them: its
-    jumps found by a checker of the C++ calls and its varying parameters
-    read off them.  {!Control_to_legacy_minicpp}, which lowers the loop from
-    the function's ControlIR instead, is compared with it under
-    [CRANE_CHECK_IR].  Where given, [parts] says which parameters every
-    call passes a value stored in what the caller passed for it, which its
-    shadows may point at ({!Loopify_tail.pointer_safe_flags}); so for
-    {!checker_modulo_cons}, {!checker_frame_machine}, {!frame_machine},
-    {!modulo_cons_loop}, {!local_frame_machine}, and for the fixpoint of
-    the member it names, {!lower_local_tail_loops} and
-    {!lower_local_loops}. *)
-val checker_tail_loop :
-  partner:(GlobRef.t -> Loopify_analysis.registered_fn option) ->
-  ?parts:bool list ->
-  tparams:(template_type * Id.t) list ->
-  dfun ->
-  (Id.t * cpp_type) list ->
-  cpp_stmt list ->
-  cpp_stmt list
-
 (** [after_tail_loop ~tparams f params loop] is the body of the function
     [f] once Loopify's transform has made [loop] of it: the local fixpoints
     in [loop] lowered, and the outcome recorded, [strategy] -- a tail loop
@@ -50,32 +28,6 @@ val checker_tail_loop :
 val after_tail_loop :
   ?strategy:Loopify_analysis.loopify_outcome ->
   ?survived:string ->
-  tparams:(template_type * Id.t) list ->
-  dfun ->
-  (Id.t * cpp_type) list ->
-  cpp_stmt list ->
-  cpp_stmt list
-
-(** The loop Loopify's own transform makes of the body [body] of the
-    function [f], planned tail modulo cons, as {!checker_tail_loop} makes a
-    tail loop: its branches read off the plan's chains, its calls and
-    varying parameters off the C++ calls.  [body] itself where it is not so
-    planned. *)
-val checker_modulo_cons :
-  partner:(GlobRef.t -> Loopify_analysis.registered_fn option) ->
-  ?parts:bool list ->
-  tparams:(template_type * Id.t) list ->
-  dfun ->
-  (Id.t * cpp_type) list ->
-  cpp_stmt list ->
-  cpp_stmt list
-
-(** The machine with a stack Loopify's own transform makes of the body
-    [body] of the function [f], as {!checker_tail_loop} makes a tail loop:
-    its calls recognised by a checker of the C++ calls. *)
-val checker_frame_machine :
-  partner:(GlobRef.t -> Loopify_analysis.registered_fn option) ->
-  ?parts:bool list ->
   tparams:(template_type * Id.t) list ->
   dfun ->
   (Id.t * cpp_type) list ->
@@ -121,9 +73,11 @@ val frame_machine :
   cpp_stmt list ->
   (cpp_stmt list * string option, unlowered) result
 
-(** Whether the body [body] of the function [f] still calls it, as Loopify
-    reads its calls: a machine made of it leaves a call behind. *)
-val leaves_calls : dfun -> cpp_stmt list -> bool
+(** The recursive calls of the definition [r], each by the occurrence the
+    C++ call made of it records: a function's own, in its recursive group's
+    bodies ({!Recursion_plan.calls}), or those of the member of the local
+    fixpoint a helper lifted for it lowers. *)
+val definition_calls : GlobRef.t -> Miniml.Occurrence.t list
 
 (** [record_unlowered ?unlowered f body] records the outcome of the
     function [f], whose body is [body], of which no loop of its own is made
@@ -168,9 +122,9 @@ val modulo_cons_loop :
     given, and
     points at those [parts] says every call passes a value stored in what
     the caller passed for it, where given ({!Loopify_tail.pointer_safe_flags}).
-    With [controlled], a loop tail modulo cons or a machine takes the calls
-    the method's ControlIR continues by, and builds its cells along its
-    turns ({!Loopify_tmc.control_shapes}).  With [receiver_derived], its
+    A loop tail modulo cons or a machine takes the calls the method's
+    ControlIR continues by, and builds its cells along its turns
+    ({!Loopify_tmc.control_shapes}).  With [receiver_derived], its
     ControlIR's turns pass the receiver a value derived from a parameter
     ({!Control_ir.derived_passed}): under [CRANE_CHECK_IR] no call may pass
     one made in a turn, which it declines ({!value_receiver}).  A tail loop
@@ -182,7 +136,6 @@ val transform_method_own :
   ?varying:bool list ->
   ?parts:bool list ->
   ?park:Miniml.Occurrence.t list ->
-  ?controlled:bool ->
   ?receiver_derived:bool ->
   tparams:(template_type * Id.t) list ->
   self_ty:cpp_type ->
@@ -203,11 +156,6 @@ val rebuilt_receiver_read : string
     tail-recursive local fixpoints in them turned into loops, under the
     template parameters [tparams]. *)
 val lower_local_tail_loops :
-  ?parts:(Miniml.Occurrence.t * int) * bool list -> tparams:(template_type * Id.t) list -> cpp_stmt list -> cpp_stmt list
-
-(** [lower_local_loops ~tparams stmts] is [stmts] with every local fixpoint
-    in them that Loopify lowers turned into its loop or its machine. *)
-val lower_local_loops :
   ?parts:(Miniml.Occurrence.t * int) * bool list -> tparams:(template_type * Id.t) list -> cpp_stmt list -> cpp_stmt list
 
 (** [lower_function_locals ~tparams params body] is the body [body] of a

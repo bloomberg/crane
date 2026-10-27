@@ -54,13 +54,9 @@
     loop tail modulo cons or a machine takes the calls its ControlIR
     continues by ({!lower_methods}).  Under [CRANE_CHECK_IR] the calls a
     loop takes must change the parameters its ControlIR varies and no other
-    ({!Loopify_analysis.varying_params}).
+    ({!Loopify_analysis.varying_params}). *)
 
-    Under [CRANE_CHECK_IR] Loopify's own transform runs beside it, and must
-    make the same loop ({!Loopify.checker_tail_loop},
-    {!Loopify.checker_modulo_cons}, {!Loopify.lower_local_tail_loops}). *)
-
-(** [local_loop ~owner ~function_ ~lifted ~member ~tparams ~name ~self_passing l]
+(** [local_loop ~owner ~function_ ~lifted ~member ~tparams ~name l]
     is the statement declaring the local fixpoint [name], the function
     [member] of a Core fixpoint of one member, generated in the body of the
     definition [owner], a function's where [function_], inside the helpers
@@ -76,11 +72,9 @@
     a machine ({!Recursion_plan.adoptable_somewhere}), a tail loop in a
     definition Loopify makes a machine with a stack of its own of, one whose
     loop leaves one of its calls behind, or that Loopify declines; it is
-    then generated as the Y-combinator [self_passing ()] Loopify
-    recognises.  A tail loop that only the function it is in the flow of
-    may adopt is lowered so too: that function adopts it only where it is
-    a machine.  Under [CRANE_CHECK_IR] the statement must be the one Loopify
-    makes of that Y-combinator. *)
+    then generated as the Y-combinator Loopify recognises.  A tail loop
+    that only the function it is in the flow of may adopt is lowered so
+    too: that function adopts it only where it is a machine. *)
 val local_loop :
   owner:Names.GlobRef.t option ->
   function_:bool ->
@@ -88,7 +82,6 @@ val local_loop :
   member:Miniml.Occurrence.t * int ->
   tparams:(Minicpp.template_type * Names.Id.t) list ->
   name:Names.Id.t ->
-  self_passing:(unit -> Minicpp.cpp_stmt list) ->
   Minicpp.cpp_lambda ->
   Minicpp.cpp_stmt option
 
@@ -99,9 +92,7 @@ val local_loop :
     lowered to that loop, recording it ({!Minicpp.method_field.mf_loop}),
     as Loopify lowers a method: its receiver the loop's first variable.
     [merged] says whether the struct is merged into its module's, whose
-    members Loopify loopifies only where it loopifies everything.  Under
-    [CRANE_CHECK_IR] Loopify's own transform runs beside it and must make the
-    same method. *)
+    members Loopify loopifies only where it loopifies everything. *)
 val lower_methods :
   merged:bool ->
   Names.GlobRef.t ->

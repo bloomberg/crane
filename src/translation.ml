@@ -96,7 +96,7 @@ let local_fix_stmts selves ~binders ~self_passing impl_stmts funs_with_params =
     match
       Control_to_legacy_minicpp.local_loop ~owner:(!tctx).body_owner ~function_:(!tctx).body_function
         ~lifted:(!tctx).lifted_fixpoints ~member
-        ~tparams:(get_current_template_head ()) ~name:fix_id ~self_passing lam
+        ~tparams:(get_current_template_head ()) ~name:fix_id lam
     with
     | Some loop -> [loop]
     | None -> self_passing () )

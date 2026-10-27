@@ -430,41 +430,15 @@ type nontail_result = {
 
     A [call_checker] is a function that recognises recursive calls in
     expressions. It returns [Some call_site] when the expression is a direct
-    recursive call, and [None] otherwise. Different checkers are used for
-    top-level functions ({!fn_checker}) vs methods ({!method_checker}) vs local
-    fixpoints, which recurse through their self-parameter. *)
+    recursive call, and [None] otherwise.  A loop's are the calls made of
+    its Continues; a method's also convert the receiver ({!method_checker});
+    a local fixpoint's drop the self-parameter it recurses through
+    ({!planned_self_checker}); and those a body is left with are told by
+    the Core use they are made of ({!calls_checker}). *)
 
 (** Type alias for recursive call detection functions. Given a [cpp_expr],
     returns [Some call_site] if it is a direct recursive call, [None] otherwise. *)
 type call_checker = cpp_expr -> call_site option
-
-(** Check whether a [GlobRef.t] names one of the given functions.  A
-    function is emitted once per constant, so the constant's own name
-    decides it: [Make.eq_dec], included from its functor's parameter, has
-    [M.eq_dec]'s canonical name and is another C++ function, calling which
-    is no recursion. *)
-let ref_matches fn_refs r =
-  List.exists
-    (fun (fn_r, _) -> GlobRef.UserOrd.equal r fn_r)
-    fn_refs
-
-(** Build a call checker for top-level function definitions: a call is
-    recursive when it names one of the function's global references.  A local
-    variable that happens to share the function's name -- a class method's
-    field read in its own projection -- is not the function.
-
-    @param fn_refs List of [(GlobRef.t, type_args)] pairs identifying the
-                   function being loopified. Multiple refs arise when a single
-                   Rocq definition is known by several global references (e.g.
-                   mutual fixpoints registered together).
-    @return A {!call_checker} that returns [Some cs] when [e] is a direct call
-            to any function in [fn_refs], [None] otherwise. *)
-let fn_checker (fn_refs : (GlobRef.t * cpp_type list) list) : call_checker =
- fun e ->
-   match e with
-   | CPPfun_call (_, CPPglob (r, _, _), args) when ref_matches fn_refs r ->
-     Some (mk_call_site (to_reversed args))
-   | _ -> None
 
 (** Locals whose storage does not outlive one iteration of a loopified body.
 
