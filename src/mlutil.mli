@@ -587,6 +587,12 @@ val permut_rels : int -> int -> ml_ast -> ml_ast
     @param t the term in which the substitution is performed *)
 val ast_subst : ml_ast -> ml_ast -> ml_ast
 
+(** [ast_subst_each make t] substitutes for each read of [Rel 1] in [t] a
+    term of its own, [make ()], as {!ast_subst} substitutes one: a use of a
+    global made for each read is an occurrence of its own, where one term
+    copied to every read would make them all the same occurrence. *)
+val ast_subst_each : (unit -> ml_ast) -> ml_ast -> ml_ast
+
 (** Substitute global references in a term using the given map.
     @param s a map from [GlobRef.t] to replacement [ml_ast] bodies
     @param t the term in which to perform the substitution *)
