@@ -260,3 +260,14 @@
   (alias runtest)
   (deps nullary_unit_effect_dropped.t.exe)
   (action (run ./nullary_unit_effect_dropped.t.exe))))
+
+(subdir loopify_coerced_recursive_call
+ (rule
+  (targets loopify_coerced_recursive_call.t.exe)
+  (deps LoopifyCoercedRecursiveCall.vo loopify_coerced_recursive_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_coerced_recursive_call.t.exe loopify_coerced_recursive_call.cpp loopify_coerced_recursive_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_coerced_recursive_call.t.exe)
+  (action (run ./loopify_coerced_recursive_call.t.exe))))
