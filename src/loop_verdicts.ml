@@ -3,6 +3,7 @@
 
 type t =
   | Lowered
+  | Declined of string
   | Unlowered of string
   | Kept
 

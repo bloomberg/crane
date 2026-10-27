@@ -10,9 +10,15 @@
 
 type t =
   | Lowered  (** made the loop the recursion plan commits to *)
+  | Declined of string
+      (** made no loop of it, for this reason, read off the program's Core
+          and its ControlIR before any C++ was lowered: a turn passing a
+          receiver it makes, which a pointer kept across turns cannot point
+          at *)
   | Unlowered of string
       (** left the definition as it was generated, for this reason, though
-          the plan commits to a loop of it *)
+          the plan commits to a loop of it and nothing before lowering
+          declined it: under [CRANE_CHECK_IR] a violation *)
   | Kept
       (** a local fixpoint or a method left as generated where the plan
           commits to no loop of it there: one a machine may adopt, one

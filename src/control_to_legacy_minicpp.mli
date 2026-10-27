@@ -136,7 +136,9 @@ val lower_group : Minicpp.cpp_decl list -> Minicpp.cpp_decl list
     method's, a local fixpoint's -- one it lowered, or, a local fixpoint's,
     one it kept for the machine it was lowered with; every definition
     emitted as generated, one it did not lower, and one it decided on where
-    the recursion plan commits it to a loop; and no loop emitted still
+    the recursion plan commits it to a loop -- declined before lowering, from
+    the program's Core and ControlIR, never left by a lowering that could
+    not make the loop; and no loop emitted still
     making a call of an occurrence one of its turns alone is made of
     ({!Lower_control.taken_continues}).  It checks the constructor structs'
     pointer fields too ({!Loopify.check_pointer_fields}). *)

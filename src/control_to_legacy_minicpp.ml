@@ -444,7 +444,8 @@ let lower_method ~tparams ~self_ty (m : method_field) =
     match (transform, value_receiver) with
     | None, Some why ->
       Loopify_analysis.record_outcome (Id.to_string m.mf_name) (Lp_declined why);
-      unlowered why
+      Loop_verdicts.record l.loop (Declined why);
+      None
     | None, None ->
       Loopify.record_unlowered_method m;
       unlowered "its receiver and parameters stand for none of its loop's"
@@ -645,10 +646,11 @@ let check_lowered decl =
   let unlowered l ~committed =
     match Loop_verdicts.find l with
     | Some Lowered -> violation l "a loop control lowering lowered was not emitted"
-    | Some (Unlowered _ | Kept) -> ()
+    | Some (Unlowered why) -> violation l ("a loop the plan commits to was left as generated (" ^ why ^ ")")
+    | Some (Declined _ | Kept) -> ()
     | None -> if committed then violation l "the plan commits to a loop control lowering never decided on"
   in
-  let lowered = function Some Loop_verdicts.Lowered -> true | Some (Unlowered _ | Kept) | None -> false in
+  let lowered = function Some Loop_verdicts.Lowered -> true | Some (Declined _ | Unlowered _ | Kept) | None -> false in
   let function_ (f : dfun) =
     match (f.df_shape, f.df_path.dp_inner) with
     | Ddef (_, body), [] -> (
@@ -672,7 +674,7 @@ let check_lowered decl =
     | Some {lf_member = o, m; lf_encoding = Lowered; _} ->
       emitted (Member (o, m)) l.cl_body ~recorded:(function
         | Some (Loop_verdicts.Lowered | Kept) -> true
-        | Some (Unlowered _) | None -> false )
+        | Some (Declined _ | Unlowered _) | None -> false )
     | Some {lf_member = (o, m) as member; lf_encoding = Self_passing [_]; _} ->
       let committed =
         match Recursion_plan.strategy_at ~pointer_fields:Loopify_analysis.constructor_pointer_fields member with
