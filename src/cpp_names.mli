@@ -214,3 +214,50 @@ val method_type_args : Names.GlobRef.t -> Minicpp.cpp_type list -> Minicpp.cpp_t
 
 (** Sets of identifiers ([Names.variable]). *)
 module IdSet : Set.S with type elt = Names.variable
+
+(** {2 What a declaration not yet printed names} *)
+
+(** The module whose element is being written: what the plan reads off
+    something written there is keyed by it. *)
+val module_written : unit -> Names.ModPath.t
+
+(** The functor whose body declares module types at [mp], by its label, with
+    its parameters, as {!Cpp_state.functor_concept_scopes} records it. *)
+val functor_concept_scope : Names.ModPath.t -> (Names.Label.t * Names.ModPath.t list) option
+
+(** The arguments, after the constrained module, of the concept of the module
+    type [kn]: the parameters of the functor declaring it, if one does. *)
+val concept_extra_args : Names.ModPath.t -> Names.ModPath.t list
+
+(** The C++ identifier of the concept the module type at [mp] becomes, at
+    its declaration and at every reference: named after the functor whose
+    body declares it, where one does ({!functor_concept_scope}); qualified
+    with its module where another concept shares its name
+    ({!Module_plan.modtype_concept_name}); and otherwise its label
+    ({!Structure_analysis.concept_name_of_label}).  Every site naming a
+    module-type concept goes through this, so no two can disagree. *)
+val modtype_concept_name : Names.ModPath.t -> string
+
+(** The concept of the module type [kn], as a reference names it where the
+    printer is.  In separate extraction a concept lives in its file's
+    namespace, so a reference from another file is qualified. *)
+val modtype_concept_ref : Names.ModPath.t -> Cpp_name.t
+
+(** The name the struct of [id] is defined under. *)
+val struct_definition_name : Names.GlobRef.t -> Cpp_name.t
+
+(** The name the scoped enum of [r] is defined under. *)
+val enum_definition_name : Names.GlobRef.t -> Cpp_name.t
+
+(** [enter entered k] is [k ()] in the scope [entered], inside the one the
+    printer is in: how printing a declaration enters it, and how resolving
+    what the declaration names there does. *)
+val enter : Cpp_resolution.entered -> (unit -> 'a) -> 'a
+
+(** [at_frame frame k] is [k ()] with each scope of [frame] entered,
+    outermost first ({!enter}). *)
+val at_frame : Cpp_resolution.frame -> (unit -> 'a) -> 'a
+
+(** [key] named where the printer is: what {!Cpp_resolution.resolve} is
+    given, at each frame, and what a printed name is checked against. *)
+val live_name : Cpp_resolution.key -> Cpp_name.t

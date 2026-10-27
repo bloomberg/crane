@@ -238,11 +238,18 @@ let () =
     (match Cpp_ast.to_pp wrapper with exception Invalid_argument _ -> true | _ -> false);
   let spelling_text = function Cpp_ast.Element_of mp -> "E(" ^ ModPath.to_string mp ^ ")" | Member_of mp -> "M(" ^ ModPath.to_string mp ^ ")" in
   let ref_text = function GlobRef.VarRef id -> Id.to_string id | _ -> "?" in
-  let resolve spelling =
-    let named what = Cpp_name.unqualified (what ^ "@" ^ spelling_text spelling) in
-    { Cpp_ast.module_name = (fun mp -> named (ModPath.to_string mp));
-      class_concept = (fun r -> named ("concept " ^ ref_text r));
-      type_name = (fun r -> named ("type " ^ ref_text r)) }
+  let resolve spelling (frame : Cpp_resolution.frame) (key : Cpp_resolution.key) =
+    let named what = Cpp_name.unqualified (what ^ "@" ^ spelling_text spelling ^ String.make (List.length frame) '\'') in
+    match key with
+    | Module mp -> named (ModPath.to_string mp)
+    | Class_concept r -> named ("concept " ^ ref_text r)
+    | Global (_, r) -> named ("type " ^ ref_text r)
+    | _ -> named "?"
+  in
+  let signature = Cpp_resolution.Signature {signature = inner; parameters = []} in
+  let requested : Cpp_ast.declaration -> _ = function
+    | Modtype_concept _ -> [([], Cpp_resolution.Module inner); ([signature], Module inner)]
+    | _ -> []
   in
   let resolved_text sections =
     let write spelling (u : Cpp_ast.unprinted) =
@@ -251,9 +258,17 @@ let () =
       | Module_alias {target = Module_named {name = Unresolved; _}; _} -> Pp.str "unresolved"
       | Assertion {concept = Of_class {name = Resolved c; _}; subject = Instance {instance = {name = Resolved i; _}; _}} ->
         Pp.str (Cpp_name.to_string c ^ "<" ^ Cpp_name.to_string i ^ ">")
+      | Modtype_concept {names; _} ->
+        let at frame =
+          match Cpp_resolution.find names frame (Module inner) with
+          | Found n -> Cpp_name.to_string n
+          | Unresolved -> "unresolved"
+          | Not_requested -> "not requested"
+        in
+        Pp.str (at [] ^ " " ^ at [signature] ^ " " ^ at [signature; signature])
       | _ -> Pp.str (spelling_text spelling)
     in
-    Pp.string_of_ppcmds (Cpp_ast.print_tree ~write (Cpp_ast.resolve_tree ~resolve (Cpp_ast.seq sections)))
+    Pp.string_of_ppcmds (Cpp_ast.print_tree ~write (Cpp_ast.resolve_tree ~requested ~resolve (Cpp_ast.seq sections)))
   in
   check_text "resolving keeps how each declaration is spelled"
     (resolved_text [top (Cpp_ast.elements ~source:m (unprinted ()))]) "E(F.M)";
@@ -276,3 +291,18 @@ let () =
   check_text "the class concept and the instance an assertion names are resolved where it is written"
     (resolved_text [top (Cpp_ast.elements ~source:m assertion)])
     "concept C@E(F.M)<type I@E(F.M)>"
+;
+  let concept = Cpp_ast.modtype_concept ~path:inner ~params:[] (Alias {base = inner; refinements = []}) in
+  check_text "a declaration's names are resolved at each frame inside it, and only those asked for"
+    (resolved_text [top (Cpp_ast.elements ~source:m concept)])
+    "F.M.N@E(F.M) F.M.N@E(F.M)' not requested";
+  check_text "a declaration's names are unresolved until resolved"
+    (Pp.string_of_ppcmds
+       (Cpp_ast.print_tree
+          ~write:(fun _ (u : Cpp_ast.unprinted) ->
+            match u.declaration with
+            | Modtype_concept {names; _} -> (
+              match Cpp_resolution.find names [] (Module inner) with Unresolved -> Pp.str "u" | _ -> Pp.str "r" )
+            | _ -> Pp.str "?" )
+          (Cpp_ast.elements ~source:m concept) ))
+    "u"

@@ -170,8 +170,15 @@ val render_section : section -> Cpp_ast.t list
 
 (** [resolver_at ~file spelling] names what a declaration spelled
     [spelling] names where it is written in [file], in the visibility planned
-    there ({!Cpp_ast.resolve}). *)
+    there, at a frame inside it ({!Cpp_ast.resolve}). *)
 val resolver_at : file:Common.file -> Cpp_ast.spelling -> Cpp_ast.resolver
+
+(** {!Cpp_ast.resolve_tree} by {!resolver_at}, a declaration naming what
+    {!Cpp_concepts.names_requested} says. *)
+val resolve_tree : file:Common.file -> Cpp_ast.t -> Cpp_ast.t
+
+(** {!Cpp_ast.resolve} as {!resolve_tree} resolves each section. *)
+val resolve : file:Common.file -> Cpp_ast.scheduled -> Cpp_ast.scheduled
 
 (** Print a declaration not yet printed as the tree spells it
     ({!Cpp_ast.print}). *)

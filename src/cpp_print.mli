@@ -30,7 +30,8 @@ val write_absorbing : homed:(string * ModPath.t) list -> Common.env -> Cpp_erasu
 (** The name of a module a declaration of the tree names, as
     {!Cpp_ast.resolve} resolved it where the declaration is written; under
     [CRANE_CHECK_IR], checked against the name resolution gives it where it
-    is printed.  A module not yet resolved is an anomaly. *)
+    is printed ({!Cpp_names.live_name}).  A module not yet resolved is an
+    anomaly. *)
 val resolved_module : Cpp_ast.module_ref -> Cpp_name.t
 
 (** {!resolved_module} for the concept of a type class. *)
@@ -38,6 +39,14 @@ val resolved_class_concept : Cpp_ast.global_ref -> Cpp_name.t
 
 (** {!resolved_module} for a type. *)
 val resolved_type_name : Cpp_ast.global_ref -> Cpp_name.t
+
+(** {!resolved_module} for the concept of a module type. *)
+val resolved_concept : Cpp_ast.concept_ref -> Cpp_name.t
+
+(** [name_in names frame key] is the name [names] gives [key] at [frame],
+    checked as {!resolved_module} is.  A table not yet resolved, or one that
+    was but not for this, is an anomaly. *)
+val name_in : Cpp_resolution.table -> Cpp_resolution.frame -> Cpp_resolution.key -> Cpp_name.t
 
 (** Whether [d] is an assertion the struct being written holds back until
     after it, writing nothing for it here. *)
@@ -62,17 +71,13 @@ val unprinted : module_:Names.ModPath.t -> Common.env -> Cpp_erasure.settled -> 
 val unprinted_fields :
   module_:ModPath.t -> vl:Id.t list -> GlobRef.t -> (string * cpp_type) list -> Cpp_ast.t
 
-(** The module whose element is being written, which every element is
-    written as one of; an anomaly where none is. *)
-val module_written : unit -> ModPath.t
-
 (** The text of a declaration not yet printed, printed in the render
     context and visibility its spelling enters, a module type's concept by
     [modtype_concept] and an assertion by [assertion].  Under
     [CRANE_CHECK_IR] it must need, printed there, what was planned for it
     where it was made. *)
 val print_unprinted :
-  modtype_concept:(path:ModPath.t -> params:ModPath.t list -> Modtype_concept.t -> Pp.t) ->
+  modtype_concept:(names:Cpp_resolution.table -> params:ModPath.t list -> ModPath.t -> Modtype_concept.t -> Pp.t) ->
   assertion:(Cpp_ast.assertion -> Pp.t) ->
   Cpp_ast.unprinted ->
   Pp.t

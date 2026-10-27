@@ -1271,16 +1271,15 @@ let in_spelling ~file spelling k =
       Pp.(str "Crane: the implementation writes a member of the struct of " ++ str (ModPath.to_string mp)
           ++ str ", which it does not write.")
 
-let resolver_at ~file spelling =
-  let at f x = in_spelling ~file spelling (fun () -> f x) in
-  {Cpp_ast.module_name = at Common.resolve_module; class_concept = at Cpp_names.concept_name; type_name = at (Cpp_names.global_name Type)}
+let resolver_at ~file spelling frame key =
+  in_spelling ~file spelling (fun () -> Cpp_names.at_frame frame (fun () -> Cpp_names.live_name key))
+
+let resolve_tree ~file = Cpp_ast.resolve_tree ~requested:Cpp_concepts.names_requested ~resolve:(resolver_at ~file)
+let resolve ~file = Cpp_ast.resolve ~requested:Cpp_concepts.names_requested ~resolve:(resolver_at ~file)
 
 let write_unprinted ~file spelling u =
-  let modtype_concept ~path ~params c =
-    Cpp_concepts.pp_modtype_concept ~params (Pp.str (Cpp_concepts.modtype_concept_name path)) c
-  in
   in_spelling ~file spelling (fun () ->
-      Cpp_print.print_unprinted ~modtype_concept ~assertion:Cpp_concepts.pp_assertion u )
+      Cpp_print.print_unprinted ~modtype_concept:Cpp_concepts.pp_modtype_concept ~assertion:Cpp_concepts.pp_assertion u )
 
 type group = {source : ModPath.t; declarations : rendered}
 type section = group list

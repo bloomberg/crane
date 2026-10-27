@@ -19,20 +19,24 @@ type resolution = Unresolved | Resolved of Cpp_name.t
 type module_ref = {path : ModPath.t; name : resolution}
 type global_ref = {global : GlobRef.t; name : resolution}
 
+type concept_ref = {module_type : ModPath.t; name : resolution}
+
 let module_ref path = {path; name = Unresolved}
 let global_ref global = {global; name = Unresolved}
+let concept_ref module_type = {module_type; name = Unresolved}
 
-type resolver = {
-  module_name : ModPath.t -> Cpp_name.t;
-  class_concept : GlobRef.t -> Cpp_name.t;
-  type_name : GlobRef.t -> Cpp_name.t;
-}
+type resolver = Cpp_resolution.frame -> Cpp_resolution.key -> Cpp_name.t
 
 type declaration =
   | Declaration of {env : Common.env; settled : Cpp_erasure.settled}
   | Absorbed of {env : Common.env; settled : Cpp_erasure.settled}
   | Fields of {record : GlobRef.t; vars : Id.t list; fields : (string * Minicpp.cpp_type) list}
-  | Modtype_concept of {path : ModPath.t; params : ModPath.t list; concept : Modtype_concept.t}
+  | Modtype_concept of {
+      path : ModPath.t;
+      params : ModPath.t list;
+      concept : Modtype_concept.t;
+      names : Cpp_resolution.table;
+    }
   | Global_alias of global_alias
   | Assertion of assertion
   | Module_alias of {name : Pp.t; target : module_expr}
@@ -44,18 +48,18 @@ and module_expr = Module_named of module_ref | Applied of application
 and application = {functor_ : module_ref; args : module_ref list}
 
 and assertion = {concept : asserted; subject : subject}
-and asserted = Of_module_type of ModPath.t | Of_class of global_ref
+and asserted = Of_module_type of concept_ref | Of_class of global_ref
 and subject = Module of module_ref | Instance of {instance : global_ref; args : Minicpp.cpp_type list}
 
 and global_alias =
   | Alias_of_type of {
-      target : GlobRef.t;
+      target : global_ref;
       definition : definition;
       tparams : (Minicpp.template_type * Id.t) list;
     }
   | Alias_of_module of module_ref
 
-and definition = Enum_definition | Struct_definition | Alias_definition
+and definition = Cpp_resolution.definition = Enum_definition | Struct_definition | Alias_definition
 
 type unprinted = {declaration : declaration; needs : Needs.t}
 
@@ -119,7 +123,7 @@ let unprinted ~needs env settled = Unprinted {declaration = Declaration {env; se
 let absorbed env settled = Unprinted {declaration = Absorbed {env; settled}; needs = Needs.none}
 let fields ~needs ~record ~vars fields = Unprinted {declaration = Fields {record; vars; fields}; needs}
 let modtype_concept ~path ~params concept =
-  Unprinted {declaration = Modtype_concept {path; params; concept}; needs = Needs.none}
+  Unprinted {declaration = Modtype_concept {path; params; concept; names = Cpp_resolution.unresolved}; needs = Needs.none}
 let global_alias a = Unprinted {declaration = Global_alias a; needs = Needs.none}
 let assertion a = Unprinted {declaration = Assertion a; needs = Needs.none}
 let module_alias ~name target = Unprinted {declaration = Module_alias {name; target}; needs = Needs.none}
@@ -439,16 +443,17 @@ let map_leaves f t =
   in
   map None t
 
-let resolve_declaration resolve declaration =
-  let module_ref (m : module_ref) = {m with name = Resolved (resolve.module_name m.path)} in
-  let global_ref resolve (g : global_ref) = {g with name = Resolved (resolve g.global)} in
+let resolve_declaration ~requested (resolve : resolver) declaration =
+  let here key = resolve [] key in
+  let module_ref (m : module_ref) = {m with name = Resolved (here (Module m.path))} in
+  let global_ref key (g : global_ref) = {g with name = Resolved (here (key g.global))} in
   let concept : asserted -> asserted = function
-    | Of_class g -> Of_class (global_ref resolve.class_concept g)
-    | Of_module_type _ as c -> c
+    | Of_class g -> Of_class (global_ref (fun r -> Class_concept r) g)
+    | Of_module_type c -> Of_module_type {c with name = Resolved (here (Modtype_concept c.module_type))}
   in
   let subject : subject -> subject = function
     | Module m -> Module (module_ref m)
-    | Instance i -> Instance {i with instance = global_ref resolve.type_name i.instance}
+    | Instance i -> Instance {i with instance = global_ref (fun r -> Global (Type, r)) i.instance}
   in
   let module_expr = function
     | Module_named m -> Module_named (module_ref m)
@@ -461,14 +466,17 @@ let resolve_declaration resolve declaration =
   | Derived_functor a -> Derived_functor {a with base = module_expr a.base}
   | Assertion a -> Assertion {concept = concept a.concept; subject = subject a.subject}
   | Global_alias (Alias_of_module m) -> Global_alias (Alias_of_module (module_ref m))
-  | Global_alias (Alias_of_type _)
-  | Declaration _ | Absorbed _ | Fields _ | Modtype_concept _ ->
-    declaration
+  | Global_alias (Alias_of_type a) ->
+    Global_alias (Alias_of_type {a with target = global_ref (fun r -> Definition (a.definition, r)) a.target})
+  | Modtype_concept c -> Modtype_concept {c with names = Cpp_resolution.resolve resolve (requested declaration)}
+  | Declaration _ | Absorbed _ | Fields _ -> declaration
 
-let resolve_tree ~resolve t =
-  map_leaves (fun spelling u -> Unprinted {u with declaration = resolve_declaration (resolve spelling) u.declaration}) t
+let resolve_tree ~requested ~resolve t =
+  map_leaves
+    (fun spelling u -> Unprinted {u with declaration = resolve_declaration ~requested (resolve spelling) u.declaration})
+    t
 
-let resolve ~resolve s = {s with body = List.map (resolve_tree ~resolve) s.body}
+let resolve ~requested ~resolve s = {s with body = List.map (resolve_tree ~requested ~resolve) s.body}
 
 (* Every declaration is printed before any text is joined: whether a member
    opens a doc comment decides the break in front of it. *)

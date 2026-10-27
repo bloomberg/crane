@@ -869,8 +869,9 @@ let in_unmerged_wrapper r =
 type nested_struct_owner = NSref of GlobRef.t | NSmodule of ModPath.t
 
 (** C++ names of the structs emitted as members of an enclosing struct, mapped
-    to every owner they stand for. Recorded by the struct printer, which is
-    where the name is actually rendered, so the two cannot drift.
+    to every owner they stand for. Installed from the plan before anything is
+    printed; the printer checks, under [CRANE_CHECK_IR], that it printed
+    exactly these ({!printed_nested_struct}).
 
     A nested struct shadows any global-scope type of the same name for every
     unqualified lookup from inside its enclosing struct;

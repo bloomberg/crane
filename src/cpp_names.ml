@@ -440,9 +440,9 @@ let struct_scopes_for r n =
     type.  Naming the global one [::Nat] is unambiguous wherever it appears --
     including inside the global struct itself -- so no other name has to move.
 
-    The nested names come from {!Cpp_state.nested_struct_names}, recorded by
-    the struct printer itself, so the shadow test compares against the name
-    that was actually emitted. *)
+    The nested names come from {!Cpp_state.nested_struct_names}, installed
+    from the plan before anything is printed ({!Install_legacy_plan}); the
+    printer checks, under [CRANE_CHECK_IR], that it printed exactly those. *)
 let global_scopes_for r n =
   match r with
   | GlobRef.IndRef _ when not (Cpp_name.is_qualified n) ->
@@ -608,3 +608,85 @@ let method_type_args n tys =
     List.filteri (fun i _ -> not (List.mem i carried || List.mem i dropped)) tys
 
 module IdSet = Set.Make (Names.Id)
+
+(** {2 What a declaration not yet printed names} *)
+
+let module_written () =
+  match (!render_ctx).rc_module with
+  | Some mp -> mp
+  | None -> CErrors.anomaly (Pp.str "Crane: templates were read off something written as no module's element.")
+
+let functor_concept_scope mp =
+  List.find_map (fun (m, scope) -> if ModPath.equal m mp then Some scope else None) !functor_concept_scopes
+
+let concept_extra_args kn =
+  match kn with
+  | ModPath.MPdot (mp0, _) -> ( match functor_concept_scope mp0 with Some (_, params) -> params | None -> [])
+  | _ -> []
+
+let modtype_concept_name mp =
+  let base = Structure_analysis.concept_name_of_label in
+  match mp with
+  | ModPath.MPdot (mp0, l) -> (
+    match functor_concept_scope mp0 with
+    | Some (fl, _) -> base fl ^ "_" ^ base l
+    | None -> Option.default (base l) (Module_plan.modtype_concept_name mp) )
+  | MPfile _ | MPbound _ -> CErrors.anomaly (Pp.str "modtype_concept_name: a module type is a member of a structure")
+
+let modtype_concept_ref kn =
+  match kn with
+  | ModPath.MPdot (mp0, _) when Option.has_some (functor_concept_scope mp0) ->
+    (* Declared at file scope, so named after the functor declaring it. *)
+    Cpp_name.unqualified (modtype_concept_name kn)
+  | MPdot (mp0, _) when Common.get_force_cross_file_qualification () ->
+    (* A top-level module type of another file is a concept in a namespace
+       of the same name, which from outside the namespace names the
+       namespace: [C::C].  The file is the one holding the module whose
+       element is being written, which the plan says, not the visibility in
+       effect. *)
+    let resolved = Common.resolve_module kn in
+    let rec file_of = function
+      | ModPath.MPfile _ as mp -> mp
+      | MPdot (mp, _) -> file_of mp
+      | MPbound _ -> mp0
+    in
+    let foreign_file =
+      match mp0 with MPfile _ -> not (ModPath.equal mp0 (file_of (module_written ()))) | _ -> false
+    in
+    if foreign_file && not (Cpp_name.is_qualified resolved) then
+      Cpp_name.inside resolved (fun s -> Cpp_name.Namespace s) (Cpp_name.unqualified (modtype_concept_name kn))
+    else resolved
+  | MPdot _ ->
+    (* Monolithic extraction: resolving the module records the file it names;
+       the short label is the concept's name everywhere in the one file. *)
+    ignore (Common.resolve_module kn);
+    Cpp_name.unqualified (modtype_concept_name kn)
+  | MPfile _ | MPbound _ -> Common.resolve_module kn
+
+let struct_definition_name id =
+  let local = is_local_inductive id in
+  match struct_spelling ~local id with
+  | As_declared -> global_name Type id
+  | Eponymous_record_name | Capitalized -> Cpp_name.unqualified (struct_declaration_name ~local id)
+
+let enum_definition_name r =
+  match r with GlobRef.IndRef _ -> inductive_type_name r | _ -> global_name Type r
+
+let enter (entered : Cpp_resolution.entered) k =
+  match entered with
+  | Signature {signature; parameters} -> with_visibility (inside signature parameters (current_visibility ())) k
+
+let rec at_frame (frame : Cpp_resolution.frame) k =
+  match frame with [] -> k () | entered :: outer -> at_frame outer (fun () -> enter entered k)
+
+let live_name : Cpp_resolution.key -> Cpp_name.t = function
+  | Module mp -> Common.resolve_module mp
+  | Global (k, r) -> global_name k r
+  | Unmapped (k, r) -> Common.global_name k r
+  | Short (k, r) -> Cpp_name.unqualified (Common.pp_global_name k r)
+  | Class_concept r -> concept_name r
+  | Modtype_concept mp -> modtype_concept_ref mp
+  | Modtype_concept_declared mp -> Cpp_name.unqualified (modtype_concept_name mp)
+  | Definition (Enum_definition, r) -> enum_definition_name r
+  | Definition (Struct_definition, r) -> struct_definition_name r
+  | Definition (Alias_definition, r) -> global_name Type r

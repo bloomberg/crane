@@ -442,7 +442,7 @@ let stand_ins t =
       | Cpp_ast.Declared (Declaration {settled; _} | Absorbed {settled; _}) ->
         List.map
           (fun (target, definition, tparams) ->
-            Cpp_ast.(global_alias (Alias_of_type {target; definition; tparams})) )
+            Cpp_ast.(global_alias (Alias_of_type {target = global_ref target; definition; tparams})) )
           (declared_types (settled :> cpp_decl))
       | Declared (Fields _ | Modtype_concept _ | Global_alias _ | Assertion _ | Module_alias _ | Functor_alias _ | Derived_functor _) -> []
       | Struct_of mp -> [Cpp_ast.(global_alias (Alias_of_module (module_ref mp)))] )
@@ -3156,13 +3156,6 @@ let ctor_aliases_found ~file visit =
       | _ -> () );
   !ctor_aliases_spelled
 
-(* The module whose element is being written: what the plan reads off
-   something written there is keyed by it. *)
-let module_written () =
-  match (!render_ctx).rc_module with
-  | Some mp -> mp
-  | None -> CErrors.anomaly (Pp.str "Crane: templates were read off something written as no module's element.")
-
 let ctor_aliases_written ~file (d : Cpp_erasure.settled) =
   { read_written = (module_written (), Written_declaration (d :> cpp_decl));
     read_aliases = ctor_aliases_found ~file (fun f -> Cpp_demands.tyctors_of_decl f (d :> cpp_decl)) }
@@ -3647,17 +3640,10 @@ let nspace_merges (w : dm_wrapper) : bool =
   w.dw_sole_child && not (nested_in_wrapper w.dw_ref)
 
 (** The name the struct of [id] is defined under. *)
-let struct_definition_name id =
-  let local = is_local_inductive id in
-  match struct_spelling ~local id with
-  | As_declared -> pp_global Type id
-  | Eponymous_record_name | Capitalized -> str (struct_declaration_name ~local id)
+let struct_definition_name id = Cpp_name.pp (Cpp_names.struct_definition_name id)
 
 (** The name the scoped enum of [r] is defined under. *)
-let enum_definition_name r =
-  match r with
-  | GlobRef.IndRef _ -> pp_inductive_type_name r
-  | _ -> pp_global Type r
+let enum_definition_name r = Cpp_name.pp (Cpp_names.enum_definition_name r)
 
 (** The names of the wrapper structs [d] writes around something other than
     a sole struct merged into them, in the order it writes them: the structs
@@ -4353,31 +4339,37 @@ let unprinted ~module_ env settled = Cpp_ast.unprinted ~needs:(planned_needs ~mo
 let unprinted_fields ~module_ ~vl r fields =
   Cpp_ast.fields ~needs:(fields_needs ~module_ ~vl r (List.map snd fields)) ~record:r ~vars:vl fields
 
-(* The name {!Cpp_ast.resolve} gave [what ()] where the declaration naming
-   it is written; under [CRANE_CHECK_IR], the one [here ()] gives it where it
-   is printed, too. *)
-let resolved ~what ~here (resolution : Cpp_ast.resolution) =
+(* [n], the name the resolution pass gave [key] where the declaration naming
+   it is written; under [CRANE_CHECK_IR], the one it has where it is printed
+   must be the same. *)
+let checked_name key n =
+  ( if Probe.checking () then
+      let here = live_name key in
+      if not (Cpp_name.equal n here) then
+        Probe.violation "names resolved"
+          Pp.(
+            Cpp_resolution.pp_key key ++ str " was resolved as " ++ str (Cpp_name.to_string n)
+            ++ str " where the declaration naming it is written, and is named " ++ str (Cpp_name.to_string here)
+            ++ str " where it is printed" ) );
+  n
+
+let resolved key (resolution : Cpp_ast.resolution) =
   match resolution with
-  | Resolved n ->
-    ( if Probe.checking () then
-        let here = here () in
-        if not (Cpp_name.equal n here) then
-          Probe.violation "names resolved"
-            Pp.(
-              what () ++ str " was resolved as " ++ str (Cpp_name.to_string n)
-              ++ str " where the declaration naming it is written, and is named " ++ str (Cpp_name.to_string here)
-              ++ str " where it is printed" ) );
-    n
-  | Unresolved -> CErrors.anomaly Pp.(str "Crane: " ++ what () ++ str " was printed before it was resolved.")
+  | Resolved n -> checked_name key n
+  | Unresolved -> CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " was printed before it was resolved.")
 
-let resolved_module (m : Cpp_ast.module_ref) =
-  resolved ~what:(fun () -> Pp.(str "the module " ++ str (ModPath.to_string m.path))) ~here:(fun () -> resolve_module m.path) m.name
+let resolved_module (m : Cpp_ast.module_ref) = resolved (Module m.path) m.name
+let resolved_class_concept (c : Cpp_ast.global_ref) = resolved (Class_concept c.global) c.name
+let resolved_type_name (g : Cpp_ast.global_ref) = resolved (Global (Type, g.global)) g.name
+let resolved_concept (c : Cpp_ast.concept_ref) = resolved (Modtype_concept c.module_type) c.name
 
-let resolved_class_concept (c : Cpp_ast.global_ref) =
-  resolved ~what:(fun () -> Pp.(str "the concept of " ++ Printer.pr_global c.global)) ~here:(fun () -> concept_name c.global) c.name
-
-let resolved_type_name (g : Cpp_ast.global_ref) =
-  resolved ~what:(fun () -> Pp.(str "the type " ++ Printer.pr_global g.global)) ~here:(fun () -> global_name Type g.global) g.name
+let name_in names frame key =
+  match Cpp_resolution.find names frame key with
+  | Found n -> checked_name key n
+  | Unresolved -> CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " was printed before it was resolved.")
+  | Not_requested ->
+    CErrors.anomaly
+      Pp.(str "Crane: a declaration names " ++ Cpp_resolution.pp_key key ++ str ", which resolving it did not ask for.")
 
 (* A module named in a module expression, and its resolution. *)
 let pp_module_name (m : Cpp_ast.module_ref) =
@@ -4431,7 +4423,7 @@ let pp_derived_functor template name (base : Cpp_ast.module_expr) =
 let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
   let text, needs =
     match u.declaration with
-    | Modtype_concept {path; params; concept} -> (modtype_concept ~path ~params concept, u.needs)
+    | Modtype_concept {path; params; concept; names} -> (modtype_concept ~names ~params path concept, u.needs)
     | Assertion a -> (assertion a, u.needs)
     | Module_alias {name; target} -> (pp_module_alias name target, u.needs)
     | Functor_alias {name; functor_; params} -> (pp_functor_alias name functor_ params, u.needs)
@@ -4447,11 +4439,7 @@ let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
       let tparams, name =
         match a with
         | Alias_of_type {target; definition; tparams} ->
-          ( tparams,
-            match definition with
-            | Enum_definition -> enum_definition_name target
-            | Struct_definition -> struct_definition_name target
-            | Alias_definition -> pp_global Type target )
+          (tparams, Cpp_name.pp (resolved (Definition (definition, target.global)) target.name))
         | Alias_of_module m -> ([], Cpp_names.module_struct_name_of (resolved_module m))
       in
       let args =

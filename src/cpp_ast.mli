@@ -80,13 +80,17 @@ val module_ref : ModPath.t -> module_ref
 (** [global_ref r] is the global [r], not yet resolved. *)
 val global_ref : GlobRef.t -> global_ref
 
-(** How {!resolve} names what a declaration names where it is written: a
-    module, the concept of a type class, a type. *)
-type resolver = {
-  module_name : ModPath.t -> Cpp_name.t;
-  class_concept : GlobRef.t -> Cpp_name.t;
-  type_name : GlobRef.t -> Cpp_name.t;
-}
+(** The concept of a module type a declaration names, by the module type's
+    path, and its name where the declaration is written. *)
+type concept_ref = {module_type : ModPath.t; name : resolution}
+
+(** [concept_ref path] is the concept of the module type at [path], not yet
+    resolved. *)
+val concept_ref : ModPath.t -> concept_ref
+
+(** How {!resolve} names what a declaration names where it is written, at
+    a frame inside it. *)
+type resolver = Cpp_resolution.frame -> Cpp_resolution.key -> Cpp_name.t
 
 (** What a declaration not yet printed declares. *)
 type declaration =
@@ -100,10 +104,15 @@ type declaration =
       (** The fields of the eponymous record [record] merged into its
           module's struct, each by its name and type, the type variables
           they name named [vars]: no declaration holds them. *)
-  | Modtype_concept of {path : ModPath.t; params : ModPath.t list; concept : Modtype_concept.t}
+  | Modtype_concept of {
+      path : ModPath.t;
+      params : ModPath.t list;
+      concept : Modtype_concept.t;
+      names : Cpp_resolution.table;
+    }
       (** The concept the module type at [path] becomes, generated as
           [concept], over the parameters [params] of a functor declaring
-          it. *)
+          it, naming what [names] names. *)
   | Global_alias of global_alias
       (** [using N = ::N;]: a member standing in for a type declared under
           the same name at namespace scope, where the file moved it, so that
@@ -139,7 +148,7 @@ and assertion = {concept : asserted; subject : subject}
 
 (** The concept an {!assertion} asserts. *)
 and asserted =
-  | Of_module_type of ModPath.t  (** That of the module type at the path. *)
+  | Of_module_type of concept_ref  (** That of the module type. *)
   | Of_class of global_ref  (** That of the type class. *)
 
 (** What an {!assertion} asserts it of. *)
@@ -151,7 +160,7 @@ and subject =
 (** What a {!Global_alias} stands in for. *)
 and global_alias =
   | Alias_of_type of {
-      target : GlobRef.t;
+      target : global_ref;
       definition : definition;
       tparams : (Minicpp.template_type * Id.t) list;
     }
@@ -163,10 +172,7 @@ and global_alias =
 
 (** How the type an {!Alias_of_type} stands in for is declared, which is
     the name it is declared under. *)
-and definition =
-  | Enum_definition  (** A scoped enum. *)
-  | Struct_definition  (** A struct. *)
-  | Alias_definition  (** A [using] declaration. *)
+and definition = Cpp_resolution.definition = Enum_definition | Struct_definition | Alias_definition
 
 (** A declaration not yet printed, with what placing the declarations it
     needs reads -- planned, so known before it is printed. *)
@@ -357,12 +363,18 @@ val fill_wrappers : (string * body) list -> t -> t
     @raise Invalid_argument if it holds a declaration not yet printed. *)
 val to_pp : t -> Pp.t
 
-(** [resolve_tree ~resolve t] is [t] with what each declaration not yet
-    printed names resolved -- its modules, the class concept and the instance
-    an assertion names -- each as [resolve spelling] names it where a
-    declaration spelled [spelling] is written.
+(** [resolve_tree ~requested ~resolve t] is [t] with what each declaration
+    not yet printed names resolved -- its modules, the concepts and the
+    instance an assertion names, the type a member alias stands in for, and
+    whatever else [requested] says it names, at a frame inside it -- each as
+    [resolve spelling] names it where a declaration spelled [spelling] is
+    written.
     @raise Invalid_argument as {!print_tree} does. *)
-val resolve_tree : resolve:(spelling -> resolver) -> t -> t
+val resolve_tree :
+  requested:(declaration -> (Cpp_resolution.frame * Cpp_resolution.key) list) ->
+  resolve:(spelling -> resolver) ->
+  t ->
+  t
 
 (** [t] as a document, each declaration not yet printed printed by [write],
     in the order written, as the tree spells it.
@@ -434,7 +446,11 @@ type scheduled
 val schedule : templates:template list -> forwards:forward list -> translation_unit -> scheduled
 
 (** {!resolve_tree} over each section of a scheduled unit. *)
-val resolve : resolve:(spelling -> resolver) -> scheduled -> scheduled
+val resolve :
+  requested:(declaration -> (Cpp_resolution.frame * Cpp_resolution.key) list) ->
+  resolve:(spelling -> resolver) ->
+  scheduled ->
+  scheduled
 
 (** The scheduled unit as a document, as {!print_tree} writes each
     section. *)

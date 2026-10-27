@@ -76,7 +76,7 @@ let rec concept_of_mt = function
 (** The concept an enclosing struct holds back that makes it hold back
     [a]. *)
 let held_concept_of (a : Cpp_ast.assertion) =
-  match a.concept with Of_module_type mp -> HCmodtype mp | Of_class c -> HCclass c.global
+  match a.concept with Of_module_type c -> HCmodtype c.module_type | Of_class c -> HCclass c.global
 
 (** The assertion that the module [mp] satisfies the concept of its module
     type [mty], and the assertions it holds back.  When that concept is one
@@ -86,7 +86,7 @@ let concept_assertion mp mty =
   match concept_of_mt mty with
   | None -> (Cpp_ast.empty, [])
   | Some (mt_mp, _) ->
-    let a = {Cpp_ast.concept = Of_module_type mt_mp; subject = Module (Cpp_ast.module_ref mp)} in
+    let a = {Cpp_ast.concept = Of_module_type (Cpp_ast.concept_ref mt_mp); subject = Module (Cpp_ast.module_ref mp)} in
     if concept_held_back (held_concept_of a) then (Cpp_ast.empty, [a]) else (Cpp_ast.assertion a, [])
 
 (** Render a functor parameter as a C++ template parameter.
@@ -278,7 +278,7 @@ let struct_hoists mp t =
     Probe.checking () && planned
     && names_into_a_struct
          (Cpp_ast.print_tree ~write:(Cpp_ind.write_unprinted ~file:Intf)
-            (Cpp_ast.resolve_tree ~resolve:(Cpp_ind.resolver_at ~file:Intf) t) )
+            (Cpp_ind.resolve_tree ~file:Intf t) )
   then
     Probe.violation "hoisted structs"
       Pp.(
@@ -3448,7 +3448,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     else []
   in
   let written = if is_header then Common.Intf else Common.Impl in
-  let scheduled = Cpp_ast.resolve ~resolve:(Cpp_ind.resolver_at ~file:written) (Cpp_ast.schedule ~templates ~forwards unit) in
+  let scheduled = Cpp_ind.resolve ~file:written (Cpp_ast.schedule ~templates ~forwards unit) in
   let print () = Cpp_ast.print ~write:(Cpp_ind.write_unprinted ~file:written) scheduled in
   let file = print () in
   (* Printing a scheduled unit is a function of it: printed again, with
