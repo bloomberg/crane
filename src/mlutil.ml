@@ -2635,7 +2635,14 @@ let optimize_fix a =
         a'
       with
       | MLfix (_, [|f|], [|c|], _, occ) ->
-        let new_f = MLapp (fresh_rel (n + 1), eta_args n) in
+        (* The fixpoint calls itself under the definition's binders, passing
+           each on -- a binder erasure kept, a type binder under
+           Conservative Types, as the dummy it stands for, as extraction
+           writes an erased argument of any other call. *)
+        let args =
+          List.rev (List.mapi (fun i (_, ty) -> match ty with Tdummy k -> MLdummy k | _ -> fresh_rel (i + 1)) ids)
+        in
+        let new_f = MLapp (fresh_rel (n + 1), args) in
         let new_c = named_lams ids (normalize (ast_subst new_f c)) in
         MLfix (0, [|f|], [|new_c|], false, occ)
       | MLapp (a', args) ->
