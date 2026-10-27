@@ -1164,11 +1164,18 @@ let find_varying_params check params body =
 (** The parameters [params] a loop varies: [planned], ControlIR's
     ({!Control_ir.invariant_parameters}), where the caller has it, and
     otherwise those the calls [check] recognises in [body] change
-    ({!find_varying_params}).  Under [CRANE_CHECK_IR] those calls must change
+    ({!find_varying_params}), which is a violation under [CRANE_CHECK_IR]:
+    the C++ would decide it.  Under [CRANE_CHECK_IR] those calls must change
     the planned ones and no other. *)
 let varying_params ?planned check params body =
   match planned with
-  | None -> find_varying_params check params body
+  | None ->
+    Probe.violation "control lowering"
+      Pp.(
+        str "the parameters the loop over "
+        ++ prlist_with_sep pr_comma (fun (id, _) -> Id.print id) params
+        ++ str " varies are read off its C++ calls, no ControlIR saying" );
+    find_varying_params check params body
   | Some varying ->
     if Probe.checking () && find_varying_params check params body <> varying then
       Probe.violation "control lowering"
