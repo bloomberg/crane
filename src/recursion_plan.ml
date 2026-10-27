@@ -68,13 +68,15 @@ type call = {
 (* Where a function goes on once a recursive call returns: the binder the
    call's result is bound to, the binders bound before it that what follows
    reads, which a frame keeps across the call, the calls it resumes after,
-   and those of the live binders the calls' arguments read. *)
+   those of the live binders the calls' arguments read, and the binders in
+   scope whose value makes no call, with those it reads. *)
 type resume = {
   binder : Core_binder.t;
   live : Core_binder.t list;
   after : call list;
   passes : passing list;
   read_by_call : Core_binder.t list;
+  recomputable : recomputable list;
 }
 
 (* A live binder passed on, as it is, for a parameter of a recursive call. *)
@@ -82,6 +84,12 @@ and passing = {
   passed : Core_binder.t;
   into : Core_binder.t;
   call : call;
+}
+
+(* A binder whose value makes no call, and the binders it reads. *)
+and recomputable = {
+  recomputed : Core_binder.t;
+  from : Core_binder.t list;
 }
 
 type t = {
@@ -425,6 +433,8 @@ let value_levels ~heads ~depth e =
   go 0 e;
   List.sort_uniq Int.compare !found
 
+let rec strip = function MLmagic (_, e) -> strip e | e -> e
+
 (* The arguments a call is applied to, through coercions. *)
 let rec arguments = function MLmagic (_, e) -> arguments e | MLapp (_, args) -> args | _ -> []
 
@@ -520,7 +530,7 @@ let resumes_of ~effects ~origin ~targets lex body =
      them, each handler passing it to the next frame as it holds it: what
      follows a point passes it on as what follows the outermost of them,
      [enclosing], does too. *)
-  let resume ~heads ~fixpoints ~targets ~enclosing ~site ~after ~arguments_read depth rest =
+  let resume ~heads ~fixpoints ~targets ~enclosing ~site ~after ~arguments_read ~recipes depth rest =
     let live =
       List.filter (fun l -> l <> depth && not (dictionary l)) (value_levels ~heads ~depth:(depth + 1) rest)
     in
@@ -535,12 +545,18 @@ let resumes_of ~effects ~origin ~targets lex body =
         live = live_binders;
         after;
         passes = dedup_passings (inherited @ passings ~fixpoints ~targets ~live (depth + 1) rest);
-        read_by_call = List.map binder (List.filter (fun l -> List.mem l arguments_read) live) }
+        read_by_call = List.map binder (List.filter (fun l -> List.mem l arguments_read) live);
+        recomputable =
+          List.filter_map
+            (fun (l, reads) ->
+              if dictionary l then None
+              else Some {recomputed = binder l; from = List.map binder (List.filter (fun r -> not (dictionary r)) reads)} )
+            recipes }
     in
     found := r :: !found;
     r
   in
-  let rec walk ~targets ~heads ~fixpoints ~enclosing ~closures ~captures depth e =
+  let rec walk ~targets ~heads ~fixpoints ~enclosing ~closures ~fields ~captures depth e =
     (* A local fixpoint applied where it is written, reaching a recursive
        call, is bound as one ({!Normalize}). *)
     let rec reaches depth e =
@@ -629,11 +645,21 @@ let resumes_of ~effects ~origin ~targets lex body =
         | MLmagic (_, b) -> arguments_read depth b
         | _ -> [] )
     in
-    let go = walk ~targets ~heads ~fixpoints ~enclosing ~closures ~captures in
+    let go = walk ~targets ~heads ~fixpoints ~enclosing ~closures ~fields ~captures in
+    (* The binders in scope whose value makes no call, outermost first,
+       with the levels it reads: a closure a let binds, which reads what it
+       captures, and a pattern variable of a record's one branch matching a
+       variable, a field of that variable. *)
+    let recipes =
+      List.sort
+        (fun (l, _) (l', _) -> Int.compare l l')
+        (List.map (fun (l, a) -> (l, value_levels ~heads:[] ~depth:l a)) closures
+        @ List.map (fun (l, s) -> (l, [s])) fields)
+    in
     let resuming ~site ~after ~arguments_read depth rest =
       match after with
       | [] -> enclosing
-      | after -> resume ~heads ~fixpoints ~targets ~enclosing ~site ~after ~arguments_read depth rest :: enclosing
+      | after -> resume ~heads ~fixpoints ~targets ~enclosing ~site ~after ~arguments_read ~recipes depth rest :: enclosing
     in
     match e with
     | MLletin (_, _, a, b, site) ->
@@ -641,7 +667,7 @@ let resumes_of ~effects ~origin ~targets lex body =
       go depth a;
       let rec closure = function MLlam _ | MLfix _ -> true | MLmagic (_, e) -> closure e | _ -> false in
       let closures = if closure a then (depth, a) :: closures else closures in
-      walk ~targets ~heads ~fixpoints ~enclosing ~closures ~captures (depth + 1) b
+      walk ~targets ~heads ~fixpoints ~enclosing ~closures ~fields ~captures (depth + 1) b
     | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Bind -> (
       match List.rev args with
       | MLlam (_, _, k) :: action :: rest ->
@@ -649,8 +675,16 @@ let resumes_of ~effects ~origin ~targets lex body =
         let arguments_read = if after = [] then [] else calls_read depth after (arguments action) in
         let enclosing = resuming ~site:(Global_use.occurrence use) ~after ~arguments_read depth k in
         List.iter (go depth) (action :: rest);
-        walk ~targets ~heads ~fixpoints ~enclosing ~closures ~captures (depth + 1) k
+        walk ~targets ~heads ~fixpoints ~enclosing ~closures ~fields ~captures (depth + 1) k
       | _ -> List.iter (go depth) args )
+    | MLcase (ty, s, [|(ids, _, _, b)|]) when Table.record_fields_of_type ty <> [] -> (
+      go depth s;
+      match strip s with
+      | MLrel (i, _) ->
+        let n = List.length ids in
+        let fields = List.init n (fun k -> (depth + k, depth - i)) @ fields in
+        walk ~targets ~heads ~fixpoints ~enclosing ~closures ~fields ~captures (depth + n) b
+      | _ -> go (depth + List.length ids) b )
     | MLcase (_, s, branches) ->
       go depth s;
       Array.iter (fun (ids, _, _, b) -> go (depth + List.length ids) b) branches
@@ -670,13 +704,13 @@ let resumes_of ~effects ~origin ~targets lex body =
       Array.iter
         (fun f ->
           let arity, b = split_params 0 f in
-          walk ~targets ~heads ~fixpoints ~enclosing:[] ~closures ~captures (depth + n + arity) b )
+          walk ~targets ~heads ~fixpoints ~enclosing:[] ~closures ~fields ~captures (depth + n + arity) b )
         funs
     | MLlam (_, _, b) ->
-      walk ~targets:(fun ~depth:_ _ -> []) ~heads:[] ~fixpoints ~enclosing:[] ~closures ~captures (depth + 1) b
+      walk ~targets:(fun ~depth:_ _ -> []) ~heads:[] ~fixpoints ~enclosing:[] ~closures ~fields ~captures (depth + 1) b
     | e -> Mlutil.ast_iter (go depth) e
   in
-  walk ~targets:(fun ~depth:_ e -> targets e) ~heads:[] ~fixpoints:[] ~enclosing:[] ~closures:[] ~captures:[]
+  walk ~targets:(fun ~depth:_ e -> targets e) ~heads:[] ~fixpoints:[] ~enclosing:[] ~closures:[] ~fields:[] ~captures:[]
     (Lexenv.depth lex) body;
   List.rev !found
 
@@ -757,7 +791,6 @@ let local_groups ~effects defs =
   let plan ~bound origin lex ids funs occurrence =
     let n = Array.length ids in
     let arities = Array.map (fun f -> fst (split_params 0 f)) funs in
-    let rec strip = function MLmagic (_, e) -> strip e | e -> e in
     let member ~within ~depth f =
       match strip f with
       | MLrel (db, _) ->
@@ -1265,7 +1298,10 @@ let equal a b =
                  (fun p p' ->
                    Core_binder.equal p.passed p'.passed && Core_binder.equal p.into p'.into && same_call p.call p'.call )
                  r.passes r'.passes
-            && List.equal Core_binder.equal r.read_by_call r'.read_by_call ) )
+            && List.equal Core_binder.equal r.read_by_call r'.read_by_call
+            && List.equal
+                 (fun c c' -> Core_binder.equal c.recomputed c'.recomputed && List.equal Core_binder.equal c.from c'.from)
+                 r.recomputable r'.recomputable ) )
        a.resumes b.resumes
   && Ref.User.Map.equal (List.equal Occurrence.equal) a.adoptable b.adoptable
   && Ref.User.Map.equal (List.equal same_inlining) a.inlinings b.inlinings

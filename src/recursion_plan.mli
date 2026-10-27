@@ -279,13 +279,16 @@ type call = private {
     binds, and what a local fixpoint called captures -- a closure reads what
     it captures when it is called, and a machine adopting the fixpoint takes
     its captures as arguments.  They are still read where the frame for the
-    call is saved, the call being made after. *)
+    call is saved, the call being made after.  [recomputable] are the
+    binders in scope, outermost first, whose value makes no call: a frame
+    may bind one again from what it reads rather than keep it. *)
 type resume = private {
   binder : Core_binder.t;
   live : Core_binder.t list;
   after : call list;
   passes : passing list;
   read_by_call : Core_binder.t list;
+  recomputable : recomputable list;
 }
 
 (** A binder of [live] that what follows passes on, as it is, to the
@@ -300,6 +303,17 @@ and passing = private {
   passed : Core_binder.t;
   into : Core_binder.t;
   call : call;
+}
+
+(** A binder whose value makes no call: a closure a let binds, which reads
+    the binders it captures, or a pattern variable of the one branch of a
+    record's match on a variable, a field of that variable, which
+    translation binds as a statement.  [from] are the binders it reads,
+    dictionaries left out: a declaration takes those as template arguments,
+    in scope everywhere. *)
+and recomputable = private {
+  recomputed : Core_binder.t;
+  from : Core_binder.t list;
 }
 
 (** The points binding [b] at which its definition, a member of a group that
