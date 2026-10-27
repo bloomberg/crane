@@ -178,3 +178,22 @@ val derived_passed :
   in_place:(Miniml.ml_type -> Miniml.ml_type -> bool) ->
   Term.loop ->
   bool list
+
+(** A turn passing a parameter a value it makes: the [Continue] made of
+    [turn], and whether another of its arguments reads that parameter or a
+    binder derived from it. *)
+type rebuilt = {
+  turn : Miniml.Occurrence.t;
+  read_elsewhere : bool;
+}
+
+(** The [Continue]s of the loop [l], in order, passing its parameter [i] a
+    value derived from none of [l]'s parameters, as {!derived_passed}
+    derives one: a value made in the turn, which a parameter kept as a
+    pointer cannot point at past it. *)
+val rebuilt :
+  pointer_fields:(Names.GlobRef.t -> int list option) ->
+  in_place:(Miniml.ml_type -> Miniml.ml_type -> bool) ->
+  Term.loop ->
+  int ->
+  rebuilt list

@@ -13564,3 +13564,13 @@
   (alias runtest)
   (deps loopify_adopted_fix_alias_result.t.exe)
   (action (run ./loopify_adopted_fix_alias_result.t.exe))))
+(subdir loopify_receiver_from_temporary
+ (rule
+  (targets loopify_receiver_from_temporary.t.exe)
+  (deps LoopifyReceiverFromTemporary.vo loopify_receiver_from_temporary.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_receiver_from_temporary.t.exe loopify_receiver_from_temporary.cpp loopify_receiver_from_temporary.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_receiver_from_temporary.t.exe)
+  (action (run ./loopify_receiver_from_temporary.t.exe))))

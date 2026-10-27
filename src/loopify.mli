@@ -173,10 +173,15 @@ val modulo_cons_loop :
     turns ({!Loopify_tmc.control_shapes}).  With [receiver_derived], its
     ControlIR's turns pass the receiver a value derived from a parameter
     ({!Control_ir.derived_passed}): under [CRANE_CHECK_IR] no call may pass
-    one made in a turn, which it declines ({!value_receiver}). *)
+    one made in a turn, which it declines ({!value_receiver}).  A tail loop
+    parks the receiver of the calls made of [park], those of the turns that
+    make the receiver they pass ({!Control_ir.rebuilt}), where given, and
+    passes the others theirs: under [CRANE_CHECK_IR] its own reading of the
+    receivers must agree. *)
 val transform_method_own :
   ?varying:bool list ->
   ?parts:bool list ->
+  ?park:Miniml.Occurrence.t list ->
   ?controlled:bool ->
   ?receiver_derived:bool ->
   tparams:(template_type * Id.t) list ->
@@ -188,6 +193,11 @@ val transform_method_own :
     whose recursive call passes a receiver made in a turn: a frame or a cell
     keeps a pointer to the receiver, which that value does not outlive. *)
 val value_receiver : string
+
+(** Why a method is not lowered to a tail loop one of whose recursive calls
+    makes the receiver it passes and reads the receiver in another
+    argument: the receiver is parked before that argument is evaluated. *)
+val rebuilt_receiver_read : string
 
 (** [lower_local_tail_loops ~tparams stmts] is [stmts] with the
     tail-recursive local fixpoints in them turned into loops, under the

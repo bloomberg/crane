@@ -163,18 +163,18 @@ type provenance =
   | Stored of int
   | Derived of int
 
-(* For each parameter of the loop [l], whether every Continue of [l] passes
-   it an argument whose provenance [accepted] accepts of its position;
-   [false] for each where none continues [l]. *)
-let passed ~accepted ~pointer_fields ~in_place (l : loop) =
+(* The provenance of [e] under [env], the provenance of each binder inside
+   a loop's parameters, innermost first. *)
+let rec provenance ~in_place env = function
+  | Miniml.MLrel (db, _) -> Option.flatten (List.nth_opt env (db - 1))
+  | Miniml.MLmagic (Miniml.Mcoerce (from, into), e) when in_place from into -> provenance ~in_place env e
+  | _ -> None
+
+(* Each Continue of the loop [l], in order, with the provenance of each
+   binder it stands under inside [l]'s parameters, innermost first. *)
+let turn_provenances ~pointer_fields ~in_place (l : loop) =
   let n = List.length l.parameters in
-  (* [env]: the provenance of each binder inside the loop's parameters,
-     innermost first. *)
-  let rec provenance env = function
-    | Miniml.MLrel (db, _) -> Option.flatten (List.nth_opt env (db - 1))
-    | Miniml.MLmagic (Miniml.Mcoerce (from, into), e) when in_place from into -> provenance env e
-    | _ -> None
-  in
+  let provenance = provenance ~in_place in
   let derived env e = match provenance env e with Some (Stored i | Derived i) -> Some (Derived i) | None -> None in
   let unrelated k env = List.init k (fun _ -> None) @ env in
   (* The binders of a branch, [Prel 1] first, of its pattern matching a
@@ -197,7 +197,8 @@ let passed ~accepted ~pointer_fields ~in_place (l : loop) =
     bind [] (-1) b.pattern;
     Array.to_list bound
   in
-  (* The provenance of the arguments of each Continue of [target] in [t]. *)
+  (* Each Continue of [target] in [t], with the provenance of the binders it
+     stands under. *)
   let rec turns target env acc = function
     | Loop inner -> turns target env acc inner.body
     | Let b -> turns target (derived env b.value :: env) acc b.body
@@ -212,8 +213,7 @@ let passed ~accepted ~pointer_fields ~in_place (l : loop) =
           turns target (binders @ env) acc b.body )
         acc m.branches
     | Return _ -> acc
-    | Continue c | Continue_into {next = c; _} ->
-      if Loop.equal c.target target then List.map (provenance env) c.arguments :: acc else acc
+    | Continue c | Continue_into {next = c; _} -> if Loop.equal c.target target then (c, env) :: acc else acc
     | Resume r -> turns target (unrelated 1 env) (turns target env acc r.value) r.body
     | Entry e ->
       let scope = unrelated (Option.cata (fun _ -> 1) 0 e.name) env in
@@ -230,9 +230,10 @@ let passed ~accepted ~pointer_fields ~in_place (l : loop) =
     let origin arguments j =
       match List.nth_opt arguments j with Some (Some (Stored i | Derived i)) -> Some i | _ -> None
     in
-    let entering = turns e.entered.loop scope [] e.scope in
+    let arguments_of = List.map (fun ((c : continue_), env) -> List.map (provenance env) c.arguments) in
+    let entering = arguments_of (turns e.entered.loop scope [] e.scope) in
     let agreed parameters =
-      let arguments = entering @ turns e.entered.loop (within parameters) [] e.entered.body in
+      let arguments = entering @ arguments_of (turns e.entered.loop (within parameters) [] e.entered.body) in
       List.mapi
         (fun j p ->
           match p with
@@ -249,17 +250,61 @@ let passed ~accepted ~pointer_fields ~in_place (l : loop) =
     in
     within (settle (List.init k guessed))
   in
-  match turns l.loop (List.init n (fun k -> Some (Stored (n - 1 - k)))) [] l.body with
+  List.rev (turns l.loop (List.init n (fun k -> Some (Stored (n - 1 - k)))) [] l.body)
+
+(* For each parameter of the loop [l], whether every Continue of [l] passes
+   it an argument whose provenance [accepted] accepts of its position;
+   [false] for each where none continues [l]. *)
+let passed ~accepted ~pointer_fields ~in_place (l : loop) =
+  let n = List.length l.parameters in
+  match turn_provenances ~pointer_fields ~in_place l with
   | [] -> List.init n (fun _ -> false)
   | turns ->
     List.init n (fun i ->
         List.for_all
-          (fun arguments -> match List.nth_opt arguments i with Some (Some p) -> accepted i p | _ -> false)
+          (fun ((c : continue_), env) ->
+            match Option.map (provenance ~in_place env) (List.nth_opt c.arguments i) with
+            | Some (Some p) -> accepted i p
+            | Some None | None -> false )
           turns )
 
 let parts_passed = passed ~accepted:(fun i -> function Stored j -> Int.equal i j | Derived _ -> false)
 
 let derived_passed = passed ~accepted:(fun _ (Stored _ | Derived _) -> true)
+
+type rebuilt = {
+  turn : Miniml.Occurrence.t;
+  read_elsewhere : bool;
+}
+
+let rebuilt ~pointer_fields ~in_place (l : loop) i =
+  let of_parameter = function Some (Stored j | Derived j) -> Int.equal i j | None -> false in
+  (* Whether [e], under [env], reads the parameter or a binder derived from
+     it. *)
+  let reads env e =
+    let rec go depth = function
+      | Miniml.MLrel (db, _) -> db > depth && of_parameter (Option.flatten (List.nth_opt env (db - depth - 1)))
+      | Miniml.MLlam (_, _, b) -> go (depth + 1) b
+      | Miniml.MLletin (_, _, a, b, _) -> go depth a || go (depth + 1) b
+      | Miniml.MLcase (_, s, branches) ->
+        go depth s || Array.exists (fun (ids, _, _, b) -> go (depth + List.length ids) b) branches
+      | Miniml.MLfix (_, ids, funs, _, _) -> Array.exists (go (depth + Array.length ids)) funs
+      | Miniml.MLapp (f, args) -> go depth f || List.exists (go depth) args
+      | Miniml.MLcons (_, _, args) | Miniml.MLtuple args -> List.exists (go depth) args
+      | Miniml.MLmagic (_, e) -> go depth e
+      | Miniml.MLparray (elements, default) -> Array.exists (go depth) elements || go depth default
+      | Miniml.MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> false
+    in
+    go 0 e
+  in
+  List.filter_map
+    (fun ((c : continue_), env) ->
+      match List.nth_opt c.arguments i with
+      | Some a when Option.is_empty (provenance ~in_place env a) ->
+        let others = List.filteri (fun j _ -> j <> i) c.arguments in
+        Some {turn = c.occurrence; read_elsewhere = List.exists (reads env) others}
+      | Some _ | None -> None )
+    (turn_provenances ~pointer_fields ~in_place l)
 
 let invariant_parameters (l : loop) =
   let n = List.length l.parameters in
