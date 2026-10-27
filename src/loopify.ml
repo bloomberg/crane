@@ -1107,6 +1107,22 @@ let local_frame_machine ~member ~name ~binders ?varying ?parts ~tparams check pa
     @return An [Fmethod] field with the loopified body *)
 let value_receiver = "recursive call passes a value-type receiver, whose address cannot be stored in a frame"
 
+(** The position of the receiver of the method [mf] among the arguments a
+    C++ call of it writes: the registry's
+    ({!Cpp_names.lookup_method_this_pos}).  The method's own [this_pos]
+    counts the arrows of its ML type, and an erased one before the receiver
+    -- a dictionary, a type binder kept under Conservative Types -- takes
+    no argument.  A static method has no receiver to strip from a call: its
+    calls never carry more arguments than it has parameters, so position
+    [0] is never read. *)
+let receiver_position mf =
+  match mf.mf_receiver with
+  | Static -> 0
+  | Instance r -> (
+    match Option.bind mf.mf_globref Cpp_state.is_registered_method with
+    | Some (_, pos) -> pos
+    | None -> r.this_pos )
+
 let transform_method_own ?varying ?parts ?(controlled = false) ?(receiver_derived = false) ~tparams ~self_ty mf =
   (* [tparams] arrives holding only the enclosing struct's parameters.  A
      method's body is written under its own template header too, and a
@@ -1115,12 +1131,7 @@ let transform_method_own ?varying ?parts ?(controlled = false) ?(receiver_derive
      struct one. *)
   let tparams = tparams @ mf.mf_tparams in
   let n_params = List.length mf.mf_params in
-  (* A static method has no receiver to strip from a call: its calls never
-     carry more arguments than it has parameters, so position [0] is never
-     read. *)
-  let this_pos =
-    match mf.mf_receiver with Instance r -> r.this_pos | Static -> 0
-  in
+  let this_pos = receiver_position mf in
   let name = Id.to_string mf.mf_name in
   let basic_check =
     method_checker ~n_params ~has_self_param:false ~this_pos mf.mf_globref
@@ -1323,8 +1334,10 @@ let transform_method_own ?varying ?parts ?(controlled = false) ?(receiver_derive
         Fmethod {mf with mf_body = body'} )
 
 let record_unlowered_method mf =
-  let this_pos = match mf.mf_receiver with Instance r -> r.this_pos | Static -> 0 in
-  let check = method_checker ~n_params:(List.length mf.mf_params) ~has_self_param:false ~this_pos mf.mf_globref in
+  let check =
+    method_checker ~n_params:(List.length mf.mf_params) ~has_self_param:false ~this_pos:(receiver_position mf)
+      mf.mf_globref
+  in
   let name = Id.to_string mf.mf_name in
   match planned_strategy mf.mf_globref check mf.mf_body with
   | No_loop -> ()
