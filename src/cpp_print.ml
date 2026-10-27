@@ -757,6 +757,25 @@ let cut_at_argument_list str_of =
   | Some i -> String.sub str_of 0 i
   | None -> str_of
 
+(* Whether [probe], a type constructor applied to the sentinel, is written as
+   a template name applied to the sentinel alone, read off its structure and
+   not off its rendering; [None] where the structure does not say.  A custom
+   mapping is that name where its text is a head with no argument list of its
+   own, then the sentinel's hole, then the list's close; any other global is
+   its name applied to its arguments. *)
+let rec applied_to_sentinel_alone = function
+  | Tid (_, args) | Tid_external (_, args) -> Some (args = [Thole])
+  | Tnamespace (_, t) -> applied_to_sentinel_alone t
+  | Tglob (r, args, []) -> (
+    match find_custom_opt r with
+    | None -> Some (args = [Thole])
+    | Some template -> (
+      match type_template template with
+      | [CCstring head; CCty_arg i; CCstring ">"] when List.nth_opt args i = Some Thole ->
+        Some (String.index_opt head '<' = Some (String.length head - 1))
+      | tokens -> if List.exists (function CCelem _ -> true | _ -> false) tokens then None else Some false ) )
+  | _ -> None
+
 (** The C++ name of the field a projection reads.
 
     It is the projection's own label, escaped the same way the field was when
@@ -1361,12 +1380,26 @@ and ctor_alias_of_probe vl ~base probe =
       (fun () ->
         Common.with_visibility (ctor_alias_visibility home) (fun () -> Pp.string_of_ppcmds (pp_cpp_type false vl t)) )
   in
-  let rendered = render probe in
-  if
-    String.equal rendered
-      (cut_at_argument_list rendered ^ "<" ^ ctor_alias_tvar ^ ">")
-  then None
+  let rendered = lazy (render probe) in
+  let head_alone () =
+    let rendered = Lazy.force rendered in
+    String.equal rendered (cut_at_argument_list rendered ^ "<" ^ ctor_alias_tvar ^ ">")
+  in
+  let alone =
+    match applied_to_sentinel_alone probe with
+    | Some alone ->
+      if Probe.checking () && alone <> head_alone () then
+        Probe.violation "constructor alias shape"
+          Pp.(str "the type constructor written " ++ str (Lazy.force rendered) ++ str " is read off its structure as "
+              ++ str (if alone then "" else "not ") ++ str "a template name applied to its argument alone");
+      alone
+    | None ->
+      Probe.hit "CTORALIAS_UNDECIDED" (fun () -> Lazy.force rendered);
+      head_alone ()
+  in
+  if alone then None
   else
+    let rendered = Lazy.force rendered in
     (* Only a name the body actually {e writes} has to be abstracted
        over.  A custom mapping's replacement text need not use every
        argument -- [itree]'s spells only its last -- so a parameter that
