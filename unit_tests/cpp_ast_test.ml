@@ -27,7 +27,7 @@ let template ?(homed = false) ?(holder = false) name = {Cpp_ast.name; homed; hol
 let forward s = {Cpp_ast.struct_ = s; forward_declaration = Pp.str ("fwd:" ^ s)}
 
 (* A unit whose body is [sections], nothing in any other section. *)
-let unit_of ?(prologue = []) sections =
+let unit_of ?(prologue = []) ?(wrapper_bodies = []) sections =
   { Cpp_ast.forward_declarations = prologue;
     erased_aliases = [];
     concept_prerequisites = [];
@@ -36,7 +36,8 @@ let unit_of ?(prologue = []) sections =
     lifted_specs = [];
     body = Cpp_ast.seq sections;
     deferred_definitions = [];
-    deferred_members = [] }
+    deferred_members = [];
+    wrapper_bodies }
 
 (* The text, without whitespace: breaks and separators are formatting. *)
 let text ?(templates = []) ?(forwards = []) sections =
@@ -203,7 +204,8 @@ let () =
       lifted_specs = [Cpp_ast.empty];
       body = t "b";
       deferred_definitions = [t "d1"; Cpp_ast.empty; t "d2"];
-      deferred_members = [t "m"] }
+      deferred_members = [t "m"];
+      wrapper_bodies = [] }
   in
   let printed u = Pp.string_of_ppcmds (Cpp_ast.print ~write:(fun _ _ -> Pp.str "?") (Cpp_ast.schedule ~templates:[] ~forwards:[] u)) in
   let squeezed u = String.of_seq (Seq.filter (fun c -> not (List.mem c [' '; '\n'])) (String.to_seq (printed u))) in
@@ -218,4 +220,59 @@ let () =
   check_text "classes' concepts ahead of a struct follow a line break" (group Classes_ahead) "\nc1\nc2\n\n";
   check_text "module types' concepts ahead of a struct follow nothing" (group Module_types_ahead) "c1\nc2\n\n";
   check_text "concepts after a struct follow a blank line" (group After_struct) "\n\nc1\nc2\n\n";
-  check "no concepts are no group" (Cpp_ast.is_empty (Cpp_ast.concept_group After_struct []))
+  check "no concepts are no group" (Cpp_ast.is_empty (Cpp_ast.concept_group After_struct []));
+  let wrapper = Cpp_ast.wrapper_struct ~name:"W" ~module_:inner ~fields:(t "f;") in
+  let filled bodies = Pp.string_of_ppcmds (Cpp_ast.print ~write:(fun _ _ -> Pp.str "?")
+      (Cpp_ast.schedule ~templates:[template ~homed:true "T"] ~forwards:[] (unit_of ~wrapper_bodies:bodies [top wrapper]))) in
+  check_text "a wrapper struct is filled in with its module's body, after its own members"
+    (filled [("W", Cpp_ast.module_body inner [t "y;"; leaf ~templates:["T"] "z;"])])
+    "struct W {\nf;y;<T>z;\n};";
+  let refused_fill bodies = match filled bodies with exception Invalid_argument _ -> true | _ -> false in
+  check "a wrapper struct with no body is refused" (refused_fill []);
+  check "a wrapper struct given another module's body is refused" (refused_fill [("W", Cpp_ast.module_body m [t "y;"])]);
+  check "a wrapper struct is a struct its module declares"
+    (match Cpp_ast.declared wrapper with [Struct_of mp] -> ModPath.equal mp inner | _ -> false);
+  check "the wrapper structs of a tree are listed in the order written"
+    (Cpp_ast.wrapper_structs (Cpp_ast.seq [wrapper; top (Cpp_ast.wrapper_struct ~name:"V" ~module_:m ~fields:Cpp_ast.empty)]) = ["W"; "V"]);
+  check "a wrapper struct not filled in is not printed"
+    (match Cpp_ast.to_pp wrapper with exception Invalid_argument _ -> true | _ -> false);
+  let spelling_text = function Cpp_ast.Element_of mp -> "E(" ^ ModPath.to_string mp ^ ")" | Member_of mp -> "M(" ^ ModPath.to_string mp ^ ")" in
+  let ref_text = function GlobRef.VarRef id -> Id.to_string id | _ -> "?" in
+  let resolve spelling =
+    let named what = Cpp_name.unqualified (what ^ "@" ^ spelling_text spelling) in
+    { Cpp_ast.module_name = (fun mp -> named (ModPath.to_string mp));
+      class_concept = (fun r -> named ("concept " ^ ref_text r));
+      type_name = (fun r -> named ("type " ^ ref_text r)) }
+  in
+  let resolved_text sections =
+    let write spelling (u : Cpp_ast.unprinted) =
+      match u.declaration with
+      | Module_alias {target = Module_named {name = Resolved n; _}; _} -> Pp.str (spelling_text spelling ^ "=" ^ Cpp_name.to_string n)
+      | Module_alias {target = Module_named {name = Unresolved; _}; _} -> Pp.str "unresolved"
+      | Assertion {concept = Of_class {name = Resolved c; _}; subject = Instance {instance = {name = Resolved i; _}; _}} ->
+        Pp.str (Cpp_name.to_string c ^ "<" ^ Cpp_name.to_string i ^ ">")
+      | _ -> Pp.str (spelling_text spelling)
+    in
+    Pp.string_of_ppcmds (Cpp_ast.print_tree ~write (Cpp_ast.resolve_tree ~resolve (Cpp_ast.seq sections)))
+  in
+  check_text "resolving keeps how each declaration is spelled"
+    (resolved_text [top (Cpp_ast.elements ~source:m (unprinted ()))]) "E(F.M)";
+  let alias = Cpp_ast.module_alias ~name:(Pp.str "A") (Module_named (Cpp_ast.module_ref inner)) in
+  check_text "a module a declaration names is resolved where the declaration is written"
+    (resolved_text [top (Cpp_ast.elements ~source:m (Cpp_ast.module_ struct_ (Cpp_ast.module_body inner [alias])))])
+    "struct M {\nM(F.M.N)=F.M.N@M(F.M.N)\n};";
+  check_text "a module a declaration names is unresolved until resolved"
+    (Pp.string_of_ppcmds
+       (Cpp_ast.print_tree
+          ~write:(fun _ (u : Cpp_ast.unprinted) ->
+            match u.declaration with Module_alias {target = Module_named {name = Unresolved; _}; _} -> Pp.str "u" | _ -> Pp.str "r")
+          (Cpp_ast.elements ~source:m alias) ))
+    "u";
+  let var s = GlobRef.VarRef (Id.of_string s) in
+  let assertion =
+    Cpp_ast.assertion
+      {concept = Of_class (Cpp_ast.global_ref (var "C")); subject = Instance {instance = Cpp_ast.global_ref (var "I"); args = []}}
+  in
+  check_text "the class concept and the instance an assertion names are resolved where it is written"
+    (resolved_text [top (Cpp_ast.elements ~source:m assertion)])
+    "concept C@E(F.M)<type I@E(F.M)>"

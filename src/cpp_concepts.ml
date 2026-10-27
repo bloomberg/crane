@@ -348,12 +348,13 @@ let pp_modtype_concept ?(params = []) name (c : Modtype_concept.t) =
     its own. *)
 let pp_assertion (a : Cpp_ast.assertion) =
   let concept =
-    match a.concept with Of_module_type mp -> pp_concept_ref mp | Of_class r -> pp_concept_name_of_ref r
+    match a.concept with Of_module_type mp -> pp_concept_ref mp | Of_class c -> Cpp_name.pp (resolved_class_concept c)
   in
   let subject =
     match a.subject with
-    | Module mp -> module_struct_name mp
-    | Instance {instance; args} -> pp_global Type instance ++ prlist (fun ty -> str ", " ++ pp_cpp_type false [] ty) args
+    | Module m -> module_struct_name_of (resolved_module m)
+    | Instance {instance; args} ->
+      Cpp_name.pp (resolved_type_name instance) ++ prlist (fun ty -> str ", " ++ pp_cpp_type false [] ty) args
   in
   fnl () ++ str "static_assert(" ++ concept ++ str "<" ++ subject ++ str ">);"
 

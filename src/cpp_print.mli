@@ -17,9 +17,27 @@ open Minicpp
     placing the declarations it needs reads ({!Cpp_ast.Needs}). *)
 val write_decl : Common.env -> Cpp_erasure.settled -> Cpp_ast.t
 
-(** Whether [d] writes a wrapper struct holding a wrapper module's
-    declarations, which are members of it ({!write_decl}). *)
-val absorbs : Cpp_erasure.settled -> bool
+(** [absorbs ~homed d]: whether [d] writes a wrapper struct holding a
+    wrapper module's declarations, which are members of it: one [homed]
+    names, with the module, as planned. *)
+val absorbs : homed:(string * ModPath.t) list -> Cpp_erasure.settled -> bool
+
+(** [write_absorbing ~homed env d] is [d], which {!absorbs}, as {!write_decl}
+    writes it, each wrapper struct holding a wrapper module's declarations a
+    {!Cpp_ast.Wrapper_struct}. *)
+val write_absorbing : homed:(string * ModPath.t) list -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
+
+(** The name of a module a declaration of the tree names, as
+    {!Cpp_ast.resolve} resolved it where the declaration is written; under
+    [CRANE_CHECK_IR], checked against the name resolution gives it where it
+    is printed.  A module not yet resolved is an anomaly. *)
+val resolved_module : Cpp_ast.module_ref -> Cpp_name.t
+
+(** {!resolved_module} for the concept of a type class. *)
+val resolved_class_concept : Cpp_ast.global_ref -> Cpp_name.t
+
+(** {!resolved_module} for a type. *)
+val resolved_type_name : Cpp_ast.global_ref -> Cpp_name.t
 
 (** Whether [d] is an assertion the struct being written holds back until
     after it, writing nothing for it here. *)
@@ -133,16 +151,6 @@ val nested_in_wrapper : GlobRef.t -> bool
     other than a sole struct merged into them, in the order it writes them:
     the structs another wrapper's declarations can be written into. *)
 val unmerged_wrappers_written : Cpp_erasure.settled -> string list
-
-(** [writing_wrapper_members members f] runs [f], writing an element whose
-    wrapper structs of the names [members] gives hold, after their own
-    members, the declarations it gives with them: those of the wrapper
-    modules of those names. *)
-val writing_wrapper_members : (string * Cpp_ast.body) list -> (unit -> 'a) -> 'a
-
-(** Take the names of the wrapper structs that took a wrapper module's
-    declarations since the last call, under [CRANE_CHECK_IR]. *)
-val take_absorbed_wrappers : unit -> string list
 
 (** The assertions a declaration holds back, in the order it writes them:
     those that a class's concept holds of an instance where the concept is

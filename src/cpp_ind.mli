@@ -26,10 +26,6 @@ type generated = (Common.env * Minicpp.cpp_decl) list
     one MiniML declaration became). *)
 type rendered = (Common.env * Cpp_erasure.settled) list
 
-(** [render_decl env d] prints [d] as it was finished ahead of the files
-    ({!finished_alone}). *)
-val render_decl : Common.env -> Minicpp.cpp_decl -> Cpp_ast.t
-
 (** Print the declarations an entry point answered with. *)
 val pp_decls : rendered -> Cpp_ast.t
 
@@ -171,6 +167,11 @@ type section = group list
 (** A section's groups, in order, each to be printed as an element of its
     source module is spelled ({!Cpp_ast.Elements}). *)
 val render_section : section -> Cpp_ast.t list
+
+(** [resolver_at ~file spelling] names what a declaration spelled
+    [spelling] names where it is written in [file], in the visibility planned
+    there ({!Cpp_ast.resolve}). *)
+val resolver_at : file:Common.file -> Cpp_ast.spelling -> Cpp_ast.resolver
 
 (** Print a declaration not yet printed as the tree spells it
     ({!Cpp_ast.print}). *)

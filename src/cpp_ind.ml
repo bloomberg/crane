@@ -978,10 +978,6 @@ let finished_of ~what (job : finishing) =
     a lifted helper. *)
 let finished_alone d = finished_of ~what:"a declaration" (finishing d)
 
-(** [render_decl env d] prints [d] finished ahead of the files
-    ({!finished_alone}). *)
-let render_decl env d = Cpp_print.write_decl env (finished_alone d)
-
 (** [finished_group ~what ds] is [ds], each finished ahead of the files. *)
 let finished_group ~what (ds : generated) : rendered =
   List.map (fun (env, d) -> (env, finished_of ~what (finishing d))) ds
@@ -1274,6 +1270,10 @@ let in_spelling ~file spelling k =
     CErrors.anomaly
       Pp.(str "Crane: the implementation writes a member of the struct of " ++ str (ModPath.to_string mp)
           ++ str ", which it does not write.")
+
+let resolver_at ~file spelling =
+  let at f x = in_spelling ~file spelling (fun () -> f x) in
+  {Cpp_ast.module_name = at Common.resolve_module; class_concept = at Cpp_names.concept_name; type_name = at (Cpp_names.global_name Type)}
 
 let write_unprinted ~file spelling u =
   let modtype_concept ~path ~params c =

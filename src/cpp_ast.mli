@@ -62,6 +62,32 @@ type template_param =
   | Constrained of {concept : Pp.t; param : Pp.t}
       (** [C<..> M], the concept applied to any further arguments. *)
 
+(** The name a reference is written with where the declaration holding it
+    is written, once {!resolve} has resolved it there. *)
+type resolution = Unresolved | Resolved of Cpp_name.t
+
+(** A module a declaration names, by its path, and its name where the
+    declaration is written. *)
+type module_ref = {path : ModPath.t; name : resolution}
+
+(** A global a declaration names, and its name where the declaration is
+    written. *)
+type global_ref = {global : GlobRef.t; name : resolution}
+
+(** [module_ref path] is the module at [path], not yet resolved. *)
+val module_ref : ModPath.t -> module_ref
+
+(** [global_ref r] is the global [r], not yet resolved. *)
+val global_ref : GlobRef.t -> global_ref
+
+(** How {!resolve} names what a declaration names where it is written: a
+    module, the concept of a type class, a type. *)
+type resolver = {
+  module_name : ModPath.t -> Cpp_name.t;
+  class_concept : GlobRef.t -> Cpp_name.t;
+  type_name : GlobRef.t -> Cpp_name.t;
+}
+
 (** What a declaration not yet printed declares. *)
 type declaration =
   | Declaration of {env : Common.env; settled : Cpp_erasure.settled}
@@ -90,21 +116,21 @@ type declaration =
       (** [using name = target;]: a module defined as another, inside a
           class template a qualified name in [target] being a dependent
           one. *)
-  | Functor_alias of {name : Pp.t; functor_ : ModPath.t; params : (template_param * ModPath.t) list}
+  | Functor_alias of {name : Pp.t; functor_ : module_ref; params : (template_param * module_ref) list}
       (** [template <params> using name = functor_<params>;]: a functor
           defined as another, which Rocq reduces to the other's name, over
-          its own parameters, each as declared and by its path. *)
+          its own parameters, each as declared and as a module. *)
   | Derived_functor of {template : template_param list; name : Pp.t; base : module_expr}
       (** [template <template> struct name : base {};]: a functor whose body
           is another module, its own parameters visible to [base]. *)
 
-(** A module a declaration names. *)
+(** A module expression a declaration writes. *)
 and module_expr =
-  | Module_named of ModPath.t  (** The module at the path. *)
+  | Module_named of module_ref  (** The module. *)
   | Applied of application
 
-(** A functor applied to modules, each by its path. *)
-and application = {functor_ : ModPath.t; args : ModPath.t list}
+(** A functor applied to modules. *)
+and application = {functor_ : module_ref; args : module_ref list}
 
 (** That [subject] satisfies [concept], each named as written where the
     assertion is: a subject declared in a struct the assertion follows is
@@ -114,12 +140,12 @@ and assertion = {concept : asserted; subject : subject}
 (** The concept an {!assertion} asserts. *)
 and asserted =
   | Of_module_type of ModPath.t  (** That of the module type at the path. *)
-  | Of_class of GlobRef.t  (** That of the type class. *)
+  | Of_class of global_ref  (** That of the type class. *)
 
 (** What an {!assertion} asserts it of. *)
 and subject =
-  | Module of ModPath.t  (** The struct the module is written as. *)
-  | Instance of {instance : GlobRef.t; args : Minicpp.cpp_type list}
+  | Module of module_ref  (** The struct the module is written as. *)
+  | Instance of {instance : global_ref; args : Minicpp.cpp_type list}
       (** The instance, as a type, with the class's further arguments. *)
 
 (** What a {!Global_alias} stands in for. *)
@@ -132,7 +158,7 @@ and global_alias =
       (** The type [target] declares, as [definition] declares it, over
           [tparams], which the alias repeats:
           [template <tparams> using N = ::N<tparams>;]. *)
-  | Alias_of_module of ModPath.t
+  | Alias_of_module of module_ref
       (** The struct a module is written as. *)
 
 (** How the type an {!Alias_of_type} stands in for is declared, which is
@@ -171,6 +197,13 @@ type t = private
           [enclosure] writes, if any, which closes them on a line of its
           own.  Empty only where no struct is written and there is nothing
           in it. *)
+  | Wrapper_struct of {name : string; module_ : ModPath.t; fields : t}
+      (** The struct [name] a declaration writes around the declarations of
+          the wrapper module [module_]: its own members, [fields], then that
+          module's body, which the translation unit holds
+          ({!translation_unit.wrapper_bodies}) and {!schedule} writes in.  The
+          body is built apart from the declaration, which only knows, from the
+          plan, that it is written into it. *)
   | Concept_group of {position : concept_position; concepts : t list}
       (** Concepts a module's struct is written beside, each on a line of
           its own, laid out as [position] says.  At least one. *)
@@ -253,11 +286,14 @@ val module_alias : name:Pp.t -> module_expr -> t
 
 (** [functor_alias ~name functor_ params] is {!Functor_alias}, printed where
     the tree puts it.  It needs nothing placed in front of it. *)
-val functor_alias : name:Pp.t -> ModPath.t -> (template_param * ModPath.t) list -> t
+val functor_alias : name:Pp.t -> module_ref -> (template_param * module_ref) list -> t
 
 (** [derived_functor ~template ~name base] is {!Derived_functor}, printed
     where the tree puts it.  It needs nothing placed in front of it. *)
 val derived_functor : template:template_param list -> name:Pp.t -> module_expr -> t
+
+(** [wrapper_struct ~name ~module_ ~fields] is {!Wrapper_struct}. *)
+val wrapper_struct : name:string -> module_:ModPath.t -> fields:t -> t
 
 (** [elements ~source t] is [t], spelled as the elements of [source] are. *)
 val elements : source:ModPath.t -> t -> t
@@ -307,9 +343,26 @@ type declared = Declared of declaration | Struct_of of ModPath.t
 
 val declared : t -> declared list
 
+(** The names of the {!Wrapper_struct}s in [t], in the order written. *)
+val wrapper_structs : t -> string list
+
+(** [fill_wrappers bodies t] is [t] with each {!Wrapper_struct} written as
+    {!module_} writes the struct around its fields and the body [bodies]
+    gives under its name.
+    @raise Invalid_argument if [bodies] gives none, or one of another
+    module. *)
+val fill_wrappers : (string * body) list -> t -> t
+
 (** [t] as a document, for reading.
     @raise Invalid_argument if it holds a declaration not yet printed. *)
 val to_pp : t -> Pp.t
+
+(** [resolve_tree ~resolve t] is [t] with what each declaration not yet
+    printed names resolved -- its modules, the class concept and the instance
+    an assertion names -- each as [resolve spelling] names it where a
+    declaration spelled [spelling] is written.
+    @raise Invalid_argument as {!print_tree} does. *)
+val resolve_tree : resolve:(spelling -> resolver) -> t -> t
 
 (** [t] as a document, each declaration not yet printed printed by [write],
     in the order written, as the tree spells it.
@@ -357,6 +410,9 @@ type translation_unit = {
   deferred_members : t list;
       (** Datatype members whose bodies name a module's struct, last of
           all, after a break. *)
+  wrapper_bodies : (string * body) list;
+      (** The body of each wrapper module a {!Wrapper_struct} writes, by the
+          struct's name. *)
 }
 
 (** A translation unit with every due declaration placed. *)
@@ -373,8 +429,12 @@ type scheduled
     front of aliases.  One nothing writes is declared nowhere.
     A forward declaration goes in front of the innermost chunk at namespace
     scope holding the first declaration that names its struct, unless that
-    chunk defines the struct. *)
+    chunk defines the struct.  Each {!Wrapper_struct} is filled in first
+    ({!fill_wrappers}). *)
 val schedule : templates:template list -> forwards:forward list -> translation_unit -> scheduled
+
+(** {!resolve_tree} over each section of a scheduled unit. *)
+val resolve : resolve:(spelling -> resolver) -> scheduled -> scheduled
 
 (** The scheduled unit as a document, as {!print_tree} writes each
     section. *)

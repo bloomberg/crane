@@ -831,7 +831,7 @@ let render_numeral info (n : Z.t) : cpp_expr =
          ++ Printer.pr_global info.Table.num_ind
          ++ str " extracts to."))
   | _ -> () );
-  CPPnumeral (info.Table.num_ind, n)
+  CPPnumeral (info.Table.num_ind, {nl_value = n; nl_text = Common.render_template [("%n", Z.to_string n)] info.Table.num_fmt})
 
 (** Try to fold a binary positive chain [xI(xO(...xH...))] into an [int64].
     Returns [Some n] where [n > 0] if the entire chain can be folded, or

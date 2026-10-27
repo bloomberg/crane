@@ -445,7 +445,7 @@ let stand_ins t =
             Cpp_ast.(global_alias (Alias_of_type {target; definition; tparams})) )
           (declared_types (settled :> cpp_decl))
       | Declared (Fields _ | Modtype_concept _ | Global_alias _ | Assertion _ | Module_alias _ | Functor_alias _ | Derived_functor _) -> []
-      | Struct_of mp -> [Cpp_ast.(global_alias (Alias_of_module mp))] )
+      | Struct_of mp -> [Cpp_ast.(global_alias (Alias_of_module (module_ref mp)))] )
     (Cpp_ast.declared t)
 
 (** The C++ token an {!Minicpp.obj_access} prints as. *)
@@ -756,6 +756,25 @@ let cut_at_argument_list str_of =
   match String.index_opt str_of '<' with
   | Some i -> String.sub str_of 0 i
   | None -> str_of
+
+(* Whether [probe], a type constructor applied to the sentinel, is written as
+   a template name applied to the sentinel alone, read off its structure and
+   not off its rendering; [None] where the structure does not say.  A custom
+   mapping is that name where its text is a head with no argument list of its
+   own, then the sentinel's hole, then the list's close; any other global is
+   its name applied to its arguments. *)
+let rec applied_to_sentinel_alone = function
+  | Tid (_, args) | Tid_external (_, args) -> Some (args = [Thole])
+  | Tnamespace (_, t) -> applied_to_sentinel_alone t
+  | Tglob (r, args, []) -> (
+    match find_custom_opt r with
+    | None -> Some (args = [Thole])
+    | Some template -> (
+      match type_template template with
+      | [CCstring head; CCty_arg i; CCstring ">"] when List.nth_opt args i = Some Thole ->
+        Some (String.index_opt head '<' = Some (String.length head - 1))
+      | tokens -> if List.exists (function CCelem _ -> true | _ -> false) tokens then None else Some false ) )
+  | _ -> None
 
 (** The C++ name of the field a projection reads.
 
@@ -1361,12 +1380,26 @@ and ctor_alias_of_probe vl ~base probe =
       (fun () ->
         Common.with_visibility (ctor_alias_visibility home) (fun () -> Pp.string_of_ppcmds (pp_cpp_type false vl t)) )
   in
-  let rendered = render probe in
-  if
-    String.equal rendered
-      (cut_at_argument_list rendered ^ "<" ^ ctor_alias_tvar ^ ">")
-  then None
+  let rendered = lazy (render probe) in
+  let head_alone () =
+    let rendered = Lazy.force rendered in
+    String.equal rendered (cut_at_argument_list rendered ^ "<" ^ ctor_alias_tvar ^ ">")
+  in
+  let alone =
+    match applied_to_sentinel_alone probe with
+    | Some alone ->
+      if Probe.checking () && alone <> head_alone () then
+        Probe.violation "constructor alias shape"
+          Pp.(str "the type constructor written " ++ str (Lazy.force rendered) ++ str " is read off its structure as "
+              ++ str (if alone then "" else "not ") ++ str "a template name applied to its argument alone");
+      alone
+    | None ->
+      Probe.hit "CTORALIAS_UNDECIDED" (fun () -> Lazy.force rendered);
+      head_alone ()
+  in
+  if alone then None
   else
+    let rendered = Lazy.force rendered in
     (* Only a name the body actually {e writes} has to be abstracted
        over.  A custom mapping's replacement text need not use every
        argument -- [itree]'s spells only its last -- so a parameter that
@@ -2066,10 +2099,7 @@ and pp_cpp_expr env args t =
      | Crane_rt.Make_rc_reusing_unchecked | Crane_rt.Reuse_step
      | Crane_rt.Share_child -> ());
     str (Crane_rt.name h)
-  | CPPnumeral (r, n) -> (
-    match Table.get_numeral_info r with
-    | Some info -> str (Common.render_template [("%n", Z.to_string n)] info.Table.num_fmt)
-    | None -> CErrors.anomaly Pp.(str "a numeral of a type with no numeral format") )
+  | CPPnumeral (_, n) -> str n.nl_text
   | CPPraw code -> str code
   | CPPbinop (op, lhs, rhs) ->
     (* Parenthesize && subexpressions inside || to avoid
@@ -3642,22 +3672,6 @@ let rec unmerged_wrappers_written (d : Cpp_erasure.settled) =
     else List.concat_map unmerged_wrappers_written members @ [nspace_wrapper_name id]
   | Decl _ -> []
 
-(** The declarations of the wrapper modules the element being written
-    writes into a wrapper struct of the same name, by that name, as planned
-    ({!Cpp.file_layout}). *)
-let wrapper_members : (string * Cpp_ast.body) list ref = ref []
-
-let writing_wrapper_members members f = setting wrapper_members members f
-
-(** The wrapper structs that took a wrapper module's declarations, in the
-    order they did, under [CRANE_CHECK_IR]. *)
-let absorbed_wrappers : string list ref = ref []
-
-let take_absorbed_wrappers () =
-  let l = List.rev !absorbed_wrappers in
-  absorbed_wrappers := [];
-  l
-
 (** The assertions [d] holds back, in the order it writes them: those that
     a class's concept holds of an instance where the concept is declared
     after the struct being written, because its requirements name the
@@ -3671,8 +3685,8 @@ let rec held_back_assertions (d : Cpp_erasure.settled) =
     if nspace_merges {dw_ref = id; dw_sole_child = sole_child} then []
     else List.concat_map held_back_assertions members
   | Decl (Dstatic_assert (CPPconcept_app (class_ref, subject, tys), None)) when class_concept_held_back class_ref ->
-    [ { Cpp_ast.concept = Of_class class_ref;
-        subject = Instance {instance = subject; args = tys} } ]
+    [ { Cpp_ast.concept = Of_class (Cpp_ast.global_ref class_ref);
+        subject = Instance {instance = Cpp_ast.global_ref subject; args = tys} } ]
   | Decl _ -> []
 
 (** The structs and scoped enums [d] defines at namespace scope, written
@@ -4228,18 +4242,19 @@ let constrained_structs : (GlobRef.t * string) list ref = State.cell State.Unit 
 
 let read_cpp_decl = pp_cpp_decl
 
-(** Whether [d] writes a wrapper struct that holds a wrapper module's
-    declarations ({!wrapper_members}). *)
-let absorbs (d : Cpp_erasure.settled) =
-  List.exists (fun name -> List.mem_assoc name !wrapper_members) (unmerged_wrappers_written d)
+(** The wrapper structs [d] writes that hold a wrapper module's
+    declarations: those [homed] names, each with the module. *)
+let absorbed_by ~homed (d : Cpp_erasure.settled) = List.filter (fun name -> List.mem_assoc name homed) (unmerged_wrappers_written d)
+
+let absorbs ~homed d = absorbed_by ~homed d <> []
 
 (** [d], which {!absorbs}, as written: each wrapper struct holding a wrapper
-    module's declarations the body of that module in a struct of its own
-    name, the wrapper's own members first, as fields, each printed where
-    the tree puts it ({!Cpp_ast.Absorbed}). *)
-let rec absorbing_decl env (d : Cpp_erasure.settled) =
+    module's declarations a {!Cpp_ast.Wrapper_struct}, the wrapper's own
+    members its fields, each printed where the tree puts it
+    ({!Cpp_ast.Absorbed}). *)
+let rec absorbing_decl ~homed env (d : Cpp_erasure.settled) =
   note_file_scope_type (d :> cpp_decl);
-  let written d = if absorbs d then absorbing_decl env d else Cpp_ast.absorbed env d in
+  let written d = if absorbs ~homed d then absorbing_decl ~homed env d else Cpp_ast.absorbed env d in
   match Cpp_erasure.view d with
   | Template (temps, cstr, inner) -> Cpp_ast.seq [Cpp_ast.text (template_head env temps cstr); written inner]
   | Namespace (None, decls) ->
@@ -4248,13 +4263,8 @@ let rec absorbing_decl env (d : Cpp_erasure.settled) =
   | Namespace (Some id, members) -> (
     let name = nspace_wrapper_name id in
     let ds = with_render_ctx (fun c -> {c with rc_in_struct = true}) (fun () -> Cpp_ast.concat fnl (List.map written members)) in
-    match List.assoc_opt name !wrapper_members with
-    | Some body ->
-      if Probe.checking () then absorbed_wrappers := name :: !absorbed_wrappers;
-      Cpp_ast.module_
-        (Struct {head = {template = []; name = str name; base = None}; layout = Block})
-        ~fields:Cpp_ast.(seq [ds; text (fnl ())])
-        body
+    match List.assoc_opt name homed with
+    | Some module_ -> Cpp_ast.wrapper_struct ~name ~module_ ~fields:Cpp_ast.(seq [ds; text (fnl ())])
     | None -> Cpp_ast.(seq [text (str "struct " ++ str name ++ str " {" ++ fnl ()); ds; text (fnl () ++ str "};")]) )
   | Decl _ -> Cpp_ast.text (pp_cpp_decl env d)
 
@@ -4283,8 +4293,8 @@ let constrained_named ~names ~defined =
     ({!planned_ctor_aliases}); and, of the structs the file has constrained
     forward declarations of, those it names or defines, and those it
     defines.  The declarations of a wrapper module it writes into a struct
-    of its own ({!wrapper_members}) are members of that struct, and need
-    what they need themselves. *)
+    of its own ({!Cpp_ast.Wrapper_struct}) are members of that struct, and
+    need what they need themselves. *)
 let needs_of ~templates (settled : Cpp_erasure.settled) =
   let names, defines =
     constrained_named
@@ -4306,33 +4316,34 @@ let fields_needs ~module_ ~vl r types =
   in
   {Cpp_ast.Needs.templates = List.map ctor_alias_name aliases; names; defines = []}
 
-let printed_decl ~print env settled =
-  let absorbed_before = List.length !absorbed_wrappers in
-  let text = print env settled in
-  let needs = needs_of ~templates:(List.map ctor_alias_name (ctor_aliases_planned settled)) settled in
-  let absorbing = List.filter (fun name -> List.mem_assoc name !wrapper_members) (unmerged_wrappers_written settled) in
+let printed_needs settled = needs_of ~templates:(List.map ctor_alias_name (ctor_aliases_planned settled)) settled
+
+let printed_decl env settled =
+  let text = pp_cpp_decl env settled in
+  (text, printed_needs settled)
+
+(** [settled], printed where it is made, with what placing the declarations
+    it needs reads ({!needs_of}). *)
+let write_decl env settled =
+  let text, needs = printed_decl env settled in
+  Cpp_ast.decl ~needs text
+
+(** [settled], which {!absorbs}, written where it is made ({!absorbing_decl}),
+    behind what placing the declarations it needs reads. *)
+let write_absorbing ~homed env settled =
+  let tree = absorbing_decl ~homed env settled in
+  let needs = printed_needs settled in
   ( if Probe.checking () then
-      let printed = List.filteri (fun i _ -> i < List.length !absorbed_wrappers - absorbed_before) !absorbed_wrappers in
-      if List.sort String.compare printed <> List.sort String.compare absorbing then
+      let written = Cpp_ast.wrapper_structs tree and absorbing = absorbed_by ~homed settled in
+      if List.sort String.compare written <> List.sort String.compare absorbing then
         Probe.violation "wrapper homes"
           Pp.(
             str "a declaration wrote the declarations of the wrappers "
-            ++ prlist_with_sep pr_comma str printed
+            ++ prlist_with_sep pr_comma str written
             ++ str " into its structs, and needs what those of "
             ++ prlist_with_sep pr_comma str absorbing
             ++ str " need" ) );
-  (text, needs)
-
-(** [settled], printed where it is made, with what placing the declarations
-    it needs reads ({!needs_of}), ahead of a wrapper struct it writes holding
-    a wrapper module's declarations. *)
-let write_decl env settled =
-  if absorbs settled then
-    let tree, needs = printed_decl ~print:absorbing_decl env settled in
-    Cpp_ast.seq [Cpp_ast.decl ~needs (Pp.mt ()); tree]
-  else
-    let text, needs = printed_decl ~print:pp_cpp_decl env settled in
-    Cpp_ast.decl ~needs text
+  Cpp_ast.seq [Cpp_ast.decl ~needs (Pp.mt ()); tree]
 
 let planned_needs ~module_ settled =
   needs_of ~templates:(List.map ctor_alias_name (planned_ctor_aliases ~module_ settled)) settled
@@ -4342,10 +4353,36 @@ let unprinted ~module_ env settled = Cpp_ast.unprinted ~needs:(planned_needs ~mo
 let unprinted_fields ~module_ ~vl r fields =
   Cpp_ast.fields ~needs:(fields_needs ~module_ ~vl r (List.map snd fields)) ~record:r ~vars:vl fields
 
+(* The name {!Cpp_ast.resolve} gave [what ()] where the declaration naming
+   it is written; under [CRANE_CHECK_IR], the one [here ()] gives it where it
+   is printed, too. *)
+let resolved ~what ~here (resolution : Cpp_ast.resolution) =
+  match resolution with
+  | Resolved n ->
+    ( if Probe.checking () then
+        let here = here () in
+        if not (Cpp_name.equal n here) then
+          Probe.violation "names resolved"
+            Pp.(
+              what () ++ str " was resolved as " ++ str (Cpp_name.to_string n)
+              ++ str " where the declaration naming it is written, and is named " ++ str (Cpp_name.to_string here)
+              ++ str " where it is printed" ) );
+    n
+  | Unresolved -> CErrors.anomaly Pp.(str "Crane: " ++ what () ++ str " was printed before it was resolved.")
+
+let resolved_module (m : Cpp_ast.module_ref) =
+  resolved ~what:(fun () -> Pp.(str "the module " ++ str (ModPath.to_string m.path))) ~here:(fun () -> resolve_module m.path) m.name
+
+let resolved_class_concept (c : Cpp_ast.global_ref) =
+  resolved ~what:(fun () -> Pp.(str "the concept of " ++ Printer.pr_global c.global)) ~here:(fun () -> concept_name c.global) c.name
+
+let resolved_type_name (g : Cpp_ast.global_ref) =
+  resolved ~what:(fun () -> Pp.(str "the type " ++ Printer.pr_global g.global)) ~here:(fun () -> global_name Type g.global) g.name
+
 (* A module named in a module expression, and its resolution. *)
-let pp_module_name mp =
-  let r = resolve_module mp in
-  (str (wrapper_qualify_modname mp (resolved_string r)), r)
+let pp_module_name (m : Cpp_ast.module_ref) =
+  let r = resolved_module m in
+  (str (wrapper_qualify_modname m.path (resolved_string r)), r)
 
 (* Inside a class template a qualified module is a dependent name: an
    argument is preceded by [typename], and a functor applied is named
@@ -4357,8 +4394,8 @@ let pp_application {Cpp_ast.functor_; args} =
     | _, r when in_template && resolved_is_qualified r -> Cpp_name.pp ~template_keyword:true r
     | head, _ -> head
   in
-  let arg mp =
-    match pp_module_name mp with
+  let arg m =
+    match pp_module_name m with
     | a, r when in_template && resolved_is_qualified r -> str "typename " ++ a
     | a, _ -> a
   in
@@ -4367,8 +4404,8 @@ let pp_application {Cpp_ast.functor_; args} =
 let pp_module_alias name (target : Cpp_ast.module_expr) =
   let target =
     match target with
-    | Module_named mp ->
-      let r = resolve_module mp in
+    | Module_named m ->
+      let r = resolved_module m in
       let named = str (resolved_string r) in
       if (!render_ctx).rc_in_template && resolved_is_qualified r then str "typename " ++ named else named
     | Applied a -> pp_application a
@@ -4378,8 +4415,8 @@ let pp_module_alias name (target : Cpp_ast.module_expr) =
 let pp_functor_alias name functor_ params =
   Cpp_ast.pp_template_head (List.map fst params)
   ++ str "using " ++ name ++ str " = "
-  ++ str (resolved_string (resolve_module functor_))
-  ++ str "<" ++ prlist_with_sep (fun () -> str ", ") (fun (_, mp) -> pp_modname mp) params ++ str ">;"
+  ++ str (resolved_string (resolved_module functor_))
+  ++ str "<" ++ prlist_with_sep (fun () -> str ", ") (fun (_, m) -> Cpp_name.pp (resolved_module m)) params ++ str ">;"
 
 (* The base is written inside the functor's template; a base specifier
    names a type, so a dependent one takes no [typename]. *)
@@ -4387,7 +4424,7 @@ let pp_derived_functor template name (base : Cpp_ast.module_expr) =
   let base =
     with_render_ctx
       (fun c -> {c with rc_in_struct = true; rc_in_template = true})
-      (fun () -> match base with Module_named mp -> fst (pp_module_name mp) | Applied a -> pp_application a)
+      (fun () -> match base with Module_named m -> fst (pp_module_name m) | Applied a -> pp_application a)
   in
   Cpp_ast.pp_template_head template ++ str "struct " ++ name ++ str " : " ++ base ++ str " {};"
 
@@ -4399,7 +4436,7 @@ let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
     | Module_alias {name; target} -> (pp_module_alias name target, u.needs)
     | Functor_alias {name; functor_; params} -> (pp_functor_alias name functor_ params, u.needs)
     | Derived_functor {template; name; base} -> (pp_derived_functor template name base, u.needs)
-    | Declaration {env; settled} -> printed_decl ~print:pp_cpp_decl env settled
+    | Declaration {env; settled} -> printed_decl env settled
     | Absorbed {env; settled} -> (pp_cpp_decl env settled, u.needs)
     | Fields {record; vars; fields} ->
       ( prlist_with_sep fnl (fun (name, ty) -> pp_cpp_type false vars ty ++ spc () ++ str name ++ str ";") fields
@@ -4415,7 +4452,7 @@ let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
             | Enum_definition -> enum_definition_name target
             | Struct_definition -> struct_definition_name target
             | Alias_definition -> pp_global Type target )
-        | Alias_of_module mp -> ([], Cpp_names.module_struct_name mp)
+        | Alias_of_module m -> ([], Cpp_names.module_struct_name_of (resolved_module m))
       in
       let args =
         if tparams = [] then mt () else str "<" ++ prlist_with_sep (fun () -> str ", ") (fun (_, v) -> Id.print v) tparams ++ str ">"

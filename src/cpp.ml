@@ -76,7 +76,7 @@ let rec concept_of_mt = function
 (** The concept an enclosing struct holds back that makes it hold back
     [a]. *)
 let held_concept_of (a : Cpp_ast.assertion) =
-  match a.concept with Of_module_type mp -> HCmodtype mp | Of_class r -> HCclass r
+  match a.concept with Of_module_type mp -> HCmodtype mp | Of_class c -> HCclass c.global
 
 (** The assertion that the module [mp] satisfies the concept of its module
     type [mty], and the assertions it holds back.  When that concept is one
@@ -86,7 +86,7 @@ let concept_assertion mp mty =
   match concept_of_mt mty with
   | None -> (Cpp_ast.empty, [])
   | Some (mt_mp, _) ->
-    let a = {Cpp_ast.concept = Of_module_type mt_mp; subject = Module mp} in
+    let a = {Cpp_ast.concept = Of_module_type mt_mp; subject = Module (Cpp_ast.module_ref mp)} in
     if concept_held_back (held_concept_of a) then (Cpp_ast.empty, [a]) else (Cpp_ast.assertion a, [])
 
 (** Render a functor parameter as a C++ template parameter.
@@ -119,8 +119,8 @@ let template_param (mbid, mt) : Cpp_ast.template_param =
     or an application is applied. *)
 let application_of me =
   let rec flatten args = function
-    | MEapply (g, MEident arg) -> flatten (arg :: args) g
-    | MEident functor_ -> {Cpp_ast.functor_; args}
+    | MEapply (g, MEident arg) -> flatten (Cpp_ast.module_ref arg :: args) g
+    | MEident functor_ -> {Cpp_ast.functor_ = Cpp_ast.module_ref functor_; args}
     | _ -> CErrors.anomaly (Pp.str "Crane: a functor application whose functor or argument is not a path.")
   in
   flatten [] me
@@ -274,7 +274,12 @@ let hoisted_structs : MPset.t ref = State.cell State.Unit MPset.empty
     written, its declarations printed as the tree spells them. *)
 let struct_hoists mp t =
   let planned = MPset.mem mp !hoisted_structs in
-  if Probe.checking () && planned && names_into_a_struct (Cpp_ast.print_tree ~write:(Cpp_ind.write_unprinted ~file:Intf) t) then
+  if
+    Probe.checking () && planned
+    && names_into_a_struct
+         (Cpp_ast.print_tree ~write:(Cpp_ind.write_unprinted ~file:Intf)
+            (Cpp_ast.resolve_tree ~resolve:(Cpp_ind.resolver_at ~file:Intf) t) )
+  then
     Probe.violation "hoisted structs"
       Pp.(
         str "the struct of the module " ++ str (ModPath.to_string mp)
@@ -320,19 +325,22 @@ type file_layout = {
           another file declares ({!promoted_alias_import}), in
           alphabetical order: the implementation file includes the header,
           and so sees them too. *)
-  wrapper_homes : (string * ml_decl) list;
+  wrapper_homes : wrapper_home list;
       (** The wrapper modules whose declarations the header writes into a
           struct of the same name that a declaration writes around an
-          inductive -- [Nat::nat], with the functions of the module [Nat] --
-          by that name, with the declaration: the first the header writes,
-          if it writes it before the module's own turn.  Any other wrapper
-          module's declarations are written as a struct of their own, at the
-          module's turn. *)
+          inductive -- [Nat::nat], with the functions of the module [Nat]:
+          the first the header writes, if it writes it before the module's
+          own turn.  Any other wrapper module's declarations are written as a
+          struct of their own, at the module's turn. *)
   file_scope_types : CString.Set.t;
       (** The type names the header introduces at namespace scope
           ({!Cpp_print.file_scope_types}), which a definition written out of
           line leaves unqualified. *)
 }
+
+(** That the declaration [home] writes the struct [wrapper] around the
+    declarations of the wrapper module [wrapped]. *)
+and wrapper_home = {wrapper : string; wrapped : ModPath.t; home : ml_decl}
 
 let file_layout : file_layout ref =
   State.cell State.Unit
@@ -560,16 +568,23 @@ let unenclosed_element enclosure ?fields body =
   let m = Cpp_ast.module_ enclosure ?fields body in
   if Cpp_ast.body_is_empty body then m else Cpp_ast.(seq [m; text (fnl ())])
 
-(** [element_decl ~module_ env d] is the declaration [d], written as an
-    element of the module [module_]: printed where the tree puts it
+(** [element_decl ~module_ ~homed env d] is the declaration [d], written as
+    an element of the module [module_]: printed where the tree puts it
     ({!Cpp_ast.print}), but a wrapper struct holding a wrapper module's
-    declarations, whose members are, and an assertion held back, which is
-    nothing here: it is written after the struct holding it back
-    ({!Cpp_print.held_back_assertions}). *)
-let element_decl ~module_ env d =
+    declarations, one of those [homed] names, whose members are, and an
+    assertion held back, which is nothing here: it is written after the
+    struct holding it back ({!Cpp_print.held_back_assertions}). *)
+let element_decl ~module_ ~homed env d =
   if Cpp_print.is_held_back_assertion d then Cpp_ast.empty
-  else if Cpp_print.absorbs d then write_decl env d
+  else if Cpp_print.absorbs ~homed d then Cpp_print.write_absorbing ~homed env d
   else Cpp_print.unprinted ~module_ env d
+
+(** The wrapper structs the header writes around a wrapper module's
+    declarations, the declaration [d] writing them, as planned
+    ({!file_layout}): each by its name, with the module. *)
+let homed_at ~is_header d =
+  if is_header then List.filter_map (fun h -> if h.home == d then Some (h.wrapper, h.wrapped) else None) !file_layout.wrapper_homes
+  else []
 
 (** Pretty-print a structure element (label, elem) pair. Handles modules, module
     types, and declarations.
@@ -594,7 +609,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
        right before the declaration that produced it instead; helpers produced
        elsewhere keep their file-scope placement. *)
     let {Cpp_ind.rendered; helpers; _} = f ~module_ d in
-    let element = element_decl ~module_ in
+    let element = element_decl ~module_ ~homed:(homed_at ~is_header d) in
     (* An erasure landing pad -- [using X = std::any;] -- travels to the very
        top of the file, ahead of the concepts.
 
@@ -760,7 +775,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                 (* A functor that is another module is a struct deriving
                    from it, as one applying another functor is. *)
                 | MEapply _ -> written (Cpp_ast.derived_functor ~template ~name (Applied (application_of body)))
-                | MEident mp -> written (Cpp_ast.derived_functor ~template ~name (Module_named mp))
+                | MEident mp -> written (Cpp_ast.derived_functor ~template ~name (Module_named (Cpp_ast.module_ref mp)))
                 | MEfunctor _ -> CErrors.anomaly (Pp.str "Crane: a functor's parameters were not all collected.") )
           in
           { text = struct_def; concepts = concepts @ body_concepts; asserts }
@@ -1077,16 +1092,17 @@ let rec pp_structure_elem ~is_header f ~module_ = function
              [MEident WFacts] with a functor's type: the alias is a template
              over the functor's parameters, [WFacts] being one too. *)
           let rec functor_params = function
-            | MTfunsig (mbid, mt, rest) -> (template_param (mbid, mt), MPbound mbid) :: functor_params rest
+            | MTfunsig (mbid, mt, rest) ->
+              (template_param (mbid, mt), Cpp_ast.module_ref (MPbound mbid)) :: functor_params rest
             | _ -> []
           in
           match functor_params m.ml_mod_type with
           (* A file module is a namespace, which no alias in a struct can
              name. *)
           | [] when is_modfile target && (!render_ctx).rc_in_struct -> written Cpp_ast.empty
-          | [] -> written (Cpp_ast.module_alias ~name (Module_named target))
+          | [] -> written (Cpp_ast.module_alias ~name (Module_named (Cpp_ast.module_ref target)))
           | params ->
-            written (Cpp_ast.functor_alias ~name target params)
+            written (Cpp_ast.functor_alias ~name (Cpp_ast.module_ref target) params)
     in
     { mod_pp with
       text =
@@ -1257,7 +1273,7 @@ let pp_wrapper_module_dual ~is_header mp func_sels =
   let render_sel_specs (specs, _) =
     Cpp_ast.concat fnl (List.map (fun (d, env) -> Cpp_print.unprinted ~module_:mp env d) specs)
   in
-  let element = element_decl ~module_:mp in
+  let element = element_decl ~module_:mp ~homed:[] in
   let render_sel_defs (_, defs) = Cpp_ast.concat fnl (List.map (fun (d, env) -> element env d) defs) in
   let specs = Cpp_ast.module_body mp (if is_header then List.map render_sel_specs all_results else []) in
   let defs_pp = joined render_sel_defs all_results in
@@ -1905,7 +1921,7 @@ let plan_file_layout s =
         List.iter
           (fun name ->
             match Hashtbl.find_opt unmerged_wrappers name with
-            | Some wrapped -> homes := (position mp, position wrapped, name, d) :: !homes
+            | Some wrapped -> homes := (position mp, position wrapped, {wrapper = name; wrapped; home = d}) :: !homes
             | None -> () )
           (Cpp_print.unmerged_wrappers_written d') )
       rendered
@@ -1993,10 +2009,10 @@ let plan_file_layout s =
           forward;
       wrapper_homes =
         List.fold_left
-          (fun acc (at, own, name, d) ->
-            if at <= own && not (List.mem_assoc name acc) then acc @ [(name, d)] else acc )
+          (fun acc (at, own, h) ->
+            if at <= own && not (List.exists (fun h' -> String.equal h'.wrapper h.wrapper) acc) then acc @ [h] else acc )
           []
-          (List.stable_sort (fun (i, _, _, _) (j, _, _, _) -> Int.compare i j) (List.rev !homes));
+          (List.stable_sort (fun (i, _, _) (j, _, _) -> Int.compare i j) (List.rev !homes));
       file_scope_types = !types }
 
 (** Plan the synthesised templates each file writes
@@ -3078,19 +3094,22 @@ let do_struct_with_decl_tracking ~is_header f s =
     if is_header then
       List.map (fun (f : Cpp_print.forward_declaration) -> (f.fwd_ref, f.fwd_struct)) !file_layout.constrained_decls
     else [];
-  let place ~wrapper_specs ~source ((l, se) as x) =
+  (* The body of each wrapper module the header writes into a struct a
+     declaration writes around an inductive, by the struct's name. *)
+  let wrapper_bodies parts =
+    if not is_header then []
+    else
+      List.filter_map
+        (fun h ->
+          Option.map (fun w -> (h.wrapper, w.wr_specs)) (List.find_opt (fun w -> String.equal w.wr_name h.wrapper) parts) )
+        !file_layout.wrapper_homes
+  in
+  let place ~wrapper_bodies ~source ((l, se) as x) =
     let defined = if is_header then declarations [(source, [x])] else [] in
-    let homed =
-      List.filter_map (fun (name, d) -> if List.memq d defined then Some name else None) !file_layout.wrapper_homes
-    in
-    let {text = p; concepts = c; asserts = _} =
-      element_of source
-        (Cpp_print.writing_wrapper_members
-           (List.map (fun name -> (name, wrapper_specs name)) homed)
-           (fun () -> writing_element_of source (fun () -> f ~module_:source x)) )
-    in
+    let homed = List.filter_map (fun h -> if List.memq h.home defined then Some h.wrapper else None) !file_layout.wrapper_homes in
+    let {text = p; concepts = c; asserts = _} = element_of source (writing_element_of source (fun () -> f ~module_:source x)) in
     if is_header && Probe.checking () then begin
-      let absorbed = Cpp_print.take_absorbed_wrappers () in
+      let absorbed = Cpp_ast.wrapper_structs p in
       if absorbed <> homed then
         Probe.violation "wrapper homes"
           Pp.(
@@ -3104,7 +3123,7 @@ let do_struct_with_decl_tracking ~is_header f s =
       && (not (!render_ctx).rc_in_struct)
       && (not (Cpp_ast.is_empty p))
       && match se with
-         | SEmodule {ml_mod_expr = MEstruct (body_mp, _); _} -> struct_hoists body_mp p
+         | SEmodule {ml_mod_expr = MEstruct (body_mp, _); _} -> struct_hoists body_mp (Cpp_ast.fill_wrappers wrapper_bodies p)
          | _ -> false
     in
     (* A struct's member is not a chunk at namespace scope: the struct is. *)
@@ -3186,9 +3205,6 @@ let do_struct_with_decl_tracking ~is_header f s =
               } )
         wrapper_names
     in
-    if is_header && Cpp_print.take_absorbed_wrappers () <> [] then
-      Probe.violation "wrapper homes"
-        (Pp.str "a wrapper's declarations were written into a struct lifted out of a wrapper module");
     let deferred_definitions = List.map (fun w -> w.wr_defs) wrapper_parts in
     let ppl ((mp, sel), wrapper_name) =
       in_planned_visibility mp @@ fun () ->
@@ -3198,7 +3214,7 @@ let do_struct_with_decl_tracking ~is_header f s =
         | Some w -> w.wr_specs
         | None -> Cpp_ast.module_body mp []
       in
-      let place_in source = place ~wrapper_specs ~source in
+      let place_in source = place ~wrapper_bodies:(wrapper_bodies wrapper_parts) ~source in
       let f = place_in mp in
       let joined_placed sel =
         let stays, moved = gathered (List.map f sel) in
@@ -3220,7 +3236,7 @@ let do_struct_with_decl_tracking ~is_header f s =
              hold its declarations, and has ({!file_layout}). *)
           let wrapper_pp, wrapper_moved =
             let specs = wrapper_specs name in
-            if (not is_header) || Cpp_ast.body_is_empty specs || List.mem_assoc name !file_layout.wrapper_homes then
+            if (not is_header) || Cpp_ast.body_is_empty specs || List.exists (fun h -> String.equal h.wrapper name) !file_layout.wrapper_homes then
               (Cpp_ast.empty, nothing_moved)
             else
               let struct_pp = pp_wrapper_struct name specs in
@@ -3398,8 +3414,23 @@ let do_struct_with_decl_tracking ~is_header f s =
       lifted_specs;
       body = p;
       deferred_definitions;
-      deferred_members }
+      deferred_members;
+      wrapper_bodies = wrapper_bodies wrapper_parts }
   in
+  if Probe.checking () then begin
+    let written =
+      List.concat_map Cpp_ast.wrapper_structs
+        ( unit.erased_aliases @ unit.concept_prerequisites @ unit.concepts @ unit.hoisted_structs @ unit.lifted_specs
+        @ (unit.body :: unit.deferred_definitions) @ unit.deferred_members )
+    in
+    let planned = List.map fst unit.wrapper_bodies in
+    if List.sort String.compare written <> List.sort String.compare planned then
+      Probe.violation "wrapper homes"
+        Pp.(
+          str "the wrapper structs " ++ prlist_with_sep pr_comma str written
+          ++ str " were written around a wrapper module's declarations, and those of "
+          ++ prlist_with_sep pr_comma str planned ++ str " were planned to be" )
+  end;
   let templates =
     List.map
       (fun a ->
@@ -3417,7 +3448,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     else []
   in
   let written = if is_header then Common.Intf else Common.Impl in
-  let scheduled = Cpp_ast.schedule ~templates ~forwards unit in
+  let scheduled = Cpp_ast.resolve ~resolve:(Cpp_ind.resolver_at ~file:written) (Cpp_ast.schedule ~templates ~forwards unit) in
   let print () = Cpp_ast.print ~write:(Cpp_ind.write_unprinted ~file:written) scheduled in
   let file = print () in
   (* Printing a scheduled unit is a function of it: printed again, with

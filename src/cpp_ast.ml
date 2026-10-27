@@ -15,6 +15,19 @@ type spelling = Element_of of ModPath.t | Member_of of ModPath.t
 
 type template_param = Typename of Pp.t | Constrained of {concept : Pp.t; param : Pp.t}
 
+type resolution = Unresolved | Resolved of Cpp_name.t
+type module_ref = {path : ModPath.t; name : resolution}
+type global_ref = {global : GlobRef.t; name : resolution}
+
+let module_ref path = {path; name = Unresolved}
+let global_ref global = {global; name = Unresolved}
+
+type resolver = {
+  module_name : ModPath.t -> Cpp_name.t;
+  class_concept : GlobRef.t -> Cpp_name.t;
+  type_name : GlobRef.t -> Cpp_name.t;
+}
+
 type declaration =
   | Declaration of {env : Common.env; settled : Cpp_erasure.settled}
   | Absorbed of {env : Common.env; settled : Cpp_erasure.settled}
@@ -23,16 +36,16 @@ type declaration =
   | Global_alias of global_alias
   | Assertion of assertion
   | Module_alias of {name : Pp.t; target : module_expr}
-  | Functor_alias of {name : Pp.t; functor_ : ModPath.t; params : (template_param * ModPath.t) list}
+  | Functor_alias of {name : Pp.t; functor_ : module_ref; params : (template_param * module_ref) list}
   | Derived_functor of {template : template_param list; name : Pp.t; base : module_expr}
 
-and module_expr = Module_named of ModPath.t | Applied of application
+and module_expr = Module_named of module_ref | Applied of application
 
-and application = {functor_ : ModPath.t; args : ModPath.t list}
+and application = {functor_ : module_ref; args : module_ref list}
 
 and assertion = {concept : asserted; subject : subject}
-and asserted = Of_module_type of ModPath.t | Of_class of GlobRef.t
-and subject = Module of ModPath.t | Instance of {instance : GlobRef.t; args : Minicpp.cpp_type list}
+and asserted = Of_module_type of ModPath.t | Of_class of global_ref
+and subject = Module of module_ref | Instance of {instance : global_ref; args : Minicpp.cpp_type list}
 
 and global_alias =
   | Alias_of_type of {
@@ -40,7 +53,7 @@ and global_alias =
       definition : definition;
       tparams : (Minicpp.template_type * Id.t) list;
     }
-  | Alias_of_module of ModPath.t
+  | Alias_of_module of module_ref
 
 and definition = Enum_definition | Struct_definition | Alias_definition
 
@@ -55,6 +68,7 @@ type t =
   | Joined of t list
   | Top_level of t
   | Module of {module_ : ModPath.t; enclosure : enclosure; fields : t; members : t list}
+  | Wrapper_struct of {name : string; module_ : ModPath.t; fields : t}
   | Concept_group of {position : concept_position; concepts : t list}
   | Declarations of Pp.t list
 
@@ -115,6 +129,7 @@ let functor_alias ~name functor_ params =
 
 let derived_functor ~template ~name base =
   Unprinted {declaration = Derived_functor {template; name; base}; needs = Needs.none}
+let wrapper_struct ~name ~module_ ~fields = Wrapper_struct {name; module_; fields}
 let elements ~source elements = Elements {source; elements}
 let seq l = Seq l
 
@@ -125,7 +140,7 @@ let rec is_empty = function
   | Elements {elements; _} -> is_empty elements
   | Seq l | Joined l -> List.for_all is_empty l
   | Top_level _ -> false
-  | Module {enclosure = Struct _; _} -> false
+  | Module {enclosure = Struct _; _} | Wrapper_struct _ -> false
   | Module {fields; members; _} -> members = [] && is_empty fields
   | Concept_group _ -> false
   | Declarations l -> l = []
@@ -144,6 +159,7 @@ let rec has_top_level = function
   | Top_level _ -> true
   | Seq l | Joined l -> List.exists has_top_level l
   | Module {fields; members; _} -> List.exists has_top_level (fields :: members)
+  | Wrapper_struct {fields; _} -> has_top_level fields
   | Concept_group {concepts; _} -> List.exists has_top_level concepts
 
 let module_ enclosure ?(fields = empty) b =
@@ -163,6 +179,7 @@ let rec needs = function
   | Seq l | Joined l -> List.fold_left (fun acc t -> Needs.union acc (needs t)) Needs.none l
   | Top_level t -> needs t
   | Module {fields; members; _} -> needs (Seq (fields :: members))
+  | Wrapper_struct {fields; _} -> needs fields
   | Concept_group {concepts; _} -> needs (Seq concepts)
 
 type declared = Declared of declaration | Struct_of of ModPath.t
@@ -172,7 +189,7 @@ let rec declared = function
   | Unprinted {declaration; _} -> [Declared declaration]
   | Elements {elements = t; _} | Top_level t -> declared t
   | Seq l | Joined l | Concept_group {concepts = l; _} -> List.concat_map declared l
-  | Module {module_; enclosure = Struct _; _} -> [Struct_of module_]
+  | Module {module_; enclosure = Struct _; _} | Wrapper_struct {module_; _} -> [Struct_of module_]
   | Module {fields; members; enclosure = Out_of_line | In_enclosing_scope; _} ->
     List.concat_map declared (fields :: members)
 
@@ -206,7 +223,7 @@ let starts_with_doc_comment t =
         | Declarations _ -> None
         | Seq l | Joined l -> first l
         | Top_level t -> first [t]
-        | Module {enclosure = Struct _; _} -> Some false
+        | Module {enclosure = Struct _; _} | Wrapper_struct _ -> Some false
         | Module {fields; members; _} -> first (fields :: members)
         | Concept_group {position; concepts} -> first [laid_out position concepts]
       in
@@ -247,8 +264,33 @@ let rec to_pp = function
         ++ (if members = [] then mt () else fnl ())
         ++ str "};")
     | Out_of_line | In_enclosing_scope -> inside )
+  | Wrapper_struct _ -> invalid_arg "Cpp_ast.to_pp: a wrapper struct whose body is not filled in"
   | Concept_group {position; concepts} -> to_pp (laid_out position concepts)
   | Declarations l -> Pp.(prlist_with_sep fnl (fun d -> d) l ++ cut2 ())
+
+let rec wrapper_structs = function
+  | Text _ | Decl _ | Unprinted _ | Declarations _ -> []
+  | Elements {elements = t; _} | Top_level t -> wrapper_structs t
+  | Seq l | Joined l | Concept_group {concepts = l; _} -> List.concat_map wrapper_structs l
+  | Module {fields; members; _} -> List.concat_map wrapper_structs (fields :: members)
+  | Wrapper_struct {name; fields; _} -> wrapper_structs fields @ [name]
+
+let rec fill_wrappers bodies t =
+  let fill = fill_wrappers bodies in
+  match t with
+  | Text _ | Decl _ | Unprinted _ | Declarations _ -> t
+  | Elements e -> Elements {e with elements = fill e.elements}
+  | Top_level t -> Top_level (fill t)
+  | Seq l -> Seq (List.map fill l)
+  | Joined l -> Joined (List.map fill l)
+  | Concept_group g -> Concept_group {g with concepts = List.map fill g.concepts}
+  | Module m -> Module {m with fields = fill m.fields; members = List.map fill m.members}
+  | Wrapper_struct {name; module_ = wrapped; fields} -> (
+    match List.assoc_opt name bodies with
+    | Some b when ModPath.equal b.body_module wrapped ->
+      module_ (Struct {head = {template = []; name = Pp.str name; base = None}; layout = Block}) ~fields:(fill fields) b
+    | Some _ -> invalid_arg ("Cpp_ast.fill_wrappers: the body given for " ^ name ^ " is another module's")
+    | None -> invalid_arg ("Cpp_ast.fill_wrappers: no body for the wrapper struct " ^ name) )
 
 type template = {name : string; homed : bool; holder : bool; declaration : Pp.t}
 type forward = {struct_ : string; forward_declaration : Pp.t}
@@ -262,6 +304,7 @@ type translation_unit = {
   body : t;
   deferred_definitions : t list;
   deferred_members : t list;
+  wrapper_bodies : (string * body) list;
 }
 type scheduled = {opening : Pp.t; body : t list}
 
@@ -282,7 +325,7 @@ let sections u =
 (* The chunks are numbered in the order written, in both passes: a chunk at
    namespace scope and a member of a struct each take the next number. *)
 let schedule ~templates ~forwards u =
-  let u_sections = sections u in
+  let u_sections = List.map (fill_wrappers u.wrapper_bodies) (sections u) in
   let template_slots = Hashtbl.create 16 and placed_in = Hashtbl.create 16 in
   let struct_slot = Hashtbl.create 16 and defined_in = Hashtbl.create 16 in
   let count = ref 0 in
@@ -303,6 +346,7 @@ let schedule ~templates ~forwards u =
       let defined = first_uses ~top:(Some k) ~member ~scope t in
       Hashtbl.replace defined_in k defined;
       defined
+    | Wrapper_struct _ -> invalid_arg "Cpp_ast.schedule: a wrapper struct whose body is not filled in"
     | Module {module_; enclosure; fields; members} ->
       let defined = first_uses ~top ~member ~scope fields in
       let scope = match enclosure with Struct _ -> Some module_ | Out_of_line | In_enclosing_scope -> scope in
@@ -365,6 +409,7 @@ let schedule ~templates ~forwards u =
           m.members
       in
       Module {m with fields; members}
+    | Wrapper_struct _ -> invalid_arg "Cpp_ast.schedule: a wrapper struct whose body is not filled in"
   in
   let body = List.map placed u_sections in
   let prologue =
@@ -373,25 +418,61 @@ let schedule ~templates ~forwards u =
   let opening = match templates_due None with [] -> prologue | l -> Pp.(prologue ++ to_pp (Declarations l)) in
   {opening; body}
 
-(* Every declaration is printed before any text is joined: whether a member
-   opens a doc comment decides the break in front of it. *)
-let print_tree ~write t =
-  let rec printed spelling = function
+(* [t] with each declaration not yet printed replaced by [f] of it and how
+   the innermost group or struct around it spells it. *)
+let map_leaves f t =
+  let rec map spelling = function
     | (Text _ | Decl _ | Declarations _) as t -> t
     | Unprinted u -> (
       match spelling with
-      | Some spelling -> Decl {text = write spelling u; needs = u.needs}
-      | None -> invalid_arg "Cpp_ast.print: a declaration written where nothing says how it is spelled" )
-    | Elements {source; elements} -> printed (Some (Element_of source)) elements
-    | Seq l -> Seq (List.map (printed spelling) l)
-    | Joined l -> Joined (List.map (printed spelling) l)
-    | Concept_group g -> Concept_group {g with concepts = List.map (printed spelling) g.concepts}
-    | Top_level t -> Top_level (printed spelling t)
+      | Some spelling -> f spelling u
+      | None -> invalid_arg "Cpp_ast: a declaration written where nothing says how it is spelled" )
+    | Elements {source; elements} -> Elements {source; elements = map (Some (Element_of source)) elements}
+    | Seq l -> Seq (List.map (map spelling) l)
+    | Joined l -> Joined (List.map (map spelling) l)
+    | Concept_group g -> Concept_group {g with concepts = List.map (map spelling) g.concepts}
+    | Top_level t -> Top_level (map spelling t)
     | Module m ->
       let spelling = match m.enclosure with Struct _ -> Some (Member_of m.module_) | Out_of_line | In_enclosing_scope -> None in
-      Module {m with fields = printed spelling m.fields; members = List.map (printed spelling) m.members}
+      Module {m with fields = map spelling m.fields; members = List.map (map spelling) m.members}
+    | Wrapper_struct _ -> invalid_arg "Cpp_ast: a wrapper struct whose body is not filled in"
   in
-  to_pp (printed None t)
+  map None t
+
+let resolve_declaration resolve declaration =
+  let module_ref (m : module_ref) = {m with name = Resolved (resolve.module_name m.path)} in
+  let global_ref resolve (g : global_ref) = {g with name = Resolved (resolve g.global)} in
+  let concept : asserted -> asserted = function
+    | Of_class g -> Of_class (global_ref resolve.class_concept g)
+    | Of_module_type _ as c -> c
+  in
+  let subject : subject -> subject = function
+    | Module m -> Module (module_ref m)
+    | Instance i -> Instance {i with instance = global_ref resolve.type_name i.instance}
+  in
+  let module_expr = function
+    | Module_named m -> Module_named (module_ref m)
+    | Applied {functor_; args} -> Applied {functor_ = module_ref functor_; args = List.map module_ref args}
+  in
+  match declaration with
+  | Module_alias a -> Module_alias {a with target = module_expr a.target}
+  | Functor_alias a ->
+    Functor_alias {a with functor_ = module_ref a.functor_; params = List.map (fun (p, m) -> (p, module_ref m)) a.params}
+  | Derived_functor a -> Derived_functor {a with base = module_expr a.base}
+  | Assertion a -> Assertion {concept = concept a.concept; subject = subject a.subject}
+  | Global_alias (Alias_of_module m) -> Global_alias (Alias_of_module (module_ref m))
+  | Global_alias (Alias_of_type _)
+  | Declaration _ | Absorbed _ | Fields _ | Modtype_concept _ ->
+    declaration
+
+let resolve_tree ~resolve t =
+  map_leaves (fun spelling u -> Unprinted {u with declaration = resolve_declaration (resolve spelling) u.declaration}) t
+
+let resolve ~resolve s = {s with body = List.map (resolve_tree ~resolve) s.body}
+
+(* Every declaration is printed before any text is joined: whether a member
+   opens a doc comment decides the break in front of it. *)
+let print_tree ~write t = to_pp (map_leaves (fun spelling u -> Decl {text = write spelling u; needs = u.needs}) t)
 
 let print ~write s = Pp.(s.opening ++ List.fold_left (fun acc t -> acc ++ print_tree ~write t) (mt ()) s.body)
 
