@@ -1151,9 +1151,13 @@ type enter_rewrite_ctx = {
           not stored in continuation frames *)
   er_rematerialized : (Id.t * cpp_stmt) list;
       (** Locals in scope bound to a value that mentions no local and calls
-          nothing -- an alias of a static member, say.  A continuation binds
-          them again rather than saving them in its frame, where a type the
-          binding left to [auto] has no spelling. *)
+          nothing -- an alias of a static member, say: the C++'s account of
+          what a continuation may bind again, which under [CRANE_CHECK_IR]
+          must be the recursion plan's ({!rebuilt_binders}). *)
+  er_bound : (Id.t * cpp_stmt) list;
+      (** The locals the machine's body has declared so far, innermost
+          first, each with the statement declaring it: what a continuation
+          binds again of what its frame does not keep. *)
   er_entered_by : (Recursion_plan.call -> bool) option;
       (** The calls that enter the machine, as the recursion plan names
           what a point resumes after; [None] where the plan does not
@@ -1246,6 +1250,57 @@ let with_rematerialized ctx stmt =
     {ctx with er_rematerialized = ctx.er_rematerialized @ [(id, stmt)]}
   | _ -> ctx
 
+(** [bound] once [stmt] has run ({!enter_rewrite_ctx.er_bound}). *)
+let bound_after bound = function Sasgn (id, Declare _, _) as stmt -> (id, stmt) :: bound | _ -> bound
+
+(** The Core binder the local [x] stands for, if any. *)
+let binder_of ctx x = Option.flatten (List.assoc_opt x ctx.er_binders)
+
+(** Whether the local [x] stands for the Core binder [b]. *)
+let stands_for ctx b x = match binder_of ctx x with Some b' -> Core_binder.equal b b' | None -> false
+
+(** Whether the Core binder [b] is in scope wherever the machine runs: a
+    parameter no re-entry changes. *)
+let available ctx b = Id.Set.exists (stands_for ctx b) ctx.er_invariant_params
+
+(** The binders the point [p] has in scope that its continuation binds again
+    rather than keeps: each recomputable from binders {!available} or so
+    bound in turn ({!Recursion_plan.recomputable}). *)
+let rebuilt_binders ctx (p : Recursion_plan.resume) =
+  List.fold_left
+    (fun rebuilt (c : Recursion_plan.recomputable) ->
+      if List.for_all (fun b -> available ctx b || List.exists (Core_binder.equal b) rebuilt) c.from then
+        c.recomputed :: rebuilt
+      else rebuilt )
+    [] p.recomputable
+
+(** Whether the local [x] is declared as a reference to locals standing for
+    the binder it stands for too -- a pattern variable read through the
+    pointer its field holds: another spelling of a value a frame keeps by
+    the local it names. *)
+let respells ctx x =
+  match (List.assoc_opt x ctx.er_bound, binder_of ctx x) with
+  | Some (Sasgn (_, Declare (ty, _), e)), Some b ->
+    is_reference_type ty && free_vars_expr e <> [] && List.for_all (stands_for ctx b) (free_vars_expr e)
+  | _ -> false
+
+(** The declarations, in the order they were made, that bind again the
+    locals of [reads] a continuation does not have -- not [kept] by its
+    frame -- with those they read in turn. *)
+let rebuilt_bindings ctx ~kept reads =
+  let rec need needed v =
+    if List.exists (Id.equal v) needed || kept v then needed
+    else
+      match List.assoc_opt v ctx.er_bound with
+      | Some (Sasgn (_, _, e)) -> List.fold_left need (v :: needed) (free_vars_expr e)
+      | Some _ | None -> needed
+  in
+  let needed = List.fold_left need [] reads in
+  List.fold_left
+    (fun found (v, stmt) ->
+      if List.exists (Id.equal v) needed && not (List.mem_assoc v found) then (v, stmt) :: found else found )
+    [] ctx.er_bound
+
 (** [binders] once [stmt] has run: the local it declares joins them. *)
 let declared_binders binders = function
   | Sasgn (id, Declare (_, b), _) | Sdecl (id, _, b) | Sblock_custom (_, _, id, _, _, _, b) -> (id, b) :: binders
@@ -1253,47 +1308,35 @@ let declared_binders binders = function
   | Sbind (ids, _) -> List.map (fun id -> (id, None)) ids @ binders
   | _ -> binders
 
-(** The locals of [binders], a scope, innermost first, that the planned
-    resume point [p] keeps across its call: for each binder it finds live,
-    the innermost local in scope standing for it that the frame carries --
-    one [kept_elsewhere] does not leave out, such as a reference to a field
-    the handler binds again from the field, which the frame carries
-    instead.  Under [CRANE_CHECK_IR] every binder it finds live has a local
-    in scope standing for it: the frame would otherwise lose it. *)
-let planned_frame binders ~kept_elsewhere (p : Recursion_plan.resume) =
-  let stands_for b x =
-    match List.assoc_opt x binders with
-    | Some (Some b') -> Core_binder.equal b b'
-    | Some None | None -> false
-  in
+(** The locals of the scope of [ctx] that the planned resume point [p]
+    keeps across its call, in the order the Core binds them: for each binder
+    it finds live, the innermost local in scope standing for it that
+    [keeps] picks.  Under [CRANE_CHECK_IR] every binder it finds live has a
+    local in scope standing for it: the frame would otherwise lose it. *)
+let planned_frame ctx ~keeps (p : Recursion_plan.resume) =
   List.filter_map
     (fun b ->
-      match List.filter (fun (x, _) -> stands_for b x) binders with
+      match List.filter (fun (x, _) -> stands_for ctx b x) ctx.er_binders with
       | [] ->
         Probe.violation "frame plan"
           (Pp.str "a binder the recursion plan finds live across a call has no local in scope standing for it");
         None
-      | standing -> List.find_map (fun (x, _) -> if kept_elsewhere x then None else Some x) standing )
+      | standing -> List.find_map (fun (x, _) -> if keeps b x then Some x else None) standing )
     p.live
 
-(** The frame the plan has for the call whose result [tgt] binds to [id],
-    in the order the Core binds what it keeps: the {!planned_frame} of the
-    one point resuming there, which its
-    binder's site picks out from its siblings ({!Core_binder.site}).  [None],
-    a violation, where the result stands for no Core binder or the plan has
-    no one point for it.  [kept_elsewhere] are the locals the frame leaves
-    out by design: what the handler rebuilds, the machine's entries, the
-    parameters no re-entry changes. *)
-let planned_frame_at ctx id tgt ~kept_elsewhere =
+(** The one point the plan resumes at once the call whose result [tgt] binds
+    to [id] returns, which its binder's site picks out from its siblings
+    ({!Core_binder.site}).  [None], a violation, where the result stands for
+    no Core binder or the plan has no one point for it. *)
+let planned_point ctx id tgt =
   let binder =
     match tgt with
     | Declare (_, b) -> b
-    | Existing -> Option.flatten (List.assoc_opt id ctx.er_binders)
+    | Existing -> binder_of ctx id
     | Declare_static _ -> None
   in
   match Option.map Recursion_plan.resumes_binding binder with
-  | Some [p] ->
-    Some (p, planned_frame ctx.er_binders ~kept_elsewhere:(fun x -> Id.equal x id || kept_elsewhere x) p)
+  | Some [p] -> Some p
   | Some points ->
     Probe.violation "frame plan"
       Pp.(str "the recursion plan has " ++ int (List.length points) ++ str " resume points for a call's result");
@@ -1517,9 +1560,12 @@ and rewrite_enter_stmts ctx stmts =
        reads, whose handler binds [id] to the call's result and runs the
        rest, pushed under [enter], the call's re-entry. *)
     let make_cont_handler ~result enter =
-      (* The bindings the rest reads, with the ones they read in turn, in
-         the order they were made. *)
-      let remat =
+      (* The C++'s own account of the frame, which the plan's must agree
+         with under [CRANE_CHECK_IR], and is the frame where the plan has
+         none: the bindings the rest reads that bind something calling
+         nothing ({!with_rematerialized}), with the ones they read in turn,
+         in the order they were made, bound again rather than kept. *)
+      let cpp_rebuilt =
         let needed =
           List.fold_right
             (fun (cid, st) needed ->
@@ -1531,7 +1577,7 @@ and rewrite_enter_stmts ctx stmts =
         List.filter (fun (cid, _) -> List.exists (Id.equal cid) needed) ctx.er_rematerialized
       in
       (* A name heading a recursive call is the machine's entry, not a value
-         the continuation needs: the call becomes a frame push. *)
+         the continuation reads: the call becomes a frame push. *)
       let entry_heads =
         let heads = ref [] in
         let rec fe e =
@@ -1548,13 +1594,14 @@ and rewrite_enter_stmts ctx stmts =
       let remat_free =
         List.concat_map
           (fun (_, st) -> match st with Sasgn (_, _, e) -> free_vars_expr e | _ -> [])
-          remat
+          cpp_rebuilt
         |> List.filter (fun v -> not (List.exists (fun (_, tp) -> Id.equal tp v) tparams))
       in
       let kept_elsewhere x =
         Id.Set.mem x ctx.er_invariant_params
-        || List.mem_assoc x remat
+        || List.mem_assoc x cpp_rebuilt
         || List.exists (Id.equal x) entry_heads
+        || Id.equal x id
       in
       let read =
         filter_cont_vars ~exclude_id:id
@@ -1563,10 +1610,38 @@ and rewrite_enter_stmts ctx stmts =
              rest_free remat_free)
         |> List.filter (fun cid -> not (kept_elsewhere cid))
       in
-      (* Which Core values cross the call, and in what order the frame keeps
-         them, is the plan's. *)
-      let planned = planned_frame_at ctx id tgt ~kept_elsewhere in
+      (* Which Core values cross the call, in what order the frame keeps
+         them, and which it binds again instead -- those no re-entry changes,
+         and those recomputable from them -- is the plan's.  Of a value kept
+         the frame keeps the local holding it, not one respelling it.  Under
+         [CRANE_CHECK_IR] the C++'s own reading must agree. *)
+      let planned =
+        Option.map
+          (fun p ->
+            let rebuilt = rebuilt_binders ctx p in
+            let dropped b = available ctx b || List.exists (Core_binder.equal b) rebuilt in
+            (p, planned_frame ctx ~keeps:(fun b x -> not (dropped b || Id.equal x id || respells ctx x)) p) )
+          (planned_point ctx id tgt)
+      in
+      if Probe.checking () then
+        Option.iter
+          (fun (p, frame) ->
+            if not (List.equal Id.equal frame (planned_frame ctx ~keeps:(fun _ x -> not (kept_elsewhere x)) p)) then
+              Probe.violation "frame plan" (Pp.str "a frame keeps other locals than the C++ finds it cannot bind again") )
+          planned;
       let cont_vars = frame_locals ctx (Option.map snd planned) read in
+      (* What the rest reads of what the frame does not keep is bound again
+         in the handler. *)
+      let remat =
+        match planned with
+        | Some _ ->
+          let kept v = List.exists (Id.equal v) cont_vars || Id.equal v id || Id.equal v id_result in
+          let rebuilt = rebuilt_bindings ctx ~kept rest_free in
+          if Probe.checking () && not (List.equal Id.equal (List.map fst rebuilt) (List.map fst cpp_rebuilt)) then
+            Probe.violation "frame plan" (Pp.str "a continuation binds again other locals than the C++ finds it can");
+          rebuilt
+        | None -> cpp_rebuilt
+      in
       (* A local is kept as a pointer where what follows passes it on, as
          it is, for a parameter the machine's entry takes a pointer for: a
          copy in the frame would die with the handler that pushed the
@@ -1805,6 +1880,7 @@ and rewrite_enter_stmts ctx stmts =
     rewrite_enter_lambda_return ctx stmt
     @ rewrite_enter_stmts
         { (with_rematerialized ctx stmt) with
+          er_bound = bound_after ctx.er_bound stmt;
           er_env = updated_env;
           er_binders = declared_binders ctx.er_binders stmt;
           er_aliased = aliased_after ctx.er_aliased stmt }
@@ -2909,6 +2985,7 @@ let transform_nontail ?(fn_name : string option) ?loop ?varying ?adopted ?entere
                er_seen_frame_names = Hashtbl.create 16;
                er_invariant_params = invariant_params;
                er_rematerialized = [];
+               er_bound = [];
                er_entered_by = entered_by;
                er_entered = entered;
                er_points_into = points_into;

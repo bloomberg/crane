@@ -409,7 +409,9 @@ let decl_of_term r a t =
   (* An instance of a singleton class stays an instance, whose method the
      fixpoint is. *)
   | MLfix (0, _, [|c|], _, _) when singleton_instance_class r = None ->
-    let c = ast_subst (MLglob (Mlutil.self_reference r)) c in
+    (* Each call of itself is a use of its own, told apart from the others
+       by its occurrence. *)
+    let c = Mlutil.ast_subst_each (fun () -> MLglob (Mlutil.self_reference r)) c in
     unify_binders_with_signature t c;
     Dfix [{fd_ref = r; fd_body = c; fd_type = t}]
     (* The [] ML type args are safe: gen_expr reads template args from the

@@ -1608,12 +1608,12 @@ let renamed occ = function MLrel (j, _) -> MLrel (j, occ) | e -> e
 (** {2 Substitution. [ml_subst e t] substitutes [e] for [Rel 1] in [t]. Lifting
     (of one binder) is done at the same time} *)
 
-let ast_subst e =
+let ast_subst_each make =
   let rec subst n = function
     | MLrel (i, occ) as a ->
       let i' = i - n in
       if Int.equal i' 1 then
-        renamed occ (ast_lift n e)
+        renamed occ (ast_lift n (make ()))
       else if i' < 1 then
         a
       else
@@ -1621,6 +1621,8 @@ let ast_subst e =
     | a -> ast_map_lift subst n a
   in
   subst 0
+
+let ast_subst e = ast_subst_each (fun () -> e)
 
 (** {2 Generalized substitution. [gen_subst v d t] applies to [t] the
     substitution coded in the [v] array: [(Rel i)] becomes [v.(i-1)]. [d] is the

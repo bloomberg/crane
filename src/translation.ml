@@ -96,7 +96,7 @@ let local_fix_stmts selves ~binders ~self_passing impl_stmts funs_with_params =
     match
       Control_to_legacy_minicpp.local_loop ~owner:(!tctx).body_owner ~function_:(!tctx).body_function
         ~lifted:(!tctx).lifted_fixpoints ~member
-        ~tparams:(get_current_template_head ()) ~name:fix_id ~self_passing lam
+        ~tparams:(get_current_template_head ()) ~name:fix_id lam
     with
     | Some loop -> [loop]
     | None -> self_passing () )
@@ -6836,6 +6836,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
               slot
             | _ -> cod
           in
+          (* The call the lambda makes is the application completed, made of
+             the global's use as a saturated one is. *)
           let call =
             (* The number of arguments the callee itself takes.  An
                inline-custom template stops at its last [%aN] placeholder:
@@ -6867,11 +6869,11 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
               (* A call that fills the callee exactly yields the lambda's
                  result: recorded, so a mapping's [%ret] can name it. *)
               let yields = if surplus = [] && cod <> Tvoid then Some cod else None in
-              let filled = mk_call ?yields cglob (args @ fill) in
+              let filled = made_of (Global_use.occurrence use) (mk_call ?yields cglob (args @ fill)) in
               (* The surplus goes to the result in the groups its spelling
                  takes them in ({!call_result_site}). *)
               apply_at_site (call_result_site id) filled surplus
-            | None -> mk_call cglob call_args
+            | None -> made_of (Global_use.occurrence use) (mk_call cglob call_args)
           in
           let ret_ty, body =
             if cod = Tvoid then
