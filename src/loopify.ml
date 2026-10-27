@@ -977,15 +977,6 @@ let modulo_cons_loop ~jumped ~varying ?parts ~shapes ~tparams check (f : dfun) p
     in
     if classify (fn_checker names) loop = No_recursion then Some loop else None
 
-let checker_frame_machine ~partner ?parts ~tparams (f : dfun) params body =
-  let r = fst f.df_path.dp_outer in
-  let check = fn_checker (dfun_path_list f.df_path) in
-  let body = expose_tail_calls check (try_inline_mutual_into ~partner r body) in
-  let adopted = find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body in
-  (apply_nontail_loopification ~fn_name:(fundef_display_name f.df_path) ?adopted ?entered_by:(entered_by_definition r)
-     ?loop:(function_loop r) ~binders:f.df_binders ?parts check tparams params f.df_ret body )
-    .nt_body
-
 (** Whether the body [ad] the machine of the function [r] adopts is the
     loop [entry] its ControlIR enters: the local fixpoint's function, or
     the partner whose calls are run in place. *)
@@ -998,23 +989,41 @@ let adopts_entry r ad (entry : Control_ir.Loop.t) =
     | None -> false )
   | (Fixpoint _ | Invocations _), _ -> false
 
+let checker_frame_machine ~partner ?parts ~tparams (f : dfun) params body =
+  let r = fst f.df_path.dp_outer in
+  let check = fn_checker (dfun_path_list f.df_path) in
+  let body = expose_tail_calls check (try_inline_mutual_into ~partner r body) in
+  (* What the machine adopts is its ControlIR's entry, as {!frame_machine}
+     has it. *)
+  let entered ad =
+    match Option.bind (function_loop r) Lower_control.loop with
+    | Some (Loop l) -> List.exists (fun (e : Control_ir.Term.loop) -> adopts_entry r ad e.loop) (Control_ir.entries l.body)
+    | Some _ | None -> false
+  in
+  let adopted =
+    Option.filter entered
+      (find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body)
+  in
+  (apply_nontail_loopification ~fn_name:(fundef_display_name f.df_path) ?adopted ?entered_by:(entered_by_definition r)
+     ?loop:(function_loop r) ~binders:f.df_binders ?parts check tparams params f.df_ret body )
+    .nt_body
+
 let frame_machine ~loop ?entry ?varying ?parts ~tparams check (f : dfun) params body =
   let names = dfun_path_list f.df_path in
   let r = fst f.df_path.dp_outer in
-  let adopted = find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body in
-  (* A body found where ControlIR has no entry is one the transform does
-     not adopt -- a partner yielding another type than the function's --
-     where the calls entering the machine are its loop's Continues. *)
+  let found = find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body in
+  (* What the machine adopts is its ControlIR's entry: a body found where
+     there is none -- a partner yielding another type than the function's --
+     is left where it is, and the calls entering the machine are its loop's
+     Continues. *)
+  let adopted = if Option.has_some entry then found else None in
   let as_planned =
     match (adopted, entry) with
-    | (None | Some _), None -> true
+    | _, None -> true
     | Some ad, Some entry -> adopts_entry r ad entry
     | None, Some _ -> false
   in
-  let unadopted entries =
-    Option.has_some entry || Option.is_empty adopted || Option.is_empty (machine_disagreement loop entries)
-  in
-  let survived = Option.map decline_reason adopted in
+  let survived = Option.map decline_reason found in
   let declined = Error (Left survived) in
   if has_recursive_branch_dependency check body then Error (Declined branch_dependency)
   else if not as_planned then declined
@@ -1025,8 +1034,7 @@ let frame_machine ~loop ?entry ?varying ?parts ~tparams check (f : dfun) params 
           transform_nontail ~fn_name:(fundef_display_name f.df_path) ~loop ?varying ?adopted ?entered_by:(entered_by_definition r)
             ~entered ~binders:f.df_binders ?parts check tparams params f.df_ret body )
     with
-    | Some (made, entries) when classify survivors made = No_recursion ->
-      if unadopted entries then Ok (made, survived) else declined
+    | Some (made, _) when classify survivors made = No_recursion -> Ok (made, survived)
     | Some (made, entries) when not (has_recursive_branch_dependency survivors body) ->
       (* A machine leaving a call behind is the machine of its ControlIR
          where the calls entering it are its loop's: those it leaves are

@@ -96,8 +96,9 @@ val tail_loop :
     normalized program [p] takes.  A function generated as a method,
     [methods] says, adopts nothing into its machine, as Loopify lowers a
     method ({!Loopify.transform_method_own}); nor does a machine adopt a
-    partner returning another type than its function: a machine has one
-    result. *)
+    fixpoint or a partner returning another type than its function -- told
+    apart with every abbreviation unfolded, as the C++ does not spell them
+    -- for a machine has one result. *)
 val lower : methods:(Names.GlobRef.t -> bool) -> Recursion_plan.t -> Core.normalized Core.program -> t
 
 (** Make [t] the extraction's, the one {!loop} reads. *)

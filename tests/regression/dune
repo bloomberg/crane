@@ -13554,3 +13554,13 @@
   (alias runtest)
   (deps local_tail_loop_calls_back.t.exe)
   (action (run ./local_tail_loop_calls_back.t.exe))))
+(subdir loopify_adopted_fix_alias_result
+ (rule
+  (targets loopify_adopted_fix_alias_result.t.exe)
+  (deps LoopifyAdoptedFixAliasResult.vo loopify_adopted_fix_alias_result.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_adopted_fix_alias_result.t.exe loopify_adopted_fix_alias_result.cpp loopify_adopted_fix_alias_result.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_adopted_fix_alias_result.t.exe)
+  (action (run ./loopify_adopted_fix_alias_result.t.exe))))

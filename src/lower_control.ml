@@ -224,16 +224,35 @@ let tail_loop ?(inlined = fun _ -> None) ?(modulo_cons = false) ?(frames = false
           scope }
   | Some (Fixpoint _) | None -> lower own 0 body
 
-(* The fixpoints in [e] whose occurrence [wanted] holds. *)
+(* The fixpoints in [e] whose occurrence [wanted] holds, with the types of
+   their functions. *)
 let rec fixpoints wanted acc e =
   let acc =
     match e with
-    | MLfix (_, _, funs, _, occ) when List.exists (Occurrence.equal occ) wanted -> (occ, funs) :: acc
+    | MLfix (_, ids, funs, _, occ) when List.exists (Occurrence.equal occ) wanted -> (occ, Array.map snd ids, funs) :: acc
     | _ -> acc
   in
   let acc = ref acc in
   Mlutil.ast_iter (fun e -> acc := fixpoints wanted !acc e) e;
   !acc
+
+(* Whether [a] and [b] are one type once every abbreviation is unfolded,
+   whatever [Type Expand] says the C++ spells, and a variable of the
+   definition's scheme is read alike whether it is written as the scheme's
+   or, under a binder inside it, as rigid. *)
+let same_type a b =
+  let rec unfold = function
+    | Tmeta {contents = Some t} -> unfold t
+    | Tglob ((Names.GlobRef.ConstRef kn as r), args, a) -> (
+      match Table.lookup_typedef_unchecked kn with
+      | Some t -> unfold (Mlutil.type_subst_list args t)
+      | None -> Tglob (r, List.map unfold args, a) )
+    | Tglob (r, args, a) -> Tglob (r, List.map unfold args, a)
+    | Tapp (i, args) -> Tapp (i, List.map unfold args)
+    | Tarr (a, b) -> Tarr (unfold a, unfold b)
+    | t -> t
+  in
+  Mlutil.eq_ml_type (Mlutil.rigidify (unfold a)) (Mlutil.rigidify (unfold b))
 
 let lower ~methods plan program =
   let struc = Core.structure program in
@@ -274,15 +293,21 @@ let lower ~methods plan program =
      that the partner run in place of the calls the plan has it adopt,
      read as generated ({!Loopify_frame.find_adopted}), where it returns
      what [r] does: a machine has one result. *)
-  let returns fd = Ml_type_util.ml_return_type (Mlutil.type_simpl fd.fd_type) in
+  let returns ty = Ml_type_util.ml_return_type (Mlutil.type_simpl ty) in
+  let yields_own r ty =
+    match Names.GlobRef.Map_env.find_opt r !defs with
+    | Some own -> same_type (returns own.fd_type) (returns ty)
+    | None -> false
+  in
   let adoption r inner =
-    let single (_, funs) = Array.length funs = 1 in
-    match List.find_opt (fun o -> List.exists single (fixpoints [o] [] inner)) (Recursion_plan.adoptable_in plan r) with
-    | Some o -> Some (Fixpoint o)
+    let single (_, _, funs) = Array.length funs = 1 in
+    let first o = List.find_opt single (fixpoints [o] [] inner) in
+    match List.find_map first (Recursion_plan.adoptable_in plan r) with
+    | Some (o, types, _) -> if yields_own r types.(0) then Some (Fixpoint o) else None
     | None ->
       Option.bind (Recursion_plan.adopted_partner_in plan r) (fun (i : Recursion_plan.inlining) ->
-          match (Names.GlobRef.Map_env.find_opt r !defs, Names.GlobRef.Map_env.find_opt i.partner !defs) with
-          | Some own, Some fd when Mlutil.eq_ml_type (returns own) (returns fd) ->
+          match Names.GlobRef.Map_env.find_opt i.partner !defs with
+          | Some fd when yields_own r fd.fd_type ->
             let parameters, body = read ~builds:false fd in
             Some (Partner {partner = i.partner; invoked = i.invoked; parameters; body})
           | _ -> None )
@@ -326,7 +351,9 @@ let lower ~methods plan program =
               in
               let target = Loop.Member (occ, 0) in
               add target parameters (tail_loop ~modulo_cons:builds ~frames ~effects ~target ~callee inner) )
-            (List.rev (fixpoints (locals @ local_modulo_cons @ frame_locals) [] body)) )
+            (List.rev_map
+               (fun (occ, _, funs) -> (occ, funs))
+               (fixpoints (locals @ local_modulo_cons @ frame_locals) [] body) ) )
         (Mlutil.term_defs d) )
     (fun _ -> ())
     (fun _ -> ())

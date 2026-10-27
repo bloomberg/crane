@@ -2784,35 +2784,29 @@ let transform_nontail ?(fn_name : string option) ?loop ?varying ?adopted ?entere
           { ad with
             ad_captures = List.filter (fun id -> not (is_tparam id)) ad.ad_captures }
         in
-        (* A body yielding another type -- the inlined partner of a mutual
-           recursion over two types, [dbl_md] inside [dbl_e] -- cannot share
-           the one [_result]. *)
-        let yields_other =
-          match ad.ad_ret with
-          | Some t -> (
-            let t = strip_ref_and_const_type t
-            and r = strip_ref_and_const_type ret_ty in
-            match (t, r) with
-            | Tdecay (Texpr_type _), _ | _, Tdecay (Texpr_type _) -> false
-            | _ -> ( try t <> r with Invalid_argument _ -> false ) )
-          | None -> false
-        in
-        (* A parameter only a generic lambda can declare ([auto &&]) is not a
-           type a frame can store it at. *)
+        (* The body yields what the function does: ControlIR enters no other
+           ({!Lower_control.lower}).  A parameter only a generic lambda
+           can declare ([auto &&]), or a capture of a type the function
+           cannot name, is not one a frame can store, which no entry in the
+           corpus has: under [CRANE_CHECK_IR] a violation. *)
         let unnameable_param =
           List.exists
             (fun (_, ty) -> strip_ref_and_const_type ty = Tauto)
             ad.ad_params
         in
-        if yields_other || unnameable_param then None
-        else
         let env = collect_type_env body @ params in
         let capture_params =
           List.filter_map
             (fun id -> Option.map (fun ty -> (id, ty)) (List.assoc_opt id env))
             ad.ad_captures
         in
-        if List.length capture_params <> List.length ad.ad_captures then None
+        if unnameable_param || List.compare_lengths capture_params ad.ad_captures <> 0 then begin
+          Probe.violation "control lowering"
+            Pp.(
+              str "the machine of " ++ str (Option.default "a function" fn_name)
+              ++ str " cannot store what " ++ str ad.ad_what ++ str ", which its ControlIR enters, takes" );
+          None
+        end
         else Some (ad, capture_params) )
   in
   let check =
