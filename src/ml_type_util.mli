@@ -809,6 +809,9 @@ val hkt_arg_ml_tvar_arities : Miniml.ml_type list -> (int * int) list
     it is erased to [std::any] and recovered at the call. *)
 val result_is_index_only_tvar : Miniml.ml_type -> bool
 
+(** The variable {!result_is_index_only_tvar} finds, [Some n] for [Tvar n]. *)
+val index_only_result_tvar : Miniml.ml_type -> int option
+
 (** [explicit_tvar_prefix ~force_required cty] is how many leading template
     parameters of a signature of type [cty] a call must supply explicitly
     because the signature does not represent them. Only a leading run counts:

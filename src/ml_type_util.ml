@@ -1951,8 +1951,9 @@ let hkt_arg_ml_tvar_arities tys =
     Neither weaker shape qualifies.  A single-constructor inductive
     ([wrap A -> A]) fixes one index, so the function has one result type and a
     template parameter says it exactly.  And a variable the arguments also
-    carry outside an index position is deducible as usual. *)
-let result_is_index_only_tvar ml_ty =
+    carry outside an index position is deducible as usual.  The variable is
+    [Some n] for [Tvar n], [None] where the result is no such variable. *)
+let index_only_result_tvar ml_ty =
   let rec split acc = function
     | Miniml.Tarr (t1, t2) -> split (t1 :: acc) t2
     | Miniml.Tmeta {contents = Some t} -> split acc t
@@ -1990,8 +1991,10 @@ let result_is_index_only_tvar ml_ty =
       | t -> tvars_of elsewhere t
     in
     List.iter walk doms;
-    IntSet.mem n !as_index && not (IntSet.mem n !elsewhere)
-  | _ -> false
+    if IntSet.mem n !as_index && not (IntSet.mem n !elsewhere) then Some n else None
+  | _ -> None
+
+let result_is_index_only_tvar ml_ty = Option.has_some (index_only_result_tvar ml_ty)
 
 (** [explicit_tvar_prefix ~force_required cty] is how many of a signature's
     leading template parameters the signature does not represent, and which a

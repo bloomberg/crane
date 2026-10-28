@@ -536,6 +536,13 @@ let into_erased_return slot =
   | Some (Boxed kind) -> into_box kind slot
   | Some Native | None -> slot
 
+(** The type variable the definition whose body is being generated returns
+    boxed, its arguments carrying it only as a type index
+    ({!Ml_type_util.index_only_result_tvar}): [Some 1] in [eval : expr A ->
+    A]. *)
+let own_index_only_result () =
+  Option.bind (Option.bind (!tctx).body_owner find_type_opt) Ml_type_util.index_only_result_tvar
+
 (** Under [CRANE_CHECK_IR], that the variable at de Bruijn index [i] is one
     binder to both of the scopes translation keeps: [env], which names it, and
     the binder environment ({!current_lexenv}), which types it.  The two are
@@ -1475,6 +1482,12 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let result = if move_candidate then CPPmove var_expr else var_expr in
     if binder_is_boxed i then begin
       match expected_ty with
+      | Some (Tvar (Tv_index (n, _))) when own_index_only_result () = Some n ->
+        (* The definition returns this variable boxed, and nothing else spells
+           it: its template parameter is the caller's instantiation -- in a
+           machine the outermost call's -- not the type of a value read at
+           the variable at some other depth. *)
+        result
       | Some ty when not (prints_as_any ty) && ty <> Tvoid ->
         if resolves_to_any_type ty then result
         else
