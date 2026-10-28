@@ -91,8 +91,14 @@ val unprinted_names : Cpp_ast.declaration -> (Cpp_resolution.frame * Cpp_resolut
     [CRANE_CHECK_IR] it must need, printed there, what was planned for it
     where it was made. *)
 val print_unprinted :
-  modtype_concept:(names:Cpp_resolution.table -> params:ModPath.t list -> ModPath.t -> Modtype_concept.t -> Pp.t) ->
-  assertion:(Cpp_ast.assertion -> Pp.t) ->
+  modtype_concept:
+    (Cpp_state.render_ctx ->
+    names:Cpp_resolution.table ->
+    params:ModPath.t list ->
+    ModPath.t ->
+    Modtype_concept.t ->
+    Pp.t ) ->
+  assertion:(Cpp_state.render_ctx -> Cpp_ast.assertion -> Pp.t) ->
   Cpp_ast.unprinted ->
   Pp.t
 

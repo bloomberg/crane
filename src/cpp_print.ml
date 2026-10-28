@@ -4459,8 +4459,8 @@ let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
   let ctx = !render_ctx in
   let text, needs =
     match u.declaration with
-    | Modtype_concept {path; params; concept} -> (modtype_concept ~names:u.names ~params path concept, u.needs)
-    | Assertion a -> (assertion a, u.needs)
+    | Modtype_concept {path; params; concept} -> (modtype_concept ctx ~names:u.names ~params path concept, u.needs)
+    | Assertion a -> (assertion ctx a, u.needs)
     | Module_alias {name; target} -> (pp_module_alias ctx name target, u.needs)
     | Functor_alias {name; functor_; params} -> (pp_functor_alias name functor_ params, u.needs)
     | Derived_functor {template; name; base} -> (pp_derived_functor ctx template name base, u.needs)
