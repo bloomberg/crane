@@ -1,0 +1,168 @@
+#ifndef INCLUDED_INDEXED_FAMILY_DEEP_DESTRUCTOR
+#define INCLUDED_INDEXED_FAMILY_DEEP_DESTRUCTOR
+
+#include "crane_fn.h"
+#include "obj.h"
+#include <cstdint>
+#include <memory>
+#include <type_traits>
+#include <utility>
+#include <variant>
+
+/// Tearing down a deep value of a type-indexed family.
+///
+/// A plain inductive whose constructors hold children of its own type is
+/// destroyed iteratively: its destructor drains the children it owns into
+/// a worklist rather than recursing.  An indexed family -- expr, whose
+/// index a constructor fixes -- gets no such destructor, so destroying a
+/// succE chain recurses once per node and a chain a hundred thousand
+/// deep exhausts the stack.
+///
+/// Expected: stack overflow destroying the expr chain.  When fixed:
+/// prints ok.
+struct IndexedFamilyDeepDestructor {
+  struct expr {
+    // TYPES
+    struct Lit {
+      uint64_t a0;
+    };
+
+    struct Bl {
+      bool a0;
+    };
+
+    struct SuccE {
+      std::shared_ptr<expr> a0;
+    };
+
+    struct Ite {
+      std::shared_ptr<expr> a;
+      std::shared_ptr<expr> a1;
+      std::shared_ptr<expr> a2;
+    };
+
+    struct PairE {
+      std::shared_ptr<expr> a;
+      std::shared_ptr<expr> b;
+    };
+
+    struct FstE {
+      std::shared_ptr<expr> a;
+    };
+
+    using variant_t = std::variant<Lit, Bl, SuccE, Ite, PairE, FstE>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    expr() {}
+
+    explicit expr(Lit _v) : v_(std::move(_v)) {}
+
+    explicit expr(Bl _v) : v_(std::move(_v)) {}
+
+    explicit expr(SuccE _v) : v_(std::move(_v)) {}
+
+    explicit expr(Ite _v) : v_(std::move(_v)) {}
+
+    explicit expr(PairE _v) : v_(std::move(_v)) {}
+
+    explicit expr(FstE _v) : v_(std::move(_v)) {}
+
+    static expr lit(uint64_t a0) { return expr(Lit{a0}); }
+
+    static expr bl(bool a0) { return expr(Bl{a0}); }
+
+    static expr succe(expr a0) {
+      return expr(SuccE{std::make_shared<expr>(std::move(a0))});
+    }
+
+    static expr ite(expr a, expr a1, expr a2) {
+      return expr(Ite{std::make_shared<expr>(std::move(a)),
+                      std::make_shared<expr>(std::move(a1)),
+                      std::make_shared<expr>(std::move(a2))});
+    }
+
+    static expr paire(expr a, expr b) {
+      return expr(PairE{std::make_shared<expr>(std::move(a)),
+                        std::make_shared<expr>(std::move(b))});
+    }
+
+    static expr fste(expr a) {
+      return expr(FstE{std::make_shared<expr>(std::move(a))});
+    }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+  };
+
+  template <typename T1, typename T2 = void, typename F0, typename F1,
+            typename F2, typename F3, typename F4, typename F5>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, const bool &>
+  static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
+                      const expr &e) {
+    if (std::holds_alternative<typename expr::Lit>(e.v())) {
+      const auto &[a0] = std::get<typename expr::Lit>(e.v());
+      return f(a0);
+    } else if (std::holds_alternative<typename expr::Bl>(e.v())) {
+      const auto &[a0] = std::get<typename expr::Bl>(e.v());
+      return f0(a0);
+    } else if (std::holds_alternative<typename expr::SuccE>(e.v())) {
+      const auto &[a0] = std::get<typename expr::SuccE>(e.v());
+      return f1(*a0, expr_rect(f, f0, f1, f2, f3, f4, *a0));
+    } else if (std::holds_alternative<typename expr::Ite>(e.v())) {
+      const auto &[a, a1, a2] = std::get<typename expr::Ite>(e.v());
+      return crane_any_cast<T1>(f2(*a, expr_rect(f, f0, f1, f2, f3, f4, *a),
+                                   *a1, expr_rect(f, f0, f1, f2, f3, f4, *a1),
+                                   *a2, expr_rect(f, f0, f1, f2, f3, f4, *a2)));
+    } else if (std::holds_alternative<typename expr::PairE>(e.v())) {
+      const auto &[a, b] = std::get<typename expr::PairE>(e.v());
+      return crane_any_cast<T1>(f3(*a, expr_rect(f, f0, f1, f2, f3, f4, *a), *b,
+                                   expr_rect(f, f0, f1, f2, f3, f4, *b)));
+    } else {
+      const auto &[a] = std::get<typename expr::FstE>(e.v());
+      return crane_any_cast<T1>(f4(*a, expr_rect(f, f0, f1, f2, f3, f4, *a)));
+    }
+  }
+
+  template <typename T1, typename T2 = void, typename F0, typename F1,
+            typename F2, typename F3, typename F4, typename F5>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, const bool &>
+  static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
+                     const expr &e) {
+    if (std::holds_alternative<typename expr::Lit>(e.v())) {
+      const auto &[a0] = std::get<typename expr::Lit>(e.v());
+      return f(a0);
+    } else if (std::holds_alternative<typename expr::Bl>(e.v())) {
+      const auto &[a0] = std::get<typename expr::Bl>(e.v());
+      return f0(a0);
+    } else if (std::holds_alternative<typename expr::SuccE>(e.v())) {
+      const auto &[a0] = std::get<typename expr::SuccE>(e.v());
+      return f1(*a0, expr_rec(f, f0, f1, f2, f3, f4, *a0));
+    } else if (std::holds_alternative<typename expr::Ite>(e.v())) {
+      const auto &[a, a1, a2] = std::get<typename expr::Ite>(e.v());
+      return crane_any_cast<T1>(f2(*a, expr_rec(f, f0, f1, f2, f3, f4, *a), *a1,
+                                   expr_rec(f, f0, f1, f2, f3, f4, *a1), *a2,
+                                   expr_rec(f, f0, f1, f2, f3, f4, *a2)));
+    } else if (std::holds_alternative<typename expr::PairE>(e.v())) {
+      const auto &[a, b] = std::get<typename expr::PairE>(e.v());
+      return crane_any_cast<T1>(f3(*a, expr_rec(f, f0, f1, f2, f3, f4, *a), *b,
+                                   expr_rec(f, f0, f1, f2, f3, f4, *b)));
+    } else {
+      const auto &[a] = std::get<typename expr::FstE>(e.v());
+      return crane_any_cast<T1>(f4(*a, expr_rec(f, f0, f1, f2, f3, f4, *a)));
+    }
+  }
+
+  static inline const expr sample = expr::succe(expr::lit(UINT64_C(1)));
+};
+
+#endif // INCLUDED_INDEXED_FAMILY_DEEP_DESTRUCTOR

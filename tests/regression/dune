@@ -13574,3 +13574,23 @@
   (alias runtest)
   (deps loopify_receiver_from_temporary.t.exe)
   (action (run ./loopify_receiver_from_temporary.t.exe))))
+(subdir loopify_coerced_recursive_call
+ (rule
+  (targets loopify_coerced_recursive_call.t.exe)
+  (deps LoopifyCoercedRecursiveCall.vo loopify_coerced_recursive_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_coerced_recursive_call.t.exe loopify_coerced_recursive_call.cpp loopify_coerced_recursive_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_coerced_recursive_call.t.exe)
+  (action (run ./loopify_coerced_recursive_call.t.exe))))
+(subdir loopify_recursor_instantiated
+ (rule
+  (targets loopify_recursor_instantiated.t.exe)
+  (deps LoopifyRecursorInstantiated.vo loopify_recursor_instantiated.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_recursor_instantiated.t.exe loopify_recursor_instantiated.cpp loopify_recursor_instantiated.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_recursor_instantiated.t.exe)
+  (action (run ./loopify_recursor_instantiated.t.exe))))

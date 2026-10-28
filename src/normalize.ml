@@ -31,10 +31,12 @@ type local = {l_type : ml_type; l_arity : int}
 (* The functions whose calls are bound: a top-level fixpoint group, by
    reference, and the local fixpoints enclosing the term, each by the depth
    its bodies start at and its functions, the [j]th being [MLrel (j + 1)]
-   there.  [fresh] names the next temporary of the declaration, and
-   [effects] are the effect operations of the program it is in. *)
+   there.  [own_tvars] counts the type variables of the declaration, [Tvar 1]
+   to [Tvar own_tvars]; [fresh] names the next temporary of the declaration,
+   and [effects] are the effect operations of the program it is in. *)
 type group = {
   globals : GlobRef.t list;
+  own_tvars : int;
   locals : (int * local array) list;
   fresh : unit -> ml_ident;
   effects : Core_effects.t;
@@ -79,6 +81,34 @@ let group_call group ~depth e =
     | _ -> None )
   | _ -> None
 
+(* The type the temporary binding the call [e], of type [ty], is declared
+   at, or [None] where the call is left in place; [read_at] is the type a
+   coercion around the call reads it at.  A function whose result is a type
+   index ({!Ml_type_util.result_is_index_only_tvar}: [eval : expr A -> A])
+   returns it boxed, and a temporary at [ty] holds it unboxed, cast where it
+   is bound.  Where [ty] names a type variable the declaration does not bind
+   -- one a constructor hides, the [A * B] of [fst (eval p)] -- no C++ type
+   spells it, and only the box holds the value: an open annotation, which
+   prints as the box.  Translation opens a boxed temporary where a coercion
+   reads it into a type with a shape.  Read at a type variable -- [eval]'s
+   own result type, at which the pair [(eval x, eval y)] reads its
+   components -- it would cast the box to the variable, so such a call is
+   left in place. *)
+let held group ?read_at e ty =
+  let boxed_only =
+    Mlutil.type_maxvar ty > group.own_tvars
+    &&
+    match Mlutil.read_spine e with
+    | MLapp (MLglob {callee = r; _}, _) ->
+      Option.cata Ml_type_util.result_is_index_only_tvar false (Translation_state.find_type_opt r)
+    | _ -> false
+  in
+  if not boxed_only then Some ty
+  else
+    match Option.map Mlutil.type_simpl read_at with
+    | Some (Tvar _ | Tapp _) | None -> None
+    | Some _ -> Some (Mlutil.new_meta ())
+
 (* Whether [e], at binder depth [depth], calls one of [group]'s functions
    where it is evaluated with [e]: under a branch or a let body, but not
    under a lambda -- except a local fixpoint applied there and then, whose
@@ -117,7 +147,9 @@ and branch_reaches_call group ~depth branches =
    to [group] that sits at a strictly evaluated, non-tail position bound to
    a variable first, in evaluation order.  Branches, lambda bodies, let
    bodies, a bind's arguments and a coinductive constructor's are scopes of
-   their own, and nothing under a coercion is touched.  Tail modulo cons
+   their own.  A coercion is no scope: a call it reads is bound like any
+   other, [S (eval x)] becoming [let t := eval x in S t], with the coercion
+   kept around the temporary ({!held}).  Tail modulo cons
    sees through the bindings ({!Cpp_temporaries} restores the expression
    before it looks), so a constructor's arguments are bound like any
    other. *)
@@ -135,7 +167,7 @@ let rec scope ~group ~depth e =
     | MLfix (_, ids, bodies, false, _) -> fix_reaches_call group ~depth ids bodies
     | _ -> false
   in
-  let rec strict ~tail e =
+  let rec strict ?read_at ~tail e =
     match e with
     | MLapp ((MLglob use as f), args)
       when Core_effects.lookup group.effects use = Some {operation = Bind; mode = Sequential} ->
@@ -147,7 +179,7 @@ let rec scope ~group ~depth e =
     | MLapp (f, args) -> (
       let e' = MLapp (strict ~tail:false f, List.map (strict ~tail:false) args) in
       match group_call e', f with
-      | Some ty, _ when not tail -> take e' ty
+      | Some ty, _ when not tail -> Option.cata (take e') e' (held group ?read_at e' ty)
       | None, MLfix (i, ids, _, false, _) when (not tail) && enters_group f ->
         (* A local fixpoint applied here that recurses into the group is a
            call into it. *)
@@ -171,13 +203,7 @@ let rec scope ~group ~depth e =
       MLcons (ty, r, List.mapi (fun i a -> strict ~tail:(tail && through = Some i) a) args)
     | MLtuple args -> MLtuple (List.map (strict ~tail:false) args)
     | MLcase (ty, scrut, branches) ->
-      (* A call matched through a coercion -- [if eval c] in a type-indexed
-         evaluator -- is bound like one matched directly. *)
-      let scrut =
-        match scrut with
-        | MLmagic (mty, a) when group_call a <> None -> MLmagic (mty, strict ~tail:false a)
-        | _ -> strict ~tail:false scrut
-      in
+      let scrut = strict ~tail:false scrut in
       let e' =
         MLcase
           ( ty,
@@ -217,6 +243,8 @@ let rec scope ~group ~depth e =
           {group with locals = (depth + n, fns) :: group.locals}
       in
       MLfix (i, ids, Array.map (inner ~group n) bodies, cofix, occ)
+    | MLmagic ((Mcoerce (_, into) as m), a) -> MLmagic (m, strict ~read_at:into ~tail a)
+    | MLmagic (m, a) -> MLmagic (m, strict ~tail a)
     | _ -> e
   in
   let body = strict ~tail:true e in
@@ -239,20 +267,21 @@ let loopified ~methods r =
   | Some (ind, _) -> Table.loopifies_methods_of ind && Table.loopifies_method r
   | None -> Table.should_loopify r
 
-(* A declaration's body, normalized against the top-level functions
-   [globals] it recurses through, in a program of effect operations
-   [effects]. *)
-let body ~effects ~globals b = scope ~group:{globals; locals = []; fresh = temporaries (); effects} ~depth:0 b
+(* The body [b] of a declaration of type [ty], normalized against the
+   top-level functions [globals] it recurses through, in a program of effect
+   operations [effects]. *)
+let body ~effects ~globals ty b =
+  scope ~group:{globals; own_tvars = Mlutil.type_maxvar ty; locals = []; fresh = temporaries (); effects} ~depth:0 b
 
 let decl ~effects ~methods = function
   | Dfix fds when List.exists (fun fd -> loopified ~methods fd.fd_ref) fds ->
     (* A group is normalized whole: loopification inlines one member's
        partners into it, whether or not they are loopified themselves. *)
     let globals = List.map (fun fd -> fd.fd_ref) fds in
-    Dfix (List.map (fun fd -> {fd with fd_body = body ~effects ~globals fd.fd_body}) fds)
+    Dfix (List.map (fun fd -> {fd with fd_body = body ~effects ~globals fd.fd_type fd.fd_body}) fds)
   | Dterm (r, b, ty) when loopified ~methods r ->
     (* No recursion of its own, but a local fixpoint in it is loopified. *)
-    Dterm (r, body ~effects ~globals:[] b, ty)
+    Dterm (r, body ~effects ~globals:[] ty b, ty)
   | d -> d
 
 (* A definition of type [ty] as it is generated: binding a parameter at each

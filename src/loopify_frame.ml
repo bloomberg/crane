@@ -1135,6 +1135,9 @@ type enter_rewrite_ctx = {
       (** Template parameters of the enclosing function *)
   er_env : (Id.t * cpp_type) list;
       (** Type environment — changes when entering sub-scopes *)
+  er_result_ty : cpp_type;
+      (** The type the machine's [_result] is declared at: a call's value as
+          the machine resumes with it *)
   er_binders : (Id.t * Core_binder.t option) list;
       (** The Core binder each local in scope stands for, innermost first,
           where translation declared it for one ({!Core_binder}) *)
@@ -1558,8 +1561,10 @@ and rewrite_enter_stmts ctx stmts =
     let rest_free = compute_rest_free_vars rest in
     (* The continuation of [id = f(args)]: a frame saving what the rest
        reads, whose handler binds [id] to the call's result and runs the
-       rest, pushed under [enter], the call's re-entry. *)
-    let make_cont_handler ~result enter =
+       rest, pushed under [enter], the call's re-entry.  [cast] is what the
+       statement casts the call's result to, if anything. *)
+    let make_cont_handler ~cast enter =
+      let result r = match cast with Some ty -> CPPany_cast (ty, r) | None -> r in
       (* The C++'s own account of the frame, which the plan's must agree
          with under [CRANE_CHECK_IR], and is the frame where the plan has
          none: the bindings the rest reads that bind something calling
@@ -1671,9 +1676,15 @@ and rewrite_enter_stmts ctx stmts =
       let field_names = derive_field_names cont_saved in
       let bindings = make_cont_bindings ~field_names cont_vars cont_types in
       (* The rest sees the result binding too: a later frame saving it needs
-         its type, and the body it came from may only say [auto]. *)
+         its type.  Where the body says only [auto], the binding holds the
+         call's value as the machine resumes with it, uncast: [_result]'s. *)
       let rest_env =
-        let bound = match tgt with Declare (ty, _) when ty <> Tauto -> [(id, ty)] | _ -> [] in
+        let bound =
+          match (tgt, cast) with
+          | Declare (Tauto, _), None -> [(id, ctx.er_result_ty)]
+          | Declare (ty, _), _ when ty <> Tauto -> [(id, ty)]
+          | _ -> []
+        in
         bound @ make_cont_env cont_vars cont_types env
       in
       (* When tgt is Existing (a bare assignment), the variable was declared
@@ -1780,10 +1791,10 @@ and rewrite_enter_stmts ctx stmts =
     (* A temporary Normalize bound at the type the Core gives the call, of
        a function returning it erased, is the call cast: the frame re-enters
        by the call, and the handler casts its result. *)
-    let result, called =
+    let cast, called =
       match e with
-      | CPPany_cast (ty, called) -> ((fun r -> CPPany_cast (ty, r)), called)
-      | _ -> (Fun.id, e)
+      | CPPany_cast (ty, called) -> (Some ty, called)
+      | _ -> (None, e)
     in
     let call = if n_calls = 1 then check called else None in
     let resumes =
@@ -1800,7 +1811,7 @@ and rewrite_enter_stmts ctx stmts =
     ( match call with
     | Some cs when resumes ->
       ctx.er_entered ~resumes:true called;
-      make_cont_handler ~result (make_enter_for ctx cs)
+      make_cont_handler ~cast (make_enter_for ctx cs)
     | Some _ | None -> Sasgn (id, tgt, e) :: rewrite_enter_stmts ctx rest )
   (* Conditional recursion: at least one branch has a recursive call and there
      are continuation statements after.  Merge the continuation into each branch
@@ -2979,6 +2990,7 @@ let transform_nontail ?(fn_name : string option) ?loop ?varying ?adopted ?entere
   let ctx = { er_check = check; er_entries = entries;
                er_tparams = tparams;
                er_env = env;
+               er_result_ty = ret_ty;
                er_binders = List.map (fun (id, b) -> (id, Some b)) binders;
                er_call_counter = call_counter; er_frames_ref = frames_ref;
                er_branch_ctx = None;
