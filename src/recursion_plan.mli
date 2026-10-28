@@ -294,11 +294,12 @@ type resume = private {
 (** A binder of [live] that what follows passes on, as it is, to the
     recursive call [call], one entering the machine there -- its value what
     a let or a bind binds, or what follows returns: [passed], the argument,
-    for [into], the parameter of the function called.  What follows an
-    enclosing point keeping the binder too passes it on here as well, the
-    frames of the two keeping it alike.  A call whose value goes into some
-    other term, or under a lambda, or in a local fixpoint's bodies, passes
-    nothing here. *)
+    for [into], the parameter of the function called, the argument read
+    through the coercions keeping its representation ({!in_place}).  What
+    follows an enclosing point keeping the binder too passes it on here as
+    well, the frames of the two keeping it alike.  A call whose value goes
+    into some other term, or under a lambda, or in a local fixpoint's bodies,
+    passes nothing here. *)
 and passing = private {
   passed : Core_binder.t;
   into : Core_binder.t;
@@ -315,6 +316,12 @@ and recomputable = private {
   recomputed : Core_binder.t;
   from : Core_binder.t list;
 }
+
+(** Whether a coercion from [from] into [into] keeps the value's
+    representation: two instances of one inductive agreeing on the
+    arguments its C++ type takes, those of its parameters
+    ({!Table.get_ind_num_param_vars_opt}); its indices it does not take. *)
+val in_place : Miniml.ml_type -> Miniml.ml_type -> bool
 
 (** The points binding [b] at which its definition, a member of a group that
     does not recurse only by tail calls, resumes after a recursive call: a

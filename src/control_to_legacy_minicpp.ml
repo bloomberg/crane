@@ -68,19 +68,7 @@ let reason = function
   | Loopify.Declined why | Left (Some why) -> why
   | Left None -> "left as generated"
 
-(* Whether a coercion from [from] into [into] keeps the value's
-   representation: two instances of one inductive agreeing on the
-   arguments its C++ type takes, those of its parameters
-   ({!Table.get_ind_num_param_vars_opt}); its indices it does not take. *)
-let in_place from into =
-  match (Mlutil.type_simpl from, Mlutil.type_simpl into) with
-  | Miniml.Tglob ((GlobRef.IndRef (kn, _) as r), args, _), Miniml.Tglob (r', args', _)
-    when GlobRef.UserOrd.equal r r' -> (
-    match Table.get_ind_num_param_vars_opt kn with
-    | Some n when List.length args >= n && List.length args' >= n ->
-      List.for_all2 Mlutil.eq_ml_type (CList.firstn n args) (CList.firstn n args')
-    | Some _ | None -> false )
-  | _ -> false
+let in_place = Recursion_plan.in_place
 
 (* What each parameter of the loop [l] is passed by its Continues
    ({!Control_ir.parts_passed}), read with the planned representation. *)

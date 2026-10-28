@@ -435,6 +435,22 @@ let value_levels ~heads ~depth e =
 
 let rec strip = function MLmagic (_, e) -> strip e | e -> e
 
+let in_place from into =
+  match (Mlutil.type_simpl from, Mlutil.type_simpl into) with
+  | Tglob ((Names.GlobRef.IndRef (kn, _) as r), args, _), Tglob (r', args', _)
+    when Names.GlobRef.UserOrd.equal r r' -> (
+    match Table.get_ind_num_param_vars_opt kn with
+    | Some n when List.length args >= n && List.length args' >= n ->
+      List.for_all2 Mlutil.eq_ml_type (CList.firstn n args) (CList.firstn n args')
+    | Some _ | None -> false )
+  | _ -> false
+
+(* [e] through the coercions keeping its representation: the value a
+   parameter is passed where the argument is [e]. *)
+let rec as_passed = function
+  | MLmagic (Mcoerce (from, into), e) when in_place from into -> as_passed e
+  | e -> e
+
 (* The arguments a call is applied to, through coercions. *)
 let rec arguments = function MLmagic (_, e) -> arguments e | MLapp (_, args) -> args | _ -> []
 
@@ -497,7 +513,7 @@ let resumes_of ~effects ~origin ~targets lex body =
       | [c] when enters ->
         List.iteri
           (fun i a ->
-            match a with
+            match as_passed a with
             | MLrel (j, _) when j > d && List.mem (depth + d - j) live ->
               Option.iter
                 (fun p -> found := {passed = binder (depth + d - j); into = p; call = c} :: !found)
