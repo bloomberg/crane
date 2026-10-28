@@ -36,6 +36,10 @@ val of_module :
   enclosing:(Label.t * Miniml.ml_structure_elem) list ->
   t
 
+(** Whether a class [sel] declares has a concept named as the module [mp]
+    is, by the names both are planned under. *)
+val concept_collision : ModPath.t -> (Label.t * Miniml.ml_structure_elem) list -> bool
+
 (** Whether two frames say the same of a module: the same eponymous
     inductive and record, the same candidates at the same receiver
     positions, the same collision and promotion. *)

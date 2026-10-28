@@ -2483,27 +2483,6 @@ let plan_scopes s =
              (Table.escape_reserved_struct_name (String.capitalize_ascii (string_of_modfile mp))) )
     else None
   in
-  (* The names compared are the ones planned, not the ones a reference
-     spells: those depend on where the reference is written from. *)
-  let concept_name r =
-    match Module_plan.concept_name r with
-    | Some name -> Some name
-    | None -> Common.decided_global_name r
-  in
-  let concept_collision mp sel =
-    List.exists
-      (fun (_, se) ->
-        match se with
-        | SEdecl (Dind (kn, ({ind_kind = TypeClass _; _} as ind))) ->
-          List.exists
-            (fun i ->
-              Option.equal String.equal
-                (concept_name (GlobRef.IndRef (kn, i)))
-                (Some (Common.emitted_module_name mp)) )
-            (List.init (Array.length ind.ind_packets) Fun.id)
-        | _ -> false )
-      sel
-  in
   let scope_of ~parent mp sel =
     let at module_ qualifier = Some {Scope_plan.module_; qualifier} in
     match Module_plan.wrapper mp with
@@ -2515,7 +2494,7 @@ let plan_scopes s =
       match collision_wrapper mp sel with
       | Some w -> at mp [w]
       | None ->
-        if Common.is_struct_module mp && not (concept_collision mp sel) then
+        if Common.is_struct_module mp && not (Module_frame.concept_collision mp sel) then
           at mp (Option.cata (fun (p : Scope_plan.scope) -> p.qualifier) [] parent @ [own mp])
         else None )
   in
