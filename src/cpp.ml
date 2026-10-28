@@ -34,7 +34,6 @@ open Gen_decls
 open Cpp_state
 open Cpp_names
 open Cpp_print
-open Cpp_concepts
 open Cpp_ind
 
 (** Whether the concept [d] of a type class declared in the module [mp]
@@ -68,7 +67,7 @@ let pp_doc_comment label = pp_doc_comment_for_name (Label.to_string label)
     [pp_module_type] would inline the concept body into the template
     parameter list, producing garbled C++. *)
 let rec concept_of_mt = function
-  | MTident kn -> Some (kn, pp_concept_ref kn)
+  | MTident kn -> Some kn
   | MTwith (mt, _) -> concept_of_mt mt
   | MTfunsig (_, _, mt') -> concept_of_mt mt'
   | MTsig _ -> None
@@ -85,7 +84,7 @@ let held_concept_of (a : Cpp_ast.assertion) =
 let concept_assertion mp mty =
   match concept_of_mt mty with
   | None -> (Cpp_ast.empty, [])
-  | Some (mt_mp, _) ->
+  | Some mt_mp ->
     let a = {Cpp_ast.concept = Of_module_type (Cpp_ast.concept_ref mt_mp); subject = Module (Cpp_ast.module_ref mp)} in
     if concept_held_back (held_concept_of a) then (Cpp_ast.empty, [a]) else (Cpp_ast.assertion a, [])
 
@@ -99,20 +98,16 @@ let concept_assertion mp mty =
       signature's requirement lines are not a constraint expression: they
       belong inside a named concept, not in a template parameter list. *)
 let template_param (mbid, mt) : Cpp_ast.template_param =
-  let param = pp_modname (MPbound mbid) in
+  let param = Cpp_ast.module_ref (MPbound mbid) in
   match concept_of_mt mt with
   (* A concept the enclosing struct holds back is declared after it, so a
      functor inside it takes its parameter unconstrained, as a class concept
      held back does. *)
-  | Some (mt_mp, _) when concept_held_back (HCmodtype mt_mp) -> Typename param
-  | Some (mt_mp, cname) ->
-    let args =
-      match concept_extra_args mt_mp with
-      | [] -> Pp.mt ()
-      | ps -> str "<" ++ prlist_with_sep (fun () -> str ", ") pp_modname ps ++ str ">"
-    in
-    Constrained {concept = cname ++ args; param}
-  | None -> Typename param
+  | Some mt_mp when concept_held_back (HCmodtype mt_mp) -> Typename (Module_parameter param)
+  | Some mt_mp ->
+    Constrained
+      {concept = Cpp_ast.concept_ref mt_mp; args = List.map Cpp_ast.module_ref (concept_extra_args mt_mp); param}
+  | None -> Typename (Module_parameter param)
 
 (** The functor application [me], its arguments in order.  Rocq applies a
     functor to paths only ({!Extract_env.extract_mexpr}), and only a path
@@ -128,6 +123,10 @@ let application_of me =
 (** [plain_struct name] is the head of the struct [name], which is no
     template and derives from nothing. *)
 let plain_struct name = {Cpp_ast.template = []; name; base = None}
+
+(** [module_struct mp] is the head of the struct the module [mp] is written
+    as, which is no template and derives from nothing. *)
+let module_struct mp = plain_struct (Module_struct (Cpp_ast.declared_module mp))
 
 (** The name of the lifted helper a declaration defines, if it defines one.
 
@@ -706,23 +705,18 @@ let rec pp_structure_elem ~is_header f ~module_ = function
       asserts = List.concat_map (fun (_, d) -> Cpp_print.held_back_assertions d) rendered }
   | l, SEmodule m ->
     let mp = MPdot (module_, l) in
-    let name =
-      match m.ml_mod_expr with
-      | MEident _ | MEapply _ ->
-        (* Transparent aliases generate a [using X = Y;] alias in C++, named
-           as references spell the module: a renamed one where another module
-           shares the label ([OrdersEx.Positive_as_OT] beside
-           [OrderedTypeEx.Positive_as_OT]). *)
-        let s = Common.emitted_module_name mp in
-        str (Table.escape_reserved_struct_name s)
-      | _ -> Cpp_names.module_struct_name mp
-    in
+    (* Its struct, or the alias standing for it, is declared under the
+       module's name -- a renamed one where another module shares the label
+       ([OrdersEx.Positive_as_OT] beside [OrderedTypeEx.Positive_as_OT]).
+       What is written names it through resolution
+       ({!Cpp_resolution.Module_declared}); the checks below read it here. *)
+    let name = Cpp_names.module_declared_name mp in
     (* A submodule becomes a nested struct, which shadows any global-scope type
        of the same name for unqualified lookups from inside the parent -- a
        [Module Nat] hides the runtime [Nat] exactly as an [Inductive Nat]
        would.  Record it so {!Cpp_names.global_scope_qualifier_for} spells the
        global one [::Nat]. *)
-    if (!render_ctx).rc_in_struct then printed_nested_struct (Pp.string_of_ppcmds name) (NSmodule mp);
+    if (!render_ctx).rc_in_struct then printed_nested_struct name (NSmodule mp);
     let mod_pp =
       match m.ml_mod_expr with
       | MEfunctor _ ->
@@ -770,12 +764,12 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                   { b with
                     text =
                       Cpp_ast.module_
-                        (Struct {head = {template; name; base = None}; layout = Block})
+                        (Struct {head = {(module_struct mp) with template}; layout = Block})
                         b.text }
                 (* A functor that is another module is a struct deriving
                    from it, as one applying another functor is. *)
-                | MEapply _ -> written (Cpp_ast.derived_functor ~template ~name (Applied (application_of body)))
-                | MEident mp -> written (Cpp_ast.derived_functor ~template ~name (Module_named (Cpp_ast.module_ref mp)))
+                | MEapply _ -> written (Cpp_ast.derived_functor ~template mp (Applied (application_of body)))
+                | MEident base -> written (Cpp_ast.derived_functor ~template mp (Module_named (Cpp_ast.module_ref base)))
                 | MEfunctor _ -> CErrors.anomaly (Pp.str "Crane: a functor's parameters were not all collected.") )
           in
           { text = struct_def; concepts = concepts @ body_concepts; asserts }
@@ -784,7 +778,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
           written Cpp_ast.empty
         else
           let assertion, held = concept_assertion mp m.ml_mod_type in
-          { text = Cpp_ast.seq [Cpp_ast.module_alias ~name (Applied (application_of m.ml_mod_expr)); assertion];
+          { text = Cpp_ast.seq [Cpp_ast.module_alias mp (Applied (application_of m.ml_mod_expr)); assertion];
             concepts = [];
             asserts = held }
       | MEstruct (body_mp, sel) ->
@@ -795,7 +789,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
           Probe.checking ()
           && not
                (Module_frame.equal frame
-                  (Module_frame.of_module mp ~name:(Pp.string_of_ppcmds name) sel
+                  (Module_frame.of_module mp ~name sel
                      ~enclosing:!current_structure_decls ) )
         then
           Probe.violation "module frames"
@@ -968,31 +962,15 @@ let rec pp_structure_elem ~is_header f ~module_ = function
             (* Promoted module: the module struct IS the eponymous type. Wrap
                body in a template struct with the inductive's template params
                and emit deferred defs at file scope. *)
-            let template =
-              match promoted_tparams with
-              | Some vars -> List.map (fun v -> Cpp_ast.Typename (Id.print (Common.tparam_name v))) vars
-              | None -> []
-            in
+            let vars = List.map Common.tparam_name (Option.default [] promoted_tparams) in
+            let template = List.map (fun v -> Cpp_ast.Typename (Type_variable v)) vars in
             let base =
-              if this_promote_sft then
-                let type_args =
-                  match promoted_tparams with
-                  | Some (_ :: _ as vars) ->
-                    str "<"
-                    ++ prlist_with_sep
-                         (fun () -> str ", ")
-                         (fun v -> Id.print (Common.tparam_name v))
-                         vars
-                    ++ str ">"
-                  | _ -> mt ()
-                in
-                Some (str (sn ()).enable_from_this ++ str "<" ++ name ++ type_args ++ str ">")
-              else
-                None
+              if this_promote_sft then Some (Cpp_ast.Of_itself {template = (sn ()).enable_from_this; type_args = vars})
+              else None
             in
             let struct_def =
               Cpp_ast.module_
-                (Struct {head = {template; name; base}; layout = Block})
+                (Struct {head = {(module_struct mp) with template; base}; layout = Block})
                 body
             in
             (Cpp_ast.seq [typeclasses_pp; modtypes_pp; struct_def; modtypes_after_pp; deferred_asserts_pp], [])
@@ -1001,7 +979,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
               match this_eponymous_record with
               | Some (epon_ref, fields, packet) ->
                 let ty_vars = packet.ip_vars in
-                let template = List.map (fun v -> Cpp_ast.Typename (Id.print v)) ty_vars in
+                let template = List.map (fun v -> Cpp_ast.Typename (Type_variable v)) ty_vars in
                 (* [fields] already pairs each projection with its type:
                    extraction selected the two together. *)
                 let field_types = Cpp_ind.record_field_types ~module_ epon_ref ty_vars fields in
@@ -1067,11 +1045,11 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                  empty Rocq module satisfying some module type.  Previously
                  this returned [mt ()] which suppressed the struct
                  entirely, causing undeclared-identifier errors. *)
-              (Cpp_ast.module_ (Struct {head = {template; name; base = None}; layout = One_line}) body, [])
+              (Cpp_ast.module_ (Struct {head = {(module_struct mp) with template}; layout = One_line}) body, [])
             else
               let struct_def =
                 Cpp_ast.module_
-                  (Struct {head = {template; name; base = None}; layout = Block})
+                  (Struct {head = {(module_struct mp) with template}; layout = Block})
                   ~fields body
               in
               let assertion, held = concept_assertion mp m.ml_mod_type in
@@ -1100,9 +1078,9 @@ let rec pp_structure_elem ~is_header f ~module_ = function
           (* A file module is a namespace, which no alias in a struct can
              name. *)
           | [] when is_modfile target && (!render_ctx).rc_in_struct -> written Cpp_ast.empty
-          | [] -> written (Cpp_ast.module_alias ~name (Module_named (Cpp_ast.module_ref target)))
+          | [] -> written (Cpp_ast.module_alias mp (Module_named (Cpp_ast.module_ref target)))
           | params ->
-            written (Cpp_ast.functor_alias ~name (Cpp_ast.module_ref target) params)
+            written (Cpp_ast.functor_alias mp (Cpp_ast.module_ref target) params)
     in
     { mod_pp with
       text =
@@ -2778,7 +2756,7 @@ let plan_field_names s =
 (** [pp_wrapper_struct name specs] is the struct a library module is rendered
     as: its body, [specs], inside a struct of that name. *)
 let pp_wrapper_struct name specs =
-  Cpp_ast.module_ (Struct {head = plain_struct (str name); layout = Block}) specs
+  Cpp_ast.module_ (Struct {head = plain_struct (Named name); layout = Block}) specs
 
 (** What rendering one wrapper module produced, beyond the declarations that
     merge into its struct.
@@ -3346,7 +3324,7 @@ let do_struct_with_decl_tracking ~is_header f s =
               else
                 ( Cpp_ast.top_level
                     (Cpp_ast.module_
-                       (Struct {head = plain_struct (str parent_name); layout = Block})
+                       (Struct {head = plain_struct (Named parent_name); layout = Block})
                        body ),
                   moved ) )
             else

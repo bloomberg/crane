@@ -14,6 +14,7 @@ type definition = Enum_definition | Struct_definition | Alias_definition
 
 type key =
   | Module of ModPath.t
+  | Module_declared of ModPath.t
   | Global of Common.kind * GlobRef.t
   | Unmapped of Common.kind * GlobRef.t
   | Inductive_value of GlobRef.t
@@ -28,6 +29,7 @@ let pp_key k =
   let path what mp = Pp.str (what ^ " " ^ ModPath.to_string mp) in
   match k with
   | Module mp -> path "the module" mp
+  | Module_declared mp -> path "the declared name of the module" mp
   | Global (_, r) -> global "the global" r
   | Unmapped (_, r) -> global "the unmapped global" r
   | Inductive_value r -> global "the value of the inductive" r
@@ -54,18 +56,22 @@ let compare_kind (a : Common.kind) b = compare a b
 let compare_key a b =
   let rank = function
     | Module _ -> 0
-    | Global _ -> 1
-    | Unmapped _ -> 2
-    | Inductive_value _ -> 3
-    | Short _ -> 4
-    | Class_concept _ -> 5
-    | Modtype_concept _ -> 6
-    | Modtype_concept_declared _ -> 7
-    | Definition _ -> 8
+    | Module_declared _ -> 1
+    | Global _ -> 2
+    | Unmapped _ -> 3
+    | Inductive_value _ -> 4
+    | Short _ -> 5
+    | Class_concept _ -> 6
+    | Modtype_concept _ -> 7
+    | Modtype_concept_declared _ -> 8
+    | Definition _ -> 9
   in
   let global ka ra kb rb = match compare_kind ka kb with 0 -> GlobRef.UserOrd.compare ra rb | c -> c in
   match (a, b) with
-  | Module a, Module b | Modtype_concept a, Modtype_concept b | Modtype_concept_declared a, Modtype_concept_declared b ->
+  | Module a, Module b
+  | Module_declared a, Module_declared b
+  | Modtype_concept a, Modtype_concept b
+  | Modtype_concept_declared a, Modtype_concept_declared b ->
     ModPath.compare a b
   | Global (ka, ra), Global (kb, rb) | Unmapped (ka, ra), Unmapped (kb, rb) | Short (ka, ra), Short (kb, rb) ->
     global ka ra kb rb

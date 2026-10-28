@@ -65,11 +65,6 @@ let pp_concept_clause name = function
 let pp_concept_def name body =
   str "template<typename M>" ++ fnl () ++ pp_concept_clause name body
 
-
-(** The concept of the module type [kn], as a reference names it where the
-    printer is. *)
-let pp_concept_ref kn = Cpp_name.pp (modtype_concept_ref kn)
-
 (** The type member [name] of [M], an enum's capitalised, applied to [args]
     when it is a template. *)
 let pp_member_type ~enum name r args =

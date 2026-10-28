@@ -4370,6 +4370,7 @@ let resolved_module (m : Cpp_ast.module_ref) = resolved (Module m.path) m.name
 let resolved_class_concept (c : Cpp_ast.global_ref) = resolved (Class_concept c.global) c.name
 let resolved_type_name (g : Cpp_ast.global_ref) = resolved (Global (Type, g.global)) g.name
 let resolved_concept (c : Cpp_ast.concept_ref) = resolved (Modtype_concept c.module_type) c.name
+let pp_declared_module (m : Cpp_ast.declared_module) = Cpp_name.pp (resolved (Module_declared m.declares) m.name)
 
 let name_in names frame key = name_from names frame key ~live:(fun () -> live_name key)
 
@@ -4404,11 +4405,11 @@ let pp_module_alias name (target : Cpp_ast.module_expr) =
       if (!render_ctx).rc_in_template && resolved_is_qualified r then str "typename " ++ named else named
     | Applied a -> pp_application a
   in
-  str "using " ++ name ++ str " = " ++ target ++ str ";"
+  str "using " ++ pp_declared_module name ++ str " = " ++ target ++ str ";"
 
 let pp_functor_alias name functor_ params =
   Cpp_ast.pp_template_head (List.map fst params)
-  ++ str "using " ++ name ++ str " = "
+  ++ str "using " ++ pp_declared_module name ++ str " = "
   ++ str (resolved_string (resolved_module functor_))
   ++ str "<" ++ prlist_with_sep (fun () -> str ", ") (fun (_, m) -> Cpp_name.pp (resolved_module m)) params ++ str ">;"
 
@@ -4420,7 +4421,7 @@ let pp_derived_functor template name (base : Cpp_ast.module_expr) =
       (fun c -> {c with rc_in_struct = true; rc_in_template = true})
       (fun () -> match base with Module_named m -> fst (pp_module_name m) | Applied a -> pp_application a)
   in
-  Cpp_ast.pp_template_head template ++ str "struct " ++ name ++ str " : " ++ base ++ str " {};"
+  Cpp_ast.pp_template_head template ++ str "struct " ++ pp_declared_module name ++ str " : " ++ base ++ str " {};"
 
 let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
   naming u.names @@ fun () ->

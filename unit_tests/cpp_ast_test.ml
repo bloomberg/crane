@@ -47,7 +47,7 @@ let text ?(templates = []) ?(forwards = []) sections =
   |> String.of_seq
 
 let top = Cpp_ast.top_level
-let struct_named ?(layout = Cpp_ast.Block) name = Cpp_ast.Struct {head = {template = []; name = Pp.str name; base = None}; layout}
+let struct_named ?(layout = Cpp_ast.Block) name = Cpp_ast.Struct {head = {template = []; name = Named name; base = None}; layout}
 
 let () =
   let unit = [top (Cpp_ast.text (Pp.str "a")); top (leaf ~templates:["T"] "b"); top (leaf ~templates:["T"] "c")] in
@@ -119,8 +119,17 @@ let () =
     ( match Cpp_ast.module_ (struct_named ~layout:One_line "s") one with
     | exception Invalid_argument _ -> true
     | _ -> false );
-  let head = {Cpp_ast.template = [Typename (Pp.str "A"); Constrained {concept = Pp.str "C<P>"; param = Pp.str "M"}];
-              name = Pp.str "s"; base = Some (Pp.str "b<s<A, M>>")} in
+  let resolved_module s : Cpp_ast.module_ref = {path = m; name = Resolved (Cpp_name.unqualified s)} in
+  let head =
+    { Cpp_ast.template =
+        [ Typename (Type_variable (Id.of_string "A"));
+          Constrained
+            { concept = {module_type = m; name = Resolved (Cpp_name.unqualified "C")};
+              args = [resolved_module "P"];
+              param = resolved_module "M" } ];
+      name = Named "s";
+      base = Some (Of_itself {template = "b"; type_args = [Id.of_string "A"; Id.of_string "M"]}) }
+  in
   check_text "a struct's head writes its template and the class it derives from"
     (raw (Cpp_ast.module_ (Struct {head; layout = Block}) one))
     "template<typename A, C<P> M>\nstruct s : public b<s<A, M>> {\ny;\n};";
@@ -242,6 +251,8 @@ let () =
     let named what = Cpp_name.unqualified (what ^ "@" ^ spelling_text spelling ^ String.make (List.length frame) '\'') in
     match key with
     | Module mp -> named (ModPath.to_string mp)
+    | Module_declared mp -> named ("declared " ^ ModPath.to_string mp)
+    | Modtype_concept mp -> named ("concept " ^ ModPath.to_string mp)
     | Class_concept r -> named ("concept " ^ ref_text r)
     | Global (_, r) -> named ("type " ^ ref_text r)
     | _ -> named "?"
@@ -272,7 +283,7 @@ let () =
   in
   check_text "resolving keeps how each declaration is spelled"
     (resolved_text [top (Cpp_ast.elements ~source:m (unprinted ()))]) "E(F.M)";
-  let alias = Cpp_ast.module_alias ~name:(Pp.str "A") (Module_named (Cpp_ast.module_ref inner)) in
+  let alias = Cpp_ast.module_alias (ModPath.MPdot (inner, Label.make "A")) (Module_named (Cpp_ast.module_ref inner)) in
   check_text "a module a declaration names is resolved where the declaration is written"
     (resolved_text [top (Cpp_ast.elements ~source:m (Cpp_ast.module_ struct_ (Cpp_ast.module_body inner [alias])))])
     "struct M {\nM(F.M.N)=F.M.N@M(F.M.N)\n};";
@@ -283,6 +294,25 @@ let () =
             match u.declaration with Module_alias {target = Module_named {name = Unresolved; _}; _} -> Pp.str "u" | _ -> Pp.str "r")
           (Cpp_ast.elements ~source:m alias) ))
     "u";
+  let functor_struct =
+    Cpp_ast.module_
+      (Struct
+         { head =
+             { template =
+                 [ Constrained {concept = Cpp_ast.concept_ref m; args = [Cpp_ast.module_ref m]; param = Cpp_ast.module_ref inner};
+                   Typename (Type_variable (Id.of_string "T")) ];
+               name = Module_struct (Cpp_ast.declared_module inner);
+               base = None };
+           layout = One_line })
+      (Cpp_ast.module_body inner [])
+  in
+  check_text "what the head of a module's struct names is resolved where the struct is written"
+    (resolved_text [top (Cpp_ast.elements ~source:m functor_struct)])
+    "template<concept F.M@E(F.M)<F.M@E(F.M)> F.M.N@E(F.M), typename T>\nstruct declared F.M.N@E(F.M) {};";
+  check "a struct whose head names a module, written where nothing says how it is spelled, is refused"
+    (match resolved_text [top functor_struct] with exception Invalid_argument _ -> true | _ -> false);
+  check "a struct whose head names a module is not printed before it is resolved"
+    (match raw functor_struct with exception Invalid_argument _ -> true | _ -> false);
   let var s = GlobRef.VarRef (Id.of_string s) in
   let assertion =
     Cpp_ast.assertion

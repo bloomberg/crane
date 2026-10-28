@@ -13,17 +13,24 @@ end
 
 type spelling = Element_of of ModPath.t | Member_of of ModPath.t
 
-type template_param = Typename of Pp.t | Constrained of {concept : Pp.t; param : Pp.t}
-
 type resolution = Unresolved | Resolved of Cpp_name.t
 type module_ref = {path : ModPath.t; name : resolution}
 type global_ref = {global : GlobRef.t; name : resolution}
 
 type concept_ref = {module_type : ModPath.t; name : resolution}
 
+type declared_module = {declares : ModPath.t; name : resolution}
+
 let module_ref path = {path; name = Unresolved}
 let global_ref global = {global; name = Unresolved}
 let concept_ref module_type = {module_type; name = Unresolved}
+let declared_module declares = {declares; name = Unresolved}
+
+type template_param =
+  | Typename of parameter
+  | Constrained of {concept : concept_ref; args : module_ref list; param : module_ref}
+
+and parameter = Type_variable of Id.t | Module_parameter of module_ref
 
 type resolver = Cpp_resolution.frame -> Cpp_resolution.key -> Cpp_name.t
 
@@ -34,9 +41,9 @@ type declaration =
   | Modtype_concept of {path : ModPath.t; params : ModPath.t list; concept : Modtype_concept.t}
   | Global_alias of global_alias
   | Assertion of assertion
-  | Module_alias of {name : Pp.t; target : module_expr}
-  | Functor_alias of {name : Pp.t; functor_ : module_ref; params : (template_param * module_ref) list}
-  | Derived_functor of {template : template_param list; name : Pp.t; base : module_expr}
+  | Module_alias of {name : declared_module; target : module_expr}
+  | Functor_alias of {name : declared_module; functor_ : module_ref; params : (template_param * module_ref) list}
+  | Derived_functor of {template : template_param list; name : declared_module; base : module_expr}
 
 and module_expr = Module_named of module_ref | Applied of application
 
@@ -72,7 +79,9 @@ type t =
   | Declarations of Pp.t list
 
 and enclosure = Struct of {head : struct_head; layout : layout} | Out_of_line | In_enclosing_scope
-and struct_head = {template : template_param list; name : Pp.t; base : Pp.t option}
+and struct_head = {template : template_param list; name : struct_name; base : base option}
+and struct_name = Named of string | Module_struct of declared_module
+and base = Of_itself of {template : string; type_args : Id.t list}
 and layout = Block | One_line
 and concept_position = Classes_ahead | Module_types_ahead | After_struct
 
@@ -99,19 +108,39 @@ let laid_out position concepts =
 
 let concept_group position = function [] -> empty | concepts -> Concept_group {position; concepts}
 
+let resolved what = function
+  | Resolved n -> Cpp_name.pp n
+  | Unresolved -> invalid_arg ("Cpp_ast: " ^ what ^ " printed before it was resolved")
+
+let pp_list pp l = Pp.(prlist_with_sep (fun () -> str ", ") pp l)
+let pp_module_ref (m : module_ref) = resolved ("the module " ^ ModPath.to_string m.path) m.name
+
 let pp_template_head = function
   | [] -> Pp.mt ()
   | params ->
     let param = function
-      | Typename p -> Pp.(str "typename " ++ p)
-      | Constrained {concept; param} -> Pp.(concept ++ str " " ++ param)
+      | Typename (Type_variable var) -> Pp.(str "typename " ++ Id.print var)
+      | Typename (Module_parameter m) -> Pp.(str "typename " ++ pp_module_ref m)
+      | Constrained {concept; args; param} ->
+        Pp.(
+          resolved ("the concept of " ^ ModPath.to_string concept.module_type) concept.name
+          ++ (match args with [] -> mt () | args -> str "<" ++ pp_list pp_module_ref args ++ str ">")
+          ++ str " " ++ pp_module_ref param)
     in
-    Pp.(str "template<" ++ prlist_with_sep (fun () -> str ", ") param params ++ str ">" ++ fnl ())
+    Pp.(str "template<" ++ pp_list param params ++ str ">" ++ fnl ())
+
+let pp_declared_module (m : declared_module) = resolved ("the declared name of " ^ ModPath.to_string m.declares) m.name
 
 let pp_struct_head {template; name; base} =
+  let name = match name with Named s -> Pp.str s | Module_struct m -> pp_declared_module m in
+  let pp_base = function
+    | Of_itself {template; type_args} ->
+      let args = match type_args with [] -> Pp.mt () | vs -> Pp.(str "<" ++ pp_list Id.print vs ++ str ">") in
+      Pp.(str template ++ str "<" ++ name ++ args ++ str ">")
+  in
   Pp.(
     pp_template_head template ++ str "struct " ++ name
-    ++ (match base with Some b -> str " : public " ++ b | None -> mt ())
+    ++ (match base with Some b -> str " : public " ++ pp_base b | None -> mt ())
     ++ str " {")
 let decl ~needs text = Decl {text; needs}
 let leaf ?(needs = Needs.none) declaration = Unprinted {declaration; needs; names = Cpp_resolution.unresolved}
@@ -121,9 +150,9 @@ let fields ~needs ~record ~vars fields = leaf ~needs (Fields {record; vars; fiel
 let modtype_concept ~path ~params concept = leaf (Modtype_concept {path; params; concept})
 let global_alias a = leaf (Global_alias a)
 let assertion a = leaf (Assertion a)
-let module_alias ~name target = leaf (Module_alias {name; target})
-let functor_alias ~name functor_ params = leaf (Functor_alias {name; functor_; params})
-let derived_functor ~template ~name base = leaf (Derived_functor {template; name; base})
+let module_alias mp target = leaf (Module_alias {name = declared_module mp; target})
+let functor_alias mp functor_ params = leaf (Functor_alias {name = declared_module mp; functor_; params})
+let derived_functor ~template mp base = leaf (Derived_functor {template; name = declared_module mp; base})
 let wrapper_struct ~name ~module_ ~fields = Wrapper_struct {name; module_; fields}
 let elements ~source elements = Elements {source; elements}
 let seq l = Seq l
@@ -283,7 +312,7 @@ let rec fill_wrappers bodies t =
   | Wrapper_struct {name; module_ = wrapped; fields} -> (
     match List.assoc_opt name bodies with
     | Some b when ModPath.equal b.body_module wrapped ->
-      module_ (Struct {head = {template = []; name = Pp.str name; base = None}; layout = Block}) ~fields:(fill fields) b
+      module_ (Struct {head = {template = []; name = Named name; base = None}; layout = Block}) ~fields:(fill fields) b
     | Some _ -> invalid_arg ("Cpp_ast.fill_wrappers: the body given for " ^ name ^ " is another module's")
     | None -> invalid_arg ("Cpp_ast.fill_wrappers: no body for the wrapper struct " ^ name) )
 
@@ -414,8 +443,10 @@ let schedule ~templates ~forwards u =
   {opening; body}
 
 (* [t] with each declaration not yet printed replaced by [f] of it and how
-   the innermost group or struct around it spells it. *)
-let map_leaves f t =
+   the innermost group or struct around it spells it, and the head of each
+   struct by [head] of it and how what is around the struct spells it, if
+   anything does. *)
+let map_leaves ?(head = fun _ h -> h) f t =
   let rec map spelling = function
     | (Text _ | Decl _ | Declarations _) as t -> t
     | Unprinted u -> (
@@ -428,15 +459,47 @@ let map_leaves f t =
     | Concept_group g -> Concept_group {g with concepts = List.map (map spelling) g.concepts}
     | Top_level t -> Top_level (map spelling t)
     | Module m ->
-      let spelling = match m.enclosure with Struct _ -> Some (Member_of m.module_) | Out_of_line | In_enclosing_scope -> None in
-      Module {m with fields = map spelling m.fields; members = List.map (map spelling) m.members}
+      let enclosure, inner =
+        match m.enclosure with
+        | Struct s -> (Struct {s with head = head spelling s.head}, Some (Member_of m.module_))
+        | (Out_of_line | In_enclosing_scope) as e -> (e, None)
+      in
+      Module {m with enclosure; fields = map inner m.fields; members = List.map (map inner) m.members}
     | Wrapper_struct _ -> invalid_arg "Cpp_ast: a wrapper struct whose body is not filled in"
   in
   map None t
 
+(* Each name written as [here] names it where it is written. *)
+let resolve_module_ref here (m : module_ref) = {m with name = Resolved (here (Cpp_resolution.Module m.path))}
+let resolve_declared_module here (m : declared_module) = {m with name = Resolved (here (Cpp_resolution.Module_declared m.declares))}
+
+let resolve_template_param here = function
+  | Typename (Type_variable _) as p -> p
+  | Typename (Module_parameter m) -> Typename (Module_parameter (resolve_module_ref here m))
+  | Constrained {concept; args; param} ->
+    Constrained
+      { concept = {concept with name = Resolved (here (Modtype_concept concept.module_type))};
+        args = List.map (resolve_module_ref here) args;
+        param = resolve_module_ref here param }
+
+(* Whether a struct's head names anything resolving it names. *)
+let head_names {template; name; base = _} =
+  (match name with Named _ -> false | Module_struct _ -> true)
+  || List.exists (function Typename (Type_variable _) -> false | Typename (Module_parameter _) | Constrained _ -> true) template
+
+let resolve_head (resolve : spelling -> resolver) spelling h =
+  match spelling with
+  | _ when not (head_names h) -> h
+  | None -> invalid_arg "Cpp_ast: a struct whose head names a module written where nothing says how it is spelled"
+  | Some spelling ->
+    let here = resolve spelling [] in
+    { h with
+      template = List.map (resolve_template_param here) h.template;
+      name = (match h.name with Named _ as n -> n | Module_struct m -> Module_struct (resolve_declared_module here m)) }
+
 let resolve_declaration (resolve : resolver) declaration =
   let here key = resolve [] key in
-  let module_ref (m : module_ref) = {m with name = Resolved (here (Module m.path))} in
+  let module_ref = resolve_module_ref here and template_param = resolve_template_param here in
   let global_ref key (g : global_ref) = {g with name = Resolved (here (key g.global))} in
   let concept : asserted -> asserted = function
     | Of_class g -> Of_class (global_ref (fun r -> Class_concept r) g)
@@ -451,10 +514,17 @@ let resolve_declaration (resolve : resolver) declaration =
     | Applied {functor_; args} -> Applied {functor_ = module_ref functor_; args = List.map module_ref args}
   in
   match declaration with
-  | Module_alias a -> Module_alias {a with target = module_expr a.target}
+  | Module_alias a -> Module_alias {name = resolve_declared_module here a.name; target = module_expr a.target}
   | Functor_alias a ->
-    Functor_alias {a with functor_ = module_ref a.functor_; params = List.map (fun (p, m) -> (p, module_ref m)) a.params}
-  | Derived_functor a -> Derived_functor {a with base = module_expr a.base}
+    Functor_alias
+      { name = resolve_declared_module here a.name;
+        functor_ = module_ref a.functor_;
+        params = List.map (fun (p, m) -> (template_param p, module_ref m)) a.params }
+  | Derived_functor a ->
+    Derived_functor
+      { template = List.map template_param a.template;
+        name = resolve_declared_module here a.name;
+        base = module_expr a.base }
   | Assertion a -> Assertion {concept = concept a.concept; subject = subject a.subject}
   | Global_alias (Alias_of_module m) -> Global_alias (Alias_of_module (module_ref m))
   | Global_alias (Alias_of_type a) ->
@@ -462,7 +532,7 @@ let resolve_declaration (resolve : resolver) declaration =
   | Declaration _ | Absorbed _ | Fields _ | Modtype_concept _ -> declaration
 
 let resolve_tree ~requested ~resolve t =
-  map_leaves
+  map_leaves ~head:(resolve_head resolve)
     (fun spelling u ->
       let resolve = resolve spelling in
       Unprinted

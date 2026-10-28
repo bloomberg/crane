@@ -44,6 +44,9 @@ type definition =
 (** What is named, each as the naming function the printer would ask. *)
 type key =
   | Module of ModPath.t  (** The module, as its struct is named. *)
+  | Module_declared of ModPath.t
+      (** The name the module's struct, or the alias standing for it, is
+          declared under. *)
   | Global of Common.kind * GlobRef.t
       (** The global: an inline custom mapping's text, or its name. *)
   | Unmapped of Common.kind * GlobRef.t

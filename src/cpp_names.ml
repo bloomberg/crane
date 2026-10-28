@@ -125,7 +125,7 @@ let module_struct_name_of name =
   let escaped = Table.escape_reserved_struct_name s in
   if String.equal s escaped then raw else Pp.str escaped
 
-let module_struct_name mp = module_struct_name_of (module_name mp)
+let module_declared_name mp = Table.escape_reserved_struct_name (Common.emitted_module_name mp)
 
 (** Check if a non-local inductive's Dnspace wrapper was merged with its inner
     struct. Returns true if the wrapper WAS merged (no pending declarations →
@@ -780,6 +780,7 @@ let live_name (key : Cpp_resolution.key) =
   with_render_ctx (fun c -> {c with rc_names = None}) @@ fun () ->
   match key with
   | Module mp -> Common.resolve_module mp
+  | Module_declared mp -> Cpp_name.unqualified (module_declared_name mp)
   | Global (k, r) -> global_name k r
   | Unmapped (k, r) -> Common.global_name k r
   | Inductive_value r -> inductive_value_name r

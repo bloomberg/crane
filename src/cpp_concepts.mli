@@ -7,10 +7,6 @@
 
 open Names
 
-(** The concept of the module type [kn], as a reference names it where the
-    printer is ({!Cpp_names.modtype_concept_ref}). *)
-val pp_concept_ref : ModPath.t -> Pp.t
-
 (** [pp_modtype_concept ~names ~params path c] is the declaration of the
     concept of the module type at [path], generated as [c], over [M] and the
     parameters [params] of a functor declaring it, with the concepts its

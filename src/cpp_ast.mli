@@ -56,12 +56,6 @@ type spelling =
           planned header scope says -- a library module writes its types
           at namespace scope and its functions in a struct of its name. *)
 
-(** A parameter of a template, by its name. *)
-type template_param =
-  | Typename of Pp.t  (** [typename T]. *)
-  | Constrained of {concept : Pp.t; param : Pp.t}
-      (** [C<..> M], the concept applied to any further arguments. *)
-
 (** The name a reference is written with where the declaration holding it
     is written, once {!resolve} has resolved it there. *)
 type resolution = Unresolved | Resolved of Cpp_name.t
@@ -87,6 +81,27 @@ type concept_ref = {module_type : ModPath.t; name : resolution}
 (** [concept_ref path] is the concept of the module type at [path], not yet
     resolved. *)
 val concept_ref : ModPath.t -> concept_ref
+
+(** A module a declaration declares -- its struct, or an alias standing for
+    it -- and the name it is declared under, once {!resolve} has resolved
+    it. *)
+type declared_module = {declares : ModPath.t; name : resolution}
+
+(** [declared_module path] is the module at [path], declared under a name
+    not yet resolved. *)
+val declared_module : ModPath.t -> declared_module
+
+(** A parameter of a template, by its name. *)
+type template_param =
+  | Typename of parameter  (** [typename T]. *)
+  | Constrained of {concept : concept_ref; args : module_ref list; param : module_ref}
+      (** [C<args> M]: the concept of a module type, applied to any further
+          arguments, constraining a functor's parameter. *)
+
+(** What a template parameter names. *)
+and parameter =
+  | Type_variable of Id.t
+  | Module_parameter of module_ref  (** A functor's parameter. *)
 
 (** How {!resolve} names what a declaration names where it is written, at
     a frame inside it. *)
@@ -116,15 +131,15 @@ type declaration =
   | Assertion of assertion
       (** [static_assert(C<S>);], on a line of its own: that a module or an
           instance satisfies a concept. *)
-  | Module_alias of {name : Pp.t; target : module_expr}
+  | Module_alias of {name : declared_module; target : module_expr}
       (** [using name = target;]: a module defined as another, inside a
           class template a qualified name in [target] being a dependent
           one. *)
-  | Functor_alias of {name : Pp.t; functor_ : module_ref; params : (template_param * module_ref) list}
+  | Functor_alias of {name : declared_module; functor_ : module_ref; params : (template_param * module_ref) list}
       (** [template <params> using name = functor_<params>;]: a functor
           defined as another, which Rocq reduces to the other's name, over
           its own parameters, each as declared and as a module. *)
-  | Derived_functor of {template : template_param list; name : Pp.t; base : module_expr}
+  | Derived_functor of {template : template_param list; name : declared_module; base : module_expr}
       (** [template <template> struct name : base {};]: a functor whose body
           is another module, its own parameters visible to [base]. *)
 
@@ -229,9 +244,20 @@ and enclosure =
     struct is written: [template <template> struct name : public base]. *)
 and struct_head = {
   template : template_param list;  (** None if the struct is no template. *)
-  name : Pp.t;
-  base : Pp.t option;  (** The class it derives from, if any. *)
+  name : struct_name;
+  base : base option;  (** The class it derives from, if any. *)
 }
+
+(** The name a struct is declared under. *)
+and struct_name =
+  | Named of string  (** As the plan named it: a wrapper's struct. *)
+  | Module_struct of declared_module  (** As its module is declared. *)
+
+(** A class a struct derives from. *)
+and base =
+  | Of_itself of {template : string; type_args : Id.t list}
+      (** [template<N<type_args>>]: the class template instantiated at the
+          struct [N] itself, as [std::enable_shared_from_this] is. *)
 
 (** How a struct's braces are laid out. *)
 and layout =
@@ -254,7 +280,8 @@ val empty : t
 val concept_group : concept_position -> t list -> t
 
 (** [template<..>] and a line break, if [params] is not empty; nothing
-    otherwise. *)
+    otherwise.
+    @raise Invalid_argument if a name in it is not resolved. *)
 val pp_template_head : template_param list -> Pp.t
 val decl : needs:Needs.t -> Pp.t -> t
 
@@ -282,17 +309,20 @@ val global_alias : global_alias -> t
     needs nothing placed in front of it. *)
 val assertion : assertion -> t
 
-(** [module_alias ~name target] is {!Module_alias}, printed where the tree
-    puts it.  It needs nothing placed in front of it. *)
-val module_alias : name:Pp.t -> module_expr -> t
+(** [module_alias mp target] is {!Module_alias}, declaring the module [mp],
+    printed where the tree puts it.  It needs nothing placed in front of
+    it. *)
+val module_alias : ModPath.t -> module_expr -> t
 
-(** [functor_alias ~name functor_ params] is {!Functor_alias}, printed where
-    the tree puts it.  It needs nothing placed in front of it. *)
-val functor_alias : name:Pp.t -> module_ref -> (template_param * module_ref) list -> t
+(** [functor_alias mp functor_ params] is {!Functor_alias}, declaring the
+    module [mp], printed where the tree puts it.  It needs nothing placed in
+    front of it. *)
+val functor_alias : ModPath.t -> module_ref -> (template_param * module_ref) list -> t
 
-(** [derived_functor ~template ~name base] is {!Derived_functor}, printed
-    where the tree puts it.  It needs nothing placed in front of it. *)
-val derived_functor : template:template_param list -> name:Pp.t -> module_expr -> t
+(** [derived_functor ~template mp base] is {!Derived_functor}, declaring
+    the module [mp], printed where the tree puts it.  It needs nothing
+    placed in front of it. *)
+val derived_functor : template:template_param list -> ModPath.t -> module_expr -> t
 
 (** [wrapper_struct ~name ~module_ ~fields] is {!Wrapper_struct}. *)
 val wrapper_struct : name:string -> module_:ModPath.t -> fields:t -> t
@@ -356,7 +386,8 @@ val wrapper_structs : t -> string list
 val fill_wrappers : (string * body) list -> t -> t
 
 (** [t] as a document, for reading.
-    @raise Invalid_argument if it holds a declaration not yet printed. *)
+    @raise Invalid_argument if it holds a declaration not yet printed, or
+    a struct whose head names what is not resolved. *)
 val to_pp : t -> Pp.t
 
 (** [resolve_tree ~requested ~resolve t] is [t] with what each declaration
@@ -364,8 +395,11 @@ val to_pp : t -> Pp.t
     instance an assertion names, the type a member alias stands in for, and
     whatever else [requested] says it names, at a frame inside it -- each as
     [resolve spelling] names it where a declaration spelled [spelling] is
-    written.
-    @raise Invalid_argument as {!print_tree} does. *)
+    written; and so is what the head of each module's struct names, where
+    the struct is written.
+    @raise Invalid_argument as {!print_tree} does, and if a struct whose
+    head names a module is outside every {!Elements} and struct
+    {!Module}. *)
 val resolve_tree :
   requested:(declaration -> (Cpp_resolution.frame * Cpp_resolution.key) list) ->
   resolve:(spelling -> resolver) ->

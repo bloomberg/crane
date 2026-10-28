@@ -52,12 +52,14 @@ val pp_global_name : Common.kind -> Names.GlobRef.t -> Pp.t
 (** Pretty-print a module path. *)
 val pp_modname : Names.ModPath.t -> Pp.t
 
-(** The name of the struct the module [mp] is written as, at its
-    declaration: {!pp_modname}, escaped where it is reserved. *)
-val module_struct_name : Names.ModPath.t -> Pp.t
-
-(** {!module_struct_name} of the module resolution names [name]. *)
+(** The name of the struct the module resolution names [name] is written
+    as: escaped where it is reserved. *)
 val module_struct_name_of : Cpp_name.t -> Pp.t
+
+(** The name the struct the module [mp] is written as, or the alias
+    standing for it, is declared under: the module's, escaped where it is
+    reserved ({!Cpp_resolution.Module_declared}). *)
+val module_declared_name : Names.ModPath.t -> string
 
 (** {2 Inductive references} *)
 
