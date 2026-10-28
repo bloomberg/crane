@@ -358,3 +358,24 @@ let () =
             | _ -> Pp.str "?" )
           (Cpp_ast.elements ~source:m concept) ))
     "u"
+
+(* Entering a scope is a function from one position to the next, and what
+   enter_from passes on is what it installs. *)
+let () =
+  let start = Cpp_state.file_start Common.Intf in
+  let s = Cpp_names.next Cpp_resolution.In_struct start in
+  check "entering a struct's body is in a struct, at a frame one deeper"
+    (s.rc_in_struct && (not s.rc_in_template) && s.rc_frame = [Cpp_resolution.In_struct]);
+  let t = Cpp_names.next Cpp_resolution.In_template s in
+  check "entering a class template's body keeps what was entered, innermost first"
+    (t.rc_in_struct && t.rc_in_template && t.rc_frame = [Cpp_resolution.In_template; In_struct]);
+  let signature = Cpp_resolution.Signature {signature = m; parameters = []} in
+  let g = Cpp_names.next signature start in
+  check "entering a signature changes only the frame" ({g with rc_frame = []} = start && g.rc_frame = [signature]);
+  let f = Cpp_names.next (Function {owner = ref_of "f"; defines = true}) s in
+  check "a function defined in a struct's body is defined there, in no out-of-line scope" (f.rc_scope = None);
+  let installed =
+    Cpp_names.entering_from start [In_struct; In_template] (fun c -> (c, c == !Cpp_state.render_ctx))
+  in
+  check "entering scopes one after another is entering each in turn" (fst installed = t);
+  check "the position entered is the one installed" (snd installed)
