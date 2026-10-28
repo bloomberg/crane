@@ -64,6 +64,11 @@ let global_name c k r =
 (** {!global_name} as text. *)
 let str_global c k r = Cpp_name.to_string (global_name c k r)
 
+(** The name [r] is declared under, wherever it is declared: the replacement
+    text of an inline custom mapping, otherwise its own short name. *)
+let declared_name k r =
+  match find_custom_opt r with Some custom_str when to_inline r -> custom_str | _ -> Common.pp_global_name k r
+
 (** {!global_name} as a document. *)
 let pp_global c k r = Cpp_name.pp (global_name c k r)
 
@@ -662,7 +667,7 @@ let modtype_concept_ref ctx kn =
 let struct_definition_name ctx id =
   let local = local_at ctx id and merged = merged_at ctx and promoted = promoted_at ctx in
   match struct_spelling ~merged ~promoted ~local id with
-  | As_declared -> global_name ctx Type id
+  | As_declared -> Cpp_name.unqualified (declared_name Type id)
   | Eponymous_record_name | Capitalized -> Cpp_name.unqualified (struct_declaration_name ~merged ~promoted ~local id)
 
 let enum_definition_name ctx r =

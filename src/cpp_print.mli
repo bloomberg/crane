@@ -20,7 +20,7 @@ val write_decl : Common.env -> Cpp_erasure.settled -> Cpp_ast.t
 (** [absorbs ~homed d]: whether [d] writes a wrapper struct holding a
     wrapper module's declarations, which are members of it: one [homed]
     names, with the module, as planned. *)
-val absorbs : homed:(string * ModPath.t) list -> Cpp_state.render_ctx -> Cpp_erasure.settled -> bool
+val absorbs : homed:(string * ModPath.t) list -> Cpp_erasure.settled -> bool
 
 (** [write_absorbing ~homed env d] is [d], which {!absorbs}, as {!write_decl}
     writes it, each wrapper struct holding a wrapper module's declarations a
@@ -166,7 +166,7 @@ val render_type_template : hole:(int -> Pp.t option) -> string -> Pp.t
 
 (** The name the struct wrapping an inductive at namespace scope is written
     under. *)
-val nspace_wrapper_name : Cpp_state.render_ctx -> GlobRef.t -> string
+val nspace_wrapper_name : GlobRef.t -> string
 
 (** Whether the inductive is written inside a wrapper other declarations were
     queued against, and so is spelled [List::list] rather than [List]. *)
@@ -175,7 +175,7 @@ val nested_in_wrapper : GlobRef.t -> bool
 (** The names of the wrapper structs a declaration writes around something
     other than a sole struct merged into them, in the order it writes them:
     the structs another wrapper's declarations can be written into. *)
-val unmerged_wrappers_written : Cpp_state.render_ctx -> Cpp_erasure.settled -> string list
+val unmerged_wrappers_written : Cpp_erasure.settled -> string list
 
 (** The assertions a declaration holds back, in the order it writes them:
     those that a class's concept holds of an instance where the concept is

@@ -14,6 +14,11 @@
     custom mapping, otherwise as resolution settles it there. *)
 val global_name : Cpp_state.render_ctx -> Common.kind -> Names.GlobRef.t -> Cpp_name.t
 
+(** The name a global is declared under, wherever it is declared: the
+    replacement text of an inline custom mapping, otherwise its own short
+    name. *)
+val declared_name : Common.kind -> Names.GlobRef.t -> string
+
 (** {!global_name} as text. *)
 val str_global : Cpp_state.render_ctx -> Common.kind -> Names.GlobRef.t -> string
 
