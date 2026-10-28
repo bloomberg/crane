@@ -435,16 +435,29 @@ struct LoopifyCoercedRecursiveCall {
       const expr *a2;
     };
 
+    /// CraneCont_PairE: saves [b], resumes after recursive call, then processes
+    /// rest.
+    struct CraneCont_PairE {
+      const expr *b;
+    };
+
+    /// CraneCont_PairE_1: saves [_tmp4], resumes after recursive call, then
+    /// processes rest.
+    struct CraneCont_PairE_1 {
+      crane::obj _tmp4;
+    };
+
     /// CraneCont_SuccE: resumes after recursive call, then processes rest.
     struct CraneCont_SuccE {};
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_FstE, CraneCont_Ite,
-                                    CraneCont_SuccE>;
+    using CraneFrame =
+        std::variant<CraneEnter, CraneCont_FstE, CraneCont_Ite, CraneCont_PairE,
+                     CraneCont_PairE_1, CraneCont_SuccE>;
     crane::obj _result{};
     crane::small_vector<CraneFrame> _stack;
     _stack.emplace_back(CraneEnter{&e});
     /// Loopified eval: CraneEnter -> CraneCont_FstE -> CraneCont_Ite ->
-    /// CraneCont_SuccE.
+    /// CraneCont_PairE -> CraneCont_PairE_1 -> CraneCont_SuccE.
     while (!_stack.empty()) {
       CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -467,8 +480,8 @@ struct LoopifyCoercedRecursiveCall {
           _stack.emplace_back(CraneEnter{crane_raw(a)});
         } else if (std::holds_alternative<typename expr::PairE>(e.v())) {
           const auto &[a, b] = std::get<typename expr::PairE>(e.v());
-          _result = std::make_pair(crane::obj(eval<crane::obj>(*a)),
-                                   crane::obj(eval<crane::obj>(*b)));
+          _stack.emplace_back(CraneCont_PairE{crane_raw(b)});
+          _stack.emplace_back(CraneEnter{crane_raw(a)});
         } else {
           const auto &[a] = std::get<typename expr::FstE>(e.v());
           _stack.emplace_back(CraneCont_FstE{});
@@ -488,6 +501,15 @@ struct LoopifyCoercedRecursiveCall {
         } else {
           _stack.emplace_back(CraneEnter{&a2});
         }
+      } else if (std::holds_alternative<CraneCont_PairE>(_frame)) {
+        auto _f = std::move(std::get<CraneCont_PairE>(_frame));
+        const expr &b = *_f.b;
+        _stack.emplace_back(CraneCont_PairE_1{std::move(_result)});
+        _stack.emplace_back(CraneEnter{&b});
+      } else if (std::holds_alternative<CraneCont_PairE_1>(_frame)) {
+        auto _f = std::move(std::get<CraneCont_PairE_1>(_frame));
+        _result = std::make_pair(crane::obj(_f._tmp4),
+                                 crane::obj(std::move(_result)));
       } else {
         auto _f = std::move(std::get<CraneCont_SuccE>(_frame));
         _result = (crane::any_cast<uint64_t>(std::move(_result)) + 1);

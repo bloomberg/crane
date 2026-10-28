@@ -1,9 +1,5 @@
 // Copyright 2026 Bloomberg Finance L.P.
 // Distributed under the terms of the GNU LGPL v2.1 license.
-//
-// Expected: SEGFAULT (stack overflow) in eval, whose machine leaves the
-// recursive calls at pairE's existential types as C++ calls.
-// When fixed: prints "loopify_existential_recursive_call: ok".
 #include <loopify_existential_recursive_call.h>
 
 #include <cassert>

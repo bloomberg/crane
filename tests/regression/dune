@@ -13594,3 +13594,14 @@
   (alias runtest)
   (deps loopify_recursor_instantiated.t.exe)
   (action (run ./loopify_recursor_instantiated.t.exe))))
+
+(subdir loopify_existential_recursive_call
+ (rule
+  (targets loopify_existential_recursive_call.t.exe)
+  (deps LoopifyExistentialRecursiveCall.vo loopify_existential_recursive_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_existential_recursive_call.t.exe loopify_existential_recursive_call.cpp loopify_existential_recursive_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_existential_recursive_call.t.exe)
+  (action (run ./loopify_existential_recursive_call.t.exe))))

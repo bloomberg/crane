@@ -10,16 +10,15 @@ Require Import Crane.Mapping.NatIntStd.
 
     In [(eval x, eval y)] each call is at a type [pairE] hides, which no
     C++ type spells, so only the box [eval] returns can hold its value.
-    The pair reads it at [eval]'s own result type [A], and translation reads
+    The pair reads it at [eval]'s own result type [A], and translation read
     a boxed temporary at [A] by casting it to [eval]'s template parameter,
-    which in a machine is the outermost call's: a [bool] component would be
-    cast to the [nat] of the whole.  So Normalize leaves these calls in
-    place, ordinary C++ calls inside [eval]'s machine, and a [fstE]/[pairE]
-    nest a hundred thousand deep exhausts the stack.  ([fst (eval p)] reads
-    its call through a coercion into a pair, and is bound: see
-    [regression/loopify_coerced_recursive_call].)
-
-    Expected: stack overflow in [eval].  When fixed: prints ok. *)
+    which in a machine is the outermost call's: a [bool] component would
+    have been cast to the [nat] of the whole.  So Normalize left these calls
+    in place, ordinary C++ calls inside [eval]'s machine, and a
+    [fstE]/[pairE] nest a hundred thousand deep exhausted the stack.  Such a
+    temporary now stays the box, and the calls are bound and resumed like
+    any other.  ([fst (eval p)] reads its call through a coercion into a
+    pair: see [regression/loopify_coerced_recursive_call].) *)
 Module LoopifyExistentialRecursiveCall.
 
 Inductive expr : Type -> Type :=
