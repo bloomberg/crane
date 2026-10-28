@@ -51,3 +51,12 @@ val plan : ModPath.t -> t -> unit
 
 (** The planned frame of a module; an anomaly where none was planned. *)
 val planned : ModPath.t -> t
+
+(** The modules whose frames the body of the module [mp] is written in,
+    innermost first, as planned ({!Scope_plan.frames}). *)
+val frames_around : ModPath.t -> ModPath.t list
+
+(** The inductives not promoted in the body of the module [mp]: the
+    eponymous inductive of each frame around it that does not promote it,
+    whatever the unit's plan promotes. *)
+val demoted_around : ModPath.t -> GlobRef.t list

@@ -876,7 +876,7 @@ let inductive_head ctx r ~applied =
       if Common.get_force_cross_file_qualification () then capitalize_base type_name else type_name
     in
     let cap =
-      if is_merged_inductive r then dedup_tail ~allow_bare:(Table.modular () && not needs_ns) cap
+      if merged_at ctx r then dedup_tail ~allow_bare:(Table.modular () && not needs_ns) cap
       else cap
     in
     (* The qualified name is relative to the enclosing module struct, so
@@ -887,7 +887,7 @@ let inductive_head ctx r ~applied =
       head = cap;
       typename = needs_typename ctx cap;
       template_keyword = applied && ctx.rc_in_template }
-  else if is_merged_inductive r && not (local_at ctx r) then
+  else if merged_at ctx r && not (local_at ctx r) then
     (* A local inductive is a sibling member of the enclosing module struct,
        so it is in scope under its own name; the merged-wrapper spelling
        ([Opt] for [opt]) names nothing there. *)

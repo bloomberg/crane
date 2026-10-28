@@ -97,12 +97,21 @@ let module_struct_name_of name =
 
 let module_declared_name mp = Table.escape_reserved_struct_name (Common.emitted_module_name mp)
 
-(** Check if a non-local inductive's Dnspace wrapper was merged with its inner
-    struct. Returns true if the wrapper WAS merged (no pending declarations →
-    use List<A>). Returns false if it was NOT merged (has pending declarations →
-    use List::list<A>). *)
-let is_merged_inductive (r : GlobRef.t) : bool =
-  Ref.User.Tbl.mem promoted_inductives r || not (in_unmerged_wrapper r)
+(** Whether the inductive [r] is promoted at the position [c]: promoted by
+    the unit's plan, and not demoted in the body of the module whose element
+    is being written ({!Module_frame.demoted_around}). *)
+let promoted_at (c : render_ctx) r =
+  Ref.User.Tbl.mem promoted_inductives r
+  &&
+  match c.rc_module with
+  | Some mp -> not (List.exists (globref_equal r) (Module_frame.demoted_around mp))
+  | None -> true
+
+(** Whether a non-local inductive's Dnspace wrapper was merged with its inner
+    struct at the position [c]: true if the wrapper WAS merged (no pending
+    declarations, so List<A>); false if it was NOT merged (has pending
+    declarations, so List::list<A>). *)
+let merged_at c r = promoted_at c r || not (in_unmerged_wrapper r)
 
 (* ============================================================================
    Helper functions to reduce code duplication
@@ -203,7 +212,7 @@ let inductive_name ctx r =
     match r with
     | GlobRef.IndRef _ when Module_plan.is_eponymous_record r ->
       (Cpp_name.unqualified (Common.pp_type_name_capitalized r), false)
-    | GlobRef.IndRef _ when Ref.User.Tbl.mem promoted_inductives r ->
+    | GlobRef.IndRef _ when promoted_at ctx r ->
       (capitalize_struct (global_name ctx Type r), false)
     | GlobRef.IndRef _ when local_at ctx r ->
       if Common.get_force_cross_file_qualification () then
@@ -288,7 +297,7 @@ let inductive_type_name ctx r =
     if force && Cpp_name.is_qualified (global_name ctx Type r) then
       Cpp_name.name [Cpp_name.Class cap_name] cap_name
     else Cpp_name.unqualified cap_name
-  | GlobRef.IndRef _ when Ref.User.Tbl.mem promoted_inductives r ->
+  | GlobRef.IndRef _ when promoted_at ctx r ->
     if local_at ctx r then
       Cpp_name.unqualified (String.capitalize_ascii (Common.pp_global_name Type r))
     else promoted_name (global_name ctx Type r)
@@ -305,9 +314,9 @@ let inductive_type_name ctx r =
     let n = global_name ctx Type r in
     if Cpp_name.is_qualified n then
       if not force then n
-      else if is_merged_inductive r then promoted_name n
+      else if merged_at ctx r then promoted_name n
       else capitalize_base n
-    else if is_merged_inductive r then capitalize_initial n
+    else if merged_at ctx r then capitalize_initial n
     else Cpp_name.inside (capitalize_initial n) (fun s -> Cpp_name.Class s) n
   | _ -> global_name ctx Type r
 
@@ -364,7 +373,7 @@ let struct_scopes_for (ctx : render_ctx) r n =
        the struct's constructor; it takes the qualifier the struct itself is
        written with. *)
     else if
-      (Ref.User.Tbl.mem promoted_inductives r || Module_plan.is_eponymous_record r)
+      (promoted_at ctx r || Module_plan.is_eponymous_record r)
       && ModPath.equal (modpath_of_r r) scope.Scope_plan.module_
     then
       match List.rev struct_scopes with
@@ -549,8 +558,7 @@ type struct_spelling =
 (** The spelling of [id]'s struct at its declaration, [local] where the
     declaration is rendered among the inductives local to it: a promoted
     inductive, and one a reference sees as merged, take the merged spelling. *)
-let struct_spelling ?(merged = is_merged_inductive)
-    ?(promoted = Ref.User.Tbl.mem promoted_inductives) ~local id =
+let struct_spelling ~merged ~promoted ~local id =
   match id with
   | GlobRef.IndRef _ when is_eponymous_record_cached id -> Eponymous_record_name
   | GlobRef.IndRef _ when promoted id -> Capitalized
@@ -570,8 +578,8 @@ let struct_spelling ?(merged = is_merged_inductive)
 let enum_declaration_name r = capitalize_enum_name (Common.pp_global_name Type r) r
 
 (** {!struct_spelling} as a string. *)
-let struct_declaration_name ?merged ?promoted ~local id =
-  match struct_spelling ?merged ?promoted ~local id with
+let struct_declaration_name ~merged ~promoted ~local id =
+  match struct_spelling ~merged ~promoted ~local id with
   | Eponymous_record_name -> Common.pp_type_name_capitalized id
   | Capitalized -> String.capitalize_ascii (Common.pp_global_name Type id)
   | As_declared -> Common.pp_global_name Type id
@@ -652,10 +660,10 @@ let modtype_concept_ref ctx kn =
   | MPfile _ | MPbound _ -> Common.resolve_module kn
 
 let struct_definition_name ctx id =
-  let local = local_at ctx id in
-  match struct_spelling ~local id with
+  let local = local_at ctx id and merged = merged_at ctx and promoted = promoted_at ctx in
+  match struct_spelling ~merged ~promoted ~local id with
   | As_declared -> global_name ctx Type id
-  | Eponymous_record_name | Capitalized -> Cpp_name.unqualified (struct_declaration_name ~local id)
+  | Eponymous_record_name | Capitalized -> Cpp_name.unqualified (struct_declaration_name ~merged ~promoted ~local id)
 
 let enum_definition_name ctx r =
   match r with GlobRef.IndRef _ -> inductive_type_name ctx r | _ -> global_name ctx Type r
@@ -714,11 +722,11 @@ let inductive_value_name ctx x =
   let force = Common.get_force_cross_file_qualification () in
   (* Check eponymous record FIRST because they can also be local *)
   if is_eponymous_record_cached x then Cpp_name.unqualified (Common.pp_type_name_capitalized x)
-  else if Ref.User.Tbl.mem promoted_inductives x then
+  else if promoted_at ctx x then
     dedup_tail (if force then capitalize_base type_name else capitalize_initial type_name)
   else if Cpp_name.is_qualified type_name then
     let cap = if force then capitalize_base type_name else type_name in
-    if is_merged_inductive x then
+    if merged_at ctx x then
       let allow_bare =
         let ref_base = base_mp (modpath_of_r x) in
         List.exists (ModPath.equal ref_base) (visible_mps (current_visibility ()))
@@ -726,7 +734,7 @@ let inductive_value_name ctx x =
       dedup_tail ~allow_bare cap
     else cap
   else if needs_ns then
-    if is_merged_inductive x then
+    if merged_at ctx x then
       (* Merged non-local inductive: use capitalized name directly *)
       List.fold_right Cpp_name.within (global_scopes_for x ns_name) ns_name
     else (* Unmerged non-local inductive: Wrapper::inner *)

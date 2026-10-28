@@ -2564,7 +2564,7 @@ let plan_nested_structs s =
   (* A struct written inside another is its module's rendering, which demotes
      the module's inductive while it lasts: none is promoted there.  Whether
      its wrapper is merged is as a reference sees it at the declaration
-     ({!Cpp_names.is_merged_inductive}), which spells the inductive the way
+     ({!Cpp_names.merged_at}), which spells the inductive the way
      the declaration does. *)
   let promoted _ = false in
   let merged r = not (in_unmerged_wrapper r) in

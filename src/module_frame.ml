@@ -187,3 +187,17 @@ let planned mp =
   | None ->
     CErrors.anomaly
       Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned frame.")
+
+let frames_around mp =
+  match Scope_plan.frames mp with
+  | Some frames -> frames
+  | None ->
+    CErrors.anomaly
+      Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned frames.")
+
+let demoted_around mp =
+  List.filter_map
+    (fun m ->
+      let frame = planned m in
+      if Option.has_some frame.promoted then None else frame.eponymous_type )
+    (frames_around mp)

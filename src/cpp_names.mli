@@ -45,8 +45,15 @@ val module_declared_name : Names.ModPath.t -> string
 
 (** {2 Inductive references} *)
 
-(** Whether the given global is a merged inductive. *)
-val is_merged_inductive : Names.GlobRef.t -> bool
+(** Whether the inductive is promoted at the position: promoted by the
+    unit's plan, and not demoted by a frame around the body of the module
+    whose element is being written. *)
+val promoted_at : Cpp_state.render_ctx -> Names.GlobRef.t -> bool
+
+(** Whether the inductive's namespace wrapper is merged with it at the
+    position: it is promoted there, or no declaration was queued against
+    its wrapper. *)
+val merged_at : Cpp_state.render_ctx -> Names.GlobRef.t -> bool
 
 (** {2 Name predicates and inductive/enum naming} *)
 
@@ -105,11 +112,11 @@ type struct_spelling =
 (** The spelling of an inductive's struct at its declaration, [local] where
     the declaration is rendered among the inductives local to it; [merged]
     says whether its namespace wrapper is merged with it, as a reference
-    sees it ({!is_merged_inductive} by default), and [promoted]
-    whether it is promoted where it is declared. *)
+    sees it ({!merged_at}), and [promoted] whether it is promoted where it
+    is declared. *)
 val struct_spelling :
-  ?merged:(Names.GlobRef.t -> bool) ->
-  ?promoted:(Names.GlobRef.t -> bool) ->
+  merged:(Names.GlobRef.t -> bool) ->
+  promoted:(Names.GlobRef.t -> bool) ->
   local:bool ->
   Names.GlobRef.t ->
   struct_spelling
@@ -119,8 +126,8 @@ val enum_declaration_name : Names.GlobRef.t -> string
 
 (** {!struct_spelling} as a string. *)
 val struct_declaration_name :
-  ?merged:(Names.GlobRef.t -> bool) ->
-  ?promoted:(Names.GlobRef.t -> bool) ->
+  merged:(Names.GlobRef.t -> bool) ->
+  promoted:(Names.GlobRef.t -> bool) ->
   local:bool ->
   Names.GlobRef.t ->
   string
