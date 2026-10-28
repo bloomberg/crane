@@ -3721,24 +3721,29 @@ let rec pp_initialiser env ty e =
     is spelled the way it will be written out, and the passes that settle a
     declaration ({!Cpp_pipeline.finish}) have already run.
 
+    @param ctx  where it is written, as the scopes entered from where the
+                declaration of the tree holding it is written say
     @param env  name environment for sub-expression and sub-type printers *)
-and pp_cpp_decl env (settled : Cpp_erasure.settled) =
+and pp_cpp_decl ctx env (settled : Cpp_erasure.settled) =
+  if Probe.checking () && not (ctx == !render_ctx || ctx = !render_ctx) then
+    Probe.violation "threaded positions"
+      (str "a declaration is printed at another position than the printer is at");
   note_file_scope_type (settled :> cpp_decl);
   match Cpp_erasure.view settled with
-  | Template (temps, cstr, inner) -> pp_template_decl env temps cstr inner
+  | Template (temps, cstr, inner) -> pp_template_decl ctx env temps cstr inner
   | Namespace (None, decls) ->
-    let ds = pp_list_stmt (pp_cpp_decl env) decls in
+    let ds = pp_list_stmt (pp_cpp_decl ctx env) decls in
     (str "namespace " ++ str "{") ++ fnl () ++ ds ++ fnl () ++ str "};"
-  | Namespace (Some id, members) -> pp_wrapper_nspace env id members
-  | Decl d -> pp_leaf_decl env d
+  | Namespace (Some id, members) -> pp_wrapper_nspace ctx env id members
+  | Decl d -> pp_leaf_decl ctx env d
 
 (** A template head and the declaration it introduces. *)
-and pp_template_decl env temps cstr (inner : Cpp_erasure.settled) =
+and pp_template_decl ctx env temps cstr (inner : Cpp_erasure.settled) =
   match (inner :> cpp_decl) with
-  | Dasgn {da_ref = id; da_type = ty; da_init = e; _} when (!render_ctx).rc_in_struct ->
+  | Dasgn {da_ref = id; da_type = ty; da_init = e; _} when ctx.rc_in_struct ->
     let expr_pp = pp_initialiser env ty e in
     template_head env temps cstr ++ pp_meyers_singleton env id ty expr_pp
-  | _ -> template_head env temps cstr ++ pp_cpp_decl env inner
+  | _ -> template_head env temps cstr ++ pp_cpp_decl ctx env inner
 
 (** A template head with its constraint.  A default may be given once per
     parameter.  Which printing gives it is decided in the declarations: a
@@ -3757,7 +3762,7 @@ and template_head env temps cstr =
 
 (** A namespace-scope wrapper struct around [members], merged with its sole
     struct child where it can be. *)
-and pp_wrapper_nspace env id (members : Cpp_erasure.settled list) =
+and pp_wrapper_nspace ctx env id (members : Cpp_erasure.settled list) =
   let decls = (members :> cpp_decl list) in
   let struct_name_str = nspace_wrapper_name id in
   (* The same question the out-of-line definition of a member asks, asked
@@ -3781,7 +3786,7 @@ and pp_wrapper_nspace env id (members : Cpp_erasure.settled list) =
       true ) ->
     (* MERGE non-template: struct Nat { ... } *)
     let struct_name = str struct_name_str in
-    let f_s = entering [In_struct; Inductive_struct ds_ref] (fun () -> pp_cpp_fields_with_vis ~struct_name env fields) in
+    let f_s = entering_from ctx [In_struct; Inductive_struct ds_ref] (fun _ -> pp_cpp_fields_with_vis ~struct_name env fields) in
     let inherit_clause =
       if sft then
         str " : public " ++ str (sn ()).enable_from_this ++ str "<"
@@ -3813,7 +3818,7 @@ and pp_wrapper_nspace env id (members : Cpp_erasure.settled list) =
     (* MERGE template: template<typename A> struct List { ... } *)
     let struct_name = str struct_name_str in
     let f_s =
-      entering [In_struct; In_template; Inductive_struct ds_ref] (fun () -> pp_cpp_fields_with_vis ~struct_name env fields)
+      entering_from ctx [In_struct; In_template; Inductive_struct ds_ref] (fun _ -> pp_cpp_fields_with_vis ~struct_name env fields)
     in
     let args = pp_list pp_template_param temps in
     let req = pp_requires_of_tparams temps in
@@ -3847,7 +3852,7 @@ and pp_wrapper_nspace env id (members : Cpp_erasure.settled list) =
   | _ ->
     (* No merge: keep wrapper struct (has pending decls or multiple
        children) *)
-    let ds = enter In_struct (fun () -> pp_list_stmt (pp_cpp_decl env) members) in
+    let ds = enter_from ctx In_struct (fun ctx -> pp_list_stmt (pp_cpp_decl ctx env) members) in
     (str "struct " ++ str struct_name_str ++ str " {")
     ++ fnl ()
     ++ ds
@@ -3855,7 +3860,7 @@ and pp_wrapper_nspace env id (members : Cpp_erasure.settled list) =
     ++ str "};" )
 
 (** A declaration with no declaration nested inside it. *)
-and pp_leaf_decl env (d : cpp_decl) =
+and pp_leaf_decl ctx env (d : cpp_decl) =
   match d with
   (* Taken apart by {!Cpp_erasure.view}, which hands out their children
      settled. *)
@@ -3872,8 +3877,8 @@ and pp_leaf_decl env (d : cpp_decl) =
     (* A definition outside every struct body is a member of the struct its
        declaration's scope names, as planned; so is every name written in it
        that the struct declares. *)
-    enter (Function {owner = fst df_path.dp_outer; defines = is_def}) @@ fun () ->
-    let scope = (!render_ctx).rc_scope in
+    enter_from ctx (Function {owner = fst df_path.dp_outer; defines = is_def}) @@ fun ctx ->
+    let scope = ctx.rc_scope in
     let pp_fun_name n =
       match n with
       | GlobRef.VarRef v when is_def -> str (Id.to_string v)
@@ -3902,7 +3907,7 @@ and pp_leaf_decl env (d : cpp_decl) =
     let is_qualified =
       df_path.dp_inner <> [] || snd df_path.dp_outer <> []
     in
-    let is_struct_member = is_qualified || (!render_ctx).rc_in_struct in
+    let is_struct_member = is_qualified || ctx.rc_in_struct in
     let is_out_of_struct_def = Option.has_some scope in
     let static_kw =
       if is_struct_member && ((not is_def) || not is_out_of_struct_def) then
@@ -3922,7 +3927,7 @@ and pp_leaf_decl env (d : cpp_decl) =
             (List.rev params)
         in
         let qualifier =
-          if may_be_constexpr df_constexpr && (!render_ctx).rc_in_struct && not is_out_of_struct_def
+          if may_be_constexpr df_constexpr && ctx.rc_in_struct && not is_out_of_struct_def
           then str "constexpr "
           else mt ()
         in
@@ -3956,11 +3961,11 @@ and pp_leaf_decl env (d : cpp_decl) =
       } ->
     let struct_name = struct_definition_name id in
     note_file_scope_name struct_name;
-    if (!render_ctx).rc_in_struct then printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref id);
+    if ctx.rc_in_struct then printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref id);
     let f_s =
-      entering
+      entering_from ctx
         (Cpp_resolution.Inductive_struct id :: (if tparams = [] then [] else [In_template]))
-        (fun () -> pp_cpp_fields_with_vis ~struct_name env fields)
+        (fun _ -> pp_cpp_fields_with_vis ~struct_name env fields)
     in
     let tmpl = struct_template_head ~pp_param:pp_template_param env tparams cstr in
     let inherit_clause =
@@ -3993,9 +3998,7 @@ and pp_leaf_decl env (d : cpp_decl) =
     ++ str "};"
   | Dasgn {da_ref = id; da_type = ty; da_init = e; da_constexpr} ->
     let expr_pp = pp_initialiser env ty e in
-    if (!render_ctx).rc_in_template
-       || ((!render_ctx).rc_in_struct
-           && Common.get_force_cross_file_qualification ()) then
+    if ctx.rc_in_template || (ctx.rc_in_struct && Common.get_force_cross_file_qualification ()) then
       (* In template context or separate-extraction struct: use Meyers
          singleton so that module-type-parameter references via L::val()
          work for both template and non-template implementing modules. *)
@@ -4007,15 +4010,13 @@ and pp_leaf_decl env (d : cpp_decl) =
       let literal = may_be_constexpr da_constexpr in
       let ty = match ty with Tconst t when literal -> t | t -> t in
       let static_kw =
-        match ((!render_ctx).rc_in_struct, literal) with
+        match (ctx.rc_in_struct, literal) with
         | true, true -> str "static constexpr "
         | true, false -> str "static inline "
         | false, true -> str "inline constexpr "
         | false, false -> mt ()
       in
-      let needs_iife =
-        (!render_ctx).rc_in_struct && expr_contains_capturing_lambda e
-      in
+      let needs_iife = ctx.rc_in_struct && expr_contains_capturing_lambda e in
       let wrapped_expr =
         if needs_iife then
           str "[]() {"
@@ -4090,17 +4091,17 @@ and pp_leaf_decl env (d : cpp_decl) =
       | tps ->
         sname ++ str "<" ++ pp_list (fun (_, id) -> Id.print id) tps ++ str ">"
     in
-    entering
+    entering_from ctx
       ((if dm_tparams = [] then [] else [Cpp_resolution.In_template]) @ [Inductive_struct dm_owner])
-      (fun () ->
+      (fun _ ->
         pp_cpp_field ~struct_name:(str own_name) ~mode:(Mm_defined (qual, dm_tparams)) env (field_of_member dm_field) )
   | Dfields ds ->
     let struct_name =
       str (String.capitalize_ascii (str_global Type ds.ds_ref))
     in
-    entering
+    entering_from ctx
       ((Cpp_resolution.In_struct :: (if ds.ds_tparams = [] then [] else [In_template])) @ [Inductive_struct ds.ds_ref])
-      (fun () -> pp_cpp_fields_with_vis ~struct_name env ds.ds_fields)
+      (fun _ -> pp_cpp_fields_with_vis ~struct_name env ds.ds_fields)
   | Dstatic_assert (CPPconcept_app (class_ref, _, _), None) when class_concept_held_back class_ref ->
     (* The concept is declared after the struct being rendered, because its
        requirements name the struct's own types.  The assertion goes with it
@@ -4135,7 +4136,7 @@ and pp_leaf_decl env (d : cpp_decl) =
        same way -- the standard library's [comparison] is emitted globally and
        a user type spelled [Comparison] inside the struct would otherwise
        capture every unqualified mention of it. *)
-    if (!render_ctx).rc_in_struct then printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref name);
+    if ctx.rc_in_struct then printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref name);
     str "enum class "
     ++ struct_name
     ++ str " {"
@@ -4149,7 +4150,9 @@ and pp_leaf_decl env (d : cpp_decl) =
     declaration declares. *)
 let constrained_structs : GlobRef.t list ref = State.cell State.Unit []
 
-let read_cpp_decl = pp_cpp_decl
+(** [d] printed in [env] where the printer is: a declaration written
+    outside every tree. *)
+let read_cpp_decl env d = pp_cpp_decl !render_ctx env d
 
 (** The wrapper structs [d] writes that hold a wrapper module's
     declarations: those [homed] names, each with the module. *)
@@ -4175,7 +4178,7 @@ let rec absorbing_decl ~homed env (d : Cpp_erasure.settled) =
     match List.assoc_opt name homed with
     | Some module_ -> Cpp_ast.wrapper_struct ~name ~module_ ~fields:Cpp_ast.(seq [ds; text (fnl ())])
     | None -> Cpp_ast.(seq [text (str "struct " ++ str name ++ str " {" ++ fnl ()); ds; text (fnl () ++ str "};")]) )
-  | Decl _ -> Cpp_ast.text (pp_cpp_decl env d)
+  | Decl _ -> Cpp_ast.text (read_cpp_decl env d)
 
 (** Whether [d] is an assertion the struct being written holds back
     ({!held_back_assertions}), which it writes nothing for. *)
@@ -4330,14 +4333,14 @@ let unprinted_names : Cpp_ast.declaration -> _ = function
 
 let naming names k = with_render_ctx (fun c -> {c with rc_names = Some names}) k
 
-let printed_decl env settled =
-  let text = pp_cpp_decl env settled in
+let printed_decl ctx env settled =
+  let text = pp_cpp_decl ctx env settled in
   (text, printed_needs settled)
 
 (** [settled], printed where it is made, with what placing the declarations
     it needs reads ({!needs_of}). *)
 let write_decl env settled =
-  let text, needs = printed_decl env settled in
+  let text, needs = printed_decl !render_ctx env settled in
   Cpp_ast.decl ~needs text
 
 (** [settled], which {!absorbs}, written where it is made ({!absorbing_decl}),
@@ -4427,6 +4430,8 @@ let pp_derived_functor template name (base : Cpp_ast.module_expr) =
 
 let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
   naming u.names @@ fun () ->
+  (* Where the declaration is written, which is where the printer is. *)
+  let ctx = !render_ctx in
   let text, needs =
     match u.declaration with
     | Modtype_concept {path; params; concept} -> (modtype_concept ~names:u.names ~params path concept, u.needs)
@@ -4435,8 +4440,8 @@ let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
     | Functor_alias {name; functor_; params} -> (pp_functor_alias name functor_ params, u.needs)
     | Derived_functor {template; name; base} -> (pp_derived_functor template name base, u.needs)
     | Forward_declaration {env; defined} -> (pp_forward_declaration env defined, u.needs)
-    | Declaration {env; settled} -> printed_decl env settled
-    | Absorbed {env; settled} -> (pp_cpp_decl env settled, u.needs)
+    | Declaration {env; settled} -> printed_decl ctx env settled
+    | Absorbed {env; settled} -> (pp_cpp_decl ctx env settled, u.needs)
     | Fields {record; vars; fields} ->
       ( prlist_with_sep fnl (fun (name, ty) -> pp_cpp_type false vars ty ++ spc () ++ str name ++ str ";") fields
         ++ fnl (),

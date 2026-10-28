@@ -727,20 +727,31 @@ let inductive_struct_visibility r =
     inside ~members:(Id.Set.of_list ctors) mp [] (current_visibility ())
   | _ -> current_visibility ()
 
-let enter (entered : Cpp_resolution.entered) k =
-  let entering update = with_render_ctx (fun c -> {(update c) with rc_frame = entered :: c.rc_frame}) in
-  match entered with
-  | Signature {signature; parameters} ->
-    entering Fun.id (fun () -> with_visibility (inside signature parameters (current_visibility ())) k)
-  | Inductive_struct r -> entering Fun.id (fun () -> with_visibility (inductive_struct_visibility r) k)
-  | In_struct -> entering (fun c -> {c with rc_in_struct = true}) k
-  | In_template -> entering (fun c -> {c with rc_in_template = true}) k
-  | Function {owner; defines} ->
-    entering
-      (fun c -> {c with rc_scope = (if defines && not c.rc_in_struct then Scope_plan.of_declaration owner else None)})
-      k
+let next (entered : Cpp_resolution.entered) (c : render_ctx) =
+  let c =
+    match entered with
+    | Signature _ | Inductive_struct _ -> c
+    | In_struct -> {c with rc_in_struct = true}
+    | In_template -> {c with rc_in_template = true}
+    | Function {owner; defines} ->
+      {c with rc_scope = (if defines && not c.rc_in_struct then Scope_plan.of_declaration owner else None)}
+  in
+  {c with rc_frame = entered :: c.rc_frame}
 
-let entering l k = List.fold_right (fun entered k () -> enter entered k) l k ()
+(* The position is installed for the printers not yet given it, and the
+   visibility for the names still resolved where the printer is: the
+   resolver's replay, and the check against it. *)
+let enter_from c (entered : Cpp_resolution.entered) k =
+  let c' = next entered c in
+  with_render_ctx (fun _ -> c') @@ fun () ->
+  match entered with
+  | Signature {signature; parameters} -> with_visibility (inside signature parameters (current_visibility ())) (fun () -> k c')
+  | Inductive_struct r -> with_visibility (inductive_struct_visibility r) (fun () -> k c')
+  | In_struct | In_template | Function _ -> k c'
+
+let rec entering_from c l k = match l with [] -> k c | entered :: rest -> enter_from c entered (fun c' -> entering_from c' rest k)
+let enter entered k = enter_from !render_ctx entered (fun _ -> k ())
+let entering l k = entering_from !render_ctx l (fun _ -> k ())
 
 let rec at_frame (frame : Cpp_resolution.frame) k =
   match frame with [] -> k () | entered :: outer -> at_frame outer (fun () -> enter entered k)

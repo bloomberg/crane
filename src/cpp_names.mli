@@ -271,6 +271,19 @@ val unresolved : Cpp_resolution.key -> 'a
 val name_from :
   Cpp_resolution.table -> Cpp_resolution.frame -> Cpp_resolution.key -> live:(unit -> Cpp_name.t) -> Cpp_name.t
 
+(** [next entered c] is the position [c] is after entering the scope
+    [entered] inside it: a function of the two. *)
+val next : Cpp_resolution.entered -> Cpp_state.render_ctx -> Cpp_state.render_ctx
+
+(** [enter_from c entered k] is [k] of the position after entering the
+    scope [entered] from [c] ({!next}), where that is the printer's position
+    too, and the names visible there visible. *)
+val enter_from : Cpp_state.render_ctx -> Cpp_resolution.entered -> (Cpp_state.render_ctx -> 'a) -> 'a
+
+(** [entering_from c l k] is [k] of the position after entering each scope
+    of [l] from [c], in order ({!enter_from}). *)
+val entering_from : Cpp_state.render_ctx -> Cpp_resolution.entered list -> (Cpp_state.render_ctx -> 'a) -> 'a
+
 (** [enter entered k] is [k ()] in the scope [entered], inside the one the
     printer is in: how printing a declaration enters it, and how resolving
     what the declaration names there does. *)
