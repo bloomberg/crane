@@ -8,18 +8,15 @@ Require Import Crane.Mapping.NatIntStd.
     machine with a stack of frames.
 
     A type-indexed evaluator reads a recursive result at the type its
-    branch gives it, through a coercion: [S (eval x)], [(eval x, eval y)],
-    [fst (eval p)].  Normalize binds every recursive call that is not a
-    tail call, so that the machine resumes after it, but touches nothing
-    under a coercion (only a call matched through one, [if eval c]).  The
-    calls above stay ordinary C++ calls inside [eval]'s machine, each
-    running a machine of its own, and a [succE] chain a hundred thousand
-    deep exhausts the stack.  Binding them needs a temporary whose C++ type
-    the coercion can still cast from: typed at the call's instantiated type,
-    or at the coercion's source type, the coercion is dropped
-    ([_result.first] on a [crane::obj]).
-
-    Expected: stack overflow in [eval].  When fixed: prints ok. *)
+    branch gives it, through a coercion: [S (eval x)], [fst (eval p)],
+    [if eval c].  Normalize bound only the last, and the others stayed
+    ordinary C++ calls inside [eval]'s machine, each running a machine of
+    its own: a [succE] chain a hundred thousand deep exhausted the stack.
+    Normalize now binds a call under a coercion like any other, the
+    coercion kept around the temporary.  [eval] returns its result boxed;
+    the temporary of [eval x] is declared at [nat] and cast where it is
+    bound, while that of [eval p], at the [A * B] that [fstE] hides and no
+    C++ type spells, stays the box the coercion opens. *)
 Module LoopifyCoercedRecursiveCall.
 
 Inductive expr : Type -> Type :=

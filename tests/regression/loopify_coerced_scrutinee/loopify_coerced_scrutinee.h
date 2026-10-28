@@ -93,28 +93,46 @@ struct LoopifyCoercedScrutinee {
       const expr *e;
     };
 
+    /// CraneCont_Iszero: saves [a0], resumes after recursive call, then
+    /// processes rest.
+    struct CraneCont_Iszero {
+      std::shared_ptr<expr> a0;
+    };
+
     /// CraneCont_Ite: saves [a, a1, a2], resumes after recursive call, then
     /// processes rest.
     struct CraneCont_Ite {
       std::shared_ptr<expr> a;
-      std::shared_ptr<expr> a1;
+      const expr *a1;
       const expr *a2;
     };
 
-    /// CraneCont_Ite_1: saves [a, a1, a2, _tmp2], resumes after recursive call,
+    /// CraneCont_Ite_1: saves [a, a1, a2, _tmp3], resumes after recursive call,
     /// then processes rest.
     struct CraneCont_Ite_1 {
       std::shared_ptr<expr> a;
-      std::shared_ptr<expr> a1;
+      const expr *a1;
       const expr *a2;
+      T1 _tmp3;
+    };
+
+    /// CraneCont_Ite_2: saves [a, a1, a2, _tmp3, _tmp2], resumes after
+    /// recursive call, then processes rest.
+    struct CraneCont_Ite_2 {
+      std::shared_ptr<expr> a;
+      const expr *a1;
+      const expr *a2;
+      T1 _tmp3;
       T1 _tmp2;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Ite, CraneCont_Ite_1>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Iszero, CraneCont_Ite,
+                                    CraneCont_Ite_1, CraneCont_Ite_2>;
     T1 _result{};
     crane::small_vector<CraneFrame> _stack;
     _stack.emplace_back(CraneEnter{&e});
-    /// Loopified expr_rect: CraneEnter -> CraneCont_Ite -> CraneCont_Ite_1.
+    /// Loopified expr_rect: CraneEnter -> CraneCont_Iszero -> CraneCont_Ite ->
+    /// CraneCont_Ite_1 -> CraneCont_Ite_2.
     while (!_stack.empty()) {
       CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -129,27 +147,40 @@ struct LoopifyCoercedScrutinee {
           _result = f0(a0);
         } else if (std::holds_alternative<typename expr::Ite>(e.v())) {
           const auto &[a, a1, a2] = std::get<typename expr::Ite>(e.v());
-          _stack.emplace_back(CraneCont_Ite{a, a1, crane_raw(a2)});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Ite{a, crane_raw(a1), crane_raw(a2)});
+          _stack.emplace_back(CraneEnter{crane_raw(a)});
         } else {
           const auto &[a0] = std::get<typename expr::Iszero>(e.v());
-          _result = f2(*a0, expr_rect(f, f0, f1, f2, *a0));
+          _stack.emplace_back(CraneCont_Iszero{a0});
+          _stack.emplace_back(CraneEnter{crane_raw(a0)});
         }
+      } else if (std::holds_alternative<CraneCont_Iszero>(_frame)) {
+        auto _f = std::move(std::get<CraneCont_Iszero>(_frame));
+        std::shared_ptr<expr> a0 = std::move(_f.a0);
+        _result = f2(*a0, std::move(_result));
       } else if (std::holds_alternative<CraneCont_Ite>(_frame)) {
         auto _f = std::move(std::get<CraneCont_Ite>(_frame));
         std::shared_ptr<expr> a = std::move(_f.a);
-        std::shared_ptr<expr> a1 = std::move(_f.a1);
+        const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
-        _stack.emplace_back(CraneCont_Ite_1{std::move(a), std::move(a1), &a2,
-                                            std::move(_result)});
-        _stack.emplace_back(CraneEnter{&a2});
-      } else {
+        _stack.emplace_back(
+            CraneCont_Ite_1{std::move(a), &a1, &a2, std::move(_result)});
+        _stack.emplace_back(CraneEnter{&a1});
+      } else if (std::holds_alternative<CraneCont_Ite_1>(_frame)) {
         auto _f = std::move(std::get<CraneCont_Ite_1>(_frame));
         std::shared_ptr<expr> a = std::move(_f.a);
-        std::shared_ptr<expr> a1 = std::move(_f.a1);
+        const expr &a1 = *_f.a1;
+        const expr &a2 = *_f.a2;
+        _stack.emplace_back(CraneCont_Ite_2{
+            std::move(a), &a1, &a2, std::move(_f._tmp3), std::move(_result)});
+        _stack.emplace_back(CraneEnter{&a2});
+      } else {
+        auto _f = std::move(std::get<CraneCont_Ite_2>(_frame));
+        std::shared_ptr<expr> a = std::move(_f.a);
+        const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
         _result =
-            crane_any_cast<T1>(f1(*a, expr_rect(f, f0, f1, f2, *a), *a1,
+            crane_any_cast<T1>(f1(*a, std::move(_f._tmp3), a1,
                                   std::move(_f._tmp2), a2, std::move(_result)));
       }
     }
@@ -168,28 +199,46 @@ struct LoopifyCoercedScrutinee {
       const expr *e;
     };
 
+    /// CraneCont_Iszero: saves [a0], resumes after recursive call, then
+    /// processes rest.
+    struct CraneCont_Iszero {
+      std::shared_ptr<expr> a0;
+    };
+
     /// CraneCont_Ite: saves [a, a1, a2], resumes after recursive call, then
     /// processes rest.
     struct CraneCont_Ite {
       std::shared_ptr<expr> a;
-      std::shared_ptr<expr> a1;
+      const expr *a1;
       const expr *a2;
     };
 
-    /// CraneCont_Ite_1: saves [a, a1, a2, _tmp2], resumes after recursive call,
+    /// CraneCont_Ite_1: saves [a, a1, a2, _tmp3], resumes after recursive call,
     /// then processes rest.
     struct CraneCont_Ite_1 {
       std::shared_ptr<expr> a;
-      std::shared_ptr<expr> a1;
+      const expr *a1;
       const expr *a2;
+      T1 _tmp3;
+    };
+
+    /// CraneCont_Ite_2: saves [a, a1, a2, _tmp3, _tmp2], resumes after
+    /// recursive call, then processes rest.
+    struct CraneCont_Ite_2 {
+      std::shared_ptr<expr> a;
+      const expr *a1;
+      const expr *a2;
+      T1 _tmp3;
       T1 _tmp2;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Ite, CraneCont_Ite_1>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Iszero, CraneCont_Ite,
+                                    CraneCont_Ite_1, CraneCont_Ite_2>;
     T1 _result{};
     crane::small_vector<CraneFrame> _stack;
     _stack.emplace_back(CraneEnter{&e});
-    /// Loopified expr_rec: CraneEnter -> CraneCont_Ite -> CraneCont_Ite_1.
+    /// Loopified expr_rec: CraneEnter -> CraneCont_Iszero -> CraneCont_Ite ->
+    /// CraneCont_Ite_1 -> CraneCont_Ite_2.
     while (!_stack.empty()) {
       CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -204,27 +253,40 @@ struct LoopifyCoercedScrutinee {
           _result = f0(a0);
         } else if (std::holds_alternative<typename expr::Ite>(e.v())) {
           const auto &[a, a1, a2] = std::get<typename expr::Ite>(e.v());
-          _stack.emplace_back(CraneCont_Ite{a, a1, crane_raw(a2)});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Ite{a, crane_raw(a1), crane_raw(a2)});
+          _stack.emplace_back(CraneEnter{crane_raw(a)});
         } else {
           const auto &[a0] = std::get<typename expr::Iszero>(e.v());
-          _result = f2(*a0, expr_rec(f, f0, f1, f2, *a0));
+          _stack.emplace_back(CraneCont_Iszero{a0});
+          _stack.emplace_back(CraneEnter{crane_raw(a0)});
         }
+      } else if (std::holds_alternative<CraneCont_Iszero>(_frame)) {
+        auto _f = std::move(std::get<CraneCont_Iszero>(_frame));
+        std::shared_ptr<expr> a0 = std::move(_f.a0);
+        _result = f2(*a0, std::move(_result));
       } else if (std::holds_alternative<CraneCont_Ite>(_frame)) {
         auto _f = std::move(std::get<CraneCont_Ite>(_frame));
         std::shared_ptr<expr> a = std::move(_f.a);
-        std::shared_ptr<expr> a1 = std::move(_f.a1);
+        const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
-        _stack.emplace_back(CraneCont_Ite_1{std::move(a), std::move(a1), &a2,
-                                            std::move(_result)});
-        _stack.emplace_back(CraneEnter{&a2});
-      } else {
+        _stack.emplace_back(
+            CraneCont_Ite_1{std::move(a), &a1, &a2, std::move(_result)});
+        _stack.emplace_back(CraneEnter{&a1});
+      } else if (std::holds_alternative<CraneCont_Ite_1>(_frame)) {
         auto _f = std::move(std::get<CraneCont_Ite_1>(_frame));
         std::shared_ptr<expr> a = std::move(_f.a);
-        std::shared_ptr<expr> a1 = std::move(_f.a1);
+        const expr &a1 = *_f.a1;
+        const expr &a2 = *_f.a2;
+        _stack.emplace_back(CraneCont_Ite_2{
+            std::move(a), &a1, &a2, std::move(_f._tmp3), std::move(_result)});
+        _stack.emplace_back(CraneEnter{&a2});
+      } else {
+        auto _f = std::move(std::get<CraneCont_Ite_2>(_frame));
+        std::shared_ptr<expr> a = std::move(_f.a);
+        const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
         _result =
-            crane_any_cast<T1>(f1(*a, expr_rec(f, f0, f1, f2, *a), *a1,
+            crane_any_cast<T1>(f1(*a, std::move(_f._tmp3), a1,
                                   std::move(_f._tmp2), a2, std::move(_result)));
       }
     }
@@ -240,6 +302,9 @@ struct LoopifyCoercedScrutinee {
       const expr *e;
     };
 
+    /// CraneCont_Iszero: resumes after recursive call, then processes rest.
+    struct CraneCont_Iszero {};
+
     /// CraneCont_Ite: saves [a1, a2], resumes after recursive call, then
     /// processes rest.
     struct CraneCont_Ite {
@@ -247,11 +312,12 @@ struct LoopifyCoercedScrutinee {
       const expr *a2;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Ite>;
+    using CraneFrame =
+        std::variant<CraneEnter, CraneCont_Iszero, CraneCont_Ite>;
     crane::obj _result{};
     crane::small_vector<CraneFrame> _stack;
     _stack.emplace_back(CraneEnter{&e});
-    /// Loopified eval: CraneEnter -> CraneCont_Ite.
+    /// Loopified eval: CraneEnter -> CraneCont_Iszero -> CraneCont_Ite.
     while (!_stack.empty()) {
       CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -270,9 +336,12 @@ struct LoopifyCoercedScrutinee {
           _stack.emplace_back(CraneEnter{crane_raw(a)});
         } else {
           const auto &[a0] = std::get<typename expr::Iszero>(e.v());
-          _result =
-              crane::any_cast<uint64_t>(eval<crane::obj>(*a0)) == UINT64_C(0);
+          _stack.emplace_back(CraneCont_Iszero{});
+          _stack.emplace_back(CraneEnter{crane_raw(a0)});
         }
+      } else if (std::holds_alternative<CraneCont_Iszero>(_frame)) {
+        auto _f = std::move(std::get<CraneCont_Iszero>(_frame));
+        _result = crane::any_cast<uint64_t>(std::move(_result)) == UINT64_C(0);
       } else {
         auto _f = std::move(std::get<CraneCont_Ite>(_frame));
         const expr &a1 = *_f.a1;

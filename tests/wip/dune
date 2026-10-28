@@ -261,17 +261,6 @@
   (deps nullary_unit_effect_dropped.t.exe)
   (action (run ./nullary_unit_effect_dropped.t.exe))))
 
-(subdir loopify_coerced_recursive_call
- (rule
-  (targets loopify_coerced_recursive_call.t.exe)
-  (deps LoopifyCoercedRecursiveCall.vo loopify_coerced_recursive_call.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_coerced_recursive_call.t.exe loopify_coerced_recursive_call.cpp loopify_coerced_recursive_call.t.cpp)))
- (rule
-  (alias runtest)
-  (deps loopify_coerced_recursive_call.t.exe)
-  (action (run ./loopify_coerced_recursive_call.t.exe))))
-
 (subdir indexed_family_deep_destructor
  (rule
   (targets indexed_family_deep_destructor.t.exe)
@@ -304,3 +293,14 @@
   (alias runtest)
   (deps recursor_method_head_sibling.t.exe)
   (action (run ./recursor_method_head_sibling.t.exe))))
+
+(subdir loopify_existential_recursive_call
+ (rule
+  (targets loopify_existential_recursive_call.t.exe)
+  (deps LoopifyExistentialRecursiveCall.vo loopify_existential_recursive_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_existential_recursive_call.t.exe loopify_existential_recursive_call.cpp loopify_existential_recursive_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_existential_recursive_call.t.exe)
+  (action (run ./loopify_existential_recursive_call.t.exe))))
