@@ -20,7 +20,7 @@ val write_decl : Common.env -> Cpp_erasure.settled -> Cpp_ast.t
 (** [absorbs ~homed d]: whether [d] writes a wrapper struct holding a
     wrapper module's declarations, which are members of it: one [homed]
     names, with the module, as planned. *)
-val absorbs : homed:(string * ModPath.t) list -> Cpp_erasure.settled -> bool
+val absorbs : homed:(string * ModPath.t) list -> Cpp_state.render_ctx -> Cpp_erasure.settled -> bool
 
 (** [write_absorbing ~homed env d] is [d], which {!absorbs}, as {!write_decl}
     writes it, each wrapper struct holding a wrapper module's declarations a
@@ -50,7 +50,7 @@ val name_in : Cpp_resolution.table -> Cpp_resolution.frame -> Cpp_resolution.key
 
 (** Whether [d] is an assertion the struct being written holds back until
     after it, writing nothing for it here. *)
-val is_held_back_assertion : Cpp_erasure.settled -> bool
+val is_held_back_assertion : Cpp_state.render_ctx -> Cpp_erasure.settled -> bool
 
 (** What placing the declarations [decl], written in the module [module_],
     needs reads ({!Cpp_ast.Needs}), as planned. *)
@@ -143,11 +143,11 @@ val is_static_member_declaration : cpp_decl -> bool
 (** Whether a function declaration writes a qualifier into a struct or a
     template parameter, in its name, result or parameters, asked of the
     declaration rather than of its rendering: each name is the one
-    {!pp_cpp_type} writes, from the same heads, in the render context the
-    caller has set.  [None] for anything but a function declaration, and
-    where only the rendering can tell -- an expression's type, a type
-    constructor named as a template argument. *)
-val declaration_names_into_a_struct : cpp_decl -> bool option
+    {!pp_cpp_type} writes, from the same heads, at the given position.
+    [None] for anything but a function declaration, and where only the
+    rendering can tell -- an expression's type, a type constructor named as a
+    template argument. *)
+val declaration_names_into_a_struct : Cpp_state.render_ctx -> cpp_decl -> bool option
 
 (** Doc-comment lines for [name], or nothing when none is registered. *)
 val pp_doc_comment_for_name : ?indent:string -> string -> Pp.t
@@ -166,7 +166,7 @@ val render_type_template : hole:(int -> Pp.t option) -> string -> Pp.t
 
 (** The name the struct wrapping an inductive at namespace scope is written
     under. *)
-val nspace_wrapper_name : GlobRef.t -> string
+val nspace_wrapper_name : Cpp_state.render_ctx -> GlobRef.t -> string
 
 (** Whether the inductive is written inside a wrapper other declarations were
     queued against, and so is spelled [List::list] rather than [List]. *)
@@ -175,12 +175,12 @@ val nested_in_wrapper : GlobRef.t -> bool
 (** The names of the wrapper structs a declaration writes around something
     other than a sole struct merged into them, in the order it writes them:
     the structs another wrapper's declarations can be written into. *)
-val unmerged_wrappers_written : Cpp_erasure.settled -> string list
+val unmerged_wrappers_written : Cpp_state.render_ctx -> Cpp_erasure.settled -> string list
 
 (** The assertions a declaration holds back, in the order it writes them:
     those that a class's concept holds of an instance where the concept is
     declared after the struct being written, and so is the assertion. *)
-val held_back_assertions : Cpp_erasure.settled -> Cpp_ast.assertion list
+val held_back_assertions : Cpp_state.render_ctx -> Cpp_erasure.settled -> Cpp_ast.assertion list
 
 (** {2 Forward declarations} *)
 

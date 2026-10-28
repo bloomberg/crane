@@ -118,7 +118,7 @@ let concept_collision mp sel =
       | SEdecl (Dind (kn, ind)) ->
         (match ind.ind_kind with TypeClass _ -> true | _ -> false)
         && List.exists
-             (fun (r, _) -> String.equal (Cpp_names.concept_name_of_ref r) module_name)
+             (fun (r, _) -> String.equal (Cpp_names.concept_name_of_ref !Cpp_state.render_ctx r) module_name)
              (inductive_refs kn ind)
       | _ -> false )
     sel

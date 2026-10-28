@@ -10,47 +10,29 @@
 
 (** {2 Names of globals} *)
 
-(** The name of a global, using an explicit [KerName.t] key: the replacement
-    text of an inline custom mapping, otherwise as resolution settles it where
-    the printer is. *)
-val global_name_with_key :
-  Common.kind -> Names.KerName.t -> Names.GlobRef.t -> Cpp_name.t
+(** The name of a global at the position: the replacement text of an inline
+    custom mapping, otherwise as resolution settles it there. *)
+val global_name : Cpp_state.render_ctx -> Common.kind -> Names.GlobRef.t -> Cpp_name.t
 
-(** {!global_name_with_key} using the default key. *)
-val global_name : Common.kind -> Names.GlobRef.t -> Cpp_name.t
+(** {!global_name} as text. *)
+val str_global : Cpp_state.render_ctx -> Common.kind -> Names.GlobRef.t -> string
 
-(** Render a global to a string, using an explicit [KerName.t] key. *)
-val str_global_with_key :
-  Common.kind -> Names.KerName.t -> Names.GlobRef.t -> string
+(** {!global_name} as a document. *)
+val pp_global : Cpp_state.render_ctx -> Common.kind -> Names.GlobRef.t -> Pp.t
 
-(** Render a global to a string. *)
-val str_global : Common.kind -> Names.GlobRef.t -> string
-
-(** Pretty-print a global, using an explicit [KerName.t] key. *)
-val pp_global_with_key :
-  Common.kind -> Names.KerName.t -> Names.GlobRef.t -> Pp.t
-
-(** Pretty-print a global. *)
-val pp_global : Common.kind -> Names.GlobRef.t -> Pp.t
-
-(** The name a typeclass concept is declared and referenced under: its short
-    name, since a concept may only appear at namespace scope and so carries no
-    struct qualifier; a use in another file names that file's namespace. *)
-val concept_name : Names.GlobRef.t -> Cpp_name.t
+(** The name a typeclass concept is declared and referenced under at the
+    position: its short name, since a concept may only appear at namespace
+    scope and so carries no struct qualifier; a use in another file names
+    that file's namespace. *)
+val concept_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
 
 (** {!concept_name} as text. *)
-val concept_name_of_ref : Names.GlobRef.t -> string
+val concept_name_of_ref : Cpp_state.render_ctx -> Names.GlobRef.t -> string
 
 (** {!concept_name_of_ref} as a [Pp.t]. *)
-val pp_concept_name_of_ref : Names.GlobRef.t -> Pp.t
+val pp_concept_name_of_ref : Cpp_state.render_ctx -> Names.GlobRef.t -> Pp.t
 
-(** Pretty-print just the (unqualified) name of a global. *)
-val pp_global_name : Common.kind -> Names.GlobRef.t -> Pp.t
-
-(** {2 Full paths and module names} *)
-
-(** Pretty-print a module path. *)
-val pp_modname : Names.ModPath.t -> Pp.t
+(** {2 Module names} *)
 
 (** The name of the struct the module resolution names [name] is written
     as: escaped where it is reserved. *)
@@ -65,20 +47,6 @@ val module_declared_name : Names.ModPath.t -> string
 
 (** Whether the given global is a merged inductive. *)
 val is_merged_inductive : Names.GlobRef.t -> bool
-
-(** The inductive underlying a global reference. *)
-val get_ind : Names.GlobRef.t -> Names.GlobRef.t
-
-(** The [KerName.t] of an inductive reference. *)
-val kn_of_ind : Names.GlobRef.t -> Names.KerName.t
-
-(** {2 Record and inductive field names} *)
-
-(** Pretty-print a single field of a record/inductive at the given index. *)
-val pp_one_field : Names.GlobRef.t -> int -> Names.GlobRef.t option -> Pp.t
-
-(** Pretty-print the field selected by index from a list of field references. *)
-val pp_field : Names.GlobRef.t -> Names.GlobRef.t option list -> int -> Pp.t
 
 (** {2 Name predicates and inductive/enum naming} *)
 
@@ -223,9 +191,9 @@ module IdSet : Set.S with type elt = Names.variable
 
 (** {2 What a declaration not yet printed names} *)
 
-(** The module whose element is being written: what the plan reads off
-    something written there is keyed by it. *)
-val module_written : unit -> Names.ModPath.t
+(** The module whose element is being written at the position: what the
+    plan reads off something written there is keyed by it. *)
+val module_written : Cpp_state.render_ctx -> Names.ModPath.t
 
 (** The functor whose body declares module types at [mp], by its label, with
     its parameters, as {!Cpp_state.functor_concept_scopes} records it. *)
@@ -244,10 +212,10 @@ val concept_extra_args : Names.ModPath.t -> Names.ModPath.t list
     module-type concept goes through this, so no two can disagree. *)
 val modtype_concept_name : Names.ModPath.t -> string
 
-(** The concept of the module type [kn], as a reference names it where the
-    printer is.  In separate extraction a concept lives in its file's
+(** The concept of the module type [kn], as a reference names it at the
+    position.  In separate extraction a concept lives in its file's
     namespace, so a reference from another file is qualified. *)
-val modtype_concept_ref : Names.ModPath.t -> Cpp_name.t
+val modtype_concept_ref : Cpp_state.render_ctx -> Names.ModPath.t -> Cpp_name.t
 
 (** The name the struct of [id] is defined under. *)
 val struct_definition_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
@@ -256,7 +224,7 @@ val struct_definition_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name
 val enum_definition_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
 
 (** The name the inductive type [x] is written under as a value: the struct
-    a constructor's value is built through, where the printer is. *)
+    a constructor's value is built through, at the position. *)
 val inductive_value : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
 
 (** [checked key ~live n] is [n], the name the resolution pass gave [key];

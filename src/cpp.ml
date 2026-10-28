@@ -86,7 +86,7 @@ let concept_assertion mp mty =
   | None -> (Cpp_ast.empty, [])
   | Some mt_mp ->
     let a = {Cpp_ast.concept = Of_module_type (Cpp_ast.concept_ref mt_mp); subject = Module (Cpp_ast.module_ref mp)} in
-    if concept_held_back (held_concept_of a) then (Cpp_ast.empty, [a]) else (Cpp_ast.assertion a, [])
+    if concept_held_back !render_ctx (held_concept_of a) then (Cpp_ast.empty, [a]) else (Cpp_ast.assertion a, [])
 
 (** Render a functor parameter as a C++ template parameter.
 
@@ -103,7 +103,7 @@ let template_param (mbid, mt) : Cpp_ast.template_param =
   (* A concept the enclosing struct holds back is declared after it, so a
      functor inside it takes its parameter unconstrained, as a class concept
      held back does. *)
-  | Some mt_mp when concept_held_back (HCmodtype mt_mp) -> Typename (Module_parameter param)
+  | Some mt_mp when concept_held_back !render_ctx (HCmodtype mt_mp) -> Typename (Module_parameter param)
   | Some mt_mp ->
     Constrained
       {concept = Cpp_ast.concept_ref mt_mp; args = List.map Cpp_ast.module_ref (concept_extra_args mt_mp); param}
@@ -186,7 +186,7 @@ let names_into_a_struct (doc : Pp.t) : bool = List.exists writes_into_a_struct (
     past the uses it exists to precede -- so what it costs is the position, for
     every other helper in the block. *)
 let spec_is_hoistable (spec : Cpp_erasure.settled) : bool =
-  let hoistable = declaration_names_into_a_struct (spec :> cpp_decl) = Some false in
+  let hoistable = declaration_names_into_a_struct !render_ctx (spec :> cpp_decl) = Some false in
   if Probe.checking () && hoistable = names_into_a_struct (Cpp_print.read_cpp_decl (empty_env ()) spec) then
     Probe.violation "hoisted helpers"
       Pp.(str "a helper's declaration was judged by its type to "
@@ -574,8 +574,9 @@ let unenclosed_element enclosure ?fields body =
     assertion held back, which is nothing here: it is written after the
     struct holding it back ({!Cpp_print.held_back_assertions}). *)
 let element_decl ~module_ ~homed env d =
-  if Cpp_print.is_held_back_assertion d then Cpp_ast.empty
-  else if Cpp_print.absorbs ~homed d then Cpp_print.write_absorbing ~homed env d
+  let ctx = !render_ctx in
+  if Cpp_print.is_held_back_assertion ctx d then Cpp_ast.empty
+  else if Cpp_print.absorbs ~homed ctx d then Cpp_print.write_absorbing ~homed env d
   else Cpp_print.unprinted ~module_ env d
 
 (** The wrapper structs the header writes around a wrapper module's
@@ -702,7 +703,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
     in
     { text = (if Cpp_ast.is_empty body then Cpp_ast.empty else Cpp_ast.(seq [text (pp_doc_comment l); body]));
       concepts;
-      asserts = List.concat_map (fun (_, d) -> Cpp_print.held_back_assertions d) rendered }
+      asserts = List.concat_map (fun (_, d) -> Cpp_print.held_back_assertions !render_ctx d) rendered }
   | l, SEmodule m ->
     let mp = MPdot (module_, l) in
     (* Its struct, or the alias standing for it, is declared under the
@@ -1878,7 +1879,7 @@ let plan_file_layout s =
     && Option.cata
          (List.for_all (fun d ->
               is_static_member_declaration d
-              && writing_element_of mp (fun () -> declaration_names_into_a_struct d) = Some false ) )
+              && declaration_names_into_a_struct {!render_ctx with rc_module = Some mp} d = Some false ) )
          false
          (struct_members ~wrapper mp sel)
   in
@@ -1902,7 +1903,7 @@ let plan_file_layout s =
             match Hashtbl.find_opt unmerged_wrappers name with
             | Some wrapped -> homes := (position mp, position wrapped, {wrapper = name; wrapped; home = d}) :: !homes
             | None -> () )
-          (Cpp_print.unmerged_wrappers_written d') )
+          (Cpp_print.unmerged_wrappers_written !render_ctx d') )
       rendered
   in
   let add band mp group = band := (position mp, group) :: !band in
@@ -2886,7 +2887,7 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
                 acc (Mlutil.term_defs d)
             | _ -> acc )
           acc
-          (wrapper_sels (Cpp_print.nspace_wrapper_name r)) )
+          (wrapper_sels (Cpp_print.nspace_wrapper_name !render_ctx r)) )
       payloads (packet_refs kn ind)
   in
   let held_in_collision_struct =
