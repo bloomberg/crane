@@ -306,7 +306,7 @@ type file_layout = {
           gave up because their bodies name a module's struct, which is
           written after every datatype and cannot be moved in front of one it
           holds by value: they go last. *)
-  forward_decls : Pp.t list;
+  forward_decls : Cpp_ast.t list;
       (** The forward declaration of every struct and scoped enum the header
           defines at namespace scope but a constrained template, in the order
           it defines them, which open the file. *)
@@ -1910,7 +1910,8 @@ let plan_file_layout s =
      lifted out of them first. *)
   let defines ~lifted mp env d =
     let pass = if lifted then 0 else 1 in
-    forward := ((pass, position mp), List.map (fun f -> (lifted, f)) (Cpp_print.forward_declarations env d)) :: !forward;
+    forward :=
+      ((pass, position mp), List.map (fun f -> (lifted, f)) (Cpp_print.forward_declarations ~module_:mp env d)) :: !forward;
     types := List.fold_right CString.Set.add (Cpp_print.file_scope_types d) !types
   in
   let wrapper_lifted ~module_ se =
@@ -1979,7 +1980,8 @@ let plan_file_layout s =
     { erased_aliases = in_writing_order erased;
       lifted_specs = in_writing_order specs;
       member_defs = in_writing_order member_defs;
-      forward_decls = List.filter_map (fun (_, (f : Cpp_print.forward_declaration)) -> if f.fwd_constrained then None else Some f.fwd_text) forward;
+      forward_decls =
+        List.filter_map (fun (_, (f : Cpp_print.forward_declaration)) -> if f.fwd_constrained then None else Some f.fwd_tree) forward;
       promoted_imports;
       constrained_decls =
         List.filter_map
@@ -3070,7 +3072,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   Cpp_print.file_scope_type_names := if is_header then !file_layout.file_scope_types else CString.Set.empty;
   Cpp_print.constrained_structs :=
     if is_header then
-      List.map (fun (f : Cpp_print.forward_declaration) -> (f.fwd_ref, f.fwd_struct)) !file_layout.constrained_decls
+      List.map (fun (f : Cpp_print.forward_declaration) -> f.fwd_ref) !file_layout.constrained_decls
     else [];
   (* The body of each wrapper module the header writes into a struct a
      declaration writes around an inductive, by the struct's name. *)
@@ -3421,7 +3423,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   let forwards =
     if is_header then
       List.map
-        (fun (f : Cpp_print.forward_declaration) -> {Cpp_ast.struct_ = f.fwd_struct; forward_declaration = f.fwd_text})
+        (fun (f : Cpp_print.forward_declaration) -> {Cpp_ast.struct_ = f.fwd_ref; forward_declaration = f.fwd_tree})
         !file_layout.constrained_decls
     else []
   in

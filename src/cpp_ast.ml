@@ -4,7 +4,7 @@
 open Names
 
 module Needs = struct
-  type t = {templates : string list; names : string list; defines : string list}
+  type t = {templates : string list; names : GlobRef.t list; defines : GlobRef.t list}
 
   let none = {templates = []; names = []; defines = []}
   let is_none n = n.templates = [] && n.names = [] && n.defines = []
@@ -34,6 +34,17 @@ and parameter = Type_variable of Id.t | Module_parameter of module_ref
 
 type resolver = Cpp_resolution.frame -> Cpp_resolution.key -> Cpp_name.t
 
+type defined =
+  | Defined_struct of {
+      struct_ : GlobRef.t;
+      name : defined_name;
+      tparams : (Minicpp.template_type * Id.t) list;
+      constraint_ : Minicpp.cpp_constraint option;
+    }
+  | Defined_enum of GlobRef.t
+
+and defined_name = As_defined | As_inductive_wrapper
+
 type declaration =
   | Declaration of {env : Common.env; settled : Cpp_erasure.settled}
   | Absorbed of {env : Common.env; settled : Cpp_erasure.settled}
@@ -44,6 +55,7 @@ type declaration =
   | Module_alias of {name : declared_module; target : module_expr}
   | Functor_alias of {name : declared_module; functor_ : module_ref; params : (template_param * module_ref) list}
   | Derived_functor of {template : template_param list; name : declared_module; base : module_expr}
+  | Forward_declaration of {env : Common.env; defined : defined}
 
 and module_expr = Module_named of module_ref | Applied of application
 
@@ -76,7 +88,7 @@ type t =
   | Module of {module_ : ModPath.t; enclosure : enclosure; fields : t; members : t list}
   | Wrapper_struct of {name : string; module_ : ModPath.t; fields : t}
   | Concept_group of {position : concept_position; concepts : t list}
-  | Declarations of Pp.t list
+  | Declarations of t list
 
 and enclosure = Struct of {head : struct_head; layout : layout} | Out_of_line | In_enclosing_scope
 and struct_head = {template : template_param list; name : struct_name; base : base option}
@@ -153,6 +165,7 @@ let assertion a = leaf (Assertion a)
 let module_alias mp target = leaf (Module_alias {name = declared_module mp; target})
 let functor_alias mp functor_ params = leaf (Functor_alias {name = declared_module mp; functor_; params})
 let derived_functor ~template mp base = leaf (Derived_functor {template; name = declared_module mp; base})
+let forward_declaration env defined = leaf (Forward_declaration {env; defined})
 let wrapper_struct ~name ~module_ ~fields = Wrapper_struct {name; module_; fields}
 let elements ~source elements = Elements {source; elements}
 let seq l = Seq l
@@ -290,7 +303,7 @@ let rec to_pp = function
     | Out_of_line | In_enclosing_scope -> inside )
   | Wrapper_struct _ -> invalid_arg "Cpp_ast.to_pp: a wrapper struct whose body is not filled in"
   | Concept_group {position; concepts} -> to_pp (laid_out position concepts)
-  | Declarations l -> Pp.(prlist_with_sep fnl (fun d -> d) l ++ cut2 ())
+  | Declarations l -> to_pp (Seq [concat Pp.fnl l; Text (cut2 ())])
 
 let rec wrapper_structs = function
   | Text _ | Decl _ | Unprinted _ | Declarations _ -> []
@@ -317,9 +330,9 @@ let rec fill_wrappers bodies t =
     | None -> invalid_arg ("Cpp_ast.fill_wrappers: no body for the wrapper struct " ^ name) )
 
 type template = {name : string; homed : bool; holder : bool; declaration : Pp.t}
-type forward = {struct_ : string; forward_declaration : Pp.t}
+type forward = {struct_ : GlobRef.t; forward_declaration : t}
 type translation_unit = {
-  forward_declarations : Pp.t list;
+  forward_declarations : t list;
   erased_aliases : t list;
   concept_prerequisites : t list;
   concepts : t list;
@@ -330,7 +343,7 @@ type translation_unit = {
   deferred_members : t list;
   wrapper_bodies : (string * body) list;
 }
-type scheduled = {opening : Pp.t; body : t list}
+type scheduled = {opening : t; body : t list}
 
 let sections u =
   let non_empty = List.filter (fun t -> not (is_empty t)) in
@@ -351,7 +364,8 @@ let sections u =
 let schedule ~templates ~forwards u =
   let u_sections = List.map (fill_wrappers u.wrapper_bodies) (sections u) in
   let template_slots = Hashtbl.create 16 and placed_in = Hashtbl.create 16 in
-  let struct_slot = Hashtbl.create 16 and defined_in = Hashtbl.create 16 in
+  let struct_slots = ref [] and defined_in = Hashtbl.create 16 in
+  let struct_slot r = List.find_map (fun (r', slot) -> if GlobRef.UserOrd.equal r r' then Some slot else None) !struct_slots in
   let count = ref 0 in
   (* Where each template and constrained struct is first needed, from the
      innermost chunk at namespace scope [top], the innermost member [member]
@@ -391,20 +405,20 @@ let schedule ~templates ~forwards u =
               Hashtbl.add template_slots slot name ) )
           | None -> () )
         needs.templates;
-      List.iter (fun name -> if not (Hashtbl.mem struct_slot name) then Hashtbl.replace struct_slot name top) needs.names;
+      List.iter (fun r -> if Option.is_empty (struct_slot r) then struct_slots := (r, top) :: !struct_slots) needs.names;
       needs.defines
   in
   List.iter (fun t -> ignore (first_uses ~top:None ~member:None ~scope:None t)) u_sections;
   let templates_due k =
     let due = List.filter (fun (a : template) -> List.mem a.name (Hashtbl.find_all template_slots k)) templates in
     let holders, aliases = List.partition (fun (a : template) -> a.holder) due in
-    List.map (fun (a : template) -> a.declaration) (holders @ aliases)
+    List.map (fun (a : template) -> Text a.declaration) (holders @ aliases)
   in
   let forwards_due k =
     List.filter_map
       (fun f ->
-        match Hashtbl.find_opt struct_slot f.struct_ with
-        | Some (Some k') when k' = k && not (List.mem f.struct_ (Hashtbl.find defined_in k)) ->
+        match struct_slot f.struct_ with
+        | Some (Some k') when k' = k && not (List.exists (GlobRef.UserOrd.equal f.struct_) (Hashtbl.find defined_in k)) ->
           Some f.forward_declaration
         | _ -> None )
       forwards
@@ -436,10 +450,8 @@ let schedule ~templates ~forwards u =
     | Wrapper_struct _ -> invalid_arg "Cpp_ast.schedule: a wrapper struct whose body is not filled in"
   in
   let body = List.map placed u_sections in
-  let prologue =
-    match u.forward_declarations with [] -> Pp.mt () | l -> Pp.(prlist_with_sep fnl (fun d -> d) l ++ cut2 ())
-  in
-  let opening = match templates_due None with [] -> prologue | l -> Pp.(prologue ++ to_pp (Declarations l)) in
+  let prologue = match u.forward_declarations with [] -> empty | l -> Seq [concat Pp.fnl l; Text (cut2 ())] in
+  let opening = match templates_due None with [] -> prologue | l -> Seq [prologue; Declarations l] in
   {opening; body}
 
 (* [t] with each declaration not yet printed replaced by [f] of it and how
@@ -448,7 +460,8 @@ let schedule ~templates ~forwards u =
    anything does. *)
 let map_leaves ?(head = fun _ h -> h) f t =
   let rec map spelling = function
-    | (Text _ | Decl _ | Declarations _) as t -> t
+    | (Text _ | Decl _) as t -> t
+    | Declarations l -> Declarations (List.map (map spelling) l)
     | Unprinted u -> (
       match spelling with
       | Some spelling -> f spelling u
@@ -529,7 +542,7 @@ let resolve_declaration (resolve : resolver) declaration =
   | Global_alias (Alias_of_module m) -> Global_alias (Alias_of_module (module_ref m))
   | Global_alias (Alias_of_type a) ->
     Global_alias (Alias_of_type {a with target = global_ref (fun r -> Definition (a.definition, r)) a.target})
-  | Declaration _ | Absorbed _ | Fields _ | Modtype_concept _ -> declaration
+  | Declaration _ | Absorbed _ | Fields _ | Modtype_concept _ | Forward_declaration _ -> declaration
 
 let resolve_tree ~requested ~resolve t =
   map_leaves ~head:(resolve_head resolve)
@@ -541,11 +554,12 @@ let resolve_tree ~requested ~resolve t =
           names = Cpp_resolution.resolve resolve (requested u.declaration) } )
     t
 
-let resolve ~requested ~resolve s = {s with body = List.map (resolve_tree ~requested ~resolve) s.body}
+let resolve ~requested ~resolve s =
+  {opening = resolve_tree ~requested ~resolve s.opening; body = List.map (resolve_tree ~requested ~resolve) s.body}
 
 (* Every declaration is printed before any text is joined: whether a member
    opens a doc comment decides the break in front of it. *)
 let print_tree ~write t = to_pp (map_leaves (fun spelling u -> Decl {text = write spelling u; needs = u.needs}) t)
 
-let print ~write s = Pp.(s.opening ++ List.fold_left (fun acc t -> acc ++ print_tree ~write t) (mt ()) s.body)
+let print ~write s = List.fold_left (fun acc t -> Pp.(acc ++ print_tree ~write t)) (Pp.mt ()) (s.opening :: s.body)
 

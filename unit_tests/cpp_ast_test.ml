@@ -21,10 +21,13 @@ let check_text name got expected =
     exit 1 )
 
 let m = ModPath.MPdot (ModPath.MPfile (DirPath.make [Id.of_string "F"]), Label.make "M")
-let needs ?(templates = []) ?(names = []) ?(defines = []) () = {Cpp_ast.Needs.templates; names; defines}
+let ref_of s = GlobRef.VarRef (Id.of_string s)
+
+let needs ?(templates = []) ?(names = []) ?(defines = []) () =
+  {Cpp_ast.Needs.templates; names = List.map ref_of names; defines = List.map ref_of defines}
 let leaf ?templates ?names ?defines s = Cpp_ast.decl ~needs:(needs ?templates ?names ?defines ()) (Pp.str s)
 let template ?(homed = false) ?(holder = false) name = {Cpp_ast.name; homed; holder; declaration = Pp.str ("<" ^ name ^ ">")}
-let forward s = {Cpp_ast.struct_ = s; forward_declaration = Pp.str ("fwd:" ^ s)}
+let forward s = {Cpp_ast.struct_ = ref_of s; forward_declaration = Cpp_ast.text (Pp.str ("fwd:" ^ s))}
 
 (* A unit whose body is [sections], nothing in any other section. *)
 let unit_of ?(prologue = []) ?(wrapper_bodies = []) sections =
@@ -41,7 +44,7 @@ let unit_of ?(prologue = []) ?(wrapper_bodies = []) sections =
 
 (* The text, without whitespace: breaks and separators are formatting. *)
 let text ?(templates = []) ?(forwards = []) sections =
-  let doc = Cpp_ast.print ~write:(fun _ _ -> Pp.str "?") (Cpp_ast.schedule ~templates ~forwards (unit_of ~prologue:[Pp.str "P"] sections)) in
+  let doc = Cpp_ast.print ~write:(fun _ _ -> Pp.str "?") (Cpp_ast.schedule ~templates ~forwards (unit_of ~prologue:[Cpp_ast.text (Pp.str "P")] sections)) in
   String.to_seq (Pp.string_of_ppcmds doc)
   |> Seq.filter (fun c -> not (List.mem c [' '; '\n'; '\t']))
   |> String.of_seq
@@ -156,6 +159,14 @@ let () =
     in
     Pp.string_of_ppcmds (Cpp_ast.print ~write (Cpp_ast.schedule ~templates ~forwards:[] (unit_of sections)))
   in
+  let spelled_forward forwards sections =
+    let write spelling (_ : Cpp_ast.unprinted) =
+      Pp.str ("fwd(" ^ (match spelling with Cpp_ast.Element_of mp | Member_of mp -> ModPath.to_string mp) ^ ")")
+    in
+    String.of_seq
+      (Seq.filter (fun c -> not (List.mem c [' '; '\n']))
+         (String.to_seq (Pp.string_of_ppcmds (Cpp_ast.print ~write (Cpp_ast.schedule ~templates:[] ~forwards (unit_of sections))))))
+  in
   check_text "a declaration not yet printed is spelled as an element of the module of the group around it"
     (spelled [top (Cpp_ast.elements ~source:m (unprinted ()))]) "E(F.M)";
   check_text "the innermost struct around a declaration not yet printed spells it as its member"
@@ -184,6 +195,17 @@ let () =
                      ~fields:(Cpp_ast.elements ~source:m (fields ~templates:["T"] ()))
                      (Cpp_ast.module_body inner [leaf "w"]) ]) ) ])
     "PstructM{y<T>structN{?w};};";
+  let forward_leaf s = Cpp_ast.elements ~source:inner (Cpp_ast.forward_declaration (Common.empty_env ()) (Defined_enum (ref_of s))) in
+  check_text "a forward declaration in the prologue is printed as the tree spells it"
+    (Pp.string_of_ppcmds
+       (Cpp_ast.print ~write:(fun spelling _ -> Pp.str ("fwd " ^ (match spelling with Element_of mp | Member_of mp -> ModPath.to_string mp)))
+          (Cpp_ast.schedule ~templates:[] ~forwards:[] (unit_of ~prologue:[forward_leaf "E"] [top (leaf "x;")])) )
+     |> String.to_seq |> Seq.filter (fun c -> not (List.mem c [' '; '\n'])) |> String.of_seq)
+    "fwdF.M.Nx;";
+  check_text "a forward declaration scheduled in front of a chunk is printed as the tree spells it"
+    (spelled_forward [{Cpp_ast.struct_ = ref_of "S"; forward_declaration = forward_leaf "S"}]
+       [top (leaf ~names:["S"] "e")])
+    "fwd(F.M.N)e";
   check_text "a declaration not yet printed is placed by what it needs, as planned"
     (spelled ~templates:[template "T"] [top (Cpp_ast.elements ~source:m (unprinted ~templates:["T"] ()))])
     "<T>E(F.M)";
@@ -205,7 +227,7 @@ let () =
   check_text "one thing joined is that thing" (raw (Cpp_ast.joined [Cpp_ast.empty; leaf "x;"])) "x;";
   let t s = Cpp_ast.text (Pp.str s) in
   let full =
-    { Cpp_ast.forward_declarations = [Pp.str "f1"; Pp.str "f2"];
+    { Cpp_ast.forward_declarations = [t "f1"; t "f2"];
       erased_aliases = [t "e1"; t "e2"];
       concept_prerequisites = [t "p"];
       concepts = [t "c1"; Cpp_ast.empty; t "c2"];

@@ -444,7 +444,10 @@ let stand_ins t =
           (fun (target, definition, tparams) ->
             Cpp_ast.(global_alias (Alias_of_type {target = global_ref target; definition; tparams})) )
           (declared_types (settled :> cpp_decl))
-      | Declared (Fields _ | Modtype_concept _ | Global_alias _ | Assertion _ | Module_alias _ | Functor_alias _ | Derived_functor _) -> []
+      | Declared
+          ( Fields _ | Modtype_concept _ | Global_alias _ | Assertion _ | Module_alias _ | Functor_alias _ | Derived_functor _
+          | Forward_declaration _ ) ->
+        []
       | Struct_of mp -> [Cpp_ast.(global_alias (Alias_of_module (module_ref mp)))] )
     (Cpp_ast.declared t)
 
@@ -3033,59 +3036,6 @@ let struct_template_head ~pp_param env tparams cstr =
     (str "template <" ++ args ++ str ">")
     ++ cstr_pp
 
-(** A forward declaration of a struct defined at namespace scope.
-
-    A module struct can be emitted before an inductive a later module pulled
-    up to global scope, so a member declaration may name a type whose
-    definition comes further down the header ([static Prod<nat, nat>
-    divmod(...)] ahead of [struct Prod]).  A declaration only needs the name
-    to have been introduced, so the header's prologue declares them up front.
-    Made here, by the function that prints the definition's template head,
-    so the two spellings of the parameter list cannot drift apart.
-
-    A constrained template -- a [requires] clause on the struct, or a
-    concept-kinded parameter -- names its concept, which need not be declared
-    by that prologue, nor anywhere above the struct's first use; its
-    declaration goes in front of the first chunk of the file that names the
-    struct before defining it ({!Cpp.do_struct_with_decl_tracking}): a
-    section-local instance's struct and the file module's struct can each
-    name the other, [typename StateV<_tcI0>::state] in a member's signature
-    against a call to that member in the instance's body. *)
-type forward_declaration = {
-  fwd_ref : GlobRef.t;
-  fwd_struct : string;
-  fwd_text : Pp.t;
-  fwd_constrained : bool;
-}
-
-let forward_declaration ~env ~ref ~name ~tparams ~cstr =
-  let concept_kinded (tt, _) =
-    match tt with
-    | TTconcept _ -> true
-    | _ -> false
-  in
-  { fwd_ref = ref;
-    fwd_struct = Pp.string_of_ppcmds name;
-    fwd_text =
-      struct_template_head ~pp_param:pp_template_param_redecl env tparams cstr
-      ++ str "struct " ++ name ++ str ";";
-    fwd_constrained =
-      cstr <> None
-      || pp_requires_of_tparams tparams <> None
-      || List.exists concept_kinded tparams }
-
-(** An opaque declaration of a scoped enum.  A module struct can be emitted
-    before an enum a later module pulled up to global scope, so a member
-    declaration may name the enum ahead of its definition.  [enum class E;]
-    is a complete type -- a scoped enum has a fixed underlying type -- so
-    replaying it in the header prologue is enough for those members, and the
-    definition still follows in its own place. *)
-let enum_forward_declaration ~ref name =
-  { fwd_ref = ref;
-    fwd_struct = Pp.string_of_ppcmds name;
-    fwd_text = str "enum class " ++ name ++ str ";";
-    fwd_constrained = false }
-
 (** Render a doc comment as [///]-prefixed lines followed by a newline, or
     [mt ()] if no comment is registered for [name].  This is the single lookup
     point used by field, constructor-struct, and enum-value printers.
@@ -3634,37 +3584,83 @@ let rec held_back_assertions (d : Cpp_erasure.settled) =
     in the scope being written, in the order it defines them, each with the
     reference it is declared under, its definition's template head and its
     constraint. *)
-type defined =
-  | Defined_struct of GlobRef.t * Pp.t * (template_type * Id.t) list * cpp_constraint option
-  | Defined_enum of GlobRef.t
-
-let rec structs_defined (d : Cpp_erasure.settled) =
+let rec structs_defined (d : Cpp_erasure.settled) : Cpp_ast.defined list =
   match Cpp_erasure.view d with
   | Template (_, _, inner) -> structs_defined inner
   | Namespace (None, decls) -> List.concat_map structs_defined decls
   | Namespace (Some id, members) -> (
     match (members :> cpp_decl list) with
     | [Dstruct {ds_tparams; ds_constraint; _}] when nspace_merges {dw_ref = id; dw_sole_child = true} ->
-      [Defined_struct (id, str (nspace_wrapper_name id), ds_tparams, ds_constraint)]
+      [Defined_struct {struct_ = id; name = As_inductive_wrapper; tparams = ds_tparams; constraint_ = ds_constraint}]
     | _ -> [] )
   | Decl (Dstruct {ds_ref; ds_tparams; ds_constraint; _}) ->
-    [Defined_struct (ds_ref, struct_definition_name ds_ref, ds_tparams, ds_constraint)]
+    [Defined_struct {struct_ = ds_ref; name = As_defined; tparams = ds_tparams; constraint_ = ds_constraint}]
   | Decl (Denum {de_ref; _}) -> [Defined_enum de_ref]
   | Decl _ -> []
 
-let defined_ref = function Defined_struct (r, _, _, _) | Defined_enum r -> r
+let defined_ref : Cpp_ast.defined -> _ = function Defined_struct {struct_ = r; _} | Defined_enum r -> r
 
-(** The forward declarations of the structs and scoped enums [d] defines at
-    namespace scope, in the order it defines them: none inside a struct,
-    where a member is not nameable before its enclosing struct anyway. *)
-let forward_declarations env (d : Cpp_erasure.settled) =
+(** A forward declaration of a struct defined at namespace scope.
+
+    A module struct can be emitted before an inductive a later module pulled
+    up to global scope, so a member declaration may name a type whose
+    definition comes further down the header ([static Prod<nat, nat>
+    divmod(...)] ahead of [struct Prod]).  A declaration only needs the name
+    to have been introduced, so the header's prologue declares them up front.
+    Printed by the function that prints the definition's template head, so
+    the two spellings of the parameter list cannot drift apart.
+
+    A constrained template -- a [requires] clause on the struct, or a
+    concept-kinded parameter -- names its concept, which need not be declared
+    by that prologue, nor anywhere above the struct's first use; its
+    declaration goes in front of the first chunk of the file that names the
+    struct before defining it ({!Cpp.do_struct_with_decl_tracking}): a
+    section-local instance's struct and the file module's struct can each
+    name the other, [typename StateV<_tcI0>::state] in a member's signature
+    against a call to that member in the instance's body.
+
+    An opaque declaration of a scoped enum is one too: [enum class E;] is a
+    complete type -- a scoped enum has a fixed underlying type -- so replaying
+    it in the header prologue is enough for the members naming it ahead of
+    its definition, which still follows in its own place. *)
+type forward_declaration = {fwd_ref : GlobRef.t; fwd_tree : Cpp_ast.t; fwd_constrained : bool}
+
+(* Whether [tparams] make the [requires] clause {!pp_requires_of_tparams}
+   prints. *)
+let makes_requires_clause tparams =
+  List.exists
+    (fun (tt, _) ->
+      match tt with
+      | TTinvocable _ -> true
+      | TTconcept (concept, _ :: _) -> not (class_concept_held_back concept)
+      | _ -> false )
+    tparams
+
+let constrained : Cpp_ast.defined -> bool = function
+  | Defined_struct {tparams; constraint_; _} ->
+    Option.has_some constraint_ || makes_requires_clause tparams
+    || List.exists (function TTconcept _, _ -> true | _ -> false) tparams
+  | Defined_enum _ -> false
+
+(** The forward declarations of the structs and scoped enums [d], an element
+    of the module [module_], defines at namespace scope, in the order it
+    defines them: none inside a struct, where a member is not nameable before
+    its enclosing struct anyway. *)
+let forward_declarations ~module_ env (d : Cpp_erasure.settled) =
   if (!render_ctx).rc_in_struct then []
   else
     List.map
-      (function
-        | Defined_struct (ref, name, tparams, cstr) -> forward_declaration ~env ~ref ~name ~tparams ~cstr
-        | Defined_enum r -> enum_forward_declaration ~ref:r (enum_definition_name r) )
+      (fun defined ->
+        { fwd_ref = defined_ref defined;
+          fwd_tree = Cpp_ast.elements ~source:module_ (Cpp_ast.forward_declaration env defined);
+          fwd_constrained = constrained defined } )
       (structs_defined d)
+
+let pp_forward_declaration env : Cpp_ast.defined -> _ = function
+  | Defined_struct {struct_; name; tparams; constraint_} ->
+    let name = match name with As_defined -> struct_definition_name struct_ | As_inductive_wrapper -> str (nspace_wrapper_name struct_) in
+    struct_template_head ~pp_param:pp_template_param_redecl env tparams constraint_ ++ str "struct " ++ name ++ str ";"
+  | Defined_enum r -> str "enum class " ++ enum_definition_name r ++ str ";"
 
 (** The type names [d], written at namespace scope, introduces there, as the
     printer writes them ({!note_file_scope_type}): its own, through a
@@ -4151,7 +4147,7 @@ and pp_leaf_decl env (d : cpp_decl) =
 (** The structs the file being written has constrained forward declarations
     of, planned with its layout, each by its reference and the name its
     declaration declares. *)
-let constrained_structs : (GlobRef.t * string) list ref = State.cell State.Unit []
+let constrained_structs : GlobRef.t list ref = State.cell State.Unit []
 
 let read_cpp_decl = pp_cpp_decl
 
@@ -4195,9 +4191,7 @@ let constrained_named ~names ~defined =
   match !constrained_structs with
   | [] -> ([], [])
   | constrained ->
-    let of_refs refs =
-      List.filter_map (fun (r, name) -> if List.exists (GlobRef.UserOrd.equal r) refs then Some name else None) constrained
-    in
+    let of_refs refs = List.filter (fun r -> List.exists (GlobRef.UserOrd.equal r) refs) constrained in
     let defined = defined () in
     (of_refs (defined @ names ()), of_refs defined)
 
@@ -4322,6 +4316,14 @@ let unprinted_names : Cpp_ast.declaration -> _ = function
   | Fields {fields; _} -> global_names [[]] (List.concat_map (fun (_, ty) -> Cpp_demands.globals_of_type ty) fields)
   | Assertion {subject = Instance {args; _}; _} -> global_names [[]] (List.concat_map Cpp_demands.globals_of_type args)
   | Global_alias (Alias_of_type {tparams; _}) -> global_names [[]] (template_param_globals tparams)
+  | Forward_declaration {defined = Defined_struct {struct_; tparams; constraint_; _}; _} ->
+    let constraint_globals c =
+      let found = ref [] in
+      Minicpp.iter_globrefs (fun r -> found := r :: !found) (Dstatic_assert (c, None));
+      !found
+    in
+    global_names [[]] ((struct_ :: template_param_globals tparams) @ Option.cata constraint_globals [] constraint_)
+  | Forward_declaration {defined = Defined_enum r; _} -> global_names [[]] [r]
   | Assertion {subject = Module _; _} | Global_alias (Alias_of_module _) | Modtype_concept _ | Module_alias _
   | Functor_alias _ | Derived_functor _ ->
     []
@@ -4432,6 +4434,7 @@ let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
     | Module_alias {name; target} -> (pp_module_alias name target, u.needs)
     | Functor_alias {name; functor_; params} -> (pp_functor_alias name functor_ params, u.needs)
     | Derived_functor {template; name; base} -> (pp_derived_functor template name base, u.needs)
+    | Forward_declaration {env; defined} -> (pp_forward_declaration env defined, u.needs)
     | Declaration {env; settled} -> printed_decl env settled
     | Absorbed {env; settled} -> (pp_cpp_decl env settled, u.needs)
     | Fields {record; vars; fields} ->

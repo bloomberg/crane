@@ -179,20 +179,21 @@ val held_back_assertions : Cpp_erasure.settled -> Cpp_ast.assertion list
 (** {2 Forward declarations} *)
 
 (** A forward declaration of a struct or scoped enum defined at namespace
-    scope: the name it declares, its text, and whether it is a constrained
-    template -- one whose [requires] clause or concept-kinded parameter names
-    a concept, which the header's prologue need not have declared. *)
+    scope: what it declares, the declaration as the tree writes it, and
+    whether it is a constrained template -- one whose [requires] clause or
+    concept-kinded parameter names a concept, which the header's prologue
+    need not have declared. *)
 type forward_declaration = {
   fwd_ref : GlobRef.t;  (** The struct or enum it declares. *)
-  fwd_struct : string;
-  fwd_text : Pp.t;
+  fwd_tree : Cpp_ast.t;
   fwd_constrained : bool;
 }
 
-(** [forward_declarations env d] is the forward declaration of each struct
-    and scoped enum [d] defines at namespace scope, in the order it defines
-    them, printed in the current scope as the definition prints its head. *)
-val forward_declarations : Common.env -> Cpp_erasure.settled -> forward_declaration list
+(** [forward_declarations ~module_ env d] is the forward declaration of each
+    struct and scoped enum [d], an element of the module [module_], defines
+    at namespace scope, in the order it defines them, written as an element
+    of [module_] and printed as the definition prints its head. *)
+val forward_declarations : module_:ModPath.t -> Common.env -> Cpp_erasure.settled -> forward_declaration list
 
 (** {2 Synthesised aliases} *)
 
@@ -248,9 +249,9 @@ val start_ctor_alias_census : unit -> unit
 val check_ctor_alias_plan : file:Common.file -> unit
 
 (** The structs the file being written has constrained forward declarations
-    of, each by its reference and the name its declaration declares; a
-    written declaration needs those it names or defines ({!write_decl}). *)
-val constrained_structs : (GlobRef.t * string) list ref
+    of; a written declaration needs those it names or defines
+    ({!write_decl}). *)
+val constrained_structs : GlobRef.t list ref
 
 (** The type names the file being written introduces at file scope, as
     planned: a definition written out of line leaves them unqualified. *)

@@ -30,10 +30,10 @@ open Names
 module Needs : sig
   type t = {
     templates : string list;  (** The synthesised templates it writes. *)
-    names : string list;
+    names : GlobRef.t list;
         (** Of the structs the file forward-declares as constrained
             templates, those it names or defines. *)
-    defines : string list;  (** Of those, the ones it defines. *)
+    defines : GlobRef.t list;  (** Of those, the ones it defines. *)
   }
 
   val none : t
@@ -107,6 +107,24 @@ and parameter =
     a frame inside it. *)
 type resolver = Cpp_resolution.frame -> Cpp_resolution.key -> Cpp_name.t
 
+(** A struct or scoped enum a declaration defines at namespace scope, which
+    a forward declaration declares ahead of it. *)
+type defined =
+  | Defined_struct of {
+      struct_ : GlobRef.t;
+      name : defined_name;
+      tparams : (Minicpp.template_type * Id.t) list;
+      constraint_ : Minicpp.cpp_constraint option;
+    }
+      (** The struct [struct_], over the definition's template head and
+          constraint, which its forward declaration repeats. *)
+  | Defined_enum of GlobRef.t
+
+(** The name a {!Defined_struct} is declared under. *)
+and defined_name =
+  | As_defined  (** Its definition's ({!Cpp_resolution.Struct_definition}). *)
+  | As_inductive_wrapper  (** That of the wrapper merged with the inductive's struct. *)
+
 (** What a declaration not yet printed declares. *)
 type declaration =
   | Declaration of {env : Common.env; settled : Cpp_erasure.settled}
@@ -142,6 +160,9 @@ type declaration =
   | Derived_functor of {template : template_param list; name : declared_module; base : module_expr}
       (** [template <template> struct name : base {};]: a functor whose body
           is another module, its own parameters visible to [base]. *)
+  | Forward_declaration of {env : Common.env; defined : defined}
+      (** The forward declaration of what a declaration defines, printed in
+          the name environment [env]. *)
 
 (** A module expression a declaration writes. *)
 and module_expr =
@@ -224,9 +245,9 @@ type t = private
   | Concept_group of {position : concept_position; concepts : t list}
       (** Concepts a module's struct is written beside, each on a line of
           its own, laid out as [position] says.  At least one. *)
-  | Declarations of Pp.t list
-      (** Declarations {!schedule} placed in front of what follows it; no
-          tree built before scheduling has one. *)
+  | Declarations of t list
+      (** Declarations {!schedule} placed in front of what follows it, each
+          on a line of its own; no tree built before scheduling has one. *)
 
 (** Where the members of a module's body are written. *)
 and enclosure =
@@ -323,6 +344,10 @@ val functor_alias : ModPath.t -> module_ref -> (template_param * module_ref) lis
     the module [mp], printed where the tree puts it.  It needs nothing
     placed in front of it. *)
 val derived_functor : template:template_param list -> ModPath.t -> module_expr -> t
+
+(** [forward_declaration env d] is {!Forward_declaration}, printed where
+    the tree puts it.  It needs nothing placed in front of it. *)
+val forward_declaration : Common.env -> defined -> t
 
 (** [wrapper_struct ~name ~module_ ~fields] is {!Wrapper_struct}. *)
 val wrapper_struct : name:string -> module_:ModPath.t -> fields:t -> t
@@ -426,9 +451,9 @@ val cut2 : unit -> Pp.t
     is a holder -- a struct -- rather than an alias. *)
 type template = {name : string; homed : bool; holder : bool; declaration : Pp.t}
 
-(** A constrained template's forward declaration, by the name of the struct
-    it declares. *)
-type forward = {struct_ : string; forward_declaration : Pp.t}
+(** A constrained template's forward declaration, by the struct it
+    declares. *)
+type forward = {struct_ : GlobRef.t; forward_declaration : t}
 
 (** A file as the driver assembled it, in the order written: the forward
     declarations of the structs it names ahead of their definitions, then
@@ -437,7 +462,7 @@ type forward = {struct_ : string; forward_declaration : Pp.t}
     non-empty groups, with a break between each two -- a line break between
     erased aliases -- and one after the last. *)
 type translation_unit = {
-  forward_declarations : Pp.t list;
+  forward_declarations : t list;
   erased_aliases : t list;
       (** Erasure landing pads ([using X = std::any;]) and the imports of
           promoted aliases, ahead of the concepts that spell them. *)
