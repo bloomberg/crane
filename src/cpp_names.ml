@@ -363,8 +363,8 @@ let pp_inductive_type_name r = Cpp_name.pp (inductive_type_name r)
 
 (** Add typename prefix for dependent types in template contexts. C++ requires
     'typename' keyword when accessing nested types in templates. *)
-let typename_prefix_for n =
-  if (!render_ctx).rc_in_template && Cpp_name.is_qualified n then
+let typename_prefix_for (ctx : render_ctx) n =
+  if ctx.rc_in_template && Cpp_name.is_qualified n then
     str "typename "
   else
     mt ()
@@ -526,8 +526,8 @@ let wrapper_qualified_type_name (ctx : render_ctx) r n =
 (** Check if a global function needs :: prefix to avoid name collision. When
     generating out-of-struct definitions, we add :: to call external functions
     rather than recursing into the struct's own member. *)
-let needs_global_qualifier x =
-  match (!render_ctx).rc_scope with
+let needs_global_qualifier (ctx : render_ctx) x =
+  match ctx.rc_scope with
   | Some scope ->
     (not (Cpp_name.is_qualified (global_name Term x)))
     && not (mp_encloses (modpath_of_r x) scope.Scope_plan.module_)

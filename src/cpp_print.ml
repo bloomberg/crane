@@ -528,8 +528,8 @@ type ctor_alias = {
     file, which writes no module struct, it is the struct whose members are
     defined out of line around it.  Where no module's element is being
     written, there is none. *)
-let ctor_alias_home body =
-  match (!render_ctx).rc_module with
+let ctor_alias_home ctx body =
+  match ctx.rc_module with
   | None -> None
   | Some cur ->
     let modpath_of = function
@@ -575,10 +575,9 @@ let ctor_alias_visibility = function
     template where the home's struct is one; in the implementation, beside
     the definitions of its home's members, which are written out of line and
     qualify what they name by the struct they are members of. *)
-let ctor_alias_render_ctx home =
-  let file = (!render_ctx).rc_file in
-  let start = file_start file in
-  match (home, file) with
+let ctor_alias_render_ctx ctx home =
+  let start = file_start ctx.rc_file in
+  match (home, ctx.rc_file) with
   | None, _ -> start
   | Some home, Common.Intf ->
     {start with rc_in_struct = true; rc_in_template = Scope_plan.templated home; rc_module = Some home}
@@ -951,6 +950,12 @@ let head_names_into_a_struct h =
 let external_type_name id_s =
   if String.equal id_s "std::vector" && (sn ()).ns <> "std" then "bsl::vector" else id_s
 
+(** Under [CRANE_CHECK_IR], that the position a printer is given is the one
+    installed where it is: printers not given it yet read it there. *)
+let check_position ctx =
+  if Probe.checking () && not (ctx == !render_ctx || ctx = !render_ctx) then
+    Probe.violation "threaded positions" (str "a printer is given another position than the one it is at")
+
 (** Whether the type [t] writes a qualifier into a struct or a template
     parameter, asked of the type rather than of its rendering: each name is
     the one {!pp_cpp_type} writes, from the same heads, in the render context
@@ -1039,8 +1044,8 @@ let rec declaration_names_into_a_struct (d : cpp_decl) =
     A {!Minicpp.Tpromoted} reaching the printer is one no resolution map
     claimed, so it is rendered as a member of the enclosing struct: the bare
     name inside a struct body, [StructName::id] outside one. *)
-let rec pp_cpp_type ?(lead = true) par vl t =
-  let ctx = !render_ctx in
+let rec pp_cpp_type ?(lead = true) ctx par vl t =
+  check_position ctx;
   let rec pp_rec ?(lead = true) par t =
     (* The [typename] a dependent qualifier needs, unless the caller is placing
        this type somewhere the keyword would be wrong: as the base of a longer
@@ -1084,7 +1089,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       cpp_angle Crane_rt.rebind (pp_list (pp_rec false) [ h; x ])
     | Thole -> str ctor_alias_tvar
     | Tref (Forwarding, t) -> pp_rec false t ++ str "&&"
-    | Texpr_type e -> str "decltype(" ++ pp_cpp_expr ([], Id.Set.empty) [] e ++ str ")"
+    | Texpr_type e -> str "decltype(" ++ pp_cpp_expr ctx ([], Id.Set.empty) [] e ++ str ")"
     | Tdecltype_auto -> str "decltype(auto)"
     | Tid_external (id_s, args) ->
       let id_s =
@@ -1112,8 +1117,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
           term_template (custom_template_with_args s (List.length tys))
         in
         pp_custom
-          ~container:r
-          (Pp.string_of_ppcmds (GlobRef.print r) ^ " := " ^ s)
+          ~container:r ctx (Pp.string_of_ppcmds (GlobRef.print r) ^ " := " ^ s)
           (empty_env ())
           None
           None
@@ -1263,7 +1267,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
        here is the eta-expansion of the constructor: its head is what the
        position wants. *)
     let t = tyctor_constructor t in
-    match ctor_alias_at vl t with
+    match ctor_alias_at ctx vl t with
     | Some (alias, args) ->
       note_ctor_alias_spelled alias;
       let name = ctor_alias_name alias in
@@ -1309,16 +1313,16 @@ let rec pp_cpp_type ?(lead = true) par vl t =
     its argument goes -- it is the abstraction, not an application of one.  A
     custom mapping arrives applied to its real arguments, so the sentinel is
     put in the carrier's place first. *)
-and ctor_alias_at vl t =
+and ctor_alias_at ctx vl t =
   let custom () =
     match t with
     | Tglob (r, (_ :: _ as args), _) when find_custom_opt r <> None ->
       let fixed = List.filteri (fun i _ -> i < List.length args - 1) args in
-      ctor_alias_of_probe vl ~base:(Common.pp_global_name Type r) (Tglob (r, fixed @ [Thole], []))
+      ctor_alias_of_probe ctx vl ~base:(Common.pp_global_name Type r) (Tglob (r, fixed @ [Thole], []))
     | _ -> None
   in
   if exists_cpp_type (fun s -> s = Thole) t then
-    match ctor_alias_of_probe vl ~base:"crane_carrier" t with
+    match ctor_alias_of_probe ctx vl ~base:"crane_carrier" t with
     | Some _ as alias -> alias
     | None -> custom ()
   else custom ()
@@ -1329,7 +1333,7 @@ and ctor_alias_at vl t =
     The body is rendered where the template is declared ({!ctor_alias_visibility}),
     because that is where a [using] is read; every name it writes
     has to mean there what it means at the use. *)
-and ctor_alias_of_probe vl ~base probe =
+and ctor_alias_of_probe ctx vl ~base probe =
   (* Every node of a type, in the order written, a type constructor's
      included: a carrier nested in the body as a template template argument
      is written through its own template, whose arguments name what it
@@ -1346,7 +1350,7 @@ and ctor_alias_of_probe vl ~base probe =
       | _ -> () );
     !seen
   in
-  let written_var v = Pp.string_of_ppcmds (pp_cpp_type false vl (Tvar v)) in
+  let written_var v = Pp.string_of_ppcmds (pp_cpp_type ctx false vl (Tvar v)) in
   (* A captured parameter is named {e applied} to the alias's own
      argument -- that is what makes the body an abstraction rather than a
      type, and it is what lets the holder declare every parameter it
@@ -1381,12 +1385,13 @@ and ctor_alias_of_probe vl ~base probe =
         | t -> t )
       probe
   in
-  let home = ctor_alias_home probe in
+  let home = ctor_alias_home ctx probe in
   let render t =
+    let declared = ctor_alias_render_ctx ctx home in
     with_render_ctx
-      (fun _ -> ctor_alias_render_ctx home)
+      (fun _ -> declared)
       (fun () ->
-        Common.with_visibility (ctor_alias_visibility home) (fun () -> Pp.string_of_ppcmds (pp_cpp_type false vl t)) )
+        Common.with_visibility (ctor_alias_visibility home) (fun () -> Pp.string_of_ppcmds (pp_cpp_type declared false vl t)) )
   in
   let rendered = lazy (render probe) in
   let head_alone () =
@@ -1462,13 +1467,13 @@ and ctor_alias_of_probe vl ~base probe =
     and it qualifies a global by its namespace where the value spelling elides
     the prefix that is already in scope.  A named global therefore goes through
     the expression printer; anything else only needs the keyword removed. *)
-and pp_value_qualifier env ty =
+and pp_value_qualifier ctx env ty =
   match ty with
   | Tglob (r, tys, []) ->
     (* No [~yields]: a type qualifier is never a block in value position. *)
-    pp_cpp_expr env [] (CPPglob (r, tys, Some (Table.custom_info r)))
+    pp_cpp_expr ctx env [] (CPPglob (r, tys, Some (Table.custom_info r)))
   | _ ->
-  pp_cpp_type ~lead:false false [] ty
+  pp_cpp_type ~lead:false ctx false [] ty
 
 (** Pretty-print a MiniCpp expression as C++ source.  The central expression
     printer of the module; dispatches on every {!Minicpp.cpp_expr} form and
@@ -1480,14 +1485,15 @@ and pp_value_qualifier env ty =
                  applied once the head expression is reached, via [pp_apply_cpp]
     @param t     the expression to render *)
 (* A member named after [.] or [->], with the template arguments it writes. *)
-and pp_member_name method_name = function
+and pp_member_name ctx method_name = function
   | [] -> Id.print method_name
   | tys ->
     str "template " ++ Id.print method_name ++ str "<"
-    ++ pp_list (pp_cpp_type false []) tys
+    ++ pp_list (pp_cpp_type ctx false []) tys
     ++ str ">"
 
-and pp_cpp_expr env args t =
+and pp_cpp_expr ctx env args t =
+  check_position ctx;
   let apply st = pp_apply_cpp st args in
   (* Generate an IIFE wrapper for a block template (%result) in expression
      position.  [ref_name] is for debug labels, [custom] is the raw template
@@ -1506,8 +1512,7 @@ and pp_cpp_expr env args t =
     let cmds = term_template substituted in
     let body_pp =
       pp_custom
-        ~container:ref_name
-        (Pp.string_of_ppcmds (GlobRef.print ref_name) ^ " := " ^ custom)
+        ~container:ref_name ctx (Pp.string_of_ppcmds (GlobRef.print ref_name) ^ " := " ^ custom)
         env None None tys [] val_args [] [] cmds
     in
     let body_str = Pp.string_of_ppcmds body_pp in
@@ -1519,9 +1524,9 @@ and pp_cpp_expr env args t =
       String.concat "\n"
         (List.map (fun s -> "  " ^ String.trim s ^ ";") stmts)
     in
-    str "[]() -> " ++ pp_cpp_type false [] ret_ty ++ str " {"
+    str "[]() -> " ++ pp_cpp_type ctx false [] ret_ty ++ str " {"
     ++ fnl ()
-    ++ str ("  " ^ Pp.string_of_ppcmds (pp_cpp_type false [] ret_ty)
+    ++ str ("  " ^ Pp.string_of_ppcmds (pp_cpp_type ctx false [] ret_ty)
             ^ " " ^ result_str ^ ";")
     ++ fnl ()
     ++ str stmt_lines
@@ -1539,8 +1544,7 @@ and pp_cpp_expr env args t =
     else
     let cmds = type_template custom in
     pp_custom
-      ~container:x
-      (Pp.string_of_ppcmds (GlobRef.print x) ^ " := " ^ custom)
+      ~container:x ctx (Pp.string_of_ppcmds (GlobRef.print x) ^ " := " ^ custom)
       env
       None
       None
@@ -1558,14 +1562,14 @@ and pp_cpp_expr env args t =
     in
     let param name = function
       | Some ty ->
-        Pp.string_of_ppcmds (str "const " ++ pp_cpp_type false [] ty ++ str (" &" ^ name))
+        Pp.string_of_ppcmds (str "const " ++ pp_cpp_type ctx false [] ty ++ str (" &" ^ name))
       | None -> "const auto &" ^ name
     in
     let params = String.concat ", " (List.map2 param names mv_params) in
     let call_args = String.concat ", " (List.filteri (fun i _ -> i <> mv_receiver) names) in
     str ("[](" ^ params ^ ") { return " ^ List.nth names mv_receiver)
     ++ str (pp_obj_access mv_access)
-    ++ pp_member_name (Common.id_of_global Term mv_method) mv_type_args
+    ++ pp_member_name ctx (Common.id_of_global Term mv_method) mv_type_args
     ++ str ("(" ^ call_args ^ "); }")
   | CPPprojection_value r ->
     str "[](const auto &_x) { return _x." ++ str (projection_field_name r) ++ str "; }"
@@ -1596,7 +1600,7 @@ and pp_cpp_expr env args t =
         let struct_name = Common.pp_global_name Type record_ref in
         let func_name = Common.pp_global_name Term x in
         let placeholder_args = gen_placeholder_args type_params in
-        let ty_args = pp_list (pp_cpp_type false []) tys in
+        let ty_args = pp_list (pp_cpp_type ctx false []) tys in
         `Written
           ( Cpp_name.pp_type_qualifier class_
               (str (String.capitalize_ascii struct_name) ++ str "<" ++ str placeholder_args ++ str ">")
@@ -1618,7 +1622,7 @@ and pp_cpp_expr env args t =
         let name = global_name Term x in
         let qualified = wrapper_qualify x name in
         if not (Cpp_name.equal qualified name) then `Named qualified
-        else if needs_global_qualifier x then `Named (Cpp_name.within Cpp_name.Global name)
+        else if needs_global_qualifier ctx x then `Named (Cpp_name.within Cpp_name.Global name)
         else `Named name
     in
     let base_name = match base with `Named n -> Cpp_name.pp n | `Written d -> d in
@@ -1661,7 +1665,7 @@ and pp_cpp_expr env args t =
         (* A template named through a qualifier takes the [template]
            disambiguator: [C::template empty<T>]. *)
         Cpp_name.pp ~template_keyword:true n
-        ++ str "<" ++ pp_list (pp_cpp_type false []) tys ++ str ">"
+        ++ str "<" ++ pp_list (pp_cpp_type ctx false []) tys ++ str ">"
     in
     let full_name =
       if not is_accessor then full_name
@@ -1680,7 +1684,7 @@ and pp_cpp_expr env args t =
     apply full_name
   | CPPnamespace (r, t) ->
     let name, _ = inductive_name r in
-    Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) name ++ pp_cpp_expr env args t
+    Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) name ++ pp_cpp_expr ctx env args t
   | CPPfun_call (res, CPPglob (n, tys, Some {ci_inline = Some tmpl; _}), ts) ->
     let s = tmpl.it_text in
     if tmpl.it_form = Block_iife then
@@ -1692,9 +1696,9 @@ and pp_cpp_expr env args t =
       let ty_args_s =
         match tys with
         | [] -> mt ()
-        | _ -> str "<" ++ pp_list (pp_cpp_type false []) tys ++ str ">"
+        | _ -> str "<" ++ pp_list (pp_cpp_type ctx false []) tys ++ str ">"
       in
-      let args_s = pp_list (pp_cpp_expr env args) (call_args ts) in
+      let args_s = pp_list (pp_cpp_expr ctx env args) (call_args ts) in
       str s ++ ty_args_s ++ str "(" ++ args_s ++ str ")"
     else
       (* [%ret] is the type the call yields, as translation recorded it: a
@@ -1705,7 +1709,7 @@ and pp_cpp_expr env args t =
           match res.cs_yields with
           | Ryields ty ->
             Str.global_replace (Str.regexp_string "%ret")
-              (Pp.string_of_ppcmds (pp_cpp_type false [] ty)) s
+              (Pp.string_of_ppcmds (pp_cpp_type ctx false [] ty)) s
           | Ropaque ->
             CErrors.user_err
               Pp.(str "Crane: the mapping " ++ GlobRef.print n
@@ -1727,8 +1731,7 @@ and pp_cpp_expr env args t =
           0 cmds
       in
       pp_custom
-        ~container:n
-        (Pp.string_of_ppcmds (GlobRef.print n) ^ " := " ^ s)
+        ~container:n ctx (Pp.string_of_ppcmds (GlobRef.print n) ^ " := " ^ s)
         env
         None
         None
@@ -1739,57 +1742,57 @@ and pp_cpp_expr env args t =
         []
         cmds
   | CPPmethod_call {mc_method; mc_access; mc_receiver; mc_type_args; mc_args} ->
-    pp_cpp_expr env args mc_receiver
+    pp_cpp_expr ctx env args mc_receiver
     ++ str (pp_obj_access mc_access)
-    ++ pp_member_name (Common.id_of_global Term mc_method) mc_type_args
+    ++ pp_member_name ctx (Common.id_of_global Term mc_method) mc_type_args
     ++ str "("
-    ++ pp_list (pp_cpp_expr env args) mc_args
+    ++ pp_list (pp_cpp_expr ctx env args) mc_args
     ++ str ")"
   | CPPfun_call (_, CPPrt Crane_rt.Share_child, {rev = [arg]}) -> (
     (* A field read out of a matched value goes to the new node as the cell
        it is in; anything else is the value itself. *)
     match arg with
-    | CPPderef p -> str (Crane_rt.name Crane_rt.Share_child) ++ str "(" ++ pp_cpp_expr env args p ++ str ")"
-    | _ -> pp_cpp_expr env args arg )
+    | CPPderef p -> str (Crane_rt.name Crane_rt.Share_child) ++ str "(" ++ pp_cpp_expr ctx env args p ++ str ")"
+    | _ -> pp_cpp_expr ctx env args arg )
   | CPPfun_call (_, CPPderef e, ts) ->
     (* Call through a dereferenced pointer: deref + invoke pattern.
        Arises from the shared_ptr fixpoint pattern where recursive calls
        dereference the function pointer before invoking. *)
-    let args_s = pp_list (pp_cpp_expr env args) (call_args ts) in
-    str "(*" ++ pp_cpp_expr env args e ++ str ")(" ++ args_s ++ str ")"
+    let args_s = pp_list (pp_cpp_expr ctx env args) (call_args ts) in
+    str "(*" ++ pp_cpp_expr ctx env args e ++ str ")(" ++ args_s ++ str ")"
   | CPPprojection {pj_projection; pj_record; pj_args} ->
-    pp_cpp_expr env args pj_record ++ str "." ++ str (projection_field_name pj_projection)
-    ++ (if pj_args = [] then mt () else str "(" ++ pp_list (pp_cpp_expr env args) pj_args ++ str ")")
+    pp_cpp_expr ctx env args pj_record ++ str "." ++ str (projection_field_name pj_projection)
+    ++ (if pj_args = [] then mt () else str "(" ++ pp_list (pp_cpp_expr ctx env args) pj_args ++ str ")")
   | CPPfun_call (_, f, ts) ->
-    let args_s = pp_list (pp_cpp_expr env args) (call_args ts) in
+    let args_s = pp_list (pp_cpp_expr ctx env args) (call_args ts) in
     let prefix = match f with
       | CPPglob (GlobRef.IndRef _, _, _)
-        when (!render_ctx).rc_in_template && writes_qualifier (pp_cpp_expr env args f) ->
+        when ctx.rc_in_template && writes_qualifier (pp_cpp_expr ctx env args f) ->
         str "typename "
       | _ -> mt ()
     in
-    prefix ++ pp_cpp_expr env args f ++ str "(" ++ args_s ++ str ")"
+    prefix ++ pp_cpp_expr ctx env args f ++ str "(" ++ args_s ++ str ")"
   (* A box is the converting constructor [std::any(e)], so it prints as one. *)
-  | CPPbox (ty, e) -> pp_cpp_expr env args (CPPconverting_ctor (ty, [ e ]))
+  | CPPbox (ty, e) -> pp_cpp_expr ctx env args (CPPconverting_ctor (ty, [ e ]))
   | CPPconverting_ctor (ty, ts) ->
-    pp_cpp_type false [] ty ++ str "(" ++ pp_list (pp_cpp_expr env args) ts ++ str ")"
+    pp_cpp_type ctx false [] ty ++ str "(" ++ pp_list (pp_cpp_expr ctx env args) ts ++ str ")"
   | CPPderef e ->
     let needs_parens = match e with
       | CPPvar _ | CPPthis | CPPfun_call _ | CPPaccess _
       | CPPaccess_call _ | CPPmethod_call _ | CPPprojection _ -> false
       | _ -> true
     in
-    if needs_parens then str "*(" ++ pp_cpp_expr env args e ++ str ")"
-    else str "*" ++ pp_cpp_expr env args e
+    if needs_parens then str "*(" ++ pp_cpp_expr ctx env args e ++ str ")"
+    else str "*" ++ pp_cpp_expr ctx env args e
   | CPPmove e ->
     writes_standard "utility";
-    str (sn ()).move ++ str "(" ++ pp_cpp_expr env args e ++ str ")"
+    str (sn ()).move ++ str "(" ++ pp_cpp_expr ctx env args e ++ str ")"
   | CPPforward (ty, e) ->
     str (sn ()).forward
     ++ str "<"
-    ++ pp_cpp_type false [] ty
+    ++ pp_cpp_type ctx false [] ty
     ++ str ">("
-    ++ pp_cpp_expr env args e
+    ++ pp_cpp_expr ctx env args e
     ++ str ")"
   | CPPlambda
     { cl_params = params;
@@ -1827,14 +1830,14 @@ and pp_cpp_expr env args t =
           | Immediate -> str "[&]" )
       ++ tparams_str ++ str "("
     in
-    let body_s = pp_list_stmt (pp_cpp_stmt env args) body in
+    let body_s = pp_list_stmt (pp_cpp_stmt ctx env args) body in
     let read = Minicpp.reads_as_printed body in
     let params_s =
       pp_list
         (fun (ty, id_opt) ->
           match id_opt with
-          | Some id when read id -> pp_cpp_type false [] ty ++ spc () ++ Id.print id
-          | _ -> pp_cpp_type false [] ty )
+          | Some id when read id -> pp_cpp_type ctx false [] ty ++ spc () ++ Id.print id
+          | _ -> pp_cpp_type ctx false [] ty )
         (List.rev params)
     in
     ( match ret_ty with
@@ -1844,7 +1847,7 @@ and pp_cpp_expr env args t =
         ++ params_s
         ++ str ")"
         ++ str " -> "
-        ++ pp_cpp_type false [] ty )
+        ++ pp_cpp_type ctx false [] ty )
       ++ str " {"
       ++ fnl ()
       ++ body_s
@@ -1860,18 +1863,18 @@ and pp_cpp_expr env args t =
   | CPPalloc ((Alloc_heap | Alloc_arena_scoped), t) when Pointer_slot.of_pointee t = Pointer_slot.Shared ->
     (* A shared value goes into its slot as it is: no cell to allocate. *)
     writes (Table.Runtime Crane_rt.shared_variant_header);
-    cpp_angle Crane_rt.shared_box (pp_cpp_type false [] t) ++ str "::make"
+    cpp_angle Crane_rt.shared_box (pp_cpp_type ctx false [] t) ++ str "::make"
   | CPPalloc (Alloc_heap, t) ->
     writes_standard "memory";
-    cpp_angle (sn ()).make_shared (pp_cpp_type false [] t)
+    cpp_angle (sn ()).make_shared (pp_cpp_type ctx false [] t)
   | CPPalloc (Alloc_reusing, t) ->
     (* Perceus reuse factory; only emitted under NonAtomicRc (crane::rc). *)
-    cpp_angle Crane_rt.make_rc_reusing (pp_cpp_type false [] t)
+    cpp_angle Crane_rt.make_rc_reusing (pp_cpp_type ctx false [] t)
   | CPPalloc (Alloc_arena_scoped, t) ->
     (* Runtime scoped-arena factory: the arena-aware form of make_shared/make_rc
        for the current pointer flavor.  Falls back to a plain heap allocation at
        runtime whenever no arena scope is open at the call site. *)
-    let inner = pp_cpp_type false [] t in
+    let inner = pp_cpp_type ctx false [] t in
     if Table.non_atomic_rc () then begin
       (* crane::rc<T>::make(...) -- rc.h transitively includes arena.h. *)
       writes_standard "memory";
@@ -1887,11 +1890,11 @@ and pp_cpp_expr env args t =
   | CPPstructmk (id, tys, es) | CPPstruct (id, tys, es) as e ->
     let suffix = match e with CPPstructmk _ -> "::make(" | _ -> "{" in
     let closing = match e with CPPstructmk _ -> str ")" | _ -> str "}" in
-    let es_s = pp_list (pp_cpp_expr env args) es in
+    let es_s = pp_list (pp_cpp_expr ctx env args) es in
     let templates =
       match tys with
       | [] -> mt ()
-      | _ -> str "<" ++ pp_list (pp_cpp_type false []) tys ++ str ">"
+      | _ -> str "<" ++ pp_list (pp_cpp_type ctx false []) tys ++ str ">"
     in
     let struct_name =
       match id with
@@ -1899,32 +1902,32 @@ and pp_cpp_expr env args t =
         Cpp_name.unqualified (Common.pp_type_name_capitalized id)
       | _ -> global_name Type id
     in
-    typename_prefix_for struct_name
+    typename_prefix_for ctx struct_name
     ++ Cpp_name.pp struct_name ++ templates ++ str suffix ++ es_s ++ closing
   | CPPstruct_id (id, tys, es) ->
-    let es_s = pp_list (pp_cpp_expr env args) es in
+    let es_s = pp_list (pp_cpp_expr ctx env args) es in
     let templates =
       match tys with
       | [] -> mt ()
-      | _ -> str "<" ++ pp_list (pp_cpp_type false []) tys ++ str ">"
+      | _ -> str "<" ++ pp_list (pp_cpp_type ctx false []) tys ++ str ">"
     in
     Id.print id ++ templates ++ str "{" ++ es_s ++ str "}"
   | CPPget (e, id) ->
     ( match e with
     | CPPderef CPPthis -> str "this->" ++ Id.print id
     | CPPderef _ | CPPraw _ ->
-      str "(" ++ pp_cpp_expr env args e ++ str ")." ++ Id.print id
-    | _ -> pp_cpp_expr env args e ++ str "." ++ Id.print id )
+      str "(" ++ pp_cpp_expr ctx env args e ++ str ")." ++ Id.print id
+    | _ -> pp_cpp_expr ctx env args e ++ str "." ++ Id.print id )
   | CPPget' (e, id, _) ->
     let field_name = str (Common.pp_global_name Type id) in
     ( match e with
     | CPPderef CPPthis -> str "this->" ++ field_name
     | CPPderef _ | CPPraw _ ->
-      str "(" ++ pp_cpp_expr env args e ++ str ")." ++ field_name
-    | _ -> pp_cpp_expr env args e ++ str "." ++ field_name )
+      str "(" ++ pp_cpp_expr ctx env args e ++ str ")." ++ field_name
+    | _ -> pp_cpp_expr ctx env args e ++ str "." ++ field_name )
   | CPPstring s -> str ("\"" ^ escape_cpp_string (Pstring.to_string s) ^ "\"")
   | CPPparray (elems, _) ->
-    str "{" ++ pp_list (pp_cpp_expr env args) (Array.to_list elems) ++ str "}"
+    str "{" ++ pp_list (pp_cpp_expr ctx env args) (Array.to_list elems) ++ str "}"
   | CPPuint x ->
     let s = Uint63.to_string x in
     ( match
@@ -1944,7 +1947,7 @@ and pp_cpp_expr env args t =
     pp_concept_name_of_ref concept
     ++ str "<"
     ++ pp_global Type subject
-    ++ prlist (fun ty -> str ", " ++ pp_cpp_type false [] ty) tys
+    ++ prlist (fun ty -> str ", " ++ pp_cpp_type ctx false [] ty) tys
     ++ str ">"
   | CPPrequires (ty_vars, exprs, type_reqs) ->
     let ty_vars_s =
@@ -1953,14 +1956,14 @@ and pp_cpp_expr env args t =
       | _ ->
         str "("
         ++ pp_list
-             (fun (ty, id) -> pp_cpp_type false [] ty ++ spc () ++ Id.print id)
+             (fun (ty, id) -> pp_cpp_type ctx false [] ty ++ spc () ++ Id.print id)
              ty_vars
         ++ str ") "
     in
     let type_reqs_s =
       prlist_with_sep
         fnl
-        (fun ty -> str "  " ++ pp_cpp_type false [] ty ++ str ";")
+        (fun ty -> str "  " ++ pp_cpp_type ctx false [] ty ++ str ";")
         type_reqs
     in
     let exprs_s =
@@ -1968,9 +1971,9 @@ and pp_cpp_expr env args t =
         fnl
         (fun (e1, e2) ->
           str "  { "
-          ++ pp_cpp_expr env args e1
+          ++ pp_cpp_expr ctx env args e1
           ++ str " } -> "
-          ++ pp_cpp_expr env args e2
+          ++ pp_cpp_expr ctx env args e2
           ++ str ";" )
         exprs
     in
@@ -1988,16 +1991,16 @@ and pp_cpp_expr env args t =
     ++ str "}"
   | CPPnew (ty, exprs) ->
     str "new "
-    ++ pp_cpp_type false [] ty
+    ++ pp_cpp_type ctx false [] ty
     ++ str "("
-    ++ pp_list (pp_cpp_expr env args) exprs
+    ++ pp_list (pp_cpp_expr ctx env args) exprs
     ++ str ")"
   | CPPshared_ptr_ctor (ty, expr) ->
     str (sn ()).shared_ptr
     ++ str "<"
-    ++ pp_cpp_type false [] ty
+    ++ pp_cpp_type ctx false [] ty
     ++ str ">("
-    ++ pp_cpp_expr env args expr
+    ++ pp_cpp_expr ctx env args expr
     ++ str ")"
   | CPPthis -> str "this"
   | CPPshared_from_this ty ->
@@ -2008,31 +2011,31 @@ and pp_cpp_expr env args t =
       str "this->rc_from_this()"
     else
       str "std::const_pointer_cast<"
-      ++ pp_cpp_type false [] ty
+      ++ pp_cpp_type ctx false [] ty
       ++ str ">(this->shared_from_this())"
   | CPPaccess (acc, e, id) ->
     ( match (acc, e) with
     | Adot, CPPderef inner ->
       (* Dot access on a dereferenced pointer is arrow access on the pointer. *)
-      pp_object env args inner ++ str "->" ++ Id.print id
-    | _ -> pp_object env args e ++ str (pp_obj_access acc) ++ Id.print id )
+      pp_object ctx env args inner ++ str "->" ++ Id.print id
+    | _ -> pp_object ctx env args e ++ str (pp_obj_access acc) ++ Id.print id )
   | CPPaccess_call (acc, obj, method_name, call_args) ->
-    pp_object env args obj ++ str (pp_obj_access acc) ++ Id.print method_name
-    ++ str "(" ++ pp_list (pp_cpp_expr env args) call_args ++ str ")"
+    pp_object ctx env args obj ++ str (pp_obj_access acc) ++ Id.print method_name
+    ++ str "(" ++ pp_list (pp_cpp_expr ctx env args) call_args ++ str ")"
   | CPPscope (e, id, []) ->
-    pp_cpp_expr env args e ++ str "::" ++ Id.print id
+    pp_cpp_expr ctx env args e ++ str "::" ++ Id.print id
   | CPPscope (e, id, tys) ->
-    pp_cpp_expr env args e ++ str "::template " ++ Id.print id ++ str "<"
-    ++ pp_list (pp_cpp_type false []) tys ++ str ">"
+    pp_cpp_expr ctx env args e ++ str "::template " ++ Id.print id ++ str "<"
+    ++ pp_list (pp_cpp_type ctx false []) tys ++ str ">"
   | CPPqualified_t (ty, id) ->
-    pp_value_qualifier env ty ++ str "::" ++ Id.print id
+    pp_value_qualifier ctx env ty ++ str "::" ++ Id.print id
   | CPPconvertible_to ty ->
     writes_standard "concepts";
-    str "std::convertible_to<" ++ pp_cpp_type false [] ty ++ str ">"
+    str "std::convertible_to<" ++ pp_cpp_type ctx false [] ty ++ str ">"
   | CPPabort (msg, ty) ->
     writes_standard "stdexcept";
     str "([]() -> "
-    ++ pp_cpp_type false [] ty
+    ++ pp_cpp_type ctx false [] ty
     ++ str " { throw "
     ++ str (sn ()).logic_error
     ++ str "(\""
@@ -2053,22 +2056,22 @@ and pp_cpp_expr env args t =
     writes_standard "utility";
     str ((sn ()).ns ^ "::in_place_index<" ^ string_of_int i ^ ">")
   | CPPbraced es ->
-    str "{" ++ pp_list (pp_cpp_expr env args) es ++ str "}"
+    str "{" ++ pp_list (pp_cpp_expr ctx env args) es ++ str "}"
   | CPPstd_get (ty, None) ->
     writes_variant ();
-    str ((sn ()).get ^ "<") ++ pp_cpp_type false [] ty ++ str ">"
+    str ((sn ()).get ^ "<") ++ pp_cpp_type ctx false [] ty ++ str ">"
   | CPPstd_get (ty, Some e) ->
     writes_variant ();
-    str ((sn ()).get ^ "<") ++ pp_cpp_type false [] ty ++ str ">("
-    ++ pp_cpp_expr env args e
+    str ((sn ()).get ^ "<") ++ pp_cpp_type ctx false [] ty ++ str ">("
+    ++ pp_cpp_expr ctx env args e
     ++ str ")"
   | CPPstd_holds_alternative ty ->
     writes_variant ();
-    str ((sn ()).holds_alternative ^ "<") ++ pp_cpp_type false [] ty ++ str ">"
+    str ((sn ()).holds_alternative ^ "<") ++ pp_cpp_type ctx false [] ty ++ str ">"
   | CPPdeclval ty ->
     writes_standard "utility";
-    str "std::declval<" ++ pp_cpp_type false [] ty ++ str ">()"
-  | CPPtype_name ty -> pp_cpp_type false [] ty
+    str "std::declval<" ++ pp_cpp_type ctx false [] ty ++ str ">()"
+  | CPPtype_name ty -> pp_cpp_type ctx false [] ty
   (* Low-level constructs for reuse optimization *)
   | CPPrt h ->
     (match h with
@@ -2088,10 +2091,10 @@ and pp_cpp_expr env args t =
     let paren_child child =
       match child with
       | CPPbinop (Band, _, _) when op = Bor ->
-        str "(" ++ pp_cpp_expr env args child ++ str ")"
+        str "(" ++ pp_cpp_expr ctx env args child ++ str ")"
       | CPPbinop (Bor, _, _) when op = Band ->
-        str "(" ++ pp_cpp_expr env args child ++ str ")"
-      | _ -> pp_cpp_expr env args child
+        str "(" ++ pp_cpp_expr ctx env args child ++ str ")"
+      | _ -> pp_cpp_expr ctx env args child
     in
     paren_child lhs
     ++ str " "
@@ -2102,11 +2105,11 @@ and pp_cpp_expr env args t =
     (* Wrap the whole ternary in parentheses, so a conditional used as a
        subexpression cannot bind incorrectly against a surrounding operator. *)
     str "("
-    ++ pp_cpp_expr env args cond
+    ++ pp_cpp_expr ctx env args cond
     ++ str " ? "
-    ++ pp_cpp_expr env args then_expr
+    ++ pp_cpp_expr ctx env args then_expr
     ++ str " : "
-    ++ pp_cpp_expr env args else_expr
+    ++ pp_cpp_expr ctx env args else_expr
     ++ str ")"
   | CPPbool b -> str (if b then "true" else "false")
   | CPPint n -> str (string_of_int n)
@@ -2117,33 +2120,33 @@ and pp_cpp_expr env args t =
        stay unparenthesized. *)
     let operand =
       match e with
-      | CPPbinop _ | CPPcond _ -> str "(" ++ pp_cpp_expr env args e ++ str ")"
-      | _ -> pp_cpp_expr env args e
+      | CPPbinop _ | CPPcond _ -> str "(" ++ pp_cpp_expr ctx env args e ++ str ")"
+      | _ -> pp_cpp_expr ctx env args e
     in
     str (spell_unop op) ++ operand
   | CPPunbox (Unbox_to ty, e) ->
     writes_obj ();
-    str Crane_rt.obj_cast ++ str "<" ++ pp_cpp_type false [] ty ++ str ">("
-    ++ pp_cpp_expr env args e ++ str ")"
+    str Crane_rt.obj_cast ++ str "<" ++ pp_cpp_type ctx false [] ty ++ str ">("
+    ++ pp_cpp_expr ctx env args e ++ str ")"
   | CPPunbox (Unbox_or_keep ty, e) ->
     writes_standard "type_traits";
-    let ty_pp = pp_cpp_type false [] ty and e_pp = pp_cpp_expr env args e in
+    let ty_pp = pp_cpp_type ctx false [] ty and e_pp = pp_cpp_expr ctx env args e in
     str "[&]() -> " ++ ty_pp
     ++ str " { if constexpr (std::is_same_v<" ++ ty_pp
     ++ str (", " ^ Crane_rt.obj ^ ">) return ") ++ e_pp
     ++ str "; else return " ++ str Crane_rt.obj_cast
     ++ str "<" ++ ty_pp ++ str ">(" ++ e_pp ++ str "); }()"
   | CPPunbox (Unbox_list (list_ty, flat_ty), e) ->
-    pp_cpp_type false [] list_ty
+    pp_cpp_type ctx false [] list_ty
     ++ str "(" ++ str Crane_rt.obj_cast ++ str "<"
-    ++ pp_cpp_type false [] flat_ty
-    ++ str ">(" ++ pp_cpp_expr env args e ++ str "))"
+    ++ pp_cpp_type ctx false [] flat_ty
+    ++ str ">(" ++ pp_cpp_expr ctx env args e ++ str "))"
   | CPPany_cast (ty, e) | CPPany_cast_tolerant (ty, e) ->
     writes_obj ();
     (* A binder holding a known type in a box is read bare inside a cast
        that already names its type; {!Cpp_erasure.lower_boxed_reads} leaves
        it so. *)
-    let inner = pp_cpp_expr env args e in
+    let inner = pp_cpp_expr ctx env args e in
     (* Which caster, and whether the cast is needed at all, was decided by
        {!Cpp_erasure.resolve_casts}. *)
     let caster =
@@ -2153,7 +2156,7 @@ and pp_cpp_expr env args t =
         Crane_rt.any_cast
       | _ -> Crane_rt.obj_cast
     in
-    str caster ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ inner
+    str caster ++ str "<" ++ pp_cpp_type ctx false [] ty ++ str ">(" ++ inner
     ++ str ")"
   | CPPerase_fn
       (shape, (CPPglob (GlobRef.ConstRef _, [], (None | Some {ci_inline = None; _})) as g)) ->
@@ -2161,13 +2164,13 @@ and pp_cpp_expr env args t =
        method is never a global here: it is named through a lambda
        ({!Minicpp.method_value}), never as itself. *)
     writes Table.erase_fn_header;
-    str Crane_rt.erase_global ++ str "<" ++ pp_cpp_expr env args g
+    str Crane_rt.erase_global ++ str "<" ++ pp_cpp_expr ctx env args g
     ++ ( match shape with
        | Boxed_whole -> mt ()
-       | At_signature ty -> str ", " ++ pp_cpp_type false [] ty )
+       | At_signature ty -> str ", " ++ pp_cpp_type ctx false [] ty )
     ++ str ">()"
   | CPPsuspend (ty, thunk) ->
-    pp_cpp_expr env args
+    pp_cpp_expr ctx env args
       (CPPfun_call
          ( Minicpp.call_sig ~yields:ty ~nargs:1 (),
            CPPqualified_t (ty, Id.of_string "lazy_"),
@@ -2177,9 +2180,9 @@ and pp_cpp_expr env args t =
     str Crane_rt.erase_fn
     ++ ( match shape with
        | Boxed_whole -> mt ()
-       | At_signature ty -> str "<" ++ pp_cpp_type false [] ty ++ str ">" )
+       | At_signature ty -> str "<" ++ pp_cpp_type ctx false [] ty ++ str ">" )
     ++ str "("
-    ++ pp_cpp_expr env args e
+    ++ pp_cpp_expr ctx env args e
     ++ str ")"
   | CPPerased_call (f, a) ->
     (* The one signature a callable is erased into storage at, so the one it
@@ -2188,62 +2191,64 @@ and pp_cpp_expr env args t =
     writes_standard "functional";
     str Crane_rt.obj_cast
     ++ str "<"
-    ++ pp_cpp_type false [] (Tfun ([Tany], Tany))
+    ++ pp_cpp_type ctx false [] (Tfun ([Tany], Tany))
     ++ str ">("
-    ++ pp_cpp_expr env args f
+    ++ pp_cpp_expr ctx env args f
     ++ str ")("
-    ++ pp_cpp_expr env args a
+    ++ pp_cpp_expr ctx env args a
     ++ str ")"
   | CPPtolerant_call (f, call_args) ->
     writes Table.erase_fn_header;
     str Crane_rt.call_erased
     ++ str "("
-    ++ prlist_with_sep pr_comma (pp_cpp_expr env args) (f :: call_args)
+    ++ prlist_with_sep pr_comma (pp_cpp_expr ctx env args) (f :: call_args)
     ++ str ")"
   | CPPfn_value e ->
     writes (Table.Runtime Crane_rt.fn_header);
-    str Crane_rt.fn ++ str "(" ++ pp_cpp_expr env args e ++ str ")"
+    str Crane_rt.fn ++ str "(" ++ pp_cpp_expr ctx env args e ++ str ")"
   | CPPconvert (ty, e) ->
     writes Table.erase_fn_header;
     str Crane_rt.convert
     ++ str "<"
-    ++ pp_cpp_type false [] ty
+    ++ pp_cpp_type ctx false [] ty
     ++ str ">("
-    ++ pp_cpp_expr env args e
+    ++ pp_cpp_expr ctx env args e
     ++ str ")"
   | CPPcontainer_cast (ty, e, suppress_boxing) ->
     writes Table.erase_fn_header;
     let ty_pp =
-      setting suppress_elem_boxing (suppress_boxing || !suppress_elem_boxing) (fun () -> pp_cpp_type false [] ty)
+      setting suppress_elem_boxing (suppress_boxing || !suppress_elem_boxing) (fun () -> pp_cpp_type ctx false [] ty)
     in
     str Crane_rt.container_cast ++ str "<"
     ++ ty_pp
     ++ str ">("
-    ++ pp_cpp_expr env args e
+    ++ pp_cpp_expr ctx env args e
     ++ str ")"
   | CPPstd_get_if (ty, e) ->
     writes_variant ();
-    str ((sn ()).get_if ^ "<") ++ pp_cpp_type false [] ty ++ str ">("
-    ++ pp_cpp_expr env args e ++ str ")"
+    str ((sn ()).get_if ^ "<") ++ pp_cpp_type ctx false [] ty ++ str ">("
+    ++ pp_cpp_expr ctx env args e ++ str ")"
 
-(** [pp_object env args e] prints [e] in the position a [.], [->] or member
+(** [pp_object ctx env args e] prints [e] in the position a [.], [->] or member
     call is about to be applied to.
 
     Postfix operators bind tighter than the prefix ones, so an [e] that prints
     with a leading [*] has to be parenthesised for the access to apply to [e]
     as a whole rather than to its operand. *)
-and pp_object env args e =
+and pp_object ctx env args e =
   match e with
-  | CPPderef _ -> str "(" ++ pp_cpp_expr env args e ++ str ")"
+  | CPPderef _ -> str "(" ++ pp_cpp_expr ctx env args e ++ str ")"
   | CPPraw s when String.length s > 0 && s.[0] = '*' ->
-    str "(" ++ pp_cpp_expr env args e ++ str ")"
-  | _ -> pp_cpp_expr env args e
+    str "(" ++ pp_cpp_expr ctx env args e ++ str ")"
+  | _ -> pp_cpp_expr ctx env args e
 
 (** Pretty-print a MiniCpp statement as C++ source.
 
     @param env   name environment (see {!pp_cpp_expr})
     @param args  accumulated argument list forwarded to sub-expression printers *)
-and pp_cpp_stmt env args = function
+and pp_cpp_stmt ctx env args stmt =
+  check_position ctx;
+  match stmt with
   | Sreturn None -> str "return;"
   | Sreturn (Some (CPPabort (msg, _))) ->
     writes_standard "stdexcept";
@@ -2253,22 +2258,22 @@ and pp_cpp_stmt env args = function
     ++ str (escape_cpp_string msg)
     ++ str "\");"
   | Sreturn (Some e) ->
-    str "return " ++ pp_cpp_expr env args e ++ str ";"
+    str "return " ++ pp_cpp_expr ctx env args e ++ str ";"
   | Sdecl (id, ty, _) ->
-    pp_cpp_type false [] ty ++ str " " ++ Id.print id ++ str ";"
+    pp_cpp_type ctx false [] ty ++ str " " ++ Id.print id ++ str ";"
   | Sasgn (id, Declare (ty, _), e) ->
-    pp_cpp_type false [] ty
+    pp_cpp_type ctx false [] ty
     ++ str " "
     ++ Id.print id
     ++ str " = "
-    ++ pp_cpp_expr env args e
+    ++ pp_cpp_expr ctx env args e
     ++ str ";"
   | Sasgn (id, Existing, e) ->
-    Id.print id ++ str " = " ++ pp_cpp_expr env args e ++ str ";"
+    Id.print id ++ str " = " ++ pp_cpp_expr ctx env args e ++ str ";"
   | Sasgn (id, Declare_static ty, e) ->
-    str "static " ++ pp_cpp_type false [] ty ++ str " " ++ Id.print id ++ str " = "
-    ++ pp_cpp_expr env args e ++ str ";"
-  | Sexpr e -> pp_cpp_expr env args e ++ str ";"
+    str "static " ++ pp_cpp_type ctx false [] ty ++ str " " ++ Id.print id ++ str " = "
+    ++ pp_cpp_expr ctx env args e ++ str ";"
+  | Sexpr e -> pp_cpp_expr ctx env args e ++ str ";"
   | Sthrow msg ->
     writes_standard "stdexcept";
     str "throw "
@@ -2296,7 +2301,7 @@ and pp_cpp_stmt env args = function
       ++ Id.print ctor
       ++ str ": {"
       ++ fnl ()
-      ++ pp_list_stmt (pp_cpp_stmt env args) stmts
+      ++ pp_list_stmt (pp_cpp_stmt ctx env args) stmts
       ++ ( if ends_with_return stmts then mt ()
          else fnl () ++ str "break;" )
       ++ fnl ()
@@ -2304,7 +2309,7 @@ and pp_cpp_stmt env args = function
     in
     writes_standard "utility";
     str "switch ("
-    ++ pp_cpp_expr env args scrut
+    ++ pp_cpp_expr ctx env args scrut
     ++ str ") {"
     ++ fnl ()
     ++ prlist_with_sep fnl pp_branch branches
@@ -2313,7 +2318,7 @@ and pp_cpp_stmt env args = function
        | Some stmts ->
          str "default: {"
          ++ fnl ()
-         ++ pp_list_stmt (pp_cpp_stmt env args) stmts
+         ++ pp_list_stmt (pp_cpp_stmt ctx env args) stmts
          ++ fnl ()
          ++ str "}"
        | None ->
@@ -2345,47 +2350,47 @@ and pp_cpp_stmt env args = function
   | Sif_constexpr (Tt_convertible (t1, t2), then_stmts, else_stmts) ->
     writes Table.erase_fn_header;
     str "if constexpr (" ++ str Crane_rt.convertible ++ str "<"
-    ++ pp_cpp_type false [] t1
+    ++ pp_cpp_type ctx false [] t1
     ++ str ", "
-    ++ pp_cpp_type false [] t2
+    ++ pp_cpp_type ctx false [] t2
     ++ str ">) {"
     ++ fnl ()
-    ++ pp_list_stmt (pp_cpp_stmt env args) then_stmts
+    ++ pp_list_stmt (pp_cpp_stmt ctx env args) then_stmts
     ++ fnl ()
     ++ str "} else {"
     ++ fnl ()
-    ++ pp_list_stmt (pp_cpp_stmt env args) else_stmts
+    ++ pp_list_stmt (pp_cpp_stmt ctx env args) else_stmts
     ++ fnl ()
     ++ str "}"
   | Sif (cond, then_stmts, else_stmts) ->
     str "if ("
-    ++ pp_cpp_expr env args cond
+    ++ pp_cpp_expr ctx env args cond
     ++ str ") {"
     ++ fnl ()
-    ++ pp_list_stmt (pp_cpp_stmt env args) then_stmts
+    ++ pp_list_stmt (pp_cpp_stmt ctx env args) then_stmts
     ++ fnl ()
     ++ ( match else_stmts with
        | [] -> str "}"
        | _ ->
          str "} else {"
          ++ fnl ()
-         ++ pp_list_stmt (pp_cpp_stmt env args) else_stmts
+         ++ pp_list_stmt (pp_cpp_stmt ctx env args) else_stmts
          ++ fnl ()
          ++ str "}" )
   | Sif_decl (id, ty, init, then_stmts, else_stmts) ->
     str "if ("
-    ++ pp_cpp_type false [] ty ++ str " " ++ Id.print id
-    ++ str " = " ++ pp_cpp_expr env args init
+    ++ pp_cpp_type ctx false [] ty ++ str " " ++ Id.print id
+    ++ str " = " ++ pp_cpp_expr ctx env args init
     ++ str ") {"
     ++ fnl ()
-    ++ pp_list_stmt (pp_cpp_stmt env args) then_stmts
+    ++ pp_list_stmt (pp_cpp_stmt ctx env args) then_stmts
     ++ fnl ()
     ++ (match else_stmts with
         | [] -> str "}"
         | _ ->
           str "} else {"
           ++ fnl ()
-          ++ pp_list_stmt (pp_cpp_stmt env args) else_stmts
+          ++ pp_list_stmt (pp_cpp_stmt ctx env args) else_stmts
           ++ fnl ()
           ++ str "}")
   | Sraw code ->
@@ -2400,44 +2405,44 @@ and pp_cpp_stmt env args = function
     ++ str " { "
     ++ prlist_with_sep mt
          (fun (fid, ty) ->
-           pp_cpp_type false [] ty ++ str " " ++ Id.print fid ++ str "; ")
+           pp_cpp_type ctx false [] ty ++ str " " ++ Id.print fid ++ str "; ")
          fields
     ++ str "};"
   | Susing (name, ty) ->
-    str "using " ++ Id.print name ++ str " = " ++ pp_cpp_type false [] ty ++ str ";"
+    str "using " ++ Id.print name ++ str " = " ++ pp_cpp_type ctx false [] ty ++ str ";"
   | Sdecl_init (id, ty) ->
-    pp_cpp_type false [] ty ++ str " " ++ Id.print id ++ str "{};"
+    pp_cpp_type ctx false [] ty ++ str " " ++ Id.print id ++ str "{};"
   | Sbind (ids, e) ->
     str "const auto& [" ++ prlist_with_sep (fun () -> str ", ") Id.print ids
-    ++ str "] = " ++ pp_cpp_expr env args e ++ str ";"
+    ++ str "] = " ++ pp_cpp_expr ctx env args e ++ str ";"
   | Sfor_range (id, e, body) ->
     str "for (auto& " ++ Id.print id ++ str " : "
-    ++ pp_cpp_expr env args e
+    ++ pp_cpp_expr ctx env args e
     ++ str ") {"
     ++ fnl ()
-    ++ pp_list_stmt (pp_cpp_stmt env args) body
+    ++ pp_list_stmt (pp_cpp_stmt ctx env args) body
     ++ fnl ()
     ++ str "}"
   | Swhile (cond, body) ->
     str "while ("
-    ++ pp_cpp_expr env args cond
+    ++ pp_cpp_expr ctx env args cond
     ++ str ") {"
     ++ fnl ()
-    ++ pp_list_stmt (pp_cpp_stmt env args) body
+    ++ pp_list_stmt (pp_cpp_stmt ctx env args) body
     ++ fnl ()
     ++ str "}"
   | Sblock stmts ->
     str "{"
     ++ fnl ()
-    ++ pp_list_stmt (pp_cpp_stmt env args) stmts
+    ++ pp_list_stmt (pp_cpp_stmt ctx env args) stmts
     ++ fnl ()
     ++ str "}"
   | Scontinue -> str "continue;"
   | Sbreak -> str "break;"
   | Sassign_expr (lhs, e) ->
-    pp_cpp_expr env args lhs
+    pp_cpp_expr ctx env args lhs
     ++ str " = "
-    ++ pp_cpp_expr env args e
+    ++ pp_cpp_expr ctx env args e
     ++ str ";"
   | Sblock_custom (_ref, tmpl, result_var, result_ty, args, tyargs, _) ->
     (* Block template: emit a declaration + template-substituted statements.
@@ -2448,15 +2453,14 @@ and pp_cpp_stmt env args = function
     let cmds = term_template flat in
     (* Render: type declaration + template body as statements *)
     let decl_pp =
-      pp_cpp_type false [] result_ty
+      pp_cpp_type ctx false [] result_ty
       ++ str " "
       ++ Id.print result_var
       ++ str ";"
     in
     let body_pp =
       pp_custom
-        ~container:_ref
-        ("block custom " ^ Pp.string_of_ppcmds (GlobRef.print _ref))
+        ~container:_ref ctx ("block custom " ^ Pp.string_of_ppcmds (GlobRef.print _ref))
         env None None tyargs [] args [] [] cmds
     in
     (* Split rendered body by ';' and emit each as a statement line *)
@@ -2477,9 +2481,8 @@ and pp_cpp_stmt env args = function
        scrutinee.  The printer just expands the template. *)
     let text = custom_match_text cmatch in
     let cmds = match_template text in
-    pp_custom
-      ( "custom match for "
-      ^ Pp.string_of_ppcmds (pp_cpp_type false [] typ)
+    pp_custom ctx ( "custom match for "
+      ^ Pp.string_of_ppcmds (pp_cpp_type ctx false [] typ)
       ^ " := "
       ^ text )
       env
@@ -2522,7 +2525,7 @@ and pp_cpp_stmt env args = function
        Single-constructor exhaustive matches (one branch, no wildcard)
        emit just the binding + body inline — no if/else needed. *)
     let n_branches = List.length branches in
-    let pp_scrut = pp_cpp_expr env args in
+    let pp_scrut = pp_cpp_expr ctx env args in
     (* Derive a unique scrutinee variable name from the first branch's binding
        variable, so that two Smatch nodes in the same scope never redeclare the
        same scrutinee name — no block-scoping is needed. *)
@@ -2547,7 +2550,7 @@ and pp_cpp_stmt env args = function
     (* Helper: [std::holds_alternative<Ctor>(scrut)]. *)
     let pp_holds scrut_var_pp br =
       str (sn ()).holds_alternative ++ str "<"
-      ++ pp_cpp_type false [] br.smb_ctor_type ++ str ">("
+      ++ pp_cpp_type ctx false [] br.smb_ctor_type ++ str ">("
       ++ scrut_var_pp ++ str ")"
     in
     (* Helper: binding statement inside the if-block.
@@ -2572,7 +2575,7 @@ and pp_cpp_stmt env args = function
                (fun fb -> Id.print fb.fb_name)
                br.smb_field_bindings
           ++ str "] = " ++ str (sn ()).get ++ str "<"
-          ++ pp_cpp_type false [] br.smb_ctor_type ++ str ">("
+          ++ pp_cpp_type ctx false [] br.smb_ctor_type ++ str ">("
           ++ scrut_var_pp ++ str ");"
       | [] ->
         ( match br.smb_var with
@@ -2580,12 +2583,12 @@ and pp_cpp_stmt env args = function
           if scrut.sc_owned then
             str "auto " ++ Id.print var_id
             ++ str " = std::move(" ++ str (sn ()).get ++ str "<"
-            ++ pp_cpp_type false [] br.smb_ctor_type ++ str ">("
+            ++ pp_cpp_type ctx false [] br.smb_ctor_type ++ str ">("
             ++ scrut_var_pp ++ str "));"
           else
             str "const auto& " ++ Id.print var_id
             ++ str " = " ++ str (sn ()).get ++ str "<"
-            ++ pp_cpp_type false [] br.smb_ctor_type ++ str ">("
+            ++ pp_cpp_type ctx false [] br.smb_ctor_type ++ str ">("
             ++ scrut_var_pp ++ str ");"
         | None -> mt () )
     in
@@ -2650,9 +2653,9 @@ and pp_cpp_stmt env args = function
       (* Single-constructor exhaustive match: emit binding + body inline.
          No if/else needed. *)
       let br = match branches with br :: _ -> br
-        | [] -> CErrors.anomaly (Pp.str "pp_cpp_stmt Smatch: empty branch list") in
+        | [] -> CErrors.anomaly (Pp.str "pp_cpp_stmt ctx Smatch: empty branch list") in
       let binding = pp_block_binding scrut_var_pp br in
-      let body_pp = pp_list_stmt (pp_cpp_stmt env args) br.smb_body in
+      let body_pp = pp_list_stmt (pp_cpp_stmt ctx env args) br.smb_body in
       if binding = mt () then body_pp
       else scrut_binding_pp ++ binding ++ fnl () ++ body_pp
     else
@@ -2662,7 +2665,7 @@ and pp_cpp_stmt env args = function
         i = n_branches - 1 && default = None && n_branches > 1
       in
       let binding = pp_block_binding scrut_var_pp br in
-      let normal_body_pp = pp_list_stmt (pp_cpp_stmt env args) br.smb_body in
+      let normal_body_pp = pp_list_stmt (pp_cpp_stmt ctx env args) br.smb_body in
       let body_pp =
         ( if binding = mt () then mt ()
           else binding ++ fnl () )
@@ -2679,7 +2682,7 @@ and pp_cpp_stmt env args = function
             let conds_pp =
               prlist_with_sep
                 (fun () -> str " && ")
-                (pp_cpp_expr env args)
+                (pp_cpp_expr ctx env args)
                 conds
             in
             holds_pp ++ str " && " ++ conds_pp
@@ -2696,7 +2699,7 @@ and pp_cpp_stmt env args = function
       match default with
       | Some stmts ->
         fnl () ++ str "} else {"
-        ++ fnl () ++ pp_list_stmt (pp_cpp_stmt env args) stmts
+        ++ fnl () ++ pp_list_stmt (pp_cpp_stmt ctx env args) stmts
       | None when branches = [] ->
         str "std::unreachable();"
       | None ->
@@ -2743,7 +2746,7 @@ and string_object printed =
   writes_standard "string";
   str (sn ()).string ++ str "(" ++ printed ++ str ")"
 
-and pp_custom ?container custom env typ t tyargs cases args _arg_types vl cmds =
+and pp_custom ?container ctx custom env typ t tyargs cases args _arg_types vl cmds =
   (* Every read of a boxed value the template needs at a concrete type was
      made explicit by {!Cpp_erasure.lower_boxed_reads}; this prints. *)
   let pp ?(followed_by_dot=false) cmd =
@@ -2752,7 +2755,7 @@ and pp_custom ?container custom env typ t tyargs cases args _arg_types vl cmds =
     | CCscrut ->
       ( match t with
       | Some t_expr ->
-        let t_printed = pp_cpp_expr env [] t_expr in
+        let t_printed = pp_cpp_expr ctx env [] t_expr in
         ( match t_expr with
         | CPPstring _ -> string_object t_printed
         (* A custom match template splices [%scrut] in as text and appends
@@ -2783,21 +2786,21 @@ and pp_custom ?container custom env typ t tyargs cases args _arg_types vl cmds =
           (Pp.str "Custom syntax: scrutinee token with no bound expression") )
     | CCty ->
       ( match typ with
-      | Some typ -> pp_cpp_type false vl typ
+      | Some typ -> pp_cpp_type ctx false vl typ
       | None ->
         CErrors.anomaly (Pp.str "Custom syntax: type token with no bound type")
       )
     | CCbody i ->
       ( try
           let _, _, ss = List.nth cases i in
-          pp_list_stmt (pp_cpp_stmt env []) ss
+          pp_list_stmt (pp_cpp_stmt ctx env []) ss
         with Failure _ ->
           CErrors.anomaly
             Pp.(str "Custom syntax: unbound case body in: " ++ str custom) )
     | CCty_arg i ->
       ( match List.nth_opt tyargs i with
-        | Some ty -> pp_cpp_type false vl ty
-        | None -> pp_cpp_type false vl Tany
+        | Some ty -> pp_cpp_type ctx false vl ty
+        | None -> pp_cpp_type ctx false vl Tany
       )
     | CCelem i ->
       (* Like CCty_arg, but wrap the element in the container's [Boxed Element]
@@ -2805,7 +2808,7 @@ and pp_custom ?container custom env typ t tyargs cases args _arg_types vl cmds =
       let elem_ty =
         match List.nth_opt tyargs i with Some ty -> ty | None -> Tany
       in
-      let base = pp_cpp_type false vl elem_ty in
+      let base = pp_cpp_type ctx false vl elem_ty in
       let container_ref =
         match container with
         | Some _ -> container
@@ -2842,7 +2845,7 @@ and pp_custom ?container custom env typ t tyargs cases args _arg_types vl cmds =
           let ids, _, _ = List.nth cases i in
           (* Spellable: one that is not was materialised at the seam
              ({!Cpp_erasure.materialise}). *)
-          pp_cpp_type false vl (List.nth ids j).cp_type
+          pp_cpp_type ctx false vl (List.nth ids j).cp_type
         with Failure _ ->
           CErrors.anomaly
             Pp.(
@@ -2851,7 +2854,7 @@ and pp_custom ?container custom env typ t tyargs cases args _arg_types vl cmds =
     | CCarg i ->
     try
       let arg_expr = List.nth args i in
-      let arg = pp_cpp_expr env [] arg_expr in
+      let arg = pp_cpp_expr ctx env [] arg_expr in
       let arg =
         match arg_expr with
         | CPPstring _ -> string_object arg
@@ -2898,7 +2901,7 @@ and pp_custom ?container custom env typ t tyargs cases args _arg_types vl cmds =
 
 (** Pretty-print an already-converted MiniCpp type with no parenthesization and
     no type-variable context; the common-case shorthand for {!pp_cpp_type}. *)
-let pp_type t = pp_cpp_type false [] t
+let pp_type ctx t = pp_cpp_type ctx false [] t
 
 (* A callable parameter whose constraint was never settled from its body
    ({!Minicpp.settle_constraints}) is printed unconstrained -- a constraint
@@ -2926,21 +2929,21 @@ let pp_template_type = function
     str "typename"
 
 (** Print a complete template parameter including name and optional default *)
-let pp_template_param (tt, id) =
+let pp_template_param ctx (tt, id) =
   match tt with
   | TTtypename_default default_ty ->
     str "typename"
     ++ spc ()
     ++ Id.print id
     ++ str " = "
-    ++ pp_type default_ty
+    ++ pp_type ctx default_ty
   | _ -> pp_template_type tt ++ spc () ++ Id.print id
 
 (** [template <...> ] prefix for a declaration, or nothing when the parameter
     list is empty. *)
-let pp_template_header = function
+let pp_template_header ctx = function
   | [] -> mt ()
-  | tparams -> str "template <" ++ pp_list pp_template_param tparams ++ str "> "
+  | tparams -> str "template <" ++ pp_list (pp_template_param ctx) tparams ++ str "> "
 
 (** Print a template parameter for a re-declaration: same kind, but without the
     default argument, which C++ allows to appear only once per parameter. *)
@@ -2956,7 +2959,7 @@ let pp_template_param_redecl (tt, id) = pp_template_type tt ++ spc () ++ Id.prin
                     template parameter declaration
     @return [Some pp] where [pp] is the full [requires ...] clause, or [None]
             if no [TTfun] constraints are present *)
-let pp_requires_of_tparams tparams =
+let pp_requires_of_tparams ctx tparams =
   let invocable_r =
     if String.equal (Table.std_lib ()) "BDE" then "bsl::is_invocable_r_v"
     else "std::is_invocable_r_v"
@@ -2978,11 +2981,11 @@ let pp_requires_of_tparams tparams =
           in
           let clause inv =
             str invocable_r ++ str "<"
-            ++ pp_type cod
+            ++ pp_type ctx cod
             ++ str ", "
             ++ operand inv.inv_callable (Id.print id)
             ++ List.fold_left
-                 (fun acc (cat, ty) -> acc ++ str ", " ++ operand cat (pp_type ty))
+                 (fun acc (cat, ty) -> acc ++ str ", " ++ operand cat (pp_type ctx ty))
                  (mt ()) inv.inv_args
             ++ str ">"
           in
@@ -2999,7 +3002,7 @@ let pp_requires_of_tparams tparams =
             ( pp_concept_name_of_ref concept ++ str "<"
             ++ Id.print id
             ++ List.fold_left
-                 (fun acc ty -> acc ++ str ", " ++ pp_type ty)
+                 (fun acc ty -> acc ++ str ", " ++ pp_type ctx ty)
                  (mt ()) args
             ++ str ">" )
         | _ -> None)
@@ -3021,17 +3024,17 @@ let pp_requires_of_tparams tparams =
     definition and a constrained forward declaration print it here, so a
     re-declaration repeats the constraint token for token -- which is what
     makes the compiler see the two as one. *)
-let struct_template_head ~pp_param env tparams cstr =
+let struct_template_head ~pp_param ctx env tparams cstr =
   match tparams with
   | [] -> mt ()
   | _ ->
     let args = pp_list pp_param tparams in
-    let req = pp_requires_of_tparams tparams in
+    let req = pp_requires_of_tparams ctx tparams in
     let cstr_pp = match (req, cstr) with
       | None, None -> mt ()
       | Some r, None -> r ++ fnl ()
-      | None, Some c -> pp_cpp_expr env [] c ++ fnl ()
-      | Some r, Some c -> r ++ str " && " ++ pp_cpp_expr env [] c ++ fnl ()
+      | None, Some c -> pp_cpp_expr ctx env [] c ++ fnl ()
+      | Some r, Some c -> r ++ str " && " ++ pp_cpp_expr ctx env [] c ++ fnl ()
     in
     (str "template <" ++ args ++ str ">")
     ++ cstr_pp
@@ -3056,7 +3059,7 @@ let ctor_aliases_found ~file visit =
   visit (fun ~vl ~owner t ->
       match t with
       | Ttyctor _ ->
-        let spell () = ignore (pp_cpp_type false vl t) in
+        let spell () = ignore (pp_cpp_type !render_ctx false vl t) in
         ( match owner with Some r -> enter (Inductive_struct r) spell | None -> spell () )
       | _ -> () );
   !ctor_aliases_spelled
@@ -3119,17 +3122,16 @@ type member_mode =
           template parameters. *)
 
 (** The [template <...>] line a struct's parameters call for, if any. *)
-let pp_owner_template = function
+let pp_owner_template ctx = function
   | [] -> mt ()
-  | tps -> (str "template <" ++ pp_list pp_template_param tps ++ str ">") ++ fnl ()
+  | tps -> (str "template <" ++ pp_list (pp_template_param ctx) tps ++ str ">") ++ fnl ()
 
 (** Pretty-print a single MiniCpp struct field as C++ source.
 
     @param struct_name  the enclosing struct's pretty-printed name, forwarded
                         to constructor and destructor printers that need it
     @param env          name environment for sub-expression pretty-printing *)
-let rec pp_cpp_field
-    ?(struct_name : Pp.t option) ?(mode = Mm_inline) env = function
+let rec pp_cpp_field ?(struct_name : Pp.t option) ?(mode = Mm_inline) ctx env = function
   | Fvar (id, ty) ->
     (* Strip d_ prefix for doc comment lookup (C++ fields are d_fst, Rocq
        names are fst) *)
@@ -3140,7 +3142,7 @@ let rec pp_cpp_field
       else id_str
     in
     pp_doc_comment_for_name rocq_name
-    ++ (pp_type ty ++ str " " ++ Id.print id ++ str ";")
+    ++ (pp_type ctx ty ++ str " " ++ Id.print id ++ str ";")
   | Fvar' (id, ty) ->
     (* A field's name lives in its struct, not in the enclosing namespace, so
        it must not be registered as occupying one: a field named after a type
@@ -3148,7 +3150,7 @@ let rec pp_cpp_field
        that type through a duplicate wrapper.  Reads spell the field the same
        way (see [CPPget']). *)
     pp_doc_comment_for_name (Common.pp_global_name Type id)
-    ++ (pp_type ty ++ str " " ++ str (Common.pp_global_name Type id)
+    ++ (pp_type ctx ty ++ str " " ++ str (Common.pp_global_name Type id)
           ++ str ";")
   | Fmethod
       {
@@ -3191,7 +3193,7 @@ let rec pp_cpp_field
       | Mm_defined (_, owner_tps) ->
         if owner_tps = [] && mf_tparams = [] then str "inline " else mt ()
     in
-    let body_s = pp_list_stmt (pp_cpp_stmt env []) mf_body in
+    let body_s = pp_list_stmt (pp_cpp_stmt ctx env []) mf_body in
     let read = Minicpp.reads_as_printed mf_body in
     let params_s =
       pp_list
@@ -3199,16 +3201,16 @@ let rec pp_cpp_field
           if
             (not (read id))
             && not (String.equal (Id.to_string mf_name) "operator=")
-          then pp_type ty
-          else pp_type ty ++ str " " ++ Id.print id)
+          then pp_type ctx ty
+          else pp_type ctx ty ++ str " " ++ Id.print id)
         mf_params
     in
     let template_s =
       match mf_tparams with
       | [] -> mt ()
       | _ ->
-        let args = pp_list pp_template_param mf_tparams in
-        let req = pp_requires_of_tparams mf_tparams in
+        let args = pp_list (pp_template_param ctx) mf_tparams in
+        let req = pp_requires_of_tparams ctx mf_tparams in
         str "template <" ++ args ++ str ">" ++ fnl ()
         ++ ( match req with
            | None -> mt ()
@@ -3219,7 +3221,7 @@ let rec pp_cpp_field
     let owner_template_s, qual_s =
       match mode with
       | Mm_defined (qual, owner_tps) ->
-        (pp_owner_template owner_tps, qual ++ str "::")
+        (pp_owner_template ctx owner_tps, qual ++ str "::")
       | Mm_inline | Mm_declared -> (mt (), mt ())
     in
     (* A conversion function has no return type of its own -- its name is the
@@ -3228,9 +3230,9 @@ let rec pp_cpp_field
       h
         ( inline_s
         ++ ( if mf_is_conversion then
-               qual_s ++ str "operator " ++ pp_type mf_ret_type
+               qual_s ++ str "operator " ++ pp_type ctx mf_ret_type
              else
-               qualifier ++ static_s ++ pp_type mf_ret_type ++ str " "
+               qualifier ++ static_s ++ pp_type ctx mf_ret_type ++ str " "
                ++ qual_s ++ Id.print mf_name )
         ++ pp_par true params_s
         ++ const_s
@@ -3252,11 +3254,11 @@ let rec pp_cpp_field
       match fc_tparams with
       | [] -> mt ()
       | _ ->
-        str "template <" ++ pp_list pp_template_param fc_tparams ++ str ">"
+        str "template <" ++ pp_list (pp_template_param ctx) fc_tparams ++ str ">"
         ++ fnl ()
     in
     let params_s =
-      pp_list (fun (id, ty) -> pp_type ty ++ str " " ++ Id.print id) fc_params
+      pp_list (fun (id, ty) -> pp_type ctx ty ++ str " " ++ Id.print id) fc_params
     in
     let init_s =
       match fc_inits with
@@ -3265,7 +3267,7 @@ let rec pp_cpp_field
         str " : "
         ++ pp_list
              (fun (member, expr) ->
-               Id.print member ++ str "(" ++ pp_cpp_expr env [] expr ++ str ")" )
+               Id.print member ++ str "(" ++ pp_cpp_expr ctx env [] expr ++ str ")" )
              fc_inits
     in
     let explicit_s = if fc_explicit then str "explicit " else mt () in
@@ -3278,7 +3280,7 @@ let rec pp_cpp_field
        | [] -> head ++ str " {}"
        | _ ->
          head ++ str " {" ++ fnl ()
-         ++ pp_list_stmt (pp_cpp_stmt env []) fc_body
+         ++ pp_list_stmt (pp_cpp_stmt ctx env []) fc_body
          ++ str "}" )
   | Fdestructor body ->
     let sname =
@@ -3291,21 +3293,21 @@ let rec pp_cpp_field
     | Mm_inline ->
       (str "~" ++ sname ++ str "() {")
       ++ fnl ()
-      ++ pp_list_stmt (pp_cpp_stmt env []) body
+      ++ pp_list_stmt (pp_cpp_stmt ctx env []) body
       ++ fnl ()
       ++ str "}"
     | Mm_defined (qual, owner_tps) ->
-      pp_owner_template owner_tps
+      pp_owner_template ctx owner_tps
       ++ h
            ( (if owner_tps = [] then str "inline " else mt ())
            ++ qual ++ str "::~" ++ sname ++ str "() {" )
       ++ fnl ()
-      ++ pp_list_stmt (pp_cpp_stmt env []) body
+      ++ pp_list_stmt (pp_cpp_stmt ctx env []) body
       ++ fnl ()
       ++ str "}" )
   | Fnested_struct (id, fields) ->
     let fields_s =
-      pp_cpp_fields_with_vis ~struct_name:(Id.print id) env fields
+      pp_cpp_fields_with_vis ctx ~struct_name:(Id.print id) env fields
     in
     (* Constructor structs are PascalCase (e.g. Mycons) while Rocq names are
        lowercase (mycons).  Try both for the doc comment lookup. *)
@@ -3328,12 +3330,12 @@ let rec pp_cpp_field
       ++ pp_list
            (fun (id, ty) ->
              str "typename " ++ Id.print id ++ str " = "
-             ++ pp_cpp_type false [] ty )
+             ++ pp_cpp_type ctx false [] ty )
            dfs_selves
       ++ str "> struct " ++ str tmpl ++ str " {" )
     ++ fnl ()
     ++ prlist_with_sep fnl
-         (fun (id, ty) -> (pp_cpp_type false [] ty ++ spc () ++ Id.print id ++ str ";"))
+         (fun (id, ty) -> (pp_cpp_type ctx false [] ty ++ spc () ++ Id.print id ++ str ";"))
          dfs_fields
     ++ fnl ()
     ++ str "};"
@@ -3344,15 +3346,15 @@ let rec pp_cpp_field
       ( ( if tparams = [] then mt ()
           else
             str "template <"
-            ++ pp_list pp_template_param tparams
+            ++ pp_list (pp_template_param ctx) tparams
             ++ str "> " )
       ++ str "using "
       ++ Id.print id
       ++ str " = "
-      ++ pp_type ty
+      ++ pp_type ctx ty
       ++ str ";" )
   | Fmember_decl m ->
-    pp_cpp_field ?struct_name ~mode:Mm_declared env (field_of_member m)
+    pp_cpp_field ctx ?struct_name ~mode:Mm_declared env (field_of_member m)
   | Fdeleted_ctor ->
     let sname =
       match struct_name with
@@ -3388,7 +3390,7 @@ let rec pp_cpp_field
     @param struct_name  forwarded to {!pp_cpp_field} for constructor/destructor
     @param env          name environment for sub-expression pretty-printing
     @param fields       list of [(field, visibility, section_tag)] triples *)
-and pp_cpp_fields_with_vis ?(struct_name : Pp.t option) env fields =
+and pp_cpp_fields_with_vis ?(struct_name : Pp.t option) ctx env fields =
   (* Group consecutive fields by (visibility, section_tag) *)
   let rec group_fields current_vis current_tag acc result = function
     | [] ->
@@ -3445,7 +3447,7 @@ and pp_cpp_fields_with_vis ?(struct_name : Pp.t option) env fields =
         | Some s -> str ("  " ^ s) ++ fnl ()
         | None -> mt ()
       in
-      vis_pp ++ tag_pp ++ pp_list_stmt (pp_cpp_field ?struct_name env) flds
+      vis_pp ++ tag_pp ++ pp_list_stmt (pp_cpp_field ctx ?struct_name env) flds
     | (vis, tag, flds) :: rest ->
       let vis_pp =
         if needs_labels && vis <> prev_vis then
@@ -3465,7 +3467,7 @@ and pp_cpp_fields_with_vis ?(struct_name : Pp.t option) env fields =
       in
       vis_pp
       ++ tag_pp
-      ++ pp_list_stmt (pp_cpp_field ?struct_name env) flds
+      ++ pp_list_stmt (pp_cpp_field ctx ?struct_name env) flds
       ++ fnl ()
       ++ pp_groups vis rest
   in
@@ -3486,7 +3488,7 @@ and pp_cpp_fields_with_vis ?(struct_name : Pp.t option) env fields =
     @param ty       C++ type of the data member; [const] modifier is stripped
                     before use inside the function body
     @param expr_pp  already pretty-printed initializer expression *)
-let pp_meyers_singleton env id ty expr_pp =
+let pp_meyers_singleton ctx env id ty expr_pp =
   if not (is_template_static_accessor (modpath_of_r id) (label_of_r id)) then
     Probe.violation "template static accessors"
       Pp.(str "the accessor " ++ GlobRef.print id ++ str " was printed without being planned");
@@ -3497,13 +3499,13 @@ let pp_meyers_singleton env id ty expr_pp =
   in
   h
     ( str "static const "
-    ++ pp_type bare_ty
+    ++ pp_type ctx bare_ty
     ++ str "& "
     ++ pp_global Type id
     ++ str "() {" )
   ++ fnl ()
   ++ str "  static const "
-  ++ pp_type bare_ty
+  ++ pp_type ctx bare_ty
   ++ str " v = "
   ++ expr_pp
   ++ str ";"
@@ -3656,10 +3658,10 @@ let forward_declarations ~module_ env (d : Cpp_erasure.settled) =
           fwd_constrained = constrained defined } )
       (structs_defined d)
 
-let pp_forward_declaration env : Cpp_ast.defined -> _ = function
+let pp_forward_declaration ctx env : Cpp_ast.defined -> _ = function
   | Defined_struct {struct_; name; tparams; constraint_} ->
     let name = match name with As_defined -> struct_definition_name struct_ | As_inductive_wrapper -> str (nspace_wrapper_name struct_) in
-    struct_template_head ~pp_param:pp_template_param_redecl env tparams constraint_ ++ str "struct " ++ name ++ str ";"
+    struct_template_head ~pp_param:pp_template_param_redecl ctx env tparams constraint_ ++ str "struct " ++ name ++ str ";"
   | Defined_enum r -> str "enum class " ++ enum_definition_name r ++ str ";"
 
 (** The type names [d], written at namespace scope, introduces there, as the
@@ -3695,13 +3697,13 @@ let check_file_scope_types ~file =
           ++ prlist_with_sep pr_comma str (CString.Set.elements (CString.Set.diff planned written)) )
   end
 
-(** [pp_initialiser env ty e] prints [e] as the initialiser of something
+(** [pp_initialiser ctx env ty e] prints [e] as the initialiser of something
     declared with type [ty].
 
     A {!CPPabort} never returns, so the type it should be spelled with comes
     entirely from where it sits; here that is [ty].  Everywhere else the
     expression printer already knows enough. *)
-let rec pp_initialiser env ty e =
+let rec pp_initialiser ctx env ty e =
   match e with
   | CPPabort (msg, _) ->
     writes_standard "stdexcept";
@@ -3709,13 +3711,13 @@ let rec pp_initialiser env ty e =
        nothing and [-Wignored-qualifiers] rejects it. *)
     let ret_ty = match ty with Tconst t -> t | t -> t in
     str "([]() -> "
-    ++ pp_type ret_ty
+    ++ pp_type ctx ret_ty
     ++ str " { throw "
     ++ str (sn ()).logic_error
     ++ str "(\""
     ++ str (escape_cpp_string msg)
     ++ str "\"); })()"
-  | _ -> pp_cpp_expr env [] e
+  | _ -> pp_cpp_expr ctx env [] e
 
 (** Pretty-print a settled MiniCpp declaration as C++ source: every type here
     is spelled the way it will be written out, and the passes that settle a
@@ -3725,9 +3727,7 @@ let rec pp_initialiser env ty e =
                 declaration of the tree holding it is written say
     @param env  name environment for sub-expression and sub-type printers *)
 and pp_cpp_decl ctx env (settled : Cpp_erasure.settled) =
-  if Probe.checking () && not (ctx == !render_ctx || ctx = !render_ctx) then
-    Probe.violation "threaded positions"
-      (str "a declaration is printed at another position than the printer is at");
+  check_position ctx;
   note_file_scope_type (settled :> cpp_decl);
   match Cpp_erasure.view settled with
   | Template (temps, cstr, inner) -> pp_template_decl ctx env temps cstr inner
@@ -3741,22 +3741,22 @@ and pp_cpp_decl ctx env (settled : Cpp_erasure.settled) =
 and pp_template_decl ctx env temps cstr (inner : Cpp_erasure.settled) =
   match (inner :> cpp_decl) with
   | Dasgn {da_ref = id; da_type = ty; da_init = e; _} when ctx.rc_in_struct ->
-    let expr_pp = pp_initialiser env ty e in
-    template_head env temps cstr ++ pp_meyers_singleton env id ty expr_pp
-  | _ -> template_head env temps cstr ++ pp_cpp_decl ctx env inner
+    let expr_pp = pp_initialiser ctx env ty e in
+    template_head ctx env temps cstr ++ pp_meyers_singleton ctx env id ty expr_pp
+  | _ -> template_head ctx env temps cstr ++ pp_cpp_decl ctx env inner
 
 (** A template head with its constraint.  A default may be given once per
     parameter.  Which printing gives it is decided in the declarations: a
     definition written after its declaration has had its defaults stripped
     ({!Function_entity.definition_after_declaration}). *)
-and template_head env temps cstr =
-  let args = pp_list pp_template_param temps in
-  let req = pp_requires_of_tparams temps in
+and template_head ctx env temps cstr =
+  let args = pp_list (pp_template_param ctx) temps in
+  let req = pp_requires_of_tparams ctx temps in
   let cstr_pp = match (req, cstr) with
     | None, None -> mt ()
     | Some r, None -> r ++ fnl ()
-    | None, Some c -> pp_cpp_expr env [] c ++ fnl ()
-    | Some r, Some c -> r ++ str " && " ++ pp_cpp_expr env [] c ++ fnl ()
+    | None, Some c -> pp_cpp_expr ctx env [] c ++ fnl ()
+    | Some r, Some c -> r ++ str " && " ++ pp_cpp_expr ctx env [] c ++ fnl ()
   in
   (str "template <" ++ args ++ str ">") ++ cstr_pp
 
@@ -3786,7 +3786,7 @@ and pp_wrapper_nspace ctx env id (members : Cpp_erasure.settled list) =
       true ) ->
     (* MERGE non-template: struct Nat { ... } *)
     let struct_name = str struct_name_str in
-    let f_s = entering_from ctx [In_struct; Inductive_struct ds_ref] (fun _ -> pp_cpp_fields_with_vis ~struct_name env fields) in
+    let f_s = entering_from ctx [In_struct; Inductive_struct ds_ref] (fun ctx -> pp_cpp_fields_with_vis ~struct_name ctx env fields) in
     let inherit_clause =
       if sft then
         str " : public " ++ str (sn ()).enable_from_this ++ str "<"
@@ -3818,15 +3818,15 @@ and pp_wrapper_nspace ctx env id (members : Cpp_erasure.settled list) =
     (* MERGE template: template<typename A> struct List { ... } *)
     let struct_name = str struct_name_str in
     let f_s =
-      entering_from ctx [In_struct; In_template; Inductive_struct ds_ref] (fun _ -> pp_cpp_fields_with_vis ~struct_name env fields)
+      entering_from ctx [In_struct; In_template; Inductive_struct ds_ref] (fun ctx -> pp_cpp_fields_with_vis ~struct_name ctx env fields)
     in
-    let args = pp_list pp_template_param temps in
-    let req = pp_requires_of_tparams temps in
+    let args = pp_list (pp_template_param ctx) temps in
+    let req = pp_requires_of_tparams ctx temps in
     let cstr_pp = match (req, cstr) with
       | None, None -> mt ()
       | Some r, None -> r ++ fnl ()
-      | None, Some c -> pp_cpp_expr env [] c ++ fnl ()
-      | Some r, Some c -> r ++ str " && " ++ pp_cpp_expr env [] c ++ fnl ()
+      | None, Some c -> pp_cpp_expr ctx env [] c ++ fnl ()
+      | Some r, Some c -> r ++ str " && " ++ pp_cpp_expr ctx env [] c ++ fnl ()
     in
     let inherit_clause =
       if sft then
@@ -3890,7 +3890,7 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
         (fun (n, tys) ->
           match tys with
           | [] -> pp_fun_name n
-          | _ -> pp_fun_name n ++ str "<" ++ pp_list pp_type tys ++ str ">" )
+          | _ -> pp_fun_name n ++ str "<" ++ pp_list (pp_type ctx) tys ++ str ">" )
         ids
     in
     let is_lifted =
@@ -3917,13 +3917,13 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
     let params_s, qualifier, tail =
       match shape with
       | Ddef (params, body) ->
-        let body_s = pp_list_stmt (pp_cpp_stmt env []) body in
+        let body_s = pp_list_stmt (pp_cpp_stmt ctx env []) body in
         let read = Minicpp.reads_as_printed body in
         let params_s =
           pp_list
             (fun (id, ty) ->
-              if not (read id) then pp_type ty
-              else pp_type ty ++ str " " ++ Id.print id)
+              if not (read id) then pp_type ctx ty
+              else pp_type ctx ty ++ str " " ++ Id.print id)
             (List.rev params)
         in
         let qualifier =
@@ -3937,8 +3937,8 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
           pp_list
             (fun (id, ty) ->
               match id with
-              | Some id -> pp_type ty ++ str " " ++ Id.print id
-              | None -> pp_type ty )
+              | Some id -> pp_type ctx ty ++ str " " ++ Id.print id
+              | None -> pp_type ctx ty )
             (List.rev params)
         in
         (params_s, mt (), str ";")
@@ -3946,7 +3946,7 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
     h
       ( qualifier
       ++ static_kw
-      ++ pp_type ret_ty
+      ++ pp_type ctx ret_ty
       ++ str " "
       ++ name
       ++ pp_par true params_s )
@@ -3965,9 +3965,9 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
     let f_s =
       entering_from ctx
         (Cpp_resolution.Inductive_struct id :: (if tparams = [] then [] else [In_template]))
-        (fun _ -> pp_cpp_fields_with_vis ~struct_name env fields)
+        (fun ctx -> pp_cpp_fields_with_vis ~struct_name ctx env fields)
     in
-    let tmpl = struct_template_head ~pp_param:pp_template_param env tparams cstr in
+    let tmpl = struct_template_head ~pp_param:(pp_template_param ctx) ctx env tparams cstr in
     let inherit_clause =
       if sft then
         match
@@ -3997,12 +3997,12 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
     ++ fnl ()
     ++ str "};"
   | Dasgn {da_ref = id; da_type = ty; da_init = e; da_constexpr} ->
-    let expr_pp = pp_initialiser env ty e in
+    let expr_pp = pp_initialiser ctx env ty e in
     if ctx.rc_in_template || (ctx.rc_in_struct && Common.get_force_cross_file_qualification ()) then
       (* In template context or separate-extraction struct: use Meyers
          singleton so that module-type-parameter references via L::val()
          work for both template and non-template implementing modules. *)
-      pp_meyers_singleton env id ty expr_pp
+      pp_meyers_singleton ctx env id ty expr_pp
     else
       (* A value written as a literal of a literal type is a constant
          expression: [constexpr] says so, and lets it stand in a
@@ -4031,7 +4031,7 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
       in
       h
         ( static_kw
-        ++ pp_type ty
+        ++ pp_type ctx ty
         ++ str " "
         ++ pp_global Type id
         ++ str " = "
@@ -4042,7 +4042,7 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
       ( str "concept "
       ++ pp_concept_name_of_ref id
       ++ str " = "
-      ++ pp_cpp_expr env [] cstr
+      ++ pp_cpp_expr ctx env [] cstr
       ++ str ";" )
   | Dusing u ->
     (* The template parameter names are also the scope the right-hand side's
@@ -4051,19 +4051,19 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
     let def =
       match u.du_rhs with
       | None -> mt ()
-      | Some ty -> str " =" ++ spc () ++ pp_cpp_type false vl ty
+      | Some ty -> str " =" ++ spc () ++ pp_cpp_type ctx false vl ty
     in
     let note =
       match u.du_note with None -> mt () | Some s -> str (" /* " ^ s ^ " */")
     in
-    ( pp_template_header u.du_tparams
+    ( pp_template_header ctx u.du_tparams
       ++ str "using "
       ++ pp_global Type u.du_name
       ++ def
       ++ note
       ++ str ";" )
   | Dstruct_fwd (tparams, r) ->
-    (pp_template_header tparams ++ str "struct " ++ pp_global Type r ++ str ";")
+    (pp_template_header ctx tparams ++ str "struct " ++ pp_global Type r ++ str ";")
   | Dmember_def {dm_owner; dm_enclosing; dm_tparams; dm_field} ->
     (* The struct is behind us, so its own name is no longer in scope: the
        member is written under the qualifier that names it from outside.
@@ -4093,15 +4093,15 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
     in
     entering_from ctx
       ((if dm_tparams = [] then [] else [Cpp_resolution.In_template]) @ [Inductive_struct dm_owner])
-      (fun _ ->
-        pp_cpp_field ~struct_name:(str own_name) ~mode:(Mm_defined (qual, dm_tparams)) env (field_of_member dm_field) )
+      (fun ctx ->
+        pp_cpp_field ~struct_name:(str own_name) ctx ~mode:(Mm_defined (qual, dm_tparams)) env (field_of_member dm_field) )
   | Dfields ds ->
     let struct_name =
       str (String.capitalize_ascii (str_global Type ds.ds_ref))
     in
     entering_from ctx
       ((Cpp_resolution.In_struct :: (if ds.ds_tparams = [] then [] else [In_template])) @ [Inductive_struct ds.ds_ref])
-      (fun _ -> pp_cpp_fields_with_vis ~struct_name env ds.ds_fields)
+      (fun ctx -> pp_cpp_fields_with_vis ~struct_name ctx env ds.ds_fields)
   | Dstatic_assert (CPPconcept_app (class_ref, _, _), None) when class_concept_held_back class_ref ->
     (* The concept is declared after the struct being rendered, because its
        requirements name the struct's own types.  The assertion goes with it
@@ -4109,11 +4109,11 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
     mt ()
   | Dstatic_assert (e, so) ->
     ( match so with
-    | None -> (str "static_assert(" ++ pp_cpp_expr env [] e ++ str ");")
+    | None -> (str "static_assert(" ++ pp_cpp_expr ctx env [] e ++ str ");")
     | Some s ->
       h
         ( str "static_assert("
-        ++ pp_cpp_expr env [] e
+        ++ pp_cpp_expr ctx env [] e
         ++ str ", \""
         ++ str (escape_cpp_string s)
         ++ str "\");" ) )
@@ -4168,7 +4168,7 @@ let rec absorbing_decl ~homed env (d : Cpp_erasure.settled) =
   note_file_scope_type (d :> cpp_decl);
   let written d = if absorbs ~homed d then absorbing_decl ~homed env d else Cpp_ast.absorbed env d in
   match Cpp_erasure.view d with
-  | Template (temps, cstr, inner) -> Cpp_ast.seq [Cpp_ast.text (template_head env temps cstr); written inner]
+  | Template (temps, cstr, inner) -> Cpp_ast.seq [Cpp_ast.text (template_head !render_ctx env temps cstr); written inner]
   | Namespace (None, decls) ->
     Cpp_ast.seq
       [Cpp_ast.text (str "namespace {" ++ fnl ()); Cpp_ast.concat fnl (List.map written decls); Cpp_ast.text (fnl () ++ str "};")]
@@ -4387,8 +4387,8 @@ let pp_module_name (m : Cpp_ast.module_ref) =
 (* Inside a class template a qualified module is a dependent name: an
    argument is preceded by [typename], and a functor applied is named
    [A::template F]. *)
-let pp_application {Cpp_ast.functor_; args} =
-  let in_template = (!render_ctx).rc_in_template in
+let pp_application ctx {Cpp_ast.functor_; args} =
+  let in_template = ctx.rc_in_template in
   let head =
     match pp_module_name functor_ with
     | _, r when in_template && resolved_is_qualified r -> Cpp_name.pp ~template_keyword:true r
@@ -4401,14 +4401,14 @@ let pp_application {Cpp_ast.functor_; args} =
   in
   head ++ str "<" ++ prlist_with_sep (fun () -> str ", ") arg args ++ str ">"
 
-let pp_module_alias name (target : Cpp_ast.module_expr) =
+let pp_module_alias ctx name (target : Cpp_ast.module_expr) =
   let target =
     match target with
     | Module_named m ->
       let r = resolved_module m in
       let named = str (resolved_string r) in
-      if (!render_ctx).rc_in_template && resolved_is_qualified r then str "typename " ++ named else named
-    | Applied a -> pp_application a
+      if ctx.rc_in_template && resolved_is_qualified r then str "typename " ++ named else named
+    | Applied a -> pp_application ctx a
   in
   str "using " ++ pp_declared_module name ++ str " = " ++ target ++ str ";"
 
@@ -4420,11 +4420,12 @@ let pp_functor_alias name functor_ params =
 
 (* The base is written inside the functor's template; a base specifier
    names a type, so a dependent one takes no [typename]. *)
-let pp_derived_functor template name (base : Cpp_ast.module_expr) =
+let pp_derived_functor ctx template name (base : Cpp_ast.module_expr) =
+  let inside = {ctx with rc_in_struct = true; rc_in_template = true} in
   let base =
     with_render_ctx
-      (fun c -> {c with rc_in_struct = true; rc_in_template = true})
-      (fun () -> match base with Module_named m -> fst (pp_module_name m) | Applied a -> pp_application a)
+      (fun _ -> inside)
+      (fun () -> match base with Module_named m -> fst (pp_module_name m) | Applied a -> pp_application inside a)
   in
   Cpp_ast.pp_template_head template ++ str "struct " ++ pp_declared_module name ++ str " : " ++ base ++ str " {};"
 
@@ -4436,14 +4437,14 @@ let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
     match u.declaration with
     | Modtype_concept {path; params; concept} -> (modtype_concept ~names:u.names ~params path concept, u.needs)
     | Assertion a -> (assertion a, u.needs)
-    | Module_alias {name; target} -> (pp_module_alias name target, u.needs)
+    | Module_alias {name; target} -> (pp_module_alias ctx name target, u.needs)
     | Functor_alias {name; functor_; params} -> (pp_functor_alias name functor_ params, u.needs)
-    | Derived_functor {template; name; base} -> (pp_derived_functor template name base, u.needs)
-    | Forward_declaration {env; defined} -> (pp_forward_declaration env defined, u.needs)
+    | Derived_functor {template; name; base} -> (pp_derived_functor ctx template name base, u.needs)
+    | Forward_declaration {env; defined} -> (pp_forward_declaration ctx env defined, u.needs)
     | Declaration {env; settled} -> printed_decl ctx env settled
     | Absorbed {env; settled} -> (pp_cpp_decl ctx env settled, u.needs)
     | Fields {record; vars; fields} ->
-      ( prlist_with_sep fnl (fun (name, ty) -> pp_cpp_type false vars ty ++ spc () ++ str name ++ str ";") fields
+      ( prlist_with_sep fnl (fun (name, ty) -> pp_cpp_type ctx false vars ty ++ spc () ++ str name ++ str ";") fields
         ++ fnl (),
         if Probe.checking () then fields_needs ~module_:(module_written ()) ~vl:vars record (List.map snd fields)
         else u.needs )
@@ -4457,7 +4458,7 @@ let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
       let args =
         if tparams = [] then mt () else str "<" ++ prlist_with_sep (fun () -> str ", ") (fun (_, v) -> Id.print v) tparams ++ str ">"
       in
-      (pp_template_header tparams ++ str "using " ++ name ++ str " = ::" ++ name ++ args ++ str ";", u.needs)
+      (pp_template_header ctx tparams ++ str "using " ++ name ++ str " = ::" ++ name ++ args ++ str ";", u.needs)
   in
   if Probe.checking () && needs <> u.needs then
     Probe.violation "unprinted declarations"
@@ -4465,3 +4466,7 @@ let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
   text
 
 let cut2 = Cpp_ast.cut2
+
+(* The type printer's entry for a type written outside every declaration of
+   the tree: where the printer is. *)
+let pp_cpp_type ?lead par vl t = pp_cpp_type ?lead !render_ctx par vl t

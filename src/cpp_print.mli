@@ -112,15 +112,21 @@ val read_cpp_decl : Common.env -> Cpp_erasure.settled -> Pp.t
     of line. *)
 type member_mode
 
-(** [pp_cpp_field env f] renders a struct member.  [struct_name] is the
-    enclosing struct's name, for constructors and destructors. *)
+(** [pp_cpp_field ctx env f] renders a struct member at the position
+    [ctx].  [struct_name] is the enclosing struct's name, for constructors
+    and destructors. *)
 val pp_cpp_field :
-  ?struct_name:Pp.t -> ?mode:member_mode -> Common.env -> cpp_field -> Pp.t
+  ?struct_name:Pp.t -> ?mode:member_mode -> Cpp_state.render_ctx -> Common.env -> cpp_field -> Pp.t
 
-(** [pp_cpp_type par vl t] renders a type; [par] asks for parentheses where
-    precedence needs them, [vl] names the type variables by index.  [~lead:false]
-    drops the leading [typename] of a dependent name about to be embedded in a
-    longer one. *)
+(** [pp_type ctx t] renders the type [t], naming no variable by index, at
+    the position [ctx]. *)
+val pp_type : Cpp_state.render_ctx -> cpp_type -> Pp.t
+
+(** [pp_cpp_type par vl t] renders a type where the printer is, for a type
+    written outside every declaration of the tree; [par] asks for
+    parentheses where precedence needs them, [vl] names the type variables
+    by index.  [~lead:false] drops the leading [typename] of a dependent name
+    about to be embedded in a longer one. *)
 val pp_cpp_type : ?lead:bool -> bool -> Id.t list -> cpp_type -> Pp.t
 
 (** Whether one thing a rendering writes ({!Cpp_name.written}) is a

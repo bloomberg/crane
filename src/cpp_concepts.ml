@@ -14,6 +14,10 @@ open Cpp_state
 open Cpp_names
 open Cpp_print
 
+(* A concept is printed at the position the printer is at, which it is
+   not given yet: it threads only the frame it enters. *)
+let pp_type ty = pp_type !render_ctx ty
+
 (** Render a custom type mapping (e.g. ["std::pair<%t0,%t1>"]) with each of
     its type holes qualified by [qualify_type].
 
@@ -132,17 +136,17 @@ let rec pp_concept_type names frame (t : Modtype_concept.concept_type) : Pp.t =
   match t with
   | Member {member; enum; arguments} ->
     pp_member_type ~enum (name_in names frame (Global (Type, member))) member (List.map pp_concept_type arguments)
-  | Parameter ty -> str "typename " ++ pp_cpp_type false [] ty
+  | Parameter ty -> str "typename " ++ pp_type ty
   | Foreign (template, args) -> qualify_custom_template template args pp_concept_type
-  | Global (r, []) -> pp_cpp_type false [] (Tglob (r, [], []))
+  | Global (r, []) -> pp_type (Tglob (r, [], []))
   | Global (r, args) ->
-    pp_cpp_type false [] (Tglob (r, [], []))
+    pp_type (Tglob (r, [], []))
     ++ str "<"
     ++ prlist_with_sep (fun () -> str ", ") pp_concept_type args
     ++ str ">"
-  | Namespaced (r, r', e, []) -> pp_cpp_type false [] (Tnamespace (r, Tglob (r', [], e)))
+  | Namespaced (r, r', e, []) -> pp_type (Tnamespace (r, Tglob (r', [], e)))
   | Namespaced (r, r', e, args) ->
-    pp_cpp_type false [] (Tnamespace (r, Tglob (r', [], e)))
+    pp_type (Tnamespace (r, Tglob (r', [], e)))
     ++ str "<"
     ++ prlist_with_sep (fun () -> str ", ") pp_concept_type args
     ++ str ">"
@@ -164,7 +168,7 @@ let rec pp_concept_type names frame (t : Modtype_concept.concept_type) : Pp.t =
     ++ str "("
     ++ prlist_with_sep (fun () -> str ", ") pp_concept_type dom
     ++ str ")>"
-  | Plain ty -> pp_cpp_type false [] ty
+  | Plain ty -> pp_type ty
 
 (** One line of a module-type concept's [requires] clause
     ({!Modtype_concept.requirement}).  A nullary value may be a static data
@@ -176,7 +180,7 @@ let pp_requirement names frame : Modtype_concept.requirement -> Pp.t =
   let pp_concept_type = pp_concept_type names frame in
   function
   | Inductive_member {member; enum; arity} ->
-    let placeholders = List.init arity (fun _ -> pp_cpp_type false [] Tany) in
+    let placeholders = List.init arity (fun _ -> pp_type Tany) in
     pp_member_type ~enum (name (Short (Type, member))) member placeholders ++ str ";" ++ fnl ()
   | Type_member {member; arity} ->
     let name = Cpp_name.pp (name (Unmapped (Type, member))) in
@@ -289,7 +293,7 @@ let pp_refinements refinements =
         ++ str "<typename M::"
         ++ str path
         ++ str ", "
-        ++ pp_cpp_type false [] cpp
+        ++ pp_type cpp
         ++ str ">" )
       refinements
   in
@@ -335,7 +339,7 @@ let pp_assertion (a : Cpp_ast.assertion) =
     match a.subject with
     | Module m -> module_struct_name_of (resolved_module m)
     | Instance {instance; args} ->
-      Cpp_name.pp (resolved_type_name instance) ++ prlist (fun ty -> str ", " ++ pp_cpp_type false [] ty) args
+      Cpp_name.pp (resolved_type_name instance) ++ prlist (fun ty -> str ", " ++ pp_type ty) args
   in
   fnl () ++ str "static_assert(" ++ concept ++ str "<" ++ subject ++ str ">);"
 

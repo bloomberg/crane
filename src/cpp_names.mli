@@ -158,8 +158,9 @@ val struct_declaration_name :
   Names.GlobRef.t ->
   string
 
-(** The [typename] prefix required for the given name, if qualified. *)
-val typename_prefix_for : Cpp_name.t -> Pp.t
+(** The [typename] prefix the name needs at the position [ctx]: where it
+    is qualified inside a class template. *)
+val typename_prefix_for : Cpp_state.render_ctx -> Cpp_name.t -> Pp.t
 
 (** {2 Struct and namespace qualification} *)
 
@@ -180,8 +181,10 @@ val wrapper_qualify : Names.GlobRef.t -> Cpp_name.t -> Cpp_name.t
     the render context says. *)
 val wrapper_qualified_type_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t -> Cpp_name.t
 
-(** Whether the global must be referenced with a global-scope qualifier. *)
-val needs_global_qualifier : Names.GlobRef.t -> bool
+(** Whether the global must be referenced with a global-scope qualifier at
+    the position [ctx]: from the out-of-line definition of a member of a
+    struct that does not enclose it. *)
+val needs_global_qualifier : Cpp_state.render_ctx -> Names.GlobRef.t -> bool
 
 (** {2 Name-resolution cache and cached predicates} *)
 
