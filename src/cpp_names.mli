@@ -85,11 +85,13 @@ val pp_field : Names.GlobRef.t -> Names.GlobRef.t option list -> int -> Pp.t
 (** Whether the inductive is a record. *)
 val is_record_inductive : Names.GlobRef.t -> bool
 
-(** Whether the inductive is local. *)
-val is_local_inductive : Names.GlobRef.t -> bool
+(** Whether the inductive is spelled bare at the position: the body of the
+    module whose element is being written spells it bare, as planned. *)
+val local_at : Cpp_state.render_ctx -> Names.GlobRef.t -> bool
 
-(** [Tglob (r, args, es)], the inductive [r] applied, as a type: a local
-    inductive is in scope under its own name, any other is written in its own
+(** [Tglob (r, args, es)], the inductive [r] applied, as a type: an
+    inductive local where the declaration generator is is in scope under its
+    own name, any other is written in its own
     scope ([Tnamespace]), which the printer places where its struct was put. *)
 val inductive_type : Names.GlobRef.t -> Minicpp.cpp_type list -> Minicpp.cpp_expr list -> Minicpp.cpp_type
 
@@ -102,7 +104,7 @@ val capitalize_initial : Cpp_name.t -> Cpp_name.t
 
 (** An inductive's name, and whether it is a non-local inductive's, which
     is capitalized and stands for the inductive's namespace wrapper. *)
-val inductive_name : Names.GlobRef.t -> Cpp_name.t * bool
+val inductive_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t * bool
 
 (** Whether an enum name collides with its parent's name. *)
 val enum_name_collides_with_parent : Names.GlobRef.t -> bool
@@ -124,10 +126,7 @@ val promoted_name : Cpp_name.t -> Cpp_name.t
 val dedup_tail : ?allow_bare:bool -> Cpp_name.t -> Cpp_name.t
 
 (** The C++ type name of an inductive. *)
-val inductive_type_name : Names.GlobRef.t -> Cpp_name.t
-
-(** {!inductive_type_name} as a document. *)
-val pp_inductive_type_name : Names.GlobRef.t -> Pp.t
+val inductive_type_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
 
 (** How an inductive's struct is spelled where it is declared. *)
 type struct_spelling =
@@ -147,7 +146,7 @@ val struct_spelling :
   Names.GlobRef.t ->
   struct_spelling
 
-(** An enum's name where it is declared ({!pp_inductive_type_name} there). *)
+(** An enum's name where it is declared ({!inductive_type_name} there). *)
 val enum_declaration_name : Names.GlobRef.t -> string
 
 (** {!struct_spelling} as a string. *)
@@ -251,14 +250,14 @@ val modtype_concept_name : Names.ModPath.t -> string
 val modtype_concept_ref : Names.ModPath.t -> Cpp_name.t
 
 (** The name the struct of [id] is defined under. *)
-val struct_definition_name : Names.GlobRef.t -> Cpp_name.t
+val struct_definition_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
 
 (** The name the scoped enum of [r] is defined under. *)
-val enum_definition_name : Names.GlobRef.t -> Cpp_name.t
+val enum_definition_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
 
 (** The name the inductive type [x] is written under as a value: the struct
     a constructor's value is built through, where the printer is. *)
-val inductive_value : Names.GlobRef.t -> Cpp_name.t
+val inductive_value : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
 
 (** [checked key ~live n] is [n], the name the resolution pass gave [key];
     under [CRANE_CHECK_IR], [live ()], the name resolution gives it where it

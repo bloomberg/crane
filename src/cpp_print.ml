@@ -839,7 +839,7 @@ let needs_typename (ctx : render_ctx) n = ctx.rc_in_template && Cpp_name.is_qual
 (** The head of the type [Tglob (r, tys, _)] that no custom mapping inlines,
     [applied] when [tys] is not empty. *)
 let glob_head ctx r ~applied =
-  let bare = inductive_type_name r in
+  let bare = inductive_type_name ctx r in
   let enclosing = struct_scopes_for ctx r bare @ global_scopes_for r bare in
   (* The wrapper qualifier is the last resort: the two qualifiers above say
      where the name lives whenever they say anything, and stacking this one
@@ -857,13 +857,13 @@ let glob_head ctx r ~applied =
     so we use just the capitalized name without namespace qualification
     (CHT, not CHT::cHT). *)
 let inductive_head ctx r ~applied =
-  let name, needs_ns = inductive_name r in
+  let name, needs_ns = inductive_name ctx r in
   let class_ s = Cpp_name.Class s in
   let type_name = global_name Type r in
   (* Check eponymous record FIRST because they can also be local *)
   if is_eponymous_record_cached r then
     let cap_name = Common.pp_type_name_capitalized r in
-    if Common.get_force_cross_file_qualification () && not (is_local_inductive r)
+    if Common.get_force_cross_file_qualification () && not (local_at ctx r)
     then unqualified_head (Cpp_name.name [class_ cap_name] cap_name)
     else unqualified_head (Cpp_name.unqualified cap_name)
   else if is_enum_cached r then
@@ -887,7 +887,7 @@ let inductive_head ctx r ~applied =
       head = cap;
       typename = needs_typename ctx cap;
       template_keyword = applied && ctx.rc_in_template }
-  else if is_merged_inductive r && not (is_local_inductive r) then
+  else if is_merged_inductive r && not (local_at ctx r) then
     (* A local inductive is a sibling member of the enclosing module struct,
        so it is in scope under its own name; the merged-wrapper spelling
        ([Opt] for [opt]) names nothing there. *)
@@ -1147,7 +1147,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
       | _ ->
         (* Fallback: generic namespace-qualified type *)
         leading_typename
-        ++ Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) (fst (inductive_name r))
+        ++ Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) (fst (inductive_name ctx r))
         ++ pp_rec false t )
     | (Tqualified _ | Tapply (Tqualified _, _)) as qualified_ty ->
       (* An associated type may itself be an alias template — the carrier of a
@@ -1580,7 +1580,7 @@ and pp_cpp_expr ctx env args t =
        already written. *)
     let base =
       match x with
-      | GlobRef.IndRef _ -> `Named (inductive_value x)
+      | GlobRef.IndRef _ -> `Named (inductive_value ctx x)
       | GlobRef.VarRef v -> `Named (Cpp_name.unqualified (Id.to_string v))
       | _ ->
       (* Check if this function is inside an eponymous template struct. If so,
@@ -1683,7 +1683,7 @@ and pp_cpp_expr ctx env args t =
     in
     apply full_name
   | CPPnamespace (r, t) ->
-    let name, _ = inductive_name r in
+    let name, _ = inductive_name ctx r in
     Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) name ++ pp_cpp_expr ctx env args t
   | CPPfun_call (res, CPPglob (n, tys, Some {ci_inline = Some tmpl; _}), ts) ->
     let s = tmpl.it_text in
@@ -2286,7 +2286,7 @@ and pp_cpp_stmt ctx env args stmt =
        get the unqualified base name, capitalize to match enum class
        definition. *)
     let type_name =
-      let n = inductive_type_name ind in
+      let n = inductive_type_name ctx ind in
       Cpp_name.pp_scopes (global_scopes_for ind n) ++ Cpp_name.pp n
     in
     let ends_with_return stmts =
@@ -3547,10 +3547,10 @@ let nspace_merges (w : dm_wrapper) : bool =
   w.dw_sole_child && not (nested_in_wrapper w.dw_ref)
 
 (** The name the struct of [id] is defined under. *)
-let struct_definition_name id = Cpp_name.pp (Cpp_names.struct_definition_name id)
+let struct_definition_name ctx id = Cpp_name.pp (Cpp_names.struct_definition_name ctx id)
 
 (** The name the scoped enum of [r] is defined under. *)
-let enum_definition_name r = Cpp_name.pp (Cpp_names.enum_definition_name r)
+let enum_definition_name ctx r = Cpp_name.pp (Cpp_names.enum_definition_name ctx r)
 
 (** The names of the wrapper structs [d] writes around something other than
     a sole struct merged into them, in the order it writes them: the structs
@@ -3660,22 +3660,23 @@ let forward_declarations ~module_ env (d : Cpp_erasure.settled) =
 
 let pp_forward_declaration ctx env : Cpp_ast.defined -> _ = function
   | Defined_struct {struct_; name; tparams; constraint_} ->
-    let name = match name with As_defined -> struct_definition_name struct_ | As_inductive_wrapper -> str (nspace_wrapper_name struct_) in
+    let name = match name with As_defined -> struct_definition_name ctx struct_ | As_inductive_wrapper -> str (nspace_wrapper_name struct_) in
     struct_template_head ~pp_param:pp_template_param_redecl ctx env tparams constraint_ ++ str "struct " ++ name ++ str ";"
-  | Defined_enum r -> str "enum class " ++ enum_definition_name r ++ str ";"
+  | Defined_enum r -> str "enum class " ++ enum_definition_name ctx r ++ str ";"
 
 (** The type names [d], written at namespace scope, introduces there, as the
     printer writes them ({!note_file_scope_type}): its own, through a
     template head and an anonymous namespace, and a struct's -- but not
     those of what a wrapper struct holds, which are its members. *)
 let file_scope_types (d : Cpp_erasure.settled) =
+  let ctx = !render_ctx in
   let rec go (d : Cpp_erasure.settled) =
     (match decl_type_name (d :> cpp_decl) with Some name -> [name] | None -> [])
     @
     match Cpp_erasure.view d with
     | Template (_, _, inner) -> go inner
     | Namespace (None, decls) -> List.concat_map go decls
-    | Decl (Dstruct {ds_ref; _}) -> [struct_definition_name ds_ref]
+    | Decl (Dstruct {ds_ref; _}) -> [struct_definition_name ctx ds_ref]
     | Namespace (Some _, _) | Decl _ -> []
   in
   List.map Pp.string_of_ppcmds (go d)
@@ -3959,7 +3960,7 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
         ds_constraint = cstr;
         ds_needs_shared_from_this = sft;
       } ->
-    let struct_name = struct_definition_name id in
+    let struct_name = struct_definition_name ctx id in
     note_file_scope_name struct_name;
     if ctx.rc_in_struct then printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref id);
     let f_s =
@@ -4119,7 +4120,7 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
         ++ str "\");" ) )
   | Denum {de_ref = name; de_ctors = ctors; de_ctor_rocq_names = rocq_names; _}
     ->
-    let struct_name = enum_definition_name name in
+    let struct_name = enum_definition_name ctx name in
     (* Emit each enum value, preceded by its doc comment if one exists.
        [rocq_names] and [ctors] are parallel lists from the same constructor
        array, so [List.map2] is safe. *)

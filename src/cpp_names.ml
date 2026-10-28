@@ -203,10 +203,24 @@ let is_record_inductive r =
   | _ -> false
 
 (** Check if a GlobRef refers to a local inductive (defined in current module
-    scope). Local inductives don't need namespace qualification (e.g.,
-    List::list vs just list). *)
+    scope), as the declaration generator sees it. Local inductives don't need
+    namespace qualification (e.g., List::list vs just list).  The printer asks
+    its position instead ({!local_at}). *)
 let is_local_inductive r =
   List.exists (globref_equal r) (Translation_state.get_local_inductives ())
+
+(** Whether [r] is an inductive spelled bare at the position [c]: one the body
+    of the module whose element is being written spells bare, as planned
+    ({!Scope_plan.local_inductives}); none where no module's element is. *)
+let local_at (c : render_ctx) r =
+  match c.rc_module with
+  | None -> false
+  | Some mp -> (
+    match Scope_plan.local_inductives mp with
+    | Some local -> List.exists (globref_equal r) local
+    | None ->
+      CErrors.anomaly
+        Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned local inductives.") )
 
 let inductive_type r args es =
   let t = Tglob (r, args, es) in
@@ -245,14 +259,14 @@ let capitalize_struct n =
     - Non-local inductives: capitalized name (e.g., "List", "Nat")
     Returns the name and whether it is a non-local inductive's
     (capitalized) one. *)
-let inductive_name r =
+let inductive_name ctx r =
   let n, needs_ns =
     match r with
     | GlobRef.IndRef _ when Module_plan.is_eponymous_record r ->
       (Cpp_name.unqualified (Common.pp_type_name_capitalized r), false)
     | GlobRef.IndRef _ when Ref.User.Tbl.mem promoted_inductives r ->
       (capitalize_struct (global_name Type r), false)
-    | GlobRef.IndRef _ when is_local_inductive r ->
+    | GlobRef.IndRef _ when local_at ctx r ->
       if Common.get_force_cross_file_qualification () then
         (Cpp_name.unqualified (String.capitalize_ascii (Common.pp_global_name Type r)), false)
       else (global_name Type r, false)
@@ -327,7 +341,7 @@ let dedup_tail ?(allow_bare = false) n =
 
 (** The C++ type name for an inductive reference, handling eponymous records,
     promoted inductives, enums, locals, and merged/unmerged wrappers. *)
-let inductive_type_name r =
+let inductive_type_name ctx r =
   let force = Common.get_force_cross_file_qualification () in
   match r with
   | GlobRef.IndRef _ when Module_plan.is_eponymous_record r ->
@@ -336,7 +350,7 @@ let inductive_type_name r =
       Cpp_name.name [Cpp_name.Class cap_name] cap_name
     else Cpp_name.unqualified cap_name
   | GlobRef.IndRef _ when Ref.User.Tbl.mem promoted_inductives r ->
-    if is_local_inductive r then
+    if local_at ctx r then
       Cpp_name.unqualified (String.capitalize_ascii (Common.pp_global_name Type r))
     else promoted_name (global_name Type r)
   | GlobRef.IndRef _ when is_record_inductive r -> global_name Type r
@@ -346,7 +360,7 @@ let inductive_type_name r =
       (if Cpp_name.is_qualified n then n
        else Cpp_name.unqualified (Common.pp_global_name Type r))
       r
-  | GlobRef.IndRef _ when is_local_inductive r ->
+  | GlobRef.IndRef _ when local_at ctx r ->
     if force then capitalize_base (global_name Type r) else global_name Type r
   | GlobRef.IndRef _ ->
     let n = global_name Type r in
@@ -357,9 +371,6 @@ let inductive_type_name r =
     else if is_merged_inductive r then capitalize_initial n
     else Cpp_name.inside (capitalize_initial n) (fun s -> Cpp_name.Class s) n
   | _ -> global_name Type r
-
-(** {!inductive_type_name} as a document. *)
-let pp_inductive_type_name r = Cpp_name.pp (inductive_type_name r)
 
 (** Add typename prefix for dependent types in template contexts. C++ requires
     'typename' keyword when accessing nested types in templates. *)
@@ -428,7 +439,7 @@ let struct_scopes_for (ctx : render_ctx) r n =
       if member_of_struct () then struct_scopes else []
     (* Non-local records are placed at C++ global scope (before the struct),
        so they never need the struct prefix. *)
-    else if is_record_inductive r && not (is_local_inductive r) then []
+    else if is_record_inductive r && not (local_at ctx r) then []
     (* Enums at global scope need no prefix; those inside the struct do. *)
     else if Table.is_enum_inductive r then
       if Module_plan.is_global_scope_enum r then []
@@ -538,7 +549,7 @@ let needs_global_qualifier (ctx : render_ctx) x =
    ============================================================================
    These query the pre-computed Name_resolution cache for classification
    information (eponymous, enum, record, merged status). The actual display name
-   rendering is still done by the original functions (pp_inductive_type_name,
+   rendering is still done by the original functions (inductive_type_name,
    inductive_name_info, etc.) since they depend on the visibility context which
    is only available during rendering.
 
@@ -701,14 +712,14 @@ let modtype_concept_ref kn =
     Cpp_name.unqualified (modtype_concept_name kn)
   | MPfile _ | MPbound _ -> Common.resolve_module kn
 
-let struct_definition_name id =
-  let local = is_local_inductive id in
+let struct_definition_name ctx id =
+  let local = local_at ctx id in
   match struct_spelling ~local id with
   | As_declared -> global_name Type id
   | Eponymous_record_name | Capitalized -> Cpp_name.unqualified (struct_declaration_name ~local id)
 
-let enum_definition_name r =
-  match r with GlobRef.IndRef _ -> inductive_type_name r | _ -> global_name Type r
+let enum_definition_name ctx r =
+  match r with GlobRef.IndRef _ -> inductive_type_name ctx r | _ -> global_name Type r
 
 (* The visibility inside the struct of the inductive [r]: a layer whose path
    names nothing a reference could be declared in, holding the
@@ -758,8 +769,8 @@ let rec at_frame (frame : Cpp_resolution.frame) k =
 
 (* The name the inductive type [x] is written under as a value: the
    struct a constructor's value is built through. *)
-let inductive_value_name x =
-  let ns_name, needs_ns = inductive_name x in
+let inductive_value_name ctx x =
+  let ns_name, needs_ns = inductive_name ctx x in
   let type_name = global_name Type x in
   let force = Common.get_force_cross_file_qualification () in
   (* Check eponymous record FIRST because they can also be local *)
@@ -785,20 +796,22 @@ let inductive_value_name x =
   else (* Local inductive: use original name directly *)
     type_name
 
-let inductive_value x = named (Inductive_value x) (fun () -> inductive_value_name x)
+let inductive_value ctx x = named (Inductive_value x) (fun () -> inductive_value_name ctx x)
 
 let live_name (key : Cpp_resolution.key) =
   with_render_ctx (fun c -> {c with rc_names = None}) @@ fun () ->
+  (* The replay's position, which whoever resolves the key installs. *)
+  let ctx = !render_ctx in
   match key with
   | Module mp -> Common.resolve_module mp
   | Module_declared mp -> Cpp_name.unqualified (module_declared_name mp)
   | Global (k, r) -> global_name k r
   | Unmapped (k, r) -> Common.global_name k r
-  | Inductive_value r -> inductive_value_name r
+  | Inductive_value r -> inductive_value_name ctx r
   | Short (k, r) -> Cpp_name.unqualified (Common.pp_global_name k r)
   | Class_concept r -> concept_name r
   | Modtype_concept mp -> modtype_concept_ref mp
   | Modtype_concept_declared mp -> Cpp_name.unqualified (modtype_concept_name mp)
-  | Definition (Enum_definition, r) -> enum_definition_name r
-  | Definition (Struct_definition, r) -> struct_definition_name r
+  | Definition (Enum_definition, r) -> enum_definition_name ctx r
+  | Definition (Struct_definition, r) -> struct_definition_name ctx r
   | Definition (Alias_definition, r) -> global_name Type r

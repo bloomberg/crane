@@ -1877,7 +1877,8 @@ let plan_file_layout s =
     && module_members_name_only_inductives sel
     && Option.cata
          (List.for_all (fun d ->
-              is_static_member_declaration d && declaration_names_into_a_struct d = Some false ) )
+              is_static_member_declaration d
+              && writing_element_of mp (fun () -> declaration_names_into_a_struct d) = Some false ) )
          false
          (struct_members ~wrapper mp sel)
   in
@@ -1905,6 +1906,8 @@ let plan_file_layout s =
       rendered
   in
   let add band mp group = band := (position mp, group) :: !band in
+  (* What a declaration of [mp]'s writes is asked as an element of [mp]: the
+     inductives its body spells bare are read off that position. *)
   (* The header writes every wrapper module's functions before any module's
      types ({!do_struct_with_decl_tracking}), and so defines the structs
      lifted out of them first. *)
@@ -1912,7 +1915,7 @@ let plan_file_layout s =
     let pass = if lifted then 0 else 1 in
     forward :=
       ((pass, position mp), List.map (fun f -> (lifted, f)) (Cpp_print.forward_declarations ~module_:mp env d)) :: !forward;
-    types := List.fold_right CString.Set.add (Cpp_print.file_scope_types d) !types
+    types := List.fold_right CString.Set.add (writing_element_of mp (fun () -> Cpp_print.file_scope_types d)) !types
   in
   let wrapper_lifted ~module_ se =
     match wrapper_element ~module_ se with

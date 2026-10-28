@@ -1062,7 +1062,7 @@ let method_returns_any (func_ref : GlobRef.t) : bool =
     reference to CHT from another module would incorrectly generate "CHT::cHT"
     instead of just "CHT".
 
-    See also: pp_inductive_type_name which uses this registry for type name
+    See also: Cpp_names.inductive_type_name which uses this registry for type name
     rendering. *)
 
 (** Track current structure's declarations for finding methods from sibling
