@@ -1344,8 +1344,3 @@ val promoted_inductives : unit Ref.User.Tbl.t
 (** Record that a reference is promoted; see {!promoted_inductives}.  A
     promotion outlives the rendering that decided it. *)
 val promote_inductive : GlobRef.t -> unit
-
-(** [with_demoted_inductive r body] runs [body] with [r] not promoted, putting
-    its promotion back afterwards.  A module rendered nested demotes its
-    eponymous inductive for the duration, and only for the duration. *)
-val with_demoted_inductive : GlobRef.t option -> (unit -> 'a) -> 'a

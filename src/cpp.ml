@@ -877,13 +877,13 @@ let rec pp_structure_elem ~is_header f ~module_ = function
         (* Set the promotion state the body will be rendered under.  A
            promotion outlives this module -- every later mention of the
            inductive spells it the promoted way -- whereas the demotion a
-           nested rendering needs lasts exactly as long as that rendering:
-           the ones planned around its body ({!Cpp_ind.with_planned_demotions}). *)
+           nested rendering needs is the position's, read off the frames
+           planned around its body ({!Cpp_names.promoted_at}). *)
         let with_promotion_scope body =
           if is_promoted then (
             eponymous_promote_ref := !eponymous_type_ref;
             Option.iter rendered_promotion !eponymous_type_ref );
-          Cpp_ind.with_planned_demotions body_mp body
+          body ()
         in
         let promoted_template =
           is_promoted && match promoted_tparams with Some (_ :: _) -> true | _ -> false
@@ -1519,9 +1519,7 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = f
     in
     Cpp_ind.plan_module_concepts mp (Cpp_ind.plan_concepts ~nested:outer.in_struct ~classes:class_concepts ~modtypes);
     let with_promotion k =
-      match frame.promoted with
-      | Some _ -> setting eponymous_promote_ref frame.eponymous_type k
-      | None -> Table.with_demoted_inductive frame.eponymous_type k
+      match frame.promoted with Some _ -> setting eponymous_promote_ref frame.eponymous_type k | None -> k ()
     in
     with_promotion (fun () -> in_header_scope scope k);
     classes ~module_ (declared_classes sel);

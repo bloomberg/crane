@@ -140,12 +140,6 @@ val in_header_element_scope : Names.ModPath.t -> (in_struct:bool -> 'a) -> 'a
     ({!Scope_plan.local_inductives}), and no others. *)
 val with_planned_local_inductives : Names.ModPath.t -> (unit -> 'a) -> 'a
 
-(** [with_planned_demotions mp k] runs [k] with the inductive of each
-    module frame around the body of the module [mp]
-    ({!Scope_plan.frames}) that is not promoted to that module's struct
-    demoted, as the render demotes it there. *)
-val with_planned_demotions : Names.ModPath.t -> (unit -> 'a) -> 'a
-
 (** [planned_held_back ~file mp] is what the concepts held back around the
     body of the module [mp] are in [file], innermost first: in the header,
     those each module frame around it ({!Scope_plan.frames}) holds back,

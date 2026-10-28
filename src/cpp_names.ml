@@ -103,8 +103,9 @@ let module_struct_name_of name =
 let module_declared_name mp = Table.escape_reserved_struct_name (Common.emitted_module_name mp)
 
 (** Whether the inductive [r] is promoted at the position [c]: promoted by
-    the unit's plan, and not demoted in the body of the module whose element
-    is being written ({!Module_frame.demoted_around}). *)
+    the unit's plan, which nothing demotes in place, and not demoted in the
+    body of the module whose element is being written
+    ({!Module_frame.demoted_around}). *)
 let promoted_at (c : render_ctx) r =
   Ref.User.Tbl.mem promoted_inductives r
   &&

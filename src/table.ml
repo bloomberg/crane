@@ -2895,21 +2895,6 @@ let promoted_inductives : unit Ref.User.Tbl.t = Ref.User.Tbl.create 4
     promoted way. *)
 let promote_inductive r = Ref.User.Tbl.replace promoted_inductives r ()
 
-(** Run [body] with [r] not promoted, putting its promotion back afterwards.
-
-    The same inductive is promoted when its module is rendered standalone but
-    not when that module is rendered nested inside another, and the nested
-    rendering must not leave its answer behind for everyone else. *)
-let with_demoted_inductive r body =
-  match r with
-  | None -> body ()
-  | Some r ->
-    let was_promoted = Ref.User.Tbl.mem promoted_inductives r in
-    Ref.User.Tbl.remove promoted_inductives r;
-    Fun.protect
-      ~finally:(fun () -> if was_promoted then promote_inductive r)
-      body
-
 let reset_modfile () =
   modfile_ids := !blacklist_table;
   modfile_mps := MPmap.empty

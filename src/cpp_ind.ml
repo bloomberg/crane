@@ -1185,9 +1185,6 @@ let with_planned_local_inductives mp k =
     CErrors.anomaly
       Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned local inductives.")
 
-let with_planned_demotions mp k =
-  List.fold_left (fun k r () -> Table.with_demoted_inductive (Some r) k) k (Module_frame.demoted_around mp) ()
-
 type concept_placement = Ahead_of_struct | After_struct | At_file_scope
 
 type concept_plan = {
@@ -1245,7 +1242,7 @@ let in_spelling ~file spelling k =
     | Some v ->
       with_visibility v (fun () ->
           with_planned_local_inductives mp (fun () ->
-              with_planned_demotions mp (fun () -> setting held_back_concepts (planned_held_back ~file mp) k) ) )
+              setting held_back_concepts (planned_held_back ~file mp) k ) )
     | None -> CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
   in
   match ((file : Common.file), (spelling : Cpp_ast.spelling)) with
