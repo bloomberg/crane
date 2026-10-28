@@ -1132,7 +1132,9 @@ let report_outcome ?survived ~name ~check ~strategy body =
     exactly the same variable back (i.e. the argument at that position is
     [CPPvar id] where [id] is the parameter name, or [crane_raw(id)]: a
     method's receiver [_self], a raw pointer already, as a call passes it
-    ({!method_checker})). Invariant parameters can be
+    ({!method_checker}), or [crane_erase_fn(id)]: a callable adapted to the
+    erased slot it is passed in, which for a self-call is the parameter's
+    own). Invariant parameters can be
     referenced directly from function scope and need not appear in shadow
     variables or frame structs.
 
@@ -1155,7 +1157,8 @@ let find_varying_params check params body =
                | Some
                    ( CPPvar arg_id
                    | CPPmove (CPPvar arg_id)
-                   | CPPfun_call (_, CPPrt Crane_rt.Raw, {rev = [CPPvar arg_id]}) ) ->
+                   | CPPfun_call (_, CPPrt Crane_rt.Raw, {rev = [CPPvar arg_id]})
+                   | CPPerase_fn (_, CPPvar arg_id) ) ->
                  Id.equal arg_id id
                | _ -> false )
              calls ) )
