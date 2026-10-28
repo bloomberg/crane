@@ -1493,7 +1493,7 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = f
      header works it out ({!pp_structure_elem}), from whether the module's
      class concepts name its members. *)
   let in_module_frame ~module_ mp sel k =
-    let name = Table.escape_reserved_struct_name (Common.pp_module mp) in
+    let name = Cpp_names.module_declared_name mp in
     let frame = Module_frame.of_module mp ~name sel ~enclosing:!current_structure_decls in
     Module_frame.plan mp frame;
     let outer = !header in
