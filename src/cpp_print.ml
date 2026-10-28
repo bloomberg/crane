@@ -446,7 +446,7 @@ let stand_ins t =
           (declared_types (settled :> cpp_decl))
       | Declared
           ( Fields _ | Modtype_concept _ | Global_alias _ | Assertion _ | Module_alias _ | Functor_alias _ | Derived_functor _
-          | Forward_declaration _ ) ->
+          | Forward_declaration _ | Synthesised_template _ ) ->
         []
       | Struct_of mp -> [Cpp_ast.(global_alias (Alias_of_module (module_ref mp)))] )
     (Cpp_ast.declared t)
@@ -509,12 +509,12 @@ let ctor_alias_tvar = Minicpp.ctor_alias_tvar
 type ctor_alias = {
   ca_base : string;  (** What its name is made from. *)
   ca_holder : bool;
-  ca_home : Names.ModPath.t option;
-      (** The module struct it is declared in ({!ctor_alias_home}), or
-          [None] for namespace scope. *)
+  ca_declared : Cpp_ast.declared_in;  (** Where it is declared ({!ctor_alias_declared}). *)
   ca_body : string;
       (** The type it abbreviates, as written where it is declared, with the
           sentinel where the template's own parameter goes. *)
+  ca_type : cpp_type;  (** That type. *)
+  ca_vars : Id.t list;  (** The names of the variables it names by index. *)
 }
 
 (** The module struct the template abbreviating [body], written in [file],
@@ -555,33 +555,39 @@ let ctor_alias_home ctx body =
     in
     if names_struct && not (Table.is_modfile cur) then Some cur else None
 
-(** Where a template with home [home] is declared, and so the visibility
-    its body is written in: the body of its home module, as planned, or
-    outside every module body. *)
-let ctor_alias_visibility = function
-  | Some home -> (
+(** Where the template abbreviating [body], spelled at [ctx], is declared:
+    in the struct of its home ({!ctor_alias_home}), or at namespace scope
+    beneath the unit's files as the visibility there sees them -- a module
+    body's, or, spelled in another template's body, that template's. *)
+let ctor_alias_declared ctx body : Cpp_ast.declared_in =
+  match ctor_alias_home ctx body with
+  | Some home -> In_struct_of home
+  | None -> At_namespace_scope (List.rev (List.filter Table.is_modfile (Common.visible_mps (Common.current_visibility ()))))
+
+(** The visibility a template is declared, and so its body written, in: the
+    body of its home module, as planned, or outside every module body. *)
+let ctor_alias_visibility : Cpp_ast.declared_in -> _ = function
+  | In_struct_of home -> (
     match Scope_plan.visibility home with
     | Some v -> v
     | None ->
       CErrors.anomaly
         Pp.(str "Crane: the module " ++ str (ModPath.to_string home) ++ str " has no planned visibility.") )
-  | None ->
-    Common.toplevel_visibility
-      (List.rev (List.filter Table.is_modfile (Common.visible_mps (Common.current_visibility ()))))
+  | At_namespace_scope files -> Common.toplevel_visibility files
 
-(** The context a template with home [home] is written in, in the file
-    being written: at
-    namespace scope; in the header, inside its home's struct, a class
-    template where the home's struct is one; in the implementation, beside
-    the definitions of its home's members, which are written out of line and
-    qualify what they name by the struct they are members of. *)
-let ctor_alias_render_ctx ctx home =
+(** The position a template declared at [declared] is written at, in the
+    file [ctx] is written in: at namespace scope; in the header, inside its
+    home's struct, a class template where the home's struct is one; in the
+    implementation, beside the definitions of its home's members, which are
+    written out of line and qualify what they name by the struct they are
+    members of. *)
+let ctor_alias_render_ctx ctx (declared : Cpp_ast.declared_in) =
   let start = file_start ctx.rc_file in
-  match (home, ctx.rc_file) with
-  | None, _ -> start
-  | Some home, Common.Intf ->
+  match (declared, ctx.rc_file) with
+  | At_namespace_scope _, _ -> start
+  | In_struct_of home, Common.Intf ->
     {start with rc_in_struct = true; rc_in_template = Scope_plan.templated home; rc_module = Some home}
-  | Some home, Common.Impl -> {start with rc_scope = Scope_plan.of_module home; rc_module = Some home}
+  | In_struct_of home, Common.Impl -> {start with rc_scope = Scope_plan.of_module home; rc_module = Some home}
 
 (** What a file writes that places the templates it writes: a declaration,
     or the fields of the eponymous record merged into a module's struct,
@@ -676,28 +682,16 @@ let ctor_alias_name a =
   let kind = if a.ca_holder then "_tch_" else "_tc_" in
   a.ca_base ^ kind ^ String.sub (Digest.to_hex (Digest.string a.ca_body)) 0 16
 
-(** The declaration of [alias].  A holder's parameters are the captured
-    names its body writes: one written applied to the alias's own argument
-    is a type constructor ([CraneFk]), one written bare a type ([CranePk]),
-    a plain family the declaration deapplied. *)
+(** The declaration of [alias], printed where the tree puts it as declared
+    where it is ({!Cpp_ast.Template_in}). *)
 let ctor_alias_declaration a =
-  let name = ctor_alias_name a in
-  if not a.ca_holder then
-    str "template <typename " ++ str ctor_alias_tvar ++ str "> using " ++ str name ++ str " = "
-    ++ str a.ca_body ++ str ";"
-  else
-    let names = identifier_tokens a.ca_body in
-    let rec params i =
-      let f = Id.to_string (Generated_name.indexed "F" i)
-      and p = Id.to_string (Generated_name.indexed "P" i) in
-      if List.mem f names then (str "template <typename> class " ++ str f) :: params (i + 1)
-      else if List.mem p names then (str "typename " ++ str p) :: params (i + 1)
-      else []
-    in
-    str "template <"
-    ++ prlist_with_sep (fun () -> str ", ") (fun p -> p) (params 0)
-    ++ str "> struct " ++ str name ++ str " { template <typename " ++ str ctor_alias_tvar
-    ++ str "> using c = " ++ str a.ca_body ++ str "; };"
+  Cpp_ast.synthesised_template
+    { name = ctor_alias_name a;
+      holder = a.ca_holder;
+      declared_in = a.ca_declared;
+      body = a.ca_type;
+      vars = a.ca_vars;
+      planned = a.ca_body }
 
 (** The templates the file [file] declares, each once, in the order planned:
     the aliases it writes, and, in the header, every holder the unit writes.
@@ -733,7 +727,7 @@ let check_ctor_alias_plan ~file =
     ctor_aliases_spelled := [];
     let describe a =
       Printf.sprintf "%s %s%s" (if a.ca_holder then "holder" else "alias") a.ca_body
-        (match a.ca_home with Some mp -> " in " ^ ModPath.to_string mp | None -> "")
+        (match a.ca_declared with In_struct_of mp -> " in " ^ ModPath.to_string mp | At_namespace_scope _ -> "")
     in
     let missing l l' = List.filter (fun a -> not (List.mem a l')) l in
     match (missing spelled planned, missing planned spelled) with
@@ -1384,13 +1378,14 @@ and ctor_alias_of_probe ctx vl ~base probe =
         | t -> t )
       probe
   in
-  let home = ctor_alias_home ctx probe in
+  let declared_in = ctor_alias_declared ctx probe in
   let render t =
-    let declared = ctor_alias_render_ctx ctx home in
+    let declared = ctor_alias_render_ctx ctx declared_in in
     with_render_ctx
       (fun _ -> declared)
       (fun () ->
-        Common.with_visibility (ctor_alias_visibility home) (fun () -> Pp.string_of_ppcmds (pp_cpp_type declared false vl t)) )
+        Common.with_visibility (ctor_alias_visibility declared_in) (fun () ->
+            Pp.string_of_ppcmds (pp_cpp_type declared false vl t) ) )
   in
   let rendered = lazy (render probe) in
   let head_alone () =
@@ -1431,7 +1426,7 @@ and ctor_alias_of_probe ctx vl ~base probe =
       !seen
     in
     match (captured probe, instances) with
-    | [], [] -> Some ({ca_base = base; ca_holder = false; ca_home = home; ca_body = rendered}, [])
+    | [], [] -> Some ({ca_base = base; ca_holder = false; ca_declared = declared_in; ca_body = rendered; ca_type = probe; ca_vars = vl}, [])
     | vars, instances ->
       (* Rendered a second time with the captured names replaced by the
          holder's own, so that two declarations differing only in what
@@ -1453,7 +1448,7 @@ and ctor_alias_of_probe ctx vl ~base probe =
           probe
       in
       Some
-        ( {ca_base = base; ca_holder = true; ca_home = home; ca_body = render renamed},
+        ( {ca_base = base; ca_holder = true; ca_declared = declared_in; ca_body = render renamed; ca_type = renamed; ca_vars = vl},
           List.map (fun (_, v) -> written_var v) vars @ List.map Id.to_string instances )
 
 (** Render [ty] as the qualifier of a {e value} -- [T::member] -- rather than of
@@ -4331,6 +4326,7 @@ let unprinted_names : Cpp_ast.declaration -> _ = function
     in
     global_names [[]] ((struct_ :: template_param_globals tparams) @ Option.cata constraint_globals [] constraint_)
   | Forward_declaration {defined = Defined_enum r; _} -> global_names [[]] [r]
+  | Synthesised_template {body; _} -> global_names [[]] (Cpp_demands.globals_of_type body)
   | Assertion {subject = Module _; _} | Global_alias (Alias_of_module _) | Modtype_concept _ | Module_alias _
   | Functor_alias _ | Derived_functor _ ->
     []
@@ -4433,6 +4429,32 @@ let pp_derived_functor ctx template name (base : Cpp_ast.module_expr) =
   in
   Cpp_ast.pp_template_head template ++ str "struct " ++ pp_declared_module name ++ str " : " ++ base ++ str " {};"
 
+(* The declaration of a synthesised template, its body written where it is
+   declared, which is where it is printed.  A holder's parameters are the
+   captured names its body writes: one written applied to the alias's own
+   argument is a type constructor ([CraneFk]), one written bare a type
+   ([CranePk]), a plain family the declaration deapplied. *)
+let pp_synthesised ctx (s : Cpp_ast.synthesised) =
+  let body = Pp.string_of_ppcmds (pp_cpp_type ctx false s.vars s.body) in
+  if Probe.checking () && not (String.equal body s.planned) then
+    Probe.violation "constructor aliases"
+      (str "the template " ++ str s.name ++ str " is declared with the body " ++ str body ++ str ", planned as "
+     ++ str s.planned );
+  if not s.holder then
+    str "template <typename " ++ str ctor_alias_tvar ++ str "> using " ++ str s.name ++ str " = " ++ str body ++ str ";"
+  else
+    let names = identifier_tokens body in
+    let rec params i =
+      let f = Id.to_string (Generated_name.indexed "F" i) and p = Id.to_string (Generated_name.indexed "P" i) in
+      if List.mem f names then (str "template <typename> class " ++ str f) :: params (i + 1)
+      else if List.mem p names then (str "typename " ++ str p) :: params (i + 1)
+      else []
+    in
+    str "template <"
+    ++ prlist_with_sep (fun () -> str ", ") (fun p -> p) (params 0)
+    ++ str "> struct " ++ str s.name ++ str " { template <typename " ++ str ctor_alias_tvar ++ str "> using c = " ++ str body
+    ++ str "; };"
+
 let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
   naming u.names @@ fun () ->
   (* Where the declaration is written, which is where the printer is. *)
@@ -4445,6 +4467,7 @@ let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
     | Functor_alias {name; functor_; params} -> (pp_functor_alias name functor_ params, u.needs)
     | Derived_functor {template; name; base} -> (pp_derived_functor ctx template name base, u.needs)
     | Forward_declaration {env; defined} -> (pp_forward_declaration ctx env defined, u.needs)
+    | Synthesised_template s -> (pp_synthesised ctx s, u.needs)
     | Declaration {env; settled} -> printed_decl ctx env settled
     | Absorbed {env; settled} -> (pp_cpp_decl ctx env settled, u.needs)
     | Fields {record; vars; fields} ->

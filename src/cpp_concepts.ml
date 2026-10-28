@@ -346,5 +346,5 @@ let pp_assertion (a : Cpp_ast.assertion) =
 let names_requested : Cpp_ast.declaration -> _ = function
   | Modtype_concept {path; params; concept; _} -> modtype_concept_names ~path ~params concept
   | Declaration _ | Absorbed _ | Fields _ | Global_alias _ | Assertion _ | Module_alias _ | Functor_alias _
-  | Derived_functor _ | Forward_declaration _ ->
+  | Derived_functor _ | Forward_declaration _ | Synthesised_template _ ->
     []

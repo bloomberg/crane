@@ -210,11 +210,11 @@ val forward_declarations : module_:ModPath.t -> Common.env -> Cpp_erasure.settle
 type ctor_alias = private {
   ca_base : string;  (** What its name is made from. *)
   ca_holder : bool;
-  ca_home : ModPath.t option;
-      (** The module struct it is declared in, or [None] for namespace
-          scope. *)
+  ca_declared : Cpp_ast.declared_in;  (** Where it is declared. *)
   ca_body : string;
       (** The type it abbreviates, as written where it is declared. *)
+  ca_type : cpp_type;  (** That type. *)
+  ca_vars : Id.t list;  (** The names of the variables it names by index. *)
 }
 
 (** The synthesised templates something a file writes writes, in the order
@@ -238,8 +238,16 @@ val plan_ctor_aliases : (Common.file -> ctor_aliases_read list) -> unit
 (** The name of a template, a function of its body. *)
 val ctor_alias_name : ctor_alias -> string
 
-(** The declaration of a template. *)
-val ctor_alias_declaration : ctor_alias -> Pp.t
+(** The declaration of a template, written where the tree puts it as
+    declared where it is ({!Cpp_ast.Template_in}). *)
+val ctor_alias_declaration : ctor_alias -> Cpp_ast.t
+
+(** The position a template declared where the second argument says is
+    written at, in the file the first is written in ({!Cpp_ast.Template_in}). *)
+val ctor_alias_render_ctx : Cpp_state.render_ctx -> Cpp_ast.declared_in -> Cpp_state.render_ctx
+
+(** The visibility a template declared where it says is written in. *)
+val ctor_alias_visibility : Cpp_ast.declared_in -> Common.visibility
 
 (** The templates the file [file] declares, each once, in the order
     planned: the aliases it writes, and, in the header, every holder the

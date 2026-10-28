@@ -1238,6 +1238,7 @@ let in_spelling ~file spelling k =
     match spelling with
     | Cpp_ast.Element_of mp | Member_of mp ->
       fun () -> with_render_ctx (fun c -> {c with rc_module = Some mp; rc_frame = []; rc_names = None}) k
+    | Template_in _ -> k
   in
   let in_body mp k =
     match Scope_plan.visibility mp with
@@ -1260,6 +1261,12 @@ let in_spelling ~file spelling k =
     CErrors.anomaly
       Pp.(str "Crane: the implementation writes a member of the struct of " ++ str (ModPath.to_string mp)
           ++ str ", which it does not write.")
+  (* A synthesised template is written where it is declared, whatever is
+     around it. *)
+  | _, Template_in declared ->
+    with_render_ctx
+      (fun c -> Cpp_print.ctor_alias_render_ctx {c with rc_file = file} declared)
+      (fun () -> with_visibility (Cpp_print.ctor_alias_visibility declared) k)
 
 let resolver_at ~file spelling frame key =
   Common.without_noting_written_files (fun () ->
