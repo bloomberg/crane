@@ -122,6 +122,27 @@ struct NonUniformListNest {
     static n2 s2(n2 a0) { return n2(S2{std::make_shared<n2>(std::move(a0))}); }
 
     // MANIPULATORS
+    ~n2() {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<n2> {
+        if (auto *_alt = std::get_if<S2>(&_v)) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a0);
+          }
+        }
+        return nullptr;
+      };
+      std::shared_ptr<n2> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
+      }
+    }
+
+    n2(const n2 &) = default;
+    n2 &operator=(const n2 &) = default;
+    n2(n2 &&) = default;
+    n2 &operator=(n2 &&) = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

@@ -15,14 +15,12 @@ using M = LoopifyCoercedRecursiveCall;
 int main() {
   assert(M::run == 4);
   // A succE chain deep enough that a C++ call of eval per level would
-  // exhaust the stack.  It is never destroyed: expr, an indexed family, has
-  // no iterative destructor (wip/indexed_family_deep_destructor), and
-  // tearing the chain down would overflow the stack as well.
-  M::expr *e = new M::expr(M::expr::lit(0));
+  // exhaust the stack, and torn down by expr's iterative destructor.
+  M::expr e = M::expr::lit(0);
   for (int i = 0; i < DEPTH; ++i) {
-    *e = M::expr::succe(std::move(*e));
+    e = M::expr::succe(std::move(e));
   }
-  assert(crane::any_cast<uint64_t>(M::eval<uint64_t>(*e)) == DEPTH);
+  assert(crane::any_cast<uint64_t>(M::eval<uint64_t>(e)) == DEPTH);
   std::cout << "loopify_coerced_recursive_call: ok\n";
   return 0;
 }

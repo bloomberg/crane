@@ -1,9 +1,5 @@
 // Copyright 2026 Bloomberg Finance L.P.
 // Distributed under the terms of the GNU LGPL v2.1 license.
-//
-// Expected: SEGFAULT (stack overflow) destroying a deep chain of expr, an
-// indexed family, which has no iterative destructor.
-// When fixed: prints "indexed_family_deep_destructor: ok".
 #include <indexed_family_deep_destructor.h>
 
 #include <iostream>

@@ -13616,3 +13616,14 @@
   (alias runtest)
   (deps recursor_self_call_no_motive.t.exe)
   (action (run ./recursor_self_call_no_motive.t.exe))))
+
+(subdir indexed_family_deep_destructor
+ (rule
+  (targets indexed_family_deep_destructor.t.exe)
+  (deps IndexedFamilyDeepDestructor.vo indexed_family_deep_destructor.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} indexed_family_deep_destructor.t.exe indexed_family_deep_destructor.cpp indexed_family_deep_destructor.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps indexed_family_deep_destructor.t.exe)
+  (action (run ./indexed_family_deep_destructor.t.exe))))

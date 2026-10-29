@@ -1183,12 +1183,14 @@ let constructor_pointer_fields ~name ~is_coinductive vars tys =
     @param mutual_partners other types in the mutual block *)
 
 (* Whether ML type [t] is a reference to [ref_name] applied to the same type
-   variables [ref_vars] (i.e., a direct recursive or mutual recursive
-   occurrence). *)
+   variables [ref_vars], its parameters (i.e., a direct recursive or mutual
+   recursive occurrence).  The arguments after them are a family's type
+   indices, which its C++ type does not take: [succE : expr nat -> expr nat]
+   holds an [expr] like any other. *)
 let rec is_ref_to ref_name ref_vars = function
   | Miniml.Tglob (r, args, _) ->
     globref_equal r ref_name
-    && List.length args = List.length ref_vars
+    && List.length args >= List.length ref_vars
     && List.for_all
          (fun (j, arg) ->
            match arg with
@@ -1197,7 +1199,7 @@ let rec is_ref_to ref_name ref_vars = function
            | Miniml.Tmeta {contents = Some (Miniml.Tvar (Rigid, k))} ->
              k = j + 1
            | _ -> false)
-         (List.mapi (fun j a -> (j, a)) args)
+         (List.mapi (fun j a -> (j, a)) (CList.firstn (List.length ref_vars) args))
   | Miniml.Tmeta {contents = Some t} -> is_ref_to ref_name ref_vars t
   | _ -> false
 

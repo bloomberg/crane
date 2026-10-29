@@ -30,14 +30,13 @@ int main() {
   assert(M::run == 5);
   assert(count(M::sample) == 5);
   // A succE chain deep enough that a C++ call of expr_rect per level would
-  // exhaust the stack.  It is never destroyed: expr, an indexed family, has
-  // no iterative destructor, and tearing it down would overflow the stack.
-  M::expr *e = new M::expr(M::expr::lit(0));
+  // exhaust the stack, and torn down by expr's iterative destructor.
+  M::expr e = M::expr::lit(0);
   for (int i = 0; i < DEPTH; ++i) {
-    *e = M::expr::succe(std::move(*e));
+    e = M::expr::succe(std::move(e));
   }
-  assert(M::size<uint64_t>(*e) == DEPTH + 1);
-  assert(count(*e) == DEPTH + 1);
+  assert(M::size<uint64_t>(e) == DEPTH + 1);
+  assert(count(e) == DEPTH + 1);
   std::cout << "loopify_recursor_instantiated: ok\n";
   return 0;
 }

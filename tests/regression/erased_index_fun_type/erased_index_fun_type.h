@@ -5,6 +5,7 @@
 #include "fn.h"
 #include "obj.h"
 #include "shared_block.h"
+#include "small_vector.h"
 #include <atomic>
 #include <functional>
 #include <memory>
@@ -102,6 +103,43 @@ struct ErasedIndexFunType {
     }
 
     // MANIPULATORS
+    ~ty() {
+      if (std::holds_alternative<TN>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<TF>(&v_mut())) {
+        if (!((_alt->a && _alt->a.use_count() == 1) ||
+              (_alt->b && _alt->b.use_count() == 1))) {
+          return;
+        }
+      }
+      crane::small_vector<std::shared_ptr<ty>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<TF>(&_v)) {
+          if (_alt->a && _alt->a.use_count() == 1) {
+            _stack.push_back(std::move(_alt->a));
+          }
+          if (_alt->b && _alt->b.use_count() == 1) {
+            _stack.push_back(std::move(_alt->b));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
+    ty(const ty &) = default;
+    ty &operator=(const ty &) = default;
+    ty(ty &&) = default;
+    ty &operator=(ty &&) = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

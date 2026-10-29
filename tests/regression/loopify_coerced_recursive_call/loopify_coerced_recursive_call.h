@@ -100,6 +100,84 @@ struct LoopifyCoercedRecursiveCall {
     }
 
     // MANIPULATORS
+    ~expr() {
+      if (std::holds_alternative<Lit>(v_mut())) {
+        return;
+      }
+      if (std::holds_alternative<Bl>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<SuccE>(&v_mut())) {
+        if (!(_alt->a0 && _alt->a0.use_count() == 1)) {
+          return;
+        }
+      }
+      if (auto *_alt = std::get_if<Ite>(&v_mut())) {
+        if (!((_alt->a && _alt->a.use_count() == 1) ||
+              (_alt->a1 && _alt->a1.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1))) {
+          return;
+        }
+      }
+      if (auto *_alt = std::get_if<PairE>(&v_mut())) {
+        if (!((_alt->a && _alt->a.use_count() == 1) ||
+              (_alt->b && _alt->b.use_count() == 1))) {
+          return;
+        }
+      }
+      if (auto *_alt = std::get_if<FstE>(&v_mut())) {
+        if (!(_alt->a && _alt->a.use_count() == 1)) {
+          return;
+        }
+      }
+      crane::small_vector<std::shared_ptr<expr>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<SuccE>(&_v)) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+        }
+        if (auto *_alt = std::get_if<Ite>(&_v)) {
+          if (_alt->a && _alt->a.use_count() == 1) {
+            _stack.push_back(std::move(_alt->a));
+          }
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+          if (_alt->a2 && _alt->a2.use_count() == 1) {
+            _stack.push_back(std::move(_alt->a2));
+          }
+        }
+        if (auto *_alt = std::get_if<PairE>(&_v)) {
+          if (_alt->a && _alt->a.use_count() == 1) {
+            _stack.push_back(std::move(_alt->a));
+          }
+          if (_alt->b && _alt->b.use_count() == 1) {
+            _stack.push_back(std::move(_alt->b));
+          }
+        }
+        if (auto *_alt = std::get_if<FstE>(&_v)) {
+          if (_alt->a && _alt->a.use_count() == 1) {
+            _stack.push_back(std::move(_alt->a));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
+    expr(const expr &) = default;
+    expr &operator=(const expr &) = default;
+    expr(expr &&) = default;
+    expr &operator=(expr &&) = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

@@ -3,6 +3,7 @@
 
 #include "crane_fn.h"
 #include "obj.h"
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <type_traits>
@@ -45,6 +46,27 @@ struct NestedTreePairLiteral {
     }
 
     // MANIPULATORS
+    ~tree() {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<tree> {
+        if (auto *_alt = std::get_if<Nd>(&_v)) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a0);
+          }
+        }
+        return nullptr;
+      };
+      std::shared_ptr<tree> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
+      }
+    }
+
+    tree(const tree &) = default;
+    tree &operator=(const tree &) = default;
+    tree(tree &&) = default;
+    tree &operator=(tree &&) = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

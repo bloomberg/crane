@@ -9,12 +9,10 @@ Require Import Crane.Mapping.NatIntStd.
     A plain inductive whose constructors hold children of its own type is
     destroyed iteratively: its destructor drains the children it owns into
     a worklist rather than recursing.  An indexed family -- [expr], whose
-    index a constructor fixes -- gets no such destructor, so destroying a
-    [succE] chain recurses once per node and a chain a hundred thousand
-    deep exhausts the stack.
-
-    Expected: stack overflow destroying the [expr] chain.  When fixed:
-    prints ok. *)
+    index a constructor fixes -- got no such destructor, its children
+    [expr nat] and [expr bool] not being recognised as its own type, though
+    its C++ type takes no index: destroying a [succE] chain recursed once
+    per node, and a chain a hundred thousand deep exhausted the stack. *)
 Module IndexedFamilyDeepDestructor.
 
 Inductive expr : Type -> Type :=

@@ -4,6 +4,7 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
+#include <atomic>
 #include <memory>
 #include <string>
 #include <utility>
@@ -59,6 +60,27 @@ struct FreeMonad {
     static IO print(std::string a0) { return IO(Print{std::move(a0)}); }
 
     // MANIPULATORS
+    ~IO() {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<IO> {
+        if (auto *_alt = std::get_if<Bind>(&_v)) {
+          if (_alt->a && _alt->a.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a);
+          }
+        }
+        return nullptr;
+      };
+      std::shared_ptr<IO> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
+      }
+    }
+
+    IO(const IO &) = default;
+    IO &operator=(const IO &) = default;
+    IO(IO &&) = default;
+    IO &operator=(IO &&) = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
