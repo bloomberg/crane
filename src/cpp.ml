@@ -208,18 +208,48 @@ let spec_is_hoistable ~module_ (spec : Cpp_erasure.settled) : bool =
    ({!Scope_plan.nested}). *)
 let outside_every_struct mp = not (Scope_plan.nested mp)
 
-(** A lifted helper [d], finalized: what to write in its place, and the
-    declaration to hoist ahead of its callers where [d] defines a function,
-    [may_hoist] allows it, and {!spec_is_hoistable} does.
+(** Whether the declaration of each lifted helper the header places at
+    namespace scope is hoisted ahead of every definition, by the helper:
+    planned before either file is rendered ({!plan_file_layout}), where the
+    helper defines a function and {!spec_is_hoistable} says it may be. *)
+let hoisted_helpers : bool GlobRef.Map_env.t ref = State.cell State.Unit GlobRef.Map_env.empty
+
+let helper_entity d = Function_entity.of_finished (Cpp_ind.finished_alone d)
+
+(* The function the lifted helper [d], finalized as [e], defines, if it
+   defines one: only a function's declaration can be hoisted. *)
+let hoistable_function e d = if Function_entity.defines_function e then decl_globref d else None
+
+(** Plan whether the declaration of the lifted helper [d], placed at
+    namespace scope as an element of [module_], is hoisted
+    ({!hoisted_helpers}). *)
+let plan_helper_hoist ~module_ d =
+  let e = helper_entity d in
+  Option.iter
+    (fun r ->
+      hoisted_helpers :=
+        GlobRef.Map_env.add r (spec_is_hoistable ~module_ (Function_entity.declaration e)) !hoisted_helpers )
+    (hoistable_function e d)
+
+(** A lifted helper [d], an element of [module_], finalized: what to write in
+    its place, and the declaration to hoist ahead of its callers where
+    [may_hoist] allows it and it is planned to be ({!hoisted_helpers}).
+    Under [CRANE_CHECK_IR], a helper whose hoisting was planned is asked
+    again.
 
     Both come from one finished definition, so the hoisted declaration states
     the head the definition does; the definition then leaves the template
     defaults to the declaration. *)
 let lifted_views ~module_ ?(may_hoist = true) (d : cpp_decl) =
-  let e = Function_entity.of_finished (Cpp_ind.finished_alone d) in
-  let spec = Function_entity.declaration e in
-  if Function_entity.defines_function e && may_hoist && spec_is_hoistable ~module_ spec
-  then (Function_entity.definition_after_declaration e, Some spec)
+  let e = helper_entity d in
+  let planned = Option.bind (hoistable_function e d) (fun r -> GlobRef.Map_env.find_opt r !hoisted_helpers) in
+  ( match planned with
+    | Some hoists when Probe.checking () && hoists <> spec_is_hoistable ~module_ (Function_entity.declaration e) ->
+      Probe.violation "hoisted helpers"
+        (Pp.str "a helper's declaration is asked whether it may be hoisted and answers otherwise than planned")
+    | _ -> () );
+  if may_hoist && planned = Some true then
+    (Function_entity.definition_after_declaration e, Some (Function_entity.declaration e))
   else (Function_entity.definition e, None)
 
 (** Whether a module's members name only types a forward declaration can
@@ -1856,8 +1886,9 @@ let promoted_alias_import id =
   else None
 
 (** Plan where the header writes what it does not write in place
-    ({!file_layout}), and which modules' structs it declares ahead of the
-    file ({!hoisted_structs}).
+    ({!file_layout}), which modules' structs it declares ahead of the
+    file ({!hoisted_structs}), and which helpers' declarations
+    ({!hoisted_helpers}).
 
     The sections are read off each element the header writes through
     {!pp_structure_elem} -- every one but a wrapper module's functions -- in
@@ -1936,7 +1967,11 @@ let plan_file_layout s =
   in
   let wrapper_functions mp se =
     with_render_ctx at_file_scope @@ fun () ->
-    List.iter (fun h -> defines ~lifted:true mp (empty_env ()) (fst (lifted_views ~module_:mp h))) (wrapper_lifted ~module_:mp se)
+    List.iter
+      (fun h ->
+        plan_helper_hoist ~module_:mp h;
+        defines ~lifted:true mp (empty_env ()) (fst (lifted_views ~module_:mp h)) )
+      (wrapper_lifted ~module_:mp se)
   in
   let element mp d =
     Cpp_ind.in_header_element_scope mp @@ fun ~in_struct ->
@@ -1957,6 +1992,7 @@ let plan_file_layout s =
         List.iter (fun (env, d') -> defines ~lifted:false mp env d') e.rendered;
         List.iter
           (fun h ->
+            plan_helper_hoist ~module_:mp h;
             let def, spec = lifted_views ~module_:mp h in
             defines ~lifted:false mp (empty_env ()) def;
             Option.iter (fun spec -> add specs mp {Cpp_ind.source = mp; declarations = [(empty_env (), spec)]}) spec )
