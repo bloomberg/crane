@@ -7,14 +7,12 @@ Require Import Crane.Mapping.NatIntStd.
 (** The recursive calls of a type-indexed family's recursor.
 
     [expr_rect]'s C++ template spells its motive [T1] only in its result
-    type, so no argument deduces it, yet its recursive calls write no
-    template arguments.  The header compiles until the recursor is
-    instantiated, and then no call matches.  Under [Set Crane Loopify] the
-    calls Loopify leaves in the machine (those under a coercion, see
-    [wip/loopify_coerced_recursive_call]) are written the same way.
-
-    Expected: the C++ test fails to compile (no matching function for call
-    to [expr_rect]).  When fixed: prints ok. *)
+    type, so no argument deduces it.  Its recursive calls wrote no template
+    arguments, leaving every one to deduction from the recursive argument,
+    as for a nested inductive, whose self-calls are at another
+    instantiation; but [expr]'s C++ type takes no index, so the header
+    compiled until the recursor was instantiated, and then no call matched.
+    The calls now write the motive. *)
 Module RecursorSelfCallNoMotive.
 
 Inductive expr : Type -> Type :=

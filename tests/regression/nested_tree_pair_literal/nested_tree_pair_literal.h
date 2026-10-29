@@ -59,7 +59,7 @@ struct NestedTreePairLiteral {
       return crane_any_cast<T1>(f(a0));
     } else {
       const auto &[a0] = std::get<typename tree::Nd>(t.v());
-      return crane_any_cast<T1>(f0(*a0, tree_rect(f, f0, *a0)));
+      return crane_any_cast<T1>(f0(*a0, tree_rect<T1>(f, f0, *a0)));
     }
   }
 
@@ -71,7 +71,7 @@ struct NestedTreePairLiteral {
       return crane_any_cast<T1>(f(a0));
     } else {
       const auto &[a0] = std::get<typename tree::Nd>(t.v());
-      return crane_any_cast<T1>(f0(*a0, tree_rec(f, f0, *a0)));
+      return crane_any_cast<T1>(f0(*a0, tree_rec<T1>(f, f0, *a0)));
     }
   }
 

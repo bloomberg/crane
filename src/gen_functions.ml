@@ -945,15 +945,40 @@ let dfun_body_scope n b cty ty temps =
      and, unlike defaulting them, still rejects a caller that supplies
      nothing. *)
   let tvars_are_phantom = recurses_on_non_uniform_ind && fun_tys = [] in
+  (* ... and unless one of them is spelled by no parameter while the result
+     or a callable's constraint names it: the motive of a type-indexed
+     family's recursor.  The family's C++ type takes no index, so nothing
+     deduces it, and the recursion is at the one instantiation the result
+     names.  The self-call writes it and the parameters before it, leaving
+     those after it to deduction. *)
+  let undeducible_prefix temps =
+    let spelled = List.concat_map (fun (_, ty) -> get_rendered_tvar_indices ty) ids in
+    let constrained =
+      get_tvar_indices cod
+      @ List.concat_map
+          (function _, TTfun (dom, cod), _ -> get_tvar_indices (Tfun (dom, cod)) | _ -> [])
+          fun_tys
+    in
+    let undeducible (tt, id) =
+      match (tt, tvar_number id) with
+      | TTtypename_default _, _ | _, None -> false
+      | _, Some i -> List.mem i constrained && not (List.mem i spelled)
+    in
+    let _, written =
+      List.fold_left (fun (k, n) t -> (k + 1, if undeducible t then k + 1 else n)) (0, 0) temps
+    in
+    CList.firstn written temps
+  in
+  let own_temps =
+    List.filter
+      (fun (_, id) -> not (List.exists (fun (i, _) -> tvar_id i = id) hkt_tvar_resolutions))
+      temps
+  in
   let rec_call_temps =
-    if recurses_on_non_uniform_ind && not tvars_are_phantom then
-      typeclass_temps_basic
-    else
-      typeclass_temps_basic
-      @ List.filter
-          (fun (_, id) ->
-            not (List.exists (fun (i, _) -> tvar_id i = id) hkt_tvar_resolutions) )
-          temps
+    typeclass_temps_basic
+    @
+    if recurses_on_non_uniform_ind && not tvars_are_phantom then undeducible_prefix own_temps
+    else own_temps
   in
   let rec_call =
     mk_cppglob n (List.map (fun (_, id) -> named_tvar id) rec_call_temps)

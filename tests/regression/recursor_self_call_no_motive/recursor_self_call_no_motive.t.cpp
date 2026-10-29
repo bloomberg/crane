@@ -1,9 +1,5 @@
 // Copyright 2026 Bloomberg Finance L.P.
 // Distributed under the terms of the GNU LGPL v2.1 license.
-//
-// Expected: COMPILE ERROR, no matching function for the recursive calls of
-// expr_rect, which write no motive.
-// When fixed: prints "recursor_self_call_no_motive: ok".
 #include <recursor_self_call_no_motive.h>
 
 #include <cassert>

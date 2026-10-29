@@ -116,19 +116,22 @@ struct IndexedFamilyDeepDestructor {
       return f0(a0);
     } else if (std::holds_alternative<typename expr::SuccE>(e.v())) {
       const auto &[a0] = std::get<typename expr::SuccE>(e.v());
-      return f1(*a0, expr_rect(f, f0, f1, f2, f3, f4, *a0));
+      return f1(*a0, expr_rect<T1>(f, f0, f1, f2, f3, f4, *a0));
     } else if (std::holds_alternative<typename expr::Ite>(e.v())) {
       const auto &[a, a1, a2] = std::get<typename expr::Ite>(e.v());
-      return crane_any_cast<T1>(f2(*a, expr_rect(f, f0, f1, f2, f3, f4, *a),
-                                   *a1, expr_rect(f, f0, f1, f2, f3, f4, *a1),
-                                   *a2, expr_rect(f, f0, f1, f2, f3, f4, *a2)));
+      return crane_any_cast<T1>(
+          f2(*a, expr_rect<T1>(f, f0, f1, f2, f3, f4, *a), *a1,
+             expr_rect<T1>(f, f0, f1, f2, f3, f4, *a1), *a2,
+             expr_rect<T1>(f, f0, f1, f2, f3, f4, *a2)));
     } else if (std::holds_alternative<typename expr::PairE>(e.v())) {
       const auto &[a, b] = std::get<typename expr::PairE>(e.v());
-      return crane_any_cast<T1>(f3(*a, expr_rect(f, f0, f1, f2, f3, f4, *a), *b,
-                                   expr_rect(f, f0, f1, f2, f3, f4, *b)));
+      return crane_any_cast<T1>(f3(*a, expr_rect<T1>(f, f0, f1, f2, f3, f4, *a),
+                                   *b,
+                                   expr_rect<T1>(f, f0, f1, f2, f3, f4, *b)));
     } else {
       const auto &[a] = std::get<typename expr::FstE>(e.v());
-      return crane_any_cast<T1>(f4(*a, expr_rect(f, f0, f1, f2, f3, f4, *a)));
+      return crane_any_cast<T1>(
+          f4(*a, expr_rect<T1>(f, f0, f1, f2, f3, f4, *a)));
     }
   }
 
@@ -146,19 +149,22 @@ struct IndexedFamilyDeepDestructor {
       return f0(a0);
     } else if (std::holds_alternative<typename expr::SuccE>(e.v())) {
       const auto &[a0] = std::get<typename expr::SuccE>(e.v());
-      return f1(*a0, expr_rec(f, f0, f1, f2, f3, f4, *a0));
+      return f1(*a0, expr_rec<T1>(f, f0, f1, f2, f3, f4, *a0));
     } else if (std::holds_alternative<typename expr::Ite>(e.v())) {
       const auto &[a, a1, a2] = std::get<typename expr::Ite>(e.v());
-      return crane_any_cast<T1>(f2(*a, expr_rec(f, f0, f1, f2, f3, f4, *a), *a1,
-                                   expr_rec(f, f0, f1, f2, f3, f4, *a1), *a2,
-                                   expr_rec(f, f0, f1, f2, f3, f4, *a2)));
+      return crane_any_cast<T1>(
+          f2(*a, expr_rec<T1>(f, f0, f1, f2, f3, f4, *a), *a1,
+             expr_rec<T1>(f, f0, f1, f2, f3, f4, *a1), *a2,
+             expr_rec<T1>(f, f0, f1, f2, f3, f4, *a2)));
     } else if (std::holds_alternative<typename expr::PairE>(e.v())) {
       const auto &[a, b] = std::get<typename expr::PairE>(e.v());
-      return crane_any_cast<T1>(f3(*a, expr_rec(f, f0, f1, f2, f3, f4, *a), *b,
-                                   expr_rec(f, f0, f1, f2, f3, f4, *b)));
+      return crane_any_cast<T1>(f3(*a, expr_rec<T1>(f, f0, f1, f2, f3, f4, *a),
+                                   *b,
+                                   expr_rec<T1>(f, f0, f1, f2, f3, f4, *b)));
     } else {
       const auto &[a] = std::get<typename expr::FstE>(e.v());
-      return crane_any_cast<T1>(f4(*a, expr_rec(f, f0, f1, f2, f3, f4, *a)));
+      return crane_any_cast<T1>(
+          f4(*a, expr_rec<T1>(f, f0, f1, f2, f3, f4, *a)));
     }
   }
 

@@ -55,7 +55,7 @@ struct NonUniformPairNest {
       return crane_any_cast<T1>(f(a0));
     } else {
       const auto &[a0] = std::get<typename nest::NS>(n.v());
-      return crane_any_cast<T1>(f0(*a0, nest_rect(f, f0, *a0)));
+      return crane_any_cast<T1>(f0(*a0, nest_rect<T1>(f, f0, *a0)));
     }
   }
 
@@ -67,7 +67,7 @@ struct NonUniformPairNest {
       return crane_any_cast<T1>(f(a0));
     } else {
       const auto &[a0] = std::get<typename nest::NS>(n.v());
-      return crane_any_cast<T1>(f0(*a0, nest_rec(f, f0, *a0)));
+      return crane_any_cast<T1>(f0(*a0, nest_rec<T1>(f, f0, *a0)));
     }
   }
 

@@ -12,14 +12,12 @@
 /// The recursive calls of a type-indexed family's recursor.
 ///
 /// expr_rect's C++ template spells its motive T1 only in its result
-/// type, so no argument deduces it, yet its recursive calls write no
-/// template arguments.  The header compiles until the recursor is
-/// instantiated, and then no call matches.  Under Set Crane Loopify the
-/// calls Loopify leaves in the machine (those under a coercion, see
-/// wip/loopify_coerced_recursive_call) are written the same way.
-///
-/// Expected: the C++ test fails to compile (no matching function for call
-/// to expr_rect).  When fixed: prints ok.
+/// type, so no argument deduces it.  Its recursive calls wrote no template
+/// arguments, leaving every one to deduction from the recursive argument,
+/// as for a nested inductive, whose self-calls are at another
+/// instantiation; but expr's C++ type takes no index, so the header
+/// compiled until the recursor was instantiated, and then no call matched.
+/// The calls now write the motive.
 struct RecursorSelfCallNoMotive {
   struct expr {
     // TYPES
@@ -116,19 +114,22 @@ struct RecursorSelfCallNoMotive {
       return f0(a0);
     } else if (std::holds_alternative<typename expr::SuccE>(e.v())) {
       const auto &[a0] = std::get<typename expr::SuccE>(e.v());
-      return f1(*a0, expr_rect(f, f0, f1, f2, f3, f4, *a0));
+      return f1(*a0, expr_rect<T1>(f, f0, f1, f2, f3, f4, *a0));
     } else if (std::holds_alternative<typename expr::Ite>(e.v())) {
       const auto &[a, a1, a2] = std::get<typename expr::Ite>(e.v());
-      return crane_any_cast<T1>(f2(*a, expr_rect(f, f0, f1, f2, f3, f4, *a),
-                                   *a1, expr_rect(f, f0, f1, f2, f3, f4, *a1),
-                                   *a2, expr_rect(f, f0, f1, f2, f3, f4, *a2)));
+      return crane_any_cast<T1>(
+          f2(*a, expr_rect<T1>(f, f0, f1, f2, f3, f4, *a), *a1,
+             expr_rect<T1>(f, f0, f1, f2, f3, f4, *a1), *a2,
+             expr_rect<T1>(f, f0, f1, f2, f3, f4, *a2)));
     } else if (std::holds_alternative<typename expr::PairE>(e.v())) {
       const auto &[a, b] = std::get<typename expr::PairE>(e.v());
-      return crane_any_cast<T1>(f3(*a, expr_rect(f, f0, f1, f2, f3, f4, *a), *b,
-                                   expr_rect(f, f0, f1, f2, f3, f4, *b)));
+      return crane_any_cast<T1>(f3(*a, expr_rect<T1>(f, f0, f1, f2, f3, f4, *a),
+                                   *b,
+                                   expr_rect<T1>(f, f0, f1, f2, f3, f4, *b)));
     } else {
       const auto &[a] = std::get<typename expr::FstE>(e.v());
-      return crane_any_cast<T1>(f4(*a, expr_rect(f, f0, f1, f2, f3, f4, *a)));
+      return crane_any_cast<T1>(
+          f4(*a, expr_rect<T1>(f, f0, f1, f2, f3, f4, *a)));
     }
   }
 
@@ -146,19 +147,22 @@ struct RecursorSelfCallNoMotive {
       return f0(a0);
     } else if (std::holds_alternative<typename expr::SuccE>(e.v())) {
       const auto &[a0] = std::get<typename expr::SuccE>(e.v());
-      return f1(*a0, expr_rec(f, f0, f1, f2, f3, f4, *a0));
+      return f1(*a0, expr_rec<T1>(f, f0, f1, f2, f3, f4, *a0));
     } else if (std::holds_alternative<typename expr::Ite>(e.v())) {
       const auto &[a, a1, a2] = std::get<typename expr::Ite>(e.v());
-      return crane_any_cast<T1>(f2(*a, expr_rec(f, f0, f1, f2, f3, f4, *a), *a1,
-                                   expr_rec(f, f0, f1, f2, f3, f4, *a1), *a2,
-                                   expr_rec(f, f0, f1, f2, f3, f4, *a2)));
+      return crane_any_cast<T1>(
+          f2(*a, expr_rec<T1>(f, f0, f1, f2, f3, f4, *a), *a1,
+             expr_rec<T1>(f, f0, f1, f2, f3, f4, *a1), *a2,
+             expr_rec<T1>(f, f0, f1, f2, f3, f4, *a2)));
     } else if (std::holds_alternative<typename expr::PairE>(e.v())) {
       const auto &[a, b] = std::get<typename expr::PairE>(e.v());
-      return crane_any_cast<T1>(f3(*a, expr_rec(f, f0, f1, f2, f3, f4, *a), *b,
-                                   expr_rec(f, f0, f1, f2, f3, f4, *b)));
+      return crane_any_cast<T1>(f3(*a, expr_rec<T1>(f, f0, f1, f2, f3, f4, *a),
+                                   *b,
+                                   expr_rec<T1>(f, f0, f1, f2, f3, f4, *b)));
     } else {
       const auto &[a] = std::get<typename expr::FstE>(e.v());
-      return crane_any_cast<T1>(f4(*a, expr_rec(f, f0, f1, f2, f3, f4, *a)));
+      return crane_any_cast<T1>(
+          f4(*a, expr_rec<T1>(f, f0, f1, f2, f3, f4, *a)));
     }
   }
 
