@@ -490,6 +490,11 @@ type render_ctx = {
   (* The names of the declaration of the tree being written, resolved before
      it is printed; none where what is written is no such declaration. *)
   rc_names : Cpp_resolution.table option;
+  (* The scopes whose names are visible where the printer is, innermost
+     first: the planned visibility of what is being written, with a layer
+     for each scope printing has entered that declares names; none where
+     what is written is not spelled as the tree spells a declaration. *)
+  rc_visibility : Common.visibility option;
 }
 
 (** The context at the start of the file [file]: file scope, outside every
@@ -504,6 +509,7 @@ let file_start rc_file =
     rc_module = None;
     rc_frame = [];
     rc_names = None;
+    rc_visibility = None;
   }
 
 (** The context at file scope in the file [c] is written in. *)
@@ -512,6 +518,20 @@ let at_file_scope c = file_start c.rc_file
 (** Global render context state.  Outside every file a planning pass reads
     as the header would be written. *)
 let render_ctx = owned_ref (file_start Common.Intf)
+
+(* How many scopes printing has entered since a position was installed:
+   printing threads the position through them, so the installed one is not
+   where the printer is inside any. *)
+let entered_since_installed = owned_ref 0
+
+let not_threaded what =
+  if Probe.checking () && !entered_since_installed > 0 then
+    Probe.violation "threaded positions"
+      Pp.(str "the installed position is " ++ str what ++ str " inside a scope printing entered, which threads it")
+
+let current_render_ctx () =
+  not_threaded "read";
+  !render_ctx
 
 (** The functor bodies whose module types are file-scope concepts over the
     functor's parameters as well as [M]: the body's path, the functor's
@@ -534,20 +554,43 @@ let held_concept_equal a b =
   | HCclass x, HCclass y -> globref_equal x y
   | _ -> false
 
-(** The concepts the struct now being rendered has held back: their
-    declarations come after it, so neither a [requires] clause nor a
-    [static_assert] inside it may name them yet. *)
-let held_back_concepts : held_concept list ref =
-  owned_list ~census:false "held_back_concepts"
-
 (** Whether a concept is one the current frame is holding back. *)
 let is_held_back_in held_back c =
   List.exists (held_concept_equal c) held_back
 
 (** Whether the struct being rendered holds concept [c] back, so that a
     constraint written inside it cannot name [c] yet. *)
+type concept_placement = Ahead_of_struct | After_struct | At_file_scope
+
+type concept_plan = {
+  placements : (held_concept * concept_placement) list;
+  held_back : held_concept list;
+}
+
+let concept_plans : concept_plan Names.MPmap.t ref = State.cell State.Unit Names.MPmap.empty
+
+let plan_module_concepts mp plan = concept_plans := Names.MPmap.add mp plan !concept_plans
+
+let concept_plan mp =
+  match Names.MPmap.find_opt mp !concept_plans with
+  | Some plan -> plan
+  | None ->
+    CErrors.anomaly
+      Pp.(str "Crane: the module " ++ str (Names.ModPath.to_string mp) ++ str " has no planned concepts.")
+
+let planned_held_back ~file mp =
+  match (file : Common.file) with
+  | Intf -> (
+    match Scope_plan.frames mp with
+    | Some frames -> List.concat_map (fun m -> (concept_plan m).held_back) frames
+    | None ->
+      CErrors.anomaly
+        Pp.(str "Crane: the body of the module " ++ str (Names.ModPath.to_string mp) ++ str " has no planned frames.") )
+  | Impl -> []
+
 let concept_held_back ctx c =
-  ctx.rc_in_struct && is_held_back_in !held_back_concepts c
+  ctx.rc_in_struct
+  && match ctx.rc_module with Some mp -> is_held_back_in (planned_held_back ~file:ctx.rc_file mp) c | None -> false
 
 let class_concept_held_back ctx r = concept_held_back ctx (HCclass r)
 
@@ -560,13 +603,25 @@ let class_concept_held_back ctx r = concept_held_back ctx (HCclass r)
     renders the rest of the file as though it were still inside the struct that
     has just closed. *)
 let with_render_ctx (upd : render_ctx -> render_ctx) (f : unit -> 'a) : 'a =
-  let saved = !render_ctx in
+  not_threaded "derived from";
+  let saved = !render_ctx and entered = !entered_since_installed in
   render_ctx := upd saved;
-  Fun.protect ~finally:(fun () -> render_ctx := saved) f
+  entered_since_installed := 0;
+  Fun.protect
+    ~finally:(fun () ->
+      render_ctx := saved;
+      entered_since_installed := entered )
+    f
+
+let entering_scope f =
+  let entered = !entered_since_installed in
+  entered_since_installed := entered + 1;
+  Fun.protect ~finally:(fun () -> entered_since_installed := entered) f
 
 let writing_file file f = with_render_ctx (fun c -> {c with rc_file = file}) f
 
-let writing_element_of mp f = with_render_ctx (fun c -> {c with rc_module = Some mp}) f
+let writing_element_of mp f =
+  with_render_ctx (fun c -> {c with rc_module = Some mp; rc_visibility = Scope_plan.visibility mp}) f
 
 (** Track definitions rendered as function accessors (Meyers singletons) instead
     of static inline variables, due to template static init ordering. Stores
@@ -670,14 +725,11 @@ let module_frame_cells =
     Saver eponymous_type_ref;
     Saver eponymous_record;
     Saver method_candidates;
-    Saver held_back_concepts;
   ]
 
 (** [with_module_frame f] renders [f] as a module frame: it starts with no
     eponymous type, no eponymous record and no method candidates of its own,
-    and leaves the enclosing frame's untouched.  [held_back_concepts] carries
-    over, since a concept the enclosing struct is holding back is still
-    unusable inside a nested one. *)
+    and leaves the enclosing frame's untouched. *)
 let with_module_frame f =
   with_saved module_frame_cells (fun () ->
       eponymous_type_ref := None;

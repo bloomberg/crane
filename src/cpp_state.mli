@@ -125,7 +125,7 @@ val sig_preamble : 'a -> string option -> Names.ModPath.t list -> 'b -> Pp.t
 (** {2 Render context} *)
 
 (** Where in the output the pretty-printer currently is. Immutable: the
-    mutability lives in the {!render_ctx} ref, so that save/restore around a
+    mutability lives in one installed position ({!current_render_ctx}), so that save/restore around a
     sub-render cannot forget a field. *)
 type render_ctx = {
   rc_file : Common.file;  (** The file being written. *)
@@ -147,6 +147,13 @@ type render_ctx = {
           where what is written is no such declaration -- planning, the
           driver's own text, a synthesised template's body -- whose names
           are resolved where they are written. *)
+  rc_visibility : Common.visibility option;
+      (** The scopes whose names are visible where the printer is, innermost
+          first: the planned visibility of what is being written
+          ({!Scope_plan.visibility}), with a layer for each scope printing
+          has entered that declares names ({!Cpp_names.next}); none where
+          what is written is not spelled as the tree spells a declaration --
+          planning, the driver's own text. *)
 }
 
 (** The context at the start of the file [file]: file scope, outside every
@@ -156,9 +163,11 @@ val file_start : Common.file -> render_ctx
 (** The context at file scope in the file [c] is written in. *)
 val at_file_scope : render_ctx -> render_ctx
 
-(** The single global render context, reset by [reset_cpp_state]. Change it
-    only through [with_render_ctx]. *)
-val render_ctx : render_ctx ref
+(** The position installed, reset by [reset_cpp_state]: where planning, and a
+    boundary of the printer, reads it.  Printing threads the position through
+    the scopes it enters ({!entering_scope}), so under [CRANE_CHECK_IR] a
+    read inside one is a violation. *)
+val current_render_ctx : unit -> render_ctx
 
 
 (** A concept a frame is holding back until after the struct it was written
@@ -175,14 +184,43 @@ val held_concept_equal : held_concept -> held_concept -> bool
     label, and its parameters. *)
 val functor_concept_scopes : (Names.ModPath.t * (Names.Label.t * Names.ModPath.t list)) list ref
 
-(** The concepts the struct now being rendered has held back. *)
-val held_back_concepts : held_concept list ref
-
 (** Whether a concept is one the current frame is holding back. *)
 val is_held_back_in : held_concept list -> held_concept -> bool
 
+(** Where the header declares one of a module's concepts.  No concept can
+    be declared inside a struct, so a module nested in one declares its
+    concepts at file scope.  Otherwise a concept goes ahead of the module's
+    struct, whose body may constrain a functor with it, unless it names one
+    of the struct's members, when it follows the struct. *)
+type concept_placement = Ahead_of_struct | After_struct | At_file_scope
+
+(** The concepts of a module's classes and module types, planned ahead of
+    the files: where each is declared, and which the struct's body treats as
+    not declared yet ({!concept_held_back}). *)
+type concept_plan = {
+  placements : (held_concept * concept_placement) list;
+      (** The class concepts, then the module-type concepts, in declaration
+          order. *)
+  held_back : held_concept list;
+}
+
+(** [plan_module_concepts mp plan] plans [plan] for the module [mp]. *)
+val plan_module_concepts : Names.ModPath.t -> concept_plan -> unit
+
+(** The concepts planned for the module [mp]; an anomaly if none were. *)
+val concept_plan : Names.ModPath.t -> concept_plan
+
+(** [planned_held_back ~file mp] is what the concepts held back around the
+    body of the module [mp] are in [file], innermost first: in the header,
+    those each module frame around it ({!Scope_plan.frames}) holds back,
+    as planned ({!concept_plan}); in the implementation, which declares no
+    concept, none. *)
+val planned_held_back : file:Common.file -> Names.ModPath.t -> held_concept list
+
 (** Whether the struct the position is in holds concept [c] back: declared
-    after it, so a constraint inside it cannot name [c] yet. *)
+    after it, so a constraint inside it cannot name [c] yet.  What is held
+    back is planned around the module the position writes an element of, in
+    the file it is written in ({!planned_held_back}). *)
 val concept_held_back : render_ctx -> held_concept -> bool
 
 (** Whether the concept of type class [r] is held back by the struct the position is
@@ -195,14 +233,20 @@ val class_concept_held_back : render_ctx -> Names.GlobRef.t -> bool
 (** [with_render_ctx upd f] renders [f] in the context [upd] derives from the
     current one, restoring the enclosing context on the way out however [f]
     leaves -- returning or raising. The only supported way to change the
-    context. *)
+    context.  Deriving it inside a scope printing entered is a violation, as
+    reading it is ({!current_render_ctx}). *)
 val with_render_ctx : (render_ctx -> render_ctx) -> (unit -> 'a) -> 'a
+
+(** [entering_scope f] runs [f] inside a scope printing entered, which
+    installs no position: printing hands the position to what it prints
+    there. *)
+val entering_scope : (unit -> 'a) -> 'a
 
 (** [writing_file file f] renders [f] as part of the file [file]. *)
 val writing_file : Common.file -> (unit -> 'a) -> 'a
 
 (** [writing_element_of mp f] runs [f] writing an element of the module
-    [mp] ({!render_ctx}). *)
+    [mp] ({!current_render_ctx}). *)
 val writing_element_of : Names.ModPath.t -> (unit -> 'a) -> 'a
 
 (** {2 Template static accessors} *)
@@ -257,8 +301,7 @@ val eponymous_record :
 (** [with_module_frame f] renders [f] as a module frame: it starts with no
     eponymous type, no eponymous record and no method candidates of its own, and
     leaves the enclosing frame's untouched, however [f] leaves -- returning or
-    raising.  [held_back_concepts] carries over, since a concept the enclosing
-    struct is holding back is still unusable inside a nested one. *)
+    raising. *)
 val with_module_frame : (unit -> 'a) -> 'a
 
 (** [setting cell v f] runs [f] with [cell] holding [v] and puts the enclosing

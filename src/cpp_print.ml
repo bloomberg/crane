@@ -556,12 +556,15 @@ let ctor_alias_home ctx body =
 
 (** Where the template abbreviating [body], spelled at [ctx], is declared:
     in the struct of its home ({!ctor_alias_home}), or at namespace scope
-    beneath the unit's files as the visibility there sees them -- a module
-    body's, or, spelled in another template's body, that template's. *)
+    beneath the unit's files as what is visible at [ctx] sees them -- a
+    module body's, or, spelled in another template's body, that
+    template's. *)
 let ctor_alias_declared ctx body : Cpp_ast.declared_in =
   match ctor_alias_home ctx body with
   | Some home -> In_struct_of home
-  | None -> At_namespace_scope (List.rev (List.filter Table.is_modfile (Common.visible_mps (Common.current_visibility ()))))
+  | None ->
+    let visible = visibility_at ctx (str "a template is declared at namespace scope") in
+    At_namespace_scope (List.rev (List.filter Table.is_modfile (Common.visible_mps visible)))
 
 (** The visibility a template is declared, and so its body written, in: the
     body of its home module, as planned, or outside every module body. *)
@@ -581,7 +584,7 @@ let ctor_alias_visibility : Cpp_ast.declared_in -> _ = function
     written out of line and qualify what they name by the struct they are
     members of. *)
 let ctor_alias_render_ctx ctx (declared : Cpp_ast.declared_in) =
-  let start = file_start ctx.rc_file in
+  let start = {(file_start ctx.rc_file) with rc_visibility = Some (ctor_alias_visibility declared)} in
   match (declared, ctx.rc_file) with
   | At_namespace_scope _, _ -> start
   | In_struct_of home, Common.Intf ->
@@ -943,12 +946,6 @@ let head_names_into_a_struct h =
 let external_type_name id_s =
   if String.equal id_s "std::vector" && (sn ()).ns <> "std" then "bsl::vector" else id_s
 
-(** Under [CRANE_CHECK_IR], that the position a printer is given is the one
-    installed where it is: printers not given it yet read it there. *)
-let check_position ctx =
-  if Probe.checking () && not (ctx == !render_ctx || ctx = !render_ctx) then
-    Probe.violation "threaded positions" (str "a printer is given another position than the one it is at")
-
 (** Whether the type [t] writes a qualifier into a struct or a template
     parameter, asked of the type rather than of its rendering: each name is
     the one {!pp_cpp_type} writes, from the same heads, at the position
@@ -997,9 +994,10 @@ let is_static_member_declaration (d : cpp_decl) =
     and parameters, and in its template head -- a concept constraining a
     parameter, a type a parameter defaults to or a callable one is invoked
     with.  [None] for anything else, a declaration under a [requires]
-    clause, or where only its rendering can tell. *)
+    clause, or where only its rendering can tell.  Each name is asked at
+    the frame the printer writes it at ({!pp_cpp_decl}). *)
 let rec declaration_names_into_a_struct ctx (d : cpp_decl) =
-  let any_type ts =
+  let any_type ctx ts =
     List.fold_left
       (fun acc t -> match acc with Some false -> type_names_into_a_struct ctx t | _ -> acc)
       (Some false) ts
@@ -1007,9 +1005,10 @@ let rec declaration_names_into_a_struct ctx (d : cpp_decl) =
   let names_through n = head_names_into_a_struct (unqualified_head n) in
   match d with
   | Dfun {df_path = {dp_outer; dp_inner}; df_ret; df_shape = Ddecl params; _} ->
+    let ctx = next (Function {owner = fst dp_outer; defines = false}) ctx in
     let path = dp_outer :: dp_inner in
     if List.exists (fun (n, _) -> names_through (global_name ctx Type n)) path then Some true
-    else any_type ((df_ret :: List.map snd params) @ List.concat_map snd path)
+    else any_type ctx ((df_ret :: List.map snd params) @ List.concat_map snd path)
   | Dtemplate (tparams, None, inner) ->
     let concept_names_through c = (not (class_concept_held_back ctx c)) && names_through (concept_name ctx c) in
     let param_types (tt, _) =
@@ -1023,7 +1022,7 @@ let rec declaration_names_into_a_struct ctx (d : cpp_decl) =
     if List.exists (function TTconcept (c, _), _ -> concept_names_through c | _ -> false) tparams
     then Some true
     else (
-      match any_type (List.concat_map param_types tparams) with
+      match any_type ctx (List.concat_map param_types tparams) with
       | Some false -> declaration_names_into_a_struct ctx inner
       | answer -> answer )
   | _ -> None
@@ -1037,7 +1036,6 @@ let rec declaration_names_into_a_struct ctx (d : cpp_decl) =
     claimed, so it is rendered as a member of the enclosing struct: the bare
     name inside a struct body, [StructName::id] outside one. *)
 let rec pp_cpp_type ?(lead = true) ctx par vl t =
-  check_position ctx;
   let rec pp_rec ?(lead = true) par t =
     (* The [typename] a dependent qualifier needs, unless the caller is placing
        this type somewhere the keyword would be wrong: as the base of a longer
@@ -1322,8 +1320,8 @@ and ctor_alias_at ctx vl t =
 (** The template synthesised for [probe], a type constructor applied to the
     sentinel, if its rendering is not a head applied to the sentinel.
 
-    The body is rendered where the template is declared ({!ctor_alias_visibility}),
-    because that is where a [using] is read; every name it writes
+    The body is rendered where the template is declared ({!ctor_alias_render_ctx}),
+    what is visible there included, because that is where a [using] is read; every name it writes
     has to mean there what it means at the use. *)
 and ctor_alias_of_probe ctx vl ~base probe =
   (* Every node of a type, in the order written, a type constructor's
@@ -1379,12 +1377,7 @@ and ctor_alias_of_probe ctx vl ~base probe =
   in
   let declared_in = ctor_alias_declared ctx probe in
   let render t =
-    let declared = ctor_alias_render_ctx ctx declared_in in
-    with_render_ctx
-      (fun _ -> declared)
-      (fun () ->
-        Common.with_visibility (ctor_alias_visibility declared_in) (fun () ->
-            Pp.string_of_ppcmds (pp_cpp_type declared false vl t) ) )
+    Pp.string_of_ppcmds (pp_cpp_type (ctor_alias_render_ctx ctx declared_in) false vl t)
   in
   let rendered = lazy (render probe) in
   let head_alone () =
@@ -1486,7 +1479,6 @@ and pp_member_name ctx method_name = function
     ++ str ">"
 
 and pp_cpp_expr ctx env args t =
-  check_position ctx;
   let apply st = pp_apply_cpp st args in
   (* Generate an IIFE wrapper for a block template (%result) in expression
      position.  [ref_name] is for debug labels, [custom] is the raw template
@@ -2240,7 +2232,6 @@ and pp_object ctx env args e =
     @param env   name environment (see {!pp_cpp_expr})
     @param args  accumulated argument list forwarded to sub-expression printers *)
 and pp_cpp_stmt ctx env args stmt =
-  check_position ctx;
   match stmt with
   | Sreturn None -> str "return;"
   | Sreturn (Some (CPPabort (msg, _))) ->
@@ -3049,20 +3040,21 @@ let ctor_aliases_found ~file visit =
   writing_file file @@ fun () ->
   setting collecting_ctor_aliases true @@ fun () ->
   setting ctor_aliases_spelled [] @@ fun () ->
+  let ctx = current_render_ctx () in
   visit (fun ~vl ~owner t ->
       match t with
       | Ttyctor _ ->
-        let spell () = ignore (pp_cpp_type !render_ctx false vl t) in
-        ( match owner with Some r -> enter (Inductive_struct r) spell | None -> spell () )
+        let spell ctx = ignore (pp_cpp_type ctx false vl t) in
+        ( match owner with Some r -> enter_from ctx (Inductive_struct r) spell | None -> spell ctx )
       | _ -> () );
   !ctor_aliases_spelled
 
 let ctor_aliases_written ~file (d : Cpp_erasure.settled) =
-  { read_written = (module_written !render_ctx, Written_declaration (d :> cpp_decl));
+  { read_written = (module_written (current_render_ctx ()), Written_declaration (d :> cpp_decl));
     read_aliases = ctor_aliases_found ~file (fun f -> Cpp_demands.tyctors_of_decl f (d :> cpp_decl)) }
 
 let ctor_aliases_of_fields ~file ~vl r types =
-  { read_written = (module_written !render_ctx, Written_fields r);
+  { read_written = (module_written (current_render_ctx ()), Written_fields r);
     read_aliases = ctor_aliases_found ~file (fun f -> List.iter (Cpp_demands.tyctors_of_type f ~vl) types) }
 
 (** The synthesised templates [w], written in the module [module_], writes
@@ -3071,7 +3063,7 @@ let planned_aliases ~module_ w =
   match !ctor_alias_plan with
   | None -> []
   | Some plan -> (
-    let file = (!render_ctx).rc_file in
+    let file = (current_render_ctx ()).rc_file in
     let writes = match file with Common.Intf -> plan.intf_writes | Common.Impl -> plan.impl_writes in
     match Written.find_opt writes (module_, w) with
     | Some aliases -> aliases
@@ -3094,7 +3086,7 @@ let ctor_aliases_planned (d : Cpp_erasure.settled) =
   match !ctor_alias_plan with
   | None -> []
   | Some _ ->
-    let ctx = !render_ctx in
+    let ctx = current_render_ctx () in
     let aliases = planned_ctor_aliases ~module_:(module_written ctx) d in
     let file = ctx.rc_file in
     if Probe.checking () && (ctor_aliases_written ~file d).read_aliases <> aliases then
@@ -3643,7 +3635,7 @@ let constrained ctx : Cpp_ast.defined -> bool = function
     defines them: none inside a struct, where a member is not nameable before
     its enclosing struct anyway. *)
 let forward_declarations ~module_ env (d : Cpp_erasure.settled) =
-  let ctx = !render_ctx in
+  let ctx = current_render_ctx () in
   if ctx.rc_in_struct then []
   else
     List.map
@@ -3664,7 +3656,7 @@ let pp_forward_declaration ctx env : Cpp_ast.defined -> _ = function
     template head and an anonymous namespace, and a struct's -- but not
     those of what a wrapper struct holds, which are its members. *)
 let file_scope_types (d : Cpp_erasure.settled) =
-  let ctx = !render_ctx in
+  let ctx = current_render_ctx () in
   let rec go (d : Cpp_erasure.settled) =
     (match decl_type_name (d :> cpp_decl) with Some name -> [name] | None -> [])
     @
@@ -3723,7 +3715,6 @@ let rec pp_initialiser ctx env ty e =
                 declaration of the tree holding it is written say
     @param env  name environment for sub-expression and sub-type printers *)
 and pp_cpp_decl ctx env (settled : Cpp_erasure.settled) =
-  check_position ctx;
   note_file_scope_type ctx (settled :> cpp_decl);
   match Cpp_erasure.view settled with
   | Template (temps, cstr, inner) -> pp_template_decl ctx env temps cstr inner
@@ -4148,7 +4139,7 @@ let constrained_structs : GlobRef.t list ref = State.cell State.Unit []
 
 (** [d] printed in [env] where the printer is: a declaration written
     outside every tree. *)
-let read_cpp_decl env d = pp_cpp_decl !render_ctx env d
+let read_cpp_decl env d = pp_cpp_decl (current_render_ctx ()) env d
 
 (** The wrapper structs [d] writes that hold a wrapper module's
     declarations: those [homed] names, each with the module. *)
@@ -4160,22 +4151,25 @@ let absorbs ~homed d = absorbed_by ~homed d <> []
     module's declarations a {!Cpp_ast.Wrapper_struct}, the wrapper's own
     members its fields, each printed where the tree puts it
     ({!Cpp_ast.Absorbed}). *)
-let rec absorbing_decl ~homed env (d : Cpp_erasure.settled) =
-  let ctx = !render_ctx in
+let rec absorbing_at ctx ~homed env (d : Cpp_erasure.settled) =
   note_file_scope_type ctx (d :> cpp_decl);
-  let written d = if absorbs ~homed d then absorbing_decl ~homed env d else Cpp_ast.absorbed env d in
+  let written ctx d = if absorbs ~homed d then absorbing_at ctx ~homed env d else Cpp_ast.absorbed env d in
   match Cpp_erasure.view d with
-  | Template (temps, cstr, inner) -> Cpp_ast.seq [Cpp_ast.text (template_head ctx env temps cstr); written inner]
+  | Template (temps, cstr, inner) -> Cpp_ast.seq [Cpp_ast.text (template_head ctx env temps cstr); written ctx inner]
   | Namespace (None, decls) ->
     Cpp_ast.seq
-      [Cpp_ast.text (str "namespace {" ++ fnl ()); Cpp_ast.concat fnl (List.map written decls); Cpp_ast.text (fnl () ++ str "};")]
+      [ Cpp_ast.text (str "namespace {" ++ fnl ());
+        Cpp_ast.concat fnl (List.map (written ctx) decls);
+        Cpp_ast.text (fnl () ++ str "};") ]
   | Namespace (Some id, members) -> (
     let name = nspace_wrapper_name id in
-    let ds = enter In_struct (fun () -> Cpp_ast.concat fnl (List.map written members)) in
+    let ds = enter_from ctx In_struct (fun ctx -> Cpp_ast.concat fnl (List.map (written ctx) members)) in
     match List.assoc_opt name homed with
     | Some module_ -> Cpp_ast.wrapper_struct ~name ~module_ ~fields:Cpp_ast.(seq [ds; text (fnl ())])
     | None -> Cpp_ast.(seq [text (str "struct " ++ str name ++ str " {" ++ fnl ()); ds; text (fnl () ++ str "};")]) )
-  | Decl _ -> Cpp_ast.text (read_cpp_decl env d)
+  | Decl _ -> Cpp_ast.text (pp_cpp_decl ctx env d)
+
+let absorbing_decl ~homed env d = absorbing_at (current_render_ctx ()) ~homed env d
 
 (** Whether [d] is an assertion the struct being written holds back
     ({!held_back_assertions}), which it writes nothing for. *)
@@ -4212,7 +4206,7 @@ let needs_of ~templates (settled : Cpp_erasure.settled) =
 
 let fields_needs ~module_ ~vl r types =
   let aliases = planned_aliases ~module_ (Written_fields r) in
-  let file = (!render_ctx).rc_file in
+  let file = (current_render_ctx ()).rc_file in
   if Probe.checking () && Option.has_some !ctor_alias_plan && (ctor_aliases_of_fields ~file ~vl r types).read_aliases <> aliases
   then
     Probe.violation "constructor aliases"
@@ -4338,7 +4332,7 @@ let printed_decl ctx env settled =
 (** [settled], printed where it is made, with what placing the declarations
     it needs reads ({!needs_of}). *)
 let write_decl env settled =
-  let text, needs = printed_decl !render_ctx env settled in
+  let text, needs = printed_decl (current_render_ctx ()) env settled in
   Cpp_ast.decl ~needs text
 
 (** [settled], which {!absorbs}, written where it is made ({!absorbing_decl}),
@@ -4366,20 +4360,20 @@ let unprinted ~module_ env settled = Cpp_ast.unprinted ~needs:(planned_needs ~mo
 let unprinted_fields ~module_ ~vl r fields =
   Cpp_ast.fields ~needs:(fields_needs ~module_ ~vl r (List.map snd fields)) ~record:r ~vars:vl fields
 
-let resolved key (resolution : Cpp_ast.resolution) =
-  match resolution with Resolved n -> checked key ~live:(fun () -> live_name key) n | Unresolved -> unresolved key
+let resolved ctx key (resolution : Cpp_ast.resolution) =
+  match resolution with Resolved n -> checked key ~live:(fun () -> live_name ctx key) n | Unresolved -> unresolved key
 
-let resolved_module (m : Cpp_ast.module_ref) = resolved (Module m.path) m.name
-let resolved_class_concept (c : Cpp_ast.global_ref) = resolved (Class_concept c.global) c.name
-let resolved_type_name (g : Cpp_ast.global_ref) = resolved (Global (Type, g.global)) g.name
-let resolved_concept (c : Cpp_ast.concept_ref) = resolved (Modtype_concept c.module_type) c.name
-let pp_declared_module (m : Cpp_ast.declared_module) = Cpp_name.pp (resolved (Module_declared m.declares) m.name)
+let resolved_module ctx (m : Cpp_ast.module_ref) = resolved ctx (Module m.path) m.name
+let resolved_class_concept ctx (c : Cpp_ast.global_ref) = resolved ctx (Class_concept c.global) c.name
+let resolved_type_name ctx (g : Cpp_ast.global_ref) = resolved ctx (Global (Type, g.global)) g.name
+let resolved_concept ctx (c : Cpp_ast.concept_ref) = resolved ctx (Modtype_concept c.module_type) c.name
+let pp_declared_module ctx (m : Cpp_ast.declared_module) = Cpp_name.pp (resolved ctx (Module_declared m.declares) m.name)
 
-let name_in names frame key = name_from names frame key ~live:(fun () -> live_name key)
+let name_in ctx names frame key = name_from names frame key ~live:(fun () -> live_name ctx key)
 
 (* A module named in a module expression, and its resolution. *)
-let pp_module_name (m : Cpp_ast.module_ref) =
-  let r = resolved_module m in
+let pp_module_name ctx (m : Cpp_ast.module_ref) =
+  let r = resolved_module ctx m in
   (str (wrapper_qualify_modname m.path (resolved_string r)), r)
 
 (* Inside a class template a qualified module is a dependent name: an
@@ -4388,12 +4382,12 @@ let pp_module_name (m : Cpp_ast.module_ref) =
 let pp_application ctx {Cpp_ast.functor_; args} =
   let in_template = ctx.rc_in_template in
   let head =
-    match pp_module_name functor_ with
+    match pp_module_name ctx functor_ with
     | _, r when in_template && resolved_is_qualified r -> Cpp_name.pp ~template_keyword:true r
     | head, _ -> head
   in
   let arg m =
-    match pp_module_name m with
+    match pp_module_name ctx m with
     | a, r when in_template && resolved_is_qualified r -> str "typename " ++ a
     | a, _ -> a
   in
@@ -4403,29 +4397,25 @@ let pp_module_alias ctx name (target : Cpp_ast.module_expr) =
   let target =
     match target with
     | Module_named m ->
-      let r = resolved_module m in
+      let r = resolved_module ctx m in
       let named = str (resolved_string r) in
       if ctx.rc_in_template && resolved_is_qualified r then str "typename " ++ named else named
     | Applied a -> pp_application ctx a
   in
-  str "using " ++ pp_declared_module name ++ str " = " ++ target ++ str ";"
+  str "using " ++ pp_declared_module ctx name ++ str " = " ++ target ++ str ";"
 
-let pp_functor_alias name functor_ params =
+let pp_functor_alias ctx name functor_ params =
   Cpp_ast.pp_template_head (List.map fst params)
-  ++ str "using " ++ pp_declared_module name ++ str " = "
-  ++ str (resolved_string (resolved_module functor_))
-  ++ str "<" ++ prlist_with_sep (fun () -> str ", ") (fun (_, m) -> Cpp_name.pp (resolved_module m)) params ++ str ">;"
+  ++ str "using " ++ pp_declared_module ctx name ++ str " = "
+  ++ str (resolved_string (resolved_module ctx functor_))
+  ++ str "<" ++ prlist_with_sep (fun () -> str ", ") (fun (_, m) -> Cpp_name.pp (resolved_module ctx m)) params ++ str ">;"
 
 (* The base is written inside the functor's template; a base specifier
    names a type, so a dependent one takes no [typename]. *)
 let pp_derived_functor ctx template name (base : Cpp_ast.module_expr) =
   let inside = {ctx with rc_in_struct = true; rc_in_template = true} in
-  let base =
-    with_render_ctx
-      (fun _ -> inside)
-      (fun () -> match base with Module_named m -> fst (pp_module_name m) | Applied a -> pp_application inside a)
-  in
-  Cpp_ast.pp_template_head template ++ str "struct " ++ pp_declared_module name ++ str " : " ++ base ++ str " {};"
+  let base = match base with Module_named m -> fst (pp_module_name inside m) | Applied a -> pp_application inside a in
+  Cpp_ast.pp_template_head template ++ str "struct " ++ pp_declared_module ctx name ++ str " : " ++ base ++ str " {};"
 
 (* The declaration of a synthesised template, its body written where it is
    declared, which is where it is printed.  A holder's parameters are the
@@ -4453,16 +4443,19 @@ let pp_synthesised ctx (s : Cpp_ast.synthesised) =
     ++ str "> struct " ++ str s.name ++ str " { template <typename " ++ str ctor_alias_tvar ++ str "> using c = " ++ str body
     ++ str "; };"
 
+let resolved_names_into_a_struct names (settled : Cpp_erasure.settled) =
+  naming names @@ fun () -> declaration_names_into_a_struct (current_render_ctx ()) (settled :> cpp_decl)
+
 let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
   naming u.names @@ fun () ->
   (* Where the declaration is written, which is where the printer is. *)
-  let ctx = !render_ctx in
+  let ctx = current_render_ctx () in
   let text, needs =
     match u.declaration with
     | Modtype_concept {path; params; concept} -> (modtype_concept ctx ~names:u.names ~params path concept, u.needs)
     | Assertion a -> (assertion ctx a, u.needs)
     | Module_alias {name; target} -> (pp_module_alias ctx name target, u.needs)
-    | Functor_alias {name; functor_; params} -> (pp_functor_alias name functor_ params, u.needs)
+    | Functor_alias {name; functor_; params} -> (pp_functor_alias ctx name functor_ params, u.needs)
     | Derived_functor {template; name; base} -> (pp_derived_functor ctx template name base, u.needs)
     | Forward_declaration {env; defined} -> (pp_forward_declaration ctx env defined, u.needs)
     | Synthesised_template s -> (pp_synthesised ctx s, u.needs)
@@ -4477,8 +4470,8 @@ let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
       let tparams, name =
         match a with
         | Alias_of_type {target; definition; tparams} ->
-          (tparams, Cpp_name.pp (resolved (Definition (definition, target.global)) target.name))
-        | Alias_of_module m -> ([], Cpp_names.module_struct_name_of (resolved_module m))
+          (tparams, Cpp_name.pp (resolved ctx (Definition (definition, target.global)) target.name))
+        | Alias_of_module m -> ([], Cpp_names.module_struct_name_of (resolved_module ctx m))
       in
       let args =
         if tparams = [] then mt () else str "<" ++ prlist_with_sep (fun () -> str ", ") (fun (_, v) -> Id.print v) tparams ++ str ">"
@@ -4494,4 +4487,4 @@ let cut2 = Cpp_ast.cut2
 
 (* The type printer's entry for a type written outside every declaration of
    the tree: where the printer is. *)
-let pp_cpp_type ?lead par vl t = pp_cpp_type ?lead !render_ctx par vl t
+let pp_cpp_type ?lead par vl t = pp_cpp_type ?lead (current_render_ctx ()) par vl t

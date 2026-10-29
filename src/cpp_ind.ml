@@ -157,7 +157,7 @@ let ind_header_decls kn ind =
      collision struct holding it ahead of the concepts
      ({!Cpp.plan_concept_prerequisites}), which is planned. *)
   let at_namespace_scope =
-    (not (!render_ctx).rc_in_struct) || Array.for_all Module_plan.is_namespace_scope_ref names
+    (not (current_render_ctx ()).rc_in_struct) || Array.for_all Module_plan.is_namespace_scope_ref names
   in
   let cnames =
     Array.mapi
@@ -170,7 +170,7 @@ let ind_header_decls kn ind =
     (* Type classes become C++ concepts *)
     (* Skip if concepts have been hoisted or we're inside a struct *)
     header_decls
-      ( if (!render_ctx).rc_in_struct || (!render_ctx).rc_concepts_hoisted then []
+      ( if (let c = current_render_ctx () in c.rc_in_struct || c.rc_concepts_hoisted) then []
         else [(empty_env (), gen_typeclass_cpp names.(0) fields)] )
   | Record fields ->
     (* Check if this is an eponymous record being merged into module struct *)
@@ -362,7 +362,7 @@ let ind_header_decls kn ind =
               when globref_equal ind_ref epon_ref ->
               !method_candidates
             | _
-              when (not (!render_ctx).rc_in_struct) && not is_inside_submodule_decl
+              when (not (current_render_ctx ()).rc_in_struct) && not is_inside_submodule_decl
               ->
               (* For top-level inductives only, find methods from sibling
                  declarations *)
@@ -831,7 +831,7 @@ let planned_claim key =
 let header_claim key lifted =
   match Node_table.find_opt header_claims (Obj.repr key) with
   | Some planned ->
-    if Probe.checking () && (!render_ctx).rc_file = Intf then begin
+    if Probe.checking () && (current_render_ctx ()).rc_file = Intf then begin
       let claimed = List.filter (newly_placed header_took) lifted in
       if not (List.equal ( == ) planned claimed) then
         Probe.violation "header claims"
@@ -888,7 +888,7 @@ let generate ~module_ d =
   | Dind (kn, ind) -> Header_only (fun () -> ind_header_decls kn ind)
   (* A singleton class is a concept, declared where concepts are. *)
   | Dtype (r, _, _) when Table.singleton_class_method r <> None ->
-    if (!render_ctx).rc_in_struct || (!render_ctx).rc_concepts_hoisted then Nothing
+    if (let c = current_render_ctx () in c.rc_in_struct || c.rc_concepts_hoisted) then Nothing
     else
       Header_only
         (fun () ->
@@ -1024,7 +1024,7 @@ let function_views ~is_header ~lifted_inline funs =
   in
   let forward =
     is_header
-    && (not (!render_ctx).rc_in_struct)
+    && (not (current_render_ctx ()).rc_in_struct)
     && List.length (List.filter (fun (g, _) -> in_header g) paired) > 1
   in
   let declarations =
@@ -1185,9 +1185,9 @@ let with_planned_local_inductives mp k =
     CErrors.anomaly
       Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned local inductives.")
 
-type concept_placement = Ahead_of_struct | After_struct | At_file_scope
+type concept_placement = Cpp_state.concept_placement = Ahead_of_struct | After_struct | At_file_scope
 
-type concept_plan = {
+type concept_plan = Cpp_state.concept_plan = {
   placements : (held_concept * concept_placement) list;
   held_back : held_concept list;
 }
@@ -1209,70 +1209,56 @@ let equal_concept_plan a b =
   List.equal (fun (c, p) (c', p') -> held_concept_equal c c' && p = p') a.placements b.placements
   && List.equal held_concept_equal a.held_back b.held_back
 
-let concept_plans : concept_plan MPmap.t ref = State.cell State.Unit MPmap.empty
-
-let plan_module_concepts mp plan = concept_plans := MPmap.add mp plan !concept_plans
-
-let concept_plan mp =
-  match MPmap.find_opt mp !concept_plans with
-  | Some plan -> plan
-  | None ->
-    CErrors.anomaly
-      Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned concepts.")
-
 let concept_placement plan c =
   match List.find_opt (fun (c', _) -> held_concept_equal c c') plan.placements with
   | Some (_, p) -> p
   | None -> CErrors.anomaly Pp.(str "Crane: a concept was written whose placement was not planned.")
 
-let planned_held_back ~file mp =
-  match (file : Common.file) with
-  | Intf -> List.concat_map (fun m -> (concept_plan m).held_back) (Module_frame.frames_around mp)
-  | Impl -> []
+let planned_visibility mp =
+  match Scope_plan.visibility mp with
+  | Some v -> v
+  | None -> CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
 
 let in_spelling ~file spelling k =
   let k =
     match spelling with
     | Cpp_ast.Element_of mp | Member_of mp ->
-      fun () -> with_render_ctx (fun c -> {c with rc_module = Some mp; rc_frame = []; rc_names = None}) k
+      fun () ->
+        with_render_ctx
+          (fun c -> {c with rc_module = Some mp; rc_frame = []; rc_names = None; rc_visibility = Some (planned_visibility mp)})
+          k
     | Template_in _ -> k
   in
-  let in_body mp k =
-    match Scope_plan.visibility mp with
-    | Some v ->
-      with_visibility v (fun () ->
-          with_planned_local_inductives mp (fun () ->
-              setting held_back_concepts (planned_held_back ~file mp) k ) )
-    | None -> CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
-  in
   match ((file : Common.file), (spelling : Cpp_ast.spelling)) with
-  | Intf, Element_of mp -> in_body mp (fun () -> in_header_element_scope mp (fun ~in_struct:_ -> k ()))
+  | Intf, Element_of mp -> with_planned_local_inductives mp (fun () -> in_header_element_scope mp (fun ~in_struct:_ -> k ()))
   | Intf, Member_of mp ->
-    in_body mp (fun () ->
+    with_planned_local_inductives mp (fun () ->
         in_header_element_scope mp (fun ~in_struct:_ -> with_render_ctx (fun c -> {c with rc_in_struct = true}) k) )
   (* The implementation writes every element of a module at file scope:
      what it defines out of line is qualified by the scope its plan gives
      it ({!Scope_plan.of_declaration}). *)
-  | Impl, Element_of mp -> in_body mp (fun () -> with_render_ctx (fun _ -> file_start Impl) k)
+  | Impl, Element_of mp -> with_planned_local_inductives mp (fun () -> with_render_ctx (fun _ -> file_start Impl) k)
   | Impl, Member_of mp ->
     CErrors.anomaly
       Pp.(str "Crane: the implementation writes a member of the struct of " ++ str (ModPath.to_string mp)
           ++ str ", which it does not write.")
   (* A synthesised template is written where it is declared, whatever is
      around it. *)
-  | _, Template_in declared ->
-    with_render_ctx
-      (fun c -> Cpp_print.ctor_alias_render_ctx {c with rc_file = file} declared)
-      (fun () -> with_visibility (Cpp_print.ctor_alias_visibility declared) k)
+  | _, Template_in declared -> with_render_ctx (fun c -> Cpp_print.ctor_alias_render_ctx {c with rc_file = file} declared) k
 
 let resolver_at ~file spelling frame key =
   Common.without_noting_written_files (fun () ->
-      in_spelling ~file spelling (fun () -> Cpp_names.at_frame frame (fun () -> Cpp_names.live_name key)) )
+      in_spelling ~file spelling (fun () ->
+          Cpp_names.at_frame (current_render_ctx ()) frame (fun ctx -> Cpp_names.live_name ctx key) ) )
 
 let requested d = Cpp_print.unprinted_names d @ Cpp_concepts.names_requested d
 
 let resolve_tree ~file = Cpp_ast.resolve_tree ~requested ~resolve:(resolver_at ~file)
 let resolve ~file = Cpp_ast.resolve ~requested ~resolve:(resolver_at ~file)
+
+let names_into_a_struct_as_written ~file spelling settled =
+  let names = Cpp_resolution.resolve (resolver_at ~file spelling) (requested (Declaration {env = empty_env (); settled})) in
+  in_spelling ~file spelling (fun () -> Cpp_print.resolved_names_into_a_struct names settled)
 
 let write_unprinted ~file spelling u =
   in_spelling ~file spelling (fun () ->

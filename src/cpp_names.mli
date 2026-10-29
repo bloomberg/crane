@@ -258,27 +258,26 @@ val name_from :
 val next : Cpp_resolution.entered -> Cpp_state.render_ctx -> Cpp_state.render_ctx
 
 (** [enter_from c entered k] is [k] of the position after entering the
-    scope [entered] from [c] ({!next}), where that is the printer's position
-    too, and the names visible there visible. *)
+    scope [entered] from [c] ({!next}), what is visible there included.  It
+    installs nothing ({!Cpp_state.entering_scope}): [k] is handed it. *)
 val enter_from : Cpp_state.render_ctx -> Cpp_resolution.entered -> (Cpp_state.render_ctx -> 'a) -> 'a
 
 (** [entering_from c l k] is [k] of the position after entering each scope
     of [l] from [c], in order ({!enter_from}). *)
 val entering_from : Cpp_state.render_ctx -> Cpp_resolution.entered list -> (Cpp_state.render_ctx -> 'a) -> 'a
 
-(** [enter entered k] is [k ()] in the scope [entered], inside the one the
-    printer is in: how printing a declaration enters it, and how resolving
-    what the declaration names there does. *)
-val enter : Cpp_resolution.entered -> (unit -> 'a) -> 'a
+(** What is visible at the position [c] ({!Cpp_state.render_ctx.rc_visibility}),
+    where [what] happens; an anomaly where nothing planned it. *)
+val visibility_at : Cpp_state.render_ctx -> Pp.t -> Common.visibility
 
-(** [at_frame frame k] is [k ()] with each scope of [frame] entered,
-    outermost first ({!enter}). *)
-val at_frame : Cpp_resolution.frame -> (unit -> 'a) -> 'a
+(** [at_frame c frame k] is [k] of the position after entering each scope
+    of [frame] from [c], outermost first ({!enter_from}): how resolving what
+    a declaration names at a frame enters it. *)
+val at_frame : Cpp_state.render_ctx -> Cpp_resolution.frame -> (Cpp_state.render_ctx -> 'a) -> 'a
 
-(** [entering l k] is [k ()] with each scope of [l] entered, in order. *)
-val entering : Cpp_resolution.entered list -> (unit -> 'a) -> 'a
-
-(** [key] named where the printer is, from its visibility, whatever
-    declaration is being written: what {!Cpp_resolution.resolve} is
-    given, at each frame, and what a printed name is checked against. *)
-val live_name : Cpp_resolution.key -> Cpp_name.t
+(** [key] named at the position [c], from what is visible there
+    ({!Cpp_state.render_ctx.rc_visibility}), whatever declaration is being
+    written: what {!Cpp_resolution.resolve} is given, at each frame, and
+    what a printed name is checked against.  A position nothing planned the
+    visibility of is an anomaly. *)
+val live_name : Cpp_state.render_ctx -> Cpp_resolution.key -> Cpp_name.t

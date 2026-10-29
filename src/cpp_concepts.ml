@@ -131,7 +131,7 @@ let rec pp_concept_type ctx names frame (t : Modtype_concept.concept_type) : Pp.
   let pp_concept_type = pp_concept_type ctx names frame in
   match t with
   | Member {member; enum; arguments} ->
-    pp_member_type ~enum (name_in names frame (Global (Type, member))) member (List.map pp_concept_type arguments)
+    pp_member_type ~enum (name_in ctx names frame (Global (Type, member))) member (List.map pp_concept_type arguments)
   | Parameter ty -> str "typename " ++ pp_type ctx ty
   | Foreign (template, args) -> qualify_custom_template template args pp_concept_type
   | Global (r, []) -> pp_type ctx (Tglob (r, [], []))
@@ -172,7 +172,7 @@ let rec pp_concept_type ctx names frame (t : Modtype_concept.concept_type) : Pp.
     nullary accessor; which one a functor body uses is decided by
     per-reference resolution later, so both are accepted. *)
 let pp_requirement ctx names frame : Modtype_concept.requirement -> Pp.t =
-  let name key = name_in names frame key in
+  let name key = name_in ctx names frame key in
   let pp_concept_type = pp_concept_type ctx names frame in
   function
   | Inductive_member {member; enum; arity} ->
@@ -261,7 +261,7 @@ let pp_requirement ctx names frame : Modtype_concept.requirement -> Pp.t =
     the signature and the functor parameters visible in it visible, which
     is the frame [names] names them at. *)
 let rec pp_constraint ctx names frame : Modtype_concept.constraint_ -> Pp.t list * module_constraint = function
-  | Named kn -> ([], MCname (Cpp_name.pp (name_in names frame (Module kn))))
+  | Named kn -> ([], MCname (Cpp_name.pp (name_in ctx names frame (Module kn))))
   | Requirements {signature; parameters; items} ->
     let entered = Cpp_resolution.Signature {signature; parameters} in
     let frame = entered :: frame in
@@ -270,7 +270,7 @@ let rec pp_constraint ctx names frame : Modtype_concept.constraint_ -> Pp.t list
       | Requirement req -> (hoisted, pp_requirement ctx names frame req :: reqs)
       | Nested (path, c) ->
         let inner, nested = pp_constraint ctx names frame c in
-        let def = pp_concept_def (Cpp_name.pp (name_in names frame (Modtype_concept_declared path))) (concept_body_pp nested) in
+        let def = pp_concept_def (Cpp_name.pp (name_in ctx names frame (Modtype_concept_declared path))) (concept_body_pp nested) in
         (def :: List.rev_append inner hoisted, reqs)
     in
     let hoisted, reqs = List.fold_left item ([], []) items in
@@ -302,7 +302,7 @@ let pp_refinements ctx refinements =
     it constrains, and over [params], the parameters of a functor declaring
     it, which its requirements may mention. *)
 let pp_modtype_concept ctx ~names ~params path (c : Modtype_concept.t) =
-  let here key = Cpp_name.pp (name_in names [] key) in
+  let here key = Cpp_name.pp (name_in ctx names [] key) in
   let name = here (Modtype_concept_declared path) in
   let head =
     str "template<typename M"
@@ -328,14 +328,14 @@ let pp_modtype_concept ctx ~names ~params path (c : Modtype_concept.t) =
 let pp_assertion ctx (a : Cpp_ast.assertion) =
   let concept =
     match a.concept with
-    | Of_module_type c -> Cpp_name.pp (resolved_concept c)
-    | Of_class c -> Cpp_name.pp (resolved_class_concept c)
+    | Of_module_type c -> Cpp_name.pp (resolved_concept ctx c)
+    | Of_class c -> Cpp_name.pp (resolved_class_concept ctx c)
   in
   let subject =
     match a.subject with
-    | Module m -> module_struct_name_of (resolved_module m)
+    | Module m -> module_struct_name_of (resolved_module ctx m)
     | Instance {instance; args} ->
-      Cpp_name.pp (resolved_type_name instance) ++ prlist (fun ty -> str ", " ++ pp_type ctx ty) args
+      Cpp_name.pp (resolved_type_name ctx instance) ++ prlist (fun ty -> str ", " ++ pp_type ctx ty) args
   in
   fnl () ++ str "static_assert(" ++ concept ++ str "<" ++ subject ++ str ">);"
 
