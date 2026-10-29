@@ -10,12 +10,10 @@ Require Import Crane.Mapping.NatIntStd.
     With [chain] declared beside [expr], [expr_rect] becomes a method of
     [expr] (alone, it stays a function), and the method's head drops the
     index variable [T2].  The check that the body names no variable the
-    head dropped reports that it names [T2], though the printed C++ names
-    it nowhere and compiles and runs: some annotation the printer does not
-    print still carries it.
-
-    Expected: extraction fails under [CRANE_CHECK_IR] (method head).  When
-    fixed: prints ok. *)
+    head dropped reported that it names [T2], though the printed C++ names
+    it nowhere: the method's own self-call carries every type argument,
+    and is printed on its receiver without the ones the head dropped.  The
+    check now reads a method callee's type arguments as they are printed. *)
 Module RecursorMethodHeadSibling.
 
 Inductive expr : Type -> Type :=

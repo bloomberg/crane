@@ -1,8 +1,5 @@
 // Copyright 2026 Bloomberg Finance L.P.
 // Distributed under the terms of the GNU LGPL v2.1 license.
-//
-// Expected: extraction fails under CRANE_CHECK_IR (method head).
-// When fixed: prints "recursor_method_head_sibling: ok".
 #include <recursor_method_head_sibling.h>
 
 #include <cassert>

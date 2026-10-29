@@ -864,7 +864,10 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   let no_pure = is_monadic_ml_type ret_ty in
   (* What the body generated does name.  A callee printed verbatim from its
      custom text names its type arguments, and the signature recorded on a
-     call to it, only where the text spells them: not at all, here. *)
+     call to it, only where the text spells them: not at all, here.  A method
+     callee, this one's own self-call included, is written on its receiver
+     with only the type arguments {!Cpp_names.method_type_args} keeps: the
+     ones the receiver carries and the ones its head dropped are not. *)
   let stmt_has_tvar name stmts =
     let found = ref false in
     let rec on_type t =
@@ -874,6 +877,9 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
       | CPPglob (_, _, Some {ci_inline = Some _; _}) as e -> e
       | CPPfun_call (_, CPPglob (_, _, Some {ci_inline = Some _; _}), args) as e ->
         List.iter (fun a -> ignore (on_expr a)) (to_reversed args);
+        e
+      | CPPglob (r, tys, ci) as e when Cpp_names.lookup_method_this_pos r <> None ->
+        ignore (Minicpp.map_expr on_expr on_stmt on_type (CPPglob (r, Cpp_names.method_type_args r tys, ci)));
         e
       | e -> Minicpp.map_expr on_expr on_stmt on_type e
     and on_stmt s = Minicpp.map_stmt on_expr on_stmt on_type s in
