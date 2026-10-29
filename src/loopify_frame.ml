@@ -1139,11 +1139,6 @@ type enter_rewrite_ctx = {
   er_invariant_params : Id.Set.t;
       (** Invariant parameter ids — referenced directly from function scope,
           not stored in continuation frames *)
-  er_rematerialized : (Id.t * cpp_stmt) list;
-      (** Locals in scope bound to a value that mentions no local and calls
-          nothing -- an alias of a static member, say: the C++'s account of
-          what a continuation may bind again, which under [CRANE_CHECK_IR]
-          must be the recursion plan's ({!rebuilt_binders}). *)
   er_bound : (Id.t * cpp_stmt) list;
       (** The locals the machine's body has declared so far, innermost
           first, each with the statement declaring it: what a continuation
@@ -1205,40 +1200,20 @@ let make_enter_at ctx entry args =
 (** The [CraneEnter]-style frame expression that enters [cs]'s target. *)
 let make_enter_for ctx cs = make_enter_at ctx cs.cs_entry cs.cs_args
 
-(** [with_rematerialized ctx stmt] -- [ctx] once [stmt] has run: a binding
-    whose value mentions only template parameters, invariant parameters and
-    locals already bound again, and whose evaluation calls nothing, joins
-    {!enter_rewrite_ctx.er_rematerialized}.  A call inside a lambda's body
-    runs when the lambda does, not when it is made, so a closure qualifies:
-    rebuilding it in a continuation is cheaper than storing it, and safe where
-    storing it would keep references to locals of a scope already left. *)
-let with_rematerialized ctx stmt =
-  let rebindable v =
-    List.exists (fun (_, tp) -> Id.equal tp v) ctx.er_tparams
-    || Id.Set.mem v ctx.er_invariant_params
-    || List.mem_assoc v ctx.er_rematerialized
-  in
-  let rec calls_nothing e =
-    match e with
-    | CPPfun_call _ -> false
-    | CPPlambda _ -> true
-    | _ ->
-      let ok = ref true in
-      iter_expr_children
-        ~on_expr:(fun c -> if not (calls_nothing c) then ok := false)
-        ~on_stmts:(fun _ -> ok := false)
-        e;
-      !ok
-  in
-  match stmt with
-  (* A reference names someone else's value: saving it would copy the value
-     and leave a pointer taken from it dangling with the frame.  The
-     continuation rebuilds it from its source, which is saved instead. *)
-  | Sasgn (id, Declare (ty, _), e)
-    when calls_nothing e
-         && (is_reference_type ty || List.for_all rebindable (free_vars_expr e)) ->
-    {ctx with er_rematerialized = ctx.er_rematerialized @ [(id, stmt)]}
-  | _ -> ctx
+(** Whether evaluating [e] calls nothing.  A call inside a lambda's body
+    runs when the lambda does, not when it is made, so a closure calls
+    nothing. *)
+let rec calls_nothing e =
+  match e with
+  | CPPfun_call _ -> false
+  | CPPlambda _ -> true
+  | _ ->
+    let ok = ref true in
+    iter_expr_children
+      ~on_expr:(fun c -> if not (calls_nothing c) then ok := false)
+      ~on_stmts:(fun _ -> ok := false)
+      e;
+    !ok
 
 (** [bound] once [stmt] has run ({!enter_rewrite_ctx.er_bound}). *)
 let bound_after bound = function Sasgn (id, Declare _, _) as stmt -> (id, stmt) :: bound | _ -> bound
@@ -1535,22 +1510,6 @@ and rewrite_enter_stmts ctx stmts =
        statement casts the call's result to, if anything. *)
     let make_cont_handler ~cast enter =
       let result r = match cast with Some ty -> CPPany_cast (ty, r) | None -> r in
-      (* The C++'s own account of what the continuation binds again, which
-         the plan's must agree with under [CRANE_CHECK_IR]: the bindings the
-         rest reads that bind something calling nothing
-         ({!with_rematerialized}), with the ones they read in turn, in the
-         order they were made. *)
-      let cpp_rebuilt =
-        let needed =
-          List.fold_right
-            (fun (cid, st) needed ->
-              if List.exists (Id.equal cid) needed then
-                needed @ (match st with Sasgn (_, _, e) -> free_vars_expr e | _ -> [])
-              else needed )
-            ctx.er_rematerialized rest_free
-        in
-        List.filter (fun (cid, _) -> List.exists (Id.equal cid) needed) ctx.er_rematerialized
-      in
       (* Which Core values cross the call, in what order the frame keeps
          them, and which it binds again instead -- those no re-entry changes,
          and those recomputable from them -- is the plan's.  Of a value kept
@@ -1562,12 +1521,25 @@ and rewrite_enter_stmts ctx stmts =
         planned_frame ctx ~keeps:(fun b x -> not (dropped b || Id.equal x id || respells ctx x)) p
       in
       (* What the rest reads of what the frame does not keep is bound again
-         in the handler. *)
+         in the handler.  Under [CRANE_CHECK_IR] each such local is one the
+         plan finds recomputable, another spelling of one the frame keeps,
+         or a backend local standing for no Core binder, and it is bound
+         again by a declaration calling nothing: running a call again in
+         the handler would repeat its work, and a recursive one would recurse. *)
       let remat =
         let kept v = List.exists (Id.equal v) cont_vars || Id.equal v id || Id.equal v id_result in
         let rebuilt = rebuilt_bindings ctx ~kept rest_free in
-        if Probe.checking () && not (List.equal Id.equal (List.map fst rebuilt) (List.map fst cpp_rebuilt)) then
-          Probe.violation "frame plan" (Pp.str "a continuation binds again other locals than the C++ finds it can");
+        ( if Probe.checking () then
+            let recomputed = rebuilt_binders ctx p in
+            let rebindable (v, st) =
+              ( match binder_of ctx v with
+              | Some b -> List.exists (Core_binder.equal b) recomputed || respells ctx v
+              | None -> true )
+              && match st with Sasgn (_, _, e) -> calls_nothing e | _ -> false
+            in
+            if not (List.for_all rebindable rebuilt) then
+              Probe.violation "frame plan"
+                (Pp.str "a continuation binds again a local the recursion plan neither keeps nor finds recomputable") );
         rebuilt
       in
       (* A local is kept as a pointer where what follows passes it on, as
@@ -1670,16 +1642,17 @@ and rewrite_enter_stmts ctx stmts =
           | None -> None
         in
         if Probe.checking () then begin
-          (* A read of a binding the handler rebuilds -- a reference to a
-             field, a closure -- reads what it is rebuilt from. *)
-          let rec through v =
-            v
-            :: ( match List.assoc_opt v ctx.er_rematerialized with
-               | Some (Sasgn (_, _, e)) -> List.concat_map through (free_vars_expr e)
-               | Some _ | None -> [] )
+          (* A read of a binder the plan finds recomputable -- a closure, a
+             field -- reads what it is recomputed from. *)
+          let rec through b =
+            b
+            :: ( match List.find_opt (fun (c : Recursion_plan.recomputable) -> Core_binder.equal c.recomputed b) p.recomputable with
+               | Some c -> List.concat_map through c.from
+               | None -> [] )
           in
-          let read = List.concat_map through (free_vars_expr enter) in
-          if List.exists (fun cid -> read_by_call cid = Some false && List.exists (Id.equal cid) read) cont_vars then
+          let read = List.concat_map (fun v -> Option.cata through [] (binder_of ctx v)) (free_vars_expr enter) in
+          let reads cid = Option.cata (fun b -> List.exists (Core_binder.equal b) read) false (binder_of ctx cid) in
+          if List.exists (fun cid -> read_by_call cid = Some false && reads cid) cont_vars then
             Probe.violation "frame plan"
               (Pp.str "the call a frame is saved for reads a local the frame keeps the recursion plan says it does not")
         end;
@@ -1807,7 +1780,7 @@ and rewrite_enter_stmts ctx stmts =
     in
     rewrite_enter_lambda_return ctx stmt
     @ rewrite_enter_stmts
-        { (with_rematerialized ctx stmt) with
+        { ctx with
           er_bound = bound_after ctx.er_bound stmt;
           er_env = updated_env;
           er_binders = declared_binders ctx.er_binders stmt;
@@ -2749,7 +2722,6 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
                er_branch_ctx = None;
                er_seen_frame_names = Hashtbl.create 16;
                er_invariant_params = invariant_params;
-               er_rematerialized = [];
                er_bound = [];
                er_entered_by = entered_by;
                er_entered = entered;
