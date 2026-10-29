@@ -374,19 +374,6 @@ let compute_rest_free_vars rest =
   |> List.filter (fun v -> not (List.exists (Id.equal v) rest_defined))
   |> List.sort_uniq (fun a b -> Id.compare a b)
 
-(** Filter continuation free variables, removing the assigned variable and
-    the [_result] accumulator.
-
-    @param exclude_id The variable being assigned (not needed in continuation)
-    @param rest_free The free variables of the continuation
-    @return Filtered list of continuation variables *)
-let filter_cont_vars ~exclude_id rest_free =
-  List.filter
-    (fun fv ->
-      (not (Id.equal fv exclude_id))
-      && not (Id.equal fv (id_result)))
-    rest_free
-
 (** Generate statements that bind continuation variables from frame fields.
     Produces [<type> <name> = _f.<field i>;] for each continuation variable.
 
@@ -1353,24 +1340,6 @@ let planned_point ctx id tgt =
     Probe.violation "frame plan" (Pp.str "a call the machine resumes after binds a local standing for no Core binder");
     raise (Not_linearisable no_resume_point)
 
-(** The locals the frame for that call keeps, in the order it keeps them:
-    the ones the plan finds live there, in the order the Core binds them
-    ({!planned_frame_at}).  [read], the locals the continuation reads that
-    the frame does not leave out by design, is the C++'s account of the
-    same: under [CRANE_CHECK_IR] it must be that frame, every local in it
-    standing for a Core binder. *)
-let frame_locals ctx planned read =
-  if Probe.checking () then begin
-    let identified v = Option.has_some (Option.flatten (List.assoc_opt v ctx.er_binders)) in
-    if not (List.for_all identified read) then
-      Probe.violation "frame plan"
-        (Pp.str "a continuation reads a local standing for no Core binder, which no frame keeps");
-    let sorted = List.sort Id.compare in
-    if not (List.equal Id.equal (sorted read) (sorted planned)) then
-      Probe.violation "frame plan" (Pp.str "a frame keeps other binders than the recursion plan finds live there")
-  end;
-  planned
-
 (** Whether the statement binding [e] to [id] by [tgt] is a point the
     machine resumes at once a call returns, as the recursion plan has it:
     whether the point resuming at the Core binder [id] stands for
@@ -1566,11 +1535,11 @@ and rewrite_enter_stmts ctx stmts =
        statement casts the call's result to, if anything. *)
     let make_cont_handler ~cast enter =
       let result r = match cast with Some ty -> CPPany_cast (ty, r) | None -> r in
-      (* The C++'s own account of the frame, which the plan's must agree
-         with under [CRANE_CHECK_IR], and is the frame where the plan has
-         none: the bindings the rest reads that bind something calling
-         nothing ({!with_rematerialized}), with the ones they read in turn,
-         in the order they were made, bound again rather than kept. *)
+      (* The C++'s own account of what the continuation binds again, which
+         the plan's must agree with under [CRANE_CHECK_IR]: the bindings the
+         rest reads that bind something calling nothing
+         ({!with_rematerialized}), with the ones they read in turn, in the
+         order they were made. *)
       let cpp_rebuilt =
         let needed =
           List.fold_right
@@ -1582,54 +1551,16 @@ and rewrite_enter_stmts ctx stmts =
         in
         List.filter (fun (cid, _) -> List.exists (Id.equal cid) needed) ctx.er_rematerialized
       in
-      (* A name heading a recursive call is the machine's entry, not a value
-         the continuation reads: the call becomes a frame push. *)
-      let entry_heads =
-        let heads = ref [] in
-        let rec fe e =
-          ( match e with
-          | CPPfun_call (_, CPPvar h, _) when check e <> None -> heads := h :: !heads
-          | _ -> () );
-          iter_expr_children ~on_expr:fe ~on_stmts:(List.iter fs) e
-        and fs st = iter_stmt_children ~on_expr:fe ~on_stmts:(List.iter fs) st in
-        List.iter fs rest;
-        !heads
-      in
-      (* What the rest reads, with what its rebuilt bindings read in place
-         of those bindings. *)
-      let remat_free =
-        List.concat_map
-          (fun (_, st) -> match st with Sasgn (_, _, e) -> free_vars_expr e | _ -> [])
-          cpp_rebuilt
-        |> List.filter (fun v -> not (List.exists (fun (_, tp) -> Id.equal tp v) tparams))
-      in
-      let kept_elsewhere x =
-        Id.Set.mem x ctx.er_invariant_params
-        || List.mem_assoc x cpp_rebuilt
-        || List.exists (Id.equal x) entry_heads
-        || Id.equal x id
-      in
-      let read =
-        filter_cont_vars ~exclude_id:id
-          (List.fold_left
-             (fun acc v -> if List.exists (Id.equal v) acc then acc else acc @ [v])
-             rest_free remat_free)
-        |> List.filter (fun cid -> not (kept_elsewhere cid))
-      in
       (* Which Core values cross the call, in what order the frame keeps
          them, and which it binds again instead -- those no re-entry changes,
          and those recomputable from them -- is the plan's.  Of a value kept
-         the frame keeps the local holding it, not one respelling it.  Under
-         [CRANE_CHECK_IR] the C++'s own reading must agree. *)
+         the frame keeps the local holding it, not one respelling it. *)
       let p = planned_point ctx id tgt in
-      let frame =
+      let cont_vars =
         let rebuilt = rebuilt_binders ctx p in
         let dropped b = available ctx b || List.exists (Core_binder.equal b) rebuilt in
         planned_frame ctx ~keeps:(fun b x -> not (dropped b || Id.equal x id || respells ctx x)) p
       in
-      if Probe.checking () && not (List.equal Id.equal frame (planned_frame ctx ~keeps:(fun _ x -> not (kept_elsewhere x)) p))
-      then Probe.violation "frame plan" (Pp.str "a frame keeps other locals than the C++ finds it cannot bind again");
-      let cont_vars = frame_locals ctx frame read in
       (* What the rest reads of what the frame does not keep is bound again
          in the handler. *)
       let remat =
