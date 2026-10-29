@@ -125,7 +125,7 @@ val sig_preamble : 'a -> string option -> Names.ModPath.t list -> 'b -> Pp.t
 (** {2 Render context} *)
 
 (** Where in the output the pretty-printer currently is. Immutable: the
-    mutability lives in the {!render_ctx} ref, so that save/restore around a
+    mutability lives in one installed position ({!current_render_ctx}), so that save/restore around a
     sub-render cannot forget a field. *)
 type render_ctx = {
   rc_file : Common.file;  (** The file being written. *)
@@ -156,9 +156,11 @@ val file_start : Common.file -> render_ctx
 (** The context at file scope in the file [c] is written in. *)
 val at_file_scope : render_ctx -> render_ctx
 
-(** The single global render context, reset by [reset_cpp_state]. Change it
-    only through [with_render_ctx]. *)
-val render_ctx : render_ctx ref
+(** The position installed, reset by [reset_cpp_state]: where planning, and a
+    boundary of the printer, reads it.  Printing threads the position through
+    the scopes it enters ({!entering_scope}), so under [CRANE_CHECK_IR] a
+    read inside one is a violation. *)
+val current_render_ctx : unit -> render_ctx
 
 
 (** A concept a frame is holding back until after the struct it was written
@@ -195,14 +197,19 @@ val class_concept_held_back : render_ctx -> Names.GlobRef.t -> bool
 (** [with_render_ctx upd f] renders [f] in the context [upd] derives from the
     current one, restoring the enclosing context on the way out however [f]
     leaves -- returning or raising. The only supported way to change the
-    context. *)
+    context.  Deriving it inside a scope printing entered is a violation, as
+    reading it is ({!current_render_ctx}). *)
 val with_render_ctx : (render_ctx -> render_ctx) -> (unit -> 'a) -> 'a
+
+(** [entering_scope c f] runs [f] inside a scope printing entered at the
+    position [c], which printing hands to what it prints there. *)
+val entering_scope : render_ctx -> (unit -> 'a) -> 'a
 
 (** [writing_file file f] renders [f] as part of the file [file]. *)
 val writing_file : Common.file -> (unit -> 'a) -> 'a
 
 (** [writing_element_of mp f] runs [f] writing an element of the module
-    [mp] ({!render_ctx}). *)
+    [mp] ({!current_render_ctx}). *)
 val writing_element_of : Names.ModPath.t -> (unit -> 'a) -> 'a
 
 (** {2 Template static accessors} *)

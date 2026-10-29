@@ -29,24 +29,25 @@ val write_absorbing : homed:(string * ModPath.t) list -> Common.env -> Cpp_erasu
 
 (** The name of a module a declaration of the tree names, as
     {!Cpp_ast.resolve} resolved it where the declaration is written; under
-    [CRANE_CHECK_IR], checked against the name resolution gives it where it
-    is printed ({!Cpp_names.live_name}).  A module not yet resolved is an
-    anomaly. *)
-val resolved_module : Cpp_ast.module_ref -> Cpp_name.t
+    [CRANE_CHECK_IR], checked against the name resolution gives it at the
+    position it is printed at ({!Cpp_names.live_name}).  A module not yet
+    resolved is an anomaly. *)
+val resolved_module : Cpp_state.render_ctx -> Cpp_ast.module_ref -> Cpp_name.t
 
 (** {!resolved_module} for the concept of a type class. *)
-val resolved_class_concept : Cpp_ast.global_ref -> Cpp_name.t
+val resolved_class_concept : Cpp_state.render_ctx -> Cpp_ast.global_ref -> Cpp_name.t
 
 (** {!resolved_module} for a type. *)
-val resolved_type_name : Cpp_ast.global_ref -> Cpp_name.t
+val resolved_type_name : Cpp_state.render_ctx -> Cpp_ast.global_ref -> Cpp_name.t
 
 (** {!resolved_module} for the concept of a module type. *)
-val resolved_concept : Cpp_ast.concept_ref -> Cpp_name.t
+val resolved_concept : Cpp_state.render_ctx -> Cpp_ast.concept_ref -> Cpp_name.t
 
-(** [name_in names frame key] is the name [names] gives [key] at [frame],
-    checked as {!resolved_module} is.  A table not yet resolved, or one that
-    was but not for this, is an anomaly. *)
-val name_in : Cpp_resolution.table -> Cpp_resolution.frame -> Cpp_resolution.key -> Cpp_name.t
+(** [name_in ctx names frame key] is the name [names] gives [key] at
+    [frame], checked as {!resolved_module} is, at the position [ctx].  A
+    table not yet resolved, or one that was but not for this, is an
+    anomaly. *)
+val name_in : Cpp_state.render_ctx -> Cpp_resolution.table -> Cpp_resolution.frame -> Cpp_resolution.key -> Cpp_name.t
 
 (** Whether [d] is an assertion the struct being written holds back until
     after it, writing nothing for it here. *)

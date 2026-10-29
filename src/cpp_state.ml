@@ -513,6 +513,20 @@ let at_file_scope c = file_start c.rc_file
     as the header would be written. *)
 let render_ctx = owned_ref (file_start Common.Intf)
 
+(* How many scopes printing has entered since a position was installed:
+   printing threads the position through them, so the installed one is not
+   where the printer is inside any. *)
+let entered_since_installed = owned_ref 0
+
+let not_threaded what =
+  if Probe.checking () && !entered_since_installed > 0 then
+    Probe.violation "threaded positions"
+      Pp.(str "the installed position is " ++ str what ++ str " inside a scope printing entered, which threads it")
+
+let current_render_ctx () =
+  not_threaded "read";
+  !render_ctx
+
 (** The functor bodies whose module types are file-scope concepts over the
     functor's parameters as well as [M]: the body's path, the functor's
     label, and its parameters.  A concept cannot be declared in the class
@@ -559,10 +573,21 @@ let class_concept_held_back ctx r = concept_held_back ctx (HCclass r)
     save/set/restore by hand: an omitted restore does not fail, it silently
     renders the rest of the file as though it were still inside the struct that
     has just closed. *)
+let installed c ~entered f =
+  let saved = !render_ctx and saved_entered = !entered_since_installed in
+  render_ctx := c;
+  entered_since_installed := entered;
+  Fun.protect
+    ~finally:(fun () ->
+      render_ctx := saved;
+      entered_since_installed := saved_entered )
+    f
+
 let with_render_ctx (upd : render_ctx -> render_ctx) (f : unit -> 'a) : 'a =
-  let saved = !render_ctx in
-  render_ctx := upd saved;
-  Fun.protect ~finally:(fun () -> render_ctx := saved) f
+  not_threaded "derived from";
+  installed (upd !render_ctx) ~entered:0 f
+
+let entering_scope c f = installed c ~entered:(!entered_since_installed + 1) f
 
 let writing_file file f = with_render_ctx (fun c -> {c with rc_file = file}) f
 

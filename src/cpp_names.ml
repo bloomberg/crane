@@ -702,23 +702,20 @@ let next (entered : Cpp_resolution.entered) (c : render_ctx) =
   in
   {c with rc_frame = entered :: c.rc_frame}
 
-(* The position is installed for the printers not yet given it, and the
-   visibility for the names still resolved where the printer is: the
-   resolver's replay, and the check against it. *)
+(* The visibility is installed for the names still resolved where the
+   printer is: the resolver's replay, and the check against it. *)
 let enter_from c (entered : Cpp_resolution.entered) k =
   let c' = next entered c in
-  with_render_ctx (fun _ -> c') @@ fun () ->
+  entering_scope c' @@ fun () ->
   match entered with
   | Signature {signature; parameters} -> with_visibility (inside signature parameters (current_visibility ())) (fun () -> k c')
   | Inductive_struct r -> with_visibility (inductive_struct_visibility r) (fun () -> k c')
   | In_struct | In_template | Function _ -> k c'
 
 let rec entering_from c l k = match l with [] -> k c | entered :: rest -> enter_from c entered (fun c' -> entering_from c' rest k)
-let enter entered k = enter_from !render_ctx entered (fun _ -> k ())
-let entering l k = entering_from !render_ctx l (fun _ -> k ())
 
-let rec at_frame (frame : Cpp_resolution.frame) k =
-  match frame with [] -> k () | entered :: outer -> at_frame outer (fun () -> enter entered k)
+let rec at_frame c (frame : Cpp_resolution.frame) k =
+  match frame with [] -> k c | entered :: outer -> at_frame c outer (fun c -> enter_from c entered k)
 
 (* The name the inductive type [x] is written under as a value: the
    struct a constructor's value is built through. *)
@@ -751,10 +748,8 @@ let inductive_value_name ctx x =
 
 let inductive_value ctx x = named ctx (Inductive_value x) (fun () -> inductive_value_name ctx x)
 
-let live_name (key : Cpp_resolution.key) =
-  with_render_ctx (fun c -> {c with rc_names = None}) @@ fun () ->
-  (* The replay's position, which whoever resolves the key installs. *)
-  let ctx = !render_ctx in
+let live_name c (key : Cpp_resolution.key) =
+  let ctx = {c with rc_names = None} in
   match key with
   | Module mp -> Common.resolve_module mp
   | Module_declared mp -> Cpp_name.unqualified (module_declared_name mp)

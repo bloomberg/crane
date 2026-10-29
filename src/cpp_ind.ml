@@ -157,7 +157,7 @@ let ind_header_decls kn ind =
      collision struct holding it ahead of the concepts
      ({!Cpp.plan_concept_prerequisites}), which is planned. *)
   let at_namespace_scope =
-    (not (!render_ctx).rc_in_struct) || Array.for_all Module_plan.is_namespace_scope_ref names
+    (not (current_render_ctx ()).rc_in_struct) || Array.for_all Module_plan.is_namespace_scope_ref names
   in
   let cnames =
     Array.mapi
@@ -170,7 +170,7 @@ let ind_header_decls kn ind =
     (* Type classes become C++ concepts *)
     (* Skip if concepts have been hoisted or we're inside a struct *)
     header_decls
-      ( if (!render_ctx).rc_in_struct || (!render_ctx).rc_concepts_hoisted then []
+      ( if (let c = current_render_ctx () in c.rc_in_struct || c.rc_concepts_hoisted) then []
         else [(empty_env (), gen_typeclass_cpp names.(0) fields)] )
   | Record fields ->
     (* Check if this is an eponymous record being merged into module struct *)
@@ -362,7 +362,7 @@ let ind_header_decls kn ind =
               when globref_equal ind_ref epon_ref ->
               !method_candidates
             | _
-              when (not (!render_ctx).rc_in_struct) && not is_inside_submodule_decl
+              when (not (current_render_ctx ()).rc_in_struct) && not is_inside_submodule_decl
               ->
               (* For top-level inductives only, find methods from sibling
                  declarations *)
@@ -831,7 +831,7 @@ let planned_claim key =
 let header_claim key lifted =
   match Node_table.find_opt header_claims (Obj.repr key) with
   | Some planned ->
-    if Probe.checking () && (!render_ctx).rc_file = Intf then begin
+    if Probe.checking () && (current_render_ctx ()).rc_file = Intf then begin
       let claimed = List.filter (newly_placed header_took) lifted in
       if not (List.equal ( == ) planned claimed) then
         Probe.violation "header claims"
@@ -888,7 +888,7 @@ let generate ~module_ d =
   | Dind (kn, ind) -> Header_only (fun () -> ind_header_decls kn ind)
   (* A singleton class is a concept, declared where concepts are. *)
   | Dtype (r, _, _) when Table.singleton_class_method r <> None ->
-    if (!render_ctx).rc_in_struct || (!render_ctx).rc_concepts_hoisted then Nothing
+    if (let c = current_render_ctx () in c.rc_in_struct || c.rc_concepts_hoisted) then Nothing
     else
       Header_only
         (fun () ->
@@ -1024,7 +1024,7 @@ let function_views ~is_header ~lifted_inline funs =
   in
   let forward =
     is_header
-    && (not (!render_ctx).rc_in_struct)
+    && (not (current_render_ctx ()).rc_in_struct)
     && List.length (List.filter (fun (g, _) -> in_header g) paired) > 1
   in
   let declarations =
@@ -1267,7 +1267,8 @@ let in_spelling ~file spelling k =
 
 let resolver_at ~file spelling frame key =
   Common.without_noting_written_files (fun () ->
-      in_spelling ~file spelling (fun () -> Cpp_names.at_frame frame (fun () -> Cpp_names.live_name key)) )
+      in_spelling ~file spelling (fun () ->
+          Cpp_names.at_frame (current_render_ctx ()) frame (fun ctx -> Cpp_names.live_name ctx key) ) )
 
 let requested d = Cpp_print.unprinted_names d @ Cpp_concepts.names_requested d
 

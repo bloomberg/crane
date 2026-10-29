@@ -386,7 +386,7 @@ let () =
   let f = Cpp_names.next (Function {owner = ref_of "f"; defines = true}) s in
   check "a function defined in a struct's body is defined there, in no out-of-line scope" (f.rc_scope = None);
   let installed =
-    Cpp_names.entering_from start [In_struct; In_template] (fun c -> (c, c == !Cpp_state.render_ctx))
+    Cpp_names.entering_from start [In_struct; In_template] (fun c -> (c, c == Cpp_state.current_render_ctx ()))
   in
   check "entering scopes one after another is entering each in turn" (fst installed = t);
   check "the position entered is the one installed" (snd installed)

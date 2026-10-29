@@ -266,19 +266,12 @@ val enter_from : Cpp_state.render_ctx -> Cpp_resolution.entered -> (Cpp_state.re
     of [l] from [c], in order ({!enter_from}). *)
 val entering_from : Cpp_state.render_ctx -> Cpp_resolution.entered list -> (Cpp_state.render_ctx -> 'a) -> 'a
 
-(** [enter entered k] is [k ()] in the scope [entered], inside the one the
-    printer is in: how printing a declaration enters it, and how resolving
-    what the declaration names there does. *)
-val enter : Cpp_resolution.entered -> (unit -> 'a) -> 'a
+(** [at_frame c frame k] is [k] of the position after entering each scope
+    of [frame] from [c], outermost first ({!enter_from}): how resolving what
+    a declaration names at a frame enters it. *)
+val at_frame : Cpp_state.render_ctx -> Cpp_resolution.frame -> (Cpp_state.render_ctx -> 'a) -> 'a
 
-(** [at_frame frame k] is [k ()] with each scope of [frame] entered,
-    outermost first ({!enter}). *)
-val at_frame : Cpp_resolution.frame -> (unit -> 'a) -> 'a
-
-(** [entering l k] is [k ()] with each scope of [l] entered, in order. *)
-val entering : Cpp_resolution.entered list -> (unit -> 'a) -> 'a
-
-(** [key] named where the printer is, from its visibility, whatever
-    declaration is being written: what {!Cpp_resolution.resolve} is
-    given, at each frame, and what a printed name is checked against. *)
-val live_name : Cpp_resolution.key -> Cpp_name.t
+(** [key] named at the position [c], from the visibility in effect, whatever
+    declaration is being written: what {!Cpp_resolution.resolve} is given,
+    at each frame, and what a printed name is checked against. *)
+val live_name : Cpp_state.render_ctx -> Cpp_resolution.key -> Cpp_name.t
