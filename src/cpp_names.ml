@@ -46,20 +46,22 @@ let name_from names frame key ~live =
     CErrors.anomaly
       Pp.(str "Crane: a declaration names " ++ Cpp_resolution.pp_key key ++ str ", which resolving it did not ask for.")
 
-(* What is visible at the position [c], where [key] is named live. *)
-let visible_at (c : render_ctx) key =
+let visibility_at (c : render_ctx) what =
   match c.rc_visibility with
   | Some v -> v
-  | None -> CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " is named where nothing planned what is visible.")
+  | None -> CErrors.anomaly Pp.(str "Crane: " ++ what ++ str " where nothing planned what is visible.")
+
+let visible_at c key = visibility_at c Pp.(Cpp_resolution.pp_key key ++ str " is named")
 
 (* [key]'s name at the position [c]: from the names of the declaration of
    the tree being written, at the frame printing it has entered, checked
    against [live ()] where [c] sees what it sees, if one is being written;
    [live ()] where none is. *)
 let named (c : render_ctx) key live =
-  match c.rc_names with
-  | None -> live ()
-  | Some names -> name_from names c.rc_frame key ~live:(fun () -> with_visibility (visible_at c key) live)
+  match (c.rc_names, c.rc_visibility) with
+  | None, None -> live ()
+  | None, Some v -> with_visibility v live
+  | Some names, _ -> name_from names c.rc_frame key ~live:(fun () -> with_visibility (visible_at c key) live)
 
 (** The name of a global reference at the position [c]: the replacement text
     of an inline custom mapping, otherwise as resolution settles it there.

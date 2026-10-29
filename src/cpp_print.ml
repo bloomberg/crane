@@ -556,12 +556,15 @@ let ctor_alias_home ctx body =
 
 (** Where the template abbreviating [body], spelled at [ctx], is declared:
     in the struct of its home ({!ctor_alias_home}), or at namespace scope
-    beneath the unit's files as the visibility there sees them -- a module
-    body's, or, spelled in another template's body, that template's. *)
+    beneath the unit's files as what is visible at [ctx] sees them -- a
+    module body's, or, spelled in another template's body, that
+    template's. *)
 let ctor_alias_declared ctx body : Cpp_ast.declared_in =
   match ctor_alias_home ctx body with
   | Some home -> In_struct_of home
-  | None -> At_namespace_scope (List.rev (List.filter Table.is_modfile (Common.visible_mps (Common.current_visibility ()))))
+  | None ->
+    let visible = visibility_at ctx (str "a template is declared at namespace scope") in
+    At_namespace_scope (List.rev (List.filter Table.is_modfile (Common.visible_mps visible)))
 
 (** The visibility a template is declared, and so its body written, in: the
     body of its home module, as planned, or outside every module body. *)

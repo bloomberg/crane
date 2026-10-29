@@ -597,7 +597,8 @@ let entering_scope f =
 
 let writing_file file f = with_render_ctx (fun c -> {c with rc_file = file}) f
 
-let writing_element_of mp f = with_render_ctx (fun c -> {c with rc_module = Some mp}) f
+let writing_element_of mp f =
+  with_render_ctx (fun c -> {c with rc_module = Some mp; rc_visibility = Scope_plan.visibility mp}) f
 
 (** Track definitions rendered as function accessors (Meyers singletons) instead
     of static inline variables, due to template static init ordering. Stores

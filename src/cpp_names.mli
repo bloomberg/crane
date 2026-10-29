@@ -266,6 +266,10 @@ val enter_from : Cpp_state.render_ctx -> Cpp_resolution.entered -> (Cpp_state.re
     of [l] from [c], in order ({!enter_from}). *)
 val entering_from : Cpp_state.render_ctx -> Cpp_resolution.entered list -> (Cpp_state.render_ctx -> 'a) -> 'a
 
+(** What is visible at the position [c] ({!Cpp_state.render_ctx.rc_visibility}),
+    where [what] happens; an anomaly where nothing planned it. *)
+val visibility_at : Cpp_state.render_ctx -> Pp.t -> Common.visibility
+
 (** [at_frame c frame k] is [k] of the position after entering each scope
     of [frame] from [c], outermost first ({!enter_from}): how resolving what
     a declaration names at a frame enters it. *)
