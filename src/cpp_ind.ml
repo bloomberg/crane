@@ -1274,6 +1274,10 @@ let requested d = Cpp_print.unprinted_names d @ Cpp_concepts.names_requested d
 let resolve_tree ~file = Cpp_ast.resolve_tree ~requested ~resolve:(resolver_at ~file)
 let resolve ~file = Cpp_ast.resolve ~requested ~resolve:(resolver_at ~file)
 
+let names_into_a_struct_as_written ~file spelling settled =
+  let names = Cpp_resolution.resolve (resolver_at ~file spelling) (requested (Declaration {env = empty_env (); settled})) in
+  in_spelling ~file spelling (fun () -> Cpp_print.resolved_names_into_a_struct names settled)
+
 let write_unprinted ~file spelling u =
   in_spelling ~file spelling (fun () ->
       Cpp_print.print_unprinted ~modtype_concept:Cpp_concepts.pp_modtype_concept ~assertion:Cpp_concepts.pp_assertion u )

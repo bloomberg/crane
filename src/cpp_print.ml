@@ -997,9 +997,10 @@ let is_static_member_declaration (d : cpp_decl) =
     and parameters, and in its template head -- a concept constraining a
     parameter, a type a parameter defaults to or a callable one is invoked
     with.  [None] for anything else, a declaration under a [requires]
-    clause, or where only its rendering can tell. *)
+    clause, or where only its rendering can tell.  Each name is asked at
+    the frame the printer writes it at ({!pp_cpp_decl}). *)
 let rec declaration_names_into_a_struct ctx (d : cpp_decl) =
-  let any_type ts =
+  let any_type ctx ts =
     List.fold_left
       (fun acc t -> match acc with Some false -> type_names_into_a_struct ctx t | _ -> acc)
       (Some false) ts
@@ -1007,9 +1008,10 @@ let rec declaration_names_into_a_struct ctx (d : cpp_decl) =
   let names_through n = head_names_into_a_struct (unqualified_head n) in
   match d with
   | Dfun {df_path = {dp_outer; dp_inner}; df_ret; df_shape = Ddecl params; _} ->
+    let ctx = next (Function {owner = fst dp_outer; defines = false}) ctx in
     let path = dp_outer :: dp_inner in
     if List.exists (fun (n, _) -> names_through (global_name ctx Type n)) path then Some true
-    else any_type ((df_ret :: List.map snd params) @ List.concat_map snd path)
+    else any_type ctx ((df_ret :: List.map snd params) @ List.concat_map snd path)
   | Dtemplate (tparams, None, inner) ->
     let concept_names_through c = (not (class_concept_held_back ctx c)) && names_through (concept_name ctx c) in
     let param_types (tt, _) =
@@ -1023,7 +1025,7 @@ let rec declaration_names_into_a_struct ctx (d : cpp_decl) =
     if List.exists (function TTconcept (c, _), _ -> concept_names_through c | _ -> false) tparams
     then Some true
     else (
-      match any_type (List.concat_map param_types tparams) with
+      match any_type ctx (List.concat_map param_types tparams) with
       | Some false -> declaration_names_into_a_struct ctx inner
       | answer -> answer )
   | _ -> None
@@ -4452,6 +4454,9 @@ let pp_synthesised ctx (s : Cpp_ast.synthesised) =
     ++ prlist_with_sep (fun () -> str ", ") (fun p -> p) (params 0)
     ++ str "> struct " ++ str s.name ++ str " { template <typename " ++ str ctor_alias_tvar ++ str "> using c = " ++ str body
     ++ str "; };"
+
+let resolved_names_into_a_struct names (settled : Cpp_erasure.settled) =
+  naming names @@ fun () -> declaration_names_into_a_struct !render_ctx (settled :> cpp_decl)
 
 let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
   naming u.names @@ fun () ->

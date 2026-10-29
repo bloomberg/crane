@@ -85,6 +85,15 @@ val global_names :
     enters. *)
 val unprinted_names : Cpp_ast.declaration -> (Cpp_resolution.frame * Cpp_resolution.key) list
 
+(** Whether a function declaration writes a qualifier into a struct or a
+    template parameter, in its name, result or parameters, asked of the
+    declaration rather than of its rendering: each name is the one
+    {!pp_cpp_type} writes, from the same heads, where the printer is, of the
+    names [names] as {!print_unprinted} reads them.  [None] for anything but
+    a function declaration, and where only the rendering can tell -- an
+    expression's type, a type constructor named as a template argument. *)
+val resolved_names_into_a_struct : Cpp_resolution.table -> Cpp_erasure.settled -> bool option
+
 (** The text of a declaration not yet printed, printed in the render
     context and visibility its spelling enters, a module type's concept by
     [modtype_concept] and an assertion by [assertion].  Under
@@ -145,15 +154,6 @@ val writes_into_a_struct : Cpp_name.written -> bool
 (** Whether a declaration, written as a member of a struct body, is a static
     function declaration ending at its semicolon. *)
 val is_static_member_declaration : cpp_decl -> bool
-
-(** Whether a function declaration writes a qualifier into a struct or a
-    template parameter, in its name, result or parameters, asked of the
-    declaration rather than of its rendering: each name is the one
-    {!pp_cpp_type} writes, from the same heads, at the given position.
-    [None] for anything but a function declaration, and where only the
-    rendering can tell -- an expression's type, a type constructor named as a
-    template argument. *)
-val declaration_names_into_a_struct : Cpp_state.render_ctx -> cpp_decl -> bool option
 
 (** Doc-comment lines for [name], or nothing when none is registered. *)
 val pp_doc_comment_for_name : ?indent:string -> string -> Pp.t

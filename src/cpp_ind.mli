@@ -174,6 +174,12 @@ val resolve_tree : file:Common.file -> Cpp_ast.t -> Cpp_ast.t
 (** {!Cpp_ast.resolve} as {!resolve_tree} resolves each section. *)
 val resolve : file:Common.file -> Cpp_ast.scheduled -> Cpp_ast.scheduled
 
+(** {!Cpp_print.resolved_names_into_a_struct} of a declaration as [file]
+    writes it spelled [spelling]: at the position printing it is at, and of
+    the names resolution settles there ({!resolver_at}), which are the ones
+    printing it reads. *)
+val names_into_a_struct_as_written : file:Common.file -> Cpp_ast.spelling -> Cpp_erasure.settled -> bool option
+
 (** Print a declaration not yet printed as the tree spells it
     ({!Cpp_ast.print}). *)
 val write_unprinted : file:Common.file -> Cpp_ast.spelling -> Cpp_ast.unprinted -> Pp.t
