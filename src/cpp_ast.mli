@@ -41,6 +41,12 @@ module Needs : sig
   val union : t -> t -> t
 end
 
+(** Where a synthesised template is declared: inside the struct of a
+    module, as its members are written, or at namespace scope, beneath the
+    unit's files, innermost last -- the files as the module whose element
+    first spelled it sees them. *)
+type declared_in = In_struct_of of ModPath.t | At_namespace_scope of ModPath.t list
+
 (** How a declaration not yet printed is spelled, which is what printing it
     reads off where the tree puts it. *)
 type spelling =
@@ -55,6 +61,9 @@ type spelling =
           as an element of the module, but inside the struct whatever its
           planned header scope says -- a library module writes its types
           at namespace scope and its functions in a struct of its name. *)
+  | Template_in of declared_in
+      (** As a synthesised template declared where it says, wherever it is
+          written, which is where it is declared ({!Synthesised_template}). *)
 
 (** The name a reference is written with where the declaration holding it
     is written, once {!resolve} has resolved it there. *)
@@ -163,6 +172,22 @@ type declaration =
   | Forward_declaration of {env : Common.env; defined : defined}
       (** The forward declaration of what a declaration defines, printed in
           the name environment [env]. *)
+  | Synthesised_template of synthesised
+      (** A template synthesised to stand where a type constructor is
+          written as a template template argument, spelled as
+          {!Template_in} its home says. *)
+
+(** A synthesised template: [template <typename _> using name = body;], or,
+    a holder, a struct over the parameters its body captures holding such
+    an alias. *)
+and synthesised = {
+  name : string;
+  holder : bool;
+  declared_in : declared_in;
+  body : Minicpp.cpp_type;  (** The type it abbreviates, its own parameter the sentinel. *)
+  vars : Id.t list;  (** The names of the type variables [body] names by index. *)
+  planned : string;  (** [body] as the plan wrote it, which its name digests. *)
+}
 
 (** A module expression a declaration writes. *)
 and module_expr =
@@ -349,6 +374,11 @@ val derived_functor : template:template_param list -> ModPath.t -> module_expr -
     the tree puts it.  It needs nothing placed in front of it. *)
 val forward_declaration : Common.env -> defined -> t
 
+(** [synthesised_template s] is {!Synthesised_template}, printed wherever
+    the tree puts it as declared in its home.  It needs nothing placed in
+    front of it. *)
+val synthesised_template : synthesised -> t
+
 (** [wrapper_struct ~name ~module_ ~fields] is {!Wrapper_struct}. *)
 val wrapper_struct : name:string -> module_:ModPath.t -> fields:t -> t
 
@@ -433,7 +463,8 @@ val resolve_tree :
 
 (** [t] as a document, each declaration not yet printed printed by [write],
     in the order written, as the tree spells it.
-    @raise Invalid_argument if one is outside every {!Elements} and struct
+    @raise Invalid_argument if one but a synthesised template, which is
+    spelled as declared in its home, is outside every {!Elements} and struct
     {!Module}: nothing says how it is spelled. *)
 val print_tree : write:(spelling -> unprinted -> Pp.t) -> t -> Pp.t
 
@@ -449,7 +480,7 @@ val cut2 : unit -> Pp.t
     homed -- declared in the struct of the module whose member writes it,
     because its body names what only that struct declares -- and whether it
     is a holder -- a struct -- rather than an alias. *)
-type template = {name : string; homed : bool; holder : bool; declaration : Pp.t}
+type template = {name : string; homed : bool; holder : bool; declaration : t}
 
 (** A constrained template's forward declaration, by the struct it
     declares. *)

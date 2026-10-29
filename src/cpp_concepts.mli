@@ -7,16 +7,21 @@
 
 open Names
 
-(** [pp_modtype_concept ~names ~params path c] is the declaration of the
-    concept of the module type at [path], generated as [c], over [M] and the
-    parameters [params] of a functor declaring it, with the concepts its
-    nested module types are hoisted into ahead of it, naming what [names]
-    names ({!names_requested}). *)
+(** [pp_modtype_concept ctx ~names ~params path c] is the declaration, at
+    the position [ctx], of the concept of the module type at [path],
+    generated as [c], over [M] and the parameters [params] of a functor
+    declaring it, with the concepts its nested module types are hoisted into
+    ahead of it, naming what [names] names ({!names_requested}). *)
 val pp_modtype_concept :
-  names:Cpp_resolution.table -> params:ModPath.t list -> ModPath.t -> Modtype_concept.t -> Pp.t
+  Cpp_state.render_ctx ->
+  names:Cpp_resolution.table ->
+  params:ModPath.t list ->
+  ModPath.t ->
+  Modtype_concept.t ->
+  Pp.t
 
-(** The assertion [a], as written where the tree puts it. *)
-val pp_assertion : Cpp_ast.assertion -> Pp.t
+(** The assertion [a], as written at the position where the tree puts it. *)
+val pp_assertion : Cpp_state.render_ctx -> Cpp_ast.assertion -> Pp.t
 
 (** What a declaration not yet printed names, at the frames inside it,
     beyond the references the tree holds itself: what

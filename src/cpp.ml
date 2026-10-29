@@ -86,7 +86,7 @@ let concept_assertion mp mty =
   | None -> (Cpp_ast.empty, [])
   | Some mt_mp ->
     let a = {Cpp_ast.concept = Of_module_type (Cpp_ast.concept_ref mt_mp); subject = Module (Cpp_ast.module_ref mp)} in
-    if concept_held_back (held_concept_of a) then (Cpp_ast.empty, [a]) else (Cpp_ast.assertion a, [])
+    if concept_held_back !render_ctx (held_concept_of a) then (Cpp_ast.empty, [a]) else (Cpp_ast.assertion a, [])
 
 (** Render a functor parameter as a C++ template parameter.
 
@@ -103,7 +103,7 @@ let template_param (mbid, mt) : Cpp_ast.template_param =
   (* A concept the enclosing struct holds back is declared after it, so a
      functor inside it takes its parameter unconstrained, as a class concept
      held back does. *)
-  | Some mt_mp when concept_held_back (HCmodtype mt_mp) -> Typename (Module_parameter param)
+  | Some mt_mp when concept_held_back !render_ctx (HCmodtype mt_mp) -> Typename (Module_parameter param)
   | Some mt_mp ->
     Constrained
       {concept = Cpp_ast.concept_ref mt_mp; args = List.map Cpp_ast.module_ref (concept_extra_args mt_mp); param}
@@ -186,7 +186,7 @@ let names_into_a_struct (doc : Pp.t) : bool = List.exists writes_into_a_struct (
     past the uses it exists to precede -- so what it costs is the position, for
     every other helper in the block. *)
 let spec_is_hoistable (spec : Cpp_erasure.settled) : bool =
-  let hoistable = declaration_names_into_a_struct (spec :> cpp_decl) = Some false in
+  let hoistable = declaration_names_into_a_struct !render_ctx (spec :> cpp_decl) = Some false in
   if Probe.checking () && hoistable = names_into_a_struct (Cpp_print.read_cpp_decl (empty_env ()) spec) then
     Probe.violation "hoisted helpers"
       Pp.(str "a helper's declaration was judged by its type to "
@@ -574,7 +574,8 @@ let unenclosed_element enclosure ?fields body =
     assertion held back, which is nothing here: it is written after the
     struct holding it back ({!Cpp_print.held_back_assertions}). *)
 let element_decl ~module_ ~homed env d =
-  if Cpp_print.is_held_back_assertion d then Cpp_ast.empty
+  let ctx = !render_ctx in
+  if Cpp_print.is_held_back_assertion ctx d then Cpp_ast.empty
   else if Cpp_print.absorbs ~homed d then Cpp_print.write_absorbing ~homed env d
   else Cpp_print.unprinted ~module_ env d
 
@@ -702,7 +703,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
     in
     { text = (if Cpp_ast.is_empty body then Cpp_ast.empty else Cpp_ast.(seq [text (pp_doc_comment l); body]));
       concepts;
-      asserts = List.concat_map (fun (_, d) -> Cpp_print.held_back_assertions d) rendered }
+      asserts = List.concat_map (fun (_, d) -> Cpp_print.held_back_assertions !render_ctx d) rendered }
   | l, SEmodule m ->
     let mp = MPdot (module_, l) in
     (* Its struct, or the alias standing for it, is declared under the
@@ -876,13 +877,13 @@ let rec pp_structure_elem ~is_header f ~module_ = function
         (* Set the promotion state the body will be rendered under.  A
            promotion outlives this module -- every later mention of the
            inductive spells it the promoted way -- whereas the demotion a
-           nested rendering needs lasts exactly as long as that rendering:
-           the ones planned around its body ({!Cpp_ind.with_planned_demotions}). *)
+           nested rendering needs is the position's, read off the frames
+           planned around its body ({!Cpp_names.promoted_at}). *)
         let with_promotion_scope body =
           if is_promoted then (
             eponymous_promote_ref := !eponymous_type_ref;
             Option.iter rendered_promotion !eponymous_type_ref );
-          Cpp_ind.with_planned_demotions body_mp body
+          body ()
         in
         let promoted_template =
           is_promoted && match promoted_tparams with Some (_ :: _) -> true | _ -> false
@@ -1518,9 +1519,7 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = f
     in
     Cpp_ind.plan_module_concepts mp (Cpp_ind.plan_concepts ~nested:outer.in_struct ~classes:class_concepts ~modtypes);
     let with_promotion k =
-      match frame.promoted with
-      | Some _ -> setting eponymous_promote_ref frame.eponymous_type k
-      | None -> Table.with_demoted_inductive frame.eponymous_type k
+      match frame.promoted with Some _ -> setting eponymous_promote_ref frame.eponymous_type k | None -> k ()
     in
     with_promotion (fun () -> in_header_scope scope k);
     classes ~module_ (declared_classes sel);
@@ -1877,7 +1876,8 @@ let plan_file_layout s =
     && module_members_name_only_inductives sel
     && Option.cata
          (List.for_all (fun d ->
-              is_static_member_declaration d && declaration_names_into_a_struct d = Some false ) )
+              is_static_member_declaration d
+              && declaration_names_into_a_struct {!render_ctx with rc_module = Some mp} d = Some false ) )
          false
          (struct_members ~wrapper mp sel)
   in
@@ -1905,6 +1905,8 @@ let plan_file_layout s =
       rendered
   in
   let add band mp group = band := (position mp, group) :: !band in
+  (* What a declaration of [mp]'s writes is asked as an element of [mp]: the
+     inductives its body spells bare are read off that position. *)
   (* The header writes every wrapper module's functions before any module's
      types ({!do_struct_with_decl_tracking}), and so defines the structs
      lifted out of them first. *)
@@ -1912,7 +1914,7 @@ let plan_file_layout s =
     let pass = if lifted then 0 else 1 in
     forward :=
       ((pass, position mp), List.map (fun f -> (lifted, f)) (Cpp_print.forward_declarations ~module_:mp env d)) :: !forward;
-    types := List.fold_right CString.Set.add (Cpp_print.file_scope_types d) !types
+    types := List.fold_right CString.Set.add (writing_element_of mp (fun () -> Cpp_print.file_scope_types d)) !types
   in
   let wrapper_lifted ~module_ se =
     match wrapper_element ~module_ se with
@@ -2479,27 +2481,6 @@ let plan_scopes s =
              (Table.escape_reserved_struct_name (String.capitalize_ascii (string_of_modfile mp))) )
     else None
   in
-  (* The names compared are the ones planned, not the ones a reference
-     spells: those depend on where the reference is written from. *)
-  let concept_name r =
-    match Module_plan.concept_name r with
-    | Some name -> Some name
-    | None -> Common.decided_global_name r
-  in
-  let concept_collision mp sel =
-    List.exists
-      (fun (_, se) ->
-        match se with
-        | SEdecl (Dind (kn, ({ind_kind = TypeClass _; _} as ind))) ->
-          List.exists
-            (fun i ->
-              Option.equal String.equal
-                (concept_name (GlobRef.IndRef (kn, i)))
-                (Some (Common.emitted_module_name mp)) )
-            (List.init (Array.length ind.ind_packets) Fun.id)
-        | _ -> false )
-      sel
-  in
   let scope_of ~parent mp sel =
     let at module_ qualifier = Some {Scope_plan.module_; qualifier} in
     match Module_plan.wrapper mp with
@@ -2511,7 +2492,7 @@ let plan_scopes s =
       match collision_wrapper mp sel with
       | Some w -> at mp [w]
       | None ->
-        if Common.is_struct_module mp && not (concept_collision mp sel) then
+        if Common.is_struct_module mp && not (Module_frame.concept_collision mp sel) then
           at mp (Option.cata (fun (p : Scope_plan.scope) -> p.qualifier) [] parent @ [own mp])
         else None )
   in
@@ -2581,7 +2562,7 @@ let plan_nested_structs s =
   (* A struct written inside another is its module's rendering, which demotes
      the module's inductive while it lasts: none is promoted there.  Whether
      its wrapper is merged is as a reference sees it at the declaration
-     ({!Cpp_names.is_merged_inductive}), which spells the inductive the way
+     ({!Cpp_names.merged_at}), which spells the inductive the way
      the declaration does. *)
   let promoted _ = false in
   let merged r = not (in_unmerged_wrapper r) in
@@ -3415,7 +3396,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     List.map
       (fun a ->
         { Cpp_ast.name = ctor_alias_name a;
-          homed = Option.has_some a.ca_home;
+          homed = (match a.ca_declared with In_struct_of _ -> true | At_namespace_scope _ -> false);
           holder = a.ca_holder;
           declaration = ctor_alias_declaration a } )
       (ctor_aliases_declared_in ~file:(if is_header then Common.Intf else Common.Impl))

@@ -110,16 +110,19 @@ let method_candidates epon_ref sel ~enclosing =
       sel;
   candidates
 
+(* The names compared are the ones planned, not the ones a reference
+   spells: those depend on where the reference is written from. *)
 let concept_collision mp sel =
-  let module_name = pp_module mp in
+  let concept_name r =
+    match Module_plan.concept_name r with Some name -> Some name | None -> Common.decided_global_name r
+  in
   List.exists
     (fun (_, se) ->
       match se with
-      | SEdecl (Dind (kn, ind)) ->
-        (match ind.ind_kind with TypeClass _ -> true | _ -> false)
-        && List.exists
-             (fun (r, _) -> String.equal (Cpp_names.concept_name_of_ref r) module_name)
-             (inductive_refs kn ind)
+      | SEdecl (Dind (kn, ({ind_kind = TypeClass _; _} as ind))) ->
+        List.exists
+          (fun (r, _) -> Option.equal String.equal (concept_name r) (Some (Common.emitted_module_name mp)))
+          (inductive_refs kn ind)
       | _ -> false )
     sel
 
@@ -184,3 +187,17 @@ let planned mp =
   | None ->
     CErrors.anomaly
       Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned frame.")
+
+let frames_around mp =
+  match Scope_plan.frames mp with
+  | Some frames -> frames
+  | None ->
+    CErrors.anomaly
+      Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned frames.")
+
+let demoted_around mp =
+  List.filter_map
+    (fun m ->
+      let frame = planned m in
+      if Option.has_some frame.promoted then None else frame.eponymous_type )
+    (frames_around mp)

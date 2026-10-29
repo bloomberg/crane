@@ -11,7 +11,9 @@ module Needs = struct
   let union a b = {templates = a.templates @ b.templates; names = a.names @ b.names; defines = a.defines @ b.defines}
 end
 
-type spelling = Element_of of ModPath.t | Member_of of ModPath.t
+type declared_in = In_struct_of of ModPath.t | At_namespace_scope of ModPath.t list
+
+type spelling = Element_of of ModPath.t | Member_of of ModPath.t | Template_in of declared_in
 
 type resolution = Unresolved | Resolved of Cpp_name.t
 type module_ref = {path : ModPath.t; name : resolution}
@@ -56,6 +58,16 @@ type declaration =
   | Functor_alias of {name : declared_module; functor_ : module_ref; params : (template_param * module_ref) list}
   | Derived_functor of {template : template_param list; name : declared_module; base : module_expr}
   | Forward_declaration of {env : Common.env; defined : defined}
+  | Synthesised_template of synthesised
+
+and synthesised = {
+  name : string;
+  holder : bool;
+  declared_in : declared_in;
+  body : Minicpp.cpp_type;
+  vars : Id.t list;
+  planned : string;
+}
 
 and module_expr = Module_named of module_ref | Applied of application
 
@@ -166,6 +178,7 @@ let module_alias mp target = leaf (Module_alias {name = declared_module mp; targ
 let functor_alias mp functor_ params = leaf (Functor_alias {name = declared_module mp; functor_; params})
 let derived_functor ~template mp base = leaf (Derived_functor {template; name = declared_module mp; base})
 let forward_declaration env defined = leaf (Forward_declaration {env; defined})
+let synthesised_template s = leaf (Synthesised_template s)
 let wrapper_struct ~name ~module_ ~fields = Wrapper_struct {name; module_; fields}
 let elements ~source elements = Elements {source; elements}
 let seq l = Seq l
@@ -329,7 +342,7 @@ let rec fill_wrappers bodies t =
     | Some _ -> invalid_arg ("Cpp_ast.fill_wrappers: the body given for " ^ name ^ " is another module's")
     | None -> invalid_arg ("Cpp_ast.fill_wrappers: no body for the wrapper struct " ^ name) )
 
-type template = {name : string; homed : bool; holder : bool; declaration : Pp.t}
+type template = {name : string; homed : bool; holder : bool; declaration : t}
 type forward = {struct_ : GlobRef.t; forward_declaration : t}
 type translation_unit = {
   forward_declarations : t list;
@@ -412,7 +425,7 @@ let schedule ~templates ~forwards u =
   let templates_due k =
     let due = List.filter (fun (a : template) -> List.mem a.name (Hashtbl.find_all template_slots k)) templates in
     let holders, aliases = List.partition (fun (a : template) -> a.holder) due in
-    List.map (fun (a : template) -> Text a.declaration) (holders @ aliases)
+    List.map (fun (a : template) -> a.declaration) (holders @ aliases)
   in
   let forwards_due k =
     List.filter_map
@@ -462,6 +475,7 @@ let map_leaves ?(head = fun _ h -> h) f t =
   let rec map spelling = function
     | (Text _ | Decl _) as t -> t
     | Declarations l -> Declarations (List.map (map spelling) l)
+    | Unprinted ({declaration = Synthesised_template s; _} as u) -> f (Template_in s.declared_in) u
     | Unprinted u -> (
       match spelling with
       | Some spelling -> f spelling u
@@ -542,7 +556,7 @@ let resolve_declaration (resolve : resolver) declaration =
   | Global_alias (Alias_of_module m) -> Global_alias (Alias_of_module (module_ref m))
   | Global_alias (Alias_of_type a) ->
     Global_alias (Alias_of_type {a with target = global_ref (fun r -> Definition (a.definition, r)) a.target})
-  | Declaration _ | Absorbed _ | Fields _ | Modtype_concept _ | Forward_declaration _ -> declaration
+  | Declaration _ | Absorbed _ | Fields _ | Modtype_concept _ | Forward_declaration _ | Synthesised_template _ -> declaration
 
 let resolve_tree ~requested ~resolve t =
   map_leaves ~head:(resolve_head resolve)

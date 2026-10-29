@@ -26,7 +26,14 @@ let ref_of s = GlobRef.VarRef (Id.of_string s)
 let needs ?(templates = []) ?(names = []) ?(defines = []) () =
   {Cpp_ast.Needs.templates; names = List.map ref_of names; defines = List.map ref_of defines}
 let leaf ?templates ?names ?defines s = Cpp_ast.decl ~needs:(needs ?templates ?names ?defines ()) (Pp.str s)
-let template ?(homed = false) ?(holder = false) name = {Cpp_ast.name; homed; holder; declaration = Pp.str ("<" ^ name ^ ">")}
+let template ?(homed = false) ?(holder = false) name =
+  {Cpp_ast.name; homed; holder; declaration = Cpp_ast.text (Pp.str ("<" ^ name ^ ">"))}
+
+let spelling_text = function
+  | Cpp_ast.Element_of mp -> "E(" ^ ModPath.to_string mp ^ ")"
+  | Member_of mp -> "M(" ^ ModPath.to_string mp ^ ")"
+  | Template_in (In_struct_of mp) -> "T(" ^ ModPath.to_string mp ^ ")"
+  | Template_in (At_namespace_scope files) -> "T[" ^ String.concat "," (List.map ModPath.to_string files) ^ "]"
 let forward s = {Cpp_ast.struct_ = ref_of s; forward_declaration = Cpp_ast.text (Pp.str ("fwd:" ^ s))}
 
 (* A unit whose body is [sections], nothing in any other section. *)
@@ -151,17 +158,12 @@ let () =
       (Cpp_erasure.materialise (Minicpp.Dstatic_assert (Minicpp.CPPbool true, None)))
   in
   let spelled ?(templates = []) sections =
-    let write spelling (_ : Cpp_ast.unprinted) =
-      Pp.str
-        ( match spelling with
-        | Cpp_ast.Element_of mp -> "E(" ^ ModPath.to_string mp ^ ")"
-        | Member_of mp -> "M(" ^ ModPath.to_string mp ^ ")" )
-    in
+    let write spelling (_ : Cpp_ast.unprinted) = Pp.str (spelling_text spelling) in
     Pp.string_of_ppcmds (Cpp_ast.print ~write (Cpp_ast.schedule ~templates ~forwards:[] (unit_of sections)))
   in
   let spelled_forward forwards sections =
     let write spelling (_ : Cpp_ast.unprinted) =
-      Pp.str ("fwd(" ^ (match spelling with Cpp_ast.Element_of mp | Member_of mp -> ModPath.to_string mp) ^ ")")
+      Pp.str ("fwd" ^ spelling_text spelling)
     in
     String.of_seq
       (Seq.filter (fun c -> not (List.mem c [' '; '\n']))
@@ -198,14 +200,24 @@ let () =
   let forward_leaf s = Cpp_ast.elements ~source:inner (Cpp_ast.forward_declaration (Common.empty_env ()) (Defined_enum (ref_of s))) in
   check_text "a forward declaration in the prologue is printed as the tree spells it"
     (Pp.string_of_ppcmds
-       (Cpp_ast.print ~write:(fun spelling _ -> Pp.str ("fwd " ^ (match spelling with Element_of mp | Member_of mp -> ModPath.to_string mp)))
+       (Cpp_ast.print ~write:(fun spelling _ -> Pp.str ("fwd " ^ spelling_text spelling))
           (Cpp_ast.schedule ~templates:[] ~forwards:[] (unit_of ~prologue:[forward_leaf "E"] [top (leaf "x;")])) )
      |> String.to_seq |> Seq.filter (fun c -> not (List.mem c [' '; '\n'])) |> String.of_seq)
-    "fwdF.M.Nx;";
+    "fwdE(F.M.N)x;";
   check_text "a forward declaration scheduled in front of a chunk is printed as the tree spells it"
     (spelled_forward [{Cpp_ast.struct_ = ref_of "S"; forward_declaration = forward_leaf "S"}]
        [top (leaf ~names:["S"] "e")])
-    "fwd(F.M.N)e";
+    "fwdE(F.M.N)e";
+  let synthesised declared_in =
+    Cpp_ast.synthesised_template {name = "S"; holder = false; declared_in; body = Minicpp.Tany; vars = []; planned = ""}
+  in
+  check_text "a synthesised template is spelled as declared in its home, wherever it is placed"
+    (spelled ~templates:[{(template "S") with declaration = synthesised (In_struct_of inner)}]
+       [top (Cpp_ast.elements ~source:m (unprinted ~templates:["S"] ()))])
+    "T(F.M.N)E(F.M)";
+  check_text "a synthesised template homed nowhere is spelled as declared at namespace scope"
+    (spelled [top (synthesised (At_namespace_scope [m]))])
+    "T[F.M]";
   check_text "a declaration not yet printed is placed by what it needs, as planned"
     (spelled ~templates:[template "T"] [top (Cpp_ast.elements ~source:m (unprinted ~templates:["T"] ()))])
     "<T>E(F.M)";
@@ -267,7 +279,6 @@ let () =
     (Cpp_ast.wrapper_structs (Cpp_ast.seq [wrapper; top (Cpp_ast.wrapper_struct ~name:"V" ~module_:m ~fields:Cpp_ast.empty)]) = ["W"; "V"]);
   check "a wrapper struct not filled in is not printed"
     (match Cpp_ast.to_pp wrapper with exception Invalid_argument _ -> true | _ -> false);
-  let spelling_text = function Cpp_ast.Element_of mp -> "E(" ^ ModPath.to_string mp ^ ")" | Member_of mp -> "M(" ^ ModPath.to_string mp ^ ")" in
   let ref_text = function GlobRef.VarRef id -> Id.to_string id | _ -> "?" in
   let resolve spelling (frame : Cpp_resolution.frame) (key : Cpp_resolution.key) =
     let named what = Cpp_name.unqualified (what ^ "@" ^ spelling_text spelling ^ String.make (List.length frame) '\'') in

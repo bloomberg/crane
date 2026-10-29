@@ -181,16 +181,16 @@ val held_back_concepts : held_concept list ref
 (** Whether a concept is one the current frame is holding back. *)
 val is_held_back_in : held_concept list -> held_concept -> bool
 
-(** Whether the struct now being rendered holds concept [c] back: declared
+(** Whether the struct the position is in holds concept [c] back: declared
     after it, so a constraint inside it cannot name [c] yet. *)
-val concept_held_back : held_concept -> bool
+val concept_held_back : render_ctx -> held_concept -> bool
 
-(** Whether the concept of type class [r] is held back by the struct now being
-    rendered: declared after it, so nothing inside may name it.  A
+(** Whether the concept of type class [r] is held back by the struct the position is
+    in: declared after it, so nothing inside may name it.  A
     [static_assert] is deferred with it, and a template parameter it would
     constrain is left a plain [typename], which the deferred assertion still
     checks for every instance. *)
-val class_concept_held_back : Names.GlobRef.t -> bool
+val class_concept_held_back : render_ctx -> Names.GlobRef.t -> bool
 
 (** [with_render_ctx upd f] renders [f] in the context [upd] derives from the
     current one, restoring the enclosing context on the way out however [f]

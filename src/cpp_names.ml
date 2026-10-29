@@ -25,10 +25,6 @@ open Cpp_state
 
 (** {2 Global name printing} *)
 
-(** Beware of the side-effects of [pp_global] and [pp_modname]. They are used to
-    update table of content for modules. Many [let] below should not be altered
-    since they force evaluation order. *)
-
 let checked key ~live n =
   ( if Probe.checking () then
       let here = live () in
@@ -50,54 +46,39 @@ let name_from names frame key ~live =
     CErrors.anomaly
       Pp.(str "Crane: a declaration names " ++ Cpp_resolution.pp_key key ++ str ", which resolving it did not ask for.")
 
-(* [key]'s name where the printer is: from the names of the declaration of
+(* [key]'s name at the position [c]: from the names of the declaration of
    the tree being written, at the frame printing it has entered, if one is
    being written; [live ()] where none is. *)
-let named key live =
-  match (!render_ctx).rc_names with None -> live () | Some names -> name_from names (!render_ctx).rc_frame key ~live
+let named (c : render_ctx) key live =
+  match c.rc_names with None -> live () | Some names -> name_from names c.rc_frame key ~live
 
-(** [r]'s name, whatever an inline custom mapping says ({!Common.global_name}). *)
-let unmapped_name k r = named (Unmapped (k, r)) (fun () -> Common.global_name k r)
-
-(** [mp]'s name ({!Common.resolve_module}). *)
-let module_name mp = named (Module mp) (fun () -> Common.resolve_module mp)
-
-(** The name of a global reference: the replacement text of an inline custom
-    mapping, otherwise as resolution settles it where the printer is.
+(** The name of a global reference at the position [c]: the replacement text
+    of an inline custom mapping, otherwise as resolution settles it there.
     @param k  the extraction key category (e.g. [Type] or [Term])
-    @param key the [KerName] used as the lookup key in the name table
     @param r  the global reference to name *)
-let global_name_with_key k key r =
+let global_name c k r =
   match find_custom_opt r with
   | Some custom_str when to_inline r -> Cpp_name.foreign custom_str
-  | _ when KerName.equal key (repr_of_r r) -> unmapped_name k r
-  | _ when Option.has_some (!render_ctx).rc_names ->
-    CErrors.anomaly
-      Pp.(str "Crane: a declaration names " ++ GlobRef.print r ++ str " through another's kernel name, which it is not resolved by.")
-  | _ -> Common.global_name_with_key k key r
-
-(** {!global_name_with_key} using the default key. *)
-let global_name k r = global_name_with_key k (repr_of_r r) r
-
-(** {!global_name_with_key} as text. *)
-let str_global_with_key k key r = Cpp_name.to_string (global_name_with_key k key r)
+  | _ -> named c (Unmapped (k, r)) (fun () -> Common.global_name k r)
 
 (** {!global_name} as text. *)
-let str_global k r = Cpp_name.to_string (global_name k r)
+let str_global c k r = Cpp_name.to_string (global_name c k r)
 
-(** {!global_name_with_key} as a document. *)
-let pp_global_with_key k key r = Cpp_name.pp (global_name_with_key k key r)
+(** The name [r] is declared under, wherever it is declared: the replacement
+    text of an inline custom mapping, otherwise its own short name. *)
+let declared_name k r =
+  match find_custom_opt r with Some custom_str when to_inline r -> custom_str | _ -> Common.pp_global_name k r
 
 (** {!global_name} as a document. *)
-let pp_global k r = Cpp_name.pp (global_name k r)
+let pp_global c k r = Cpp_name.pp (global_name c k r)
 
 (** The name a typeclass concept is declared and referenced under.  A concept
     may only appear at namespace scope, so it is hoisted out of every
     enclosing struct and carries no struct qualifier -- neither at its
     declaration nor at its uses.  A use in another file still names the file's
     namespace. *)
-let concept_name r =
-  named (Class_concept r) @@ fun () ->
+let concept_name c r =
+  named c (Class_concept r) @@ fun () ->
   let name =
     match Module_plan.concept_name r with
     | Some name -> name
@@ -108,16 +89,10 @@ let concept_name r =
   | None -> Cpp_name.unqualified name
 
 (** {!concept_name} as text. *)
-let concept_name_of_ref r = Cpp_name.to_string (concept_name r)
+let concept_name_of_ref c r = Cpp_name.to_string (concept_name c r)
 
 (** {!concept_name} as a document. *)
-let pp_concept_name_of_ref r = Cpp_name.pp (concept_name r)
-
-(** Pretty-print a global name (without custom mapping) as a Pp.t. *)
-let pp_global_name k r = Cpp_name.pp (unmapped_name k r)
-
-(** Pretty-print a module path as a Pp.t. *)
-let pp_modname mp = Cpp_name.pp (module_name mp)
+let pp_concept_name_of_ref c r = Cpp_name.pp (concept_name c r)
 
 let module_struct_name_of name =
   let raw = Cpp_name.pp name in
@@ -127,43 +102,22 @@ let module_struct_name_of name =
 
 let module_declared_name mp = Table.escape_reserved_struct_name (Common.emitted_module_name mp)
 
-(** Check if a non-local inductive's Dnspace wrapper was merged with its inner
-    struct. Returns true if the wrapper WAS merged (no pending declarations →
-    use List<A>). Returns false if it was NOT merged (has pending declarations →
-    use List::list<A>). *)
-let is_merged_inductive (r : GlobRef.t) : bool =
-  Ref.User.Tbl.mem promoted_inductives r || not (in_unmerged_wrapper r)
+(** Whether the inductive [r] is promoted at the position [c]: promoted by
+    the unit's plan, which nothing demotes in place, and not demoted in the
+    body of the module whose element is being written
+    ({!Module_frame.demoted_around}). *)
+let promoted_at (c : render_ctx) r =
+  Ref.User.Tbl.mem promoted_inductives r
+  &&
+  match c.rc_module with
+  | Some mp -> not (List.exists (globref_equal r) (Module_frame.demoted_around mp))
+  | None -> true
 
-(** Extract the [IndRef] from an [IndRef] or [ConstructRef]. *)
-let get_ind =
-  let open GlobRef in
-  function
-    | IndRef _ as r -> r
-    | ConstructRef (ind, _) -> IndRef ind
-    | _ -> CErrors.anomaly (Pp.str "get_ind: expected IndRef or ConstructRef")
-
-(** Extract the [KerName] from an [IndRef]. *)
-let kn_of_ind =
-  let open GlobRef in
-  function
-    | IndRef (kn, _) -> MutInd.user kn
-    | _ -> CErrors.anomaly (Pp.str "kn_of_ind: expected IndRef")
-
-(** Pretty-print a single record field, using the field ref if available.
-    @param r  the inductive (or constructor) reference owning the record
-    @param i  zero-based field index, used as a fallback suffix when no named
-              field ref exists
-    @return a [Pp.t] for the field name, either from its [GlobRef] or as
-            [<type>_field<i>] *)
-let pp_one_field r i = function
-  | Some r' -> pp_global_with_key Term (kn_of_ind (get_ind r)) r'
-  | None -> pp_global Type (get_ind r) ++ str "_field" ++ int i
-
-(** Pretty-print the [i]-th record field.
-    @param r      the inductive reference owning the record
-    @param fields the list of optional field [GlobRef]s for the record
-    @param i      zero-based index of the field to print *)
-let pp_field r fields i = pp_one_field r i (List.nth fields i)
+(** Whether a non-local inductive's Dnspace wrapper was merged with its inner
+    struct at the position [c]: true if the wrapper WAS merged (no pending
+    declarations, so List<A>); false if it was NOT merged (has pending
+    declarations, so List::list<A>). *)
+let merged_at c r = promoted_at c r || not (in_unmerged_wrapper r)
 
 (* ============================================================================
    Helper functions to reduce code duplication
@@ -203,10 +157,24 @@ let is_record_inductive r =
   | _ -> false
 
 (** Check if a GlobRef refers to a local inductive (defined in current module
-    scope). Local inductives don't need namespace qualification (e.g.,
-    List::list vs just list). *)
+    scope), as the declaration generator sees it. Local inductives don't need
+    namespace qualification (e.g., List::list vs just list).  The printer asks
+    its position instead ({!local_at}). *)
 let is_local_inductive r =
   List.exists (globref_equal r) (Translation_state.get_local_inductives ())
+
+(** Whether [r] is an inductive spelled bare at the position [c]: one the body
+    of the module whose element is being written spells bare, as planned
+    ({!Scope_plan.local_inductives}); none where no module's element is. *)
+let local_at (c : render_ctx) r =
+  match c.rc_module with
+  | None -> false
+  | Some mp -> (
+    match Scope_plan.local_inductives mp with
+    | Some local -> List.exists (globref_equal r) local
+    | None ->
+      CErrors.anomaly
+        Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned local inductives.") )
 
 let inductive_type r args es =
   let t = Tglob (r, args, es) in
@@ -245,19 +213,19 @@ let capitalize_struct n =
     - Non-local inductives: capitalized name (e.g., "List", "Nat")
     Returns the name and whether it is a non-local inductive's
     (capitalized) one. *)
-let inductive_name r =
+let inductive_name ctx r =
   let n, needs_ns =
     match r with
     | GlobRef.IndRef _ when Module_plan.is_eponymous_record r ->
       (Cpp_name.unqualified (Common.pp_type_name_capitalized r), false)
-    | GlobRef.IndRef _ when Ref.User.Tbl.mem promoted_inductives r ->
-      (capitalize_struct (global_name Type r), false)
-    | GlobRef.IndRef _ when is_local_inductive r ->
+    | GlobRef.IndRef _ when promoted_at ctx r ->
+      (capitalize_struct (global_name ctx Type r), false)
+    | GlobRef.IndRef _ when local_at ctx r ->
       if Common.get_force_cross_file_qualification () then
         (Cpp_name.unqualified (String.capitalize_ascii (Common.pp_global_name Type r)), false)
-      else (global_name Type r, false)
-    | GlobRef.IndRef _ -> (capitalize_struct (global_name Type r), true)
-    | _ -> (global_name Type r, false)
+      else (global_name ctx Type r, false)
+    | GlobRef.IndRef _ -> (capitalize_struct (global_name ctx Type r), true)
+    | _ -> (global_name ctx Type r, false)
   in
   (n, needs_ns)
 
@@ -327,39 +295,36 @@ let dedup_tail ?(allow_bare = false) n =
 
 (** The C++ type name for an inductive reference, handling eponymous records,
     promoted inductives, enums, locals, and merged/unmerged wrappers. *)
-let inductive_type_name r =
+let inductive_type_name ctx r =
   let force = Common.get_force_cross_file_qualification () in
   match r with
   | GlobRef.IndRef _ when Module_plan.is_eponymous_record r ->
     let cap_name = Common.pp_type_name_capitalized r in
-    if force && Cpp_name.is_qualified (global_name Type r) then
+    if force && Cpp_name.is_qualified (global_name ctx Type r) then
       Cpp_name.name [Cpp_name.Class cap_name] cap_name
     else Cpp_name.unqualified cap_name
-  | GlobRef.IndRef _ when Ref.User.Tbl.mem promoted_inductives r ->
-    if is_local_inductive r then
+  | GlobRef.IndRef _ when promoted_at ctx r ->
+    if local_at ctx r then
       Cpp_name.unqualified (String.capitalize_ascii (Common.pp_global_name Type r))
-    else promoted_name (global_name Type r)
-  | GlobRef.IndRef _ when is_record_inductive r -> global_name Type r
+    else promoted_name (global_name ctx Type r)
+  | GlobRef.IndRef _ when is_record_inductive r -> global_name ctx Type r
   | GlobRef.IndRef _ when is_enum_inductive r ->
-    let n = global_name Type r in
+    let n = global_name ctx Type r in
     enum_name
       (if Cpp_name.is_qualified n then n
        else Cpp_name.unqualified (Common.pp_global_name Type r))
       r
-  | GlobRef.IndRef _ when is_local_inductive r ->
-    if force then capitalize_base (global_name Type r) else global_name Type r
+  | GlobRef.IndRef _ when local_at ctx r ->
+    if force then capitalize_base (global_name ctx Type r) else global_name ctx Type r
   | GlobRef.IndRef _ ->
-    let n = global_name Type r in
+    let n = global_name ctx Type r in
     if Cpp_name.is_qualified n then
       if not force then n
-      else if is_merged_inductive r then promoted_name n
+      else if merged_at ctx r then promoted_name n
       else capitalize_base n
-    else if is_merged_inductive r then capitalize_initial n
+    else if merged_at ctx r then capitalize_initial n
     else Cpp_name.inside (capitalize_initial n) (fun s -> Cpp_name.Class s) n
-  | _ -> global_name Type r
-
-(** {!inductive_type_name} as a document. *)
-let pp_inductive_type_name r = Cpp_name.pp (inductive_type_name r)
+  | _ -> global_name ctx Type r
 
 (** Add typename prefix for dependent types in template contexts. C++ requires
     'typename' keyword when accessing nested types in templates. *)
@@ -414,7 +379,7 @@ let struct_scopes_for (ctx : render_ctx) r n =
        the struct's constructor; it takes the qualifier the struct itself is
        written with. *)
     else if
-      (Ref.User.Tbl.mem promoted_inductives r || Module_plan.is_eponymous_record r)
+      (promoted_at ctx r || Module_plan.is_eponymous_record r)
       && ModPath.equal (modpath_of_r r) scope.Scope_plan.module_
     then
       match List.rev struct_scopes with
@@ -428,7 +393,7 @@ let struct_scopes_for (ctx : render_ctx) r n =
       if member_of_struct () then struct_scopes else []
     (* Non-local records are placed at C++ global scope (before the struct),
        so they never need the struct prefix. *)
-    else if is_record_inductive r && not (is_local_inductive r) then []
+    else if is_record_inductive r && not (local_at ctx r) then []
     (* Enums at global scope need no prefix; those inside the struct do. *)
     else if Table.is_enum_inductive r then
       if Module_plan.is_global_scope_enum r then []
@@ -529,7 +494,7 @@ let wrapper_qualified_type_name (ctx : render_ctx) r n =
 let needs_global_qualifier (ctx : render_ctx) x =
   match ctx.rc_scope with
   | Some scope ->
-    (not (Cpp_name.is_qualified (global_name Term x)))
+    (not (Cpp_name.is_qualified (global_name ctx Term x)))
     && not (mp_encloses (modpath_of_r x) scope.Scope_plan.module_)
   | None -> false
 
@@ -538,7 +503,7 @@ let needs_global_qualifier (ctx : render_ctx) x =
    ============================================================================
    These query the pre-computed Name_resolution cache for classification
    information (eponymous, enum, record, merged status). The actual display name
-   rendering is still done by the original functions (pp_inductive_type_name,
+   rendering is still done by the original functions (inductive_type_name,
    inductive_name_info, etc.) since they depend on the visibility context which
    is only available during rendering.
 
@@ -599,8 +564,7 @@ type struct_spelling =
 (** The spelling of [id]'s struct at its declaration, [local] where the
     declaration is rendered among the inductives local to it: a promoted
     inductive, and one a reference sees as merged, take the merged spelling. *)
-let struct_spelling ?(merged = is_merged_inductive)
-    ?(promoted = Ref.User.Tbl.mem promoted_inductives) ~local id =
+let struct_spelling ~merged ~promoted ~local id =
   match id with
   | GlobRef.IndRef _ when is_eponymous_record_cached id -> Eponymous_record_name
   | GlobRef.IndRef _ when promoted id -> Capitalized
@@ -620,8 +584,8 @@ let struct_spelling ?(merged = is_merged_inductive)
 let enum_declaration_name r = capitalize_enum_name (Common.pp_global_name Type r) r
 
 (** {!struct_spelling} as a string. *)
-let struct_declaration_name ?merged ?promoted ~local id =
-  match struct_spelling ?merged ?promoted ~local id with
+let struct_declaration_name ~merged ~promoted ~local id =
+  match struct_spelling ~merged ~promoted ~local id with
   | Eponymous_record_name -> Common.pp_type_name_capitalized id
   | Capitalized -> String.capitalize_ascii (Common.pp_global_name Type id)
   | As_declared -> Common.pp_global_name Type id
@@ -649,8 +613,8 @@ module IdSet = Set.Make (Names.Id)
 
 (** {2 What a declaration not yet printed names} *)
 
-let module_written () =
-  match (!render_ctx).rc_module with
+let module_written (c : render_ctx) =
+  match c.rc_module with
   | Some mp -> mp
   | None -> CErrors.anomaly (Pp.str "Crane: templates were read off something written as no module's element.")
 
@@ -671,7 +635,7 @@ let modtype_concept_name mp =
     | None -> Option.default (base l) (Module_plan.modtype_concept_name mp) )
   | MPfile _ | MPbound _ -> CErrors.anomaly (Pp.str "modtype_concept_name: a module type is a member of a structure")
 
-let modtype_concept_ref kn =
+let modtype_concept_ref ctx kn =
   match kn with
   | ModPath.MPdot (mp0, _) when Option.has_some (functor_concept_scope mp0) ->
     (* Declared at file scope, so named after the functor declaring it. *)
@@ -689,7 +653,7 @@ let modtype_concept_ref kn =
       | MPbound _ -> mp0
     in
     let foreign_file =
-      match mp0 with MPfile _ -> not (ModPath.equal mp0 (file_of (module_written ()))) | _ -> false
+      match mp0 with MPfile _ -> not (ModPath.equal mp0 (file_of (module_written ctx))) | _ -> false
     in
     if foreign_file && not (Cpp_name.is_qualified resolved) then
       Cpp_name.inside resolved (fun s -> Cpp_name.Namespace s) (Cpp_name.unqualified (modtype_concept_name kn))
@@ -701,14 +665,14 @@ let modtype_concept_ref kn =
     Cpp_name.unqualified (modtype_concept_name kn)
   | MPfile _ | MPbound _ -> Common.resolve_module kn
 
-let struct_definition_name id =
-  let local = is_local_inductive id in
-  match struct_spelling ~local id with
-  | As_declared -> global_name Type id
-  | Eponymous_record_name | Capitalized -> Cpp_name.unqualified (struct_declaration_name ~local id)
+let struct_definition_name ctx id =
+  let local = local_at ctx id and merged = merged_at ctx and promoted = promoted_at ctx in
+  match struct_spelling ~merged ~promoted ~local id with
+  | As_declared -> Cpp_name.unqualified (declared_name Type id)
+  | Eponymous_record_name | Capitalized -> Cpp_name.unqualified (struct_declaration_name ~merged ~promoted ~local id)
 
-let enum_definition_name r =
-  match r with GlobRef.IndRef _ -> inductive_type_name r | _ -> global_name Type r
+let enum_definition_name ctx r =
+  match r with GlobRef.IndRef _ -> inductive_type_name ctx r | _ -> global_name ctx Type r
 
 (* The visibility inside the struct of the inductive [r]: a layer whose path
    names nothing a reference could be declared in, holding the
@@ -758,17 +722,17 @@ let rec at_frame (frame : Cpp_resolution.frame) k =
 
 (* The name the inductive type [x] is written under as a value: the
    struct a constructor's value is built through. *)
-let inductive_value_name x =
-  let ns_name, needs_ns = inductive_name x in
-  let type_name = global_name Type x in
+let inductive_value_name ctx x =
+  let ns_name, needs_ns = inductive_name ctx x in
+  let type_name = global_name ctx Type x in
   let force = Common.get_force_cross_file_qualification () in
   (* Check eponymous record FIRST because they can also be local *)
   if is_eponymous_record_cached x then Cpp_name.unqualified (Common.pp_type_name_capitalized x)
-  else if Ref.User.Tbl.mem promoted_inductives x then
+  else if promoted_at ctx x then
     dedup_tail (if force then capitalize_base type_name else capitalize_initial type_name)
   else if Cpp_name.is_qualified type_name then
     let cap = if force then capitalize_base type_name else type_name in
-    if is_merged_inductive x then
+    if merged_at ctx x then
       let allow_bare =
         let ref_base = base_mp (modpath_of_r x) in
         List.exists (ModPath.equal ref_base) (visible_mps (current_visibility ()))
@@ -776,7 +740,7 @@ let inductive_value_name x =
       dedup_tail ~allow_bare cap
     else cap
   else if needs_ns then
-    if is_merged_inductive x then
+    if merged_at ctx x then
       (* Merged non-local inductive: use capitalized name directly *)
       List.fold_right Cpp_name.within (global_scopes_for x ns_name) ns_name
     else (* Unmerged non-local inductive: Wrapper::inner *)
@@ -785,20 +749,22 @@ let inductive_value_name x =
   else (* Local inductive: use original name directly *)
     type_name
 
-let inductive_value x = named (Inductive_value x) (fun () -> inductive_value_name x)
+let inductive_value ctx x = named ctx (Inductive_value x) (fun () -> inductive_value_name ctx x)
 
 let live_name (key : Cpp_resolution.key) =
   with_render_ctx (fun c -> {c with rc_names = None}) @@ fun () ->
+  (* The replay's position, which whoever resolves the key installs. *)
+  let ctx = !render_ctx in
   match key with
   | Module mp -> Common.resolve_module mp
   | Module_declared mp -> Cpp_name.unqualified (module_declared_name mp)
-  | Global (k, r) -> global_name k r
+  | Global (k, r) -> global_name ctx k r
   | Unmapped (k, r) -> Common.global_name k r
-  | Inductive_value r -> inductive_value_name r
+  | Inductive_value r -> inductive_value_name ctx r
   | Short (k, r) -> Cpp_name.unqualified (Common.pp_global_name k r)
-  | Class_concept r -> concept_name r
-  | Modtype_concept mp -> modtype_concept_ref mp
+  | Class_concept r -> concept_name ctx r
+  | Modtype_concept mp -> modtype_concept_ref ctx mp
   | Modtype_concept_declared mp -> Cpp_name.unqualified (modtype_concept_name mp)
-  | Definition (Enum_definition, r) -> enum_definition_name r
-  | Definition (Struct_definition, r) -> struct_definition_name r
-  | Definition (Alias_definition, r) -> global_name Type r
+  | Definition (Enum_definition, r) -> enum_definition_name ctx r
+  | Definition (Struct_definition, r) -> struct_definition_name ctx r
+  | Definition (Alias_definition, r) -> global_name ctx Type r

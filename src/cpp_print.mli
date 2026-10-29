@@ -50,7 +50,7 @@ val name_in : Cpp_resolution.table -> Cpp_resolution.frame -> Cpp_resolution.key
 
 (** Whether [d] is an assertion the struct being written holds back until
     after it, writing nothing for it here. *)
-val is_held_back_assertion : Cpp_erasure.settled -> bool
+val is_held_back_assertion : Cpp_state.render_ctx -> Cpp_erasure.settled -> bool
 
 (** What placing the declarations [decl], written in the module [module_],
     needs reads ({!Cpp_ast.Needs}), as planned. *)
@@ -91,8 +91,14 @@ val unprinted_names : Cpp_ast.declaration -> (Cpp_resolution.frame * Cpp_resolut
     [CRANE_CHECK_IR] it must need, printed there, what was planned for it
     where it was made. *)
 val print_unprinted :
-  modtype_concept:(names:Cpp_resolution.table -> params:ModPath.t list -> ModPath.t -> Modtype_concept.t -> Pp.t) ->
-  assertion:(Cpp_ast.assertion -> Pp.t) ->
+  modtype_concept:
+    (Cpp_state.render_ctx ->
+    names:Cpp_resolution.table ->
+    params:ModPath.t list ->
+    ModPath.t ->
+    Modtype_concept.t ->
+    Pp.t ) ->
+  assertion:(Cpp_state.render_ctx -> Cpp_ast.assertion -> Pp.t) ->
   Cpp_ast.unprinted ->
   Pp.t
 
@@ -143,11 +149,11 @@ val is_static_member_declaration : cpp_decl -> bool
 (** Whether a function declaration writes a qualifier into a struct or a
     template parameter, in its name, result or parameters, asked of the
     declaration rather than of its rendering: each name is the one
-    {!pp_cpp_type} writes, from the same heads, in the render context the
-    caller has set.  [None] for anything but a function declaration, and
-    where only the rendering can tell -- an expression's type, a type
-    constructor named as a template argument. *)
-val declaration_names_into_a_struct : cpp_decl -> bool option
+    {!pp_cpp_type} writes, from the same heads, at the given position.
+    [None] for anything but a function declaration, and where only the
+    rendering can tell -- an expression's type, a type constructor named as a
+    template argument. *)
+val declaration_names_into_a_struct : Cpp_state.render_ctx -> cpp_decl -> bool option
 
 (** Doc-comment lines for [name], or nothing when none is registered. *)
 val pp_doc_comment_for_name : ?indent:string -> string -> Pp.t
@@ -180,7 +186,7 @@ val unmerged_wrappers_written : Cpp_erasure.settled -> string list
 (** The assertions a declaration holds back, in the order it writes them:
     those that a class's concept holds of an instance where the concept is
     declared after the struct being written, and so is the assertion. *)
-val held_back_assertions : Cpp_erasure.settled -> Cpp_ast.assertion list
+val held_back_assertions : Cpp_state.render_ctx -> Cpp_erasure.settled -> Cpp_ast.assertion list
 
 (** {2 Forward declarations} *)
 
@@ -210,11 +216,11 @@ val forward_declarations : module_:ModPath.t -> Common.env -> Cpp_erasure.settle
 type ctor_alias = private {
   ca_base : string;  (** What its name is made from. *)
   ca_holder : bool;
-  ca_home : ModPath.t option;
-      (** The module struct it is declared in, or [None] for namespace
-          scope. *)
+  ca_declared : Cpp_ast.declared_in;  (** Where it is declared. *)
   ca_body : string;
       (** The type it abbreviates, as written where it is declared. *)
+  ca_type : cpp_type;  (** That type. *)
+  ca_vars : Id.t list;  (** The names of the variables it names by index. *)
 }
 
 (** The synthesised templates something a file writes writes, in the order
@@ -238,8 +244,16 @@ val plan_ctor_aliases : (Common.file -> ctor_aliases_read list) -> unit
 (** The name of a template, a function of its body. *)
 val ctor_alias_name : ctor_alias -> string
 
-(** The declaration of a template. *)
-val ctor_alias_declaration : ctor_alias -> Pp.t
+(** The declaration of a template, written where the tree puts it as
+    declared where it is ({!Cpp_ast.Template_in}). *)
+val ctor_alias_declaration : ctor_alias -> Cpp_ast.t
+
+(** The position a template declared where the second argument says is
+    written at, in the file the first is written in ({!Cpp_ast.Template_in}). *)
+val ctor_alias_render_ctx : Cpp_state.render_ctx -> Cpp_ast.declared_in -> Cpp_state.render_ctx
+
+(** The visibility a template declared where it says is written in. *)
+val ctor_alias_visibility : Cpp_ast.declared_in -> Common.visibility
 
 (** The templates the file [file] declares, each once, in the order
     planned: the aliases it writes, and, in the header, every holder the

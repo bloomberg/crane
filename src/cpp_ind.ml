@@ -534,7 +534,7 @@ let ind_header_decls kn ind =
         let own_nspace_names =
           Array.to_list
             (Array.map
-               (fun r -> Some (String.capitalize_ascii (str_global Type r)))
+               (fun r -> Some (String.capitalize_ascii (declared_name Type r)))
                names )
         in
         let group, defs =
@@ -1185,23 +1185,6 @@ let with_planned_local_inductives mp k =
     CErrors.anomaly
       Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned local inductives.")
 
-let planned_frames mp =
-  match Scope_plan.frames mp with
-  | Some frames -> frames
-  | None ->
-    CErrors.anomaly
-      Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned frames.")
-
-let with_planned_demotions mp k =
-  let demoted =
-    List.filter_map
-      (fun m ->
-        let frame = Module_frame.planned m in
-        if Option.has_some frame.promoted then None else frame.eponymous_type )
-      (planned_frames mp)
-  in
-  List.fold_left (fun k r () -> Table.with_demoted_inductive (Some r) k) k demoted ()
-
 type concept_placement = Ahead_of_struct | After_struct | At_file_scope
 
 type concept_plan = {
@@ -1244,7 +1227,7 @@ let concept_placement plan c =
 
 let planned_held_back ~file mp =
   match (file : Common.file) with
-  | Intf -> List.concat_map (fun m -> (concept_plan m).held_back) (planned_frames mp)
+  | Intf -> List.concat_map (fun m -> (concept_plan m).held_back) (Module_frame.frames_around mp)
   | Impl -> []
 
 let in_spelling ~file spelling k =
@@ -1252,13 +1235,14 @@ let in_spelling ~file spelling k =
     match spelling with
     | Cpp_ast.Element_of mp | Member_of mp ->
       fun () -> with_render_ctx (fun c -> {c with rc_module = Some mp; rc_frame = []; rc_names = None}) k
+    | Template_in _ -> k
   in
   let in_body mp k =
     match Scope_plan.visibility mp with
     | Some v ->
       with_visibility v (fun () ->
           with_planned_local_inductives mp (fun () ->
-              with_planned_demotions mp (fun () -> setting held_back_concepts (planned_held_back ~file mp) k) ) )
+              setting held_back_concepts (planned_held_back ~file mp) k ) )
     | None -> CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
   in
   match ((file : Common.file), (spelling : Cpp_ast.spelling)) with
@@ -1274,6 +1258,12 @@ let in_spelling ~file spelling k =
     CErrors.anomaly
       Pp.(str "Crane: the implementation writes a member of the struct of " ++ str (ModPath.to_string mp)
           ++ str ", which it does not write.")
+  (* A synthesised template is written where it is declared, whatever is
+     around it. *)
+  | _, Template_in declared ->
+    with_render_ctx
+      (fun c -> Cpp_print.ctor_alias_render_ctx {c with rc_file = file} declared)
+      (fun () -> with_visibility (Cpp_print.ctor_alias_visibility declared) k)
 
 let resolver_at ~file spelling frame key =
   Common.without_noting_written_files (fun () ->

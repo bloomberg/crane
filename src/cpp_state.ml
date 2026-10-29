@@ -546,10 +546,10 @@ let is_held_back_in held_back c =
 
 (** Whether the struct being rendered holds concept [c] back, so that a
     constraint written inside it cannot name [c] yet. *)
-let concept_held_back c =
-  !render_ctx.rc_in_struct && is_held_back_in !held_back_concepts c
+let concept_held_back ctx c =
+  ctx.rc_in_struct && is_held_back_in !held_back_concepts c
 
-let class_concept_held_back r = concept_held_back (HCclass r)
+let class_concept_held_back ctx r = concept_held_back ctx (HCclass r)
 
 (** [with_render_ctx upd f] renders [f] in the context [upd] derives from the
     current one, and puts the enclosing context back on the way out however [f]
@@ -1062,7 +1062,7 @@ let method_returns_any (func_ref : GlobRef.t) : bool =
     reference to CHT from another module would incorrectly generate "CHT::cHT"
     instead of just "CHT".
 
-    See also: pp_inductive_type_name which uses this registry for type name
+    See also: Cpp_names.inductive_type_name which uses this registry for type name
     rendering. *)
 
 (** Track current structure's declarations for finding methods from sibling
