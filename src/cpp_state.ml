@@ -554,20 +554,43 @@ let held_concept_equal a b =
   | HCclass x, HCclass y -> globref_equal x y
   | _ -> false
 
-(** The concepts the struct now being rendered has held back: their
-    declarations come after it, so neither a [requires] clause nor a
-    [static_assert] inside it may name them yet. *)
-let held_back_concepts : held_concept list ref =
-  owned_list ~census:false "held_back_concepts"
-
 (** Whether a concept is one the current frame is holding back. *)
 let is_held_back_in held_back c =
   List.exists (held_concept_equal c) held_back
 
 (** Whether the struct being rendered holds concept [c] back, so that a
     constraint written inside it cannot name [c] yet. *)
+type concept_placement = Ahead_of_struct | After_struct | At_file_scope
+
+type concept_plan = {
+  placements : (held_concept * concept_placement) list;
+  held_back : held_concept list;
+}
+
+let concept_plans : concept_plan Names.MPmap.t ref = State.cell State.Unit Names.MPmap.empty
+
+let plan_module_concepts mp plan = concept_plans := Names.MPmap.add mp plan !concept_plans
+
+let concept_plan mp =
+  match Names.MPmap.find_opt mp !concept_plans with
+  | Some plan -> plan
+  | None ->
+    CErrors.anomaly
+      Pp.(str "Crane: the module " ++ str (Names.ModPath.to_string mp) ++ str " has no planned concepts.")
+
+let planned_held_back ~file mp =
+  match (file : Common.file) with
+  | Intf -> (
+    match Scope_plan.frames mp with
+    | Some frames -> List.concat_map (fun m -> (concept_plan m).held_back) frames
+    | None ->
+      CErrors.anomaly
+        Pp.(str "Crane: the body of the module " ++ str (Names.ModPath.to_string mp) ++ str " has no planned frames.") )
+  | Impl -> []
+
 let concept_held_back ctx c =
-  ctx.rc_in_struct && is_held_back_in !held_back_concepts c
+  ctx.rc_in_struct
+  && match ctx.rc_module with Some mp -> is_held_back_in (planned_held_back ~file:ctx.rc_file mp) c | None -> false
 
 let class_concept_held_back ctx r = concept_held_back ctx (HCclass r)
 
@@ -702,14 +725,11 @@ let module_frame_cells =
     Saver eponymous_type_ref;
     Saver eponymous_record;
     Saver method_candidates;
-    Saver held_back_concepts;
   ]
 
 (** [with_module_frame f] renders [f] as a module frame: it starts with no
     eponymous type, no eponymous record and no method candidates of its own,
-    and leaves the enclosing frame's untouched.  [held_back_concepts] carries
-    over, since a concept the enclosing struct is holding back is still
-    unusable inside a nested one. *)
+    and leaves the enclosing frame's untouched. *)
 let with_module_frame f =
   with_saved module_frame_cells (fun () ->
       eponymous_type_ref := None;

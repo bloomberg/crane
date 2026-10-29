@@ -140,13 +140,6 @@ val in_header_element_scope : Names.ModPath.t -> (in_struct:bool -> 'a) -> 'a
     ({!Scope_plan.local_inductives}), and no others. *)
 val with_planned_local_inductives : Names.ModPath.t -> (unit -> 'a) -> 'a
 
-(** [planned_held_back ~file mp] is what the concepts held back around the
-    body of the module [mp] are in [file], innermost first: in the header,
-    those each module frame around it ({!Scope_plan.frames}) holds back,
-    as planned ({!concept_plan}); in the implementation, which declares no
-    concept, none. *)
-val planned_held_back : file:Common.file -> Names.ModPath.t -> Cpp_state.held_concept list
-
 (** A group of finished declarations the header writes at file scope, away
     from the module [source] they were generated in.  They are spelled as
     the header spells an element of [source] -- in the visibility planned
@@ -189,15 +182,11 @@ val write_unprinted : file:Common.file -> Cpp_ast.spelling -> Cpp_ast.unprinted 
     concepts at file scope.  Otherwise a concept goes ahead of the module's
     struct, whose body may constrain a functor with it, unless it names one
     of the struct's members, when it follows the struct. *)
-type concept_placement = Ahead_of_struct | After_struct | At_file_scope
+type concept_placement = Cpp_state.concept_placement = Ahead_of_struct | After_struct | At_file_scope
 
-(** The concepts of a module's classes and module types, planned ahead of
-    the files: where each is declared, and which the struct's body treats as
-    not declared yet ({!Cpp_state.held_back_concepts}). *)
-type concept_plan = {
+(** {!Cpp_state.concept_plan}. *)
+type concept_plan = Cpp_state.concept_plan = {
   placements : (Cpp_state.held_concept * concept_placement) list;
-      (** The class concepts, then the module-type concepts, in declaration
-          order. *)
   held_back : Cpp_state.held_concept list;
 }
 
@@ -211,12 +200,6 @@ val plan_concepts :
   concept_plan
 
 val equal_concept_plan : concept_plan -> concept_plan -> bool
-
-(** [plan_module_concepts mp plan] plans [plan] for the module [mp]. *)
-val plan_module_concepts : Names.ModPath.t -> concept_plan -> unit
-
-(** The concepts planned for the module [mp]; an anomaly if none were. *)
-val concept_plan : Names.ModPath.t -> concept_plan
 
 (** Where [plan] places the concept [c]; an anomaly if it does not. *)
 val concept_placement : concept_plan -> Cpp_state.held_concept -> concept_placement

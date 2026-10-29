@@ -1185,9 +1185,9 @@ let with_planned_local_inductives mp k =
     CErrors.anomaly
       Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned local inductives.")
 
-type concept_placement = Ahead_of_struct | After_struct | At_file_scope
+type concept_placement = Cpp_state.concept_placement = Ahead_of_struct | After_struct | At_file_scope
 
-type concept_plan = {
+type concept_plan = Cpp_state.concept_plan = {
   placements : (held_concept * concept_placement) list;
   held_back : held_concept list;
 }
@@ -1209,26 +1209,10 @@ let equal_concept_plan a b =
   List.equal (fun (c, p) (c', p') -> held_concept_equal c c' && p = p') a.placements b.placements
   && List.equal held_concept_equal a.held_back b.held_back
 
-let concept_plans : concept_plan MPmap.t ref = State.cell State.Unit MPmap.empty
-
-let plan_module_concepts mp plan = concept_plans := MPmap.add mp plan !concept_plans
-
-let concept_plan mp =
-  match MPmap.find_opt mp !concept_plans with
-  | Some plan -> plan
-  | None ->
-    CErrors.anomaly
-      Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned concepts.")
-
 let concept_placement plan c =
   match List.find_opt (fun (c', _) -> held_concept_equal c c') plan.placements with
   | Some (_, p) -> p
   | None -> CErrors.anomaly Pp.(str "Crane: a concept was written whose placement was not planned.")
-
-let planned_held_back ~file mp =
-  match (file : Common.file) with
-  | Intf -> List.concat_map (fun m -> (concept_plan m).held_back) (Module_frame.frames_around mp)
-  | Impl -> []
 
 let planned_visibility mp =
   match Scope_plan.visibility mp with
@@ -1245,16 +1229,15 @@ let in_spelling ~file spelling k =
           k
     | Template_in _ -> k
   in
-  let in_body mp k = with_planned_local_inductives mp (fun () -> setting held_back_concepts (planned_held_back ~file mp) k) in
   match ((file : Common.file), (spelling : Cpp_ast.spelling)) with
-  | Intf, Element_of mp -> in_body mp (fun () -> in_header_element_scope mp (fun ~in_struct:_ -> k ()))
+  | Intf, Element_of mp -> with_planned_local_inductives mp (fun () -> in_header_element_scope mp (fun ~in_struct:_ -> k ()))
   | Intf, Member_of mp ->
-    in_body mp (fun () ->
+    with_planned_local_inductives mp (fun () ->
         in_header_element_scope mp (fun ~in_struct:_ -> with_render_ctx (fun c -> {c with rc_in_struct = true}) k) )
   (* The implementation writes every element of a module at file scope:
      what it defines out of line is qualified by the scope its plan gives
      it ({!Scope_plan.of_declaration}). *)
-  | Impl, Element_of mp -> in_body mp (fun () -> with_render_ctx (fun _ -> file_start Impl) k)
+  | Impl, Element_of mp -> with_planned_local_inductives mp (fun () -> with_render_ctx (fun _ -> file_start Impl) k)
   | Impl, Member_of mp ->
     CErrors.anomaly
       Pp.(str "Crane: the implementation writes a member of the struct of " ++ str (ModPath.to_string mp)

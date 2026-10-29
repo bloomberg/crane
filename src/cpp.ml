@@ -867,10 +867,10 @@ let rec pp_structure_elem ~is_header f ~module_ = function
             []
         in
         (* The header declares the module's concepts where the walk ahead of
-           the files planned them ({!Cpp_ind.concept_plan}); under
+           the files planned them ({!Cpp_state.concept_plan}); under
            [CRANE_CHECK_IR] the plan is checked against the concepts
            generated here. *)
-        let plan = if is_header then Some (Cpp_ind.concept_plan mp) else None in
+        let plan = if is_header then Some (concept_plan mp) else None in
         if
           is_header && Probe.checking ()
           && not
@@ -963,11 +963,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
         let body_written, this_method_candidates =
           with_promotion_scope @@ fun () ->
           with_render_ctx enter_module (fun () ->
-            let body =
-              setting held_back_concepts
-                (Cpp_ind.planned_held_back ~file:(if is_header then Intf else Impl) body_mp)
-                (fun () -> pp_module_body ~is_header f body_mp sel)
-            in
+            let body = pp_module_body ~is_header f body_mp sel in
             (body, !method_candidates) )
         in
         (* The assertions this struct's body held back: those naming a concept
@@ -1557,7 +1553,7 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = f
         (fun (path, c) -> (HCmodtype path, Modtype_concept.names_member mp c))
         (modtypes ~module_ mp ~params:[] sel)
     in
-    Cpp_ind.plan_module_concepts mp (Cpp_ind.plan_concepts ~nested:outer.in_struct ~classes:class_concepts ~modtypes);
+    plan_module_concepts mp (Cpp_ind.plan_concepts ~nested:outer.in_struct ~classes:class_concepts ~modtypes);
     let with_promotion k =
       match frame.promoted with Some _ -> setting eponymous_promote_ref frame.eponymous_type k | None -> k ()
     in
