@@ -147,6 +147,13 @@ type render_ctx = {
           where what is written is no such declaration -- planning, the
           driver's own text, a synthesised template's body -- whose names
           are resolved where they are written. *)
+  rc_visibility : Common.visibility option;
+      (** The scopes whose names are visible where the printer is, innermost
+          first: the planned visibility of what is being written
+          ({!Scope_plan.visibility}), with a layer for each scope printing
+          has entered that declares names ({!Cpp_names.next}); none where
+          what is written is not spelled as the tree spells a declaration --
+          planning, the driver's own text. *)
 }
 
 (** The context at the start of the file [file]: file scope, outside every

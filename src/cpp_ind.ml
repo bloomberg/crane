@@ -1230,20 +1230,24 @@ let planned_held_back ~file mp =
   | Intf -> List.concat_map (fun m -> (concept_plan m).held_back) (Module_frame.frames_around mp)
   | Impl -> []
 
+let planned_visibility mp =
+  match Scope_plan.visibility mp with
+  | Some v -> v
+  | None -> CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
+
 let in_spelling ~file spelling k =
   let k =
     match spelling with
     | Cpp_ast.Element_of mp | Member_of mp ->
-      fun () -> with_render_ctx (fun c -> {c with rc_module = Some mp; rc_frame = []; rc_names = None}) k
+      fun () ->
+        with_render_ctx
+          (fun c -> {c with rc_module = Some mp; rc_frame = []; rc_names = None; rc_visibility = Some (planned_visibility mp)})
+          k
     | Template_in _ -> k
   in
   let in_body mp k =
-    match Scope_plan.visibility mp with
-    | Some v ->
-      with_visibility v (fun () ->
-          with_planned_local_inductives mp (fun () ->
-              setting held_back_concepts (planned_held_back ~file mp) k ) )
-    | None -> CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
+    with_visibility (planned_visibility mp) (fun () ->
+        with_planned_local_inductives mp (fun () -> setting held_back_concepts (planned_held_back ~file mp) k) )
   in
   match ((file : Common.file), (spelling : Cpp_ast.spelling)) with
   | Intf, Element_of mp -> in_body mp (fun () -> in_header_element_scope mp (fun ~in_struct:_ -> k ()))

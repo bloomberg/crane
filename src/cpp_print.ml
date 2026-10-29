@@ -581,7 +581,7 @@ let ctor_alias_visibility : Cpp_ast.declared_in -> _ = function
     written out of line and qualify what they name by the struct they are
     members of. *)
 let ctor_alias_render_ctx ctx (declared : Cpp_ast.declared_in) =
-  let start = file_start ctx.rc_file in
+  let start = {(file_start ctx.rc_file) with rc_visibility = Some (ctor_alias_visibility declared)} in
   match (declared, ctx.rc_file) with
   | At_namespace_scope _, _ -> start
   | In_struct_of home, Common.Intf ->

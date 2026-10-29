@@ -382,7 +382,12 @@ let () =
     (t.rc_in_struct && t.rc_in_template && t.rc_frame = [Cpp_resolution.In_template; In_struct]);
   let signature = Cpp_resolution.Signature {signature = m; parameters = []} in
   let g = Cpp_names.next signature start in
-  check "entering a signature changes only the frame" ({g with rc_frame = []} = start && g.rc_frame = [signature]);
+  check "entering a signature where nothing planned what is visible changes only the frame"
+    ({g with rc_frame = []} = start && g.rc_frame = [signature]);
+  let visible = Common.toplevel_visibility [ModPath.MPfile (DirPath.make [Id.of_string "F"])] in
+  let planned = Cpp_names.next signature {start with rc_visibility = Some visible} in
+  check "entering a signature makes what it declares visible"
+    (Option.equal Common.equal_visibility planned.rc_visibility (Some (Common.inside m [] visible)));
   let f = Cpp_names.next (Function {owner = ref_of "f"; defines = true}) s in
   check "a function defined in a struct's body is defined there, in no out-of-line scope" (f.rc_scope = None);
   let outside = Cpp_state.current_render_ctx () in

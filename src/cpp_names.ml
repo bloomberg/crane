@@ -46,11 +46,20 @@ let name_from names frame key ~live =
     CErrors.anomaly
       Pp.(str "Crane: a declaration names " ++ Cpp_resolution.pp_key key ++ str ", which resolving it did not ask for.")
 
+(* What is visible at the position [c], where [key] is named live. *)
+let visible_at (c : render_ctx) key =
+  match c.rc_visibility with
+  | Some v -> v
+  | None -> CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " is named where nothing planned what is visible.")
+
 (* [key]'s name at the position [c]: from the names of the declaration of
-   the tree being written, at the frame printing it has entered, if one is
-   being written; [live ()] where none is. *)
+   the tree being written, at the frame printing it has entered, checked
+   against [live ()] where [c] sees what it sees, if one is being written;
+   [live ()] where none is. *)
 let named (c : render_ctx) key live =
-  match c.rc_names with None -> live () | Some names -> name_from names c.rc_frame key ~live
+  match c.rc_names with
+  | None -> live ()
+  | Some names -> name_from names c.rc_frame key ~live:(fun () -> with_visibility (visible_at c key) live)
 
 (** The name of a global reference at the position [c]: the replacement text
     of an inline custom mapping, otherwise as resolution settles it there.
@@ -674,10 +683,10 @@ let struct_definition_name ctx id =
 let enum_definition_name ctx r =
   match r with GlobRef.IndRef _ -> inductive_type_name ctx r | _ -> global_name ctx Type r
 
-(* The visibility inside the struct of the inductive [r]: a layer whose path
-   names nothing a reference could be declared in, holding the
+(* The visibility [v] with the struct of the inductive [r] entered: a layer
+   whose path names nothing a reference could be declared in, holding the
    constructors' struct names. *)
-let inductive_struct_visibility r =
+let inside_inductive_struct r v =
   match r with
   | GlobRef.IndRef ((kn, i) as ind) ->
     let ctors =
@@ -687,14 +696,15 @@ let inductive_struct_visibility r =
     let scope =
       Label.make (Printf.sprintf "%sstruct_%s_%d" Common.crane_local_prefix (Label.to_string (MutInd.label kn)) i)
     in
-    let mp = ModPath.MPdot (top_visible_mp (), scope) in
-    inside ~members:(Id.Set.of_list ctors) mp [] (current_visibility ())
-  | _ -> current_visibility ()
+    let innermost = match visible_mps v with mp :: _ -> mp | [] -> CErrors.anomaly (Pp.str "Crane: no scope is visible.") in
+    inside ~members:(Id.Set.of_list ctors) (ModPath.MPdot (innermost, scope)) [] v
+  | _ -> v
 
 let next (entered : Cpp_resolution.entered) (c : render_ctx) =
   let c =
     match entered with
-    | Signature _ | Inductive_struct _ -> c
+    | Signature {signature; parameters} -> {c with rc_visibility = Option.map (inside signature parameters) c.rc_visibility}
+    | Inductive_struct r -> {c with rc_visibility = Option.map (inside_inductive_struct r) c.rc_visibility}
     | In_struct -> {c with rc_in_struct = true}
     | In_template -> {c with rc_in_template = true}
     | Function {owner; defines} ->
@@ -702,15 +712,9 @@ let next (entered : Cpp_resolution.entered) (c : render_ctx) =
   in
   {c with rc_frame = entered :: c.rc_frame}
 
-(* The visibility is installed for the names still resolved where the
-   printer is: the resolver's replay, and the check against it. *)
 let enter_from c (entered : Cpp_resolution.entered) k =
   let c' = next entered c in
-  entering_scope @@ fun () ->
-  match entered with
-  | Signature {signature; parameters} -> with_visibility (inside signature parameters (current_visibility ())) (fun () -> k c')
-  | Inductive_struct r -> with_visibility (inductive_struct_visibility r) (fun () -> k c')
-  | In_struct | In_template | Function _ -> k c'
+  entering_scope (fun () -> k c')
 
 let rec entering_from c l k = match l with [] -> k c | entered :: rest -> enter_from c entered (fun c' -> entering_from c' rest k)
 
@@ -750,6 +754,7 @@ let inductive_value ctx x = named ctx (Inductive_value x) (fun () -> inductive_v
 
 let live_name c (key : Cpp_resolution.key) =
   let ctx = {c with rc_names = None} in
+  with_visibility (visible_at c key) @@ fun () ->
   match key with
   | Module mp -> Common.resolve_module mp
   | Module_declared mp -> Cpp_name.unqualified (module_declared_name mp)

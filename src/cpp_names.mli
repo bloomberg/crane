@@ -258,9 +258,8 @@ val name_from :
 val next : Cpp_resolution.entered -> Cpp_state.render_ctx -> Cpp_state.render_ctx
 
 (** [enter_from c entered k] is [k] of the position after entering the
-    scope [entered] from [c] ({!next}), with the names visible there
-    visible.  It installs no position ({!Cpp_state.entering_scope}): [k] is
-    handed it. *)
+    scope [entered] from [c] ({!next}), what is visible there included.  It
+    installs nothing ({!Cpp_state.entering_scope}): [k] is handed it. *)
 val enter_from : Cpp_state.render_ctx -> Cpp_resolution.entered -> (Cpp_state.render_ctx -> 'a) -> 'a
 
 (** [entering_from c l k] is [k] of the position after entering each scope
@@ -272,7 +271,9 @@ val entering_from : Cpp_state.render_ctx -> Cpp_resolution.entered list -> (Cpp_
     a declaration names at a frame enters it. *)
 val at_frame : Cpp_state.render_ctx -> Cpp_resolution.frame -> (Cpp_state.render_ctx -> 'a) -> 'a
 
-(** [key] named at the position [c], from the visibility in effect, whatever
-    declaration is being written: what {!Cpp_resolution.resolve} is given,
-    at each frame, and what a printed name is checked against. *)
+(** [key] named at the position [c], from what is visible there
+    ({!Cpp_state.render_ctx.rc_visibility}), whatever declaration is being
+    written: what {!Cpp_resolution.resolve} is given, at each frame, and
+    what a printed name is checked against.  A position nothing planned the
+    visibility of is an anomaly. *)
 val live_name : Cpp_state.render_ctx -> Cpp_resolution.key -> Cpp_name.t

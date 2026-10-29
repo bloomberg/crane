@@ -490,6 +490,11 @@ type render_ctx = {
   (* The names of the declaration of the tree being written, resolved before
      it is printed; none where what is written is no such declaration. *)
   rc_names : Cpp_resolution.table option;
+  (* The scopes whose names are visible where the printer is, innermost
+     first: the planned visibility of what is being written, with a layer
+     for each scope printing has entered that declares names; none where
+     what is written is not spelled as the tree spells a declaration. *)
+  rc_visibility : Common.visibility option;
 }
 
 (** The context at the start of the file [file]: file scope, outside every
@@ -504,6 +509,7 @@ let file_start rc_file =
     rc_module = None;
     rc_frame = [];
     rc_names = None;
+    rc_visibility = None;
   }
 
 (** The context at file scope in the file [c] is written in. *)
