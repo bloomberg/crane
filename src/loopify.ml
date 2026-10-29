@@ -1110,7 +1110,7 @@ let receiver_position mf =
     | Some (_, pos) -> pos
     | None -> r.this_pos )
 
-let transform_method_own ~varying ?parts ?park ?(receiver_derived = false) ~tparams ~self_ty mf =
+let transform_method_own ~varying ?parts ~park ~tparams ~self_ty mf =
   (* [tparams] arrives holding only the enclosing struct's parameters.  A
      method's body is written under its own template header too, and a
      parameter declared there is the one most likely to constrain how the body
@@ -1137,52 +1137,13 @@ let transform_method_own ~varying ?parts ?park ?(receiver_derived = false) ~tpar
       let self_check =
         method_checker ~n_params ~has_self_param:true ~this_pos mf.mf_globref
       in
-      (* Check whether any recursive call has a value-type receiver — a
-         temporary such as [Trie::leaf()], whose address would dangle once
-         stored in the CraneEnter frame.  Receivers that name existing storage
-         ([CPPvar], [CPPthis]) or dereference a smart pointer ([CPPderef]) are
-         fine, since the frame holds a pointer into memory that outlives it.
-
-         This must inspect [cs_recv], the receiver as written.  Inspecting
-         [cs_args] instead — as this guard used to — is vacuous: the head of
-         [cs_args] is whatever [recv_to_self] produced, always a [CPPunop
-         ("&", _)] or a [crane_raw] call and so never one of the three safe
-         shapes.  The guard therefore fired for *every* method whose recursion
-         went through a [CPPaccess_call], declining 120 functions across the
-         test corpus that have no value receiver at all. *)
-      let calls = collect_stmts self_check ~in_visitor:false body_with_self in
-      (* A receiver that names existing storage is only safe when that storage
-         itself outlives the loop; a binder of a match on a temporary does
-         not. *)
-      let unstable =
-        unstable_locals
-          ~stable:
-            (List.fold_left
-               (fun s (id, _) -> Id.Set.add id s)
-               (Id.Set.singleton self_id) mf.mf_params)
-          body_with_self
-      in
-      let reads_unstable e =
-        expr_exists
-          (function CPPvar v -> Id.Set.mem v unstable | _ -> false)
-          e
-      in
-      let has_value_receiver =
-        List.exists (fun cs ->
-          match Option.map receiver_storage cs.cs_recv with
-          | None -> false
-          | Some r -> if receiver_is_value r then true else reads_unstable r)
-          calls
-      in
       (* A tail call whose receiver is a value made in the turn ([t::n(...)])
-         can still be linearised: park the value in a local that outlives the
-         loop and recurse on that local instead, so the pointer stored for
-         [_self] stays valid across the back-edge.  Only safe when the call's
-         other arguments do not read the receiver, since the parking
-         assignment happens first.  Which turns park is the plan's [park],
-         where it has one ({!Control_ir.rebuilt}), and every other turn
-         passes a receiver derived from the loop's parameters: under
-         [CRANE_CHECK_IR] the C++ reading below must agree. *)
+         is linearised by parking the value in a local that outlives the
+         loop and recursing on that local instead, so the pointer stored for
+         [_self] stays valid across the back-edge.  The parking assignment
+         happens first, so a turn whose other arguments read the receiver is
+         declined before this ({!rebuilt_receiver_read}).  Which turns park is the plan's [park] ({!Control_ir.rebuilt}); every
+         other turn passes a receiver derived from the loop's parameters. *)
       let self_store_ty =
         let rec pointee = function
           | Tref (_, t) | Tconst t -> pointee t
@@ -1192,51 +1153,27 @@ let transform_method_own ~varying ?parts ?park ?(receiver_derived = false) ~tpar
         pointee self_ty
       in
       let id_self_store = Id.of_string "_self_store" in
-      let disagreement what =
-        Probe.violation "control lowering"
-          Pp.(str "the tail loop of the method " ++ str name ++ str what)
-      in
-      let park_value_receivers body =
-        let mentions_self e =
-          expr_exists
-            (function CPPvar v -> Id.equal v self_id | CPPthis -> true | _ -> false)
-            e
-        in
+      let park_receivers body =
         let parked = ref 0 in
-        let is_value_recv e = receiver_is_value (receiver_storage e) in
         let replace_at pos x l = List.mapi (fun i y -> if i = pos then x else y) l in
         let is_self r =
           match mf.mf_globref with Some sr -> Common.globref_equal r sr | None -> false
         in
-        let parks cs recv others =
-          let made_here = is_value_recv recv && not (List.exists mentions_self others) in
-          match park with
-          | None -> made_here
-          | Some planned ->
-            (* The C++ sees a receiver made in the turn where it is spelled
-               as a temporary, not where a reference reaches into one -- a
-               binder of a match on a call's result, which a pointer kept
-               across the back-edge outlives: it may park less than the plan,
-               never more. *)
-            let planned = match cs.cs_occurrence with Some o -> List.exists (Miniml.Occurrence.equal o) planned | None -> false in
-            if Probe.checking () && made_here && not planned then
-              disagreement " parks a receiver its ControlIR's turns do not make";
-            planned
-        in
+        let parks cs = match cs.cs_occurrence with Some o -> List.exists (Miniml.Occurrence.equal o) park | None -> false in
         (* [park e] returns the rewritten self-call, with its value receiver
            replaced by a reference to the parking slot, or [None]. *)
         let park e =
           match e with
           | CPPfun_call (cs, CPPglob (r, targs, x), args)
-            when is_self r && List.length (to_reversed args) > n_params -> (
+            when is_self r && List.length (to_reversed args) > n_params && parks cs -> (
             let args_normal = call_args args in
             match List.nth_opt args_normal this_pos with
-            | Some recv when parks cs recv (list_remove_at this_pos args_normal) ->
+            | Some recv ->
               let args' =
                 List.rev (replace_at this_pos (CPPvar id_self_store) args_normal)
               in
               Some (recv, CPPfun_call (cs, CPPglob (r, targs, x), of_reversed args'))
-            | Some _ | None -> None )
+            | None -> None )
           | _ -> None
         in
         let rec go_stmt s =
@@ -1250,43 +1187,18 @@ let transform_method_own ~varying ?parts ?park ?(receiver_derived = false) ~tpar
         let body' = List.map go_stmt body in
         (body', !parked)
       in
-      let parked =
+      let parked_body, parked =
         match (strategy, self_store_ty) with
-        | (Tail_loop, Some _) -> park_value_receivers body_with_self
+        | Tail_loop, Some _ -> park_receivers body_with_self
         | _ -> (body_with_self, 0)
       in
-      let left_value_receiver b =
-        List.exists
-          (fun cs ->
-            match cs.cs_recv with
-            | None -> false
-            | Some r -> receiver_is_value (receiver_storage r) )
-          (collect_stmts self_check ~in_visitor:false b)
-      in
-      let body_with_self, has_value_receiver, self_store_ty =
-        match (park, parked) with
-        | Some planned, (b, n) ->
-          if n <> List.length planned then begin
-            disagreement " has a turn making its receiver that no tail call parks";
-            (body_with_self, true, None)
-          end
-          else begin
-            if Probe.checking () && (if n = 0 then has_value_receiver else left_value_receiver b) then
-              disagreement " passes a value receiver its ControlIR's turns do not";
-            if n = 0 then (body_with_self, false, None) else (b, false, self_store_ty)
-          end
-        | None, (_, 0) -> (body_with_self, has_value_receiver, None)
-        | None, (b, _) ->
-          if left_value_receiver b then (body_with_self, has_value_receiver, None)
-          else (b, false, self_store_ty)
-      in
-      if has_value_receiver then begin
-        if receiver_derived then
-          Probe.violation "control lowering"
-            Pp.(str "the method " ++ str name ++ str " passes a value receiver its ControlIR's turns do not");
+      if parked <> List.length park then begin
+        Probe.violation "control lowering"
+          Pp.(str "the tail loop of the method " ++ str name ++ str " has a turn making its receiver that no tail call parks");
         record_outcome name (Lp_declined value_receiver);
         Fmethod mf
       end else
+      let body_with_self, self_store_ty = if parked = 0 then (body_with_self, None) else (parked_body, self_store_ty) in
       let self_param = (self_id, self_ty) in
       let augmented_params = self_param :: mf.mf_params in
       let lowered =

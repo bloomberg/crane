@@ -375,15 +375,12 @@ let lower_method ~tparams ~self_ty (m : method_field) =
         Some Loopify.rebuilt_receiver_read
       | (Modulo_cons | Frames | Tail), _ -> None
     in
-    let park = match lowering with Tail -> Some (List.map (fun (r : Control_ir.rebuilt) -> r.turn) rebuilt) | Modulo_cons | Frames -> None in
+    let park = List.map (fun (r : Control_ir.rebuilt) -> r.turn) rebuilt in
     let transform =
       match (lowering, planned) with
       | _ when Option.has_some value_receiver -> None
-      | Tail, Some {varying; _} -> Some (fun () -> Loopify.transform_method_own ~varying ?parts ?park ~tparams ~self_ty m)
-      | (Modulo_cons | Frames), Some {varying; _} ->
-        let receiver_derived = Option.has_some positions in
-        Some (fun () -> Loopify.transform_method_own ~receiver_derived ~varying ?parts ~tparams ~self_ty m)
-      | (Tail | Modulo_cons | Frames), None -> None
+      | _, Some {varying; _} -> Some (fun () -> Loopify.transform_method_own ~varying ?parts ~park ~tparams ~self_ty m)
+      | _, None -> None
     in
     match (transform, value_receiver) with
     | None, Some why ->

@@ -123,19 +123,15 @@ val modulo_cons_loop :
     the caller passed for it, where given ({!Loopify_tail.pointer_safe_flags}).
     A loop tail modulo cons or a machine takes the calls the method's
     ControlIR continues by, and builds its cells along its turns
-    ({!Loopify_tmc.control_shapes}).  With [receiver_derived], its
-    ControlIR's turns pass the receiver a value derived from a parameter
-    ({!Control_ir.derived_passed}): under [CRANE_CHECK_IR] no call may pass
-    one made in a turn, which it declines ({!value_receiver}).  A tail loop
-    parks the receiver of the calls made of [park], those of the turns that
-    make the receiver they pass ({!Control_ir.rebuilt}), where given, and
-    passes the others theirs: under [CRANE_CHECK_IR] its own reading of the
-    receivers must agree. *)
+    ({!Loopify_tmc.control_shapes}).  A tail loop parks the receiver of the
+    calls made of [park], those of the turns that make the receiver they
+    pass ({!Control_ir.rebuilt}), and passes the others theirs, which the
+    turns derive from the loop's parameters; a loop of another kind parks
+    none.  Under [CRANE_CHECK_IR] it parks every call of [park]. *)
 val transform_method_own :
   varying:bool list ->
   ?parts:bool list ->
-  ?park:Miniml.Occurrence.t list ->
-  ?receiver_derived:bool ->
+  park:Miniml.Occurrence.t list ->
   tparams:(template_type * Id.t) list ->
   self_ty:cpp_type ->
   method_field ->

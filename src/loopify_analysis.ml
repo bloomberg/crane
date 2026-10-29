@@ -440,78 +440,6 @@ type nontail_result = {
     returns [Some call_site] if it is a direct recursive call, [None] otherwise. *)
 type call_checker = cpp_expr -> call_site option
 
-(** Locals whose storage does not outlive one iteration of a loopified body.
-
-    A match whose scrutinee is a value temporary -- typically the [_cs] cache
-    of a scrutinee that is a function call, as in [auto _cs = _self->next();]
-    -- binds names into an object that dies with the branch that created it.
-    Parking the address of such a binder in an [CraneEnter] frame leaves the frame
-    pointing at freed memory once the branch is left, so a recursive call on
-    one of these receivers must not be linearised.
-
-    [stable] seeds the traversal with the storage that does outlive the loop:
-    the method parameters and [_self]. *)
-let unstable_locals ~(stable : Id.Set.t) (body : cpp_stmt list) : Id.Set.t =
-  let stable = ref stable in
-  let unstable = ref Id.Set.empty in
-  (* Storage outlives the frame when it is rooted in [this] or in a variable
-     already known to be stable.  An accessor call is treated as reaching into
-     its receiver ([_self->v()] denotes part of [*_self]); when such a call in
-     fact returns by value, the copy it makes is caught below, at the local it
-     is bound to. *)
-  let rec denotes_stable e =
-    match e with
-    | CPPthis -> true
-    | CPPvar v -> Id.Set.mem v !stable
-    | CPPderef e | CPPmove e | CPPaccess (_, e, _)
-    | CPPget (e, _) | CPPget' (e, _, _)
-    | CPPaccess_call (_, e, _, _) ->
-      denotes_stable e
-    | CPPfun_call (_, f, args) -> List.exists denotes_stable (f :: to_reversed args)
-    | _ -> false
-  in
-  (* A local initialised from a call keeps a copy of whatever the call
-     returned, unless it is declared as a reference; that copy dies with its
-     enclosing block.  Locals bound from a dereference or a field are plain
-     aliases and live as long as what they name. *)
-  let rec is_alias_ty = function
-    | Tref _ -> true
-    | Tconst t -> is_alias_ty t
-    | _ -> false
-  in
-  let copies_its_initialiser e ty =
-    ( match e with
-    | CPPaccess_call _ | CPPfun_call _ -> true
-    | _ -> false )
-    && match ty with Declare (t, _) | Declare_static t -> not (is_alias_ty t) | Existing -> true
-  in
-  let classify ok id =
-    if ok then stable := Id.Set.add id !stable
-    else unstable := Id.Set.add id !unstable
-  in
-  let rec walk s =
-    ( match s with
-    | Sasgn (id, ty, e) ->
-      classify (denotes_stable e && not (copies_its_initialiser e ty)) id
-    | Scustom_case (_, scrut, _, branches, _) ->
-      let ok = denotes_stable scrut in
-      List.iter
-        (fun (binders, _, _) -> List.iter (fun p -> classify ok p.cp_name) binders)
-        branches
-    | Smatch (scrut, branches, _) ->
-      (* Structured bindings alias the matched object. *)
-      let ok = denotes_stable scrut.sc_expr in
-      List.iter
-        (fun br ->
-          Option.iter (classify ok) br.smb_var;
-          List.iter (fun fb -> classify ok fb.fb_name) br.smb_field_bindings)
-        branches
-    | _ -> () );
-    iter_stmt_children ~on_expr:(fun _ -> ()) ~on_stmts:(List.iter walk) s
-  in
-  List.iter walk body;
-  !unstable
-
 (** {3 The Y-combinator idiom for local fixpoints}
 
     {!Translation.gen_local_fix_by_ref} emits Coq's [let fix] as a pair of
@@ -572,14 +500,6 @@ let calls_checker calls : call_checker = function
     [this] still names the storage of [this] rather than making a temporary of
     its own. *)
 let rec receiver_storage = function CPPmove e -> receiver_storage e | e -> e
-
-(** Whether a recursive call's receiver is a value temporary, whose address
-    would dangle once parked in an [CraneEnter] frame.  A receiver that names
-    existing storage -- a variable, [this], or a smart pointer it dereferences
-    -- is not. *)
-let receiver_is_value = function
-  | CPPderef _ | CPPvar _ | CPPthis -> false
-  | _ -> true
 
 (** Build a call checker for struct methods: a recursive call is a call of
     the global the method was made from, [self_ref], and when
