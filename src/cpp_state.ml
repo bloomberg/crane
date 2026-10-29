@@ -573,21 +573,21 @@ let class_concept_held_back ctx r = concept_held_back ctx (HCclass r)
     save/set/restore by hand: an omitted restore does not fail, it silently
     renders the rest of the file as though it were still inside the struct that
     has just closed. *)
-let installed c ~entered f =
-  let saved = !render_ctx and saved_entered = !entered_since_installed in
-  render_ctx := c;
-  entered_since_installed := entered;
+let with_render_ctx (upd : render_ctx -> render_ctx) (f : unit -> 'a) : 'a =
+  not_threaded "derived from";
+  let saved = !render_ctx and entered = !entered_since_installed in
+  render_ctx := upd saved;
+  entered_since_installed := 0;
   Fun.protect
     ~finally:(fun () ->
       render_ctx := saved;
-      entered_since_installed := saved_entered )
+      entered_since_installed := entered )
     f
 
-let with_render_ctx (upd : render_ctx -> render_ctx) (f : unit -> 'a) : 'a =
-  not_threaded "derived from";
-  installed (upd !render_ctx) ~entered:0 f
-
-let entering_scope c f = installed c ~entered:(!entered_since_installed + 1) f
+let entering_scope f =
+  let entered = !entered_since_installed in
+  entered_since_installed := entered + 1;
+  Fun.protect ~finally:(fun () -> entered_since_installed := entered) f
 
 let writing_file file f = with_render_ctx (fun c -> {c with rc_file = file}) f
 

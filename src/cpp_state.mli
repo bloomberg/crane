@@ -201,9 +201,10 @@ val class_concept_held_back : render_ctx -> Names.GlobRef.t -> bool
     reading it is ({!current_render_ctx}). *)
 val with_render_ctx : (render_ctx -> render_ctx) -> (unit -> 'a) -> 'a
 
-(** [entering_scope c f] runs [f] inside a scope printing entered at the
-    position [c], which printing hands to what it prints there. *)
-val entering_scope : render_ctx -> (unit -> 'a) -> 'a
+(** [entering_scope f] runs [f] inside a scope printing entered, which
+    installs no position: printing hands the position to what it prints
+    there. *)
+val entering_scope : (unit -> 'a) -> 'a
 
 (** [writing_file file f] renders [f] as part of the file [file]. *)
 val writing_file : Common.file -> (unit -> 'a) -> 'a

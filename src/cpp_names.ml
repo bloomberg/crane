@@ -706,7 +706,7 @@ let next (entered : Cpp_resolution.entered) (c : render_ctx) =
    printer is: the resolver's replay, and the check against it. *)
 let enter_from c (entered : Cpp_resolution.entered) k =
   let c' = next entered c in
-  entering_scope c' @@ fun () ->
+  entering_scope @@ fun () ->
   match entered with
   | Signature {signature; parameters} -> with_visibility (inside signature parameters (current_visibility ())) (fun () -> k c')
   | Inductive_struct r -> with_visibility (inductive_struct_visibility r) (fun () -> k c')
