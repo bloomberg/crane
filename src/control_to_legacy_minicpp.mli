@@ -52,9 +52,8 @@
     loop's first variable; the parameters a jump or a re-entry leaves alone
     are read off the Core binders of the receiver and the parameters, and a
     loop tail modulo cons or a machine takes the calls its ControlIR
-    continues by ({!lower_methods}).  Under [CRANE_CHECK_IR] the calls a
-    loop takes must change the parameters its ControlIR varies and no other
-    ({!Loopify_analysis.varying_params}). *)
+    continues by ({!lower_methods}).  The parameters a loop varies are its
+    ControlIR's, and a loop with none is not lowered. *)
 
 (** [local_loop ~owner ~function_ ~lifted ~member ~tparams ~name l]
     is the statement declaring the local fixpoint [name], the function

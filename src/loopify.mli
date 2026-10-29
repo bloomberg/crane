@@ -43,13 +43,13 @@ type unlowered =
   | Declined of string
   | Left of string option
 
-(** [frame_machine ~loop ?entry ~tparams check f params body] is the
+(** [frame_machine ~loop ?entry ~varying ~tparams check f params body] is the
     machine with a stack of frames of the function [f], the loop [loop] of
     its ControlIR, whose body [body] has its partners inlined and its tail
     calls exposed: [check] recognises the calls that enter it at [f], and
     the body Loopify adopts, where its ControlIR has the entry [entry], is
     a second entry of it ({!Loopify_frame.find_adopted}); its frames save
-    the parameters [varying], where given, of [f]'s.  With it comes
+    the parameters [varying] of [f]'s.  With it comes
     the reason a call it leaves behind survived, where it adopted a body.
     [Error why] where Loopify would do anything else with [f]: adopt
     another body than the entry or one where there is none, decline a
@@ -64,7 +64,7 @@ type unlowered =
 val frame_machine :
   loop:Control_ir.Loop.t ->
   ?entry:Control_ir.Loop.t ->
-  ?varying:bool list ->
+  varying:bool list ->
   ?parts:bool list ->
   tparams:(template_type * Id.t) list ->
   Loopify_analysis.call_checker ->
@@ -118,8 +118,7 @@ val modulo_cons_loop :
     transform of the method [m] of a struct whose receiver pointer type is
     [self_ty], under the struct's template parameters [tparams], before the
     local fixpoints in it are lowered: [m] itself where it declines.  A tail
-    loop or a machine varies the receiver and parameters [varying], where
-    given, and
+    loop or a machine varies the receiver and parameters [varying], and
     points at those [parts] says every call passes a value stored in what
     the caller passed for it, where given ({!Loopify_tail.pointer_safe_flags}).
     A loop tail modulo cons or a machine takes the calls the method's
@@ -133,7 +132,7 @@ val modulo_cons_loop :
     passes the others theirs: under [CRANE_CHECK_IR] its own reading of the
     receivers must agree. *)
 val transform_method_own :
-  ?varying:bool list ->
+  varying:bool list ->
   ?parts:bool list ->
   ?park:Miniml.Occurrence.t list ->
   ?receiver_derived:bool ->
@@ -165,12 +164,12 @@ val lower_local_tail_loops :
 val lower_function_locals :
   tparams:(template_type * Id.t) list -> (Id.t * cpp_type) list -> cpp_stmt list -> cpp_stmt list
 
-(** [local_frame_machine ~member ~name ~binders ~tparams check params ret_ty
-    body] is the body of the machine with a stack of frames of the local
+(** [local_frame_machine ~member ~name ~binders ~varying ~tparams check
+    params ret_ty body] is the body of the machine with a stack of frames of the local
     fixpoint [name], the function [member] of a Core fixpoint, its body
     [body] over its parameters [params], standing for the Core binders
     [binders], with its tail calls exposed: [check] recognises the calls
-    entering it, and its frames save the parameters [varying], where given.
+    entering it, and its frames save the parameters [varying].
     The local fixpoints in it are lowered after it, as Loopify
     lowers them.  [None] where the machine leaves a call behind.  Under
     [CRANE_CHECK_IR] the calls entering it must be its loop's [Continue]s.
@@ -180,7 +179,7 @@ val local_frame_machine :
   member:Miniml.Occurrence.t * int ->
   name:Id.t ->
   binders:(Id.t * Core_binder.t) list ->
-  ?varying:bool list ->
+  varying:bool list ->
   ?parts:bool list ->
   tparams:(template_type * Id.t) list ->
   Loopify_analysis.call_checker ->

@@ -1059,8 +1059,7 @@ let optimize_last_use_moves ~self_ref_candidate ~last_use_candidate stmts =
   in
   process stmts
 
-let build_shadow_setup ?varying ?parts tparams check params body =
-  let varying = varying_params ?planned:varying check params body in
+let build_shadow_setup ~varying ?parts tparams check params body =
   let pointer_safe = pointer_safe_flags ?parts check params body in
   let varying_params = filter_by_mask varying params in
   let varying_pointer_safe = filter_by_mask varying pointer_safe in
@@ -1184,10 +1183,10 @@ let drop_unread_shadows shadow_decls body =
     @param ret_ty Return type of the function
     @param body Function body statements
     @return Transformed body with while loop structure *)
-let transform_tail ?(param_inits = []) ?(jumped = ignore) ?varying ?parts tparams check params ret_ty body =
+let transform_tail ?(param_inits = []) ?(jumped = ignore) ~varying ?parts tparams check params ret_ty body =
   let { ss_varying = varying; ss_varying_params = varying_params;
         ss_shadow_params = shadow_params; ss_subs = subs } =
-    build_shadow_setup ?varying ?parts tparams check params body
+    build_shadow_setup ~varying ?parts tparams check params body
   in
   let is_void = ret_ty = Tvoid in
   (* Shadow variable declarations (only for varying params) *)

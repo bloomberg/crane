@@ -519,6 +519,10 @@ let kept_positions (l : Control_ir.Term.loop) =
   List.filteri (fun _ (_, ty) -> not (Ml_type_util.void_binder ty)) (List.mapi (fun i (_, ty) -> (i, ty)) l.parameters)
   |> List.rev_map fst
 
+(** Why a local fixpoint whose ControlIR says nothing of the parameters its
+    loop varies is not lowered. *)
+let no_varying_plan = "no ControlIR loop says which parameters vary"
+
 let member_varying member params =
   match Lower_control.loop (Control_ir.Loop.Member (fst member, snd member)) with
   | Some (Loop l) ->
@@ -602,19 +606,23 @@ let loopify_inner_lambdas ?(tail_only = false) ?parts ~tparams ?(outer_env = [])
         (* The frame structs a non-tail transform emits are named after the
            fixpoint. *)
         let name = Id.to_string lf_name in
-        let varying = member_varying lf_member params in
+        match member_varying lf_member params with
+        | None ->
+          record_outcome name (Lp_declined no_varying_plan);
+          None
+        | Some varying ->
         let body' =
           match strategy with
           | Tail_loop ->
             report_outcome ~name ~check ~strategy:Lp_tail
               (let loop = Some (Control_ir.Loop.Member (fst lf_member, snd lf_member)) in
                checked_tail_loop loop (fun jumped ->
-                   transform_tail ~jumped ?varying ?parts tparams (planned_jumps loop check) params ret_ty lbody ) )
+                   transform_tail ~jumped ~varying ?parts tparams (planned_jumps loop check) params ret_ty lbody ) )
           (* The tail-modulo-cons loop is built for a function, not a lambda:
              a local fixpoint gets it only through a helper lifted out of it. *)
           | Modulo_cons _ | Frame_stack ->
             report_outcome ~name ~check ~strategy:Lp_frame
-              (transform_nontail ~fn_name:name ~loop:(Control_ir.Loop.Member (fst lf_member, snd lf_member)) ?varying ~outer_env
+              (transform_nontail ~fn_name:name ~loop:(Control_ir.Loop.Member (fst lf_member, snd lf_member)) ~varying ~outer_env
                  ~binders ~entered_by:(entered_by_member lf_member) ?parts check tparams
                  params ret_ty lbody)
           | No_loop | Suspended _ ->
@@ -843,7 +851,7 @@ type unlowered =
 let branch_dependency = "recursive call in a branch condition or dispatch scrutinee"
 
 let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_by ?modulo_cons ?shapes ?loop
-    ?varying ?binders ?parts check tparams params ret_ty body =
+    ~varying ?binders ?parts check tparams params ret_ty body =
   let declined reason =
     {nt_body = body; nt_outcome = Lp_declined reason; nt_machine = false}
   in
@@ -853,7 +861,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
   let frame () =
     let machine =
       checked_frame_machine loop check (fun entered ->
-          transform_nontail ?fn_name ?loop ?varying ?adopted ?entered_by ~entered ?binders ?parts check tparams params ret_ty body )
+          transform_nontail ?fn_name ?loop ~varying ?adopted ?entered_by ~entered ?binders ?parts check tparams params ret_ty body )
     in
     { nt_body = Option.cata fst body machine;
       nt_outcome = Lp_frame;
@@ -882,7 +890,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
     | Some chains ->
       let tmc =
         checked_tail_loop loop (fun jumped ->
-            transform_tmc ~param_inits ~jumped ?varying ?parts
+            transform_tmc ~param_inits ~jumped ~varying ?parts
               ~shapes:(Option.default (chain_shapes chains) shapes)
               tparams check params ret_ty restored )
       in
@@ -990,7 +998,7 @@ let adopts_entry r ad (entry : Control_ir.Loop.t) =
     | None -> false )
   | (Fixpoint _ | Invocations _), _ -> false
 
-let frame_machine ~loop ?entry ?varying ?parts ~tparams check (f : dfun) params body =
+let frame_machine ~loop ?entry ~varying ?parts ~tparams check (f : dfun) params body =
   let r = fst f.df_path.dp_outer in
   let found = find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body in
   (* What the machine adopts is its ControlIR's entry: a body found where
@@ -1012,7 +1020,7 @@ let frame_machine ~loop ?entry ?varying ?parts ~tparams check (f : dfun) params 
     let survivors = survivors f in
     match
       checked_frame_machine (Some loop) survivors (fun entered ->
-          transform_nontail ~fn_name:(fundef_display_name f.df_path) ~loop ?varying ?adopted ?entered_by:(entered_by_definition r)
+          transform_nontail ~fn_name:(fundef_display_name f.df_path) ~loop ~varying ?adopted ?entered_by:(entered_by_definition r)
             ~entered ~binders:f.df_binders ?parts check tparams params f.df_ret body )
     with
     | Some (made, _) when classify survivors made = No_recursion -> Ok (made, survived)
@@ -1040,11 +1048,11 @@ let lower_local_tail_loops ?parts ~tparams stmts = loopify_inner_lambdas ~tail_o
 
 let lower_function_locals ~tparams params body = loopify_inner_lambdas ~tparams ~outer_env:params body
 
-let local_frame_machine ~member ~name ~binders ?varying ?parts ~tparams check params ret_ty body =
+let local_frame_machine ~member ~name ~binders ~varying ?parts ~tparams check params ret_ty body =
   let name = Id.to_string name in
   Option.bind
     (checked_frame_machine (Some (Control_ir.Loop.Member (fst member, snd member))) check (fun entered ->
-         transform_nontail ~fn_name:name ~loop:(Control_ir.Loop.Member (fst member, snd member)) ?varying ~binders
+         transform_nontail ~fn_name:name ~loop:(Control_ir.Loop.Member (fst member, snd member)) ~varying ~binders
            ~entered_by:(entered_by_member member) ~entered ?parts check tparams
            params ret_ty body ) )
     (fun (machine, _) ->
@@ -1074,9 +1082,8 @@ let local_frame_machine ~member ~name ~binders ?varying ?parts ~tparams check pa
     @param self_ty        C++ type for the struct pointer (e.g.,
                           [Tconst (Tptr (Tglob (...)))])
     @param mf             The method record to transform
-    @param varying        Which of the receiver and the parameters a tail
-                          loop varies, where the caller knows; read off its
-                          calls otherwise
+    @param varying        Which of the receiver and the parameters the loop
+                          varies, as its ControlIR says
     @param controlled     Whether a loop tail modulo cons or a machine takes
                           the calls its ControlIR continues by, and builds
                           its cells as its turns do, rather than every call
@@ -1103,7 +1110,7 @@ let receiver_position mf =
     | Some (_, pos) -> pos
     | None -> r.this_pos )
 
-let transform_method_own ?varying ?parts ?park ?(receiver_derived = false) ~tparams ~self_ty mf =
+let transform_method_own ~varying ?parts ?park ?(receiver_derived = false) ~tparams ~self_ty mf =
   (* [tparams] arrives holding only the enclosing struct's parameters.  A
      method's body is written under its own template header too, and a
      parameter declared there is the one most likely to constrain how the body
@@ -1289,7 +1296,7 @@ let transform_method_own ?varying ?parts ?park ?(receiver_derived = false) ~tpar
             (report_outcome ~name ~check:(method_survivors mf) ~strategy:Lp_tail
                (let loop = Option.bind mf.mf_globref function_loop in
                 checked_tail_loop loop (fun jumped ->
-                    transform_tail ~param_inits:[(self_id, CPPthis)] ~jumped ?varying ?parts tparams
+                    transform_tail ~param_inits:[(self_id, CPPthis)] ~jumped ~varying ?parts tparams
                       (planned_jumps loop self_check) augmented_params mf.mf_ret_type body_with_self ) ) )
         | Modulo_cons _ | Frame_stack ->
           let fn_name = Some name in
@@ -1307,7 +1314,7 @@ let transform_method_own ?varying ?parts ?park ?(receiver_derived = false) ~tpar
               ~binders:
                 ( (match mf.mf_receiver_binder with Some b -> [(self_id, b)] | None -> [])
                 @ mf.mf_binders )
-              ?fn_name ?modulo_cons:(modulo_cons_chains strategy) ?shapes ?loop ?varying ?parts
+              ?fn_name ?modulo_cons:(modulo_cons_chains strategy) ?shapes ?loop ~varying ?parts
               check tparams
               augmented_params mf.mf_ret_type body_with_self
           in

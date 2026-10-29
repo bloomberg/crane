@@ -380,11 +380,10 @@ let lower_method ~tparams ~self_ty (m : method_field) =
       match (lowering, planned) with
       | _ when Option.has_some value_receiver -> None
       | Tail, Some {varying; _} -> Some (fun () -> Loopify.transform_method_own ~varying ?parts ?park ~tparams ~self_ty m)
-      | Tail, None -> None
-      | (Modulo_cons | Frames), _ ->
-        let varying = Option.map (fun p -> p.varying) planned in
+      | (Modulo_cons | Frames), Some {varying; _} ->
         let receiver_derived = Option.has_some positions in
-        Some (fun () -> Loopify.transform_method_own ~receiver_derived ?varying ?parts ~tparams ~self_ty m)
+        Some (fun () -> Loopify.transform_method_own ~receiver_derived ~varying ?parts ~tparams ~self_ty m)
+      | (Tail | Modulo_cons | Frames), None -> None
     in
     match (transform, value_receiver) with
     | None, Some why ->
