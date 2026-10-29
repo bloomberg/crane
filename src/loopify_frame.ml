@@ -1976,165 +1976,6 @@ let make_param_copies varying_params =
                  CPPaccess (Adot, CPPvar (id_f), id)) )
     varying_params
 
-(** Compute pointer-safe flags for each Call frame by analyzing which
-    frame fields appear as [CraneEnter] push args at pointer-safe positions.
-    Propagates transitively through Call-to-Call chains (e.g. when
-    [_Call1] handler pushes [CraneCont1\{_f._s1\}] and [CraneCont1._s1] is used
-    at a pointer-safe position in [CraneEnter]).
-    Returns [(frame_name, bool list)] for frames with any pointer-safe
-    field. *)
-let compute_frame_pointer_safe pointer_safe_varying frames =
-  if not (List.exists Fun.id pointer_safe_varying) then []
-  else
-  let n_enter = List.length pointer_safe_varying in
-  (* The frame field, by index in [field_names], that [expr] reads: through
-     the moves, dereferences, addresses and [crane_raw] a push wraps around
-     a value, and through the locals in [local_map] bound to one.  Whatever
-     the shape, a pointer pushed from such an expression points into the
-     field's storage -- a copy in the frame dies with the handler that
-     pushed the pointer to it, so the field must be saved as that pointer. *)
-  let rec field_read field_names local_map expr =
-    match expr with
-    | CPPmove e | CPPderef e | CPPunop (Uaddr, e)
-    | CPPfun_call (_, CPPrt Crane_rt.Raw, {rev = [e]}) ->
-      field_read field_names local_map e
-    | CPPaccess (Adot, CPPvar f, field_id) when Id.equal f id_f ->
-      (try Some (Util.List.index0 Id.equal field_id field_names) with Not_found -> None)
-    | CPPvar x -> List.assoc_opt x local_map
-    | _ -> None
-  in
-  (* The locals a handler binds, at top level, to a frame field or to
-     another such local, so that a [CraneEnter{local_var}] push can be
-     traced back to the frame field [local_var] was loaded from. *)
-  let build_local_to_field_map field_names stmts =
-    List.fold_left
-      (fun local_map stmt ->
-        match stmt with
-        | Sasgn (id, _, expr) -> (
-          match field_read field_names local_map expr with
-          | Some j -> (id, j) :: local_map
-          | None -> local_map )
-        | _ -> local_map )
-      [] stmts
-  in
-  let is_field_access_or_alias local_map field_names j expr =
-    field_read field_names local_map expr = Some j
-  in
-  (* Find all struct pushes in handler body: returns (name, args) list *)
-  let find_struct_pushes stmts =
-    let result = ref [] in
-    let rec scan = function
-      | Sexpr (CPPfun_call (_, _callee, {rev = [CPPstruct_id (name, _, args)]})) ->
-        result := (Id.to_string name, args) :: !result
-      | s ->
-        iter_stmt_children ~on_expr:(fun _ -> ())
-          ~on_stmts:(List.iter scan) s
-    in
-    List.iter scan stmts;
-    !result
-  in
-  (* Mutable flags per frame *)
-  let flag_arrays =
-    List.map
-      (fun cf ->
-        (cf.cf_name, Array.make (List.length (cf_saved_types cf)) false))
-      frames
-  in
-  let get_flags name =
-    match List.assoc_opt name flag_arrays with
-    | Some arr -> Some arr
-    | None -> None
-  in
-  (* Step 1: seed from CraneEnter push args, looking through local variable bindings *)
-  List.iter
-    (fun cf ->
-      let fnames = cf_field_names cf in
-      let local_map = build_local_to_field_map fnames cf.cf_handler in
-      let pushes = find_struct_pushes cf.cf_handler in
-      List.iter
-        (fun (push_name, args) ->
-          if push_name = Id.to_string id_enter && List.length args = n_enter then
-            match get_flags cf.cf_name with
-            | Some arr ->
-              for j = 0 to Array.length arr - 1 do
-                if not arr.(j) then
-                  let is_used =
-                    List.exists2
-                      (fun safe arg ->
-                        safe
-                        && is_field_access_or_alias local_map fnames j arg)
-                      pointer_safe_varying args
-                  in
-                  if is_used then arr.(j) <- true
-              done
-            | None -> ())
-        pushes)
-    frames;
-  (* Step 2: propagate through Call-to-Call chains until fixpoint.
-     Two directions:
-     (a) BACKWARD: if target frame's position k is pointer-safe and cf pushes
-         target with its field j (or local from field j) at position k, then
-         cf's field j must also be pointer-safe (it will be forwarded as a raw ptr).
-     (b) FORWARD: if cf's field j is pointer-safe and cf pushes target with
-         that field at position k, then target's position k must also be
-         pointer-safe (it receives a raw pointer and must store/forward it as such). *)
-  let changed = ref true in
-  while !changed do
-    changed := false;
-    List.iter
-      (fun cf ->
-        let fnames = cf_field_names cf in
-      let local_map = build_local_to_field_map fnames cf.cf_handler in
-        let pushes = find_struct_pushes cf.cf_handler in
-        List.iter
-          (fun (push_name, args) ->
-            match get_flags push_name with
-            | Some target_arr when List.length args = Array.length target_arr ->
-              List.iteri
-                (fun k arg ->
-                  (* (a) BACKWARD: target[k] true → src[j] true *)
-                  (if target_arr.(k) then
-                    match get_flags cf.cf_name with
-                    | Some src_arr ->
-                      for j = 0 to Array.length src_arr - 1 do
-                        if (not src_arr.(j))
-                           && is_field_access_or_alias local_map fnames j arg
-                        then (
-                          src_arr.(j) <- true;
-                          changed := true)
-                      done
-                    | None -> ());
-                  (* (b) FORWARD: src[j] true → target[k] true.
-                     If the argument at position k comes from a pointer-safe
-                     field of cf, then target position k must also be pointer-safe
-                     so its type stays consistent (raw pointer throughout). *)
-                  if not target_arr.(k) then
-                    (match get_flags cf.cf_name with
-                    | Some src_arr ->
-                      let src_is_safe =
-                        Array.exists Fun.id
-                          (Array.mapi (fun j flag ->
-                            flag
-                            && is_field_access_or_alias local_map fnames j
-                                 arg)
-                          src_arr)
-                      in
-                      if src_is_safe then (
-                        target_arr.(k) <- true;
-                        changed := true)
-                    | None -> ()))
-                args
-            | _ -> ())
-          pushes)
-      frames
-  done;
-  (* Collect results *)
-  List.filter_map
-    (fun (name, arr) ->
-      let flags = Array.to_list arr in
-      if List.exists Fun.id flags then Some (name, flags) else None)
-    flag_arrays
-
 (** Rewrite frame push expressions so that pointer-safe positions use
     [&x] (for variables) or [crane_raw(x)] (for dereferences) instead of
     deep-copying.  Handles both [CraneEnter] and [_CallN] pushes.
@@ -2689,7 +2530,7 @@ let make_decltype_ty env expr =
   Tdecay (Texpr_type expr)
 
 (** Fix bindings in a continuation frame handler for fields that became
-    pointer-safe after [compute_frame_pointer_safe].
+    pointer-safe ({!call_frame_info.cf_pointers}).
 
     When a frame field is pointer-safe, its C++ type changes from [T] to
     [const T*].  The handler body (generated by [make_cont_bindings] before
@@ -3013,22 +2854,11 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
     List.sort (fun a b -> String.compare a.cf_name b.cf_name) !frames_ref
   in
   (* Which slots each frame keeps as pointers is the recursion plan's
-     ({!call_frame_info.cf_pointers}).  The pushes the handlers make are
-     the C++'s account of the same: under [CRANE_CHECK_IR] the slots they
-     need as pointers must be those. *)
+     ({!call_frame_info.cf_pointers}). *)
   let frame_ps_map =
-    let planned =
-      List.filter_map
-        (fun cf -> if List.exists Fun.id cf.cf_pointers then Some (cf.cf_name, cf.cf_pointers) else None)
-        frames
-    in
-    if
-      Probe.checking ()
-      && not (List.equal ( = ) planned (compute_frame_pointer_safe (filter_by_mask varying entry_pointers) frames))
-    then
-      Probe.violation "frame plan"
-        (Pp.str "a frame keeps other locals as pointers than the pushes of the machine's handlers need");
-    planned
+    List.filter_map
+      (fun cf -> if List.exists Fun.id cf.cf_pointers then Some (cf.cf_name, cf.cf_pointers) else None)
+      frames
   in
   (* One emission per entry point, in {!entries} order. *)
   let emissions =
