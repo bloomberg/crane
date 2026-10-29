@@ -444,19 +444,11 @@ let try_inline_mutual_into ~partner r body =
   end;
   inlined
 
-(** The strategy for a body {!classify} reads as recursing so, where no plan
-    says: a loop for tail recursion, an explicit stack for any other. *)
-let classified_strategy = function
-  | No_recursion -> Recursion_plan.No_loop
-  | Tail_recursion -> Tail_loop
-  | Nontail_recursion -> Frame_stack
-
-(** The strategy of the local fixpoint [fixpoint], whose body is [body], as
-    planned for the Core fixpoint it lowers ({!Recursion_plan.strategy_at}).
-    A body with no fixpoint recorded on it, or one the plan does not know, is
-    classified here, which is a violation. *)
-let planned_local_strategy fixpoint check body =
-  let classified () = classify_in_flow check body in
+(** The strategy of the local fixpoint [fixpoint] as planned for the Core
+    fixpoint it lowers ({!Recursion_plan.strategy_at}).  A body with no
+    fixpoint recorded on it, or one the plan does not know, a violation, is
+    not loopified. *)
+let planned_local_strategy fixpoint =
   match fixpoint with
   | Some {lf_member; lf_binder; _} -> (
     let what () = Pp.(str "the local fixpoint " ++ Id.print lf_binder) in
@@ -464,11 +456,11 @@ let planned_local_strategy fixpoint check body =
     | Some planned -> planned
     | None ->
       Probe.violation "recursion plan" Pp.(str "the recursion plan does not know " ++ what ());
-      classified_strategy (classified ()) )
+      Recursion_plan.No_loop )
   | None ->
     Probe.violation "recursion plan"
       (Pp.str "a local fixpoint's body was reached with no Core fixpoint recorded on it");
-    classified_strategy (classified ())
+    No_loop
 
 (** The calls the machine of the function [r] is entered by, as the
     recursion plan names what a point resumes after: its own. *)
@@ -575,7 +567,7 @@ let loopify_inner_lambdas ?(tail_only = false) ?parts ~tparams ?(outer_env = [])
     | Some {lf_name; lf_member; _}, Some self_id -> (
       let check = planned_self_checker lf_member in
       let lbody = expose_tail_calls check lbody in
-      match planned_local_strategy fixpoint check lbody with
+      match planned_local_strategy fixpoint with
       | No_loop -> None
       (* A local cofixpoint: its calls run when a thunk is forced, after it
          has returned, as a top-level one's do. *)
@@ -926,21 +918,19 @@ let function_loop r =
   | Some (Let _) -> None
   | None -> Some (Control_ir.Loop.Function r)
 
-(** The strategy of the function [r], whose body is [body]: as the
-    program's recursion plan has it ({!Recursion_plan.strategy}), read off its
+(** The strategy of the function [r]: as the program's recursion plan has it ({!Recursion_plan.strategy}), read off its
     Core body and its recursive group's before any of them was lowered, given
     the constructor fields planned behind the pointer.  A helper lifted out of
     a definition for one of its local fixpoints is planned by that fixpoint,
     and one lifted for a lambda a let binds by that let.
 
-    A function the plan does not know is classified here, from [body], the
-    finished body, which is a violation.  A member the backend generates
-    itself -- a factory, a deep copy -- has no Core body and no reference,
-    and is classified here. *)
-let planned_strategy r check body =
-  let classified () = classify_in_flow check body in
+    A function the plan does not know, a violation, is not loopified, and
+    neither is a member the backend generates itself -- a factory, a deep
+    copy -- which has no Core body and no reference, and calls itself
+    nowhere. *)
+let planned_strategy r =
   match r with
-  | None -> classified_strategy (classified ())
+  | None -> Recursion_plan.No_loop
   | Some r -> (
     let pointer_fields = constructor_pointer_fields in
     let planned =
@@ -954,7 +944,7 @@ let planned_strategy r check body =
     | Some planned -> planned
     | None ->
       Probe.violation "recursion plan" Pp.(str "the recursion plan does not know " ++ what ());
-      classified_strategy (classified ()) )
+      No_loop )
 
 (** The local fixpoints the machine of [r] may adopt, as the recursion plan
     has them ({!Recursion_plan.adoptable}): a helper lifted for a local
@@ -1037,7 +1027,7 @@ let frame_machine ~loop ?entry ~varying ?parts ~tparams check (f : dfun) params 
 let record_unlowered ?(unlowered = Left None) (f : dfun) body =
   let name = fundef_display_name f.df_path in
   let check = survivors f in
-  match (planned_strategy (Some (fst f.df_path.dp_outer)) check body, unlowered) with
+  match (planned_strategy (Some (fst f.df_path.dp_outer)), unlowered) with
   | No_loop, _ -> ()
   | Suspended _, _ -> record_outcome name deferred_cofixpoint
   | (Tail_loop | Modulo_cons _ | Frame_stack), Declined why -> record_outcome name (Lp_declined why)
@@ -1120,10 +1110,7 @@ let transform_method_own ~varying ?parts ~park ~tparams ~self_ty mf =
   let n_params = List.length mf.mf_params in
   let this_pos = receiver_position mf in
   let name = Id.to_string mf.mf_name in
-  let basic_check =
-    method_checker ~n_params ~has_self_param:false ~this_pos mf.mf_globref
-  in
-  let strategy = planned_strategy mf.mf_globref basic_check mf.mf_body in
+  let strategy = planned_strategy mf.mf_globref in
     ( match strategy with
     (* A suspended method returns in O(1) stack frames, as a function does. *)
     | Suspended _ ->
@@ -1258,7 +1245,7 @@ let transform_method_own ~varying ?parts ~park ~tparams ~self_ty mf =
 let record_unlowered_method mf =
   let check = method_survivors mf in
   let name = Id.to_string mf.mf_name in
-  match planned_strategy mf.mf_globref check mf.mf_body with
+  match planned_strategy mf.mf_globref with
   | No_loop -> ()
   | Suspended _ -> record_outcome name deferred_cofixpoint
   | Tail_loop -> ignore (report_outcome ~name ~check ~strategy:Lp_tail mf.mf_body)
