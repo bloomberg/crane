@@ -73,9 +73,9 @@ type call_frame_info = {
   cf_env : (Id.t * cpp_type) list;
       (** type env at frame creation, for decltype resolution *)
   cf_handler : cpp_stmt list;
-  cf_pointers : bool list option;
+  cf_pointers : bool list;
       (** Which slots the frame keeps as pointers, as the recursion plan has
-          it: [None] where the plan does not describe the frame *)
+          it *)
 }
 
 (** [make_slots ~types ~exprs] pairs a frame's saved types with the
@@ -1327,10 +1327,15 @@ let planned_frame ctx ~keeps (p : Recursion_plan.resume) =
       | standing -> List.find_map (fun (x, _) -> if keeps b x then Some x else None) standing )
     p.live
 
+let no_resume_point = "the recursion plan has no one point a call's result resumes at"
+
+let no_entering_calls = "no ControlIR loop says which calls enter the machine a frame keeps pointers for"
+
 (** The one point the plan resumes at once the call whose result [tgt] binds
     to [id] returns, which its binder's site picks out from its siblings
-    ({!Core_binder.site}).  [None], a violation, where the result stands for
-    no Core binder or the plan has no one point for it. *)
+    ({!Core_binder.site}).  Where the result stands for no Core binder or
+    the plan has no one point for it, a violation, the machine is not made:
+    nothing else says what its frame keeps. *)
 let planned_point ctx id tgt =
   let binder =
     match tgt with
@@ -1339,36 +1344,32 @@ let planned_point ctx id tgt =
     | Declare_static _ -> None
   in
   match Option.map Recursion_plan.resumes_binding binder with
-  | Some [p] -> Some p
+  | Some [p] -> p
   | Some points ->
     Probe.violation "frame plan"
       Pp.(str "the recursion plan has " ++ int (List.length points) ++ str " resume points for a call's result");
-    None
+    raise (Not_linearisable no_resume_point)
   | None ->
     Probe.violation "frame plan" (Pp.str "a call the machine resumes after binds a local standing for no Core binder");
-    None
+    raise (Not_linearisable no_resume_point)
 
 (** The locals the frame for that call keeps, in the order it keeps them:
     the ones the plan finds live there, in the order the Core binds them
     ({!planned_frame_at}).  [read], the locals the continuation reads that
     the frame does not leave out by design, is the C++'s account of the
     same: under [CRANE_CHECK_IR] it must be that frame, every local in it
-    standing for a Core binder.  Where the plan has no frame, a violation,
-    it is the frame. *)
+    standing for a Core binder. *)
 let frame_locals ctx planned read =
-  match planned with
-  | Some planned ->
-    if Probe.checking () then begin
-      let identified v = Option.has_some (Option.flatten (List.assoc_opt v ctx.er_binders)) in
-      if not (List.for_all identified read) then
-        Probe.violation "frame plan"
-          (Pp.str "a continuation reads a local standing for no Core binder, which no frame keeps");
-      let sorted = List.sort Id.compare in
-      if not (List.equal Id.equal (sorted read) (sorted planned)) then
-        Probe.violation "frame plan" (Pp.str "a frame keeps other binders than the recursion plan finds live there")
-    end;
-    planned
-  | None -> read
+  if Probe.checking () then begin
+    let identified v = Option.has_some (Option.flatten (List.assoc_opt v ctx.er_binders)) in
+    if not (List.for_all identified read) then
+      Probe.violation "frame plan"
+        (Pp.str "a continuation reads a local standing for no Core binder, which no frame keeps");
+    let sorted = List.sort Id.compare in
+    if not (List.equal Id.equal (sorted read) (sorted planned)) then
+      Probe.violation "frame plan" (Pp.str "a frame keeps other binders than the recursion plan finds live there")
+  end;
+  planned
 
 (** Whether the statement binding [e] to [id] by [tgt] is a point the
     machine resumes at once a call returns, as the recursion plan has it:
@@ -1620,52 +1621,40 @@ and rewrite_enter_stmts ctx stmts =
          and those recomputable from them -- is the plan's.  Of a value kept
          the frame keeps the local holding it, not one respelling it.  Under
          [CRANE_CHECK_IR] the C++'s own reading must agree. *)
-      let planned =
-        Option.map
-          (fun p ->
-            let rebuilt = rebuilt_binders ctx p in
-            let dropped b = available ctx b || List.exists (Core_binder.equal b) rebuilt in
-            (p, planned_frame ctx ~keeps:(fun b x -> not (dropped b || Id.equal x id || respells ctx x)) p) )
-          (planned_point ctx id tgt)
+      let p = planned_point ctx id tgt in
+      let frame =
+        let rebuilt = rebuilt_binders ctx p in
+        let dropped b = available ctx b || List.exists (Core_binder.equal b) rebuilt in
+        planned_frame ctx ~keeps:(fun b x -> not (dropped b || Id.equal x id || respells ctx x)) p
       in
-      if Probe.checking () then
-        Option.iter
-          (fun (p, frame) ->
-            if not (List.equal Id.equal frame (planned_frame ctx ~keeps:(fun _ x -> not (kept_elsewhere x)) p)) then
-              Probe.violation "frame plan" (Pp.str "a frame keeps other locals than the C++ finds it cannot bind again") )
-          planned;
-      let cont_vars = frame_locals ctx (Option.map snd planned) read in
+      if Probe.checking () && not (List.equal Id.equal frame (planned_frame ctx ~keeps:(fun _ x -> not (kept_elsewhere x)) p))
+      then Probe.violation "frame plan" (Pp.str "a frame keeps other locals than the C++ finds it cannot bind again");
+      let cont_vars = frame_locals ctx frame read in
       (* What the rest reads of what the frame does not keep is bound again
          in the handler. *)
       let remat =
-        match planned with
-        | Some _ ->
-          let kept v = List.exists (Id.equal v) cont_vars || Id.equal v id || Id.equal v id_result in
-          let rebuilt = rebuilt_bindings ctx ~kept rest_free in
-          if Probe.checking () && not (List.equal Id.equal (List.map fst rebuilt) (List.map fst cpp_rebuilt)) then
-            Probe.violation "frame plan" (Pp.str "a continuation binds again other locals than the C++ finds it can");
-          rebuilt
-        | None -> cpp_rebuilt
+        let kept v = List.exists (Id.equal v) cont_vars || Id.equal v id || Id.equal v id_result in
+        let rebuilt = rebuilt_bindings ctx ~kept rest_free in
+        if Probe.checking () && not (List.equal Id.equal (List.map fst rebuilt) (List.map fst cpp_rebuilt)) then
+          Probe.violation "frame plan" (Pp.str "a continuation binds again other locals than the C++ finds it can");
+        rebuilt
       in
       (* A local is kept as a pointer where what follows passes it on, as
          it is, for a parameter the machine's entry takes a pointer for: a
          copy in the frame would die with the handler that pushed the
          pointer to it. *)
       let pointers =
-        match (planned, ctx.er_entering) with
-        | Some ((p : Recursion_plan.resume), _), Some entering ->
-          let passed b =
-            List.exists
-              (fun (q : Recursion_plan.passing) ->
-                Core_binder.equal q.passed b && ctx.er_points_into q.into
-                && List.exists (Miniml.Occurrence.equal q.call.occurrence) entering )
-              p.passes
-          in
-          Some
-            (List.map
-               (fun x -> Option.cata passed false (Option.flatten (List.assoc_opt x ctx.er_binders)))
-               cont_vars )
-        | None, _ | _, None -> None
+        let entering =
+          match ctx.er_entering with Some entering -> entering | None -> raise (Not_linearisable no_entering_calls)
+        in
+        let passed b =
+          List.exists
+            (fun (q : Recursion_plan.passing) ->
+              Core_binder.equal q.passed b && ctx.er_points_into q.into
+              && List.exists (Miniml.Occurrence.equal q.call.occurrence) entering )
+            p.passes
+        in
+        List.map (fun x -> Option.cata passed false (binder_of ctx x)) cont_vars
       in
       let cont_saved = List.map (fun cid -> CPPvar cid) cont_vars in
       (* Each kept at the type its local was declared at: the binder's. *)
@@ -1744,37 +1733,34 @@ and rewrite_enter_stmts ctx stmts =
          pointed at.  Under [CRANE_CHECK_IR] the call's arguments must read
          none of those the plan says they do not. *)
       let saved_conv =
-        match (planned, pointers) with
-        | Some ((p : Recursion_plan.resume), _), Some pointers ->
-          let read_by_call cid =
-            match Option.flatten (List.assoc_opt cid ctx.er_binders) with
-            | Some b -> Some (List.exists (Core_binder.equal b) p.read_by_call)
-            | None -> None
+        let read_by_call cid =
+          match binder_of ctx cid with
+          | Some b -> Some (List.exists (Core_binder.equal b) p.read_by_call)
+          | None -> None
+        in
+        if Probe.checking () then begin
+          (* A read of a binding the handler rebuilds -- a reference to a
+             field, a closure -- reads what it is rebuilt from. *)
+          let rec through v =
+            v
+            :: ( match List.assoc_opt v ctx.er_rematerialized with
+               | Some (Sasgn (_, _, e)) -> List.concat_map through (free_vars_expr e)
+               | Some _ | None -> [] )
           in
-          if Probe.checking () then begin
-            (* A read of a binding the handler rebuilds -- a reference to a
-               field, a closure -- reads what it is rebuilt from. *)
-            let rec through v =
-              v
-              :: ( match List.assoc_opt v ctx.er_rematerialized with
-                 | Some (Sasgn (_, _, e)) -> List.concat_map through (free_vars_expr e)
-                 | Some _ | None -> [] )
-            in
-            let read = List.concat_map through (free_vars_expr enter) in
-            if List.exists (fun cid -> read_by_call cid = Some false && List.exists (Id.equal cid) read) cont_vars then
-              Probe.violation "frame plan"
-                (Pp.str "the call a frame is saved for reads a local the frame keeps the recursion plan says it does not")
-          end;
-          let owned cid =
-            (not (Id.Set.mem cid ctx.er_aliased))
-            && (not (Id.Set.mem cid ctx.er_invariant_params))
-            && match List.assoc_opt cid env with Some ty -> movable ty | None -> false
-          in
-          List.map2
-            (fun cid pointer ->
-              if (not pointer) && owned cid && read_by_call cid = Some false then CPPmove (CPPvar cid) else CPPvar cid )
-            cont_vars pointers
-        | Some _, None | None, _ -> cont_saved
+          let read = List.concat_map through (free_vars_expr enter) in
+          if List.exists (fun cid -> read_by_call cid = Some false && List.exists (Id.equal cid) read) cont_vars then
+            Probe.violation "frame plan"
+              (Pp.str "the call a frame is saved for reads a local the frame keeps the recursion plan says it does not")
+        end;
+        let owned cid =
+          (not (Id.Set.mem cid ctx.er_aliased))
+          && (not (Id.Set.mem cid ctx.er_invariant_params))
+          && match List.assoc_opt cid env with Some ty -> movable ty | None -> false
+        in
+        List.map2
+          (fun cid pointer ->
+            if (not pointer) && owned cid && read_by_call cid = Some false then CPPmove (CPPvar cid) else CPPvar cid )
+          cont_vars pointers
       in
       register_frame frames_ref ~name:call_name ~saved_types:cont_types
         ~saved_exprs:cont_saved ~env ~handler ~pointers;
@@ -3029,25 +3015,20 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
   (* Which slots each frame keeps as pointers is the recursion plan's
      ({!call_frame_info.cf_pointers}).  The pushes the handlers make are
      the C++'s account of the same: under [CRANE_CHECK_IR] the slots they
-     need as pointers must be those.  A machine the plan does not describe
-     keeps what its pushes need. *)
+     need as pointers must be those. *)
   let frame_ps_map =
-    let pushed () = compute_frame_pointer_safe (filter_by_mask varying entry_pointers) frames in
     let planned =
-      List.fold_right
-        (fun cf acc ->
-          match (cf.cf_pointers, acc) with
-          | Some ps, Some acc -> Some (if List.exists Fun.id ps then (cf.cf_name, ps) :: acc else acc)
-          | None, _ | _, None -> None )
-        frames (Some [])
+      List.filter_map
+        (fun cf -> if List.exists Fun.id cf.cf_pointers then Some (cf.cf_name, cf.cf_pointers) else None)
+        frames
     in
-    match planned with
-    | Some planned ->
-      if Probe.checking () && not (List.equal ( = ) planned (pushed ())) then
-        Probe.violation "frame plan"
-          (Pp.str "a frame keeps other locals as pointers than the pushes of the machine's handlers need");
-      planned
-    | None -> pushed ()
+    if
+      Probe.checking ()
+      && not (List.equal ( = ) planned (compute_frame_pointer_safe (filter_by_mask varying entry_pointers) frames))
+    then
+      Probe.violation "frame plan"
+        (Pp.str "a frame keeps other locals as pointers than the pushes of the machine's handlers need");
+    planned
   in
   (* One emission per entry point, in {!entries} order. *)
   let emissions =
