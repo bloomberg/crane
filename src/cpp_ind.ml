@@ -1245,10 +1245,7 @@ let in_spelling ~file spelling k =
           k
     | Template_in _ -> k
   in
-  let in_body mp k =
-    with_visibility (planned_visibility mp) (fun () ->
-        with_planned_local_inductives mp (fun () -> setting held_back_concepts (planned_held_back ~file mp) k) )
-  in
+  let in_body mp k = with_planned_local_inductives mp (fun () -> setting held_back_concepts (planned_held_back ~file mp) k) in
   match ((file : Common.file), (spelling : Cpp_ast.spelling)) with
   | Intf, Element_of mp -> in_body mp (fun () -> in_header_element_scope mp (fun ~in_struct:_ -> k ()))
   | Intf, Member_of mp ->
@@ -1264,10 +1261,7 @@ let in_spelling ~file spelling k =
           ++ str ", which it does not write.")
   (* A synthesised template is written where it is declared, whatever is
      around it. *)
-  | _, Template_in declared ->
-    with_render_ctx
-      (fun c -> Cpp_print.ctor_alias_render_ctx {c with rc_file = file} declared)
-      (fun () -> with_visibility (Cpp_print.ctor_alias_visibility declared) k)
+  | _, Template_in declared -> with_render_ctx (fun c -> Cpp_print.ctor_alias_render_ctx {c with rc_file = file} declared) k
 
 let resolver_at ~file spelling frame key =
   Common.without_noting_written_files (fun () ->

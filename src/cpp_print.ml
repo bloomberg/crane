@@ -1320,8 +1320,8 @@ and ctor_alias_at ctx vl t =
 (** The template synthesised for [probe], a type constructor applied to the
     sentinel, if its rendering is not a head applied to the sentinel.
 
-    The body is rendered where the template is declared ({!ctor_alias_visibility}),
-    because that is where a [using] is read; every name it writes
+    The body is rendered where the template is declared ({!ctor_alias_render_ctx}),
+    what is visible there included, because that is where a [using] is read; every name it writes
     has to mean there what it means at the use. *)
 and ctor_alias_of_probe ctx vl ~base probe =
   (* Every node of a type, in the order written, a type constructor's
@@ -1377,9 +1377,7 @@ and ctor_alias_of_probe ctx vl ~base probe =
   in
   let declared_in = ctor_alias_declared ctx probe in
   let render t =
-    let declared = ctor_alias_render_ctx ctx declared_in in
-    Common.with_visibility (ctor_alias_visibility declared_in) (fun () ->
-        Pp.string_of_ppcmds (pp_cpp_type declared false vl t) )
+    Pp.string_of_ppcmds (pp_cpp_type (ctor_alias_render_ctx ctx declared_in) false vl t)
   in
   let rendered = lazy (render probe) in
   let head_alone () =

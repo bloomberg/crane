@@ -253,9 +253,6 @@ val ctor_alias_declaration : ctor_alias -> Cpp_ast.t
     written at, in the file the first is written in ({!Cpp_ast.Template_in}). *)
 val ctor_alias_render_ctx : Cpp_state.render_ctx -> Cpp_ast.declared_in -> Cpp_state.render_ctx
 
-(** The visibility a template declared where it says is written in. *)
-val ctor_alias_visibility : Cpp_ast.declared_in -> Common.visibility
-
 (** The templates the file [file] declares, each once, in the order
     planned: the aliases it writes, and, in the header, every holder the
     unit writes. *)
