@@ -1291,6 +1291,8 @@ let planned_frame ctx ~keeps (p : Recursion_plan.resume) =
 
 let no_resume_point = "the recursion plan has no one point a call's result resumes at"
 
+let no_resume_plan = "the recursion plan does not say whether a statement making a recursive call resumes after it"
+
 let no_entering_calls = "no ControlIR loop says which calls enter the machine a frame keeps pointers for"
 
 (** The one point the plan resumes at once the call whose result [tgt] binds
@@ -1676,8 +1678,9 @@ and rewrite_enter_stmts ctx stmts =
     (* Whether the statement resumes is the plan's ({!planned_resume}); the
        call the frame re-enters by is the one {!Normalize} bound there, the
        whole right-hand side.  Under [CRANE_CHECK_IR] the plan is checked
-       against the C++, one call the machine's checker recognises, and a
-       statement the plan says nothing of is a violation. *)
+       against the C++, one call the machine's checker recognises.  A
+       statement the plan says nothing of is a violation, and the machine is
+       not made. *)
     (* A temporary Normalize bound at the type the Core gives the call, of
        a function returning it erased, is the call cast: the frame re-enters
        by the call, and the handler casts its result. *)
@@ -1693,10 +1696,8 @@ and rewrite_enter_stmts ctx stmts =
         if Probe.checking () && planned <> Option.has_some call then resume_violation ();
         planned
       | None ->
-        if Probe.checking () then
-          Probe.violation "resume plan"
-            (Pp.str "the recursion plan does not say whether a statement making a recursive call resumes after it");
-        Option.has_some call
+        Probe.violation "resume plan" (Pp.str no_resume_plan);
+        raise (Not_linearisable no_resume_plan)
     in
     ( match call with
     | Some cs when resumes ->
