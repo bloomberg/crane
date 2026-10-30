@@ -435,11 +435,11 @@ let generated_concept ~module_ r fields =
   ignore (record_entity r [d] []);
   d
 
-(** The concept [d] of a class, an element of the module [module_]
-    wherever the file moves it -- ahead of or after the struct of the
-    module declaring the class, or to the top of the file -- printed where
-    the tree puts it. *)
-let class_concept_element ~module_ d = Cpp_print.unprinted ~module_ (empty_env ()) (Cpp_ind.finished_alone d)
+(** The concept [d] of a class, written at the position [ctx] as an element
+    of the module [module_] wherever the file moves it -- ahead of or after
+    the struct of the module declaring the class, or to the top of the file
+    -- printed where the tree puts it. *)
+let class_concept_element ctx ~module_ d = Cpp_print.unprinted ctx ~module_ (empty_env ()) (Cpp_ind.finished_alone d)
 
 (** The functions of a module's method candidates [candidates] its
     eponymous record's struct is given as methods: those that are not
@@ -599,8 +599,8 @@ let unenclosed_element enclosure ?fields body =
     struct holding it back ({!Cpp_print.held_back_assertions}). *)
 let element_decl ~module_ ~homed ctx env d =
   if Cpp_print.is_held_back_assertion ctx d then Cpp_ast.empty
-  else if Cpp_print.absorbs ~homed d then Cpp_print.write_absorbing ~homed env d
-  else Cpp_print.unprinted ~module_ env d
+  else if Cpp_print.absorbs ~homed d then Cpp_print.write_absorbing ctx ~homed env d
+  else Cpp_print.unprinted ctx ~module_ env d
 
 (** The wrapper structs the header writes around a wrapper module's
     declarations, the declaration [d] writing them, as planned
@@ -631,7 +631,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
        referring to an undeclared name.  Emit it as a static member template
        right before the declaration that produced it instead; helpers produced
        elsewhere keep their file-scope placement. *)
-    let {Cpp_ind.rendered; helpers; _} = f ~module_ d in
+    let {Cpp_ind.rendered; helpers; _} = f ctx ~module_ d in
     let element = element_decl ~module_ ~homed:(homed_at ~is_header d) ctx in
     (* An erasure landing pad -- [using X = std::any;] -- travels to the very
        top of the file, ahead of the concepts.
@@ -780,21 +780,17 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
           let template = List.map (template_param ctx) template_params in
           let inside = {ctx with rc_in_struct = true; rc_in_template = true} in
           let {text = struct_def; concepts = body_concepts; asserts} =
-            installing inside
-              (fun () ->
-                match body with
-                | MEstruct (body_mp, sel) ->
-                  let b = pp_module_body ~is_header f inside body_mp sel in
-                  { b with
-                    text =
-                      Cpp_ast.module_
-                        (Struct {head = {(module_struct mp) with template}; layout = Block})
-                        b.text }
-                (* A functor that is another module is a struct deriving
-                   from it, as one applying another functor is. *)
-                | MEapply _ -> written (Cpp_ast.derived_functor ~template mp (Applied (application_of body)))
-                | MEident base -> written (Cpp_ast.derived_functor ~template mp (Module_named (Cpp_ast.module_ref base)))
-                | MEfunctor _ -> CErrors.anomaly (Pp.str "Crane: a functor's parameters were not all collected.") )
+            match body with
+            | MEstruct (body_mp, sel) ->
+              let b = pp_module_body ~is_header f inside body_mp sel in
+              { b with
+                text =
+                  Cpp_ast.module_ (Struct {head = {(module_struct mp) with template}; layout = Block}) b.text }
+            (* A functor that is another module is a struct deriving from
+               it, as one applying another functor is. *)
+            | MEapply _ -> written (Cpp_ast.derived_functor ~template mp (Applied (application_of body)))
+            | MEident base -> written (Cpp_ast.derived_functor ~template mp (Module_named (Cpp_ast.module_ref base)))
+            | MEfunctor _ -> CErrors.anomaly (Pp.str "Crane: a functor's parameters were not all collected.")
           in
           { text = struct_def; concepts = concepts @ body_concepts; asserts }
       | MEapply _ ->
@@ -829,7 +825,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
             List.map
               (fun (l, r, fields) ->
                 let d = generated_concept ~module_ r fields in
-                let concept = class_concept_element ~module_ d in
+                let concept = class_concept_element ctx ~module_ d in
                 (HCclass r, Cpp_ast.(seq [text (pp_doc_comment l); concept]), concept_names_member mp d) )
               (declared_classes sel)
           else []
@@ -945,10 +941,8 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
         in
         let body_written, this_method_candidates =
           with_promotion_scope @@ fun () ->
-          let inside = enter_module ctx in
-          installing inside (fun () ->
-            let body = pp_module_body ~is_header f inside body_mp sel in
-            (body, !method_candidates) )
+          let body = pp_module_body ~is_header f (enter_module ctx) body_mp sel in
+          (body, !method_candidates)
         in
         (* The assertions this struct's body held back: those naming a concept
            it declares are emitted after it, now that both are in scope; the
@@ -972,7 +966,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
                    (match !eponymous_type_ref with
                     | Some (GlobRef.IndRef (kn', _)) -> MutInd.CanOrd.equal kn kn'
                     | _ -> false)
-                   && Cpp_ind.promoted_shared_from_this ~module_:body_mp d
+                   && Cpp_ind.promoted_shared_from_this ctx ~module_:body_mp d
                  | _ -> false )
                sel
         in
@@ -1013,7 +1007,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
                   | None -> "_field" ^ string_of_int i
                 in
                 let fields_pp =
-                  Cpp_print.unprinted_fields ~module_ ~vl:ty_vars epon_ref
+                  Cpp_print.unprinted_fields ctx ~module_ ~vl:ty_vars epon_ref
                     (List.combine (List.mapi field_name fields) field_types)
                 in
                 let method_fields, method_helpers =
@@ -1028,7 +1022,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
                     (List.map
                        (fun h ->
                          Cpp_ast.seq
-                           [ Cpp_print.unprinted ~module_ (empty_env ()) (fst (lifted_views ~module_ ~may_hoist:false h));
+                           [ Cpp_print.unprinted ctx ~module_ (empty_env ()) (fst (lifted_views ~module_ ~may_hoist:false h));
                              Cpp_ast.text (fnl ()) ] )
                        method_helpers )
                 in
@@ -1044,7 +1038,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
                       Cpp_ind.finished_record_methods epon_ref ty_vars method_fields
                     in
                     Cpp_ast.seq
-                      [helpers_pp; Cpp_print.unprinted ~module_ (empty_env ()) finished; Cpp_ast.text (fnl ())]
+                      [helpers_pp; Cpp_print.unprinted ctx ~module_ (empty_env ()) finished; Cpp_ast.text (fnl ())]
                 in
                 (template, fields_pp, methods_pp)
               | None -> ([], Cpp_ast.empty, Cpp_ast.empty)
@@ -1145,7 +1139,7 @@ and pp_module_body ~is_header f ctx mp sel =
      namespace scope those names mean nothing. *)
   let written =
     let ctx = element_position mp ctx in
-    List.map (fun e -> element_of mp (installing ctx (fun () -> pp_structure_elem ~is_header f ctx ~module_:mp e))) sel
+    List.map (fun e -> element_of mp (pp_structure_elem ~is_header f ctx ~module_:mp e)) sel
   in
   current_structure_decls := old_structure_decls;
   { text = Cpp_ast.module_body mp (List.map (fun w -> w.text) written);
@@ -1271,7 +1265,7 @@ let pp_wrapper_module_dual ~is_header ctx mp func_sels =
      own, or one an inductive of its name writes -- and everything else it
      writes is an element of it, all printed as the tree spells them. *)
   let render_sel_specs (specs, _) =
-    Cpp_ast.concat fnl (List.map (fun (d, env) -> Cpp_print.unprinted ~module_:mp env d) specs)
+    Cpp_ast.concat fnl (List.map (fun (d, env) -> Cpp_print.unprinted ctx ~module_:mp env d) specs)
   in
   let element = element_decl ~module_:mp ~homed:[] ctx in
   let render_sel_defs (_, defs) = Cpp_ast.concat fnl (List.map (fun (d, env) -> element env d) defs) in
@@ -3044,7 +3038,11 @@ let gathered l = (List.map fst l, moved_together (List.map snd l))
             out-of-line function definitions. *)
 let do_struct_with_decl_tracking ~is_header f s =
   writing_file (if is_header then Common.Intf else Common.Impl) @@ fun () ->
+  (* The file is written from its start, threaded through everything the
+     driver writes: under [CRANE_CHECK_IR] nothing beneath reads the
+     installed position. *)
   let top = current_render_ctx () in
+  entering_scope @@ fun () ->
   (* A synthesised alias is emitted in front of the top-level element that
      writes it, rather than collected into the file's prologue.
 
@@ -3104,7 +3102,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     let defined = if is_header then declarations [(source, [x])] else [] in
     let homed = List.filter_map (fun h -> if List.memq h.home defined then Some h.wrapper else None) !file_layout.wrapper_homes in
     let element = element_position source ctx in
-    let {text = p; concepts = c; asserts = _} = element_of source (installing element (fun () -> f element ~module_:source x)) in
+    let {text = p; concepts = c; asserts = _} = element_of source (f element ~module_:source x) in
     if is_header && Probe.checking () then begin
       let absorbed = Cpp_ast.wrapper_structs p in
       if absorbed <> homed then
@@ -3307,9 +3305,8 @@ let do_struct_with_decl_tracking ~is_header f s =
                  Being unwritable inside the struct used to be answered by
                  dropping it. *)
               let class_concept (l, r, fields) =
-                installing (element_position mp {top with rc_in_struct = true}) @@ fun () ->
                 let d = generated_concept ~module_:mp r fields in
-                let concept = class_concept_element ~module_:mp d in
+                let concept = class_concept_element (element_position mp {top with rc_in_struct = true}) ~module_:mp d in
                 Cpp_ast.elements ~source:mp Cpp_ast.(seq [text (pp_doc_comment l); concept])
               in
               let concepts_moved =
@@ -3328,7 +3325,7 @@ let do_struct_with_decl_tracking ~is_header f s =
               let sel = List.filter (fun (_, se) -> match se with SEmodtype _ -> false | _ -> true) sel in
               let body, body_moved =
                 let inside = {top with rc_in_struct = true} in
-                installing inside (fun () -> body inside In_enclosing_scope ~keep:is_func_decl sel)
+                body inside In_enclosing_scope ~keep:is_func_decl sel
               in
               let moved = moved_together (concepts_moved @ [body_moved]) in
               if Cpp_ast.body_is_empty body then (Cpp_ast.empty, moved)
@@ -3367,7 +3364,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   let erased_aliases =
     let imports = if is_header then List.map (fun i -> Cpp_ast.text (str i)) !file_layout.promoted_imports else [] in
     let pads = if is_header then !file_layout.erased_aliases else [] in
-    imports @ Cpp_ind.render_section pads
+    imports @ Cpp_ind.render_section top pads
   in
   (* Aliases go in front of the text that writes them, and only what no text
      writes is left for the prologue; see {!Cpp_ast.schedule}. *)
@@ -3382,12 +3379,12 @@ let do_struct_with_decl_tracking ~is_header f s =
      cost the property that makes this correct. *)
   let lifted_specs =
     if is_header then
-      List.map (fun w -> w.wr_lifted_specs) wrapper_parts @ Cpp_ind.render_section !file_layout.lifted_specs
+      List.map (fun w -> w.wr_lifted_specs) wrapper_parts @ Cpp_ind.render_section top !file_layout.lifted_specs
     else []
   in
   (* Last of all: a datatype's method whose body names a module's struct, which
      is emitted after every datatype.  Nothing else in the header is later. *)
-  let deferred_members = Cpp_ind.render_section (if is_header then !file_layout.member_defs else []) in
+  let deferred_members = Cpp_ind.render_section top (if is_header then !file_layout.member_defs else []) in
   (* Each section a chunk of its own, so that an alias no single element
      claimed -- one whose only use is in a section assembled out of several
      -- still lands in front of the first section that writes it rather than
@@ -3482,5 +3479,5 @@ let cpp_descr =
     pp_hstruct;
     sig_suffix = Some ".h";
     sig_preamble;
-    pp_decl = (fun ~module_ d -> Cpp_ast.to_pp (pp_decls (impl_decls ~module_ d).rendered));
+    pp_decl = (fun ~module_ d -> Cpp_ast.to_pp (pp_decls (impl_decls (current_render_ctx ()) ~module_ d).rendered));
   }

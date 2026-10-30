@@ -4331,8 +4331,7 @@ let write_decl env settled =
 
 (** [settled], which {!absorbs}, written where it is made ({!absorbing_at}),
     behind what placing the declarations it needs reads. *)
-let write_absorbing ~homed env settled =
-  let ctx = current_render_ctx () in
+let write_absorbing ctx ~homed env settled =
   let tree = absorbing_at ctx ~homed env settled in
   let needs = printed_needs ctx settled in
   ( if Probe.checking () then
@@ -4350,11 +4349,11 @@ let write_absorbing ~homed env settled =
 let planned_needs ~file ~module_ settled =
   needs_of ~templates:(List.map ctor_alias_name (planned_ctor_aliases ~file ~module_ settled)) settled
 
-let unprinted ~module_ env settled =
-  Cpp_ast.unprinted ~needs:(planned_needs ~file:(current_render_ctx ()).rc_file ~module_ settled) env settled
+let unprinted ctx ~module_ env settled =
+  Cpp_ast.unprinted ~needs:(planned_needs ~file:ctx.rc_file ~module_ settled) env settled
 
-let unprinted_fields ~module_ ~vl r fields =
-  Cpp_ast.fields ~needs:(fields_needs (current_render_ctx ()) ~module_ ~vl r (List.map snd fields)) ~record:r ~vars:vl fields
+let unprinted_fields ctx ~module_ ~vl r fields =
+  Cpp_ast.fields ~needs:(fields_needs ctx ~module_ ~vl r (List.map snd fields)) ~record:r ~vars:vl fields
 
 let resolved ctx key (resolution : Cpp_ast.resolution) =
   match resolution with Resolved n -> checked key ~live:(fun () -> live_name ctx key) n | Unresolved -> unresolved key

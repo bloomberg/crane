@@ -22,10 +22,11 @@ val write_decl : Common.env -> Cpp_erasure.settled -> Cpp_ast.t
     names, with the module, as planned. *)
 val absorbs : homed:(string * ModPath.t) list -> Cpp_erasure.settled -> bool
 
-(** [write_absorbing ~homed env d] is [d], which {!absorbs}, as {!write_decl}
-    writes it, each wrapper struct holding a wrapper module's declarations a
-    {!Cpp_ast.Wrapper_struct}. *)
-val write_absorbing : homed:(string * ModPath.t) list -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
+(** [write_absorbing ctx ~homed env d] is [d], which {!absorbs}, as
+    {!write_decl} writes it at the position [ctx], each wrapper struct
+    holding a wrapper module's declarations a {!Cpp_ast.Wrapper_struct}. *)
+val write_absorbing :
+  Cpp_state.render_ctx -> homed:(string * ModPath.t) list -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
 
 (** The name of a module a declaration of the tree names, as
     {!Cpp_ast.resolve} resolved it where the declaration is written; under
@@ -57,19 +58,22 @@ val is_held_back_assertion : Cpp_state.render_ctx -> Cpp_erasure.settled -> bool
     the file [file], needs reads ({!Cpp_ast.Needs}), as planned. *)
 val planned_needs : file:Common.file -> module_:Names.ModPath.t -> Cpp_erasure.settled -> Cpp_ast.Needs.t
 
-(** [unprinted ~module_ env decl] is [decl], written in the module
-    [module_], to be printed where the tree puts it ({!Cpp_ast.print}),
-    with what placing the declarations it needs reads, as planned. *)
-val unprinted : module_:Names.ModPath.t -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
+(** [unprinted ctx ~module_ env decl] is [decl], written at the position
+    [ctx] in the module [module_], to be printed where the tree puts it
+    ({!Cpp_ast.print}), with what placing the declarations it needs reads,
+    as planned. *)
+val unprinted : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
 
-(** [unprinted_fields ~module_ ~vl r fields] is the fields [fields] of the
-    eponymous record [r], each by its name and type, their type variables
-    named [vl], written in the module [module_], to be printed where the
+(** [unprinted_fields ctx ~module_ ~vl r fields] is the fields [fields] of
+    the eponymous record [r], each by its name and type, their type
+    variables named [vl], written at the position [ctx] in the module
+    [module_], to be printed where the
     tree puts them, with what placing the declarations they need reads: the
     synthesised templates they write, as planned, and the constrained
     structs they name.  Under [CRANE_CHECK_IR] the templates are spelled
     again and compared. *)
 val unprinted_fields :
+  Cpp_state.render_ctx ->
   module_:ModPath.t -> vl:Id.t list -> GlobRef.t -> (string * cpp_type) list -> Cpp_ast.t
 
 (** [global_names frames globals] asks for [globals] by name at each of

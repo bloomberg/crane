@@ -246,6 +246,11 @@ val entering_scope : (unit -> 'a) -> 'a
 (** [writing_file file f] renders [f] as part of the file [file]. *)
 val writing_file : Common.file -> (unit -> 'a) -> 'a
 
+(** The file {!writing_file} is writing, which nothing written inside it
+    changes: unlike the rest of the installed position, a fact about the
+    whole pass, which a check may ask wherever it is. *)
+val file_being_written : unit -> Common.file
+
 (** [element_position mp c] is the position [c] writing an element of the
     module [mp]: in the visibility planned for its body. *)
 val element_position : Names.ModPath.t -> render_ctx -> render_ctx
@@ -256,8 +261,8 @@ val writing_element_of : Names.ModPath.t -> (unit -> 'a) -> 'a
 
 (** [installing c f] runs [f] with the position [c] installed, which the
     caller threads: for what is reached beneath it that still reads the
-    installed position -- the generators the driver calls -- rather than
-    being handed it. *)
+    installed position rather than being handed it -- a declaration
+    generated ahead of the files. *)
 val installing : render_ctx -> (unit -> 'a) -> 'a
 
 (** {2 Template static accessors} *)

@@ -620,6 +620,8 @@ let entering_scope f =
 
 let writing_file file f = with_render_ctx (fun c -> {c with rc_file = file}) f
 
+let file_being_written () = !render_ctx.rc_file
+
 let element_position mp c = {c with rc_module = Some mp; rc_visibility = Scope_plan.visibility mp}
 
 let writing_element_of mp f = with_render_ctx (element_position mp) f
