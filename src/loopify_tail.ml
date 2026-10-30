@@ -312,19 +312,8 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(owned = []) shadow_para
     List.map
       (fun ((shadow_id, ty), arg) ->
         ((shadow_id, ty), tail_shadow_arg ~shadow_ids ty arg))
-      (* Same arity caveat as {!filter_by_mask}: a self-call of a different
-         arity than the definition has no shadow-parameter correspondence, so
-         decline rather than fail the extraction. *)
       ( if List.compare_lengths shadow_params args <> 0 then
-          raise
-            (Not_linearisable
-               (Printf.sprintf
-                  "a recursive call updates %d shadow parameter%s from %d \
-                   argument%s"
-                  (List.length shadow_params)
-                  (if List.length shadow_params = 1 then "" else "s")
-                  (List.length args)
-                  (if List.length args = 1 then "" else "s") ))
+          arity_mismatch ~args:(List.length args) ~params:(List.length shadow_params)
         else List.combine shadow_params args )
   in
   (* Identify which params actually change (filter self-assignments). *)

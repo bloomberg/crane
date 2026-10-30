@@ -929,24 +929,25 @@ let report_outcome ?survived ~name ~check ~strategy body =
   record_outcome name outcome;
   body
 
-(** Filter a list keeping only elements at positions where [mask] is [true].
+(** A recursive call a transform takes passing [args] arguments to a loop of
+    [params] parameters.  A call taken is made of one of the loop's
+    Continues, which passes each parameter one argument, so this is the C++
+    call disagreeing with the loop's ControlIR: a violation under
+    [CRANE_CHECK_IR], and the transform declines ({!Not_linearisable}). *)
+let arity_mismatch ~args ~params =
+  let plural n = if n = 1 then "" else "s" in
+  let why =
+    Printf.sprintf "a recursive call passes %d argument%s where its loop has %d parameter%s" args (plural args) params
+      (plural params)
+  in
+  Probe.violation "control lowering" (Pp.str why);
+  raise (Not_linearisable why)
 
-    [mask] is indexed by the function's parameters, so [lst] is expected to be
-    a call site's argument list of the same length.  A self-call can legitimately
-    carry a different arity than the definition it sits in -- a partially applied
-    call, or a knot-tying wrapper whose functional takes an extra [rec] parameter
-    -- and then no per-parameter mask applies.  That is a shape this transform
-    does not handle rather than a broken invariant, so raise {!Not_linearisable}
-    and let the caller decline, instead of failing the whole extraction. *)
+(** Filter a list keeping only elements at positions where [mask] is [true].
+    [mask] is indexed by the loop's parameters and [lst] is a call's
+    arguments, one per parameter ({!arity_mismatch}). *)
 let filter_by_mask mask lst =
-  let n1 = List.length mask and n2 = List.length lst in
-  if n1 <> n2 then
-    raise
-      (Not_linearisable
-         (Printf.sprintf
-            "a recursive call passes %d argument%s where the definition has %d \
-             parameter%s"
-            n2 (if n2 = 1 then "" else "s") n1 (if n1 = 1 then "" else "s") ));
+  if List.compare_lengths mask lst <> 0 then arity_mismatch ~args:(List.length lst) ~params:(List.length mask);
   List.combine mask lst
   |> List.filter_map (fun (keep, x) -> if keep then Some x else None)
 
