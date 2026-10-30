@@ -3031,16 +3031,14 @@ let struct_template_head ~pp_param ctx env tparams cstr =
     indented contexts such as enum values).  Defaults to [""]. *)
 let pp_doc_comment_for_name = Doc_comments.pp
 
-(** The synthesised templates spelled, in [file], at the type constructors
-    [visit] calls its argument at, in the order spelled -- one written in
-    another's body ahead of it -- each spelled as the printer spells it in
-    that file, inside the struct of the inductive whose members are written
-    around it, if any ({!Cpp_resolution.Inductive_struct}). *)
-let ctor_aliases_found ~file visit =
-  writing_file file @@ fun () ->
+(** The synthesised templates spelled at the position [ctx] at the type
+    constructors [visit] calls its argument at, in the order spelled -- one
+    written in another's body ahead of it -- each spelled as the printer
+    spells it there, inside the struct of the inductive whose members are
+    written around it, if any ({!Cpp_resolution.Inductive_struct}). *)
+let ctor_aliases_found ctx visit =
   setting collecting_ctor_aliases true @@ fun () ->
   setting ctor_aliases_spelled [] @@ fun () ->
-  let ctx = current_render_ctx () in
   visit (fun ~vl ~owner t ->
       match t with
       | Ttyctor _ ->
@@ -3049,21 +3047,22 @@ let ctor_aliases_found ~file visit =
       | _ -> () );
   !ctor_aliases_spelled
 
-let ctor_aliases_written ~file (d : Cpp_erasure.settled) =
-  { read_written = (module_written (current_render_ctx ()), Written_declaration (d :> cpp_decl));
-    read_aliases = ctor_aliases_found ~file (fun f -> Cpp_demands.tyctors_of_decl f (d :> cpp_decl)) }
+let ctor_aliases_written ~file ctx (d : Cpp_erasure.settled) =
+  let ctx = {ctx with rc_file = file} in
+  { read_written = (module_written ctx, Written_declaration (d :> cpp_decl));
+    read_aliases = ctor_aliases_found ctx (fun f -> Cpp_demands.tyctors_of_decl f (d :> cpp_decl)) }
 
-let ctor_aliases_of_fields ~file ~vl r types =
-  { read_written = (module_written (current_render_ctx ()), Written_fields r);
-    read_aliases = ctor_aliases_found ~file (fun f -> List.iter (Cpp_demands.tyctors_of_type f ~vl) types) }
+let ctor_aliases_of_fields ~file ctx ~vl r types =
+  let ctx = {ctx with rc_file = file} in
+  { read_written = (module_written ctx, Written_fields r);
+    read_aliases = ctor_aliases_found ctx (fun f -> List.iter (Cpp_demands.tyctors_of_type f ~vl) types) }
 
 (** The synthesised templates [w], written in the module [module_], writes
-    in the file being written, as planned. *)
-let planned_aliases ~module_ w =
+    in the file [file], as planned. *)
+let planned_aliases ~file ~module_ w =
   match !ctor_alias_plan with
   | None -> []
   | Some plan -> (
-    let file = (current_render_ctx ()).rc_file in
     let writes = match file with Common.Intf -> plan.intf_writes | Common.Impl -> plan.impl_writes in
     match Written.find_opt writes (module_, w) with
     | Some aliases -> aliases
@@ -3075,21 +3074,20 @@ let planned_aliases ~module_ w =
             ++ str " are written that were not read when their templates were planned.") )
 
 (** The synthesised templates the finished declaration [d], written in the
-    module [module_], writes in the file being written, as planned. *)
-let planned_ctor_aliases ~module_ (d : Cpp_erasure.settled) = planned_aliases ~module_ (Written_declaration (d :> cpp_decl))
+    module [module_], writes in the file [file], as planned. *)
+let planned_ctor_aliases ~file ~module_ (d : Cpp_erasure.settled) =
+  planned_aliases ~file ~module_ (Written_declaration (d :> cpp_decl))
 
-(** The synthesised templates the finished declaration [d] writes in the
-    file being written, as an element of the module the render context
-    names, as planned; under [CRANE_CHECK_IR], spelled again and
-    compared. *)
-let ctor_aliases_planned (d : Cpp_erasure.settled) =
+(** The synthesised templates the finished declaration [d] writes at the
+    position [ctx], as an element of the module it names, as planned; under
+    [CRANE_CHECK_IR], spelled again and compared. *)
+let ctor_aliases_planned ctx (d : Cpp_erasure.settled) =
   match !ctor_alias_plan with
   | None -> []
   | Some _ ->
-    let ctx = current_render_ctx () in
-    let aliases = planned_ctor_aliases ~module_:(module_written ctx) d in
     let file = ctx.rc_file in
-    if Probe.checking () && (ctor_aliases_written ~file d).read_aliases <> aliases then
+    let aliases = planned_ctor_aliases ~file ~module_:(module_written ctx) d in
+    if Probe.checking () && (ctor_aliases_written ~file ctx d).read_aliases <> aliases then
       Probe.violation "constructor aliases"
         Pp.(str "a declaration of the " ++ str (Common.file_name file)
             ++ str " writes other templates than were planned for it");
@@ -4169,8 +4167,6 @@ let rec absorbing_at ctx ~homed env (d : Cpp_erasure.settled) =
     | None -> Cpp_ast.(seq [text (str "struct " ++ str name ++ str " {" ++ fnl ()); ds; text (fnl () ++ str "};")]) )
   | Decl _ -> Cpp_ast.text (pp_cpp_decl ctx env d)
 
-let absorbing_decl ~homed env d = absorbing_at (current_render_ctx ()) ~homed env d
-
 (** Whether [d] is an assertion the struct being written holds back
     ({!held_back_assertions}), which it writes nothing for. *)
 let is_held_back_assertion ctx (d : Cpp_erasure.settled) =
@@ -4204,10 +4200,10 @@ let needs_of ~templates (settled : Cpp_erasure.settled) =
   in
   {Cpp_ast.Needs.templates; names; defines}
 
-let fields_needs ~module_ ~vl r types =
-  let aliases = planned_aliases ~module_ (Written_fields r) in
-  let file = (current_render_ctx ()).rc_file in
-  if Probe.checking () && Option.has_some !ctor_alias_plan && (ctor_aliases_of_fields ~file ~vl r types).read_aliases <> aliases
+let fields_needs ctx ~module_ ~vl r types =
+  let file = ctx.rc_file in
+  let aliases = planned_aliases ~file ~module_ (Written_fields r) in
+  if Probe.checking () && Option.has_some !ctor_alias_plan && (ctor_aliases_of_fields ~file ctx ~vl r types).read_aliases <> aliases
   then
     Probe.violation "constructor aliases"
       Pp.(str "the fields of a record in the " ++ str (Common.file_name file)
@@ -4217,7 +4213,7 @@ let fields_needs ~module_ ~vl r types =
   in
   {Cpp_ast.Needs.templates = List.map ctor_alias_name aliases; names; defines = []}
 
-let printed_needs settled = needs_of ~templates:(List.map ctor_alias_name (ctor_aliases_planned settled)) settled
+let printed_needs ctx settled = needs_of ~templates:(List.map ctor_alias_name (ctor_aliases_planned ctx settled)) settled
 
 (* The frames printing [d] enters names at: {!pp_cpp_decl}'s scopes, read
    without printing. *)
@@ -4323,11 +4319,9 @@ let unprinted_names : Cpp_ast.declaration -> _ = function
   | Functor_alias _ | Derived_functor _ ->
     []
 
-let naming names k = with_render_ctx (fun c -> {c with rc_names = Some names}) k
-
 let printed_decl ctx env settled =
   let text = pp_cpp_decl ctx env settled in
-  (text, printed_needs settled)
+  (text, printed_needs ctx settled)
 
 (** [settled], printed where it is made, with what placing the declarations
     it needs reads ({!needs_of}). *)
@@ -4335,11 +4329,11 @@ let write_decl env settled =
   let text, needs = printed_decl (current_render_ctx ()) env settled in
   Cpp_ast.decl ~needs text
 
-(** [settled], which {!absorbs}, written where it is made ({!absorbing_decl}),
+(** [settled], which {!absorbs}, written where it is made ({!absorbing_at}),
     behind what placing the declarations it needs reads. *)
-let write_absorbing ~homed env settled =
-  let tree = absorbing_decl ~homed env settled in
-  let needs = printed_needs settled in
+let write_absorbing ctx ~homed env settled =
+  let tree = absorbing_at ctx ~homed env settled in
+  let needs = printed_needs ctx settled in
   ( if Probe.checking () then
       let written = Cpp_ast.wrapper_structs tree and absorbing = absorbed_by ~homed settled in
       if List.sort String.compare written <> List.sort String.compare absorbing then
@@ -4352,13 +4346,14 @@ let write_absorbing ~homed env settled =
             ++ str " need" ) );
   Cpp_ast.seq [Cpp_ast.decl ~needs (Pp.mt ()); tree]
 
-let planned_needs ~module_ settled =
-  needs_of ~templates:(List.map ctor_alias_name (planned_ctor_aliases ~module_ settled)) settled
+let planned_needs ~file ~module_ settled =
+  needs_of ~templates:(List.map ctor_alias_name (planned_ctor_aliases ~file ~module_ settled)) settled
 
-let unprinted ~module_ env settled = Cpp_ast.unprinted ~needs:(planned_needs ~module_ settled) env settled
+let unprinted ctx ~module_ env settled =
+  Cpp_ast.unprinted ~needs:(planned_needs ~file:ctx.rc_file ~module_ settled) env settled
 
-let unprinted_fields ~module_ ~vl r fields =
-  Cpp_ast.fields ~needs:(fields_needs ~module_ ~vl r (List.map snd fields)) ~record:r ~vars:vl fields
+let unprinted_fields ctx ~module_ ~vl r fields =
+  Cpp_ast.fields ~needs:(fields_needs ctx ~module_ ~vl r (List.map snd fields)) ~record:r ~vars:vl fields
 
 let resolved ctx key (resolution : Cpp_ast.resolution) =
   match resolution with Resolved n -> checked key ~live:(fun () -> live_name ctx key) n | Unresolved -> unresolved key
@@ -4443,13 +4438,11 @@ let pp_synthesised ctx (s : Cpp_ast.synthesised) =
     ++ str "> struct " ++ str s.name ++ str " { template <typename " ++ str ctor_alias_tvar ++ str "> using c = " ++ str body
     ++ str "; };"
 
-let resolved_names_into_a_struct names (settled : Cpp_erasure.settled) =
-  naming names @@ fun () -> declaration_names_into_a_struct (current_render_ctx ()) (settled :> cpp_decl)
+let resolved_names_into_a_struct ctx names (settled : Cpp_erasure.settled) =
+  declaration_names_into_a_struct {ctx with rc_names = Some names} (settled :> cpp_decl)
 
-let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
-  naming u.names @@ fun () ->
-  (* Where the declaration is written, which is where the printer is. *)
-  let ctx = current_render_ctx () in
+let print_unprinted ctx ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
+  let ctx = {ctx with rc_names = Some u.names} in
   let text, needs =
     match u.declaration with
     | Modtype_concept {path; params; concept} -> (modtype_concept ctx ~names:u.names ~params path concept, u.needs)
@@ -4464,7 +4457,7 @@ let print_unprinted ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
     | Fields {record; vars; fields} ->
       ( prlist_with_sep fnl (fun (name, ty) -> pp_cpp_type ctx false vars ty ++ spc () ++ str name ++ str ";") fields
         ++ fnl (),
-        if Probe.checking () then fields_needs ~module_:(module_written ctx) ~vl:vars record (List.map snd fields)
+        if Probe.checking () then fields_needs ctx ~module_:(module_written ctx) ~vl:vars record (List.map snd fields)
         else u.needs )
     | Global_alias a ->
       let tparams, name =

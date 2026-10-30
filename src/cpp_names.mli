@@ -224,10 +224,6 @@ val concept_extra_args : Names.ModPath.t -> Names.ModPath.t list
     module-type concept goes through this, so no two can disagree. *)
 val modtype_concept_name : Names.ModPath.t -> string
 
-(** The concept of the module type [kn], as a reference names it at the
-    position.  In separate extraction a concept lives in its file's
-    namespace, so a reference from another file is qualified. *)
-val modtype_concept_ref : Cpp_state.render_ctx -> Names.ModPath.t -> Cpp_name.t
 
 (** The name the struct of [id] is defined under. *)
 val struct_definition_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t

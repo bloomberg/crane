@@ -1875,12 +1875,13 @@ let derive_source_file filename =
     paths, optimizes, and writes to a monolithic output file. *)
 type export = {ex_ref : GlobRef.t; ex_name : string; ex_unit : string}
 
-(** The C++ expression for Rocq's [tt] under the active mappings and naming. *)
-let cpp_unit () =
+(** The C++ expression for Rocq's [tt] under the active mappings and naming,
+    written where [v] is visible. *)
+let cpp_unit v =
   match Table.resolve_tt_ctor () with
   | Some tt when Table.is_custom tt -> Table.find_custom tt
   | Some (GlobRef.ConstructRef ((kn, index), constructor_index)) ->
-    pp_global Type (GlobRef.IndRef (kn, index))
+    Cpp_name.to_string (resolve_ref_name v Type (GlobRef.IndRef (kn, index)))
     ^ "::"
     ^ Common.enum_ctor_name_of_ref kn index constructor_index
   | _ -> CErrors.anomaly Pp.(str "Crane could not resolve Rocq's unit constructor.")
@@ -1891,8 +1892,8 @@ let cpp_unit () =
 let exports refs =
   let export r =
     let base, _ = Table.labels_of_ref r in
-    with_visibility (toplevel_visibility [base]) (fun () ->
-        {ex_ref = r; ex_name = pp_global Term r; ex_unit = cpp_unit ()} )
+    let v = toplevel_visibility [base] in
+    {ex_ref = r; ex_name = Cpp_name.to_string (resolve_ref_name v Term r); ex_unit = cpp_unit v}
   in
   List.filter_map
     (function GlobRef.ConstRef _ as r -> Some (export r) | _ -> None)
@@ -2504,7 +2505,7 @@ let print_one_decl struc mp decl =
   end_planning ();
   let ans =
     Cpp_state.writing_file Impl @@ fun () ->
-    with_visibility (toplevel_visibility [mp]) @@ fun () ->
+    Cpp_state.with_render_ctx (fun c -> {c with Cpp_state.rc_visibility = Some (toplevel_visibility [mp])}) @@ fun () ->
     Cpp.generate_decl_ahead ~module_:mp decl;
     d.pp_decl ~module_:mp decl
   in

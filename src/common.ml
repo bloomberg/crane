@@ -623,7 +623,7 @@ let clear_non_output_modules () = Hashtbl.clear valid_output_module_set
     Computing a name demands nothing -- a generator asking whether a
     reference is spelled [list] reaches no other file -- and only a reference
     spelled through another file's namespace ({!pp_ocaml_extern},
-    {!file_qualifier}) needs that file declared.  What the files do write is
+    {!resolve_file_qualifier}) needs that file declared.  What the files do write is
     recorded under [CRANE_CHECK_IR] ({!note_written_file}), and the two must
     agree ({!check_written_files}). *)
 let planned_files = ref MPset.empty
@@ -719,33 +719,6 @@ let toplevel_visibility mps =
   List.fold_left (fun v mp -> inside mp [] v) global_visibility mps
 
 let visible_mps v = List.map (fun l -> l.mp) v
-
-(** The scopes enclosing what is being written, innermost first.  Only ever
-    entered for the extent of a function ({!with_visibility}) and at a
-    visibility the plan computed -- a module body's ({!Scope_plan.visibility}),
-    the files' ({!toplevel_visibility}), or one of those with a layer
-    {!inside} it -- so it is never pushed or popped. *)
-let visible = ref global_visibility
-
-let () = register_cleanup (fun () -> visible := global_visibility)
-
-let get_visible () = !visible
-
-let with_visibility v f =
-  let saved = !visible in
-  visible := v;
-  Fun.protect ~finally:(fun () -> visible := saved) f
-
-let current_visibility = get_visible
-
-(** Get the innermost visible layer. *)
-let top_visible () =
-  match get_visible () with
-  | [] -> CErrors.anomaly (Pp.str "top_visible: no scope is visible")
-  | v :: _ -> v
-
-(** Get the module path of the innermost visible layer. *)
-let top_visible_mp () = (top_visible ()).mp
 
 (** Whether a scope of [vis] nearer than global scope declares [name] -- a
     member of a module's struct, or a constructor's struct inside an
@@ -1470,24 +1443,11 @@ let resolve_global_name vis k key r =
     match lang () with
     | Cpp -> pp_cpp_gen vis k mp kinds (List.rev ls) (Some l)
 
-(** {!resolve_global_name} as text. *)
-let resolve_global vis k key r = Cpp_name.to_string (resolve_global_name vis k key r)
+(** The name of the reference [r] written where [vis] is visible, by its
+    canonical kernel name. *)
+let resolve_ref_name vis k r = resolve_global_name vis k (repr_of_r r) r
 
-(** {!resolve_global_name} where the printer is. *)
-let global_name_with_key k key r = resolve_global_name (get_visible ()) k key r
-
-(** {!resolve_global} where the printer is. *)
-let pp_global_with_key k key r = resolve_global (get_visible ()) k key r
-
-(** Print a reference using its canonical kernel name.
-    @param k The kind of the global reference
-    @param r The global reference to print *)
-let pp_global k r = pp_global_with_key k (repr_of_r r) r
-
-(** {!pp_global}, resolved. *)
-let global_name k r = global_name_with_key k (repr_of_r r) r
-
-(** The file part of {!pp_global}'s answer: the name of the file defining
+(** The file part of {!resolve_ref_name}'s answer: the name of the file defining
     [r] when a reference to it from here must name it, as {!pp_cpp_gen}
     decides.  For a name hoisted out of its module's structs to the file's
     namespace, which keeps the file and drops the rest. *)
@@ -1504,9 +1464,6 @@ let resolve_file_qualifier vis k r =
         note_written_file base;
         Some (unquote base_s)
       | [] -> None )
-
-(** {!resolve_file_qualifier} where the printer is. *)
-let file_qualifier k r = resolve_file_qualifier (get_visible ()) k r
 
 (** Print just the short name of a reference (for declarations). Main name
     printing function for declaring a reference.
@@ -1554,12 +1511,6 @@ let resolve_module_in vis mp =
     (* simplest situation: definition of mp (or use in the same context) *)
     Cpp_name.unqualified (List.hd ls)
   | _ -> pp_ocaml_gen vis Mod mp (mp_scope_kinds mp) (List.rev ls) None
-
-(** {!resolve_module_in} where the printer is. *)
-let resolve_module mp = resolve_module_in (get_visible ()) mp
-
-(** {!resolve_module} as text. *)
-let pp_module mp = resolved_string (resolve_module mp)
 
 (** The C++ name of a module label, as {!modular_rename} spells it. *)
 let module_label_name l = modular_rename Mod (Label.to_id l)

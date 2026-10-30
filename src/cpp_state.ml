@@ -493,7 +493,7 @@ type render_ctx = {
   (* The scopes whose names are visible where the printer is, innermost
      first: the planned visibility of what is being written, with a layer
      for each scope printing has entered that declares names; none where
-     what is written is not spelled as the tree spells a declaration. *)
+     nothing planned it, where nothing may be named. *)
   rc_visibility : Common.visibility option;
 }
 
@@ -620,8 +620,13 @@ let entering_scope f =
 
 let writing_file file f = with_render_ctx (fun c -> {c with rc_file = file}) f
 
-let writing_element_of mp f =
-  with_render_ctx (fun c -> {c with rc_module = Some mp; rc_visibility = Scope_plan.visibility mp}) f
+let file_being_written () = !render_ctx.rc_file
+
+let element_position mp c = {c with rc_module = Some mp; rc_visibility = Scope_plan.visibility mp}
+
+let writing_element_of mp f = with_render_ctx (element_position mp) f
+
+let installing c f = with_render_ctx (fun _ -> c) f
 
 (** Track definitions rendered as function accessors (Meyers singletons) instead
     of static inline variables, due to template static init ordering. Stores

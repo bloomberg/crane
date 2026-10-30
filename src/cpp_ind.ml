@@ -150,14 +150,16 @@ let header_decls decls = {decls; member_defs = []; promoted_sft = None}
     The forward declaration must carry the same template parameters as the
     full definition; a plain [struct tree;] followed by
     [template <typename A> struct tree { ... }] is a C++ error
-    ("redefinition as different kind of symbol"). *)
-let ind_header_decls kn ind =
+    ("redefinition as different kind of symbol").
+
+    Written at the position [ctx]. *)
+let ind_header_decls ctx kn ind =
   let names = Array.mapi (fun i p -> GlobRef.IndRef (kn, i)) ind.ind_packets in
   (* Written at namespace scope: outside every struct, or moved out of the
      collision struct holding it ahead of the concepts
      ({!Cpp.plan_concept_prerequisites}), which is planned. *)
   let at_namespace_scope =
-    (not (current_render_ctx ()).rc_in_struct) || Array.for_all Module_plan.is_namespace_scope_ref names
+    (not ctx.rc_in_struct) || Array.for_all Module_plan.is_namespace_scope_ref names
   in
   let cnames =
     Array.mapi
@@ -170,7 +172,7 @@ let ind_header_decls kn ind =
     (* Type classes become C++ concepts *)
     (* Skip if concepts have been hoisted or we're inside a struct *)
     header_decls
-      ( if (let c = current_render_ctx () in c.rc_in_struct || c.rc_concepts_hoisted) then []
+      ( if ctx.rc_in_struct || ctx.rc_concepts_hoisted then []
         else [(empty_env (), gen_typeclass_cpp names.(0) fields)] )
   | Record fields ->
     (* Check if this is an eponymous record being merged into module struct *)
@@ -362,7 +364,7 @@ let ind_header_decls kn ind =
               when globref_equal ind_ref epon_ref ->
               !method_candidates
             | _
-              when (not (current_render_ctx ()).rc_in_struct) && not is_inside_submodule_decl
+              when (not ctx.rc_in_struct) && not is_inside_submodule_decl
               ->
               (* For top-level inductives only, find methods from sibling
                  declarations *)
@@ -831,7 +833,7 @@ let planned_claim key =
 let header_claim key lifted =
   match Node_table.find_opt header_claims (Obj.repr key) with
   | Some planned ->
-    if Probe.checking () && (current_render_ctx ()).rc_file = Intf then begin
+    if Probe.checking () && file_being_written () = Intf then begin
       let claimed = List.filter (newly_placed header_took) lifted in
       if not (List.equal ( == ) planned claimed) then
         Probe.violation "header claims"
@@ -866,7 +868,7 @@ let generated_once ~module_ ?(on_reuse = ignore) ?(on_peek = ignore) ?planned no
     recorded, or declarations only the header writes.  Inline customs,
     projections merged into a struct, and functions emitted as methods
     generate nothing. *)
-let generate ~module_ d =
+let generate ctx ~module_ d =
   (* A method candidate is a registered method
      ({!Method_registry.planned_candidate}). *)
   let skipped r =
@@ -885,10 +887,10 @@ let generate ~module_ d =
   match d with
   | (Dtype (r, _, _) | Dterm (r, _, _)) when is_any_inline_custom r -> Nothing
   | Dterm (r, _, _) when skipped r -> Nothing
-  | Dind (kn, ind) -> Header_only (fun () -> ind_header_decls kn ind)
+  | Dind (kn, ind) -> Header_only (fun () -> ind_header_decls ctx kn ind)
   (* A singleton class is a concept, declared where concepts are. *)
   | Dtype (r, _, _) when Table.singleton_class_method r <> None ->
-    if (let c = current_render_ctx () in c.rc_in_struct || c.rc_concepts_hoisted) then Nothing
+    if ctx.rc_in_struct || ctx.rc_concepts_hoisted then Nothing
     else
       Header_only
         (fun () ->
@@ -1011,7 +1013,7 @@ let finalized (funs : Gen_decls.generated_fun list) =
 (** The views of [funs] a file writes, finished: a definition in the file
     that holds it, and in the header a declaration of a definition the
     implementation file holds. *)
-let function_views ~is_header ~lifted_inline funs =
+let function_views ~is_header ~lifted_inline ctx funs =
   let paired = finalized funs in
   (* Functions of one group the header defines may call one another, and at
      namespace scope a call is looked up where it is written: a struct sees
@@ -1024,7 +1026,7 @@ let function_views ~is_header ~lifted_inline funs =
   in
   let forward =
     is_header
-    && (not (current_render_ctx ()).rc_in_struct)
+    && (not ctx.rc_in_struct)
     && List.length (List.filter (fun (g, _) -> in_header g) paired) > 1
   in
   let declarations =
@@ -1164,19 +1166,25 @@ let plan_header_scope mp scope = header_scopes := MPmap.add mp scope !header_sco
 
 let header_scope mp = MPmap.find_opt mp !header_scopes
 
-let in_header_element_scope mp k =
+let planned_header_scope mp =
   match header_scope mp with
+  | Some scope -> scope
   | None ->
     CErrors.anomaly
       Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned header scope.")
-  | Some {in_struct; concepts_hoisted} ->
-    with_render_ctx
-      (fun c ->
-        { (at_file_scope c) with
-          rc_in_struct = in_struct;
-          rc_concepts_hoisted = concepts_hoisted;
-          rc_in_template = Scope_plan.templated mp } )
-      (fun () -> k ~in_struct)
+
+(* The position at file scope of the header from which an element of the
+   module [mp] is written, as planned. *)
+let header_element_position mp =
+  let {in_struct; concepts_hoisted} = planned_header_scope mp in
+  { (file_start Intf) with
+    rc_in_struct = in_struct;
+    rc_concepts_hoisted = concepts_hoisted;
+    rc_in_template = Scope_plan.templated mp }
+
+let in_header_element_scope mp k =
+  let {in_struct; _} = planned_header_scope mp in
+  with_render_ctx (fun c -> {(header_element_position mp) with rc_file = c.rc_file}) (fun () -> k ~in_struct)
 
 let with_planned_local_inductives mp k =
   match Scope_plan.local_inductives mp with
@@ -1219,37 +1227,33 @@ let planned_visibility mp =
   | Some v -> v
   | None -> CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
 
-let in_spelling ~file spelling k =
-  let k =
-    match spelling with
-    | Cpp_ast.Element_of mp | Member_of mp ->
-      fun () ->
-        with_render_ctx
-          (fun c -> {c with rc_module = Some mp; rc_frame = []; rc_names = None; rc_visibility = Some (planned_visibility mp)})
-          k
-    | Template_in _ -> k
-  in
+(* The position a declaration spelled [spelling] is written at in [file],
+   a function of the plan alone: nothing installed around it reaches it. *)
+let spelling_position ~file spelling =
+  let element mp c = {c with rc_module = Some mp; rc_visibility = Some (planned_visibility mp)} in
   match ((file : Common.file), (spelling : Cpp_ast.spelling)) with
-  | Intf, Element_of mp -> with_planned_local_inductives mp (fun () -> in_header_element_scope mp (fun ~in_struct:_ -> k ()))
-  | Intf, Member_of mp ->
-    with_planned_local_inductives mp (fun () ->
-        in_header_element_scope mp (fun ~in_struct:_ -> with_render_ctx (fun c -> {c with rc_in_struct = true}) k) )
+  | Intf, Element_of mp -> element mp (header_element_position mp)
+  | Intf, Member_of mp -> element mp {(header_element_position mp) with rc_in_struct = true}
   (* The implementation writes every element of a module at file scope:
      what it defines out of line is qualified by the scope its plan gives
      it ({!Scope_plan.of_declaration}). *)
-  | Impl, Element_of mp -> with_planned_local_inductives mp (fun () -> with_render_ctx (fun _ -> file_start Impl) k)
+  | Impl, Element_of mp -> element mp (file_start Impl)
   | Impl, Member_of mp ->
     CErrors.anomaly
       Pp.(str "Crane: the implementation writes a member of the struct of " ++ str (ModPath.to_string mp)
           ++ str ", which it does not write.")
   (* A synthesised template is written where it is declared, whatever is
      around it. *)
-  | _, Template_in declared -> with_render_ctx (fun c -> Cpp_print.ctor_alias_render_ctx {c with rc_file = file} declared) k
+  | _, Template_in declared -> Cpp_print.ctor_alias_render_ctx (file_start file) declared
+
+(* [k] of the position of [spelling] in [file], threaded: under
+   [CRANE_CHECK_IR] nothing beneath may read the installed position
+   ({!Cpp_state.entering_scope}). *)
+let at_spelling ~file spelling k = entering_scope (fun () -> k (spelling_position ~file spelling))
 
 let resolver_at ~file spelling frame key =
   Common.without_noting_written_files (fun () ->
-      in_spelling ~file spelling (fun () ->
-          Cpp_names.at_frame (current_render_ctx ()) frame (fun ctx -> Cpp_names.live_name ctx key) ) )
+      at_spelling ~file spelling (fun ctx -> Cpp_names.at_frame ctx frame (fun ctx -> Cpp_names.live_name ctx key)) )
 
 let requested d = Cpp_print.unprinted_names d @ Cpp_concepts.names_requested d
 
@@ -1258,20 +1262,20 @@ let resolve ~file = Cpp_ast.resolve ~requested ~resolve:(resolver_at ~file)
 
 let names_into_a_struct_as_written ~file spelling settled =
   let names = Cpp_resolution.resolve (resolver_at ~file spelling) (requested (Declaration {env = empty_env (); settled})) in
-  in_spelling ~file spelling (fun () -> Cpp_print.resolved_names_into_a_struct names settled)
+  at_spelling ~file spelling (fun ctx -> Cpp_print.resolved_names_into_a_struct ctx names settled)
 
 let write_unprinted ~file spelling u =
-  in_spelling ~file spelling (fun () ->
-      Cpp_print.print_unprinted ~modtype_concept:Cpp_concepts.pp_modtype_concept ~assertion:Cpp_concepts.pp_assertion u )
+  at_spelling ~file spelling (fun ctx ->
+      Cpp_print.print_unprinted ctx ~modtype_concept:Cpp_concepts.pp_modtype_concept ~assertion:Cpp_concepts.pp_assertion u )
 
 type group = {source : ModPath.t; declarations : rendered}
 type section = group list
 
-let render_section (groups : section) =
+let render_section ctx (groups : section) =
   List.map
     (fun {source; declarations} ->
       Cpp_ast.elements ~source
-        (Cpp_ast.concat Pp.fnl (List.map (fun (env, d) -> Cpp_print.unprinted ~module_:source env d) declarations)) )
+        (Cpp_ast.concat Pp.fnl (List.map (fun (env, d) -> Cpp_print.unprinted ctx ~module_:source env d) declarations)) )
     groups
 
 (** The concept of each class, generated ahead of the files in the module
@@ -1411,24 +1415,20 @@ let header_entity ~module_ d gen =
 
 let finished_header = finished_group ~what:"a header declaration"
 
-(** [in_header_scope ~module_ f] runs [f] in the render context the header
-    writes the body of [module_] in, as planned ({!header_scope}). *)
-let in_header_scope ~module_:mp f =
-  match header_scope mp with
-  | Some {in_struct; concepts_hoisted} ->
-    with_render_ctx
-      (fun c -> {c with rc_in_struct = in_struct; rc_concepts_hoisted = concepts_hoisted})
-      f
-  | None ->
-    CErrors.anomaly
-      Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned header scope.")
+(** [in_header_scope ~module_ k] runs [k] at, and with installed, the
+    position the header writes the body of [module_] in, as planned
+    ({!header_scope}). *)
+let in_header_scope ~module_:mp k =
+  let {in_struct; concepts_hoisted} = planned_header_scope mp in
+  let ctx = {(current_render_ctx ()) with rc_in_struct = in_struct; rc_concepts_hoisted = concepts_hoisted} in
+  installing ctx (fun () -> k ctx)
 
 (** What [d] generates, a declaration the header alone writes generated in
     the scope the header writes it in. *)
 let generate_in_scope ~module_ d k =
   match d with
-  | Dind _ | Dtype _ -> in_header_scope ~module_ (fun () -> k (generate ~module_ d))
-  | Dterm _ | Dfix _ -> k (generate ~module_ d)
+  | Dind _ | Dtype _ -> in_header_scope ~module_ (fun ctx -> k (generate ctx ~module_ d))
+  | Dterm _ | Dfix _ -> k (generate (current_render_ctx ()) ~module_ d)
 
 type ahead = {
   entities : Generated_program.entity list;
@@ -1472,8 +1472,8 @@ let regenerate_ahead ~module_ d =
   | Header_only gen -> ignore (header_entity ~module_ d gen : header_generation * cpp_decl list)
   | Functions _ | Nothing -> ()
 
-let decls_for ~is_header ~module_ d =
-  match generate ~module_ d with
+let decls_for ~is_header ctx ~module_ d =
+  match generate ctx ~module_ d with
   | Functions {funs; lifted} ->
     if !mode <> Peeking then record_funs ~fallback:(decl_entity d) funs;
     let lifted_inline, helpers =
@@ -1482,7 +1482,7 @@ let decls_for ~is_header ~module_ d =
       | By_element helpers -> (false, helpers)
       | Unwritten -> (false, [])
     in
-    { rendered = function_views ~is_header ~lifted_inline funs; helpers; member_defs = [] }
+    { rendered = function_views ~is_header ~lifted_inline ctx funs; helpers; member_defs = [] }
   | Header_only gen when is_header ->
     let g, helpers = header_entity ~module_ d gen in
     { rendered = finished_header g.decls; helpers; member_defs = finished_header g.member_defs }
@@ -1497,14 +1497,14 @@ let header_decls = decls_for ~is_header:true
 (** What the header writes for the declaration [d] and the helpers it
     places, read off what was generated ahead of the files without taking
     it: nothing is recorded or claimed. *)
-let header_element_ahead ~module_ d = peeking (fun () -> header_decls ~module_ d)
+let header_element_ahead ~module_ d = peeking (fun () -> header_decls (current_render_ctx ()) ~module_ d)
 
 (** What the implementation writes for the declaration [d], read off what
     was generated ahead of the files without taking it. *)
-let impl_element_ahead ~module_ d = peeking (fun () -> impl_decls ~module_ d)
+let impl_element_ahead ~module_ d = peeking (fun () -> impl_decls (current_render_ctx ()) ~module_ d)
 
-let promoted_shared_from_this ~module_ d =
+let promoted_shared_from_this ctx ~module_ d =
   peeking @@ fun () ->
-  match generate ~module_ d with
+  match generate ctx ~module_ d with
   | Header_only gen -> (fst (header_entity ~module_ d gen)).promoted_sft = Some true
   | Functions _ | Instance _ | Nothing -> false

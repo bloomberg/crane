@@ -152,8 +152,8 @@ type render_ctx = {
           first: the planned visibility of what is being written
           ({!Scope_plan.visibility}), with a layer for each scope printing
           has entered that declares names ({!Cpp_names.next}); none where
-          what is written is not spelled as the tree spells a declaration --
-          planning, the driver's own text. *)
+          nothing planned it, where naming anything is an anomaly: no
+          visibility is installed for a name to fall back on. *)
 }
 
 (** The context at the start of the file [file]: file scope, outside every
@@ -239,15 +239,31 @@ val with_render_ctx : (render_ctx -> render_ctx) -> (unit -> 'a) -> 'a
 
 (** [entering_scope f] runs [f] inside a scope printing entered, which
     installs no position: printing hands the position to what it prints
-    there. *)
+    there.  A declaration's spelling is one, entered wherever the
+    declaration is resolved or printed. *)
 val entering_scope : (unit -> 'a) -> 'a
 
 (** [writing_file file f] renders [f] as part of the file [file]. *)
 val writing_file : Common.file -> (unit -> 'a) -> 'a
 
+(** The file {!writing_file} is writing, which nothing written inside it
+    changes: unlike the rest of the installed position, a fact about the
+    whole pass, which a check may ask wherever it is. *)
+val file_being_written : unit -> Common.file
+
+(** [element_position mp c] is the position [c] writing an element of the
+    module [mp]: in the visibility planned for its body. *)
+val element_position : Names.ModPath.t -> render_ctx -> render_ctx
+
 (** [writing_element_of mp f] runs [f] writing an element of the module
-    [mp] ({!current_render_ctx}). *)
+    [mp] ({!element_position}, {!current_render_ctx}). *)
 val writing_element_of : Names.ModPath.t -> (unit -> 'a) -> 'a
+
+(** [installing c f] runs [f] with the position [c] installed, which the
+    caller threads: for what is reached beneath it that still reads the
+    installed position rather than being handed it -- a declaration
+    generated ahead of the files. *)
+val installing : render_ctx -> (unit -> 'a) -> 'a
 
 (** {2 Template static accessors} *)
 

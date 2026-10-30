@@ -151,9 +151,10 @@ type group = {source : Names.ModPath.t; declarations : rendered}
 (** Groups in writing order. *)
 type section = group list
 
-(** A section's groups, in order, each to be printed as an element of its
-    source module is spelled ({!Cpp_ast.Elements}). *)
-val render_section : section -> Cpp_ast.t list
+(** A section's groups, in order, written at the position given, each to be
+    printed as an element of its source module is spelled
+    ({!Cpp_ast.Elements}). *)
+val render_section : Cpp_state.render_ctx -> section -> Cpp_ast.t list
 
 (** [resolver_at ~file spelling] names what a declaration spelled
     [spelling] names where it is written in [file], in the visibility planned
@@ -333,11 +334,13 @@ type element = {
           of the file: only a datatype's, and only in the header. *)
 }
 
-(** The implementation-file declarations for one MiniML declaration. *)
-val impl_decls : module_:Names.ModPath.t -> Miniml.ml_decl -> element
+(** The implementation-file declarations for one MiniML declaration, written
+    at the position given. *)
+val impl_decls : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Miniml.ml_decl -> element
 
-(** The header declarations for one MiniML declaration. *)
-val header_decls : module_:Names.ModPath.t -> Miniml.ml_decl -> element
+(** The header declarations for one MiniML declaration, written at the
+    position given. *)
+val header_decls : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Miniml.ml_decl -> element
 
 (** What {!header_decls} gives for a declaration, read off what was generated
     ahead of the files without taking it: nothing is recorded or claimed,
@@ -350,6 +353,7 @@ val impl_element_ahead : module_:Names.ModPath.t -> Miniml.ml_decl -> element
 
 (** Whether the inductive [d] declares, promoted to its module's struct,
     makes that struct derive from [enable_shared_from_this], read off what
-    was generated ahead of the files in the module [module_]. *)
-val promoted_shared_from_this : module_:Names.ModPath.t -> Miniml.ml_decl -> bool
+    was generated ahead of the files in the module [module_], written at
+    the position given. *)
+val promoted_shared_from_this : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Miniml.ml_decl -> bool
 

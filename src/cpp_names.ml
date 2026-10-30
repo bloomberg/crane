@@ -55,13 +55,12 @@ let visible_at c key = visibility_at c Pp.(Cpp_resolution.pp_key key ++ str " is
 
 (* [key]'s name at the position [c]: from the names of the declaration of
    the tree being written, at the frame printing it has entered, checked
-   against [live ()] where [c] sees what it sees, if one is being written;
-   [live ()] where none is. *)
+   against [live v] where [c] sees [v], if one is being written; [live v]
+   where none is. *)
 let named (c : render_ctx) key live =
-  match (c.rc_names, c.rc_visibility) with
-  | None, None -> live ()
-  | None, Some v -> with_visibility v live
-  | Some names, _ -> name_from names c.rc_frame key ~live:(fun () -> with_visibility (visible_at c key) live)
+  match c.rc_names with
+  | None -> live (visible_at c key)
+  | Some names -> name_from names c.rc_frame key ~live:(fun () -> live (visible_at c key))
 
 (** The name of a global reference at the position [c]: the replacement text
     of an inline custom mapping, otherwise as resolution settles it there.
@@ -70,7 +69,7 @@ let named (c : render_ctx) key live =
 let global_name c k r =
   match find_custom_opt r with
   | Some custom_str when to_inline r -> Cpp_name.foreign custom_str
-  | _ -> named c (Unmapped (k, r)) (fun () -> Common.global_name k r)
+  | _ -> named c (Unmapped (k, r)) (fun v -> Common.resolve_ref_name v k r)
 
 (** {!global_name} as text. *)
 let str_global c k r = Cpp_name.to_string (global_name c k r)
@@ -89,13 +88,13 @@ let pp_global c k r = Cpp_name.pp (global_name c k r)
     declaration nor at its uses.  A use in another file still names the file's
     namespace. *)
 let concept_name c r =
-  named c (Class_concept r) @@ fun () ->
+  named c (Class_concept r) @@ fun v ->
   let name =
     match Module_plan.concept_name r with
     | Some name -> name
     | None -> Common.pp_global_name Type r
   in
-  match Common.file_qualifier Type r with
+  match Common.resolve_file_qualifier v Type r with
   | Some file -> Cpp_name.name [Cpp_name.Namespace file] name
   | None -> Cpp_name.unqualified name
 
@@ -646,7 +645,11 @@ let modtype_concept_name mp =
     | None -> Option.default (base l) (Module_plan.modtype_concept_name mp) )
   | MPfile _ | MPbound _ -> CErrors.anomaly (Pp.str "modtype_concept_name: a module type is a member of a structure")
 
-let modtype_concept_ref ctx kn =
+(* The concept of the module type [kn], as a reference written at the
+   position [ctx], which sees [v], names it.  In separate extraction a
+   concept lives in its file's namespace, so a reference from another file
+   is qualified. *)
+let modtype_concept_ref ctx v kn =
   match kn with
   | ModPath.MPdot (mp0, _) when Option.has_some (functor_concept_scope mp0) ->
     (* Declared at file scope, so named after the functor declaring it. *)
@@ -657,7 +660,7 @@ let modtype_concept_ref ctx kn =
        namespace: [C::C].  The file is the one holding the module whose
        element is being written, which the plan says, not the visibility in
        effect. *)
-    let resolved = Common.resolve_module kn in
+    let resolved = Common.resolve_module_in v kn in
     let rec file_of = function
       | ModPath.MPfile _ as mp -> mp
       | MPdot (mp, _) -> file_of mp
@@ -672,9 +675,9 @@ let modtype_concept_ref ctx kn =
   | MPdot _ ->
     (* Monolithic extraction: resolving the module records the file it names;
        the short label is the concept's name everywhere in the one file. *)
-    ignore (Common.resolve_module kn);
+    ignore (Common.resolve_module_in v kn);
     Cpp_name.unqualified (modtype_concept_name kn)
-  | MPfile _ | MPbound _ -> Common.resolve_module kn
+  | MPfile _ | MPbound _ -> Common.resolve_module_in v kn
 
 let struct_definition_name ctx id =
   let local = local_at ctx id and merged = merged_at ctx and promoted = promoted_at ctx in
@@ -725,7 +728,7 @@ let rec at_frame c (frame : Cpp_resolution.frame) k =
 
 (* The name the inductive type [x] is written under as a value: the
    struct a constructor's value is built through. *)
-let inductive_value_name ctx x =
+let inductive_value_name ctx v x =
   let ns_name, needs_ns = inductive_name ctx x in
   let type_name = global_name ctx Type x in
   let force = Common.get_force_cross_file_qualification () in
@@ -738,7 +741,7 @@ let inductive_value_name ctx x =
     if merged_at ctx x then
       let allow_bare =
         let ref_base = base_mp (modpath_of_r x) in
-        List.exists (ModPath.equal ref_base) (visible_mps (current_visibility ()))
+        List.exists (ModPath.equal ref_base) (visible_mps v)
       in
       dedup_tail ~allow_bare cap
     else cap
@@ -752,20 +755,20 @@ let inductive_value_name ctx x =
   else (* Local inductive: use original name directly *)
     type_name
 
-let inductive_value ctx x = named ctx (Inductive_value x) (fun () -> inductive_value_name ctx x)
+let inductive_value ctx x = named ctx (Inductive_value x) (fun v -> inductive_value_name ctx v x)
 
 let live_name c (key : Cpp_resolution.key) =
   let ctx = {c with rc_names = None} in
-  with_visibility (visible_at c key) @@ fun () ->
+  let v = visible_at c key in
   match key with
-  | Module mp -> Common.resolve_module mp
+  | Module mp -> Common.resolve_module_in v mp
   | Module_declared mp -> Cpp_name.unqualified (module_declared_name mp)
   | Global (k, r) -> global_name ctx k r
-  | Unmapped (k, r) -> Common.global_name k r
-  | Inductive_value r -> inductive_value_name ctx r
+  | Unmapped (k, r) -> Common.resolve_ref_name v k r
+  | Inductive_value r -> inductive_value_name ctx v r
   | Short (k, r) -> Cpp_name.unqualified (Common.pp_global_name k r)
   | Class_concept r -> concept_name ctx r
-  | Modtype_concept mp -> modtype_concept_ref ctx mp
+  | Modtype_concept mp -> modtype_concept_ref ctx v mp
   | Modtype_concept_declared mp -> Cpp_name.unqualified (modtype_concept_name mp)
   | Definition (Enum_definition, r) -> enum_definition_name ctx r
   | Definition (Struct_definition, r) -> struct_definition_name ctx r
