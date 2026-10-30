@@ -593,11 +593,9 @@ end
 
 (** {2 Frozen instantiations} *)
 
-let last_hole = ref 0
-
-let fresh_hole () =
-  incr last_hole;
-  Thole !last_hole
+(* From the one supply {!Global_use.infer_all} mints from too: two holes in
+   one instantiation are filled by number. *)
+let fresh_hole () = Thole (Scheme.Hole.fresh ())
 
 let freeze_types tys =
   let holes = Hashtbl.create 4 in
