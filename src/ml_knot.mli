@@ -17,7 +17,10 @@
     over [f]'s arguments and any erased ones, a proof that the recursion is
     well-founded -- and nothing else naming [f]; the functional's parameter
     is called with an argument for each of the expansion's binders and
-    never read otherwise; and [f] is not polymorphic.  The functional is
-    left in place. *)
+    never read otherwise, but passed whole to a term defined without
+    recursion -- a clause helper [Equations] generates for a [with] or a
+    [where] -- whose body, instantiated there, reads it so in turn; and [f]
+    is not polymorphic.  The functional and its helpers are left in
+    place. *)
 
 val structure : Miniml.ml_structure -> Miniml.ml_structure

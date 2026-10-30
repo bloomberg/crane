@@ -33,15 +33,24 @@ let eta_of f e =
 (* [body], under [k] parameters, with each call of the parameter [j],
    outermost first, a call of [f] passing the arguments [kept] says it
    takes: [None] where it reads that parameter otherwise, or calls it with
-   other than one argument for each. *)
-let tie f ~kept k j body =
+   other than one argument for each.  The parameter passed whole to a term
+   [defs] defines -- a clause helper Equations generates for a [with] or a
+   [where], given the recursion as an argument -- reads it where that
+   term's body does: the call is that body, instantiated there. *)
+let tie defs f ~kept k j body =
   let exception Read in
+  let knot d = function MLrel (i, _) -> i = k - j + d | _ -> false in
   let rec self d e =
     match e with
     | MLapp (MLrel (i, _), args) when i = k - j + d && List.compare_lengths args kept = 0 ->
       let args = List.filter_map (fun (a, taken) -> if taken then Some (self d a) else None) (List.combine args kept) in
       MLapp (MLglob (Global_use.monomorphic f), args)
     | MLrel (i, _) when i = k - j + d -> raise_notrace Read
+    | MLapp (MLglob use, args) when List.exists (knot d) args -> (
+      match (Ref.User.Map.find_opt use.callee defs, Ml_specialize.body_of defs use) with
+      | Some (Ml_specialize.Term _), Some helper -> (
+        match Ml_specialize.instantiate helper args with Some e -> self d e | None -> raise_notrace Read )
+      | _ -> raise_notrace Read )
     | _ -> Mlutil.ast_map_lift self d e
   in
   try Some (self 0 body) with Read -> None
@@ -66,7 +75,7 @@ let fixpoint defs (fd : ml_fix_def) =
           let k = List.length gparams in
           if k <> List.length args then None
           else
-            match tie f ~kept k j gbody with
+            match tie defs f ~kept k j gbody with
             | None -> None
             | Some tied ->
               let args = List.mapi (fun i a -> if i = j then MLdummy Kprop else a) args in

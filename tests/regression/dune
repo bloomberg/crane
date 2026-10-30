@@ -13660,3 +13660,14 @@
   (alias runtest)
   (deps loopify_dispatch_on_call.t.exe)
   (action (run ./loopify_dispatch_on_call.t.exe))))
+
+(subdir loopify_equations_with_clause
+ (rule
+  (targets loopify_equations_with_clause.t.exe)
+  (deps LoopifyEquationsWithClause.vo loopify_equations_with_clause.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_equations_with_clause.t.exe loopify_equations_with_clause.cpp loopify_equations_with_clause.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_equations_with_clause.t.exe)
+  (action (run ./loopify_equations_with_clause.t.exe))))
