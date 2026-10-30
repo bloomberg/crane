@@ -79,7 +79,7 @@ let is_moveable_param_type = function
     worse than the borrow it replaced.  A by-value parameter lives for the whole
     call, so a pointer into it (or into a subterm it keeps alive) is as safe as
     one into a [const T&].  Which parameters may actually be walked by pointer
-    is decided separately by {!tail_pointer_safe_flags}: an accumulator that is
+    is decided separately by {!pointer_safe_flags}: an accumulator that is
     rebuilt each iteration ([acc := Cons(x, acc)]) is not pointer-safe and keeps
     its value shadow.
 
@@ -183,120 +183,12 @@ let rec storage_root ~root ~bound e =
   | CPPstd_get (_, Some e) -> inside e
   | _ -> None
 
-(** Provenance of a local binder: the loop *parameter* whose storage the binder
-    lives inside, or [None] when the binder was produced locally (a freshly
-    built value, a computed match scrutinee, an inlined callee's temporary...).
-
-    This is what makes a [const T*] shadow safe or not.  Deciding pointer-safety
-    from the *shape* of a recursive-call argument alone ([*a1] "looks like" a
-    borrow) says nothing about whose storage [a1] points into.  If [a1] is a
-    field of a *different* loop variable that the same iteration overwrites, or
-    of a block-scoped temporary, the pointer dangles before the next iteration
-    reads it.  Only a pointer that walks deeper into the parameter's *own*
-    borrowed argument is guaranteed to stay live: that storage belongs to the
-    caller and nothing in the loop can drop it.
-
-    Binders bound more than once with conflicting roots (pattern variables such
-    as [a1] are reused across match branches) are demoted to [None]: this is a
-    flow-insensitive over-approximation, so it can only cost an optimisation,
-    never soundness. *)
-let compute_binder_provenance params body =
-  let param_ids = List.map fst params in
-  let is_param x = List.exists (Id.equal x) param_ids in
-  let tbl : (Id.t * Id.t option) list ref = ref [] in
-  let record id p =
-    match List.assoc_opt id !tbl with
-    | None -> tbl := (id, p) :: !tbl
-    | Some q ->
-      if not (Option.equal Id.equal q p) then
-        tbl := (id, None) :: List.remove_assoc id !tbl
-  in
-  let prov_of e =
-    storage_root ~root:is_param
-      ~bound:(fun x -> match List.assoc_opt x !tbl with Some p -> p | None -> None)
-      e
-  in
-  let rec walk_stmt s =
-    match s with
-    | Sasgn (id, _, e) -> record id (prov_of e)
-    | Smatch (scrut, branches, default) ->
-      let root = prov_of scrut.sc_expr in
-      List.iter
-        (fun br ->
-          Option.iter (fun v -> record v root) br.smb_var;
-          List.iter (fun fb -> record fb.fb_name root) br.smb_field_bindings;
-          List.iter walk_stmt br.smb_body)
-        branches;
-      Option.iter (List.iter walk_stmt) default
-    | s -> iter_stmt_children ~on_expr:(fun _ -> ()) ~on_stmts:(List.iter walk_stmt) s
-  in
-  (* Two sweeps: a binder may be recorded after a use that reads it. *)
-  List.iter walk_stmt body;
-  List.iter walk_stmt body;
-  prov_of
-
-(** Compute pointer-safety flags for each parameter.
-
-    A parameter is "pointer-safe" when it is a borrowed value-type ([const T&]),
-    every recursive call site passes either [*ptr] or the same variable back as
-    that argument, *and* that argument's storage provably belongs to the
-    parameter itself (see {!compute_binder_provenance}).  Together these
-    guarantee the pointer shadow will always point at a live object.
-
-    When [binding_env] is supplied, [CPPvar x] at a call site is accepted as
-    pointer-safe if [x] is bound to [CPPderef _] in that environment — i.e., if
-    the caller wrote [x = *(sp)] and then passed [x] instead of [*(sp)] directly.
-    This handles the common case where translation.ml introduces an intermediate
-    binding to deduplicate multi-use values.
-
-    @return A bool list parallel to [params]: [true] = can use [const T*] shadow *)
-let tail_pointer_safe_flags check params body ?(binding_env = []) () =
-  let calls = collect_stmts check ~in_visitor:false body in
-  if calls = [] then
-    List.map (fun _ -> false) params
-  else
-    let is_safe_arg id arg =
-      match arg with
-      | CPPderef _ -> true
-      | CPPvar arg_id when Id.equal arg_id id -> true
-      | CPPvar x ->
-        (* Look through: if x = *(sp) in scope, treat as CPPderef *)
-        (match List.assoc_opt x binding_env with
-         | Some (CPPderef _) -> true
-         | _ -> false)
-      | _ -> false
-    in
-    let prov_of = compute_binder_provenance params body in
-    List.mapi
-      (fun i (id, ty) ->
-        match borrowed_value_param_pointee ty with
-        | None -> false
-        | Some _ ->
-          List.for_all
-            (fun cs ->
-              match List.nth_opt cs.cs_args i with
-              | Some arg ->
-                (* Shape alone is not enough: the pointee must live inside this
-                   parameter's own borrowed argument, or it can be freed by the
-                   very iteration that publishes the pointer. *)
-                is_safe_arg id arg
-                && (match prov_of arg with
-                    | Some root -> Id.equal root id
-                    | None -> false)
-              | None -> false)
-            calls)
-      params
-
-(** Pointer-safety flags for [params]: where the caller knows which of them
-    every recursive call passes a value stored in what the caller passed
-    for it ({!Control_ir.parts_passed}), [parts], those of them a borrowed
-    value type; read off the calls [check] finds otherwise
-    ({!tail_pointer_safe_flags}). *)
-let pointer_safe_flags ?parts ?binding_env check params body =
-  match parts with
-  | Some parts ->
-    List.map2 (fun part (_, ty) -> part && Option.has_some (borrowed_value_param_pointee ty)) parts params
-  | None -> tail_pointer_safe_flags check params body ?binding_env ()
+(** Pointer-safety flags for [params]: those of them every recursive call
+    passes a value stored in what the caller passed for it, as the loop's
+    ControlIR says ({!Control_ir.parts_passed}), [parts], that are a
+    borrowed value type. *)
+let pointer_safe_flags ~parts params =
+  List.map2 (fun part (_, ty) -> part && Option.has_some (borrowed_value_param_pointee ty)) parts params
 
 (** Rewrite references to pointer-safe shadow variables ([const T*]) so that
     reads dereference the pointer and method calls use [->] via
@@ -1059,8 +951,8 @@ let optimize_last_use_moves ~self_ref_candidate ~last_use_candidate stmts =
   in
   process stmts
 
-let build_shadow_setup ~varying ?parts tparams check params body =
-  let pointer_safe = pointer_safe_flags ?parts check params body in
+let build_shadow_setup ~varying ~parts tparams params =
+  let pointer_safe = pointer_safe_flags ~parts params in
   let varying_params = filter_by_mask varying params in
   let varying_pointer_safe = filter_by_mask varying pointer_safe in
   let shadow_params =
@@ -1183,10 +1075,10 @@ let drop_unread_shadows shadow_decls body =
     @param ret_ty Return type of the function
     @param body Function body statements
     @return Transformed body with while loop structure *)
-let transform_tail ?(param_inits = []) ?(jumped = ignore) ~varying ?parts tparams check params ret_ty body =
+let transform_tail ?(param_inits = []) ?(jumped = ignore) ~varying ~parts tparams check params ret_ty body =
   let { ss_varying = varying; ss_varying_params = varying_params;
         ss_shadow_params = shadow_params; ss_subs = subs } =
-    build_shadow_setup ~varying ?parts tparams check params body
+    build_shadow_setup ~varying ~parts tparams params
   in
   let is_void = ret_ty = Tvoid in
   (* Shadow variable declarations (only for varying params) *)

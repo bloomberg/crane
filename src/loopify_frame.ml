@@ -1086,18 +1086,6 @@ let find_adopted ~adoptable ~invocations stmts =
   | None ->
     Option.bind invocations (fun invocations -> find_in_flow stmts ~on_expr:(adopt_invocation ~invocations))
 
-(** [only_entry n check] reports just the calls [check] finds against entry
-    [n].
-
-    Per-parameter analyses -- which parameters vary across calls, which are
-    safe to park as pointers -- are about one entry's parameter list, so they
-    must not be shown an argument list belonging to another entry: the two
-    have no positional correspondence, and generally not even the same
-    length. *)
-let only_entry entry (check : call_checker) : call_checker =
- fun e ->
-  match check e with Some cs when cs.cs_entry = entry -> Some cs | _ -> None
-
 (** A checker that tries each of [checkers] in turn, so one machine can be
     driven by the calls that reach any of its entry points. *)
 let any_checker (checkers : call_checker list) : call_checker =
@@ -2576,7 +2564,7 @@ let fix_handler_bindings field_names cf_ps handler =
             [body] unchanged when the transformation is unsafe (branch
             dependencies on recursive calls) *)
 let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entered_by ?(entered = fun ~resumes:_ _ -> ())
-    ?(outer_env = []) ?(binders = []) ?parts check tparams params ret_ty body =
+    ?(outer_env = []) ?(binders = []) ~parts check tparams params ret_ty body =
   (* An adopted body becomes a second entry point of this machine rather than
      a machine of its own: two machines cannot unwind each other's stack, so
      loopifying them separately leaves the recursion in place.  The calls that
@@ -2651,12 +2639,8 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
     | None -> body
     | Some (ad, _) -> ad.ad_install body
   in
-  (* This function's own parameters are described by the calls that re-enter
-     it, not by those targeting an adopted fixpoint -- wherever they are made,
-     the adopted body, which installation took out of [body], included. *)
-  let own = only_entry 0 check in
   let binding_env = collect_binding_env body in
-  let pointer_safe = pointer_safe_flags ?parts ~binding_env own params body in
+  let pointer_safe = pointer_safe_flags ~parts params in
   (* Loopifying a function on its own gives a machine with one entry: the
      function itself, entered through [CraneEnter]. *)
   let own_entry = machine_entry ~enter_id:id_enter ~params ~varying in

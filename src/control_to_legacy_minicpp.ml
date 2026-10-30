@@ -273,12 +273,9 @@ let local_loop ~owner ~function_ ~lifted ~member:((occurrence, _) as member) ~tp
   match (Lower_control.loop member_loop, lowering) with
   | Some (Loop l), Some lowering when Control_ir.continues l.body <> [] -> (
     let params = List.filter_map (fun (ty, x) -> Option.map (fun x -> (x, ty)) x) (to_reversed lam.cl_params) in
-    let invariant = Control_ir.invariant_parameters l in
-    let kept = Loopify.kept_positions l in
-    if List.compare_lengths kept params <> 0 then unlowered "its lambda takes other parameters than its loop"
-    else
-      let varying = List.map (fun i -> not (List.nth invariant i)) kept in
-      let parts = List.map (List.nth (parts_passed l)) kept in
+    match Loopify.member_plan member params with
+    | None -> unlowered "its lambda takes other parameters than its loop"
+    | Some {member_varying = varying; member_parts = parts} ->
       let continues = Control_ir.continues l.body in
       let jumps = ref [] in
       let jumped e = jumps := Loopify_analysis.made_of e :: !jumps in
@@ -356,7 +353,6 @@ let lower_method ~tparams ~self_ty (m : method_field) =
     in
     let positions = method_positions r l m in
     let planned = Option.map (planned_at l lowering) positions in
-    let parts = Option.map (fun p -> p.parts) planned in
     (* A frame or a cell keeps a pointer to the receiver across turns, which
        one made in a turn -- a call's result, a binder of a match on one --
        does not outlive.  A tail loop parks such a receiver, before the
@@ -379,7 +375,7 @@ let lower_method ~tparams ~self_ty (m : method_field) =
     let transform =
       match (lowering, planned) with
       | _ when Option.has_some value_receiver -> None
-      | _, Some {varying; _} -> Some (fun () -> Loopify.transform_method_own ~varying ?parts ~park ~tparams ~self_ty m)
+      | _, Some {varying; parts; _} -> Some (fun () -> Loopify.transform_method_own ~varying ~parts ~park ~tparams ~self_ty m)
       | _, None -> None
     in
     match (transform, value_receiver) with

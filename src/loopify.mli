@@ -65,7 +65,7 @@ val frame_machine :
   loop:Control_ir.Loop.t ->
   ?entry:Control_ir.Loop.t ->
   varying:bool list ->
-  ?parts:bool list ->
+  parts:bool list ->
   tparams:(template_type * Id.t) list ->
   Loopify_analysis.call_checker ->
   dfun ->
@@ -105,7 +105,7 @@ val record_unlowered_method : method_field -> unit
 val modulo_cons_loop :
   jumped:(cpp_expr -> unit) ->
   varying:bool list ->
-  ?parts:bool list ->
+  parts:bool list ->
   shapes:Loopify_tmc.shape list ->
   tparams:(template_type * Id.t) list ->
   Loopify_analysis.call_checker ->
@@ -130,7 +130,7 @@ val modulo_cons_loop :
     none.  Under [CRANE_CHECK_IR] it parks every call of [park]. *)
 val transform_method_own :
   varying:bool list ->
-  ?parts:bool list ->
+  parts:bool list ->
   park:Miniml.Occurrence.t list ->
   tparams:(template_type * Id.t) list ->
   self_ty:cpp_type ->
@@ -151,7 +151,7 @@ val rebuilt_receiver_read : string
     tail-recursive local fixpoints in them turned into loops, under the
     template parameters [tparams]. *)
 val lower_local_tail_loops :
-  ?parts:(Miniml.Occurrence.t * int) * bool list -> tparams:(template_type * Id.t) list -> cpp_stmt list -> cpp_stmt list
+  tparams:(template_type * Id.t) list -> cpp_stmt list -> cpp_stmt list
 
 (** [lower_function_locals ~tparams params body] is the body [body] of a
     function taking [params], of which Loopify makes no loop of its own,
@@ -176,7 +176,7 @@ val local_frame_machine :
   name:Id.t ->
   binders:(Id.t * Core_binder.t) list ->
   varying:bool list ->
-  ?parts:bool list ->
+  parts:bool list ->
   tparams:(template_type * Id.t) list ->
   Loopify_analysis.call_checker ->
   (Id.t * cpp_type) list ->
@@ -184,17 +184,22 @@ val local_frame_machine :
   cpp_stmt list ->
   cpp_stmt list option
 
-(** [kept_positions l] are the positions among the parameters of the loop
-    [l] of those a local fixpoint's lambda takes -- the ones not void
-    ({!Ml_type_util.void_binder}) -- in the order a lambda stores its
-    parameters, the last first ({!Minicpp.to_reversed}). *)
-val kept_positions : Control_ir.Term.loop -> int list
+(** What the ControlIR loop of a local fixpoint's function says of each
+    parameter its lambda takes -- the loop's parameters that are not void
+    ({!Ml_type_util.void_binder}), in the order a lambda stores them, the
+    last first ({!Minicpp.to_reversed}): whether some Continue changes it
+    ({!Control_ir.invariant_parameters}), and whether every Continue passes
+    it a value stored in what the caller passed for it
+    ({!Control_ir.parts_passed}). *)
+type member_plan = {
+  member_varying : bool list;
+  member_parts : bool list;
+}
 
-(** [member_varying member params] is, for each of the parameters [params]
-    of the lambda of the local fixpoint function [member], as {!kept_positions}
-    orders them, whether its loop varies it ({!Control_ir.invariant_parameters});
-    [None] where the lambda takes other parameters than the loop. *)
-val member_varying : Miniml.Occurrence.t * int -> 'a list -> bool list option
+(** [member_plan member params] is the plan of the local fixpoint function
+    [member] whose lambda takes [params]; [None] where it has no ControlIR
+    loop, or the lambda takes other parameters than the loop. *)
+val member_plan : Miniml.Occurrence.t * int -> 'a list -> member_plan option
 
 val worthwhile_move_type : cpp_type -> bool
 (** Whether a value of this type is expensive enough to copy that writing
