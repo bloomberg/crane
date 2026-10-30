@@ -959,7 +959,14 @@ let modulo_cons_loop ~jumped ~varying ~parts ~shapes ~tparams check (f : dfun) p
   let adopted () =
     find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body
   in
-  if Option.has_some (adopted ()) then None
+  if Option.has_some (adopted ()) then begin
+    (* A loop tail modulo cons enters by no second entry, and the plan
+       lowers so only a function every non-tail call of which is a chain's:
+       a local fixpoint calling back into it is a call it would leave. *)
+    Probe.violation "control IR"
+      Pp.(str "the loop tail modulo cons of " ++ str (Table.kername_of_global r) ++ str " has a body to adopt");
+    None
+  end
   else
     let loop =
       transform_tmc ~jumped ~varying ~parts ~shapes tparams check params f.df_ret (Cpp_temporaries.own_stmts body)
@@ -994,7 +1001,13 @@ let frame_machine ~loop ?entry ~varying ~parts ~tparams check (f : dfun) params 
   in
   let survived = Option.map decline_reason found in
   let declined = Error (Left survived) in
-  if not as_planned then declined
+  if not as_planned then begin
+    (* The plan has the machine adopt the entry, and Loopify could not
+       install it: a fixpoint named as a value, or copied, say. *)
+    Probe.violation "control IR"
+      Pp.(str "the machine of " ++ str (Table.kername_of_global r) ++ str " does not adopt the entry its ControlIR enters");
+    declined
+  end
   else
     let survivors = survivors f in
     match
