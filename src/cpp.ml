@@ -78,17 +78,18 @@ let held_concept_of (a : Cpp_ast.assertion) =
   match a.concept with Of_module_type c -> HCmodtype c.module_type | Of_class c -> HCclass c.global
 
 (** The assertion that the module [mp] satisfies the concept of its module
-    type [mty], and the assertions it holds back.  When that concept is one
-    the enclosing struct holds back, so is the assertion: the concept is not
-    declared yet. *)
-let concept_assertion mp mty =
+    type [mty], written at the position [ctx], and the assertions it holds
+    back.  When that concept is one the enclosing struct holds back, so is
+    the assertion: the concept is not declared yet. *)
+let concept_assertion ctx mp mty =
   match concept_of_mt mty with
   | None -> (Cpp_ast.empty, [])
   | Some mt_mp ->
     let a = {Cpp_ast.concept = Of_module_type (Cpp_ast.concept_ref mt_mp); subject = Module (Cpp_ast.module_ref mp)} in
-    if concept_held_back (current_render_ctx ()) (held_concept_of a) then (Cpp_ast.empty, [a]) else (Cpp_ast.assertion a, [])
+    if concept_held_back ctx (held_concept_of a) then (Cpp_ast.empty, [a]) else (Cpp_ast.assertion a, [])
 
-(** Render a functor parameter as a C++ template parameter.
+(** Render a functor parameter as a C++ template parameter, written at the
+    position [ctx].
 
     Strategy:
     - If a named concept can be extracted from the module type via
@@ -97,13 +98,13 @@ let concept_assertion mp mty =
       {!concept_of_mt} declines only for [MTsig], and an anonymous
       signature's requirement lines are not a constraint expression: they
       belong inside a named concept, not in a template parameter list. *)
-let template_param (mbid, mt) : Cpp_ast.template_param =
+let template_param ctx (mbid, mt) : Cpp_ast.template_param =
   let param = Cpp_ast.module_ref (MPbound mbid) in
   match concept_of_mt mt with
   (* A concept the enclosing struct holds back is declared after it, so a
      functor inside it takes its parameter unconstrained, as a class concept
      held back does. *)
-  | Some mt_mp when concept_held_back (current_render_ctx ()) (HCmodtype mt_mp) -> Typename (Module_parameter param)
+  | Some mt_mp when concept_held_back ctx (HCmodtype mt_mp) -> Typename (Module_parameter param)
   | Some mt_mp ->
     Constrained
       {concept = Cpp_ast.concept_ref mt_mp; args = List.map Cpp_ast.module_ref (concept_extra_args mt_mp); param}
@@ -589,14 +590,14 @@ let unenclosed_element enclosure ?fields body =
   let m = Cpp_ast.module_ enclosure ?fields body in
   if Cpp_ast.body_is_empty body then m else Cpp_ast.(seq [m; text (fnl ())])
 
-(** [element_decl ~module_ ~homed env d] is the declaration [d], written as
-    an element of the module [module_]: printed where the tree puts it
+(** [element_decl ~module_ ~homed ctx env d] is the declaration [d], written
+    at the position [ctx] as an element of the module [module_]: printed
+    where the tree puts it
     ({!Cpp_ast.print}), but a wrapper struct holding a wrapper module's
     declarations, one of those [homed] names, whose members are, and an
     assertion held back, which is nothing here: it is written after the
     struct holding it back ({!Cpp_print.held_back_assertions}). *)
-let element_decl ~module_ ~homed env d =
-  let ctx = current_render_ctx () in
+let element_decl ~module_ ~homed ctx env d =
   if Cpp_print.is_held_back_assertion ctx d then Cpp_ast.empty
   else if Cpp_print.absorbs ~homed d then Cpp_print.write_absorbing ~homed env d
   else Cpp_print.unprinted ~module_ env d
@@ -620,7 +621,7 @@ let homed_at ~is_header d =
     @param module_    The module whose body the element is an element of.
     @return The element written ({!written}): its text, empty if it
             produces no output in the current pass, and its concepts. *)
-let rec pp_structure_elem ~is_header f ~module_ = function
+let rec pp_structure_elem ~is_header f ctx ~module_ = function
   | l, SEdecl d ->
     (* {b Placement of lifted lambda helpers.}  A helper lifted out of a local
        [let g := fun ... in] that mentions the enclosing struct (its parameter
@@ -631,7 +632,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
        right before the declaration that produced it instead; helpers produced
        elsewhere keep their file-scope placement. *)
     let {Cpp_ind.rendered; helpers; _} = f ~module_ d in
-    let element = element_decl ~module_ ~homed:(homed_at ~is_header d) in
+    let element = element_decl ~module_ ~homed:(homed_at ~is_header d) ctx in
     (* An erasure landing pad -- [using X = std::any;] -- travels to the very
        top of the file, ahead of the concepts.
 
@@ -647,7 +648,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
     let body =
       if
         is_header
-        && (not (current_render_ctx ()).rc_in_struct)
+        && (not ctx.rc_in_struct)
         && rendered <> []
         && List.for_all is_erased_alias rendered
       then Cpp_ast.empty
@@ -667,8 +668,8 @@ let rec pp_structure_elem ~is_header f ~module_ = function
     let concepts, body =
       if
         is_header
-        && (not (current_render_ctx ()).rc_in_struct)
-        && (not (current_render_ctx ()).rc_concepts_hoisted)
+        && (not ctx.rc_in_struct)
+        && (not ctx.rc_concepts_hoisted)
         && (match d with
            | Miniml.Dind (_, ind) -> (
              match ind.ind_kind with Miniml.TypeClass _ -> true | _ -> false )
@@ -691,7 +692,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                that produces them one at a time into a [Pp.t]. *)
             dbg_lifted ~site:"structure-elem" ~module_
               ~extra:
-                (Printf.sprintf "rc_in_struct=%b" (current_render_ctx ()).rc_in_struct)
+                (Printf.sprintf "rc_in_struct=%b" ctx.rc_in_struct)
               d';
             (* Only at namespace scope.  A struct is a complete-class
                context, so a method may call a member declared after it and a
@@ -702,7 +703,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                member's signature resolves against the struct, a nested [t] or
                a sibling type, and hoisting the declaration to file scope takes
                those names out of scope with it. *)
-            let def, _ = lifted_views ~module_ ~may_hoist:(not (current_render_ctx ()).rc_in_struct) d' in
+            let def, _ = lifted_views ~module_ ~may_hoist:(not ctx.rc_in_struct) d' in
             let pp = element (empty_env ()) def in
             if Cpp_ast.is_empty pp then acc
             else if Cpp_ast.is_empty acc then pp
@@ -725,7 +726,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
     in
     { text = (if Cpp_ast.is_empty body then Cpp_ast.empty else Cpp_ast.(seq [text (pp_doc_comment l); body]));
       concepts;
-      asserts = List.concat_map (fun (_, d) -> Cpp_print.held_back_assertions (current_render_ctx ()) d) rendered }
+      asserts = List.concat_map (fun (_, d) -> Cpp_print.held_back_assertions ctx d) rendered }
   | l, SEmodule m ->
     let mp = MPdot (module_, l) in
     (* Its struct, or the alias standing for it, is declared under the
@@ -739,7 +740,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
        [Module Nat] hides the runtime [Nat] exactly as an [Inductive Nat]
        would.  Record it so {!Cpp_names.global_scope_qualifier_for} spells the
        global one [::Nat]. *)
-    if (current_render_ctx ()).rc_in_struct then printed_nested_struct name (NSmodule mp);
+    if ctx.rc_in_struct then printed_nested_struct name (NSmodule mp);
     let mod_pp =
       match m.ml_mod_expr with
       | MEfunctor _ ->
@@ -776,14 +777,14 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                 sel
             | _ -> []
           in
-          let template = List.map template_param template_params in
+          let template = List.map (template_param ctx) template_params in
+          let inside = {ctx with rc_in_struct = true; rc_in_template = true} in
           let {text = struct_def; concepts = body_concepts; asserts} =
-            with_render_ctx
-              (fun c -> { c with rc_in_struct = true; rc_in_template = true })
+            installing inside
               (fun () ->
                 match body with
                 | MEstruct (body_mp, sel) ->
-                  let b = pp_module_body ~is_header f body_mp sel in
+                  let b = pp_module_body ~is_header f inside body_mp sel in
                   { b with
                     text =
                       Cpp_ast.module_
@@ -800,12 +801,12 @@ let rec pp_structure_elem ~is_header f ~module_ = function
         if not is_header then
           written Cpp_ast.empty
         else
-          let assertion, held = concept_assertion mp m.ml_mod_type in
+          let assertion, held = concept_assertion ctx mp m.ml_mod_type in
           { text = Cpp_ast.seq [Cpp_ast.module_alias mp (Applied (application_of m.ml_mod_expr)); assertion];
             concepts = [];
             asserts = held }
       | MEstruct (body_mp, sel) ->
-        let old_context = (current_render_ctx ()).rc_in_struct in
+        let old_context = ctx.rc_in_struct in
         with_module_frame @@ fun () ->
         let frame = Module_frame.planned mp in
         if
@@ -944,8 +945,9 @@ let rec pp_structure_elem ~is_header f ~module_ = function
         in
         let body_written, this_method_candidates =
           with_promotion_scope @@ fun () ->
-          with_render_ctx enter_module (fun () ->
-            let body = pp_module_body ~is_header f body_mp sel in
+          let inside = enter_module ctx in
+          installing inside (fun () ->
+            let body = pp_module_body ~is_header f inside body_mp sel in
             (body, !method_candidates) )
         in
         (* The assertions this struct's body held back: those naming a concept
@@ -1071,7 +1073,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                   (Struct {head = {(module_struct mp) with template}; layout = Block})
                   ~fields body
               in
-              let assertion, held = concept_assertion mp m.ml_mod_type in
+              let assertion, held = concept_assertion ctx mp m.ml_mod_type in
               ( Cpp_ast.seq [typeclasses_pp; modtypes_pp; struct_def; modtypes_after_pp; deferred_asserts_pp; assertion],
                 held )
         else if this_promoted && promoted_template then
@@ -1090,13 +1092,13 @@ let rec pp_structure_elem ~is_header f ~module_ = function
              over the functor's parameters, [WFacts] being one too. *)
           let rec functor_params = function
             | MTfunsig (mbid, mt, rest) ->
-              (template_param (mbid, mt), Cpp_ast.module_ref (MPbound mbid)) :: functor_params rest
+              (template_param ctx (mbid, mt), Cpp_ast.module_ref (MPbound mbid)) :: functor_params rest
             | _ -> []
           in
           match functor_params m.ml_mod_type with
           (* A file module is a namespace, which no alias in a struct can
              name. *)
-          | [] when is_modfile target && (current_render_ctx ()).rc_in_struct -> written Cpp_ast.empty
+          | [] when is_modfile target && ctx.rc_in_struct -> written Cpp_ast.empty
           | [] -> written (Cpp_ast.module_alias mp (Module_named (Cpp_ast.module_ref target)))
           | params ->
             written (Cpp_ast.functor_alias mp (Cpp_ast.module_ref target) params)
@@ -1107,7 +1109,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
     }
   | l, SEmodtype m ->
     written
-      ( if (not is_header) || (current_render_ctx ()).rc_in_struct then Cpp_ast.empty
+      ( if (not is_header) || ctx.rc_in_struct then Cpp_ast.empty
         else
           let path = MPdot (module_, l) in
           let concept = Cpp_ind.modtype_concept ~module_ path ~params:[] m in
@@ -1116,18 +1118,17 @@ let rec pp_structure_elem ~is_header f ~module_ = function
 (** The body of the module [mp] of elements [sel], each element a member of
     it, each written in the visibility planned for the module
     ({!Cpp_state.writing_element_of}). *)
-and pp_module_body ~is_header f mp sel =
-  if is_header && Probe.checking () && (current_render_ctx ()).rc_in_template <> Scope_plan.templated mp then
+and pp_module_body ~is_header f ctx mp sel =
+  if is_header && Probe.checking () && ctx.rc_in_template <> Scope_plan.templated mp then
     Probe.violation "templated modules"
       Pp.(
         str "the module " ++ str (ModPath.to_string mp)
         ++ str
-             ( if (current_render_ctx ()).rc_in_template then " is written in a class template its plan says it is outside"
+             ( if ctx.rc_in_template then " is written in a class template its plan says it is outside"
                else " is written outside every class template where its plan says it is inside" ) );
   if is_header && Probe.checking () then begin
-    let c = current_render_ctx () in
     match Cpp_ind.header_scope mp with
-    | Some {in_struct; concepts_hoisted} when in_struct = c.rc_in_struct && concepts_hoisted = c.rc_concepts_hoisted
+    | Some {in_struct; concepts_hoisted} when in_struct = ctx.rc_in_struct && concepts_hoisted = ctx.rc_concepts_hoisted
       -> ()
     | Some _ ->
       Probe.violation "header scopes"
@@ -1143,7 +1144,8 @@ and pp_module_body ~is_header f mp sel =
      first member that writes it (see {!Cpp_print.ctor_alias_home}): at
      namespace scope those names mean nothing. *)
   let written =
-    List.map (fun e -> element_of mp (writing_element_of mp (fun () -> pp_structure_elem ~is_header f ~module_:mp e))) sel
+    let ctx = element_position mp ctx in
+    List.map (fun e -> element_of mp (installing ctx (fun () -> pp_structure_elem ~is_header f ctx ~module_:mp e))) sel
   in
   current_structure_decls := old_structure_decls;
   { text = Cpp_ast.module_body mp (List.map (fun w -> w.text) written);
@@ -1232,6 +1234,7 @@ let wrapper_element ~module_ se =
     @param is_header   When [true] produce declaration specs; when [false]
                        produce out-of-line definitions, each qualified by the
                        scope its plan gives it ({!Scope_plan}).
+    @param ctx         The position the module's elements are written at.
     @param func_sels   The [(label, structure_elem)] pairs from the wrapper
                        that contain function declarations ([Dterm], [Dfix]).
     @param mp          The wrapper module.
@@ -1244,7 +1247,7 @@ let wrapper_element ~module_ se =
             translation, and [lifted_specs_pp] the forward declarations of the
             functions among those, which are due before the struct rather than
             after it. *)
-let pp_wrapper_module_dual ~is_header mp func_sels =
+let pp_wrapper_module_dual ~is_header ctx mp func_sels =
   let process_sel (_l, se) =
     match wrapper_element ~module_:mp se with
     | Wrapper_nothing -> ([], [])
@@ -1270,7 +1273,7 @@ let pp_wrapper_module_dual ~is_header mp func_sels =
   let render_sel_specs (specs, _) =
     Cpp_ast.concat fnl (List.map (fun (d, env) -> Cpp_print.unprinted ~module_:mp env d) specs)
   in
-  let element = element_decl ~module_:mp ~homed:[] in
+  let element = element_decl ~module_:mp ~homed:[] ctx in
   let render_sel_defs (_, defs) = Cpp_ast.concat fnl (List.map (fun (d, env) -> element env d) defs) in
   let specs = Cpp_ast.module_body mp (if is_header then List.map render_sel_specs all_results else []) in
   let defs_pp = joined render_sel_defs all_results in
@@ -3013,6 +3016,7 @@ let gathered l = (List.map fst l, moved_together (List.map snd l))
             out-of-line function definitions. *)
 let do_struct_with_decl_tracking ~is_header f s =
   writing_file (if is_header then Common.Intf else Common.Impl) @@ fun () ->
+  let top = current_render_ctx () in
   (* A synthesised alias is emitted in front of the top-level element that
      writes it, rather than collected into the file's prologue.
 
@@ -3068,10 +3072,11 @@ let do_struct_with_decl_tracking ~is_header f s =
           Option.map (fun w -> (h.wrapper, w.wr_specs)) (List.find_opt (fun w -> String.equal w.wr_name h.wrapper) parts) )
         !file_layout.wrapper_homes
   in
-  let place ~wrapper_bodies ~source ((l, se) as x) =
+  let place ~wrapper_bodies ctx ~source ((l, se) as x) =
     let defined = if is_header then declarations [(source, [x])] else [] in
     let homed = List.filter_map (fun h -> if List.memq h.home defined then Some h.wrapper else None) !file_layout.wrapper_homes in
-    let {text = p; concepts = c; asserts = _} = element_of source (writing_element_of source (fun () -> f ~module_:source x)) in
+    let element = element_position source ctx in
+    let {text = p; concepts = c; asserts = _} = element_of source (installing element (fun () -> f element ~module_:source x)) in
     if is_header && Probe.checking () then begin
       let absorbed = Cpp_ast.wrapper_structs p in
       if absorbed <> homed then
@@ -3084,14 +3089,14 @@ let do_struct_with_decl_tracking ~is_header f s =
     end;
     let hoists =
       is_header
-      && (not (current_render_ctx ()).rc_in_struct)
+      && (not ctx.rc_in_struct)
       && (not (Cpp_ast.is_empty p))
       && match se with
          | SEmodule {ml_mod_expr = MEstruct (body_mp, _); _} -> struct_hoists body_mp (Cpp_ast.fill_wrappers wrapper_bodies p)
          | _ -> false
     in
     (* A struct's member is not a chunk at namespace scope: the struct is. *)
-    let p = if (current_render_ctx ()).rc_in_struct then p else Cpp_ast.top_level p in
+    let p = if ctx.rc_in_struct then p else Cpp_ast.top_level p in
     if hoists then (Cpp_ast.empty, {nothing_moved with hoisted = [p]; concepts = c})
     else if is_header && Module_plan.is_concept_prerequisite l && is_modfile source && not (Cpp_ast.is_empty p) then (
       (* The prerequisites are asked for by label, of the files' top-level
@@ -3103,7 +3108,7 @@ let do_struct_with_decl_tracking ~is_header f s =
          each type it declares, through which the struct, and every
          reference qualified by it, still names it. *)
       let moved = {nothing_moved with prereqs = [p]; concepts = c} in
-      if not (current_render_ctx ()).rc_in_struct then (Cpp_ast.empty, moved)
+      if not ctx.rc_in_struct then (Cpp_ast.empty, moved)
       else
         let stand_ins = Cpp_print.stand_ins p in
         if Probe.checking () && stand_ins = [] then
@@ -3142,7 +3147,7 @@ let do_struct_with_decl_tracking ~is_header f s =
             let old_decls = !current_structure_decls in
             current_structure_decls := sel;
             let p_specs, p_defs, p_lifted, p_lifted_specs =
-              pp_wrapper_module_dual ~is_header mp func_sels
+              pp_wrapper_module_dual ~is_header top mp func_sels
             in
             current_structure_decls := old_decls;
             if is_header && Cpp_ast.body_is_empty p_specs = Hashtbl.mem unmerged_wrappers name then
@@ -3171,10 +3176,10 @@ let do_struct_with_decl_tracking ~is_header f s =
         | Some w -> w.wr_specs
         | None -> Cpp_ast.module_body mp []
       in
-      let place_in source = place ~wrapper_bodies:(wrapper_bodies wrapper_parts) ~source in
+      let place_in source ctx = place ~wrapper_bodies:(wrapper_bodies wrapper_parts) ctx ~source in
       let f = place_in mp in
       let joined_placed sel =
-        let stays, moved = gathered (List.map f sel) in
+        let stays, moved = gathered (List.map (f top) sel) in
         (Cpp_ast.joined stays, moved)
       in
       let old_decls = !current_structure_decls in
@@ -3250,16 +3255,16 @@ let do_struct_with_decl_tracking ~is_header f s =
                it calls has to be declared ahead of it, which Rocq's order
                already ensures. *)
             let flattened (l, se) = match se with SEmodule _ -> is_colliding_child l se | _ -> false in
-            let child enclosure ~keep (_, se) =
+            let child ctx enclosure ~keep (_, se) =
               match se with
               | SEmodule {ml_mod_expr = MEstruct (inner_mp, inner_sel); _} ->
                 Cpp_ind.with_planned_local_inductives inner_mp (fun () ->
-                    let stays, moved = gathered (List.map (place_in inner_mp) (List.filter keep inner_sel)) in
+                    let stays, moved = gathered (List.map (place_in inner_mp ctx) (List.filter keep inner_sel)) in
                     (Cpp_ast.module_ enclosure (Cpp_ast.module_body inner_mp stays), moved) )
               | _ -> (Cpp_ast.empty, nothing_moved)
             in
-            let body enclosure ~keep sel =
-              let stays, moved = gathered (List.map (fun x -> if flattened x then child enclosure ~keep x else f x) sel) in
+            let body ctx enclosure ~keep sel =
+              let stays, moved = gathered (List.map (fun x -> if flattened x then child ctx enclosure ~keep x else f ctx x) sel) in
               (Cpp_ast.module_body mp stays, moved)
             in
             if is_header then (
@@ -3274,8 +3279,7 @@ let do_struct_with_decl_tracking ~is_header f s =
                  Being unwritable inside the struct used to be answered by
                  dropping it. *)
               let class_concept (l, r, fields) =
-                with_render_ctx (fun c -> {c with rc_in_struct = true}) @@ fun () ->
-                writing_element_of mp @@ fun () ->
+                installing (element_position mp {top with rc_in_struct = true}) @@ fun () ->
                 let d = generated_concept ~module_:mp r fields in
                 let concept = class_concept_element ~module_:mp d in
                 Cpp_ast.elements ~source:mp Cpp_ast.(seq [text (pp_doc_comment l); concept])
@@ -3286,7 +3290,7 @@ let do_struct_with_decl_tracking ~is_header f s =
                     let concepts, moved =
                       match se with
                       | SEmodtype _ ->
-                        let concept, moved = f x in
+                        let concept, moved = f top x in
                         ([concept], moved)
                       | _ -> (List.map class_concept (declared_classes [x]), nothing_moved)
                     in
@@ -3295,7 +3299,8 @@ let do_struct_with_decl_tracking ~is_header f s =
               in
               let sel = List.filter (fun (_, se) -> match se with SEmodtype _ -> false | _ -> true) sel in
               let body, body_moved =
-                with_render_ctx (fun c -> {c with rc_in_struct = true}) (fun () -> body In_enclosing_scope ~keep:is_func_decl sel)
+                let inside = {top with rc_in_struct = true} in
+                installing inside (fun () -> body inside In_enclosing_scope ~keep:is_func_decl sel)
               in
               let moved = moved_together (concepts_moved @ [body_moved]) in
               if Cpp_ast.body_is_empty body then (Cpp_ast.empty, moved)
@@ -3306,7 +3311,7 @@ let do_struct_with_decl_tracking ~is_header f s =
                        body ),
                   moved ) )
             else
-              let body, moved = body Out_of_line ~keep:(fun _ -> true) sel in
+              let body, moved = body top Out_of_line ~keep:(fun _ -> true) sel in
               (Cpp_ast.module_ Out_of_line body, moved) )
           else
             joined_placed sel
