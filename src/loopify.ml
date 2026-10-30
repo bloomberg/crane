@@ -308,22 +308,21 @@ let machine_disagreement l entries =
     transform makes, telling [entered] each call it enters the machine by and
     whether it resumes after it, with those calls; [None] where it enters it
     by none, and the machine, which would run its body once, is not made.  A
-    recursion it does not take is then left where it was.  Under
-    [CRANE_CHECK_IR] the calls must agree with the loop's ControlIR
-    ({!machine_disagreement}).  A machine leaving a call [check] recognises
-    is not judged: its decline is reported with the outcome
-    ({!report_outcome}). *)
-let checked_frame_machine loop check transform =
+    recursion it does not take is then left where it was.  The calls must
+    agree with the loop's ControlIR ({!machine_disagreement}), whatever
+    calls the machine leaves, which are ordinary recursive calls there: a
+    machine disagreeing is a violation under [CRANE_CHECK_IR], and is not
+    made. *)
+let checked_frame_machine loop transform =
   let entries = ref [] in
   let body = transform (fun ~resumes e -> entries := (resumes, made_of e) :: !entries) in
   if !entries = [] then None
-  else begin
-    ( match loop with
-    | Some l when Probe.checking () && classify check body = No_recursion ->
-      Option.iter (Probe.violation "control IR") (machine_disagreement l !entries)
-    | Some _ | None -> () );
-    Some (body, !entries)
-  end
+  else
+    match Option.bind loop (fun l -> machine_disagreement l !entries) with
+    | Some why ->
+      Probe.violation "control IR" why;
+      None
+    | None -> Some (body, !entries)
 
 (** The name a local of a body inlined into another takes there: prefixed,
     so that it collides with none of the other body's, and a temporary
@@ -853,7 +852,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
   in
   let frame () =
     let machine =
-      checked_frame_machine loop check (fun entered ->
+      checked_frame_machine loop (fun entered ->
           transform_nontail ?fn_name ?loop ~varying ?adopted ?entered_by ~entered ?binders ~parts check tparams params ret_ty body )
     in
     { nt_body = Option.cata fst body machine;
@@ -1020,20 +1019,16 @@ let frame_machine ~loop ?entry ~varying ~parts ~tparams check (f : dfun) params 
     declined
   end
   else
-    let survivors = survivors f in
+    (* A machine leaving a call behind is the machine of its ControlIR
+       where the calls entering it are its loop's: those it leaves are
+       ordinary recursive calls there, each running a machine of its own,
+       and its frames are laid out for the calls it takes alone. *)
     match
-      checked_frame_machine (Some loop) survivors (fun entered ->
+      checked_frame_machine (Some loop) (fun entered ->
           transform_nontail ~fn_name:(fundef_display_name f.df_path) ~loop ~varying ?adopted ?entered_by:(entered_by_definition r)
             ~entered ~binders:f.df_binders ~parts check tparams params f.df_ret body )
     with
-    | Some (made, _) when classify survivors made = No_recursion -> Ok (made, survived)
-    | Some (made, entries) ->
-      (* A machine leaving a call behind is the machine of its ControlIR
-         where the calls entering it are its loop's: those it leaves are
-         ordinary recursive calls there, each running a machine of its own,
-         and its frames are laid out for the calls it takes alone, as a
-         method's are ({!transform_method_own}). *)
-      if Option.is_empty (machine_disagreement loop entries) then Ok (made, survived) else declined
+    | Some (made, _) -> Ok (made, survived)
     | None -> declined
 
 let record_unlowered ?(unlowered = Left None) (f : dfun) body =
@@ -1053,7 +1048,7 @@ let lower_function_locals ~tparams params body = loopify_inner_lambdas ~tparams 
 let local_frame_machine ~member ~name ~binders ~varying ~parts ~tparams check params ret_ty body =
   let name = Id.to_string name in
   Option.bind
-    (checked_frame_machine (Some (Control_ir.Loop.Member (fst member, snd member))) check (fun entered ->
+    (checked_frame_machine (Some (Control_ir.Loop.Member (fst member, snd member))) (fun entered ->
          transform_nontail ~fn_name:name ~loop:(Control_ir.Loop.Member (fst member, snd member)) ~varying ~binders
            ~entered_by:(entered_by_member member) ~entered ~parts check tparams
            params ret_ty body ) )

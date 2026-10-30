@@ -52,15 +52,15 @@ type unlowered =
     the parameters [varying] of [f]'s.  With it comes
     the reason a call it leaves behind survived, where it adopted a body.
     [Error why] where Loopify would do anything else with [f]: adopt
-    another body than the entry or none where there is one, a violation
-    under [CRANE_CHECK_IR], or make a machine
-    disagreeing with its ControlIR; [why] is what Loopify records of the
-    function it makes no machine of.  A machine may leave a call behind that
-    its ControlIR holds as an ordinary recursive call: the calls entering it
-    are then those its loop's [Continue]s, its entry's included, are made
-    of, and its frames are laid out for those alone.  Under [CRANE_CHECK_IR] the calls entering a machine leaving none
-    must be those.  It raises [Loopify_analysis.Not_linearisable] where the
-    transform declines. *)
+    another body than the entry or none where there is one, or make a
+    machine disagreeing with its ControlIR, each a violation under
+    [CRANE_CHECK_IR]; [why] is what Loopify records of the function it
+    makes no machine of.  A machine may leave a call behind that its
+    ControlIR holds as an ordinary recursive call: the calls entering it are
+    those its loop's [Continue]s, its entry's included, are made of, whether
+    or not it leaves one, and its frames are laid out for those alone.  It
+    raises [Loopify_analysis.Not_linearisable] where the transform
+    declines. *)
 val frame_machine :
   loop:Control_ir.Loop.t ->
   ?entry:Control_ir.Loop.t ->
