@@ -493,7 +493,7 @@ type render_ctx = {
   (* The scopes whose names are visible where the printer is, innermost
      first: the planned visibility of what is being written, with a layer
      for each scope printing has entered that declares names; none where
-     what is written is not spelled as the tree spells a declaration. *)
+     nothing planned it, where nothing may be named. *)
   rc_visibility : Common.visibility option;
 }
 

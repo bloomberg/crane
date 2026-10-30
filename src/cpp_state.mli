@@ -152,8 +152,8 @@ type render_ctx = {
           first: the planned visibility of what is being written
           ({!Scope_plan.visibility}), with a layer for each scope printing
           has entered that declares names ({!Cpp_names.next}); none where
-          what is written is not spelled as the tree spells a declaration --
-          planning, the driver's own text. *)
+          nothing planned it, where naming anything is an anomaly: no
+          visibility is installed for a name to fall back on. *)
 }
 
 (** The context at the start of the file [file]: file scope, outside every

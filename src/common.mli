@@ -227,26 +227,10 @@ val label_of_r : GlobRef.t -> Label.t
     must still be run through this. *)
 val modular_rename : kind -> Id.t -> string
 
-(** Print a reference using a specific kernel name key. *)
-val pp_global_with_key : kind -> KerName.t -> GlobRef.t -> string
-
-(** Print a reference using its canonical kernel name. Has side effects on the
-    renaming tables. *)
-val pp_global : kind -> GlobRef.t -> string
-
-(** {!pp_global_with_key} and {!pp_global}, resolved rather than printed. *)
-val global_name_with_key : kind -> KerName.t -> GlobRef.t -> Cpp_name.t
-
-val global_name : kind -> GlobRef.t -> Cpp_name.t
-
 (** Emit the file [mp] under the namespace [ns] rather than its own name, in
     its declaration and in every reference to it.  Must be decided before any
     file is rendered. *)
 val rename_file_namespace : ModPath.t -> string -> unit
-
-(** The name of the file defining a reference, when a reference to it from the
-    current scope must name it; for a name hoisted to its file's namespace. *)
-val file_qualifier : kind -> GlobRef.t -> string option
 
 (** Print just the short name of a reference (for declarations). *)
 val pp_global_name : kind -> GlobRef.t -> string
@@ -274,16 +258,13 @@ val id_of_global : kind -> GlobRef.t -> Id.t
     enclosing module name for consistent struct/type naming. *)
 val pp_type_name_capitalized : GlobRef.t -> string
 
-(** Print a module path. *)
-val pp_module : ModPath.t -> string
-
 (** The C++ name of a module label, as {!modular_rename} spells it. *)
 val module_label_name : Label.t -> string
 
 (** Pre-scan the structure for module/inductive name collisions.  When a module
     has the same C++ name as an inductive type that is either its sibling or
     declared inside it, the module is renamed with a ["_Mod"] suffix.
-    Must be called before any [pp_global] or [pp_module] calls. *)
+    Must be called before any reference or module is named. *)
 val detect_sibling_module_inductive_collisions : ml_structure -> unit
 
 (** The name a module's C++ struct is emitted under, including any suffix
@@ -301,11 +282,8 @@ val inductive_generated_members : Id.Set.t
 
 (** Record that [r] is emitted as a member of the struct of inductive [ind], so
     that its C++ name avoids {!inductive_generated_members} and [ind]'s factory
-    methods.  Must be called before any [pp_global] for [r]. *)
+    methods.  Must be called before [r] is named. *)
 val reserve_methodified : ind:GlobRef.t -> GlobRef.t -> unit
-
-(** Get the module path of the innermost visible layer. *)
-val top_visible_mp : unit -> ModPath.t
 
 (** The C++ names a structure declares as members of its struct, as
     {!inside} takes them. *)
@@ -313,13 +291,6 @@ val member_names_of_sel : Miniml.ml_module_structure -> Id.Set.t
 
 (** The scopes a name is spelled from, innermost first. *)
 type visibility
-
-(** The visibility what is being written is written in. *)
-val current_visibility : unit -> visibility
-
-(** [with_visibility v f] runs [f] written in [v], which the plan computed,
-    restoring the enclosing visibility however [f] leaves. *)
-val with_visibility : visibility -> (unit -> 'a) -> 'a
 
 (** Outside every module body, with only the given modules -- a unit's files
     -- visible, the last innermost. *)
@@ -357,27 +328,26 @@ val resolved_string : resolved -> string
 (** Whether the resolved name comes out carrying a [::] qualifier. *)
 val resolved_is_qualified : resolved -> bool
 
-(** Resolve a module path to its name, as the visible scopes qualify it;
-    {!pp_module} is this plus {!resolved_string}. *)
-val resolve_module : Names.ModPath.t -> resolved
-
 (** {2 Resolution in an explicit scope}
 
     Each of these is a function of the visibility it is given and the naming
-    tables, so it answers the same wherever it is asked; the printer's
-    {!pp_global_with_key}, {!resolve_module} and {!file_qualifier} are these
-    at the visibility it is writing in. *)
+    tables, so it answers the same wherever it is asked.  No visibility is
+    installed anywhere: whoever names something says where it is written
+    ({!Cpp_state.render_ctx.rc_visibility}). *)
 
-(** The name of a reference written where the visibility is. *)
-val resolve_global : visibility -> kind -> KerName.t -> GlobRef.t -> string
-
-(** {!resolve_global}, resolved rather than printed. *)
+(** The name of a reference written where the visibility is, using the
+    kernel name key to find its defining module. *)
 val resolve_global_name : visibility -> kind -> KerName.t -> GlobRef.t -> Cpp_name.t
+
+(** {!resolve_global_name} by the reference's canonical kernel name. *)
+val resolve_ref_name : visibility -> kind -> GlobRef.t -> Cpp_name.t
 
 (** The name of a module written where the visibility is. *)
 val resolve_module_in : visibility -> ModPath.t -> resolved
 
-(** {!file_qualifier} where the visibility is. *)
+(** The name of the file defining a reference, when a reference to it written
+    where the visibility is must name it; for a name hoisted to its file's
+    namespace. *)
 val resolve_file_qualifier : visibility -> kind -> GlobRef.t -> string option
 
 (** Reset all renaming tables. *)

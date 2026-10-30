@@ -418,7 +418,7 @@ let dbg_lifted =
           let spec = Function_entity.declaration e in
           Printf.sprintf "splits=yes hoistable=%b spec=%S"
             (spec_is_hoistable ~module_ spec)
-            (Pp.string_of_ppcmds (read_cpp_decl (empty_env ()) spec))
+            (Pp.string_of_ppcmds (writing_element_of module_ (fun () -> read_cpp_decl (empty_env ()) spec)))
         else "splits=no"
       in
       Feedback.msg_notice
@@ -501,24 +501,6 @@ let is_wrapped_child mp =
   match Module_plan.wrapper_role mp with
   | Some (Flattened | Bystander) -> true
   | Some Own | None -> false
-
-(** [in_planned_visibility mp k] runs [k] in the visibility planned for the
-    body of the module [mp] ({!plan_visibility}).  Under [CRANE_CHECK_IR],
-    the body must be entered from the scope its plan nests it in. *)
-let in_planned_visibility mp k =
-  match Scope_plan.visibility mp with
-  | None ->
-    CErrors.anomaly
-      Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
-  | Some planned ->
-    ( if Probe.checking () then
-        let actual = current_visibility () in
-        if not (equal_visibility (enclosing_visibility planned) actual) then
-          Probe.violation "visibility chains"
-            Pp.(
-              str "the module " ++ str (ModPath.to_string mp) ++ str " is entered from "
-              ++ pp_visibility actual ++ str ", planned in " ++ pp_visibility planned) );
-    with_visibility planned k
 
 (** Whether the module [mp], of elements [sel], has a child a name collision
     puts inside a wrapper struct, which then holds all of [mp]'s elements:
@@ -988,7 +970,7 @@ let rec pp_structure_elem ~is_header f ~module_ = function
                    (match !eponymous_type_ref with
                     | Some (GlobRef.IndRef (kn', _)) -> MutInd.CanOrd.equal kn kn'
                     | _ -> false)
-                   && in_planned_visibility body_mp (fun () -> Cpp_ind.promoted_shared_from_this ~module_:body_mp d)
+                   && Cpp_ind.promoted_shared_from_this ~module_:body_mp d
                  | _ -> false )
                sel
         in
@@ -1132,7 +1114,8 @@ let rec pp_structure_elem ~is_header f ~module_ = function
           Cpp_ast.modtype_concept ~path ~params:[] concept )
 
 (** The body of the module [mp] of elements [sel], each element a member of
-    it, written in the visibility planned for it ({!in_planned_visibility}). *)
+    it, each written in the visibility planned for the module
+    ({!Cpp_state.writing_element_of}). *)
 and pp_module_body ~is_header f mp sel =
   if is_header && Probe.checking () && (current_render_ctx ()).rc_in_template <> Scope_plan.templated mp then
     Probe.violation "templated modules"
@@ -1152,7 +1135,6 @@ and pp_module_body ~is_header f mp sel =
     | None ->
       Probe.violation "header scopes" Pp.(str "the module " ++ str (ModPath.to_string mp) ++ str " has no planned scope")
   end;
-  in_planned_visibility mp @@ fun () ->
   let old_structure_decls = !current_structure_decls in
   current_structure_decls := sel;
   Cpp_ind.with_planned_local_inductives mp @@ fun () ->
@@ -1405,17 +1387,9 @@ let module_plan_of_analysis
     tables it fills are read by both the header and the implementation; it was
     nonetheless invoked from inside the renderer, so the same conclusions were
     reached four times per unit and the last one silently won.  Reaching them
-    once, here, is what lets the layout be planned before anything renders.
-
-    It runs where a rendering pass starts, the unit's files visible: the
-    analysis is a function of the structure, but the helpers it calls read
-    the visibility, and this is a relocation, not a re-derivation. *)
+    once, here, is what lets the layout be planned before anything renders. *)
 let prepare_structure s =
-  let initial_mps =
-    List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s
-  in
   let analysis =
-    with_visibility (toplevel_visibility initial_mps) @@ fun () ->
     Common.detect_sibling_module_inductive_collisions s;
   method_registry :=
     Some
@@ -1506,8 +1480,7 @@ let registered_methods ?(order = Fun.id) kn ind =
     module type, module or functor is.  A
     functor's body is walked as the class
     template it becomes,
-    its parameters visible in it.  Each module is walked in the visibility
-    planned for it ({!in_planned_visibility}), as the render writes it. *)
+    its parameters visible in it. *)
 let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = fun ~module_:_ _ -> ())
     ?(after_module = fun ~module_:_ _ _ -> ()) ?(in_body = fun ~wrapper:_ _ _ -> ())
     ?(modtype = fun ~module_:_ _ ~params mt -> Modtype_concept.generate ~params mt)
@@ -1517,7 +1490,7 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = f
   let header = ref {Cpp_ind.in_struct = false; concepts_hoisted = false} in
   let in_module mp sel k =
     Cpp_ind.plan_header_scope mp !header;
-    in_planned_visibility mp @@ fun () -> setting current_structure_decls sel k
+    setting current_structure_decls sel k
   in
   let in_header_scope scope k = setting header scope k in
   let modtypes ~module_ mp ~params sel =
@@ -1587,8 +1560,6 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = f
               in_body ~wrapper:false mp sel ) )
     | MEident _ | MEapply _ | MEfunctor _ -> ()
   in
-  with_visibility (toplevel_visibility (List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s))
-  @@ fun () ->
   List.iter
     (fun (mi : Structure_analysis.module_info) ->
       if mi.wrapper_name <> None then
@@ -1874,10 +1845,11 @@ let struct_members ~wrapper mp sel =
     that alias sits in its class's namespace, which a bare name in this one
     does not reach; the [using] gives the name the lookup it has in a
     single-file extraction, a struct's own member still first. *)
-let promoted_alias_import id =
+let promoted_alias_import files id =
   if Common.get_force_cross_file_qualification () then
     match Table.promoted_type_var_field id with
-    | Some g when Option.has_some (Common.file_qualifier Type g) -> Some ("using " ^ Common.pp_global Type g ^ ";")
+    | Some g when Option.has_some (Common.resolve_file_qualifier files Type g) ->
+      Some ("using " ^ Cpp_name.to_string (Common.resolve_ref_name files Type g) ^ ";")
     | _ -> None
   else None
 
@@ -1971,15 +1943,6 @@ let plan_file_layout s =
   in
   let element mp d =
     Cpp_ind.in_header_element_scope mp @@ fun ~in_struct ->
-      if
-        Probe.checking ()
-        && not (Option.cata (equal_visibility (current_visibility ())) false (Scope_plan.visibility mp))
-      then
-        Probe.violation "section scopes"
-          Pp.(
-            str "an element of the module " ++ str (ModPath.to_string mp)
-            ++ str " is planned from a visibility other than the one planned for the module: "
-            ++ pp_visibility (current_visibility ()) );
       let e = Cpp_ind.header_element_ahead ~module_:mp d in
       home mp d e.rendered;
       if e.member_defs <> [] then add member_defs mp {Cpp_ind.source = mp; declarations = e.member_defs};
@@ -2007,10 +1970,9 @@ let plan_file_layout s =
           if hoists ~wrapper mp sel then hoisted_structs := MPset.add mp !hoisted_structs )
         s );
   let promoted_imports =
-    with_visibility (toplevel_visibility (List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s))
-    @@ fun () ->
+    let files = toplevel_visibility (List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s) in
     List.sort_uniq String.compare
-      (List.filter_map promoted_alias_import
+      (List.filter_map (promoted_alias_import files)
          ( Finished_program.installed_promoted ()
          @ List.concat_map Cpp_demands.promoted_of_type (Cpp_ind.generated_record_field_types ()) ))
   in
@@ -2983,7 +2945,6 @@ let is_func_decl (_, se) = match se with SEdecl (Dterm _ | Dfix _) -> true | _ -
     scope, the inductives among them a collision struct holds, which move
     out of it. *)
 let plan_concept_prerequisites (plan : Module_plan.t) s =
-  let initial_mps = List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s in
   let modules = (get_structure_analysis ()).sorted_modules in
   let wrapper_sels name =
     List.concat_map
@@ -2991,7 +2952,7 @@ let plan_concept_prerequisites (plan : Module_plan.t) s =
         if mi.wrapper_name = Some name then List.filter is_func_decl mi.sels else [] )
       modules
   in
-  let labels = with_visibility (toplevel_visibility initial_mps) (fun () -> concept_prereqs ~wrapper_sels s) in
+  let labels = concept_prereqs ~wrapper_sels s in
   let moved_out =
     List.concat_map
       (fun (mp, sel) ->
@@ -3157,15 +3118,10 @@ let do_struct_with_decl_tracking ~is_header f s =
   Cpp_print.start_file_scope_census ();
   Cpp_ind.start_render ();
   init_std_names ();
-  (* The file is written outside every module body, its files visible;
-     [ppl] writes each module in the visibility planned for it, which has them
-     beneath it.  What follows only assembles what was written there. *)
-  let initial_mps =
-    List.filter_map
-      (fun (mp, _) -> if is_modfile mp then Some mp else None) s
-  in
+  (* [ppl] writes each module's elements in the visibility planned for it
+     ({!writing_element_of}); what follows only assembles what was written
+     there. *)
   let wrapper_parts, deferred_definitions, p, moved =
-    with_visibility (toplevel_visibility initial_mps) @@ fun () ->
     let analysis = get_structure_analysis () in
     let wrapper_names =
       List.map
@@ -3182,7 +3138,6 @@ let do_struct_with_decl_tracking ~is_header f s =
           match wrapper_name with
           | None -> None
           | Some name ->
-            in_planned_visibility mp @@ fun () ->
             let func_sels = List.filter is_func_decl sel in
             let old_decls = !current_structure_decls in
             current_structure_decls := sel;
@@ -3210,7 +3165,6 @@ let do_struct_with_decl_tracking ~is_header f s =
     in
     let deferred_definitions = List.map (fun w -> w.wr_defs) wrapper_parts in
     let ppl ((mp, sel), wrapper_name) =
-      in_planned_visibility mp @@ fun () ->
       Cpp_ind.with_planned_local_inductives mp @@ fun () ->
       let wrapper_specs name =
         match List.find_opt (fun w -> String.equal w.wr_name name) wrapper_parts with
@@ -3299,8 +3253,7 @@ let do_struct_with_decl_tracking ~is_header f s =
             let child enclosure ~keep (_, se) =
               match se with
               | SEmodule {ml_mod_expr = MEstruct (inner_mp, inner_sel); _} ->
-                in_planned_visibility inner_mp (fun () ->
-                    Cpp_ind.with_planned_local_inductives inner_mp @@ fun () ->
+                Cpp_ind.with_planned_local_inductives inner_mp (fun () ->
                     let stays, moved = gathered (List.map (place_in inner_mp) (List.filter keep inner_sel)) in
                     (Cpp_ast.module_ enclosure (Cpp_ast.module_body inner_mp stays), moved) )
               | _ -> (Cpp_ast.empty, nothing_moved)
