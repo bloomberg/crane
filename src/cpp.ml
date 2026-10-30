@@ -2391,6 +2391,31 @@ let plan_visibility s =
   in
   List.rev (List.fold_left top [] s)
 
+(** Under [CRANE_CHECK_IR], the visibility planned for each module body of
+    [s] ({!plan_visibility}) must see, innermost first, the modules its path
+    is nested in and then the unit's files.  The answer is read off the
+    paths alone, not off the walk over the structure that planned it, and
+    every name printed is resolved at a planned visibility: the resolver and
+    the check of a printed name read the same one, so neither can tell it
+    was planned wrong. *)
+let check_planned_visibility s planned =
+  if Probe.checking () then
+    let files = List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s in
+    let rec enclosing = function
+      | ModPath.MPdot (outer, _) as mp -> mp :: enclosing outer
+      | (MPfile _ | MPbound _) as mp -> [mp]
+    in
+    List.iter
+      (fun (mp, vis) ->
+        let expected = enclosing mp @ List.rev files in
+        if not (List.equal ModPath.equal (visible_mps vis) expected) then
+          Probe.violation "planned visibilities"
+            Pp.(
+              str "the body of the module " ++ str (ModPath.to_string mp) ++ str " is planned in "
+              ++ pp_visibility vis ++ str ", where its path is nested in "
+              ++ prlist_with_sep (fun () -> str " < ") (fun mp -> str (ModPath.to_string mp)) expected ) )
+      planned
+
 (** [plan_bodies ~start ~enter s] is what the render carries into each
     module body of [s] it enters, keyed by the path the body is written
     under: [start ~wrapper] into a file module's -- a library's, if
@@ -2542,7 +2567,10 @@ let plan_scopes s =
   { Scope_plan.scopes = List.rev scopes;
     nested = List.rev nested;
     templated = List.rev templated;
-    visibility = plan_visibility s;
+    visibility =
+      (let planned = plan_visibility s in
+       check_planned_visibility s planned;
+       planned);
     local_inductives = plan_local_inductives s;
     frames = plan_frames s }
 
