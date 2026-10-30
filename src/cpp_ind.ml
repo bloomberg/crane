@@ -1164,19 +1164,25 @@ let plan_header_scope mp scope = header_scopes := MPmap.add mp scope !header_sco
 
 let header_scope mp = MPmap.find_opt mp !header_scopes
 
-let in_header_element_scope mp k =
+let planned_header_scope mp =
   match header_scope mp with
+  | Some scope -> scope
   | None ->
     CErrors.anomaly
       Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned header scope.")
-  | Some {in_struct; concepts_hoisted} ->
-    with_render_ctx
-      (fun c ->
-        { (at_file_scope c) with
-          rc_in_struct = in_struct;
-          rc_concepts_hoisted = concepts_hoisted;
-          rc_in_template = Scope_plan.templated mp } )
-      (fun () -> k ~in_struct)
+
+(* The position at file scope of the header from which an element of the
+   module [mp] is written, as planned. *)
+let header_element_position mp =
+  let {in_struct; concepts_hoisted} = planned_header_scope mp in
+  { (file_start Intf) with
+    rc_in_struct = in_struct;
+    rc_concepts_hoisted = concepts_hoisted;
+    rc_in_template = Scope_plan.templated mp }
+
+let in_header_element_scope mp k =
+  let {in_struct; _} = planned_header_scope mp in
+  with_render_ctx (fun c -> {(header_element_position mp) with rc_file = c.rc_file}) (fun () -> k ~in_struct)
 
 let with_planned_local_inductives mp k =
   match Scope_plan.local_inductives mp with
@@ -1219,35 +1225,33 @@ let planned_visibility mp =
   | Some v -> v
   | None -> CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
 
-let in_spelling ~file spelling k =
-  let k =
-    match spelling with
-    | Cpp_ast.Element_of mp | Member_of mp ->
-      fun () ->
-        with_render_ctx
-          (fun c -> {c with rc_module = Some mp; rc_frame = []; rc_names = None; rc_visibility = Some (planned_visibility mp)})
-          k
-    | Template_in _ -> k
-  in
+(* The position a declaration spelled [spelling] is written at in [file],
+   a function of the plan alone: nothing installed around it reaches it. *)
+let spelling_position ~file spelling =
+  let element mp c = {c with rc_module = Some mp; rc_visibility = Some (planned_visibility mp)} in
   match ((file : Common.file), (spelling : Cpp_ast.spelling)) with
-  | Intf, Element_of mp -> in_header_element_scope mp (fun ~in_struct:_ -> k ())
-  | Intf, Member_of mp -> in_header_element_scope mp (fun ~in_struct:_ -> with_render_ctx (fun c -> {c with rc_in_struct = true}) k)
+  | Intf, Element_of mp -> element mp (header_element_position mp)
+  | Intf, Member_of mp -> element mp {(header_element_position mp) with rc_in_struct = true}
   (* The implementation writes every element of a module at file scope:
      what it defines out of line is qualified by the scope its plan gives
      it ({!Scope_plan.of_declaration}). *)
-  | Impl, Element_of mp -> with_render_ctx (fun _ -> file_start Impl) k
+  | Impl, Element_of mp -> element mp (file_start Impl)
   | Impl, Member_of mp ->
     CErrors.anomaly
       Pp.(str "Crane: the implementation writes a member of the struct of " ++ str (ModPath.to_string mp)
           ++ str ", which it does not write.")
   (* A synthesised template is written where it is declared, whatever is
      around it. *)
-  | _, Template_in declared -> with_render_ctx (fun c -> Cpp_print.ctor_alias_render_ctx {c with rc_file = file} declared) k
+  | _, Template_in declared -> Cpp_print.ctor_alias_render_ctx (file_start file) declared
+
+(* [k] of the position of [spelling] in [file], threaded: under
+   [CRANE_CHECK_IR] nothing beneath may read the installed position
+   ({!Cpp_state.entering_scope}). *)
+let at_spelling ~file spelling k = entering_scope (fun () -> k (spelling_position ~file spelling))
 
 let resolver_at ~file spelling frame key =
   Common.without_noting_written_files (fun () ->
-      in_spelling ~file spelling (fun () ->
-          Cpp_names.at_frame (current_render_ctx ()) frame (fun ctx -> Cpp_names.live_name ctx key) ) )
+      at_spelling ~file spelling (fun ctx -> Cpp_names.at_frame ctx frame (fun ctx -> Cpp_names.live_name ctx key)) )
 
 let requested d = Cpp_print.unprinted_names d @ Cpp_concepts.names_requested d
 
@@ -1256,11 +1260,11 @@ let resolve ~file = Cpp_ast.resolve ~requested ~resolve:(resolver_at ~file)
 
 let names_into_a_struct_as_written ~file spelling settled =
   let names = Cpp_resolution.resolve (resolver_at ~file spelling) (requested (Declaration {env = empty_env (); settled})) in
-  in_spelling ~file spelling (fun () -> Cpp_print.resolved_names_into_a_struct names settled)
+  at_spelling ~file spelling (fun ctx -> Cpp_print.resolved_names_into_a_struct ctx names settled)
 
 let write_unprinted ~file spelling u =
-  in_spelling ~file spelling (fun () ->
-      Cpp_print.print_unprinted ~modtype_concept:Cpp_concepts.pp_modtype_concept ~assertion:Cpp_concepts.pp_assertion u )
+  at_spelling ~file spelling (fun ctx ->
+      Cpp_print.print_unprinted ctx ~modtype_concept:Cpp_concepts.pp_modtype_concept ~assertion:Cpp_concepts.pp_assertion u )
 
 type group = {source : ModPath.t; declarations : rendered}
 type section = group list

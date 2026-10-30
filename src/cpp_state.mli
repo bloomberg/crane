@@ -239,7 +239,8 @@ val with_render_ctx : (render_ctx -> render_ctx) -> (unit -> 'a) -> 'a
 
 (** [entering_scope f] runs [f] inside a scope printing entered, which
     installs no position: printing hands the position to what it prints
-    there. *)
+    there.  A declaration's spelling is one, entered wherever the
+    declaration is resolved or printed. *)
 val entering_scope : (unit -> 'a) -> 'a
 
 (** [writing_file file f] renders [f] as part of the file [file]. *)

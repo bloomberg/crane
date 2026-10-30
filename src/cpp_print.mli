@@ -53,9 +53,9 @@ val name_in : Cpp_state.render_ctx -> Cpp_resolution.table -> Cpp_resolution.fra
     after it, writing nothing for it here. *)
 val is_held_back_assertion : Cpp_state.render_ctx -> Cpp_erasure.settled -> bool
 
-(** What placing the declarations [decl], written in the module [module_],
-    needs reads ({!Cpp_ast.Needs}), as planned. *)
-val planned_needs : module_:Names.ModPath.t -> Cpp_erasure.settled -> Cpp_ast.Needs.t
+(** What placing the declarations [decl], written in the module [module_] in
+    the file [file], needs reads ({!Cpp_ast.Needs}), as planned. *)
+val planned_needs : file:Common.file -> module_:Names.ModPath.t -> Cpp_erasure.settled -> Cpp_ast.Needs.t
 
 (** [unprinted ~module_ env decl] is [decl], written in the module
     [module_], to be printed where the tree puts it ({!Cpp_ast.print}),
@@ -89,18 +89,18 @@ val unprinted_names : Cpp_ast.declaration -> (Cpp_resolution.frame * Cpp_resolut
 (** Whether a function declaration writes a qualifier into a struct or a
     template parameter, in its name, result or parameters, asked of the
     declaration rather than of its rendering: each name is the one
-    {!pp_cpp_type} writes, from the same heads, where the printer is, of the
-    names [names] as {!print_unprinted} reads them.  [None] for anything but
+    {!pp_cpp_type} writes, from the same heads, at the position given, of
+    the names [names] as {!print_unprinted} reads them.  [None] for anything but
     a function declaration, and where only the rendering can tell -- an
     expression's type, a type constructor named as a template argument. *)
-val resolved_names_into_a_struct : Cpp_resolution.table -> Cpp_erasure.settled -> bool option
+val resolved_names_into_a_struct : Cpp_state.render_ctx -> Cpp_resolution.table -> Cpp_erasure.settled -> bool option
 
-(** The text of a declaration not yet printed, printed in the render
-    context and visibility its spelling enters, a module type's concept by
-    [modtype_concept] and an assertion by [assertion].  Under
-    [CRANE_CHECK_IR] it must need, printed there, what was planned for it
-    where it was made. *)
+(** The text of a declaration not yet printed, printed at the position its
+    spelling enters, a module type's concept by [modtype_concept] and an
+    assertion by [assertion].  Under [CRANE_CHECK_IR] it must need, printed
+    there, what was planned for it where it was made. *)
 val print_unprinted :
+  Cpp_state.render_ctx ->
   modtype_concept:
     (Cpp_state.render_ctx ->
     names:Cpp_resolution.table ->
@@ -228,14 +228,16 @@ type ctor_alias = private {
     written, read in the scope being written. *)
 type ctor_aliases_read
 
-(** What the finished declaration written in [file] writes; the render of
-    the declaration there reads it back from the plan. *)
-val ctor_aliases_written : file:Common.file -> Cpp_erasure.settled -> ctor_aliases_read
+(** What the finished declaration written in [file], at the position given
+    there, writes; the render of the declaration there reads it back from
+    the plan. *)
+val ctor_aliases_written : file:Common.file -> Cpp_state.render_ctx -> Cpp_erasure.settled -> ctor_aliases_read
 
 (** What the fields of the record [r], of types [types], write in [file],
     their type variables read as [vl]; the render of the fields there reads
     it back from the plan ({!fields_needs}). *)
-val ctor_aliases_of_fields : file:Common.file -> vl:Id.t list -> GlobRef.t -> cpp_type list -> ctor_aliases_read
+val ctor_aliases_of_fields :
+  file:Common.file -> Cpp_state.render_ctx -> vl:Id.t list -> GlobRef.t -> cpp_type list -> ctor_aliases_read
 
 (** [plan_ctor_aliases written] plans the templates each file writes,
     [written file] being what is read off what [file] writes, in the order

@@ -2016,7 +2016,7 @@ let plan_file_layout s =
 let plan_ctor_aliases s =
   let written_in file =
     let found = ref [] in
-    let written ds = List.iter (fun d -> found := Cpp_print.ctor_aliases_written ~file d :: !found) ds in
+    let written ds = List.iter (fun d -> found := Cpp_print.ctor_aliases_written ~file (current_render_ctx ()) d :: !found) ds in
     let helpers ~module_ hs =
       written
         (List.concat_map
@@ -2067,7 +2067,7 @@ let plan_ctor_aliases s =
           (fun (r, fields, (packet : ml_ind_packet)) ->
             let vl = packet.ip_vars in
             found :=
-              Cpp_print.ctor_aliases_of_fields ~file ~vl r (Cpp_ind.record_field_types ~module_ r vl fields)
+              Cpp_print.ctor_aliases_of_fields ~file (current_render_ctx ()) ~vl r (Cpp_ind.record_field_types ~module_ r vl fields)
               :: !found )
           (merged_eponymous_record frame);
         Option.iter
