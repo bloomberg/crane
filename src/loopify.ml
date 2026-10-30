@@ -603,7 +603,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
           record_outcome name (Lp_declined no_varying_plan);
           None
         | Some {member_varying = varying; member_parts = parts} ->
-        let body' =
+        match
           match strategy with
           | Tail_loop ->
             report_outcome ~name ~check ~strategy:Lp_tail
@@ -619,7 +619,12 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
                  params ret_ty lbody)
           | No_loop | Suspended _ ->
             CErrors.anomaly (Pp.str "loopify: no loop cannot appear here")
-        in
+        with
+        (* A transform declining declines this fixpoint, which is left as it
+           was, not the function it is in. *)
+        | exception Not_linearisable why ->
+          record_outcome name (Lp_declined why);
+          None
         (* A call the transform left -- one in a closure, say a fixpoint in
            the body that calls back, which a local machine does not adopt --
            recurses through the self-parameter the loop drops, so the
@@ -628,7 +633,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
            names here; the lambda printer drops the name of any param its
            body does not reference, so unused ones do not trip
            [-Wunused-parameter]. *)
-        if classify check body' = No_recursion then Some (lparams, body') else None )
+        | body' -> if classify check body' = No_recursion then Some (lparams, body') else None )
   in
   let rec process_stmts stmts =
     match stmts with
