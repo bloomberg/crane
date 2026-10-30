@@ -506,112 +506,6 @@ let infer_saved_types tparams env exprs =
     (fun e -> Option.default Tunresolved (infer_saved_type tparams env e))
     exprs
 
-(** Search through an argument list for an element matching [search_fn].
-
-    Iterates left-to-right through [args] applying [search_fn] to each element.
-    On the first match, returns [Some (result, rebuild)] where [result] is the
-    value produced by [search_fn] and [rebuild] is a function that reconstructs
-    the full argument list with a replacement element at the matched position.
-    Returns [None] if no element matches.
-
-    This enables "find and replace in context" patterns: locate a subexpression
-    within a function's arguments, transform it, and rebuild the outer call.
-
-    @param search_fn Predicate/extractor applied to each argument
-    @param args      The argument list to search
-    @return [Some (result, rebuild)] on match, [None] otherwise. [rebuild] takes
-            a replacement expression and returns the full argument list with that
-            element substituted at the matched position. *)
-let search_in_args search_fn args =
-  let rec try_args rev_pre = function
-    | [] -> None
-    | arg :: post ->
-    match search_fn arg with
-    | Some result -> Some (result, fun x -> List.rev rev_pre @ [x] @ post)
-    | None -> try_args (arg :: rev_pre) post
-  in
-  try_args [] args
-
-(** Find an immediately-invoked lambda expression (IIFE) containing recursive
-    calls. Returns [(body, ret_ty, rebuild)] where [rebuild] wraps a result
-    expression back into the surrounding context. *)
-let rec find_inner_iife check = function
-  | CPPfun_call (_, CPPlambda
-    { cl_params = {rev = []};
-      cl_ret = ret_ty;
-      cl_body = body;
-      cl_capture = _cap }, {rev = []})
-    when collect_stmts check ~in_visitor:false body <> [] ->
-    Some (body, ret_ty, Fun.id)
-  | CPPfun_call (res, f, args) ->
-    ( match search_in_args (find_inner_iife check) (to_reversed args) with
-    | Some ((body, ret_ty, rebuild), mk_args) ->
-      Some (body, ret_ty, fun x -> CPPfun_call (res, f, of_reversed (mk_args (rebuild x))))
-    | None -> None )
-  | CPPmove e ->
-    ( match find_inner_iife check e with
-    | Some (body, ret_ty, rebuild) ->
-      Some (body, ret_ty, fun x -> CPPmove (rebuild x))
-    | None -> None )
-  | CPPstruct_id (name, tys, args) ->
-    ( match search_in_args (find_inner_iife check) args with
-    | Some ((body, ret_ty, rebuild), mk_args) ->
-      Some (body, ret_ty, fun x -> CPPstruct_id (name, tys, mk_args (rebuild x)))
-    | None -> None )
-  | CPPstructmk (name, tys, args) ->
-    ( match search_in_args (find_inner_iife check) args with
-    | Some ((body, ret_ty, rebuild), mk_args) ->
-      Some (body, ret_ty, fun x -> CPPstructmk (name, tys, mk_args (rebuild x)))
-    | None -> None )
-  | _ -> None
-
-(** Handle a base-case expression (0 direct recursive calls) that may contain
-    recursive calls hidden inside a nested IIFE.
-
-    When {!find_inner_iife} finds an immediately-invoked lambda, each of its
-    [Sreturn (Some result)] statements is wrapped with [rebuild] so the
-    surrounding expression context is preserved, then the body is rewritten via
-    [rewrite_iife_body].  Otherwise this falls back to [base_case e].
-
-    @param check              Call checker identifying recursive calls
-    @param e                  Expression with 0 direct calls to check
-    @param rewrite_iife_body  Rewriter for IIFE bodies:
-                              [extended_body -> rewritten_body]
-    @param base_case          Fallback for true base cases (no inner calls) *)
-let rewrite_base_with_inner_calls check e ~rewrite_iife_body ~base_case =
-  let rec wrap_returns_with rebuild body =
-    List.map
-      (fun stmt ->
-        match stmt with
-        | Sreturn (Some result) -> Sreturn (Some (rebuild result))
-        | Sif (cond, t, e) ->
-          Sif (cond, wrap_returns_with rebuild t, wrap_returns_with rebuild e)
-        | Sif_decl (id, ty, init, t, e) ->
-          Sif_decl (id, ty, init, wrap_returns_with rebuild t, wrap_returns_with rebuild e)
-        | Sblock stmts -> Sblock (wrap_returns_with rebuild stmts)
-        | Sswitch (scrut, r, branches, default) ->
-          Sswitch (scrut, r,
-            List.map (fun (lbl, b) -> (lbl, wrap_returns_with rebuild b)) branches,
-            Option.map (wrap_returns_with rebuild) default)
-        | Smatch (scrut, branches, default) ->
-          Smatch (
-            scrut,
-            List.map (fun br -> { br with smb_body = wrap_returns_with rebuild br.smb_body }) branches,
-            Option.map (wrap_returns_with rebuild) default)
-        | Scustom_case (ty, scrut, tyargs, branches, err) ->
-          Scustom_case (ty, scrut, tyargs,
-            List.map (fun (pats, ret_ty, b) -> (pats, ret_ty, wrap_returns_with rebuild b)) branches,
-            err)
-        | s -> s )
-      body
-  in
-  match find_inner_iife check e with
-  | Some (iife_body, _iife_ret_ty, rebuild) ->
-    let extended_body = wrap_returns_with rebuild iife_body in
-    rewrite_iife_body extended_body
-  | None ->
-    base_case e
-
 (** {3 Enter-rewrite context} *)
 
 (** One parameter a frame carries, and how the frame holds it: [fp_pointer_safe]
@@ -1335,18 +1229,21 @@ let planned_resume ctx id tgt e =
         (Option.flatten (List.assoc_opt id ctx.er_binders))
     | Declare (_, None) | Declare_static _ -> None )
 
-let resume_violation () =
-  Probe.violation "resume plan"
-    (Pp.str "the recursion plan and the finished body disagree on whether a statement resumes after a recursive call")
+(** Why a machine is not made whose recursion plan and finished body
+    disagree on whether a statement resumes after a recursive call. *)
+let resume_disagreement =
+  "the recursion plan and the finished body disagree on whether a statement resumes after a recursive call"
+
+let resume_violation () = Probe.violation "resume plan" (Pp.str resume_disagreement)
 
 (** Rewrite a single return statement for the [CraneEnter] handler in frame-based
     non-tail recursion transformation.
 
-    {!Normalize} has bound every recursive call that is not a tail call, so a
-    returned expression holds none but a tail call:
-
-    - {b 0 calls}: assign to [_result], descending into IIFEs that hold calls
-    - {b a tail call}: push [CraneEnter]
+    A returned expression made of one of the loop's Continues, which the
+    machine's checker recognises, is a tail call, and re-enters by
+    [CraneEnter]; any other is the result.  A call it holds that its
+    ControlIR takes is left there, which {!Control_to_legacy_minicpp}
+    reports of the lowered loop.
 
     @param ctx  Enter-rewrite context (see {!enter_rewrite_ctx})
     @param stmt The statement to rewrite (typically a [Sreturn] statement)
@@ -1354,23 +1251,12 @@ let resume_violation () =
 let rec rewrite_enter_lambda_return ctx stmt =
   let { er_check = check; er_env = env; _ } = ctx in
   match stmt with
-  | Sreturn (Some e) ->
-    let n_calls = count_calls_expr check e in
-    if n_calls = 0 then
-      rewrite_base_with_inner_calls check e
-        ~rewrite_iife_body:(rewrite_enter_stmts ctx)
-        ~base_case:assign_result
-    else (
-      match check e with
-      | Some cs when List.for_all (fun a -> count_calls_expr check a = 0) cs.cs_args ->
-        (* Tail call: re-enter. *)
-        ctx.er_entered ~resumes:false e;
-        [make_stack_push (make_enter_for ctx cs)]
-      | _ ->
-        (* {!Normalize} leaves a returned expression no call but a tail
-           call; one it did not reach runs inline, and the postcondition
-           reports the function. *)
-        assign_result e )
+  | Sreturn (Some e) -> (
+    match check e with
+    | Some cs ->
+      ctx.er_entered ~resumes:false e;
+      [make_stack_push (make_enter_for ctx cs)]
+    | None -> assign_result e )
   | Sif (cond, then_br, else_br) ->
     let rw_stmts = rewrite_enter_stmts ctx in
     let rw_then = rw_stmts then_br in
@@ -1665,10 +1551,9 @@ and rewrite_enter_stmts ctx stmts =
     in
     (* Whether the statement resumes is the plan's ({!planned_resume}); the
        call the frame re-enters by is the one {!Normalize} bound there, the
-       whole right-hand side.  Under [CRANE_CHECK_IR] the plan is checked
-       against the C++, one call the machine's checker recognises.  A
-       statement the plan says nothing of is a violation, and the machine is
-       not made. *)
+       whole right-hand side, one call the machine's checker recognises.  A
+       statement the plan says nothing of, or one the C++ disagrees with
+       the plan about, is a violation, and the machine is not made. *)
     (* A temporary Normalize bound at the type the Core gives the call, of
        a function returning it erased, is the call cast: the frame re-enters
        by the call, and the handler casts its result. *)
@@ -1678,20 +1563,17 @@ and rewrite_enter_stmts ctx stmts =
       | _ -> (None, e)
     in
     let call = if n_calls = 1 then check called else None in
-    let resumes =
-      match planned_resume ctx id tgt e with
-      | Some planned ->
-        if Probe.checking () && planned <> Option.has_some call then resume_violation ();
-        planned
-      | None ->
-        Probe.violation "resume plan" (Pp.str no_resume_plan);
-        raise (Not_linearisable no_resume_plan)
-    in
-    ( match call with
-    | Some cs when resumes ->
+    ( match (planned_resume ctx id tgt e, call) with
+    | Some true, Some cs ->
       ctx.er_entered ~resumes:true called;
       make_cont_handler ~cast (make_enter_for ctx cs)
-    | Some _ | None -> Sasgn (id, tgt, e) :: rewrite_enter_stmts ctx rest )
+    | Some false, None -> Sasgn (id, tgt, e) :: rewrite_enter_stmts ctx rest
+    | Some _, _ ->
+      resume_violation ();
+      raise (Not_linearisable resume_disagreement)
+    | None, _ ->
+      Probe.violation "resume plan" (Pp.str no_resume_plan);
+      raise (Not_linearisable no_resume_plan) )
   (* Conditional recursion: at least one branch has a recursive call and there
      are continuation statements after.  Merge the continuation into each branch
      so the recursive branch captures it via the Sasgn::rest CraneCont pattern while
