@@ -149,12 +149,26 @@ let () =
   check "and continues the loop" (continues_at [u] (lower_frames body));
   check "without frames a let binding a call is returned with it" (lower body = Term.Return body);
   (* let x := (match n with O => acc | S m => count m acc) in count x acc:
-     the call in a branch resumes, the tail call continues. *)
+     translation runs a let's match that is neither custom nor a record's
+     in a lambda invoked in place, where the call in a branch is an
+     ordinary call; the tail call continues. *)
   let inner = use () and tail = use () in
   let rhs = MLcase (nat, fresh_rel 2, [| ([], nat, Pwild, fresh_rel 1); ([(id "m", nat)], nat, Pwild, call inner [fresh_rel 1; fresh_rel 2]) |]) in
   let body = MLletin (id "x", nat, rhs, call tail [fresh_rel 1; fresh_rel 2], Occurrence.fresh ()) in
   let t = lower_frames body in
-  check "a call ending a branch of a let's right-hand side is resumed after"
+  check "a call ending a branch of a let's match run in a lambda is no turn" (resumed t = []);
+  check "the tail call after it continues alone" (continues_at [tail] t);
+  (* let x := (match p with {a} => count a acc) in count x acc, a record's
+     one branch: generated as statements assigning the binder, the call in
+     the branch resumes. *)
+  let kn = MutInd.make1 (KerName.make (ModPath.MPfile (DirPath.make [Id.of_string "T"])) (Label.make "R")) in
+  Table.add_inductive_kind kn (Record [(Some (r "a"), nat)]);
+  let record = Tglob (GlobRef.IndRef (kn, 0), [], []) in
+  let inner = use () and tail = use () in
+  let rhs = MLcase (record, fresh_rel 2, [| ([(id "a", nat)], nat, Pwild, call inner [fresh_rel 1; fresh_rel 2]) |]) in
+  let body = MLletin (id "x", nat, rhs, call tail [fresh_rel 1; fresh_rel 2], Occurrence.fresh ()) in
+  let t = lower_frames body in
+  check "a call ending a branch of a let's record match is resumed after"
     (List.equal Occurrence.equal (resumed t) [Global_use.occurrence inner]);
   check "the tail call after it continues" (continues_at [inner; tail] t);
   check "a parameter passed on under the resumed binder is kept"

@@ -52,6 +52,13 @@ val sequential : Core_effects.t -> Miniml.global_use -> Core_effects.operation o
     then where the custom is. *)
 val identity : Names.GlobRef.t -> bool
 
+(** Whether translation generates a match at [ty] over [branches] standing
+    as a let's right-hand side as statements, each branch assigning the
+    binder -- a custom match, or a record's one branch -- rather than in a
+    lambda invoked in place, as it does any other.  A recursive call only
+    the latter's branches end in is not a point the let resumes at. *)
+val match_bound_in_place : Miniml.ml_type -> Miniml.ml_branch array -> bool
+
 (** What [t] lowers to loops of tail calls alone: the functions planned
     {!Tail_loop}, and the local fixpoints of one member planned so, by
     occurrence. *)

@@ -13638,3 +13638,25 @@
   (alias runtest)
   (deps recursor_method_head_sibling.t.exe)
   (action (run ./recursor_method_head_sibling.t.exe))))
+
+(subdir loopify_operand_match_call
+ (rule
+  (targets loopify_operand_match_call.t.exe)
+  (deps LoopifyOperandMatchCall.vo loopify_operand_match_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_operand_match_call.t.exe loopify_operand_match_call.cpp loopify_operand_match_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_operand_match_call.t.exe)
+  (action (run ./loopify_operand_match_call.t.exe))))
+
+(subdir loopify_dispatch_on_call
+ (rule
+  (targets loopify_dispatch_on_call.t.exe)
+  (deps LoopifyDispatchOnCall.vo loopify_dispatch_on_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_dispatch_on_call.t.exe loopify_dispatch_on_call.cpp loopify_dispatch_on_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_dispatch_on_call.t.exe)
+  (action (run ./loopify_dispatch_on_call.t.exe))))

@@ -45,8 +45,8 @@ let tail_loop ?(inlined = fun _ -> None) ?(modulo_cons = false) ?(frames = false
      continues, and its number of parameters. *)
   let own ~depth f = Option.map (fun n -> (target, n)) (callee ~depth f) in
   let adopts o = match adopted with Some (Fixpoint o') -> Occurrence.equal o o' | Some (Partner _) | None -> false in
-  let rec lower callee depth e =
-    match recognise callee depth e with
+  let rec lower ?(bound = false) callee depth e =
+    match recognise ~bound callee depth e with
     | t when continues t = [] -> Return e
     | t -> t
   (* The loop [f] names, under [depth] binders, where it takes [n]
@@ -114,7 +114,12 @@ let tail_loop ?(inlined = fun _ -> None) ?(modulo_cons = false) ?(frames = false
       | _ -> callee ~depth:(depth + 1 + arity + d) f
     in
     {loop = target; parameters = List.rev parameters; body = lower callee 0 inner}
-  and recognise callee depth e =
+  (* [bound] says [e] is a let's value, or a bind's action: a match there
+     that translation does not generate as statements each assigning the
+     binder ({!Recursion_plan.match_bound_in_place}) runs in a lambda
+     invoked in place, where no call is a turn. *)
+  and recognise ~bound callee depth e =
+    let lower ?(bound = bound) = lower ~bound in
     let continue_ f target arguments =
       match occurrence f with
       | Some occurrence -> Continue {target; occurrence; arguments}
@@ -166,7 +171,7 @@ let tail_loop ?(inlined = fun _ -> None) ?(modulo_cons = false) ?(frames = false
     | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Bind -> (
       match List.rev args with
       | MLlam (x, ty, k) :: action :: _ when frames && calls callee ~depth action > 0 ->
-        Resume {binder = x; binder_type = ty; value = lower callee depth action; body = lower callee (depth + 1) k}
+        Resume {binder = x; binder_type = ty; value = lower ~bound:true callee depth action; body = lower callee (depth + 1) k}
       | MLlam (x, ty, k) :: action :: _ ->
         Let {binder = x; binder_type = ty; value = action; body = lower callee (depth + 1) k}
       | _ -> Return e )
@@ -183,8 +188,9 @@ let tail_loop ?(inlined = fun _ -> None) ?(modulo_cons = false) ?(frames = false
       in
       enter depth f args
     | MLletin (x, ty, a, b, _) when frames && calls callee ~depth a > 0 ->
-      Resume {binder = x; binder_type = ty; value = lower callee depth a; body = lower callee (depth + 1) b}
+      Resume {binder = x; binder_type = ty; value = lower ~bound:true callee depth a; body = lower callee (depth + 1) b}
     | MLletin (x, ty, a, b, _) -> Let {binder = x; binder_type = ty; value = a; body = lower callee (depth + 1) b}
+    | MLcase (ty, _, branches) when bound && not (Recursion_plan.match_bound_in_place ty branches) -> Return e
     | MLcase (ty, s, branches) ->
       Match
         { scrutinee_type = ty;
