@@ -1230,14 +1230,12 @@ let in_spelling ~file spelling k =
     | Template_in _ -> k
   in
   match ((file : Common.file), (spelling : Cpp_ast.spelling)) with
-  | Intf, Element_of mp -> with_planned_local_inductives mp (fun () -> in_header_element_scope mp (fun ~in_struct:_ -> k ()))
-  | Intf, Member_of mp ->
-    with_planned_local_inductives mp (fun () ->
-        in_header_element_scope mp (fun ~in_struct:_ -> with_render_ctx (fun c -> {c with rc_in_struct = true}) k) )
+  | Intf, Element_of mp -> in_header_element_scope mp (fun ~in_struct:_ -> k ())
+  | Intf, Member_of mp -> in_header_element_scope mp (fun ~in_struct:_ -> with_render_ctx (fun c -> {c with rc_in_struct = true}) k)
   (* The implementation writes every element of a module at file scope:
      what it defines out of line is qualified by the scope its plan gives
      it ({!Scope_plan.of_declaration}). *)
-  | Impl, Element_of mp -> with_planned_local_inductives mp (fun () -> with_render_ctx (fun _ -> file_start Impl) k)
+  | Impl, Element_of mp -> with_render_ctx (fun _ -> file_start Impl) k
   | Impl, Member_of mp ->
     CErrors.anomaly
       Pp.(str "Crane: the implementation writes a member of the struct of " ++ str (ModPath.to_string mp)
