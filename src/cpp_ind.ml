@@ -1182,10 +1182,6 @@ let header_element_position mp =
     rc_concepts_hoisted = concepts_hoisted;
     rc_in_template = Scope_plan.templated mp }
 
-let in_header_element_scope mp k =
-  let {in_struct; _} = planned_header_scope mp in
-  with_render_ctx (fun c -> {(header_element_position mp) with rc_file = c.rc_file}) (fun () -> k ~in_struct)
-
 let with_planned_local_inductives mp k =
   match Scope_plan.local_inductives mp with
   | Some local -> setting Translation_state.local_inductives local k
@@ -1497,11 +1493,11 @@ let header_decls = decls_for ~is_header:true
 (** What the header writes for the declaration [d] and the helpers it
     places, read off what was generated ahead of the files without taking
     it: nothing is recorded or claimed. *)
-let header_element_ahead ~module_ d = peeking (fun () -> header_decls (current_render_ctx ()) ~module_ d)
+let header_element_ahead ctx ~module_ d = peeking (fun () -> header_decls ctx ~module_ d)
 
 (** What the implementation writes for the declaration [d], read off what
     was generated ahead of the files without taking it. *)
-let impl_element_ahead ~module_ d = peeking (fun () -> impl_decls (current_render_ctx ()) ~module_ d)
+let impl_element_ahead ctx ~module_ d = peeking (fun () -> impl_decls ctx ~module_ d)
 
 let promoted_shared_from_this ctx ~module_ d =
   peeking @@ fun () ->

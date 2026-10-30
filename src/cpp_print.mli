@@ -206,11 +206,13 @@ type forward_declaration = {
   fwd_constrained : bool;
 }
 
-(** [forward_declarations ~module_ env d] is the forward declaration of each
-    struct and scoped enum [d], an element of the module [module_], defines
-    at namespace scope, in the order it defines them, written as an element
-    of [module_] and printed as the definition prints its head. *)
-val forward_declarations : module_:ModPath.t -> Common.env -> Cpp_erasure.settled -> forward_declaration list
+(** [forward_declarations ctx ~module_ env d] is the forward declaration of
+    each struct and scoped enum [d], an element of the module [module_]
+    written at the position [ctx], defines at namespace scope, in the order
+    it defines them, written as an element of [module_] and printed as the
+    definition prints its head. *)
+val forward_declarations :
+  Cpp_state.render_ctx -> module_:ModPath.t -> Common.env -> Cpp_erasure.settled -> forward_declaration list
 
 (** {2 Synthesised aliases} *)
 
@@ -232,16 +234,15 @@ type ctor_alias = private {
     written, read in the scope being written. *)
 type ctor_aliases_read
 
-(** What the finished declaration written in [file], at the position given
-    there, writes; the render of the declaration there reads it back from
-    the plan. *)
-val ctor_aliases_written : file:Common.file -> Cpp_state.render_ctx -> Cpp_erasure.settled -> ctor_aliases_read
+(** What the finished declaration written at the position given, in the
+    file it is in, writes; the render of the declaration there reads it back
+    from the plan. *)
+val ctor_aliases_written : Cpp_state.render_ctx -> Cpp_erasure.settled -> ctor_aliases_read
 
-(** What the fields of the record [r], of types [types], write in [file],
-    their type variables read as [vl]; the render of the fields there reads
-    it back from the plan ({!fields_needs}). *)
-val ctor_aliases_of_fields :
-  file:Common.file -> Cpp_state.render_ctx -> vl:Id.t list -> GlobRef.t -> cpp_type list -> ctor_aliases_read
+(** What the fields of the record [r], of types [types], written at the
+    position given, write, their type variables read as [vl]; the render of
+    the fields there reads it back from the plan ({!fields_needs}). *)
+val ctor_aliases_of_fields : Cpp_state.render_ctx -> vl:Id.t list -> GlobRef.t -> cpp_type list -> ctor_aliases_read
 
 (** [plan_ctor_aliases written] plans the templates each file writes,
     [written file] being what is read off what [file] writes, in the order
@@ -281,9 +282,9 @@ val constrained_structs : GlobRef.t list ref
     planned: a definition written out of line leaves them unqualified. *)
 val file_scope_type_names : CString.Set.t ref
 
-(** The type names a declaration written at namespace scope introduces
-    there, as they are written. *)
-val file_scope_types : Cpp_erasure.settled -> string list
+(** The type names a declaration written at namespace scope, at the
+    position given, introduces there, as they are written. *)
+val file_scope_types : Cpp_state.render_ctx -> Cpp_erasure.settled -> string list
 
 (** Under [CRANE_CHECK_IR], start recording the type names the file about
     to be written introduces at file scope. *)

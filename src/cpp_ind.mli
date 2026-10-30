@@ -129,11 +129,10 @@ val plan_header_scope : Names.ModPath.t -> header_scope -> unit
 (** The scope planned for the body of a module. *)
 val header_scope : Names.ModPath.t -> header_scope option
 
-(** [in_header_element_scope mp k] runs [k ~in_struct] in the render
-    context the header writes an element of the module [mp] in, as planned
-    ({!header_scope}): [in_struct] says whether that is inside the module's
-    struct. *)
-val in_header_element_scope : Names.ModPath.t -> (in_struct:bool -> 'a) -> 'a
+(** [spelling_position ~file spelling] is the position a declaration
+    spelled [spelling] is written at in [file], a function of the plan
+    alone. *)
+val spelling_position : file:Common.file -> Cpp_ast.spelling -> Cpp_state.render_ctx
 
 (** [with_planned_local_inductives mp k] runs [k] with the inductives the
     body of the module [mp] spells bare local, as planned
@@ -344,12 +343,14 @@ val header_decls : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Miniml.ml_
 
 (** What {!header_decls} gives for a declaration, read off what was generated
     ahead of the files without taking it: nothing is recorded or claimed,
-    and the helpers are those the header is planned to place there. *)
-val header_element_ahead : module_:Names.ModPath.t -> Miniml.ml_decl -> element
+    and the helpers are those the header is planned to place there.  Read
+    at the position given. *)
+val header_element_ahead : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Miniml.ml_decl -> element
 
 (** What the implementation writes for a declaration, read off what was
-    generated ahead of the files without taking it. *)
-val impl_element_ahead : module_:Names.ModPath.t -> Miniml.ml_decl -> element
+    generated ahead of the files without taking it, at the position
+    given. *)
+val impl_element_ahead : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Miniml.ml_decl -> element
 
 (** Whether the inductive [d] declares, promoted to its module's struct,
     makes that struct derive from [enable_shared_from_this], read off what

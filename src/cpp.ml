@@ -1802,11 +1802,10 @@ let generate_ahead s =
     something more: a nested module or module type, a concept, the fields of
     a merged record, a helper's definition.  A wrapper module's struct holds
     the declarations of its functions ({!pp_wrapper_module_dual}); any other
-    module's holds what each of its elements is written as there. *)
+    module's holds what each of its elements is written as there, read as
+    a member of its struct. *)
 let struct_members ~wrapper mp sel =
   let decls (rendered : Cpp_ind.rendered) = List.map snd rendered in
-  with_render_ctx (fun c -> {c with rc_in_struct = true; rc_in_template = false; rc_scope = None})
-  @@ fun () ->
   if wrapper then
     let generated =
       List.filter_map
@@ -1827,12 +1826,13 @@ let struct_members ~wrapper mp sel =
       || declared_classes sel <> []
     then None
     else
+      let at = Cpp_ind.spelling_position ~file:Intf (Member_of mp) in
       List.fold_left
         (fun acc (_, se) ->
           match (acc, se) with
           | None, _ | _, (SEmodule _ | SEmodtype _) -> None
           | Some members, SEdecl d -> (
-            match Cpp_ind.header_element_ahead ~module_:mp d with
+            match Cpp_ind.header_element_ahead at ~module_:mp d with
             | {rendered; helpers = []; _} -> Some (members @ decls rendered)
             | {helpers = _ :: _; _} -> None ) )
         (Some []) sel
@@ -1916,12 +1916,13 @@ let plan_file_layout s =
   (* The header writes every wrapper module's functions before any module's
      types ({!do_struct_with_decl_tracking}), and so defines the structs
      lifted out of them first. *)
-  let defines ~lifted mp env d =
+  let defines ~lifted at mp env d =
     let pass = if lifted then 0 else 1 in
     forward :=
-      ((pass, position mp), List.map (fun f -> (lifted, f)) (Cpp_print.forward_declarations ~module_:mp env d)) :: !forward;
-    types := List.fold_right CString.Set.add (writing_element_of mp (fun () -> Cpp_print.file_scope_types d)) !types
+      ((pass, position mp), List.map (fun f -> (lifted, f)) (Cpp_print.forward_declarations at ~module_:mp env d)) :: !forward;
+    types := List.fold_right CString.Set.add (Cpp_print.file_scope_types at d) !types
   in
+  let element_at mp = Cpp_ind.spelling_position ~file:Intf (Element_of mp) in
   let wrapper_lifted ~module_ se =
     match wrapper_element ~module_ se with
     | Wrapper_nothing -> []
@@ -1931,29 +1932,29 @@ let plan_file_layout s =
     | Wrapper_functions (_, generate) -> List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) (generate ())
   in
   let wrapper_functions mp se =
-    with_render_ctx at_file_scope @@ fun () ->
+    let at = element_at mp in
     List.iter
       (fun h ->
         plan_helper_hoist ~module_:mp h;
-        defines ~lifted:true mp (empty_env ()) (fst (lifted_views ~module_:mp h)) )
+        defines ~lifted:true at mp (empty_env ()) (fst (lifted_views ~module_:mp h)) )
       (wrapper_lifted ~module_:mp se)
   in
   let element mp d =
-    Cpp_ind.in_header_element_scope mp @@ fun ~in_struct ->
-      let e = Cpp_ind.header_element_ahead ~module_:mp d in
-      home mp d e.rendered;
-      if e.member_defs <> [] then add member_defs mp {Cpp_ind.source = mp; declarations = e.member_defs};
-      if not in_struct then begin
-        if e.rendered <> [] && List.for_all is_erased_alias e.rendered then add erased mp {Cpp_ind.source = mp; declarations = e.rendered};
-        List.iter (fun (env, d') -> defines ~lifted:false mp env d') e.rendered;
-        List.iter
-          (fun h ->
-            plan_helper_hoist ~module_:mp h;
-            let def, spec = lifted_views ~module_:mp h in
-            defines ~lifted:false mp (empty_env ()) def;
-            Option.iter (fun spec -> add specs mp {Cpp_ind.source = mp; declarations = [(empty_env (), spec)]}) spec )
-          e.helpers
-      end
+    let at = element_at mp in
+    let e = Cpp_ind.header_element_ahead at ~module_:mp d in
+    home mp d e.rendered;
+    if e.member_defs <> [] then add member_defs mp {Cpp_ind.source = mp; declarations = e.member_defs};
+    if not at.rc_in_struct then begin
+      if e.rendered <> [] && List.for_all is_erased_alias e.rendered then add erased mp {Cpp_ind.source = mp; declarations = e.rendered};
+      List.iter (fun (env, d') -> defines ~lifted:false at mp env d') e.rendered;
+      List.iter
+        (fun h ->
+          plan_helper_hoist ~module_:mp h;
+          let def, spec = lifted_views ~module_:mp h in
+          defines ~lifted:false at mp (empty_env ()) def;
+          Option.iter (fun spec -> add specs mp {Cpp_ind.source = mp; declarations = [(empty_env (), spec)]}) spec )
+        e.helpers
+    end
   in
   let in_writing_order band = List.map snd (List.stable_sort (fun (i, _) (j, _) -> Int.compare i j) (List.rev !band)) in
   Cpp_ind.peeking (fun () ->
@@ -2013,65 +2014,60 @@ let plan_file_layout s =
 let plan_ctor_aliases s =
   let written_in file =
     let found = ref [] in
-    let written ds = List.iter (fun d -> found := Cpp_print.ctor_aliases_written ~file (current_render_ctx ()) d :: !found) ds in
-    let helpers ~module_ hs =
-      written
+    let written at ds = List.iter (fun d -> found := Cpp_print.ctor_aliases_written at d :: !found) ds in
+    let helpers at ~module_ hs =
+      written at
         (List.concat_map
            (fun h -> match lifted_views ~module_ h with def, Some spec -> [def; spec] | def, None -> [def])
            hs )
     in
     let header = file = Common.Intf in
-    (* What an element of the module [mp] writes is read in the scope the
-       render writes it in, as an element of [mp]. *)
-    let in_element_scope mp k =
-      if header then Cpp_ind.in_header_element_scope mp (fun ~in_struct:_ -> writing_element_of mp k)
-      else with_render_ctx at_file_scope (fun () -> writing_element_of mp k)
-    in
+    (* What an element of the module [mp] writes is read at the position the
+       file writes it at, as an element of [mp]. *)
+    let element_at mp = Cpp_ind.spelling_position ~file (Element_of mp) in
     let element ~module_ d =
-      in_element_scope module_ (fun () ->
-          let e : Cpp_ind.element =
-            if header then Cpp_ind.header_element_ahead ~module_ d else Cpp_ind.impl_element_ahead ~module_ d
-          in
-          written (List.map snd e.rendered);
-          helpers ~module_ e.helpers;
-          written (List.map snd e.member_defs) )
+      let at = element_at module_ in
+      let e : Cpp_ind.element =
+        if header then Cpp_ind.header_element_ahead at ~module_ d else Cpp_ind.impl_element_ahead at ~module_ d
+      in
+      written at (List.map snd e.rendered);
+      helpers at ~module_ e.helpers;
+      written at (List.map snd e.member_defs)
     in
     let wrapper_element ~module_ se =
-      with_render_ctx at_file_scope @@ fun () ->
-      writing_element_of module_ @@ fun () ->
+      let at = element_at module_ in
       match wrapper_element ~module_ se with
       | Wrapper_nothing -> ()
       | Wrapper_instance (r, a, t) ->
         if header then
           let ds, hs = Cpp_ind.instance_entity ~module_ r a t in
-          helpers ~module_ (hs @ List.map snd ds)
+          helpers at ~module_ (hs @ List.map snd ds)
       | Wrapper_functions (_, generate) ->
         let gs = generate () in
         List.iter
-          (fun (specs, defs) -> written (List.map fst (if header then specs @ defs else defs)))
+          (fun (specs, defs) -> written at (List.map fst (if header then specs @ defs else defs)))
           (file_views ~is_header:header [gs]);
-        if header then helpers ~module_ (List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) gs)
+        if header then helpers at ~module_ (List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) gs)
     in
     let classes ~module_ cs =
       if header then
-        in_element_scope module_ @@ fun () ->
-        List.iter (fun (_, r, fields) -> written [Cpp_ind.finished_alone (Cpp_ind.concept ~module_ r fields)]) cs
+        let at = element_at module_ in
+        List.iter (fun (_, r, fields) -> written at [Cpp_ind.finished_alone (Cpp_ind.concept ~module_ r fields)]) cs
     in
     let after_module ~module_ (frame : Module_frame.t) _ =
       if header then begin
-        in_element_scope module_ @@ fun () ->
+        let at = element_at module_ in
         Option.iter
           (fun (r, fields, (packet : ml_ind_packet)) ->
             let vl = packet.ip_vars in
             found :=
-              Cpp_print.ctor_aliases_of_fields ~file (current_render_ctx ()) ~vl r (Cpp_ind.record_field_types ~module_ r vl fields)
-              :: !found )
+              Cpp_print.ctor_aliases_of_fields at ~vl r (Cpp_ind.record_field_types ~module_ r vl fields) :: !found )
           (merged_eponymous_record frame);
         Option.iter
           (fun (r, vars, candidates) ->
             let fields, hs = Cpp_ind.record_methods ~module_ r vars candidates in
-            if fields <> [] then written [Cpp_ind.finished_record_methods r vars fields];
-            written (List.map (fun h -> fst (lifted_views ~module_ ~may_hoist:false h)) hs) )
+            if fields <> [] then written at [Cpp_ind.finished_record_methods r vars fields];
+            written at (List.map (fun h -> fst (lifted_views ~module_ ~may_hoist:false h)) hs) )
           (eponymous_record_methods frame)
       end
     in

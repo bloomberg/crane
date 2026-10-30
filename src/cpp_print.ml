@@ -3047,13 +3047,11 @@ let ctor_aliases_found ctx visit =
       | _ -> () );
   !ctor_aliases_spelled
 
-let ctor_aliases_written ~file ctx (d : Cpp_erasure.settled) =
-  let ctx = {ctx with rc_file = file} in
+let ctor_aliases_written ctx (d : Cpp_erasure.settled) =
   { read_written = (module_written ctx, Written_declaration (d :> cpp_decl));
     read_aliases = ctor_aliases_found ctx (fun f -> Cpp_demands.tyctors_of_decl f (d :> cpp_decl)) }
 
-let ctor_aliases_of_fields ~file ctx ~vl r types =
-  let ctx = {ctx with rc_file = file} in
+let ctor_aliases_of_fields ctx ~vl r types =
   { read_written = (module_written ctx, Written_fields r);
     read_aliases = ctor_aliases_found ctx (fun f -> List.iter (Cpp_demands.tyctors_of_type f ~vl) types) }
 
@@ -3087,7 +3085,7 @@ let ctor_aliases_planned ctx (d : Cpp_erasure.settled) =
   | Some _ ->
     let file = ctx.rc_file in
     let aliases = planned_ctor_aliases ~file ~module_:(module_written ctx) d in
-    if Probe.checking () && (ctor_aliases_written ~file ctx d).read_aliases <> aliases then
+    if Probe.checking () && (ctor_aliases_written ctx d).read_aliases <> aliases then
       Probe.violation "constructor aliases"
         Pp.(str "a declaration of the " ++ str (Common.file_name file)
             ++ str " writes other templates than were planned for it");
@@ -3629,11 +3627,10 @@ let constrained ctx : Cpp_ast.defined -> bool = function
   | Defined_enum _ -> false
 
 (** The forward declarations of the structs and scoped enums [d], an element
-    of the module [module_], defines at namespace scope, in the order it
-    defines them: none inside a struct, where a member is not nameable before
-    its enclosing struct anyway. *)
-let forward_declarations ~module_ env (d : Cpp_erasure.settled) =
-  let ctx = current_render_ctx () in
+    of the module [module_], written at the position [ctx], defines at
+    namespace scope, in the order it defines them: none inside a struct,
+    where a member is not nameable before its enclosing struct anyway. *)
+let forward_declarations ctx ~module_ env (d : Cpp_erasure.settled) =
   if ctx.rc_in_struct then []
   else
     List.map
@@ -3649,12 +3646,12 @@ let pp_forward_declaration ctx env : Cpp_ast.defined -> _ = function
     struct_template_head ~pp_param:(pp_template_param_redecl ctx) ctx env tparams constraint_ ++ str "struct " ++ name ++ str ";"
   | Defined_enum r -> str "enum class " ++ enum_definition_name ctx r ++ str ";"
 
-(** The type names [d], written at namespace scope, introduces there, as the
-    printer writes them ({!note_file_scope_type}): its own, through a
-    template head and an anonymous namespace, and a struct's -- but not
-    those of what a wrapper struct holds, which are its members. *)
-let file_scope_types (d : Cpp_erasure.settled) =
-  let ctx = current_render_ctx () in
+(** The type names [d], written at namespace scope at the position [ctx],
+    introduces there, as the printer writes them ({!note_file_scope_type}):
+    its own, through a template head and an anonymous namespace, and a
+    struct's -- but not those of what a wrapper struct holds, which are its
+    members. *)
+let file_scope_types ctx (d : Cpp_erasure.settled) =
   let rec go (d : Cpp_erasure.settled) =
     (match decl_type_name (d :> cpp_decl) with Some name -> [name] | None -> [])
     @
@@ -4203,7 +4200,7 @@ let needs_of ~templates (settled : Cpp_erasure.settled) =
 let fields_needs ctx ~module_ ~vl r types =
   let file = ctx.rc_file in
   let aliases = planned_aliases ~file ~module_ (Written_fields r) in
-  if Probe.checking () && Option.has_some !ctor_alias_plan && (ctor_aliases_of_fields ~file ctx ~vl r types).read_aliases <> aliases
+  if Probe.checking () && Option.has_some !ctor_alias_plan && (ctor_aliases_of_fields ctx ~vl r types).read_aliases <> aliases
   then
     Probe.violation "constructor aliases"
       Pp.(str "the fields of a record in the " ++ str (Common.file_name file)
