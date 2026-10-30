@@ -803,9 +803,6 @@ let loopify_inner_lambdas ?(tail_only = false) ?parts ~tparams ?(outer_env = [])
 
 (** Apply nontail-recursion loopification, trying strategies in priority order:
     {ol
-      {- {b Branch dependency} — bail out if any return expression depends on a
-         destructured match binding that is also passed to a recursive call
-         (the frame-based rewriter can't handle this yet).}
       {- {b TMC} ({!transform_tmc}) — if the recursion plan lowers it "tail
          modulo cons" (each non-tail call the one call of a constructor
          chain), each return read as one of the plan's chains
@@ -838,18 +835,11 @@ type unlowered =
   | Declined of string
   | Left of string option
 
-(** Why a function whose recursive call decides a branch is not made a
-    machine. *)
-let branch_dependency = "recursive call in a branch condition or dispatch scrutinee"
-
 let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_by ?modulo_cons ?shapes ?loop
     ~varying ?binders ?parts check tparams params ret_ty body =
   let declined reason =
     {nt_body = body; nt_outcome = Lp_declined reason; nt_machine = false}
   in
-  if has_recursive_branch_dependency check body then
-    declined branch_dependency
-  else
   let frame () =
     let machine =
       checked_frame_machine loop check (fun entered ->
@@ -969,7 +959,7 @@ let modulo_cons_loop ~jumped ~varying ?parts ~shapes ~tparams check (f : dfun) p
   let adopted () =
     find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body
   in
-  if Option.has_some (adopted ()) || has_recursive_branch_dependency check body then None
+  if Option.has_some (adopted ()) then None
   else
     let loop =
       transform_tmc ~jumped ~varying ?parts ~shapes tparams check params f.df_ret (Cpp_temporaries.own_stmts body)
@@ -1004,8 +994,7 @@ let frame_machine ~loop ?entry ~varying ?parts ~tparams check (f : dfun) params 
   in
   let survived = Option.map decline_reason found in
   let declined = Error (Left survived) in
-  if has_recursive_branch_dependency check body then Error (Declined branch_dependency)
-  else if not as_planned then declined
+  if not as_planned then declined
   else
     let survivors = survivors f in
     match
@@ -1014,14 +1003,13 @@ let frame_machine ~loop ?entry ~varying ?parts ~tparams check (f : dfun) params 
             ~entered ~binders:f.df_binders ?parts check tparams params f.df_ret body )
     with
     | Some (made, _) when classify survivors made = No_recursion -> Ok (made, survived)
-    | Some (made, entries) when not (has_recursive_branch_dependency survivors body) ->
+    | Some (made, entries) ->
       (* A machine leaving a call behind is the machine of its ControlIR
          where the calls entering it are its loop's: those it leaves are
          ordinary recursive calls there, each running a machine of its own,
          and its frames are laid out for the calls it takes alone, as a
          method's are ({!transform_method_own}). *)
       if Option.is_empty (machine_disagreement loop entries) then Ok (made, survived) else declined
-    | Some _ -> Error (Declined branch_dependency)
     | None -> declined
 
 let record_unlowered ?(unlowered = Left None) (f : dfun) body =
