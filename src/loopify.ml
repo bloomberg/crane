@@ -235,12 +235,18 @@ and generic_inline_expr spec expr =
       Fun.id
       expr
 
+(** Why a loop with no ControlIR is not lowered. *)
+let no_control_ir = "the loop has no ControlIR"
+
 (** [check], narrowed to the calls the tail loop of [loop] jumps at, as its
     ControlIR has them ({!Lower_control.loop}): a call made of one of its
-    Continues.  [check] still reads the call's arguments and receiver. *)
+    Continues.  [check] still reads the call's arguments and receiver.  A
+    loop with no ControlIR is a violation, and the transform declines. *)
 let planned_jumps loop check =
   match Option.bind loop Lower_control.loop with
-  | None -> check
+  | None ->
+    Probe.violation "control IR" (Pp.str no_control_ir);
+    raise (Not_linearisable no_control_ir)
   | Some t ->
     let continues = Control_ir.continues t in
     fun e ->
