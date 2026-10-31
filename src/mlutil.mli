@@ -511,6 +511,11 @@ val ast_map_types : (ml_type -> ml_type) -> ml_ast -> ml_ast
     recovery does, then leaves [e] itself as it was for the next pass. *)
 val freshen_metas : ml_ast -> ml_ast
 
+(** [a] with the holes of its global uses renamed apart from every other, the
+    same new hole wherever [a] shares one: a copy is new uses, which leave
+    open what their originals did independently of them. *)
+val freshen_holes : ml_ast -> ml_ast
+
 (** [has_unknown t] — whether [t] mentions [Tunknown], the marker extraction
     leaves where a type was erased. *)
 val has_unknown : ml_type -> bool
