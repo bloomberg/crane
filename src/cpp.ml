@@ -2379,13 +2379,45 @@ let plan_visibility s =
   in
   List.rev (List.fold_left top [] s)
 
+(** What the module body written under [mp] declares and binds, found by
+    following [mp] through [s] label by label, not by the walk over the
+    structure that plans visibilities: a file module, and a child a name
+    collision flattens into its parent's wrapper, declare nothing; any other
+    body declares the members of its struct ({!member_names_of_sel}) and
+    binds the parameters of the functor it is the body of, outermost first.
+    [None] where no body is written under [mp]. *)
+let declared_at s mp =
+  let rec body params = function
+    | MEfunctor (mbid, _, me) -> body (params @ [MPbound mbid]) me
+    | MEstruct (body_mp, sel) -> Some (params, body_mp, sel)
+    | MEident _ | MEapply _ -> None
+  in
+  let rec struct_at mp =
+    match List.find_opt (fun (mp', _) -> ModPath.equal mp mp') s with
+    | Some (_, sel) -> Some ([], mp, sel)
+    | None -> (
+      match mp with
+      | MPdot (parent, l) -> (
+        match struct_at parent with
+        | Some (_, _, sel) -> (
+          match List.assoc_opt l sel with Some (SEmodule {ml_mod_expr; _}) -> body [] ml_mod_expr | _ -> None )
+        | None -> None )
+      | MPfile _ | MPbound _ -> None )
+  in
+  match struct_at mp with
+  | Some (params, body_mp, sel) when ModPath.equal body_mp mp ->
+    if is_modfile mp || Module_plan.wrapper_role mp = Some Module_plan.Flattened then Some ([], Id.Set.empty)
+    else Some (params, member_names_of_sel sel)
+  | Some _ | None -> None
+
 (** Under [CRANE_CHECK_IR], the visibility planned for each module body of
     [s] ({!plan_visibility}) must see, innermost first, the modules its path
-    is nested in and then the unit's files.  The answer is read off the
-    paths alone, not off the walk over the structure that planned it, and
-    every name printed is resolved at a planned visibility: the resolver and
-    the check of a printed name read the same one, so neither can tell it
-    was planned wrong. *)
+    is nested in, each declaring and binding what its body does
+    ({!declared_at}), and then the unit's files, declaring nothing.  The
+    answer is read off the paths alone, not off the walk over the structure
+    that planned it, and every name printed is resolved at a planned
+    visibility: the resolver and the check of a printed name read the same
+    one, so neither can tell it was planned wrong. *)
 let check_planned_visibility s planned =
   if Probe.checking () then
     let files = List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s in
@@ -2395,13 +2427,19 @@ let check_planned_visibility s planned =
     in
     List.iter
       (fun (mp, vis) ->
-        let expected = enclosing mp @ List.rev files in
-        if not (List.equal ModPath.equal (visible_mps vis) expected) then
+        let nested = List.filter_map (fun m -> Option.map (fun d -> (m, d)) (declared_at s m)) (enclosing mp) in
+        let expected =
+          List.fold_right
+            (fun (m, (params, members)) v -> inside ~members m params v)
+            nested (toplevel_visibility files)
+        in
+        if List.length nested <> List.length (enclosing mp) || not (equal_visibility vis expected) then
           Probe.violation "planned visibilities"
             Pp.(
               str "the body of the module " ++ str (ModPath.to_string mp) ++ str " is planned in "
               ++ pp_visibility vis ++ str ", where its path is nested in "
-              ++ prlist_with_sep (fun () -> str " < ") (fun mp -> str (ModPath.to_string mp)) expected ) )
+              ++ prlist_with_sep (fun () -> str " < ") (fun mp -> str (ModPath.to_string mp)) (enclosing mp)
+              ++ str ", each declaring and binding what its body does" ) )
       planned
 
 (** [plan_bodies ~start ~enter s] is what the render carries into each
