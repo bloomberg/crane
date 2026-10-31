@@ -3141,8 +3141,7 @@ let gen_ind_header_v2
                         ~skip:(fun g ->
                           GlobRef.CanOrd.equal g name
                           || Table.same_mutual_block g name
-                          || List.exists (GlobRef.CanOrd.equal g)
-                               (get_local_inductives ()))
+                          || spells_bare g)
                         ~src_ty:src_fty ~dst_ty:dst_fty
                         src_expr)
                     field_info

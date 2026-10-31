@@ -155,6 +155,11 @@ type translation_ctx = {
      container types (e.g. List<tree>) get shared_ptr wrapping, matching
      the struct definition. Empty outside method bodies. *)
   method_self_ns : Ref.User.Set.t;
+  (* The inductives the body of the module being generated spells bare, as
+     planned ({!Scope_plan.local_inductives}): set where generation enters
+     that module ({!generating_in}).  [None] outside every such entry, where
+     the printer's install answers instead ({!spells_bare}). *)
+  local_inductives : GlobRef.t list option;
   (** The C++ type of {e every} binder in scope, by de Bruijn index, paired
       with what decided it.
 
@@ -211,6 +216,7 @@ let tctx =
         cs_counter = 0;
         reuse_token = None;
         method_self_ns = Ref.User.Set.empty;
+        local_inductives = None;
         cpp_binder_types = IntMap.empty;
     }
 
@@ -311,6 +317,44 @@ let with_method_self_ns (ns : Ref.User.Set.t) (f : unit -> 'a) : 'a =
     (fun c -> c.method_self_ns)
     (fun ns -> tctx := { !tctx with method_self_ns = ns })
     ns f
+
+(** [generating_in mp f] runs [f] generating an element of the body of the
+    module [mp], whose planned local inductives it spells bare
+    ({!translation_ctx.local_inductives}). *)
+let generating_in (mp : ModPath.t) (f : unit -> 'a) : 'a =
+  match Scope_plan.local_inductives mp with
+  | Some local ->
+    with_field
+      (fun c -> c.local_inductives)
+      (fun l -> tctx := { !tctx with local_inductives = l })
+      (Some local) f
+  | None ->
+    CErrors.anomaly
+      Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned local inductives.")
+
+(** The inductives spelled bare where generation is: the planned ones of the
+    module it entered ({!generating_in}), or else those the printer installed.
+    Where both are known they must be the same set: the install is what a
+    planned entry replaces. *)
+let local_inductives_in_scope () =
+  match (!tctx).local_inductives with
+  | None -> !local_inductives
+  | Some planned ->
+    let covers a b = List.for_all (fun r -> List.exists (GlobRef.CanOrd.equal r) b) a in
+    if Probe.checking () && not (covers planned !local_inductives && covers !local_inductives planned) then
+      Probe.violation "planned local inductives"
+        Pp.(str "generation spells bare other inductives than the printer installed");
+    planned
+
+(** Whether generation spells the inductive [r] bare, unqualified by its
+    namespace ({!local_inductives_in_scope}). *)
+let spells_bare r = List.exists (GlobRef.CanOrd.equal r) (local_inductives_in_scope ())
+
+(** The type of the inductive [r] at [args] as generation spells it: bare
+    where it is local, qualified by its namespace elsewhere. *)
+let inductive_type r args es =
+  let t = Tglob (r, args, es) in
+  if spells_bare r then t else Tnamespace (r, t)
 
 (** [with_lifted_fixpoint occurrence f] runs [f] generating the members of
     the local fixpoint at [occurrence] as lifted helpers
