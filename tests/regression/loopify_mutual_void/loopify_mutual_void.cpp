@@ -15,12 +15,11 @@ void LoopifyMutualVoid::even_void(uint64_t n) {
       return;
     } else {
       uint64_t m = _loop_n - 1;
-      uint64_t _inl_n = m;
-      if (_inl_n <= 0) {
+      if (m <= 0) {
         return;
       } else {
-        uint64_t _inl_m = _inl_n - 1;
-        _loop_n = _inl_m;
+        uint64_t m0 = m - 1;
+        _loop_n = m0;
       }
     }
   }
@@ -34,12 +33,11 @@ void LoopifyMutualVoid::odd_void(uint64_t n) {
       return;
     } else {
       uint64_t m = _loop_n - 1;
-      uint64_t _inl_n = m;
-      if (_inl_n <= 0) {
+      if (m <= 0) {
         return;
       } else {
-        uint64_t _inl_m = _inl_n - 1;
-        _loop_n = _inl_m;
+        uint64_t m0 = m - 1;
+        _loop_n = m0;
       }
     }
   }

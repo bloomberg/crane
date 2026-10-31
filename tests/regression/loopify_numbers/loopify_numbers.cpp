@@ -949,19 +949,17 @@ bool LoopifyNumbers::is_even_fuel(uint64_t fuel, uint64_t n) {
       if (_loop_n == UINT64_C(0)) {
         return true;
       } else {
-        uint64_t _inl_n =
+        uint64_t n0 =
             (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
-        uint64_t _inl_fuel = f;
-        if (_inl_fuel <= 0) {
+        if (f <= 0) {
           return false;
         } else {
-          uint64_t _inl_f = _inl_fuel - 1;
-          if (_inl_n == UINT64_C(0)) {
+          uint64_t f0 = f - 1;
+          if (n0 == UINT64_C(0)) {
             return false;
           } else {
-            _loop_n = ((
-                (_inl_n - UINT64_C(1)) > _inl_n ? 0 : (_inl_n - UINT64_C(1))));
-            _loop_fuel = _inl_f;
+            _loop_n = (((n0 - UINT64_C(1)) > n0 ? 0 : (n0 - UINT64_C(1))));
+            _loop_fuel = f0;
           }
         }
       }
@@ -980,19 +978,17 @@ bool LoopifyNumbers::is_odd_fuel(uint64_t fuel, uint64_t n) {
       if (_loop_n == UINT64_C(0)) {
         return false;
       } else {
-        uint64_t _inl_n =
+        uint64_t n0 =
             (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
-        uint64_t _inl_fuel = f;
-        if (_inl_fuel <= 0) {
+        if (f <= 0) {
           return true;
         } else {
-          uint64_t _inl_f = _inl_fuel - 1;
-          if (_inl_n == UINT64_C(0)) {
+          uint64_t f0 = f - 1;
+          if (n0 == UINT64_C(0)) {
             return true;
           } else {
-            _loop_n = ((
-                (_inl_n - UINT64_C(1)) > _inl_n ? 0 : (_inl_n - UINT64_C(1))));
-            _loop_fuel = _inl_f;
+            _loop_n = (((n0 - UINT64_C(1)) > n0 ? 0 : (n0 - UINT64_C(1))));
+            _loop_fuel = f0;
           }
         }
       }

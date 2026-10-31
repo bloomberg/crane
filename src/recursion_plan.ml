@@ -1048,8 +1048,6 @@ let inlinings_of ~effects ~defs ~members self fd =
   in
   match flow_of self fd with Some body -> plan (spliced_into self) [] body | None -> []
 
-let splicing () = Sys.getenv_opt "CRANE_SPLICE_PARTNERS" <> None
-
 (* Why the partners of [r] are left to Loopify to inline. *)
 let unspliced why r =
   Probe.hit "SPLICE_declined" (fun () -> why ^ " " ^ Table.kername_of_global r);
