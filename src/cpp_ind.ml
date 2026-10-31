@@ -39,7 +39,7 @@ type rendered = (Common.env * Cpp_erasure.settled) list
 
 
 (** Print the declarations an entry point answered with. *)
-let pp_decls (ds : rendered) = Cpp_ast.concat Pp.fnl (List.map (fun (env, d) -> Cpp_print.write_decl env d) ds)
+let pp_decls ctx (ds : rendered) = Cpp_ast.concat Pp.fnl (List.map (fun (env, d) -> Cpp_print.write_decl ctx env d) ds)
 
 (** The struct a module's declarations are written inside of, when the module is
     written as a struct at all.
@@ -814,7 +814,13 @@ let header_placed : GlobRef.t list ref = State.cell State.Unit []
     [CRANE_CHECK_IR]; emptied as each render begins ({!start_render}). *)
 let header_took : GlobRef.t list ref = State.cell State.Unit []
 
-let start_render () = header_took := []
+(** The file the render begun last writes ({!start_render}): the header's
+    claims are checked as it takes its elements. *)
+let rendering : Common.file option ref = State.cell State.Unit None
+
+let start_render ~file =
+  header_took := [];
+  rendering := Some file
 
 (** [newly_placed placed d] is whether [d] is a helper no element counted in
     [placed] places, counting it placed by this one. *)
@@ -846,7 +852,7 @@ let planned_claim key =
 let header_claim key lifted =
   match Node_table.find_opt header_claims (Obj.repr key) with
   | Some planned ->
-    if Probe.checking () && file_being_written () = Intf then begin
+    if Probe.checking () && !rendering = Some Common.Intf then begin
       let claimed = List.filter (newly_placed header_took) lifted in
       if not (List.equal ( == ) planned claimed) then
         Probe.violation "header claims"
@@ -1245,10 +1251,8 @@ let spelling_position ~file spelling =
      around it. *)
   | _, Template_in declared -> Cpp_print.ctor_alias_render_ctx (file_start file) declared
 
-(* [k] of the position of [spelling] in [file], threaded: under
-   [CRANE_CHECK_IR] nothing beneath may read the installed position
-   ({!Cpp_state.entering_scope}). *)
-let at_spelling ~file spelling k = entering_scope (fun () -> k (spelling_position ~file spelling))
+(* [k] of the position of [spelling] in [file]. *)
+let at_spelling ~file spelling k = k (spelling_position ~file spelling)
 
 let resolver_at ~file spelling frame key =
   Common.without_noting_written_files (fun () ->

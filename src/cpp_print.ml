@@ -4322,8 +4322,8 @@ let printed_decl ctx env settled =
 
 (** [settled], printed where it is made, with what placing the declarations
     it needs reads ({!needs_of}). *)
-let write_decl env settled =
-  let text, needs = printed_decl (current_render_ctx ()) env settled in
+let write_decl ctx env settled =
+  let text, needs = printed_decl ctx env settled in
   Cpp_ast.decl ~needs text
 
 (** [settled], which {!absorbs}, written where it is made ({!absorbing_at}),
@@ -4477,4 +4477,4 @@ let cut2 = Cpp_ast.cut2
 
 (* The type printer's entry for a type written outside every declaration of
    the tree: where the printer is. *)
-let pp_cpp_type ?lead par vl t = pp_cpp_type ?lead (current_render_ctx ()) par vl t
+let pp_cpp_type ?lead par vl t = pp_cpp_type ?lead (file_start Common.Intf) par vl t

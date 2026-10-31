@@ -26,8 +26,9 @@ type generated = (Common.env * Minicpp.cpp_decl) list
     one MiniML declaration became). *)
 type rendered = (Common.env * Cpp_erasure.settled) list
 
-(** Print the declarations an entry point answered with. *)
-val pp_decls : rendered -> Cpp_ast.t
+(** Print the declarations an entry point answered with, at the position
+    given. *)
+val pp_decls : Cpp_state.render_ctx -> rendered -> Cpp_ast.t
 
 (** What a type class instance becomes: the struct carrying its methods, and,
     for a ground instance, the [static_assert] checking it against the class's
@@ -66,9 +67,10 @@ val generated_once :
     it for both files. *)
 val generating_ahead : (unit -> 'a) -> 'a
 
-(** Begin a render of a file: under [CRANE_CHECK_IR] the header claims the
-    helpers it places afresh, to check them against the planned claims. *)
-val start_render : unit -> unit
+(** Begin a render of the file [file]: under [CRANE_CHECK_IR] the header
+    claims the helpers it places afresh, to check them against the planned
+    claims. *)
+val start_render : file:Common.file -> unit
 
 (** A declaration to finish ({!Finished_program.job}). *)
 type finishing = Finished_program.job

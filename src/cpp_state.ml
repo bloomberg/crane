@@ -456,18 +456,9 @@ let sig_preamble _ comment used_modules _usf =
 
 (** {2 The pretty-printer for C++ syntax} *)
 
-(* ============================================================================
-   Render context — mutable state tracking the rendering position. These refs
-   are saved/restored around sub-renders using with_render_ctx.
-   ============================================================================ *)
-
-(** Consolidated render context state: where in the output the printer
-    currently is.
-
-    The record is immutable and the mutability lives in the one {!render_ctx}
-    ref, so saving and restoring a context around a sub-render is total --
-    [let saved = !render_ctx in ... ; render_ctx := saved] cannot forget a
-    field, whatever fields are added later. *)
+(** Where in the output something is written or planned: a value, handed
+    to whatever writes there and derived as each scope is entered.  No
+    position is installed anywhere for a reader to find. *)
 type render_ctx = {
   (* The file being written. *)
   rc_file : Common.file;
@@ -511,25 +502,6 @@ let file_start rc_file =
     rc_names = None;
     rc_visibility = None;
   }
-
-(** Global render context state: the file being written, installed by the
-    file driver and the single-declaration path, read where they start.
-    Planning is handed its positions and reads none. *)
-let render_ctx = owned_ref (file_start Common.Intf)
-
-(* How many scopes printing has entered since a position was installed:
-   printing threads the position through them, so the installed one is not
-   where the printer is inside any. *)
-let entered_since_installed = owned_ref 0
-
-let not_threaded what =
-  if Probe.checking () && !entered_since_installed > 0 then
-    Probe.violation "threaded positions"
-      Pp.(str "the installed position is " ++ str what ++ str " inside a scope printing entered, which threads it")
-
-let current_render_ctx () =
-  not_threaded "read";
-  !render_ctx
 
 (** The functor bodies whose module types are file-scope concepts over the
     functor's parameters as well as [M]: the body's path, the functor's
@@ -591,34 +563,6 @@ let concept_held_back ctx c =
   && match ctx.rc_module with Some mp -> is_held_back_in (planned_held_back ~file:ctx.rc_file mp) c | None -> false
 
 let class_concept_held_back ctx r = concept_held_back ctx (HCclass r)
-
-(** [with_render_ctx upd f] renders [f] in the context [upd] derives from the
-    current one, and puts the enclosing context back on the way out however [f]
-    leaves -- returning or raising.
-
-    Every context change goes through this, so that no caller writes the
-    save/set/restore by hand: an omitted restore does not fail, it silently
-    renders the rest of the file as though it were still inside the struct that
-    has just closed. *)
-let with_render_ctx (upd : render_ctx -> render_ctx) (f : unit -> 'a) : 'a =
-  not_threaded "derived from";
-  let saved = !render_ctx and entered = !entered_since_installed in
-  render_ctx := upd saved;
-  entered_since_installed := 0;
-  Fun.protect
-    ~finally:(fun () ->
-      render_ctx := saved;
-      entered_since_installed := entered )
-    f
-
-let entering_scope f =
-  let entered = !entered_since_installed in
-  entered_since_installed := entered + 1;
-  Fun.protect ~finally:(fun () -> entered_since_installed := entered) f
-
-let writing_file file f = with_render_ctx (fun c -> {c with rc_file = file}) f
-
-let file_being_written () = !render_ctx.rc_file
 
 let element_position mp c = {c with rc_module = Some mp; rc_visibility = Scope_plan.visibility mp}
 
@@ -688,10 +632,10 @@ let eponymous_record :
 
 (** {2 Scoped render state}
 
-    The render context proper lives in one record behind {!render_ctx}, so
-    {!with_render_ctx} restores it in full.  The state below could not join it
-    -- it is read in a dozen modules under the names it already has -- so it
-    stays in its own refs and is bracketed instead of inlined. *)
+    The position is a value handed to what writes there ({!render_ctx}).
+    The state below could not join it -- it is read in a dozen modules
+    under the names it already has -- so it stays in its own refs and is
+    bracketed instead. *)
 
 (** A mutable cell a scope saves and restores, with its contents' type hidden
     so that cells of different types can be listed together. *)
@@ -718,8 +662,8 @@ let with_saved cells f =
     being rendered and of nothing outside it, so a nested render must not
     inherit it and the enclosing one must get it back.
 
-    {!render_ctx} is not here -- entering a module changes it rather than
-    merely shadowing it, which is {!with_render_ctx}'s job. *)
+    The position is not here: entering a module hands on another
+    ({!Cpp_names.next}). *)
 let module_frame_cells =
   [
     Saver eponymous_type_ref;

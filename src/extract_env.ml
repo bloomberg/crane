@@ -1611,18 +1611,15 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   in
   let intf_first = Sys.getenv_opt "CRANE_RENDER_ORDER" = Some "intf-first" in
   (* Every function is generated before either render, reading the plans
-     emission reads, and each pass is handed the position it plans for:
-     under [CRANE_CHECK_IR] nothing beneath reads or installs one
-     ({!Cpp_state.entering_scope}), so no file is being written. *)
+     emission reads, and each pass is handed the position it plans for. *)
   end_planning ();
-  Cpp_state.entering_scope (fun () ->
-      Pipeline_trace.event "emit" "generate_ahead";
-      Cpp.generate_ahead struc;
-      Common.plan_written_files (Cpp.files_named_ahead struc);
-      Pipeline_trace.event "emit" "plan_file_layout";
-      Cpp.plan_file_layout struc;
-      Pipeline_trace.event "emit" "plan_ctor_aliases";
-      Cpp.plan_ctor_aliases struc );
+  Pipeline_trace.event "emit" "generate_ahead";
+  Cpp.generate_ahead struc;
+  Common.plan_written_files (Cpp.files_named_ahead struc);
+  Pipeline_trace.event "emit" "plan_file_layout";
+  Cpp.plan_file_layout struc;
+  Pipeline_trace.event "emit" "plan_ctor_aliases";
+  Cpp.plan_ctor_aliases struc;
   let generated_checkpoint = checkpoint () in
   let body_impl, body_hstruct =
     if intf_first then
@@ -2506,8 +2503,6 @@ let print_one_decl struc mp decl =
   elaborate_unit struc;
   end_planning ();
   let ans =
-    Cpp_state.writing_file Impl @@ fun () ->
-    Cpp_state.with_render_ctx (fun c -> {c with Cpp_state.rc_visibility = Some (toplevel_visibility [mp])}) @@ fun () ->
     Cpp.generate_decl_ahead ~module_:mp decl;
     d.pp_decl ~module_:mp decl
   in

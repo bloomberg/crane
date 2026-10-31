@@ -718,8 +718,7 @@ let next (entered : Cpp_resolution.entered) (c : render_ctx) =
   {c with rc_frame = entered :: c.rc_frame}
 
 let enter_from c (entered : Cpp_resolution.entered) k =
-  let c' = next entered c in
-  entering_scope (fun () -> k c')
+  k (next entered c)
 
 let rec entering_from c l k = match l with [] -> k c | entered :: rest -> enter_from c entered (fun c' -> entering_from c' rest k)
 

@@ -144,8 +144,8 @@ val file_name : file -> string
 (** What a pass is for.  {!Plan} decides, before anything is rendered: the
     names of what a unit declares and refers to, its layout, its callables.
     {!Emit} generates the unit's declarations ahead of the files, from those
-    decisions, and renders each file, which one the printer's context says
-    ({!Cpp_state.writing_file}).  Beyond its text it may only demand -- the
+    decisions, and renders each file, which one the printer's position says
+    ({!Cpp_state.render_ctx}).  Beyond its text it may only demand -- the
     headers its body includes -- and generate the helpers it lifts out of
     the bodies it translates, which are named as they are lifted;
     {!names_decided_while_emitting} is how that is checked. *)

@@ -13,9 +13,10 @@ open Minicpp
 
 (** {2 Rendering} *)
 
-(** [write_decl env decl] is a settled declaration a file writes, with what
-    placing the declarations it needs reads ({!Cpp_ast.Needs}). *)
-val write_decl : Common.env -> Cpp_erasure.settled -> Cpp_ast.t
+(** [write_decl ctx env decl] is a settled declaration written at the
+    position [ctx], with what placing the declarations it needs reads
+    ({!Cpp_ast.Needs}). *)
+val write_decl : Cpp_state.render_ctx -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
 
 (** [absorbs ~homed d]: whether [d] writes a wrapper struct holding a
     wrapper module's declarations, which are members of it: one [homed]
@@ -142,8 +143,8 @@ val pp_cpp_field :
     the position [ctx]. *)
 val pp_type : Cpp_state.render_ctx -> cpp_type -> Pp.t
 
-(** [pp_cpp_type par vl t] renders a type where the printer is, for a type
-    written outside every declaration of the tree; [par] asks for
+(** [pp_cpp_type par vl t] renders a type at the start of the header, where
+    nothing may be named, for a diagnostic of a type that names nothing; [par] asks for
     parentheses where precedence needs them, [vl] names the type variables
     by index.  [~lead:false] drops the leading [typename] of a dependent name
     about to be embedded in a longer one. *)

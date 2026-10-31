@@ -124,9 +124,10 @@ val sig_preamble : 'a -> string option -> Names.ModPath.t list -> 'b -> Pp.t
 
 (** {2 Render context} *)
 
-(** Where in the output the pretty-printer currently is. Immutable: the
-    mutability lives in one installed position ({!current_render_ctx}), so that save/restore around a
-    sub-render cannot forget a field. *)
+(** Where in the output something is written or planned: a value, handed
+    to whatever writes there and derived as each scope is entered
+    ({!Cpp_names.next}).  No position is installed anywhere for a reader to
+    find. *)
 type render_ctx = {
   rc_file : Common.file;  (** The file being written. *)
   rc_in_struct : bool;
@@ -159,13 +160,6 @@ type render_ctx = {
 (** The context at the start of the file [file]: file scope, outside every
     struct. *)
 val file_start : Common.file -> render_ctx
-
-(** The position installed, reset by [reset_cpp_state]: where a file, or a
-    declaration printed on its own, starts, which reads it.  Printing and
-    planning thread their positions through the scopes they enter
-    ({!entering_scope}), so under [CRANE_CHECK_IR] a read inside one is a
-    violation. *)
-val current_render_ctx : unit -> render_ctx
 
 
 (** A concept a frame is holding back until after the struct it was written
@@ -227,27 +221,6 @@ val concept_held_back : render_ctx -> held_concept -> bool
     constrain is left a plain [typename], which the deferred assertion still
     checks for every instance. *)
 val class_concept_held_back : render_ctx -> Names.GlobRef.t -> bool
-
-(** [with_render_ctx upd f] renders [f] in the context [upd] derives from the
-    current one, restoring the enclosing context on the way out however [f]
-    leaves -- returning or raising. The only supported way to change the
-    context.  Deriving it inside a scope printing entered is a violation, as
-    reading it is ({!current_render_ctx}). *)
-val with_render_ctx : (render_ctx -> render_ctx) -> (unit -> 'a) -> 'a
-
-(** [entering_scope f] runs [f] inside a scope printing entered, which
-    installs no position: printing hands the position to what it prints
-    there.  A declaration's spelling is one, entered wherever the
-    declaration is resolved or printed. *)
-val entering_scope : (unit -> 'a) -> 'a
-
-(** [writing_file file f] renders [f] as part of the file [file]. *)
-val writing_file : Common.file -> (unit -> 'a) -> 'a
-
-(** The file {!writing_file} is writing, which nothing written inside it
-    changes: unlike the rest of the installed position, a fact about the
-    whole pass, which a check may ask wherever it is. *)
-val file_being_written : unit -> Common.file
 
 (** [element_position mp c] is the position [c] writing an element of the
     module [mp]: in the visibility planned for its body. *)

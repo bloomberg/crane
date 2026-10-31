@@ -3069,12 +3069,10 @@ let gathered l = (List.map fst l, moved_together (List.map snd l))
             implementation), including lifted declarations and deferred
             out-of-line function definitions. *)
 let do_struct_with_decl_tracking ~is_header f s =
-  writing_file (if is_header then Common.Intf else Common.Impl) @@ fun () ->
   (* The file is written from its start, threaded through everything the
-     driver writes: under [CRANE_CHECK_IR] nothing beneath reads the
-     installed position. *)
-  let top = current_render_ctx () in
-  entering_scope @@ fun () ->
+     driver writes. *)
+  let file = if is_header then Common.Intf else Common.Impl in
+  let top = file_start file in
   (* A synthesised alias is emitted in front of the top-level element that
      writes it, rather than collected into the file's prologue.
 
@@ -3179,7 +3177,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   in
   Cpp_print.start_ctor_alias_census ();
   Cpp_print.start_file_scope_census ();
-  Cpp_ind.start_render ();
+  Cpp_ind.start_render ~file;
   init_std_names ();
   (* [ppl] writes each module's elements in the visibility planned for it
      ({!element_position}); what follows only assembles what was written
@@ -3511,5 +3509,10 @@ let cpp_descr =
     pp_hstruct;
     sig_suffix = Some ".h";
     sig_preamble;
-    pp_decl = (fun ~module_ d -> Cpp_ast.to_pp (pp_decls (impl_decls (current_render_ctx ()) ~module_ d).rendered));
+    (* A declaration printed on its own is written at the start of an
+       implementation, where its module is the only one visible. *)
+    pp_decl =
+      (fun ~module_ d ->
+        let ctx = {(file_start Common.Impl) with rc_visibility = Some (toplevel_visibility [module_])} in
+        Cpp_ast.to_pp (pp_decls ctx (impl_decls ctx ~module_ d).rendered) );
   }

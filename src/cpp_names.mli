@@ -254,8 +254,7 @@ val name_from :
 val next : Cpp_resolution.entered -> Cpp_state.render_ctx -> Cpp_state.render_ctx
 
 (** [enter_from c entered k] is [k] of the position after entering the
-    scope [entered] from [c] ({!next}), what is visible there included.  It
-    installs nothing ({!Cpp_state.entering_scope}): [k] is handed it. *)
+    scope [entered] from [c] ({!next}), what is visible there included. *)
 val enter_from : Cpp_state.render_ctx -> Cpp_resolution.entered -> (Cpp_state.render_ctx -> 'a) -> 'a
 
 (** [entering_from c l k] is [k] of the position after entering each scope

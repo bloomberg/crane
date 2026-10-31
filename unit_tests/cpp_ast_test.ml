@@ -371,7 +371,7 @@ let () =
     "u"
 
 (* Entering a scope is a function from one position to the next, which
-   enter_from hands on, installing nothing. *)
+   enter_from hands on. *)
 let () =
   let start = Cpp_state.file_start Common.Intf in
   let s = Cpp_names.next Cpp_resolution.In_struct start in
@@ -390,9 +390,5 @@ let () =
     (Option.equal Common.equal_visibility planned.rc_visibility (Some (Common.inside m [] visible)));
   let f = Cpp_names.next (Function {owner = ref_of "f"; defines = true}) s in
   check "a function defined in a struct's body is defined there, in no out-of-line scope" (f.rc_scope = None);
-  let outside = Cpp_state.current_render_ctx () in
-  let entered, installed =
-    Cpp_names.entering_from start [In_struct; In_template] (fun c -> (c, Cpp_state.current_render_ctx ()))
-  in
-  check "entering scopes one after another is entering each in turn" (entered = t);
-  check "entering a scope installs nothing" (installed == outside)
+  check "entering scopes one after another is entering each in turn"
+    (Cpp_names.entering_from start [In_struct; In_template] Fun.id = t)
