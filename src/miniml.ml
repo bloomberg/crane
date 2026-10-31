@@ -14,12 +14,24 @@
 
 open Names
 
-(* A [unit ref] compares and hashes by its contents, which every occurrence
-   shares, and is told apart from another only physically. *)
+(* A ref compares and hashes by its contents, which every occurrence shares,
+   and is told apart from another only physically.  The contents are [0]
+   except while [shared] counts visits in them, which is what lets it find a
+   repeated occurrence in one pass, with no hash to go by. *)
 module Occurrence = struct
-  type t = unit ref
-  let fresh () = ref ()
+  type t = int ref
+  let fresh () = ref 0
   let equal = ( == )
+
+  let shared iter =
+    let found = ref [] in
+    let visit o =
+      match !o with
+      | 0 -> o := 1
+      | 1 -> o := 2; found := o :: !found
+      | _ -> ()
+    in
+    Fun.protect ~finally:(fun () -> iter (fun o -> o := 0)) (fun () -> iter visit; List.rev !found)
 end
 
 (* An open annotation is told apart from another by its cell, as the
@@ -329,6 +341,7 @@ let fresh_rel i = MLrel (i, Occurrence.fresh ())
 module Global_use = struct
   let callee g = g.callee
   let occurrence g = g.occurrence
+  let refresh g = {g with occurrence = Occurrence.fresh ()}
   let monomorphic callee = {callee; instance = Monomorphic; occurrence = Occurrence.fresh ()}
 
   let polymorphic callee inst =

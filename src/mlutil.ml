@@ -593,11 +593,9 @@ end
 
 (** {2 Frozen instantiations} *)
 
-let last_hole = ref 0
-
-let fresh_hole () =
-  incr last_hole;
-  Thole !last_hole
+(* From the one supply {!Global_use.infer_all} mints from too: two holes in
+   one instantiation are filled by number. *)
+let fresh_hole () = Thole (Scheme.Hole.fresh ())
 
 let freeze_types tys =
   let holes = Hashtbl.create 4 in
@@ -2578,9 +2576,21 @@ let normalize a =
     two closure types, and C++ has no common type to give the conditional --
     even though each branch, applied, is an ordinary call.  {!simpl_app}
     already knows where an application belongs; this is the entry point for
-    the callers that build one late. *)
+    the callers that build one late.
+
+    Placed in each branch of a match, a read among [args] is copied, and it
+    is copied after {!Fresh_reads} made every read one of its own: each copy
+    is given an occurrence of its own here. *)
 let apply_eta_args f args =
-  match args with [] -> f | _ -> simpl_app (optims ()) args f
+  match args with
+  | [] -> f
+  | _ ->
+    let reads = List.filter_map (function MLrel (_, o) -> Some o | _ -> None) args in
+    let rec own = function
+      | MLrel (i, o) when List.exists (Occurrence.equal o) reads -> fresh_rel i
+      | e -> ast_map own e
+    in
+    own (simpl_app (optims ()) args f)
 
 (** {1 Special treatment of fixpoint for pretty-printing purpose} *)
 

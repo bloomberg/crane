@@ -1,17 +1,21 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Every read of a local is a read of its own.  See [fresh_reads.mli]. *)
+(** Every term is an occurrence of its own.  See [fresh_reads.mli]. *)
 
 open Miniml
 
-let rec expr = function
+let rec term e =
+  match Mlutil.ast_map term e with
   | MLrel (i, _) -> fresh_rel i
-  | e -> Mlutil.ast_map expr e
+  | MLletin (x, ty, a, b, _) -> MLletin (x, ty, a, b, Occurrence.fresh ())
+  | MLfix (i, ids, bodies, cofix, _) -> MLfix (i, ids, bodies, cofix, Occurrence.fresh ())
+  | MLglob use -> MLglob (Global_use.refresh use)
+  | e -> e
 
 let decl = function
-  | Dterm (r, b, ty) -> Dterm (r, expr b, ty)
-  | Dfix fds -> Dfix (List.map (fun fd -> {fd with fd_body = expr fd.fd_body}) fds)
+  | Dterm (r, b, ty) -> Dterm (r, term b, ty)
+  | Dfix fds -> Dfix (List.map (fun fd -> {fd with fd_body = term fd.fd_body}) fds)
   | d -> d
 
 let structure = Modutil.map_struct_decls decl

@@ -33,9 +33,11 @@ val extracted : Miniml.ml_structure -> extracted program
 val optimize : (Miniml.ml_structure -> Miniml.ml_structure) -> extracted program -> optimized program
 
 (** [freeze p] is [p], checked: every recursive group is nonempty and its
-    selected member exists, no reference is declared twice, and every
+    selected member exists, no reference is declared twice, every
     polymorphic use is instantiated at its callee's own scheme with no
-    metavariable in its instantiation.  Its annotations hold no metavariable
+    metavariable in its instantiation, and no two terms -- reads, lets,
+    local fixpoints, global uses -- are one {!Miniml.Occurrence.t}, which
+    every consumer reads as one place in one definition.  Its annotations hold no metavariable
     either: each is replaced by its solution, or by an open annotation where
     extraction left it unsolved, and from here until the extraction ends none
     is made or solved.  Under [CRANE_TRACE_PIPELINE] it reports how many open
@@ -52,7 +54,8 @@ val freeze : optimized program -> frozen program
     the call does not say is given an open annotation.  Under
     [CRANE_CHECK_IR] the result is a fixed point of [pass] -- normalizing it
     again rewrites no top-level element -- which is what says that no such
-    call was left unbound. *)
+    call was left unbound, and no two of its terms are one occurrence, as
+    {!freeze} checks. *)
 val normalize : (Miniml.ml_structure -> Miniml.ml_structure) -> frozen program -> normalized program
 
 (** The structure, for the consumers not converted to the phase types. *)

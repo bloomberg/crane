@@ -48,6 +48,11 @@ module Occurrence : sig
   val fresh : unit -> t
 
   val equal : t -> t -> bool
+
+  (** [shared iter]: the occurrences [iter] visits more than once, each
+      listed once, in the order of its second visit.  [iter] is run twice,
+      and must visit the same occurrences each time. *)
+  val shared : ((t -> unit) -> unit) -> t list
 end
 
 (** Which open annotation a {!Topen} is.  Every annotation that shared one
@@ -510,6 +515,9 @@ module Global_use : sig
   val written_evidence : global_use -> (Scheme.Var.t * ml_type) list
 
   val occurrence : global_use -> Occurrence.t
+
+  (** The use, as a new occurrence: for a copy that is new terms. *)
+  val refresh : global_use -> global_use
 
   (** Maps every type of the instantiation, keeping the scheme, the slots'
       evidence, the holes and the occurrence. *)

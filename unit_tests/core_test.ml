@@ -33,6 +33,13 @@ let () =
   check "a local group selecting a missing member is refused"
     (refused [term "h" (MLfix (2, [|(Id.of_string "go", nat)|], [|lam|], false, Occurrence.fresh ())) nat]);
   check "a declaration made twice is refused" (refused (fine @ fine));
+  let read = fresh_rel 1 in
+  let f = MLglob (Global_use.monomorphic (r "f")) in
+  check "two reads of their own freeze"
+    (not (refused [term "d" (MLlam (Dummy, nat, MLapp (f, [fresh_rel 1; fresh_rel 1]))) (Tarr (nat, nat))]));
+  check "one read at two terms is refused"
+    (refused [term "e" (MLlam (Dummy, nat, MLapp (f, [read; read]))) (Tarr (nat, nat))]);
+  check "one use in two definitions is refused" (refused [term "a" f nat; term "b" f nat]);
   let use_at scheme ty =
     MLglob
       (Global_use.polymorphic (r "g")

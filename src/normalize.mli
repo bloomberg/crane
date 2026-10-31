@@ -29,5 +29,7 @@ val eta_expand : Miniml.ml_structure -> Miniml.ml_structure
 val let_lambdas : Miniml.ml_structure -> Miniml.ml_structure
 
 (** [structure s] normalizes every loopified fixpoint group in [s], a frozen
-    program ({!Core.normalize}). *)
+    program ({!Core.normalize}), once each partner a loopified function is
+    to have inlined is spliced into it, where
+    {!Recursion_plan.splicing} says to ({!Recursion_plan.splice_partners}). *)
 val structure : Miniml.ml_structure -> Miniml.ml_structure
