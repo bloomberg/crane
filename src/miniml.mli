@@ -48,6 +48,11 @@ module Occurrence : sig
   val fresh : unit -> t
 
   val equal : t -> t -> bool
+
+  (** [shared iter]: the occurrences [iter] visits more than once, each
+      listed once, in the order of its second visit.  [iter] is run twice,
+      and must visit the same occurrences each time. *)
+  val shared : ((t -> unit) -> unit) -> t list
 end
 
 (** Which open annotation a {!Topen} is.  Every annotation that shared one

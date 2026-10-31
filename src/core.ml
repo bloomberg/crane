@@ -197,6 +197,47 @@ let check_instantiations p =
     (fun _ -> ())
     p.structure
 
+(** [f r what o] for every occurrence [o] the body of the definition [r]
+    holds, [what] saying whose: a read's, a let's, a fixpoint's or a global
+    use's. *)
+let iter_occurrences f p =
+  Modutil.struct_iter
+    (function
+      | (Dterm _ | Dfix _) as d ->
+        List.iter
+          (fun fd ->
+            let rec walk e =
+              ( match e with
+              | MLrel (_, o) -> f fd.fd_ref "read" o
+              | MLletin (_, _, _, _, o) -> f fd.fd_ref "let" o
+              | MLfix (_, _, _, _, o) -> f fd.fd_ref "local fixpoint" o
+              | MLglob use -> f fd.fd_ref "use" (Global_use.occurrence use)
+              | _ -> () );
+              Mlutil.ast_iter walk e
+            in
+            walk fd.fd_body )
+          (Mlutil.term_defs d)
+      | Dind _ | Dtype _ -> () )
+    (fun _ -> ())
+    (fun _ -> ())
+    p.structure
+
+(** No two terms of the program are one occurrence: every consumer keyed on
+    occurrences -- the recursion plan's calls, ControlIR's turns, the
+    ownership plan's reads, the C++ call a Core call makes -- reads each as
+    one place in one definition. *)
+let check_occurrences phase p =
+  match Occurrence.shared (fun visit -> iter_occurrences (fun _ _ o -> visit o) p) with
+  | [] -> ()
+  | o :: _ ->
+    let holders = ref [] in
+    iter_occurrences
+      (fun r what o' ->
+        if Occurrence.equal o o' then
+          holders := (what ^ " in " ^ Table.kername_of_global r) :: !holders )
+      p;
+    failure phase ("holds one occurrence at several terms: " ^ String.concat ", " (List.rev !holders))
+
 let freeze p =
   let p = zonk p in
   Meta.freeze ();
@@ -204,7 +245,8 @@ let freeze p =
     check_recursive_groups p;
     check_declared_once p;
     check_instantiations p;
-    check_zonked p
+    check_zonked p;
+    check_occurrences "frozen" p
   end;
   if Pipeline_trace.enabled () then
     Pipeline_trace.event "freeze" (Printf.sprintf "open annotations: %d" (open_annotations p));
@@ -221,6 +263,7 @@ let not_normal pass struc =
 let normalize pass p =
   let structure = pass p.structure in
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
+    check_occurrences "normalized" {structure};
     match not_normal pass structure with
     | [] -> ()
     | l :: _ ->
