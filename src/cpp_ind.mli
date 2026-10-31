@@ -114,7 +114,8 @@ val funs_entities :
 val generate_ahead : module_:Names.ModPath.t -> Miniml.ml_decl -> ahead
 
 (** How the header writes a module's body: inside a struct or not, and with
-    the module's class concepts already declared ahead of its struct or not.
+    the module's class concepts already declared ahead of its struct or not,
+    which is all generating a declaration asks of where it is written.
     Planned for every module ahead of the files ({!plan_header_scope}) and
     checked against the header's render context as it enters the module. *)
 type header_scope = {

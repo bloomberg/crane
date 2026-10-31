@@ -121,6 +121,19 @@ type header_generation = {
 
 let header_decls decls = {decls; member_defs = []; promoted_sft = None}
 
+(** How the header writes a module's body: inside a struct or not, and with
+    the module's class concepts already declared ahead of its struct or not,
+    which is all generating a declaration asks of where it is written
+    ({!Cpp.walk_as_rendered} works both out from the module's frame).
+    Planned for every module ahead of the files, by the module. *)
+type header_scope = {
+  in_struct : bool;
+  concepts_hoisted : bool;
+}
+
+(* The header scope the position [ctx] is in. *)
+let scope_at (ctx : render_ctx) = {in_struct = ctx.rc_in_struct; concepts_hoisted = ctx.rc_concepts_hoisted}
+
 (** Render inductive type header (.h file).
     TypeClasses become C++ concepts, Records become structs,
     other inductives become variant-like structs with constructors.
@@ -152,14 +165,14 @@ let header_decls decls = {decls; member_defs = []; promoted_sft = None}
     [template <typename A> struct tree { ... }] is a C++ error
     ("redefinition as different kind of symbol").
 
-    Written at the position [ctx]. *)
-let ind_header_decls ctx kn ind =
+    Written in the header scope [scope]. *)
+let ind_header_decls scope kn ind =
   let names = Array.mapi (fun i p -> GlobRef.IndRef (kn, i)) ind.ind_packets in
   (* Written at namespace scope: outside every struct, or moved out of the
      collision struct holding it ahead of the concepts
      ({!Cpp.plan_concept_prerequisites}), which is planned. *)
   let at_namespace_scope =
-    (not ctx.rc_in_struct) || Array.for_all Module_plan.is_namespace_scope_ref names
+    (not scope.in_struct) || Array.for_all Module_plan.is_namespace_scope_ref names
   in
   let cnames =
     Array.mapi
@@ -172,7 +185,7 @@ let ind_header_decls ctx kn ind =
     (* Type classes become C++ concepts *)
     (* Skip if concepts have been hoisted or we're inside a struct *)
     header_decls
-      ( if ctx.rc_in_struct || ctx.rc_concepts_hoisted then []
+      ( if scope.in_struct || scope.concepts_hoisted then []
         else [(empty_env (), gen_typeclass_cpp names.(0) fields)] )
   | Record fields ->
     (* Check if this is an eponymous record being merged into module struct *)
@@ -364,7 +377,7 @@ let ind_header_decls ctx kn ind =
               when globref_equal ind_ref epon_ref ->
               !method_candidates
             | _
-              when (not ctx.rc_in_struct) && not is_inside_submodule_decl
+              when (not scope.in_struct) && not is_inside_submodule_decl
               ->
               (* For top-level inductives only, find methods from sibling
                  declarations *)
@@ -863,12 +876,13 @@ let generated_once ~module_ ?(on_reuse = ignore) ?(on_peek = ignore) ?planned no
     ~peek:(fun funs -> on_peek funs; funs)
     gen
 
-(** [generate d] is what the MiniML declaration [d] generates, for whichever
-    file is being written: functions translated once, with their file
+(** [generate scope ~module_ d] is what the MiniML declaration [d], an
+    element of [module_] written in the header scope [scope], generates, for
+    whichever file is being written: functions translated once, with their file
     recorded, or declarations only the header writes.  Inline customs,
     projections merged into a struct, and functions emitted as methods
     generate nothing. *)
-let generate ctx ~module_ d =
+let generate scope ~module_ d =
   (* A method candidate is a registered method
      ({!Method_registry.planned_candidate}). *)
   let skipped r =
@@ -887,10 +901,10 @@ let generate ctx ~module_ d =
   match d with
   | (Dtype (r, _, _) | Dterm (r, _, _)) when is_any_inline_custom r -> Nothing
   | Dterm (r, _, _) when skipped r -> Nothing
-  | Dind (kn, ind) -> Header_only (fun () -> ind_header_decls ctx kn ind)
+  | Dind (kn, ind) -> Header_only (fun () -> ind_header_decls scope kn ind)
   (* A singleton class is a concept, declared where concepts are. *)
   | Dtype (r, _, _) when Table.singleton_class_method r <> None ->
-    if ctx.rc_in_struct || ctx.rc_concepts_hoisted then Nothing
+    if scope.in_struct || scope.concepts_hoisted then Nothing
     else
       Header_only
         (fun () ->
@@ -1013,7 +1027,7 @@ let finalized (funs : Gen_decls.generated_fun list) =
 (** The views of [funs] a file writes, finished: a definition in the file
     that holds it, and in the header a declaration of a definition the
     implementation file holds. *)
-let function_views ~is_header ~lifted_inline ctx funs =
+let function_views ~is_header ~lifted_inline scope funs =
   let paired = finalized funs in
   (* Functions of one group the header defines may call one another, and at
      namespace scope a call is looked up where it is written: a struct sees
@@ -1026,7 +1040,7 @@ let function_views ~is_header ~lifted_inline ctx funs =
   in
   let forward =
     is_header
-    && (not ctx.rc_in_struct)
+    && (not scope.in_struct)
     && List.length (List.filter (fun (g, _) -> in_header g) paired) > 1
   in
   let declarations =
@@ -1147,18 +1161,7 @@ let instance_entity ~module_ r a t =
     ~peek:(fun ((ds, _) as v) -> (ds, planned_claim v))
     (fun () -> Translation.collecting_lifted (fun () -> instance_decls r a t))
 
-(** {2 The header's scope of a module}
-
-    How the header writes a module's body: inside a struct or not, and with
-    the module's class concepts already declared ahead of its struct or not
-    ({!Cpp.walk_as_rendered} works both out from the module's frame).  Planned
-    for every module ahead of the files, by the module, and checked against
-    the header's render context as it enters the module. *)
-
-type header_scope = {
-  in_struct : bool;
-  concepts_hoisted : bool;
-}
+(** {2 The header's scope of a module} *)
 
 let header_scopes : header_scope MPmap.t ref = State.cell State.Unit MPmap.empty
 
@@ -1414,7 +1417,7 @@ let finished_header = finished_group ~what:"a header declaration"
 (** What [d] generates, at the position the header writes an element of
     [module_] at, as planned ({!header_scope}): what an inductive or an
     alias generates, the header alone writes. *)
-let generate_in_scope ~module_ d k = k (generate (header_element_position module_) ~module_ d)
+let generate_in_scope ~module_ d k = k (generate (planned_header_scope module_) ~module_ d)
 
 type ahead = {
   entities : Generated_program.entity list;
@@ -1459,7 +1462,8 @@ let regenerate_ahead ~module_ d =
   | Functions _ | Nothing -> ()
 
 let decls_for ~is_header ctx ~module_ d =
-  match generate ctx ~module_ d with
+  let scope = scope_at ctx in
+  match generate scope ~module_ d with
   | Functions {funs; lifted} ->
     if !mode <> Peeking then record_funs ~fallback:(decl_entity d) funs;
     let lifted_inline, helpers =
@@ -1468,7 +1472,7 @@ let decls_for ~is_header ctx ~module_ d =
       | By_element helpers -> (false, helpers)
       | Unwritten -> (false, [])
     in
-    { rendered = function_views ~is_header ~lifted_inline ctx funs; helpers; member_defs = [] }
+    { rendered = function_views ~is_header ~lifted_inline scope funs; helpers; member_defs = [] }
   | Header_only gen when is_header ->
     let g, helpers = header_entity ~module_ d gen in
     { rendered = finished_header g.decls; helpers; member_defs = finished_header g.member_defs }
@@ -1491,6 +1495,6 @@ let impl_element_ahead ctx ~module_ d = peeking (fun () -> impl_decls ctx ~modul
 
 let promoted_shared_from_this ctx ~module_ d =
   peeking @@ fun () ->
-  match generate ctx ~module_ d with
+  match generate (scope_at ctx) ~module_ d with
   | Header_only gen -> (fst (header_entity ~module_ d gen)).promoted_sft = Some true
   | Functions _ | Instance _ | Nothing -> false
