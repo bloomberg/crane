@@ -194,6 +194,27 @@ val inlinings_in : t -> Names.GlobRef.t -> inlining list
     function on no cycle with another inlines none. *)
 val inlinings : Names.GlobRef.t -> inlining list
 
+(** Whether partners are spliced into Core ({!splice_partners}):
+    [CRANE_SPLICE_PARTNERS]. *)
+val splicing : unit -> bool
+
+(** [splice_partners ~loopified s]: [s], a structure about to be
+    normalized, with the partners Loopify would inline into each function
+    [loopified] says it loopifies ({!inlinings}) spliced into the Core body
+    instead, where every one of them it continues in: each call continuing
+    in a partner's body replaced by that body, its parameters bound to the
+    call's arguments ({!Core_copy.call}), a copy that is new terms; the
+    next partner's calls are then read off the body so spliced, as
+    {!inlinings} reads them through the partners it continues in.  A
+    function some partner of which runs in place of a call, or whose
+    partner's body would need instantiating -- a call solving one of its
+    variables, a partner of more or fewer variables or another monad, or one
+    suspended whole -- is left as it is, its partners to Loopify.  The
+    partners spliced into a function are recorded for the extraction:
+    {!inlinings} starts after them, and splicing again leaves the function
+    as it is, so normalizing the result again rewrites nothing. *)
+val splice_partners : loopified:(Names.GlobRef.t -> bool) -> Miniml.ml_structure -> Miniml.ml_structure
+
 (** Whether some function inlines [r] into it ({!inlinings}). *)
 val inlined : Names.GlobRef.t -> bool
 

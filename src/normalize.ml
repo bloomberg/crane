@@ -344,4 +344,9 @@ let methods_of struc = Method_registry.create ~ret_is_erased:Translation.return_
    off it first ({!Core_effects.analyze}): a bind is sequencing only where
    the declaration it is written in erases its monad. *)
 let structure struc =
+  let struc =
+    if Recursion_plan.splicing () then
+      Recursion_plan.splice_partners ~loopified:(loopified ~methods:(methods_of struc)) struc
+    else struc
+  in
   Modutil.map_struct_decls (decl ~effects:(Core_effects.analyze struc) ~methods:(methods_of struc)) struc
