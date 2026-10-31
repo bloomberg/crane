@@ -329,6 +329,7 @@ let fresh_rel i = MLrel (i, Occurrence.fresh ())
 module Global_use = struct
   let callee g = g.callee
   let occurrence g = g.occurrence
+  let refresh g = {g with occurrence = Occurrence.fresh ()}
   let monomorphic callee = {callee; instance = Monomorphic; occurrence = Occurrence.fresh ()}
 
   let polymorphic callee inst =

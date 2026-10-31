@@ -511,6 +511,9 @@ module Global_use : sig
 
   val occurrence : global_use -> Occurrence.t
 
+  (** The use, as a new occurrence: for a copy that is new terms. *)
+  val refresh : global_use -> global_use
+
   (** Maps every type of the instantiation, keeping the scheme, the slots'
       evidence, the holes and the occurrence. *)
   val map_types : (ml_type -> ml_type) -> global_use -> global_use

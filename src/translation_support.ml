@@ -2588,8 +2588,9 @@ type let_lambda =
       (** A polymorphic alias -- [let alias := @id], abstracting over erased
           type parameters alone -- used at several instances.  It has no C++
           value to bind, only a template no call could deduce, so each use
-          calls what it abbreviates: this is [b] with [a] put in place of [x]
-          and the applications reduced, [alias nat 9] becoming [id 9]. *)
+          calls what it abbreviates: this is [b] with a copy of [a] of its
+          own ({!Fresh_reads.term}) put in place of each read of [x] and the
+          applications reduced, [alias nat 9] becoming [id 9]. *)
   | Lifted  (** Lifted out to a function template of its own. *)
 
 (** The decision {!let_lambda} names, made from the Core term alone: it is
@@ -2617,7 +2618,7 @@ let let_lambda ~lex ~n_outer t a b =
           | MLapp ((MLlam _ as f), args) -> beta_red_app args f
           | t -> ast_map beta_normalize t
         in
-        Inlined (beta_normalize (ast_subst a b))
+        Inlined (beta_normalize (ast_subst_each (fun () -> Fresh_reads.term a) b))
 
 (** Check if a GlobRef returns a typeclass type (possibly through Tarr layers).
 *)
