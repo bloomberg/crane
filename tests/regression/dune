@@ -13671,3 +13671,14 @@
   (alias runtest)
   (deps loopify_equations_with_clause.t.exe)
   (action (run ./loopify_equations_with_clause.t.exe))))
+
+(subdir shadowed_prim_int
+ (rule
+  (targets shadowed_prim_int.t.exe)
+  (deps ShadowedPrimInt.vo shadowed_prim_int.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} shadowed_prim_int.t.exe shadowed_prim_int.cpp shadowed_prim_int.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps shadowed_prim_int.t.exe)
+  (action (run ./shadowed_prim_int.t.exe))))

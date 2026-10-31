@@ -1915,16 +1915,15 @@ and pp_cpp_expr ctx env args t =
   | CPPparray (elems, _) ->
     str "{" ++ pp_list (pp_cpp_expr ctx env args) (Array.to_list elems) ++ str "}"
   | CPPuint x ->
+    (* Spelled through the mapping of the primitive type, found by what it is
+       registered as: its short name may be a user's own [int] where the
+       extraction runs. *)
     let s = Uint63.to_string x in
-    ( match
-        try Some (Nametab.locate (Libnames.qualid_of_string "int"))
-        with Not_found -> None
-      with
-    | Some gr -> (
-      match Table.used_inline_custom_text gr with
-      | Some "int64_t" -> str ("INT64_C(" ^ s ^ ")")
-      | Some cpp_type -> str (cpp_type ^ "(" ^ s ^ ")")
-      | None -> str s )
+    let int63 = "num.int63.type" in
+    let mapped = if Rocqlib.has_ref int63 then Table.used_inline_custom_text (Rocqlib.lib_ref int63) else None in
+    ( match mapped with
+    | Some "int64_t" -> str ("INT64_C(" ^ s ^ ")")
+    | Some cpp_type -> str (cpp_type ^ "(" ^ s ^ ")")
     | None -> str s )
   | CPPfloat f -> str (spell_double (Float64.to_float f))
   | CPPconcept_app (concept, subject, tys) ->

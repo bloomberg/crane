@@ -266,7 +266,7 @@ template <typename K, typename V> struct CHT {
   }
   template <typename T1, typename T2, typename F0, typename F1>
   static CHT<T1, T2> new_hash(F0 &&eqb, F1 &&hash, int64_t requested) {
-    int64_t n = bsl::max<int64_t>(requested, 1);
+    int64_t n = bsl::max<int64_t>(requested, INT64_C(1));
     bsl::vector<stm::TVar<List<bsl::pair<T1, T2>>>> bs =
         CHT<int, int>::template mk_buckets<T1, T2>(n);
     bool empt = bs.empty();
@@ -277,9 +277,9 @@ template <typename K, typename V> struct CHT {
       });
       bsl::vector<stm::TVar<List<bsl::pair<T1, T2>>>> v = {};
       v.push_back(fb);
-      return CHT<T1, T2>{eqb, hash, bsl::move(v), 1, bsl::move(fb)};
+      return CHT<T1, T2>{eqb, hash, bsl::move(v), INT64_C(1), bsl::move(fb)};
     } else {
-      stm::TVar<List<bsl::pair<T1, T2>>> b = bs.at(0);
+      stm::TVar<List<bsl::pair<T1, T2>>> b = bs.at(INT64_C(0));
       return CHT<T1, T2>{eqb, hash, bsl::move(bs), n, bsl::move(b)};
     }
   }
