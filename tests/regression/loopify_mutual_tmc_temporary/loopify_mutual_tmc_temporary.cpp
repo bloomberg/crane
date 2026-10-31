@@ -19,16 +19,17 @@ LoopifyMutualTmcTemporary::ea(const LoopifyMutualTmcTemporary::num
     const LoopifyMutualTmcTemporary::num *n;
   };
 
-  /// CraneEnter_inl: captures varying parameters for each recursive call.
-  struct CraneEnter_inl {
-    LoopifyMutualTmcTemporary::num _inl_x;
-    LoopifyMutualTmcTemporary::num _inl_n;
+  /// CraneEnter_eb_entry: captures varying parameters for each recursive call.
+  struct CraneEnter_eb_entry {
+    LoopifyMutualTmcTemporary::num x;
+    LoopifyMutualTmcTemporary::num n0;
   };
 
   /// CraneCont_Su: resumes after recursive call, then processes rest.
   struct CraneCont_Su {};
 
-  using CraneFrame = std::variant<CraneEnter, CraneEnter_inl, CraneCont_Su>;
+  using CraneFrame =
+      std::variant<CraneEnter, CraneEnter_eb_entry, CraneCont_Su>;
   LoopifyMutualTmcTemporary::num _result{};
   crane::small_vector<CraneFrame> _stack;
   _stack.emplace_back(CraneEnter{&n});
@@ -46,32 +47,32 @@ LoopifyMutualTmcTemporary::ea(const LoopifyMutualTmcTemporary::num
         const auto &[n0] =
             std::get<typename LoopifyMutualTmcTemporary::num::Su>(n.v());
         _stack.emplace_back(CraneCont_Su{});
-        _stack.emplace_back(CraneEnter_inl{
+        _stack.emplace_back(CraneEnter_eb_entry{
             [&]() {
-              auto &&_sv0 = *n0;
+              auto &&_sv1 = *n0;
               if (std::holds_alternative<
-                      typename LoopifyMutualTmcTemporary::num::Z>(_sv0.v())) {
+                      typename LoopifyMutualTmcTemporary::num::Z>(_sv1.v())) {
                 return num::z();
               } else {
                 const auto &[n1] =
                     std::get<typename LoopifyMutualTmcTemporary::num::Su>(
-                        _sv0.v());
+                        _sv1.v());
                 return *n1;
               }
             }(),
             *n0});
       }
-    } else if (std::holds_alternative<CraneEnter_inl>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter_inl>(_frame));
-      LoopifyMutualTmcTemporary::num _inl_x = std::move(_f._inl_x);
-      const LoopifyMutualTmcTemporary::num &_inl_n = std::move(_f._inl_n);
+    } else if (std::holds_alternative<CraneEnter_eb_entry>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter_eb_entry>(_frame));
+      LoopifyMutualTmcTemporary::num x = std::move(_f.x);
+      const LoopifyMutualTmcTemporary::num &n0 = std::move(_f.n0);
       if (std::holds_alternative<typename LoopifyMutualTmcTemporary::num::Z>(
-              _inl_n.v())) {
-        _result = std::move(_inl_x);
+              n0.v())) {
+        _result = std::move(x);
       } else {
-        const auto &[_inl_n0] =
-            std::get<typename LoopifyMutualTmcTemporary::num::Su>(_inl_n.v());
-        _stack.emplace_back(CraneEnter{crane_raw(_inl_n0)});
+        const auto &[n1] =
+            std::get<typename LoopifyMutualTmcTemporary::num::Su>(n0.v());
+        _stack.emplace_back(CraneEnter{crane_raw(n1)});
       }
     } else {
       auto _f = std::move(std::get<CraneCont_Su>(_frame));
@@ -99,17 +100,17 @@ LoopifyMutualTmcTemporary::eb(const LoopifyMutualTmcTemporary::num &n,
     } else {
       const auto &[n0] =
           std::get<typename LoopifyMutualTmcTemporary::num::Su>(_loop_n->v());
-      const LoopifyMutualTmcTemporary::num &_inl_n = *n0;
+      auto &&_sv0 = *n0;
       if (std::holds_alternative<typename LoopifyMutualTmcTemporary::num::Z>(
-              _inl_n.v())) {
+              _sv0.v())) {
         auto _value = num::z();
         (_write ? *(*_write = std::make_shared<LoopifyMutualTmcTemporary::num>(
                         std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[_inl_n0] =
-            std::get<typename LoopifyMutualTmcTemporary::num::Su>(_inl_n.v());
+        const auto &[n1] =
+            std::get<typename LoopifyMutualTmcTemporary::num::Su>(_sv0.v());
         auto _cell = typename LoopifyMutualTmcTemporary::num::Su(nullptr);
         LoopifyMutualTmcTemporary::num &_node =
             (_write
@@ -120,17 +121,17 @@ LoopifyMutualTmcTemporary::eb(const LoopifyMutualTmcTemporary::num &n,
                       _node.v_mut())
                       .n;
         _loop_x = [&]() {
-          auto &&_sv = *_inl_n0;
+          auto &&_sv1 = *n1;
           if (std::holds_alternative<
-                  typename LoopifyMutualTmcTemporary::num::Z>(_sv.v())) {
+                  typename LoopifyMutualTmcTemporary::num::Z>(_sv1.v())) {
             return num::z();
           } else {
-            const auto &[_inl_n1] =
-                std::get<typename LoopifyMutualTmcTemporary::num::Su>(_sv.v());
-            return *_inl_n1;
+            const auto &[n2] =
+                std::get<typename LoopifyMutualTmcTemporary::num::Su>(_sv1.v());
+            return *n2;
           }
         }();
-        _loop_n = crane_raw(_inl_n0);
+        _loop_n = crane_raw(n1);
         continue;
       }
     }

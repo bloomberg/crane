@@ -194,24 +194,45 @@ val inlinings_in : t -> Names.GlobRef.t -> inlining list
     function on no cycle with another inlines none. *)
 val inlinings : Names.GlobRef.t -> inlining list
 
-(** [splice_partners ~loopified s]: [s], a structure about to be
+(** [splice_partners ~loopified ~adopts s]: [s], a structure about to be
     normalized, with the partners Loopify would inline into each function
     [loopified] says it loopifies ({!inlinings}) spliced into the Core body
-    instead, where every one of them it continues in: each call continuing
-    in a partner's body replaced by that body, its parameters bound to the
-    call's arguments ({!Core_copy.call}), a copy that is new terms; the
-    next partner's calls are then read off the body so spliced, as
-    {!inlinings} reads them through the partners it continues in.  A
-    function some partner of which runs in place of a call, or whose
-    partner's body would need instantiating -- a call solving one of its
-    variables, a partner of more or fewer variables or another monad, or one
-    suspended whole -- is left as it is, its partners to Loopify, and so is
-    every function of its recursive group: a function left to Loopify reads
-    its partners' bodies as written.  The partners spliced into a function
-    are recorded for the extraction:
-    {!inlinings} starts after them, and splicing again leaves the function
-    as it is, so normalizing the result again rewrites nothing. *)
-val splice_partners : loopified:(Names.GlobRef.t -> bool) -> Miniml.ml_structure -> Miniml.ml_structure
+    instead, a copy that is new terms.  Each call continuing in a partner's
+    body is replaced by that body, its parameters bound to the call's
+    arguments ({!Core_copy.call}); the next partner's calls are then read
+    off the body so spliced, as {!inlinings} reads them through the
+    partners it continues in.  A partner every call of which runs in place
+    of a call is entered instead, where [adopts] says the function makes a
+    machine that adopts a partner, the partner yields what the function does
+    and its body, run there, calls the function back: a copy of it is bound
+    in front of the body, a local fixpoint whose calls of the partner are
+    its own, and each call is a call of the copy ({!entered_copy}).  A
+    function some partner of which is neither, or whose partner's body
+    would need instantiating -- a call solving one of its variables, a
+    partner of more or fewer variables or another monad, or one suspended
+    whole -- is left as it is, its partners to Loopify, and so is every
+    function of its recursive group: a function left to Loopify reads its
+    partners' bodies as written.  The partners spliced into a function are
+    recorded for the extraction: {!inlinings} starts after them, and
+    splicing again leaves the function as it is, so normalizing the result
+    again rewrites nothing. *)
+val splice_partners :
+  loopified:(Names.GlobRef.t -> bool) -> adopts:(Names.GlobRef.t -> bool) -> Miniml.ml_structure -> Miniml.ml_structure
+
+(** The occurrence of the local fixpoint the machine of the function [r]
+    enters, a copy of a partner spliced into its body ({!splice_partners}),
+    if one was. *)
+val entered_copy : Names.GlobRef.t -> Miniml.Occurrence.t option
+
+(** Whether the local fixpoint at the occurrence [o] is a partner's copy
+    some machine enters ({!entered_copy}): it stands for the partner, a
+    function of the group. *)
+val is_entered_copy : Miniml.Occurrence.t -> bool
+
+(** Whether functions of types [a] and [b] yield one type, once every
+    abbreviation is unfolded and a variable of the definition's scheme is
+    read alike whether it is written as the scheme's or as rigid. *)
+val yields_alike : Miniml.ml_type -> Miniml.ml_type -> bool
 
 (** Whether some function inlines [r] into it ({!inlinings}). *)
 val inlined : Names.GlobRef.t -> bool
