@@ -1042,6 +1042,15 @@ val find_custom : GlobRef.t -> string
 (** Find custom extraction code if exists. *)
 val find_custom_opt : GlobRef.t -> string option
 
+(** The replacement text of the custom [r], read to print it.  Printing marks
+    nothing used: the header's includes follow from the customs the unit was
+    found to use before its files were rendered, so a custom printed is one
+    of those, which [CRANE_CHECK_IR] checks. *)
+val used_custom_text : GlobRef.t -> string option
+
+(** {!used_custom_text} where [r] is inlined. *)
+val used_inline_custom_text : GlobRef.t -> string option
+
 (** What a reference to [r] carries about its custom mapping: the replacement
     text where [r] is inlined, and [yields], what it evaluates to where the
     caller knows. *)

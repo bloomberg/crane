@@ -1142,11 +1142,12 @@ let report_decided_while_rendering before =
         else String.concat ", " (List.map (fun (name, n) -> Printf.sprintf "%s +%d" name n) grown) )
 
 (** The tables generating output ahead of the files may add to: the headers
-    what is generated needs, and the names of the helpers lifted out of a
+    what is generated needs, the customs its types turn out to use, whose
+    imports are headers too, and the names of the helpers lifted out of a
     body as it is generated, which {!Common.names_decided_while_emitting}
     lists for the check below.  Rendering may add to none: the headers are
     demanded from what was generated ({!Cpp_demands}). *)
-let generation_products = ["demands"; "ref_renaming"; "mp_renaming"; "global_ids"]
+let generation_products = ["demands"; "used_customs"; "ref_renaming"; "mp_renaming"; "global_ids"]
 
 let rendering_products = []
 

@@ -3022,6 +3022,8 @@ let mark_custom_used r =
 
 let () = on_reset (fun () -> used_refs := Ref.User.Set.empty)
 
+let () = register_census "used_customs" (fun () -> Ref.User.Set.cardinal !used_refs)
+
 (* Fires when a global already has a Crane extraction mapping and a *different*
    one is registered on top of it -- almost always the symptom of importing two
    overlapping [Mapping.*] modules (e.g. an int-backed and a GMP-backed flavor of
@@ -3164,6 +3166,18 @@ let find_custom_opt r =
     mark_custom_used r;
     Some s
   | None -> None
+
+let used_custom_text r =
+  match Ref.Can.Map.find_opt r !customs with
+  | Some (_, s) ->
+    if Probe.checking () && not (Ref.User.Set.mem r !used_refs) then
+      Probe.violation "used customs"
+        (str "the custom " ++ str (kername_of_global r)
+         ++ str " is printed, but the unit was not found to use it, so its imports are not included");
+    Some s
+  | None -> None
+
+let used_inline_custom_text r = if to_inline r then used_custom_text r else None
 
 let custom_info ?yields r : Minicpp.custom_info =
   { ci_inline =

@@ -67,9 +67,9 @@ let named (c : render_ctx) key live =
     @param k  the extraction key category (e.g. [Type] or [Term])
     @param r  the global reference to name *)
 let global_name c k r =
-  match find_custom_opt r with
-  | Some custom_str when to_inline r -> Cpp_name.foreign custom_str
-  | _ -> named c (Unmapped (k, r)) (fun v -> Common.resolve_ref_name v k r)
+  match used_inline_custom_text r with
+  | Some custom_str -> Cpp_name.foreign custom_str
+  | None -> named c (Unmapped (k, r)) (fun v -> Common.resolve_ref_name v k r)
 
 (** {!global_name} as text. *)
 let str_global c k r = Cpp_name.to_string (global_name c k r)
@@ -77,7 +77,7 @@ let str_global c k r = Cpp_name.to_string (global_name c k r)
 (** The name [r] is declared under, wherever it is declared: the replacement
     text of an inline custom mapping, otherwise its own short name. *)
 let declared_name k r =
-  match find_custom_opt r with Some custom_str when to_inline r -> custom_str | _ -> Common.pp_global_name k r
+  match used_inline_custom_text r with Some custom_str -> custom_str | None -> Common.pp_global_name k r
 
 (** {!global_name} as a document. *)
 let pp_global c k r = Cpp_name.pp (global_name c k r)

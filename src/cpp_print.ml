@@ -765,7 +765,7 @@ let rec applied_to_sentinel_alone = function
   | Tid (_, args) | Tid_external (_, args) -> Some (args = [Thole])
   | Tnamespace (_, t) -> applied_to_sentinel_alone t
   | Tglob (r, args, []) -> (
-    match find_custom_opt r with
+    match Table.used_custom_text r with
     | None -> Some (args = [Thole])
     | Some template -> (
       match type_template template with
@@ -967,9 +967,9 @@ let type_names_into_a_struct ctx t =
   | Tid (id, args) -> scopes_name_into_a_struct (Option.default [] (member_scopes ctx id)) ||? any args
   | Tid_external (id_s, args) -> text_names_into_a_struct (external_type_name id_s) ||? any args
   | Tglob (r, tys, _) -> (
-    match find_custom_opt r with
-    | Some s when to_inline r -> text_names_into_a_struct s ||? any tys
-    | _ ->
+    match Table.used_inline_custom_text r with
+    | Some s -> text_names_into_a_struct s ||? any tys
+    | None ->
       head_names_into_a_struct (glob_head ctx r ~applied:(tys <> [])) ||? any tys )
   | Tnamespace ((GlobRef.IndRef _ as r), Tglob (r', args, _)) when globref_equal r r' ->
     head_names_into_a_struct (inductive_head ctx r' ~applied:(args <> [])) ||? any args
@@ -1101,8 +1101,8 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
       writes_obj ();
       pp_library_name Crane_rt.obj
     | Tglob (r, tys, args) ->
-      ( match find_custom_opt r with
-      | Some s when to_inline r ->
+      ( match Table.used_inline_custom_text r with
+      | Some s ->
         let cmds =
           term_template (custom_template_with_args s (List.length tys))
         in
@@ -1117,7 +1117,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
           []
           vl
           cmds
-      | _ ->
+      | None ->
         pp_written_head ~lead (glob_head ctx r ~applied:(tys <> []))
         ++ (match tys with [] -> mt () | l -> str "<" ++ pp_list (pp_rec false) l ++ str ">") )
     | Tfun (d, c) ->
@@ -1275,7 +1275,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
            member and the position rejects it. *)
         (pp_rec ~lead:false false base ++ str "::template " ++ Id.print id, true)
       | Tglob (r, _ :: _, _) ->
-        ( ( match find_custom_opt r with
+        ( ( match Table.used_custom_text r with
           | Some template when String.contains template '%' -> (
             match type_template template with
             | CCstring lit :: _ -> str (cut_at_argument_list lit)
@@ -1306,7 +1306,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
 and ctor_alias_at ctx vl t =
   let custom () =
     match t with
-    | Tglob (r, (_ :: _ as args), _) when find_custom_opt r <> None ->
+    | Tglob (r, (_ :: _ as args), _) when Table.used_custom_text r <> None ->
       let fixed = List.filteri (fun i _ -> i < List.length args - 1) args in
       ctor_alias_of_probe ctx vl ~base:(Common.pp_global_name Type r) (Tglob (r, fixed @ [Thole], []))
     | _ -> None
@@ -1457,7 +1457,8 @@ and pp_value_qualifier ctx env ty =
   match ty with
   | Tglob (r, tys, []) ->
     (* No [~yields]: a type qualifier is never a block in value position. *)
-    pp_cpp_expr ctx env [] (CPPglob (r, tys, Some (Table.custom_info r)))
+    let info = {ci_inline = Option.map Minicpp.inline_template (Table.used_inline_custom_text r); ci_yields = None} in
+    pp_cpp_expr ctx env [] (CPPglob (r, tys, Some info))
   | _ ->
   pp_cpp_type ~lead:false ctx false [] ty
 
@@ -1919,12 +1920,12 @@ and pp_cpp_expr ctx env args t =
         try Some (Nametab.locate (Libnames.qualid_of_string "int"))
         with Not_found -> None
       with
-    | Some gr when is_inline_custom gr ->
-      ( match find_custom_opt gr with
+    | Some gr -> (
+      match Table.used_inline_custom_text gr with
       | Some "int64_t" -> str ("INT64_C(" ^ s ^ ")")
       | Some cpp_type -> str (cpp_type ^ "(" ^ s ^ ")")
       | None -> str s )
-    | _ -> str s )
+    | None -> str s )
   | CPPfloat f -> str (spell_double (Float64.to_float f))
   | CPPconcept_app (concept, subject, tys) ->
     (* A concept is hoisted out of every enclosing struct, so it is named
