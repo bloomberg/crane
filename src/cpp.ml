@@ -1133,7 +1133,6 @@ and pp_module_body ~is_header f ctx mp sel =
   end;
   let old_structure_decls = !current_structure_decls in
   current_structure_decls := sel;
-  Cpp_ind.with_planned_local_inductives mp @@ fun () ->
   (* A synthesised alias whose body names this module's own types, as its
      members spell them, is declared inside the struct, in front of the
      first member that writes it (see {!Cpp_print.ctor_alias_home}): at
@@ -3226,7 +3225,6 @@ let do_struct_with_decl_tracking ~is_header f s =
     in
     let deferred_definitions = List.map (fun w -> w.wr_defs) wrapper_parts in
     let ppl ((mp, sel), wrapper_name) =
-      Cpp_ind.with_planned_local_inductives mp @@ fun () ->
       let wrapper_specs name =
         match List.find_opt (fun w -> String.equal w.wr_name name) wrapper_parts with
         | Some w -> w.wr_specs
@@ -3314,9 +3312,8 @@ let do_struct_with_decl_tracking ~is_header f s =
             let child ctx enclosure ~keep (_, se) =
               match se with
               | SEmodule {ml_mod_expr = MEstruct (inner_mp, inner_sel); _} ->
-                Cpp_ind.with_planned_local_inductives inner_mp (fun () ->
-                    let stays, moved = gathered (List.map (place_in inner_mp ctx) (List.filter keep inner_sel)) in
-                    (Cpp_ast.module_ enclosure (Cpp_ast.module_body inner_mp stays), moved) )
+                let stays, moved = gathered (List.map (place_in inner_mp ctx) (List.filter keep inner_sel)) in
+                (Cpp_ast.module_ enclosure (Cpp_ast.module_body inner_mp stays), moved)
               | _ -> (Cpp_ast.empty, nothing_moved)
             in
             let body ctx enclosure ~keep sel =

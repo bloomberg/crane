@@ -744,6 +744,16 @@ let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) 
   && List.equal Id.equal (fst a.gf_env) (fst b.gf_env)
   && Id.Set.equal (snd a.gf_env) (snd b.gf_env)
 
+(** [with_planned_local_inductives mp k] is [k ()] generating an element of
+    the module [mp], whose planned local inductives the generator spells
+    bare. *)
+let with_planned_local_inductives mp k =
+  match Scope_plan.local_inductives mp with
+  | Some local -> setting Translation_state.local_inductives local k
+  | None ->
+    CErrors.anomaly
+      Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned local inductives.")
+
 (** [ahead_once ~module_ ~what ~recorded ~record ~same ?planned ?take gen]
     is [gen ()] ahead of the files ({!generating_ahead}), recorded
     ([record]) with [module_], the module whose element it is generated as,
@@ -758,8 +768,9 @@ let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) 
     it is [gen ()].  Read while {!peeking}, it is what was recorded, handed
     to [peek] for what taking it would give without taking it. *)
 let ahead_once ~module_ ~what ~recorded ~record ~same ?(planned = ignore) ?(take = Fun.id) ?(peek = Fun.id) gen =
+  let generated () = with_planned_local_inductives module_ gen in
   let check v ~again =
-    if Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (same v (fst (Translation.collecting_lifted gen))) then
+    if Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (same v (fst (Translation.collecting_lifted generated))) then
       CErrors.anomaly
         Pp.(str "Crane: " ++ what () ++ str " was generated differently ahead of the files and " ++ str again)
   in
@@ -774,7 +785,7 @@ let ahead_once ~module_ ~what ~recorded ~record ~same ?(planned = ignore) ?(take
   match (get_phase (), !mode) with
   | Plan, _ -> gen ()
   | Emit, Generating ->
-    let v = gen () in
+    let v = generated () in
     record ((module_, v) :: recorded ());
     planned v;
     v
@@ -1203,13 +1214,6 @@ let header_element_position mp =
     rc_in_struct = in_struct;
     rc_concepts_hoisted = concepts_hoisted;
     rc_in_template = Scope_plan.templated mp }
-
-let with_planned_local_inductives mp k =
-  match Scope_plan.local_inductives mp with
-  | Some local -> setting Translation_state.local_inductives local k
-  | None ->
-    CErrors.anomaly
-      Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned local inductives.")
 
 type concept_placement = Cpp_state.concept_placement = Ahead_of_struct | After_struct | At_file_scope
 
