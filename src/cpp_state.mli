@@ -160,13 +160,11 @@ type render_ctx = {
     struct. *)
 val file_start : Common.file -> render_ctx
 
-(** The context at file scope in the file [c] is written in. *)
-val at_file_scope : render_ctx -> render_ctx
-
-(** The position installed, reset by [reset_cpp_state]: where planning, and a
-    boundary of the printer, reads it.  Printing threads the position through
-    the scopes it enters ({!entering_scope}), so under [CRANE_CHECK_IR] a
-    read inside one is a violation. *)
+(** The position installed, reset by [reset_cpp_state]: where a file, or a
+    declaration printed on its own, starts, which reads it.  Printing and
+    planning thread their positions through the scopes they enter
+    ({!entering_scope}), so under [CRANE_CHECK_IR] a read inside one is a
+    violation. *)
 val current_render_ctx : unit -> render_ctx
 
 
@@ -255,15 +253,6 @@ val file_being_written : unit -> Common.file
     module [mp]: in the visibility planned for its body. *)
 val element_position : Names.ModPath.t -> render_ctx -> render_ctx
 
-(** [writing_element_of mp f] runs [f] writing an element of the module
-    [mp] ({!element_position}, {!current_render_ctx}). *)
-val writing_element_of : Names.ModPath.t -> (unit -> 'a) -> 'a
-
-(** [installing c f] runs [f] with the position [c] installed, which the
-    caller threads: for what is reached beneath it that still reads the
-    installed position rather than being handed it -- a declaration
-    generated ahead of the files. *)
-val installing : render_ctx -> (unit -> 'a) -> 'a
 
 (** {2 Template static accessors} *)
 

@@ -512,11 +512,9 @@ let file_start rc_file =
     rc_visibility = None;
   }
 
-(** The context at file scope in the file [c] is written in. *)
-let at_file_scope c = file_start c.rc_file
-
-(** Global render context state.  Outside every file a planning pass reads
-    as the header would be written. *)
+(** Global render context state: the file being written, installed by the
+    file driver and the single-declaration path, read where they start.
+    Planning is handed its positions and reads none. *)
 let render_ctx = owned_ref (file_start Common.Intf)
 
 (* How many scopes printing has entered since a position was installed:
@@ -624,9 +622,6 @@ let file_being_written () = !render_ctx.rc_file
 
 let element_position mp c = {c with rc_module = Some mp; rc_visibility = Scope_plan.visibility mp}
 
-let writing_element_of mp f = with_render_ctx (element_position mp) f
-
-let installing c f = with_render_ctx (fun _ -> c) f
 
 (** Track definitions rendered as function accessors (Meyers singletons) instead
     of static inline variables, due to template static init ordering. Stores

@@ -1411,20 +1411,10 @@ let header_entity ~module_ d gen =
 
 let finished_header = finished_group ~what:"a header declaration"
 
-(** [in_header_scope ~module_ k] runs [k] at, and with installed, the
-    position the header writes the body of [module_] in, as planned
-    ({!header_scope}). *)
-let in_header_scope ~module_:mp k =
-  let {in_struct; concepts_hoisted} = planned_header_scope mp in
-  let ctx = {(current_render_ctx ()) with rc_in_struct = in_struct; rc_concepts_hoisted = concepts_hoisted} in
-  installing ctx (fun () -> k ctx)
-
-(** What [d] generates, a declaration the header alone writes generated in
-    the scope the header writes it in. *)
-let generate_in_scope ~module_ d k =
-  match d with
-  | Dind _ | Dtype _ -> in_header_scope ~module_ (fun ctx -> k (generate ctx ~module_ d))
-  | Dterm _ | Dfix _ -> k (generate (current_render_ctx ()) ~module_ d)
+(** What [d] generates, at the position the header writes an element of
+    [module_] at, as planned ({!header_scope}): what an inductive or an
+    alias generates, the header alone writes. *)
+let generate_in_scope ~module_ d k = k (generate (header_element_position module_) ~module_ d)
 
 type ahead = {
   entities : Generated_program.entity list;

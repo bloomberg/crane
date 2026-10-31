@@ -419,7 +419,8 @@ let dbg_lifted =
           let spec = Function_entity.declaration e in
           Printf.sprintf "splits=yes hoistable=%b spec=%S"
             (spec_is_hoistable ~module_ spec)
-            (Pp.string_of_ppcmds (writing_element_of module_ (fun () -> read_cpp_decl (empty_env ()) spec)))
+            (Pp.string_of_ppcmds
+               (read_cpp_decl (Cpp_ind.spelling_position ~file:Intf (Element_of module_)) (empty_env ()) spec) )
         else "splits=no"
       in
       Feedback.msg_notice
@@ -1111,7 +1112,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
 
 (** The body of the module [mp] of elements [sel], each element a member of
     it, each written in the visibility planned for the module
-    ({!Cpp_state.writing_element_of}). *)
+    ({!Cpp_state.element_position}). *)
 and pp_module_body ~is_header f ctx mp sel =
   if is_header && Probe.checking () && ctx.rc_in_template <> Scope_plan.templated mp then
     Probe.violation "templated modules"
@@ -1541,10 +1542,7 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = f
       in
       let params, body = split [] me in
       (match body with MEstruct (body_mp, sel) -> ignore (modtypes ~module_ body_mp ~params sel) | _ -> ());
-      with_render_ctx
-        (fun c -> {c with rc_in_struct = true; rc_in_template = true})
-        (fun () ->
-          in_header_scope {!header with in_struct = true} (fun () -> module_expr body) )
+      in_header_scope {!header with in_struct = true} (fun () -> module_expr body)
     | SEmodule {ml_mod_expr = MEstruct (_, sel) as me; _} ->
       in_module_frame ~module_ (MPdot (module_, l)) sel (fun () -> module_expr me)
     | SEmodule {ml_mod_expr; _} -> module_expr ml_mod_expr
@@ -3146,7 +3144,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   Cpp_ind.start_render ();
   init_std_names ();
   (* [ppl] writes each module's elements in the visibility planned for it
-     ({!writing_element_of}); what follows only assembles what was written
+     ({!element_position}); what follows only assembles what was written
      there. *)
   let wrapper_parts, deferred_definitions, p, moved =
     let analysis = get_structure_analysis () in

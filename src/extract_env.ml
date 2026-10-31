@@ -1610,10 +1610,12 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
     d.pp_hstruct struc
   in
   let intf_first = Sys.getenv_opt "CRANE_RENDER_ORDER" = Some "intf-first" in
-  (* Every function is generated before either render, as the file rendered
-     first writes it, reading the plans emission reads. *)
+  (* Every function is generated before either render, reading the plans
+     emission reads, and each pass is handed the position it plans for:
+     under [CRANE_CHECK_IR] nothing beneath reads or installs one
+     ({!Cpp_state.entering_scope}), so no file is being written. *)
   end_planning ();
-  Cpp_state.writing_file (if intf_first then Intf else Impl) (fun () ->
+  Cpp_state.entering_scope (fun () ->
       Pipeline_trace.event "emit" "generate_ahead";
       Cpp.generate_ahead struc;
       Common.plan_written_files (Cpp.files_named_ahead struc);

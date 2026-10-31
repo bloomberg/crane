@@ -123,9 +123,9 @@ val print_unprinted :
     so only those are stood in for. *)
 val stand_ins : Cpp_ast.t -> Cpp_ast.t list
 
-(** [read_cpp_decl env decl] renders [decl]: for a declaration whose text is
-    read, not written. *)
-val read_cpp_decl : Common.env -> Cpp_erasure.settled -> Pp.t
+(** [read_cpp_decl ctx env decl] renders [decl] at the position [ctx]: for
+    a declaration whose text is read, not written. *)
+val read_cpp_decl : Cpp_state.render_ctx -> Common.env -> Cpp_erasure.settled -> Pp.t
 
 
 (** How a member is written: in the struct with or without its body, or out

@@ -4134,7 +4134,7 @@ let constrained_structs : GlobRef.t list ref = State.cell State.Unit []
 
 (** [d] printed in [env] where the printer is: a declaration written
     outside every tree. *)
-let read_cpp_decl env d = pp_cpp_decl (current_render_ctx ()) env d
+let read_cpp_decl ctx env d = pp_cpp_decl ctx env d
 
 (** The wrapper structs [d] writes that hold a wrapper module's
     declarations: those [homed] names, each with the module. *)
