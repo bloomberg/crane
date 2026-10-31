@@ -1128,15 +1128,37 @@ let splice_partners ~loopified struc =
     struc;
   let originals = !originals in
   let defs = Ref.User.Map.map (fun fd -> {fd with fd_body = Mlutil.read_spines fd.fd_body}) originals in
+  let splicings =
+    Ref.User.Map.filter_map
+      (fun r fd ->
+        match Recursive_groups.group groups r with
+        | Some members when loopified r && not (Ref.User.Map.mem r !spliced) ->
+          Some (splice_member ~originals ~defs ~members fd)
+        | Some _ | None -> None )
+      originals
+  in
+  (* A group is spliced whole or not at all: a member left to Loopify
+     inlines and adopts its partners as their bodies stand, and one spliced
+     into is another function there -- its partners' calls turned into its
+     own, which an adopted body leaves calls. *)
+  let declined r =
+    List.exists
+      (fun m -> match Ref.User.Map.find_opt m splicings with Some None -> true | Some (Some _) | None -> false)
+      (Option.default [] (Recursive_groups.group groups r))
+  in
   let splice fd =
-    match Recursive_groups.group groups fd.fd_ref with
-    | Some members when loopified fd.fd_ref && not (Ref.User.Map.mem fd.fd_ref !spliced) -> (
-      match splice_member ~originals ~defs ~members fd with
-      | Some ((_ :: _ as partners), body) ->
+    match Ref.User.Map.find_opt fd.fd_ref splicings with
+    | Some (Some ((_ :: _ as partners), body)) ->
+      if declined fd.fd_ref then begin
+        ignore (unspliced "group" fd.fd_ref);
+        fd
+      end
+      else begin
+        Probe.hit "SPLICE_spliced" (fun () -> Table.kername_of_global fd.fd_ref);
         spliced := Ref.User.Map.add fd.fd_ref partners !spliced;
         {fd with fd_body = body}
-      | Some ([], _) | None -> fd )
-    | Some _ | None -> fd
+      end
+    | Some (Some ([], _) | None) | None -> fd
   in
   Modutil.map_struct_decls
     (function
