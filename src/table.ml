@@ -233,12 +233,22 @@ let constant_schema kn = Option.map snd (Cmap_env.find_opt kn !cst_types)
 let inductives =
   ref (Mindmap_env.empty : (mutual_inductive_body * ml_ind) Mindmap_env.t)
 
-let init_inductives () = inductives := Mindmap_env.empty
+(* Every inductive added, a replacement included: what the printer asks of
+   an inductive -- its kind, its fields, its constructors -- is read here,
+   so emission adding one is a late decision ({!register_census}). *)
+let inductives_added = ref 0
+
+let init_inductives () =
+  inductives := Mindmap_env.empty;
+  inductives_added := 0
 
 let () = on_reset init_inductives
 
+let () = register_census "inductives" (fun () -> !inductives_added)
+
 let add_ind kn mib ml_ind =
-  inductives := Mindmap_env.add kn (mib, ml_ind) !inductives
+  inductives := Mindmap_env.add kn (mib, ml_ind) !inductives;
+  incr inductives_added
 
 let lookup_ind kn mib =
   match Mindmap_env.find_opt kn !inductives with
