@@ -79,12 +79,12 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
     | _ -> () );
     match t with
     | Tglob (r, tys, args) -> (
-      match Table.find_custom_opt r with
-      | Some s when Table.to_inline r ->
+      match Table.used_inline_custom_text r with
+      | Some s ->
         custom {no_holes with tyargs = tys; args}
           (Foreign_template.term_template (Foreign_template.custom_template_with_args s (List.length tys)));
         Some t
-      | _ ->
+      | None ->
         global r;
         List.iter ty tys;
         Some t )
