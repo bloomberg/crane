@@ -882,6 +882,21 @@ let generated_once ~module_ ?(on_reuse = ignore) ?(on_peek = ignore) ?planned no
     ~peek:(fun funs -> on_peek funs; funs)
     gen
 
+(** Whether the type an alias abbreviates is written in C++, decided ahead
+    of the files, by the MiniML node of the alias. *)
+let aliases_written : (ModPath.t * bool) list Node_table.t = Node_table.create 16
+
+let () = State.on_reset State.Unit (fun () -> Node_table.reset aliases_written)
+
+(** [alias_written ~module_ d l t] is {!ahead_once} for whether the type [t]
+    over [l] the alias [d] abbreviates is written in C++, asked of the type
+    as it would be printed.  Translating the type is generating: a file
+    takes the answer. *)
+let alias_written ~module_ d l t =
+  let recorded, record = in_node_table aliases_written d in
+  ahead_once ~module_ ~what:(fun () -> Pp.str "an alias") ~recorded ~record ~same:Bool.equal (fun () ->
+      not (Ml_type_util.has_no_cpp_spelling (Translation.convert_ml_type_to_cpp_type (empty_env ()) l t)) )
+
 (** [generate scope ~module_ d] is what the MiniML declaration [d], an
     element of [module_] written in the header scope [scope], generates, for
     whichever file is being written: functions translated once, with their file
@@ -919,9 +934,7 @@ let generate scope ~module_ d =
   | Dtype (r, l, t) ->
     ( match t with
     | Miniml.Tdummy Miniml.Ktype -> Nothing (* erased Type aliases *)
-    | t
-      when Ml_type_util.has_no_cpp_spelling
-             (Translation.convert_ml_type_to_cpp_type (empty_env ()) l t) ->
+    | t when not (alias_written ~module_ d l t) ->
       (* An abbreviation for a type that is not written in C++ is not written
          either, asked of the type as it would be printed: [Definition bigE :=
          ioE +' envE] is a [Sum1] of event families that have no C++ name, and
