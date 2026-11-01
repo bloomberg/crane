@@ -441,21 +441,13 @@ let rec arguments = function MLmagic (_, e) -> arguments e | MLapp (_, args) -> 
 let match_bound_in_place ty branches =
   Table.is_custom_match branches || (Table.record_fields_of_type ty <> [] && Array.length branches = 1)
 
-(* The fixpoint each function's machine enters where it called a partner,
-   a copy of the partner spliced into its body ({!adopt_calls}). *)
-let entered = State.cell State.Extraction Ref.User.Map.empty
-
-let entered_copy r = Ref.User.Map.find_opt r !entered
-
-let is_entered_copy o = Ref.User.Map.exists (fun _ o' -> Occurrence.equal o o') !entered
-
 (* The points the body of [origin], standing in [lex], resumes at once a
    recursive call returns: a let whose right-hand side is the call, or ends
    in one in some branch, and a sequential bind whose action is the call,
    its continuation's parameter binding the result.  In the body itself a
    recursive call is one [targets] names; in a local fixpoint's bodies a
    call of a member of that fixpoint is one too, as is, in the body of a
-   let binding a partner's copy the machine enters ({!entered_copy}), a
+   let binding a partner's copy the machine enters ([entered]), a
    call of the copy, which is no value kept.  A call under a lambda is
    made where the closure runs, not here, but a local fixpoint in the
    lambda's body is lowered on its own, and resumes after its own calls.
@@ -464,7 +456,7 @@ let is_entered_copy o = Ref.User.Map.exists (fun _ o' -> Occurrence.equal o o') 
    the declaration takes, which C++ takes as a template argument, nor a
    member of a local fixpoint whose calls the point is among -- [heads],
    those whose bodies it is in -- called, which enters the machine again. *)
-let resumes_of ~effects ~origin ~targets lex body =
+let resumes_of ~effects ~entered ~origin ~targets lex body =
   let effect_ = sequential effects in
   let found = ref [] in
   let binder level = Core_binder.make ~origin ~level () in
@@ -677,7 +669,7 @@ let resumes_of ~effects ~origin ~targets lex body =
          the body are the copy's, a member of the fixpoint at that level. *)
       let targets, heads, fixpoints, captures =
         match a with
-        | MLfix (_, [|_|], [|_|], false, occ) when is_entered_copy occ ->
+        | MLfix (_, [|_|], [|_|], false, occ) when entered occ ->
           let level = depth in
           let rec entering ~depth:d = function
             | MLmagic (_, e) -> entering ~depth:d e
@@ -1029,10 +1021,6 @@ let next_inlining ~opaque ~effects ~defs ~members ~inlined self body =
     let these continues = List.filter_map (fun c -> if c.continues = continues then Some c.made_of else None) found in
     Some {partner; continued = these true; invoked = these false}
 
-(* The functions {!splice_partners} decided the partners of, for this
-   extraction: splicing again leaves them as they are. *)
-let decided = State.cell State.Extraction Ref.User.Set.empty
-
 (* Why the partners of [r] are not spliced. *)
 let unspliced why r =
   Probe.hit "SPLICE_declined" (fun () -> why ^ " " ^ Table.kername_of_global r);
@@ -1230,7 +1218,7 @@ let splice_member ~inlines ~originals ~defs ~members fd =
   | Some ((_ :: _), _, body) when not (recurses {fd with fd_body = body}) -> Some ([], None, fd.fd_body)
   | spliced -> spliced
 
-let splice_partners ~loopified ~inlines struc =
+let splice_partners ~loopified ~inlines ({structure = struc; splices} : Core.normalizing) : Core.normalizing =
   let groups = Recursive_groups.analyze struc in
   let originals = ref Ref.User.Map.empty in
   Modutil.struct_iter
@@ -1244,7 +1232,7 @@ let splice_partners ~loopified ~inlines struc =
     Ref.User.Map.filter_map
       (fun r fd ->
         match Recursive_groups.group groups r with
-        | Some members when loopified r && (not (Table.is_custom r)) && not (Ref.User.Set.mem r !decided) ->
+        | Some members when loopified r && (not (Table.is_custom r)) && not (Splices.decided splices r) ->
           Some (splice_member ~inlines ~originals ~defs ~members fd)
         | Some _ | None -> None )
       originals
@@ -1259,32 +1247,32 @@ let splice_partners ~loopified ~inlines struc =
       (fun m -> match Ref.User.Map.find_opt m splicings with Some None -> true | Some (Some _) | None -> false)
       (Option.default [] (Recursive_groups.group groups r))
   in
-  let splice fd =
-    match Ref.User.Map.find_opt fd.fd_ref splicings with
-    | Some (Some (_ :: _, entry, body)) ->
-      if declined fd.fd_ref then begin
-        ignore (unspliced "group" fd.fd_ref);
-        fd
-      end
-      else begin
-        Probe.hit "SPLICE_spliced" (fun () -> Table.kername_of_global fd.fd_ref);
-        decided := Ref.User.Set.add fd.fd_ref !decided;
-        Option.iter (fun o -> entered := Ref.User.Map.add fd.fd_ref o !entered) entry;
-        {fd with fd_body = body}
-      end
-    | Some (Some ([], _, _)) ->
-      decided := Ref.User.Set.add fd.fd_ref !decided;
-      fd
-    | Some None | None -> fd
+  (* Each member decided: the copy its machine enters, if any, and its
+     spliced body, if it changes. *)
+  let decision r = function
+    | Some (_ :: _, _, _) when declined r -> unspliced "group" r
+    | Some (_ :: _, entered, body) ->
+      Probe.hit "SPLICE_spliced" (fun () -> Table.kername_of_global r);
+      Some (entered, Some body)
+    | Some ([], _, _) -> Some (None, None)
+    | None -> None
   in
-  Modutil.map_struct_decls
-    (function
-      | Dfix fds -> Dfix (List.map splice fds)
-      | Dterm (r, b, ty) ->
-        let fd = splice {fd_ref = r; fd_body = b; fd_type = ty} in
-        Dterm (r, fd.fd_body, ty)
-      | d -> d )
-    struc
+  let decisions = Ref.User.Map.filter_map decision splicings in
+  let splice fd =
+    match Ref.User.Map.find_opt fd.fd_ref decisions with
+    | Some (_, Some body) -> {fd with fd_body = body}
+    | Some (_, None) | None -> fd
+  in
+  { structure =
+      Modutil.map_struct_decls
+        (function
+          | Dfix fds -> Dfix (List.map splice fds)
+          | Dterm (r, b, ty) ->
+            let fd = splice {fd_ref = r; fd_body = b; fd_type = ty} in
+            Dterm (r, fd.fd_body, ty)
+          | d -> d )
+        struc;
+    splices = Ref.User.Map.fold (fun r (entered, _) s -> Splices.decide ?entered r s) decisions splices }
 
 (* A member of a group recurses by the calls of itself it makes, those in
    the copies of its partners spliced into its body included
@@ -1393,7 +1381,7 @@ let analyze groups program =
           | _ -> []
         in
         let lex, body = Core_elaborate.declaration_scope fd.fd_type fd.fd_body in
-        resumes_of ~effects ~origin:r ~targets lex body )
+        resumes_of ~effects ~entered:(Splices.is_entered_copy (Core.splices program)) ~origin:r ~targets lex body )
       defs
   in
   let adoptable =

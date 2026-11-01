@@ -166,7 +166,7 @@ val adoptable : Names.GlobRef.t -> Miniml.Occurrence.t list
 (** {!adoptable} in the plan [t]. *)
 val adoptable_in : t -> Names.GlobRef.t -> Miniml.Occurrence.t list
 
-(** [splice_partners ~loopified ~inlines s]: [s], a structure about to be
+(** [splice_partners ~loopified ~inlines p]: [p], a program being
     normalized, with the partners of each function [loopified] says it
     loopifies, in its recursive group, spliced into its Core body, a copy
     that is new terms.  A partner is spliced at the calls of it that run in
@@ -185,7 +185,7 @@ val adoptable_in : t -> Names.GlobRef.t -> Miniml.Occurrence.t list
     the function does, its body, run there, calls the function back, and no
     other partner is entered: a copy of it is bound in front of the body, a
     local fixpoint whose calls of the partner are its own, and each such
-    call is a call of the copy ({!entered_copy}).  Any other is replaced by
+    call is a call of the copy ({!Splices.entered_copy}).  Any other is replaced by
     a copy of the partner's body as a tail call is, run where the call was,
     where no partner's call is read.  A function that does not call itself
     once spliced into, which makes no loop, is left as it is.  A function
@@ -194,21 +194,11 @@ val adoptable_in : t -> Names.GlobRef.t -> Miniml.Occurrence.t list
     partner of more or fewer variables or another monad, or one suspended
     whole -- is left as it is, calling its partners, and so is every
     function of its recursive group.  A custom is not generated, and splices
-    nothing.  The functions decided are recorded for the extraction:
-    splicing again leaves them as they are, so normalizing the result again
-    rewrites nothing. *)
+    nothing.  The functions decided, and the copy each enters, are
+    recorded in [p]'s splices: splicing again leaves a function decided as
+    it is, so normalizing the result again rewrites nothing. *)
 val splice_partners :
-  loopified:(Names.GlobRef.t -> bool) -> inlines:(Names.GlobRef.t -> bool) -> Miniml.ml_structure -> Miniml.ml_structure
-
-(** The occurrence of the local fixpoint the machine of the function [r]
-    enters, a copy of a partner spliced into its body ({!splice_partners}),
-    if one was. *)
-val entered_copy : Names.GlobRef.t -> Miniml.Occurrence.t option
-
-(** Whether the local fixpoint at the occurrence [o] is a partner's copy
-    some machine enters ({!entered_copy}): it stands for the partner, a
-    function of the group. *)
-val is_entered_copy : Miniml.Occurrence.t -> bool
+  loopified:(Names.GlobRef.t -> bool) -> inlines:(Names.GlobRef.t -> bool) -> Core.normalizing -> Core.normalizing
 
 (** Whether functions of types [a] and [b] yield one type, once every
     abbreviation is unfolded and a variable of the definition's scheme is

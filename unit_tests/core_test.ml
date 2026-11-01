@@ -92,13 +92,25 @@ let () =
     | _ -> true
     | exception e when CErrors.is_anomaly e -> false
   in
-  let coerce =
-    Modutil.map_struct_decls (function
-      | Dterm (r, b, t) -> Dterm (r, MLmagic (Mcoerce (t, t), b), t)
-      | d -> d )
+  let coerce (p : Core.normalizing) =
+    { p with
+      structure =
+        Modutil.map_struct_decls
+          (function
+            | Dterm (r, b, t) -> Dterm (r, MLmagic (Mcoerce (t, t), b), t)
+            | d -> d )
+          p.structure }
   in
+  let decide_once (p : Core.normalizing) =
+    if Splices.decided p.splices (r "n") then p else {p with splices = Splices.decide (r "n") p.splices}
+  in
+  let decide_anew (p : Core.normalizing) = {p with splices = Splices.decide ~entered:(Occurrence.fresh ()) (r "n") p.splices} in
   check "a pass its result is a fixed point of normalizes" (normalizes Fun.id);
   check "a pass that would rewrite its own result is refused" (not (normalizes coerce));
+  check "a pass that decides once what it splices normalizes" (normalizes decide_once);
+  check "a pass that would splice its own result otherwise is refused" (not (normalizes decide_anew));
+  check "the splices decided are the program's"
+    (Splices.decided (Core.splices (Core.normalize decide_once (frozen fine))) (r "n"));
   let minting s = ignore (Mlutil.new_meta ()); s in
   let before = Mlutil.new_meta () in
   ignore (Core.normalize minting (frozen fine));
