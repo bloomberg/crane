@@ -13704,3 +13704,14 @@
   (alias runtest)
   (deps loopify_partner_back_under_fixpoint.t.exe)
   (action (run ./loopify_partner_back_under_fixpoint.t.exe))))
+
+(subdir splice_partner_other_instance
+ (rule
+  (targets splice_partner_other_instance.t.exe)
+  (deps SplicePartnerOtherInstance.vo splice_partner_other_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} splice_partner_other_instance.t.exe splice_partner_other_instance.cpp splice_partner_other_instance.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps splice_partner_other_instance.t.exe)
+  (action (run ./splice_partner_other_instance.t.exe))))

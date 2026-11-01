@@ -1038,13 +1038,22 @@ let unspliced why r =
   Probe.hit "SPLICE_declined" (fun () -> why ^ " " ^ Table.kername_of_global r);
   None
 
-(* Whether the use [use] solves one of its callee's variables to a type:
-   the callee's body is then another function there. *)
+(* Whether the use [use] solves one of its callee's variables to a type, or
+   is written at a type other than the variable in its place: the callee's
+   body is then another function there.  A use within its callee's
+   recursive group is solved at the group's own variables, whatever it is
+   written at -- [g bool] in [g]'s partner. *)
 let solves_variables use =
-  Option.cata
-    (Scheme.Instantiation.exists (fun _ (s : ml_type Scheme.slot) ->
-         match s.solution with Scheme.Type _ -> true | Scheme.Identity -> false ) )
-    false (Global_use.instantiation use)
+  let solved =
+    Option.cata
+      (Scheme.Instantiation.exists (fun _ (s : ml_type Scheme.slot) ->
+           match s.solution with Scheme.Type _ -> true | Scheme.Identity -> false ) )
+      false (Global_use.instantiation use)
+  in
+  let written_elsewhere (v, t) =
+    match Mlutil.type_simpl t with Tvar (_, i) -> i <> Scheme.Var.ordinal v | _ -> true
+  in
+  solved || List.exists written_elsewhere (Global_use.written_evidence use)
 
 (* The occurrences of the global uses in [e]. *)
 let uses_in e =
