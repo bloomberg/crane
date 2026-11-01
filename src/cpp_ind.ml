@@ -746,10 +746,12 @@ let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) 
 
 (** [with_planned_local_inductives mp k] is [k ()] generating an element of
     the module [mp], whose planned local inductives the generator spells
-    bare. *)
+    bare ({!Translation_state.generating_in}).  They are installed too, for
+    [CRANE_CHECK_IR] to compare with the entry: generation outside an entry
+    still reads the install. *)
 let with_planned_local_inductives mp k =
   match Scope_plan.local_inductives mp with
-  | Some local -> setting Translation_state.local_inductives local k
+  | Some local -> setting Translation_state.local_inductives local (fun () -> Translation_state.generating_in mp k)
   | None ->
     CErrors.anomaly
       Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned local inductives.")

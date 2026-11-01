@@ -166,13 +166,6 @@ let is_record_inductive r =
   | GlobRef.IndRef _ -> Table.get_record_fields r <> []
   | _ -> false
 
-(** Check if a GlobRef refers to a local inductive (defined in current module
-    scope), as the declaration generator sees it. Local inductives don't need
-    namespace qualification (e.g., List::list vs just list).  The printer asks
-    its position instead ({!local_at}). *)
-let is_local_inductive r =
-  List.exists (globref_equal r) (Translation_state.get_local_inductives ())
-
 (** Whether [r] is an inductive spelled bare at the position [c]: one the body
     of the module whose element is being written spells bare, as planned
     ({!Scope_plan.local_inductives}); none where no module's element is. *)
@@ -185,10 +178,6 @@ let local_at (c : render_ctx) r =
     | None ->
       CErrors.anomaly
         Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned local inductives.") )
-
-let inductive_type r args es =
-  let t = Tglob (r, args, es) in
-  if is_local_inductive r then t else Tnamespace (r, t)
 
 (** [String.capitalize_ascii] of the name's text: the first character of its
     outermost qualifier, or of its base when it has none. *)
