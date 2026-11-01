@@ -1678,15 +1678,59 @@ let finish_ahead (aheads : Cpp_ind.ahead list) =
 
 let generate_decl_ahead ~module_ d = generating_ahead @@ fun () -> finish_ahead [Cpp_ind.generate_ahead ~module_ d]
 
+(** What the modules of the structure [s] name around their declarations,
+    as {!pp_structure_elem} writes them: the concept constraining a functor's
+    parameter, the functor and arguments of an application, the module an
+    alias or a derived functor stands for, and the concept a module is
+    asserted to satisfy. *)
+let structure_module_names s =
+  let concept mt =
+    match concept_of_mt mt with
+    | Some kn -> Cpp_resolution.Modtype_concept kn :: List.map (fun p -> Cpp_resolution.Module p) (concept_extra_args kn)
+    | None -> []
+  in
+  let module_ (m : Cpp_ast.module_ref) = Cpp_resolution.Module m.path in
+  let application me =
+    let {Cpp_ast.functor_; args} = application_of me in
+    List.map module_ (functor_ :: args)
+  in
+  let rec functor_params = function MTfunsig (_, mt, rest) -> concept mt @ functor_params rest | _ -> [] in
+  let rec elems ~in_struct mp sel =
+    List.concat_map
+      (function
+        | l, SEmodule m -> module_expr ~in_struct (MPdot (mp, l)) m.ml_mod_type m.ml_mod_expr
+        | _, (SEdecl _ | SEmodtype _) -> [] )
+      sel
+  and module_expr ~in_struct mp mt = function
+    | MEfunctor (_, param, body) -> concept param @ functor_body mp body
+    | MEapply _ as me -> application me @ concept mt
+    | MEstruct (body_mp, sel) ->
+      (if Module_frame.concept_collision mp sel then [] else concept mt) @ elems ~in_struct:true body_mp sel
+    | MEident target -> (
+      match functor_params mt with [] when is_modfile target && in_struct -> [] | ps -> Cpp_resolution.Module target :: ps )
+  and functor_body mp = function
+    | MEfunctor (_, param, body) -> concept param @ functor_body mp body
+    | MEstruct (body_mp, sel) -> elems ~in_struct:true body_mp sel
+    | MEapply _ as me -> application me
+    | MEident base -> [Cpp_resolution.Module base]
+  in
+  List.concat_map (fun (mp, sel) -> elems ~in_struct:false mp sel) s
+
 (** The files the unit [s]'s names are written through, read off what was
     generated ahead of its files where the printer writes it
-    ({!Cpp_demands.globals_of_decl}): the installed finished program's, and
-    the types of the eponymous record fields generated with it. *)
+    ({!Cpp_demands.globals_of_decl}): the installed finished program's, the
+    types of the eponymous record fields generated with it, and what the
+    module-type concepts generated with it name; and off the modules of [s]
+    ({!structure_module_names}). *)
 let files_named_ahead s =
   let unit_files = List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s in
-  Finished_program.installed_globals ()
-  @ List.concat_map Cpp_demands.globals_of_type (Cpp_ind.generated_record_field_types ())
-  |> List.filter_map (Common.file_named_by ~unit_files)
+  let globals =
+    Finished_program.installed_globals ()
+    @ List.concat_map Cpp_demands.globals_of_type (Cpp_ind.generated_record_field_types ())
+  in
+  let keys = List.map snd (List.concat_map Cpp_concepts.concept_body_names (Cpp_ind.generated_concepts ())) in
+  List.filter_map (Common.file_named_by ~unit_files) globals
+  @ List.filter_map (Cpp_names.file_named_by_key ~unit_files) (keys @ structure_module_names s)
   |> List.sort_uniq ModPath.compare
 
 let generate_ahead s =

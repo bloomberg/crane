@@ -188,6 +188,12 @@ val without_noting_written_files : (unit -> 'a) -> 'a
     or is an inline custom. *)
 val file_named_by : unit_files:ModPath.t list -> GlobRef.t -> ModPath.t option
 
+(** The file a reference to the module or module type [mp], written in the
+    unit of the files [unit_files], names: its own, unless that is one of
+    the unit's, or [mp] is reached through a functor parameter or is in a
+    module not output. *)
+val file_of_module_named : unit_files:ModPath.t list -> ModPath.t -> ModPath.t option
+
 (** Activate separate-extraction naming: every cross-file reference is spelled
     in full, and the last component of a qualified type name is capitalized to
     match the C++ struct name ([Datatypes::List]).  Cleared automatically on

@@ -668,6 +668,13 @@ let modtype_concept_ref ctx v kn =
     Cpp_name.unqualified (modtype_concept_name kn)
   | MPfile _ | MPbound _ -> Common.resolve_module_in v kn
 
+let file_named_by_key ~unit_files : Cpp_resolution.key -> ModPath.t option = function
+  | Module mp -> Common.file_of_module_named ~unit_files mp
+  | Modtype_concept (MPdot (mp0, _)) when Option.has_some (functor_concept_scope mp0) -> None
+  | Modtype_concept kn -> Common.file_of_module_named ~unit_files kn
+  | Global (_, r) | Unmapped (_, r) -> Common.file_named_by ~unit_files r
+  | Module_declared _ | Short _ | Inductive_value _ | Class_concept _ | Modtype_concept_declared _ | Definition _ -> None
+
 let struct_definition_name ctx id =
   let local = local_at ctx id and merged = merged_at ctx and promoted = promoted_at ctx in
   match struct_spelling ~merged ~promoted ~local id with

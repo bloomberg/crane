@@ -312,7 +312,7 @@ let () =
         Pp.str (at [] ^ " " ^ at [signature] ^ " " ^ at [signature; signature])
       | _ -> Pp.str (spelling_text spelling)
     in
-    Pp.string_of_ppcmds (Cpp_ast.print_tree ~write (Cpp_ast.resolve_tree ~requested ~resolve (Cpp_ast.seq sections)))
+    Pp.string_of_ppcmds (Cpp_ast.print_tree ~write (Cpp_ast.resolve_tree ~requested ~resolve ~resolve_head:resolve (Cpp_ast.seq sections)))
   in
   check_text "resolving keeps how each declaration is spelled"
     (resolved_text [top (Cpp_ast.elements ~source:m (unprinted ()))]) "E(F.M)";

@@ -1262,14 +1262,22 @@ let spelling_position ~file spelling =
 (* [k] of the position of [spelling] in [file]. *)
 let at_spelling ~file spelling k = k (spelling_position ~file spelling)
 
+let head_resolver_at ~file spelling frame key =
+  at_spelling ~file spelling (fun ctx -> Cpp_names.at_frame ctx frame (fun ctx -> Cpp_names.live_name ctx key))
+
+(* A declaration's names are noted as written where it is printed, which
+   names them again under CRANE_CHECK_IR ({!Cpp_names.checked}); a struct's
+   head is printed as resolved, so its names are noted here. *)
 let resolver_at ~file spelling frame key =
-  Common.without_noting_written_files (fun () ->
-      at_spelling ~file spelling (fun ctx -> Cpp_names.at_frame ctx frame (fun ctx -> Cpp_names.live_name ctx key)) )
+  Common.without_noting_written_files (fun () -> head_resolver_at ~file spelling frame key)
 
 let requested d = Cpp_print.unprinted_names d @ Cpp_concepts.names_requested d
 
-let resolve_tree ~file = Cpp_ast.resolve_tree ~requested ~resolve:(resolver_at ~file)
-let resolve ~file = Cpp_ast.resolve ~requested ~resolve:(resolver_at ~file)
+let resolve_tree ~file t =
+  Common.without_noting_written_files (fun () ->
+      Cpp_ast.resolve_tree ~requested ~resolve:(resolver_at ~file) ~resolve_head:(head_resolver_at ~file) t )
+
+let resolve ~file = Cpp_ast.resolve ~requested ~resolve:(resolver_at ~file) ~resolve_head:(head_resolver_at ~file)
 
 let names_into_a_struct_as_written ~file spelling settled =
   let names = Cpp_resolution.resolve (resolver_at ~file spelling) (requested (Declaration {env = empty_env (); settled})) in

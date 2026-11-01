@@ -159,10 +159,13 @@ val render_section : Cpp_state.render_ctx -> section -> Cpp_ast.t list
 val resolver_at : file:Common.file -> Cpp_ast.spelling -> Cpp_ast.resolver
 
 (** {!Cpp_ast.resolve_tree} by {!resolver_at}, a declaration naming what
-    {!Cpp_print.unprinted_names} and {!Cpp_concepts.names_requested} say. *)
+    {!Cpp_print.unprinted_names} and {!Cpp_concepts.names_requested} say,
+    for a question about [t] rather than to write it: nothing it names is
+    noted as written ({!Common.check_written_files}). *)
 val resolve_tree : file:Common.file -> Cpp_ast.t -> Cpp_ast.t
 
-(** {!Cpp_ast.resolve} as {!resolve_tree} resolves each section. *)
+(** {!Cpp_ast.resolve} as {!resolve_tree} resolves each section, to write
+    it: what a struct's head names is noted as written. *)
 val resolve : file:Common.file -> Cpp_ast.scheduled -> Cpp_ast.scheduled
 
 (** {!Cpp_print.resolved_names_into_a_struct} of a declaration as [file]

@@ -218,6 +218,11 @@ val concept_extra_args : Names.ModPath.t -> Names.ModPath.t list
     module-type concept goes through this, so no two can disagree. *)
 val modtype_concept_name : Names.ModPath.t -> string
 
+(** The file whose namespace a name, written for [key] in the unit of the
+    files [unit_files], reaches into: what resolving it notes
+    ({!Common.check_written_files}).  A module-type concept a functor's body
+    declares is named at file scope, unqualified. *)
+val file_named_by_key : unit_files:Names.ModPath.t list -> Cpp_resolution.key -> Names.ModPath.t option
 
 (** The name the struct of [id] is defined under. *)
 val struct_definition_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t

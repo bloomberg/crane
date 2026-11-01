@@ -28,3 +28,8 @@ val pp_assertion : Cpp_state.render_ctx -> Cpp_ast.assertion -> Pp.t
     {!Cpp_ast.resolve_tree} resolves into its table.  Of a module type's
     concept, everything but the types the type printer writes. *)
 val names_requested : Cpp_ast.declaration -> (Cpp_resolution.frame * Cpp_resolution.key) list
+
+(** What the definition of the concept [c] names after its head, at the
+    frames inside it: the base concept it refines and the globals of the
+    refinements, or its requirements' names. *)
+val concept_body_names : Modtype_concept.t -> (Cpp_resolution.frame * Cpp_resolution.key) list

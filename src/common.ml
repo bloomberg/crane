@@ -662,16 +662,14 @@ let check_written_files () =
     unit's, or [r] is reached through a functor parameter, is in a module not
     output, or is an inline custom, whose replacement text is written instead
     of any name. *)
-let file_named_by ~unit_files r =
-  let base = base_mp (modpath_of_r r) in
-  match base with
-  | MPfile _
-    when not
-           ( is_non_output_module base
-           || List.exists (ModPath.equal base) unit_files
-           || (Table.to_inline r && Option.has_some (Table.find_custom_opt r)) ) ->
-    Some base
+let file_of_module_named ~unit_files mp =
+  match base_mp mp with
+  | MPfile _ as base when not (is_non_output_module base || List.exists (ModPath.equal base) unit_files) -> Some base
   | _ -> None
+
+let file_named_by ~unit_files r =
+  if Table.to_inline r && Option.has_some (Table.find_custom_opt r) then None
+  else file_of_module_named ~unit_files (modpath_of_r r)
 
 (** The visible horizon at a precise moment, i.e. the structures we are
     inside, innermost first.

@@ -114,15 +114,17 @@ let rec constraint_names frame : Modtype_concept.constraint_ -> _ = function
         | Nested (path, c) -> (frame, Cpp_resolution.Modtype_concept_declared path) :: constraint_names frame c )
       items
 
-let modtype_concept_names ~path ~params (c : Modtype_concept.t) =
-  let modules frame = List.map (fun p -> (frame, Cpp_resolution.Module p)) in
-  (([], Cpp_resolution.Modtype_concept_declared path) :: modules [] params)
-  @
-  match c with
+let modules frame = List.map (fun p -> (frame, Cpp_resolution.Module p))
+
+(* What the definition of the concept [c] names, after its head. *)
+let concept_body_names : Modtype_concept.t -> _ = function
   | Alias {base; refinements} ->
     (([], Cpp_resolution.Modtype_concept base) :: modules [] (concept_extra_args base))
     @ List.concat_map (fun (_, ty) -> type_names [] ty) refinements
   | Constraint c -> constraint_names [] c
+
+let modtype_concept_names ~path ~params (c : Modtype_concept.t) =
+  (([], Cpp_resolution.Modtype_concept_declared path) :: modules [] params) @ concept_body_names c
 
 (** A type of a module-type concept's requirements, spelled from inside the
     concept ({!Modtype_concept.concept_type}), naming what [names] names at

@@ -445,19 +445,22 @@ val fill_wrappers : (string * body) list -> t -> t
     a struct whose head names what is not resolved. *)
 val to_pp : t -> Pp.t
 
-(** [resolve_tree ~requested ~resolve t] is [t] with what each declaration
-    not yet printed names resolved -- its modules, the concepts and the
-    instance an assertion names, the type a member alias stands in for, and
-    whatever else [requested] says it names, at a frame inside it -- each as
-    [resolve spelling] names it where a declaration spelled [spelling] is
-    written; and so is what the head of each module's struct names, where
-    the struct is written.
+(** [resolve_tree ~requested ~resolve ~resolve_head t] is [t] with what
+    each declaration not yet printed names resolved -- its modules, the
+    concepts and the instance an assertion names, the type a member alias
+    stands in for, and whatever else [requested] says it names, at a frame
+    inside it -- each as [resolve spelling] names it where a declaration
+    spelled [spelling] is written; and what the head of each module's struct
+    names, as [resolve_head spelling] names it where the struct is written.
+    A head is printed as resolved, a declaration by a printer that may name
+    again what it prints.
     @raise Invalid_argument as {!print_tree} does, and if a struct whose
     head names a module is outside every {!Elements} and struct
     {!Module}. *)
 val resolve_tree :
   requested:(declaration -> (Cpp_resolution.frame * Cpp_resolution.key) list) ->
   resolve:(spelling -> resolver) ->
+  resolve_head:(spelling -> resolver) ->
   t ->
   t
 
@@ -535,6 +538,7 @@ val schedule : templates:template list -> forwards:forward list -> translation_u
 val resolve :
   requested:(declaration -> (Cpp_resolution.frame * Cpp_resolution.key) list) ->
   resolve:(spelling -> resolver) ->
+  resolve_head:(spelling -> resolver) ->
   scheduled ->
   scheduled
 

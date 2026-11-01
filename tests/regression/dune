@@ -13770,3 +13770,14 @@
   (alias runtest)
   (deps functor_param_ctor_field.t.exe)
   (action (run ./functor_param_ctor_field.t.exe))))
+
+(subdir sep_ext_functor_include
+ (rule
+  (targets sep_ext_functor_include.t.exe)
+  (deps Ord.vo SepExtFunctorInclude.vo sep_ext_functor_include.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_functor_include.t.exe Nat.cpp Ord.cpp SepExtFunctorInclude.cpp sep_ext_functor_include.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_functor_include.t.exe)
+  (action (run ./sep_ext_functor_include.t.exe))))

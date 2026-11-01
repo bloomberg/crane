@@ -558,8 +558,8 @@ let resolve_declaration (resolve : resolver) declaration =
     Global_alias (Alias_of_type {a with target = global_ref (fun r -> Definition (a.definition, r)) a.target})
   | Declaration _ | Absorbed _ | Fields _ | Modtype_concept _ | Forward_declaration _ | Synthesised_template _ -> declaration
 
-let resolve_tree ~requested ~resolve t =
-  map_leaves ~head:(resolve_head resolve)
+let resolve_tree ~requested ~resolve ~resolve_head:head t =
+  map_leaves ~head:(resolve_head head)
     (fun spelling u ->
       let resolve = resolve spelling in
       Unprinted
@@ -568,8 +568,9 @@ let resolve_tree ~requested ~resolve t =
           names = Cpp_resolution.resolve resolve (requested u.declaration) } )
     t
 
-let resolve ~requested ~resolve s =
-  {opening = resolve_tree ~requested ~resolve s.opening; body = List.map (resolve_tree ~requested ~resolve) s.body}
+let resolve ~requested ~resolve ~resolve_head s =
+  let tree = resolve_tree ~requested ~resolve ~resolve_head in
+  {opening = tree s.opening; body = List.map tree s.body}
 
 (* Every declaration is printed before any text is joined: whether a member
    opens a doc comment decides the break in front of it. *)
