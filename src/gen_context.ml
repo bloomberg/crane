@@ -716,7 +716,7 @@ let conversion_to_other_instantiation ~leading ~name ~templates ~vars ~fields =
             ~skip:(fun g ->
               GlobRef.CanOrd.equal g name
               || Table.same_mutual_block g name
-              || List.exists (GlobRef.CanOrd.equal g) (get_local_inductives ()) )
+              || spells_bare g )
             ~src_ty:(deapply_families name vars (at vars))
             ~dst_ty:(deapply_families name u_var_names (at u_var_names))
             (CPPvar field_id) )

@@ -13,12 +13,11 @@ bool LoopifyMutualCountdown::even_countdown(uint64_t n) {
       return true;
     } else {
       uint64_t n_ = _loop_n - 1;
-      uint64_t _inl_n = n_;
-      if (_inl_n <= 0) {
+      if (n_ <= 0) {
         return false;
       } else {
-        uint64_t _inl_n_ = _inl_n - 1;
-        _loop_n = _inl_n_;
+        uint64_t n_0 = n_ - 1;
+        _loop_n = n_0;
       }
     }
   }
@@ -31,12 +30,11 @@ bool LoopifyMutualCountdown::odd_countdown(uint64_t n) {
       return false;
     } else {
       uint64_t n_ = _loop_n - 1;
-      uint64_t _inl_n = n_;
-      if (_inl_n <= 0) {
+      if (n_ <= 0) {
         return true;
       } else {
-        uint64_t _inl_n_ = _inl_n - 1;
-        _loop_n = _inl_n_;
+        uint64_t n_0 = n_ - 1;
+        _loop_n = n_0;
       }
     }
   }

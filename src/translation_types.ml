@@ -1597,12 +1597,7 @@ let rec convert_ml_type_to_cpp_type
         | None ->
           (* Fallback: if tvars is non-empty and this is a local reference, use
              tvars length *)
-          let is_local =
-            Ref.User.Set.mem g ns
-            || List.exists
-                 (globref_equal g)
-                 !local_inductives
-          in
+          let is_local = Ref.User.Set.mem g ns || spells_bare g in
           if is_local && tvars <> [] then
             safe_firstn (List.length tvars) ts
           else
@@ -1648,12 +1643,7 @@ let rec convert_ml_type_to_cpp_type
     | GlobRef.IndRef _ ->
       (* Enum inductives are value types - no shared_ptr wrapping *)
       if is_enum_inductive g then
-        let is_local =
-          Ref.User.Set.mem g ns
-          || List.exists
-               (globref_equal g)
-               !local_inductives
-        in
+        let is_local = Ref.User.Set.mem g ns || spells_bare g in
         if is_local then
           core
         else
@@ -1676,12 +1666,7 @@ let rec convert_ml_type_to_cpp_type
               | _ -> false) ns
           | _ -> false
         in
-        let is_local =
-          is_self_ref
-          || List.exists
-               (globref_equal g)
-               !local_inductives
-        in
+        let is_local = is_self_ref || spells_bare g in
         let is_uniform_self_ref =
           if not is_self_ref then
             true
@@ -3200,7 +3185,7 @@ let ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : cpp_type =
       ind_promoted_type_args r
       @ apply_hkt_tyctors r (template_params_of_ml ~site:Declared env tys)
     in
-    Tqualified (Cpp_names.inductive_type r temps [], ctor_name)
+    Tqualified (inductive_type r temps [], ctor_name)
   | _ -> Tid (ctor_name, [])
 
 (** [recover_boxed_result ~boxed ~expected expr] casts the result of a call

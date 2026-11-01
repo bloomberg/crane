@@ -3667,7 +3667,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              spelling; the result is recorded as a type, which only here,
              where the inductives in scope are known, can be written. *)
           let ctor_sig ?constructs args =
-            Minicpp.call_sig ~yields:(Cpp_names.inductive_type n temps []) ?constructs
+            Minicpp.call_sig ~yields:(inductive_type n temps []) ?constructs
               ~nargs:(List.length args) ()
           in
           (* Perceus reuse: where the plan gives this construction the token
@@ -10612,7 +10612,7 @@ let with_method_ns_for_locals ?base (f : unit -> 'a) : 'a =
         then Ref.User.Set.add g acc
         else acc)
       (Option.default (!tctx).method_self_ns base)
-      (get_local_inductives ())
+      (local_inductives_in_scope ())
   in
   with_method_self_ns full_ns f
 

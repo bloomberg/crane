@@ -249,7 +249,15 @@ let rec scope ~group ~depth e =
         | MLcase _ -> strict ~tail:true rhs
         | _ -> strict ~tail:false rhs
       in
-      MLletin (id, ty, rhs, inner 1 body, occ)
+      let group =
+        match rhs with
+        | MLfix (_, [|_|], [|fn|], false, o) when Recursion_plan.is_entered_copy o ->
+          (* A partner's copy the machine enters stands for the partner: its
+             calls are the group's. *)
+          {group with locals = (depth + 1, [|{l_type = ty; l_arity = Mlutil.nb_lams fn}|]) :: group.locals}
+        | _ -> group
+      in
+      MLletin (id, ty, rhs, inner ~group 1 body, occ)
     | MLlam (id, ty, body) -> MLlam (id, ty, inner 1 body)
     | MLfix (i, ids, bodies, cofix, occ) ->
       let n = Array.length ids in
@@ -344,9 +352,10 @@ let methods_of struc = Method_registry.create ~ret_is_erased:Translation.return_
    off it first ({!Core_effects.analyze}): a bind is sequencing only where
    the declaration it is written in erases its monad. *)
 let structure struc =
+  let methods = methods_of struc in
   let struc =
-    if Recursion_plan.splicing () then
-      Recursion_plan.splice_partners ~loopified:(loopified ~methods:(methods_of struc)) struc
-    else struc
+    Recursion_plan.splice_partners ~loopified:(loopified ~methods)
+      ~adopts:(fun r -> Method_registry.is_registered_method methods r = None)
+      struc
   in
   Modutil.map_struct_decls (decl ~effects:(Core_effects.analyze struc) ~methods:(methods_of struc)) struc

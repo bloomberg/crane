@@ -7,19 +7,18 @@ uint64_t MutualLoopifyAcc::tsum(
 
   struct CraneEnter {
     const MutualLoopifyAcc::tree *t;
-    uint64_t acc;
   };
 
-  /// CraneCont_Fcons: saves [_inl_a1], resumes after recursive call, then
-  /// processes rest.
+  /// CraneCont_Fcons: saves [a10], resumes after recursive call, then processes
+  /// rest.
   struct CraneCont_Fcons {
-    std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1;
+    std::shared_ptr<MutualLoopifyAcc::forest> a10;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Fcons>;
   uint64_t _result{};
   crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&t, acc});
+  _stack.emplace_back(CraneEnter{&t});
   /// Loopified tsum: CraneEnter -> CraneCont_Fcons.
   while (!_stack.empty()) {
     CraneFrame _frame = std::move(_stack.back());
@@ -27,7 +26,6 @@ uint64_t MutualLoopifyAcc::tsum(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MutualLoopifyAcc::tree &t = *_f.t;
-      uint64_t acc = _f.acc;
       if (std::holds_alternative<typename MutualLoopifyAcc::tree::Leaf>(
               t.v())) {
         const auto &[a0] =
@@ -36,22 +34,21 @@ uint64_t MutualLoopifyAcc::tsum(
       } else {
         const auto &[a0] =
             std::get<typename MutualLoopifyAcc::tree::Node>(t.v());
-        const MutualLoopifyAcc::forest &_inl_f = *a0;
-        uint64_t _inl_acc = acc;
+        auto &&_sv0 = *a0;
         if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(
-                _inl_f.v())) {
-          _result = std::move(_inl_acc);
+                _sv0.v())) {
+          _result = acc;
         } else {
-          const auto &[_inl_a0, _inl_a1] =
-              std::get<typename MutualLoopifyAcc::forest::Fcons>(_inl_f.v());
-          _stack.emplace_back(CraneCont_Fcons{_inl_a1});
-          _stack.emplace_back(CraneEnter{crane_raw(_inl_a0), _inl_acc});
+          const auto &[a00, a10] =
+              std::get<typename MutualLoopifyAcc::forest::Fcons>(_sv0.v());
+          _stack.emplace_back(CraneCont_Fcons{a10});
+          _stack.emplace_back(CraneEnter{crane_raw(a00)});
         }
       }
     } else {
       auto _f = std::move(std::get<CraneCont_Fcons>(_frame));
-      std::shared_ptr<MutualLoopifyAcc::forest> _inl_a1 = std::move(_f._inl_a1);
-      _result = fsum(std::move(_result), *_inl_a1);
+      std::shared_ptr<MutualLoopifyAcc::forest> a10 = std::move(_f.a10);
+      _result = fsum(std::move(_result), *a10);
     }
   }
   return _result;
@@ -67,19 +64,21 @@ uint64_t MutualLoopifyAcc::fsum(
     uint64_t acc;
   };
 
-  /// CraneEnter_inl: captures varying parameters for each recursive call.
-  struct CraneEnter_inl {
-    MutualLoopifyAcc::tree _inl_t;
-    uint64_t _inl_acc;
+  /// CraneEnter_tsum_entry: captures varying parameters for each recursive
+  /// call.
+  struct CraneEnter_tsum_entry {
+    MutualLoopifyAcc::tree t;
+    uint64_t acc0;
   };
 
-  /// CraneCont_Fcons: saves [a1], resumes after recursive call, then processes
+  /// CraneCont_Fcons: saves [a10], resumes after recursive call, then processes
   /// rest.
   struct CraneCont_Fcons {
-    const MutualLoopifyAcc::forest *a1;
+    const MutualLoopifyAcc::forest *a10;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneEnter_inl, CraneCont_Fcons>;
+  using CraneFrame =
+      std::variant<CraneEnter, CraneEnter_tsum_entry, CraneCont_Fcons>;
   uint64_t _result{};
   crane::small_vector<CraneFrame> _stack;
   _stack.emplace_back(CraneEnter{&f, acc});
@@ -95,29 +94,29 @@ uint64_t MutualLoopifyAcc::fsum(
               f.v())) {
         _result = std::move(acc);
       } else {
-        const auto &[a0, a1] =
+        const auto &[a00, a10] =
             std::get<typename MutualLoopifyAcc::forest::Fcons>(f.v());
-        _stack.emplace_back(CraneCont_Fcons{crane_raw(a1)});
-        _stack.emplace_back(CraneEnter_inl{*a0, acc});
+        _stack.emplace_back(CraneCont_Fcons{crane_raw(a10)});
+        _stack.emplace_back(CraneEnter_tsum_entry{*a00, acc});
       }
-    } else if (std::holds_alternative<CraneEnter_inl>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter_inl>(_frame));
-      const MutualLoopifyAcc::tree &_inl_t = std::move(_f._inl_t);
-      uint64_t _inl_acc = _f._inl_acc;
+    } else if (std::holds_alternative<CraneEnter_tsum_entry>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter_tsum_entry>(_frame));
+      const MutualLoopifyAcc::tree &t = std::move(_f.t);
+      uint64_t acc0 = _f.acc0;
       if (std::holds_alternative<typename MutualLoopifyAcc::tree::Leaf>(
-              _inl_t.v())) {
-        const auto &[_inl_a0] =
-            std::get<typename MutualLoopifyAcc::tree::Leaf>(_inl_t.v());
-        _result = (_inl_acc + _inl_a0);
+              t.v())) {
+        const auto &[a0] =
+            std::get<typename MutualLoopifyAcc::tree::Leaf>(t.v());
+        _result = (acc0 + a0);
       } else {
-        const auto &[_inl_a0] =
-            std::get<typename MutualLoopifyAcc::tree::Node>(_inl_t.v());
-        _stack.emplace_back(CraneEnter{crane_raw(_inl_a0), _inl_acc});
+        const auto &[a0] =
+            std::get<typename MutualLoopifyAcc::tree::Node>(t.v());
+        _stack.emplace_back(CraneEnter{crane_raw(a0), acc0});
       }
     } else {
       auto _f = std::move(std::get<CraneCont_Fcons>(_frame));
-      const MutualLoopifyAcc::forest &a1 = *_f.a1;
-      _stack.emplace_back(CraneEnter{&a1, std::move(_result)});
+      const MutualLoopifyAcc::forest &a10 = *_f.a10;
+      _stack.emplace_back(CraneEnter{&a10, std::move(_result)});
     }
   }
   return _result;

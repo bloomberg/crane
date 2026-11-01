@@ -242,24 +242,6 @@ let rec fixpoints wanted acc e =
   Mlutil.ast_iter (fun e -> acc := fixpoints wanted !acc e) e;
   !acc
 
-(* Whether [a] and [b] are one type once every abbreviation is unfolded,
-   whatever [Type Expand] says the C++ spells, and a variable of the
-   definition's scheme is read alike whether it is written as the scheme's
-   or, under a binder inside it, as rigid. *)
-let same_type a b =
-  let rec unfold = function
-    | Tmeta {contents = Some t} -> unfold t
-    | Tglob ((Names.GlobRef.ConstRef kn as r), args, a) -> (
-      match Table.lookup_typedef_unchecked kn with
-      | Some t -> unfold (Mlutil.type_subst_list args t)
-      | None -> Tglob (r, List.map unfold args, a) )
-    | Tglob (r, args, a) -> Tglob (r, List.map unfold args, a)
-    | Tapp (i, args) -> Tapp (i, List.map unfold args)
-    | Tarr (a, b) -> Tarr (unfold a, unfold b)
-    | t -> t
-  in
-  Mlutil.eq_ml_type (Mlutil.rigidify (unfold a)) (Mlutil.rigidify (unfold b))
-
 let lower ~methods plan program =
   let struc = Core.structure program in
   let effects = Core_effects.analyze struc in
@@ -299,10 +281,9 @@ let lower ~methods plan program =
      that the partner run in place of the calls the plan has it adopt,
      read as generated ({!Loopify_frame.find_adopted}), where it returns
      what [r] does: a machine has one result. *)
-  let returns ty = Ml_type_util.ml_return_type (Mlutil.type_simpl ty) in
   let yields_own r ty =
     match Names.GlobRef.Map_env.find_opt r !defs with
-    | Some own -> same_type (returns own.fd_type) (returns ty)
+    | Some own -> Recursion_plan.yields_alike own.fd_type ty
     | None -> false
   in
   let adoption r inner =
@@ -317,6 +298,17 @@ let lower ~methods plan program =
             let parameters, body = read ~builds:false fd in
             Some (Partner {partner = i.partner; invoked = i.invoked; parameters; body})
           | _ -> None )
+  in
+  (* A partner's copy spliced into the body of [r] is entered by the
+     machine [lowered] lowers it as ({!Recursion_plan.entered_copy}). *)
+  let check_entered r lowered =
+    match Recursion_plan.entered_copy r with
+    | Some o when Probe.checking () ->
+      let enters t = List.exists (fun (e : loop) -> Loop.equal e.loop (Loop.Member (o, 0))) (Control_ir.entries t) in
+      if not (Option.cata enters false lowered) then
+        Probe.violation "entered partner"
+          Pp.(str "the machine of " ++ str (Table.kername_of_global r) ++ str " does not enter the partner spliced into its body")
+    | Some _ | None -> ()
   in
   let loops = ref [] in
   let add target parameters body =
@@ -339,10 +331,14 @@ let lower ~methods plan program =
             in
             let target = Loop.Function fd.fd_ref in
             let adopted = if frames && not (methods fd.fd_ref) then adoption fd.fd_ref inner else None in
-            add target parameters
-              (tail_loop ~inlined:(inlined ~builds fd.fd_ref) ~modulo_cons:builds ~frames ?adopted ~effects ~target
-                 ~callee inner )
-          end;
+            let lowered =
+              tail_loop ~inlined:(inlined ~builds fd.fd_ref) ~modulo_cons:builds ~frames ?adopted ~effects ~target
+                ~callee inner
+            in
+            add target parameters lowered;
+            check_entered fd.fd_ref (Some lowered)
+          end
+          else check_entered fd.fd_ref None;
           List.iter
             (fun (occ, funs) ->
               let builds = List.exists (Occurrence.equal occ) local_modulo_cons in
