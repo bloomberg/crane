@@ -239,8 +239,8 @@ let safe_firstn n lst =
   in
   aux n lst []
 
-(* The shared mutable translation state ([tctx], [local_inductives], and their
-   accessors) lives in {!Translation_state}, opened at the top of this file. *)
+(* The shared mutable translation state ([tctx] and its accessors) lives in
+   {!Translation_state}, opened at the top of this file. *)
 
 (** Extract the innermost result type from a (possibly monadic) ML type.
     For [nat -> itree ioE unit], returns [unit].

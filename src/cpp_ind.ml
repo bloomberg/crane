@@ -58,14 +58,6 @@ let module_struct_name (mp : ModPath.t) : string option =
     | MPdot (_, lbl) -> Some (String.capitalize_ascii (Label.to_string lbl))
     | MPfile _ | MPbound _ -> None )
 
-(** [generating_outside_modules k] is [k ()] generating outside the body of
-    every module, where no inductive is spelled bare: a pass over the whole
-    unit or program that asks what a type converts to, not how a module
-    writes it. *)
-let generating_outside_modules k =
-  Translation_state.(
-    with_field (fun c -> c.local_inductives) (fun l -> tctx := {!tctx with local_inductives = l}) (Some []) k)
-
 (** The kinds of the template parameters of the inductive [kn]'s packets,
     as {!ind_header_decls} gives them. *)
 let ind_template_kinds kn ind =
@@ -101,7 +93,7 @@ let alias_template_kinds r l t =
   if written then [(r, type_alias_kinds r l t)] else []
 
 let template_kinds struc =
-  generating_outside_modules @@ fun () ->
+  Translation_state.generating_outside_modules @@ fun () ->
   let kinds = ref [] in
   let decide l =
     List.iter (fun (r, k) -> Tparam_kinds.record r k) l;
@@ -753,18 +745,6 @@ let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) 
   && List.equal Id.equal (fst a.gf_env) (fst b.gf_env)
   && Id.Set.equal (snd a.gf_env) (snd b.gf_env)
 
-(** [with_planned_local_inductives mp k] is [k ()] generating an element of
-    the module [mp], whose planned local inductives the generator spells
-    bare ({!Translation_state.generating_in}).  They are installed too, for
-    [CRANE_CHECK_IR] to compare with the entry: generation outside an entry
-    still reads the install. *)
-let with_planned_local_inductives mp k =
-  match Scope_plan.local_inductives mp with
-  | Some local -> setting Translation_state.local_inductives local (fun () -> Translation_state.generating_in mp k)
-  | None ->
-    CErrors.anomaly
-      Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned local inductives.")
-
 (** [ahead_once ~module_ ~what ~recorded ~record ~same ?planned ?take gen]
     is [gen ()] ahead of the files ({!generating_ahead}), recorded
     ([record]) with [module_], the module whose element it is generated as,
@@ -779,7 +759,7 @@ let with_planned_local_inductives mp k =
     it is [gen ()].  Read while {!peeking}, it is what was recorded, handed
     to [peek] for what taking it would give without taking it. *)
 let ahead_once ~module_ ~what ~recorded ~record ~same ?(planned = ignore) ?(take = Fun.id) ?(peek = Fun.id) gen =
-  let generated () = with_planned_local_inductives module_ gen in
+  let generated () = Translation_state.generating_in module_ gen in
   let check v ~again =
     if Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (same v (fst (Translation.collecting_lifted generated))) then
       CErrors.anomaly

@@ -2,11 +2,10 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Shared mutable state for the MiniML -> MiniCpp translation.
 
-    Holds the per-declaration translation context ([tctx]) and the module-scope
-    [local_inductives] list, plus their accessors, so that the translation core
-    ([translation.ml]) and the declaration generators can share this state
-    without a dependency cycle.  Mirrors the [cpp_state.ml] pattern used by the
-    pretty-printer. *)
+    Holds the per-declaration translation context ([tctx]) and its accessors,
+    so that the translation core ([translation.ml]) and the declaration
+    generators can share this state without a dependency cycle.  Mirrors the
+    [cpp_state.ml] pattern used by the pretty-printer. *)
 
 module IntMap = Map.Make (Int)
 
@@ -14,18 +13,6 @@ open Common
 open Miniml
 open Minicpp
 open Names
-
-let local_inductives : GlobRef.t list ref = ref []
-
-(** Register an inductive as local to the current module scope. *)
-let add_local_inductive (r : GlobRef.t) =
-  local_inductives := r :: !local_inductives
-
-(** Clear the local inductives list (called at module boundaries). *)
-let clear_local_inductives () = local_inductives := []
-
-(** Return the list of inductives local to the current module scope. *)
-let get_local_inductives () = !local_inductives
 
 (** Helper to create CPPglob with pre-computed custom_info.  [yields] is what
     the global evaluates to, and is worth passing whenever the caller has the
@@ -60,11 +47,9 @@ type env_binder = Lexenv.binder = {
   eb_role : binder_role;
 }
 
-(** Consolidated mutable state for expression compilation.
-    All fields except {!local_inductives} (which has a different lifecycle
-    and is exported to [cpp.ml]) and the helpers being lifted
-    ({!lifted_so_far}, which belong to a generation rather than a scope) live
-    here. *)
+(** Consolidated mutable state for expression compilation.  All of it but
+    the helpers being lifted ({!lifted_so_far}, which belong to a generation
+    rather than a scope) lives here. *)
 type translation_ctx = {
   (* Template type variables for the function currently being translated. *)
   current_type_vars : Id.t list;
@@ -157,8 +142,9 @@ type translation_ctx = {
   method_self_ns : Ref.User.Set.t;
   (* The inductives the body of the module being generated spells bare, as
      planned ({!Scope_plan.local_inductives}): set where generation enters
-     that module ({!generating_in}).  [None] outside every such entry, where
-     the printer's install answers instead ({!spells_bare}). *)
+     that module ({!generating_in}), none where it enters no module
+     ({!generating_outside_modules}), and [None] before either, where nothing
+     may ask ({!local_inductives_in_scope}). *)
   local_inductives : GlobRef.t list option;
   (** The C++ type of {e every} binder in scope, by de Bruijn index, paired
       with what decided it.
@@ -318,33 +304,33 @@ let with_method_self_ns (ns : Ref.User.Set.t) (f : unit -> 'a) : 'a =
     (fun ns -> tctx := { !tctx with method_self_ns = ns })
     ns f
 
+let spelling_bare (local : GlobRef.t list) (f : unit -> 'a) : 'a =
+  with_field (fun c -> c.local_inductives) (fun l -> tctx := { !tctx with local_inductives = l }) (Some local) f
+
 (** [generating_in mp f] runs [f] generating an element of the body of the
     module [mp], whose planned local inductives it spells bare
     ({!translation_ctx.local_inductives}). *)
 let generating_in (mp : ModPath.t) (f : unit -> 'a) : 'a =
   match Scope_plan.local_inductives mp with
-  | Some local ->
-    with_field
-      (fun c -> c.local_inductives)
-      (fun l -> tctx := { !tctx with local_inductives = l })
-      (Some local) f
+  | Some local -> spelling_bare local f
   | None ->
     CErrors.anomaly
       Pp.(str "Crane: the body of the module " ++ str (ModPath.to_string mp) ++ str " has no planned local inductives.")
 
+(** [generating_outside_modules f] runs [f] generating outside the body of
+    every module, where no inductive is spelled bare: a pass over the whole
+    unit or program that asks what a type converts to, not how a module
+    writes it. *)
+let generating_outside_modules (f : unit -> 'a) : 'a = spelling_bare [] f
+
 (** The inductives spelled bare where generation is: the planned ones of the
-    module it entered ({!generating_in}), or else those the printer installed.
-    Where both are known they must be the same set: the install is what a
-    planned entry replaces. *)
+    module it entered ({!generating_in}), none outside every module
+    ({!generating_outside_modules}).  Generation that entered neither has no
+    answer. *)
 let local_inductives_in_scope () =
   match (!tctx).local_inductives with
-  | None -> !local_inductives
-  | Some planned ->
-    let covers a b = List.for_all (fun r -> List.exists (GlobRef.CanOrd.equal r) b) a in
-    if Probe.checking () && not (covers planned !local_inductives && covers !local_inductives planned) then
-      Probe.violation "planned local inductives"
-        Pp.(str "generation spells bare other inductives than the printer installed");
-    planned
+  | Some local -> local
+  | None -> CErrors.anomaly Pp.(str "Crane: generation asked which inductives it spells bare outside every entry.")
 
 (** Whether generation spells the inductive [r] bare, unqualified by its
     namespace ({!local_inductives_in_scope}). *)

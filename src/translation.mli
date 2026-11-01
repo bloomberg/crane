@@ -34,18 +34,9 @@ open Names
     sibling-qualified. *)
 
 (** {2 Local Inductive Context}
-    Tracks inductives defined in the current module scope. When set, references
-    to these inductives won't be wrapped in Tnamespace, so they appear as
-    sibling types rather than outer-namespace-qualified types. *)
-
-(** Record an inductive as defined in the current module scope. *)
-val add_local_inductive : GlobRef.t -> unit
-
-(** Reset the local-inductive set. Called at module boundaries. *)
-val clear_local_inductives : unit -> unit
-
-(** Return the inductives currently recorded as local to this module scope. *)
-val get_local_inductives : unit -> GlobRef.t list
+    The inductives the module being generated declares are spelled bare, as
+    sibling types, not qualified by their namespace
+    ({!Translation_state.generating_in}). *)
 
 (** [with_method_ns_for_locals () f] runs [f] with the module's local
     inductives added to [method_self_ns], restoring the enclosing namespace on
