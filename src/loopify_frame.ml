@@ -632,38 +632,26 @@ and rewrite_exprs_stmt f s =
 and rewrite_exprs_expr f e =
   f (map_expr (rewrite_exprs_expr f) (rewrite_exprs_stmt f) Fun.id e)
 
-(** The first hit of [on_stmt] or [on_expr] among the statements that run as
-    part of this function's flow.
+(** The first hit of [on_stmt] among the statements that run as part of
+    this function's flow.
 
     Statements are searched throughout -- what is looked for is often bound
-    inside a match branch rather than at the body's top level.  Expressions are
-    searched only when [on_expr] is given, and then recursively; without it the
-    traversal still enters {!invoked_body} lambdas, since translation wraps a
-    Coq [let fix] appearing in argument position in one of those.  The body of
-    a lambda this function merely {i builds} is never searched: it runs later,
-    under a scope this machine does not control. *)
-let find_in_flow ?on_stmt ?on_expr stmts =
+    inside a match branch rather than at the body's top level.  The
+    traversal enters {!invoked_body} lambdas, since translation wraps a Coq
+    [let fix] appearing in argument position in one of those.  The body of
+    a lambda this function merely {i builds} is never searched: it runs
+    later, under a scope this machine does not control. *)
+let find_in_flow ~on_stmt stmts =
   let found = ref None in
   let pending () = Option.is_empty !found in
-  let try_hit f x = if pending () then found := f x in
   let rec visit stmt =
     if pending () then (
-      Option.iter (fun f -> try_hit f stmt) on_stmt;
+      found := on_stmt stmt;
       if pending () then ignore (map_stmt visit_expr visit Fun.id stmt) );
     stmt
   and visit_expr e =
-    if pending () then (
-      match on_expr with
-      | Some f ->
-        try_hit f e;
-        if pending () then
-          Minicpp.iter_expr_children
-            ~on_expr:(fun c -> ignore (visit_expr c))
-            ~on_stmts:(fun _ -> ()) e
-      | None ->
-        List.iter
-          (fun body -> List.iter (fun s -> ignore (visit s)) body)
-          (invoked_bodies_expr e) );
+    if pending () then
+      List.iter (fun body -> List.iter (fun s -> ignore (visit s)) body) (invoked_bodies_expr e);
     e
   in
   List.iter (fun s -> ignore (visit s)) stmts;
@@ -719,19 +707,15 @@ let find_fix_wrapper fixpoint stmts =
       | Sasgn (wid, Declare (Tauto, _), CPPlambda w) when wraps fixpoint w -> Some wid
       | _ -> None )
 
-(** A body this machine adopts as an extra entry point.
+(** A body this machine adopts as an extra entry point: a fixpoint local to
+    the function, whose calls belong to this machine's recursion but sit
+    where the [CraneEnter] rewriter does not go, so that a single-entry
+    machine cannot linearise them.
 
-    Two shapes reach here: a fixpoint local to the function, and the body of a
-    mutual-recursion partner that {!generic_inline_expr} left as an
-    immediately-invoked lambda.  Both hold calls that belong to this machine's
-    recursion but sit where the [CraneEnter] rewriter does not go, so neither can
-    be linearised by a single-entry machine.
-
-    The machine treats them alike because {!ad_install} makes them alike: it
-    rewrites the enclosing body so that, whichever shape the source had, the
-    calls that enter the adopted body are calls on the one name
-    {!ad_entry_id}.  Everything downstream keys on that name, so there is a
-    single way to denote "enter this entry" rather than one per shape. *)
+    {!ad_install} rewrites the enclosing body so that the calls that enter
+    the adopted body are calls on the one name {!ad_entry_id}, whether they
+    name the fixpoint or a binder of it.  Everything downstream keys on that
+    name. *)
 type adopted = {
   ad_name : string;  (** Names the entry's frame, [CraneEnter_<name>] *)
   ad_entry_id : Id.t;
@@ -758,16 +742,8 @@ type adopted = {
           gets the function reported as declined even though its machine is
           correct. *)
   ad_what : string;  (** The body, named concretely enough to act on *)
-  ad_source : adopted_source;  (** What the body is in Core *)
+  ad_fixpoint : Miniml.Occurrence.t;  (** The occurrence of the Core fixpoint the body is *)
 }
-
-(** What an adopted body is in Core: a local fixpoint, by its occurrence,
-    or a partner's body inlined in place at each of the calls of it the
-    entry reroutes, by those calls' occurrences
-    ({!Minicpp.call_sig.cs_occurrence}). *)
-and adopted_source =
-  | Fixpoint of Miniml.Occurrence.t
-  | Invocations of Miniml.Occurrence.t list
 
 (** The synthetic name calls entering an entry called [name] are routed
     through.  Lowercase and prefixed, so it cannot collide with the [CraneEnter_]
@@ -902,83 +878,18 @@ let adopt_local_fix ~stmts ~planned = function
             ad_body = install_calls cl_body;
             ad_install = install;
             ad_what = "the local fixpoint " ^ name;
-            ad_source = Fixpoint (fst fixpoint.lf_member) } )
+            ad_fixpoint = fst fixpoint.lf_member } )
   | _ -> None
 
-(** Whether [e] is a lambda invoked in place of one of the calls
-    [invocations] are the occurrences of: a partner's body inlined there
-    ({!Loopify.inline_partner}). *)
-let invocation_of invocations = function
-  | CPPfun_call ({cs_occurrence = Some o; _}, CPPlambda _, _) ->
-    List.exists (Miniml.Occurrence.equal o) invocations
-  | _ -> false
-
-(** Adopt the body of an immediately-invoked lambda that still calls this
-    function -- what {!generic_inline_expr} leaves behind when a mutual
-    recursion partner is inlined in a non-tail position -- as the
-    recursion plan has it: the lambda invoked in place of one of the calls
-    [invocations] are the occurrences of
-    ({!Recursion_plan.adopted_invocations}).
-
-    Unlike a fixpoint the lambda has no name to key calls on, so installation
-    recognises each invocation by the Core call it is made of and replaces
-    it with a call on {!ad_entry_id}, which the body itself then no longer
-    appears in. *)
-let adopt_invocation ~invocations e =
-  match e with
-  | CPPfun_call (_, CPPlambda {cl_params; cl_body; cl_ret; cl_binders; _}, args)
-    when invocation_of invocations e ->
-    let params =
-      List.filter_map
-        (fun (ty, id_opt) ->
-          match id_opt with Some id -> Some (id, ty) | None -> None )
-        (to_reversed cl_params)
-    in
-    if params = [] || List.length params <> List.length (call_args args) then
-      None
-    else
-      let bound = List.map fst params in
-      let captures =
-        free_vars_body cl_body
-        |> List.filter (fun v -> not (List.exists (Id.equal v) bound))
-        |> List.sort_uniq Id.compare
-      in
-      let entry_id = adopted_entry_id "inl" in
-      let reroute e' =
-        match e' with
-        | CPPfun_call (res, CPPlambda _, args') when invocation_of invocations e' ->
-          CPPfun_call (res, CPPvar entry_id, args')
-        | _ -> e'
-      in
-      Some
-        { ad_name = "inl";
-          ad_entry_id = entry_id;
-          ad_params = params;
-          ad_ret = cl_ret;
-          ad_captures = captures;
-          ad_binders = cl_binders;
-          ad_body = rewrite_exprs reroute cl_body;
-          ad_install = rewrite_exprs reroute;
-          ad_what = "an inlined body";
-          ad_source = Invocations invocations }
-  | _ -> None
-
-(** The body this machine should adopt, if any.
-
-    A local fixpoint is preferred: it is the shape translation emits for Coq's
-    [let fix], and it names itself.  Which of them call back into the function
-    is the recursion plan's, [adoptable]; the first in the flow lowering can
-    take is adopted.  Failing that, the lambda invoked in place of the calls
-    of a mutual-recursion partner the plan has the machine adopt,
-    [invocations], the residue of inlining it. *)
-let find_adopted ~adoptable ~invocations stmts =
+(** The body this machine should adopt, if any: a local fixpoint, the shape
+    translation emits for Coq's [let fix], which names itself.  Which of them
+    call back into the function is the recursion plan's, [adoptable]; the
+    first in the flow lowering can take is adopted. *)
+let find_adopted ~adoptable stmts =
   let planned (lf : local_fixpoint) =
     List.exists (Miniml.Occurrence.equal (fst lf.lf_member)) adoptable
   in
-  match find_in_flow stmts ~on_stmt:(adopt_local_fix ~stmts ~planned) with
-  | Some _ as found -> found
-  | None ->
-    Option.bind invocations (fun invocations -> find_in_flow stmts ~on_expr:(adopt_invocation ~invocations))
+  find_in_flow stmts ~on_stmt:(adopt_local_fix ~stmts ~planned)
 
 (** A checker that tries each of [checkers] in turn, so one machine can be
     driven by the calls that reach any of its entry points. *)
@@ -2501,18 +2412,15 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
     | None -> check
     | Some (ad, _) -> any_checker [check; adopted_checker ~entry:1 ad]
   in
-  (* A machine adopting a local fixpoint is entered by its members too; one
-     adopting a partner's inlined body by the calls of the partner it
-     reroutes. *)
+  (* A machine adopting a local fixpoint is entered by its members too. *)
   let entered_by =
     match adopted with
     | None -> entered_by
     | Some (ad, _) ->
       let adopted_enters (c : Recursion_plan.call) =
-        match (ad.ad_source, c.target) with
-        | Fixpoint fixpoint, (Member (o, _) | Entering o) -> Miniml.Occurrence.equal o fixpoint
-        | Fixpoint _, Function _ -> false
-        | Invocations calls, _ -> List.exists (Miniml.Occurrence.equal c.occurrence) calls
+        match c.target with
+        | Member (o, _) | Entering o -> Miniml.Occurrence.equal o ad.ad_fixpoint
+        | Function _ -> false
       in
       Option.map (fun entered_by c -> entered_by c || adopted_enters c) entered_by
   in

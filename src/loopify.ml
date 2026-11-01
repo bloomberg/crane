@@ -68,9 +68,8 @@
     {2 Adopted Bodies}
 
     Some of a function's recursion lives in a lambda: a fixpoint local to it
-    (Coq's [let fix], or a [fix] applied in argument position), or a
-    mutual-recursion partner that inlining left as an immediately-invoked
-    lambda.  Such a body is not loopified on its own: two machines cannot share
+    (Coq's [let fix], or a [fix] applied in argument position).  Such a body
+    is not loopified on its own: two machines cannot share
     a stack, so each would unwind through the other and the C++ would still
     recurse.  Instead it is {e adopted} as a second entry point of the
     enclosing machine -- its own [CraneEnter_<name>] frame carrying its parameters
@@ -84,7 +83,9 @@
     The pass is split by responsibility: {!Loopify_analysis} finds and
     classifies recursive calls, {!Loopify_tail}, {!Loopify_tmc} and
     {!Loopify_frame} are the rewrite strategies, and this module dispatches
-    between them and inlines mutual recursion.  What it lowers, and where,
+    between them.  A mutual-recursion partner is spliced into a function's
+    Core body before any of this ({!Recursion_plan.splice_partners}).  What
+    it lowers, and where,
     is the recursion plan's, read off the ControlIR of each loop as the
     definition is generated ({!Control_to_legacy_minicpp}).
 
@@ -99,141 +100,6 @@ include Loopify_tmc
 include Loopify_frame
 
 (** {2 Main transformation dispatch} *)
-
-(** {3 Generic mutual recursion inlining}
-
-    Every inlining Loopify does is one operation: find every call to a
-    target function and replace it with the callee's body.  This record and
-    the three generic traversal functions capture it, parameterised only by
-    how the calls inlined are recognised. *)
-
-(** How an inlined call is replaced: a tail call continues in the callee's
-    body, any other runs the body in a lambda invoked in its place. *)
-type inlined_as =
-  | Continued
-  | Invoked
-
-(** Parameters for a single inlining substitution. *)
-type inline_spec = {
-  continues : cpp_expr -> bool;
-      (** [true] if [expr], returned, is a call that continues in the body of
-          the function being inlined *)
-  invokes : cpp_expr -> bool;
-      (** [true] if [expr] is a call that runs that body in its place *)
-  inlined : inlined_as -> cpp_expr -> unit;
-      (** Told of each call inlined, as it is replaced *)
-  get_args : cpp_expr -> cpp_expr list;
-      (** Extract the argument list from a target call expression *)
-  params : (Id.t * cpp_type) list;
-      (** Formal parameters of the function being inlined (possibly renamed) *)
-  binders : (Id.t * Core_binder.t) list;
-      (** The Core binder each of them stands for, by name *)
-  body : cpp_stmt list;
-      (** Body of the function being inlined (possibly with renamed variables) *)
-  ret_ty : cpp_type;
-      (** Return type of the function being inlined.  A non-tail call becomes
-          a lambda around [body]; this is that lambda's return type. *)
-}
-
-(** Whether every path through [stmts] ends in a return or a throw. *)
-let rec leaves stmts =
-  match List.rev stmts with
-  | (Sreturn _ | Sthrow _) :: _ -> true
-  | Sif (_, t, e) :: _ -> leaves t && leaves e
-  | Scustom_case (_, _, _, branches, _) :: _ ->
-    branches <> [] && List.for_all (fun (_, _, b) -> leaves b) branches
-  | Smatch (_, branches, Some default) :: _ ->
-    leaves default && List.for_all (fun br -> leaves br.smb_body) branches
-  | Sblock ss :: _ -> leaves ss
-  | _ -> false
-
-(** Inline all calls matching [spec] in a statement list.  Tail calls are
-    expanded to parameter bindings plus body; non-tail calls become IIFEs.
-    {!generic_inline_stmt} handles individual statements. *)
-let rec generic_inline_stmts spec = function
-  (* A tail call of a function returning nothing is its statement and a
-     return.  It continues in a body every path of which ends in a return
-     or a throw, as such a function's body is generated: nothing may follow
-     a call the transforms read as the function's last. *)
-  | Sexpr e :: Sreturn None :: _ when spec.continues e && leaves spec.body -> generic_continue spec e
-  | s :: rest -> generic_inline_stmt spec s @ generic_inline_stmts spec rest
-  | [] -> []
-
-(** The tail call [e], continued in the body inlined: its parameters bound to
-    its arguments, then the body. *)
-and generic_continue spec e =
-  spec.inlined Continued e;
-  List.map2
-    (fun (pid, ty) arg -> Sasgn (pid, Declare (ty, List.assoc_opt pid spec.binders), arg))
-    spec.params (spec.get_args e)
-  @ spec.body
-
-(** Inline all calls matching [spec] in a single statement. *)
-and generic_inline_stmt spec = function
-  | Sreturn (Some e) when spec.continues e -> generic_continue spec e
-  | Sif (cond, then_br, else_br) ->
-    [Sif (cond,
-          generic_inline_stmts spec then_br,
-          generic_inline_stmts spec else_br)]
-  | Scustom_case (ty, scrut, tyargs, branches, err) ->
-    [ Scustom_case
-        ( ty, generic_inline_expr spec scrut, tyargs,
-          List.map (fun (ps, rty, b) ->
-            (ps, rty, generic_inline_stmts spec b)) branches,
-          err ) ]
-  | Sreturn (Some e) -> [Sreturn (Some (generic_inline_expr spec e))]
-  | Sasgn (id, ty, e) -> [Sasgn (id, ty, generic_inline_expr spec e)]
-  | Sassign_expr (lhs, e) ->
-    [Sassign_expr (generic_inline_expr spec lhs, generic_inline_expr spec e)]
-  | Sexpr e -> [Sexpr (generic_inline_expr spec e)]
-  | Smatch (scrut, branches, default) ->
-    [ Smatch
-        ( scrut,
-          List.map (fun br ->
-            { br with smb_body = generic_inline_stmts spec br.smb_body })
-            branches,
-          Option.map (generic_inline_stmts spec) default ) ]
-  | Sblock ss -> [Sblock (generic_inline_stmts spec ss)]
-  | s -> [s]
-
-(** Inline all calls matching [spec] in an expression.  Non-tail calls are
-    wrapped in an immediately-invoked lambda (IIFE). *)
-and generic_inline_expr spec expr =
-  if spec.invokes expr then
-    let () = spec.inlined Invoked expr in
-    (* Non-tail call — wrap inlined body in immediately-invoked lambda, which
-       is still the Core call it replaces. *)
-    let lparams =
-      List.map (fun (pid, ty) -> (ty, Some pid)) spec.params
-    in
-    let occurrence = match expr with CPPfun_call (cs, _, _) -> cs.cs_occurrence | _ -> None in
-    CPPfun_call
-      ( {call_opaque with cs_occurrence = occurrence},
-        CPPlambda
-          { cl_params = of_reversed lparams;
-            cl_tparams = [];
-            cl_binders = spec.binders;
-            cl_fixpoint = None;
-            cl_moved = [];
-            cl_ret = Some spec.ret_ty;
-            cl_body = spec.body;
-            cl_capture = Closure },
-        of_reversed (spec.get_args expr) )
-  else
-    match expr with
-    (* A call inside a closure cannot join the loop machine: the closure may
-       run after this function returns, or elsewhere.  Inlining there would
-       only hand the machine a call it cannot reach. *)
-    | CPPlambda _ -> expr
-    | _ ->
-    map_expr
-      (generic_inline_expr spec)
-      (fun s ->
-        match generic_inline_stmt spec s with
-        | [s'] -> s'
-        | ss -> Sblock ss )
-      Fun.id
-      expr
 
 (** Why a loop with no ControlIR is not lowered. *)
 let no_control_ir = "the loop has no ControlIR"
@@ -323,131 +189,6 @@ let checked_frame_machine loop transform =
       Probe.violation "control IR" why;
       None
     | None -> Some (body, !entries)
-
-(** The name a local of a body inlined into another takes there: prefixed,
-    so that it collides with none of the other body's, and a temporary
-    still where it was one ({!Mlutil.is_temporary_id}), so that
-    {!Cpp_temporaries} puts it back where it is read. *)
-let inlined_local_name id =
-  if Mlutil.is_temporary_id id then Id.of_string (Id.to_string id ^ "_inl")
-  else Generated_name.prefixed "_inl" id
-
-(** [inline_partner ~continues ~invokes callee body] is [body] with the
-    calls [continues] and [invokes] recognise replaced by the body of
-    [callee], as it was generated: a returned call that
-    continues in it by parameter bindings and the body, any other by a
-    lambda invoked in its place, which is still the Core call it replaces.
-    With it come the occurrences of the calls replaced so, those that
-    continued and those invoked.
-
-    Parameter names in the inlined body are prefixed with [_inl_] to avoid
-    collisions with the outer function's variables, and so are its locals. *)
-let inline_partner ~continues ~invokes
-    {rf_ret_ty = callee_ret_ty; rf_params = callee_params; rf_binders = callee_binders; rf_body = callee_body} body =
-  (* Generate fresh names for parameters AND all local variables to avoid
-     collision with the outer function's bindings. *)
-  let param_rename_map =
-    List.map
-      (fun (pid, _ty) -> (pid, Generated_name.prefixed "_inl" pid))
-      callee_params
-  in
-  let local_ids = declared_ids callee_body in
-  let local_rename_map =
-    List.filter_map (fun id ->
-      if List.mem_assoc id param_rename_map then None
-      else Some (id, inlined_local_name id))
-      local_ids
-  in
-  let rename_map = param_rename_map @ local_rename_map in
-  (* The body is inlined as a lambda invoked in place, and a lambda is not
-     under the callee's template header: a forwarding parameter [F1 &&f]
-     there names the caller's [F1], if anything, and is not forwarding --
-     it is an rvalue or an lvalue reference by what that [F1] was deduced
-     as, and binds one kind of argument only.  [auto &&] is the forwarding
-     reference a lambda can declare. *)
-  let fresh_params =
-    List.map
-      (fun (pid, ty) ->
-        let ty =
-          match ty with
-          | Tref (Forwarding, Tvar _) -> Tref (Forwarding, Tauto)
-          | ty -> ty
-        in
-        (List.assoc pid rename_map, ty))
-      callee_params
-  in
-  let rename_var id =
-    match List.assoc_opt id rename_map with
-    | Some fresh -> fresh
-    | None -> id
-  in
-  let get_call_args = function
-    | CPPfun_call (_, _, args) -> to_reversed args
-    | _ -> []
-  in
-  let continued = ref [] and invoked = ref [] in
-  let inlined how e =
-    match how with
-    | Continued -> continued := made_of e :: !continued
-    | Invoked -> invoked := made_of e :: !invoked
-  in
-  let body =
-    generic_inline_stmts
-      { continues;
-        invokes;
-        inlined;
-        get_args = get_call_args;
-        params = fresh_params;
-        binders = List.map (fun (pid, b) -> (rename_var pid, b)) callee_binders;
-        body = rename_ids rename_var callee_body;
-        ret_ty = callee_ret_ty }
-      body
-  in
-  (body, List.rev !continued, List.rev !invoked)
-
-(** Inline mutual recursion partners into the body of the function [r] as
-    the recursion plan has them ({!Recursion_plan.inlinings}): each partner
-    as [partner] has it, at the calls whose occurrences the plan lists, a
-    tail call continuing in the partner's body and any other running it in a
-    lambda invoked in place.  The function then calls itself where it
-    called them, and its loop is lowered as a function's is.
-
-    Under [CRANE_CHECK_IR] the calls inlined must be those planned. *)
-let try_inline_mutual_into ~partner r body =
-  let planned = Recursion_plan.inlinings r in
-  let made = ref [] in
-  let inline_one body (i : Recursion_plan.inlining) =
-    match partner i.partner with
-    | None -> body
-    | Some registered ->
-      let call_in occurrences = function
-        | CPPfun_call ({cs_occurrence = Some o; _}, CPPglob (g, _, _), _) ->
-          Common.globref_equal g i.partner && List.exists (Miniml.Occurrence.equal o) occurrences
-        | _ -> false
-      in
-      let body, continued, invoked =
-        inline_partner ~continues:(call_in i.continued) ~invokes:(call_in i.invoked) registered body
-      in
-      made := (i.partner, continued, invoked) :: !made;
-      body
-  in
-  let inlined = List.fold_left inline_one body planned in
-  if Probe.checking () then begin
-    let same_calls = made_as_planned in
-    let agree hops =
-      List.length planned = List.length hops
-      && List.for_all2
-           (fun (i : Recursion_plan.inlining) (g, continued, invoked) ->
-             Common.globref_equal i.partner g && same_calls i.continued continued
-             && same_calls i.invoked invoked )
-           planned hops
-    in
-    let what () = Pp.str (Table.kername_of_global r) in
-    if not (agree (List.rev !made)) then
-      Probe.violation "partner inlining plan"
-        Pp.(str "the calls of its partners inlined into " ++ what () ++ str " are not those planned")
-  end;
-  inlined
 
 (** The strategy of the local fixpoint [fixpoint] as planned for the Core
     fixpoint it lowers ({!Recursion_plan.strategy_at}).  A body with no
@@ -967,7 +708,7 @@ let after_tail_loop ?(strategy = Lp_tail) ?survived ~tparams (f : dfun) params l
 let modulo_cons_loop ~jumped ~varying ~parts ~shapes ~tparams check (f : dfun) params body =
   let r = fst f.df_path.dp_outer in
   let adopted () =
-    find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body
+    find_adopted ~adoptable:(planned_adoptable r) body
   in
   if Option.has_some (adopted ()) then begin
     (* A loop tail modulo cons enters by no second entry, and the plan
@@ -983,30 +724,25 @@ let modulo_cons_loop ~jumped ~varying ~parts ~shapes ~tparams check (f : dfun) p
     in
     if classify (survivors f) loop = No_recursion then Some loop else None
 
-(** Whether the body [ad] the machine of the function [r] adopts is the
-    loop [entry] its ControlIR enters: the local fixpoint's function, or
-    the partner whose calls are run in place. *)
-let adopts_entry r ad (entry : Control_ir.Loop.t) =
-  match (ad.ad_source, entry) with
-  | Fixpoint o, Member (o', 0) -> Miniml.Occurrence.equal o o'
-  | Invocations _, Function g -> (
-    match Recursion_plan.adopted_partner r with
-    | Some i -> Common.globref_equal i.partner g
-    | None -> false )
-  | (Fixpoint _ | Invocations _), _ -> false
+(** Whether the body [ad] a machine adopts is the loop [entry] its
+    ControlIR enters: the local fixpoint's function. *)
+let adopts_entry ad (entry : Control_ir.Loop.t) =
+  match entry with
+  | Member (o, 0) -> Miniml.Occurrence.equal ad.ad_fixpoint o
+  | Member _ | Function _ -> false
 
 let frame_machine ~loop ?entry ~varying ~parts ~tparams check (f : dfun) params body =
   let r = fst f.df_path.dp_outer in
-  let found = find_adopted ~adoptable:(planned_adoptable r) ~invocations:(Recursion_plan.adopted_invocations r) body in
+  let found = find_adopted ~adoptable:(planned_adoptable r) body in
   (* What the machine adopts is its ControlIR's entry: a body found where
-     there is none -- a partner yielding another type than the function's --
+     there is none -- a fixpoint yielding another type than the function's --
      is left where it is, and the calls entering the machine are its loop's
      Continues. *)
   let adopted = if Option.has_some entry then found else None in
   let as_planned =
     match (adopted, entry) with
     | _, None -> true
-    | Some ad, Some entry -> adopts_entry r ad entry
+    | Some ad, Some entry -> adopts_entry ad entry
     | None, Some _ -> false
   in
   let survived = Option.map decline_reason found in

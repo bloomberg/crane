@@ -15,10 +15,10 @@
     stack: a recursive call whose result a let or a sequential bind binds
     is a [Resume], where the machine resumes once the call has returned.
     A machine may have more than one way in: a local fixpoint calling back
-    into the function, or the body of a partner run in place of a call
-    that is not a tail call, is an [Entry] of the function's machine rather
-    than a machine of its own, for two machines cannot unwind each other's
-    stack.  {!Lower_control} produces them. *)
+    into the function -- a partner's copy spliced into its body among them
+    ({!Recursion_plan.splice_partners}) -- is an [Entry] of the function's
+    machine rather than a machine of its own, for two machines cannot unwind
+    each other's stack.  {!Lower_control} produces them. *)
 
 (** What a loop is the loop of: a function of the program, or the member
     [m] of the local fixpoint [occurrence]. *)
@@ -112,10 +112,8 @@ module Term : sig
       machine there as one of the enclosing loop does.  It is the function
       of a local fixpoint of one member ({!Loop.Member}), its body under
       the fixpoint's name and its parameters, [name] the binder [scope]
-      reads it by where a let binds it; or the body of a partner of the
-      function ({!Loop.Function}), under its parameters alone, entered by
-      the calls of the partner run in place.  Its [Continue]s of the
-      enclosing loop re-enter that loop. *)
+      reads it by where a let binds it.  Its [Continue]s of the enclosing
+      loop re-enter that loop. *)
   and entry = {
     entered : loop;
     name : (Miniml.ml_ident * Miniml.ml_type) option;

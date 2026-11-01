@@ -27,7 +27,7 @@ let callee ~depth:_ = function
 let use () = Global_use.monomorphic count
 let call u args = MLapp (MLglob u, args)
 let plus a b = MLapp (MLglob (Global_use.monomorphic (r "plus")), [a; b])
-let lower ?inlined body = Lower_control.tail_loop ?inlined ~effects:Core_effects.empty ~target ~callee body
+let lower body = Lower_control.tail_loop ~effects:Core_effects.empty ~target ~callee body
 let continues_at us t = List.equal Occurrence.equal (continues t) (List.map Global_use.occurrence us)
 let id s = Id (Id.of_string s)
 
@@ -69,25 +69,9 @@ let () =
       ( Mboxed,
         MLcase (nat, fresh_rel 2, [| ([], nat, Pwild, fresh_rel 1); ([], nat, Pwild, call u [fresh_rel 2; fresh_rel 1]) |]) )
   in
-  ( match lower coerced with
+  match lower coerced with
   | Term.Match {branches = [{body = Return (MLmagic (Mboxed, _)); _}; {body = Continue _; _}]; _} -> ()
-  | _ -> check "a coerced body continues, its returns coerced" false );
-
-  (* A partner the function continues in: its body in place, its
-     parameter bound to the argument, its own call of the function a
-     continue. *)
-  let into_partner = Global_use.monomorphic (r "partner") and back = use () in
-  let partner_body = call back [fresh_rel 1; fresh_rel 1] in
-  let inlined u =
-    if Occurrence.equal (Global_use.occurrence u) (Global_use.occurrence into_partner) then
-      Some ([(id "p", nat)], partner_body)
-    else None
-  in
-  ( match lower ~inlined (call into_partner [fresh_rel 2]) with
-  | Term.Let {binder; body = Continue c; _} ->
-    check "the partner's parameter is bound" (binder = id "p");
-    check "the partner's call back continues" (Occurrence.equal c.occurrence (Global_use.occurrence back))
-  | _ -> check "a continued partner is inlined" false )
+  | _ -> check "a coerced body continues, its returns coerced" false
 
 (* The parameters a loop keeps: those every Continue passes on as they
    are, read at the depth the Continue is under. *)
@@ -198,7 +182,7 @@ let () =
            ) |] )
   in
   let fixpoint = MLfix (0, [|(Id.of_string "go", Tarr (nat, nat))|], [|MLlam (id "k", nat, go_body)|], false, fix) in
-  let t = lower_adopting (Lower_control.Fixpoint fix) (MLapp (fixpoint, [fresh_rel 1])) in
+  let t = lower_adopting fix (MLapp (fixpoint, [fresh_rel 1])) in
   ( match t with
   | Term.Entry {entered; name = None; scope = Continue c} ->
     check "the entry is the fixpoint's function" (Loop.equal entered.loop (Loop.Member (fix, 0)));
@@ -214,34 +198,9 @@ let () =
   check "a fixpoint not adopted is returned" (lower_frames (MLapp (fixpoint, [fresh_rel 1])) = Term.Return (MLapp (fixpoint, [fresh_rel 1])));
   (* let g := fix go k := ... in g n: the let's binder names the entry. *)
   let g_read = Occurrence.fresh () in
-  let t = lower_adopting (Lower_control.Fixpoint fix) (MLletin (id "g", Tarr (nat, nat), fixpoint, MLapp (MLrel (1, g_read), [fresh_rel 3]), Occurrence.fresh ())) in
+  let t = lower_adopting fix (MLletin (id "g", Tarr (nat, nat), fixpoint, MLapp (MLrel (1, g_read), [fresh_rel 3]), Occurrence.fresh ())) in
   match t with
   | Term.Entry {name = Some (x, _); scope = Continue c; _} ->
     check "the let's binder is the entry's name" (x = id "g");
     check "a call by that name enters it" (Occurrence.equal c.occurrence g_read)
   | _ -> check "a let binding an adopted fixpoint is an entry" false
-
-(* A machine adopting a partner's body run in place of its calls: an Entry
-   around the whole body, entered where a call is run in place. *)
-let () =
-  let partner = r "partner" in
-  let invoked = Global_use.monomorphic partner and other = Global_use.monomorphic partner and back = use () in
-  let adopted =
-    Lower_control.Partner
-      { partner;
-        invoked = [Global_use.occurrence invoked];
-        parameters = [(id "p", nat)];
-        body = call back [fresh_rel 1; fresh_rel 1] }
-  in
-  (* let x := partner n in plus x (partner acc), only the first adopted. *)
-  let body =
-    MLletin (id "x", nat, call invoked [fresh_rel 2], plus (fresh_rel 1) (call other [fresh_rel 2]), Occurrence.fresh ())
-  in
-  ( match lower_adopting adopted body with
-  | Term.Entry {entered; name = None; scope = Resume {value = Continue c; body = Return _; _}} ->
-    check "the entry is the partner's body" (Loop.equal entered.loop (Loop.Function partner));
-    check "the call run in place enters it" (Occurrence.equal c.occurrence (Global_use.occurrence invoked));
-    check "and the partner's call of the function continues the function's loop"
-      (continues entered.body = [Global_use.occurrence back])
-  | _ -> check "an adopted partner is an entry around the body" false );
-  check "a body running no adopted call has no entry" (lower_adopting adopted (call other [fresh_rel 1]) = lower_frames (call other [fresh_rel 1]))

@@ -1044,8 +1044,8 @@ let planned_scope_head n ty scope =
     binders, resumes at, where the body is lowered as a machine with a
     stack of frames as it is generated ({!Control_to_legacy_minicpp.lower_group}):
     one the configuration loopifies and the recursion plan lowers so, whose
-    machine adopts nothing and that inlines no partner nor is inlined, so
-    that nothing decided after the plan leaves its calls as generated.  A
+    machine adopts nothing, so that nothing decided after the plan leaves
+    its calls as generated.  A
     frame keeps the binders bound before a point that what follows reads,
     except the parameters every turn passes on unchanged, which the machine
     holds outside its frames. *)
@@ -1053,8 +1053,6 @@ let frame_resumes r ~depth : Ownership_plan.resumes option =
   let frames =
     Table.should_loopify r
     && Option.is_empty (Lifted.of_ref r)
-    && Recursion_plan.inlinings r = []
-    && (not (Recursion_plan.inlined r))
     && Recursion_plan.strategy ~pointer_fields:Loopify_analysis.constructor_pointer_fields r
        = Some Recursion_plan.Frame_stack
   in
@@ -1839,8 +1837,7 @@ let defined d tvars = Defined (d, definition_file_of tvars)
 
 (** Generate each function of a mutually recursive group, translating each
     body once, then lower the group's control from its ControlIR where that
-    is the bridge's to lower ({!Control_to_legacy_minicpp}): a member
-    continues in its partners' bodies as they were generated. *)
+    is the bridge's to lower ({!Control_to_legacy_minicpp}). *)
 let gen_dfuns_dual fds =
   let generated =
     List.map

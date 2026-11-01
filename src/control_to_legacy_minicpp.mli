@@ -10,16 +10,16 @@
     This version lowers the loop of direct tail recursion of a top-level
     function ({!Control_ir.Loop.Function}) that the configuration loopifies
     ({!Table.should_loopify}) and that the recursion plan lowers so
-    ({!Recursion_plan.Tail_loop}).  A recursive group is lowered as a unit,
-    once all of its members are generated: a member continues in the bodies
-    of the partners the plan inlines into it ({!Recursion_plan.inlinings}),
-    read as they were generated.  Its jumps are the C++ calls made of the
+    ({!Recursion_plan.Tail_loop}).  A recursive group is lowered once all
+    of its members are generated, each member alone: its partners' bodies
+    are spliced into its Core body ({!Recursion_plan.splice_partners}).
+    Its jumps are the C++ calls made of the
     loop's [Continue]s, by the occurrence each records
     ({!Minicpp.call_sig.cs_occurrence}); the parameters a jump leaves alone
     are those every [Continue] passes on unchanged
     ({!Control_ir.invariant_parameters}).  What is left to the C++ is how
-    each is spelled: the arguments the call was translated with, the
-    statements of a partner continued in, and the shadow each varying
+    each is spelled: the arguments the call was translated with and the
+    shadow each varying
     parameter is kept in ({!Loopify_tail}).  The local fixpoints in the
     loop are lowered as Loopify lowers them after its own transform
     ({!Loopify.after_tail_loop}).
@@ -39,9 +39,8 @@
     re-entries leave alone, which its frames do not save, those every
     [Continue] of its own passes on unchanged.  A machine whose ControlIR
     has an entry ({!Control_ir.Term.Entry}) takes the body Loopify finds
-    for it -- the adopted local fixpoint's lambdas, or the partner's body
-    invoked in place -- as its second entry, where that body is the
-    entry's.  It is left to Loopify where Loopify would adopt another body
+    for it -- the adopted local fixpoint's lambdas -- as its second entry,
+    where that body is the entry's.  It is left to Loopify where Loopify would adopt another body
     or leave a call behind.
 
     The loop of a local fixpoint of one member ({!Control_ir.Loop.Member})
@@ -112,10 +111,8 @@ val lower_lifted : Minicpp.cpp_decl -> Minicpp.cpp_decl
 
 (** [lower_group ds] is the declarations [ds], generated for the members of
     one recursive group, in its order, with each function lowered as above
-    where it is one, recording its loop ({!Minicpp.dfun.df_loop}).  The
-    members that inline one another and that Loopify makes a loop of are
-    lowered all of them or none: Loopify inlines a partner as it was
-    generated.  A member Loopify loopifies of which no loop is made has the
+    where it is one, recording its loop ({!Minicpp.dfun.df_loop}).  A
+    member Loopify loopifies of which no loop is made has the
     local fixpoints in its body lowered as {!lower_lifted} lowers a
     helper's. *)
 val lower_group : Minicpp.cpp_decl list -> Minicpp.cpp_decl list

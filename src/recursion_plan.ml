@@ -101,8 +101,6 @@ type t = {
   suspended : Ref.User.Set.t;  (* the definitions whose body suspends *)
   resumes : resume list Ref.User.Map.t;
   adoptable : Occurrence.t list Ref.User.Map.t;
-  inlinings : inlining list Ref.User.Map.t;
-  adopted : inlining Ref.User.Map.t;  (* the partner whose invoked body the machine adopts *)
   kinds : kind Ref.User.Map.t;  (* per definition, its own calls *)
   calls : Occurrence.t list Ref.User.Map.t;  (* per member, the uses heading its calls in its group's bodies *)
   let_lambdas : Occurrence.t list;  (* the lets binding a lambda *)
@@ -117,8 +115,6 @@ let empty =
     suspended = Ref.User.Set.empty;
     resumes = Ref.User.Map.empty;
     adoptable = Ref.User.Map.empty;
-    inlinings = Ref.User.Map.empty;
-    adopted = Ref.User.Map.empty;
     kinds = Ref.User.Map.empty;
     calls = Ref.User.Map.empty;
     let_lambdas = [] }
@@ -141,12 +137,6 @@ let sequential effects use =
 let identity r =
   Table.is_custom r && Minicpp.inline_shape_of_text (Table.find_custom r) = Minicpp.Inline_identity
 
-(* A partner's body Loopify inlines at a call: continued where the call
-   was, or run in a lambda invoked in its place. *)
-type inlined_body =
-  | Continues of ml_ast
-  | Invokes of ml_ast
-
 (* How [body], a function's body inside its parameters, calls the members
    of its recursive group, as the C++ it becomes does: a call is a tail call
    where its result is the function's, and one applied to more arguments
@@ -158,25 +148,15 @@ type inlined_body =
    under [depth] binders inside the function's parameters, and [None] where
    [f] names none.  A bind or a ret is sequencing where [effects], the
    analysis of the program [body] is taken from, says it is generated
-   sequentially.  [inlined use] is the body of a partner Loopify inlines at
-   the call [use] heads ({!inlinings_of}), which is read in its place: a
-   body continued where the call was, and one invoked as an operand, where
-   nothing more is inlined. *)
-let classify ?(inlined = fun _ -> None) ~effects ~callee body =
+   sequentially. *)
+let classify ~effects ~callee body =
   let tail_call = ref false and nontail_call = ref false in
   let effect_ = sequential effects in
-  let rec walk ~inlining ~depth ~tail e =
-    let walk_under n ~tail e = walk ~inlining ~depth:(depth + n) ~tail e in
-    let walk ~tail e = walk ~inlining ~depth ~tail e in
-    let continuation = continuation ~inlining in
+  let rec walk ~depth ~tail e =
+    let walk_under n ~tail e = walk ~depth:(depth + n) ~tail e in
+    let walk ~tail e = walk ~depth ~tail e in
     match e with
     | f when callee ~depth f = Some 0 -> if tail then tail_call := true else nontail_call := true
-    | MLapp (MLglob use, args) when inlining && Option.has_some (inlined use) -> (
-      List.iter (walk ~tail:false) args;
-      match inlined use with
-      | Some (Continues b) -> walk ~tail b
-      | Some (Invokes b) -> walk_body ~inlining:false ~tail:false b
-      | None -> () )
     | MLcons (_, c, [a]) when identity c -> walk ~tail a
     | MLapp (MLglob use, [a]) when identity use.callee && Table.to_inline use.callee -> walk ~tail a
     | MLapp (f, args) when Option.has_some (callee ~depth f) ->
@@ -230,13 +210,13 @@ let classify ?(inlined = fun _ -> None) ~effects ~callee body =
       walk ~tail:false d
     | MLrel _ | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ ->
       ()
-  and continuation ~inlining ~depth ~tail = function
+  and continuation ~depth ~tail = function
     | MLlam _ as k ->
       let n, b = split_params 0 k in
-      walk ~inlining ~depth:(depth + n) ~tail b
-    | k -> walk ~inlining ~depth ~tail:false k
-  and walk_body ~inlining ~tail b = walk ~inlining ~depth:0 ~tail b in
-  walk ~inlining:true ~depth:0 ~tail:true body;
+      walk ~depth:(depth + n) ~tail b
+    | k -> walk ~depth ~tail:false k
+  in
+  walk ~depth:0 ~tail:true body;
   if !nontail_call then Nontail else if !tail_call then Tail else No_recursion
 
 let combine a b =
@@ -265,10 +245,10 @@ let rec restore_temporaries e =
    the innermost holding it directly.  [bodies.(k)] is the member [k]'s
    body, parameters included, read with Normalize's temporaries put back,
    and [member ~within ~depth f] the member [f] names in the body of the
-   member [within], under [depth] binders inside its parameters.  A tail call to a partner continues in
-   the partner's body, as Loopify inlines it there; any other call to a
-   partner is inlined in a closure, out of reach.  A partner already
-   inlined is called as any function is. *)
+   member [within], under [depth] binders inside its parameters.  A tail
+   call to a partner is read as continuing in the partner's body; any other
+   call to a partner is out of reach.  A partner already read so is called
+   as any function is. *)
 let modulo_cons_chains ~effects ~member ~bodies self =
   let bodies = Array.map (fun b -> split_params 0 (restore_temporaries b)) bodies in
   let effect_ = sequential effects in
@@ -930,9 +910,7 @@ type inlined_call = {
 
 (* The partners' calls whose uses [inlines] holds that run in [body] as
    translation generates it, the body of the function [self], in the order
-   Loopify meets them: [continued] holds the calls an earlier partner's
-   inlining continued in, whose arguments are bound and whose callee's body
-   runs in their place.  A call runs there unless it stands in a lambda: a
+   they are met.  A call runs there unless it stands in a lambda: a
    closure's body, a local fixpoint's, a suspended coinductive constructor's
    arguments or a body suspended whole, and a match, let, fixpoint or bind
    that is an operand, which translation runs in a lambda invoked in place,
@@ -943,19 +921,14 @@ type inlined_call = {
    heads.  A saturated call continues in the partner's body where its
    result is the function's -- in one returning unit, the call's statement
    and the return after it.  [parameters g] is the number of parameters of
-   [g], and [flow_body g] its body as generated, [None] where it is
-   suspended whole. *)
-let inlined_calls ~self ~effects ~parameters ~flow_body ~inlines ~continued body =
+   [g]. *)
+let inlined_calls ~self ~effects ~parameters ~inlines body =
   let effect_ = sequential effects in
   let found = ref [] in
-  let continued_call use = List.exists (Occurrence.equal (Global_use.occurrence use)) continued in
   let rec go pos e =
     let operand = go Operand in
     match e with
     | MLapp (MLglob use, args) when Table.is_custom use.callee -> List.iter operand args
-    | MLapp (MLglob use, args) when continued_call use ->
-      List.iter operand args;
-      Option.iter (go Returning) (flow_body use.callee)
     | MLapp (MLglob use, args) when inlines use ->
       let n = List.length args and k = parameters use.callee in
       if n >= k then
@@ -1026,25 +999,23 @@ let flow_of r fd =
   let _, body = Core_elaborate.declaration_scope fd.fd_type fd.fd_body in
   if Translation_support.suspends_whole r (Ml_type_util.ml_return_type fd.fd_type) body then None else Some body
 
-(* The partner of [self] in its group [members] Loopify inlines into [body],
-   its body as generated, once it has inlined the partners [inlined], with
-   the calls of it inlined ({!inlined_calls}): the partner of the first call
-   met that is of a partner not yet inlined, whose calls are all inlined at
-   once.  [continued] are the calls earlier partners' inlining continued
-   in.  A call [opaque] holds is in a partner's body run in place of a
-   call, where nothing is inlined. *)
-let next_inlining ?(opaque = []) ~effects ~defs ~members ~inlined ~continued self body =
+(* The partner of [self] in its group [members] spliced next into [body],
+   its body as generated, once the partners [inlined] are, with the calls of
+   it spliced ({!inlined_calls}): the partner of the first call met that is
+   of a partner not yet spliced, whose calls are all spliced at once.  A
+   call [opaque] holds is in a partner's body run in place of a call, where
+   nothing is spliced. *)
+let next_inlining ~opaque ~effects ~defs ~members ~inlined self body =
   let parameters g =
     match Ref.User.Map.find_opt g defs with
     | Some fd -> List.length (Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type))
     | None -> 0
   in
-  let flow_body g = Option.bind (Ref.User.Map.find_opt g defs) (flow_of g) in
   let calls ~inlines =
     let inlines (use : global_use) =
       inlines use.callee && not (List.exists (Occurrence.equal (Global_use.occurrence use)) opaque)
     in
-    inlined_calls ~self ~effects ~parameters ~flow_body ~inlines ~continued body
+    inlined_calls ~self ~effects ~parameters ~inlines body
   in
   let pending g =
     (not (Common.globref_equal g self))
@@ -1058,31 +1029,11 @@ let next_inlining ?(opaque = []) ~effects ~defs ~members ~inlined ~continued sel
     let these continues = List.filter_map (fun c -> if c.continues = continues then Some c.made_of else None) found in
     Some {partner; continued = these true; invoked = these false}
 
-(* The partners each function {!splice_partners} decided on had spliced
-   into its Core body, in order, for this extraction: none for one that
-   makes no loop, or has no partner. *)
-let spliced = State.cell State.Extraction Ref.User.Map.empty
+(* The functions {!splice_partners} decided the partners of, for this
+   extraction: splicing again leaves them as they are. *)
+let decided = State.cell State.Extraction Ref.User.Set.empty
 
-let spliced_into r = Option.default [] (Ref.User.Map.find_opt r !spliced)
-
-(* The partners of [self] in its group [members] that Loopify inlines into
-   it, in order, with the calls of each it inlines ({!next_inlining}), until
-   none is met, after those already spliced into its body
-   ({!splice_partners}); none where splicing found it inlines none.  The
-   calls that continue in a partner's body leave its calls in the body that
-   later partners' are met in.  Each partner is inlined once: its calls in
-   its own body stay calls. *)
-let inlinings_of ~effects ~defs ~members self fd =
-  let rec plan inlined continued body =
-    match next_inlining ~effects ~defs ~members ~inlined ~continued self body with
-    | None -> []
-    | Some i -> i :: plan (i.partner :: inlined) (continued @ i.continued) body
-  in
-  match (flow_of self fd, Ref.User.Map.find_opt self !spliced) with
-  | None, _ | Some _, Some [] -> []
-  | Some body, spliced -> plan (Option.default [] spliced) [] body
-
-(* Why the partners of [r] are left to Loopify to inline. *)
+(* Why the partners of [r] are not spliced. *)
 let unspliced why r =
   Probe.hit "SPLICE_declined" (fun () -> why ^ " " ^ Table.kername_of_global r);
   None
@@ -1166,8 +1117,8 @@ let calls_back ~defs ~self def =
       | Some fd -> List.length (Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type))
       | None -> 0
     in
-    inlined_calls ~self:def.fd_ref ~effects:(definition_effects def) ~parameters ~flow_body:(fun _ -> None)
-      ~inlines:(fun use -> Common.globref_equal use.callee self) ~continued:[] body
+    inlined_calls ~self:def.fd_ref ~effects:(definition_effects def) ~parameters
+      ~inlines:(fun use -> Common.globref_equal use.callee self) body
 
 (* [body], the body of a function, with each call of its partner defined as
    [def] made at [sites] replaced by a call of a copy of the partner bound in
@@ -1211,8 +1162,7 @@ let adopt_calls def sites body =
   | exception Unspliced why -> Error why
 
 (* Whether the function defined as [fd] calls itself once its partners are
-   spliced into it: only a function that does is lowered as a loop, and
-   only a loop has partners inlined into it. *)
+   spliced into it: only a function that does is lowered as a loop. *)
 let recurses fd =
   let arity = List.length (Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type)) in
   let callee ~depth:_ = function
@@ -1222,9 +1172,9 @@ let recurses fd =
   let _, body = Core_elaborate.declaration_scope fd.fd_type (Mlutil.read_spines fd.fd_body) in
   classify ~effects:(definition_effects fd) ~callee body <> No_recursion
 
-(* The partners Loopify inlines into [fd] ({!inlinings_of}), a function of
-   the group [members], in order, its body with them spliced into it, and
-   the occurrence of the partner it enters, if any.  A partner's tail calls
+(* The partners of [fd], a function of the group [members], in the order
+   they are spliced into it ({!next_inlining}), its body with them spliced
+   into it, and the occurrence of the partner it enters, if any.  A partner's tail calls
    continue in a copy of its body.  Its other calls, where [inlines] says
    the partners of [fd] are inlined into it at all, are entered as a copy
    its machine enters ({!adopt_calls}) -- where none is entered yet, the
@@ -1232,8 +1182,8 @@ let recurses fd =
    back -- or else run a copy of its body in their place, as a call would.
    [None] where some partner is not spliced so, or where one's body would
    need instantiating there ({!splice_partners}).  A function that does
-   not recurse once spliced into is no loop, which has nothing inlined: it
-   is left as it is.  [originals] are the definitions as written, [defs]
+   not recurse once spliced into makes no loop a copy would serve: it is
+   left as it is.  [originals] are the definitions as written, [defs]
    the same read with their applications whole. *)
 let splice_member ~inlines ~originals ~defs ~members fd =
   let self = fd.fd_ref in
@@ -1242,7 +1192,7 @@ let splice_member ~inlines ~originals ~defs ~members fd =
   let rec go opaque inlined entered body =
     let current = {fd with fd_body = body} in
     let flow = flow_of self {current with fd_body = Mlutil.read_spines body} in
-    let next = next_inlining ~opaque ~effects:(definition_effects current) ~defs ~members ~inlined ~continued:[] self in
+    let next = next_inlining ~opaque ~effects:(definition_effects current) ~defs ~members ~inlined self in
     match Option.bind flow next with
     | None -> Some (List.rev inlined, entered, body)
     | Some {partner; continued; invoked} -> (
@@ -1285,15 +1235,16 @@ let splice_partners ~loopified ~inlines struc =
     Ref.User.Map.filter_map
       (fun r fd ->
         match Recursive_groups.group groups r with
-        | Some members when loopified r && (not (Table.is_custom r)) && not (Ref.User.Map.mem r !spliced) ->
+        | Some members when loopified r && (not (Table.is_custom r)) && not (Ref.User.Set.mem r !decided) ->
           Some (splice_member ~inlines ~originals ~defs ~members fd)
         | Some _ | None -> None )
       originals
   in
-  (* A group is spliced whole or not at all: a member left to Loopify
-     inlines and adopts its partners as their bodies stand, and one spliced
-     into is another function there -- its partners' calls turned into its
-     own, which an adopted body leaves calls. *)
+  (* A group is spliced whole or not at all: a member declines where a
+     partner's body cannot stand in its own, and a partner spliced instead
+     would take its body, with the call it could not splice, into its own --
+     a call of the partner at another instance, say, which no loop of the
+     partner can take. *)
   let declined r =
     List.exists
       (fun m -> match Ref.User.Map.find_opt m splicings with Some None -> true | Some (Some _) | None -> false)
@@ -1301,19 +1252,19 @@ let splice_partners ~loopified ~inlines struc =
   in
   let splice fd =
     match Ref.User.Map.find_opt fd.fd_ref splicings with
-    | Some (Some ((_ :: _ as partners), entry, body)) ->
+    | Some (Some (_ :: _, entry, body)) ->
       if declined fd.fd_ref then begin
         ignore (unspliced "group" fd.fd_ref);
         fd
       end
       else begin
         Probe.hit "SPLICE_spliced" (fun () -> Table.kername_of_global fd.fd_ref);
-        spliced := Ref.User.Map.add fd.fd_ref partners !spliced;
+        decided := Ref.User.Set.add fd.fd_ref !decided;
         Option.iter (fun o -> entered := Ref.User.Map.add fd.fd_ref o !entered) entry;
         {fd with fd_body = body}
       end
     | Some (Some ([], _, _)) ->
-      spliced := Ref.User.Map.add fd.fd_ref [] !spliced;
+      decided := Ref.User.Set.add fd.fd_ref !decided;
       fd
     | Some None | None -> fd
   in
@@ -1326,37 +1277,11 @@ let splice_partners ~loopified ~inlines struc =
       | d -> d )
     struc
 
-(* The partner whose invocations the machine of [self] adopts, of those its
-   [inlinings] leave: the first that has some, and parameters, and whose
-   body calls [self]. *)
-let adopted_of ~defs self inlinings =
-  let calls_self g =
-    match Ref.User.Map.find_opt g defs with
-    | None -> false
-    | Some fd ->
-      let exception Found in
-      let rec walk = function
-        | MLapp (MLglob use, _) when Common.globref_equal use.callee self -> raise Found
-        | e -> Mlutil.ast_iter walk e
-      in
-      ( try walk (snd (Core_elaborate.declaration_scope fd.fd_type fd.fd_body)); false with Found -> true )
-  in
-  let has_parameters g =
-    match Ref.User.Map.find_opt g defs with
-    | Some fd -> Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type) <> []
-    | None -> false
-  in
-  List.find_map
-    (fun i -> if i.invoked <> [] && has_parameters i.partner && calls_self i.partner then Some i else None)
-    inlinings
-
-(* A group with partners is planned as one: Loopify inlines the partners
-   into a member before reading it ({!inlinings_of}), so a loop of the
-   member takes the calls of itself it then reads, in its body and in the
-   partners' bodies inlined there, and only those: a partner's call it
-   could not inline, or one of a third member in a partner's body run as
-   an operand, stays a call of another function.  A function on no cycle
-   calls no function it could recurse through. *)
+(* A member of a group recurses by the calls of itself it makes, those in
+   the copies of its partners spliced into its body included
+   ({!splice_partners}), and only those: a partner's call that was not
+   spliced stays a call of another function.  A function on no cycle calls
+   no function it could recurse through. *)
 let analyze groups program =
   let struc = Core.structure program in
   let effects = Core_effects.analyze struc in
@@ -1376,48 +1301,13 @@ let analyze groups program =
      its calls are read there, a call with fewer arguments than that being
      the closure the C++ makes of it. *)
   let parameters fd = List.length (Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type)) in
-  let inlinings =
-    Ref.User.Map.mapi
-      (fun r fd ->
-        match Recursive_groups.group groups r with
-        | Some members -> inlinings_of ~effects ~defs ~members r fd
-        | None -> [] )
-      defs
-  in
-  (* Splicing takes every partner a function inlines or none. *)
-  if Probe.checking () then
-    Ref.User.Map.iter
-      (fun r is ->
-        if spliced_into r <> [] && is <> [] then
-          Probe.violation "partner splice"
-            Pp.(str "partners are left to inline into " ++ str (Table.kername_of_global r) ++ str " once some were spliced") )
-      inlinings;
-  (* A member's own calls, its partners inlined as Loopify inlines them:
-     what a loop of the member can take. *)
+  (* A member's own calls: what a loop of the member can take. *)
   let member_kind r fd =
     let callee ~depth:_ = function
-      | MLglob use when Names.GlobRef.UserOrd.equal use.callee r ->
-        Option.map parameters (Ref.User.Map.find_opt use.callee defs)
+      | MLglob use when Names.GlobRef.UserOrd.equal use.callee r -> Some (parameters fd)
       | _ -> None
     in
-    let planned = Ref.User.Map.find r inlinings in
-    let inlined (use : global_use) =
-      let occurrence = Global_use.occurrence use in
-      List.find_map
-        (fun i ->
-          let body () =
-            Option.map
-              (fun fd -> snd (Core_elaborate.declaration_scope fd.fd_type fd.fd_body))
-              (Ref.User.Map.find_opt i.partner defs)
-          in
-          if List.exists (Occurrence.equal occurrence) i.continued then
-            Option.map (fun b -> Continues b) (body ())
-          else if List.exists (Occurrence.equal occurrence) i.invoked then
-            Option.map (fun b -> Invokes b) (body ())
-          else None )
-        planned
-    in
-    classify ~inlined ~effects ~callee (snd (Core_elaborate.declaration_scope fd.fd_type fd.fd_body))
+    classify ~effects ~callee (snd (Core_elaborate.declaration_scope fd.fd_type fd.fd_body))
   in
   let kinds = Ref.User.Map.mapi member_kind defs in
   let plans =
@@ -1448,30 +1338,19 @@ let analyze groups program =
             Pp.(str "no single plan for the group of " ++ str (Table.kername_of_global r)) )
       defs;
   let modulo_cons =
-    List.fold_left
-      (fun m g ->
-        if g.kind <> Nontail then m
-        else
-          let index r =
-            let rec go k = function
-              | [] -> None
-              | m :: ms -> if Common.globref_equal m r then Some k else go (k + 1) ms
-            in
-            go 0 g.members
-          in
-          let bodies =
-            Array.of_list (List.map (fun r -> (Ref.User.Map.find r defs).fd_body) g.members)
-          in
-          let member ~within:_ ~depth:_ = function MLglob use -> index use.callee | _ -> None in
-          let chains_of r =
-            if Ref.User.Map.find_opt r kinds <> Some Nontail then None
-            else Option.bind (index r) (modulo_cons_chains ~effects ~member ~bodies)
-          in
-          List.fold_left
-            (fun m r ->
-              match chains_of r with Some chains -> Ref.User.Map.add r chains m | None -> m )
-            m g.members )
-      Ref.User.Map.empty plans
+    Ref.User.Map.fold
+      (fun r fd m ->
+        let member ~within:_ ~depth:_ = function
+          | MLglob use when Names.GlobRef.UserOrd.equal use.callee r -> Some 0
+          | _ -> None
+        in
+        match Ref.User.Map.find_opt r kinds with
+        | Some Nontail -> (
+          match modulo_cons_chains ~effects ~member ~bodies:[|fd.fd_body|] 0 with
+          | Some chains -> Ref.User.Map.add r chains m
+          | None -> m )
+        | Some (Tail | No_recursion) | None -> m )
+      defs Ref.User.Map.empty
   in
   let suspended =
     Ref.User.Map.fold
@@ -1520,11 +1399,6 @@ let analyze groups program =
         flow_fixpoints ~names (Lexenv.depth lex) body )
       defs
   in
-  let adopted =
-    Ref.User.Map.fold
-      (fun r is m -> match adopted_of ~defs r is with Some i -> Ref.User.Map.add r i m | None -> m)
-      inlinings Ref.User.Map.empty
-  in
   let calls =
     List.fold_left
       (fun m g ->
@@ -1551,8 +1425,6 @@ let analyze groups program =
     suspended;
     resumes;
     adoptable;
-    inlinings;
-    adopted;
     kinds;
     calls;
     let_lambdas =
@@ -1572,11 +1444,6 @@ let same_cell c c' = Common.globref_equal c.constructor c'.constructor && c.hole
 let same_chains =
   List.equal (fun c c' ->
       List.equal same_cell c.around c'.around && same_cell c.innermost c'.innermost )
-
-let same_inlining i i' =
-  Common.globref_equal i.partner i'.partner
-  && List.equal Occurrence.equal i.continued i'.continued
-  && List.equal Occurrence.equal i.invoked i'.invoked
 
 let same_target t t' =
   match (t, t') with
@@ -1621,8 +1488,6 @@ let equal a b =
                  r.recomputable r'.recomputable ) )
        a.resumes b.resumes
   && Ref.User.Map.equal (List.equal Occurrence.equal) a.adoptable b.adoptable
-  && Ref.User.Map.equal (List.equal same_inlining) a.inlinings b.inlinings
-  && Ref.User.Map.equal same_inlining a.adopted b.adopted
   && Ref.User.Map.equal ( = ) a.kinds b.kinds
   && Ref.User.Map.equal (List.equal Occurrence.equal) a.calls b.calls
   && List.equal Occurrence.equal a.let_lambdas b.let_lambdas
@@ -1713,8 +1578,8 @@ let strategy_of ~pointer_fields ~suspends kind chains =
     Modulo_cons chains
   | Nontail, _ -> Frame_stack
 
-(* A member's kind is its own calls', its partners inlined; a partner is
-   inlined into a member, its suspensions with it. *)
+(* A member's kind is its own calls'.  It suspends where some member of its
+   group does, whose body may be spliced into its own. *)
 let strategy ~pointer_fields r =
   if Ref.User.Set.mem r !installed.defined then
     let kind = Option.default No_recursion (Ref.User.Map.find_opt r !installed.kinds) in
@@ -1797,21 +1662,6 @@ let resumes_binding (b : Core_binder.t) =
   match Ref.User.Map.find_opt b.origin !installed.resumes with
   | Some rs -> List.filter (fun r -> Core_binder.equal r.binder b && Core_binder.same_site r.binder b) rs
   | None -> []
-
-let inlinings_in t r = Option.default [] (Ref.User.Map.find_opt r t.inlinings)
-
-let inlinings r = inlinings_in !installed r
-
-let inlined r =
-  Ref.User.Map.exists
-    (fun _ is -> List.exists (fun i -> Names.GlobRef.UserOrd.equal i.partner r) is)
-    !installed.inlinings
-
-let adopted_partner_in t r = Ref.User.Map.find_opt r t.adopted
-
-let adopted_partner r = adopted_partner_in !installed r
-
-let adopted_invocations r = Option.map (fun i -> i.invoked) (adopted_partner r)
 
 (* A lambda a let binds does not call itself. *)
 let strategy_of_let occurrence =

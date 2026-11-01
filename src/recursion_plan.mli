@@ -13,8 +13,8 @@
     [ret] stand where the operation does.  A custom whose replacement text is
     just its one argument stands for that argument.  The plan is per
     recursive group ({!Recursive_groups}), exactly one each, and a member
-    recurses by the calls of itself it makes once Loopify has inlined its
-    partners into it ({!inlinings}).  A function on no cycle does not
+    recurses by the calls of itself it makes once its partners are spliced
+    into it ({!splice_partners}).  A function on no cycle does not
     recurse.
 
     For a function that does not recurse only by tail calls, the plan also
@@ -123,13 +123,13 @@ type strategy =
 val kind_of_strategy : strategy -> kind
 
 (** The strategy of the function [r], if the program defines it: the kind
-    of its own calls, its partners inlined into it ({!inlinings}), whether
-    the group suspends ({!Suspended}), and for a member that does not
-    recurse only by tail calls whether it is lowered tail modulo cons.
-    It is, where each call that is not a tail call is the one call of a
-    chain of constructor applications in tail position, the innermost
-    holding it directly, read off [r]'s Core body with {!Normalize}'s
-    temporaries put back and its partners inlined as Loopify inlines them.
+    of its own calls, the copies of its partners spliced into it
+    ({!splice_partners}) included, whether the group suspends
+    ({!Suspended}), and for a member that does not recurse only by tail
+    calls whether it is lowered tail modulo cons.  It is, where each call
+    that is not a tail call is the one call of a chain of constructor
+    applications in tail position, the innermost holding it directly, read
+    off [r]'s Core body with {!Normalize}'s temporaries put back.
     Every chain ends in the same constructor, holding the call at the same
     argument, which its constructor stores behind the pointer, and every
     constructor in a chain stores some field there: [pointer_fields c] are
@@ -166,61 +166,37 @@ val adoptable : Names.GlobRef.t -> Miniml.Occurrence.t list
 (** {!adoptable} in the plan [t]. *)
 val adoptable_in : t -> Names.GlobRef.t -> Miniml.Occurrence.t list
 
-(** The calls of one partner of a function that Loopify inlines into it,
-    by the occurrences of the global's uses they are made of
-    ({!Minicpp.call_sig.cs_occurrence}): [continued], the tail calls, which
-    continue in the partner's body, and [invoked], the others, each running
-    the partner's body in its place. *)
-type inlining = private {
-  partner : Names.GlobRef.t;
-  continued : Miniml.Occurrence.t list;
-  invoked : Miniml.Occurrence.t list;
-}
-
-(** {!inlinings} of the function [r] in the plan [t]. *)
-val inlinings_in : t -> Names.GlobRef.t -> inlining list
-
-(** The partners of the function [r] in its recursive group that Loopify
-    inlines into it, in the order it inlines them, read off the Core bodies
-    as translation generates them.  The first partner whose call runs in
-    [r]'s statements is inlined at every such call at once, then the next,
-    each once, until no partner's call runs there.  A call runs in the
-    statements unless it stands in a lambda -- a closure's body, a local
-    fixpoint's, a suspended constructor argument, or a match, let,
+(** [splice_partners ~loopified ~inlines s]: [s], a structure about to be
+    normalized, with the partners of each function [loopified] says it
+    loopifies, in its recursive group, spliced into its Core body, a copy
+    that is new terms.  A partner is spliced at the calls of it that run in
+    the function's statements, read off the body as translation generates
+    it: the first partner whose call runs there at every such call at once,
+    then the next, each once, until no partner's call runs there.  A call
+    runs in the statements unless it stands in a lambda -- a closure's body,
+    a local fixpoint's, a suspended constructor argument, or a match, let,
     fixpoint or bind standing as an operand, or a match bound by a let,
     which translation runs in a lambda invoked in place -- or in an enum's
-    match.  A tail call continues in the partner's body, where the next
-    partners' calls run too, unless [r] returns unit and so nothing.  A
-    function on no cycle with another inlines none. *)
-val inlinings : Names.GlobRef.t -> inlining list
-
-(** [splice_partners ~loopified ~inlines s]: [s], a structure about to be
-    normalized, with the partners Loopify would inline into each function
-    [loopified] says it loopifies ({!inlinings}) spliced into the Core body
-    instead, a copy that is new terms.  Each call continuing in a partner's
-    body is replaced by that body, its parameters bound to the call's
-    arguments ({!Core_copy.call}); the next partner's calls are then read
-    off the body so spliced, as {!inlinings} reads them through the
-    partners it continues in.  A partner's call that runs in place of a
-    call, where [inlines] says the function has partners inlined at such
-    calls -- a method has not -- is entered where the partner yields what
+    match.  Each tail call is replaced by the partner's body, its
+    parameters bound to the call's arguments ({!Core_copy.call}), where the
+    next partners' calls are read too.  A call that runs in place of one,
+    where [inlines] says the function takes its partners' bodies at such
+    calls -- a method does not -- is entered where the partner yields what
     the function does, its body, run there, calls the function back, and no
     other partner is entered: a copy of it is bound in front of the body, a
     local fixpoint whose calls of the partner are its own, and each such
     call is a call of the copy ({!entered_copy}).  Any other is replaced by
-    a copy of the partner's body as a continued one is, run where the call
-    was.  A function that does not call itself
+    a copy of the partner's body as a tail call is, run where the call was,
+    where no partner's call is read.  A function that does not call itself
     once spliced into, which makes no loop, is left as it is.  A function
     some partner of which is spliced in neither way, or whose partner's body
     would need instantiating -- a call solving one of its variables, a
     partner of more or fewer variables or another monad, or one suspended
-    whole -- is left as it is, its partners to Loopify, and so is every
-    function of its recursive group: a function left to Loopify reads its
-    partners' bodies as written.  A custom is not generated, and splices
-    nothing.  The partners spliced into a function are recorded for the
-    extraction: {!inlinings} starts after them, and splicing again leaves
-    the function as it is, so normalizing the result again rewrites
-    nothing. *)
+    whole -- is left as it is, calling its partners, and so is every
+    function of its recursive group.  A custom is not generated, and splices
+    nothing.  The functions decided are recorded for the extraction:
+    splicing again leaves them as they are, so normalizing the result again
+    rewrites nothing. *)
 val splice_partners :
   loopified:(Names.GlobRef.t -> bool) -> inlines:(Names.GlobRef.t -> bool) -> Miniml.ml_structure -> Miniml.ml_structure
 
@@ -238,22 +214,6 @@ val is_entered_copy : Miniml.Occurrence.t -> bool
     abbreviation is unfolded and a variable of the definition's scheme is
     read alike whether it is written as the scheme's or as rigid. *)
 val yields_alike : Miniml.ml_type -> Miniml.ml_type -> bool
-
-(** Whether some function inlines [r] into it ({!inlinings}). *)
-val inlined : Names.GlobRef.t -> bool
-
-(** The calls of the partner whose body the machine of the function [r]
-    adopts as a second entry, if it adopts one ({!Loopify_frame.adopted}):
-    the [invoked] calls of the first of {!inlinings} that has some, whose
-    partner takes parameters and whose body calls [r]. *)
-val adopted_invocations : Names.GlobRef.t -> Miniml.Occurrence.t list option
-
-(** The inlining of the partner whose invoked calls the machine of the
-    function [r] adopts in the plan [t] ({!adopted_invocations}). *)
-val adopted_partner_in : t -> Names.GlobRef.t -> inlining option
-
-(** {!adopted_partner_in} in the extraction's plan. *)
-val adopted_partner : Names.GlobRef.t -> inlining option
 
 (** {!adoptable} for the function [member] of the local fixpoint
     [occurrence], lowered as a helper of its own ({!Lifted.fixpoint}): the
@@ -281,8 +241,8 @@ val member_calls : Miniml.Occurrence.t * int -> Miniml.Occurrence.t list
 (** The calls of the function [r] made in its recursive group's bodies,
     each by the occurrence of the use heading it, which the C++ call made
     of it records ({!Minicpp.call_sig.cs_occurrence}): the recursive calls
-    of [r], wherever a body inlined into its own puts them.  None for a
-    function on no cycle. *)
+    of [r], the copies of its partners spliced into its body included.
+    None for a function on no cycle. *)
 val calls : Names.GlobRef.t -> Miniml.Occurrence.t list
 
 (** Whether the bodies of the group of the local fixpoint [occurrence] read
