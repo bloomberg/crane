@@ -13682,3 +13682,14 @@
   (alias runtest)
   (deps shadowed_prim_int.t.exe)
   (action (run ./shadowed_prim_int.t.exe))))
+
+(subdir block_template_for_header
+ (rule
+  (targets block_template_for_header.t.exe)
+  (deps BlockTemplateForHeader.vo block_template_for_header.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} block_template_for_header.t.exe block_template_for_header.cpp block_template_for_header.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps block_template_for_header.t.exe)
+  (action (run ./block_template_for_header.t.exe))))

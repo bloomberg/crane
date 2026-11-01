@@ -273,17 +273,19 @@ let pp_library_name s = Cpp_name.pp (library_name s)
     @param s      the pre-rendered type argument list *)
 let cpp_angle label s = pp_library_name label ++ str "<" ++ s ++ str ">"
 
-(** Split a rendered C++ string on semicolons while respecting string
-    literals (double-quoted) and character literals (single-quoted).
-    Escaped quotes inside literals are handled. *)
+(** Split a rendered C++ string on the semicolons that end its statements:
+    not those inside string literals (double-quoted), character literals
+    (single-quoted) or parentheses -- a [for] header's, whose clauses may be
+    empty.  Escaped quotes inside literals are handled. *)
 let split_on_semicolons (s : string) : string list =
   let len = String.length s in
   let buf = Buffer.create 64 in
   let acc = ref [] in
+  let depth = ref 0 in
   let i = ref 0 in
   while !i < len do
     let c = s.[!i] in
-    if c = ';' then begin
+    if c = ';' && !depth = 0 then begin
       acc := Buffer.contents buf :: !acc;
       Buffer.clear buf;
       incr i
@@ -309,6 +311,7 @@ let split_on_semicolons (s : string) : string list =
       end
     end
     else begin
+      if c = '(' then incr depth else if c = ')' then decr depth;
       Buffer.add_char buf c;
       incr i
     end
@@ -1510,7 +1513,10 @@ and pp_cpp_expr ctx env args t =
       String.concat "\n"
         (List.map (fun s -> "  " ^ String.trim s ^ ";") stmts)
     in
-    str "[]() -> " ++ pp_cpp_type ctx false [] ret_ty ++ str " {"
+    (* The arguments are spliced into the body, so the lambda captures the
+       locals they read -- by reference: it runs where it is written. *)
+    let reads_locals = fst (lambda_needs_capture [] (List.map (fun a -> Sexpr a) val_args)) in
+    str (if reads_locals then "[&]" else "[]") ++ str "() -> " ++ pp_cpp_type ctx false [] ret_ty ++ str " {"
     ++ fnl ()
     ++ str ("  " ^ Pp.string_of_ppcmds (pp_cpp_type ctx false [] ret_ty)
             ^ " " ^ result_str ^ ";")
