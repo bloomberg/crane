@@ -834,19 +834,22 @@ and extract_type_app env sg db (r, s) args =
   let ml_args =
     List.fold_right
       (fun (b, c) a ->
-        (* match b with
-      | Kill _ -> *)
-        (* TODO: figure out how to identify when to actually do it!!! *)
-        try
-          let p =
-            List.length (fst (whd_decompose_prod env sg (type_of env sg c)))
-          in
-          let db = iterate (fun l -> 0 :: l) p db in
-          let ty = type_of env sg c in
-          let ty = extract_type_scheme env sg db ty p in
-          extract_term env sg Mlenv.empty ty c [] :: a
-        with _ -> a
-        (* | _ -> a) *) )
+        (* A kept argument is a type, already in [ml_ty_args]: its place among
+           the arguments a custom's text reads is held by an erased one.  As a
+           term it would name a type as a value -- a functor's parameter type
+           as a callee no callable plan exists for. *)
+        match b with
+        | Keep -> MLdummy Ktype :: a
+        | Kill _ -> (
+          try
+            let p =
+              List.length (fst (whd_decompose_prod env sg (type_of env sg c)))
+            in
+            let db = iterate (fun l -> 0 :: l) p db in
+            let ty = type_of env sg c in
+            let ty = extract_type_scheme env sg db ty p in
+            extract_term env sg Mlenv.empty ty c [] :: a
+          with _ -> a ) )
       (List.combine s args)
       []
   in

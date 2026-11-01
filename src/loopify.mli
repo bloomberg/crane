@@ -11,14 +11,6 @@
 open Names
 open Minicpp
 
-(** [try_inline_mutual_into ~partner r body] is the body [body] of the
-    function [r] with the partners the recursion plan inlines into it
-    inlined ({!Recursion_plan.inlinings}), each read as [partner] has it, at
-    the calls the plan lists by occurrence: a tail call continuing in the
-    partner's body, any other running it in a lambda invoked in place. *)
-val try_inline_mutual_into :
-  partner:(GlobRef.t -> Loopify_analysis.registered_fn option) -> GlobRef.t -> cpp_stmt list -> cpp_stmt list
-
 (** [after_tail_loop ~tparams f params loop] is the body of the function
     [f] once Loopify's transform has made [loop] of it: the local fixpoints
     in [loop] lowered, and the outcome recorded, [strategy] -- a tail loop
@@ -45,8 +37,8 @@ type unlowered =
 
 (** [frame_machine ~loop ?entry ~varying ~tparams check f params body] is the
     machine with a stack of frames of the function [f], the loop [loop] of
-    its ControlIR, whose body [body] has its partners inlined and its tail
-    calls exposed: [check] recognises the calls that enter it at [f], and
+    its ControlIR, whose body [body] has its tail calls exposed: [check]
+    recognises the calls that enter it at [f], and
     the body Loopify adopts, where its ControlIR has the entry [entry], is
     a second entry of it ({!Loopify_frame.find_adopted}); its frames save
     the parameters [varying] of [f]'s.  With it comes
@@ -94,7 +86,7 @@ val record_unlowered_method : method_field -> unit
 
 (** [modulo_cons_loop ~jumped ~varying ~shapes ~tparams check f params
     body] is the tail-modulo-cons loop of the function [f], whose body
-    [body] has its partners inlined and its tail calls exposed: [check]
+    [body] has its tail calls exposed: [check]
     recognises the calls the loop takes, [shapes] the branches it builds
     cells in ({!Loopify_tmc.branch_along}), [varying] the parameters it
     changes, and [jumped] is told each call it takes.  [None] where
@@ -237,8 +229,7 @@ val string_of_outcome : loopify_outcome -> string
 
 (** Outcomes recorded so far, in the order the functions were first
     processed, each name collapsed to the last outcome recorded of it, the
-    one describing the emitted C++: a member of a recursive group lowered
-    and then left with its partners is recorded as left last. *)
+    one describing the emitted C++. *)
 val get_outcomes : unit -> (string * loopify_outcome) list
 
 (** Print the collapsed outcomes ([Crane Loopify Diagnostics]) and raise on any

@@ -355,7 +355,7 @@ let structure struc =
   let methods = methods_of struc in
   let struc =
     Recursion_plan.splice_partners ~loopified:(loopified ~methods)
-      ~adopts:(fun r -> Method_registry.is_registered_method methods r = None)
+      ~inlines:(fun r -> Method_registry.is_registered_method methods r = None)
       struc
   in
   Modutil.map_struct_decls (decl ~effects:(Core_effects.analyze struc) ~methods:(methods_of struc)) struc

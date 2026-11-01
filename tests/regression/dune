@@ -13715,3 +13715,58 @@
   (alias runtest)
   (deps functor_param_signature_type.t.exe)
   (action (run ./functor_param_signature_type.t.exe))))
+
+(subdir loopify_partner_tail_and_invoked
+ (rule
+  (targets loopify_partner_tail_and_invoked.t.exe)
+  (deps LoopifyPartnerTailAndInvoked.vo loopify_partner_tail_and_invoked.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_partner_tail_and_invoked.t.exe loopify_partner_tail_and_invoked.cpp loopify_partner_tail_and_invoked.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_partner_tail_and_invoked.t.exe)
+  (action (run ./loopify_partner_tail_and_invoked.t.exe))))
+
+(subdir loopify_partner_back_under_fixpoint
+ (rule
+  (targets loopify_partner_back_under_fixpoint.t.exe)
+  (deps LoopifyPartnerBackUnderFixpoint.vo loopify_partner_back_under_fixpoint.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_partner_back_under_fixpoint.t.exe loopify_partner_back_under_fixpoint.cpp loopify_partner_back_under_fixpoint.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_partner_back_under_fixpoint.t.exe)
+  (action (run ./loopify_partner_back_under_fixpoint.t.exe))))
+
+(subdir splice_partner_other_instance
+ (rule
+  (targets splice_partner_other_instance.t.exe)
+  (deps SplicePartnerOtherInstance.vo splice_partner_other_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} splice_partner_other_instance.t.exe splice_partner_other_instance.cpp splice_partner_other_instance.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps splice_partner_other_instance.t.exe)
+  (action (run ./splice_partner_other_instance.t.exe))))
+
+(subdir functor_param_custom_list
+ (rule
+  (targets functor_param_custom_list.t.exe)
+  (deps FunctorParamCustomList.vo functor_param_custom_list.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} functor_param_custom_list.t.exe functor_param_custom_list.cpp functor_param_custom_list.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps functor_param_custom_list.t.exe)
+  (action (run ./functor_param_custom_list.t.exe))))
+
+(subdir functor_param_ctor_field
+ (rule
+  (targets functor_param_ctor_field.t.exe)
+  (deps FunctorParamCtorField.vo functor_param_ctor_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} functor_param_ctor_field.t.exe functor_param_ctor_field.cpp functor_param_ctor_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps functor_param_ctor_field.t.exe)
+  (action (run ./functor_param_ctor_field.t.exe))))

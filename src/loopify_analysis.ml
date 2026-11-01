@@ -212,30 +212,6 @@ let movable ty = (not (is_borrowed ty)) && (ty = Tauto || worthwhile_move_type t
    - ctor_ptr_fields : accumulates across the full session; never cleared because
      struct shapes don't change within a Rocq session *)
 
-(** {2 Partners}
-
-    A mutual-recursion partner is inlined from its definition as it was
-    generated. *)
-
-(** A registered function definition, as an inlining site needs it.  The
-    return type is carried because inlining a non-tail call builds a lambda
-    around the body, and that lambda's return type is this one -- there is no
-    reason for a later pass to go looking for it in the statements. *)
-type registered_fn = {
-  rf_ret_ty : cpp_type;  (** the function's declared return type *)
-  rf_params : (Id.t * cpp_type) list;  (** its formal parameters *)
-  rf_binders : (Id.t * Core_binder.t) list;
-      (** the Core binder each parameter stands for, by name *)
-  rf_body : cpp_stmt list;  (** its body *)
-}
-
-(** The definition [f], as an inlining site reads it; [None] for a
-    declaration. *)
-let registered (f : dfun) =
-  match f.df_shape with
-  | Ddef (params, body) -> Some {rf_ret_ty = f.df_ret; rf_params = params; rf_binders = f.df_binders; rf_body = body}
-  | Ddecl _ -> None
-
 (** Table mapping constructor struct names to their shared_ptr field indices.
     Installed before rendering ({!install_ctor_ptr_fields}) and queried by
     {!Loopify_tmc.make_cell} to determine which fields need [make_shared] wrapping

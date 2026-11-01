@@ -19,32 +19,16 @@ let occurrence f =
   | MLrel (_, read) -> Some read
   | _ -> None
 
-(* What the machine of a loop adopts as a further entry
-   ({!Control_ir.Term.entry}): the local fixpoint of one member at an
-   occurrence, or a partner's body, its parameters innermost first, run in
-   place of its calls [invoked]. *)
-type adoption =
-  | Fixpoint of Occurrence.t
-  | Partner of {
-      partner : Names.GlobRef.t;
-      invoked : Occurrence.t list;
-      parameters : (ml_ident * ml_type) list;
-      body : ml_ast;
-    }
-
 (* [body], under the parameters of the loop [target], as that loop:
    [callee ~depth f] is the number of parameters of the loop's function
-   where [f], under [depth] binders inside them, names it, and [inlined use]
-   the parameters, innermost first, and body of the partner whose call
-   [use] heads, where Loopify continues in the partner's body
-   ({!Recursion_plan.inlinings}).  A machine [adopted] has that entry too. *)
-let tail_loop ?(inlined = fun _ -> None) ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target ~callee
-    body =
+   where [f], under [depth] binders inside them, names it.  A machine
+   adopting the local fixpoint at [adopted] has that entry too. *)
+let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target ~callee body =
   let effect_ = Recursion_plan.sequential effects in
   (* The loops a read names, by the binders it stands under: the loop it
      continues, and its number of parameters. *)
   let own ~depth f = Option.map (fun n -> (target, n)) (callee ~depth f) in
-  let adopts o = match adopted with Some (Fixpoint o') -> Occurrence.equal o o' | Some (Partner _) | None -> false in
+  let adopts o = Option.cata (Occurrence.equal o) false adopted in
   let rec lower ?(bound = false) callee depth e =
     match recognise ~bound callee depth e with
     | t when continues t = [] -> Return e
@@ -147,24 +131,6 @@ let tail_loop ?(inlined = fun _ -> None) ?(modulo_cons = false) ?(frames = false
     | f when Option.has_some (named callee ~depth f 0) -> continue_ f (Option.get (named callee ~depth f 0)) []
     | MLapp (f, args) when Option.has_some (named callee ~depth f (List.length args)) ->
       continue_ f (Option.get (named callee ~depth f (List.length args))) args
-    | MLapp (MLglob use, args) when Option.has_some (inlined use) -> (
-      let params, partner = Option.get (inlined use) in
-      (* The partner's parameters bound to the arguments, its body under
-         them, which names nothing else of the scope it is inlined in. *)
-      let rec bind depth lift params args =
-        match (params, args) with
-        | (x, ty) :: params, a :: args ->
-          Let
-            { binder = x;
-              binder_type = ty;
-              value = Mlutil.ast_lift lift a;
-              body = bind (depth + 1) (lift + 1) params args }
-        | [], [] -> lower callee depth partner
-        | _ -> Return e
-      in
-      match bind depth 0 (List.rev params) args with
-      | Return _ -> Return e
-      | t -> t )
     | MLcons (_, c, [a]) when Recursion_plan.identity c -> lower callee depth a
     | MLapp (MLglob use, [a]) when Recursion_plan.identity use.callee && Table.to_inline use.callee ->
       lower callee depth a
@@ -206,29 +172,7 @@ let tail_loop ?(inlined = fun _ -> None) ?(modulo_cons = false) ?(frames = false
       match chain callee depth e with Some c -> Continue_into c | None -> Return e )
     | e -> Return e
   in
-  match adopted with
-  | Some (Partner p) ->
-    (* The partner's calls run in place enter its body, which names nothing
-       of the function's scope; and a call of the function's there
-       re-enters the function's loop. *)
-    let arity = List.length p.parameters in
-    let invoking ~depth f =
-      match (own ~depth f, strip f) with
-      | (Some _ as c), _ -> c
-      | None, MLglob use
-        when Names.GlobRef.UserOrd.equal use.callee p.partner
-             && List.exists (Occurrence.equal (Global_use.occurrence use)) p.invoked ->
-        Some (Loop.Function p.partner, arity)
-      | None, _ -> None
-    in
-    let scope = lower invoking 0 body in
-    if not (List.exists (fun o -> List.exists (Occurrence.equal o) p.invoked) (continues scope)) then lower own 0 body
-    else
-      Entry
-        { entered = {loop = Loop.Function p.partner; parameters = List.rev p.parameters; body = lower own 0 p.body};
-          name = None;
-          scope }
-  | Some (Fixpoint _) | None -> lower own 0 body
+  lower own 0 body
 
 (* The fixpoints in [e] whose occurrence [wanted] holds, with the types of
    their functions. *)
@@ -260,44 +204,27 @@ let lower ~methods plan program =
   let generated (fd : ml_fix_def) =
     Ml_type_util.declared_parameters (Mlutil.type_simpl fd.fd_type) (Mlutil.read_spines fd.fd_body)
   in
-  (* The body of a function lowered tail modulo cons, its partners' as they
-     are inlined into it, are read with Normalize's temporaries put back, as
-     the plan reads its chains. *)
+  (* The body of a function lowered tail modulo cons is read with
+     Normalize's temporaries put back, as the plan reads its chains. *)
   let read ~builds fd =
     let parameters, inner = generated fd in
     (parameters, if builds then Recursion_plan.restore_temporaries inner else inner)
   in
-  let inlined ~builds r (use : global_use) =
-    let occurrence = Global_use.occurrence use in
-    List.find_map
-      (fun (i : Recursion_plan.inlining) ->
-        if List.exists (Occurrence.equal occurrence) i.continued then
-          Option.map (read ~builds) (Names.GlobRef.Map_env.find_opt i.partner !defs)
-        else None )
-      (Recursion_plan.inlinings_in plan r)
-  in
   (* What the machine of the function [r], whose body is [inner], adopts:
-     the first fixpoint of one member the plan has it adopt, and failing
-     that the partner run in place of the calls the plan has it adopt,
-     read as generated ({!Loopify_frame.find_adopted}), where it returns
-     what [r] does: a machine has one result. *)
-  let yields_own r ty =
-    match Names.GlobRef.Map_env.find_opt r !defs with
-    | Some own -> Recursion_plan.yields_alike own.fd_type ty
-    | None -> false
-  in
+     the first fixpoint of one member the plan has it adopt
+     ({!Loopify_frame.find_adopted}), where it returns what [r] does: a
+     machine has one result. *)
   let adoption r inner =
     let single (_, _, funs) = Array.length funs = 1 in
     let first o = List.find_opt single (fixpoints [o] [] inner) in
+    let yields_own ty =
+      match Names.GlobRef.Map_env.find_opt r !defs with
+      | Some own -> Recursion_plan.yields_alike own.fd_type ty
+      | None -> false
+    in
     match List.find_map first (Recursion_plan.adoptable_in plan r) with
-    | Some (o, types, _) -> if yields_own r types.(0) then Some (Fixpoint o) else None
-    | None ->
-      Option.bind (Recursion_plan.adopted_partner_in plan r) (fun (i : Recursion_plan.inlining) ->
-          match Names.GlobRef.Map_env.find_opt i.partner !defs with
-          | Some fd when yields_own r fd.fd_type ->
-            let parameters, body = read ~builds:false fd in
-            Some (Partner {partner = i.partner; invoked = i.invoked; parameters; body})
-          | _ -> None )
+    | Some (o, types, _) when yields_own types.(0) -> Some o
+    | Some _ | None -> None
   in
   (* A partner's copy spliced into the body of [r] is entered by the
      machine [lowered] lowers it as ({!Recursion_plan.entered_copy}). *)
@@ -331,10 +258,7 @@ let lower ~methods plan program =
             in
             let target = Loop.Function fd.fd_ref in
             let adopted = if frames && not (methods fd.fd_ref) then adoption fd.fd_ref inner else None in
-            let lowered =
-              tail_loop ~inlined:(inlined ~builds fd.fd_ref) ~modulo_cons:builds ~frames ?adopted ~effects ~target
-                ~callee inner
-            in
+            let lowered = tail_loop ~modulo_cons:builds ~frames ?adopted ~effects ~target ~callee inner in
             add target parameters lowered;
             check_entered fd.fd_ref (Some lowered)
           end
