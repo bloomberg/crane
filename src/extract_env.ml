@@ -1090,7 +1090,7 @@ let plan_layout struc =
       ( Target_plan.same_callables callables callables'
       && Target_plan.same_instance_methods instance_methods instance_methods' )
   then CErrors.anomaly Pp.(str "Crane: planning the callables in reverse order decided differently.");
-  let assumed = Translation_calls.assumed_callables struc callables in
+  let assumed = Cpp_ind.generating_outside_modules (fun () -> Translation_calls.assumed_callables struc callables) in
   Pipeline_trace.event "layout" install_callables;
   Install_legacy_plan.install_callables callables assumed;
   Install_legacy_plan.install_instance_methods instance_methods;
@@ -1434,6 +1434,7 @@ let check_structure_unchanged planned struc =
     calls, how each function recurses -- installed before any unit is
     planned ({!Program_facts.analyze_program}). *)
 let freeze core =
+  Cpp_ind.generating_outside_modules @@ fun () ->
   let normalized =
     Core.normalize (Pipeline_trace.run ~stage:"normalize" normalize_passes) (Core.freeze core)
   in
@@ -1507,6 +1508,7 @@ let elaborate_pass_names = [elaborate_calls; plan_foreign_callables]
 (** Elaborate every call of [struc] and install the elaborations, then plan
     the callables of the globals it names that it does not declare. *)
 let elaborate_unit struc =
+  Cpp_ind.generating_outside_modules @@ fun () ->
   Pipeline_trace.event "elaborate" elaborate_calls;
   let elaborations = Core_elaborate.structure struc in
   Core_elaborate.install elaborations;
@@ -2190,7 +2192,7 @@ let print_per_library ~dry (core : Core.normalized Core.program) =
   in
   (* Pre-build the method registry from the full structure so that
      cross-module method calls are recognized during per-module rendering. *)
-  Cpp_state.set_global_method_registry (Method_registry.create ~ret_is_erased:Translation.return_type_is_erased struc);
+  Cpp_state.set_global_method_registry (Cpp.method_registry_of struc);
   (* Generic traversal of ml_structure: walks MEstruct/MEfunctor/MEapply
      and calls [visit ~in_struct elem] on each structure element. *)
   let iter_structure visit struc =

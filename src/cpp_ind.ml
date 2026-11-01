@@ -58,6 +58,14 @@ let module_struct_name (mp : ModPath.t) : string option =
     | MPdot (_, lbl) -> Some (String.capitalize_ascii (Label.to_string lbl))
     | MPfile _ | MPbound _ -> None )
 
+(** [generating_outside_modules k] is [k ()] generating outside the body of
+    every module, where no inductive is spelled bare: a pass over the whole
+    unit or program that asks what a type converts to, not how a module
+    writes it. *)
+let generating_outside_modules k =
+  Translation_state.(
+    with_field (fun c -> c.local_inductives) (fun l -> tctx := {!tctx with local_inductives = l}) (Some []) k)
+
 (** The kinds of the template parameters of the inductive [kn]'s packets,
     as {!ind_header_decls} gives them. *)
 let ind_template_kinds kn ind =
@@ -93,6 +101,7 @@ let alias_template_kinds r l t =
   if written then [(r, type_alias_kinds r l t)] else []
 
 let template_kinds struc =
+  generating_outside_modules @@ fun () ->
   let kinds = ref [] in
   let decide l =
     List.iter (fun (r, k) -> Tparam_kinds.record r k) l;

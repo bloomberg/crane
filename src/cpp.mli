@@ -27,6 +27,10 @@
     extraction pass. *)
 val cpp_descr : Miniml.language_descr
 
+(** The methods registered for the inductives of a structure
+    ({!Method_registry.create}), decided outside every module body. *)
+val method_registry_of : Miniml.ml_structure -> Method_registry.t
+
 (** Decide the unit's layout before either file is rendered: analyse the
     structure ({!Structure_analysis}), record what rendering reads of the
     analysis, and return the {!Module_plan} it decides, which is not yet

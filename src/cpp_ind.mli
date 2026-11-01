@@ -142,6 +142,10 @@ val spelling_position : file:Common.file -> Cpp_ast.spelling -> Cpp_state.render
     ({!Scope_plan.local_inductives}), and no others. *)
 val with_planned_local_inductives : Names.ModPath.t -> (unit -> 'a) -> 'a
 
+(** [generating_outside_modules k] runs [k] generating outside the body of
+    every module: it spells no inductive bare. *)
+val generating_outside_modules : (unit -> 'a) -> 'a
+
 (** A group of finished declarations the header writes at file scope, away
     from the module [source] they were generated in.  They are spelled as
     the header spells an element of [source] -- in the visibility planned

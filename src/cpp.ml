@@ -1385,6 +1385,10 @@ let module_plan_of_analysis
     nonetheless invoked from inside the renderer, so the same conclusions were
     reached four times per unit and the last one silently won.  Reaching them
     once, here, is what lets the layout be planned before anything renders. *)
+let method_registry_of s =
+  Cpp_ind.generating_outside_modules (fun () ->
+      Method_registry.create ~ret_is_erased:Translation.return_type_is_erased s )
+
 let prepare_structure s =
   let analysis =
     Common.detect_sibling_module_inductive_collisions s;
@@ -1393,8 +1397,7 @@ let prepare_structure s =
       ( match !global_method_registry with
       | Some reg -> reg
       | None ->
-        Method_registry.create
-          ~ret_is_erased:Translation.return_type_is_erased s );
+        method_registry_of s );
   let analysis = Structure_analysis.analyze (get_method_registry ()) s in
   (* Whether an inductive is a flat struct, and whether a type is an axiom,
      are properties of their declarations; every reader, before or after the
@@ -1550,17 +1553,19 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = f
     | MEstruct (mp, sel) ->
       in_module mp sel (fun () ->
           with_local_inductives (inductives_declared_in mp sel) (fun () ->
-              List.iter (elem ~wrapper:false ~module_:mp) (order sel);
-              in_body ~wrapper:false mp sel ) )
+              Translation_state.generating_in mp (fun () ->
+                  List.iter (elem ~wrapper:false ~module_:mp) (order sel);
+                  in_body ~wrapper:false mp sel ) ) )
     | MEident _ | MEapply _ | MEfunctor _ -> ()
   in
   List.iter
     (fun (mi : Structure_analysis.module_info) ->
       if mi.wrapper_name <> None then
         in_module mi.modpath mi.sels (fun () ->
-            List.iter (elem ~wrapper:true ~module_:mi.modpath) (order mi.sels);
-            after_wrapper ();
-            in_body ~wrapper:true mi.modpath mi.sels ) )
+            Translation_state.generating_in mi.modpath (fun () ->
+                List.iter (elem ~wrapper:true ~module_:mi.modpath) (order mi.sels);
+                after_wrapper ();
+                in_body ~wrapper:true mi.modpath mi.sels ) ) )
     (order analysis.sorted_modules);
   with_local_inductives (file_local_inductives analysis) (fun () ->
       List.iter
@@ -1569,8 +1574,9 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = f
             let collision = wraps_children mi.modpath mi.sels in
             in_header_scope {!header with in_struct = collision} (fun () ->
                 in_module mi.modpath mi.sels (fun () ->
-                    List.iter (elem ~wrapper:false ~module_:mi.modpath) (order mi.sels);
-                    if collision then classes ~module_:mi.modpath (declared_classes mi.sels) ) ) )
+                    Translation_state.generating_in mi.modpath (fun () ->
+                        List.iter (elem ~wrapper:false ~module_:mi.modpath) (order mi.sels);
+                        if collision then classes ~module_:mi.modpath (declared_classes mi.sels) ) ) ) )
         (order analysis.sorted_modules) )
 
 (** The callable plan of each function the renders will generate, in the
@@ -2289,6 +2295,7 @@ let plan_promoted_inductives s =
   List.concat_map (fun (mp, sel) -> elems mp sel) s
 
 let plan_accessors s =
+  Cpp_ind.generating_outside_modules @@ fun () ->
   let accessor ~in_struct ~in_template r b ty =
     if is_any_inline_custom r || Table.is_projection r || is_registered_method r <> None
        || is_typeclass_instance b ty
@@ -2699,6 +2706,7 @@ let plan_nested_structs s =
     s
 
 let plan_instance_promoted_types s =
+  Cpp_ind.generating_outside_modules @@ fun () ->
   List.concat_map
     (function
       | Dterm (r, a, t) when is_typeclass_instance a t -> (
@@ -2731,6 +2739,7 @@ let plan_unmerged_wrappers () : (string * ModPath.t) list =
     (get_structure_analysis ()).sorted_modules
 
 let plan_pointer_fields s =
+  Cpp_ind.generating_outside_modules @@ fun () ->
   List.concat_map
     (function
       | Dind (kn, ({ind_kind = (Standard | Coinductive) as kind; _} as ind)) ->
