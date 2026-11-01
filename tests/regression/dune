@@ -13704,3 +13704,14 @@
   (alias runtest)
   (deps ret_hole.t.exe)
   (action (run ./ret_hole.t.exe))))
+
+(subdir functor_param_signature_type
+ (rule
+  (targets functor_param_signature_type.t.exe)
+  (deps FunctorParamSignatureType.vo functor_param_signature_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} functor_param_signature_type.t.exe functor_param_signature_type.cpp functor_param_signature_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps functor_param_signature_type.t.exe)
+  (action (run ./functor_param_signature_type.t.exe))))

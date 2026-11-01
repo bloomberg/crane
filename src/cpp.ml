@@ -2172,7 +2172,13 @@ let plan_referenced_names s =
     match a with
     | MLglob ({callee; _} as use) ->
       name Term callee;
-      Global_use.iter_types ty use
+      Global_use.iter_types ty use;
+      (* A member of a functor parameter is declared nowhere in the unit,
+         yet a call of it is written against its signature
+         ({!Translation_calls.callee_abi}), which a cast to a parameter's
+         type names. *)
+      if under_mp_bound (modpath_of_r callee) then
+        Option.iter ty (try Some (Table.find_type callee) with Not_found -> None)
     | MLcons (t, r, _) ->
       name Cons r;
       ty t
