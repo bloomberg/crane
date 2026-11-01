@@ -15,11 +15,13 @@ type custom_case =
   | CCbr_var_ty of int * int  (** [%b{i}t{j}]: the type of that binder *)
   | CCstring of string  (** literal text *)
   | CCarg of int  (** [%a{i}]: value argument [i] *)
+  | CCret  (** [%ret]: the type the call yields *)
 
 (** The tokens of a type template: [%t{i}] and [%elem{i}] holes. *)
 val type_template : string -> custom_case list
 
-(** The tokens of a term template: a type template's holes and [%a{i}]. *)
+(** The tokens of a term template: a type template's holes, [%a{i}] and
+    [%ret]. *)
 val term_template : string -> custom_case list
 
 (** The tokens of an inductive's match template. *)

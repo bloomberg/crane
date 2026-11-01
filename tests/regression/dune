@@ -13693,3 +13693,14 @@
   (alias runtest)
   (deps block_template_for_header.t.exe)
   (action (run ./block_template_for_header.t.exe))))
+
+(subdir ret_hole
+ (rule
+  (targets ret_hole.t.exe)
+  (deps RetHole.vo ret_hole.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ret_hole.t.exe ret_hole.cpp ret_hole.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ret_hole.t.exe)
+  (action (run ./ret_hole.t.exe))))

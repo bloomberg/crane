@@ -20,6 +20,7 @@ type custom_case =
   | CCbr_var_ty of int * int
   | CCstring of string
   | CCarg of int
+  | CCret
 
 (** Test whether a character is an ASCII digit. *)
 let is_digit c = c >= '0' && c <= '9'
@@ -195,11 +196,13 @@ let type_arity tokens =
   List.fold_left (fun n -> function CCty_arg i | CCelem i -> max n (i + 1) | _ -> n) 0 tokens
 
 (** Parse a custom {e term} template: {!parse_type_template} plus the [%a{i}]
-    holes that splice value arguments. *)
+    holes that splice value arguments and the [%ret] hole that spells the
+    type the call yields. *)
 let parse_term_template s =
-  expand_elem_args
-    (expand_numbered_args "t" (fun i -> CCty_arg i)
-       (parse_numbered_args "a" (fun i -> CCarg i) s))
+  expand_custom_fixed "ret" CCret
+    (expand_elem_args
+       (expand_numbered_args "t" (fun i -> CCty_arg i)
+          (parse_numbered_args "a" (fun i -> CCarg i) s)))
 
 (** Flatten a token list known to hold only literal text back into a string. *)
 let flatten_custom_strings cmds =

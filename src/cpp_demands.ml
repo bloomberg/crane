@@ -19,17 +19,19 @@ let at_type_variable = function Tvar _ | Tapply (Tvar _, _) -> true | _ -> false
 (* Where a custom mapping is printed, only what its placeholders name is
    written: the type it is matched or applied at, a type argument (an absent
    one is written erased), a branch's binder's type (erased where it has no
-   spelling), a branch's body, the scrutinee and a value argument -- a string
-   literal among the last two spliced in as a [std::string]. *)
+   spelling), a branch's body, the scrutinee, a value argument -- a string
+   literal among the last two spliced in as a [std::string] -- and the type a
+   call yields. *)
 type custom_holes = {
   typ : cpp_type option;
   scrut : cpp_expr option;
   tyargs : cpp_type list;
   cases : (custom_param list * cpp_type * cpp_stmt list) list;
   args : cpp_expr list;
+  ret : cpp_type option;
 }
 
-let no_holes = {typ = None; scrut = None; tyargs = []; cases = []; args = []}
+let no_holes = {typ = None; scrut = None; tyargs = []; cases = []; args = []; ret = None}
 
 (* The headers [visit] finds a declaration, statement, expression or type
    needs, written down where the printer writes it: the annotations a node
@@ -122,6 +124,7 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
               expr e;
               string_literal e )
             (nth holes.args i)
+        | CCret -> Option.iter ty holes.ret
         | CCbr_var _ | CCstring _ -> () )
       cmds
   and block_template ?yields holes text =
@@ -185,15 +188,13 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
       | Bare_callee ->
         List.iter ty tys;
         List.iter expr args
-      | _ ->
-        (* [%ret] is spelled as the type the call yields; an argument past the
-           last one the template names is not written. *)
-        if Common.contains_substring tmpl.it_text "%ret" then Option.iter ty yields;
+      | Templated ->
+        (* An argument past the last one the template names is not written. *)
         let cmds = Foreign_template.term_template tmpl.it_text in
         let named =
           List.fold_left (fun n -> function Foreign_template.CCarg i -> max n (i + 1) | _ -> n) 0 cmds
         in
-        custom {no_holes with tyargs = tys; args = CList.firstn (min named (List.length args)) args} cmds )
+        custom {no_holes with tyargs = tys; args = CList.firstn (min named (List.length args)) args; ret = yields} cmds )
     | CPPfun_call (_, f, args) ->
       expr f;
       List.iter expr args.rev
@@ -224,7 +225,7 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
              | CPPstruct _ | CPPstructmk _ | CPPstruct_id _ ) as returned))) ->
       expr returned
     | Scustom_case (typ, scrut, tyargs, cases, cm) ->
-      custom {typ = Some typ; scrut = Some scrut; tyargs; cases; args = []}
+      custom {no_holes with typ = Some typ; scrut = Some scrut; tyargs; cases}
         (Foreign_template.match_template cm.cm_template)
     | Sblock_custom (_, text, _, result_ty, args, tyargs, _) ->
       block_template ~yields:result_ty {no_holes with tyargs; args} text

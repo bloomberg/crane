@@ -571,8 +571,28 @@ let rec supply_type_args t =
       | _ -> None)
     t
 
+(* [%ret] spells the type a call yields: only a template applied as a call
+   has one, and only where translation recorded it.  Refused here, before
+   anything is printed, wherever it has none. *)
+let names_ret text = List.mem Foreign_template.CCret (Foreign_template.term_template text)
+
+let refuse_ret r why = CErrors.user_err Pp.(str "Crane: the mapping " ++ GlobRef.print r ++ str " names %ret" ++ str why)
+
+let in_block = " in a block template."
+
+let check_ret = function
+  | CPPfun_call (res, CPPglob (r, _, Some {ci_inline = Some tmpl; _}), _) when names_ret tmpl.it_text -> (
+    match (tmpl.it_form, res.cs_yields) with
+    | Templated, Ryields _ -> ()
+    | Templated, Ropaque -> refuse_ret r ", but the type its call yields is not known here."
+    | (Block_iife | Bare_callee), _ -> refuse_ret r in_block )
+  | CPPglob (r, _, Some {ci_inline = Some {it_form = Block_iife; it_text; _}; _}) when names_ret it_text ->
+    refuse_ret r in_block
+  | _ -> ()
+
 let supply_template_args (d : settled) : settled =
   let rec fe e =
+    check_ret e;
     match e with
     | CPPglob (r, tys, (Some {ci_inline = Some tmpl; _} as ci)) ->
       CPPglob (r, supplied (Foreign_template.term_template tmpl.it_text) (List.map supply_type_args tys), ci)
@@ -580,6 +600,7 @@ let supply_template_args (d : settled) : settled =
   and fs s =
     match map_stmt fe fs supply_type_args s with
     | Sblock_custom (r, tmpl, result, ty, args, tyargs, b) ->
+      if names_ret tmpl then refuse_ret r in_block;
       Sblock_custom (r, tmpl, result, ty, args, supplied (Foreign_template.term_template tmpl) tyargs, b)
     | Scustom_case (ty, scrut, tyargs, branches, cm) ->
       let tokens = Foreign_template.match_template (custom_match_text cm) in

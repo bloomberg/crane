@@ -1693,21 +1693,6 @@ and pp_cpp_expr ctx env args t =
       let args_s = pp_list (pp_cpp_expr ctx env args) (call_args ts) in
       str s ++ ty_args_s ++ str "(" ++ args_s ++ str ")"
     else
-      (* [%ret] is the type the call yields, as translation recorded it: a
-         mapping can name a generated type -- the enum an ordering
-         becomes -- without knowing what the generator called it. *)
-      let s =
-        if Common.contains_substring s "%ret" then
-          match res.cs_yields with
-          | Ryields ty ->
-            Str.global_replace (Str.regexp_string "%ret")
-              (Pp.string_of_ppcmds (pp_cpp_type ctx false [] ty)) s
-          | Ropaque ->
-            CErrors.user_err
-              Pp.(str "Crane: the mapping " ++ GlobRef.print n
-                  ++ str " names %ret, but the type its call yields is not known here.")
-        else s
-      in
       let cmds = term_template s in
       let arg_types =
         match res.cs_params with Ptypes ts -> ts | Punknown -> []
@@ -1722,8 +1707,12 @@ and pp_cpp_expr ctx env args t =
           (fun acc -> function CCarg i -> max acc (i + 1) | _ -> acc)
           0 cmds
       in
+      (* [%ret] is the type the call yields, as translation recorded it: a
+         mapping can name a generated type -- the enum an ordering
+         becomes -- without knowing what the generator called it. *)
       pp_custom
-        ~container:n ctx (Pp.string_of_ppcmds (GlobRef.print n) ^ " := " ^ s)
+        ~container:n ?ret:(match res.cs_yields with Ryields ty -> Some ty | Ropaque -> None)
+        ctx (Pp.string_of_ppcmds (GlobRef.print n) ^ " := " ^ s)
         env
         None
         None
@@ -2736,7 +2725,7 @@ and string_object printed =
   writes_standard "string";
   str (sn ()).string ++ str "(" ++ printed ++ str ")"
 
-and pp_custom ?container ctx custom env typ t tyargs cases args _arg_types vl cmds =
+and pp_custom ?container ?ret ctx custom env typ t tyargs cases args _arg_types vl cmds =
   (* Every read of a boxed value the template needs at a concrete type was
      made explicit by {!Cpp_erasure.lower_boxed_reads}; this prints. *)
   let pp ?(followed_by_dot=false) cmd =
@@ -2841,6 +2830,11 @@ and pp_custom ?container ctx custom env typ t tyargs cases args _arg_types vl cm
             Pp.(
               str "Custom syntax: unbound case branch type argument in: "
               ++ str custom ) )
+    | CCret -> (
+      (* Checked where the template was settled ({!Cpp_erasure.supply_template_args}). *)
+      match ret with
+      | Some ty -> str (Pp.string_of_ppcmds (pp_cpp_type ctx false [] ty))
+      | None -> CErrors.anomaly Pp.(str "Custom syntax: %ret with no type the call yields in: " ++ str custom) )
     | CCarg i ->
     try
       let arg_expr = List.nth args i in
