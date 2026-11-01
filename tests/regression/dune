@@ -13682,3 +13682,25 @@
   (alias runtest)
   (deps shadowed_prim_int.t.exe)
   (action (run ./shadowed_prim_int.t.exe))))
+
+(subdir loopify_partner_tail_and_invoked
+ (rule
+  (targets loopify_partner_tail_and_invoked.t.exe)
+  (deps LoopifyPartnerTailAndInvoked.vo loopify_partner_tail_and_invoked.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_partner_tail_and_invoked.t.exe loopify_partner_tail_and_invoked.cpp loopify_partner_tail_and_invoked.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_partner_tail_and_invoked.t.exe)
+  (action (run ./loopify_partner_tail_and_invoked.t.exe))))
+
+(subdir loopify_partner_back_under_fixpoint
+ (rule
+  (targets loopify_partner_back_under_fixpoint.t.exe)
+  (deps LoopifyPartnerBackUnderFixpoint.vo loopify_partner_back_under_fixpoint.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_partner_back_under_fixpoint.t.exe loopify_partner_back_under_fixpoint.cpp loopify_partner_back_under_fixpoint.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_partner_back_under_fixpoint.t.exe)
+  (action (run ./loopify_partner_back_under_fixpoint.t.exe))))

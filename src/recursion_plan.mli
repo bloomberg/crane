@@ -194,30 +194,35 @@ val inlinings_in : t -> Names.GlobRef.t -> inlining list
     function on no cycle with another inlines none. *)
 val inlinings : Names.GlobRef.t -> inlining list
 
-(** [splice_partners ~loopified ~adopts s]: [s], a structure about to be
+(** [splice_partners ~loopified ~inlines s]: [s], a structure about to be
     normalized, with the partners Loopify would inline into each function
     [loopified] says it loopifies ({!inlinings}) spliced into the Core body
     instead, a copy that is new terms.  Each call continuing in a partner's
     body is replaced by that body, its parameters bound to the call's
     arguments ({!Core_copy.call}); the next partner's calls are then read
     off the body so spliced, as {!inlinings} reads them through the
-    partners it continues in.  A partner every call of which runs in place
-    of a call is entered instead, where [adopts] says the function makes a
-    machine that adopts a partner, the partner yields what the function does
-    and its body, run there, calls the function back: a copy of it is bound
-    in front of the body, a local fixpoint whose calls of the partner are
-    its own, and each call is a call of the copy ({!entered_copy}).  A
-    function some partner of which is neither, or whose partner's body
+    partners it continues in.  A partner's call that runs in place of a
+    call, where [inlines] says the function has partners inlined at such
+    calls -- a method has not -- is entered where the partner yields what
+    the function does, its body, run there, calls the function back, and no
+    other partner is entered: a copy of it is bound in front of the body, a
+    local fixpoint whose calls of the partner are its own, and each such
+    call is a call of the copy ({!entered_copy}).  Any other is replaced by
+    a copy of the partner's body as a continued one is, run where the call
+    was.  A function that does not call itself
+    once spliced into, which makes no loop, is left as it is.  A function
+    some partner of which is spliced in neither way, or whose partner's body
     would need instantiating -- a call solving one of its variables, a
     partner of more or fewer variables or another monad, or one suspended
     whole -- is left as it is, its partners to Loopify, and so is every
     function of its recursive group: a function left to Loopify reads its
-    partners' bodies as written.  The partners spliced into a function are
-    recorded for the extraction: {!inlinings} starts after them, and
-    splicing again leaves the function as it is, so normalizing the result
-    again rewrites nothing. *)
+    partners' bodies as written.  A custom is not generated, and splices
+    nothing.  The partners spliced into a function are recorded for the
+    extraction: {!inlinings} starts after them, and splicing again leaves
+    the function as it is, so normalizing the result again rewrites
+    nothing. *)
 val splice_partners :
-  loopified:(Names.GlobRef.t -> bool) -> adopts:(Names.GlobRef.t -> bool) -> Miniml.ml_structure -> Miniml.ml_structure
+  loopified:(Names.GlobRef.t -> bool) -> inlines:(Names.GlobRef.t -> bool) -> Miniml.ml_structure -> Miniml.ml_structure
 
 (** The occurrence of the local fixpoint the machine of the function [r]
     enters, a copy of a partner spliced into its body ({!splice_partners}),
