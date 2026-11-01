@@ -1374,7 +1374,7 @@ let core_passes to_appear : ml_structure Pipeline_trace.pass list =
     pass "specialize" Ml_specialize.structure;
     pass "knot" Ml_knot.structure;
     pass "fix_shape" Fix_shape.structure;
-    pass "fresh_reads" Fresh_reads.structure;
+    pass "fresh_occurrences" Fresh_occurrences.structure;
     effect_ "local_types" Local_types.structure;
     effect_ "ir_check" Ml_ir_check.structure ]
 

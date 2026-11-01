@@ -2579,8 +2579,8 @@ let normalize a =
     the callers that build one late.
 
     Placed in each branch of a match, a read among [args] is copied, and it
-    is copied after {!Fresh_reads} made every read one of its own: each copy
-    is given an occurrence of its own here. *)
+    is copied after {!Fresh_occurrences} made every read one of its own: each
+    copy is given an occurrence of its own here. *)
 let apply_eta_args f args =
   match args with
   | [] -> f

@@ -1,7 +1,7 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Every term is an occurrence of its own.  See [fresh_reads.mli]. *)
+(** Every term is an occurrence of its own.  See [fresh_occurrences.mli]. *)
 
 open Miniml
 
