@@ -249,10 +249,7 @@ template <SYM Ty> struct DefsFn {
   static std::optional<symbols_semty>
   assemble(const List<symbol> &ys, const List<SigT<symbol, crane::obj>> &stk) {
     if (std::holds_alternative<typename List<symbol>::Nil>(ys.v())) {
-      return std::make_optional<symbols_semty>(([]() -> symbols_semty {
-        throw std::logic_error(
-            "unreachable: impossible dependent match branch");
-      })());
+      return std::make_optional<symbols_semty>(std::monostate{});
     } else {
       const auto &[a0, a1] = std::get<typename List<symbol>::Cons>(ys.v());
       if (std::holds_alternative<typename List<SigT<symbol, crane::obj>>::Nil>(
@@ -298,8 +295,7 @@ template <SYM Ty> struct DefsFn {
     auto _cs = assemble(e.projT1().second, stk);
     if (_cs.has_value()) {
       const auto &vs = *_cs;
-      return std::make_optional<crane::obj>(
-          crane::obj(action_of(e, crane::any_cast<symbols_semty>(vs))));
+      return std::make_optional<crane::obj>(crane::obj(action_of(e, vs)));
     } else {
       return std::optional<crane::obj>();
     }

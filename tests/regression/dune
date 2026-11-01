@@ -13715,3 +13715,25 @@
   (alias runtest)
   (deps splice_partner_other_instance.t.exe)
   (action (run ./splice_partner_other_instance.t.exe))))
+
+(subdir functor_param_custom_list
+ (rule
+  (targets functor_param_custom_list.t.exe)
+  (deps FunctorParamCustomList.vo functor_param_custom_list.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} functor_param_custom_list.t.exe functor_param_custom_list.cpp functor_param_custom_list.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps functor_param_custom_list.t.exe)
+  (action (run ./functor_param_custom_list.t.exe))))
+
+(subdir functor_param_ctor_field
+ (rule
+  (targets functor_param_ctor_field.t.exe)
+  (deps FunctorParamCtorField.vo functor_param_ctor_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} functor_param_ctor_field.t.exe functor_param_ctor_field.cpp functor_param_ctor_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps functor_param_ctor_field.t.exe)
+  (action (run ./functor_param_ctor_field.t.exe))))
