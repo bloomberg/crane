@@ -10,6 +10,17 @@
 
 (** {2 Names of globals} *)
 
+(** The text of the custom mapping of [r], written at the position [c],
+    if [r] has one: as resolved for the declaration being written
+    ({!Cpp_resolution.Custom_text}), which must have asked for it. *)
+val custom_text : Cpp_state.render_ctx -> Names.GlobRef.t -> string option
+
+(** {!custom_text} where [r] is inlined. *)
+val inline_custom_text : Cpp_state.render_ctx -> Names.GlobRef.t -> string option
+
+(** The custom texts writing [globals] may write. *)
+val custom_texts_named : Names.GlobRef.t list -> Cpp_resolution.key list
+
 (** The name of a global at the position: the replacement text of an inline
     custom mapping, otherwise as resolution settles it there. *)
 val global_name : Cpp_state.render_ctx -> Common.kind -> Names.GlobRef.t -> Cpp_name.t

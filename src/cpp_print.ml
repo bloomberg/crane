@@ -747,6 +747,52 @@ let check_ctor_alias_plan ~file =
           ++ str " planned" )
   end
 
+(* The primitive integer type, found by what it is registered as: its short
+   name may be a user's own [int] where the extraction runs. *)
+let uint63_type () =
+  let int63 = "num.int63.type" in
+  if Rocqlib.has_ref int63 then Some (Rocqlib.lib_ref int63) else None
+
+(* The head of every global type in [ty], a type constructor written as a
+   template template argument entered too ({!exists_cpp_type}). *)
+let type_heads ty =
+  let heads = ref [] in
+  ignore (exists_cpp_type (fun t -> (match t with Tglob (r, _, _) -> heads := r :: !heads | _ -> ()); false) ty);
+  !heads
+
+(* What writing [d] names that its globals ({!Minicpp.iter_globrefs}) do not:
+   the head of each type constructor written as a template template
+   argument, a leaf to a type's traversal, and the primitive integer type,
+   through whose mapping each literal of that type is spelled. *)
+let globals_written_beside (d : cpp_decl) =
+  let found = ref [] in
+  let rec ty t =
+    ignore
+      (map_cpp_type
+         (fun t ->
+           ( match t with
+           | Tglob (_, _, args) -> List.iter (fun e -> ignore (expr e)) args
+           | Texpr_type e -> ignore (expr e)
+           | Ttyctor head -> found := type_heads head @ !found
+           | _ -> () );
+           t )
+         t );
+    t
+  and expr e =
+    (match e with CPPuint _ -> found := Option.cata (fun r -> [r]) [] (uint63_type ()) @ !found | _ -> ());
+    map_expr expr stmt ty e
+  and stmt s = map_stmt expr stmt ty s in
+  let rec decl = function
+    | Dtemplate (tps, c, inner) ->
+      ignore (map_tparams ty tps);
+      Option.iter (fun e -> ignore (expr e)) c;
+      decl inner
+    | Dnspace (_, ds) -> List.iter decl ds
+    | d -> ignore (map_decl expr stmt ty d)
+  in
+  decl d;
+  !found
+
 (** The constructor a type constructor position writes: an applied type
     there is the eta-expansion of the constructor, whose head is what the
     position wants. *)
@@ -764,11 +810,11 @@ let cut_at_argument_list str_of =
    mapping is that name where its text is a head with no argument list of its
    own, then the sentinel's hole, then the list's close; any other global is
    its name applied to its arguments. *)
-let rec applied_to_sentinel_alone = function
+let rec applied_to_sentinel_alone ctx = function
   | Tid (_, args) | Tid_external (_, args) -> Some (args = [Thole])
-  | Tnamespace (_, t) -> applied_to_sentinel_alone t
+  | Tnamespace (_, t) -> applied_to_sentinel_alone ctx t
   | Tglob (r, args, []) -> (
-    match Table.used_custom_text r with
+    match Cpp_names.custom_text ctx r with
     | None -> Some (args = [Thole])
     | Some template -> (
       match type_template template with
@@ -970,7 +1016,7 @@ let type_names_into_a_struct ctx t =
   | Tid (id, args) -> scopes_name_into_a_struct (Option.default [] (member_scopes ctx id)) ||? any args
   | Tid_external (id_s, args) -> text_names_into_a_struct (external_type_name id_s) ||? any args
   | Tglob (r, tys, _) -> (
-    match Table.used_inline_custom_text r with
+    match Cpp_names.inline_custom_text ctx r with
     | Some s -> text_names_into_a_struct s ||? any tys
     | None ->
       head_names_into_a_struct (glob_head ctx r ~applied:(tys <> [])) ||? any tys )
@@ -1104,7 +1150,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
       writes_obj ();
       pp_library_name Crane_rt.obj
     | Tglob (r, tys, args) ->
-      ( match Table.used_inline_custom_text r with
+      ( match Cpp_names.inline_custom_text ctx r with
       | Some s ->
         let cmds =
           term_template (custom_template_with_args s (List.length tys))
@@ -1278,7 +1324,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
            member and the position rejects it. *)
         (pp_rec ~lead:false false base ++ str "::template " ++ Id.print id, true)
       | Tglob (r, _ :: _, _) ->
-        ( ( match Table.used_custom_text r with
+        ( ( match Cpp_names.custom_text ctx r with
           | Some template when String.contains template '%' -> (
             match type_template template with
             | CCstring lit :: _ -> str (cut_at_argument_list lit)
@@ -1309,7 +1355,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
 and ctor_alias_at ctx vl t =
   let custom () =
     match t with
-    | Tglob (r, (_ :: _ as args), _) when Table.used_custom_text r <> None ->
+    | Tglob (r, (_ :: _ as args), _) when Cpp_names.custom_text ctx r <> None ->
       let fixed = List.filteri (fun i _ -> i < List.length args - 1) args in
       ctor_alias_of_probe ctx vl ~base:(Common.pp_global_name Type r) (Tglob (r, fixed @ [Thole], []))
     | _ -> None
@@ -1388,7 +1434,7 @@ and ctor_alias_of_probe ctx vl ~base probe =
     String.equal rendered (cut_at_argument_list rendered ^ "<" ^ ctor_alias_tvar ^ ">")
   in
   let alone =
-    match applied_to_sentinel_alone probe with
+    match applied_to_sentinel_alone ctx probe with
     | Some alone ->
       if Probe.checking () && alone <> head_alone () then
         Probe.violation "constructor alias shape"
@@ -1460,7 +1506,7 @@ and pp_value_qualifier ctx env ty =
   match ty with
   | Tglob (r, tys, []) ->
     (* No [~yields]: a type qualifier is never a block in value position. *)
-    let info = {ci_inline = Option.map Minicpp.inline_template (Table.used_inline_custom_text r); ci_yields = None} in
+    let info = {ci_inline = Option.map Minicpp.inline_template (Cpp_names.inline_custom_text ctx r); ci_yields = None} in
     pp_cpp_expr ctx env [] (CPPglob (r, tys, Some info))
   | _ ->
   pp_cpp_type ~lead:false ctx false [] ty
@@ -1910,12 +1956,9 @@ and pp_cpp_expr ctx env args t =
   | CPPparray (elems, _) ->
     str "{" ++ pp_list (pp_cpp_expr ctx env args) (Array.to_list elems) ++ str "}"
   | CPPuint x ->
-    (* Spelled through the mapping of the primitive type, found by what it is
-       registered as: its short name may be a user's own [int] where the
-       extraction runs. *)
+    (* Spelled through the mapping of the primitive type. *)
     let s = Uint63.to_string x in
-    let int63 = "num.int63.type" in
-    let mapped = if Rocqlib.has_ref int63 then Table.used_inline_custom_text (Rocqlib.lib_ref int63) else None in
+    let mapped = Option.bind (uint63_type ()) (Cpp_names.inline_custom_text ctx) in
     ( match mapped with
     | Some "int64_t" -> str ("INT64_C(" ^ s ^ ")")
     | Some cpp_type -> str (cpp_type ^ "(" ^ s ^ ")")
@@ -3042,7 +3085,10 @@ let ctor_aliases_found ctx visit =
   visit (fun ~vl ~owner t ->
       match t with
       | Ttyctor _ ->
-        let spell ctx = ignore (pp_cpp_type ctx false vl t) in
+        (* Which templates are spelled, not what they are named: named live,
+           as planning names them, not from the names of a declaration
+           resolved at the frames its printing enters. *)
+        let spell ctx = ignore (pp_cpp_type {ctx with rc_names = None} false vl t) in
         ( match owner with Some r -> enter_from ctx (Inductive_struct r) spell | None -> spell ctx )
       | _ -> () );
   !ctor_aliases_spelled
@@ -4275,33 +4321,38 @@ let global_names frames globals =
   let decided r = Option.has_some (Common.decided_global_name r) in
   let globals =
     List.sort_uniq GlobRef.UserOrd.compare
-      (List.filter decided
-         (List.concat_map (function GlobRef.ConstructRef (ind, _) as r -> [r; GlobRef.IndRef ind] | r -> [r]) globals) )
+      (List.concat_map (function GlobRef.ConstructRef (ind, _) as r -> [r; GlobRef.IndRef ind] | r -> [r]) globals)
   in
   let keys =
     List.concat_map
       (fun r ->
         Cpp_resolution.[Unmapped (Type, r); Unmapped (Term, r); Class_concept r]
         @ match r with GlobRef.IndRef _ -> [Cpp_resolution.Inductive_value r] | _ -> [] )
-      globals
+      (List.filter decided globals)
+    @ Cpp_names.custom_texts_named globals
   in
   List.concat_map (fun frame -> List.map (fun key -> (frame, key)) keys) frames
+
+(* The globals writing [ty] names: those its printing writes the names of
+   ({!Cpp_demands.globals_of_type}), and the head of every global type in
+   it, a custom whose text it is written from among them. *)
+let type_globals ty = Cpp_demands.globals_of_type ty @ type_heads ty
 
 let template_param_globals tps =
   let types = ref [] in
   ignore (map_tparams (fun t -> types := t :: !types; t) tps);
-  List.filter_map (function TTconcept (r, _), _ -> Some r | _ -> None) tps
-  @ List.concat_map Cpp_demands.globals_of_type !types
+  List.filter_map (function TTconcept (r, _), _ -> Some r | _ -> None) tps @ List.concat_map type_globals !types
 
 let declaration_names (d : Cpp_erasure.settled) =
   let globals = ref [] in
   Minicpp.iter_globrefs (fun r -> globals := r :: !globals) (d :> cpp_decl);
-  global_names (declaration_frames d) (!globals @ declared_globals (d :> cpp_decl))
+  global_names (declaration_frames d)
+    (!globals @ globals_written_beside (d :> cpp_decl) @ declared_globals (d :> cpp_decl))
 
 let unprinted_names : Cpp_ast.declaration -> _ = function
   | Declaration {settled; _} | Absorbed {settled; _} -> declaration_names settled
-  | Fields {fields; _} -> global_names [[]] (List.concat_map (fun (_, ty) -> Cpp_demands.globals_of_type ty) fields)
-  | Assertion {subject = Instance {args; _}; _} -> global_names [[]] (List.concat_map Cpp_demands.globals_of_type args)
+  | Fields {fields; _} -> global_names [[]] (List.concat_map (fun (_, ty) -> type_globals ty) fields)
+  | Assertion {subject = Instance {args; _}; _} -> global_names [[]] (List.concat_map type_globals args)
   | Global_alias (Alias_of_type {tparams; _}) -> global_names [[]] (template_param_globals tparams)
   | Forward_declaration {defined = Defined_struct {struct_; tparams; constraint_; _}; _} ->
     let constraint_globals c =
@@ -4311,7 +4362,7 @@ let unprinted_names : Cpp_ast.declaration -> _ = function
     in
     global_names [[]] ((struct_ :: template_param_globals tparams) @ Option.cata constraint_globals [] constraint_)
   | Forward_declaration {defined = Defined_enum r; _} -> global_names [[]] [r]
-  | Synthesised_template {body; _} -> global_names [[]] (Cpp_demands.globals_of_type body)
+  | Synthesised_template {body; _} -> global_names [[]] (type_globals body)
   | Assertion {subject = Module _; _} | Global_alias (Alias_of_module _) | Modtype_concept _ | Module_alias _
   | Functor_alias _ | Derived_functor _ ->
     []

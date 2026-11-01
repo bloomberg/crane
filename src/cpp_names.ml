@@ -62,12 +62,32 @@ let named (c : render_ctx) key live =
   | None -> live (visible_at c key)
   | Some names -> name_from names c.rc_frame key ~live:(fun () -> live (visible_at c key))
 
+let live_custom_text r =
+  match used_custom_text r with
+  | Some text -> Cpp_name.foreign text
+  | None -> CErrors.anomaly Pp.(str "Crane: " ++ GlobRef.print r ++ str " has no custom mapping to write.")
+
+let custom_text (c : render_ctx) r =
+  if not (is_custom r) then None
+  else
+    let text =
+      match c.rc_names with
+      | None -> live_custom_text r
+      | Some names -> name_from names c.rc_frame (Custom_text r) ~live:(fun () -> live_custom_text r)
+    in
+    Some (Cpp_name.to_string text)
+
+let inline_custom_text c r = if to_inline r then custom_text c r else None
+
+let custom_texts_named globals =
+  List.filter_map (fun r -> if is_custom r then Some (Cpp_resolution.Custom_text r) else None) globals
+
 (** The name of a global reference at the position [c]: the replacement text
     of an inline custom mapping, otherwise as resolution settles it there.
     @param k  the extraction key category (e.g. [Type] or [Term])
     @param r  the global reference to name *)
 let global_name c k r =
-  match used_inline_custom_text r with
+  match inline_custom_text c r with
   | Some custom_str -> Cpp_name.foreign custom_str
   | None -> named c (Unmapped (k, r)) (fun v -> Common.resolve_ref_name v k r)
 
@@ -673,7 +693,9 @@ let file_named_by_key ~unit_files : Cpp_resolution.key -> ModPath.t option = fun
   | Modtype_concept (MPdot (mp0, _)) when Option.has_some (functor_concept_scope mp0) -> None
   | Modtype_concept kn -> Common.file_of_module_named ~unit_files kn
   | Global (_, r) | Unmapped (_, r) -> Common.file_named_by ~unit_files r
-  | Module_declared _ | Short _ | Inductive_value _ | Class_concept _ | Modtype_concept_declared _ | Definition _ -> None
+  | Module_declared _ | Short _ | Inductive_value _ | Class_concept _ | Modtype_concept_declared _ | Definition _
+  | Custom_text _ ->
+    None
 
 let struct_definition_name ctx id =
   let local = local_at ctx id and merged = merged_at ctx and promoted = promoted_at ctx in
@@ -768,3 +790,4 @@ let live_name c (key : Cpp_resolution.key) =
   | Definition (Enum_definition, r) -> enum_definition_name ctx r
   | Definition (Struct_definition, r) -> struct_definition_name ctx r
   | Definition (Alias_definition, r) -> global_name ctx Type r
+  | Custom_text r -> live_custom_text r

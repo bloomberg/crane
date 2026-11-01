@@ -80,9 +80,13 @@ val unprinted_fields :
 (** [global_names frames globals] asks for [globals] by name at each of
     [frames]: each whose name is decided -- printing decides none -- as a
     type, as a term and as a type class's concept, an inductive as a value
-    too. *)
+    too; and each custom's text. *)
 val global_names :
   Cpp_resolution.frame list -> GlobRef.t list -> (Cpp_resolution.frame * Cpp_resolution.key) list
+
+(** The globals writing the type names, for {!global_names}: those whose
+    names it writes and the customs it is written from. *)
+val type_globals : Minicpp.cpp_type -> GlobRef.t list
 
 (** What printing a declaration not yet printed names through the type and
     expression printers, at the frames inside it it names them at, for

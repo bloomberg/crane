@@ -81,7 +81,7 @@ let pp_member_type ~enum name r args =
    in: {!pp_modtype_concept}, read without printing it.  The type printer
    names the globals of the types it writes ({!Cpp_print.global_names}). *)
 
-let type_names frame ty = global_names [frame] (Cpp_demands.globals_of_type ty)
+let type_names frame ty = global_names [frame] (type_globals ty)
 
 let rec concept_type_names frame : Modtype_concept.concept_type -> _ = function
   | Member {member; arguments; _} -> (frame, Cpp_resolution.Global (Type, member)) :: concept_types_names frame arguments

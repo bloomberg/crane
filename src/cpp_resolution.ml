@@ -23,6 +23,7 @@ type key =
   | Modtype_concept of ModPath.t
   | Modtype_concept_declared of ModPath.t
   | Definition of definition * GlobRef.t
+  | Custom_text of GlobRef.t
 
 let pp_key k =
   let global what r = Pp.(str what ++ str " " ++ GlobRef.print r) in
@@ -38,6 +39,7 @@ let pp_key k =
   | Modtype_concept mp -> path "the concept of the module type" mp
   | Modtype_concept_declared mp -> path "the declared concept of the module type" mp
   | Definition (_, r) -> global "the definition of" r
+  | Custom_text r -> global "the custom text of" r
 
 let compare_entered a b =
   let rank = function Signature _ -> 0 | Inductive_struct _ -> 1 | In_struct -> 2 | In_template -> 3 | Function _ -> 4 in
@@ -65,6 +67,7 @@ let compare_key a b =
     | Modtype_concept _ -> 7
     | Modtype_concept_declared _ -> 8
     | Definition _ -> 9
+    | Custom_text _ -> 10
   in
   let global ka ra kb rb = match compare_kind ka kb with 0 -> GlobRef.UserOrd.compare ra rb | c -> c in
   match (a, b) with
@@ -75,7 +78,8 @@ let compare_key a b =
     ModPath.compare a b
   | Global (ka, ra), Global (kb, rb) | Unmapped (ka, ra), Unmapped (kb, rb) | Short (ka, ra), Short (kb, rb) ->
     global ka ra kb rb
-  | Class_concept a, Class_concept b | Inductive_value a, Inductive_value b -> GlobRef.UserOrd.compare a b
+  | Class_concept a, Class_concept b | Inductive_value a, Inductive_value b | Custom_text a, Custom_text b ->
+    GlobRef.UserOrd.compare a b
   | Definition (da, a), Definition (db, b) -> ( match compare da db with 0 -> GlobRef.UserOrd.compare a b | c -> c )
   | _ -> Int.compare (rank a) (rank b)
 

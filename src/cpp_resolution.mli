@@ -62,6 +62,9 @@ type key =
   | Definition of definition * GlobRef.t
       (** The name the type is defined under, declared as the definition
           says. *)
+  | Custom_text of GlobRef.t
+      (** The text of the global's custom mapping, foreign: what a type or
+          a value it maps is instantiated from. *)
 
 val pp_key : key -> Pp.t
 
