@@ -182,8 +182,9 @@ val adoptable_in : t -> Names.GlobRef.t -> Miniml.Occurrence.t list
     next partners' calls are read too.  A call that runs in place of one,
     where [inlines] says the function takes its partners' bodies at such
     calls -- a method does not -- is entered where the partner yields what
-    the function does, its body, run there, calls the function back, and no
-    other partner is entered: a copy of it is bound in front of the body, a
+    the function does, its body, run there, calls the function back, each
+    of its uses of itself is a call made there -- the copy entered is no
+    value a closure could call -- and no other partner is entered: a copy of it is bound in front of the body, a
     local fixpoint whose calls of the partner are its own, and each such
     call is a call of the copy ({!Splices.entered_copy}).  Any other is replaced by
     a copy of the partner's body as a tail call is, run where the call was,

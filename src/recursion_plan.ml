@@ -991,6 +991,12 @@ let flow_of r fd =
   let _, body = Core_elaborate.declaration_scope fd.fd_type fd.fd_body in
   if Translation_support.suspends_whole r (Ml_type_util.ml_return_type fd.fd_type) body then None else Some body
 
+(* The number of parameters of [g], among the definitions [defs]. *)
+let parameters defs g =
+  match Ref.User.Map.find_opt g defs with
+  | Some fd -> List.length (Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type))
+  | None -> 0
+
 (* The partner of [self] in its group [members] spliced next into [body],
    its body as generated, once the partners [inlined] are, with the calls of
    it spliced ({!inlined_calls}): the partner of the first call met that is
@@ -998,16 +1004,11 @@ let flow_of r fd =
    call [opaque] holds is in a partner's body run in place of a call, where
    nothing is spliced. *)
 let next_inlining ~opaque ~effects ~defs ~members ~inlined self body =
-  let parameters g =
-    match Ref.User.Map.find_opt g defs with
-    | Some fd -> List.length (Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type))
-    | None -> 0
-  in
   let calls ~inlines =
     let inlines (use : global_use) =
       inlines use.callee && not (List.exists (Occurrence.equal (Global_use.occurrence use)) opaque)
     in
-    inlined_calls ~self ~effects ~parameters ~inlines body
+    inlined_calls ~self ~effects ~parameters:(parameters defs) ~inlines body
   in
   let pending g =
     (not (Common.globref_equal g self))
@@ -1103,19 +1104,32 @@ let yields_alike a b =
   let returns ty = Mlutil.rigidify (unfold (Ml_type_util.ml_return_type (Mlutil.type_simpl ty))) in
   Mlutil.eq_ml_type (returns a) (returns b)
 
-(* The calls of [self] the partner [def] makes where its body runs in place
-   of a call of it ({!inlined_calls}). *)
-let calls_back ~defs ~self def =
+(* The calls of [g] the partner [def] makes where its body runs in place of
+   a call of it ({!inlined_calls}), and the number of its uses of [g] there
+   in all. *)
+let flow_calls ~defs def g =
   match flow_of def.fd_ref {def with fd_body = Mlutil.read_spines def.fd_body} with
-  | None -> []
+  | None -> ([], 0)
   | Some body ->
-    let parameters g =
-      match Ref.User.Map.find_opt g defs with
-      | Some fd -> List.length (Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type))
-      | None -> 0
-    in
-    inlined_calls ~self:def.fd_ref ~effects:(definition_effects def) ~parameters
-      ~inlines:(fun use -> Common.globref_equal use.callee self) body
+    let of_g (use : global_use) = Common.globref_equal use.callee g in
+    let uses = ref 0 in
+    let rec count = function MLglob use when of_g use -> incr uses | e -> Mlutil.ast_iter count e in
+    count body;
+    ( inlined_calls ~self:def.fd_ref ~effects:(definition_effects def) ~parameters:(parameters defs) ~inlines:of_g
+        body,
+      !uses )
+
+(* The calls of [self] the partner [def] makes where its body runs in place
+   of a call of it. *)
+let calls_back ~defs ~self def = fst (flow_calls ~defs def self)
+
+(* Whether each use the partner [def] makes of itself is a call where its
+   body runs: the copy a machine enters is no value, so a use in a closure,
+   a partial application or anything run in a lambda would have nothing to
+   call. *)
+let calls_itself_in_flow ~defs def =
+  let calls, uses = flow_calls ~defs def def.fd_ref in
+  List.length calls = uses
 
 (* [body], the body of a function, with each call of its partner defined as
    [def] made at [sites] replaced by a call of a copy of the partner bound in
@@ -1196,6 +1210,7 @@ let splice_member ~inlines ~originals ~defs ~members fd =
       let def = Ref.User.Map.find partner originals in
       let enters () =
         entered = None && yields_alike fd.fd_type def.fd_type && calls_back ~defs ~self def <> []
+        && calls_itself_in_flow ~defs def
         && not (definition_suspends self fd.fd_type fd.fd_body)
       in
       if Mlutil.type_maxvar def.fd_type <> own_vars then unspliced "variables" self
