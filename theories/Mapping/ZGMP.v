@@ -17,7 +17,8 @@ From Stdlib Require Import BinInt.
 Crane Extract Inductive Z =>
   "mpz_class"
   [ "mpz_class(0)" "%a0" "(-%a0)" ]
-  "if (%scrut == 0) { %br0 } else if (%scrut > 0) { mpz_class %b1a0 = %scrut; %br1 } else { mpz_class %b2a0 = -%scrut; %br2 }".
+  "if (%scrut == 0) { %br0 } else if (%scrut > 0) { mpz_class %b1a0 = %scrut; %br1 } else { mpz_class %b2a0 = -%scrut; %br2 }"
+  From "gmpxx.h".
 
 Crane Extract Numeral Z => "mpz_class(%n)".
 

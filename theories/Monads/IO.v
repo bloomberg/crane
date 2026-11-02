@@ -37,7 +37,7 @@ Crane Extract Inductive fileE => ""
 }()"
     "[&]() -> bool { std::error_code _ec; return std::filesystem::exists(std::filesystem::path(%a0), _ec); }()"
     "[&]() { std::error_code _ec; std::filesystem::remove(std::filesystem::path(%a0), _ec); }()" ]
-  From "fstream" "filesystem" "system_error".
+  From "fstream" "iostream" "filesystem" "system_error".
 
 Crane Extract Inlined Constant print => "std::cout << %a0" From "iostream".
 Crane Extract Inlined Constant print_endline => "std::cout << %a0 << '\n'" From "iostream".
@@ -54,7 +54,7 @@ Crane Extract Inlined Constant read =>
   return std::string(
       std::istreambuf_iterator<char>(file),
       std::istreambuf_iterator<char>());
-}()" From "fstream".
+}()" From "fstream" "iostream".
 
 Crane Extract Inlined Constant write_file =>
 "[&]() {
