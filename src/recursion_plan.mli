@@ -186,9 +186,13 @@ val adoptable_in : t -> Names.GlobRef.t -> Miniml.Occurrence.t list
     of its uses of itself is a call made there -- the copy entered is no
     value a closure could call -- and no other partner is entered: a copy of it is bound in front of the body, a
     local fixpoint whose calls of the partner are its own, and each such
-    call is a call of the copy ({!Splices.entered_copy}).  Any other is replaced by
-    a copy of the partner's body as a tail call is, run where the call was,
-    where no partner's call is read.  A function that does not call itself
+    call is a call of the copy ({!Splices.entered_copy}).  Any other is
+    replaced by a copy of the partner's body as a tail call is, run where
+    the call was, where no partner's call is read.  Once no partner is left
+    to splice, a partner whose copies brought calls of it that are not tail
+    calls is entered at them so, where none is entered yet: they would
+    otherwise be calls of another function, made on the C++ stack at every
+    turn that passes through them.  A function that does not call itself
     once spliced into, which makes no loop, is left as it is.  A function
     some partner of which is spliced in neither way, or whose partner's body
     would need instantiating -- a call solving one of its variables, a
