@@ -216,12 +216,14 @@ module IdSet : Set.S with type elt = Names.variable
     plan reads off something written there is keyed by it. *)
 val module_written : Cpp_state.render_ctx -> Names.ModPath.t
 
-(** The functor whose body declares module types at [mp], by its label, with
-    its parameters, as {!Cpp_state.functor_concept_scopes} records it. *)
-val functor_concept_scope : Names.ModPath.t -> (Names.Label.t * Names.ModPath.t list) option
+(** Where the concepts of the module types [mp] declares are declared, if a
+    functor declares them: [mp] is the functor's body, an application of it
+    or an alias of the application ({!Cpp_state.functor_concept_scopes}). *)
+val functor_concept_scope : Names.ModPath.t -> Module_plan.concept_scope option
 
 (** The arguments, after the constrained module, of the concept of the module
-    type [kn]: the parameters of the functor declaring it, if one does. *)
+    type [kn]: the parameters of the functor declaring it, if [kn] is in its
+    body, or the arguments of the application [kn] is reached through. *)
 val concept_extra_args : Names.ModPath.t -> Names.ModPath.t list
 
 (** The C++ identifier of the concept the module type at [mp] becomes, at

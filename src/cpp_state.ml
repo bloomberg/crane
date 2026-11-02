@@ -503,11 +503,10 @@ let file_start rc_file =
     rc_visibility = None;
   }
 
-(** The functor bodies whose module types are file-scope concepts over the
-    functor's parameters as well as [M]: the body's path, the functor's
-    label, and its parameters.  A concept cannot be declared in the class
-    template a functor becomes, and the module type may mention a parameter. *)
-let functor_concept_scopes : (Names.ModPath.t * (Names.Label.t * Names.ModPath.t list)) list ref =
+(** The modules whose module types are file-scope concepts of a functor
+    ({!Module_plan.concept_scope}): a functor's body, an application of the
+    functor, an alias of the application. *)
+let functor_concept_scopes : (Names.ModPath.t * Module_plan.concept_scope) list ref =
   owned_list "functor_concept_scopes"
 
 

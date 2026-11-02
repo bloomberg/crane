@@ -27,6 +27,15 @@ type wrapper_role =
     type parameters that struct is a template over. *)
 type eponymous_record = {record : GlobRef.t; type_params : int}
 
+(** Where the concepts of the module types a module declares are declared.
+    A concept cannot be declared inside the class template a functor
+    becomes, so those of a functor's body are declared at the file scope of
+    the functor, named after it ([functor_]) and over its parameters
+    ([args]) as well as the module they constrain; an application of the
+    functor declares none of its own, its module types being the functor's
+    concepts over the application's arguments. *)
+type concept_scope = {functor_ : ModPath.t; args : ModPath.t list}
+
 (** The facts one unit's preparation decided. *)
 type t = {
   global_scope_enums : GlobRef.t list;

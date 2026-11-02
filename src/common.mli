@@ -351,6 +351,12 @@ val resolve_ref_name : visibility -> kind -> GlobRef.t -> Cpp_name.t
 (** The name of a module written where the visibility is. *)
 val resolve_module_in : visibility -> ModPath.t -> resolved
 
+(** The namespace of the file declaring the module [mp], which a name
+    declared at that file's scope is qualified with where [vis] is visible:
+    none in the same file, or where [mp] is a functor parameter's or not
+    output. *)
+val resolve_module_file_qualifier : visibility -> ModPath.t -> string option
+
 (** The name of the file defining a reference, when a reference to it written
     where the visibility is must name it; for a name hoisted to its file's
     namespace. *)

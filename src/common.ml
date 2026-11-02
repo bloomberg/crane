@@ -1501,6 +1501,22 @@ let decided_module_name mp =
     definition uses the module name, so type references must too. *)
 let pp_type_name_capitalized r = emitted_module_name (modpath_of_r r)
 
+(** The namespace of the file declaring the module [mp], which a name declared
+    at that file's scope is qualified with where [vis] is visible: none in
+    the same file, or where [mp] is a functor parameter's or not output. *)
+let resolve_module_file_qualifier vis mp =
+  match common_prefix_from_list mp (List.map (fun v -> v.mp) vis) with
+  | Some _ -> None
+  | None -> (
+    let base = base_mp mp in
+    if is_mp_bound base || is_non_output_module base then None
+    else
+      match List.rev (mp_renaming mp) with
+      | base_s :: _ ->
+        note_written_file base;
+        Some (unquote base_s)
+      | [] -> None )
+
 (** The name of the module [mp] written where [vis] is visible. *)
 let resolve_module_in vis mp =
   let ls = mp_renaming mp in

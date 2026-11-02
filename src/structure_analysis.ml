@@ -34,7 +34,7 @@ type t = {
   wrapper_bystanders : (ModPath.t * string) list;
   functor_app_sources : (ModPath.t * ModPath.t) list;
   eponymous_records : GlobRef.t list;
-  functor_concept_scopes : (ModPath.t * (Label.t * ModPath.t list)) list;
+  functor_concept_scopes : (ModPath.t * Module_plan.concept_scope) list;
   concept_renames : (GlobRef.t * string) list;
   modtype_concept_renames : (ModPath.t * string) list;
   lifted_instances : GlobRef.t list;
@@ -132,29 +132,74 @@ let collect_functor_app_sources (s : ml_structure) :
          | _ -> acc )
        s [])
 
-(** [(body, (functor, params))] for every functor whose body declares a module
-    type.  A concept cannot be declared inside the class template a functor
-    becomes, and the module type may mention the functor's parameters, so its
-    concept is declared at file scope over those parameters too; the name it
-    goes by there, and the arguments every use passes, are settled here. *)
-let collect_functor_concept_scopes (s : ml_structure) :
-    (ModPath.t * (Label.t * ModPath.t list)) list =
+let declares_module_type sel = List.exists (function _, SEmodtype _ -> true | _ -> false) sel
+
+(** The concept scope of the functor [f] outside the structure -- in another
+    file of a separate extraction, whose own unit declares the concepts --
+    read off its signature as that unit's structure shows it: a functor
+    defined by its body, whose body declares a module type. *)
+let declared_functor_scope f =
+  match base_mp f with
+  | MPbound _ -> None
+  | MPfile _ | MPdot _ -> (
+    match Global.lookup_module f with
+    | exception e when CErrors.noncritical e -> None
+    | mb -> (
+      let rec params acc : _ Declarations.functorize -> _ = function
+        | MoreFunctor (mbid, _, body) -> params (MPbound mbid :: acc) body
+        | NoFunctor sign -> (List.rev acc, sign)
+      in
+      match (Declareops.mod_expr mb, params [] mb.mod_type) with
+      | (FullStruct | Struct _), ((_ :: _ as ps), sign)
+        when List.exists (function _, Declarations.SFBmodtype _ -> true | _ -> false) sign ->
+        Some {Module_plan.functor_ = f; args = ps}
+      | _ -> None ) )
+
+(** The concept scope of every functor whose body declares a module type,
+    keyed by its body; of every application of such a functor, keyed by the
+    module it defines, the functor's over the arguments; and of every alias
+    of such an application.  A concept cannot be declared inside the class
+    template a functor becomes, and the module type may mention the
+    functor's parameters, so its concept is declared at file scope over
+    those parameters too; the name it goes by there, and the arguments every
+    use passes, are settled here. *)
+let collect_functor_concept_scopes (s : ml_structure) : (ModPath.t * Module_plan.concept_scope) list =
   let rec params acc = function
     | MEfunctor (mbid, _, body) -> params (MPbound mbid :: acc) body
     | body -> (List.rev acc, body)
   in
+  let rec application args = function
+    | MEapply (f, MEident arg) -> application (arg :: args) f
+    | MEident f -> Some (f, args)
+    | _ -> None
+  in
+  let found scopes mp = List.find_map (fun (key, scope) -> if ModPath.equal key mp then Some scope else None) scopes in
+  (* Whether [mp] is the functor body declaring the concepts of [scope]. *)
+  let declares mp (scope : Module_plan.concept_scope) = ModPath.equal mp scope.functor_ in
   List.rev
     (fold_structure ~root:ignore
        ~enter:(fun () _ -> ())
-       (fun () _ l se acc ->
+       (fun () mp l se scopes ->
          match se with
          | SEmodule {ml_mod_expr = MEfunctor _ as me; _} -> (
            match params [] me with
-           | ps, MEstruct (body_mp, sel)
-             when List.exists (function _, SEmodtype _ -> true | _ -> false) sel ->
-             (body_mp, (l, ps)) :: acc
-           | _ -> acc )
-         | _ -> acc )
+           | ps, MEstruct (body_mp, sel) when declares_module_type sel ->
+             (body_mp, {Module_plan.functor_ = body_mp; args = ps}) :: scopes
+           | _ -> scopes )
+         | SEmodule {ml_mod_expr = me; _} -> (
+           match application [] me with
+           | Some (f, (_ :: _ as args)) -> (
+             let scope = match found scopes f with None -> declared_functor_scope f | scope -> scope in
+             match scope with
+             | Some scope when declares f scope && List.length scope.args = List.length args ->
+               (MPdot (mp, l), {scope with args}) :: scopes
+             | _ -> scopes )
+           | Some (source, []) -> (
+             match found scopes source with
+             | Some scope when not (declares source scope) -> (MPdot (mp, l), scope) :: scopes
+             | _ -> scopes )
+           | None -> scopes )
+         | _ -> scopes )
        s [])
 
 (** {2 Enum registration} *)

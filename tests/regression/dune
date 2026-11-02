@@ -13792,3 +13792,25 @@
   (alias runtest)
   (deps loopify_partner_self_in_closure.t.exe)
   (action (run ./loopify_partner_self_in_closure.t.exe))))
+
+(subdir functor_modtype_via_application
+ (rule
+  (targets functor_modtype_via_application.t.exe)
+  (deps FunctorModtypeViaApplication.vo functor_modtype_via_application.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} functor_modtype_via_application.t.exe functor_modtype_via_application.cpp functor_modtype_via_application.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps functor_modtype_via_application.t.exe)
+  (action (run ./functor_modtype_via_application.t.exe))))
+
+(subdir sep_ext_functor_modtype_via_application
+ (rule
+  (targets sep_ext_functor_modtype_via_application.t.exe)
+  (deps Inner.vo SepExtFunctorModtypeViaApplication.vo sep_ext_functor_modtype_via_application.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_functor_modtype_via_application.t.exe Nat.cpp Inner.cpp SepExtFunctorModtypeViaApplication.cpp sep_ext_functor_modtype_via_application.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_functor_modtype_via_application.t.exe)
+  (action (run ./sep_ext_functor_modtype_via_application.t.exe))))

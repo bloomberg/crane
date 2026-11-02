@@ -6,6 +6,8 @@ open Names
 type wrapper_role = Own | Flattened | Bystander
 type eponymous_record = {record : GlobRef.t; type_params : int}
 
+type concept_scope = {functor_ : ModPath.t; args : ModPath.t list}
+
 type t = {
   global_scope_enums : GlobRef.t list;
   concept_names : (GlobRef.t * string) list;

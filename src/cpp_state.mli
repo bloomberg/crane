@@ -174,7 +174,7 @@ val held_concept_equal : held_concept -> held_concept -> bool
 (** The functor bodies whose module types are file-scope concepts over the
     functor's parameters as well as [M]: the body's path, the functor's
     label, and its parameters. *)
-val functor_concept_scopes : (Names.ModPath.t * (Names.Label.t * Names.ModPath.t list)) list ref
+val functor_concept_scopes : (Names.ModPath.t * Module_plan.concept_scope) list ref
 
 (** Whether a concept is one the current frame is holding back. *)
 val is_held_back_in : held_concept list -> held_concept -> bool

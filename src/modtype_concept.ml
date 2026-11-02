@@ -52,7 +52,8 @@ let rec base_mp = function MPdot (parent, _) -> base_mp parent | mp -> mp
 let is_functor_param_ref r =
   let b = base_mp (Table.modpath_of_r r) in
   List.exists
-    (fun (_, (_, params)) -> List.exists (ModPath.equal b) params)
+    (fun (key, ({functor_; args} : Module_plan.concept_scope)) ->
+      ModPath.equal key functor_ && List.exists (ModPath.equal b) args)
     !Cpp_state.functor_concept_scopes
 
 (* Whether [r] is a member of [M], the module the concept of the signature

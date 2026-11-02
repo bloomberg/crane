@@ -645,30 +645,34 @@ let module_written (c : render_ctx) =
 let functor_concept_scope mp =
   List.find_map (fun (m, scope) -> if ModPath.equal m mp then Some scope else None) !functor_concept_scopes
 
-let concept_extra_args kn =
-  match kn with
-  | ModPath.MPdot (mp0, _) -> ( match functor_concept_scope mp0 with Some (_, params) -> params | None -> [])
-  | _ -> []
+(* The concept scope of the module declaring the module type [kn], if its
+   concept is a functor's. *)
+let concept_scope_of = function ModPath.MPdot (mp0, _) -> functor_concept_scope mp0 | MPfile _ | MPbound _ -> None
+
+let concept_extra_args kn = match concept_scope_of kn with Some scope -> scope.args | None -> []
 
 let modtype_concept_name mp =
   let base = Structure_analysis.concept_name_of_label in
-  match mp with
-  | ModPath.MPdot (mp0, l) -> (
-    match functor_concept_scope mp0 with
-    | Some (fl, _) -> base fl ^ "_" ^ base l
-    | None -> Option.default (base l) (Module_plan.modtype_concept_name mp) )
-  | MPfile _ | MPbound _ -> CErrors.anomaly (Pp.str "modtype_concept_name: a module type is a member of a structure")
+  match (mp, concept_scope_of mp) with
+  | ModPath.MPdot (_, l), Some {functor_ = MPdot (_, fl); _} -> base fl ^ "_" ^ base l
+  | MPdot (_, l), _ -> Option.default (base l) (Module_plan.modtype_concept_name mp)
+  | (MPfile _ | MPbound _), _ ->
+    CErrors.anomaly (Pp.str "modtype_concept_name: a module type is a member of a structure")
 
 (* The concept of the module type [kn], as a reference written at the
    position [ctx], which sees [v], names it.  In separate extraction a
    concept lives in its file's namespace, so a reference from another file
    is qualified. *)
 let modtype_concept_ref ctx v kn =
-  match kn with
-  | ModPath.MPdot (mp0, _) when Option.has_some (functor_concept_scope mp0) ->
-    (* Declared at file scope, so named after the functor declaring it. *)
-    Cpp_name.unqualified (modtype_concept_name kn)
-  | MPdot (mp0, _) when Common.get_force_cross_file_qualification () ->
+  match (kn, concept_scope_of kn) with
+  | _, Some {functor_; _} -> (
+    (* Declared at the file scope of the functor declaring it, and named
+       after the functor. *)
+    let name = modtype_concept_name kn in
+    match Common.resolve_module_file_qualifier v functor_ with
+    | Some file -> Cpp_name.name [Cpp_name.Namespace file] name
+    | None -> Cpp_name.unqualified name )
+  | MPdot (mp0, _), None when Common.get_force_cross_file_qualification () ->
     (* A top-level module type of another file is a concept in a namespace
        of the same name, which from outside the namespace names the
        namespace: [C::C].  The file is the one holding the module whose
@@ -686,17 +690,19 @@ let modtype_concept_ref ctx v kn =
     if foreign_file && not (Cpp_name.is_qualified resolved) then
       Cpp_name.inside resolved (fun s -> Cpp_name.Namespace s) (Cpp_name.unqualified (modtype_concept_name kn))
     else resolved
-  | MPdot _ ->
+  | MPdot _, None ->
     (* Monolithic extraction: resolving the module records the file it names;
        the short label is the concept's name everywhere in the one file. *)
     ignore (Common.resolve_module_in v kn);
     Cpp_name.unqualified (modtype_concept_name kn)
-  | MPfile _ | MPbound _ -> Common.resolve_module_in v kn
+  | (MPfile _ | MPbound _), None -> Common.resolve_module_in v kn
 
 let file_named_by_key ~unit_files : Cpp_resolution.key -> ModPath.t option = function
   | Module mp -> Common.file_of_module_named ~unit_files mp
-  | Modtype_concept (MPdot (mp0, _)) when Option.has_some (functor_concept_scope mp0) -> None
-  | Modtype_concept kn -> Common.file_of_module_named ~unit_files kn
+  | Modtype_concept kn -> (
+    match concept_scope_of kn with
+    | Some {functor_; _} -> Common.file_of_module_named ~unit_files functor_
+    | None -> Common.file_of_module_named ~unit_files kn )
   | Global (_, r) | Unmapped (_, r) -> Common.file_named_by ~unit_files r
   | Module_declared _ | Short _ | Inductive_value _ | Class_concept _ | Modtype_concept_declared _ | Definition _
   | Custom_text _ ->
