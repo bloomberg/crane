@@ -5,41 +5,69 @@
 /// sum_md also calls itself inside the closure it folds a list with, and
 /// the copy a machine enters is no value a closure could call.  Its body
 /// runs in place of the call instead.
-uint64_t
-LoopifyPartnerSelfInClosure::sum_e(const LoopifyPartnerSelfInClosure::e &x) {
-  if (std::holds_alternative<typename LoopifyPartnerSelfInClosure::e::Leaf>(
-          x.v())) {
-    const auto &[n0] =
-        std::get<typename LoopifyPartnerSelfInClosure::e::Leaf>(x.v());
-    return n0;
-  } else {
-    const auto &[m0] =
-        std::get<typename LoopifyPartnerSelfInClosure::e::Meta>(x.v());
-    const LoopifyPartnerSelfInClosure::md &m0_value = *m0;
-    return (UINT64_C(1) + [&]() {
-      if (std::holds_alternative<
-              typename LoopifyPartnerSelfInClosure::md::MNil>(m0_value.v())) {
-        return UINT64_C(0);
-      } else if (std::holds_alternative<
-                     typename LoopifyPartnerSelfInClosure::md::MNode>(
-                     m0_value.v())) {
-        const auto &[l0] =
-            std::get<typename LoopifyPartnerSelfInClosure::md::MNode>(
-                m0_value.v());
-        const List<LoopifyPartnerSelfInClosure::md> &l0_value = *l0;
-        return l0_value.template fold_left<uint64_t>(
-            [](uint64_t acc, const LoopifyPartnerSelfInClosure::md &m1) {
-              return (acc + sum_md(m1));
-            },
-            UINT64_C(0));
+uint64_t LoopifyPartnerSelfInClosure::sum_e(
+    const LoopifyPartnerSelfInClosure::e
+        &x) { /// CraneEnter: captures varying parameters for each recursive
+              /// call.
+
+  struct CraneEnter {
+    const LoopifyPartnerSelfInClosure::e *x;
+  };
+
+  /// CraneCont_MConst: resumes after recursive call, then processes rest.
+  struct CraneCont_MConst {};
+
+  using CraneFrame = std::variant<CraneEnter, CraneCont_MConst>;
+  uint64_t _result{};
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&x});
+  /// Loopified sum_e: CraneEnter -> CraneCont_MConst.
+  while (!_stack.empty()) {
+    CraneFrame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
+      const LoopifyPartnerSelfInClosure::e &x = *_f.x;
+      if (std::holds_alternative<typename LoopifyPartnerSelfInClosure::e::Leaf>(
+              x.v())) {
+        const auto &[n0] =
+            std::get<typename LoopifyPartnerSelfInClosure::e::Leaf>(x.v());
+        _result = std::move(n0);
       } else {
-        const auto &[x1] =
-            std::get<typename LoopifyPartnerSelfInClosure::md::MConst>(
-                m0_value.v());
-        return sum_e(*x1);
+        const auto &[m0] =
+            std::get<typename LoopifyPartnerSelfInClosure::e::Meta>(x.v());
+        const LoopifyPartnerSelfInClosure::md &m0_value = *m0;
+        if (std::holds_alternative<
+                typename LoopifyPartnerSelfInClosure::md::MNil>(m0_value.v())) {
+          _result = (UINT64_C(1) + UINT64_C(0));
+        } else if (std::holds_alternative<
+                       typename LoopifyPartnerSelfInClosure::md::MNode>(
+                       m0_value.v())) {
+          const auto &[l0] =
+              std::get<typename LoopifyPartnerSelfInClosure::md::MNode>(
+                  m0_value.v());
+          const List<LoopifyPartnerSelfInClosure::md> &l0_value = *l0;
+          _result =
+              (UINT64_C(1) +
+               l0_value.template fold_left<uint64_t>(
+                   [](uint64_t acc, const LoopifyPartnerSelfInClosure::md &m1) {
+                     return (acc + sum_md(m1));
+                   },
+                   UINT64_C(0)));
+        } else {
+          const auto &[x1] =
+              std::get<typename LoopifyPartnerSelfInClosure::md::MConst>(
+                  m0_value.v());
+          _stack.emplace_back(CraneCont_MConst{});
+          _stack.emplace_back(CraneEnter{crane_raw(x1)});
+        }
       }
-    }());
+    } else {
+      auto _f = std::move(std::get<CraneCont_MConst>(_frame));
+      _result = (UINT64_C(1) + std::move(_result));
+    }
   }
+  return _result;
 }
 
 uint64_t LoopifyPartnerSelfInClosure::sum_md(

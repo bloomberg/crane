@@ -572,6 +572,9 @@ val ast_lift : int -> ml_ast -> ml_ast
 (** Pop the outermost de Bruijn level (equivalent to [ast_lift (-1)]). *)
 val ast_pop : ml_ast -> ml_ast
 
+(** The number of nodes of a term, each counted once. *)
+val ast_size : ml_ast -> int
+
 (** The application [e] is, read whole as translation reads it: a global
     applied in stages is called once with every argument, a coercion of the
     head is seen through -- what is called is what it coerces -- and

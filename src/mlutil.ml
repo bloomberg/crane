@@ -1565,6 +1565,20 @@ let ast_lift k t =
 
 let ast_pop t = ast_lift (-1) t
 
+let rec ast_size e =
+  1
+  +
+  match e with
+  | MLapp (f, a) -> ast_size f + ast_sizes a
+  | MLlam (_, _, b) | MLmagic (_, b) -> ast_size b
+  | MLletin (_, _, a, b, _) -> ast_size a + ast_size b
+  | MLcons (_, _, a) | MLtuple a -> ast_sizes a
+  | MLcase (_, s, brs) -> Array.fold_left (fun n (_, _, _, b) -> n + ast_size b) (ast_size s) brs
+  | MLfix (_, _, bs, _, _) -> Array.fold_left (fun n b -> n + ast_size b) 0 bs
+  | _ -> 0
+
+and ast_sizes l = List.fold_left (fun n a -> n + ast_size a) 0 l
+
 let rec read_spine = function
   | MLapp (MLapp ((MLglob _ as g), inner), outer) -> read_spine (MLapp (g, inner @ outer))
   | MLapp (MLmagic (_, f), args) -> read_spine (MLapp (f, args))

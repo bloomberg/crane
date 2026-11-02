@@ -15,5 +15,8 @@ int main() {
   uint64_t big = M::tree_size(M::chain(2000, leaf));
   std::cout << "tree_size (chain 2000) = " << big << " (want 4000)" << std::endl;
   assert(big == 4000);
+  // A chain a hundred thousand levels deep: on the C++ stack, a frame or
+  // more per level overflows it.
+  assert(M::tree_size(M::chain(100000, leaf)) == 200000);
   return 0;
 }
