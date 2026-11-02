@@ -1,7 +1,6 @@
 #ifndef INCLUDED_EFFECT_COMPLEX_ARGS
 #define INCLUDED_EFFECT_COMPLEX_ARGS
 
-#include <crane_itree.h>
 #include <cstdlib>
 #include <iostream>
 #include <memory>

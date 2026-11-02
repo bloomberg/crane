@@ -1733,6 +1733,23 @@ let files_named_ahead s =
   @ List.filter_map (Cpp_names.file_named_by_key ~unit_files) (keys @ structure_module_names s)
   |> List.sort_uniq ModPath.compare
 
+(** The customs the unit's files write, read off what was generated ahead of
+    them as resolving it asks for their texts ({!Cpp_print.global_names}):
+    the installed finished program's declarations, the types of the
+    eponymous record fields generated with it, and the module-type concepts
+    generated with it ({!Cpp_concepts.concept_body_names}). *)
+let customs_written_ahead () =
+  let globals =
+    List.concat_map Cpp_print.declaration_globals (Finished_program.installed_declarations ())
+    @ List.concat_map Cpp_print.type_globals (Cpp_ind.generated_record_field_types ())
+  in
+  let keys =
+    Cpp_print.global_names [[]] globals @ List.concat_map Cpp_concepts.concept_body_names (Cpp_ind.generated_concepts ())
+  in
+  List.fold_left
+    (fun customs -> function _, Cpp_resolution.Custom_text r -> Ref.User.Set.add r customs | _ -> customs)
+    Ref.User.Set.empty keys
+
 let generate_ahead s =
   generating_ahead @@ fun () ->
   (* Everything is generated first, and finished after ({!finish_ahead}).  A

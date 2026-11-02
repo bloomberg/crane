@@ -3006,23 +3006,28 @@ let reset_extraction_blacklist () = Lib.add_leaf (reset_blacklist ())
 
 (** {2 Crane Extract Constant/Inductive} *)
 
-(* Track which custom GlobRefs are actually used during extraction. *)
-let used_refs = ref Ref.User.Set.empty
+(* The customs the unit's program names ({!Program_facts.used_customs}),
+   installed with the plan, before anything is generated: whether the unit
+   can start a thread is decided from them. *)
+let named_refs = ref Ref.User.Set.empty
 
-let set_used_customs s = used_refs := s
-let used_customs () = !used_refs
+let set_named_customs s = named_refs := s
+let named_customs () = !named_refs
 
-(* Reading a custom's replacement to emit it uses it, whether or not the
-   structure named it: an inline custom's text can name another. *)
-let mark_custom_used r =
-  used_refs := Ref.User.Set.add r !used_refs;
-  match r with
-  | GlobRef.ConstructRef (ip, _) -> used_refs := Ref.User.Set.add (GlobRef.IndRef ip) !used_refs
-  | _ -> ()
+(* The customs the unit's files write, planned from what was generated ahead
+   of them: the unit includes their imports.  [None] until planned. *)
+let written_refs = ref None
 
-let () = on_reset (fun () -> used_refs := Ref.User.Set.empty)
+let plan_written_customs s = written_refs := Some s
+let written_customs () = Option.default Ref.User.Set.empty !written_refs
 
-let () = register_census "used_customs" (fun () -> Ref.User.Set.cardinal !used_refs)
+let () =
+  on_reset (fun () ->
+      named_refs := Ref.User.Set.empty;
+      written_refs := None )
+
+let () = register_census "named_customs" (fun () -> Ref.User.Set.cardinal !named_refs)
+let () = register_census "written_customs" (fun () -> Ref.User.Set.cardinal (written_customs ()))
 
 (* Fires when a global already has a Crane extraction mapping and a *different*
    one is registered on top of it -- almost always the symptom of importing two
@@ -3147,8 +3152,8 @@ let is_shared_variant r = shared_variant () && is_shared_variant_registered r
 
 let is_inline_custom r = is_custom r && to_inline r
 
-(** The replacement text of the inline custom [r], without marking [r] used:
-    reading a template to reason about it is not using it. *)
+(** The replacement text of the inline custom [r], read to reason about it
+    rather than to write it ({!written_custom_text}). *)
 let inline_custom_text r =
   if to_inline r then Option.map snd (Ref.Can.Map.find_opt r !customs) else None
 
@@ -3156,33 +3161,29 @@ let is_foreign_custom r = is_custom r && to_foreign r
 
 let find_callback r = Ref.User.Map.find r !callback_map
 
-let find_custom r =
-  mark_custom_used r;
-  snd (Ref.Can.Map.find r !customs)
+let find_custom r = snd (Ref.Can.Map.find r !customs)
 
-let find_custom_opt r =
-  match Ref.Can.Map.find_opt r !customs with
-  | Some (ids, s) ->
-    mark_custom_used r;
+let find_custom_opt r = Option.map snd (Ref.Can.Map.find_opt r !customs)
+
+let check_written_custom r =
+  match !written_refs with
+  | Some written when Probe.checking () && not (Ref.User.Set.mem r written) ->
+    Probe.violation "written customs"
+      (str "the custom " ++ str (kername_of_global r)
+       ++ str " is written, but nothing generated ahead of the files writes it, so its imports are not included")
+  | _ -> ()
+
+let written_custom_text r =
+  match find_custom_opt r with
+  | Some s ->
+    check_written_custom r;
     Some s
   | None -> None
 
-let used_custom_text r =
-  match Ref.Can.Map.find_opt r !customs with
-  | Some (_, s) ->
-    if Probe.checking () && not (Ref.User.Set.mem r !used_refs) then
-      Probe.violation "used customs"
-        (str "the custom " ++ str (kername_of_global r)
-         ++ str " is printed, but the unit was not found to use it, so its imports are not included");
-    Some s
-  | None -> None
-
-let used_inline_custom_text r = if to_inline r then used_custom_text r else None
+let written_inline_custom_text r = if to_inline r then written_custom_text r else None
 
 let custom_info ?yields r : Minicpp.custom_info =
-  { ci_inline =
-      ( if to_inline r then Option.map Minicpp.inline_template (find_custom_opt r)
-        else None );
+  { ci_inline = (if to_inline r then Option.map Minicpp.inline_template (find_custom_opt r) else None);
     ci_yields = yields }
 
 (** The C++ type names the user has declared trivially copyable with
@@ -3284,8 +3285,6 @@ let extraction_trivially_copyable (l : qualid list) =
   List.iter
     (fun q ->
       let r = Smartlocate.global_with_alias q in
-      (* Read [customs] directly rather than through [find_custom_opt], which
-         would mark the mapping used and pull in its headers. *)
       match Ref.Can.Map.find_opt r !customs with
       | Some (_, s) ->
         Lib.add_leaf (trivially_copyable_object (r, template_head s))
@@ -3389,10 +3388,7 @@ let is_custom_match pv =
   | r -> Ref.Can.Map.mem r !custom_matchs
   | exception Not_found -> false
 
-let find_custom_match pv =
-  let r = indref_of_match pv in
-  mark_custom_used r;
-  Ref.Can.Map.find r !custom_matchs
+let find_custom_match pv = Ref.Can.Map.find (indref_of_match pv) !custom_matchs
 
 let find_custom_ctor_templates (ip : Names.inductive) =
   let mib = Global.lookup_mind (fst ip) in
@@ -3478,13 +3474,12 @@ let in_custom_drains : GlobRef.t * string -> obj =
 
 (* Grammar entries. *)
 
-(* Custom imports are now tracked per-GlobRef rather than globally. When a [From
+(* Custom imports are tracked per-GlobRef rather than globally. When a [From
    "header.h"] clause appears in an extraction directive, the header is
-   associated with the specific GlobRef being mapped. During extraction,
-   [find_custom] records which GlobRefs are actually used, and
-   [get_custom_imports] returns only the headers for those refs. This prevents
-   unused mappings (e.g. PrimArray in a file that only uses PrimInt63) from
-   injecting spurious #include directives. *)
+   associated with the specific GlobRef being mapped, and [get_custom_imports]
+   returns only the headers of the customs the unit's files write. This
+   prevents unused mappings (e.g. PrimArray in a file that only uses
+   PrimInt63) from injecting spurious #include directives. *)
 
 let ref_imports = Summary.ref Ref.Can.Map.empty ~name:"CraneRefImports"
 
@@ -3515,34 +3510,42 @@ let empty_custom_imports = StringSet.empty
 
 let custom_imports = Summary.ref empty_custom_imports ~name:"CraneCustomImports"
 
-(* Returns only the imports for custom constants/inductives that were actually
-   referenced during extraction, plus any legacy global imports. *)
-let get_custom_imports () =
-  let used_imports =
-    Ref.User.Set.fold
-      (fun r acc ->
-        match Ref.Can.Map.find_opt r !ref_imports with
-        | Some imports -> StringSet.union imports acc
-        | None -> acc )
-      !used_refs
-      StringSet.empty
-  in
-  StringSet.elements (StringSet.union !custom_imports used_imports)
+let imports_of refs =
+  Ref.User.Set.fold
+    (fun r acc ->
+      match Ref.Can.Map.find_opt r !ref_imports with
+      | Some imports -> StringSet.union imports acc
+      | None -> acc )
+    refs !custom_imports
+
+(* The imports of the customs the unit's files write, plus any legacy global
+   imports. *)
+let get_custom_imports () = StringSet.elements (imports_of (written_customs ()))
 
 (* The headers that declare a way to start a thread -- [std::thread] and
-   [std::async], and Crane's [crane::thread] over the former: a unit whose used
-   customs pull one in can run its code on several threads. *)
+   [std::async], and Crane's [crane::thread] over the former: a unit whose
+   program names a custom pulling one in can run its code on several threads.
+   Decided from what the program names, before anything is generated, so
+   every reader -- the generated code and the header's preamble -- sees one
+   answer. *)
 let thread_starting_headers = ["thread"; "future"; "crane_thread.h"]
 
-let unit_is_concurrent () =
-  List.exists (fun h -> List.mem h thread_starting_headers) (get_custom_imports ())
+let spawns_threads refs = StringSet.exists (fun h -> List.mem h thread_starting_headers) (imports_of refs)
+
+let unit_is_concurrent () = spawns_threads !named_refs
+
+let check_concurrency_decided () =
+  if Probe.checking () && spawns_threads (written_customs ()) && not (unit_is_concurrent ()) then
+    Probe.violation "written customs"
+      (str "the files write a custom that starts a thread, but the customs the program names were found to "
+       ++ str "start none, which is what a NonAtomicRc or SingleThreaded request is withheld by")
 
 (* [Crane NonAtomicRc] is a promise about the extracted program: that it is
    single-threaded, so a refcount needs no atomics. A unit that reaches a
    custom extraction spelled in terms of <thread> breaks that promise, and a
    non-atomic refcount shared between threads corrupts the heap. The promise is
-   therefore not taken on trust: it holds only where this unit's used customs
-   say no thread is spawned. *)
+   therefore not taken on trust: it holds only where the customs this unit's
+   program names say no thread is spawned. *)
 let non_atomic_rc () = non_atomic_rc_requested () && not (unit_is_concurrent ())
 
 let single_threaded () = single_threaded_requested () && not (unit_is_concurrent ())

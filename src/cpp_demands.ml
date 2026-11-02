@@ -81,7 +81,7 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
     | _ -> () );
     match t with
     | Tglob (r, tys, args) -> (
-      match Table.used_inline_custom_text r with
+      match Table.inline_custom_text r with
       | Some s ->
         custom {no_holes with tyargs = tys; args}
           (Foreign_template.term_template (Foreign_template.custom_template_with_args s (List.length tys)));
@@ -321,10 +321,10 @@ let of_modtype_concept (c : Modtype_concept.t) =
   let rec cty : Modtype_concept.concept_type -> unit = function
     | Member {arguments; _} -> List.iter cty arguments
     | Parameter t | Plain t -> need (of_type t)
-    | Foreign (template, args) ->
+    | Foreign {template; arguments; _} ->
       List.iter
         (function
-          | Foreign_template.CCty_arg i | CCelem i -> Option.iter cty (List.nth_opt args i)
+          | Foreign_template.CCty_arg i | CCelem i -> Option.iter cty (List.nth_opt arguments i)
           | _ -> () )
         (Foreign_template.type_template template)
     | Global (r, args) ->

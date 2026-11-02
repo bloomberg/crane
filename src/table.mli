@@ -898,7 +898,7 @@ val fast_variant : unit -> bool
     [Set Crane NonAtomicRc] request: the request is a promise that the
     extracted program is single-threaded, and it is withheld from a unit that
     spawns threads (see {!check_non_atomic_rc_request}).  Only meaningful once
-    the unit's used custom extractions have been marked. *)
+    the customs the unit's program names are installed. *)
 val non_atomic_rc : unit -> bool
 
 (** Whether the runtime's block heap is one global ([Set Crane
@@ -907,13 +907,13 @@ val non_atomic_rc : unit -> bool
     {!non_atomic_rc}. *)
 val single_threaded : unit -> bool
 
-(** Whether this unit reaches a custom extraction spelled in terms of
-    [<thread>], i.e. whether the extracted code can spawn a thread. *)
+(** Whether this unit's program names a custom extraction spelled in terms
+    of [<thread>], i.e. whether the extracted code can spawn a thread. *)
 val unit_is_concurrent : unit -> bool
 
 (** Warn, once per unit, if [Set Crane NonAtomicRc] was requested but withheld
-    because the unit is concurrent.  Call after the unit's used custom
-    extractions have been marked and before any code generation. *)
+    because the unit is concurrent.  Call after the customs the unit's
+    program names are installed and before any code generation. *)
 val check_non_atomic_rc_request : unit -> unit
 
 (** [Set Crane Arena]: whether the runtime scoped-arena factory
@@ -1027,7 +1027,8 @@ val is_custom : GlobRef.t -> bool
 (** Check if reference has inline custom extraction. *)
 val is_inline_custom : GlobRef.t -> bool
 
-(** The replacement text of the inline custom [r], without marking it used. *)
+(** The replacement text of the inline custom [r], read to reason about it
+    rather than to write it ({!written_custom_text}). *)
 val inline_custom_text : GlobRef.t -> string option
 
 (** Check if reference has foreign custom extraction. *)
@@ -1042,14 +1043,17 @@ val find_custom : GlobRef.t -> string
 (** Find custom extraction code if exists. *)
 val find_custom_opt : GlobRef.t -> string option
 
-(** The replacement text of the custom [r], read to print it.  Printing marks
-    nothing used: the header's includes follow from the customs the unit was
-    found to use before its files were rendered, so a custom printed is one
-    of those, which [CRANE_CHECK_IR] checks. *)
-val used_custom_text : GlobRef.t -> string option
+(** Under [CRANE_CHECK_IR], once the customs the files write are planned
+    ({!plan_written_customs}), that [r] is one of them: the header includes
+    the imports of those only. *)
+val check_written_custom : GlobRef.t -> unit
 
-(** {!used_custom_text} where [r] is inlined. *)
-val used_inline_custom_text : GlobRef.t -> string option
+(** The replacement text of the custom [r], read to write it
+    ({!check_written_custom}). *)
+val written_custom_text : GlobRef.t -> string option
+
+(** {!written_custom_text} where [r] is inlined. *)
+val written_inline_custom_text : GlobRef.t -> string option
 
 (** What a reference to [r] carries about its custom mapping: the replacement
     text where [r] is inlined, and [yields], what it evaluates to where the
@@ -1204,15 +1208,27 @@ val reset_extraction_callback : unit -> unit
     @param x      the qualified identifier of the function to register as a callback *)
 val extract_callback : string option -> qualid -> unit
 
-(** Get list of custom imports. *)
+(** The imports of the customs the unit's files write. *)
 val get_custom_imports : unit -> string list
 
-(** Install the custom references the unit uses
-    ({!Program_facts.used_customs}), whose imports its header includes. *)
-val set_used_customs : Ref.User.Set.t -> unit
+(** Install the custom references the unit's program names
+    ({!Program_facts.used_customs}), which decide {!unit_is_concurrent}. *)
+val set_named_customs : Ref.User.Set.t -> unit
 
-(** The installed custom references the unit uses. *)
-val used_customs : unit -> Ref.User.Set.t
+(** The installed custom references the unit's program names. *)
+val named_customs : unit -> Ref.User.Set.t
+
+(** Plan the custom references the unit's files write, from what was
+    generated ahead of them: their imports are {!get_custom_imports}. *)
+val plan_written_customs : Ref.User.Set.t -> unit
+
+(** The planned custom references the unit's files write (none before they
+    are planned). *)
+val written_customs : unit -> Ref.User.Set.t
+
+(** Under [CRANE_CHECK_IR], that the files write no custom starting a thread
+    unless the program was decided to start one ({!unit_is_concurrent}). *)
+val check_concurrency_decided : unit -> unit
 
 (** Extract constant with inline custom code.
     @param inline [true] to mark the constant as Inline (inlined at call sites),

@@ -70,7 +70,5 @@ val install_instance_methods : (Names.GlobRef.t * (Names.Id.t * Callable_abi.t) 
 (** Under [CRANE_CHECK_IR], fail unless every table {!install},
     {!install_template_kinds}, {!install_modules} and {!install_callables}
     filled still answers what the values say.  A census sees an entry added; this sees one
-    overwritten.  The used customs are the exception that may grow: emitting a
-    custom's replacement marks it used, and the header's includes follow what
-    was emitted. *)
+    overwritten. *)
 val check_installed : Program_facts.t -> Target_plan.t -> unit

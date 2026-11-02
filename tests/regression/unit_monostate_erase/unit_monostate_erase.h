@@ -1,12 +1,8 @@
 #ifndef INCLUDED_UNIT_MONOSTATE_ERASE
 #define INCLUDED_UNIT_MONOSTATE_ERASE
 
-#include <crane_itree.h>
-#include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <string>
-#include <system_error>
 #include <utility>
 #include <variant>
 

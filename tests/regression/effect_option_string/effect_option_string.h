@@ -1,7 +1,6 @@
 #ifndef INCLUDED_EFFECT_OPTION_STRING
 #define INCLUDED_EFFECT_OPTION_STRING
 
-#include <crane_itree.h>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>

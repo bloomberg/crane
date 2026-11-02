@@ -2,7 +2,6 @@
 #define INCLUDED_PAGE_ADDRESS
 
 #include <cstdint>
-#include <utility>
 
 struct PageAddress {
   static uint64_t addr12_of_nat(uint64_t n);

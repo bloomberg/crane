@@ -1,12 +1,8 @@
 #ifndef INCLUDED_BLOCK_TEMPLATE_SEMICOLON
 #define INCLUDED_BLOCK_TEMPLATE_SEMICOLON
 
-#include <crane_itree.h>
-#include <filesystem>
 #include <fstream>
-#include <iostream>
 #include <string>
-#include <system_error>
 #include <utility>
 
 struct BlockTemplateSemicolon {

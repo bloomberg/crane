@@ -2,7 +2,6 @@
 #define INCLUDED_MAPPING_LAMBDA_CAPTURE_DEFAULT
 
 #include <cstdint>
-#include <utility>
 
 struct Z {};
 

@@ -1915,3 +1915,5 @@ let writes_standard h = writes (Table.Standard h)
    -- [crane_any_cast], [crane::rebind_t] -- is declared in obj.h. *)
 let writes_obj () = writes (Table.Runtime Crane_rt.obj_header)
 
+let writes_custom = Table.check_written_custom
+

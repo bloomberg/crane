@@ -1,12 +1,8 @@
 #ifndef INCLUDED_BIND_ETA_REDUCED
 #define INCLUDED_BIND_ETA_REDUCED
 
-#include <crane_itree.h>
-#include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <string>
-#include <system_error>
 #include <type_traits>
 #include <utility>
 

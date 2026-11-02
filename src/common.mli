@@ -571,3 +571,9 @@ val writes_standard : string -> unit
 
 (** What is being written erases a value, and so needs obj.h. *)
 val writes_obj : unit -> unit
+
+(** [writes_custom r] records that what is being written writes the custom
+    [r]'s mapping: under [CRANE_CHECK_IR] it must be one of the customs
+    planned for the files, whose imports they include
+    ({!Table.check_written_custom}). *)
+val writes_custom : Names.GlobRef.t -> unit

@@ -5,7 +5,6 @@
 #include "obj.h"
 #include <atomic>
 #include <memory>
-#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <variant>

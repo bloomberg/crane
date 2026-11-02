@@ -1142,12 +1142,12 @@ let report_decided_while_rendering before =
         else String.concat ", " (List.map (fun (name, n) -> Printf.sprintf "%s +%d" name n) grown) )
 
 (** The tables generating output ahead of the files may add to: the headers
-    what is generated needs, the customs its types turn out to use, whose
-    imports are headers too, and the names of the helpers lifted out of a
-    body as it is generated, which {!Common.names_decided_while_emitting}
-    lists for the check below.  Rendering may add to none: the headers are
+    what is generated needs, the customs it writes, whose imports are headers
+    too, and the names of the helpers lifted out of a body as it is
+    generated, which {!Common.names_decided_while_emitting} lists for the
+    check below.  Rendering may add to none: the headers are
     demanded from what was generated ({!Cpp_demands}). *)
-let generation_products = ["demands"; "used_customs"; "ref_renaming"; "mp_renaming"; "global_ids"]
+let generation_products = ["demands"; "written_customs"; "ref_renaming"; "mp_renaming"; "global_ids"]
 
 let rendering_products = []
 
@@ -1485,9 +1485,9 @@ let analyze_and_plan struc =
     [namespace] is the C++ namespace of a separately extracted file. *)
 let unit_passes ~namespace : ml_structure Pipeline_trace.pass list =
   let open Pipeline_trace in
-  [ (* The used customs decide whether this unit can spawn a thread, which is
-       what resolves a [Crane NonAtomicRc] or [Crane SingleThreaded]
-       request. *)
+  [ (* The customs the program names decide whether this unit can spawn a
+       thread, which is what resolves a [Crane NonAtomicRc] or [Crane
+       SingleThreaded] request. *)
     effect_ "non_atomic_rc" (fun _ -> Table.check_non_atomic_rc_request ());
     (* This file's demands start from nothing, so that one file's needs don't
        leak into a later file of a separate extraction. *)
@@ -1623,6 +1623,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   Pipeline_trace.event "emit" "generate_ahead";
   Cpp.generate_ahead struc;
   Common.plan_written_files (Cpp.files_named_ahead struc);
+  Table.plan_written_customs (Cpp.customs_written_ahead ());
   Pipeline_trace.event "emit" "plan_file_layout";
   Cpp.plan_file_layout struc;
   Pipeline_trace.event "emit" "plan_ctor_aliases";
@@ -1649,6 +1650,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   report_body_generations fn;
   Table.freeze_demands ();
   Common.check_written_files ();
+  Table.check_concurrency_decided ();
   check_no_late_decisions ~planned:planned_checkpoint ~generated:generated_checkpoint;
   Generated_program.check_against_plan ~declares:(declares struc);
   Generated_program.check_against_ahead ();

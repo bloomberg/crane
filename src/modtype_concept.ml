@@ -8,7 +8,7 @@ open Minicpp
 type concept_type =
   | Member of {member : GlobRef.t; enum : bool; arguments : concept_type list}
   | Parameter of cpp_type
-  | Foreign of string * concept_type list
+  | Foreign of {custom : GlobRef.t; template : string; arguments : concept_type list}
   | Global of GlobRef.t * concept_type list
   | Namespaced of GlobRef.t * GlobRef.t * cpp_expr list * concept_type list
   | Shared_pointer of concept_type
@@ -71,7 +71,8 @@ let rec concept_type signature ty =
   | Tglob (r, [], _) when (not (Table.is_custom r)) && is_functor_param_ref r -> Parameter ty
   | Tglob (r, tys, _) -> (
     match Table.find_custom_opt r with
-    | Some custom -> Foreign (Foreign_template.custom_template_with_args custom (List.length tys), args tys)
+    | Some text ->
+      Foreign {custom = r; template = Foreign_template.custom_template_with_args text (List.length tys); arguments = args tys}
     | None -> Global (r, args tys) )
   | Tshared_ptr ty -> Shared_pointer (concept_type signature ty)
   | Tvariant (storage, tys) -> Variant (storage, args tys)
@@ -164,7 +165,7 @@ let generate ~params mt =
 let rec type_refs note = function
   | Member {arguments; _} -> List.iter (type_refs note) arguments
   | Parameter ty | Plain ty -> cpp_type_refs note ty
-  | Foreign (_, args) -> List.iter (type_refs note) args
+  | Foreign {arguments; _} -> List.iter (type_refs note) arguments
   | Global (r, args) ->
     note r;
     List.iter (type_refs note) args

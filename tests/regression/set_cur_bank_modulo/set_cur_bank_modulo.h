@@ -2,7 +2,6 @@
 #define INCLUDED_SET_CUR_BANK_MODULO
 
 #include <cstdint>
-#include <utility>
 
 struct SetCurBankModulo {
   static constexpr uint64_t NBANKS = UINT64_C(4);

@@ -88,6 +88,12 @@ val global_names :
     names it writes and the customs it is written from. *)
 val type_globals : Minicpp.cpp_type -> GlobRef.t list
 
+(** The globals printing the declaration [d] names, for {!global_names}:
+    those it holds, those written beside them -- a template template
+    argument's head, the primitive integer type, the custom a custom match
+    or a block custom is written from -- and those it declares. *)
+val declaration_globals : Cpp_erasure.settled -> GlobRef.t list
+
 (** What printing a declaration not yet printed names through the type and
     expression printers, at the frames inside it it names them at, for
     {!Cpp_ast.resolve} to resolve before it is printed: of a declaration of

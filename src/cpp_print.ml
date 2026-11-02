@@ -762,8 +762,9 @@ let type_heads ty =
 
 (* What writing [d] names that its globals ({!Minicpp.iter_globrefs}) do not:
    the head of each type constructor written as a template template
-   argument, a leaf to a type's traversal, and the primitive integer type,
-   through whose mapping each literal of that type is spelled. *)
+   argument, a leaf to a type's traversal, the primitive integer type,
+   through whose mapping each literal of that type is spelled, and the
+   custom whose template a custom match or a block custom writes. *)
 let globals_written_beside (d : cpp_decl) =
   let found = ref [] in
   let rec ty t =
@@ -781,7 +782,13 @@ let globals_written_beside (d : cpp_decl) =
   and expr e =
     (match e with CPPuint _ -> found := Option.cata (fun r -> [r]) [] (uint63_type ()) @ !found | _ -> ());
     map_expr expr stmt ty e
-  and stmt s = map_stmt expr stmt ty s in
+  and stmt s =
+    ( match s with
+    | Scustom_case (_, _, _, _, cm) -> found := cm.cm_inductive :: !found
+    | Sblock_custom (r, _, _, _, _, _, _) -> found := r :: !found
+    | _ -> () );
+    map_stmt expr stmt ty s
+  in
   let rec decl = function
     | Dtemplate (tps, c, inner) ->
       ignore (map_tparams ty tps);
@@ -1737,6 +1744,7 @@ and pp_cpp_expr ctx env args t =
         | _ -> str "<" ++ pp_list (pp_cpp_type ctx false []) tys ++ str ">"
       in
       let args_s = pp_list (pp_cpp_expr ctx env args) (call_args ts) in
+      Common.writes_custom n;
       str s ++ ty_args_s ++ str "(" ++ args_s ++ str ")"
     else
       let cmds = term_template s in
@@ -2107,7 +2115,9 @@ and pp_cpp_expr ctx env args t =
      | Crane_rt.Make_rc_reusing_unchecked | Crane_rt.Reuse_step
      | Crane_rt.Share_child -> ());
     str (Crane_rt.name h)
-  | CPPnumeral (_, n) -> str n.nl_text
+  | CPPnumeral (r, n) ->
+    Common.writes_custom r;
+    str n.nl_text
   | CPPraw code -> str code
   | CPPbinop (op, lhs, rhs) ->
     (* Parenthesize && subexpressions inside || to avoid
@@ -2502,6 +2512,7 @@ and pp_cpp_stmt ctx env args stmt =
        in gen_custom_cpp_case, which prepends an Sasgn before this node
        when the template uses %scrut more than once with a non-trivial
        scrutinee.  The printer just expands the template. *)
+    Common.writes_custom cmatch.cm_inductive;
     let text = custom_match_text cmatch in
     let cmds = match_template text in
     pp_custom ctx ( "custom match for "
@@ -2772,6 +2783,7 @@ and string_object printed =
   str (sn ()).string ++ str "(" ++ printed ++ str ")"
 
 and pp_custom ?container ?ret ctx custom env typ t tyargs cases args _arg_types vl cmds =
+  Option.iter Common.writes_custom container;
   (* Every read of a boxed value the template needs at a concrete type was
      made explicit by {!Cpp_erasure.lower_boxed_reads}; this prints. *)
   let pp ?(followed_by_dot=false) cmd =
@@ -4346,11 +4358,12 @@ let template_param_globals tps =
   ignore (map_tparams (fun t -> types := t :: !types; t) tps);
   List.filter_map (function TTconcept (r, _), _ -> Some r | _ -> None) tps @ List.concat_map type_globals !types
 
-let declaration_names (d : Cpp_erasure.settled) =
+let declaration_globals (d : Cpp_erasure.settled) =
   let globals = ref [] in
   Minicpp.iter_globrefs (fun r -> globals := r :: !globals) (d :> cpp_decl);
-  global_names (declaration_frames d)
-    (!globals @ globals_written_beside (d :> cpp_decl) @ declared_globals (d :> cpp_decl))
+  !globals @ globals_written_beside (d :> cpp_decl) @ declared_globals (d :> cpp_decl)
+
+let declaration_names d = global_names (declaration_frames d) (declaration_globals d)
 
 let unprinted_names : Cpp_ast.declaration -> _ = function
   | Declaration {settled; _} | Absorbed {settled; _} -> declaration_names settled

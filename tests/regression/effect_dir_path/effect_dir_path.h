@@ -5,7 +5,6 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
-#include <crane_itree.h>
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>

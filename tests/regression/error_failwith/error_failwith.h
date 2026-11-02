@@ -5,12 +5,8 @@
 #include "obj.h"
 #include <crane_itree.h>
 #include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
 #include <stdexcept>
 #include <string>
-#include <system_error>
 #include <utility>
 
 template <typename Err> struct ExceptE;

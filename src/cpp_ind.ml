@@ -550,7 +550,7 @@ let ind_header_decls scope kn ind =
         let own_nspace_names =
           Array.to_list
             (Array.map
-               (fun r -> Some (String.capitalize_ascii (declared_name Type r)))
+               (fun r -> Some (String.capitalize_ascii (declared_spelling Type r)))
                names )
         in
         let group, defs =

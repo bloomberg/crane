@@ -62,6 +62,10 @@ val generate_decl_ahead : module_:Names.ModPath.t -> Miniml.ml_decl -> unit
     {!generate_ahead} generated: what its files include. *)
 val files_named_ahead : Miniml.ml_structure -> Names.ModPath.t list
 
+(** The customs the unit's files write, read off what {!generate_ahead}
+    generated: whose imports its files include. *)
+val customs_written_ahead : unit -> Ref.User.Set.t
+
 (** Plan, before either file is rendered and from what {!generate_ahead}
     generated, where the header writes what it does not write in place --
     the erasure landing pads and the declarations of lifted helpers at the

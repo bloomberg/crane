@@ -2,7 +2,6 @@
 #define INCLUDED_JMS_BBL_ROUNDTRIP
 
 #include <cstdint>
-#include <utility>
 
 struct JmsBblRoundtrip {
   struct state {

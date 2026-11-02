@@ -2,7 +2,6 @@
 #define INCLUDED_Z_DIV_MIN
 
 #include <cstdint>
-#include <utility>
 
 struct Z {};
 

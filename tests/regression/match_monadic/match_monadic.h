@@ -5,16 +5,12 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
-#include <crane_itree.h>
 #include <cstdint>
-#include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <system_error>
 #include <utility>
 #include <variant>
 

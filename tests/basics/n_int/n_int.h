@@ -1,8 +1,6 @@
 #ifndef INCLUDED_N_INT
 #define INCLUDED_N_INT
 
-#include <utility>
-
 struct Pos {
   static unsigned int add_carry(unsigned int x, unsigned int y);
 };

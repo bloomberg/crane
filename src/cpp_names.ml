@@ -63,7 +63,7 @@ let named (c : render_ctx) key live =
   | Some names -> name_from names c.rc_frame key ~live:(fun () -> live (visible_at c key))
 
 let live_custom_text r =
-  match used_custom_text r with
+  match written_custom_text r with
   | Some text -> Cpp_name.foreign text
   | None -> CErrors.anomaly Pp.(str "Crane: " ++ GlobRef.print r ++ str " has no custom mapping to write.")
 
@@ -96,8 +96,13 @@ let str_global c k r = Cpp_name.to_string (global_name c k r)
 
 (** The name [r] is declared under, wherever it is declared: the replacement
     text of an inline custom mapping, otherwise its own short name. *)
-let declared_name k r =
-  match used_inline_custom_text r with Some custom_str -> custom_str | None -> Common.pp_global_name k r
+let declared_name_from text k r = match text r with Some custom_str -> custom_str | None -> Common.pp_global_name k r
+
+let declared_name = declared_name_from written_inline_custom_text
+
+(** {!declared_name}, read to compare it with another name rather than to
+    write it. *)
+let declared_spelling = declared_name_from Table.inline_custom_text
 
 (** {!global_name} as a document. *)
 let pp_global c k r = Cpp_name.pp (global_name c k r)

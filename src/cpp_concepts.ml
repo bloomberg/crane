@@ -87,7 +87,8 @@ let rec concept_type_names frame : Modtype_concept.concept_type -> _ = function
   | Member {member; arguments; _} -> (frame, Cpp_resolution.Global (Type, member)) :: concept_types_names frame arguments
   | Global (r, args) -> type_names frame (Tglob (r, [], [])) @ concept_types_names frame args
   | Namespaced (r, r', e, args) -> type_names frame (Tnamespace (r, Tglob (r', [], e))) @ concept_types_names frame args
-  | Foreign (_, args) | Variant (_, args) -> concept_types_names frame args
+  | Foreign {custom; arguments; _} -> (frame, Cpp_resolution.Custom_text custom) :: concept_types_names frame arguments
+  | Variant (_, args) -> concept_types_names frame args
   | Shared_pointer ty -> concept_type_names frame ty
   | Function (dom, cod) -> concept_types_names frame (cod :: dom)
   | Parameter ty | Plain ty -> type_names frame ty
@@ -135,7 +136,9 @@ let rec pp_concept_type ctx names frame (t : Modtype_concept.concept_type) : Pp.
   | Member {member; enum; arguments} ->
     pp_member_type ~enum (name_in ctx names frame (Global (Type, member))) member (List.map pp_concept_type arguments)
   | Parameter ty -> str "typename " ++ pp_type ctx ty
-  | Foreign (template, args) -> qualify_custom_template template args pp_concept_type
+  | Foreign {custom; template; arguments} ->
+    Common.writes_custom custom;
+    qualify_custom_template template arguments pp_concept_type
   | Global (r, []) -> pp_type ctx (Tglob (r, [], []))
   | Global (r, args) ->
     pp_type ctx (Tglob (r, [], []))

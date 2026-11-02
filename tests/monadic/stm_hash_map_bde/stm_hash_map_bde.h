@@ -5,7 +5,6 @@
 #include "fn.h"
 #include "obj.h"
 #include <atomic>
-#include <bdls_filesystemutil.h>
 #include <bsl_concepts.h>
 #include <bsl_cstdint.h>
 #include <bsl_functional.h>
@@ -18,8 +17,6 @@
 #include <bsl_utility.h>
 #include <bsl_variant.h>
 #include <bsl_vector.h>
-#include <crane_itree.h>
-#include <fstream>
 #include <stm_adapter.h>
 #include <utility>
 #include <variant>

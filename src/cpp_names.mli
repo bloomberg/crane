@@ -30,6 +30,10 @@ val global_name : Cpp_state.render_ctx -> Common.kind -> Names.GlobRef.t -> Cpp_
     name. *)
 val declared_name : Common.kind -> Names.GlobRef.t -> string
 
+(** {!declared_name}, read to compare it with another name rather than to
+    write it. *)
+val declared_spelling : Common.kind -> Names.GlobRef.t -> string
+
 (** {!global_name} as text. *)
 val str_global : Cpp_state.render_ctx -> Common.kind -> Names.GlobRef.t -> string
 

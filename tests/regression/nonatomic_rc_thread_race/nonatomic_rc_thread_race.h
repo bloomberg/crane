@@ -3,14 +3,11 @@
 
 #include "shared_block.h"
 #include <atomic>
-#include <chrono>
-#include <crane_itree.h>
 #include <crane_thread.h>
 #include <cstdint>
 #include <iostream>
 #include <memory>
 #include <string>
-#include <thread>
 #include <utility>
 #include <variant>
 static_assert(crane::rc_is_atomic,

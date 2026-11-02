@@ -5,7 +5,6 @@
 #include "obj.h"
 #include <cstdint>
 #include <stdexcept>
-#include <utility>
 
 struct SPropTest {
   template <typename T1> static T1 sFalse_rect() {

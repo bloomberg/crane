@@ -4,7 +4,7 @@
 open Miniml
 
 let install struc (facts : Program_facts.t) (plan : Target_plan.t) =
-  Table.set_used_customs facts.used_customs;
+  Table.set_named_customs facts.used_customs;
   Table.set_higher_order_projections facts.higher_order_projections;
   Core_effects.install facts.effects;
   List.iter
@@ -56,10 +56,7 @@ let check_installed (facts : Program_facts.t) (plan : Target_plan.t) =
       CErrors.anomaly
         Pp.(str ("Crane: the installed " ^ what ^ " no longer agree with the plan."))
     in
-    (* Emitting a custom marks it used too, so rendering may add to these;
-       what the structure names must still be there. *)
-    if not (Ref.User.Set.subset facts.used_customs (Table.used_customs ())) then
-      fail "used custom references";
+    if not (Ref.User.Set.equal facts.used_customs (Table.named_customs ())) then fail "named custom references";
     if not (Ref.User.Set.equal (Table.higher_order_projections ()) facts.higher_order_projections)
     then fail "higher-order projections";
     List.iter

@@ -41,6 +41,8 @@ let installed = State.cell State.Unit {decls = Node_table.create 0; demands = []
 
 let installed_globals () = !installed.globals
 
+let installed_declarations () = Node_table.fold (fun _ f fs -> f :: fs) !installed.decls []
+
 let installed_promoted () = !installed.promoted
 
 let install t = installed := t
