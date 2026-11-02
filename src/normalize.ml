@@ -33,13 +33,15 @@ type local = {l_type : ml_type; l_arity : int}
    its bodies start at and its functions, the [j]th being [MLrel (j + 1)]
    there.  [own_tvars] counts the type variables of the declaration, [Tvar 1]
    to [Tvar own_tvars]; [fresh] names the next temporary of the declaration,
-   and [effects] are the effect operations of the program it is in. *)
+   [effects] are the effect operations of the program it is in, and
+   [splices] what splicing decided there ({!Recursion_plan.splice_partners}). *)
 type group = {
   globals : GlobRef.t list;
   own_tvars : int;
   locals : (int * local array) list;
   fresh : unit -> ml_ident;
   effects : Core_effects.t;
+  splices : Splices.t;
 }
 
 (* A supply of the declaration's temporaries, numbered from 1, so no two of
@@ -251,7 +253,7 @@ let rec scope ~group ~depth e =
       in
       let group =
         match rhs with
-        | MLfix (_, [|_|], [|fn|], false, o) when Recursion_plan.is_entered_copy o ->
+        | MLfix (_, [|_|], [|fn|], false, o) when Splices.is_entered_copy group.splices o ->
           (* A partner's copy the machine enters stands for the partner: its
              calls are the group's. *)
           {group with locals = (depth + 1, [|{l_type = ty; l_arity = Mlutil.nb_lams fn}|]) :: group.locals}
@@ -296,19 +298,19 @@ let loopified ~methods r =
 
 (* The body [b] of a declaration of type [ty], normalized against the
    top-level functions [globals] it recurses through, in a program of effect
-   operations [effects]. *)
-let body ~effects ~globals ty b =
-  scope ~group:{globals; own_tvars = Mlutil.type_maxvar ty; locals = []; fresh = temporaries (); effects} ~depth:0 b
+   operations [effects] whose partners splicing decided [splices]. *)
+let body ~effects ~splices ~globals ty b =
+  scope ~group:{globals; own_tvars = Mlutil.type_maxvar ty; locals = []; fresh = temporaries (); effects; splices} ~depth:0 b
 
-let decl ~effects ~methods = function
+let decl ~effects ~splices ~methods = function
   | Dfix fds when List.exists (fun fd -> loopified ~methods fd.fd_ref) fds ->
     (* A group is normalized whole: loopification inlines one member's
        partners into it, whether or not they are loopified themselves. *)
     let globals = List.map (fun fd -> fd.fd_ref) fds in
-    Dfix (List.map (fun fd -> {fd with fd_body = body ~effects ~globals fd.fd_type fd.fd_body}) fds)
+    Dfix (List.map (fun fd -> {fd with fd_body = body ~effects ~splices ~globals fd.fd_type fd.fd_body}) fds)
   | Dterm (r, b, ty) when loopified ~methods r ->
     (* No recursion of its own, but a local fixpoint in it is loopified. *)
-    Dterm (r, body ~effects ~globals:[] ty b, ty)
+    Dterm (r, body ~effects ~splices ~globals:[] ty b, ty)
   | d -> d
 
 (* A definition of type [ty] as it is generated: binding a parameter at each
@@ -351,11 +353,11 @@ let methods_of struc = Method_registry.create ~ret_is_erased:Translation.return_
 (* The effect operations are those of the program being normalized, read
    off it first ({!Core_effects.analyze}): a bind is sequencing only where
    the declaration it is written in erases its monad. *)
-let structure struc =
-  let methods = methods_of struc in
-  let struc =
+let structure (program : Core.normalizing) : Core.normalizing =
+  let methods = methods_of program.structure in
+  let {Core.structure = struc; splices} =
     Recursion_plan.splice_partners ~loopified:(loopified ~methods)
       ~inlines:(fun r -> Method_registry.is_registered_method methods r = None)
-      struc
+      program
   in
-  Modutil.map_struct_decls (decl ~effects:(Core_effects.analyze struc) ~methods:(methods_of struc)) struc
+  {structure = Modutil.map_struct_decls (decl ~effects:(Core_effects.analyze struc) ~splices ~methods:(methods_of struc)) struc; splices}

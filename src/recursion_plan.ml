@@ -441,21 +441,13 @@ let rec arguments = function MLmagic (_, e) -> arguments e | MLapp (_, args) -> 
 let match_bound_in_place ty branches =
   Table.is_custom_match branches || (Table.record_fields_of_type ty <> [] && Array.length branches = 1)
 
-(* The fixpoint each function's machine enters where it called a partner,
-   a copy of the partner spliced into its body ({!adopt_calls}). *)
-let entered = State.cell State.Extraction Ref.User.Map.empty
-
-let entered_copy r = Ref.User.Map.find_opt r !entered
-
-let is_entered_copy o = Ref.User.Map.exists (fun _ o' -> Occurrence.equal o o') !entered
-
 (* The points the body of [origin], standing in [lex], resumes at once a
    recursive call returns: a let whose right-hand side is the call, or ends
    in one in some branch, and a sequential bind whose action is the call,
    its continuation's parameter binding the result.  In the body itself a
    recursive call is one [targets] names; in a local fixpoint's bodies a
    call of a member of that fixpoint is one too, as is, in the body of a
-   let binding a partner's copy the machine enters ({!entered_copy}), a
+   let binding a partner's copy the machine enters ([entered]), a
    call of the copy, which is no value kept.  A call under a lambda is
    made where the closure runs, not here, but a local fixpoint in the
    lambda's body is lowered on its own, and resumes after its own calls.
@@ -464,7 +456,7 @@ let is_entered_copy o = Ref.User.Map.exists (fun _ o' -> Occurrence.equal o o') 
    the declaration takes, which C++ takes as a template argument, nor a
    member of a local fixpoint whose calls the point is among -- [heads],
    those whose bodies it is in -- called, which enters the machine again. *)
-let resumes_of ~effects ~origin ~targets lex body =
+let resumes_of ~effects ~entered ~origin ~targets lex body =
   let effect_ = sequential effects in
   let found = ref [] in
   let binder level = Core_binder.make ~origin ~level () in
@@ -677,7 +669,7 @@ let resumes_of ~effects ~origin ~targets lex body =
          the body are the copy's, a member of the fixpoint at that level. *)
       let targets, heads, fixpoints, captures =
         match a with
-        | MLfix (_, [|_|], [|_|], false, occ) when is_entered_copy occ ->
+        | MLfix (_, [|_|], [|_|], false, occ) when entered occ ->
           let level = depth in
           let rec entering ~depth:d = function
             | MLmagic (_, e) -> entering ~depth:d e
@@ -999,28 +991,23 @@ let flow_of r fd =
   let _, body = Core_elaborate.declaration_scope fd.fd_type fd.fd_body in
   if Translation_support.suspends_whole r (Ml_type_util.ml_return_type fd.fd_type) body then None else Some body
 
-(* The partner of [self] in its group [members] spliced next into [body],
-   its body as generated, once the partners [inlined] are, with the calls of
-   it spliced ({!inlined_calls}): the partner of the first call met that is
-   of a partner not yet spliced, whose calls are all spliced at once.  A
-   call [opaque] holds is in a partner's body run in place of a call, where
-   nothing is spliced. *)
-let next_inlining ~opaque ~effects ~defs ~members ~inlined self body =
-  let parameters g =
-    match Ref.User.Map.find_opt g defs with
-    | Some fd -> List.length (Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type))
-    | None -> 0
-  in
+(* The number of parameters of [g], among the definitions [defs]. *)
+let parameters defs g =
+  match Ref.User.Map.find_opt g defs with
+  | Some fd -> List.length (Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type))
+  | None -> 0
+
+(* The partner of [self] spliced next into [body], its body as generated,
+   with the calls of it spliced ({!inlined_calls}): the partner of the first
+   such call met of a function [pending] holds, whose calls are all spliced
+   at once.  A call [opaque] holds is in a partner's body run in place of a
+   call, where nothing is spliced. *)
+let next_inlining ~opaque ~effects ~defs ~pending self body =
   let calls ~inlines =
     let inlines (use : global_use) =
       inlines use.callee && not (List.exists (Occurrence.equal (Global_use.occurrence use)) opaque)
     in
-    inlined_calls ~self ~effects ~parameters ~inlines body
-  in
-  let pending g =
-    (not (Common.globref_equal g self))
-    && List.exists (Common.globref_equal g) members
-    && not (List.exists (Common.globref_equal g) inlined)
+    inlined_calls ~self ~effects ~parameters:(parameters defs) ~inlines body
   in
   match calls ~inlines:pending with
   | [] -> None
@@ -1028,10 +1015,6 @@ let next_inlining ~opaque ~effects ~defs ~members ~inlined self body =
     let found = calls ~inlines:(Common.globref_equal partner) in
     let these continues = List.filter_map (fun c -> if c.continues = continues then Some c.made_of else None) found in
     Some {partner; continued = these true; invoked = these false}
-
-(* The functions {!splice_partners} decided the partners of, for this
-   extraction: splicing again leaves them as they are. *)
-let decided = State.cell State.Extraction Ref.User.Set.empty
 
 (* Why the partners of [r] are not spliced. *)
 let unspliced why r =
@@ -1115,19 +1098,32 @@ let yields_alike a b =
   let returns ty = Mlutil.rigidify (unfold (Ml_type_util.ml_return_type (Mlutil.type_simpl ty))) in
   Mlutil.eq_ml_type (returns a) (returns b)
 
-(* The calls of [self] the partner [def] makes where its body runs in place
-   of a call of it ({!inlined_calls}). *)
-let calls_back ~defs ~self def =
+(* The calls of [g] the partner [def] makes where its body runs in place of
+   a call of it ({!inlined_calls}), and the number of its uses of [g] there
+   in all. *)
+let flow_calls ~defs def g =
   match flow_of def.fd_ref {def with fd_body = Mlutil.read_spines def.fd_body} with
-  | None -> []
+  | None -> ([], 0)
   | Some body ->
-    let parameters g =
-      match Ref.User.Map.find_opt g defs with
-      | Some fd -> List.length (Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type))
-      | None -> 0
-    in
-    inlined_calls ~self:def.fd_ref ~effects:(definition_effects def) ~parameters
-      ~inlines:(fun use -> Common.globref_equal use.callee self) body
+    let of_g (use : global_use) = Common.globref_equal use.callee g in
+    let uses = ref 0 in
+    let rec count = function MLglob use when of_g use -> incr uses | e -> Mlutil.ast_iter count e in
+    count body;
+    ( inlined_calls ~self:def.fd_ref ~effects:(definition_effects def) ~parameters:(parameters defs) ~inlines:of_g
+        body,
+      !uses )
+
+(* The calls of [self] the partner [def] makes where its body runs in place
+   of a call of it. *)
+let calls_back ~defs ~self def = fst (flow_calls ~defs def self)
+
+(* Whether each use the partner [def] makes of itself is a call where its
+   body runs: the copy a machine enters is no value, so a use in a closure,
+   a partial application or anything run in a lambda would have nothing to
+   call. *)
+let calls_itself_in_flow ~defs def =
+  let calls, uses = flow_calls ~defs def def.fd_ref in
+  List.length calls = uses
 
 (* [body], the body of a function, with each call of its partner defined as
    [def] made at [sites] replaced by a call of a copy of the partner bound in
@@ -1183,33 +1179,52 @@ let recurses fd =
 
 (* The partners of [fd], a function of the group [members], in the order
    they are spliced into it ({!next_inlining}), its body with them spliced
-   into it, and the occurrence of the partner it enters, if any.  A partner's tail calls
-   continue in a copy of its body.  Its other calls, where [inlines] says
-   the partners of [fd] are inlined into it at all, are entered as a copy
-   its machine enters ({!adopt_calls}) -- where none is entered yet, the
-   partner yields what [fd] does and its body, run in place, calls [fd]
-   back -- or else run a copy of its body in their place, as a call would.
-   [None] where some partner is not spliced so, or where one's body would
-   need instantiating there ({!splice_partners}).  A function that does
-   not recurse once spliced into makes no loop a copy would serve: it is
-   left as it is.  [originals] are the definitions as written, [defs]
-   the same read with their applications whole. *)
+   into it, and the occurrence of the partner it enters, if any.  A
+   partner's tail calls continue in a copy of its body.  Its other calls,
+   where [inlines] says the partners of [fd] are inlined into it at all, are
+   entered as a copy its machine enters ({!adopt_calls}) -- where none is
+   entered yet, the partner yields what [fd] does and its body, run in
+   place, calls [fd] back -- or else run a copy of its body in their place,
+   as a call would.  Once no partner is left to splice, a partner whose
+   copies brought calls of it that are not tail calls is entered there, if
+   it can be: they would otherwise stay calls of another function, which no
+   turn of [fd]'s machine takes.  [None] where some partner is not spliced
+   so, or where one's body would need instantiating there
+   ({!splice_partners}).  A function that does not recurse once spliced
+   into makes no loop a copy would serve: it is left as it is.  [originals]
+   are the definitions as written, [defs] the same read with their
+   applications whole. *)
 let splice_member ~inlines ~originals ~defs ~members fd =
   let self = fd.fd_ref in
   let own_vars = Mlutil.type_maxvar fd.fd_type in
   let own_monad = Ml_type_util.codomain_monad fd.fd_type in
+  let partner g = (not (Common.globref_equal g self)) && List.exists (Common.globref_equal g) members in
+  let enterable def =
+    inlines self && yields_alike fd.fd_type def.fd_type && calls_back ~defs ~self def <> []
+    && calls_itself_in_flow ~defs def
+    && not (definition_suspends self fd.fd_type fd.fd_body)
+  in
   let rec go opaque inlined entered body =
     let current = {fd with fd_body = body} in
     let flow = flow_of self {current with fd_body = Mlutil.read_spines body} in
-    let next = next_inlining ~opaque ~effects:(definition_effects current) ~defs ~members ~inlined self in
-    match Option.bind flow next with
-    | None -> Some (List.rev inlined, entered, body)
+    let next pending =
+      Option.bind flow (next_inlining ~opaque ~effects:(definition_effects current) ~defs ~pending self)
+    in
+    let spliced g = List.exists (Common.globref_equal g) inlined in
+    let finished = Some (List.rev inlined, entered, body) in
+    match next (fun g -> partner g && not (spliced g)) with
+    | None -> (
+      match next spliced with
+      | Some {partner; continued = []; invoked = _ :: _ as invoked} when entered = None -> (
+        let def = Ref.User.Map.find partner originals in
+        if not (enterable def) then finished
+        else
+          match adopt_calls def invoked body with
+          | Ok (body, o) -> go opaque inlined (Some o) body
+          | Error _ -> finished )
+      | Some _ | None -> finished )
     | Some {partner; continued; invoked} -> (
       let def = Ref.User.Map.find partner originals in
-      let enters () =
-        entered = None && yields_alike fd.fd_type def.fd_type && calls_back ~defs ~self def <> []
-        && not (definition_suspends self fd.fd_type fd.fd_body)
-      in
       if Mlutil.type_maxvar def.fd_type <> own_vars then unspliced "variables" self
       else if not (Option.equal Names.GlobRef.UserOrd.equal (Ml_type_util.codomain_monad def.fd_type) own_monad) then
         unspliced "monad" self
@@ -1219,7 +1234,8 @@ let splice_member ~inlines ~originals ~defs ~members fd =
         let spliced =
           Result.bind (splice_calls def continued body) (fun (body, _) ->
               if invoked = [] then Ok (body, entered, [])
-              else if enters () then Result.map (fun (body, o) -> (body, Some o, [])) (adopt_calls def invoked body)
+              else if entered = None && enterable def then
+                Result.map (fun (body, o) -> (body, Some o, [])) (adopt_calls def invoked body)
               else Result.map (fun (body, run) -> (body, entered, run)) (splice_calls def invoked body) )
         in
         match spliced with
@@ -1230,7 +1246,7 @@ let splice_member ~inlines ~originals ~defs ~members fd =
   | Some ((_ :: _), _, body) when not (recurses {fd with fd_body = body}) -> Some ([], None, fd.fd_body)
   | spliced -> spliced
 
-let splice_partners ~loopified ~inlines struc =
+let splice_partners ~loopified ~inlines ({structure = struc; splices} : Core.normalizing) : Core.normalizing =
   let groups = Recursive_groups.analyze struc in
   let originals = ref Ref.User.Map.empty in
   Modutil.struct_iter
@@ -1244,7 +1260,7 @@ let splice_partners ~loopified ~inlines struc =
     Ref.User.Map.filter_map
       (fun r fd ->
         match Recursive_groups.group groups r with
-        | Some members when loopified r && (not (Table.is_custom r)) && not (Ref.User.Set.mem r !decided) ->
+        | Some members when loopified r && (not (Table.is_custom r)) && not (Splices.decided splices r) ->
           Some (splice_member ~inlines ~originals ~defs ~members fd)
         | Some _ | None -> None )
       originals
@@ -1259,32 +1275,32 @@ let splice_partners ~loopified ~inlines struc =
       (fun m -> match Ref.User.Map.find_opt m splicings with Some None -> true | Some (Some _) | None -> false)
       (Option.default [] (Recursive_groups.group groups r))
   in
-  let splice fd =
-    match Ref.User.Map.find_opt fd.fd_ref splicings with
-    | Some (Some (_ :: _, entry, body)) ->
-      if declined fd.fd_ref then begin
-        ignore (unspliced "group" fd.fd_ref);
-        fd
-      end
-      else begin
-        Probe.hit "SPLICE_spliced" (fun () -> Table.kername_of_global fd.fd_ref);
-        decided := Ref.User.Set.add fd.fd_ref !decided;
-        Option.iter (fun o -> entered := Ref.User.Map.add fd.fd_ref o !entered) entry;
-        {fd with fd_body = body}
-      end
-    | Some (Some ([], _, _)) ->
-      decided := Ref.User.Set.add fd.fd_ref !decided;
-      fd
-    | Some None | None -> fd
+  (* Each member decided: the copy its machine enters, if any, and its
+     spliced body, if it changes. *)
+  let decision r = function
+    | Some (_ :: _, _, _) when declined r -> unspliced "group" r
+    | Some (_ :: _, entered, body) ->
+      Probe.hit "SPLICE_spliced" (fun () -> Table.kername_of_global r);
+      Some (entered, Some body)
+    | Some ([], _, _) -> Some (None, None)
+    | None -> None
   in
-  Modutil.map_struct_decls
-    (function
-      | Dfix fds -> Dfix (List.map splice fds)
-      | Dterm (r, b, ty) ->
-        let fd = splice {fd_ref = r; fd_body = b; fd_type = ty} in
-        Dterm (r, fd.fd_body, ty)
-      | d -> d )
-    struc
+  let decisions = Ref.User.Map.filter_map decision splicings in
+  let splice fd =
+    match Ref.User.Map.find_opt fd.fd_ref decisions with
+    | Some (_, Some body) -> {fd with fd_body = body}
+    | Some (_, None) | None -> fd
+  in
+  { structure =
+      Modutil.map_struct_decls
+        (function
+          | Dfix fds -> Dfix (List.map splice fds)
+          | Dterm (r, b, ty) ->
+            let fd = splice {fd_ref = r; fd_body = b; fd_type = ty} in
+            Dterm (r, fd.fd_body, ty)
+          | d -> d )
+        struc;
+    splices = Ref.User.Map.fold (fun r (entered, _) s -> Splices.decide ?entered r s) decisions splices }
 
 (* A member of a group recurses by the calls of itself it makes, those in
    the copies of its partners spliced into its body included
@@ -1393,7 +1409,7 @@ let analyze groups program =
           | _ -> []
         in
         let lex, body = Core_elaborate.declaration_scope fd.fd_type fd.fd_body in
-        resumes_of ~effects ~origin:r ~targets lex body )
+        resumes_of ~effects ~entered:(Splices.is_entered_copy (Core.splices program)) ~origin:r ~targets lex body )
       defs
   in
   let adoptable =

@@ -15,8 +15,7 @@
     {!Ownership_plan}) sees one place and must take the most cautious of its
     places for all of them.  Run after the last rewrite of Core, this gives
     each term an occurrence of its own; a term translation copies afterwards,
-    having planned the original, keeps its copy's.  The pass is named for
-    its first job, reads. *)
+    having planned the original, keeps its copy's. *)
 
 (** [term e]: [e], every occurrence in it fresh. *)
 val term : Miniml.ml_ast -> Miniml.ml_ast

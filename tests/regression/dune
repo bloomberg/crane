@@ -13781,3 +13781,14 @@
   (alias runtest)
   (deps sep_ext_functor_include.t.exe)
   (action (run ./sep_ext_functor_include.t.exe))))
+
+(subdir loopify_partner_self_in_closure
+ (rule
+  (targets loopify_partner_self_in_closure.t.exe)
+  (deps LoopifyPartnerSelfInClosure.vo loopify_partner_self_in_closure.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_partner_self_in_closure.t.exe loopify_partner_self_in_closure.cpp loopify_partner_self_in_closure.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_partner_self_in_closure.t.exe)
+  (action (run ./loopify_partner_self_in_closure.t.exe))))

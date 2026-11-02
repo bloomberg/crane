@@ -26,6 +26,11 @@ type normalized
 
 type 'phase program
 
+(** A program being normalized ({!normalize}): its structure, and what
+    splicing decided about the partners of its loopified functions so far
+    ({!Splices}). *)
+type normalizing = { structure : Miniml.ml_structure; splices : Splices.t }
+
 (** The immediate result of extraction. *)
 val extracted : Miniml.ml_structure -> extracted program
 
@@ -46,17 +51,22 @@ val freeze : optimized program -> frozen program
 
 (** [normalize pass p] is [p] in the form control lowering reads: [pass]
     gives each definition a parameter at every arrow of its type
-    ({!Normalize.eta_expand}), then ({!Normalize.structure}) binds each call
+    ({!Normalize.eta_expand}), then ({!Normalize.structure}) splices the
+    partners of each loopified function into it and binds each call
     a function Loopify transforms makes to its own recursive group, where it
     is evaluated strictly and not in tail position, to a temporary of its
     own, in evaluation order.  It
     runs on the frozen program and so solves nothing: a temporary whose type
     the call does not say is given an open annotation.  Under
     [CRANE_CHECK_IR] the result is a fixed point of [pass] -- normalizing it
-    again rewrites no top-level element -- which is what says that no such
-    call was left unbound, and no two of its terms are one occurrence, as
-    {!freeze} checks. *)
-val normalize : (Miniml.ml_structure -> Miniml.ml_structure) -> frozen program -> normalized program
+    again rewrites no top-level element and decides no partner otherwise --
+    which is what says that no such call was left unbound, and no two of its
+    terms are one occurrence, as {!freeze} checks. *)
+val normalize : (normalizing -> normalizing) -> frozen program -> normalized program
+
+(** What normalizing the program decided about the partners of its
+    loopified functions. *)
+val splices : normalized program -> Splices.t
 
 (** The structure, for the consumers not converted to the phase types. *)
 val structure : 'phase program -> Miniml.ml_structure

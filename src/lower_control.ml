@@ -227,9 +227,9 @@ let lower ~methods plan program =
     | Some _ | None -> None
   in
   (* A partner's copy spliced into the body of [r] is entered by the
-     machine [lowered] lowers it as ({!Recursion_plan.entered_copy}). *)
+     machine [lowered] lowers it as ({!Splices.entered_copy}). *)
   let check_entered r lowered =
-    match Recursion_plan.entered_copy r with
+    match Splices.entered_copy (Core.splices program) r with
     | Some o when Probe.checking () ->
       let enters t = List.exists (fun (e : loop) -> Loop.equal e.loop (Loop.Member (o, 0))) (Control_ir.entries t) in
       if not (Option.cata enters false lowered) then

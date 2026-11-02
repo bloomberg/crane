@@ -1374,7 +1374,7 @@ let core_passes to_appear : ml_structure Pipeline_trace.pass list =
     pass "specialize" Ml_specialize.structure;
     pass "knot" Ml_knot.structure;
     pass "fix_shape" Fix_shape.structure;
-    pass "fresh_reads" Fresh_reads.structure;
+    pass "fresh_occurrences" Fresh_occurrences.structure;
     effect_ "local_types" Local_types.structure;
     effect_ "ir_check" Ml_ir_check.structure ]
 
@@ -1388,8 +1388,12 @@ let core_pass_names = Pipeline_trace.names (core_passes ([], []))
     let-bound lambdas put as they are generated, which is the body
     translation generates, so that is the body Normalize names the calls
     of. *)
-let normalize_passes : ml_structure Pipeline_trace.pass list =
-  Pipeline_trace.[pass "eta_expand" Normalize.eta_expand; pass "let_lambdas" Normalize.let_lambdas; pass "normalize" Normalize.structure]
+let normalize_passes : Core.normalizing Pipeline_trace.pass list =
+  let rewriting f (p : Core.normalizing) = {p with structure = f p.structure} in
+  Pipeline_trace.
+    [ pass "eta_expand" (rewriting Normalize.eta_expand);
+      pass "let_lambdas" (rewriting Normalize.let_lambdas);
+      pass "normalize" Normalize.structure ]
 
 let normalize_pass_names = Pipeline_trace.names normalize_passes
 

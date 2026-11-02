@@ -8,17 +8,19 @@ type optimized
 type frozen
 type normalized
 
-type 'phase program = { structure : ml_structure }
+type normalizing = { structure : ml_structure; splices : Splices.t }
+type 'phase program = normalizing
 
-let extracted structure = { structure }
-let optimize passes p = { structure = passes p.structure }
+let extracted structure = { structure; splices = Splices.empty }
+let optimize passes p = { p with structure = passes p.structure }
 let structure p = p.structure
+let splices p = p.splices
 
 let partition keep p =
   let kept, rest = List.partition (fun (mp, _) -> keep mp) p.structure in
-  ({ structure = kept }, { structure = rest })
+  ({ p with structure = kept }, { p with structure = rest })
 
-let modules p = List.map (fun ((mp, _) as m) -> (mp, { structure = [m] })) p.structure
+let modules p = List.map (fun ((mp, _) as m) -> (mp, { p with structure = [m] })) p.structure
 
 (** Every type annotation of the structure: declared types, the types bodies
     annotate, constructor argument types and type definitions. *)
@@ -102,7 +104,7 @@ let zonk p =
     | Sval (r, b, t) -> Sval (r, body b, ty t)
   in
   Table.map_types ty;
-  { structure = Modutil.map_struct ~spec ~with_type:ty decl p.structure }
+  { p with structure = Modutil.map_struct ~spec ~with_type:ty decl p.structure }
 
 (** No metavariable, solved or not, is reachable from an annotation, nor
     from the type a global is registered at. *)
@@ -250,24 +252,26 @@ let freeze p =
   end;
   if Pipeline_trace.enabled () then
     Pipeline_trace.event "freeze" (Printf.sprintf "open annotations: %d" (open_annotations p));
-  { structure = p.structure }
+  p
 
-(** The top-level elements of [struc] that normalizing [struc] again would
-    rewrite. *)
-let not_normal pass struc =
-  let again = Mlutil.preserving_meta_supply (fun () -> pass struc) in
-  List.filter_map
-    (fun ((l, fp), (_, fp')) -> if Ml_fingerprint.equal fp fp' then None else Some l)
-    (List.combine (Ml_fingerprint.elements struc) (Ml_fingerprint.elements again))
+(** The top-level elements of [p] that normalizing [p] again would
+    rewrite, and whether it would decide the partners it splices alike. *)
+let not_normal pass p =
+  let again = Mlutil.preserving_meta_supply (fun () -> pass p) in
+  ( List.filter_map
+      (fun ((l, fp), (_, fp')) -> if Ml_fingerprint.equal fp fp' then None else Some l)
+      (List.combine (Ml_fingerprint.elements p.structure) (Ml_fingerprint.elements again.structure)),
+    Splices.equal p.splices again.splices )
 
 let normalize pass p =
-  let structure = pass p.structure in
+  let p = pass p in
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
-    check_occurrences "normalized" {structure};
-    match not_normal pass structure with
-    | [] -> ()
-    | l :: _ ->
+    check_occurrences "normalized" p;
+    match not_normal pass p with
+    | [], true -> ()
+    | l :: _, _ ->
       failure "normalized"
         ("is not in normal form: normalizing " ^ Names.Label.to_string l ^ " again rewrites it")
+    | [], false -> failure "normalized" "is not in normal form: normalizing it again splices partners otherwise"
   end;
-  { structure }
+  p
