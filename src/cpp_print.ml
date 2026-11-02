@@ -4447,8 +4447,21 @@ let pp_module_alias ctx name (target : Cpp_ast.module_expr) =
   in
   str "using " ++ pp_declared_module ctx name ++ str " = " ++ target ++ str ";"
 
+(* A template head, each name it writes checked where it is printed as the
+   rest of the declaration's are ({!resolved}). *)
+let pp_template_head ctx template =
+  List.iter
+    (function
+      | Cpp_ast.Typename (Type_variable _) -> ()
+      | Typename (Module_parameter m) -> ignore (resolved_module ctx m)
+      | Constrained {concept; args; param} ->
+        ignore (resolved_concept ctx concept);
+        List.iter (fun m -> ignore (resolved_module ctx m)) (args @ [param]) )
+    template;
+  Cpp_ast.pp_template_head template
+
 let pp_functor_alias ctx name functor_ params =
-  Cpp_ast.pp_template_head (List.map fst params)
+  pp_template_head ctx (List.map fst params)
   ++ str "using " ++ pp_declared_module ctx name ++ str " = "
   ++ str (resolved_string (resolved_module ctx functor_))
   ++ str "<" ++ prlist_with_sep (fun () -> str ", ") (fun (_, m) -> Cpp_name.pp (resolved_module ctx m)) params ++ str ">;"
@@ -4458,7 +4471,7 @@ let pp_functor_alias ctx name functor_ params =
 let pp_derived_functor ctx template name (base : Cpp_ast.module_expr) =
   let inside = {ctx with rc_in_struct = true; rc_in_template = true} in
   let base = match base with Module_named m -> fst (pp_module_name inside m) | Applied a -> pp_application inside a in
-  Cpp_ast.pp_template_head template ++ str "struct " ++ pp_declared_module ctx name ++ str " : " ++ base ++ str " {};"
+  pp_template_head ctx template ++ str "struct " ++ pp_declared_module ctx name ++ str " : " ++ base ++ str " {};"
 
 (* The declaration of a synthesised template, its body written where it is
    declared, which is where it is printed.  A holder's parameters are the
