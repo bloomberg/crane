@@ -668,7 +668,9 @@ let rec drop_bindings dropped stmts =
   List.filter_map
     (fun st ->
       if dropped st then None
-      else Some (map_stmt (drop_bindings_expr dropped) (drop_bindings_stmt dropped) Fun.id st) )
+      else
+        Some
+          (map_stmt ~fl:(drop_bindings dropped) (drop_bindings_expr dropped) (drop_bindings_stmt dropped) Fun.id st) )
     stmts
 
 (** [drop_bindings] on a single statement, collapsing a list result into a
@@ -1560,7 +1562,16 @@ and rewrite_enter_stmts ctx stmts =
       | Sdecl (id, ty, _) | Sblock_custom (_, _, id, ty, _, _, _) -> (id, ty) :: ctx.er_env
       | _ -> ctx.er_env
     in
-    rewrite_enter_lambda_return ctx stmt
+    let here =
+      match stmt, rest with
+      | Sdecl (id, _, _), Sasgn (id', Existing, e) :: _ when Id.equal id id' && count_calls_expr check e >= 1 ->
+        (* The call assigning [id] ends this handler: all that follows it,
+           every use of [id], runs in the continuation's, which declares
+           [id] itself. *)
+        []
+      | _ -> rewrite_enter_lambda_return ctx stmt
+    in
+    here
     @ rewrite_enter_stmts
         { ctx with
           er_bound = bound_after ctx.er_bound stmt;

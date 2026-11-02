@@ -299,10 +299,6 @@ struct LoopifyAdoptedFixAliasResult {
           auto &[a0, a1] =
               std::get<typename List<std::pair<uint64_t, T1>>::Cons>(m.v_mut());
           const auto &[k, e] = a0;
-          {
-          }
-          {
-          }
           _stack.emplace_back(
               CraneEnter_map2_aux{std::move(x0_), a1, e, f, k, m});
         }

@@ -59,11 +59,6 @@ uint64_t LoopifyPartnerBackUnderFixpoint::tree_size(
       const auto &[ts0] =
           std::get<typename LoopifyPartnerBackUnderFixpoint::forest::Forest0>(
               _sv0.v());
-      uint64_t _tmp3;
-      {
-      }
-      {
-      }
       _stack.emplace_back(CraneCont_Forest0{n0});
       _stack.emplace_back(CraneEnter_sizes{*ts0});
     } else if (std::holds_alternative<CraneEnter_sizes>(_frame)) {
