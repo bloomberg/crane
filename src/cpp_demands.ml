@@ -133,6 +133,8 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
   and expr e =
     ( match e with
     | CPPmove _ | CPPin_place | CPPin_place_index _ | CPPdeclval _ -> std "utility"
+    (* A variable whose last use is a closure's capture is moved into it. *)
+    | CPPlambda {cl_capture = Closure; cl_moved = _ :: _; _} -> std "utility"
     | CPPalloc ((Alloc_heap | Alloc_arena_scoped), t)
       when Pointer_slot.of_pointee t = Pointer_slot.Shared ->
       rt Crane_rt.shared_variant_header
@@ -212,7 +214,10 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
       if at_type_variable t then obj ()
     | Sraw text when String.equal text acquire_fence -> std "atomic"
     | Sraw text when Common.contains_substring text "std::vector" -> std "vector"
-    | Smatch _ -> variant ()
+    | Smatch (scrut, _, _) ->
+      variant ();
+      (* An owned scrutinee's alternative is moved out of it. *)
+      if scrut.sc_owned then std "utility"
     | _ -> () );
     match s with
     (* Written as a [throw]. *)

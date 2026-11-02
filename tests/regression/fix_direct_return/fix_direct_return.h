@@ -4,6 +4,7 @@
 #include "fn.h"
 #include <cstdint>
 #include <type_traits>
+#include <utility>
 
 struct FixDirectReturn {
   /// A local fixpoint is captured by an outer lambda and returned.

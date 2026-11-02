@@ -4,6 +4,7 @@
 #include "fn.h"
 #include "shared_block.h"
 #include <cstdint>
+#include <utility>
 
 struct PolyIdAtFunctionType {
   /// A polymorphic identity instantiated at a function type collapses the

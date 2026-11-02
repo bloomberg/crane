@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <utility>
 
 struct FixViaSimpleLambda {
   /// Two local fixpoints both capture a let-binding base via &.

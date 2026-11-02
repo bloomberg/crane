@@ -1848,6 +1848,7 @@ and pp_cpp_expr ctx env args t =
         else match capture with
           | Closure ->
             (* A variable whose last use is this capture moves into it. *)
+            if moved <> [] then writes_standard "utility";
             let moves =
               List.map
                 (fun x -> str ", " ++ Id.print x ++ str " = std::move(" ++ Id.print x ++ str ")")
@@ -2602,11 +2603,13 @@ and pp_cpp_stmt ctx env args stmt =
       | [] ->
         ( match br.smb_var with
         | Some var_id ->
-          if scrut.sc_owned then
+          if scrut.sc_owned then begin
+            writes_standard "utility";
             str "auto " ++ Id.print var_id
             ++ str " = std::move(" ++ str (sn ()).get ++ str "<"
             ++ pp_cpp_type ctx false [] br.smb_ctor_type ++ str ">("
             ++ scrut_var_pp ++ str "));"
+          end
           else
             str "const auto& " ++ Id.print var_id
             ++ str " = " ++ str (sn ()).get ++ str "<"
