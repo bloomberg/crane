@@ -67,7 +67,6 @@ uint64_t LoopifyTopLevelCallBinding::csum(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const LoopifyTopLevelCallBinding::cell &c = std::move(_f.c);
-      uint64_t _tmp3;
       _stack.emplace_back(CraneCont1{c});
       _stack.emplace_back(CraneEnter_go{kids(c)});
     } else if (std::holds_alternative<CraneEnter_go>(_frame)) {

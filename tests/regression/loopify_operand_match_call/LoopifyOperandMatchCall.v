@@ -6,7 +6,10 @@
     are ordinary calls there, which no loop takes as turns.  ControlIR took
     them for points the machine resumes at, so [depthish] was entered by no
     call and [mirror] left calls its ControlIR said it took; both were
-    declined, which [CRANE_CHECK_IR] reports of a loop the plan commits to. *)
+    declined, which [CRANE_CHECK_IR] reports of a loop the plan commits to.
+    Normalize now copies what follows such a match into its branches, so
+    the calls are turns and both functions are machines, on trees of any
+    depth. *)
 
 From Crane Require Extraction.
 From Crane Require Import Mapping.Std Mapping.NatIntStd.

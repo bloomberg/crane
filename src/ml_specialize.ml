@@ -53,21 +53,6 @@ let body_of defs use =
 
 (** {1 Terms} *)
 
-(* Every node counted once. *)
-let rec size e =
-  1
-  +
-  match e with
-  | MLapp (f, a) -> size f + sizes a
-  | MLlam (_, _, b) | MLmagic (_, b) -> size b
-  | MLletin (_, _, a, b, _) -> size a + size b
-  | MLcons (_, _, a) | MLtuple a -> sizes a
-  | MLcase (_, s, brs) -> Array.fold_left (fun n (_, _, _, b) -> n + size b) (size s) brs
-  | MLfix (_, _, bs, _, _) -> Array.fold_left (fun n b -> n + size b) 0 bs
-  | _ -> 0
-
-and sizes l = List.fold_left (fun n a -> n + size a) 0 l
-
 (* A term whose evaluation computes nothing, and so may be duplicated or
    dropped. *)
 let rec is_value = function
@@ -159,7 +144,7 @@ and unfold defs shrunk fuel use args =
       | None -> None
       | Some e ->
         let e' = settle defs (fuel - 1) e in
-        if size e' < size (MLapp (MLglob use, args)) then (
+        if Mlutil.ast_size e' < Mlutil.ast_size (MLapp (MLglob use, args)) then (
           shrunk := true;
           Some e' )
         else None )
@@ -196,7 +181,7 @@ and push defs shrunk fuel use args =
           let lift = List.map (Mlutil.ast_lift k) in
           let call = MLapp (MLglob use, lift before @ [b] @ lift after) in
           let call' = settle defs fuel call in
-          if size call' < size call then (
+          if Mlutil.ast_size call' < Mlutil.ast_size call then (
             any := true;
             (ids, bty, p, call') )
           else

@@ -158,19 +158,65 @@ and branch_reaches_call group ~depth branches =
     (fun (ids, _, _, b) -> reaches_call group ~depth:(depth + List.length ids) b)
     branches
 
-(* [scope ~group ~depth e] -- [e], at binder depth [depth], with every call
-   to [group] that sits at a strictly evaluated, non-tail position bound to
-   a variable first, in evaluation order.  Branches, lambda bodies, let
-   bodies, a bind's arguments and a coinductive constructor's are scopes of
-   their own.  A coercion is no scope: a call it reads is bound like any
-   other, [S (eval x)] becoming [let t := eval x in S t], with the coercion
-   kept around the temporary ({!held}).  Tail modulo cons
-   sees through the bindings ({!Cpp_temporaries} restores the expression
-   before it looks), so a constructor's arguments are bound like any
-   other. *)
-let rec scope ~group ~depth e =
+(* How many nodes copying what follows a bound match into its branches may
+   add ({!scope}).  Each copy is what follows one match, never the program
+   around it, so code grows by at most this much per match, however the
+   matches nest.  Every match the corpus binds this way has fewer than ten
+   nodes after it, in at most four branches. *)
+let duplication_budget = 32
+
+(* [e], a term under one binder, under [n] more between that binder and the
+   ones around [e]. *)
+let below_first n e = Mlutil.permut_rels n 1 (Mlutil.ast_lift n e)
+
+(* [e] with each temporary it binds renamed by [fresh]: a copy of a term
+   binding temporaries binds temporaries of its own. *)
+let rec renamed_temporaries fresh e =
+  match e with
+  | MLletin (Tmp x, ty, a, b, occ) when Mlutil.is_temporary_id x ->
+    MLletin (fresh (), ty, renamed_temporaries fresh a, renamed_temporaries fresh b, occ)
+  | _ -> Mlutil.ast_map (renamed_temporaries fresh) e
+
+let into_branches ~fresh ~rty (id, ty, occ) branches rest =
+  if (Array.length branches - 1) * Mlutil.ast_size rest > duplication_budget then None
+  else
+    let renamed = function Tmp x when Mlutil.is_temporary_id x -> fresh () | id -> id in
+    let branch i (ids, _, p, b) =
+      let id, rest, occ =
+        if i = 0 then (id, rest, occ)
+        else (renamed id, renamed_temporaries fresh (Core_copy.copy rest), Occurrence.fresh ())
+      in
+      let n = List.length ids in
+      let rec plug m = function
+        | MLletin (x, tx, a, b, o) -> MLletin (x, tx, a, plug (m + 1) b, o)
+        | b -> MLletin (id, ty, b, below_first (n + m) rest, occ)
+      in
+      (ids, rty, p, plug 0 b)
+    in
+    Some (Array.mapi branch branches)
+
+(* [scope ~group ~depth ?expected e] -- [e], at binder depth [depth], with
+   every call to [group] that sits at a strictly evaluated, non-tail
+   position bound to a variable first, in evaluation order.  Branches,
+   lambda bodies, let bodies, a bind's arguments and a coinductive
+   constructor's are scopes of their own.  A coercion is no scope: a call it
+   reads is bound like any other, [S (eval x)] becoming
+   [let t := eval x in S t], with the coercion kept around the temporary
+   ({!held}).  Tail modulo cons sees through the bindings
+   ({!Cpp_temporaries} restores the expression before it looks), so a
+   constructor's arguments are bound like any other.
+
+   A match bound to a variable runs where it is bound, in a lambda invoked
+   in place or a conditional expression, so the calls ending its branches
+   are no turns of a loop ({!Recursion_plan.match_bound_in_place}).  Where
+   the scope's type is known ([expected], a branch's annotation), what
+   follows such a match is copied into each of its branches instead, after
+   the branch's own bindings: [let t := match x with p => b in k] becomes
+   [match x with p => let t := b in k], evaluated in the same order, as
+   long as the copies stay within {!duplication_budget}. *)
+let rec scope ~group ~depth ?expected e =
   let group_call = group_call group ~depth in
-  let inner ?(group = group) binders = scope ~group ~depth:(depth + binders) in
+  let inner ?(group = group) ?expected binders = scope ~group ~depth:(depth + binders) ?expected in
   let taken = ref [] in
   let count = ref 0 in
   let take call ty =
@@ -230,7 +276,7 @@ let rec scope ~group ~depth e =
           ( ty,
             scrut,
             Array.map
-              (fun (ids, rty, p, body) -> (ids, rty, p, inner (List.length ids) body))
+              (fun (ids, rty, p, body) -> (ids, rty, p, inner ~expected:rty (List.length ids) body))
               branches )
       in
       (* A match whose value is not the result, with a branch that recurses,
@@ -239,7 +285,7 @@ let rec scope ~group ~depth e =
       if (not tail) && branch_reaches_call group ~depth branches then
         let _, rty, _, _ = branches.(0) in
         take e' rty
-      else e' 
+      else e'
     | MLletin (id, ty, rhs, body, occ) ->
       (* A right-hand side that is the call, a local fixpoint applied there
          that recurses into the group, or a match ending in one, is already
@@ -259,7 +305,7 @@ let rec scope ~group ~depth e =
           {group with locals = (depth + 1, [|{l_type = ty; l_arity = Mlutil.nb_lams fn}|]) :: group.locals}
         | _ -> group
       in
-      MLletin (id, ty, rhs, inner ~group 1 body, occ)
+      MLletin (id, ty, rhs, inner ~group ?expected:(if tail then expected else None) 1 body, occ)
     | MLlam (id, ty, body) -> MLlam (id, ty, inner 1 body)
     | MLfix (i, ids, bodies, cofix, occ) ->
       let n = Array.length ids in
@@ -286,7 +332,29 @@ let rec scope ~group ~depth e =
       let rhs = replace_placeholders (fun j -> fresh_rel (i - j)) (Mlutil.ast_lift (i - 1) call) in
       MLletin (group.fresh (), ty, rhs, wrap (i + 1) rest, Occurrence.fresh ())
   in
-  if k = 0 then body else wrap 1 calls
+  (* The scope from the let at depth [depth] on, what follows a match it
+     binds copied into the match's branches, each branch then a scope. *)
+  let rec distribute ~depth e =
+    let pushed =
+      match e, expected with
+      | MLletin (id, ty, MLcase (cty, scrut, branches), rest, occ), Some rty
+        when (not (Recursion_plan.match_bound_in_place cty branches)) && branch_reaches_call group ~depth branches ->
+        into_branches ~fresh:group.fresh ~rty (id, ty, occ) branches rest
+        |> Option.map (fun branches ->
+               MLcase
+                 ( cty,
+                   scrut,
+                   Array.map
+                     (fun (ids, rty, p, b) -> (ids, rty, p, scope ~group ~depth:(depth + List.length ids) ~expected:rty b))
+                     branches ) )
+      | _ -> None
+    in
+    match pushed, e with
+    | Some e', _ -> e'
+    | None, MLletin (id, ty, rhs, body, occ) -> MLletin (id, ty, rhs, distribute ~depth:(depth + 1) body, occ)
+    | None, _ -> e
+  in
+  distribute ~depth (if k = 0 then body else wrap 1 calls)
 
 (* Whether [r] is loopified: by its own name, or, made a method, where its
    inductive's methods are (see {!Table.loopifies_methods_of}) and its own

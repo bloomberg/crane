@@ -4,8 +4,11 @@ From Crane Require Import Mapping.Std Mapping.NatIntStd.
 (** [tree_size]'s partner [forest_size] calls it back only from a local
     fixpoint over a list of trees, and [tree_size] calls [forest_size] as
     the operand of an addition.  No machine can enter [forest_size], so its
-    body runs in place of the call, its calls of [tree_size] ordinary calls,
-    as a call of [forest_size] would make them. *)
+    body is spliced in place of the call.  The addition is then copied into
+    the one branch of the match the body is, which applies the local
+    fixpoint where [tree_size]'s machine runs it as a loop of its own: the
+    calls of [tree_size] in it are turns, and a chain of any depth runs in
+    one C++ frame. *)
 
 Module LoopifyPartnerBackUnderFixpoint.
 

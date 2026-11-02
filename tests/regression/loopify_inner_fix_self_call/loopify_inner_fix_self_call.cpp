@@ -125,10 +125,6 @@ LoopifyInnerFixSelfCall::join(LoopifyInnerFixSelfCall::tree l, uint64_t x0_,
       } else {
         auto &[a0, a1, a2] =
             std::get<typename LoopifyInnerFixSelfCall::tree::Node>(l.v_mut());
-        {
-        }
-        {
-        }
         _stack.emplace_back(CraneEnter_join_aux{x1_, a0, a1, a2, l, x0_});
       }
     } else if (std::holds_alternative<CraneEnter_join_aux>(_frame)) {

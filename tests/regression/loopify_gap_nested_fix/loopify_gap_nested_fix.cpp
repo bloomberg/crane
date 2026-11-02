@@ -48,11 +48,6 @@ LoopifyGapNestedFix::rose_sum(const LoopifyGapNestedFix::rose
       const LoopifyGapNestedFix::rose &r = std::move(_f.r);
       const auto &[a0, a1] =
           std::get<typename LoopifyGapNestedFix::rose::Rose0>(r.v());
-      uint64_t _tmp3;
-      {
-      }
-      {
-      }
       _stack.emplace_back(CraneCont_Rose0{a0});
       _stack.emplace_back(CraneEnter_sum_list{*a1});
     } else if (std::holds_alternative<CraneEnter_sum_list>(_frame)) {
