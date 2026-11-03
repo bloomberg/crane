@@ -1191,7 +1191,7 @@ uint64_t LoopifyNumbers::sum_odd_indices_fuel(
   /// CraneEnter_sum_even_indices_fuel_entry: captures varying parameters for
   /// each recursive call.
   struct CraneEnter_sum_even_indices_fuel_entry {
-    List<uint64_t> l0;
+    const List<uint64_t> *l0;
     uint64_t fuel0;
   };
 
@@ -1225,14 +1225,15 @@ uint64_t LoopifyNumbers::sum_odd_indices_fuel(
           const auto &[a00, a10] =
               std::get<typename List<uint64_t>::Cons>(l.v());
           _stack.emplace_back(CraneCont_Cons{a00});
-          _stack.emplace_back(CraneEnter_sum_even_indices_fuel_entry{*a10, f});
+          _stack.emplace_back(
+              CraneEnter_sum_even_indices_fuel_entry{crane_raw(a10), f});
         }
       }
     } else if (std::holds_alternative<CraneEnter_sum_even_indices_fuel_entry>(
                    _frame)) {
       auto _f =
           std::move(std::get<CraneEnter_sum_even_indices_fuel_entry>(_frame));
-      const List<uint64_t> &l0 = std::move(_f.l0);
+      const List<uint64_t> &l0 = *_f.l0;
       uint64_t fuel0 = _f.fuel0;
       if (fuel0 <= 0) {
         _result = UINT64_C(0);

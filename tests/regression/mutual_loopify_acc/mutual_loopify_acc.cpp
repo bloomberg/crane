@@ -67,7 +67,7 @@ uint64_t MutualLoopifyAcc::fsum(
   /// CraneEnter_tsum_entry: captures varying parameters for each recursive
   /// call.
   struct CraneEnter_tsum_entry {
-    MutualLoopifyAcc::tree t;
+    const MutualLoopifyAcc::tree *t;
     uint64_t acc0;
   };
 
@@ -97,11 +97,11 @@ uint64_t MutualLoopifyAcc::fsum(
         const auto &[a00, a10] =
             std::get<typename MutualLoopifyAcc::forest::Fcons>(f.v());
         _stack.emplace_back(CraneCont_Fcons{crane_raw(a10)});
-        _stack.emplace_back(CraneEnter_tsum_entry{*a00, acc});
+        _stack.emplace_back(CraneEnter_tsum_entry{crane_raw(a00), acc});
       }
     } else if (std::holds_alternative<CraneEnter_tsum_entry>(_frame)) {
       auto _f = std::move(std::get<CraneEnter_tsum_entry>(_frame));
-      const MutualLoopifyAcc::tree &t = std::move(_f.t);
+      const MutualLoopifyAcc::tree &t = *_f.t;
       uint64_t acc0 = _f.acc0;
       if (std::holds_alternative<typename MutualLoopifyAcc::tree::Leaf>(
               t.v())) {

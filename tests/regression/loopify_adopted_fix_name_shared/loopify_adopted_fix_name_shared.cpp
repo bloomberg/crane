@@ -18,19 +18,19 @@ LoopifyAdoptedFixNameShared::f(const LoopifyAdoptedFixNameShared::tree &t,
 
   struct CraneEnter {
     Nat i;
-    LoopifyAdoptedFixNameShared::tree t;
+    const LoopifyAdoptedFixNameShared::tree *t;
   };
 
   /// CraneEnter_loop: captures varying parameters for each recursive call.
   struct CraneEnter_loop {
     Nat k;
-    List<LoopifyAdoptedFixNameShared::tree> ts;
+    const List<LoopifyAdoptedFixNameShared::tree> *ts;
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneEnter_loop>;
   std::optional<Nat> _result{};
   crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{std::move(i), t});
+  _stack.emplace_back(CraneEnter{std::move(i), &t});
   /// Loopified f: CraneEnter.
   while (!_stack.empty()) {
     CraneFrame _frame = std::move(_stack.back());
@@ -38,7 +38,7 @@ LoopifyAdoptedFixNameShared::f(const LoopifyAdoptedFixNameShared::tree &t,
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       Nat i = std::move(_f.i);
-      const LoopifyAdoptedFixNameShared::tree &t = std::move(_f.t);
+      const LoopifyAdoptedFixNameShared::tree &t = *_f.t;
       crane::fn<std::optional<Nat>(
           std::optional<Nat>, List<LoopifyAdoptedFixNameShared::tree>, Nat)>
           struct_bytes = [](std::optional<Nat> pad,
@@ -87,12 +87,12 @@ LoopifyAdoptedFixNameShared::f(const LoopifyAdoptedFixNameShared::tree &t,
       } else {
         const auto &[ts0] =
             std::get<typename LoopifyAdoptedFixNameShared::tree::Arr>(t.v());
-        _stack.emplace_back(CraneEnter_loop{std::move(i), *ts0});
+        _stack.emplace_back(CraneEnter_loop{std::move(i), crane_raw(ts0)});
       }
     } else {
       auto _f = std::move(std::get<CraneEnter_loop>(_frame));
       Nat k = std::move(_f.k);
-      const List<LoopifyAdoptedFixNameShared::tree> &ts = std::move(_f.ts);
+      const List<LoopifyAdoptedFixNameShared::tree> &ts = *_f.ts;
       if (std::holds_alternative<
               typename List<LoopifyAdoptedFixNameShared::tree>::Nil>(ts.v())) {
         _result = std::optional<Nat>();
@@ -101,10 +101,10 @@ LoopifyAdoptedFixNameShared::f(const LoopifyAdoptedFixNameShared::tree &t,
             std::get<typename List<LoopifyAdoptedFixNameShared::tree>::Cons>(
                 ts.v());
         if (k.ltb(Nat::s(Nat::s(Nat::o())))) {
-          _stack.emplace_back(CraneEnter{std::move(k), a0});
+          _stack.emplace_back(CraneEnter{std::move(k), &a0});
         } else {
           _stack.emplace_back(
-              CraneEnter_loop{k.sub(Nat::s(Nat::s(Nat::o()))), *a1});
+              CraneEnter_loop{k.sub(Nat::s(Nat::s(Nat::o()))), crane_raw(a1)});
         }
       }
     }

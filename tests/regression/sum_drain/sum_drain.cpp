@@ -19,7 +19,7 @@ SumDrain::depth(const SumDrain::t &x) { /// CraneEnter: captures varying
                                         /// parameters for each recursive call.
 
   struct CraneEnter {
-    SumDrain::t x;
+    const SumDrain::t *x;
   };
 
   /// CraneCont_Inr: resumes after recursive call, then processes rest.
@@ -28,14 +28,14 @@ SumDrain::depth(const SumDrain::t &x) { /// CraneEnter: captures varying
   using CraneFrame = std::variant<CraneEnter, CraneCont_Inr>;
   uint64_t _result{};
   crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{x});
+  _stack.emplace_back(CraneEnter{&x});
   /// Loopified depth: CraneEnter -> CraneCont_Inr.
   while (!_stack.empty()) {
     CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      const SumDrain::t &x = std::move(_f.x);
+      const SumDrain::t &x = *_f.x;
       const auto &[a0] = std::get<typename SumDrain::t::N>(x.v());
       auto &&_sv0 = *a0;
       if (std::holds_alternative<typename Sum<uint64_t, SumDrain::t>::Inl>(
@@ -45,7 +45,7 @@ SumDrain::depth(const SumDrain::t &x) { /// CraneEnter: captures varying
         const auto &[a00] =
             std::get<typename Sum<uint64_t, SumDrain::t>::Inr>(_sv0.v());
         _stack.emplace_back(CraneCont_Inr{});
-        _stack.emplace_back(CraneEnter{a00});
+        _stack.emplace_back(CraneEnter{&a00});
       }
     } else {
       auto _f = std::move(std::get<CraneCont_Inr>(_frame));

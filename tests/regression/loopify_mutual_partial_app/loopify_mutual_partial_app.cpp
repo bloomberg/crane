@@ -137,13 +137,13 @@ LoopifyMutualPartialApp::sum_md(const LoopifyMutualPartialApp::md<uint64_t> &
   /// CraneEnter_sum_e_entry: captures varying parameters for each recursive
   /// call.
   struct CraneEnter_sum_e_entry {
-    LoopifyMutualPartialApp::e<uint64_t> x;
+    const LoopifyMutualPartialApp::e<uint64_t> *x;
   };
 
   /// CraneCont_Add: saves [b0], resumes after recursive call, then processes
   /// rest.
   struct CraneCont_Add {
-    std::shared_ptr<LoopifyMutualPartialApp::e<uint64_t>> b0;
+    const LoopifyMutualPartialApp::e<uint64_t> *b0;
   };
 
   /// CraneCont_Add_1: saves [_tmp2], resumes after recursive call, then
@@ -195,7 +195,7 @@ LoopifyMutualPartialApp::sum_md(const LoopifyMutualPartialApp::md<uint64_t> &
             std::get<typename LoopifyMutualPartialApp::md<uint64_t>::MConst>(
                 m.v());
         _stack.emplace_back(CraneCont_MConst{u0});
-        _stack.emplace_back(CraneEnter_sum_e_entry{*x0});
+        _stack.emplace_back(CraneEnter_sum_e_entry{crane_raw(x0)});
       } else if (std::holds_alternative<
                      typename LoopifyMutualPartialApp::md<uint64_t>::MNode>(
                      m.v())) {
@@ -217,7 +217,7 @@ LoopifyMutualPartialApp::sum_md(const LoopifyMutualPartialApp::md<uint64_t> &
       }
     } else if (std::holds_alternative<CraneEnter_sum_e_entry>(_frame)) {
       auto _f = std::move(std::get<CraneEnter_sum_e_entry>(_frame));
-      const LoopifyMutualPartialApp::e<uint64_t> &x = std::move(_f.x);
+      const LoopifyMutualPartialApp::e<uint64_t> &x = *_f.x;
       if (std::holds_alternative<
               typename LoopifyMutualPartialApp::e<uint64_t>::Leaf>(x.v())) {
         const auto &[n0] =
@@ -235,8 +235,8 @@ LoopifyMutualPartialApp::sum_md(const LoopifyMutualPartialApp::md<uint64_t> &
                      x.v())) {
         const auto &[a0, b0] =
             std::get<typename LoopifyMutualPartialApp::e<uint64_t>::Add>(x.v());
-        _stack.emplace_back(CraneCont_Add{b0});
-        _stack.emplace_back(CraneEnter_sum_e_entry{*a0});
+        _stack.emplace_back(CraneCont_Add{crane_raw(b0)});
+        _stack.emplace_back(CraneEnter_sum_e_entry{crane_raw(a0)});
       } else {
         const auto &[m1] =
             std::get<typename LoopifyMutualPartialApp::e<uint64_t>::Meta>(
@@ -245,10 +245,9 @@ LoopifyMutualPartialApp::sum_md(const LoopifyMutualPartialApp::md<uint64_t> &
       }
     } else if (std::holds_alternative<CraneCont_Add>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Add>(_frame));
-      std::shared_ptr<LoopifyMutualPartialApp::e<uint64_t>> b0 =
-          std::move(_f.b0);
+      const LoopifyMutualPartialApp::e<uint64_t> &b0 = *_f.b0;
       _stack.emplace_back(CraneCont_Add_1{std::move(_result)});
-      _stack.emplace_back(CraneEnter_sum_e_entry{*b0});
+      _stack.emplace_back(CraneEnter_sum_e_entry{&b0});
     } else if (std::holds_alternative<CraneCont_Add_1>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Add_1>(_frame));
       _result = (_f._tmp2 + std::move(_result));

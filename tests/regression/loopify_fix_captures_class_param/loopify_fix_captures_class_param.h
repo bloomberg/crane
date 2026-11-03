@@ -324,19 +324,19 @@ struct LoopifyFixCapturesClassParam {
 
     struct CraneEnter {
       Nat i;
-      tree t;
+      const tree *t;
     };
 
     /// CraneEnter_loop: captures varying parameters for each recursive call.
     struct CraneEnter_loop {
       Nat k;
-      List<tree> ts;
+      const List<tree> *ts;
     };
 
     using CraneFrame = std::variant<CraneEnter, CraneEnter_loop>;
     std::optional<Nat> _result{};
     crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{std::move(i), t});
+    _stack.emplace_back(CraneEnter{std::move(i), &t});
     /// Loopified f: CraneEnter.
     while (!_stack.empty()) {
       CraneFrame _frame = std::move(_stack.back());
@@ -344,27 +344,27 @@ struct LoopifyFixCapturesClassParam {
       if (std::holds_alternative<CraneEnter>(_frame)) {
         auto _f = std::move(std::get<CraneEnter>(_frame));
         Nat i = std::move(_f.i);
-        const tree &t = std::move(_f.t);
+        const tree &t = *_f.t;
         if (std::holds_alternative<typename tree::Leaf>(t.v())) {
           const auto &[n0] = std::get<typename tree::Leaf>(t.v());
           _result = std::make_optional<Nat>(n0.add(std::move(i)));
         } else {
           const auto &[ts0] = std::get<typename tree::Node>(t.v());
-          _stack.emplace_back(CraneEnter_loop{std::move(i), *ts0});
+          _stack.emplace_back(CraneEnter_loop{std::move(i), crane_raw(ts0)});
         }
       } else {
         auto _f = std::move(std::get<CraneEnter_loop>(_frame));
         Nat k = std::move(_f.k);
-        const List<tree> &ts = std::move(_f.ts);
+        const List<tree> &ts = *_f.ts;
         if (std::holds_alternative<typename List<tree>::Nil>(ts.v())) {
           _result = std::optional<Nat>();
         } else {
           const auto &[a0, a1] = std::get<typename List<tree>::Cons>(ts.v());
           if (k.ltb(_tcI0::size(Nat::s(Nat::s(Nat::o()))))) {
-            _stack.emplace_back(CraneEnter{std::move(k), a0});
+            _stack.emplace_back(CraneEnter{std::move(k), &a0});
           } else {
             _stack.emplace_back(CraneEnter_loop{
-                k.sub(_tcI0::size(Nat::s(Nat::s(Nat::o())))), *a1});
+                k.sub(_tcI0::size(Nat::s(Nat::s(Nat::o())))), crane_raw(a1)});
           }
         }
       }

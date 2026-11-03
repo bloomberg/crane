@@ -567,7 +567,7 @@ struct LoopifyEquationsWithClause {
     struct CraneEnter {
       const plain_graph *p;
       uint64_t _x0;
-      List<uint64_t> _x;
+      const List<uint64_t> *_x;
     };
 
     /// CraneCont_Plain_graph_equation_2: saves [x0, xs0, hind0], resumes after
@@ -582,7 +582,7 @@ struct LoopifyEquationsWithClause {
         std::variant<CraneEnter, CraneCont_Plain_graph_equation_2>;
     T1 _result{};
     crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&p, _x0, _x});
+    _stack.emplace_back(CraneEnter{&p, _x0, &_x});
     /// Loopified plain_graph_rect: CraneEnter ->
     /// CraneCont_Plain_graph_equation_2.
     while (!_stack.empty()) {
@@ -592,7 +592,7 @@ struct LoopifyEquationsWithClause {
         auto _f = std::move(std::get<CraneEnter>(_frame));
         const plain_graph &p = *_f.p;
         uint64_t _x0 = _f._x0;
-        const List<uint64_t> &_x = std::move(_f._x);
+        const List<uint64_t> &_x = *_f._x;
         if (std::holds_alternative<
                 typename plain_graph::Plain_graph_equation_1>(p.v())) {
           _result = f;
@@ -600,7 +600,7 @@ struct LoopifyEquationsWithClause {
           const auto &[x0, xs0, hind0] =
               std::get<typename plain_graph::Plain_graph_equation_2>(p.v());
           _stack.emplace_back(CraneCont_Plain_graph_equation_2{x0, xs0, hind0});
-          _stack.emplace_back(CraneEnter{crane_raw(hind0), plain(xs0), xs0});
+          _stack.emplace_back(CraneEnter{crane_raw(hind0), plain(xs0), &xs0});
         }
       } else {
         auto _f = std::move(std::get<CraneCont_Plain_graph_equation_2>(_frame));

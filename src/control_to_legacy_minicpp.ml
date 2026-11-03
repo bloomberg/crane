@@ -144,6 +144,61 @@ let check_jumps ~loop (f : dfun) ~continues ~jumped =
         ++ str (Table.kername_of_global (fst f.df_path.dp_outer))
         ++ str " takes are not its Continues" )
 
+(* Whether a frame can hold a parameter declared at [ty] by pointer: one
+   borrowed of a value type ({!Loopify_tail.borrowed_value_param_pointee}). *)
+let holdable_type ty = Option.has_some (Loopify_tail.borrowed_value_param_pointee ty)
+
+(* The parameters of every local fixpoint's lambda in [stmts], each by the
+   Core binder translation records it binds, with the type it declares. *)
+let fixpoint_parameters stmts =
+  let found = ref [] in
+  let rec fe e =
+    ( match e with
+    | CPPlambda {cl_fixpoint = Some _; cl_params; cl_binders; _} ->
+      List.iter
+        (fun (ty, x) ->
+          match Option.bind x (fun x -> List.assoc_opt x cl_binders) with
+          | Some b -> found := (b, ty) :: !found
+          | None -> () )
+        (to_reversed cl_params)
+    | _ -> () );
+    map_expr fe fs Fun.id e
+  and fs s = map_stmt fe fs Fun.id s in
+  List.iter (fun s -> ignore (fs s)) stmts;
+  !found
+
+(* How the frames of the machine of the function [f], its loop [l], hold
+   its parameters [params] and those of the loops its entries enter
+   ({!Frame_storage}), as each is represented: a parameter of the loop by
+   the C++ parameter standing for it, one of an entered loop by the
+   parameter of the local fixpoint's lambda in [body] binding it.  The
+   parameters' flags, in order, and those of the entered loops' by the Core
+   binder.  [None] for the loop of no function, or where some parameter
+   stands for none of the loop's. *)
+let machine_storage (f : dfun) params body (l : Control_ir.Term.loop) =
+  match l.loop with
+  | Member _ -> None
+  | Function r ->
+    let positions = List.map (fun p -> position r l (binder_of f.df_binders p)) params in
+    if not (List.for_all Option.has_some positions) then None
+    else
+      let lambda_params = fixpoint_parameters body in
+      let holdable : Frame_storage.parameter -> bool = function
+        | Own i -> List.exists2 (fun p (_, ty) -> p = Some i && holdable_type ty) positions params
+        | Entered level ->
+          List.exists
+            (fun ((b : Core_binder.t), ty) -> GlobRef.UserOrd.equal b.origin r && b.level = level && holdable_type ty)
+            lambda_params
+      in
+      let storage =
+        Frame_storage.plan ~pointer_fields:Loopify_analysis.constructor_pointer_fields ~in_place ~holdable l
+      in
+      let own_pointers = List.map (function Some i -> List.nth storage.own i | None -> false) positions in
+      let entered (b : Core_binder.t) =
+        GlobRef.UserOrd.equal b.origin r && List.assoc_opt b.level storage.entered = Some true
+      in
+      Some (own_pointers, entered)
+
 (* The function [f], generated under the template parameters [tparams],
    lowered to the loop [l] varying the parameters [varying]; [Error why]
    where Loopify makes no loop of it -- a call passing the loop other
@@ -192,10 +247,17 @@ and lower_modulo_cons ~tparams (f : dfun) params body l ?cursor ~varying ~parts 
 and lower_frames ~tparams (f : dfun) params body (l : Control_ir.Term.loop) ~varying ~parts =
   let own = Control_ir.continues_of l.loop l.body in
   let exposed = Loopify_analysis.expose_tail_calls (jump own) body in
+  let parts, entered_pointers =
+    match machine_storage f params body l with
+    | Some (own_pointers, entered_pointers) -> (List.map2 ( || ) parts own_pointers, Some entered_pointers)
+    | None -> (parts, None)
+  in
   let machine () =
     match Control_ir.entries l.body with
     | [] -> Loopify.frame_machine ~loop:l.loop ~varying ~parts ~tparams (jump own) f params exposed
-    | [entry] -> Loopify.frame_machine ~loop:l.loop ~entry:entry.loop ~varying ~parts ~tparams (jump own) f params exposed
+    | [entry] ->
+      Loopify.frame_machine ~loop:l.loop ~entry:entry.loop ?entered_pointers ~varying ~parts ~tparams (jump own) f
+        params exposed
     | _ :: _ :: _ -> Error (Loopify.Left None)
   in
   match machine () with

@@ -11,7 +11,7 @@ MutualTmcLoopify::evens(const Nat &n) { /// CraneEnter: captures varying
   /// CraneEnter_odds_entry: captures varying parameters for each recursive
   /// call.
   struct CraneEnter_odds_entry {
-    Nat n0;
+    const Nat *n0;
   };
 
   /// CraneCont_S: saves [n], resumes after recursive call, then processes rest.
@@ -42,11 +42,11 @@ MutualTmcLoopify::evens(const Nat &n) { /// CraneEnter: captures varying
       } else {
         const auto &[a00] = std::get<typename Nat::S>(n.v());
         _stack.emplace_back(CraneCont_S{n});
-        _stack.emplace_back(CraneEnter_odds_entry{*a00});
+        _stack.emplace_back(CraneEnter_odds_entry{crane_raw(a00)});
       }
     } else if (std::holds_alternative<CraneEnter_odds_entry>(_frame)) {
       auto _f = std::move(std::get<CraneEnter_odds_entry>(_frame));
-      const Nat &n0 = std::move(_f.n0);
+      const Nat &n0 = *_f.n0;
       if (std::holds_alternative<typename Nat::O>(n0.v())) {
         _result = mylist::mnil();
       } else {
