@@ -78,13 +78,13 @@ LoopifyInnerFixSelfCall::join(LoopifyInnerFixSelfCall::tree l, uint64_t x0_,
                                          /// parameters for each recursive call.
 
   struct CraneEnter {
-    LoopifyInnerFixSelfCall::tree x1_;
+    const LoopifyInnerFixSelfCall::tree *x1_;
     LoopifyInnerFixSelfCall::tree l;
   };
 
   /// CraneEnter_join_aux: captures varying parameters for each recursive call.
   struct CraneEnter_join_aux {
-    LoopifyInnerFixSelfCall::tree r;
+    const LoopifyInnerFixSelfCall::tree *r;
     std::shared_ptr<LoopifyInnerFixSelfCall::tree> a0;
     uint64_t a1;
     std::shared_ptr<LoopifyInnerFixSelfCall::tree> a2;
@@ -110,14 +110,14 @@ LoopifyInnerFixSelfCall::join(LoopifyInnerFixSelfCall::tree l, uint64_t x0_,
       std::variant<CraneEnter, CraneEnter_join_aux, CraneCont1, CraneCont2>;
   LoopifyInnerFixSelfCall::tree _result{};
   crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{x1_, std::move(l)});
+  _stack.emplace_back(CraneEnter{&x1_, std::move(l)});
   /// Loopified join: CraneEnter -> CraneCont1 -> CraneCont2.
   while (!_stack.empty()) {
     CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      const LoopifyInnerFixSelfCall::tree &x1_ = std::move(_f.x1_);
+      const LoopifyInnerFixSelfCall::tree &x1_ = *_f.x1_;
       LoopifyInnerFixSelfCall::tree l = std::move(_f.l);
       if (std::holds_alternative<typename LoopifyInnerFixSelfCall::tree::Leaf>(
               l.v_mut())) {
@@ -125,11 +125,11 @@ LoopifyInnerFixSelfCall::join(LoopifyInnerFixSelfCall::tree l, uint64_t x0_,
       } else {
         auto &[a0, a1, a2] =
             std::get<typename LoopifyInnerFixSelfCall::tree::Node>(l.v_mut());
-        _stack.emplace_back(CraneEnter_join_aux{x1_, a0, a1, a2, l, x0_});
+        _stack.emplace_back(CraneEnter_join_aux{&x1_, a0, a1, a2, l, x0_});
       }
     } else if (std::holds_alternative<CraneEnter_join_aux>(_frame)) {
       auto _f = std::move(std::get<CraneEnter_join_aux>(_frame));
-      const LoopifyInnerFixSelfCall::tree &r = std::move(_f.r);
+      const LoopifyInnerFixSelfCall::tree &r = *_f.r;
       std::shared_ptr<LoopifyInnerFixSelfCall::tree> a0 = std::move(_f.a0);
       uint64_t a1 = _f.a1;
       std::shared_ptr<LoopifyInnerFixSelfCall::tree> a2 = std::move(_f.a2);
@@ -143,11 +143,12 @@ LoopifyInnerFixSelfCall::join(LoopifyInnerFixSelfCall::tree l, uint64_t x0_,
             std::get<typename LoopifyInnerFixSelfCall::tree::Node>(r.v());
         if (size(*a20) < a1) {
           _stack.emplace_back(CraneCont1{std::move(a0), a1});
-          _stack.emplace_back(CraneEnter{r, *a2});
+          _stack.emplace_back(CraneEnter{&r, *a2});
         } else {
           if (a1 < size(*a00)) {
             _stack.emplace_back(CraneCont2{a10, a20});
-            _stack.emplace_back(CraneEnter_join_aux{*a00, a0, a1, a2, l, x0_});
+            _stack.emplace_back(
+                CraneEnter_join_aux{crane_raw(a00), a0, a1, a2, l, x0_});
           } else {
             _result = node(l, x0_, r);
           }

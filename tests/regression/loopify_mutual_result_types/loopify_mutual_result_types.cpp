@@ -189,7 +189,7 @@ LoopifyMutualResultTypes::sum_e(const LoopifyMutualResultTypes::e &
   /// CraneEnter_sum_md_entry: captures varying parameters for each recursive
   /// call.
   struct CraneEnter_sum_md_entry {
-    LoopifyMutualResultTypes::md m;
+    const LoopifyMutualResultTypes::md *m;
   };
 
   /// CraneCont_Add: saves [b0], resumes after recursive call, then processes
@@ -207,7 +207,7 @@ LoopifyMutualResultTypes::sum_e(const LoopifyMutualResultTypes::e &
   /// CraneCont_MPair: saves [b1], resumes after recursive call, then processes
   /// rest.
   struct CraneCont_MPair {
-    std::shared_ptr<LoopifyMutualResultTypes::md> b1;
+    const LoopifyMutualResultTypes::md *b1;
   };
 
   /// CraneCont_MPair_1: saves [_tmp6], resumes after recursive call, then
@@ -219,7 +219,7 @@ LoopifyMutualResultTypes::sum_e(const LoopifyMutualResultTypes::e &
   /// CraneCont_MPair_2: saves [b0], resumes after recursive call, then
   /// processes rest.
   struct CraneCont_MPair_2 {
-    std::shared_ptr<LoopifyMutualResultTypes::md> b0;
+    const LoopifyMutualResultTypes::md *b0;
   };
 
   /// CraneCont_MPair_3: saves [_tmp2], resumes after recursive call, then
@@ -271,13 +271,13 @@ LoopifyMutualResultTypes::sum_e(const LoopifyMutualResultTypes::e &
         } else {
           const auto &[a1, b1] =
               std::get<typename LoopifyMutualResultTypes::md::MPair>(_sv1.v());
-          _stack.emplace_back(CraneCont_MPair{b1});
-          _stack.emplace_back(CraneEnter_sum_md_entry{*a1});
+          _stack.emplace_back(CraneCont_MPair{crane_raw(b1)});
+          _stack.emplace_back(CraneEnter_sum_md_entry{crane_raw(a1)});
         }
       }
     } else if (std::holds_alternative<CraneEnter_sum_md_entry>(_frame)) {
       auto _f = std::move(std::get<CraneEnter_sum_md_entry>(_frame));
-      const LoopifyMutualResultTypes::md &m = std::move(_f.m);
+      const LoopifyMutualResultTypes::md &m = *_f.m;
       if (std::holds_alternative<typename LoopifyMutualResultTypes::md::MNull>(
               m.v())) {
         _result = UINT64_C(0);
@@ -289,8 +289,8 @@ LoopifyMutualResultTypes::sum_e(const LoopifyMutualResultTypes::e &
       } else {
         const auto &[a0, b0] =
             std::get<typename LoopifyMutualResultTypes::md::MPair>(m.v());
-        _stack.emplace_back(CraneCont_MPair_2{b0});
-        _stack.emplace_back(CraneEnter_sum_md_entry{*a0});
+        _stack.emplace_back(CraneCont_MPair_2{crane_raw(b0)});
+        _stack.emplace_back(CraneEnter_sum_md_entry{crane_raw(a0)});
       }
     } else if (std::holds_alternative<CraneCont_Add>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Add>(_frame));
@@ -302,17 +302,17 @@ LoopifyMutualResultTypes::sum_e(const LoopifyMutualResultTypes::e &
       _result = (_f._tmp4 + std::move(_result));
     } else if (std::holds_alternative<CraneCont_MPair>(_frame)) {
       auto _f = std::move(std::get<CraneCont_MPair>(_frame));
-      std::shared_ptr<LoopifyMutualResultTypes::md> b1 = std::move(_f.b1);
+      const LoopifyMutualResultTypes::md &b1 = *_f.b1;
       _stack.emplace_back(CraneCont_MPair_1{std::move(_result)});
-      _stack.emplace_back(CraneEnter_sum_md_entry{*b1});
+      _stack.emplace_back(CraneEnter_sum_md_entry{&b1});
     } else if (std::holds_alternative<CraneCont_MPair_1>(_frame)) {
       auto _f = std::move(std::get<CraneCont_MPair_1>(_frame));
       _result = (_f._tmp6 + std::move(_result));
     } else if (std::holds_alternative<CraneCont_MPair_2>(_frame)) {
       auto _f = std::move(std::get<CraneCont_MPair_2>(_frame));
-      std::shared_ptr<LoopifyMutualResultTypes::md> b0 = std::move(_f.b0);
+      const LoopifyMutualResultTypes::md &b0 = *_f.b0;
       _stack.emplace_back(CraneCont_MPair_3{std::move(_result)});
-      _stack.emplace_back(CraneEnter_sum_md_entry{*b0});
+      _stack.emplace_back(CraneEnter_sum_md_entry{&b0});
     } else {
       auto _f = std::move(std::get<CraneCont_MPair_3>(_frame));
       _result = (_f._tmp2 + std::move(_result));
@@ -333,13 +333,13 @@ uint64_t LoopifyMutualResultTypes::sum_md(
   /// CraneEnter_sum_e_entry: captures varying parameters for each recursive
   /// call.
   struct CraneEnter_sum_e_entry {
-    LoopifyMutualResultTypes::e x;
+    const LoopifyMutualResultTypes::e *x;
   };
 
   /// CraneCont_Add: saves [b1], resumes after recursive call, then processes
   /// rest.
   struct CraneCont_Add {
-    std::shared_ptr<LoopifyMutualResultTypes::e> b1;
+    const LoopifyMutualResultTypes::e *b1;
   };
 
   /// CraneCont_Add_1: saves [_tmp4], resumes after recursive call, then
@@ -351,7 +351,7 @@ uint64_t LoopifyMutualResultTypes::sum_md(
   /// CraneCont_Add_2: saves [b0], resumes after recursive call, then processes
   /// rest.
   struct CraneCont_Add_2 {
-    std::shared_ptr<LoopifyMutualResultTypes::e> b0;
+    const LoopifyMutualResultTypes::e *b0;
   };
 
   /// CraneCont_Add_3: saves [_tmp2], resumes after recursive call, then
@@ -405,8 +405,8 @@ uint64_t LoopifyMutualResultTypes::sum_md(
                        typename LoopifyMutualResultTypes::e::Add>(_sv1.v())) {
           const auto &[a1, b1] =
               std::get<typename LoopifyMutualResultTypes::e::Add>(_sv1.v());
-          _stack.emplace_back(CraneCont_Add{b1});
-          _stack.emplace_back(CraneEnter_sum_e_entry{*a1});
+          _stack.emplace_back(CraneCont_Add{crane_raw(b1)});
+          _stack.emplace_back(CraneEnter_sum_e_entry{crane_raw(a1)});
         } else {
           const auto &[m1] =
               std::get<typename LoopifyMutualResultTypes::e::Meta>(_sv1.v());
@@ -420,7 +420,7 @@ uint64_t LoopifyMutualResultTypes::sum_md(
       }
     } else if (std::holds_alternative<CraneEnter_sum_e_entry>(_frame)) {
       auto _f = std::move(std::get<CraneEnter_sum_e_entry>(_frame));
-      const LoopifyMutualResultTypes::e &x = std::move(_f.x);
+      const LoopifyMutualResultTypes::e &x = *_f.x;
       if (std::holds_alternative<typename LoopifyMutualResultTypes::e::Leaf>(
               x.v())) {
         const auto &[n0] =
@@ -430,8 +430,8 @@ uint64_t LoopifyMutualResultTypes::sum_md(
                      typename LoopifyMutualResultTypes::e::Add>(x.v())) {
         const auto &[a0, b0] =
             std::get<typename LoopifyMutualResultTypes::e::Add>(x.v());
-        _stack.emplace_back(CraneCont_Add_2{b0});
-        _stack.emplace_back(CraneEnter_sum_e_entry{*a0});
+        _stack.emplace_back(CraneCont_Add_2{crane_raw(b0)});
+        _stack.emplace_back(CraneEnter_sum_e_entry{crane_raw(a0)});
       } else {
         const auto &[m1] =
             std::get<typename LoopifyMutualResultTypes::e::Meta>(x.v());
@@ -439,17 +439,17 @@ uint64_t LoopifyMutualResultTypes::sum_md(
       }
     } else if (std::holds_alternative<CraneCont_Add>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Add>(_frame));
-      std::shared_ptr<LoopifyMutualResultTypes::e> b1 = std::move(_f.b1);
+      const LoopifyMutualResultTypes::e &b1 = *_f.b1;
       _stack.emplace_back(CraneCont_Add_1{std::move(_result)});
-      _stack.emplace_back(CraneEnter_sum_e_entry{*b1});
+      _stack.emplace_back(CraneEnter_sum_e_entry{&b1});
     } else if (std::holds_alternative<CraneCont_Add_1>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Add_1>(_frame));
       _result = (_f._tmp4 + std::move(_result));
     } else if (std::holds_alternative<CraneCont_Add_2>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Add_2>(_frame));
-      std::shared_ptr<LoopifyMutualResultTypes::e> b0 = std::move(_f.b0);
+      const LoopifyMutualResultTypes::e &b0 = *_f.b0;
       _stack.emplace_back(CraneCont_Add_3{std::move(_result)});
-      _stack.emplace_back(CraneEnter_sum_e_entry{*b0});
+      _stack.emplace_back(CraneEnter_sum_e_entry{&b0});
     } else if (std::holds_alternative<CraneCont_Add_3>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Add_3>(_frame));
       _result = (_f._tmp2 + std::move(_result));

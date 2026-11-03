@@ -731,7 +731,7 @@ let adopts_entry ad (entry : Control_ir.Loop.t) =
   | Member (o, 0) -> Miniml.Occurrence.equal ad.ad_fixpoint o
   | Member _ | Function _ -> false
 
-let frame_machine ~loop ?entry ~varying ~parts ~tparams check (f : dfun) params body =
+let frame_machine ~loop ?entry ?entered_pointers ~varying ~parts ~tparams check (f : dfun) params body =
   let r = fst f.df_path.dp_outer in
   let found = find_adopted ~adoptable:(planned_adoptable r) body in
   (* What the machine adopts is its ControlIR's entry: a body found where
@@ -762,7 +762,7 @@ let frame_machine ~loop ?entry ~varying ~parts ~tparams check (f : dfun) params 
     match
       checked_frame_machine (Some loop) (fun entered ->
           transform_nontail ~fn_name:(fundef_display_name f.df_path) ~loop ~varying ?adopted ?entered_by:(entered_by_definition r)
-            ~entered ~binders:f.df_binders ~parts check tparams params f.df_ret body )
+            ~entered ~binders:f.df_binders ?entered_pointers ~parts check tparams params f.df_ret body )
     with
     | Some (made, _) -> Ok (made, survived)
     | None -> declined

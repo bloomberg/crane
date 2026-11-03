@@ -22,7 +22,7 @@ LoopifyMutualTmcTemporary::ea(const LoopifyMutualTmcTemporary::num
   /// CraneEnter_eb_entry: captures varying parameters for each recursive call.
   struct CraneEnter_eb_entry {
     LoopifyMutualTmcTemporary::num x;
-    LoopifyMutualTmcTemporary::num n0;
+    const LoopifyMutualTmcTemporary::num *n0;
   };
 
   /// CraneCont_Su: resumes after recursive call, then processes rest.
@@ -60,12 +60,12 @@ LoopifyMutualTmcTemporary::ea(const LoopifyMutualTmcTemporary::num
                 return *n1;
               }
             }(),
-            *n0});
+            crane_raw(n0)});
       }
     } else if (std::holds_alternative<CraneEnter_eb_entry>(_frame)) {
       auto _f = std::move(std::get<CraneEnter_eb_entry>(_frame));
       LoopifyMutualTmcTemporary::num x = std::move(_f.x);
-      const LoopifyMutualTmcTemporary::num &n0 = std::move(_f.n0);
+      const LoopifyMutualTmcTemporary::num &n0 = *_f.n0;
       if (std::holds_alternative<typename LoopifyMutualTmcTemporary::num::Z>(
               n0.v())) {
         _result = std::move(x);

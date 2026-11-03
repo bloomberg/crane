@@ -946,12 +946,12 @@ type enter_rewrite_ctx = {
       (** Told each call that enters the machine, and whether the machine
           resumes after it. *)
   er_points_into : Core_binder.t -> bool;
-      (** Whether the machine's own entry takes a value passed for the
+      (** Whether an entry of the machine takes a value passed for the
           parameter standing for this Core binder as a pointer to it *)
   er_entering : Miniml.Occurrence.t list option;
-      (** The calls that enter the machine at its own entry: its loop's
-          Continues ({!Control_ir.continues_of}); [None] where it has no
-          ControlIR *)
+      (** The calls that enter the machine at one of its entries: the
+          Continues of its loop and of the loops its entries enter
+          ({!Control_ir.continues}); [None] where it has no ControlIR *)
   er_aliased : Id.Set.t;
       (** The locals in scope that are references, or that a reference
           names: one bound to a matched value's field, to what a pointer the
@@ -2368,7 +2368,7 @@ let fix_handler_bindings field_names cf_ps handler =
             [body] unchanged when the transformation is unsafe (branch
             dependencies on recursive calls) *)
 let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entered_by ?(entered = fun ~resumes:_ _ -> ())
-    ?(outer_env = []) ?(binders = []) ~parts check tparams params ret_ty body =
+    ?(outer_env = []) ?(binders = []) ?(entered_pointers = fun _ -> false) ~parts check tparams params ret_ty body =
   (* An adopted body becomes a second entry point of this machine rather than
      a machine of its own: two machines cannot unwind each other's stack, so
      loopifying them separately leaves the recursion in place.  The calls that
@@ -2456,12 +2456,35 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
      [_self] -- takes a pointer at every entry. *)
   let is_pointer_param (_, ty) = match ty with Tptr _ | Tconst (Tptr _) -> true | _ -> false in
   let entry_pointers = List.map2 ( || ) pointer_safe (List.map is_pointer_param params) in
+  (* Of the adopted entry's parameters, those its frames hold by pointer:
+     its parameters as the plan has them, of a type a pointer can stand for;
+     the variables it captures are copied into its frames. *)
+  let adopted_pointers =
+    match adopted with
+    | None -> []
+    | Some (ad, capture_params) ->
+      List.map
+        (fun (id, ty) ->
+          Option.has_some (borrowed_value_param_pointee ty)
+          && Option.cata entered_pointers false (List.assoc_opt id ad.ad_binders) )
+        ad.ad_params
+      @ List.map (fun _ -> false) capture_params
+  in
   let points_into b =
     List.exists2
       (fun (id, _) (varies, pointer) ->
         varies && pointer
         && match List.assoc_opt id binders with Some b' -> Core_binder.equal b b' | None -> false )
       params (List.combine varying entry_pointers)
+    ||
+    match adopted with
+    | Some (ad, _) ->
+      List.exists2
+        (fun (id, _) pointer ->
+          pointer && match List.assoc_opt id ad.ad_binders with Some b' -> Core_binder.equal b b' | None -> false )
+        ad.ad_params
+        (List.filteri (fun i _ -> i < List.length ad.ad_params) adopted_pointers)
+    | None -> false
   in
   (
   (* Rewrite body for Enter handler and collect call frame info *)
@@ -2512,7 +2535,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
                er_entered_by = entered_by;
                er_entered = entered;
                er_points_into = points_into;
-               er_entering = Option.bind loop (fun l -> Option.map (Control_ir.continues_of l) (Lower_control.loop l));
+               er_entering = Option.bind loop (fun l -> Option.map Control_ir.continues (Lower_control.loop l));
                er_aliased = aliased_params ~pointer_safe:pointer_safe_varying own_entry }
   in
   (* The body is a sequence like any other: a recursive call bound at its top
@@ -2534,9 +2557,9 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
           er_binders =
             List.map (fun (id, _) -> (id, List.assoc_opt id ad.ad_binders)) en.en_params @ ctx.er_binders;
           er_invariant_params = Id.Set.empty;
-          er_aliased = aliased_params en }
+          er_aliased = aliased_params ~pointer_safe:adopted_pointers en }
       in
-      [entry_emission en (rewrite_enter_stmts ctx1 ad.ad_body)]
+      [entry_emission ~pointer_safe:adopted_pointers en (rewrite_enter_stmts ctx1 ad.ad_body)]
   in
   (* Sort frames by name to ensure consistent ordering *)
   let frames =

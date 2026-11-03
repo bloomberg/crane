@@ -40,7 +40,9 @@ type unlowered =
     its ControlIR, whose body [body] has its tail calls exposed: [check]
     recognises the calls that enter it at [f], and
     the body Loopify adopts, where its ControlIR has the entry [entry], is
-    a second entry of it ({!Loopify_frame.find_adopted}); its frames save
+    a second entry of it ({!Loopify_frame.find_adopted}), whose frames hold
+    by pointer the parameters standing for the Core binders
+    [entered_pointers] accepts; its frames save
     the parameters [varying] of [f]'s.  With it comes
     the reason a call it leaves behind survived, where it adopted a body.
     [Error why] where Loopify would do anything else with [f]: adopt
@@ -56,6 +58,7 @@ type unlowered =
 val frame_machine :
   loop:Control_ir.Loop.t ->
   ?entry:Control_ir.Loop.t ->
+  ?entered_pointers:(Core_binder.t -> bool) ->
   varying:bool list ->
   parts:bool list ->
   tparams:(template_type * Id.t) list ->

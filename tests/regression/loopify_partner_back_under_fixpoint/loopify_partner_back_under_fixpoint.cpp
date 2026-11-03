@@ -14,18 +14,18 @@ uint64_t LoopifyPartnerBackUnderFixpoint::tree_size(
               /// call.
 
   struct CraneEnter {
-    LoopifyPartnerBackUnderFixpoint::tree t;
+    const LoopifyPartnerBackUnderFixpoint::tree *t;
   };
 
   /// CraneEnter_sizes: captures varying parameters for each recursive call.
   struct CraneEnter_sizes {
-    List<LoopifyPartnerBackUnderFixpoint::tree> l;
+    const List<LoopifyPartnerBackUnderFixpoint::tree> *l;
   };
 
   /// CraneCont_Cons: saves [a11], resumes after recursive call, then processes
   /// rest.
   struct CraneCont_Cons {
-    std::shared_ptr<List<LoopifyPartnerBackUnderFixpoint::tree>> a11;
+    const List<LoopifyPartnerBackUnderFixpoint::tree> *a11;
   };
 
   /// CraneCont_Cons_1: saves [_tmp2], resumes after recursive call, then
@@ -44,7 +44,7 @@ uint64_t LoopifyPartnerBackUnderFixpoint::tree_size(
                                   CraneCont_Cons_1, CraneCont_Forest0>;
   uint64_t _result{};
   crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{t});
+  _stack.emplace_back(CraneEnter{&t});
   /// Loopified tree_size: CraneEnter -> CraneCont_Cons -> CraneCont_Cons_1 ->
   /// CraneCont_Forest0.
   while (!_stack.empty()) {
@@ -52,7 +52,7 @@ uint64_t LoopifyPartnerBackUnderFixpoint::tree_size(
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      const LoopifyPartnerBackUnderFixpoint::tree &t = std::move(_f.t);
+      const LoopifyPartnerBackUnderFixpoint::tree &t = *_f.t;
       const auto &[n0, kids0] =
           std::get<typename LoopifyPartnerBackUnderFixpoint::tree::Node>(t.v());
       auto &&_sv0 = *kids0;
@@ -60,10 +60,10 @@ uint64_t LoopifyPartnerBackUnderFixpoint::tree_size(
           std::get<typename LoopifyPartnerBackUnderFixpoint::forest::Forest0>(
               _sv0.v());
       _stack.emplace_back(CraneCont_Forest0{n0});
-      _stack.emplace_back(CraneEnter_sizes{*ts0});
+      _stack.emplace_back(CraneEnter_sizes{crane_raw(ts0)});
     } else if (std::holds_alternative<CraneEnter_sizes>(_frame)) {
       auto _f = std::move(std::get<CraneEnter_sizes>(_frame));
-      const List<LoopifyPartnerBackUnderFixpoint::tree> &l = std::move(_f.l);
+      const List<LoopifyPartnerBackUnderFixpoint::tree> &l = *_f.l;
       if (std::holds_alternative<
               typename List<LoopifyPartnerBackUnderFixpoint::tree>::Nil>(
               l.v())) {
@@ -71,15 +71,14 @@ uint64_t LoopifyPartnerBackUnderFixpoint::tree_size(
       } else {
         const auto &[a01, a11] = std::get<
             typename List<LoopifyPartnerBackUnderFixpoint::tree>::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{a11});
-        _stack.emplace_back(CraneEnter{a01});
+        _stack.emplace_back(CraneCont_Cons{crane_raw(a11)});
+        _stack.emplace_back(CraneEnter{&a01});
       }
     } else if (std::holds_alternative<CraneCont_Cons>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-      std::shared_ptr<List<LoopifyPartnerBackUnderFixpoint::tree>> a11 =
-          std::move(_f.a11);
+      const List<LoopifyPartnerBackUnderFixpoint::tree> &a11 = *_f.a11;
       _stack.emplace_back(CraneCont_Cons_1{std::move(_result)});
-      _stack.emplace_back(CraneEnter_sizes{*a11});
+      _stack.emplace_back(CraneEnter_sizes{&a11});
     } else if (std::holds_alternative<CraneCont_Cons_1>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Cons_1>(_frame));
       _result = (_f._tmp2 + std::move(_result));
