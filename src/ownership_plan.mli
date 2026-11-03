@@ -144,6 +144,15 @@ end
     it planned does not contain. *)
 val use : ?whole:bool -> t -> Miniml.Occurrence.t -> Use.t option
 
+(** [evaluated_first p at]: the positions among its arguments of those the
+    local fixpoint applied where it is written, at the occurrence [at],
+    reads before the call, in order.  The plan binds such a fixpoint's
+    parameters to its arguments in order, so that an argument may be the
+    last use of a variable an earlier one reads; a call leaves its
+    arguments unordered, and the earlier one is evaluated first: each
+    reading a variable, or a part of one, that a later argument moves. *)
+val evaluated_first : t -> Miniml.Occurrence.t -> int list
+
 (** Whether a match taking the record [t] apart takes its value, as [p]
     plans it, rather than reading it in place: [t] is not a variable read by
     copy or in place, a global naming which reads it, or a field of one.

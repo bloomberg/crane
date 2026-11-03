@@ -48,6 +48,9 @@ LoopifyReuseCursorTurns::lst
 LoopifyReuseCursorTurns::keep_even(LoopifyReuseCursorTurns::lst l) {
   crane::rc<LoopifyReuseCursorTurns::lst> _head{};
   crane::rc<LoopifyReuseCursorTurns::lst> *_write = &_head;
+  crane::rc<LoopifyReuseCursorTurns::lst> _own =
+      crane::rc<LoopifyReuseCursorTurns::lst>();
+  bool _uniq = true;
   const LoopifyReuseCursorTurns::lst *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyReuseCursorTurns::lst::Nil>(
@@ -58,16 +61,64 @@ LoopifyReuseCursorTurns::keep_even(LoopifyReuseCursorTurns::lst l) {
       const auto &[a0, a1] =
           std::get<typename LoopifyReuseCursorTurns::lst::Cons>(_loop_l->v());
       if (Nat::even(a0)) {
-        auto _cell = crane::make_rc<LoopifyReuseCursorTurns::lst>(
+        auto _rs = crane::reuse_step(_own, _uniq, a1);
+        auto _cell = crane::make_rc_reusing_unchecked(
+            std::move(_rs.token),
             typename LoopifyReuseCursorTurns::lst::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename LoopifyReuseCursorTurns::lst::Cons>(
                       (*_write)->v_mut())
                       .a1;
-        _loop_l = crane_raw(a1);
+        _own = std::move(_rs.next);
+        _loop_l = _own.get();
         continue;
       } else {
-        _loop_l = crane_raw(a1);
+        auto _rs = crane::reuse_step(_own, _uniq, a1);
+        _own = std::move(_rs.next);
+        _loop_l = _own.get();
+        continue;
+      }
+    }
+  }
+  return std::move(*_head);
+}
+
+LoopifyReuseCursorTurns::lst
+LoopifyReuseCursorTurns::skip_sums(uint64_t seen,
+                                   LoopifyReuseCursorTurns::lst l) {
+  crane::rc<LoopifyReuseCursorTurns::lst> _head{};
+  crane::rc<LoopifyReuseCursorTurns::lst> *_write = &_head;
+  crane::rc<LoopifyReuseCursorTurns::lst> _own =
+      crane::rc<LoopifyReuseCursorTurns::lst>();
+  bool _uniq = true;
+  const LoopifyReuseCursorTurns::lst *_loop_l = &l;
+  uint64_t _loop_seen = seen;
+  while (true) {
+    if (std::holds_alternative<typename LoopifyReuseCursorTurns::lst::Nil>(
+            _loop_l->v())) {
+      *_write = crane::make_rc<LoopifyReuseCursorTurns::lst>(lst::nil());
+      break;
+    } else {
+      const auto &[a0, a1] =
+          std::get<typename LoopifyReuseCursorTurns::lst::Cons>(_loop_l->v());
+      if (Nat::even(a0)) {
+        auto _rs = crane::reuse_step(_own, _uniq, a1);
+        auto _cell = crane::make_rc_reusing_unchecked(
+            std::move(_rs.token), typename LoopifyReuseCursorTurns::lst::Cons(
+                                      (a0 + _loop_seen), nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename LoopifyReuseCursorTurns::lst::Cons>(
+                      (*_write)->v_mut())
+                      .a1;
+        _own = std::move(_rs.next);
+        _loop_l = _own.get();
+        continue;
+      } else {
+        auto _read = (_loop_seen + sum(*a1));
+        auto _rs = crane::reuse_step(_own, _uniq, a1);
+        _loop_seen = std::move(_read);
+        _own = std::move(_rs.next);
+        _loop_l = _own.get();
         continue;
       }
     }

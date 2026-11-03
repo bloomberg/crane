@@ -167,37 +167,40 @@ let fixpoint_parameters stmts =
   List.iter (fun s -> ignore (fs s)) stmts;
   !found
 
-(* How the frames of the machine of the function [f], its loop [l], hold
-   its parameters [params] and those of the loops its entries enter
-   ({!Frame_storage}), as each is represented: a parameter of the loop by
-   the C++ parameter standing for it, one of an entered loop by the
-   parameter of the local fixpoint's lambda in [body] binding it.  The
-   parameters' flags, in order, and those of the entered loops' by the Core
-   binder.  [None] for the loop of no function, or where some parameter
-   stands for none of the loop's. *)
+(* How the frames of a machine of the function [r], its loop [l], hold its
+   parameters and those of the loops its entries enter ({!Frame_storage}),
+   as each is represented: a parameter of the loop by the C++ parameter of
+   [params] standing for it, at its position in [positions], held by
+   pointer where [held k ty] of the one at [k] of type [ty]; one of an
+   entered loop by the parameter of the local fixpoint's lambda in [body]
+   binding it.  The parameters' flags, in order, and those of the entered
+   loops' by the Core binder. *)
+let storage_at r (l : Control_ir.Term.loop) positions params ~held body =
+  let lambda_params = fixpoint_parameters body in
+  let holdable : Frame_storage.parameter -> bool = function
+    | Own i -> List.exists2 (fun p (k, (_, ty)) -> p = Some i && held k ty) positions (List.mapi (fun k p -> (k, p)) params)
+    | Entered level ->
+      List.exists
+        (fun ((b : Core_binder.t), ty) -> GlobRef.UserOrd.equal b.origin r && b.level = level && holdable_type ty)
+        lambda_params
+  in
+  let storage = Frame_storage.plan ~pointer_fields:Loopify_analysis.constructor_pointer_fields ~in_place ~holdable l in
+  let own_pointers = List.map (function Some i -> List.nth storage.own i | None -> false) positions in
+  let entered (b : Core_binder.t) =
+    GlobRef.UserOrd.equal b.origin r && List.assoc_opt b.level storage.entered = Some true
+  in
+  (own_pointers, entered)
+
+(* The same, of the function [f]'s machine, its C++ parameters [params]:
+   [None] for the loop of no function, or where some parameter stands for
+   none of the loop's. *)
 let machine_storage (f : dfun) params body (l : Control_ir.Term.loop) =
   match l.loop with
   | Member _ -> None
   | Function r ->
     let positions = List.map (fun p -> position r l (binder_of f.df_binders p)) params in
     if not (List.for_all Option.has_some positions) then None
-    else
-      let lambda_params = fixpoint_parameters body in
-      let holdable : Frame_storage.parameter -> bool = function
-        | Own i -> List.exists2 (fun p (_, ty) -> p = Some i && holdable_type ty) positions params
-        | Entered level ->
-          List.exists
-            (fun ((b : Core_binder.t), ty) -> GlobRef.UserOrd.equal b.origin r && b.level = level && holdable_type ty)
-            lambda_params
-      in
-      let storage =
-        Frame_storage.plan ~pointer_fields:Loopify_analysis.constructor_pointer_fields ~in_place ~holdable l
-      in
-      let own_pointers = List.map (function Some i -> List.nth storage.own i | None -> false) positions in
-      let entered (b : Core_binder.t) =
-        GlobRef.UserOrd.equal b.origin r && List.assoc_opt b.level storage.entered = Some true
-      in
-      Some (own_pointers, entered)
+    else Some (storage_at r l positions params ~held:(fun _ ty -> holdable_type ty) body)
 
 (* The function [f], generated under the template parameters [tparams],
    lowered to the loop [l] varying the parameters [varying]; [Error why]
@@ -432,10 +435,22 @@ let lower_method ~tparams ~self_ty (m : method_field) =
       | (Modulo_cons | Frames | Tail), _ -> None
     in
     let park = List.map (fun (r : Control_ir.rebuilt) -> r.turn) rebuilt in
+    (* A machine holds a parameter by pointer where it lies in what the
+       caller passed ({!Frame_storage}), the receiver -- [_self], a pointer
+       to the caller's object -- among what it passed. *)
+    let pointed parts =
+      match (lowering, positions) with
+      | Frames, Some positions ->
+        let params = (Id.of_string "_self", self_ty) :: m.mf_params in
+        let own, _ = storage_at r l positions params ~held:(fun k ty -> k = 0 || holdable_type ty) m.mf_body in
+        List.mapi (fun k (part, pointer) -> part || (k > 0 && pointer)) (List.combine parts own)
+      | (Frames | Modulo_cons | Tail), _ -> parts
+    in
     let transform =
       match (lowering, planned) with
       | _ when Option.has_some value_receiver -> None
       | _, Some {varying; parts; cursor; _} ->
+        let parts = pointed parts in
         Some (fun () -> Loopify.transform_method_own ?cursor ~varying ~parts ~park ~tparams ~self_ty m)
       | _, None -> None
     in

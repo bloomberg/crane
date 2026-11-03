@@ -52,21 +52,8 @@ let node_count (d : cpp_decl) =
   ignore (map_decl fe fs ft d);
   !n
 
-(** A declaration on its way to the seam, and whether a pass lowering
-    control rewrote it: the plan of its moves was made over Core, before the
-    sequenced bindings that pass makes, and does not see the last uses they
-    create.  Control lowered from ControlIR as it is generated needs no such
-    pass: its loops make their own moves, at construction. *)
-type unsettled = {decl : cpp_decl; control_lowered : bool}
-
-(** A pass over the declaration alone. *)
-let on_decl name f = Pipeline_trace.pass name (fun u -> {u with decl = f u.decl})
-
-(** A pass lowering control, noting whether it rewrote anything. *)
-let lowering name f =
-  Pipeline_trace.pass name (fun u ->
-      let d = f u.decl in
-      {decl = d; control_lowered = u.control_lowered || not (d == u.decl || compare d u.decl = 0)} )
+(** A pass over a declaration on its way to the seam. *)
+let on_decl = Pipeline_trace.pass
 
 (** The passes below that discharge an {!obligation}, named once so that
     the list of obligations refers to the pass rather than to its name. *)
@@ -81,7 +68,7 @@ let access_moves = Pipeline_trace.pass "access_moves" Cpp_erasure.lower_access_m
 let constexpr = Pipeline_trace.pass "constexpr" Cpp_erasure.decide_constexpr
 
 (** Every pass before the {!Cpp_erasure} seam, in the order they run. *)
-let minicpp_passes : unsettled Pipeline_trace.pass list =
+let minicpp_passes : cpp_decl Pipeline_trace.pass list =
   [ (* Control is lowered as it is generated, from its ControlIR
        ({!Control_to_legacy_minicpp}): nothing is left here to lower.  Under
        [CRANE_CHECK_IR] what is emitted must be what control lowering
@@ -90,9 +77,11 @@ let minicpp_passes : unsettled Pipeline_trace.pass list =
     on_decl "control" (fun d ->
         if Probe.checking () then Control_to_legacy_minicpp.check_lowered d;
         d );
-    (* Closures made and used in one place become the code they stand for,
-       before ownership is decided, so what they captured is seen as local. *)
-    lowering "local_closures" Cpp_local_closures.transform_decl;
+    (* Closures made and used in one place become the code they stand for.
+       The moves they hold were decided over Core, the arguments a local
+       fixpoint applied in place binds its parameters to in order
+       ({!Ownership_plan.evaluated_first}). *)
+    on_decl "local_closures" Cpp_local_closures.transform_decl;
     (* A function's constants are declared once at its top, now that nothing
        moves code between functions -- and before the passes that rewrite what
        an initialiser holds: [depth] splits a deep one into bindings, which in
@@ -110,15 +99,9 @@ let minicpp_passes : unsettled Pipeline_trace.pass list =
     (* An initialiser nested deeper than a compiler will parse becomes a run of
        bindings; everything shallower is left as it stands. *)
     on_decl "depth" Cpp_depth.flatten;
-    (* Where control was lowered after the plan, with the temporaries in
-       their final places, a local's last read is visible, and becomes a
-       move.  Elsewhere the plan moved every read it could. *)
-    Pipeline_trace.pass "last_use" (fun u ->
-        if u.control_lowered && Table.move_last_use () then {u with decl = Last_use.transform_decl u.decl}
-        else u );
     (* A returned value is moved by the language; writing the move there
        only suppresses copy elision. *)
-    on_decl "return_moves" Last_use.drop_return_moves;
+    on_decl "return_moves" Return_moves.drop_return_moves;
     (* Which callable parameters keep a constraint is decided here, with the
        body that decides it in hand; the printer writes what it is given. *)
     constraints ]
@@ -228,7 +211,7 @@ let owes (decl : Cpp_erasure.settled) o =
   | Unresolved_type -> mentions (function Tunresolved -> true | _ -> false) d
   | Opaque_type -> mentions (function Topaque -> true | _ -> false) d
   | Unspellable_binder -> Cpp_erasure.writes_unspellable_binder decl
-  | Unsettled_callable -> compare (constraints.run {decl = d; control_lowered = false}).decl d <> 0
+  | Unsettled_callable -> compare (constraints.run d) d <> 0
   | Unresolved_cast -> rewrites casts
   | Free_type_variable -> rewrites free_tvars
   | Missing_template_argument -> rewrites template_args
@@ -281,9 +264,7 @@ let finish decl =
         d' )
       d passes
   in
-  let {decl; _} =
-    run (fun u -> u.decl) minicpp_passes {decl; control_lowered = false}
-  in
+  let decl = run Fun.id minicpp_passes decl in
   let settled = Cpp_erasure.materialise decl in
   note seam decl (settled :> cpp_decl);
   let decl =

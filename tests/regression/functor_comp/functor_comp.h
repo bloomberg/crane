@@ -265,8 +265,9 @@ struct FunctorComp {
     }
 
     static List<uint64_t> to_list(typename C::t c) {
+      uint64_t _arg0 = C::size(c);
       {
-        uint64_t _lc1_fuel = C::size(c);
+        uint64_t _lc1_fuel = _arg0;
         const List<uint64_t> &_lc1_acc = List<uint64_t>::nil();
         typename C::t _lc1_c0 = std::move(c);
         typename C::t _lc1_loop_c0 = std::move(_lc1_c0);

@@ -31,6 +31,14 @@ type arm =
 
 type resume = {calls : Occurrence.t list; kept : Core_binder.t list}
 
+(* A local fixpoint applied where it is written, [at] its occurrence, and
+   what each of its arguments reads: the variables, by level, with their
+   parts ([variables]), and every read, by level and occurrence ([read_at]).
+   [overlaps] says whether two levels share storage where it stands. *)
+type argument = {variables : Levels.t; read_at : (int * Occurrence.t) list}
+
+type entered = {at : Occurrence.t; arguments : argument list; overlaps : int -> int -> bool}
+
 type resumes = {origin : Names.GlobRef.t; depth : int; resume_at : Core_binder.t -> resume option}
 
 type t = {
@@ -45,6 +53,7 @@ type t = {
   captures : read list;  (* a lambda's capture of a variable, by the reads inside it *)
   captured_owned : (Occurrence.t * bool) list;
   copied_reads : Occurrence.t list;  (* reads of a variable closures copy *)
+  entered : entered list;
 }
 
 let empty =
@@ -58,7 +67,8 @@ let empty =
     owned = [];
     captures = [];
     captured_owned = [];
-    copied_reads = [] }
+    copied_reads = [];
+    entered = [] }
 
 (* The reads in [t] of variables bound outside it, by level, [t] standing [d]
    binders deep. *)
@@ -322,6 +332,7 @@ let kept_across resumes d a occurrence =
 let liveness ~n_outer ~copied ~arms ~resumes t =
   let reads = ref [] in
   let captures = ref [] in
+  let entered = ref [] in
   (* [walk ~consumed ~pinned parents d live t] records [t]'s reads and is
      what is live before [t], given [live] after it: both sets of variables
      in scope at [t], [d] binders deep.  [consumed] is whether [t] stands
@@ -362,6 +373,19 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
         walk ~pinned parents d (leave parents' d live_body) action )
     | MLapp (MLglob {callee = r; _}, args) when Table.is_inline_custom r ->
       unsequenced ~evaluated:(evaluations r) ~pinned parents d live args
+    (* A local fixpoint applied where it is written binds its parameters to
+       its arguments in order: each is followed by the later ones alone, and
+       by what the fixpoint reads, which it reads as it runs, after them all.
+       What it copies, it copies before any of them is evaluated. *)
+    | MLapp ((MLfix (_, _, _, _, at) as f), args) ->
+      let reads_of = List.map (free ~outside:copied parents d) args in
+      ignore (walk ~consumed:false ~pinned parents d (List.fold_left Levels.union live reads_of) f);
+      entered :=
+        { at;
+          overlaps = overlap parents;
+          arguments = List.map2 (fun t variables -> {variables; read_at = closure_reads d t}) args reads_of }
+        :: !entered;
+      List.fold_right (fun t live -> walk ~pinned parents d live t) args (Levels.union live (free parents d f))
     (* A function is called through: [std::move(f)(x)] still calls [f]. *)
     | MLapp (f, args) ->
       unsequenced ~inspected:(fun k -> k = 0) ~pinned parents d live (f :: args)
@@ -422,7 +446,7 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
     |> List.fold_left Levels.union live
   in
   ignore (walk ~pinned:Levels.empty Parents.empty 0 Levels.empty t);
-  (!reads, !captures)
+  (!reads, !captures, !entered)
 
 type fate = Last_use | Read_again | Inspected | Unplanned
 
@@ -605,11 +629,11 @@ let ownership ~n_outer ~reads ~arms ~owned ~copied t =
   own owned 0 t;
   (!out, !captured, !copied_reads)
 
-let plan ~n_outer ~resumes root root_owned root_copied arms (reads, captures) =
+let plan ~n_outer ~resumes root root_owned root_copied arms (reads, captures, entered) =
   let owned, captured_owned, copied_reads =
     ownership ~n_outer ~reads ~arms ~owned:root_owned ~copied:root_copied root
   in
-  {root; n_outer; resumes; root_owned; root_copied; arms; reads; owned; captures; captured_owned; copied_reads}
+  {root; n_outer; resumes; root_owned; root_copied; arms; reads; owned; captures; captured_owned; copied_reads; entered}
 
 let region ?(owned = []) ?(copied = []) ?resumes ~n_outer t =
   let levels is = Levels.of_list (List.map (fun i -> -i) is) in
@@ -646,7 +670,7 @@ let reuse_arm p ~scrutinee ~branch ~constructor =
         Pp.(str "a branch rebuilding in its scrutinee's storage returns no construction to take it");
     plan ~n_outer:p.n_outer ~resumes:p.resumes p.root p.root_owned p.root_copied
       (Rebuild {scrutinee; branch; consumers} :: p.arms)
-      (p.reads, p.captures)
+      (p.reads, p.captures, p.entered)
   | None -> p
 
 module Allocation = struct
@@ -662,7 +686,7 @@ let fields_by_value p ~case ~by_value =
   if p == empty then p
   else
     plan ~n_outer:p.n_outer ~resumes:p.resumes p.root p.root_owned p.root_copied (Fields {case; by_value} :: p.arms)
-      (p.reads, p.captures)
+      (p.reads, p.captures, p.entered)
 
 (* Unlike the other arms, this one changes what a closure reads where it is
    made, so the reads are planned again. *)
@@ -693,6 +717,22 @@ let use ?(whole = false) p o : Use.t option =
   | Inspected -> Some Borrow
   | Last_use | Read_again -> Some Copy
   | Unplanned -> None
+
+(* The arguments the local fixpoint applied at [at] reads before the call:
+   each reading a variable, or a part of one, that a later one moves -- by
+   a read the plan moves, or a capture it takes by move.  The call alone
+   leaves its arguments unordered. *)
+let evaluated_first p at =
+  match List.find_opt (fun e -> Occurrence.equal e.at at) p.entered with
+  | None -> []
+  | Some e ->
+    let moved (_, o) = use p o = Some Move || fate_in p.captures o = Last_use in
+    let moves = List.map (fun a -> List.filter moved a.read_at) e.arguments in
+    List.filter_map
+      (fun (j, a) ->
+        let later = List.concat (List.filteri (fun k _ -> k > j) moves) in
+        if List.exists (fun (l, _) -> Levels.exists (fun m -> e.overlaps m l) a.variables) later then Some j else None )
+      (List.mapi (fun j a -> (j, a)) e.arguments)
 
 let rec takes_record p t =
   match t with

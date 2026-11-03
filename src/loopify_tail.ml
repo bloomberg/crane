@@ -60,7 +60,7 @@ let rec strip_ref_and_const_type = function
     pessimizing-move warning since the move constructor receives [const T&&]
     and falls back to copy anyway; and a move of a type that copies for free
     -- a scalar -- transfers nothing.  An [auto] parameter may be anything,
-    and is moved as {!Last_use} moves one. *)
+    and is moved as a type variable is ({!Ownership_plan.worth_moving}). *)
 let is_moveable_param_type = function
   | Tref _ | Tconst _ -> false
   | Tauto -> true
@@ -517,10 +517,13 @@ type top_rewrite_config = {
   trc_inner : loop_rewrite_config;
   (** Inner config for rewriting match-branch bodies. *)
 
-  trc_tail_suffix : cpp_stmt list;
-  (** Statements appended after tail-call shadow updates at the top level.
-      Empty [[]] for plain tail recursion (control falls through to the
-      [while (true)] test); [[Scontinue]] for TMC. *)
+  trc_jump :
+    derefs:(Id.t * cpp_expr) list -> updates:(cpp_expr list -> cpp_stmt list) -> cpp_expr -> cpp_expr list -> cpp_stmt list;
+  (** The statements a recursive call [e] in tail position passing [args],
+      every parameter's, becomes, under the references to a dereference
+      [derefs] declared before it, where [updates args] are the shadow
+      updates passing [args] ({!make_shadow_updates}).  Plain tail recursion
+      falls through to the [while (true)] test after them; TMC continues. *)
 
   trc_on_other : derefs:(Id.t * cpp_expr) list -> cpp_expr -> cpp_stmt;
   (** Emit code for a non-tail, non-visit return at the top level, under
@@ -550,10 +553,11 @@ let rec generic_rewrite_stmt ?(aliases = []) ?(derefs = []) ?(owned = []) trc = 
     ( match trc.trc_inner.rc_check e with
     | Some cs ->
       trc.trc_inner.rc_jumped e;
-      Sblock
-        (make_shadow_updates ~aliases ~derefs ~owned trc.trc_inner.rc_shadow_params
-           (filter_by_mask trc.trc_inner.rc_varying cs.cs_args)
-         @ trc.trc_tail_suffix)
+      let updates args =
+        make_shadow_updates ~aliases ~derefs ~owned trc.trc_inner.rc_shadow_params
+          (filter_by_mask trc.trc_inner.rc_varying args)
+      in
+      Sblock (trc.trc_jump ~derefs ~updates e cs.cs_args)
     | None -> trc.trc_on_other ~derefs e )
   | Sif (cond, then_br, else_br) ->
     let rw = generic_rewrite_stmts ~aliases ~derefs ~owned trc in
@@ -667,7 +671,7 @@ let rewrite_visit_stmts ~jumped check varying shadow_params =
   in
   generic_rewrite_stmts
     { trc_inner = inner_rc;
-      trc_tail_suffix = [];
+      trc_jump = (fun ~derefs:_ ~updates _ args -> updates args);
       trc_on_other = (fun ~derefs:_ e -> wrap_as_block (assign_result_and_stop e));
       trc_rewrite_branch = Fun.id;
       trc_detect_void_tail = true }

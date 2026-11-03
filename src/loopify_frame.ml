@@ -151,25 +151,6 @@ let rec collect_type_env (stmts : cpp_stmt list) : (Id.t * cpp_type) list =
       | _ -> [] )
     stmts
 
-(** Collect expression bindings: maps id to its RHS for [Sasgn(id, _, rhs)] entries.
-    Recurses into [Smatch] branches, [Sif] branches, and [Sblock] to find all
-    bindings.  Used to look through intermediate bindings in pointer-safe analysis
-    (e.g., to detect [x = *(sp)] and treat a recursive call passing [CPPvar x] as
-    equivalent to passing [CPPderef sp]). *)
-let rec collect_binding_env (stmts : cpp_stmt list) : (Id.t * cpp_expr) list =
-  List.concat_map
-    (fun s ->
-      match s with
-      | Sasgn (id, _, expr) -> [(id, expr)]
-      | Smatch (scrut, branches, default) ->
-        List.concat_map (fun br -> collect_binding_env br.smb_body) branches
-        @ (match default with Some ss -> collect_binding_env ss | None -> [])
-      | Sif (_, then_br, else_br) ->
-        collect_binding_env then_br @ collect_binding_env else_br
-      | Sblock ss -> collect_binding_env ss
-      | _ -> [])
-    stmts
-
 (** Look up a variable's type in the environment. *)
 let lookup_var_type env id = List.assoc_opt id env
 
@@ -1677,20 +1658,22 @@ let make_param_copies varying_params =
     [&x] (for variables) or [crane_raw(x)] (for dereferences) instead of
     deep-copying.  Handles both [CraneEnter] and [_CallN] pushes.
 
-    When [binding_env] is supplied, a [CPPvar x] at a pointer-safe position is
-    looked up: if [x = *(sp)] in the environment, emit [crane_raw(sp)] rather
-    than [&x] (which would be a dangling pointer to a local).
+    A [CPPvar x] at a pointer-safe position is looked up among the bindings
+    in scope where the push stands: if [x = *(sp)], emit [crane_raw(sp)]
+    rather than [&x] (which would be a dangling pointer to a local).  Only
+    those in scope: another handler, or another branch, may bind the same
+    name to something this one cannot reach.
 
     @param frame_pointer_safe [(frame_name, bool list)] mapping
     @param frame_sptr  [(frame_name, bool list)] — positions where the
            original saved type is [Tshared_ptr _]. At these positions, emit
            [crane_raw(...)] instead of [&] to extract the raw pointer. *)
-let adjust_frame_push_args ?(binding_env = []) ?(frame_sptr = []) frame_pointer_safe stmts =
+let adjust_frame_push_args ?(frame_sptr = []) frame_pointer_safe stmts =
   if frame_pointer_safe = [] then stmts
   else
     let lookup name_s = List.assoc_opt name_s frame_pointer_safe in
     let lookup_uptr name_s = List.assoc_opt name_s frame_sptr in
-    let adjust_arg safe is_uptr arg =
+    let adjust_arg binding_env safe is_uptr arg =
       if not safe then arg
       else
       let arg = match arg with CPPmove a -> a | a -> a in
@@ -1731,12 +1714,16 @@ let adjust_frame_push_args ?(binding_env = []) ?(frame_sptr = []) frame_pointer_
              CPPunop (Uaddr, arg)
            | Some (CPPderef sp) ->
              raw_of sp
+           (* A copy the handler took out of its frame dies with the handler,
+              and the frame pushed would point at it. *)
+           | Some (CPPmove (CPPaccess (Adot, CPPvar f, _)) | CPPaccess (Adot, CPPvar f, _)) when Id.equal f id_f ->
+             raise (Not_linearisable "a frame would point at a copy its handler took out of the frame it popped")
            | _ -> CPPunop (Uaddr, arg))
         | _ -> arg
     in
     (* [crane_raw(x)] of a local read through a pointer the frame saved --
        [const T &x = *_f.field] -- is that pointer. *)
-    let saved_pointer arg =
+    let saved_pointer binding_env arg =
       match arg with
       | CPPfun_call (_, CPPrt Crane_rt.Raw, {rev = [CPPvar x]}) -> (
         match List.assoc_opt x binding_env with
@@ -1744,23 +1731,27 @@ let adjust_frame_push_args ?(binding_env = []) ?(frame_sptr = []) frame_pointer_
         | _ -> arg )
       | _ -> arg
     in
-    let rec on_stmt = function
+    let rec on_stmts env = function
+      | [] -> []
+      | s :: rest ->
+        let s' = on_stmt env s in
+        let env = match s with Sasgn (id, _, e) -> (id, e) :: env | _ -> env in
+        s' :: on_stmts env rest
+    and on_stmt env = function
       | Sexpr (CPPfun_call (_, callee, {rev = [CPPstruct_id (name, targs, args)]})) -> (
-        let args = List.map saved_pointer args in
+        let args = List.map (saved_pointer env) args in
+        let push args = Sexpr (CPPfun_call (call_opaque, callee, of_reversed [CPPstruct_id (name, targs, args)])) in
         match lookup (Id.to_string name) with
         | Some flags when List.length args = List.length flags ->
           let uptr_flags = match lookup_uptr (Id.to_string name) with
             | Some f -> f
             | None -> List.map (fun _ -> false) flags
           in
-          let args' = List.map2 (fun (safe, is_uptr) arg -> adjust_arg safe is_uptr arg)
-            (List.combine flags uptr_flags) args in
-          Sexpr (CPPfun_call (call_opaque, callee, of_reversed ([CPPstruct_id (name, targs, args')])))
-        | _ -> map_stmt Fun.id on_stmt Fun.id
-                 (Sexpr (CPPfun_call (call_opaque, callee, of_reversed ([CPPstruct_id (name, targs, args)])))))
-      | s -> map_stmt Fun.id on_stmt Fun.id s
+          push (List.map2 (fun (safe, is_uptr) arg -> adjust_arg env safe is_uptr arg) (List.combine flags uptr_flags) args)
+        | _ -> push args )
+      | s -> map_stmt ~fl:(on_stmts env) Fun.id (on_stmt env) Fun.id s
     in
-    List.map on_stmt stmts
+    on_stmts [] stmts
 
 (** Rewrite [Smatch] nodes in [stmts] whose scrutinee is a value-type accessor
     [param.v()] for any [param] in [owned_names], marking the scrutinee owned
@@ -2440,7 +2431,6 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
     | None -> body
     | Some (ad, _) -> ad.ad_install body
   in
-  let binding_env = collect_binding_env body in
   let pointer_safe = pointer_safe_flags ~parts params in
   (* Loopifying a function on its own gives a machine with one entry: the
      function itself, entered through [CraneEnter]. *)
@@ -2457,18 +2447,47 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
   let is_pointer_param (_, ty) = match ty with Tptr _ | Tconst (Tptr _) -> true | _ -> false in
   let entry_pointers = List.map2 ( || ) pointer_safe (List.map is_pointer_param params) in
   (* Of the adopted entry's parameters, those its frames hold by pointer:
-     its parameters as the plan has them, of a type a pointer can stand for;
-     the variables it captures are copied into its frames. *)
+     its parameters as the plan has them, of a type a pointer can stand for.
+     The variables it captures are copied into its frames, but one the scope
+     binds by reference to a dereference, [const T &a1_value = *a1], and the
+     body passes to a parameter of the machine held by pointer: the plan
+     holds that parameter so only where what it is passed lies in a cell
+     that outlives the machine, and its frames keep the pointer to that
+     cell, so that a frame pushed from them may point at it. *)
   let adopted_pointers =
     match adopted with
     | None -> []
     | Some (ad, capture_params) ->
+      let dereferences = ref [] in
+      let rec scan s =
+        ( match s with
+        | Sasgn (id, Declare (ty, _), CPPderef _) when is_reference_type ty -> dereferences := id :: !dereferences
+        | _ -> () );
+        map_stmt Fun.id (fun s -> ignore (scan s); s) Fun.id s
+      in
+      List.iter (fun s -> ignore (scan s)) body;
+      let passed_to_pointer id =
+        body_exists
+          (fun e ->
+            match check e with
+            | Some cs when List.compare_lengths cs.cs_args entry_pointers = 0 ->
+              List.exists2
+                (fun a pointer -> pointer && match a with CPPvar x | CPPmove (CPPvar x) -> Id.equal x id | _ -> false)
+                cs.cs_args entry_pointers
+            | Some _ | None -> false )
+          ad.ad_body
+      in
       List.map
         (fun (id, ty) ->
           Option.has_some (borrowed_value_param_pointee ty)
           && Option.cata entered_pointers false (List.assoc_opt id ad.ad_binders) )
         ad.ad_params
-      @ List.map (fun _ -> false) capture_params
+      @ List.map
+          (fun (id, ty) ->
+            List.exists (Id.equal id) !dereferences
+            && Option.has_some (borrowed_value_param_pointee ty)
+            && passed_to_pointer id )
+          capture_params
   in
   let points_into b =
     List.exists2
@@ -2765,8 +2784,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
       key = Id.to_string id_result || List.mem key field_keys
     in
     let handler =
-      make_param_copies ee.ee_params
-      @ adjust_frame_push_args ~binding_env ~frame_sptr all_frame_ps body
+      adjust_frame_push_args ~frame_sptr all_frame_ps (make_param_copies ee.ee_params @ body)
       |> optimize_frame_push_args frame_field_types
       |> optimize_last_use_moves
            ~self_ref_candidate:is_cand
@@ -2797,8 +2815,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
            fields are pointer-safe, and that push needs adjusting too. *)
         let handler =
           if all_frame_ps <> [] then
-            let cf_binding_env = collect_binding_env handler in
-            adjust_frame_push_args ~binding_env:cf_binding_env ~frame_sptr all_frame_ps handler
+            adjust_frame_push_args ~frame_sptr all_frame_ps handler
           else handler
         in
         let cf_types = compute_frame_field_types cf (frame_ps_for cf) in

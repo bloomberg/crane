@@ -46,8 +46,16 @@ let on_list ?(result = lst) scrutinee body =
             pattern = Pcons (cons, [Prel 2; Prel 1]);
             body } ] }
 
+let cells_read_first (s : Reuse_cursor.step) =
+  match s.action with Recycle {cells_read_first} -> cells_read_first | Release -> []
+
 let steps_of = function
-  | Some (c : Reuse_cursor.t) -> List.map (fun (s : Reuse_cursor.step) -> (s.turn, s.cells_read_first, s.arguments_read_first)) c.steps
+  | Some (c : Reuse_cursor.t) -> List.map (fun (s : Reuse_cursor.step) -> (s.turn, cells_read_first s, s.arguments_read_first)) c.steps
+  | None -> []
+
+let releases = function
+  | Some (c : Reuse_cursor.t) ->
+    List.filter_map (fun (s : Reuse_cursor.step) -> match s.action with Release -> Some s.turn | Recycle _ -> None) c.steps
   | None -> []
 
 let () =
@@ -97,7 +105,8 @@ let () =
     check "a cursor standing for no parameter is none" (Reuse_cursor.positioned c [Some 0; None] = None)
   | None -> check "scale has a cursor" false );
 
-  (* filter: a turn walking on builds nothing, leaving the handle behind. *)
+  (* filter: a turn walking on building nothing releases the cell it leaves. *)
+  let kept = Occurrence.fresh () and skipped = Occurrence.fresh () in
   let filter =
     on_list (fresh_rel 1)
       (Term.Match
@@ -107,10 +116,36 @@ let () =
              [ { binders = [];
                  result_type = lst;
                  pattern = Pwild;
-                 body = Continue_into {cells = [cell [fresh_rel 2]]; next = continue_ (Occurrence.fresh ()) [fresh_rel 1]} };
-               {binders = []; result_type = lst; pattern = Pwild; body = Continue (continue_ (Occurrence.fresh ()) [fresh_rel 1])} ] })
+                 body = Continue_into {cells = [cell [fresh_rel 2]]; next = continue_ kept [fresh_rel 1]} };
+               {binders = []; result_type = lst; pattern = Pwild; body = Continue (continue_ skipped [fresh_rel 1])} ] })
   in
-  check "a turn walking on building nothing declines the cursor" (plan filter = None);
+  check "filter steps at both turns" (steps_of (plan filter) = [(kept, [], []); (skipped, [], [])]);
+  check "filter's turn building nothing releases" (releases (plan filter) = [skipped]);
+
+  (* count_skip acc l: the turn building nothing passes an accumulator
+     reading the element, which is read before the release. *)
+  let kept = Occurrence.fresh () and skipped = Occurrence.fresh () in
+  let count_skip =
+    on_list (fresh_rel 1)
+      (Term.Match
+         { scrutinee_type = nat;
+           scrutinee = app "even" [fresh_rel 2];
+           branches =
+             [ { binders = [];
+                 result_type = lst;
+                 pattern = Pwild;
+                 body = Continue_into {cells = [cell [fresh_rel 4]]; next = continue_ kept [fresh_rel 4; fresh_rel 1]} };
+               { binders = [];
+                 result_type = lst;
+                 pattern = Pwild;
+                 body = Continue (continue_ skipped [app "add" [fresh_rel 4; fresh_rel 2]; fresh_rel 1]) } ] })
+  in
+  check "a released cell's element is read first"
+    (steps_of (plan ~parameters:[(id "acc", nat); (id "l", lst)] count_skip) = [(kept, [], []); (skipped, [], [0])]);
+
+  (* drop_all: every turn walking on builds nothing -- nothing to recycle. *)
+  let drop_all = on_list (fresh_rel 1) (Continue (continue_ (Occurrence.fresh ()) [fresh_rel 1])) in
+  check "a loop recycling nothing has no cursor" (plan drop_all = None);
 
   (* swap: two cells a turn walks on to a field of the second cell. *)
   let swap =

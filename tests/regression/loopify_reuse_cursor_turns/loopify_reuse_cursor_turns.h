@@ -127,6 +127,7 @@ struct LoopifyReuseCursorTurns {
 
   static uint64_t sum(const lst &l);
   static lst keep_even(lst l);
+  static lst skip_sums(uint64_t seen, lst l);
   static lst swap(lst l);
   static lst stutter(lst l);
   static lst scale(uint64_t acc, lst l);

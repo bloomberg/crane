@@ -1635,10 +1635,15 @@ let rec local_var_subst_expr ?(keep_cast = false) ?(extra_args = [])
   | CPPvar id when Id.equal id target -> repl
   | _ ->
     (* A lambda's body then reads the local [repl] reads in place of
-       [target], and so do the Core binders it records by name. *)
+       [target], and so do the Core binders it records by name.  What it
+       takes by move it takes from [repl] where that is a local, and
+       copies otherwise: a capture moves a local, not an expression. *)
     let e =
-      match (e, free_vars_expr repl) with
-      | CPPlambda l, [v] -> CPPlambda (rekey_lambda_binders target v l)
+      match e with
+      | CPPlambda l ->
+        let l = match free_vars_expr repl with [v] -> rekey_lambda_binders target v l | _ -> l in
+        let moved x = if not (Id.equal x target) then [x] else match repl with CPPvar v -> [v] | _ -> [] in
+        CPPlambda {l with cl_moved = List.concat_map moved l.cl_moved}
       | _ -> e
     in
     map_expr

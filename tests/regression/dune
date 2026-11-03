@@ -13836,3 +13836,25 @@
   (alias runtest)
   (deps loopify_reuse_cursor_turns.t.exe)
   (action (run ./loopify_reuse_cursor_turns.t.exe))))
+
+(subdir reuse_forced_views
+ (rule
+  (targets reuse_forced_views.t.exe)
+  (deps ReuseForcedViews.vo reuse_forced_views.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_forced_views.t.exe reuse_forced_views.cpp reuse_forced_views.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_forced_views.t.exe)
+  (action (run ./reuse_forced_views.t.exe))))
+
+(subdir reuse_moved_capture_renamed
+ (rule
+  (targets reuse_moved_capture_renamed.t.exe)
+  (deps ReuseMovedCaptureRenamed.vo reuse_moved_capture_renamed.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_moved_capture_renamed.t.exe reuse_moved_capture_renamed.cpp reuse_moved_capture_renamed.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_moved_capture_renamed.t.exe)
+  (action (run ./reuse_moved_capture_renamed.t.exe))))
