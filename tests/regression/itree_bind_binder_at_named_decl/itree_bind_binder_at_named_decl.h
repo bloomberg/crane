@@ -8,8 +8,6 @@
 #include <utility>
 #include <variant>
 #include <crane_itree.h>
-#include <variant>
-#include <utility>
 #include "obj.h"
 #include "crane_fn.h"
 

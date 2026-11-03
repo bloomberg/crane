@@ -697,12 +697,11 @@ let header fn () =
   in
   if is_bde () then
     let imps = get_custom_imports () in
-    let himports = header_imports_bsl in
     let h =
       List.fold_left
         (fun p s -> p ++ mk_include s ++ fnl ())
         (str "")
-        (himports @ imps)
+        (CList.uniquize (header_imports_bsl @ imps))
     in
     self_include
     ++ fnl ()
@@ -730,6 +729,9 @@ let spec_header ?(unit_includes = []) si () =
       header_imports_bsl @ extra_std
     else Table.required_standard_headers ()
   in
+  (* A standard header the code demands may be a mapping's import too: each
+     is included once, where it first comes. *)
+  let included = CList.uniquize (himports @ imps) in
   (* The producing binary, named by the artifact itself under [CRANE_STAMP]:
      see {!Table.stamp_build}.  Ahead of the include guard so it survives a
      second inclusion being skipped, and a comment so nothing downstream reads
@@ -753,7 +755,7 @@ let spec_header ?(unit_includes = []) si () =
     List.fold_left
       (fun p s -> p ++ mk_include s ++ fnl ())
       (str "")
-      (himports @ imps)
+      included
   in
 
   (* [Set Crane Arena] master switch.  Defined before the runtime headers
@@ -836,7 +838,7 @@ let spec_header ?(unit_includes = []) si () =
        && not
             (List.exists
                (fun s -> String.equal s Crane_rt.itree_header)
-               (himports @ imps) )
+               included )
     then
       h ++ mk_include_quoted Crane_rt.itree_header ++ fnl ()
     else
@@ -851,7 +853,7 @@ let spec_header ?(unit_includes = []) si () =
        && not
             (List.exists
                (fun s -> String.equal s Crane_rt.erasure_header)
-               (himports @ imps) )
+               included )
     then
       h ++ mk_include_quoted Crane_rt.erasure_header ++ fnl ()
     else
@@ -861,7 +863,7 @@ let spec_header ?(unit_includes = []) si () =
      live in the arena.h runtime header. *)
   let h =
     if Table.needs_arena ()
-       && not (List.exists (fun s -> String.equal s "arena.h") (himports @ imps))
+       && not (List.exists (fun s -> String.equal s "arena.h") included)
     then
       h ++ mk_include_quoted "arena.h" ++ fnl ()
     else
@@ -871,7 +873,7 @@ let spec_header ?(unit_includes = []) si () =
      reference-counted pointer selected by [Crane NonAtomicRc]) live in rc.h. *)
   let h =
     if Table.non_atomic_rc ()
-       && not (List.exists (fun s -> String.equal s "rc.h") (himports @ imps))
+       && not (List.exists (fun s -> String.equal s "rc.h") included)
     then
       h ++ mk_include_quoted "rc.h" ++ fnl ()
     else
@@ -881,7 +883,7 @@ let spec_header ?(unit_includes = []) si () =
      shared pointer selected by [CRANE_COUNT_RC]) lives in count_rc.h. *)
   let h =
     if Table.count_rc ()
-       && not (List.exists (fun s -> String.equal s "count_rc.h") (himports @ imps))
+       && not (List.exists (fun s -> String.equal s "count_rc.h") included)
     then
       h ++ mk_include_quoted "count_rc.h" ++ fnl ()
     else
@@ -891,7 +893,7 @@ let spec_header ?(unit_includes = []) si () =
      worklist) lives in small_vector.h. *)
   let h =
     if Table.needs_small_vector ()
-       && not (List.exists (fun s -> String.equal s "small_vector.h") (himports @ imps))
+       && not (List.exists (fun s -> String.equal s "small_vector.h") included)
     then
       h ++ mk_include_quoted "small_vector.h" ++ fnl ()
     else
@@ -905,7 +907,7 @@ let spec_header ?(unit_includes = []) si () =
      fence and so needs no include. *)
   let h =
     if Table.needs_small_vector () && not (Table.non_atomic_rc ())
-       && not (List.exists (fun s -> String.equal s "atomic") (himports @ imps))
+       && not (List.exists (fun s -> String.equal s "atomic") included)
     then
       h ++ mk_include "atomic" ++ fnl ()
     else

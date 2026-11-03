@@ -8,9 +8,6 @@
 #include <stdexcept>
 #include <utility>
 #include <variant>
-#include <optional>
-#include <utility>
-#include <memory>
 #include "obj.h"
 #include "crane_fn.h"
 

@@ -7,8 +7,6 @@
 #include <stdexcept>
 #include <utility>
 #include <variant>
-#include <variant>
-#include <utility>
 #include "obj.h"
 #include "crane_fn.h"
 
