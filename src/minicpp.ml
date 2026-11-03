@@ -2890,14 +2890,16 @@ let declared_ids stmts =
 
     Clears [sc_owned] (so the printer emits [const auto& [..] = std::get<C>(
     p->v())] rather than [auto& [..]] over [v_mut()]) and drops the [std::move]
-    translation put on the field bindings.  Reverting a destructive match to a
-    borrowing one is always sound -- it only copies where it could have moved --
-    so this pass is a safety net, never a rewrite that changes meaning. *)
+    translation put on the field bindings.  What a borrowing match binds is
+    itself a [const] view, so the matches on it are turned back too.
+    Reverting a destructive match to a borrowing one is always sound -- it only
+    copies where it could have moved -- so this pass is a safety net, never a
+    rewrite that changes meaning. *)
 let borrow_matches_on ids stmts =
-  let rec mentions e =
+  let rec mentions ids e =
     (match e with CPPvar id -> List.exists (Id.equal id) ids | _ -> false)
     || fold_expr_children
-         ~on_expr:(fun acc e -> acc || mentions e)
+         ~on_expr:(fun acc e -> acc || mentions ids e)
          ~on_stmts:(fun acc _ -> acc)
          false e
   in
@@ -2908,22 +2910,23 @@ let borrow_matches_on ids stmts =
     and stmt s = map_stmt expr stmt Fun.id s in
     List.map stmt
   in
-  let rec stmt = function
+  let rec stmt ids = function
     | Smatch (scrut, branches, default) ->
-      let through = mentions scrut.sc_expr in
+      let through = mentions ids scrut.sc_expr in
       Smatch
         ( { scrut with sc_owned = scrut.sc_owned && not through },
           List.map
             (fun br ->
-              if not through then { br with smb_body = List.map stmt br.smb_body }
+              if not through then { br with smb_body = List.map (stmt ids) br.smb_body }
               else
                 let bound = List.map (fun fb -> fb.fb_name) br.smb_field_bindings in
-                { br with smb_body = strip_moves bound (List.map stmt br.smb_body) })
+                let views = (match br.smb_var with Some v -> v :: bound | None -> bound) @ ids in
+                { br with smb_body = strip_moves bound (List.map (stmt views) br.smb_body) })
             branches,
-          Option.map (List.map stmt) default )
-    | s -> map_stmt Fun.id stmt Fun.id s
+          Option.map (List.map (stmt ids)) default )
+    | s -> map_stmt Fun.id (stmt ids) Fun.id s
   in
-  List.map stmt stmts
+  List.map (stmt ids) stmts
 
 (** [stmts] with every match on a local bound by [const] reference or by
     pointer borrowing: such a local names a value something else owns -- a
