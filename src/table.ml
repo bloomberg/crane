@@ -3684,16 +3684,6 @@ let extract_constant_generic
     Lib.add_leaf (in_customs (g, ids, s))
   | _ -> error_constant ?loc:r.CAst.loc g
 
-(** Registers a custom constant extraction with inline/noinline behavior. *)
-let extract_constant_inline inline r ids s =
-  extract_constant_generic
-    r
-    ids
-    s
-    (fun _ _ _ -> ())
-    (is_foreign_custom, "foreign")
-    (fun g -> inline_extraction (inline, [g]))
-
 (* const_name : qualid -> replacement : string*)
 let extract_constant_foreign r s =
   if lang () != Cpp then
@@ -3711,7 +3701,27 @@ let extract_constant_foreign r s =
     (is_inline_custom, "inline")
     (fun g -> foreign_extraction [g] )
 
-(** Like [extract_constant_inline] but also registers import headers. *)
+(* A mapping is all Crane knows of the C++ it writes, so the headers a unit
+   includes are the [From] headers of the mappings its code uses -- and of
+   the mapped types its code computes with, spelled or not.  A type mapping
+   without one writes a type nothing promises to declare: it compiles only
+   where another mapping in use happens to import its header. *)
+let warn_undeclared_mapped_type =
+  CWarnings.create ~name:"crane-mapping-without-header" ~category:CWarnings.CoreCategories.extraction
+    (fun (r, names) ->
+      strbrk "Crane: the mapping of " ++ safe_pr_global r ++ strbrk " writes "
+      ++ prlist_with_sep pr_comma str names
+      ++ strbrk " but has no From clause, so no header declaring "
+      ++ str (if List.length names > 1 then "them" else "it")
+      ++ strbrk " is included on its behalf: it compiles only where another mapping in use happens to import one. Name the header with From \"...\".")
+
+let check_type_mapping_header r s imports =
+  match Foreign_template.declared_type_names s with
+  | _ :: _ as names when imports = [] -> warn_undeclared_mapped_type (r, List.sort_uniq String.compare names)
+  | _ -> ()
+
+(** Registers a custom constant extraction with inline/noinline behavior and
+    the headers it imports. *)
 let extract_constant_import inline r ids s imports =
   let g = Smartlocate.global_with_alias r in
   List.iter
@@ -3719,7 +3729,13 @@ let extract_constant_import inline r ids s imports =
       add_ref_import g i;
       Lib.add_leaf (ref_imports_object (g, i)) )
     imports;
-  extract_constant_inline inline r ids s
+  extract_constant_generic
+    r
+    ids
+    s
+    (fun _ _ g -> check_type_mapping_header g s imports)
+    (is_foreign_custom, "foreign")
+    (fun g -> inline_extraction (inline, [g]))
 
 (** Registers a custom inductive type extraction with constructor mappings and
     optional match template. *)
@@ -3734,6 +3750,7 @@ let extract_inductive ?boxed ?drain r s l optstr imports =
         add_ref_import g i;
         Lib.add_leaf (ref_imports_object (g, i)) )
       imports;
+    check_type_mapping_header g s imports;
     let mib = Global.lookup_mind kn in
     let n = Array.length mib.mind_packets.(i).mind_consnames in
     if not (Int.equal n (List.length l)) then error_nb_cons ();

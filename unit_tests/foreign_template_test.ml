@@ -33,4 +33,10 @@ let () =
   check "binders out of order" (structured_binding "auto [%b0a1, %b0a0] = %scrut; %br0" = None);
   check "not a binding" (structured_binding "auto& p = %scrut; auto %b0a0 = p.first; %br0" = None);
   check "something after the branch" (structured_binding "auto [%b0a0] = %scrut; %br0 f();" = None);
-  check "bound by value" (bound_by_value std_pair = "auto [%b0a0, %b0a1] = %scrut; %br0")
+  check "bound by value" (bound_by_value std_pair = "auto [%b0a0, %b0a1] = %scrut; %br0");
+  check "declared: a qualified template" (declared_type_names "std::vector<%t2> *" = ["std::vector"]);
+  check "declared: builtin words" (declared_type_names "const unsigned long long" = []);
+  check "declared: holes only" (declared_type_names "%t1" = []);
+  check "declared: a member of a hole" (declared_type_names "typename %t0::value_type" = []);
+  check "declared: each name" (declared_type_names "std::pair<mpz_class, %elem>" = ["std::pair"; "mpz_class"]);
+  check "declared: digits are not names" (declared_type_names "std::array<int, 4>" = ["std::array"])

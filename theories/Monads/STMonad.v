@@ -311,22 +311,22 @@ Crane Extract Skip STRefToIx.
 (* NOTE: skipping STRefClass seems to drop too much typing information,
  and the value types within references are not inferred. *)
 (* Crane Extract Skip STRefClass. *)
-Crane Extract Inlined Constant STRef => "std::shared_ptr<%t2>".
+Crane Extract Inlined Constant STRef => "std::shared_ptr<%t2>" From "memory".
 Crane Extract Inlined Constant newSTRef => "%result = std::make_shared<decltype(%a1)>(%a1)".
 Crane Extract Inlined Constant readSTRef => "*%a1".
 Crane Extract Inlined Constant writeSTRef => "*%a1 = %a2".
 (* array extraction *)
 
-Crane Extract Inductive STArray => "std::vector<%t2> *" [ "" ].
+Crane Extract Inductive STArray => "std::vector<%t2> *" [ "" ] From "vector".
 Crane Extract Inlined Constant newArray =>
-"%result = new std::remove_pointer_t<decltype(%result)>(%a2 - %a1 + 1, %a3)".
+"%result = new std::remove_pointer_t<decltype(%result)>(%a2 - %a1 + 1, %a3)" From "type_traits".
 Crane Extract Inlined Constant readArray => "(*%a1)[%a2]".
 Crane Extract Inlined Constant writeArray => "(*%a1)[%a2] = %a3".
 
 Crane Extract Inlined Constant newListArray =>
-  "%result = new std::remove_pointer_t<decltype(%result)>(%a2 - %a1 + 1); { auto _xs = %a3; for (size_t _i = 0; _i < %result->size(); _i++) { if (holds_alternative<typename std::remove_cvref_t<decltype(_xs)>::Cons>(_xs.v())) { const auto& [_a, _l] = get<typename std::remove_cvref_t<decltype(_xs)>::Cons>(_xs.v()); (*%result)[_i] = _a; if (_l) _xs = *_l; } } }".
+  "%result = new std::remove_pointer_t<decltype(%result)>(%a2 - %a1 + 1); { auto _xs = %a3; for (size_t _i = 0; _i < %result->size(); _i++) { if (holds_alternative<typename std::remove_cvref_t<decltype(_xs)>::Cons>(_xs.v())) { const auto& [_a, _l] = get<typename std::remove_cvref_t<decltype(_xs)>::Cons>(_xs.v()); (*%result)[_i] = _a; if (_l) _xs = *_l; } } }" From "type_traits".
 Crane Extract Inlined Constant getElems =>
-  "[&]() { using _E = typename std::remove_pointer_t<std::remove_cvref_t<decltype(%a1)>>::value_type; List<_E> _r = List<_E>::nil(); for (size_t _i = %a1->size(); _i > 0; _i--) { _r = List<_E>::cons((*%a1)[_i - 1], std::move(_r)); } return _r; }()".
+  "[&]() { using _E = typename std::remove_pointer_t<std::remove_cvref_t<decltype(%a1)>>::value_type; List<_E> _r = List<_E>::nil(); for (size_t _i = %a1->size(); _i > 0; _i--) { _r = List<_E>::cons((*%a1)[_i - 1], std::move(_r)); } return _r; }()" From "type_traits" "utility".
 
 (* Recursion is mapped to a while loop that models the stack explicitly. *)
 (* NOTE: should this go in ITree base as part of the erased translation? *)

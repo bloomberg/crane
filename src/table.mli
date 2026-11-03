@@ -1230,20 +1230,15 @@ val written_customs : unit -> Ref.User.Set.t
     unless the program was decided to start one ({!unit_is_concurrent}). *)
 val check_concurrency_decided : unit -> unit
 
-(** Extract constant with inline custom code.
-    @param inline [true] to mark the constant as Inline (inlined at call sites),
-                  [false] for NoInline
-    @param r      the qualified identifier of the constant to extract
-    @param ids    type parameter names for type-scheme axioms (usually [[]])
-    @param s      the C++ replacement expression or type string *)
-val extract_constant_inline : bool -> qualid -> string list -> string -> unit
-
 (** Extract constant with import custom code.
     @param inline  [true] to mark as Inline, [false] for NoInline
     @param r       the qualified identifier of the constant to extract
     @param ids     type parameter names for type-scheme axioms (usually [[]])
     @param s       the C++ replacement expression or type string
-    @param imports list of C++ headers to [#include] when this constant is used *)
+    @param imports list of C++ headers to [#include] when this constant is used
+
+    A constant standing for a type with no [imports] is warned about where
+    its text writes a name C++ does not declare: see {!extract_inductive}. *)
 val extract_constant_import :
   bool -> qualid -> string list -> string -> string list -> unit
 
@@ -1258,7 +1253,12 @@ val extract_constant_foreign : qualid -> string -> unit
     @param l       list of C++ constructor representation strings, one per
                    constructor (length must match the number of constructors)
     @param optstr  optional C++ match template string for custom pattern matching
-    @param imports list of C++ headers to [#include] when this type is used *)
+    @param imports list of C++ headers to [#include] when this type is used
+
+    Warns ([crane-mapping-without-header]) when [imports] is empty and [s]
+    writes a name C++ does not declare
+    ({!Foreign_template.declared_type_names}): the header a unit includes for
+    a mapped type is the mapping's own, never another's. *)
 val extract_inductive :
   ?boxed:string ->
   ?drain:string ->

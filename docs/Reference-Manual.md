@@ -32,7 +32,7 @@ Crane Extract Inductive <Rocq type> =>
   A C++ code block that implements pattern matching (case analysis) on values of this type. This should dispatch to the appropriate branch based on which constructor was used, binding constructor arguments to names specified by branch parameter placeholders (`%b0a0`, `%b0a1`, etc.) and executing the corresponding branch code (`%br0`, `%br1`, etc.).
 
 * **`From ...` clause**
-  A space-separated list of libraries/headers whose inclusion is required.  Crane will translate these to the corresponding `#include <...>` directives.
+  A space-separated list of libraries/headers whose inclusion is required.  Crane will translate these to the corresponding `#include <...>` directives.  A type mapping must name the header that declares its type: see [Which headers a unit includes](#which-headers-a-unit-includes).
 
 ### Example: mapping Rocq's `option` type to `std::optional`
 
@@ -179,7 +179,7 @@ Crane Extract Inlined Constant <Rocq definition name> => "<C++ expr>" From "<lib
   A C++ expression that replaces calls to the Rocq constant. This expression may use argument placeholders (`%a0`, `%a1`, etc.) to reference the arguments passed to the constant.
 
 * **`From ...` clause**
-  A space-separated list of libraries/headers whose inclusion is required. Crane will translate these to the corresponding `#include <...>` directives.
+  A space-separated list of libraries/headers whose inclusion is required. Crane will translate these to the corresponding `#include <...>` directives.  The headers of the mapped types the constant takes or returns need not be repeated: see [Which headers a unit includes](#which-headers-a-unit-includes).
 
 ### Examples
 
@@ -273,6 +273,27 @@ Crane Extract Foreign Constant <Rocq definition name> => "<C++ callable>".
 Parameter native_checksum : nat -> nat.
 Crane Extract Foreign Constant native_checksum => "native_checksum".
 ```
+
+---
+
+## Which headers a unit includes
+
+A generated unit includes the `From` headers of every mapping its code uses, and of every mapped type its code computes with -- a type it never spells included, such as the type a mapped operation returns into a temporary.  A mapping in scope that the code does not use contributes no header.
+
+So a mapping names the headers its own text needs, except those of the mapped types it takes or returns.  Below, `origin_at` and `on_axis` need no `From` clause: code that uses either computes with a `point`, so `<complex>` is included wherever they are.  `is_real` is written `((std::complex<double>(b ? 1.0 : 0.0, 0.0)).imag() == 0.0)`, which never spells `point`, and its unit includes `<complex>`.
+
+```coq
+Axiom point : Type.
+Axiom origin_at : bool -> point.
+Axiom on_axis : point -> bool.
+Definition is_real (b : bool) : bool := on_axis (origin_at b).
+
+Crane Extract Inlined Constant point => "std::complex<double>" From "complex".
+Crane Extract Inlined Constant origin_at => "std::complex<double>(%a0 ? 1.0 : 0.0, 0.0)".
+Crane Extract Inlined Constant on_axis => "(%a0.imag() == 0.0)".
+```
+
+A type mapping -- of an inductive, or of a constant whose Rocq type is a type -- has no such fallback: it must name the header that declares its C++ type.  Where one has no `From` clause and its type names anything but C++'s builtin types and the mapping's placeholders, Crane warns (`crane-mapping-without-header`).  Code using such a mapping may still compile, because another mapping in use or one of Crane's runtime headers happens to include the header, but nothing promises that it will.
 
 ---
 

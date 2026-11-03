@@ -69,6 +69,12 @@ val custom_template_with_args : string -> int -> string
     holds, and 0 when it holds none. *)
 val type_arity : custom_case list -> int
 
+(** The names the literal text of the type template [s] writes that C++
+    does not declare itself -- every name but the builtin type words, a hole
+    and a member of what a hole is filled with: what some header has to
+    declare. *)
+val declared_type_names : string -> string list
+
 (** How a match template binds its one branch's binders. *)
 type binding = By_reference | By_value
 

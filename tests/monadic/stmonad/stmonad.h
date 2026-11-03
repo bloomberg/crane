@@ -17,6 +17,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 template <typename A> struct List;
 template <typename Err> struct ExceptE;

@@ -330,3 +330,30 @@ let structured_binding s =
   | _ -> None
 
 let bound_by_value s = "auto " ^ String.sub s (String.index s '[') (String.length s - String.index s '[')
+
+(* What the language spells without a declaration: a type template naming
+   only these, its holes and punctuation needs no header. *)
+let builtin_type_words =
+  [ "auto"; "bool"; "char"; "char8_t"; "char16_t"; "char32_t"; "class"; "const"; "decltype"; "double"; "enum";
+    "float"; "int"; "long"; "short"; "signed"; "struct"; "typename"; "unsigned"; "void"; "volatile"; "wchar_t" ]
+
+let declared_type_names s =
+  let is_start c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c = '_' in
+  let is_part c = is_start c || (c >= '0' && c <= '9') || c = ':' in
+  (* A name right after [::] -- [%t0::type] -- is a member of what is in
+     front of it, not something a header declares. *)
+  let names lit =
+    let n = String.length lit in
+    let rec go i acc =
+      if i >= n then acc
+      else if is_start lit.[i] && (i = 0 || not (is_part lit.[i - 1])) then
+        let rec stop j = if j < n && is_part lit.[j] then stop (j + 1) else j in
+        let j = stop i in
+        go j (String.sub lit i (j - i) :: acc)
+      else go (i + 1) acc
+    in
+    List.rev (go 0 [])
+  in
+  List.filter
+    (fun w -> not (List.mem w builtin_type_words))
+    (List.concat_map (function CCstring lit -> names lit | _ -> []) (type_template s))
