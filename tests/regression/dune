@@ -13847,3 +13847,14 @@
   (alias runtest)
   (deps reuse_forced_views.t.exe)
   (action (run ./reuse_forced_views.t.exe))))
+
+(subdir reuse_moved_capture_renamed
+ (rule
+  (targets reuse_moved_capture_renamed.t.exe)
+  (deps ReuseMovedCaptureRenamed.vo reuse_moved_capture_renamed.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_moved_capture_renamed.t.exe reuse_moved_capture_renamed.cpp reuse_moved_capture_renamed.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_moved_capture_renamed.t.exe)
+  (action (run ./reuse_moved_capture_renamed.t.exe))))
