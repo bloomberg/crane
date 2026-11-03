@@ -1991,6 +1991,11 @@ and dfun_shape =
   | Ddecl of (Id.t option * cpp_type) list
       (** Forward declaration: parameters, possibly anonymous. *)
 
+let rec declared_by_reference = function
+  | Tref _ | Tconst _ -> true
+  | Tnamespace (_, t) -> declared_by_reference t
+  | _ -> false
+
 (** The [GlobRef.t] a declaration is about, if it has one: what a [Crane
     Loopify] directive names, and what tells two hoisted helpers apart.
 

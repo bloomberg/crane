@@ -1674,6 +1674,11 @@ and dfun_shape =
   | Ddecl of (Id.t option * cpp_type) list
       (** Forward declaration: parameters, possibly anonymous. *)
 
+(** Whether a parameter declared at C++ type [ty] is a reference the body
+    does not own: a [const T &], or the [F &&] a deduced callable is, which
+    may name the caller's own object. *)
+val declared_by_reference : cpp_type -> bool
+
 (** The [GlobRef.t] a declaration is about, if it has one: what a [Crane
     Loopify] directive names, and what tells two hoisted helpers apart.
 

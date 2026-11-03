@@ -88,6 +88,9 @@ let rec worth_moving = function
        || List.exists worth_moving args
        || not (Table.is_custom_scalar_ref r || Table.is_trivially_copyable_ref r) )
   | Tarr _ | Tvar _ | Tapp _ -> true
+  (* A type nothing determined, an index a constructor hides, is held in the
+     box ([std::any]), which a move hands over. *)
+  | Topen _ -> true
   | Tmeta {contents = Some t} -> worth_moving t
   | _ -> false
 

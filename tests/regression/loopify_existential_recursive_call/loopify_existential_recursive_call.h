@@ -588,7 +588,7 @@ struct LoopifyExistentialRecursiveCall {
         _stack.emplace_back(CraneEnter{&b});
       } else if (std::holds_alternative<CraneCont_PairE_1>(_frame)) {
         auto _f = std::move(std::get<CraneCont_PairE_1>(_frame));
-        _result = std::make_pair(crane::obj(_f._tmp4),
+        _result = std::make_pair(crane::obj(std::move(_f._tmp4)),
                                  crane::obj(std::move(_result)));
       } else {
         auto _f = std::move(std::get<CraneCont_SuccE>(_frame));

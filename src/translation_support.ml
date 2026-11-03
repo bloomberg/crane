@@ -1359,14 +1359,6 @@ let with_escape_analysis f =
     caller then projects with [.first.first]. *)
 let with_iife_return_type expected_ty f = with_cpp_return_type expected_ty f
 
-(** Whether a parameter declared at C++ type [ty] is a reference the body
-    does not own: a [const T &], or the [F &&] a deduced callable is, which
-    may name the caller's own object. *)
-let rec declared_by_reference = function
-  | Tref _ | Tconst _ -> true
-  | Tnamespace (_, t) -> declared_by_reference t
-  | _ -> false
-
 (** Whether a body owns a parameter the head declares at [declared]: when
     it declares it by value, which it does for one the ownership summary
     marks owned and for one whose type it never passes by reference.  A

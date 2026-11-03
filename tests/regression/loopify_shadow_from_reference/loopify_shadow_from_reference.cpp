@@ -48,6 +48,9 @@ LoopifyShadowFromReference::lst
 LoopifyShadowFromReference::g(LoopifyShadowFromReference::lst l) {
   crane::rc<LoopifyShadowFromReference::lst> _head{};
   crane::rc<LoopifyShadowFromReference::lst> *_write = &_head;
+  crane::rc<LoopifyShadowFromReference::lst> _own =
+      crane::rc<LoopifyShadowFromReference::lst>();
+  bool _uniq = true;
   const LoopifyShadowFromReference::lst *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyShadowFromReference::lst::Nil>(
@@ -59,16 +62,18 @@ LoopifyShadowFromReference::g(LoopifyShadowFromReference::lst l) {
           std::get<typename LoopifyShadowFromReference::lst::Cons>(
               _loop_l->v());
       const LoopifyShadowFromReference::lst &a1_value = *a1;
-      auto _cell = crane::make_rc<LoopifyShadowFromReference::lst>(
-          typename LoopifyShadowFromReference::lst::Cons(
-              twice([=](uint64_t y) { return suml(lst::cons(y, a1_value)); },
-                    a0),
-              nullptr));
+      auto _read =
+          twice([=](uint64_t y) { return suml(lst::cons(y, a1_value)); }, a0);
+      auto _rs = crane::reuse_step(_own, _uniq, a1);
+      auto _cell = crane::make_rc_reusing_unchecked(
+          std::move(_rs.token), typename LoopifyShadowFromReference::lst::Cons(
+                                    std::move(_read), nullptr));
       *_write = std::move(_cell);
       _write = &std::get<typename LoopifyShadowFromReference::lst::Cons>(
                     (*_write)->v_mut())
                     .a1;
-      _loop_l = &a1_value;
+      _own = std::move(_rs.next);
+      _loop_l = _own.get();
       continue;
     }
   }
