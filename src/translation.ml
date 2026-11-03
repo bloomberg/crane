@@ -9990,180 +9990,203 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     let outer_tvars = get_current_type_vars () in
     let n_outer = List.length outer_tvars in
     let has_extra_tvars = Ml_type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) in
-    if has_extra_tvars then (
-      (* Lift the polymorphic inner fixpoint to a top-level function *)
-      let all_tvar_names = build_tvar_names ~outer_tvars fix_tvar_indices in
-      let all_temps = List.map (fun id -> (TTtypename, id)) all_tvar_names in
-      (* The body being lifted was written against the enclosing declaration's
-         class instances -- it spells [typename _tcI0::PTR::ptr] -- and a
-         concept-constrained parameter is not an ML type variable, so
-         [fix_tvar_indices] cannot mention one.  Carry the head's own
-         instances over, ahead of the type variables and explicit at every
-         reference: nothing deduces a class instance from an argument. *)
-      let class_temps = current_class_temps () in
-      let class_args = List.map (fun (_, id) -> named_tvar id) class_temps in
-      let extended_tvar_names =
-        build_extended_tvar_names fix_tvar_indices all_tvar_names all_body_tvars
-      in
-      let fix_name = fst ids.(x) in
-      let lifted_ref = lifted_ref (Lifted.Fixpoint (occ, x)) fix_name in
-      (* Compile under the lifted function's extended tvar scope, which covers
-         both signature and body Tvar indices. *)
-      let all_fix_ids_list = Array.to_list ids in
-      let funs_compiled =
-        with_lifted_fixpoint occ @@ fun () ->
-        with_type_vars extended_tvar_names (fun () ->
-            Array.to_list
-              (Array.mapi
-                 (fun i f ->
-                   gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i)
-                     f )
-                 funs ) )
-      in
-      (* Build lifted declarations *)
-      let n_fix = Array.length funs in
-      List.iteri
-        (fun i ((renamed_id, fix_ty), params, body, param_binders) ->
-          let cpp_ty =
-            convert_ml_type_to_cpp_type
-              env
-              extended_tvar_names
-              fix_ty
-          in
-          let _, cod =
-            match cpp_ty with
-            | Tfun (dom, cod) -> (dom, cod)
-            | _ -> ([], cpp_ty)
-          in
-          let non_fwd_source_indices =
-            let lam_params, stripped_body =
-              Mlutil.collect_lams funs.(i)
+    (* The arguments the plan reads before the call, its parameters being
+       bound to them in order ({!Ownership_plan.evaluated_first}), each
+       evaluated into a local of its own ahead of everything the call
+       makes. *)
+    let first = Ownership_plan.evaluated_first (!tctx).move_plan occ in
+    let evaluated = ref [] in
+    let gen_args args =
+      let params = List.rev (fst (collect_lams funs.(x))) in
+      List.rev
+        (List.mapi
+           (fun i a ->
+             let e = gen_expr env a in
+             match (List.mem i first, List.nth_opt params i) with
+             | true, Some (_, ty) ->
+               let id = Id.of_string (Printf.sprintf "_arg%d" i) in
+               evaluated := !evaluated @ [Sasgn (id, Declare (cpp_of_ml env ty, None), e)];
+               if Ownership_plan.worth_moving ty then CPPmove (CPPvar id) else CPPvar id
+             | _ -> e )
+           args )
+    in
+    let stmts =
+      if has_extra_tvars then (
+        (* Lift the polymorphic inner fixpoint to a top-level function *)
+        let all_tvar_names = build_tvar_names ~outer_tvars fix_tvar_indices in
+        let all_temps = List.map (fun id -> (TTtypename, id)) all_tvar_names in
+        (* The body being lifted was written against the enclosing declaration's
+           class instances -- it spells [typename _tcI0::PTR::ptr] -- and a
+           concept-constrained parameter is not an ML type variable, so
+           [fix_tvar_indices] cannot mention one.  Carry the head's own
+           instances over, ahead of the type variables and explicit at every
+           reference: nothing deduces a class instance from an argument. *)
+        let class_temps = current_class_temps () in
+        let class_args = List.map (fun (_, id) -> named_tvar id) class_temps in
+        let extended_tvar_names =
+          build_extended_tvar_names fix_tvar_indices all_tvar_names all_body_tvars
+        in
+        let fix_name = fst ids.(x) in
+        let lifted_ref = lifted_ref (Lifted.Fixpoint (occ, x)) fix_name in
+        (* Compile under the lifted function's extended tvar scope, which covers
+           both signature and body Tvar indices. *)
+        let all_fix_ids_list = Array.to_list ids in
+        let funs_compiled =
+          with_lifted_fixpoint occ @@ fun () ->
+          with_type_vars extended_tvar_names (fun () ->
+              Array.to_list
+                (Array.mapi
+                   (fun i f ->
+                     gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i)
+                       f )
+                   funs ) )
+        in
+        (* Build lifted declarations *)
+        let n_fix = Array.length funs in
+        List.iteri
+          (fun i ((renamed_id, fix_ty), params, body, param_binders) ->
+            let cpp_ty =
+              convert_ml_type_to_cpp_type
+                env
+                extended_tvar_names
+                fix_ty
             in
-            detect_non_forwarded_params_fix
-              (List.length lam_params) n_fix i stripped_body
-          in
-          let cpp_params, all_temps_with_funs =
-            build_lifted_cpp_params
-              ~non_fwd_source_indices
-              (convert_ml_type_to_cpp_type
-                 env
-                 extended_tvar_names )
-              all_temps
-              params
-          in
-          let rec_call =
-            mk_cppglob lifted_ref
-              (class_args @ List.map (fun id -> named_tvar id) all_tvar_names)
-          in
-          let body = List.map (local_var_subst_stmt renamed_id rec_call) body in
-          let inner =
-            Dfun (mk_dfun ~binders:param_binders ~ret:cod lifted_ref (Ddef (cpp_params, body)))
-          in
-          let lifted_decl =
-            Dtemplate (class_temps @ all_temps_with_funs, None, inner)
-          in
-          add_lifted_decl (Control_to_legacy_minicpp.lower_lifted lifted_decl) )
-        funs_compiled;
-      let call_type_args =
-        lifted_call_type_args ~class_args ~env ~outer_tvars
-          ~head:(List.map snd all_temps) ~all_tvar_names ~binder_ty:(snd ids.(x))
-          ~param_ml_tys:
-            ( match List.nth_opt funs_compiled x with
-            | Some (_, params, _, _) -> List.map snd params
-            | None -> [] )
-      in
-      let cpp_args = List.rev_map (gen_expr env) args in
-      [k (made_of occ (CPPfun_call (call_opaque, mk_cppglob lifted_ref call_type_args, of_reversed cpp_args)))] )
-    else (* No extra Tvars - proceed with by-ref local fixpoint (immediately applied) *)
-      let all_fix_ids_list = Array.to_list ids in
-      let funs_compiled =
-        Array.to_list
-          (Array.mapi
-             (fun i f ->
-               gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i) f )
-             funs )
-      in
-      let renamed_ids =
-        List.map (fun (renamed_id, _, _, _) -> renamed_id) funs_compiled
-      in
-      let funs_with_params =
-        List.map (fun (_, params, body, _) -> (params, body)) funs_compiled
-      in
-      let args = List.rev_map (gen_expr env) args in
-      let _, fix_params, _, _ = List.nth funs_compiled x in
-      let n_provided = List.length args in
-      let n_fix_params = List.length fix_params in
-      if n_provided < n_fix_params then begin
-        (* Partial application: the fixpoint escapes (returned as a lambda).
-           Use Y-combinator pattern so the fixpoint body doesn't capture
-           a stack-local std::function by reference. *)
-        let decls, defs, deref_subst =
-          gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
-            ~moved:(fix_moved_captures env fix_term)
-            renamed_ids funs_with_params
-        in
-        let remaining_params =
-          (* [fix_params] is in de Bruijn order -- last parameter first -- so
-             the arguments already supplied fill its tail, not its head.  What
-             is left over is the front of the list, returned in source order
-             so the wrapper's parameters line up with the call below. *)
-          List.rev (safe_firstn (n_fix_params - n_provided) fix_params)
-        in
-        let pa_params =
-          List.mapi
-            (fun j (_, ml_ty) ->
-              let cpp_ty =
-                cpp_of_ml env ml_ty
+            let _, cod =
+              match cpp_ty with
+              | Tfun (dom, cod) -> (dom, cod)
+              | _ -> ([], cpp_ty)
+            in
+            let non_fwd_source_indices =
+              let lam_params, stripped_body =
+                Mlutil.collect_lams funs.(i)
               in
-              (cpp_ty, Some (Id.of_string (Printf.sprintf "_pa%d" j))) )
-            remaining_params
-        in
-        let pa_exprs =
-          List.map (fun (_, id_opt) -> CPPvar (Option.get id_opt)) pa_params
-        in
-        let fix_id = fst (List.nth renamed_ids x) in
-        let full_call = mk_call (CPPvar fix_id) (args @ pa_exprs) in
-        decls @ defs
-        @ deref_subst [k (mk_lambda pa_params None [Sreturn (Some full_call)] ~capture:Closure)]
-      end
-      else if
-        let closures = Analyze_closures.group ~n_outer ~cofix ids funs = Closures in
-        check_fixpoint_escape (fst (List.nth renamed_ids x)) ~closures (fun () ->
-            fix_escapes_in_own_bodies renamed_ids funs_with_params );
-        closures
-      then
-        let decls, defs, deref_subst =
-          gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
-            ~moved:(fix_moved_captures env fix_term)
-            renamed_ids funs_with_params
-        in
-        decls @ defs
-        @ deref_subst
-            [k (made_of occ (CPPfun_call (call_opaque, CPPvar (fst (List.nth renamed_ids x)), of_reversed args)))]
-      else begin
-        let owned_flags_per_fun =
-          Array.to_list (Array.map (fun f ->
-            let lam_ids, inner_body = Mlutil.collect_lams f in
-            let n_params =
-              List.length
-                (List.filter
-                   (fun (_, ty) -> not (void_binder ty))
-                   lam_ids)
+              detect_non_forwarded_params_fix
+                (List.length lam_params) n_fix i stripped_body
             in
-            let n_fix = Array.length funs in
-            let all_flags =
-              Escape.infer_owned_params (n_params + n_fix) inner_body
+            let cpp_params, all_temps_with_funs =
+              build_lifted_cpp_params
+                ~non_fwd_source_indices
+                (convert_ml_type_to_cpp_type
+                   env
+                   extended_tvar_names )
+                all_temps
+                params
             in
-            List.init n_params (fun i -> List.nth all_flags i)
-          ) funs)
+            let rec_call =
+              mk_cppglob lifted_ref
+                (class_args @ List.map (fun id -> named_tvar id) all_tvar_names)
+            in
+            let body = List.map (local_var_subst_stmt renamed_id rec_call) body in
+            let inner =
+              Dfun (mk_dfun ~binders:param_binders ~ret:cod lifted_ref (Ddef (cpp_params, body)))
+            in
+            let lifted_decl =
+              Dtemplate (class_temps @ all_temps_with_funs, None, inner)
+            in
+            add_lifted_decl (Control_to_legacy_minicpp.lower_lifted lifted_decl) )
+          funs_compiled;
+        let call_type_args =
+          lifted_call_type_args ~class_args ~env ~outer_tvars
+            ~head:(List.map snd all_temps) ~all_tvar_names ~binder_ty:(snd ids.(x))
+            ~param_ml_tys:
+              ( match List.nth_opt funs_compiled x with
+              | Some (_, params, _, _) -> List.map snd params
+              | None -> [] )
         in
-        let decls, defs =
-          gen_local_fix_by_ref env ~binders:(local_fix_binders env fix_term occ ids funs_compiled) renamed_ids funs_with_params
-            owned_flags_per_fun
+        let cpp_args = gen_args args in
+        [k (made_of occ (CPPfun_call (call_opaque, mk_cppglob lifted_ref call_type_args, of_reversed cpp_args)))] )
+      else (* No extra Tvars - proceed with by-ref local fixpoint (immediately applied) *)
+        let all_fix_ids_list = Array.to_list ids in
+        let funs_compiled =
+          Array.to_list
+            (Array.mapi
+               (fun i f ->
+                 gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i) f )
+               funs )
         in
-        decls @ defs
-        @ [k (made_of occ (CPPfun_call (call_opaque, CPPvar (fst (List.nth renamed_ids x)), of_reversed args)))]
-      end
+        let renamed_ids =
+          List.map (fun (renamed_id, _, _, _) -> renamed_id) funs_compiled
+        in
+        let funs_with_params =
+          List.map (fun (_, params, body, _) -> (params, body)) funs_compiled
+        in
+        let args = gen_args args in
+        let _, fix_params, _, _ = List.nth funs_compiled x in
+        let n_provided = List.length args in
+        let n_fix_params = List.length fix_params in
+        if n_provided < n_fix_params then begin
+          (* Partial application: the fixpoint escapes (returned as a lambda).
+             Use Y-combinator pattern so the fixpoint body doesn't capture
+             a stack-local std::function by reference. *)
+          let decls, defs, deref_subst =
+            gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
+              ~moved:(fix_moved_captures env fix_term)
+              renamed_ids funs_with_params
+          in
+          let remaining_params =
+            (* [fix_params] is in de Bruijn order -- last parameter first -- so
+               the arguments already supplied fill its tail, not its head.  What
+               is left over is the front of the list, returned in source order
+               so the wrapper's parameters line up with the call below. *)
+            List.rev (safe_firstn (n_fix_params - n_provided) fix_params)
+          in
+          let pa_params =
+            List.mapi
+              (fun j (_, ml_ty) ->
+                let cpp_ty =
+                  cpp_of_ml env ml_ty
+                in
+                (cpp_ty, Some (Id.of_string (Printf.sprintf "_pa%d" j))) )
+              remaining_params
+          in
+          let pa_exprs =
+            List.map (fun (_, id_opt) -> CPPvar (Option.get id_opt)) pa_params
+          in
+          let fix_id = fst (List.nth renamed_ids x) in
+          let full_call = mk_call (CPPvar fix_id) (args @ pa_exprs) in
+          decls @ defs
+          @ deref_subst [k (mk_lambda pa_params None [Sreturn (Some full_call)] ~capture:Closure)]
+        end
+        else if
+          let closures = Analyze_closures.group ~n_outer ~cofix ids funs = Closures in
+          check_fixpoint_escape (fst (List.nth renamed_ids x)) ~closures (fun () ->
+              fix_escapes_in_own_bodies renamed_ids funs_with_params );
+          closures
+        then
+          let decls, defs, deref_subst =
+            gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
+              ~moved:(fix_moved_captures env fix_term)
+              renamed_ids funs_with_params
+          in
+          decls @ defs
+          @ deref_subst
+              [k (made_of occ (CPPfun_call (call_opaque, CPPvar (fst (List.nth renamed_ids x)), of_reversed args)))]
+        else begin
+          let owned_flags_per_fun =
+            Array.to_list (Array.map (fun f ->
+              let lam_ids, inner_body = Mlutil.collect_lams f in
+              let n_params =
+                List.length
+                  (List.filter
+                     (fun (_, ty) -> not (void_binder ty))
+                     lam_ids)
+              in
+              let n_fix = Array.length funs in
+              let all_flags =
+                Escape.infer_owned_params (n_params + n_fix) inner_body
+              in
+              List.init n_params (fun i -> List.nth all_flags i)
+            ) funs)
+          in
+          let decls, defs =
+            gen_local_fix_by_ref env ~binders:(local_fix_binders env fix_term occ ids funs_compiled) renamed_ids funs_with_params
+              owned_flags_per_fun
+          in
+          decls @ defs
+          @ [k (made_of occ (CPPfun_call (call_opaque, CPPvar (fst (List.nth renamed_ids x)), of_reversed args)))]
+        end
+    in
+    !evaluated @ stmts
   | MLfix (x, ids, funs, _, occ) as fix_term ->
     (* Standalone fixpoint (not immediately applied) — e.g., appearing as the
        RHS of a let-binding.  Since the fixpoint value itself is returned (not

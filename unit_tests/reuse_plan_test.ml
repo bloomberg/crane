@@ -97,3 +97,32 @@ let () =
   check "an argument read again after the call is copied" (use None = Some Ownership_plan.Use.Copy);
   check "one a frame keeps across the call is moved" (use (Some (resumes [call_site])) = Some Ownership_plan.Use.Move);
   check "not where the let resumes after another call" (use (Some (resumes [Occurrence.fresh ()])) = Some Ownership_plan.Use.Copy)
+
+(* [(fix f n l := g n l) (len s) s], [s] an owned parameter: the fixpoint's
+   parameters are bound to its arguments in order, so the second argument
+   is [s]'s last use, and the first, reading [s] too, is evaluated before
+   the call.  A fixpoint reading [s] as it runs leaves [s] read after them. *)
+let () =
+  let applied body =
+    let s = fresh_rel 1 in
+    let at = Occurrence.fresh () in
+    let fix =
+      MLfix
+        ( 0,
+          [|(Id.of_string "f", Tarr (nat, Tarr (lst, lst)))|],
+          [|MLlam (Id (Id.of_string "n"), nat, MLlam (Id (Id.of_string "l"), lst, body))|],
+          false,
+          at )
+    in
+    let root = MLapp (fix, [call "len" [fresh_rel 1]; s]) in
+    let read = match s with MLrel (_, o) -> o | _ -> assert false in
+    let p = Ownership_plan.region ~owned:[1] ~n_outer:0 root in
+    (Ownership_plan.use p read, Ownership_plan.evaluated_first p at)
+  in
+  let use, first = applied (call "g" [fresh_rel 2; fresh_rel 1]) in
+  check "the last argument takes the variable" (use = Some Ownership_plan.Use.Move);
+  check "the argument reading it before is evaluated first" (first = [0]);
+  (* The body under f, n and l reads [s] at index 4. *)
+  let use, first = applied (call "g" [fresh_rel 4; fresh_rel 1]) in
+  check "a fixpoint reading it as it runs keeps it" (use = Some Ownership_plan.Use.Copy);
+  check "and nothing is evaluated first" (first = [])

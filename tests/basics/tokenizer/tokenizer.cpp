@@ -110,6 +110,7 @@ List<std::basic_string_view<char>>
 Tokenizer::list_tokens(std::basic_string_view<char> input,
                        std::basic_string_view<char> soft,
                        std::basic_string_view<char> hard) {
+  uint64_t _arg0 = static_cast<uint64_t>(input.length());
   auto aux_impl = [&](auto &_self_aux, uint64_t fuel,
                       std::basic_string_view<char> rest)
       -> List<std::basic_string_view<char>> {
@@ -131,7 +132,7 @@ Tokenizer::list_tokens(std::basic_string_view<char> input,
     }
   };
   {
-    uint64_t _lc1_fuel = static_cast<uint64_t>(input.length());
+    uint64_t _lc1_fuel = _arg0;
     std::basic_string_view<char> _lc1_rest = std::move(input);
     return aux_impl(aux_impl, _lc1_fuel, std::move(_lc1_rest));
   }
