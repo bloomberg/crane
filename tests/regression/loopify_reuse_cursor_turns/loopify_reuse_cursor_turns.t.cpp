@@ -37,6 +37,16 @@ int main() {
     assert(items(m) == (V{5, 4, 3, 2, 1}));
     assert(items(M::keep_even(down(8))) == (V{8, 6, 4, 2}));
   }
+  // A turn building nothing reads the tail it walks on to before stealing it.
+  {
+    // [3; 2; 5; 4; 1]: 3 skips with 2+5+4+1 = 12, 5 with 4+1 = 5 more.
+    L l = L::cons(3, L::cons(2, L::cons(5, L::cons(4, L::cons(1, L::nil())))));
+    assert(items(M::skip_sums(0, std::move(l))) == (V{14, 21}));
+    L m = down(4);
+    L r = M::skip_sums(1, L::cons(2, L::cons(1, m)));
+    assert(items(r) == (V{3, 15, 16}));
+    assert(items(m) == (V{4, 3, 2, 1}));
+  }
   // Two cells a turn: the second cell, shared with [m], keeps its fields.
   {
     L m = L::cons(3, down(4));

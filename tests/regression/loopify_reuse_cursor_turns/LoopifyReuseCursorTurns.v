@@ -7,9 +7,11 @@
 
     The cursor holds the cell it stands on by an owning handle, steals the
     field it walks on to, and rebuilds the cell as the turn's outermost one.
-    [keep_even] walks on by a turn building nothing, which left the handle
-    on the cell it had left: the next steal took a field out of a cell the
-    loop did not own, emptying the caller's shared list.  [swap] walks two
+    [keep_even] walks on by a turn building nothing, which once left the
+    handle on the cell it had left: the next steal took a field out of a
+    cell the loop did not own, emptying the caller's shared list.  Such a
+    turn now steps the handle too, releasing the cell it leaves, and
+    [skip_sums]'s reads the field it steals, whole, before the steal.  [swap] walks two
     cells at a time: the field it stole was the second cell's, whose
     uniqueness nothing tested.  [stutter], [scale] and [suffix_sums] read the
     cell after the steal or the rebuilding: the inner cell's argument, the
@@ -35,6 +37,12 @@ Fixpoint keep_even (l : lst) : lst :=
   match l with
   | Nil => Nil
   | Cons x xs => if Nat.even x then Cons x (keep_even xs) else keep_even xs
+  end.
+
+Fixpoint skip_sums (seen : nat) (l : lst) : lst :=
+  match l with
+  | Nil => Nil
+  | Cons x xs => if Nat.even x then Cons (x + seen) (skip_sums seen xs) else skip_sums (seen + sum xs) xs
   end.
 
 Fixpoint swap (l : lst) : lst :=

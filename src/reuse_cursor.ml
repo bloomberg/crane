@@ -7,9 +7,13 @@
 open Miniml
 module Term = Control_ir.Term
 
+type action =
+  | Recycle of {cells_read_first : (int * int) list}
+  | Release
+
 type step = {
   turn : Occurrence.t;
-  cells_read_first : (int * int) list;
+  action : action;
   arguments_read_first : int list;
 }
 
@@ -118,7 +122,7 @@ exception Not_walked
 (* The steps of the loop [l] walking its parameter [cursor], every turn of
    [l] passing it itself or a field stored behind the pointer of a match on
    it; [Not_walked] where one passes it anything else, or walks it on
-   building nothing, or builds a cell of another type than the cursor's. *)
+   building a cell of another type than the cursor's. *)
 let steps ~pointer_fields ~in_place (l : Term.loop) cursor =
   let n = List.length l.parameters in
   let cursor_type = snd (List.nth l.parameters cursor) in
@@ -132,7 +136,15 @@ let steps ~pointer_fields ~in_place (l : Term.loop) cursor =
       | Some _ | None -> raise Not_walked )
     | Some _ | None -> raise Not_walked
   in
-  let step env result (into : Term.continue_into) field =
+  let step env (next : Term.continue_) field action =
+    let arguments_read_first =
+      List.filter_map
+        (fun (i, a) -> if i <> cursor && reads_cell ~field (reads env a) then Some i else None)
+        (List.mapi (fun i a -> (i, a)) next.arguments)
+    in
+    {turn = next.occurrence; action; arguments_read_first}
+  in
+  let recycle env result (into : Term.continue_into) field =
     ( match result with
     | Some ty when into.cells <> [] && Mlutil.eq_ml_type ty cursor_type -> ()
     | Some _ | None -> raise Not_walked );
@@ -148,12 +160,7 @@ let steps ~pointer_fields ~in_place (l : Term.loop) cursor =
                (List.mapi (fun m a -> (m, a)) cell.arguments) )
            into.cells )
     in
-    let arguments_read_first =
-      List.filter_map
-        (fun (i, a) -> if i <> cursor && reads_cell ~field (reads env a) then Some i else None)
-        (List.mapi (fun i a -> (i, a)) into.next.arguments)
-    in
-    {turn = into.next.occurrence; cells_read_first; arguments_read_first}
+    step env into.next field (Recycle {cells_read_first})
   in
   let rec walk env result acc = function
     | Term.Let b -> walk ({unrelated with parts = reads env b.value} :: env) result acc b.body
@@ -163,9 +170,9 @@ let steps ~pointer_fields ~in_place (l : Term.loop) cursor =
           walk (branch_binders ~pointer_fields ~in_place env m.scrutinee b @ env) (Some b.result_type) acc b.body )
         acc m.branches
     | Return _ -> acc
-    | Continue c -> ( match passed env c with None -> acc | Some _ -> raise Not_walked )
+    | Continue c -> ( match passed env c with None -> acc | Some field -> step env c field Release :: acc )
     | Continue_into into -> (
-      match passed env into.next with None -> acc | Some field -> step env result into field :: acc )
+      match passed env into.next with None -> acc | Some field -> recycle env result into field :: acc )
     | Loop _ | Resume _ | Entry _ -> raise Not_walked
   in
   let env =
@@ -174,12 +181,13 @@ let steps ~pointer_fields ~in_place (l : Term.loop) cursor =
   List.rev (walk env None [] l.body)
 
 let plan ~pointer_fields ~in_place (l : Term.loop) =
+  let recycles s = match s.action with Recycle _ -> true | Release -> false in
   let walked =
     List.filter_map
       (fun parameter ->
         match steps ~pointer_fields ~in_place l parameter with
-        | [] | (exception Not_walked) -> None
-        | steps -> Some {parameter; steps} )
+        | exception Not_walked -> None
+        | steps -> if List.exists recycles steps then Some {parameter; steps} else None )
       (List.init (List.length l.parameters) Fun.id)
   in
   match walked with [c] -> Some c | [] | _ :: _ :: _ -> None
