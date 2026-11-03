@@ -397,7 +397,7 @@ struct FunctionVernac {
       /// CraneEnter: captures varying parameters for each recursive call.
       struct CraneEnter {
         const R_list_sum *_self;
-        List<uint64_t> _x;
+        const List<uint64_t> *_x;
         uint64_t _x0;
       };
 
@@ -414,7 +414,7 @@ struct FunctionVernac {
       using CraneFrame = std::variant<CraneEnter, CraneCont_R_list_sum_1>;
       T1 _result{};
       crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self, _x, _x0});
+      _stack.emplace_back(CraneEnter{_self, &_x, _x0});
       /// Loopified R_list_sum_rect: CraneEnter -> CraneCont_R_list_sum_1.
       while (!_stack.empty()) {
         CraneFrame _frame = std::move(_stack.back());
@@ -422,7 +422,7 @@ struct FunctionVernac {
         if (std::holds_alternative<CraneEnter>(_frame)) {
           auto _f = std::move(std::get<CraneEnter>(_frame));
           const R_list_sum *_self = _f._self;
-          const List<uint64_t> &_x = std::move(_f._x);
+          const List<uint64_t> &_x = *_f._x;
           uint64_t _x0 = _f._x0;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename R_list_sum::R_list_sum_0>(
@@ -434,7 +434,7 @@ struct FunctionVernac {
             const auto &[l0, x0, xs0, a3, _res] =
                 std::get<typename R_list_sum::R_list_sum_1>(_sv.v());
             _stack.emplace_back(CraneCont_R_list_sum_1{l0, x0, xs0, a3, _res});
-            _stack.emplace_back(CraneEnter{crane_raw(_res), xs0, a3});
+            _stack.emplace_back(CraneEnter{crane_raw(_res), &xs0, a3});
           }
         } else {
           auto _f = std::move(std::get<CraneCont_R_list_sum_1>(_frame));

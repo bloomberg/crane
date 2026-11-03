@@ -465,9 +465,9 @@ struct Levenshtein {
       /// CraneEnter: captures varying parameters for each recursive call.
       struct CraneEnter {
         const chain *_self;
-        String _x;
-        String _x0;
-        Nat _x1;
+        const String *_x;
+        const String *_x0;
+        const Nat *_x1;
       };
 
       /// CraneCont_Change: saves [s0, t0, u0, n0, a4, a5], resumes after
@@ -495,7 +495,7 @@ struct Levenshtein {
           std::variant<CraneEnter, CraneCont_Change, CraneCont_Skip>;
       T1 _result{};
       crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self, _x, _x0, _x1});
+      _stack.emplace_back(CraneEnter{_self, &_x, &_x0, &_x1});
       /// Loopified chain_rect: CraneEnter -> CraneCont_Change ->
       /// CraneCont_Skip.
       while (!_stack.empty()) {
@@ -504,9 +504,9 @@ struct Levenshtein {
         if (std::holds_alternative<CraneEnter>(_frame)) {
           auto _f = std::move(std::get<CraneEnter>(_frame));
           const chain *_self = _f._self;
-          const String &_x = std::move(_f._x);
-          const String &_x0 = std::move(_f._x0);
-          const Nat &_x1 = std::move(_f._x1);
+          const String &_x = *_f._x;
+          const String &_x0 = *_f._x0;
+          const Nat &_x1 = *_f._x1;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename chain::Empty>(_sv.v())) {
             _result = f;
@@ -514,12 +514,12 @@ struct Levenshtein {
             const auto &[a0, s0, t0, n0, a4] =
                 std::get<typename chain::Skip>(_sv.v());
             _stack.emplace_back(CraneCont_Skip{a0, s0, t0, n0, a4});
-            _stack.emplace_back(CraneEnter{crane_raw(a4), s0, t0, n0});
+            _stack.emplace_back(CraneEnter{crane_raw(a4), &s0, &t0, &n0});
           } else {
             const auto &[s0, t0, u0, n0, a4, a5] =
                 std::get<typename chain::Change>(_sv.v());
             _stack.emplace_back(CraneCont_Change{s0, t0, u0, n0, a4, a5});
-            _stack.emplace_back(CraneEnter{crane_raw(a5), t0, u0, n0});
+            _stack.emplace_back(CraneEnter{crane_raw(a5), &t0, &u0, &n0});
           }
         } else if (std::holds_alternative<CraneCont_Change>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Change>(_frame));

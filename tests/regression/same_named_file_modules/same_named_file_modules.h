@@ -1544,7 +1544,7 @@ struct Coq_Pos {
       /// CraneEnter: captures varying parameters for each recursive call.
       struct CraneEnter {
         const PeanoView *_self;
-        Positive _x;
+        const Positive *_x;
       };
 
       /// CraneCont_PeanoSucc: saves [p], resumes after recursive call, then
@@ -1556,7 +1556,7 @@ struct Coq_Pos {
       using CraneFrame = std::variant<CraneEnter, CraneCont_PeanoSucc>;
       T1 _result{};
       crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self, _x});
+      _stack.emplace_back(CraneEnter{_self, &_x});
       /// Loopified PeanoView_iter: CraneEnter -> CraneCont_PeanoSucc.
       while (!_stack.empty()) {
         CraneFrame _frame = std::move(_stack.back());
@@ -1564,7 +1564,7 @@ struct Coq_Pos {
         if (std::holds_alternative<CraneEnter>(_frame)) {
           auto _f = std::move(std::get<CraneEnter>(_frame));
           const PeanoView *_self = _f._self;
-          const Positive &_x = std::move(_f._x);
+          const Positive &_x = *_f._x;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename PeanoView::PeanoOne>(_sv.v())) {
             _result = a;
@@ -1572,7 +1572,7 @@ struct Coq_Pos {
             const auto &[p, a1] =
                 std::get<typename PeanoView::PeanoSucc>(_sv.v());
             _stack.emplace_back(CraneCont_PeanoSucc{p});
-            _stack.emplace_back(CraneEnter{crane_raw(a1), p});
+            _stack.emplace_back(CraneEnter{crane_raw(a1), &p});
           }
         } else {
           auto _f = std::move(std::get<CraneCont_PeanoSucc>(_frame));
@@ -1664,7 +1664,7 @@ struct Coq_Pos {
       /// CraneEnter: captures varying parameters for each recursive call.
       struct CraneEnter {
         const PeanoView *_self;
-        Positive _x;
+        const Positive *_x;
       };
 
       /// CraneCont_PeanoSucc: saves [p2, a1], resumes after recursive call,
@@ -1677,7 +1677,7 @@ struct Coq_Pos {
       using CraneFrame = std::variant<CraneEnter, CraneCont_PeanoSucc>;
       T1 _result{};
       crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self, _x});
+      _stack.emplace_back(CraneEnter{_self, &_x});
       /// Loopified PeanoView_rect: CraneEnter -> CraneCont_PeanoSucc.
       while (!_stack.empty()) {
         CraneFrame _frame = std::move(_stack.back());
@@ -1685,7 +1685,7 @@ struct Coq_Pos {
         if (std::holds_alternative<CraneEnter>(_frame)) {
           auto _f = std::move(std::get<CraneEnter>(_frame));
           const PeanoView *_self = _f._self;
-          const Positive &_x = std::move(_f._x);
+          const Positive &_x = *_f._x;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename PeanoView::PeanoOne>(_sv.v())) {
             _result = f;
@@ -1693,7 +1693,7 @@ struct Coq_Pos {
             const auto &[p2, a1] =
                 std::get<typename PeanoView::PeanoSucc>(_sv.v());
             _stack.emplace_back(CraneCont_PeanoSucc{p2, a1});
-            _stack.emplace_back(CraneEnter{crane_raw(a1), p2});
+            _stack.emplace_back(CraneEnter{crane_raw(a1), &p2});
           }
         } else {
           auto _f = std::move(std::get<CraneCont_PeanoSucc>(_frame));
