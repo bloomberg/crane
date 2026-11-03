@@ -5,6 +5,7 @@
 #include "obj.h"
 #include <atomic>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <iostream>

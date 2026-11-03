@@ -357,3 +357,78 @@ let declared_type_names s =
   List.filter
     (fun w -> not (List.mem w builtin_type_words))
     (List.concat_map (function CCstring lit -> names lit | _ -> []) (type_template s))
+
+(* The header declaring a standard-library name, by what follows [std::] in
+   it -- a nested namespace ([chrono], [filesystem]) stands for every name
+   in it.  Only names mappings are seen to write: a name missing here is not
+   checked. *)
+let standard_headers =
+  [ ("utility", ["move"; "forward"; "pair"; "make_pair"; "swap"; "exchange"; "declval"; "in_place"]);
+    ("string", ["string"; "to_string"; "getline"; "stoi"; "stol"; "stoll"; "stoul"; "stoull"; "stod"]);
+    ("string_view", ["string_view"; "basic_string_view"]);
+    ("optional", ["optional"; "make_optional"; "nullopt"; "nullopt_t"; "bad_optional_access"]);
+    ("memory", ["shared_ptr"; "make_shared"; "unique_ptr"; "make_unique"; "weak_ptr"; "enable_shared_from_this"]);
+    ("functional", ["function"; "invoke"; "equal_to"; "hash"; "bad_function_call"]);
+    ("vector", ["vector"]);
+    ("deque", ["deque"]);
+    ("array", ["array"]);
+    ("map", ["map"]);
+    ("set", ["set"]);
+    ("unordered_map", ["unordered_map"]);
+    ("variant", ["variant"; "monostate"; "visit"; "get_if"; "holds_alternative"; "bad_variant_access"]);
+    ("any", ["any"; "any_cast"; "bad_any_cast"; "make_any"]);
+    ("algorithm", ["max"; "min"; "clamp"; "reverse"; "sort"; "find"; "copy"]);
+    ("numeric", ["accumulate"; "gcd"; "lcm"]);
+    ("stdexcept", ["runtime_error"; "logic_error"; "out_of_range"; "length_error"; "invalid_argument"]);
+    ("iostream", ["cout"; "cin"; "cerr"; "clog"]);
+    ("fstream", ["ifstream"; "ofstream"; "fstream"]);
+    ("sstream", ["stringstream"; "istringstream"; "ostringstream"]);
+    ("iterator", ["istreambuf_iterator"; "back_inserter"]);
+    ("thread", ["thread"; "this_thread"]);
+    ("future", ["future"; "shared_future"; "async"; "launch"; "promise"]);
+    ("mutex", ["mutex"; "lock_guard"; "unique_lock"]);
+    ("atomic", ["atomic"]);
+    ("chrono", ["chrono"]);
+    ("filesystem", ["filesystem"]);
+    ("system_error", ["error_code"; "system_error"]);
+    ("random", ["random_device"; "mt19937"; "uniform_int_distribution"]);
+    ("complex", ["complex"]);
+    ("cmath", ["sqrt"; "pow"; "floor"; "ceil"; "signbit"; "fpclassify"; "isnan"; "isinf"; "fabs"]);
+    ("cstdlib", ["getenv"; "rand"; "srand"; "exit"; "abort"]);
+    ("cstdint", ["int8_t"; "int16_t"; "int32_t"; "int64_t"; "uint8_t"; "uint16_t"; "uint32_t"; "uint64_t"]);
+    ("cstddef", ["size_t"; "ptrdiff_t"; "nullptr_t"; "byte"]);
+    ("limits", ["numeric_limits"]);
+    ("exception", ["terminate"; "exception"; "exception_ptr"]);
+    ("bit", ["bit_cast"; "popcount"; "countl_zero"; "countr_zero"]);
+    ("type_traits",
+      [ "type_identity_t"; "remove_pointer_t"; "remove_cvref_t"; "decay_t"; "invoke_result_t"; "is_invocable_r_v";
+        "is_same_v"; "conditional_t"; "enable_if_t" ]) ]
+
+let standard_header_of =
+  let by_name = Hashtbl.create 128 in
+  List.iter (fun (header, names) -> List.iter (fun n -> Hashtbl.replace by_name n header) names) standard_headers;
+  Hashtbl.find_opt by_name
+
+let standard_names_written tokens =
+  let is_word c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c = '_' in
+  let names lit =
+    let n = String.length lit in
+    let rec go i acc =
+      match CString.string_index_from lit i "std::" with
+      | j ->
+        let stop = let rec stop k = if k < n && is_word lit.[k] then stop (k + 1) else k in stop (j + 5) in
+        (* [crane::std::x] or [mystd::x] is not the standard library's. *)
+        let at_start = j = 0 || not (is_word lit.[j - 1] || lit.[j - 1] = ':') in
+        let name = String.sub lit (j + 5) (stop - j - 5) in
+        go stop (if at_start && name <> "" then name :: acc else acc)
+      | exception Not_found -> acc
+    in
+    go 0 []
+  in
+  List.sort_uniq compare
+    (List.concat_map
+       (function
+         | CCstring lit ->
+           List.filter_map (fun name -> Option.map (fun h -> ("std::" ^ name, h)) (standard_header_of name)) (names lit)
+         | _ -> [])
+       tokens)

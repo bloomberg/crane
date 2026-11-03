@@ -295,6 +295,16 @@ Crane Extract Inlined Constant on_axis => "(%a0.imag() == 0.0)".
 
 A type mapping -- of an inductive, or of a constant whose Rocq type is a type -- has no such fallback: it must name the header that declares its C++ type.  Where one has no `From` clause and its type names anything but C++'s builtin types and the mapping's placeholders, Crane warns (`crane-mapping-without-header`).  Code using such a mapping may still compile, because another mapping in use or one of Crane's runtime headers happens to include the header, but nothing promises that it will.
 
+An operation mapping -- of a constant whose Rocq type is not a type, or a constructor or match template of an inductive -- that writes a name of the C++ standard library is checked the same way: where the standard header declaring it is neither in the mapping's `From` clause nor in that of a mapped type its signature names, Crane warns (`crane-mapping-standard-header`), once, when it first extracts code using the mapping -- the mapping of a type in its signature may come after it.  The check knows the standard library's commonly mapped names only, and does not judge a mapping whose own headers, or whose signature types' headers, are not the standard library's (anything with a `.` or a `/`): such a header may include whatever its mapping needs.
+
+```coq
+Axiom larger : nat -> nat -> nat.
+(* Warns: std::max is declared in <algorithm>. *)
+Crane Extract Inlined Constant larger => "std::max(%a0, %a1)".
+(* Does not. *)
+Crane Extract Inlined Constant larger => "std::max(%a0, %a1)" From "algorithm".
+```
+
 ---
 
 ## `Crane Extraction`

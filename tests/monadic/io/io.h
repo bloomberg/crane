@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <string>
 #include <utility>
 #include <variant>

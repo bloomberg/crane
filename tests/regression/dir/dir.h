@@ -4,6 +4,7 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include <atomic>
+#include <cstddef>
 #include <filesystem>
 #include <memory>
 #include <stdexcept>

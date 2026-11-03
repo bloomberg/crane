@@ -75,6 +75,12 @@ val type_arity : custom_case list -> int
     declare. *)
 val declared_type_names : string -> string list
 
+(** The standard-library names the literal text of [tokens] writes, each
+    with the standard header declaring it ([("std::max", "algorithm")]),
+    sorted.  A name the table behind this does not know is left out: it is
+    a heuristic, which may miss a name but never invents a header. *)
+val standard_names_written : custom_case list -> (string * string) list
+
 (** How a match template binds its one branch's binders. *)
 type binding = By_reference | By_value
 

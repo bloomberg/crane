@@ -1624,6 +1624,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   Cpp.generate_ahead struc;
   Common.plan_written_files (Cpp.files_named_ahead struc);
   Table.plan_written_customs (Cpp.customs_written_ahead ());
+  Table.check_written_mapping_headers ();
   Pipeline_trace.event "emit" "plan_file_layout";
   Cpp.plan_file_layout struc;
   Pipeline_trace.event "emit" "plan_ctor_aliases";

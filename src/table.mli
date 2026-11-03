@@ -1226,6 +1226,16 @@ val plan_written_customs : Ref.User.Set.t -> unit
     are planned). *)
 val written_customs : unit -> Ref.User.Set.t
 
+(** Warns ([crane-mapping-standard-header]), once a session per mapping,
+    where an operation mapping the unit writes -- a constant's, a
+    constructor's or a match template -- writes a standard-library name
+    ({!Foreign_template.standard_names_written}) whose header neither its
+    own [From] clause nor that of a mapped type in its signature names.  A
+    mapping leaning on a header outside the standard library is not judged.
+    Made once the written customs are planned, when every mapping a
+    signature names is declared. *)
+val check_written_mapping_headers : unit -> unit
+
 (** Under [CRANE_CHECK_IR], that the files write no custom starting a thread
     unless the program was decided to start one ({!unit_is_concurrent}). *)
 val check_concurrency_decided : unit -> unit

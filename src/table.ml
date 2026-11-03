@@ -3720,6 +3720,90 @@ let check_type_mapping_header r s imports =
   | _ :: _ as names when imports = [] -> warn_undeclared_mapped_type (r, List.sort_uniq String.compare names)
   | _ -> ()
 
+(* An operation may lean on the headers of the mapped types its signature
+   names: a unit computing with the operation computes with those types, so
+   includes their headers too. *)
+let signature_imports types =
+  let env = Global.env () in
+  let rec refs seen c =
+    match Constr.kind c with
+    | Constr.Const (kn, _) when not (GlobRef.Set.mem (GlobRef.ConstRef kn) seen) -> (
+      let seen = GlobRef.Set.add (GlobRef.ConstRef kn) seen in
+      let cb = Global.lookup_constant kn in
+      (* An unmapped type definition stands for the types it unfolds to. *)
+      match cb.const_body with
+      | Def body when (not (is_custom (GlobRef.ConstRef kn))) && Reduction.is_arity env cb.const_type -> refs seen body
+      | _ -> seen )
+    | Constr.Ind (ip, _) -> GlobRef.Set.add (GlobRef.IndRef ip) seen
+    | _ -> Constr.fold refs seen c
+  in
+  GlobRef.Set.fold (fun r acc -> get_ref_import_list r @ acc) (List.fold_left refs GlobRef.Set.empty types) []
+
+let warn_borrowed_standard_header =
+  CWarnings.create ~name:"crane-mapping-standard-header" ~category:CWarnings.CoreCategories.extraction
+    (fun (r, missing) ->
+      let headers = List.sort_uniq String.compare (List.map snd missing) in
+      strbrk "Crane: the mapping of " ++ safe_pr_global r ++ strbrk " writes "
+      ++ prlist_with_sep pr_comma (fun (name, header) -> str name ++ str " (<" ++ str header ++ str ">)") missing
+      ++ strbrk " but neither its From clause nor that of a mapped type in its signature names "
+      ++ str (if List.length headers > 1 then "those headers" else "that header")
+      ++ strbrk ": it compiles only where something else the unit includes happens to declare "
+      ++ str (if List.length missing > 1 then "them" else "it")
+      ++ strbrk ". Add " ++ prlist_with_sep spc (fun h -> str "\"" ++ str h ++ str "\"") headers
+      ++ strbrk " to its From clause.")
+
+let check_operation_mapping_headers r tokens ~signature imports =
+  match Foreign_template.standard_names_written tokens with
+  | [] -> ()
+  | written ->
+    let supplying = imports @ signature_imports signature in
+    (* A header outside the standard library may include anything: a
+       mapping leaning on one is not judged. *)
+    let standard h = not (String.contains h '.' || String.contains h '/') in
+    if List.for_all standard supplying then
+      match List.filter (fun (_, h) -> not (List.mem h supplying)) written with
+      | [] -> ()
+      | missing -> warn_borrowed_standard_header (r, missing)
+
+(* Checked once a session, whichever unit writes them first. *)
+let operations_checked = ref GlobRef.Set.empty
+
+(* Unlike a type mapping's, an operation's check needs the mappings of the
+   types in its signature, which may be declared after it ([future] after
+   the [parE] constructors returning one): it is made where they are all
+   known, for the operations a unit writes. *)
+let check_written_mapping_headers () =
+  let env = Global.env () in
+  let constructor_types ((kn, i) : inductive) = Array.to_list (Global.lookup_mind kn).mind_packets.(i).mind_user_lc in
+  let check r =
+    match r with
+    | GlobRef.ConstRef _ when not (to_foreign r) -> (
+      let typ, _ = Typeops.type_of_global_in_context env r in
+      match find_custom_opt r with
+      | Some s when not (Reduction.is_arity env typ) ->
+        check_operation_mapping_headers r (Foreign_template.term_template s) ~signature:[typ] (get_ref_import_list r)
+      | _ -> () )
+    | GlobRef.ConstructRef (ip, _) ->
+      Option.iter
+        (fun s ->
+          check_operation_mapping_headers r (Foreign_template.term_template s) ~signature:(constructor_types ip)
+            (get_ref_import_list (GlobRef.IndRef ip)) )
+        (find_custom_opt r)
+    | GlobRef.IndRef ip ->
+      Option.iter
+        (fun s ->
+          check_operation_mapping_headers r (Foreign_template.match_template s) ~signature:(constructor_types ip)
+            (get_ref_import_list r) )
+        (Ref.Can.Map.find_opt r !custom_matchs)
+    | GlobRef.ConstRef _ | GlobRef.VarRef _ -> ()
+  in
+  Ref.User.Set.iter
+    (fun r ->
+      if not (GlobRef.Set.mem r !operations_checked) then (
+        operations_checked := GlobRef.Set.add r !operations_checked;
+        check r ) )
+    (written_customs ())
+
 (** Registers a custom constant extraction with inline/noinline behavior and
     the headers it imports. *)
 let extract_constant_import inline r ids s imports =

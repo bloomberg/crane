@@ -39,4 +39,12 @@ let () =
   check "declared: holes only" (declared_type_names "%t1" = []);
   check "declared: a member of a hole" (declared_type_names "typename %t0::value_type" = []);
   check "declared: each name" (declared_type_names "std::pair<mpz_class, %elem>" = ["std::pair"; "mpz_class"]);
-  check "declared: digits are not names" (declared_type_names "std::array<int, 4>" = ["std::array"])
+  check "declared: digits are not names" (declared_type_names "std::array<int, 4>" = ["std::array"]);
+  let standard s = standard_names_written (term_template s) in
+  check "standard: a call" (standard "std::max(%a0, %a1)" = [("std::max", "algorithm")]);
+  check "standard: each once, sorted"
+    (standard "std::move(%a0) + std::to_string(std::move(%a1))" = [("std::move", "utility"); ("std::to_string", "string")]);
+  check "standard: a nested namespace" (standard "std::chrono::milliseconds(%a0)" = [("std::chrono", "chrono")]);
+  check "standard: not another std" (standard "crane::std::max(%a0) + mystd::max(%a1)" = []);
+  check "standard: an unknown name" (standard "std::frobnicate(%a0)" = []);
+  check "standard: holes are not text" (standard "%a0.size()" = [])

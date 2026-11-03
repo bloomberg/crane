@@ -34,7 +34,7 @@ Crane Extract Inductive dirE => ""
   return result;
 }()"
     "[&]() -> std::string { std::error_code _ec; auto _p = std::filesystem::current_path(_ec); return _ec ? std::string{} : _p.string(); }()" ]
-  From "filesystem" "system_error".
+  From "filesystem" "system_error" "cstddef" "utility".
 
 Crane Extract Inlined Constant create_directory =>
   "[&]() -> bool { std::error_code _ec; std::filesystem::create_directories(std::filesystem::path(%a0), _ec); return !_ec; }()"
@@ -54,7 +54,7 @@ Crane Extract Inlined Constant list_directory =>
     result = List<std::string>::cons(_it->path().filename().string(), std::move(result));
   }
   return result;
-}()" From "filesystem" "system_error".
+}()" From "filesystem" "system_error" "cstddef" "utility".
 
 Crane Extract Inlined Constant current_path =>
   "[&]() -> std::string { std::error_code _ec; auto _p = std::filesystem::current_path(_ec); return _ec ? std::string{} : _p.string(); }()"

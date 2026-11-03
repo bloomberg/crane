@@ -4,6 +4,7 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
+#include <algorithm>
 #include <atomic>
 #include <cstdint>
 #include <memory>

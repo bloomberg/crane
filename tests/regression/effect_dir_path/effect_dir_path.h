@@ -5,6 +5,7 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
