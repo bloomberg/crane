@@ -544,7 +544,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                     ~owned:(fun i ->
                       let name, _, cpp_ty = params_db.(i) in
                       List.exists (fun (n, _, _) -> Id.equal n name) cast_info
-                      || not (Translation_support.declared_by_reference cpp_ty) )
+                      || not (declared_by_reference cpp_ty) )
                     ~declared:(fun i -> let _, _, cpp_ty = params_db.(i) in Some cpp_ty)
                     ~ty:(fun i -> snd (List.nth ml_vars i))
                 in
@@ -636,7 +636,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                       Translation_support.owned_parameters (Array.length binders_db)
                         ~owned:(fun i ->
                           binders_db.(i).mb_kind = `Value
-                          && not (Translation_support.declared_by_reference binders_db.(i).mb_cpp_ty) )
+                          && not (declared_by_reference binders_db.(i).mb_cpp_ty) )
                         ~declared:(fun i -> Some binders_db.(i).mb_cpp_ty)
                         ~ty:(fun i -> binders_db.(i).mb_ml_ty)
                     in

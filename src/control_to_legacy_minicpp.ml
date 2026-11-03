@@ -81,12 +81,14 @@ let derived_passed l =
    parameter of the loop it stands for -- and whether every Continue passes
    it a value stored in what the caller passed for it
    ({!Control_ir.parts_passed}).  A parameter standing for none of the
-   loop's is neither. *)
+   loop's is neither.  A loop built tail modulo cons may recycle the cells
+   of an input it walks into its own ({!Reuse_cursor}). *)
 type planned = {
   loop : Control_ir.Term.loop;
   lowering : lowering;
   varying : bool list;
   parts : bool list;
+  cursor : Reuse_cursor.t option;
 }
 
 (* [l] lowered as [lowering] from what takes C++ parameters standing, in
@@ -96,7 +98,14 @@ let planned_at (l : Control_ir.Term.loop) lowering positions =
   { loop = l;
     lowering;
     varying = at (List.map not (Control_ir.invariant_parameters l));
-    parts = at (parts_passed l) }
+    parts = at (parts_passed l);
+    cursor =
+      ( match lowering with
+      | Modulo_cons ->
+        Option.bind
+          (Reuse_cursor.plan ~pointer_fields:Loopify_analysis.constructor_pointer_fields ~in_place l)
+          (fun c -> Reuse_cursor.positioned c positions)
+      | Tail | Frames -> None ) }
 
 (* The position among the parameters of the loop [l] of the parameter of
    the function [r] the Core binder [b] is, where it is one. *)
@@ -140,11 +149,11 @@ let check_jumps ~loop (f : dfun) ~continues ~jumped =
    where Loopify makes no loop of it -- a call passing the loop other
    arguments than it has parameters, say -- for the reason [why]
    ({!Loopify.unlowered}). *)
-let rec lower_function ~tparams (f : dfun) {loop = l; lowering; varying; parts} =
+let rec lower_function ~tparams (f : dfun) {loop = l; lowering; varying; parts; cursor} =
   match (f.df_shape, lowering) with
   | Ddecl _, _ -> Error (Loopify.Left None)
   | Ddef (params, body), Modulo_cons ->
-    lower_modulo_cons ~tparams f params body l ~varying ~parts (Control_ir.continues_into l.body)
+    lower_modulo_cons ~tparams f params body l ?cursor ~varying ~parts (Control_ir.continues_into l.body)
   | Ddef (params, body), Frames -> lower_frames ~tparams f params body l ~varying ~parts
   | Ddef (params, body), Tail -> (
     let continues = Control_ir.continues l.body in
@@ -161,13 +170,13 @@ let rec lower_function ~tparams (f : dfun) {loop = l; lowering; varying; parts} 
 
 (* The function [f] lowered to the loop [l] tail modulo cons, building the
    cells of its turns [into] around the calls they continue by. *)
-and lower_modulo_cons ~tparams (f : dfun) params body l ~varying ~parts into =
+and lower_modulo_cons ~tparams (f : dfun) params body l ?cursor ~varying ~parts into =
   let continues = Control_ir.continues l.body in
   let shapes = Loopify_tmc.control_shapes into in
   let jumps = ref [] in
   let jumped e = jumps := Loopify_analysis.made_of e :: !jumps in
   let exposed = Loopify_analysis.expose_tail_calls (jump continues) body in
-  match Loopify.modulo_cons_loop ~jumped ~varying ~parts ~shapes ~tparams (jump continues) f params exposed with
+  match Loopify.modulo_cons_loop ~jumped ?cursor ~varying ~parts ~shapes ~tparams (jump continues) f params exposed with
   | exception Loopify_analysis.Not_linearisable why -> Error (Loopify.Declined why)
   | None -> Error (Loopify.Left None)
   | Some loop -> (
@@ -364,7 +373,8 @@ let lower_method ~tparams ~self_ty (m : method_field) =
     let transform =
       match (lowering, planned) with
       | _ when Option.has_some value_receiver -> None
-      | _, Some {varying; parts; _} -> Some (fun () -> Loopify.transform_method_own ~varying ~parts ~park ~tparams ~self_ty m)
+      | _, Some {varying; parts; cursor; _} ->
+        Some (fun () -> Loopify.transform_method_own ?cursor ~varying ~parts ~park ~tparams ~self_ty m)
       | _, None -> None
     in
     match (transform, value_receiver) with

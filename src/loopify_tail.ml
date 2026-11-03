@@ -294,7 +294,8 @@ let assign_result_and_stop expr =
     overwrites [a0] with the next cell's field.
 
     [derefs] are the variables declared as references to a dereference
-    ([const T &a1_value = *a1]): one stands for that dereference.
+    ([const T &a1_value = *a1]), each with the pointer it dereferences: one
+    stands for that dereference.
 
     [owned] are the locals of the turn the jump ends held by value, worth
     moving and with no reference bound into them: one assigned whole to a
@@ -341,7 +342,7 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(owned = []) shadow_para
     let vty = strip_ref_and_const_type ty in
     let dereference = function
       | CPPderef _ -> true
-      | CPPvar v -> List.exists (Id.equal v) derefs
+      | CPPvar v -> List.exists (fun (x, _) -> Id.equal v x) derefs
       | _ -> false
     in
     match (ty, core) with
@@ -521,7 +522,7 @@ type top_rewrite_config = {
       Empty [[]] for plain tail recursion (control falls through to the
       [while (true)] test); [[Scontinue]] for TMC. *)
 
-  trc_on_other : derefs:Id.t list -> cpp_expr -> cpp_stmt;
+  trc_on_other : derefs:(Id.t * cpp_expr) list -> cpp_expr -> cpp_stmt;
   (** Emit code for a non-tail, non-visit return at the top level, under
       the references to a dereference [derefs] declared before it
       ({!make_shadow_updates}).  Wraps in [Sblock] as needed. *)
@@ -623,7 +624,7 @@ and generic_rewrite_stmts ?(aliases = []) ?(derefs = []) ?(owned = []) trc = fun
     let s' = generic_rewrite_stmt ~aliases ~derefs ~owned trc s in
     let derefs =
       match s with
-      | Sasgn (id, Declare (ty, _), CPPderef _) when is_reference_type ty -> id :: derefs
+      | Sasgn (id, Declare (ty, _), CPPderef pointer) when is_reference_type ty -> (id, pointer) :: derefs
       | _ -> derefs
     in
     (* A local declared by value worth moving is owned; a reference is not,

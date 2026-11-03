@@ -458,48 +458,60 @@ let return_from_switches ret stmts =
   in
   block ~in_switch:false stmts
 
-(** Whether [e] reads a variable the recursive field [field] is reached
-    through. *)
-let reads_field field =
-  let through = free_vars_expr field in
-  fun e -> List.exists (fun v -> List.exists (Id.equal v) through) (free_vars_expr e)
+(** The cursor declined where its lowering cannot carry out the step its plan
+    takes ({!cursor_step}): the loop is built without it. *)
+exception Cursor_declined
 
-(** The branch [br] with every read of [field] other than the cursor's own
-    advance -- an argument of a cell, the next value of a shadow other than
-    [cursor_id] -- bound to a temporary, and the declarations of those
-    temporaries.  [reuse_step] moves the field out of a unique cell, so a read
-    evaluated after it sees a null handle; the cell's constructor cannot run
-    before it, since recycling destroys the old payload the field lives in.
-    Each temporary is read once, where the read it holds was, and moved
-    there. *)
-let read_before_step ~cursor_id ~field varying shadow_params br =
-  let reads = reads_field field in
+(** The branch [br] with what the cursor's [step] reads first bound to
+    temporaries, and the declarations of those temporaries: the arguments of
+    its cells the step names, and the next values of the parameters it names
+    ({!Reuse_cursor.step}), each at its position among [params], whose
+    shadows, where they vary, are [shadow_params].  [reuse_step] moves the
+    field out of a unique cell, and the outermost cell is then rebuilt in
+    the cell's storage: a read of either evaluated after them sees a null
+    handle or the rebuilt cell.  A pointer shadow's next value would point
+    into the temporary, and the cursor is declined.  Each temporary is read
+    once, where the read it holds was, and moved there. *)
+let read_before_step (step : Reuse_cursor.step) varying shadow_params br =
   let decls = ref [] in
   let bind e =
-    if not (reads e) then e
-    else
-      let n = List.length !decls in
-      let id = Id.of_string (if n = 0 then "_read" else "_read" ^ string_of_int n) in
-      decls := Sasgn (id, Declare (Tauto, None), e) :: !decls;
-      CPPmove (CPPvar id)
+    let n = List.length !decls in
+    let id = Id.of_string (if n = 0 then "_read" else "_read" ^ string_of_int n) in
+    decls := Sasgn (id, Declare (Tauto, None), e) :: !decls;
+    CPPmove (CPPvar id)
   in
   let cells =
-    List.map
-      (fun cell -> {cell with tca_non_rec_args = List.map (fun (i, e) -> (i, bind e)) cell.tca_non_rec_args})
+    List.mapi
+      (fun k cell ->
+        { cell with
+          tca_non_rec_args =
+            List.map
+              (fun (i, e) ->
+                (* The arguments are stored reversed: [i] counts from the last declared. *)
+                if List.mem (k, cell.tca_n_args - 1 - i) step.cells_read_first then (i, bind e) else (i, e) )
+              cell.tca_non_rec_args } )
       br.tmc_cells
   in
   let shadows = ref shadow_params in
   let rec_args =
-    List.map2
-      (fun is_varying e ->
-        if not is_varying then e
+    List.mapi
+      (fun i (is_varying, e) ->
+        let shadow =
+          if not is_varying then None
+          else
+            match !shadows with
+            | s :: rest ->
+              shadows := rest;
+              Some s
+            | [] -> None
+        in
+        if not (List.mem i step.arguments_read_first) then e
         else
-          match !shadows with
-          | (sid, _) :: rest ->
-            shadows := rest;
-            if Id.equal sid cursor_id then e else bind e
-          | [] -> e)
-      varying br.tmc_rec_args
+          match shadow with
+          | Some (_, Tptr _) -> raise Cursor_declined
+          | Some _ -> bind e
+          | None -> e )
+      (List.combine varying br.tmc_rec_args)
   in
   (List.rev !decls, {br with tmc_cells = cells; tmc_rec_args = rec_args})
 
@@ -537,52 +549,43 @@ let read_before_step ~cursor_id ~field varying shadow_params br =
       _loop_l = _own.get();
     ]}
 
-    Identify the cursor: the single varying parameter that the loop walks by
-    pointer and whose recursive argument is a dereference of one of the matched
-    cell's fields, i.e. exactly the spine being consumed -- and whose cells are
-    the output's own type, since a recycled cell is rebuilt in place: [combine]
-    walks a [list B] beside the [list A] it consumes and builds a
-    [list (A * B)], and no cell of either input is the right size for its
-    output.  Everything else -- accumulators, unchanged parameters, several
-    pointer-walked parameters at once -- yields [None] and the ordinary
-    allocating path.
-
-    [reuse_step] steals the recursive field, so whatever else the iteration
-    reads of it is read first ({!read_before_step}); a temporary can hold a
-    cell's argument or a value shadow's next value, but not another pointer
-    shadow's, which would then point into the temporary -- such a walk
-    declines the cursor. *)
-let tmc_reuse_cursor ~storage varying shadow_params br =
-  match storage with
-  | Value_root _ | Pointer_result _ -> None
-  | Boxed_root ret_ty ->
-    let rec_args = filter_by_mask varying br.tmc_rec_args in
-    if List.length rec_args <> List.length shadow_params then None
-    else
-      let rec pointee = function Tconst t -> pointee t | t -> t in
-      let updates = List.combine shadow_params rec_args in
-      let candidates =
-        List.filter_map
-          (fun ((sid, sty), arg) ->
-            match sty, arg with
-            | Tptr t, CPPderef inner when Ml_type_util.cpp_ty_eq (pointee t) ret_ty ->
-              Some (sid, inner)
-            | _ -> None)
-          updates
-      in
-      match candidates with
-      | [((cursor_id, field) as c)] ->
-        let reads = reads_field field in
-        if
-          List.exists
-            (fun ((sid, sty), arg) ->
-              (not (Id.equal sid cursor_id))
-              && (match sty with Tptr _ -> true | _ -> false)
-              && reads arg)
-            updates
-        then None
-        else Some c
-      | _ -> None
+    Which parameter is the cursor, at which turns it steps, and what each
+    step reads first are the loop's {!Reuse_cursor} plan, decided over its
+    ControlIR: every turn passes the cursor itself or a field of the cell it
+    stands on, so [_own] always owns that cell; a turn walking on rebuilds
+    one cell of the cursor's type; and nothing the turn reads of the cell is
+    read after the steal or the rebuilding ({!read_before_step}).  Here the
+    step is only carried out: the field is what the recursive call's
+    argument dereferences, directly or through a reference [derefs] binds
+    to the dereference ({!Loopify_tail.make_shadow_updates}), and a temporary can hold a cell's argument or a value
+    shadow's next value, but not another pointer shadow's, which would then
+    point into the temporary -- such a walk declines the cursor. *)
+let cursor_step ~(cursor : Reuse_cursor.t) ~derefs varying shadow_params br =
+  match Option.map (Reuse_cursor.step_at cursor) (Loopify_analysis.made_of br.tmc_call) with
+  (* A turn of unknown origin may be one the cursor walks on at. *)
+  | None -> raise Cursor_declined
+  | Some None -> None
+  | Some (Some step) ->
+    let shadow =
+      List.nth_opt shadow_params
+        (List.length (List.filter Fun.id (List.filteri (fun i _ -> i < cursor.parameter) varying)))
+    in
+    if List.compare_lengths varying br.tmc_rec_args <> 0 then raise Cursor_declined;
+    (* The field dereferenced, or named through a reference bound to its
+       dereference. *)
+    let field = function
+      | Some (CPPderef field) -> Some field
+      | Some (CPPvar v) -> List.find_map (fun (x, pointer) -> if Id.equal v x then Some pointer else None) derefs
+      | Some _ | None -> None
+    in
+    match (List.nth_opt varying cursor.parameter, shadow, field (List.nth_opt br.tmc_rec_args cursor.parameter)) with
+    | Some true, Some (cursor_id, Tptr _), Some field ->
+      let reads, br = read_before_step step varying shadow_params br in
+      Some (cursor_id, field, reads, br)
+    | _ ->
+      Probe.violation "reuse cursor"
+        Pp.(str "a turn the cursor steps at does not walk a pointer shadow on to a field of its cell");
+      raise Cursor_declined
 
 (** Generate statements for a TMC branch with possibly nested constructor cells.
     Allocates all cells with [nullptr] holes, links consecutive pairs via
@@ -599,19 +602,19 @@ let tmc_reuse_cursor ~storage varying shadow_params br =
       _last = _cell1;                     // advance
       <shadow updates>
     ]} *)
-let build_tmc_branch_stmts ?(cursor_used = ref false) ?(derefs = []) ~storage br
+let build_tmc_branch_stmts ?(cursor_used = ref false) ?cursor ?(derefs = []) ~storage br
     varying shadow_params =
   let vt_ret = cell_value_type storage in
   (* 0. Perceus reuse cursor.  See {!section:reuse-cursor}: when the loop walks
         an owned spine by pointer, the cell it is standing on is dead as soon as
         the iteration's output cell is built, so it can be recycled into that
         output instead of being freed and a fresh one allocated. *)
-  let cursor = tmc_reuse_cursor ~storage varying shadow_params br in
-  if cursor <> None then cursor_used := true;
+  let stepped = Option.bind cursor (fun cursor -> cursor_step ~cursor ~derefs varying shadow_params br) in
+  if stepped <> None then cursor_used := true;
+  let cursor = Option.map (fun (cursor_id, rec_field, _, _) -> (cursor_id, rec_field)) stepped in
   let step_decl, br =
-    match cursor with
-    | Some (cursor_id, rec_field) ->
-      let reads, br = read_before_step ~cursor_id ~field:rec_field varying shadow_params br in
+    match stepped with
+    | Some (_, rec_field, reads, br) ->
       (* CPPfun_call holds its arguments reversed (see translation.ml:1776),
          so [reuse_step(_own, _uniq, a1)] is written innermost-first here. *)
       ( reads
@@ -764,7 +767,7 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ?(derefs = []) ~storage br
     @param storage where the result is assembled
     @param branch  a returned expression as a TMC branch ({!branch_along})
     @param check   Call checker for identifying recursive calls *)
-let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~jumped ~storage ~branch check
+let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ?cursor ~jumped ~storage ~branch check
     varying shadow_params =
   (* Emit code for a non-tail return in the TMC context.
      [suffix] is appended after TMC branches: empty inside visitor lambdas,
@@ -779,7 +782,7 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~jumped ~storage ~branch c
       match branch e with
       | Some br ->
         jumped br.tmc_call;
-        build_tmc_branch_stmts ~cursor_used ~derefs ~storage br varying shadow_params
+        build_tmc_branch_stmts ~cursor_used ?cursor ~derefs ~storage br varying shadow_params
         @ suffix
       | None ->
         (* A call the plan's chains do not reach stays a call; the loop is
@@ -809,12 +812,14 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~jumped ~storage ~branch c
     @param varying which parameters the loop varies, where the caller knows;
                    read off the calls otherwise
     @param shapes the branches' shapes ({!branch_along})
+    @param cursor the loop's {!Reuse_cursor}, its parameters positioned
+                  among [params], where it has one
     @param check Call checker for identifying recursive calls
     @param params Function parameters
     @param ret_ty Return type
     @param body Function body
     @return Transformed body with TMC while loop *)
-let transform_tmc ?(param_inits = []) ?(jumped = ignore) ~varying ~parts ~shapes tparams check params ret_ty body =
+let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~varying ~parts ~shapes tparams check params ret_ty body =
   let branch = branch_along shapes check in
   let storage = storage_of ret_ty in
   let { ss_varying = varying; ss_varying_params = varying_params;
@@ -864,15 +869,38 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ~varying ~parts ~shapes
   in
   (* Substitute param references in body *)
   let body' = List.map (subst_stmt subs) body in
-  (* Rewrite body for TMC, then flatten unnecessary Sblock wrappers *)
-  let cursor_used = ref false in
-  let body'' =
-    List.map
-      (rewrite_tmc_visit_stmt ~cursor_used ~jumped ~storage ~branch check varying shadow_params)
-      body'
-    |> strip_unnecessary_blocks
-    |> rewrite_borrowed_shadow_uses shadow_params
+  (* The cursor recycles the input's cells into the result's: it needs a
+     result assembled in heap cells, and an input the loop owns, which its
+     first step steals the field of before any cell was proven unique -- a
+     parameter the head declares by value, not a reference or a receiver. *)
+  let cursor =
+    match (storage, cursor) with
+    | Boxed_root _, Some (c : Reuse_cursor.t) -> (
+      match List.nth_opt params c.parameter with
+      | Some (id, ty) when (not (List.mem_assoc id param_inits)) && not (declared_by_reference ty) -> Some c
+      | Some _ | None -> None )
+    | (Value_root _ | Pointer_result _ | Boxed_root _), _ -> None
   in
+  (* Rewrite body for TMC, then flatten unnecessary Sblock wrappers.  A step
+     the cursor's lowering cannot carry out declines it, and the body is
+     rewritten without; the calls taken are told once, of the rewrite kept. *)
+  let rewrite cursor =
+    let cursor_used = ref false and jumps = ref [] in
+    let jumped e = jumps := e :: !jumps in
+    let body =
+      List.map
+        (rewrite_tmc_visit_stmt ~cursor_used ?cursor ~jumped ~storage ~branch check varying shadow_params)
+        body'
+    in
+    (body, !cursor_used, List.rev !jumps)
+  in
+  let body'', cursor_used, jumps =
+    match rewrite cursor with
+    | rewritten -> rewritten
+    | exception Cursor_declined -> rewrite None
+  in
+  List.iter jumped jumps;
+  let body'' = body'' |> strip_unnecessary_blocks |> rewrite_borrowed_shadow_uses shadow_params in
   (* The matches the loop reads through its pointer shadows.  Escape analysis
      may have passed a scrutinee owned so that a loop would have cells to
      recycle, which also made translation emit a destructive match ([auto&]
@@ -886,7 +914,7 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ~varying ~parts ~shapes
      licensed -- the recursive field of a cell it has just proven unique. *)
   let body'' = borrow_cursor_matches shadow_params body'' in
   let cursor_decls =
-    if not !cursor_used then []
+    if not cursor_used then []
     else
       [ Sasgn (id_own, Declare (head_ty, None), Cpp_erasure.converting_ctor head_ty []);
         (* [Tid] is the *user-defined* type constructor, so the printer

@@ -89,12 +89,14 @@ val record_unlowered_method : method_field -> unit
     [body] has its tail calls exposed: [check]
     recognises the calls the loop takes, [shapes] the branches it builds
     cells in ({!Loopify_tmc.branch_along}), [varying] the parameters it
-    changes, and [jumped] is told each call it takes.  [None] where
+    changes, [cursor] the input it recycles the cells of, and [jumped] is
+    told each call it takes.  [None] where
     Loopify would do anything else with [f]: adopt a body, a violation under
     [CRANE_CHECK_IR], or leave a call behind.  It raises
     [Loopify_analysis.Not_linearisable] where the transform declines. *)
 val modulo_cons_loop :
   jumped:(cpp_expr -> unit) ->
+  ?cursor:Reuse_cursor.t ->
   varying:bool list ->
   parts:bool list ->
   shapes:Loopify_tmc.shape list ->
@@ -114,12 +116,14 @@ val modulo_cons_loop :
     the caller passed for it, where given ({!Loopify_tail.pointer_safe_flags}).
     A loop tail modulo cons or a machine takes the calls the method's
     ControlIR continues by, and builds its cells along its turns
-    ({!Loopify_tmc.control_shapes}).  A tail loop parks the receiver of the
+    ({!Loopify_tmc.control_shapes}), recycling the cells of the input
+    [cursor] walks, where given.  A tail loop parks the receiver of the
     calls made of [park], those of the turns that make the receiver they
     pass ({!Control_ir.rebuilt}), and passes the others theirs, which the
     turns derive from the loop's parameters; a loop of another kind parks
     none.  Under [CRANE_CHECK_IR] it parks every call of [park]. *)
 val transform_method_own :
+  ?cursor:Reuse_cursor.t ->
   varying:bool list ->
   parts:bool list ->
   park:Miniml.Occurrence.t list ->

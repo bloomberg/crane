@@ -13814,3 +13814,14 @@
   (alias runtest)
   (deps sep_ext_functor_modtype_via_application.t.exe)
   (action (run ./sep_ext_functor_modtype_via_application.t.exe))))
+
+(subdir loopify_reuse_cursor_turns
+ (rule
+  (targets loopify_reuse_cursor_turns.t.exe)
+  (deps LoopifyReuseCursorTurns.vo loopify_reuse_cursor_turns.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_reuse_cursor_turns.t.exe loopify_reuse_cursor_turns.cpp loopify_reuse_cursor_turns.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_reuse_cursor_turns.t.exe)
+  (action (run ./loopify_reuse_cursor_turns.t.exe))))

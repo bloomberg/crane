@@ -586,7 +586,7 @@ type unlowered =
   | Declined of string
   | Left of string option
 
-let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_by ?modulo_cons ?shapes ?loop
+let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_by ?modulo_cons ?shapes ?cursor ?loop
     ~varying ?binders ~parts check tparams params ret_ty body =
   let declined reason =
     {nt_body = body; nt_outcome = Lp_declined reason; nt_machine = false}
@@ -623,7 +623,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_b
     | Some chains ->
       let tmc =
         checked_tail_loop loop (fun jumped ->
-            transform_tmc ~param_inits ~jumped ~varying ~parts
+            transform_tmc ~param_inits ~jumped ?cursor ~varying ~parts
               ~shapes:(Option.default (chain_shapes chains) shapes)
               tparams check params ret_ty restored )
       in
@@ -705,7 +705,7 @@ let after_tail_loop ?(strategy = Lp_tail) ?survived ~tparams (f : dfun) params l
   report_outcome ?survived ~name:(fundef_display_name f.df_path) ~check:(survivors f) ~strategy
     (loopify_inner_lambdas ~tparams ~outer_env:params loop)
 
-let modulo_cons_loop ~jumped ~varying ~parts ~shapes ~tparams check (f : dfun) params body =
+let modulo_cons_loop ~jumped ?cursor ~varying ~parts ~shapes ~tparams check (f : dfun) params body =
   let r = fst f.df_path.dp_outer in
   let adopted () =
     find_adopted ~adoptable:(planned_adoptable r) body
@@ -720,7 +720,7 @@ let modulo_cons_loop ~jumped ~varying ~parts ~shapes ~tparams check (f : dfun) p
   end
   else
     let loop =
-      transform_tmc ~jumped ~varying ~parts ~shapes tparams check params f.df_ret (Cpp_temporaries.own_stmts body)
+      transform_tmc ~jumped ?cursor ~varying ~parts ~shapes tparams check params f.df_ret (Cpp_temporaries.own_stmts body)
     in
     if classify (survivors f) loop = No_recursion then Some loop else None
 
@@ -843,7 +843,7 @@ let receiver_position mf =
     | Some (_, pos) -> pos
     | None -> r.this_pos )
 
-let transform_method_own ~varying ~parts ~park ~tparams ~self_ty mf =
+let transform_method_own ?cursor ~varying ~parts ~park ~tparams ~self_ty mf =
   (* [tparams] arrives holding only the enclosing struct's parameters.  A
      method's body is written under its own template header too, and a
      parameter declared there is the one most likely to constrain how the body
@@ -956,7 +956,7 @@ let transform_method_own ~varying ~parts ~park ~tparams ~self_ty mf =
               ~binders:
                 ( (match mf.mf_receiver_binder with Some b -> [(self_id, b)] | None -> [])
                 @ mf.mf_binders )
-              ?fn_name ?modulo_cons:(modulo_cons_chains strategy) ?shapes ?loop ~varying ~parts
+              ?fn_name ?modulo_cons:(modulo_cons_chains strategy) ?shapes ?cursor ?loop ~varying ~parts
               check tparams
               augmented_params mf.mf_ret_type body_with_self
           in
