@@ -13814,3 +13814,14 @@
   (alias runtest)
   (deps sep_ext_functor_modtype_via_application.t.exe)
   (action (run ./sep_ext_functor_modtype_via_application.t.exe))))
+
+(subdir custom_signature_type_include
+ (rule
+  (targets custom_signature_type_include.t.exe)
+  (deps CustomSignatureTypeInclude.vo custom_signature_type_include.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} custom_signature_type_include.t.exe custom_signature_type_include.cpp custom_signature_type_include.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps custom_signature_type_include.t.exe)
+  (action (run ./custom_signature_type_include.t.exe))))
