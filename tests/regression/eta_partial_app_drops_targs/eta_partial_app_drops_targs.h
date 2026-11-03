@@ -238,7 +238,7 @@ template <Mon _tcI0> struct Fun_Mon {
                                                        crane::obj x) {
     return liftM<_tcI0, crane::obj, crane::obj>(
         [=](const auto &) { return a; },
-        crane_any_cast<typename _tcI0::template m<crane::obj>>(x));
+        crane_any_cast<typename _tcI0::template m<crane::obj>>(std::move(x)));
   }
 };
 

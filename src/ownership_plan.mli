@@ -35,7 +35,7 @@ val empty : t
     one a copy of which costs more than a move.  This is the reading
     {!worth_moving_cpp} makes, made of the ML type: an inductive that is not
     an enum or coinductive, a closure, a type variable or one applied to
-    arguments, and a mapped type unless it is a scalar or declared trivially
+    arguments, a type nothing determined (held in the box), and a mapped type unless it is a scalar or declared trivially
     copyable with arguments that are too. *)
 val worth_moving : Miniml.ml_type -> bool
 
