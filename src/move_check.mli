@@ -7,7 +7,7 @@
 
     The moves a body holds come from several places -- translation at the
     last uses its region's plan finds ({!Ownership_plan}), Loopify's frames
-    and loops, {!Last_use}, the depth flattening -- and this checks all of
+    and loops, the depth flattening -- and this checks all of
     them against the C++ they ended up in, independently of how each was
     decided.  A move reaches a whole local or one member of it -- a field
     of the alternative its variant holds among them; a later read of the

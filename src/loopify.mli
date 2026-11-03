@@ -203,8 +203,8 @@ val worthwhile_move_type : cpp_type -> bool
 (** Whether a value of this type is expensive enough to copy that writing
     [std::move] around it earns its keep: a reference count to bump, an
     inductive to clone, or a type parameter that may be either.  Exported for
-    {!Last_use}, which asks the same question of a local as loopify asks of a
-    frame field. *)
+    {!Cpp_simplify}, which asks the same question of a local as loopify asks
+    of a frame field. *)
 
 (** [check_pointer_fields ds] checks, under [CRANE_CHECK_IR], the fields
     each constructor struct of the struct [ds] stores behind the pointer

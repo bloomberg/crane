@@ -60,7 +60,7 @@ let rec strip_ref_and_const_type = function
     pessimizing-move warning since the move constructor receives [const T&&]
     and falls back to copy anyway; and a move of a type that copies for free
     -- a scalar -- transfers nothing.  An [auto] parameter may be anything,
-    and is moved as {!Last_use} moves one. *)
+    and is moved as a type variable is ({!Ownership_plan.worth_moving}). *)
 let is_moveable_param_type = function
   | Tref _ | Tconst _ -> false
   | Tauto -> true
