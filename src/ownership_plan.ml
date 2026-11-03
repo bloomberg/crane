@@ -90,13 +90,15 @@ let closure_reads d t =
   in
   go d [] t
 
+let worth_moving_ref worth r args =
+  (not (Table.is_enum_inductive r))
+  && (not (Table.is_coinductive r))
+  && ( (not (Table.is_custom r))
+     || List.exists worth args
+     || not (Table.is_custom_scalar_ref r || Table.is_trivially_copyable_ref r) )
+
 let rec worth_moving = function
-  | Tglob (r, args, _) ->
-    (not (Table.is_enum_inductive r))
-    && (not (Table.is_coinductive r))
-    && ( (not (Table.is_custom r))
-       || List.exists worth_moving args
-       || not (Table.is_custom_scalar_ref r || Table.is_trivially_copyable_ref r) )
+  | Tglob (r, args, _) -> worth_moving_ref worth_moving r args
   | Tarr _ | Tvar _ | Tapp _ -> true
   (* A type nothing determined, an index a constructor hides, is held in the
      box ([std::any]), which a move hands over. *)
@@ -107,12 +109,7 @@ let rec worth_moving = function
 let rec worth_moving_cpp (ty : Minicpp.cpp_type) =
   let open Minicpp in
   match ty with
-  | Tglob (r, tparams, _) ->
-    (not (Table.is_enum_inductive r))
-    && (not (Table.is_coinductive r))
-    && ( (not (Table.is_custom r))
-       || List.exists worth_moving_cpp tparams
-       || not (Table.is_custom_scalar_ref r || Table.is_trivially_copyable_ref r) )
+  | Tglob (r, tparams, _) -> worth_moving_ref worth_moving_cpp r tparams
   | Tshared_ptr _ | Tfun _ | Terased _ -> true
   | Tvariant (_, ts) | Tid (_, ts) | Tid_external (_, ts) -> List.exists worth_moving_cpp ts
   | Tnondeduced t -> worth_moving_cpp t
