@@ -330,16 +330,6 @@ let rec cpp_type_mentions_boxed_recursive t =
   | Tnamespace (_, t) -> cpp_type_mentions_boxed_recursive t
   | _ -> false
 
-(* Suppresses [%elem] boxing while rendering a [crane_container_cast] target
-   type.  That cast reconstructs a concrete container type from an erased
-   [std::any] representation to match a CALLEE's declared parameter type; when
-   the callee is a template function generic over the element (e.g.
-   [nodupKeys<T1>]), its declaration never boxes (a bare [Tvar] never
-   recurses), so the cast target must stay unboxed too, even though this
-   call site's substituted element type (e.g. [Json_value]) would otherwise
-   be judged boxed-recursive. *)
-let suppress_elem_boxing = ref false
-
 (** Render a custom type template, filling hole [i] with [hole i] and copying
     the text between holes verbatim.  [hole] returns [None] for an index the
     caller cannot fill, which is written back out as a placeholder of the same
@@ -587,7 +577,9 @@ let ctor_alias_visibility : Cpp_ast.declared_in -> _ = function
     written out of line and qualify what they name by the struct they are
     members of. *)
 let ctor_alias_render_ctx ctx (declared : Cpp_ast.declared_in) =
-  let start = {(file_start ctx.rc_file) with rc_visibility = Some (ctor_alias_visibility declared)} in
+  let start =
+    {(file_start ctx.rc_file) with rc_visibility = Some (ctor_alias_visibility declared); rc_elem_boxing = ctx.rc_elem_boxing}
+  in
   match (declared, ctx.rc_file) with
   | At_namespace_scope _, _ -> start
   | In_struct_of home, Common.Intf ->
@@ -2250,9 +2242,7 @@ and pp_cpp_expr ctx env args t =
     ++ str ")"
   | CPPcontainer_cast (ty, e, suppress_boxing) ->
     writes Table.erase_fn_header;
-    let ty_pp =
-      setting suppress_elem_boxing (suppress_boxing || !suppress_elem_boxing) (fun () -> pp_cpp_type ctx false [] ty)
-    in
+    let ty_pp = pp_cpp_type (if suppress_boxing then {ctx with rc_elem_boxing = false} else ctx) false [] ty in
     str Crane_rt.container_cast ++ str "<"
     ++ ty_pp
     ++ str ">("
@@ -2857,8 +2847,7 @@ and pp_custom ?container ?ret ctx custom env typ t tyargs cases args _arg_types 
       in
       ( match container_ref with
       | Some g
-        when (not !suppress_elem_boxing)
-             && cpp_type_mentions_boxed_recursive elem_ty ->
+        when ctx.rc_elem_boxing && cpp_type_mentions_boxed_recursive elem_ty ->
         let ind =
           match g with
           | GlobRef.ConstructRef (ip, _) -> GlobRef.IndRef ip

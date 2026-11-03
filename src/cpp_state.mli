@@ -155,6 +155,11 @@ type render_ctx = {
           has entered that declares names ({!Cpp_names.next}); none where
           nothing planned it, where naming anything is an anomaly: no
           visibility is installed for a name to fall back on. *)
+  rc_elem_boxing : bool;
+      (** Whether a container template's [%elem] boxes an element recursing
+          through the container: not in a [crane_container_cast] target that
+          spells the parameter of a callee generic over the element
+          ({!Minicpp.CPPcontainer_cast}), whose declaration boxes nothing. *)
 }
 
 (** The context at the start of the file [file]: file scope, outside every

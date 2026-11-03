@@ -486,6 +486,8 @@ type render_ctx = {
      for each scope printing has entered that declares names; none where
      nothing planned it, where nothing may be named. *)
   rc_visibility : Common.visibility option;
+  (* Whether [%elem] boxes; see the interface. *)
+  rc_elem_boxing : bool;
 }
 
 (** The context at the start of the file [file]: file scope, outside every
@@ -501,6 +503,7 @@ let file_start rc_file =
     rc_frame = [];
     rc_names = None;
     rc_visibility = None;
+    rc_elem_boxing = true;
   }
 
 (** The modules whose module types are file-scope concepts of a functor
