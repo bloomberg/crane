@@ -2421,7 +2421,8 @@ let reset_extraction_reuse () = Lib.add_leaf (reset_reuse ())
 
    This is what the user *asked for*; what the unit actually gets is
    [non_atomic_rc] below, which withholds the swap from a unit that spawns
-   threads.  Nothing outside this file reads the request directly. *)
+   threads.  The one reader of the request itself outside this file is
+   [Escape.is_reuse_scrutinee], for the program-wide ownership summary. *)
 let {Goptions.get = non_atomic_rc_requested} =
   declare_bool_option_and_ref ~key:["Crane"; "NonAtomicRc"] ~value:false ()
 

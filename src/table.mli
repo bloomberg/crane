@@ -901,6 +901,13 @@ val fast_variant : unit -> bool
     the customs the unit's program names are installed. *)
 val non_atomic_rc : unit -> bool
 
+(** The raw [Set Crane NonAtomicRc] request, before {!non_atomic_rc} withholds
+    it from a concurrent unit.  It is program-wide, so a decision that has to
+    agree across the units of one extraction reads it rather than the per-unit
+    answer: the parameter ownership {!Ownership} settles for the whole program
+    in [Extract_env.freeze], before any unit's customs are installed. *)
+val non_atomic_rc_requested : unit -> bool
+
 (** Whether the runtime's block heap is one global ([Set Crane
     SingleThreaded]): the request, a promise that Crane values are used from
     one thread at a time, withheld from a unit that spawns threads like

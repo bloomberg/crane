@@ -13924,3 +13924,14 @@
   (alias runtest)
   (deps boxed_element_block_template.t.exe)
   (action (run ./boxed_element_block_template.t.exe))))
+
+(subdir reuse_summary_concurrent_unit
+ (rule
+  (targets reuse_summary_concurrent_unit.t.exe)
+  (deps ReuseSummaryConcurrentUnit.vo reuse_summary_concurrent_unit.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_summary_concurrent_unit.t.exe reuse_summary_concurrent_unit.cpp reuse_summary_concurrent_unit.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_summary_concurrent_unit.t.exe)
+  (action (run ./reuse_summary_concurrent_unit.t.exe))))
