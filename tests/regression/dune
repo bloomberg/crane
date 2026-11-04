@@ -13869,3 +13869,25 @@
   (alias runtest)
   (deps frame_kept_consumed_before_call.t.exe)
   (action (run ./frame_kept_consumed_before_call.t.exe))))
+
+(subdir rc_assign_from_own_child
+ (rule
+  (targets rc_assign_from_own_child.t.exe)
+  (deps RcAssignFromOwnChild.vo rc_assign_from_own_child.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rc_assign_from_own_child.t.exe rc_assign_from_own_child.cpp rc_assign_from_own_child.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rc_assign_from_own_child.t.exe)
+  (action (run ./rc_assign_from_own_child.t.exe))))
+
+(subdir fast_variant_assign_from_own_child
+ (rule
+  (targets fast_variant_assign_from_own_child.t.exe)
+  (deps FastVariantAssignFromOwnChild.vo fast_variant_assign_from_own_child.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fast_variant_assign_from_own_child.t.exe fast_variant_assign_from_own_child.cpp fast_variant_assign_from_own_child.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fast_variant_assign_from_own_child.t.exe)
+  (action (run ./fast_variant_assign_from_own_child.t.exe))))

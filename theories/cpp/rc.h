@@ -96,13 +96,15 @@ public:
     rc(const rc& other) noexcept : ctrl_(other.ctrl_) { inc_strong(); }
     rc(rc&& other) noexcept : ctrl_(other.ctrl_) { other.ctrl_ = nullptr; }
 
+    // [other] may live inside the block this one releases -- [x = *x.child]
+    // -- so it is taken before anything is released.
     rc& operator=(const rc& other) noexcept {
-        if (this != &other) { release(); ctrl_ = other.ctrl_; inc_strong(); }
+        rc(other).swap(*this);
         return *this;
     }
 
     rc& operator=(rc&& other) noexcept {
-        if (this != &other) { release(); ctrl_ = other.ctrl_; other.ctrl_ = nullptr; }
+        rc(std::move(other)).swap(*this);
         return *this;
     }
 

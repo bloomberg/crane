@@ -14,11 +14,13 @@
 // is a large share of the run time.
 //
 // A wrong alternative is reported as std::variant reports it, by throwing
-// std::bad_variant_access.  So is the state an assignment leaves when building
-// the new alternative throws: the old one is gone and no new one exists, and
-// the variant holds nothing (std::variant's valueless_by_exception) rather
-// than a tag naming a destroyed alternative.  Moves are noexcept exactly when
-// every alternative's move is.
+// std::bad_variant_access.  An assignment takes its source before it destroys
+// anything, so one whose copy throws leaves the variant as it was.  So is the
+// state left when what is built after the old alternative is destroyed throws
+// -- an emplace, or a taken value moved in by a move that can throw: no
+// alternative exists, and the variant holds nothing (std::variant's
+// valueless_by_exception) rather than a tag naming a destroyed alternative.
+// Moves are noexcept exactly when every alternative's move is.
 
 #ifndef INCLUDED_CRANE_VARIANT
 #define INCLUDED_CRANE_VARIANT
@@ -56,6 +58,7 @@ template <class... Ts> class variant {
   // and destroy() has nothing to do.
   static constexpr std::uint8_t valueless = 255;
   static constexpr bool nothrow_move = (std::is_nothrow_move_constructible_v<Ts> && ...);
+  static constexpr bool nothrow_move_assign = nothrow_move && (std::is_nothrow_move_assignable_v<Ts> && ...);
 
   // Replace the alternative with whatever [build] constructs, which sets
   // [index_] once it has succeeded.
@@ -119,14 +122,30 @@ public:
     ::new (storage_) alt<I>(std::forward<A>(a)...);
   }
 
+  // [o] may live inside the alternative this one holds -- [v = child.v] --
+  // which is not destroyed before [o] is read: the same alternative is
+  // assigned, whose own assignment takes [o] first, and another is built
+  // from a copy of [o] taken before.
   variant &operator=(const variant &o) {
-    if (this != &o)
-      rebuild([&] { copy_from(o); });
+    if (this == &o)
+      return *this;
+    if (index_ == o.index_)
+      on_index([&](auto i) { raw<decltype(i)::value>() = o.template raw<decltype(i)::value>(); });
+    else {
+      variant copy(o);
+      rebuild([&] { move_from(copy); });
+    }
     return *this;
   }
-  variant &operator=(variant &&o) noexcept(nothrow_move) {
-    if (this != &o)
-      rebuild([&] { move_from(o); });
+  variant &operator=(variant &&o) noexcept(nothrow_move_assign) {
+    if (this == &o)
+      return *this;
+    if (index_ == o.index_)
+      on_index([&](auto i) { raw<decltype(i)::value>() = std::move(o.template raw<decltype(i)::value>()); });
+    else {
+      variant taken(std::move(o));
+      rebuild([&] { move_from(taken); });
+    }
     return *this;
   }
   template <class T, class D = std::decay_t<T>,
