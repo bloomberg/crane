@@ -16,8 +16,7 @@
 template <typename A, typename P> struct SigT;
 
 struct Datatypes {
-  template <typename T1 = void>
-  static uint64_t length(const crane::list<crane::obj> &l);
+  template <typename T1> static uint64_t length(const crane::list<T1> &l);
 };
 
 template <typename A, typename P> struct SigT {
@@ -153,13 +152,12 @@ struct BoxedElementContainerCast {
     }
   };
 
-  template <typename T1 = void>
-  static bool
-  nodupKeys(const crane::list<std::pair<std::string, crane::obj>> &prs) {
+  template <typename T1>
+  static bool nodupKeys(const crane::list<std::pair<std::string, T1>> &prs) {
     if (prs.empty()) {
       return true;
     } else {
-      const std::pair<std::string, crane::obj> &_x = prs.front();
+      const std::pair<std::string, T1> &_x = prs.front();
       auto _x0 = prs.tail();
       return false;
     }
@@ -314,14 +312,13 @@ struct BoxedElementContainerCast {
       ListDef::template map<grammar_entry, uint64_t>(action_size, entries);
 };
 
-template <typename T1>
-uint64_t Datatypes::length(const crane::list<crane::obj> &l) {
+template <typename T1> uint64_t Datatypes::length(const crane::list<T1> &l) {
   if (l.empty()) {
     return UINT64_C(0);
   } else {
-    const crane::obj &_x = l.front();
+    const T1 &_x = l.front();
     auto l_ = l.tail();
-    return (Datatypes::template length<crane::obj>(l_) + 1);
+    return (Datatypes::template length<T1>(l_) + 1);
   }
 }
 

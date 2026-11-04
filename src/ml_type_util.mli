@@ -611,7 +611,8 @@ val signed_neg_idx : int
 (** Set of type-variable indices. *)
 module IntSet : module type of Escape.IntSet
 
-(** The 0-based [%tN] positions a custom template string mentions. *)
+(** The 0-based type-argument positions a custom template string writes:
+    its [%t{i}] and [%elem{i}] holes. *)
 val template_referenced_positions : string -> IntSet.t
 
 (** The type-argument positions a custom/monad global's template string
