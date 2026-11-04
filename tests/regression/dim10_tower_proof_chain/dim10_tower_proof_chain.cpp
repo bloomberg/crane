@@ -5,10 +5,10 @@ Dim10TowerProofChainCase::nat_le_of_lt(uint64_t n, uint64_t m,
                                        Dim10TowerProofChainCase::nat_lt h_) {
   if (n <= 0) {
     if (m <= 0) {
-      throw std::logic_error("unreachable: impossible dependent match branch");
+      return std::monostate{};
     } else {
       uint64_t _x = m - 1;
-      throw std::logic_error("unreachable: impossible dependent match branch");
+      return std::monostate{};
     }
   } else {
     uint64_t n0 = n - 1;

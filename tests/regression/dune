@@ -13858,3 +13858,14 @@
   (alias runtest)
   (deps reuse_moved_capture_renamed.t.exe)
   (action (run ./reuse_moved_capture_renamed.t.exe))))
+
+(subdir tt_at_computed_type
+ (rule
+  (targets tt_at_computed_type.t.exe)
+  (deps TtAtComputedType.vo tt_at_computed_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tt_at_computed_type.t.exe tt_at_computed_type.cpp tt_at_computed_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tt_at_computed_type.t.exe)
+  (action (run ./tt_at_computed_type.t.exe))))

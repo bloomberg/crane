@@ -189,7 +189,10 @@ let is_unit_cpp_type = function
     other absurd cases.
 
     A nested lambda is traversed under its own declared return type, since a
-    [tt] returned from a lambda that really does return [unit] is well-typed. *)
+    [tt] returned from a lambda that really does return [unit] is well-typed.
+    So is one returned where the result is the box: a type a type-level
+    function computes ([tuple (nats n)], [unit] at [0]) erases to it, and its
+    [unit] branch is as reachable as any other. *)
 let dead_unit_returns_to_abort (cod : cpp_type) (body : cpp_stmt list) =
   (* A [tt] can also reach the return as the head of a call, when the branch's
      type is a function type and eta-expansion pushed the invented argument
@@ -205,7 +208,8 @@ let dead_unit_returns_to_abort (cod : cpp_type) (body : cpp_stmt list) =
      declared type to contradict, so leave those bodies alone. *)
   let rec fix_stmts ret_ty stmts =
     match ret_ty with
-    | Some t when not (is_unit_cpp_type t) -> List.map (fix_stmt ret_ty) stmts
+    | Some t when not (is_unit_cpp_type t || Translation_types.resolves_to_any_type t) ->
+      List.map (fix_stmt ret_ty) stmts
     | _ -> List.map (fix_stmt None) stmts
   and fix_stmt ret_ty s =
     match s with
