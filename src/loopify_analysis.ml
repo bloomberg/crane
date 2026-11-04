@@ -582,89 +582,28 @@ let rec collect_expr (check : call_checker) expr =
     cs :: nested
   | None ->
   match expr with
-  | CPPfun_call (_, f, args) ->
-    collect_expr check f
-    @ List.concat_map (collect_expr check) (to_reversed args)
-  | CPPerased_call (f, a) -> collect_expr check f @ collect_expr check a
-  | CPPtolerant_call (f, args) ->
-    collect_expr check f @ List.concat_map (collect_expr check) args
-  | CPPaccess_call (Aarrow, obj, _id, args) ->
-    collect_expr check obj @ List.concat_map (collect_expr check) args
-  | CPPaccess_call (Adot, obj, _id, args) ->
-    collect_expr check obj @ List.concat_map (collect_expr check) args
-  | CPPmethod_call {mc_receiver = obj; mc_args = args; _}
-  | CPPprojection {pj_record = obj; pj_args = args; _} ->
-    collect_expr check obj @ List.concat_map (collect_expr check) args
-  | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) | CPPsuspend (_, e) ->
-    collect_expr check e
-  | CPPlambda {cl_body = stmts; _} ->
-    (* Calls inside lambdas found via collect_expr are NOT tail calls of the
-       outer function — they're returns from the lambda, whose result is used in
-       a larger expression (e.g., Cons_(x, visit(l, {... => f(args)}))). The
-       direct visit-in-return case goes through collect_stmt's special case for
-       Sreturn(Some(visit(...))), not through here. *)
-    List.map
-      (fun cs -> {cs with cs_is_tail = false; cs_recv = None})
-      (collect_stmts check ~in_visitor:false stmts)
-  | CPPget (e, _)
-   |CPPget' (e, _, _)
-   |CPPaccess (_, e, _)
-   |CPPscope (e, _, _) -> collect_expr check e
-  | CPPstructmk (_, _, args)
-   |CPPstruct (_, _, args)
-   |CPPstruct_id (_, _, args)
-   |CPPnew (_, args) -> List.concat_map (collect_expr check) args
-  | CPPshared_ptr_ctor (_, e) ->
-    collect_expr check e
-  | CPPbinop (_, e1, e2) -> collect_expr check e1 @ collect_expr check e2
-  | CPPcond (c, t, f) ->
-    collect_expr check c @ collect_expr check t @ collect_expr check f
   | CPPparray (arr, def) ->
     Array.fold_left
       (fun acc e -> acc @ collect_expr check e)
       (collect_expr check def)
       arr
-  | CPPbraced args -> List.concat_map (collect_expr check) args
-  | CPPstd_get (_, Some e) -> collect_expr check e
-  | CPPstd_get_if (_, e) -> collect_expr check e
-  (* A cast, a conversion or an operator around a call evaluates the call
-     first: the call is not in tail position, but it is a call. *)
-  | CPPunop (_, e)
-  | CPPany_cast (_, e)
-  | CPPany_cast_tolerant (_, e)
-  | CPPunbox (_, e)
-  | CPPconvert (_, e)
-  | CPPerase_fn (_, e)
-  | CPPfn_value e
-  | CPPcontainer_cast (_, e, _)
-  | CPPbox (_, e) -> collect_expr check e
-  | CPPconverting_ctor (_, args) -> List.concat_map (collect_expr check) args
-  | CPPvar _
-   |CPPglob _
-   |CPPalloc _
-   |CPPthis
-   |CPPshared_from_this _
-   |CPPconvertible_to _
-   |CPPabort _
-   |CPPenum_val _
-   |CPPnullptr | CPPin_place | CPPin_place_index _
-   |CPPstd_get (_, None)
-   |CPPstd_holds_alternative _
-   |CPPdeclval _
-   |CPPtype_name _
-   |CPPnumeral _
-   |CPPraw _
-   |CPPrt _
-   |CPPbool _
-   |CPPint _
-   |CPPmethod_value _
-   |CPPprojection_value _
-   |CPPqualified_t _
-   |CPPstring _
-   |CPPuint _
-   |CPPfloat _
-   |CPPconcept_app _
-   |CPPrequires _ -> []
+  (* A requires-expression is never evaluated. *)
+  | CPPrequires _ -> []
+  | _ ->
+    (* A call below an expression is not in tail position, but it is a call.
+       A statement list there is a lambda's body: a call in it returns from
+       the lambda, whose result the larger expression uses (e.g.
+       Cons_(x, visit(l, {... => f(args)}))); collect_stmt sees the direct
+       Sreturn(Some(visit(...))) case, not this. *)
+    let in_body stmts =
+      List.map
+        (fun cs -> {cs with cs_is_tail = false; cs_recv = None})
+        (collect_stmts check ~in_visitor:false stmts)
+    in
+    fold_expr_children
+      ~on_expr:(fun acc e -> acc @ collect_expr check e)
+      ~on_stmts:(fun acc stmts -> acc @ in_body stmts)
+      [] expr
 
 (** Collect recursive call sites from a list of statements.
     Delegates to {!collect_stmt} for each statement. *)

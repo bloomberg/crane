@@ -3,41 +3,43 @@
 ReuseMovedCaptureRenamed::mylist<crane::fn<uint64_t(uint64_t)>>
 ReuseMovedCaptureRenamed::adders(
     ReuseMovedCaptureRenamed::mylist<ReuseMovedCaptureRenamed::tree> ts) {
+  std::optional<ReuseMovedCaptureRenamed::mylist<crane::fn<uint64_t(uint64_t)>>>
+      _root{};
   crane::rc<ReuseMovedCaptureRenamed::mylist<crane::fn<uint64_t(uint64_t)>>>
-      _head{};
-  crane::rc<ReuseMovedCaptureRenamed::mylist<crane::fn<uint64_t(uint64_t)>>>
-      *_write = &_head;
+      *_write = nullptr;
   const ReuseMovedCaptureRenamed::mylist<ReuseMovedCaptureRenamed::tree>
       *_loop_ts = &ts;
   while (true) {
     if (std::holds_alternative<typename ReuseMovedCaptureRenamed::mylist<
             ReuseMovedCaptureRenamed::tree>::Mynil>(_loop_ts->v())) {
-      *_write = crane::make_rc<
-          ReuseMovedCaptureRenamed::mylist<crane::fn<uint64_t(uint64_t)>>>(
-          mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
+      auto _value = mylist<crane::fn<uint64_t(uint64_t)>>::mynil();
+      (_write ? *(*_write = crane::make_rc<ReuseMovedCaptureRenamed::mylist<
+                      crane::fn<uint64_t(uint64_t)>>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] = std::get<typename ReuseMovedCaptureRenamed::mylist<
           ReuseMovedCaptureRenamed::tree>::Mycons>(_loop_ts->v());
       const ReuseMovedCaptureRenamed::mylist<ReuseMovedCaptureRenamed::tree>
           &a1_value = *a1;
-      auto _cell = crane::make_rc<
-          ReuseMovedCaptureRenamed::mylist<crane::fn<uint64_t(uint64_t)>>>(
-          typename ReuseMovedCaptureRenamed::
-              mylist<crane::fn<uint64_t(uint64_t)>>::Mycons(
-                  [=, a0 = std::move(a0)](uint64_t _x0) -> uint64_t {
-                    return a0.peek(_x0);
-                  },
-                  nullptr));
-      *_write = std::move(_cell);
+      auto _cell = typename ReuseMovedCaptureRenamed::
+          mylist<crane::fn<uint64_t(uint64_t)>>::Mycons(
+              [=, a0 = std::move(a0)](uint64_t _x0) -> uint64_t {
+                return a0.peek(_x0);
+              },
+              nullptr);
+      ReuseMovedCaptureRenamed::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
+          (_write ? *(*_write = crane::make_rc<ReuseMovedCaptureRenamed::mylist<
+                          crane::fn<uint64_t(uint64_t)>>>(std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
       _write = &std::get<typename ReuseMovedCaptureRenamed::mylist<
-          crane::fn<uint64_t(uint64_t)>>::Mycons>((*_write)->v_mut())
+          crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut())
                     .a1;
       _loop_ts = &a1_value;
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 uint64_t ReuseMovedCaptureRenamed::apply_all(

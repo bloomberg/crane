@@ -45,6 +45,12 @@ val worth_moving : Miniml.ml_type -> bool
     frame fields it declares itself. *)
 val worth_moving_cpp : Minicpp.cpp_type -> bool
 
+(** What both ask of the global type [r] applied to [args], [worth] judging
+    an argument: an inductive unless an enum or coinductive, a mapped type
+    unless a scalar or trivially copyable one with no argument worth moving.
+    The question a type node instantiating a mapping asks of its mapping. *)
+val worth_moving_ref : ('a -> bool) -> Names.GlobRef.t -> 'a list -> bool
+
 (** A let a machine with a stack of frames resumes at: [calls], the
     occurrences of the recursive calls its right-hand side ends in, and
     [kept], the binders the frame saved for them keeps across them, which

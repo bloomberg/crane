@@ -90,13 +90,15 @@ let closure_reads d t =
   in
   go d [] t
 
+let worth_moving_ref worth r args =
+  (not (Table.is_enum_inductive r))
+  && (not (Table.is_coinductive r))
+  && ( (not (Table.is_custom r))
+     || List.exists worth args
+     || not (Table.is_custom_scalar_ref r || Table.is_trivially_copyable_ref r) )
+
 let rec worth_moving = function
-  | Tglob (r, args, _) ->
-    (not (Table.is_enum_inductive r))
-    && (not (Table.is_coinductive r))
-    && ( (not (Table.is_custom r))
-       || List.exists worth_moving args
-       || not (Table.is_custom_scalar_ref r || Table.is_trivially_copyable_ref r) )
+  | Tglob (r, args, _) -> worth_moving_ref worth_moving r args
   | Tarr _ | Tvar _ | Tapp _ -> true
   (* A type nothing determined, an index a constructor hides, is held in the
      box ([std::any]), which a move hands over. *)
@@ -107,12 +109,7 @@ let rec worth_moving = function
 let rec worth_moving_cpp (ty : Minicpp.cpp_type) =
   let open Minicpp in
   match ty with
-  | Tglob (r, tparams, _) ->
-    (not (Table.is_enum_inductive r))
-    && (not (Table.is_coinductive r))
-    && ( (not (Table.is_custom r))
-       || List.exists worth_moving_cpp tparams
-       || not (Table.is_custom_scalar_ref r || Table.is_trivially_copyable_ref r) )
+  | Tglob (r, tparams, _) -> worth_moving_ref worth_moving_cpp r tparams
   | Tshared_ptr _ | Tfun _ | Terased _ -> true
   | Tvariant (_, ts) | Tid (_, ts) | Tid_external (_, ts) -> List.exists worth_moving_cpp ts
   | Tnondeduced t -> worth_moving_cpp t
@@ -319,7 +316,8 @@ let sequential_bind use = Core_effects.find use = Some {operation = Bind; mode =
    [let _ := a in _] at [occurrence] standing [d] binders deep: where the
    let is a point a frame machine resumes at and [a] is the call itself, the
    frame saving them is made before [a]'s arguments are evaluated, and what
-   follows reads them in the frame. *)
+   follows reads them in the frame.  The save reads them: what reads them
+   before it does not read them last. *)
 let kept_across resumes d a occurrence =
   match (resumes, strip a) with
   | Some {origin; depth; resume_at}, MLapp (MLglob {occurrence = call; _}, _) -> (
@@ -411,7 +409,8 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
       let parents_b = bind parents d ~n:1 in
       let live_b = walk ~consumed ~pinned:pinned_b parents_b (d + 1) live b in
       let kept = kept_across resumes d a occurrence in
-      walk ~pinned parents d (Levels.filter (fun l -> not (Levels.mem (storage l) kept)) (leave parents_b d live_b)) a
+      let saved, after_save = Levels.partition (fun l -> Levels.mem (storage l) kept) (leave parents_b d live_b) in
+      Levels.union saved (walk ~pinned parents d after_save a)
     (* A branch reads its pattern variables through the scrutinee's own
        evaluation -- a field of the record it names, a component of the pair
        it hands over -- so what follows the scrutinee is what the branches

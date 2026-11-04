@@ -128,13 +128,16 @@ LoopifyReuseCursorTurns::skip_sums(uint64_t seen,
 
 LoopifyReuseCursorTurns::lst
 LoopifyReuseCursorTurns::swap(LoopifyReuseCursorTurns::lst l) {
-  crane::rc<LoopifyReuseCursorTurns::lst> _head{};
-  crane::rc<LoopifyReuseCursorTurns::lst> *_write = &_head;
+  std::optional<LoopifyReuseCursorTurns::lst> _root{};
+  crane::rc<LoopifyReuseCursorTurns::lst> *_write = nullptr;
   const LoopifyReuseCursorTurns::lst *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyReuseCursorTurns::lst::Nil>(
             _loop_l->v())) {
-      *_write = crane::make_rc<LoopifyReuseCursorTurns::lst>(lst::nil());
+      auto _value = lst::nil();
+      (_write ? *(*_write = crane::make_rc<LoopifyReuseCursorTurns::lst>(
+                      std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] =
@@ -142,22 +145,25 @@ LoopifyReuseCursorTurns::swap(LoopifyReuseCursorTurns::lst l) {
       auto &&_sv0 = *a1;
       if (std::holds_alternative<typename LoopifyReuseCursorTurns::lst::Nil>(
               _sv0.v())) {
-        *_write = crane::make_rc<LoopifyReuseCursorTurns::lst>(
-            lst::cons(a0, lst::nil()));
+        auto _value = lst::cons(a0, lst::nil());
+        (_write ? *(*_write = crane::make_rc<LoopifyReuseCursorTurns::lst>(
+                        std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a00, a10] =
             std::get<typename LoopifyReuseCursorTurns::lst::Cons>(_sv0.v());
-        auto _cell = crane::make_rc<LoopifyReuseCursorTurns::lst>(
-            typename LoopifyReuseCursorTurns::lst::Cons(a00, nullptr));
         auto _cell1 = crane::make_rc<LoopifyReuseCursorTurns::lst>(
             typename LoopifyReuseCursorTurns::lst::Cons(a0, nullptr));
-        std::get<typename LoopifyReuseCursorTurns::lst::Cons>(_cell->v_mut())
-            .a1 = std::move(_cell1);
-        *_write = std::move(_cell);
+        auto _cell =
+            typename LoopifyReuseCursorTurns::lst::Cons(a00, std::move(_cell1));
+        LoopifyReuseCursorTurns::lst &_node =
+            (_write ? *(*_write = crane::make_rc<LoopifyReuseCursorTurns::lst>(
+                            std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
         _write = &std::get<typename LoopifyReuseCursorTurns::lst::Cons>(
                       std::get<typename LoopifyReuseCursorTurns::lst::Cons>(
-                          (*_write)->v_mut())
+                          _node.v_mut())
                           .a1->v_mut())
                       .a1;
         _loop_l = crane_raw(a10);
@@ -165,7 +171,7 @@ LoopifyReuseCursorTurns::swap(LoopifyReuseCursorTurns::lst l) {
       }
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 LoopifyReuseCursorTurns::lst

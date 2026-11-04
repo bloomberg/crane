@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -103,40 +104,45 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1> List<std::pair<A, T1>> combine(List<T1> l_) const {
-    crane::rc<List<std::pair<A, T1>>> _head{};
-    crane::rc<List<std::pair<A, T1>>> *_write = &_head;
+    std::optional<List<std::pair<A, T1>>> _root{};
+    crane::rc<List<std::pair<A, T1>>> *_write = nullptr;
     const List<A> *_loop_self = this;
     const List<T1> *_loop_l_ = &l_;
     while (true) {
       auto &&_sv = *_loop_self;
       if (crane::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = crane::make_rc<List<std::pair<A, T1>>>(
-            List<std::pair<A, T1>>::nil());
+        auto _value = List<std::pair<A, T1>>::nil();
+        (_write ? *(*_write = crane::make_rc<List<std::pair<A, T1>>>(
+                        std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = crane::get<typename List<A>::Cons>(_sv.v());
         if (crane::holds_alternative<typename List<T1>::Nil>(_loop_l_->v())) {
-          *_write = crane::make_rc<List<std::pair<A, T1>>>(
-              List<std::pair<A, T1>>::nil());
+          auto _value = List<std::pair<A, T1>>::nil();
+          (_write ? *(*_write = crane::make_rc<List<std::pair<A, T1>>>(
+                          std::move(_value)))
+                  : _root.emplace(std::move(_value)));
           break;
         } else {
           const auto &[a00, a10] =
               crane::get<typename List<T1>::Cons>(_loop_l_->v());
-          auto _cell = crane::make_rc<List<std::pair<A, T1>>>(
-              typename List<std::pair<A, T1>>::Cons(
-                  std::make_pair(crane::unbox(a0), crane::unbox(a00)),
-                  nullptr));
-          *_write = std::move(_cell);
-          _write = &crane::get<typename List<std::pair<A, T1>>::Cons>(
-                        (*_write)->v_mut())
-                        .l;
+          auto _cell = typename List<std::pair<A, T1>>::Cons(
+              std::make_pair(crane::unbox(a0), crane::unbox(a00)), nullptr);
+          List<std::pair<A, T1>> &_node =
+              (_write ? *(*_write = crane::make_rc<List<std::pair<A, T1>>>(
+                              std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
+          _write =
+              &crane::get<typename List<std::pair<A, T1>>::Cons>(_node.v_mut())
+                   .l;
           _loop_self = crane_raw(a1);
           _loop_l_ = crane_raw(a10);
           continue;
         }
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   template <typename T1, typename F0>
@@ -157,33 +163,38 @@ public:
   }
 
   List<A> firstn(uint64_t n) const {
-    crane::rc<List<A>> _head{};
-    crane::rc<List<A>> *_write = &_head;
+    std::optional<List<A>> _root{};
+    crane::rc<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
     uint64_t _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
-        *_write = crane::make_rc<List<A>>(List<A>::nil());
+        auto _value = List<A>::nil();
+        (_write ? *(*_write = crane::make_rc<List<A>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t n0 = _loop_n - 1;
         auto &&_sv = *_loop_self;
         if (crane::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-          *_write = crane::make_rc<List<A>>(List<A>::nil());
+          auto _value = List<A>::nil();
+          (_write ? *(*_write = crane::make_rc<List<A>>(std::move(_value)))
+                  : _root.emplace(std::move(_value)));
           break;
         } else {
           const auto &[a0, a1] = crane::get<typename List<A>::Cons>(_sv.v());
-          auto _cell = crane::make_rc<List<A>>(
-              typename List<A>::Cons(crane::unbox(a0), nullptr));
-          *_write = std::move(_cell);
-          _write = &crane::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+          auto _cell = typename List<A>::Cons(crane::unbox(a0), nullptr);
+          List<A> &_node =
+              (_write ? *(*_write = crane::make_rc<List<A>>(std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
+          _write = &crane::get<typename List<A>::Cons>(_node.v_mut()).l;
           _loop_self = crane_raw(a1);
           _loop_n = n0;
           continue;
         }
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 enum class Comparison { EQ, LT, GT };
