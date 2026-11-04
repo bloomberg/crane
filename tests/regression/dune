@@ -13891,3 +13891,14 @@
   (alias runtest)
   (deps frame_kept_consumed_before_call.t.exe)
   (action (run ./frame_kept_consumed_before_call.t.exe))))
+
+(subdir boxed_element_block_template
+ (rule
+  (targets boxed_element_block_template.t.exe)
+  (deps BoxedElementBlockTemplate.vo boxed_element_block_template.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} boxed_element_block_template.t.exe boxed_element_block_template.cpp boxed_element_block_template.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps boxed_element_block_template.t.exe)
+  (action (run ./boxed_element_block_template.t.exe))))

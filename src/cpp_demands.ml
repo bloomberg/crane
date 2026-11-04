@@ -127,6 +127,20 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
         | CCret -> Option.iter ty holes.ret
         | CCbr_var _ | CCstring _ -> () )
       cmds
+  (* An instantiated mapping writes what its pieces name. *)
+  and foreign fr =
+    List.iter
+      (function
+        | Fp_type i | Fp_element (i, _) -> ty (Option.default Tany (List.nth_opt fr.fr_types i))
+        | Fp_value i ->
+          Option.iter
+            (fun e ->
+              expr e;
+              string_literal e )
+            (List.nth_opt fr.fr_values i)
+        | Fp_yields -> Option.iter ty fr.fr_yields
+        | Fp_text _ -> () )
+      fr.fr_pieces
   and block_template ?yields holes text =
     ty (Option.default Tauto yields);
     custom holes (Foreign_template.term_template (Foreign_template.with_result "_r" text))
@@ -176,6 +190,7 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
       global subject
     | _ -> () );
     match e with
+    | CPPforeign (_, fr) -> foreign fr
     | CPPglob (_, tys, Some {ci_inline = Some tmpl; ci_yields; _}) ->
       if tmpl.it_form = Block_iife then block_template ?yields:ci_yields {no_holes with tyargs = tys} tmpl.it_text
       else custom {no_holes with tyargs = tys} (Foreign_template.type_template tmpl.it_text)

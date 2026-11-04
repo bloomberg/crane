@@ -146,6 +146,17 @@ val lower_boxed_reads : settled -> settled
     ({!Minicpp.Ttyctor}) is not an application, and is left alone. *)
 val supply_template_args : settled -> settled
 
+(** [instantiate_foreign decl] instantiates every inline mapping [decl]
+    applies as a value whose text places its arguments itself: a mapped
+    constant or a call of one becomes a {!Minicpp.CPPforeign}, each hole
+    pointing at the argument it is filled with and each [%elem] hole boxed
+    or not -- not in the target type of a container cast for a callee
+    generic over the element, whose declaration boxes nothing.  A [%result]
+    block keeps its node, its element holes decided in its text; a bare
+    callee is left as it is.  Run on the way to the printer, after the
+    checks of what a resolved declaration moves and borrows. *)
+val instantiate_foreign : settled -> settled
+
 (** [lower_method_calls decl] writes each call of a function the method
     registry made a member of its receiver's struct as the
     {!Minicpp.CPPmethod_call} it is: the receiver taken out of the argument

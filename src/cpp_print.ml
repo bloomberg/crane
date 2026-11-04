@@ -1574,6 +1574,7 @@ and pp_cpp_expr ctx env args t =
   in
   match t with
   | CPPvar id -> Id.print id
+  | CPPforeign (_, fr) -> pp_foreign ctx env [] fr
   | CPPglob (x, tys, Some {ci_inline = Some tmpl; ci_yields; _}) ->
     let custom = tmpl.it_text in
     if tmpl.it_form = Block_iife then
@@ -2882,38 +2883,10 @@ and pp_custom ?container ?ret ctx custom env typ t tyargs cases args _arg_types 
       match ret with
       | Some ty -> str (Pp.string_of_ppcmds (pp_cpp_type ctx false [] ty))
       | None -> CErrors.anomaly Pp.(str "Custom syntax: %ret with no type the call yields in: " ++ str custom) )
-    | CCarg i ->
-    try
-      let arg_expr = List.nth args i in
-      let arg = pp_cpp_expr ctx env [] arg_expr in
-      let arg =
-        match arg_expr with
-        | CPPstring _ -> string_object arg
-        | _ -> arg
-      in
-      (* Parenthesize compound expressions that would bind incorrectly
-         when followed by member access (.c_str() etc.) in templates. *)
-      if followed_by_dot then
-        match arg_expr with
-        | CPPbinop _ -> str "(" ++ arg ++ str ")"
-        | CPPfun_call (_, CPPglob (_, _, Some ci), _) when ci.ci_inline <> None ->
-          str "(" ++ arg ++ str ")"
-        (* A prefix pointer operator binds looser than the member access
-           the template appends, so [%a0.first] applied to a scrutinee
-           that prints as [*a0] came out as [*a0.first] -- the [.first]
-           attaching to the pointer rather than the pointee.  This is the
-           same hazard [CCscrut] guards against; see the comment there for
-           why only [*] and [&] need it. *)
-        | _
-          when (let s = Pp.string_of_ppcmds arg in
-                String.length s > 0
-                && (match s.[0] with '*' | '&' -> true | _ -> false)) ->
-          str "(" ++ arg ++ str ")"
-        | _ -> arg
-      else arg
-    with Failure _ ->
-      CErrors.anomaly
-        Pp.(str "Custom syntax: unbound term argument in: " ++ str custom)
+    | CCarg i -> (
+      match List.nth_opt args i with
+      | Some arg -> pp_spliced ctx env ~followed_by_dot arg
+      | None -> CErrors.anomaly Pp.(str "Custom syntax: unbound term argument in: " ++ str custom) )
   in
   let next_starts_with_dot = function
     | CCstring s :: _ ->
@@ -2929,6 +2902,70 @@ and pp_custom ?container ?ret ctx custom env typ t tyargs cases args _arg_types 
   in
   fold_cmds (mt ()) cmds
 
+
+(* A value argument spliced into a mapping's text: a string literal as the
+   [std::string] it stands for. *)
+and pp_spliced ctx env ~followed_by_dot arg_expr =
+  let arg = pp_cpp_expr ctx env [] arg_expr in
+  let arg =
+    match arg_expr with
+    | CPPstring _ -> string_object arg
+    | _ -> arg
+  in
+  (* Parenthesize compound expressions that would bind incorrectly
+     when followed by member access (.c_str() etc.) in templates. *)
+  if followed_by_dot then
+    match arg_expr with
+    | CPPbinop _ | CPPforeign (Foreign_call, _) -> str "(" ++ arg ++ str ")"
+    | CPPfun_call (_, CPPglob (_, _, Some ci), _) when ci.ci_inline <> None ->
+      str "(" ++ arg ++ str ")"
+    (* A prefix pointer operator binds looser than the member access
+       the template appends, so [%a0.first] applied to a scrutinee
+       that prints as [*a0] came out as [*a0.first] -- the [.first]
+       attaching to the pointer rather than the pointee.  This is the
+       same hazard [CCscrut] guards against; see the comment there for
+       why only [*] and [&] need it. *)
+    | _
+      when (let s = Pp.string_of_ppcmds arg in
+            String.length s > 0
+            && (match s.[0] with '*' | '&' -> true | _ -> false)) ->
+      str "(" ++ arg ++ str ")"
+    | _ -> arg
+  else arg
+
+(* An instantiated mapping: its pieces in order, a type hole past the
+   arguments the use supplies written erased. *)
+and pp_foreign ctx env vl fr =
+  Common.writes_custom fr.fr_custom;
+  let arg i = pp_cpp_type ctx false vl (Option.default Tany (List.nth_opt fr.fr_types i)) in
+  let piece ~followed_by_dot = function
+    | Fp_text s -> str s
+    | Fp_type i | Fp_element (i, None) -> arg i
+    | Fp_element (i, Some wrapper) ->
+      let element = Pp.string_of_ppcmds (arg i) in
+      str (String.concat "" (List.map (function Wp_text s -> s | Wp_element -> element) wrapper))
+    | Fp_yields -> (
+      match fr.fr_yields with
+      | Some ty -> str (Pp.string_of_ppcmds (pp_cpp_type ctx false [] ty))
+      | None -> CErrors.anomaly Pp.(str "Custom syntax: %ret with no type the call yields in " ++ GlobRef.print fr.fr_custom) )
+    | Fp_value i -> (
+      match List.nth_opt fr.fr_values i with
+      | Some e -> pp_spliced ctx env ~followed_by_dot e
+      | None -> CErrors.anomaly Pp.(str "Custom syntax: unbound term argument in " ++ GlobRef.print fr.fr_custom) )
+  in
+  let rec pieces acc = function
+    | [] -> acc
+    | p :: rest ->
+      let followed_by_dot =
+        match rest with
+        | Fp_text s :: _ ->
+          let s = String.trim s in
+          String.length s > 0 && s.[0] = '.'
+        | _ -> false
+      in
+      pieces (acc ++ piece ~followed_by_dot p) rest
+  in
+  pieces (mt ()) fr.fr_pieces
 
 (** Pretty-print an already-converted MiniCpp type with no parenthesization and
     no type-variable context; the common-case shorthand for {!pp_cpp_type}. *)

@@ -24,6 +24,16 @@ val type_template : string -> custom_case list
     [%ret]. *)
 val term_template : string -> custom_case list
 
+(** [settle_elements spell s] is the term template [s] with each [%elem{i}]
+    hole written as [spell i] and every other token as [s] writes it: an
+    element hole decided before anything is printed. *)
+val settle_elements : (int -> string) -> string -> string
+
+(** [element_spelled ~wrapper i] is a [Boxed Element] [wrapper], a type
+    template over its one element, holding a template's type argument [i]
+    there: ["crane::box<%t0>"] at [1] is ["crane::box<%t1>"]. *)
+val element_spelled : wrapper:string -> int -> string
+
 (** The tokens of an inductive's match template. *)
 val match_template : string -> custom_case list
 

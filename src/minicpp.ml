@@ -542,6 +542,7 @@ and cpp_expr =
        that unboxed declaration rather than this call site's concrete,
        possibly-recursive substituted element type. *)
   | CPPstd_get_if of cpp_type * cpp_expr
+  | CPPforeign of foreign_use * foreign
     (* std::get_if<T>(&variant) — pointer-returning variant accessor.
        Uses (sn()).get_if for BDE compatibility.  When [Id.t option] is
        [Some id], emits [std::get_if<typename T::Id>(&expr)]. *)
@@ -781,6 +782,25 @@ and custom_info = {
      to, recorded while the global's ML type was still in hand. *)
   ci_yields : cpp_type option;
 }
+
+and foreign = {
+  fr_custom : GlobRef.t;
+  fr_types : cpp_type list;
+  fr_values : cpp_expr list;
+  fr_yields : cpp_type option;
+  fr_pieces : foreign_piece list;
+}
+
+and foreign_piece =
+  | Fp_text of string
+  | Fp_type of int
+  | Fp_element of int * wrapper_piece list option
+  | Fp_value of int
+  | Fp_yields
+
+and wrapper_piece = Wp_text of string | Wp_element
+
+and foreign_use = Foreign_constant | Foreign_call
 
 let inline_shape_of_text s =
   if String.equal s "%a0" then Inline_identity
@@ -1456,6 +1476,14 @@ let map_lambda ?fl fs ft l =
     cl_ret = Option.map ft l.cl_ret;
     cl_body = fl l.cl_body }
 
+(** [map_foreign fe ft fr] maps [fe] over the value arguments of [fr] and
+    [ft] over its type arguments and what it yields. *)
+let map_foreign fe ft fr =
+  { fr with
+    fr_types = List.map ft fr.fr_types;
+    fr_values = List.map fe fr.fr_values;
+    fr_yields = Option.map ft fr.fr_yields }
+
 (** [map_expr fe fs ft e] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural
     descent. *)
@@ -1559,6 +1587,7 @@ let map_expr ?fl
   | CPPfn_value e' -> CPPfn_value (fe e')
   | CPPcontainer_cast (ty, e', sb) -> CPPcontainer_cast (ft ty, fe e', sb)
   | CPPstd_get_if (ty, e') -> CPPstd_get_if (ft ty, fe e')
+  | CPPforeign (u, fr) -> CPPforeign (u, map_foreign fe ft fr)
 
 (** [map_stmt fe fs ft s] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural
@@ -1677,6 +1706,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPcond (c, t, f) -> on_expr c; on_expr t; on_expr f
   | CPPbraced args -> List.iter on_expr args
   | CPPstd_get (_, e_opt) -> Option.iter on_expr e_opt
+  | CPPforeign (_, fr) -> List.iter on_expr fr.fr_values
 
 (** Iterate over the immediate children of a [cpp_stmt], calling [on_expr]
     for child expressions and [on_stmts] for child statement lists.  Does
@@ -1824,6 +1854,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPbinop (_, l, r) -> fe (fe acc l) r
   | CPPcond (c, t, f) -> fe (fe (fe acc c) t) f
   | CPPbraced args -> List.fold_left fe acc args
+  | CPPforeign (_, fr) -> List.fold_left fe acc fr.fr_values
   | CPPstd_get (_, e_opt) -> match e_opt with None -> acc | Some e' -> fe acc e'
 
 (** Fold over immediate children of a [cpp_stmt].  [on_expr] folds over
@@ -2534,7 +2565,7 @@ let iter_globrefs note d =
     t
   and expr e =
     ( match e with
-    | CPPglob (r, _, _) | CPPnamespace (r, _) | CPPstructmk (r, _, _) | CPPstruct (r, _, _)
+    | CPPglob (r, _, _) | CPPforeign (_, {fr_custom = r; _}) | CPPnamespace (r, _) | CPPstructmk (r, _, _) | CPPstruct (r, _, _)
     | CPPget' (_, r, _) | CPPprojection_value r | CPPenum_val (r, _) | CPPnumeral (r, _) ->
       note r
     | CPPconcept_app (c, r, _) -> note c; note r
@@ -2615,6 +2646,8 @@ let rec vars_expr ~printed e =
   | CPPfun_call (_, (CPPglob (_, _, Some {ci_inline = Some it; _}) as f), args) when printed ->
     let spells = inline_spells_arg it in
     expr f @ List.concat (List.mapi (fun i a -> if spells i then expr a else []) (call_args args))
+  | CPPforeign (_, fr) when printed ->
+    List.concat (List.mapi (fun i a -> if List.mem (Fp_value i) fr.fr_pieces then expr a else []) fr.fr_values)
   | CPPfun_call (_, f, args) ->
     expr f @ List.concat_map expr (to_reversed args)
   | CPPaccess_call (_, obj, _, args) ->
