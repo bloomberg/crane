@@ -240,6 +240,10 @@ type cpp_type =
   | Texpr_type of cpp_expr
       (** [decltype(e)], undecayed: what [std::forward] is instantiated at *)
   | Tdecltype_auto  (** [decltype(auto)]: a reference-preserving return type *)
+  | Tforeign of foreign
+      (** An inline mapping's type template instantiated where it is written
+          ({!Cpp_erasure.instantiate_foreign}): what an application of the
+          mapped global ({!Tglob}) becomes past the seam. *)
 
 (** {2 C++ statements} *)
 
@@ -701,7 +705,9 @@ and cpp_expr =
       (** crane_container_cast<Dst>(expr) — converts a type-erased sequence
           container (element type std::any) into a concrete-element container
           by std::any_cast-ing each element. The bool suppresses [%elem]
-          boxing when rendering [Dst], for callees generic over the element. *)
+          boxing where the seam instantiates [Dst]
+          ({!Cpp_erasure.instantiate_foreign}), for callees generic over the
+          element. *)
   | CPPstd_get_if of cpp_type * cpp_expr
       (** [std::get_if<T>(&variant)] -- pointer-returning variant accessor.
           Uses [(sn()).get_if] for BDE compatibility.  See {!CPPstd_get} on

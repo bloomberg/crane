@@ -90,6 +90,9 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
         global r;
         List.iter ty tys;
         Some t )
+    | Tforeign fr ->
+      foreign fr;
+      Some t
     (* Only its head is written. *)
     | Ttyctor _ ->
       tyctor ~vl:!names ~owner:!owner t;

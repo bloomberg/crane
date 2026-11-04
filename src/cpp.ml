@@ -988,7 +988,9 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
                 let template = List.map (fun v -> Cpp_ast.Typename (Type_variable v)) ty_vars in
                 (* [fields] already pairs each projection with its type:
                    extraction selected the two together. *)
-                let field_types = Cpp_ind.record_field_types ~module_ epon_ref ty_vars fields in
+                let field_types =
+                  List.map Cpp_erasure.instantiate_type (Cpp_ind.record_field_types ~module_ epon_ref ty_vars fields)
+                in
                 let field_name i (field_ref, _) =
                   match field_ref with
                   | Some r -> Common.pp_global_name Term r

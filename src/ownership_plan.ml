@@ -110,6 +110,7 @@ let rec worth_moving_cpp (ty : Minicpp.cpp_type) =
   let open Minicpp in
   match ty with
   | Tglob (r, tparams, _) -> worth_moving_ref worth_moving_cpp r tparams
+  | Tforeign {fr_custom; fr_types; _} -> worth_moving_ref worth_moving_cpp fr_custom fr_types
   | Tshared_ptr _ | Tfun _ | Terased _ -> true
   | Tvariant (_, ts) | Tid (_, ts) | Tid_external (_, ts) -> List.exists worth_moving_cpp ts
   | Tnondeduced t -> worth_moving_cpp t

@@ -319,17 +319,6 @@ let split_on_semicolons (s : string) : string list =
   let last = Buffer.contents buf in
   List.rev (if String.trim last = "" then !acc else last :: !acc)
 
-(* Does a C++ type structurally mention an inductive that recurses through a
-   boxed-element container?  If so it must be boxed as such a container's
-   element, everywhere, for type-consistency. *)
-let rec cpp_type_mentions_boxed_recursive t =
-  match t with
-  | Tglob (r, args, _) ->
-    Table.is_boxed_recursive_ind r
-    || List.exists cpp_type_mentions_boxed_recursive args
-  | Tnamespace (_, t) -> cpp_type_mentions_boxed_recursive t
-  | _ -> false
-
 (** Render a custom type template, filling hole [i] with [hole i] and copying
     the text between holes verbatim.  [hole] returns [None] for an index the
     caller cannot fill, which is written back out as a placeholder of the same
@@ -347,14 +336,6 @@ let render_type_template ~hole template =
         CErrors.anomaly
           (Pp.str "render_type_template: a type template has only type holes"))
     (type_template template)
-
-(** Substitute the element hole of a wrapper template (e.g. ["immer::box<%t0>"])
-    with an already-rendered element string. *)
-let subst_wrapper_t0 wrapper elem_str =
-  Pp.string_of_ppcmds
-    (render_type_template
-       ~hole:(fun i -> if i = 0 then Some (str elem_str) else None)
-       wrapper)
 
 (** Generate N placeholder type arguments (comma-separated ["int"]s). *)
 let gen_placeholder_args n =
@@ -541,7 +522,8 @@ let ctor_alias_home ctx body =
     let names_struct =
       exists_cpp_type
         (function
-          | Tglob (r, _, _) -> ( match modpath_of r with Some mp -> inside mp | None -> false )
+          | Tglob (r, _, _) | Tforeign {fr_custom = r; _} -> (
+            match modpath_of r with Some mp -> inside mp | None -> false )
           | _ -> false )
         body
     in
@@ -578,7 +560,7 @@ let ctor_alias_visibility : Cpp_ast.declared_in -> _ = function
     members of. *)
 let ctor_alias_render_ctx ctx (declared : Cpp_ast.declared_in) =
   let start =
-    {(file_start ctx.rc_file) with rc_visibility = Some (ctor_alias_visibility declared); rc_elem_boxing = ctx.rc_elem_boxing}
+    {(file_start ctx.rc_file) with rc_visibility = Some (ctor_alias_visibility declared)}
   in
   match (declared, ctx.rc_file) with
   | At_namespace_scope _, _ -> start
@@ -749,7 +731,12 @@ let uint63_type () =
    template template argument entered too ({!exists_cpp_type}). *)
 let type_heads ty =
   let heads = ref [] in
-  ignore (exists_cpp_type (fun t -> (match t with Tglob (r, _, _) -> heads := r :: !heads | _ -> ()); false) ty);
+  ignore
+    (exists_cpp_type
+       (fun t ->
+         (match t with Tglob (r, _, _) | Tforeign {fr_custom = r; _} -> heads := r :: !heads | _ -> ());
+         false )
+       ty );
   !heads
 
 (* What writing [d] names that its globals ({!Minicpp.iter_globrefs}) do not:
@@ -764,7 +751,7 @@ let globals_written_beside (d : cpp_decl) =
       (map_cpp_type
          (fun t ->
            ( match t with
-           | Tglob (_, _, args) -> List.iter (fun e -> ignore (expr e)) args
+           | Tglob (_, _, args) | Tforeign {fr_values = args; _} -> List.iter (fun e -> ignore (expr e)) args
            | Texpr_type e -> ignore (expr e)
            | Ttyctor head -> found := type_heads head @ !found
            | _ -> () );
@@ -803,6 +790,19 @@ let cut_at_argument_list str_of =
   | Some i -> String.sub str_of 0 i
   | None -> str_of
 
+(* The text an instantiated mapping was instantiated from, each hole the
+   placeholder it was written as. *)
+let foreign_text fr =
+  String.concat ""
+    (List.map
+       (function
+         | Fp_text s -> s
+         | Fp_type i -> Printf.sprintf "%%t%d" i
+         | Fp_element (i, _) -> Printf.sprintf "%%elem%d" i
+         | Fp_value i -> Printf.sprintf "%%a%d" i
+         | Fp_yields -> "%ret")
+       fr.fr_pieces)
+
 (* Whether [probe], a type constructor applied to the sentinel, is written as
    a template name applied to the sentinel alone, read off its structure and
    not off its rendering; [None] where the structure does not say.  A custom
@@ -820,6 +820,11 @@ let rec applied_to_sentinel_alone ctx = function
       | [CCstring head; CCty_arg i; CCstring ">"] when List.nth_opt args i = Some Thole ->
         Some (String.index_opt head '<' = Some (String.length head - 1))
       | tokens -> if List.exists (function CCelem _ -> true | _ -> false) tokens then None else Some false ) )
+  | Tforeign {fr_types = args; fr_values = []; fr_pieces; _} -> (
+    match fr_pieces with
+    | [Fp_text head; Fp_type i; Fp_text ">"] when List.nth_opt args i = Some Thole ->
+      Some (String.index_opt head '<' = Some (String.length head - 1))
+    | pieces -> if List.exists (function Fp_element _ -> true | _ -> false) pieces then None else Some false )
   | _ -> None
 
 (** The C++ name of the field a projection reads.
@@ -1019,6 +1024,7 @@ let type_names_into_a_struct ctx t =
     | Some s -> text_names_into_a_struct s ||? any tys
     | None ->
       head_names_into_a_struct (glob_head ctx r ~applied:(tys <> [])) ||? any tys )
+  | Tforeign fr -> text_names_into_a_struct (foreign_text fr) ||? any fr.fr_types
   | Tnamespace ((GlobRef.IndRef _ as r), Tglob (r', args, _)) when globref_equal r r' ->
     head_names_into_a_struct (inductive_head ctx r' ~applied:(args <> [])) ||? any args
   | Tnamespace _ | Tqualified _ | Tapply (Tqualified _, _) -> Some true
@@ -1168,6 +1174,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
       | None ->
         pp_written_head ~lead (glob_head ctx r ~applied:(tys <> []))
         ++ (match tys with [] -> mt () | l -> str "<" ++ pp_list (pp_rec false) l ++ str ">") )
+    | Tforeign fr -> pp_foreign ctx (empty_env ()) vl fr
     | Tfun (d, c) ->
       writes (Table.Runtime Crane_rt.fn_header);
       cpp_angle
@@ -1331,6 +1338,9 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
           | Some template -> str (cut_at_argument_list template)
           | None -> pp_rec false (Tglob (r, [], [])) ),
           false )
+      | Tforeign ({fr_types = _ :: _; _} as fr) ->
+        let lead = match fr.fr_pieces with Fp_text lit :: _ -> lit | _ -> foreign_text fr in
+        (str (cut_at_argument_list lead), false)
       | _ -> (str (cut_at_argument_list (Pp.string_of_ppcmds (pp_rec false t))), false) )
   in
   (pp_rec ~lead par t)
@@ -1357,6 +1367,17 @@ and ctor_alias_at ctx vl t =
     | Tglob (r, (_ :: _ as args), _) when Cpp_names.custom_text ctx r <> None ->
       let fixed = List.filteri (fun i _ -> i < List.length args - 1) args in
       ctor_alias_of_probe ctx vl ~base:(Common.pp_global_name Type r) (Tglob (r, fixed @ [Thole], []))
+    (* The sentinel in the last argument's place, its element hole holding
+       the sentinel bare: the sentinel recurses through nothing. *)
+    | Tforeign ({fr_types = _ :: _ as args; _} as fr) ->
+      let last = List.length args - 1 in
+      let probe =
+        { fr with
+          fr_types = List.filteri (fun i _ -> i < last) args @ [Thole];
+          fr_values = [];
+          fr_pieces = List.map (function Fp_element (i, _) when i = last -> Fp_element (i, None) | p -> p) fr.fr_pieces }
+      in
+      ctor_alias_of_probe ctx vl ~base:(Common.pp_global_name Type fr.fr_custom) (Tforeign probe)
     | _ -> None
   in
   if exists_cpp_type (fun s -> s = Thole) t then
@@ -2241,11 +2262,12 @@ and pp_cpp_expr ctx env args t =
     ++ str ">("
     ++ pp_cpp_expr ctx env args e
     ++ str ")"
-  | CPPcontainer_cast (ty, e, suppress_boxing) ->
+  (* Whether the target boxes its elements was decided at the seam
+     ({!Cpp_erasure.instantiate_foreign}). *)
+  | CPPcontainer_cast (ty, e, _) ->
     writes Table.erase_fn_header;
-    let ty_pp = pp_cpp_type (if suppress_boxing then {ctx with rc_elem_boxing = false} else ctx) false [] ty in
     str Crane_rt.container_cast ++ str "<"
-    ++ ty_pp
+    ++ pp_cpp_type ctx false [] ty
     ++ str ">("
     ++ pp_cpp_expr ctx env args e
     ++ str ")"
@@ -2830,34 +2852,9 @@ and pp_custom ?container ?ret ctx custom env typ t tyargs cases args _arg_types 
         | Some ty -> pp_cpp_type ctx false vl ty
         | None -> pp_cpp_type ctx false vl Tany
       )
-    | CCelem i ->
-      (* Like CCty_arg, but wrap the element in the container's [Boxed Element]
-         wrapper when the element recurses through a boxed-element container. *)
-      let elem_ty =
-        match List.nth_opt tyargs i with Some ty -> ty | None -> Tany
-      in
-      let base = pp_cpp_type ctx false vl elem_ty in
-      let container_ref =
-        match container with
-        | Some _ -> container
-        | None ->
-          ( match typ with
-          | Some (Tglob (g, _, _)) -> Some g
-          | Some (Tnamespace (_, Tglob (g, _, _))) -> Some g
-          | _ -> None )
-      in
-      ( match container_ref with
-      | Some g
-        when ctx.rc_elem_boxing && cpp_type_mentions_boxed_recursive elem_ty ->
-        let ind =
-          match g with
-          | GlobRef.ConstructRef (ip, _) -> GlobRef.IndRef ip
-          | _ -> g
-        in
-        ( match Table.find_boxed_wrapper_opt ind with
-        | Some w -> str (subst_wrapper_t0 w (Pp.string_of_ppcmds base))
-        | None -> base )
-      | _ -> base )
+    | CCelem _ ->
+      CErrors.anomaly
+        Pp.(str "Custom syntax: an element hole the seam did not decide in: " ++ str custom)
     | CCbr_var (i, j) ->
       ( try
           let ids, _, _ = List.nth cases i in

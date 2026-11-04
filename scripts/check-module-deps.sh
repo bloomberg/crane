@@ -29,9 +29,11 @@ rules=(
 # program it is handed in the declaration, decided by a plan or a pass.  The
 # facts it still asks Table for are listed, and the list only shrinks: a read
 # that goes is deleted from it, and a new one is an error.  A custom's text
-# is resolved with the declaration's names (Cpp_names.custom_text).
+# is resolved with the declaration's names (Cpp_names.custom_text), and a
+# mapping's element holes are decided at the seam
+# (Cpp_erasure.instantiate_foreign).
 PRINTER_TABLE_CONFIGURATION="Runtime erase_fn_header is_modfile std_lib modular non_atomic_rc arena_header escape_reserved_struct_name"
-PRINTER_TABLE_PENDING="is_boxed_recursive_ind find_boxed_wrapper_opt"
+PRINTER_TABLE_PENDING=""
 
 status=0
 printer_reads=$(grep -o 'Table\.[a-zA-Z_]*' src/cpp_print.ml | sed 's/^Table\.//' | sort -u)

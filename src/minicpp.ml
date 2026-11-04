@@ -199,6 +199,7 @@ type cpp_type =
     (* [decltype(e)], undecayed: the declared type of a name, references and
        all -- what [std::forward] is instantiated at. *)
   | Tdecltype_auto
+  | Tforeign of foreign
     (* [decltype(auto)]: a return type deduced with references preserved. *)
 
 (* Whether an assignment also declares its target: [Declare ty] prints
@@ -960,6 +961,7 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   let ty = f ty in
   match ty with
   | Tglob (r, tys, args) -> Tglob (r, List.map (map_cpp_type f) tys, args)
+  | Tforeign fr -> Tforeign {fr with fr_types = List.map (map_cpp_type f) fr.fr_types}
   | Tid (id, tys) -> Tid (id, List.map (map_cpp_type f) tys)
   | Tid_external (id, tys) -> Tid_external (id, List.map (map_cpp_type f) tys)
   | Tfun (dom, cod) -> Tfun (List.map (map_cpp_type f) dom, map_cpp_type f cod)
@@ -998,6 +1000,7 @@ let rec rewrite_cpp_type (f : cpp_type -> cpp_type option) (ty : cpp_type) :
     let go = rewrite_cpp_type f in
     match ty with
     | Tglob (r, tys, args) -> Tglob (r, List.map go tys, args)
+    | Tforeign fr -> Tforeign {fr with fr_types = List.map go fr.fr_types}
     | Tid (id, tys) -> Tid (id, List.map go tys)
     | Tid_external (id, tys) -> Tid_external (id, List.map go tys)
     | Tfun (dom, cod) -> Tfun (List.map go dom, go cod)
@@ -1161,6 +1164,7 @@ let rec subst_cpp_tvars (sub : int -> cpp_type option) (ty : cpp_type) : cpp_typ
   | Tvar (Tv_index (i, _)) -> ( match sub i with Some t -> t | None -> ty )
   | Tvar (Tv_named _) -> ty
   | Tglob (r, tys, args) -> Tglob (r, List.map go tys, args)
+  | Tforeign fr -> Tforeign {fr with fr_types = List.map go fr.fr_types}
   | Tid (id, tys) -> Tid (id, List.map go tys)
   | Tid_external (id, tys) -> Tid_external (id, List.map go tys)
   | Tfun (dom, cod) -> Tfun (List.map go dom, go cod)
@@ -1199,7 +1203,8 @@ let rec exists_cpp_type (p : cpp_type -> bool) (ty : cpp_type) : bool =
   p ty
   ||
   match ty with
-  | Tglob (_, tys, _) | Tid (_, tys) | Tid_external (_, tys) | Tvariant (_, tys) ->
+  | Tglob (_, tys, _) | Tid (_, tys) | Tid_external (_, tys) | Tvariant (_, tys)
+  | Tforeign {fr_types = tys; _} ->
     List.exists (exists_cpp_type p) tys
   | Tfun (dom, cod) ->
     List.exists (exists_cpp_type p) dom || exists_cpp_type p cod
@@ -2554,7 +2559,7 @@ let iter_globrefs note d =
       (map_cpp_type
          (fun t ->
            ( match t with
-           | Tglob (r, _, args) ->
+           | Tglob (r, _, args) | Tforeign {fr_custom = r; fr_values = args; _} ->
              note r;
              List.iter (fun e -> ignore (expr e)) args
            | Tnamespace (r, _) | Tinstance (_, r) -> note r
