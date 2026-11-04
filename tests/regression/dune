@@ -13858,3 +13858,14 @@
   (alias runtest)
   (deps reuse_moved_capture_renamed.t.exe)
   (action (run ./reuse_moved_capture_renamed.t.exe))))
+
+(subdir frame_kept_consumed_before_call
+ (rule
+  (targets frame_kept_consumed_before_call.t.exe)
+  (deps FrameKeptConsumedBeforeCall.vo frame_kept_consumed_before_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} frame_kept_consumed_before_call.t.exe frame_kept_consumed_before_call.cpp frame_kept_consumed_before_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps frame_kept_consumed_before_call.t.exe)
+  (action (run ./frame_kept_consumed_before_call.t.exe))))

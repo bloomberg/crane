@@ -98,6 +98,30 @@ let () =
   check "one a frame keeps across the call is moved" (use (Some (resumes [call_site])) = Some Ownership_plan.Use.Move);
   check "not where the let resumes after another call" (use (Some (resumes [Occurrence.fresh ()])) = Some Ownership_plan.Use.Copy)
 
+(* [let y := h s in let r := weigh y in g s r], a frame keeping [s] across
+   [weigh]: saving the frame reads [s] after [h] does, so [h] copies it. *)
+let () =
+  let origin = GlobRef.VarRef (Id.of_string "weigh") in
+  let arg = fresh_rel 1 in
+  let value = call "weigh" [fresh_rel 1] in
+  let site = Occurrence.fresh () in
+  let resumed = MLletin (Id (Id.of_string "r"), nat, value, call "g" [fresh_rel 3; fresh_rel 1], site) in
+  let root = MLletin (Id (Id.of_string "y"), nat, call "h" [arg], resumed, Occurrence.fresh ()) in
+  let read = match arg with MLrel (_, o) -> o | _ -> assert false in
+  let call_site = match value with MLapp (MLglob g, _) -> g.occurrence | _ -> assert false in
+  let at_let = Core_binder.make ~origin ~level:2 ~site () in
+  let resumes : Ownership_plan.resumes =
+    { origin;
+      depth = 1;
+      resume_at =
+        (fun b ->
+          if Core_binder.equal b at_let && Core_binder.same_site b at_let
+          then Some {calls = [call_site]; kept = [Core_binder.make ~origin ~level:0 ()]}
+          else None ) }
+  in
+  let use = Ownership_plan.use (Ownership_plan.region ~owned:[1] ~resumes ~n_outer:0 root) read in
+  check "a read before the frame keeping it is saved is copied" (use = Some Ownership_plan.Use.Copy)
+
 (* [(fix f n l := g n l) (len s) s], [s] an owned parameter: the fixpoint's
    parameters are bound to its arguments in order, so the second argument
    is [s]'s last use, and the first, reading [s] too, is evaluated before

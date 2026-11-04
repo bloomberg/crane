@@ -316,7 +316,8 @@ let sequential_bind use = Core_effects.find use = Some {operation = Bind; mode =
    [let _ := a in _] at [occurrence] standing [d] binders deep: where the
    let is a point a frame machine resumes at and [a] is the call itself, the
    frame saving them is made before [a]'s arguments are evaluated, and what
-   follows reads them in the frame. *)
+   follows reads them in the frame.  The save reads them: what reads them
+   before it does not read them last. *)
 let kept_across resumes d a occurrence =
   match (resumes, strip a) with
   | Some {origin; depth; resume_at}, MLapp (MLglob {occurrence = call; _}, _) -> (
@@ -408,7 +409,8 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
       let parents_b = bind parents d ~n:1 in
       let live_b = walk ~consumed ~pinned:pinned_b parents_b (d + 1) live b in
       let kept = kept_across resumes d a occurrence in
-      walk ~pinned parents d (Levels.filter (fun l -> not (Levels.mem (storage l) kept)) (leave parents_b d live_b)) a
+      let saved, after_save = Levels.partition (fun l -> Levels.mem (storage l) kept) (leave parents_b d live_b) in
+      Levels.union saved (walk ~pinned parents d after_save a)
     (* A branch reads its pattern variables through the scrutinee's own
        evaluation -- a field of the record it names, a component of the pair
        it hands over -- so what follows the scrutinee is what the branches
