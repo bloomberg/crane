@@ -266,15 +266,27 @@ type member_plan = {
   member_parts : bool list;
 }
 
-let member_plan member params =
+let member_plan ~frames member params =
   match Lower_control.loop (Control_ir.Loop.Member (fst member, snd member)) with
   | Some (Loop l) ->
     let kept = kept_positions l in
     if List.compare_lengths kept params <> 0 then None
     else
       let invariant = Control_ir.invariant_parameters l in
+      let in_place = Recursion_plan.in_place in
+      let parts = Control_ir.parts_passed ~pointer_fields:constructor_pointer_fields ~in_place l in
       let parts =
-        Control_ir.parts_passed ~pointer_fields:constructor_pointer_fields ~in_place:Recursion_plan.in_place l
+        if not frames then parts
+        else
+          let holdable : Frame_storage.parameter -> bool = function
+            | Own i ->
+              List.exists2
+                (fun k (_, ty) -> k = i && Option.has_some (borrowed_value_param_pointee ty))
+                kept params
+            | Entered _ -> false
+          in
+          List.map2 ( || ) parts
+            (Frame_storage.plan ~pointer_fields:constructor_pointer_fields ~in_place ~holdable l).own
       in
       Some
         { member_varying = List.map (fun i -> not (List.nth invariant i)) kept;
@@ -344,7 +356,8 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         (* The frame structs a non-tail transform emits are named after the
            fixpoint. *)
         let name = Id.to_string lf_name in
-        match member_plan lf_member params with
+        let frames = match strategy with Modulo_cons _ | Frame_stack -> true | _ -> false in
+        match member_plan ~frames lf_member params with
         | None ->
           record_outcome name (Lp_declined no_varying_plan);
           None

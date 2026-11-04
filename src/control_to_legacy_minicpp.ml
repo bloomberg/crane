@@ -336,7 +336,7 @@ let local_loop ~owner ~function_ ~lifted ~member:((occurrence, _) as member) ~tp
   match (Lower_control.loop member_loop, lowering) with
   | Some (Loop l), Some lowering when Control_ir.continues l.body <> [] -> (
     let params = List.filter_map (fun (ty, x) -> Option.map (fun x -> (x, ty)) x) (to_reversed lam.cl_params) in
-    match Loopify.member_plan member params with
+    match Loopify.member_plan ~frames:(lowering = Frames) member params with
     | None -> unlowered "its lambda takes other parameters than its loop"
     | Some {member_varying = varying; member_parts = parts} ->
       let continues = Control_ir.continues l.body in

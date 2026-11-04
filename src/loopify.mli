@@ -188,16 +188,19 @@ val local_frame_machine :
     last first ({!Minicpp.to_reversed}): whether some Continue changes it
     ({!Control_ir.invariant_parameters}), and whether every Continue passes
     it a value stored in what the caller passed for it
-    ({!Control_ir.parts_passed}). *)
+    ({!Control_ir.parts_passed}) or, of a machine with a stack of frames,
+    whether its frames hold it by pointer ({!Frame_storage}). *)
 type member_plan = {
   member_varying : bool list;
   member_parts : bool list;
 }
 
-(** [member_plan member params] is the plan of the local fixpoint function
-    [member] whose lambda takes [params]; [None] where it has no ControlIR
-    loop, or the lambda takes other parameters than the loop. *)
-val member_plan : Miniml.Occurrence.t * int -> 'a list -> member_plan option
+(** [member_plan ~frames member params] is the plan of the local fixpoint
+    function [member] whose lambda takes [params], lowered as a machine with
+    a stack of frames where [frames]; [None] where it has no ControlIR loop,
+    or the lambda takes other parameters than the loop. *)
+val member_plan :
+  frames:bool -> Miniml.Occurrence.t * int -> (Names.Id.t * cpp_type) list -> member_plan option
 
 val worthwhile_move_type : cpp_type -> bool
 (** Whether a value of this type is expensive enough to copy that writing
