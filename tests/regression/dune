@@ -13869,3 +13869,14 @@
   (alias runtest)
   (deps tt_at_computed_type.t.exe)
   (action (run ./tt_at_computed_type.t.exe))))
+
+(subdir boxed_element_container_cast
+ (rule
+  (targets boxed_element_container_cast.t.exe)
+  (deps BoxedElementContainerCast.vo boxed_element_container_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} boxed_element_container_cast.t.exe boxed_element_container_cast.cpp boxed_element_container_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps boxed_element_container_cast.t.exe)
+  (action (run ./boxed_element_container_cast.t.exe))))
