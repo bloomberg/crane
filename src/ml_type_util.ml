@@ -1299,31 +1299,17 @@ let signed_neg_idx = 2
 
 module IntSet = Escape.IntSet
 
-(** Parse a custom template string to find which [%tN] positions are
-    referenced.  Returns the set of 0-based indices that appear in the
-    template.  E.g. ["std::shared_ptr<ITree<%t1>>"] returns [{1}]. *)
+(** The type arguments a custom template writes: the indices of its type
+    holes, [%t{i}] and [%elem{i}] alike ({!Foreign_template.type_template}).
+    E.g. ["std::shared_ptr<ITree<%t1>>"] gives [{1}], and
+    ["crane::list<%elem>"] [{0}]. *)
 let template_referenced_positions template_str =
-  let len = String.length template_str in
-  let rec scan i acc =
-    if i > len - 3 then acc
-    else if template_str.[i] = '%' && template_str.[i + 1] = 't' then
-      let digit_start = i + 2 in
-      let rec find_digit_end j =
-        if j < len && template_str.[j] >= '0' && template_str.[j] <= '9' then
-          find_digit_end (j + 1)
-        else j
-      in
-      let digit_end = find_digit_end digit_start in
-      if digit_end > digit_start then
-        let idx =
-          int_of_string
-            (String.sub template_str digit_start (digit_end - digit_start))
-        in
-        scan digit_end (IntSet.add idx acc)
-      else scan (i + 1) acc
-    else scan (i + 1) acc
-  in
-  scan 0 IntSet.empty
+  List.fold_left
+    (fun acc -> function
+      | Foreign_template.CCty_arg i | Foreign_template.CCelem i -> IntSet.add i acc
+      | _ -> acc )
+    IntSet.empty
+    (Foreign_template.type_template template_str)
 
 (** For a custom/monad GlobRef, return the set of type-arg positions that
     appear in its template string.  Returns [None] if no custom template

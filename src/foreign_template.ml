@@ -224,6 +224,27 @@ let memoized parse =
 let type_template = memoized parse_type_template
 let term_template = memoized parse_term_template
 
+let text_of_term_token = function
+  | CCstring s -> s
+  | CCty_arg i -> Printf.sprintf "%%t%d" i
+  | CCelem i -> Printf.sprintf "%%elem%d" i
+  | CCarg i -> Printf.sprintf "%%a%d" i
+  | CCret -> "%ret"
+  | CCscrut | CCty | CCbody _ | CCbr_var _ | CCbr_var_ty _ ->
+    CErrors.anomaly (Pp.str "text_of_term_token: a match template's hole in a term template")
+
+let settle_elements spell s =
+  let tokens = term_template s in
+  if List.exists (function CCelem _ -> true | _ -> false) tokens then
+    String.concat "" (List.map (function CCelem i -> spell i | tok -> text_of_term_token tok) tokens)
+  else s
+
+let element_spelled ~wrapper i =
+  String.concat ""
+    (List.map
+       (function CCty_arg 0 | CCelem 0 -> Printf.sprintf "%%t%d" i | tok -> text_of_term_token tok)
+       (type_template wrapper))
+
 let match_template =
   memoized (fun s ->
       parse_custom_fixed "scrut" CCscrut s

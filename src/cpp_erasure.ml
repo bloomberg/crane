@@ -609,6 +609,129 @@ let supply_template_args (d : settled) : settled =
   in
   map_decl fe fs supply_type_args d
 
+(** {2 Instantiating mappings} *)
+
+let rec recurses_boxed = function
+  | Tglob (r, args, _) | Tforeign {fr_custom = r; fr_types = args; _} ->
+    Table.is_boxed_recursive_ind r || List.exists recurses_boxed args
+  | Tnamespace (_, t) -> recurses_boxed t
+  | _ -> false
+
+(* The inductive whose mapping a constructor's text belongs to, where a
+   [Boxed Element] wrapper is declared. *)
+let container_of = function GlobRef.ConstructRef (ind, _) -> GlobRef.IndRef ind | r -> r
+
+let wrapper_pieces wrapper =
+  List.map
+    (function
+      | Foreign_template.CCstring s -> Wp_text s
+      | CCty_arg 0 | CCelem 0 -> Wp_element
+      | CCty_arg i -> Wp_text (Printf.sprintf "%%t%d" i)
+      | CCelem i -> Wp_text (Printf.sprintf "%%elem%d" i)
+      | _ -> CErrors.anomaly (Pp.str "wrapper_pieces: a wrapper is a type template"))
+    (Foreign_template.type_template wrapper)
+
+let foreign_pieces ~element tokens =
+  List.map
+    (function
+      | Foreign_template.CCstring s -> Fp_text s
+      | CCty_arg i -> Fp_type i
+      | CCelem i -> Fp_element (i, element i)
+      | CCarg i -> Fp_value i
+      | CCret -> Fp_yields
+      | CCscrut | CCty | CCbody _ | CCbr_var _ | CCbr_var_ty _ ->
+        CErrors.anomaly (Pp.str "foreign_pieces: a match template's hole in a type or term template"))
+    tokens
+
+(* The wrapper the element hole [i] of [r]'s text, applied at [tys], is
+   written inside: where it holds an element recursing through the container. *)
+let boxed_by ~boxing r tys i =
+  if boxing && recurses_boxed (Option.default Tany (List.nth_opt tys i)) then
+    Table.find_boxed_wrapper_opt (container_of r)
+  else None
+
+(* A [%result] block's text, its element holes decided: it is per use, and
+   printed by splicing. *)
+let settle_block ~boxing r tys text =
+  Foreign_template.settle_elements
+    (fun i ->
+      match boxed_by ~boxing r tys i with
+      | Some wrapper -> Foreign_template.element_spelled ~wrapper i
+      | None -> Printf.sprintf "%%t%d" i)
+    text
+
+let is_templated = function Some {ci_inline = Some {it_form = Templated; _}; _} -> true | _ -> false
+
+let rec instantiated_type ~boxing t =
+  rewrite_cpp_type
+    (function
+      (* Written through the inductive's own head. *)
+      | Tnamespace ((GlobRef.IndRef _ as r), Tglob (r', tys, args)) when Common.globref_equal r r' ->
+        Some (Tnamespace (r, Tglob (r', List.map (instantiated_type ~boxing) tys, List.map (instantiated_expr ~boxing) args)))
+      | Tglob (r, tys, args) -> (
+        match Table.inline_custom_text r with
+        (* An empty text is a global removed from the output, written as
+           its arguments alone ({!Ml_type_util.ref_has_no_cpp_name}). *)
+        | Some s when s <> "" ->
+          let tokens = Foreign_template.term_template (Foreign_template.custom_template_with_args s (List.length tys)) in
+          Some (Tforeign (instantiated_foreign ~boxing r tokens tys args None))
+        | Some _ | None -> Some (Tglob (r, List.map (instantiated_type ~boxing) tys, List.map (instantiated_expr ~boxing) args)) )
+      | Texpr_type e -> Some (Texpr_type (instantiated_expr ~boxing e))
+      | _ -> None)
+    t
+(* Each element hole is decided on the argument the use supplies, before
+   that argument is itself instantiated. *)
+and instantiated_foreign ~boxing r tokens tys values yields =
+  let element i = Option.map wrapper_pieces (boxed_by ~boxing r tys i) in
+  { fr_custom = r;
+    fr_types = List.map (instantiated_type ~boxing) tys;
+    fr_values = List.map (instantiated_expr ~boxing) values;
+    fr_yields = Option.map (instantiated_type ~boxing) yields;
+    fr_pieces = foreign_pieces ~element tokens }
+and instantiated_expr ~boxing e =
+  match e with
+  | CPPfun_call (res, CPPglob (n, tys, Some {ci_inline = Some ({it_form = Templated; _} as tmpl); _}), call) ->
+    let tokens = Foreign_template.term_template tmpl.it_text in
+    (* An argument past the last one the text names is not its own: the
+       call's result is applied to it. *)
+    let named = List.fold_left (fun n -> function Foreign_template.CCarg i -> max n (i + 1) | _ -> n) 0 tokens in
+    let args = call_args call in
+    let yields = match res.cs_yields with Ryields t -> Some t | Ropaque -> None in
+    CPPforeign (Foreign_call, instantiated_foreign ~boxing n tokens tys (CList.firstn (min named (List.length args)) args) yields)
+  | CPPglob (x, tys, Some ({ci_inline = Some ({it_form = Block_iife; _} as tmpl); _} as ci)) ->
+    let ci = {ci with ci_inline = Some {tmpl with it_text = settle_block ~boxing x tys tmpl.it_text}} in
+    map_expr (instantiated_expr ~boxing) (instantiated_stmt ~boxing) (instantiated_type ~boxing) (CPPglob (x, tys, Some ci))
+  | CPPglob (x, tys, (Some {ci_inline = Some tmpl; _} as ci)) when is_templated ci ->
+    CPPforeign (Foreign_constant, instantiated_foreign ~boxing x (Foreign_template.type_template tmpl.it_text) tys [] None)
+  (* Spelled as a value, a mapped qualifier is its text as written, given
+     no arguments it does not place itself. *)
+  | CPPqualified_t (Tglob (r, tys, []), id) when Table.inline_custom_text r <> None -> (
+    match Table.inline_custom_text r with
+    | Some s when (inline_template s).it_form = Templated ->
+      CPPqualified_t (Tforeign (instantiated_foreign ~boxing r (Foreign_template.type_template s) tys [] None), id)
+    | Some _ | None -> CPPqualified_t (Tglob (r, List.map (instantiated_type ~boxing) tys, []), id) )
+  (* For a callee generic over the element, whose declaration never boxes
+     it. *)
+  | CPPcontainer_cast (t, e', suppress) -> CPPcontainer_cast (instantiated_type ~boxing:(boxing && not suppress) t, instantiated_expr ~boxing e', suppress)
+  | e -> map_expr (instantiated_expr ~boxing) (instantiated_stmt ~boxing) (instantiated_type ~boxing) e
+and instantiated_stmt ~boxing = function
+  | Sblock_custom (r, text, result, result_ty, args, tys, b) ->
+    Sblock_custom
+      ( r,
+        settle_block ~boxing r tys text,
+        result,
+        instantiated_type ~boxing result_ty,
+        List.map (instantiated_expr ~boxing) args,
+        List.map (instantiated_type ~boxing) tys,
+        b )
+  | s -> map_stmt (instantiated_expr ~boxing) (instantiated_stmt ~boxing) (instantiated_type ~boxing) s
+
+let instantiate_type = instantiated_type ~boxing:true
+
+let instantiate_foreign (d : settled) : settled =
+  let boxing = true in
+  map_decl (instantiated_expr ~boxing) (instantiated_stmt ~boxing) (instantiated_type ~boxing) d
+
 (* The lambda a methodified function [n] is written as where it is a value,
    its receiver at [pos].  It takes the function's parameters at the types the
    method was declared at, not [const auto &]: a generic lambda has no
@@ -783,6 +906,8 @@ let rec is_literal_type ty =
     false
   (* [std::function] erases what it holds. *)
   | Tfun _ | Tdecay _ -> false
+  (* A mapping asks what the application it instantiates asks. *)
+  | Tforeign fr -> is_literal_type (Tglob (fr.fr_custom, fr.fr_types, fr.fr_values))
   | Tglob (r, _, _) when is_axiom_type_ref r -> false
   | Tglob (r, [], _) when Table.is_custom_scalar_ref r -> true
   (* A generated inductive other than an enum has user-provided constructors

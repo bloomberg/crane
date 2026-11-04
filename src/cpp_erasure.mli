@@ -146,6 +146,28 @@ val lower_boxed_reads : settled -> settled
     ({!Minicpp.Ttyctor}) is not an application, and is left alone. *)
 val supply_template_args : settled -> settled
 
+(** Whether [ty] recurses through a container with a [Boxed Element]
+    wrapper: an inductive recorded as such ({!Table.is_boxed_recursive_ind}),
+    or a type applied to one.  Such an element is boxed wherever a
+    container's [%elem] hole holds it, so that it has one representation. *)
+val recurses_boxed : Minicpp.cpp_type -> bool
+
+(** [instantiate_foreign decl] instantiates every inline mapping [decl]
+    applies whose text places its arguments itself: a mapped type
+    ({!Minicpp.Tglob}) becomes a {!Minicpp.Tforeign}, a mapped constant or a
+    call of one a {!Minicpp.CPPforeign}, each hole pointing at the argument it
+    is filled with and each [%elem] hole boxed or not -- not in the target
+    type of a container cast for a callee generic over the element, whose
+    declaration boxes nothing.  A [%result] block and a bare callee are left
+    as they are.  The last pass: every pass before it sees the mapped global
+    as translation wrote it. *)
+val instantiate_foreign : settled -> settled
+
+(** [instantiate_type ty] instantiates the mappings [ty] applies, as
+    {!instantiate_foreign} does a declaration's: for a type written outside
+    every declaration, a record's field. *)
+val instantiate_type : Minicpp.cpp_type -> Minicpp.cpp_type
+
 (** [lower_method_calls decl] writes each call of a function the method
     registry made a member of its receiver's struct as the
     {!Minicpp.CPPmethod_call} it is: the receiver taken out of the argument

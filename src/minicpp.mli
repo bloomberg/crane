@@ -240,6 +240,10 @@ type cpp_type =
   | Texpr_type of cpp_expr
       (** [decltype(e)], undecayed: what [std::forward] is instantiated at *)
   | Tdecltype_auto  (** [decltype(auto)]: a reference-preserving return type *)
+  | Tforeign of foreign
+      (** An inline mapping's type template instantiated where it is written
+          ({!Cpp_erasure.instantiate_foreign}): what an application of the
+          mapped global ({!Tglob}) becomes past the seam. *)
 
 (** {2 C++ statements} *)
 
@@ -701,11 +705,19 @@ and cpp_expr =
       (** crane_container_cast<Dst>(expr) — converts a type-erased sequence
           container (element type std::any) into a concrete-element container
           by std::any_cast-ing each element. The bool suppresses [%elem]
-          boxing when rendering [Dst], for callees generic over the element. *)
+          boxing where the seam instantiates [Dst]
+          ({!Cpp_erasure.instantiate_foreign}), for callees generic over the
+          element. *)
   | CPPstd_get_if of cpp_type * cpp_expr
       (** [std::get_if<T>(&variant)] -- pointer-returning variant accessor.
           Uses [(sn()).get_if] for BDE compatibility.  See {!CPPstd_get} on
           naming an alternative. *)
+  | CPPforeign of foreign_use * foreign
+      (** An inline mapping's term template instantiated at one use
+          ({!Cpp_erasure.instantiate_foreign}): a mapped constant written
+          through its template, or a call of a mapping that places its
+          arguments itself.  A [%result] block and a bare callee keep their
+          {!CPPglob}. *)
 
 (** A call of a methodified function, written [receiver.method(args)].
     Translation builds every call as a plain {!CPPfun_call}; the last
@@ -1040,6 +1052,45 @@ and custom_info = {
           hand.  A block in expression position is printed as an immediately
           invoked lambda, and a lambda has to be given a return type. *)
 }
+
+(** A custom mapping's replacement text instantiated at one use: its holes
+    point at the arguments the use supplies, and an element hole says whether
+    the element is boxed -- every decision the text leaves open is taken
+    before anything is printed.  The text was parsed once
+    ({!Foreign_template}); what remains for the printer is to write the
+    pieces in order. *)
+and foreign = {
+  fr_custom : GlobRef.t;
+      (** The global whose mapping this is: what brings the text, and the
+          headers it is written with, into the unit. *)
+  fr_types : cpp_type list;
+      (** The type arguments of the use.  A hole past the last one is a type
+          the use erased, written as the box. *)
+  fr_values : cpp_expr list;
+      (** The value arguments the text may splice: a call's, up to the last
+          one the text names. *)
+  fr_yields : cpp_type option;
+      (** What the call yields, for a [%ret] hole; checked present where the
+          text has one ({!Cpp_erasure.supply_template_args}). *)
+  fr_pieces : foreign_piece list;
+}
+
+(** One piece of an instantiated mapping, in the order it is written. *)
+and foreign_piece =
+  | Fp_text of string  (** literal C++ of the mapping *)
+  | Fp_type of int  (** [%t{i}]: type argument [i] *)
+  | Fp_element of int * wrapper_piece list option
+      (** [%elem{i}]: type argument [i], inside the container's [Boxed
+          Element] wrapper where it recurses through the container *)
+  | Fp_value of int  (** [%a{i}]: value argument [i] *)
+  | Fp_yields  (** [%ret]: what the call yields *)
+
+(** A piece of a [Boxed Element] wrapper, a type template over its one
+    element. *)
+and wrapper_piece = Wp_text of string | Wp_element
+
+(** How a term template is used: named as a value, or called. *)
+and foreign_use = Foreign_constant | Foreign_call
 
 (** {2 Type schemas} *)
 

@@ -13859,6 +13859,28 @@
   (deps reuse_moved_capture_renamed.t.exe)
   (action (run ./reuse_moved_capture_renamed.t.exe))))
 
+(subdir tt_at_computed_type
+ (rule
+  (targets tt_at_computed_type.t.exe)
+  (deps TtAtComputedType.vo tt_at_computed_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tt_at_computed_type.t.exe tt_at_computed_type.cpp tt_at_computed_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tt_at_computed_type.t.exe)
+  (action (run ./tt_at_computed_type.t.exe))))
+
+(subdir boxed_element_container_cast
+ (rule
+  (targets boxed_element_container_cast.t.exe)
+  (deps BoxedElementContainerCast.vo boxed_element_container_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} boxed_element_container_cast.t.exe boxed_element_container_cast.cpp boxed_element_container_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps boxed_element_container_cast.t.exe)
+  (action (run ./boxed_element_container_cast.t.exe))))
+
 (subdir frame_kept_consumed_before_call
  (rule
   (targets frame_kept_consumed_before_call.t.exe)
@@ -13891,3 +13913,14 @@
   (alias runtest)
   (deps fast_variant_assign_from_own_child.t.exe)
   (action (run ./fast_variant_assign_from_own_child.t.exe))))
+
+(subdir boxed_element_block_template
+ (rule
+  (targets boxed_element_block_template.t.exe)
+  (deps BoxedElementBlockTemplate.vo boxed_element_block_template.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} boxed_element_block_template.t.exe boxed_element_block_template.cpp boxed_element_block_template.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps boxed_element_block_template.t.exe)
+  (action (run ./boxed_element_block_template.t.exe))))

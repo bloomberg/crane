@@ -66,6 +66,7 @@ let method_calls = Pipeline_trace.pass "method_calls" Cpp_erasure.lower_method_c
 let projections = Pipeline_trace.pass "projections" Cpp_erasure.lower_projections
 let access_moves = Pipeline_trace.pass "access_moves" Cpp_erasure.lower_access_moves
 let constexpr = Pipeline_trace.pass "constexpr" Cpp_erasure.decide_constexpr
+let foreign = Pipeline_trace.pass "foreign" Cpp_erasure.instantiate_foreign
 
 (** Every pass before the {!Cpp_erasure} seam, in the order they run. *)
 let minicpp_passes : cpp_decl Pipeline_trace.pass list =
@@ -138,8 +139,15 @@ let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
     (* With every type final, which definitions may be [constexpr]. *)
     constexpr ]
 
+(** With the declaration resolved and checked, each mapping's text is
+    instantiated on the way to the printer: what is left to it is to write
+    the pieces.  The checks of what a resolved declaration moves and borrows
+    read a mapping's application as translation wrote it. *)
+let instantiation_passes = [foreign]
+
 let pass_names =
   Pipeline_trace.names minicpp_passes @ [seam] @ Pipeline_trace.names settled_passes
+  @ Pipeline_trace.names instantiation_passes
 
 (** {2 What the printer is not owed}
 
@@ -149,7 +157,8 @@ let pass_names =
     type variable nothing declares, a type argument a mapping's template names
     and its application leaves out, a call of a method or a projection
     written as a call of a function, a member read of a moved object, a
-    definition not yet known to be [constexpr] or not.  Each is discharged by one pass above, and
+    definition not yet known to be [constexpr] or not, a mapping's text not yet
+    instantiated.  Each is discharged by one pass above, and
     {!Cpp_erasure.settled} claims that by the end none is outstanding.  The
     list is closed: a new kind of debt the printer must not see is a new
     constructor here, with the pass that pays it. *)
@@ -173,11 +182,14 @@ type obligation =
   | Undecided_constexpr
       (** a definition whose {!Minicpp.constexpr_eligibility} is not
           decided *)
+  | Uninstantiated_mapping
+      (** an inline mapping whose text places its arguments, applied but not
+          instantiated *)
 
 let obligations =
   [ Unresolved_type; Opaque_type; Unspellable_binder; Unsettled_callable; Unresolved_cast; Free_type_variable;
     Missing_template_argument; Unlowered_method_call; Unlowered_projection; Move_under_access;
-    Undecided_constexpr ]
+    Undecided_constexpr; Uninstantiated_mapping ]
 
 let describe = function
   | Unresolved_type -> "an undetermined type (Tunresolved), owed by the pass that wrote it"
@@ -191,6 +203,7 @@ let describe = function
   | Unlowered_projection -> "a projection called as a function, owed by " ^ projections.name
   | Move_under_access -> "a member read of a moved object, owed by " ^ access_moves.name
   | Undecided_constexpr -> "an undecided constexpr eligibility, owed by " ^ constexpr.name
+  | Uninstantiated_mapping -> "an uninstantiated mapping, owed by " ^ foreign.name
 
 (** Whether [decl] writes down a type [p] holds of. *)
 let mentions p (decl : cpp_decl) =
@@ -219,6 +232,7 @@ let owes (decl : Cpp_erasure.settled) o =
   | Unlowered_projection -> rewrites projections
   | Move_under_access -> rewrites access_moves
   | Undecided_constexpr -> rewrites constexpr
+  | Uninstantiated_mapping -> rewrites foreign
 
 (** [check_settled decl] fails if [decl] still owes the printer anything.
 
@@ -267,14 +281,15 @@ let finish decl =
   let decl = run Fun.id minicpp_passes decl in
   let settled = Cpp_erasure.materialise decl in
   note seam decl (settled :> cpp_decl);
-  let decl =
-    run (fun (d : Cpp_erasure.settled) -> (d :> cpp_decl)) settled_passes settled
-  in
-  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
-    check_settled decl;
+  let inj (d : Cpp_erasure.settled) = (d :> cpp_decl) in
+  let checking = Sys.getenv_opt "CRANE_CHECK_IR" <> None in
+  let decl = run inj settled_passes settled in
+  if checking then begin
     Borrow_projection.check_decl (decl :> cpp_decl);
     Move_check.check_decl (decl :> cpp_decl)
   end;
+  let decl = run inj instantiation_passes decl in
+  if checking then check_settled decl;
   Option.iter
     (fun name ->
       Feedback.msg_notice

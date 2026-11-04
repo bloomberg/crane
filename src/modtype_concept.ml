@@ -149,7 +149,7 @@ let rec base_concept = function
    innermost first. *)
 let refinements mt =
   let rec go acc = function
-    | MTwith (inner, ML_With_type (idl, _, typ)) -> go ((idl, convert typ) :: acc) inner
+    | MTwith (inner, ML_With_type (idl, _, typ)) -> go ((idl, Cpp_erasure.instantiate_type (convert typ)) :: acc) inner
     | MTwith (inner, ML_With_module _) -> go acc inner
     | _ -> acc
   in
@@ -184,7 +184,7 @@ and cpp_type_refs note ty =
   ignore
     (exists_cpp_type
        (function
-         | Tglob (r, _, _) | Tnamespace (r, _) ->
+         | Tglob (r, _, _) | Tforeign {fr_custom = r; _} | Tnamespace (r, _) ->
            note r;
            false
          | _ -> false )
