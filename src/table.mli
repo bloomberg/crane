@@ -901,6 +901,14 @@ val fast_variant : unit -> bool
     the customs the unit's program names are installed. *)
 val non_atomic_rc : unit -> bool
 
+(** Whether [Set Crane NonAtomicRc] was requested, whatever any unit
+    decides.  For an analysis of the whole program, which runs before any
+    unit's concurrency is decided and whose answer every unit shares: what a
+    parameter's ownership depends on cannot be a per-unit decision
+    ({!Escape.is_reuse_scrutinee}).  Everything a unit generates reads
+    {!non_atomic_rc}. *)
+val non_atomic_rc_requested : unit -> bool
+
 (** Whether the runtime's block heap is one global ([Set Crane
     SingleThreaded]): the request, a promise that Crane values are used from
     one thread at a time, withheld from a unit that spawns threads like

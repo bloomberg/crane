@@ -325,11 +325,18 @@ let find_reuse_candidates (_typ : ml_type) (pv : ml_branch array) =
     match-only param.  A shared variant's block is recycled whatever the
     counts; another type's child cell only under non-atomic counts (the
     recycling helpers in rc.h are single-threaded, matching the rest of
-    Crane's clone-at-boundary model). *)
+    Crane's clone-at-boundary model).
+
+    Non-atomic counts as requested, not as a unit is granted them: ownership
+    is settled for the whole program ({!Ownership.summarize}) before any
+    unit's concurrency is decided, and a function's parameters are owned the
+    same way in every unit that calls it.  A unit refused the request
+    because it starts a thread ({!Table.non_atomic_rc}) owns such a
+    parameter and recycles nothing through it. *)
 let is_reuse_scrutinee k body =
   let recyclable = function
     | Tglob (r, _, _) when Table.is_shared_variant r -> true
-    | _ -> non_atomic_rc ()
+    | _ -> non_atomic_rc_requested ()
   in
   let found = ref false in
   let rec scan d = function
