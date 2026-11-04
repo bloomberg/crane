@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <variant>
 #define CRANE_NON_ATOMIC_RC 1

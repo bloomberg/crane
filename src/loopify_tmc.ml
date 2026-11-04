@@ -73,18 +73,18 @@ type result_storage =
   | Pointer_result of cpp_type
       (** A result that is itself the pointer at the head of the chain. *)
 
-let storage_of ret_ty =
+let storage_of ret_ty = if is_value_type_ret ret_ty then Value_root ret_ty else Pointer_result ret_ty
+
+(* Whether a result of [ret_ty] may be assembled in cells a reuse cursor
+   recycles: a value type under the reuse policy, unless a shared variant,
+   whose slot holds no cell. *)
+let recyclable_result ret_ty =
   let rec shared = function
     | Tglob (r, _, _) -> Table.is_shared_variant r
     | Tnamespace (_, t) | Tconst t -> shared t
     | _ -> false
   in
-  let shared = shared ret_ty in
-  if is_value_type_ret ret_ty then
-    (* A shared variant's slot holds no cell for the cursor to recycle. *)
-    if Table.reuse () && Table.non_atomic_rc () && not shared then Boxed_root ret_ty
-    else Value_root ret_ty
-  else Pointer_result ret_ty
+  is_value_type_ret ret_ty && Table.reuse () && Table.non_atomic_rc () && not (shared ret_ty)
 
 (** The value type a cell holds behind its pointer, when cells are values. *)
 let cell_value_type = function
@@ -842,24 +842,9 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ?cursor ~jumped ~storage ~
     @return Transformed body with TMC while loop *)
 let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~varying ~parts ~shapes tparams check params ret_ty body =
   let branch = branch_along shapes check in
-  let storage = storage_of ret_ty in
   let { ss_varying = varying; ss_varying_params = varying_params;
         ss_shadow_params = shadow_params; ss_subs = subs } =
     build_shadow_setup ~varying ~parts tparams params
-  in
-  (* Where the result is assembled, and the hole [_write] starts at. *)
-  let head_ty = match storage with
-    | Value_root t | Boxed_root t -> Tshared_ptr t
-    | Pointer_result t -> t
-  in
-  let root_decls =
-    match storage with
-    | Value_root t ->
-      [ Sdecl_init (id_root, Tid_external ((Cpp_state.sn ()).ns ^ "::optional", [t]));
-        Sasgn (id_write, Declare (Tptr head_ty, None), CPPnullptr) ]
-    | Boxed_root _ | Pointer_result _ ->
-      [ Sdecl_init (id_head, head_ty);
-        Sasgn (id_write, Declare (Tptr head_ty, None), CPPunop (Uaddr, CPPvar id_head)) ]
   in
   (* Shadow variable declarations.
      For pointer params with custom inits (e.g., _self = this in methods), only
@@ -895,17 +880,19 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~varying ~parts
      first step steals the field of before any cell was proven unique -- a
      parameter the head declares by value, not a reference or a receiver. *)
   let cursor =
-    match (storage, cursor) with
-    | Boxed_root _, Some (c : Reuse_cursor.t) -> (
+    match cursor with
+    | Some (c : Reuse_cursor.t) when recyclable_result ret_ty -> (
       match List.nth_opt params c.parameter with
       | Some (id, ty) when (not (List.mem_assoc id param_inits)) && not (declared_by_reference ty) -> Some c
       | Some _ | None -> None )
-    | (Value_root _ | Pointer_result _ | Boxed_root _), _ -> None
+    | Some _ | None -> None
   in
   (* Rewrite body for TMC, then flatten unnecessary Sblock wrappers.  A step
      the cursor's lowering cannot carry out declines it, and the body is
-     rewritten without; the calls taken are told once, of the rewrite kept. *)
-  let rewrite cursor =
+     rewritten without it, in the storage its type has: the first cell is
+     allocated on the heap only for the cursor to recycle into.  The calls
+     taken are told once, of the rewrite kept. *)
+  let rewrite storage cursor =
     let cursor_used = ref false and jumps = ref [] in
     let jumped e = jumps := e :: !jumps in
     let body =
@@ -915,10 +902,28 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~varying ~parts
     in
     (body, !cursor_used, List.rev !jumps)
   in
-  let body'', cursor_used, jumps =
-    match rewrite cursor with
-    | rewritten -> rewritten
-    | exception Cursor_declined -> rewrite None
+  let without_cursor () = (storage_of ret_ty, rewrite (storage_of ret_ty) None) in
+  let storage, (body'', cursor_used, jumps) =
+    match cursor with
+    | None -> without_cursor ()
+    | Some _ -> (
+      match rewrite (Boxed_root ret_ty) cursor with
+      | (_, true, _) as rewritten -> (Boxed_root ret_ty, rewritten)
+      | _ | (exception Cursor_declined) -> without_cursor () )
+  in
+  (* Where the result is assembled, and the hole [_write] starts at. *)
+  let head_ty = match storage with
+    | Value_root t | Boxed_root t -> Tshared_ptr t
+    | Pointer_result t -> t
+  in
+  let root_decls =
+    match storage with
+    | Value_root t ->
+      [ Sdecl_init (id_root, Tid_external ((Cpp_state.sn ()).ns ^ "::optional", [t]));
+        Sasgn (id_write, Declare (Tptr head_ty, None), CPPnullptr) ]
+    | Boxed_root _ | Pointer_result _ ->
+      [ Sdecl_init (id_head, head_ty);
+        Sasgn (id_write, Declare (Tptr head_ty, None), CPPunop (Uaddr, CPPvar id_head)) ]
   in
   List.iter jumped jumps;
   let body'' = body'' |> strip_unnecessary_blocks |> rewrite_borrowed_shadow_uses shadow_params in

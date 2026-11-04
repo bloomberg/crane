@@ -1,11 +1,15 @@
 // A loopified list builder assembles its result in place: n elements cost n
 // allocations -- n-1 cells below the root and the terminal Nil -- and an empty
-// result none.  A shared tail it appends onto stays intact.
+// result none.  A shared tail it appends onto stays intact.  Cells counted
+// through a pool (crane::rc, under NonAtomicRc) may reuse one freed before:
+// there n bounds the count.
 #include "tmc_value_root.h"
 
 #include <cassert>
 #include <cstdlib>
+#include <memory>
 #include <new>
+#include <type_traits>
 
 static long g_allocs = 0;
 void *operator new(std::size_t n) {
@@ -32,10 +36,16 @@ static int len(const L &l) {
   return n;
 }
 
+static constexpr bool pooled = !std::is_same_v<decltype(L::Cons::l), std::shared_ptr<L>>;
+
+static bool costs(long allocated, long cells) {
+  return pooled ? allocated <= cells : allocated == cells;
+}
+
 int main() {
   assert(allocations([] { L r = TmcValueRoot::range(0, 0); assert(len(r) == 0); }) == 0);
-  assert(allocations([] { L r = TmcValueRoot::range(0, 1); assert(len(r) == 1); }) == 1);
-  assert(allocations([] { L r = TmcValueRoot::range(0, 5); assert(len(r) == 5); }) == 5);
+  assert(costs(allocations([] { L r = TmcValueRoot::range(0, 1); assert(len(r) == 1); }), 1));
+  assert(costs(allocations([] { L r = TmcValueRoot::range(0, 5); assert(len(r) == 5); }), 5));
 
   L xs = TmcValueRoot::range(0, 3);
   L ys = TmcValueRoot::range(10, 2);
