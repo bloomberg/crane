@@ -3835,6 +3835,9 @@ let extract_inductive ?boxed ?drain r s l optstr imports =
         Lib.add_leaf (ref_imports_object (g, i)) )
       imports;
     check_type_mapping_header g s imports;
+    (* The wrapper is written wherever an element is boxed, on the
+       container's headers. *)
+    Option.iter (fun w -> check_type_mapping_header g w imports) boxed;
     let mib = Global.lookup_mind kn in
     let n = Array.length mib.mind_packets.(i).mind_consnames in
     if not (Int.equal n (List.length l)) then error_nb_cons ();
@@ -3937,6 +3940,7 @@ let extract_monad m b r s imports =
         add_ref_import mon i;
         Lib.add_leaf (ref_imports_object (mon, i)) )
       imports;
+    check_type_mapping_header mon s imports;
     Lib.add_leaf (monad_extraction (mon, bind, ret, s));
     Lib.add_leaf (in_customs (mon, [], s))
   in
