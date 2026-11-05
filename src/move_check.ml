@@ -113,6 +113,7 @@ let member e =
   | CPPfun_call
       (_, CPPglob (_, _, Some {ci_inline = Some {it_shape = Inline_pair_projection f; _}; _}), {rev = [x]}) ->
     Some (x, f)
+  | CPPforeign (Foreign_call, fr) -> foreign_pair_projection fr
   | _ -> None
 
 (* A member of the local [x]; of a reference, the part it names. *)

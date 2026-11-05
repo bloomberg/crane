@@ -139,10 +139,10 @@ let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
     (* With every type final, which definitions may be [constexpr]. *)
     constexpr ]
 
-(** With the declaration resolved and checked, each mapping's text is
-    instantiated on the way to the printer: what is left to it is to write
-    the pieces.  The checks of what a resolved declaration moves and borrows
-    read a mapping's application as translation wrote it. *)
+(** With the declaration resolved, each mapping's text is instantiated on
+    the way to the printer: what is left to it is to write the pieces.  The
+    checks of what a declaration moves and borrows read the instantiated
+    pieces, a pair projection's included ({!Minicpp.foreign_pair_projection}). *)
 let instantiation_passes = [foreign]
 
 let pass_names =
@@ -284,12 +284,12 @@ let finish decl =
   let inj (d : Cpp_erasure.settled) = (d :> cpp_decl) in
   let checking = Sys.getenv_opt "CRANE_CHECK_IR" <> None in
   let decl = run inj settled_passes settled in
+  let decl = run inj instantiation_passes decl in
   if checking then begin
     Borrow_projection.check_decl (decl :> cpp_decl);
-    Move_check.check_decl (decl :> cpp_decl)
+    Move_check.check_decl (decl :> cpp_decl);
+    check_settled decl
   end;
-  let decl = run inj instantiation_passes decl in
-  if checking then check_settled decl;
   Option.iter
     (fun name ->
       Feedback.msg_notice

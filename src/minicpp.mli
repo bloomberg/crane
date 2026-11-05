@@ -1106,6 +1106,12 @@ val static_fun :
 
 val inline_shape_of_text : string -> inline_shape
 
+(** [foreign_pair_projection fr] is the pair and the component [fr] reads,
+    where [fr] instantiates a pair projection's mapping ([%a0.first]): what
+    {!Inline_pair_projection} says of the mapping's application before it is
+    instantiated. *)
+val foreign_pair_projection : foreign -> (cpp_expr * string) option
+
 (** An inline mapping's text, classified once when the use is resolved. *)
 val inline_template : string -> inline_template
 

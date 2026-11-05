@@ -20,6 +20,16 @@ let field t f =
 (* [std::get<tree::Node>(t.v_mut())], the alternative [t] holds. *)
 let alternative t = CPPstd_get (Tqualified (tree, id "Node"), Some (mk_call (CPPaccess (Adot, v t, id "v_mut")) []))
 
+(* [%a0.first] applied to [pair], instantiated ({!Minicpp.foreign}). *)
+let projection f pair =
+  CPPforeign
+    ( Foreign_call,
+      { fr_custom = GlobRef.VarRef (id f);
+        fr_types = [];
+        fr_values = [pair];
+        fr_yields = None;
+        fr_pieces = [Fp_value 0; Fp_text ("." ^ f)] } )
+
 (* A frame pushed onto a stack, as a loop saving its continuation does. *)
 let push args = mk_call (CPPaccess (Adot, v "_stack", id "push_back")) [CPPbraced args]
 
@@ -117,4 +127,7 @@ let () =
     ["t"];
   check "a copy of a field, read after its local is moved"
     [decl "c" (field "t" "a0"); Sexpr (push [CPPmove (v "t")]); Sreturn (Some (v "c"))]
+    [];
+  check "each component taken out of a pair through its instantiated projection"
+    [Sexpr (push [projection "first" (CPPmove (v "p")); projection "second" (CPPmove (v "p"))])]
     []
