@@ -14,21 +14,6 @@ open Cpp_state
 open Cpp_names
 open Cpp_print
 
-(** Render a custom type mapping (e.g. ["std::pair<%t0,%t1>"]) with each of
-    its type holes qualified by [qualify_type].
-
-    This is what lets a parametric custom type appear in a module signature's
-    [requires] clause: the arguments spliced into it need the same
-    ["typename M::"] qualification the surrounding concept gives everything
-    else.  A hole with no corresponding argument is left as written.
-
-    @param custom_str  The mapping as the user wrote it.
-    @param args        The C++ type arguments filling [%t0], [%t1], ….
-    @param qualify_type  Renders one argument, qualified. *)
-let qualify_custom_template custom_str args qualify_type =
-  render_type_template custom_str
-    ~hole:(fun i -> Option.map qualify_type (List.nth_opt args i))
-
 (** What a module type contributes where a concept body is expected.
 
     [MTident] and its refinements name a concept that already exists; only an
@@ -136,9 +121,9 @@ let rec pp_concept_type ctx names frame (t : Modtype_concept.concept_type) : Pp.
   | Member {member; enum; arguments} ->
     pp_member_type ~enum (name_in ctx names frame (Global (Type, member))) member (List.map pp_concept_type arguments)
   | Parameter ty -> str "typename " ++ pp_type ctx ty
-  | Foreign {custom; template; arguments} ->
+  | Foreign {custom; pieces; arguments} ->
     Common.writes_custom custom;
-    qualify_custom_template template arguments pp_concept_type
+    pp_type_pieces custom pieces (fun i -> Option.map pp_concept_type (List.nth_opt arguments i))
   | Global (r, []) -> pp_type ctx (Tglob (r, [], []))
   | Global (r, args) ->
     pp_type ctx (Tglob (r, [], []))

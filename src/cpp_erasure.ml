@@ -728,6 +728,10 @@ and instantiated_stmt ~boxing = function
 
 let instantiate_type = instantiated_type ~boxing:true
 
+let type_pieces r text tys =
+  let tokens = Foreign_template.type_template (Foreign_template.custom_template_with_args text (List.length tys)) in
+  foreign_pieces ~element:(fun i -> Option.map wrapper_pieces (boxed_by ~boxing:true r tys i)) tokens
+
 let instantiate_foreign (d : settled) : settled =
   let boxing = true in
   map_decl (instantiated_expr ~boxing) (instantiated_stmt ~boxing) (instantiated_type ~boxing) d

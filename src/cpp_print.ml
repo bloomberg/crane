@@ -319,23 +319,23 @@ let split_on_semicolons (s : string) : string list =
   let last = Buffer.contents buf in
   List.rev (if String.trim last = "" then !acc else last :: !acc)
 
-(** Render a custom type template, filling hole [i] with [hole i] and copying
-    the text between holes verbatim.  [hole] returns [None] for an index the
-    caller cannot fill, which is written back out as a placeholder of the same
-    index -- nothing here knows better than the template did. *)
-let render_type_template ~hole template =
-  prlist
-    (function
-      | CCstring lit -> str lit
-      | (CCty_arg i | CCelem i) as tok -> (
-        match hole i with
-        | Some pp -> pp
-        | None ->
-          str (Printf.sprintf "%%%s%d" (match tok with CCelem _ -> "elem" | _ -> "t") i) )
-      | _ ->
-        CErrors.anomaly
-          (Pp.str "render_type_template: a type template has only type holes"))
-    (type_template template)
+(* A piece of the type mapping [r]'s instantiated text, hole [i] written
+   [arg i]: an element hole bare or inside the wrapper decided for it. *)
+let pp_type_piece r arg = function
+  | Fp_text s -> str s
+  | Fp_type i | Fp_element (i, None) -> arg i
+  | Fp_element (i, Some wrapper) ->
+    let element = Pp.string_of_ppcmds (arg i) in
+    str (String.concat "" (List.map (function Wp_text s -> s | Wp_element -> element) wrapper))
+  | Fp_value _ | Fp_yields -> CErrors.anomaly Pp.(str "the type mapping " ++ GlobRef.print r ++ str " names a value")
+
+let pp_type_pieces r pieces arg =
+  let arg i =
+    match arg i with
+    | Some pp -> pp
+    | None -> CErrors.anomaly Pp.(str "a type argument the mapping " ++ GlobRef.print r ++ str " names was not supplied")
+  in
+  prlist (pp_type_piece r arg) pieces
 
 (** Generate N placeholder type arguments (comma-separated ["int"]s). *)
 let gen_placeholder_args n =
@@ -805,26 +805,22 @@ let foreign_text fr =
 
 (* Whether [probe], a type constructor applied to the sentinel, is written as
    a template name applied to the sentinel alone, read off its structure and
-   not off its rendering; [None] where the structure does not say.  A custom
-   mapping is that name where its text is a head with no argument list of its
-   own, then the sentinel's hole, then the list's close; any other global is
-   its name applied to its arguments. *)
+   not off its rendering; [None] where the structure does not say.  An
+   instantiated mapping is that name where its text is a head with no
+   argument list of its own, then the sentinel's hole -- an element hole
+   written bare, as the sentinel's always is ({!ctor_alias_at}) -- then the
+   list's close; any other global is its name applied to its arguments.  A
+   value argument is written only where a mapping's text splices it, which
+   is then not that shape. *)
 let rec applied_to_sentinel_alone ctx = function
   | Tid (_, args) | Tid_external (_, args) -> Some (args = [Thole])
   | Tnamespace (_, t) -> applied_to_sentinel_alone ctx t
-  | Tglob (r, args, []) -> (
-    match Cpp_names.custom_text ctx r with
-    | None -> Some (args = [Thole])
-    | Some template -> (
-      match type_template template with
-      | [CCstring head; CCty_arg i; CCstring ">"] when List.nth_opt args i = Some Thole ->
-        Some (String.index_opt head '<' = Some (String.length head - 1))
-      | tokens -> if List.exists (function CCelem _ -> true | _ -> false) tokens then None else Some false ) )
-  | Tforeign {fr_types = args; fr_values = []; fr_pieces; _} -> (
+  | Tglob (_, args, _) -> Some (args = [Thole])
+  | Tforeign {fr_types = args; fr_pieces; _} -> (
     match fr_pieces with
-    | [Fp_text head; Fp_type i; Fp_text ">"] when List.nth_opt args i = Some Thole ->
+    | [Fp_text head; (Fp_type i | Fp_element (i, None)); Fp_text ">"] when List.nth_opt args i = Some Thole ->
       Some (String.index_opt head '<' = Some (String.length head - 1))
-    | pieces -> if List.exists (function Fp_element _ -> true | _ -> false) pieces then None else Some false )
+    | _ -> Some false )
   | _ -> None
 
 (** The C++ name of the field a projection reads.
@@ -1081,6 +1077,12 @@ let rec declaration_names_into_a_struct ctx (d : cpp_decl) =
       | answer -> answer )
   | _ -> None
 
+(** A mapping whose text places its arguments itself is instantiated before
+    it is printed ({!Cpp_erasure.instantiate_foreign}): reaching the printer
+    as its application is a pass not run. *)
+let uninstantiated_mapping r =
+  CErrors.anomaly Pp.(str "a mapping's application reached the printer uninstantiated: " ++ GlobRef.print r)
+
 (** Pretty-print a MiniCpp type as C++ source text.
 
     @param par  whether to parenthesize (for precedence in function types)
@@ -1154,23 +1156,17 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
     | Terased _ ->
       writes_obj ();
       pp_library_name Crane_rt.obj
-    | Tglob (r, tys, args) ->
+    | Tglob (r, tys, _) ->
       ( match Cpp_names.inline_custom_text ctx r with
-      | Some s ->
-        let cmds =
-          term_template (custom_template_with_args s (List.length tys))
-        in
-        pp_custom
-          ~container:r ctx (Pp.string_of_ppcmds (GlobRef.print r) ^ " := " ^ s)
-          (empty_env ())
-          None
-          None
-          tys
-          []
-          args
-          []
-          vl
-          cmds
+      (* A mapped type is instantiated before it is printed
+         ({!Cpp_erasure.instantiate_foreign}, {!Cpp_erasure.instantiate_type}
+         for one written outside a declaration), and one mapped to nothing
+         has no spelling to print: the [Tapply] arm writes such a head's
+         arguments, and anywhere else it is refused at the seam. *)
+      | Some "" ->
+        CErrors.anomaly Pp.(str "a type mapped to nothing reached the printer: " ++ GlobRef.print r)
+      | Some _ ->
+        CErrors.anomaly Pp.(str "a mapped type reached the printer uninstantiated: " ++ GlobRef.print r)
       | None ->
         pp_written_head ~lead (glob_head ctx r ~applied:(tys <> []))
         ++ (match tys with [] -> mt () | l -> str "<" ++ pp_list (pp_rec false) l ++ str ">") )
@@ -1329,15 +1325,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
            ([temp.names]/5).  Without it the name parses as a non-template
            member and the position rejects it. *)
         (pp_rec ~lead:false false base ++ str "::template " ++ Id.print id, true)
-      | Tglob (r, _ :: _, _) ->
-        ( ( match Cpp_names.custom_text ctx r with
-          | Some template when String.contains template '%' -> (
-            match type_template template with
-            | CCstring lit :: _ -> str (cut_at_argument_list lit)
-            | _ -> str (cut_at_argument_list template) )
-          | Some template -> str (cut_at_argument_list template)
-          | None -> pp_rec false (Tglob (r, [], [])) ),
-          false )
+      | Tglob (r, _ :: _, _) -> (pp_rec false (Tglob (r, [], [])), false)
       | Tforeign ({fr_types = _ :: _; _} as fr) ->
         let lead = match fr.fr_pieces with Fp_text lit :: _ -> lit | _ -> foreign_text fr in
         (str (cut_at_argument_list lead), false)
@@ -1364,9 +1352,6 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
 and ctor_alias_at ctx vl t =
   let custom () =
     match t with
-    | Tglob (r, (_ :: _ as args), _) when Cpp_names.custom_text ctx r <> None ->
-      let fixed = List.filteri (fun i _ -> i < List.length args - 1) args in
-      ctor_alias_of_probe ctx vl ~base:(Common.pp_global_name Type r) (Tglob (r, fixed @ [Thole], []))
     (* The sentinel in the last argument's place, its element hole holding
        the sentinel bare: the sentinel recurses through nothing. *)
     | Tforeign ({fr_types = _ :: _ as args; _} as fr) ->
@@ -1568,7 +1553,7 @@ and pp_cpp_expr ctx env args t =
     let body_pp =
       pp_custom
         ~container:ref_name ctx (Pp.string_of_ppcmds (GlobRef.print ref_name) ^ " := " ^ custom)
-        env None None tys [] val_args [] [] cmds
+        env None None tys [] val_args [] cmds
     in
     let body_str = Pp.string_of_ppcmds body_pp in
     let stmts =
@@ -1596,23 +1581,14 @@ and pp_cpp_expr ctx env args t =
   match t with
   | CPPvar id -> Id.print id
   | CPPforeign (_, fr) -> pp_foreign ctx env [] fr
-  | CPPglob (x, tys, Some {ci_inline = Some tmpl; ci_yields; _}) ->
-    let custom = tmpl.it_text in
-    if tmpl.it_form = Block_iife then
-      gen_block_iife ?yields:ci_yields x custom tys []
-    else
-    let cmds = type_template custom in
-    pp_custom
-      ~container:x ctx (Pp.string_of_ppcmds (GlobRef.print x) ^ " := " ^ custom)
-      env
-      None
-      None
-      tys
-      []
-      []
-      []
-      []
-      cmds
+  | CPPglob (x, tys, Some {ci_inline = Some tmpl; ci_yields; _}) -> (
+    match tmpl.it_form with
+    | Block_iife -> gen_block_iife ?yields:ci_yields x tmpl.it_text tys []
+    (* A text with no hole is written as it stands. *)
+    | Bare_callee ->
+      Common.writes_custom x;
+      str tmpl.it_text
+    | Templated -> uninstantiated_mapping x )
   | CPPmethod_value {mv_method; mv_access; mv_receiver; mv_params; mv_type_args} ->
     let names =
       match mv_params with
@@ -1760,36 +1736,7 @@ and pp_cpp_expr ctx env args t =
       let args_s = pp_list (pp_cpp_expr ctx env args) (call_args ts) in
       Common.writes_custom n;
       str s ++ ty_args_s ++ str "(" ++ args_s ++ str ")"
-    else
-      let cmds = term_template s in
-      let arg_types =
-        match res.cs_params with Ptypes ts -> ts | Punknown -> []
-      in
-      (* A mapping names the arguments it needs, and an argument past the last
-         one it names is one it chose not to read.  An argument past the
-         constant's own parameters -- [case_ f g] applied to an event -- is
-         not this call's at all: translation applies the result to it. *)
-      let all_args = call_args ts in
-      let named =
-        List.fold_left
-          (fun acc -> function CCarg i -> max acc (i + 1) | _ -> acc)
-          0 cmds
-      in
-      (* [%ret] is the type the call yields, as translation recorded it: a
-         mapping can name a generated type -- the enum an ordering
-         becomes -- without knowing what the generator called it. *)
-      pp_custom
-        ~container:n ?ret:(match res.cs_yields with Ryields ty -> Some ty | Ropaque -> None)
-        ctx (Pp.string_of_ppcmds (GlobRef.print n) ^ " := " ^ s)
-        env
-        None
-        None
-        tys
-        []
-        (CList.firstn (min named (List.length all_args)) all_args)
-        arg_types
-        []
-        cmds
+    else uninstantiated_mapping n
   | CPPmethod_call {mc_method; mc_access; mc_receiver; mc_type_args; mc_args} ->
     pp_cpp_expr ctx env args mc_receiver
     ++ str (pp_obj_access mc_access)
@@ -2507,7 +2454,7 @@ and pp_cpp_stmt ctx env args stmt =
     let body_pp =
       pp_custom
         ~container:_ref ctx ("block custom " ^ Pp.string_of_ppcmds (GlobRef.print _ref))
-        env None None tyargs [] args [] [] cmds
+        env None None tyargs [] args [] cmds
     in
     (* Split rendered body by ';' and emit each as a statement line *)
     let body_str = Pp.string_of_ppcmds body_pp in
@@ -2537,7 +2484,6 @@ and pp_cpp_stmt ctx env args stmt =
       (Some t)
       tyargs
       cases
-      []
       []
       []
       cmds
@@ -2795,7 +2741,7 @@ and string_object printed =
   writes_standard "string";
   str (sn ()).string ++ str "(" ++ printed ++ str ")"
 
-and pp_custom ?container ?ret ctx custom env typ t tyargs cases args _arg_types vl cmds =
+and pp_custom ?container ctx custom env typ t tyargs cases args vl cmds =
   Option.iter Common.writes_custom container;
   (* Every read of a boxed value the template needs at a concrete type was
      made explicit by {!Cpp_erasure.lower_boxed_reads}; this prints. *)
@@ -2847,11 +2793,12 @@ and pp_custom ?container ?ret ctx custom env typ t tyargs cases args _arg_types 
         with Failure _ ->
           CErrors.anomaly
             Pp.(str "Custom syntax: unbound case body in: " ++ str custom) )
-    | CCty_arg i ->
-      ( match List.nth_opt tyargs i with
-        | Some ty -> pp_cpp_type ctx false vl ty
-        | None -> pp_cpp_type ctx false vl Tany
-      )
+    | CCty_arg i -> (
+      (* Every type argument the text names was supplied at the seam
+         ({!Cpp_erasure.supply_template_args}). *)
+      match List.nth_opt tyargs i with
+      | Some ty -> pp_cpp_type ctx false vl ty
+      | None -> CErrors.anomaly Pp.(str "Custom syntax: a type argument the seam did not supply in: " ++ str custom) )
     | CCelem _ ->
       CErrors.anomaly
         Pp.(str "Custom syntax: an element hole the seam did not decide in: " ++ str custom)
@@ -2875,11 +2822,10 @@ and pp_custom ?container ?ret ctx custom env typ t tyargs cases args _arg_types 
             Pp.(
               str "Custom syntax: unbound case branch type argument in: "
               ++ str custom ) )
-    | CCret -> (
-      (* Checked where the template was settled ({!Cpp_erasure.supply_template_args}). *)
-      match ret with
-      | Some ty -> str (Pp.string_of_ppcmds (pp_cpp_type ctx false [] ty))
-      | None -> CErrors.anomaly Pp.(str "Custom syntax: %ret with no type the call yields in: " ++ str custom) )
+    | CCret ->
+      (* Only a call's template names it, and that is instantiated; a block
+         naming it is refused at the seam ({!Cpp_erasure.check_ret}). *)
+      CErrors.anomaly Pp.(str "Custom syntax: %ret in a block or match template: " ++ str custom)
     | CCarg i -> (
       match List.nth_opt args i with
       | Some arg -> pp_spliced ctx env ~followed_by_dot arg
@@ -2936,11 +2882,7 @@ and pp_foreign ctx env vl fr =
   Common.writes_custom fr.fr_custom;
   let arg i = pp_cpp_type ctx false vl (Option.default Tany (List.nth_opt fr.fr_types i)) in
   let piece ~followed_by_dot = function
-    | Fp_text s -> str s
-    | Fp_type i | Fp_element (i, None) -> arg i
-    | Fp_element (i, Some wrapper) ->
-      let element = Pp.string_of_ppcmds (arg i) in
-      str (String.concat "" (List.map (function Wp_text s -> s | Wp_element -> element) wrapper))
+    | (Fp_text _ | Fp_type _ | Fp_element _) as p -> pp_type_piece fr.fr_custom arg p
     | Fp_yields -> (
       match fr.fr_yields with
       | Some ty -> str (Pp.string_of_ppcmds (pp_cpp_type ctx false [] ty))

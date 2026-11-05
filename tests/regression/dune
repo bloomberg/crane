@@ -13935,3 +13935,14 @@
   (alias runtest)
   (deps reuse_scrutinee_concurrent_unit.t.exe)
   (action (run ./reuse_scrutinee_concurrent_unit.t.exe))))
+
+(subdir boxed_element_concept
+ (rule
+  (targets boxed_element_concept.t.exe)
+  (deps BoxedElementConcept.vo boxed_element_concept.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} boxed_element_concept.t.exe boxed_element_concept.cpp boxed_element_concept.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps boxed_element_concept.t.exe)
+  (action (run ./boxed_element_concept.t.exe))))

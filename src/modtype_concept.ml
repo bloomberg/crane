@@ -8,7 +8,7 @@ open Minicpp
 type concept_type =
   | Member of {member : GlobRef.t; enum : bool; arguments : concept_type list}
   | Parameter of cpp_type
-  | Foreign of {custom : GlobRef.t; template : string; arguments : concept_type list}
+  | Foreign of {custom : GlobRef.t; pieces : foreign_piece list; arguments : concept_type list}
   | Global of GlobRef.t * concept_type list
   | Namespaced of GlobRef.t * GlobRef.t * cpp_expr list * concept_type list
   | Shared_pointer of concept_type
@@ -73,7 +73,15 @@ let rec concept_type signature ty =
   | Tglob (r, tys, _) -> (
     match Table.find_custom_opt r with
     | Some text ->
-      Foreign {custom = r; template = Foreign_template.custom_template_with_args text (List.length tys); arguments = args tys}
+      let pieces = Cpp_erasure.type_pieces r text tys in
+      (* A type argument the text names and the use does not supply is
+         erased, as the seam writes one ({!Cpp_erasure.supply_template_args}). *)
+      let arity =
+        List.fold_left (fun n -> function Fp_type i | Fp_element (i, _) -> max n (i + 1) | _ -> n) 0 pieces
+      in
+      let supplied = args tys in
+      let erased = List.init (max 0 (arity - List.length supplied)) (fun _ -> Plain Tany) in
+      Foreign {custom = r; pieces; arguments = supplied @ erased}
     | None -> Global (r, args tys) )
   | Tshared_ptr ty -> Shared_pointer (concept_type signature ty)
   | Tvariant (storage, tys) -> Variant (storage, args tys)

@@ -339,12 +339,10 @@ let of_modtype_concept (c : Modtype_concept.t) =
   let rec cty : Modtype_concept.concept_type -> unit = function
     | Member {arguments; _} -> List.iter cty arguments
     | Parameter t | Plain t -> need (of_type t)
-    | Foreign {template; arguments; _} ->
+    | Foreign {pieces; arguments; _} ->
       List.iter
-        (function
-          | Foreign_template.CCty_arg i | CCelem i -> Option.iter cty (List.nth_opt arguments i)
-          | _ -> () )
-        (Foreign_template.type_template template)
+        (function Fp_type i | Fp_element (i, _) -> Option.iter cty (List.nth_opt arguments i) | _ -> ())
+        pieces
     | Global (r, args) ->
       need (of_type (Tglob (r, [], [])));
       List.iter cty args

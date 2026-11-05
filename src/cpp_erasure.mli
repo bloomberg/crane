@@ -168,6 +168,12 @@ val instantiate_foreign : settled -> settled
     every declaration, a record's field. *)
 val instantiate_type : Minicpp.cpp_type -> Minicpp.cpp_type
 
+(** [type_pieces r text tys] is the type mapping [r]'s [text] applied at
+    [tys] in pieces, each [%elem] hole boxed or not as {!instantiate_type}
+    decides it: for a type written where no {!Minicpp.cpp_type} holds it, a
+    module type's concept. *)
+val type_pieces : Names.GlobRef.t -> string -> Minicpp.cpp_type list -> Minicpp.foreign_piece list
+
 (** [lower_method_calls decl] writes each call of a function the method
     registry made a member of its receiver's struct as the
     {!Minicpp.CPPmethod_call} it is: the receiver taken out of the argument

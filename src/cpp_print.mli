@@ -180,9 +180,11 @@ val cut2 : unit -> Pp.t
 (** {2 Custom type templates} *)
 
 
-(** [render_type_template ~hole text] fills hole [i] with [hole i], writing an
-    unfillable hole back out as a placeholder. *)
-val render_type_template : hole:(int -> Pp.t option) -> string -> Pp.t
+(** [pp_type_pieces r pieces arg] writes the type mapping [r] instantiated
+    in [pieces], hole [i] filled with [arg i] -- in a module type's concept,
+    each argument written as the concept qualifies it.  Every hole is
+    supplied, an erased argument included ({!Modtype_concept.concept_type}). *)
+val pp_type_pieces : GlobRef.t -> foreign_piece list -> (int -> Pp.t option) -> Pp.t
 
 (** {2 Wrapper structs} *)
 

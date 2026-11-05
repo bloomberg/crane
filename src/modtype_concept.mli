@@ -18,7 +18,7 @@ type concept_type =
   | Parameter of cpp_type
       (** A type of a parameter of the functor declaring the module type,
           which the concept is over too: [typename P::t]. *)
-  | Foreign of {custom : GlobRef.t; template : string; arguments : concept_type list}
+  | Foreign of {custom : GlobRef.t; pieces : foreign_piece list; arguments : concept_type list}
       (** The custom [custom]'s mapping template, its holes filled with the
           arguments. *)
   | Global of GlobRef.t * concept_type list  (** Any other named type, applied. *)
