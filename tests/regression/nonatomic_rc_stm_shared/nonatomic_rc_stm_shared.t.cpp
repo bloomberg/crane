@@ -17,10 +17,13 @@ int main() {
   auto box = NonatomicRcStmShared::make();
   std::vector<std::thread> workers;
   for (int t = 0; t < threads; ++t) {
+    // Every push reads the variable, copying the list's head while other
+    // threads replace it.  The list is walked (non-tail-recursively) only on
+    // the main thread, after the joins: a worker's stack is 512 KB, too small
+    // for thousands of frames under AddressSanitizer.
     workers.emplace_back([box, t] {
       for (int i = 0; i < pushes; ++i) {
         NonatomicRcStmShared::push(box, t * pushes + i);
-        (void)NonatomicRcStmShared::size(box);
       }
     });
   }
