@@ -810,6 +810,12 @@ let inline_shape_of_text s =
     | Some f -> Inline_pair_projection f
     | None -> Inline_other
 
+let foreign_pair_projection = function
+  | {fr_values = [pair]; fr_pieces = [Fp_text ""; Fp_value 0; Fp_text f] | [Fp_value 0; Fp_text f]; _}
+    when f = ".first" || f = ".second" ->
+    Some (pair, String.sub f 1 (String.length f - 1))
+  | _ -> None
+
 let inline_template s =
   let contains sub =
     let n = String.length s and m = String.length sub in

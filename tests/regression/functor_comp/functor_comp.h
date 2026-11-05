@@ -283,7 +283,7 @@ struct FunctorComp {
               const std::pair<uint64_t, typename C::t> &p = *_cs;
               const auto &[x, c_] = p;
               _lc1_loop_c0 = c_;
-              _lc1_loop_acc = List<uint64_t>::cons(x, _lc1_loop_acc);
+              _lc1_loop_acc = List<uint64_t>::cons(x, std::move(_lc1_loop_acc));
               _lc1_loop_fuel = f;
             } else {
               return _lc1_loop_acc.rev();

@@ -20,6 +20,16 @@ let field t f =
 (* [std::get<tree::Node>(t.v_mut())], the alternative [t] holds. *)
 let alternative t = CPPstd_get (Tqualified (tree, id "Node"), Some (mk_call (CPPaccess (Adot, v t, id "v_mut")) []))
 
+(* [%a0.first] applied to [pair], instantiated ({!Minicpp.foreign}). *)
+let projection f pair =
+  CPPforeign
+    ( Foreign_call,
+      { fr_custom = GlobRef.VarRef (id f);
+        fr_types = [];
+        fr_values = [pair];
+        fr_yields = None;
+        fr_pieces = [Fp_value 0; Fp_text ("." ^ f)] } )
+
 (* A frame pushed onto a stack, as a loop saving its continuation does. *)
 let push args = mk_call (CPPaccess (Adot, v "_stack", id "push_back")) [CPPbraced args]
 
@@ -117,4 +127,32 @@ let () =
     ["t"];
   check "a copy of a field, read after its local is moved"
     [decl "c" (field "t" "a0"); Sexpr (push [CPPmove (v "t")]); Sreturn (Some (v "c"))]
+    [];
+  check "each component taken out of a pair through its instantiated projection"
+    [Sexpr (push [projection "first" (CPPmove (v "p")); projection "second" (CPPmove (v "p"))])]
     []
+
+(* A callable's parameters and body against the convention its plan
+   states: [f] owns [a] and lends [b]. *)
+let () =
+  let f = GlobRef.VarRef (id "f") in
+  Callable_abi.install [Callable_abi.of_head ~passing:[Owned; Borrowed] ~callee:f ~scheme:None []] [];
+  let cref = Tref (Lvalue, Tconst tree) in
+  let convention name params body expected =
+    let found = Option.map List.length (Move_check.convention_violations f params body) in
+    if found <> Some expected then (
+      Printf.eprintf "move_check: %s: %s violations, expected %d\n" name
+        (match found with Some n -> string_of_int n | None -> "no plan's") expected;
+      exit 1 )
+  in
+  convention "as the plan has them" [(id "a", tree); (id "b", cref)] [Sreturn (Some (mk_call (v "g") [CPPmove (v "a"); v "b"]))] 0;
+  convention "an owned parameter declared by reference" [(id "a", cref); (id "b", cref)] [] 1;
+  convention "a lent parameter moved out of" [(id "a", tree); (id "b", cref)] [Sreturn (Some (CPPmove (v "b")))] 1;
+  convention "a lent parameter's name declared again and moved"
+    [(id "a", tree); (id "b", cref)]
+    [decl "b" (v "a"); Sreturn (Some (CPPmove (v "b")))]
+    0;
+  convention "a parameter the plan does not pass" [(id "a", tree)] [] 1;
+  if Move_check.convention_violations (GlobRef.VarRef (id "unplanned")) [] [] <> None then (
+    prerr_endline "move_check: a callable with no plan has a convention";
+    exit 1 )

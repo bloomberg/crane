@@ -13968,3 +13968,14 @@
   (alias runtest)
   (deps lifted_helper_frame_pointer.t.exe)
   (action (run ./lifted_helper_frame_pointer.t.exe))))
+
+(subdir loopify_accumulator_read_elsewhere
+ (rule
+  (targets loopify_accumulator_read_elsewhere.t.exe)
+  (deps LoopifyAccumulatorReadElsewhere.vo loopify_accumulator_read_elsewhere.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_accumulator_read_elsewhere.t.exe loopify_accumulator_read_elsewhere.cpp loopify_accumulator_read_elsewhere.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_accumulator_read_elsewhere.t.exe)
+  (action (run ./loopify_accumulator_read_elsewhere.t.exe))))

@@ -200,3 +200,15 @@ val moved_reads : t -> Miniml.ml_ast list -> int list
     of a conditional -- holds one read twice; it is a last use where every
     copy is one. *)
 val fate : ?whole:bool -> t -> Miniml.Occurrence.t -> fate
+
+(** For each [Continue] of the loop [l] itself, by the occurrence of the
+    call it is made of, and for each of [l]'s parameters, outermost first,
+    whether the turn moves the parameter into its own next value: the
+    argument passed it reads it once, as the turn's last read of it -- no
+    other argument, nor a closure reading at its uses, reads it or a part of
+    it -- and is not that read alone, and the parameter's type is worth
+    moving.  A loop keeps each parameter it varies in a local of its own,
+    which the next turn's value replaces: the read is the local's last.
+    Whether a parameter is so kept, rather than by pointer, is the
+    lowering's to say.  A machine's loop moves nothing so. *)
+val continue_moves : Control_ir.Term.loop -> (Miniml.Occurrence.t * bool list) list

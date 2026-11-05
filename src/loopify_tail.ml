@@ -822,54 +822,81 @@ type shadow_setup = {
     @param body   Function body statements
     @return {!shadow_setup} record consumed by the caller *)
 
-(** Move a loop accumulator into its own next value: [_loop_x = g(a, _loop_x)]
-    becomes [_loop_x = g(a, std::move(_loop_x))] where [candidate] names
-    [_loop_x] and the right-hand side reads it once -- the overwrite ends its
-    life.  This is what remains of a C++-level last-use pass: the Core plan
-    moves every other read, frame handlers included (round 66 measured the
-    handler half adding only [std::move] into const reference bindings).  It
-    is a Continue's argument reading the parameter it replaces, which the
-    plan does not see yet: a loop's back edge is lowered after it. *)
-let move_self_assigned_accumulators ~candidate stmts =
-  let reads expr =
-    let tbl : (string, int) Hashtbl.t = Hashtbl.create 4 in
-    let rec walk = function
-      | CPPmove _ | CPPlambda _ -> ()
-      | CPPvar id ->
-        let key = Id.to_string id in
-        Hashtbl.replace tbl key (1 + Option.default 0 (Hashtbl.find_opt tbl key))
-      | e -> iter_expr_children ~on_expr:walk ~on_stmts:(fun _ -> ()) e
+(** The jumps [check] finds, each moving into the next value of a shadow
+    kept by value the shadow itself where the plan moves it there
+    ({!Ownership_plan.continue_moves}): [moves] gives, by the occurrence of
+    the call a jump is made of, a flag for each of [params], the shadows'
+    names [subs] stand for.  The argument reads the shadow once, outside any
+    closure and not already moved; reading it otherwise it is left, and
+    where that is a spelling the plan's one read does not account for --
+    no read, or two, or one in another argument -- reported under
+    [CRANE_CHECK_IR]. *)
+let moving_jumps ~moves ~subs ~shadow_params params (check : call_checker) : call_checker =
+  if moves = [] then check
+  else
+    let rec pointer = function Tptr _ -> true | Tconst t | Tref (_, t) -> pointer t | _ -> false in
+    let by_value shadow =
+      match List.assoc_opt shadow shadow_params with Some ty -> not (pointer ty) | None -> false
     in
-    walk expr;
-    tbl
-  in
-  let rec move_in key = function
-    | CPPmove _ as e -> e
-    | CPPlambda _ as e -> e
-    | CPPvar id as e when String.equal (Id.to_string id) key -> CPPmove e
-    | e -> map_expr (move_in key) Fun.id Fun.id e
-  in
-  let rec stmt s =
-    match s with
-    | Sexpr (CPPbinop (Bassign, (CPPvar lhs as l), rhs)) ->
-      let key = Id.to_string lhs in
-      if candidate key && Hashtbl.find_opt (reads rhs) key = Some 1 then
-        Sexpr (CPPbinop (Bassign, l, move_in key rhs))
-      else s
-    | Sasgn (lhs, d, rhs) ->
-      let key = Id.to_string lhs in
-      if candidate key && Hashtbl.find_opt (reads rhs) key = Some 1 then Sasgn (lhs, d, move_in key rhs) else s
-    | Sif (cond, then_, else_) -> Sif (cond, List.map stmt then_, List.map stmt else_)
-    | Smatch (scrut, branches, default) ->
-      Smatch
-        ( scrut,
-          List.map (fun br -> {br with smb_body = List.map stmt br.smb_body}) branches,
-          Option.map (List.map stmt) default )
-    | Sblock body -> Sblock (List.map stmt body)
-    | Swhile (cond, body) -> Swhile (cond, List.map stmt body)
-    | s -> s
-  in
-  List.map stmt stmts
+    let move_read x arg =
+      let bare = ref 0 and moved = ref 0 and captured = ref 0 in
+      let rec count = function
+        | CPPmove (CPPvar y) -> if Id.equal x y then incr moved
+        | CPPlambda _ as l -> if List.exists (Id.equal x) (free_vars_expr l) then incr captured
+        | CPPmove _ -> ()
+        | CPPvar y -> if Id.equal x y then incr bare
+        | e -> iter_expr_children ~on_expr:count ~on_stmts:(fun _ -> ()) e
+      in
+      count arg;
+      let rec move_in = function
+        | (CPPmove _ | CPPlambda _) as e -> e
+        | CPPvar y as e when Id.equal x y -> CPPmove e
+        | e -> map_expr move_in Fun.id Fun.id e
+      in
+      if !bare = 1 then move_in arg
+      else begin
+        (* Translation moved it already, the parameter being owned there; or
+           the read is inside a closure translation made around it -- a
+           partial application eta-expanded -- whose capture takes it as
+           the plan's captures say ({!Ownership_plan.moved_captures}). *)
+        if not (!bare = 0 && !moved + !captured = 1) then
+          Probe.violation "ownership plan"
+            Pp.(str "a jump the plan moves " ++ Id.print x ++ str " into its next value at reads it " ++ int !bare ++ str " times");
+        arg
+      end
+    in
+    fun e ->
+      match check e with
+      | Some site -> (
+        let flags =
+          Option.bind (made_of e) (fun o ->
+              List.find_map (fun (o', flags) -> if Miniml.Occurrence.equal o o' then Some flags else None) moves )
+        in
+        match flags with
+        | Some flags when List.compare_lengths flags params = 0 && List.compare_lengths site.cs_args params = 0 ->
+          (* Another argument spelling the shadow reads it where the plan's
+             Core does not: it is left. *)
+          let spelled_elsewhere k x =
+            List.exists (fun (j, a) -> j <> k && List.exists (Id.equal x) (free_vars_expr a))
+              (List.mapi (fun j a -> (j, a)) site.cs_args)
+          in
+          let args =
+            List.mapi
+              (fun k ((flag, (id, _)), arg) ->
+                match List.assoc_opt id subs with
+                | Some shadow when flag && by_value shadow ->
+                  if spelled_elsewhere k shadow then begin
+                    Probe.violation "ownership plan"
+                      Pp.(str "a jump the plan moves " ++ Id.print shadow ++ str " into its next value at reads it in another argument");
+                    arg
+                  end
+                  else move_read shadow arg
+                | Some _ | None -> arg )
+              (List.combine (List.combine flags params) site.cs_args)
+          in
+          Some {site with cs_args = args}
+        | Some _ | None -> Some site )
+      | None -> None
 
 let build_shadow_setup ~varying ~parts tparams params =
   let pointer_safe = pointer_safe_flags ~parts params in
@@ -995,7 +1022,7 @@ let drop_unread_shadows shadow_decls body =
     @param ret_ty Return type of the function
     @param body Function body statements
     @return Transformed body with while loop structure *)
-let transform_tail ?(param_inits = []) ?(jumped = ignore) ~varying ~parts tparams check params ret_ty body =
+let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~varying ~parts tparams check params ret_ty body =
   let { ss_varying = varying; ss_varying_params = varying_params;
         ss_shadow_params = shadow_params; ss_subs = subs } =
     build_shadow_setup ~varying ~parts tparams params
@@ -1024,22 +1051,11 @@ let transform_tail ?(param_inits = []) ?(jumped = ignore) ~varying ~parts tparam
   in
   (* Rewrite recursive calls (list-level rewrite handles void tail-call
      pattern [Sexpr call; Sreturn None] → [Sreturn (Some call)]) *)
+  let check = moving_jumps ~moves ~subs ~shadow_params params check in
   let body'' =
     rewrite_visit_stmts ~jumped check varying shadow_params body'
   in
   let body'' = strip_unnecessary_blocks body'' in
-  (* Move loop accumulators at self-referencing assignment sites:
-     [_loop_x = f(_loop_x)] → [_loop_x = f(std::move(_loop_x))].
-     General last-use is disabled for loop vars (live across the back-edge). *)
-  let is_loop_cand key =
-    List.exists (fun (id, ty) ->
-      Id.to_string id = key
-      && worthwhile_move_type (strip_ref_and_const_type ty))
-    shadow_params
-  in
-  let body'' =
-    move_self_assigned_accumulators ~candidate:is_loop_cand body''
-  in
   (* Assemble the loop body.
      - Non-void: [... while (true) { ... return val; }]
      - Void:     [... while (true) { ... } return;]

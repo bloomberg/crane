@@ -328,10 +328,10 @@ bool LoopifySearch::binary_search_fuel(uint64_t fuel, uint64_t target,
           return true;
         } else {
           if (target < mid_val) {
-            _loop_l = take_impl(mid, _loop_l);
+            _loop_l = take_impl(mid, std::move(_loop_l));
             _loop_fuel = f;
           } else {
-            _loop_l = drop_impl((mid + 1), _loop_l);
+            _loop_l = drop_impl((mid + 1), std::move(_loop_l));
             _loop_fuel = f;
           }
         }

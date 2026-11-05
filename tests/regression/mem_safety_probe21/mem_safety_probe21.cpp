@@ -70,7 +70,7 @@ uint64_t MemSafetyProbe21::grow_and_sum(const MemSafetyProbe21::tree &t,
     } else {
       uint64_t n_ = _loop_n - 1;
       uint64_t _next_n = n_;
-      _loop_t = tree::node(_loop_t, _loop_n, tree::leaf());
+      _loop_t = tree::node(std::move(_loop_t), _loop_n, tree::leaf());
       _loop_n = _next_n;
     }
   }

@@ -82,13 +82,16 @@ let derived_passed l =
    it a value stored in what the caller passed for it
    ({!Control_ir.parts_passed}).  A parameter standing for none of the
    loop's is neither.  A loop built tail modulo cons may recycle the cells
-   of an input it walks into its own ({!Reuse_cursor}). *)
+   of an input it walks into its own ({!Reuse_cursor}).  A tail loop moves
+   a parameter into its own next value at a Continue where the plan says
+   so ({!Ownership_plan.continue_moves}). *)
 type planned = {
   loop : Control_ir.Term.loop;
   lowering : lowering;
   varying : bool list;
   parts : bool list;
   cursor : Reuse_cursor.t option;
+  moves : (Miniml.Occurrence.t * bool list) list;
 }
 
 (* [l] lowered as [lowering] from what takes C++ parameters standing, in
@@ -105,7 +108,11 @@ let planned_at (l : Control_ir.Term.loop) lowering positions =
         Option.bind
           (Reuse_cursor.plan ~pointer_fields:Loopify_analysis.constructor_pointer_fields ~in_place l)
           (fun c -> Reuse_cursor.positioned c positions)
-      | Tail | Frames -> None ) }
+      | Tail | Frames -> None );
+    moves =
+      ( match lowering with
+      | Tail -> List.map (fun (o, flags) -> (o, at flags)) (Ownership_plan.continue_moves l)
+      | Modulo_cons | Frames -> [] ) }
 
 (* The position among the parameters of the loop [l] of the parameter of
    the function [r] the Core binder [b] is, where it is one. *)
@@ -147,6 +154,66 @@ let check_jumps ~loop (f : dfun) ~continues ~jumped =
 (* Whether a frame can hold a parameter declared at [ty] by pointer: one
    borrowed of a value type ({!Loopify_tail.borrowed_value_param_pointee}). *)
 let holdable_type ty = Option.has_some (Loopify_tail.borrowed_value_param_pointee ty)
+
+(* Whether the program holds a value of the Core type [ty] as a value -- an
+   inductive neither coinductive, custom, nor an enum, which is passed by
+   value however it is lent -- so that a pointer may stand for one
+   ({!Loopify_analysis.is_value_type_ret}); with [~abbreviations], an
+   abbreviation as what it abbreviates ([Definition t := list (key * elt)]).
+   An abstract type -- a functor parameter's [X.t] -- is no value inductive
+   the program knows. *)
+let rec value_inductive ~abbreviations : Miniml.ml_type -> bool = function
+  | Tglob ((GlobRef.IndRef _ as r), _, _) ->
+    (not (Table.is_coinductive r)) && (not (Table.is_custom r)) && not (Table.is_enum_inductive r)
+  | Tglob ((GlobRef.ConstRef kn as r), args, _) when abbreviations && not (Table.is_custom r) -> (
+    match Table.lookup_typedef_unchecked kn with
+    | Some t -> value_inductive ~abbreviations (Mlutil.type_subst_list args t)
+    | None -> false )
+  | Tmeta {contents = Some t} -> value_inductive ~abbreviations t
+  | _ -> false
+
+(* Whether a frame can hold by pointer the parameter at declared position
+   [k] of the callable [r], of Core type [ty], as [r]'s callable plan passes
+   it: lent by const reference, or under Reuse with NonAtomicRc owned by
+   value -- either lives for the call, and nothing moves out of it -- at a
+   value inductive.  The convention declares a lent value inductive by
+   reference only where its type names it, not through an abbreviation:
+   one lent so is passed by value, a copy no frame points at.  [None] where
+   no plan states how [r] passes its parameters. *)
+let planned_holdable r k ty =
+  match Option.bind (Callable_abi.lookup r) Callable_abi.passing with
+  | None -> None
+  | Some passing ->
+    Some
+      ( match List.nth_opt passing k with
+      | Some Borrowed -> value_inductive ~abbreviations:false ty
+      | Some Owned -> Table.reuse () && Table.non_atomic_rc () && value_inductive ~abbreviations:true ty
+      | Some Forwarded | None -> false )
+
+(* [held k cty] for {!storage_at} of the machine of the callable [r], its
+   loop [l], the C++ parameter at [k] declared at [cty] and standing for the
+   loop's parameter [positions] gives: as [r]'s plan passes the parameter at
+   declared position [declared k] ({!planned_holdable}); where no plan says,
+   or it stands for none of [l]'s, as its declared type does
+   ({!holdable_type}).  The two differ only under Reuse with NonAtomicRc,
+   where the declared type takes any value it does not recognise as boxed
+   -- an enum, or an alias of an erased type -- for a value inductive.  A
+   frame spells the pointer from the declared type: one the plan holds by
+   pointer that it cannot spell so is held by value, and reported under
+   [CRANE_CHECK_IR]. *)
+let planned_held r (l : Control_ir.Term.loop) positions ~declared k cty =
+  match List.nth_opt positions k with
+  | Some (Some i) -> (
+    match planned_holdable r (declared k) (snd (List.nth l.parameters i)) with
+    | Some true when not (holdable_type cty) ->
+      Probe.violation "frame storage"
+        Pp.(
+          str "the plan of " ++ str (Table.kername_of_global r) ++ str " lends its parameter " ++ int (declared k)
+          ++ str " for a frame to hold by pointer, at a declared type no pointer spells" );
+      false
+    | Some planned -> planned
+    | None -> holdable_type cty )
+  | Some None | None -> holdable_type cty
 
 (* The parameters of every local fixpoint's lambda in [stmts], each by the
    Core binder translation records it binds, with the type it declares. *)
@@ -217,22 +284,27 @@ let storage_at ?entering (l : Control_ir.Term.loop) positions params ~held body 
 let machine_storage (f : dfun) params body (l : Control_ir.Term.loop) =
   match l.loop with
   | Member _ ->
-    if Option.has_some (Lifted.of_ref (fst f.df_path.dp_outer)) then
+    let r = fst f.df_path.dp_outer in
+    if Option.has_some (Lifted.of_ref r) then
       Option.map
-        (fun positions -> storage_at l positions params ~held:(fun _ ty -> holdable_type ty) body)
+        (fun positions ->
+          let n = List.length params in
+          storage_at l positions params ~held:(planned_held r l positions ~declared:(fun k -> n - 1 - k)) body )
         (lifted_positions l params)
     else None
   | Function r ->
     let positions = List.map (fun p -> position r l (binder_of f.df_binders p)) params in
     if not (List.for_all Option.has_some positions) then None
-    else Some (storage_at ~entering:r l positions params ~held:(fun _ ty -> holdable_type ty) body)
+    else
+      let n = List.length params in
+      Some (storage_at ~entering:r l positions params ~held:(planned_held r l positions ~declared:(fun k -> n - 1 - k)) body)
 
 (* The function [f], generated under the template parameters [tparams],
    lowered to the loop [l] varying the parameters [varying]; [Error why]
    where Loopify makes no loop of it -- a call passing the loop other
    arguments than it has parameters, say -- for the reason [why]
    ({!Loopify.unlowered}). *)
-let rec lower_function ~tparams (f : dfun) {loop = l; lowering; varying; parts; cursor} =
+let rec lower_function ~tparams (f : dfun) {loop = l; lowering; varying; parts; cursor; moves} =
   match (f.df_shape, lowering) with
   | Ddecl _, _ -> Error (Loopify.Left None)
   | Ddef (params, body), Modulo_cons ->
@@ -243,7 +315,7 @@ let rec lower_function ~tparams (f : dfun) {loop = l; lowering; varying; parts; 
     let jumps = ref [] in
     let jumped e = jumps := Loopify_analysis.made_of e :: !jumps in
     let exposed = Loopify_analysis.expose_tail_calls (jump continues) body in
-    match Loopify_tail.transform_tail ~jumped ~varying ~parts tparams (jump continues) params f.df_ret exposed with
+    match Loopify_tail.transform_tail ~jumped ~moves ~varying ~parts tparams (jump continues) params f.df_ret exposed with
     | exception Loopify_analysis.Not_linearisable why -> Error (Loopify.Declined why)
     | loop -> (
       if Probe.checking () then check_jumps ~loop:"tail loop" f ~continues ~jumped:(List.rev !jumps);
@@ -363,7 +435,7 @@ let local_loop ~owner ~function_ ~lifted ~member:((occurrence, _) as member) ~tp
     let params = List.filter_map (fun (ty, x) -> Option.map (fun x -> (x, ty)) x) (to_reversed lam.cl_params) in
     match Loopify.member_plan ~frames:(lowering = Frames) member params with
     | None -> unlowered "its lambda takes other parameters than its loop"
-    | Some {member_varying = varying; member_parts = parts} ->
+    | Some {member_varying = varying; member_parts = parts; member_moves = moves} ->
       let continues = Control_ir.continues l.body in
       let jumps = ref [] in
       let jumped e = jumps := Loopify_analysis.made_of e :: !jumps in
@@ -372,7 +444,7 @@ let local_loop ~owner ~function_ ~lifted ~member:((occurrence, _) as member) ~tp
       let body () =
         match lowering with
         | Tail | Modulo_cons ->
-          Some (Loopify_tail.transform_tail ~jumped ~varying ~parts tparams (jump continues) params ret_ty exposed)
+          Some (Loopify_tail.transform_tail ~jumped ~moves ~varying ~parts tparams (jump continues) params ret_ty exposed)
         | Frames ->
           Loopify.local_frame_machine ~member ~name ~binders:(lambda_binders lam) ~varying ~parts ~tparams (jump continues) params ret_ty exposed
       in
@@ -467,16 +539,17 @@ let lower_method ~tparams ~self_ty (m : method_field) =
       match (lowering, positions) with
       | Frames, Some positions ->
         let params = (Id.of_string "_self", self_ty) :: m.mf_params in
-        let own, _ = storage_at ~entering:r l positions params ~held:(fun k ty -> k = 0 || holdable_type ty) m.mf_body in
+        let held k ty = k = 0 || planned_held r l positions ~declared:(fun k -> k - 1) k ty in
+        let own, _ = storage_at ~entering:r l positions params ~held m.mf_body in
         List.mapi (fun k (part, pointer) -> part || (k > 0 && pointer)) (List.combine parts own)
       | (Frames | Modulo_cons | Tail), _ -> parts
     in
     let transform =
       match (lowering, planned) with
       | _ when Option.has_some value_receiver -> None
-      | _, Some {varying; parts; cursor; _} ->
+      | _, Some {varying; parts; cursor; moves; _} ->
         let parts = pointed parts in
-        Some (fun () -> Loopify.transform_method_own ?cursor ~varying ~parts ~park ~tparams ~self_ty m)
+        Some (fun () -> Loopify.transform_method_own ?cursor ~moves ~varying ~parts ~park ~tparams ~self_ty m)
       | _, None -> None
     in
     match (transform, value_receiver) with

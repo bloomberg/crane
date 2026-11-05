@@ -264,6 +264,7 @@ let no_varying_plan = "no ControlIR loop says which parameters vary"
 type member_plan = {
   member_varying : bool list;
   member_parts : bool list;
+  member_moves : (Miniml.Occurrence.t * bool list) list;
 }
 
 let member_plan ~frames member params =
@@ -290,7 +291,10 @@ let member_plan ~frames member params =
       in
       Some
         { member_varying = List.map (fun i -> not (List.nth invariant i)) kept;
-          member_parts = List.map (List.nth parts) kept }
+          member_parts = List.map (List.nth parts) kept;
+          member_moves =
+            ( if frames then []
+              else List.map (fun (o, flags) -> (o, List.map (List.nth flags) kept)) (Ownership_plan.continue_moves l) ) }
   | Some _ | None -> None
 
 (** Walk through a statement list and loopify each local fixpoint: the
@@ -361,14 +365,14 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         | None ->
           record_outcome name (Lp_declined no_varying_plan);
           None
-        | Some {member_varying = varying; member_parts = parts} ->
+        | Some {member_varying = varying; member_parts = parts; member_moves = moves} ->
         match
           match strategy with
           | Tail_loop ->
             report_outcome ~name ~check ~strategy:Lp_tail
               (let loop = Some (Control_ir.Loop.Member (fst lf_member, snd lf_member)) in
                checked_tail_loop loop (fun jumped ->
-                   transform_tail ~jumped ~varying ~parts tparams (planned_jumps loop check) params ret_ty lbody ) )
+                   transform_tail ~jumped ~moves ~varying ~parts tparams (planned_jumps loop check) params ret_ty lbody ) )
           (* The tail-modulo-cons loop is built for a function, not a lambda:
              a local fixpoint gets it only through a helper lifted out of it. *)
           | Modulo_cons _ | Frame_stack ->
@@ -856,7 +860,7 @@ let receiver_position mf =
     | Some (_, pos) -> pos
     | None -> r.this_pos )
 
-let transform_method_own ?cursor ~varying ~parts ~park ~tparams ~self_ty mf =
+let transform_method_own ?cursor ?moves ~varying ~parts ~park ~tparams ~self_ty mf =
   (* [tparams] arrives holding only the enclosing struct's parameters.  A
      method's body is written under its own template header too, and a
      parameter declared there is the one most likely to constrain how the body
@@ -951,7 +955,7 @@ let transform_method_own ?cursor ~varying ~parts ~park ~tparams ~self_ty mf =
             (report_outcome ~name ~check:(method_survivors mf) ~strategy:Lp_tail
                (let loop = Option.bind mf.mf_globref function_loop in
                 checked_tail_loop loop (fun jumped ->
-                    transform_tail ~param_inits:[(self_id, CPPthis)] ~jumped ~varying ~parts tparams
+                    transform_tail ~param_inits:[(self_id, CPPthis)] ~jumped ?moves ~varying ~parts tparams
                       (planned_jumps loop self_check) augmented_params mf.mf_ret_type body_with_self ) ) )
         | Modulo_cons _ | Frame_stack ->
           let fn_name = Some name in
