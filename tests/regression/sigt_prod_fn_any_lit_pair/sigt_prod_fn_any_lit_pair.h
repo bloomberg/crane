@@ -193,7 +193,7 @@ struct Inst {
 };
 
 using M = Make<Inst>;
-const M::entry my_entry = M::mk_entry(std::monostate{});
+[[gnu::used]] inline const M::entry my_entry = M::mk_entry(std::monostate{});
 Inst::sem my_arg(std::monostate _x);
 bool check(std::monostate _x);
 

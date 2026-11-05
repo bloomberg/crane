@@ -273,52 +273,6 @@ let pp_library_name s = Cpp_name.pp (library_name s)
     @param s      the pre-rendered type argument list *)
 let cpp_angle label s = pp_library_name label ++ str "<" ++ s ++ str ">"
 
-(** Split a rendered C++ string on the semicolons that end its statements:
-    not those inside string literals (double-quoted), character literals
-    (single-quoted) or parentheses -- a [for] header's, whose clauses may be
-    empty.  Escaped quotes inside literals are handled. *)
-let split_on_semicolons (s : string) : string list =
-  let len = String.length s in
-  let buf = Buffer.create 64 in
-  let acc = ref [] in
-  let depth = ref 0 in
-  let i = ref 0 in
-  while !i < len do
-    let c = s.[!i] in
-    if c = ';' && !depth = 0 then begin
-      acc := Buffer.contents buf :: !acc;
-      Buffer.clear buf;
-      incr i
-    end
-    else if c = '"' || c = '\'' then begin
-      (* Inside a string or char literal — consume until matching close *)
-      let quote = c in
-      Buffer.add_char buf c;
-      incr i;
-      while !i < len && s.[!i] <> quote do
-        if s.[!i] = '\\' && !i + 1 < len then begin
-          Buffer.add_char buf s.[!i];
-          Buffer.add_char buf s.[!i + 1];
-          i := !i + 2
-        end else begin
-          Buffer.add_char buf s.[!i];
-          incr i
-        end
-      done;
-      if !i < len then begin
-        Buffer.add_char buf s.[!i]; (* closing quote *)
-        incr i
-      end
-    end
-    else begin
-      if c = '(' then incr depth else if c = ')' then decr depth;
-      Buffer.add_char buf c;
-      incr i
-    end
-  done;
-  let last = Buffer.contents buf in
-  List.rev (if String.trim last = "" then !acc else last :: !acc)
-
 (* A piece of the type mapping [r]'s instantiated text, hole [i] written
    [arg i]: an element hole bare or inside the wrapper decided for it. *)
 let pp_type_piece r arg = function
@@ -1555,20 +1509,12 @@ and pp_cpp_expr ctx env args t =
     let result_str = "_r" in
     let substituted = with_result result_str custom in
     let cmds = term_template substituted in
-    let body_pp =
-      pp_custom
-        ~container:ref_name ctx (Pp.string_of_ppcmds (GlobRef.print ref_name) ^ " := " ^ custom)
-        env None None tys [] val_args [] cmds
-    in
-    let body_str = Pp.string_of_ppcmds body_pp in
     let stmts =
-      List.filter (fun s -> String.trim s <> "")
-        (split_on_semicolons body_str)
+      pp_block_statements ~container:ref_name ctx
+        (Pp.string_of_ppcmds (GlobRef.print ref_name) ^ " := " ^ custom)
+        env tys val_args cmds
     in
-    let stmt_lines =
-      String.concat "\n"
-        (List.map (fun s -> "  " ^ String.trim s ^ ";") stmts)
-    in
+    let stmt_lines = String.concat "\n" (List.map (fun s -> "  " ^ s) stmts) in
     (* The arguments are spliced into the body, so the lambda captures the
        locals they read -- by reference: it runs where it is written. *)
     let reads_locals = fst (lambda_needs_capture [] (List.map (fun a -> Sexpr a) val_args)) in
@@ -1589,11 +1535,7 @@ and pp_cpp_expr ctx env args t =
   | CPPglob (x, tys, Some {ci_inline = Some tmpl; ci_yields; _}) -> (
     match tmpl.it_form with
     | Block_iife -> gen_block_iife ?yields:ci_yields x tmpl.it_text tys []
-    (* A text with no hole is written as it stands. *)
-    | Bare_callee ->
-      Common.writes_custom x;
-      str tmpl.it_text
-    | Templated -> uninstantiated_mapping x )
+    | Bare_callee | Templated -> uninstantiated_mapping x )
   | CPPmethod_value {mv_method; mv_access; mv_receiver; mv_params; mv_type_args} ->
     let names =
       match mv_params with
@@ -1726,21 +1668,12 @@ and pp_cpp_expr ctx env args t =
     let name, _ = inductive_name ctx r in
     Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) name ++ pp_cpp_expr ctx env args t
   | CPPfun_call (res, CPPglob (n, tys, Some {ci_inline = Some tmpl; _}), ts) ->
-    let s = tmpl.it_text in
+    (* A callee's text was instantiated as the call's callee, and a
+       template's as the whole call ({!Cpp_erasure.instantiate_foreign}). *)
     if tmpl.it_form = Block_iife then
       gen_block_iife
         ?yields:(match res.cs_yields with Ryields ty -> Some ty | Ropaque -> None)
-        n s tys (call_args ts)
-    else
-    if tmpl.it_form = Bare_callee then
-      let ty_args_s =
-        match tys with
-        | [] -> mt ()
-        | _ -> str "<" ++ pp_list (pp_cpp_type ctx false []) tys ++ str ">"
-      in
-      let args_s = pp_list (pp_cpp_expr ctx env args) (call_args ts) in
-      Common.writes_custom n;
-      str s ++ ty_args_s ++ str "(" ++ args_s ++ str ")"
+        n tmpl.it_text tys (call_args ts)
     else uninstantiated_mapping n
   | CPPmethod_call {mc_method; mc_access; mc_receiver; mc_type_args; mc_args} ->
     pp_cpp_expr ctx env args mc_receiver
@@ -2456,22 +2389,12 @@ and pp_cpp_stmt ctx env args stmt =
       ++ Id.print result_var
       ++ str ";"
     in
-    let body_pp =
-      pp_custom
-        ~container:_ref ctx ("block custom " ^ Pp.string_of_ppcmds (GlobRef.print _ref))
-        env None None tyargs [] args [] cmds
-    in
-    (* Split rendered body by ';' and emit each as a statement line *)
-    let body_str = Pp.string_of_ppcmds body_pp in
     let stmts =
-      List.filter
-        (fun s -> String.trim s <> "")
-        (split_on_semicolons body_str)
+      pp_block_statements ~container:_ref ctx
+        ("block custom " ^ Pp.string_of_ppcmds (GlobRef.print _ref))
+        env tyargs args cmds
     in
-    let stmt_pps =
-      List.map (fun s -> str (String.trim s) ++ str ";") stmts
-    in
-    prlist_with_sep fnl (fun x -> x) (decl_pp :: stmt_pps)
+    prlist_with_sep fnl (fun x -> x) (decl_pp :: List.map str stmts)
   | Scustom_case (typ, t, tyargs, cases, cmatch) ->
     (* Scrutinee caching (auto _cs = expr;) is handled during translation
        in gen_custom_cpp_case, which prepends an Sasgn before this node
@@ -2851,6 +2774,16 @@ and pp_custom ?container ctx custom env typ t tyargs cases args vl cmds =
   fold_cmds (mt ()) cmds
 
 
+(* A block template's statements ({!Foreign_template.statements}), each
+   written on its own with the semicolon that ends it: the template's text
+   is split, never what is spliced into it. *)
+and pp_block_statements ~container ctx custom env tyargs args cmds =
+  Common.writes_custom container;
+  List.map
+    (fun stmt ->
+      String.trim (Pp.string_of_ppcmds (pp_custom ctx custom env None None tyargs [] args [] stmt)) ^ ";")
+    (Foreign_template.statements cmds)
+
 (* A value argument spliced into a mapping's text: a string literal as the
    [std::string] it stands for. *)
 and pp_spliced ctx env ~followed_by_dot arg_expr =
@@ -2865,7 +2798,8 @@ and pp_spliced ctx env ~followed_by_dot arg_expr =
   if followed_by_dot then
     match arg_expr with
     | CPPbinop _ | CPPforeign (Foreign_call, _) -> str "(" ++ arg ++ str ")"
-    | CPPfun_call (_, CPPglob (_, _, Some ci), _) when ci.ci_inline <> None ->
+    (* A mapping's call: a block, or a callee's text applied. *)
+    | CPPfun_call (_, (CPPglob (_, _, Some {ci_inline = Some _; _}) | CPPforeign _), _) ->
       str "(" ++ arg ++ str ")"
     (* A prefix pointer operator binds looser than the member access
        the template appends, so [%a0.first] applied to a scrutinee
@@ -4022,10 +3956,22 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
          [static_assert] or a template argument. *)
       let literal = may_be_constexpr da_constexpr in
       let ty = match ty with Tconst t when literal -> t | t -> t in
+      (* A [static inline] variable is initialised in a translation unit
+         only if that unit names it: clang emits it nowhere else.  One that
+         only a function body reads is then initialised only where that body
+         is compiled -- the [.cpp] -- and another unit's initialiser calling
+         the function runs first if its unit is linked first, reading the
+         variable before it holds its value.  [[gnu::used]] has every unit
+         including the header initialise it, before what follows it.  At
+         namespace scope a [const] variable is one per unit, each initialised
+         by its own unit, so the function reads its own unit's: [inline]
+         makes it one variable. *)
       let static_kw =
         match (ctx.rc_in_struct, literal) with
         | true, true -> str "static constexpr "
+        | true, false when Cpp_state.read_by_a_function id -> str "[[gnu::used]] static inline "
         | true, false -> str "static inline "
+        | false, false when Cpp_state.read_by_a_function id -> str "[[gnu::used]] inline "
         | false, true -> str "inline constexpr "
         | false, false -> mt ()
       in

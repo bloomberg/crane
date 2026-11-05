@@ -179,7 +179,7 @@ struct PolygonWindingAreaTraceCase {
        (2u *
         (2u * (2u * (2u * (2u * (2u * (2u * (2u * 1u + 1u) + 1u) + 1u) + 1u)) +
                1u))))});
-  static inline const Real R_earth = R_earth_default;
+  [[gnu::used]] static inline const Real R_earth = R_earth_default;
   static Real hav(Real theta);
   static Real distance(const Point &p1, const Point &p2);
   using Polygon = List<Point>;

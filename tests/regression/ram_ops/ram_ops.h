@@ -319,11 +319,11 @@ struct RamOps {
     ram_sel sel_ram;
   };
 
-  static inline const ram_reg_sel empty_reg_sel =
+  [[gnu::used]] static inline const ram_reg_sel empty_reg_sel =
       ram_reg_sel{List<uint64_t>::nil(), List<uint64_t>::nil()};
-  static inline const ram_chip_sel empty_chip_sel =
+  [[gnu::used]] static inline const ram_chip_sel empty_chip_sel =
       ram_chip_sel{List<ram_reg_sel>::nil(), UINT64_C(0)};
-  static inline const ram_bank_sel empty_bank_sel =
+  [[gnu::used]] static inline const ram_bank_sel empty_bank_sel =
       ram_bank_sel{List<ram_chip_sel>::nil()};
   static ram_bank_sel get_bank_sel(const state_sel &s, uint64_t b);
   static ram_chip_sel get_chip_sel(const ram_bank_sel &bk, uint64_t c);
@@ -384,11 +384,11 @@ struct RamOps {
     ram_sel_nested sel_ram_nested;
   };
 
-  static inline const ram_reg_nested empty_reg_nested =
+  [[gnu::used]] static inline const ram_reg_nested empty_reg_nested =
       ram_reg_nested{List<uint64_t>::nil(), List<uint64_t>::nil()};
-  static inline const ram_chip_nested empty_chip_nested =
+  [[gnu::used]] static inline const ram_chip_nested empty_chip_nested =
       ram_chip_nested{List<ram_reg_nested>::nil(), UINT64_C(0)};
-  static inline const ram_bank_nested empty_bank_nested =
+  [[gnu::used]] static inline const ram_bank_nested empty_bank_nested =
       ram_bank_nested{List<ram_chip_nested>::nil()};
   static ram_bank_nested get_bank_nested(const state_nested &s, uint64_t b);
   static ram_chip_nested get_chip_nested(const ram_bank_nested &bk, uint64_t c);

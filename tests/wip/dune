@@ -17,7 +17,7 @@
   (targets z_abs_min.t.exe)
   (deps ZAbsMin.vo z_abs_min.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} z_abs_min.t.exe z_abs_min.cpp z_abs_min.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} z_abs_min.t.exe z_abs_min.t.cpp z_abs_min.cpp)))
  (rule
   (alias runtest)
   (deps z_abs_min.t.exe)
@@ -28,7 +28,7 @@
   (targets z_arith_overflow.t.exe)
   (deps ZArithOverflow.vo z_arith_overflow.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} z_arith_overflow.t.exe z_arith_overflow.cpp z_arith_overflow.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} z_arith_overflow.t.exe z_arith_overflow.t.cpp z_arith_overflow.cpp)))
  (rule
   (alias runtest)
   (deps z_arith_overflow.t.exe)
@@ -39,7 +39,7 @@
   (targets z_div_min.t.exe)
   (deps ZDivMin.vo z_div_min.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} z_div_min.t.exe z_div_min.cpp z_div_min.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} z_div_min.t.exe z_div_min.t.cpp z_div_min.cpp)))
  (rule
   (alias runtest)
   (deps z_div_min.t.exe)
@@ -50,7 +50,7 @@
   (targets rocq_bug_3287.t.exe)
   (deps RocqBug3287.vo rocq_bug_3287.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_3287.t.exe rocq_bug_3287.cpp rocq_bug_3287.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_bug_3287.t.exe rocq_bug_3287.t.cpp rocq_bug_3287.cpp)))
  (rule
   (alias runtest)
   (deps rocq_bug_3287.t.exe)
@@ -61,7 +61,7 @@
   (targets fibst_cofix_repro.t.exe)
   (deps FibstCofixRepro.vo fibst_cofix_repro.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} fibst_cofix_repro.t.exe fibst_cofix_repro.cpp fibst_cofix_repro.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fibst_cofix_repro.t.exe fibst_cofix_repro.t.cpp fibst_cofix_repro.cpp)))
  (rule
   (alias runtest)
   (deps fibst_cofix_repro.t.exe)
@@ -72,7 +72,7 @@
   (targets cps_continuation_copy.t.exe)
   (deps CpsContinuationCopy.vo cps_continuation_copy.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} cps_continuation_copy.t.exe cps_continuation_copy.cpp cps_continuation_copy.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} cps_continuation_copy.t.exe cps_continuation_copy.t.cpp cps_continuation_copy.cpp)))
  (rule
   (alias runtest)
   (deps cps_continuation_copy.t.exe)
@@ -85,7 +85,7 @@
   (targets stateT_dict_arg_dropped.t.exe)
   (deps StateTDictArgDropped.vo stateT_dict_arg_dropped.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} stateT_dict_arg_dropped.t.exe stateT_dict_arg_dropped.cpp stateT_dict_arg_dropped.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} stateT_dict_arg_dropped.t.exe stateT_dict_arg_dropped.t.cpp stateT_dict_arg_dropped.cpp)))
  (rule
   (alias runtest)
   (deps stateT_dict_arg_dropped.t.exe)
@@ -98,7 +98,7 @@
   (targets eta_handler_event_as_template.t.exe)
   (deps EtaHandlerEventAsTemplate.vo eta_handler_event_as_template.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_handler_event_as_template.t.exe eta_handler_event_as_template.cpp eta_handler_event_as_template.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_handler_event_as_template.t.exe eta_handler_event_as_template.t.cpp eta_handler_event_as_template.cpp)))
  (rule
   (alias runtest)
   (deps eta_handler_event_as_template.t.exe)
@@ -109,7 +109,7 @@
   (targets applied_typename_not_hk.t.exe)
   (deps AppliedTypenameNotHk.vo applied_typename_not_hk.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} applied_typename_not_hk.t.exe applied_typename_not_hk.cpp applied_typename_not_hk.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} applied_typename_not_hk.t.exe applied_typename_not_hk.t.cpp applied_typename_not_hk.cpp)))
  (rule
   (alias runtest)
   (deps applied_typename_not_hk.t.exe)
@@ -120,7 +120,7 @@
   (targets handler_lambda_targ_undeclared.t.exe)
   (deps HandlerLambdaTargUndeclared.vo handler_lambda_targ_undeclared.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} handler_lambda_targ_undeclared.t.exe handler_lambda_targ_undeclared.cpp handler_lambda_targ_undeclared.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} handler_lambda_targ_undeclared.t.exe handler_lambda_targ_undeclared.t.cpp handler_lambda_targ_undeclared.cpp)))
  (rule
   (alias runtest)
   (deps handler_lambda_targ_undeclared.t.exe)
@@ -131,7 +131,7 @@
   (targets hk_carrier_written_at_partial_app.t.exe)
   (deps HkCarrierWrittenAtPartialApp.vo hk_carrier_written_at_partial_app.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_carrier_written_at_partial_app.t.exe hk_carrier_written_at_partial_app.cpp hk_carrier_written_at_partial_app.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_carrier_written_at_partial_app.t.exe hk_carrier_written_at_partial_app.t.cpp hk_carrier_written_at_partial_app.cpp)))
  (rule
   (alias runtest)
   (deps hk_carrier_written_at_partial_app.t.exe)
@@ -144,7 +144,7 @@
   (targets mrec_ctx_wrapped_in_ret.t.exe)
   (deps MrecCtxWrappedInRet.vo mrec_ctx_wrapped_in_ret.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} mrec_ctx_wrapped_in_ret.t.exe mrec_ctx_wrapped_in_ret.cpp mrec_ctx_wrapped_in_ret.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mrec_ctx_wrapped_in_ret.t.exe mrec_ctx_wrapped_in_ret.t.cpp mrec_ctx_wrapped_in_ret.cpp)))
  (rule
   (alias runtest)
   (deps mrec_ctx_wrapped_in_ret.t.exe)
@@ -155,7 +155,7 @@
   (targets carrier_alias_promoted.t.exe)
   (deps CarrierAliasPromoted.vo carrier_alias_promoted.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} carrier_alias_promoted.t.exe carrier_alias_promoted.cpp carrier_alias_promoted.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} carrier_alias_promoted.t.exe carrier_alias_promoted.t.cpp carrier_alias_promoted.cpp)))
  (rule
   (alias runtest)
   (deps carrier_alias_promoted.t.exe)
@@ -166,7 +166,7 @@
   (targets carrier_holder_before_alias.t.exe)
   (deps CarrierHolderBeforeAlias.vo carrier_holder_before_alias.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} carrier_holder_before_alias.t.exe carrier_holder_before_alias.cpp carrier_holder_before_alias.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} carrier_holder_before_alias.t.exe carrier_holder_before_alias.t.cpp carrier_holder_before_alias.cpp)))
  (rule
   (alias runtest)
   (deps carrier_holder_before_alias.t.exe)
@@ -200,7 +200,7 @@
   (targets case_handler_concrete_result.t.exe)
   (deps CaseHandlerConcreteResult.vo case_handler_concrete_result.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} case_handler_concrete_result.t.exe case_handler_concrete_result.cpp case_handler_concrete_result.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} case_handler_concrete_result.t.exe case_handler_concrete_result.t.cpp case_handler_concrete_result.cpp)))
  (rule
   (alias runtest)
   (deps case_handler_concrete_result.t.exe)
@@ -211,7 +211,7 @@
   (targets interp_state_dict.t.exe)
   (deps InterpStateDict.vo interp_state_dict.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} interp_state_dict.t.exe interp_state_dict.cpp interp_state_dict.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} interp_state_dict.t.exe interp_state_dict.t.cpp interp_state_dict.cpp)))
  (rule
   (alias runtest)
   (deps interp_state_dict.t.exe)
@@ -222,7 +222,7 @@
   (targets tyarg_equal_count_shift.t.exe)
   (deps TyargEqualCountShift.vo tyarg_equal_count_shift.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} tyarg_equal_count_shift.t.exe tyarg_equal_count_shift.cpp tyarg_equal_count_shift.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tyarg_equal_count_shift.t.exe tyarg_equal_count_shift.t.cpp tyarg_equal_count_shift.cpp)))
  (rule
   (alias runtest)
   (deps tyarg_equal_count_shift.t.exe)
@@ -233,7 +233,7 @@
   (targets tyarg_partial_type_application.t.exe)
   (deps TyargPartialTypeApplication.vo tyarg_partial_type_application.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} tyarg_partial_type_application.t.exe tyarg_partial_type_application.cpp tyarg_partial_type_application.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tyarg_partial_type_application.t.exe tyarg_partial_type_application.t.cpp tyarg_partial_type_application.cpp)))
  (rule
   (alias runtest)
   (deps tyarg_partial_type_application.t.exe)
@@ -244,7 +244,7 @@
   (targets tyarg_implicit_type_binder.t.exe)
   (deps TyargImplicitTypeBinder.vo tyarg_implicit_type_binder.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} tyarg_implicit_type_binder.t.exe tyarg_implicit_type_binder.cpp tyarg_implicit_type_binder.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tyarg_implicit_type_binder.t.exe tyarg_implicit_type_binder.t.cpp tyarg_implicit_type_binder.cpp)))
  (rule
   (alias runtest)
   (deps tyarg_implicit_type_binder.t.exe)
@@ -255,7 +255,7 @@
   (targets nullary_unit_effect_dropped.t.exe)
   (deps NullaryUnitEffectDropped.vo nullary_unit_effect_dropped.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} nullary_unit_effect_dropped.t.exe nullary_unit_effect_dropped.cpp nullary_unit_effect_dropped.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nullary_unit_effect_dropped.t.exe nullary_unit_effect_dropped.t.cpp nullary_unit_effect_dropped.cpp)))
  (rule
   (alias runtest)
   (deps nullary_unit_effect_dropped.t.exe)
@@ -266,7 +266,7 @@
   (targets mutual_lambda_other_instance.t.exe)
   (deps MutualLambdaOtherInstance.vo mutual_lambda_other_instance.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} mutual_lambda_other_instance.t.exe mutual_lambda_other_instance.cpp mutual_lambda_other_instance.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mutual_lambda_other_instance.t.exe mutual_lambda_other_instance.t.cpp mutual_lambda_other_instance.cpp)))
  (rule
   (alias runtest)
   (deps mutual_lambda_other_instance.t.exe)

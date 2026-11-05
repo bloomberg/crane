@@ -237,7 +237,7 @@ struct HistoricalEventSafetyTraceCase {
     RatingTable mrt_table;
   };
 
-  static inline const HistoricalEvent flood_1983_inflows =
+  [[gnu::used]] static inline const HistoricalEvent flood_1983_inflows =
       List<InflowRecord>::cons(
           InflowRecord{UINT64_C(0), UINT64_C(50)},
           List<InflowRecord>::cons(
@@ -262,7 +262,7 @@ struct HistoricalEventSafetyTraceCase {
                                                            UINT64_C(150)},
                                               List<InflowRecord>::
                                                   nil()))))))))));
-  static inline const HistoricalEvent flood_2011_inflows =
+  [[gnu::used]] static inline const HistoricalEvent flood_2011_inflows =
       List<InflowRecord>::cons(
           InflowRecord{UINT64_C(0), UINT64_C(100)},
           List<InflowRecord>::cons(
@@ -312,15 +312,16 @@ struct HistoricalEventSafetyTraceCase {
                                                            UINT64_C(280)},
                                               List<InflowRecord>::
                                                   nil()))))))))));
-  static inline const PlantConfig hist_witness_plant = PlantConfig{
-      UINT64_C(500), UINT64_C(500), UINT64_C(500),
-      UINT64_C(1),   UINT64_C(5),   UINT64_C(10),
-      UINT64_C(100), UINT64_C(100), [](uint64_t) {
+  [[gnu::used]] static inline const PlantConfig hist_witness_plant =
+      PlantConfig{
+          UINT64_C(500), UINT64_C(500), UINT64_C(500),
+          UINT64_C(1),   UINT64_C(5),   UINT64_C(10),
+          UINT64_C(100), UINT64_C(100), [](uint64_t) {
 return UINT64_C(100); },
-      UINT64_C(100), UINT64_C(1)};
+          UINT64_C(100), UINT64_C(1)};
   static uint64_t hist_witness_stage(uint64_t out);
   static uint64_t hist_witness_ctrl(const State &s, uint64_t _x);
-  static inline const State hist_witness_initial =
+  [[gnu::used]] static inline const State hist_witness_initial =
       State{UINT64_C(50), UINT64_C(0), UINT64_C(0)};
   static inline const TestResult hist_test_1983 = run_historical_test(
       hist_witness_plant, flood_1983_inflows, UINT64_C(0), hist_witness_ctrl,
@@ -337,7 +338,7 @@ return UINT64_C(1000); },
   static inline const State hoover_initial_state =
       State{UINT64_C(1500), UINT64_C(20), UINT64_C(0)};
   static uint64_t hoover_controller(const State &s, uint64_t _x);
-  static inline const MonotoneRatingTable hoover_rating_table =
+  [[gnu::used]] static inline const MonotoneRatingTable hoover_rating_table =
       MonotoneRatingTable{List<std::pair<uint64_t, uint64_t>>::cons(
           std::make_pair(UINT64_C(100), UINT64_C(30)),
           List<std::pair<uint64_t, uint64_t>>::cons(

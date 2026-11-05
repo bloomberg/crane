@@ -582,7 +582,7 @@ struct IntrinsicTableCurry {
     };
   }
 
-  static inline const pure_function p1 =
+  [[gnu::used]] static inline const pure_function p1 =
       [](const List<Nat> &args) -> std::optional<Sum<Nat, Nat>> {
     if (std::holds_alternative<typename List<Nat>::Nil>(args.v())) {
       return std::optional<Sum<Nat, Nat>>();
@@ -597,7 +597,7 @@ struct IntrinsicTableCurry {
       }
     }
   };
-  static inline const pure_function p2 =
+  [[gnu::used]] static inline const pure_function p2 =
       [](const List<Nat> &args) -> std::optional<Sum<Nat, Nat>> {
     if (std::holds_alternative<typename List<Nat>::Nil>(args.v())) {
       return std::optional<Sum<Nat, Nat>>();

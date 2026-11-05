@@ -17,12 +17,12 @@ enum class Tag;
 using sem_ty = crane::obj;
 enum class Tag { TAGLIST, TAGNAT };
 using action = Specif::SigT<Tag, crane::fn<sem_ty(sem_ty)>>;
-const action base_action =
+[[gnu::used]] inline const action base_action =
     Specif::template SigT<Tag, crane::fn<crane::obj(crane::obj)>>::existt(
         Tag::TAGLIST, crane_erase_fn([](const crane::obj &) -> crane::obj {
           return std::deque<crane::obj>{};
         }));
-const action cons_action =
+[[gnu::used]] inline const action cons_action =
     Specif::template SigT<Tag, crane::fn<crane::obj(crane::obj)>>::existt(
         Tag::TAGLIST,
         crane_erase_fn([](const crane::obj &_any_xs) -> crane::obj {
@@ -37,7 +37,7 @@ const action cons_action =
 Specif::SigT<Tag, sem_ty>
 apply_action(const Specif::SigT<Tag, crane::fn<crane::obj(crane::obj)>> &a,
              const Specif::SigT<Tag, sem_ty> &v);
-const Specif::SigT<Tag, sem_ty> chain = []() {
+[[gnu::used]] inline const Specif::SigT<Tag, sem_ty> chain = []() {
   Specif::SigT<Tag, sem_ty> v0 = Specif::template SigT<Tag, sem_ty>::existt(
       Tag::TAGLIST, std::deque<crane::obj>{});
   Specif::SigT<Tag, sem_ty> v1 = apply_action(base_action, std::move(v0));

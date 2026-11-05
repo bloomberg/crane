@@ -94,7 +94,7 @@ struct UnitFieldCallAsValue {
     crane::fn<Nat(std::monostate)> globals_get;
   };
 
-  static inline const debug_globals globals_object =
+  [[gnu::used]] static inline const debug_globals globals_object =
       debug_globals{[](const Nat &) { return std::monostate{}; },
                     [](std::monostate) { return Nat::o(); }};
   static std::pair<Nat, std::monostate> update(const Nat &gs);

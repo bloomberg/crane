@@ -8,7 +8,8 @@
 namespace NumOps {
 
 bool leb(const Num::Num &a, const Num::Num &b);
-const Num::Num two = Num::Num::succ(Num::Num::succ(Num::Num::zero()));
+[[gnu::used]] inline const Num::Num two =
+    Num::Num::succ(Num::Num::succ(Num::Num::zero()));
 
 } // namespace NumOps
 

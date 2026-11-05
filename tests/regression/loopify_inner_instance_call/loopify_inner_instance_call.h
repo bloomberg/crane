@@ -329,9 +329,9 @@ struct LoopifyInnerInstanceCall {
   enum class Ev { ASK };
   template <typename CraneTcArg>
   using crane_carrier_tc_21402bc4025dedf3 = Itree<Ev, CraneTcArg>;
-  static inline const Monads::template stateT<
-      uint64_t, crane_carrier_tc_21402bc4025dedf3, uint64_t>
-      st = [](uint64_t s) {
+  [[gnu::used]] static inline const Monads::template stateT<
+      uint64_t, crane_carrier_tc_21402bc4025dedf3, uint64_t> st =
+      [](uint64_t s) {
         return Monad_itree<Ev>::template ret<std::pair<uint64_t, uint64_t>>(
             std::make_pair(s, UINT64_C(41)));
       };

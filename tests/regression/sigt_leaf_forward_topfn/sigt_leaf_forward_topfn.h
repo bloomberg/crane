@@ -159,7 +159,7 @@ bool wrap_string(const std::string &s);
 using prod2 = std::pair<uint64_t, List<uint64_t>>;
 using psem = std::pair<pred_ty, act_ty>;
 using entry = SigT<prod2, psem>;
-const entry my_entry = SigT<prod2, psem>::existt(
+[[gnu::used]] inline const entry my_entry = SigT<prod2, psem>::existt(
     std::make_pair(UINT64_C(0), List<uint64_t>::nil()),
     std::make_pair(
         crane::obj(crane_erase_fn([](const auto &tup) {

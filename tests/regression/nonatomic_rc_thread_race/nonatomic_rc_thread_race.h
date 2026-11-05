@@ -90,7 +90,7 @@ struct NonatomicRcThreadRace {
   static lst build(uint64_t n);
   static uint64_t len(const lst &l);
   /// Shared between both threads; every step copies it.
-  static inline const lst shared = build(UINT64_C(4));
+  [[gnu::used]] static inline const lst shared = build(UINT64_C(4));
   static uint64_t step(const lst &l);
   static uint64_t churn(uint64_t n, const lst &l);
   static void worker(uint64_t n);

@@ -318,13 +318,13 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
   static bool epitope_eq_dec(const HLAEpitope &x, const HLAEpitope &y);
   static bool epitope_eqb(const HLAEpitope &x, const HLAEpitope &y);
-  static inline const HLAEpitope eplet_62GE =
+  [[gnu::used]] static inline const HLAEpitope eplet_62GE =
       HLAEpitope{UINT64_C(62), HLALocus::LOCUS_A, true};
-  static inline const HLAEpitope eplet_65QIA =
+  [[gnu::used]] static inline const HLAEpitope eplet_65QIA =
       HLAEpitope{UINT64_C(65), HLALocus::LOCUS_A, true};
-  static inline const HLAEpitope eplet_142T =
+  [[gnu::used]] static inline const HLAEpitope eplet_142T =
       HLAEpitope{UINT64_C(142), HLALocus::LOCUS_B, true};
-  static inline const HLAEpitope eplet_77N =
+  [[gnu::used]] static inline const HLAEpitope eplet_77N =
       HLAEpitope{UINT64_C(77), HLALocus::LOCUS_DR, true};
   static List<HLAEpitope> allele_epitopes(const HLAAllele &a);
   static List<HLAEpitope> typing_epitopes(const HLATyping &t);

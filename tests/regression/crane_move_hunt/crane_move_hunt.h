@@ -27,7 +27,8 @@ struct CraneMoveHunt {
   static std::pair<bool, state> handle_state(const state &s);
   static inline const box initial_box = box{UINT64_C(41), true};
   static inline const box other_box = box{UINT64_C(1), false};
-  static inline const state initial_state = state{initial_box, other_box, true};
+  [[gnu::used]] static inline const state initial_state =
+      state{initial_box, other_box, true};
   static inline const box record_constant = []() {
     box b = keep_box(initial_box);
     box b1 = clone_box(b);

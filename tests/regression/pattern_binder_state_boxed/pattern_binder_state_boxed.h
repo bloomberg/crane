@@ -447,13 +447,12 @@ struct PatternBinderStateBoxed {
     };
   }
 
-  static inline const Monads::template stateT<
-      Nat, crane_carrier_tc_73ef07e9f18b86f9, Nat>
-      incr = [](const Nat &g) {
-        return Itree<noE, std::pair<Nat, Nat>>::go(
-            ItreeF<noE, std::pair<Nat, Nat>, Itree<noE, std::pair<Nat, Nat>>>::
-                retf(std::make_pair(Nat::s(g), g)));
-      };
+  [[gnu::used]] static inline const Monads::template stateT<
+      Nat, crane_carrier_tc_73ef07e9f18b86f9, Nat> incr = [](const Nat &g) {
+    return Itree<noE, std::pair<Nat, Nat>>::go(
+        ItreeF<noE, std::pair<Nat, Nat>, Itree<noE, std::pair<Nat, Nat>>>::retf(
+            std::make_pair(Nat::s(g), g)));
+  };
 
   template <Params _tcI0>
   static Itree<noE, std::pair<FusedS<typename _tcI0::ptr>, Nat>>

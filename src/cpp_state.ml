@@ -589,6 +589,24 @@ let class_concept_held_back ctx r = concept_held_back ctx (HCclass r)
 
 let element_position mp c = {c with rc_module = Some mp; rc_visibility = Scope_plan.visibility mp}
 
+(** The globals the unit's function bodies name, planned from the finished
+    program before either file is rendered ({!Cpp.plan_function_reads}):
+    [None] until planned.  Compared by the definition a name reaches, so a
+    read through a module alias counts. *)
+let function_reads : Ref.Can.Set.t option ref = owned_ref None
+
+(* What the declarations of every unit of a separate extraction name, from
+   the whole program before any unit is generated: another unit's function
+   is not generated when this one is planned. *)
+let program_reads : Ref.Can.Set.t ref = owned_ref Ref.Can.Set.empty
+
+let note_program_reads s = program_reads := s
+let plan_function_reads s = function_reads := Some (Ref.Can.Set.union s !program_reads)
+
+let read_by_a_function r =
+  match !function_reads with
+  | Some s -> Ref.Can.Set.mem r s
+  | None -> false
 
 (** Track definitions rendered as function accessors (Meyers singletons) instead
     of static inline variables, due to template static init ordering. Stores

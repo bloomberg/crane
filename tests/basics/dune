@@ -114,7 +114,7 @@
   (targets ack.t.exe)
   (deps Ack.vo ack.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} ack.t.exe ack.cpp ack.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ack.t.exe ack.t.cpp ack.cpp)))
  (rule
   (alias runtest)
   (deps ack.t.exe)
@@ -125,7 +125,7 @@
   (targets binomial_heap.t.exe)
   (deps BinomialHeap.vo binomial_heap.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} binomial_heap.t.exe binomial_heap.cpp binomial_heap.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} binomial_heap.t.exe binomial_heap.t.cpp binomial_heap.cpp)))
  (rule
   (alias runtest)
   (deps binomial_heap.t.exe)
@@ -136,7 +136,7 @@
   (targets bool_ops.t.exe)
   (deps BoolOps.vo bool_ops.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} bool_ops.t.exe bool_ops.cpp bool_ops.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bool_ops.t.exe bool_ops.t.cpp bool_ops.cpp)))
  (rule
   (alias runtest)
   (deps bool_ops.t.exe)
@@ -147,7 +147,7 @@
   (targets closures_in_data.t.exe)
   (deps ClosuresInData.vo closures_in_data.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} closures_in_data.t.exe closures_in_data.cpp closures_in_data.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} closures_in_data.t.exe closures_in_data.t.cpp closures_in_data.cpp)))
  (rule
   (alias runtest)
   (deps closures_in_data.t.exe)
@@ -158,7 +158,7 @@
   (targets colist.t.exe)
   (deps Colist.vo colist.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} colist.t.exe colist.cpp colist.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} colist.t.exe colist.t.cpp colist.cpp)))
  (rule
   (alias runtest)
   (deps colist.t.exe)
@@ -169,7 +169,7 @@
   (targets comparison.t.exe)
   (deps Comparison.vo comparison.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} comparison.t.exe comparison.cpp comparison.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} comparison.t.exe comparison.t.cpp comparison.cpp)))
  (rule
   (alias runtest)
   (deps comparison.t.exe)
@@ -180,7 +180,7 @@
   (targets cotree.t.exe)
   (deps Cotree.vo cotree.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} cotree.t.exe cotree.cpp cotree.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} cotree.t.exe cotree.t.cpp cotree.cpp)))
  (rule
   (alias runtest)
   (deps cotree.t.exe)
@@ -191,7 +191,7 @@
   (targets currying.t.exe)
   (deps Currying.vo currying.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} currying.t.exe currying.cpp currying.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} currying.t.exe currying.t.cpp currying.cpp)))
  (rule
   (alias runtest)
   (deps currying.t.exe)
@@ -202,7 +202,7 @@
   (targets doc_comments.t.exe)
   (deps DocComments.vo doc_comments.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} doc_comments.t.exe doc_comments.cpp doc_comments.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} doc_comments.t.exe doc_comments.t.cpp doc_comments.cpp)))
  (rule
   (alias runtest)
   (deps doc_comments.t.exe)
@@ -213,7 +213,7 @@
   (targets eq_ord_show.t.exe)
   (deps EqOrdShow.vo eq_ord_show.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} eq_ord_show.t.exe eq_ord_show.cpp eq_ord_show.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eq_ord_show.t.exe eq_ord_show.t.cpp eq_ord_show.cpp)))
  (rule
   (alias runtest)
   (deps eq_ord_show.t.exe)
@@ -224,7 +224,7 @@
   (targets graph.t.exe)
   (deps Graph.vo graph.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} graph.t.exe graph.cpp graph.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} graph.t.exe graph.t.cpp graph.cpp)))
  (rule
   (alias runtest)
   (deps graph.t.exe)
@@ -235,7 +235,7 @@
   (targets higher_order.t.exe)
   (deps HigherOrder.vo higher_order.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} higher_order.t.exe higher_order.cpp higher_order.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} higher_order.t.exe higher_order.t.cpp higher_order.cpp)))
  (rule
   (alias runtest)
   (deps higher_order.t.exe)
@@ -246,7 +246,7 @@
   (targets int63_arith.t.exe)
   (deps Int63Arith.vo int63_arith.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} int63_arith.t.exe int63_arith.cpp int63_arith.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} int63_arith.t.exe int63_arith.t.cpp int63_arith.cpp)))
  (rule
   (alias runtest)
   (deps int63_arith.t.exe)
@@ -257,7 +257,7 @@
   (targets lambda.t.exe)
   (deps Lambda.vo lambda.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} lambda.t.exe lambda.cpp lambda.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lambda.t.exe lambda.t.cpp lambda.cpp)))
  (rule
   (alias runtest)
   (deps lambda.t.exe)
@@ -268,7 +268,7 @@
   (targets levenshtein.t.exe)
   (deps Levenshtein.vo levenshtein.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} levenshtein.t.exe levenshtein.cpp levenshtein.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} levenshtein.t.exe levenshtein.t.cpp levenshtein.cpp)))
  (rule
   (alias runtest)
   (deps levenshtein.t.exe)
@@ -279,7 +279,7 @@
   (targets list.t.exe)
   (deps List.vo list.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} list.t.exe list.cpp list.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} list.t.exe list.t.cpp list.cpp)))
  (rule
   (alias runtest)
   (deps list.t.exe)
@@ -290,7 +290,7 @@
   (targets module.t.exe)
   (deps Module.vo module.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} module.t.exe module.cpp module.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module.t.exe module.t.cpp module.cpp)))
  (rule
   (alias runtest)
   (deps module.t.exe)
@@ -301,7 +301,7 @@
   (targets multi_ind_functor.t.exe)
   (deps MultiIndFunctor.vo multi_ind_functor.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} multi_ind_functor.t.exe multi_ind_functor.cpp multi_ind_functor.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} multi_ind_functor.t.exe multi_ind_functor.t.cpp multi_ind_functor.cpp)))
  (rule
   (alias runtest)
   (deps multi_ind_functor.t.exe)
@@ -312,7 +312,7 @@
   (targets mutual_functor.t.exe)
   (deps MutualFunctor.vo mutual_functor.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} mutual_functor.t.exe mutual_functor.cpp mutual_functor.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mutual_functor.t.exe mutual_functor.t.cpp mutual_functor.cpp)))
  (rule
   (alias runtest)
   (deps mutual_functor.t.exe)
@@ -323,7 +323,7 @@
   (targets mutual_mod.t.exe)
   (deps MutualMod.vo mutual_mod.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} mutual_mod.t.exe mutual_mod.cpp mutual_mod.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mutual_mod.t.exe mutual_mod.t.cpp mutual_mod.cpp)))
  (rule
   (alias runtest)
   (deps mutual_mod.t.exe)
@@ -334,7 +334,7 @@
   (targets mutual_recursion.t.exe)
   (deps MutualRecursion.vo mutual_recursion.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} mutual_recursion.t.exe mutual_recursion.cpp mutual_recursion.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mutual_recursion.t.exe mutual_recursion.t.cpp mutual_recursion.cpp)))
  (rule
   (alias runtest)
   (deps mutual_recursion.t.exe)
@@ -345,7 +345,7 @@
   (targets n_gmp.t.exe)
   (deps NGMPTest.vo n_gmp.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-gmp.sh %{project_root} n_gmp.t.exe n_gmp.cpp n_gmp.t.cpp)))
+   (run %{project_root}/scripts/compile-gmp.sh %{project_root} n_gmp.t.exe n_gmp.t.cpp n_gmp.cpp)))
  (rule
   (alias runtest)
   (deps n_gmp.t.exe)
@@ -356,7 +356,7 @@
   (targets n_int.t.exe)
   (deps NIntTest.vo n_int.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} n_int.t.exe n_int.cpp n_int.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} n_int.t.exe n_int.t.cpp n_int.cpp)))
  (rule
   (alias runtest)
   (deps n_int.t.exe)
@@ -367,7 +367,7 @@
   (targets nat_bde.t.exe)
   (deps Nat.vo nat_bde.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-bde.sh %{project_root} nat_bde.t.exe nat_bde.cpp nat_bde.t.cpp)))
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} nat_bde.t.exe nat_bde.t.cpp nat_bde.cpp)))
  (rule
   (alias runtest)
   (deps nat_bde.t.exe)
@@ -378,7 +378,7 @@
   (targets nat_gmp.t.exe)
   (deps NatGMPTest.vo nat_gmp.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-gmp.sh %{project_root} nat_gmp.t.exe nat_gmp.cpp nat_gmp.t.cpp)))
+   (run %{project_root}/scripts/compile-gmp.sh %{project_root} nat_gmp.t.exe nat_gmp.t.cpp nat_gmp.cpp)))
  (rule
   (alias runtest)
   (deps nat_gmp.t.exe)
@@ -389,7 +389,7 @@
   (targets nat.t.exe)
   (deps Nat.vo nat.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} nat.t.exe nat.cpp nat.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nat.t.exe nat.t.cpp nat.cpp)))
  (rule
   (alias runtest)
   (deps nat.t.exe)
@@ -400,7 +400,7 @@
   (targets option.t.exe)
   (deps Option.vo option.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} option.t.exe option.cpp option.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} option.t.exe option.t.cpp option.cpp)))
  (rule
   (alias runtest)
   (deps option.t.exe)
@@ -411,7 +411,7 @@
   (targets prim_array.t.exe)
   (deps PrimArray.vo prim_array.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} prim_array.t.exe prim_array.cpp prim_array.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} prim_array.t.exe prim_array.t.cpp prim_array.cpp)))
  (rule
   (alias runtest)
   (deps prim_array.t.exe)
@@ -422,7 +422,7 @@
   (targets prim_float.t.exe)
   (deps PrimFloat.vo prim_float.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} prim_float.t.exe prim_float.cpp prim_float.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} prim_float.t.exe prim_float.t.cpp prim_float.cpp)))
  (rule
   (alias runtest)
   (deps prim_float.t.exe)
@@ -433,7 +433,7 @@
   (targets record_match.t.exe)
   (deps RecordMatch.vo record_match.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} record_match.t.exe record_match.cpp record_match.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_match.t.exe record_match.t.cpp record_match.cpp)))
  (rule
   (alias runtest)
   (deps record_match.t.exe)
@@ -444,7 +444,7 @@
   (targets regexp.t.exe)
   (deps Regexp.vo regexp.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} regexp.t.exe regexp.cpp regexp.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} regexp.t.exe regexp.t.cpp regexp.cpp)))
  (rule
   (alias runtest)
   (deps regexp.t.exe)
@@ -455,7 +455,7 @@
   (targets sections.t.exe)
   (deps Sections.vo sections.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sections.t.exe sections.cpp sections.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sections.t.exe sections.t.cpp sections.cpp)))
  (rule
   (alias runtest)
   (deps sections.t.exe)
@@ -466,7 +466,7 @@
   (targets sigma_types.t.exe)
   (deps SigmaTypes.vo sigma_types.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sigma_types.t.exe sigma_types.cpp sigma_types.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sigma_types.t.exe sigma_types.t.cpp sigma_types.cpp)))
  (rule
   (alias runtest)
   (deps sigma_types.t.exe)
@@ -477,7 +477,7 @@
   (targets sort.t.exe)
   (deps Sort.vo sort.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sort.t.exe sort.cpp sort.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sort.t.exe sort.t.cpp sort.cpp)))
  (rule
   (alias runtest)
   (deps sort.t.exe)
@@ -488,7 +488,7 @@
   (targets stream.t.exe)
   (deps Stream.vo stream.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} stream.t.exe stream.cpp stream.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} stream.t.exe stream.t.cpp stream.cpp)))
  (rule
   (alias runtest)
   (deps stream.t.exe)
@@ -499,7 +499,7 @@
   (targets string_match.t.exe)
   (deps StringMatch.vo string_match.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} string_match.t.exe string_match.cpp string_match.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} string_match.t.exe string_match.t.cpp string_match.cpp)))
  (rule
   (alias runtest)
   (deps string_match.t.exe)
@@ -510,7 +510,7 @@
   (targets sum.t.exe)
   (deps Sum.vo sum.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sum.t.exe sum.cpp sum.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sum.t.exe sum.t.cpp sum.cpp)))
  (rule
   (alias runtest)
   (deps sum.t.exe)
@@ -521,7 +521,7 @@
   (targets tail_rec_map.t.exe)
   (deps TailRecMap.vo tail_rec_map.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} tail_rec_map.t.exe tail_rec_map.cpp tail_rec_map.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tail_rec_map.t.exe tail_rec_map.t.cpp tail_rec_map.cpp)))
  (rule
   (alias runtest)
   (deps tail_rec_map.t.exe)
@@ -532,7 +532,7 @@
   (targets perceus_reuse.t.exe)
   (deps Reuse.vo perceus_reuse.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} perceus_reuse.t.exe perceus_reuse.cpp perceus_reuse.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} perceus_reuse.t.exe perceus_reuse.t.cpp perceus_reuse.cpp)))
  (rule
   (alias runtest)
   (deps perceus_reuse.t.exe)
@@ -543,7 +543,7 @@
   (targets tail_rec_rev.t.exe)
   (deps TailRecRev.vo tail_rec_rev.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} tail_rec_rev.t.exe tail_rec_rev.cpp tail_rec_rev.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tail_rec_rev.t.exe tail_rec_rev.t.cpp tail_rec_rev.cpp)))
  (rule
   (alias runtest)
   (deps tail_rec_rev.t.exe)
@@ -554,7 +554,7 @@
   (targets tail_rec_zip.t.exe)
   (deps TailRecZip.vo tail_rec_zip.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} tail_rec_zip.t.exe tail_rec_zip.cpp tail_rec_zip.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tail_rec_zip.t.exe tail_rec_zip.t.cpp tail_rec_zip.cpp)))
  (rule
   (alias runtest)
   (deps tail_rec_zip.t.exe)
@@ -565,7 +565,7 @@
   (targets tokenizer.t.exe)
   (deps Tokenizer.vo tokenizer.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} tokenizer.t.exe tokenizer.cpp tokenizer.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tokenizer.t.exe tokenizer.t.cpp tokenizer.cpp)))
  (rule
   (alias runtest)
   (deps tokenizer.t.exe)
@@ -576,7 +576,7 @@
   (targets topological_sort_bde.t.exe)
   (deps TopologicalSort.vo topological_sort_bde.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-bde.sh %{project_root} topological_sort_bde.t.exe topological_sort_bde.cpp topological_sort_bde.t.cpp)))
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} topological_sort_bde.t.exe topological_sort_bde.t.cpp topological_sort_bde.cpp)))
  (rule
   (alias runtest)
   (deps topological_sort_bde.t.exe)
@@ -587,7 +587,7 @@
   (targets topological_sort.t.exe)
   (deps TopologicalSort.vo topological_sort.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} topological_sort.t.exe topological_sort.cpp topological_sort.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} topological_sort.t.exe topological_sort.t.cpp topological_sort.cpp)))
  (rule
   (alias runtest)
   (deps topological_sort.t.exe)
@@ -598,7 +598,7 @@
   (targets tree.t.exe)
   (deps Tree.vo tree.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} tree.t.exe tree.cpp tree.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tree.t.exe tree.t.cpp tree.cpp)))
  (rule
   (alias runtest)
   (deps tree.t.exe)
@@ -609,7 +609,7 @@
   (targets typeclasses.t.exe)
   (deps Typeclasses.vo typeclasses.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} typeclasses.t.exe typeclasses.cpp typeclasses.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typeclasses.t.exe typeclasses.t.cpp typeclasses.cpp)))
  (rule
   (alias runtest)
   (deps typeclasses.t.exe)
@@ -620,7 +620,7 @@
   (targets typed_expr.t.exe)
   (deps TypedExpr.vo typed_expr.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_expr.t.exe typed_expr.cpp typed_expr.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_expr.t.exe typed_expr.t.cpp typed_expr.cpp)))
  (rule
   (alias runtest)
   (deps typed_expr.t.exe)
@@ -631,7 +631,7 @@
   (targets z_gmp.t.exe)
   (deps ZGMPTest.vo z_gmp.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-gmp.sh %{project_root} z_gmp.t.exe z_gmp.cpp z_gmp.t.cpp)))
+   (run %{project_root}/scripts/compile-gmp.sh %{project_root} z_gmp.t.exe z_gmp.t.cpp z_gmp.cpp)))
  (rule
   (alias runtest)
   (deps z_gmp.t.exe)
@@ -642,7 +642,7 @@
   (targets z_int.t.exe)
   (deps ZIntTest.vo z_int.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} z_int.t.exe z_int.cpp z_int.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} z_int.t.exe z_int.t.cpp z_int.cpp)))
  (rule
   (alias runtest)
   (deps z_int.t.exe)
@@ -653,7 +653,7 @@
   (targets string_get_bounds.t.exe)
   (deps StringGetBounds.vo string_get_bounds.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} string_get_bounds.t.exe string_get_bounds.cpp string_get_bounds.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} string_get_bounds.t.exe string_get_bounds.t.cpp string_get_bounds.cpp)))
  (rule
   (alias runtest)
   (deps string_get_bounds.t.exe)
@@ -664,7 +664,7 @@
   (targets perceus_reuse_loopify.t.exe)
   (deps ReuseLoopify.vo perceus_reuse_loopify.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} perceus_reuse_loopify.t.exe perceus_reuse_loopify.cpp perceus_reuse_loopify.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} perceus_reuse_loopify.t.exe perceus_reuse_loopify.t.cpp perceus_reuse_loopify.cpp)))
  (rule
   (alias runtest)
   (deps perceus_reuse_loopify.t.exe)

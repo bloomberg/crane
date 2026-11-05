@@ -257,6 +257,77 @@ let match_template =
 let with_result name s =
   flatten_custom_strings (parse_custom_fixed "result" (CCstring name) s)
 
+let statements tokens =
+  let depth = ref 0 in
+  let quote = ref None in
+  let stmts = ref [] in
+  let current = ref [] in
+  let text = Buffer.create 64 in
+  let flush_text () =
+    if Buffer.length text > 0 then begin
+      current := CCstring (Buffer.contents text) :: !current;
+      Buffer.clear text
+    end
+  in
+  let end_statement () =
+    flush_text ();
+    stmts := List.rev !current :: !stmts;
+    current := []
+  in
+  let literal s =
+    let n = String.length s in
+    let i = ref 0 in
+    while !i < n do
+      let c = s.[!i] in
+      ( match !quote with
+      | Some q ->
+        Buffer.add_char text c;
+        if c = '\\' && !i + 1 < n then begin
+          Buffer.add_char text s.[!i + 1];
+          incr i
+        end
+        else if c = q then quote := None
+      | None ->
+        if c = ';' && !depth = 0 then end_statement ()
+        else begin
+          if c = '"' || c = '\'' then quote := Some c
+          else if c = '(' then incr depth
+          else if c = ')' then decr depth;
+          Buffer.add_char text c
+        end );
+      incr i
+    done
+  in
+  List.iter
+    (function
+      | CCstring s -> literal s
+      | hole ->
+        flush_text ();
+        current := hole :: !current)
+    tokens;
+  end_statement ();
+  (* The blanks [String.trim] removes. *)
+  let blank c = c = ' ' || c = '\t' || c = '\n' || c = '\r' || c = '\012' in
+  let ltrim s =
+    let n = String.length s in
+    let i = ref 0 in
+    while !i < n && blank s.[!i] do incr i done;
+    String.sub s !i (n - !i)
+  in
+  let rtrim s =
+    let n = ref (String.length s) in
+    while !n > 0 && blank s.[!n - 1] do decr n done;
+    String.sub s 0 !n
+  in
+  let trim stmt =
+    let stmt = match stmt with CCstring s :: rest -> CCstring (ltrim s) :: rest | _ -> stmt in
+    let stmt =
+      match List.rev stmt with CCstring s :: rest -> List.rev (CCstring (rtrim s) :: rest) | _ -> stmt
+    in
+    List.filter (function CCstring "" -> false | _ -> true) stmt
+  in
+  List.filter (fun stmt -> stmt <> []) (List.map trim (List.rev !stmts))
+
 type drain_token = Drain_text of string | Drain_yield of string
 
 let drain_template s =

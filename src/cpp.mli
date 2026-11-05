@@ -66,6 +66,10 @@ val files_named_ahead : Miniml.ml_structure -> Names.ModPath.t list
     generated: whose imports its files include. *)
 val customs_written_ahead : unit -> Ref.User.Set.t
 
+(** Plan, from what {!generate_ahead} generated, which globals the unit's
+    function bodies read ({!Cpp_state.read_by_a_function}). *)
+val plan_function_reads : unit -> unit
+
 (** Plan, before either file is rendered and from what {!generate_ahead}
     generated, where the header writes what it does not write in place --
     the erasure landing pads and the declarations of lifted helpers at the

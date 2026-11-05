@@ -386,21 +386,23 @@ struct EpochCellGlyphTraceCase {
     Z zodiac_position;
   };
 
-  static inline const MechanismState initial_state = MechanismState{
-      Z::z0(), Z::z0(), Z::z0(), Z::z0(), Z::z0(), Z::z0(), Z::z0()};
-  static inline const Z metonic_modulus =
+  [[gnu::used]] static inline const MechanismState initial_state =
+      MechanismState{Z::z0(), Z::z0(), Z::z0(), Z::z0(),
+                     Z::z0(), Z::z0(), Z::z0()};
+  [[gnu::used]] static inline const Z metonic_modulus =
       Z::zpos(Positive::xi(Positive::xi(Positive::xo(Positive::xi(
           Positive::xo(Positive::xi(Positive::xi(Positive::xh()))))))));
-  static inline const Z saros_modulus =
+  [[gnu::used]] static inline const Z saros_modulus =
       Z::zpos(Positive::xi(Positive::xi(Positive::xi(Positive::xi(
           Positive::xi(Positive::xo(Positive::xi(Positive::xh()))))))));
-  static inline const Z callippic_modulus = Z::zpos(Positive::xo(Positive::xo(
-      Positive::xi(Positive::xi(Positive::xo(Positive::xo(Positive::xh())))))));
-  static inline const Z exeligmos_modulus =
+  [[gnu::used]] static inline const Z callippic_modulus =
+      Z::zpos(Positive::xo(Positive::xo(Positive::xi(
+          Positive::xi(Positive::xo(Positive::xo(Positive::xh())))))));
+  [[gnu::used]] static inline const Z exeligmos_modulus =
       Z::zpos(Positive::xi(Positive::xh()));
-  static inline const Z games_modulus =
+  [[gnu::used]] static inline const Z games_modulus =
       Z::zpos(Positive::xo(Positive::xo(Positive::xh())));
-  static inline const Z zodiac_modulus =
+  [[gnu::used]] static inline const Z zodiac_modulus =
       Z::zpos(Positive::xo(Positive::xo(Positive::xo(Positive::xi(Positive::xo(
           Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))))));
   static MechanismState step(const MechanismState &s);

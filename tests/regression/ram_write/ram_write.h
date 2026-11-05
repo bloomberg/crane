@@ -189,12 +189,12 @@ struct RamWrite {
     List<uint64_t> state_rom;
   };
 
-  static inline const ram_reg empty_reg =
+  [[gnu::used]] static inline const ram_reg empty_reg =
       ram_reg{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
               ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(4))};
-  static inline const ram_chip empty_chip = ram_chip{
+  [[gnu::used]] static inline const ram_chip empty_chip = ram_chip{
       ListDef::template repeat<ram_reg>(empty_reg, UINT64_C(4)), UINT64_C(0)};
-  static inline const ram_bank empty_bank =
+  [[gnu::used]] static inline const ram_bank empty_bank =
       ram_bank{ListDef::template repeat<ram_chip>(empty_chip, UINT64_C(4))};
   static inline const List<ram_bank> empty_ram =
       ListDef::template repeat<ram_bank>(empty_bank, UINT64_C(4));

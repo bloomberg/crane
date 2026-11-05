@@ -832,7 +832,7 @@ struct LoopifyMutualPartialApp {
   };
 
   static_assert(Endo<endo_double, uint64_t>);
-  static inline const e<uint64_t> sample = e<uint64_t>::add(
+  [[gnu::used]] static inline const e<uint64_t> sample = e<uint64_t>::add(
       e<uint64_t>::leaf(UINT64_C(1)),
       e<uint64_t>::meta(md<uint64_t>::mpair(
           md<uint64_t>::mconst(UINT64_C(5),

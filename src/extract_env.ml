@@ -1254,7 +1254,18 @@ let clang_format_available () = executable_available "clang-format"
     minutes and grew past 10 GB -- so a file taking ten times the usual rate
     is abandoned, and none is given more than two minutes: a whole-program
     header the size of Vellvm's would take most of an hour even at the usual
-    rate, and is better kept as written. *)
+    rate, and is better kept as written.
+
+    The budget is wall time, which the formatter's processor time is not: on
+    a machine running many times as many processes as it has processors, a
+    file that formats in ten seconds alone (deep_arith_nesting) can run out
+    of it and be kept unformatted -- the warning below says so, and the file
+    then differs from a formatted copy in whitespace only.  Stretching the
+    budget by the share of a processor this process has had was tried and
+    does not track the formatter's share closely enough (2 of 7 runs at load
+    180 still timed out).  A true processor-time limit needs the child's own
+    usage ([setrlimit] in the child, or reading it while it runs), which
+    {!Subprocess} does not offer. *)
 let format_budget text =
   let lines = ref 0 in
   String.iter (fun c -> if c = '\n' then incr lines) text;
@@ -1262,11 +1273,12 @@ let format_budget text =
 
 (** Whether the formatter was killed for running past {!format_budget}, in
     which case [what] is reported as left unformatted. *)
-let format_timed_out what = function
+let format_timed_out ~budget what = function
   | Unix.WSIGNALED s when s = Sys.sigkill ->
     Feedback.msg_warning
       Pp.(
-        str "the formatter ran out of time on" ++ spc () ++ str what ++ str ";"
+        str "the formatter ran out of time on" ++ spc () ++ str what
+        ++ spc () ++ str (Printf.sprintf "(%.0f s);" budget)
         ++ spc () ++ str "leaving it unformatted" );
     true
   | _ -> false
@@ -1295,14 +1307,15 @@ let format_buffer_to_string (buf : Buffer.t) : string =
       Buffer.contents buf )
     else
       let raw_output = Buffer.contents buf in
+      let budget = format_budget raw_output in
       match
-        Subprocess.filter ~timeout:(format_budget raw_output) formatter
+        Subprocess.filter ~timeout:budget formatter
           formatter_args raw_output
       with
       | exception _ -> raw_output
       | {status = Unix.WEXITED 0; stdout; _} -> stdout
       | {status; _} ->
-        ignore (format_timed_out "the generated code" status);
+        ignore (format_timed_out ~budget "the generated code" status);
         raw_output
 
 (** Runs [clang-format -i] (or [bde-format]) on [filename] in place. No-op
@@ -1336,7 +1349,7 @@ let format_file_inplace (filename : string) : unit =
         format_budget (In_channel.with_open_bin filename In_channel.input_all)
       in
       ignore
-        (format_timed_out filename
+        (format_timed_out ~budget:timeout filename
            (Subprocess.run ~timeout formatter formatter_args) )
 
 (** Filter applied to [opened_libraries ()] in [print_structure_to_file] to
@@ -1627,6 +1640,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   Common.plan_written_files (Cpp.files_named_ahead struc);
   Table.plan_written_customs (Cpp.customs_written_ahead ());
   Table.check_written_mapping_headers ();
+  Cpp.plan_function_reads ();
   Pipeline_trace.event "emit" "plan_file_layout";
   Cpp.plan_file_layout struc;
   Pipeline_trace.event "emit" "plan_ctor_aliases";
@@ -2202,6 +2216,19 @@ let print_per_library ~dry (core : Core.normalized Core.program) =
   (* Pre-build the method registry from the full structure so that
      cross-module method calls are recognized during per-module rendering. *)
   Cpp_state.set_global_method_registry (Cpp.method_registry_of struc);
+  (* Which values another declaration names, any unit's: a function of a
+     later unit may read a value of an earlier one, which then has to be
+     initialised wherever its header is included
+     ({!Cpp_state.read_by_a_function}). *)
+  let program_reads = ref Ref.Can.Set.empty in
+  Modutil.struct_iter
+    (fun d ->
+      let own = List.map (fun fd -> fd.fd_ref) (Mlutil.term_defs d) in
+      Modutil.decl_iter_references
+        (fun r -> if not (List.exists (Ref.Can.equal r) own) then program_reads := Ref.Can.Set.add r !program_reads)
+        ignore ignore d)
+    ignore ignore struc;
+  Cpp_state.note_program_reads !program_reads;
   (* Generic traversal of ml_structure: walks MEstruct/MEfunctor/MEapply
      and calls [visit ~in_struct elem] on each structure element. *)
   let iter_structure visit struc =
