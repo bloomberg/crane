@@ -1036,12 +1036,6 @@ let rec declaration_names_into_a_struct ctx (d : cpp_decl) =
       | answer -> answer )
   | _ -> None
 
-(** A mapping whose text places its arguments itself is instantiated before
-    it is printed ({!Cpp_erasure.instantiate_foreign}): reaching the printer
-    as its application is a pass not run. *)
-let uninstantiated_mapping r =
-  CErrors.anomaly Pp.(str "a mapping's application reached the printer uninstantiated: " ++ GlobRef.print r)
-
 (** Pretty-print a MiniCpp type as C++ source text.
 
     @param par  whether to parenthesize (for precedence in function types)

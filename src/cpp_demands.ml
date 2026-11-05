@@ -16,22 +16,22 @@ let of_external name =
 
 let at_type_variable = function Tvar _ | Tapply (Tvar _, _) -> true | _ -> false
 
-(* Where a custom mapping is printed, only what its placeholders name is
-   written: the type it is matched or applied at, a type argument (an absent
-   one is written erased), a branch's binder's type (erased where it has no
-   spelling), a branch's body, the scrutinee, a value argument -- a string
-   literal among the last two spliced in as a [std::string] -- and the type a
-   call yields. *)
+(* Where a mapping's text is printed -- a match or block template, or a
+   type's text -- only what its placeholders name is written: the type it is
+   matched or applied at, a type argument (an absent one is written erased),
+   a branch's binder's type (erased where it has no spelling), a branch's
+   body, the scrutinee, a value argument -- a string literal among the last
+   two spliced in as a [std::string].  (A call's [%ret] is instantiated; in
+   a block or match it is refused at the seam, {!Cpp_erasure.check_ret}.) *)
 type custom_holes = {
   typ : cpp_type option;
   scrut : cpp_expr option;
   tyargs : cpp_type list;
   cases : (custom_param list * cpp_type * cpp_stmt list) list;
   args : cpp_expr list;
-  ret : cpp_type option;
 }
 
-let no_holes = {typ = None; scrut = None; tyargs = []; cases = []; args = []; ret = None}
+let no_holes = {typ = None; scrut = None; tyargs = []; cases = []; args = []}
 
 (* The headers [visit] finds a declaration, statement, expression or type
    needs, written down where the printer writes it: the annotations a node
@@ -127,8 +127,7 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
               expr e;
               string_literal e )
             (nth holes.args i)
-        | CCret -> Option.iter ty holes.ret
-        | CCbr_var _ | CCstring _ -> () )
+        | CCret | CCbr_var _ | CCstring _ -> () )
       cmds
   (* An instantiated mapping writes what its pieces name. *)
   and foreign fr =
@@ -194,27 +193,21 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
     | _ -> () );
     match e with
     | CPPforeign (_, fr) -> foreign fr
-    | CPPglob (_, tys, Some {ci_inline = Some tmpl; ci_yields; _}) ->
+    (* Only a block is still a text here: every other inline mapping was
+       instantiated at the seam, and what reads demands reads settled
+       declarations (probed, default and CHECK: no other form reaches). *)
+    | CPPglob (r, tys, Some {ci_inline = Some tmpl; ci_yields; _}) ->
       if tmpl.it_form = Block_iife then block_template ?yields:ci_yields {no_holes with tyargs = tys} tmpl.it_text
-      else custom {no_holes with tyargs = tys} (Foreign_template.type_template tmpl.it_text)
+      else uninstantiated_mapping r
     | CPPglob (r, tys, _) ->
       global r;
       List.iter ty tys
-    | CPPfun_call (res, CPPglob (_, tys, Some {ci_inline = Some tmpl; _}), call) -> (
-      let args = call_args call in
-      let yields = match res.cs_yields with Ryields t -> Some t | Ropaque -> None in
+    | CPPfun_call (res, CPPglob (r, tys, Some {ci_inline = Some tmpl; _}), call) -> (
       match tmpl.it_form with
-      | Block_iife -> block_template ?yields {no_holes with tyargs = tys; args} tmpl.it_text
-      | Bare_callee ->
-        List.iter ty tys;
-        List.iter expr args
-      | Templated ->
-        (* An argument past the last one the template names is not written. *)
-        let cmds = Foreign_template.term_template tmpl.it_text in
-        let named =
-          List.fold_left (fun n -> function Foreign_template.CCarg i -> max n (i + 1) | _ -> n) 0 cmds
-        in
-        custom {no_holes with tyargs = tys; args = CList.firstn (min named (List.length args)) args; ret = yields} cmds )
+      | Block_iife ->
+        let yields = match res.cs_yields with Ryields t -> Some t | Ropaque -> None in
+        block_template ?yields {no_holes with tyargs = tys; args = call_args call} tmpl.it_text
+      | Bare_callee | Templated -> uninstantiated_mapping r )
     | CPPfun_call (_, f, args) ->
       expr f;
       List.iter expr args.rev

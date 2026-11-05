@@ -1118,6 +1118,13 @@ val inline_template : string -> inline_template
 (** The shape of [ci]'s replacement text, [None] where it is not inlined. *)
 val inline_shape : custom_info -> inline_shape option
 
+(** [uninstantiated_mapping r] is the anomaly for an application of [r]'s
+    mapping that places its arguments itself ({!Bare_callee}, {!Templated})
+    reaching a reader of settled declarations -- the printer, or what it
+    names: those are instantiated before ({!Cpp_erasure.instantiate_foreign}),
+    so meeting one means that pass was not run. *)
+val uninstantiated_mapping : GlobRef.t -> 'a
+
 (** The text a custom match is printed from: its template, binding by value
     where it holds its scrutinee so and the template is a structured binding
     ({!Foreign_template.bound_by_value}). *)
