@@ -734,6 +734,66 @@ let evaluated_first p at =
         if List.exists (fun (l, _) -> Levels.exists (fun m -> e.overlaps m l) a.variables) later then Some j else None )
       (List.mapi (fun j a -> (j, a)) e.arguments)
 
+(* A turn of a loop as the Core it runs, standing under the loop's
+   parameters, where it is one a region plans: lets and matches as they
+   are, a [Continue] the application of nothing to its arguments -- what
+   follows a turn is the next one, which the parameter a turn passes a new
+   value no longer reads -- and the cells a [Continue_into] builds made
+   beside its arguments, in no order.  A machine's [Resume]s and entries
+   run turns of their own: none is planned. *)
+exception Unplanned_turn
+
+let rec turn_term : Control_ir.Term.t -> ml_ast = function
+  | Loop inner -> turn_term inner.body
+  | Let {binder; binder_type; value; body} ->
+    MLletin (binder, binder_type, value, turn_term body, Occurrence.fresh ())
+  | Match {scrutinee_type; scrutinee; branches} ->
+    MLcase
+      ( scrutinee_type,
+        scrutinee,
+        Array.of_list
+          (List.map
+             (fun (b : Control_ir.Term.branch) -> (b.binders, b.result_type, b.pattern, turn_term b.body))
+             branches ) )
+  | Return t -> t
+  | Continue c -> MLapp (MLdummy Kprop, c.arguments)
+  | Continue_into {cells; next} ->
+    MLtuple (List.concat_map (fun (c : Control_ir.Term.cell) -> c.arguments) cells @ [MLapp (MLdummy Kprop, next.arguments)])
+  | Resume _ | Entry _ -> raise Unplanned_turn
+
+let continue_moves (l : Control_ir.Term.loop) =
+  match turn_term l.body with
+  | exception Unplanned_turn -> []
+  | body ->
+    let p = region ~n_outer:0 body in
+    let n = List.length l.parameters in
+    (* The reads in [t], standing where the Continue does, of what the index
+       [db] names there. *)
+    let reads_of db t = List.filter_map (fun (l, o) -> if l = -db then Some o else None) (closure_reads 0 t) in
+    let moves depth (c : Control_ir.Term.continue_) =
+      List.mapi
+        (fun i ((_, ty), argument) ->
+          match reads_of (n - i + depth) argument with
+          | [o] ->
+            worth_moving ty
+            && (match strip argument with MLrel _ -> false | _ -> true)
+            && fate ~whole:true p o = Last_use
+          | _ -> false )
+        (List.combine l.parameters c.arguments)
+    in
+    let rec turns depth acc : Control_ir.Term.t -> _ = function
+      | Loop inner -> turns depth acc inner.body
+      | Let b -> turns (depth + 1) acc b.body
+      | Match m ->
+        List.fold_left (fun acc (b : Control_ir.Term.branch) -> turns (depth + List.length b.binders) acc b.body) acc m.branches
+      | Return _ | Resume _ | Entry _ -> acc
+      | Continue c | Continue_into {next = c; _} ->
+        if Control_ir.Loop.equal c.target l.loop && List.compare_lengths c.arguments l.parameters = 0 then
+          (c.occurrence, moves depth c) :: acc
+        else acc
+    in
+    List.rev (turns 0 [] l.body)
+
 let rec takes_record p t =
   match t with
   | MLrel (_, o) -> use p o = Some Move

@@ -346,10 +346,10 @@ LoopifyPatterns::split_by_sign_aux(const LoopifyPatterns::list<uint64_t> &l,
           std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(
               _loop_l->v());
       if (base <= a0) {
-        _loop_pos = list<uint64_t>::cons(a0, _loop_pos);
+        _loop_pos = list<uint64_t>::cons(a0, std::move(_loop_pos));
         _loop_l = crane_raw(a1);
       } else {
-        _loop_neg = list<uint64_t>::cons(a0, _loop_neg);
+        _loop_neg = list<uint64_t>::cons(a0, std::move(_loop_neg));
         _loop_l = crane_raw(a1);
       }
     }

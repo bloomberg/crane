@@ -156,7 +156,7 @@ uint64_t ParUnitNotConcurrent::churn(uint64_t k,
       return sum(_loop_t);
     } else {
       uint64_t j = _loop_k - 1;
-      _loop_t = mirror(_loop_t);
+      _loop_t = mirror(std::move(_loop_t));
       _loop_k = j;
     }
   }

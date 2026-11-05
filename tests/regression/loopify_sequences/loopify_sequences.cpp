@@ -336,10 +336,10 @@ LoopifySequences::split_by_sign(const List<uint64_t> &l, uint64_t base,
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (base <= a0) {
-        _loop_pos = List<uint64_t>::cons(a0, _loop_pos);
+        _loop_pos = List<uint64_t>::cons(a0, std::move(_loop_pos));
         _loop_l = crane_raw(a1);
       } else {
-        _loop_neg = List<uint64_t>::cons(a0, _loop_neg);
+        _loop_neg = List<uint64_t>::cons(a0, std::move(_loop_neg));
         _loop_l = crane_raw(a1);
       }
     }
@@ -563,7 +563,7 @@ bool LoopifySequences::is_palindrome_fuel(uint64_t fuel,
         } else {
           uint64_t _x = n0 - 1;
           if (first_elem(_loop_s) == last_elem(_loop_s)) {
-            _loop_s = init_list(tail_list(_loop_s));
+            _loop_s = init_list(tail_list(std::move(_loop_s)));
             _loop_fuel = f;
           } else {
             return false;

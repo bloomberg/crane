@@ -82,13 +82,16 @@ let derived_passed l =
    it a value stored in what the caller passed for it
    ({!Control_ir.parts_passed}).  A parameter standing for none of the
    loop's is neither.  A loop built tail modulo cons may recycle the cells
-   of an input it walks into its own ({!Reuse_cursor}). *)
+   of an input it walks into its own ({!Reuse_cursor}).  A tail loop moves
+   a parameter into its own next value at a Continue where the plan says
+   so ({!Ownership_plan.continue_moves}). *)
 type planned = {
   loop : Control_ir.Term.loop;
   lowering : lowering;
   varying : bool list;
   parts : bool list;
   cursor : Reuse_cursor.t option;
+  moves : (Miniml.Occurrence.t * bool list) list;
 }
 
 (* [l] lowered as [lowering] from what takes C++ parameters standing, in
@@ -105,7 +108,11 @@ let planned_at (l : Control_ir.Term.loop) lowering positions =
         Option.bind
           (Reuse_cursor.plan ~pointer_fields:Loopify_analysis.constructor_pointer_fields ~in_place l)
           (fun c -> Reuse_cursor.positioned c positions)
-      | Tail | Frames -> None ) }
+      | Tail | Frames -> None );
+    moves =
+      ( match lowering with
+      | Tail -> List.map (fun (o, flags) -> (o, at flags)) (Ownership_plan.continue_moves l)
+      | Modulo_cons | Frames -> [] ) }
 
 (* The position among the parameters of the loop [l] of the parameter of
    the function [r] the Core binder [b] is, where it is one. *)
@@ -232,7 +239,7 @@ let machine_storage (f : dfun) params body (l : Control_ir.Term.loop) =
    where Loopify makes no loop of it -- a call passing the loop other
    arguments than it has parameters, say -- for the reason [why]
    ({!Loopify.unlowered}). *)
-let rec lower_function ~tparams (f : dfun) {loop = l; lowering; varying; parts; cursor} =
+let rec lower_function ~tparams (f : dfun) {loop = l; lowering; varying; parts; cursor; moves} =
   match (f.df_shape, lowering) with
   | Ddecl _, _ -> Error (Loopify.Left None)
   | Ddef (params, body), Modulo_cons ->
@@ -243,7 +250,7 @@ let rec lower_function ~tparams (f : dfun) {loop = l; lowering; varying; parts; 
     let jumps = ref [] in
     let jumped e = jumps := Loopify_analysis.made_of e :: !jumps in
     let exposed = Loopify_analysis.expose_tail_calls (jump continues) body in
-    match Loopify_tail.transform_tail ~jumped ~varying ~parts tparams (jump continues) params f.df_ret exposed with
+    match Loopify_tail.transform_tail ~jumped ~moves ~varying ~parts tparams (jump continues) params f.df_ret exposed with
     | exception Loopify_analysis.Not_linearisable why -> Error (Loopify.Declined why)
     | loop -> (
       if Probe.checking () then check_jumps ~loop:"tail loop" f ~continues ~jumped:(List.rev !jumps);
@@ -363,7 +370,7 @@ let local_loop ~owner ~function_ ~lifted ~member:((occurrence, _) as member) ~tp
     let params = List.filter_map (fun (ty, x) -> Option.map (fun x -> (x, ty)) x) (to_reversed lam.cl_params) in
     match Loopify.member_plan ~frames:(lowering = Frames) member params with
     | None -> unlowered "its lambda takes other parameters than its loop"
-    | Some {member_varying = varying; member_parts = parts} ->
+    | Some {member_varying = varying; member_parts = parts; member_moves = moves} ->
       let continues = Control_ir.continues l.body in
       let jumps = ref [] in
       let jumped e = jumps := Loopify_analysis.made_of e :: !jumps in
@@ -372,7 +379,7 @@ let local_loop ~owner ~function_ ~lifted ~member:((occurrence, _) as member) ~tp
       let body () =
         match lowering with
         | Tail | Modulo_cons ->
-          Some (Loopify_tail.transform_tail ~jumped ~varying ~parts tparams (jump continues) params ret_ty exposed)
+          Some (Loopify_tail.transform_tail ~jumped ~moves ~varying ~parts tparams (jump continues) params ret_ty exposed)
         | Frames ->
           Loopify.local_frame_machine ~member ~name ~binders:(lambda_binders lam) ~varying ~parts ~tparams (jump continues) params ret_ty exposed
       in
@@ -474,9 +481,9 @@ let lower_method ~tparams ~self_ty (m : method_field) =
     let transform =
       match (lowering, planned) with
       | _ when Option.has_some value_receiver -> None
-      | _, Some {varying; parts; cursor; _} ->
+      | _, Some {varying; parts; cursor; moves; _} ->
         let parts = pointed parts in
-        Some (fun () -> Loopify.transform_method_own ?cursor ~varying ~parts ~park ~tparams ~self_ty m)
+        Some (fun () -> Loopify.transform_method_own ?cursor ~moves ~varying ~parts ~park ~tparams ~self_ty m)
       | _, None -> None
     in
     match (transform, value_receiver) with
