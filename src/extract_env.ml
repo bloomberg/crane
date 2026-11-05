@@ -1683,6 +1683,22 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
     Pipeline_trace.event "emit" (Callable_abi.report_foreign ())
   end;
   let opened = List.filter !opened_filter (opened_libraries ()) in
+  (* The header includes every file either of the unit's files names, so a
+     unit including a function's header also includes the header of each
+     value the function's body reads -- and initialises that value first
+     ([[gnu::used]] inline, see the printer's Dasgn): there is no unit that
+     includes a function but not a value it reads, unless the topological
+     filter dropped a named file. *)
+  if Probe.checking () then
+    List.iter
+      (fun mp ->
+        if not (!opened_filter mp) then
+          Probe.violation "included files"
+            Pp.(
+              str "the unit names" ++ spc () ++ ModPath.print mp
+              ++ spc ()
+              ++ str "but does not include it: a later unit in the extraction order" ))
+      (opened_libraries ());
   let ns_open =
     match namespace with
     | Some ns -> str ("namespace " ^ ns ^ " {") ++ fnl2 ()
