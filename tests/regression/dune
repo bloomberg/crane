@@ -13990,3 +13990,14 @@
   (alias runtest)
   (deps lent_alias_by_reference.t.exe)
   (action (run ./lent_alias_by_reference.t.exe))))
+
+(subdir loopify_continue_moves_local
+ (rule
+  (targets loopify_continue_moves_local.t.exe)
+  (deps LoopifyContinueMovesLocal.vo loopify_continue_moves_local.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_continue_moves_local.t.exe loopify_continue_moves_local.cpp loopify_continue_moves_local.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_continue_moves_local.t.exe)
+  (action (run ./loopify_continue_moves_local.t.exe))))

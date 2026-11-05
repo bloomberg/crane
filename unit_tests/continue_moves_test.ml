@@ -1,11 +1,13 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(* Which parameters a tail loop's turn moves into their own next value
+(* What a tail loop's turn moves into its parameters' next values
    (Ownership_plan.continue_moves): an accumulator rebuilt around itself
-   is; one read again by another argument, or beside a part of itself,
-   passed on as it is, or read by a closure, is not; a machine moves
-   nothing so. *)
+   is moved; one read again by another argument, or beside a part of
+   itself, passed on as it is, or read by a closure, is not.  A local of
+   the turn passed whole is moved, even where another argument names it
+   (the lowering moves it at its last read), but not where another reads a
+   part of it.  A machine moves nothing so. *)
 
 open Crane_plugin
 open Names
@@ -45,6 +47,9 @@ let loop turn : Term.loop =
                 body = turn } ] } }
 
 let moves turn = Ownership_plan.continue_moves (loop turn)
+let k = Ownership_plan.Continue_move.Keep
+let p = Ownership_plan.Continue_move.Move_parameter
+let a = Ownership_plan.Continue_move.Move_argument
 let flags o turn = List.find_map (fun (o', f) -> if Occurrence.equal o o' then Some f else None) (moves turn)
 
 let () =
@@ -52,15 +57,15 @@ let () =
   let consed a = MLcons (lst, cons, [x; a]) in
   let o = Occurrence.fresh () in
   check "rev: the accumulator rebuilt around itself is moved, the list walked on is not"
-    (flags o (continue_ o [xs; consed acc]) = Some [false; true]);
+    (flags o (continue_ o [xs; consed acc]) = Some [k; p]);
   let o = Occurrence.fresh () in
   check "an accumulator another argument reads too is not moved"
-    (flags o (continue_ o [app "drop" [xs; fresh_rel 3]; consed acc]) = Some [false; false]);
+    (flags o (continue_ o [app "drop" [xs; fresh_rel 3]; consed acc]) = Some [k; k]);
   let o = Occurrence.fresh () in
-  check "an accumulator passed on as it is is not moved" (flags o (continue_ o [xs; acc]) = Some [false; false]);
+  check "an accumulator passed on as it is is not moved" (flags o (continue_ o [xs; acc]) = Some [k; k]);
   let o = Occurrence.fresh () in
   check "an accumulator a closure reads is not moved"
-    (flags o (continue_ o [xs; app "g" [MLlam (id "y", nat, fresh_rel 4)]]) = Some [false; false]);
+    (flags o (continue_ o [xs; app "g" [MLlam (id "y", nat, fresh_rel 4)]]) = Some [k; k]);
   (* match acc with cons y ys => f xs (cons y acc): [y] is a part of
      [acc], read beside it. *)
   let o = Occurrence.fresh () in
@@ -74,7 +79,28 @@ let () =
               pattern = Pcons (cons, [Prel 2; Prel 1]);
               body = continue_ o [fresh_rel 3; MLcons (lst, cons, [fresh_rel 2; fresh_rel 5])] } ] }
   in
-  check "an accumulator read beside a part of itself is not moved" (flags o on_acc = Some [false; false]);
+  check "an accumulator read beside a part of itself is not moved" (flags o on_acc = Some [k; k]);
+  (* let next := cons x acc in f xs next: [next] is [MLrel 1], [xs] [MLrel 2]. *)
+  let let_next body = Term.Let {binder = id "next"; binder_type = lst; value = consed acc; body} in
+  let o = Occurrence.fresh () in
+  check "a local passed whole, read nowhere else, is moved"
+    (flags o (let_next (continue_ o [fresh_rel 2; fresh_rel 1])) = Some [k; a]);
+  let o = Occurrence.fresh () in
+  check "a local another argument names is moved at the last read"
+    (flags o (let_next (continue_ o [app "drop" [fresh_rel 2; fresh_rel 1]; fresh_rel 1])) = Some [k; a]);
+  (* match next with cons y ys => f ys next: [ys] is a part of [next]. *)
+  let o = Occurrence.fresh () in
+  let on_next =
+    Term.Match
+      { scrutinee_type = lst;
+        scrutinee = fresh_rel 1;
+        branches =
+          [ { binders = [(id "y", nat); (id "ys", lst)];
+              result_type = lst;
+              pattern = Pcons (cons, [Prel 2; Prel 1]);
+              body = continue_ o [fresh_rel 1; fresh_rel 3] } ] }
+  in
+  check "a local another argument reads a part of is not moved" (flags o (let_next on_next) = Some [k; k]);
   (* A machine's turn resumes after a call: nothing is planned. *)
   let o = Occurrence.fresh () in
   let resumed =

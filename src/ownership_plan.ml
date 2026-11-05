@@ -743,23 +743,27 @@ let evaluated_first p at =
    run turns of their own: none is planned. *)
 exception Unplanned_turn
 
-let rec turn_term : Control_ir.Term.t -> ml_ast = function
-  | Loop inner -> turn_term inner.body
-  | Let {binder; binder_type; value; body} ->
-    MLletin (binder, binder_type, value, turn_term body, Occurrence.fresh ())
-  | Match {scrutinee_type; scrutinee; branches} ->
-    MLcase
-      ( scrutinee_type,
-        scrutinee,
-        Array.of_list
-          (List.map
-             (fun (b : Control_ir.Term.branch) -> (b.binders, b.result_type, b.pattern, turn_term b.body))
-             branches ) )
-  | Return t -> t
-  | Continue c -> MLapp (MLdummy Kprop, c.arguments)
-  | Continue_into {cells; next} ->
-    MLtuple (List.concat_map (fun (c : Control_ir.Term.cell) -> c.arguments) cells @ [MLapp (MLdummy Kprop, next.arguments)])
-  | Resume _ | Entry _ -> raise Unplanned_turn
+let turn_term ?(arguments = fun (c : Control_ir.Term.continue_) -> c.arguments) t =
+  let rec go : Control_ir.Term.t -> ml_ast = function
+    | Loop inner -> go inner.body
+    | Let {binder; binder_type; value; body} -> MLletin (binder, binder_type, value, go body, Occurrence.fresh ())
+    | Match {scrutinee_type; scrutinee; branches} ->
+      MLcase
+        ( scrutinee_type,
+          scrutinee,
+          Array.of_list
+            (List.map (fun (b : Control_ir.Term.branch) -> (b.binders, b.result_type, b.pattern, go b.body)) branches) )
+    | Return t -> t
+    | Continue c -> MLapp (MLdummy Kprop, arguments c)
+    | Continue_into {cells; next} ->
+      MLtuple (List.concat_map (fun (c : Control_ir.Term.cell) -> c.arguments) cells @ [MLapp (MLdummy Kprop, arguments next)])
+    | Resume _ | Entry _ -> raise Unplanned_turn
+  in
+  go t
+
+module Continue_move = struct
+  type t = Keep | Move_parameter | Move_argument
+end
 
 let continue_moves (l : Control_ir.Term.loop) =
   match turn_term l.body with
@@ -770,15 +774,37 @@ let continue_moves (l : Control_ir.Term.loop) =
     (* The reads in [t], standing where the Continue does, of what the index
        [db] names there. *)
     let reads_of db t = List.filter_map (fun (l, o) -> if l = -db then Some o else None) (closure_reads 0 t) in
+    (* Whether the read [o] of the local [k] the argument at [i] of the
+       Continue [c] is would be a move were [c]'s other arguments not to
+       name [k]: the turn planned again with those reads erased.  A read of
+       a part of [k] there is left, and keeps [o] from being the last. *)
+    let last_but_by_name (c : Control_ir.Term.continue_) i k o =
+      use ~whole:true p o = Some Move
+      ||
+      let rec erase n t = match t with MLrel (j, _) when j = n -> MLdummy Kprop | t -> Mlutil.ast_map_lift erase n t in
+      let arguments (c' : Control_ir.Term.continue_) =
+        if Occurrence.equal c'.occurrence c.occurrence then List.mapi (fun j a -> if j = i then a else erase k a) c'.arguments
+        else c'.arguments
+      in
+      match turn_term ~arguments l.body with
+      | exception Unplanned_turn -> false
+      | body -> use ~whole:true (region ~n_outer:0 body) o = Some Move
+    in
     let moves depth (c : Control_ir.Term.continue_) =
       List.mapi
-        (fun i ((_, ty), argument) ->
-          match reads_of (n - i + depth) argument with
-          | [o] ->
-            worth_moving ty
-            && (match strip argument with MLrel _ -> false | _ -> true)
-            && fate ~whole:true p o = Last_use
-          | _ -> false )
+        (fun i ((_, ty), argument) : Continue_move.t ->
+          match (reads_of (n - i + depth) argument, strip argument) with
+          | [o], argument
+            when worth_moving ty
+                 && (match argument with MLrel _ -> false | _ -> true)
+                 && fate ~whole:true p o = Last_use ->
+            Move_parameter
+          (* A local of the turn -- [depth] binders stand between the
+             Continue and the loop's parameters -- owned, read whole, and
+             read after by nothing but this Continue's other arguments,
+             naming it. *)
+          | [], MLrel (k, o) when k <= depth && worth_moving ty && last_but_by_name c i k o -> Move_argument
+          | _ -> Keep )
         (List.combine l.parameters c.arguments)
     in
     let rec turns depth acc : Control_ir.Term.t -> _ = function

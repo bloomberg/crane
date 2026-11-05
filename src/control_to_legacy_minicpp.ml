@@ -91,7 +91,7 @@ type planned = {
   varying : bool list;
   parts : bool list;
   cursor : Reuse_cursor.t option;
-  moves : (Miniml.Occurrence.t * bool list) list;
+  moves : (Miniml.Occurrence.t * Ownership_plan.Continue_move.t list) list;
 }
 
 (* [l] lowered as [lowering] from what takes C++ parameters standing, in
@@ -111,7 +111,10 @@ let planned_at (l : Control_ir.Term.loop) lowering positions =
       | Tail | Frames -> None );
     moves =
       ( match lowering with
-      | Tail -> List.map (fun (o, flags) -> (o, at flags)) (Ownership_plan.continue_moves l)
+      | Tail ->
+        List.map
+          (fun (o, moves) -> (o, List.map (function Some i -> List.nth moves i | None -> Ownership_plan.Continue_move.Keep) positions))
+          (Ownership_plan.continue_moves l)
       | Modulo_cons | Frames -> [] ) }
 
 (* The position among the parameters of the loop [l] of the parameter of

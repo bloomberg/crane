@@ -201,14 +201,27 @@ val moved_reads : t -> Miniml.ml_ast list -> int list
     copy is one. *)
 val fate : ?whole:bool -> t -> Miniml.Occurrence.t -> fate
 
+(** What a [Continue] moves into the next value of one of its loop's
+    parameters: nothing ([Keep]); the parameter itself, read once by the
+    argument passed it ([Move_parameter]); or the argument whole, a local of
+    the turn, at the last read of it the lowering makes ([Move_argument]). *)
+module Continue_move : sig
+  type t = Keep | Move_parameter | Move_argument
+end
+
 (** For each [Continue] of the loop [l] itself, by the occurrence of the
     call it is made of, and for each of [l]'s parameters, outermost first,
-    whether the turn moves the parameter into its own next value: the
-    argument passed it reads it once, as the turn's last read of it -- no
-    other argument, nor a closure reading at its uses, reads it or a part of
-    it -- and is not that read alone, and the parameter's type is worth
+    what the turn moves into the parameter's next value.  [Move_parameter]:
+    the argument passed it reads it once, as the turn's last read of it --
+    no other argument, nor a closure reading at its uses, reads it or a part
+    of it -- and is not that read alone, and the parameter's type is worth
     moving.  A loop keeps each parameter it varies in a local of its own,
     which the next turn's value replaces: the read is the local's last.
-    Whether a parameter is so kept, rather than by pointer, is the
-    lowering's to say.  A machine's loop moves nothing so. *)
-val continue_moves : Control_ir.Term.loop -> (Miniml.Occurrence.t * bool list) list
+    [Move_argument]: the argument is a variable the turn binds and owns,
+    read there whole, at a type worth moving, and after it by nothing but
+    the Continue's other arguments naming it -- not a part of it, which may
+    be bound into it: the lowering, which orders the arguments' evaluation,
+    moves it at the last of those reads it makes.  Whether a
+    parameter is kept in a local, rather than by pointer, is the lowering's
+    to say.  A machine's loop moves nothing so. *)
+val continue_moves : Control_ir.Term.loop -> (Miniml.Occurrence.t * Continue_move.t list) list

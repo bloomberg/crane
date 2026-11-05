@@ -303,11 +303,14 @@ let assign_result_and_stop expr =
     ([const T &a1_value = *a1]), each with the pointer it dereferences: one
     stands for that dereference.
 
-    [owned] are the locals of the turn the jump ends held by value, worth
-    moving and with no reference bound into them: one assigned whole to a
-    shadow kept by value, or to a temporary, where the updates read it for
-    the last time dies there, and is moved. *)
-let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(owned = []) shadow_params args =
+    What an argument moves of a parameter, the plan says, and [args] spell
+    already ({!moving_jumps}).  [last_reads] are the locals of the turn the
+    plan lets the jump move into a parameter's next value at the last of
+    the updates reading them by name
+    ({!Ownership_plan.Continue_move.Move_argument}): which that is, the
+    order the updates are made in says.  One assigned whole to a shadow
+    kept by value, or to a temporary, by that update is moved. *)
+let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow_params args =
   let shadow_ids = List.map (fun (id, _) -> id) shadow_params in
   let is_self_assign shadow_id arg =
     match arg with
@@ -357,15 +360,13 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(owned = []) shadow_para
       Cpp_erasure.converting_ctor vty [core]
     | _ -> arg
   in
-  (* An owned local assigned whole to a shadow kept by value at its last
-     read among the updates dies there, and is moved. *)
   let rec pointer = function Tptr _ -> true | Tconst t | Tref (_, t) -> pointer t | _ -> false in
   let by_value id = List.exists (fun (s, ty) -> Id.equal s id && not (pointer ty)) shadow_params in
   let moved_at_last_read updates =
     fst
       (List.fold_right
          (fun s (after, read) ->
-           let last v = List.exists (Id.equal v) owned && not (List.exists (Id.equal v) read) in
+           let last v = List.exists (Id.equal v) last_reads && not (List.exists (Id.equal v) read) in
            let s =
              match s with
              | Sasgn (x, Existing, CPPvar v) when by_value x && last v -> Sasgn (x, Existing, CPPmove (CPPvar v))
@@ -515,6 +516,10 @@ type loop_rewrite_config = {
 
   rc_jumped : cpp_expr -> unit;
   (** Told each recursive call rewritten into a jump. *)
+
+  rc_last_reads : cpp_expr -> cpp_expr list -> Id.t list;
+  (** The locals a recursive call passing the arguments given may move at
+      their last read among its shadow updates ({!make_shadow_updates}). *)
 }
 
 (** Top-level rewrite configuration.  Combines a {!loop_rewrite_config}
@@ -554,26 +559,27 @@ type top_rewrite_config = {
     - Handles [Sswitch] (only present at the top level of visitor bodies).
     - Uses {!generic_rewrite_stmts} for list-level recursion, which
       optionally detects the void tail-call pattern. *)
-let rec generic_rewrite_stmt ?(aliases = []) ?(derefs = []) ?(owned = []) trc = function
+let rec generic_rewrite_stmt ?(aliases = []) ?(derefs = []) trc = function
   | Sreturn (Some e) ->
     ( match trc.trc_inner.rc_check e with
     | Some cs ->
       trc.trc_inner.rc_jumped e;
       let updates args =
-        make_shadow_updates ~aliases ~derefs ~owned trc.trc_inner.rc_shadow_params
+        make_shadow_updates ~aliases ~derefs ~last_reads:(trc.trc_inner.rc_last_reads e cs.cs_args)
+          trc.trc_inner.rc_shadow_params
           (filter_by_mask trc.trc_inner.rc_varying args)
       in
       Sblock (trc.trc_jump ~derefs ~updates e cs.cs_args)
     | None -> trc.trc_on_other ~derefs e )
   | Sif (cond, then_br, else_br) ->
-    let rw = generic_rewrite_stmts ~aliases ~derefs ~owned trc in
+    let rw = generic_rewrite_stmts ~aliases ~derefs trc in
     Sif (cond, rw then_br, rw else_br)
   | Sswitch (scrut, r, branches, default) ->
-    let rw = generic_rewrite_stmts ~aliases ~derefs ~owned trc in
+    let rw = generic_rewrite_stmts ~aliases ~derefs trc in
     Sswitch
       (scrut, r, List.map (fun (id, body) -> (id, rw body)) branches, default)
   | Scustom_case (ty, scrut, tyargs, branches, err) ->
-    let rw = generic_rewrite_stmts ~aliases ~derefs ~owned trc in
+    let rw = generic_rewrite_stmts ~aliases ~derefs trc in
     Scustom_case (ty, scrut, tyargs,
       List.map (fun (ps, ret_ty, body) -> (ps, ret_ty, rw body))
         branches, err)
@@ -602,18 +608,16 @@ let rec generic_rewrite_stmt ?(aliases = []) ?(derefs = []) ?(owned = []) trc = 
         let bound = match br.smb_var with Some v -> v :: bound | None -> bound in
         List.map (fun b -> (b, s)) bound @ aliases
     in
-    (* A branch binds into its scrutinee, which it must not move. *)
-    let branch_owned = List.filter (fun x -> not (List.exists (Id.equal x) (free_vars_expr scrut.sc_expr))) owned in
     Smatch (
       scrut,
       List.map
         (fun br ->
           let br' = trc.trc_rewrite_branch br in
-          { br' with smb_body = generic_rewrite_stmts ~aliases:(inside br') ~derefs ~owned:branch_owned trc br'.smb_body })
+          { br' with smb_body = generic_rewrite_stmts ~aliases:(inside br') ~derefs trc br'.smb_body })
         branches,
-      Option.map (generic_rewrite_stmts ~aliases ~derefs ~owned trc) default)
+      Option.map (generic_rewrite_stmts ~aliases ~derefs trc) default)
   | Sblock stmts ->
-    Sblock (generic_rewrite_stmts ~aliases ~derefs ~owned trc stmts)
+    Sblock (generic_rewrite_stmts ~aliases ~derefs trc stmts)
   | s -> s
 
 (** List-level top-level rewriter.
@@ -625,35 +629,19 @@ let rec generic_rewrite_stmt ?(aliases = []) ?(derefs = []) ?(owned = []) trc = 
     Both forms are rewritten as [Sreturn (Some call)] so the statement-level
     rewriter can handle them as ordinary tail calls.  This pattern is produced
     by [cofix_wrap] and [gen_stmts] for void-returning recursive functions. *)
-and generic_rewrite_stmts ?(aliases = []) ?(derefs = []) ?(owned = []) trc = function
+and generic_rewrite_stmts ?(aliases = []) ?(derefs = []) trc = function
   | Sexpr e :: Sreturn _ :: rest
     when trc.trc_detect_void_tail && trc.trc_inner.rc_check e <> None ->
-    generic_rewrite_stmt ~aliases ~derefs ~owned trc (Sreturn (Some e))
-    :: generic_rewrite_stmts ~aliases ~derefs ~owned trc rest
+    generic_rewrite_stmt ~aliases ~derefs trc (Sreturn (Some e))
+    :: generic_rewrite_stmts ~aliases ~derefs trc rest
   | s :: rest ->
-    let s' = generic_rewrite_stmt ~aliases ~derefs ~owned trc s in
+    let s' = generic_rewrite_stmt ~aliases ~derefs trc s in
     let derefs =
       match s with
       | Sasgn (id, Declare (ty, _), CPPderef pointer) when is_reference_type ty -> (id, pointer) :: derefs
       | _ -> derefs
     in
-    (* A local declared by value worth moving is owned; a reference is not,
-       nor what one is bound into, nor what a closure made here captures,
-       which a later update calling it reads. *)
-    let disown ids = List.filter (fun x -> not (List.exists (Id.equal x) ids)) owned in
-    let captured e = if expr_exists (function CPPlambda _ -> true | _ -> false) e then free_vars_expr e else [] in
-    let owned =
-      match s with
-      | Sasgn (id, Declare (ty, _), e) when is_borrowed ty -> disown (id :: free_vars_expr e)
-      | Sasgn (id, Declare (ty, _), e) ->
-        let owned = disown (id :: captured e) in
-        if movable ty then id :: owned else owned
-      | Sasgn (_, _, e) | Sexpr e -> disown (captured e)
-      | Sdecl (id, ty, _) -> if movable ty then id :: disown [id] else disown [id]
-      | Sbind (ids, e) -> disown (ids @ free_vars_expr e)
-      | _ -> owned
-    in
-    s' :: generic_rewrite_stmts ~aliases ~derefs ~owned trc rest
+    s' :: generic_rewrite_stmts ~aliases ~derefs trc rest
   | [] -> []
 
 (** Wrap a statement list as a single statement. *)
@@ -668,12 +656,13 @@ let wrap_as_block = function
     tail calls update shadow variables with no suffix (control falls through
     to the [while (true)] test).  Void tail-call detection is enabled.
     [jumped] is told each call rewritten into a jump. *)
-let rewrite_visit_stmts ~jumped check varying shadow_params =
+let rewrite_visit_stmts ?(last_reads = fun _ _ -> []) ~jumped check varying shadow_params =
   let inner_rc =
     { rc_check = check;
       rc_varying = varying;
       rc_shadow_params = shadow_params;
-      rc_jumped = jumped }
+      rc_jumped = jumped;
+      rc_last_reads = last_reads }
   in
   generic_rewrite_stmts
     { trc_inner = inner_rc;
@@ -882,21 +871,40 @@ let moving_jumps ~moves ~subs ~shadow_params params (check : call_checker) : cal
           in
           let args =
             List.mapi
-              (fun k ((flag, (id, _)), arg) ->
-                match List.assoc_opt id subs with
-                | Some shadow when flag && by_value shadow ->
+              (fun k ((move, (id, _)), arg) ->
+                match (List.assoc_opt id subs, (move : Ownership_plan.Continue_move.t)) with
+                | Some shadow, Move_parameter when by_value shadow ->
                   if spelled_elsewhere k shadow then begin
                     Probe.violation "ownership plan"
                       Pp.(str "a jump the plan moves " ++ Id.print shadow ++ str " into its next value at reads it in another argument");
                     arg
                   end
                   else move_read shadow arg
-                | Some _ | None -> arg )
+                | Some _, _ | None, _ -> arg )
               (List.combine (List.combine flags params) site.cs_args)
           in
           Some {site with cs_args = args}
         | Some _ | None -> Some site )
       | None -> None
+
+(** The locals a jump made of a recursive call [e] passing [args] may move
+    at their last read among its updates: those passed whole where the plan
+    says [Move_argument] ({!Ownership_plan.continue_moves}), [moves] giving,
+    by the occurrence of the call, what it moves into each parameter. *)
+let planned_last_reads ~moves e args =
+  match
+    Option.bind (made_of e) (fun o ->
+        List.find_map (fun (o', flags) -> if Miniml.Occurrence.equal o o' then Some flags else None) moves )
+  with
+  | Some flags when List.compare_lengths flags args = 0 ->
+    List.concat
+      (List.map2
+         (fun (move : Ownership_plan.Continue_move.t) arg ->
+           match (move, arg) with
+           | Move_argument, (CPPvar x | CPPmove (CPPvar x)) -> [x]
+           | _ -> [] )
+         flags args )
+  | Some _ | None -> []
 
 let build_shadow_setup ~varying ~parts tparams params =
   let pointer_safe = pointer_safe_flags ~parts params in
@@ -1053,7 +1061,7 @@ let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~varying
      pattern [Sexpr call; Sreturn None] → [Sreturn (Some call)]) *)
   let check = moving_jumps ~moves ~subs ~shadow_params params check in
   let body'' =
-    rewrite_visit_stmts ~jumped check varying shadow_params body'
+    rewrite_visit_stmts ~last_reads:(planned_last_reads ~moves) ~jumped check varying shadow_params body'
   in
   let body'' = strip_unnecessary_blocks body'' in
   (* Assemble the loop body.
