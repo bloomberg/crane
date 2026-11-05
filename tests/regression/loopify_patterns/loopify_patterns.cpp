@@ -764,7 +764,7 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::process_twice_fuel(
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      const LoopifyPatterns::list<uint64_t> &l = _f.l;
+      LoopifyPatterns::list<uint64_t> l = std::move(_f.l);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
         _result = std::move(l);
