@@ -16,9 +16,10 @@
 // sharing a count between them.
 //
 // Within one translation unit the policy is whichever the first runtime
-// header saw.  A unit that spawns threads checks [crane::rc_is_atomic] after
-// its includes, so a non-atomic header included ahead of it is a compile
-// error rather than a race.
+// header saw.  A unit that runs on several threads (it starts them, or uses
+// transactional memory) checks [crane::rc_is_atomic] after its includes, so a
+// non-atomic header included ahead of it is a compile error rather than a
+// race.
 #pragma once
 #include <cstddef>
 #include <new>

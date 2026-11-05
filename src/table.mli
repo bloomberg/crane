@@ -897,7 +897,7 @@ val fast_variant : unit -> bool
     [crane::rc]/[crane::make_rc].  This is the resolved answer, not the raw
     [Set Crane NonAtomicRc] request: the request is a promise that the
     extracted program is single-threaded, and it is withheld from a unit that
-    spawns threads (see {!check_non_atomic_rc_request}).  Only meaningful once
+    runs on several threads (see {!unit_is_concurrent}).  Only meaningful once
     the customs the unit's program names are installed. *)
 val non_atomic_rc : unit -> bool
 
@@ -912,12 +912,15 @@ val non_atomic_rc_requested : unit -> bool
 
 (** Whether the runtime's block heap is one global ([Set Crane
     SingleThreaded]): the request, a promise that Crane values are used from
-    one thread at a time, withheld from a unit that spawns threads like
-    {!non_atomic_rc}. *)
+    one thread at a time, withheld from a unit that runs on several threads
+    like {!non_atomic_rc}. *)
 val single_threaded : unit -> bool
 
-(** Whether this unit's program names a custom extraction spelled in terms
-    of [<thread>], i.e. whether the extracted code can spawn a thread. *)
+(** Whether this unit runs on several threads: its program names a custom
+    extraction from a header that starts threads ([<thread>], [<future>],
+    [crane_thread.h], their BDE spellings) or from Crane's transactional
+    memory ([stm_adapter.h]), whose values are shared by threads the caller
+    starts. *)
 val unit_is_concurrent : unit -> bool
 
 (** Warn, once per unit, if [Set Crane NonAtomicRc] was requested but withheld

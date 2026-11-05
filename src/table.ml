@@ -2420,8 +2420,8 @@ let reset_extraction_reuse () = Lib.add_leaf (reset_reuse ())
    Global string swap via [Cpp_state.init_std_names]; opt-in, default off.
 
    This is what the user *asked for*; what the unit actually gets is
-   [non_atomic_rc] below, which withholds the swap from a unit that spawns
-   threads.  Outside this file the request is read only by analyses of the
+   [non_atomic_rc] below, which withholds the swap from a unit that runs on
+   several threads.  Outside this file the request is read only by analyses of the
    whole program, which no unit's concurrency may change (see table.mli),
    such as [Escape.is_reuse_scrutinee]'s program-wide ownership summary. *)
 let {Goptions.get = non_atomic_rc_requested} =
@@ -2431,7 +2431,7 @@ let {Goptions.get = non_atomic_rc_requested} =
    at a time, so the runtime's block heap is one global rather than one per
    thread -- on Darwin every thread-local access is a call, and every
    allocation and free made one.  A promise, like NonAtomicRc, and withheld
-   from a unit that spawns threads. *)
+   from a unit that runs on several threads. *)
 let {Goptions.get = single_threaded_requested} =
   declare_bool_option_and_ref ~key:["Crane"; "SingleThreaded"] ~value:false ()
 
@@ -3524,30 +3524,37 @@ let imports_of refs =
    imports. *)
 let get_custom_imports () = StringSet.elements (imports_of (written_customs ()))
 
-(* The headers that declare a way to start a thread -- [std::thread] and
-   [std::async], and Crane's [crane::thread] over the former: a unit whose
-   program names a custom pulling one in can run its code on several threads.
+(* The headers whose mappings put the program's values on several threads:
+   [std::thread] and [std::async] and Crane's [crane::thread] over the
+   former, BDE's [bsl::thread] and [bsl::async], and Crane's transactional
+   memory ([stm_adapter.h], both flavours), which exists to be shared by
+   threads the program's caller starts -- a hash map in TVars is called from
+   many [std::thread]s of a driver that the extracted code never sees.  A
+   unit whose program names a custom pulling one in runs on several threads.
    Decided from what the program names, before anything is generated, so
    every reader -- the generated code and the header's preamble -- sees one
    answer. *)
-let thread_starting_headers = ["thread"; "future"; "crane_thread.h"]
+let concurrency_headers =
+  ["thread"; "future"; "crane_thread.h"; "bsl_thread.h"; "bsl_future.h"; "stm_adapter.h"]
 
-let spawns_threads refs = StringSet.exists (fun h -> List.mem h thread_starting_headers) (imports_of refs)
+let runs_on_threads refs =
+  StringSet.exists (fun h -> List.mem h concurrency_headers) (imports_of refs)
 
-let unit_is_concurrent () = spawns_threads !named_refs
+let unit_is_concurrent () = runs_on_threads !named_refs
 
 let check_concurrency_decided () =
-  if Probe.checking () && spawns_threads (written_customs ()) && not (unit_is_concurrent ()) then
+  if Probe.checking () && runs_on_threads (written_customs ()) && not (unit_is_concurrent ()) then
     Probe.violation "written customs"
-      (str "the files write a custom that starts a thread, but the customs the program names were found to "
-       ++ str "start none, which is what a NonAtomicRc or SingleThreaded request is withheld by")
+      (str "the files write a custom that runs on several threads, but the customs the program names were "
+       ++ str "found to need none, which is what a NonAtomicRc or SingleThreaded request is withheld by")
 
 (* [Crane NonAtomicRc] is a promise about the extracted program: that it is
    single-threaded, so a refcount needs no atomics. A unit that reaches a
-   custom extraction spelled in terms of <thread> breaks that promise, and a
-   non-atomic refcount shared between threads corrupts the heap. The promise is
-   therefore not taken on trust: it holds only where the customs this unit's
-   program names say no thread is spawned. *)
+   custom extraction spelled in terms of threads or of transactional memory
+   breaks that promise, and a non-atomic refcount shared between threads
+   corrupts the heap. The promise is therefore not taken on trust: it holds
+   only where the customs this unit's program names say it runs on one
+   thread ({!concurrency_headers}). *)
 let non_atomic_rc () = non_atomic_rc_requested () && not (unit_is_concurrent ())
 
 let single_threaded () = single_threaded_requested () && not (unit_is_concurrent ())
@@ -3628,17 +3635,19 @@ let warn_non_atomic_rc_concurrent =
   CWarnings.create ~name:"crane-non-atomic-rc-concurrent"
     ~category:CWarnings.CoreCategories.extraction (fun () ->
       Pp.str
-        "Set Crane NonAtomicRc is ignored in this unit: it spawns threads, and \
-         a non-atomic reference count shared between threads corrupts the \
+        "Set Crane NonAtomicRc is ignored in this unit: it runs on several \
+         threads (it starts them, or uses transactional memory), and a \
+         non-atomic reference count shared between threads corrupts the \
          heap. Falling back to std::shared_ptr." )
 
 let warn_single_threaded_concurrent =
   CWarnings.create ~name:"crane-single-threaded-concurrent"
     ~category:CWarnings.CoreCategories.extraction (fun () ->
       Pp.str
-        "Set Crane SingleThreaded is ignored in this unit: it spawns threads, \
-         and one block heap shared between threads corrupts it. Falling back \
-         to a heap per thread." )
+        "Set Crane SingleThreaded is ignored in this unit: it runs on several \
+         threads (it starts them, or uses transactional memory), and one \
+         block heap shared between threads corrupts it. Falling back to a \
+         heap per thread." )
 
 let check_non_atomic_rc_request () =
   if non_atomic_rc_requested () && unit_is_concurrent () then

@@ -11,8 +11,8 @@
 #include <utility>
 #include <variant>
 static_assert(crane::rc_is_atomic,
-              "this unit spawns threads, but a header included before it chose "
-              "CRANE_NON_ATOMIC_RC");
+              "this unit runs on several threads, but a header included before "
+              "it chose CRANE_NON_ATOMIC_RC");
 
 struct ReuseSummaryConcurrentUnit {
   struct lst {

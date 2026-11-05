@@ -12542,6 +12542,17 @@
   (deps stm_tvar_of_function.t.exe)
   (action (run ./stm_tvar_of_function.t.exe))))
 
+(subdir nonatomic_rc_stm_shared
+ (rule
+  (targets nonatomic_rc_stm_shared.t.exe)
+  (deps NonatomicRcStmShared.vo nonatomic_rc_stm_shared.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nonatomic_rc_stm_shared.t.exe nonatomic_rc_stm_shared.t.cpp nonatomic_rc_stm_shared.cpp)))
+ (rule
+  (alias runtest)
+  (deps nonatomic_rc_stm_shared.t.exe)
+  (action (run ./nonatomic_rc_stm_shared.t.exe))))
+
 (subdir par_future_read_twice
  (rule
   (targets par_future_read_twice.t.exe)

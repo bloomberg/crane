@@ -3,6 +3,7 @@
 
 #include "crane_fn.h"
 #include "obj.h"
+#include "shared_block.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -12,6 +13,9 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+static_assert(crane::rc_is_atomic,
+              "this unit runs on several threads, but a header included before "
+              "it chose CRANE_NON_ATOMIC_RC");
 
 template <typename A> struct List;
 

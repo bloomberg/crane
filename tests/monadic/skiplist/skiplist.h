@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SKIPLIST
 #define INCLUDED_SKIPLIST
 
+#include "shared_block.h"
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -8,6 +9,9 @@
 #include <stm_adapter.h>
 #include <utility>
 #include <variant>
+static_assert(crane::rc_is_atomic,
+              "this unit runs on several threads, but a header included before "
+              "it chose CRANE_NON_ATOMIC_RC");
 
 struct Nat {};
 

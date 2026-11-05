@@ -767,6 +767,15 @@ thread boundary are copied rather than shared. It takes precedence over the
 `bsl::shared_ptr` that [`Set Crane StdLib "BDE"`](#set-crane-stdlib) would
 otherwise select.
 
+The promise is not taken on trust. A unit whose program uses a mapping that
+puts its values on several threads keeps `std::shared_ptr`, and Crane warns
+(`crane-non-atomic-rc-concurrent`). Those mappings are the ones from the
+headers that start threads (`<thread>`, `<future>`, `crane_thread.h`,
+`bsl_thread.h`, `bsl_future.h`: `Monads.Thread`, `Monads.Par` and their BDE
+flavours) and Crane's transactional memory (`stm_adapter.h`: `Monads.STM` and
+`Monads.STMBDE`). Transactional memory is there to be shared by threads that
+the program's caller starts, even when the extracted code starts none.
+
 Under this option, a constructor's factory takes each field holding a value of
 the inductive itself as a `crane::child_slot<T>`. A slot built from a value
 boxes it into a new cell, except that all values of a constructor without

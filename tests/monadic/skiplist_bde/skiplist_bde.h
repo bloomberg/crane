@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SKIPLIST_BDE
 #define INCLUDED_SKIPLIST_BDE
 
+#include "shared_block.h"
 #include <bsl_concepts.h>
 #include <bsl_functional.h>
 #include <bsl_iostream.h>
@@ -16,6 +17,9 @@
 #include <stm_adapter.h>
 #include <utility>
 #include <variant>
+static_assert(crane::rc_is_atomic,
+              "this unit runs on several threads, but a header included before "
+              "it chose CRANE_NON_ATOMIC_RC");
 
 using namespace BloombergLP;
 template <class From, class To>
