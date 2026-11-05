@@ -479,7 +479,7 @@ let ctor_alias_tvar = Minicpp.ctor_alias_tvar
     spell.  Its body has the captured names replaced by the holder's own, so
     two declarations that differ only in what they call their parameters
     share one holder. *)
-type ctor_alias = {
+type ctor_alias = Cpp_state.ctor_alias = {
   ca_base : string;  (** What its name is made from. *)
   ca_holder : bool;
   ca_declared : Cpp_ast.declared_in;  (** Where it is declared ({!ctor_alias_declared}). *)
@@ -557,10 +557,13 @@ let ctor_alias_visibility : Cpp_ast.declared_in -> _ = function
     home's struct, a class template where the home's struct is one; in the
     implementation, beside the definitions of its home's members, which are
     written out of line and qualify what they name by the struct they are
-    members of. *)
+    members of.  The templates its body spells are collected where those
+    spelled at [ctx] are. *)
 let ctor_alias_render_ctx ctx (declared : Cpp_ast.declared_in) =
   let start =
-    {(file_start ctx.rc_file) with rc_visibility = Some (ctor_alias_visibility declared)}
+    { (file_start ctx.rc_file) with
+      rc_visibility = Some (ctor_alias_visibility declared);
+      rc_aliases = ctx.rc_aliases }
   in
   match (declared, ctx.rc_file) with
   | At_namespace_scope _, _ -> start
@@ -617,17 +620,19 @@ type ctor_alias_plan = {
     ({!Extract_env.print_one_decl}), places none. *)
 let ctor_alias_plan : ctor_alias_plan option ref = State.cell State.Unit None
 
-(** Set while the templates some declaration or type writes are collected
-    ({!ctor_aliases_found}). *)
-let collecting_ctor_aliases = ref false
-
-(** The templates spelled in the file being written, under [CRANE_CHECK_IR],
-    or in what is being collected. *)
+(** Under [CRANE_CHECK_IR], the templates the file being written spells
+    where nothing collects them: what {!check_ctor_alias_plan} compares with
+    the plan. *)
 let ctor_aliases_spelled : ctor_alias list ref = ref []
 
-let note_ctor_alias_spelled a =
-  if (!collecting_ctor_aliases || Probe.checking ()) && not (List.mem a !ctor_aliases_spelled) then
-    ctor_aliases_spelled := !ctor_aliases_spelled @ [a]
+(** [a] spelled at [ctx]: collected where the position collects
+    ({!Cpp_state.render_ctx.rc_aliases}), and otherwise, under
+    [CRANE_CHECK_IR], noted as spelled in the file. *)
+let note_ctor_alias_spelled ctx a =
+  let add spelled = if not (List.mem a !spelled) then spelled := !spelled @ [a] in
+  match ctx.rc_aliases with
+  | Some found -> add found
+  | None -> if Probe.checking () then add ctor_aliases_spelled
 
 let start_ctor_alias_census () = ctor_aliases_spelled := []
 
@@ -1310,7 +1315,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
     let t = tyctor_constructor t in
     match ctor_alias_at ctx vl t with
     | Some (alias, args) ->
-      note_ctor_alias_spelled alias;
+      note_ctor_alias_spelled ctx alias;
       let name = ctor_alias_name alias in
       if alias.ca_holder then (str (name ^ "<" ^ String.concat ", " args ^ ">::template c"), true)
       else (str name, false)
@@ -3060,8 +3065,8 @@ let pp_doc_comment_for_name = Doc_comments.pp
     spells it there, inside the struct of the inductive whose members are
     written around it, if any ({!Cpp_resolution.Inductive_struct}). *)
 let ctor_aliases_found ctx visit =
-  setting collecting_ctor_aliases true @@ fun () ->
-  setting ctor_aliases_spelled [] @@ fun () ->
+  let found = ref [] in
+  let ctx = {ctx with rc_aliases = Some found} in
   visit (fun ~vl ~owner t ->
       match t with
       | Ttyctor _ ->
@@ -3071,7 +3076,7 @@ let ctor_aliases_found ctx visit =
         let spell ctx = ignore (pp_cpp_type {ctx with rc_names = None} false vl t) in
         ( match owner with Some r -> enter_from ctx (Inductive_struct r) spell | None -> spell ctx )
       | _ -> () );
-  !ctor_aliases_spelled
+  !found
 
 let ctor_aliases_written ctx (d : Cpp_erasure.settled) =
   { read_written = (module_written ctx, Written_declaration (d :> cpp_decl));

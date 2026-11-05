@@ -233,7 +233,7 @@ val forward_declarations :
     template template argument but has no template name of its own: an alias
     template, or a holder -- a struct over the enclosing declaration's
     parameters the body names, with the alias as its member [c]. *)
-type ctor_alias = private {
+type ctor_alias = Cpp_state.ctor_alias = private {
   ca_base : string;  (** What its name is made from. *)
   ca_holder : bool;
   ca_declared : Cpp_ast.declared_in;  (** Where it is declared. *)

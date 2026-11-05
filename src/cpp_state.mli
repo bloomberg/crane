@@ -124,6 +124,26 @@ val sig_preamble : 'a -> string option -> Names.ModPath.t list -> 'b -> Pp.t
 
 (** {2 Render context} *)
 
+(** Where a synthesised template is declared: inside the struct of a
+    module, as its members are written, or at namespace scope, beneath the
+    unit's files, innermost last -- the files as the module whose element
+    first spelled it sees them. *)
+type declared_in = In_struct_of of Names.ModPath.t | At_namespace_scope of Names.ModPath.t list
+
+(** A template synthesised for a type constructor with no template name of
+    its own, where it is spelled as a template template argument
+    ({!Cpp_print.ctor_alias_at}). *)
+type ctor_alias = {
+  ca_base : string;  (** What its name is made from. *)
+  ca_holder : bool;
+  ca_declared : declared_in;  (** Where it is declared ({!Cpp_print.ctor_alias_declared}). *)
+  ca_body : string;
+      (** The type it abbreviates, as written where it is declared, with the
+          sentinel where the template's own parameter goes. *)
+  ca_type : Minicpp.cpp_type;  (** That type. *)
+  ca_vars : Names.Id.t list;  (** The names of the variables it names by index. *)
+}
+
 (** Where in the output something is written or planned: a value, handed
     to whatever writes there and derived as each scope is entered
     ({!Cpp_names.next}).  No position is installed anywhere for a reader to
@@ -155,6 +175,13 @@ type render_ctx = {
           has entered that declares names ({!Cpp_names.next}); none where
           nothing planned it, where naming anything is an anomaly: no
           visibility is installed for a name to fall back on. *)
+  rc_aliases : ctor_alias list ref option;
+      (** Where the synthesised templates spelled from here are collected,
+          in the order first spelled, by what asked which ones its text
+          spells ({!Cpp_print.ctor_aliases_found}); none where nothing
+          collects them.  Every position derived from this one collects into
+          the same list, a template's body written where it is declared
+          included. *)
 }
 
 (** The context at the start of the file [file]: file scope, outside every

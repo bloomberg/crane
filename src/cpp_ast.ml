@@ -11,7 +11,7 @@ module Needs = struct
   let union a b = {templates = a.templates @ b.templates; names = a.names @ b.names; defines = a.defines @ b.defines}
 end
 
-type declared_in = In_struct_of of ModPath.t | At_namespace_scope of ModPath.t list
+type declared_in = Cpp_state.declared_in = In_struct_of of ModPath.t | At_namespace_scope of ModPath.t list
 
 type spelling = Element_of of ModPath.t | Member_of of ModPath.t | Template_in of declared_in
 

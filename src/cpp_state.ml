@@ -456,6 +456,26 @@ let sig_preamble _ comment used_modules _usf =
 
 (** {2 The pretty-printer for C++ syntax} *)
 
+(** Where a synthesised template is declared: inside the struct of a
+    module, as its members are written, or at namespace scope, beneath the
+    unit's files, innermost last -- the files as the module whose element
+    first spelled it sees them. *)
+type declared_in = In_struct_of of ModPath.t | At_namespace_scope of ModPath.t list
+
+(** A template synthesised for a type constructor with no template name of
+    its own, where it is spelled as a template template argument
+    ({!Cpp_print.ctor_alias_at}). *)
+type ctor_alias = {
+  ca_base : string;  (** What its name is made from. *)
+  ca_holder : bool;
+  ca_declared : declared_in;  (** Where it is declared ({!Cpp_print.ctor_alias_declared}). *)
+  ca_body : string;
+      (** The type it abbreviates, as written where it is declared, with the
+          sentinel where the template's own parameter goes. *)
+  ca_type : Minicpp.cpp_type;  (** That type. *)
+  ca_vars : Id.t list;  (** The names of the variables it names by index. *)
+}
+
 (** Where in the output something is written or planned: a value, handed
     to whatever writes there and derived as each scope is entered.  No
     position is installed anywhere for a reader to find. *)
@@ -486,6 +506,9 @@ type render_ctx = {
      for each scope printing has entered that declares names; none where
      nothing planned it, where nothing may be named. *)
   rc_visibility : Common.visibility option;
+  (* Where the synthesised templates spelled from here are collected, if
+     anything collects them. *)
+  rc_aliases : ctor_alias list ref option;
 }
 
 (** The context at the start of the file [file]: file scope, outside every
@@ -501,6 +524,7 @@ let file_start rc_file =
     rc_frame = [];
     rc_names = None;
     rc_visibility = None;
+    rc_aliases = None;
   }
 
 (** The modules whose module types are file-scope concepts of a functor

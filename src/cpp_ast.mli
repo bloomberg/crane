@@ -41,11 +41,10 @@ module Needs : sig
   val union : t -> t -> t
 end
 
-(** Where a synthesised template is declared: inside the struct of a
-    module, as its members are written, or at namespace scope, beneath the
-    unit's files, innermost last -- the files as the module whose element
-    first spelled it sees them. *)
-type declared_in = In_struct_of of ModPath.t | At_namespace_scope of ModPath.t list
+(** Where a synthesised template is declared ({!Cpp_state.declared_in}),
+    defined beside the position that collects the templates spelled from
+    it. *)
+type declared_in = Cpp_state.declared_in = In_struct_of of ModPath.t | At_namespace_scope of ModPath.t list
 
 (** How a declaration not yet printed is spelled, which is what printing it
     reads off where the tree puts it. *)
