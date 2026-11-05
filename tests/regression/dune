@@ -13935,3 +13935,14 @@
   (alias runtest)
   (deps reuse_summary_concurrent_unit.t.exe)
   (action (run ./reuse_summary_concurrent_unit.t.exe))))
+
+(subdir lifted_helper_frame_pointer
+ (rule
+  (targets lifted_helper_frame_pointer.t.exe)
+  (deps LiftedHelperFramePointer.vo lifted_helper_frame_pointer.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_helper_frame_pointer.t.exe lifted_helper_frame_pointer.cpp lifted_helper_frame_pointer.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_helper_frame_pointer.t.exe)
+  (action (run ./lifted_helper_frame_pointer.t.exe))))

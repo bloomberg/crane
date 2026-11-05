@@ -167,14 +167,14 @@ struct LiftedLocalFixLoopify {
   static uint64_t total_length_crane_len(const List<T1> xs,
                                          const uint64_t acc) {
     uint64_t _loop_acc = acc;
-    List<T1> _loop_xs = xs;
+    const List<T1> *_loop_xs = &xs;
     while (true) {
-      if (std::holds_alternative<typename List<T1>::Nil>(_loop_xs.v())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(_loop_xs->v())) {
         return _loop_acc;
       } else {
-        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_xs.v());
+        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_xs->v());
         _loop_acc = (_loop_acc + 1);
-        _loop_xs = List<T1>(*a1);
+        _loop_xs = crane_raw(a1);
       }
     }
   }
@@ -188,7 +188,7 @@ struct LiftedLocalFixLoopify {
                                    /// for each recursive call.
 
     struct CraneEnter {
-      List<T1> xs;
+      const List<T1> *xs;
     };
 
     /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
@@ -200,20 +200,20 @@ struct LiftedLocalFixLoopify {
     using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     uint64_t _result{};
     crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{xs});
+    _stack.emplace_back(CraneEnter{&xs});
     /// Loopified weighted_crane_sum_all: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
       CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<CraneEnter>(_frame)) {
         auto _f = std::move(std::get<CraneEnter>(_frame));
-        const List<T1> &xs = std::move(_f.xs);
+        const List<T1> &xs = *_f.xs;
         if (std::holds_alternative<typename List<T1>::Nil>(xs.v())) {
           _result = UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename List<T1>::Cons>(xs.v());
           _stack.emplace_back(CraneCont_Cons{a0});
-          _stack.emplace_back(CraneEnter{*a1});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
         auto _f = std::move(std::get<CraneCont_Cons>(_frame));

@@ -83,10 +83,16 @@ let is_moveable_param_type = function
     rebuilt each iteration ([acc := Cons(x, acc)]) is not pointer-safe and keeps
     its value shadow.
 
+    A [const T] parameter qualifies for the same reason, under any policy: it
+    lives for the whole call, and being const nothing moves out of it.  A
+    helper lifted out of a definition for a polymorphic local fixpoint
+    declares its parameters so.
+
     @return [Some pointee_type] when the parameter qualifies, [None] otherwise *)
 let borrowed_value_param_pointee = function
   | Tref (Lvalue, Tconst t) when is_value_type_ret t -> Some t
   | Tconst (Tref (Lvalue, t)) when is_value_type_ret t -> Some t
+  | Tconst t when is_value_type_ret t -> Some t
   | t when Table.reuse () && Table.non_atomic_rc () && is_value_type_ret t ->
     Some t
   | _ -> None
