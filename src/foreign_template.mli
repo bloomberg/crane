@@ -70,6 +70,14 @@ val mentions_each_arg_once : string -> bool
 (** [with_result name s] is [s] with every [%result] spelled [name]. *)
 val with_result : string -> string -> string
 
+(** The statements of a block template's tokens: split at the semicolons of
+    its own text that end a statement -- not one inside a string or character
+    literal, or inside parentheses (a [for] header's).  A hole is never split:
+    what is spliced into it is not read.  Each statement is trimmed of the
+    blanks around it and has no semicolon of its own; a blank statement is
+    dropped. *)
+val statements : custom_case list -> custom_case list list
+
 (** A mapping that names a template without saying where its arguments go
     takes them in order: ["Sum1"] at two arguments is ["Sum1<%t0, %t1>"]. *)
 val custom_template_with_args : string -> int -> string

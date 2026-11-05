@@ -47,4 +47,16 @@ let () =
   check "standard: a nested namespace" (standard "std::chrono::milliseconds(%a0)" = [("std::chrono", "chrono")]);
   check "standard: not another std" (standard "crane::std::max(%a0) + mystd::max(%a1)" = []);
   check "standard: an unknown name" (standard "std::frobnicate(%a0)" = []);
-  check "standard: holes are not text" (standard "%a0.size()" = [])
+  check "standard: holes are not text" (standard "%a0.size()" = []);
+  let stmts s =
+    List.map (List.filter (( <> ) (CCstring ""))) (statements (term_template (with_result "_r" s)))
+  in
+  check "statements: one per semicolon, trimmed"
+    (stmts " _r = %a0;  f(_r) ;" = [[CCstring "_r = "; CCarg 0]; [CCstring "f(_r)"]]);
+  check "statements: a last one without its semicolon" (stmts "std::cin >> _r" = [[CCstring "std::cin >> _r"]]);
+  check "statements: a for header is one statement"
+    (stmts "for (int i = 0;; ++i) { if (i >= %a0) break; }"
+     = [[CCstring "for (int i = 0;; ++i) { if (i >= "; CCarg 0; CCstring ") break"]; [CCstring "}"]]);
+  check "statements: not inside a literal" (stmts "f(\";\"); g(';')" = [[CCstring "f(\";\")"]; [CCstring "g(';')"]]);
+  check "statements: blank ones dropped" (stmts "a;; ;b" = [[CCstring "a"]; [CCstring "b"]]);
+  check "statements: a hole alone" (stmts "%a0; %a1" = [[CCarg 0]; [CCarg 1]])
