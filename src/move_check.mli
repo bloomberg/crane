@@ -28,6 +28,9 @@
     over where it is made, and its own body is checked as a body.  A body
     holding raw C++ is not checked.
 
+    A planned function's or method's parameters are checked against the
+    convention its callable plan states ({!convention_violations}).
+
     Under [CRANE_CHECK_IR] each violation is reported ({!Probe.violation}). *)
 
 val check_decl : Minicpp.cpp_decl -> unit
@@ -35,3 +38,15 @@ val check_decl : Minicpp.cpp_decl -> unit
 (** The locals [ss], a body, reads after it moves them, the backend's own
     storage aside. *)
 val moved_reads : Minicpp.cpp_stmt list -> Names.Id.t list
+
+(** [convention_violations r params body]: what the parameters [params] of
+    the callable [r], in declaration order, and its [body] contradict of the
+    convention its callable plan states ({!Callable_abi.passing}), [None]
+    where no plan states one.  The plan passes each parameter one way: a
+    deduced callable forwarded exactly where the declaration is an [F &&],
+    one it owns declared by value, and none it lends by reference moved out
+    of by name -- the ownership plan moves only what the convention hands
+    the body (a name the body declares again, as a frame handler binds a
+    parameter's to the frame's field, is that local's). *)
+val convention_violations :
+  Names.GlobRef.t -> (Names.Id.t * Minicpp.cpp_type) list -> Minicpp.cpp_stmt list -> string list option

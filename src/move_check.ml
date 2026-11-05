@@ -307,17 +307,62 @@ let check_body owner ss =
         Pp.(str "in " ++ owner ++ str ", " ++ Id.print x ++ str " is read after it is moved") )
     (moved_reads ss)
 
+let convention_violations r params body =
+  match Option.bind (Callable_abi.lookup r) Callable_abi.passing with
+  | None -> None
+  | Some passing ->
+    if List.compare_lengths passing params <> 0 then
+      Some
+        [ Printf.sprintf "the plan passes %d parameters, the declaration takes %d" (List.length passing)
+            (List.length params) ]
+    else
+      (* What the body moves by name, and the names it declares again: a
+         frame handler binds a parameter's name to the frame's field. *)
+      let moved = ref [] and declared = ref [] in
+      let rec fe e =
+        (match e with CPPmove (CPPvar x) -> moved := x :: !moved | _ -> ());
+        map_expr fe fs Fun.id e
+      and fs s =
+        (match s with Sasgn (x, Declare _, _) -> declared := x :: !declared | _ -> ());
+        map_stmt fe fs Fun.id s
+      in
+      List.iter (fun s -> ignore (fs s)) body;
+      Some
+        (List.concat
+           (List.map2
+              (fun (p : Callable_abi.passing) (x, ty) ->
+                let name = Id.to_string x in
+                match (p, ty) with
+                | Forwarded, Tref (Forwarding, _) -> []
+                | Forwarded, _ -> ["the plan forwards " ^ name ^ ", declared otherwise"]
+                | (Owned | Borrowed), Tref (Forwarding, _) -> ["the declaration forwards " ^ name ^ ", the plan does not"]
+                | Owned, _ when declared_by_reference ty -> ["the plan owns " ^ name ^ ", declared by reference"]
+                | Borrowed, _
+                  when declared_by_reference ty && List.exists (Id.equal x) !moved
+                       && not (List.exists (Id.equal x) !declared) ->
+                  ["the body moves out of " ^ name ^ ", which the plan lends it"]
+                | (Owned | Borrowed), _ -> [] )
+              passing params ) )
+
+let check_convention owner r params body =
+  List.iter
+    (fun what -> Probe.violation "callable convention" Pp.(str "in " ++ owner ++ str ", " ++ str what))
+    (Option.default [] (convention_violations r params body))
+
 let rec check_decl d =
   let rec field (f, _, _) =
     match f with
-    | Fmethod m -> check_body (Id.print m.mf_name) m.mf_body
+    | Fmethod m ->
+      check_body (Id.print m.mf_name) m.mf_body;
+      Option.iter (fun r -> check_convention (Id.print m.mf_name) r m.mf_params m.mf_body) m.mf_globref
     | Fnested_struct (_, fs) -> List.iter field fs
     | _ -> ()
   in
   match d with
-  | Dfun {df_shape = Ddef (_, ss); df_path; _} ->
+  | Dfun {df_shape = Ddef (params, ss); df_path; _} ->
     let r, _ = match List.rev df_path.dp_inner with inner :: _ -> inner | [] -> df_path.dp_outer in
-    check_body (GlobRef.print r) ss
+    check_body (GlobRef.print r) ss;
+    if df_path.dp_inner = [] then check_convention (GlobRef.print r) r (List.rev params) ss
   | Dtemplate (_, _, inner) -> check_decl inner
   | Dnspace (_, ds) -> List.iter check_decl ds
   | Dstruct s | Dfields s -> List.iter field s.ds_fields
