@@ -163,7 +163,7 @@ List<uint64_t> STMonadTests::quicksort_fun(
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      const List<uint64_t> &x = std::move(_f.x);
+      const List<uint64_t> &x = _f.x;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(x.v())) {
         _result = List<uint64_t>::nil();
       } else {

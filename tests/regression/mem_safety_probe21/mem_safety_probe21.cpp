@@ -105,7 +105,7 @@ uint64_t MemSafetyProbe21::double_grow(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       uint64_t n = _f.n;
-      const MemSafetyProbe21::tree &t = std::move(_f.t);
+      const MemSafetyProbe21::tree &t = _f.t;
       if (n <= 0) {
         _result = tree_sum(t);
       } else {
@@ -116,7 +116,7 @@ uint64_t MemSafetyProbe21::double_grow(
       }
     } else {
       auto _f = std::move(std::get<CraneCont_n_>(_frame));
-      const MemSafetyProbe21::tree &t = std::move(_f.t);
+      const MemSafetyProbe21::tree &t = _f.t;
       _result = (tree_sum(t) + std::move(_result));
     }
   }
@@ -159,7 +159,7 @@ uint64_t MemSafetyProbe21::branch_grow(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       uint64_t n = _f.n;
-      const MemSafetyProbe21::tree &t = std::move(_f.t);
+      const MemSafetyProbe21::tree &t = _f.t;
       if (n <= 0) {
         _result = tree_sum(t);
       } else {
@@ -271,7 +271,7 @@ uint64_t MemSafetyProbe21::sum_and_grow(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       uint64_t n = _f.n;
-      const MemSafetyProbe21::tree &t = std::move(_f.t);
+      const MemSafetyProbe21::tree &t = _f.t;
       if (n <= 0) {
         _result = tree_sum(t);
       } else {

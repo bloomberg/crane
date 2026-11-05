@@ -73,6 +73,31 @@ let () =
   let whole = on_list (fresh_rel 1) (Continue_into {cells = [cell [app "sum" [fresh_rel 3]]]; next = continue_ o [fresh_rel 1]}) in
   check "the outermost cell reads the walked list first" (steps_of (plan whole) = [(o, [(0, 0)], [])]);
 
+  (* let s = sum l in cons s (f xs): the let is evaluated where it stands,
+     before the steal, into a value of its own; the cell reads that, not
+     the list. *)
+  let under_let ?(ty = nat) value cell_arg =
+    let o = Occurrence.fresh () in
+    ( o,
+      on_list (fresh_rel 1)
+        (Term.Let
+           { binder = id "s";
+             binder_type = ty;
+             value;
+             body = Continue_into {cells = [cell [cell_arg]]; next = continue_ o [fresh_rel 2]} }) )
+  in
+  let o, summed = under_let (app "sum" [fresh_rel 3]) (fresh_rel 1) in
+  check "a let holding a call's value reads nothing of the cell later" (steps_of (plan summed) = [(o, [], [])]);
+  (* let s = l in cons (sum s) (f xs): the let names the list itself. *)
+  let o, aliased = under_let ~ty:lst (fresh_rel 3) (app "sum" [fresh_rel 1]) in
+  check "a let naming the walked list reads it later" (steps_of (plan aliased) = [(o, [(0, 0)], [])]);
+  (* let s = fun _ => sum l in cons (s x) (f xs): the closure reads the list
+     when it is called, after the steal. *)
+  let o, closure =
+    under_let ~ty:(Tarr (nat, nat)) (MLlam (id "_", nat, app "sum" [fresh_rel 4])) (MLapp (fresh_rel 1, [fresh_rel 3]))
+  in
+  check "a let holding a closure reads what it captures later" (steps_of (plan closure) = [(o, [(0, 0)], [])]);
+
   (* stutter: cons (S x) (cons x (f xs)): the inner cell reads the element
      the outer one is rebuilt over, the outer one reads it before. *)
   let o = Occurrence.fresh () in

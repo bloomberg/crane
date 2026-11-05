@@ -73,18 +73,23 @@ type result_storage =
   | Pointer_result of cpp_type
       (** A result that is itself the pointer at the head of the chain. *)
 
-let storage_of ret_ty = if is_value_type_ret ret_ty then Value_root ret_ty else Pointer_result ret_ty
+(** What a loop's result is, decided from the inductive it builds -- the one
+    of the outermost cell of every turn building it ({!planned_result}) --
+    not from how the C++ return type is spelled: [values] where its cells
+    are values held behind the pointer of the field the next cell fills
+    (neither coinductive nor a custom), [shared] where it is a shared
+    variant, whose slot holds no cell to recycle. *)
+type planned_result = {
+  values : bool;
+  shared : bool;
+}
 
-(* Whether a result of [ret_ty] may be assembled in cells a reuse cursor
-   recycles: a value type under the reuse policy, unless a shared variant,
-   whose slot holds no cell. *)
-let recyclable_result ret_ty =
-  let rec shared = function
-    | Tglob (r, _, _) -> Table.is_shared_variant r
-    | Tnamespace (_, t) | Tconst t -> shared t
-    | _ -> false
-  in
-  is_value_type_ret ret_ty && Table.reuse () && Table.non_atomic_rc () && not (shared ret_ty)
+let storage_of (planned : planned_result) ret_ty = if planned.values then Value_root ret_ty else Pointer_result ret_ty
+
+(* Whether a result may be assembled in cells a reuse cursor recycles: one
+   of values under the reuse policy, unless a shared variant. *)
+let recyclable_result (planned : planned_result) =
+  planned.values && Table.reuse () && Table.non_atomic_rc () && not planned.shared
 
 (** The value type a cell holds behind its pointer, when cells are values. *)
 let cell_value_type = function
@@ -185,6 +190,39 @@ let control_shapes into =
       { constructors = List.map (fun (cell : Control_ir.Term.cell) -> (cell.constructor, cell.hole)) c.cells;
         call = Some c.next.occurrence } )
     into
+
+(** The result of a loop whose turns build along [shapes]: the inductive of
+    the outermost constructor of every shape, which must be one.  Under
+    [CRANE_CHECK_IR] the decision is checked against the C++ return type
+    [ret_ty] it was read off before ({!is_value_type_ret}), which a loop
+    building no one inductive outermost, a violation, falls back to. *)
+let planned_result shapes ret_ty =
+  let read_off_type =
+    let rec shared = function
+      | Tglob (r, _, _) -> Table.is_shared_variant r
+      | Tnamespace (_, t) | Tconst t -> shared t
+      | _ -> false
+    in
+    {values = is_value_type_ret ret_ty; shared = shared ret_ty}
+  in
+  let outermost sh =
+    match sh.constructors with
+    | (GlobRef.ConstructRef (ind, _), _) :: _ -> Some (GlobRef.IndRef ind)
+    | _ -> None
+  in
+  match List.sort_uniq GlobRef.CanOrd.compare (List.filter_map outermost shapes) with
+  | [r] ->
+    let planned = {values = (not (Table.is_coinductive r)) && not (Table.is_custom r); shared = Table.is_shared_variant r} in
+    if Probe.checking () && planned <> read_off_type then
+      Probe.violation "tail modulo cons plan"
+        Pp.(
+          str "the result the turns of a loop tail modulo cons build, " ++ Names.GlobRef.print r
+          ++ str ", is not stored as its C++ return type says" );
+    planned
+  | _ ->
+    Probe.violation "tail modulo cons plan"
+      Pp.(str "the turns of a loop tail modulo cons build no one inductive outermost");
+    read_off_type
 
 (** The return expression [expr] as the branch of the first of [shapes] it
     has: the factory calls it nests, each building its cell's constructor,
@@ -842,6 +880,7 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ?cursor ~jumped ~storage ~
     @return Transformed body with TMC while loop *)
 let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~varying ~parts ~shapes tparams check params ret_ty body =
   let branch = branch_along shapes check in
+  let planned = planned_result shapes ret_ty in
   let { ss_varying = varying; ss_varying_params = varying_params;
         ss_shadow_params = shadow_params; ss_subs = subs } =
     build_shadow_setup ~varying ~parts tparams params
@@ -881,7 +920,7 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~varying ~parts
      parameter the head declares by value, not a reference or a receiver. *)
   let cursor =
     match cursor with
-    | Some (c : Reuse_cursor.t) when recyclable_result ret_ty -> (
+    | Some (c : Reuse_cursor.t) when recyclable_result planned -> (
       match List.nth_opt params c.parameter with
       | Some (id, ty) when (not (List.mem_assoc id param_inits)) && not (declared_by_reference ty) -> Some c
       | Some _ | None -> None )
@@ -902,7 +941,7 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~varying ~parts
     in
     (body, !cursor_used, List.rev !jumps)
   in
-  let without_cursor () = (storage_of ret_ty, rewrite (storage_of ret_ty) None) in
+  let without_cursor () = (storage_of planned ret_ty, rewrite (storage_of planned ret_ty) None) in
   let storage, (body'', cursor_used, jumps) =
     match cursor with
     | None -> without_cursor ()

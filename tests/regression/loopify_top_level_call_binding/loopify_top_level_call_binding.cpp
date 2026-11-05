@@ -66,12 +66,12 @@ uint64_t LoopifyTopLevelCallBinding::csum(
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      const LoopifyTopLevelCallBinding::cell &c = std::move(_f.c);
+      const LoopifyTopLevelCallBinding::cell &c = _f.c;
       _stack.emplace_back(CraneCont1{c});
       _stack.emplace_back(CraneEnter_go{kids(c)});
     } else if (std::holds_alternative<CraneEnter_go>(_frame)) {
       auto _f = std::move(std::get<CraneEnter_go>(_frame));
-      const List<LoopifyTopLevelCallBinding::cell> &l = std::move(_f.l);
+      const List<LoopifyTopLevelCallBinding::cell> &l = _f.l;
       if (std::holds_alternative<
               typename List<LoopifyTopLevelCallBinding::cell>::Nil>(l.v())) {
         _result = UINT64_C(0);
@@ -84,7 +84,7 @@ uint64_t LoopifyTopLevelCallBinding::csum(
       }
     } else if (std::holds_alternative<CraneCont1>(_frame)) {
       auto _f = std::move(std::get<CraneCont1>(_frame));
-      const LoopifyTopLevelCallBinding::cell &c = std::move(_f.c);
+      const LoopifyTopLevelCallBinding::cell &c = _f.c;
       _result = (key(c) + std::move(_result));
     } else if (std::holds_alternative<CraneCont_Cons>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));

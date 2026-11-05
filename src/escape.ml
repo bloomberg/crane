@@ -332,7 +332,8 @@ let find_reuse_candidates (_typ : ml_type) (pv : ml_branch array) =
     unit's concurrency is decided, and a function's parameters are owned the
     same way in every unit that calls it.  A unit refused the request
     because it starts a thread ({!Table.non_atomic_rc}) owns such a
-    parameter and recycles nothing through it. *)
+    parameter and recycles nothing through it: the rewrite itself is gated
+    on the granted answer. *)
 let is_reuse_scrutinee k body =
   let recyclable = function
     | Tglob (r, _, _) when Table.is_shared_variant r -> true

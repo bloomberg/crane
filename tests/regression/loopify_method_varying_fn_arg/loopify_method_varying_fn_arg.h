@@ -122,7 +122,7 @@ struct LoopifyMethodVaryingFnArg {
         if (std::holds_alternative<CraneEnter>(_frame)) {
           auto _f = std::move(std::get<CraneEnter>(_frame));
           const tree *_self = _f._self;
-          const crane::fn<uint64_t(uint64_t)> &f = std::move(_f.f);
+          const crane::fn<uint64_t(uint64_t)> &f = _f.f;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f(UINT64_C(0));
@@ -136,7 +136,7 @@ struct LoopifyMethodVaryingFnArg {
           }
         } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Node>(_frame));
-          const crane::fn<uint64_t(uint64_t)> &f = std::move(_f.f);
+          const crane::fn<uint64_t(uint64_t)> &f = _f.f;
           const tree &a2 = *_f.a2;
           const tree &a2_value = a2;
           _stack.emplace_back(CraneCont_Node_1{std::move(_result)});

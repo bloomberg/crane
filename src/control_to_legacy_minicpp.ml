@@ -167,40 +167,65 @@ let fixpoint_parameters stmts =
   List.iter (fun s -> ignore (fs s)) stmts;
   !found
 
-(* How the frames of a machine of the function [r], its loop [l], hold its
-   parameters and those of the loops its entries enter ({!Frame_storage}),
-   as each is represented: a parameter of the loop by the C++ parameter of
-   [params] standing for it, at its position in [positions], held by
-   pointer where [held k ty] of the one at [k] of type [ty]; one of an
-   entered loop by the parameter of the local fixpoint's lambda in [body]
-   binding it.  The parameters' flags, in order, and those of the entered
-   loops' by the Core binder. *)
-let storage_at r (l : Control_ir.Term.loop) positions params ~held body =
-  let lambda_params = fixpoint_parameters body in
+(* The positions among the parameters of the loop [l] of those the C++
+   parameters [params] of a helper lifted out for the function of a local
+   fixpoint stand for, as a definition stores them, the last first
+   ({!Minicpp.dfun_shape}): the variables the helper captures, stored
+   first, stand for none, every call passing them on as they are; the rest
+   for the parameters of [l] that are not void
+   ({!Ml_type_util.void_binder}), the last first.  [None] where they are
+   not so many. *)
+let lifted_positions (l : Control_ir.Term.loop) params =
+  let kept =
+    List.filter_map
+      (fun (i, (_, ty)) -> if Ml_type_util.void_binder ty then None else Some i)
+      (List.mapi (fun i p -> (i, p)) l.parameters)
+  in
+  let captured = List.length params - List.length kept in
+  if captured < 0 then None else Some (List.init captured (fun _ -> None) @ List.rev_map (fun i -> Some i) kept)
+
+(* How the frames of a machine, its loop [l], hold its parameters and those
+   of the loops its entries enter ({!Frame_storage}), as each is
+   represented: a parameter of the loop by the C++ parameter of [params]
+   standing for it, at its position in [positions] ([None]: it stands for
+   none, and no frame holds it by pointer), held by pointer where [held k ty]
+   of the one at [k] of type [ty]; one of an entered loop, where the machine
+   is the function [entering]'s, by the parameter of the local fixpoint's
+   lambda in [body] binding it, the Core binder counting from [entering]'s
+   parameters -- with no [entering], none is held by pointer.  The
+   parameters' flags, in order, and those of the entered loops' by the Core
+   binder. *)
+let storage_at ?entering (l : Control_ir.Term.loop) positions params ~held body =
+  let lambda_params = if Option.has_some entering then fixpoint_parameters body else [] in
+  let of_entering (b : Core_binder.t) = Option.cata (fun r -> GlobRef.UserOrd.equal b.origin r) false entering in
   let holdable : Frame_storage.parameter -> bool = function
     | Own i -> List.exists2 (fun p (k, (_, ty)) -> p = Some i && held k ty) positions (List.mapi (fun k p -> (k, p)) params)
     | Entered level ->
-      List.exists
-        (fun ((b : Core_binder.t), ty) -> GlobRef.UserOrd.equal b.origin r && b.level = level && holdable_type ty)
-        lambda_params
+      List.exists (fun ((b : Core_binder.t), ty) -> of_entering b && b.level = level && holdable_type ty) lambda_params
   in
   let storage = Frame_storage.plan ~pointer_fields:Loopify_analysis.constructor_pointer_fields ~in_place ~holdable l in
   let own_pointers = List.map (function Some i -> List.nth storage.own i | None -> false) positions in
-  let entered (b : Core_binder.t) =
-    GlobRef.UserOrd.equal b.origin r && List.assoc_opt b.level storage.entered = Some true
-  in
+  let entered (b : Core_binder.t) = of_entering b && List.assoc_opt b.level storage.entered = Some true in
   (own_pointers, entered)
 
-(* The same, of the function [f]'s machine, its C++ parameters [params]:
-   [None] for the loop of no function, or where some parameter stands for
-   none of the loop's. *)
+(* The same, of the machine of the function [f], its C++ parameters
+   [params]: of a function's loop where every parameter stands for one of
+   the loop's; of the loop of the local fixpoint a helper is lifted for by
+   the helper's positions ({!lifted_positions}), the variables it captures
+   standing for none and no parameter of an entered loop held by pointer, as
+   a local machine's ({!Loopify.member_plan}).  [None] otherwise. *)
 let machine_storage (f : dfun) params body (l : Control_ir.Term.loop) =
   match l.loop with
-  | Member _ -> None
+  | Member _ ->
+    if Option.has_some (Lifted.of_ref (fst f.df_path.dp_outer)) then
+      Option.map
+        (fun positions -> storage_at l positions params ~held:(fun _ ty -> holdable_type ty) body)
+        (lifted_positions l params)
+    else None
   | Function r ->
     let positions = List.map (fun p -> position r l (binder_of f.df_binders p)) params in
     if not (List.for_all Option.has_some positions) then None
-    else Some (storage_at r l positions params ~held:(fun _ ty -> holdable_type ty) body)
+    else Some (storage_at ~entering:r l positions params ~held:(fun _ ty -> holdable_type ty) body)
 
 (* The function [f], generated under the template parameters [tparams],
    lowered to the loop [l] varying the parameters [varying]; [Error why]
@@ -442,7 +467,7 @@ let lower_method ~tparams ~self_ty (m : method_field) =
       match (lowering, positions) with
       | Frames, Some positions ->
         let params = (Id.of_string "_self", self_ty) :: m.mf_params in
-        let own, _ = storage_at r l positions params ~held:(fun k ty -> k = 0 || holdable_type ty) m.mf_body in
+        let own, _ = storage_at ~entering:r l positions params ~held:(fun k ty -> k = 0 || holdable_type ty) m.mf_body in
         List.mapi (fun k (part, pointer) -> part || (k > 0 && pointer)) (List.combine parts own)
       | (Frames | Modulo_cons | Tail), _ -> parts
     in
@@ -491,23 +516,6 @@ let lower_methods ~merged inductive vars fields =
         end
       | _ -> field )
     fields
-
-(* The positions among the parameters of the loop [l] of those the C++
-   parameters [params] of a helper lifted out for the function of a local
-   fixpoint stand for, as a definition stores them, the last first
-   ({!Minicpp.dfun_shape}): the variables the helper captures, stored
-   first, stand for none, every call passing them on as they are; the rest
-   for the parameters of [l] that are not void
-   ({!Ml_type_util.void_binder}), the last first.  [None] where they are
-   not so many. *)
-let lifted_positions (l : Control_ir.Term.loop) params =
-  let kept =
-    List.filter_map
-      (fun (i, (_, ty)) -> if Ml_type_util.void_binder ty then None else Some i)
-      (List.mapi (fun i p -> (i, p)) l.parameters)
-  in
-  let captured = List.length params - List.length kept in
-  if captured < 0 then None else Some (List.init captured (fun _ -> None) @ List.rev_map (fun i -> Some i) kept)
 
 (* The definition [d], a function Loopify loopifies of which no loop of
    its own is made here, for the reason [unlowered], with the local

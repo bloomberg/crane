@@ -47,12 +47,12 @@ uint64_t FramePushMovesScrutineeField::weigh(
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      const List<uint64_t> &x0_ = std::move(_f.x0_);
+      const List<uint64_t> &x0_ = _f.x0_;
       List<List<uint64_t>> s = std::move(_f.s);
       _stack.emplace_back(CraneEnter_weigh1{x0_, std::move(s)});
     } else if (std::holds_alternative<CraneEnter_weigh1>(_frame)) {
       auto _f = std::move(std::get<CraneEnter_weigh1>(_frame));
-      const List<uint64_t> &t = std::move(_f.t);
+      const List<uint64_t> &t = _f.t;
       List<List<uint64_t>> s = std::move(_f.s);
       if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
               s.v_mut())) {
@@ -71,7 +71,7 @@ uint64_t FramePushMovesScrutineeField::weigh(
       }
     } else if (std::holds_alternative<CraneCont_Cons>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-      const List<uint64_t> &t = std::move(_f.t);
+      const List<uint64_t> &t = _f.t;
       List<uint64_t> a0 = std::move(_f.a0);
       std::shared_ptr<List<List<uint64_t>>> a1 = std::move(_f.a1);
       _stack.emplace_back(CraneCont_Cons_1{std::move(a0), std::move(_result)});

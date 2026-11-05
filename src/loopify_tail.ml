@@ -83,10 +83,16 @@ let is_moveable_param_type = function
     rebuilt each iteration ([acc := Cons(x, acc)]) is not pointer-safe and keeps
     its value shadow.
 
+    A [const T] parameter qualifies for the same reason, under any policy: it
+    lives for the whole call, and being const nothing moves out of it.  A
+    helper lifted out of a definition for a polymorphic local fixpoint
+    declares its parameters so.
+
     @return [Some pointee_type] when the parameter qualifies, [None] otherwise *)
 let borrowed_value_param_pointee = function
   | Tref (Lvalue, Tconst t) when is_value_type_ret t -> Some t
   | Tconst (Tref (Lvalue, t)) when is_value_type_ret t -> Some t
+  | Tconst t when is_value_type_ret t -> Some t
   | t when Table.reuse () && Table.non_atomic_rc () && is_value_type_ret t ->
     Some t
   | _ -> None
@@ -816,134 +822,54 @@ type shadow_setup = {
     @param body   Function body statements
     @return {!shadow_setup} record consumed by the caller *)
 
-(** Insert [std::move] at last-use positions of owned variables in loopified
-    statement blocks.  Complements {!optimize_frame_push_args} which handles
-    frame-push groups; this pass handles ordinary statements such as
-    [_result = f(_result, _f.field)] and [_loop_x = g(a, _loop_x)].
-
-    [self_ref_candidate key] — true when [key] should be moved in
-    self-referencing assignments ([x = f(...x...)]).  Safe for loop
-    accumulators whose liveness the caller knows ends with the overwrite.
-
-    [last_use_candidate key] — true when [key] may be moved at its final
-    read in the block.  Safe for [_result] and [_f.field] in single-shot
-    handler bodies, NOT safe for loop variables (live across the back-edge). *)
-let optimize_last_use_moves ~self_ref_candidate ~last_use_candidate stmts =
-  let collect_reads expr =
+(** Move a loop accumulator into its own next value: [_loop_x = g(a, _loop_x)]
+    becomes [_loop_x = g(a, std::move(_loop_x))] where [candidate] names
+    [_loop_x] and the right-hand side reads it once -- the overwrite ends its
+    life.  This is what remains of a C++-level last-use pass: the Core plan
+    moves every other read, frame handlers included (round 66 measured the
+    handler half adding only [std::move] into const reference bindings).  It
+    is a Continue's argument reading the parameter it replaces, which the
+    plan does not see yet: a loop's back edge is lowered after it. *)
+let move_self_assigned_accumulators ~candidate stmts =
+  let reads expr =
     let tbl : (string, int) Hashtbl.t = Hashtbl.create 4 in
-    let add key =
-      let n = try Hashtbl.find tbl key with Not_found -> 0 in
-      Hashtbl.replace tbl key (n + 1)
-    in
     let rec walk = function
       | CPPmove _ | CPPlambda _ -> ()
-      | CPPvar id -> add (Id.to_string id)
-      | CPPaccess (Adot, CPPvar fid, field) when Id.equal fid id_f ->
-        add (frame_field_key field)
+      | CPPvar id ->
+        let key = Id.to_string id in
+        Hashtbl.replace tbl key (1 + Option.default 0 (Hashtbl.find_opt tbl key))
       | e -> iter_expr_children ~on_expr:walk ~on_stmts:(fun _ -> ()) e
     in
     walk expr;
     tbl
   in
-  let merge t1 t2 =
-    Hashtbl.iter (fun k v ->
-      let prev = try Hashtbl.find t1 k with Not_found -> 0 in
-      Hashtbl.replace t1 k (prev + v)) t2;
-    t1
+  let rec move_in key = function
+    | CPPmove _ as e -> e
+    | CPPlambda _ as e -> e
+    | CPPvar id as e when String.equal (Id.to_string id) key -> CPPmove e
+    | e -> map_expr (move_in key) Fun.id Fun.id e
   in
-  let rec collect_reads_stmt stmt =
-    match stmt with
-    | Sexpr (CPPbinop (Bassign, CPPvar _, rhs)) -> collect_reads rhs
-    | Sasgn (_, _, rhs) -> collect_reads rhs
-    | Sexpr e -> collect_reads e
-    | Sreturn (Some e) -> collect_reads e
-    | s ->
-      (* Recurse through nested statement lists — both arms of an [Sif], the
-         [Smatch]/[Sswitch] branch bodies, [Sblock]/[Swhile] bodies — so a
-         read in a *later* sibling branch is visible to [read_after].  A
-         condition-only walk (the previous [Sif (cond, _, _)] arm) missed
-         those reads and could [std::move] a value still read in a following
-         branch. *)
-      let tbl = Hashtbl.create 4 in
-      iter_stmt_children
-        ~on_expr:(fun e -> ignore (merge tbl (collect_reads e)))
-        ~on_stmts:(fun stmts ->
-          List.iter (fun s -> ignore (merge tbl (collect_reads_stmt s))) stmts)
-        s;
-      tbl
-  in
-  let rewrite_expr to_move expr =
-    let rec rw = function
-      | CPPmove _ as e -> e
-      | CPPlambda _ as e -> e
-      | CPPvar id as e ->
-        if Hashtbl.mem to_move (Id.to_string id) then CPPmove e else e
-      | CPPaccess (Adot, CPPvar fid, field) as e
-        when Id.equal fid id_f ->
-        let key = frame_field_key field in
-        if Hashtbl.mem to_move key then CPPmove e else e
-      | e -> map_expr rw Fun.id Fun.id e
-    in
-    rw expr
-  in
-  let rewrite_stmt to_move stmt =
-    match stmt with
-    | Sexpr (CPPbinop (Bassign, (CPPvar _ as lhs), rhs)) ->
-      Sexpr (CPPbinop (Bassign, lhs, rewrite_expr to_move rhs))
-    | _ ->
-      map_stmt (rewrite_expr to_move) Fun.id Fun.id stmt
-  in
-  let build_to_move reads read_after stmt =
-    let to_move : (string, unit) Hashtbl.t = Hashtbl.create 4 in
-    ( match stmt with
-      | Sexpr (CPPbinop (Bassign, CPPvar lhs, _))
-      | Sasgn (lhs, _, _) ->
-        let key = Id.to_string lhs in
-        if self_ref_candidate key
-           && (try Hashtbl.find reads key with Not_found -> 0) = 1
-        then Hashtbl.replace to_move key ()
-      | _ -> () );
-    Hashtbl.iter (fun key count ->
-      if last_use_candidate key
-         && count = 1
-         && not (Hashtbl.mem read_after key)
-      then Hashtbl.replace to_move key ()
-    ) reads;
-    to_move
-  in
-  let rec process stmts =
-    let stmts = List.map descend stmts in
-    let n = List.length stmts in
-    if n = 0 then []
-    else
-    let arr = Array.of_list stmts in
-    let read_after = Array.init n (fun _ -> Hashtbl.create 4) in
-    let running : (string, unit) Hashtbl.t = Hashtbl.create 8 in
-    for i = n - 1 downto 0 do
-      read_after.(i) <- Hashtbl.copy running;
-      Hashtbl.iter (fun k _ -> Hashtbl.replace running k ())
-        (collect_reads_stmt arr.(i))
-    done;
-    Array.to_list (Array.mapi (fun i s ->
-      let reads = collect_reads_stmt s in
-      let to_move = build_to_move reads read_after.(i) s in
-      if Hashtbl.length to_move = 0 then s
-      else rewrite_stmt to_move s
-    ) arr)
-  and descend stmt =
-    match stmt with
-    | Sif (cond, then_, else_) ->
-      Sif (cond, process then_, process else_)
+  let rec stmt s =
+    match s with
+    | Sexpr (CPPbinop (Bassign, (CPPvar lhs as l), rhs)) ->
+      let key = Id.to_string lhs in
+      if candidate key && Hashtbl.find_opt (reads rhs) key = Some 1 then
+        Sexpr (CPPbinop (Bassign, l, move_in key rhs))
+      else s
+    | Sasgn (lhs, d, rhs) ->
+      let key = Id.to_string lhs in
+      if candidate key && Hashtbl.find_opt (reads rhs) key = Some 1 then Sasgn (lhs, d, move_in key rhs) else s
+    | Sif (cond, then_, else_) -> Sif (cond, List.map stmt then_, List.map stmt else_)
     | Smatch (scrut, branches, default) ->
-      Smatch (
-        scrut,
-        List.map (fun br -> { br with smb_body = process br.smb_body }) branches,
-        Option.map process default)
-    | Sblock body -> Sblock (process body)
-    | Swhile (cond, body) -> Swhile (cond, process body)
+      Smatch
+        ( scrut,
+          List.map (fun br -> {br with smb_body = List.map stmt br.smb_body}) branches,
+          Option.map (List.map stmt) default )
+    | Sblock body -> Sblock (List.map stmt body)
+    | Swhile (cond, body) -> Swhile (cond, List.map stmt body)
     | s -> s
   in
-  process stmts
+  List.map stmt stmts
 
 let build_shadow_setup ~varying ~parts tparams params =
   let pointer_safe = pointer_safe_flags ~parts params in
@@ -1112,10 +1038,7 @@ let transform_tail ?(param_inits = []) ?(jumped = ignore) ~varying ~parts tparam
     shadow_params
   in
   let body'' =
-    optimize_last_use_moves
-      ~self_ref_candidate:is_loop_cand
-      ~last_use_candidate:(fun _ -> false)
-      body''
+    move_self_assigned_accumulators ~candidate:is_loop_cand body''
   in
   (* Assemble the loop body.
      - Non-void: [... while (true) { ... return val; }]

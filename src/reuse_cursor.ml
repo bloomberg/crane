@@ -117,6 +117,56 @@ let reads_stolen ~field = List.exists (function Whole -> true | Field {level; _}
    What the stolen field points at outlives it. *)
 let reads_cell ~field = List.exists (function Whole | Field _ -> true | Pointee level -> level <> field)
 
+(* Whether a let binding [value] at [ty] holds a value of its own, which
+   reading later reads nothing of the cell: the let is evaluated where it
+   stands, before the turn steals the field and rebuilds or releases the
+   cell, into a C++ local declared by value.  Not so where the let may be a
+   reference into what it reads, or a closure that reads it later:
+   - a field projected out of a variable, which the plan binds by const
+     reference ({!Ownership_plan.projects_in_place}) -- any projection, as
+     whether it does is the plan's;
+   - a variable read as it is, or a match, which may yield one of its
+     fields;
+   - a custom head whose text declares the binder itself (a block
+     template) or yields its argument or a field of it;
+   - a function value, or anything holding a lambda or a fixpoint: a closure
+     may capture what it reads by reference (a single-use partial
+     application does, translation's [&] capture).
+   A call's result, a construction or a literal over none of those is a
+   value of its own; one that is a handle to a cell holds its own count. *)
+let own_value ty value =
+  let rec closure_free = function
+    | MLlam _ | MLfix _ -> false
+    | MLapp (f, args) -> List.for_all closure_free (f :: args)
+    | MLcons (_, _, args) | MLtuple args -> List.for_all closure_free args
+    | MLmagic (_, e) -> closure_free e
+    | MLletin (_, _, a, b, _) -> closure_free a && closure_free b
+    | MLcase (_, s, branches) -> closure_free s && Array.for_all (fun (_, _, _, b) -> closure_free b) branches
+    | MLparray (elements, default) -> Array.for_all closure_free elements && closure_free default
+    | MLrel _ | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> true
+  in
+  let rec head = function MLmagic (_, e) -> head e | e -> e in
+  (* A custom computes a value of its own unless its text binds the result
+     itself or yields its argument, or a field of it, as an lvalue. *)
+  let computes r =
+    match Table.find_custom_opt r with
+    | None -> true
+    | Some text -> (
+      let t = Minicpp.inline_template text in
+      match (t.it_form, t.it_shape) with
+      | Block_iife, _ | _, (Inline_identity | Inline_pair_projection _) -> false
+      | (Templated | Bare_callee), Inline_other -> true )
+  in
+  let fresh =
+    match head value with
+    | MLapp (MLglob {callee; _}, _) -> computes callee
+    | MLapp (MLrel _, _) -> true
+    | MLcons (_, r, _) -> computes r
+    | MLtuple _ | MLuint _ | MLfloat _ | MLstring _ -> true
+    | _ -> false
+  in
+  fresh && (not (Ml_type_util.is_prod_ml_type ty)) && closure_free value
+
 exception Not_walked
 
 (* The steps of the loop [l] walking its parameter [cursor], every turn of
@@ -163,7 +213,9 @@ let steps ~pointer_fields ~in_place (l : Term.loop) cursor =
     step env into.next field (Recycle {cells_read_first})
   in
   let rec walk env result acc = function
-    | Term.Let b -> walk ({unrelated with parts = reads env b.value} :: env) result acc b.body
+    | Term.Let b ->
+      let parts = if own_value b.binder_type b.value then [] else reads env b.value in
+      walk ({unrelated with parts} :: env) result acc b.body
     | Match m ->
       List.fold_left
         (fun acc (b : Term.branch) ->
