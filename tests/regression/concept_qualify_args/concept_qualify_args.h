@@ -114,10 +114,12 @@ struct ConceptQualifyArgs {
 
   struct NatElems {
     using t = uint64_t;
-    static inline const List<uint64_t> elements = List<uint64_t>::cons(
-        UINT64_C(1), List<uint64_t>::cons(
-                         UINT64_C(2), List<uint64_t>::cons(
-                                          UINT64_C(3), List<uint64_t>::nil())));
+    [[gnu::used]] static inline const List<uint64_t> elements =
+        List<uint64_t>::cons(
+            UINT64_C(1),
+            List<uint64_t>::cons(
+                UINT64_C(2),
+                List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())));
     static uint64_t head_or(uint64_t d);
   };
 

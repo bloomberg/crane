@@ -89,7 +89,7 @@ struct ReuseScrutineeConcurrentUnit {
 
   static lst build(uint64_t n);
   static uint64_t len(const lst &l);
-  static inline const lst shared = build(UINT64_C(4));
+  [[gnu::used]] static inline const lst shared = build(UINT64_C(4));
   /// Matches on n and rebuilds O in the O branch: a reuse candidate.
   static uint64_t churn(uint64_t n, const lst &l);
   static void worker(uint64_t n);

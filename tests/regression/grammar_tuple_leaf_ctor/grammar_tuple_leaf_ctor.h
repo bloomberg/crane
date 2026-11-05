@@ -241,31 +241,34 @@ public:
 using production = std::pair<crane::obj, List<Symbol>>;
 using production_semty = std::pair<predicate_semty, action_semty>;
 using grammar_entry = SigT<production, production_semty>;
-const List<grammar_entry> entries = List<grammar_entry>::cons(
-    SigT<production, production_semty>::existt(
-        std::make_pair(crane::obj(crane::obj()),
-                       List<Symbol>::cons(Symbol::t(Terminal::TSTRING),
-                                          List<Symbol>::nil())),
-        std::make_pair(
-            crane::obj(crane_erase_fn([](const auto &) { return true; })),
-            crane::obj(crane_erase_fn([](const auto &tup) {
-              const auto &[s, _x] =
-                  crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-              return Val::vstr(crane::any_cast<std::string>(s));
-            })))),
+[[gnu::used]] inline const List<grammar_entry> entries =
     List<grammar_entry>::cons(
         SigT<production, production_semty>::existt(
             std::make_pair(crane::obj(crane::obj()),
-                           List<Symbol>::cons(Symbol::t(Terminal::TINT),
+                           List<Symbol>::cons(Symbol::t(Terminal::TSTRING),
                                               List<Symbol>::nil())),
             std::make_pair(
                 crane::obj(crane_erase_fn([](const auto &) { return true; })),
                 crane::obj(crane_erase_fn([](const auto &tup) {
-                  const auto &[i, _x] =
+                  const auto &[s, _x] =
                       crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-                  return Val::vint(crane::any_cast<uint64_t>(i));
+                  return Val::vstr(crane::any_cast<std::string>(s));
                 })))),
-        List<grammar_entry>::nil()));
+        List<grammar_entry>::cons(
+            SigT<production, production_semty>::existt(
+                std::make_pair(crane::obj(crane::obj()),
+                               List<Symbol>::cons(Symbol::t(Terminal::TINT),
+                                                  List<Symbol>::nil())),
+                std::make_pair(
+                    crane::obj(
+                        crane_erase_fn([](const auto &) { return true; })),
+                    crane::obj(crane_erase_fn([](const auto &tup) {
+                      const auto &[i, _x] =
+                          crane::any_cast<std::pair<crane::obj, crane::obj>>(
+                              tup);
+                      return Val::vint(crane::any_cast<uint64_t>(i));
+                    })))),
+            List<grammar_entry>::nil()));
 uint64_t num_entries(std::monostate _x);
 
 #endif // INCLUDED_GRAMMAR_TUPLE_LEAF_CTOR

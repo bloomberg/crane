@@ -176,7 +176,7 @@ struct IPZ {
 
 static_assert(IPtr<IPZ>);
 using prov = List<Nat>;
-const prov nil_prov = List<Nat>::nil();
+[[gnu::used]] inline const prov nil_prov = List<Nat>::nil();
 
 template <IPtr _tcI0> struct PointerV {
   using iptr = typename _tcI0::iptr;

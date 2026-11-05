@@ -1421,9 +1421,11 @@ struct Nat {
   static bool Even_Odd_dec(uint64_t n);
   using EvenT = Sig<uint64_t>;
   using OddT = Sig<uint64_t>;
-  static inline const EvenT EvenT_0 = Sig<uint64_t>::exist(UINT64_C(0));
+  [[gnu::used]] static inline const EvenT EvenT_0 =
+      Sig<uint64_t>::exist(UINT64_C(0));
   static EvenT EvenT_2(uint64_t _x, const Sig<uint64_t> &h0);
-  static inline const OddT OddT_1 = Sig<uint64_t>::exist(UINT64_C(0));
+  [[gnu::used]] static inline const OddT OddT_1 =
+      Sig<uint64_t>::exist(UINT64_C(0));
   static OddT OddT_2(uint64_t _x, const Sig<uint64_t> &h0);
   static OddT EvenT_S_OddT(uint64_t _x, const Sig<uint64_t> &h);
   static EvenT OddT_S_EvenT(uint64_t _x, const Sig<uint64_t> &h);

@@ -203,7 +203,7 @@ struct Inst {
 };
 
 using M = Make<Inst>;
-const M::entry my_entry = M::mk_entry(
+[[gnu::used]] inline const M::entry my_entry = M::mk_entry(
     std::monostate{},
     crane_erase_fn<bool>(
         [](std::string _x0, std::string _x1) -> bool { return (_x0 == _x1); }));

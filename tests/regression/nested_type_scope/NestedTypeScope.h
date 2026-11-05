@@ -57,7 +57,7 @@ struct Tags {
 };
 
 using RM = RuleMod<Tags>;
-const RM::Rule my_rule =
+[[gnu::used]] inline const RM::Rule my_rule =
     Datatypes::template Prod<Tags::Tag_, Datatypes::Nat>::pair(
         Tags::Tag_::BAR,
         Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(

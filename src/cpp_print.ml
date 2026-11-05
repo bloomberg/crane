@@ -4022,10 +4022,22 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
          [static_assert] or a template argument. *)
       let literal = may_be_constexpr da_constexpr in
       let ty = match ty with Tconst t when literal -> t | t -> t in
+      (* A [static inline] variable is initialised in a translation unit
+         only if that unit names it: clang emits it nowhere else.  One that
+         only a function body reads is then initialised only where that body
+         is compiled -- the [.cpp] -- and another unit's initialiser calling
+         the function runs first if its unit is linked first, reading the
+         variable before it holds its value.  [[gnu::used]] has every unit
+         including the header initialise it, before what follows it.  At
+         namespace scope a [const] variable is one per unit, each initialised
+         by its own unit, so the function reads its own unit's: [inline]
+         makes it one variable. *)
       let static_kw =
         match (ctx.rc_in_struct, literal) with
         | true, true -> str "static constexpr "
+        | true, false when Cpp_state.read_by_a_function id -> str "[[gnu::used]] static inline "
         | true, false -> str "static inline "
+        | false, false when Cpp_state.read_by_a_function id -> str "[[gnu::used]] inline "
         | false, true -> str "inline constexpr "
         | false, false -> mt ()
       in

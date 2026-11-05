@@ -591,7 +591,7 @@ struct CoalitionBidHonorTraceCase {
     uint64_t fm_total_ecr;
   };
 
-  static inline const ForceMetrics empty_metrics =
+  [[gnu::used]] static inline const ForceMetrics empty_metrics =
       ForceMetrics{UINT64_C(0), UINT64_C(0), UINT64_C(0),
                    UINT64_C(0), UINT64_C(0), UINT64_C(0)};
   static ForceMetrics unit_to_metrics(const Unit &u);

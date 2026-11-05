@@ -420,27 +420,28 @@ struct STMonadTests {
   static std::string list_to_string_helper(const List<uint64_t> &l);
   static std::string list_to_string(const List<uint64_t> &l);
   static List<uint64_t> rep_list_nat(List<uint64_t> l, uint64_t n);
-  static inline const List<uint64_t> input_lst1 = List<uint64_t>::cons(
-      UINT64_C(212498),
+  [[gnu::used]] static inline const List<uint64_t> input_lst1 =
       List<uint64_t>::cons(
-          UINT64_C(127),
+          UINT64_C(212498),
           List<uint64_t>::cons(
-              UINT64_C(5981),
+              UINT64_C(127),
               List<uint64_t>::cons(
-                  UINT64_C(2749812),
+                  UINT64_C(5981),
                   List<uint64_t>::cons(
-                      UINT64_C(74879),
+                      UINT64_C(2749812),
                       List<uint64_t>::cons(
-                          UINT64_C(126),
+                          UINT64_C(74879),
                           List<uint64_t>::cons(
-                              UINT64_C(4),
+                              UINT64_C(126),
                               List<uint64_t>::cons(
-                                  UINT64_C(51),
+                                  UINT64_C(4),
                                   List<uint64_t>::cons(
-                                      UINT64_C(2412),
+                                      UINT64_C(51),
                                       List<uint64_t>::cons(
-                                          UINT64_C(10645),
-                                          List<uint64_t>::nil()))))))))));
+                                          UINT64_C(2412),
+                                          List<uint64_t>::cons(
+                                              UINT64_C(10645),
+                                              List<uint64_t>::nil()))))))))));
   static std::string test_quicksort_ST(std::monostate _x);
   static std::string test_quicksort_fun(std::monostate _x);
 };

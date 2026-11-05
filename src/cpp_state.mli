@@ -253,6 +253,24 @@ val class_concept_held_back : render_ctx -> Names.GlobRef.t -> bool
     module [mp]: in the visibility planned for its body. *)
 val element_position : Names.ModPath.t -> render_ctx -> render_ctx
 
+(** {2 What function bodies read} *)
+
+(** [plan_function_reads s]: [s] is every global a function body of the
+    unit names, from the finished program, before either file is rendered. *)
+val plan_function_reads : Ref.Can.Set.t -> unit
+
+(** [note_program_reads s], before any unit of a separate extraction is
+    generated: [s] is every global another declaration of the program names.
+    A function of a later unit, not yet generated when an earlier one is
+    planned, may read a value of the earlier one; each unit's
+    {!plan_function_reads} counts all of [s]. *)
+val note_program_reads : Ref.Can.Set.t -> unit
+
+(** Whether a function body of the unit names [r] (as planned by
+    {!plan_function_reads}; nothing does before it is planned).  A header's
+    [static inline] variable such a body reads is written [[[gnu::used]]]:
+    see {!Cpp_print}'s [Dasgn]. *)
+val read_by_a_function : Names.GlobRef.t -> bool
 
 (** {2 Template static accessors} *)
 

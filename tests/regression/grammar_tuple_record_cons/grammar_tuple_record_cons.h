@@ -59,7 +59,7 @@ enum class Symbol { T, NT };
 using production = std::pair<crane::obj, std::deque<Symbol>>;
 using production_semty = std::pair<predicate_semty, action_semty>;
 using grammar_entry = SigT<production, production_semty>;
-const std::deque<grammar_entry> entries =
+[[gnu::used]] inline const std::deque<grammar_entry> entries =
     [](auto _a0, auto _a1) {
       _a1.push_front(_a0);
       return _a1;

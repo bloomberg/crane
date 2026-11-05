@@ -97,7 +97,7 @@ struct NatKey {
 };
 
 using C = Collector<NatKey>;
-const Datatypes::List<C::production> test_prods =
+[[gnu::used]] inline const Datatypes::List<C::production> test_prods =
     Datatypes::template List<C::production>::cons(
         std::make_pair(
             Datatypes::Nat::s(Datatypes::Nat::o()),

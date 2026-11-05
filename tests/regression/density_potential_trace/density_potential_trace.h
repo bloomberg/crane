@@ -43,8 +43,8 @@ struct DensityPotentialTraceCase {
   static Real sample_gamma(Real t);
   static Real sample_v(Real _x);
   static Real sample_N(Real x);
-  static inline const Real sample_mass = Real::from_z(INT64_C(3));
-  static inline const Real sample_time = Real::from_z(INT64_C(2));
+  [[gnu::used]] static inline const Real sample_mass = Real::from_z(INT64_C(3));
+  [[gnu::used]] static inline const Real sample_time = Real::from_z(INT64_C(2));
   static Real density_radicand_at(uint64_t n);
   static bool static_time_nonnegative_at(uint64_t n);
   static bool density_radicand_nonnegative_at(uint64_t n);

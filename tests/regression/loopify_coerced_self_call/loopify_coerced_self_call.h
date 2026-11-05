@@ -49,7 +49,8 @@ template <typename A> struct Sig {
 
 struct Nat {
   using EvenT = Sig<uint64_t>;
-  static inline const EvenT EvenT_0 = Sig<uint64_t>::exist(UINT64_C(0));
+  [[gnu::used]] static inline const EvenT EvenT_0 =
+      Sig<uint64_t>::exist(UINT64_C(0));
   static EvenT EvenT_2(uint64_t _x, const Sig<uint64_t> &h0);
   static EvenT even_EvenT(uint64_t n);
 };

@@ -1752,6 +1752,29 @@ let customs_written_ahead () =
     (fun customs -> function _, Cpp_resolution.Custom_text r -> Ref.User.Set.add r customs | _ -> customs)
     Ref.User.Set.empty keys
 
+(** Plan what the unit's function bodies read ({!Cpp_state.plan_function_reads}):
+    the globals every installed declaration but a variable's names.  A
+    variable's initialiser is not a function body: what it reads it reads
+    where the variable is initialised, and so is defined there before it.
+    Struct fields carry no initialiser, so a struct counts whole (its
+    methods). *)
+let plan_function_reads () =
+  let rec function_globals = function
+    | Dasgn _ -> []
+    | Dtemplate (_, _, d) -> function_globals d
+    | Dnspace (_, ds) -> List.concat_map function_globals ds
+    | d ->
+      let globals = ref [] in
+      Minicpp.iter_globrefs (fun r -> globals := r :: !globals) d;
+      !globals
+  in
+  Cpp_state.plan_function_reads
+    (List.fold_left
+       (fun reads (d : Cpp_erasure.settled) ->
+         List.fold_right Ref.Can.Set.add (function_globals (d :> cpp_decl)) reads)
+       Ref.Can.Set.empty
+       (Finished_program.installed_declarations ()))
+
 let generate_ahead s =
   generating_ahead @@ fun () ->
   (* Everything is generated first, and finished after ({!finish_ahead}).  A

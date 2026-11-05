@@ -158,7 +158,7 @@ struct RamInitReset {
       ram_bank{ListDef::template repeat<ram_chip>(empty_chip, UINT64_C(4))};
   static inline const List<ram_bank> empty_ram =
       ListDef::template repeat<ram_bank>(empty_bank, UINT64_C(4));
-  static inline const ram_sel default_sel =
+  [[gnu::used]] static inline const ram_sel default_sel =
       ram_sel{UINT64_C(0), UINT64_C(0), UINT64_C(0), UINT64_C(0)};
   static inline const state init_state =
       state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),

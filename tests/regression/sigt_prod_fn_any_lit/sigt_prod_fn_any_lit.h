@@ -182,7 +182,7 @@ using M = Make<Inst>;
 /// Build the entry via the functor's mk_entry (inline generic lambdas at the
 /// abstract payload type) — mirroring how parse-a-lot builds
 /// jsonGrammarEntries.
-const M::entry my_entry = M::mk_entry(std::monostate{});
+[[gnu::used]] inline const M::entry my_entry = M::mk_entry(std::monostate{});
 Inst::sem my_arg(std::monostate _x);
 /// In Rocq this is true (predicate 0 =? 0), and the extracted C++ now
 /// agrees.

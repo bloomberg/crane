@@ -557,7 +557,7 @@ struct BorrowedFieldMovedIntoMethod {
   };
 
   static_assert(Size<SizeI>);
-  static inline const BfmTypes::ty arr = BfmTypes::ty::ta(
+  [[gnu::used]] static inline const BfmTypes::ty arr = BfmTypes::ty::ta(
       false, N::npos(Positive::xo(Positive::xo(Positive::xh()))),
       BfmTypes::ty::tb(Positive::xo(Positive::xo(Positive::xo(
           Positive::xo(Positive::xo(Positive::xo(Positive::xh()))))))));

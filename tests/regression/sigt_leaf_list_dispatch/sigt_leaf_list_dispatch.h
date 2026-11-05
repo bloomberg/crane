@@ -189,9 +189,10 @@ template <typename F1> entry mk(uint64_t p, F1 &&f) {
 domty run(const SigT<uint64_t, crane::fn<crane::obj(std::monostate)>> &e);
 const entry entry_tree =
     mk(UINT64_C(1), [](std::monostate) { return UINT64_C(42); });
-const entry entry_trees = mk(UINT64_C(0), [](std::monostate) {
-  return List<crane::obj>::cons(run(entry_tree), List<crane::obj>::nil());
-});
+[[gnu::used]] inline const entry entry_trees =
+    mk(UINT64_C(0), [](std::monostate) {
+      return List<crane::obj>::cons(run(entry_tree), List<crane::obj>::nil());
+    });
 bool check(std::monostate _x);
 
 #endif // INCLUDED_SIGT_LEAF_LIST_DISPATCH

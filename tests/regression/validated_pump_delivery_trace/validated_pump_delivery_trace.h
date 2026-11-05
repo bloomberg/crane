@@ -226,7 +226,7 @@ struct ValidatedPumpDeliveryTraceCase {
     uint64_t cfg_iob_high_threshold_twentieths;
   };
 
-  static inline const Config default_config = Config{
+  [[gnu::used]] static inline const Config default_config = Config{
       UINT64_C(4), UINT64_C(30), UINT64_C(80), UINT64_C(60), UINT64_C(200)};
   enum class ActivityState {
     ACTIVITY_NORMAL,

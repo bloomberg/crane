@@ -289,7 +289,7 @@ struct BoxedElementContainerCast {
                       })))),
           crane::list<SigT<std::pair<Nonterminal, crane::list<symbol>>,
                            std::pair<crane::obj, crane::obj>>>{}));
-  static inline const t_semty sample_t = []() {
+  [[gnu::used]] static inline const t_semty sample_t = []() {
     return std::string(
                1, (static_cast<char>((true ? 1 : 0) | (true ? 2 : 0) |
                                      (false ? 4 : 0) | (false ? 8 : 0) |

@@ -192,7 +192,7 @@ struct FailE {
 template <typename e = void>
 using semantic_function = crane::fn<std::shared_ptr<ITree<Nat>>(List<Nat>)>;
 template <typename T1>
-const semantic_function<T1> k =
+[[gnu::used]] inline const semantic_function<T1> k =
     [](const List<Nat> &args) { return itree_ret(args.length()); };
 
 #endif // INCLUDED_ERASED_EVENT_ALIAS_TARG

@@ -181,7 +181,7 @@ struct Inst {
 };
 
 using M = Make<Inst>;
-const M::entry my_entry =
+[[gnu::used]] inline const M::entry my_entry =
     M::mk(std::monostate{},
           crane_erase_fn<bool>([](uint64_t n) { return n == UINT64_C(0); }),
           crane_erase_fn<uint64_t>([](uint64_t n) { return (n + 1); }));

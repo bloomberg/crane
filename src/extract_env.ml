@@ -1627,6 +1627,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   Common.plan_written_files (Cpp.files_named_ahead struc);
   Table.plan_written_customs (Cpp.customs_written_ahead ());
   Table.check_written_mapping_headers ();
+  Cpp.plan_function_reads ();
   Pipeline_trace.event "emit" "plan_file_layout";
   Cpp.plan_file_layout struc;
   Pipeline_trace.event "emit" "plan_ctor_aliases";
@@ -2202,6 +2203,19 @@ let print_per_library ~dry (core : Core.normalized Core.program) =
   (* Pre-build the method registry from the full structure so that
      cross-module method calls are recognized during per-module rendering. *)
   Cpp_state.set_global_method_registry (Cpp.method_registry_of struc);
+  (* Which values another declaration names, any unit's: a function of a
+     later unit may read a value of an earlier one, which then has to be
+     initialised wherever its header is included
+     ({!Cpp_state.read_by_a_function}). *)
+  let program_reads = ref Ref.Can.Set.empty in
+  Modutil.struct_iter
+    (fun d ->
+      let own = List.map (fun fd -> fd.fd_ref) (Mlutil.term_defs d) in
+      Modutil.decl_iter_references
+        (fun r -> if not (List.exists (Ref.Can.equal r) own) then program_reads := Ref.Can.Set.add r !program_reads)
+        ignore ignore d)
+    ignore ignore struc;
+  Cpp_state.note_program_reads !program_reads;
   (* Generic traversal of ml_structure: walks MEstruct/MEfunctor/MEapply
      and calls [visit ~in_struct elem] on each structure element. *)
   let iter_structure visit struc =

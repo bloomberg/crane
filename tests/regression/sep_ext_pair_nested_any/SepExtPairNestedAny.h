@@ -13,7 +13,8 @@ namespace SepExtPairNestedAny {
 
 using sem_ty = crane::obj;
 using token = Specif::SigT<Datatypes::Nat, sem_ty>;
-const std::pair<std::optional<Datatypes::List<token>>, bool> produce =
+[[gnu::used]] inline const std::pair<std::optional<Datatypes::List<token>>,
+                                     bool> produce =
     std::make_pair(
         std::optional<
             Datatypes::List<Specif::SigT<Datatypes::Nat, crane::obj>>>(),

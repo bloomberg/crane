@@ -300,12 +300,13 @@ struct FoldSequenceStateTraceCase {
                                              const FoldStep &step);
   static ConstructionState execute_sequence(ConstructionState st,
                                             const List<FoldStep> &seq);
-  static inline const FoldSequence sample_sequence = List<FoldStep>::cons(
-      FoldStep::fs_o1(point_O, point_diag),
+  [[gnu::used]] static inline const FoldSequence sample_sequence =
       List<FoldStep>::cons(
-          FoldStep::fs_o2(point_O, point_X),
-          List<FoldStep>::cons(FoldStep::fs_o4(point_diag, line_xaxis),
-                               List<FoldStep>::nil())));
+          FoldStep::fs_o1(point_O, point_diag),
+          List<FoldStep>::cons(
+              FoldStep::fs_o2(point_O, point_X),
+              List<FoldStep>::cons(FoldStep::fs_o4(point_diag, line_xaxis),
+                                   List<FoldStep>::nil())));
   static inline const ConstructionState sample_final_state =
       execute_sequence(initial_state, sample_sequence);
   static uint64_t line_count_after_sample_sequence(ConstructionState st);

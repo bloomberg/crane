@@ -213,7 +213,7 @@ struct PolyRank2RecordField {
     return m0.run(crane_erase_fn<crane::obj>(x), x0);
   }
 
-  static inline const mapper m =
+  [[gnu::used]] static inline const mapper m =
       mapper{[]<typename CraneT1>(auto &&a0, const List<CraneT1> &a1)
                  -> List<std::invoke_result_t<decltype(a0) &, CraneT1 &>> {
         return a1.template map<std::invoke_result_t<decltype(a0) &, CraneT1 &>>(
