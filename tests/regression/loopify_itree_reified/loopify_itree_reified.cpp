@@ -27,7 +27,7 @@ LoopifyItreeReified::count_taus(uint64_t fuel,
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      const std::shared_ptr<ITree<uint64_t>> &t = std::move(_f.t);
+      const std::shared_ptr<ITree<uint64_t>> &t = _f.t;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
         _result = UINT64_C(0);

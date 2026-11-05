@@ -283,7 +283,7 @@ uint64_t MemSafetyProbe22::split_sum(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       uint64_t n = _f.n;
-      const MemSafetyProbe22::tree &t = std::move(_f.t);
+      const MemSafetyProbe22::tree &t = _f.t;
       if (n <= 0) {
         _result = tree_sum(t);
       } else {

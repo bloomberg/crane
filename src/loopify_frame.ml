@@ -2774,21 +2774,13 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
       if owned = [] then ee.ee_body
       else make_owned_param_matches owned ee.ee_body
     in
-    let field_keys =
-      List.filter_map (fun (id, ty) ->
-        if worthwhile_move_type (strip_ref_and_const_type ty)
-        then Some (frame_field_key id) else None)
-      (entry_fields ee)
-    in
-    let is_cand key =
-      key = Id.to_string id_result || List.mem key field_keys
-    in
+    (* No C++-level last-use pass over a handler: every read the Core plan
+       moves is moved already, and what such a pass added over the whole
+       forced-Loopify corpus was only [std::move] into a const reference
+       binding of a frame field, which moves nothing (round 66). *)
     let handler =
       adjust_frame_push_args ~frame_sptr all_frame_ps (make_param_copies ee.ee_params @ body)
       |> optimize_frame_push_args frame_field_types
-      |> optimize_last_use_moves
-           ~self_ref_candidate:is_cand
-           ~last_use_candidate:is_cand
     in
     make_frame_branch (ee_name ee) handler
   in
@@ -2818,22 +2810,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
             adjust_frame_push_args ~frame_sptr all_frame_ps handler
           else handler
         in
-        let cf_types = compute_frame_field_types cf (frame_ps_for cf) in
-        let cf_field_keys =
-          List.filter_map (fun (id, ty) ->
-            if worthwhile_move_type (strip_ref_and_const_type ty)
-            then Some (frame_field_key id) else None)
-          (List.combine (cf_field_names cf) cf_types)
-        in
-        let is_cf_cand key =
-          key = Id.to_string id_result || List.mem key cf_field_keys
-        in
-        make_frame_branch cf.cf_name
-          (handler
-           |> optimize_frame_push_args frame_field_types
-           |> optimize_last_use_moves
-                ~self_ref_candidate:is_cf_cand
-                ~last_use_candidate:is_cf_cand))
+        make_frame_branch cf.cf_name (handler |> optimize_frame_push_args frame_field_types))
       frames
   in
   make_loop_and_return ?fn_name struct_defs ret_ty init_push

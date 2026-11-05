@@ -61,7 +61,7 @@ struct DequeAnyCast {
       _stack.pop_back();
       if (std::holds_alternative<CraneEnter>(_frame)) {
         auto _f = std::move(std::get<CraneEnter>(_frame));
-        const std::deque<typename _tcI0::m_carrier> &l = std::move(_f.l);
+        const std::deque<typename _tcI0::m_carrier> &l = _f.l;
         if (l.empty()) {
           _result = _tcI0::m_id();
         } else {

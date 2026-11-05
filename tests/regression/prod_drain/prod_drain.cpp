@@ -36,7 +36,7 @@ uint64_t ProdDrain::depth(
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      const ProdDrain::t &x = std::move(_f.x);
+      const ProdDrain::t &x = _f.x;
       if (std::holds_alternative<typename ProdDrain::t::L>(x.v())) {
         _result = UINT64_C(0);
       } else {

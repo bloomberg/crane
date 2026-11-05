@@ -33,7 +33,7 @@ LoopifyPairOptionChild::sum(const LoopifyPairOptionChild::tree
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      const LoopifyPairOptionChild::tree &t = std::move(_f.t);
+      const LoopifyPairOptionChild::tree &t = _f.t;
       if (std::holds_alternative<typename LoopifyPairOptionChild::tree::Leaf>(
               t.v())) {
         _result = UINT64_C(0);

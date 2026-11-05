@@ -118,8 +118,8 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      const List<uint64_t> &orig = std::move(_f.orig);
-      const List<uint64_t> &choices = std::move(_f.choices);
+      const List<uint64_t> &orig = _f.orig;
+      const List<uint64_t> &choices = _f.choices;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<List<uint64_t>>::nil();
@@ -143,7 +143,7 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
       }
     } else if (std::holds_alternative<CraneCont_Cons>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-      const List<uint64_t> &orig = std::move(_f.orig);
+      const List<uint64_t> &orig = _f.orig;
       uint64_t f = _f.f;
       uint64_t a0 = _f.a0;
       std::shared_ptr<List<uint64_t>> a1 = std::move(_f.a1);
@@ -464,7 +464,7 @@ List<List<uint64_t>> LoopifyCombinatorics::insert_everywhere(
       }
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-      const List<uint64_t> &l = std::move(_f.l);
+      const List<uint64_t> &l = _f.l;
       uint64_t a0 = _f.a0;
       List<List<uint64_t>> rest = std::move(_result);
       auto prepend_y =

@@ -267,7 +267,7 @@ List<uint64_t> LoopifyHofs::longest_run_fuel(
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      const List<uint64_t> &l = std::move(_f.l);
+      const List<uint64_t> &l = _f.l;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
         _result = std::move(l);

@@ -66,7 +66,7 @@ uint64_t LoopifyComputedScrutineeTemp::walk(
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      const LoopifyComputedScrutineeTemp::lst &l = std::move(_f.l);
+      const LoopifyComputedScrutineeTemp::lst &l = _f.l;
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -86,7 +86,7 @@ uint64_t LoopifyComputedScrutineeTemp::walk(
       }
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-      const LoopifyComputedScrutineeTemp::lst &l = std::move(_f.l);
+      const LoopifyComputedScrutineeTemp::lst &l = _f.l;
       uint64_t a0 = _f.a0;
       _result = ((a0 + hd(l)) + std::move(_result));
     }

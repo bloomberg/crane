@@ -304,7 +304,7 @@ struct LoopifyAdoptedFixAliasResult {
         }
       } else if (std::holds_alternative<CraneEnter_map2_aux>(_frame)) {
         auto _f = std::move(std::get<CraneEnter_map2_aux>(_frame));
-        const List<std::pair<uint64_t, T2>> &m_ = std::move(_f.m_);
+        const List<std::pair<uint64_t, T2>> &m_ = _f.m_;
         std::shared_ptr<List<std::pair<uint64_t, T1>>> a1 = std::move(_f.a1);
         auto e = std::move(_f.e);
         auto f = std::move(_f.f);

@@ -37,7 +37,7 @@ uint64_t ProdFstProjection::depth(
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      const ProdFstProjection::t &x = std::move(_f.x);
+      const ProdFstProjection::t &x = _f.x;
       if (std::holds_alternative<typename ProdFstProjection::t::L>(x.v())) {
         _result = UINT64_C(0);
       } else {

@@ -64,8 +64,8 @@ LoopifyFramePtrEscape::walk(uint64_t n, const LoopifyFramePtrEscape::lst &l,
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      const LoopifyFramePtrEscape::lst &acc = std::move(_f.acc);
-      const LoopifyFramePtrEscape::lst &l = std::move(_f.l);
+      const LoopifyFramePtrEscape::lst &acc = _f.acc;
+      const LoopifyFramePtrEscape::lst &l = _f.l;
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = hd(acc);
