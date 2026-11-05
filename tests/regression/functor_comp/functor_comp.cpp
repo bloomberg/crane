@@ -16,7 +16,7 @@ FunctorComp::Stack::pop(const List<uint64_t> &s) {
   }
 }
 
-uint64_t FunctorComp::Stack::size(FunctorComp::Stack::t x0_) {
+uint64_t FunctorComp::Stack::size(const FunctorComp::Stack::t &x0_) {
   return x0_.length();
 }
 

@@ -525,12 +525,12 @@ struct BinderTypeNamesSectionField {
               return crane_erase_global<Function::Id_IFun, crane::obj>();
             },
             crane::obj()));
-    return [=](FusedS<typename _tcI0::ptr> s) {
+    return [=](const FusedS<typename _tcI0::ptr> &s) {
       return ITree::template bind<CntE, T1,
                                   std::pair<FusedS<typename _tcI0::ptr>, T1>>(
           ITree::template trigger<CntE, T1>(
               Subevent::template subevent<CntE, CntE, T1>(resum_id, e)),
-          [=, s = std::move(s)](const T1 &r) {
+          [=](const T1 &r) {
             return Itree<CntE, std::pair<FusedS<typename _tcI0::ptr>, T1>>::go(
                 ItreeF<CntE, std::pair<FusedS<typename _tcI0::ptr>, T1>,
                        Itree<CntE, std::pair<FusedS<typename _tcI0::ptr>,
@@ -539,8 +539,9 @@ struct BinderTypeNamesSectionField {
     };
   }
 
-  template <Params _tcI0> static Nat size_of(FusedS<typename _tcI0::ptr> s) {
-    return MemStateV<_tcI0>::sz(std::move(s).first).add(std::move(s).second);
+  template <Params _tcI0>
+  static Nat size_of(const FusedS<typename _tcI0::ptr> &s) {
+    return MemStateV<_tcI0>::sz(s.first).add(s.second);
   }
 
   template <Params _tcI0>

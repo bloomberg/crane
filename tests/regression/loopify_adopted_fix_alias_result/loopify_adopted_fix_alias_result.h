@@ -235,18 +235,18 @@ struct LoopifyAdoptedFixAliasResult {
 
   template <typename T1, typename T2, typename T3, typename F0>
   static t<T3> map2(F0 &&f, List<std::pair<uint64_t, T1>> m,
-                    t<T2> x0_) { /// CraneEnter: captures varying parameters for
-                                 /// each recursive call.
+                    const t<T2> &x0_) { /// CraneEnter: captures varying
+                                        /// parameters for each recursive call.
 
     struct CraneEnter {
-      t<T2> x0_;
+      const t<T2> *x0_;
       List<std::pair<uint64_t, T1>> m;
     };
 
     /// CraneEnter_map2_aux: captures varying parameters for each recursive
     /// call.
     struct CraneEnter_map2_aux {
-      List<std::pair<uint64_t, T2>> m_;
+      const List<std::pair<uint64_t, T2>> *m_;
       std::shared_ptr<List<std::pair<uint64_t, T1>>> a1;
       T1 e;
       std::decay_t<F0> f;
@@ -283,28 +283,27 @@ struct LoopifyAdoptedFixAliasResult {
                                     CraneCont2, CraneCont3>;
     t<T3> _result{};
     crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{std::move(x0_), std::move(m)});
+    _stack.emplace_back(CraneEnter{&x0_, std::move(m)});
     /// Loopified map2: CraneEnter -> CraneCont1 -> CraneCont2 -> CraneCont3.
     while (!_stack.empty()) {
       CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<CraneEnter>(_frame)) {
         auto _f = std::move(std::get<CraneEnter>(_frame));
-        t<T2> x0_ = std::move(_f.x0_);
+        const t<T2> &x0_ = *_f.x0_;
         List<std::pair<uint64_t, T1>> m = std::move(_f.m);
         if (std::holds_alternative<typename List<std::pair<uint64_t, T1>>::Nil>(
                 m.v_mut())) {
-          _result = map2_r<T1, T2, T3>(f, std::move(x0_));
+          _result = map2_r<T1, T2, T3>(f, x0_);
         } else {
           auto &[a0, a1] =
               std::get<typename List<std::pair<uint64_t, T1>>::Cons>(m.v_mut());
           const auto &[k, e] = a0;
-          _stack.emplace_back(
-              CraneEnter_map2_aux{std::move(x0_), a1, e, f, k, m});
+          _stack.emplace_back(CraneEnter_map2_aux{&x0_, a1, e, f, k, m});
         }
       } else if (std::holds_alternative<CraneEnter_map2_aux>(_frame)) {
         auto _f = std::move(std::get<CraneEnter_map2_aux>(_frame));
-        const List<std::pair<uint64_t, T2>> &m_ = _f.m_;
+        const List<std::pair<uint64_t, T2>> &m_ = *_f.m_;
         std::shared_ptr<List<std::pair<uint64_t, T1>>> a1 = std::move(_f.a1);
         auto e = std::move(_f.e);
         auto f = std::move(_f.f);
@@ -319,14 +318,15 @@ struct LoopifyAdoptedFixAliasResult {
           const auto &[k_, e_] = a00;
           if (k < k_) {
             _stack.emplace_back(CraneCont1{f, k, std::move(e)});
-            _stack.emplace_back(CraneEnter{m_, *a1});
+            _stack.emplace_back(CraneEnter{&m_, *a1});
           } else {
             if (k_ < k) {
               _stack.emplace_back(CraneCont2{f, k_, e_});
-              _stack.emplace_back(CraneEnter_map2_aux{*a10, a1, e, f, k, m});
+              _stack.emplace_back(
+                  CraneEnter_map2_aux{crane_raw(a10), a1, e, f, k, m});
             } else {
               _stack.emplace_back(CraneCont3{f, k, std::move(e), e_});
-              _stack.emplace_back(CraneEnter{*a10, *a1});
+              _stack.emplace_back(CraneEnter{crane_raw(a10), *a1});
             }
           }
         }

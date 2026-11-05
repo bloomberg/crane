@@ -2759,9 +2759,40 @@ let infer_owned_flags ?owner body params =
     settled
   | _ -> read_off_body ()
 
+(** Whether the C++ type [cpp_ty] names a value inductive
+    ({!Ml_type_util.is_inductive_value_type}), as itself or through a type
+    abbreviation: [Definition t elt := list (key * elt)] declares [t<T2>] an
+    alias of [List<std::pair<key, T2>>], a value copied whole as surely as one
+    named [List] is. *)
+let rec names_value_inductive cpp_ty =
+  is_inductive_value_type cpp_ty
+  ||
+  match cpp_ty with
+  | Tglob ((GlobRef.ConstRef kn as r), args, _) when not (Table.is_custom r) -> (
+    match Table.lookup_typedef_unchecked kn with
+    | Some body -> abbreviates_value_inductive args body
+    | None -> false )
+  | _ -> false
+
+(* Whether the body [body] of a type abbreviation applied to the C++ types
+   [args] is a value inductive ({!names_value_inductive}): a variable of the
+   abbreviation stands for the argument written for it. *)
+and abbreviates_value_inductive args body =
+  match resolve_tmeta body with
+  | Miniml.Tglob ((GlobRef.IndRef _ as r), _, _) ->
+    (not (Table.is_enum_inductive r)) && (not (Table.is_coinductive r)) && not (Table.is_custom_scalar_ref r)
+  | Miniml.Tglob ((GlobRef.ConstRef kn as r), inner, _) when not (Table.is_custom r) -> (
+    match Table.lookup_typedef_unchecked kn with
+    | Some body -> abbreviates_value_inductive args (Mlutil.type_subst_list inner body)
+    | None -> false )
+  | Miniml.Tvar (_, j) when j >= 1 -> (
+    match List.nth_opt args (j - 1) with Some t -> names_value_inductive t | None -> false )
+  | _ -> false
+
 (** Wraps a C++ parameter type with const/ref based on ownership semantics.
     Owned inductive/shared_ptr params are passed by value (moved in);
-    borrowed inductive/shared_ptr params are passed by const reference;
+    borrowed inductive/shared_ptr params are passed by const reference,
+    an inductive named through an abbreviation too ({!names_value_inductive});
     other types are passed by const value.
 
     A closure and a coinductive value are a pointer to a shared block, as a
@@ -2780,7 +2811,7 @@ let wrap_param_by_ownership ?(is_owned = false) cpp_ty =
   | Tshared_ptr _ -> Tref (Lvalue, Tconst cpp_ty)
   | _ when shared_block cpp_ty ->
     if is_owned then cpp_ty else Tref (Lvalue, Tconst cpp_ty)
-  | _ when is_inductive_value_type cpp_ty ->
+  | _ when names_value_inductive cpp_ty ->
     if is_owned then cpp_ty  (* pass by value, caller moves *)
     else Tref (Lvalue, Tconst cpp_ty)  (* const T& for borrowing *)
   | Tvar _ | Tqualified _ ->

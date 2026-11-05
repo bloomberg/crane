@@ -33,7 +33,7 @@ template <SymTypes Ty> struct Actions {
         crane::fn<bool(crane::obj)>>::existt(gamma, crane_erase_fn<bool>(f));
   }
 
-  static bool apply_entry(entry x0_, symbols_semty x1_) {
+  static bool apply_entry(const entry &x0_, symbols_semty x1_) {
     return x0_.projT2()(std::move(x1_));
   }
 };

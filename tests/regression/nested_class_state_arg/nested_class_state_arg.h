@@ -227,12 +227,13 @@ struct NestedClassStateArg {
   template <typename ptr>
   using FusedS = std::pair<St<ptr>, std::pair<List<Nat>, Nat>>;
 
-  template <Params _tcI0> static Nat interp_it(FusedS<typename _tcI0::ptr> s) {
+  template <Params _tcI0>
+  static Nat interp_it(const FusedS<typename _tcI0::ptr> &s) {
     return run_st<FusedS<typename _tcI0::ptr>>(
-        [](FusedS<typename _tcI0::ptr> st) {
-          return (std::move(st).second).second;
+        [](const FusedS<typename _tcI0::ptr> &st) {
+          return (st.second).second;
         },
-        std::move(s));
+        s);
   }
 
   template <Params _tcI0> static Nat start(std::monostate) {

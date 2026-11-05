@@ -229,23 +229,23 @@ struct Denot {
 
   template <Params _tcI0, typename T1>
   static std::optional<exc<typename _tcI0::ptr>>
-  exc_of_event(CFGEtop<typename _tcI0::ptr, T1> e) {
+  exc_of_event(const CFGEtop<typename _tcI0::ptr, T1> &e) {
     if (std::holds_alternative<
             typename Sum1<OtherE, FailE<typename _tcI0::ptr>, T1>::Inl1>(
-            e.v_mut())) {
+            e.v())) {
       return std::optional<dvalue<typename _tcI0::ptr>>();
     } else {
-      auto &[a0] =
+      const auto &[a0] =
           std::get<typename Sum1<OtherE, FailE<typename _tcI0::ptr>, T1>::Inr1>(
-              e.v_mut());
-      auto &[a00] = a0;
-      return std::make_optional<dvalue<typename _tcI0::ptr>>(std::move(a00));
+              e.v());
+      const auto &[a00] = a0;
+      return std::make_optional<dvalue<typename _tcI0::ptr>>(a00);
     }
   }
 
   template <Params _tcI0, typename T1>
   static CFGtop<typename _tcI0::ptr, Sum<exc<typename _tcI0::ptr>, T1>>
-  run_exc(CFGtop<typename _tcI0::ptr, T1> t) {
+  run_exc(const CFGtop<typename _tcI0::ptr, T1> &t) {
     return itree_iter(
         [](const std::shared_ptr<ITree<T1>> &u)
             -> std::shared_ptr<ITree<Sum<std::shared_ptr<ITree<T1>>,
@@ -286,7 +286,7 @@ struct Denot {
             }
           }
         },
-        std::move(t));
+        t);
   }
 };
 

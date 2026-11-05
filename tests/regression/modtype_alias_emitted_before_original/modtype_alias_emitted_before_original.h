@@ -91,7 +91,7 @@ template <Dec X> struct Make {
 
 struct NatDec {
   using t = Nat;
-  static bool eq_dec(t x0_, t x1_);
+  static bool eq_dec(const t &x0_, const t &x1_);
 };
 
 using MN = Make<NatDec>;

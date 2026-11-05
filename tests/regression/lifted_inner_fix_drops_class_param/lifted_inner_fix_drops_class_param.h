@@ -277,13 +277,12 @@ EOU<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>> collect(
 struct LiftedInnerFixDropsClassParam {
   template <Params _tcI0>
   static EOU<dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>
-  use(dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr> x) {
+  use(const dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr> &x) {
     return collect<_tcI0>(
         Nat::o(),
         List<std::pair<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::
-            cons(std::move(x),
-                 List<std::pair<typename _tcI0::PTR::ptr,
-                                typename _tcI0::IPTR::iptr>>::nil()));
+            cons(x, List<std::pair<typename _tcI0::PTR::ptr,
+                                   typename _tcI0::IPTR::iptr>>::nil()));
   }
 };
 

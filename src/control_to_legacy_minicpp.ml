@@ -176,17 +176,17 @@ let rec value_inductive ~abbreviations : Miniml.ml_type -> bool = function
    [k] of the callable [r], of Core type [ty], as [r]'s callable plan passes
    it: lent by const reference, or under Reuse with NonAtomicRc owned by
    value -- either lives for the call, and nothing moves out of it -- at a
-   value inductive.  The convention declares a lent value inductive by
-   reference only where its type names it, not through an abbreviation:
-   one lent so is passed by value, a copy no frame points at.  [None] where
-   no plan states how [r] passes its parameters. *)
+   value inductive, named as itself or through an abbreviation
+   ({!Translation.wrap_param_by_ownership} declares either by
+   reference).  [None] where no plan states how [r] passes its
+   parameters. *)
 let planned_holdable r k ty =
   match Option.bind (Callable_abi.lookup r) Callable_abi.passing with
   | None -> None
   | Some passing ->
     Some
       ( match List.nth_opt passing k with
-      | Some Borrowed -> value_inductive ~abbreviations:false ty
+      | Some Borrowed -> value_inductive ~abbreviations:true ty
       | Some Owned -> Table.reuse () && Table.non_atomic_rc () && value_inductive ~abbreviations:true ty
       | Some Forwarded | None -> false )
 
