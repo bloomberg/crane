@@ -47,14 +47,86 @@ let executable_available executable =
       |> List.exists (fun directory ->
            executable_file (Filename.concat directory executable) )
 
-(** Wait for [pid], killing it once [seconds] have passed.  The poll interval
-    grows from a millisecond, so a quick child costs about what a blocking
-    wait does. *)
-let wait_at_most seconds pid =
-  let deadline = Unix.gettimeofday () +. seconds in
+(** Seconds of a [ps] [time] column: [[[dd-]hh:]mm:]ss[.ff], as both BSD
+    ([0:12.34]) and procps ([00:00:12]) write it.  [None] for anything
+    else. *)
+let parse_cpu_time text =
+  let text = String.trim text in
+  let days, clock =
+    match String.index_opt text '-' with
+    | None -> (Some 0., text)
+    | Some i ->
+      ( Float.of_string_opt (String.sub text 0 i),
+        String.sub text (i + 1) (String.length text - i - 1) )
+  in
+  let fields = List.map Float.of_string_opt (String.split_on_char ':' clock) in
+  if text = "" || List.length fields > 3 || List.mem None (days :: fields)
+  then None
+  else
+    let seconds =
+      List.fold_left
+        (fun total field -> (total *. 60.) +. Option.get field)
+        0. fields
+    in
+    Some ((Option.get days *. 86400.) +. seconds)
+
+(** The processor time [pid] has used so far, read off [ps] (argv only, like
+    every child here); [None] when it cannot be read -- [ps] missing, or the
+    child already gone. *)
+let cpu_time pid =
+  let out = Filename.temp_file "crane_process_ps" ".log" in
+  Fun.protect
+    ~finally:(fun () -> remove_if_exists out)
+    (fun () ->
+      match
+        let fd =
+          Unix.openfile out [Unix.O_WRONLY; Unix.O_CREAT; Unix.O_TRUNC] 0o600
+        in
+        Fun.protect
+          ~finally:(fun () -> Unix.close fd)
+          (fun () ->
+            CUnix.waitpid_non_intr
+              (Unix.create_process "ps"
+                 [|"ps"; "-o"; "time="; "-p"; string_of_int pid|]
+                 Unix.stdin fd fd ) )
+      with
+      | Unix.WEXITED 0 -> parse_cpu_time (read_file out)
+      | _ -> None
+      | exception Unix.Unix_error _ -> None )
+
+(** Wait for [pid], killing it once [timeout] seconds have passed or once it
+    has used [cpu_limit] seconds of processor time.  The poll interval grows
+    from a millisecond, so a quick child costs about what a blocking wait
+    does.
+
+    Processor time is read only when it could have run out: a
+    single-threaded child's time grows no faster than the clock, so the first
+    reading is due once the clock has passed [cpu_limit], and each later one
+    once the clock has passed what was left at the previous reading -- a
+    handful of [ps] runs however loaded the machine is.  (A child running
+    several threads can overrun the limit by up to its thread count before
+    it is read.)  A child whose time cannot be read (no [ps]) is held to
+    [cpu_limit] as wall time. *)
+let wait_at_most ?timeout ?cpu_limit pid =
+  let start = Unix.gettimeofday () in
+  let deadline = Option.map (fun s -> start +. s) timeout in
+  let next_reading = ref (Option.map (fun s -> start +. s) cpu_limit) in
+  let out_of_time now =
+    (match deadline with Some d -> now >= d | None -> false)
+    ||
+    match (!next_reading, cpu_limit) with
+    | Some due, Some limit when now >= due -> (
+      match cpu_time pid with
+      | None -> true
+      | Some used when used >= limit -> true
+      | Some used ->
+        next_reading := Some (now +. (limit -. used));
+        false )
+    | _ -> false
+  in
   let rec poll interval =
     match Unix.waitpid [Unix.WNOHANG] pid with
-    | 0, _ when Unix.gettimeofday () >= deadline ->
+    | 0, _ when out_of_time (Unix.gettimeofday ()) ->
       (try Unix.kill pid Sys.sigkill with Unix.Unix_error _ -> ());
       CUnix.waitpid_non_intr pid
     | 0, _ ->
@@ -66,10 +138,11 @@ let wait_at_most seconds pid =
   poll 0.001
 
 (** Execute a program directly, with optional file redirection, and wait for
-    its termination -- or, given [timeout], for at most that many seconds,
-    after which it is killed and reported as signalled. Open redirection
+    its termination -- or, given [timeout] (wall seconds) or [cpu_limit]
+    (seconds of the child's processor time), until either runs out, after
+    which it is killed and reported as signalled. Open redirection
     descriptors are always closed. *)
-let run ?stdin_file ?stdout_file ?stderr_file ?timeout program args =
+let run ?stdin_file ?stdout_file ?stderr_file ?timeout ?cpu_limit program args =
   let open_output filename =
     Unix.openfile
       filename
@@ -94,9 +167,9 @@ let run ?stdin_file ?stdout_file ?stderr_file ?timeout program args =
       let stderr_fd = match stderr_fd with Some fd -> fd | None -> Unix.stderr in
       let argv = Array.of_list (program :: args) in
       let pid = Unix.create_process program argv stdin_fd stdout_fd stderr_fd in
-      match timeout with
-      | None -> CUnix.waitpid_non_intr pid
-      | Some seconds -> wait_at_most seconds pid )
+      match (timeout, cpu_limit) with
+      | None, None -> CUnix.waitpid_non_intr pid
+      | _ -> wait_at_most ?timeout ?cpu_limit pid )
 
 (** Execute a program while capturing stdout and stderr in separate temporary
     files. The temporary files are deleted after their contents are read. *)
@@ -119,7 +192,7 @@ let capture program args =
     stderr. The child never sees a shell: [input] is staged through a temporary
     file wired directly to the child's stdin descriptor. All temporary files are
     removed even when execution raises. *)
-let filter ?timeout program args input =
+let filter ?timeout ?cpu_limit program args input =
   let stdin_file = Filename.temp_file "crane_process_stdin" ".in" in
   let stdout_file = Filename.temp_file "crane_process_stdout" ".log" in
   let stderr_file = Filename.temp_file "crane_process_stderr" ".log" in
@@ -134,7 +207,8 @@ let filter ?timeout program args input =
         ~finally:(fun () -> close_out_noerr oc)
         (fun () -> output_string oc input);
       let status =
-        run ~stdin_file ~stdout_file ~stderr_file ?timeout program args
+        run ~stdin_file ~stdout_file ~stderr_file ?timeout ?cpu_limit program
+          args
       in
       {
         status;

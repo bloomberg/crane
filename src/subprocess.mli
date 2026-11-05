@@ -28,7 +28,12 @@ val executable_available : string -> bool
     read-only; redirection output files are truncated or created with
     permissions [0o600]. Unspecified streams remain inherited from the parent
     process. Given [timeout], a child still running after that many seconds
-    is killed, and its status is [WSIGNALED Sys.sigkill].
+    is killed, and its status is [WSIGNALED Sys.sigkill]; given [cpu_limit],
+    so is a child that has used that many seconds of processor time (read
+    with [ps] when it could have run out; a child whose time cannot be read
+    is held to it as wall time).  Processor time is what a budget for a
+    computation means on a loaded machine: wall time stretches with the
+    load, the child's own time does not.
 
     @return the child's raw {!Unix.process_status} *)
 val run :
@@ -36,6 +41,7 @@ val run :
   ?stdout_file:string ->
   ?stderr_file:string ->
   ?timeout:float ->
+  ?cpu_limit:float ->
   string ->
   string list ->
   Unix.process_status
@@ -49,10 +55,21 @@ val capture : string -> string list -> captured_output
 (** [filter program arguments input] runs [program] with [input] on standard
     input and captures its stdout and stderr. The input is staged through a
     temporary file wired directly to the child's stdin, so no shell is involved.
-    Temporary files are removed even when execution raises.
+    Temporary files are removed even when execution raises. [timeout] and
+    [cpu_limit] are as for {!run}.
 
     @return the child's status and captured streams *)
-val filter : ?timeout:float -> string -> string list -> string -> captured_output
+val filter :
+  ?timeout:float ->
+  ?cpu_limit:float ->
+  string ->
+  string list ->
+  string ->
+  captured_output
+
+(** [parse_cpu_time text] reads a [ps] [time] column, [[[dd-]hh:]mm:]ss[.ff]
+    (BSD and procps both), as seconds. *)
+val parse_cpu_time : string -> float option
 
 (** [exit_code status] converts [status] to a conventional integer exit code.
     Normal exits retain their code; signals and stopped states use [128 + n]. *)

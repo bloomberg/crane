@@ -1247,29 +1247,30 @@ let bde_format_available () = executable_available "bde-format"
 
 let clang_format_available () = executable_available "clang-format"
 
-(** How long the formatter may take on [text] before Crane keeps it as
-    written.  Crane's output formats at about 2 ms a line, but clang-format's
-    line breaking can blow up on a long, fully qualified, template-heavy
-    expression -- a 4700-line separately extracted Vellvm header ran for
-    minutes and grew past 10 GB -- so a file taking ten times the usual rate
-    is abandoned, and none is given more than two minutes: a whole-program
-    header the size of Vellvm's would take most of an hour even at the usual
-    rate, and is better kept as written.
+(** How much processor time the formatter may take on [text] before Crane
+    keeps it as written.  Crane's output formats at about 2 ms a line, but
+    clang-format's line breaking can blow up on a long, fully qualified,
+    template-heavy expression -- a 4700-line separately extracted Vellvm
+    header ran for minutes and grew past 10 GB -- so a file taking ten times
+    the usual rate is abandoned, and none is given more than two minutes: a
+    whole-program header the size of Vellvm's would take most of an hour even
+    at the usual rate, and is better kept as written.
 
-    The budget is wall time, which the formatter's processor time is not: on
-    a machine running many times as many processes as it has processors, a
-    file that formats in ten seconds alone (deep_arith_nesting) can run out
-    of it and be kept unformatted -- the warning below says so, and the file
-    then differs from a formatted copy in whitespace only.  Stretching the
-    budget by the share of a processor this process has had was tried and
-    does not track the formatter's share closely enough (2 of 7 runs at load
-    180 still timed out).  A true processor-time limit needs the child's own
-    usage ([setrlimit] in the child, or reading it while it runs), which
-    {!Subprocess} does not offer. *)
+    The budget is the formatter's own processor time, not wall time: on a
+    machine running many times as many processes as it has processors, a
+    file that formats in ten seconds alone (deep_arith_nesting: 12.6 s of
+    processor time over 86 s of wall time at load 165) ran out of a wall
+    budget and was kept unformatted, differing from a formatted copy in
+    whitespace only.  {!format_wall_ceiling} only catches a formatter that
+    stops making progress without using the processor. *)
 let format_budget text =
   let lines = ref 0 in
   String.iter (fun c -> if c = '\n' then incr lines) text;
   Float.min 120. (30. +. (0.02 *. float_of_int !lines))
+
+(** Wall time after which a formatter is abandoned whatever its processor
+    time: far past any share of a processor a loaded machine leaves it. *)
+let format_wall_ceiling budget = 20. *. budget
 
 (** Whether the formatter was killed for running past {!format_budget}, in
     which case [what] is reported as left unformatted. *)
@@ -1278,7 +1279,8 @@ let format_timed_out ~budget what = function
     Feedback.msg_warning
       Pp.(
         str "the formatter ran out of time on" ++ spc () ++ str what
-        ++ spc () ++ str (Printf.sprintf "(%.0f s);" budget)
+        ++ spc ()
+        ++ str (Printf.sprintf "(%.0f s of processor time);" budget)
         ++ spc () ++ str "leaving it unformatted" );
     true
   | _ -> false
@@ -1309,8 +1311,9 @@ let format_buffer_to_string (buf : Buffer.t) : string =
       let raw_output = Buffer.contents buf in
       let budget = format_budget raw_output in
       match
-        Subprocess.filter ~timeout:budget formatter
-          formatter_args raw_output
+        Subprocess.filter ~cpu_limit:budget
+          ~timeout:(format_wall_ceiling budget) formatter formatter_args
+          raw_output
       with
       | exception _ -> raw_output
       | {status = Unix.WEXITED 0; stdout; _} -> stdout
@@ -1345,12 +1348,13 @@ let format_file_inplace (filename : string) : unit =
     if skip_format then
       ()
     else
-      let timeout =
+      let budget =
         format_budget (In_channel.with_open_bin filename In_channel.input_all)
       in
       ignore
-        (format_timed_out ~budget:timeout filename
-           (Subprocess.run ~timeout formatter formatter_args) )
+        (format_timed_out ~budget filename
+           (Subprocess.run ~cpu_limit:budget
+              ~timeout:(format_wall_ceiling budget) formatter formatter_args ) )
 
 (** Filter applied to [opened_libraries ()] in [print_structure_to_file] to
     prune back-edges in the inter-module include graph during separate
