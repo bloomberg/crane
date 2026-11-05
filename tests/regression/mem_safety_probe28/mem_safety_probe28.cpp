@@ -704,7 +704,7 @@ MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
     _stack.pop_back();
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
-      const MemSafetyProbe28::tree &t2 = _f.t2;
+      MemSafetyProbe28::tree t2 = std::move(_f.t2);
       const MemSafetyProbe28::tree &t1 = *_f.t1;
       if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(
               t1.v())) {

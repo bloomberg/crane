@@ -530,7 +530,7 @@ bool Z_as_OT::eq_dec(const Z &x0_, const Z &x1_) {
   return BinInt::eq_dec(x0_, x1_);
 }
 
-Nat Qp::use(IM::template t<Nat> x0_) { return im_size<Nat>(std::move(x0_)); }
+Nat Qp::use(const IM::template t<Nat> &x0_) { return im_size<Nat>(x0_); }
 
 Comparison Datatypes::CompOpp(Comparison r) {
   switch (r) {

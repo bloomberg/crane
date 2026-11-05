@@ -1990,12 +1990,35 @@ let optimize_frame_push_args frame_field_types stmts =
     in
     on_stmts ~decl_owned:[] [] stmts
 
+(** A handler's bindings of its frame's fields, [body], with each local
+    bound by const reference to a field the frame holds by value, that the
+    handler moves and does not read through the frame again, bound by value
+    instead, moved out of the frame: the handler owns its frame ([_f] was
+    moved off the stack), and a move out of a const reference copies.  A
+    lent parameter or a saved local is held by value in a frame not pointing
+    into it -- [CraneEnter{l, fuel}] -- and its handler's read of it last,
+    [_result = std::move(l)], is such a move. *)
+let own_moved_bindings body =
+  let rec go = function
+    | Sasgn (id, Declare (Tref (Lvalue, Tconst t), None), (CPPaccess (Adot, CPPvar f, field) as read)) :: rest
+      when Id.equal f id_f
+           && body_exists (function CPPmove (CPPvar x) -> Id.equal x id | _ -> false) rest
+           && not
+                (body_exists
+                   (function CPPaccess (Adot, CPPvar f', field') -> Id.equal f' id_f && Id.equal field' field | _ -> false)
+                   rest ) ->
+      Sasgn (id, Declare (t, None), CPPmove read) :: go rest
+    | s :: rest -> s :: go rest
+    | [] -> []
+  in
+  go body
+
 (** Build one branch of the frame-dispatch [Smatch].
 
     The loop variable [_frame] is the scrutinee; the frame struct type is
     represented as [Tvar(0, Some name)] (avoids the struct-name qualification
-    that [Tid] would add); [_f] is the [const auto&] binding that gives the
-    handler body access to the saved frame fields.
+    that [Tid] would add); [_f] is the frame, moved off it, that gives the
+    handler body access to the saved frame fields ({!own_moved_bindings}).
 
     @param frame_name Name of the frame struct (e.g. [CraneEnter], [CraneCont1])
     @param body       Handler body statements
@@ -2005,7 +2028,7 @@ let make_frame_branch frame_name body =
     smb_var = Some (id_f);
     smb_field_bindings = [];
     smb_extra_conds = [];
-    smb_body = body }
+    smb_body = own_moved_bindings body }
 
 (** The scrutinee of the frame-dispatch match: the loop variable [_frame],
     owned (it was moved off the stack) and held as a variant. *)

@@ -242,7 +242,7 @@ struct FunctorComp {
     static inline const t empty = List<uint64_t>::nil();
     static t push(uint64_t x, const List<uint64_t> &s);
     static std::optional<std::pair<uint64_t, t>> pop(const List<uint64_t> &s);
-    static uint64_t size(t x0_);
+    static uint64_t size(const t &x0_);
   };
 
   struct Queue {

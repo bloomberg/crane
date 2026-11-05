@@ -91,7 +91,7 @@ type planned = {
   varying : bool list;
   parts : bool list;
   cursor : Reuse_cursor.t option;
-  moves : (Miniml.Occurrence.t * bool list) list;
+  moves : (Miniml.Occurrence.t * Ownership_plan.Continue_move.t list) list;
 }
 
 (* [l] lowered as [lowering] from what takes C++ parameters standing, in
@@ -111,7 +111,10 @@ let planned_at (l : Control_ir.Term.loop) lowering positions =
       | Tail | Frames -> None );
     moves =
       ( match lowering with
-      | Tail -> List.map (fun (o, flags) -> (o, at flags)) (Ownership_plan.continue_moves l)
+      | Tail ->
+        List.map
+          (fun (o, moves) -> (o, List.map (function Some i -> List.nth moves i | None -> Ownership_plan.Continue_move.Keep) positions))
+          (Ownership_plan.continue_moves l)
       | Modulo_cons | Frames -> [] ) }
 
 (* The position among the parameters of the loop [l] of the parameter of
@@ -176,17 +179,17 @@ let rec value_inductive ~abbreviations : Miniml.ml_type -> bool = function
    [k] of the callable [r], of Core type [ty], as [r]'s callable plan passes
    it: lent by const reference, or under Reuse with NonAtomicRc owned by
    value -- either lives for the call, and nothing moves out of it -- at a
-   value inductive.  The convention declares a lent value inductive by
-   reference only where its type names it, not through an abbreviation:
-   one lent so is passed by value, a copy no frame points at.  [None] where
-   no plan states how [r] passes its parameters. *)
+   value inductive, named as itself or through an abbreviation
+   ({!Translation.wrap_param_by_ownership} declares either by
+   reference).  [None] where no plan states how [r] passes its
+   parameters. *)
 let planned_holdable r k ty =
   match Option.bind (Callable_abi.lookup r) Callable_abi.passing with
   | None -> None
   | Some passing ->
     Some
       ( match List.nth_opt passing k with
-      | Some Borrowed -> value_inductive ~abbreviations:false ty
+      | Some Borrowed -> value_inductive ~abbreviations:true ty
       | Some Owned -> Table.reuse () && Table.non_atomic_rc () && value_inductive ~abbreviations:true ty
       | Some Forwarded | None -> false )
 

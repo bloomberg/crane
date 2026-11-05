@@ -264,7 +264,7 @@ let no_varying_plan = "no ControlIR loop says which parameters vary"
 type member_plan = {
   member_varying : bool list;
   member_parts : bool list;
-  member_moves : (Miniml.Occurrence.t * bool list) list;
+  member_moves : (Miniml.Occurrence.t * Ownership_plan.Continue_move.t list) list;
 }
 
 let member_plan ~frames member params =

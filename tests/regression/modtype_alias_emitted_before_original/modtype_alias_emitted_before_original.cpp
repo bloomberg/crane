@@ -23,8 +23,8 @@ bool PeanoNat::eq_dec(const Nat &n, const Nat &m) {
   }
 }
 
-bool NatDec::eq_dec(NatDec::t x0_, NatDec::t x1_) {
-  return PeanoNat::eq_dec(std::move(x0_), std::move(x1_));
+bool NatDec::eq_dec(const NatDec::t &x0_, const NatDec::t &x1_) {
+  return PeanoNat::eq_dec(x0_, x1_);
 }
 
 bool go(const Nat &x0_, const Nat &x1_) { return MN::same(x0_, x1_); }

@@ -227,15 +227,15 @@ struct Denot {
   template <typename ptr, typename r> using CFGtop = std::shared_ptr<ITree<r>>;
 
   template <Params _tcI0, typename T1>
-  static Sum<Nat, T1> handle_bot(CFGEtop<typename _tcI0::ptr, T1> e) {
+  static Sum<Nat, T1> handle_bot(const CFGEtop<typename _tcI0::ptr, T1> &e) {
     if (std::holds_alternative<
             typename Sum1<OtherE, FailE<typename _tcI0::ptr>, T1>::Inl1>(
-            e.v_mut())) {
-      auto &[a0] =
+            e.v())) {
+      const auto &[a0] =
           std::get<typename Sum1<OtherE, FailE<typename _tcI0::ptr>, T1>::Inl1>(
-              e.v_mut());
-      auto &[a00] = a0;
-      return Sum<Nat, T1>::inr(std::move(a00));
+              e.v());
+      const auto &[a00] = a0;
+      return Sum<Nat, T1>::inr(a00);
     } else {
       return Sum<Nat, T1>::inl(Nat::o());
     }
@@ -243,7 +243,7 @@ struct Denot {
 
   template <Params _tcI0, typename T1>
   static CFGtop<typename _tcI0::ptr, Sum<exc<typename _tcI0::ptr>, T1>>
-  run_exc(CFGtop<typename _tcI0::ptr, T1> t) {
+  run_exc(const CFGtop<typename _tcI0::ptr, T1> &t) {
     return itree_iter(
         [](const std::shared_ptr<ITree<T1>> &u)
             -> std::shared_ptr<
@@ -286,7 +286,7 @@ struct Denot {
             }
           }
         },
-        std::move(t));
+        t);
   }
 };
 

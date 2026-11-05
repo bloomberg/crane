@@ -132,7 +132,8 @@ struct RegFile {
   template <typename T1>
   static std::optional<List<T1>> replace_nth(const List<T1> &l, uint64_t i,
                                              const T1 &x);
-  static std::optional<rfile> write_r(rfile x0_, uint64_t x1_, const Rv &x2_);
+  static std::optional<rfile> write_r(const rfile &x0_, uint64_t x1_,
+                                      const Rv &x2_);
 };
 
 const std::optional<rfile> written = RegFile::write_r(

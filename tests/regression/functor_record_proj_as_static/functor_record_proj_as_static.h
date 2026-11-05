@@ -728,10 +728,11 @@ template <OrderedType X> struct Coq_Raw {
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-  static t<T3> map2(F0 &&f, List<std::pair<typename X::t, T1>> m, t<T2> x0_) {
+  static t<T3> map2(F0 &&f, List<std::pair<typename X::t, T1>> m,
+                    const t<T2> &x0_) {
     if (std::holds_alternative<
             typename List<std::pair<typename X::t, T1>>::Nil>(m.v_mut())) {
-      return map2_r<T1, T2, T3>(f, std::move(x0_));
+      return map2_r<T1, T2, T3>(f, x0_);
     } else {
       auto &[a0, a1] =
           std::get<typename List<std::pair<typename X::t, T1>>::Cons>(
@@ -770,13 +771,13 @@ template <OrderedType X> struct Coq_Raw {
           -> List<std::pair<typename X::t, T3>> {
         return map2_aux_impl(map2_aux_impl, m_);
       };
-      return map2_aux(std::move(x0_));
+      return map2_aux(x0_);
     }
   }
 
   template <typename T1, typename T2>
   static t<std::pair<std::optional<T1>, std::optional<T2>>>
-  combine(List<std::pair<typename X::t, T1>> m, t<T2> x0_) {
+  combine(List<std::pair<typename X::t, T1>> m, const t<T2> &x0_) {
     if (std::holds_alternative<
             typename List<std::pair<typename X::t, T1>>::Nil>(m.v_mut())) {
       return map<T2, std::pair<std::optional<T1>, std::optional<T2>>>(
@@ -784,7 +785,7 @@ template <OrderedType X> struct Coq_Raw {
             return std::make_pair(std::optional<T1>(),
                                   std::make_optional<T2>(e_));
           },
-          std::move(x0_));
+          x0_);
     } else {
       auto &[a0, a1] =
           std::get<typename List<std::pair<typename X::t, T1>>::Cons>(
@@ -842,7 +843,7 @@ template <OrderedType X> struct Coq_Raw {
                             std::pair<std::optional<T1>, std::optional<T2>>>> {
         return combine_aux_impl(combine_aux_impl, m_);
       };
-      return combine_aux(std::move(x0_));
+      return combine_aux(x0_);
     }
   }
 
@@ -1870,7 +1871,7 @@ template <typename T1> Nat im_size(const IM::template bst<T1> &m) {
 }
 
 struct Qp {
-  static Nat use(IM::template t<Nat> x0_);
+  static Nat use(const IM::template t<Nat> &x0_);
 };
 
 #endif // INCLUDED_FUNCTOR_RECORD_PROJ_AS_STATIC

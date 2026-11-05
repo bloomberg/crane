@@ -235,7 +235,7 @@ struct AstLib {
 
   struct RawIDOrd {
     using t = Raw_id;
-    static bool eq_dec(t x0_, t x1_);
+    static bool eq_dec(const t &x0_, const t &x1_);
   };
 };
 

@@ -9,7 +9,7 @@
 
 namespace ParserAnyCast {
 
-ParserAnyCast::Tag ParserAnyCast::get_tag(ParserAnyCast::entry x0_) {
+ParserAnyCast::Tag ParserAnyCast::get_tag(const ParserAnyCast::entry &x0_) {
   return x0_.projT1();
 }
 
@@ -42,7 +42,7 @@ uint64_t ParserAnyCast::sum_a_entries(
 }
 
 ParserAnyCast::Label
-ParserAnyCast::get_entry_label(ParserAnyCast::labeled_entry x0_) {
+ParserAnyCast::get_entry_label(const ParserAnyCast::labeled_entry &x0_) {
   return x0_.projT1();
 }
 
