@@ -1535,11 +1535,7 @@ and pp_cpp_expr ctx env args t =
   | CPPglob (x, tys, Some {ci_inline = Some tmpl; ci_yields; _}) -> (
     match tmpl.it_form with
     | Block_iife -> gen_block_iife ?yields:ci_yields x tmpl.it_text tys []
-    (* A text with no hole is written as it stands. *)
-    | Bare_callee ->
-      Common.writes_custom x;
-      str tmpl.it_text
-    | Templated -> uninstantiated_mapping x )
+    | Bare_callee | Templated -> uninstantiated_mapping x )
   | CPPmethod_value {mv_method; mv_access; mv_receiver; mv_params; mv_type_args} ->
     let names =
       match mv_params with
@@ -1672,21 +1668,12 @@ and pp_cpp_expr ctx env args t =
     let name, _ = inductive_name ctx r in
     Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) name ++ pp_cpp_expr ctx env args t
   | CPPfun_call (res, CPPglob (n, tys, Some {ci_inline = Some tmpl; _}), ts) ->
-    let s = tmpl.it_text in
+    (* A callee's text was instantiated as the call's callee, and a
+       template's as the whole call ({!Cpp_erasure.instantiate_foreign}). *)
     if tmpl.it_form = Block_iife then
       gen_block_iife
         ?yields:(match res.cs_yields with Ryields ty -> Some ty | Ropaque -> None)
-        n s tys (call_args ts)
-    else
-    if tmpl.it_form = Bare_callee then
-      let ty_args_s =
-        match tys with
-        | [] -> mt ()
-        | _ -> str "<" ++ pp_list (pp_cpp_type ctx false []) tys ++ str ">"
-      in
-      let args_s = pp_list (pp_cpp_expr ctx env args) (call_args ts) in
-      Common.writes_custom n;
-      str s ++ ty_args_s ++ str "(" ++ args_s ++ str ")"
+        n tmpl.it_text tys (call_args ts)
     else uninstantiated_mapping n
   | CPPmethod_call {mc_method; mc_access; mc_receiver; mc_type_args; mc_args} ->
     pp_cpp_expr ctx env args mc_receiver
@@ -2811,7 +2798,8 @@ and pp_spliced ctx env ~followed_by_dot arg_expr =
   if followed_by_dot then
     match arg_expr with
     | CPPbinop _ | CPPforeign (Foreign_call, _) -> str "(" ++ arg ++ str ")"
-    | CPPfun_call (_, CPPglob (_, _, Some ci), _) when ci.ci_inline <> None ->
+    (* A mapping's call: a block, or a callee's text applied. *)
+    | CPPfun_call (_, (CPPglob (_, _, Some {ci_inline = Some _; _}) | CPPforeign _), _) ->
       str "(" ++ arg ++ str ")"
     (* A prefix pointer operator binds looser than the member access
        the template appends, so [%a0.first] applied to a scrutinee

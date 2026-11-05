@@ -688,6 +688,14 @@ and instantiated_foreign ~boxing r tokens tys values yields =
     fr_values = List.map (instantiated_expr ~boxing) values;
     fr_yields = Option.map (instantiated_type ~boxing) yields;
     fr_pieces = foreign_pieces ~element tokens }
+(* A text with no hole, applied to the type arguments [tys]: [text<t0, t1>]. *)
+and bare_callee ~boxing r text tys =
+  let applied = match tys with [] -> [] | _ -> [Fp_text "<"] @ List.concat (List.mapi (fun i _ -> (if i > 0 then [Fp_text ", "] else []) @ [Fp_type i]) tys) @ [Fp_text ">"] in
+  { fr_custom = r;
+    fr_types = List.map (instantiated_type ~boxing) tys;
+    fr_values = [];
+    fr_yields = None;
+    fr_pieces = Fp_text text :: applied }
 and instantiated_expr ~boxing e =
   match e with
   | CPPfun_call (res, CPPglob (n, tys, Some {ci_inline = Some ({it_form = Templated; _} as tmpl); _}), call) ->
@@ -701,14 +709,24 @@ and instantiated_expr ~boxing e =
   | CPPglob (x, tys, Some ({ci_inline = Some ({it_form = Block_iife; _} as tmpl); _} as ci)) ->
     let ci = {ci with ci_inline = Some {tmpl with it_text = settle_block ~boxing x tys tmpl.it_text}} in
     map_expr (instantiated_expr ~boxing) (instantiated_stmt ~boxing) (instantiated_type ~boxing) (CPPglob (x, tys, Some ci))
+  (* A text that places nothing is a callee: the call stays a call, of the
+     text applied to the type arguments, and its arguments are written as a
+     call's, not spliced. *)
+  | CPPfun_call (res, CPPglob (n, tys, Some {ci_inline = Some {it_form = Bare_callee; it_text; _}; _}), call) ->
+    map_expr (instantiated_expr ~boxing) (instantiated_stmt ~boxing) (instantiated_type ~boxing)
+      (CPPfun_call (res, CPPforeign (Foreign_constant, bare_callee ~boxing n it_text tys), call))
   | CPPglob (x, tys, (Some {ci_inline = Some tmpl; _} as ci)) when is_templated ci ->
     CPPforeign (Foreign_constant, instantiated_foreign ~boxing x (Foreign_template.type_template tmpl.it_text) tys [] None)
+  (* Not applied, a callee is its text as it stands. *)
+  | CPPglob (x, _, Some {ci_inline = Some {it_form = Bare_callee; it_text; _}; _}) ->
+    CPPforeign (Foreign_constant, bare_callee ~boxing x it_text [])
   (* Spelled as a value, a mapped qualifier is its text as written, given
      no arguments it does not place itself. *)
   | CPPqualified_t (Tglob (r, tys, []), id) when Table.inline_custom_text r <> None -> (
     match Table.inline_custom_text r with
     | Some s when (inline_template s).it_form = Templated ->
       CPPqualified_t (Tforeign (instantiated_foreign ~boxing r (Foreign_template.type_template s) tys [] None), id)
+    | Some s when (inline_template s).it_form = Bare_callee -> CPPqualified_t (Tforeign (bare_callee ~boxing r s []), id)
     | Some _ | None -> CPPqualified_t (Tglob (r, List.map (instantiated_type ~boxing) tys, []), id) )
   (* For a callee generic over the element, whose declaration never boxes
      it. *)
@@ -972,6 +990,9 @@ let decide_constexpr (d : settled) : settled =
         (* A mapped constant constructor of a literal type ([true]) is that
            type's literal. *)
         | CPPglob ((GlobRef.ConstructRef _ as r), [], _) -> Table.is_custom r
+        (* And so is its text once instantiated ({!instantiate_foreign}). *)
+        | CPPforeign (Foreign_constant, {fr_custom = GlobRef.ConstructRef _ as r; fr_types = []; fr_values = []; _}) ->
+          Table.is_custom r
         | _ -> false
       in
       Dasgn {a with da_constexpr = eligible (literal && is_literal_type a.da_type)}
