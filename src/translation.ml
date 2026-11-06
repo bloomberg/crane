@@ -9072,7 +9072,8 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
         cases,
         { cm_template = cmatch;
           cm_inductive = Table.indref_of_match pv;
-          cm_scrutinee = (if pair_by_value then Scrut_owned else Scrut_borrowed) } ) ]
+          cm_scrutinee = (if pair_by_value then Scrut_owned else Scrut_borrowed);
+          cm_pieces = None } ) ]
 
 (** {2 IIFE Inlining}
 

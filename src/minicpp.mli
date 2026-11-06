@@ -1028,13 +1028,30 @@ and ref_qual =
   | Rq_rvalue  (** [&&] *)
 
 (** A custom match: the mapping's template, as the mapping writes it, the
-    inductive it matches, and how the match holds its scrutinee; it is
-    printed from {!custom_match_text}. *)
+    inductive it matches, and how the match holds its scrutinee. *)
 and custom_match = {
   cm_template : string;
   cm_inductive : GlobRef.t;
   cm_scrutinee : scrutinee_hold;
+  cm_pieces : match_piece list option;
+      (** The template ({!custom_match_text}) instantiated at the seam
+          ({!Cpp_erasure.instantiate_foreign}), every decision it leaves
+          open taken; [None] until then. *)
 }
+
+(** One piece of an instantiated match template, in the order it is
+    written. *)
+and match_piece =
+  | Mp_text of string  (** literal C++ of the mapping *)
+  | Mp_scrutinee of {parenthesised : bool}
+      (** [%scrut], parenthesised where it is written with a leading pointer
+          operator ({!written_with_leading_pointer_operator}): the text may
+          follow it with a member access. *)
+  | Mp_matched_type  (** [%ty] *)
+  | Mp_type_arg of int  (** [%t{i}] *)
+  | Mp_branch of int  (** [%br{i}]: branch [i]'s statements *)
+  | Mp_binder of int * int  (** [%b{i}a{j}]: branch [i]'s binder [j] *)
+  | Mp_binder_type of int * int  (** [%b{i}t{j}]: its type *)
 
 (** How a custom match holds its scrutinee. *)
 and scrutinee_hold =

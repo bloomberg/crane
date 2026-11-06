@@ -24,7 +24,6 @@ open Common
 open Minicpp
 open Cpp_state
 open Cpp_names
-open Foreign_template
 
 (** Escape a byte string for emission inside a double-quoted C++ string literal.
 
@@ -2183,22 +2182,43 @@ and pp_cpp_stmt ctx env args stmt =
     (* Scrutinee caching (auto _cs = expr;) is handled during translation
        in gen_custom_cpp_case, which prepends an Sasgn before this node
        when the template uses %scrut more than once with a non-trivial
-       scrutinee.  The printer just expands the template. *)
+       scrutinee.  The printer writes the pieces. *)
     Common.writes_custom cmatch.cm_inductive;
-    let text = custom_match_text cmatch in
-    let cmds = match_template text in
-    pp_custom ctx ( "custom match for "
-      ^ Pp.string_of_ppcmds (pp_cpp_type ctx false [] typ)
-      ^ " := "
-      ^ text )
-      env
-      (Some typ)
-      (Some t)
-      tyargs
-      cases
-      []
-      []
-      cmds
+    let pieces = match cmatch.cm_pieces with Some p -> p | None -> uninstantiated_mapping cmatch.cm_inductive in
+    let unbound what = CErrors.anomaly Pp.(str ("Custom syntax: unbound " ^ what ^ " in the match of ") ++ GlobRef.print cmatch.cm_inductive) in
+    let branch i = match List.nth_opt cases i with Some b -> b | None -> unbound "branch" in
+    let binder i j = match List.nth_opt (let ps, _, _ = branch i in ps) j with Some p -> p | None -> unbound "binder" in
+    let piece = function
+      | Mp_text s -> str s
+      | Mp_scrutinee {parenthesised} ->
+        let printed = pp_cpp_expr ctx env [] t in
+        ( match t with
+        | CPPstring _ -> string_object printed
+        (* A scrutinee carrying a prefix pointer operator binds looser than
+           whatever the template appends: the option template's
+           [%scrut.has_value()] applied to a recursive occurrence stored
+           behind a smart pointer, written [*a1], came out as
+           [*a1.has_value()].  Only the pointer operators need this: they are
+           the ones a template can follow with a member access; the logical
+           and arithmetic prefixes already bind tighter than anything a
+           template appends. *)
+        | _ ->
+          check_leading_pointer_operator t printed;
+          if parenthesised then surround printed else printed )
+      | Mp_matched_type -> pp_cpp_type ctx false [] typ
+      | Mp_type_arg i -> (
+        (* Every type argument the text names was supplied at the seam
+           ({!Cpp_erasure.supply_template_args}). *)
+        match List.nth_opt tyargs i with Some ty -> pp_cpp_type ctx false [] ty | None -> unbound "type argument" )
+      | Mp_branch i ->
+        let _, _, ss = branch i in
+        pp_list_stmt (pp_cpp_stmt ctx env []) ss
+      | Mp_binder (i, j) -> Id.print (binder i j).cp_name
+      (* Spellable: one that is not was materialised at the seam
+         ({!Cpp_erasure.materialise}). *)
+      | Mp_binder_type (i, j) -> pp_cpp_type ctx false [] (binder i j).cp_type
+    in
+    List.fold_left (fun acc p -> acc ++ piece p) (mt ()) pieces
   | Smatch (scrut, branches, default) ->
     writes_variant ();
     (* Print an if/else-if chain using [std::holds_alternative] for
@@ -2452,107 +2472,6 @@ and pp_cpp_stmt ctx env args stmt =
 and string_object printed =
   writes_standard "string";
   str (sn ()).string ++ str "(" ++ printed ++ str ")"
-
-and pp_custom ?container ctx custom env typ t tyargs cases args vl cmds =
-  Option.iter Common.writes_custom container;
-  (* Every read of a boxed value the template needs at a concrete type was
-     made explicit by {!Cpp_erasure.lower_boxed_reads}; this prints. *)
-  let pp ?(followed_by_dot=false) cmd =
-    match cmd with
-    | CCstring s -> str s
-    | CCscrut ->
-      ( match t with
-      | Some t_expr ->
-        let t_printed = pp_cpp_expr ctx env [] t_expr in
-        ( match t_expr with
-        | CPPstring _ -> string_object t_printed
-        (* A custom match template splices [%scrut] in as text and appends
-           to it, so a scrutinee carrying a prefix operator would bind
-           looser than whatever follows.  A recursive occurrence nested
-           under a mapped type (e.g. [option chain]) is stored behind a
-           smart pointer, so the scrutinee prints as [*a1] and the option
-           template's [%scrut.has_value()] came out as [*a1.has_value()] --
-           the member access binding to [a1] rather than to the pointee,
-           which does not compile.  Parenthesize so the operator keeps its
-           intended operand.
-
-           Only the pointer operators need this: they are the ones a
-           template can follow with a member access.  The logical and
-           arithmetic prefixes ([!], [-], [~]) already bind tighter than
-           anything a template appends after [%scrut], so parenthesizing
-           them would only add noise to the generated code. *)
-        | _ ->
-          check_leading_pointer_operator t_expr t_printed;
-          if Minicpp.written_with_leading_pointer_operator t_expr then surround t_printed else t_printed )
-      | None ->
-        CErrors.anomaly
-          (Pp.str "Custom syntax: scrutinee token with no bound expression") )
-    | CCty ->
-      ( match typ with
-      | Some typ -> pp_cpp_type ctx false vl typ
-      | None ->
-        CErrors.anomaly (Pp.str "Custom syntax: type token with no bound type")
-      )
-    | CCbody i ->
-      ( try
-          let _, _, ss = List.nth cases i in
-          pp_list_stmt (pp_cpp_stmt ctx env []) ss
-        with Failure _ ->
-          CErrors.anomaly
-            Pp.(str "Custom syntax: unbound case body in: " ++ str custom) )
-    | CCty_arg i -> (
-      (* Every type argument the text names was supplied at the seam
-         ({!Cpp_erasure.supply_template_args}). *)
-      match List.nth_opt tyargs i with
-      | Some ty -> pp_cpp_type ctx false vl ty
-      | None -> CErrors.anomaly Pp.(str "Custom syntax: a type argument the seam did not supply in: " ++ str custom) )
-    | CCelem _ ->
-      CErrors.anomaly
-        Pp.(str "Custom syntax: an element hole the seam did not decide in: " ++ str custom)
-    | CCbr_var (i, j) ->
-      ( try
-          let ids, _, _ = List.nth cases i in
-          Id.print (List.nth ids j).cp_name
-        with Failure _ ->
-          CErrors.anomaly
-            Pp.(
-              str "Custom syntax: unbound case branch variable in: "
-              ++ str custom ) )
-    | CCbr_var_ty (i, j) ->
-      ( try
-          let ids, _, _ = List.nth cases i in
-          (* Spellable: one that is not was materialised at the seam
-             ({!Cpp_erasure.materialise}). *)
-          pp_cpp_type ctx false vl (List.nth ids j).cp_type
-        with Failure _ ->
-          CErrors.anomaly
-            Pp.(
-              str "Custom syntax: unbound case branch type argument in: "
-              ++ str custom ) )
-    | CCret ->
-      (* Only a call's template names it, and that is instantiated; a block
-         naming it is refused at the seam ({!Cpp_erasure.check_ret}). *)
-      CErrors.anomaly Pp.(str "Custom syntax: %ret in a block or match template: " ++ str custom)
-    | CCresult -> CErrors.anomaly Pp.(str "Custom syntax: %result outside a block: " ++ str custom)
-    | CCarg i -> (
-      match List.nth_opt args i with
-      | Some arg -> pp_spliced ctx env ~followed_by_dot arg
-      | None -> CErrors.anomaly Pp.(str "Custom syntax: unbound term argument in: " ++ str custom) )
-  in
-  let next_starts_with_dot = function
-    | CCstring s :: _ ->
-      let s = String.trim s in
-      String.length s > 0 && s.[0] = '.'
-    | _ -> false
-  in
-  let rec fold_cmds acc = function
-    | [] -> acc
-    | cmd :: rest ->
-      let followed_by_dot = next_starts_with_dot rest in
-      fold_cmds (acc ++ pp ~followed_by_dot cmd) rest
-  in
-  fold_cmds (mt ()) cmds
-
 
 (* A block's statements, each written on its own with the semicolon that
    ends it, its [%result] spelled [result]. *)

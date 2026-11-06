@@ -755,13 +755,37 @@ and instantiated_stmt ~boxing = function
 
 let instantiate_type = instantiated_type ~boxing:true
 
+(* A match template's pieces, on the scrutinee [scrut] it is written with. *)
+let match_pieces cm scrut =
+  List.map
+    (function
+      | Foreign_template.CCstring s -> Mp_text s
+      | CCscrut -> Mp_scrutinee {parenthesised = written_with_leading_pointer_operator scrut}
+      | CCty -> Mp_matched_type
+      | CCty_arg i -> Mp_type_arg i
+      | CCbody i -> Mp_branch i
+      | CCbr_var (i, j) -> Mp_binder (i, j)
+      | CCbr_var_ty (i, j) -> Mp_binder_type (i, j)
+      | CCelem _ | CCarg _ | CCret | CCresult ->
+        CErrors.anomaly (Pp.str "match_pieces: a term template's hole in a match template"))
+    (Foreign_template.match_template (custom_match_text cm))
+
 let type_pieces r text tys =
   let tokens = Foreign_template.type_template (Foreign_template.custom_template_with_args text (List.length tys)) in
   foreign_pieces ~element:(fun i -> Option.map wrapper_pieces (boxed_by ~boxing:true r tys i)) tokens
 
+(* A custom match is instantiated on its instantiated scrutinee: the one
+   that is written. *)
 let instantiate_foreign (d : settled) : settled =
   let boxing = true in
-  map_decl (instantiated_expr ~boxing) (instantiated_stmt ~boxing) (instantiated_type ~boxing) d
+  let rec fs s =
+    match instantiated_stmt ~boxing s with
+    | Scustom_case (ty, scrut, tyargs, branches, cm) ->
+      let branches = List.map (fun (ps, rty, b) -> (ps, rty, List.map fs b)) branches in
+      Scustom_case (ty, scrut, tyargs, branches, {cm with cm_pieces = Some (match_pieces cm scrut)})
+    | s -> map_stmt fe fs Fun.id s
+  and fe e = map_expr fe fs Fun.id e in
+  map_decl fe fs Fun.id (map_decl (instantiated_expr ~boxing) (instantiated_stmt ~boxing) (instantiated_type ~boxing) d)
 
 (* Inner lambdas first: what an outer body names is read off the inner
    lambdas' bodies, which deciding leaves as they are. *)

@@ -16,24 +16,14 @@ let of_external name =
 
 let at_type_variable = function Tvar _ | Tapply (Tvar _, _) -> true | _ -> false
 
-(* Where a mapping's text is printed -- a match or block template, or a
-   type's text -- only what its placeholders name is written: the type it is
-   matched or applied at, a type argument (an absent one is written erased),
-   a branch's binder's type (erased where it has no spelling), a branch's
-   body, the scrutinee, a value argument -- a string literal among the last
-   two spliced in as a [std::string].  (A call's [%ret] is instantiated; in
-   a block or match it is refused at the seam, {!Cpp_erasure.check_ret}.) *)
-type custom_holes = {
-  typ : cpp_type option;
-  scrut : cpp_expr option;
-  tyargs : cpp_type list;
-  cases : (custom_param list * cpp_type * cpp_stmt list) list;
-  args : cpp_expr list;
-}
+(* Where a mapping is written -- a match, a block, a type or a term --
+   only what its instantiated pieces name is written: the type it is matched
+   or applied at, a type argument (an absent one is written erased), a
+   branch's binder's type (erased where it has no spelling), a branch's body,
+   the scrutinee, a value argument -- a string literal among the last two
+   spliced in as a [std::string].
 
-let no_holes = {typ = None; scrut = None; tyargs = []; cases = []; args = []}
-
-(* The headers [visit] finds a declaration, statement, expression or type
+   The headers [visit] finds a declaration, statement, expression or type
    needs, written down where the printer writes it: the annotations a node
    carries for later passes -- a call's signature, a projection's field type,
    a structured binding's field types -- are not written, and neither is
@@ -111,34 +101,6 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
       expr e;
       Some t
     | _ -> None
-  and custom holes cmds =
-    let nth l i = List.nth_opt l i in
-    List.iter
-      (function
-        | Foreign_template.CCscrut ->
-          Option.iter
-            (fun e ->
-              expr e;
-              string_literal e )
-            holes.scrut
-        | CCty -> Option.iter ty holes.typ
-        | CCbody i -> Option.iter (fun (_, _, ss) -> List.iter stmt ss) (nth holes.cases i)
-        | CCty_arg i | CCelem i -> ty (Option.default Tany (nth holes.tyargs i))
-        | CCbr_var_ty (i, j) ->
-          Option.iter
-            (fun (ids, _, _) ->
-              Option.iter
-                (fun p -> ty p.cp_type)
-                (nth ids j) )
-            (nth holes.cases i)
-        | CCarg i ->
-          Option.iter
-            (fun e ->
-              expr e;
-              string_literal e )
-            (nth holes.args i)
-        | CCret | CCresult | CCbr_var _ | CCstring _ -> () )
-      cmds
   (* An instantiated mapping writes what its pieces name; a block, the type
      of its result too. *)
   and foreign use fr =
@@ -241,9 +203,21 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
             (( CPPvar _ | CPPfun_call _ | CPPaccess_call _ | CPPmethod_call _ | CPPprojection _
              | CPPstruct _ | CPPstructmk _ | CPPstruct_id _ ) as returned))) ->
       expr returned
+    (* A match writes what its pieces name. *)
     | Scustom_case (typ, scrut, tyargs, cases, cm) ->
-      custom {no_holes with typ = Some typ; scrut = Some scrut; tyargs; cases}
-        (Foreign_template.match_template cm.cm_template)
+      let nth l i = List.nth_opt l i in
+      List.iter
+        (function
+          | Mp_scrutinee _ ->
+            expr scrut;
+            string_literal scrut
+          | Mp_matched_type -> ty typ
+          | Mp_type_arg i -> ty (Option.default Tany (nth tyargs i))
+          | Mp_branch i -> Option.iter (fun (_, _, ss) -> List.iter stmt ss) (nth cases i)
+          | Mp_binder_type (i, j) ->
+            Option.iter (fun (ps, _, _) -> Option.iter (fun p -> ty p.cp_type) (nth ps j)) (nth cases i)
+          | Mp_text _ | Mp_binder _ -> ())
+        (match cm.cm_pieces with Some pieces -> pieces | None -> uninstantiated_mapping cm.cm_inductive)
     | Sblock_custom (r, _, _, _, _, _, _) -> uninstantiated_mapping r
     | Smatch (scrut, branches, default) ->
       expr scrut.sc_expr;

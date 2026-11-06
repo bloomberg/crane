@@ -762,7 +762,17 @@ and custom_match = {
   cm_template : string;
   cm_inductive : GlobRef.t;
   cm_scrutinee : scrutinee_hold;
+  cm_pieces : match_piece list option;
 }
+
+and match_piece =
+  | Mp_text of string
+  | Mp_scrutinee of {parenthesised : bool}
+  | Mp_matched_type
+  | Mp_type_arg of int
+  | Mp_branch of int
+  | Mp_binder of int * int
+  | Mp_binder_type of int * int
 
 and scrutinee_hold = Scrut_owned | Scrut_borrowed
 
