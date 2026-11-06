@@ -1114,16 +1114,29 @@ let rec is_reified_monadic_expr ml_expr =
   | MLcons (ty, _, _) -> is_monadic_ml_type ty
   | _ -> false
 
-(** Make the lambdas a function returns closures.  A returned lambda
-    outlives the frame it was written in, so it must hold copies ([\[=\]])
-    rather than references into that frame.
+(** [stmts], a body, whose returned lambdas hold copies ([\[=\]]) rather
+    than references into the frame they were written in, which they
+    outlive.  Where each lambda is made, Core has decided what it captures
+    (plan 3.8): a lambda the program writes is a closure; one holding
+    references -- the lambdas of a local fixpoint generated in place
+    ({!Analyze_closures.In_place}), a lambda invoked where it is written, a
+    single-use eta-expansion a let binds -- runs where it is written, and
+    no body returns it.  A lambda invoked where it is written is not
+    returned, whatever its result is: only what {e it} returns is looked
+    at.
 
-    A lambda invoked where it is written is not returned, whatever its result
-    is: it stays [Immediate], and only what {e it} returns is made a
-    closure. *)
+    Under [CRANE_CHECK_IR], a returned lambda holding references is a
+    violation.  It is made a closure all the same, so that no build returns
+    references into a frame that is gone. *)
 let return_captures_by_value stmts =
-  let rec by_value l =
-    {(map_lambda stmt Fun.id l) with cl_capture = Closure}
+  let closure l =
+    if l.cl_capture = Immediate then begin
+      Probe.violation "closure capture" (Pp.str "a lambda holding references into its frame is returned");
+      {l with cl_capture = Closure}
+    end
+    else l
+  in
+  let rec by_value l = closure (map_lambda stmt Fun.id l)
   and expr = function
     | CPPlambda l -> CPPlambda (by_value l)
     | CPPfun_call (res, CPPlambda l, args) ->
@@ -1145,7 +1158,7 @@ let return_captures_by_value stmts =
     | CPPget' (e, id, ty) -> CPPget' (expr e, id, ty)
     | CPPaccess_call (Aarrow, e, id, args) ->
       CPPaccess_call (Aarrow, expr e, id, List.map expr args)
-    | CPPany_cast (ty, e) -> Cpp_erasure.unbox ty (expr e)
+    | CPPany_cast (ty, e) -> CPPany_cast (ty, expr e)
     | e -> e
   and stmt = function
     | Sreturn (Some e) -> Sreturn (Some (expr e))
@@ -1180,8 +1193,7 @@ let return_captures_by_value stmts =
   List.map
     (fun s ->
       match s with
-      | Sreturn (Some (CPPlambda ({ cl_capture = Immediate; _ } as l))) ->
-        Sreturn (Some (CPPlambda { l with cl_capture = Closure }))
+      | Sreturn (Some (CPPlambda ({ cl_capture = Immediate; _ } as l))) -> Sreturn (Some (CPPlambda (closure l)))
       | Sreturn (Some e) -> Sreturn (Some (expr e))
       | s -> s )
     stmts
