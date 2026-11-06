@@ -163,6 +163,16 @@ val recurses_boxed : Minicpp.cpp_type -> bool
     as translation wrote it. *)
 val instantiate_foreign : settled -> settled
 
+(** [name_scrutinees decl] declares the local each {!Minicpp.Smatch} holds a
+    computed scrutinee in, in front of the match, and has the match read that
+    local: a variant read through a computed object ([e->v()]) binds the
+    object ([auto&& _sv = e;]), any other computed scrutinee is bound whole
+    ([const auto& _sv = e;]).  The local is named after the match's first
+    binding variable, so two matches in one scope declare different names.
+    Afterwards every match reads a local or the receiver, and the printer
+    names nothing. *)
+val name_scrutinees : settled -> settled
+
 (** [decide_captures decl] writes down each lambda's capture
     ({!Minicpp.Written}) from its {!Minicpp.capture} and what its finished
     body names ({!Minicpp.lambda_needs_capture}): nothing, by reference, or

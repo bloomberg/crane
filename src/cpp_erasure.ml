@@ -787,6 +787,70 @@ let instantiate_foreign (d : settled) : settled =
   and fe e = map_expr fe fs Fun.id e in
   map_decl fe fs Fun.id (map_decl (instantiated_expr ~boxing) (instantiated_stmt ~boxing) (instantiated_type ~boxing) d)
 
+(* The local a match holds its scrutinee in, named after the match's first
+   binding variable -- [_m3] gives [_sv3], a frame dispatch's [_f2] gives
+   [_fsv2] -- so that two matches in one scope never declare the same name
+   and need no block of their own. *)
+let scrutinee_name branches =
+  let after prefix s =
+    if String.starts_with ~prefix s then
+      Some (String.sub s (String.length prefix) (String.length s - String.length prefix))
+    else None
+  in
+  match List.find_map (fun br -> br.smb_var) branches with
+  | None -> "_sv"
+  | Some id -> (
+    let s = Id.to_string id in
+    match (after "_m" s, after "_f" s) with
+    | Some k, _ -> "_sv" ^ k
+    | None, Some k -> "_fsv" ^ k
+    | None, None -> "_sv" )
+
+(* An object a match can read its variant through as it stands: a local, or
+   the receiver. *)
+let is_named_object = function CPPvar _ | CPPthis | CPPderef CPPthis -> true | _ -> false
+
+(* The declaration a match's scrutinee is held in, if the match holds it, and
+   the scrutinee reading that local.  A variant read through a computed object
+   ([e->v()], [e.v()]) binds the object, by forwarding reference so that a
+   temporary lives across the branches; any other computed scrutinee is bound
+   whole by [const] reference.  A match of one constructor, exhaustive, that
+   binds nothing never reads its scrutinee, and holds nothing. *)
+let held_scrutinee scrut branches default =
+  let local () = Id.of_string (scrutinee_name branches) in
+  let is_v v = Id.to_string v = "v" in
+  match (branches, default, scrut.sc_expr) with
+  | [{smb_field_bindings = []; smb_var = None; _}], None, _ -> None
+  | _, _, CPPaccess_call (Aarrow, obj, v, []) when is_v v && not (is_named_object obj) ->
+    let x = local () in
+    Some (Sasgn (x, Declare (Tref (Forwarding, Tauto), None), obj), CPPaccess_call (Aarrow, CPPvar x, v, []))
+  | _, _, CPPfun_call (sg, CPPaccess (Adot, obj, v), ({rev = []} as none)) when is_v v && not (is_named_object obj) ->
+    let x = local () in
+    Some (Sasgn (x, Declare (Tref (Forwarding, Tauto), None), obj), CPPfun_call (sg, CPPaccess (Adot, CPPvar x, v), none))
+  | _, _, (CPPaccess_call (Aarrow, _, v, []) | CPPfun_call (_, CPPaccess (Adot, _, v), {rev = []})) when is_v v -> None
+  | _, _, (CPPvar _ | CPPderef CPPthis) -> None
+  | _, _, e ->
+    let x = local () in
+    Some (Sasgn (x, Declare (Tref (Lvalue, Tconst Tauto), None), e), CPPvar x)
+
+let name_scrutinees (d : settled) : settled =
+  let rec stmts ss = List.concat_map stmt ss
+  and stmt s =
+    match map_stmt ~fl:stmts fe one Fun.id s with
+    | Smatch (scrut, branches, default) as s -> (
+      match held_scrutinee scrut branches default with
+      | Some (held, sc_expr) -> [held; Smatch ({scrut with sc_expr}, branches, default)]
+      | None -> [s] )
+    | s -> [s]
+  (* Every statement a statement or a declaration holds is in a list, which
+     [stmts] rewrites; nothing asks for one statement alone. *)
+  and one s =
+    match stmt s with
+    | [s] -> s
+    | _ -> CErrors.anomaly (Pp.str "name_scrutinees: a match held outside a statement list")
+  and fe e = map_expr ~fl:stmts fe one Fun.id e in
+  map_decl ~fl:stmts fe one Fun.id d
+
 (* Inner lambdas first: what an outer body names is read off the inner
    lambdas' bodies, which deciding leaves as they are. *)
 let decide_captures (d : settled) : settled =

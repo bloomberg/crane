@@ -2240,8 +2240,9 @@ and pp_cpp_stmt ctx env args stmt =
 
        Branches without a binding ([smb_var = None]) emit no binding.
 
-       The scrutinee is evaluated once and stored in [auto&&] to prevent
-       re-evaluation and to keep temporaries alive across branches.
+       A computed scrutinee was declared, named, in front of the match at
+       the seam ({!Cpp_erasure.name_scrutinees}): what is read here is a
+       local or the receiver.
 
        The last explicit branch before [None] default (= exhaustive match
        without wildcard) uses plain [else] — the discriminant check is
@@ -2250,33 +2251,11 @@ and pp_cpp_stmt ctx env args stmt =
        Single-constructor exhaustive matches (one branch, no wildcard)
        emit just the binding + body inline — no if/else needed. *)
     let n_branches = List.length branches in
-    let pp_scrut = pp_cpp_expr ctx env args in
-    (* Derive a unique scrutinee variable name from the first branch's binding
-       variable, so that two Smatch nodes in the same scope never redeclare the
-       same scrutinee name — no block-scoping is needed. *)
-    let sv_name =
-      match List.find_opt (fun br -> br.smb_var <> None) branches with
-      | Some { smb_var = Some id; _ } ->
-        let s = Id.to_string id in
-        let strip_prefix p =
-          let n = String.length p in
-          if String.length s >= n && String.sub s 0 n = p
-          then Some (String.sub s n (String.length s - n))
-          else None
-        in
-        ( match strip_prefix "_m" with
-        | Some suffix -> "_sv" ^ suffix
-        | None ->
-          match strip_prefix "_f" with
-          | Some suffix -> "_fsv" ^ suffix
-          | None -> "_sv" )
-      | _ -> "_sv"
-    in
     (* Helper: [std::holds_alternative<Ctor>(scrut)]. *)
     let pp_holds scrut_var_pp br =
       str (sn ()).holds_alternative ++ str "<"
       ++ pp_cpp_type ctx false [] br.smb_ctor_type ++ str ">("
-      ++ scrut_var_pp ++ str ")"
+      ++ Lazy.force scrut_var_pp ++ str ")"
     in
     (* Helper: binding statement inside the if-block.
        - Structured bindings: [const auto& [f1, f2] = std::get<T>(scrut);]
@@ -2293,7 +2272,7 @@ and pp_cpp_stmt ctx env args stmt =
           ++ prlist_with_sep (fun () -> str ", ")
                (fun fb -> Id.print fb.fb_name)
                br.smb_field_bindings
-          ++ str "] = " ++ scrut_var_pp ++ str ";"
+          ++ str "] = " ++ Lazy.force scrut_var_pp ++ str ";"
         else
           str binding_qual
           ++ prlist_with_sep (fun () -> str ", ")
@@ -2301,7 +2280,7 @@ and pp_cpp_stmt ctx env args stmt =
                br.smb_field_bindings
           ++ str "] = " ++ str (sn ()).get ++ str "<"
           ++ pp_cpp_type ctx false [] br.smb_ctor_type ++ str ">("
-          ++ scrut_var_pp ++ str ");"
+          ++ Lazy.force scrut_var_pp ++ str ");"
       | [] ->
         ( match br.smb_var with
         | Some var_id ->
@@ -2310,21 +2289,18 @@ and pp_cpp_stmt ctx env args stmt =
             str "auto " ++ Id.print var_id
             ++ str " = std::move(" ++ str (sn ()).get ++ str "<"
             ++ pp_cpp_type ctx false [] br.smb_ctor_type ++ str ">("
-            ++ scrut_var_pp ++ str "));"
+            ++ Lazy.force scrut_var_pp ++ str "));"
           end
           else
             str "const auto& " ++ Id.print var_id
             ++ str " = " ++ str (sn ()).get ++ str "<"
             ++ pp_cpp_type ctx false [] br.smb_ctor_type ++ str ">("
-            ++ scrut_var_pp ++ str ");"
+            ++ Lazy.force scrut_var_pp ++ str ");"
         | None -> mt () )
     in
-    (* Extract the scrutinee object expression from the variant accessor.
-       Handles both [CPPaccess_call (Aarrow, obj, "v", [])] (pointer:
-       [obj->v()])
-       and [CPPfun_call(CPPaccess (Adot, obj, "v"), [])] (value: [obj.v()]).
-       Bind temporaries with [auto&&] to extend lifetime, then reconstruct
-       the accessor. *)
+    (* The scrutinee object under the variant accessor: pointer
+       [CPPaccess_call (Aarrow, obj, "v", [])] ([obj->v()]) or value
+       [CPPfun_call (CPPaccess (Adot, obj, "v"), [])] ([obj.v()]). *)
     let first_scrut = scrut.sc_expr in
     let is_value_type = scrut.sc_access = Adot in
     let scrut_obj_opt =
@@ -2353,28 +2329,22 @@ and pp_cpp_stmt ctx env args stmt =
       else
         name ^ (if is_owned then "->v_mut()" else "->v()")
     in
-    let scrut_binding_pp, scrut_var_pp, _scrut_obj_pp =
-      match scrut_obj_opt with
-      | Some (CPPvar id) ->
-        let name = Id.to_string id in
-        (mt (), str (v_access name), str name)
-      | Some CPPthis | Some (CPPderef CPPthis) ->
-        (mt (), str (if is_owned then "this->v_mut()" else "this->v()"), str "(*this)")
-      | Some obj_expr ->
-        let obj_pp = pp_scrut obj_expr in
-        ( str ("auto&& " ^ sv_name ^ " = ") ++ obj_pp ++ str ";" ++ fnl (),
-          str (v_access sv_name), str sv_name )
-      | None ->
-        ( match first_scrut with
-        | CPPvar id ->
-          let name = Id.to_string id in
-          (mt (), str name, str name)
-        | CPPderef CPPthis ->
-          (mt (), str "*this", str "(*this)")
-        | _ ->
-          let raw_pp = pp_scrut first_scrut in
-          ( str ("const auto& " ^ sv_name ^ " = ") ++ raw_pp ++ str ";" ++ fnl (),
-            str sv_name, str sv_name ) )
+    let unnamed () =
+      CErrors.anomaly (Pp.str "pp_cpp_stmt: a match reads a scrutinee no local holds (Cpp_erasure.name_scrutinees)")
+    in
+    (* Forced only where it is written: a match of one constructor that
+       binds nothing writes no scrutinee, and none was named for it. *)
+    let scrut_var_pp =
+      lazy
+      ( match scrut_obj_opt with
+      | Some (CPPvar id) -> str (v_access (Id.to_string id))
+      | Some CPPthis | Some (CPPderef CPPthis) -> str (if is_owned then "this->v_mut()" else "this->v()")
+      | Some _ -> unnamed ()
+      | None -> (
+        match first_scrut with
+        | CPPvar id -> str (Id.to_string id)
+        | CPPderef CPPthis -> str "*this"
+        | _ -> unnamed () ) )
     in
     if n_branches = 1 && default = None then
       (* Single-constructor exhaustive match: emit binding + body inline.
@@ -2384,7 +2354,7 @@ and pp_cpp_stmt ctx env args stmt =
       let binding = pp_block_binding scrut_var_pp br in
       let body_pp = pp_list_stmt (pp_cpp_stmt ctx env args) br.smb_body in
       if binding = mt () then body_pp
-      else scrut_binding_pp ++ binding ++ fnl () ++ body_pp
+      else binding ++ fnl () ++ body_pp
     else
     let pp_branch i br =
       let keyword = if i = 0 then "if" else "} else if" in
@@ -2418,8 +2388,7 @@ and pp_cpp_stmt ctx env args stmt =
         ++ fnl () ++ body_pp
     in
     let branches_pp =
-      scrut_binding_pp
-      ++ prlist_with_sep fnl (fun (i, br) -> pp_branch i br)
+      prlist_with_sep fnl (fun (i, br) -> pp_branch i br)
            (List.mapi (fun i br -> (i, br)) branches)
     in
     let default_pp =
