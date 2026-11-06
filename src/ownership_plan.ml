@@ -872,3 +872,22 @@ let moved_reads p ts =
     | _ -> acc
   in
   List.sort_uniq Int.compare (List.fold_left go [] ts)
+
+module Local_passing = struct
+  type t = Callable_abi.passing option list
+
+  let recorded : ((Occurrence.t * int) * t) list ref = State.cell State.Extraction []
+
+  let same (o, j) (o', j') = Occurrence.equal o o' && Int.equal j j'
+
+  let lookup member = List.find_map (fun (m, t) -> if same m member then Some t else None) !recorded
+
+  let record member t =
+    match lookup member with
+    | Some t' when t' = t -> ()
+    | Some _ ->
+      Probe.violation "local passing"
+        (Pp.str "a local fixpoint is generated passing its parameters otherwise than it was before");
+      recorded := (member, t) :: List.filter (fun (m, _) -> not (same m member)) !recorded
+    | None -> recorded := (member, t) :: !recorded
+end

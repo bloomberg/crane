@@ -225,3 +225,25 @@ end
     parameter is kept in a local, rather than by pointer, is the lowering's
     to say.  A machine's loop moves nothing so. *)
 val continue_moves : Control_ir.Term.loop -> (Miniml.Occurrence.t * Continue_move.t list) list
+
+(** How each function of a local fixpoint passes its parameters -- the
+    callable plan of a function with no global, which the frames of its
+    machine read ([Storage.Frame], plan 4.10): for each of its Core
+    parameters, outermost first, how the lambda it is generated as takes
+    it, [None] for one of no runtime value, which the lambda does not take.
+    Translation decides it once per group, before generating the group's
+    lambdas from it and before any loop is lowered from them
+    ({!Translation.local_passing}). *)
+module Local_passing : sig
+  type t = Callable_abi.passing option list
+
+  (** [record member t]: the function [member] -- the fixpoint's
+      occurrence, and the function's position in it -- passes its
+      parameters as [t].  A member generated twice is generated alike:
+      under [CRANE_CHECK_IR], recording another plan is a violation. *)
+  val record : Miniml.Occurrence.t * int -> t -> unit
+
+  (** What was recorded of [member]: [None] where it is generated as no
+      lambda (a lifted helper's plan is its global's). *)
+  val lookup : Miniml.Occurrence.t * int -> t option
+end

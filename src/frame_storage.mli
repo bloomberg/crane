@@ -26,11 +26,50 @@ type t = {
   entered : (int * bool) list;
 }
 
-(** A parameter of the loop, by its position, or of a loop an entry enters,
-    by the Core level it is bound at. *)
+(** A parameter of the loop, by its position, or of a loop an entry enters:
+    the loop, the parameter's position there, and the Core level it is
+    bound at under the machine's loop's parameters. *)
 type parameter =
   | Own of int
-  | Entered of int
+  | Entered of {
+      loop : Control_ir.Term.loop;
+      index : int;
+      level : int;
+    }
+
+(** Whether the program holds a value of the Core type [ty] as a value -- an
+    inductive neither coinductive, custom, nor an enum, which is passed by
+    value however it is lent -- so that a pointer may stand for one
+    ({!Loopify_analysis.is_value_type_ret}); with [~abbreviations], an
+    abbreviation as what it abbreviates ([Definition t := list (key * elt)]).
+    An abstract type -- a functor parameter's [X.t] -- is no value inductive
+    the program knows. *)
+val value_inductive : abbreviations:bool -> Miniml.ml_type -> bool
+
+(** Whether a frame can hold by pointer a parameter of Core type [ty] that
+    its callable passes as [passing] says: lent by const reference, or under
+    Reuse with NonAtomicRc owned by value -- either lives for the call, and
+    nothing moves out of it -- at a value inductive, named as itself or
+    through an abbreviation ({!Translation_support.wrap_param_by_ownership}
+    declares either by reference).  A parameter of no runtime value
+    ([None]) is held by none. *)
+val passed_holdable : Callable_abi.passing option -> Miniml.ml_type -> bool
+
+(** Whether a frame can hold the parameter at position [i] of the loop [l]
+    by pointer, as the plan of the local fixpoint's function [l] is made
+    from passes it ({!Ownership_plan.Local_passing}, {!passed_holdable});
+    [None] where [l] is a function's loop, or no plan says. *)
+val local_holdable : Control_ir.Term.loop -> int -> bool option
+
+(** [check_local i ~planned ~declared]: under [CRANE_CHECK_IR], where the
+    plan of a local fixpoint has a frame hold the parameter at [i] of its
+    loop by pointer ([planned]), the C++ type its lambda declares it at must
+    be one a pointer spells ([declared ()]).  The converse does not hold:
+    under Reuse with NonAtomicRc the declared type takes any value it does
+    not recognise as boxed -- an enum, an alias of an erased type -- for a
+    value inductive, which the plan does not hold by pointer (as
+    {!Control_to_legacy_minicpp}'s machines of functions). *)
+val check_local : int -> planned:bool -> declared:(unit -> bool) -> unit
 
 (** [plan ~pointer_fields ~in_place ~holdable l]: how the frames of the
     machine of [l] hold its parameters; [pointer_fields c] are the declared

@@ -135,7 +135,49 @@ let local_fix_stmts selves ~binders ~self_passing impl_stmts funs_with_params =
 let forwarded ~by_value ty v =
   if by_value && Ownership_plan.worth_moving ty && not (ml_type_is_unit ty) then CPPmove v else v
 
-let gen_local_fix_ycomb env ~binders ~moved renamed_ids funs_with_params =
+(** How each function of the local fixpoint group whose bodies are [funs]
+    passes its parameters ({!Ownership_plan.Local_passing}): a group of
+    [closures] takes each by value; one generated in place lends each its
+    body does not own ({!Escape.infer_owned_params}) -- the [i]th parameter
+    of a runtime value, innermost first, as the body's [i]th binder.  A
+    parameter of no runtime value is taken by no lambda. *)
+let local_passing ~closures funs =
+  let n_fix = Array.length funs in
+  let member f =
+    let lam_ids, inner = Mlutil.collect_lams f in
+    let runtime = List.filter (fun (_, ty) -> not (void_binder ty)) lam_ids in
+    let owned =
+      if closures then List.map (fun _ -> true) runtime
+      else
+        let flags = Escape.infer_owned_params (List.length runtime + n_fix) inner in
+        List.mapi (fun i _ -> List.nth flags i) runtime
+    in
+    (* [lam_ids] is innermost first, and the plan outermost first. *)
+    let rec go owned acc = function
+      | [] -> acc
+      | (_, ty) :: rest when void_binder ty -> go owned (None :: acc) rest
+      | _ :: rest -> (
+        match owned with
+        | o :: owned -> go owned (Some (if o then Callable_abi.Owned else Callable_abi.Borrowed) :: acc) rest
+        | [] -> assert false )
+    in
+    go owned [] lam_ids
+  in
+  Array.to_list (Array.map member funs)
+
+(* Record that the functions [binders] name pass their parameters as
+   [passing] says, each the plan of the one at its position. *)
+let record_local_passing ~binders passing =
+  List.iter2 (fun (_, member, _, _) t -> Ownership_plan.Local_passing.record member t) binders passing
+
+(* Whether a lambda generated as [passing] says owns each parameter it
+   takes, innermost first, as its parameters are listed. *)
+let owned_flags passing = List.rev_map (fun p -> p = Callable_abi.Owned) (List.filter_map Fun.id passing)
+
+let gen_local_fix_ycomb env ~binders ~passing ~moved renamed_ids funs_with_params =
+  (* The lambdas take every parameter by value, as [passing], a group of
+     closures', says. *)
+  record_local_passing ~binders passing;
   let ret_ty ty =
     match cpp_of_ml env ty with
     | Tfun (_, t) ->
@@ -280,7 +322,9 @@ let gen_local_fix_ycomb env ~binders ~moved renamed_ids funs_with_params =
 
     @return [(decls, defs)] — declaration and definition statement lists.
     @see gen_local_fix_ycomb for the escaping-fixpoint alternative. *)
-let gen_local_fix_by_ref env ~binders renamed_ids funs_with_params owned_flags_per_fun =
+let gen_local_fix_by_ref env ~binders ~passing renamed_ids funs_with_params =
+  record_local_passing ~binders passing;
+  let owned_flags_per_fun = List.map owned_flags passing in
   let ret_ty ty =
     match cpp_of_ml env ty with
     | Tfun (_, t) ->
@@ -9273,33 +9317,18 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       check_fixpoint_escape (fst projected_id) ~closures (fun () ->
           List.exists (fun (id, _) -> fixpoint_escapes_in_stmts id cont) renamed_ids
           || fix_escapes_in_own_bodies renamed_ids funs_with_params );
+      let passing = local_passing ~closures funs in
       if closures then
         let decls, defs, deref_subst =
-          gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
+          gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled) ~passing
             ~moved:(fix_moved_captures env fix_term)
             renamed_ids funs_with_params
         in
         declared (decls @ defs) @ deref_subst cont
       else
-        let owned_flags_per_fun =
-          Array.to_list (Array.map (fun f ->
-            let lam_ids, inner_body = Mlutil.collect_lams f in
-            let n_params =
-              List.length
-                (List.filter
-                   (fun (_, ty) -> not (void_binder ty))
-                   lam_ids)
-            in
-            let n_fix = Array.length funs in
-            let all_flags =
-              Escape.infer_owned_params (n_params + n_fix) inner_body
-            in
-            List.init n_params (fun i -> List.nth all_flags i)
-          ) funs)
-        in
         let decls, defs =
-          gen_local_fix_by_ref env ~binders:(local_fix_binders env fix_term occ ids funs_compiled) renamed_ids funs_with_params
-            owned_flags_per_fun
+          gen_local_fix_by_ref env ~binders:(local_fix_binders env fix_term occ ids funs_compiled) ~passing renamed_ids
+            funs_with_params
         in
         declared (decls @ defs) @ cont
   | MLletin (x, t, (MLlam _ as a), b, let_occ) ->
@@ -10120,6 +10149,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
              a stack-local std::function by reference. *)
           let decls, defs, deref_subst =
             gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
+              ~passing:(local_passing ~closures:true funs)
               ~moved:(fix_moved_captures env fix_term)
               renamed_ids funs_with_params
           in
@@ -10155,6 +10185,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         then
           let decls, defs, deref_subst =
             gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
+              ~passing:(local_passing ~closures:true funs)
               ~moved:(fix_moved_captures env fix_term)
               renamed_ids funs_with_params
           in
@@ -10162,25 +10193,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           @ deref_subst
               [k (made_of occ (CPPfun_call (call_opaque, CPPvar (fst (List.nth renamed_ids x)), of_reversed args)))]
         else begin
-          let owned_flags_per_fun =
-            Array.to_list (Array.map (fun f ->
-              let lam_ids, inner_body = Mlutil.collect_lams f in
-              let n_params =
-                List.length
-                  (List.filter
-                     (fun (_, ty) -> not (void_binder ty))
-                     lam_ids)
-              in
-              let n_fix = Array.length funs in
-              let all_flags =
-                Escape.infer_owned_params (n_params + n_fix) inner_body
-              in
-              List.init n_params (fun i -> List.nth all_flags i)
-            ) funs)
-          in
           let decls, defs =
-            gen_local_fix_by_ref env ~binders:(local_fix_binders env fix_term occ ids funs_compiled) renamed_ids funs_with_params
-              owned_flags_per_fun
+            gen_local_fix_by_ref env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
+              ~passing:(local_passing ~closures:false funs) renamed_ids funs_with_params
           in
           decls @ defs
           @ [k (made_of occ (CPPfun_call (call_opaque, CPPvar (fst (List.nth renamed_ids x)), of_reversed args)))]
@@ -10210,6 +10225,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     in
     let decls, defs, _deref_subst =
       gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
+            ~passing:(local_passing ~closures:true funs)
             ~moved:(fix_moved_captures env fix_term)
             renamed_ids funs_with_params
     in

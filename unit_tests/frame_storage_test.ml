@@ -101,4 +101,35 @@ let () =
      is passed on of it is no pointer either. *)
   let p = plan ~holdable:(function Frame_storage.Own _ -> false | Entered _ -> true) (machine (fresh_rel 1)) in
   check "a parameter held by value is no pointer" (p.own = [false]);
-  check "nor what an entered loop is passed of it" (p.entered = [(4, false)])
+  check "nor what an entered loop is passed of it" (p.entered = [(4, false)]);
+  (* An entered parameter is asked about by its loop and position. *)
+  let asked = ref [] in
+  let p =
+    plan
+      ~holdable:(function
+        | Frame_storage.Own _ -> true
+        | Entered {loop; index; level} ->
+          asked := (loop.loop, index, level) :: !asked;
+          false )
+      (machine (fresh_rel 1))
+  in
+  check "the entered parameter is asked about by its loop, position and level"
+    (match !asked with [(l, 0, 4)] -> Loop.equal l sizes | _ -> false);
+  check "and held by value where it is not holdable, with what it passes on" (p.entered = [(4, false)] && p.own = [false]);
+
+  (* A local fixpoint's plan: what translation recorded of each function. *)
+  let o = Occurrence.fresh () in
+  let member = Loop.Member (o, 0) in
+  let loop parameters = {Term.loop = member; parameters; body = Term.Return (fresh_rel 1)} in
+  check "a function's loop has no local plan" (Frame_storage.local_holdable (machine (fresh_rel 1)) 0 = None);
+  check "nor a member translation generated no lambda for" (Frame_storage.local_holdable (loop [(id "t", tree)]) 0 = None);
+  Ownership_plan.Local_passing.record (o, 0) [None; Some Callable_abi.Borrowed; Some Callable_abi.Forwarded];
+  check "the plan is looked up by the member"
+    (Ownership_plan.Local_passing.lookup (o, 0) = Some [None; Some Callable_abi.Borrowed; Some Callable_abi.Forwarded]);
+  check "of another function of the group nothing is recorded" (Ownership_plan.Local_passing.lookup (o, 1) = None);
+  let l = loop [(id "p", nat); (id "t", tree); (id "k", nat)] in
+  check "a parameter of no runtime value is held by no pointer" (Frame_storage.local_holdable l 0 = Some false);
+  check "a lent parameter of a type the program knows no inductive of is held by value"
+    (Frame_storage.local_holdable l 1 = Some false);
+  check "a forwarded parameter is held by value" (Frame_storage.local_holdable l 2 = Some false);
+  check "no value is held by pointer that is not lent" (not (Frame_storage.passed_holdable None tree))
