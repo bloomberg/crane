@@ -54,6 +54,13 @@ type resumes = {
    part of it or it one of that one; and it is no variable closures copy. *)
 type save = {save_at : Occurrence.t; saved : (Core_binder.t * int * bool) list}
 
+(* A call that may enter a frame of the machine the region is lowered as
+   ({!machine_call}), by its occurrence: what it enters an adopted entry
+   with besides its arguments, by level, with whether nothing after the
+   call or beside it reads it, and the arguments that are variables, by
+   level and read. *)
+type entry_read = {call : Occurrence.t; captured : (int * bool) list; arguments : (int * Occurrence.t) list}
+
 type t = {
   root : ml_ast;
   n_outer : int;  (* the type variables of the head the region is generated under *)
@@ -70,6 +77,8 @@ type t = {
   entered : entered list;
   saves : save list;
   saved_owned : (Occurrence.t * Levels.t) list;  (* of each let [saves] names, the levels it keeps owned there *)
+  entries : entry_read list;
+  entry_owned : (Occurrence.t * Levels.t) list;  (* of each call [entries] names, the levels owned there *)
 }
 
 let empty =
@@ -87,7 +96,9 @@ let empty =
     copied_reads = [];
     entered = [];
     saves = [];
-    saved_owned = [] }
+    saved_owned = [];
+    entries = [];
+    entry_owned = [] }
 
 (* The reads in [t] of variables bound outside it, by level, [t] standing [d]
    binders deep. *)
@@ -390,6 +401,26 @@ let held_across resumes d a occurrence =
   | Some (depth, {held; _}) -> Levels.of_list (List.map (fun (b : Core_binder.t) -> b.level - depth) held)
   | None -> Levels.empty
 
+(* A call [f] applied [d] deep makes that may enter a frame of the machine
+   the region is lowered as, by its occurrence, and what it enters with
+   besides its arguments: a call of the definition itself, or of a local
+   function -- the member of the fixpoint whose body the region is, an
+   adopted entry entered with the fixpoint's captures, [`Member] -- or a
+   local fixpoint applied where it is written, entered with what it
+   captures, [`Fixpoint]. *)
+let machine_call resumes d f =
+  match resumes with
+  | None -> None
+  | Some {origin; entry_captures; _} -> (
+    match strip f with
+    | MLfix (_, _, _, _, at) -> Some (at, `Fixpoint)
+    | _ -> (
+      match (call_head f, entry_captures) with
+      | MLglob {callee; occurrence; _}, _ when Common.globref_equal callee origin -> Some (occurrence, `Plain)
+      | MLrel (i, occurrence), Some k when d - i = -k -> Some (occurrence, `Member)
+      | MLrel (_, occurrence), _ -> Some (occurrence, `Plain)
+      | _ -> None ) )
+
 (* A frame saved where the right-hand side of the let at [let_at] ends in one of
    the calls [calls]: the binders it keeps, with their levels, and what is
    read once the let is done. *)
@@ -413,6 +444,18 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
   let captures = ref [] in
   let entered = ref [] in
   let saves = ref [] in
+  let entries = ref [] in
+  (* The call at [call] entering an entry with [args], passing [captured]
+     besides them, [live] read after it, [d] deep. *)
+  let enters call captured args ~pinned parents d live =
+    let after = List.fold_left (fun acc a -> Levels.union acc (free ~outside:copied parents d a)) (Levels.union live pinned) args in
+    let last l = (not (Levels.mem l copied)) && not (Levels.exists (overlap parents l) after) in
+    entries :=
+      { call;
+        captured = List.map (fun l -> (l, last l)) (Levels.elements captured);
+        arguments = List.filter_map (fun a -> match strip a with MLrel (i, o) -> Some (d - i, o) | _ -> None) args }
+      :: !entries
+  in
   (* [walk ~consumed ~pinned parents d live t] records [t]'s reads and is
      what is live before [t], given [live] after it: both sets of variables
      in scope at [t], [d] binders deep.  [consumed] is whether [t] stands
@@ -484,6 +527,9 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
        by what the fixpoint reads, which it reads as it runs, after them all.
        What it copies, it copies before any of them is evaluated. *)
     | MLapp ((MLfix (_, _, _, _, at) as f), args) ->
+      (* A machine adopting the fixpoint enters it here with what it
+         captures. *)
+      if Option.has_some (machine_call resumes d f) then enters at (free parents d f) args ~pinned parents d live;
       let reads_of = List.map (free ~outside:copied parents d) args in
       ignore (walk ~consumed:false ~pinned parents d (List.fold_left Levels.union live reads_of) f);
       entered :=
@@ -494,6 +540,12 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
       List.fold_right (fun t live -> walk ~pinned parents d live t) args (Levels.union live (free parents d f))
     (* A function is called through: [std::move(f)(x)] still calls [f]. *)
     | MLapp (f, args) ->
+      ( match (machine_call resumes d f, entry_captures) with
+      | Some (call, `Member), Some (_, captures) -> enters call (Lazy.force captures) args ~pinned parents d live
+      | Some (call, (`Member | `Plain | `Fixpoint)), _
+        when List.exists (fun a -> match strip a with MLrel _ -> true | _ -> false) args ->
+        enters call Levels.empty args ~pinned parents d live
+      | _ -> () );
       unsequenced ~inspected:(fun k -> k = 0) ~pinned parents d live (f :: args)
     | MLcons (_, _, args) | MLtuple args -> unsequenced ~pinned parents d live args
     | MLparray (elems, default) ->
@@ -566,7 +618,7 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
     |> List.fold_left Levels.union live
   in
   ignore (walk ~pinned:Levels.empty Parents.empty 0 Levels.empty t);
-  (!reads, !captures, !entered, !saves)
+  (!reads, !captures, !entered, !saves, !entries)
 
 type fate = Last_use | Read_again | Inspected | Unplanned
 
@@ -649,6 +701,7 @@ let ownership ~n_outer ~resumes ~reads ~arms ~owned ~copied t =
   let captured = ref [] in
   let copied_reads = ref [] in
   let saved_owned = ref [] in
+  let entry_owned = ref [] in
   (* The levels of the binders the frames of the turn [own] is in hold
      ({!resume.held}). *)
   let frame_held = ref Levels.empty in
@@ -678,7 +731,9 @@ let ownership ~n_outer ~resumes ~reads ~arms ~owned ~copied t =
         let n = List.length ids in
         saving d action use.occurrence owned (fun () ->
             own (if worth_moving ty then Levels.add (d + n - 1) owned else owned) (d + n) body ) )
-    | MLapp (f, args) -> all (f :: args)
+    | MLapp (f, args) ->
+      Option.iter (fun call -> entry_owned := (call, Levels.union owned (frame_held_now ())) :: !entry_owned) (entering d f);
+      all (f :: args)
     | MLcons (_, _, args) | MLtuple args -> all args
     | MLparray (elems, default) -> all (default :: Array.to_list elems)
     (* A closure's body is a region of its own. *)
@@ -714,6 +769,10 @@ let ownership ~n_outer ~resumes ~reads ~arms ~owned ~copied t =
     frame_held := Levels.union enclosing (held_across resumes d a occurrence);
     f ();
     frame_held := enclosing
+  (* The call [f] applied [d] deep makes into an entry: of a local fixpoint
+     applied where it is written, or of the member of the fixpoint the region
+     is the body of. *)
+  and entering d f = Option.map fst (machine_call resumes d f)
   and owned_var owned d i _ = Levels.mem (d - i) owned
   and let_owned owned d x ty a occurrence =
     match (x, a) with
@@ -774,10 +833,10 @@ let ownership ~n_outer ~resumes ~reads ~arms ~owned ~copied t =
         | _ -> owned
   in
   own owned 0 t;
-  (!out, !captured, !copied_reads, !saved_owned)
+  (!out, !captured, !copied_reads, !saved_owned, !entry_owned)
 
-let plan ~n_outer ~resumes ~certain root root_owned root_copied arms (reads, captures, entered, saves) =
-  let owned, captured_owned, copied_reads, saved_owned =
+let plan ~n_outer ~resumes ~certain root root_owned root_copied arms (reads, captures, entered, saves, entries) =
+  let owned, captured_owned, copied_reads, saved_owned, entry_owned =
     ownership ~n_outer ~resumes ~reads ~arms ~owned:root_owned ~copied:root_copied root
   in
   { root;
@@ -794,7 +853,9 @@ let plan ~n_outer ~resumes ~certain root root_owned root_copied arms (reads, cap
     copied_reads;
     entered;
     saves;
-    saved_owned }
+    saved_owned;
+    entries;
+    entry_owned }
 
 (* The reads of [t] and the saves of the machine it is lowered as: where it
    may be generated as it is, its reads planned as they are there. *)
@@ -802,9 +863,9 @@ let liveness_of ~n_outer ~copied ~arms ~resumes ~certain t =
   let lowered = liveness ~n_outer ~copied ~arms ~resumes t in
   if certain || Option.is_empty resumes then lowered
   else
-    let reads, captures, entered, _ = liveness ~n_outer ~copied ~arms ~resumes:None t in
-    let _, _, _, saves = lowered in
-    (reads, captures, entered, saves)
+    let reads, captures, entered, _, _ = liveness ~n_outer ~copied ~arms ~resumes:None t in
+    let _, _, _, saves, _ = lowered in
+    (reads, captures, entered, saves, [])
 
 let region ?(owned = []) ?(copied = []) ?resumes ?(certain = true) ~n_outer t =
   let levels is = Levels.of_list (List.map (fun i -> -i) is) in
@@ -841,7 +902,7 @@ let reuse_arm p ~scrutinee ~branch ~constructor =
         Pp.(str "a branch rebuilding in its scrutinee's storage returns no construction to take it");
     plan ~n_outer:p.n_outer ~resumes:p.resumes ~certain:p.certain p.root p.root_owned p.root_copied
       (Rebuild {scrutinee; branch; consumers} :: p.arms)
-      (p.reads, p.captures, p.entered, p.saves)
+      (p.reads, p.captures, p.entered, p.saves, p.entries)
   | None -> p
 
 module Allocation = struct
@@ -857,7 +918,7 @@ let fields_by_value p ~case ~by_value =
   if p == empty then p
   else
     plan ~n_outer:p.n_outer ~resumes:p.resumes ~certain:p.certain p.root p.root_owned p.root_copied (Fields {case; by_value} :: p.arms)
-      (p.reads, p.captures, p.entered, p.saves)
+      (p.reads, p.captures, p.entered, p.saves, p.entries)
 
 (* Unlike the other arms, this one changes what a closure reads where it is
    made, so the reads are planned again. *)
@@ -1117,4 +1178,58 @@ module Frame_save = struct
       let both = List.filter (fun b -> List.exists (Core_binder.equal b) t') t in
       recorded := (binder, both) :: List.filter (fun (b, _) -> not (same b binder)) !recorded
     | None -> recorded := (binder, t) :: !recorded
+end
+
+let entry_moves p =
+  match p.resumes with
+  | Some {origin; depth; _} when p.certain ->
+    let calls =
+      List.fold_left
+        (fun acc e -> if List.exists (Occurrence.equal e.call) acc then acc else e.call :: acc)
+        [] p.entries
+    in
+    List.map
+      (fun call ->
+        let here = List.filter (fun e -> Occurrence.equal e.call call) p.entries in
+        let owned =
+          match List.filter_map (fun (o, l) -> if Occurrence.equal o call then Some l else None) p.entry_owned with
+          | [] -> Levels.empty
+          | l :: ls -> List.fold_left Levels.inter l ls
+        in
+        let moved e =
+          List.filter_map (fun (l, last) -> if last && Levels.mem l owned then Some l else None) e.captured
+          @ List.filter_map
+              (fun (l, o) ->
+                if fate_in p.reads o = Last_use && (owned_at p o = Some true || Levels.mem l owned) then Some l else None )
+              e.arguments
+        in
+        let levels =
+          match List.map (fun e -> Levels.of_list (moved e)) here with
+          | [] -> Levels.empty
+          | l :: ls -> List.fold_left Levels.inter l ls
+        in
+        (call, List.map (fun l -> Core_binder.make ~origin ~level:(depth + l) ()) (Levels.elements levels)) )
+      calls
+  | Some _ | None -> []
+
+type region_plan = t
+
+module Entry_moves = struct
+  type t = Core_binder.t list
+
+  let recorded : (Occurrence.t * t) list ref = State.cell State.Extraction []
+
+  let lookup call = List.find_map (fun (c, t) -> if Occurrence.equal c call then Some t else None) !recorded
+
+  let record call t =
+    match lookup call with
+    | Some t' when List.equal Core_binder.equal t t' -> ()
+    | Some t' ->
+      Probe.violation "entry moves"
+        (Pp.str "a call entering an adopted entry is planned moving otherwise than it was before");
+      let both = List.filter (fun b -> List.exists (Core_binder.equal b) t') t in
+      recorded := (call, both) :: List.filter (fun (c, _) -> not (Occurrence.equal c call)) !recorded
+    | None -> recorded := (call, t) :: !recorded
+
+  let record_plan p = List.iter (fun (call, t) -> record call t) (entry_moves p)
 end

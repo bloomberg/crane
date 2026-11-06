@@ -148,7 +148,8 @@ LoopifyInnerFixSelfCall::join(LoopifyInnerFixSelfCall::tree l, uint64_t x0_,
           if (a1 < size(*a00)) {
             _stack.emplace_back(CraneCont2{a10, a20});
             _stack.emplace_back(
-                CraneEnter_join_aux{crane_raw(a00), a0, a1, a2, l, x0_});
+                CraneEnter_join_aux{crane_raw(a00), std::move(a0), a1,
+                                    std::move(a2), std::move(l), x0_});
           } else {
             _result = node(l, x0_, r);
           }

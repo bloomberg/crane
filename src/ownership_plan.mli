@@ -298,3 +298,36 @@ module Local_passing : sig
       lambda (a lifted helper's plan is its global's). *)
   val lookup : Miniml.Occurrence.t * int -> t option
 end
+
+(** [entry_moves p]: of each call [p]'s region makes that may enter a
+    frame of the machine it is certainly lowered as -- of the definition
+    itself, of a local function (the member of the fixpoint whose body the
+    region is, perhaps an adopted entry: {!resumes.entry_captures}), or a
+    local fixpoint applied where it is written -- the binders the frame
+    entering there may take: the arguments that are variables read last,
+    and the captures an adopted entry takes besides them read by nothing
+    after the call nor beside it, each owned there, or held by the entry's
+    frame.  The frame holds each by value, where the callee may have lent
+    it. *)
+val entry_moves : t -> (Miniml.Occurrence.t * Core_binder.t list) list
+
+(** A region's plan, as {!Entry_moves} names it. *)
+type region_plan = t
+
+(** Which binders the frame entering a machine's entry at each call takes,
+    by the call's occurrence: what translation, which holds the plan, says
+    ({!entry_moves}) where it plans the region, read by the frame machine
+    ({!Loopify_frame}) where it pushes the frame. *)
+module Entry_moves : sig
+  type t = Core_binder.t list
+
+  (** [record call t]: the frame entering an entry at [call] moves [t].
+      Recording another set is a violation under [CRANE_CHECK_IR], and only
+      what both move is moved. *)
+  val record : Miniml.Occurrence.t -> t -> unit
+
+  (** [record_plan p]: {!record} of every call {!entry_moves} plans. *)
+  val record_plan : region_plan -> unit
+
+  val lookup : Miniml.Occurrence.t -> t option
+end

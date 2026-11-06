@@ -213,6 +213,28 @@ let () =
   check "another call's save moves a capture the entry holds"
     (match moves (call "h" [fresh_rel 1]) with Some [b] -> Core_binder.equal b c | _ -> false)
 
+(* The body of a fixpoint [f a] a machine adopts as an entry, capturing [c],
+   [a] owned: [let u := h c in f a] -- a call of [f] enters the entry with
+   [c] besides its argument, and takes both where nothing after it reads
+   them; [let u := h c in g (f a) c] reads [c] beside it, which the call
+   then copies. *)
+let () =
+  let origin = GlobRef.VarRef (Id.of_string "outer") in
+  let c = Core_binder.make ~origin ~level:0 () and a = Core_binder.make ~origin ~level:2 () in
+  let resumes : Ownership_plan.resumes = {origin; depth = 3; entry_captures = Some 2; resume_at = (fun _ -> None)} in
+  let moves body =
+    let f = fresh_rel 3 in
+    let at = match f with MLrel (_, o) -> o | _ -> assert false in
+    let root = MLletin (Id (Id.of_string "u"), nat, call "h" [fresh_rel 3], body (MLapp (f, [fresh_rel 2])), Occurrence.fresh ()) in
+    let planned = Ownership_plan.entry_moves (Ownership_plan.region ~owned:[1] ~resumes ~n_outer:0 root) in
+    match List.find_map (fun (o, bs) -> if Occurrence.equal o at then Some bs else None) planned with
+    | Some bs -> bs
+    | None -> []
+  in
+  let same xs ys = List.length xs = List.length ys && List.for_all (fun x -> List.exists (Core_binder.equal x) ys) xs in
+  check "a call re-entering the entry takes its argument and the capture" (same (moves Fun.id) [c; a]);
+  check "not a capture read beside it" (same (moves (fun app -> call "g" [app; fresh_rel 4])) [a])
+
 (* [(fix f n l := g n l) (len s) s], [s] an owned parameter: the fixpoint's
    parameters are bound to its arguments in order, so the second argument
    is [s]'s last use, and the first, reading [s] too, is evaluated before

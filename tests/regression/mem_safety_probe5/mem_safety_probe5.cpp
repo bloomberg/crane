@@ -186,7 +186,7 @@ MemSafetyProbe5::collect_left_vals(
       auto _f = std::move(std::get<CraneCont_Node>(_frame));
       std::shared_ptr<MemSafetyProbe5::tree> a0 = std::move(_f.a0);
       const MemSafetyProbe5::tree &a0_value = *a0;
-      _stack.emplace_back(CraneEnter{std::move(_result), a0_value});
+      _stack.emplace_back(CraneEnter{std::move(_result), std::move(a0_value)});
     }
   }
   return _result;
