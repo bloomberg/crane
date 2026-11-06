@@ -787,6 +787,33 @@ let instantiate_foreign (d : settled) : settled =
   and fe e = map_expr fe fs Fun.id e in
   map_decl fe fs Fun.id (map_decl (instantiated_expr ~boxing) (instantiated_stmt ~boxing) (instantiated_type ~boxing) d)
 
+(* A type that qualifies a member in value position, [T::f(..)], spelled as
+   the value it names: a named global written as an expression -- no
+   [typename], since what follows is not a type, and with the namespace
+   prefix the value spelling elides where it is in scope.  Anything else
+   keeps its type spelling, without the keyword. *)
+let value_qualifier = function
+  | Tglob (r, tys, []) ->
+    let info = {ci_inline = Option.map inline_template (Table.inline_custom_text r); ci_yields = None} in
+    Some (CPPglob (r, tys, Some info))
+  | _ -> None
+
+let lower_qualifiers (d : settled) : settled =
+  let qualified ty id =
+    match value_qualifier ty with Some q -> CPPscope (q, id, []) | None -> CPPqualified_t (ty, id)
+  in
+  let rec fe e =
+    match map_expr fe fs ft e with
+    (* A suspension is its type's [lazy_] factory applied to the thunk. *)
+    | CPPsuspend (ty, thunk) ->
+      CPPfun_call (call_sig ~yields:ty ~nargs:1 (), qualified ty (Id.of_string "lazy_"), of_reversed [thunk])
+    | CPPqualified_t (ty, id) -> qualified ty id
+    | e -> e
+  and fs s = map_stmt fe fs ft s
+  (* A type may hold an expression: [decltype(T::f(..))]. *)
+  and ft t = map_cpp_type (function Texpr_type e -> Texpr_type (fe e) | t -> t) t in
+  map_decl fe fs ft d
+
 (* The local a match holds its scrutinee in, named after the match's first
    binding variable -- [_m3] gives [_sv3], a frame dispatch's [_f2] gives
    [_fsv2] -- so that two matches in one scope never declare the same name

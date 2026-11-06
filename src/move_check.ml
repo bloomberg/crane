@@ -132,7 +132,7 @@ let rec expr report aliases e : effect_ =
   | _, CPPmove (CPPvar x) -> {none with moves = [local aliases x]}
   (* A reuse factory takes the storage of the local it is handed as its
      token, first, to rebuild it in place. *)
-  | _, CPPfun_call (_, CPPqualified_t (_, f), args) when Generated_name.is_companion "reuse" f -> (
+  | _, CPPfun_call (_, (CPPqualified_t (_, f) | CPPscope (_, f, [])), args) when Generated_name.is_companion "reuse" f -> (
     match call_args args with
     | CPPmove (CPPvar x) :: rest -> unsequenced report ({none with moves = [Storage x]} :: List.map expr rest)
     | args -> unsequenced report (List.map expr args) )

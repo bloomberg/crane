@@ -1291,25 +1291,6 @@ and ctor_alias_of_probe ctx vl ~base probe =
         ( {ca_base = base; ca_holder = true; ca_declared = declared_in; ca_body = render renamed; ca_type = renamed; ca_vars = vl},
           List.map (fun (_, v) -> written_var v) vars @ List.map Id.to_string instances )
 
-(** Render [ty] as the qualifier of a {e value} -- [T::member] -- rather than of
-    a nested type.
-
-    A type and a value spell the same global differently.  The type spelling
-    carries a leading [typename] for a dependent qualifier (see
-    {!Cpp_names.typename_prefix_for}), which is ill-formed in front of a static
-    member function -- [typename C::t::pair(x)] claims [pair] names a type --
-    and it qualifies a global by its namespace where the value spelling elides
-    the prefix that is already in scope.  A named global therefore goes through
-    the expression printer; anything else only needs the keyword removed. *)
-and pp_value_qualifier ctx env ty =
-  match ty with
-  | Tglob (r, tys, []) ->
-    (* No [~yields]: a type qualifier is never a block in value position. *)
-    let info = {ci_inline = Option.map Minicpp.inline_template (Cpp_names.inline_custom_text ctx r); ci_yields = None} in
-    pp_cpp_expr ctx env [] (CPPglob (r, tys, Some info))
-  | _ ->
-  pp_cpp_type ~lead:false ctx false [] ty
-
 (** Pretty-print a MiniCpp expression as C++ source.  The central expression
     printer of the module; dispatches on every {!Minicpp.cpp_expr} form and
     recurses into {!pp_cpp_stmt} for block/statement-valued expressions.
@@ -1755,8 +1736,13 @@ and pp_cpp_expr ctx env args t =
   | CPPscope (e, id, tys) ->
     pp_cpp_expr ctx env args e ++ str "::template " ++ Id.print id ++ str "<"
     ++ pp_list (pp_cpp_type ctx false []) tys ++ str ">"
+  (* A named global qualifying a member in value position was spelled as the
+     value it names at the seam ({!Cpp_erasure.lower_qualifiers}): what is
+     left is a type, written without [typename], since a member follows. *)
+  | CPPqualified_t (Tglob (_, _, []), _) ->
+    CErrors.anomaly (Pp.str "pp_cpp_expr: a type qualifier in value position not lowered (Cpp_erasure.lower_qualifiers)")
   | CPPqualified_t (ty, id) ->
-    pp_value_qualifier ctx env ty ++ str "::" ++ Id.print id
+    pp_cpp_type ~lead:false ctx false [] ty ++ str "::" ++ Id.print id
   | CPPconvertible_to ty ->
     writes_standard "concepts";
     str "std::convertible_to<" ++ pp_cpp_type ctx false [] ty ++ str ">"
@@ -1899,12 +1885,8 @@ and pp_cpp_expr ctx env args t =
        | Boxed_whole -> mt ()
        | At_signature ty -> str ", " ++ pp_cpp_type ctx false [] ty )
     ++ str ">()"
-  | CPPsuspend (ty, thunk) ->
-    pp_cpp_expr ctx env args
-      (CPPfun_call
-         ( Minicpp.call_sig ~yields:ty ~nargs:1 (),
-           CPPqualified_t (ty, Id.of_string "lazy_"),
-           of_reversed [thunk] ))
+  | CPPsuspend _ ->
+    CErrors.anomaly (Pp.str "pp_cpp_expr: a suspension not lowered (Cpp_erasure.lower_qualifiers)")
   | CPPerase_fn (shape, e) ->
     writes Table.erase_fn_header;
     str Crane_rt.erase_fn

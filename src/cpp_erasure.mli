@@ -163,6 +163,14 @@ val recurses_boxed : Minicpp.cpp_type -> bool
     as translation wrote it. *)
 val instantiate_foreign : settled -> settled
 
+(** [lower_qualifiers decl] spells each type qualifying a member in value
+    position ({!Minicpp.CPPqualified_t}) as what the printer writes there: a
+    named global becomes the value it names ([CPPscope (CPPglob ..)]); and a
+    suspension ({!Minicpp.CPPsuspend}) becomes its type's [lazy_] factory
+    applied to the thunk.  After {!instantiate_foreign}, which turns a mapped
+    qualifier into its instantiated text first. *)
+val lower_qualifiers : settled -> settled
+
 (** [name_scrutinees decl] declares the local each {!Minicpp.Smatch} holds a
     computed scrutinee in, in front of the match, and has the match read that
     local: a variant read through a computed object ([e->v()]) binds the
