@@ -2811,7 +2811,7 @@ and abbreviates_value_inductive args body =
     [shared_ptr] is: copying one in is a retain, and dropping it at the end
     of the call a release.  Borrowed, they too are passed by const
     reference. *)
-let wrap_param_by_ownership ?(is_owned = false) cpp_ty =
+let cpp_lent_by_reference cpp_ty =
   let rec shared_block = function
     | Tfun _ -> true
     | Tnondeduced t | Tnamespace (_, t) -> shared_block t
@@ -2819,20 +2819,64 @@ let wrap_param_by_ownership ?(is_owned = false) cpp_ty =
     | _ -> false
   in
   match cpp_ty with
-  | Tshared_ptr _ when is_owned -> cpp_ty
-  | Tshared_ptr _ -> Tref (Lvalue, Tconst cpp_ty)
-  | _ when shared_block cpp_ty ->
-    if is_owned then cpp_ty else Tref (Lvalue, Tconst cpp_ty)
-  | _ when names_value_inductive cpp_ty ->
-    if is_owned then cpp_ty  (* pass by value, caller moves *)
-    else Tref (Lvalue, Tconst cpp_ty)  (* const T& for borrowing *)
-  | Tvar _ | Tqualified _ ->
-    (* Template type parameters and dependent types (e.g. typename C::t) have
-       unknown concrete size; always pass by const-ref to avoid deep copies.
-       When owned (caller moves in), pass by value to enable move semantics. *)
-    if is_owned then cpp_ty
-    else Tref (Lvalue, Tconst cpp_ty)
-  | _ -> cpp_ty
+  | Tshared_ptr _ -> true
+  | _ when shared_block cpp_ty -> true
+  | _ when names_value_inductive cpp_ty -> true
+  (* Template type parameters and dependent types (e.g. typename C::t) have
+     unknown concrete size. *)
+  | Tvar _ | Tqualified _ -> true
+  | _ -> false
+
+(** Whether a parameter of Core type [ty] that its function does not own is
+    lent by const reference, read off the Core type: a value inductive --
+    named as itself, or through an abbreviation whose body is one -- a
+    closure, a coinductive, a type variable, and a reified interaction tree,
+    each a value a copy of which costs a clone or a retain.  [None] where
+    the Core type does not say: one nothing determined, an erased or
+    promoted type, an abstract one, a type variable applied -- under the
+    abstractions over types erasure removes. *)
+let rec core_lent_by_reference ty =
+  match resolve_tmeta ty with
+  | ty when is_monadic_ml_type ty && (!tctx).itree_mode = Reified -> Some true
+  | Miniml.Tglob ((GlobRef.IndRef _ as r), _, _) ->
+    Some ((not (Table.is_enum_inductive r)) && not (Table.is_custom_scalar_ref r))
+  | Miniml.Tglob ((GlobRef.ConstRef kn as r), args, _)
+    when (not (Table.is_custom r)) && not (Table.is_promoted_type_var r || Table.is_erased_type_const r) -> (
+    match Table.lookup_typedef_unchecked kn with
+    | Some body -> (
+      (* As {!names_value_inductive} reads an abbreviation: its body a value
+         inductive, or a variable standing for one. *)
+      match resolve_tmeta (Mlutil.type_subst_list args body) with
+      | Miniml.Tglob ((GlobRef.IndRef _ | GlobRef.ConstRef _), _, _) as unfolded -> (
+        match core_lent_by_reference unfolded with
+        | Some lent ->
+          Some (lent && match unfolded with Miniml.Tglob (r, _, _) -> not (Table.is_coinductive r) | _ -> true)
+        | None -> None )
+      | _ -> Some false )
+    | None -> None )
+  | Miniml.Tglob (r, _, _) when Table.is_custom r -> Some false
+  (* A type abstraction erasure removes is no closure: what it returns is
+     the value. *)
+  | Miniml.Tarr (d, rest) when Mlutil.isTdummy d -> core_lent_by_reference rest
+  | Miniml.Tarr _ | Miniml.Tvar _ -> Some true
+  | _ -> None
+
+let wrap_param_by_ownership ?(is_owned = false) ?core cpp_ty =
+  let by_cpp = cpp_lent_by_reference cpp_ty in
+  let lent =
+    match Option.bind core core_lent_by_reference with
+    | Some by_core ->
+      if Probe.checking () && by_core <> by_cpp then
+        Probe.violation "parameter convention"
+          Pp.(
+            str "the Core type of a parameter says it is "
+            ++ str (if by_core then "lent by reference" else "copied")
+            ++ str ", its C++ type the other" );
+      by_core
+    | None -> by_cpp
+  in
+  (* Owned: by value, the caller moves it in. *)
+  if lent && not is_owned then Tref (Lvalue, Tconst cpp_ty) else cpp_ty
 
 (** How a parameter declared at [ty] -- after {!wrap_param_by_ownership},
     or as the [F &&] a deduced callable is -- with ownership [owned], is

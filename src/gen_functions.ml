@@ -729,7 +729,7 @@ let dfun_body_scope n b cty ty temps =
         in
         (* Reify monadic parameter types: itree E R → shared_ptr<ITree<R>> *)
         let cpp_ty = reify_monadic_param_type ty cpp_ty in
-        let wrapped = wrap_param_by_ownership ~is_owned:owned cpp_ty in
+        let wrapped = wrap_param_by_ownership ~is_owned:owned ~core:ty cpp_ty in
         (x, wrapped) )
       ids_with_owned
   in
@@ -1427,18 +1427,24 @@ let gen_sfun n b dom cod temps =
         let cpp_ty = convert_ml_type_to_cpp_type env [] ty in
         (* Reify monadic parameter types: itree E R → shared_ptr<ITree<R>> *)
         let cpp_ty = reify_monadic_param_type ty cpp_ty in
-        let wrapped = wrap_param_by_ownership ~is_owned:owned cpp_ty in
+        let wrapped = wrap_param_by_ownership ~is_owned:owned ~core:ty cpp_ty in
         (Some x, wrapped) )
       ids_with_owned
   in
   let dom = List.filter (fun ty -> ty != Tvoid) dom in
   (* For already-converted C++ types in dom, wrap shared_ptr with const ref *)
   let args =
-    List.mapi
-      (fun _i ty ->
-        let wrapped = wrap_param_by_ownership ty in
+    (* Where [dom] has a type for each parameter, each is the C++ type of
+       the parameter's Core type. *)
+    let cores =
+      if List.compare_lengths dom ids_with_owned = 0 then List.map (fun (_, ty, _) -> Some ty) ids_with_owned
+      else List.map (fun _ -> None) dom
+    in
+    List.map2
+      (fun ty core ->
+        let wrapped = wrap_param_by_ownership ?core ty in
         (None, wrapped) )
-      dom
+      dom cores
   in
   (* Merge parameter names from [ids] (body lambdas) with resolved types
      from [dom] (function signature).  [ids] carries the correct parameter
