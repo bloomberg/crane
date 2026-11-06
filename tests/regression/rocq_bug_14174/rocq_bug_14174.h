@@ -872,10 +872,10 @@ struct RocqBug14174 {
     dependent_choice(std::type_identity_t<crane::fn<sig<T1>(T1)>> h, T1 x0) {
       auto f_impl = [=, h = std::move(h), x0 = std::move(x0)](auto &_self_f,
                                                               Nat n) -> T1 {
-        if (std::holds_alternative<typename Nat::O>(n.v())) {
+        if (std::holds_alternative<typename Nat::O>(n.v_mut())) {
           return x0;
         } else {
-          const auto &[a0] = std::get<typename Nat::S>(n.v());
+          auto &[a0] = std::get<typename Nat::S>(n.v_mut());
           return h(_self_f(_self_f, *a0)).proj1_sig();
         }
       };

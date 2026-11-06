@@ -9283,11 +9283,12 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          continuation while a [\[&\]] lambda may still refer to them: the
          plan pins them ({!Ownership_plan}). *)
       let all_fix_ids_list = Array.to_list ids in
+      let closures = Analyze_closures.group ~n_outer ~continuation:b ~cofix ids funs = Closures in
       let funs_compiled =
         Array.to_list
           (Array.mapi
              (fun i f ->
-               gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i) f )
+               gen_fix env ~all_fix_ids:all_fix_ids_list ~by_value:closures ~fix_idx:i ids.(i) f )
              funs )
       in
       let renamed_ids =
@@ -9320,7 +9321,6 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       push_binders env [projected_id];
       let declared = declaring (fst projected_id) (core_binder ~site:let_occ env_with_fix 1) in
       let cont = gen_stmts ~slot env_with_fix k b in
-      let closures = Analyze_closures.group ~n_outer ~continuation:b ~cofix ids funs = Closures in
       check_fixpoint_escape (fst projected_id) ~closures (fun () ->
           List.exists (fun (id, _) -> fixpoint_escapes_in_stmts id cont) renamed_ids
           || fix_escapes_in_own_bodies renamed_ids funs_with_params );
@@ -10133,11 +10133,20 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         [k (made_of occ (CPPfun_call (call_opaque, mk_cppglob lifted_ref call_type_args, of_reversed cpp_args)))] )
       else (* No extra Tvars - proceed with by-ref local fixpoint (immediately applied) *)
         let all_fix_ids_list = Array.to_list ids in
+        (* A group escaping in its own bodies is closures, and so is one
+           applied to fewer arguments than its function takes parameters of
+           a runtime value: their bodies own every parameter. *)
+        let escapes = Analyze_closures.group ~n_outer ~cofix ids funs = Closures in
+        let partial =
+          List.compare_length_with args
+            (List.length (List.filter (fun (_, ty) -> not (void_binder ty)) (fst (collect_lams funs.(x)))))
+          < 0
+        in
         let funs_compiled =
           Array.to_list
             (Array.mapi
                (fun i f ->
-                 gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i) f )
+                 gen_fix env ~all_fix_ids:all_fix_ids_list ~by_value:(escapes || partial) ~fix_idx:i ids.(i) f )
                funs )
         in
         let renamed_ids =
@@ -10150,7 +10159,10 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         let _, fix_params, _, _ = List.nth funs_compiled x in
         let n_provided = List.length args in
         let n_fix_params = List.length fix_params in
-        if n_provided < n_fix_params then begin
+        if Probe.checking () && partial <> (n_provided < n_fix_params) then
+          Probe.violation "partial application"
+            (Pp.str "a local fixpoint is applied to other arguments than Core counts");
+        if partial then begin
           (* Partial application: the fixpoint escapes (returned as a lambda).
              Use Y-combinator pattern so the fixpoint body doesn't capture
              a stack-local std::function by reference. *)
@@ -10185,7 +10197,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           @ deref_subst [k (mk_lambda pa_params None [Sreturn (Some full_call)] ~capture:Closure)]
         end
         else if
-          let closures = Analyze_closures.group ~n_outer ~cofix ids funs = Closures in
+          let closures = escapes in
           check_fixpoint_escape (fst (List.nth renamed_ids x)) ~closures (fun () ->
               fix_escapes_in_own_bodies renamed_ids funs_with_params );
           closures
@@ -10221,7 +10233,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       Array.to_list
         (Array.mapi
            (fun i f ->
-             gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i) f )
+             gen_fix env ~all_fix_ids:all_fix_ids_list ~by_value:true ~fix_idx:i ids.(i) f )
            funs )
     in
     let renamed_ids =
@@ -10563,7 +10575,7 @@ and gen_stored_value ?expected_ty ~slot env e =
 (** Generate a fixpoint (recursive function) definition. Handles both single and
     mutually recursive functions. [all_fix_ids] contains names of all mutual
     fixpoints; [fix_idx] is the index of this fixpoint in the mutual group. *)
-and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
+and gen_fix env ?(all_fix_ids = []) ?(by_value = false) ~fix_idx (n, ty) f =
   let ids, f = collect_lams f in
   let ids = List.map (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty)) ids in
   (* Push all mutual fixpoint names (or just (n,ty) for single fixpoints). For
@@ -10592,7 +10604,9 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
   let ids = List.filter (fun (_, ty) -> not (void_binder ty)) ids in
   (* The parameters the body owns, passed by value in the generated lambda.
      After push_vars'(ids @ fix_names), ids[0] is db 1, ..., ids[k-1] db k,
-     and the fixpoints follow; only parameters are owned. *)
+     and the fixpoints follow; only parameters are owned.  A function whose
+     lambda takes every parameter by value ([by_value]: its group's plan
+     owns each, {!local_passing}) owns each: it holds its own copy. *)
   let n_fix_params = List.length ids in
   let n_total = n_fix_params + n_fix_funs in
   let fix_owned_base = Escape.infer_owned_params n_total f in
@@ -10601,7 +10615,7 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
     owned_parameters n_fix_params
       ~owned:(fun i ->
         let flag l = Option.default false (List.nth_opt l i) in
-        flag fix_owned_base || (flag fix_sub_esc && is_prod_ml_type (snd (List.nth ids i))) )
+        by_value || flag fix_owned_base || (flag fix_sub_esc && is_prod_ml_type (snd (List.nth ids i))) )
       ~ty:(fun i -> snd (List.nth ids i))
   in
   (* The body returns the fixpoint's own codomain, not the enclosing

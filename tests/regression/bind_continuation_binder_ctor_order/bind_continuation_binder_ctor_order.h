@@ -393,12 +393,12 @@ bytes_to_dv(const Nat &n, const List<Byte> &bs) {
       const auto &[a01] = a00;
       auto go_impl = [=](auto &_self_go, List<Nat> ds, List<Byte> bs0)
           -> EOU<List<Dv<typename _tcI0::tag, typename _tcI0::addr>>> {
-        if (std::holds_alternative<typename List<Nat>::Nil>(ds.v())) {
+        if (std::holds_alternative<typename List<Nat>::Nil>(ds.v_mut())) {
           return EOU_monad::template ret<
               List<Dv<typename _tcI0::tag, typename _tcI0::addr>>>(
               List<Dv<typename _tcI0::tag, typename _tcI0::addr>>::nil());
         } else {
-          const auto &[a02, a12] = std::get<typename List<Nat>::Cons>(ds.v());
+          auto &[a02, a12] = std::get<typename List<Nat>::Cons>(ds.v_mut());
           const List<Nat> &a12_value = *a12;
           return EOU_monad::template bind<
               Dv<typename _tcI0::tag, typename _tcI0::addr>,

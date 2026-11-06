@@ -407,12 +407,12 @@ std::optional<Dvalue<typename _tcI0::ptr>> to_dvalue(const List<Nat> &dbs,
         auto go_impl = [=, pad = std::move(pad)](auto &_self_go, Nat offset,
                                                  List<Dtyp> dts, List<Nat> dbs0)
             -> std::optional<List<Dvalue<typename _tcI0::ptr>>> {
-          if (std::holds_alternative<typename List<Dtyp>::Nil>(dts.v())) {
+          if (std::holds_alternative<typename List<Dtyp>::Nil>(dts.v_mut())) {
             return Monad_option::template ret<
                 List<Dvalue<typename _tcI0::ptr>>>(
                 List<Dvalue<typename _tcI0::ptr>>::nil());
           } else {
-            const auto &[a0, a1] = std::get<typename List<Dtyp>::Cons>(dts.v());
+            auto &[a0, a1] = std::get<typename List<Dtyp>::Cons>(dts.v_mut());
             const List<Dtyp> &a1_value = *a1;
             Nat padding;
             if (pad.has_value()) {
@@ -423,8 +423,8 @@ std::optional<Dvalue<typename _tcI0::ptr>> to_dvalue(const List<Nat> &dbs,
             }
             return Monad_option::template bind<
                 Dvalue<typename _tcI0::ptr>, List<Dvalue<typename _tcI0::ptr>>>(
-                to_dvalue<_tcI0>(dbs0, a0),
-                [=, padding = std::move(padding)](
+                to_dvalue<_tcI0>(dbs0, std::move(a0)),
+                [=, offset = std::move(offset), padding = std::move(padding)](
                     const Dvalue<typename _tcI0::ptr> &f) {
                   return Monad_option::template bind<
                       List<Dvalue<typename _tcI0::ptr>>,
