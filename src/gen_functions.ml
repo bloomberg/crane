@@ -1044,54 +1044,6 @@ let planned_scope_head n ty scope =
     Callable_abi.check decided );
   (Callable_abi.declared_head abi, Callable_abi.relaxations abi)
 
-(** The points the function [r], its body standing under [depth] of its
-    binders, resumes at, where the body is lowered as a machine with a
-    stack of frames as it is generated ({!Control_to_legacy_minicpp.lower_group}):
-    one the configuration loopifies and the recursion plan lowers so, whose
-    machine adopts nothing, so that nothing decided after the plan leaves
-    its calls as generated.  A
-    frame keeps the binders bound before a point that what follows reads,
-    except the parameters every turn passes on unchanged, which the machine
-    holds outside its frames. *)
-let frame_resumes r ~depth : Ownership_plan.resumes option =
-  let frames =
-    Table.should_loopify r
-    && Option.is_empty (Lifted.of_ref r)
-    && Recursion_plan.strategy ~pointer_fields:Loopify_analysis.constructor_pointer_fields r
-       = Some Recursion_plan.Frame_stack
-  in
-  match (frames, if frames then Lower_control.loop (Control_ir.Loop.Function r) else None) with
-  | true, Some (Control_ir.Term.Loop l) when Control_ir.entries l.body = [] ->
-    let invariant = Control_ir.invariant_parameters l in
-    let available (b : Core_binder.t) = Option.default false (List.nth_opt invariant b.level) in
-    let kept b = not (available b) in
-    (* What the handler binds again rather than the frame holding it: one
-       recomputable from what is available, or bound again so, in turn, as
-       the machine does ({!Loopify_frame}'s [rebuilt_binders]). *)
-    let rebuilt (p : Recursion_plan.resume) =
-      List.fold_left
-        (fun rebuilt (c : Recursion_plan.recomputable) ->
-          if List.for_all (fun b -> available b || List.exists (Core_binder.equal b) rebuilt) c.from then
-            c.recomputed :: rebuilt
-          else rebuilt )
-        [] p.recomputable
-    in
-    Some
-      { origin = r;
-        depth;
-        resume_at =
-          (fun b ->
-            match Recursion_plan.resumes_binding b with
-            | [p] ->
-              let kept = List.filter kept p.live in
-              let rebuilt = rebuilt p in
-              Some
-                { calls = List.map (fun (c : Recursion_plan.call) -> c.occurrence) p.after;
-                  kept;
-                  held = List.filter (fun b -> not (List.exists (Core_binder.equal b) rebuilt)) kept }
-            | _ -> None ) }
-  | _ -> None
-
 let gen_dfun n b cty ty temps =
   let scope = dfun_body_scope n b cty ty temps in
   let temps, relaxations = planned_scope_head n ty scope in
@@ -1246,7 +1198,7 @@ let gen_dfun n b cty ty temps =
   in
   begin_body ~owner:n ~function_:true ();
   set_current_parameters (List.map snd (parameter_binders env all_ids));
-  let resumes = frame_resumes n ~depth:(List.length all_ids) in
+  let resumes = Control_to_legacy_minicpp.function_resumes n ~depth:(List.length all_ids) in
   (* The parameters the body owns, at de Bruijn indices 1..n_params: those
      the head declares by value. *)
   let owned_params =

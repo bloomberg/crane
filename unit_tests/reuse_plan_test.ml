@@ -87,6 +87,7 @@ let () =
   let resumes calls : Ownership_plan.resumes =
     { origin;
       depth = 1;
+      entry_captures = None;
       resume_at =
         (fun b ->
           if Core_binder.equal b (Core_binder.make ~origin ~level:1 ()) && Core_binder.same_site b (Core_binder.make ~origin ~level:1 ~site ())
@@ -113,6 +114,7 @@ let () =
   let resumes : Ownership_plan.resumes =
     { origin;
       depth = 1;
+      entry_captures = None;
       resume_at =
         (fun b ->
           if Core_binder.equal b at_let && Core_binder.same_site b at_let
@@ -139,6 +141,7 @@ let () =
     let resumes : Ownership_plan.resumes =
       { origin;
         depth = 2;
+        entry_captures = None;
         resume_at =
           (fun b ->
             if Core_binder.equal b at_let && Core_binder.same_site b at_let then
@@ -172,6 +175,7 @@ let () =
   let resumes : Ownership_plan.resumes =
     { origin;
       depth = 2;
+      entry_captures = None;
       resume_at =
         (fun b -> List.find_map (fun (at, r) -> if Core_binder.equal b at && Core_binder.same_site b at then Some r else None) points) }
   in
@@ -179,6 +183,35 @@ let () =
   check "the first save keeps what the region lends" (Ownership_plan.save_moves p outer_site = Some []);
   check "the second moves what the first frame holds"
     (match Ownership_plan.save_moves p inner_site with Some [b] -> Core_binder.equal b s | _ -> false)
+
+(* The body of a fixpoint [f a] a machine adopts as an entry, capturing [c]:
+   [let r := f a in g r c].  The entry's frame holds [c], which the region
+   does not own, so a save may move it -- but not where the call it is saved
+   for re-enters the entry, which passes [c] again; a call of another
+   function does not. *)
+let () =
+  let origin = GlobRef.VarRef (Id.of_string "outer") in
+  let c = Core_binder.make ~origin ~level:0 () in
+  let moves value =
+    let site = Occurrence.fresh () in
+    let root = MLletin (Id (Id.of_string "r"), nat, value, call "g" [fresh_rel 1; fresh_rel 4], site) in
+    let call_site = match value with MLapp ((MLrel (_, o) | MLglob {occurrence = o; _}), _) -> o | _ -> assert false in
+    let at_let = Core_binder.make ~origin ~level:3 ~site () in
+    let resumes : Ownership_plan.resumes =
+      { origin;
+        depth = 3;
+        entry_captures = Some 2;
+        resume_at =
+          (fun b ->
+            if Core_binder.equal b at_let && Core_binder.same_site b at_let then
+              Some {calls = [call_site]; kept = [c]; held = [c]}
+            else None ) }
+    in
+    Ownership_plan.save_moves (Ownership_plan.region ~resumes ~n_outer:0 root) site
+  in
+  check "a save keeps a capture the call re-entering the entry passes" (moves (MLapp (fresh_rel 2, [fresh_rel 1])) = Some []);
+  check "another call's save moves a capture the entry holds"
+    (match moves (call "h" [fresh_rel 1]) with Some [b] -> Core_binder.equal b c | _ -> false)
 
 (* [(fix f n l := g n l) (len s) s], [s] an owned parameter: the fixpoint's
    parameters are bound to its arguments in order, so the second argument

@@ -39,7 +39,12 @@ type argument = {variables : Levels.t; read_at : (int * Occurrence.t) list}
 
 type entered = {at : Occurrence.t; arguments : argument list; overlaps : int -> int -> bool}
 
-type resumes = {origin : Names.GlobRef.t; depth : int; resume_at : Core_binder.t -> resume option}
+type resumes = {
+  origin : Names.GlobRef.t;
+  depth : int;
+  resume_at : Core_binder.t -> resume option;
+  entry_captures : int option;
+}
 
 (* Of a let a frame machine resumes at, by its occurrence: each binder the
    frame saved for the call keeps, with its level, and whether the save is
@@ -53,6 +58,7 @@ type t = {
   root : ml_ast;
   n_outer : int;  (* the type variables of the head the region is generated under *)
   resumes : resumes option;
+  certain : bool;  (* whether the region is lowered as the machine resuming at [resumes] wherever it is generated *)
   root_owned : Levels.t;
   root_copied : Levels.t;  (* variables closures capture a copy of, owned by them alone *)
   arms : arm list;
@@ -70,6 +76,7 @@ let empty =
   { root = MLdummy Kprop;
     n_outer = 0;
     resumes = None;
+    certain = true;
     root_owned = Levels.empty;
     root_copied = Levels.empty;
     arms = [];
@@ -325,19 +332,49 @@ let evaluations r =
 
 let sequential_bind use = Core_effects.find use = Some {operation = Bind; mode = Sequential}
 
-(* The variables, by level, that a frame keeps across the call [a] makes,
-   [let _ := a in _] at [occurrence] standing [d] binders deep: where the
-   let is a point a frame machine resumes at and [a] is the call itself, the
-   frame saving them is made before [a]'s arguments are evaluated, and what
-   follows reads them in the frame.  The save reads them: what reads them
-   before it does not read them last. *)
-let resume_of resumes d a occurrence =
-  match (resumes, strip a) with
-  | Some {origin; depth; resume_at}, MLapp (MLglob {occurrence = call; _}, _) -> (
-    match resume_at (Core_binder.make ~origin ~level:(depth + d) ~site:occurrence ()) with
-    | Some ({calls; _} as r) when List.exists (Occurrence.equal call) calls -> Some (depth, r)
-    | Some _ | None -> None )
+(* What an application, perhaps applied in turn, applies: through casts. *)
+let rec call_head f = match strip f with MLapp (g, _) -> call_head g | h -> h
+
+(* The call [a] makes, by its occurrence, where it is one -- of a global, of
+   a local fixpoint's member, or a local fixpoint applied where it is
+   written -- applied in one application or several. *)
+let call_of a =
+  match strip a with
+  | MLapp (f, _) -> (
+    match call_head f with
+    | MLglob {occurrence; _} | MLrel (_, occurrence) | MLfix (_, _, _, _, occurrence) -> Some occurrence
+    | _ -> None )
   | _ -> None
+
+(* Whether the branches of a match on a value of type [ty] are where the
+   value of the match is bound, rather than in a closure run in its place
+   (as {!Recursion_plan} reads a right-hand side ending in its branches). *)
+let bound_in_place ty branches =
+  Table.is_custom_match branches || (Table.record_fields_of_type ty <> [] && Array.length branches = 1)
+
+(* The calls [a] ends in: the call it is, or those the branches of a match
+   bound in place end in, through lets and casts. *)
+let rec ending_calls a =
+  match (call_of a, strip a) with
+  | Some call, _ -> [call]
+  | None, MLcase (ty, _, branches) when bound_in_place ty branches ->
+    List.concat_map (fun (_, _, _, b) -> ending_calls b) (Array.to_list branches)
+  | None, MLletin (_, _, _, b, _) -> ending_calls b
+  | None, _ -> []
+
+(* The variables, by level, that a frame keeps across the calls [a] ends
+   in, [let _ := a in _] at [occurrence] standing [d] binders deep: where
+   the let is a point a frame machine resumes at, the frame saving them is
+   made before such a call's arguments are evaluated, and what follows
+   reads them in the frame.  The save reads them: what reads them before it
+   does not read them last. *)
+let resume_of resumes d a occurrence =
+  match (resumes, ending_calls a) with
+  | Some _, [] | None, _ -> None
+  | Some {origin; depth; resume_at}, ending -> (
+    match resume_at (Core_binder.make ~origin ~level:(depth + d) ~site:occurrence ()) with
+    | Some ({calls; _} as r) when List.exists (fun c -> List.exists (Occurrence.equal c) calls) ending -> Some (depth, r)
+    | Some _ | None -> None )
 
 let kept_binders resumes d a occurrence =
   match resume_of resumes d a occurrence with
@@ -353,7 +390,25 @@ let held_across resumes d a occurrence =
   | Some (depth, {held; _}) -> Levels.of_list (List.map (fun (b : Core_binder.t) -> b.level - depth) held)
   | None -> Levels.empty
 
+(* A frame saved where the right-hand side of the let at [let_at] ends in one of
+   the calls [calls]: the binders it keeps, with their levels, and what is
+   read once the let is done. *)
+type tail_save = {
+  let_at : Occurrence.t;
+  calls : Occurrence.t list;
+  kept_at : (Core_binder.t * int) list;
+  kept : Levels.t;
+  outside : Levels.t;
+}
+
 let liveness ~n_outer ~copied ~arms ~resumes t =
+  (* The captures a call re-entering the entry the region is lowered as
+     passes it, and the level of the fixpoint's member such a call names. *)
+  let entry_captures =
+    match resumes with
+    | Some {entry_captures = Some k; _} -> Some (-k, lazy (Levels.filter (fun l -> l < -k) (free Parents.empty 0 t)))
+    | Some _ | None -> None
+  in
   let reads = ref [] in
   let captures = ref [] in
   let entered = ref [] in
@@ -365,7 +420,7 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
      subterm whose value is [t]'s -- a cast's operand, a let's body, a
      branch -- stands where [t] does, and any other takes its value, unless
      it is read in place. *)
-  let rec walk ?(consumed = true) ~pinned parents d live t =
+  let rec walk ?(consumed = true) ?tail ~pinned parents d live t =
     let read l occurrence =
       let last_of m = not (Levels.exists (overlap parents m) (Levels.union live pinned)) in
       reads := {occurrence; last = last_of l; last_whole = last_of (storage l); consumed} :: !reads;
@@ -374,8 +429,32 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
       if Levels.mem (storage l) copied then live else Levels.add l live
     in
     match t with
+    (* A call a frame is saved for, where the right-hand side of the let
+       the machine resumes at ends in it: the save is made before its
+       arguments are evaluated. *)
+    | _ when Option.cata (fun s -> Option.cata (fun c -> List.exists (Occurrence.equal c) s.calls) false (call_of t)) false tail
+      ->
+      let s = Option.get tail in
+      let saved, after_save = Levels.partition (fun l -> Levels.mem (storage l) s.kept) live in
+      (* A call re-entering the entry the region is lowered as -- of the
+         fixpoint's member -- passes the entry the fixpoint's captures as
+         well. *)
+      let entered =
+        match (entry_captures, strip t) with
+        | Some (member, captures), MLapp (f, _) -> (
+          match call_head f with MLrel (i, _) when d - i = member -> Lazy.force captures | _ -> Levels.empty )
+        | _ -> Levels.empty
+      in
+      let read_after = Levels.union (free parents d t) (Levels.union s.outside entered) in
+      let last l =
+        (not (Levels.mem l copied))
+        && (not (Levels.exists (overlap parents l) read_after))
+        && not (Levels.exists (overlap parents l) (Levels.remove l s.kept))
+      in
+      saves := {save_at = s.let_at; saved = List.map (fun (b, l) -> (b, l, last l)) s.kept_at} :: !saves;
+      Levels.union saved (walk ~consumed ~pinned parents d after_save t)
     | MLrel (i, occurrence) -> read (d - i) occurrence
-    | MLmagic (_, t) -> walk ~consumed ~pinned parents d live t
+    | MLmagic (_, t) -> walk ~consumed ?tail ~pinned parents d live t
     (* A component read through its projection is a part of the pair: a read
        of the other component is not a later read of it. *)
     | MLapp (MLglob {callee = r; _}, [arg]) when projected d r (strip arg) <> None ->
@@ -394,8 +473,10 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
       | ids, body ->
         let n = List.length ids in
         let parents' = bind parents d ~n in
-        let live_body = walk ~consumed ~pinned parents' (d + n) live body in
-        walk ~pinned parents d (leave parents' d live_body) action )
+        let parents' = after_resume parents' d action use.occurrence in
+        let live_body = walk ~consumed ?tail ~pinned parents' (d + n) live body in
+        walk ?tail:(saved_at d action use.occurrence ~outside:(Levels.union live pinned)) ~pinned parents d
+          (leave parents' d live_body) action )
     | MLapp (MLglob {callee = r; _}, args) when Table.is_inline_custom r ->
       unsequenced ~evaluated:(evaluations r) ~pinned parents d live args
     (* A local fixpoint applied where it is written binds its parameters to
@@ -433,21 +514,9 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
       Levels.union live captured
     | MLletin (_, ty, a, b, occurrence) ->
       let pinned_b = if reads_at_uses ~n_outer ~arms ty a occurrence then Levels.union pinned (free parents d a) else pinned in
-      let parents_b = bind parents d ~n:1 in
-      let live_b = walk ~consumed ~pinned:pinned_b parents_b (d + 1) live b in
-      let kept_at = kept_binders resumes d a occurrence in
-      let kept = Levels.of_list (List.map snd kept_at) in
-      let saved, after_save = Levels.partition (fun l -> Levels.mem (storage l) kept) (leave parents_b d live_b) in
-      if kept_at <> [] then begin
-        let read_after = Levels.union (free parents d a) (Levels.union live pinned) in
-        let last l =
-          (not (Levels.mem l copied))
-          && (not (Levels.exists (overlap parents l) read_after))
-          && not (Levels.exists (overlap parents l) (Levels.remove l kept))
-        in
-        saves := {save_at = occurrence; saved = List.map (fun (b, l) -> (b, l, last l)) kept_at} :: !saves
-      end;
-      Levels.union saved (walk ~pinned parents d after_save a)
+      let parents_b = after_resume (bind parents d ~n:1) d a occurrence in
+      let live_b = walk ~consumed ?tail ~pinned:pinned_b parents_b (d + 1) live b in
+      walk ?tail:(saved_at d a occurrence ~outside:(Levels.union live pinned)) ~pinned parents d (leave parents_b d live_b) a
     (* A branch reads its pattern variables through the scrutinee's own
        evaluation -- a field of the record it names, a component of the pair
        it hands over -- so what follows the scrutinee is what the branches
@@ -457,7 +526,8 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
         Array.fold_left
           (fun acc (ids, _, _, body) ->
             let n = List.length ids in
-            let live_body = walk ~consumed ~pinned (bind_parts parents d ~n scrut) (d + n) live body in
+            let tail = if bound_in_place ty branches then tail else None in
+            let live_body = walk ~consumed ?tail ~pinned (bind_parts parents d ~n scrut) (d + n) live body in
             Levels.union acc (leave (bind parents d ~n) d live_body) )
           Levels.empty branches
       in
@@ -465,6 +535,20 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
         ~consumed:(scrutinee_consumed ty scrut branches)
         ~pinned parents d after_scrut scrut
     | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> live
+  (* What follows a resume at the binder [a] binds at [occurrence], [d]
+     deep, reads each binder the frame holds itself in a field of its own, a
+     part of no other. *)
+  and after_resume parents d a occurrence =
+    List.fold_left (fun parents l -> Parents.remove l parents) parents
+      (Levels.elements (held_across resumes d a occurrence))
+  (* The frame saved where [a], bound at [occurrence], [d] deep, ends in a
+     call the point resumes after: at each such call, [outside] read once
+     the binding is done. *)
+  and saved_at d a occurrence ~outside =
+    match (kept_binders resumes d a occurrence, resume_of resumes d a occurrence) with
+    | (_ :: _ as kept_at), Some (_, r) ->
+      Some {let_at = occurrence; calls = r.calls; kept_at; kept = Levels.of_list (List.map snd kept_at); outside}
+    | _ -> None
   (* The terms of [ts] are evaluated in no fixed order: each is followed by
      whatever the others read, and by what it reads itself when it is
      evaluated twice.  One evaluated not at all reads nothing; one
@@ -568,6 +652,14 @@ let ownership ~n_outer ~resumes ~reads ~arms ~owned ~copied t =
   (* The levels of the binders the frames of the turn [own] is in hold
      ({!resume.held}). *)
   let frame_held = ref Levels.empty in
+  (* The frame of the entry the region is lowered as holds what it reads
+     from outside it, its parameters and its captures, from its root on. *)
+  let outer =
+    match resumes with
+    | Some {entry_captures = Some _; _} -> Levels.filter (fun l -> l < 0) (free Parents.empty 0 t)
+    | Some _ | None -> Levels.empty
+  in
+  let frame_held_now () = Levels.union !frame_held outer in
   let rec own owned d t =
     let all = List.iter (own owned d) in
     match t with
@@ -584,7 +676,8 @@ let ownership ~n_outer ~resumes ~reads ~arms ~owned ~copied t =
       | [], _ -> own owned d k
       | ((_, ty) :: _ as ids), body ->
         let n = List.length ids in
-        own (if worth_moving ty then Levels.add (d + n - 1) owned else owned) (d + n) body )
+        saving d action use.occurrence owned (fun () ->
+            own (if worth_moving ty then Levels.add (d + n - 1) owned else owned) (d + n) body ) )
     | MLapp (f, args) -> all (f :: args)
     | MLcons (_, _, args) | MLtuple args -> all args
     | MLparray (elems, default) -> all (default :: Array.to_list elems)
@@ -595,21 +688,12 @@ let ownership ~n_outer ~resumes ~reads ~arms ~owned ~copied t =
         (closure_reads d t)
     | MLletin (x, ty, a, b, occurrence) ->
       own owned d a;
-      (* A binder an enclosing frame of the turn holds is the handler's own,
-         for the frame saved here to take; where else it is read, it is
-         read as it was bound. *)
-      ( match kept_across resumes d a occurrence with
-      | kept when not (Levels.is_empty kept) ->
-        saved_owned := (occurrence, Levels.inter kept (Levels.union owned !frame_held)) :: !saved_owned
-      | _ -> () );
       (* What a local fixpoint closes over, it reads by reference. *)
       let owned_b =
         match a with MLfix _ -> Levels.diff owned (free Parents.empty d a) | _ -> owned
       in
-      let enclosing = !frame_held in
-      frame_held := Levels.union enclosing (held_across resumes d a occurrence);
-      own (if let_owned owned d x ty a occurrence then Levels.add d owned_b else owned_b) (d + 1) b;
-      frame_held := enclosing
+      saving d a occurrence owned (fun () ->
+          own (if let_owned owned d x ty a occurrence then Levels.add d owned_b else owned_b) (d + 1) b )
     | MLcase (ty, scrut, branches) ->
       own owned d scrut;
       Array.iteri
@@ -617,6 +701,19 @@ let ownership ~n_outer ~resumes ~reads ~arms ~owned ~copied t =
           own (branch_owned owned d t ty scrut branches k branch) (d + List.length ids) body )
         branches
     | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> ()
+  (* [f], which plans what follows a binding of [a] at [occurrence], [d]
+     deep: where the machine resumes there, a binder an enclosing frame of
+     the turn holds is the handler's own, for the frame saved here to take;
+     where else it is read, it is read as it was bound. *)
+  and saving d a occurrence owned f =
+    ( match kept_across resumes d a occurrence with
+    | kept when not (Levels.is_empty kept) ->
+      saved_owned := (occurrence, Levels.inter kept (Levels.union owned (frame_held_now ()))) :: !saved_owned
+    | _ -> () );
+    let enclosing = !frame_held in
+    frame_held := Levels.union enclosing (held_across resumes d a occurrence);
+    f ();
+    frame_held := enclosing
   and owned_var owned d i _ = Levels.mem (d - i) owned
   and let_owned owned d x ty a occurrence =
     match (x, a) with
@@ -679,13 +776,14 @@ let ownership ~n_outer ~resumes ~reads ~arms ~owned ~copied t =
   own owned 0 t;
   (!out, !captured, !copied_reads, !saved_owned)
 
-let plan ~n_outer ~resumes root root_owned root_copied arms (reads, captures, entered, saves) =
+let plan ~n_outer ~resumes ~certain root root_owned root_copied arms (reads, captures, entered, saves) =
   let owned, captured_owned, copied_reads, saved_owned =
     ownership ~n_outer ~resumes ~reads ~arms ~owned:root_owned ~copied:root_copied root
   in
   { root;
     n_outer;
     resumes;
+    certain;
     root_owned;
     root_copied;
     arms;
@@ -698,10 +796,20 @@ let plan ~n_outer ~resumes root root_owned root_copied arms (reads, captures, en
     saves;
     saved_owned }
 
-let region ?(owned = []) ?(copied = []) ?resumes ~n_outer t =
+(* The reads of [t] and the saves of the machine it is lowered as: where it
+   may be generated as it is, its reads planned as they are there. *)
+let liveness_of ~n_outer ~copied ~arms ~resumes ~certain t =
+  let lowered = liveness ~n_outer ~copied ~arms ~resumes t in
+  if certain || Option.is_empty resumes then lowered
+  else
+    let reads, captures, entered, _ = liveness ~n_outer ~copied ~arms ~resumes:None t in
+    let _, _, _, saves = lowered in
+    (reads, captures, entered, saves)
+
+let region ?(owned = []) ?(copied = []) ?resumes ?(certain = true) ~n_outer t =
   let levels is = Levels.of_list (List.map (fun i -> -i) is) in
-  plan ~n_outer ~resumes t (levels owned) (levels copied) []
-    (liveness ~n_outer ~copied:(levels copied) ~arms:[] ~resumes t)
+  plan ~n_outer ~resumes ~certain t (levels owned) (levels copied) []
+    (liveness_of ~n_outer ~copied:(levels copied) ~arms:[] ~resumes ~certain t)
 
 (* The branches of the match in [root] on the variable read at [o]. *)
 let branches_at root o =
@@ -731,7 +839,7 @@ let reuse_arm p ~scrutinee ~branch ~constructor =
     if consumers = [] && Probe.checking () then
       Probe.violation "reuse plan"
         Pp.(str "a branch rebuilding in its scrutinee's storage returns no construction to take it");
-    plan ~n_outer:p.n_outer ~resumes:p.resumes p.root p.root_owned p.root_copied
+    plan ~n_outer:p.n_outer ~resumes:p.resumes ~certain:p.certain p.root p.root_owned p.root_copied
       (Rebuild {scrutinee; branch; consumers} :: p.arms)
       (p.reads, p.captures, p.entered, p.saves)
   | None -> p
@@ -748,7 +856,7 @@ let allocation p construction : Allocation.t =
 let fields_by_value p ~case ~by_value =
   if p == empty then p
   else
-    plan ~n_outer:p.n_outer ~resumes:p.resumes p.root p.root_owned p.root_copied (Fields {case; by_value} :: p.arms)
+    plan ~n_outer:p.n_outer ~resumes:p.resumes ~certain:p.certain p.root p.root_owned p.root_copied (Fields {case; by_value} :: p.arms)
       (p.reads, p.captures, p.entered, p.saves)
 
 (* Unlike the other arms, this one changes what a closure reads where it is
@@ -757,8 +865,8 @@ let bound_at_instance p ~let_ =
   if p == empty then p
   else
     let arms = Instance let_ :: p.arms in
-    plan ~n_outer:p.n_outer ~resumes:p.resumes p.root p.root_owned p.root_copied arms
-      (liveness ~n_outer:p.n_outer ~copied:p.root_copied ~arms ~resumes:p.resumes p.root)
+    plan ~n_outer:p.n_outer ~resumes:p.resumes ~certain:p.certain p.root p.root_owned p.root_copied arms
+      (liveness_of ~n_outer:p.n_outer ~copied:p.root_copied ~arms ~resumes:p.resumes ~certain:p.certain p.root)
 
 let closure_local p ty a = if p == empty then None else Some (closure_local ~n_outer:p.n_outer ty a)
 

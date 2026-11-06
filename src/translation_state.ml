@@ -392,13 +392,13 @@ let with_itree_mode (m : itree_extraction_mode) (f : unit -> 'a) : 'a =
 (** [with_region ~owned ~copied ~resumes body f] runs [f], which generates
     [body] as one C++ body owning the variables at the de Bruijn indices
     [owned], its closures owning their copy of those at [copied], lowered as
-    a machine resuming at [resumes], if any, with the moves planned over
-    [body] ({!Ownership_plan.region}). *)
-let with_region ?(owned = []) ?(copied = []) ?resumes (body : ml_ast) (f : unit -> 'a) : 'a =
+    a machine resuming at [resumes], if any -- [certain]ly, or perhaps --
+    with the moves planned over [body] ({!Ownership_plan.region}). *)
+let with_region ?(owned = []) ?(copied = []) ?resumes ?certain (body : ml_ast) (f : unit -> 'a) : 'a =
   with_field
     (fun c -> c.move_plan)
     (fun p -> tctx := { !tctx with move_plan = p })
-    (Ownership_plan.region ~owned ~copied ?resumes ~n_outer:(List.length (!tctx).current_type_vars) body)
+    (Ownership_plan.region ~owned ~copied ?resumes ?certain ~n_outer:(List.length (!tctx).current_type_vars) body)
     f
 
 (** [with_plan p f] runs [f] with the moves planned by [p], an alternative

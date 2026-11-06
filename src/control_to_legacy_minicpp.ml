@@ -76,6 +76,76 @@ let parts_passed l =
 let derived_passed l =
   Control_ir.derived_passed ~pointer_fields:Loopify_analysis.constructor_pointer_fields ~in_place l
 
+(* The points a machine with a stack of frames, lowered from a body of the
+   definition [origin] standing under [depth] of its binders, resumes at.
+   A frame keeps the binders bound before a point that what follows reads,
+   except those [available] -- the parameters of its loop every turn passes
+   on unchanged, which the machine holds outside its frames -- and holds
+   itself those of them its handler does not bind again: one recomputable
+   from what is available, or bound again so, in turn, as the machine does
+   ({!Loopify_frame}'s [rebuilt_binders]). *)
+let resumes_of ?entry_captures ~origin ~depth ~available () : Ownership_plan.resumes =
+  let rebuilt (p : Recursion_plan.resume) =
+    List.fold_left
+      (fun rebuilt (c : Recursion_plan.recomputable) ->
+        if List.for_all (fun b -> available b || List.exists (Core_binder.equal b) rebuilt) c.from then
+          c.recomputed :: rebuilt
+        else rebuilt )
+      [] p.recomputable
+  in
+  { origin;
+    depth;
+    entry_captures;
+    resume_at =
+      (fun b ->
+        match Recursion_plan.resumes_binding b with
+        | [p] ->
+          let kept = List.filter (fun b -> not (available b)) p.live in
+          let rebuilt = rebuilt p in
+          Some
+            { calls = List.map (fun (c : Recursion_plan.call) -> c.occurrence) p.after;
+              kept;
+              held = List.filter (fun b -> not (List.exists (Core_binder.equal b) rebuilt)) kept }
+        | _ -> None ) }
+
+(* Whether the Core binder [b] is a parameter of the loop [l], whose first
+   parameter is at the level [first], that every turn passes on unchanged. *)
+let invariant_at (l : Control_ir.Term.loop) ~first =
+  let invariant = Control_ir.invariant_parameters l in
+  fun (b : Core_binder.t) -> b.level >= first && Option.default false (List.nth_opt invariant (b.level - first))
+
+(* The loop of the function [r] where its body is lowered as a machine with
+   a stack of frames as it is generated ({!lower_group}): one the
+   configuration loopifies and the recursion plan lowers so, adopting at
+   most one local fixpoint, as its ControlIR's entry, so that nothing
+   decided after the plan leaves its calls as generated. *)
+let function_machine r =
+  let frames =
+    Table.should_loopify r
+    && Option.is_empty (Lifted.of_ref r)
+    && Recursion_plan.strategy ~pointer_fields:Loopify_analysis.constructor_pointer_fields r
+       = Some Recursion_plan.Frame_stack
+  in
+  match if frames then Lower_control.loop (Control_ir.Loop.Function r) else None with
+  | Some (Control_ir.Term.Loop l) when List.compare_length_with (Control_ir.entries l.body) 1 <= 0 -> Some l
+  | Some _ | None -> None
+
+let function_resumes r ~depth =
+  Option.map (fun l -> resumes_of ~origin:r ~depth ~available:(invariant_at l ~first:0) ()) (function_machine r)
+
+let method_resumes r ~inductive ~receiver ~depth =
+  (* Its struct's methods are loopified where everything is, if the struct
+     is merged into its module's, and as its inductive says otherwise
+     ({!lower_methods}): which, the method is generated before it is told. *)
+  let either = Table.loopify () || Table.loopifies_methods_of inductive in
+  let both = Table.loopify () && Table.loopifies_methods_of inductive in
+  match method_loop r with
+  | Some (l, Frames)
+    when Table.loopifies_method r && either && Control_ir.entries l.body = []
+         && Option.default false (List.nth_opt (derived_passed l) receiver) ->
+    Some (resumes_of ~origin:r ~depth ~available:(invariant_at l ~first:0) (), both)
+  | Some _ | None -> None
+
 (* A loop as it is lowered, and for each C++ parameter of what it is
    lowered from, whether the loop varies it -- some Continue changes the
    parameter of the loop it stands for -- and whether every Continue passes
@@ -389,20 +459,59 @@ let machine r =
    loops alone. *)
 let lowers_local_machines ~function_ r = function_ && Table.should_loopify r && not (Option.has_some (Lifted.of_ref r))
 
-let local_loop ~owner ~function_ ~lifted ~member:((occurrence, _) as member) ~tparams ~name (lam : cpp_lambda) =
-  (* The function a fixpoint is in the flow of adopts it only where it is
-     a machine itself, which a local tail loop is never lowered inside. *)
-  let lowering =
-    match Recursion_plan.strategy_at ~pointer_fields:Loopify_analysis.constructor_pointer_fields member with
-    | Some Tail_loop ->
-      if Recursion_plan.adoptable_by_fixpoint ~lifted occurrence || Option.cata machine false owner then None
-      else Some Tail
-    | Some (Modulo_cons _ | Frame_stack)
-      when (not (Recursion_plan.adoptable_somewhere ~lifted occurrence))
-           && Option.cata (lowers_local_machines ~function_) false owner ->
-      Some Frames
-    | Some (No_loop | Modulo_cons _ | Frame_stack | Suspended _) | None -> None
+(* How {!local_loop} lowers the local fixpoint [member], if at all.  The
+   function a fixpoint is in the flow of adopts it only where it is a
+   machine itself, which a local tail loop is never lowered inside. *)
+let local_lowering ~owner ~function_ ~lifted ~member:((occurrence, _) as member) =
+  match Recursion_plan.strategy_at ~pointer_fields:Loopify_analysis.constructor_pointer_fields member with
+  | Some Tail_loop ->
+    if Recursion_plan.adoptable_by_fixpoint ~lifted occurrence || Option.cata machine false owner then None
+    else Some Tail
+  | Some (Modulo_cons _ | Frame_stack)
+    when (not (Recursion_plan.adoptable_somewhere ~lifted occurrence))
+         && Option.cata (lowers_local_machines ~function_) false owner ->
+    Some Frames
+  | Some (No_loop | Modulo_cons _ | Frame_stack | Suspended _) | None -> None
+
+let local_resumes ~owner ~function_ ~lifted ~member ~depth ~arity =
+  (* The machine of the function [owner] adopting the fixpoint as its
+     entry re-enters it with every parameter it takes, its captures among
+     them: a frame of the entry's keeps whatever what follows reads. *)
+  let adopted =
+    match Option.bind owner function_machine with
+    | Some l ->
+      List.exists
+        (fun (e : Control_ir.Term.loop) -> Control_ir.Loop.equal e.loop (Member (fst member, snd member)))
+        (Control_ir.entries l.body)
+    | None -> false
   in
+  (* A machine of its own: one {!local_loop} makes, or, of a fixpoint the
+     plan lowers so that it does not take, perhaps one Loopify makes of the
+     Y-combinator it is then generated as, in a body it loopifies. *)
+  let own =
+    match local_lowering ~owner ~function_ ~lifted ~member with
+    | Some Frames -> Some true
+    | Some (Tail | Modulo_cons) -> None
+    | None -> (
+      match Recursion_plan.strategy_at ~pointer_fields:Loopify_analysis.constructor_pointer_fields member with
+      | Some (Modulo_cons _ | Frame_stack) -> Some false
+      | Some (No_loop | Tail_loop | Suspended _) | None -> None )
+  in
+  match (owner, own) with
+  | Some origin, _ when adopted -> Some (resumes_of ~entry_captures:(arity + 1) ~origin ~depth ~available:(fun _ -> false) (), true)
+  | Some origin, Some certain -> (
+    match Lower_control.loop (Control_ir.Loop.Member (fst member, snd member)) with
+    | Some (Loop l) when Control_ir.continues l.body <> [] ->
+      (* What the body reads from outside the fixpoint is bound before the
+         loop and in scope for all of it, as an invariant parameter is. *)
+      let first = depth - arity in
+      let invariant = invariant_at l ~first in
+      Some (resumes_of ~origin ~depth ~available:(fun b -> b.level < first || invariant b) (), certain)
+    | Some _ | None -> None )
+  | _ -> None
+
+let local_loop ~owner ~function_ ~lifted ~member ~tparams ~name (lam : cpp_lambda) =
+  let lowering = local_lowering ~owner ~function_ ~lifted ~member in
   let member_loop = Control_ir.Loop.Member (fst member, snd member) in
   let unlowered why =
     Loop_verdicts.record member_loop (Unlowered why);
@@ -602,6 +711,16 @@ let lifted_loop r =
       (lowering_of (Recursion_plan.strategy_at ~pointer_fields:Loopify_analysis.constructor_pointer_fields member))
       (Control_ir.Loop.Member (fst member, snd member))
   | Some _ | None -> None
+
+let lifted_resumes r ~owner ~depth ~arity =
+  match (owner, lifted_loop r) with
+  | Some origin, Some (l, Frames) when Control_ir.entries l.body = [] ->
+    (* What the helper captures it takes as its first parameters, passed on
+       unchanged by every call, as an invariant parameter is. *)
+    let first = depth - arity in
+    let invariant = invariant_at l ~first in
+    Some (resumes_of ~origin ~depth ~available:(fun b -> b.level < first || invariant b) ())
+  | _ -> None
 
 let lower_lifted d =
   (* The loop the plan commits the helper to, and what came of it. *)

@@ -761,6 +761,16 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   (* The receiver becomes [this]; a closure reading it captures a copy of
      the object ({!replace_this_in_lambdas}), which the closures own. *)
   let closures_copy = if this_arg_id <> None then [method_n_params - this_pos] else [] in
+  (* Where it is lowered as a machine with a stack of frames, the frames it
+     saves are planned with the body: certainly, or perhaps. *)
+  let resumes, certain =
+    match
+      Control_to_legacy_minicpp.method_resumes func_ref ~inductive:name ~receiver:this_pos
+        ~depth:(List.length (fst env))
+    with
+    | Some (resumes, certain) -> (Some resumes, Some certain)
+    | None -> (None, None)
+  in
   (* The scope covers both the inductive's type vars and the extra ones, so
      that gen_expr/eta_fun convert Tvars to the named C++ types the method
      body expects (e.g. recursive calls carry type args).  The return type is
@@ -775,7 +785,7 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
            type arguments get shared_ptr wrapping to match struct field
            types. *)
         with_method_ns_for_locals ~base:method_ns (fun () ->
-            with_region ~owned:owned_params ~copied:closures_copy inner_body (fun () ->
+            with_region ~owned:owned_params ~copied:closures_copy ?resumes ?certain inner_body (fun () ->
                 gen_stmts env method_k inner_body ) ) )
   in
   (* Add type args to recursive self-calls. Inside fixpoint bodies, the

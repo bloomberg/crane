@@ -63,8 +63,20 @@ type resume = {calls : Miniml.Occurrence.t list; kept : Core_binder.t list; held
 (** The points the definition [origin], whose body is lowered as a machine
     with a stack of frames, resumes at, as [resume_at] finds them by the
     Core binder each binds: the region is that body, standing under
-    [depth] of the definition's binders. *)
-type resumes = {origin : Names.GlobRef.t; depth : int; resume_at : Core_binder.t -> resume option}
+    [depth] of the definition's binders.  [entry_captures]: where the region
+    is the body of a local fixpoint of one member that a machine adopts as an
+    entry, [k], the region-relative level of the fixpoint's member (its
+    parameters lie between it and the root): the machine enters it with its
+    parameters and the variables it reads from below [k], its captures, a
+    call of the member passing the captures as well, and the entry's frame
+    holds each, the handler owning it as a frame's handler owns what the
+    frame holds ({!resume.held}). *)
+type resumes = {
+  origin : Names.GlobRef.t;
+  depth : int;
+  resume_at : Core_binder.t -> resume option;
+  entry_captures : int option;
+}
 
 (** [region ~owned ~copied ~resumes ~n_outer t] is the plan of [t]'s reads,
     [t] standing under binders it reads but does not bind, of which it owns
@@ -76,8 +88,12 @@ type resumes = {origin : Names.GlobRef.t; depth : int; resume_at : Core_binder.t
     machine resuming at [resumes], a let whose right-hand side is one of
     the calls a point resumes after saves its frame before evaluating the
     call's arguments: the binders the frame keeps are not read after them,
-    so an argument may be their last use. *)
-val region : ?owned:int list -> ?copied:int list -> ?resumes:resumes -> n_outer:int -> Miniml.ml_ast -> t
+    so an argument may be their last use -- where the region is [certain]ly
+    lowered as that machine (the default).  Where it may be generated as it
+    is, the saves are planned ({!save_moves}) but no read relies on one
+    having been made. *)
+val region :
+  ?owned:int list -> ?copied:int list -> ?resumes:resumes -> ?certain:bool -> n_outer:int -> Miniml.ml_ast -> t
 
 (** Whether, as [p] plans it, [let x : ty := a] binds the closure [a] to a
     C++ local, which the region owns: [a] is a local fixpoint or a lambda
