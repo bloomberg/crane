@@ -3029,7 +3029,12 @@ let rec clean_self_ns t =
 (** One function of a local fixpoint block, as its Y-combinator form names
     it: the fixpoint's own name, the self parameter every impl lambda takes
     for it, and its parameters' C++ types, innermost first. *)
-type local_fix_self = { fix_id : Id.t; self_id : Id.t; param_tys_rev : cpp_type list }
+type local_fix_self = {
+  fix_id : Id.t;
+  self_id : Id.t;
+  param_tys_rev : cpp_type list;
+  param_core_tys_rev : Miniml.ml_type list;  (** the parameters' Core types, as [param_tys_rev] spells them *)
+}
 
 (** The {!local_fix_self} of each function of a block, from the fixpoints'
     renamed names and the parameters [gen_fix] gave them; [cpp_of] spells a
@@ -3039,7 +3044,8 @@ let local_fix_selves cpp_of renamed_ids funs_with_params =
     (fun (fix_id, _) (args, _) ->
       { fix_id;
         self_id = Id.of_string ("_self_" ^ Id.to_string fix_id);
-        param_tys_rev = List.map (fun (_, ty) -> cpp_of ty) args } )
+        param_tys_rev = List.map (fun (_, ty) -> cpp_of ty) args;
+        param_core_tys_rev = List.map snd args } )
     renamed_ids funs_with_params
 
 (** Rewrite a local fixpoint's recursive calls to pass the self-parameters.
@@ -3062,6 +3068,8 @@ let local_fix_selves cpp_of renamed_ids funs_with_params =
     another function -- is the function its wrapper would be, written where
     the wrapper is not yet declared: a closure over its parameters, of the
     C++ types [param_tys_rev] gives in reverse, calling the self-parameter.
+    The closure takes each by value and reads it once, passing it on: it
+    moves one a copy of which costs more ({!Ownership_plan.worth_moving}).
 
     Unless [passing], no self-parameter is passed: each call is flattened and
     still calls the fixpoint by its own name, as a loop lowered from the
@@ -3075,7 +3083,7 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
   let self_vars_rev = if passing then List.rev_map (fun s -> CPPvar s.self_id) selves else [] in
   let find_self id =
     Option.map
-      (fun s -> ((if passing then s.self_id else s.fix_id), s.param_tys_rev))
+      (fun s -> ((if passing then s.self_id else s.fix_id), s))
       (List.find_opt (fun s -> Id.equal id s.fix_id) selves)
   in
   let find_self_id id = Option.map fst (find_self id) in
@@ -3101,12 +3109,19 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
     | None -> (
       match e with
       | CPPvar id when passing && Option.has_some (find_self id) ->
-        let self_id, tys_rev = Option.get (find_self id) in
+        let self_id, self = Option.get (find_self id) in
+        let tys_rev = self.param_tys_rev in
         let n = List.length tys_rev in
         let params_rev =
           List.mapi (fun i ty -> (ty, Some (Id.of_string (Printf.sprintf "_ec%d" (n - 1 - i))))) tys_rev
         in
-        let args_rev = List.map (fun (_, x) -> CPPvar (Option.get x)) params_rev in
+        let args_rev =
+          List.map2
+            (fun (_, x) core ->
+              let v = CPPvar (Option.get x) in
+              if Ownership_plan.worth_moving core && not (Ml_type_util.ml_type_is_unit core) then CPPmove v else v )
+            params_rev self.param_core_tys_rev
+        in
         CPPlambda
           { cl_tparams = [];
             cl_binders = [];

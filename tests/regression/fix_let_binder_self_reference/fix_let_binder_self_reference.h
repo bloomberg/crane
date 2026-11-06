@@ -104,7 +104,9 @@ struct FixLetBinderSelfReference {
           auto f_impl = [=](auto &_self_f, List<uint64_t> l) -> uint64_t {
             crane::fn<uint64_t(List<uint64_t>)> h0 = [=](List<uint64_t> _pa0) {
               return h(
-                  [=](List<uint64_t> _ec0) { return _self_f(_self_f, _ec0); },
+                  [=](List<uint64_t> _ec0) {
+                    return _self_f(_self_f, std::move(_ec0));
+                  },
                   _pa0);
             };
             if (std::holds_alternative<typename List<uint64_t>::Nil>(
