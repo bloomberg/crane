@@ -67,6 +67,7 @@ let projections = Pipeline_trace.pass "projections" Cpp_erasure.lower_projection
 let access_moves = Pipeline_trace.pass "access_moves" Cpp_erasure.lower_access_moves
 let constexpr = Pipeline_trace.pass "constexpr" Cpp_erasure.decide_constexpr
 let foreign = Pipeline_trace.pass "foreign" Cpp_erasure.instantiate_foreign
+let captures = Pipeline_trace.pass "captures" Cpp_erasure.decide_captures
 
 (** Every pass before the {!Cpp_erasure} seam, in the order they run. *)
 let minicpp_passes : cpp_decl Pipeline_trace.pass list =
@@ -142,8 +143,9 @@ let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
 (** With the declaration resolved, each mapping's text is instantiated on
     the way to the printer: what is left to it is to write the pieces.  The
     checks of what a declaration moves and borrows read the instantiated
-    pieces, a pair projection's included ({!Minicpp.foreign_pair_projection}). *)
-let instantiation_passes = [foreign]
+    pieces, a pair projection's included ({!Minicpp.foreign_pair_projection}).
+    Last, with every body final, what each lambda captures is written down. *)
+let instantiation_passes = [foreign; captures]
 
 let pass_names =
   Pipeline_trace.names minicpp_passes @ [seam] @ Pipeline_trace.names settled_passes
@@ -185,11 +187,12 @@ type obligation =
   | Uninstantiated_mapping
       (** an inline mapping whose text places its arguments, applied but not
           instantiated *)
+  | Undecided_capture  (** a lambda whose capture is not written down *)
 
 let obligations =
   [ Unresolved_type; Opaque_type; Unspellable_binder; Unsettled_callable; Unresolved_cast; Free_type_variable;
     Missing_template_argument; Unlowered_method_call; Unlowered_projection; Move_under_access;
-    Undecided_constexpr; Uninstantiated_mapping ]
+    Undecided_constexpr; Uninstantiated_mapping; Undecided_capture ]
 
 let describe = function
   | Unresolved_type -> "an undetermined type (Tunresolved), owed by the pass that wrote it"
@@ -204,6 +207,7 @@ let describe = function
   | Move_under_access -> "a member read of a moved object, owed by " ^ access_moves.name
   | Undecided_constexpr -> "an undecided constexpr eligibility, owed by " ^ constexpr.name
   | Uninstantiated_mapping -> "an uninstantiated mapping, owed by " ^ foreign.name
+  | Undecided_capture -> "an undecided lambda capture, owed by " ^ captures.name
 
 (** Whether [decl] writes down a type [p] holds of. *)
 let mentions p (decl : cpp_decl) =
@@ -233,6 +237,7 @@ let owes (decl : Cpp_erasure.settled) o =
   | Move_under_access -> rewrites access_moves
   | Undecided_constexpr -> rewrites constexpr
   | Uninstantiated_mapping -> rewrites foreign
+  | Undecided_capture -> rewrites captures
 
 (** [check_settled decl] fails if [decl] still owes the printer anything.
 

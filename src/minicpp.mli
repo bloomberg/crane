@@ -85,10 +85,28 @@ type section_tag =
 
     The two mistakes this rules out are a stored lambda holding references
     into a dead frame, and an in-place lambda paying for copies it never
-    needed. *)
+    needed.
+
+    Translation says which of the two a lambda is; what it then writes
+    between the brackets is decided once its body is final, after the seam
+    ({!Cpp_erasure.decide_captures}): [Written], which is all the printer
+    accepts. *)
 type capture =
   | Immediate
   | Closure
+  | Written of written_capture
+
+(** A lambda's capture as written: decided on the finished body, from the
+    lambda's {!capture} and what the body names. *)
+and written_capture =
+  | Captures_nothing
+      (** [\[\]]: the body names no variable of its scope and not [this] --
+          whether the lambda runs in place or is stored. *)
+  | By_reference  (** [\[&\]]: an {!Immediate} lambda that names its scope. *)
+  | By_copy of {this : bool; moved : Id.t list}
+      (** [\[=\]]: a {!Closure} that names its scope; [, this] when it names
+          the enclosing object, and [, x = std::move(x)] for each of
+          [moved] ({!cpp_lambda.cl_moved}). *)
 
 (** Where an inductive's alternatives live: inline in the value
     ([std::variant], [crane::variant]), or in a counted block the value points
@@ -1103,9 +1121,11 @@ and wrapper_piece = Wp_text of string | Wp_element
 and foreign_use =
   | Foreign_constant
   | Foreign_call
-  | Foreign_block
+  | Foreign_block of written_capture
       (** A block used as a value: an immediately invoked lambda assigning
-          a result of its own. *)
+          a result of its own, capturing by reference the locals its
+          arguments read -- it runs where it is written -- or nothing.
+          Decided when the block is instantiated. *)
   | Foreign_statements
       (** A block bound to a variable ({!Sblock_custom}): its statements
           assigning the variable, written after the variable's declaration.
@@ -1588,7 +1608,10 @@ val lambda_needs_capture : (cpp_type * Id.t option) list -> cpp_stmt list -> boo
     the same wherever it is evaluated. *)
 val closed_lambda : cpp_expr -> bool
 
-(** Whether [e] contains a lambda that captures (see {!lambda_needs_capture}). *)
+(** Whether [e] contains a lambda that captures, read off the captures as
+    written down ({!Written}); a capture not written down is refused.  For
+    the printer: a static's initialiser in a struct holding one is wrapped in
+    a closed lambda. *)
 val expr_contains_capturing_lambda : cpp_expr -> bool
 
 (** Statement counterpart of {!expr_contains_capturing_lambda}. *)

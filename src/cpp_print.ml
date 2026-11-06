@@ -54,6 +54,16 @@ let escape_cpp_string (s : string) : string =
 
 (** {2 Pretty-printing C++ syntax.} *)
 
+(** A lambda's capture as decided ({!Cpp_erasure.decide_captures}); a
+    variable whose last use is the capture moves into it. *)
+let pp_capture = function
+  | Captures_nothing -> str "[]"
+  | By_reference -> str "[&]"
+  | By_copy {this; moved} ->
+    if moved <> [] then writes_standard "utility";
+    let moves = List.map (fun x -> str ", " ++ Id.print x ++ str " = std::move(" ++ Id.print x ++ str ")") moved in
+    str "[=" ++ (if this then str ", this" else mt ()) ++ seq moves ++ str "]"
+
 (** The C++ source spelling of a binary operator. *)
 let spell_binop = function
   | Beq -> "=="
@@ -1322,14 +1332,11 @@ and pp_cpp_expr ctx env args t =
   let apply st = pp_apply_cpp st args in
   match t with
   | CPPvar id -> Id.print id
-  | CPPforeign (Foreign_block, fr) ->
-    (* The arguments are spliced into the body, so the lambda captures the
-       locals they read -- by reference: it runs where it is written. *)
-    let reads_locals = fst (lambda_needs_capture [] (List.map (fun a -> Sexpr a) fr.fr_values)) in
+  | CPPforeign (Foreign_block capture, fr) ->
     let ret_ty = Pp.string_of_ppcmds (pp_cpp_type ctx false [] (Option.default Tauto fr.fr_yields)) in
     let result = "_r" in
     let stmts = pp_block_statements ctx env fr ~result in
-    str (if reads_locals then "[&]" else "[]") ++ str ("() -> " ^ ret_ty ^ " {")
+    pp_capture capture ++ str ("() -> " ^ ret_ty ^ " {")
     ++ fnl ()
     ++ str ("  " ^ ret_ty ^ " " ^ result ^ ";")
     ++ fnl ()
@@ -1535,9 +1542,8 @@ and pp_cpp_expr ctx env args t =
       cl_ret = ret_ty;
       cl_body = body;
       cl_capture = capture;
-      cl_moved = moved } ->
+      _ } ->
     let params = to_reversed params in
-    let needs_capture, uses_this = lambda_needs_capture params body in
     (* A polymorphic function object: the erased positions of a rank-2
        argument are the lambda's own template parameters, so the body says
        [X] where it would otherwise have to guess. *)
@@ -1552,18 +1558,9 @@ and pp_cpp_expr ctx env args t =
     (* Never [mutable]: a closure's captures are [const] in its body, which
        is what lets every copy of a [crane::fn] share one closure. *)
     let capture =
-      ( if not needs_capture then str "[]"
-        else match capture with
-          | Closure ->
-            (* A variable whose last use is this capture moves into it. *)
-            if moved <> [] then writes_standard "utility";
-            let moves =
-              List.map
-                (fun x -> str ", " ++ Id.print x ++ str " = std::move(" ++ Id.print x ++ str ")")
-                moved
-            in
-            str "[=" ++ (if uses_this then str ", this" else mt ()) ++ seq moves ++ str "]"
-          | Immediate -> str "[&]" )
+      ( match capture with
+      | Written w -> pp_capture w
+      | Immediate | Closure -> CErrors.anomaly (Pp.str "a lambda whose capture is not written down reached the printer") )
       ++ tparams_str ++ str "("
     in
     let body_s = pp_list_stmt (pp_cpp_stmt ctx env args) body in

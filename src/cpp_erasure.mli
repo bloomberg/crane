@@ -163,6 +163,13 @@ val recurses_boxed : Minicpp.cpp_type -> bool
     as translation wrote it. *)
 val instantiate_foreign : settled -> settled
 
+(** [decide_captures decl] writes down each lambda's capture
+    ({!Minicpp.Written}) from its {!Minicpp.capture} and what its finished
+    body names ({!Minicpp.lambda_needs_capture}): nothing, by reference, or
+    by copy -- [this] and the moved variables included.  After every pass
+    that changes a body. *)
+val decide_captures : settled -> settled
+
 (** [instantiate_type ty] instantiates the mappings [ty] applies, as
     {!instantiate_foreign} does a declaration's: for a type written outside
     every declaration, a record's field. *)

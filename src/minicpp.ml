@@ -94,6 +94,9 @@ type section_tag =
 type capture =
   | Immediate
   | Closure
+  | Written of written_capture
+
+and written_capture = Captures_nothing | By_reference | By_copy of {this : bool; moved : Id.t list}
 
 (** Where an inductive's alternatives live: inline in the value
     ([std::variant], [crane::variant]), or in a counted block the value points
@@ -803,7 +806,7 @@ and foreign_piece =
 
 and wrapper_piece = Wp_text of string | Wp_element
 
-and foreign_use = Foreign_constant | Foreign_call | Foreign_block | Foreign_statements
+and foreign_use = Foreign_constant | Foreign_call | Foreign_block of written_capture | Foreign_statements
 
 let inline_shape_of_text s =
   if String.equal s "%a0" then Inline_identity
@@ -882,7 +885,7 @@ and foreign_written_with_leading_pointer_operator fr =
 
 (* What a mapping's text parenthesises where a member access follows it. *)
 and spliced_in_parentheses = function
-  | CPPbinop _ | CPPforeign ((Foreign_call | Foreign_block), _) | CPPfun_call (_, CPPforeign _, _) -> true
+  | CPPbinop _ | CPPforeign ((Foreign_call | Foreign_block _), _) | CPPfun_call (_, CPPforeign _, _) -> true
   | e -> written_with_leading_pointer_operator e
 
 let custom_match_text cm =
@@ -1942,14 +1945,15 @@ let closed_lambda (e : cpp_expr) : bool =
   | CPPfun_call (_, f, args) -> call_args args = [] && captureless f
   | _ -> false
 
-(** Check if a cpp_expr contains any lambdas that need capture (have free
-    variables). Used to determine if IIFE wrapping is needed for static inline
-    initializers. Closed lambdas (with []) don't need IIFE wrapping. *)
+(* Read off the captures as decided: a lambda writing [[]] still may hold
+   one that captures. *)
 let rec expr_contains_capturing_lambda (e : cpp_expr) : bool =
   match e with
-  | CPPlambda {cl_params = params; cl_body = body; _} ->
-    fst (lambda_needs_capture (to_reversed params) body)
-    || List.exists stmt_contains_capturing_lambda body
+  | CPPlambda {cl_capture = Written Captures_nothing; cl_body = body; _} ->
+    List.exists stmt_contains_capturing_lambda body
+  | CPPlambda {cl_capture = Written (By_reference | By_copy _); _} -> true
+  | CPPlambda {cl_capture = Immediate | Closure; _} ->
+    invalid_arg "Minicpp.expr_contains_capturing_lambda: a capture not written down"
   | _ ->
     let exception Found in
     ( try
@@ -2355,7 +2359,11 @@ let invocations ~params body tparam dom =
     | _ -> () );
     match e with
     | CPPlambda l ->
-      let env = match l.cl_capture with Closure -> constify env | Immediate -> env in
+      let env =
+        match l.cl_capture with
+        | Closure | Written (By_copy _) -> constify env
+        | Immediate | Written (By_reference | Captures_nothing) -> env
+      in
       let env =
         List.fold_left
           (fun env (ty, x) ->

@@ -142,7 +142,7 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
   (* An instantiated mapping writes what its pieces name; a block, the type
      of its result too. *)
   and foreign use fr =
-    if use = Foreign_block || use = Foreign_statements then ty (Option.default Tauto fr.fr_yields);
+    (match use with Foreign_block _ | Foreign_statements -> ty (Option.default Tauto fr.fr_yields) | Foreign_constant | Foreign_call -> ());
     List.iter
       (function
         | Fp_type i | Fp_element (i, _) -> ty (Option.default Tany (List.nth_opt fr.fr_types i))
@@ -159,7 +159,7 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
     ( match e with
     | CPPmove _ | CPPin_place | CPPin_place_index _ | CPPdeclval _ -> std "utility"
     (* A variable whose last use is a closure's capture is moved into it. *)
-    | CPPlambda {cl_capture = Closure; cl_moved = _ :: _; _} -> std "utility"
+    | CPPlambda {cl_capture = Written (By_copy {moved = _ :: _; _}); _} -> std "utility"
     | CPPalloc ((Alloc_heap | Alloc_arena_scoped), t)
       when Pointer_slot.of_pointee t = Pointer_slot.Shared ->
       rt Crane_rt.shared_variant_header

@@ -710,11 +710,11 @@ and instantiated_expr ~boxing e =
     let yields = match res.cs_yields with Ryields t -> Some t | Ropaque -> None in
     CPPforeign (Foreign_call, instantiated_foreign ~boxing n tokens tys (CList.firstn (min named (List.length args)) args) yields)
   | CPPglob (x, tys, Some {ci_inline = Some {it_form = Block_iife; it_text; _}; ci_yields}) ->
-    CPPforeign (Foreign_block, instantiated_block ~boxing x it_text tys [] ci_yields)
+    value_block (instantiated_block ~boxing x it_text tys [] ci_yields)
   (* Every argument of a block's call is its own, spliced or not. *)
   | CPPfun_call (res, CPPglob (n, tys, Some {ci_inline = Some {it_form = Block_iife; it_text; _}; _}), call) ->
     let yields = match res.cs_yields with Ryields t -> Some t | Ropaque -> None in
-    CPPforeign (Foreign_block, instantiated_block ~boxing n it_text tys (call_args call) yields)
+    value_block (instantiated_block ~boxing n it_text tys (call_args call) yields)
   (* A text that places nothing is a callee: the call stays a call, of the
      text applied to the type arguments, and its arguments are written as a
      call's, not spliced. *)
@@ -738,6 +738,12 @@ and instantiated_expr ~boxing e =
      it. *)
   | CPPcontainer_cast (t, e', suppress) -> CPPcontainer_cast (instantiated_type ~boxing:(boxing && not suppress) t, instantiated_expr ~boxing e', suppress)
   | e -> map_expr (instantiated_expr ~boxing) (instantiated_stmt ~boxing) (instantiated_type ~boxing) e
+(* A block used as a value runs where it is written: the lambda it is
+   written as captures by reference the locals its arguments read, which
+   are spliced into its body, or nothing. *)
+and value_block fr =
+  let reads_locals = fst (lambda_needs_capture [] (List.map (fun a -> Sexpr a) fr.fr_values)) in
+  CPPforeign (Foreign_block (if reads_locals then By_reference else Captures_nothing), fr)
 and instantiated_stmt ~boxing = function
   (* The variable the block assigns is declared in front of it. *)
   | Sblock_custom (r, text, result, result_ty, args, tys, b) ->
@@ -756,6 +762,22 @@ let type_pieces r text tys =
 let instantiate_foreign (d : settled) : settled =
   let boxing = true in
   map_decl (instantiated_expr ~boxing) (instantiated_stmt ~boxing) (instantiated_type ~boxing) d
+
+(* Inner lambdas first: what an outer body names is read off the inner
+   lambdas' bodies, which deciding leaves as they are. *)
+let decide_captures (d : settled) : settled =
+  let rec fe e =
+    match map_expr fe fs Fun.id e with
+    | CPPlambda ({cl_capture = (Immediate | Closure) as how; _} as l) ->
+      let names_scope, this = lambda_needs_capture (to_reversed l.cl_params) l.cl_body in
+      let written =
+        if not names_scope then Captures_nothing
+        else match how with Immediate -> By_reference | _ -> By_copy {this; moved = l.cl_moved}
+      in
+      CPPlambda {l with cl_capture = Written written}
+    | e -> e
+  and fs s = map_stmt fe fs Fun.id s in
+  map_decl fe fs Fun.id d
 
 (* The lambda a methodified function [n] is written as where it is a value,
    its receiver at [pos].  It takes the function's parameters at the types the
