@@ -1575,6 +1575,25 @@ val iter_stmt_children :
   on_expr:(cpp_expr -> unit) -> on_stmts:(cpp_stmt list -> unit) ->
   cpp_stmt -> unit
 
+(** [lambda_needs_capture params body] is [(needs_capture, uses_this)]:
+    whether a lambda of these parameters and this body names a variable it
+    neither binds nor declares -- its own, or one a nested lambda names --
+    and so must capture ([\[&\]] or [\[=\]]), and whether it names the
+    enclosing [this].  A function of the tree, read by the printer to write
+    the capture and by the passes that ask whether a value is closed. *)
+val lambda_needs_capture : (cpp_type * Id.t option) list -> cpp_stmt list -> bool * bool
+
+(** Whether [e] is a lambda that captures nothing, or one such invoked at
+    once with no argument: a value that names no variable of its scope, so
+    the same wherever it is evaluated. *)
+val closed_lambda : cpp_expr -> bool
+
+(** Whether [e] contains a lambda that captures (see {!lambda_needs_capture}). *)
+val expr_contains_capturing_lambda : cpp_expr -> bool
+
+(** Statement counterpart of {!expr_contains_capturing_lambda}. *)
+val stmt_contains_capturing_lambda : cpp_stmt -> bool
+
 (** [erased_into_storage_ids body] names the value parameters [body] only ever
     hands to a representation-tolerant helper from [crane_fn.h] -- erased into
     storage by [crane_erase_fn], or applied through [crane_call_erased] -- and

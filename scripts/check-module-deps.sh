@@ -12,12 +12,12 @@ cd "$(dirname "$0")/.."
 
 TRANSLATION="Translation Translation_state Translation_support Translation_types Translation_calls Gen_decls Gen_context Gen_records Gen_instances Gen_functions Gen_inductives Plan_templates Cpp_ind Cpp Extract_env Structure_analysis Method_registry"
 PRINTER="Cpp_print"
-FINISHING="Cpp_pipeline Loopify Loopify_analysis Loopify_tail Loopify_tmc Loopify_frame Last_use Cpp_depth Borrow_projection Cpp_erasure Function_entity"
+FINISHING="Cpp_pipeline Loopify Loopify_analysis Loopify_tail Loopify_tmc Loopify_frame Cpp_depth Borrow_projection Cpp_erasure Function_entity Cpp_constants Cpp_local_closures Cpp_shared_args Cpp_simplify Cpp_temporaries Move_check Ownership_plan Return_moves Control_to_legacy_minicpp"
 
 # layer modules : forbidden dependencies
 rules=(
   "miniml minicpp foreign_template crane_rt tparam_kinds scheme ml_schema lexenv : $TRANSLATION $PRINTER $FINISHING Table Common"
-  "cpp_pipeline loopify loopify_analysis loopify_tail loopify_tmc loopify_frame last_use cpp_depth borrow_projection cpp_erasure function_entity : $TRANSLATION $PRINTER"
+  "cpp_pipeline loopify loopify_analysis loopify_tail loopify_tmc loopify_frame cpp_depth borrow_projection cpp_erasure function_entity cpp_constants cpp_local_closures cpp_shared_args cpp_simplify cpp_temporaries move_check ownership_plan return_moves control_to_legacy_minicpp : $TRANSLATION $PRINTER"
   # The printer reads Cpp_erasure's settled declarations; nothing else of the
   # finishing passes.
   "cpp_print : $TRANSLATION ${FINISHING/ Cpp_erasure/}"
@@ -54,6 +54,13 @@ for rule in "${rules[@]}"; do
   modules=${rule%% : *}
   forbidden=" ${rule##* : } "
   for m in $modules; do
+    # ocamldep is silent about a missing file: a renamed module would drop
+    # out of the check unnoticed.
+    if [[ ! -f "src/$m.ml" ]]; then
+      echo "src/$m.ml does not exist: update the layer lists"
+      status=1
+      continue
+    fi
     deps=$(ocamlfind ocamldep -modules "src/$m.ml" | cut -d: -f2)
     for d in $deps; do
       if [[ "$forbidden" == *" $d "* ]]; then

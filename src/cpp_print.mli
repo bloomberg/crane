@@ -306,7 +306,3 @@ val start_file_scope_census : unit -> unit
 (** Under [CRANE_CHECK_IR], check those against {!file_scope_type_names}. *)
 val check_file_scope_types : file:Common.file -> unit
 
-(** Whether an expression is a lambda that captures nothing, or one such
-    invoked at once with no argument: the same value wherever it is evaluated
-    (see {!Cpp_constants}). *)
-val closed_lambda : Minicpp.cpp_expr -> bool

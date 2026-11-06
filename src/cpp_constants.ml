@@ -21,7 +21,7 @@ let marked e =
    and an allocation each time. *)
 let closed_erase_fn e =
   match e with
-  | CPPerase_fn (_, l) when Cpp_print.closed_lambda l -> Some e
+  | CPPerase_fn (_, l) when Minicpp.closed_lambda l -> Some e
   | _ -> None
 
 (* The identifiers [body] declares or reads, which a constant's name must not
