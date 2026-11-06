@@ -2655,14 +2655,9 @@ and pp_custom ?container ctx custom env typ t tyargs cases args vl cmds =
            arithmetic prefixes ([!], [-], [~]) already bind tighter than
            anything a template appends after [%scrut], so parenthesizing
            them would only add noise to the generated code. *)
-        | _
-          when (let s = Pp.string_of_ppcmds t_printed in
-                String.length s > 0
-                && (match s.[0] with
-                    | '*' | '&' -> true
-                    | _ -> false)) ->
-          surround t_printed
-        | _ -> t_printed )
+        | _ ->
+          check_leading_pointer_operator t_expr t_printed;
+          if Minicpp.written_with_leading_pointer_operator t_expr then surround t_printed else t_printed )
       | None ->
         CErrors.anomaly
           (Pp.str "Custom syntax: scrutinee token with no bound expression") )
@@ -2757,25 +2752,29 @@ and pp_spliced ctx env ~followed_by_dot arg_expr =
   in
   (* Parenthesize compound expressions that would bind incorrectly
      when followed by member access (.c_str() etc.) in templates. *)
-  if followed_by_dot then
-    match arg_expr with
-    | CPPbinop _ | CPPforeign ((Foreign_call | Foreign_block), _) -> str "(" ++ arg ++ str ")"
-    (* A callee's text applied. *)
-    | CPPfun_call (_, CPPforeign _, _) ->
-      str "(" ++ arg ++ str ")"
-    (* A prefix pointer operator binds looser than the member access
-       the template appends, so [%a0.first] applied to a scrutinee
-       that prints as [*a0] came out as [*a0.first] -- the [.first]
-       attaching to the pointer rather than the pointee.  This is the
-       same hazard [CCscrut] guards against; see the comment there for
-       why only [*] and [&] need it. *)
-    | _
-      when (let s = Pp.string_of_ppcmds arg in
-            String.length s > 0
-            && (match s.[0] with '*' | '&' -> true | _ -> false)) ->
-      str "(" ++ arg ++ str ")"
-    | _ -> arg
+  (* A compound expression, a mapping's call, or one written with a leading
+     prefix pointer operator binds looser than the member access the text
+     appends: [%a0.first] applied to a scrutinee written [*a0] came out as
+     [*a0.first], the [.first] attaching to the pointer rather than the
+     pointee.  See [CCscrut] for why only [*] and [&] need it. *)
+  if followed_by_dot then begin
+    check_leading_pointer_operator arg_expr arg;
+    if Minicpp.spliced_in_parentheses arg_expr then str "(" ++ arg ++ str ")" else arg
+  end
   else arg
+
+(* Under [CRANE_CHECK_IR]: [e], written [printed], has a leading prefix
+   pointer operator exactly where the tree says so
+   ({!Minicpp.written_with_leading_pointer_operator}). *)
+and check_leading_pointer_operator e printed =
+  if Probe.checking () then
+    let s = Pp.string_of_ppcmds printed in
+    let rendered = String.length s > 0 && (s.[0] = '*' || s.[0] = '&') in
+    if rendered <> Minicpp.written_with_leading_pointer_operator e then
+      Probe.violation "leading pointer operator"
+        Pp.(str "the expression written " ++ str s ++ str (if rendered then " begins" else " does not begin")
+            ++ str " with a prefix pointer operator, which its tree says it "
+            ++ str (if rendered then "does not" else "does"))
 
 (* An instantiated mapping: its pieces in order, a type hole past the
    arguments the use supplies written erased; a block's [%result] spelled

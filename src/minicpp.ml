@@ -838,6 +838,53 @@ let uninstantiated_mapping r =
   CErrors.anomaly
     Pp.(str "a mapping's application reached the printer uninstantiated: " ++ GlobRef.print r)
 
+(* A conjunction under a disjunction, or the reverse, is parenthesised
+   where it is written. *)
+let parenthesised_operand op = function
+  | CPPbinop (Band, _, _) -> op = Bor
+  | CPPbinop (Bor, _, _) -> op = Band
+  | _ -> false
+
+let starts_with_pointer_operator s = s <> "" && (s.[0] = '*' || s.[0] = '&')
+
+let rec written_with_leading_pointer_operator = function
+  | CPPderef _ | CPPunop (Uaddr, _) -> true
+  | CPPraw s -> starts_with_pointer_operator s
+  | CPPnumeral (_, n) -> starts_with_pointer_operator n.nl_text
+  | CPPbinop (op, lhs, _) -> (not (parenthesised_operand op lhs)) && written_with_leading_pointer_operator lhs
+  | CPPmethod_call {mc_receiver; _} -> written_with_leading_pointer_operator mc_receiver
+  | CPPforeign ((Foreign_constant | Foreign_call), fr) -> foreign_written_with_leading_pointer_operator fr
+  | _ -> false
+
+(* A mapping's text begins with its first non-empty piece; a value spliced
+   there begins as it is written, unless it is a string literal (written as
+   the string object it stands for) or parenthesised for a member access
+   following it. *)
+and foreign_written_with_leading_pointer_operator fr =
+  let rec first = function
+    | Fp_text "" :: rest -> first rest
+    | Fp_text s :: _ -> starts_with_pointer_operator s
+    | Fp_value i :: rest -> (
+      let followed_by_dot =
+        match rest with
+        | Fp_text s :: _ ->
+          let s = String.trim s in
+          s <> "" && s.[0] = '.'
+        | _ -> false
+      in
+      match List.nth_opt fr.fr_values i with
+      | Some (CPPstring _) | None -> false
+      | Some e when followed_by_dot && spliced_in_parentheses e -> false
+      | Some e -> written_with_leading_pointer_operator e )
+    | _ -> false
+  in
+  first fr.fr_pieces
+
+(* What a mapping's text parenthesises where a member access follows it. *)
+and spliced_in_parentheses = function
+  | CPPbinop _ | CPPforeign ((Foreign_call | Foreign_block), _) | CPPfun_call (_, CPPforeign _, _) -> true
+  | e -> written_with_leading_pointer_operator e
+
 let custom_match_text cm =
   match cm.cm_scrutinee with
   | Scrut_owned when Foreign_template.structured_binding cm.cm_template <> None ->

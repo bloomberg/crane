@@ -1132,6 +1132,17 @@ val inline_shape_of_text : string -> inline_shape
     instantiated. *)
 val foreign_pair_projection : foreign -> (cpp_expr * string) option
 
+(** Whether [e] is written with a leading [*] or [&]: a prefix pointer
+    operator, which binds looser than a member access a mapping's text
+    appends to [e], so that [e] spliced there has to be parenthesised.  Read
+    off the tree, the way the printer writes it. *)
+val written_with_leading_pointer_operator : cpp_expr -> bool
+
+(** Whether a value spliced into a mapping's text in front of a member
+    access is parenthesised there: a binary operation, a mapping's call or
+    block, or one {!written_with_leading_pointer_operator}. *)
+val spliced_in_parentheses : cpp_expr -> bool
+
 (** An inline mapping's text, classified once when the use is resolved. *)
 val inline_template : string -> inline_template
 
