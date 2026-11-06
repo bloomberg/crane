@@ -90,7 +90,7 @@ let () =
       resume_at =
         (fun b ->
           if Core_binder.equal b (Core_binder.make ~origin ~level:1 ()) && Core_binder.same_site b (Core_binder.make ~origin ~level:1 ~site ())
-          then Some {calls; kept = [s]}
+          then Some {calls; kept = [s]; held = [s]}
           else None ) }
   in
   let use resumes = Ownership_plan.use (Ownership_plan.region ~owned:[1] ?resumes ~n_outer:0 root) read in
@@ -116,11 +116,69 @@ let () =
       resume_at =
         (fun b ->
           if Core_binder.equal b at_let && Core_binder.same_site b at_let
-          then Some {calls = [call_site]; kept = [Core_binder.make ~origin ~level:0 ()]}
+          then
+            let s = Core_binder.make ~origin ~level:0 () in
+            Some {calls = [call_site]; kept = [s]; held = [s]}
           else None ) }
   in
   let use = Ownership_plan.use (Ownership_plan.region ~owned:[1] ~resumes ~n_outer:0 root) read in
   check "a read before the frame keeping it is saved is copied" (use = Some Ownership_plan.Use.Copy)
+
+(* [let r := weigh a in g s r] under [t] and [s], a frame keeping [s]
+   across [weigh]: the save may move [s] where the region owns it and the
+   call's argument [a] does not read it. *)
+let () =
+  let origin = GlobRef.VarRef (Id.of_string "weigh") in
+  let s = Core_binder.make ~origin ~level:1 () in
+  let moves ~owned arg =
+    let value = call "weigh" [arg] in
+    let site = Occurrence.fresh () in
+    let root = MLletin (Id (Id.of_string "r"), nat, value, call "g" [fresh_rel 2; fresh_rel 1], site) in
+    let call_site = match value with MLapp (MLglob g, _) -> g.occurrence | _ -> assert false in
+    let at_let = Core_binder.make ~origin ~level:2 ~site () in
+    let resumes : Ownership_plan.resumes =
+      { origin;
+        depth = 2;
+        resume_at =
+          (fun b ->
+            if Core_binder.equal b at_let && Core_binder.same_site b at_let then
+              Some {calls = [call_site]; kept = [s]; held = [s]}
+            else None ) }
+    in
+    Ownership_plan.save_moves (Ownership_plan.region ~owned ~resumes ~n_outer:0 root) site
+  in
+  let moved = function Some [b] -> Core_binder.equal b s | _ -> false in
+  check "a save moves what the region owns and the call does not read" (moved (moves ~owned:[1] (fresh_rel 2)));
+  check "not what the call reads after it" (moves ~owned:[1] (fresh_rel 1) = Some []);
+  check "nor what the region does not own" (moves ~owned:[] (fresh_rel 2) = Some []);
+  check "a let no machine resumes at saves nothing"
+    (Ownership_plan.save_moves (Ownership_plan.region ~owned:[1] ~n_outer:0 (fresh_rel 1)) (Occurrence.fresh ()) = None)
+
+(* [let y := weigh t in let r := weigh t in g s y r] under [t] and [s], [s]
+   lent: the first frame holds [s], so the handler resuming there owns it,
+   and the second save may move it; the first may not. *)
+let () =
+  let origin = GlobRef.VarRef (Id.of_string "weigh") in
+  let s = Core_binder.make ~origin ~level:1 () in
+  let outer_value = call "weigh" [fresh_rel 2] and inner_value = call "weigh" [fresh_rel 3] in
+  let outer_site = Occurrence.fresh () and inner_site = Occurrence.fresh () in
+  let inner = MLletin (Id (Id.of_string "r"), nat, inner_value, call "g" [fresh_rel 3; fresh_rel 2; fresh_rel 1], inner_site) in
+  let root = MLletin (Id (Id.of_string "y"), nat, outer_value, inner, outer_site) in
+  let call_of = function MLapp (MLglob g, _) -> g.occurrence | _ -> assert false in
+  let point level site value =
+    (Core_binder.make ~origin ~level ~site (), {Ownership_plan.calls = [call_of value]; kept = [s]; held = [s]})
+  in
+  let points = [point 2 outer_site outer_value; point 3 inner_site inner_value] in
+  let resumes : Ownership_plan.resumes =
+    { origin;
+      depth = 2;
+      resume_at =
+        (fun b -> List.find_map (fun (at, r) -> if Core_binder.equal b at && Core_binder.same_site b at then Some r else None) points) }
+  in
+  let p = Ownership_plan.region ~resumes ~n_outer:0 root in
+  check "the first save keeps what the region lends" (Ownership_plan.save_moves p outer_site = Some []);
+  check "the second moves what the first frame holds"
+    (match Ownership_plan.save_moves p inner_site with Some [b] -> Core_binder.equal b s | _ -> false)
 
 (* [(fix f n l := g n l) (len s) s], [s] an owned parameter: the fixpoint's
    parameters are bound to its arguments in order, so the second argument

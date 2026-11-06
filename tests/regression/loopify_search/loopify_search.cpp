@@ -953,7 +953,7 @@ List<uint64_t> LoopifySearch::merge_sort_fuel(
             _result = std::move(l);
           } else {
             auto [a, b] = split_list(l);
-            _stack.emplace_back(CraneCont_a{f, b});
+            _stack.emplace_back(CraneCont_a{f, std::move(b)});
             _stack.emplace_back(CraneEnter{std::move(a), f});
           }
         }

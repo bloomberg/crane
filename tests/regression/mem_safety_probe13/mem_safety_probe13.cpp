@@ -112,7 +112,8 @@ MemSafetyProbe13::tree_vals_and_fns(
       const MemSafetyProbe13::tree &a0_value = *a0;
       const MemSafetyProbe13::tree &a2_value = a2;
       auto [lvals, lfns] = std::move(_result);
-      _stack.emplace_back(CraneCont_lvals{std::move(a0), a1, &a2, lvals, lfns});
+      _stack.emplace_back(CraneCont_lvals{std::move(a0), a1, &a2,
+                                          std::move(lvals), std::move(lfns)});
       _stack.emplace_back(CraneEnter{&a2_value});
     } else {
       auto _f = std::move(std::get<CraneCont_lvals>(_frame));

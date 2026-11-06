@@ -9765,6 +9765,12 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     else
       let depth = (!tctx).current_letin_depth in
       tctx := { !tctx with current_letin_depth = depth + 1 };
+      (* Where a machine resumes at this let, which of what its frame keeps
+         the save moves is the plan's: the machine reads it by the let's
+         binder. *)
+      ( match (Ownership_plan.save_moves (!tctx).move_plan let_occ, core_binder ~site:let_occ env' 1) with
+      | Some moved, Some binder -> Ownership_plan.Frame_save.record binder moved
+      | _ -> () );
       (* What the continuation reads, in the right-hand side's coordinates. *)
       let cont_free = Escape.free_rels 1 b in
       let asgn =

@@ -1292,7 +1292,7 @@ struct LoopifyLists {
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
           auto [acc_, y] = f(acc, a0);
-          _stack.emplace_back(CraneCont_acc_{y});
+          _stack.emplace_back(CraneCont_acc_{std::move(y)});
           _stack.emplace_back(CraneEnter{crane_raw(a1), std::move(acc_)});
         }
       } else {

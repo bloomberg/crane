@@ -1063,7 +1063,19 @@ let frame_resumes r ~depth : Ownership_plan.resumes option =
   match (frames, if frames then Lower_control.loop (Control_ir.Loop.Function r) else None) with
   | true, Some (Control_ir.Term.Loop l) when Control_ir.entries l.body = [] ->
     let invariant = Control_ir.invariant_parameters l in
-    let kept (b : Core_binder.t) = not (Option.default false (List.nth_opt invariant b.level)) in
+    let available (b : Core_binder.t) = Option.default false (List.nth_opt invariant b.level) in
+    let kept b = not (available b) in
+    (* What the handler binds again rather than the frame holding it: one
+       recomputable from what is available, or bound again so, in turn, as
+       the machine does ({!Loopify_frame}'s [rebuilt_binders]). *)
+    let rebuilt (p : Recursion_plan.resume) =
+      List.fold_left
+        (fun rebuilt (c : Recursion_plan.recomputable) ->
+          if List.for_all (fun b -> available b || List.exists (Core_binder.equal b) rebuilt) c.from then
+            c.recomputed :: rebuilt
+          else rebuilt )
+        [] p.recomputable
+    in
     Some
       { origin = r;
         depth;
@@ -1071,9 +1083,12 @@ let frame_resumes r ~depth : Ownership_plan.resumes option =
           (fun b ->
             match Recursion_plan.resumes_binding b with
             | [p] ->
+              let kept = List.filter kept p.live in
+              let rebuilt = rebuilt p in
               Some
                 { calls = List.map (fun (c : Recursion_plan.call) -> c.occurrence) p.after;
-                  kept = List.filter kept p.live }
+                  kept;
+                  held = List.filter (fun b -> not (List.exists (Core_binder.equal b) rebuilt)) kept }
             | _ -> None ) }
   | _ -> None
 

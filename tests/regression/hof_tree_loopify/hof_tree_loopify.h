@@ -435,7 +435,7 @@ struct HofTreeLoopify {
         const tree<T1> &a2 = *_f.a2;
         auto [acc1, l_] = std::move(_result);
         auto [acc2, x_] = f(std::move(acc1), a1);
-        _stack.emplace_back(CraneCont_acc2{l_, x_});
+        _stack.emplace_back(CraneCont_acc2{std::move(l_), std::move(x_)});
         _stack.emplace_back(CraneEnter{&a2, std::move(acc2)});
       } else {
         auto _f = std::move(std::get<CraneCont_acc2>(_frame));
