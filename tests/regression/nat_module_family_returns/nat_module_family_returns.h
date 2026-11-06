@@ -1221,13 +1221,13 @@ struct Nat {
   };
 
   template <typename T1, typename T2, typename F2>
-    requires std::is_invocable_r_v<T2, const F2 &, T1 &, crane::fn<T2(T1)>>
+    requires std::is_invocable_r_v<T2, const F2 &, T1 &&, crane::fn<T2(T1)>>
   static T2
   measure_right_induction(std::type_identity_t<crane::fn<uint64_t(T1)>> f,
                           uint64_t, F2 &&iH, const T1 &x) {
     uint64_t t0 = f(x);
     auto f0_impl = [=, f = std::move(f)](auto &_self_f0, uint64_t, T1 y) -> T2 {
-      return iH(y, [=](const T1 &y_) {
+      return iH(std::move(y), [=](const T1 &y_) {
         uint64_t y0 = f(y_);
         return _self_f0(_self_f0, y0, y_);
       });

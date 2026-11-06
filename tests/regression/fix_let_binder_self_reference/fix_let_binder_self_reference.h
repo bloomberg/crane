@@ -107,11 +107,12 @@ struct FixLetBinderSelfReference {
                   [=](List<uint64_t> _ec0) { return _self_f(_self_f, _ec0); },
                   _pa0);
             };
-            if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+            if (std::holds_alternative<typename List<uint64_t>::Nil>(
+                    l.v_mut())) {
               return UINT64_C(0);
             } else {
-              const auto &[a0, a1] =
-                  std::get<typename List<uint64_t>::Cons>(l.v());
+              auto &[a0, a1] =
+                  std::get<typename List<uint64_t>::Cons>(l.v_mut());
               return h0(*a1);
             }
           };

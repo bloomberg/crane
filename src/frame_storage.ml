@@ -16,7 +16,43 @@ type t = {
 
 type parameter =
   | Own of int
-  | Entered of int
+  | Entered of {
+      loop : Term.loop;
+      index : int;
+      level : int;
+    }
+
+let rec value_inductive ~abbreviations : ml_type -> bool = function
+  | Tglob ((GlobRef.IndRef _ as r), _, _) ->
+    (not (Table.is_coinductive r)) && (not (Table.is_custom r)) && not (Table.is_enum_inductive r)
+  | Tglob ((GlobRef.ConstRef kn as r), args, _) when abbreviations && not (Table.is_custom r) -> (
+    match Table.lookup_typedef_unchecked kn with
+    | Some t -> value_inductive ~abbreviations (Mlutil.type_subst_list args t)
+    | None -> false )
+  | Tmeta {contents = Some t} -> value_inductive ~abbreviations t
+  | _ -> false
+
+let passed_holdable passing ty =
+  match passing with
+  | Some Callable_abi.Borrowed -> value_inductive ~abbreviations:true ty
+  | Some Owned -> Table.reuse () && Table.non_atomic_rc () && value_inductive ~abbreviations:true ty
+  | Some Forwarded | None -> false
+
+let local_holdable (l : Term.loop) i =
+  match l.loop with
+  | Loop.Function _ -> None
+  | Loop.Member (o, j) ->
+    Option.map
+      (fun passing ->
+        passed_holdable (Option.flatten (List.nth_opt passing i)) (snd (List.nth l.parameters i)) )
+      (Ownership_plan.Local_passing.lookup (o, j))
+
+let check_local i ~planned ~declared =
+  if Probe.checking () && planned && not (declared ()) then
+    Probe.violation "frame storage"
+      Pp.(
+        str "the plan of a local fixpoint lends its parameter " ++ int i
+        ++ str " for a frame to hold by pointer, at a declared type no pointer spells" )
 
 (* What a value the machine holds is, of the storage the caller passed it --
    which outlives the machine, and which nothing changes while it runs: a
@@ -121,7 +157,7 @@ let entered_levels (l : Term.loop) =
     | Resume r -> go (depth + 1) (go depth acc r.value) r.body
     | Entry e ->
       let base = depth + named e.entered in
-      let acc = List.mapi (fun i _ -> ((e.entered.loop, i), base + i)) e.entered.parameters @ acc in
+      let acc = List.mapi (fun i _ -> ((e.entered, i), base + i)) e.entered.parameters @ acc in
       let acc = go (base + List.length e.entered.parameters) acc e.entered.body in
       go (depth + Option.cata (fun _ -> 1) 0 e.name) acc e.scope
   in
@@ -132,7 +168,10 @@ let plan ~pointer_fields ~in_place ~holdable (l : Term.loop) =
   (* What a frame cannot hold by pointer is held by value from the start. *)
   let unholdable =
     List.filter_map (fun i -> if holdable (Own i) then None else Some (l.loop, i)) (List.init (List.length l.parameters) Fun.id)
-    @ List.filter_map (fun (p, level) -> if holdable (Entered level) then None else Some p) levels
+    @ List.filter_map
+        (fun (((loop : Term.loop), index), level) ->
+          if holdable (Entered {loop; index; level}) then None else Some (loop.loop, index) )
+        levels
   in
   (* The greatest set of parameters held by pointer: each passed only what
      is pointable when those are. *)
@@ -145,4 +184,4 @@ let plan ~pointer_fields ~in_place ~holdable (l : Term.loop) =
   let excluded = settle unholdable in
   let pointed p = not (mem p excluded) in
   { own = List.mapi (fun i _ -> pointed (l.loop, i)) l.parameters;
-    entered = List.map (fun (p, level) -> (level, pointed p)) levels }
+    entered = List.map (fun (((loop : Term.loop), i), level) -> (level, pointed (loop.loop, i))) levels }

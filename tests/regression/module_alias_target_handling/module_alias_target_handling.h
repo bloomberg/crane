@@ -1415,14 +1415,14 @@ struct N {
   };
 
   template <typename T1, typename T2, typename F2>
-    requires std::is_invocable_r_v<T2, const F2 &, T1 &, crane::fn<T2(T1)>>
+    requires std::is_invocable_r_v<T2, const F2 &, T1 &&, crane::fn<T2(T1)>>
   static T2
   measure_right_induction(std::type_identity_t<crane::fn<unsigned int(T1)>> f0,
                           unsigned int, F2 &&iH, const T1 &x) {
     unsigned int t0 = f0(x);
     auto f1_impl = [=, f0 = std::move(f0)](auto &_self_f1, unsigned int,
                                            T1 y) -> T2 {
-      return iH(y, [=](const T1 &y_) {
+      return iH(std::move(y), [=](const T1 &y_) {
         unsigned int y0 = f0(y_);
         return _self_f1(_self_f1, y0, y_);
       });

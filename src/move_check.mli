@@ -29,7 +29,10 @@
     holding raw C++ is not checked.
 
     A planned function's or method's parameters are checked against the
-    convention its callable plan states ({!convention_violations}).
+    convention its callable plan states ({!convention_violations}), and the
+    lambda of each local fixpoint in its body -- its parameters other than
+    the members it calls through -- against its function's
+    ({!Ownership_plan.Local_passing}).
 
     Under [CRANE_CHECK_IR] each violation is reported ({!Probe.violation}). *)
 

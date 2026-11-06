@@ -158,40 +158,14 @@ let check_jumps ~loop (f : dfun) ~continues ~jumped =
    borrowed of a value type ({!Loopify_tail.borrowed_value_param_pointee}). *)
 let holdable_type ty = Option.has_some (Loopify_tail.borrowed_value_param_pointee ty)
 
-(* Whether the program holds a value of the Core type [ty] as a value -- an
-   inductive neither coinductive, custom, nor an enum, which is passed by
-   value however it is lent -- so that a pointer may stand for one
-   ({!Loopify_analysis.is_value_type_ret}); with [~abbreviations], an
-   abbreviation as what it abbreviates ([Definition t := list (key * elt)]).
-   An abstract type -- a functor parameter's [X.t] -- is no value inductive
-   the program knows. *)
-let rec value_inductive ~abbreviations : Miniml.ml_type -> bool = function
-  | Tglob ((GlobRef.IndRef _ as r), _, _) ->
-    (not (Table.is_coinductive r)) && (not (Table.is_custom r)) && not (Table.is_enum_inductive r)
-  | Tglob ((GlobRef.ConstRef kn as r), args, _) when abbreviations && not (Table.is_custom r) -> (
-    match Table.lookup_typedef_unchecked kn with
-    | Some t -> value_inductive ~abbreviations (Mlutil.type_subst_list args t)
-    | None -> false )
-  | Tmeta {contents = Some t} -> value_inductive ~abbreviations t
-  | _ -> false
-
 (* Whether a frame can hold by pointer the parameter at declared position
    [k] of the callable [r], of Core type [ty], as [r]'s callable plan passes
-   it: lent by const reference, or under Reuse with NonAtomicRc owned by
-   value -- either lives for the call, and nothing moves out of it -- at a
-   value inductive, named as itself or through an abbreviation
-   ({!Translation.wrap_param_by_ownership} declares either by
-   reference).  [None] where no plan states how [r] passes its
-   parameters. *)
+   it ({!Frame_storage.passed_holdable}).  [None] where no plan states how
+   [r] passes its parameters. *)
 let planned_holdable r k ty =
-  match Option.bind (Callable_abi.lookup r) Callable_abi.passing with
-  | None -> None
-  | Some passing ->
-    Some
-      ( match List.nth_opt passing k with
-      | Some Borrowed -> value_inductive ~abbreviations:true ty
-      | Some Owned -> Table.reuse () && Table.non_atomic_rc () && value_inductive ~abbreviations:true ty
-      | Some Forwarded | None -> false )
+  Option.map
+    (fun passing -> Frame_storage.passed_holdable (List.nth_opt passing k) ty)
+    (Option.bind (Callable_abi.lookup r) Callable_abi.passing)
 
 (* [held k cty] for {!storage_at} of the machine of the callable [r], its
    loop [l], the C++ parameter at [k] declared at [cty] and standing for the
@@ -260,18 +234,25 @@ let lifted_positions (l : Control_ir.Term.loop) params =
    standing for it, at its position in [positions] ([None]: it stands for
    none, and no frame holds it by pointer), held by pointer where [held k ty]
    of the one at [k] of type [ty]; one of an entered loop, where the machine
-   is the function [entering]'s, by the parameter of the local fixpoint's
-   lambda in [body] binding it, the Core binder counting from [entering]'s
-   parameters -- with no [entering], none is held by pointer.  The
-   parameters' flags, in order, and those of the entered loops' by the Core
-   binder. *)
+   is the function [entering]'s, as the plan of the local fixpoint the loop
+   is made from passes it ({!Frame_storage.local_holdable}) -- with no
+   [entering], none is held by pointer.  Under [CRANE_CHECK_IR], the
+   parameter of the fixpoint's lambda in [body] binding it, the Core binder
+   counting from [entering]'s parameters, must be declared at a type a
+   pointer spells exactly where the plan holds it so.  The parameters'
+   flags, in order, and those of the entered loops' by the Core binder. *)
 let storage_at ?entering (l : Control_ir.Term.loop) positions params ~held body =
-  let lambda_params = if Option.has_some entering then fixpoint_parameters body else [] in
+  let lambda_params = lazy (if Option.has_some entering then fixpoint_parameters body else []) in
   let of_entering (b : Core_binder.t) = Option.cata (fun r -> GlobRef.UserOrd.equal b.origin r) false entering in
   let holdable : Frame_storage.parameter -> bool = function
     | Own i -> List.exists2 (fun p (k, (_, ty)) -> p = Some i && held k ty) positions (List.mapi (fun k p -> (k, p)) params)
-    | Entered level ->
-      List.exists (fun ((b : Core_binder.t), ty) -> of_entering b && b.level = level && holdable_type ty) lambda_params
+    | Entered {loop; index; level} ->
+      let planned = Option.has_some entering && Frame_storage.local_holdable loop index = Some true in
+      Frame_storage.check_local index ~planned ~declared:(fun () ->
+          List.exists
+            (fun ((b : Core_binder.t), ty) -> of_entering b && b.level = level && holdable_type ty)
+            (Lazy.force lambda_params) );
+      planned
   in
   let storage = Frame_storage.plan ~pointer_fields:Loopify_analysis.constructor_pointer_fields ~in_place ~holdable l in
   let own_pointers = List.map (function Some i -> List.nth storage.own i | None -> false) positions in

@@ -860,6 +860,25 @@ let moved_captures p closure =
          if List.for_all (fun (l', o) -> l' <> l || moves o) reads then Some (-l) else None )
        reads )
 
+let moved_captures_by_member p fix =
+  match fix with
+  | MLfix (_, _, funs, _, _) ->
+    let n = Array.length funs in
+    let reads =
+      Array.map
+        (fun f -> List.filter_map (fun (l, _) -> if -l - n > 0 then Some (-l - n) else None) (closure_reads 0 f))
+        funs
+    in
+    let last_reader d =
+      Array.fold_left (fun (j, last) r -> (j + 1, if List.mem d r then Some j else last)) (0, None) reads |> snd
+    in
+    let taken = Array.make n [] in
+    List.iter
+      (fun d -> Option.iter (fun j -> taken.(j) <- d :: taken.(j)) (last_reader d))
+      (moved_captures p fix);
+    Array.to_list (Array.map (List.sort_uniq Int.compare) taken)
+  | _ -> []
+
 let moved_reads p ts =
   let rec go acc = function
     | MLrel (i, o) -> if taken_by_closure p o then i :: acc else acc
@@ -872,3 +891,22 @@ let moved_reads p ts =
     | _ -> acc
   in
   List.sort_uniq Int.compare (List.fold_left go [] ts)
+
+module Local_passing = struct
+  type t = Callable_abi.passing option list
+
+  let recorded : ((Occurrence.t * int) * t) list ref = State.cell State.Extraction []
+
+  let same (o, j) (o', j') = Occurrence.equal o o' && Int.equal j j'
+
+  let lookup member = List.find_map (fun (m, t) -> if same m member then Some t else None) !recorded
+
+  let record member t =
+    match lookup member with
+    | Some t' when t' = t -> ()
+    | Some _ ->
+      Probe.violation "local passing"
+        (Pp.str "a local fixpoint is generated passing its parameters otherwise than it was before");
+      recorded := (member, t) :: List.filter (fun (m, _) -> not (same m member)) !recorded
+    | None -> recorded := (member, t) :: !recorded
+end

@@ -369,8 +369,9 @@ val ml_head_has_magic : ml_ast -> bool
 val make_subst_extra_tvars :
   int -> (int * Id.t) list -> cpp_type -> cpp_type
 
-(** Rewrite lambda bodies so their statement lists are treated as
-    capture-by-value contexts (used when hoisting closures). *)
+(** A body whose returned lambdas hold copies, as Core made them: under
+    [CRANE_CHECK_IR] one holding references is a violation, and is made a
+    closure all the same ({!Translation_support.return_captures_by_value}). *)
 val return_captures_by_value : cpp_stmt list -> cpp_stmt list
 
 (** Unify the (possibly polymorphic) declared type [ty] against the concrete

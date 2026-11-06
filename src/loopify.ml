@@ -279,11 +279,15 @@ let member_plan ~frames member params =
       let parts =
         if not frames then parts
         else
+          (* As the fixpoint's plan passes the parameter. *)
           let holdable : Frame_storage.parameter -> bool = function
             | Own i ->
-              List.exists2
-                (fun k (_, ty) -> k = i && Option.has_some (borrowed_value_param_pointee ty))
-                kept params
+              let planned = Frame_storage.local_holdable l i = Some true in
+              Frame_storage.check_local i ~planned ~declared:(fun () ->
+                  List.exists2
+                    (fun k (_, ty) -> k = i && Option.has_some (borrowed_value_param_pointee ty))
+                    kept params );
+              planned
             | Entered _ -> false
           in
           List.map2 ( || ) parts

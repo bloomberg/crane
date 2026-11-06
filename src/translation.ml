@@ -135,7 +135,49 @@ let local_fix_stmts selves ~binders ~self_passing impl_stmts funs_with_params =
 let forwarded ~by_value ty v =
   if by_value && Ownership_plan.worth_moving ty && not (ml_type_is_unit ty) then CPPmove v else v
 
-let gen_local_fix_ycomb env ~binders ~moved renamed_ids funs_with_params =
+(** How each function of the local fixpoint group whose bodies are [funs]
+    passes its parameters ({!Ownership_plan.Local_passing}): a group of
+    [closures] takes each by value; one generated in place lends each its
+    body does not own ({!Escape.infer_owned_params}) -- the [i]th parameter
+    of a runtime value, innermost first, as the body's [i]th binder.  A
+    parameter of no runtime value is taken by no lambda. *)
+let local_passing ~closures funs =
+  let n_fix = Array.length funs in
+  let member f =
+    let lam_ids, inner = Mlutil.collect_lams f in
+    let runtime = List.filter (fun (_, ty) -> not (void_binder ty)) lam_ids in
+    let owned =
+      if closures then List.map (fun _ -> true) runtime
+      else
+        let flags = Escape.infer_owned_params (List.length runtime + n_fix) inner in
+        List.mapi (fun i _ -> List.nth flags i) runtime
+    in
+    (* [lam_ids] is innermost first, and the plan outermost first. *)
+    let rec go owned acc = function
+      | [] -> acc
+      | (_, ty) :: rest when void_binder ty -> go owned (None :: acc) rest
+      | _ :: rest -> (
+        match owned with
+        | o :: owned -> go owned (Some (if o then Callable_abi.Owned else Callable_abi.Borrowed) :: acc) rest
+        | [] -> assert false )
+    in
+    go owned [] lam_ids
+  in
+  Array.to_list (Array.map member funs)
+
+(* Record that the functions [binders] name pass their parameters as
+   [passing] says, each the plan of the one at its position. *)
+let record_local_passing ~binders passing =
+  List.iter2 (fun (_, member, _, _) t -> Ownership_plan.Local_passing.record member t) binders passing
+
+(* Whether a lambda generated as [passing] says owns each parameter it
+   takes, innermost first, as its parameters are listed. *)
+let owned_flags passing = List.rev_map (fun p -> p = Callable_abi.Owned) (List.filter_map Fun.id passing)
+
+let gen_local_fix_ycomb env ~binders ~passing ~moved renamed_ids funs_with_params =
+  (* The lambdas take every parameter by value, as [passing], a group of
+     closures', says. *)
+  record_local_passing ~binders passing;
   let ret_ty ty =
     match cpp_of_ml env ty with
     | Tfun (_, t) ->
@@ -183,29 +225,35 @@ let gen_local_fix_ycomb env ~binders ~moved renamed_ids funs_with_params =
       (List.combine (List.combine renamed_ids impl_ids) binders)
       funs_with_params
   in
-  (* Each variable the group takes by move goes to the last impl that
-     captures it; the impls before it still copy it. *)
+  (* Each impl takes by move what the plan has its function's closure take
+     ([moved]): each variable the group takes so, the last impl capturing it
+     takes; the impls before it still copy it.  Under [CRANE_CHECK_IR], the
+     impls' C++ captures must agree. *)
   let impl_stmts =
-    let captures = function
-      | Sasgn (_, _, (CPPlambda _ as l)) -> free_vars_expr l
-      | _ -> []
-    in
-    let rec give = function
-      | [] -> []
-      | s :: rest ->
-        let taken_later = List.concat_map captures rest in
-        let ts =
-          List.filter (fun x -> List.mem x (captures s) && not (List.mem x taken_later)) moved
-        in
-        let s =
-          match s with
-          | Sasgn (id, d, CPPlambda l) when ts <> [] ->
-            Sasgn (id, d, CPPlambda {l with cl_moved = List.sort Id.compare ts})
-          | _ -> s
-        in
-        s :: give rest
-    in
-    give impl_stmts
+    if Probe.checking () then begin
+      let captures = function
+        | Sasgn (_, _, (CPPlambda _ as l)) -> free_vars_expr l
+        | _ -> []
+      in
+      let everything = List.sort_uniq Id.compare (List.concat moved) in
+      let rec given = function
+        | [] -> []
+        | s :: rest ->
+          let taken_later = List.concat_map captures rest in
+          List.sort Id.compare
+            (List.filter (fun x -> List.mem x (captures s) && not (List.mem x taken_later)) everything)
+          :: given rest
+      in
+      if not (List.equal (List.equal Id.equal) (given impl_stmts) moved) then
+        Probe.violation "closure captures"
+          (Pp.str "a local fixpoint's closures take by move other variables than their C++ captures give them")
+    end;
+    List.map2
+      (fun s ts ->
+        match s with
+        | Sasgn (id, d, CPPlambda l) when ts <> [] -> Sasgn (id, d, CPPlambda {l with cl_moved = ts})
+        | _ -> s )
+      impl_stmts moved
   in
   (* Generate wrapper lambdas: forward to impl with all impl_ids prepended. *)
   let impl_vars_rev = List.rev_map (fun id -> CPPvar id) impl_ids in
@@ -280,7 +328,9 @@ let gen_local_fix_ycomb env ~binders ~moved renamed_ids funs_with_params =
 
     @return [(decls, defs)] — declaration and definition statement lists.
     @see gen_local_fix_ycomb for the escaping-fixpoint alternative. *)
-let gen_local_fix_by_ref env ~binders renamed_ids funs_with_params owned_flags_per_fun =
+let gen_local_fix_by_ref env ~binders ~passing renamed_ids funs_with_params =
+  record_local_passing ~binders passing;
+  let owned_flags_per_fun = List.map owned_flags passing in
   let ret_ty ty =
     match cpp_of_ml env ty with
     | Tfun (_, t) ->
@@ -386,10 +436,11 @@ let capture_names env is =
        (fun id -> not (Common.is_tc_instance_id id))
        (List.filter_map (fun i -> Common.get_db_name_opt i env) is) )
 
-(* What the closures a local fixpoint [fix] is generated as take by move
-   where they are made. *)
+(* What the closure of each function of a local fixpoint [fix] generated as
+   closures takes by move where it is made
+   ({!Ownership_plan.moved_captures_by_member}). *)
 let fix_moved_captures env fix =
-  capture_names env (Ownership_plan.moved_captures (!tctx).move_plan fix)
+  List.map (capture_names env) (Ownership_plan.moved_captures_by_member (!tctx).move_plan fix)
 
 (* Whether a record's fields are moved out of what [base] reads it from. *)
 let moved_out base = match base with CPPmove _ -> true | _ -> false
@@ -9232,11 +9283,12 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          continuation while a [\[&\]] lambda may still refer to them: the
          plan pins them ({!Ownership_plan}). *)
       let all_fix_ids_list = Array.to_list ids in
+      let closures = Analyze_closures.group ~n_outer ~continuation:b ~cofix ids funs = Closures in
       let funs_compiled =
         Array.to_list
           (Array.mapi
              (fun i f ->
-               gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i) f )
+               gen_fix env ~all_fix_ids:all_fix_ids_list ~by_value:closures ~fix_idx:i ids.(i) f )
              funs )
       in
       let renamed_ids =
@@ -9269,37 +9321,21 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       push_binders env [projected_id];
       let declared = declaring (fst projected_id) (core_binder ~site:let_occ env_with_fix 1) in
       let cont = gen_stmts ~slot env_with_fix k b in
-      let closures = Analyze_closures.group ~n_outer ~continuation:b ~cofix ids funs = Closures in
       check_fixpoint_escape (fst projected_id) ~closures (fun () ->
           List.exists (fun (id, _) -> fixpoint_escapes_in_stmts id cont) renamed_ids
           || fix_escapes_in_own_bodies renamed_ids funs_with_params );
+      let passing = local_passing ~closures funs in
       if closures then
         let decls, defs, deref_subst =
-          gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
+          gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled) ~passing
             ~moved:(fix_moved_captures env fix_term)
             renamed_ids funs_with_params
         in
         declared (decls @ defs) @ deref_subst cont
       else
-        let owned_flags_per_fun =
-          Array.to_list (Array.map (fun f ->
-            let lam_ids, inner_body = Mlutil.collect_lams f in
-            let n_params =
-              List.length
-                (List.filter
-                   (fun (_, ty) -> not (void_binder ty))
-                   lam_ids)
-            in
-            let n_fix = Array.length funs in
-            let all_flags =
-              Escape.infer_owned_params (n_params + n_fix) inner_body
-            in
-            List.init n_params (fun i -> List.nth all_flags i)
-          ) funs)
-        in
         let decls, defs =
-          gen_local_fix_by_ref env ~binders:(local_fix_binders env fix_term occ ids funs_compiled) renamed_ids funs_with_params
-            owned_flags_per_fun
+          gen_local_fix_by_ref env ~binders:(local_fix_binders env fix_term occ ids funs_compiled) ~passing renamed_ids
+            funs_with_params
         in
         declared (decls @ defs) @ cont
   | MLletin (x, t, (MLlam _ as a), b, let_occ) ->
@@ -10097,11 +10133,20 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         [k (made_of occ (CPPfun_call (call_opaque, mk_cppglob lifted_ref call_type_args, of_reversed cpp_args)))] )
       else (* No extra Tvars - proceed with by-ref local fixpoint (immediately applied) *)
         let all_fix_ids_list = Array.to_list ids in
+        (* A group escaping in its own bodies is closures, and so is one
+           applied to fewer arguments than its function takes parameters of
+           a runtime value: their bodies own every parameter. *)
+        let escapes = Analyze_closures.group ~n_outer ~cofix ids funs = Closures in
+        let partial =
+          List.compare_length_with args
+            (List.length (List.filter (fun (_, ty) -> not (void_binder ty)) (fst (collect_lams funs.(x)))))
+          < 0
+        in
         let funs_compiled =
           Array.to_list
             (Array.mapi
                (fun i f ->
-                 gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i) f )
+                 gen_fix env ~all_fix_ids:all_fix_ids_list ~by_value:(escapes || partial) ~fix_idx:i ids.(i) f )
                funs )
         in
         let renamed_ids =
@@ -10114,12 +10159,16 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         let _, fix_params, _, _ = List.nth funs_compiled x in
         let n_provided = List.length args in
         let n_fix_params = List.length fix_params in
-        if n_provided < n_fix_params then begin
+        if Probe.checking () && partial <> (n_provided < n_fix_params) then
+          Probe.violation "partial application"
+            (Pp.str "a local fixpoint is applied to other arguments than Core counts");
+        if partial then begin
           (* Partial application: the fixpoint escapes (returned as a lambda).
              Use Y-combinator pattern so the fixpoint body doesn't capture
              a stack-local std::function by reference. *)
           let decls, defs, deref_subst =
             gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
+              ~passing:(local_passing ~closures:true funs)
               ~moved:(fix_moved_captures env fix_term)
               renamed_ids funs_with_params
           in
@@ -10148,13 +10197,14 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           @ deref_subst [k (mk_lambda pa_params None [Sreturn (Some full_call)] ~capture:Closure)]
         end
         else if
-          let closures = Analyze_closures.group ~n_outer ~cofix ids funs = Closures in
+          let closures = escapes in
           check_fixpoint_escape (fst (List.nth renamed_ids x)) ~closures (fun () ->
               fix_escapes_in_own_bodies renamed_ids funs_with_params );
           closures
         then
           let decls, defs, deref_subst =
             gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
+              ~passing:(local_passing ~closures:true funs)
               ~moved:(fix_moved_captures env fix_term)
               renamed_ids funs_with_params
           in
@@ -10162,25 +10212,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           @ deref_subst
               [k (made_of occ (CPPfun_call (call_opaque, CPPvar (fst (List.nth renamed_ids x)), of_reversed args)))]
         else begin
-          let owned_flags_per_fun =
-            Array.to_list (Array.map (fun f ->
-              let lam_ids, inner_body = Mlutil.collect_lams f in
-              let n_params =
-                List.length
-                  (List.filter
-                     (fun (_, ty) -> not (void_binder ty))
-                     lam_ids)
-              in
-              let n_fix = Array.length funs in
-              let all_flags =
-                Escape.infer_owned_params (n_params + n_fix) inner_body
-              in
-              List.init n_params (fun i -> List.nth all_flags i)
-            ) funs)
-          in
           let decls, defs =
-            gen_local_fix_by_ref env ~binders:(local_fix_binders env fix_term occ ids funs_compiled) renamed_ids funs_with_params
-              owned_flags_per_fun
+            gen_local_fix_by_ref env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
+              ~passing:(local_passing ~closures:false funs) renamed_ids funs_with_params
           in
           decls @ defs
           @ [k (made_of occ (CPPfun_call (call_opaque, CPPvar (fst (List.nth renamed_ids x)), of_reversed args)))]
@@ -10199,7 +10233,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       Array.to_list
         (Array.mapi
            (fun i f ->
-             gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i) f )
+             gen_fix env ~all_fix_ids:all_fix_ids_list ~by_value:true ~fix_idx:i ids.(i) f )
            funs )
     in
     let renamed_ids =
@@ -10210,6 +10244,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     in
     let decls, defs, _deref_subst =
       gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
+            ~passing:(local_passing ~closures:true funs)
             ~moved:(fix_moved_captures env fix_term)
             renamed_ids funs_with_params
     in
@@ -10540,7 +10575,7 @@ and gen_stored_value ?expected_ty ~slot env e =
 (** Generate a fixpoint (recursive function) definition. Handles both single and
     mutually recursive functions. [all_fix_ids] contains names of all mutual
     fixpoints; [fix_idx] is the index of this fixpoint in the mutual group. *)
-and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
+and gen_fix env ?(all_fix_ids = []) ?(by_value = false) ~fix_idx (n, ty) f =
   let ids, f = collect_lams f in
   let ids = List.map (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty)) ids in
   (* Push all mutual fixpoint names (or just (n,ty) for single fixpoints). For
@@ -10569,7 +10604,9 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
   let ids = List.filter (fun (_, ty) -> not (void_binder ty)) ids in
   (* The parameters the body owns, passed by value in the generated lambda.
      After push_vars'(ids @ fix_names), ids[0] is db 1, ..., ids[k-1] db k,
-     and the fixpoints follow; only parameters are owned. *)
+     and the fixpoints follow; only parameters are owned.  A function whose
+     lambda takes every parameter by value ([by_value]: its group's plan
+     owns each, {!local_passing}) owns each: it holds its own copy. *)
   let n_fix_params = List.length ids in
   let n_total = n_fix_params + n_fix_funs in
   let fix_owned_base = Escape.infer_owned_params n_total f in
@@ -10578,7 +10615,7 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
     owned_parameters n_fix_params
       ~owned:(fun i ->
         let flag l = Option.default false (List.nth_opt l i) in
-        flag fix_owned_base || (flag fix_sub_esc && is_prod_ml_type (snd (List.nth ids i))) )
+        by_value || flag fix_owned_base || (flag fix_sub_esc && is_prod_ml_type (snd (List.nth ids i))) )
       ~ty:(fun i -> snd (List.nth ids i))
   in
   (* The body returns the fixpoint's own codomain, not the enclosing
