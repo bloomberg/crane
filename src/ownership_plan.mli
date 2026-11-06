@@ -188,6 +188,13 @@ val projects_in_place : t -> Miniml.ml_type -> Miniml.ml_ast -> bool
     it. *)
 val moved_captures : t -> Miniml.ml_ast -> int list
 
+(** Of the local fixpoint [fix], generated as closures, one per function,
+    for each function in order, the de Bruijn indices at [fix] of the
+    variables its closure takes by move ({!moved_captures}): each the last
+    function reading it takes, those made before it copying it.  [[]] where
+    [fix] is no fixpoint. *)
+val moved_captures_by_member : t -> Miniml.ml_ast -> int list list
+
 (** The de Bruijn indices, at [ts], of the variables [ts] read by move
     ({!use}) directly -- not inside a closure, a let or a match they
     contain -- and those a closure among them takes by move

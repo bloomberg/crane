@@ -860,6 +860,25 @@ let moved_captures p closure =
          if List.for_all (fun (l', o) -> l' <> l || moves o) reads then Some (-l) else None )
        reads )
 
+let moved_captures_by_member p fix =
+  match fix with
+  | MLfix (_, _, funs, _, _) ->
+    let n = Array.length funs in
+    let reads =
+      Array.map
+        (fun f -> List.filter_map (fun (l, _) -> if -l - n > 0 then Some (-l - n) else None) (closure_reads 0 f))
+        funs
+    in
+    let last_reader d =
+      Array.fold_left (fun (j, last) r -> (j + 1, if List.mem d r then Some j else last)) (0, None) reads |> snd
+    in
+    let taken = Array.make n [] in
+    List.iter
+      (fun d -> Option.iter (fun j -> taken.(j) <- d :: taken.(j)) (last_reader d))
+      (moved_captures p fix);
+    Array.to_list (Array.map (List.sort_uniq Int.compare) taken)
+  | _ -> []
+
 let moved_reads p ts =
   let rec go acc = function
     | MLrel (i, o) -> if taken_by_closure p o then i :: acc else acc

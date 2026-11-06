@@ -225,29 +225,35 @@ let gen_local_fix_ycomb env ~binders ~passing ~moved renamed_ids funs_with_param
       (List.combine (List.combine renamed_ids impl_ids) binders)
       funs_with_params
   in
-  (* Each variable the group takes by move goes to the last impl that
-     captures it; the impls before it still copy it. *)
+  (* Each impl takes by move what the plan has its function's closure take
+     ([moved]): each variable the group takes so, the last impl capturing it
+     takes; the impls before it still copy it.  Under [CRANE_CHECK_IR], the
+     impls' C++ captures must agree. *)
   let impl_stmts =
-    let captures = function
-      | Sasgn (_, _, (CPPlambda _ as l)) -> free_vars_expr l
-      | _ -> []
-    in
-    let rec give = function
-      | [] -> []
-      | s :: rest ->
-        let taken_later = List.concat_map captures rest in
-        let ts =
-          List.filter (fun x -> List.mem x (captures s) && not (List.mem x taken_later)) moved
-        in
-        let s =
-          match s with
-          | Sasgn (id, d, CPPlambda l) when ts <> [] ->
-            Sasgn (id, d, CPPlambda {l with cl_moved = List.sort Id.compare ts})
-          | _ -> s
-        in
-        s :: give rest
-    in
-    give impl_stmts
+    if Probe.checking () then begin
+      let captures = function
+        | Sasgn (_, _, (CPPlambda _ as l)) -> free_vars_expr l
+        | _ -> []
+      in
+      let everything = List.sort_uniq Id.compare (List.concat moved) in
+      let rec given = function
+        | [] -> []
+        | s :: rest ->
+          let taken_later = List.concat_map captures rest in
+          List.sort Id.compare
+            (List.filter (fun x -> List.mem x (captures s) && not (List.mem x taken_later)) everything)
+          :: given rest
+      in
+      if not (List.equal (List.equal Id.equal) (given impl_stmts) moved) then
+        Probe.violation "closure captures"
+          (Pp.str "a local fixpoint's closures take by move other variables than their C++ captures give them")
+    end;
+    List.map2
+      (fun s ts ->
+        match s with
+        | Sasgn (id, d, CPPlambda l) when ts <> [] -> Sasgn (id, d, CPPlambda {l with cl_moved = ts})
+        | _ -> s )
+      impl_stmts moved
   in
   (* Generate wrapper lambdas: forward to impl with all impl_ids prepended. *)
   let impl_vars_rev = List.rev_map (fun id -> CPPvar id) impl_ids in
@@ -430,10 +436,11 @@ let capture_names env is =
        (fun id -> not (Common.is_tc_instance_id id))
        (List.filter_map (fun i -> Common.get_db_name_opt i env) is) )
 
-(* What the closures a local fixpoint [fix] is generated as take by move
-   where they are made. *)
+(* What the closure of each function of a local fixpoint [fix] generated as
+   closures takes by move where it is made
+   ({!Ownership_plan.moved_captures_by_member}). *)
 let fix_moved_captures env fix =
-  capture_names env (Ownership_plan.moved_captures (!tctx).move_plan fix)
+  List.map (capture_names env) (Ownership_plan.moved_captures_by_member (!tctx).move_plan fix)
 
 (* Whether a record's fields are moved out of what [base] reads it from. *)
 let moved_out base = match base with CPPmove _ -> true | _ -> false
