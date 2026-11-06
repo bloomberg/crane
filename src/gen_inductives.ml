@@ -495,15 +495,15 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
      borrowed params are passed by const ref. This matches gen_dfun's logic to
      ensure forward declarations and definitions agree. *)
   let params =
-    List.map
-      (fun (id, cpp_ty, i, owned, generalised) ->
+    List.map2
+      (fun (id, cpp_ty, i, owned, generalised) (_, core, _) ->
         let wrapped =
           match cpp_ty with
           | Tfun _ when generalised -> Tref (Forwarding, named_tvar (fun_tparam_id i))
-          | _ -> wrap_param_by_ownership ~is_owned:owned cpp_ty
+          | _ -> wrap_param_by_ownership ~is_owned:owned ~core cpp_ty
         in
         (id, wrapped) )
-      params_with_idx
+      params_with_idx param_ids_with_pos
   in
   let passing =
     List.map2 (fun (_, ty) (_, _, _, owned, _) -> param_passing ~owned ty) params params_with_idx

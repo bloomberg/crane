@@ -194,7 +194,7 @@ List<uint64_t> LoopifySorting::merge_sort_fuel(
             _result = std::move(l);
           } else {
             auto [l1, l2] = split<uint64_t>(l);
-            _stack.emplace_back(CraneCont_l1{f, l2});
+            _stack.emplace_back(CraneCont_l1{f, std::move(l2)});
             _stack.emplace_back(CraneEnter{std::move(l1), f});
           }
         }
@@ -312,7 +312,7 @@ List<uint64_t> LoopifySorting::quicksort_fuel(
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           auto [lo, hi] = partition(a0, *a1);
-          _stack.emplace_back(CraneCont_lo{f, a0, hi});
+          _stack.emplace_back(CraneCont_lo{f, a0, std::move(hi)});
           _stack.emplace_back(CraneEnter{std::move(lo), f});
         }
       }

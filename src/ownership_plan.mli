@@ -55,8 +55,10 @@ val worth_moving_ref : ('a -> bool) -> Names.GlobRef.t -> 'a list -> bool
     occurrences of the recursive calls its right-hand side ends in, and
     [kept], the binders the frame saved for them keeps across them, which
     what follows the let reads in the frame rather than where they were
-    bound. *)
-type resume = {calls : Miniml.Occurrence.t list; kept : Core_binder.t list}
+    bound; [held], those of [kept] the frame holds itself, rather than
+    binding them again from what it holds -- the handler resuming there
+    owns each, having moved its frame off the stack. *)
+type resume = {calls : Miniml.Occurrence.t list; kept : Core_binder.t list; held : Core_binder.t list}
 
 (** The points the definition [origin], whose body is lowered as a machine
     with a stack of frames, resumes at, as [resume_at] finds them by the
@@ -232,6 +234,32 @@ end
     parameter is kept in a local, rather than by pointer, is the lowering's
     to say.  A machine's loop moves nothing so. *)
 val continue_moves : Control_ir.Term.loop -> (Miniml.Occurrence.t * Continue_move.t list) list
+
+(** [save_moves p let_]: of the let at the occurrence [let_], a point a
+    machine with a stack of frames resumes at ({!resumes}), the binders the
+    frame saved for its call keeps that the save may move into the frame:
+    each owned there, and the save its last read in the turn -- the call's
+    arguments, evaluated after it, read neither it nor a part of it, nothing
+    reads it at a closure's uses or after the let, and the frame keeps no
+    part of it, nor anything it is a part of, beside it.  What follows the
+    let reads it in the frame.  [None] of a let no point resumes at. *)
+val save_moves : t -> Miniml.Occurrence.t -> Core_binder.t list option
+
+(** Which binders each frame saved at a resume point moves into it, by the
+    Core binder of the let the machine resumes at: what translation, which
+    holds the plan, says ({!save_moves}) where it generates that let, read by
+    the frame machine ({!Loopify_frame}) where it saves the frame. *)
+module Frame_save : sig
+  type t = Core_binder.t list
+
+  (** [record binder t]: the frame saved at the let binding [binder] moves
+      the binders [t].  A let generated twice is generated alike: under
+      [CRANE_CHECK_IR], recording another set is a violation, and only what
+      both move is moved. *)
+  val record : Core_binder.t -> t -> unit
+
+  val lookup : Core_binder.t -> t option
+end
 
 (** How each function of a local fixpoint passes its parameters -- the
     callable plan of a function with no global, which the frames of its

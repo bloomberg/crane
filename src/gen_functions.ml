@@ -729,7 +729,7 @@ let dfun_body_scope n b cty ty temps =
         in
         (* Reify monadic parameter types: itree E R → shared_ptr<ITree<R>> *)
         let cpp_ty = reify_monadic_param_type ty cpp_ty in
-        let wrapped = wrap_param_by_ownership ~is_owned:owned cpp_ty in
+        let wrapped = wrap_param_by_ownership ~is_owned:owned ~core:ty cpp_ty in
         (x, wrapped) )
       ids_with_owned
   in
@@ -1063,7 +1063,19 @@ let frame_resumes r ~depth : Ownership_plan.resumes option =
   match (frames, if frames then Lower_control.loop (Control_ir.Loop.Function r) else None) with
   | true, Some (Control_ir.Term.Loop l) when Control_ir.entries l.body = [] ->
     let invariant = Control_ir.invariant_parameters l in
-    let kept (b : Core_binder.t) = not (Option.default false (List.nth_opt invariant b.level)) in
+    let available (b : Core_binder.t) = Option.default false (List.nth_opt invariant b.level) in
+    let kept b = not (available b) in
+    (* What the handler binds again rather than the frame holding it: one
+       recomputable from what is available, or bound again so, in turn, as
+       the machine does ({!Loopify_frame}'s [rebuilt_binders]). *)
+    let rebuilt (p : Recursion_plan.resume) =
+      List.fold_left
+        (fun rebuilt (c : Recursion_plan.recomputable) ->
+          if List.for_all (fun b -> available b || List.exists (Core_binder.equal b) rebuilt) c.from then
+            c.recomputed :: rebuilt
+          else rebuilt )
+        [] p.recomputable
+    in
     Some
       { origin = r;
         depth;
@@ -1071,9 +1083,12 @@ let frame_resumes r ~depth : Ownership_plan.resumes option =
           (fun b ->
             match Recursion_plan.resumes_binding b with
             | [p] ->
+              let kept = List.filter kept p.live in
+              let rebuilt = rebuilt p in
               Some
                 { calls = List.map (fun (c : Recursion_plan.call) -> c.occurrence) p.after;
-                  kept = List.filter kept p.live }
+                  kept;
+                  held = List.filter (fun b -> not (List.exists (Core_binder.equal b) rebuilt)) kept }
             | _ -> None ) }
   | _ -> None
 
@@ -1427,18 +1442,24 @@ let gen_sfun n b dom cod temps =
         let cpp_ty = convert_ml_type_to_cpp_type env [] ty in
         (* Reify monadic parameter types: itree E R → shared_ptr<ITree<R>> *)
         let cpp_ty = reify_monadic_param_type ty cpp_ty in
-        let wrapped = wrap_param_by_ownership ~is_owned:owned cpp_ty in
+        let wrapped = wrap_param_by_ownership ~is_owned:owned ~core:ty cpp_ty in
         (Some x, wrapped) )
       ids_with_owned
   in
   let dom = List.filter (fun ty -> ty != Tvoid) dom in
   (* For already-converted C++ types in dom, wrap shared_ptr with const ref *)
   let args =
-    List.mapi
-      (fun _i ty ->
-        let wrapped = wrap_param_by_ownership ty in
+    (* Where [dom] has a type for each parameter, each is the C++ type of
+       the parameter's Core type. *)
+    let cores =
+      if List.compare_lengths dom ids_with_owned = 0 then List.map (fun (_, ty, _) -> Some ty) ids_with_owned
+      else List.map (fun _ -> None) dom
+    in
+    List.map2
+      (fun ty core ->
+        let wrapped = wrap_param_by_ownership ?core ty in
         (None, wrapped) )
-      dom
+      dom cores
   in
   (* Merge parameter names from [ids] (body lambdas) with resolved types
      from [dom] (function signature).  [ids] carries the correct parameter

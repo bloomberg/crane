@@ -310,8 +310,12 @@ val generalises_callable :
 val infer_owned_flags :
   ?owner:Names.GlobRef.t -> ml_ast -> ('a * ml_type) list -> bool list
 
-(** Wrap a C++ parameter type with const/ref based on ownership semantics. *)
-val wrap_param_by_ownership : ?is_owned:bool -> cpp_type -> cpp_type
+(** Wrap a C++ parameter type with const/ref based on ownership semantics:
+    owned, by value; lent, by const reference where a copy costs a clone or
+    a retain.  Which types those are is read off [core], the parameter's
+    Core type, where it says, and off the C++ type otherwise; under
+    [CRANE_CHECK_IR] the two readings must agree. *)
+val wrap_param_by_ownership : ?is_owned:bool -> ?core:Miniml.ml_type -> cpp_type -> cpp_type
 
 (** How a parameter declared at a type -- after {!wrap_param_by_ownership},
     or as the [F &&] a deduced callable is -- owned or not, is passed. *)

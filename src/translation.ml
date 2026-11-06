@@ -138,30 +138,22 @@ let forwarded ~by_value ty v =
 (** How each function of the local fixpoint group whose bodies are [funs]
     passes its parameters ({!Ownership_plan.Local_passing}): a group of
     [closures] takes each by value; one generated in place lends each its
-    body does not own ({!Escape.infer_owned_params}) -- the [i]th parameter
-    of a runtime value, innermost first, as the body's [i]th binder.  A
-    parameter of no runtime value is taken by no lambda. *)
+    body does not own ({!Escape.infer_owned_params}).  A parameter of no
+    runtime value is taken by no lambda, but is a binder of the body all the
+    same: the flag of the parameter [i]th innermost is that of the body's
+    binder [i + 1], whatever binders inside it lack a runtime value. *)
 let local_passing ~closures funs =
   let n_fix = Array.length funs in
   let member f =
     let lam_ids, inner = Mlutil.collect_lams f in
-    let runtime = List.filter (fun (_, ty) -> not (void_binder ty)) lam_ids in
-    let owned =
-      if closures then List.map (fun _ -> true) runtime
-      else
-        let flags = Escape.infer_owned_params (List.length runtime + n_fix) inner in
-        List.mapi (fun i _ -> List.nth flags i) runtime
-    in
+    let flags = if closures then [] else Escape.infer_owned_params (List.length lam_ids + n_fix) inner in
     (* [lam_ids] is innermost first, and the plan outermost first. *)
-    let rec go owned acc = function
-      | [] -> acc
-      | (_, ty) :: rest when void_binder ty -> go owned (None :: acc) rest
-      | _ :: rest -> (
-        match owned with
-        | o :: owned -> go owned (Some (if o then Callable_abi.Owned else Callable_abi.Borrowed) :: acc) rest
-        | [] -> assert false )
-    in
-    go owned [] lam_ids
+    List.rev
+      (List.mapi
+         (fun i (_, ty) ->
+           if void_binder ty then None
+           else Some (if closures || List.nth flags i then Callable_abi.Owned else Callable_abi.Borrowed) )
+         lam_ids )
   in
   Array.to_list (Array.map member funs)
 
@@ -9773,6 +9765,12 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     else
       let depth = (!tctx).current_letin_depth in
       tctx := { !tctx with current_letin_depth = depth + 1 };
+      (* Where a machine resumes at this let, which of what its frame keeps
+         the save moves is the plan's: the machine reads it by the let's
+         binder. *)
+      ( match (Ownership_plan.save_moves (!tctx).move_plan let_occ, core_binder ~site:let_occ env' 1) with
+      | Some moved, Some binder -> Ownership_plan.Frame_save.record binder moved
+      | _ -> () );
       (* What the continuation reads, in the right-hand side's coordinates. *)
       let cont_free = Escape.free_rels 1 b in
       let asgn =
@@ -10597,26 +10595,28 @@ and gen_fix env ?(all_fix_ids = []) ?(by_value = false) ~fix_idx (n, ty) f =
   let n_lam_params = List.length ids in
   (* The parameters as the body names them: renamed together with the
      fixpoints, which may take a parameter's name first. *)
-  let ids = safe_firstn n_lam_params renamed_fix_ids in
+  let binders = safe_firstn n_lam_params renamed_fix_ids in
   let renamed_n =
     fst (List.nth renamed_fix_ids
            (n_lam_params + (n_fix_funs - 1 - fix_idx))) in
-  let ids = List.filter (fun (_, ty) -> not (void_binder ty)) ids in
+  let ids = List.filter (fun (_, ty) -> not (void_binder ty)) binders in
   (* The parameters the body owns, passed by value in the generated lambda.
-     After push_vars'(ids @ fix_names), ids[0] is db 1, ..., ids[k-1] db k,
-     and the fixpoints follow; only parameters are owned.  A function whose
-     lambda takes every parameter by value ([by_value]: its group's plan
-     owns each, {!local_passing}) owns each: it holds its own copy. *)
-  let n_fix_params = List.length ids in
-  let n_total = n_fix_params + n_fix_funs in
+     After push_vars'(binders @ fix_names), binders[0] is db 1, ...,
+     binders[k-1] db k -- a binder of no runtime value, which the lambda
+     does not take, among them -- and the fixpoints follow; only parameters
+     of a runtime value are owned.  A function whose lambda takes every
+     parameter by value ([by_value]: its group's plan owns each,
+     {!local_passing}) owns each: it holds its own copy. *)
+  let n_total = n_lam_params + n_fix_funs in
   let fix_owned_base = Escape.infer_owned_params n_total f in
   let fix_sub_esc = Escape.infer_sub_bindings_escape_params n_total f in
   let owned_params =
-    owned_parameters n_fix_params
+    owned_parameters n_lam_params
       ~owned:(fun i ->
         let flag l = Option.default false (List.nth_opt l i) in
-        by_value || flag fix_owned_base || (flag fix_sub_esc && is_prod_ml_type (snd (List.nth ids i))) )
-      ~ty:(fun i -> snd (List.nth ids i))
+        let ty = snd (List.nth binders i) in
+        (not (void_binder ty)) && (by_value || flag fix_owned_base || (flag fix_sub_esc && is_prod_ml_type ty)) )
+      ~ty:(fun i -> snd (List.nth binders i))
   in
   (* The body returns the fixpoint's own codomain, not the enclosing
      function's: a result recovered from a box inside it is recovered at

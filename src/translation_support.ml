@@ -2811,7 +2811,7 @@ and abbreviates_value_inductive args body =
     [shared_ptr] is: copying one in is a retain, and dropping it at the end
     of the call a release.  Borrowed, they too are passed by const
     reference. *)
-let wrap_param_by_ownership ?(is_owned = false) cpp_ty =
+let cpp_lent_by_reference cpp_ty =
   let rec shared_block = function
     | Tfun _ -> true
     | Tnondeduced t | Tnamespace (_, t) -> shared_block t
@@ -2819,20 +2819,64 @@ let wrap_param_by_ownership ?(is_owned = false) cpp_ty =
     | _ -> false
   in
   match cpp_ty with
-  | Tshared_ptr _ when is_owned -> cpp_ty
-  | Tshared_ptr _ -> Tref (Lvalue, Tconst cpp_ty)
-  | _ when shared_block cpp_ty ->
-    if is_owned then cpp_ty else Tref (Lvalue, Tconst cpp_ty)
-  | _ when names_value_inductive cpp_ty ->
-    if is_owned then cpp_ty  (* pass by value, caller moves *)
-    else Tref (Lvalue, Tconst cpp_ty)  (* const T& for borrowing *)
-  | Tvar _ | Tqualified _ ->
-    (* Template type parameters and dependent types (e.g. typename C::t) have
-       unknown concrete size; always pass by const-ref to avoid deep copies.
-       When owned (caller moves in), pass by value to enable move semantics. *)
-    if is_owned then cpp_ty
-    else Tref (Lvalue, Tconst cpp_ty)
-  | _ -> cpp_ty
+  | Tshared_ptr _ -> true
+  | _ when shared_block cpp_ty -> true
+  | _ when names_value_inductive cpp_ty -> true
+  (* Template type parameters and dependent types (e.g. typename C::t) have
+     unknown concrete size. *)
+  | Tvar _ | Tqualified _ -> true
+  | _ -> false
+
+(** Whether a parameter of Core type [ty] that its function does not own is
+    lent by const reference, read off the Core type: a value inductive --
+    named as itself, or through an abbreviation whose body is one -- a
+    closure, a coinductive, a type variable, and a reified interaction tree,
+    each a value a copy of which costs a clone or a retain.  [None] where
+    the Core type does not say: one nothing determined, an erased or
+    promoted type, an abstract one, a type variable applied -- under the
+    abstractions over types erasure removes. *)
+let rec core_lent_by_reference ty =
+  match resolve_tmeta ty with
+  | ty when is_monadic_ml_type ty && (!tctx).itree_mode = Reified -> Some true
+  | Miniml.Tglob ((GlobRef.IndRef _ as r), _, _) ->
+    Some ((not (Table.is_enum_inductive r)) && not (Table.is_custom_scalar_ref r))
+  | Miniml.Tglob ((GlobRef.ConstRef kn as r), args, _)
+    when (not (Table.is_custom r)) && not (Table.is_promoted_type_var r || Table.is_erased_type_const r) -> (
+    match Table.lookup_typedef_unchecked kn with
+    | Some body -> (
+      (* As {!names_value_inductive} reads an abbreviation: its body a value
+         inductive, or a variable standing for one. *)
+      match resolve_tmeta (Mlutil.type_subst_list args body) with
+      | Miniml.Tglob ((GlobRef.IndRef _ | GlobRef.ConstRef _), _, _) as unfolded -> (
+        match core_lent_by_reference unfolded with
+        | Some lent ->
+          Some (lent && match unfolded with Miniml.Tglob (r, _, _) -> not (Table.is_coinductive r) | _ -> true)
+        | None -> None )
+      | _ -> Some false )
+    | None -> None )
+  | Miniml.Tglob (r, _, _) when Table.is_custom r -> Some false
+  (* A type abstraction erasure removes is no closure: what it returns is
+     the value. *)
+  | Miniml.Tarr (d, rest) when Mlutil.isTdummy d -> core_lent_by_reference rest
+  | Miniml.Tarr _ | Miniml.Tvar _ -> Some true
+  | _ -> None
+
+let wrap_param_by_ownership ?(is_owned = false) ?core cpp_ty =
+  let by_cpp = cpp_lent_by_reference cpp_ty in
+  let lent =
+    match Option.bind core core_lent_by_reference with
+    | Some by_core ->
+      if Probe.checking () && by_core <> by_cpp then
+        Probe.violation "parameter convention"
+          Pp.(
+            str "the Core type of a parameter says it is "
+            ++ str (if by_core then "lent by reference" else "copied")
+            ++ str ", its C++ type the other" );
+      by_core
+    | None -> by_cpp
+  in
+  (* Owned: by value, the caller moves it in. *)
+  if lent && not is_owned then Tref (Lvalue, Tconst cpp_ty) else cpp_ty
 
 (** How a parameter declared at [ty] -- after {!wrap_param_by_ownership},
     or as the [F &&] a deduced callable is -- with ownership [owned], is
@@ -2985,7 +3029,12 @@ let rec clean_self_ns t =
 (** One function of a local fixpoint block, as its Y-combinator form names
     it: the fixpoint's own name, the self parameter every impl lambda takes
     for it, and its parameters' C++ types, innermost first. *)
-type local_fix_self = { fix_id : Id.t; self_id : Id.t; param_tys_rev : cpp_type list }
+type local_fix_self = {
+  fix_id : Id.t;
+  self_id : Id.t;
+  param_tys_rev : cpp_type list;
+  param_core_tys_rev : Miniml.ml_type list;  (** the parameters' Core types, as [param_tys_rev] spells them *)
+}
 
 (** The {!local_fix_self} of each function of a block, from the fixpoints'
     renamed names and the parameters [gen_fix] gave them; [cpp_of] spells a
@@ -2995,7 +3044,8 @@ let local_fix_selves cpp_of renamed_ids funs_with_params =
     (fun (fix_id, _) (args, _) ->
       { fix_id;
         self_id = Id.of_string ("_self_" ^ Id.to_string fix_id);
-        param_tys_rev = List.map (fun (_, ty) -> cpp_of ty) args } )
+        param_tys_rev = List.map (fun (_, ty) -> cpp_of ty) args;
+        param_core_tys_rev = List.map snd args } )
     renamed_ids funs_with_params
 
 (** Rewrite a local fixpoint's recursive calls to pass the self-parameters.
@@ -3018,6 +3068,8 @@ let local_fix_selves cpp_of renamed_ids funs_with_params =
     another function -- is the function its wrapper would be, written where
     the wrapper is not yet declared: a closure over its parameters, of the
     C++ types [param_tys_rev] gives in reverse, calling the self-parameter.
+    The closure takes each by value and reads it once, passing it on: it
+    moves one a copy of which costs more ({!Ownership_plan.worth_moving}).
 
     Unless [passing], no self-parameter is passed: each call is flattened and
     still calls the fixpoint by its own name, as a loop lowered from the
@@ -3031,7 +3083,7 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
   let self_vars_rev = if passing then List.rev_map (fun s -> CPPvar s.self_id) selves else [] in
   let find_self id =
     Option.map
-      (fun s -> ((if passing then s.self_id else s.fix_id), s.param_tys_rev))
+      (fun s -> ((if passing then s.self_id else s.fix_id), s))
       (List.find_opt (fun s -> Id.equal id s.fix_id) selves)
   in
   let find_self_id id = Option.map fst (find_self id) in
@@ -3057,12 +3109,19 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
     | None -> (
       match e with
       | CPPvar id when passing && Option.has_some (find_self id) ->
-        let self_id, tys_rev = Option.get (find_self id) in
+        let self_id, self = Option.get (find_self id) in
+        let tys_rev = self.param_tys_rev in
         let n = List.length tys_rev in
         let params_rev =
           List.mapi (fun i ty -> (ty, Some (Id.of_string (Printf.sprintf "_ec%d" (n - 1 - i))))) tys_rev
         in
-        let args_rev = List.map (fun (_, x) -> CPPvar (Option.get x)) params_rev in
+        let args_rev =
+          List.map2
+            (fun (_, x) core ->
+              let v = CPPvar (Option.get x) in
+              if Ownership_plan.worth_moving core && not (Ml_type_util.ml_type_is_unit core) then CPPmove v else v )
+            params_rev self.param_core_tys_rev
+        in
         CPPlambda
           { cl_tparams = [];
             cl_binders = [];

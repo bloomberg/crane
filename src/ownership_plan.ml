@@ -29,7 +29,7 @@ type arm =
   | Fields of {case : ml_ast; by_value : bool list}
   | Instance of Occurrence.t
 
-type resume = {calls : Occurrence.t list; kept : Core_binder.t list}
+type resume = {calls : Occurrence.t list; kept : Core_binder.t list; held : Core_binder.t list}
 
 (* A local fixpoint applied where it is written, [at] its occurrence, and
    what each of its arguments reads: the variables, by level, with their
@@ -40,6 +40,14 @@ type argument = {variables : Levels.t; read_at : (int * Occurrence.t) list}
 type entered = {at : Occurrence.t; arguments : argument list; overlaps : int -> int -> bool}
 
 type resumes = {origin : Names.GlobRef.t; depth : int; resume_at : Core_binder.t -> resume option}
+
+(* Of a let a frame machine resumes at, by its occurrence: each binder the
+   frame saved for the call keeps, with its level, and whether the save is
+   its last read -- nothing the turn evaluates after the save, the call's
+   arguments, nor anything a closure reads at its uses, nor what follows the
+   let, reads it or a part of it, nor is another binder the frame keeps a
+   part of it or it one of that one; and it is no variable closures copy. *)
+type save = {save_at : Occurrence.t; saved : (Core_binder.t * int * bool) list}
 
 type t = {
   root : ml_ast;
@@ -54,6 +62,8 @@ type t = {
   captured_owned : (Occurrence.t * bool) list;
   copied_reads : Occurrence.t list;  (* reads of a variable closures copy *)
   entered : entered list;
+  saves : save list;
+  saved_owned : (Occurrence.t * Levels.t) list;  (* of each let [saves] names, the levels it keeps owned there *)
 }
 
 let empty =
@@ -68,7 +78,9 @@ let empty =
     captures = [];
     captured_owned = [];
     copied_reads = [];
-    entered = [] }
+    entered = [];
+    saves = [];
+    saved_owned = [] }
 
 (* The reads in [t] of variables bound outside it, by level, [t] standing [d]
    binders deep. *)
@@ -319,19 +331,33 @@ let sequential_bind use = Core_effects.find use = Some {operation = Bind; mode =
    frame saving them is made before [a]'s arguments are evaluated, and what
    follows reads them in the frame.  The save reads them: what reads them
    before it does not read them last. *)
-let kept_across resumes d a occurrence =
+let resume_of resumes d a occurrence =
   match (resumes, strip a) with
   | Some {origin; depth; resume_at}, MLapp (MLglob {occurrence = call; _}, _) -> (
     match resume_at (Core_binder.make ~origin ~level:(depth + d) ~site:occurrence ()) with
-    | Some {calls; kept} when List.exists (Occurrence.equal call) calls ->
-      Levels.of_list (List.map (fun (b : Core_binder.t) -> b.level - depth) kept)
-    | Some _ | None -> Levels.empty )
-  | _ -> Levels.empty
+    | Some ({calls; _} as r) when List.exists (Occurrence.equal call) calls -> Some (depth, r)
+    | Some _ | None -> None )
+  | _ -> None
+
+let kept_binders resumes d a occurrence =
+  match resume_of resumes d a occurrence with
+  | Some (depth, {kept; _}) -> List.map (fun (b : Core_binder.t) -> (b, b.level - depth)) kept
+  | None -> []
+
+let kept_across resumes d a occurrence = Levels.of_list (List.map snd (kept_binders resumes d a occurrence))
+
+(* Of the binders the frame saved at such a let keeps, the levels of those
+   it holds itself ({!resume.held}). *)
+let held_across resumes d a occurrence =
+  match resume_of resumes d a occurrence with
+  | Some (depth, {held; _}) -> Levels.of_list (List.map (fun (b : Core_binder.t) -> b.level - depth) held)
+  | None -> Levels.empty
 
 let liveness ~n_outer ~copied ~arms ~resumes t =
   let reads = ref [] in
   let captures = ref [] in
   let entered = ref [] in
+  let saves = ref [] in
   (* [walk ~consumed ~pinned parents d live t] records [t]'s reads and is
      what is live before [t], given [live] after it: both sets of variables
      in scope at [t], [d] binders deep.  [consumed] is whether [t] stands
@@ -409,8 +435,18 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
       let pinned_b = if reads_at_uses ~n_outer ~arms ty a occurrence then Levels.union pinned (free parents d a) else pinned in
       let parents_b = bind parents d ~n:1 in
       let live_b = walk ~consumed ~pinned:pinned_b parents_b (d + 1) live b in
-      let kept = kept_across resumes d a occurrence in
+      let kept_at = kept_binders resumes d a occurrence in
+      let kept = Levels.of_list (List.map snd kept_at) in
       let saved, after_save = Levels.partition (fun l -> Levels.mem (storage l) kept) (leave parents_b d live_b) in
+      if kept_at <> [] then begin
+        let read_after = Levels.union (free parents d a) (Levels.union live pinned) in
+        let last l =
+          (not (Levels.mem l copied))
+          && (not (Levels.exists (overlap parents l) read_after))
+          && not (Levels.exists (overlap parents l) (Levels.remove l kept))
+        in
+        saves := {save_at = occurrence; saved = List.map (fun (b, l) -> (b, l, last l)) kept_at} :: !saves
+      end;
       Levels.union saved (walk ~pinned parents d after_save a)
     (* A branch reads its pattern variables through the scrutinee's own
        evaluation -- a field of the record it names, a component of the pair
@@ -446,7 +482,7 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
     |> List.fold_left Levels.union live
   in
   ignore (walk ~pinned:Levels.empty Parents.empty 0 Levels.empty t);
-  (!reads, !captures, !entered)
+  (!reads, !captures, !entered, !saves)
 
 type fate = Last_use | Read_again | Inspected | Unplanned
 
@@ -524,10 +560,14 @@ end
    variable it reads is owned where it is read: bound by value, so that the
    region may take its value.  [owned] holds the levels of the variables the
    region owns at its root. *)
-let ownership ~n_outer ~reads ~arms ~owned ~copied t =
+let ownership ~n_outer ~resumes ~reads ~arms ~owned ~copied t =
   let out = ref [] in
   let captured = ref [] in
   let copied_reads = ref [] in
+  let saved_owned = ref [] in
+  (* The levels of the binders the frames of the turn [own] is in hold
+     ({!resume.held}). *)
+  let frame_held = ref Levels.empty in
   let rec own owned d t =
     let all = List.iter (own owned d) in
     match t with
@@ -555,11 +595,21 @@ let ownership ~n_outer ~reads ~arms ~owned ~copied t =
         (closure_reads d t)
     | MLletin (x, ty, a, b, occurrence) ->
       own owned d a;
+      (* A binder an enclosing frame of the turn holds is the handler's own,
+         for the frame saved here to take; where else it is read, it is
+         read as it was bound. *)
+      ( match kept_across resumes d a occurrence with
+      | kept when not (Levels.is_empty kept) ->
+        saved_owned := (occurrence, Levels.inter kept (Levels.union owned !frame_held)) :: !saved_owned
+      | _ -> () );
       (* What a local fixpoint closes over, it reads by reference. *)
       let owned_b =
         match a with MLfix _ -> Levels.diff owned (free Parents.empty d a) | _ -> owned
       in
-      own (if let_owned owned d x ty a occurrence then Levels.add d owned_b else owned_b) (d + 1) b
+      let enclosing = !frame_held in
+      frame_held := Levels.union enclosing (held_across resumes d a occurrence);
+      own (if let_owned owned d x ty a occurrence then Levels.add d owned_b else owned_b) (d + 1) b;
+      frame_held := enclosing
     | MLcase (ty, scrut, branches) ->
       own owned d scrut;
       Array.iteri
@@ -627,13 +677,26 @@ let ownership ~n_outer ~reads ~arms ~owned ~copied t =
         | _ -> owned
   in
   own owned 0 t;
-  (!out, !captured, !copied_reads)
+  (!out, !captured, !copied_reads, !saved_owned)
 
-let plan ~n_outer ~resumes root root_owned root_copied arms (reads, captures, entered) =
-  let owned, captured_owned, copied_reads =
-    ownership ~n_outer ~reads ~arms ~owned:root_owned ~copied:root_copied root
+let plan ~n_outer ~resumes root root_owned root_copied arms (reads, captures, entered, saves) =
+  let owned, captured_owned, copied_reads, saved_owned =
+    ownership ~n_outer ~resumes ~reads ~arms ~owned:root_owned ~copied:root_copied root
   in
-  {root; n_outer; resumes; root_owned; root_copied; arms; reads; owned; captures; captured_owned; copied_reads; entered}
+  { root;
+    n_outer;
+    resumes;
+    root_owned;
+    root_copied;
+    arms;
+    reads;
+    owned;
+    captures;
+    captured_owned;
+    copied_reads;
+    entered;
+    saves;
+    saved_owned }
 
 let region ?(owned = []) ?(copied = []) ?resumes ~n_outer t =
   let levels is = Levels.of_list (List.map (fun i -> -i) is) in
@@ -670,7 +733,7 @@ let reuse_arm p ~scrutinee ~branch ~constructor =
         Pp.(str "a branch rebuilding in its scrutinee's storage returns no construction to take it");
     plan ~n_outer:p.n_outer ~resumes:p.resumes p.root p.root_owned p.root_copied
       (Rebuild {scrutinee; branch; consumers} :: p.arms)
-      (p.reads, p.captures, p.entered)
+      (p.reads, p.captures, p.entered, p.saves)
   | None -> p
 
 module Allocation = struct
@@ -686,7 +749,7 @@ let fields_by_value p ~case ~by_value =
   if p == empty then p
   else
     plan ~n_outer:p.n_outer ~resumes:p.resumes p.root p.root_owned p.root_copied (Fields {case; by_value} :: p.arms)
-      (p.reads, p.captures, p.entered)
+      (p.reads, p.captures, p.entered, p.saves)
 
 (* Unlike the other arms, this one changes what a closure reads where it is
    made, so the reads are planned again. *)
@@ -909,4 +972,41 @@ module Local_passing = struct
         (Pp.str "a local fixpoint is generated passing its parameters otherwise than it was before");
       recorded := (member, t) :: List.filter (fun (m, _) -> not (same m member)) !recorded
     | None -> recorded := (member, t) :: !recorded
+end
+
+let save_moves p let_ =
+  match List.filter (fun s -> Occurrence.equal s.save_at let_) p.saves with
+  | [] -> None
+  | saves ->
+    let owned =
+      match List.filter_map (fun (o, l) -> if Occurrence.equal o let_ then Some l else None) p.saved_owned with
+      | [] -> Levels.empty
+      | l :: ls -> List.fold_left Levels.inter l ls
+    in
+    let moved (b, l, _) =
+      Levels.mem l owned
+      && List.for_all
+           (fun s -> List.exists (fun (b', l', last) -> l' = l && Core_binder.equal b b' && last) s.saved)
+           saves
+    in
+    Some (List.filter_map (fun ((b, _, _) as s) -> if moved s then Some b else None) (List.hd saves).saved)
+
+module Frame_save = struct
+  type t = Core_binder.t list
+
+  let recorded : (Core_binder.t * t) list ref = State.cell State.Extraction []
+
+  let same b b' = Core_binder.equal b b' && Core_binder.same_site b b'
+
+  let lookup binder = List.find_map (fun (b, t) -> if same b binder then Some t else None) !recorded
+
+  let record binder t =
+    match lookup binder with
+    | Some t' when List.equal Core_binder.equal t t' -> ()
+    | Some t' ->
+      Probe.violation "frame save"
+        (Pp.str "a let a frame machine resumes at is generated saving its frame otherwise than it was before");
+      let both = List.filter (fun b -> List.exists (Core_binder.equal b) t') t in
+      recorded := (binder, both) :: List.filter (fun (b, _) -> not (same b binder)) !recorded
+    | None -> recorded := (binder, t) :: !recorded
 end

@@ -76,6 +76,9 @@ type call_frame_info = {
   cf_pointers : bool list;
       (** Which slots the frame keeps as pointers, as the recursion plan has
           it *)
+  cf_planned_save : bool;
+      (** Whether which slots the push saving the frame moves is the
+          ownership plan's ({!Ownership_plan.Frame_save}) *)
 }
 
 (** [make_slots ~types ~exprs] pairs a frame's saved types with the
@@ -404,12 +407,12 @@ let make_cont_env cont_vars cont_types env =
     @param saved_exprs The saved expressions (for decltype fallback)
     @param env Type environment at frame creation point
     @param handler The handler body statements *)
-let register_frame frames_ref ~name ~saved_types ~saved_exprs ~env ~handler ~pointers =
+let register_frame frames_ref ~name ~saved_types ~saved_exprs ~env ~handler ~pointers ~planned_save =
   frames_ref :=
     !frames_ref
     @ [{cf_name = name;
         cf_slots = make_slots ~types:saved_types ~exprs:saved_exprs;
-        cf_env = env; cf_handler = handler; cf_pointers = pointers}]
+        cf_env = env; cf_handler = handler; cf_pointers = pointers; cf_planned_save = planned_save}]
 
 (** {3 Frame-based non-tail rewrite}
 
@@ -1404,7 +1407,16 @@ and rewrite_enter_stmts ctx stmts =
          plan says ({!Recursion_plan.resume.read_by_call}); one held by value
          is moved into the frame there.  One the frame keeps as a pointer is
          pointed at.  Under [CRANE_CHECK_IR] the call's arguments must read
-         none of those the plan says they do not. *)
+         none of those the plan says they do not.  Which a save moves is the
+         ownership plan's where it planned the let the machine resumes at
+         ({!Ownership_plan.Frame_save}): each binder it owns there or an
+         enclosing frame of the turn holds, read last by the save; the
+         declared types say only which are worth moving.  Elsewhere, a local
+         declared by value that no reference names. *)
+      let plan_moves =
+        let b = match tgt with Declare (_, b) -> b | Existing -> binder_of ctx id | Declare_static _ -> None in
+        Option.bind b Ownership_plan.Frame_save.lookup
+      in
       let saved_conv =
         let read_by_call cid =
           match binder_of ctx cid with
@@ -1433,11 +1445,28 @@ and rewrite_enter_stmts ctx stmts =
         in
         List.map2
           (fun cid pointer ->
-            if (not pointer) && owned cid && read_by_call cid = Some false then CPPmove (CPPvar cid) else CPPvar cid )
+            let old = (not pointer) && owned cid && read_by_call cid = Some false in
+            let planned =
+              Option.map
+                (fun moved ->
+                  (not pointer)
+                  && (match List.assoc_opt cid env with Some ty -> movable ty | None -> false)
+                  && Option.cata (fun b -> List.exists (Core_binder.equal b) moved) false (binder_of ctx cid) )
+                plan_moves
+            in
+            (* Under [CRANE_CHECK_IR], the plan moves at least what the
+               C++ reading -- a local declared by value, not aliased -- would:
+               it moves more where a binder the C++ finds aliased is one it
+               owns, a structured binding's by value or a field of an owned
+               match. *)
+            if Probe.checking () && old && planned = Some false then
+              Probe.violation "frame save"
+                (Pp.str "a frame save the plan decides keeps a local the C++ reading would move");
+            if Option.default old planned then CPPmove (CPPvar cid) else CPPvar cid )
           cont_vars pointers
       in
       register_frame frames_ref ~name:call_name ~saved_types:cont_types
-        ~saved_exprs:cont_saved ~env ~handler ~pointers;
+        ~saved_exprs:cont_saved ~env ~handler ~pointers ~planned_save:(Option.has_some plan_moves);
       [
         make_stack_push (CPPstruct_id (Id.of_string call_name, [], saved_conv));
         make_stack_push enter;
@@ -1806,12 +1835,30 @@ let make_owned_param_matches owned_names stmts =
 
     Value fields bound from owned [v_mut()] matches (e.g. [auto &[a0, a1] =
     std::get<...>(l.v_mut())]) are also moveable: the scrutinee is owned and
-    dead after the frame push, so moving the field avoids a deep copy. *)
-let optimize_frame_push_args frame_field_types stmts =
+    dead after the frame push, so moving the field avoids a deep copy.
+
+    A continuation frame among [planned_saves] -- one whose save the
+    ownership plan decided ({!call_frame_info.cf_planned_save}) -- moves no
+    further local than its save does. *)
+let optimize_frame_push_args ?(planned_saves = []) frame_field_types stmts =
   if frame_field_types = [] then stmts
   else
     let lookup name_s = List.assoc_opt name_s frame_field_types in
-    let should_move ~is_enter ~owned_vars ty arg =
+    let planned name = List.mem (Id.to_string name) planned_saves in
+    (* A save the plan decided moves what it moves already: one more the C++
+       reading would add is not made, and is reported under [CRANE_CHECK_IR]
+       where it is a local declared by value -- a binding of a match the C++
+       takes for owned may be a const reference into a value the plan finds
+       lent, which a move would copy. *)
+    let withheld ~decl_owned name id =
+      if List.exists (Id.equal id) decl_owned then
+        Probe.violation "frame save"
+          Pp.(
+            str "the local " ++ Id.print id ++ str " the save of " ++ Id.print name
+            ++ str " keeps, as the plan decides, is one the frame push reading would move" );
+      false
+    in
+    let should_move ~decl_owned ~name ~is_enter ~owned_vars ty arg =
       let stripped = strip_ref_and_const_type ty in
       worthwhile_move_type stripped
       &&
@@ -1819,14 +1866,15 @@ let optimize_frame_push_args frame_field_types stmts =
       | CPPmove _ -> false
       | CPPaccess (Adot, CPPvar id, _) when Id.equal id id_f -> true
       | CPPvar id when Id.equal id id_result -> true
-      | CPPvar id when List.exists (Id.equal id) owned_vars -> true
+      | CPPvar id when List.exists (Id.equal id) owned_vars ->
+        if planned name then withheld ~decl_owned name id else true
       | _ -> false
     in
-    let adjust_args ~is_enter ~owned_vars types args =
+    let adjust_args ~decl_owned ~name ~is_enter ~owned_vars types args =
       if List.length types = List.length args then
         List.map2
           (fun ty arg ->
-            if should_move ~is_enter ~owned_vars ty arg then CPPmove arg else arg)
+            if should_move ~decl_owned ~name ~is_enter ~owned_vars ty arg then CPPmove arg else arg)
           types args
       else
         args
@@ -1902,7 +1950,7 @@ let optimize_frame_push_args frame_field_types stmts =
         | Some _ | None -> Hashtbl.replace last_push_of (Id.to_string b) idx
       in
       List.iteri (fun idx -> List.iter (note idx)) through;
-      let should_move_in_group ~is_enter idx ty arg =
+      let should_move_in_group ~name ~is_enter idx ty arg =
         let stripped = strip_ref_and_const_type ty in
         worthwhile_move_type stripped
         &&
@@ -1911,8 +1959,11 @@ let optimize_frame_push_args frame_field_types stmts =
         | CPPaccess (Adot, CPPvar id, _) when Id.equal id id_f -> true
         | CPPvar id when Id.equal id id_result -> true
         | CPPvar id when List.exists (Id.equal id) owned_vars ->
-          Hashtbl.find_opt last_push_of (Id.to_string id) = Some idx
-          && not (List.exists (Id.equal id) (List.nth through idx))
+          let m =
+            Hashtbl.find_opt last_push_of (Id.to_string id) = Some idx
+            && not (List.exists (Id.equal id) (List.nth through idx))
+          in
+          if m && planned name then withheld ~decl_owned name id else m
         | _ -> false
       in
       List.mapi (fun idx (callee, name, targs, args) ->
@@ -1920,7 +1971,7 @@ let optimize_frame_push_args frame_field_types stmts =
         | Some types when List.length types = List.length args ->
           let is_enter = Id.equal name id_enter in
           let args' = List.map2 (fun ty arg ->
-            if should_move_in_group ~is_enter idx ty arg
+            if should_move_in_group ~name ~is_enter idx ty arg
             then CPPmove arg else arg
           ) types args in
           Sexpr (CPPfun_call (call_opaque, callee, of_reversed ([CPPstruct_id (name, targs, args')])))
@@ -1959,7 +2010,7 @@ let optimize_frame_push_args frame_field_types stmts =
                (call_opaque, callee,
                 of_reversed
                   [CPPstruct_id (name, targs,
-                    adjust_args ~is_enter ~owned_vars types args)]))
+                    adjust_args ~decl_owned ~name ~is_enter ~owned_vars types args)]))
         | None -> map_stmt Fun.id (on_stmt ~decl_owned match_owned) Fun.id s )
       | Smatch (scrut, branches, default) ->
         let branches' =
@@ -2756,6 +2807,8 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
     @ call_structs
     @ [Susing (id_Frame, Tvariant (Inline_variant, variant_tys))]
   in
+  (* The saves whose moves the ownership plan decided. *)
+  let planned_saves = List.filter_map (fun cf -> if cf.cf_planned_save then Some cf.cf_name else None) frames in
   let frame_field_types =
     List.map (fun ee -> (ee_name ee, List.map snd (entry_fields ee))) emissions
     @ List.map
@@ -2803,7 +2856,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
        binding of a frame field, which moves nothing (round 66). *)
     let handler =
       adjust_frame_push_args ~frame_sptr all_frame_ps (make_param_copies ee.ee_params @ body)
-      |> optimize_frame_push_args frame_field_types
+      |> optimize_frame_push_args ~planned_saves frame_field_types
     in
     make_frame_branch (ee_name ee) handler
   in
@@ -2833,7 +2886,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
             adjust_frame_push_args ~frame_sptr all_frame_ps handler
           else handler
         in
-        make_frame_branch cf.cf_name (handler |> optimize_frame_push_args frame_field_types))
+        make_frame_branch cf.cf_name (handler |> optimize_frame_push_args ~planned_saves frame_field_types))
       frames
   in
   make_loop_and_return ?fn_name struct_defs ret_ty init_push
