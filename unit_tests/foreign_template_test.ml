@@ -20,7 +20,7 @@ let () =
   check "match holes"
     (List.mem CCscrut (match_template "if (%scrut) { %br0 } else { %br1 }")
      && List.mem (CCbody 1) (match_template "if (%scrut) { %br0 } else { %br1 }"));
-  check "result" (with_result "_r" "%result = %a0;" = "_r = %a0;");
+  check "result" (block_statements "%result = %a0;" = [[CCresult; CCstring " = "; CCarg 0]]);
   check "drain"
     (drain_template "while (!%scrut.empty()) { %yield(f(x)); }"
      = [Drain_text "while (!%scrut.empty()) { "; Drain_yield "f(x)"; Drain_text "; }"]);
@@ -49,7 +49,7 @@ let () =
   check "standard: an unknown name" (standard "std::frobnicate(%a0)" = []);
   check "standard: holes are not text" (standard "%a0.size()" = []);
   let stmts s =
-    List.map (List.filter (( <> ) (CCstring ""))) (statements (term_template (with_result "_r" s)))
+    List.map (List.filter (( <> ) (CCstring ""))) (block_statements s)
   in
   check "statements: one per semicolon, trimmed"
     (stmts " _r = %a0;  f(_r) ;" = [[CCstring "_r = "; CCarg 0]; [CCstring "f(_r)"]]);

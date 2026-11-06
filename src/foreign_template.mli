@@ -16,6 +16,7 @@ type custom_case =
   | CCstring of string  (** literal text *)
   | CCarg of int  (** [%a{i}]: value argument [i] *)
   | CCret  (** [%ret]: the type the call yields *)
+  | CCresult  (** [%result]: the variable a block template assigns *)
 
 (** The tokens of a type template: [%t{i}] and [%elem{i}] holes. *)
 val type_template : string -> custom_case list
@@ -23,16 +24,6 @@ val type_template : string -> custom_case list
 (** The tokens of a term template: a type template's holes, [%a{i}] and
     [%ret]. *)
 val term_template : string -> custom_case list
-
-(** [settle_elements spell s] is the term template [s] with each [%elem{i}]
-    hole written as [spell i] and every other token as [s] writes it: an
-    element hole decided before anything is printed. *)
-val settle_elements : (int -> string) -> string -> string
-
-(** [element_spelled ~wrapper i] is a [Boxed Element] [wrapper], a type
-    template over its one element, holding a template's type argument [i]
-    there: ["crane::box<%t0>"] at [1] is ["crane::box<%t1>"]. *)
-val element_spelled : wrapper:string -> int -> string
 
 (** The tokens of an inductive's match template. *)
 val match_template : string -> custom_case list
@@ -67,16 +58,13 @@ val arg_mentions : string -> int -> int
     once, so that the C++ it expands to evaluates each exactly once. *)
 val mentions_each_arg_once : string -> bool
 
-(** [with_result name s] is [s] with every [%result] spelled [name]. *)
-val with_result : string -> string -> string
-
-(** The statements of a block template's tokens: split at the semicolons of
-    its own text that end a statement -- not one inside a string or character
-    literal, or inside parentheses (a [for] header's).  A hole is never split:
-    what is spliced into it is not read.  Each statement is trimmed of the
-    blanks around it and has no semicolon of its own; a blank statement is
-    dropped. *)
-val statements : custom_case list -> custom_case list list
+(** The statements of a block template: a term template's holes and
+    [%result], split at the semicolons of its own text that end a statement
+    -- not one inside a string or character literal, or inside parentheses (a
+    [for] header's).  A hole is never split: what is spliced into it is not
+    read.  Each statement is trimmed of the blanks around it and has no
+    semicolon of its own; a blank statement is dropped. *)
+val block_statements : string -> custom_case list list
 
 (** A mapping that names a template without saying where its arguments go
     takes them in order: ["Sum1"] at two arguments is ["Sum1<%t0, %t1>"]. *)

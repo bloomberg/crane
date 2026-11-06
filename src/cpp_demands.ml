@@ -91,7 +91,7 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
         List.iter ty tys;
         Some t )
     | Tforeign fr ->
-      foreign fr;
+      foreign Foreign_constant fr;
       Some t
     (* Only its head is written. *)
     | Ttyctor _ ->
@@ -127,10 +127,12 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
               expr e;
               string_literal e )
             (nth holes.args i)
-        | CCret | CCbr_var _ | CCstring _ -> () )
+        | CCret | CCresult | CCbr_var _ | CCstring _ -> () )
       cmds
-  (* An instantiated mapping writes what its pieces name. *)
-  and foreign fr =
+  (* An instantiated mapping writes what its pieces name; a block, the type
+     of its result too. *)
+  and foreign use fr =
+    if use = Foreign_block || use = Foreign_statements then ty (Option.default Tauto fr.fr_yields);
     List.iter
       (function
         | Fp_type i | Fp_element (i, _) -> ty (Option.default Tany (List.nth_opt fr.fr_types i))
@@ -141,11 +143,8 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
               string_literal e )
             (List.nth_opt fr.fr_values i)
         | Fp_yields -> Option.iter ty fr.fr_yields
-        | Fp_text _ -> () )
+        | Fp_text _ | Fp_result | Fp_statement_end -> () )
       fr.fr_pieces
-  and block_template ?yields holes text =
-    ty (Option.default Tauto yields);
-    custom holes (Foreign_template.term_template (Foreign_template.with_result "_r" text))
   and expr e =
     ( match e with
     | CPPmove _ | CPPin_place | CPPin_place_index _ | CPPdeclval _ -> std "utility"
@@ -192,22 +191,14 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
       global subject
     | _ -> () );
     match e with
-    | CPPforeign (_, fr) -> foreign fr
-    (* Only a block is still a text here: every other inline mapping was
-       instantiated at the seam, and what reads demands reads settled
-       declarations (probed, default and CHECK: no other form reaches). *)
-    | CPPglob (r, tys, Some {ci_inline = Some tmpl; ci_yields; _}) ->
-      if tmpl.it_form = Block_iife then block_template ?yields:ci_yields {no_holes with tyargs = tys} tmpl.it_text
-      else uninstantiated_mapping r
+    | CPPforeign (use, fr) -> foreign use fr
+    (* Every inline mapping was instantiated at the seam, and what reads
+       demands reads instantiated declarations. *)
+    | CPPglob (r, _, Some {ci_inline = Some _; _}) | CPPfun_call (_, CPPglob (r, _, Some {ci_inline = Some _; _}), _) ->
+      uninstantiated_mapping r
     | CPPglob (r, tys, _) ->
       global r;
       List.iter ty tys
-    | CPPfun_call (res, CPPglob (r, tys, Some {ci_inline = Some tmpl; _}), call) -> (
-      match tmpl.it_form with
-      | Block_iife ->
-        let yields = match res.cs_yields with Ryields t -> Some t | Ropaque -> None in
-        block_template ?yields {no_holes with tyargs = tys; args = call_args call} tmpl.it_text
-      | Bare_callee | Templated -> uninstantiated_mapping r )
     | CPPfun_call (_, f, args) ->
       expr f;
       List.iter expr args.rev
@@ -243,8 +234,7 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
     | Scustom_case (typ, scrut, tyargs, cases, cm) ->
       custom {no_holes with typ = Some typ; scrut = Some scrut; tyargs; cases}
         (Foreign_template.match_template cm.cm_template)
-    | Sblock_custom (_, text, _, result_ty, args, tyargs, _) ->
-      block_template ~yields:result_ty {no_holes with tyargs; args} text
+    | Sblock_custom (r, _, _, _, _, _, _) -> uninstantiated_mapping r
     | Smatch (scrut, branches, default) ->
       expr scrut.sc_expr;
       List.iter

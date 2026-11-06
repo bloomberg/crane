@@ -639,6 +639,7 @@ let foreign_pieces ~element tokens =
       | CCelem i -> Fp_element (i, element i)
       | CCarg i -> Fp_value i
       | CCret -> Fp_yields
+      | CCresult -> Fp_result
       | CCscrut | CCty | CCbody _ | CCbr_var _ | CCbr_var_ty _ ->
         CErrors.anomaly (Pp.str "foreign_pieces: a match template's hole in a type or term template"))
     tokens
@@ -649,16 +650,6 @@ let boxed_by ~boxing r tys i =
   if boxing && recurses_boxed (Option.default Tany (List.nth_opt tys i)) then
     Table.find_boxed_wrapper_opt (container_of r)
   else None
-
-(* A [%result] block's text, its element holes decided: it is per use, and
-   printed by splicing. *)
-let settle_block ~boxing r tys text =
-  Foreign_template.settle_elements
-    (fun i ->
-      match boxed_by ~boxing r tys i with
-      | Some wrapper -> Foreign_template.element_spelled ~wrapper i
-      | None -> Printf.sprintf "%%t%d" i)
-    text
 
 let is_templated = function Some {ci_inline = Some {it_form = Templated; _}; _} -> true | _ -> false
 
@@ -688,6 +679,18 @@ and instantiated_foreign ~boxing r tokens tys values yields =
     fr_values = List.map (instantiated_expr ~boxing) values;
     fr_yields = Option.map (instantiated_type ~boxing) yields;
     fr_pieces = foreign_pieces ~element tokens }
+(* A [%result] block's statements, each element hole decided on the
+   argument the use supplies. *)
+and instantiated_block ~boxing r text tys values yields =
+  let element i = Option.map wrapper_pieces (boxed_by ~boxing r tys i) in
+  { fr_custom = r;
+    fr_types = List.map (instantiated_type ~boxing) tys;
+    fr_values = List.map (instantiated_expr ~boxing) values;
+    fr_yields = Option.map (instantiated_type ~boxing) yields;
+    fr_pieces =
+      List.concat_map
+        (fun stmt -> foreign_pieces ~element stmt @ [Fp_statement_end])
+        (Foreign_template.block_statements text) }
 (* A text with no hole, applied to the type arguments [tys]: [text<t0, t1>]. *)
 and bare_callee ~boxing r text tys =
   let applied = match tys with [] -> [] | _ -> [Fp_text "<"] @ List.concat (List.mapi (fun i _ -> (if i > 0 then [Fp_text ", "] else []) @ [Fp_type i]) tys) @ [Fp_text ">"] in
@@ -706,9 +709,12 @@ and instantiated_expr ~boxing e =
     let args = call_args call in
     let yields = match res.cs_yields with Ryields t -> Some t | Ropaque -> None in
     CPPforeign (Foreign_call, instantiated_foreign ~boxing n tokens tys (CList.firstn (min named (List.length args)) args) yields)
-  | CPPglob (x, tys, Some ({ci_inline = Some ({it_form = Block_iife; _} as tmpl); _} as ci)) ->
-    let ci = {ci with ci_inline = Some {tmpl with it_text = settle_block ~boxing x tys tmpl.it_text}} in
-    map_expr (instantiated_expr ~boxing) (instantiated_stmt ~boxing) (instantiated_type ~boxing) (CPPglob (x, tys, Some ci))
+  | CPPglob (x, tys, Some {ci_inline = Some {it_form = Block_iife; it_text; _}; ci_yields}) ->
+    CPPforeign (Foreign_block, instantiated_block ~boxing x it_text tys [] ci_yields)
+  (* Every argument of a block's call is its own, spliced or not. *)
+  | CPPfun_call (res, CPPglob (n, tys, Some {ci_inline = Some {it_form = Block_iife; it_text; _}; _}), call) ->
+    let yields = match res.cs_yields with Ryields t -> Some t | Ropaque -> None in
+    CPPforeign (Foreign_block, instantiated_block ~boxing n it_text tys (call_args call) yields)
   (* A text that places nothing is a callee: the call stays a call, of the
      text applied to the type arguments, and its arguments are written as a
      call's, not spliced. *)
@@ -733,15 +739,12 @@ and instantiated_expr ~boxing e =
   | CPPcontainer_cast (t, e', suppress) -> CPPcontainer_cast (instantiated_type ~boxing:(boxing && not suppress) t, instantiated_expr ~boxing e', suppress)
   | e -> map_expr (instantiated_expr ~boxing) (instantiated_stmt ~boxing) (instantiated_type ~boxing) e
 and instantiated_stmt ~boxing = function
+  (* The variable the block assigns is declared in front of it. *)
   | Sblock_custom (r, text, result, result_ty, args, tys, b) ->
-    Sblock_custom
-      ( r,
-        settle_block ~boxing r tys text,
-        result,
-        instantiated_type ~boxing result_ty,
-        List.map (instantiated_expr ~boxing) args,
-        List.map (instantiated_type ~boxing) tys,
-        b )
+    Sasgn
+      ( result,
+        Declare (instantiated_type ~boxing result_ty, b),
+        CPPforeign (Foreign_statements, instantiated_block ~boxing r text tys args (Some result_ty)) )
   | s -> map_stmt (instantiated_expr ~boxing) (instantiated_stmt ~boxing) (instantiated_type ~boxing) s
 
 let instantiate_type = instantiated_type ~boxing:true

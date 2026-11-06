@@ -21,6 +21,7 @@ type custom_case =
   | CCstring of string
   | CCarg of int
   | CCret
+  | CCresult
 
 (** Test whether a character is an ASCII digit. *)
 let is_digit c = c >= '0' && c <= '9'
@@ -204,12 +205,6 @@ let parse_term_template s =
        (expand_numbered_args "t" (fun i -> CCty_arg i)
           (parse_numbered_args "a" (fun i -> CCarg i) s)))
 
-(** Flatten a token list known to hold only literal text back into a string. *)
-let flatten_custom_strings cmds =
-  String.concat ""
-    (List.map (function CCstring s -> s
-      | _ -> CErrors.anomaly (Pp.str "flatten_custom_strings: non-string command")) cmds)
-
 (** A memoized parser: a mapping's text parses to the same tokens every time. *)
 let memoized parse =
   let cache = Hashtbl.create 64 in
@@ -224,27 +219,6 @@ let memoized parse =
 let type_template = memoized parse_type_template
 let term_template = memoized parse_term_template
 
-let text_of_term_token = function
-  | CCstring s -> s
-  | CCty_arg i -> Printf.sprintf "%%t%d" i
-  | CCelem i -> Printf.sprintf "%%elem%d" i
-  | CCarg i -> Printf.sprintf "%%a%d" i
-  | CCret -> "%ret"
-  | CCscrut | CCty | CCbody _ | CCbr_var _ | CCbr_var_ty _ ->
-    CErrors.anomaly (Pp.str "text_of_term_token: a match template's hole in a term template")
-
-let settle_elements spell s =
-  let tokens = term_template s in
-  if List.exists (function CCelem _ -> true | _ -> false) tokens then
-    String.concat "" (List.map (function CCelem i -> spell i | tok -> text_of_term_token tok) tokens)
-  else s
-
-let element_spelled ~wrapper i =
-  String.concat ""
-    (List.map
-       (function CCty_arg 0 | CCelem 0 -> Printf.sprintf "%%t%d" i | tok -> text_of_term_token tok)
-       (type_template wrapper))
-
 let match_template =
   memoized (fun s ->
       parse_custom_fixed "scrut" CCscrut s
@@ -253,9 +227,6 @@ let match_template =
       |> expand_numbered_args "br" (fun i -> CCbody i)
       |> expand_custom_binders "b" "a" (fun i j -> CCbr_var (i, j))
       |> expand_custom_binders "b" "t" (fun i j -> CCbr_var_ty (i, j)) )
-
-let with_result name s =
-  flatten_custom_strings (parse_custom_fixed "result" (CCstring name) s)
 
 let statements tokens =
   let depth = ref 0 in
@@ -327,6 +298,16 @@ let statements tokens =
     List.filter (function CCstring "" -> false | _ -> true) stmt
   in
   List.filter (fun stmt -> stmt <> []) (List.map trim (List.rev !stmts))
+
+(* [%result] is read first: the term placeholders are read in the text
+   around it. *)
+let block_statements =
+  memoized (fun s ->
+      statements
+        (expand_custom_fixed "ret" CCret
+           (expand_elem_args
+              (expand_numbered_args "t" (fun i -> CCty_arg i)
+                 (expand_numbered_args "a" (fun i -> CCarg i) (parse_custom_fixed "result" CCresult s))))))
 
 type drain_token = Drain_text of string | Drain_yield of string
 

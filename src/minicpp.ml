@@ -798,10 +798,12 @@ and foreign_piece =
   | Fp_element of int * wrapper_piece list option
   | Fp_value of int
   | Fp_yields
+  | Fp_result
+  | Fp_statement_end
 
 and wrapper_piece = Wp_text of string | Wp_element
 
-and foreign_use = Foreign_constant | Foreign_call
+and foreign_use = Foreign_constant | Foreign_call | Foreign_block | Foreign_statements
 
 let inline_shape_of_text s =
   if String.equal s "%a0" then Inline_identity

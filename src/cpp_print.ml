@@ -281,7 +281,8 @@ let pp_type_piece r arg = function
   | Fp_element (i, Some wrapper) ->
     let element = Pp.string_of_ppcmds (arg i) in
     str (String.concat "" (List.map (function Wp_text s -> s | Wp_element -> element) wrapper))
-  | Fp_value _ | Fp_yields -> CErrors.anomaly Pp.(str "the type mapping " ++ GlobRef.print r ++ str " names a value")
+  | Fp_value _ | Fp_yields | Fp_result | Fp_statement_end ->
+    CErrors.anomaly Pp.(str "the type mapping " ++ GlobRef.print r ++ str " names a value")
 
 let pp_type_pieces r pieces arg =
   let arg i =
@@ -759,7 +760,9 @@ let foreign_text fr =
          | Fp_type i -> Printf.sprintf "%%t%d" i
          | Fp_element (i, _) -> Printf.sprintf "%%elem%d" i
          | Fp_value i -> Printf.sprintf "%%a%d" i
-         | Fp_yields -> "%ret")
+         | Fp_yields -> "%ret"
+         | Fp_result -> "%result"
+         | Fp_statement_end -> ";")
        fr.fr_pieces)
 
 (* Whether [probe], a type constructor applied to the sentinel, is written as
@@ -1488,48 +1491,28 @@ and pp_member_name ctx method_name = function
 
 and pp_cpp_expr ctx env args t =
   let apply st = pp_apply_cpp st args in
-  (* Generate an IIFE wrapper for a block template (%result) in expression
-     position.  [ref_name] is for debug labels, [custom] is the raw template
-     string, [tys] are type args, [val_args] are value args (already reversed
-     for pp_custom). *)
-  let gen_block_iife ?yields ref_name custom tys val_args =
-    (* What the block evaluates to, as translation recorded it -- on the call
-       node for a call, and on the global's own [ci_yields] for a bare
-       reference to a block-valued constant, which has no call node.  The
-       printer does not re-derive it: it would be reading the uninstantiated
-       scheme out of the front-end table, and answering [List<T1>] where
-       [List<uint64_t>] was meant. *)
-    let ret_ty = match yields with Some ty -> ty | None -> Tauto in
-    let result_str = "_r" in
-    let substituted = with_result result_str custom in
-    let cmds = term_template substituted in
-    let stmts =
-      pp_block_statements ~container:ref_name ctx
-        (Pp.string_of_ppcmds (GlobRef.print ref_name) ^ " := " ^ custom)
-        env tys val_args cmds
-    in
-    let stmt_lines = String.concat "\n" (List.map (fun s -> "  " ^ s) stmts) in
-    (* The arguments are spliced into the body, so the lambda captures the
-       locals they read -- by reference: it runs where it is written. *)
-    let reads_locals = fst (lambda_needs_capture [] (List.map (fun a -> Sexpr a) val_args)) in
-    str (if reads_locals then "[&]" else "[]") ++ str "() -> " ++ pp_cpp_type ctx false [] ret_ty ++ str " {"
-    ++ fnl ()
-    ++ str ("  " ^ Pp.string_of_ppcmds (pp_cpp_type ctx false [] ret_ty)
-            ^ " " ^ result_str ^ ";")
-    ++ fnl ()
-    ++ str stmt_lines
-    ++ fnl ()
-    ++ str ("  return " ^ result_str ^ ";")
-    ++ fnl ()
-    ++ str "}()"
-  in
   match t with
   | CPPvar id -> Id.print id
-  | CPPforeign (_, fr) -> pp_foreign ctx env [] fr
-  | CPPglob (x, tys, Some {ci_inline = Some tmpl; ci_yields; _}) -> (
-    match tmpl.it_form with
-    | Block_iife -> gen_block_iife ?yields:ci_yields x tmpl.it_text tys []
-    | Bare_callee | Templated -> uninstantiated_mapping x )
+  | CPPforeign (Foreign_block, fr) ->
+    (* The arguments are spliced into the body, so the lambda captures the
+       locals they read -- by reference: it runs where it is written. *)
+    let reads_locals = fst (lambda_needs_capture [] (List.map (fun a -> Sexpr a) fr.fr_values)) in
+    let ret_ty = Pp.string_of_ppcmds (pp_cpp_type ctx false [] (Option.default Tauto fr.fr_yields)) in
+    let result = "_r" in
+    let stmts = pp_block_statements ctx env fr ~result in
+    str (if reads_locals then "[&]" else "[]") ++ str ("() -> " ^ ret_ty ^ " {")
+    ++ fnl ()
+    ++ str ("  " ^ ret_ty ^ " " ^ result ^ ";")
+    ++ fnl ()
+    ++ str (String.concat "\n" (List.map (fun s -> "  " ^ s) stmts))
+    ++ fnl ()
+    ++ str ("  return " ^ result ^ ";")
+    ++ fnl ()
+    ++ str "}()"
+  | CPPforeign ((Foreign_constant | Foreign_call), fr) -> pp_foreign ctx env [] fr
+  | CPPforeign (Foreign_statements, fr) ->
+    CErrors.anomaly Pp.(str "a block's statements written other than as the declaration they assign: " ++ GlobRef.print fr.fr_custom)
+  | CPPglob (x, _, Some {ci_inline = Some _; _}) -> uninstantiated_mapping x
   | CPPmethod_value {mv_method; mv_access; mv_receiver; mv_params; mv_type_args} ->
     let names =
       match mv_params with
@@ -1661,14 +1644,9 @@ and pp_cpp_expr ctx env args t =
   | CPPnamespace (r, t) ->
     let name, _ = inductive_name ctx r in
     Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) name ++ pp_cpp_expr ctx env args t
-  | CPPfun_call (res, CPPglob (n, tys, Some {ci_inline = Some tmpl; _}), ts) ->
-    (* A callee's text was instantiated as the call's callee, and a
-       template's as the whole call ({!Cpp_erasure.instantiate_foreign}). *)
-    if tmpl.it_form = Block_iife then
-      gen_block_iife
-        ?yields:(match res.cs_yields with Ryields ty -> Some ty | Ropaque -> None)
-        n tmpl.it_text tys (call_args ts)
-    else uninstantiated_mapping n
+  (* A callee's text was instantiated as the call's callee, and a template's
+     or a block's as the whole call ({!Cpp_erasure.instantiate_foreign}). *)
+  | CPPfun_call (_, CPPglob (n, _, Some {ci_inline = Some _; _}), _) -> uninstantiated_mapping n
   | CPPmethod_call {mc_method; mc_access; mc_receiver; mc_type_args; mc_args} ->
     pp_cpp_expr ctx env args mc_receiver
     ++ str (pp_obj_access mc_access)
@@ -2186,6 +2164,11 @@ and pp_cpp_stmt ctx env args stmt =
     str "return " ++ pp_cpp_expr ctx env args e ++ str ";"
   | Sdecl (id, ty, _) ->
     pp_cpp_type ctx false [] ty ++ str " " ++ Id.print id ++ str ";"
+  (* The block assigns the variable declared in front of it. *)
+  | Sasgn (id, Declare (ty, _), CPPforeign (Foreign_statements, fr)) ->
+    let decl = pp_cpp_type ctx false [] ty ++ str " " ++ Id.print id ++ str ";" in
+    prlist_with_sep fnl (fun x -> x)
+      (decl :: List.map str (pp_block_statements ctx env fr ~result:(Pp.string_of_ppcmds (Id.print id))))
   | Sasgn (id, Declare (ty, _), e) ->
     pp_cpp_type ctx false [] ty
     ++ str " "
@@ -2369,26 +2352,7 @@ and pp_cpp_stmt ctx env args stmt =
     ++ str " = "
     ++ pp_cpp_expr ctx env args e
     ++ str ";"
-  | Sblock_custom (_ref, tmpl, result_var, result_ty, args, tyargs, _) ->
-    (* Block template: emit a declaration + template-substituted statements.
-       %result → result_var, %aN → value args, %tN → type args *)
-    let result_str = Pp.string_of_ppcmds (Id.print result_var) in
-    (* Substitute %result first *)
-    let flat = with_result result_str tmpl in
-    let cmds = term_template flat in
-    (* Render: type declaration + template body as statements *)
-    let decl_pp =
-      pp_cpp_type ctx false [] result_ty
-      ++ str " "
-      ++ Id.print result_var
-      ++ str ";"
-    in
-    let stmts =
-      pp_block_statements ~container:_ref ctx
-        ("block custom " ^ Pp.string_of_ppcmds (GlobRef.print _ref))
-        env tyargs args cmds
-    in
-    prlist_with_sep fnl (fun x -> x) (decl_pp :: List.map str stmts)
+  | Sblock_custom (r, _, _, _, _, _, _) -> uninstantiated_mapping r
   | Scustom_case (typ, t, tyargs, cases, cmatch) ->
     (* Scrutinee caching (auto _cs = expr;) is handled during translation
        in gen_custom_cpp_case, which prepends an Sasgn before this node
@@ -2748,6 +2712,7 @@ and pp_custom ?container ctx custom env typ t tyargs cases args vl cmds =
       (* Only a call's template names it, and that is instantiated; a block
          naming it is refused at the seam ({!Cpp_erasure.check_ret}). *)
       CErrors.anomaly Pp.(str "Custom syntax: %ret in a block or match template: " ++ str custom)
+    | CCresult -> CErrors.anomaly Pp.(str "Custom syntax: %result outside a block: " ++ str custom)
     | CCarg i -> (
       match List.nth_opt args i with
       | Some arg -> pp_spliced ctx env ~followed_by_dot arg
@@ -2768,15 +2733,18 @@ and pp_custom ?container ctx custom env typ t tyargs cases args vl cmds =
   fold_cmds (mt ()) cmds
 
 
-(* A block template's statements ({!Foreign_template.statements}), each
-   written on its own with the semicolon that ends it: the template's text
-   is split, never what is spliced into it. *)
-and pp_block_statements ~container ctx custom env tyargs args cmds =
-  Common.writes_custom container;
+(* A block's statements, each written on its own with the semicolon that
+   ends it, its [%result] spelled [result]. *)
+and pp_block_statements ctx env fr ~result =
+  let rec split current = function
+    | [] -> if current = [] then [] else [List.rev current]
+    | Fp_statement_end :: rest -> List.rev current :: split [] rest
+    | p :: rest -> split (p :: current) rest
+  in
   List.map
-    (fun stmt ->
-      String.trim (Pp.string_of_ppcmds (pp_custom ctx custom env None None tyargs [] args [] stmt)) ^ ";")
-    (Foreign_template.statements cmds)
+    (fun pieces ->
+      String.trim (Pp.string_of_ppcmds (pp_foreign ctx env [] ~result {fr with fr_pieces = pieces})) ^ ";")
+    (split [] fr.fr_pieces)
 
 (* A value argument spliced into a mapping's text: a string literal as the
    [std::string] it stands for. *)
@@ -2791,9 +2759,9 @@ and pp_spliced ctx env ~followed_by_dot arg_expr =
      when followed by member access (.c_str() etc.) in templates. *)
   if followed_by_dot then
     match arg_expr with
-    | CPPbinop _ | CPPforeign (Foreign_call, _) -> str "(" ++ arg ++ str ")"
-    (* A mapping's call: a block, or a callee's text applied. *)
-    | CPPfun_call (_, (CPPglob (_, _, Some {ci_inline = Some _; _}) | CPPforeign _), _) ->
+    | CPPbinop _ | CPPforeign ((Foreign_call | Foreign_block), _) -> str "(" ++ arg ++ str ")"
+    (* A callee's text applied. *)
+    | CPPfun_call (_, CPPforeign _, _) ->
       str "(" ++ arg ++ str ")"
     (* A prefix pointer operator binds looser than the member access
        the template appends, so [%a0.first] applied to a scrutinee
@@ -2810,8 +2778,9 @@ and pp_spliced ctx env ~followed_by_dot arg_expr =
   else arg
 
 (* An instantiated mapping: its pieces in order, a type hole past the
-   arguments the use supplies written erased. *)
-and pp_foreign ctx env vl fr =
+   arguments the use supplies written erased; a block's [%result] spelled
+   [result]. *)
+and pp_foreign ?result ctx env vl fr =
   Common.writes_custom fr.fr_custom;
   let arg i = pp_cpp_type ctx false vl (Option.default Tany (List.nth_opt fr.fr_types i)) in
   let piece ~followed_by_dot = function
@@ -2824,6 +2793,12 @@ and pp_foreign ctx env vl fr =
       match List.nth_opt fr.fr_values i with
       | Some e -> pp_spliced ctx env ~followed_by_dot e
       | None -> CErrors.anomaly Pp.(str "Custom syntax: unbound term argument in " ++ GlobRef.print fr.fr_custom) )
+    | Fp_result -> (
+      match result with
+      | Some name -> str name
+      | None -> CErrors.anomaly Pp.(str "Custom syntax: %result outside a block in " ++ GlobRef.print fr.fr_custom) )
+    | Fp_statement_end ->
+      CErrors.anomaly Pp.(str "Custom syntax: a block's statement written as a term in " ++ GlobRef.print fr.fr_custom)
   in
   let rec pieces acc = function
     | [] -> acc

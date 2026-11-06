@@ -341,7 +341,9 @@ and cpp_stmt =
       * Core_binder.t option
       (** Block template expansion: multi-statement inline custom that
           substitutes [%result] with the bind target variable name, the
-          Core binder it stands for last ({!Core_binder}). *)
+          Core binder it stands for last ({!Core_binder}).  Instantiated at
+          the seam into the declaration of that variable, initialised by the
+          block ({!Foreign_statements}). *)
   | Smatch of smatch_scrutinee * smatch_branch list * cpp_stmt list option
       (** If/else-if pattern match chain using [std::holds_alternative] and
           [std::get].  Branches are checked in order.  The optional else
@@ -715,9 +717,9 @@ and cpp_expr =
   | CPPforeign of foreign_use * foreign
       (** An inline mapping's term template instantiated at one use
           ({!Cpp_erasure.instantiate_foreign}): a mapped constant written
-          through its template, or a call of a mapping that places its
-          arguments itself.  A [%result] block and a bare callee keep their
-          {!CPPglob}. *)
+          through its template, a call of a mapping that places its
+          arguments itself, or a [%result] block ({!Foreign_block}).  A bare
+          callee is the callee of the call that stays a call. *)
 
 (** A call of a methodified function, written [receiver.method(args)].
     Translation builds every call as a plain {!CPPfun_call}; the last
@@ -1071,7 +1073,9 @@ and foreign = {
           one the text names. *)
   fr_yields : cpp_type option;
       (** What the call yields, for a [%ret] hole; checked present where the
-          text has one ({!Cpp_erasure.supply_template_args}). *)
+          text has one ({!Cpp_erasure.supply_template_args}).  Of a block, the
+          type of its [%result] -- [None] where translation recorded none,
+          which a lambda's return type writes as [auto]. *)
   fr_pieces : foreign_piece list;
 }
 
@@ -1084,13 +1088,29 @@ and foreign_piece =
           Element] wrapper where it recurses through the container *)
   | Fp_value of int  (** [%a{i}]: value argument [i] *)
   | Fp_yields  (** [%ret]: what the call yields *)
+  | Fp_result  (** [%result]: the variable a block assigns *)
+  | Fp_statement_end
+      (** The end of one of a block's statements, split where the block's
+          own text ends one ({!Foreign_template.block_statements}) -- never
+          inside what a hole splices. *)
 
 (** A piece of a [Boxed Element] wrapper, a type template over its one
     element. *)
 and wrapper_piece = Wp_text of string | Wp_element
 
-(** How a term template is used: named as a value, or called. *)
-and foreign_use = Foreign_constant | Foreign_call
+(** How a term template is used: named as a value, or called; or a
+    block's statements, each ended by {!Fp_statement_end}. *)
+and foreign_use =
+  | Foreign_constant
+  | Foreign_call
+  | Foreign_block
+      (** A block used as a value: an immediately invoked lambda assigning
+          a result of its own. *)
+  | Foreign_statements
+      (** A block bound to a variable ({!Sblock_custom}): its statements
+          assigning the variable, written after the variable's declaration.
+          Only the initialiser of that declaration,
+          [Sasgn (x, Declare _, CPPforeign (Foreign_statements, _))]. *)
 
 (** {2 Type schemas} *)
 
