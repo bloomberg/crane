@@ -80,12 +80,22 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
       Option.iter global (Table.promoted_type_var_field id)
     | _ -> () );
     match t with
+    (* Written through the inductive's own head, whatever it is mapped to:
+       the head and its arguments. *)
+    | Tnamespace ((Names.GlobRef.IndRef _ as r), Tglob (r', tys, _)) when Common.globref_equal r r' ->
+      List.iter ty tys;
+      Some t
     | Tglob (r, tys, args) -> (
       match Table.inline_custom_text r with
-      | Some s ->
-        custom {no_holes with tyargs = tys; args}
-          (Foreign_template.term_template (Foreign_template.custom_template_with_args s (List.length tys)));
+      (* A mapped type is instantiated before demands read it
+         ({!Cpp_erasure.instantiate_foreign}; a record's field types are
+         instantiated when they are planned, {!Cpp_ind.record_field_types}):
+         only one mapped to nothing is still a [Tglob], a head written as
+         its arguments. *)
+      | Some "" ->
+        List.iter ty tys;
         Some t
+      | Some _ -> CErrors.anomaly Pp.(str "a mapped type reached demands uninstantiated: " ++ Names.GlobRef.print r)
       | None ->
         global r;
         List.iter ty tys;
