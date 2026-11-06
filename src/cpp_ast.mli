@@ -541,6 +541,10 @@ val resolve :
   scheduled ->
   scheduled
 
+(** The declarations of a scheduled unit, in the order {!print} writes
+    them. *)
+val declarations_in_order : scheduled -> declaration list
+
 (** The scheduled unit as a document, as {!print_tree} writes each
     section. *)
 val print : write:(spelling -> unprinted -> Pp.t) -> scheduled -> Pp.t

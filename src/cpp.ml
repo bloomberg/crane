@@ -3132,6 +3132,67 @@ let moved_together l =
 (** What stays of each of [l], in order, and what they move. *)
 let gathered l = (List.map fst l, moved_together (List.map snd l))
 
+(* Within one file, values are written in the order Rocq declares them, so a
+   value's initialiser runs after the initialisers of every value of the file
+   it reads -- itself, or through the functions it calls, whatever file
+   defines them: C++ initialises the variables of a translation unit in the
+   order they are defined.  Checked on the scheduled file, under
+   [CRANE_CHECK_IR]. *)
+let check_value_order scheduled =
+  if Probe.checking () then begin
+    let values =
+      List.filter_map
+        (function
+          | Cpp_ast.Declaration {settled; _} | Absorbed {settled; _} -> (
+            match (settled :> cpp_decl) with Dasgn {da_ref; _} -> Some (da_ref, settled) | _ -> None )
+          | _ -> None)
+        (Cpp_ast.declarations_in_order scheduled)
+    in
+    let position = Ref.Can.Map.of_list (List.mapi (fun i (r, _) -> (r, i)) values) in
+    let names d =
+      let found = ref [] in
+      Minicpp.iter_globrefs (fun r -> found := r :: !found) d;
+      !found
+    in
+    (* What each function's definition names, whichever file writes it. *)
+    let functions =
+      List.fold_left
+        (fun m (d : Cpp_erasure.settled) ->
+          match (d :> cpp_decl) with
+          | Dasgn _ -> m
+          | d -> (
+            match Minicpp.decl_globref d with
+            | Some r -> Ref.Can.Map.update r (fun l -> Some (names d @ Option.default [] l)) m
+            | None -> m ))
+        Ref.Can.Map.empty (Finished_program.installed_declarations ())
+    in
+    (* The values of the file [r]'s initialiser reads, directly or through a
+       function: what a value reads is its own to check. *)
+    let reads r d =
+      let seen = ref Ref.Can.Set.empty and read = ref [] in
+      let rec visit g =
+        if not (Ref.Can.Set.mem g !seen) then begin
+          seen := Ref.Can.Set.add g !seen;
+          if Ref.Can.Map.mem g position then (if not (Common.globref_equal g r) then read := g :: !read)
+          else Option.iter (List.iter visit) (Ref.Can.Map.find_opt g functions)
+        end
+      in
+      List.iter visit (names d);
+      !read
+    in
+    List.iteri
+      (fun i (r, d) ->
+        List.iter
+          (fun g ->
+            if Ref.Can.Map.find g position > i then
+              Probe.violation "value order"
+                Pp.(
+                  str "the value " ++ GlobRef.print r ++ str " reads " ++ GlobRef.print g
+                  ++ str ", written after it in the same file: its initialiser would read it uninitialised" ))
+          (reads r (d : Cpp_erasure.settled :> cpp_decl)))
+      values
+  end
+
 (** Main structure renderer with declaration tracking.
 
     PASS 1: Render every wrapper module's functions. PASS 2: Render types,
@@ -3549,6 +3610,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   in
   let written = if is_header then Common.Intf else Common.Impl in
   let scheduled = Cpp_ind.resolve ~file:written (Cpp_ast.schedule ~templates ~forwards unit) in
+  check_value_order scheduled;
   let print () = Cpp_ast.print ~write:(Cpp_ind.write_unprinted ~file:written) scheduled in
   let file = print () in
   (* Printing a scheduled unit is a function of it: printed again, with

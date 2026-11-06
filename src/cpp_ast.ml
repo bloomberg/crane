@@ -578,3 +578,15 @@ let print_tree ~write t = to_pp (map_leaves (fun spelling u -> Decl {text = writ
 
 let print ~write s = List.fold_left (fun acc t -> Pp.(acc ++ print_tree ~write t)) (Pp.mt ()) (s.opening :: s.body)
 
+(* In the order {!to_pp} lays the tree out: a module's fields, then its
+   members. *)
+let declarations_in_order s =
+  let rec fold acc = function
+    | Text _ | Decl _ -> acc
+    | Unprinted u -> u.declaration :: acc
+    | Declarations l | Seq l | Joined l | Concept_group {concepts = l; _} -> List.fold_left fold acc l
+    | Elements {elements = t; _} | Top_level t -> fold acc t
+    | Module {fields; members; _} -> List.fold_left fold acc (fields :: members)
+    | Wrapper_struct _ -> invalid_arg "Cpp_ast: a wrapper struct whose body is not filled in"
+  in
+  List.rev (List.fold_left fold [] (s.opening :: s.body))
