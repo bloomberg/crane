@@ -656,6 +656,10 @@ let is_templated = function Some {ci_inline = Some {it_form = Templated; _}; _} 
 let rec instantiated_type ~boxing t =
   rewrite_cpp_type
     (function
+      (* A constructor removed from the output ([Crane Extract Skip], or a
+         skipped module's) is the identity on what it is applied to: its
+         argument is the whole of what there is to write. *)
+      | Tapply (Tglob (r, _, _), [arg]) when Ml_type_util.ref_has_no_cpp_name r -> Some (instantiated_type ~boxing arg)
       (* Written through the inductive's own head. *)
       | Tnamespace ((GlobRef.IndRef _ as r), Tglob (r', tys, args)) when Common.globref_equal r r' ->
         Some (Tnamespace (r, Tglob (r', List.map (instantiated_type ~boxing) tys, List.map (instantiated_expr ~boxing) args)))
