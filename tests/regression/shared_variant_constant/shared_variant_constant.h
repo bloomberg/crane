@@ -7,7 +7,6 @@
 #include "shared_block.h"
 #include "shared_variant.h"
 #include <cstdint>
-#include <memory>
 #include <stdexcept>
 #include <utility>
 #include <variant>

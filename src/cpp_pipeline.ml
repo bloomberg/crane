@@ -68,6 +68,7 @@ let access_moves = Pipeline_trace.pass "access_moves" Cpp_erasure.lower_access_m
 let constexpr = Pipeline_trace.pass "constexpr" Cpp_erasure.decide_constexpr
 let foreign = Pipeline_trace.pass "foreign" Cpp_erasure.instantiate_foreign
 let qualifiers = Pipeline_trace.pass "qualifiers" Cpp_erasure.lower_qualifiers
+let pointer_slots = Pipeline_trace.pass "pointer_slots" Cpp_erasure.lower_pointer_slots
 let scrutinees = Pipeline_trace.pass "scrutinees" Cpp_erasure.name_scrutinees
 let captures = Pipeline_trace.pass "captures" Cpp_erasure.decide_captures
 
@@ -147,9 +148,10 @@ let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
     checks of what a declaration moves and borrows read the instantiated
     pieces, a pair projection's included ({!Minicpp.foreign_pair_projection}).
     A type qualifying a member in value position is spelled as the value it
-    names.  Each match's computed scrutinee is declared, named, in front of it.  Last,
+    names.  A pointer is written in the slot its pointee is held in.  Each
+    match's computed scrutinee is declared, named, in front of it.  Last,
     with every body final, what each lambda captures is written down. *)
-let instantiation_passes = [foreign; qualifiers; scrutinees; captures]
+let instantiation_passes = [foreign; qualifiers; pointer_slots; scrutinees; captures]
 
 let pass_names =
   Pipeline_trace.names minicpp_passes @ [seam] @ Pipeline_trace.names settled_passes
@@ -194,13 +196,17 @@ type obligation =
   | Unlowered_qualifier
       (** a named type qualifying a member in value position, or a
           suspension, not yet spelled as a value *)
+  | Unslotted_pointer
+      (** a pointer whose slot -- a shared value's own handle, or the choice
+          a functor's instantiation makes -- is not written down *)
   | Unnamed_scrutinee  (** a match reading a scrutinee no local holds *)
   | Undecided_capture  (** a lambda whose capture is not written down *)
 
 let obligations =
   [ Unresolved_type; Opaque_type; Unspellable_binder; Unsettled_callable; Unresolved_cast; Free_type_variable;
     Missing_template_argument; Unlowered_method_call; Unlowered_projection; Move_under_access;
-    Undecided_constexpr; Uninstantiated_mapping; Unlowered_qualifier; Unnamed_scrutinee; Undecided_capture ]
+    Undecided_constexpr; Uninstantiated_mapping; Unlowered_qualifier; Unslotted_pointer; Unnamed_scrutinee;
+    Undecided_capture ]
 
 let describe = function
   | Unresolved_type -> "an undetermined type (Tunresolved), owed by the pass that wrote it"
@@ -216,6 +222,7 @@ let describe = function
   | Undecided_constexpr -> "an undecided constexpr eligibility, owed by " ^ constexpr.name
   | Uninstantiated_mapping -> "an uninstantiated mapping, owed by " ^ foreign.name
   | Unlowered_qualifier -> "a type qualifier in value position, owed by " ^ qualifiers.name
+  | Unslotted_pointer -> "a pointer's unchosen slot, owed by " ^ pointer_slots.name
   | Unnamed_scrutinee -> "a match's unnamed scrutinee, owed by " ^ scrutinees.name
   | Undecided_capture -> "an undecided lambda capture, owed by " ^ captures.name
 
@@ -248,6 +255,7 @@ let owes (decl : Cpp_erasure.settled) o =
   | Undecided_constexpr -> rewrites constexpr
   | Uninstantiated_mapping -> rewrites foreign
   | Unlowered_qualifier -> rewrites qualifiers
+  | Unslotted_pointer -> rewrites pointer_slots
   | Unnamed_scrutinee -> rewrites scrutinees
   | Undecided_capture -> rewrites captures
 

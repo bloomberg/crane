@@ -171,6 +171,15 @@ val instantiate_foreign : settled -> settled
     qualifier into its instantiated text first. *)
 val lower_qualifiers : settled -> settled
 
+(** [lower_pointer_slots decl] writes each pointer in the slot its pointee
+    is held in ({!Pointer_slot}): to a shared value, [crane::shared_box<T>]
+    (and its allocation, [shared_box<T>::make]); to an inductive only a
+    functor's instantiation knows the representation of,
+    [crane::shared_or_t<T, P>] with [P] the ordinary pointer.  Afterwards a
+    {!Minicpp.Tshared_ptr} is an ordinary pointer, and the printer reads no
+    representation fact to spell one. *)
+val lower_pointer_slots : settled -> settled
+
 (** [name_scrutinees decl] declares the local each {!Minicpp.Smatch} holds a
     computed scrutinee in, in front of the match, and has the match read that
     local: a variant read through a computed object ([e->v()]) binds the
@@ -190,7 +199,8 @@ val decide_captures : settled -> settled
 
 (** [instantiate_type ty] instantiates the mappings [ty] applies, as
     {!instantiate_foreign} does a declaration's: for a type written outside
-    every declaration, a record's field. *)
+    every declaration, a record's field -- and writes each pointer in its
+    slot, as {!lower_pointer_slots} does. *)
 val instantiate_type : Minicpp.cpp_type -> Minicpp.cpp_type
 
 (** [type_pieces r text tys] is the type mapping [r]'s [text] applied at

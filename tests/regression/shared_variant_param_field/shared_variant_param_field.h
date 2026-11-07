@@ -6,7 +6,6 @@
 #include "obj.h"
 #include "shared_variant.h"
 #include <cstdint>
-#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <type_traits>

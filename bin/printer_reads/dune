@@ -1,0 +1,5 @@
+; Reads the plugin's typed trees to list what the printer reaches in Table:
+; see main.ml and scripts/check-module-deps.sh.
+(executable
+ (name main)
+ (libraries compiler-libs.common))

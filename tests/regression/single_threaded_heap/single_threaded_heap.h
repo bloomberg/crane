@@ -2,7 +2,6 @@
 #define INCLUDED_SINGLE_THREADED_HEAP
 
 #include <cstdint>
-#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <type_traits>

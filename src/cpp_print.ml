@@ -220,8 +220,6 @@ let stand_ins t =
 (** The C++ token an {!Minicpp.obj_access} prints as. *)
 let pp_obj_access = function Adot -> "." | Aarrow -> "->"
 
-let ref_has_no_cpp_name = Ml_type_util.ref_has_no_cpp_name
-
 (** The C++ identifiers appearing in [text], as whole tokens.  Used to tell
     whether a rendered type body really names a template parameter, which a
     structural walk over the type cannot: a custom mapping's replacement text
@@ -939,6 +937,9 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
         end else if String.equal id_s Crane_rt.constant_tc then begin
           writes_obj ();
           id_s
+        end else if String.equal id_s Crane_rt.shared_box || String.equal id_s Crane_rt.shared_or then begin
+          writes (Table.Runtime Crane_rt.shared_variant_header);
+          id_s
         end else id_s
       in
       ( match args with
@@ -1026,54 +1027,48 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
              str "template " ++ Id.print nested_id
              ++ str "<" ++ pp_list (pp_rec false) targs ++ str ">" )
     | Tapply (head, args) ->
-      (* A non-dependent alias template: the head names it outright.
-
-         Unless the head has no name.  A constructor [Crane Extract Skip]
-         removed renders as nothing, and nothing followed by [<args>] is not a
-         template-id with an elided name, it is a syntax error -- and one that
-         then gets wrapped by whatever reads the result, which is how
-         [crane_event_as<<typename I::PROV>>] happened.  A removed constructor
-         is the identity on what it was applied to, so its arguments are the
-         whole of what there is to write. *)
-      ( match head with
-      | Tglob (r, _, _) when ref_has_no_cpp_name r ->
-        pp_list (pp_rec false) args
-      | _ ->
-        (* Non-dependent is what the head usually is, but not always: a
-           carrier whose body names a template parameter of the enclosing
-           declaration has no namespace-scope alias to be, so it is
-           synthesised as a member of a holder, spelled [H<T1>::template c].
-           That is a dependent qualified name, and applying it yields a type,
-           which needs the [typename] the {!Tqualified} arm above would have
-           given it.  Whether a holder was needed is decided by which names
-           the body actually {e writes}, which is not a property of the type's
-           shape, so the head says how it was written ({!tyctor_head}). *)
-        let head_pp, dependent_member =
-          match head with
-          | Ttyctor t -> tyctor_head t
-          | _ -> (pp_rec false head, false)
-        in
-        (if dependent_member then leading_typename else mt ())
-        ++ head_pp ++ str "<" ++ pp_list (pp_rec false) args ++ str ">" )
+      (* A non-dependent alias template: the head names it outright.  A head
+         with no name -- a constructor [Crane Extract Skip] removed, written
+         as nothing, and nothing followed by [<args>] is a syntax error
+         ([crane_event_as<<typename I::PROV>>]) -- was replaced by its
+         argument at the seam ({!Cpp_erasure.instantiate_foreign}). *)
+      if Probe.checking () then begin
+        match head with
+        | Tglob (r, _, _) when Ml_type_util.ref_has_no_cpp_name r ->
+          CErrors.anomaly (Pp.str "pp_cpp_type: a nameless constructor applied, not removed at the seam")
+        | _ -> ()
+      end;
+      (* Non-dependent is what the head usually is, but not always: a
+         carrier whose body names a template parameter of the enclosing
+         declaration has no namespace-scope alias to be, so it is
+         synthesised as a member of a holder, spelled [H<T1>::template c].
+         That is a dependent qualified name, and applying it yields a type,
+         which needs the [typename] the {!Tqualified} arm above would have
+         given it.  Whether a holder was needed is decided by which names
+         the body actually {e writes}, which is not a property of the type's
+         shape, so the head says how it was written ({!tyctor_head}). *)
+      let head_pp, dependent_member =
+        match head with
+        | Ttyctor t -> tyctor_head t
+        | _ -> (pp_rec false head, false)
+      in
+      (if dependent_member then leading_typename else mt ())
+      ++ head_pp ++ str "<" ++ pp_list (pp_rec false) args ++ str ">"
     | Tvariant (Inline_variant, tys) ->
       writes_variant ();
       cpp_angle (sn ()).variant (pp_list (pp_rec false) tys)
     | Tvariant (Shared_variant, tys) ->
       writes (Table.Runtime Crane_rt.shared_variant_header);
       cpp_angle Crane_rt.shared_variant (pp_list (pp_rec false) tys)
-    | Tshared_ptr t -> (
-      let pointer () =
-        writes_standard "memory";
-        cpp_angle (sn ()).shared_ptr (pp_rec false t)
-      in
-      match Pointer_slot.of_pointee t with
-      | Pointer_slot.Shared ->
-        writes (Table.Runtime Crane_rt.shared_variant_header);
-        cpp_angle Crane_rt.shared_box (pp_rec false t)
-      | Pointer_slot.At_instantiation ->
-        writes (Table.Runtime Crane_rt.shared_variant_header);
-        cpp_angle Crane_rt.shared_or (pp_rec false t ++ str ", " ++ pointer ())
-      | Pointer_slot.Pointer -> pointer () )
+    (* The slot a pointer is held in was written down at the seam
+       ({!Cpp_erasure.lower_pointer_slots}): what is left is a pointer -- to
+       an inductive only a functor's instantiation knows the representation
+       of, the pointer [shared_or_t] is given as its alternative. *)
+    | Tshared_ptr t ->
+      if Probe.checking () && Pointer_slot.of_pointee t = Pointer_slot.Shared then
+        CErrors.anomaly (Pp.str "pp_cpp_type: a pointer's slot not chosen (Cpp_erasure.lower_pointer_slots)");
+      writes_standard "memory";
+      cpp_angle (sn ()).shared_ptr (pp_rec false t)
     | Tvoid -> str "void"
     | Tunresolved ->
       (* There is no C++ spelling for "no type was determined"; emitting a
@@ -1573,10 +1568,6 @@ and pp_cpp_expr ctx env args t =
       ++ body_s
       ++ fnl ()
       ++ str "}" )
-  | CPPalloc ((Alloc_heap | Alloc_arena_scoped), t) when Pointer_slot.of_pointee t = Pointer_slot.Shared ->
-    (* A shared value goes into its slot as it is: no cell to allocate. *)
-    writes (Table.Runtime Crane_rt.shared_variant_header);
-    cpp_angle Crane_rt.shared_box (pp_cpp_type ctx false [] t) ++ str "::make"
   | CPPalloc (Alloc_heap, t) ->
     writes_standard "memory";
     cpp_angle (sn ()).make_shared (pp_cpp_type ctx false [] t)

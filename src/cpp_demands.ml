@@ -12,6 +12,8 @@ let of_external name =
   else if String.equal name ((Cpp_state.sn ()).ns ^ "::optional") then Some (Table.Standard "optional")
   else if String.equal name "std::vector" then Some (Table.Standard "vector")
   else if String.equal name Crane_rt.constant_tc then Some (Table.Runtime Crane_rt.obj_header)
+  else if String.equal name Crane_rt.shared_box || String.equal name Crane_rt.shared_or then
+    Some (Table.Runtime Crane_rt.shared_variant_header)
   else None
 
 let at_type_variable = function Tvar _ | Tapply (Tvar _, _) -> true | _ -> false
@@ -54,6 +56,9 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
     | Tfun _ -> rt Crane_rt.fn_header
     | Tvariant (Inline_variant, _) -> variant ()
     | Tvariant (Shared_variant, _) -> rt Crane_rt.shared_variant_header
+    (* Planning reads types that have not crossed the seam
+       ({!Cpp_erasure.lower_pointer_slots}): their slot is chosen here as the
+       seam would choose it. *)
     | Tshared_ptr t -> (
       match Pointer_slot.of_pointee t with
       | Pointer_slot.Shared -> rt Crane_rt.shared_variant_header
@@ -122,9 +127,6 @@ let collect ?(global = ignore) ?(promoted = ignore) ?(tyctor = fun ~vl:_ ~owner:
     | CPPmove _ | CPPin_place | CPPin_place_index _ | CPPdeclval _ -> std "utility"
     (* A variable whose last use is a closure's capture is moved into it. *)
     | CPPlambda {cl_capture = Written (By_copy {moved = _ :: _; _}); _} -> std "utility"
-    | CPPalloc ((Alloc_heap | Alloc_arena_scoped), t)
-      when Pointer_slot.of_pointee t = Pointer_slot.Shared ->
-      rt Crane_rt.shared_variant_header
     | CPPalloc (Alloc_heap, _) -> std "memory"
     | CPPalloc (Alloc_arena_scoped, _) ->
       if Table.non_atomic_rc () then std "memory"
