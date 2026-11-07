@@ -25,22 +25,32 @@ open Cpp_state
 
 (** {2 Global name printing} *)
 
-let checked key ~live n =
+(* The resolver's naming of a key at a position ({!live_name}), for the
+   checks below only: it is defined last, since it names through the
+   functions here. *)
+let live_name_for_checks : (render_ctx -> Cpp_resolution.key -> Cpp_name.t) ref =
+  ref (fun _ key -> CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " checked before the resolver exists."))
+
+let violation_resolved key n here =
+  Probe.violation "names resolved"
+    Pp.(
+      Cpp_resolution.pp_key key ++ str " was resolved as " ++ str n
+      ++ str " where the declaration naming it is written, and is named " ++ str here ++ str " where it is printed" )
+
+(* [n], resolved for [key] where the declaration naming it is written;
+   under CRANE_CHECK_IR it must be [key]'s name at [c], where it is
+   printed. *)
+let checked c key n =
   ( if Probe.checking () then
-      let here = live () in
-      if not (Cpp_name.equal n here) then
-        Probe.violation "names resolved"
-          Pp.(
-            Cpp_resolution.pp_key key ++ str " was resolved as " ++ str (Cpp_name.to_string n)
-            ++ str " where the declaration naming it is written, and is named " ++ str (Cpp_name.to_string here)
-            ++ str " where it is printed" ) );
+      let here = !live_name_for_checks c key in
+      if not (Cpp_name.equal n here) then violation_resolved key (Cpp_name.to_string n) (Cpp_name.to_string here) );
   n
 
 let unresolved key = CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " was printed before it was resolved.")
 
-let name_from names frame key ~live =
+let name_from c names frame key =
   match Cpp_resolution.find names frame key with
-  | Found n -> checked key ~live n
+  | Found n -> checked c key n
   | Unresolved -> unresolved key
   | Not_requested ->
     CErrors.anomaly
@@ -61,43 +71,67 @@ let named_nowhere key =
     Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " is named where nothing resolved the names written.")
 
 (* [key]'s name at the position [c]: from the names resolved for what is
-   being written, at the frame printing it has entered, checked against
-   [live v] where [c] sees [v]; [live v] at the resolver's position. *)
-let named (c : render_ctx) key live =
+   being written, at the frame printing it has entered; at the resolver's
+   position, as the resolver names it. *)
+let named (c : render_ctx) key =
   match c.rc_names with
-  | Naming_live -> live (visible_at c key)
+  | Naming_live live -> live.live_key c key
   | No_names -> named_nowhere key
-  | Names_resolved names -> name_from names c.rc_frame key ~live:(fun () -> live (visible_at c key))
+  | Names_resolved names -> name_from c names c.rc_frame key
 
 let live_custom_text r =
   match written_custom_text r with
   | Some text -> Cpp_name.foreign text
   | None -> CErrors.anomaly Pp.(str "Crane: " ++ GlobRef.print r ++ str " has no custom mapping to write.")
 
-let custom_text (c : render_ctx) r =
-  if not (is_custom r) then None
-  else
-    let text =
-      match c.rc_names with
-      | Naming_live -> live_custom_text r
-      | No_names -> named_nowhere (Custom_text r)
-      | Names_resolved names -> name_from names c.rc_frame (Custom_text r) ~live:(fun () -> live_custom_text r)
-    in
-    Some (Cpp_name.to_string text)
+(* The text [r] is written as where it has an inline custom mapping. *)
+let live_inline_custom_text r =
+  if to_inline r && is_custom r then Some (Cpp_name.to_string (live_custom_text r)) else None
 
-let inline_custom_text c r = if to_inline r then custom_text c r else None
+let inline_custom_text (c : render_ctx) r =
+  match c.rc_names with
+  | Naming_live live -> live.live_inline r
+  | No_names -> named_nowhere (Inline_custom r)
+  | Names_resolved names ->
+    let text =
+      match Cpp_resolution.find names c.rc_frame (Inline_custom r) with
+      | Found n -> Some (Cpp_name.to_string n)
+      | Not_requested -> None
+      | Unresolved -> unresolved (Inline_custom r)
+    in
+    ( if Probe.checking () then
+        let here = live_inline_custom_text r in
+        if here <> text then
+          violation_resolved (Inline_custom r) (Option.default "no inline custom text" text)
+            (Option.default "no inline custom text" here) );
+    text
 
 let custom_texts_named globals =
   List.filter_map (fun r -> if is_custom r then Some (Cpp_resolution.Custom_text r) else None) globals
+
+(* Asked for without reading the text: a request writes nothing
+   ({!Table.check_written_custom}). *)
+let inline_customs_named globals =
+  List.filter_map (fun r -> if to_inline r && is_custom r then Some (Cpp_resolution.Inline_custom r) else None) globals
 
 (** The name of a global reference at the position [c]: the replacement text
     of an inline custom mapping, otherwise as resolution settles it there.
     @param k  the extraction key category (e.g. [Type] or [Term])
     @param r  the global reference to name *)
 let global_name c k r =
-  match inline_custom_text c r with
+  match c.rc_names with
+  | Naming_live live -> live.live_global c k r
+  | No_names -> named_nowhere (Global (k, r))
+  | Names_resolved _ -> (
+    match inline_custom_text c r with
+    | Some custom_str -> Cpp_name.foreign custom_str
+    | None -> named c (Unmapped (k, r)) )
+
+(* {!global_name} as the resolver names it at [c]. *)
+let live_global_name c k r =
+  match live_inline_custom_text r with
   | Some custom_str -> Cpp_name.foreign custom_str
-  | None -> named c (Unmapped (k, r)) (fun v -> Common.resolve_ref_name v k r)
+  | None -> Common.resolve_ref_name (visible_at c (Unmapped (k, r))) k r
 
 (** {!global_name} as text. *)
 let str_global c k r = Cpp_name.to_string (global_name c k r)
@@ -120,8 +154,10 @@ let pp_global c k r = Cpp_name.pp (global_name c k r)
     enclosing struct and carries no struct qualifier -- neither at its
     declaration nor at its uses.  A use in another file still names the file's
     namespace. *)
-let concept_name c r =
-  named c (Class_concept r) @@ fun v ->
+let concept_name c r = named c (Class_concept r)
+
+(* {!concept_name} as the resolver names it where [v] is visible. *)
+let live_concept_name v r =
   let name =
     match Module_plan.concept_name r with
     | Some name -> name
@@ -713,7 +749,7 @@ let file_named_by_key ~unit_files : Cpp_resolution.key -> ModPath.t option = fun
     | None -> Common.file_of_module_named ~unit_files kn )
   | Global (_, r) | Unmapped (_, r) -> Common.file_named_by ~unit_files r
   | Module_declared _ | Short _ | Inductive_value _ | Class_concept _ | Modtype_concept_declared _ | Definition _
-  | Custom_text _ ->
+  | Custom_text _ | Inline_custom _ ->
     None
 
 let struct_definition_name ctx id =
@@ -791,22 +827,32 @@ let inductive_value_name ctx v x =
   else (* Local inductive: use original name directly *)
     type_name
 
-let inductive_value ctx x = named ctx (Inductive_value x) (fun v -> inductive_value_name ctx v x)
+let inductive_value ctx x = named ctx (Inductive_value x)
 
-let live_name c (key : Cpp_resolution.key) =
-  let ctx = {c with rc_names = Naming_live} in
+let rec live_name c (key : Cpp_resolution.key) =
+  let ctx = {c with rc_names = Naming_live live_namers} in
   let v = visible_at c key in
   match key with
   | Module mp -> Common.resolve_module_in v mp
   | Module_declared mp -> Cpp_name.unqualified (module_declared_name mp)
-  | Global (k, r) -> global_name ctx k r
+  | Global (k, r) -> live_global_name ctx k r
   | Unmapped (k, r) -> Common.resolve_ref_name v k r
   | Inductive_value r -> inductive_value_name ctx v r
   | Short (k, r) -> Cpp_name.unqualified (Common.pp_global_name k r)
-  | Class_concept r -> concept_name ctx r
+  | Class_concept r -> live_concept_name v r
   | Modtype_concept mp -> modtype_concept_ref ctx v mp
   | Modtype_concept_declared mp -> Cpp_name.unqualified (modtype_concept_name mp)
   | Definition (Enum_definition, r) -> enum_definition_name ctx r
   | Definition (Struct_definition, r) -> struct_definition_name ctx r
-  | Definition (Alias_definition, r) -> global_name ctx Type r
+  | Definition (Alias_definition, r) -> live_global_name ctx Type r
   | Custom_text r -> live_custom_text r
+  | Inline_custom r -> (
+    match live_inline_custom_text r with
+    | Some text -> Cpp_name.foreign text
+    | None -> CErrors.anomaly Pp.(str "Crane: " ++ GlobRef.print r ++ str " has no inline custom mapping."))
+
+(* The resolver's namers, which the naming functions shared with the printer
+   call at its position. *)
+and live_namers = {live_key = (fun c key -> live_name c key); live_global = live_global_name; live_inline = live_inline_custom_text}
+
+let () = live_name_for_checks := live_name

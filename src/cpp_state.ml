@@ -490,14 +490,24 @@ and tyctor_use = {
 
 (** What the names written at a position are read off: nothing, where
     naming anything is an anomaly; the program, where the resolver names
-    each key where it stands ({!Cpp_names.live_name}); or the names of the
-    declaration being written, resolved before it is written. *)
-type naming = No_names | Naming_live | Names_resolved of Cpp_resolution.table
+    each key where it stands, through the namers it hands the position
+    ({!Cpp_names.live_name}); or the names of the declaration being written,
+    resolved before it is written. *)
+type naming = No_names | Naming_live of live_namers | Names_resolved of Cpp_resolution.table
+
+(* How the resolver names, at a position, a key, a global, and the inline
+   custom text of a global, if it has one: what the naming functions shared
+   with the printer call where the resolver uses them. *)
+and live_namers = {
+  live_key : render_ctx -> Cpp_resolution.key -> Cpp_name.t;
+  live_global : render_ctx -> Common.kind -> GlobRef.t -> Cpp_name.t;
+  live_inline : GlobRef.t -> string option;
+}
 
 (** Where the type printer reads how a type constructor is written: nowhere,
     where writing one is an anomaly; off planning, which decides it where it
     is spelled and notes it; or off the plan of the leaf being printed. *)
-type tyctor_plan = Unplanned | Deciding of tyctor_decision | Planned of tyctor_use list
+and tyctor_plan = Unplanned | Deciding of tyctor_decision | Planned of tyctor_use list
 
 (* How planning decides, at a position, how a type constructor naming the
    given variables is written, and the uses it has decided, in the order

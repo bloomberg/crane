@@ -10,16 +10,19 @@
 
 (** {2 Names of globals} *)
 
-(** The text of the custom mapping of [r], written at the position [c],
-    if [r] has one: as resolved for the declaration being written
-    ({!Cpp_resolution.Custom_text}), which must have asked for it. *)
-val custom_text : Cpp_state.render_ctx -> Names.GlobRef.t -> string option
-
-(** {!custom_text} where [r] is inlined. *)
+(** The text [r] is written as at the position [c], where it has an inline
+    custom mapping: as resolved for the declaration being written
+    ({!Cpp_resolution.Inline_custom}, asked for exactly where it has one);
+    at the resolver's position, as the resolver reads it.  Under
+    [CRANE_CHECK_IR] the resolved answer is compared with the mapping. *)
 val inline_custom_text : Cpp_state.render_ctx -> Names.GlobRef.t -> string option
 
 (** The custom texts writing [globals] may write. *)
 val custom_texts_named : Names.GlobRef.t list -> Cpp_resolution.key list
+
+(** The inline custom texts writing [globals] writes: one for each that has
+    an inline custom mapping. *)
+val inline_customs_named : Names.GlobRef.t list -> Cpp_resolution.key list
 
 (** The name of a global at the position: the replacement text of an inline
     custom mapping, otherwise as resolution settles it there. *)
@@ -251,19 +254,19 @@ val enum_definition_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
     a constructor's value is built through, at the position. *)
 val inductive_value : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
 
-(** [checked key ~live n] is [n], the name the resolution pass gave [key];
-    under [CRANE_CHECK_IR], [live ()], the name resolution gives it where it
-    is printed, must be the same. *)
-val checked : Cpp_resolution.key -> live:(unit -> Cpp_name.t) -> Cpp_name.t -> Cpp_name.t
+(** [checked c key n] is [n], the name the resolution pass gave [key];
+    under [CRANE_CHECK_IR], the name the resolver gives it at [c], where it
+    is printed ({!live_name}), must be the same. *)
+val checked : Cpp_state.render_ctx -> Cpp_resolution.key -> Cpp_name.t -> Cpp_name.t
 
 (** An anomaly: [key] was printed before it was resolved. *)
 val unresolved : Cpp_resolution.key -> 'a
 
-(** [name_from names frame key ~live] is the name [names] gives [key] at
-    [frame], {!checked}.  A table not yet resolved, or one that was but not
-    for this, is an anomaly. *)
+(** [name_from c names frame key] is the name [names] gives [key] at
+    [frame], {!checked} at [c].  A table not yet resolved, or one that was
+    but not for this, is an anomaly. *)
 val name_from :
-  Cpp_resolution.table -> Cpp_resolution.frame -> Cpp_resolution.key -> live:(unit -> Cpp_name.t) -> Cpp_name.t
+  Cpp_state.render_ctx -> Cpp_resolution.table -> Cpp_resolution.frame -> Cpp_resolution.key -> Cpp_name.t
 
 (** [next entered c] is the position [c] is after entering the scope
     [entered] inside it: a function of the two. *)

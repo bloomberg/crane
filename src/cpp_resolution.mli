@@ -65,6 +65,10 @@ type key =
   | Custom_text of GlobRef.t
       (** The text of the global's custom mapping, foreign: what a type or
           a value it maps is instantiated from. *)
+  | Inline_custom of GlobRef.t
+      (** The text the global is written as, foreign, where it has an inline
+          custom mapping: asked for only where it has one, so a name not
+          asked for is one written otherwise. *)
 
 val pp_key : key -> Pp.t
 

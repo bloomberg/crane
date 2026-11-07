@@ -3550,7 +3550,7 @@ let is_held_back_assertion ctx (d : Cpp_erasure.settled) =
   | Decl (Dstatic_assert (CPPconcept_app (class_ref, _, _), None)) -> class_concept_held_back ctx class_ref
   | _ -> false
 let resolved ctx key (resolution : Cpp_ast.resolution) =
-  match resolution with Resolved n -> checked key ~live:(fun () -> live_name ctx key) n | Unresolved -> unresolved key
+  match resolution with Resolved n -> checked ctx key n | Unresolved -> unresolved key
 
 let resolved_module ctx (m : Cpp_ast.module_ref) = resolved ctx (Module m.path) m.name
 let resolved_class_concept ctx (c : Cpp_ast.global_ref) = resolved ctx (Class_concept c.global) c.name
@@ -3558,7 +3558,7 @@ let resolved_type_name ctx (g : Cpp_ast.global_ref) = resolved ctx (Global (Type
 let resolved_concept ctx (c : Cpp_ast.concept_ref) = resolved ctx (Modtype_concept c.module_type) c.name
 let pp_declared_module ctx (m : Cpp_ast.declared_module) = Cpp_name.pp (resolved ctx (Module_declared m.declares) m.name)
 
-let name_in ctx names frame key = name_from names frame key ~live:(fun () -> live_name ctx key)
+let name_in ctx names frame key = name_from ctx names frame key
 
 (* A module named in a module expression, and its resolution. *)
 let pp_module_name ctx (m : Cpp_ast.module_ref) =

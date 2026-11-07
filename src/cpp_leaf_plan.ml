@@ -88,7 +88,7 @@ let global_names frames globals =
         Cpp_resolution.[Unmapped (Type, r); Unmapped (Term, r); Class_concept r]
         @ match r with GlobRef.IndRef _ -> [Cpp_resolution.Inductive_value r] | _ -> [] )
       (List.filter decided globals)
-    @ Cpp_names.custom_texts_named globals
+    @ Cpp_names.custom_texts_named globals @ Cpp_names.inline_customs_named globals
   in
   List.concat_map (fun frame -> List.map (fun key -> (frame, key)) keys) frames
 

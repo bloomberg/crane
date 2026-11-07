@@ -164,16 +164,26 @@ type naming =
   | No_names
       (** Nothing: naming anything here is an anomaly.  Every position
           starts so ({!file_start}). *)
-  | Naming_live
+  | Naming_live of live_namers
       (** The program, where the resolver names a key where it stands
-          ({!Cpp_names.live_name}): the one position that names live. *)
+          ({!Cpp_names.live_name}): the one position that names live, with
+          the namers it hands the naming functions it shares with the
+          printer, which name nothing live themselves. *)
   | Names_resolved of Cpp_resolution.table
       (** The names of what is being written, resolved before it is
           written: a leaf of the tree ({!Cpp_ast.unprinted.names}), or what
           planning spells, which it resolves first. *)
 
+(** How the resolver names, at a position, a key, a global, and the inline
+    custom text of a global, if it has one. *)
+and live_namers = {
+  live_key : render_ctx -> Cpp_resolution.key -> Cpp_name.t;
+  live_global : render_ctx -> Common.kind -> Names.GlobRef.t -> Cpp_name.t;
+  live_inline : Names.GlobRef.t -> string option;
+}
+
 (** Where the type printer reads how a type constructor is written. *)
-type tyctor_plan =
+and tyctor_plan =
   | Unplanned  (** Nowhere: writing one here is an anomaly. *)
   | Deciding of tyctor_decision
       (** Off planning, which decides it where it is spelled and notes the
