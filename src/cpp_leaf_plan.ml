@@ -21,10 +21,11 @@ open Cpp_print
     constructors [visit] calls its argument at, in the order spelled -- one
     written in another's body ahead of it -- each spelled as the printer
     spells it there, inside the struct of the inductive whose members are
-    written around it, if any ({!Cpp_resolution.Inductive_struct}). *)
+    written around it, if any ({!Cpp_resolution.Inductive_struct}); and how
+    each type constructor is written, in the order first spelled. *)
 let ctor_aliases_found ctx visit =
-  let found = ref [] in
-  let ctx = {ctx with rc_aliases = Some found} in
+  let found = ref [] and uses = ref [] in
+  let ctx = {ctx with rc_aliases = Some found; rc_tyctors = Noting uses} in
   visit (fun ~vl ~owner t ->
       match t with
       | Ttyctor _ ->
@@ -34,15 +35,15 @@ let ctor_aliases_found ctx visit =
         let spell ctx = ignore (pp_cpp_type_at {ctx with rc_names = None} false vl t) in
         ( match owner with Some r -> enter_from ctx (Inductive_struct r) spell | None -> spell ctx )
       | _ -> () );
-  !found
+  (!found, !uses)
 
 let ctor_aliases_written ctx (d : Cpp_erasure.settled) =
-  { read_written = (module_written ctx, Written_declaration (d :> cpp_decl));
-    read_aliases = ctor_aliases_found ctx (fun f -> Cpp_demands.tyctors_of_decl f (d :> cpp_decl)) }
+  let aliases, uses = ctor_aliases_found ctx (fun f -> Cpp_demands.tyctors_of_decl f (d :> cpp_decl)) in
+  {read_written = (module_written ctx, Written_declaration (d :> cpp_decl)); read_aliases = aliases; read_uses = uses}
 
 let ctor_aliases_of_fields ctx ~vl r types =
-  { read_written = (module_written ctx, Written_fields r);
-    read_aliases = ctor_aliases_found ctx (fun f -> List.iter (Cpp_demands.tyctors_of_type f ~vl) types) }
+  let aliases, uses = ctor_aliases_found ctx (fun f -> List.iter (Cpp_demands.tyctors_of_type f ~vl) types) in
+  {read_written = (module_written ctx, Written_fields r); read_aliases = aliases; read_uses = uses}
 
 (** The synthesised templates the finished declaration [d], written in the
     module [module_], writes in the file [file], as planned. *)
@@ -226,8 +227,11 @@ let write_decl ctx env settled =
 
 (** [settled], which {!absorbs}, written where it is made ({!absorbing_at}),
     behind what placing the declarations it needs reads. *)
-let write_absorbing ctx ~homed env settled =
-  let tree = absorbing_at ctx ~homed env settled in
+let write_absorbing ctx ~homed env (settled : Cpp_erasure.settled) =
+  let tyctors =
+    planned_tyctors ~file:ctx.rc_file ~module_:(module_written ctx) (Written_declaration (settled :> cpp_decl))
+  in
+  let tree = absorbing_at ctx ~homed ?tyctors env settled in
   let needs = printed_needs ctx settled in
   ( if Probe.checking () then
       let written = Cpp_ast.wrapper_structs tree and absorbing = absorbed_by ~homed settled in
@@ -244,11 +248,17 @@ let write_absorbing ctx ~homed env settled =
 let planned_needs ~file ~module_ settled =
   needs_of ~templates:(List.map ctor_alias_name (planned_ctor_aliases ~file ~module_ settled)) settled
 
-let unprinted ctx ~module_ env settled =
-  Cpp_ast.unprinted ~needs:(planned_needs ~file:ctx.rc_file ~module_ settled) env settled
+let unprinted ctx ~module_ env (settled : Cpp_erasure.settled) =
+  let file = ctx.rc_file in
+  Cpp_ast.unprinted ~needs:(planned_needs ~file ~module_ settled)
+    ?tyctors:(planned_tyctors ~file ~module_ (Written_declaration (settled :> cpp_decl)))
+    env settled
 
 let unprinted_fields ctx ~module_ ~vl r fields =
-  Cpp_ast.fields ~needs:(fields_needs ctx ~module_ ~vl r (List.map snd fields)) ~record:r ~vars:vl fields
+  Cpp_ast.fields
+    ~needs:(fields_needs ctx ~module_ ~vl r (List.map snd fields))
+    ?tyctors:(planned_tyctors ~file:ctx.rc_file ~module_ (Written_fields r))
+    ~record:r ~vars:vl fields
 
 
 (** [u] printed as {!Cpp_print.print_unprinted} prints it; under

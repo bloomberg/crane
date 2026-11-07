@@ -232,7 +232,15 @@ and definition = Cpp_resolution.definition = Enum_definition | Struct_definition
 (** A declaration not yet printed, with what placing the declarations it
     needs reads -- planned, so known before it is printed -- and the names it
     is printed with, resolved before it is printed ({!resolve_tree}). *)
-type unprinted = {declaration : declaration; needs : Needs.t; names : Cpp_resolution.table}
+type unprinted = {
+  declaration : declaration;
+  needs : Needs.t;
+  names : Cpp_resolution.table;
+  tyctors : Cpp_state.tyctor_use list option;
+      (** How the type constructors it writes as template template arguments
+          are written, planned with the synthesised templates it writes; none
+          where nothing planned them, where printing decides them. *)
+}
 
 type t = private
   | Text of Pp.t  (** Written as it is; nothing is placed by it. *)
@@ -330,16 +338,24 @@ val concept_group : concept_position -> t list -> t
 val pp_template_head : template_param list -> Pp.t
 val decl : needs:Needs.t -> Pp.t -> t
 
-(** [unprinted ~needs env d] is [d], printed in [env] where the tree puts
+(** [unprinted ~needs ?tyctors env d] is [d], printed in [env] where the
+    tree puts it, writing its type constructors as [tyctors] says
+    ({!unprinted.tyctors}). *)
+val unprinted : needs:Needs.t -> ?tyctors:Cpp_state.tyctor_use list -> Common.env -> Cpp_erasure.settled -> t
+
+(** [absorbed ?tyctors env d] is {!Absorbed}, printed where the tree puts
     it. *)
-val unprinted : needs:Needs.t -> Common.env -> Cpp_erasure.settled -> t
+val absorbed : ?tyctors:Cpp_state.tyctor_use list -> Common.env -> Cpp_erasure.settled -> t
 
-(** [absorbed env d] is {!Absorbed}, printed where the tree puts it. *)
-val absorbed : Common.env -> Cpp_erasure.settled -> t
-
-(** [fields ~needs ~record ~vars fields] is {!Fields}, printed where the
-    tree puts it. *)
-val fields : needs:Needs.t -> record:GlobRef.t -> vars:Id.t list -> (string * Minicpp.cpp_type) list -> t
+(** [fields ~needs ?tyctors ~record ~vars fields] is {!Fields}, printed
+    where the tree puts it. *)
+val fields :
+  needs:Needs.t ->
+  ?tyctors:Cpp_state.tyctor_use list ->
+  record:GlobRef.t ->
+  vars:Id.t list ->
+  (string * Minicpp.cpp_type) list ->
+  t
 
 (** [modtype_concept ~path ~params c] is {!Modtype_concept}, printed where
     the tree puts it.  It needs nothing placed in front of it. *)
@@ -373,10 +389,11 @@ val derived_functor : template:template_param list -> ModPath.t -> module_expr -
     the tree puts it.  It needs nothing placed in front of it. *)
 val forward_declaration : Common.env -> defined -> t
 
-(** [synthesised_template s] is {!Synthesised_template}, printed wherever
-    the tree puts it as declared in its home.  It needs nothing placed in
-    front of it. *)
-val synthesised_template : synthesised -> t
+(** [synthesised_template ~tyctors s] is {!Synthesised_template}, printed
+    wherever the tree puts it as declared in its home, its body writing its
+    type constructors as [tyctors] says.  It needs nothing placed in front
+    of it. *)
+val synthesised_template : tyctors:Cpp_state.tyctor_use list -> synthesised -> t
 
 (** [wrapper_struct ~name ~module_ ~fields] is {!Wrapper_struct}. *)
 val wrapper_struct : name:string -> module_:ModPath.t -> fields:t -> t

@@ -142,7 +142,34 @@ type ctor_alias = {
           sentinel where the template's own parameter goes. *)
   ca_type : Minicpp.cpp_type;  (** That type. *)
   ca_vars : Names.Id.t list;  (** The names of the variables it names by index. *)
+  ca_uses : tyctor_use list;
+      (** How its body writes the type constructors in it, decided where the
+          body was planned: what printing its declaration reads. *)
 }
+
+(** How a type constructor written as a template template argument is
+    written, decided where it is planned: the constructor
+    ({!Cpp_print.tyctor_constructor}), the names of the type variables it
+    names by index, and the template synthesised for it with the arguments
+    a holder is applied to, if it has no template name of its own
+    ({!Cpp_print.ctor_alias_at}). *)
+and tyctor_use = {
+  tu_constructor : Minicpp.cpp_type;
+  tu_vars : Names.Id.t list;
+  tu_alias : (ctor_alias * string list) option;
+}
+
+(** Where the type printer reads how a type constructor is written. *)
+type tyctor_plan =
+  | Decided_here
+      (** Decided where it is spelled: what is written outside every leaf
+          the tree plans -- planning's own reads, the driver's text. *)
+  | Noting of tyctor_use list ref
+      (** Decided where it is spelled, and noted, in the order first spelled:
+          what planning reads off a leaf it plans. *)
+  | Planned of tyctor_use list
+      (** Read off the plan of the leaf being printed; an anomaly if it has
+          none for the constructor. *)
 
 (** Where in the output something is written or planned: a value, handed
     to whatever writes there and derived as each scope is entered
@@ -182,6 +209,9 @@ type render_ctx = {
           collects them.  Every position derived from this one collects into
           the same list, a template's body written where it is declared
           included. *)
+  rc_tyctors : tyctor_plan;
+      (** How the type constructors written from here are written
+          ({!tyctor_plan}). *)
 }
 
 (** The context at the start of the file [file]: file scope, outside every

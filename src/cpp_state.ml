@@ -474,7 +474,25 @@ type ctor_alias = {
           sentinel where the template's own parameter goes. *)
   ca_type : Minicpp.cpp_type;  (** That type. *)
   ca_vars : Id.t list;  (** The names of the variables it names by index. *)
+  ca_uses : tyctor_use list;  (** How its body writes the type constructors in it. *)
 }
+
+(** How a type constructor written as a template template argument is
+    written, decided where it is planned: the constructor, the names of the
+    type variables it names by index, and the template synthesised for it
+    with the arguments a holder is applied to, if it has no template name
+    of its own ({!Cpp_print.ctor_alias_at}). *)
+and tyctor_use = {
+  tu_constructor : Minicpp.cpp_type;
+  tu_vars : Id.t list;
+  tu_alias : (ctor_alias * string list) option;
+}
+
+(** Where the type printer reads how a type constructor is written: decided
+    where it is spelled, which only planning, and what is printed outside
+    every plan, does; noted, by planning, as it decides; or read off the
+    plan of the leaf being printed. *)
+type tyctor_plan = Decided_here | Noting of tyctor_use list ref | Planned of tyctor_use list
 
 (** Where in the output something is written or planned: a value, handed
     to whatever writes there and derived as each scope is entered.  No
@@ -509,6 +527,8 @@ type render_ctx = {
   (* Where the synthesised templates spelled from here are collected, if
      anything collects them. *)
   rc_aliases : ctor_alias list ref option;
+  (* How the type constructors written from here are written. *)
+  rc_tyctors : tyctor_plan;
 }
 
 (** The context at the start of the file [file]: file scope, outside every
@@ -525,6 +545,7 @@ let file_start rc_file =
     rc_names = None;
     rc_visibility = None;
     rc_aliases = None;
+    rc_tyctors = Decided_here;
   }
 
 (** The modules whose module types are file-scope concepts of a functor

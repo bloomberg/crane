@@ -87,7 +87,12 @@ and global_alias =
 
 and definition = Cpp_resolution.definition = Enum_definition | Struct_definition | Alias_definition
 
-type unprinted = {declaration : declaration; needs : Needs.t; names : Cpp_resolution.table}
+type unprinted = {
+  declaration : declaration;
+  needs : Needs.t;
+  names : Cpp_resolution.table;
+  tyctors : Cpp_state.tyctor_use list option;
+}
 
 type t =
   | Text of Pp.t
@@ -167,10 +172,12 @@ let pp_struct_head {template; name; base} =
     ++ (match base with Some b -> str " : public " ++ pp_base b | None -> mt ())
     ++ str " {")
 let decl ~needs text = Decl {text; needs}
-let leaf ?(needs = Needs.none) declaration = Unprinted {declaration; needs; names = Cpp_resolution.unresolved}
-let unprinted ~needs env settled = leaf ~needs (Declaration {env; settled})
-let absorbed env settled = leaf (Absorbed {env; settled})
-let fields ~needs ~record ~vars fields = leaf ~needs (Fields {record; vars; fields})
+let leaf ?(needs = Needs.none) ?tyctors declaration =
+  Unprinted {declaration; needs; names = Cpp_resolution.unresolved; tyctors}
+
+let unprinted ~needs ?tyctors env settled = leaf ~needs ?tyctors (Declaration {env; settled})
+let absorbed ?tyctors env settled = leaf ?tyctors (Absorbed {env; settled})
+let fields ~needs ?tyctors ~record ~vars fields = leaf ~needs ?tyctors (Fields {record; vars; fields})
 let modtype_concept ~path ~params concept = leaf (Modtype_concept {path; params; concept})
 let global_alias a = leaf (Global_alias a)
 let assertion a = leaf (Assertion a)
@@ -178,7 +185,7 @@ let module_alias mp target = leaf (Module_alias {name = declared_module mp; targ
 let functor_alias mp functor_ params = leaf (Functor_alias {name = declared_module mp; functor_; params})
 let derived_functor ~template mp base = leaf (Derived_functor {template; name = declared_module mp; base})
 let forward_declaration env defined = leaf (Forward_declaration {env; defined})
-let synthesised_template s = leaf (Synthesised_template s)
+let synthesised_template ~tyctors s = leaf ~tyctors (Synthesised_template s)
 let wrapper_struct ~name ~module_ ~fields = Wrapper_struct {name; module_; fields}
 let elements ~source elements = Elements {source; elements}
 let seq l = Seq l
