@@ -241,27 +241,54 @@ val pair_by_value : t -> Miniml.ml_ast -> Miniml.ml_branch array -> bool
     projects out of a record that is not moved there. *)
 val projects_in_place : t -> Miniml.ml_type -> Miniml.ml_ast -> bool
 
-(** The de Bruijn indices, at [closure], of the variables the lambda or
-    local fixpoint [closure] takes by move when it is made, as closures that
-    copy what they capture: each is owned there, and the capture is its last
-    use -- nothing after the closure, beside it, or captured with it reads
-    it. *)
-val moved_captures : t -> Miniml.ml_ast -> int list
+(** How a closure holds a variable it reads from the scope it is made in. *)
+module Capture : sig
+  type t =
+    | By_reference
+        (** reads it where it stands: a local fixpoint generated in place
+            ({!Analyze_closures.In_place}), which runs while the scope does *)
+    | By_move
+        (** takes its value where it is made: the variable is owned there,
+            and the capture is its last use -- nothing after the closure,
+            beside it, or captured with it reads it *)
+    | Shared
+        (** holds a copy of its own, made where it is made, the variable
+            left to the scope: what the copy is, the variable's {!Use}
+            says *)
+end
+
+(** Where a value a machine's frame holds across a call is stored
+    ({!Frame_storage}). *)
+module Storage : sig
+  type t =
+    | Local
+        (** where the machine's caller keeps it -- a parameter, or a field
+            bound into one, which outlives the machine and which nothing
+            changes while it runs: the frame holds a pointer to it *)
+    | Frame  (** in the frame itself, a value of its own *)
+end
+
+(** Each variable the lambda or local fixpoint [closure] reads from the
+    scope it is made in, by its de Bruijn index at [closure], in order,
+    with how it holds it: generated as closures that copy what they
+    capture, [By_move] or [Shared]; with [~in_place], generated in place,
+    [By_reference]. *)
+val captures : ?in_place:bool -> t -> Miniml.ml_ast -> (int * Capture.t) list
 
 (** Of the local fixpoint [fix], generated as closures, one per function,
-    for each function in order, the de Bruijn indices at [fix] of the
-    variables its closure takes by move ({!moved_captures}): each the last
-    function reading it takes, those made before it copying it.  [[]] where
-    [fix] is no fixpoint. *)
-val moved_captures_by_member : t -> Miniml.ml_ast -> int list list
+    for each function in order, each variable its closure reads from the
+    scope, by its de Bruijn index at [fix], with how it holds it: the last
+    function reading a variable {!captures} takes [By_move] takes it so,
+    those made before it share it.  [[]] where [fix] is no fixpoint. *)
+val captures_by_member : t -> Miniml.ml_ast -> (int * Capture.t) list list
 
-(** The de Bruijn indices, at [ts], of the variables [ts] read by move
-    ({!use}) directly -- not inside a closure, a let or a match they
-    contain -- and those a closure among them takes by move
-    ({!moved_captures}): what a closure made around them, the eta-expansion
-    of a partial application of which they are the arguments, takes by move
-    when it is made. *)
-val moved_reads : t -> Miniml.ml_ast list -> int list
+(** Each variable the terms [ts] read, by its de Bruijn index where they
+    stand, with how a closure made around them holds it -- the
+    eta-expansion of a partial application of which they are the arguments:
+    [By_move] what they read by move ({!use}) directly, not inside a let or
+    a match they contain, and what a closure among them takes by move
+    ({!captures}); the rest [Shared]. *)
+val eta_captures : t -> Miniml.ml_ast list -> (int * Capture.t) list
 
 (** A term copied to two places -- an eta argument pushed into both branches
     of a conditional -- holds one read twice; it is a last use where every
@@ -321,7 +348,7 @@ end
 
 (** How each function of a local fixpoint passes its parameters -- the
     callable plan of a function with no global, which the frames of its
-    machine read ([Storage.Frame], plan 4.10): for each of its Core
+    machine read ({!Storage}): for each of its Core
     parameters, outermost first, how the lambda it is generated as takes
     it, [None] for one of no runtime value, which the lambda does not take.
     Translation decides it once per group, before generating the group's

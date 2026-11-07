@@ -337,8 +337,12 @@ let storage_at ?entering (l : Control_ir.Term.loop) positions params ~held body 
       planned
   in
   let storage = Frame_storage.plan ~pointer_fields:Loopify_analysis.constructor_pointer_fields ~in_place ~holdable l in
-  let own_pointers = List.map (function Some i -> List.nth storage.own i | None -> false) positions in
-  let entered (b : Core_binder.t) = of_entering b && List.assoc_opt b.level storage.entered = Some true in
+  let own_pointers =
+    List.map (function Some i -> List.nth storage.own i = Ownership_plan.Storage.Local | None -> false) positions
+  in
+  let entered (b : Core_binder.t) =
+    of_entering b && List.assoc_opt b.level storage.entered = Some Ownership_plan.Storage.Local
+  in
   (own_pointers, entered)
 
 (* The same, of the machine of the function [f], its C++ parameters

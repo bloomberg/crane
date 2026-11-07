@@ -847,7 +847,7 @@ let moving_jumps ~moves ~subs ~shadow_params params (check : call_checker) : cal
         (* Translation moved it already, the parameter being owned there; or
            the read is inside a closure translation made around it -- a
            partial application eta-expanded -- whose capture takes it as
-           the plan's captures say ({!Ownership_plan.moved_captures}). *)
+           the plan's captures say ({!Ownership_plan.captures}). *)
         if not (!bare = 0 && !moved + !captured = 1) then
           Probe.violation "ownership plan"
             Pp.(str "a jump the plan moves " ++ Id.print x ++ str " into its next value at reads it " ++ int !bare ++ str " times");

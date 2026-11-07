@@ -3,7 +3,7 @@
 
 (** How the frames of a machine with a stack hold the parameters of its
     loops, decided over its ControlIR (docs/Pipeline-Disentangling-Plan.md,
-    section 4.10: [Storage.Frame]).
+    section 4.10: {!Ownership_plan.Storage}).
 
     A machine runs on what its caller passed, which outlives it and which
     nothing changes while it runs.  A frame can hold a parameter by pointer
@@ -18,12 +18,14 @@
     pointer until a turn passes it a value that lies elsewhere, given those
     still held so. *)
 
-(** [own], for each parameter of the loop, whether its frames hold it by
-    pointer; [entered], for each parameter of a loop an entry enters, by the
-    Core level it is bound at under the loop's parameters, the same. *)
+(** [own], for each parameter of the loop, where the value its frames hold
+    is stored: [Local], where the machine's caller keeps it, a frame holding
+    a pointer to it, or [Frame], in the frame itself; [entered], for each
+    parameter of a loop an entry enters, by the Core level it is bound at
+    under the loop's parameters, the same. *)
 type t = {
-  own : bool list;
-  entered : (int * bool) list;
+  own : Ownership_plan.Storage.t list;
+  entered : (int * Ownership_plan.Storage.t) list;
 }
 
 (** A parameter of the loop, by its position, or of a loop an entry enters:

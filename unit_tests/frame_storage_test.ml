@@ -9,6 +9,7 @@ open Crane_plugin
 open Names
 open Miniml
 open Control_ir
+module Storage = Ownership_plan.Storage
 
 let check name cond =
   if not cond then (
@@ -51,8 +52,8 @@ let size_body pass_left =
 
 let () =
   let size pass = {Term.loop = f; parameters = [(id "t", tree)]; body = size_body pass} in
-  check "a subtree behind the pointer is held by pointer" ((plan (size (fresh_rel 2))).own = [true]);
-  check "a value a call made is held by value" ((plan (size (app "mirror" [fresh_rel 2]))).own = [false]);
+  check "a subtree behind the pointer is held by pointer" ((plan (size (fresh_rel 2))).own = [Storage.Local]);
+  check "a value a call made is held by value" ((plan (size (app "mirror" [fresh_rel 2]))).own = [Storage.Frame]);
 
   (* tree_size t := match t with node n kids => n + sizes kids, sizes the
      entered fixpoint over a list of trees: sizes (cons a rest) :=
@@ -79,12 +80,12 @@ let () =
               (Term.Entry {entered = entered pass_rest; name = None; scope = continue_ sizes [pass_kids]}) ] }
   in
   let p = plan (machine (fresh_rel 1)) in
-  check "the machine's parameter, passed a cell's head, is held by pointer" (p.own = [true]);
+  check "the machine's parameter, passed a cell's head, is held by pointer" (p.own = [Storage.Local]);
   (* The entered body stands under [t], [n], [kids] and the fixpoint's name. *)
-  check "the entered parameter is held by pointer, at its level" (p.entered = [(4, true)]);
+  check "the entered parameter is held by pointer, at its level" (p.entered = [(4, Storage.Local)]);
   let p = plan (machine (app "rebuild" [fresh_rel 1])) in
-  check "an entered parameter passed a value a call made is held by value" (p.entered = [(4, false)]);
-  check "and what is passed on of it is no pointer either" (p.own = [false]);
+  check "an entered parameter passed a value a call made is held by value" (p.entered = [(4, Storage.Frame)]);
+  check "and what is passed on of it is no pointer either" (p.own = [Storage.Frame]);
   (* A turn passing the tail through a let copies the list it reads. *)
   let p =
     plan
@@ -96,12 +97,12 @@ let () =
                 (Pcons (node, [Prel 2; Prel 1]))
                 (Term.Let {binder = id "k"; binder_type = lst; value = fresh_rel 1; body = Term.Entry {entered = entered (fresh_rel 2); name = None; scope = continue_ sizes [fresh_rel 1]}}) ] }
   in
-  check "a let's copy is held by value" (p.entered = [(5, false)]);
+  check "a let's copy is held by value" (p.entered = [(5, Storage.Frame)]);
   (* A parameter its lowering holds by value is a copy in its frame: what
      is passed on of it is no pointer either. *)
   let p = plan ~holdable:(function Frame_storage.Own _ -> false | Entered _ -> true) (machine (fresh_rel 1)) in
-  check "a parameter held by value is no pointer" (p.own = [false]);
-  check "nor what an entered loop is passed of it" (p.entered = [(4, false)]);
+  check "a parameter held by value is no pointer" (p.own = [Storage.Frame]);
+  check "nor what an entered loop is passed of it" (p.entered = [(4, Storage.Frame)]);
   (* An entered parameter is asked about by its loop and position. *)
   let asked = ref [] in
   let p =
@@ -115,7 +116,7 @@ let () =
   in
   check "the entered parameter is asked about by its loop, position and level"
     (match !asked with [(l, 0, 4)] -> Loop.equal l sizes | _ -> false);
-  check "and held by value where it is not holdable, with what it passes on" (p.entered = [(4, false)] && p.own = [false]);
+  check "and held by value where it is not holdable, with what it passes on" (p.entered = [(4, Storage.Frame)] && p.own = [Storage.Frame]);
 
   (* A local fixpoint's plan: what translation recorded of each function. *)
   let o = Occurrence.fresh () in

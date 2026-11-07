@@ -327,3 +327,18 @@ let () =
   check "a type abstraction is what it returns" (mode (Tarr (Tdummy Kprop, Tarr (lst, lst))) = Some Share);
   check "an unknown type is copied as declared" (mode ~declared:Minicpp.Tvoid Tunknown = Some Copy);
   check "or as a box" (mode Tunknown = Some Clone)
+
+(* [g (fun _ => h s) t] and [g (fun _ => h s) s], [s] and [t] owned: a
+   closure made where nothing after reads what it captures takes it by
+   move, one beside a later read shares it, and one generated in place
+   reads it where it stands. *)
+let () =
+  let closure () = MLlam (Id (Id.of_string "u"), nat, call "h" [fresh_rel 2]) in
+  let modes ?in_place last =
+    let lam = closure () in
+    let root = call "g" [lam; fresh_rel last] in
+    Ownership_plan.captures ?in_place (Ownership_plan.region ~owned:[1; 2] ~n_outer:0 root) lam
+  in
+  check "a last capture takes by move" (modes 2 = [(1, Ownership_plan.Capture.By_move)]);
+  check "one read again shares" (modes 1 = [(1, Ownership_plan.Capture.Shared)]);
+  check "in place, by reference" (modes ~in_place:true 2 = [(1, Ownership_plan.Capture.By_reference)])

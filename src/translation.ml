@@ -428,11 +428,15 @@ let capture_names env is =
        (fun id -> not (Common.is_tc_instance_id id))
        (List.filter_map (fun i -> Common.get_db_name_opt i env) is) )
 
+(* The names of the variables [captures] says a closure takes by move. *)
+let moved_names env captures =
+  capture_names env (List.filter_map (function i, Ownership_plan.Capture.By_move -> Some i | _ -> None) captures)
+
 (* What the closure of each function of a local fixpoint [fix] generated as
    closures takes by move where it is made
-   ({!Ownership_plan.moved_captures_by_member}). *)
+   ({!Ownership_plan.captures_by_member}). *)
 let fix_moved_captures env fix =
-  List.map (capture_names env) (Ownership_plan.moved_captures_by_member (!tctx).move_plan fix)
+  List.map (moved_names env) (Ownership_plan.captures_by_member (!tctx).move_plan fix)
 
 (* Whether a record's fields are moved out of what [base] reads it from. *)
 let moved_out base = match base with CPPmove _ -> true | _ -> false
@@ -1847,7 +1851,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     | result -> made_of_application result )
   | MLlam _ as a ->
     (* What the lambda takes by move as it is made. *)
-    let moved_captures = capture_names env (Ownership_plan.moved_captures (!tctx).move_plan a) in
+    let moved_captures = moved_names env (Ownership_plan.captures (!tctx).move_plan a) in
     (* Where the slot is a definitional class -- an alias for a function
        type -- which of its domains the declaration takes as values.  Read
        off the alias's own definition, before this call instantiated it:
@@ -3749,7 +3753,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             then
               (* The arguments are read where the thunk is made, and taken
                  by move there when the plan moves them. *)
-              let moved = capture_names env (Ownership_plan.moved_reads (!tctx).move_plan ts) in
+              let moved = moved_names env (Ownership_plan.eta_captures (!tctx).move_plan ts) in
               suspend_ctor ~moved type_expr (Id.of_string ctor_struct) (of_reversed args)
             else
               CPPfun_call
@@ -7005,7 +7009,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             match mk_lambda ~tparams:eta_tparams eta_args ret_ty body ~capture:Closure with
             | CPPlambda l ->
               CPPlambda
-                {l with cl_moved = capture_names env (Ownership_plan.moved_reads (!tctx).move_plan ml_args)}
+                {l with cl_moved = moved_names env (Ownership_plan.eta_captures (!tctx).move_plan ml_args)}
             | e -> e ) )
       | _ ->
         if id_is_typeclass_instance && args = [] then
@@ -7461,7 +7465,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           with
           | CPPlambda l ->
             CPPlambda
-              {l with cl_moved = capture_names env (Ownership_plan.moved_reads (!tctx).move_plan (f :: ml_args))}
+              {l with cl_moved = moved_names env (Ownership_plan.eta_captures (!tctx).move_plan (f :: ml_args))}
           | e -> e )
       else
         mk_call (gen_callee ()) args

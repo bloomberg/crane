@@ -10,8 +10,8 @@ module Term = Control_ir.Term
 module Loop = Control_ir.Loop
 
 type t = {
-  own : bool list;
-  entered : (int * bool) list;
+  own : Ownership_plan.Storage.t list;
+  entered : (int * Ownership_plan.Storage.t) list;
 }
 
 type parameter =
@@ -182,6 +182,6 @@ let plan ~pointer_fields ~in_place ~holdable (l : Term.loop) =
     | more -> settle (more @ excluded)
   in
   let excluded = settle unholdable in
-  let pointed p = not (mem p excluded) in
-  { own = List.mapi (fun i _ -> pointed (l.loop, i)) l.parameters;
-    entered = List.map (fun (((loop : Term.loop), i), level) -> (level, pointed (loop.loop, i))) levels }
+  let storage p : Ownership_plan.Storage.t = if mem p excluded then Frame else Local in
+  { own = List.mapi (fun i _ -> storage (l.loop, i)) l.parameters;
+    entered = List.map (fun (((loop : Term.loop), i), level) -> (level, storage (loop.loop, i))) levels }

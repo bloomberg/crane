@@ -290,7 +290,9 @@ let member_plan ~frames member params =
               planned
             | Entered _ -> false
           in
-          List.map2 ( || ) parts
+          List.map2
+            (fun part (storage : Ownership_plan.Storage.t) -> part || storage = Local)
+            parts
             (Frame_storage.plan ~pointer_fields:constructor_pointer_fields ~in_place ~holdable l).own
       in
       Some

@@ -1312,6 +1312,39 @@ let moved_reads p ts =
   in
   List.sort_uniq Int.compare (List.fold_left go [] ts)
 
+module Capture = struct
+  type t = By_reference | By_move | Shared
+end
+
+module Storage = struct
+  type t = Local | Frame
+end
+
+(* The variables [ts] read, at the index each has where they stand, in
+   order, once each. *)
+let read_indices ts = List.sort_uniq Int.compare (List.concat_map (fun t -> List.map (fun (l, _) -> -l) (closure_reads 0 t)) ts)
+
+let mode_of moved i : Capture.t = if List.mem i moved then By_move else Shared
+
+let captures ?(in_place = false) p closure =
+  let moved = if in_place then [] else moved_captures p closure in
+  List.map (fun i -> (i, if in_place then Capture.By_reference else mode_of moved i)) (read_indices [closure])
+
+let captures_by_member p fix =
+  match fix with
+  | MLfix (_, _, funs, _, _) ->
+    let n = Array.length funs in
+    List.map2
+      (fun f moved ->
+        let read = List.sort_uniq Int.compare (List.filter_map (fun (l, _) -> if -l - n > 0 then Some (-l - n) else None) (closure_reads 0 f)) in
+        List.map (fun i -> (i, mode_of moved i)) read )
+      (Array.to_list funs) (moved_captures_by_member p fix)
+  | _ -> []
+
+let eta_captures p ts =
+  let moved = moved_reads p ts in
+  List.map (fun i -> (i, mode_of moved i)) (read_indices ts)
+
 module Local_passing = struct
   type t = Callable_abi.passing option list
 
