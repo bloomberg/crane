@@ -10,8 +10,8 @@ module Term = Control_ir.Term
 module Loop = Control_ir.Loop
 
 type t = {
-  own : Ownership_plan.Storage.t list;
-  entered : (int * Ownership_plan.Storage.t) list;
+  own : Ownership_ir.Storage.t list;
+  entered : (int * Ownership_ir.Storage.t) list;
 }
 
 type parameter =
@@ -45,7 +45,7 @@ let local_holdable (l : Term.loop) i =
     Option.map
       (fun passing ->
         passed_holdable (Option.flatten (List.nth_opt passing i)) (snd (List.nth l.parameters i)) )
-      (Ownership_plan.Local_passing.lookup (o, j))
+      (Ownership_ir.Local_passing.lookup (o, j))
 
 let check_local i ~planned ~declared =
   if Probe.checking () && planned && not (declared ()) then
@@ -182,6 +182,6 @@ let plan ~pointer_fields ~in_place ~holdable (l : Term.loop) =
     | more -> settle (more @ excluded)
   in
   let excluded = settle unholdable in
-  let storage p : Ownership_plan.Storage.t = if mem p excluded then Frame else Local in
+  let storage p : Ownership_ir.Storage.t = if mem p excluded then Frame else Local in
   { own = List.mapi (fun i _ -> storage (l.loop, i)) l.parameters;
     entered = List.map (fun (((loop : Term.loop), i), level) -> (level, storage (loop.loop, i))) levels }

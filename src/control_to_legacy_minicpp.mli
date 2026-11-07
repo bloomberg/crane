@@ -64,7 +64,7 @@
     binders bound before a point that what follows reads, except the
     parameters every turn passes on unchanged, which the machine holds
     outside its frames. *)
-val function_resumes : Names.GlobRef.t -> depth:int -> Ownership_plan.resumes option
+val function_resumes : Names.GlobRef.t -> depth:int -> Ownership_ir.resumes option
 
 (** [method_resumes r ~inductive ~receiver ~depth]: the points the method
     made of the function [r] in the struct of [inductive], its receiver its
@@ -80,7 +80,7 @@ val method_resumes :
   inductive:Names.GlobRef.t ->
   receiver:int ->
   depth:int ->
-  (Ownership_plan.resumes * bool) option
+  (Ownership_ir.resumes * bool) option
 
 (** [local_resumes ~owner ~function_ ~lifted ~member ~depth ~arity]: the
     points the local fixpoint [member] resumes at, generated in the body of
@@ -98,7 +98,7 @@ val local_resumes :
   member:Miniml.Occurrence.t * int ->
   depth:int ->
   arity:int ->
-  (Ownership_plan.resumes * bool) option
+  (Ownership_ir.resumes * bool) option
 
 (** [lifted_resumes r ~owner ~depth ~arity]: the points the helper [r],
     lifted out of the body of [owner] for the function of a local fixpoint,
@@ -106,7 +106,7 @@ val local_resumes :
     adopting nothing ({!lower_lifted}): its body standing under [depth] of
     [owner]'s binders, the last [arity] of them the fixpoint's parameters. *)
 val lifted_resumes :
-  Names.GlobRef.t -> owner:Names.GlobRef.t option -> depth:int -> arity:int -> Ownership_plan.resumes option
+  Names.GlobRef.t -> owner:Names.GlobRef.t option -> depth:int -> arity:int -> Ownership_ir.resumes option
 
 (** [local_loop ~owner ~function_ ~lifted ~member ~tparams ~name l]
     is the statement declaring the local fixpoint [name], the function

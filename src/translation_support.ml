@@ -1354,7 +1354,7 @@ let with_escape_analysis f =
   tctx :=
     { !tctx with
       current_letin_depth = 0;
-      move_plan = Ownership_plan.empty;
+      move_plan = Ownership_ir.empty;
       match_param_counter = 0;
       cs_counter = 0;
       in_constructor_expr = false;
@@ -1381,16 +1381,16 @@ let declared_by_value declared ~summary =
 
 (** The de Bruijn indices of the [n] innermost parameters a body owns: those
     [owned] says are passed by value, of a type worth moving.  That is one
-    {!Ownership_plan.worth_moving} accepts as reading [ty]; but an erased ML
+    {!Ownership_ir.worth_moving} accepts as reading [ty]; but an erased ML
     type says nothing of how the value is held, and there the type the head
-    [declared] it at is read instead ({!Ownership_plan.worth_moving_cpp}):
+    [declared] it at is read instead ({!Ownership_ir.worth_moving_cpp}):
     [x] in an instance's [fun (A : Type) (x : A) => Some x] is a boxed
     [crane::obj]. *)
 let owned_parameters ?(declared = fun _ -> None) n ~owned ~ty =
   let worth i =
     match (resolve_tmeta (ty i), declared i) with
-    | (Tdummy _ | Tunknown | Taxiom), Some cty -> Ownership_plan.worth_moving_cpp cty
-    | ty, _ -> Ownership_plan.worth_moving ty
+    | (Tdummy _ | Tunknown | Taxiom), Some cty -> Ownership_ir.worth_moving_cpp cty
+    | ty, _ -> Ownership_ir.worth_moving ty
   in
   List.filter_map (fun i -> if owned i && worth i then Some (i + 1) else None) (List.init n Fun.id)
 
@@ -3069,7 +3069,7 @@ let local_fix_selves cpp_of renamed_ids funs_with_params =
     the wrapper is not yet declared: a closure over its parameters, of the
     C++ types [param_tys_rev] gives in reverse, calling the self-parameter.
     The closure takes each by value and reads it once, passing it on: it
-    moves one a copy of which costs more ({!Ownership_plan.worth_moving}).
+    moves one a copy of which costs more ({!Ownership_ir.worth_moving}).
 
     Unless [passing], no self-parameter is passed: each call is flattened and
     still calls the fixpoint by its own name, as a loop lowered from the
@@ -3119,7 +3119,7 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
           List.map2
             (fun (_, x) core ->
               let v = CPPvar (Option.get x) in
-              if Ownership_plan.worth_moving core && not (Ml_type_util.ml_type_is_unit core) then CPPmove v else v )
+              if Ownership_ir.worth_moving core && not (Ml_type_util.ml_type_is_unit core) then CPPmove v else v )
             params_rev self.param_core_tys_rev
         in
         CPPlambda

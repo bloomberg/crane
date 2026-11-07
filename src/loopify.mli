@@ -126,10 +126,10 @@ val modulo_cons_loop :
     turns derive from the loop's parameters; a loop of another kind parks
     none.  Under [CRANE_CHECK_IR] it parks every call of [park].  A tail
     loop moves a parameter into its own next value at the calls [moves]
-    gives ({!Ownership_plan.continue_moves}). *)
+    gives ({!Ownership_ir.continue_moves}). *)
 val transform_method_own :
   ?cursor:Reuse_cursor.t ->
-  ?moves:(Miniml.Occurrence.t * Ownership_plan.Continue_move.t list) list ->
+  ?moves:(Miniml.Occurrence.t * Ownership_ir.Continue_move.t list) list ->
   varying:bool list ->
   parts:bool list ->
   park:Miniml.Occurrence.t list ->
@@ -196,7 +196,7 @@ val local_frame_machine :
 type member_plan = {
   member_varying : bool list;
   member_parts : bool list;
-  member_moves : (Miniml.Occurrence.t * Ownership_plan.Continue_move.t list) list;
+  member_moves : (Miniml.Occurrence.t * Ownership_ir.Continue_move.t list) list;
 }
 
 (** [member_plan ~frames member params] is the plan of the local fixpoint

@@ -999,12 +999,12 @@ let binder_of ctx x = Option.flatten (List.assoc_opt x ctx.er_binders)
     where the callee may have lent it -- the call's arguments, and, an
     adopted entry's, the captures it is entered with besides them
     ({!adopted_checker}) -- and moves each local the ownership plan says
-    the call may take ({!Ownership_plan.Entry_moves}), at a type worth
+    the call may take ({!Ownership_ir.Entry_moves}), at a type worth
     moving; one it holds by pointer is pointed at
     ({!adjust_frame_push_args}). *)
 let make_enter_for ctx ~called cs =
   let en = List.nth ctx.er_entries cs.cs_entry in
-  let moved = Option.default [] (Option.bind (Loopify_analysis.made_of called) Ownership_plan.Entry_moves.lookup) in
+  let moved = Option.default [] (Option.bind (Loopify_analysis.made_of called) Ownership_ir.Entry_moves.lookup) in
   let takes (_, ty) arg =
     match arg with
     | CPPvar x
@@ -1428,13 +1428,13 @@ and rewrite_enter_stmts ctx stmts =
          pointed at.  Under [CRANE_CHECK_IR] the call's arguments must read
          none of those the plan says they do not.  Which a save moves is the
          ownership plan's, which planned the let or bind the machine resumes
-         at ({!Ownership_plan.Frame_save}): each binder it owns there or an
+         at ({!Ownership_ir.Frame_save}): each binder it owns there or an
          enclosing frame of the turn holds, read last by the save; the
          declared types say only which are worth moving.  A save it did not
          plan moves nothing, and is a violation under [CRANE_CHECK_IR]. *)
       let plan_moves =
         let b = match tgt with Declare (_, b) -> b | Existing -> binder_of ctx id | Declare_static _ -> None in
-        match Option.bind b Ownership_plan.Frame_save.lookup with
+        match Option.bind b Ownership_ir.Frame_save.lookup with
         | Some moved -> moved
         | None ->
           if cont_vars <> [] then

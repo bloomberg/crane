@@ -2,7 +2,7 @@
 
 /// A tail loop moves a local of its turn into a parameter's next value
 /// where the turn owns it and reads it there for the last time
-/// (Ownership_plan.continue_moves, Move_argument): where nothing reads it
+/// (Ownership_ir.continue_moves, Move_argument): where nothing reads it
 /// after but the Continue's other arguments, by name, it is moved at the
 /// last of the loop's updates that reads it.  A part of it read by another
 /// argument keeps it copied.

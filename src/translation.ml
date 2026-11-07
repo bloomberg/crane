@@ -133,10 +133,10 @@ let local_fix_stmts selves ~binders ~self_passing impl_stmts funs_with_params =
 (* A local fixpoint's wrapper parameter, of ML type [ty], forwarded to the
    impl: its one read, a move where the wrapper takes it by value. *)
 let forwarded ~by_value ty v =
-  if by_value && Ownership_plan.worth_moving ty && not (ml_type_is_unit ty) then CPPmove v else v
+  if by_value && Ownership_ir.worth_moving ty && not (ml_type_is_unit ty) then CPPmove v else v
 
 (** How each function of the local fixpoint group whose bodies are [funs]
-    passes its parameters ({!Ownership_plan.Local_passing}): a group of
+    passes its parameters ({!Ownership_ir.Local_passing}): a group of
     [closures] takes each by value; one generated in place lends each its
     body does not own ({!Escape.infer_owned_params}).  A parameter of no
     runtime value is taken by no lambda, but is a binder of the body all the
@@ -160,7 +160,7 @@ let local_passing ~closures funs =
 (* Record that the functions [binders] name pass their parameters as
    [passing] says, each the plan of the one at its position. *)
 let record_local_passing ~binders passing =
-  List.iter2 (fun (_, member, _, _) t -> Ownership_plan.Local_passing.record member t) binders passing
+  List.iter2 (fun (_, member, _, _) t -> Ownership_ir.Local_passing.record member t) binders passing
 
 (* Whether a lambda generated as [passing] says owns each parameter it
    takes, innermost first, as its parameters are listed. *)
@@ -430,23 +430,23 @@ let capture_names env is =
 
 (* The names of the variables [captures] says a closure takes by move. *)
 let moved_names env captures =
-  capture_names env (List.filter_map (function i, Ownership_plan.Capture.By_move -> Some i | _ -> None) captures)
+  capture_names env (List.filter_map (function i, Ownership_ir.Capture.By_move -> Some i | _ -> None) captures)
 
 (* What the closure of each function of a local fixpoint [fix] generated as
    closures takes by move where it is made
-   ({!Ownership_plan.captures_by_member}). *)
+   ({!Ownership_ir.captures_by_member}). *)
 let fix_moved_captures env fix =
-  List.map (moved_names env) (Ownership_plan.captures_by_member (!tctx).move_plan fix)
+  List.map (moved_names env) (Ownership_ir.captures_by_member (!tctx).move_plan fix)
 
 (* Whether a record's fields are moved out of what [base] reads it from. *)
 let moved_out base = match base with CPPmove _ -> true | _ -> false
 
 (* Whether a match taking the record [t] apart, a class instance's fields
    unless [is_typeclass], takes its value, as the plan says
-   ({!Ownership_plan.takes_record}); under [CRANE_CHECK_IR], the code reading
+   ({!Ownership_ir.takes_record}); under [CRANE_CHECK_IR], the code reading
    it from [base] must agree. *)
 let record_taken ~is_typeclass t base =
-  let taken = (not is_typeclass) && Ownership_plan.takes_record (!tctx).move_plan t in
+  let taken = (not is_typeclass) && Ownership_ir.takes_record (!tctx).move_plan t in
   if Probe.checking () && taken <> moved_out base then
     Probe.violation "ownership plan"
       (Pp.str
@@ -467,7 +467,7 @@ let ungenerated_let_lambda what =
 
 let check_closure_local ty a ~local =
   if Probe.checking () then
-    match Ownership_plan.closure_local (!tctx).move_plan ty a with
+    match Ownership_ir.closure_local (!tctx).move_plan ty a with
     | Some planned when planned <> local ->
       Probe.violation "ownership plan"
         (Pp.str
@@ -1509,7 +1509,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let x = try get_db_name i env with Failure _ -> db_fallback_id i in
     let var_expr = CPPvar x in
     (* Move on a last use of a variable the region owns, as its plan says
-       ({!Ownership_plan.use}); a boxed variable is unboxed whole, whatever
+       ({!Ownership_ir.use}); a boxed variable is unboxed whole, whatever
        component of it Core reads.  Never move a typeclass instance -- it is a type reference in the concept
        paradigm, not an owned value, and wrapping it produces invalid C++ like
        [std::move(_tcI0)::method()].  Recognised by identity rather than by ML
@@ -1519,7 +1519,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let move_candidate =
       (not (Common.is_tc_instance_id x))
       &&
-      match Ownership_plan.use ~boxed:(binder_is_boxed i) ?declared:(binder_cpp_type i) (!tctx).move_plan occ with
+      match Ownership_ir.use ~boxed:(binder_is_boxed i) ?declared:(binder_cpp_type i) (!tctx).move_plan occ with
       | Some ((Share | Clone | Copy) as copy) ->
         (* The copy the plan names is the one the variable's declaration
            makes. *)
@@ -1527,14 +1527,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             match binder_cpp_type i with
             (* [auto] says nothing of the type it deduces. *)
             | Some (Tauto | Tconst Tauto | Tref (_, (Tauto | Tconst Tauto))) -> ()
-            | Some declared when Ownership_plan.copy_of_declared declared <> copy ->
-              let name : Ownership_plan.Use.t -> string = function
+            | Some declared when Ownership_ir.copy_of_declared declared <> copy ->
+              let name : Ownership_ir.Use.t -> string = function
                 | Share -> "shares" | Clone -> "clones" | Copy -> "copies" | Move -> "moves" | Borrow -> "borrows"
               in
               Probe.violation "copy mode"
                 Pp.(
                   str "the plan " ++ str (name copy) ++ str " " ++ Id.print x ++ str " where its declaration "
-                  ++ str (name (Ownership_plan.copy_of_declared declared)) ++ str " it" )
+                  ++ str (name (Ownership_ir.copy_of_declared declared)) ++ str " it" )
             | Some _ | None -> () );
         false
       | Some use -> use = Move
@@ -1851,7 +1851,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     | result -> made_of_application result )
   | MLlam _ as a ->
     (* What the lambda takes by move as it is made. *)
-    let moved_captures = moved_names env (Ownership_plan.captures (!tctx).move_plan a) in
+    let moved_captures = moved_names env (Ownership_ir.captures (!tctx).move_plan a) in
     (* Where the slot is a definitional class -- an alias for a function
        type -- which of its domains the declaration takes as values.  Read
        off the alias's own definition, before this call instantiated it:
@@ -3736,11 +3736,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           in
           (* Perceus reuse: where the plan gives this construction the token
              of the use_count()==1-guarded arm it is returned from
-             ({!Ownership_plan.allocation}), call the [<factory>__reuse] variant
+             ({!Ownership_ir.allocation}), call the [<factory>__reuse] variant
              with the token appended (stored last = printed first, matching
              the [_tok] leading parameter). *)
           ( match (!tctx).reuse_token with
-          | Some tok when Ownership_plan.allocation (!tctx).move_plan construction = Reuse ->
+          | Some tok when Ownership_ir.allocation (!tctx).move_plan construction = Reuse ->
             let args = args @ [CPPmove tok] in
             CPPfun_call
               ( ctor_sig args,
@@ -3753,7 +3753,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             then
               (* The arguments are read where the thunk is made, and taken
                  by move there when the plan moves them. *)
-              let moved = moved_names env (Ownership_plan.eta_captures (!tctx).move_plan ts) in
+              let moved = moved_names env (Ownership_ir.eta_captures (!tctx).move_plan ts) in
               suspend_ctor ~moved type_expr (Id.of_string ctor_struct) (of_reversed args)
             else
               CPPfun_call
@@ -7009,7 +7009,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             match mk_lambda ~tparams:eta_tparams eta_args ret_ty body ~capture:Closure with
             | CPPlambda l ->
               CPPlambda
-                {l with cl_moved = moved_names env (Ownership_plan.eta_captures (!tctx).move_plan ml_args)}
+                {l with cl_moved = moved_names env (Ownership_ir.eta_captures (!tctx).move_plan ml_args)}
             | e -> e ) )
       | _ ->
         if id_is_typeclass_instance && args = [] then
@@ -7465,7 +7465,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           with
           | CPPlambda l ->
             CPPlambda
-              {l with cl_moved = moved_names env (Ownership_plan.eta_captures (!tctx).move_plan (f :: ml_args))}
+              {l with cl_moved = moved_names env (Ownership_ir.eta_captures (!tctx).move_plan (f :: ml_args))}
           | e -> e )
       else
         mk_call (gen_callee ()) args
@@ -8196,7 +8196,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
           else "_m" ^ string_of_int (match_i - 1) )
     in
     (* The scrutinee is referenced across all branches, so the plan has a
-       read of it as one in place, never moved ({!Ownership_plan.Inspected}). *)
+       read of it as one in place, never moved ({!Ownership_ir.Inspected}). *)
     let scrut_expr = gen_expr env t in
     let scrut_expr =
       recover_erased_scrutinee env ~is_magic:scrut_is_mlmagic_case typ scrut_expr
@@ -8210,7 +8210,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
     (* Whether this match may consume the scrutinee.  A shared value is
        matched by borrowing all the same -- its fields are count bumps away --
        and is consumed only by block reuse below. *)
-    let scrut_consumable = Ownership_plan.owns_scrutinee (!tctx).move_plan t in
+    let scrut_consumable = Ownership_ir.owns_scrutinee (!tctx).move_plan t in
     let scrut_is_owned = scrut_consumable && not scrut_is_shared in
     (* Build variant accessor.  All inductives (including coinductives)
        are value types and use [scrut.v()] (dot access).  Exception:
@@ -8481,7 +8481,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
             let body_stmts =
               with_reuse_token (Some tok) (fun () ->
                   with_plan
-                    (Ownership_plan.reuse_arm (!tctx).move_plan ~scrutinee:t ~branch:branch_idx
+                    (Ownership_ir.reuse_arm (!tctx).move_plan ~scrutinee:t ~branch:branch_idx
                        ~constructor:tail_ctor)
                     (fun () -> gen_stmts env' (fun x -> Sreturn (Some x)) body) )
             in
@@ -8661,7 +8661,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   (* Custom match templates may use %scrut multiple times (e.g., option: "if
      (%scrut.has_value()) { ... *%scrut; ... }"). Each occurrence re-prints the
      scrutinee C++ expression: a variable is then read in place (the plan has
-     no move of it, {!Ownership_plan.Inspected}), and anything else is bound
+     no move of it, {!Ownership_ir.Inspected}), and anything else is bound
      once to a temporary below. *)
   let cmatch = find_custom_match pv in
   let scrut_uses =
@@ -8670,7 +8670,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   in
   (* Whether the match binds the pair's components by value, moving them out:
      asked while [t] is still the Core scrutinee. *)
-  let pair_by_value = Ownership_plan.pair_by_value (!tctx).move_plan t pv in
+  let pair_by_value = Ownership_ir.pair_by_value (!tctx).move_plan t pv in
   let scrut_is_trivial_ml = match t with
     | MLrel _ | MLmagic (_, MLrel _) -> true
     | _ -> false
@@ -9133,7 +9133,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
    moved out of the record into a local of its own is the body's.  A field
    copied out of a record still held is not: it may be read in place. *)
 and with_fields_plan case asgns f =
-  with_plan (Ownership_plan.fields_by_value (!tctx).move_plan ~case ~by_value:(List.map snd asgns)) f
+  with_plan (Ownership_ir.fields_by_value (!tctx).move_plan ~case ~by_value:(List.map snd asgns)) f
 
 and record_read_once env ~is_typeclass t =
   let scrut = gen_expr env t in
@@ -9295,7 +9295,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
 
          The variables the fixpoint bodies capture are not moved in the
          continuation while a [\[&\]] lambda may still refer to them: the
-         plan pins them ({!Ownership_plan}). *)
+         plan pins them ({!Ownership_ir}). *)
       let all_fix_ids_list = Array.to_list ids in
       let closures = Analyze_closures.group ~n_outer ~continuation:b ~cofix ids funs = Closures in
       let funs_compiled =
@@ -9429,7 +9429,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     | At_instance inst ->
       let subst = Mlutil.type_subst_list inst in
       ungenerated_let_lambda "a lambda used at one instance";
-      with_plan (Ownership_plan.bound_at_instance (!tctx).move_plan ~let_:let_occ) (fun () ->
+      with_plan (Ownership_ir.bound_at_instance (!tctx).move_plan ~let_:let_occ) (fun () ->
           gen_stmts ~slot env k (MLletin (x, subst t, Mlutil.ast_map_types subst a, b, let_occ)) )
     | Inlined b ->
       ungenerated_let_lambda "an alias to inline";
@@ -9790,8 +9790,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       (* Where a machine resumes at this let, which of what its frame keeps
          the save moves is the plan's: the machine reads it by the let's
          binder. *)
-      ( match (Ownership_plan.save_moves (!tctx).move_plan let_occ, core_binder ~site:let_occ env' 1) with
-      | Some moved, Some binder -> Ownership_plan.Frame_save.record binder moved
+      ( match (Ownership_ir.save_moves (!tctx).move_plan let_occ, core_binder ~site:let_occ env' 1) with
+      | Some moved, Some binder -> Ownership_ir.Frame_save.record binder moved
       | _ -> () );
       (* What the continuation reads, in the right-hand side's coordinates. *)
       let cont_free = Escape.free_rels 1 b in
@@ -9974,7 +9974,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          moved there is bound as [const T&], saving a [shared_ptr] count
          bump; the plan does not own such a binder, so it is never moved
          from.  Only for [shared_ptr] types. *)
-      let use_const_ref = Ownership_plan.projects_in_place (!tctx).move_plan t a in
+      let use_const_ref = Ownership_ir.projects_in_place (!tctx).move_plan t a in
       let result =
         match asgn with
           | [Sasgn (_, Existing, e)] ->
@@ -10047,10 +10047,10 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     let n_outer = List.length outer_tvars in
     let has_extra_tvars = Ml_type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) in
     (* The arguments the plan reads before the call, its parameters being
-       bound to them in order ({!Ownership_plan.evaluated_first}), each
+       bound to them in order ({!Ownership_ir.evaluated_first}), each
        evaluated into a local of its own ahead of everything the call
        makes. *)
-    let first = Ownership_plan.evaluated_first (!tctx).move_plan occ in
+    let first = Ownership_ir.evaluated_first (!tctx).move_plan occ in
     let evaluated = ref [] in
     let gen_args args =
       let params = List.rev (fst (collect_lams funs.(x))) in
@@ -10062,7 +10062,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
              | true, Some (_, ty) ->
                let id = Id.of_string (Printf.sprintf "_arg%d" i) in
                evaluated := !evaluated @ [Sasgn (id, Declare (cpp_of_ml env ty, None), e)];
-               if Ownership_plan.worth_moving ty then CPPmove (CPPvar id) else CPPvar id
+               if Ownership_ir.worth_moving ty then CPPmove (CPPvar id) else CPPvar id
              | _ -> e )
            args )
     in
@@ -10303,8 +10303,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     let bound_by_bind env = core_binder ~site:(Global_use.occurrence use) env 1 in
     (* Where a machine resumes at the continuation's parameter, which of
        what its frame keeps the save moves is the plan's, as at a let. *)
-    ( match (ids, Ownership_plan.save_moves (!tctx).move_plan (Global_use.occurrence use)) with
-    | _ :: _, Some moved -> Option.iter (fun b -> Ownership_plan.Frame_save.record b moved) (bound_by_bind env)
+    ( match (ids, Ownership_ir.save_moves (!tctx).move_plan (Global_use.occurrence use)) with
+    | _ :: _, Some moved -> Option.iter (fun b -> Ownership_ir.Frame_save.record b moved) (bound_by_bind env)
     | _ -> () );
     (
     match ids with
@@ -10375,7 +10375,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             if cpp_ty = Tvoid || cpp_ty = Tunresolved || ml_type_is_unit ty then
               None
             else
-              Some (cpp_ty, Ownership_plan.worth_moving ty)
+              Some (cpp_ty, Ownership_ir.worth_moving ty)
           | None -> None
         in
         ( match non_void_ty with

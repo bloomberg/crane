@@ -6,7 +6,7 @@
     path").
 
     The moves a body holds come from several places -- translation at the
-    last uses its region's plan finds ({!Ownership_plan}), Loopify's frames
+    last uses its region's plan finds ({!Ownership_ir}), Loopify's frames
     and loops, the depth flattening -- and this checks all of
     them against the C++ they ended up in, independently of how each was
     decided.  A move reaches a whole local or one member of it -- a field
@@ -32,7 +32,7 @@
     convention its callable plan states ({!convention_violations}), and the
     lambda of each local fixpoint in its body -- its parameters other than
     the members it calls through -- against its function's
-    ({!Ownership_plan.Local_passing}).
+    ({!Ownership_ir.Local_passing}).
 
     Under [CRANE_CHECK_IR] each violation is reported ({!Probe.violation}). *)
 

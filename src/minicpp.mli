@@ -796,7 +796,7 @@ and cpp_lambda = {
   cl_moved : Id.t list;
       (** The variables a {!Closure} takes by move, at their last use --
           [\[=, x = std::move(x)\]]; the rest it copies.  Set as the
-          region's plan says ({!Ownership_plan.moved_captures}). *)
+          region's plan says ({!Ownership_ir.captures}). *)
   cl_binders : (Id.t * Core_binder.t) list;
       (** The Core binder each parameter stands for, by the parameter's name,
           where the lambda is the body of a Core function: a local

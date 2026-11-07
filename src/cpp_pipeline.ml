@@ -85,7 +85,7 @@ let minicpp_passes : cpp_decl Pipeline_trace.pass list =
     (* Closures made and used in one place become the code they stand for.
        The moves they hold were decided over Core, the arguments a local
        fixpoint applied in place binds its parameters to in order
-       ({!Ownership_plan.evaluated_first}). *)
+       ({!Ownership_ir.evaluated_first}). *)
     on_decl "local_closures" Cpp_local_closures.transform_decl;
     (* A function's constants are declared once at its top, now that nothing
        moves code between functions -- and before the passes that rewrite what

@@ -1,8 +1,17 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Which reads of a local are its last use, decided over Core
-    (docs/Pipeline-Disentangling-Plan.md, Milestone 7).
+(** OwnershipIR: what each region does with the values it reads, holds
+    and builds, decided over Core and ControlIR before C++ is generated
+    (docs/Pipeline-Disentangling-Plan.md, sections 4.10 and 6.4, Milestone
+    7): how each read uses its variable ({!Use}), how each closure holds
+    what it captures ({!Capture}), where a machine's frames store what they
+    hold ({!Storage}), where each construction is built ({!Allocation}),
+    which binders a frame takes as it is saved or entered ({!Frame_save},
+    {!Entry_moves}), what a loop's turn moves into its next parameters
+    ({!Continue_move}), and how a local function passes its parameters
+    ({!Local_passing}).  Its validators are {!Move_check}'s and the checks
+    translation makes against it under [CRANE_CHECK_IR].
 
     A region is a term translation generates as one C++ body: a function's,
     a method's or a local fixpoint's, a lambda's, or that of a let standing

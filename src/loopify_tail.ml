@@ -60,7 +60,7 @@ let rec strip_ref_and_const_type = function
     pessimizing-move warning since the move constructor receives [const T&&]
     and falls back to copy anyway; and a move of a type that copies for free
     -- a scalar -- transfers nothing.  An [auto] parameter may be anything,
-    and is moved as a type variable is ({!Ownership_plan.worth_moving}). *)
+    and is moved as a type variable is ({!Ownership_ir.worth_moving}). *)
 let is_moveable_param_type = function
   | Tref _ | Tconst _ -> false
   | Tauto -> true
@@ -307,7 +307,7 @@ let assign_result_and_stop expr =
     already ({!moving_jumps}).  [last_reads] are the locals of the turn the
     plan lets the jump move into a parameter's next value at the last of
     the updates reading them by name
-    ({!Ownership_plan.Continue_move.Move_argument}): which that is, the
+    ({!Ownership_ir.Continue_move.Move_argument}): which that is, the
     order the updates are made in says.  One assigned whole to a shadow
     kept by value, or to a temporary, by that update is moved. *)
 let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow_params args =
@@ -813,7 +813,7 @@ type shadow_setup = {
 
 (** The jumps [check] finds, each moving into the next value of a shadow
     kept by value the shadow itself where the plan moves it there
-    ({!Ownership_plan.continue_moves}): [moves] gives, by the occurrence of
+    ({!Ownership_ir.continue_moves}): [moves] gives, by the occurrence of
     the call a jump is made of, a flag for each of [params], the shadows'
     names [subs] stand for.  The argument reads the shadow once, outside any
     closure and not already moved; reading it otherwise it is left, and
@@ -847,7 +847,7 @@ let moving_jumps ~moves ~subs ~shadow_params params (check : call_checker) : cal
         (* Translation moved it already, the parameter being owned there; or
            the read is inside a closure translation made around it -- a
            partial application eta-expanded -- whose capture takes it as
-           the plan's captures say ({!Ownership_plan.captures}). *)
+           the plan's captures say ({!Ownership_ir.captures}). *)
         if not (!bare = 0 && !moved + !captured = 1) then
           Probe.violation "ownership plan"
             Pp.(str "a jump the plan moves " ++ Id.print x ++ str " into its next value at reads it " ++ int !bare ++ str " times");
@@ -872,7 +872,7 @@ let moving_jumps ~moves ~subs ~shadow_params params (check : call_checker) : cal
           let args =
             List.mapi
               (fun k ((move, (id, _)), arg) ->
-                match (List.assoc_opt id subs, (move : Ownership_plan.Continue_move.t)) with
+                match (List.assoc_opt id subs, (move : Ownership_ir.Continue_move.t)) with
                 | Some shadow, Move_parameter when by_value shadow ->
                   if spelled_elsewhere k shadow then begin
                     Probe.violation "ownership plan"
@@ -889,7 +889,7 @@ let moving_jumps ~moves ~subs ~shadow_params params (check : call_checker) : cal
 
 (** The locals a jump made of a recursive call [e] passing [args] may move
     at their last read among its updates: those passed whole where the plan
-    says [Move_argument] ({!Ownership_plan.continue_moves}), [moves] giving,
+    says [Move_argument] ({!Ownership_ir.continue_moves}), [moves] giving,
     by the occurrence of the call, what it moves into each parameter. *)
 let planned_last_reads ~moves e args =
   match
@@ -899,7 +899,7 @@ let planned_last_reads ~moves e args =
   | Some flags when List.compare_lengths flags args = 0 ->
     List.concat
       (List.map2
-         (fun (move : Ownership_plan.Continue_move.t) arg ->
+         (fun (move : Ownership_ir.Continue_move.t) arg ->
            match (move, arg) with
            | Move_argument, (CPPvar x | CPPmove (CPPvar x)) -> [x]
            | _ -> [] )

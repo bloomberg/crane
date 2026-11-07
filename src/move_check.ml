@@ -353,13 +353,13 @@ let check_convention owner r params body =
   report_conventions owner (Option.default [] (convention_violations r params body))
 
 (* The lambda of each local fixpoint in [ss] against the plan of the
-   function it is generated for ({!Ownership_plan.Local_passing}): the
+   function it is generated for ({!Ownership_ir.Local_passing}): the
    parameters it takes other than the members it calls through. *)
 let check_local_conventions owner ss =
   let rec fe e =
     ( match e with
     | CPPlambda {cl_fixpoint = Some lf; cl_params; cl_body; _} -> (
-      match Ownership_plan.Local_passing.lookup lf.lf_member with
+      match Ownership_ir.Local_passing.lookup lf.lf_member with
       | Some passing ->
         let selves = match lf.lf_encoding with Self_passing ids -> ids | Knot | Lowered -> [] in
         (* [to_reversed] lists them the last first; the plan, the first. *)

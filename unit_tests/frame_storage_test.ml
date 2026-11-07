@@ -9,7 +9,7 @@ open Crane_plugin
 open Names
 open Miniml
 open Control_ir
-module Storage = Ownership_plan.Storage
+module Storage = Ownership_ir.Storage
 
 let check name cond =
   if not cond then (
@@ -124,10 +124,10 @@ let () =
   let loop parameters = {Term.loop = member; parameters; body = Term.Return (fresh_rel 1)} in
   check "a function's loop has no local plan" (Frame_storage.local_holdable (machine (fresh_rel 1)) 0 = None);
   check "nor a member translation generated no lambda for" (Frame_storage.local_holdable (loop [(id "t", tree)]) 0 = None);
-  Ownership_plan.Local_passing.record (o, 0) [None; Some Callable_abi.Borrowed; Some Callable_abi.Forwarded];
+  Ownership_ir.Local_passing.record (o, 0) [None; Some Callable_abi.Borrowed; Some Callable_abi.Forwarded];
   check "the plan is looked up by the member"
-    (Ownership_plan.Local_passing.lookup (o, 0) = Some [None; Some Callable_abi.Borrowed; Some Callable_abi.Forwarded]);
-  check "of another function of the group nothing is recorded" (Ownership_plan.Local_passing.lookup (o, 1) = None);
+    (Ownership_ir.Local_passing.lookup (o, 0) = Some [None; Some Callable_abi.Borrowed; Some Callable_abi.Forwarded]);
+  check "of another function of the group nothing is recorded" (Ownership_ir.Local_passing.lookup (o, 1) = None);
   let l = loop [(id "p", nat); (id "t", tree); (id "k", nat)] in
   check "a parameter of no runtime value is held by no pointer" (Frame_storage.local_holdable l 0 = Some false);
   check "a lent parameter of a type the program knows no inductive of is held by value"
