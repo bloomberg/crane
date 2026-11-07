@@ -323,7 +323,8 @@ struct LoopifyAdoptedFixAliasResult {
             if (k_ < k) {
               _stack.emplace_back(CraneCont2{f, k_, e_});
               _stack.emplace_back(
-                  CraneEnter_map2_aux{crane_raw(a10), a1, e, f, k, m});
+                  CraneEnter_map2_aux{crane_raw(a10), std::move(a1),
+                                      std::move(e), f, k, std::move(m)});
             } else {
               _stack.emplace_back(CraneCont3{f, k, std::move(e), e_});
               _stack.emplace_back(CraneEnter{crane_raw(a10), *a1});

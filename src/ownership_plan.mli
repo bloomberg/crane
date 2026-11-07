@@ -63,8 +63,20 @@ type resume = {calls : Miniml.Occurrence.t list; kept : Core_binder.t list; held
 (** The points the definition [origin], whose body is lowered as a machine
     with a stack of frames, resumes at, as [resume_at] finds them by the
     Core binder each binds: the region is that body, standing under
-    [depth] of the definition's binders. *)
-type resumes = {origin : Names.GlobRef.t; depth : int; resume_at : Core_binder.t -> resume option}
+    [depth] of the definition's binders.  [entry_captures]: where the region
+    is the body of a local fixpoint of one member that a machine adopts as an
+    entry, [k], the region-relative level of the fixpoint's member (its
+    parameters lie between it and the root): the machine enters it with its
+    parameters and the variables it reads from below [k], its captures, a
+    call of the member passing the captures as well, and the entry's frame
+    holds each, the handler owning it as a frame's handler owns what the
+    frame holds ({!resume.held}). *)
+type resumes = {
+  origin : Names.GlobRef.t;
+  depth : int;
+  resume_at : Core_binder.t -> resume option;
+  entry_captures : int option;
+}
 
 (** [region ~owned ~copied ~resumes ~n_outer t] is the plan of [t]'s reads,
     [t] standing under binders it reads but does not bind, of which it owns
@@ -76,8 +88,12 @@ type resumes = {origin : Names.GlobRef.t; depth : int; resume_at : Core_binder.t
     machine resuming at [resumes], a let whose right-hand side is one of
     the calls a point resumes after saves its frame before evaluating the
     call's arguments: the binders the frame keeps are not read after them,
-    so an argument may be their last use. *)
-val region : ?owned:int list -> ?copied:int list -> ?resumes:resumes -> n_outer:int -> Miniml.ml_ast -> t
+    so an argument may be their last use -- where the region is [certain]ly
+    lowered as that machine (the default).  Where it may be generated as it
+    is, the saves are planned ({!save_moves}) but no read relies on one
+    having been made. *)
+val region :
+  ?owned:int list -> ?copied:int list -> ?resumes:resumes -> ?certain:bool -> n_outer:int -> Miniml.ml_ast -> t
 
 (** Whether, as [p] plans it, [let x : ty := a] binds the closure [a] to a
     C++ local, which the region owns: [a] is a local fixpoint or a lambda
@@ -281,4 +297,37 @@ module Local_passing : sig
   (** What was recorded of [member]: [None] where it is generated as no
       lambda (a lifted helper's plan is its global's). *)
   val lookup : Miniml.Occurrence.t * int -> t option
+end
+
+(** [entry_moves p]: of each call [p]'s region makes that may enter a
+    frame of the machine it is certainly lowered as -- of the definition
+    itself, of a local function (the member of the fixpoint whose body the
+    region is, perhaps an adopted entry: {!resumes.entry_captures}), or a
+    local fixpoint applied where it is written -- the binders the frame
+    entering there may take: the arguments that are variables read last,
+    and the captures an adopted entry takes besides them read by nothing
+    after the call nor beside it, each owned there, or held by the entry's
+    frame.  The frame holds each by value, where the callee may have lent
+    it. *)
+val entry_moves : t -> (Miniml.Occurrence.t * Core_binder.t list) list
+
+(** A region's plan, as {!Entry_moves} names it. *)
+type region_plan = t
+
+(** Which binders the frame entering a machine's entry at each call takes,
+    by the call's occurrence: what translation, which holds the plan, says
+    ({!entry_moves}) where it plans the region, read by the frame machine
+    ({!Loopify_frame}) where it pushes the frame. *)
+module Entry_moves : sig
+  type t = Core_binder.t list
+
+  (** [record call t]: the frame entering an entry at [call] moves [t].
+      Recording another set is a violation under [CRANE_CHECK_IR], and only
+      what both move is moved. *)
+  val record : Miniml.Occurrence.t -> t -> unit
+
+  (** [record_plan p]: {!record} of every call {!entry_moves} plans. *)
+  val record_plan : region_plan -> unit
+
+  val lookup : Miniml.Occurrence.t -> t option
 end

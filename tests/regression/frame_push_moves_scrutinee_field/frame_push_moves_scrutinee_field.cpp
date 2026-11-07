@@ -66,16 +66,16 @@ uint64_t FramePushMovesScrutineeField::weigh(
           const auto &[a00, a10] =
               std::get<typename List<uint64_t>::Cons>(t.v());
           _stack.emplace_back(CraneCont_Cons{t, a0, a1});
-          _stack.emplace_back(CraneEnter_weigh1{*a10, s});
+          _stack.emplace_back(CraneEnter_weigh1{*a10, std::move(s)});
         }
       }
     } else if (std::holds_alternative<CraneCont_Cons>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-      const List<uint64_t> &t = _f.t;
+      List<uint64_t> t = std::move(_f.t);
       List<uint64_t> a0 = std::move(_f.a0);
       std::shared_ptr<List<List<uint64_t>>> a1 = std::move(_f.a1);
       _stack.emplace_back(CraneCont_Cons_1{std::move(a0), std::move(_result)});
-      _stack.emplace_back(CraneEnter{t, *a1});
+      _stack.emplace_back(CraneEnter{std::move(t), *a1});
     } else {
       auto _f = std::move(std::get<CraneCont_Cons_1>(_frame));
       List<uint64_t> a0 = std::move(_f.a0);

@@ -538,10 +538,10 @@ uint64_t MemSafetyProbe23::flatten_tree_of_trees(
       }
     } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Node>(_frame));
-      const MemSafetyProbe23::tree &inner = _f.inner;
+      MemSafetyProbe23::tree inner = std::move(_f.inner);
       const MemSafetyProbe23::tree &a2 = *_f.a2;
       _stack.emplace_back(CraneCont_Node_1{std::move(_result)});
-      _stack.emplace_back(CraneEnter{inner, &a2});
+      _stack.emplace_back(CraneEnter{std::move(inner), &a2});
     } else {
       auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
       _result = (_f._tmp2 + std::move(_result));

@@ -54,6 +54,60 @@
     continues by ({!lower_methods}).  The parameters a loop varies are its
     ControlIR's, and a loop with none is not lowered. *)
 
+(** [function_resumes r ~depth]: the points the function [r], its body
+    standing under [depth] of its binders, resumes at, where the body is
+    lowered as a machine with a stack of frames as it is generated
+    ({!lower_group}): one the configuration loopifies and the recursion
+    plan lowers so, adopting at most the one local fixpoint its ControlIR
+    enters ({!local_resumes} plans that body's), so that nothing decided
+    after the plan leaves its calls as generated.  A frame keeps the
+    binders bound before a point that what follows reads, except the
+    parameters every turn passes on unchanged, which the machine holds
+    outside its frames. *)
+val function_resumes : Names.GlobRef.t -> depth:int -> Ownership_plan.resumes option
+
+(** [method_resumes r ~inductive ~receiver ~depth]: the points the method
+    made of the function [r] in the struct of [inductive], its receiver its
+    parameter [receiver] (outermost first) and its body standing under
+    [depth] of its binders, resumes at, where it is lowered as a machine
+    with a stack of frames ({!lower_methods}): one the recursion plan lowers
+    so, adopting nothing, whose turns each pass a receiver derived from the
+    loop's parameters, of a function Loopify would loopify as a method; and
+    whether it certainly is -- which of its struct's settings decides that,
+    its being merged into its module's or not, is decided after. *)
+val method_resumes :
+  Names.GlobRef.t ->
+  inductive:Names.GlobRef.t ->
+  receiver:int ->
+  depth:int ->
+  (Ownership_plan.resumes * bool) option
+
+(** [local_resumes ~owner ~function_ ~lifted ~member ~depth ~arity]: the
+    points the local fixpoint [member] resumes at, generated in the body of
+    [owner] as {!local_loop} takes it, where it is lowered as a machine with
+    a stack of frames -- its body standing under [depth] of [owner]'s
+    binders, the last [arity] of them its parameters -- and whether it
+    certainly is: one {!local_loop} lowers so, or the entry the machine of
+    [owner] adopts it as, certainly; one the plan lowers so that
+    {!local_loop} leaves, perhaps, as Loopify may make one of the
+    Y-combinator it is generated as. *)
+val local_resumes :
+  owner:Names.GlobRef.t option ->
+  function_:bool ->
+  lifted:Miniml.Occurrence.t list ->
+  member:Miniml.Occurrence.t * int ->
+  depth:int ->
+  arity:int ->
+  (Ownership_plan.resumes * bool) option
+
+(** [lifted_resumes r ~owner ~depth ~arity]: the points the helper [r],
+    lifted out of the body of [owner] for the function of a local fixpoint,
+    resumes at, where it is lowered as a machine with a stack of frames
+    adopting nothing ({!lower_lifted}): its body standing under [depth] of
+    [owner]'s binders, the last [arity] of them the fixpoint's parameters. *)
+val lifted_resumes :
+  Names.GlobRef.t -> owner:Names.GlobRef.t option -> depth:int -> arity:int -> Ownership_plan.resumes option
+
 (** [local_loop ~owner ~function_ ~lifted ~member ~tparams ~name l]
     is the statement declaring the local fixpoint [name], the function
     [member] of a Core fixpoint of one member, generated in the body of the

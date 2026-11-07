@@ -9182,7 +9182,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             Array.to_list
               (Array.mapi
                  (fun i f ->
-                   gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i)
+                   gen_fix env ~all_fix_ids:all_fix_ids_list ~lifted:lifted_ref ~fix_idx:i ids.(i)
                      f )
                  funs ) )
       in
@@ -9281,7 +9281,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         Array.to_list
           (Array.mapi
              (fun i f ->
-               gen_fix env ~all_fix_ids:all_fix_ids_list ~by_value:closures ~fix_idx:i ids.(i) f )
+               gen_fix env ~all_fix_ids:all_fix_ids_list ~by_value:closures ~local:occ ~fix_idx:i ids.(i) f )
              funs )
       in
       let renamed_ids =
@@ -10072,7 +10072,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               Array.to_list
                 (Array.mapi
                    (fun i f ->
-                     gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i)
+                     gen_fix env ~all_fix_ids:all_fix_ids_list ~lifted:lifted_ref ~fix_idx:i ids.(i)
                        f )
                    funs ) )
         in
@@ -10145,7 +10145,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           Array.to_list
             (Array.mapi
                (fun i f ->
-                 gen_fix env ~all_fix_ids:all_fix_ids_list ~by_value:(escapes || partial) ~fix_idx:i ids.(i) f )
+                 gen_fix env ~all_fix_ids:all_fix_ids_list ~by_value:(escapes || partial) ~local:occ ~fix_idx:i ids.(i) f )
                funs )
         in
         let renamed_ids =
@@ -10232,7 +10232,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       Array.to_list
         (Array.mapi
            (fun i f ->
-             gen_fix env ~all_fix_ids:all_fix_ids_list ~by_value:true ~fix_idx:i ids.(i) f )
+             gen_fix env ~all_fix_ids:all_fix_ids_list ~by_value:true ~local:occ ~fix_idx:i ids.(i) f )
            funs )
     in
     let renamed_ids =
@@ -10280,6 +10280,11 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     in
     push_binders env ids;
     let bound_by_bind env = core_binder ~site:(Global_use.occurrence use) env 1 in
+    (* Where a machine resumes at the continuation's parameter, which of
+       what its frame keeps the save moves is the plan's, as at a let. *)
+    ( match (ids, Ownership_plan.save_moves (!tctx).move_plan (Global_use.occurrence use)) with
+    | _ :: _, Some moved -> Option.iter (fun b -> Ownership_plan.Frame_save.record b moved) (bound_by_bind env)
+    | _ -> () );
     (
     match ids with
     | (x, ml_ty) :: _ ->
@@ -10574,7 +10579,7 @@ and gen_stored_value ?expected_ty ~slot env e =
 (** Generate a fixpoint (recursive function) definition. Handles both single and
     mutually recursive functions. [all_fix_ids] contains names of all mutual
     fixpoints; [fix_idx] is the index of this fixpoint in the mutual group. *)
-and gen_fix env ?(all_fix_ids = []) ?(by_value = false) ~fix_idx (n, ty) f =
+and gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx (n, ty) f =
   let ids, f = collect_lams f in
   let ids = List.map (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty)) ids in
   (* Push all mutual fixpoint names (or just (n,ty) for single fixpoints). For
@@ -10629,11 +10634,30 @@ and gen_fix env ?(all_fix_ids = []) ?(by_value = false) ~fix_idx (n, ty) f =
     | Some t when not (exists_cpp_type prints_as_any t) -> Some t
     | _ -> (!tctx).current_cpp_return_type
   in
+  (* The local fixpoint at [local], of one member, lowered as a machine with
+     a stack of frames ({!local_fix_stmts}, or as the entry of the machine
+     adopting it), or the helper [lifted] for it, lowered so, has the frames
+     it saves planned with its body. *)
+  let resumes, certain =
+    match (local, lifted) with
+    | Some occ, _ when n_fix_funs = 1 -> (
+      match
+        Control_to_legacy_minicpp.local_resumes ~owner:(!tctx).body_owner ~function_:(!tctx).body_function
+          ~lifted:(!tctx).lifted_fixpoints ~member:(occ, fix_idx) ~depth:(List.length (fst env)) ~arity:n_lam_params
+      with
+      | Some (resumes, certain) -> (Some resumes, Some certain)
+      | None -> (None, None) )
+    | _, Some r when n_fix_funs = 1 ->
+      ( Control_to_legacy_minicpp.lifted_resumes r ~owner:(!tctx).body_owner ~depth:(List.length (fst env))
+          ~arity:n_lam_params,
+        None )
+    | _ -> (None, None)
+  in
   let result =
     ( (renamed_n, ty),
       ids,
       with_cpp_return_type fix_return_type (fun () ->
-          with_region ~owned:owned_params f (fun () -> gen_stmts env (fun x -> Sreturn (Some x)) f) ),
+          with_region ~owned:owned_params ?resumes ?certain f (fun () -> gen_stmts env (fun x -> Sreturn (Some x)) f) ),
       parameter_binders env ids )
   in
   restore_env_types saved_env_types;

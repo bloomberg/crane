@@ -211,8 +211,8 @@ ReuseForcedViews::combine(List<std::pair<uint64_t, uint64_t>> m,
             _stack.emplace_back(CraneEnter{crane_raw(a10), &a1_value});
           } else {
             _stack.emplace_back(CraneCont3{k_, e_});
-            _stack.emplace_back(
-                CraneEnter_combine_aux{crane_raw(a10), &a1_value, e, k, m});
+            _stack.emplace_back(CraneEnter_combine_aux{
+                crane_raw(a10), &a1_value, e, k, std::move(m)});
           }
         }
       }

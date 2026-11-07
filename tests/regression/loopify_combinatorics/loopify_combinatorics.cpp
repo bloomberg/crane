@@ -143,12 +143,12 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
       }
     } else if (std::holds_alternative<CraneCont_Cons>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-      const List<uint64_t> &orig = _f.orig;
+      List<uint64_t> orig = std::move(_f.orig);
       uint64_t f = _f.f;
       uint64_t a0 = _f.a0;
       std::shared_ptr<List<uint64_t>> a1 = std::move(_f.a1);
       _stack.emplace_back(CraneCont_Cons_1{a0, std::move(_result)});
-      _stack.emplace_back(CraneEnter{orig, *a1, f});
+      _stack.emplace_back(CraneEnter{std::move(orig), *a1, f});
     } else if (std::holds_alternative<CraneCont_Cons_1>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Cons_1>(_frame));
       uint64_t a0 = _f.a0;

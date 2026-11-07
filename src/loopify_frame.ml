@@ -76,9 +76,6 @@ type call_frame_info = {
   cf_pointers : bool list;
       (** Which slots the frame keeps as pointers, as the recursion plan has
           it *)
-  cf_planned_save : bool;
-      (** Whether which slots the push saving the frame moves is the
-          ownership plan's ({!Ownership_plan.Frame_save}) *)
 }
 
 (** [make_slots ~types ~exprs] pairs a frame's saved types with the
@@ -407,12 +404,12 @@ let make_cont_env cont_vars cont_types env =
     @param saved_exprs The saved expressions (for decltype fallback)
     @param env Type environment at frame creation point
     @param handler The handler body statements *)
-let register_frame frames_ref ~name ~saved_types ~saved_exprs ~env ~handler ~pointers ~planned_save =
+let register_frame frames_ref ~name ~saved_types ~saved_exprs ~env ~handler ~pointers =
   frames_ref :=
     !frames_ref
     @ [{cf_name = name;
         cf_slots = make_slots ~types:saved_types ~exprs:saved_exprs;
-        cf_env = env; cf_handler = handler; cf_pointers = pointers; cf_planned_save = planned_save}]
+        cf_env = env; cf_handler = handler; cf_pointers = pointers}]
 
 (** {3 Frame-based non-tail rewrite}
 
@@ -976,9 +973,6 @@ let make_enter_at ctx entry args =
   let en = List.nth ctx.er_entries entry in
   enter_frame en (filter_by_mask en.en_varying args)
 
-(** The [CraneEnter]-style frame expression that enters [cs]'s target. *)
-let make_enter_for ctx cs = make_enter_at ctx cs.cs_entry cs.cs_args
-
 (** Whether evaluating [e] calls nothing.  A call inside a lambda's body
     runs when the lambda does, not when it is made, so a closure calls
     nothing. *)
@@ -999,6 +993,31 @@ let bound_after bound = function Sasgn (id, Declare _, _) as stmt -> (id, stmt) 
 
 (** The Core binder the local [x] stands for, if any. *)
 let binder_of ctx x = Option.flatten (List.assoc_opt x ctx.er_binders)
+
+(** The [CraneEnter]-style frame expression that enters [cs]'s target, the
+    call [called] made.  An entry's frame holds what it takes by value
+    where the callee may have lent it -- the call's arguments, and, an
+    adopted entry's, the captures it is entered with besides them
+    ({!adopted_checker}) -- and moves each local the ownership plan says
+    the call may take ({!Ownership_plan.Entry_moves}), at a type worth
+    moving; one it holds by pointer is pointed at
+    ({!adjust_frame_push_args}). *)
+let make_enter_for ctx ~called cs =
+  let en = List.nth ctx.er_entries cs.cs_entry in
+  let moved = Option.default [] (Option.bind (Loopify_analysis.made_of called) Ownership_plan.Entry_moves.lookup) in
+  let takes (_, ty) arg =
+    match arg with
+    | CPPvar x
+      when worthwhile_move_type (strip_ref_and_const_type ty)
+           && Option.cata (fun b -> List.exists (Core_binder.equal b) moved) false (binder_of ctx x) ->
+      CPPmove arg
+    | _ -> arg
+  in
+  let args =
+    if moved <> [] && List.compare_lengths en.en_params cs.cs_args = 0 then List.map2 takes en.en_params cs.cs_args
+    else cs.cs_args
+  in
+  make_enter_at ctx cs.cs_entry args
 
 (** Whether the local [x] stands for the Core binder [b]. *)
 let stands_for ctx b x = match binder_of ctx x with Some b' -> Core_binder.equal b b' | None -> false
@@ -1152,7 +1171,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
     match check e with
     | Some cs ->
       ctx.er_entered ~resumes:false e;
-      [make_stack_push (make_enter_for ctx cs)]
+      [make_stack_push (make_enter_for ctx ~called:e cs)]
     | None -> assign_result e )
   | Sif (cond, then_br, else_br) ->
     let rw_stmts = rewrite_enter_stmts ctx in
@@ -1408,14 +1427,20 @@ and rewrite_enter_stmts ctx stmts =
          is moved into the frame there.  One the frame keeps as a pointer is
          pointed at.  Under [CRANE_CHECK_IR] the call's arguments must read
          none of those the plan says they do not.  Which a save moves is the
-         ownership plan's where it planned the let the machine resumes at
-         ({!Ownership_plan.Frame_save}): each binder it owns there or an
+         ownership plan's, which planned the let or bind the machine resumes
+         at ({!Ownership_plan.Frame_save}): each binder it owns there or an
          enclosing frame of the turn holds, read last by the save; the
-         declared types say only which are worth moving.  Elsewhere, a local
-         declared by value that no reference names. *)
+         declared types say only which are worth moving.  A save it did not
+         plan moves nothing, and is a violation under [CRANE_CHECK_IR]. *)
       let plan_moves =
         let b = match tgt with Declare (_, b) -> b | Existing -> binder_of ctx id | Declare_static _ -> None in
-        Option.bind b Ownership_plan.Frame_save.lookup
+        match Option.bind b Ownership_plan.Frame_save.lookup with
+        | Some moved -> moved
+        | None ->
+          if cont_vars <> [] then
+            Probe.violation "frame save"
+              (Pp.str "a machine saves a frame at a point the ownership plan did not plan the save of");
+          []
       in
       let saved_conv =
         let read_by_call cid =
@@ -1445,28 +1470,24 @@ and rewrite_enter_stmts ctx stmts =
         in
         List.map2
           (fun cid pointer ->
-            let old = (not pointer) && owned cid && read_by_call cid = Some false in
             let planned =
-              Option.map
-                (fun moved ->
-                  (not pointer)
-                  && (match List.assoc_opt cid env with Some ty -> movable ty | None -> false)
-                  && Option.cata (fun b -> List.exists (Core_binder.equal b) moved) false (binder_of ctx cid) )
-                plan_moves
+              (not pointer)
+              && (match List.assoc_opt cid env with Some ty -> movable ty | None -> false)
+              && Option.cata (fun b -> List.exists (Core_binder.equal b) plan_moves) false (binder_of ctx cid)
             in
             (* Under [CRANE_CHECK_IR], the plan moves at least what the
-               C++ reading -- a local declared by value, not aliased -- would:
-               it moves more where a binder the C++ finds aliased is one it
-               owns, a structured binding's by value or a field of an owned
-               match. *)
-            if Probe.checking () && old && planned = Some false then
+               C++ reading -- a local declared by value, not aliased, that
+               the call does not read -- would: it moves more where a binder
+               the C++ finds aliased is one it owns, a structured binding's
+               by value or a field of an owned match. *)
+            if Probe.checking () && (not pointer) && owned cid && read_by_call cid = Some false && not planned then
               Probe.violation "frame save"
                 (Pp.str "a frame save the plan decides keeps a local the C++ reading would move");
-            if Option.default old planned then CPPmove (CPPvar cid) else CPPvar cid )
+            if planned then CPPmove (CPPvar cid) else CPPvar cid )
           cont_vars pointers
       in
       register_frame frames_ref ~name:call_name ~saved_types:cont_types
-        ~saved_exprs:cont_saved ~env ~handler ~pointers ~planned_save:(Option.has_some plan_moves);
+        ~saved_exprs:cont_saved ~env ~handler ~pointers;
       [
         make_stack_push (CPPstruct_id (Id.of_string call_name, [], saved_conv));
         make_stack_push enter;
@@ -1489,7 +1510,7 @@ and rewrite_enter_stmts ctx stmts =
     ( match (planned_resume ctx id tgt e, call) with
     | Some true, Some cs ->
       ctx.er_entered ~resumes:true called;
-      make_cont_handler ~cast (make_enter_for ctx cs)
+      make_cont_handler ~cast (make_enter_for ctx ~called cs)
     | Some false, None -> Sasgn (id, tgt, e) :: rewrite_enter_stmts ctx rest
     | Some _, _ ->
       resume_violation ();
@@ -1816,230 +1837,6 @@ let make_owned_param_matches owned_names stmts =
       map_stmt Fun.id rewrite_stmt Fun.id s
   in
   rewrite_stmts stmts
-
-(** Move non-trivial values into explicit continuation frames when ownership is
-    already local to the loop dispatcher.
-
-    Frame handlers bind [_f] by moving the active variant alternative out of
-    [_frame].  Any non-trivial [_f.field] subsequently saved into another frame
-    can therefore be moved instead of cloned.  Likewise, [_result] is used as a
-    scratch accumulator and is overwritten by the recursive call whose [CraneEnter]
-    frame is pushed immediately after the continuation frame, so saving it by
-    move avoids a deep copy.
-
-    For [CraneEnter] frame pushes the rule is extended: child pointers dereferenced
-    by [CPPderef] (e.g. [*(d_a1)]) are also moved.  These arise from
-    [shared_ptr] fields of a value-type variant that has been matched with
-    [v_mut()] (after [make_owned_param_matches]), so the pointed-to value is
-    mutable and the current iteration is the only owner — moving is safe.
-
-    Value fields bound from owned [v_mut()] matches (e.g. [auto &[a0, a1] =
-    std::get<...>(l.v_mut())]) are also moveable: the scrutinee is owned and
-    dead after the frame push, so moving the field avoids a deep copy.
-
-    A continuation frame among [planned_saves] -- one whose save the
-    ownership plan decided ({!call_frame_info.cf_planned_save}) -- moves no
-    further local than its save does. *)
-let optimize_frame_push_args ?(planned_saves = []) frame_field_types stmts =
-  if frame_field_types = [] then stmts
-  else
-    let lookup name_s = List.assoc_opt name_s frame_field_types in
-    let planned name = List.mem (Id.to_string name) planned_saves in
-    (* A save the plan decided moves what it moves already: one more the C++
-       reading would add is not made, and is reported under [CRANE_CHECK_IR]
-       where it is a local declared by value -- a binding of a match the C++
-       takes for owned may be a const reference into a value the plan finds
-       lent, which a move would copy. *)
-    let withheld ~decl_owned name id =
-      if List.exists (Id.equal id) decl_owned then
-        Probe.violation "frame save"
-          Pp.(
-            str "the local " ++ Id.print id ++ str " the save of " ++ Id.print name
-            ++ str " keeps, as the plan decides, is one the frame push reading would move" );
-      false
-    in
-    let should_move ~decl_owned ~name ~is_enter ~owned_vars ty arg =
-      let stripped = strip_ref_and_const_type ty in
-      worthwhile_move_type stripped
-      &&
-      match arg with
-      | CPPmove _ -> false
-      | CPPaccess (Adot, CPPvar id, _) when Id.equal id id_f -> true
-      | CPPvar id when Id.equal id id_result -> true
-      | CPPvar id when List.exists (Id.equal id) owned_vars ->
-        if planned name then withheld ~decl_owned name id else true
-      | _ -> false
-    in
-    let adjust_args ~decl_owned ~name ~is_enter ~owned_vars types args =
-      if List.length types = List.length args then
-        List.map2
-          (fun ty arg ->
-            if should_move ~decl_owned ~name ~is_enter ~owned_vars ty arg then CPPmove arg else arg)
-          types args
-      else
-        args
-    in
-    (* The bindings of an owned match's branch, each with the local whose
-       storage it is bound into: reading that local reads the binding. *)
-    let owned_bindings_of_branch scrut br =
-      let into =
-        match scrut.sc_expr with
-        | CPPvar x | CPPfun_call (_, CPPaccess (Adot, CPPvar x, _), {rev = []}) -> Some x
-        | _ -> None
-      in
-      if scrut.sc_owned then
-        List.filter_map
-          (fun fb ->
-            match fb.fb_type with
-            | Tshared_ptr _ -> None
-            | _ -> Some (fb.fb_name, into))
-          br.smb_field_bindings
-      else []
-    in
-    (* The bindings among [match_owned] the expressions [args] read, through
-       the local they are bound into. *)
-    let read_through match_owned args =
-      let read = List.concat_map free_vars_expr args in
-      List.filter_map
-        (fun (b, into) -> match into with Some x when List.exists (Id.equal x) read -> Some b | _ -> None)
-        match_owned
-    in
-    let is_owned_decl_type ty =
-      let rec has_ref = function
-        | Tref _ -> true
-        | Tconst t -> has_ref t
-        | _ -> false
-      in
-      not (has_ref ty) && worthwhile_move_type (strip_ref_and_const_type ty)
-    in
-    let is_frame_push = function
-      | Sexpr (CPPfun_call (_, _, {rev = [CPPstruct_id (name, _, _)]})) ->
-        lookup (Id.to_string name) <> None
-      | _ -> false
-    in
-    let rec take_while pred = function
-      | x :: rest when pred x ->
-        let taken, remaining = take_while pred rest in
-        (x :: taken, remaining)
-      | rest -> ([], rest)
-    in
-    let process_push_group ~decl_owned match_owned pushes =
-      let owned_vars = decl_owned @ List.map fst match_owned in
-      let push_data = List.map (function
-        | Sexpr (CPPfun_call (_, callee, {rev = [CPPstruct_id (name, targs, args)]})) ->
-          (callee, name, targs, args)
-        | _ -> CErrors.anomaly (Pp.str "loopify: unexpected push statement shape")
-      ) pushes in
-      let last_push_of = Hashtbl.create 8 in
-      (* A read nested in a later push (the re-entry frame's [f(0)]) counts:
-         moving earlier would leave that read with a moved-from value. *)
-      List.iteri (fun idx (_, _, _, args) ->
-        List.iter (fun arg ->
-          List.iter (fun id ->
-            if List.exists (Id.equal id) owned_vars then
-              Hashtbl.replace last_push_of (Id.to_string id) idx)
-            (free_vars_expr arg)
-        ) args
-      ) push_data;
-      (* A binding is read where the local it is bound into is, and not
-         moved in the push that reads that local too. *)
-      let through = List.map (fun (_, _, _, args) -> read_through match_owned args) push_data in
-      let note idx b =
-        match Hashtbl.find_opt last_push_of (Id.to_string b) with
-        | Some i when i > idx -> ()
-        | Some _ | None -> Hashtbl.replace last_push_of (Id.to_string b) idx
-      in
-      List.iteri (fun idx -> List.iter (note idx)) through;
-      let should_move_in_group ~name ~is_enter idx ty arg =
-        let stripped = strip_ref_and_const_type ty in
-        worthwhile_move_type stripped
-        &&
-        match arg with
-        | CPPmove _ -> false
-        | CPPaccess (Adot, CPPvar id, _) when Id.equal id id_f -> true
-        | CPPvar id when Id.equal id id_result -> true
-        | CPPvar id when List.exists (Id.equal id) owned_vars ->
-          let m =
-            Hashtbl.find_opt last_push_of (Id.to_string id) = Some idx
-            && not (List.exists (Id.equal id) (List.nth through idx))
-          in
-          if m && planned name then withheld ~decl_owned name id else m
-        | _ -> false
-      in
-      List.mapi (fun idx (callee, name, targs, args) ->
-        match lookup (Id.to_string name) with
-        | Some types when List.length types = List.length args ->
-          let is_enter = Id.equal name id_enter in
-          let args' = List.map2 (fun ty arg ->
-            if should_move_in_group ~name ~is_enter idx ty arg
-            then CPPmove arg else arg
-          ) types args in
-          Sexpr (CPPfun_call (call_opaque, callee, of_reversed ([CPPstruct_id (name, targs, args')])))
-        | _ -> List.nth pushes idx
-      ) push_data
-    in
-    let rec on_stmts ~decl_owned match_owned = function
-      | [] -> []
-      | (Sasgn (id, (Declare (ty, _)), _) as s) :: rest
-        when is_owned_decl_type ty ->
-        on_stmt ~decl_owned match_owned s
-        :: on_stmts ~decl_owned:(id :: decl_owned) match_owned rest
-      | s :: rest when is_frame_push s ->
-        let more, after = take_while is_frame_push rest in
-        let group = s :: more in
-        if List.length group >= 2 then
-          process_push_group ~decl_owned match_owned group
-          @ on_stmts ~decl_owned match_owned after
-        else
-          on_stmt ~decl_owned match_owned s
-          :: on_stmts ~decl_owned match_owned rest
-      | s :: rest ->
-        on_stmt ~decl_owned match_owned s
-        :: on_stmts ~decl_owned match_owned rest
-    and on_stmt ~decl_owned match_owned = function
-      | Sexpr (CPPfun_call (_, callee, {rev = [CPPstruct_id (name, targs, args)]})) as s -> (
-        let through = read_through match_owned args in
-        let owned_vars =
-          decl_owned @ List.filter_map (fun (b, _) -> if List.exists (Id.equal b) through then None else Some b) match_owned
-        in
-        match lookup (Id.to_string name) with
-        | Some types ->
-          let is_enter = Id.equal name id_enter in
-          Sexpr
-            (CPPfun_call
-               (call_opaque, callee,
-                of_reversed
-                  [CPPstruct_id (name, targs,
-                    adjust_args ~decl_owned ~name ~is_enter ~owned_vars types args)]))
-        | None -> map_stmt Fun.id (on_stmt ~decl_owned match_owned) Fun.id s )
-      | Smatch (scrut, branches, default) ->
-        let branches' =
-          List.map
-            (fun br ->
-              let new_owned = owned_bindings_of_branch scrut br in
-              { br with smb_body =
-                on_stmts ~decl_owned:[] (new_owned @ match_owned) br.smb_body })
-            branches
-        in
-        let default' =
-          Option.map (on_stmts ~decl_owned:[] match_owned) default
-        in
-        Smatch (scrut, branches', default')
-      | Sif (cond, then_body, else_body) ->
-        Sif (cond,
-          on_stmts ~decl_owned match_owned then_body,
-          on_stmts ~decl_owned match_owned else_body)
-      | Sblock body ->
-        Sblock (on_stmts ~decl_owned match_owned body)
-      | Scustom_case (ty, scrut, tyargs, branches, err) ->
-        Scustom_case (ty, scrut, tyargs,
-          List.map (fun (ps, rty, body) ->
-            (ps, rty, on_stmts ~decl_owned match_owned body))
-            branches,
-          err)
-      | s -> map_stmt Fun.id (on_stmt ~decl_owned match_owned) Fun.id s
-    in
-    on_stmts ~decl_owned:[] [] stmts
 
 (** A handler's bindings of its frame's fields, [body], with each local
     bound by const reference to a field the frame holds by value, that the
@@ -2807,14 +2604,6 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
     @ call_structs
     @ [Susing (id_Frame, Tvariant (Inline_variant, variant_tys))]
   in
-  (* The saves whose moves the ownership plan decided. *)
-  let planned_saves = List.filter_map (fun cf -> if cf.cf_planned_save then Some cf.cf_name else None) frames in
-  let frame_field_types =
-    List.map (fun ee -> (ee_name ee, List.map snd (entry_fields ee))) emissions
-    @ List.map
-         (fun cf -> (cf.cf_name, compute_frame_field_types cf (frame_ps_for cf)))
-         frames
-  in
   (* The machine is entered at its first entry point: that is the call the
      caller made. *)
   let init_push =
@@ -2856,7 +2645,6 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
        binding of a frame field, which moves nothing (round 66). *)
     let handler =
       adjust_frame_push_args ~frame_sptr all_frame_ps (make_param_copies ee.ee_params @ body)
-      |> optimize_frame_push_args ~planned_saves frame_field_types
     in
     make_frame_branch (ee_name ee) handler
   in
@@ -2886,7 +2674,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
             adjust_frame_push_args ~frame_sptr all_frame_ps handler
           else handler
         in
-        make_frame_branch cf.cf_name (handler |> optimize_frame_push_args ~planned_saves frame_field_types))
+        make_frame_branch cf.cf_name handler)
       frames
   in
   make_loop_and_return ?fn_name struct_defs ret_ty init_push
