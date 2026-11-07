@@ -3388,26 +3388,15 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
         | false, true -> str "inline constexpr "
         | false, false -> mt ()
       in
-      let needs_iife = ctx.rc_in_struct && expr_contains_capturing_lambda e in
-      let wrapped_expr =
-        if needs_iife then
-          str "[]() {"
-          ++ fnl ()
-          ++ str "return "
-          ++ expr_pp
-          ++ str ";"
-          ++ fnl ()
-          ++ str "}()"
-        else
-          expr_pp
-      in
+      (* An initialiser holding a lambda that captures is invoked in place
+         already ({!Cpp_erasure.invoke_capturing_initialisers}). *)
       h
         ( static_kw
         ++ pp_type ctx ty
         ++ str " "
         ++ str (declared_name Type id)
         ++ str " = "
-        ++ wrapped_expr
+        ++ expr_pp
         ++ str ";" )
   | Dconcept (id, cstr) ->
     h

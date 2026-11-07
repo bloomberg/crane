@@ -197,6 +197,17 @@ val name_scrutinees : settled -> settled
     that changes a body. *)
 val decide_captures : settled -> settled
 
+(** [invoke_capturing_initialisers decl] has each variable [decl] declares
+    whose initialiser holds a lambda that captures (as decided:
+    {!decide_captures}) initialised by a lambda capturing nothing that
+    returns it, invoked in place: [[]() { return e; }()].  A lambda with a
+    capture is ill-formed outside a block scope, where a struct's static
+    member and a namespace variable are initialised; the outer lambda's
+    body is one, and so is a function-local static's, where the wrapping
+    is redundant and harmless.  So it is a function of the declaration,
+    not of where it is written. *)
+val invoke_capturing_initialisers : settled -> settled
+
 (** [instantiate_type ty] instantiates the mappings [ty] applies, as
     {!instantiate_foreign} does a declaration's: for a type written outside
     every declaration, a record's field -- and writes each pointer in its

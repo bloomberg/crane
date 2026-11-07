@@ -6805,6 +6805,17 @@
   (deps arena_non_atomic_rc.t.exe)
   (action (run ./arena_non_atomic_rc.t.exe))))
 
+(subdir capturing_initialiser_meyers
+ (rule
+  (targets capturing_initialiser_meyers.t.exe)
+  (deps CapturingInitialiserMeyers.vo capturing_initialiser_meyers.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} capturing_initialiser_meyers.t.exe capturing_initialiser_meyers.t.cpp capturing_initialiser_meyers.cpp)))
+ (rule
+  (alias runtest)
+  (deps capturing_initialiser_meyers.t.exe)
+  (action (run ./capturing_initialiser_meyers.t.exe))))
+
 (subdir typeclass_enum_eq
  (rule
   (targets typeclass_enum_eq.t.exe)

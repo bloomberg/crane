@@ -946,6 +946,29 @@ let decide_captures (d : settled) : settled =
   and fs s = map_stmt fe fs Fun.id s in
   map_decl fe fs Fun.id d
 
+(* An initialiser invoked in place by a lambda capturing nothing, which is
+   what this pass writes, is left as it is: the pass is a fixed point. *)
+let invoke_capturing_initialisers (d : settled) : settled =
+  let invoked_in_place = function
+    | CPPfun_call
+        (_, CPPlambda {cl_params = {rev = []}; cl_capture = Written Captures_nothing; cl_body = [Sreturn (Some _)]; _}, {rev = []}) ->
+      true
+    | _ -> false
+  in
+  let rec decl = function
+    | Dasgn a when (not (invoked_in_place a.da_init)) && expr_contains_capturing_lambda a.da_init ->
+      let returning =
+        match mk_lambda [] None [Sreturn (Some a.da_init)] ~capture:(Written Captures_nothing) with
+        | CPPlambda _ as l -> l
+        | _ -> CErrors.anomaly (Pp.str "a lambda returning an initialiser is not a lambda")
+      in
+      Dasgn {a with da_init = mk_call returning []}
+    | Dtemplate (tps, c, inner) -> Dtemplate (tps, c, decl inner)
+    | Dnspace (id, ds) -> Dnspace (id, List.map decl ds)
+    | d -> d
+  in
+  decl d
+
 (* The lambda a methodified function [n] is written as where it is a value,
    its receiver at [pos].  It takes the function's parameters at the types the
    method was declared at, not [const auto &]: a generic lambda has no
