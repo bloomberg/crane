@@ -156,3 +156,29 @@ let () =
   if Move_check.convention_violations (GlobRef.VarRef (id "unplanned")) [] [] <> None then (
     prerr_endline "move_check: a callable with no plan has a convention";
     exit 1 )
+
+(* A reference bound into a local is not read after the local is given a
+   new value: the storage it names is gone.  A pointer local given a new
+   value leaves what it pointed at; a reference bound after the assignment
+   names the new value. *)
+let () =
+  let stale name body expected =
+    let found = List.map (fun (a, b) -> Id.to_string a ^ "@" ^ Id.to_string b) (Move_check.stale_references body) in
+    if found <> expected then (
+      Printf.eprintf "move_check: %s: stale [%s]\n" name (String.concat "; " found);
+      exit 1 )
+  in
+  let next = mk_call (v "next") [] in
+  stale "read after the local is assigned"
+    [match_ "t" ["a0"] [Sasgn (id "t", Existing, next); Sreturn (Some (v "a0"))]]
+    ["a0@t"];
+  stale "read before it is not"
+    [match_ "t" ["a0"] [decl "x" (v "a0"); Sasgn (id "t", Existing, next); Sreturn (Some (v "x"))]]
+    [];
+  stale "nor read through a pointer given a new value"
+    [ Sasgn (id "t", Declare (Tptr tree, None), CPPunop (Uaddr, v "u"));
+      match_ "t" ["a0"] [Sasgn (id "t", Existing, next); Sreturn (Some (v "a0"))] ]
+    [];
+  stale "nor bound again after it"
+    [ match_ "t" ["a0"] [Sasgn (id "t", Existing, next); match_ "t" ["a0"] [Sreturn (Some (v "a0"))]] ]
+    []

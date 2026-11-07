@@ -296,8 +296,9 @@ val captures : ?in_place:bool -> t -> Miniml.ml_ast -> (int * Capture.t) list
     for each function in order, each variable its closure reads from the
     scope, by its de Bruijn index at [fix], with how it holds it: the last
     function reading a variable {!captures} takes [By_move] takes it so,
-    those made before it share it.  [[]] where [fix] is no fixpoint. *)
-val captures_by_member : t -> Miniml.ml_ast -> (int * Capture.t) list list
+    those made before it share it; with [~in_place], generated in place,
+    [By_reference].  [[]] where [fix] is no fixpoint. *)
+val captures_by_member : ?in_place:bool -> t -> Miniml.ml_ast -> (int * Capture.t) list list
 
 (** Each variable the terms [ts] read, by its de Bruijn index where they
     stand, with how a closure made around them holds it -- the
@@ -383,6 +384,30 @@ module Local_passing : sig
   (** What was recorded of [member]: [None] where it is generated as no
       lambda (a lifted helper's plan is its global's). *)
   val lookup : Miniml.Occurrence.t * int -> t option
+end
+
+(** [kept_by_frame p b]: whether a frame of the machine [p]'s region is
+    lowered as -- certainly or perhaps -- keeps the binder [b] across a
+    resume ({!save_moves}): its value is stored in the frame, and read once
+    the frame resumes, after the scope binding it has ended. *)
+val kept_by_frame : t -> Core_binder.t -> bool
+
+(** How the lambda of each local fixpoint function holds what it captures
+    ({!captures}, {!captures_by_member}), recorded where it is generated:
+    the obligation {!Move_check} holds the C++ to.  A lambda holding a
+    capture [By_reference] reads the scope it is made in, so it may not
+    outlive it: it is written capturing by reference and named only as the
+    function a call applies -- unless the C++ has it capture nothing, what
+    it reads being a dictionary, a template parameter. *)
+module Local_captures : sig
+  (** [record member modes]: the function [member] -- the fixpoint's
+      occurrence, and the function's position in it -- holds its captures
+      as [modes] say, one per variable it reads from the scope. *)
+  val record : Miniml.Occurrence.t * int -> Capture.t list -> unit
+
+  (** Whether what was recorded of [member] holds a capture
+      [By_reference]. *)
+  val by_reference : Miniml.Occurrence.t * int -> bool
 end
 
 (** [entry_moves p]: of each call [p]'s region makes that may enter a

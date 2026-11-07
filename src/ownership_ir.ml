@@ -1340,15 +1340,16 @@ let captures ?(in_place = false) p closure =
   let moved = if in_place then [] else moved_captures p closure in
   List.map (fun i -> (i, if in_place then Capture.By_reference else mode_of moved i)) (read_indices [closure])
 
-let captures_by_member p fix =
+let captures_by_member ?(in_place = false) p fix =
   match fix with
   | MLfix (_, _, funs, _, _) ->
     let n = Array.length funs in
+    let moved = if in_place then List.map (fun _ -> []) (Array.to_list funs) else moved_captures_by_member p fix in
     List.map2
       (fun f moved ->
         let read = List.sort_uniq Int.compare (List.filter_map (fun (l, _) -> if -l - n > 0 then Some (-l - n) else None) (closure_reads 0 f)) in
-        List.map (fun i -> (i, mode_of moved i)) read )
-      (Array.to_list funs) (moved_captures_by_member p fix)
+        List.map (fun i -> (i, if in_place then Capture.By_reference else mode_of moved i)) read )
+      (Array.to_list funs) moved
   | _ -> []
 
 let eta_captures p ts =
@@ -1372,6 +1373,22 @@ module Local_passing = struct
         (Pp.str "a local fixpoint is generated passing its parameters otherwise than it was before");
       recorded := (member, t) :: List.filter (fun (m, _) -> not (same m member)) !recorded
     | None -> recorded := (member, t) :: !recorded
+end
+
+let kept_by_frame p b =
+  List.exists
+    (fun s -> List.exists (fun (b', _, _) -> Core_binder.equal b b' && Core_binder.same_site b b') s.saved)
+    p.saves
+
+module Local_captures = struct
+  let recorded : ((Occurrence.t * int) * Capture.t list) list ref = State.cell State.Extraction []
+
+  let lookup member = List.find_map (fun (m, t) -> if Local_passing.same m member then Some t else None) !recorded
+
+  let record member modes =
+    recorded := (member, modes) :: List.filter (fun (m, _) -> not (Local_passing.same m member)) !recorded
+
+  let by_reference member = match lookup member with Some modes -> List.mem Capture.By_reference modes | None -> false
 end
 
 let save_moves p let_ =

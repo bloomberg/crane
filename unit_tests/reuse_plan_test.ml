@@ -346,3 +346,22 @@ let () =
   check "a last capture takes by move" (modes 2 = [(1, Ownership_ir.Capture.By_move)]);
   check "one read again shares" (modes 1 = [(1, Ownership_ir.Capture.Shared)]);
   check "in place, by reference" (modes ~in_place:true 2 = [(1, Ownership_ir.Capture.By_reference)])
+
+(* [g (fix f n := h s) s'], [s] owned, read by the member's body: generated
+   as closures, the one member reading [s] last takes it by move (nothing
+   after reads it); generated in place, it reads it by reference. *)
+let () =
+  let modes ?in_place () =
+    let fix =
+      MLfix
+        ( 0,
+          [|(Id.of_string "f", Tarr (nat, lst))|],
+          [|MLlam (Id (Id.of_string "n"), nat, call "h" [fresh_rel 3])|],
+          false,
+          Occurrence.fresh () )
+    in
+    let root = call "g" [fix] in
+    Ownership_ir.captures_by_member ?in_place (Ownership_ir.region ~owned:[1] ~n_outer:0 root) fix
+  in
+  check "a closures group's last reader takes by move" (modes () = [[(1, Ownership_ir.Capture.By_move)]]);
+  check "an in-place group's members read by reference" (modes ~in_place:true () = [[(1, Ownership_ir.Capture.By_reference)]])

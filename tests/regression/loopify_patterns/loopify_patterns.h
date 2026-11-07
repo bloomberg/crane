@@ -283,10 +283,11 @@ struct LoopifyPatterns {
                                          list<list<T1>>::nil());
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-          auto map_cons_h = [&](const list<list<T1>> &lsts) -> list<list<T1>> {
+          const list<T1> &a1_value = *a1;
+          auto map_cons_h = [=](list<list<T1>> lsts) -> list<list<T1>> {
             /// CraneEnter: captures varying parameters for each recursive call.
             struct CraneEnter {
-              const list<list<T1>> *lsts;
+              list<list<T1>> lsts;
             };
             /// CraneCont_Cons: saves [a00], resumes after recursive call, then
             /// processes rest.
@@ -296,22 +297,22 @@ struct LoopifyPatterns {
             using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
             list<list<T1>> _result{};
             crane::small_vector<CraneFrame> _stack;
-            _stack.emplace_back(CraneEnter{&lsts});
+            _stack.emplace_back(CraneEnter{std::move(lsts)});
             /// Loopified map_cons_h: CraneEnter -> CraneCont_Cons.
             while (!_stack.empty()) {
               CraneFrame _frame = std::move(_stack.back());
               _stack.pop_back();
               if (std::holds_alternative<CraneEnter>(_frame)) {
                 auto _f = std::move(std::get<CraneEnter>(_frame));
-                const list<list<T1>> &lsts = *_f.lsts;
+                list<list<T1>> lsts = std::move(_f.lsts);
                 if (std::holds_alternative<typename list<list<T1>>::Nil>(
-                        lsts.v())) {
+                        lsts.v_mut())) {
                   _result = list<list<T1>>::nil();
                 } else {
-                  const auto &[a00, a10] =
-                      std::get<typename list<list<T1>>::Cons>(lsts.v());
-                  _stack.emplace_back(CraneCont_Cons{a00});
-                  _stack.emplace_back(CraneEnter{crane_raw(a10)});
+                  auto &[a00, a10] =
+                      std::get<typename list<list<T1>>::Cons>(lsts.v_mut());
+                  _stack.emplace_back(CraneCont_Cons{std::move(a00)});
+                  _stack.emplace_back(CraneEnter{*a10});
                 }
               } else {
                 auto _f = std::move(std::get<CraneCont_Cons>(_frame));
@@ -331,9 +332,10 @@ struct LoopifyPatterns {
         std::shared_ptr<list<T1>> a1 = std::move(_f.a1);
         crane::fn<list<list<T1>>(list<list<T1>>)> map_cons_h =
             std::move(_f.map_cons_h);
-        _result =
-            list<list<T1>>::cons(list<T1>::cons(x, list<T1>::cons(a0, *a1)),
-                                 map_cons_h(std::move(_result)));
+        const list<T1> &a1_value = *a1;
+        _result = list<list<T1>>::cons(
+            list<T1>::cons(x, list<T1>::cons(a0, a1_value)),
+            map_cons_h(std::move(_result)));
       }
     }
     return _result;

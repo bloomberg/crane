@@ -14023,3 +14023,14 @@
   (alias runtest)
   (deps loopify_continue_moves_local.t.exe)
   (action (run ./loopify_continue_moves_local.t.exe))))
+
+(subdir inplace_fix_saved_in_frame
+ (rule
+  (targets inplace_fix_saved_in_frame.t.exe)
+  (deps InplaceFixSavedInFrame.vo inplace_fix_saved_in_frame.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} inplace_fix_saved_in_frame.t.exe inplace_fix_saved_in_frame.cpp inplace_fix_saved_in_frame.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps inplace_fix_saved_in_frame.t.exe)
+  (action (run ./inplace_fix_saved_in_frame.t.exe))))
