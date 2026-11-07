@@ -939,6 +939,9 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
         end else if String.equal id_s Crane_rt.constant_tc then begin
           writes_obj ();
           id_s
+        end else if String.equal id_s Crane_rt.shared_box || String.equal id_s Crane_rt.shared_or then begin
+          writes (Table.Runtime Crane_rt.shared_variant_header);
+          id_s
         end else id_s
       in
       ( match args with
@@ -1061,19 +1064,15 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
     | Tvariant (Shared_variant, tys) ->
       writes (Table.Runtime Crane_rt.shared_variant_header);
       cpp_angle Crane_rt.shared_variant (pp_list (pp_rec false) tys)
-    | Tshared_ptr t -> (
-      let pointer () =
-        writes_standard "memory";
-        cpp_angle (sn ()).shared_ptr (pp_rec false t)
-      in
-      match Pointer_slot.of_pointee t with
-      | Pointer_slot.Shared ->
-        writes (Table.Runtime Crane_rt.shared_variant_header);
-        cpp_angle Crane_rt.shared_box (pp_rec false t)
-      | Pointer_slot.At_instantiation ->
-        writes (Table.Runtime Crane_rt.shared_variant_header);
-        cpp_angle Crane_rt.shared_or (pp_rec false t ++ str ", " ++ pointer ())
-      | Pointer_slot.Pointer -> pointer () )
+    (* The slot a pointer is held in was written down at the seam
+       ({!Cpp_erasure.lower_pointer_slots}): what is left is a pointer -- to
+       an inductive only a functor's instantiation knows the representation
+       of, the pointer [shared_or_t] is given as its alternative. *)
+    | Tshared_ptr t ->
+      if Probe.checking () && Pointer_slot.of_pointee t = Pointer_slot.Shared then
+        CErrors.anomaly (Pp.str "pp_cpp_type: a pointer's slot not chosen (Cpp_erasure.lower_pointer_slots)");
+      writes_standard "memory";
+      cpp_angle (sn ()).shared_ptr (pp_rec false t)
     | Tvoid -> str "void"
     | Tunresolved ->
       (* There is no C++ spelling for "no type was determined"; emitting a
@@ -1573,10 +1572,6 @@ and pp_cpp_expr ctx env args t =
       ++ body_s
       ++ fnl ()
       ++ str "}" )
-  | CPPalloc ((Alloc_heap | Alloc_arena_scoped), t) when Pointer_slot.of_pointee t = Pointer_slot.Shared ->
-    (* A shared value goes into its slot as it is: no cell to allocate. *)
-    writes (Table.Runtime Crane_rt.shared_variant_header);
-    cpp_angle Crane_rt.shared_box (pp_cpp_type ctx false [] t) ++ str "::make"
   | CPPalloc (Alloc_heap, t) ->
     writes_standard "memory";
     cpp_angle (sn ()).make_shared (pp_cpp_type ctx false [] t)

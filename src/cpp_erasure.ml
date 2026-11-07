@@ -753,8 +753,6 @@ and instantiated_stmt ~boxing = function
         CPPforeign (Foreign_statements, instantiated_block ~boxing r text tys args (Some result_ty)) )
   | s -> map_stmt (instantiated_expr ~boxing) (instantiated_stmt ~boxing) (instantiated_type ~boxing) s
 
-let instantiate_type = instantiated_type ~boxing:true
-
 (* A match template's pieces, on the scrutinee [scrut] it is written with. *)
 let match_pieces cm scrut =
   List.map
@@ -813,6 +811,52 @@ let lower_qualifiers (d : settled) : settled =
   (* A type may hold an expression: [decltype(T::f(..))]. *)
   and ft t = map_cpp_type (function Texpr_type e -> Texpr_type (fe e) | t -> t) t in
   map_decl fe fs ft d
+
+(* A pointer is written in the slot its pointee is held in
+   ({!Pointer_slot}): a shared value is its own handle, [shared_box<T>]; where
+   only a functor's instantiation knows, [shared_or_t<T, P>] chooses between
+   that and the pointer [P].  What is left as a [Tshared_ptr] is an ordinary
+   pointer.  A slot already chosen is a fixed point: [shared_or_t]'s pointer
+   argument is not chosen again.  Expressions a type holds are reached too. *)
+let pointer_slots () =
+  let rec ft t =
+    rewrite_cpp_type
+      (function
+        | Tid_external (n, [p; Tshared_ptr p']) when String.equal n Crane_rt.shared_or ->
+          Some (Tid_external (n, [ft p; Tshared_ptr (ft p')]))
+        | Tshared_ptr p -> (
+          let p' = ft p in
+          match Pointer_slot.of_pointee p with
+          | Pointer_slot.Shared -> Some (Tid_external (Crane_rt.shared_box, [p']))
+          | Pointer_slot.At_instantiation -> Some (Tid_external (Crane_rt.shared_or, [p'; Tshared_ptr p']))
+          | Pointer_slot.Pointer -> Some (Tshared_ptr p') )
+        | Texpr_type e -> Some (Texpr_type (fe e))
+        | Tglob (r, tys, (_ :: _ as args)) -> Some (Tglob (r, List.map ft tys, List.map fe args))
+        | Tforeign fr ->
+          Some
+            (Tforeign
+               { fr with
+                 fr_types = List.map ft fr.fr_types;
+                 fr_values = List.map fe fr.fr_values;
+                 fr_yields = Option.map ft fr.fr_yields })
+        | _ -> None)
+      t
+  and fe e =
+    match map_expr fe fs ft e with
+    (* A shared value goes into its slot as it is: no cell to allocate. *)
+    | CPPalloc ((Alloc_heap | Alloc_arena_scoped), t) when Pointer_slot.of_pointee t = Pointer_slot.Shared ->
+      CPPqualified_t (Tid_external (Crane_rt.shared_box, [t]), Id.of_string "make")
+    | e -> e
+  and fs s = map_stmt fe fs ft s in
+  (ft, fe, fs)
+
+let lower_pointer_slots (d : settled) : settled =
+  let ft, fe, fs = pointer_slots () in
+  map_decl fe fs ft d
+
+let instantiate_type t =
+  let ft, _, _ = pointer_slots () in
+  ft (instantiated_type ~boxing:true t)
 
 (* The local a match holds its scrutinee in, named after the match's first
    binding variable -- [_m3] gives [_sv3], a frame dispatch's [_f2] gives
