@@ -29,7 +29,12 @@ type arm =
   | Fields of {case : ml_ast; by_value : bool list}
   | Instance of Occurrence.t
 
-type resume = {calls : Occurrence.t list; kept : Core_binder.t list; held : Core_binder.t list}
+type resume = {
+  calls : Occurrence.t list;
+  kept : Core_binder.t list;
+  held : Core_binder.t list;
+  passed : Core_binder.t list;
+}
 
 (* A local fixpoint applied where it is written, [at] its occurrence, and
    what each of its arguments reads: the variables, by level, with their
@@ -44,6 +49,7 @@ type resumes = {
   depth : int;
   resume_at : Core_binder.t -> resume option;
   entry_captures : int option;
+  parameter_type : int -> ml_type option;
 }
 
 (* Of a let a frame machine resumes at, by its occurrence: each binder the
@@ -382,7 +388,7 @@ let rec ending_calls a =
 let resume_of resumes d a occurrence =
   match (resumes, ending_calls a) with
   | Some _, [] | None, _ -> None
-  | Some {origin; depth; resume_at}, ending -> (
+  | Some {origin; depth; resume_at; _}, ending -> (
     match resume_at (Core_binder.make ~origin ~level:(depth + d) ~site:occurrence ()) with
     | Some ({calls; _} as r) when List.exists (fun c -> List.exists (Occurrence.equal c) calls) ending -> Some (depth, r)
     | Some _ | None -> None )
@@ -399,6 +405,13 @@ let kept_across resumes d a occurrence = Levels.of_list (List.map snd (kept_bind
 let held_across resumes d a occurrence =
   match resume_of resumes d a occurrence with
   | Some (depth, {held; _}) -> Levels.of_list (List.map (fun (b : Core_binder.t) -> b.level - depth) held)
+  | None -> Levels.empty
+
+(* Of those, the levels of the ones the frame may keep as pointers
+   ({!resume.passed}). *)
+let passed_across resumes d a occurrence =
+  match resume_of resumes d a occurrence with
+  | Some (depth, {passed; _}) -> Levels.of_list (List.map (fun (b : Core_binder.t) -> b.level - depth) passed)
   | None -> Levels.empty
 
 (* A call [f] applied [d] deep makes that may enter a frame of the machine
@@ -696,7 +709,7 @@ end
    variable it reads is owned where it is read: bound by value, so that the
    region may take its value.  [owned] holds the levels of the variables the
    region owns at its root. *)
-let ownership ~n_outer ~resumes ~reads ~arms ~owned ~copied t =
+let ownership ~n_outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
   let out = ref [] in
   let captured = ref [] in
   let copied_reads = ref [] in
@@ -705,6 +718,45 @@ let ownership ~n_outer ~resumes ~reads ~arms ~owned ~copied t =
   (* The levels of the binders the frames of the turn [own] is in hold
      ({!resume.held}). *)
   let frame_held = ref Levels.empty in
+  (* The pattern variables in scope bound to a variant's field stored
+     behind a pointer: a copy of one is a handle to a node others may
+     share. *)
+  let handles = ref Levels.empty in
+  (* The Core types of the binders by level: those the region binds as the
+     walk reaches them, the machine's parameters as {!resumes} gives them. *)
+  let types = Hashtbl.create 16 in
+  let bound d ty = Hashtbl.replace types d ty in
+  let binder_type l =
+    if l >= 0 then Hashtbl.find_opt types l
+    else match resumes with Some r -> r.parameter_type (r.depth + l) | None -> None
+  in
+  (* What follows a resume the machine certainly makes owns each binder its
+     frame holds by value: one the region binds, or a parameter -- not an
+     adopted entry's capture, which may be such a field bound outside it,
+     nor a method's receiver, which the frame points at, nor one the frame
+     may keep as a pointer ({!resume.passed}).  With the levels it owns so
+     and did not before. *)
+  let after_resume owned d a occurrence =
+    let own_binder l =
+      Option.cata worth_moving false (binder_type l)
+      && (not (Levels.mem l !handles))
+      && (not (Levels.mem l copied))
+      && (not (Levels.mem l (passed_across resumes d a occurrence)))
+      && match resumes with Some {entry_captures = Some k; _} -> l > -k | Some _ | None -> true
+    in
+    if certain then
+      let added = Levels.diff (Levels.filter own_binder (held_across resumes d a occurrence)) owned in
+      (Levels.union owned added, added)
+    else (owned, Levels.empty)
+  in
+  (* The levels owned only as what follows a resume ({!after_resume}). *)
+  let resumed = ref Levels.empty in
+  let resuming added f =
+    let enclosing = !resumed in
+    resumed := Levels.union enclosing added;
+    f ();
+    resumed := enclosing
+  in
   (* The frame of the entry the region is lowered as holds what it reads
      from outside it, its parameters and its captures, from its root on. *)
   let outer =
@@ -729,11 +781,29 @@ let ownership ~n_outer ~resumes ~reads ~arms ~owned ~copied t =
       | [], _ -> own owned d k
       | ((_, ty) :: _ as ids), body ->
         let n = List.length ids in
+        List.iteri (fun j (_, ty) -> bound (d + n - 1 - j) ty) ids;
+        let owned_k, added = after_resume owned d action use.occurrence in
         saving d action use.occurrence owned (fun () ->
-            own (if worth_moving ty then Levels.add (d + n - 1) owned else owned) (d + n) body ) )
+            resuming added (fun () ->
+                own (if worth_moving ty then Levels.add (d + n - 1) owned_k else owned_k) (d + n) body ) ) )
     | MLapp (f, args) ->
-      Option.iter (fun call -> entry_owned := (call, Levels.union owned (frame_held_now ())) :: !entry_owned) (entering d f);
-      all (f :: args)
+      let entered = entering d f in
+      Option.iter (fun call -> entry_owned := (call, Levels.union owned (frame_held_now ())) :: !entry_owned) entered;
+      (* A function the region is handed -- a variable bound outside it, not
+         the member of the fixpoint whose body it is -- is passed its
+         arguments as it would be with no resume: taking one by move would
+         change the signature its parameter requires of it. *)
+      let handed =
+        match (machine_call resumes d f, call_head f) with
+        | Some (_, `Member), _ -> false
+        | _, MLrel (i, _) -> d - i < 0
+        | _ -> false
+      in
+      if handed then begin
+        own owned d f;
+        List.iter (own (Levels.diff owned !resumed) d) args
+      end
+      else all (f :: args)
     | MLcons (_, _, args) | MLtuple args -> all args
     | MLparray (elems, default) -> all (default :: Array.to_list elems)
     (* A closure's body is a region of its own. *)
@@ -743,17 +813,30 @@ let ownership ~n_outer ~resumes ~reads ~arms ~owned ~copied t =
         (closure_reads d t)
     | MLletin (x, ty, a, b, occurrence) ->
       own owned d a;
+      bound d ty;
       (* What a local fixpoint closes over, it reads by reference. *)
       let owned_b =
         match a with MLfix _ -> Levels.diff owned (free Parents.empty d a) | _ -> owned
       in
+      let owned_b, added = after_resume owned_b d a occurrence in
       saving d a occurrence owned (fun () ->
-          own (if let_owned owned d x ty a occurrence then Levels.add d owned_b else owned_b) (d + 1) b )
+          resuming added (fun () ->
+              own (if let_owned owned d x ty a occurrence then Levels.add d owned_b else owned_b) (d + 1) b ) )
     | MLcase (ty, scrut, branches) ->
       own owned d scrut;
       Array.iteri
-        (fun k ((ids, _, _, body) as branch) ->
-          own (branch_owned owned d t ty scrut branches k branch) (d + List.length ids) body )
+        (fun k ((ids, _, pat, body) as branch) ->
+          let enclosing = !handles in
+          List.iteri (fun i (_, ty) -> bound (d + i) ty) ids;
+          ( match pat with
+          | (Pusual r | Pcons (r, _)) when not (Table.is_custom_match branches) ->
+            let stored = Ml_type_util.Ctor_fields.of_ctor r in
+            List.iteri
+              (fun i _ -> if Ml_type_util.Ctor_fields.behind_pointer stored i then handles := Levels.add (d + i) !handles)
+              ids
+          | _ -> () );
+          own (branch_owned owned d t ty scrut branches k branch) (d + List.length ids) body;
+          handles := enclosing )
         branches
     | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> ()
   (* [f], which plans what follows a binding of [a] at [occurrence], [d]
@@ -837,7 +920,7 @@ let ownership ~n_outer ~resumes ~reads ~arms ~owned ~copied t =
 
 let plan ~n_outer ~resumes ~certain root root_owned root_copied arms (reads, captures, entered, saves, entries) =
   let owned, captured_owned, copied_reads, saved_owned, entry_owned =
-    ownership ~n_outer ~resumes ~reads ~arms ~owned:root_owned ~copied:root_copied root
+    ownership ~n_outer ~resumes ~certain ~reads ~arms ~owned:root_owned ~copied:root_copied root
   in
   { root;
     n_outer;

@@ -387,7 +387,8 @@ struct LoopifyResultNoDefault {
         auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         _result = _tcI0::template bind<T3, T3>(
-            std::move(_result), [=](const T3 &r) { return f(r, a0); });
+            std::move(_result),
+            [=, a0 = std::move(a0)](const T3 &r) { return f(r, a0); });
       }
     }
     return _result;

@@ -57,8 +57,17 @@ val worth_moving_ref : ('a -> bool) -> Names.GlobRef.t -> 'a list -> bool
     what follows the let reads in the frame rather than where they were
     bound; [held], those of [kept] the frame holds itself, rather than
     binding them again from what it holds -- the handler resuming there
-    owns each, having moved its frame off the stack. *)
-type resume = {calls : Miniml.Occurrence.t list; kept : Core_binder.t list; held : Core_binder.t list}
+    owns each, having moved its frame off the stack; [passed], those of
+    [held] what follows passes on, as they are, to a parameter of a call
+    entering the machine ({!Recursion_plan.passing}): a frame may keep one
+    as a pointer to it, for an entry taking that parameter by pointer, so
+    what follows does not own it. *)
+type resume = {
+  calls : Miniml.Occurrence.t list;
+  kept : Core_binder.t list;
+  held : Core_binder.t list;
+  passed : Core_binder.t list;
+}
 
 (** The points the definition [origin], whose body is lowered as a machine
     with a stack of frames, resumes at, as [resume_at] finds them by the
@@ -70,12 +79,15 @@ type resume = {calls : Miniml.Occurrence.t list; kept : Core_binder.t list; held
     parameters and the variables it reads from below [k], its captures, a
     call of the member passing the captures as well, and the entry's frame
     holds each, the handler owning it as a frame's handler owns what the
-    frame holds ({!resume.held}). *)
+    frame holds ({!resume.held}).  [parameter_type l]: the Core type of the
+    parameter of the loop the machine runs that the definition's binder at
+    level [l] is, where it is one. *)
 type resumes = {
   origin : Names.GlobRef.t;
   depth : int;
   resume_at : Core_binder.t -> resume option;
   entry_captures : int option;
+  parameter_type : int -> Miniml.ml_type option;
 }
 
 (** [region ~owned ~copied ~resumes ~n_outer t] is the plan of [t]'s reads,

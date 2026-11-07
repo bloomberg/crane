@@ -325,7 +325,7 @@ struct LoopifyLists {
             } else {
               auto _f = std::move(std::get<CraneCont_Cons>(_frame));
               auto a0 = std::move(_f.a0);
-              _result = list<T1>::cons(a0, std::move(_result));
+              _result = list<T1>::cons(std::move(a0), std::move(_result));
             }
           }
           return _result;
@@ -371,7 +371,7 @@ struct LoopifyLists {
             } else {
               auto _f = std::move(std::get<CraneCont_Cons>(_frame));
               auto a0 = std::move(_f.a0);
-              _result = list<T1>::cons(a0, std::move(_result));
+              _result = list<T1>::cons(std::move(a0), std::move(_result));
             }
           }
           return _result;
@@ -534,8 +534,8 @@ struct LoopifyLists {
               } else {
                 auto _f = std::move(std::get<CraneCont_Cons>(_frame));
                 list<T1> a2 = std::move(_f.a2);
-                _result = list<list<T1>>::cons(list<T1>::cons(a0, a2),
-                                               std::move(_result));
+                _result = list<list<T1>>::cons(
+                    list<T1>::cons(a0, std::move(a2)), std::move(_result));
               }
             }
             return _result;
@@ -683,7 +683,7 @@ struct LoopifyLists {
             } else {
               auto _f = std::move(std::get<CraneCont_Cons>(_frame));
               auto a0 = std::move(_f.a0);
-              _result = list<T1>::cons(a0, std::move(_result));
+              _result = list<T1>::cons(std::move(a0), std::move(_result));
             }
           }
           return _result;
@@ -1161,7 +1161,7 @@ struct LoopifyLists {
             } else {
               auto _f = std::move(std::get<CraneCont_Cons>(_frame));
               auto a00 = std::move(_f.a00);
-              _result = list<T1>::cons(a00, std::move(_result));
+              _result = list<T1>::cons(std::move(a00), std::move(_result));
             }
           }
           return _result;
@@ -1482,12 +1482,12 @@ struct LoopifyLists {
             } else {
               auto _f = std::move(std::get<CraneCont_Cons>(_frame));
               auto a00 = std::move(_f.a00);
-              _result = list<T1>::cons(a00, std::move(_result));
+              _result = list<T1>::cons(std::move(a00), std::move(_result));
             }
           }
           return _result;
         };
-        _result = app(a0, std::move(_tmp2));
+        _result = app(std::move(a0), std::move(_tmp2));
       }
     }
     return _result;

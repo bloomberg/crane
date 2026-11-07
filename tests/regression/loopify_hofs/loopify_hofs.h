@@ -378,8 +378,8 @@ struct LoopifyHofs {
             } else {
               auto _f = std::move(std::get<CraneCont_Cons>(_frame));
               auto a0 = std::move(_f.a0);
-              _result = List<std::pair<T1, T2>>::cons(std::make_pair(x, a0),
-                                                      std::move(_result));
+              _result = List<std::pair<T1, T2>>::cons(
+                  std::make_pair(x, std::move(a0)), std::move(_result));
             }
           }
           return _result;
@@ -426,13 +426,13 @@ struct LoopifyHofs {
             } else {
               auto _f = std::move(std::get<CraneCont_Cons>(_frame));
               auto a0 = std::move(_f.a0);
-              _result = List<std::pair<T1, T2>>::cons(std::make_pair(x, a0),
-                                                      std::move(_result));
+              _result = List<std::pair<T1, T2>>::cons(
+                  std::make_pair(x, std::move(a0)), std::move(_result));
             }
           }
           return _result;
         };
-        _result = pair_with(a00, l2).app(std::move(_result));
+        _result = pair_with(std::move(a00), l2).app(std::move(_result));
       }
     }
     return _result;

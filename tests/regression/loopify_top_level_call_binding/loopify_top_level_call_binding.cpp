@@ -84,8 +84,8 @@ uint64_t LoopifyTopLevelCallBinding::csum(
       }
     } else if (std::holds_alternative<CraneCont1>(_frame)) {
       auto _f = std::move(std::get<CraneCont1>(_frame));
-      const LoopifyTopLevelCallBinding::cell &c = _f.c;
-      _result = (key(c) + std::move(_result));
+      LoopifyTopLevelCallBinding::cell c = std::move(_f.c);
+      _result = (key(std::move(c)) + std::move(_result));
     } else if (std::holds_alternative<CraneCont_Cons>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       std::shared_ptr<List<LoopifyTopLevelCallBinding::cell>> a1 =

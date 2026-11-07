@@ -105,10 +105,11 @@ std::pair<std::pair<uint64_t, uint64_t>, uint64_t> LoopifyExpr::count_by_shape(
           std::move(_result);
       const auto &[p, t] = _tmp1;
       const auto &[c, sq] = p;
-      if (std::holds_alternative<typename LoopifyExpr::shape::Circle>(a0.v())) {
+      if (std::holds_alternative<typename LoopifyExpr::shape::Circle>(
+              a0.v_mut())) {
         _result = std::make_pair(std::make_pair((c + 1), sq), t);
       } else if (std::holds_alternative<typename LoopifyExpr::shape::Square>(
-                     a0.v())) {
+                     a0.v_mut())) {
         _result = std::make_pair(std::make_pair(c, (sq + 1)), t);
       } else {
         _result = std::make_pair(std::make_pair(c, sq), (t + 1));

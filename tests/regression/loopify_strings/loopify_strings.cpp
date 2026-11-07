@@ -351,7 +351,7 @@ List<uint64_t> LoopifyStrings::intercalate(
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       List<uint64_t> a0 = std::move(_f.a0);
-      _result = append(a0, append(sep, std::move(_result)));
+      _result = append(std::move(a0), append(sep, std::move(_result)));
     }
   }
   return _result;

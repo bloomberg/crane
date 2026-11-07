@@ -194,7 +194,7 @@ struct LoopifyPolymorphic {
       } else {
         auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
-        _result = _result.app(List<T1>::cons(a0, List<T1>::nil()));
+        _result = _result.app(List<T1>::cons(std::move(a0), List<T1>::nil()));
       }
     }
     return _result;
@@ -463,8 +463,8 @@ struct LoopifyPolymorphic {
         auto a = std::move(_f.a);
         auto b = std::move(_f.b);
         auto [as_, bs] = std::move(_result);
-        _result = std::make_pair(List<T1>::cons(a, std::move(as_)),
-                                 List<T2>::cons(b, std::move(bs)));
+        _result = std::make_pair(List<T1>::cons(std::move(a), std::move(as_)),
+                                 List<T2>::cons(std::move(b), std::move(bs)));
       }
     }
     return _result;
@@ -509,11 +509,13 @@ struct LoopifyPolymorphic {
         auto a0 = std::move(_f.a0);
         auto [trues, falses] = std::move(_result);
         if (p(a0)) {
-          _result = std::make_pair(List<T1>::cons(a0, std::move(trues)),
-                                   std::move(falses));
+          _result =
+              std::make_pair(List<T1>::cons(std::move(a0), std::move(trues)),
+                             std::move(falses));
         } else {
-          _result = std::make_pair(std::move(trues),
-                                   List<T1>::cons(a0, std::move(falses)));
+          _result =
+              std::make_pair(std::move(trues),
+                             List<T1>::cons(std::move(a0), std::move(falses)));
         }
       }
     }

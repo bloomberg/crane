@@ -367,7 +367,7 @@ uint64_t LoopifyAdvancedPatterns::sum_shapes(
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       LoopifyAdvancedPatterns::shape a0 = std::move(_f.a0);
-      _result = (extract_value(a0) + std::move(_result));
+      _result = (extract_value(std::move(a0)) + std::move(_result));
     }
   }
   return _result;
@@ -419,11 +419,12 @@ LoopifyAdvancedPatterns::count_by_shape(
       const auto &[p, triangles] = _tmp1;
       const auto &[circles, squares] = p;
       if (std::holds_alternative<
-              typename LoopifyAdvancedPatterns::shape::Circle>(a0.v())) {
+              typename LoopifyAdvancedPatterns::shape::Circle>(a0.v_mut())) {
         _result = std::make_pair(
             std::make_pair((circles + UINT64_C(1)), squares), triangles);
       } else if (std::holds_alternative<
-                     typename LoopifyAdvancedPatterns::shape::Square>(a0.v())) {
+                     typename LoopifyAdvancedPatterns::shape::Square>(
+                     a0.v_mut())) {
         _result = std::make_pair(
             std::make_pair(circles, (squares + UINT64_C(1))), triangles);
       } else {

@@ -272,7 +272,7 @@ uint64_t LoopifyListOfLists::total_length(
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       List<uint64_t> a0 = std::move(_f.a0);
-      _result = (list_len(a0) + std::move(_result));
+      _result = (list_len(std::move(a0)) + std::move(_result));
     }
   }
   return _result;
@@ -424,7 +424,7 @@ uint64_t LoopifyListOfLists::max_length(
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       List<uint64_t> a0 = std::move(_f.a0);
-      _result = std::max(list_len(a0), std::move(_result));
+      _result = std::max(list_len(std::move(a0)), std::move(_result));
     }
   }
   return _result;

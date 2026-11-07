@@ -542,7 +542,7 @@ List<uint64_t> LoopifyMoreTrees::flatten(
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       List<uint64_t> a0 = std::move(_f.a0);
-      _result = append_lists(a0, std::move(_result));
+      _result = append_lists(std::move(a0), std::move(_result));
     }
   }
   return _result;
@@ -661,7 +661,7 @@ List<LoopifyMoreTrees::tree> LoopifyMoreTrees::concat_map_children(
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       LoopifyMoreTrees::tree a0 = std::move(_f.a0);
-      _result = append_trees(tree_children(a0), std::move(_result));
+      _result = append_trees(tree_children(std::move(a0)), std::move(_result));
     }
   }
   return _result;

@@ -331,8 +331,8 @@ List<List<uint64_t>> LoopifyCombinatorics::subsequences(
           } else {
             auto _f = std::move(std::get<CraneCont_Cons>(_frame));
             List<uint64_t> a00 = std::move(_f.a00);
-            _result = List<List<uint64_t>>::cons(List<uint64_t>::cons(a0, a00),
-                                                 std::move(_result));
+            _result = List<List<uint64_t>>::cons(
+                List<uint64_t>::cons(a0, std::move(a00)), std::move(_result));
           }
         }
         return _result;
@@ -464,7 +464,7 @@ List<List<uint64_t>> LoopifyCombinatorics::insert_everywhere(
       }
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-      const List<uint64_t> &l = _f.l;
+      List<uint64_t> l = std::move(_f.l);
       uint64_t a0 = _f.a0;
       List<List<uint64_t>> rest = std::move(_result);
       auto prepend_y =
@@ -501,14 +501,14 @@ List<List<uint64_t>> LoopifyCombinatorics::insert_everywhere(
           } else {
             auto _f = std::move(std::get<CraneCont_Cons>(_frame));
             List<uint64_t> a00 = std::move(_f.a00);
-            _result = List<List<uint64_t>>::cons(List<uint64_t>::cons(a0, a00),
-                                                 std::move(_result));
+            _result = List<List<uint64_t>>::cons(
+                List<uint64_t>::cons(a0, std::move(a00)), std::move(_result));
           }
         }
         return _result;
       };
-      _result = List<List<uint64_t>>::cons(List<uint64_t>::cons(x, l),
-                                           prepend_y(std::move(rest)));
+      _result = List<List<uint64_t>>::cons(
+          List<uint64_t>::cons(x, std::move(l)), prepend_y(std::move(rest)));
     }
   }
   return _result;

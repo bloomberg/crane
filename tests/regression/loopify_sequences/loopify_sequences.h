@@ -250,8 +250,8 @@ struct LoopifySequences {
           } else {
             auto _f = std::move(std::get<CraneCont_Cons>(_frame));
             auto a00 = std::move(_f.a00);
-            _result =
-                List<T1>::cons(sep, List<T1>::cons(a00, std::move(_result)));
+            _result = List<T1>::cons(
+                sep, List<T1>::cons(std::move(a00), std::move(_result)));
           }
         }
         return _result;
@@ -340,7 +340,7 @@ struct LoopifySequences {
               } else {
                 auto _f = std::move(std::get<CraneCont_Cons>(_frame));
                 auto a01 = std::move(_f.a01);
-                _result = List<T1>::cons(a01, std::move(_result));
+                _result = List<T1>::cons(std::move(a01), std::move(_result));
               }
             }
             return _result;

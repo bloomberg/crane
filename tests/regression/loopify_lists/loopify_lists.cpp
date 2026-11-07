@@ -976,7 +976,7 @@ uint64_t LoopifyLists::sum_list_lengths(
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       LoopifyLists::list<uint64_t> a0 = std::move(_f.a0);
-      _result = (len_list(a0) + std::move(_result));
+      _result = (len_list(std::move(a0)) + std::move(_result));
     }
   }
   return _result;
@@ -1951,7 +1951,7 @@ LoopifyLists::intercalate(const LoopifyLists::list<uint64_t> &sep,
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       LoopifyLists::list<uint64_t> a0 = std::move(_f.a0);
-      _result = app_helper(a0, app_helper(sep, std::move(_result)));
+      _result = app_helper(std::move(a0), app_helper(sep, std::move(_result)));
     }
   }
   return _result;

@@ -116,8 +116,8 @@ uint64_t MemSafetyProbe21::double_grow(
       }
     } else {
       auto _f = std::move(std::get<CraneCont_n_>(_frame));
-      const MemSafetyProbe21::tree &t = _f.t;
-      _result = (tree_sum(t) + std::move(_result));
+      MemSafetyProbe21::tree t = std::move(_f.t);
+      _result = (tree_sum(std::move(t)) + std::move(_result));
     }
   }
   return _result;

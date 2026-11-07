@@ -185,11 +185,11 @@ struct LoopifyPairs {
         auto a0 = std::move(_f.a0);
         auto [yes, no] = std::move(_result);
         if (p(a0)) {
-          _result =
-              std::make_pair(list<T1>::cons(a0, std::move(yes)), std::move(no));
+          _result = std::make_pair(
+              list<T1>::cons(std::move(a0), std::move(yes)), std::move(no));
         } else {
-          _result =
-              std::make_pair(std::move(yes), list<T1>::cons(a0, std::move(no)));
+          _result = std::make_pair(
+              std::move(yes), list<T1>::cons(std::move(a0), std::move(no)));
         }
       }
     }
@@ -353,8 +353,8 @@ struct LoopifyPairs {
         auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         auto [taken, rest] = std::move(_result);
-        _result = std::make_pair(list<T1>::cons(a0, std::move(taken)),
-                                 std::move(rest));
+        _result = std::make_pair(
+            list<T1>::cons(std::move(a0), std::move(taken)), std::move(rest));
       }
     }
     return _result;
@@ -408,8 +408,9 @@ struct LoopifyPairs {
         auto a0 = std::move(_f.a0);
         auto a00 = std::move(_f.a00);
         auto [evens, odds] = std::move(_result);
-        _result = std::make_pair(list<T1>::cons(a0, std::move(evens)),
-                                 list<T1>::cons(a00, std::move(odds)));
+        _result =
+            std::make_pair(list<T1>::cons(std::move(a0), std::move(evens)),
+                           list<T1>::cons(std::move(a00), std::move(odds)));
       }
     }
     return _result;
@@ -457,8 +458,8 @@ struct LoopifyPairs {
         auto _f = std::move(std::get<CraneCont1>(_frame));
         auto a0 = std::move(_f.a0);
         auto [ys, zs] = std::move(_result);
-        _result =
-            std::make_pair(list<T1>::cons(a0, std::move(ys)), std::move(zs));
+        _result = std::make_pair(list<T1>::cons(std::move(a0), std::move(ys)),
+                                 std::move(zs));
       }
     }
     return _result;

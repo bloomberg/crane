@@ -88,10 +88,11 @@ let () =
     { origin;
       depth = 1;
       entry_captures = None;
+      parameter_type = (fun _ -> None);
       resume_at =
         (fun b ->
           if Core_binder.equal b (Core_binder.make ~origin ~level:1 ()) && Core_binder.same_site b (Core_binder.make ~origin ~level:1 ~site ())
-          then Some {calls; kept = [s]; held = [s]}
+          then Some {calls; kept = [s]; held = [s]; passed = []}
           else None ) }
   in
   let use resumes = Ownership_plan.use (Ownership_plan.region ~owned:[1] ?resumes ~n_outer:0 root) read in
@@ -115,12 +116,13 @@ let () =
     { origin;
       depth = 1;
       entry_captures = None;
+      parameter_type = (fun _ -> None);
       resume_at =
         (fun b ->
           if Core_binder.equal b at_let && Core_binder.same_site b at_let
           then
             let s = Core_binder.make ~origin ~level:0 () in
-            Some {calls = [call_site]; kept = [s]; held = [s]}
+            Some {calls = [call_site]; kept = [s]; held = [s]; passed = []}
           else None ) }
   in
   let use = Ownership_plan.use (Ownership_plan.region ~owned:[1] ~resumes ~n_outer:0 root) read in
@@ -142,10 +144,11 @@ let () =
       { origin;
         depth = 2;
         entry_captures = None;
+        parameter_type = (fun _ -> None);
         resume_at =
           (fun b ->
             if Core_binder.equal b at_let && Core_binder.same_site b at_let then
-              Some {calls = [call_site]; kept = [s]; held = [s]}
+              Some {calls = [call_site]; kept = [s]; held = [s]; passed = []}
             else None ) }
     in
     Ownership_plan.save_moves (Ownership_plan.region ~owned ~resumes ~n_outer:0 root) site
@@ -169,13 +172,14 @@ let () =
   let root = MLletin (Id (Id.of_string "y"), nat, outer_value, inner, outer_site) in
   let call_of = function MLapp (MLglob g, _) -> g.occurrence | _ -> assert false in
   let point level site value =
-    (Core_binder.make ~origin ~level ~site (), {Ownership_plan.calls = [call_of value]; kept = [s]; held = [s]})
+    (Core_binder.make ~origin ~level ~site (), {Ownership_plan.calls = [call_of value]; kept = [s]; held = [s]; passed = []})
   in
   let points = [point 2 outer_site outer_value; point 3 inner_site inner_value] in
   let resumes : Ownership_plan.resumes =
     { origin;
       depth = 2;
       entry_captures = None;
+      parameter_type = (fun _ -> None);
       resume_at =
         (fun b -> List.find_map (fun (at, r) -> if Core_binder.equal b at && Core_binder.same_site b at then Some r else None) points) }
   in
@@ -201,10 +205,11 @@ let () =
       { origin;
         depth = 3;
         entry_captures = Some 2;
+        parameter_type = (fun _ -> None);
         resume_at =
           (fun b ->
             if Core_binder.equal b at_let && Core_binder.same_site b at_let then
-              Some {calls = [call_site]; kept = [c]; held = [c]}
+              Some {calls = [call_site]; kept = [c]; held = [c]; passed = []}
             else None ) }
     in
     Ownership_plan.save_moves (Ownership_plan.region ~resumes ~n_outer:0 root) site
@@ -221,7 +226,7 @@ let () =
 let () =
   let origin = GlobRef.VarRef (Id.of_string "outer") in
   let c = Core_binder.make ~origin ~level:0 () and a = Core_binder.make ~origin ~level:2 () in
-  let resumes : Ownership_plan.resumes = {origin; depth = 3; entry_captures = Some 2; resume_at = (fun _ -> None)} in
+  let resumes : Ownership_plan.resumes = {origin; depth = 3; entry_captures = Some 2; parameter_type = (fun _ -> None); resume_at = (fun _ -> None)} in
   let moves body =
     let f = fresh_rel 3 in
     let at = match f with MLrel (_, o) -> o | _ -> assert false in
@@ -263,3 +268,43 @@ let () =
   let use, first = applied (call "g" [fresh_rel 4; fresh_rel 1]) in
   check "a fixpoint reading it as it runs keeps it" (use = Some Ownership_plan.Use.Copy);
   check "and nothing is evaluated first" (first = [])
+
+(* [let r := weigh t in g s r] under [k], [t] and [s], [s] lent and kept
+   by the frame saved at the let: the handler resuming there owns the
+   frame's copy, so the read of [s] after the call moves it -- where the
+   machine is certainly made; where it may not be, it is read as it was
+   bound.  Not where the frame may keep [s] as a pointer, nor where [s] is
+   passed to the function [k] the region is handed ([k s r]), whose
+   signature is not the machine's to change, nor where moving [s] takes
+   nothing a copy would not. *)
+let () =
+  let origin = GlobRef.VarRef (Id.of_string "weigh") in
+  let s = Core_binder.make ~origin ~level:2 () in
+  let value = call "weigh" [fresh_rel 2] in
+  let site = Occurrence.fresh () in
+  let call_site = match value with MLapp (MLglob g, _) -> g.occurrence | _ -> assert false in
+  let at_let = Core_binder.make ~origin ~level:3 ~site () in
+  let use ?(passed = []) ?(handed = false) ?(ty = Tvar (Rigid, 1)) certain =
+    let read = fresh_rel 2 in
+    let body = if handed then MLapp (fresh_rel 4, [read; fresh_rel 1]) else call "g" [read; fresh_rel 1] in
+    let root = MLletin (Id (Id.of_string "r"), nat, value, body, site) in
+    let o = match read with MLrel (_, o) -> o | _ -> assert false in
+    let resumes : Ownership_plan.resumes =
+      { origin;
+        depth = 3;
+        entry_captures = None;
+        parameter_type = (fun level -> if level = 2 then Some ty else None);
+        resume_at =
+          (fun b ->
+            if Core_binder.equal b at_let && Core_binder.same_site b at_let then
+              Some {calls = [call_site]; kept = [s]; held = [s]; passed}
+            else None ) }
+    in
+    Ownership_plan.use (Ownership_plan.region ~resumes ~certain ~n_outer:0 root) o
+  in
+  let moved = Some Ownership_plan.Use.Move in
+  check "what follows a resume owns what the frame holds" (use true = moved);
+  check "not where the machine may not be made" (use false <> moved);
+  check "not what the frame may keep as a pointer" (use ~passed:[s] true <> moved);
+  check "not an argument of a function the region is handed" (use ~handed:true true <> moved);
+  check "not a parameter of a type not worth moving" (use ~ty:(Tdummy Ktype) true <> moved)

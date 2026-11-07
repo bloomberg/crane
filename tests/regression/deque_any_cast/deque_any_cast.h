@@ -76,7 +76,7 @@ struct DequeAnyCast {
         auto _f = std::move(std::get<CraneCont_x>(_frame));
         typename _tcI0::m_carrier x = std::move(_f.x);
         const auto &m_op0 = _tcI0::m_op;
-        _result = m_op0(x, std::move(_result));
+        _result = m_op0(std::move(x), std::move(_result));
       }
     }
     return _result;

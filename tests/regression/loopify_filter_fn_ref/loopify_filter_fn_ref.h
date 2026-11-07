@@ -245,7 +245,7 @@ struct LoopifyFilterFnRef {
         tree<T1> l_ = std::move(_f.l_);
         tree<T1> r_ = std::move(_result);
         if (f(a1)) {
-          _result = tree<T1>::node(std::move(l_), a1, std::move(r_));
+          _result = tree<T1>::node(std::move(l_), std::move(a1), std::move(r_));
         } else {
           _result = std::move(l_);
         }

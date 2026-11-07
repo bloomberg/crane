@@ -86,9 +86,9 @@ uint64_t LoopifyComputedScrutineeTemp::walk(
       }
     } else {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-      const LoopifyComputedScrutineeTemp::lst &l = _f.l;
+      LoopifyComputedScrutineeTemp::lst l = std::move(_f.l);
       uint64_t a0 = _f.a0;
-      _result = ((a0 + hd(l)) + std::move(_result));
+      _result = ((a0 + hd(std::move(l))) + std::move(_result));
     }
   }
   return _result;

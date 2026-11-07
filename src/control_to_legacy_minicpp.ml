@@ -83,8 +83,12 @@ let derived_passed l =
    on unchanged, which the machine holds outside its frames -- and holds
    itself those of them its handler does not bind again: one recomputable
    from what is available, or bound again so, in turn, as the machine does
-   ({!Loopify_frame}'s [rebuilt_binders]). *)
-let resumes_of ?entry_captures ~origin ~depth ~available () : Ownership_plan.resumes =
+   ({!Loopify_frame}'s [rebuilt_binders]).  Of those, what follows passes on
+   to a call entering the machine those it may keep as pointers: Loopify
+   keeps one so where the entry takes the parameter by pointer, which
+   {!Frame_storage} decides from the C++ parameters, after the plan. *)
+let resumes_of ?entry_captures ~origin ~depth ~available ~parameters:(first, (l : Control_ir.Term.loop)) () :
+    Ownership_plan.resumes =
   let rebuilt (p : Recursion_plan.resume) =
     List.fold_left
       (fun rebuilt (c : Recursion_plan.recomputable) ->
@@ -96,16 +100,22 @@ let resumes_of ?entry_captures ~origin ~depth ~available () : Ownership_plan.res
   { origin;
     depth;
     entry_captures;
+    parameter_type = (fun level -> if level < first then None else Option.map snd (List.nth_opt l.parameters (level - first)));
     resume_at =
       (fun b ->
         match Recursion_plan.resumes_binding b with
         | [p] ->
           let kept = List.filter (fun b -> not (available b)) p.live in
           let rebuilt = rebuilt p in
+          let held = List.filter (fun b -> not (List.exists (Core_binder.equal b) rebuilt)) kept in
           Some
             { calls = List.map (fun (c : Recursion_plan.call) -> c.occurrence) p.after;
               kept;
-              held = List.filter (fun b -> not (List.exists (Core_binder.equal b) rebuilt)) kept }
+              held;
+              passed =
+                List.filter
+                  (fun b -> List.exists (fun (q : Recursion_plan.passing) -> Core_binder.equal q.passed b) p.passes)
+                  held }
         | _ -> None ) }
 
 (* Whether the Core binder [b] is a parameter of the loop [l], whose first
@@ -131,7 +141,9 @@ let function_machine r =
   | Some _ | None -> None
 
 let function_resumes r ~depth =
-  Option.map (fun l -> resumes_of ~origin:r ~depth ~available:(invariant_at l ~first:0) ()) (function_machine r)
+  Option.map
+    (fun l -> resumes_of ~origin:r ~depth ~available:(invariant_at l ~first:0) ~parameters:(0, l) ())
+    (function_machine r)
 
 let method_resumes r ~inductive ~receiver ~depth =
   (* Its struct's methods are loopified where everything is, if the struct
@@ -143,7 +155,7 @@ let method_resumes r ~inductive ~receiver ~depth =
   | Some (l, Frames)
     when Table.loopifies_method r && either && Control_ir.entries l.body = []
          && Option.default false (List.nth_opt (derived_passed l) receiver) ->
-    Some (resumes_of ~origin:r ~depth ~available:(invariant_at l ~first:0) (), both)
+    Some (resumes_of ~origin:r ~depth ~available:(invariant_at l ~first:0) ~parameters:(0, l) (), both)
   | Some _ | None -> None
 
 (* A loop as it is lowered, and for each C++ parameter of what it is
@@ -480,10 +492,10 @@ let local_resumes ~owner ~function_ ~lifted ~member ~depth ~arity =
   let adopted =
     match Option.bind owner function_machine with
     | Some l ->
-      List.exists
+      List.find_opt
         (fun (e : Control_ir.Term.loop) -> Control_ir.Loop.equal e.loop (Member (fst member, snd member)))
         (Control_ir.entries l.body)
-    | None -> false
+    | None -> None
   in
   (* A machine of its own: one {!local_loop} makes, or, of a fixpoint the
      plan lowers so that it does not take, perhaps one Loopify makes of the
@@ -497,16 +509,20 @@ let local_resumes ~owner ~function_ ~lifted ~member ~depth ~arity =
       | Some (Modulo_cons _ | Frame_stack) -> Some false
       | Some (No_loop | Tail_loop | Suspended _) | None -> None )
   in
-  match (owner, own) with
-  | Some origin, _ when adopted -> Some (resumes_of ~entry_captures:(arity + 1) ~origin ~depth ~available:(fun _ -> false) (), true)
-  | Some origin, Some certain -> (
+  match (owner, adopted, own) with
+  | Some origin, Some entered, _ ->
+    Some
+      ( resumes_of ~entry_captures:(arity + 1) ~origin ~depth ~available:(fun _ -> false)
+          ~parameters:(depth - arity, entered) (),
+        true )
+  | Some origin, None, Some certain -> (
     match Lower_control.loop (Control_ir.Loop.Member (fst member, snd member)) with
     | Some (Loop l) when Control_ir.continues l.body <> [] ->
       (* What the body reads from outside the fixpoint is bound before the
          loop and in scope for all of it, as an invariant parameter is. *)
       let first = depth - arity in
       let invariant = invariant_at l ~first in
-      Some (resumes_of ~origin ~depth ~available:(fun b -> b.level < first || invariant b) (), certain)
+      Some (resumes_of ~origin ~depth ~available:(fun b -> b.level < first || invariant b) ~parameters:(first, l) (), certain)
     | Some _ | None -> None )
   | _ -> None
 
@@ -719,7 +735,7 @@ let lifted_resumes r ~owner ~depth ~arity =
        unchanged by every call, as an invariant parameter is. *)
     let first = depth - arity in
     let invariant = invariant_at l ~first in
-    Some (resumes_of ~origin ~depth ~available:(fun b -> b.level < first || invariant b) ())
+    Some (resumes_of ~origin ~depth ~available:(fun b -> b.level < first || invariant b) ~parameters:(first, l) ())
   | _ -> None
 
 let lower_lifted d =
