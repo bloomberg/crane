@@ -6,7 +6,7 @@ Set Crane Loopify.
 
 (** A tail loop moves a parameter into its own next value only where that
     value reads it for the last time in the turn
-    (Ownership_plan.continue_moves). *)
+    (Ownership_ir.continue_moves). *)
 Module LoopifyAccumulatorReadElsewhere.
 
 Inductive tree : Type :=

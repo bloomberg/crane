@@ -3,7 +3,7 @@
 
 (** How the frames of a machine with a stack hold the parameters of its
     loops, decided over its ControlIR (docs/Pipeline-Disentangling-Plan.md,
-    section 4.10: [Storage.Frame]).
+    section 4.10: {!Ownership_ir.Storage}).
 
     A machine runs on what its caller passed, which outlives it and which
     nothing changes while it runs.  A frame can hold a parameter by pointer
@@ -18,12 +18,14 @@
     pointer until a turn passes it a value that lies elsewhere, given those
     still held so. *)
 
-(** [own], for each parameter of the loop, whether its frames hold it by
-    pointer; [entered], for each parameter of a loop an entry enters, by the
-    Core level it is bound at under the loop's parameters, the same. *)
+(** [own], for each parameter of the loop, where the value its frames hold
+    is stored: [Local], where the machine's caller keeps it, a frame holding
+    a pointer to it, or [Frame], in the frame itself; [entered], for each
+    parameter of a loop an entry enters, by the Core level it is bound at
+    under the loop's parameters, the same. *)
 type t = {
-  own : bool list;
-  entered : (int * bool) list;
+  own : Ownership_ir.Storage.t list;
+  entered : (int * Ownership_ir.Storage.t) list;
 }
 
 (** A parameter of the loop, by its position, or of a loop an entry enters:
@@ -57,7 +59,7 @@ val passed_holdable : Callable_abi.passing option -> Miniml.ml_type -> bool
 
 (** Whether a frame can hold the parameter at position [i] of the loop [l]
     by pointer, as the plan of the local fixpoint's function [l] is made
-    from passes it ({!Ownership_plan.Local_passing}, {!passed_holdable});
+    from passes it ({!Ownership_ir.Local_passing}, {!passed_holdable});
     [None] where [l] is a function's loop, or no plan says. *)
 val local_holdable : Control_ir.Term.loop -> int -> bool option
 

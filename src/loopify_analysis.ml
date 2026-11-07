@@ -186,7 +186,7 @@ and is_trivially_copyable_named s ts =
   Table.is_trivially_copyable_cpp_name s
   && List.for_all is_trivially_copyable_type ts
 
-let worthwhile_move_type = Ownership_plan.worth_moving_cpp
+let worthwhile_move_type = Ownership_ir.worth_moving_cpp
 
 (** Whether a value of the C++ type [t] is copied as cheaply as it is moved:
     trivially copyable, and not worth a move -- a template type variable is

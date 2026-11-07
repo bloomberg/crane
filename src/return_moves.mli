@@ -3,7 +3,7 @@
 
 (** The moves a [return] writes: none where C++ moves the returned value on
     its own.  Every other move is decided over Core
-    ({!Ownership_plan}) or made as control is lowered. *)
+    ({!Ownership_ir}) or made as control is lowered. *)
 
 open Minicpp
 

@@ -1,7 +1,7 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Which reads of a local are its last use.  See [ownership_plan.mli]. *)
+(** OwnershipIR.  See [ownership_ir.mli]. *)
 
 open Miniml
 
@@ -67,9 +67,14 @@ type save = {save_at : Occurrence.t; saved : (Core_binder.t * int * bool) list}
    level and read. *)
 type entry_read = {call : Occurrence.t; captured : (int * bool) list; arguments : (int * Occurrence.t) list}
 
+(* What a copy of a variable's value is: its bits, a retain of the block it
+   points at, or a semantic copy ({!Use}). *)
+type copy = Bits | Retain | Duplicate
+
 type t = {
   root : ml_ast;
   n_outer : int;  (* the type variables of the head the region is generated under *)
+  outer : int -> ml_type option;  (* the Core type of a variable bound outside the region, by its index at the root *)
   resumes : resumes option;
   certain : bool;  (* whether the region is lowered as the machine resuming at [resumes] wherever it is generated *)
   root_owned : Levels.t;
@@ -77,6 +82,7 @@ type t = {
   arms : arm list;
   reads : read list;
   owned : (Occurrence.t * bool) list;  (* whether the variable a read reads is owned there *)
+  read_types : (Occurrence.t * ml_type option) list;  (* the Core type of the variable a read reads, where known *)
   captures : read list;  (* a lambda's capture of a variable, by the reads inside it *)
   captured_owned : (Occurrence.t * bool) list;
   copied_reads : Occurrence.t list;  (* reads of a variable closures copy *)
@@ -90,6 +96,7 @@ type t = {
 let empty =
   { root = MLdummy Kprop;
     n_outer = 0;
+    outer = (fun _ -> None);
     resumes = None;
     certain = true;
     root_owned = Levels.empty;
@@ -97,6 +104,7 @@ let empty =
     arms = [];
     reads = [];
     owned = [];
+    read_types = [];
     captures = [];
     captured_owned = [];
     copied_reads = [];
@@ -161,6 +169,70 @@ let rec worth_moving_cpp (ty : Minicpp.cpp_type) =
   | Tdecay t -> worth_moving_cpp t
   | Ttyctor _ | Tptr _ | Tvoid | Tauto | Tunresolved | Tany | Topaque ->
     false
+
+(* A value of the global type [r] is a handle on a counted block: a
+   coinductive's node, a shared variant's alternative. *)
+let shares_ref r = Table.is_coinductive r || Table.is_shared_variant r
+
+(* What a copy of a value of the Core type [ty] is: a retain of a block a
+   closure or a handle points at, its bits where moving it gains nothing
+   ({!worth_moving}) or there is none (an erased value), else a semantic
+   copy -- an inductive's value, a mapped type's, one a type variable
+   stands for, a box (a type left open, an abstract one the program does
+   not see into).  An abbreviation is what it abbreviates; a type
+   abstraction erasure removes, what it returns.  [None] of a type
+   inference gave up on, a metavariable nothing solved or a hole. *)
+let rec copy_of_type ty =
+  match ty with
+  | Tmeta {contents = Some t} -> copy_of_type t
+  | Tarr (d, rest) when Mlutil.isTdummy d -> copy_of_type rest
+  | Tarr _ -> Some Retain
+  (* An instance of a class is an object of its own, a singleton class's
+     too, whatever its method's type. *)
+  | Tglob (r, _, _) when Table.is_typeclass r -> Some Duplicate
+  | Tglob ((Names.GlobRef.ConstRef kn as r), args, _)
+    when (not (Table.is_custom r)) && not (Table.is_promoted_type_var r || Table.is_erased_type_const r) -> (
+    match Table.lookup_typedef_unchecked kn with
+    | Some body -> copy_of_type (Mlutil.type_subst_list args body)
+    | None -> Some Duplicate )
+  | Tglob (r, _, _) when shares_ref r -> Some Retain
+  (* A mapped type's copy copies its arguments: it is its bits only where
+     theirs are. *)
+  | Tglob (r, args, _) ->
+    Some (if worth_moving_ref (fun t -> copy_of_type t <> Some Bits) r args then Duplicate else Bits)
+  | Tvar _ | Tapp _ | Topen _ | Tstring -> Some (if worth_moving ty then Duplicate else Bits)
+  | Taxiom -> Some Duplicate
+  | Tdummy _ -> Some Bits
+  | Tunknown | Tmeta _ | Thole _ -> None
+
+(* The same, of the C++ type a variable is declared at.  An abbreviation
+   the program defines is read as its Core definition: one naming an
+   argument as that argument, one of a closure, or with no argument,
+   wholly. *)
+let rec copy_of_cpp (ty : Minicpp.cpp_type) =
+  match ty with
+  | Tshared_ptr _ | Tfun _ -> Retain
+  | Tglob (r, _, _) when shares_ref r -> Retain
+  | Tglob ((Names.GlobRef.ConstRef kn as r), args, _)
+    when (not (Table.is_custom r))
+         && (not (Table.is_promoted_type_var r || Table.is_erased_type_const r))
+         && Option.has_some (Table.lookup_typedef_unchecked kn) -> (
+    let rec body = function Tmeta {contents = Some t} -> body t | t -> t in
+    match body (Option.get (Table.lookup_typedef_unchecked kn)) with
+    (* One of its arguments, under another name. *)
+    | Tvar (_, j) when j >= 1 && j <= List.length args -> copy_of_cpp (List.nth args (j - 1))
+    | _ -> (
+      match copy_of_type (Tglob (r, [], [])) with
+      | Some Retain -> Retain
+      | Some c when args = [] -> c
+      | Some _ | None -> if worth_moving_cpp ty then Duplicate else Bits ) )
+  | Tglob (r, args, _) -> if worth_moving_ref (fun t -> copy_of_cpp t <> Bits) r args then Duplicate else Bits
+  | Tforeign {fr_custom; fr_types; _} ->
+    if worth_moving_ref (fun t -> copy_of_cpp t <> Bits) fr_custom fr_types then Duplicate else Bits
+  (* A box holds a value of its own, which a copy copies. *)
+  | Tany | Topaque -> Duplicate
+  | Tconst t | Tnamespace (_, t) | Tref (_, t) | Tnondeduced t -> copy_of_cpp t
+  | _ -> if worth_moving_cpp ty then Duplicate else Bits
 
 (* A variable is named by its de Bruijn level in the region: the number of
    binders around its binding site, counted from the region's root, so that
@@ -709,8 +781,9 @@ end
    variable it reads is owned where it is read: bound by value, so that the
    region may take its value.  [owned] holds the levels of the variables the
    region owns at its root. *)
-let ownership ~n_outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
+let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
   let out = ref [] in
+  let read_types = ref [] in
   let captured = ref [] in
   let copied_reads = ref [] in
   let saved_owned = ref [] in
@@ -730,6 +803,9 @@ let ownership ~n_outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
     if l >= 0 then Hashtbl.find_opt types l
     else match resumes with Some r -> r.parameter_type (r.depth + l) | None -> None
   in
+  (* Where the type of a variable bound outside the region is not a loop
+     parameter's, it is the one its scope gives it. *)
+  let read_type l = match binder_type l with Some ty -> Some ty | None -> if l < 0 then outer (-l) else None in
   (* What follows a resume the machine certainly makes owns each binder its
      frame holds by value: one the region binds, or a parameter -- not an
      adopted entry's capture, which may be such a field bound outside it,
@@ -770,6 +846,7 @@ let ownership ~n_outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
     match t with
     | MLrel (i, occurrence) ->
       out := (occurrence, Levels.mem (d - i) owned) :: !out;
+      read_types := (occurrence, read_type (d - i)) :: !read_types;
       if Levels.mem (d - i) copied then copied_reads := occurrence :: !copied_reads
     | MLmagic (_, t) -> own owned d t
     (* A bind generated as sequencing binds its continuation's parameter to
@@ -916,14 +993,15 @@ let ownership ~n_outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
         | _ -> owned
   in
   own owned 0 t;
-  (!out, !captured, !copied_reads, !saved_owned, !entry_owned)
+  (!out, !read_types, !captured, !copied_reads, !saved_owned, !entry_owned)
 
-let plan ~n_outer ~resumes ~certain root root_owned root_copied arms (reads, captures, entered, saves, entries) =
-  let owned, captured_owned, copied_reads, saved_owned, entry_owned =
-    ownership ~n_outer ~resumes ~certain ~reads ~arms ~owned:root_owned ~copied:root_copied root
+let plan ~n_outer ~outer ~resumes ~certain root root_owned root_copied arms (reads, captures, entered, saves, entries) =
+  let owned, read_types, captured_owned, copied_reads, saved_owned, entry_owned =
+    ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned:root_owned ~copied:root_copied root
   in
   { root;
     n_outer;
+    outer;
     resumes;
     certain;
     root_owned;
@@ -931,6 +1009,7 @@ let plan ~n_outer ~resumes ~certain root root_owned root_copied arms (reads, cap
     arms;
     reads;
     owned;
+    read_types;
     captures;
     captured_owned;
     copied_reads;
@@ -950,9 +1029,9 @@ let liveness_of ~n_outer ~copied ~arms ~resumes ~certain t =
     let _, _, _, saves, _ = lowered in
     (reads, captures, entered, saves, [])
 
-let region ?(owned = []) ?(copied = []) ?resumes ?(certain = true) ~n_outer t =
+let region ?(owned = []) ?(copied = []) ?(outer = fun _ -> None) ?resumes ?(certain = true) ~n_outer t =
   let levels is = Levels.of_list (List.map (fun i -> -i) is) in
-  plan ~n_outer ~resumes ~certain t (levels owned) (levels copied) []
+  plan ~n_outer ~outer ~resumes ~certain t (levels owned) (levels copied) []
     (liveness_of ~n_outer ~copied:(levels copied) ~arms:[] ~resumes ~certain t)
 
 (* The branches of the match in [root] on the variable read at [o]. *)
@@ -983,7 +1062,7 @@ let reuse_arm p ~scrutinee ~branch ~constructor =
     if consumers = [] && Probe.checking () then
       Probe.violation "reuse plan"
         Pp.(str "a branch rebuilding in its scrutinee's storage returns no construction to take it");
-    plan ~n_outer:p.n_outer ~resumes:p.resumes ~certain:p.certain p.root p.root_owned p.root_copied
+    plan ~n_outer:p.n_outer ~outer:p.outer ~resumes:p.resumes ~certain:p.certain p.root p.root_owned p.root_copied
       (Rebuild {scrutinee; branch; consumers} :: p.arms)
       (p.reads, p.captures, p.entered, p.saves, p.entries)
   | None -> p
@@ -1000,7 +1079,7 @@ let allocation p construction : Allocation.t =
 let fields_by_value p ~case ~by_value =
   if p == empty then p
   else
-    plan ~n_outer:p.n_outer ~resumes:p.resumes ~certain:p.certain p.root p.root_owned p.root_copied (Fields {case; by_value} :: p.arms)
+    plan ~n_outer:p.n_outer ~outer:p.outer ~resumes:p.resumes ~certain:p.certain p.root p.root_owned p.root_copied (Fields {case; by_value} :: p.arms)
       (p.reads, p.captures, p.entered, p.saves, p.entries)
 
 (* Unlike the other arms, this one changes what a closure reads where it is
@@ -1009,7 +1088,7 @@ let bound_at_instance p ~let_ =
   if p == empty then p
   else
     let arms = Instance let_ :: p.arms in
-    plan ~n_outer:p.n_outer ~resumes:p.resumes ~certain:p.certain p.root p.root_owned p.root_copied arms
+    plan ~n_outer:p.n_outer ~outer:p.outer ~resumes:p.resumes ~certain:p.certain p.root p.root_owned p.root_copied arms
       (liveness_of ~n_outer:p.n_outer ~copied:p.root_copied ~arms ~resumes:p.resumes ~certain:p.certain p.root)
 
 let closure_local p ty a = if p == empty then None else Some (closure_local ~n_outer:p.n_outer ty a)
@@ -1022,16 +1101,42 @@ let owned_at p o =
 let owned p _ o = owned_at p o = Some true
 
 module Use = struct
-  type t = Move | Copy | Borrow
+  type t = Move | Share | Clone | Copy | Borrow
+
+  let of_copy = function Retain -> Share | Duplicate -> Clone | Bits -> Copy
 end
 
-let use ?(whole = false) p o : Use.t option =
+let read_type_at p o = List.find_map (fun (o', ty) -> if Occurrence.equal o o' then Some ty else None) p.read_types
+
+let use ?(whole = false) ?(boxed = false) ?declared p o : Use.t option =
+  let whole = whole || boxed in
   match fate ~whole p o with
   | Last_use when owned p 0 o -> Some Move
   | Inspected when whole && owned p 0 o -> Some Move
   | Inspected -> Some Borrow
-  | Last_use | Read_again -> Some Copy
+  (* A copy of a box copies the value it holds. *)
+  | (Last_use | Read_again) when boxed -> Some Clone
+  | Last_use | Read_again -> (
+    match Option.map copy_of_type (Option.flatten (read_type_at p o)) with
+    | Some (Some c) -> Some (Use.of_copy c)
+    | Some None | None -> (
+      (* Where Core says nothing of the type, its declaration does: the one
+         the slot it is bound in gave it, or a box. *)
+      Probe.hit "copy-from-declaration" (fun () -> if Option.has_some declared then "declared" else "box");
+      match declared with
+      | Some ty -> Some (Use.of_copy (copy_of_cpp ty))
+      | None -> Some Clone ) )
   | Unplanned -> None
+
+(* Whether [p] moves the read [o]: {!use}'s [Move], asked where what a copy
+   would be is not the question. *)
+let moves ?(whole = false) p o =
+  match fate ~whole p o with
+  | Last_use -> owned p 0 o
+  | Inspected -> whole && owned p 0 o
+  | Read_again | Unplanned -> false
+
+let copy_of_declared ty = Use.of_copy (copy_of_cpp ty)
 
 (* The arguments the local fixpoint applied at [at] reads before the call:
    each reading a variable, or a part of one, that a later one moves -- by
@@ -1041,7 +1146,7 @@ let evaluated_first p at =
   match List.find_opt (fun e -> Occurrence.equal e.at at) p.entered with
   | None -> []
   | Some e ->
-    let moved (_, o) = use p o = Some Move || fate_in p.captures o = Last_use in
+    let moved (_, o) = moves p o || fate_in p.captures o = Last_use in
     let moves = List.map (fun a -> List.filter moved a.read_at) e.arguments in
     List.filter_map
       (fun (j, a) ->
@@ -1094,7 +1199,7 @@ let continue_moves (l : Control_ir.Term.loop) =
        name [k]: the turn planned again with those reads erased.  A read of
        a part of [k] there is left, and keeps [o] from being the last. *)
     let last_but_by_name (c : Control_ir.Term.continue_) i k o =
-      use ~whole:true p o = Some Move
+      moves ~whole:true p o
       ||
       let rec erase n t = match t with MLrel (j, _) when j = n -> MLdummy Kprop | t -> Mlutil.ast_map_lift erase n t in
       let arguments (c' : Control_ir.Term.continue_) =
@@ -1103,7 +1208,7 @@ let continue_moves (l : Control_ir.Term.loop) =
       in
       match turn_term ~arguments l.body with
       | exception Unplanned_turn -> false
-      | body -> use ~whole:true (region ~n_outer:0 body) o = Some Move
+      | body -> moves ~whole:true (region ~n_outer:0 body) o
     in
     let moves depth (c : Control_ir.Term.continue_) =
       List.mapi
@@ -1137,7 +1242,7 @@ let continue_moves (l : Control_ir.Term.loop) =
 
 let rec takes_record p t =
   match t with
-  | MLrel (_, o) -> use p o = Some Move
+  | MLrel (_, o) -> moves p o
   | MLglob {callee = r; _} -> Table.is_cofixpoint r || Table.is_throwing_value r
   | t -> ( match field_of t with Some r -> takes_record p r | None -> true )
 
@@ -1206,6 +1311,39 @@ let moved_reads p ts =
     | _ -> acc
   in
   List.sort_uniq Int.compare (List.fold_left go [] ts)
+
+module Capture = struct
+  type t = By_reference | By_move | Shared
+end
+
+module Storage = struct
+  type t = Local | Frame
+end
+
+(* The variables [ts] read, at the index each has where they stand, in
+   order, once each. *)
+let read_indices ts = List.sort_uniq Int.compare (List.concat_map (fun t -> List.map (fun (l, _) -> -l) (closure_reads 0 t)) ts)
+
+let mode_of moved i : Capture.t = if List.mem i moved then By_move else Shared
+
+let captures ?(in_place = false) p closure =
+  let moved = if in_place then [] else moved_captures p closure in
+  List.map (fun i -> (i, if in_place then Capture.By_reference else mode_of moved i)) (read_indices [closure])
+
+let captures_by_member p fix =
+  match fix with
+  | MLfix (_, _, funs, _, _) ->
+    let n = Array.length funs in
+    List.map2
+      (fun f moved ->
+        let read = List.sort_uniq Int.compare (List.filter_map (fun (l, _) -> if -l - n > 0 then Some (-l - n) else None) (closure_reads 0 f)) in
+        List.map (fun i -> (i, mode_of moved i)) read )
+      (Array.to_list funs) (moved_captures_by_member p fix)
+  | _ -> []
+
+let eta_captures p ts =
+  let moved = moved_reads p ts in
+  List.map (fun i -> (i, mode_of moved i)) (read_indices ts)
 
 module Local_passing = struct
   type t = Callable_abi.passing option list

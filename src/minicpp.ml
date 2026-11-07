@@ -588,7 +588,7 @@ and cpp_lambda = {
   cl_moved : Id.t list;
       (** The variables a {!Closure} takes by move, at their last use --
           [\[=, x = std::move(x)\]]; the rest it copies.  Set as the
-          region's plan says ({!Ownership_plan.moved_captures}). *)
+          region's plan says ({!Ownership_ir.captures}). *)
   cl_binders : (Id.t * Core_binder.t) list;
   cl_fixpoint : local_fixpoint option;
       (** The local fixpoint whose body this lambda is, as the source has

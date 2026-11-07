@@ -97,9 +97,9 @@ type translation_ctx = {
   current_letin_depth : int;
   (* Which binders the region being generated owns where each is read, and
      which reads are last uses where their value may be taken
-     ({!Ownership_plan}).  Set where the region's body is generated
+     ({!Ownership_ir}).  Set where the region's body is generated
      ({!with_region}), and emptied where a body or a closure begins. *)
-  move_plan : Ownership_plan.t;
+  move_plan : Ownership_ir.t;
   (* Counter for generating unique match scrutinee variable names
      (_mp0, _mp1, ...). Reset at function boundaries. *)
   match_param_counter : int;
@@ -130,7 +130,7 @@ type translation_ctx = {
   (* Perceus reuse: inside a use_count()==1-guarded reuse arm in
      gen_cpp_case, the token [tok] (the moved, uniquely-owned storage the
      match frees) the constructions the arm's plan names
-     ({!Ownership_plan.allocation}) are built in, as [<ctor>__reuse(tok, ...)]
+     ({!Ownership_ir.allocation}) are built in, as [<ctor>__reuse(tok, ...)]
      instead of the normal factory.  The plan names at most one on any path,
      so nothing here tracks whether it has been taken. *)
   reuse_token : cpp_expr option;
@@ -193,7 +193,7 @@ let tctx =
         body_function = false;
         lifted_fixpoints = [];
         current_letin_depth = 0;
-        move_plan = Ownership_plan.empty;
+        move_plan = Ownership_ir.empty;
         match_param_counter = 0;
         promoted_var_map = [];
         in_constructor_expr = false;
@@ -393,23 +393,26 @@ let with_itree_mode (m : itree_extraction_mode) (f : unit -> 'a) : 'a =
     [body] as one C++ body owning the variables at the de Bruijn indices
     [owned], its closures owning their copy of those at [copied], lowered as
     a machine resuming at [resumes], if any -- [certain]ly, or perhaps --
-    with the moves planned over [body] ({!Ownership_plan.region}), those
+    with the moves planned over [body] ({!Ownership_ir.region}), those
     into the frames entering the machine's entries recorded
-    ({!Ownership_plan.Entry_moves}). *)
+    ({!Ownership_ir.Entry_moves}). *)
 let with_region ?(owned = []) ?(copied = []) ?resumes ?certain (body : ml_ast) (f : unit -> 'a) : 'a =
-  let p = Ownership_plan.region ~owned ~copied ?resumes ?certain ~n_outer:(List.length (!tctx).current_type_vars) body in
+  let outer = Lexenv.type_opt (!tctx).env_types in
+  let p =
+    Ownership_ir.region ~owned ~copied ~outer ?resumes ?certain ~n_outer:(List.length (!tctx).current_type_vars) body
+  in
   (* The frames a machine enters its entries by are planned with it. *)
-  Ownership_plan.Entry_moves.record_plan p;
+  Ownership_ir.Entry_moves.record_plan p;
   with_field (fun c -> c.move_plan) (fun p -> tctx := { !tctx with move_plan = p }) p f
 
 (** [with_plan p f] runs [f] with the moves planned by [p], an alternative
-    plan of the region being generated ({!Ownership_plan.reuse_arm}). *)
-let with_plan (p : Ownership_plan.t) (f : unit -> 'a) : 'a =
+    plan of the region being generated ({!Ownership_ir.reuse_arm}). *)
+let with_plan (p : Ownership_ir.t) (f : unit -> 'a) : 'a =
   with_field (fun c -> c.move_plan) (fun p -> tctx := { !tctx with move_plan = p }) p f
 
 (** Whether the construction [e] takes the reuse token. *)
 let takes_reuse_token e =
-  Option.has_some (!tctx).reuse_token && Ownership_plan.allocation (!tctx).move_plan e = Reuse
+  Option.has_some (!tctx).reuse_token && Ownership_ir.allocation (!tctx).move_plan e = Reuse
 
 (** [with_reuse_token tok f] runs [f] with [tok] as the Perceus reuse token
     of the arm it generates. *)

@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (* What a tail loop's turn moves into its parameters' next values
-   (Ownership_plan.continue_moves): an accumulator rebuilt around itself
+   (Ownership_ir.continue_moves): an accumulator rebuilt around itself
    is moved; one read again by another argument, or beside a part of
    itself, passed on as it is, or read by a closure, is not.  A local of
    the turn passed whole is moved, even where another argument names it
@@ -46,10 +46,10 @@ let loop turn : Term.loop =
                 pattern = Pcons (cons, [Prel 2; Prel 1]);
                 body = turn } ] } }
 
-let moves turn = Ownership_plan.continue_moves (loop turn)
-let k = Ownership_plan.Continue_move.Keep
-let p = Ownership_plan.Continue_move.Move_parameter
-let a = Ownership_plan.Continue_move.Move_argument
+let moves turn = Ownership_ir.continue_moves (loop turn)
+let k = Ownership_ir.Continue_move.Keep
+let p = Ownership_ir.Continue_move.Move_parameter
+let a = Ownership_ir.Continue_move.Move_argument
 let flags o turn = List.find_map (fun (o', f) -> if Occurrence.equal o o' then Some f else None) (moves turn)
 
 let () =

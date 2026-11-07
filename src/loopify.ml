@@ -264,7 +264,7 @@ let no_varying_plan = "no ControlIR loop says which parameters vary"
 type member_plan = {
   member_varying : bool list;
   member_parts : bool list;
-  member_moves : (Miniml.Occurrence.t * Ownership_plan.Continue_move.t list) list;
+  member_moves : (Miniml.Occurrence.t * Ownership_ir.Continue_move.t list) list;
 }
 
 let member_plan ~frames member params =
@@ -290,7 +290,9 @@ let member_plan ~frames member params =
               planned
             | Entered _ -> false
           in
-          List.map2 ( || ) parts
+          List.map2
+            (fun part (storage : Ownership_ir.Storage.t) -> part || storage = Local)
+            parts
             (Frame_storage.plan ~pointer_fields:constructor_pointer_fields ~in_place ~holdable l).own
       in
       Some
@@ -298,7 +300,7 @@ let member_plan ~frames member params =
           member_parts = List.map (List.nth parts) kept;
           member_moves =
             ( if frames then []
-              else List.map (fun (o, flags) -> (o, List.map (List.nth flags) kept)) (Ownership_plan.continue_moves l) ) }
+              else List.map (fun (o, flags) -> (o, List.map (List.nth flags) kept)) (Ownership_ir.continue_moves l) ) }
   | Some _ | None -> None
 
 (** Walk through a statement list and loopify each local fixpoint: the

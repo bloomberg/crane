@@ -2,7 +2,7 @@
 
 /// A tail loop moves a parameter into its own next value only where that
 /// value reads it for the last time in the turn
-/// (Ownership_plan.continue_moves).
+/// (Ownership_ir.continue_moves).
 uint64_t LoopifyAccumulatorReadElsewhere::size(
     const LoopifyAccumulatorReadElsewhere::tree
         &t) { /// CraneEnter: captures varying parameters for each recursive

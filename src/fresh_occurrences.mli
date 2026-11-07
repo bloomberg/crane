@@ -12,7 +12,7 @@
     of a well-founded recursion into the function whose knot is tied -- is
     the same uses in two definitions.  Each copy is evaluated where it
     stands, but a plan made of occurrences ({!Recursion_plan},
-    {!Ownership_plan}) sees one place and must take the most cautious of its
+    {!Ownership_ir}) sees one place and must take the most cautious of its
     places for all of them.  Run after the last rewrite of Core, this gives
     each term an occurrence of its own; a term translation copies afterwards,
     having planned the original, keeps its copy's. *)

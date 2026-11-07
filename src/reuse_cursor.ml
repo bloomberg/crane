@@ -123,7 +123,7 @@ let reads_cell ~field = List.exists (function Whole | Field _ -> true | Pointee 
    cell, into a C++ local declared by value.  Not so where the let may be a
    reference into what it reads, or a closure that reads it later:
    - a field projected out of a variable, which the plan binds by const
-     reference ({!Ownership_plan.projects_in_place}) -- any projection, as
+     reference ({!Ownership_ir.projects_in_place}) -- any projection, as
      whether it does is the plan's;
    - a variable read as it is, or a match, which may yield one of its
      fields;

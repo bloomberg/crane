@@ -1,8 +1,17 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Which reads of a local are its last use, decided over Core
-    (docs/Pipeline-Disentangling-Plan.md, Milestone 7).
+(** OwnershipIR: what each region does with the values it reads, holds
+    and builds, decided over Core and ControlIR before C++ is generated
+    (docs/Pipeline-Disentangling-Plan.md, sections 4.10 and 6.4, Milestone
+    7): how each read uses its variable ({!Use}), how each closure holds
+    what it captures ({!Capture}), where a machine's frames store what they
+    hold ({!Storage}), where each construction is built ({!Allocation}),
+    which binders a frame takes as it is saved or entered ({!Frame_save},
+    {!Entry_moves}), what a loop's turn moves into its next parameters
+    ({!Continue_move}), and how a local function passes its parameters
+    ({!Local_passing}).  Its validators are {!Move_check}'s and the checks
+    translation makes against it under [CRANE_CHECK_IR].
 
     A region is a term translation generates as one C++ body: a function's,
     a method's or a local fixpoint's, a lambda's, or that of a let standing
@@ -23,8 +32,9 @@
     bound to a local copies it where it is made.  An argument an inline custom's template
     splices twice is read twice, and one it never splices is not read.
 
-    This is not yet the plan's OwnershipIR: it decides no use's mode, only
-    which reads a move may be made at. *)
+    Each read gets a mode ({!Use}): a move where it is a last use of what
+    the region owns, a borrow where it is read in place, else a copy, named
+    by what a copy of the variable's Core type is. *)
 
 type t
 
@@ -103,9 +113,18 @@ type resumes = {
     so an argument may be their last use -- where the region is [certain]ly
     lowered as that machine (the default).  Where it may be generated as it
     is, the saves are planned ({!save_moves}) but no read relies on one
-    having been made. *)
+    having been made.  [outer i]: the Core type of the variable bound
+    outside [t] at the index [i] there, which says what a copy of it is
+    ({!Use}). *)
 val region :
-  ?owned:int list -> ?copied:int list -> ?resumes:resumes -> ?certain:bool -> n_outer:int -> Miniml.ml_ast -> t
+  ?owned:int list ->
+  ?copied:int list ->
+  ?outer:(int -> Miniml.ml_type option) ->
+  ?resumes:resumes ->
+  ?certain:bool ->
+  n_outer:int ->
+  Miniml.ml_ast ->
+  t
 
 (** Whether, as [p] plans it, [let x : ty := a] binds the closure [a] to a
     C++ local, which the region owns: [a] is a local fixpoint or a lambda
@@ -160,25 +179,45 @@ type fate =
           the arguments of a call it makes are taken by value. *)
   | Unplanned  (** not a read of the region [p] was made of *)
 
-(** What a read does with its variable's value. *)
+(** What a read does with its variable's value.  A read that leaves the
+    value, being read again or not owned where it stands, copies it, and
+    says what the copy is, as the variable's Core type does -- a field stored
+    behind a pointer is bound as the value it points at, an abbreviation is
+    what it abbreviates. *)
 module Use : sig
   type t =
     | Move
         (** takes it: the variable is owned where it is read, and the read is
             its last use where its value may be taken *)
-    | Copy
-        (** reads it by value and leaves it: the variable is read again, or
-            is not owned there *)
+    | Share
+        (** copies a handle on a counted block, a retain: a closure, a
+            coinductive's or shared variant's value *)
+    | Clone
+        (** copies the value itself, a copy worth a move
+            ({!worth_moving}): an inductive's value, a mapped type's that is
+            neither a scalar nor trivially copyable, one a type variable
+            stands for, a box *)
+    | Copy  (** copies bits moving would not spare: a scalar, an enum *)
     | Borrow  (** reads it in place ({!Inspected}) *)
 end
 
 (** [use ~whole p o]: with [~whole], of a read that takes its variable's
     whole value even where Core reads one component of it, or reads it in
     place ({!Inspected}): a closure captures the whole of what it reads, and
-    a variable held boxed is unboxed whole by a cast.  [None] of a read the
-    plan was not made of: translation lowering it reached a term the region
-    it planned does not contain. *)
-val use : ?whole:bool -> t -> Miniml.Occurrence.t -> Use.t option
+    a variable held boxed is unboxed whole by a cast.  With [~boxed], of a
+    variable held boxed: read whole, and a copy of it copies the box, a
+    [Clone].  [declared]: the C++ type the variable is declared at, which
+    says what a copy is only where its Core type is one inference gave up
+    on -- the slot it is bound in typed it, or else it is held in a box.
+    [None] of a read the plan was not made of: translation lowering it
+    reached a term the region it planned does not contain. *)
+val use :
+  ?whole:bool -> ?boxed:bool -> ?declared:Minicpp.cpp_type -> t -> Miniml.Occurrence.t -> Use.t option
+
+(** What a copy of a variable declared at the C++ type [ty] is, as {!Use}
+    names it: what the C++ a read is lowered to does, which the plan's
+    reading of the Core type must agree with. *)
+val copy_of_declared : Minicpp.cpp_type -> Use.t
 
 (** [evaluated_first p at]: the positions among its arguments of those the
     local fixpoint applied where it is written, at the occurrence [at],
@@ -211,27 +250,54 @@ val pair_by_value : t -> Miniml.ml_ast -> Miniml.ml_branch array -> bool
     projects out of a record that is not moved there. *)
 val projects_in_place : t -> Miniml.ml_type -> Miniml.ml_ast -> bool
 
-(** The de Bruijn indices, at [closure], of the variables the lambda or
-    local fixpoint [closure] takes by move when it is made, as closures that
-    copy what they capture: each is owned there, and the capture is its last
-    use -- nothing after the closure, beside it, or captured with it reads
-    it. *)
-val moved_captures : t -> Miniml.ml_ast -> int list
+(** How a closure holds a variable it reads from the scope it is made in. *)
+module Capture : sig
+  type t =
+    | By_reference
+        (** reads it where it stands: a local fixpoint generated in place
+            ({!Analyze_closures.In_place}), which runs while the scope does *)
+    | By_move
+        (** takes its value where it is made: the variable is owned there,
+            and the capture is its last use -- nothing after the closure,
+            beside it, or captured with it reads it *)
+    | Shared
+        (** holds a copy of its own, made where it is made, the variable
+            left to the scope: what the copy is, the variable's {!Use}
+            says *)
+end
+
+(** Where a value a machine's frame holds across a call is stored
+    ({!Frame_storage}). *)
+module Storage : sig
+  type t =
+    | Local
+        (** where the machine's caller keeps it -- a parameter, or a field
+            bound into one, which outlives the machine and which nothing
+            changes while it runs: the frame holds a pointer to it *)
+    | Frame  (** in the frame itself, a value of its own *)
+end
+
+(** Each variable the lambda or local fixpoint [closure] reads from the
+    scope it is made in, by its de Bruijn index at [closure], in order,
+    with how it holds it: generated as closures that copy what they
+    capture, [By_move] or [Shared]; with [~in_place], generated in place,
+    [By_reference]. *)
+val captures : ?in_place:bool -> t -> Miniml.ml_ast -> (int * Capture.t) list
 
 (** Of the local fixpoint [fix], generated as closures, one per function,
-    for each function in order, the de Bruijn indices at [fix] of the
-    variables its closure takes by move ({!moved_captures}): each the last
-    function reading it takes, those made before it copying it.  [[]] where
-    [fix] is no fixpoint. *)
-val moved_captures_by_member : t -> Miniml.ml_ast -> int list list
+    for each function in order, each variable its closure reads from the
+    scope, by its de Bruijn index at [fix], with how it holds it: the last
+    function reading a variable {!captures} takes [By_move] takes it so,
+    those made before it share it.  [[]] where [fix] is no fixpoint. *)
+val captures_by_member : t -> Miniml.ml_ast -> (int * Capture.t) list list
 
-(** The de Bruijn indices, at [ts], of the variables [ts] read by move
-    ({!use}) directly -- not inside a closure, a let or a match they
-    contain -- and those a closure among them takes by move
-    ({!moved_captures}): what a closure made around them, the eta-expansion
-    of a partial application of which they are the arguments, takes by move
-    when it is made. *)
-val moved_reads : t -> Miniml.ml_ast list -> int list
+(** Each variable the terms [ts] read, by its de Bruijn index where they
+    stand, with how a closure made around them holds it -- the
+    eta-expansion of a partial application of which they are the arguments:
+    [By_move] what they read by move ({!use}) directly, not inside a let or
+    a match they contain, and what a closure among them takes by move
+    ({!captures}); the rest [Shared]. *)
+val eta_captures : t -> Miniml.ml_ast list -> (int * Capture.t) list
 
 (** A term copied to two places -- an eta argument pushed into both branches
     of a conditional -- holds one read twice; it is a last use where every
@@ -291,7 +357,7 @@ end
 
 (** How each function of a local fixpoint passes its parameters -- the
     callable plan of a function with no global, which the frames of its
-    machine read ([Storage.Frame], plan 4.10): for each of its Core
+    machine read ({!Storage}): for each of its Core
     parameters, outermost first, how the lambda it is generated as takes
     it, [None] for one of no runtime value, which the lambda does not take.
     Translation decides it once per group, before generating the group's
