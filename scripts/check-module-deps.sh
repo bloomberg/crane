@@ -26,9 +26,10 @@ rules=(
 )
 
 # The printer reads Table for configuration and for spelling rules that are
-# functions of a name alone, and to record the headers it writes for
-# CRANE_CHECK_IR to compare with the planned demands; a fact about the
-# program it is handed in the declaration, decided by a plan or a pass.  The
+# functions of a name alone (what it records under CRANE_CHECK_IR -- the
+# headers and customs it writes -- it records in an oracle's branch); a fact
+# about the program it is handed in the declaration, decided by a plan or a
+# pass.  The
 # facts it still asks Table for are listed, and the list only shrinks: a read
 # that goes is deleted from it, and a new one is an error.
 #
@@ -39,7 +40,7 @@ rules=(
 # [if Probe.checking () then] is an oracle's and does not count.  The graph
 # does not follow control flow, so a read the printer reaches only through a
 # closure it hands the resolver (Cpp_names.named's [live]) counts too.
-PRINTER_TABLE_CONFIGURATION="arena_header erase_fn_header escape_reserved_struct_name modular std_lib written_needs_header check_written_custom register_census lang modpath_of_r repr_of_r safe_basename_of_global string_of_modfile mp_length base_mp at_toplevel is_toplevel common_prefix_from_list"
+PRINTER_TABLE_CONFIGURATION="arena_header erase_fn_header escape_reserved_struct_name modular std_lib register_census lang modpath_of_r repr_of_r safe_basename_of_global string_of_modfile mp_length base_mp at_toplevel is_toplevel common_prefix_from_list"
 # Inductive classification (frozen from planning on: Table.inductives is
 # counted by the census) and custom texts, read while naming (Cpp_names,
 # Common).

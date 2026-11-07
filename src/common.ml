@@ -1921,9 +1921,10 @@ let enum_ctor_name_of_ref kn i j =
 
 (* The printer demands no header: a unit's demands are read off what is
    generated ahead of its files ({!Cpp_demands}).  What it writes is recorded,
-   for {!Table.freeze_demands} to check under [CRANE_CHECK_IR]. *)
+   for {!Table.freeze_demands} to check under [CRANE_CHECK_IR], and only
+   then. *)
 
-let writes = Table.written_needs_header
+let writes h = if Probe.checking () then Table.written_needs_header h
 
 let writes_standard h = writes (Table.Standard h)
 
@@ -1931,5 +1932,5 @@ let writes_standard h = writes (Table.Standard h)
    -- [crane_any_cast], [crane::rebind_t] -- is declared in obj.h. *)
 let writes_obj () = writes (Table.Runtime Crane_rt.obj_header)
 
-let writes_custom = Table.check_written_custom
+let writes_custom r = if Probe.checking () then Table.check_written_custom r
 
