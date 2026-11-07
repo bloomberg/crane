@@ -206,13 +206,21 @@ end
     place ({!Inspected}): a closure captures the whole of what it reads, and
     a variable held boxed is unboxed whole by a cast.  With [~boxed], of a
     variable held boxed: read whole, and a copy of it copies the box, a
-    [Clone].  [declared]: the C++ type the variable is declared at, which
-    says what a copy is only where its Core type is one inference gave up
-    on -- the slot it is bound in typed it, or else it is held in a box.
-    [None] of a read the plan was not made of: translation lowering it
-    reached a term the region it planned does not contain. *)
-val use :
-  ?whole:bool -> ?boxed:bool -> ?declared:Minicpp.cpp_type -> t -> Miniml.Occurrence.t -> Use.t option
+    [Clone].  A variable whose type erasure removed ([Tunknown]: an
+    existential index, a variable of the callee's the scope cannot name, a
+    type computed from a value) is held as a value of its own, a box or a
+    deduced one, and a copy of it is a [Clone].  Its mode is never read off
+    the C++ declaration: inference leaving a type unsolved where the read is
+    lowered is a violation under [CRANE_CHECK_IR].  [None] of a read the
+    plan was not made of: translation lowering it reached a term the region
+    it planned does not contain. *)
+val use : ?whole:bool -> ?boxed:bool -> t -> Miniml.Occurrence.t -> Use.t option
+
+(** Whether Core says what type the variable the read [o] reads has, other
+    than one erasure removed: where it does not, the C++ it is declared at --
+    [auto], a box, the slot's spelling -- is no evidence of what a copy of it
+    is. *)
+val read_is_typed : t -> Miniml.Occurrence.t -> bool
 
 (** What a copy of a variable declared at the C++ type [ty] is, as {!Use}
     names it: what the C++ a read is lowered to does, which the plan's

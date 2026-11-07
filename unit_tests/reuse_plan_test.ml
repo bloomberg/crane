@@ -312,21 +312,25 @@ let () =
 
 (* [g s s], [s] bound outside at the type [outer] gives it: a read that
    leaves the variable copies it as its Core type says -- a closure is
-   retained, an inductive's value cloned, an erased value's bits copied; a
-   type inference gave up on, as its declaration says, or as a box. *)
+   retained, an inductive's value cloned, an erased value's bits copied, a
+   value whose type erasure removed cloned, as a box is, whatever C++ it is
+   declared at; only a read of a Core-typed variable is typed. *)
 let () =
-  let mode ?declared ty =
+  let plan ty =
     let read = fresh_rel 1 in
     let root = call "g" [read; fresh_rel 1] in
     let o = match read with MLrel (_, o) -> o | _ -> assert false in
-    Ownership_ir.use ?declared (Ownership_ir.region ~owned:[1] ~outer:(fun _ -> Some ty) ~n_outer:0 root) o
+    (Ownership_ir.region ~owned:[1] ~outer:(fun _ -> Some ty) ~n_outer:0 root, o)
   in
+  let mode ty = let p, o = plan ty in Ownership_ir.use p o in
+  let typed ty = let p, o = plan ty in Ownership_ir.read_is_typed p o in
   check "a closure is shared" (mode (Tarr (lst, lst)) = Some Share);
   check "an inductive's value is cloned" (mode lst = Some Clone);
   check "an erased value is copied" (mode (Tdummy Kprop) = Some Copy);
   check "a type abstraction is what it returns" (mode (Tarr (Tdummy Kprop, Tarr (lst, lst))) = Some Share);
-  check "an unknown type is copied as declared" (mode ~declared:Minicpp.Tvoid Tunknown = Some Copy);
-  check "or as a box" (mode Tunknown = Some Clone)
+  check "a type erasure removed is cloned" (mode Tunknown = Some Clone);
+  check "an inductive's read is typed" (typed lst);
+  check "one erasure removed is not" (not (typed Tunknown))
 
 (* [g (fun _ => h s) t] and [g (fun _ => h s) s], [s] and [t] owned: a
    closure made where nothing after reads what it captures takes it by

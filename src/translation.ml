@@ -1519,11 +1519,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let move_candidate =
       (not (Common.is_tc_instance_id x))
       &&
-      match Ownership_ir.use ~boxed:(binder_is_boxed i) ?declared:(binder_cpp_type i) (!tctx).move_plan occ with
+      match Ownership_ir.use ~boxed:(binder_is_boxed i) (!tctx).move_plan occ with
       | Some ((Share | Clone | Copy) as copy) ->
         (* The copy the plan names is the one the variable's declaration
-           makes. *)
-        ( if Probe.checking () then
+           makes, where Core says what its type is. *)
+        ( if Probe.checking () && Ownership_ir.read_is_typed (!tctx).move_plan occ then
             match binder_cpp_type i with
             (* [auto] says nothing of the type it deduces. *)
             | Some (Tauto | Tconst Tauto | Tref (_, (Tauto | Tconst Tauto))) -> ()
