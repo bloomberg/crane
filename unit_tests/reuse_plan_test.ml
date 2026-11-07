@@ -21,6 +21,7 @@ let call f args = MLapp (MLglob (Global_use.monomorphic (GlobRef.VarRef (Id.of_s
 let x = Id (Id.of_string "x")
 let t = Id (Id.of_string "t")
 let reused p e = Ownership_plan.allocation p e = Ownership_plan.Allocation.Reuse
+let copied (u : Ownership_plan.Use.t option) = match u with Some (Share | Clone | Copy) -> true | Some (Move | Borrow) | None -> false
 
 (* [fun l => match l with nil => nil | cons x t => body], [body] under
    [l], [x] and [t]; and the plan of its cons branch rebuilding a cons. *)
@@ -96,9 +97,9 @@ let () =
           else None ) }
   in
   let use resumes = Ownership_plan.use (Ownership_plan.region ~owned:[1] ?resumes ~n_outer:0 root) read in
-  check "an argument read again after the call is copied" (use None = Some Ownership_plan.Use.Copy);
+  check "an argument read again after the call is copied" (copied (use None));
   check "one a frame keeps across the call is moved" (use (Some (resumes [call_site])) = Some Ownership_plan.Use.Move);
-  check "not where the let resumes after another call" (use (Some (resumes [Occurrence.fresh ()])) = Some Ownership_plan.Use.Copy)
+  check "not where the let resumes after another call" (copied (use (Some (resumes [Occurrence.fresh ()]))))
 
 (* [let y := h s in let r := weigh y in g s r], a frame keeping [s] across
    [weigh]: saving the frame reads [s] after [h] does, so [h] copies it. *)
@@ -126,7 +127,7 @@ let () =
           else None ) }
   in
   let use = Ownership_plan.use (Ownership_plan.region ~owned:[1] ~resumes ~n_outer:0 root) read in
-  check "a read before the frame keeping it is saved is copied" (use = Some Ownership_plan.Use.Copy)
+  check "a read before the frame keeping it is saved is copied" (copied use)
 
 (* [let r := weigh a in g s r] under [t] and [s], a frame keeping [s]
    across [weigh]: the save may move [s] where the region owns it and the
@@ -266,7 +267,7 @@ let () =
   check "the argument reading it before is evaluated first" (first = [0]);
   (* The body under f, n and l reads [s] at index 4. *)
   let use, first = applied (call "g" [fresh_rel 4; fresh_rel 1]) in
-  check "a fixpoint reading it as it runs keeps it" (use = Some Ownership_plan.Use.Copy);
+  check "a fixpoint reading it as it runs keeps it" (copied use);
   check "and nothing is evaluated first" (first = [])
 
 (* [let r := weigh t in g s r] under [k], [t] and [s], [s] lent and kept
@@ -308,3 +309,21 @@ let () =
   check "not what the frame may keep as a pointer" (use ~passed:[s] true <> moved);
   check "not an argument of a function the region is handed" (use ~handed:true true <> moved);
   check "not a parameter of a type not worth moving" (use ~ty:(Tdummy Ktype) true <> moved)
+
+(* [g s s], [s] bound outside at the type [outer] gives it: a read that
+   leaves the variable copies it as its Core type says -- a closure is
+   retained, an inductive's value cloned, an erased value's bits copied; a
+   type inference gave up on, as its declaration says, or as a box. *)
+let () =
+  let mode ?declared ty =
+    let read = fresh_rel 1 in
+    let root = call "g" [read; fresh_rel 1] in
+    let o = match read with MLrel (_, o) -> o | _ -> assert false in
+    Ownership_plan.use ?declared (Ownership_plan.region ~owned:[1] ~outer:(fun _ -> Some ty) ~n_outer:0 root) o
+  in
+  check "a closure is shared" (mode (Tarr (lst, lst)) = Some Share);
+  check "an inductive's value is cloned" (mode lst = Some Clone);
+  check "an erased value is copied" (mode (Tdummy Kprop) = Some Copy);
+  check "a type abstraction is what it returns" (mode (Tarr (Tdummy Kprop, Tarr (lst, lst))) = Some Share);
+  check "an unknown type is copied as declared" (mode ~declared:Minicpp.Tvoid Tunknown = Some Copy);
+  check "or as a box" (mode Tunknown = Some Clone)

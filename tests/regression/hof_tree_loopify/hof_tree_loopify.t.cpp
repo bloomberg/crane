@@ -62,7 +62,9 @@ static void *run_in_thread(void *arg) {
 bool survives(void (*test_fn)()) {
   pid_t pid = fork();
   if (pid == 0) {
-    alarm(10);
+    // A watchdog against a hang, not a time limit: the deep runs take ~6 s
+    // alone and over 10 s under ASan on a loaded machine.
+    alarm(120);
     pthread_t thr;
     pthread_attr_t attr;
     pthread_attr_init(&attr);

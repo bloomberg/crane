@@ -1515,7 +1515,24 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let move_candidate =
       (not (Common.is_tc_instance_id x))
       &&
-      match Ownership_plan.use ~whole:(binder_is_boxed i) (!tctx).move_plan occ with
+      match Ownership_plan.use ~boxed:(binder_is_boxed i) ?declared:(binder_cpp_type i) (!tctx).move_plan occ with
+      | Some ((Share | Clone | Copy) as copy) ->
+        (* The copy the plan names is the one the variable's declaration
+           makes. *)
+        ( if Probe.checking () then
+            match binder_cpp_type i with
+            (* [auto] says nothing of the type it deduces. *)
+            | Some (Tauto | Tconst Tauto | Tref (_, (Tauto | Tconst Tauto))) -> ()
+            | Some declared when Ownership_plan.copy_of_declared declared <> copy ->
+              let name : Ownership_plan.Use.t -> string = function
+                | Share -> "shares" | Clone -> "clones" | Copy -> "copies" | Move -> "moves" | Borrow -> "borrows"
+              in
+              Probe.violation "copy mode"
+                Pp.(
+                  str "the plan " ++ str (name copy) ++ str " " ++ Id.print x ++ str " where its declaration "
+                  ++ str (name (Ownership_plan.copy_of_declared declared)) ++ str " it" )
+            | Some _ | None -> () );
+        false
       | Some use -> use = Move
       | None ->
         Probe.violation "unplanned read"

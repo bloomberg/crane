@@ -23,8 +23,9 @@
     bound to a local copies it where it is made.  An argument an inline custom's template
     splices twice is read twice, and one it never splices is not read.
 
-    This is not yet the plan's OwnershipIR: it decides no use's mode, only
-    which reads a move may be made at. *)
+    Each read gets a mode ({!Use}): a move where it is a last use of what
+    the region owns, a borrow where it is read in place, else a copy, named
+    by what a copy of the variable's Core type is. *)
 
 type t
 
@@ -103,9 +104,18 @@ type resumes = {
     so an argument may be their last use -- where the region is [certain]ly
     lowered as that machine (the default).  Where it may be generated as it
     is, the saves are planned ({!save_moves}) but no read relies on one
-    having been made. *)
+    having been made.  [outer i]: the Core type of the variable bound
+    outside [t] at the index [i] there, which says what a copy of it is
+    ({!Use}). *)
 val region :
-  ?owned:int list -> ?copied:int list -> ?resumes:resumes -> ?certain:bool -> n_outer:int -> Miniml.ml_ast -> t
+  ?owned:int list ->
+  ?copied:int list ->
+  ?outer:(int -> Miniml.ml_type option) ->
+  ?resumes:resumes ->
+  ?certain:bool ->
+  n_outer:int ->
+  Miniml.ml_ast ->
+  t
 
 (** Whether, as [p] plans it, [let x : ty := a] binds the closure [a] to a
     C++ local, which the region owns: [a] is a local fixpoint or a lambda
@@ -160,25 +170,45 @@ type fate =
           the arguments of a call it makes are taken by value. *)
   | Unplanned  (** not a read of the region [p] was made of *)
 
-(** What a read does with its variable's value. *)
+(** What a read does with its variable's value.  A read that leaves the
+    value, being read again or not owned where it stands, copies it, and
+    says what the copy is, as the variable's Core type does -- a field stored
+    behind a pointer is bound as the value it points at, an abbreviation is
+    what it abbreviates. *)
 module Use : sig
   type t =
     | Move
         (** takes it: the variable is owned where it is read, and the read is
             its last use where its value may be taken *)
-    | Copy
-        (** reads it by value and leaves it: the variable is read again, or
-            is not owned there *)
+    | Share
+        (** copies a handle on a counted block, a retain: a closure, a
+            coinductive's or shared variant's value *)
+    | Clone
+        (** copies the value itself, a copy worth a move
+            ({!worth_moving}): an inductive's value, a mapped type's that is
+            neither a scalar nor trivially copyable, one a type variable
+            stands for, a box *)
+    | Copy  (** copies bits moving would not spare: a scalar, an enum *)
     | Borrow  (** reads it in place ({!Inspected}) *)
 end
 
 (** [use ~whole p o]: with [~whole], of a read that takes its variable's
     whole value even where Core reads one component of it, or reads it in
     place ({!Inspected}): a closure captures the whole of what it reads, and
-    a variable held boxed is unboxed whole by a cast.  [None] of a read the
-    plan was not made of: translation lowering it reached a term the region
-    it planned does not contain. *)
-val use : ?whole:bool -> t -> Miniml.Occurrence.t -> Use.t option
+    a variable held boxed is unboxed whole by a cast.  With [~boxed], of a
+    variable held boxed: read whole, and a copy of it copies the box, a
+    [Clone].  [declared]: the C++ type the variable is declared at, which
+    says what a copy is only where its Core type is one inference gave up
+    on -- the slot it is bound in typed it, or else it is held in a box.
+    [None] of a read the plan was not made of: translation lowering it
+    reached a term the region it planned does not contain. *)
+val use :
+  ?whole:bool -> ?boxed:bool -> ?declared:Minicpp.cpp_type -> t -> Miniml.Occurrence.t -> Use.t option
+
+(** What a copy of a variable declared at the C++ type [ty] is, as {!Use}
+    names it: what the C++ a read is lowered to does, which the plan's
+    reading of the Core type must agree with. *)
+val copy_of_declared : Minicpp.cpp_type -> Use.t
 
 (** [evaluated_first p at]: the positions among its arguments of those the
     local fixpoint applied where it is written, at the occurrence [at],

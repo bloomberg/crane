@@ -397,7 +397,10 @@ let with_itree_mode (m : itree_extraction_mode) (f : unit -> 'a) : 'a =
     into the frames entering the machine's entries recorded
     ({!Ownership_plan.Entry_moves}). *)
 let with_region ?(owned = []) ?(copied = []) ?resumes ?certain (body : ml_ast) (f : unit -> 'a) : 'a =
-  let p = Ownership_plan.region ~owned ~copied ?resumes ?certain ~n_outer:(List.length (!tctx).current_type_vars) body in
+  let outer = Lexenv.type_opt (!tctx).env_types in
+  let p =
+    Ownership_plan.region ~owned ~copied ~outer ?resumes ?certain ~n_outer:(List.length (!tctx).current_type_vars) body
+  in
   (* The frames a machine enters its entries by are planned with it. *)
   Ownership_plan.Entry_moves.record_plan p;
   with_field (fun c -> c.move_plan) (fun p -> tctx := { !tctx with move_plan = p }) p f
