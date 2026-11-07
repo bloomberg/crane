@@ -4,7 +4,9 @@
 # the printer, and the printer depends on neither translation nor the passes
 # that run before it.  Direct dependencies are checked; each layer obeying the
 # rule keeps the transitive closure obeying it too.  The printer also asks
-# Table nothing about the program beyond a list that only shrinks.
+# Table nothing about the program beyond a list that only shrinks, wherever
+# in the plugin the read is written (bin/printer_reads, which needs OCaml's
+# compiler-libs, finds them).
 #
 # Usage: scripts/check-module-deps.sh   (from the repository root)
 set -euo pipefail
@@ -28,24 +30,40 @@ rules=(
 # CRANE_CHECK_IR to compare with the planned demands; a fact about the
 # program it is handed in the declaration, decided by a plan or a pass.  The
 # facts it still asks Table for are listed, and the list only shrinks: a read
-# that goes is deleted from it, and a new one is an error.  A custom's text
-# is resolved with the declaration's names (Cpp_names.custom_text), and a
-# mapping's element holes are decided at the seam
-# (Cpp_erasure.instantiate_foreign).
-PRINTER_TABLE_CONFIGURATION="Runtime erase_fn_header is_modfile std_lib modular non_atomic_rc arena_header escape_reserved_struct_name"
-PRINTER_TABLE_PENDING=""
+# that goes is deleted from it, and a new one is an error.
+#
+# A read counts wherever it is written: in cpp_print.ml (which opens Table,
+# so a read need not be qualified), or in any value of the plugin a value of
+# cpp_print.ml reaches.  bin/printer_reads lists them from the typed trees
+# dune writes, with a shortest chain each; a read in the branch of an
+# [if Probe.checking () then] is an oracle's and does not count.  The graph
+# does not follow control flow, so a read the printer reaches only through a
+# closure it hands the resolver (Cpp_names.named's [live]) counts too.
+PRINTER_TABLE_CONFIGURATION="arena_header erase_fn_header escape_reserved_struct_name is_modfile modular non_atomic_rc std_lib shared_variant itree_header small_vector_header written_needs_header check_written_custom register_census lang modpath_of_r repr_of_r safe_basename_of_global string_of_modfile mp_length base_mp at_toplevel is_toplevel common_prefix_from_list"
+# Inductive classification (frozen from planning on: Table.inductives is
+# counted by the census), custom texts and the promoted-type-variable table,
+# read while naming (Cpp_names, Common) and planning constructor aliases
+# (Cpp_demands); the shared-variant fact of a type planning hands demands
+# before the seam (Pointer_slot).
+PRINTER_TABLE_PENDING="get_ind_nb_ctors_opt get_record_fields inline_custom_text is_any_inline_custom is_custom is_enum_inductive is_shared_variant is_typeclass promoted_inductives promoted_type_var_field to_inline written_custom_text written_inline_custom_text"
 
 status=0
-printer_reads=$(grep -o 'Table\.[a-zA-Z_]*' src/cpp_print.ml | sed 's/^Table\.//' | sort -u)
+dune build --root . @src/check ./bin/printer_reads/main.exe 2>&1 | head -20
+reach=$(./_build/default/bin/printer_reads/main.exe _build/default/src/.crane_plugin.objs/byte Cpp_print Table) || {
+  echo "bin/printer_reads failed"
+  exit 1
+}
+printer_reads=$(printf '%s\n' "$reach" | cut -f1 | sort -u)
 for r in $printer_reads; do
   if [[ " $PRINTER_TABLE_CONFIGURATION $PRINTER_TABLE_PENDING " != *" $r "* ]]; then
-    echo "src/cpp_print.ml reads Table.$r, a fact the declaration it prints should carry"
+    echo "the printer reads Table.$r, a fact the declaration it prints should carry:"
+    printf '%s\n' "$reach" | awk -F'\t' -v r="$r" '$1 == r { print "  " $2 }'
     status=1
   fi
 done
-for r in $PRINTER_TABLE_PENDING; do
+for r in $PRINTER_TABLE_PENDING $PRINTER_TABLE_CONFIGURATION; do
   if [[ $'\n'"$printer_reads"$'\n' != *$'\n'"$r"$'\n'* ]]; then
-    echo "src/cpp_print.ml no longer reads Table.$r: delete it from PRINTER_TABLE_PENDING"
+    echo "the printer no longer reads Table.$r: delete it from PRINTER_TABLE_PENDING or PRINTER_TABLE_CONFIGURATION"
     status=1
   fi
 done
