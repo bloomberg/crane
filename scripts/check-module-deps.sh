@@ -39,7 +39,7 @@ rules=(
 # [if Probe.checking () then] is an oracle's and does not count.  The graph
 # does not follow control flow, so a read the printer reaches only through a
 # closure it hands the resolver (Cpp_names.named's [live]) counts too.
-PRINTER_TABLE_CONFIGURATION="arena_header erase_fn_header escape_reserved_struct_name is_modfile modular non_atomic_rc std_lib written_needs_header check_written_custom register_census lang modpath_of_r repr_of_r safe_basename_of_global string_of_modfile mp_length base_mp at_toplevel is_toplevel common_prefix_from_list"
+PRINTER_TABLE_CONFIGURATION="arena_header erase_fn_header escape_reserved_struct_name is_modfile modular std_lib written_needs_header check_written_custom register_census lang modpath_of_r repr_of_r safe_basename_of_global string_of_modfile mp_length base_mp at_toplevel is_toplevel common_prefix_from_list"
 # Inductive classification (frozen from planning on: Table.inductives is
 # counted by the census) and custom texts, read while naming (Cpp_names,
 # Common).

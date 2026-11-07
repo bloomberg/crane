@@ -14,6 +14,7 @@ let of_external name =
   else if String.equal name Crane_rt.constant_tc then Some (Table.Runtime Crane_rt.obj_header)
   else if String.equal name Crane_rt.shared_box || String.equal name Crane_rt.shared_or then
     Some (Table.Runtime Crane_rt.shared_variant_header)
+  else if String.equal name Crane_rt.rc then Some (Table.Standard "memory")
   else None
 
 let at_type_variable = function Tvar _ | Tapply (Tvar _, _) -> true | _ -> false

@@ -957,6 +957,10 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
         end else if String.equal id_s Crane_rt.shared_box || String.equal id_s Crane_rt.shared_or then begin
           writes (Table.Runtime Crane_rt.shared_variant_header);
           id_s
+        end else if String.equal id_s Crane_rt.rc then begin
+          (* rc.h transitively includes arena.h. *)
+          writes_standard "memory";
+          id_s
         end else id_s
       in
       ( match args with
@@ -1594,14 +1598,14 @@ and pp_cpp_expr ctx env args t =
   | CPPalloc (Alloc_arena_scoped, t) ->
     (* Runtime scoped-arena factory: the arena-aware form of make_shared/make_rc
        for the current pointer flavor.  Falls back to a plain heap allocation at
-       runtime whenever no arena scope is open at the call site. *)
+       runtime whenever no arena scope is open at the call site.  A unit of
+       non-atomic pointers has its pointer's factory instead, chosen at the
+       seam ({!Cpp_erasure.lower_pointer_slots}). *)
+    ( if Probe.checking () then
+        if Table.non_atomic_rc () then
+          CErrors.anomaly (Pp.str "pp_cpp_expr: an arena allocation of a non-atomic pointer reached the printer") );
     let inner = pp_cpp_type ctx false [] t in
-    if Table.non_atomic_rc () then begin
-      (* crane::rc<T>::make(...) -- rc.h transitively includes arena.h. *)
-      writes_standard "memory";
-      cpp_angle Crane_rt.rc inner ++ str "::make"
-    end
-    else if Table.std_lib () = "BDE" then
+    if Table.std_lib () = "BDE" then
       (* No runtime arena under BDE (arena.h is std-only): plain factory. *)
       cpp_angle (sn ()).make_shared inner
     else begin

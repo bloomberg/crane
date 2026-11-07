@@ -850,6 +850,10 @@ let pointer_slots () =
     (* A shared value goes into its slot as it is: no cell to allocate. *)
     | CPPalloc ((Alloc_heap | Alloc_arena_scoped), t) when Pointer_slot.of_pointee t = Pointer_slot.Shared ->
       CPPqualified_t (Tid_external (Crane_rt.shared_box, [t]), Id.of_string "make")
+    (* A unit of non-atomic pointers allocates in an arena through its own
+       pointer's factory, [crane::rc<T>::make]. *)
+    | CPPalloc (Alloc_arena_scoped, t) when Table.non_atomic_rc () ->
+      CPPqualified_t (Tid_external (Crane_rt.rc, [t]), Id.of_string "make")
     | e -> e
   and fs s = map_stmt fe fs ft s in
   (ft, fe, fs)

@@ -6794,6 +6794,17 @@
   (deps arena_tree.t.exe)
   (action (run ./arena_tree.t.exe))))
 
+(subdir arena_non_atomic_rc
+ (rule
+  (targets arena_non_atomic_rc.t.exe)
+  (deps ArenaNonAtomicRc.vo arena_non_atomic_rc.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} arena_non_atomic_rc.t.exe arena_non_atomic_rc.t.cpp arena_non_atomic_rc.cpp)))
+ (rule
+  (alias runtest)
+  (deps arena_non_atomic_rc.t.exe)
+  (action (run ./arena_non_atomic_rc.t.exe))))
+
 (subdir typeclass_enum_eq
  (rule
   (targets typeclass_enum_eq.t.exe)
