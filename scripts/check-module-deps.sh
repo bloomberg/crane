@@ -12,7 +12,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-TRANSLATION="Translation Translation_state Translation_support Translation_types Translation_calls Gen_decls Gen_context Gen_records Gen_instances Gen_functions Gen_inductives Plan_templates Cpp_ind Cpp Extract_env Structure_analysis Method_registry"
+TRANSLATION="Translation Translation_state Translation_support Translation_types Translation_calls Gen_decls Gen_context Gen_records Gen_instances Gen_functions Gen_inductives Plan_templates Cpp_leaf_plan Cpp_ind Cpp Extract_env Structure_analysis Method_registry"
 PRINTER="Cpp_print"
 FINISHING="Cpp_pipeline Loopify Loopify_analysis Loopify_tail Loopify_tmc Loopify_frame Cpp_depth Borrow_projection Cpp_erasure Function_entity Cpp_constants Cpp_local_closures Cpp_shared_args Cpp_simplify Cpp_temporaries Move_check Ownership_plan Return_moves Control_to_legacy_minicpp"
 
@@ -39,13 +39,11 @@ rules=(
 # [if Probe.checking () then] is an oracle's and does not count.  The graph
 # does not follow control flow, so a read the printer reaches only through a
 # closure it hands the resolver (Cpp_names.named's [live]) counts too.
-PRINTER_TABLE_CONFIGURATION="arena_header erase_fn_header escape_reserved_struct_name is_modfile modular non_atomic_rc std_lib shared_variant itree_header small_vector_header written_needs_header check_written_custom register_census lang modpath_of_r repr_of_r safe_basename_of_global string_of_modfile mp_length base_mp at_toplevel is_toplevel common_prefix_from_list"
+PRINTER_TABLE_CONFIGURATION="arena_header erase_fn_header escape_reserved_struct_name is_modfile modular non_atomic_rc std_lib written_needs_header check_written_custom register_census lang modpath_of_r repr_of_r safe_basename_of_global string_of_modfile mp_length base_mp at_toplevel is_toplevel common_prefix_from_list"
 # Inductive classification (frozen from planning on: Table.inductives is
-# counted by the census), custom texts and the promoted-type-variable table,
-# read while naming (Cpp_names, Common) and planning constructor aliases
-# (Cpp_demands); the shared-variant fact of a type planning hands demands
-# before the seam (Pointer_slot).
-PRINTER_TABLE_PENDING="get_ind_nb_ctors_opt get_record_fields inline_custom_text is_any_inline_custom is_custom is_enum_inductive is_shared_variant is_typeclass promoted_inductives promoted_type_var_field to_inline written_custom_text written_inline_custom_text"
+# counted by the census) and custom texts, read while naming (Cpp_names,
+# Common).
+PRINTER_TABLE_PENDING="get_ind_nb_ctors_opt get_record_fields is_any_inline_custom is_custom is_enum_inductive is_typeclass promoted_inductives to_inline written_custom_text written_inline_custom_text"
 
 status=0
 dune build --root . @src/check ./bin/printer_reads/main.exe 2>&1 | head -20

@@ -440,7 +440,7 @@ let generated_concept ~module_ r fields =
     of the module [module_] wherever the file moves it -- ahead of or after
     the struct of the module declaring the class, or to the top of the file
     -- printed where the tree puts it. *)
-let class_concept_element ctx ~module_ d = Cpp_print.unprinted ctx ~module_ (empty_env ()) (Cpp_ind.finished_alone d)
+let class_concept_element ctx ~module_ d = Cpp_leaf_plan.unprinted ctx ~module_ (empty_env ()) (Cpp_ind.finished_alone d)
 
 (** The functions of a module's method candidates [candidates] its
     eponymous record's struct is given as methods: those that are not
@@ -590,8 +590,8 @@ let unenclosed_element enclosure ?fields body =
     struct holding it back ({!Cpp_print.held_back_assertions}). *)
 let element_decl ~module_ ~homed ctx env d =
   if Cpp_print.is_held_back_assertion ctx d then Cpp_ast.empty
-  else if Cpp_print.absorbs ~homed d then Cpp_print.write_absorbing ctx ~homed env d
-  else Cpp_print.unprinted ctx ~module_ env d
+  else if Cpp_print.absorbs ~homed d then Cpp_leaf_plan.write_absorbing ctx ~homed env d
+  else Cpp_leaf_plan.unprinted ctx ~module_ env d
 
 (** The wrapper structs the header writes around a wrapper module's
     declarations, the declaration [d] writing them, as planned
@@ -998,7 +998,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
                   | None -> "_field" ^ string_of_int i
                 in
                 let fields_pp =
-                  Cpp_print.unprinted_fields ctx ~module_ ~vl:ty_vars epon_ref
+                  Cpp_leaf_plan.unprinted_fields ctx ~module_ ~vl:ty_vars epon_ref
                     (List.combine (List.mapi field_name fields) field_types)
                 in
                 let method_fields, method_helpers =
@@ -1013,7 +1013,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
                     (List.map
                        (fun h ->
                          Cpp_ast.seq
-                           [ Cpp_print.unprinted ctx ~module_ (empty_env ()) (fst (lifted_views ~module_ ~may_hoist:false h));
+                           [ Cpp_leaf_plan.unprinted ctx ~module_ (empty_env ()) (fst (lifted_views ~module_ ~may_hoist:false h));
                              Cpp_ast.text (fnl ()) ] )
                        method_helpers )
                 in
@@ -1029,7 +1029,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
                       Cpp_ind.finished_record_methods epon_ref ty_vars method_fields
                     in
                     Cpp_ast.seq
-                      [helpers_pp; Cpp_print.unprinted ctx ~module_ (empty_env ()) finished; Cpp_ast.text (fnl ())]
+                      [helpers_pp; Cpp_leaf_plan.unprinted ctx ~module_ (empty_env ()) finished; Cpp_ast.text (fnl ())]
                 in
                 (template, fields_pp, methods_pp)
               | None -> ([], Cpp_ast.empty, Cpp_ast.empty)
@@ -1255,7 +1255,7 @@ let pp_wrapper_module_dual ~is_header ctx mp func_sels =
      own, or one an inductive of its name writes -- and everything else it
      writes is an element of it, all printed as the tree spells them. *)
   let render_sel_specs (specs, _) =
-    Cpp_ast.concat fnl (List.map (fun (d, env) -> Cpp_print.unprinted ctx ~module_:mp env d) specs)
+    Cpp_ast.concat fnl (List.map (fun (d, env) -> Cpp_leaf_plan.unprinted ctx ~module_:mp env d) specs)
   in
   let element = element_decl ~module_:mp ~homed:[] ctx in
   let render_sel_defs (_, defs) = Cpp_ast.concat fnl (List.map (fun (d, env) -> element env d) defs) in
@@ -1734,17 +1734,17 @@ let files_named_ahead s =
   |> List.sort_uniq ModPath.compare
 
 (** The customs the unit's files write, read off what was generated ahead of
-    them as resolving it asks for their texts ({!Cpp_print.global_names}):
+    them as resolving it asks for their texts ({!Cpp_leaf_plan.global_names}):
     the installed finished program's declarations, the types of the
     eponymous record fields generated with it, and the module-type concepts
     generated with it ({!Cpp_concepts.concept_body_names}). *)
 let customs_written_ahead () =
   let globals =
-    List.concat_map Cpp_print.declaration_globals (Finished_program.installed_declarations ())
-    @ List.concat_map Cpp_print.type_globals (Cpp_ind.generated_record_field_types ())
+    List.concat_map Cpp_leaf_plan.declaration_globals (Finished_program.installed_declarations ())
+    @ List.concat_map Cpp_leaf_plan.type_globals (Cpp_ind.generated_record_field_types ())
   in
   let keys =
-    Cpp_print.global_names [[]] globals @ List.concat_map Cpp_concepts.concept_body_names (Cpp_ind.generated_concepts ())
+    Cpp_leaf_plan.global_names [[]] globals @ List.concat_map Cpp_concepts.concept_body_names (Cpp_ind.generated_concepts ())
   in
   List.fold_left
     (fun customs -> function _, Cpp_resolution.Custom_text r -> Ref.User.Set.add r customs | _ -> customs)
@@ -2089,7 +2089,7 @@ let plan_file_layout s =
 let plan_ctor_aliases s =
   let written_in file =
     let found = ref [] in
-    let written at ds = List.iter (fun d -> found := Cpp_print.ctor_aliases_written at d :: !found) ds in
+    let written at ds = List.iter (fun d -> found := Cpp_leaf_plan.ctor_aliases_written at d :: !found) ds in
     let helpers at ~module_ hs =
       written at
         (List.concat_map
@@ -2136,7 +2136,7 @@ let plan_ctor_aliases s =
           (fun (r, fields, (packet : ml_ind_packet)) ->
             let vl = packet.ip_vars in
             found :=
-              Cpp_print.ctor_aliases_of_fields at ~vl r (Cpp_ind.record_field_types ~module_ r vl fields) :: !found )
+              Cpp_leaf_plan.ctor_aliases_of_fields at ~vl r (Cpp_ind.record_field_types ~module_ r vl fields) :: !found )
           (merged_eponymous_record frame);
         Option.iter
           (fun (r, vars, candidates) ->

@@ -13,6 +13,7 @@ open Minicpp
 open Cpp_state
 open Cpp_names
 open Cpp_print
+open Cpp_leaf_plan
 
 (** What a module type contributes where a concept body is expected.
 
@@ -64,7 +65,7 @@ let pp_member_type ~enum name r args =
 
 (* What printing a module type's concept names, at the frames it names them
    in: {!pp_modtype_concept}, read without printing it.  The type printer
-   names the globals of the types it writes ({!Cpp_print.global_names}). *)
+   names the globals of the types it writes ({!Cpp_leaf_plan.global_names}). *)
 
 let type_names frame ty = global_names [frame] (type_globals ty)
 

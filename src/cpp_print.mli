@@ -13,21 +13,39 @@ open Minicpp
 
 (** {2 Rendering} *)
 
-(** [write_decl ctx env decl] is a settled declaration written at the
-    position [ctx], with what placing the declarations it needs reads
-    ({!Cpp_ast.Needs}). *)
-val write_decl : Cpp_state.render_ctx -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
-
 (** [absorbs ~homed d]: whether [d] writes a wrapper struct holding a
     wrapper module's declarations, which are members of it: one [homed]
     names, with the module, as planned. *)
 val absorbs : homed:(string * ModPath.t) list -> Cpp_erasure.settled -> bool
 
-(** [write_absorbing ctx ~homed env d] is [d], which {!absorbs}, as
-    {!write_decl} writes it at the position [ctx], each wrapper struct
-    holding a wrapper module's declarations a {!Cpp_ast.Wrapper_struct}. *)
-val write_absorbing :
+(** The names of [homed]'s wrappers [d] writes structs for. *)
+val absorbed_by : homed:(string * ModPath.t) list -> Cpp_erasure.settled -> string list
+
+(** [d], which {!absorbs}, written at the position given, each wrapper
+    struct holding a wrapper module's declarations a
+    {!Cpp_ast.Wrapper_struct}. *)
+val absorbing_at :
   Cpp_state.render_ctx -> homed:(string * ModPath.t) list -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
+
+(** The structs and scoped enums [d] defines at namespace scope, in the
+    order it defines them, and what each declares. *)
+val structs_defined : Cpp_erasure.settled -> Cpp_ast.defined list
+
+val defined_ref : Cpp_ast.defined -> GlobRef.t
+
+(** Whether a wrapper is merged with the sole struct it holds. *)
+val nspace_merges : dm_wrapper -> bool
+
+(** The head of every global type in a type. *)
+val type_heads : cpp_type -> GlobRef.t list
+
+(** The globals a declaration's printing writes beside those it holds: a
+    template template argument's head, the primitive integer type, the
+    custom a custom match or a block custom is written from. *)
+val globals_written_beside : cpp_decl -> GlobRef.t list
+
+(** {!pp_cpp_type} at the position given. *)
+val pp_cpp_type_at : Cpp_state.render_ctx -> bool -> Id.t list -> cpp_type -> Pp.t
 
 (** The name of a module a declaration of the tree names, as
     {!Cpp_ast.resolve} resolved it where the declaration is written; under
@@ -55,52 +73,6 @@ val name_in : Cpp_state.render_ctx -> Cpp_resolution.table -> Cpp_resolution.fra
     after it, writing nothing for it here. *)
 val is_held_back_assertion : Cpp_state.render_ctx -> Cpp_erasure.settled -> bool
 
-(** What placing the declarations [decl], written in the module [module_] in
-    the file [file], needs reads ({!Cpp_ast.Needs}), as planned. *)
-val planned_needs : file:Common.file -> module_:Names.ModPath.t -> Cpp_erasure.settled -> Cpp_ast.Needs.t
-
-(** [unprinted ctx ~module_ env decl] is [decl], written at the position
-    [ctx] in the module [module_], to be printed where the tree puts it
-    ({!Cpp_ast.print}), with what placing the declarations it needs reads,
-    as planned. *)
-val unprinted : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
-
-(** [unprinted_fields ctx ~module_ ~vl r fields] is the fields [fields] of
-    the eponymous record [r], each by its name and type, their type
-    variables named [vl], written at the position [ctx] in the module
-    [module_], to be printed where the
-    tree puts them, with what placing the declarations they need reads: the
-    synthesised templates they write, as planned, and the constrained
-    structs they name.  Under [CRANE_CHECK_IR] the templates are spelled
-    again and compared. *)
-val unprinted_fields :
-  Cpp_state.render_ctx ->
-  module_:ModPath.t -> vl:Id.t list -> GlobRef.t -> (string * cpp_type) list -> Cpp_ast.t
-
-(** [global_names frames globals] asks for [globals] by name at each of
-    [frames]: each whose name is decided -- printing decides none -- as a
-    type, as a term and as a type class's concept, an inductive as a value
-    too; and each custom's text. *)
-val global_names :
-  Cpp_resolution.frame list -> GlobRef.t list -> (Cpp_resolution.frame * Cpp_resolution.key) list
-
-(** The globals writing the type names, for {!global_names}: those whose
-    names it writes and the customs it is written from. *)
-val type_globals : Minicpp.cpp_type -> GlobRef.t list
-
-(** The globals printing the declaration [d] names, for {!global_names}:
-    those it holds, those written beside them -- a template template
-    argument's head, the primitive integer type, the custom a custom match
-    or a block custom is written from -- and those it declares. *)
-val declaration_globals : Cpp_erasure.settled -> GlobRef.t list
-
-(** What printing a declaration not yet printed names through the type and
-    expression printers, at the frames inside it it names them at, for
-    {!Cpp_ast.resolve} to resolve before it is printed: of a declaration of
-    the program, every global it holds, at every frame its printing
-    enters. *)
-val unprinted_names : Cpp_ast.declaration -> (Cpp_resolution.frame * Cpp_resolution.key) list
-
 (** Whether a function declaration writes a qualifier into a struct or a
     template parameter, in its name, result or parameters, asked of the
     declaration rather than of its rendering: each name is the one
@@ -112,8 +84,7 @@ val resolved_names_into_a_struct : Cpp_state.render_ctx -> Cpp_resolution.table 
 
 (** The text of a declaration not yet printed, printed at the position its
     spelling enters, a module type's concept by [modtype_concept] and an
-    assertion by [assertion].  Under [CRANE_CHECK_IR] it must need, printed
-    there, what was planned for it where it was made. *)
+    assertion by [assertion], from the names resolved for it. *)
 val print_unprinted :
   Cpp_state.render_ctx ->
   modtype_concept:
@@ -243,19 +214,26 @@ type ctor_alias = Cpp_state.ctor_alias = private {
   ca_vars : Id.t list;  (** The names of the variables it names by index. *)
 }
 
+(** What a file writes that places the templates it writes: a declaration,
+    or the fields of the eponymous record merged into a module's struct,
+    which no declaration holds. *)
+type written = Written_declaration of cpp_decl | Written_fields of GlobRef.t
+
 (** The synthesised templates something a file writes writes, in the order
-    written, read in the scope being written. *)
-type ctor_aliases_read
+    written, read in the scope being written: what it is, in the module it
+    is written in, and the templates. *)
+type ctor_aliases_read = {
+  read_written : ModPath.t * written;
+  read_aliases : ctor_alias list;
+}
 
-(** What the finished declaration written at the position given, in the
-    file it is in, writes; the render of the declaration there reads it back
-    from the plan. *)
-val ctor_aliases_written : Cpp_state.render_ctx -> Cpp_erasure.settled -> ctor_aliases_read
+(** Whether the unit's templates are planned yet ({!plan_ctor_aliases}). *)
+val alias_plan_made : unit -> bool
 
-(** What the fields of the record [r], of types [types], written at the
-    position given, write, their type variables read as [vl]; the render of
-    the fields there reads it back from the plan ({!fields_needs}). *)
-val ctor_aliases_of_fields : Cpp_state.render_ctx -> vl:Id.t list -> GlobRef.t -> cpp_type list -> ctor_aliases_read
+(** [planned_aliases ~file ~module_ w] is the templates [w], written in the
+    module [module_], writes in the file [file], as planned: none before
+    they are planned, and an anomaly if planning did not read [w]. *)
+val planned_aliases : file:Common.file -> module_:ModPath.t -> written -> ctor_alias list
 
 (** [plan_ctor_aliases written] plans the templates each file writes,
     [written file] being what is read off what [file] writes, in the order
@@ -288,7 +266,7 @@ val check_ctor_alias_plan : file:Common.file -> unit
 
 (** The structs the file being written has constrained forward declarations
     of; a written declaration needs those it names or defines
-    ({!write_decl}). *)
+    ({!Cpp_leaf_plan.write_decl}). *)
 val constrained_structs : GlobRef.t list ref
 
 (** The type names the file being written introduces at file scope, as

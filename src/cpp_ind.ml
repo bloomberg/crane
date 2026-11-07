@@ -39,7 +39,7 @@ type rendered = (Common.env * Cpp_erasure.settled) list
 
 
 (** Print the declarations an entry point answered with. *)
-let pp_decls ctx (ds : rendered) = Cpp_ast.concat Pp.fnl (List.map (fun (env, d) -> Cpp_print.write_decl ctx env d) ds)
+let pp_decls ctx (ds : rendered) = Cpp_ast.concat Pp.fnl (List.map (fun (env, d) -> Cpp_leaf_plan.write_decl ctx env d) ds)
 
 (** The struct a module's declarations are written inside of, when the module is
     written as a struct at all.
@@ -1271,7 +1271,7 @@ let head_resolver_at ~file spelling frame key =
 let resolver_at ~file spelling frame key =
   Common.without_noting_written_files (fun () -> head_resolver_at ~file spelling frame key)
 
-let requested d = Cpp_print.unprinted_names d @ Cpp_concepts.names_requested d
+let requested d = Cpp_leaf_plan.unprinted_names d @ Cpp_concepts.names_requested d
 
 let resolve_tree ~file t =
   Common.without_noting_written_files (fun () ->
@@ -1285,7 +1285,7 @@ let names_into_a_struct_as_written ~file spelling settled =
 
 let write_unprinted ~file spelling u =
   at_spelling ~file spelling (fun ctx ->
-      Cpp_print.print_unprinted ctx ~modtype_concept:Cpp_concepts.pp_modtype_concept ~assertion:Cpp_concepts.pp_assertion u )
+      Cpp_leaf_plan.print_unprinted ctx ~modtype_concept:Cpp_concepts.pp_modtype_concept ~assertion:Cpp_concepts.pp_assertion u )
 
 type group = {source : ModPath.t; declarations : rendered}
 type section = group list
@@ -1294,7 +1294,7 @@ let render_section ctx (groups : section) =
   List.map
     (fun {source; declarations} ->
       Cpp_ast.elements ~source
-        (Cpp_ast.concat Pp.fnl (List.map (fun (env, d) -> Cpp_print.unprinted ctx ~module_:source env d) declarations)) )
+        (Cpp_ast.concat Pp.fnl (List.map (fun (env, d) -> Cpp_leaf_plan.unprinted ctx ~module_:source env d) declarations)) )
     groups
 
 (** The concept of each class, generated ahead of the files in the module
