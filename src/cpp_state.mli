@@ -132,11 +132,11 @@ type declared_in = In_struct_of of Names.ModPath.t | At_namespace_scope of Names
 
 (** A template synthesised for a type constructor with no template name of
     its own, where it is spelled as a template template argument
-    ({!Cpp_print.ctor_alias_at}). *)
+    ({!Cpp_leaf_plan.ctor_alias_at}). *)
 type ctor_alias = {
   ca_base : string;  (** What its name is made from. *)
   ca_holder : bool;
-  ca_declared : declared_in;  (** Where it is declared ({!Cpp_print.ctor_alias_declared}). *)
+  ca_declared : declared_in;  (** Where it is declared ({!Cpp_leaf_plan.ctor_alias_declared}). *)
   ca_body : string;
       (** The type it abbreviates, as written where it is declared, with the
           sentinel where the template's own parameter goes. *)
@@ -152,30 +152,50 @@ type ctor_alias = {
     ({!Cpp_print.tyctor_constructor}), the names of the type variables it
     names by index, and the template synthesised for it with the arguments
     a holder is applied to, if it has no template name of its own
-    ({!Cpp_print.ctor_alias_at}). *)
+    ({!Cpp_leaf_plan.ctor_alias_at}). *)
 and tyctor_use = {
   tu_constructor : Minicpp.cpp_type;
   tu_vars : Names.Id.t list;
   tu_alias : (ctor_alias * string list) option;
 }
 
+(** What the names written at a position are read off. *)
+type naming =
+  | No_names
+      (** Nothing: naming anything here is an anomaly.  Every position
+          starts so ({!file_start}). *)
+  | Naming_live
+      (** The program, where the resolver names a key where it stands
+          ({!Cpp_names.live_name}): the one position that names live. *)
+  | Names_resolved of Cpp_resolution.table
+      (** The names of what is being written, resolved before it is
+          written: a leaf of the tree ({!Cpp_ast.unprinted.names}), or what
+          planning spells, which it resolves first. *)
+
 (** Where the type printer reads how a type constructor is written. *)
 type tyctor_plan =
-  | Decided_here
-      (** Decided where it is spelled: what is written outside every leaf
-          the tree plans -- planning's own reads, the driver's text. *)
-  | Noting of tyctor_use list ref
-      (** Decided where it is spelled, and noted, in the order first spelled:
-          what planning reads off a leaf it plans. *)
+  | Unplanned  (** Nowhere: writing one here is an anomaly. *)
+  | Deciding of tyctor_decision
+      (** Off planning, which decides it where it is spelled and notes the
+          decision: what planning reads off what it plans. *)
   | Planned of tyctor_use list
-      (** Read off the plan of the leaf being printed; an anomaly if it has
-          none for the constructor. *)
+      (** Off the plan of the leaf being printed; an anomaly if it has none
+          for the constructor. *)
+
+(** How planning decides, at a position, how a type constructor naming the
+    given variables is written ({!Cpp_leaf_plan.ctor_alias_at}), and the
+    uses it has decided, in the order first spelled: the printer decides
+    none. *)
+and tyctor_decision = {
+  decide : render_ctx -> Names.Id.t list -> Minicpp.cpp_type -> (ctor_alias * string list) option;
+  noted : tyctor_use list ref;
+}
 
 (** Where in the output something is written or planned: a value, handed
     to whatever writes there and derived as each scope is entered
     ({!Cpp_names.next}).  No position is installed anywhere for a reader to
     find. *)
-type render_ctx = {
+and render_ctx = {
   rc_file : Common.file;  (** The file being written. *)
   rc_in_struct : bool;
   rc_concepts_hoisted : bool;
@@ -184,17 +204,12 @@ type render_ctx = {
   rc_module : Names.ModPath.t option;
       (** The module whose element is being written, if one is: the one
           whose struct a synthesised template it writes may be declared in
-          ({!Cpp_print.ctor_alias_home}). *)
+          ({!Cpp_leaf_plan.ctor_alias_home}). *)
   rc_frame : Cpp_resolution.frame;
       (** The scopes printing the declaration being written has entered
           inside the one it is written in, innermost first
           ({!Cpp_names.enter}). *)
-  rc_names : Cpp_resolution.table option;
-      (** The names of the declaration of the tree being written
-          ({!Cpp_ast.Declaration}), resolved before it is printed; none
-          where what is written is no such declaration -- planning, the
-          driver's own text, a synthesised template's body -- whose names
-          are resolved where they are written. *)
+  rc_names : naming;  (** What the names written here are read off ({!naming}). *)
   rc_visibility : Common.visibility option;
       (** The scopes whose names are visible where the printer is, innermost
           first: the planned visibility of what is being written
@@ -205,7 +220,7 @@ type render_ctx = {
   rc_aliases : ctor_alias list ref option;
       (** Where the synthesised templates spelled from here are collected,
           in the order first spelled, by what asked which ones its text
-          spells ({!Cpp_print.ctor_aliases_found}); none where nothing
+          spells ({!Cpp_leaf_plan.ctor_aliases_found}); none where nothing
           collects them.  Every position derived from this one collects into
           the same list, a template's body written where it is declared
           included. *)

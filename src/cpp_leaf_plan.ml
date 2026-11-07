@@ -7,103 +7,15 @@
 
     These are planning's questions about a declaration, not the printer's:
     {!Cpp_print} prints a leaf from what this module decided.  Planning the
-    templates still spells types to find them, with the printer's own
-    spelling; under [CRANE_CHECK_IR] a printed leaf is checked to need what
-    was planned for it. *)
+    templates spells types to find them, with the printer's own spelling,
+    the names it writes resolved first; under [CRANE_CHECK_IR] a printed
+    leaf is checked to need, and write, what was planned for it. *)
 
 open Names
 open Minicpp
 open Cpp_state
 open Cpp_names
 open Cpp_print
-
-(** The synthesised templates spelled at the position [ctx] at the type
-    constructors [visit] calls its argument at, in the order spelled -- one
-    written in another's body ahead of it -- each spelled as the printer
-    spells it there, inside the struct of the inductive whose members are
-    written around it, if any ({!Cpp_resolution.Inductive_struct}); and how
-    each type constructor is written, in the order first spelled. *)
-let ctor_aliases_found ctx visit =
-  let found = ref [] and uses = ref [] in
-  let ctx = {ctx with rc_aliases = Some found; rc_tyctors = Noting uses} in
-  visit (fun ~vl ~owner t ->
-      match t with
-      | Ttyctor _ ->
-        (* Which templates are spelled, not what they are named: named live,
-           as planning names them, not from the names of a declaration
-           resolved at the frames its printing enters. *)
-        let spell ctx = ignore (pp_cpp_type_at {ctx with rc_names = None} false vl t) in
-        ( match owner with Some r -> enter_from ctx (Inductive_struct r) spell | None -> spell ctx )
-      | _ -> () );
-  (!found, !uses)
-
-let ctor_aliases_written ctx (d : Cpp_erasure.settled) =
-  let aliases, uses = ctor_aliases_found ctx (fun f -> Cpp_demands.tyctors_of_decl f (d :> cpp_decl)) in
-  {read_written = (module_written ctx, Written_declaration (d :> cpp_decl)); read_aliases = aliases; read_uses = uses}
-
-let ctor_aliases_of_fields ctx ~vl r types =
-  let aliases, uses = ctor_aliases_found ctx (fun f -> List.iter (Cpp_demands.tyctors_of_type f ~vl) types) in
-  {read_written = (module_written ctx, Written_fields r); read_aliases = aliases; read_uses = uses}
-
-(** The synthesised templates the finished declaration [d], written in the
-    module [module_], writes in the file [file], as planned. *)
-let planned_ctor_aliases ~file ~module_ (d : Cpp_erasure.settled) =
-  planned_aliases ~file ~module_ (Written_declaration (d :> cpp_decl))
-
-(** The synthesised templates the finished declaration [d] writes at the
-    position [ctx], as an element of the module it names, as planned; under
-    [CRANE_CHECK_IR], spelled again and compared. *)
-let ctor_aliases_planned ctx (d : Cpp_erasure.settled) =
-  if not (alias_plan_made ()) then []
-  else
-    let file = ctx.rc_file in
-    let aliases = planned_ctor_aliases ~file ~module_:(module_written ctx) d in
-    if Probe.checking () && (ctor_aliases_written ctx d).read_aliases <> aliases then
-      Probe.violation "constructor aliases"
-        Pp.(str "a declaration of the " ++ str (Common.file_name file)
-            ++ str " writes other templates than were planned for it");
-    aliases
-
-(* Of the structs the file has constrained forward declarations of
-   ({!constrained_structs}), those named by [names ()] or [defined ()], and
-   those defined. *)
-let constrained_named ~names ~defined =
-  match !constrained_structs with
-  | [] -> ([], [])
-  | constrained ->
-    let of_refs refs = List.filter (fun r -> List.exists (GlobRef.UserOrd.equal r) refs) constrained in
-    let defined = defined () in
-    (of_refs (defined @ names ()), of_refs defined)
-
-(** What placing the declarations a written declaration needs reads: the
-    synthesised templates it writes, [templates], as planned
-    ({!planned_ctor_aliases}); and, of the structs the file has constrained
-    forward declarations of, those it names or defines, and those it
-    defines.  The declarations of a wrapper module it writes into a struct
-    of its own ({!Cpp_ast.Wrapper_struct}) are members of that struct, and
-    need what they need themselves. *)
-let needs_of ~templates (settled : Cpp_erasure.settled) =
-  let names, defines =
-    constrained_named
-      ~names:(fun () -> Cpp_demands.globals_of_decl (settled :> cpp_decl))
-      ~defined:(fun () -> List.map defined_ref (structs_defined settled))
-  in
-  {Cpp_ast.Needs.templates; names; defines}
-
-let fields_needs ctx ~module_ ~vl r types =
-  let file = ctx.rc_file in
-  let aliases = planned_aliases ~file ~module_ (Written_fields r) in
-  if Probe.checking () && alias_plan_made () && (ctor_aliases_of_fields ctx ~vl r types).read_aliases <> aliases
-  then
-    Probe.violation "constructor aliases"
-      Pp.(str "the fields of a record in the " ++ str (Common.file_name file)
-          ++ str " write other templates than were planned for them");
-  let names, _ =
-    constrained_named ~names:(fun () -> List.concat_map Cpp_demands.globals_of_type types) ~defined:(fun () -> [])
-  in
-  {Cpp_ast.Needs.templates = List.map ctor_alias_name aliases; names; defines = []}
-
-let printed_needs ctx settled = needs_of ~templates:(List.map ctor_alias_name (ctor_aliases_planned ctx settled)) settled
 
 (* The frames printing [d] enters names at: {!pp_cpp_decl}'s scopes, read
    without printing. *)
@@ -185,6 +97,373 @@ let global_names frames globals =
    it, a custom whose text it is written from among them. *)
 let type_globals ty = Cpp_demands.globals_of_type ty @ type_heads ty
 
+(* [ctx], naming what writing [t] there names as resolved there. *)
+let resolved_for ctx t =
+  { ctx with
+    rc_names =
+      Names_resolved (Cpp_resolution.resolve (fun _ key -> live_name ctx key) (global_names [ctx.rc_frame] (type_globals t)))
+  }
+
+(** {2 Synthesised templates}
+
+    Whether a type constructor written as a template template argument has
+    a template name of its own, and the template synthesised for it where
+    it has not, decided where planning spells it ({!Cpp_state.Deciding}):
+    the printer reads the decision off the plan of the leaf it prints. *)
+
+(** The module struct the template abbreviating [body], written in [file],
+    has to be declared inside, if any: that of the module whose element is
+    being written ({!Cpp_state.render_ctx}), where [body] names a global
+    declared anywhere in the struct at namespace scope that encloses it --
+    of that module, of one enclosing it, or of one nested in either.  Such
+    a global is incomplete, or written bare, in front of that struct, and
+    so means nothing at namespace scope; inside the module being written,
+    every one declared ahead of the use is in scope.  In the implementation
+    file, which writes no module struct, it is the struct whose members are
+    defined out of line around it.  Where no module's element is being
+    written, there is none. *)
+let ctor_alias_home ctx body =
+  match ctx.rc_module with
+  | None -> None
+  | Some cur ->
+    let modpath_of = function
+      | GlobRef.ConstRef c -> Some (Names.Constant.modpath c)
+      | GlobRef.IndRef (kn, _) | GlobRef.ConstructRef ((kn, _), _) -> Some (Names.MutInd.modpath kn)
+      | GlobRef.VarRef _ -> None
+    in
+    (* The struct at namespace scope [cur] is written in: what it declares,
+       at any depth, is incomplete in front of it. *)
+    let rec outermost mp =
+      match mp with ModPath.MPdot (parent, _) when not (Table.is_modfile parent) -> outermost parent | _ -> mp
+    in
+    let struct_ = outermost cur in
+    let rec inside mp =
+      ModPath.equal mp struct_ || match mp with ModPath.MPdot (parent, _) -> inside parent | _ -> false
+    in
+    let names_struct =
+      exists_cpp_type
+        (function
+          | Tglob (r, _, _) | Tforeign {fr_custom = r; _} -> (
+            match modpath_of r with Some mp -> inside mp | None -> false )
+          | _ -> false )
+        body
+    in
+    if names_struct && not (Table.is_modfile cur) then Some cur else None
+
+(** Where the template abbreviating [body], spelled at [ctx], is declared:
+    in the struct of its home ({!ctor_alias_home}), or at namespace scope
+    beneath the unit's files as what is visible at [ctx] sees them -- a
+    module body's, or, spelled in another template's body, that
+    template's. *)
+let ctor_alias_declared ctx body : Cpp_ast.declared_in =
+  match ctor_alias_home ctx body with
+  | Some home -> In_struct_of home
+  | None ->
+    let visible = visibility_at ctx (Pp.str "a template is declared at namespace scope") in
+    At_namespace_scope (List.rev (List.filter Table.is_modfile (Common.visible_mps visible)))
+
+(** The visibility a template is declared, and so its body written, in: the
+    body of its home module, as planned, or outside every module body. *)
+let ctor_alias_visibility : Cpp_ast.declared_in -> _ = function
+  | In_struct_of home -> (
+    match Scope_plan.visibility home with
+    | Some v -> v
+    | None ->
+      CErrors.anomaly
+        Pp.(str "Crane: the module " ++ str (ModPath.to_string home) ++ str " has no planned visibility.") )
+  | At_namespace_scope files -> Common.toplevel_visibility files
+
+(** The position a template declared at [declared] is written at, in the
+    file [ctx] is written in: at namespace scope; in the header, inside its
+    home's struct, a class template where the home's struct is one; in the
+    implementation, beside the definitions of its home's members, which are
+    written out of line and qualify what they name by the struct they are
+    members of.  The templates its body spells are collected where those
+    spelled at [ctx] are. *)
+let ctor_alias_render_ctx ctx (declared : Cpp_ast.declared_in) =
+  let start =
+    { (file_start ctx.rc_file) with
+      rc_visibility = Some (ctor_alias_visibility declared);
+      rc_aliases = ctx.rc_aliases }
+  in
+  match (declared, ctx.rc_file) with
+  | At_namespace_scope _, _ -> start
+  | In_struct_of home, Common.Intf ->
+    {start with rc_in_struct = true; rc_in_template = Scope_plan.templated home; rc_module = Some home}
+  | In_struct_of home, Common.Impl -> {start with rc_scope = Scope_plan.of_module home; rc_module = Some home}
+
+(** The template synthesised for the type constructor [t], written as a
+    template template argument, if it has no template name of its own, with
+    the arguments a holder is applied to where it is written.
+
+    A constructor applied to the sentinel is both the test and the alias body:
+    where the rendering comes out as a head plus that one argument, the head
+    is a template name and naming it is enough; where it does not, there is
+    no head to name and an alias template is introduced.  [itree] is
+    [std::shared_ptr<ITree<%t1>>] and a composite Rocq carrier is
+    [std::pair<_CraneTcArg, Box<_CraneTcArg>>]; neither can be cut back, and
+    the same reading of the same rendering covers both.
+
+    A carrier built by the front end already has the sentinel standing where
+    its argument goes -- it is the abstraction, not an application of one.  A
+    custom mapping arrives applied to its real arguments, so the sentinel is
+    put in the carrier's place first. *)
+let rec ctor_alias_at ctx vl t =
+  let custom () =
+    match t with
+    (* The sentinel in the last argument's place, its element hole holding
+       the sentinel bare: the sentinel recurses through nothing. *)
+    | Tforeign ({fr_types = _ :: _ as args; _} as fr) ->
+      let last = List.length args - 1 in
+      let probe =
+        { fr with
+          fr_types = List.filteri (fun i _ -> i < last) args @ [Thole];
+          fr_values = [];
+          fr_pieces = List.map (function Fp_element (i, _) when i = last -> Fp_element (i, None) | p -> p) fr.fr_pieces }
+      in
+      ctor_alias_of_probe ctx vl ~base:(Common.pp_global_name Type fr.fr_custom) (Tforeign probe)
+    | _ -> None
+  in
+  if exists_cpp_type (fun s -> s = Thole) t then
+    match ctor_alias_of_probe ctx vl ~base:"crane_carrier" t with
+    | Some _ as alias -> alias
+    | None -> custom ()
+  else custom ()
+
+(** The template synthesised for [probe], a type constructor applied to the
+    sentinel, if its rendering is not a head applied to the sentinel.
+
+    The body is rendered where the template is declared ({!ctor_alias_render_ctx}),
+    what is visible there included, because that is where a [using] is read; every name it writes
+    has to mean there what it means at the use. *)
+and ctor_alias_of_probe ctx vl ~base probe =
+  (* Every node of a type, in the order written, a type constructor's
+     included: a carrier nested in the body as a template template argument
+     is written through its own template, whose arguments name what it
+     names. *)
+  let visit t f = ignore (exists_cpp_type (fun t -> f t; false) t) in
+  (* The template parameters of the enclosing declaration that the body
+     names, each as the body writes it.  An alias whose body mentions one
+     cannot live at namespace scope, so those are what the holder abstracts
+     over. *)
+  let captured probe =
+    let seen = ref [] in
+    visit probe (function
+      | Tvar (Tv_index (i, _) as v) when not (List.mem_assoc i !seen) -> seen := !seen @ [(i, v)]
+      | _ -> () );
+    !seen
+  in
+  let written_var v = Pp.string_of_ppcmds (pp_cpp_type_at ctx false vl (Tvar v)) in
+  (* A captured parameter is named {e applied} to the alias's own
+     argument -- that is what makes the body an abstraction rather than a
+     type, and it is what lets the holder declare every parameter it
+     takes as a type constructor.  A variable the body names bare is not
+     a carrier parameter; it is a type the body mentions, and mentioning
+     it at the use site writes a name from the declaration's quantifier.
+     An instance method's body is emitted without that quantifier, so
+     [crane_carrier_tch<T1>] there names a scope the function is not in.
+     What the body has instead is the erasure it was emitted under, and
+     [std::any] is how the rest of it already spells that. *)
+  let applied_vars =
+    let seen = ref [] in
+    visit probe (function Tapply (Tvar (Tv_index (i, _)), _) -> seen := i :: !seen | _ -> ());
+    !seen
+  in
+  (* A variable the body names bare is kept where it is a declared
+     parameter -- named, as a plain family the declaration deapplied is
+     -- and becomes a [typename] parameter of the holder. *)
+  let bare_vars =
+    let seen = ref [] in
+    visit probe (function
+      | Tvar (Tv_index (i, Some _)) when not (List.mem i applied_vars) -> seen := i :: !seen
+      | _ -> () );
+    !seen
+  in
+  let probe =
+    map_cpp_type
+      (function
+        | Tvar (Tv_index (i, _))
+          when not (List.mem i applied_vars || List.mem i bare_vars) ->
+          Tany
+        | t -> t )
+      probe
+  in
+  let declared_in = ctor_alias_declared ctx probe in
+  let render t = written_body (ctor_alias_render_ctx ctx declared_in) vl t in
+  let rendered_with_uses = lazy (render probe) in
+  let rendered = lazy (fst (Lazy.force rendered_with_uses)) in
+  let head_alone () =
+    let rendered = Lazy.force rendered in
+    String.equal rendered (cut_at_argument_list rendered ^ "<" ^ ctor_alias_tvar ^ ">")
+  in
+  let alone =
+    match applied_to_sentinel_alone ctx probe with
+    | Some alone ->
+      if Probe.checking () && alone <> head_alone () then
+        Probe.violation "constructor alias shape"
+          Pp.(str "the type constructor written " ++ str (Lazy.force rendered) ++ str " is read off its structure as "
+              ++ str (if alone then "" else "not ") ++ str "a template name applied to its argument alone");
+      alone
+    | None ->
+      Probe.hit "CTORALIAS_UNDECIDED" (fun () -> Lazy.force rendered);
+      head_alone ()
+  in
+  if alone then None
+  else
+    let rendered = Lazy.force rendered in
+    (* Only a name the body actually {e writes} has to be abstracted
+       over.  A custom mapping's replacement text need not use every
+       argument -- [itree]'s spells only its last -- so a parameter that
+       the probe carries structurally but the rendering drops would
+       otherwise mint a holder with an unused parameter, and the alias
+       would be declared as a partial specialisation of nothing. *)
+    let names = identifier_tokens rendered in
+    let captured probe = List.filter (fun (_, v) -> List.mem (written_var v) names) (captured probe) in
+    (* A class instance the body reads a type out of -- [typename
+       _tcI0::ptr] -- is the enclosing declaration's parameter as much
+       as a variable is, and is captured the same way. *)
+    let instances =
+      let seen = ref [] in
+      visit probe (function
+        | Tinstance (id, _) when not (List.exists (Id.equal id) !seen) -> seen := !seen @ [id]
+        | _ -> () );
+      !seen
+    in
+    match (captured probe, instances) with
+    | [], [] ->
+      Some
+        ( { ca_base = base;
+            ca_holder = false;
+            ca_declared = declared_in;
+            ca_body = rendered;
+            ca_type = probe;
+            ca_vars = vl;
+            ca_uses = snd (Lazy.force rendered_with_uses) },
+          [] )
+    | vars, instances ->
+      (* Rendered a second time with the captured names replaced by the
+         holder's own, so that two declarations differing only in what
+         they call their parameters share one holder.  A renamed variable
+         is still a variable: a holder nested in the body captures it under
+         its new name, and is applied to that. *)
+      let var_names =
+        List.mapi (fun k (i, _) -> (i, Generated_name.indexed (if List.mem i bare_vars then "P" else "F") k)) vars
+      and instance_names = List.mapi (fun j id -> (id, Generated_name.indexed "P" (List.length vars + j))) instances in
+      let renamed =
+        rewrite_cpp_type
+          (function
+            | Tvar (Tv_index (i, _)) -> Option.map (fun name -> Tvar (Tv_index (i, Some name))) (List.assoc_opt i var_names)
+            | Tinstance (id, c) -> (
+              match List.find_opt (fun (id', _) -> Id.equal id id') instance_names with
+              | Some (_, name) -> Some (Tinstance (name, c))
+              | None -> None )
+            | _ -> None )
+          probe
+      in
+      let body, uses = render renamed in
+      Some
+        ( {ca_base = base; ca_holder = true; ca_declared = declared_in; ca_body = body; ca_type = renamed; ca_vars = vl; ca_uses = uses},
+          List.map (fun (_, v) -> written_var v) vars @ List.map Id.to_string instances )
+
+(** [t] as the type constructors in it are written at [ctx]: decided there
+    and noted ({!Cpp_state.Deciding}). *)
+and deciding ctx noted = {ctx with rc_tyctors = Deciding {decide = ctor_alias_at; noted}}
+
+(** The body [t] of a synthesised template, naming the variables [vl] by
+    index, written at [at], where the template is declared: its names
+    resolved there first, and how it writes the type constructors in it,
+    in the order written. *)
+and written_body at vl t =
+  let noted = ref [] in
+  let body = Pp.string_of_ppcmds (pp_cpp_type_at (deciding (resolved_for at t) noted) false vl t) in
+  (body, !noted)
+
+(** The synthesised templates spelled at the position [ctx] at the type
+    constructors [visit] calls its argument at, in the order spelled -- one
+    written in another's body ahead of it -- each spelled as the printer
+    spells it there, inside the struct of the inductive whose members are
+    written around it, if any ({!Cpp_resolution.Inductive_struct}); and how
+    each type constructor is written, in the order first spelled.  Each is
+    spelled with the names it writes resolved there first. *)
+let ctor_aliases_found ctx visit =
+  let found = ref [] and noted = ref [] in
+  let ctx = deciding {ctx with rc_aliases = Some found} noted in
+  visit (fun ~vl ~owner t ->
+      match t with
+      | Ttyctor _ ->
+        let spell ctx = ignore (pp_cpp_type_at (resolved_for ctx t) false vl t) in
+        ( match owner with Some r -> enter_from ctx (Inductive_struct r) spell | None -> spell ctx )
+      | _ -> () );
+  (!found, !noted)
+
+let ctor_aliases_written ctx (d : Cpp_erasure.settled) =
+  let aliases, uses = ctor_aliases_found ctx (fun f -> Cpp_demands.tyctors_of_decl f (d :> cpp_decl)) in
+  {read_written = (module_written ctx, Written_declaration (d :> cpp_decl)); read_aliases = aliases; read_uses = uses}
+
+let ctor_aliases_of_fields ctx ~vl r types =
+  let aliases, uses = ctor_aliases_found ctx (fun f -> List.iter (Cpp_demands.tyctors_of_type f ~vl) types) in
+  {read_written = (module_written ctx, Written_fields r); read_aliases = aliases; read_uses = uses}
+
+(** The synthesised templates the finished declaration [d], written in the
+    module [module_], writes in the file [file], as planned. *)
+let planned_ctor_aliases ~file ~module_ (d : Cpp_erasure.settled) =
+  planned_aliases ~file ~module_ (Written_declaration (d :> cpp_decl))
+
+(** The synthesised templates the finished declaration [d] writes at the
+    position [ctx], as an element of the module it names, as planned; under
+    [CRANE_CHECK_IR], spelled again and compared. *)
+let ctor_aliases_planned ctx (d : Cpp_erasure.settled) =
+  if not (alias_plan_made ()) then []
+  else
+    let file = ctx.rc_file in
+    let aliases = planned_ctor_aliases ~file ~module_:(module_written ctx) d in
+    if Probe.checking () && (ctor_aliases_written ctx d).read_aliases <> aliases then
+      Probe.violation "constructor aliases"
+        Pp.(str "a declaration of the " ++ str (Common.file_name file)
+            ++ str " writes other templates than were planned for it");
+    aliases
+
+(* Of the structs the file has constrained forward declarations of
+   ({!constrained_structs}), those named by [names ()] or [defined ()], and
+   those defined. *)
+let constrained_named ~names ~defined =
+  match !constrained_structs with
+  | [] -> ([], [])
+  | constrained ->
+    let of_refs refs = List.filter (fun r -> List.exists (GlobRef.UserOrd.equal r) refs) constrained in
+    let defined = defined () in
+    (of_refs (defined @ names ()), of_refs defined)
+
+(** What placing the declarations a written declaration needs reads: the
+    synthesised templates it writes, [templates], as planned
+    ({!planned_ctor_aliases}); and, of the structs the file has constrained
+    forward declarations of, those it names or defines, and those it
+    defines.  The declarations of a wrapper module it writes into a struct
+    of its own ({!Cpp_ast.Wrapper_struct}) are members of that struct, and
+    need what they need themselves. *)
+let needs_of ~templates (settled : Cpp_erasure.settled) =
+  let names, defines =
+    constrained_named
+      ~names:(fun () -> Cpp_demands.globals_of_decl (settled :> cpp_decl))
+      ~defined:(fun () -> List.map defined_ref (structs_defined settled))
+  in
+  {Cpp_ast.Needs.templates; names; defines}
+
+let fields_needs ctx ~module_ ~vl r types =
+  let file = ctx.rc_file in
+  let aliases = planned_aliases ~file ~module_ (Written_fields r) in
+  if Probe.checking () && alias_plan_made () && (ctor_aliases_of_fields ctx ~vl r types).read_aliases <> aliases
+  then
+    Probe.violation "constructor aliases"
+      Pp.(str "the fields of a record in the " ++ str (Common.file_name file)
+          ++ str " write other templates than were planned for them");
+  let names, _ =
+    constrained_named ~names:(fun () -> List.concat_map Cpp_demands.globals_of_type types) ~defined:(fun () -> [])
+  in
+  {Cpp_ast.Needs.templates = List.map ctor_alias_name aliases; names; defines = []}
+
+let printed_needs ctx settled = needs_of ~templates:(List.map ctor_alias_name (ctor_aliases_planned ctx settled)) settled
+
 let template_param_globals tps =
   let types = ref [] in
   ignore (map_tparams (fun t -> types := t :: !types; t) tps);
@@ -215,9 +494,24 @@ let unprinted_names : Cpp_ast.declaration -> _ = function
   | Functor_alias _ | Derived_functor _ ->
     []
 
-let printed_decl ctx env settled =
-  let text = read_cpp_decl ctx env settled in
-  (text, printed_needs ctx settled)
+(* [ctx], writing the declaration [settled] written in the module it names
+   there: its names resolved there first, at each frame printing it enters,
+   and its type constructors written as planned, or, where nothing is
+   planned yet, as decided. *)
+let writing ctx (settled : Cpp_erasure.settled) =
+  let names =
+    Cpp_resolution.resolve (fun frame key -> at_frame ctx frame (fun c -> live_name c key)) (declaration_names settled)
+  in
+  let ctx = {ctx with rc_names = Names_resolved names} in
+  if not (alias_plan_made ()) then deciding ctx (ref [])
+  else
+    match planned_tyctors ~file:ctx.rc_file ~module_:(module_written ctx) (Written_declaration (settled :> cpp_decl)) with
+    | Some uses -> {ctx with rc_tyctors = Planned uses}
+    | None -> deciding ctx (ref [])
+
+let read_decl ctx env settled = read_cpp_decl (writing ctx settled) env settled
+
+let printed_decl ctx env settled = (read_decl ctx env settled, printed_needs ctx settled)
 
 (** [settled], printed where it is made, with what placing the declarations
     it needs reads ({!needs_of}). *)
@@ -229,9 +523,10 @@ let write_decl ctx env settled =
     behind what placing the declarations it needs reads. *)
 let write_absorbing ctx ~homed env (settled : Cpp_erasure.settled) =
   let tyctors =
-    planned_tyctors ~file:ctx.rc_file ~module_:(module_written ctx) (Written_declaration (settled :> cpp_decl))
+    if not (alias_plan_made ()) then None
+    else planned_tyctors ~file:ctx.rc_file ~module_:(module_written ctx) (Written_declaration (settled :> cpp_decl))
   in
-  let tree = absorbing_at ctx ~homed ?tyctors env settled in
+  let tree = absorbing_at (writing ctx settled) ~homed ?tyctors env settled in
   let needs = printed_needs ctx settled in
   ( if Probe.checking () then
       let written = Cpp_ast.wrapper_structs tree and absorbing = absorbed_by ~homed settled in
@@ -262,12 +557,22 @@ let unprinted_fields ctx ~module_ ~vl r fields =
 
 
 (** [u] printed as {!Cpp_print.print_unprinted} prints it; under
-    [CRANE_CHECK_IR], what a declaration or a record's fields need, read
-    again where they are printed, must be what was planned where they were
-    made. *)
+    [CRANE_CHECK_IR], what a declaration, a record's fields or a synthesised
+    template need, and how they write their type constructors, read again
+    where they are printed, must be what was planned where they were made. *)
 let print_unprinted ctx ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
   let text = Cpp_print.print_unprinted ctx ~modtype_concept ~assertion u in
   ( if Probe.checking () then
+      let tyctors =
+        match u.declaration with
+        | Declaration {settled; _} -> Some (ctor_aliases_written ctx settled).read_uses
+        | Fields {record; vars; fields} -> Some (ctor_aliases_of_fields ctx ~vl:vars record (List.map snd fields)).read_uses
+        | Synthesised_template s -> Some (snd (written_body ctx s.vars s.body))
+        | _ -> u.tyctors
+      in
+      if Option.has_some u.tyctors && tyctors <> u.tyctors then
+        Probe.violation "constructor alias uses"
+          (Pp.str "a declaration printed where the tree puts it writes its type constructors otherwise than planned");
       let needs =
         match u.declaration with
         | Declaration {settled; _} -> printed_needs ctx settled

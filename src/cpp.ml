@@ -420,7 +420,7 @@ let dbg_lifted =
           Printf.sprintf "splits=yes hoistable=%b spec=%S"
             (spec_is_hoistable ~module_ spec)
             (Pp.string_of_ppcmds
-               (read_cpp_decl (Cpp_ind.spelling_position ~file:Intf (Element_of module_)) (empty_env ()) spec) )
+               (Cpp_leaf_plan.read_decl (Cpp_ind.spelling_position ~file:Intf (Element_of module_)) (empty_env ()) spec) )
         else "splits=no"
       in
       Feedback.msg_notice

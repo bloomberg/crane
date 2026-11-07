@@ -53,14 +53,21 @@ let visibility_at (c : render_ctx) what =
 
 let visible_at c key = visibility_at c Pp.(Cpp_resolution.pp_key key ++ str " is named")
 
-(* [key]'s name at the position [c]: from the names of the declaration of
-   the tree being written, at the frame printing it has entered, checked
-   against [live v] where [c] sees [v], if one is being written; [live v]
-   where none is. *)
+(* Naming [key] where nothing says what names are read off: everything
+   written, planning's spelling included, resolves its names first, and only
+   the resolver names live. *)
+let named_nowhere key =
+  CErrors.anomaly
+    Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " is named where nothing resolved the names written.")
+
+(* [key]'s name at the position [c]: from the names resolved for what is
+   being written, at the frame printing it has entered, checked against
+   [live v] where [c] sees [v]; [live v] at the resolver's position. *)
 let named (c : render_ctx) key live =
   match c.rc_names with
-  | None -> live (visible_at c key)
-  | Some names -> name_from names c.rc_frame key ~live:(fun () -> live (visible_at c key))
+  | Naming_live -> live (visible_at c key)
+  | No_names -> named_nowhere key
+  | Names_resolved names -> name_from names c.rc_frame key ~live:(fun () -> live (visible_at c key))
 
 let live_custom_text r =
   match written_custom_text r with
@@ -72,8 +79,9 @@ let custom_text (c : render_ctx) r =
   else
     let text =
       match c.rc_names with
-      | None -> live_custom_text r
-      | Some names -> name_from names c.rc_frame (Custom_text r) ~live:(fun () -> live_custom_text r)
+      | Naming_live -> live_custom_text r
+      | No_names -> named_nowhere (Custom_text r)
+      | Names_resolved names -> name_from names c.rc_frame (Custom_text r) ~live:(fun () -> live_custom_text r)
     in
     Some (Cpp_name.to_string text)
 
@@ -786,7 +794,7 @@ let inductive_value_name ctx v x =
 let inductive_value ctx x = named ctx (Inductive_value x) (fun v -> inductive_value_name ctx v x)
 
 let live_name c (key : Cpp_resolution.key) =
-  let ctx = {c with rc_names = None} in
+  let ctx = {c with rc_names = Naming_live} in
   let v = visible_at c key in
   match key with
   | Module mp -> Common.resolve_module_in v mp

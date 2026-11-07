@@ -464,11 +464,11 @@ type declared_in = In_struct_of of ModPath.t | At_namespace_scope of ModPath.t l
 
 (** A template synthesised for a type constructor with no template name of
     its own, where it is spelled as a template template argument
-    ({!Cpp_print.ctor_alias_at}). *)
+    ({!Cpp_leaf_plan.ctor_alias_at}). *)
 type ctor_alias = {
   ca_base : string;  (** What its name is made from. *)
   ca_holder : bool;
-  ca_declared : declared_in;  (** Where it is declared ({!Cpp_print.ctor_alias_declared}). *)
+  ca_declared : declared_in;  (** Where it is declared ({!Cpp_leaf_plan.ctor_alias_declared}). *)
   ca_body : string;
       (** The type it abbreviates, as written where it is declared, with the
           sentinel where the template's own parameter goes. *)
@@ -481,23 +481,36 @@ type ctor_alias = {
     written, decided where it is planned: the constructor, the names of the
     type variables it names by index, and the template synthesised for it
     with the arguments a holder is applied to, if it has no template name
-    of its own ({!Cpp_print.ctor_alias_at}). *)
+    of its own ({!Cpp_leaf_plan.ctor_alias_at}). *)
 and tyctor_use = {
   tu_constructor : Minicpp.cpp_type;
   tu_vars : Id.t list;
   tu_alias : (ctor_alias * string list) option;
 }
 
-(** Where the type printer reads how a type constructor is written: decided
-    where it is spelled, which only planning, and what is printed outside
-    every plan, does; noted, by planning, as it decides; or read off the
-    plan of the leaf being printed. *)
-type tyctor_plan = Decided_here | Noting of tyctor_use list ref | Planned of tyctor_use list
+(** What the names written at a position are read off: nothing, where
+    naming anything is an anomaly; the program, where the resolver names
+    each key where it stands ({!Cpp_names.live_name}); or the names of the
+    declaration being written, resolved before it is written. *)
+type naming = No_names | Naming_live | Names_resolved of Cpp_resolution.table
+
+(** Where the type printer reads how a type constructor is written: nowhere,
+    where writing one is an anomaly; off planning, which decides it where it
+    is spelled and notes it; or off the plan of the leaf being printed. *)
+type tyctor_plan = Unplanned | Deciding of tyctor_decision | Planned of tyctor_use list
+
+(* How planning decides, at a position, how a type constructor naming the
+   given variables is written, and the uses it has decided, in the order
+   first spelled. *)
+and tyctor_decision = {
+  decide : render_ctx -> Id.t list -> Minicpp.cpp_type -> (ctor_alias * string list) option;
+  noted : tyctor_use list ref;
+}
 
 (** Where in the output something is written or planned: a value, handed
     to whatever writes there and derived as each scope is entered.  No
     position is installed anywhere for a reader to find. *)
-type render_ctx = {
+and render_ctx = {
   (* The file being written. *)
   rc_file : Common.file;
   (* Inside a struct body? Affects qualification of nested type references. *)
@@ -516,9 +529,8 @@ type render_ctx = {
   (* The scopes printing the declaration being written has entered inside
      the one it is written in, innermost first ({!Cpp_names.enter}). *)
   rc_frame : Cpp_resolution.frame;
-  (* The names of the declaration of the tree being written, resolved before
-     it is printed; none where what is written is no such declaration. *)
-  rc_names : Cpp_resolution.table option;
+  (* What the names written here are read off. *)
+  rc_names : naming;
   (* The scopes whose names are visible where the printer is, innermost
      first: the planned visibility of what is being written, with a layer
      for each scope printing has entered that declares names; none where
@@ -542,10 +554,10 @@ let file_start rc_file =
     rc_in_template = false;
     rc_module = None;
     rc_frame = [];
-    rc_names = None;
+    rc_names = No_names;
     rc_visibility = None;
     rc_aliases = None;
-    rc_tyctors = Decided_here;
+    rc_tyctors = Unplanned;
   }
 
 (** The modules whose module types are file-scope concepts of a functor

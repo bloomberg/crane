@@ -210,7 +210,7 @@ val forward_declarations :
     template template argument but has no template name of its own: an alias
     template, or a holder -- a struct over the enclosing declaration's
     parameters the body names, with the alias as its member [c]. *)
-type ctor_alias = Cpp_state.ctor_alias = private {
+type ctor_alias = Cpp_state.ctor_alias = {
   ca_base : string;  (** What its name is made from. *)
   ca_holder : bool;
   ca_declared : Cpp_ast.declared_in;  (** Where it is declared. *)
@@ -262,9 +262,20 @@ val ctor_alias_name : ctor_alias -> string
     declared where it is ({!Cpp_ast.Template_in}). *)
 val ctor_alias_declaration : ctor_alias -> Cpp_ast.t
 
-(** The position a template declared where the second argument says is
-    written at, in the file the first is written in ({!Cpp_ast.Template_in}). *)
-val ctor_alias_render_ctx : Cpp_state.render_ctx -> Cpp_ast.declared_in -> Cpp_state.render_ctx
+(** What a synthesised template's body is decided from.  [tyctor_constructor t]
+    is the constructor a type constructor position writes; [cut_at_argument_list s]
+    is [s] up to its first template argument list; [identifier_tokens s] the
+    identifiers [s] writes, as whole tokens; [applied_to_sentinel_alone ctx t]
+    whether [t], a constructor applied to the sentinel, is written as a
+    template name applied to it alone, read off its structure, if that says;
+    [foreign_text fr] the text an instantiated mapping was instantiated
+    from. *)
+val tyctor_constructor : cpp_type -> cpp_type
+val cut_at_argument_list : string -> string
+val identifier_tokens : string -> string list
+val applied_to_sentinel_alone : Cpp_state.render_ctx -> cpp_type -> bool option
+val foreign_text : foreign -> string
+val ctor_alias_tvar : string
 
 (** The templates the file [file] declares, each once, in the order
     planned: the aliases it writes, and, in the header, every holder the

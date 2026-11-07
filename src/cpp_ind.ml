@@ -1257,7 +1257,7 @@ let spelling_position ~file spelling =
           ++ str ", which it does not write.")
   (* A synthesised template is written where it is declared, whatever is
      around it. *)
-  | _, Template_in declared -> Cpp_print.ctor_alias_render_ctx (file_start file) declared
+  | _, Template_in declared -> Cpp_leaf_plan.ctor_alias_render_ctx (file_start file) declared
 
 (* [k] of the position of [spelling] in [file]. *)
 let at_spelling ~file spelling k = k (spelling_position ~file spelling)
