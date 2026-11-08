@@ -166,7 +166,7 @@ val nspace_wrapper_name : Cpp_state.render_ctx -> GlobRef.t -> string
     parameters the body names, with the alias as its member [c]. *)
 type ctor_alias = Cpp_state.ctor_alias = {
   ca_base : string;  (** What its name is made from. *)
-  ca_holder : bool;
+  ca_holder : Cpp_state.holder_parameter list option;  (** A holder's parameters. *)
   ca_declared : Cpp_ast.declared_in;  (** Where it is declared. *)
   ca_body : string;
       (** The type it abbreviates, as written where it is declared. *)
@@ -177,6 +177,16 @@ type ctor_alias = Cpp_state.ctor_alias = {
 
 (** The name of a template, a function of its body. *)
 val ctor_alias_name : ctor_alias -> string
+
+(** How the type constructor given, naming the variables given by index, is
+    written at the position given: as the plan of the leaf being printed
+    says, or as planning, deciding it there, decides and notes. *)
+val tyctor_written : Cpp_state.render_ctx -> Id.t list -> cpp_type -> (ctor_alias * string list) option
+
+(** The template given, spelled at the position given: collected where the
+    position collects them, and otherwise, under [CRANE_CHECK_IR], noted as
+    spelled in the file. *)
+val note_ctor_alias_spelled : Cpp_state.render_ctx -> ctor_alias -> unit
 
 (** What a synthesised template's body is decided from.  [tyctor_constructor t]
     is the constructor a type constructor position writes; [cut_at_argument_list s]

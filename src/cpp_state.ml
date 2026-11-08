@@ -462,12 +462,18 @@ let sig_preamble _ comment used_modules _usf =
     first spelled it sees them. *)
 type declared_in = In_struct_of of ModPath.t | At_namespace_scope of ModPath.t list
 
+(** A parameter of a holder ({!ctor_alias}), as its body writes it: a
+    captured variable written applied to the alias's own argument, a type
+    constructor ([template <typename> class F0]); one written bare, or a
+    class instance the body reads a type out of, a type ([typename P1]). *)
+type holder_parameter = Constructor_parameter of Names.Id.t | Type_parameter of Names.Id.t
+
 (** A template synthesised for a type constructor with no template name of
     its own, where it is spelled as a template template argument
     ({!Cpp_leaf_plan.ctor_alias_at}). *)
 type ctor_alias = {
   ca_base : string;  (** What its name is made from. *)
-  ca_holder : bool;
+  ca_holder : holder_parameter list option;
   ca_declared : declared_in;  (** Where it is declared ({!Cpp_leaf_plan.ctor_alias_declared}). *)
   ca_body : string;
       (** The type it abbreviates, as written where it is declared, with the

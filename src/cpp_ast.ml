@@ -13,6 +13,8 @@ end
 
 type declared_in = Cpp_state.declared_in = In_struct_of of ModPath.t | At_namespace_scope of ModPath.t list
 
+type holder_parameter = Cpp_state.holder_parameter = Constructor_parameter of Id.t | Type_parameter of Id.t
+
 type spelling = Element_of of ModPath.t | Member_of of ModPath.t | Template_in of declared_in
 
 type resolution = Unresolved | Resolved of Cpp_name.t
@@ -62,7 +64,7 @@ type declaration =
 
 and synthesised = {
   name : string;
-  holder : bool;
+  holder : holder_parameter list option;
   declared_in : declared_in;
   body : Minicpp.cpp_type;
   vars : Id.t list;

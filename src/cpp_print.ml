@@ -251,7 +251,7 @@ let ctor_alias_tvar = Minicpp.ctor_alias_tvar
     share one holder. *)
 type ctor_alias = Cpp_state.ctor_alias = {
   ca_base : string;  (** What its name is made from. *)
-  ca_holder : bool;
+  ca_holder : Cpp_state.holder_parameter list option;  (** A holder's parameters, where it is one. *)
   ca_declared : Cpp_ast.declared_in;  (** Where it is declared ({!Cpp_leaf_plan.ctor_alias_declared}). *)
   ca_body : string;
       (** The type it abbreviates, as written where it is declared, with the
@@ -294,7 +294,7 @@ let take_ctor_aliases_spelled () =
     declared, with the holder's own parameters for what it captures, so the
     digest is over text that is already canonical. *)
 let ctor_alias_name a =
-  let kind = if a.ca_holder then "_tch_" else "_tc_" in
+  let kind = if Option.has_some a.ca_holder then "_tch_" else "_tc_" in
   a.ca_base ^ kind ^ String.sub (Digest.to_hex (Digest.string a.ca_body)) 0 16
 
 (* The primitive integer type, found by what it is registered as: its short
@@ -847,7 +847,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
     | Some (alias, args) ->
       note_ctor_alias_spelled ctx alias;
       let name = ctor_alias_name alias in
-      if alias.ca_holder then (str (name ^ "<" ^ String.concat ", " args ^ ">::template c"), true)
+      if Option.has_some alias.ca_holder then (str (name ^ "<" ^ String.concat ", " args ^ ">::template c"), true)
       else (str name, false)
     | None -> (
       match t with
@@ -3299,28 +3299,34 @@ let pp_derived_functor ctx template name (base : Cpp_ast.module_expr) =
   pp_template_head ctx template ++ str "struct " ++ pp_declared_module ctx name ++ str " : " ++ base ++ str " {};"
 
 (* The declaration of a synthesised template, its body written where it is
-   declared, which is where it is printed.  A holder's parameters are the
-   captured names its body writes: one written applied to the alias's own
-   argument is a type constructor ([CraneFk]), one written bare a type
-   ([CranePk]), a plain family the declaration deapplied. *)
+   declared, which is where it is printed, a holder's parameters as planned
+   ({!Cpp_state.holder_parameter}). *)
 let pp_synthesised ctx (s : Cpp_ast.synthesised) =
   let body = Pp.string_of_ppcmds (pp_cpp_type ctx false s.vars s.body) in
   if Probe.checking () && not (String.equal body s.planned) then
     Probe.violation "constructor aliases"
       (str "the template " ++ str s.name ++ str " is declared with the body " ++ str body ++ str ", planned as "
      ++ str s.planned );
-  if not s.holder then
-    str "template <typename " ++ str ctor_alias_tvar ++ str "> using " ++ str s.name ++ str " = " ++ str body ++ str ";"
-  else
-    let names = identifier_tokens body in
-    let rec params i =
-      let f = Id.to_string (Generated_name.indexed "F" i) and p = Id.to_string (Generated_name.indexed "P" i) in
-      if List.mem f names then (str "template <typename> class " ++ str f) :: params (i + 1)
-      else if List.mem p names then (str "typename " ++ str p) :: params (i + 1)
-      else []
+  match s.holder with
+  | None -> str "template <typename " ++ str ctor_alias_tvar ++ str "> using " ++ str s.name ++ str " = " ++ str body ++ str ";"
+  | Some params ->
+    (if Probe.checking () then
+       let names = identifier_tokens body in
+       let rec read i =
+         let f = Generated_name.indexed "F" i and p = Generated_name.indexed "P" i in
+         if List.mem (Id.to_string f) names then Cpp_ast.Constructor_parameter f :: read (i + 1)
+         else if List.mem (Id.to_string p) names then Cpp_ast.Type_parameter p :: read (i + 1)
+         else []
+       in
+       if read 0 <> params then
+         Probe.violation "holder parameters"
+           (str "the holder " ++ str s.name ++ str " writes other parameters in its body than were planned for it"));
+    let param : Cpp_ast.holder_parameter -> _ = function
+      | Constructor_parameter f -> str "template <typename> class " ++ Id.print f
+      | Type_parameter p -> str "typename " ++ Id.print p
     in
     str "template <"
-    ++ prlist_with_sep (fun () -> str ", ") (fun p -> p) (params 0)
+    ++ prlist_with_sep (fun () -> str ", ") param params
     ++ str "> struct " ++ str s.name ++ str " { template <typename " ++ str ctor_alias_tvar ++ str "> using c = " ++ str body
     ++ str "; };"
 

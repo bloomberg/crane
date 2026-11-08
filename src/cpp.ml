@@ -3591,7 +3591,7 @@ let do_struct_with_decl_tracking ~is_header f s =
       (fun a ->
         { Cpp_ast.name = ctor_alias_name a;
           homed = (match a.ca_declared with In_struct_of _ -> true | At_namespace_scope _ -> false);
-          holder = a.ca_holder;
+          holder = Option.has_some a.ca_holder;
           declaration = Cpp_leaf_plan.ctor_alias_declaration a } )
       (Cpp_leaf_plan.ctor_aliases_declared_in ~file:(if is_header then Common.Intf else Common.Impl))
   in

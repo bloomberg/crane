@@ -7,9 +7,11 @@
 
     These are planning's questions about a declaration, not the printer's:
     {!Cpp_print} prints a leaf from what this module decided.  Planning the
-    templates spells types to find them, with the printer's own spelling,
-    the names it writes resolved first; under [CRANE_CHECK_IR] a printed
-    leaf is checked to need, and write, what was planned for it. *)
+    templates walks the type constructors a declaration writes and decides
+    each, without rendering it; a template's body is rendered once its own
+    type constructors are decided, for the text its name digests.  Under
+    [CRANE_CHECK_IR] a printed leaf is checked to need, and write, what was
+    planned for it. *)
 
 open Names
 open Minicpp
@@ -109,8 +111,8 @@ let ctor_aliases_declared_in ~file =
   let declared =
     match (!ctor_alias_plan, file) with
     | None, _ -> []
-    | Some plan, Common.Intf -> plan.intf @ List.filter (fun a -> a.ca_holder) plan.impl
-    | Some plan, Common.Impl -> List.filter (fun a -> not a.ca_holder) plan.impl
+    | Some plan, Common.Intf -> plan.intf @ List.filter (fun a -> Option.has_some a.ca_holder) plan.impl
+    | Some plan, Common.Impl -> List.filter (fun a -> Option.is_empty a.ca_holder) plan.impl
   in
   List.fold_left
     (fun acc a ->
@@ -157,7 +159,7 @@ let check_ctor_alias_plan ~file =
     in
     let spelled = take_ctor_aliases_spelled () in
     let describe a =
-      Printf.sprintf "%s %s%s" (if a.ca_holder then "holder" else "alias") a.ca_body
+      Printf.sprintf "%s %s%s" (if Option.has_some a.ca_holder then "holder" else "alias") a.ca_body
         (match a.ca_declared with In_struct_of mp -> " in " ^ ModPath.to_string mp | At_namespace_scope _ -> "")
     in
     let missing l l' = List.filter (fun a -> not (List.mem a l')) l in
@@ -355,6 +357,31 @@ let forward_declarations ctx ~module_ env (d : Cpp_erasure.settled) =
           fwd_tree = Cpp_ast.elements ~source:module_ (Cpp_ast.forward_declaration env defined);
           fwd_constrained = constrained ctx defined } )
       (structs_defined d)
+
+(* What writing the type constructor [x] -- a template template argument,
+   naming the variables [vl] by index -- at [ctx] decides, without writing
+   it: how it is written, decided there and noted ({!Cpp_print.tyctor_written}),
+   the template synthesised for it collected where [ctx] collects them
+   ({!Cpp_print.note_ctor_alias_spelled}); and, where it is written through
+   its own head instead, the same for each type constructor that head
+   writes.  A mapped or global head applied to arguments is written alone
+   (its leading text, its bare name); a dependent member through its
+   qualifier; anything else as its head, which is what its rendering up to
+   its argument list writes. *)
+let rec tyctor_spelled ctx vl x =
+  let c = tyctor_constructor x in
+  match tyctor_written ctx vl c with
+  | Some (alias, _) -> note_ctor_alias_spelled ctx alias
+  | None -> (
+    match c with
+    | Tglob (_, _ :: _, _) | Tforeign {fr_types = _ :: _; _} -> ()
+    | Tqualified (base, _) -> tyctors_spelled ctx vl base
+    | _ -> tyctors_spelled ctx vl c )
+
+(* {!tyctor_spelled} at each type constructor writing [t] writes, in the
+   order demands find them ({!Cpp_demands.tyctors_of_type}). *)
+and tyctors_spelled ctx vl t =
+  Cpp_demands.tyctors_of_type (fun ~vl ~owner:_ t -> match t with Ttyctor x -> tyctor_spelled ctx vl x | _ -> ()) ~vl t
 
 (* [ctx], naming what writing [t] there names as resolved there. *)
 let resolved_for ctx t =
@@ -594,7 +621,7 @@ and ctor_alias_of_probe ctx vl ~base probe =
     | [], [] ->
       Some
         ( { ca_base = base;
-            ca_holder = false;
+            ca_holder = None;
             ca_declared = declared_in;
             ca_body = rendered;
             ca_type = probe;
@@ -622,8 +649,14 @@ and ctor_alias_of_probe ctx vl ~base probe =
           probe
       in
       let body, uses = render renamed in
+      let params =
+        List.map
+          (fun (i, name) -> if List.mem i bare_vars then Cpp_ast.Type_parameter name else Constructor_parameter name)
+          var_names
+        @ List.map (fun (_, name) -> Cpp_ast.Type_parameter name) instance_names
+      in
       Some
-        ( {ca_base = base; ca_holder = true; ca_declared = declared_in; ca_body = body; ca_type = renamed; ca_vars = vl; ca_uses = uses},
+        ( {ca_base = base; ca_holder = Some params; ca_declared = declared_in; ca_body = body; ca_type = renamed; ca_vars = vl; ca_uses = uses},
           List.map (fun (_, v) -> written_var v) vars @ List.map Id.to_string instances )
 
 (** [t] as the type constructors in it are written at [ctx]: decided there
@@ -631,30 +664,57 @@ and ctor_alias_of_probe ctx vl ~base probe =
 and deciding ctx noted = {ctx with rc_tyctors = Deciding {decide = ctor_alias_at; noted}}
 
 (** The body [t] of a synthesised template, naming the variables [vl] by
-    index, written at [at], where the template is declared: its names
-    resolved there first, and how it writes the type constructors in it,
-    in the order written. *)
+    index, written at [at], where the template is declared: how it writes
+    the type constructors in it, decided there first ({!tyctors_spelled}),
+    and the text, its names resolved there, which is the template's name's
+    digest.  Under [CRANE_CHECK_IR], deciding them by rendering the body,
+    as planning did before, must decide the same. *)
 and written_body at vl t =
   let noted = ref [] in
-  let body = Pp.string_of_ppcmds (pp_cpp_type_at (deciding (resolved_for at t) noted) false vl t) in
-  (body, !noted)
+  let found_before = Option.map ( ! ) at.rc_aliases in
+  tyctors_spelled (deciding at noted) vl t;
+  let uses = !noted in
+  let body = Pp.string_of_ppcmds (pp_cpp_type_at {(resolved_for at t) with rc_tyctors = Planned uses} false vl t) in
+  ( if Probe.checking () then
+      let noted' = ref [] in
+      let at' = {at with rc_aliases = Option.map ref found_before} in
+      let body' = Pp.string_of_ppcmds (pp_cpp_type_at (deciding (resolved_for at' t) noted') false vl t) in
+      if (not (String.equal body body')) || compare !noted' uses <> 0
+         || compare (Option.map ( ! ) at'.rc_aliases) (Option.map ( ! ) at.rc_aliases) <> 0
+      then
+        Probe.violation "structural spelling"
+          (Pp.str ("the body " ^ body ^ " decides other type constructors than rendering it does")) );
+  (body, uses)
 
 (** The synthesised templates spelled at the position [ctx] at the type
     constructors [visit] calls its argument at, in the order spelled -- one
-    written in another's body ahead of it -- each spelled as the printer
-    spells it there, inside the struct of the inductive whose members are
-    written around it, if any ({!Cpp_resolution.Inductive_struct}); and how
-    each type constructor is written, in the order first spelled.  Each is
-    spelled with the names it writes resolved there first. *)
+    written in another's body ahead of it -- each decided there without
+    writing it ({!tyctor_spelled}), inside the struct of the inductive whose
+    members are written around it, if any ({!Cpp_resolution.Inductive_struct});
+    and how each type constructor is written, in the order first spelled.
+    Under [CRANE_CHECK_IR], rendering each, as planning did before, must
+    decide the same. *)
 let ctor_aliases_found ctx visit =
   let found = ref [] and noted = ref [] in
   let ctx = deciding {ctx with rc_aliases = Some found} noted in
   visit (fun ~vl ~owner t ->
       match t with
-      | Ttyctor _ ->
-        let spell ctx = ignore (pp_cpp_type_at (resolved_for ctx t) false vl t) in
+      | Ttyctor x ->
+        let spell ctx = tyctor_spelled ctx vl x in
         ( match owner with Some r -> enter_from ctx (Inductive_struct r) spell | None -> spell ctx )
       | _ -> () );
+  ( if Probe.checking () then
+      let found' = ref [] and noted' = ref [] in
+      let ctx' = deciding {ctx with rc_aliases = Some found'} noted' in
+      visit (fun ~vl ~owner t ->
+          match t with
+          | Ttyctor _ ->
+            let spell ctx = ignore (pp_cpp_type_at (resolved_for ctx t) false vl t) in
+            ( match owner with Some r -> enter_from ctx' (Inductive_struct r) spell | None -> spell ctx' )
+          | _ -> () );
+      if compare !found' !found <> 0 || compare !noted' !noted <> 0 then
+        Probe.violation "structural spelling"
+          (Pp.str "a declaration decides other type constructors than rendering them does") );
   (!found, !noted)
 
 let ctor_aliases_written ctx (d : Cpp_erasure.settled) =

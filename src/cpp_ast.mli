@@ -46,6 +46,9 @@ end
     it. *)
 type declared_in = Cpp_state.declared_in = In_struct_of of ModPath.t | At_namespace_scope of ModPath.t list
 
+(** A holder's parameter ({!Cpp_state.holder_parameter}). *)
+type holder_parameter = Cpp_state.holder_parameter = Constructor_parameter of Id.t | Type_parameter of Id.t
+
 (** How a declaration not yet printed is spelled, which is what printing it
     reads off where the tree puts it. *)
 type spelling =
@@ -181,7 +184,7 @@ type declaration =
     an alias. *)
 and synthesised = {
   name : string;
-  holder : bool;
+  holder : holder_parameter list option;  (** A holder's parameters, where it is one. *)
   declared_in : declared_in;
   body : Minicpp.cpp_type;  (** The type it abbreviates, its own parameter the sentinel. *)
   vars : Id.t list;  (** The names of the type variables [body] names by index. *)
