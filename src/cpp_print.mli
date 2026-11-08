@@ -31,14 +31,6 @@ val absorbing_at :
   Cpp_erasure.settled ->
   Cpp_ast.t
 
-(** The head of every global type in a type. *)
-val type_heads : cpp_type -> GlobRef.t list
-
-(** The globals a declaration's printing writes beside those it holds: a
-    template template argument's head, the primitive integer type, the
-    custom a custom match or a block custom is written from. *)
-val globals_written_beside : cpp_decl -> GlobRef.t list
-
 (** {!pp_cpp_type} at the position given. *)
 val pp_cpp_type_at : Cpp_state.render_ctx -> bool -> Id.t list -> cpp_type -> Pp.t
 
@@ -64,19 +56,6 @@ val resolved_concept : Cpp_state.render_ctx -> Cpp_ast.concept_ref -> Cpp_name.t
     anomaly. *)
 val name_in : Cpp_state.render_ctx -> Cpp_resolution.table -> Cpp_resolution.frame -> Cpp_resolution.key -> Cpp_name.t
 
-(** Whether [d] is an assertion the struct being written holds back until
-    after it, writing nothing for it here. *)
-val is_held_back_assertion : Cpp_state.render_ctx -> Cpp_erasure.settled -> bool
-
-(** Whether a function declaration writes a qualifier into a struct or a
-    template parameter, in its name, result or parameters, asked of the
-    declaration rather than of its rendering: each name is the one
-    {!pp_cpp_type} writes, from the same heads, at the position given, of
-    the names [names] as {!print_unprinted} reads them.  [None] for anything but
-    a function declaration, and where only the rendering can tell -- an
-    expression's type, a type constructor named as a template argument. *)
-val resolved_names_into_a_struct : Cpp_state.render_ctx -> Cpp_resolution.table -> Cpp_erasure.settled -> bool option
-
 (** The text of a declaration not yet printed, printed at the position its
     spelling enters, a module type's concept by [modtype_concept] and an
     assertion by [assertion], from the names resolved for it. *)
@@ -92,13 +71,6 @@ val print_unprinted :
   assertion:(Cpp_state.render_ctx -> Cpp_ast.assertion -> Pp.t) ->
   Cpp_ast.unprinted ->
   Pp.t
-
-(** [stand_ins t] is, for each type the declarations of [t] declare, a
-    member alias of it ({!Cpp_ast.global_alias}): what a struct holds in
-    place of [t] once [t] is moved out of it to namespace scope.  Only an
-    alias's name and an enum's are spelled the way a reference to them is,
-    so only those are stood in for. *)
-val stand_ins : Cpp_ast.t -> Cpp_ast.t list
 
 (** [read_cpp_decl ctx env decl] renders [decl] at the position [ctx]: for
     a declaration whose text is read, not written. *)
@@ -126,22 +98,58 @@ val pp_type : Cpp_state.render_ctx -> cpp_type -> Pp.t
     about to be embedded in a longer one. *)
 val pp_cpp_type : ?lead:bool -> bool -> Id.t list -> cpp_type -> Pp.t
 
-(** Whether one thing a rendering writes ({!Cpp_name.written}) is a
-    qualifier naming into a struct or a template parameter rather than a
-    namespace: a tagged scope by its kind, untagged text by the identifier in
-    front of each [::], which passes only as an included library's
-    namespace. *)
-val writes_into_a_struct : Cpp_name.written -> bool
-
-(** Whether a declaration, written as a member of a struct body, is a static
-    function declaration ending at its semicolon. *)
-val is_static_member_declaration : cpp_decl -> bool
-
 (** Doc-comment lines for [name], or nothing when none is registered. *)
 val pp_doc_comment_for_name : ?indent:string -> string -> Pp.t
 
 (** The break between two declaration groups ({!Cpp_ast.cut2}). *)
 val cut2 : unit -> Pp.t
+
+(** {2 The printer's spelling, as planning asks it}
+
+    Planning's questions about what a declaration writes
+    ({!Cpp_leaf_plan.declaration_names_into_a_struct},
+    {!Cpp_leaf_plan.file_scope_types}) are asked of the same heads and names
+    the printer writes, not of a rendering. *)
+
+(** A type's name as the type printer writes it: the qualifiers in front of
+    it, the name itself, whether a dependent qualifier in it asks for
+    [typename], and whether template arguments following it need the
+    [template] disambiguator. *)
+type written_head = {
+  outer : Cpp_name.scope list;
+  head : Cpp_name.t;
+  typename : bool;
+  template_keyword : bool;
+}
+
+(** A name written with nothing in front of it. *)
+val unqualified_head : Cpp_name.t -> written_head
+
+(** The head of a global type no custom mapping inlines, at the position,
+    [applied] when template arguments follow it. *)
+val glob_head : Cpp_state.render_ctx -> GlobRef.t -> applied:bool -> written_head
+
+(** The head of an inductive written through the struct it is declared in. *)
+val inductive_head : Cpp_state.render_ctx -> GlobRef.t -> applied:bool -> written_head
+
+(** The qualifiers a member of the struct being defined out of line is
+    written with when named outside that struct's body, or [None] where it
+    is written bare. *)
+val member_scopes : Cpp_state.render_ctx -> Id.t -> Cpp_name.scope list option
+
+(** The spelling of an external type's name. *)
+val external_type_name : string -> string
+
+(** The primitive integer type, if registered: what a literal of it is
+    written through. *)
+val uint63_type : unit -> GlobRef.t option
+
+(** The type name a declaration introduces at the position, for the shapes
+    whose spelling is settled by the declaration. *)
+val decl_type_name : Cpp_state.render_ctx -> cpp_decl -> Pp.t option
+
+(** The name the struct of the inductive is defined under. *)
+val struct_definition_name : Cpp_state.render_ctx -> GlobRef.t -> Pp.t
 
 (** {2 Custom type templates} *)
 
@@ -191,15 +199,11 @@ val note_ctor_alias_spelled : Cpp_state.render_ctx -> ctor_alias -> unit
 (** What a synthesised template's body is decided from.  [tyctor_constructor t]
     is the constructor a type constructor position writes; [cut_at_argument_list s]
     is [s] up to its first template argument list; [identifier_tokens s] the
-    identifiers [s] writes, as whole tokens; [applied_to_sentinel_alone ctx t]
-    whether [t], a constructor applied to the sentinel, is written as a
-    template name applied to it alone, read off its structure, if that says;
-    [foreign_text fr] the text an instantiated mapping was instantiated
-    from. *)
+    identifiers [s] writes, as whole tokens; [foreign_text fr] the text an
+    instantiated mapping was instantiated from. *)
 val tyctor_constructor : cpp_type -> cpp_type
 val cut_at_argument_list : string -> string
 val identifier_tokens : string -> string list
-val applied_to_sentinel_alone : Cpp_state.render_ctx -> cpp_type -> bool option
 val foreign_text : foreign -> string
 val ctor_alias_tvar : string
 
@@ -211,10 +215,6 @@ val start_ctor_alias_census : unit -> unit
     them since {!start_ctor_alias_census}, under [CRANE_CHECK_IR]; starts
     the census again. *)
 val take_ctor_aliases_spelled : unit -> ctor_alias list
-
-(** The type names a declaration written at namespace scope, at the
-    position given, introduces there, as they are written. *)
-val file_scope_types : Cpp_state.render_ctx -> Cpp_erasure.settled -> string list
 
 (** Under [CRANE_CHECK_IR], start recording the type names the file about
     to be written introduces at file scope. *)

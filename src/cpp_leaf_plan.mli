@@ -32,9 +32,51 @@ type ctor_aliases_read = {
 val read_decl : Cpp_state.render_ctx -> Common.env -> Cpp_erasure.settled -> Pp.t
 
 (** The type names the declaration, written at namespace scope at the
-    position, introduces there ({!Cpp_print.file_scope_types}), what they
-    name resolved there first. *)
+    position, introduces there, as the printer writes them, what they name
+    resolved there first: its own, through a template head and an anonymous
+    namespace, and a struct's -- but not those of what a wrapper struct
+    holds, which are its members. *)
 val file_scope_types : Cpp_state.render_ctx -> Cpp_erasure.settled -> string list
+
+(** The head of every global type in a type. *)
+val type_heads : cpp_type -> GlobRef.t list
+
+(** The globals a declaration's printing writes beside those it holds: a
+    template template argument's head, the primitive integer type, the
+    custom a custom match or a block custom is written from. *)
+val globals_written_beside : cpp_decl -> GlobRef.t list
+
+(** Whether [d] is an assertion the struct being written holds back until
+    after it, writing nothing for it here. *)
+val is_held_back_assertion : Cpp_state.render_ctx -> Cpp_erasure.settled -> bool
+
+(** Whether a function declaration writes a qualifier into a struct or a
+    template parameter, in its name, result or parameters, asked of the
+    declaration rather than of its rendering: each name is the one
+    {!Cpp_print.pp_cpp_type} writes, from the same heads, at the position
+    given, of the names [names] as {!Cpp_print.print_unprinted} reads them.
+    [None] for anything but a function declaration, and where only the
+    rendering can tell -- an expression's type, a type constructor named as
+    a template argument. *)
+val resolved_names_into_a_struct : Cpp_state.render_ctx -> Cpp_resolution.table -> Cpp_erasure.settled -> bool option
+
+(** Whether one thing a rendering writes ({!Cpp_name.written}) is a
+    qualifier naming into a struct or a template parameter rather than a
+    namespace: a tagged scope by its kind, untagged text by the identifier in
+    front of each [::], which passes only as an included library's
+    namespace. *)
+val writes_into_a_struct : Cpp_name.written -> bool
+
+(** Whether a declaration, written as a member of a struct body, is a static
+    function declaration ending at its semicolon. *)
+val is_static_member_declaration : cpp_decl -> bool
+
+(** [stand_ins t] is, for each type the declarations of [t] declare, a
+    member alias of it ({!Cpp_ast.global_alias}): what a struct holds in
+    place of [t] once [t] is moved out of it to namespace scope.  Only an
+    alias's name and an enum's are spelled the way a reference to them is,
+    so only those are stood in for. *)
+val stand_ins : Cpp_ast.t -> Cpp_ast.t list
 
 (** The names of the wrapper structs the declaration writes around
     something other than a sole struct merged into them, in the order it

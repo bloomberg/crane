@@ -1289,7 +1289,7 @@ let resolve ~file = Cpp_ast.resolve ~requested ~resolve:(resolver_at ~file) ~res
 
 let names_into_a_struct_as_written ~file spelling settled =
   let names = Cpp_resolution.resolve (resolver_at ~file spelling) (requested (Declaration {env = empty_env (); settled})) in
-  at_spelling ~file spelling (fun ctx -> Cpp_print.resolved_names_into_a_struct ctx names settled)
+  at_spelling ~file spelling (fun ctx -> Cpp_leaf_plan.resolved_names_into_a_struct ctx names settled)
 
 let write_unprinted ~file spelling u =
   at_spelling ~file spelling (fun ctx ->

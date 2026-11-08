@@ -144,7 +144,7 @@ let rec lifted_decl_key = function
 (** Whether a rendering writes a qualifier into a struct or a template
     parameter, read from the kinds its names were tagged with as they were
     written ({!Cpp_name.written}). *)
-let names_into_a_struct (doc : Pp.t) : bool = List.exists writes_into_a_struct (Cpp_name.written doc)
+let names_into_a_struct (doc : Pp.t) : bool = List.exists Cpp_leaf_plan.writes_into_a_struct (Cpp_name.written doc)
 
 (** Whether [spec] may be emitted at the top of the file, above every
     definition in it.
@@ -158,7 +158,7 @@ let names_into_a_struct (doc : Pp.t) : bool = List.exists writes_into_a_struct (
 
     The question is about what is written, and is asked of the declaration's
     types through the heads the type printer writes them with
-    ({!Cpp_print.resolved_names_into_a_struct}), each qualifier with what it
+    ({!Cpp_leaf_plan.resolved_names_into_a_struct}), each qualifier with what it
     is.  The IR node alone cannot answer: [Nat] and [List::list] are both
     [Tnamespace], which means "an inductive's own scope", not "inside a module
     struct".  Nor can the tables behind the printer, taken one at a time --
@@ -584,7 +584,7 @@ let unenclosed_element enclosure ?fields body =
     assertion held back, which is nothing here: it is written after the
     struct holding it back ({!Cpp_leaf_plan.held_back_assertions}). *)
 let element_decl ~module_ ~homed ctx env d =
-  if Cpp_print.is_held_back_assertion ctx d then Cpp_ast.empty
+  if Cpp_leaf_plan.is_held_back_assertion ctx d then Cpp_ast.empty
   else if Cpp_leaf_plan.absorbs ~homed d then Cpp_leaf_plan.write_absorbing ctx ~homed env d
   else Cpp_leaf_plan.unprinted ctx ~module_ env d
 
@@ -1952,7 +1952,7 @@ let plan_file_layout s =
     && module_members_name_only_inductives sel
     && Option.cata
          (List.for_all (fun (d : Cpp_erasure.settled) ->
-              is_static_member_declaration (d :> cpp_decl)
+              Cpp_leaf_plan.is_static_member_declaration (d :> cpp_decl)
               && Cpp_ind.names_into_a_struct_as_written ~file:Intf (Member_of mp) d = Some false ) )
          false
          (struct_members ~wrapper mp sel)
@@ -2933,7 +2933,7 @@ type wrapper_render = {
     An inductive a collision struct holds -- a top-level element of a file
     written inside one -- has no declaration outside the struct for the
     concepts to read, and so moves too, leaving a member alias behind
-    ({!Cpp_print.stand_ins}), as an alias does.  An enum is spelled bare
+    ({!Cpp_leaf_plan.stand_ins}), as an alias does.  An enum is spelled bare
     already; any other is planned at namespace scope with the move
     ({!plan_concept_prerequisites}), so that every reference spells it
     bare too, its own body's, the concept's and its members' out of line.
@@ -3307,7 +3307,7 @@ let do_struct_with_decl_tracking ~is_header f s =
       let moved = {nothing_moved with prereqs = [p]; concepts = c} in
       if not ctx.rc_in_struct then (Cpp_ast.empty, moved)
       else
-        let stand_ins = Cpp_print.stand_ins p in
+        let stand_ins = Cpp_leaf_plan.stand_ins p in
         if Probe.checking () && stand_ins = [] then
           Probe.violation "concept prerequisites"
             Pp.(

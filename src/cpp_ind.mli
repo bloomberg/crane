@@ -168,7 +168,7 @@ val resolve_tree : file:Common.file -> Cpp_ast.t -> Cpp_ast.t
     it: what a struct's head names is noted as written. *)
 val resolve : file:Common.file -> Cpp_ast.scheduled -> Cpp_ast.scheduled
 
-(** {!Cpp_print.resolved_names_into_a_struct} of a declaration as [file]
+(** {!Cpp_leaf_plan.resolved_names_into_a_struct} of a declaration as [file]
     writes it spelled [spelling]: at the position printing it is at, and of
     the names resolution settles there ({!resolver_at}), which are the ones
     printing it reads. *)
