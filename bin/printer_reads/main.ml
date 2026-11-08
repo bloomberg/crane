@@ -164,6 +164,12 @@ let () =
   match Sys.argv with
   | [|_; dir; root; target; value|] ->
     load dir root;
+    (* A value that does not exist is reached by nothing: say so, or a check
+       asking about a renamed value passes vacuously. *)
+    if not (List.mem (target, value) (Option.value ~default:[] (Hashtbl.find_opt defined target))) then begin
+      prerr_endline ("printer_reads: " ^ target ^ "." ^ value ^ " is not a top-level value in " ^ dir);
+      exit 2
+    end;
     frontier root (target, value)
   | [|_; dir; root; target|] ->
     load dir root;

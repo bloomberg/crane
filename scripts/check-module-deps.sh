@@ -45,7 +45,7 @@ rules=(
 # fourth argument, bin/printer_reads lists every edge by which the printer
 # reaches that value of Table, not one chain: all of them must go for the
 # read to.
-PRINTER_TABLE_CONFIGURATION="arena_header erase_fn_header escape_reserved_struct_name modular std_lib register_census modpath_of_r string_of_modfile base_mp at_toplevel"
+PRINTER_TABLE_CONFIGURATION="arena_header erase_fn_header escape_reserved_struct_name std_lib register_census modpath_of_r base_mp"
 # Facts the printer reads that planning should hand it: none left.
 PRINTER_TABLE_PENDING=""
 
@@ -66,6 +66,23 @@ done
 for r in $PRINTER_TABLE_PENDING $PRINTER_TABLE_CONFIGURATION; do
   if [[ $'\n'"$printer_reads"$'\n' != *$'\n'"$r"$'\n'* ]]; then
     echo "the printer no longer reads Table.$r: delete it from PRINTER_TABLE_PENDING or PRINTER_TABLE_CONFIGURATION"
+    status=1
+  fi
+done
+
+# The printer decides no name.  A module's or a global's C++ name is decided
+# the first time Common's renaming asks for it (mp_renaming_fun,
+# ref_renaming_fun), and the decision recorded (note_decided_while_emitting);
+# the printer reads names already decided -- resolved ones, or a decided
+# lookup such as Common.decided_module_name -- and reaches none of the three.
+for v in mp_renaming_fun ref_renaming_fun note_decided_while_emitting; do
+  deciding=$(./_build/default/bin/printer_reads/main.exe _build/default/src/.crane_plugin.objs/byte Cpp_print Common "$v") || {
+    echo "bin/printer_reads failed on Common.$v"
+    exit 1
+  }
+  if [[ -n "$deciding" ]]; then
+    echo "the printer reaches Common.$v, which decides a name, by:"
+    printf '%s\n' "$deciding" | sed 's/^/  /'
     status=1
   fi
 done

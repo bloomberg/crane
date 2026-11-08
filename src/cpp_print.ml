@@ -1371,8 +1371,7 @@ and pp_cpp_expr ctx env args t =
     in
     let struct_name =
       match id with
-      | GlobRef.IndRef _ when is_eponymous_record_cached id ->
-        Cpp_name.unqualified (Common.pp_type_name_capitalized id)
+      | GlobRef.IndRef _ when is_eponymous_record_cached id -> inductive_value ctx id
       | _ -> global_name ctx Type id
     in
     typename_prefix_for ctx struct_name

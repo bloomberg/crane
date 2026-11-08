@@ -1032,6 +1032,16 @@ let is_shadowed_global_name name r =
     not (List.exists (nested_struct_owner_covers r) owners)
   | None -> false
 
+(** The struct a bystander [mp] keeps inside its collision wrapper: its
+    module's name, which planning decided when it planned the wrapper
+    ({!Common.decided_module_name}).  Read, never decided: a name first
+    decided here would be decided by whatever wrote a reference first. *)
+let bystander_struct_name mp =
+  match Common.decided_module_name mp with
+  | Some name -> name
+  | None ->
+    CErrors.anomaly
+      Pp.(str "Crane: the struct of the bystander " ++ str (ModPath.to_string mp) ++ str " has no decided name.")
 
 (** The name [r], written [name] where its own module would write it, takes
     from outside a collision wrapper its module was put in.  Only constants
@@ -1059,7 +1069,7 @@ let wrapper_qualify (r : GlobRef.t) (name : Cpp_name.t) : Cpp_name.t =
     | None, _ | _, Cpp_name.Foreign _ -> name
     | Some (struct_name, role), Cpp_name.Name {scopes = []; base} ->
       let through_child =
-        if role = Module_plan.Bystander then [Cpp_name.Class (Common.emitted_module_name mp)]
+        if role = Module_plan.Bystander then [Cpp_name.Class (bystander_struct_name mp)]
         else []
       in
       Cpp_name.name (Cpp_name.Class struct_name :: through_child) base
