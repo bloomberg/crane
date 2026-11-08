@@ -17,6 +17,7 @@ type head_form = Glob_head | Inductive_head
 type key =
   | Module of ModPath.t
   | Module_declared of ModPath.t
+  | Module_in_expression of ModPath.t
   | Global of Common.kind * GlobRef.t
   | Unmapped of Common.kind * GlobRef.t
   | Inductive_value of GlobRef.t
@@ -42,6 +43,7 @@ let pp_key k =
   match k with
   | Module mp -> path "the module" mp
   | Module_declared mp -> path "the declared name of the module" mp
+  | Module_in_expression mp -> path "the module expression naming" mp
   | Global (_, r) -> global "the global" r
   | Unmapped (_, r) -> global "the unmapped global" r
   | Inductive_value r -> global "the value of the inductive" r
@@ -99,11 +101,13 @@ let compare_key a b =
     | Enumerator_qualifier _ -> 17
     | Read_by_a_function _ -> 18
     | Held_back_concept _ -> 19
+    | Module_in_expression _ -> 20
   in
   let global ka ra kb rb = match compare_kind ka kb with 0 -> GlobRef.UserOrd.compare ra rb | c -> c in
   match (a, b) with
   | Module a, Module b
   | Module_declared a, Module_declared b
+  | Module_in_expression a, Module_in_expression b
   | Modtype_concept a, Modtype_concept b
   | Modtype_concept_declared a, Modtype_concept_declared b ->
     ModPath.compare a b

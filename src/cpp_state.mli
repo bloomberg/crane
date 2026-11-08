@@ -475,11 +475,6 @@ val is_typeclass_instance : 'a -> Miniml.ml_type -> bool
 
 (** {2 Wrapper and scope tables} *)
 
-(** [wrapper_qualify_modname mp name] re-roots [name] at the wrapper struct
-    holding [mp], when [mp] is a bystander that struct nests under its own name.
-    The module-as-a-module counterpart of [wrapper_qualify]. *)
-val wrapper_qualify_modname : Names.ModPath.t -> string -> string
-
 (** Wrapper struct names that have pending declarations and therefore cannot be
     merged, with the module each wraps. Cleared by [reset_cpp_state]. *)
 val unmerged_wrappers : (string, Names.ModPath.t) Hashtbl.t

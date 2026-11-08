@@ -1112,26 +1112,6 @@ let wrapper_qualify (r : GlobRef.t) (name : Cpp_name.t) : Cpp_name.t =
       else Cpp_name.within (Cpp_name.Class struct_name) name
     | Some _, _ -> name )
 
-(** The name a module absorbed into a collision wrapper as a bystander is
-    spelled under, when it is named as a module rather than through one of its
-    members: the wrapper's name in front of its own, unless already there.
-
-    {!wrapper_qualify_name} answers the same question for a reference to a
-    member, and cannot answer this one -- a module is not a [GlobRef.t].  Only
-    bystanders: they are the ones the wrapper nests under their own name, so
-    that name is exactly what needs re-rooting.  A flattened child has no struct
-    to name, and an ordinary wrapper's children are spelled correctly already.
-
-    The resolution this rewrites is also what decides whether a template
-    argument needs [typename], and that decision is left alone: a bystander's
-    struct is a concrete one, never dependent. *)
-let wrapper_qualify_modname (mp : ModPath.t) (name : string) : string =
-  match Module_plan.wrapper mp with
-  | Some (struct_name, Module_plan.Bystander) ->
-    let prefix = struct_name ^ "::" in
-    if String.starts_with ~prefix name then name else prefix ^ name
-  | _ -> name
-
 (** The candidate a function the render meets is as a method of [epon_ref]
     ({!Method_registry.planned_candidate}). *)
 let planned_method_candidate epon_ref func_ref body ty =

@@ -82,11 +82,9 @@ PRINTER_PLAN_ALLOWED=(
   "Module_plan : is_namespace_scope_ref"
   "Scope_plan : of_declaration qualifier"
 )
-# A bystander module named in a module expression is qualified by its
-# collision wrapper where printed (Cpp_print.pp_module_name).
 PRINTER_PLAN_PENDING=(
-  "Cpp_state : wrapper_qualify_modname"
-  "Module_plan : wrapper"
+  "Cpp_state : "
+  "Module_plan : "
   "Scope_plan : "
 )
 for i in "${!PRINTER_PLAN_ALLOWED[@]}"; do

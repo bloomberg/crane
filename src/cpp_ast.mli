@@ -72,8 +72,10 @@ type spelling =
 type resolution = Unresolved | Resolved of Cpp_name.t
 
 (** A module a declaration names, by its path, and its name where the
-    declaration is written. *)
-type module_ref = {path : ModPath.t; name : resolution}
+    declaration is written; in a module expression, also as the expression
+    names it ({!Cpp_resolution.Module_in_expression}), resolved only
+    there. *)
+type module_ref = {path : ModPath.t; name : resolution; in_expression : resolution}
 
 (** A global a declaration names, and its name where the declaration is
     written. *)

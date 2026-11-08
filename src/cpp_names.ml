@@ -935,7 +935,7 @@ let modtype_concept_ref ctx v kn =
   | (MPfile _ | MPbound _), None -> Common.resolve_module_in v kn
 
 let file_named_by_key ~unit_files : Cpp_resolution.key -> ModPath.t option = function
-  | Module mp -> Common.file_of_module_named ~unit_files mp
+  | Module mp | Module_in_expression mp -> Common.file_of_module_named ~unit_files mp
   | Modtype_concept kn -> (
     match concept_scope_of kn with
     | Some {functor_; _} -> Common.file_of_module_named ~unit_files functor_
@@ -1116,6 +1116,20 @@ let rec live_name c (key : Cpp_resolution.key) =
   match key with
   | Module mp -> Common.resolve_module_in v mp
   | Module_declared mp -> Cpp_name.unqualified (module_declared_name mp)
+  | Module_in_expression mp -> (
+    (* The wrapper's name in front of the module's, unless already there.
+       Only a bystander: the wrapper nests it under its own name, so that
+       name is what needs re-rooting; a flattened child has no struct to
+       name, and an ordinary wrapper's children are spelled right already.
+       Whether an argument needs [typename] is decided on the module's own
+       name ({!Cpp_resolution.Module}): a bystander's struct is a concrete
+       one, never dependent. *)
+    let n = Common.resolve_module_in v mp in
+    match Module_plan.wrapper mp with
+    | Some (struct_name, Module_plan.Bystander)
+      when not (String.starts_with ~prefix:(struct_name ^ "::") (Cpp_name.to_string n)) ->
+      Cpp_name.within (Cpp_name.Class struct_name) n
+    | _ -> n )
   | Global (k, r) -> live_global_name ctx k r
   | Unmapped (k, r) -> Common.resolve_ref_name v k r
   | Inductive_value r -> inductive_value_name ctx v r

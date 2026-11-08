@@ -60,6 +60,10 @@ type key =
   | Module_declared of ModPath.t
       (** The name the module's struct, or the alias standing for it, is
           declared under. *)
+  | Module_in_expression of ModPath.t
+      (** The module as a module expression names it -- a functor applied,
+          its arguments, the base a functor derives from: a module absorbed
+          into a collision wrapper as a bystander through the wrapper. *)
   | Global of Common.kind * GlobRef.t
       (** The global: an inline custom mapping's text, or its name. *)
   | Unmapped of Common.kind * GlobRef.t

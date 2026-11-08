@@ -129,7 +129,9 @@ let () =
     ( match Cpp_ast.module_ (struct_named ~layout:One_line "s") one with
     | exception Invalid_argument _ -> true
     | _ -> false );
-  let resolved_module s : Cpp_ast.module_ref = {path = m; name = Resolved (Cpp_name.unqualified s)} in
+  let resolved_module s : Cpp_ast.module_ref =
+    {path = m; name = Resolved (Cpp_name.unqualified s); in_expression = Unresolved}
+  in
   let head =
     { Cpp_ast.template =
         [ Typename (Type_variable (Id.of_string "A"));

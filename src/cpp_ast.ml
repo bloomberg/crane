@@ -18,14 +18,14 @@ type holder_parameter = Cpp_state.holder_parameter = Constructor_parameter of Id
 type spelling = Element_of of ModPath.t | Member_of of ModPath.t | Template_in of declared_in
 
 type resolution = Unresolved | Resolved of Cpp_name.t
-type module_ref = {path : ModPath.t; name : resolution}
+type module_ref = {path : ModPath.t; name : resolution; in_expression : resolution}
 type global_ref = {global : GlobRef.t; name : resolution}
 
 type concept_ref = {module_type : ModPath.t; name : resolution}
 
 type declared_module = {declares : ModPath.t; name : resolution}
 
-let module_ref path = {path; name = Unresolved}
+let module_ref path = {path; name = Unresolved; in_expression = Unresolved}
 let global_ref global = {global; name = Unresolved}
 let concept_ref module_type = {module_type; name = Unresolved}
 let declared_module declares = {declares; name = Unresolved}
@@ -552,9 +552,10 @@ let resolve_declaration (resolve : resolver) declaration =
     | Module m -> Module (module_ref m)
     | Instance i -> Instance {i with instance = global_ref (fun r -> Global (Type, r)) i.instance}
   in
+  let in_expression m = {(module_ref m) with in_expression = Resolved (here (Module_in_expression m.path))} in
   let module_expr = function
-    | Module_named m -> Module_named (module_ref m)
-    | Applied {functor_; args} -> Applied {functor_ = module_ref functor_; args = List.map module_ref args}
+    | Module_named m -> Module_named (in_expression m)
+    | Applied {functor_; args} -> Applied {functor_ = in_expression functor_; args = List.map in_expression args}
   in
   match declaration with
   | Module_alias a -> Module_alias {name = resolve_declared_module here a.name; target = module_expr a.target}

@@ -2910,7 +2910,7 @@ let name_in ctx names frame key = name_from ctx names frame key
 (* A module named in a module expression, and its resolution. *)
 let pp_module_name ctx (m : Cpp_ast.module_ref) =
   let r = resolved_module ctx m in
-  (str (wrapper_qualify_modname m.path (resolved_string r)), r)
+  (str (Cpp_name.to_string (resolved ctx (Module_in_expression m.path) m.in_expression)), r)
 
 (* Inside a class template a qualified module is a dependent name: an
    argument is preceded by [typename], and a functor applied is named
