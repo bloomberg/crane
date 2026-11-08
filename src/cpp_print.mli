@@ -202,10 +202,6 @@ val start_ctor_alias_census : unit -> unit
     the census again. *)
 val take_ctor_aliases_spelled : unit -> ctor_alias list
 
-(** The type names the file being written introduces at file scope, as
-    planned: a definition written out of line leaves them unqualified. *)
-val file_scope_type_names : CString.Set.t ref
-
 (** The type names a declaration written at namespace scope, at the
     position given, introduces there, as they are written. *)
 val file_scope_types : Cpp_state.render_ctx -> Cpp_erasure.settled -> string list
@@ -214,6 +210,7 @@ val file_scope_types : Cpp_state.render_ctx -> Cpp_erasure.settled -> string lis
     to be written introduces at file scope. *)
 val start_file_scope_census : unit -> unit
 
-(** Under [CRANE_CHECK_IR], check those against {!file_scope_type_names}. *)
+(** Under [CRANE_CHECK_IR], check those against the ones planned
+    ({!Cpp_state.file_scope_types_of}). *)
 val check_file_scope_types : file:Common.file -> unit
 

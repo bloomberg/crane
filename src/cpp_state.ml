@@ -519,6 +519,13 @@ and tyctor_decision = {
   noted : tyctor_use list ref;
 }
 
+(** The out-of-line definition being written: the scope it is a member
+    of, and the type names its file declares at file scope. *)
+and out_of_line = {
+  ol_scope : Scope_plan.scope;
+  ol_file_scope_types : CString.Set.t;
+}
+
 (** Where in the output something is written or planned: a value, handed
     to whatever writes there and derived as each scope is entered.  No
     position is installed anywhere for a reader to find. *)
@@ -529,10 +536,11 @@ and render_ctx = {
   rc_in_struct : bool;
   (* TypeClass concepts already emitted for the current module? *)
   rc_concepts_hoisted : bool;
-  (* The scope of the out-of-line definition being printed, if one is: the
-     struct it is a member of, which a name written outside that struct's
-     body is qualified by.  Set by the definition, from its plan. *)
-  rc_scope : Scope_plan.scope option;
+  (* The out-of-line definition being printed, if one is: the struct it is
+     a member of, which a name written outside that struct's body is
+     qualified by, and the type names its file declares at file scope.  Set
+     by the definition, from the plans. *)
+  rc_scope : out_of_line option;
   (* Inside a template struct (functor)? Affects typename keyword insertion. *)
   rc_in_template : bool;
   (* The module whose element is being written, if one is: said by whatever
@@ -572,6 +580,16 @@ let file_start rc_file =
     rc_aliases = None;
     rc_tyctors = Unplanned;
   }
+
+(* The type names the header declares at file scope: an erased type-class
+   field's [using], a wrapper, a struct.  A definition written out of line
+   qualifies the plain names in its signature with its struct's, which is
+   right for a member and wrong for one of these. *)
+let header_file_scope_types : CString.Set.t option ref = State.cell State.Unit None
+
+let file_scope_types_of = function
+  | Common.Intf -> Option.default CString.Set.empty !header_file_scope_types
+  | Common.Impl -> CString.Set.empty
 
 (** The modules whose module types are file-scope concepts of a functor
     ({!Module_plan.concept_scope}): a functor's body, an application of the

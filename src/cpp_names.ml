@@ -511,7 +511,7 @@ let names_through n quals =
             or none otherwise *)
 let struct_scopes_for (ctx : render_ctx) r n =
   match ctx.rc_scope with
-  | Some scope when not ctx.rc_in_struct ->
+  | Some {ol_scope = scope; _} when not ctx.rc_in_struct ->
     let classes = List.map (fun s -> Cpp_name.Class s) in
     let struct_scopes = classes scope.Scope_plan.qualifier in
     (* How [r]'s module stands to the struct's, by kernel path: the textual
@@ -640,7 +640,7 @@ let wrapper_qualified_type_name (ctx : render_ctx) r n =
     rather than recursing into the struct's own member. *)
 let needs_global_qualifier (ctx : render_ctx) x =
   match ctx.rc_scope with
-  | Some scope ->
+  | Some {ol_scope = scope; _} ->
     (not (Cpp_name.is_qualified (global_name ctx Term x)))
     && not (mp_encloses (modpath_of_r x) scope.Scope_plan.module_)
   | None -> false
@@ -847,7 +847,9 @@ let next (entered : Cpp_resolution.entered) (c : render_ctx) =
     | In_struct -> {c with rc_in_struct = true}
     | In_template -> {c with rc_in_template = true}
     | Function {owner; defines} ->
-      {c with rc_scope = (if defines && not c.rc_in_struct then Scope_plan.of_declaration owner else None)}
+      let out_of_line ol_scope = {ol_scope; ol_file_scope_types = file_scope_types_of c.rc_file} in
+      { c with
+        rc_scope = (if defines && not c.rc_in_struct then Option.map out_of_line (Scope_plan.of_declaration owner) else None) }
   in
   {c with rc_frame = entered :: c.rc_frame}
 

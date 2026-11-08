@@ -150,27 +150,6 @@ let print_cpp_type_var vl i =
   | None -> str "T" ++ int i
 
 
-(** The type names the header introduces at file scope, planned with its
-    layout ({!file_scope_types}); none in the implementation, which defines
-    no type of its own.
-
-    A definition written outside its struct ([Owner::f]) qualifies the plain
-    names in its signature with [Owner::], which is right for a member and
-    wrong for anything else.  An erased type-class field is a case of
-    "anything else": the class is at file scope, so its erased face is a
-    file-scope [using iptr = std::any;], and some unrelated struct's hoisted
-    body must resolve [iptr] to that alias rather than claim it as a member it
-    never declared.
-
-    The set is only consulted to {i withhold} the qualifier, and a file-scope
-    name that a struct also declares as a member still resolves to the
-    member, because the body of an out-of-line definition is inside its
-    class's scope. *)
-let file_scope_type_names : CString.Set.t ref = State.cell State.Unit CString.Set.empty
-
-let is_file_scope_type id =
-  CString.Set.mem (Id.to_string id) !file_scope_type_names
-
 (** Under [CRANE_CHECK_IR], the type names the file being written introduced
     at file scope, as written. *)
 let file_scope_types_written : CString.Set.t ref = ref CString.Set.empty
@@ -464,11 +443,24 @@ let rec member_kind = function
 
 (** The qualifiers a member of the struct being defined out of line is
     written with when it is named outside that struct's body ([Tid] and
-    [Tpromoted]), or [None] where it is written bare. *)
+    [Tpromoted]), or [None] where it is written bare.
+
+    A definition written outside its struct ([Owner::f]) qualifies the plain
+    names in its signature with [Owner::], which is right for a member and
+    wrong for anything else.  An erased type-class field is a case of
+    "anything else": the class is at file scope, so its erased face is a
+    file-scope [using iptr = std::any;], and some unrelated struct's hoisted
+    body must resolve [iptr] to that alias rather than claim it as a member it
+    never declared.  The position says which names its file declares at file
+    scope ({!Cpp_state.out_of_line}).
+
+    Those names only {i withhold} the qualifier, and a file-scope name that
+    a struct also declares as a member still resolves to the member, because
+    the body of an out-of-line definition is inside its class's scope. *)
 let member_scopes (ctx : render_ctx) id =
   match ctx.rc_scope with
-  | Some sc when (not ctx.rc_in_struct) && not (is_file_scope_type id) ->
-    Some (List.map (fun s -> Cpp_name.Class s) sc.Scope_plan.qualifier)
+  | Some {ol_scope; ol_file_scope_types} when (not ctx.rc_in_struct) && not (CString.Set.mem (Id.to_string id) ol_file_scope_types) ->
+    Some (List.map (fun s -> Cpp_name.Class s) ol_scope.Scope_plan.qualifier)
   | _ -> None
 
 (** A type's name as the type printer writes it: the qualifiers written in
@@ -2729,7 +2721,7 @@ let start_file_scope_census () = file_scope_types_written := CString.Set.empty
     file scope must be the ones planned for it. *)
 let check_file_scope_types ~file =
   if Probe.checking () then begin
-    let written = !file_scope_types_written and planned = !file_scope_type_names in
+    let written = !file_scope_types_written and planned = Cpp_state.file_scope_types_of file in
     file_scope_types_written := CString.Set.empty;
     if not (CString.Set.equal written planned) then
       Probe.violation "file-scope types"
@@ -2937,7 +2929,7 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
     in
     let name =
       match scope with
-      | Some sc when not is_lifted -> str (Scope_plan.qualifier sc) ++ str "::" ++ base_name
+      | Some {ol_scope; _} when not is_lifted -> str (Scope_plan.qualifier ol_scope) ++ str "::" ++ base_name
       | _ -> base_name
     in
     (* Anything the name says beyond a bare identifier -- a [::] qualifier or

@@ -449,7 +449,9 @@ let ctor_alias_render_ctx ctx (declared : Cpp_ast.declared_in) =
   | At_namespace_scope _, _ -> start
   | In_struct_of home, Common.Intf ->
     {start with rc_in_struct = true; rc_in_template = Scope_plan.templated home; rc_module = Some home}
-  | In_struct_of home, Common.Impl -> {start with rc_scope = Scope_plan.of_module home; rc_module = Some home}
+  | In_struct_of home, Common.Impl ->
+    let out_of_line ol_scope = {ol_scope; ol_file_scope_types = file_scope_types_of Common.Impl} in
+    {start with rc_scope = Option.map out_of_line (Scope_plan.of_module home); rc_module = Some home}
 
 (** The template synthesised for the type constructor [t], written as a
     template template argument, if it has no template name of its own, with

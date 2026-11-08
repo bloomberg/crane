@@ -372,10 +372,6 @@ type file_layout = {
           the first the header writes, if it writes it before the module's
           own turn.  Any other wrapper module's declarations are written as a
           struct of their own, at the module's turn. *)
-  file_scope_types : CString.Set.t;
-      (** The type names the header introduces at namespace scope
-          ({!Cpp_print.file_scope_types}), which a definition written out of
-          line leaves unqualified. *)
 }
 
 (** That the declaration [home] writes the struct [wrapper] around the
@@ -390,8 +386,7 @@ let file_layout : file_layout ref =
       forward_decls = [];
       constrained_decls = [];
       promoted_imports = [];
-      wrapper_homes = [];
-      file_scope_types = CString.Set.empty }
+      wrapper_homes = [] }
 
 
 (** Report what a lifted helper met at the site that placed it, under
@@ -2071,8 +2066,8 @@ let plan_file_layout s =
           (fun acc (at, own, h) ->
             if at <= own && not (List.exists (fun h' -> String.equal h'.wrapper h.wrapper) acc) then acc @ [h] else acc )
           []
-          (List.stable_sort (fun (i, _, _) (j, _, _) -> Int.compare i j) (List.rev !homes));
-      file_scope_types = !types }
+          (List.stable_sort (fun (i, _, _) (j, _, _) -> Int.compare i j) (List.rev !homes)) };
+  Cpp_state.header_file_scope_types := Some !types
 
 (** Plan the synthesised templates each file writes
     ({!Cpp_print.plan_ctor_aliases}), read off what was generated ahead of
@@ -3260,7 +3255,6 @@ let do_struct_with_decl_tracking ~is_header f s =
      everything else stays where it is.  Placing an element gives what
      stays and what it moved ({!moved}), the concepts it declares, which go
      to the top of the file, among them. *)
-  Cpp_print.file_scope_type_names := if is_header then !file_layout.file_scope_types else CString.Set.empty;
   Cpp_leaf_plan.constrained_structs :=
     if is_header then
       List.map (fun (f : Cpp_leaf_plan.forward_declaration) -> f.fwd_ref) !file_layout.constrained_decls

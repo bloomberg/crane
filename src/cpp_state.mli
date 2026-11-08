@@ -203,6 +203,16 @@ and tyctor_decision = {
   noted : tyctor_use list ref;
 }
 
+(** The out-of-line definition being written: the scope it is a member
+    of, as planned, which a name written outside that struct's body is
+    qualified by; and the type names its file declares at file scope
+    ({!header_file_scope_types}), which a plain name in it means instead
+    of a member of that struct. *)
+and out_of_line = {
+  ol_scope : Scope_plan.scope;
+  ol_file_scope_types : CString.Set.t;
+}
+
 (** Where in the output something is written or planned: a value, handed
     to whatever writes there and derived as each scope is entered
     ({!Cpp_names.next}).  No position is installed anywhere for a reader to
@@ -211,7 +221,8 @@ and render_ctx = {
   rc_file : Common.file;  (** The file being written. *)
   rc_in_struct : bool;
   rc_concepts_hoisted : bool;
-  rc_scope : Scope_plan.scope option;
+  rc_scope : out_of_line option;
+      (** The out-of-line definition being written, if one is. *)
   rc_in_template : bool;
   rc_module : Names.ModPath.t option;
       (** The module whose element is being written, if one is: the one
@@ -246,6 +257,16 @@ and render_ctx = {
 (** The context at the start of the file [file]: file scope, outside every
     struct. *)
 val file_start : Common.file -> render_ctx
+
+(** The type names the header declares at file scope, planned with its
+    layout ({!Cpp_leaf_plan.file_scope_types}); [None] until planned, which
+    file layout planning's own questions are asked before.  The
+    implementation declares no type of its own. *)
+val header_file_scope_types : CString.Set.t option ref
+
+(** The type names the file [file] declares at file scope, as planned:
+    none before they are planned. *)
+val file_scope_types_of : Common.file -> CString.Set.t
 
 
 (** A concept a frame is holding back until after the struct it was written
