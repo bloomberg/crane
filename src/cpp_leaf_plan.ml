@@ -197,23 +197,27 @@ let globals_written_beside (d : cpp_decl) =
 
 (* Whether [probe], a type constructor applied to the sentinel, is written as
    a template name applied to the sentinel alone, read off its structure and
-   not off its rendering; [None] where the structure does not say.  An
-   instantiated mapping is that name where its text is a head with no
-   argument list of its own, then the sentinel's hole -- an element hole
-   written bare, as the sentinel's always is ({!Cpp_leaf_plan.ctor_alias_at}) -- then the
-   list's close; any other global is its name applied to its arguments.  A
-   value argument is written only where a mapping's text splices it, which
-   is then not that shape. *)
-let rec applied_to_sentinel_alone ctx = function
-  | Tid (_, args) | Tid_external (_, args) -> Some (args = [Thole])
-  | Tnamespace (_, t) -> applied_to_sentinel_alone ctx t
-  | Tglob (_, args, _) -> Some (args = [Thole])
+   not off its rendering.  An instantiated mapping is that name where its
+   text is a head with no argument list of its own, then the sentinel's hole
+   -- an element hole written bare, as the sentinel's always is
+   ({!ctor_alias_at}) -- then the list's close; a global, a local or external
+   type, a pointer and a variant are their template applied to their
+   arguments, and an inductive in its wrapper struct is its head so applied.
+   A value argument is written only where a mapping's text splices it, which
+   is then not that shape.  Any other shape is not a template name applied
+   to anything, and is written through a synthesised template, which can
+   abbreviate any type: the printer writes a template name only for the
+   shapes answered here ({!Cpp_print.pp_cpp_type}'s [template_name]). *)
+let rec applied_to_sentinel_alone = function
+  | Tid (_, args) | Tid_external (_, args) | Tglob (_, args, _) | Tvariant (_, args) -> args = [Thole]
+  | Tshared_ptr t -> t = Thole
+  | Tnamespace (_, t) -> applied_to_sentinel_alone t
   | Tforeign {fr_types = args; fr_pieces; _} -> (
     match fr_pieces with
     | [Fp_text head; (Fp_type i | Fp_element (i, None)); Fp_text ">"] when List.nth_opt args i = Some Thole ->
-      Some (String.index_opt head '<' = Some (String.length head - 1))
-    | _ -> Some false )
-  | _ -> None
+      String.index_opt head '<' = Some (String.length head - 1)
+    | _ -> false )
+  | _ -> false
 
 (** The types [d] declares under a name no struct qualifies, each with how
     it is declared and the template parameters it is declared over, which an
@@ -598,19 +602,15 @@ let forward_declarations ctx ~module_ env (d : Cpp_erasure.settled) =
    the template synthesised for it collected where [ctx] collects them
    ({!Cpp_print.note_ctor_alias_spelled}); and, where it is written through
    its own head instead, the same for each type constructor that head
-   writes.  A mapped or global head applied to arguments is written alone
-   (its leading text, its bare name); a dependent member through its
-   qualifier; anything else as its head, which is what its rendering up to
-   its argument list writes. *)
+   writes.  A dependent member is written through its qualifier; any other
+   head as its template name, which writes no type constructor
+   ({!Cpp_print.pp_cpp_type}'s [template_name]). *)
 let rec tyctor_spelled ctx vl x =
   let c = tyctor_constructor x in
   match tyctor_written ctx vl c with
   | Some (alias, _) -> note_ctor_alias_spelled ctx alias
   | None -> (
-    match c with
-    | Tglob (_, _ :: _, _) | Tforeign {fr_types = _ :: _; _} -> ()
-    | Tqualified (base, _) -> tyctors_spelled ctx vl base
-    | _ -> tyctors_spelled ctx vl c )
+    match c with Tqualified (base, _) -> tyctors_spelled ctx vl base | _ -> () )
 
 (* {!tyctor_spelled} at each type constructor writing [t] writes, in the
    order demands find them ({!Cpp_demands.tyctors_of_type}). *)
@@ -767,12 +767,12 @@ let vars_written uses vl t =
     the arguments a holder is applied to where it is written.
 
     A constructor applied to the sentinel is both the test and the alias body:
-    where the rendering comes out as a head plus that one argument, the head
-    is a template name and naming it is enough; where it does not, there is
-    no head to name and an alias template is introduced.  [itree] is
-    [std::shared_ptr<ITree<%t1>>] and a composite Rocq carrier is
-    [std::pair<_CraneTcArg, Box<_CraneTcArg>>]; neither can be cut back, and
-    the same reading of the same rendering covers both.
+    where it is a template name applied to that one argument
+    ({!applied_to_sentinel_alone}), naming the name is enough; where it is
+    not, there is no head to name and an alias template is introduced.
+    [itree] is [std::shared_ptr<ITree<%t1>>] and a composite Rocq carrier is
+    [std::pair<_CraneTcArg, Box<_CraneTcArg>>]; neither is its head applied
+    to the sentinel, and the same reading covers both.
 
     A carrier built by the front end already has the sentinel standing where
     its argument goes -- it is the abstraction, not an application of one.  A
@@ -862,22 +862,17 @@ and ctor_alias_of_probe ctx vl ~base probe =
   let render t = written_body (ctor_alias_render_ctx ctx declared_in) vl t in
   let rendered_with_uses = lazy (render probe) in
   let rendered = lazy (fst (Lazy.force rendered_with_uses)) in
+  (* Under [CRANE_CHECK_IR], the oracle the structure is checked against:
+     whether the rendering is a head and the sentinel's argument list. *)
   let head_alone () =
     let rendered = Lazy.force rendered in
     String.equal rendered (cut_at_argument_list rendered ^ "<" ^ ctor_alias_tvar ^ ">")
   in
-  let alone =
-    match applied_to_sentinel_alone ctx probe with
-    | Some alone ->
-      if Probe.checking () && alone <> head_alone () then
-        Probe.violation "constructor alias shape"
-          Pp.(str "the type constructor written " ++ str (Lazy.force rendered) ++ str " is read off its structure as "
-              ++ str (if alone then "" else "not ") ++ str "a template name applied to its argument alone");
-      alone
-    | None ->
-      Probe.hit "CTORALIAS_UNDECIDED" (fun () -> Lazy.force rendered);
-      head_alone ()
-  in
+  let alone = applied_to_sentinel_alone probe in
+  if Probe.checking () && alone <> head_alone () then
+    Probe.violation "constructor alias shape"
+      Pp.(str "the type constructor written " ++ str (Lazy.force rendered) ++ str " is read off its structure as "
+          ++ str (if alone then "" else "not ") ++ str "a template name applied to its argument alone");
   if alone then None
   else
     let rendered = Lazy.force rendered in

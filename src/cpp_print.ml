@@ -640,11 +640,38 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
            ([temp.names]/5).  Without it the name parses as a non-template
            member and the position rejects it. *)
         (pp_rec ~lead:false false base ++ str "::template " ++ Id.print id, true)
-      | Tglob (r, _ :: _, _) -> (pp_rec false (Tglob (r, [], [])), false)
-      | Tforeign ({fr_types = _ :: _; _} as fr) ->
-        let lead = match fr.fr_pieces with Fp_text lit :: _ -> lit | _ -> foreign_text fr in
-        (str (cut_at_argument_list lead), false)
-      | _ -> (str (cut_at_argument_list (Pp.string_of_ppcmds (pp_rec false t))), false) )
+      | c -> (template_name c, false) )
+  (* The template name a type constructor planned to be written through its
+     own head writes, its arguments dropped, per shape: a global or a local
+     or external type its name; a mapping its leading text; an inductive in
+     its wrapper struct its head, the [template] disambiguator kept, as the
+     applied type writes it; a pointer or variant the library template; a
+     variable its name.  Any other shape has no template name, and planning
+     synthesises a template for it ({!Cpp_leaf_plan.ctor_alias_at}). *)
+  and template_name = function
+    | (Tvar _ | Tglob (_, [], _) | Tid (_, []) | Tid_external (_, []) | Tforeign {fr_types = []; _}) as t -> pp_rec false t
+    | Tglob (r, _ :: _, _) -> pp_rec false (Tglob (r, [], []))
+    | Tid (id, _ :: _) -> pp_rec false (Tid (id, []))
+    | Tid_external (s, _ :: _) -> pp_rec false (Tid_external (s, []))
+    | Tforeign ({fr_types = _ :: _; _} as fr) ->
+      let lead = match fr.fr_pieces with Fp_text lit :: _ -> lit | _ -> foreign_text fr in
+      str (cut_at_argument_list lead)
+    | Tnamespace ((GlobRef.IndRef _ as r), Tglob (r', _, _)) when globref_equal r r' ->
+      pp_written_head ~lead:false (inductive_head ctx r' ~applied:true)
+    | Tnamespace (r, t) ->
+      Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) (Cpp_names.inductive_scope ctx r) ++ template_name t
+    | Tshared_ptr _ ->
+      writes_standard "memory";
+      pp_library_name (sn ()).shared_ptr
+    | Tvariant (Inline_variant, _) ->
+      writes_variant ();
+      pp_library_name (sn ()).variant
+    | Tvariant (Shared_variant, _) ->
+      writes (Table.Runtime Crane_rt.shared_variant_header);
+      pp_library_name Crane_rt.shared_variant
+    | t ->
+      CErrors.anomaly
+        Pp.(str "Crane: the type constructor " ++ pp_rec false t ++ str " has no template name and no synthesised template.")
   in
   (pp_rec ~lead par t)
 
