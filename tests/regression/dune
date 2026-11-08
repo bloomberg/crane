@@ -14045,3 +14045,15 @@
   (alias runtest)
   (deps inplace_fix_saved_in_frame.t.exe)
   (action (run ./inplace_fix_saved_in_frame.t.exe))))
+
+(subdir promoted_alias_out_of_line
+ (rule
+  (targets promoted_alias_out_of_line.t.exe)
+  (deps Defs.vo promoted_alias_out_of_line.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} promoted_alias_out_of_line.t.exe promoted_alias_out_of_line.t.cpp promoted_alias_out_of_line.cpp)))
+ (rule
+  (alias runtest)
+  (deps promoted_alias_out_of_line.t.exe)
+  (action (run ./promoted_alias_out_of_line.t.exe))))
+
