@@ -11,6 +11,21 @@
 open Names
 open Minicpp
 
+(** What a file writes that places the templates it writes: a declaration,
+    or the fields of the eponymous record merged into a module's struct,
+    which no declaration holds. *)
+type written = Written_declaration of cpp_decl | Written_fields of GlobRef.t
+
+(** The synthesised templates something a file writes writes, in the order
+    written, read in the scope being written: what it is, in the module it
+    is written in, the templates, and how it writes each type constructor
+    it writes as a template template argument. *)
+type ctor_aliases_read = {
+  read_written : ModPath.t * written;
+  read_aliases : Cpp_print.ctor_alias list;
+  read_uses : Cpp_state.tyctor_use list;
+}
+
 (** [read_decl ctx env decl] is a settled declaration printed at the
     position [ctx], its names resolved there first, its type constructors
     written as planned, or, before anything is planned, as decided. *)
@@ -94,13 +109,13 @@ val unprinted_names : Cpp_ast.declaration -> (Cpp_resolution.frame * Cpp_resolut
 (** What the finished declaration written at the position given, in the
     file it is in, writes; the render of the declaration there reads it back
     from the plan. *)
-val ctor_aliases_written : Cpp_state.render_ctx -> Cpp_erasure.settled -> Cpp_print.ctor_aliases_read
+val ctor_aliases_written : Cpp_state.render_ctx -> Cpp_erasure.settled -> ctor_aliases_read
 
 (** What the fields of the record [r], of types [types], written at the
     position given, write, their type variables read as [vl]; the render of
     the fields there reads it back from the plan. *)
 val ctor_aliases_of_fields :
-  Cpp_state.render_ctx -> vl:Id.t list -> GlobRef.t -> cpp_type list -> Cpp_print.ctor_aliases_read
+  Cpp_state.render_ctx -> vl:Id.t list -> GlobRef.t -> cpp_type list -> ctor_aliases_read
 
 (** {!Cpp_print.print_unprinted}; under [CRANE_CHECK_IR] a declaration, a
     record's fields or a synthesised template must need, and write their
@@ -150,3 +165,26 @@ type forward_declaration = {
     definition prints its head. *)
 val forward_declarations :
   Cpp_state.render_ctx -> module_:Names.ModPath.t -> Common.env -> Cpp_erasure.settled -> forward_declaration list
+
+(** [plan_ctor_aliases written] plans the templates each file writes,
+    [written file] being what is read off what [file] writes, in the order
+    written: the header's, then the implementation's. *)
+val plan_ctor_aliases : (Common.file -> ctor_aliases_read list) -> unit
+
+(** The declaration of a template, written where the tree puts it as
+    declared where it is ({!Cpp_ast.Template_in}). *)
+val ctor_alias_declaration : Cpp_print.ctor_alias -> Cpp_ast.t
+
+(** The templates the file [file] declares, each once, in the order
+    planned: the aliases it writes, and, in the header, every holder the
+    unit writes. *)
+val ctor_aliases_declared_in : file:Common.file -> Cpp_print.ctor_alias list
+
+(** Under [CRANE_CHECK_IR], check what the file [file] spelled against the
+    plan. *)
+val check_ctor_alias_plan : file:Common.file -> unit
+
+(** The structs the file being written has constrained forward declarations
+    of; a written declaration needs those it names or defines
+    ({!write_decl}). *)
+val constrained_structs : GlobRef.t list ref

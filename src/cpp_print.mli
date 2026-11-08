@@ -175,46 +175,8 @@ type ctor_alias = Cpp_state.ctor_alias = {
   ca_uses : Cpp_state.tyctor_use list;  (** How its body writes the type constructors in it. *)
 }
 
-(** What a file writes that places the templates it writes: a declaration,
-    or the fields of the eponymous record merged into a module's struct,
-    which no declaration holds. *)
-type written = Written_declaration of cpp_decl | Written_fields of GlobRef.t
-
-(** The synthesised templates something a file writes writes, in the order
-    written, read in the scope being written: what it is, in the module it
-    is written in, the templates, and how it writes each type constructor
-    it writes as a template template argument. *)
-type ctor_aliases_read = {
-  read_written : ModPath.t * written;
-  read_aliases : ctor_alias list;
-  read_uses : Cpp_state.tyctor_use list;
-}
-
-(** Whether the unit's templates are planned yet ({!plan_ctor_aliases}). *)
-val alias_plan_made : unit -> bool
-
-(** [planned_aliases ~file ~module_ w] is the templates [w], written in the
-    module [module_], writes in the file [file], as planned: none before
-    they are planned, and an anomaly if planning did not read [w]. *)
-val planned_aliases : file:Common.file -> module_:ModPath.t -> written -> ctor_alias list
-
-(** [planned_tyctors ~file ~module_ w] is how [w], written in the module
-    [module_], writes its type constructors in the file [file], as planned:
-    none before the templates are planned, and an anomaly if planning did
-    not read [w]. *)
-val planned_tyctors : file:Common.file -> module_:ModPath.t -> written -> Cpp_state.tyctor_use list option
-
-(** [plan_ctor_aliases written] plans the templates each file writes,
-    [written file] being what is read off what [file] writes, in the order
-    written: the header's, then the implementation's. *)
-val plan_ctor_aliases : (Common.file -> ctor_aliases_read list) -> unit
-
 (** The name of a template, a function of its body. *)
 val ctor_alias_name : ctor_alias -> string
-
-(** The declaration of a template, written where the tree puts it as
-    declared where it is ({!Cpp_ast.Template_in}). *)
-val ctor_alias_declaration : ctor_alias -> Cpp_ast.t
 
 (** What a synthesised template's body is decided from.  [tyctor_constructor t]
     is the constructor a type constructor position writes; [cut_at_argument_list s]
@@ -231,23 +193,14 @@ val applied_to_sentinel_alone : Cpp_state.render_ctx -> cpp_type -> bool option
 val foreign_text : foreign -> string
 val ctor_alias_tvar : string
 
-(** The templates the file [file] declares, each once, in the order
-    planned: the aliases it writes, and, in the header, every holder the
-    unit writes. *)
-val ctor_aliases_declared_in : file:Common.file -> ctor_alias list
-
 (** Under [CRANE_CHECK_IR], start recording the templates the file about
     to be written spells. *)
 val start_ctor_alias_census : unit -> unit
 
-(** Under [CRANE_CHECK_IR], check what the file [file] spelled against the
-    plan. *)
-val check_ctor_alias_plan : file:Common.file -> unit
-
-(** The structs the file being written has constrained forward declarations
-    of; a written declaration needs those it names or defines
-    ({!Cpp_leaf_plan.write_decl}). *)
-val constrained_structs : GlobRef.t list ref
+(** The templates the file being written spelled where nothing collected
+    them since {!start_ctor_alias_census}, under [CRANE_CHECK_IR]; starts
+    the census again. *)
+val take_ctor_aliases_spelled : unit -> ctor_alias list
 
 (** The type names the file being written introduces at file scope, as
     planned: a definition written out of line leaves them unqualified. *)

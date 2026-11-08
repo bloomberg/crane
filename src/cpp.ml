@@ -2156,7 +2156,7 @@ let plan_ctor_aliases s =
           s );
     List.rev !found
   in
-  Cpp_print.plan_ctor_aliases written_in
+  Cpp_leaf_plan.plan_ctor_aliases written_in
 
 (* The declarations of [s], a functor's body's among them, in order. *)
 let declarations s =
@@ -3261,7 +3261,7 @@ let do_struct_with_decl_tracking ~is_header f s =
      stays and what it moved ({!moved}), the concepts it declares, which go
      to the top of the file, among them. *)
   Cpp_print.file_scope_type_names := if is_header then !file_layout.file_scope_types else CString.Set.empty;
-  Cpp_print.constrained_structs :=
+  Cpp_leaf_plan.constrained_structs :=
     if is_header then
       List.map (fun (f : Cpp_leaf_plan.forward_declaration) -> f.fwd_ref) !file_layout.constrained_decls
     else [];
@@ -3598,8 +3598,8 @@ let do_struct_with_decl_tracking ~is_header f s =
         { Cpp_ast.name = ctor_alias_name a;
           homed = (match a.ca_declared with In_struct_of _ -> true | At_namespace_scope _ -> false);
           holder = a.ca_holder;
-          declaration = ctor_alias_declaration a } )
-      (ctor_aliases_declared_in ~file:(if is_header then Common.Intf else Common.Impl))
+          declaration = Cpp_leaf_plan.ctor_alias_declaration a } )
+      (Cpp_leaf_plan.ctor_aliases_declared_in ~file:(if is_header then Common.Intf else Common.Impl))
   in
   let forwards =
     if is_header then
@@ -3625,7 +3625,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     if state () <> before then
       CErrors.anomaly (str "Crane: printing a scheduled translation unit decided something.")
   end;
-  Cpp_print.check_ctor_alias_plan ~file:written;
+  Cpp_leaf_plan.check_ctor_alias_plan ~file:written;
   Cpp_print.check_file_scope_types ~file:written;
   file ++ fnl ()
 

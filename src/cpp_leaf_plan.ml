@@ -17,6 +17,167 @@ open Cpp_state
 open Cpp_names
 open Cpp_print
 
+(** What a file writes that places the templates it writes: a declaration,
+    or the fields of the eponymous record merged into a module's struct,
+    which no declaration holds. *)
+type written = Written_declaration of cpp_decl | Written_fields of GlobRef.t
+
+(** What a file writes, in the module it is written in. *)
+module Written = Hashtbl.Make (struct
+  type t = ModPath.t * written
+
+  (* [compare] rather than [=]: a NaN literal is equal to itself. *)
+  let equal (mp, w) (mp', w') =
+    ModPath.equal mp mp'
+    &&
+    match (w, w') with
+    | Written_declaration d, Written_declaration d' -> compare d d' = 0
+    | Written_fields r, Written_fields r' -> GlobRef.UserOrd.equal r r'
+    | (Written_declaration _ | Written_fields _), _ -> false
+
+  let hash (mp, w) =
+    Hashtbl.hash
+      ( ModPath.hash mp,
+        match w with
+        | Written_declaration d -> Hashtbl.hash_param 40 160 d
+        | Written_fields r -> GlobRef.UserOrd.hash r )
+end)
+
+(** What planning reads off something a file writes: what it is, as the
+    render reads it back, the synthesised templates it writes, in the
+    order written, and how it writes each type constructor it writes as a
+    template template argument. *)
+type ctor_aliases_read = {
+  read_written : Written.key;
+  read_aliases : ctor_alias list;
+  read_uses : tyctor_use list;
+}
+
+(** The synthesised templates each file writes, planned before either is
+    rendered ({!Cpp.plan_ctor_aliases}): each file's, in the order it first
+    writes them, and those each declaration it writes writes, with how it
+    writes its type constructors. *)
+type ctor_alias_plan = {
+  intf : ctor_alias list;
+  impl : ctor_alias list;
+  intf_writes : (ctor_alias list * tyctor_use list) Written.t;
+  impl_writes : (ctor_alias list * tyctor_use list) Written.t;
+}
+
+(** [None] until the unit's templates are planned: a declaration rendered
+    before then, for its text, or on its own
+    ({!Extract_env.print_one_decl}), places none. *)
+let ctor_alias_plan : ctor_alias_plan option ref = State.cell State.Unit None
+
+(** Plan the templates each file writes, [written file] those of [file] in
+    the order written: the header's, then the implementation's. *)
+let plan_ctor_aliases written =
+  let dedup l = List.fold_left (fun acc a -> if List.mem a acc then acc else acc @ [a]) [] l in
+  let planned file =
+    let reads = written file in
+    let writes = Written.create 64 in
+    List.iter
+      (fun r ->
+        if not (Written.mem writes r.read_written) then
+          Written.add writes r.read_written (r.read_aliases, r.read_uses) )
+      reads;
+    (dedup (List.concat_map (fun r -> r.read_aliases) reads), writes)
+  in
+  let intf, intf_writes = planned Common.Intf in
+  let impl, impl_writes = planned Common.Impl in
+  ctor_alias_plan := Some {intf; impl; intf_writes; impl_writes}
+
+(** The declaration of [alias], printed where the tree puts it as declared
+    where it is ({!Cpp_ast.Template_in}). *)
+let ctor_alias_declaration a =
+  Cpp_ast.synthesised_template ~tyctors:a.ca_uses
+    { name = ctor_alias_name a;
+      holder = a.ca_holder;
+      declared_in = a.ca_declared;
+      body = a.ca_type;
+      vars = a.ca_vars;
+      planned = a.ca_body }
+
+(** The templates the file [file] declares, each once, in the order planned:
+    the aliases it writes, and, in the header, every holder the unit writes.
+
+    A holder is a struct, and a struct may be defined once.  An alias may be
+    declared in whichever file writes the use, because repeating a [using]
+    with the same definition is legal; repeating a [struct] is not, so the
+    header, the one file everything sees, declares every holder. *)
+let ctor_aliases_declared_in ~file =
+  let declared =
+    match (!ctor_alias_plan, file) with
+    | None, _ -> []
+    | Some plan, Common.Intf -> plan.intf @ List.filter (fun a -> a.ca_holder) plan.impl
+    | Some plan, Common.Impl -> List.filter (fun a -> not a.ca_holder) plan.impl
+  in
+  List.fold_left
+    (fun acc a ->
+      if List.exists (fun a' -> String.equal (ctor_alias_name a') (ctor_alias_name a)) acc then acc else acc @ [a] )
+    [] declared
+
+let alias_plan_made () = Option.has_some !ctor_alias_plan
+
+(* What is planned for [w], written in the module [module_], in the file
+   [file]: the synthesised templates it writes and how it writes its type
+   constructors; none before the unit's templates are planned. *)
+let planned_writes ~file ~module_ w =
+  match !ctor_alias_plan with
+  | None -> None
+  | Some plan -> (
+    let writes = match file with Common.Intf -> plan.intf_writes | Common.Impl -> plan.impl_writes in
+    match Written.find_opt writes (module_, w) with
+    | Some planned -> Some planned
+    | None ->
+      let what = match w with Written_declaration _ -> "a declaration" | Written_fields _ -> "the fields of a record" in
+      CErrors.anomaly
+        Pp.(str "Crane: " ++ str what ++ str " of the " ++ str (Common.file_name file) ++ str " in "
+            ++ str (ModPath.to_string module_)
+            ++ str " are written that were not read when their templates were planned.") )
+
+(** The synthesised templates [w], written in the module [module_], writes
+    in the file [file], as planned. *)
+let planned_aliases ~file ~module_ w = match planned_writes ~file ~module_ w with Some (aliases, _) -> aliases | None -> []
+
+(** How [w], written in the module [module_], writes its type constructors
+    in the file [file], as planned; none before the unit's templates are
+    planned. *)
+let planned_tyctors ~file ~module_ w = Option.map snd (planned_writes ~file ~module_ w)
+
+(** Under [CRANE_CHECK_IR], the templates the file [file] spelled must be
+    the ones planned for it. *)
+let check_ctor_alias_plan ~file =
+  if Probe.checking () then begin
+    let planned =
+      match (!ctor_alias_plan, file) with
+      | None, _ -> []
+      | Some plan, Common.Intf -> plan.intf
+      | Some plan, Common.Impl -> plan.impl
+    in
+    let spelled = take_ctor_aliases_spelled () in
+    let describe a =
+      Printf.sprintf "%s %s%s" (if a.ca_holder then "holder" else "alias") a.ca_body
+        (match a.ca_declared with In_struct_of mp -> " in " ^ ModPath.to_string mp | At_namespace_scope _ -> "")
+    in
+    let missing l l' = List.filter (fun a -> not (List.mem a l')) l in
+    match (missing spelled planned, missing planned spelled) with
+    | [], [] -> ()
+    | unplanned, unspelled ->
+      Probe.violation "constructor aliases"
+        Pp.(
+          str "the " ++ str (Common.file_name file) ++ str " spells "
+          ++ prlist_with_sep pr_comma (fun a -> str (describe a)) unplanned
+          ++ str " unplanned, and does not spell "
+          ++ prlist_with_sep pr_comma (fun a -> str (describe a)) unspelled
+          ++ str " planned" )
+  end
+
+(** The structs the file being written has constrained forward declarations
+    of, planned with its layout, each by its reference and the name its
+    declaration declares. *)
+let constrained_structs : GlobRef.t list ref = State.cell State.Unit []
+
 (* The frames printing [d] enters names at: {!pp_cpp_decl}'s scopes, read
    without printing. *)
 let declaration_frames (d : Cpp_erasure.settled) =
