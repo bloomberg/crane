@@ -75,7 +75,8 @@ let rec declared_globals (d : cpp_decl) =
 
 (* Of [globals], those whose name is decided -- printing decides none --
    asked for at each of [frames], each as the type and the expression
-   printers may name it. *)
+   printers may name it, and as the type printer may write it as a type's
+   head. *)
 let global_names frames globals =
   let decided r = Option.has_some (Common.decided_global_name r) in
   let globals =
@@ -85,8 +86,11 @@ let global_names frames globals =
   let keys =
     List.concat_map
       (fun r ->
-        Cpp_resolution.[Unmapped (Type, r); Unmapped (Term, r); Class_concept r]
-        @ match r with GlobRef.IndRef _ -> [Cpp_resolution.Inductive_value r] | _ -> [] )
+        Cpp_resolution.[Unmapped (Type, r); Unmapped (Term, r); Class_concept r; Type_head (Glob_head, r)]
+        @
+        match r with
+        | GlobRef.IndRef _ -> Cpp_resolution.[Inductive_value r; Inductive_scope r; Type_head (Inductive_head, r)]
+        | _ -> [] )
       (List.filter decided globals)
     @ Cpp_names.custom_texts_named globals @ Cpp_names.inline_customs_named globals
   in
@@ -101,7 +105,7 @@ let type_globals ty = Cpp_demands.globals_of_type ty @ type_heads ty
 let resolved_for ctx t =
   { ctx with
     rc_names =
-      Names_resolved (Cpp_resolution.resolve (fun _ key -> live_name ctx key) (global_names [ctx.rc_frame] (type_globals t)))
+      Names_resolved (Cpp_resolution.resolve (fun _ key -> live_value ctx key) (global_names [ctx.rc_frame] (type_globals t)))
   }
 
 (** {2 Synthesised templates}
@@ -474,7 +478,19 @@ let declaration_globals (d : Cpp_erasure.settled) =
   Minicpp.iter_globrefs (fun r -> globals := r :: !globals) (d :> cpp_decl);
   !globals @ globals_written_beside (d :> cpp_decl) @ declared_globals (d :> cpp_decl)
 
-let declaration_names d = global_names (declaration_frames d) (declaration_globals d)
+(* The structs and scoped enums [d] defines, each as its definition is
+   named. *)
+let rec defined_types : cpp_decl -> _ = function
+  | Dtemplate (_, _, inner) -> defined_types inner
+  | Dnspace (_, ds) -> List.concat_map defined_types ds
+  | Dstruct {ds_ref; _} -> [Cpp_resolution.Definition (Struct_definition, ds_ref)]
+  | Denum {de_ref; _} -> [Definition (Enum_definition, de_ref)]
+  | _ -> []
+
+let declaration_names d =
+  let frames = declaration_frames d in
+  global_names frames (declaration_globals d)
+  @ List.concat_map (fun frame -> List.map (fun key -> (frame, key)) (defined_types (d :> cpp_decl))) frames
 
 let unprinted_names : Cpp_ast.declaration -> _ = function
   | Declaration {settled; _} | Absorbed {settled; _} -> declaration_names settled
@@ -487,8 +503,9 @@ let unprinted_names : Cpp_ast.declaration -> _ = function
       Minicpp.iter_globrefs (fun r -> found := r :: !found) (Dstatic_assert (c, None));
       !found
     in
-    global_names [[]] ((struct_ :: template_param_globals tparams) @ Option.cata constraint_globals [] constraint_)
-  | Forward_declaration {defined = Defined_enum r; _} -> global_names [[]] [r]
+    ([], Cpp_resolution.Definition (Struct_definition, struct_))
+    :: global_names [[]] ((struct_ :: template_param_globals tparams) @ Option.cata constraint_globals [] constraint_)
+  | Forward_declaration {defined = Defined_enum r; _} -> ([], Cpp_resolution.Definition (Enum_definition, r)) :: global_names [[]] [r]
   | Synthesised_template {body; _} -> global_names [[]] (type_globals body)
   | Assertion {subject = Module _; _} | Global_alias (Alias_of_module _) | Modtype_concept _ | Module_alias _
   | Functor_alias _ | Derived_functor _ ->
@@ -500,7 +517,7 @@ let unprinted_names : Cpp_ast.declaration -> _ = function
    planned yet, as decided. *)
 let writing ctx (settled : Cpp_erasure.settled) =
   let names =
-    Cpp_resolution.resolve (fun frame key -> at_frame ctx frame (fun c -> live_name c key)) (declaration_names settled)
+    Cpp_resolution.resolve (fun frame key -> at_frame ctx frame (fun c -> live_value c key)) (declaration_names settled)
   in
   let ctx = {ctx with rc_names = Names_resolved names} in
   if not (alias_plan_made ()) then deciding ctx (ref [])
@@ -508,6 +525,20 @@ let writing ctx (settled : Cpp_erasure.settled) =
     match planned_tyctors ~file:ctx.rc_file ~module_:(module_written ctx) (Written_declaration (settled :> cpp_decl)) with
     | Some uses -> {ctx with rc_tyctors = Planned uses}
     | None -> deciding ctx (ref [])
+
+(** The type names [d], written at namespace scope at the position [ctx],
+    introduces there ({!Cpp_print.file_scope_types}), the names of the
+    structs it defines resolved there first. *)
+let file_scope_types ctx (d : Cpp_erasure.settled) =
+  let rec structs (d : Cpp_erasure.settled) =
+    match Cpp_erasure.view d with
+    | Template (_, _, inner) -> structs inner
+    | Namespace (None, decls) -> List.concat_map structs decls
+    | Decl (Dstruct {ds_ref; _}) -> [(ctx.rc_frame, Cpp_resolution.Definition (Struct_definition, ds_ref))]
+    | Namespace (Some _, _) | Decl _ -> []
+  in
+  let names = Cpp_resolution.resolve (fun _ key -> live_value ctx key) (structs d) in
+  Cpp_print.file_scope_types {ctx with rc_names = Names_resolved names} d
 
 let read_decl ctx env settled = read_cpp_decl (writing ctx settled) env settled
 

@@ -1995,7 +1995,7 @@ let plan_file_layout s =
     let pass = if lifted then 0 else 1 in
     forward :=
       ((pass, position mp), List.map (fun f -> (lifted, f)) (Cpp_print.forward_declarations at ~module_:mp env d)) :: !forward;
-    types := List.fold_right CString.Set.add (Cpp_print.file_scope_types at d) !types
+    types := List.fold_right CString.Set.add (Cpp_leaf_plan.file_scope_types at d) !types
   in
   let element_at mp = Cpp_ind.spelling_position ~file:Intf (Element_of mp) in
   let wrapper_lifted ~module_ se =

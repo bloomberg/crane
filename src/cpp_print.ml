@@ -628,74 +628,17 @@ type written_head = {
 
 let unqualified_head head = {outer = []; head; typename = false; template_keyword = false}
 
-let needs_typename (ctx : render_ctx) n = ctx.rc_in_template && Cpp_name.is_qualified n
+(** [h] written with template arguments after it if [applied]. *)
+let written_head ~applied (h : Cpp_resolution.head) =
+  {outer = h.outer; head = h.head; typename = h.typename; template_keyword = applied && h.templated}
 
 (** The head of the type [Tglob (r, tys, _)] that no custom mapping inlines,
     [applied] when [tys] is not empty. *)
-let glob_head ctx r ~applied =
-  let bare = inductive_type_name ctx r in
-  let enclosing = struct_scopes_for ctx r bare @ global_scopes_for r bare in
-  (* The wrapper qualifier is the last resort: the two qualifiers above say
-     where the name lives whenever they say anything, and stacking this one
-     on top of them spells the same struct twice. *)
-  let name = if enclosing = [] then wrapper_qualified_type_name ctx r bare else bare in
-  {outer = enclosing; head = name; typename = needs_typename ctx name; template_keyword = applied}
+let glob_head ctx r ~applied = written_head ~applied (Cpp_names.type_head ctx Glob_head r)
 
 (** The head of the inductive type [Tnamespace (r, Tglob (r, args, _))],
-    [applied] when [args] is not empty.
-
-    DESIGN: Namespace-qualified types for inductive types. Rocq's
-    inductives live in wrapper structs (e.g., type 'list' in struct 'List').
-    Local inductives don't need namespace wrapping; non-local ones get the
-    prefix. EXCEPTION: Eponymous records are merged into the module struct,
-    so we use just the capitalized name without namespace qualification
-    (CHT, not CHT::cHT). *)
-let inductive_head ctx r ~applied =
-  let name, needs_ns = inductive_name ctx r in
-  let class_ s = Cpp_name.Class s in
-  let type_name = global_name ctx Type r in
-  (* Check eponymous record FIRST because they can also be local *)
-  if is_eponymous_record_cached r then
-    let cap_name = Common.pp_type_name_capitalized r in
-    if Common.get_force_cross_file_qualification () && not (local_at ctx r)
-    then unqualified_head (Cpp_name.name [class_ cap_name] cap_name)
-    else unqualified_head (Cpp_name.unqualified cap_name)
-  else if is_enum_cached r then
-    (* Enum types at global scope need no struct qualification. Enums inside
-       structs (e.g., Comparison::cmp) need it. *)
-    let qualifier = if is_global_scope_enum_cached r then [] else struct_scopes_for ctx r type_name in
-    {(unqualified_head (enum_name type_name r)) with outer = qualifier}
-  else if Cpp_name.is_qualified type_name then
-    let cap =
-      if Common.get_force_cross_file_qualification () then capitalize_base type_name else type_name
-    in
-    let cap =
-      if merged_at ctx r then dedup_tail ~allow_bare:(Table.modular () && not needs_ns) cap
-      else cap
-    in
-    (* The qualified name is relative to the enclosing module struct, so
-       out-of-line definitions -- whose return type precedes the qualified
-       function name, and so sits outside that struct's scope -- need the
-       struct prefix in front of it. *)
-    { outer = struct_scopes_for ctx r cap;
-      head = cap;
-      typename = needs_typename ctx cap;
-      template_keyword = applied && ctx.rc_in_template }
-  else if merged_at ctx r && not (local_at ctx r) then
-    (* A local inductive is a sibling member of the enclosing module struct,
-       so it is in scope under its own name; the merged-wrapper spelling
-       ([Opt] for [opt]) names nothing there. *)
-    let cap = capitalize_initial type_name in
-    if needs_ns && Table.modular () then unqualified_head (Cpp_name.inside cap class_ cap)
-    else
-      (* A file whose declarations were folded into a struct keeps its
-         inductives there too, so the struct is their scope -- the same
-         qualifier a call into that file already gets. *)
-      let qualified = if Cpp_state.is_nested_struct_ref r then wrapper_qualify r cap else cap in
-      if not (Cpp_name.equal qualified cap) then unqualified_head qualified
-      else {(unqualified_head cap) with outer = global_scopes_for r cap}
-  else if needs_ns then unqualified_head (Cpp_name.inside name class_ type_name)
-  else {(unqualified_head type_name) with outer = global_scopes_for r type_name}
+    [applied] when [args] is not empty. *)
+let inductive_head ctx r ~applied = written_head ~applied (Cpp_names.type_head ctx Inductive_head r)
 
 (** [h] written, the [typename] it asks for only if [lead]. *)
 let pp_written_head ~lead h =
@@ -938,7 +881,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
       | _ ->
         (* Fallback: generic namespace-qualified type *)
         leading_typename
-        ++ Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) (fst (inductive_name ctx r))
+        ++ Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) (Cpp_names.inductive_scope ctx r)
         ++ pp_rec false t )
     | (Tqualified _ | Tapply (Tqualified _, _)) as qualified_ty ->
       (* An associated type may itself be an alias template — the carrier of a
@@ -1274,8 +1217,7 @@ and pp_cpp_expr ctx env args t =
     in
     apply full_name
   | CPPnamespace (r, t) ->
-    let name, _ = inductive_name ctx r in
-    Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) name ++ pp_cpp_expr ctx env args t
+    Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) (Cpp_names.inductive_scope ctx r) ++ pp_cpp_expr ctx env args t
   (* A callee's text was instantiated as the call's callee, and a template's
      or a block's as the whole call ({!Cpp_erasure.instantiate_foreign}). *)
   | CPPfun_call (_, CPPglob (n, _, Some {ci_inline = Some _; _}), _) -> uninstantiated_mapping n
@@ -1813,7 +1755,7 @@ and pp_cpp_stmt ctx env args stmt =
        get the unqualified base name, capitalize to match enum class
        definition. *)
     let type_name =
-      let n = inductive_type_name ctx ind in
+      let n = (Cpp_names.type_head ctx Glob_head ind).head in
       Cpp_name.pp_scopes (global_scopes_for ind n) ++ Cpp_name.pp n
     in
     let ends_with_return stmts =
@@ -2907,10 +2849,10 @@ let nspace_merges (w : dm_wrapper) : bool =
   w.dw_sole_child && not (nested_in_wrapper w.dw_ref)
 
 (** The name the struct of [id] is defined under. *)
-let struct_definition_name ctx id = Cpp_name.pp (Cpp_names.struct_definition_name ctx id)
+let struct_definition_name ctx id = Cpp_name.pp (Cpp_names.definition_name ctx Struct_definition id)
 
 (** The name the scoped enum of [r] is defined under. *)
-let enum_definition_name ctx r = Cpp_name.pp (Cpp_names.enum_definition_name ctx r)
+let enum_definition_name ctx r = Cpp_name.pp (Cpp_names.definition_name ctx Enum_definition r)
 
 (** The names of the wrapper structs [d] writes around something other than
     a sole struct merged into them, in the order it writes them: the structs

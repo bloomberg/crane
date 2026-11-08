@@ -281,7 +281,7 @@ let () =
     (match Cpp_ast.to_pp wrapper with exception Invalid_argument _ -> true | _ -> false);
   let ref_text = function GlobRef.VarRef id -> Id.to_string id | _ -> "?" in
   let resolve spelling (frame : Cpp_resolution.frame) (key : Cpp_resolution.key) =
-    let named what = Cpp_name.unqualified (what ^ "@" ^ spelling_text spelling ^ String.make (List.length frame) '\'') in
+    let named what = Cpp_resolution.Name (Cpp_name.unqualified (what ^ "@" ^ spelling_text spelling ^ String.make (List.length frame) '\'')) in
     match key with
     | Module mp -> named (ModPath.to_string mp)
     | Module_declared mp -> named ("declared " ^ ModPath.to_string mp)
@@ -314,6 +314,21 @@ let () =
     in
     Pp.string_of_ppcmds (Cpp_ast.print_tree ~write (Cpp_ast.resolve_tree ~requested ~resolve ~resolve_head:resolve (Cpp_ast.seq sections)))
   in
+  (let r = ref_of "t" in
+   let head : Cpp_resolution.head = {outer = [Cpp_name.Class "S"]; head = Cpp_name.unqualified "t"; typename = false; templated = true} in
+   let table =
+     Cpp_resolution.resolve
+       (fun _ key -> match key with Type_head _ -> Head head | _ -> Name (Cpp_name.unqualified "n"))
+       [([], Type_head (Glob_head, r)); ([], Unmapped (Type, r))]
+   in
+   check "a type's head is resolved as a head"
+     (Cpp_resolution.find_head table [] Glob_head r = Found head);
+   check "a head is resolved only in the form asked for"
+     (Cpp_resolution.find_head table [] Inductive_head r = Not_requested);
+   check "a name beside a head is resolved as a name"
+     (Cpp_resolution.find table [] (Unmapped (Type, r)) = Found (Cpp_name.unqualified "n"));
+   check "a head is no name"
+     (match Cpp_resolution.find table [] (Type_head (Glob_head, r)) with exception _ -> true | _ -> false));
   check_text "resolving keeps how each declaration is spelled"
     (resolved_text [top (Cpp_ast.elements ~source:m (unprinted ()))]) "E(F.M)";
   let alias = Cpp_ast.module_alias (ModPath.MPdot (inner, Label.make "A")) (Module_named (Cpp_ast.module_ref inner)) in

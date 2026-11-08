@@ -1263,7 +1263,7 @@ let spelling_position ~file spelling =
 let at_spelling ~file spelling k = k (spelling_position ~file spelling)
 
 let head_resolver_at ~file spelling frame key =
-  at_spelling ~file spelling (fun ctx -> Cpp_names.at_frame ctx frame (fun ctx -> Cpp_names.live_name ctx key))
+  at_spelling ~file spelling (fun ctx -> Cpp_names.at_frame ctx frame (fun ctx -> Cpp_names.live_value ctx key))
 
 (* A declaration's names are noted as written where it is printed, which
    names them again under CRANE_CHECK_IR ({!Cpp_names.checked}); a struct's

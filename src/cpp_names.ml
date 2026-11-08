@@ -46,6 +46,13 @@ let checked c key n =
       if not (Cpp_name.equal n here) then violation_resolved key (Cpp_name.to_string n) (Cpp_name.to_string here) );
   n
 
+(* The resolver's writing of a global type's head at a position, for the
+   check in {!type_head}, set beside {!live_name_for_checks}. *)
+let live_head_for_checks : (render_ctx -> Cpp_resolution.head_form -> GlobRef.t -> Cpp_resolution.head) ref =
+  ref (fun _ form r ->
+      CErrors.anomaly
+        Pp.(str "Crane: " ++ Cpp_resolution.pp_key (Type_head (form, r)) ++ str " checked before the resolver exists."))
+
 let unresolved key = CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " was printed before it was resolved.")
 
 let name_from c names frame key =
@@ -78,6 +85,30 @@ let named (c : render_ctx) key =
   | Naming_live live -> live.live_key c key
   | No_names -> named_nowhere key
   | Names_resolved names -> name_from c names c.rc_frame key
+
+let pp_head (h : Cpp_resolution.head) =
+  Pp.string_of_ppcmds (Cpp_name.pp_scopes h.outer) ^ Cpp_name.to_string h.head
+
+(** How the global [r] is written as a type's head in the form [form] at the
+    position [c]: as resolved for what is being written, at the frame
+    printing has entered; at the resolver's position, as the resolver
+    writes it. *)
+let type_head (c : render_ctx) form r =
+  let key = Cpp_resolution.Type_head (form, r) in
+  match c.rc_names with
+  | Naming_live live -> live.live_head c form r
+  | No_names -> named_nowhere key
+  | Names_resolved names -> (
+    match Cpp_resolution.find_head names c.rc_frame form r with
+    | Found h ->
+      ( if Probe.checking () then
+          let here = !live_head_for_checks c form r in
+          if here <> h then violation_resolved key (pp_head h) (pp_head here) );
+      h
+    | Unresolved -> unresolved key
+    | Not_requested ->
+      CErrors.anomaly
+        Pp.(str "Crane: a declaration names " ++ Cpp_resolution.pp_key key ++ str ", which resolving it did not ask for.") )
 
 let live_custom_text r =
   match written_custom_text r with
@@ -747,7 +778,7 @@ let file_named_by_key ~unit_files : Cpp_resolution.key -> ModPath.t option = fun
     match concept_scope_of kn with
     | Some {functor_; _} -> Common.file_of_module_named ~unit_files functor_
     | None -> Common.file_of_module_named ~unit_files kn )
-  | Global (_, r) | Unmapped (_, r) -> Common.file_named_by ~unit_files r
+  | Global (_, r) | Unmapped (_, r) | Inductive_scope r | Type_head (_, r) -> Common.file_named_by ~unit_files r
   | Module_declared _ | Short _ | Inductive_value _ | Class_concept _ | Modtype_concept_declared _ | Definition _
   | Custom_text _ | Inline_custom _ ->
     None
@@ -829,6 +860,87 @@ let inductive_value_name ctx v x =
 
 let inductive_value ctx x = named ctx (Inductive_value x)
 
+(** The name the type [r] is defined under at the position [ctx], declared
+    as [definition] says. *)
+let definition_name ctx definition r = named ctx (Definition (definition, r))
+
+(** The struct a member of the inductive type [r] is named through at the
+    position [ctx]. *)
+let inductive_scope ctx r = named ctx (Inductive_scope r)
+
+let needs_typename (ctx : render_ctx) n = ctx.rc_in_template && Cpp_name.is_qualified n
+
+let unqualified_head head : Cpp_resolution.head = {outer = []; head; typename = false; templated = false}
+
+(* The head of the type [Tglob (r, _, _)] that no custom mapping inlines. *)
+let live_glob_head ctx r : Cpp_resolution.head =
+  let bare = inductive_type_name ctx r in
+  let enclosing = struct_scopes_for ctx r bare @ global_scopes_for r bare in
+  (* The wrapper qualifier is the last resort: the two qualifiers above say
+     where the name lives whenever they say anything, and stacking this one
+     on top of them spells the same struct twice. *)
+  let name = if enclosing = [] then wrapper_qualified_type_name ctx r bare else bare in
+  {outer = enclosing; head = name; typename = needs_typename ctx name; templated = true}
+
+(* The head of the inductive type [Tnamespace (r, Tglob (r, _, _))].
+
+   DESIGN: Namespace-qualified types for inductive types. Rocq's
+   inductives live in wrapper structs (e.g., type 'list' in struct 'List').
+   Local inductives don't need namespace wrapping; non-local ones get the
+   prefix. EXCEPTION: Eponymous records are merged into the module struct,
+   so we use just the capitalized name without namespace qualification
+   (CHT, not CHT::cHT). *)
+let live_inductive_head ctx r : Cpp_resolution.head =
+  let name, needs_ns = inductive_name ctx r in
+  let class_ s = Cpp_name.Class s in
+  let type_name = global_name ctx Type r in
+  (* Check eponymous record FIRST because they can also be local *)
+  if is_eponymous_record_cached r then
+    let cap_name = Common.pp_type_name_capitalized r in
+    if Common.get_force_cross_file_qualification () && not (local_at ctx r)
+    then unqualified_head (Cpp_name.name [class_ cap_name] cap_name)
+    else unqualified_head (Cpp_name.unqualified cap_name)
+  else if is_enum_cached r then
+    (* Enum types at global scope need no struct qualification. Enums inside
+       structs (e.g., Comparison::cmp) need it. *)
+    let qualifier = if is_global_scope_enum_cached r then [] else struct_scopes_for ctx r type_name in
+    {(unqualified_head (enum_name type_name r)) with outer = qualifier}
+  else if Cpp_name.is_qualified type_name then
+    let cap =
+      if Common.get_force_cross_file_qualification () then capitalize_base type_name else type_name
+    in
+    let cap =
+      if merged_at ctx r then dedup_tail ~allow_bare:(Table.modular () && not needs_ns) cap
+      else cap
+    in
+    (* The qualified name is relative to the enclosing module struct, so
+       out-of-line definitions -- whose return type precedes the qualified
+       function name, and so sits outside that struct's scope -- need the
+       struct prefix in front of it. *)
+    { outer = struct_scopes_for ctx r cap;
+      head = cap;
+      typename = needs_typename ctx cap;
+      templated = ctx.rc_in_template }
+  else if merged_at ctx r && not (local_at ctx r) then
+    (* A local inductive is a sibling member of the enclosing module struct,
+       so it is in scope under its own name; the merged-wrapper spelling
+       ([Opt] for [opt]) names nothing there. *)
+    let cap = capitalize_initial type_name in
+    if needs_ns && Table.modular () then unqualified_head (Cpp_name.inside cap class_ cap)
+    else
+      (* A file whose declarations were folded into a struct keeps its
+         inductives there too, so the struct is their scope -- the same
+         qualifier a call into that file already gets. *)
+      let qualified = if Cpp_state.is_nested_struct_ref r then wrapper_qualify r cap else cap in
+      if not (Cpp_name.equal qualified cap) then unqualified_head qualified
+      else {(unqualified_head cap) with outer = global_scopes_for r cap}
+  else if needs_ns then unqualified_head (Cpp_name.inside name class_ type_name)
+  else {(unqualified_head type_name) with outer = global_scopes_for r type_name}
+
+(* {!type_head} as the resolver writes it at [c]. *)
+let live_type_head c (form : Cpp_resolution.head_form) r =
+  match form with Glob_head -> live_glob_head c r | Inductive_head -> live_inductive_head c r
+
 let rec live_name c (key : Cpp_resolution.key) =
   let ctx = {c with rc_names = Naming_live live_namers} in
   let v = visible_at c key in
@@ -850,9 +962,25 @@ let rec live_name c (key : Cpp_resolution.key) =
     match live_inline_custom_text r with
     | Some text -> Cpp_name.foreign text
     | None -> CErrors.anomaly Pp.(str "Crane: " ++ GlobRef.print r ++ str " has no inline custom mapping."))
+  | Inductive_scope r -> fst (inductive_name ctx r)
+  | Type_head _ -> CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " is a type's head, not a name.")
 
 (* The resolver's namers, which the naming functions shared with the printer
    call at its position. *)
-and live_namers = {live_key = (fun c key -> live_name c key); live_global = live_global_name; live_inline = live_inline_custom_text}
+and live_namers =
+  { live_key = (fun c key -> live_name c key);
+    live_global = live_global_name;
+    live_inline = live_inline_custom_text;
+    live_head = (fun c form r -> live_type_head {c with rc_names = Naming_live live_namers} form r) }
 
-let () = live_name_for_checks := live_name
+(** What [key] resolves to at the position [c], as the resolver resolves
+    it: a type's head for a {!Cpp_resolution.Type_head}, a name for anything
+    else. *)
+let live_value c (key : Cpp_resolution.key) : Cpp_resolution.value =
+  match key with
+  | Type_head (form, r) -> Head (live_namers.live_head c form r)
+  | _ -> Name (live_name c key)
+
+let () =
+  live_name_for_checks := live_name;
+  live_head_for_checks := live_namers.live_head

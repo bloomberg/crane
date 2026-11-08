@@ -113,7 +113,7 @@ and parameter =
 
 (** How {!resolve} names what a declaration names where it is written, at
     a frame inside it. *)
-type resolver = Cpp_resolution.frame -> Cpp_resolution.key -> Cpp_name.t
+type resolver = Cpp_resolution.frame -> Cpp_resolution.key -> Cpp_resolution.value
 
 (** A struct or scoped enum a declaration defines at namespace scope, which
     a forward declaration declares ahead of it. *)

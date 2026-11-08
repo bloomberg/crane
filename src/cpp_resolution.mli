@@ -41,6 +41,13 @@ type definition =
   | Struct_definition  (** A struct. *)
   | Alias_definition  (** A [using] declaration. *)
 
+(** The two places the type printer writes a global type's head: a type
+    named by its global ([Tglob]), and an inductive written through the
+    struct it is declared in ([Tnamespace]). *)
+type head_form =
+  | Glob_head
+  | Inductive_head
+
 (** What is named, each as the naming function the printer would ask. *)
 type key =
   | Module of ModPath.t  (** The module, as its struct is named. *)
@@ -69,8 +76,31 @@ type key =
       (** The text the global is written as, foreign, where it has an inline
           custom mapping: asked for only where it has one, so a name not
           asked for is one written otherwise. *)
+  | Inductive_scope of GlobRef.t
+      (** The struct a member of the inductive type is named through. *)
+  | Type_head of head_form * GlobRef.t
+      (** The global written as a type's head, in the form given: a
+          {!head}, not a name. *)
 
 val pp_key : key -> Pp.t
+
+(** A type's head as written: the qualifiers in front of it, the name
+    itself, whether it asks for [typename] in front, and whether template
+    arguments following it ask for the [template] disambiguator. *)
+type head = {
+  outer : Cpp_name.scope list;
+  head : Cpp_name.t;
+  typename : bool;
+  templated : bool;
+}
+
+(** What a key resolves to: a {!Type_head} a head, anything else a name. *)
+type value =
+  | Name of Cpp_name.t
+  | Head of head
+
+(** The name a key other than {!Type_head} resolves to. *)
+val name_of : key -> value -> Cpp_name.t
 
 (** A declaration's names, by frame and key. *)
 type table
@@ -78,13 +108,17 @@ type table
 (** The names of a declaration not resolved yet. *)
 val unresolved : table
 
-(** [resolve name requests] is the table naming each of [requests] as
-    [name] names it at its frame. *)
-val resolve : (frame -> key -> Cpp_name.t) -> (frame * key) list -> table
+(** [resolve value requests] is the table resolving each of [requests] as
+    [value] resolves it at its frame. *)
+val resolve : (frame -> key -> value) -> (frame * key) list -> table
 
-type lookup =
-  | Found of Cpp_name.t
+type 'a lookup =
+  | Found of 'a
   | Unresolved  (** The table was never resolved. *)
   | Not_requested  (** It was, but this was not asked for. *)
 
-val find : table -> frame -> key -> lookup
+(** The name [key], not a {!Type_head}, resolved to at [frame]. *)
+val find : table -> frame -> key -> Cpp_name.t lookup
+
+(** The head the global resolved to at [frame], in the form given. *)
+val find_head : table -> frame -> head_form -> GlobRef.t -> head lookup

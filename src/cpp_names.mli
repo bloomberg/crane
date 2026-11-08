@@ -254,6 +254,19 @@ val enum_definition_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
     a constructor's value is built through, at the position. *)
 val inductive_value : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
 
+(** The name the type is defined under at the position, declared as the
+    definition says, as resolved there ({!Cpp_resolution.Definition}). *)
+val definition_name : Cpp_state.render_ctx -> Cpp_resolution.definition -> Names.GlobRef.t -> Cpp_name.t
+
+(** The struct a member of the inductive type is named through at the
+    position, as resolved there ({!Cpp_resolution.Inductive_scope}). *)
+val inductive_scope : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
+
+(** How the global is written as a type's head in the form given at the
+    position, as resolved there ({!Cpp_resolution.Type_head}); under
+    [CRANE_CHECK_IR], as the resolver writes it there. *)
+val type_head : Cpp_state.render_ctx -> Cpp_resolution.head_form -> Names.GlobRef.t -> Cpp_resolution.head
+
 (** [checked c key n] is [n], the name the resolution pass gave [key];
     under [CRANE_CHECK_IR], the name the resolver gives it at [c], where it
     is printed ({!live_name}), must be the same. *)
@@ -295,3 +308,7 @@ val at_frame : Cpp_state.render_ctx -> Cpp_resolution.frame -> (Cpp_state.render
     what a printed name is checked against.  A position nothing planned the
     visibility of is an anomaly. *)
 val live_name : Cpp_state.render_ctx -> Cpp_resolution.key -> Cpp_name.t
+
+(** What [key] resolves to at the position [c], as the resolver resolves it
+    ({!live_name} for a name): what {!Cpp_resolution.resolve} is given. *)
+val live_value : Cpp_state.render_ctx -> Cpp_resolution.key -> Cpp_resolution.value

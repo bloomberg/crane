@@ -34,7 +34,7 @@ type template_param =
 
 and parameter = Type_variable of Id.t | Module_parameter of module_ref
 
-type resolver = Cpp_resolution.frame -> Cpp_resolution.key -> Cpp_name.t
+type resolver = Cpp_resolution.frame -> Cpp_resolution.key -> Cpp_resolution.value
 
 type defined =
   | Defined_struct of {
@@ -526,13 +526,13 @@ let resolve_head (resolve : spelling -> resolver) spelling h =
   | _ when not (head_names h) -> h
   | None -> invalid_arg "Cpp_ast: a struct whose head names a module written where nothing says how it is spelled"
   | Some spelling ->
-    let here = resolve spelling [] in
+    let here key = Cpp_resolution.name_of key (resolve spelling [] key) in
     { h with
       template = List.map (resolve_template_param here) h.template;
       name = (match h.name with Named _ as n -> n | Module_struct m -> Module_struct (resolve_declared_module here m)) }
 
 let resolve_declaration (resolve : resolver) declaration =
-  let here key = resolve [] key in
+  let here key = Cpp_resolution.name_of key (resolve [] key) in
   let module_ref = resolve_module_ref here and template_param = resolve_template_param here in
   let global_ref key (g : global_ref) = {g with name = Resolved (here (key g.global))} in
   let concept : asserted -> asserted = function

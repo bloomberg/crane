@@ -16,6 +16,11 @@ open Minicpp
     written as planned, or, before anything is planned, as decided. *)
 val read_decl : Cpp_state.render_ctx -> Common.env -> Cpp_erasure.settled -> Pp.t
 
+(** The type names the declaration, written at namespace scope at the
+    position, introduces there ({!Cpp_print.file_scope_types}), what they
+    name resolved there first. *)
+val file_scope_types : Cpp_state.render_ctx -> Cpp_erasure.settled -> string list
+
 (** [write_decl ctx env decl] is {!read_decl}, with what placing the
     declarations it needs reads ({!Cpp_ast.Needs}). *)
 val write_decl : Cpp_state.render_ctx -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
