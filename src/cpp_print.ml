@@ -171,10 +171,9 @@ let note_file_scope_type ctx d = Option.iter (note_file_scope_name ctx) (decl_ty
 (** The C++ token an {!Minicpp.obj_access} prints as. *)
 let pp_obj_access = function Adot -> "." | Aarrow -> "->"
 
-(** The C++ identifiers appearing in [text], as whole tokens.  Used to tell
-    whether a rendered type body really names a template parameter, which a
-    structural walk over the type cannot: a custom mapping's replacement text
-    may leave an argument unwritten. *)
+(** The C++ identifiers appearing in [text], as whole tokens: what the
+    [CRANE_CHECK_IR] oracles read a rendered body's parameters off, to compare
+    with what planning reads off its structure. *)
 let identifier_tokens text =
   let is_id c =
     (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
@@ -623,7 +622,12 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
     | Some (alias, args) ->
       note_ctor_alias_spelled ctx alias;
       let name = ctor_alias_name alias in
-      if Option.has_some alias.ca_holder then (str (name ^ "<" ^ String.concat ", " args ^ ">::template c"), true)
+      if Option.has_some alias.ca_holder then
+        let arg : Cpp_state.holder_argument -> _ = function
+          | Captured_variable (i, name) -> pp_rec false (Tvar (Tv_index (i, name)))
+          | Captured_instance id -> Id.print id
+        in
+        (str name ++ str "<" ++ prlist_with_sep (fun () -> str ", ") arg args ++ str ">::template c", true)
       else (str name, false)
     | None -> (
       match t with

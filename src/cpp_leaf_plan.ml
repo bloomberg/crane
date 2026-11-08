@@ -714,6 +714,54 @@ let ctor_alias_render_ctx ctx (declared : Cpp_ast.declared_in) =
     let out_of_line ol_scope = {ol_scope; ol_file_scope_types = file_scope_types_of Common.Impl} in
     {start with rc_scope = Option.map out_of_line (Scope_plan.of_module home); rc_module = Some home}
 
+(* The indices of the type variables writing [t], naming the variables [vl]
+   by index, writes, its type constructors written as [uses] says, read off
+   its structure as the type printer walks it: a mapping writes the holes its
+   pieces name and no other; a type constructor written through a synthesised
+   template writes what a holder of it is applied to and nothing of its
+   body, and one written through its own head writes what that head writes
+   -- a mapped or global head applied to arguments writes none of them, a
+   dependent member its qualifier, a variable itself. *)
+let vars_written uses vl t =
+  let rec go t =
+    match t with
+    | Tvar (Tv_index (i, _)) -> [i]
+    | Tvar (Tv_named _) | Tinstance _ | Tpromoted _ | Thole | Tvoid | Tany | Topaque | Tauto | Tdecltype_auto
+    | Terased _ | Tunresolved | Texpr_type _ ->
+      []
+    | Tid (_, args) | Tid_external (_, args) | Tglob (_, args, _) | Tvariant (_, args) -> List.concat_map go args
+    | Tforeign {fr_types; fr_pieces; _} ->
+      List.concat_map
+        (function
+          | Fp_type i | Fp_element (i, _) -> go (Option.default Tany (List.nth_opt fr_types i))
+          | Fp_text _ | Fp_value _ | Fp_yields | Fp_result | Fp_statement_end -> [] )
+        fr_pieces
+    | Tfun (dom, cod) -> go cod @ List.concat_map go dom
+    | Tconst t | Tshared_ptr t | Tref (_, t) | Tptr t | Tdecay t | Tnondeduced t | Tnamespace (_, t) | Tqualified (t, _) ->
+      go t
+    | Trebind (h, x) -> go h @ go x
+    | Tapply (head, args) -> go head @ List.concat_map go args
+    | Ttyctor x -> (
+      let c = tyctor_constructor x in
+      match List.find_opt (fun u -> compare u.tu_constructor c = 0 && u.tu_vars = vl) uses with
+      | Some {tu_alias = Some (_, args); _} ->
+        List.filter_map (function Captured_variable (i, _) -> Some i | Captured_instance _ -> None) args
+      | Some {tu_alias = None; _} -> (
+        match c with
+        | Tglob (_, _ :: _, _) | Tforeign {fr_types = _ :: _; _} -> []
+        | Tqualified (base, _) -> go base
+        | c -> head c )
+      | None ->
+        CErrors.anomaly
+          Pp.(str "Crane: a type constructor in a synthesised template's body was not decided where the body was.") )
+  (* What a head written up to its argument list writes. *)
+  and head = function
+    | Tvar (Tv_index (i, _)) -> [i]
+    | Tnamespace (_, t) -> head t
+    | _ -> []
+  in
+  go t
+
 (** The template synthesised for the type constructor [t], written as a
     template template argument, if it has no template name of its own, with
     the arguments a holder is applied to where it is written.
@@ -771,11 +819,11 @@ and ctor_alias_of_probe ctx vl ~base probe =
   let captured probe =
     let seen = ref [] in
     visit probe (function
-      | Tvar (Tv_index (i, _) as v) when not (List.mem_assoc i !seen) -> seen := !seen @ [(i, v)]
+      | Tvar (Tv_index (i, name)) when not (List.mem_assoc i !seen) -> seen := !seen @ [(i, name)]
       | _ -> () );
     !seen
   in
-  let written_var v = Pp.string_of_ppcmds (pp_cpp_type_at ctx false vl (Tvar v)) in
+  let written_var i name = Pp.string_of_ppcmds (pp_cpp_type_at ctx false vl (Tvar (Tv_index (i, name)))) in
   (* A captured parameter is named {e applied} to the alias's own
      argument -- that is what makes the body an abstraction rather than a
      type, and it is what lets the holder declare every parameter it
@@ -838,9 +886,18 @@ and ctor_alias_of_probe ctx vl ~base probe =
        argument -- [itree]'s spells only its last -- so a parameter that
        the probe carries structurally but the rendering drops would
        otherwise mint a holder with an unused parameter, and the alias
-       would be declared as a partial specialisation of nothing. *)
-    let names = identifier_tokens rendered in
-    let captured probe = List.filter (fun (_, v) -> List.mem (written_var v) names) (captured probe) in
+       would be declared as a partial specialisation of nothing.  Which
+       it writes is read off the structure the rendering walks
+       ({!vars_written}); under [CRANE_CHECK_IR], reading it off the
+       rendered text, as planning did before, must find the same. *)
+    let written = vars_written (snd (Lazy.force rendered_with_uses)) vl probe in
+    let all = captured probe in
+    let captured = List.filter (fun (i, _) -> List.mem i written) all in
+    ( if Probe.checking () then
+        let names = identifier_tokens rendered in
+        if List.filter (fun (i, name) -> List.mem (written_var i name) names) all <> captured then
+          Probe.violation "captured variables"
+            Pp.(str "the body " ++ str rendered ++ str " is read off its structure as writing other variables than its text names") );
     (* A class instance the body reads a type out of -- [typename
        _tcI0::ptr] -- is the enclosing declaration's parameter as much
        as a variable is, and is captured the same way. *)
@@ -851,7 +908,7 @@ and ctor_alias_of_probe ctx vl ~base probe =
         | _ -> () );
       !seen
     in
-    match (captured probe, instances) with
+    match (captured, instances) with
     | [], [] ->
       Some
         ( { ca_base = base;
@@ -891,7 +948,8 @@ and ctor_alias_of_probe ctx vl ~base probe =
       in
       Some
         ( {ca_base = base; ca_holder = Some params; ca_declared = declared_in; ca_body = body; ca_type = renamed; ca_vars = vl; ca_uses = uses},
-          List.map (fun (_, v) -> written_var v) vars @ List.map Id.to_string instances )
+          List.map (fun (i, name) -> Cpp_state.Captured_variable (i, name)) vars
+          @ List.map (fun id -> Cpp_state.Captured_instance id) instances )
 
 (** [t] as the type constructors in it are written at [ctx]: decided there
     and noted ({!Cpp_state.Deciding}). *)

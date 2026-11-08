@@ -136,6 +136,12 @@ type declared_in = In_struct_of of Names.ModPath.t | At_namespace_scope of Names
     class instance the body reads a type out of, a type ([typename P1]). *)
 type holder_parameter = Constructor_parameter of Names.Id.t | Type_parameter of Names.Id.t
 
+(** What a holder is applied to where it is written, the argument for each
+    of its parameters in order: a type variable of the enclosing declaration
+    its body captures, by index (and the name it is written by, where it
+    carries one), or a class instance its body reads a type out of. *)
+type holder_argument = Captured_variable of int * Names.Id.t option | Captured_instance of Names.Id.t
+
 (** A template synthesised for a type constructor with no template name of
     its own, where it is spelled as a template template argument
     ({!Cpp_leaf_plan.ctor_alias_at}). *)
@@ -164,7 +170,7 @@ type ctor_alias = {
 and tyctor_use = {
   tu_constructor : Minicpp.cpp_type;
   tu_vars : Names.Id.t list;
-  tu_alias : (ctor_alias * string list) option;
+  tu_alias : (ctor_alias * holder_argument list) option;
 }
 
 (** What the names written at a position are read off. *)
@@ -207,7 +213,7 @@ and tyctor_plan =
     uses it has decided, in the order first spelled: the printer decides
     none. *)
 and tyctor_decision = {
-  decide : render_ctx -> Names.Id.t list -> Minicpp.cpp_type -> (ctor_alias * string list) option;
+  decide : render_ctx -> Names.Id.t list -> Minicpp.cpp_type -> (ctor_alias * holder_argument list) option;
   noted : tyctor_use list ref;
 }
 

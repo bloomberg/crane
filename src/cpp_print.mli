@@ -189,7 +189,7 @@ val ctor_alias_name : ctor_alias -> string
 (** How the type constructor given, naming the variables given by index, is
     written at the position given: as the plan of the leaf being printed
     says, or as planning, deciding it there, decides and notes. *)
-val tyctor_written : Cpp_state.render_ctx -> Id.t list -> cpp_type -> (ctor_alias * string list) option
+val tyctor_written : Cpp_state.render_ctx -> Id.t list -> cpp_type -> (ctor_alias * Cpp_state.holder_argument list) option
 
 (** The template given, spelled at the position given: collected where the
     position collects them, and otherwise, under [CRANE_CHECK_IR], noted as
