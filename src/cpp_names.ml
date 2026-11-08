@@ -167,10 +167,14 @@ let live_global_name c k r =
 (** {!global_name} as text. *)
 let str_global c k r = Cpp_name.to_string (global_name c k r)
 
+(** The short name of [r] at the position [c] ({!Cpp_resolution.Short}):
+    its name in its own scope, unqualified. *)
+let short_name c k r = Cpp_name.to_string (named c (Short (k, r)))
+
 (** The name [r] is declared under, wherever it is declared, written at the
     position [c]: the replacement text of an inline custom mapping, as
     resolved there ({!inline_custom_text}), otherwise its own short name. *)
-let declared_name c k r = match inline_custom_text c r with Some custom_str -> custom_str | None -> Common.pp_global_name k r
+let declared_name c k r = match inline_custom_text c r with Some custom_str -> custom_str | None -> short_name c k r
 
 (** {!declared_name}, read to compare it with another name rather than to
     write it. *)
@@ -341,10 +345,9 @@ let inductive_name ctx r =
 
 (** Check if capitalizing an enum type name would collide with its parent
     module's struct name. Returns true if so. *)
-let enum_name_collides_with_parent r =
+let enum_name_collides base_name r =
   match r with
   | GlobRef.IndRef (kn, _) ->
-    let base_name = Common.pp_global_name Type r in
     let capitalized = String.capitalize_ascii base_name in
     let parent_mp = Names.MutInd.modpath kn in
     ( match parent_mp with
@@ -354,6 +357,8 @@ let enum_name_collides_with_parent r =
         (String.capitalize_ascii (Names.Label.to_string label))
     | _ -> false )
   | _ -> false
+
+let enum_name_collides_with_parent r = enum_name_collides (Common.pp_global_name Type r) r
 
 (** Capitalize an enum type name, avoiding collision with parent module.
     @param s the base (unqualified) name string of the enum type
@@ -369,6 +374,13 @@ let capitalize_enum_name s r =
 (** An enum's name, its final component capitalized unless that would collide
     with its parent module's struct name. *)
 let enum_name n r = if enum_name_collides_with_parent r then n else capitalize_base n
+
+(** {!enum_name}, its short name read at the position [c]. *)
+let enum_name_at c n r = if enum_name_collides (short_name c Type r) r then n else capitalize_base n
+
+(** Whether a wrapper and the sole struct inside it are written as one
+    struct, as planning asks it ({!Cpp_print.nspace_merges}). *)
+let wrapper_merges (w : dm_wrapper) = w.dw_sole_child && not (in_unmerged_wrapper w.dw_ref)
 
 (** The name of a promoted inductive (one that IS its module struct), from its
     resolved name: the inductive's own label goes when it is its parent

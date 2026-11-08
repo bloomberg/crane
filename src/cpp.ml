@@ -351,7 +351,7 @@ type file_layout = {
       (** The forward declaration of every struct and scoped enum the header
           defines at namespace scope but a constrained template, in the order
           it defines them, which open the file. *)
-  constrained_decls : Cpp_print.forward_declaration list;
+  constrained_decls : Cpp_leaf_plan.forward_declaration list;
       (** The forward declarations of the constrained templates lifted out of
           a wrapper module's functions, in the order the header defines them:
           they go in front of the first chunk of the file that names the
@@ -587,7 +587,7 @@ let unenclosed_element enclosure ?fields body =
     ({!Cpp_ast.print}), but a wrapper struct holding a wrapper module's
     declarations, one of those [homed] names, whose members are, and an
     assertion held back, which is nothing here: it is written after the
-    struct holding it back ({!Cpp_print.held_back_assertions}). *)
+    struct holding it back ({!Cpp_leaf_plan.held_back_assertions}). *)
 let element_decl ~module_ ~homed ctx env d =
   if Cpp_print.is_held_back_assertion ctx d then Cpp_ast.empty
   else if Cpp_leaf_plan.absorbs ~homed d then Cpp_leaf_plan.write_absorbing ctx ~homed env d
@@ -717,7 +717,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
     in
     { text = (if Cpp_ast.is_empty body then Cpp_ast.empty else Cpp_ast.(seq [text (pp_doc_comment l); body]));
       concepts;
-      asserts = List.concat_map (fun (_, d) -> Cpp_print.held_back_assertions ctx d) rendered }
+      asserts = List.concat_map (fun (_, d) -> Cpp_leaf_plan.held_back_assertions ctx d) rendered }
   | l, SEmodule m ->
     let mp = MPdot (module_, l) in
     (* Its struct, or the alias standing for it, is declared under the
@@ -1994,7 +1994,7 @@ let plan_file_layout s =
   let defines ~lifted at mp env d =
     let pass = if lifted then 0 else 1 in
     forward :=
-      ((pass, position mp), List.map (fun f -> (lifted, f)) (Cpp_print.forward_declarations at ~module_:mp env d)) :: !forward;
+      ((pass, position mp), List.map (fun f -> (lifted, f)) (Cpp_leaf_plan.forward_declarations at ~module_:mp env d)) :: !forward;
     types := List.fold_right CString.Set.add (Cpp_leaf_plan.file_scope_types at d) !types
   in
   let element_at mp = Cpp_ind.spelling_position ~file:Intf (Element_of mp) in
@@ -2060,11 +2060,11 @@ let plan_file_layout s =
       lifted_specs = in_writing_order specs;
       member_defs = in_writing_order member_defs;
       forward_decls =
-        List.filter_map (fun (_, (f : Cpp_print.forward_declaration)) -> if f.fwd_constrained then None else Some f.fwd_tree) forward;
+        List.filter_map (fun (_, (f : Cpp_leaf_plan.forward_declaration)) -> if f.fwd_constrained then None else Some f.fwd_tree) forward;
       promoted_imports;
       constrained_decls =
         List.filter_map
-          (fun (lifted, (f : Cpp_print.forward_declaration)) -> if lifted && f.fwd_constrained then Some f else None)
+          (fun (lifted, (f : Cpp_leaf_plan.forward_declaration)) -> if lifted && f.fwd_constrained then Some f else None)
           forward;
       wrapper_homes =
         List.fold_left
@@ -2931,7 +2931,7 @@ type wrapper_render = {
 
     An inductive is spelled qualified when it is written inside a wrapper
     struct rather than merged with it -- [List::list], beside the functions of
-    the file module [List] -- which is planned ({!Cpp_print.nested_in_wrapper}),
+    the file module [List] -- which is planned ({!Cpp_state.in_unmerged_wrapper}),
     so this is asked once the wrappers holding declarations are
     ({!plan_concept_prerequisites}).
 
@@ -3031,7 +3031,7 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
             (fun r ->
               Ref.User.Set.mem r complete
               || Ref.User.Set.mem r needed
-                 && (Cpp_print.nested_in_wrapper r || held_in_collision_struct mp) )
+                 && (Cpp_state.in_unmerged_wrapper r || held_in_collision_struct mp) )
             (packet_refs kn ind)
         then Some l
         else None )
@@ -3263,7 +3263,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   Cpp_print.file_scope_type_names := if is_header then !file_layout.file_scope_types else CString.Set.empty;
   Cpp_print.constrained_structs :=
     if is_header then
-      List.map (fun (f : Cpp_print.forward_declaration) -> f.fwd_ref) !file_layout.constrained_decls
+      List.map (fun (f : Cpp_leaf_plan.forward_declaration) -> f.fwd_ref) !file_layout.constrained_decls
     else [];
   (* The body of each wrapper module the header writes into a struct a
      declaration writes around an inductive, by the struct's name. *)
@@ -3604,7 +3604,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   let forwards =
     if is_header then
       List.map
-        (fun (f : Cpp_print.forward_declaration) -> {Cpp_ast.struct_ = f.fwd_ref; forward_declaration = f.fwd_tree})
+        (fun (f : Cpp_leaf_plan.forward_declaration) -> {Cpp_ast.struct_ = f.fwd_ref; forward_declaration = f.fwd_tree})
         !file_layout.constrained_decls
     else []
   in

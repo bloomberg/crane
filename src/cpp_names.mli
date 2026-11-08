@@ -33,6 +33,10 @@ val global_name : Cpp_state.render_ctx -> Common.kind -> Names.GlobRef.t -> Cpp_
     name. *)
 val declared_name : Cpp_state.render_ctx -> Common.kind -> Names.GlobRef.t -> string
 
+(** The short name of the global at the position, as resolved there
+    ({!Cpp_resolution.Short}): its name in its own scope, unqualified. *)
+val short_name : Cpp_state.render_ctx -> Common.kind -> Names.GlobRef.t -> string
+
 (** {!declared_name}, read to compare it with another name rather than to
     write it. *)
 val declared_spelling : Common.kind -> Names.GlobRef.t -> string
@@ -116,6 +120,14 @@ val capitalize_enum_name : string -> Names.GlobRef.t -> string
 (** An enum's name, its final component capitalized unless that collides
     with its parent module's struct name. *)
 val enum_name : Cpp_name.t -> Names.GlobRef.t -> Cpp_name.t
+
+(** {!enum_name}, the enum's short name read at the position as resolved
+    there. *)
+val enum_name_at : Cpp_state.render_ctx -> Cpp_name.t -> Names.GlobRef.t -> Cpp_name.t
+
+(** Whether a wrapper and the sole struct inside it are written as one
+    struct, asked by planning. *)
+val wrapper_merges : Minicpp.dm_wrapper -> bool
 
 (** The name of a promoted inductive, which is its module's struct, from its
     resolved name. *)

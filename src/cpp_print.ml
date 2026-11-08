@@ -506,7 +506,13 @@ let globals_written_beside (d : cpp_decl) =
          t );
     t
   and expr e =
-    (match e with CPPuint _ -> found := Option.cata (fun r -> [r]) [] (uint63_type ()) @ !found | _ -> ());
+    ( match e with
+    | CPPuint _ -> found := Option.cata (fun r -> [r]) [] (uint63_type ()) @ !found
+    | CPPglob (x, _, _) -> (
+      match Module_plan.eponymous_record_containing x with
+      | Some {Module_plan.record; _} -> found := record :: !found
+      | None -> () )
+    | _ -> () );
     map_expr expr stmt ty e
   and stmt s =
     ( match s with
@@ -1103,7 +1109,7 @@ and pp_cpp_expr ctx env args t =
     let call_args = String.concat ", " (List.filteri (fun i _ -> i <> mv_receiver) names) in
     str ("[](" ^ params ^ ") { return " ^ List.nth names mv_receiver)
     ++ str (pp_obj_access mv_access)
-    ++ pp_member_name ctx (Common.id_of_global Term mv_method) mv_type_args
+    ++ pp_member_name ctx (Id.of_string (short_name ctx Term mv_method)) mv_type_args
     ++ str ("(" ^ call_args ^ "); }")
   | CPPprojection_value r ->
     str "[](const auto &_x) { return _x." ++ str (projection_field_name r) ++ str "; }"
@@ -1131,8 +1137,8 @@ and pp_cpp_expr ctx env args t =
            StructName<int, ...>::template funcName<Args> for static methods. We
            use placeholder types for the struct and actual args for the
            method. *)
-        let struct_name = Common.pp_global_name Type record_ref in
-        let func_name = Common.pp_global_name Term x in
+        let struct_name = short_name ctx Type record_ref in
+        let func_name = short_name ctx Term x in
         let placeholder_args = gen_placeholder_args type_params in
         let ty_args = pp_list (pp_cpp_type ctx false []) tys in
         `Written
@@ -1144,8 +1150,8 @@ and pp_cpp_expr ctx env args t =
           ++ ty_args
           ++ str ">" )
       | Some (record_ref, type_params), [] ->
-        let struct_name = Common.pp_global_name Type record_ref in
-        let func_name = Common.pp_global_name Term x in
+        let struct_name = short_name ctx Type record_ref in
+        let func_name = short_name ctx Term x in
         let placeholder_args = gen_placeholder_args type_params in
         `Written
           ( Cpp_name.pp_type_qualifier class_
@@ -1224,7 +1230,7 @@ and pp_cpp_expr ctx env args t =
   | CPPmethod_call {mc_method; mc_access; mc_receiver; mc_type_args; mc_args} ->
     pp_cpp_expr ctx env args mc_receiver
     ++ str (pp_obj_access mc_access)
-    ++ pp_member_name ctx (Common.id_of_global Term mc_method) mc_type_args
+    ++ pp_member_name ctx (Id.of_string (short_name ctx Term mc_method)) mc_type_args
     ++ str "("
     ++ pp_list (pp_cpp_expr ctx env args) mc_args
     ++ str ")"
@@ -1386,7 +1392,7 @@ and pp_cpp_expr ctx env args t =
       str "(" ++ pp_cpp_expr ctx env args e ++ str ")." ++ Id.print id
     | _ -> pp_cpp_expr ctx env args e ++ str "." ++ Id.print id )
   | CPPget' (e, id, _) ->
-    let field_name = str (Common.pp_global_name Type id) in
+    let field_name = str (short_name ctx Type id) in
     ( match e with
     | CPPderef CPPthis -> str "this->" ++ field_name
     | CPPderef _ | CPPraw _ ->
@@ -1512,7 +1518,7 @@ and pp_cpp_expr ctx env args t =
   | CPPenum_val (ind, ctor) ->
     (* Generate EnumType::Constructor for enum class values. Use str_global for
        proper module qualification, with collision-aware capitalization. *)
-    let full_name = enum_name (global_name ctx Type ind) ind in
+    let full_name = enum_name_at ctx (global_name ctx Type ind) ind in
     Cpp_name.pp_scopes (global_scopes_for ind full_name)
     ++ Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) full_name
     ++ Id.print ctor
@@ -2451,8 +2457,8 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) ?(mode = Mm_inline) ctx env = 
        the same module refers to would otherwise look like a clash and send
        that type through a duplicate wrapper.  Reads spell the field the same
        way (see [CPPget']). *)
-    pp_doc_comment_for_name (Common.pp_global_name Type id)
-    ++ (pp_type ctx ty ++ str " " ++ str (Common.pp_global_name Type id)
+    pp_doc_comment_for_name (short_name ctx Type id)
+    ++ (pp_type ctx ty ++ str " " ++ str (short_name ctx Type id)
           ++ str ";")
   | Fmethod
       {
@@ -2820,13 +2826,6 @@ let pp_meyers_singleton ctx env id ty expr_pp =
     the position [ctx] ({!Cpp_names.wrapper_name_from}). *)
 let nspace_wrapper_name ctx id = wrapper_name_from (declared_name ctx) id
 
-(** Whether the inductive [r] is written inside a wrapper that other
-    declarations were queued against -- a file module of the same name, whose
-    functions go in beside it -- and so is spelled [List::list] rather than
-    [List].  A struct written inside another is named by member lookup, which
-    no forward declaration answers.  Planned ({!in_unmerged_wrapper}), so the
-    answer does not depend on whether the wrapper has been written yet. *)
-let nested_in_wrapper = in_unmerged_wrapper
 
 (** Whether a wrapper and the struct inside it are written as one struct
     rather than two.  A sole struct is merged into its wrapper and takes the
@@ -2840,107 +2839,14 @@ let nested_in_wrapper = in_unmerged_wrapper
     Asked by {!pp_cpp_decl} of the declaration and by the out-of-line
     member definition of its owner, which must agree about how many names the
     qualifier has. *)
-let nspace_merges (w : dm_wrapper) : bool =
-  w.dw_sole_child && not (nested_in_wrapper w.dw_ref)
+let nspace_merges ctx (w : dm_wrapper) : bool =
+  w.dw_sole_child && not (in_unmerged_wrapper_named (short_name ctx Type w.dw_ref) w.dw_ref)
 
 (** The name the struct of [id] is defined under. *)
 let struct_definition_name ctx id = Cpp_name.pp (Cpp_names.definition_name ctx Struct_definition id)
 
 (** The name the scoped enum of [r] is defined under. *)
 let enum_definition_name ctx r = Cpp_name.pp (Cpp_names.definition_name ctx Enum_definition r)
-
-(** The assertions [d] holds back, in the order it writes them: those that
-    a class's concept holds of an instance where the concept is declared
-    after the struct being written, because its requirements name the
-    struct's own types. *)
-let rec held_back_assertions ctx (d : Cpp_erasure.settled) =
-  match Cpp_erasure.view d with
-  | Template (_, _, inner) -> held_back_assertions ctx inner
-  | Namespace (None, decls) -> List.concat_map (held_back_assertions ctx) decls
-  | Namespace (Some id, members) ->
-    let sole_child = match (members :> cpp_decl list) with [Dstruct _] -> true | _ -> false in
-    if nspace_merges {dw_ref = id; dw_sole_child = sole_child} then []
-    else List.concat_map (held_back_assertions ctx) members
-  | Decl (Dstatic_assert (CPPconcept_app (class_ref, subject, tys), None)) when class_concept_held_back ctx class_ref ->
-    [ { Cpp_ast.concept = Of_class (Cpp_ast.global_ref class_ref);
-        subject = Instance {instance = Cpp_ast.global_ref subject; args = tys} } ]
-  | Decl _ -> []
-
-(** The structs and scoped enums [d] defines at namespace scope, written
-    in the scope being written, in the order it defines them, each with the
-    reference it is declared under, its definition's template head and its
-    constraint. *)
-let rec structs_defined (d : Cpp_erasure.settled) : Cpp_ast.defined list =
-  match Cpp_erasure.view d with
-  | Template (_, _, inner) -> structs_defined inner
-  | Namespace (None, decls) -> List.concat_map structs_defined decls
-  | Namespace (Some id, members) -> (
-    match (members :> cpp_decl list) with
-    | [Dstruct {ds_tparams; ds_constraint; _}] when nspace_merges {dw_ref = id; dw_sole_child = true} ->
-      [Defined_struct {struct_ = id; name = As_inductive_wrapper; tparams = ds_tparams; constraint_ = ds_constraint}]
-    | _ -> [] )
-  | Decl (Dstruct {ds_ref; ds_tparams; ds_constraint; _}) ->
-    [Defined_struct {struct_ = ds_ref; name = As_defined; tparams = ds_tparams; constraint_ = ds_constraint}]
-  | Decl (Denum {de_ref; _}) -> [Defined_enum de_ref]
-  | Decl _ -> []
-
-let defined_ref : Cpp_ast.defined -> _ = function Defined_struct {struct_ = r; _} | Defined_enum r -> r
-
-(** A forward declaration of a struct defined at namespace scope.
-
-    A module struct can be emitted before an inductive a later module pulled
-    up to global scope, so a member declaration may name a type whose
-    definition comes further down the header ([static Prod<nat, nat>
-    divmod(...)] ahead of [struct Prod]).  A declaration only needs the name
-    to have been introduced, so the header's prologue declares them up front.
-    Printed by the function that prints the definition's template head, so
-    the two spellings of the parameter list cannot drift apart.
-
-    A constrained template -- a [requires] clause on the struct, or a
-    concept-kinded parameter -- names its concept, which need not be declared
-    by that prologue, nor anywhere above the struct's first use; its
-    declaration goes in front of the first chunk of the file that names the
-    struct before defining it ({!Cpp.do_struct_with_decl_tracking}): a
-    section-local instance's struct and the file module's struct can each
-    name the other, [typename StateV<_tcI0>::state] in a member's signature
-    against a call to that member in the instance's body.
-
-    An opaque declaration of a scoped enum is one too: [enum class E;] is a
-    complete type -- a scoped enum has a fixed underlying type -- so replaying
-    it in the header prologue is enough for the members naming it ahead of
-    its definition, which still follows in its own place. *)
-type forward_declaration = {fwd_ref : GlobRef.t; fwd_tree : Cpp_ast.t; fwd_constrained : bool}
-
-(* Whether [tparams] make the [requires] clause {!pp_requires_of_tparams}
-   prints. *)
-let makes_requires_clause ctx tparams =
-  List.exists
-    (fun (tt, _) ->
-      match tt with
-      | TTinvocable _ -> true
-      | TTconcept (concept, _ :: _) -> not (class_concept_held_back ctx concept)
-      | _ -> false )
-    tparams
-
-let constrained ctx : Cpp_ast.defined -> bool = function
-  | Defined_struct {tparams; constraint_; _} ->
-    Option.has_some constraint_ || makes_requires_clause ctx tparams
-    || List.exists (function TTconcept _, _ -> true | _ -> false) tparams
-  | Defined_enum _ -> false
-
-(** The forward declarations of the structs and scoped enums [d], an element
-    of the module [module_], written at the position [ctx], defines at
-    namespace scope, in the order it defines them: none inside a struct,
-    where a member is not nameable before its enclosing struct anyway. *)
-let forward_declarations ctx ~module_ env (d : Cpp_erasure.settled) =
-  if ctx.rc_in_struct then []
-  else
-    List.map
-      (fun defined ->
-        { fwd_ref = defined_ref defined;
-          fwd_tree = Cpp_ast.elements ~source:module_ (Cpp_ast.forward_declaration env defined);
-          fwd_constrained = constrained ctx defined } )
-      (structs_defined d)
 
 let pp_forward_declaration ctx env : Cpp_ast.defined -> _ = function
   | Defined_struct {struct_; name; tparams; constraint_} ->
@@ -3052,7 +2958,7 @@ and pp_wrapper_nspace ctx env id (members : Cpp_erasure.settled list) =
   (* The same question the out-of-line definition of a member asks, asked
      through the same function so the two cannot drift apart. *)
   let merges =
-    nspace_merges
+    nspace_merges ctx
       { dw_ref = id;
         dw_sole_child = (match decls with [Dstruct _] -> true | _ -> false) }
   in
@@ -3362,7 +3268,7 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
        is how the outside reaches it. *)
     let own_name, sname =
       match dm_enclosing with
-      | Some w when not (nspace_merges w) ->
+      | Some w when not (nspace_merges ctx w) ->
         let own = declared_name ctx Type dm_owner in
         (own, nspace_wrapper_name ctx w.dw_ref ^ "::" ^ own)
       | _ ->
@@ -3390,7 +3296,7 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
   | Dstatic_assert (CPPconcept_app (class_ref, _, _), None) when class_concept_held_back ctx class_ref ->
     (* The concept is declared after the struct being rendered, because its
        requirements name the struct's own types.  The assertion goes with it
-       ({!held_back_assertions}). *)
+       ({!Cpp_leaf_plan.held_back_assertions}). *)
     mt ()
   | Dstatic_assert (e, so) ->
     ( match so with
@@ -3443,20 +3349,22 @@ let read_cpp_decl ctx env d = pp_cpp_decl ctx env d
     struct merged into them, in the order it writes them, each named by
     [name]: the structs another wrapper's declarations can be written
     into. *)
-let rec unmerged_wrappers_named name (d : Cpp_erasure.settled) =
+let rec unmerged_wrappers_named ~merges ~name (d : Cpp_erasure.settled) =
   match Cpp_erasure.view d with
-  | Template (_, _, inner) -> unmerged_wrappers_named name inner
-  | Namespace (None, decls) -> List.concat_map (unmerged_wrappers_named name) decls
+  | Template (_, _, inner) -> unmerged_wrappers_named ~merges ~name inner
+  | Namespace (None, decls) -> List.concat_map (unmerged_wrappers_named ~merges ~name) decls
   | Namespace (Some id, members) ->
     let sole_child = match (members :> cpp_decl list) with [Dstruct _] -> true | _ -> false in
-    if nspace_merges {dw_ref = id; dw_sole_child = sole_child} then []
-    else List.concat_map (unmerged_wrappers_named name) members @ [name id]
+    if merges {dw_ref = id; dw_sole_child = sole_child} then []
+    else List.concat_map (unmerged_wrappers_named ~merges ~name) members @ [name id]
   | Decl _ -> []
 
 (* Whether [d], written at the position [ctx], writes a wrapper struct
    holding a wrapper module's declarations, one [homed] names. *)
 let absorbs ctx ~homed d =
-  List.exists (fun name -> List.mem_assoc name homed) (unmerged_wrappers_named (nspace_wrapper_name ctx) d)
+  List.exists
+    (fun name -> List.mem_assoc name homed)
+    (unmerged_wrappers_named ~merges:(nspace_merges ctx) ~name:(nspace_wrapper_name ctx) d)
 
 (** [d], which {!absorbs}, as written: each wrapper struct holding a wrapper
     module's declarations a {!Cpp_ast.Wrapper_struct}, the wrapper's own
@@ -3481,7 +3389,7 @@ let rec absorbing_at ctx ~homed ?tyctors env (d : Cpp_erasure.settled) =
   | Decl _ -> Cpp_ast.text (pp_cpp_decl ctx env d)
 
 (** Whether [d] is an assertion the struct being written holds back
-    ({!held_back_assertions}), which it writes nothing for. *)
+    ({!Cpp_leaf_plan.held_back_assertions}), which it writes nothing for. *)
 let is_held_back_assertion ctx (d : Cpp_erasure.settled) =
   match Cpp_erasure.view d with
   | Decl (Dstatic_assert (CPPconcept_app (class_ref, _, _), None)) -> class_concept_held_back ctx class_ref

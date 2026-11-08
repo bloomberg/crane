@@ -28,7 +28,7 @@ let declaration_frames (d : Cpp_erasure.settled) =
     | Namespace (None, decls) -> List.concat_map (decl frame) decls
     | Namespace (Some id, members) -> (
       match (members :> cpp_decl list) with
-      | [Dstruct {ds_ref; ds_tparams; _}] when nspace_merges {dw_ref = id; dw_sole_child = true} ->
+      | [Dstruct {ds_ref; ds_tparams; _}] when wrapper_merges {dw_ref = id; dw_sole_child = true} ->
         [frame; entered frame ((Cpp_resolution.In_struct :: template_body ds_tparams) @ [Inductive_struct ds_ref])]
       | _ -> frame :: List.concat_map (decl (Cpp_resolution.In_struct :: frame)) members )
     | Decl (Dfun {df_path; df_shape; _}) ->
@@ -54,6 +54,7 @@ let rec declared_globals (d : cpp_decl) =
     | Fmethod {mf_tparams = tps; _} | Fconstructor {fc_tparams = tps; _} | Fnested_using (tps, _, _) -> concepts tps
     | Fnested_struct (_, fs) -> List.concat_map field fs
     | Fmember_decl m -> field (field_of_member m, VPublic, SNoTag)
+    | Fvar' (r, _) -> [r]
     | _ -> []
   in
   match d with
@@ -86,7 +87,9 @@ let global_names frames globals =
   let keys =
     List.concat_map
       (fun r ->
-        Cpp_resolution.[Unmapped (Type, r); Unmapped (Term, r); Class_concept r; Type_head (Glob_head, r)]
+        Cpp_resolution.
+          [ Unmapped (Type, r); Unmapped (Term, r); Short (Type, r); Short (Term, r); Class_concept r;
+            Type_head (Glob_head, r) ]
         @
         match r with
         | GlobRef.IndRef _ -> Cpp_resolution.[Inductive_value r; Inductive_scope r; Type_head (Inductive_head, r)]
@@ -100,6 +103,99 @@ let global_names frames globals =
    ({!Cpp_demands.globals_of_type}), and the head of every global type in
    it, a custom whose text it is written from among them. *)
 let type_globals ty = Cpp_demands.globals_of_type ty @ type_heads ty
+
+(** The assertions [d] holds back, in the order it writes them: those that
+    a class's concept holds of an instance where the concept is declared
+    after the struct being written, because its requirements name the
+    struct's own types. *)
+let rec held_back_assertions ctx (d : Cpp_erasure.settled) =
+  match Cpp_erasure.view d with
+  | Template (_, _, inner) -> held_back_assertions ctx inner
+  | Namespace (None, decls) -> List.concat_map (held_back_assertions ctx) decls
+  | Namespace (Some id, members) ->
+    let sole_child = match (members :> cpp_decl list) with [Dstruct _] -> true | _ -> false in
+    if wrapper_merges {dw_ref = id; dw_sole_child = sole_child} then []
+    else List.concat_map (held_back_assertions ctx) members
+  | Decl (Dstatic_assert (CPPconcept_app (class_ref, subject, tys), None)) when class_concept_held_back ctx class_ref ->
+    [ { Cpp_ast.concept = Of_class (Cpp_ast.global_ref class_ref);
+        subject = Instance {instance = Cpp_ast.global_ref subject; args = tys} } ]
+  | Decl _ -> []
+
+(** The structs and scoped enums [d] defines at namespace scope, written
+    in the scope being written, in the order it defines them, each with the
+    reference it is declared under, its definition's template head and its
+    constraint. *)
+let rec structs_defined (d : Cpp_erasure.settled) : Cpp_ast.defined list =
+  match Cpp_erasure.view d with
+  | Template (_, _, inner) -> structs_defined inner
+  | Namespace (None, decls) -> List.concat_map structs_defined decls
+  | Namespace (Some id, members) -> (
+    match (members :> cpp_decl list) with
+    | [Dstruct {ds_tparams; ds_constraint; _}] when wrapper_merges {dw_ref = id; dw_sole_child = true} ->
+      [Defined_struct {struct_ = id; name = As_inductive_wrapper; tparams = ds_tparams; constraint_ = ds_constraint}]
+    | _ -> [] )
+  | Decl (Dstruct {ds_ref; ds_tparams; ds_constraint; _}) ->
+    [Defined_struct {struct_ = ds_ref; name = As_defined; tparams = ds_tparams; constraint_ = ds_constraint}]
+  | Decl (Denum {de_ref; _}) -> [Defined_enum de_ref]
+  | Decl _ -> []
+
+let defined_ref : Cpp_ast.defined -> _ = function Defined_struct {struct_ = r; _} | Defined_enum r -> r
+
+(** A forward declaration of a struct defined at namespace scope.
+
+    A module struct can be emitted before an inductive a later module pulled
+    up to global scope, so a member declaration may name a type whose
+    definition comes further down the header ([static Prod<nat, nat>
+    divmod(...)] ahead of [struct Prod]).  A declaration only needs the name
+    to have been introduced, so the header's prologue declares them up front.
+    Printed by the function that prints the definition's template head, so
+    the two spellings of the parameter list cannot drift apart.
+
+    A constrained template -- a [requires] clause on the struct, or a
+    concept-kinded parameter -- names its concept, which need not be declared
+    by that prologue, nor anywhere above the struct's first use; its
+    declaration goes in front of the first chunk of the file that names the
+    struct before defining it ({!Cpp.do_struct_with_decl_tracking}): a
+    section-local instance's struct and the file module's struct can each
+    name the other, [typename StateV<_tcI0>::state] in a member's signature
+    against a call to that member in the instance's body.
+
+    An opaque declaration of a scoped enum is one too: [enum class E;] is a
+    complete type -- a scoped enum has a fixed underlying type -- so replaying
+    it in the header prologue is enough for the members naming it ahead of
+    its definition, which still follows in its own place. *)
+type forward_declaration = {fwd_ref : GlobRef.t; fwd_tree : Cpp_ast.t; fwd_constrained : bool}
+
+(* Whether [tparams] make the [requires] clause {!pp_requires_of_tparams}
+   prints. *)
+let makes_requires_clause ctx tparams =
+  List.exists
+    (fun (tt, _) ->
+      match tt with
+      | TTinvocable _ -> true
+      | TTconcept (concept, _ :: _) -> not (class_concept_held_back ctx concept)
+      | _ -> false )
+    tparams
+
+let constrained ctx : Cpp_ast.defined -> bool = function
+  | Defined_struct {tparams; constraint_; _} ->
+    Option.has_some constraint_ || makes_requires_clause ctx tparams
+    || List.exists (function TTconcept _, _ -> true | _ -> false) tparams
+  | Defined_enum _ -> false
+
+(** The forward declarations of the structs and scoped enums [d], an element
+    of the module [module_], written at the position [ctx], defines at
+    namespace scope, in the order it defines them: none inside a struct,
+    where a member is not nameable before its enclosing struct anyway. *)
+let forward_declarations ctx ~module_ env (d : Cpp_erasure.settled) =
+  if ctx.rc_in_struct then []
+  else
+    List.map
+      (fun defined ->
+        { fwd_ref = defined_ref defined;
+          fwd_tree = Cpp_ast.elements ~source:module_ (Cpp_ast.forward_declaration env defined);
+          fwd_constrained = constrained ctx defined } )
+      (structs_defined d)
 
 (* [ctx], naming what writing [t] there names as resolved there. *)
 let resolved_for ctx t =
@@ -538,7 +634,9 @@ let file_scope_types ctx (d : Cpp_erasure.settled) =
     | _ -> []
   in
   let rec keys (d : Cpp_erasure.settled) =
-    Cpp_names.inline_customs_named (declared (d :> cpp_decl))
+    let declared = declared (d :> cpp_decl) in
+    Cpp_names.inline_customs_named declared
+    @ List.map (fun r -> Cpp_resolution.Short (Type, r)) declared
     @
     match Cpp_erasure.view d with
     | Template (_, _, inner) -> keys inner
@@ -553,7 +651,7 @@ let file_scope_types ctx (d : Cpp_erasure.settled) =
     a sole struct merged into them, in the order it writes them: the structs
     another wrapper's declarations can be written into, spelled to be
     compared with them ({!Cpp_names.wrapper_spelling}). *)
-let unmerged_wrappers_written d = unmerged_wrappers_named wrapper_spelling d
+let unmerged_wrappers_written d = unmerged_wrappers_named ~merges:wrapper_merges ~name:wrapper_spelling d
 
 (** The wrapper structs [d] writes that hold a wrapper module's
     declarations: those [homed] names, each with the module. *)

@@ -451,6 +451,9 @@ val unmerged_wrappers : (string, Names.ModPath.t) Hashtbl.t
     property of its declaration, the same wherever a use is written. *)
 val in_unmerged_wrapper : Names.GlobRef.t -> bool
 
+(** {!in_unmerged_wrapper}, the inductive's short name given. *)
+val in_unmerged_wrapper_named : string -> Names.GlobRef.t -> bool
+
 (** What a nested struct name was emitted for: a Rocq reference, or a module
     (which has no [GlobRef.t]). *)
 type nested_struct_owner =

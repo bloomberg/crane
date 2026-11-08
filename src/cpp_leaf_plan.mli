@@ -118,3 +118,35 @@ val print_unprinted :
   assertion:(Cpp_state.render_ctx -> Cpp_ast.assertion -> Pp.t) ->
   Cpp_ast.unprinted ->
   Pp.t
+
+(** The structs and scoped enums [d] defines at namespace scope, in the
+    order it defines them, and what each declares. *)
+val structs_defined : Cpp_erasure.settled -> Cpp_ast.defined list
+
+val defined_ref : Cpp_ast.defined -> Names.GlobRef.t
+
+(** The assertions a declaration holds back, in the order it writes them:
+    those that a class's concept holds of an instance where the concept is
+    declared after the struct being written, and so is the assertion. *)
+val held_back_assertions : Cpp_state.render_ctx -> Cpp_erasure.settled -> Cpp_ast.assertion list
+
+(** {2 Forward declarations} *)
+
+(** A forward declaration of a struct or scoped enum defined at namespace
+    scope: what it declares, the declaration as the tree writes it, and
+    whether it is a constrained template -- one whose [requires] clause or
+    concept-kinded parameter names a concept, which the header's prologue
+    need not have declared. *)
+type forward_declaration = {
+  fwd_ref : Names.GlobRef.t;  (** The struct or enum it declares. *)
+  fwd_tree : Cpp_ast.t;
+  fwd_constrained : bool;
+}
+
+(** [forward_declarations ctx ~module_ env d] is the forward declaration of
+    each struct and scoped enum [d], an element of the module [module_]
+    written at the position [ctx], defines at namespace scope, in the order
+    it defines them, written as an element of [module_] and printed as the
+    definition prints its head. *)
+val forward_declarations :
+  Cpp_state.render_ctx -> module_:Names.ModPath.t -> Common.env -> Cpp_erasure.settled -> forward_declaration list
