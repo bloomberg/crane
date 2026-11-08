@@ -590,7 +590,7 @@ let unenclosed_element enclosure ?fields body =
     struct holding it back ({!Cpp_print.held_back_assertions}). *)
 let element_decl ~module_ ~homed ctx env d =
   if Cpp_print.is_held_back_assertion ctx d then Cpp_ast.empty
-  else if Cpp_print.absorbs ~homed d then Cpp_leaf_plan.write_absorbing ctx ~homed env d
+  else if Cpp_leaf_plan.absorbs ~homed d then Cpp_leaf_plan.write_absorbing ctx ~homed env d
   else Cpp_leaf_plan.unprinted ctx ~module_ env d
 
 (** The wrapper structs the header writes around a wrapper module's
@@ -1982,7 +1982,7 @@ let plan_file_layout s =
             match Hashtbl.find_opt unmerged_wrappers name with
             | Some wrapped -> homes := (position mp, position wrapped, {wrapper = name; wrapped; home = d}) :: !homes
             | None -> () )
-          (Cpp_print.unmerged_wrappers_written d') )
+          (Cpp_leaf_plan.unmerged_wrappers_written d') )
       rendered
   in
   let add band mp group = band := (position mp, group) :: !band in
@@ -3011,7 +3011,7 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
                 acc (Mlutil.term_defs d)
             | _ -> acc )
           acc
-          (wrapper_sels (Cpp_print.nspace_wrapper_name r)) )
+          (wrapper_sels (Cpp_names.wrapper_spelling r)) )
       payloads (packet_refs kn ind)
   in
   let held_in_collision_struct =

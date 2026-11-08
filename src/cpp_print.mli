@@ -13,15 +13,13 @@ open Minicpp
 
 (** {2 Rendering} *)
 
-(** [absorbs ~homed d]: whether [d] writes a wrapper struct holding a
-    wrapper module's declarations, which are members of it: one [homed]
-    names, with the module, as planned. *)
-val absorbs : homed:(string * ModPath.t) list -> Cpp_erasure.settled -> bool
+(** The wrapper structs a declaration writes around something other than a
+    sole struct merged into them, in the order it writes them, each named by
+    the function given: the structs another wrapper's declarations can be
+    written into. *)
+val unmerged_wrappers_named : (GlobRef.t -> string) -> Cpp_erasure.settled -> string list
 
-(** The names of [homed]'s wrappers [d] writes structs for. *)
-val absorbed_by : homed:(string * ModPath.t) list -> Cpp_erasure.settled -> string list
-
-(** [d], which {!absorbs}, written at the position given, each wrapper
+(** [d], which absorbs a wrapper module ({!Cpp_leaf_plan.absorbs}), written at the position given, each wrapper
     struct holding a wrapper module's declarations a
     {!Cpp_ast.Wrapper_struct}, each member writing its type constructors
     as [tyctors], planned for [d], says. *)
@@ -166,17 +164,12 @@ val pp_type_pieces : GlobRef.t -> foreign_piece list -> (int -> Pp.t option) -> 
 (** {2 Wrapper structs} *)
 
 (** The name the struct wrapping an inductive at namespace scope is written
-    under. *)
-val nspace_wrapper_name : GlobRef.t -> string
+    under at the position. *)
+val nspace_wrapper_name : Cpp_state.render_ctx -> GlobRef.t -> string
 
 (** Whether the inductive is written inside a wrapper other declarations were
     queued against, and so is spelled [List::list] rather than [List]. *)
 val nested_in_wrapper : GlobRef.t -> bool
-
-(** The names of the wrapper structs a declaration writes around something
-    other than a sole struct merged into them, in the order it writes them:
-    the structs another wrapper's declarations can be written into. *)
-val unmerged_wrappers_written : Cpp_erasure.settled -> string list
 
 (** The assertions a declaration holds back, in the order it writes them:
     those that a class's concept holds of an instance where the concept is

@@ -1064,9 +1064,6 @@ val check_written_custom : GlobRef.t -> unit
     ({!check_written_custom}). *)
 val written_custom_text : GlobRef.t -> string option
 
-(** {!written_custom_text} where [r] is inlined. *)
-val written_inline_custom_text : GlobRef.t -> string option
-
 (** What a reference to [r] carries about its custom mapping: the replacement
     text where [r] is inlined, and [yields], what it evaluates to where the
     caller knows. *)

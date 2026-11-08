@@ -527,18 +527,39 @@ let writing ctx (settled : Cpp_erasure.settled) =
     | None -> deciding ctx (ref [])
 
 (** The type names [d], written at namespace scope at the position [ctx],
-    introduces there ({!Cpp_print.file_scope_types}), the names of the
-    structs it defines resolved there first. *)
+    introduces there ({!Cpp_print.file_scope_types}), the names it writes
+    resolved there first: those of the structs it defines, and the inline
+    custom texts of the aliases and wrappers it declares. *)
 let file_scope_types ctx (d : Cpp_erasure.settled) =
-  let rec structs (d : Cpp_erasure.settled) =
+  let rec declared : cpp_decl -> _ = function
+    | Dtemplate (_, _, inner) -> declared inner
+    | Dusing u -> [u.du_name]
+    | Dnspace (Some r, _) -> [r]
+    | _ -> []
+  in
+  let rec keys (d : Cpp_erasure.settled) =
+    Cpp_names.inline_customs_named (declared (d :> cpp_decl))
+    @
     match Cpp_erasure.view d with
-    | Template (_, _, inner) -> structs inner
-    | Namespace (None, decls) -> List.concat_map structs decls
-    | Decl (Dstruct {ds_ref; _}) -> [(ctx.rc_frame, Cpp_resolution.Definition (Struct_definition, ds_ref))]
+    | Template (_, _, inner) -> keys inner
+    | Namespace (None, decls) -> List.concat_map keys decls
+    | Decl (Dstruct {ds_ref; _}) -> [Cpp_resolution.Definition (Struct_definition, ds_ref)]
     | Namespace (Some _, _) | Decl _ -> []
   in
-  let names = Cpp_resolution.resolve (fun _ key -> live_value ctx key) (structs d) in
+  let names = Cpp_resolution.resolve (fun _ key -> live_value ctx key) (List.map (fun key -> (ctx.rc_frame, key)) (keys d)) in
   Cpp_print.file_scope_types {ctx with rc_names = Names_resolved names} d
+
+(** The names of the wrapper structs [d] writes around something other than
+    a sole struct merged into them, in the order it writes them: the structs
+    another wrapper's declarations can be written into, spelled to be
+    compared with them ({!Cpp_names.wrapper_spelling}). *)
+let unmerged_wrappers_written d = unmerged_wrappers_named wrapper_spelling d
+
+(** The wrapper structs [d] writes that hold a wrapper module's
+    declarations: those [homed] names, each with the module. *)
+let absorbed_by ~homed d = List.filter (fun name -> List.mem_assoc name homed) (unmerged_wrappers_written d)
+
+let absorbs ~homed d = absorbed_by ~homed d <> []
 
 let read_decl ctx env settled = read_cpp_decl (writing ctx settled) env settled
 

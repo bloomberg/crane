@@ -3182,8 +3182,6 @@ let written_custom_text r =
     Some s
   | None -> None
 
-let written_inline_custom_text r = if to_inline r then written_custom_text r else None
-
 let custom_info ?yields r : Minicpp.custom_info =
   { ci_inline = (if to_inline r then Option.map Minicpp.inline_template (find_custom_opt r) else None);
     ci_yields = yields }

@@ -44,9 +44,8 @@ rules=(
 # (Cpp_state.live_namers), or every read of live naming counts.
 PRINTER_TABLE_CONFIGURATION="arena_header erase_fn_header escape_reserved_struct_name modular std_lib register_census lang modpath_of_r safe_basename_of_global string_of_modfile base_mp at_toplevel is_toplevel"
 # The constructors of an inductive whose struct printing enters
-# (Cpp_names.next); the declared name's inline custom text
-# (Cpp_names.declared_name); custom renaming in Common.pp_global_name.
-PRINTER_TABLE_PENDING="get_ind_nb_ctors_opt is_any_inline_custom is_custom written_inline_custom_text"
+# (Cpp_names.next); custom renaming in Common.pp_global_name.
+PRINTER_TABLE_PENDING="get_ind_nb_ctors_opt is_any_inline_custom is_custom"
 
 status=0
 dune build --root . @src/check ./bin/printer_reads/main.exe 2>&1 | head -20

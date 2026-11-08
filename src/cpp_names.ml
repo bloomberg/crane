@@ -167,15 +167,26 @@ let live_global_name c k r =
 (** {!global_name} as text. *)
 let str_global c k r = Cpp_name.to_string (global_name c k r)
 
-(** The name [r] is declared under, wherever it is declared: the replacement
-    text of an inline custom mapping, otherwise its own short name. *)
-let declared_name_from text k r = match text r with Some custom_str -> custom_str | None -> Common.pp_global_name k r
-
-let declared_name = declared_name_from written_inline_custom_text
+(** The name [r] is declared under, wherever it is declared, written at the
+    position [c]: the replacement text of an inline custom mapping, as
+    resolved there ({!inline_custom_text}), otherwise its own short name. *)
+let declared_name c k r = match inline_custom_text c r with Some custom_str -> custom_str | None -> Common.pp_global_name k r
 
 (** {!declared_name}, read to compare it with another name rather than to
     write it. *)
-let declared_spelling = declared_name_from Table.inline_custom_text
+let declared_spelling k r =
+  match Table.inline_custom_text r with Some custom_str -> custom_str | None -> Common.pp_global_name k r
+
+(** The name of the struct wrapping [id] at namespace scope, its declared
+    name [declared] as [declared] spells it: an inductive's wrapper is named
+    after the inductive, capitalised; anything else is spelled as itself. *)
+let wrapper_name_from declared id =
+  Table.escape_reserved_struct_name
+    (match id with GlobRef.IndRef _ -> String.capitalize_ascii (declared Type id) | _ -> declared Type id)
+
+(** {!wrapper_name_from} of {!declared_spelling}: the wrapper's name read to
+    compare it with another. *)
+let wrapper_spelling id = wrapper_name_from declared_spelling id
 
 (** {!global_name} as a document. *)
 let pp_global c k r = Cpp_name.pp (global_name c k r)
@@ -786,7 +797,7 @@ let file_named_by_key ~unit_files : Cpp_resolution.key -> ModPath.t option = fun
 let struct_definition_name ctx id =
   let local = local_at ctx id and merged = merged_at ctx and promoted = promoted_at ctx in
   match struct_spelling ~merged ~promoted ~local id with
-  | As_declared -> Cpp_name.unqualified (declared_name Type id)
+  | As_declared -> Cpp_name.unqualified (declared_name ctx Type id)
   | Eponymous_record_name | Capitalized -> Cpp_name.unqualified (struct_declaration_name ~merged ~promoted ~local id)
 
 let enum_definition_name ctx r =

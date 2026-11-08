@@ -21,6 +21,15 @@ val read_decl : Cpp_state.render_ctx -> Common.env -> Cpp_erasure.settled -> Pp.
     name resolved there first. *)
 val file_scope_types : Cpp_state.render_ctx -> Cpp_erasure.settled -> string list
 
+(** The names of the wrapper structs the declaration writes around
+    something other than a sole struct merged into them, in the order it
+    writes them, spelled to be compared ({!Cpp_names.wrapper_spelling}). *)
+val unmerged_wrappers_written : Cpp_erasure.settled -> string list
+
+(** Whether the declaration writes a wrapper struct holding a wrapper
+    module's declarations, one of those the list names. *)
+val absorbs : homed:(string * Names.ModPath.t) list -> Cpp_erasure.settled -> bool
+
 (** [write_decl ctx env decl] is {!read_decl}, with what placing the
     declarations it needs reads ({!Cpp_ast.Needs}). *)
 val write_decl : Cpp_state.render_ctx -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t

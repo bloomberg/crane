@@ -31,11 +31,20 @@ val global_name : Cpp_state.render_ctx -> Common.kind -> Names.GlobRef.t -> Cpp_
 (** The name a global is declared under, wherever it is declared: the
     replacement text of an inline custom mapping, otherwise its own short
     name. *)
-val declared_name : Common.kind -> Names.GlobRef.t -> string
+val declared_name : Cpp_state.render_ctx -> Common.kind -> Names.GlobRef.t -> string
 
 (** {!declared_name}, read to compare it with another name rather than to
     write it. *)
 val declared_spelling : Common.kind -> Names.GlobRef.t -> string
+
+(** The name of the struct wrapping the global at namespace scope, its
+    declared name spelled by the function given: an inductive's wrapper is
+    named after the inductive, capitalised; anything else as itself. *)
+val wrapper_name_from : (Common.kind -> Names.GlobRef.t -> string) -> Names.GlobRef.t -> string
+
+(** {!wrapper_name_from} of {!declared_spelling}: the wrapper's name read to
+    compare it with another rather than to write it. *)
+val wrapper_spelling : Names.GlobRef.t -> string
 
 (** {!global_name} as text. *)
 val str_global : Cpp_state.render_ctx -> Common.kind -> Names.GlobRef.t -> string
