@@ -144,6 +144,16 @@ type declaration =
       (** A member of the struct a declaration writes around a wrapper
           module's declarations, printed in [env].  What it needs is placed
           with that declaration, which is what was planned. *)
+  | Template_head of {
+      env : Common.env;
+      params : (Minicpp.template_type * Id.t) list;
+      constraint_ : Minicpp.cpp_constraint option;
+      frame : Cpp_resolution.frame;
+    }
+      (** [template <params>] and its [requires] clause, [constraint_] in it,
+          printed in [env]: the head of a template a declaration absorbing a
+          wrapper module is, written ahead of what it templates, its names
+          resolved at the frame [frame] inside the declaration. *)
   | Fields of {record : GlobRef.t; vars : Id.t list; fields : (string * Minicpp.cpp_type) list}
       (** The fields of the eponymous record [record] merged into its
           module's struct, each by its name and type, the type variables
@@ -349,6 +359,16 @@ val unprinted : needs:Needs.t -> ?tyctors:Cpp_state.tyctor_use list -> Common.en
 (** [absorbed ?tyctors env d] is {!Absorbed}, printed where the tree puts
     it. *)
 val absorbed : ?tyctors:Cpp_state.tyctor_use list -> Common.env -> Cpp_erasure.settled -> t
+
+(** [template_head ?tyctors ~frame env params constraint_] is
+    {!Template_head}, printed where the tree puts it. *)
+val template_head :
+  ?tyctors:Cpp_state.tyctor_use list ->
+  frame:Cpp_resolution.frame ->
+  Common.env ->
+  (Minicpp.template_type * Id.t) list ->
+  Minicpp.cpp_constraint option ->
+  t
 
 (** [fields ~needs ?tyctors ~record ~vars fields] is {!Fields}, printed
     where the tree puts it. *)

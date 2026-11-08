@@ -13,24 +13,6 @@ open Minicpp
 
 (** {2 Rendering} *)
 
-(** The wrapper structs a declaration writes around something other than a
-    sole struct merged into them, in the order it writes them, each named by
-    the function given: the structs another wrapper's declarations can be
-    written into. *)
-val unmerged_wrappers_named : name:(GlobRef.t -> string) -> Cpp_erasure.settled -> string list
-
-(** [d], which absorbs a wrapper module ({!Cpp_leaf_plan.absorbs}), written at the position given, each wrapper
-    struct holding a wrapper module's declarations a
-    {!Cpp_ast.Wrapper_struct}, each member writing its type constructors
-    as [tyctors], planned for [d], says. *)
-val absorbing_at :
-  Cpp_state.render_ctx ->
-  homed:(string * ModPath.t) list ->
-  ?tyctors:Cpp_state.tyctor_use list ->
-  Common.env ->
-  Cpp_erasure.settled ->
-  Cpp_ast.t
-
 (** {!pp_cpp_type} at the position given. *)
 val pp_cpp_type_at : Cpp_state.render_ctx -> bool -> Id.t list -> cpp_type -> Pp.t
 
@@ -165,6 +147,11 @@ val pp_type_pieces : GlobRef.t -> foreign_piece list -> (int -> Pp.t option) -> 
 (** The name the struct wrapping an inductive at namespace scope is written
     under at the position. *)
 val nspace_wrapper_name : Cpp_state.render_ctx -> GlobRef.t -> string
+
+(** Under [CRANE_CHECK_IR], the type name the declaration given introduces
+    at file scope where written at the position given, noted as written in
+    the file. *)
+val note_file_scope_type : Cpp_state.render_ctx -> cpp_decl -> unit
 
 (** {2 Synthesised aliases} *)
 

@@ -241,8 +241,8 @@ let stand_ins t =
             Cpp_ast.(global_alias (Alias_of_type {target = global_ref target; definition; tparams})) )
           (declared_types (settled :> cpp_decl))
       | Declared
-          ( Fields _ | Modtype_concept _ | Global_alias _ | Assertion _ | Module_alias _ | Functor_alias _ | Derived_functor _
-          | Forward_declaration _ | Synthesised_template _ ) ->
+          ( Template_head _ | Fields _ | Modtype_concept _ | Global_alias _ | Assertion _ | Module_alias _ | Functor_alias _
+          | Derived_functor _ | Forward_declaration _ | Synthesised_template _ ) ->
         []
       | Struct_of mp -> [Cpp_ast.(global_alias (Alias_of_module (module_ref mp)))] )
     (Cpp_ast.declared t)
@@ -1077,6 +1077,11 @@ let template_param_globals tps =
   ignore (map_tparams (fun t -> types := t :: !types; t) tps);
   List.filter_map (function TTconcept (r, _), _ -> Some r | _ -> None) tps @ List.concat_map type_globals !types
 
+let constraint_globals c =
+  let found = ref [] in
+  Minicpp.iter_globrefs (fun r -> found := r :: !found) (Dstatic_assert (c, None));
+  !found
+
 let declaration_globals (d : Cpp_erasure.settled) =
   let globals = ref [] in
   Minicpp.iter_globrefs (fun r -> globals := r :: !globals) (d :> cpp_decl);
@@ -1101,12 +1106,9 @@ let unprinted_names : Cpp_ast.declaration -> _ = function
   | Fields {fields; _} -> global_names [[]] (List.concat_map (fun (_, ty) -> type_globals ty) fields)
   | Assertion {subject = Instance {args; _}; _} -> global_names [[]] (List.concat_map type_globals args)
   | Global_alias (Alias_of_type {tparams; _}) -> global_names [[]] (template_param_globals tparams)
+  | Template_head {params; constraint_; frame; _} ->
+    global_names [frame] (template_param_globals params @ Option.cata constraint_globals [] constraint_)
   | Forward_declaration {defined = Defined_struct {struct_; tparams; constraint_; _}; _} ->
-    let constraint_globals c =
-      let found = ref [] in
-      Minicpp.iter_globrefs (fun r -> found := r :: !found) (Dstatic_assert (c, None));
-      !found
-    in
     ([], Cpp_resolution.Definition (Struct_definition, struct_))
     :: global_names [[]] ((struct_ :: template_param_globals tparams) @ Option.cata constraint_globals [] constraint_)
   | Forward_declaration {defined = Defined_enum r; _} -> ([], Cpp_resolution.Definition (Enum_definition, r)) :: global_names [[]] [r]
@@ -1165,6 +1167,16 @@ let file_scope_types ctx (d : Cpp_erasure.settled) =
   in
   List.map Pp.string_of_ppcmds (go d)
 
+(* The wrapper structs [d] writes around something other than a sole struct
+   merged into them, in the order it writes them, each named by [name]. *)
+let rec unmerged_wrappers_named ~name (d : Cpp_erasure.settled) =
+  match Cpp_erasure.view d with
+  | Template (_, _, inner) -> unmerged_wrappers_named ~name inner
+  | Namespace (None, decls) -> List.concat_map (unmerged_wrappers_named ~name) decls
+  | Namespace (Some w, members) ->
+    if w.nw_merges then [] else List.concat_map (unmerged_wrappers_named ~name) members @ [name w.nw_ref]
+  | Decl _ -> []
+
 (** The names of the wrapper structs [d] writes around something other than
     a sole struct merged into them, in the order it writes them: the structs
     another wrapper's declarations can be written into, spelled to be
@@ -1178,6 +1190,42 @@ let absorbed_by ~homed d = List.filter (fun name -> List.mem_assoc name homed) (
 let absorbs ~homed d = absorbed_by ~homed d <> []
 
 let read_decl ctx env settled = read_cpp_decl (writing ctx settled) env settled
+
+(* Whether [d], written at the position [ctx], writes a wrapper struct
+   holding a wrapper module's declarations, one [homed] names, as the
+   printer names it there. *)
+let absorbs_at ctx ~homed d =
+  List.exists (fun name -> List.mem_assoc name homed) (unmerged_wrappers_named ~name:(nspace_wrapper_name ctx) d)
+
+(* [d], which {!absorbs_at} [ctx], at the frame [frame] inside the
+   declaration written there, as written: each wrapper struct holding a
+   wrapper module's declarations a {!Cpp_ast.Wrapper_struct}, the wrapper's
+   own members its fields, each printed where the tree puts it
+   ({!Cpp_ast.Absorbed}), a template's head too ({!Cpp_ast.Template_head}).
+   A declaration nested in no template or namespace writes no wrapper
+   struct, so it absorbs none: it is reached only through one that does. *)
+let rec absorbing_at ctx ~homed ?tyctors ~frame env (d : Cpp_erasure.settled) =
+  note_file_scope_type ctx (d :> cpp_decl);
+  let written ctx frame d =
+    if absorbs_at ctx ~homed d then absorbing_at ctx ~homed ?tyctors ~frame env d else Cpp_ast.absorbed ?tyctors env d
+  in
+  match Cpp_erasure.view d with
+  | Template (temps, cstr, inner) -> Cpp_ast.seq [Cpp_ast.template_head ?tyctors ~frame env temps cstr; written ctx frame inner]
+  | Namespace (None, decls) ->
+    Cpp_ast.seq
+      [ Cpp_ast.text Pp.(str "namespace {" ++ fnl ());
+        Cpp_ast.concat Pp.fnl (List.map (written ctx frame) decls);
+        Cpp_ast.text Pp.(fnl () ++ str "};") ]
+  | Namespace (Some w, members) -> (
+    let name = nspace_wrapper_name ctx w.nw_ref in
+    let ds =
+      enter_from ctx In_struct (fun ctx ->
+          Cpp_ast.concat Pp.fnl (List.map (written ctx (Cpp_resolution.In_struct :: frame)) members) )
+    in
+    match List.assoc_opt name homed with
+    | Some module_ -> Cpp_ast.wrapper_struct ~name ~module_ ~fields:Cpp_ast.(seq [ds; text (Pp.fnl ())])
+    | None -> Cpp_ast.(seq [text Pp.(str "struct " ++ str name ++ str " {" ++ fnl ()); ds; text Pp.(fnl () ++ str "};")]) )
+  | Decl _ -> CErrors.anomaly Pp.(str "Crane: a declaration absorbing a wrapper module writes no wrapper struct.")
 
 let printed_decl ctx env settled = (read_decl ctx env settled, printed_needs ctx settled)
 
@@ -1194,7 +1242,7 @@ let write_absorbing ctx ~homed env (settled : Cpp_erasure.settled) =
     if not (alias_plan_made ()) then None
     else planned_tyctors ~file:ctx.rc_file ~module_:(module_written ctx) (Written_declaration (settled :> cpp_decl))
   in
-  let tree = absorbing_at (writing ctx settled) ~homed ?tyctors env settled in
+  let tree = absorbing_at (writing ctx settled) ~homed ?tyctors ~frame:[] env settled in
   let needs = printed_needs ctx settled in
   ( if Probe.checking () then
       let written = Cpp_ast.wrapper_structs tree and absorbing = absorbed_by ~homed settled in

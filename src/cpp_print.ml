@@ -2971,47 +2971,6 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
     outside every tree. *)
 let read_cpp_decl ctx env d = pp_cpp_decl ctx env d
 
-(** The wrapper structs [d] writes around something other than a sole
-    struct merged into them, in the order it writes them, each named by
-    [name]: the structs another wrapper's declarations can be written
-    into. *)
-let rec unmerged_wrappers_named ~name (d : Cpp_erasure.settled) =
-  match Cpp_erasure.view d with
-  | Template (_, _, inner) -> unmerged_wrappers_named ~name inner
-  | Namespace (None, decls) -> List.concat_map (unmerged_wrappers_named ~name) decls
-  | Namespace (Some w, members) ->
-    if w.nw_merges then [] else List.concat_map (unmerged_wrappers_named ~name) members @ [name w.nw_ref]
-  | Decl _ -> []
-
-(* Whether [d], written at the position [ctx], writes a wrapper struct
-   holding a wrapper module's declarations, one [homed] names. *)
-let absorbs ctx ~homed d =
-  List.exists
-    (fun name -> List.mem_assoc name homed)
-    (unmerged_wrappers_named ~name:(nspace_wrapper_name ctx) d)
-
-(** [d], which {!absorbs}, as written: each wrapper struct holding a wrapper
-    module's declarations a {!Cpp_ast.Wrapper_struct}, the wrapper's own
-    members its fields, each printed where the tree puts it
-    ({!Cpp_ast.Absorbed}). *)
-let rec absorbing_at ctx ~homed ?tyctors env (d : Cpp_erasure.settled) =
-  note_file_scope_type ctx (d :> cpp_decl);
-  let written ctx d = if absorbs ctx ~homed d then absorbing_at ctx ~homed ?tyctors env d else Cpp_ast.absorbed ?tyctors env d in
-  match Cpp_erasure.view d with
-  | Template (temps, cstr, inner) -> Cpp_ast.seq [Cpp_ast.text (template_head ctx env temps cstr); written ctx inner]
-  | Namespace (None, decls) ->
-    Cpp_ast.seq
-      [ Cpp_ast.text (str "namespace {" ++ fnl ());
-        Cpp_ast.concat fnl (List.map (written ctx) decls);
-        Cpp_ast.text (fnl () ++ str "};") ]
-  | Namespace (Some w, members) -> (
-    let name = nspace_wrapper_name ctx w.nw_ref in
-    let ds = enter_from ctx In_struct (fun ctx -> Cpp_ast.concat fnl (List.map (written ctx) members)) in
-    match List.assoc_opt name homed with
-    | Some module_ -> Cpp_ast.wrapper_struct ~name ~module_ ~fields:Cpp_ast.(seq [ds; text (fnl ())])
-    | None -> Cpp_ast.(seq [text (str "struct " ++ str name ++ str " {" ++ fnl ()); ds; text (fnl () ++ str "};")]) )
-  | Decl _ -> Cpp_ast.text (pp_cpp_decl ctx env d)
-
 let resolved ctx key (resolution : Cpp_ast.resolution) =
   match resolution with Resolved n -> checked ctx key n | Unresolved -> unresolved key
 
@@ -3129,6 +3088,8 @@ let print_unprinted ctx ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
   | Forward_declaration {env; defined} -> pp_forward_declaration ctx env defined
   | Synthesised_template s -> pp_synthesised ctx s
   | Declaration {env; settled} | Absorbed {env; settled} -> pp_cpp_decl ctx env settled
+  | Template_head {env; params; constraint_; frame} ->
+    Cpp_names.at_frame ctx frame (fun ctx -> template_head ctx env params constraint_)
   | Fields {vars; fields; _} ->
     prlist_with_sep fnl (fun (name, ty) -> pp_cpp_type ctx false vars ty ++ spc () ++ str name ++ str ";") fields ++ fnl ()
   | Global_alias a ->
