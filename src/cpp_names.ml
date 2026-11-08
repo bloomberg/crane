@@ -63,9 +63,35 @@ let name_from c names frame key =
     CErrors.anomaly
       Pp.(str "Crane: a declaration names " ++ Cpp_resolution.pp_key key ++ str ", which resolving it did not ask for.")
 
+(* The visibility [v] with the struct of the inductive [r] entered: a layer
+   whose path names nothing a reference could be declared in, holding the
+   constructors' struct names. *)
+let inside_inductive_struct r v =
+  match r with
+  | GlobRef.IndRef ((kn, i) as ind) ->
+    let ctors =
+      List.init (Option.default 0 (Table.get_ind_nb_ctors_opt kn i)) (fun j ->
+          Ml_type_util.ctor_struct_id_of_ref (GlobRef.ConstructRef (ind, j + 1)) )
+    in
+    let scope =
+      Label.make (Printf.sprintf "%sstruct_%s_%d" Common.crane_local_prefix (Label.to_string (MutInd.label kn)) i)
+    in
+    let innermost = match visible_mps v with mp :: _ -> mp | [] -> CErrors.anomaly (Pp.str "Crane: no scope is visible.") in
+    inside ~members:(Id.Set.of_list ctors) (ModPath.MPdot (innermost, scope)) [] v
+  | _ -> v
+
+(* The visibility [v] with the scope [entered] entered: a layer for an
+   anonymous signature and for an inductive's struct, which declare names;
+   none for the others. *)
+let layer (entered : Cpp_resolution.entered) v =
+  match entered with
+  | Signature {signature; parameters} -> inside signature parameters v
+  | Inductive_struct r -> inside_inductive_struct r v
+  | In_struct | In_template | Function _ -> v
+
 let visibility_at (c : render_ctx) what =
   match c.rc_visibility with
-  | Some v -> v
+  | Some v -> List.fold_right layer c.rc_frame v
   | None -> CErrors.anomaly Pp.(str "Crane: " ++ what ++ str " where nothing planned what is visible.")
 
 let visible_at c key = visibility_at c Pp.(Cpp_resolution.pp_key key ++ str " is named")
@@ -815,28 +841,10 @@ let struct_definition_name ctx id =
 let enum_definition_name ctx r =
   match r with GlobRef.IndRef _ -> inductive_type_name ctx r | _ -> global_name ctx Type r
 
-(* The visibility [v] with the struct of the inductive [r] entered: a layer
-   whose path names nothing a reference could be declared in, holding the
-   constructors' struct names. *)
-let inside_inductive_struct r v =
-  match r with
-  | GlobRef.IndRef ((kn, i) as ind) ->
-    let ctors =
-      List.init (Option.default 0 (Table.get_ind_nb_ctors_opt kn i)) (fun j ->
-          Ml_type_util.ctor_struct_id_of_ref (GlobRef.ConstructRef (ind, j + 1)) )
-    in
-    let scope =
-      Label.make (Printf.sprintf "%sstruct_%s_%d" Common.crane_local_prefix (Label.to_string (MutInd.label kn)) i)
-    in
-    let innermost = match visible_mps v with mp :: _ -> mp | [] -> CErrors.anomaly (Pp.str "Crane: no scope is visible.") in
-    inside ~members:(Id.Set.of_list ctors) (ModPath.MPdot (innermost, scope)) [] v
-  | _ -> v
-
 let next (entered : Cpp_resolution.entered) (c : render_ctx) =
   let c =
     match entered with
-    | Signature {signature; parameters} -> {c with rc_visibility = Option.map (inside signature parameters) c.rc_visibility}
-    | Inductive_struct r -> {c with rc_visibility = Option.map (inside_inductive_struct r) c.rc_visibility}
+    | Signature _ | Inductive_struct _ -> c
     | In_struct -> {c with rc_in_struct = true}
     | In_template -> {c with rc_in_template = true}
     | Function {owner; defines} ->

@@ -223,12 +223,14 @@ and render_ctx = {
           ({!Cpp_names.enter}). *)
   rc_names : naming;  (** What the names written here are read off ({!naming}). *)
   rc_visibility : Common.visibility option;
-      (** The scopes whose names are visible where the printer is, innermost
-          first: the planned visibility of what is being written
-          ({!Scope_plan.visibility}), with a layer for each scope printing
-          has entered that declares names ({!Cpp_names.next}); none where
-          nothing planned it, where naming anything is an anomaly: no
-          visibility is installed for a name to fall back on. *)
+      (** The scopes whose names are visible where the declaration being
+          written is written, innermost first: its planned visibility
+          ({!Scope_plan.visibility}); none where nothing planned it, where
+          naming anything is an anomaly: no visibility is installed for a
+          name to fall back on.  The scopes printing has entered inside it
+          ({!rc_frame}) that declare names add their layers where the
+          resolver reads it ({!Cpp_names.visibility_at}): printing a
+          resolved name needs none of them. *)
   rc_aliases : ctor_alias list ref option;
       (** Where the synthesised templates spelled from here are collected,
           in the order first spelled, by what asked which ones its text

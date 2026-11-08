@@ -41,11 +41,13 @@ rules=(
 # does not follow control flow: a naming function the printer shares with
 # the resolver must not refer to the resolver's live naming at all, which
 # reaches it through the namers it hands the position
-# (Cpp_state.live_namers), or every read of live naming counts.
-PRINTER_TABLE_CONFIGURATION="arena_header erase_fn_header escape_reserved_struct_name modular std_lib register_census lang modpath_of_r safe_basename_of_global string_of_modfile base_mp at_toplevel is_toplevel"
-# The constructors of an inductive whose struct printing enters
-# (Cpp_names.next); custom renaming in Common.pp_global_name.
-PRINTER_TABLE_PENDING="get_ind_nb_ctors_opt is_any_inline_custom is_custom"
+# (Cpp_state.live_namers), or every read of live naming counts.  Given a
+# fourth argument, bin/printer_reads lists every edge by which the printer
+# reaches that value of Table, not one chain: all of them must go for the
+# read to.
+PRINTER_TABLE_CONFIGURATION="arena_header erase_fn_header escape_reserved_struct_name modular std_lib register_census modpath_of_r string_of_modfile base_mp at_toplevel"
+# Facts the printer reads that planning should hand it: none left.
+PRINTER_TABLE_PENDING=""
 
 status=0
 dune build --root . @src/check ./bin/printer_reads/main.exe 2>&1 | head -20

@@ -5,6 +5,10 @@
     value of module [ROOT] reaches, through any chain of the plugin's
     top-level values, with one shortest chain each.
 
+    [printer_reads DIR ROOT TARGET VALUE]: every edge by which a value of
+    [ROOT] leaves [ROOT] for a value that reaches [TARGET.VALUE] -- all the
+    ways in, where the first form shows one.
+
     The graph is read off the typed trees dune writes ([DIR/*.cmt]): a node is
     a module's top-level value, an edge a reference to one in its body.  It is
     insensitive to control flow -- a reference in a branch never taken still
@@ -126,17 +130,43 @@ let analyse cmt_file =
     walk str
   | _ -> ()
 
+let load dir root =
+  Array.iter (fun f -> if Filename.check_suffix f ".cmt" then analyse (Filename.concat dir f)) (Sys.readdir dir);
+  match Hashtbl.find_opt defined root with
+  | None ->
+    prerr_endline ("printer_reads: no typed tree for " ^ root ^ " in " ^ dir);
+    exit 2
+  | Some _ -> ()
+
+(* The edges from a value of [root] to a value outside it that reaches
+   [goal], one line each. *)
+let frontier root goal =
+  let memo : (node, bool) Hashtbl.t = Hashtbl.create 4096 in
+  let rec reaches n =
+    match Hashtbl.find_opt memo n with
+    | Some b -> b
+    | None ->
+      Hashtbl.replace memo n false;
+      let b = n = goal || List.exists reaches (Option.value ~default:[] (Hashtbl.find_opt edges n)) in
+      Hashtbl.replace memo n b;
+      b
+  in
+  let found = ref [] in
+  List.iter
+    (fun n ->
+      List.iter
+        (fun s -> if fst s <> root && reaches s then found := (snd n ^ "\t" ^ fst s ^ "." ^ snd s) :: !found)
+        (Option.value ~default:[] (Hashtbl.find_opt edges n)) )
+    (Hashtbl.find defined root);
+  List.iter print_endline (List.sort_uniq compare !found)
+
 let () =
   match Sys.argv with
+  | [|_; dir; root; target; value|] ->
+    load dir root;
+    frontier root (target, value)
   | [|_; dir; root; target|] ->
-    Array.iter
-      (fun f -> if Filename.check_suffix f ".cmt" then analyse (Filename.concat dir f))
-      (Sys.readdir dir);
-    (match Hashtbl.find_opt defined root with
-     | None ->
-       prerr_endline ("printer_reads: no typed tree for " ^ root ^ " in " ^ dir);
-       exit 2
-     | Some _ -> ());
+    load dir root;
     (* Breadth first, so each value is reported with a shortest chain. *)
     let parent : (node, node option) Hashtbl.t = Hashtbl.create 4096 in
     let queue = Queue.create () in
@@ -164,5 +194,5 @@ let () =
       (fun n -> print_endline (snd n ^ "\t" ^ String.concat " > " (chain n)))
       (List.sort compare !found)
   | _ ->
-    prerr_endline "usage: printer_reads DIR ROOT TARGET";
+    prerr_endline "usage: printer_reads DIR ROOT TARGET [VALUE]";
     exit 2

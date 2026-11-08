@@ -401,8 +401,10 @@ let () =
     ({g with rc_frame = []} = start && g.rc_frame = [signature]);
   let visible = Common.toplevel_visibility [ModPath.MPfile (DirPath.make [Id.of_string "F"])] in
   let planned = Cpp_names.next signature {start with rc_visibility = Some visible} in
-  check "entering a signature makes what it declares visible"
-    (Option.equal Common.equal_visibility planned.rc_visibility (Some (Common.inside m [] visible)));
+  check "entering a signature makes what it declares visible where the resolver reads it"
+    (Common.equal_visibility (Cpp_names.visibility_at planned (Pp.mt ())) (Common.inside m [] visible));
+  check "entering a signature keeps the visibility of where the declaration is written"
+    (Option.equal Common.equal_visibility planned.rc_visibility (Some visible));
   let f = Cpp_names.next (Function {owner = ref_of "f"; defines = true}) s in
   check "a function defined in a struct's body is defined there, in no out-of-line scope" (f.rc_scope = None);
   check "entering scopes one after another is entering each in turn"

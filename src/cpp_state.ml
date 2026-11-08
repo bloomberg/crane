@@ -543,10 +543,11 @@ and render_ctx = {
   rc_frame : Cpp_resolution.frame;
   (* What the names written here are read off. *)
   rc_names : naming;
-  (* The scopes whose names are visible where the printer is, innermost
-     first: the planned visibility of what is being written, with a layer
-     for each scope printing has entered that declares names; none where
-     nothing planned it, where nothing may be named. *)
+  (* The scopes whose names are visible where the declaration being written
+     is written, innermost first: its planned visibility; none where nothing
+     planned it, where nothing may be named.  The layers of the scopes
+     entered inside it are added where the resolver reads it
+     ({!Cpp_names.visibility_at}). *)
   rc_visibility : Common.visibility option;
   (* Where the synthesised templates spelled from here are collected, if
      anything collects them. *)
@@ -632,7 +633,10 @@ let concept_held_back ctx c =
 
 let class_concept_held_back ctx r = concept_held_back ctx (HCclass r)
 
-let element_position mp c = {c with rc_module = Some mp; rc_visibility = Scope_plan.visibility mp}
+let element_position mp c =
+  if c.rc_frame <> [] then
+    CErrors.anomaly (Pp.str "Crane: a module's element is written inside a scope a declaration entered.");
+  {c with rc_module = Some mp; rc_visibility = Scope_plan.visibility mp}
 
 (** The globals the unit's function bodies name, planned from the finished
     program before either file is rendered ({!Cpp.plan_function_reads}):
