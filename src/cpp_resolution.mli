@@ -41,6 +41,12 @@ type definition =
   | Struct_definition  (** A struct. *)
   | Alias_definition  (** A [using] declaration. *)
 
+(** The two places an enumerator is named through its enum: as a value,
+    and as a case label of a [switch]. *)
+type enumerator_site =
+  | Enumerator_value
+  | Case_label
+
 (** The two places the type printer writes a global type's head: a type
     named by its global ([Tglob]), and an inductive written through the
     struct it is declared in ([Tnamespace]). *)
@@ -89,6 +95,21 @@ type key =
       (** Whether a value naming the global reads a variable or calls the
           accessor standing for it: an {!access}, asked for every global a
           declaration names. *)
+  | Built_struct of GlobRef.t
+      (** The struct a value of the type is built through, named. *)
+  | Enumerator_qualifier of enumerator_site * GlobRef.t
+      (** The enum an enumerator of the inductive is named through, at the
+          site given, with the [::] a nested struct of the same name asks
+          for in front of it. *)
+  | Read_by_a_function of GlobRef.t
+      (** Whether a function body of the program reads the variable, so
+          that every unit including its header has to initialise it: a
+          {!Holds} answer, asked for every global. *)
+  | Held_back_concept of GlobRef.t
+      (** Whether the concept of the type class is held back here: declared
+          after the struct being written, so that neither a constraint nor
+          an assertion names it inside it.  A {!Holds} answer, asked for
+          every type class. *)
 
 val pp_key : key -> Pp.t
 
@@ -121,14 +142,16 @@ type access =
           either way: whichever it does. *)
 
 (** What a key resolves to: a {!Type_head} a head, an {!Inline_custom}
-    the inline text or none, a {!Value_reference} a reference, an
-    {!Value_access} an access, anything else a name. *)
+    the inline text or none, a {!Value_reference} a reference, a
+    {!Value_access} an access, a {!Read_by_a_function} or a
+    {!Held_back_concept} whether it holds, anything else a name. *)
 type value =
   | Name of Cpp_name.t
   | Head of head
   | Inline of string option
   | Reference of reference
   | Access of access
+  | Holds of bool
 
 val pp_reference : reference -> Pp.t
 val pp_access : access -> Pp.t
@@ -167,3 +190,7 @@ val find_reference : table -> frame -> GlobRef.t -> reference lookup
 
 (** How a value naming the global reads it at [frame] ({!Value_access}). *)
 val find_access : table -> frame -> GlobRef.t -> access lookup
+
+(** Whether [key], a {!Read_by_a_function} or a {!Held_back_concept},
+    holds at [frame]. *)
+val find_holds : table -> frame -> key -> bool lookup

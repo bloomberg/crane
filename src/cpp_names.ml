@@ -698,6 +698,14 @@ let access c r =
     ~read:(function Cpp_resolution.Access a -> a | _ -> not_answered key)
     ~equal:( = ) ~pp:Cpp_resolution.pp_access
 
+(** Whether [key], a {!Cpp_resolution.Read_by_a_function} or a
+    {!Cpp_resolution.Held_back_concept}, holds at the position [c]. *)
+let holds c key =
+  answered c key
+    ~find:(fun names frame -> Cpp_resolution.find_holds names frame key)
+    ~read:(function Cpp_resolution.Holds b -> b | _ -> not_answered key)
+    ~equal:Bool.equal ~pp:Pp.bool
+
 (* {!value_reference} as the resolver answers it at [ctx]: through the
    eponymous template record a member of one is written through; otherwise
    by its name, qualified by the collision wrapper holding it, or with [::]
@@ -932,10 +940,16 @@ let file_named_by_key ~unit_files : Cpp_resolution.key -> ModPath.t option = fun
     match concept_scope_of kn with
     | Some {functor_; _} -> Common.file_of_module_named ~unit_files functor_
     | None -> Common.file_of_module_named ~unit_files kn )
-  | Global (_, r) | Unmapped (_, r) | Inductive_scope r | Type_head (_, r) | Value_reference r ->
+  | Global (_, r)
+  | Unmapped (_, r)
+  | Inductive_scope r
+  | Type_head (_, r)
+  | Value_reference r
+  | Built_struct r
+  | Enumerator_qualifier (_, r) ->
     Common.file_named_by ~unit_files r
   | Module_declared _ | Short _ | Inductive_value _ | Class_concept _ | Modtype_concept_declared _ | Definition _
-  | Custom_text _ | Inline_custom _ | Value_access _ ->
+  | Custom_text _ | Inline_custom _ | Value_access _ | Read_by_a_function _ | Held_back_concept _ ->
     None
 
 let struct_definition_name ctx id =
@@ -998,6 +1012,22 @@ let inductive_value_name ctx v x =
     type_name
 
 let inductive_value ctx x = named ctx (Inductive_value x)
+
+(** The struct a value of the type [r] is built through, named at the
+    position [ctx]. *)
+let built_struct ctx r = named ctx (Built_struct r)
+
+(** The enum an enumerator of the inductive [r] is named through at the
+    position [ctx], at the site given. *)
+let enumerator_qualifier ctx site r = named ctx (Enumerator_qualifier (site, r))
+
+(** Whether the concept of the type class [r] is held back at the
+    position [ctx] ({!Cpp_resolution.Held_back_concept}). *)
+let held_back_concept ctx r = holds ctx (Held_back_concept r)
+
+(** Whether a function body reads the variable [r]
+    ({!Cpp_resolution.Read_by_a_function}), at the position [ctx]. *)
+let read_by_a_function ctx r = holds ctx (Read_by_a_function r)
 
 (** The name the type [r] is defined under at the position [ctx], declared
     as [definition] says. *)
@@ -1102,7 +1132,16 @@ let rec live_name c (key : Cpp_resolution.key) =
     | Some text -> Cpp_name.foreign text
     | None -> CErrors.anomaly Pp.(str "Crane: " ++ GlobRef.print r ++ str " has no inline custom mapping."))
   | Inductive_scope r -> fst (inductive_name ctx r)
-  | Type_head _ | Value_reference _ | Value_access _ ->
+  | Built_struct r -> (
+    match r with GlobRef.IndRef _ when is_eponymous_record_cached r -> inductive_value ctx r | _ -> global_name ctx Type r )
+  | Enumerator_qualifier (site, r) ->
+    let n =
+      match site with
+      | Enumerator_value -> enum_name_at ctx (global_name ctx Type r) r
+      | Case_label -> (type_head ctx Glob_head r).head
+    in
+    List.fold_right Cpp_name.within (global_scopes_for r n) n
+  | Type_head _ | Value_reference _ | Value_access _ | Read_by_a_function _ | Held_back_concept _ ->
     CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " is not a name.")
 
 (* The resolver's namers, which the naming functions shared with the printer
@@ -1124,6 +1163,8 @@ and live_value c (key : Cpp_resolution.key) : Cpp_resolution.value =
   | Inline_custom r -> Inline (live_inline_custom_text r)
   | Value_reference r -> Reference (live_value_reference {c with rc_names = Naming_live live_namers} r)
   | Value_access r -> Access (live_access r)
+  | Read_by_a_function r -> Holds (Cpp_state.read_by_a_function r)
+  | Held_back_concept r -> Holds (class_concept_held_back c r)
   | _ -> Name (live_name c key)
 
 let () =

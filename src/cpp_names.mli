@@ -203,6 +203,23 @@ val value_reference : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_resolution.
     ({!Cpp_resolution.Value_access}). *)
 val access : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_resolution.access
 
+(** The struct a value of the type is built through, named at the position
+    given ({!Cpp_resolution.Built_struct}). *)
+val built_struct : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
+
+(** The enum an enumerator of the inductive is named through at the position
+    given, at the site given ({!Cpp_resolution.Enumerator_qualifier}). *)
+val enumerator_qualifier :
+  Cpp_state.render_ctx -> Cpp_resolution.enumerator_site -> Names.GlobRef.t -> Cpp_name.t
+
+(** Whether the concept of the type class is held back at the position
+    given ({!Cpp_resolution.Held_back_concept}). *)
+val held_back_concept : Cpp_state.render_ctx -> Names.GlobRef.t -> bool
+
+(** Whether a function body reads the variable, as resolved at the position
+    given ({!Cpp_resolution.Read_by_a_function}). *)
+val read_by_a_function : Cpp_state.render_ctx -> Names.GlobRef.t -> bool
+
 (** {2 Name-resolution cache and cached predicates} *)
 
 (** Run a resolver against the name-resolution cache, falling back otherwise. *)

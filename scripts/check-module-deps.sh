@@ -70,6 +70,48 @@ for r in $PRINTER_TABLE_PENDING $PRINTER_TABLE_CONFIGURATION; do
   fi
 done
 
+# Nor does it read a plan's tables as global cells: what a plan decided for
+# a declaration reaches the printer on the declaration's leaf, resolved
+# (Cpp_resolution's keys).  What it may still reach of the plan modules is
+# listed, by module: the spelling configuration, and what the position the
+# printer enters is derived from (Cpp_names.next: the out-of-line scope of
+# a function and the file-scope names that withhold its qualifier) and the
+# spelling of that scope (Scope_plan.qualifier).  PENDING only shrinks.
+PRINTER_PLAN_ALLOWED=(
+  "Cpp_state : file_start pp_tvar sn file_scope_types_of"
+  "Module_plan : is_namespace_scope_ref"
+  "Scope_plan : of_declaration qualifier"
+)
+# A bystander module named in a module expression is qualified by its
+# collision wrapper where printed (Cpp_print.pp_module_name).
+PRINTER_PLAN_PENDING=(
+  "Cpp_state : wrapper_qualify_modname"
+  "Module_plan : wrapper"
+  "Scope_plan : "
+)
+for i in "${!PRINTER_PLAN_ALLOWED[@]}"; do
+  m=${PRINTER_PLAN_ALLOWED[$i]%% : *}
+  allowed=" ${PRINTER_PLAN_ALLOWED[$i]##* : } ${PRINTER_PLAN_PENDING[$i]##* : } "
+  reach=$(./_build/default/bin/printer_reads/main.exe _build/default/src/.crane_plugin.objs/byte Cpp_print "$m") || {
+    echo "bin/printer_reads failed on $m"
+    exit 1
+  }
+  reads=$(printf '%s\n' "$reach" | cut -f1 | sort -u)
+  for r in $reads; do
+    if [[ "$allowed" != *" $r "* ]]; then
+      echo "the printer reads $m.$r, which the leaf it prints should carry resolved:"
+      printf '%s\n' "$reach" | awk -F'\t' -v r="$r" '$1 == r { print "  " $2 }'
+      status=1
+    fi
+  done
+  for r in $allowed; do
+    if [[ $'\n'"$reads"$'\n' != *$'\n'"$r"$'\n'* ]]; then
+      echo "the printer no longer reads $m.$r: delete it from PRINTER_PLAN_ALLOWED or PRINTER_PLAN_PENDING"
+      status=1
+    fi
+  done
+done
+
 # The printer decides no name.  A module's or a global's C++ name is decided
 # the first time Common's renaming asks for it (mp_renaming_fun,
 # ref_renaming_fun), and the decision recorded (note_decided_while_emitting);

@@ -11,6 +11,7 @@ type entered =
   | Function of {owner : GlobRef.t; defines : bool}
 type frame = entered list
 type definition = Enum_definition | Struct_definition | Alias_definition
+type enumerator_site = Enumerator_value | Case_label
 type head_form = Glob_head | Inductive_head
 
 type key =
@@ -30,6 +31,10 @@ type key =
   | Type_head of head_form * GlobRef.t
   | Value_reference of GlobRef.t
   | Value_access of GlobRef.t
+  | Built_struct of GlobRef.t
+  | Enumerator_qualifier of enumerator_site * GlobRef.t
+  | Read_by_a_function of GlobRef.t
+  | Held_back_concept of GlobRef.t
 
 let pp_key k =
   let global what r = Pp.(str what ++ str " " ++ GlobRef.print r) in
@@ -52,6 +57,11 @@ let pp_key k =
   | Type_head (Inductive_head, r) -> global "the inductive type head of" r
   | Value_reference r -> global "the value reference to" r
   | Value_access r -> global "how a value reads" r
+  | Built_struct r -> global "the struct a value is built through of" r
+  | Enumerator_qualifier (Enumerator_value, r) -> global "the enum an enumerator value names of" r
+  | Enumerator_qualifier (Case_label, r) -> global "the enum a case label names of" r
+  | Read_by_a_function r -> global "whether a function reads" r
+  | Held_back_concept r -> global "whether the concept is held back of" r
 
 let compare_entered a b =
   let rank = function Signature _ -> 0 | Inductive_struct _ -> 1 | In_struct -> 2 | In_template -> 3 | Function _ -> 4 in
@@ -85,6 +95,10 @@ let compare_key a b =
     | Type_head _ -> 13
     | Value_reference _ -> 14
     | Value_access _ -> 15
+    | Built_struct _ -> 16
+    | Enumerator_qualifier _ -> 17
+    | Read_by_a_function _ -> 18
+    | Held_back_concept _ -> 19
   in
   let global ka ra kb rb = match compare_kind ka kb with 0 -> GlobRef.UserOrd.compare ra rb | c -> c in
   match (a, b) with
@@ -101,8 +115,13 @@ let compare_key a b =
   | Inline_custom a, Inline_custom b
   | Inductive_scope a, Inductive_scope b
   | Value_reference a, Value_reference b
-  | Value_access a, Value_access b ->
+  | Value_access a, Value_access b
+  | Built_struct a, Built_struct b
+  | Read_by_a_function a, Read_by_a_function b
+  | Held_back_concept a, Held_back_concept b ->
     GlobRef.UserOrd.compare a b
+  | Enumerator_qualifier (sa, a), Enumerator_qualifier (sb, b) -> (
+    match compare sa sb with 0 -> GlobRef.UserOrd.compare a b | c -> c )
   | Type_head (fa, a), Type_head (fb, b) -> ( match compare fa fb with 0 -> GlobRef.UserOrd.compare a b | c -> c )
   | Definition (da, a), Definition (db, b) -> ( match compare da db with 0 -> GlobRef.UserOrd.compare a b | c -> c )
   | _ -> Int.compare (rank a) (rank b)
@@ -120,7 +139,13 @@ type reference =
 
 type access = Variable | Accessor | Either_form
 
-type value = Name of Cpp_name.t | Head of head | Inline of string option | Reference of reference | Access of access
+type value =
+  | Name of Cpp_name.t
+  | Head of head
+  | Inline of string option
+  | Reference of reference
+  | Access of access
+  | Holds of bool
 
 let pp_reference = function
   | Named_value {name; type_arguments} ->
@@ -139,12 +164,13 @@ let name_of key = function
   | Name n -> n
   | Head _ -> CErrors.anomaly Pp.(str "Crane: " ++ pp_key key ++ str " is a type's head, not a name.")
   | Inline _ -> CErrors.anomaly Pp.(str "Crane: " ++ pp_key key ++ str " is an inline custom answer, not a name.")
-  | Reference _ | Access _ -> not_a key "a name"
+  | Reference _ | Access _ | Holds _ -> not_a key "a name"
 
 let head_of key = function Head h -> h | _ -> not_a key "a type's head"
 let inline_of key = function Inline text -> text | _ -> not_a key "an inline custom answer"
 let reference_of key = function Reference r -> r | _ -> not_a key "a value reference"
 let access_of key = function Access a -> a | _ -> not_a key "an access"
+let holds_of key = function Holds b -> b | _ -> not_a key "whether it holds"
 
 type table = Unresolved_table | Resolved of value Map.t
 
@@ -168,3 +194,4 @@ let find_head t frame form r = lookup head_of t frame (Type_head (form, r))
 let find_inline t frame r = lookup inline_of t frame (Inline_custom r)
 let find_reference t frame r = lookup reference_of t frame (Value_reference r)
 let find_access t frame r = lookup access_of t frame (Value_access r)
+let find_holds t frame key = lookup holds_of t frame key

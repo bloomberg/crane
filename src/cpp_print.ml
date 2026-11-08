@@ -951,11 +951,7 @@ and pp_cpp_expr ctx env args t =
       | [] -> mt ()
       | _ -> str "<" ++ pp_list (pp_cpp_type ctx false []) tys ++ str ">"
     in
-    let struct_name =
-      match id with
-      | GlobRef.IndRef _ when is_eponymous_record_cached id -> inductive_value ctx id
-      | _ -> global_name ctx Type id
-    in
+    let struct_name = Cpp_names.built_struct ctx id in
     typename_prefix_for ctx struct_name
     ++ Cpp_name.pp struct_name ++ templates ++ str suffix ++ es_s ++ closing
   | CPPstruct_id (id, tys, es) ->
@@ -1099,9 +1095,7 @@ and pp_cpp_expr ctx env args t =
   | CPPenum_val (ind, ctor) ->
     (* Generate EnumType::Constructor for enum class values. Use str_global for
        proper module qualification, with collision-aware capitalization. *)
-    let full_name = enum_name_at ctx (global_name ctx Type ind) ind in
-    Cpp_name.pp_scopes (global_scopes_for ind full_name)
-    ++ Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) full_name
+    Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) (Cpp_names.enumerator_qualifier ctx Enumerator_value ind)
     ++ Id.print ctor
   | CPPnullptr -> str "nullptr"
   | CPPin_place ->
@@ -1341,10 +1335,7 @@ and pp_cpp_stmt ctx env args stmt =
     (* Generate switch statement for enum class matching. Use pp_global_name to
        get the unqualified base name, capitalize to match enum class
        definition. *)
-    let type_name =
-      let n = (Cpp_names.type_head ctx Glob_head ind).head in
-      Cpp_name.pp_scopes (global_scopes_for ind n) ++ Cpp_name.pp n
-    in
+    let type_name = Cpp_name.pp (Cpp_names.enumerator_qualifier ctx Case_label ind) in
     let ends_with_return stmts =
       match List.rev stmts with
       | Sreturn _ :: _ -> true
@@ -1869,7 +1860,7 @@ let pp_template_type ctx = function
          (List.init arity Fun.id)
     ++ str "> class"
   | TTfun _ | TTinvocable _ -> str "typename"
-  | TTconcept (concept, _) when class_concept_held_back ctx concept ->
+  | TTconcept (concept, _) when Cpp_names.held_back_concept ctx concept ->
     str "typename"
   | TTconcept (concept, []) -> pp_concept_name_of_ref ctx concept
   | TTconcept (_, _ :: _) ->
@@ -1942,7 +1933,7 @@ let pp_requires_of_tparams ctx tparams =
           in
           Some (prlist_with_sep (fun () -> str " && ") clause invs)
         | TTfun _ -> None
-        | TTconcept (concept, _) when class_concept_held_back ctx concept -> None
+        | TTconcept (concept, _) when Cpp_names.held_back_concept ctx concept -> None
         | TTconcept (concept, (_ :: _ as args)) ->
           (* Multi-parameter concept constraint: [C<_tcI0, T1, …>].  The
              constrained parameter [id] is the first concept argument, the
@@ -2716,7 +2707,7 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
       } ->
     let struct_name = struct_definition_name ctx id in
     note_file_scope_name ctx struct_name;
-    if ctx.rc_in_struct then printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref id);
+    if Probe.checking () then if ctx.rc_in_struct then printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref id);
     let f_s =
       entering_from ctx
         (Cpp_resolution.Inductive_struct id :: (if tparams = [] then [] else [In_template]))
@@ -2777,9 +2768,9 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
       let static_kw =
         match (ctx.rc_in_struct, literal) with
         | true, true -> str "static constexpr "
-        | true, false when Cpp_state.read_by_a_function id -> str "[[gnu::used]] static inline "
+        | true, false when Cpp_names.read_by_a_function ctx id -> str "[[gnu::used]] static inline "
         | true, false -> str "static inline "
-        | false, false when Cpp_state.read_by_a_function id -> str "[[gnu::used]] inline "
+        | false, false when Cpp_names.read_by_a_function ctx id -> str "[[gnu::used]] inline "
         | false, true -> str "inline constexpr "
         | false, false -> mt ()
       in
@@ -2858,7 +2849,7 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
     entering_from ctx
       ((Cpp_resolution.In_struct :: (if ds.ds_tparams = [] then [] else [In_template])) @ [Inductive_struct ds.ds_ref])
       (fun ctx -> pp_cpp_fields_with_vis ~struct_name ctx env ds.ds_fields)
-  | Dstatic_assert (CPPconcept_app (class_ref, _, _), None) when class_concept_held_back ctx class_ref ->
+  | Dstatic_assert (CPPconcept_app (class_ref, _, _), None) when Cpp_names.held_back_concept ctx class_ref ->
     (* The concept is declared after the struct being rendered, because its
        requirements name the struct's own types.  The assertion goes with it
        ({!Cpp_leaf_plan.held_back_assertions}). *)
@@ -2892,7 +2883,7 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
        same way -- the standard library's [comparison] is emitted globally and
        a user type spelled [Comparison] inside the struct would otherwise
        capture every unqualified mention of it. *)
-    if ctx.rc_in_struct then printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref name);
+    if Probe.checking () then if ctx.rc_in_struct then printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref name);
     str "enum class "
     ++ struct_name
     ++ str " {"

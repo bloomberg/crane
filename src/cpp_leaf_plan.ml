@@ -478,7 +478,9 @@ let rec declared_globals (d : cpp_decl) =
 (* Of [globals], those whose name is decided -- printing decides none --
    asked for at each of [frames], each as the type and the expression
    printers may name it, and as the type printer may write it as a type's
-   head; and of every global, how a value naming it reads it. *)
+   head; and of every global, how a value naming it reads it, whether a
+   function reads it, and, of a type class, whether its concept is held
+   back. *)
 let global_names frames globals =
   let decided r = Option.has_some (Common.decided_global_name r) in
   let globals =
@@ -492,13 +494,21 @@ let global_names frames globals =
           [ Unmapped (Type, r); Unmapped (Term, r); Short (Type, r); Short (Term, r); Class_concept r;
             Type_head (Glob_head, r) ]
         @
+        Cpp_resolution.Built_struct r
+        ::
         match r with
-        | GlobRef.IndRef _ -> Cpp_resolution.[Inductive_value r; Inductive_scope r; Type_head (Inductive_head, r)]
+        | GlobRef.IndRef _ ->
+          Cpp_resolution.[Inductive_value r; Inductive_scope r; Type_head (Inductive_head, r)]
+          @ if Cpp_names.is_enum_cached r then Cpp_resolution.[Enumerator_qualifier (Enumerator_value, r); Enumerator_qualifier (Case_label, r)] else []
         | GlobRef.ConstRef _ | GlobRef.ConstructRef _ -> [Cpp_resolution.Value_reference r]
         | GlobRef.VarRef _ -> [] )
       (List.filter decided globals)
     @ Cpp_names.custom_texts_named globals @ Cpp_names.inline_customs_named globals
-    @ List.map (fun r -> Cpp_resolution.Value_access r) globals
+    @ List.concat_map
+        (fun r ->
+          Cpp_resolution.[Value_access r; Read_by_a_function r]
+          @ if Table.is_typeclass r then [Cpp_resolution.Held_back_concept r] else [] )
+        globals
   in
   List.concat_map (fun frame -> List.map (fun key -> (frame, key)) keys) frames
 
