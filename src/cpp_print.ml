@@ -3013,8 +3013,6 @@ let print_unprinted ctx ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
   | Forward_declaration {env; defined} -> pp_forward_declaration ctx env defined
   | Synthesised_template s -> pp_synthesised ctx s
   | Declaration {env; settled} | Absorbed {env; settled} -> pp_cpp_decl ctx env settled
-  | Template_head {env; params; constraint_; frame} ->
-    Cpp_names.at_frame ctx frame (fun ctx -> template_head ctx env params constraint_)
   | Fields {vars; fields; _} ->
     prlist_with_sep fnl (fun (name, ty) -> pp_cpp_type ctx false vars ty ++ spc () ++ str name ++ str ";") fields ++ fnl ()
   | Global_alias a ->

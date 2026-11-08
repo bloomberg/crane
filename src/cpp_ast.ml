@@ -52,12 +52,6 @@ and defined_name = As_defined | As_inductive_wrapper
 type declaration =
   | Declaration of {env : Common.env; settled : Cpp_erasure.settled}
   | Absorbed of {env : Common.env; settled : Cpp_erasure.settled}
-  | Template_head of {
-      env : Common.env;
-      params : (Minicpp.template_type * Id.t) list;
-      constraint_ : Minicpp.cpp_constraint option;
-      frame : Cpp_resolution.frame;
-    }
   | Fields of {record : GlobRef.t; vars : Id.t list; fields : (string * Minicpp.cpp_type) list}
   | Modtype_concept of {path : ModPath.t; params : ModPath.t list; concept : Modtype_concept.t}
   | Global_alias of global_alias
@@ -185,7 +179,6 @@ let leaf ?(needs = Needs.none) ?tyctors declaration =
 
 let unprinted ~needs ?tyctors env settled = leaf ~needs ?tyctors (Declaration {env; settled})
 let absorbed ?tyctors env settled = leaf ?tyctors (Absorbed {env; settled})
-let template_head ?tyctors ~frame env params constraint_ = leaf ?tyctors (Template_head {env; params; constraint_; frame})
 let fields ~needs ?tyctors ~record ~vars fields = leaf ~needs ?tyctors (Fields {record; vars; fields})
 let modtype_concept ~path ~params concept = leaf (Modtype_concept {path; params; concept})
 let global_alias a = leaf (Global_alias a)
@@ -573,7 +566,7 @@ let resolve_declaration (resolve : resolver) declaration =
   | Global_alias (Alias_of_module m) -> Global_alias (Alias_of_module (module_ref m))
   | Global_alias (Alias_of_type a) ->
     Global_alias (Alias_of_type {a with target = global_ref (fun r -> Definition (a.definition, r)) a.target})
-  | Declaration _ | Absorbed _ | Template_head _ | Fields _ | Modtype_concept _ | Forward_declaration _ | Synthesised_template _ ->
+  | Declaration _ | Absorbed _ | Fields _ | Modtype_concept _ | Forward_declaration _ | Synthesised_template _ ->
     declaration
 
 let resolve_tree ~requested ~resolve ~resolve_head:head t =
