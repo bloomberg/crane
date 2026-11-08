@@ -53,6 +53,12 @@ let live_head_for_checks : (render_ctx -> Cpp_resolution.head_form -> GlobRef.t 
       CErrors.anomaly
         Pp.(str "Crane: " ++ Cpp_resolution.pp_key (Type_head (form, r)) ++ str " checked before the resolver exists."))
 
+(* The resolver's answer to a key that is not a name, for the checks of
+   {!answered}, set beside {!live_name_for_checks}. *)
+let live_value_for_checks : (render_ctx -> Cpp_resolution.key -> Cpp_resolution.value) ref =
+  ref (fun _ key ->
+      CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " checked before the resolver exists."))
+
 let unresolved key = CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " was printed before it was resolved.")
 
 let name_from c names frame key =
@@ -645,6 +651,106 @@ let needs_global_qualifier (ctx : render_ctx) x =
     && not (mp_encloses (modpath_of_r x) scope.Scope_plan.module_)
   | None -> false
 
+(* The answer [key] resolved to, read off it by [read], at the position
+   [c]: as resolved for what is being written ([find] in its table), at the
+   frame printing has entered; at the resolver's position, as the resolver
+   answers it.  Under CRANE_CHECK_IR the resolved answer must be the
+   resolver's where it is printed. *)
+let answered (c : render_ctx) key ~find ~read ~equal ~pp =
+  match c.rc_names with
+  | Naming_live live -> read (live.live_value c key)
+  | No_names -> named_nowhere key
+  | Names_resolved names -> (
+    match find names c.rc_frame with
+    | Cpp_resolution.Found a ->
+      ( if Probe.checking () then
+          let here = read (!live_value_for_checks c key) in
+          if not (equal a here) then violation_resolved key (Pp.string_of_ppcmds (pp a)) (Pp.string_of_ppcmds (pp here)) );
+      a
+    | Unresolved -> unresolved key
+    | Not_requested ->
+      CErrors.anomaly
+        Pp.(str "Crane: a declaration names " ++ Cpp_resolution.pp_key key ++ str ", which resolving it did not ask for.") )
+
+let not_answered key = CErrors.anomaly Pp.(str "Crane: the resolver did not answer " ++ Cpp_resolution.pp_key key ++ str ".")
+
+let reference_equal (a : Cpp_resolution.reference) (b : Cpp_resolution.reference) =
+  match (a, b) with
+  | Named_value a, Named_value b -> Cpp_name.equal a.name b.name && a.type_arguments = b.type_arguments
+  | Record_member a, Record_member b -> Common.globref_equal a.record b.record && a.type_params = b.type_params
+  | _ -> false
+
+(** How the constant or constructor [r] is written as a value at the
+    position [c] ({!Cpp_resolution.Value_reference}). *)
+let value_reference c r =
+  let key = Cpp_resolution.Value_reference r in
+  answered c key
+    ~find:(fun names frame -> Cpp_resolution.find_reference names frame r)
+    ~read:(function Cpp_resolution.Reference a -> a | _ -> not_answered key)
+    ~equal:reference_equal ~pp:Cpp_resolution.pp_reference
+
+(** How a value naming [r] reads it at the position [c]
+    ({!Cpp_resolution.Value_access}). *)
+let access c r =
+  let key = Cpp_resolution.Value_access r in
+  answered c key
+    ~find:(fun names frame -> Cpp_resolution.find_access names frame r)
+    ~read:(function Cpp_resolution.Access a -> a | _ -> not_answered key)
+    ~equal:( = ) ~pp:Cpp_resolution.pp_access
+
+(* {!value_reference} as the resolver answers it at [ctx]: through the
+   eponymous template record a member of one is written through; otherwise
+   by its name, qualified by the collision wrapper holding it, or with [::]
+   from an out-of-line definition of a struct that does not enclose it. *)
+let live_value_reference ctx x : Cpp_resolution.reference =
+  match Module_plan.eponymous_record_containing x with
+  | Some {Module_plan.record; type_params} when type_params > 0 -> Record_member {record; type_params}
+  | containing ->
+    let name = global_name ctx Term x in
+    let qualified = wrapper_qualify x name in
+    let name =
+      if not (Cpp_name.equal qualified name) then qualified
+      else if needs_global_qualifier ctx x then Cpp_name.within Cpp_name.Global name
+      else name
+    in
+    Named_value {name; type_arguments = Option.is_empty containing}
+
+(* {!access} as the resolver answers it: the accessors planned before
+   rendering ({!Cpp.plan_accessors}), recorded by module and label, and by
+   canonical name. *)
+let live_access x : Cpp_resolution.access =
+  let x_mp = modpath_of_r x in
+  let x_lbl = label_of_r x in
+  let rec resolve_mp mp =
+    match Module_plan.functor_app_source mp with
+    | Some source -> resolve_mp source (* iterate to fixpoint *)
+    | None -> (
+      match mp with
+      | ModPath.MPdot (parent, lbl) ->
+        let resolved_parent = resolve_mp parent in
+        if ModPath.equal resolved_parent parent then mp else ModPath.MPdot (resolved_parent, lbl)
+      | _ -> mp )
+  in
+  let resolved_x_mp = resolve_mp x_mp in
+  let planned =
+    List.exists
+      (fun (reg_mp, reg_lbl) -> Label.equal x_lbl reg_lbl && (ModPath.equal x_mp reg_mp || ModPath.equal resolved_x_mp reg_mp))
+      !Cpp_state.template_static_accessors
+  in
+  (* A constant reached through a module alias is the target's own, which
+     its canonical name says.  One reached through a functor parameter has
+     whatever shape the argument gives it, and the use accepts both: any
+     accessor of the same name makes it one. *)
+  let accessor =
+    planned
+    || (match x with
+       | GlobRef.ConstRef c -> Hashtbl.mem Cpp_state.template_static_accessor_kns (Constant.canonical c)
+       | _ -> false)
+    || Common.under_mp_bound x_mp
+       && List.exists (fun (_, reg_lbl) -> Label.equal x_lbl reg_lbl) !Cpp_state.template_static_accessors
+  in
+  if not accessor then Variable else if Common.under_mp_bound x_mp then Either_form else Accessor
+
 (* ============================================================================
    Cache-backed name resolution helpers
    ============================================================================
@@ -826,9 +932,10 @@ let file_named_by_key ~unit_files : Cpp_resolution.key -> ModPath.t option = fun
     match concept_scope_of kn with
     | Some {functor_; _} -> Common.file_of_module_named ~unit_files functor_
     | None -> Common.file_of_module_named ~unit_files kn )
-  | Global (_, r) | Unmapped (_, r) | Inductive_scope r | Type_head (_, r) -> Common.file_named_by ~unit_files r
+  | Global (_, r) | Unmapped (_, r) | Inductive_scope r | Type_head (_, r) | Value_reference r ->
+    Common.file_named_by ~unit_files r
   | Module_declared _ | Short _ | Inductive_value _ | Class_concept _ | Modtype_concept_declared _ | Definition _
-  | Custom_text _ | Inline_custom _ ->
+  | Custom_text _ | Inline_custom _ | Value_access _ ->
     None
 
 let struct_definition_name ctx id =
@@ -995,7 +1102,8 @@ let rec live_name c (key : Cpp_resolution.key) =
     | Some text -> Cpp_name.foreign text
     | None -> CErrors.anomaly Pp.(str "Crane: " ++ GlobRef.print r ++ str " has no inline custom mapping."))
   | Inductive_scope r -> fst (inductive_name ctx r)
-  | Type_head _ -> CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " is a type's head, not a name.")
+  | Type_head _ | Value_reference _ | Value_access _ ->
+    CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " is not a name.")
 
 (* The resolver's namers, which the naming functions shared with the printer
    call at its position. *)
@@ -1003,17 +1111,22 @@ and live_namers =
   { live_key = (fun c key -> live_name c key);
     live_global = live_global_name;
     live_inline = live_inline_custom_text;
-    live_head = (fun c form r -> live_type_head {c with rc_names = Naming_live live_namers} form r) }
+    live_head = (fun c form r -> live_type_head {c with rc_names = Naming_live live_namers} form r);
+    live_value = (fun c key -> live_value c key) }
 
 (** What [key] resolves to at the position [c], as the resolver resolves
-    it: a type's head for a {!Cpp_resolution.Type_head}, a name for anything
-    else. *)
-let live_value c (key : Cpp_resolution.key) : Cpp_resolution.value =
+    it: a type's head for a {!Cpp_resolution.Type_head}, a reference for a
+    {!Cpp_resolution.Value_reference}, an access for an
+    {!Cpp_resolution.Value_access}, a name for anything else. *)
+and live_value c (key : Cpp_resolution.key) : Cpp_resolution.value =
   match key with
   | Type_head (form, r) -> Head (live_namers.live_head c form r)
   | Inline_custom r -> Inline (live_inline_custom_text r)
+  | Value_reference r -> Reference (live_value_reference {c with rc_names = Naming_live live_namers} r)
+  | Value_access r -> Access (live_access r)
   | _ -> Name (live_name c key)
 
 let () =
   live_name_for_checks := live_name;
-  live_head_for_checks := live_namers.live_head
+  live_head_for_checks := live_namers.live_head;
+  live_value_for_checks := live_value

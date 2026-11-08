@@ -478,7 +478,7 @@ let rec declared_globals (d : cpp_decl) =
 (* Of [globals], those whose name is decided -- printing decides none --
    asked for at each of [frames], each as the type and the expression
    printers may name it, and as the type printer may write it as a type's
-   head. *)
+   head; and of every global, how a value naming it reads it. *)
 let global_names frames globals =
   let decided r = Option.has_some (Common.decided_global_name r) in
   let globals =
@@ -494,9 +494,11 @@ let global_names frames globals =
         @
         match r with
         | GlobRef.IndRef _ -> Cpp_resolution.[Inductive_value r; Inductive_scope r; Type_head (Inductive_head, r)]
-        | _ -> [] )
+        | GlobRef.ConstRef _ | GlobRef.ConstructRef _ -> [Cpp_resolution.Value_reference r]
+        | GlobRef.VarRef _ -> [] )
       (List.filter decided globals)
     @ Cpp_names.custom_texts_named globals @ Cpp_names.inline_customs_named globals
+    @ List.map (fun r -> Cpp_resolution.Value_access r) globals
   in
   List.concat_map (fun frame -> List.map (fun key -> (frame, key)) keys) frames
 

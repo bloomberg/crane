@@ -189,13 +189,14 @@ type naming =
           planning spells, which it resolves first. *)
 
 (** How the resolver names, at a position, a key, a global, and the inline
-    custom text of a global, if it has one, and writes a global type's
-    head. *)
+    custom text of a global, if it has one, writes a global type's head,
+    and answers any key. *)
 and live_namers = {
   live_key : render_ctx -> Cpp_resolution.key -> Cpp_name.t;
   live_global : render_ctx -> Common.kind -> Names.GlobRef.t -> Cpp_name.t;
   live_inline : Names.GlobRef.t -> string option;
   live_head : render_ctx -> Cpp_resolution.head_form -> Names.GlobRef.t -> Cpp_resolution.head;
+  live_value : render_ctx -> Cpp_resolution.key -> Cpp_resolution.value;
 }
 
 (** Where the type printer reads how a type constructor is written. *)

@@ -764,101 +764,34 @@ and pp_cpp_expr ctx env args t =
     str "[](const auto &_x) { return _x." ++ str (projection_field_name r) ++ str "; }"
   | CPPglob (x, tys, _) ->
     let class_ s = Cpp_name.Class s in
-    (* The base name of a global reference: a name, or -- for a function in an
-       eponymous template struct, which writes its own template arguments --
-       already written. *)
-    let base =
+    let type_args () = str "<" ++ pp_list (pp_cpp_type ctx false []) tys ++ str ">" in
+    (* A name followed by the use's template arguments: one named through a
+       qualifier takes the [template] disambiguator, [C::template empty<T>]. *)
+    let named n = match tys with [] -> Cpp_name.pp n | _ -> Cpp_name.pp ~template_keyword:true n ++ type_args () in
+    let full_name =
       match x with
-      | GlobRef.IndRef _ -> `Named (inductive_value ctx x)
-      | GlobRef.VarRef v -> `Named (Cpp_name.unqualified (Id.to_string v))
-      | _ ->
-      (* Check if this function is inside an eponymous template struct. If so,
-         type args go on the struct name, not the function name.  A record of
-         no parameters merges into a struct that is no template, whose
-         functions are spelled as any module's are. *)
-      let template_record = function
-        | Some {Module_plan.record; type_params} when type_params > 0 -> Some (record, type_params)
-        | Some _ | None -> None
-      in
-      match (template_record (Module_plan.eponymous_record_containing x), tys) with
-      | Some (record_ref, type_params), _ :: _ ->
-        (* Function inside eponymous template struct with type args: Generate
-           StructName<int, ...>::template funcName<Args> for static methods. We
-           use placeholder types for the struct and actual args for the
-           method. *)
-        let struct_name = short_name ctx Type record_ref in
-        let func_name = short_name ctx Term x in
-        let placeholder_args = gen_placeholder_args type_params in
-        let ty_args = pp_list (pp_cpp_type ctx false []) tys in
-        `Written
-          ( Cpp_name.pp_type_qualifier class_
-              (str (String.capitalize_ascii struct_name) ++ str "<" ++ str placeholder_args ++ str ">")
-          ++ str "template "
-          ++ str func_name
-          ++ str "<"
-          ++ ty_args
-          ++ str ">" )
-      | Some (record_ref, type_params), [] ->
-        let struct_name = short_name ctx Type record_ref in
-        let func_name = short_name ctx Term x in
-        let placeholder_args = gen_placeholder_args type_params in
-        `Written
-          ( Cpp_name.pp_type_qualifier class_
-              (str (String.capitalize_ascii struct_name) ++ str "<" ++ str placeholder_args ++ str ">")
-          ++ str func_name )
-      | None, _ ->
-        (* Normal case: function not in eponymous struct *)
-        let name = global_name ctx Term x in
-        let qualified = wrapper_qualify x name in
-        if not (Cpp_name.equal qualified name) then `Named qualified
-        else if needs_global_qualifier ctx x then `Named (Cpp_name.within Cpp_name.Global name)
-        else `Named name
-    in
-    let base_name = match base with `Named n -> Cpp_name.pp n | `Written d -> d in
-    let is_accessor =
-      let x_mp = modpath_of_r x in
-      let x_lbl = label_of_r x in
-      let rec resolve_mp mp =
-        match Module_plan.functor_app_source mp with
-        | Some source -> resolve_mp source  (* iterate to fixpoint *)
-        | None ->
-          match mp with
-          | Names.ModPath.MPdot (parent, lbl) ->
-            let resolved_parent = resolve_mp parent in
-            if ModPath.equal resolved_parent parent then mp
-            else Names.ModPath.MPdot (resolved_parent, lbl)
-          | _ -> mp
-      in
-      let resolved_x_mp = resolve_mp x_mp in
-      let planned =
-        List.exists
-          (fun (reg_mp, reg_lbl) ->
-            Label.equal x_lbl reg_lbl
-            && ( ModPath.equal x_mp reg_mp
-               || ModPath.equal resolved_x_mp reg_mp ) )
-          !template_static_accessors
-      in
-      (* A constant reached through a module alias is the target's own, which
-         its canonical name says.  One reached through a functor parameter
-         has whatever shape the argument gives it, and the use below accepts
-         both: any accessor of the same name makes it one. *)
-      planned
-      || (match x with GlobRef.ConstRef c -> Hashtbl.mem template_static_accessor_kns (Constant.canonical c) | _ -> false)
-      || under_mp_bound x_mp
-         && List.exists (fun (_, reg_lbl) -> Label.equal x_lbl reg_lbl) !template_static_accessors
+      | GlobRef.IndRef _ -> named (inductive_value ctx x)
+      | GlobRef.VarRef v -> named (Cpp_name.unqualified (Id.to_string v))
+      | _ -> (
+        match Cpp_names.value_reference ctx x with
+        | Named_value {name; type_arguments = true} -> named name
+        | Named_value {name; type_arguments = false} -> Cpp_name.pp name
+        | Record_member {record; type_params} ->
+          (* A function inside an eponymous template struct: the struct is
+             named with placeholder arguments, and the use's arguments go on
+             the function, a static member: [StructName<...>::template
+             funcName<Args>]. *)
+          let struct_name = short_name ctx Type record in
+          let func_name = short_name ctx Term x in
+          let placeholder_args = gen_placeholder_args type_params in
+          Cpp_name.pp_type_qualifier class_
+            (str (String.capitalize_ascii struct_name) ++ str "<" ++ str placeholder_args ++ str ">")
+          ++ match tys with [] -> str func_name | _ -> str "template " ++ str func_name ++ type_args () )
     in
     let full_name =
-      match (base, tys, Module_plan.eponymous_record_containing x) with
-      | `Written _, _, _ | _, [], _ | _, _, Some _ -> base_name
-      | `Named n, _, None ->
-        (* A template named through a qualifier takes the [template]
-           disambiguator: [C::template empty<T>]. *)
-        Cpp_name.pp ~template_keyword:true n
-        ++ str "<" ++ pp_list (pp_cpp_type ctx false []) tys ++ str ">"
-    in
-    let full_name =
-      if not is_accessor then full_name
-      else if under_mp_bound (modpath_of_r x) then
+      match Cpp_names.access ctx x with
+      | Variable -> full_name
+      | Either_form ->
         (* Reached through a bound module parameter, whose member shape is not
            known here: the argument module may define this value as a static
            data member or -- when it is itself inside a template, as a Meyers
@@ -868,7 +801,7 @@ and pp_cpp_expr ctx env args t =
         let n = string_of_ppcmds full_name in
         str ("[]{ if constexpr (requires { " ^ n ^ "(); }) return " ^ n
              ^ "(); else return " ^ n ^ "; }()")
-      else full_name ++ str "()"
+      | Accessor -> full_name ++ str "()"
     in
     apply full_name
   | CPPnamespace (r, t) ->
@@ -2445,9 +2378,10 @@ and pp_cpp_fields_with_vis ?(struct_name : Pp.t option) ctx env fields =
                     before use inside the function body
     @param expr_pp  already pretty-printed initializer expression *)
 let pp_meyers_singleton ctx env id ty expr_pp =
-  if not (is_template_static_accessor (modpath_of_r id) (label_of_r id)) then
-    Probe.violation "template static accessors"
-      Pp.(str "the accessor " ++ GlobRef.print id ++ str " was printed without being planned");
+  if Probe.checking () then
+    if not (is_template_static_accessor (modpath_of_r id) (label_of_r id)) then
+      Probe.violation "template static accessors"
+        Pp.(str "the accessor " ++ GlobRef.print id ++ str " was printed without being planned");
   let bare_ty =
     match ty with
     | Tconst inner -> inner

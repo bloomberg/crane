@@ -28,6 +28,8 @@ type key =
   | Inline_custom of GlobRef.t
   | Inductive_scope of GlobRef.t
   | Type_head of head_form * GlobRef.t
+  | Value_reference of GlobRef.t
+  | Value_access of GlobRef.t
 
 let pp_key k =
   let global what r = Pp.(str what ++ str " " ++ GlobRef.print r) in
@@ -48,6 +50,8 @@ let pp_key k =
   | Inductive_scope r -> global "the struct naming the members of" r
   | Type_head (Glob_head, r) -> global "the type head of" r
   | Type_head (Inductive_head, r) -> global "the inductive type head of" r
+  | Value_reference r -> global "the value reference to" r
+  | Value_access r -> global "how a value reads" r
 
 let compare_entered a b =
   let rank = function Signature _ -> 0 | Inductive_struct _ -> 1 | In_struct -> 2 | In_template -> 3 | Function _ -> 4 in
@@ -79,6 +83,8 @@ let compare_key a b =
     | Inline_custom _ -> 11
     | Inductive_scope _ -> 12
     | Type_head _ -> 13
+    | Value_reference _ -> 14
+    | Value_access _ -> 15
   in
   let global ka ra kb rb = match compare_kind ka kb with 0 -> GlobRef.UserOrd.compare ra rb | c -> c in
   match (a, b) with
@@ -93,7 +99,9 @@ let compare_key a b =
   | Inductive_value a, Inductive_value b
   | Custom_text a, Custom_text b
   | Inline_custom a, Inline_custom b
-  | Inductive_scope a, Inductive_scope b ->
+  | Inductive_scope a, Inductive_scope b
+  | Value_reference a, Value_reference b
+  | Value_access a, Value_access b ->
     GlobRef.UserOrd.compare a b
   | Type_head (fa, a), Type_head (fb, b) -> ( match compare fa fb with 0 -> GlobRef.UserOrd.compare a b | c -> c )
   | Definition (da, a), Definition (db, b) -> ( match compare da db with 0 -> GlobRef.UserOrd.compare a b | c -> c )
@@ -106,20 +114,37 @@ module Map = Map.Make (struct
 end)
 
 type head = {outer : Cpp_name.scope list; head : Cpp_name.t; typename : bool; templated : bool}
-type value = Name of Cpp_name.t | Head of head | Inline of string option
+type reference =
+  | Named_value of {name : Cpp_name.t; type_arguments : bool}
+  | Record_member of {record : GlobRef.t; type_params : int}
+
+type access = Variable | Accessor | Either_form
+
+type value = Name of Cpp_name.t | Head of head | Inline of string option | Reference of reference | Access of access
+
+let pp_reference = function
+  | Named_value {name; type_arguments} ->
+    Pp.(str (Cpp_name.to_string name) ++ if type_arguments then str " with its type arguments" else mt ())
+  | Record_member {record; type_params} ->
+    Pp.(str "a member of " ++ GlobRef.print record ++ str " of " ++ int type_params ++ str " parameters")
+
+let pp_access = function
+  | Variable -> Pp.str "a variable"
+  | Accessor -> Pp.str "an accessor"
+  | Either_form -> Pp.str "a variable or an accessor"
+
+let not_a key what = CErrors.anomaly Pp.(str "Crane: " ++ pp_key key ++ str " did not resolve to " ++ str what ++ str ".")
 
 let name_of key = function
   | Name n -> n
   | Head _ -> CErrors.anomaly Pp.(str "Crane: " ++ pp_key key ++ str " is a type's head, not a name.")
   | Inline _ -> CErrors.anomaly Pp.(str "Crane: " ++ pp_key key ++ str " is an inline custom answer, not a name.")
+  | Reference _ | Access _ -> not_a key "a name"
 
-let head_of key = function
-  | Head h -> h
-  | Name _ | Inline _ -> CErrors.anomaly Pp.(str "Crane: " ++ pp_key key ++ str " did not resolve to a type's head.")
-
-let inline_of key = function
-  | Inline text -> text
-  | Name _ | Head _ -> CErrors.anomaly Pp.(str "Crane: " ++ pp_key key ++ str " did not resolve to an inline custom answer.")
+let head_of key = function Head h -> h | _ -> not_a key "a type's head"
+let inline_of key = function Inline text -> text | _ -> not_a key "an inline custom answer"
+let reference_of key = function Reference r -> r | _ -> not_a key "a value reference"
+let access_of key = function Access a -> a | _ -> not_a key "an access"
 
 type table = Unresolved_table | Resolved of value Map.t
 
@@ -141,3 +166,5 @@ let lookup read t frame key =
 let find t frame key = lookup name_of t frame key
 let find_head t frame form r = lookup head_of t frame (Type_head (form, r))
 let find_inline t frame r = lookup inline_of t frame (Inline_custom r)
+let find_reference t frame r = lookup reference_of t frame (Value_reference r)
+let find_access t frame r = lookup access_of t frame (Value_access r)

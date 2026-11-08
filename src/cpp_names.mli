@@ -195,6 +195,14 @@ val wrapper_qualified_type_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp
     struct that does not enclose it. *)
 val needs_global_qualifier : Cpp_state.render_ctx -> Names.GlobRef.t -> bool
 
+(** How the constant or constructor is written as a value at the position
+    given ({!Cpp_resolution.Value_reference}). *)
+val value_reference : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_resolution.reference
+
+(** How a value naming the global reads it at the position given
+    ({!Cpp_resolution.Value_access}). *)
+val access : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_resolution.access
+
 (** {2 Name-resolution cache and cached predicates} *)
 
 (** Run a resolver against the name-resolution cache, falling back otherwise. *)

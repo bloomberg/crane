@@ -82,6 +82,13 @@ type key =
   | Type_head of head_form * GlobRef.t
       (** The global written as a type's head, in the form given: a
           {!head}, not a name. *)
+  | Value_reference of GlobRef.t
+      (** The constant or constructor written as a value: a
+          {!reference}, not a name. *)
+  | Value_access of GlobRef.t
+      (** Whether a value naming the global reads a variable or calls the
+          accessor standing for it: an {!access}, asked for every global a
+          declaration names. *)
 
 val pp_key : key -> Pp.t
 
@@ -95,12 +102,36 @@ type head = {
   templated : bool;
 }
 
+(** A constant or constructor as an expression names it. *)
+type reference =
+  | Named_value of {name : Cpp_name.t; type_arguments : bool}
+      (** By [name], qualified as it is to be written; followed by the
+          template arguments of the use if [type_arguments]: a function of
+          an eponymous record of no parameters writes none. *)
+  | Record_member of {record : GlobRef.t; type_params : int}
+      (** As a static member of the eponymous record [record], a class
+          template of [type_params] parameters, through the record. *)
+
+(** How a value naming a global reads it. *)
+type access =
+  | Variable  (** As the variable it is. *)
+  | Accessor  (** By calling the accessor (a Meyers singleton) standing for it. *)
+  | Either_form
+      (** Through a bound module parameter, whose argument may define it
+          either way: whichever it does. *)
+
 (** What a key resolves to: a {!Type_head} a head, an {!Inline_custom}
-    the inline text or none, anything else a name. *)
+    the inline text or none, a {!Value_reference} a reference, an
+    {!Value_access} an access, anything else a name. *)
 type value =
   | Name of Cpp_name.t
   | Head of head
   | Inline of string option
+  | Reference of reference
+  | Access of access
+
+val pp_reference : reference -> Pp.t
+val pp_access : access -> Pp.t
 
 (** The name a key other than {!Type_head} resolves to. *)
 val name_of : key -> value -> Cpp_name.t
@@ -129,3 +160,10 @@ val find_head : table -> frame -> head_form -> GlobRef.t -> head lookup
 (** The inline custom text of the global at [frame], if it has one
     ({!Inline_custom}). *)
 val find_inline : table -> frame -> GlobRef.t -> string option lookup
+
+(** How the constant or constructor is written as a value at [frame]
+    ({!Value_reference}). *)
+val find_reference : table -> frame -> GlobRef.t -> reference lookup
+
+(** How a value naming the global reads it at [frame] ({!Value_access}). *)
+val find_access : table -> frame -> GlobRef.t -> access lookup

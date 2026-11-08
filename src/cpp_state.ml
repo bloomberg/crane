@@ -508,14 +508,15 @@ and tyctor_use = {
 type naming = No_names | Naming_live of live_namers | Names_resolved of Cpp_resolution.table
 
 (* How the resolver names, at a position, a key, a global, and the inline
-   custom text of a global, if it has one, and writes a global type's head:
-   what the naming functions shared with the printer call where the resolver
-   uses them. *)
+   custom text of a global, if it has one, writes a global type's head, and
+   answers any key: what the naming functions shared with the printer call
+   where the resolver uses them. *)
 and live_namers = {
   live_key : render_ctx -> Cpp_resolution.key -> Cpp_name.t;
   live_global : render_ctx -> Common.kind -> GlobRef.t -> Cpp_name.t;
   live_inline : GlobRef.t -> string option;
   live_head : render_ctx -> Cpp_resolution.head_form -> GlobRef.t -> Cpp_resolution.head;
+  live_value : render_ctx -> Cpp_resolution.key -> Cpp_resolution.value;
 }
 
 (** Where the type printer reads how a type constructor is written: nowhere,
