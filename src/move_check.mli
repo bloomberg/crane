@@ -42,6 +42,13 @@ val check_decl : Minicpp.cpp_decl -> unit
     storage aside. *)
 val moved_reads : Minicpp.cpp_stmt list -> Names.Id.t list
 
+(** The references [ss], a body, reads after the local each was bound into
+    is given a new value, each with that local (section 4.10: "borrowed
+    values do not escape the region"): the storage a reference names is
+    destroyed or replaced by an assignment to the local holding it.  A
+    pointer local given a new value leaves what it pointed at as it was. *)
+val stale_references : Minicpp.cpp_stmt list -> (Names.Id.t * Names.Id.t) list
+
 (** [convention_violations r params body]: what the parameters [params] of
     the callable [r], in declaration order, and its [body] contradict of the
     convention its callable plan states ({!Callable_abi.passing}), [None]

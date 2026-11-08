@@ -54,8 +54,10 @@ exception Opaque
 (* What is read after a [continue], and after a [break]. *)
 type jumps = {continue_ : place list; break_ : place list}
 
-(* The variables found read after a move, in the body being checked. *)
-type report = {mutable found : Id.t list}
+(* The variables found read after a move, in the body being checked; the
+   references, each with the local it was bound into, found read after that
+   local is given a new value; the locals the body declares as pointers. *)
+type report = {mutable found : Id.t list; mutable stale : (Id.t * Id.t) list; pointers : Id.t list}
 
 (* A move in [a] read by [b], [b] running after [a] or beside it. *)
 let check_after report a b =
@@ -217,11 +219,16 @@ and stmt report jumps aliases live s =
   | Sreturn (Some e) -> at' [] e
   | Scontinue -> jumps.continue_
   | Sbreak -> jumps.break_
+  | Sasgn (x, Existing, e) ->
+    reassigned report aliases x live;
+    at' (kill (Whole x) live) e
   | Sasgn (x, _, e) -> at' (kill (Whole x) live) e
   | Sassign_expr (lhs, e) | Sexpr (CPPbinop (Bassign, lhs, e)) -> (
     match (member lhs, lhs) with
     | Some (CPPvar x, f), _ -> at' (kill (member_of aliases x f) live) e
-    | _, CPPvar x -> at' (kill (local aliases x) live) e
+    | _, CPPvar x ->
+      reassigned report aliases x live;
+      at' (kill (local aliases x) live) e
     | _ -> at' (at' live lhs) e )
   | Sdecl (x, _, _) | Sdecl_init (x, _) -> kill (Whole x) live
   | Sif (c, t, e) -> at' (walk' live t @ walk' live e) c
@@ -272,6 +279,20 @@ and stmt report jumps aliases live s =
     iter_stmt_children ~on_expr:(fun e -> live := at' !live e) ~on_stmts:(fun _ -> ()) s;
     !live
 
+(* The local [x] is given a new value, [live] being read after: a
+   reference bound into what it held before, read after, names storage the
+   assignment destroyed or replaced.  A pointer given a new value leaves
+   what it pointed at as it was. *)
+and reassigned report aliases x live =
+  let base = match Id.Map.find_opt x aliases with Some b -> b | None -> x in
+  if not (List.exists (Id.equal base) report.pointers) then
+    List.iter
+      (function
+        | Through {alias; base = b; _} when Id.equal b base && not (Id.equal alias x) ->
+          report.stale <- (alias, base) :: report.stale
+        | _ -> () )
+      live
+
 (* A loop body runs again: its end is followed by the loop's head, which is
    followed by the body's start and by what comes after the loop.  The head is
    found quietly, until nothing new reaches it; then the body is checked once
@@ -280,7 +301,7 @@ and loop report aliases after head_of ss =
   let pass report head =
     head_of report (walk report {continue_ = head; break_ = after} aliases head ss @ after)
   in
-  let quiet = {found = []} in
+  let quiet = {report with found = []; stale = []} in
   let rec fix head n =
     let head' = List.sort_uniq compare (pass quiet head @ head) in
     if n = 0 || List.length head' = List.length head then head' else fix head' (n - 1)
@@ -295,17 +316,43 @@ and loop report aliases after head_of ss =
    the recursion plan; this checks the program's locals. *)
 let backend x = String.length (Id.to_string x) > 0 && (Id.to_string x).[0] = '_'
 
-let moved_reads ss =
-  let report = {found = []} in
+(* The locals [ss] declares as pointers, in any scope. *)
+let pointers ss =
+  let rec is_pointer = function Tptr _ -> true | Tconst t | Tnamespace (_, t) -> is_pointer t | _ -> false in
+  let found = ref [] in
+  let rec fe e = map_expr fe fs Fun.id e
+  and fs s =
+    ( match s with
+    | Sasgn (x, Declare (ty, _), _) | Sdecl (x, ty, _) when is_pointer ty -> found := x :: !found
+    | _ -> () );
+    map_stmt fe fs Fun.id s
+  in
+  List.iter (fun s -> ignore (fs s)) ss;
+  !found
+
+let walk_body ss =
+  let report = {found = []; stale = []; pointers = pointers ss} in
   body report Id.Map.empty ss;
-  List.sort_uniq Id.compare (List.filter (fun x -> not (backend x)) report.found)
+  report
+
+let moved_reads ss = List.sort_uniq Id.compare (List.filter (fun x -> not (backend x)) (walk_body ss).found)
+
+let stale_references ss = List.sort_uniq compare (walk_body ss).stale
 
 let check_body owner ss =
+  let report = walk_body ss in
   List.iter
     (fun x ->
       Probe.violation "moved value read"
         Pp.(str "in " ++ owner ++ str ", " ++ Id.print x ++ str " is read after it is moved") )
-    (moved_reads ss)
+    (List.sort_uniq Id.compare (List.filter (fun x -> not (backend x)) report.found));
+  List.iter
+    (fun (alias, base) ->
+      Probe.violation "borrow outlives its base"
+        Pp.(
+          str "in " ++ owner ++ str ", the reference " ++ Id.print alias ++ str " into " ++ Id.print base
+          ++ str " is read after " ++ Id.print base ++ str " is given a new value" ) )
+    (List.sort_uniq compare report.stale)
 
 (* What the parameters [params] of a callable whose plan passes them as
    [passing] says, and whose body is [body], break of it. *)
@@ -382,12 +429,75 @@ let check_local_conventions owner ss =
   and fs s = map_stmt fe fs Fun.id s in
   List.iter (fun s -> ignore (fs s)) ss
 
+(* Whether [l] reads the scope it is made in by reference. *)
+let by_reference l = match l.cl_capture with Immediate | Written By_reference -> true | Closure | Written _ -> false
+
+(* The names the statements [ss] let escape among [xs], locals bound to
+   lambdas reading their scope by reference, [group] being all such in the
+   block: named other than as the function a call applies -- or as an
+   argument of a call applying one of [group], the members of a group
+   handing themselves on -- or named at all inside a lambda that copies
+   what it captures. *)
+let escaping ~group xs ss =
+  let found = ref [] in
+  let mem x = List.exists (Id.equal x) xs in
+  let rec expr e =
+    match e with
+    | CPPfun_call (_, CPPvar f, args) when List.exists (Id.equal f) group ->
+      List.iter (function CPPvar x when List.exists (Id.equal x) group -> () | a -> expr a) (call_args args)
+    | CPPvar x when mem x -> found := x :: !found
+    | CPPlambda l when not (by_reference l) ->
+      List.iter (fun x -> if mem x then found := x :: !found) (free_vars_expr e)
+    | _ -> iter_expr_children ~on_expr:expr ~on_stmts:(List.iter stmt) e
+  and stmt s = iter_stmt_children ~on_expr:expr ~on_stmts:(List.iter stmt) s in
+  List.iter stmt ss;
+  List.sort_uniq Id.compare !found
+
+(* Each lambda of a local fixpoint function whose plan holds a capture
+   [By_reference] ({!Ownership_ir.Local_captures}) in [ss]: written
+   capturing by reference, and not let escape by the statements after the
+   one binding it, in the block binding it -- the scope it reads. *)
+let check_by_reference_closures owner ss =
+  let report what = Probe.violation "closure captures" Pp.(str "in " ++ owner ++ str ", " ++ what) in
+  let rec block ss =
+    let group =
+      List.filter_map
+        (function
+          | Sasgn (x, Declare _, CPPlambda {cl_fixpoint = Some lf; _})
+            when Ownership_ir.Local_captures.by_reference lf.lf_member ->
+            Some x
+          | _ -> None )
+        ss
+    in
+    let rec go = function
+      | [] -> ()
+      | (Sasgn (x, Declare _, CPPlambda ({cl_fixpoint = Some lf; _} as l)) as s) :: rest
+        when Ownership_ir.Local_captures.by_reference lf.lf_member && l.cl_capture <> Written Captures_nothing ->
+        (* One the C++ has capture nothing -- what the plan reads is a
+           dictionary, a template parameter -- refers into no scope. *)
+        if not (by_reference l) then
+          report Pp.(str "the local fixpoint " ++ Id.print lf.lf_name ++ str " copies what its plan reads by reference");
+        List.iter
+          (fun x -> report Pp.(str "the local fixpoint lambda " ++ Id.print x ++ str " reads its scope by reference and escapes it"))
+          (escaping ~group [x] rest);
+        stmt s;
+        go rest
+      | s :: rest ->
+        stmt s;
+        go rest
+    in
+    go ss
+  and expr e = iter_expr_children ~on_expr:expr ~on_stmts:block e
+  and stmt s = iter_stmt_children ~on_expr:expr ~on_stmts:block s in
+  block ss
+
 let rec check_decl d =
   let rec field (f, _, _) =
     match f with
     | Fmethod m ->
       check_body (Id.print m.mf_name) m.mf_body;
       check_local_conventions (Id.print m.mf_name) m.mf_body;
+      check_by_reference_closures (Id.print m.mf_name) m.mf_body;
       Option.iter (fun r -> check_convention (Id.print m.mf_name) r m.mf_params m.mf_body) m.mf_globref
     | Fnested_struct (_, fs) -> List.iter field fs
     | _ -> ()
@@ -397,6 +507,7 @@ let rec check_decl d =
     let r, _ = match List.rev df_path.dp_inner with inner :: _ -> inner | [] -> df_path.dp_outer in
     check_body (GlobRef.print r) ss;
     check_local_conventions (GlobRef.print r) ss;
+    check_by_reference_closures (GlobRef.print r) ss;
     if df_path.dp_inner = [] then check_convention (GlobRef.print r) r (List.rev params) ss
   | Dtemplate (_, _, inner) -> check_decl inner
   | Dnspace (_, ds) -> List.iter check_decl ds

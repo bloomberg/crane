@@ -130,6 +130,19 @@ let local_fix_stmts selves ~binders ~self_passing impl_stmts funs_with_params =
     @return [(decls, defs, deref_subst)] where [defs] is empty and
     [deref_subst] is the identity function (no dereferencing needed).
     @see gen_local_fix_by_ref for the non-escaping alternative. *)
+(* The names of the variables at the de Bruijn indices [is] a closure
+   captures, in the order a capture list spells them; a class instance is a
+   template parameter, not a value it captures. *)
+let capture_names env is =
+  List.sort_uniq Id.compare
+    (List.filter
+       (fun id -> not (Common.is_tc_instance_id id))
+       (List.filter_map (fun i -> Common.get_db_name_opt i env) is) )
+
+(* The names of the variables [captures] says a closure takes by move. *)
+let moved_names env captures =
+  capture_names env (List.filter_map (function i, Ownership_ir.Capture.By_move -> Some i | _ -> None) captures)
+
 (* A local fixpoint's wrapper parameter, of ML type [ty], forwarded to the
    impl: its one read, a move where the wrapper takes it by value. *)
 let forwarded ~by_value ty v =
@@ -162,14 +175,24 @@ let local_passing ~closures funs =
 let record_local_passing ~binders passing =
   List.iter2 (fun (_, member, _, _) t -> Ownership_ir.Local_passing.record member t) binders passing
 
+(* Record that the functions [binders] name hold their captures as
+   [captures] says, each the modes of the one at its position: what
+   {!Move_check} holds their lambdas to. *)
+let record_local_captures ~binders captures =
+  List.iter2
+    (fun (_, member, _, _) modes -> Ownership_ir.Local_captures.record member (List.map snd modes))
+    binders captures
+
 (* Whether a lambda generated as [passing] says owns each parameter it
    takes, innermost first, as its parameters are listed. *)
 let owned_flags passing = List.rev_map (fun p -> p = Callable_abi.Owned) (List.filter_map Fun.id passing)
 
-let gen_local_fix_ycomb env ~binders ~passing ~moved renamed_ids funs_with_params =
+let gen_local_fix_ycomb env ~binders ~passing ~captures renamed_ids funs_with_params =
   (* The lambdas take every parameter by value, as [passing], a group of
      closures', says. *)
   record_local_passing ~binders passing;
+  record_local_captures ~binders captures;
+  let moved = List.map (moved_names env) captures in
   let ret_ty ty =
     match cpp_of_ml env ty with
     | Tfun (_, t) ->
@@ -320,8 +343,9 @@ let gen_local_fix_ycomb env ~binders ~passing ~moved renamed_ids funs_with_param
 
     @return [(decls, defs)] — declaration and definition statement lists.
     @see gen_local_fix_ycomb for the escaping-fixpoint alternative. *)
-let gen_local_fix_by_ref env ~binders ~passing renamed_ids funs_with_params =
+let gen_local_fix_by_ref env ~binders ~passing ~captures renamed_ids funs_with_params =
   record_local_passing ~binders passing;
+  record_local_captures ~binders captures;
   let owned_flags_per_fun = List.map owned_flags passing in
   let ret_ty ty =
     match cpp_of_ml env ty with
@@ -419,24 +443,10 @@ let gen_local_fix_by_ref env ~binders ~passing renamed_ids funs_with_params =
   (local_fix_stmts selves ~binders ~self_passing impl_stmts funs_with_params, [])
 
 
-(* The names of the variables at the de Bruijn indices [is] a closure
-   captures, in the order a capture list spells them; a class instance is a
-   template parameter, not a value it captures. *)
-let capture_names env is =
-  List.sort_uniq Id.compare
-    (List.filter
-       (fun id -> not (Common.is_tc_instance_id id))
-       (List.filter_map (fun i -> Common.get_db_name_opt i env) is) )
-
-(* The names of the variables [captures] says a closure takes by move. *)
-let moved_names env captures =
-  capture_names env (List.filter_map (function i, Ownership_ir.Capture.By_move -> Some i | _ -> None) captures)
-
-(* What the closure of each function of a local fixpoint [fix] generated as
-   closures takes by move where it is made
+(* How the lambda of each function of the local fixpoint [fix] holds each
+   variable it captures, generated as closures or else [in_place]
    ({!Ownership_ir.captures_by_member}). *)
-let fix_moved_captures env fix =
-  List.map (moved_names env) (Ownership_ir.captures_by_member (!tctx).move_plan fix)
+let fix_captures ~in_place fix = Ownership_ir.captures_by_member ~in_place (!tctx).move_plan fix
 
 (* Whether a record's fields are moved out of what [base] reads it from. *)
 let moved_out base = match base with CPPmove _ -> true | _ -> false
@@ -1519,11 +1529,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let move_candidate =
       (not (Common.is_tc_instance_id x))
       &&
-      match Ownership_ir.use ~boxed:(binder_is_boxed i) ?declared:(binder_cpp_type i) (!tctx).move_plan occ with
+      match Ownership_ir.use ~boxed:(binder_is_boxed i) (!tctx).move_plan occ with
       | Some ((Share | Clone | Copy) as copy) ->
         (* The copy the plan names is the one the variable's declaration
-           makes. *)
-        ( if Probe.checking () then
+           makes, where Core says what its type is. *)
+        ( if Probe.checking () && Ownership_ir.read_is_typed (!tctx).move_plan occ then
             match binder_cpp_type i with
             (* [auto] says nothing of the type it deduces. *)
             | Some (Tauto | Tconst Tauto | Tref (_, (Tauto | Tconst Tauto))) -> ()
@@ -9297,7 +9307,18 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          continuation while a [\[&\]] lambda may still refer to them: the
          plan pins them ({!Ownership_ir}). *)
       let all_fix_ids_list = Array.to_list ids in
-      let closures = Analyze_closures.group ~n_outer ~continuation:b ~cofix ids funs = Closures in
+      (* A group a frame keeps across a resume is stored in the frame and
+         called once the frame resumes, after the scope it would read by
+         reference has ended: one capturing anything holds copies, though
+         Core never lets it escape. *)
+      let kept_by_frame =
+        List.exists (( <> ) []) (fix_captures ~in_place:true fix_term)
+        &&
+        match core_binder ~site:let_occ env 0 with
+        | Some b -> Ownership_ir.kept_by_frame (!tctx).move_plan b
+        | None -> false
+      in
+      let closures = kept_by_frame || Analyze_closures.group ~n_outer ~continuation:b ~cofix ids funs = Closures in
       let funs_compiled =
         Array.to_list
           (Array.mapi
@@ -9335,21 +9356,22 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       push_binders env [projected_id];
       let declared = declaring (fst projected_id) (core_binder ~site:let_occ env_with_fix 1) in
       let cont = gen_stmts ~slot env_with_fix k b in
-      check_fixpoint_escape (fst projected_id) ~closures (fun () ->
-          List.exists (fun (id, _) -> fixpoint_escapes_in_stmts id cont) renamed_ids
-          || fix_escapes_in_own_bodies renamed_ids funs_with_params );
+      check_fixpoint_escape (fst projected_id) ~closures:(closures && not kept_by_frame) (fun () ->
+          (not kept_by_frame)
+          && ( List.exists (fun (id, _) -> fixpoint_escapes_in_stmts id cont) renamed_ids
+             || fix_escapes_in_own_bodies renamed_ids funs_with_params ) );
       let passing = local_passing ~closures funs in
       if closures then
         let decls, defs, deref_subst =
           gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled) ~passing
-            ~moved:(fix_moved_captures env fix_term)
+            ~captures:(fix_captures ~in_place:false fix_term)
             renamed_ids funs_with_params
         in
         declared (decls @ defs) @ deref_subst cont
       else
         let decls, defs =
-          gen_local_fix_by_ref env ~binders:(local_fix_binders env fix_term occ ids funs_compiled) ~passing renamed_ids
-            funs_with_params
+          gen_local_fix_by_ref env ~binders:(local_fix_binders env fix_term occ ids funs_compiled) ~passing
+            ~captures:(fix_captures ~in_place:true fix_term) renamed_ids funs_with_params
         in
         declared (decls @ defs) @ cont
   | MLletin (x, t, (MLlam _ as a), b, let_occ) ->
@@ -10189,7 +10211,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           let decls, defs, deref_subst =
             gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
               ~passing:(local_passing ~closures:true funs)
-              ~moved:(fix_moved_captures env fix_term)
+              ~captures:(fix_captures ~in_place:false fix_term)
               renamed_ids funs_with_params
           in
           let remaining_params =
@@ -10225,7 +10247,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           let decls, defs, deref_subst =
             gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
               ~passing:(local_passing ~closures:true funs)
-              ~moved:(fix_moved_captures env fix_term)
+              ~captures:(fix_captures ~in_place:false fix_term)
               renamed_ids funs_with_params
           in
           decls @ defs
@@ -10234,7 +10256,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         else begin
           let decls, defs =
             gen_local_fix_by_ref env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
-              ~passing:(local_passing ~closures:false funs) renamed_ids funs_with_params
+              ~passing:(local_passing ~closures:false funs) ~captures:(fix_captures ~in_place:true fix_term)
+              renamed_ids funs_with_params
           in
           decls @ defs
           @ [k (made_of occ (CPPfun_call (call_opaque, CPPvar (fst (List.nth renamed_ids x)), of_reversed args)))]
@@ -10265,7 +10288,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     let decls, defs, _deref_subst =
       gen_local_fix_ycomb env ~binders:(local_fix_binders env fix_term occ ids funs_compiled)
             ~passing:(local_passing ~closures:true funs)
-            ~moved:(fix_moved_captures env fix_term)
+            ~captures:(fix_captures ~in_place:false fix_term)
             renamed_ids funs_with_params
     in
     let fix_id = fst (List.nth renamed_ids x) in

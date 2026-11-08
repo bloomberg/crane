@@ -181,7 +181,7 @@ let shares_ref r = Table.is_coinductive r || Table.is_shared_variant r
    stands for, a box (a type left open, an abstract one the program does
    not see into).  An abbreviation is what it abbreviates; a type
    abstraction erasure removes, what it returns.  [None] of a type
-   inference gave up on, a metavariable nothing solved or a hole. *)
+   inference left unsolved, a metavariable or a hole. *)
 let rec copy_of_type ty =
   match ty with
   | Tmeta {contents = Some t} -> copy_of_type t
@@ -203,7 +203,11 @@ let rec copy_of_type ty =
   | Tvar _ | Tapp _ | Topen _ | Tstring -> Some (if worth_moving ty then Duplicate else Bits)
   | Taxiom -> Some Duplicate
   | Tdummy _ -> Some Bits
-  | Tunknown | Tmeta _ | Thole _ -> None
+  (* A type erasure removed -- an existential index, a variable of the
+     callee's the scope cannot name, a type computed from a value -- is held
+     as a value of its own, in a box or deduced. *)
+  | Tunknown -> Some Duplicate
+  | Tmeta _ | Thole _ -> None
 
 (* The same, of the C++ type a variable is declared at.  An abbreviation
    the program defines is read as its Core definition: one naming an
@@ -1108,7 +1112,15 @@ end
 
 let read_type_at p o = List.find_map (fun (o', ty) -> if Occurrence.equal o o' then Some ty else None) p.read_types
 
-let use ?(whole = false) ?(boxed = false) ?declared p o : Use.t option =
+let read_is_typed p o =
+  let rec typed = function
+    | Tmeta {contents = Some t} -> typed t
+    | Tunknown | Tmeta {contents = None} | Thole _ -> false
+    | _ -> true
+  in
+  match read_type_at p o with Some (Some t) -> typed t | Some None | None -> false
+
+let use ?(whole = false) ?(boxed = false) p o : Use.t option =
   let whole = whole || boxed in
   match fate ~whole p o with
   | Last_use when owned p 0 o -> Some Move
@@ -1119,13 +1131,11 @@ let use ?(whole = false) ?(boxed = false) ?declared p o : Use.t option =
   | Last_use | Read_again -> (
     match Option.map copy_of_type (Option.flatten (read_type_at p o)) with
     | Some (Some c) -> Some (Use.of_copy c)
-    | Some None | None -> (
-      (* Where Core says nothing of the type, its declaration does: the one
-         the slot it is bound in gave it, or a box. *)
-      Probe.hit "copy-from-declaration" (fun () -> if Option.has_some declared then "declared" else "box");
-      match declared with
-      | Some ty -> Some (Use.of_copy (copy_of_cpp ty))
-      | None -> Some Clone ) )
+    | Some None | None ->
+      (* Inference left the type unsolved where the read is lowered: no
+         reading of the C++ declaration stands in for it. *)
+      Probe.violation "copy mode" (Pp.str "a read whose Core type inference left unsolved is copied");
+      Some Clone )
   | Unplanned -> None
 
 (* Whether [p] moves the read [o]: {!use}'s [Move], asked where what a copy
@@ -1330,15 +1340,16 @@ let captures ?(in_place = false) p closure =
   let moved = if in_place then [] else moved_captures p closure in
   List.map (fun i -> (i, if in_place then Capture.By_reference else mode_of moved i)) (read_indices [closure])
 
-let captures_by_member p fix =
+let captures_by_member ?(in_place = false) p fix =
   match fix with
   | MLfix (_, _, funs, _, _) ->
     let n = Array.length funs in
+    let moved = if in_place then List.map (fun _ -> []) (Array.to_list funs) else moved_captures_by_member p fix in
     List.map2
       (fun f moved ->
         let read = List.sort_uniq Int.compare (List.filter_map (fun (l, _) -> if -l - n > 0 then Some (-l - n) else None) (closure_reads 0 f)) in
-        List.map (fun i -> (i, mode_of moved i)) read )
-      (Array.to_list funs) (moved_captures_by_member p fix)
+        List.map (fun i -> (i, if in_place then Capture.By_reference else mode_of moved i)) read )
+      (Array.to_list funs) moved
   | _ -> []
 
 let eta_captures p ts =
@@ -1362,6 +1373,22 @@ module Local_passing = struct
         (Pp.str "a local fixpoint is generated passing its parameters otherwise than it was before");
       recorded := (member, t) :: List.filter (fun (m, _) -> not (same m member)) !recorded
     | None -> recorded := (member, t) :: !recorded
+end
+
+let kept_by_frame p b =
+  List.exists
+    (fun s -> List.exists (fun (b', _, _) -> Core_binder.equal b b' && Core_binder.same_site b b') s.saved)
+    p.saves
+
+module Local_captures = struct
+  let recorded : ((Occurrence.t * int) * Capture.t list) list ref = State.cell State.Extraction []
+
+  let lookup member = List.find_map (fun (m, t) -> if Local_passing.same m member then Some t else None) !recorded
+
+  let record member modes =
+    recorded := (member, modes) :: List.filter (fun (m, _) -> not (Local_passing.same m member)) !recorded
+
+  let by_reference member = match lookup member with Some modes -> List.mem Capture.By_reference modes | None -> false
 end
 
 let save_moves p let_ =
