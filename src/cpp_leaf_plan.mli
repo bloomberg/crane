@@ -78,14 +78,15 @@ val is_static_member_declaration : cpp_decl -> bool
     so only those are stood in for. *)
 val stand_ins : Cpp_ast.t -> Cpp_ast.t list
 
-(** The names of the wrapper structs the declaration writes around
-    something other than a sole struct merged into them, in the order it
-    writes them, spelled to be compared ({!Cpp_names.wrapper_spelling}). *)
-val unmerged_wrappers_written : Cpp_erasure.settled -> string list
+(** The wrapper structs the declaration writes around something other than
+    a sole struct merged into them, in the order it writes them, each by the
+    wrapper and its name spelled to be compared with a wrapper module's
+    ({!Cpp_names.wrapper_spelling}). *)
+val unmerged_wrappers_written : Cpp_erasure.settled -> (Names.GlobRef.t * string) list
 
 (** Whether the declaration writes a wrapper struct holding a wrapper
-    module's declarations, one of those the list names. *)
-val absorbs : homed:(string * Names.ModPath.t) list -> Cpp_erasure.settled -> bool
+    module's declarations: that of a wrapper the list gives a module. *)
+val absorbs : homed:(Names.GlobRef.t * Names.ModPath.t) list -> Cpp_erasure.settled -> bool
 
 (** [write_decl ctx env decl] is {!read_decl}, with what placing the
     declarations it needs reads ({!Cpp_ast.Needs}). *)
@@ -96,11 +97,11 @@ val write_decl : Cpp_state.render_ctx -> Common.env -> Cpp_erasure.settled -> Cp
     ({!Cpp_ast.Template_in}). *)
 val ctor_alias_render_ctx : Cpp_state.render_ctx -> Cpp_ast.declared_in -> Cpp_state.render_ctx
 
-(** [write_absorbing ctx ~homed env d] is [d], which {!Cpp_print.absorbs}, as
+(** [write_absorbing ctx ~homed env d] is [d], which {!absorbs}, as
     {!write_decl} writes it at the position [ctx], each wrapper struct
     holding a wrapper module's declarations a {!Cpp_ast.Wrapper_struct}. *)
 val write_absorbing :
-  Cpp_state.render_ctx -> homed:(string * ModPath.t) list -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
+  Cpp_state.render_ctx -> homed:(Names.GlobRef.t * ModPath.t) list -> Common.env -> Cpp_erasure.settled -> Cpp_ast.t
 
 (** What placing the declarations [decl], written in the module [module_] in
     the file [file], needs reads ({!Cpp_ast.Needs}), as planned. *)

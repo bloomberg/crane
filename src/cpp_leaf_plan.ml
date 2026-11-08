@@ -1177,27 +1177,27 @@ let rec unmerged_wrappers_named ~name (d : Cpp_erasure.settled) =
     if w.nw_merges then [] else List.concat_map (unmerged_wrappers_named ~name) members @ [name w.nw_ref]
   | Decl _ -> []
 
-(** The names of the wrapper structs [d] writes around something other than
-    a sole struct merged into them, in the order it writes them: the structs
-    another wrapper's declarations can be written into, spelled to be
-    compared with them ({!Cpp_names.wrapper_spelling}). *)
-let unmerged_wrappers_written d = unmerged_wrappers_named ~name:wrapper_spelling d
+(** The wrapper structs [d] writes around something other than a sole
+    struct merged into them, in the order it writes them: the structs
+    another wrapper's declarations can be written into, each by the wrapper
+    and its name spelled to be compared with a wrapper module's
+    ({!Cpp_names.wrapper_spelling}). *)
+let unmerged_wrappers_written d = unmerged_wrappers_named ~name:(fun r -> (r, wrapper_spelling r)) d
 
-(** The wrapper structs [d] writes that hold a wrapper module's
-    declarations: those [homed] names, each with the module. *)
-let absorbed_by ~homed d = List.filter (fun name -> List.mem_assoc name homed) (unmerged_wrappers_written d)
+(* The wrapper module [homed] says the struct of the wrapper [r] holds the
+   declarations of, if any. *)
+let home_of ~homed r = List.find_map (fun (r', wrapped) -> if Common.globref_equal r r' then Some wrapped else None) homed
 
-let absorbs ~homed d = absorbed_by ~homed d <> []
+(** The names of the wrapper structs [d] writes that hold a wrapper module's
+    declarations: those of the wrappers [homed] gives a module. *)
+let absorbed_by ~homed d =
+  List.filter_map (fun (r, name) -> if Option.has_some (home_of ~homed r) then Some name else None) (unmerged_wrappers_written d)
+
+let absorbs ~homed d = List.exists (fun r -> Option.has_some (home_of ~homed r)) (unmerged_wrappers_named ~name:Fun.id d)
 
 let read_decl ctx env settled = read_cpp_decl (writing ctx settled) env settled
 
-(* Whether [d], written at the position [ctx], writes a wrapper struct
-   holding a wrapper module's declarations, one [homed] names, as the
-   printer names it there. *)
-let absorbs_at ctx ~homed d =
-  List.exists (fun name -> List.mem_assoc name homed) (unmerged_wrappers_named ~name:(nspace_wrapper_name ctx) d)
-
-(* [d], which {!absorbs_at} [ctx], at the frame [frame] inside the
+(* [d], which {!absorbs}, written at [ctx], at the frame [frame] inside the
    declaration written there, as written: each wrapper struct holding a
    wrapper module's declarations a {!Cpp_ast.Wrapper_struct}, the wrapper's
    own members its fields, each printed where the tree puts it
@@ -1207,7 +1207,7 @@ let absorbs_at ctx ~homed d =
 let rec absorbing_at ctx ~homed ?tyctors ~frame env (d : Cpp_erasure.settled) =
   note_file_scope_type ctx (d :> cpp_decl);
   let written ctx frame d =
-    if absorbs_at ctx ~homed d then absorbing_at ctx ~homed ?tyctors ~frame env d else Cpp_ast.absorbed ?tyctors env d
+    if absorbs ~homed d then absorbing_at ctx ~homed ?tyctors ~frame env d else Cpp_ast.absorbed ?tyctors env d
   in
   match Cpp_erasure.view d with
   | Template (temps, cstr, inner) -> Cpp_ast.seq [Cpp_ast.template_head ?tyctors ~frame env temps cstr; written ctx frame inner]
@@ -1222,7 +1222,7 @@ let rec absorbing_at ctx ~homed ?tyctors ~frame env (d : Cpp_erasure.settled) =
       enter_from ctx In_struct (fun ctx ->
           Cpp_ast.concat Pp.fnl (List.map (written ctx (Cpp_resolution.In_struct :: frame)) members) )
     in
-    match List.assoc_opt name homed with
+    match home_of ~homed w.nw_ref with
     | Some module_ -> Cpp_ast.wrapper_struct ~name ~module_ ~fields:Cpp_ast.(seq [ds; text (Pp.fnl ())])
     | None -> Cpp_ast.(seq [text Pp.(str "struct " ++ str name ++ str " {" ++ fnl ()); ds; text Pp.(fnl () ++ str "};")]) )
   | Decl _ -> CErrors.anomaly Pp.(str "Crane: a declaration absorbing a wrapper module writes no wrapper struct.")

@@ -376,7 +376,7 @@ type file_layout = {
 
 (** That the declaration [home] writes the struct [wrapper] around the
     declarations of the wrapper module [wrapped]. *)
-and wrapper_home = {wrapper : string; wrapped : ModPath.t; home : ml_decl}
+and wrapper_home = {wrapper : string; wrapper_ref : GlobRef.t; wrapped : ModPath.t; home : ml_decl}
 
 let file_layout : file_layout ref =
   State.cell State.Unit
@@ -592,7 +592,7 @@ let element_decl ~module_ ~homed ctx env d =
     declarations, the declaration [d] writing them, as planned
     ({!file_layout}): each by its name, with the module. *)
 let homed_at ~is_header d =
-  if is_header then List.filter_map (fun h -> if h.home == d then Some (h.wrapper, h.wrapped) else None) !file_layout.wrapper_homes
+  if is_header then List.filter_map (fun h -> if h.home == d then Some (h.wrapper_ref, h.wrapped) else None) !file_layout.wrapper_homes
   else []
 
 (** Pretty-print a structure element (label, elem) pair. Handles modules, module
@@ -1973,9 +1973,9 @@ let plan_file_layout s =
     List.iter
       (fun (_, d') ->
         List.iter
-          (fun name ->
+          (fun (wrapper_ref, name) ->
             match Hashtbl.find_opt unmerged_wrappers name with
-            | Some wrapped -> homes := (position mp, position wrapped, {wrapper = name; wrapped; home = d}) :: !homes
+            | Some wrapped -> homes := (position mp, position wrapped, {wrapper = name; wrapper_ref; wrapped; home = d}) :: !homes
             | None -> () )
           (Cpp_leaf_plan.unmerged_wrappers_written d') )
       rendered
@@ -2064,7 +2064,7 @@ let plan_file_layout s =
       wrapper_homes =
         List.fold_left
           (fun acc (at, own, h) ->
-            if at <= own && not (List.exists (fun h' -> String.equal h'.wrapper h.wrapper) acc) then acc @ [h] else acc )
+            if at <= own && not (List.exists (fun h' -> ModPath.equal h'.wrapped h.wrapped) acc) then acc @ [h] else acc )
           []
           (List.stable_sort (fun (i, _, _) (j, _, _) -> Int.compare i j) (List.rev !homes)) };
   Cpp_state.header_file_scope_types := Some !types
@@ -3266,7 +3266,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     else
       List.filter_map
         (fun h ->
-          Option.map (fun w -> (h.wrapper, w.wr_specs)) (List.find_opt (fun w -> String.equal w.wr_name h.wrapper) parts) )
+          Option.map (fun w -> (h.wrapper, w.wr_specs)) (List.find_opt (fun w -> ModPath.equal w.wr_module h.wrapped) parts) )
         !file_layout.wrapper_homes
   in
   let place ~wrapper_bodies ctx ~source ((l, se) as x) =
@@ -3394,7 +3394,7 @@ let do_struct_with_decl_tracking ~is_header f s =
              hold its declarations, and has ({!file_layout}). *)
           let wrapper_pp, wrapper_moved =
             let specs = wrapper_specs name in
-            if (not is_header) || Cpp_ast.body_is_empty specs || List.exists (fun h -> String.equal h.wrapper name) !file_layout.wrapper_homes then
+            if (not is_header) || Cpp_ast.body_is_empty specs || List.exists (fun h -> ModPath.equal h.wrapped mp) !file_layout.wrapper_homes then
               (Cpp_ast.empty, nothing_moved)
             else
               let struct_pp = pp_wrapper_struct name specs in
