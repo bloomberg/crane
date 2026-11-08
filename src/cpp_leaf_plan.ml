@@ -26,9 +26,9 @@ let declaration_frames (d : Cpp_erasure.settled) =
     match Cpp_erasure.view d with
     | Template (_, _, inner) -> frame :: decl frame inner
     | Namespace (None, decls) -> List.concat_map (decl frame) decls
-    | Namespace (Some id, members) -> (
+    | Namespace (Some w, members) -> (
       match (members :> cpp_decl list) with
-      | [Dstruct {ds_ref; ds_tparams; _}] when wrapper_merges {dw_ref = id; dw_sole_child = true} ->
+      | [Dstruct {ds_ref; ds_tparams; _}] when w.nw_merges ->
         [frame; entered frame ((Cpp_resolution.In_struct :: template_body ds_tparams) @ [Inductive_struct ds_ref])]
       | _ -> frame :: List.concat_map (decl (Cpp_resolution.In_struct :: frame)) members )
     | Decl (Dfun {df_path; df_shape; _}) ->
@@ -59,7 +59,7 @@ let rec declared_globals (d : cpp_decl) =
   in
   match d with
   | Dtemplate (tps, _, inner) -> concepts tps @ declared_globals inner
-  | Dnspace (id, ds) -> (match id with Some r -> [r] | None -> []) @ List.concat_map declared_globals ds
+  | Dnspace (w, ds) -> (match w with Some w -> [w.nw_ref] | None -> []) @ List.concat_map declared_globals ds
   | Dfun {df_path; _} -> List.map fst (dfun_path_list df_path)
   | Dstruct {ds_ref; ds_tparams; ds_fields; _} | Dfields {ds_ref; ds_tparams; ds_fields; _} ->
     (ds_ref :: concepts ds_tparams) @ List.concat_map field ds_fields
@@ -67,7 +67,7 @@ let rec declared_globals (d : cpp_decl) =
   | Dusing {du_name; du_tparams; _} -> du_name :: concepts du_tparams
   | Dstruct_fwd (tps, r) -> r :: concepts tps
   | Dmember_def {dm_owner; dm_enclosing; dm_tparams; dm_field} ->
-    (dm_owner :: Option.cata (fun w -> [w.dw_ref]) [] dm_enclosing)
+    (dm_owner :: Option.cata (fun w -> [w.nw_ref]) [] dm_enclosing)
     @ concepts dm_tparams
     @ field (field_of_member dm_field, VPublic, SNoTag)
   | Denum {de_ref; _} -> [de_ref]
@@ -112,10 +112,8 @@ let rec held_back_assertions ctx (d : Cpp_erasure.settled) =
   match Cpp_erasure.view d with
   | Template (_, _, inner) -> held_back_assertions ctx inner
   | Namespace (None, decls) -> List.concat_map (held_back_assertions ctx) decls
-  | Namespace (Some id, members) ->
-    let sole_child = match (members :> cpp_decl list) with [Dstruct _] -> true | _ -> false in
-    if wrapper_merges {dw_ref = id; dw_sole_child = sole_child} then []
-    else List.concat_map (held_back_assertions ctx) members
+  | Namespace (Some w, members) ->
+    if w.nw_merges then [] else List.concat_map (held_back_assertions ctx) members
   | Decl (Dstatic_assert (CPPconcept_app (class_ref, subject, tys), None)) when class_concept_held_back ctx class_ref ->
     [ { Cpp_ast.concept = Of_class (Cpp_ast.global_ref class_ref);
         subject = Instance {instance = Cpp_ast.global_ref subject; args = tys} } ]
@@ -129,10 +127,10 @@ let rec structs_defined (d : Cpp_erasure.settled) : Cpp_ast.defined list =
   match Cpp_erasure.view d with
   | Template (_, _, inner) -> structs_defined inner
   | Namespace (None, decls) -> List.concat_map structs_defined decls
-  | Namespace (Some id, members) -> (
+  | Namespace (Some w, members) -> (
     match (members :> cpp_decl list) with
-    | [Dstruct {ds_tparams; ds_constraint; _}] when wrapper_merges {dw_ref = id; dw_sole_child = true} ->
-      [Defined_struct {struct_ = id; name = As_inductive_wrapper; tparams = ds_tparams; constraint_ = ds_constraint}]
+    | [Dstruct {ds_tparams; ds_constraint; _}] when w.nw_merges ->
+      [Defined_struct {struct_ = w.nw_ref; name = As_inductive_wrapper; tparams = ds_tparams; constraint_ = ds_constraint}]
     | _ -> [] )
   | Decl (Dstruct {ds_ref; ds_tparams; ds_constraint; _}) ->
     [Defined_struct {struct_ = ds_ref; name = As_defined; tparams = ds_tparams; constraint_ = ds_constraint}]
@@ -630,7 +628,7 @@ let file_scope_types ctx (d : Cpp_erasure.settled) =
   let rec declared : cpp_decl -> _ = function
     | Dtemplate (_, _, inner) -> declared inner
     | Dusing u -> [u.du_name]
-    | Dnspace (Some r, _) -> [r]
+    | Dnspace (Some w, _) -> [w.nw_ref]
     | _ -> []
   in
   let rec keys (d : Cpp_erasure.settled) =
@@ -651,7 +649,7 @@ let file_scope_types ctx (d : Cpp_erasure.settled) =
     a sole struct merged into them, in the order it writes them: the structs
     another wrapper's declarations can be written into, spelled to be
     compared with them ({!Cpp_names.wrapper_spelling}). *)
-let unmerged_wrappers_written d = unmerged_wrappers_named ~merges:wrapper_merges ~name:wrapper_spelling d
+let unmerged_wrappers_written d = unmerged_wrappers_named ~name:wrapper_spelling d
 
 (** The wrapper structs [d] writes that hold a wrapper module's
     declarations: those [homed] names, each with the module. *)

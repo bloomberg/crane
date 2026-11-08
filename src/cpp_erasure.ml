@@ -1478,7 +1478,7 @@ let writes_unspellable_binder (d : settled) =
 
 type view =
   | Template of (template_type * Id.t) list * cpp_constraint option * settled
-  | Namespace of GlobRef.t option * settled list
+  | Namespace of nspace_wrapper option * settled list
   | Decl of cpp_decl
 
 (* The seam is hereditary -- {!materialise} rewrites a declaration together

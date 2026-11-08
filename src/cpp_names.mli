@@ -125,10 +125,6 @@ val enum_name : Cpp_name.t -> Names.GlobRef.t -> Cpp_name.t
     there. *)
 val enum_name_at : Cpp_state.render_ctx -> Cpp_name.t -> Names.GlobRef.t -> Cpp_name.t
 
-(** Whether a wrapper and the sole struct inside it are written as one
-    struct, asked by planning. *)
-val wrapper_merges : Minicpp.dm_wrapper -> bool
-
 (** The name of a promoted inductive, which is its module's struct, from its
     resolved name. *)
 val promoted_name : Cpp_name.t -> Cpp_name.t

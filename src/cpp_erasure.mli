@@ -102,7 +102,7 @@ type view =
       (Minicpp.template_type * Names.Id.t) list
       * Minicpp.cpp_constraint option
       * settled
-  | Namespace of Names.GlobRef.t option * settled list
+  | Namespace of Minicpp.nspace_wrapper option * settled list
   | Decl of Minicpp.cpp_decl  (** Any other declaration: none nested inside. *)
 
 val view : settled -> view

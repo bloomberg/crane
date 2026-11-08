@@ -70,11 +70,7 @@ let rec split_struct
     let enclosing =
       match r with
       | None -> enclosing
-      | Some dw_ref ->
-        let dw_sole_child =
-          match decls with [Dstruct _] -> true | _ -> false
-        in
-        Some {dw_ref; dw_sole_child}
+      | Some _ -> r
     in
     let decls, defs =
       List.fold_right

@@ -1683,8 +1683,8 @@ type cpp_decl =
   | Dtemplate of (template_type * Id.t) list * cpp_constraint option * cpp_decl
       (** Template declaration: parameters, optional constraint, inner
           declaration *)
-  | Dnspace of GlobRef.t option * cpp_decl list
-      (** Namespace with optional reference and declarations *)
+  | Dnspace of nspace_wrapper option * cpp_decl list
+      (** Namespace, a wrapper struct when it names one, and its declarations *)
   | Dfun of dfun
   | Dstruct of dstruct
   | Dasgn of dasgn
@@ -1740,19 +1740,23 @@ and dstruct = {
     the definition cannot recover the qualifier from [dm_owner] alone. *)
 and dmember_def = {
   dm_owner : GlobRef.t;
-  dm_enclosing : dm_wrapper option;
+  dm_enclosing : nspace_wrapper option;
   dm_tparams : (template_type * Id.t) list;
   dm_field : out_of_line_member;
 }
 
-(** The namespace struct an out-of-line member's owner is written inside of.
+(** The namespace struct an inductive at namespace scope is wrapped in, named
+    after [nw_ref], and the one an out-of-line member's owner is written inside
+    of.
 
-    [dw_sole_child] records that the owner is the only declaration in it, which
-    is half of what decides whether the two are written as one struct -- the
-    other half is whether anything was queued to be added to the wrapper, which
-    only the printer knows.  Kept here because the shape of the wrapper is not
-    recoverable once the member has been lifted out of it. *)
-and dm_wrapper = {dw_ref : GlobRef.t; dw_sole_child : bool}
+    [nw_merges] is whether the wrapper and the struct it holds are written as
+    one struct: they are when the struct is the wrapper's sole declaration and
+    no other declaration of the wrapper's module was planned into it
+    ({!Cpp_state.in_unmerged_wrapper}).  Decided where the wrapper is built
+    ({!Cpp_ind}), and carried to the out-of-line members lifted out of it, so
+    the wrapper and the qualifier of its members' definitions cannot disagree
+    about how many names there are; the printer reads it. *)
+and nspace_wrapper = {nw_ref : GlobRef.t; nw_merges : bool}
 
 (** A type alias declaration.
 

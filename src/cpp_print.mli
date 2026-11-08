@@ -17,8 +17,7 @@ open Minicpp
     sole struct merged into them, in the order it writes them, each named by
     the function given: the structs another wrapper's declarations can be
     written into. *)
-val unmerged_wrappers_named :
-  merges:(dm_wrapper -> bool) -> name:(GlobRef.t -> string) -> Cpp_erasure.settled -> string list
+val unmerged_wrappers_named : name:(GlobRef.t -> string) -> Cpp_erasure.settled -> string list
 
 (** [d], which absorbs a wrapper module ({!Cpp_leaf_plan.absorbs}), written at the position given, each wrapper
     struct holding a wrapper module's declarations a
@@ -31,10 +30,6 @@ val absorbing_at :
   Common.env ->
   Cpp_erasure.settled ->
   Cpp_ast.t
-
-(** Whether a wrapper is merged with the sole struct it holds, at the
-    position given. *)
-val nspace_merges : Cpp_state.render_ctx -> dm_wrapper -> bool
 
 (** The head of every global type in a type. *)
 val type_heads : cpp_type -> GlobRef.t list

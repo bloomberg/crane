@@ -516,7 +516,15 @@ let ind_header_decls scope kn ind =
               match decl with
               | Denum _ -> decl (* Enums don't need namespace wrapper *)
               | _ ->
-                if at_namespace_scope then Dnspace (Some names.(i), [decl])
+                if at_namespace_scope then
+                  (* Written as one struct with the wrapper when it is the
+                     wrapper's sole struct and nothing else of the module was
+                     planned into the wrapper. *)
+                  let merges =
+                    (match decl with Dstruct _ -> true | _ -> false)
+                    && not (Cpp_state.in_unmerged_wrapper names.(i))
+                  in
+                  Dnspace (Some {nw_ref = names.(i); nw_merges = merges}, [decl])
                 else decl
             in
             (empty_env (), wrapped_decl) :: pp (i + 1)

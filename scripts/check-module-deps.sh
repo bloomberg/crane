@@ -45,7 +45,7 @@ rules=(
 # fourth argument, bin/printer_reads lists every edge by which the printer
 # reaches that value of Table, not one chain: all of them must go for the
 # read to.
-PRINTER_TABLE_CONFIGURATION="arena_header erase_fn_header escape_reserved_struct_name std_lib register_census modpath_of_r base_mp"
+PRINTER_TABLE_CONFIGURATION="arena_header erase_fn_header escape_reserved_struct_name std_lib register_census modpath_of_r"
 # Facts the printer reads that planning should hand it: none left.
 PRINTER_TABLE_PENDING=""
 

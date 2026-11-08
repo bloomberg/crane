@@ -184,7 +184,7 @@ let note_file_scope_name ctx name =
 let rec decl_type_name ctx = function
   | Dtemplate (_, _, inner) -> decl_type_name ctx inner
   | Dusing u -> Some (str (declared_name ctx Type u.du_name))
-  | Dnspace (Some r, _) -> Some (str (String.capitalize_ascii (declared_name ctx Type r)))
+  | Dnspace (Some w, _) -> Some (str (String.capitalize_ascii (declared_name ctx Type w.nw_ref)))
   | _ -> None
 
 let note_file_scope_type ctx d = Option.iter (note_file_scope_name ctx) (decl_type_name ctx d)
@@ -199,7 +199,7 @@ let rec declared_types ?(outer = []) = function
   | Denum {de_ref; _} -> [(de_ref, Cpp_ast.Enum_definition, outer)]
   | Dstruct {ds_ref; ds_tparams; _} when Module_plan.is_namespace_scope_ref ds_ref ->
     [(ds_ref, Cpp_ast.Struct_definition, outer @ ds_tparams)]
-  | Dnspace (Some r, ds) when Module_plan.is_namespace_scope_ref r -> List.concat_map (declared_types ~outer) ds
+  | Dnspace (Some w, ds) when Module_plan.is_namespace_scope_ref w.nw_ref -> List.concat_map (declared_types ~outer) ds
   | _ -> []
 
 let stand_ins t =
@@ -2825,21 +2825,24 @@ let pp_meyers_singleton ctx env id ty expr_pp =
     the position [ctx] ({!Cpp_names.wrapper_name_from}). *)
 let nspace_wrapper_name ctx id = wrapper_name_from (declared_name ctx) id
 
-
-(** Whether a wrapper and the struct inside it are written as one struct
-    rather than two.  A sole struct is merged into its wrapper and takes the
-    wrapper's name; a wrapper holding anything else, or one that declarations
-    were queued against, keeps both levels, and the struct inside keeps its own
-    name underneath.
-
-    Whether that struct is a template has nothing to do with it -- both merge
-    branches below handle one -- so this asks only about the wrapper.
-
-    Asked by {!pp_cpp_decl} of the declaration and by the out-of-line
-    member definition of its owner, which must agree about how many names the
-    qualifier has. *)
-let nspace_merges ctx (w : dm_wrapper) : bool =
-  w.dw_sole_child && not (in_unmerged_wrapper_named (short_name ctx Type w.dw_ref) w.dw_ref)
+(** Whether the wrapper [w] of the declaration [members] and the struct
+    inside it are written as one struct, as {!Cpp_ind} decided where it built
+    the wrapper ({!Minicpp.nspace_wrapper}).  Under [CRANE_CHECK_IR] the
+    decision is asked again of what is printed: a sole struct, and a wrapper
+    no other declaration of its module was planned into. *)
+let nspace_merges ctx (w : nspace_wrapper) (members : cpp_decl list) =
+  ( if Probe.checking () then
+      let asked =
+        (match members with [Dstruct _] -> true | _ -> false)
+        && not (in_unmerged_wrapper_named (short_name ctx Type w.nw_ref) w.nw_ref)
+      in
+      if asked <> w.nw_merges then
+        Probe.violation "wrapper merges"
+          Pp.(
+            str "the wrapper of " ++ str (nspace_wrapper_name ctx w.nw_ref) ++ str " was built "
+            ++ str (if w.nw_merges then "merged" else "unmerged")
+            ++ str " and is printed around declarations it does not merge that way") );
+  w.nw_merges
 
 (** The name the struct of [id] is defined under. *)
 let struct_definition_name ctx id = Cpp_name.pp (Cpp_names.definition_name ctx Struct_definition id)
@@ -2923,7 +2926,7 @@ and pp_cpp_decl ctx env (settled : Cpp_erasure.settled) =
   | Namespace (None, decls) ->
     let ds = pp_list_stmt (pp_cpp_decl ctx env) decls in
     (str "namespace " ++ str "{") ++ fnl () ++ ds ++ fnl () ++ str "};"
-  | Namespace (Some id, members) -> pp_wrapper_nspace ctx env id members
+  | Namespace (Some w, members) -> pp_wrapper_nspace ctx env w members
   | Decl d -> pp_leaf_decl ctx env d
 
 (** A template head and the declaration it introduces. *)
@@ -2951,16 +2954,13 @@ and template_head ctx env temps cstr =
 
 (** A namespace-scope wrapper struct around [members], merged with its sole
     struct child where it can be. *)
-and pp_wrapper_nspace ctx env id (members : Cpp_erasure.settled list) =
+and pp_wrapper_nspace ctx env w (members : Cpp_erasure.settled list) =
   let decls = (members :> cpp_decl list) in
-  let struct_name_str = nspace_wrapper_name ctx id in
-  (* The same question the out-of-line definition of a member asks, asked
-     through the same function so the two cannot drift apart. *)
-  let merges =
-    nspace_merges ctx
-      { dw_ref = id;
-        dw_sole_child = (match decls with [Dstruct _] -> true | _ -> false) }
-  in
+  let struct_name_str = nspace_wrapper_name ctx w.nw_ref in
+  (* The decision the out-of-line definition of a member reads too: the
+     member carries its wrapper ({!Member_hoist}), so the two cannot drift
+     apart. *)
+  let merges = nspace_merges ctx w decls in
   ( match (decls, merges) with
   | ( [
         Dstruct
@@ -3267,9 +3267,9 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
        is how the outside reaches it. *)
     let own_name, sname =
       match dm_enclosing with
-      | Some w when not (nspace_merges ctx w) ->
+      | Some w when not w.nw_merges ->
         let own = declared_name ctx Type dm_owner in
-        (own, nspace_wrapper_name ctx w.dw_ref ^ "::" ^ own)
+        (own, nspace_wrapper_name ctx w.nw_ref ^ "::" ^ own)
       | _ ->
         let own = String.capitalize_ascii (declared_name ctx Type dm_owner) in
         (own, own)
@@ -3348,14 +3348,12 @@ let read_cpp_decl ctx env d = pp_cpp_decl ctx env d
     struct merged into them, in the order it writes them, each named by
     [name]: the structs another wrapper's declarations can be written
     into. *)
-let rec unmerged_wrappers_named ~merges ~name (d : Cpp_erasure.settled) =
+let rec unmerged_wrappers_named ~name (d : Cpp_erasure.settled) =
   match Cpp_erasure.view d with
-  | Template (_, _, inner) -> unmerged_wrappers_named ~merges ~name inner
-  | Namespace (None, decls) -> List.concat_map (unmerged_wrappers_named ~merges ~name) decls
-  | Namespace (Some id, members) ->
-    let sole_child = match (members :> cpp_decl list) with [Dstruct _] -> true | _ -> false in
-    if merges {dw_ref = id; dw_sole_child = sole_child} then []
-    else List.concat_map (unmerged_wrappers_named ~merges ~name) members @ [name id]
+  | Template (_, _, inner) -> unmerged_wrappers_named ~name inner
+  | Namespace (None, decls) -> List.concat_map (unmerged_wrappers_named ~name) decls
+  | Namespace (Some w, members) ->
+    if w.nw_merges then [] else List.concat_map (unmerged_wrappers_named ~name) members @ [name w.nw_ref]
   | Decl _ -> []
 
 (* Whether [d], written at the position [ctx], writes a wrapper struct
@@ -3363,7 +3361,7 @@ let rec unmerged_wrappers_named ~merges ~name (d : Cpp_erasure.settled) =
 let absorbs ctx ~homed d =
   List.exists
     (fun name -> List.mem_assoc name homed)
-    (unmerged_wrappers_named ~merges:(nspace_merges ctx) ~name:(nspace_wrapper_name ctx) d)
+    (unmerged_wrappers_named ~name:(nspace_wrapper_name ctx) d)
 
 (** [d], which {!absorbs}, as written: each wrapper struct holding a wrapper
     module's declarations a {!Cpp_ast.Wrapper_struct}, the wrapper's own
@@ -3379,8 +3377,8 @@ let rec absorbing_at ctx ~homed ?tyctors env (d : Cpp_erasure.settled) =
       [ Cpp_ast.text (str "namespace {" ++ fnl ());
         Cpp_ast.concat fnl (List.map (written ctx) decls);
         Cpp_ast.text (fnl () ++ str "};") ]
-  | Namespace (Some id, members) -> (
-    let name = nspace_wrapper_name ctx id in
+  | Namespace (Some w, members) -> (
+    let name = nspace_wrapper_name ctx w.nw_ref in
     let ds = enter_from ctx In_struct (fun ctx -> Cpp_ast.concat fnl (List.map (written ctx) members)) in
     match List.assoc_opt name homed with
     | Some module_ -> Cpp_ast.wrapper_struct ~name ~module_ ~fields:Cpp_ast.(seq [ds; text (fnl ())])

@@ -404,10 +404,6 @@ let enum_name n r = if enum_name_collides_with_parent r then n else capitalize_b
 (** {!enum_name}, its short name read at the position [c]. *)
 let enum_name_at c n r = if enum_name_collides (short_name c Type r) r then n else capitalize_base n
 
-(** Whether a wrapper and the sole struct inside it are written as one
-    struct, as planning asks it ({!Cpp_print.nspace_merges}). *)
-let wrapper_merges (w : dm_wrapper) = w.dw_sole_child && not (in_unmerged_wrapper w.dw_ref)
-
 (** The name of a promoted inductive (one that IS its module struct), from its
     resolved name: the inductive's own label goes when it is its parent
     module's, case aside, so that [Foo::foo] is [Foo] and [Ns::Trie::trie] is
