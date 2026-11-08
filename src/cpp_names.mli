@@ -12,16 +12,17 @@
 
 (** The text [r] is written as at the position [c], where it has an inline
     custom mapping: as resolved for the declaration being written
-    ({!Cpp_resolution.Inline_custom}, asked for exactly where it has one);
-    at the resolver's position, as the resolver reads it.  Under
-    [CRANE_CHECK_IR] the resolved answer is compared with the mapping. *)
+    ({!Cpp_resolution.Inline_custom}, asked of every global it names, so a
+    global it was not asked of is an anomaly in every mode); at the
+    resolver's position, as the resolver reads it.  Under [CRANE_CHECK_IR]
+    the resolved answer is compared with the mapping. *)
 val inline_custom_text : Cpp_state.render_ctx -> Names.GlobRef.t -> string option
 
 (** The custom texts writing [globals] may write. *)
 val custom_texts_named : Names.GlobRef.t list -> Cpp_resolution.key list
 
-(** The inline custom texts writing [globals] writes: one for each that has
-    an inline custom mapping. *)
+(** Whether each of [globals] is written as an inline custom text: one
+    question for each, inline or not. *)
 val inline_customs_named : Names.GlobRef.t list -> Cpp_resolution.key list
 
 (** The name of a global at the position: the replacement text of an inline

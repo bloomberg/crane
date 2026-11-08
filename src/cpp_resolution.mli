@@ -73,9 +73,10 @@ type key =
       (** The text of the global's custom mapping, foreign: what a type or
           a value it maps is instantiated from. *)
   | Inline_custom of GlobRef.t
-      (** The text the global is written as, foreign, where it has an inline
-          custom mapping: asked for only where it has one, so a name not
-          asked for is one written otherwise. *)
+      (** Whether the global is written as the text of an inline custom
+          mapping, and the text: asked for every global a declaration
+          names, so a global not asked for is a planning miss, never a
+          global written otherwise.  An {!Inline} answer, not a name. *)
   | Inductive_scope of GlobRef.t
       (** The struct a member of the inductive type is named through. *)
   | Type_head of head_form * GlobRef.t
@@ -94,10 +95,12 @@ type head = {
   templated : bool;
 }
 
-(** What a key resolves to: a {!Type_head} a head, anything else a name. *)
+(** What a key resolves to: a {!Type_head} a head, an {!Inline_custom}
+    the inline text or none, anything else a name. *)
 type value =
   | Name of Cpp_name.t
   | Head of head
+  | Inline of string option
 
 (** The name a key other than {!Type_head} resolves to. *)
 val name_of : key -> value -> Cpp_name.t
@@ -122,3 +125,7 @@ val find : table -> frame -> key -> Cpp_name.t lookup
 
 (** The head the global resolved to at [frame], in the form given. *)
 val find_head : table -> frame -> head_form -> GlobRef.t -> head lookup
+
+(** The inline custom text of the global at [frame], if it has one
+    ({!Inline_custom}). *)
+val find_inline : table -> frame -> GlobRef.t -> string option lookup

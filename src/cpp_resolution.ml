@@ -106,15 +106,20 @@ module Map = Map.Make (struct
 end)
 
 type head = {outer : Cpp_name.scope list; head : Cpp_name.t; typename : bool; templated : bool}
-type value = Name of Cpp_name.t | Head of head
+type value = Name of Cpp_name.t | Head of head | Inline of string option
 
 let name_of key = function
   | Name n -> n
   | Head _ -> CErrors.anomaly Pp.(str "Crane: " ++ pp_key key ++ str " is a type's head, not a name.")
+  | Inline _ -> CErrors.anomaly Pp.(str "Crane: " ++ pp_key key ++ str " is an inline custom answer, not a name.")
 
 let head_of key = function
   | Head h -> h
-  | Name _ -> CErrors.anomaly Pp.(str "Crane: " ++ pp_key key ++ str " resolved to a name, not a type's head.")
+  | Name _ | Inline _ -> CErrors.anomaly Pp.(str "Crane: " ++ pp_key key ++ str " did not resolve to a type's head.")
+
+let inline_of key = function
+  | Inline text -> text
+  | Name _ | Head _ -> CErrors.anomaly Pp.(str "Crane: " ++ pp_key key ++ str " did not resolve to an inline custom answer.")
 
 type table = Unresolved_table | Resolved of value Map.t
 
@@ -135,3 +140,4 @@ let lookup read t frame key =
 
 let find t frame key = lookup name_of t frame key
 let find_head t frame form r = lookup head_of t frame (Type_head (form, r))
+let find_inline t frame r = lookup inline_of t frame (Inline_custom r)

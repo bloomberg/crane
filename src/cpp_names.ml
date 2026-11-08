@@ -151,9 +151,12 @@ let inline_custom_text (c : render_ctx) r =
   | No_names -> named_nowhere (Inline_custom r)
   | Names_resolved names ->
     let text =
-      match Cpp_resolution.find names c.rc_frame (Inline_custom r) with
-      | Found n -> Some (Cpp_name.to_string n)
-      | Not_requested -> None
+      match Cpp_resolution.find_inline names c.rc_frame r with
+      | Found text -> text
+      | Not_requested ->
+        CErrors.anomaly
+          Pp.(str "Crane: a declaration names " ++ GlobRef.print r
+              ++ str ", whose inline custom mapping resolving it did not ask about.")
       | Unresolved -> unresolved (Inline_custom r)
     in
     ( if Probe.checking () then
@@ -166,10 +169,10 @@ let inline_custom_text (c : render_ctx) r =
 let custom_texts_named globals =
   List.filter_map (fun r -> if is_custom r then Some (Cpp_resolution.Custom_text r) else None) globals
 
-(* Asked for without reading the text: a request writes nothing
-   ({!Table.check_written_custom}). *)
-let inline_customs_named globals =
-  List.filter_map (fun r -> if to_inline r && is_custom r then Some (Cpp_resolution.Inline_custom r) else None) globals
+(* Asked of every global, inline or not, so that a global no request
+   covered is a miss and not a global written otherwise; asked without
+   reading the text: a request writes nothing ({!Table.check_written_custom}). *)
+let inline_customs_named globals = List.map (fun r -> Cpp_resolution.Inline_custom r) globals
 
 (** The name of a global reference at the position [c]: the replacement text
     of an inline custom mapping, otherwise as resolution settles it there.
@@ -1006,6 +1009,7 @@ and live_namers =
 let live_value c (key : Cpp_resolution.key) : Cpp_resolution.value =
   match key with
   | Type_head (form, r) -> Head (live_namers.live_head c form r)
+  | Inline_custom r -> Inline (live_inline_custom_text r)
   | _ -> Name (live_name c key)
 
 let () =
