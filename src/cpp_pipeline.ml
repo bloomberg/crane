@@ -61,6 +61,7 @@ let constraints = on_decl "constraints" Minicpp.settle_constraints
 
 let casts = Pipeline_trace.pass "casts" Cpp_erasure.resolve_casts
 let free_tvars = Pipeline_trace.pass "free_tvars" Cpp_erasure.bind_free_tvars
+let boxed_reads = Pipeline_trace.pass "boxed_reads" Cpp_erasure.lower_boxed_reads
 let template_args = Pipeline_trace.pass "template_args" Cpp_erasure.supply_template_args
 let method_calls = Pipeline_trace.pass "method_calls" Cpp_erasure.lower_method_calls
 let projections = Pipeline_trace.pass "projections" Cpp_erasure.lower_projections
@@ -128,7 +129,7 @@ let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
     free_tvars;
     (* With every type final, a read of a boxed value the context needs at a
        concrete type is written down. *)
-    pass "boxed_reads" Cpp_erasure.lower_boxed_reads;
+    boxed_reads;
     (* A type argument a mapping's template names and the call does not
        supply was erased, and is written down as one. *)
     template_args;
@@ -183,6 +184,9 @@ type obligation =
   | Unsettled_callable  (** a {!Minicpp.TTfun} parameter *)
   | Unresolved_cast  (** an [any_cast] whose caster is still to choose *)
   | Free_type_variable  (** a type variable no enclosing head declares *)
+  | Implicit_boxed_read
+      (** a boxed value read where the context needs a concrete type, with
+          no {!Minicpp.CPPunbox} saying so *)
   | Missing_template_argument
       (** a type argument an inline mapping's template names and its
           application does not supply *)
@@ -209,7 +213,7 @@ type obligation =
 
 let obligations =
   [ Unresolved_type; Opaque_type; Unspellable_binder; Unsettled_callable; Unresolved_cast; Free_type_variable;
-    Missing_template_argument; Unlowered_method_call; Unlowered_projection; Move_under_access;
+    Implicit_boxed_read; Missing_template_argument; Unlowered_method_call; Unlowered_projection; Move_under_access;
     Undecided_constexpr; Uninstantiated_mapping; Unlowered_qualifier; Unslotted_pointer; Unnamed_scrutinee;
     Undecided_capture; Capture_outside_a_block ]
 
@@ -220,6 +224,7 @@ let describe = function
   | Unsettled_callable -> "an unsettled callable constraint, owed by " ^ constraints.name
   | Unresolved_cast -> "an unresolved cast, owed by " ^ casts.name
   | Free_type_variable -> "an undeclared type variable, owed by " ^ free_tvars.name
+  | Implicit_boxed_read -> "an implicit boxed read, owed by " ^ boxed_reads.name
   | Missing_template_argument -> "a mapping's unsupplied type argument, owed by " ^ template_args.name
   | Unlowered_method_call -> "a method called as a function, owed by " ^ method_calls.name
   | Unlowered_projection -> "a projection called as a function, owed by " ^ projections.name
@@ -254,6 +259,7 @@ let owes (decl : Cpp_erasure.settled) o =
   | Unsettled_callable -> compare (constraints.run d) d <> 0
   | Unresolved_cast -> rewrites casts
   | Free_type_variable -> rewrites free_tvars
+  | Implicit_boxed_read -> rewrites boxed_reads
   | Missing_template_argument -> rewrites template_args
   | Unlowered_method_call -> rewrites method_calls
   | Unlowered_projection -> rewrites projections
