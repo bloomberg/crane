@@ -51,13 +51,21 @@ val instantiate :
 (** A unit's elaborated calls. *)
 type t
 
-(** [structure s] elaborates every global application in [s]'s
-    declarations -- in their bodies, in an instance's methods as
-    {!Instance_methods} elaborates them, and in the terms custom types are
-    applied to in the types they write, a match branch's result type and
-    the declared type of every global they call included -- and every
-    global named there unapplied, as its call with no arguments. *)
-val structure : Miniml.ml_structure -> t
+(** [structure ~methods s] elaborates every global application in [s]'s
+    declarations, in each body as it is generated -- a function generated as
+    a method of its inductive ([methods kn ind] gives each, with the
+    inductive's variables) in its body renumbered as the method's
+    ({!Method_registry.renumbering}), an instance's methods as
+    {!Instance_methods} elaborates them, not its record as written -- and in
+    the terms custom types are applied to in the types they write, a match
+    branch's result type and the declared type of every global they call
+    included; and every global named there unapplied, as its call with no
+    arguments.  Each application is so elaborated where it is generated, at
+    the variables it is generated under. *)
+val structure :
+  methods:(Names.MutInd.t -> Miniml.ml_ind -> (Names.Id.t list * Method_registry.method_candidate) list) ->
+  Miniml.ml_structure ->
+  t
 
 (** [declaration_scope ty body] is the lexical environment a definition of
     type [ty] generates its body [body] in, its parameters bound at the

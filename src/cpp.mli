@@ -37,6 +37,16 @@ val method_registry_of : Miniml.ml_structure -> Method_registry.t
     installed. *)
 val prepare_structure : Miniml.ml_structure -> Module_plan.t
 
+(** [registered_methods kn ind] -- each function registered as a method of
+    one of [ind]'s inductives, generated with it: the inductive, the
+    variables of the struct it is generated in -- an eponymous record's own,
+    otherwise the inductive's struct's -- and the method's candidate. *)
+val registered_methods :
+  ?order:(Method_registry.method_candidate list -> Method_registry.method_candidate list) ->
+  Names.MutInd.t ->
+  Miniml.ml_ind ->
+  (Names.GlobRef.t * Names.Id.t list * Method_registry.method_candidate) list
+
 (** The callable plan of each function the renders will generate, in the
     order of the unit's modules and declarations, or the reverse if
     [reversed]; planned once the plan {!prepare_structure} returns is
