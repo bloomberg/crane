@@ -7651,6 +7651,11 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
             ~cname ~typ ~env ~n_pat_vars
             ~n_fields:(List.length rev_ids)
             ~non_erased_def_site_field_tys ();
+          if Probe.checking () then
+            List.iteri
+              (fun i _ ->
+                Representation_plan.check ~site ~field:i ~live:(binder_is_boxed (n_pat_vars - i)) )
+              rev_ids;
           gen_stmts env_for_body (fun x -> Sreturn (Some x)) body ))
   in
   let tvars = get_current_type_vars () in
@@ -8704,6 +8709,12 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
           end)
           (List.init n_fields Fun.id)
       end;
+      if Probe.checking () then
+        List.iteri
+          (fun field_i _ ->
+            Representation_plan.check ~site:(Branch (case_occ, i)) ~field:field_i
+              ~live:(binder_is_boxed (n_pat_vars - field_i)) )
+          ids;
       let scrut_ind_opt =
         match ml_typ with
         | Tglob (GlobRef.IndRef _ as g, _, _) -> Some g
@@ -10482,6 +10493,7 @@ and gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx 
   result
 
 let () = type_term_arg := fun env a -> gen_expr env a
+let () = plan_representation := Representation_plan.region
 
 (** Whether [expr] is a numeral-converter application (e.g.
     [Nat.of_num_uint (Number.UIntDecimal ...)]) that {!gen_expr} folds into a

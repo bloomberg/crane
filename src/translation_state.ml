@@ -100,6 +100,12 @@ type translation_ctx = {
      ({!Ownership_ir}).  Set where the region's body is generated
      ({!with_region}), and emptied where a body or a closure begins. *)
   move_plan : Ownership_ir.t;
+  (* Whether each pattern binder of the region being generated holds a box,
+     as {!Representation_plan} plans it from the region's Core body: by Core
+     site and field.  Set beside {!move_plan} ({!with_region}), and
+     only under [CRANE_CHECK_IR], where translation checks it against the
+     binder's recorded C++ type. *)
+  representation : (Core_binder.site * int * planned_repr) list;
   (* Counter for generating unique match scrutinee variable names
      (_mp0, _mp1, ...). Reset at function boundaries. *)
   match_param_counter : int;
@@ -162,6 +168,16 @@ type translation_ctx = {
   cpp_binder_types : (cpp_type * binder_origin) IntMap.t;
 }
 
+(** A pattern binder's representation as {!Representation_plan} plans it:
+    whether it holds a box, and whether that answer rests on a lambda's
+    parameter -- the scrutinee is one, or a field matched out of one -- whose
+    representation lowering takes from the C++ slot the lambda fills, which
+    the plan does not see. *)
+and planned_repr = {
+  pr_boxed : bool;
+  pr_slot_rooted : bool;
+}
+
 (** What decided a binder's C++ type, and so which answer wins when both are
     available: an instantiation a pattern match pinned down is more precise
     than the type the binder was given where it was bound. *)
@@ -194,6 +210,7 @@ let tctx =
         lifted_fixpoints = [];
         current_letin_depth = 0;
         move_plan = Ownership_ir.empty;
+        representation = [];
         match_param_counter = 0;
         promoted_var_map = [];
         in_constructor_expr = false;
@@ -389,6 +406,12 @@ let with_itree_mode (m : itree_extraction_mode) (f : unit -> 'a) : 'a =
     (fun m -> tctx := { !tctx with itree_mode = m })
     m f
 
+(** {!Representation_plan.region}, which is translation's to name: it reads
+    types the way translation converts them. *)
+let plan_representation :
+    (outer:Lexenv.t -> ml_ast -> (Core_binder.site * int * planned_repr) list) ref =
+  ref (fun ~outer:_ _ -> [])
+
 (** [with_region ~owned ~copied ~resumes body f] runs [f], which generates
     [body] as one C++ body owning the variables at the de Bruijn indices
     [owned], its closures owning their copy of those at [copied], lowered as
@@ -403,7 +426,19 @@ let with_region ?(owned = []) ?(copied = []) ?resumes ?certain (body : ml_ast) (
   in
   (* The frames a machine enters its entries by are planned with it. *)
   Ownership_ir.Entry_moves.record_plan p;
-  with_field (fun c -> c.move_plan) (fun p -> tctx := { !tctx with move_plan = p }) p f
+  (* A region inside another of the same body -- a lambda's -- was walked
+     with it, at the binders outside it as the enclosing walk planned them;
+     planning it again from its own scope would read those at the types they
+     are bound at, not the ones their matches pinned down.  Its plan only adds
+     what the enclosing one has no answer for. *)
+  let representation =
+    match (!tctx).body_owner with
+    | Some _ when Probe.checking () ->
+      (!tctx).representation @ !plan_representation ~outer:(!tctx).env_types body
+    | Some _ | None -> []
+  in
+  with_field (fun c -> c.representation) (fun r -> tctx := { !tctx with representation = r }) representation
+  @@ fun () -> with_field (fun c -> c.move_plan) (fun p -> tctx := { !tctx with move_plan = p }) p f
 
 (** [with_plan p f] runs [f] with the moves planned by [p], an alternative
     plan of the region being generated ({!Ownership_ir.reuse_arm}). *)
