@@ -558,30 +558,33 @@ let current_lexenv () : Lexenv.t = (!tctx).env_types
 (** The Core binder of the variable at de Bruijn index [db] in [env], in the
     definition whose body is being generated ({!Core_binder}): [env] binds
     the definition's Core binders, its parameters first, so the variable's
-    level is the number bound outside it.  [site] is the let or bind
-    binding it, where one does. *)
+    level is the number bound outside it.  [site] is the let, bind or
+    pattern binding it, where one does. *)
 let core_binder ?site env db =
   Option.map
     (fun origin -> Core_binder.make ~origin ~level:(List.length (fst env) - db) ?site ())
     (!tctx).body_owner
 
+(* The de Bruijn index of the innermost name [id] in a list of names,
+   innermost first, the first numbered [db]. *)
+let rec index_of_name id db = function
+  | [] -> None
+  | x :: xs -> if Id.equal x id then Some db else index_of_name id (db + 1) xs
+
 (** The Core binders of [params], parameters of a function whose body is
     generated under [env], by name: [env] gives no two binders in scope one
     name, so a parameter's is the binder [env] names so. *)
 let parameter_binders env params =
-  let rec index id db = function
-    | [] -> None
-    | x :: xs -> if Id.equal x id then Some db else index id (db + 1) xs
-  in
   List.filter_map
     (fun (id, _) ->
-      Option.bind (index id 1 (fst env)) (fun db ->
+      Option.bind (index_of_name id 1 (fst env)) (fun db ->
           Option.map (fun b -> (id, b)) (core_binder env db) ) )
     params
 
 (** The Core binder of the local [id] in scope in [env], by name, as
-    {!parameter_binders} has a parameter's. *)
-let local_binder env id = Option.map snd (List.nth_opt (parameter_binders env [(id, ())]) 0)
+    {!parameter_binders} has a parameter's, bound at [site] where one is
+    given ({!core_binder}). *)
+let local_binder ?site env id = Option.bind (index_of_name id 1 (fst env)) (core_binder ?site env)
 
 (** The ML type of the variable at de Bruijn index [i] in [env], where it is
     a parameter of the declaration whose body is being generated

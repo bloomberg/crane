@@ -465,7 +465,7 @@ let resume_of resumes d a occurrence =
   match (resumes, ending_calls a) with
   | Some _, [] | None, _ -> None
   | Some {origin; depth; resume_at; _}, ending -> (
-    match resume_at (Core_binder.make ~origin ~level:(depth + d) ~site:occurrence ()) with
+    match resume_at (Core_binder.make ~origin ~level:(depth + d) ~site:(Binding occurrence) ()) with
     | Some ({calls; _} as r) when List.exists (fun c -> List.exists (Occurrence.equal c) calls) ending -> Some (depth, r)
     | Some _ | None -> None )
 

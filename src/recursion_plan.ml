@@ -539,7 +539,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
         enclosing
     in
     let r =
-      { binder = Core_binder.make ~origin ~level:depth ~site ();
+      { binder = Core_binder.make ~origin ~level:depth ~site:(Binding site) ();
         live = live_binders;
         after;
         passes = dedup_passings (inherited @ passings ~fixpoints ~targets ~live (depth + 1) rest);

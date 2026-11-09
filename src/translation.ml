@@ -4852,7 +4852,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       nstempmod record_arg_exprs
     in
     cons_result
-  | MLcase (typ, t, pv, _) when is_custom_match pv ->
+  | MLcase (typ, t, pv, case_occ) when is_custom_match pv ->
     let iife_ret =
       let branch_rty =
         match Array.to_list pv with
@@ -4870,10 +4870,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         else (!tctx).current_cpp_return_type
       in
       with_cpp_return_type ret (fun () ->
-          gen_custom_cpp_case env (fun x -> Sreturn (Some x)) typ t pv )
+          gen_custom_cpp_case env (fun x -> Sreturn (Some x)) typ t pv case_occ )
     in
     mk_iife (Some iife_ret) stmts
-  | MLcase (typ, t, pv, _)
+  | MLcase (typ, t, pv, case_occ)
     when (not (record_fields_of_type typ == [])) && Array.length pv == 1 ->
     let ids, r, pat, body = pv.(0) in
     let n = List.length ids in
@@ -5274,10 +5274,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             let decl_ty =
               convert_ml_type_to_cpp_type env [] ty
             in
+            let binder = local_binder ~site:(Branch (case_occ, 0)) env' renamed_name in
             let stmts =
               match lift_iife_assignment renamed_name (Some decl_ty) e with
               | Some stmts -> stmts
-              | None -> [Sasgn (renamed_name, Declare (decl_ty, local_binder env' renamed_name), e)]
+              | None -> [Sasgn (renamed_name, Declare (decl_ty, binder), e)]
             in
             (stmts, taken) )
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
@@ -5290,8 +5291,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                        gen_stmts ~slot env' (fun x -> Sreturn (Some x)) body ) ) ) ) )
     (* Known limitation: simultaneous pattern matching on record fields is not
        supported — each field is destructured individually. *)
-  | MLcase (typ, t, pv, _) when lang () == Cpp ->
-    gen_cpp_case typ t env pv
+  | MLcase (typ, t, pv, case_occ) when lang () == Cpp ->
+    gen_cpp_case typ t env pv case_occ
   | MLletin (_, ty, _, _, _) as a ->
     with_escape_analysis (fun () -> with_region a (fun () ->
       with_iife_return_type expected_ty (fun () ->
@@ -7583,9 +7584,10 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     @param body     the branch body AST
     @param sname    scrutinee expression name (for structured binding access)
     @param match_i  nesting level counter for name suffixing
-    @param scrut    the value being matched, shared by every branch *)
+    @param scrut    the value being matched, shared by every branch
+    @param site     the match and this branch, binding [ids] *)
 and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
-    match_i (scrut : smatch_scrutinee) ~scrut_db =
+    match_i (scrut : smatch_scrutinee) ~scrut_db ~site =
   let ctor_type = ctor_type_of_match env typ cname in
   let ctor_name = ctor_struct_id_of_ref cname in
   let ctor_struct_name = Id.to_string ctor_name in
@@ -7795,7 +7797,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
           else if is_param_boxed then Read_unboxed
           else Read_as_bound
         in
-        (binding_name, field_cpp_ty, read, used, core_binder env (n_pat_vars - i)))
+        (binding_name, field_cpp_ty, read, used, core_binder ~site env (n_pat_vars - i)))
       rev_ids
   in
   let field_bindings_arr = Array.of_list field_bindings in
@@ -8009,7 +8011,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     {b Type resolution.}  When the match type contains unresolved [Tvar]s,
     attempts to resolve them from [env_types] so that field types and
     constructor type parameters are concrete for code generation. *)
-and gen_cpp_case (typ : ml_type) t env pv =
+and gen_cpp_case (typ : ml_type) t env pv case_occ =
   (* When the match type annotation has unresolved Tvars, try to resolve from
      context. This handles monomorphic functions where MLcase has Tvar but the
      concrete type is known. *)
@@ -8271,7 +8273,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
     in
     (* Generate one {!smatch_branch} per constructor pattern, collecting
        a wildcard body from [Pwild] / [Prel]. *)
-    let rec gen_branches = function
+    let rec gen_branches i = function
       | [] -> ([], None)
       | (ids, rty, p, body) :: cs ->
       match p with
@@ -8281,20 +8283,20 @@ and gen_cpp_case (typ : ml_type) t env pv =
         let ids', env', dummies = process_match_pattern_vars ids env in
         let br =
           gen_match_branch env' typ rty r ids' dummies body sname
-            match_i scrut ~scrut_db
+            match_i scrut ~scrut_db ~site:(Branch (case_occ, i))
         in
         restore_env_types saved_env_types;
         restore_erased_env saved_erased;
-        let rest, wild = gen_branches cs in
+        let rest, wild = gen_branches (i + 1) cs in
         (br :: rest, wild)
       | Pwild | Prel _ ->
         let body_stmts =
           gen_stmts env (fun x -> Sreturn (Some x)) body
         in
         ([], Some body_stmts)
-      | Ptuple _ -> gen_branches cs
+      | Ptuple _ -> gen_branches (i + 1) cs
     in
-    let branches, wildcard = gen_branches (Array.to_list pv) in
+    let branches, wildcard = gen_branches 0 (Array.to_list pv) in
     let iife_ret_opt =
       match iife_void_return env typ pv with
       | Some _ as v -> v
@@ -8470,7 +8472,8 @@ and gen_cpp_case (typ : ml_type) t env pv =
               List.concat
                 (List.map2
                    (fun (i, (var_name, ml_ty)) read ->
-                     let bind e = [Sasgn (var_name, Declare (cpp_of_ml env ml_ty, local_binder env' var_name), e)] in
+                     let binder = local_binder ~site:(Branch (case_occ, branch_idx)) env' var_name in
+                     let bind e = [Sasgn (var_name, Declare (cpp_of_ml env ml_ty, binder), e)] in
                      match read with
                      | Some `Unused | None -> []
                      (* The token: its value is moved out, owned, so the
@@ -8527,7 +8530,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
     | None ->
       mk_iife iife_ret_opt [Smatch (scrut, branches, wildcard)] )
 
-and gen_cpp_custom_body env k rty ids body scrut_ind_opt =
+and gen_cpp_custom_body env k rty ids body scrut_ind_opt ~site =
   let tvars = get_current_type_vars () in
   let ret = cpp_of_ml env rty in
   let n_pat_vars = List.length ids in
@@ -8563,7 +8566,7 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt =
         in
         { cp_name = x;
           cp_type = convert_ml_type_to_cpp_type env ~ns tvars ty;
-          cp_binder = core_binder env (n_pat_vars - j) } )
+          cp_binder = core_binder ~site env (n_pat_vars - j) } )
       (List.rev ids)
   in
   (* Wrap erased variables with any_cast when returned as a template parameter. *)
@@ -8590,7 +8593,7 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt =
     Returns a [cpp_stmt list]: when the scrutinee is non-trivial and the
     template uses [%scrut] more than once, a cache declaration
     [auto _cs = expr;] is prepended before the [Scustom_case] node. *)
-and gen_custom_cpp_case env k (typ : ml_type) t pv =
+and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
   (* Save the ML type for temps computation after fix_a_fired is known. *)
   let ml_typ = typ in
   (* [scrut_is_magic]: true when the scrutinee is erased at runtime (stored as
@@ -8829,7 +8832,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   (* Generate [(params, ret_ty, body)] triples for each branch.  Handles env
      retyping for [fix_a_fired], use-site
      [any_cast] insertion, and template-arg stripping for erased arguments. *)
-  let rec gen_cases = function
+  let rec gen_cases i = function
     | [] -> []
     | (ids, rty, p, t) :: cs ->
     match p with
@@ -8931,7 +8934,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
         | _ -> None
       in
       let (br_ids, br_ret, br_stmts) =
-        gen_cpp_custom_body env' k rty ids' t scrut_ind_opt
+        gen_cpp_custom_body env' k rty ids' t scrut_ind_opt ~site:(Branch (case_occ, i))
       in
       restore_env_types saved_env_types;
       (* Use-site [any_cast] insertion: when [fix_a_fired], pair fields are all
@@ -9099,10 +9102,10 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
               br_stmts
         | _ -> br_stmts
       in
-      (br_ids, br_ret, br_stmts) :: gen_cases cs
-    | Pwild | Prel _ | Ptuple _ -> gen_cases cs
+      (br_ids, br_ret, br_stmts) :: gen_cases (i + 1) cs
+    | Pwild | Prel _ | Ptuple _ -> gen_cases (i + 1) cs
   in
-  let cases = gen_cases (Array.to_list pv) in
+  let cases = gen_cases 0 (Array.to_list pv) in
   cache_prefix @
   [ Scustom_case
       ( case_typ,
@@ -9313,7 +9316,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       let kept_by_frame =
         List.exists (( <> ) []) (fix_captures ~in_place:true fix_term)
         &&
-        match core_binder ~site:let_occ env 0 with
+        match core_binder ~site:(Binding let_occ) env 0 with
         | Some b -> Ownership_ir.kept_by_frame (!tctx).move_plan b
         | None -> false
       in
@@ -9353,7 +9356,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       in
       let _, env_with_fix = push_vars' [projected_id] env_for_cont in
       push_binders env [projected_id];
-      let declared = declaring (fst projected_id) (core_binder ~site:let_occ env_with_fix 1) in
+      let declared = declaring (fst projected_id) (core_binder ~site:(Binding let_occ) env_with_fix 1) in
       let cont = gen_stmts ~slot env_with_fix k b in
       check_fixpoint_escape (fst projected_id) ~closures:(closures && not kept_by_frame) (fun () ->
           (not kept_by_frame)
@@ -9418,7 +9421,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           gen_stmts ~slot env' k b
         in
         (* Generate the assignment with reified type *)
-        [Sasgn (x_renamed, Declare (reified_ty, core_binder ~site:let_occ env' 1), iife)] @ cont
+        [Sasgn (x_renamed, Declare (reified_ty, core_binder ~site:(Binding let_occ) env' 1), iife)] @ cont
       end else
         let afun v = Sasgn (x_renamed, Existing, v) in
         let asgn = gen_stmts env afun a in
@@ -9434,12 +9437,12 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         | [Sasgn (_, Existing, e)] ->
           Sasgn
             ( x_renamed,
-              Declare (cpp_of_ml env t, core_binder ~site:let_occ env' 1),
+              Declare (cpp_of_ml env t, core_binder ~site:(Binding let_occ) env' 1),
               e )
           :: gen_cont ()
         | _ ->
           Sdecl
-            (x_renamed, cpp_of_ml env t, core_binder ~site:let_occ env' 1)
+            (x_renamed, cpp_of_ml env t, core_binder ~site:(Binding let_occ) env' 1)
           :: asgn
           @ gen_cont ()
     in
@@ -9801,7 +9804,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       let decl =
         if stmts_reference_var x_renamed body then
           let cpp_ty = cpp_of_ml env t in
-          [Sasgn (x_renamed, Declare (cpp_ty, core_binder ~site:let_occ env' 1), mk_tt_expr ())]
+          [Sasgn (x_renamed, Declare (cpp_ty, core_binder ~site:(Binding let_occ) env' 1), mk_tt_expr ())]
         else []
       in
       rhs @ decl @ body )
@@ -9811,7 +9814,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       (* Where a machine resumes at this let, which of what its frame keeps
          the save moves is the plan's: the machine reads it by the let's
          binder. *)
-      ( match (Ownership_ir.save_moves (!tctx).move_plan let_occ, core_binder ~site:let_occ env' 1) with
+      ( match (Ownership_ir.save_moves (!tctx).move_plan let_occ, core_binder ~site:(Binding let_occ) env' 1) with
       | Some moved, Some binder -> Ownership_ir.Frame_save.record binder moved
       | _ -> () );
       (* What the continuation reads, in the right-hand side's coordinates. *)
@@ -10041,15 +10044,15 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             in
             begin match extract_block_template e with
             | Some (ref, tmpl, args, tys) ->
-              Sblock_custom (ref, tmpl, x_renamed, cpp_ty, args, tys, core_binder ~site:let_occ env' 1)
+              Sblock_custom (ref, tmpl, x_renamed, cpp_ty, args, tys, core_binder ~site:(Binding let_occ) env' 1)
               :: gen_stmts ~slot env' k b
             | None ->
-              Sasgn (x_renamed, Declare (cpp_ty, core_binder ~site:let_occ env' 1), e)
+              Sasgn (x_renamed, Declare (cpp_ty, core_binder ~site:(Binding let_occ) env' 1), e)
               :: gen_stmts ~slot env' k b
             end
           | _ ->
             let cpp_ty = cpp_of_ml env t in
-            (Sdecl (x_renamed, cpp_ty, core_binder ~site:let_occ env' 1) :: asgn)
+            (Sdecl (x_renamed, cpp_ty, core_binder ~site:(Binding let_occ) env' 1) :: asgn)
             @ gen_stmts ~slot env' k b
       in
       result
@@ -10317,7 +10320,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         env
     in
     push_binders env ids;
-    let bound_by_bind env = core_binder ~site:(Global_use.occurrence use) env 1 in
+    let bound_by_bind env = core_binder ~site:(Binding (Global_use.occurrence use)) env 1 in
     (* Where a machine resumes at the continuation's parameter, which of
        what its frame keeps the save moves is the plan's, as at a let. *)
     ( match (ids, Ownership_ir.save_moves (!tctx).move_plan (Global_use.occurrence use)) with
@@ -10420,7 +10423,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       else
         [k (gen_expr ?expected_ty:(position_cpp_ty None) env t)]
     end
-  | MLcase (typ, t, pv, _) when is_custom_match pv -> gen_custom_cpp_case env k typ t pv
+  | MLcase (typ, t, pv, case_occ) when is_custom_match pv -> gen_custom_cpp_case env k typ t pv case_occ
   | MLcons (_, r, []) when Table.is_tt_constructor r
       && (!tctx).current_cpp_return_type = Some Tvoid ->
     (* tt (unit constructor) in tail position of a void-returning function *)
@@ -10442,7 +10445,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
   | MLmagic (_, MLexn msg) ->
     (* Handle MLexn wrapped in MLmagic *)
     [Sthrow msg]
-  | MLcase (typ, t, pv, _)
+  | MLcase (typ, t, pv, case_occ)
     when (not (record_fields_of_type typ == [])) && Array.length pv == 1 ->
     let ids, _r, _pat, body = pv.(0) in
     let n = List.length ids in
@@ -10530,10 +10533,11 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               else
                 api_ty_for_decl
             in
+            let binder = local_binder ~site:(Branch (case_occ, 0)) env' renamed_name in
             let stmts =
               match lift_iife_assignment renamed_name (Some decl_ty) e with
               | Some stmts -> stmts
-              | None -> [Sasgn (renamed_name, Declare (decl_ty, local_binder env' renamed_name), e)]
+              | None -> [Sasgn (renamed_name, Declare (decl_ty, binder), e)]
             in
             (stmts, taken && match decl_ty with Tref _ -> false | _ -> true) )
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))

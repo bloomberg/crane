@@ -157,8 +157,10 @@ val recover_boxed_component : cpp_type -> cpp_expr -> cpp_expr
 val unbox_value : cpp_type -> cpp_expr -> cpp_expr
 
 (** Generate pattern matching as a C++ expression: an if/else-if chain over
-    the scrutinee's variant, wrapped in an immediately-invoked lambda. *)
-val gen_cpp_case : ml_type -> ml_ast -> env -> ml_branch array -> cpp_expr
+    the scrutinee's variant, wrapped in an immediately-invoked lambda.  The
+    occurrence is the match's, the site of the binders its patterns bind
+    ({!Core_binder.Branch}). *)
+val gen_cpp_case : ml_type -> ml_ast -> env -> ml_branch array -> Occurrence.t -> cpp_expr
 
 (** The Core binders of the parameters of a function whose body is generated
     under [env], by name ({!Core_binder}): [env] gives no two binders in
