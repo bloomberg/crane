@@ -5545,14 +5545,18 @@ and project_through_instance env use args inst =
     at.  The dictionaries' promoted variables are in scope for them. *)
 and gen_call_args ~slot ?expected_ty env id plan =
   let {
-    cp_call =
-      {Elaborated_call.regular = regular_ml_args; callee_type = fn_ml_ty; _} as call;
+    cp_instantiated =
+      {
+        Elaborated_call.call =
+          {Elaborated_call.regular = regular_ml_args; callee_type = fn_ml_ty; _} as call;
+        tys;
+        params = fn_param_ml_tys;
+        params_orig = fn_param_ml_tys_orig;
+        subst_index_of_orig;
+        _
+      };
     cp_expected_result = expected_result;
     cp_instance_families = instance_families;
-    cp_tys = tys;
-    cp_params = fn_param_ml_tys;
-    cp_params_orig = fn_param_ml_tys_orig;
-    cp_subst_index_of_orig = subst_index_of_orig;
     cp_tvars = tvars;
     cp_concrete_tvar_type = concrete_tvar_type;
     cp_result_tvar_map = result_tvar_map;
@@ -6271,14 +6275,18 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     in
     let plan = lowered.lc_plan in
     let {
-      cp_call =
-        { Elaborated_call.excess = excess_args;
-          primary = primary_ml_args;
-          instances = typeclass_ml_args;
-          regular = regular_ml_args;
-          _ } as call;
-      cp_params_orig = fn_param_ml_tys_orig;
-      cp_subst_index_of_orig = subst_index_of_orig;
+      cp_instantiated =
+        {
+          Elaborated_call.call =
+            { Elaborated_call.excess = excess_args;
+              primary = primary_ml_args;
+              instances = typeclass_ml_args;
+              regular = regular_ml_args;
+              _ } as call;
+          params_orig = fn_param_ml_tys_orig;
+          subst_index_of_orig;
+          _
+        };
       cp_tvars = tvars;
       cp_instance_promoted = instance_promoted_map;
       _
@@ -6346,7 +6354,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        C++ compiler is not sure to see through.  A method erased at
        [std::any] is left to the dispatcher, which does the erasing. *)
     let cglob =
-      match (plan.cp_call.instances, plan.cp_instance_type_args, all_type_args) with
+      match (plan.cp_instantiated.call.instances, plan.cp_instance_type_args, all_type_args) with
       | [inst], [Some inst_ty], _ :: method_targs
         when (match kept_instance_of_projection env id [inst] with
               | Some _ -> (

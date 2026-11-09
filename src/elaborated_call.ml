@@ -52,3 +52,28 @@ let same_roles a b =
 
 let leading_params c = List.length c.instances + c.erased_instances
 let dictionary_filled c = Call_tyargs.resolved_from Call_tyargs.Argument_heads c.tyargs
+
+type instantiated = {
+  call : t;
+  reading : Call_tyargs.t;
+  tys : Mlutil.Var_types.t;
+  callee_type_at_call : Miniml.ml_type;
+  params : Param_pos.subst Param_pos.params;
+  params_orig : Param_pos.orig Param_pos.params;
+  subst_index_of_orig : Param_pos.orig Param_pos.pos -> Param_pos.subst Param_pos.pos option;
+}
+
+let instantiate call ~reading ~at_call ~expand ~erased =
+  let tys = Call_tyargs.by_variable reading in
+  let subst = at_call tys in
+  let callee_type_at_call = subst call.callee_type in
+  let params_orig = Param_pos.orig_params ~expand call.callee_type in
+  {
+    call;
+    reading;
+    tys;
+    callee_type_at_call;
+    params = Param_pos.subst_params ~expand callee_type_at_call;
+    params_orig;
+    subst_index_of_orig = Param_pos.subst_of_orig ~erased:(fun t -> erased (subst t)) params_orig;
+  }

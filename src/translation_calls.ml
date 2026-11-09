@@ -178,13 +178,18 @@ type lowered_call = {
 let call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args =
   let args = if has_value_args then [()] else [] in
   let {
-    cp_call = {Elaborated_call.primary = primary_ml_args; regular = regular_ml_args; _} as call;
+    cp_instantiated =
+      {
+        Elaborated_call.call =
+          {Elaborated_call.primary = primary_ml_args; regular = regular_ml_args; _} as call;
+        reading = tyargs;
+        callee_type_at_call = fn_ml_ty_subst;
+        params = fn_param_ml_tys;
+        params_orig = fn_param_ml_tys_orig;
+        subst_index_of_orig;
+        _
+      };
     cp_instance_type_args = typeclass_type_args;
-    cp_tyargs = tyargs;
-    cp_fn_ml_ty_subst = fn_ml_ty_subst;
-    cp_params = fn_param_ml_tys;
-    cp_params_orig = fn_param_ml_tys_orig;
-    cp_subst_index_of_orig = subst_index_of_orig;
     cp_tvars = tvars;
     cp_concrete_tvar_type = concrete_tvar_type;
     cp_result_tvar_map = result_tvar_map;
@@ -1265,88 +1270,26 @@ let binding_results_of id compute =
       compute
   end
 
-(** [resolve_from_context ~lex ~slot call] -- the holes of [call]'s reading
-    of its scheme variables that its context states: the ML types [slot]
-    expects or states for its result, and the heads its arguments' types
-    give a type-level function a domain names.  The rest of the elaboration
-    ({!Core_elaborate.elaborate_arguments}) is fixed by the call alone. *)
-let resolve_from_context ~lex ~slot (call : Elaborated_call.t) =
-  let {Elaborated_call.callee = id; callee_type = fn_ml_ty; primary = primary_ml_args; tyargs; _} =
-    call
-  in
-  (* An erased event family the position's type names: [memM_interp]'s [E],
-     given unapplied where [on_mem] takes a handler into [itree BotE].  The
-     family occurs in the callee's result only, where nothing deduces it and
-     the phantom filler would write [void]. *)
-  let tyargs =
-    match
-      match slot.expected_ml_ty with
-      | Some _ as t -> t
-      | None -> slot.stated_ml_ty
-    with
-    | Some result when Call_tyargs.interior_holes tyargs <> [] ->
-      let families = Ml_type_util.event_family_ml_tvars [fn_ml_ty] in
-      (* A family is a head, or one applied at the index it erases
-         ([BotE _]); [box nat] met at a bare variable is a value type, not
-         the family. *)
-      let family_shaped b =
-        match resolve_tmeta b with
-        | Miniml.Tglob (_, [], _) -> true
-        | Miniml.Tglob (_, args, _) ->
-          Ml_type_util.is_ml_erased_ty (List.nth args (List.length args - 1))
-        | _ -> false
-      in
-      (* With [~constructors]: an applied variable against an application
-         is the head, which for a family -- the only variables filled here --
-         is the answer. *)
-      let found =
-        tvar_instantiation_found ~lex ~constructors:true ~result
-          fn_ml_ty primary_ml_args
-      in
-      (* Only where nothing deduces it: a family a parameter spells is the
-         compiler's to read off the argument. *)
-      let deducible =
-        Option.default IntSet.empty (deducible_tvars_of_glob id)
-      in
-      Call_tyargs.resolve Call_tyargs.Expected_result
-        (fun v ->
-          let k = Scheme.Var.ordinal v in
-          match List.assoc_opt k found with
-          | Some b
-            when IntSet.mem k families && (not (IntSet.mem k deducible))
-                 && family_shaped b ->
-            Some b
-          | _ -> None )
-        (Call_tyargs.interior_holes tyargs) tyargs
-    | _ -> tyargs
-  in
-
-  (* A type-level function passed where a type alias in a domain names it
-     -- the category's [C] in [Id_ obj C] -- is a hole of the reading, stated
-     by the dictionary argument.  Filled before anything is substituted, so
-     the parameter types the arguments are generated against and the
-     explicit type arguments the call writes agree. *)
-  Elaborated_call.with_tyargs call
-    (resolve_from_argument_heads ~only_alias_args:true ~lex tyargs primary_ml_args)
-
-(** [plan_call ~caller ?expected_ty env call] -- what the elaborated [call]
-    from the declaration [caller] needs to know before its arguments are
-    generated, beyond its elaboration: its scheme variables spelled in the
-    caller's scope, the callee's parameter types at that instantiation, and
-    the C++ types its result and its dictionaries are expected at.  Read by
-    {!gen_call_args} and by the assembly in {!eta_fun}. *)
-let plan_call ~caller ~lex ?expected_ty env (call : Elaborated_call.t) =
+(** [plan_call ?expected_ty env inst] -- what the instantiated call [inst]
+    ({!Core_elaborate.instantiate}) needs to know before its arguments are
+    generated, beyond its instantiation: the C++ types its result and its
+    dictionaries are expected at, and what those say of the callee's
+    variables.  Read by {!gen_call_args} and by the assembly in {!eta_fun}.
+    Nothing here changes the instantiation. *)
+let plan_call ~lex ?expected_ty env (inst : Elaborated_call.instantiated) =
   let {
-    Elaborated_call.callee = id;
-    callee_type = fn_ml_ty;
-    primary = primary_ml_args;
-    excess = excess_args;
-    instances = typeclass_ml_args;
-    regular = regular_ml_args;
-    tyargs;
+    Elaborated_call.call =
+      {
+        Elaborated_call.callee = id;
+        primary = primary_ml_args;
+        excess = excess_args;
+        instances = typeclass_ml_args;
+        _
+      };
+    tys;
     _
   } =
-    call
+    inst
   in
   let expected_result = expected_ty in
   (* Where the position erased the result's family, the arguments may still
@@ -1412,93 +1355,6 @@ let plan_call ~caller ~lex ?expected_ty env (call : Elaborated_call.t) =
             expected_result
         | _ -> None )
       typeclass_ml_args
-  in
-  (* A partial application is eta-expanded into a lambda spelled in the
-     caller's scope, and a variable of the callee's that neither the call
-     nor its arguments instantiate is not one of the caller's: left in, it
-     prints as whichever caller variable shares its index -- [h_get]'s index
-     as the enclosing handler's [T1].  It is erased, and a position nothing
-     deduces is then written as the box it is. *)
-  let tyargs =
-    let n_params =
-      let rec count ty =
-        match expand_ml_fun_alias ty with
-        | Miniml.Tarr (t, rest) ->
-          (match resolve_tmeta t with
-           | Miniml.Tdummy _ -> count rest
-           | _ -> 1 + count rest)
-        | _ -> 0
-      in
-      count fn_ml_ty
-    in
-    (* Only one the lambda's result spells: a variable the codomain does not
-       mention -- a rank-2 handler's [forall X] -- is not the call's to
-       instantiate, and keeps itself.  And not in a call to the declaration
-       being generated, whose variables {e are} the caller's. *)
-    let self_call =
-      match caller with
-      | Some r -> GlobRef.UserOrd.equal r id
-      | None -> false
-    in
-    if self_call || List.length primary_ml_args >= n_params then tyargs
-    else
-      let tyargs = resolve_from_argument_types ~lex tyargs primary_ml_args in
-      let in_cod = collect_tvars_set IntSet.empty (ml_codomain fn_ml_ty) in
-      let open_vars = Call_tyargs.beyond_extent tyargs in
-      match
-        List.fold_left
-          (fun m v ->
-            let i = Scheme.Var.ordinal v in
-            if IntSet.mem i in_cod then max m i else m )
-          0 open_vars
-      with
-      | 0 -> tyargs
-      | n ->
-        (* Erased only where it would be misread: a variable whose spelling
-           no caller variable has is bound by the eta-lambda itself (see
-           [eta_tparams]), and deduced there from the parameter that names
-           it -- [memM T2] of a natural transformation. *)
-        let collides i =
-          List.exists
-            (fun v -> String.equal (Id.to_string v) (Minicpp.tvar_spelling i))
-            (!tctx).current_type_vars
-        in
-        Call_tyargs.resolve Call_tyargs.Eta_parameter
-          (fun v ->
-            let i = Scheme.Var.ordinal v in
-            Some
-              ( if IntSet.mem i in_cod && collides i then Miniml.Tunknown
-                else Miniml.Tvar (Miniml.Schematic, i) ) )
-          (List.filter (fun v -> Scheme.Var.ordinal v <= n) open_vars)
-          tyargs
-  in
-  let tys = Call_tyargs.by_variable tyargs in
-  (* The one substitution that takes the callee's declared types to this
-     call's; without it the argument generated into a [bind]'s [m A] is left
-     with no stated type at all. *)
-  let subst_ml_ty = instantiate_at_call id tys primary_ml_args in
-  let fn_ml_ty_subst = subst_ml_ty fn_ml_ty in
-  let fn_param_ml_tys =
-    Param_pos.subst_params ~expand:expand_ml_fun_alias fn_ml_ty_subst
-  in
-  (* Non-substituted parameter types: used to detect whether a callback's
-     codomain is a type variable (needs adapter wrapping) vs concrete unit
-     (C++ definition already uses void in the is_invocable_v requires clause). *)
-  let fn_param_ml_tys_orig =
-    Param_pos.orig_params ~expand:expand_ml_fun_alias fn_ml_ty
-  in
-  (* The two lists above are not indexed alike: substitution can make a
-     parameter dummy that was not one before, and from that parameter on a
-     declared position is one place further left in the substituted list.
-     A reader holding a declared position and wanting the substituted type
-     there converts it here (see {!Param_pos}). *)
-  let subst_index_of_orig =
-    Param_pos.subst_of_orig
-      ~erased:(fun t ->
-        match resolve_tmeta (subst_ml_ty t) with
-        | Miniml.Tdummy _ -> true
-        | _ -> false )
-      fn_param_ml_tys_orig
   in
   (* {b Concrete T1 for excess-arg calls.}  When [tys = []] and there
      are excess args, the callee's polymorphic return type [Tvar i] can't
@@ -1571,16 +1427,10 @@ let plan_call ~caller ~lex ?expected_ty env (call : Elaborated_call.t) =
              | None -> (!tctx).current_cpp_return_type ) ) )
   in
   {
-    cp_call = call;
+    cp_instantiated = inst;
     cp_expected_result = expected_result;
     cp_instance_type_args = typeclass_type_args;
     cp_instance_families = instance_families;
-    cp_tyargs = tyargs;
-    cp_tys = tys;
-    cp_fn_ml_ty_subst = fn_ml_ty_subst;
-    cp_params = fn_param_ml_tys;
-    cp_params_orig = fn_param_ml_tys_orig;
-    cp_subst_index_of_orig = subst_index_of_orig;
     cp_tvars = tvars;
     cp_concrete_tvar_type = concrete_tvar_type;
     cp_instance_promoted = instance_promoted_map;
@@ -1589,18 +1439,23 @@ let plan_call ~caller ~lex ?expected_ty env (call : Elaborated_call.t) =
 
 (** [lower_call ~caller ~slot ?expected_ty env use args]: the call [use]
     [args] in the declaration [caller], lowered against its callee before any
-    of its arguments is -- how its arguments meet the callee's parameters
-    ({!plan_call}), and the template application planned and validated
-    against the callee's ABI ({!call_type_args}).  Generating the arguments
-    reads the result and decides neither. *)
+    of its arguments is -- its semantic half first, from Core and the ML
+    types its position states ({!Core_elaborate.instantiate}), then how its
+    arguments meet the callee's parameters in C++ ({!plan_call}), and the
+    template application planned and validated against the callee's ABI
+    ({!call_type_args}).  Generating the arguments reads the result and
+    decides neither. *)
 let lower_call ~caller ~slot ?expected_ty env use args =
   let id = use.callee in
   let lex = current_lexenv () in
-  let call =
-    resolve_from_context ~lex ~slot (Core_elaborate.elaboration ~lex use args)
+  let inst =
+    Core_elaborate.instantiate ~lex ~expected_ml:slot.expected_ml_ty
+      ~stated_ml:slot.stated_ml_ty ~caller ~scope:(!tctx).current_type_vars
+      (Core_elaborate.elaboration ~lex use args)
   in
-  let plan = plan_call ~caller ~lex ?expected_ty env call in
-  call_type_args ~caller ~lex ?expected_ty env id plan ~has_value_args:(call.regular <> [])
+  let plan = plan_call ~lex ?expected_ty env inst in
+  call_type_args ~caller ~lex ?expected_ty env id plan
+    ~has_value_args:(inst.call.regular <> [])
 
 (** What a reference to global [x], its type instantiated by [instantiate],
     evaluates to as it is printed.
