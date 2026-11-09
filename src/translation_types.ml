@@ -2106,31 +2106,30 @@ let record_binder_type i t =
       { !tctx with
         cpp_binder_types = IntMap.add i (t, Bpattern) (!tctx).cpp_binder_types }
 
-(** [populate_erased_field_env ~cname ~typ ~env ~n_pat_vars ~n_fields
-    ~non_erased_def_site_field_tys] populates {!cpp_binder_types} for a
-    pattern-match branch.  For each
-    constructor field whose definition-site type is a type variable that
-    resolves to [std::any] via the scrutinee's template arguments, marks
-    the corresponding de Bruijn index as erased and records its concrete
-    C++ type from the template arguments.
+(** [pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
+    ~non_erased_def_site_field_tys] -- what a pattern-match branch pins down
+    about each of its [n_fields] fields, in field order: whether the field is
+    stored as a box, and the scrutinee's template argument that fixes its
+    C++ type, if its definition-site type is one of the inductive's own
+    parameters.  Reads no binder: the scrutinee is described by its ML type
+    and, where an enclosing branch pinned it, by that C++ type.
 
-    @param scrut_db  de Bruijn index of the scrutinee within this branch, when
-           it is a local binder whose C++ type an enclosing branch recorded
+    @param scrut_pinned  the C++ type an enclosing branch pinned down for the
+           scrutinee, when it is a local binder
     @param cname  constructor reference (to look up parameter count)
     @param typ    ML type of the scrutinee
     @param env    translation environment
-    @param n_pat_vars  number of pattern variables in this branch
-    @param n_fields    number of non-erased constructor fields
+    @param n_fields    number of pattern variables in the branch
     @param non_erased_def_site_field_tys  definition-site field types
            with erased (dummy) entries filtered out *)
-let populate_erased_field_env ?scrut_db ~cname ~typ ~env ~n_pat_vars ~n_fields
-    ~non_erased_def_site_field_tys () =
+let pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
+    ~non_erased_def_site_field_tys =
   let scrut_cpp_ty =
     (* An enclosing branch may already have pinned the scrutinee's C++ type
        down -- [SigT<any, pair<any,any>>] tells us its payload binder is a
        [pair<any,any>], which its ML type (a bare type variable) does not.
        Prefer that over re-deriving from the ML type. *)
-    match Option.bind scrut_db pattern_binder_type with
+    match scrut_pinned with
     | Some t when not (resolves_to_any_type t) -> t
     | _ ->
       cpp_of_ml env typ
@@ -2211,14 +2210,151 @@ let populate_erased_field_env ?scrut_db ~cname ~typ ~env ~n_pat_vars ~n_fields
       | Some t -> arg_is_a_box t
       | None -> false
   in
-  List.iteri (fun field_i _ ->
-    let db_idx = n_pat_vars - field_i in
-    if is_field_stored_as_any field_i then
-      record_binder_type db_idx Tany;
-    match field_arg field_i with
-    | Some t -> record_binder_type db_idx t
-    | None -> ()
-  ) (List.init n_fields Fun.id)
+  List.init n_fields (fun field_i -> (is_field_stored_as_any field_i, field_arg field_i))
+
+(** [populate_erased_field_env ?scrut_db ...] records {!pattern_field_pins}
+    in {!cpp_binder_types} for a branch binding [n_pat_vars] pattern
+    variables: a field stored as a box is recorded erased, then the template
+    argument fixing a field's type, which does not overwrite the box.
+    [scrut_db] is the scrutinee's de Bruijn index within the branch, when it
+    is a local binder whose C++ type an enclosing branch recorded. *)
+let populate_erased_field_env ?scrut_db ~cname ~typ ~env ~n_pat_vars ~n_fields
+    ~non_erased_def_site_field_tys () =
+  let scrut_pinned = Option.bind scrut_db pattern_binder_type in
+  List.iteri
+    (fun field_i (stored_as_any, arg) ->
+      let db_idx = n_pat_vars - field_i in
+      if stored_as_any then record_binder_type db_idx Tany;
+      Option.iter (record_binder_type db_idx) arg )
+    (pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields ~non_erased_def_site_field_tys)
+
+(** [match_scrutinee_type env typ t pv ~var_type ~var_cpp_type] -- the type a
+    match over [t] annotated [typ], with branches [pv], is generated at: the
+    annotation, with what it leaves open filled from the scrutinee -- a
+    variable's binder ([var_type] its ML type, [var_cpp_type] the C++ type
+    it was decided to have), anything else its own structure -- and, failing
+    an inductive, the one the first branch's constructor belongs to.  Reads
+    no binder itself: what a variable stands for is the caller's to say. *)
+let match_scrutinee_type env (typ : ml_type) t pv ~var_type ~var_cpp_type =
+  (* When the match type annotation has unresolved Tvars, try to resolve from
+     context. This handles monomorphic functions where MLcase has Tvar but the
+     concrete type is known. *)
+  let rec resolvable_here = function
+    | Miniml.Tglob (g, ts, _) ->
+      ( (not (Table.is_promoted_type_var g))
+      || promoted_var_resolution g <> None )
+      && List.for_all resolvable_here ts
+    | Miniml.Tarr (a, b) -> resolvable_here a && resolvable_here b
+    | Miniml.Tmeta {contents = Some t} -> resolvable_here t
+    | _ -> true
+  in
+  let resolve_tvar_type typ candidate =
+    match (typ, candidate) with
+    | Miniml.Tglob (r1, _, _), Miniml.Tglob (r2, _, _)
+      when globref_equal r1 r2
+           && has_tvar typ
+           && (not (has_tvar candidate))
+           (* Only a candidate that erased nothing replaces the annotation
+              whole: [observe t] at a family its call erased is [itreeF D _]
+              where the annotation knows the family. *)
+           && not (ml_type_contains_erased candidate) -> candidate
+    | _ ->
+      (* The annotation may state the inductive and leave its argument open --
+         [EOU _] for a call whose declared result is [EOU ptr] -- and then the
+         match spells [std::any] where the value has a type.  The candidate is
+         the declaration the scrutinee was produced by, so it may fill what the
+         annotation left open, and nothing more: see
+         {!Ml_type_util.refine_erased}.  A promoted variable this scope cannot
+         resolve is not an answer, and neither is an erased one. *)
+      Ml_type_util.refine_erased
+        ~writable:(fun t ->
+          resolvable_here t
+          && names_only_scoped_tvars (cpp_of_ml env t)
+          && not (Ml_type_util.has_tany_in_type (cpp_of_ml env t)) )
+        typ candidate
+  in
+  let typ =
+    match t with
+    | MLrel (i, _) | MLmagic (_, MLrel (i, _)) ->
+      (* Scrutinee is a variable reference — use its concrete type, the one
+         its binder was given, a parameter's as much as a let's.  Unwrap Tmeta
+         wrappers since env_types may store types in Tmeta form. *)
+      let rec unwrap_tmeta = function
+        | Miniml.Tmeta {contents = Some t} -> unwrap_tmeta t
+        | t -> t
+      in
+      let env_ty_opt =
+        try
+          let env_ty =
+            unwrap_tmeta (match var_type i with Some t -> t | None -> raise Not_found)
+          in
+          match env_ty with
+          | Miniml.Tglob _ -> Some env_ty
+          | _ -> None
+        with _ -> None
+      in
+      let typ =
+        match env_ty_opt with
+        | Some let_ty -> resolve_tvar_type typ let_ty
+        | None -> typ
+      in
+      (* The variable's declared C++ type is what its value is: where it
+         erased a position -- a pattern field of a plain family parameter,
+         [Sum1<BE, cE, std::any>] inside [Sum1<AE, _, X>], whose ML type
+         says [X] -- the match spells it erased too. *)
+      let rec erase_as ml cpp =
+        match (resolve_tmeta ml, Ml_type_util.unqualify_ty cpp) with
+        | Miniml.Tglob (g, mas, x), Tglob (g', cas, _)
+          when GlobRef.CanOrd.equal g g' && List.length mas = List.length cas ->
+          Miniml.Tglob
+            ( g,
+              List.map2
+                (fun m c ->
+                  if prints_as_any c && not (ml_type_contains_erased m) then
+                    Miniml.Tunknown
+                  else erase_as m c )
+                mas cas,
+              x )
+        | m, _ -> m
+      in
+      ( match var_cpp_type i with
+      | Some bt -> erase_as typ (strip_cpp_ref_const bt)
+      | None -> typ )
+    | _ ->
+      (* Anything else: the scrutinee's own structure says what it produces,
+         through the one reader -- a call's instantiated codomain, a
+         projection's field type.  Reading it here rather than re-deriving a
+         callee's return type keeps a projection, which is an [MLcase] and not
+         an application at all, from being left out. *)
+      ( match
+          ( match ml_projection_field_type (strip_magic t) with
+          | Some _ as c -> c
+          | None -> infer_ml_body_type t )
+        with
+      | Some cand -> resolve_tvar_type typ cand
+      | None -> typ )
+  in
+  (* When the type is still unresolved (Tunresolved / Tdummy / non-Tglob),
+     recover the inductive from the first branch's constructor pattern -- a
+     constructor determines the inductive it belongs to, so this is sound
+     wherever the scrutinee's own type failed to resolve.  It happens for a
+     dependent field stored as [std::any] (sigT's second projection) and for
+     the body of an instance method, which is extracted against the class's
+     erased carrier and so carries no type for the scrutinee at all. *)
+  let typ =
+    match typ with
+    | Miniml.Tglob _ -> typ
+    | _ ->
+      ( try
+          let _, _, pat0, _ = pv.(0) in
+          match pat0 with
+          | Pusual (GlobRef.ConstructRef (ip, _))
+          | Pcons (GlobRef.ConstructRef (ip, _), _) ->
+            Miniml.Tglob (GlobRef.IndRef ip, [], [])
+          | _ -> typ
+        with _ -> typ )
+  in
+  typ
 
 (** The C++ type of the binder at de Bruijn index [i], for readers that have
     to produce an answer for every binder: the assignment made where it was
@@ -3219,3 +3355,163 @@ let unbox_into into e =
   match into with
   | Some into when states_unboxed_target into -> coerce ~from:Tany ~into e
   | _ -> e
+
+(** What a custom match over [t], annotated [typ], with branches [pv], knows
+    about whether its scrutinee is boxed, as {!Translation.gen_custom_cpp_case}
+    decides it: [var_boxed] says whether a variable's binder holds a box,
+    [var_type] gives its ML type.  Reads no binder itself. *)
+type custom_scrutinee = {
+  cs_mlmagic : bool;  (** a coercion that boxes *)
+  cs_cpp_erased : bool;  (** a variable whose binder holds a box *)
+  cs_magic : bool;  (** either, or a variable whose ML type erases to a box *)
+  cs_callee_ret_erased : bool;  (** a call whose declared codomain is a box *)
+  cs_typ : cpp_type;  (** the annotation, converted *)
+  cs_concrete : cpp_type;  (** the inductive the patterns recover, where [cs_typ] erases *)
+  cs_pair : GlobRef.t option;  (** that inductive, when it is a pair *)
+  cs_pair_any_cast : bool;  (** the pair is read back as [pair<any, any>], every field a box *)
+}
+
+(** A spine read whole, through the coercions around its head. *)
+let rec flatten_app = function
+  | MLapp (f, args) ->
+    ( match flatten_app f with
+    | MLapp (f', inner_args) -> flatten_app (MLapp (f', inner_args @ args))
+    | f' -> MLapp (f', args) )
+  | MLmagic (_, e) -> flatten_app e
+  | other -> other
+
+let custom_match_scrutinee env (typ : ml_type) t pv ~var_boxed ~var_type =
+  (* [scrut_is_magic]: true when the scrutinee is erased at runtime (stored as
+     [std::any]) even though the ML AST may carry a concrete type annotation.
+     Covers both explicit [Obj.magic] wrappers and variables retyped to [Tany]
+     by an outer [fix_a_fired] pair match (detected via its binder). *)
+  let scrut_is_mlmagic = match t with MLmagic (m, _) -> magic_is_boxed env m | _ -> false in
+  let scrut_is_cpp_erased = match t with
+    | MLrel (i, _) -> var_boxed i
+    | _ -> false
+  in
+  let scrut_is_magic = match t with
+    | MLmagic (m, _) -> magic_is_boxed env m
+    | MLrel (i, _) ->
+      var_boxed i
+      || (match var_type i with
+          (* An ML type that erases on its own may still have been written
+             down concretely here -- a typeclass carrier resolved by the
+             instance being generated, say -- in which case the binder holds
+             the value itself and there is no box to open. *)
+          | Some ty ->
+            is_erased_ml_type ty
+            && ml_erases_to_box env ty
+          | None -> false)
+    | _ -> false
+  in
+  (* [scrut_callee_ret_erased]: the scrutinee is a call to a global function
+     ([MLapp (MLglob {callee = r; _}, args)], possibly [MLmagic]-wrapped) whose
+     DECLARED (un-instantiated) codomain resolves to [std::any] — e.g.
+     [rev_tuple : forall xs, syms_semty xs -> syms_semty (rev xs)], a single
+     C++ function generic over [xs], so its actual return type is the
+     value-dependent-erased [syms_semty] regardless of how a specific
+     call-site's Rocq type-checker happened to reduce the annotated result
+     type (e.g. to a concrete [prod] when [xs] is a literal list). Using the
+     call-site-reduced [typ] alone under-detects this: it looks concrete even
+     though the callee only ever returns [std::any] at the C++ level. *)
+  let scrut_callee_ret_erased =
+    match flatten_app t with
+    | MLapp (MLglob ({callee = r; _} as use), args) ->
+      ( match find_type_opt r with
+      | Some fty ->
+        let fty = Mlutil.instantiate_written ~reader:"scrut_callee_ret_erased" use fty in
+        ( match strip_tarr_n (count_real_ml_args args) fty with
+        | Some rty ->
+          (* Both spellings of "is a [std::any] at run time" are needed here:
+             [resolves_to_any_type] follows a named alias for the box, and
+             [prints_as_any] catches the codomain a callee left as an erased
+             type argument, which converts to a dummy glob rather than to
+             [Tany]. *)
+          let rty_cpp = cpp_of_ml env rty in
+          spells_as_any rty_cpp
+        | None -> false )
+      | None -> false )
+    | _ -> false
+  in
+  let typ = cpp_of_ml env typ in
+  (* [concrete_match_type]: when [typ] is erased ([std::any]), recover the
+     actual inductive type from the first branch's pattern constructor and
+     its field types.  Used for non-pair matches (e.g. option, variant) where
+     we need to emit [any_cast<ConcreteType>(scrut)]. *)
+  let concrete_match_type =
+    if spells_as_any typ || scrut_callee_ret_erased then
+      try
+        let _, _, pat0, _ = pv.(0) in
+        let ind_ref = match pat0 with
+          | Pusual (GlobRef.ConstructRef (ip, _))
+          | Pcons (GlobRef.ConstructRef (ip, _), _) -> GlobRef.IndRef ip
+          | _ -> raise Not_found
+        in
+        let ids0, _, _, _ = pv.(0) in
+        let tyargs = List.rev_map (fun (_, ty) ->
+          erase_unresolved_tvars (cpp_of_ml env ty)
+        ) ids0 in
+        Tglob (ind_ref, tyargs, [])
+      with _ -> typ
+    else typ
+  in
+  let pair_g_opt = match concrete_match_type with
+    | Tglob (g, _, _) when is_prod_global g -> Some g
+    | _ -> None
+  in
+  let scrut_is_trivial_ml = match t with
+    | MLrel _ | MLmagic (_, MLrel _) -> true
+    | _ -> false
+  in
+  let needs_pair_any_cast =
+    pair_g_opt <> None &&
+    ( scrut_is_cpp_erased || scrut_is_mlmagic || scrut_callee_ret_erased
+      || (scrut_is_magic && prints_as_any typ)
+      (* Read off the type only where nothing says otherwise: a variable
+         is boxed exactly when its binder is ([scrut_is_magic]), and one
+         declared [pair<std::any, exp<std::any>>] holds that pair. *)
+      || (not scrut_is_trivial_ml)
+         && (is_all_erased typ || resolves_to_any_type typ) &&
+         ( Ml_type_util.has_tany_in_type concrete_match_type
+           || (match concrete_match_type with
+               | Tglob (_, args, _) -> List.exists resolves_to_any_type args
+               | _ -> false) ) )
+  in
+  {
+    cs_mlmagic = scrut_is_mlmagic;
+    cs_cpp_erased = scrut_is_cpp_erased;
+    cs_magic = scrut_is_magic;
+    cs_callee_ret_erased = scrut_callee_ret_erased;
+    cs_typ = typ;
+    cs_concrete = concrete_match_type;
+    cs_pair = pair_g_opt;
+    cs_pair_any_cast = needs_pair_any_cast;
+  }
+
+(** The pattern variables [ids] (innermost first) of a custom match's branch
+    matching [r], at the types they are bound at: every one that is not a box
+    or a list retyped as erased where the pair is read back as
+    [pair<any, any>] ([fix_a_fired]), then recovered from the scrutinee's own
+    type [scrut_ml_typ] and retyped for the dependent parameters of [ml_typ],
+    the match's annotation. *)
+let custom_branch_binders env ~fix_a_fired ~scrut_ml_typ ~ml_typ r ids' =
+  let ids' =
+    if fix_a_fired then
+      List.map (fun (x, ty) ->
+        let cpp_ty = cpp_of_ml env ty in
+        match cpp_ty with
+        | Tglob (g, (_ :: _), _) when is_prod_global g ->
+          (x, Tdummy Ktype)
+        | Tglob (g, _, _) when is_list_global g ->
+          (x, ty)
+        | _ when prints_as_any cpp_ty ->
+          (x, ty)
+        | _ ->
+          (x, Tdummy Ktype))
+        ids'
+    else ids'
+  in
+  let ids' = recover_pattern_var_types_from_scrutinee ~ctor:r scrut_ml_typ ids' in
+  let ids' = retype_dependent_params ml_typ ids' in
+  ids'
