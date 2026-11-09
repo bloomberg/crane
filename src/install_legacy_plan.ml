@@ -22,6 +22,7 @@ let install_program (facts : Program_facts.program) =
   List.iter Table.add_throwing_value facts.throwing_values;
   Ownership.install facts.parameter_ownership;
   Recursive_groups.install facts.recursive_groups;
+  Translation.install_partner_closure_params facts.partner_closure_params;
   Recursion_plan.install facts.recursion;
   Lower_control.install facts.control
 

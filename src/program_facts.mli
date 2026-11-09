@@ -33,6 +33,9 @@ type program = {
           innermost first ({!Ownership.summarize}). *)
   recursive_groups : Recursive_groups.t;
       (** Which functions recurse through which. *)
+  partner_closure_params : (Names.GlobRef.t * int list) list;
+      (** Which parameters of each function a call from its recursive group
+          passes a closure for ({!Translation.partner_closure_params}). *)
   recursion : Recursion_plan.t;
       (** How each function recurses through itself. *)
   control : Lower_control.t;

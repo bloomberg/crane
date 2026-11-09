@@ -284,10 +284,22 @@ type thunk_reason = Translation_support.thunk_reason = Cofixpoint | Throws | Mon
     every reference to it read. *)
 val thunk_reason : Names.GlobRef.t -> thunk_reason option
 
+(** For each function of a recursive group of [groups], the source-order
+    indices of the parameters a call from another member of its group passes
+    a closure for -- a lambda, or anything that may compute one, but not a
+    parameter of the caller or a named function -- whose type flows back,
+    through the group's calls, into the instantiation that makes it. *)
+val partner_closure_params :
+  Recursive_groups.t -> Miniml.ml_structure -> (Names.GlobRef.t * int list) list
+
+(** Make [l] the extraction's {!partner_closure_params}. *)
+val install_partner_closure_params : (Names.GlobRef.t * int list) list -> unit
+
 (** The source-order indices of the callable parameters, among the first
     [n_params], that a function made from [self_ref] takes as a [crane::fn]
     rather than generalising to [F &&]: those a self-call passes something
-    else for, and those a closure in [body] holds on to. *)
+    else for, those a call from a partner in its recursive group passes a
+    closure for, and those a closure in [body] holds on to. *)
 val ungeneralised_callable_params :
   self_ref:Names.GlobRef.t -> suspended:bool -> int -> ml_ast -> Escape.IntSet.t
 

@@ -4,14 +4,15 @@ From Stdlib Require Import List.
 Import ListNotations.
 
 (** [f] calls its partner [g] at another instance, [g bool], than its own,
-    passing a lambda over [bool], and [g] passes it back to [f].  The lambda
-    is typed at [bool] ([mutual_lambda_ground_instance]), but both take it
-    as a deduced callable, and a lambda in a function template has a new
-    closure type in every instantiation: [g<bool, L1>] instantiates [f<bool,
-    L1 &>], whose lambda [L2] instantiates [g<bool, L2>], and so on --
-    "recursive template instantiation exceeded maximum depth".  A self-call
-    passing anything but the parameter takes it as a [crane::fn]
-    ([detect_non_forwarded_params]); a partner's call is not looked at. *)
+    passing a lambda over [bool], and [g] passes it back to [f].  A lambda
+    in a function template has a new closure type in every instantiation, so
+    were [g] to take it as a deduced callable, [g<bool, L1>] would
+    instantiate [f<bool, L1 &>], whose lambda [L2] instantiates [g<bool,
+    L2>], and so on without end.  The lambda's type flows back into the
+    instantiation that makes it, so [g] takes it as a [crane::fn]
+    ([partner_closure_params]).  With a named callback instead the cycle
+    closes and [g] deduces it ([splice_partner_other_instance]), as it does
+    where [g] does not pass it back ([mutual_lambda_ground_instance]). *)
 
 Module MutualLambdaOtherInstance.
 

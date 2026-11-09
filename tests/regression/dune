@@ -14068,3 +14068,14 @@
   (alias runtest)
   (deps mutual_lambda_ground_instance.t.exe)
   (action (run ./mutual_lambda_ground_instance.t.exe))))
+
+(subdir mutual_lambda_other_instance
+ (rule
+  (targets mutual_lambda_other_instance.t.exe)
+  (deps MutualLambdaOtherInstance.vo mutual_lambda_other_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mutual_lambda_other_instance.t.exe mutual_lambda_other_instance.t.cpp mutual_lambda_other_instance.cpp)))
+ (rule
+  (alias runtest)
+  (deps mutual_lambda_other_instance.t.exe)
+  (action (run ./mutual_lambda_other_instance.t.exe))))

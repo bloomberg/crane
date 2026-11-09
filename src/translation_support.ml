@@ -1926,15 +1926,185 @@ let detect_non_forwarded_params (self_ref : GlobRef.t) (n_params : int)
       | _ -> false )
     n_params body
 
+(** What a binder a call's argument may name stands for, to
+    {!partner_closure_params}: a closure ({!argument_source}), the function's
+    parameter at a source position, or anything else. *)
+type local_source = Local_closure | Local_param of int | Local_other
+
+(** Where the type of [arg], passed by a function of [n_params] parameters
+    for a callable, comes from, under the binders [locals] (innermost
+    first): [`Param i] the function's parameter [i]'s; [`Closure] its own,
+    new in each instantiation of the function -- a lambda, a local fixpoint
+    or a partial application, which C++ writes as a lambda, has a closure
+    type that depends on every parameter of the enclosing template, and an
+    application or a [match] may compute one; [`Fixed] none of them -- a
+    named global, a pattern variable or a literal has one type whatever
+    instantiation of the function it is written in. *)
+let rec argument_source n_params locals = function
+  | MLmagic (_, e) -> argument_source n_params locals e
+  | MLrel (db, _) ->
+    let depth = List.length locals in
+    if db <= depth then
+      match List.nth locals (db - 1) with
+      | Local_closure -> `Closure
+      | Local_param i -> `Param i
+      | Local_other -> `Fixed
+    else
+      let i = n_params - (db - depth) in
+      if i >= 0 && i < n_params then `Param i else `Fixed
+  | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _
+   |MLcons _ | MLtuple _ | MLparray _ -> `Fixed
+  | MLlam _ | MLapp _ | MLletin _ | MLcase _ | MLfix _ -> `Closure
+
+(** For each function of a recursive group, the source-order indices of the
+    parameters a call from another member of its group passes a closure for,
+    where that closure's type would feed the instantiation that makes it.
+
+    A deduced callable is the argument's own type, and a closure written in
+    a function template has a type of its own in each instantiation of it:
+    [f<bool, L1>] calls [g<bool, L2>] with a lambda, and where [g] passes
+    its callable back to [f], instantiates [f<bool, L2>], whose lambda is
+    [L3], and so on without end.  Such a parameter is taken as a
+    [crane::fn], a type that does not change.
+
+    Whether it must be is a question about a graph whose nodes are the
+    parameters of the group's members: a parameter depends on the parameter
+    of the caller a call forwards to it, and on every parameter of a caller
+    that passes it a closure.  A closure feeds its own maker exactly when its
+    parameter reaches one of the maker's.  A parameter a partner passes a
+    parameter of its own or a named function -- [g bool weight] -- keeps its
+    deduced type, and so does one a closure reaches only to stop there --
+    [g] calling back [f nat dbl m m]: the cycle of instantiations closes.  A
+    parameter a self-call passes anything but itself is
+    {!detect_non_forwarded_params}' to keep, and depends on nothing.  A
+    self-call's closure is that function's too. *)
+let partner_closure_params groups struc =
+  let arity = ref Ref.User.Map.empty in
+  (* (callee, position) the parameter at each position of a member forwards
+     to, and the (callee, position) each member passes a closure to. *)
+  let forwards = ref Ref.User.Map.empty in
+  let creates = ref Ref.User.Map.empty in
+  let fixed = ref Ref.User.Map.empty in
+  let add tbl r x =
+    tbl := Ref.User.Map.add r (x :: Option.default [] (Ref.User.Map.find_opt r !tbl)) !tbl
+  in
+  let scan self body =
+    let params, body = collect_lams body in
+    let n = List.length params in
+    arity := Ref.User.Map.add self n !arity;
+    let rec strip = function MLmagic (_, e) -> strip e | e -> e in
+    let rec walk locals e =
+      match e with
+      | MLapp (f, args) ->
+        ( match strip f with
+        | MLglob {callee = g; _} when Recursive_groups.in_group groups self g ->
+          let self_call = Ref.User.equal g self in
+          List.iteri
+            (fun k arg ->
+              let source = argument_source n locals arg in
+              if self_call && source <> `Param k then add fixed self k;
+              match source with
+              | `Param i -> add forwards self (i, (g, k))
+              | `Closure -> add creates self (g, k)
+              | `Fixed -> () )
+            args
+        | _ -> () );
+        walk locals f;
+        List.iter (walk locals) args
+      | MLlam (_, _, b) -> walk (Local_other :: locals) b
+      | MLletin (_, _, e1, e2, _) ->
+        walk locals e1;
+        let bound =
+          match argument_source n locals e1 with
+          | `Param i -> Local_param i
+          | `Closure -> Local_closure
+          | `Fixed -> Local_other
+        in
+        walk (bound :: locals) e2
+      | MLcase (_, scrut, branches) ->
+        walk locals scrut;
+        Array.iter
+          (fun (ids, _, _, b) -> walk (List.map (fun _ -> Local_other) ids @ locals) b)
+          branches
+      | MLfix (_, _, bodies, _, _) ->
+        let locals = List.init (Array.length bodies) (fun _ -> Local_closure) @ locals in
+        Array.iter (walk locals) bodies
+      | MLcons (_, _, args) | MLtuple args -> List.iter (walk locals) args
+      | MLmagic (_, e) -> walk locals e
+      | MLparray (elts, def) ->
+        Array.iter (walk locals) elts;
+        walk locals def
+      | MLrel _ | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _
+       |MLstring _ -> ()
+    in
+    walk [] body
+  in
+  Modutil.struct_iter
+    (fun d ->
+      List.iter
+        (fun fd ->
+          if Recursive_groups.group groups fd.fd_ref <> None then scan fd.fd_ref fd.fd_body )
+        (Mlutil.term_defs d) )
+    (fun _ -> ())
+    (fun _ -> ())
+    struc;
+  let find tbl r = Option.default [] (Ref.User.Map.find_opt r !tbl) in
+  let is_fixed (r, k) = List.mem k (find fixed r) in
+  let succ (r, i) =
+    List.filter_map (fun (j, dst) -> if j = i then Some dst else None) (find forwards r)
+    @ find creates r
+  in
+  let same (r, i) (r', i') = Ref.User.equal r r' && i = i' in
+  (* Whether some parameter of [maker] depends on [start]. *)
+  let reaches_maker maker start =
+    let rec go seen = function
+      | [] -> false
+      | node :: rest ->
+        if List.exists (same node) seen || is_fixed node then go seen rest
+        else if Ref.User.equal (fst node) maker then true
+        else go (node :: seen) (succ node @ rest)
+    in
+    go [] [start]
+  in
+  let kept = ref Ref.User.Map.empty in
+  Ref.User.Map.iter
+    (fun maker targets ->
+      List.iter
+        (fun ((g, k) as target) ->
+          if
+            (not (Ref.User.equal g maker))
+            && (not (is_fixed target))
+            && (not (List.mem k (find kept g)))
+            && reaches_maker maker target
+          then add kept g k )
+        targets )
+    !creates;
+  Ref.User.Map.fold (fun g is acc -> (g, List.sort compare is) :: acc) !kept []
+
+(** The extraction's {!partner_closure_params}. *)
+let partner_closure_params_table : int list Ref.User.Map.t ref =
+  State.cell State.Extraction Ref.User.Map.empty
+
+let install_partner_closure_params l =
+  partner_closure_params_table :=
+    List.fold_left (fun m (g, is) -> Ref.User.Map.add g is m) Ref.User.Map.empty l
+
 (** The source-order indices of the callable parameters, among the first
     [n_params], that a function made from [self_ref] takes as a [crane::fn]
     rather than generalising to [F &&]: those a self-call passes something
-    else for (see {!detect_non_forwarded_params}), and those a closure holds
-    on to (see {!escaping_params}).  A free function and a method of an
+    else for (see {!detect_non_forwarded_params}), those a partner's call
+    passes a closure for (see {!partner_closure_params}), and those a closure
+    holds on to (see {!escaping_params}).  A free function and a method of an
     inductive are generalised alike. *)
 let ungeneralised_callable_params ~self_ref ~suspended n_params body =
+  let partners =
+    List.filter
+      (fun i -> i < n_params)
+      (Option.default [] (Ref.User.Map.find_opt self_ref !partner_closure_params_table))
+  in
   Escape.IntSet.of_list
     (detect_non_forwarded_params self_ref n_params body
+    @ partners
     @ escaping_params ~suspended n_params body)
 
 (** [reconcile_parameter_type body_ty sig_ty] -- the type a definition's
