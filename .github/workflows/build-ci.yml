@@ -57,9 +57,13 @@ jobs:
 
       - name: Install clang and GMP
         run: |
-          sudo apt-get update
-          sudo apt-get install -y clang-19 libc++-19-dev libc++abi-19-dev libgmp-dev
-          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-19 100
+          # clang-19 doesn't parse structured-binding packs (theories/cpp/shared_variant.h);
+          # pull a newer clang from LLVM's apt repo instead of Ubuntu noble's default.
+          curl -fsSL https://apt.llvm.org/llvm.sh -o /tmp/llvm.sh
+          chmod +x /tmp/llvm.sh
+          sudo /tmp/llvm.sh 22
+          sudo apt-get install -y libc++-22-dev libc++abi-22-dev libgmp-dev
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-22 100
           clang++ --version
 
       - name: Generated headers compile standalone
