@@ -1718,7 +1718,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         render_numeral info n
       | None -> eta_fun env (MLglob use) [arg] )
     | None -> eta_fun env (MLglob use) [arg] )
-  | MLapp (MLcase (typ, scrut, pv), outer_args) when Array.length pv = 1 ->
+  | MLapp (MLcase (typ, scrut, pv, occ), outer_args) when Array.length pv = 1 ->
     (* Flatten outer args into a single-branch case body.  A case with one
        branch is a destructuring and nothing else, whatever it scrutinises --
        a record, a pair, any one-constructor inductive -- so applying its
@@ -1736,7 +1736,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       | MLapp (f, inner_args) -> MLapp (f, inner_args @ lifted_outer)
       | _ -> MLapp (body, lifted_outer)
     in
-    gen_expr ~slot env (MLcase (typ, scrut, [|(ids, rty, pat, new_body)|]))
+    gen_expr ~slot env (MLcase (typ, scrut, [|(ids, rty, pat, new_body)|], occ))
   (* A class field is projected through the instance wherever the instance
      survived, whatever mapping the field carries -- see
      {!static_projection_instance}. *)
@@ -2281,7 +2281,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               true
             | MLlam (_, _, b) -> reads (depth + 1) b
             | MLletin (_, _, x, b, _) -> reads depth x || reads (depth + 1) b
-            | MLcase (_, sc, pv) ->
+            | MLcase (_, sc, pv, _) ->
               reads depth sc
               || Array.exists
                    (fun (ids, _, _, br) -> reads (depth + List.length ids) br)
@@ -2294,7 +2294,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               !found
           in
           (match body with
-           | MLcase (_, MLrel (1, _), pv) -> is_custom_match pv
+           | MLcase (_, MLrel (1, _), pv, _) -> is_custom_match pv
            | _ -> false)
           || reads 0 body
         in
@@ -2306,13 +2306,13 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           let found = ref None in
           let rec walk depth e =
             match e with
-            | MLcase ((Miniml.Tglob (_, [], _) as t), sc, _)
+            | MLcase ((Miniml.Tglob (_, [], _) as t), sc, _, _)
               when (match strip_magic sc with MLrel (j, _) -> j = depth + 1 | _ -> false)
                    && !found = None ->
               found := Some t
             | MLlam (_, _, b) -> walk (depth + 1) b
             | MLletin (_, _, x, b, _) -> walk depth x; walk (depth + 1) b
-            | MLcase (_, sc, pv) ->
+            | MLcase (_, sc, pv, _) ->
               walk depth sc;
               Array.iter (fun (ids, _, _, br) -> walk (depth + List.length ids) br) pv
             | MLfix (_, ids, funs, _, _) -> Array.iter (walk (depth + Array.length ids)) funs
@@ -2757,7 +2757,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             | _ -> Tany
         in
         let rec leaf_rtys = function
-          | MLcase (_, _, pv) ->
+          | MLcase (_, _, pv, _) ->
             List.concat_map
               (fun (_, rty, _, body) ->
                 match body with
@@ -4852,7 +4852,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       nstempmod record_arg_exprs
     in
     cons_result
-  | MLcase (typ, t, pv) when is_custom_match pv ->
+  | MLcase (typ, t, pv, _) when is_custom_match pv ->
     let iife_ret =
       let branch_rty =
         match Array.to_list pv with
@@ -4873,7 +4873,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           gen_custom_cpp_case env (fun x -> Sreturn (Some x)) typ t pv )
     in
     mk_iife (Some iife_ret) stmts
-  | MLcase (typ, t, pv)
+  | MLcase (typ, t, pv, _)
     when (not (record_fields_of_type typ == [])) && Array.length pv == 1 ->
     let ids, r, pat, body = pv.(0) in
     let n = List.length ids in
@@ -5290,7 +5290,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                        gen_stmts ~slot env' (fun x -> Sreturn (Some x)) body ) ) ) ) )
     (* Known limitation: simultaneous pattern matching on record fields is not
        supported — each field is destructured individually. *)
-  | MLcase (typ, t, pv) when lang () == Cpp ->
+  | MLcase (typ, t, pv, _) when lang () == Cpp ->
     gen_cpp_case typ t env pv
   | MLletin (_, ty, _, _, _) as a ->
     with_escape_analysis (fun () -> with_region a (fun () ->
@@ -7527,7 +7527,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         callee_is_bare_any
         ||
         match f with
-        | MLcase (case_ty, _, pv) when Array.length pv = 1 ->
+        | MLcase (case_ty, _, pv, _) when Array.length pv = 1 ->
           let (binds, _, _, br_body) = pv.(0) in
           let n_binds = List.length binds in
           let proj_idx =
@@ -10420,7 +10420,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       else
         [k (gen_expr ?expected_ty:(position_cpp_ty None) env t)]
     end
-  | MLcase (typ, t, pv) when is_custom_match pv -> gen_custom_cpp_case env k typ t pv
+  | MLcase (typ, t, pv, _) when is_custom_match pv -> gen_custom_cpp_case env k typ t pv
   | MLcons (_, r, []) when Table.is_tt_constructor r
       && (!tctx).current_cpp_return_type = Some Tvoid ->
     (* tt (unit constructor) in tail position of a void-returning function *)
@@ -10442,7 +10442,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
   | MLmagic (_, MLexn msg) ->
     (* Handle MLexn wrapped in MLmagic *)
     [Sthrow msg]
-  | MLcase (typ, t, pv)
+  | MLcase (typ, t, pv, _)
     when (not (record_fields_of_type typ == [])) && Array.length pv == 1 ->
     let ids, _r, _pat, body = pv.(0) in
     let n = List.length ids in

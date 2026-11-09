@@ -30,7 +30,7 @@ open Table
 let nb_occur_match =
   let rec nb k = function
     | MLrel (i, _) -> if i = k then 1 else 0
-    | MLcase (_, scrut, branches) ->
+    | MLcase (_, scrut, branches, _) ->
       nb k scrut
       + Array.fold_left
           (fun max_count (ids, _, _, body) ->
@@ -73,7 +73,7 @@ let nb_occur_match =
     escape analysis and the combined analysis below. *)
 let rec occurs k = function
   | MLrel (i, _) -> i = k
-  | MLcase (_, scrut, branches) ->
+  | MLcase (_, scrut, branches, _) ->
     occurs k scrut
     || Array.exists
          (fun (ids, _, _, body) -> occurs (k + List.length ids) body)
@@ -187,7 +187,7 @@ let escapes ?(query = Conservative) ?(return_escapes = true) k t =
   let cons_escapes = query <> Of_param in
   let rec check k in_tail in_fn_arg = function
     | MLrel (i, _) -> i = k && in_tail && return_escapes
-    | MLcase (_, scrut, branches) ->
+    | MLcase (_, scrut, branches, _) ->
       ( match scrut with
       | MLrel (i, _) when i = k -> false
       | _ -> check k false false scrut )
@@ -249,14 +249,14 @@ let escapes ?(query = Conservative) ?(return_escapes = true) k t =
     the parameter should be owned so sub-bindings can be moved. *)
 let sub_bindings_escape k body =
   let rec check k = function
-    | MLcase (_, MLrel (i, _), branches) when i = k ->
+    | MLcase (_, MLrel (i, _), branches, _) when i = k ->
       Array.exists (fun (ids, _, _, branch_body) ->
         let n = List.length ids in
         List.exists (fun j ->
           escapes ~query:Of_sub_binding (j + 1) branch_body
         ) (List.init n Fun.id)
       ) branches
-    | MLcase (_, scrut, branches) ->
+    | MLcase (_, scrut, branches, _) ->
       check k scrut
       || Array.exists (fun (ids, _, _, body) ->
            check (k + List.length ids) body
@@ -277,7 +277,7 @@ let rec tail_constructions = function
   | MLmagic (_, a) -> tail_constructions a
   | MLletin (_, _, _, b, _) -> tail_constructions b
   | MLcons _ as c -> [c]
-  | MLcase (_, _, brs) ->
+  | MLcase (_, _, brs, _) ->
     List.concat_map (fun (_, _, _, b) -> tail_constructions b) (Array.to_list brs)
   | _ -> []
 
@@ -341,7 +341,7 @@ let is_reuse_scrutinee k body =
   in
   let found = ref false in
   let rec scan d = function
-    | MLcase (typ, scrut, branches) ->
+    | MLcase (typ, scrut, branches, _) ->
       ( match scrut with
       | MLrel (j, _) | MLmagic (_, MLrel (j, _)) ->
         if j > d && j - d = k && recyclable typ
@@ -367,7 +367,7 @@ let is_reuse_scrutinee k body =
 
 (* Whether [MLrel k] is matched on in [t]. *)
 let rec matched k = function
-  | MLcase (_, scrut, branches) ->
+  | MLcase (_, scrut, branches, _) ->
     (match scrut with MLrel (i, _) | MLmagic (_, MLrel (i, _)) -> i = k | _ -> false)
     || matched k scrut
     || Array.exists (fun (ids, _, _, b) -> matched (k + List.length ids) b) branches
@@ -417,7 +417,7 @@ let returns_receiver_field ~this_pos fn =
   List.length params = 1
   &&
   match bare body with
-  | MLcase (_, scrut, [| (ids, _, (Pcons _ | Pusual _), result) |]) -> (
+  | MLcase (_, scrut, [| (ids, _, (Pcons _ | Pusual _), result) |], _) -> (
     (match bare scrut with MLrel (i, _) -> i = receiver | _ -> false)
     && match bare result with MLrel (j, _) -> j <= List.length ids | _ -> false )
   | _ -> false
@@ -434,7 +434,7 @@ let free_rels depth t =
   let rec collect d = function
     | MLrel (i, _) when i > d -> free := IntSet.add (i - d) !free
     | MLrel _ -> ()
-    | MLcase (_, scrut, branches) ->
+    | MLcase (_, scrut, branches, _) ->
       collect d scrut;
       Array.iter
         (fun (ids, _, _, body) -> collect (d + List.length ids) body)
@@ -479,7 +479,7 @@ let single_use_nargs k t =
     | MLletin (_, _, rhs, cont, _) ->
       search k rhs;
       search (k + 1) cont
-    | MLcase (_, scrut, branches) ->
+    | MLcase (_, scrut, branches, _) ->
       search k scrut;
       Array.iter
         (fun (ids, _, _, body) -> search (k + List.length ids) body)

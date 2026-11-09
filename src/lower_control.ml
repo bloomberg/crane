@@ -76,7 +76,7 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
         | MLletin (_, _, a, b, _) ->
           walk depth a;
           walk (depth + 1) b
-        | MLcase (_, s, branches) ->
+        | MLcase (_, s, branches, _) ->
           walk depth s;
           Array.iter (fun (ids, _, _, b) -> walk (depth + List.length ids) b) branches
         | MLfix (_, ids, funs, _, _) -> Array.iter (walk (depth + Array.length ids)) funs
@@ -156,8 +156,8 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
     | MLletin (x, ty, a, b, _) when frames && calls callee ~depth a > 0 ->
       Resume {binder = x; binder_type = ty; value = lower ~bound:true callee depth a; body = lower callee (depth + 1) b}
     | MLletin (x, ty, a, b, _) -> Let {binder = x; binder_type = ty; value = a; body = lower callee (depth + 1) b}
-    | MLcase (ty, _, branches) when bound && not (Recursion_plan.match_bound_in_place ty branches) -> Return e
-    | MLcase (ty, s, branches) ->
+    | MLcase (ty, _, branches, _) when bound && not (Recursion_plan.match_bound_in_place ty branches) -> Return e
+    | MLcase (ty, s, branches, _) ->
       Match
         { scrutinee_type = ty;
           scrutinee = s;

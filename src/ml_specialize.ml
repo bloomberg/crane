@@ -163,16 +163,16 @@ and settle defs fuel e =
 
 and push defs shrunk fuel use args =
   let rec split before = function
-    | (MLcase (ty, s, brs) as m) :: after
+    | (MLcase (ty, s, brs, occ) as m) :: after
       when List.for_all is_value before && List.for_all is_value after ->
       ignore m;
-      Some (List.rev before, ty, s, brs, after)
+      Some (List.rev before, ty, s, brs, occ, after)
     | a :: after -> split (a :: before) after
     | [] -> None
   in
   match split [] args with
   | None -> None
-  | Some (before, ty, s, brs, after) ->
+  | Some (before, ty, s, brs, occ, after) ->
     let any = ref false in
     let brs' =
       Array.map
@@ -199,7 +199,7 @@ and push defs shrunk fuel use args =
     in
     if !any then (
       shrunk := true;
-      Some (MLcase (ty, s, brs')) )
+      Some (MLcase (ty, s, brs', occ)) )
     else None
 
 (** {1 Specialization} *)

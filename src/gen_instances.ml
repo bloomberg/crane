@@ -732,7 +732,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
             named_tvar name
           with Failure _ -> Tany )
         | MLmagic (_, e) -> ml_expr_to_cpp_type e
-        | MLcase (_, scrutinee, branches)
+        | MLcase (_, scrutinee, branches, _)
           when Array.length branches = 1 ->
           (* Single-branch case = record field projection.  The branch
              destructures the record into named bindings and selects one

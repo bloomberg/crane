@@ -2254,7 +2254,7 @@ let plan_referenced_names s =
     | MLcons (t, r, _) ->
       name Cons r;
       ty t
-    | MLcase (t, _, brs) ->
+    | MLcase (t, _, brs, _) ->
       ty t;
       (* A match on a record reads its fields by name. *)
       List.iter (Option.iter (name Term)) (Table.record_fields_of_type t);

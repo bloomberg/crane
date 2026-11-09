@@ -1019,7 +1019,7 @@ let is_typeclass_instance_arg ~lex ml_arg =
        returns a skipped type (e.g. ReSum instances where the Class is a
        ConstRef not recognized by is_typeclass). *)
     ref_is_instance r
-  | MLcase (case_ty, _scrutinee, branches) when Array.length branches = 1 ->
+  | MLcase (case_ty, _scrutinee, branches, _) when Array.length branches = 1 ->
     (* Single-branch case = record field projection.  If the projected
        field's type is itself a typeclass, this is a typeclass instance
        arg — e.g., [base_category(PS)] projects a [PreCategory]-typed
@@ -1198,8 +1198,8 @@ let promoted_tys_of_arity n =
     bindings are not valid on [std::any]). *)
 let rec mark_own_param_for_pair_erasure n body =
   match body with
-  | MLcase (ty, (MLrel (i, _) as scrut), pv) when i = n && is_custom_match pv ->
-    MLcase (ty, MLmagic (Mboxed, scrut), pv)
+  | MLcase (ty, (MLrel (i, _) as scrut), pv, occ) when i = n && is_custom_match pv ->
+    MLcase (ty, MLmagic (Mboxed, scrut), pv, occ)
   | MLmagic (m, a) -> MLmagic (m, mark_own_param_for_pair_erasure n a)
   | other -> other
 
@@ -3085,7 +3085,7 @@ let rec ml_expr_is_erased env (t : ml_ast) : bool =
       | Some ml_ty -> prints_as_any (cpp_of_ml env ml_ty)
       | None -> false )
   | MLmagic (_, inner) -> ml_expr_is_erased env inner
-  | MLcase (case_ty, _, _) ->
+  | MLcase (case_ty, _, _, _) ->
     ( match case_ty with
       | Miniml.Tvar (_, _) | Miniml.Tunknown -> true
       | _ -> false )

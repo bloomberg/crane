@@ -200,7 +200,7 @@ let body_safe_for_method ?(this_pos = 0) ?(ret_has_shared_epon = false) body =
      argument. *)
   let rec returns_target depth = function
     | MLrel (i, _) -> i = target_db + depth
-    | MLcase (_, scrut, branches) ->
+    | MLcase (_, scrut, branches, _) ->
       (* Also check the scrutinee when it is itself a match expression.
          If the target argument can flow out of the scrutinee (e.g.
          [match (match c with Blue => s) with ...]), then [s] becomes [this]
@@ -220,7 +220,7 @@ let body_safe_for_method ?(this_pos = 0) ?(ret_has_shared_epon = false) body =
   in
   (* Check the inner body. Three cases: *)
   match inner with
-  | MLcase (_, MLrel (scrut_idx, _), branches) when scrut_idx = target_db ->
+  | MLcase (_, MLrel (scrut_idx, _), branches, _) when scrut_idx = target_db ->
     (* Case 1: Top-level match on first arg (e.g. [match xs with ...]). Only
        check branches, not the scrutinee — the scrutinee is the first argument
        but is used for dispatch, not directly returned. *)
@@ -240,7 +240,7 @@ let body_safe_for_method ?(this_pos = 0) ?(ret_has_shared_epon = false) body =
     let fix_lams, fix_inner = strip_lams 0 fix_body in
     let fix_target_db = target_db + n_funs + fix_lams in
     ( match fix_inner with
-    | MLcase (_, MLrel (scrut_idx, _), branches) when scrut_idx = fix_target_db ->
+    | MLcase (_, MLrel (scrut_idx, _), branches, _) when scrut_idx = fix_target_db ->
       not
         (Array.exists
            (fun (ids, _, _, branch_body) ->

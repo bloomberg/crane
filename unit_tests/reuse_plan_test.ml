@@ -35,7 +35,7 @@ let arm body =
           ( lst,
             scrutinee,
             [| ([], lst, Pusual nil, MLcons (lst, nil, []));
-               ([(x, nat); (t, lst)], lst, Pusual cons, body) |] ) )
+               ([(x, nat); (t, lst)], lst, Pusual cons, body) |], Occurrence.fresh ()) )
   in
   let p = Ownership_ir.region ~owned:[1] ~n_outer:0 root in
   (p, Ownership_ir.reuse_arm p ~scrutinee ~branch:1 ~constructor:cons)
@@ -65,7 +65,7 @@ let () =
         MLcase
           ( bool,
             fresh_rel 1,
-            [| ([], lst, Pusual other, left); ([], lst, Pusual other, right); ([], lst, Pwild, ended) |] ),
+            [| ([], lst, Pusual other, left); ([], lst, Pusual other, right); ([], lst, Pwild, ended) |], Occurrence.fresh ()),
         Occurrence.fresh () )
   in
   let _, p = arm tail in

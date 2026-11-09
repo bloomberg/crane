@@ -515,7 +515,7 @@ let promoted_resolutions_of_body ?r ?ty b =
         args
     | MLlam (_, _, b') -> walk_at (d + 1) b'
     | MLletin (_, _, a, b', _) -> walk_at d a; walk_at (d + 1) b'
-    | MLcase (_, sc, pv) ->
+    | MLcase (_, sc, pv, _) ->
       walk_at d sc;
       Array.iter (fun (ids, _, _, br) -> walk_at (d + List.length ids) br) pv
     | MLfix (_, ids, funs, _, _) -> Array.iter (walk_at (d + Array.length ids)) funs
