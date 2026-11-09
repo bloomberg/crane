@@ -325,8 +325,10 @@ let subst_dict_carrier ?(at = 1) carrier ty =
     lambda's body.  It need not be an instance at all: where the enclosing
     function abstracts over the instance, the dictionary is a binder, and the
     carrier is written in the constraint that binder's own type spells.  Both
-    sources end at an ML type headed by the carrier, and are consumed as one. *)
-let dict_carrier_ml_type id args =
+    sources end at an ML type headed by the carrier, and are consumed as one.
+    A binder is read in [lex], the environment the call stands in, and the
+    constraints of [caller], the declaration it stands in. *)
+let dict_carrier_ml_type ~lex ~caller id args =
   let ( let* ) = Option.bind in
   let* ml_ty = find_type_opt id in
   (* The class parameter is quantified first, and an explicit argument list is
@@ -437,7 +439,7 @@ let dict_carrier_ml_type id args =
         | Some (Miniml.Tglob (_, [_], _) as t) -> Some (strip_class t)
         | _ -> None
       in
-      let recorded = constraint_arg (get_env_type_opt i) in
+      let recorded = constraint_arg (Lexenv.type_opt lex i) in
       ( match recorded with
       | Some _ -> recorded
       | None ->
@@ -448,10 +450,10 @@ let dict_carrier_ml_type id args =
            body is under nothing but that declaration's own binders, the two
            lists are the same list read from opposite ends. *)
         let ( let* ) = Option.bind in
-        let* r = !Table.current_decl_ref in
+        let* r = caller in
         let* decl_ty = find_type_opt r in
         let doms = ml_domains decl_ty in
-        let n = Lexenv.depth (!tctx).env_types in
+        let n = Lexenv.depth lex in
         (* [List.nth_opt] raises rather than answering [None] on a negative
            index, and [i] can exceed [n]: a dictionary reached through an
            argument of the call need not be a binder of this body at all. *)
@@ -467,19 +469,20 @@ let dict_carrier_ml_type id args =
     every type as the carrier applied -- so the dictionary argument has to be
     read first, or a [bind]'s [m A] resolves to nothing: erased, where the
     type argument written for it is a dummy. *)
-let with_dict_carrier id value_args ty =
-  match dict_carrier_ml_type id value_args with
+let with_dict_carrier ~lex ~caller id value_args ty =
+  match dict_carrier_ml_type ~lex ~caller id value_args with
   | Some carrier -> subst_dict_carrier carrier ty
   | None -> ty
 
-let instantiate_at_call id tys value_args ty =
-  Mlutil.Var_types.apply tys (with_dict_carrier id value_args ty)
+let instantiate_at_call ~lex ~caller id tys value_args ty =
+  Mlutil.Var_types.apply tys (with_dict_carrier ~lex ~caller id value_args ty)
 
 (** {!instantiate_at_call} at the type arguments [use] wrote, read by the
     callee's scheme variables. *)
 let instantiate_use_at_call use value_args ty =
   Mlutil.instantiate_written ~reader:"instantiate_use_at_call" use
-    (with_dict_carrier use.callee value_args ty)
+    (with_dict_carrier ~lex:(current_lexenv ()) ~caller:!Table.current_decl_ref use.callee
+       value_args ty )
 
 (** What an application of a global yields, as an ML type.
 
@@ -2658,7 +2661,9 @@ let lifted_call_type_args
 let dict_carrier_type_args env tvars id args =
   Probe.changed "REPAIR_dict_carrier_type_args" id ~before:None @@
   let ( let* ) = Option.bind in
-  let* cod = dict_carrier_ml_type id args in
+  let* cod =
+    dict_carrier_ml_type ~lex:(current_lexenv ()) ~caller:!Table.current_decl_ref id args
+  in
   (* Abstracted over the traversed type, as {!apply_hkt_tyctors} does: the
      class applies its carrier to it and this idiom writes it first, so the two
      agree on one body and the printer mints one alias for both.

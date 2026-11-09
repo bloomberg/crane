@@ -313,7 +313,7 @@ let instantiate ~lex ~expected_ml ~stated_ml ~caller ~scope call =
      substituted one are not indexed alike: substitution can make a
      parameter dummy that was not one before ({!Param_pos}). *)
   Elaborated_call.instantiate call ~reading
-    ~at_call:(fun tys -> instantiate_at_call id tys primary_ml_args)
+    ~at_call:(fun tys -> instantiate_at_call ~lex ~caller id tys primary_ml_args)
     ~expand:expand_ml_fun_alias
     ~erased:(fun t ->
       match resolve_tmeta t with
