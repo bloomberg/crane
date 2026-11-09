@@ -7654,6 +7654,11 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
             ~cname ~typ ~env ~n_pat_vars
             ~n_fields:(List.length rev_ids)
             ~non_erased_def_site_field_tys ();
+          if Probe.checking () then
+            List.iteri
+              (fun i _ ->
+                Representation_plan.check ~site ~field:i ~live:(binder_is_boxed (n_pat_vars - i)) )
+              rev_ids;
           gen_stmts env_for_body (fun x -> Sreturn (Some x)) body ))
   in
   let tvars = get_current_type_vars () in
@@ -8015,122 +8020,12 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     attempts to resolve them from [env_types] so that field types and
     constructor type parameters are concrete for code generation. *)
 and gen_cpp_case (typ : ml_type) t env pv case_occ =
-  (* When the match type annotation has unresolved Tvars, try to resolve from
-     context. This handles monomorphic functions where MLcase has Tvar but the
-     concrete type is known. *)
-  let rec resolvable_here = function
-    | Miniml.Tglob (g, ts, _) ->
-      ( (not (Table.is_promoted_type_var g))
-      || promoted_var_resolution g <> None )
-      && List.for_all resolvable_here ts
-    | Miniml.Tarr (a, b) -> resolvable_here a && resolvable_here b
-    | Miniml.Tmeta {contents = Some t} -> resolvable_here t
-    | _ -> true
-  in  let resolve_tvar_type typ candidate =
-    match (typ, candidate) with
-    | Miniml.Tglob (r1, _, _), Miniml.Tglob (r2, _, _)
-      when globref_equal r1 r2
-           && has_tvar typ
-           && (not (has_tvar candidate))
-           (* Only a candidate that erased nothing replaces the annotation
-              whole: [observe t] at a family its call erased is [itreeF D _]
-              where the annotation knows the family. *)
-           && not (ml_type_contains_erased candidate) -> candidate
-    | _ ->
-      (* The annotation may state the inductive and leave its argument open --
-         [EOU _] for a call whose declared result is [EOU ptr] -- and then the
-         match spells [std::any] where the value has a type.  The candidate is
-         the declaration the scrutinee was produced by, so it may fill what the
-         annotation left open, and nothing more: see
-         {!Ml_type_util.refine_erased}.  A promoted variable this scope cannot
-         resolve is not an answer, and neither is an erased one. *)
-      Ml_type_util.refine_erased
-        ~writable:(fun t ->
-          resolvable_here t
-          && names_only_scoped_tvars (cpp_of_ml env t)
-          && not (Ml_type_util.has_tany_in_type (cpp_of_ml env t)) )
-        typ candidate
-  in
   let typ =
-    match t with
-    | MLrel (i, _) | MLmagic (_, MLrel (i, _)) ->
-      (* Scrutinee is a variable reference — use its concrete type, the one
-         its binder was given, a parameter's as much as a let's.  Unwrap Tmeta
-         wrappers since env_types may store types in Tmeta form. *)
-      let rec unwrap_tmeta = function
-        | Miniml.Tmeta {contents = Some t} -> unwrap_tmeta t
-        | t -> t
-      in
-      let env_ty_opt =
-        try
-          let env_ty = unwrap_tmeta (get_env_type i) in
-          match env_ty with
-          | Miniml.Tglob _ -> Some env_ty
-          | _ -> None
-        with _ -> None
-      in
-      let typ =
-        match env_ty_opt with
-        | Some let_ty -> resolve_tvar_type typ let_ty
-        | None -> typ
-      in
-      (* The variable's declared C++ type is what its value is: where it
-         erased a position -- a pattern field of a plain family parameter,
-         [Sum1<BE, cE, std::any>] inside [Sum1<AE, _, X>], whose ML type
-         says [X] -- the match spells it erased too. *)
-      let rec erase_as ml cpp =
-        match (resolve_tmeta ml, Ml_type_util.unqualify_ty cpp) with
-        | Miniml.Tglob (g, mas, x), Tglob (g', cas, _)
-          when GlobRef.CanOrd.equal g g' && List.length mas = List.length cas ->
-          Miniml.Tglob
-            ( g,
-              List.map2
-                (fun m c ->
-                  if prints_as_any c && not (ml_type_contains_erased m) then
-                    Miniml.Tunknown
-                  else erase_as m c )
-                mas cas,
-              x )
-        | m, _ -> m
-      in
-      ( match binder_cpp_type i with
-      | Some bt -> erase_as typ (strip_cpp_ref_const bt)
-      | None -> typ )
-    | _ ->
-      (* Anything else: the scrutinee's own structure says what it produces,
-         through the one reader -- a call's instantiated codomain, a
-         projection's field type.  Reading it here rather than re-deriving a
-         callee's return type keeps a projection, which is an [MLcase] and not
-         an application at all, from being left out. *)
-      ( match
-          ( match ml_projection_field_type (strip_magic t) with
-          | Some _ as c -> c
-          | None -> infer_ml_body_type t )
-        with
-      | Some cand -> resolve_tvar_type typ cand
-      | None -> typ )
+    match_scrutinee_type env typ t pv
+      ~var_type:(fun i -> try Some (get_env_type i) with _ -> None)
+      ~var_cpp_type:binder_cpp_type
   in
-  (* When the type is still unresolved (Tunresolved / Tdummy / non-Tglob),
-     recover the inductive from the first branch's constructor pattern -- a
-     constructor determines the inductive it belongs to, so this is sound
-     wherever the scrutinee's own type failed to resolve.  It happens for a
-     dependent field stored as [std::any] (sigT's second projection) and for
-     the body of an instance method, which is extracted against the class's
-     erased carrier and so carries no type for the scrutinee at all. *)
   let scrut_is_mlmagic_case = match t with MLmagic (_, _) -> true | _ -> false in
-  let typ =
-    match typ with
-    | Miniml.Tglob _ -> typ
-    | _ ->
-      ( try
-          let _, _, pat0, _ = pv.(0) in
-          match pat0 with
-          | Pusual (GlobRef.ConstructRef (ip, _))
-          | Pcons (GlobRef.ConstructRef (ip, _), _) ->
-            Miniml.Tglob (GlobRef.IndRef ip, [], [])
-          | _ -> typ
-        with _ -> typ )
-  in
   (* Check if this is an enum inductive type *)
   let is_enum =
     match typ with
@@ -8599,89 +8494,12 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt ~site =
 and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
   (* Save the ML type for temps computation after fix_a_fired is known. *)
   let ml_typ = typ in
-  (* [scrut_is_magic]: true when the scrutinee is erased at runtime (stored as
-     [std::any]) even though the ML AST may carry a concrete type annotation.
-     Covers both explicit [Obj.magic] wrappers and variables retyped to [Tany]
-     by an outer [fix_a_fired] pair match (detected via [env_types]). *)
-  let scrut_is_mlmagic = match t with MLmagic (m, _) -> magic_is_boxed env m | _ -> false in
-  let scrut_is_cpp_erased = match t with
-    | MLrel (i, _) -> binder_is_boxed i
-    | _ -> false
-  in
-  let scrut_is_magic = match t with
-    | MLmagic (m, _) -> magic_is_boxed env m
-    | MLrel (i, _) ->
-      binder_is_boxed i
-      || (match get_env_type_opt i with
-          (* An ML type that erases on its own may still have been written
-             down concretely here -- a typeclass carrier resolved by the
-             instance being generated, say -- in which case the binder holds
-             the value itself and there is no box to open. *)
-          | Some ty ->
-            is_erased_ml_type ty
-            && ml_erases_to_box env ty
-          | None -> false)
-    | _ -> false
-  in
-  (* [scrut_callee_ret_erased]: the scrutinee is a call to a global function
-     ([MLapp (MLglob {callee = r; _}, args)], possibly [MLmagic]-wrapped) whose
-     DECLARED (un-instantiated) codomain resolves to [std::any] — e.g.
-     [rev_tuple : forall xs, syms_semty xs -> syms_semty (rev xs)], a single
-     C++ function generic over [xs], so its actual return type is the
-     value-dependent-erased [syms_semty] regardless of how a specific
-     call-site's Rocq type-checker happened to reduce the annotated result
-     type (e.g. to a concrete [prod] when [xs] is a literal list). Using the
-     call-site-reduced [typ] alone under-detects this: it looks concrete even
-     though the callee only ever returns [std::any] at the C++ level. *)
-  let rec flatten_app = function
-    | MLapp (f, args) ->
-      ( match flatten_app f with
-      | MLapp (f', inner_args) -> flatten_app (MLapp (f', inner_args @ args))
-      | f' -> MLapp (f', args) )
-    | MLmagic (_, e) -> flatten_app e
-    | other -> other
-  in
-  let scrut_callee_ret_erased =
-    match flatten_app t with
-    | MLapp (MLglob ({callee = r; _} as use), args) ->
-      ( match find_type_opt r with
-      | Some fty ->
-        let fty = Mlutil.instantiate_written ~reader:"scrut_callee_ret_erased" use fty in
-        ( match strip_tarr_n (count_real_ml_args args) fty with
-        | Some rty ->
-          (* Both spellings of "is a [std::any] at run time" are needed here:
-             [resolves_to_any_type] follows a named alias for the box, and
-             [prints_as_any] catches the codomain a callee left as an erased
-             type argument, which converts to a dummy glob rather than to
-             [Tany]. *)
-          let rty_cpp = cpp_of_ml env rty in
-          spells_as_any rty_cpp
-        | None -> false )
-      | None -> false )
-    | _ -> false
-  in
-  let typ = cpp_of_ml env typ in
-  (* [concrete_match_type]: when [typ] is erased ([std::any]), recover the
-     actual inductive type from the first branch's pattern constructor and
-     its field types.  Used for non-pair matches (e.g. option, variant) where
-     we need to emit [any_cast<ConcreteType>(scrut)]. *)
-  let concrete_match_type =
-    if spells_as_any typ || scrut_callee_ret_erased then
-      try
-        let _, _, pat0, _ = pv.(0) in
-        let ind_ref = match pat0 with
-          | Pusual (GlobRef.ConstructRef (ip, _))
-          | Pcons (GlobRef.ConstructRef (ip, _), _) -> GlobRef.IndRef ip
-          | _ -> raise Not_found
-        in
-        let ids0, _, _, _ = pv.(0) in
-        let tyargs = List.rev_map (fun (_, ty) ->
-          erase_unresolved_tvars (cpp_of_ml env ty)
-        ) ids0 in
-        Tglob (ind_ref, tyargs, [])
-      with _ -> typ
-    else typ
-  in
+  let cs = custom_match_scrutinee env typ t pv ~var_boxed:binder_is_boxed ~var_type:get_env_type_opt in
+  let scrut_is_mlmagic = cs.cs_mlmagic in
+  let scrut_is_cpp_erased = cs.cs_cpp_erased in
+  let scrut_is_magic = cs.cs_magic in
+  let typ = cs.cs_typ in
+  let concrete_match_type = cs.cs_concrete in
   (* Custom match templates may use %scrut multiple times (e.g., option: "if
      (%scrut.has_value()) { ... *%scrut; ... }"). Each occurrence re-prints the
      scrutinee C++ expression: a variable is then read in place (the plan has
@@ -8695,10 +8513,6 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
   (* Whether the match binds the pair's components by value, moving them out:
      asked while [t] is still the Core scrutinee. *)
   let pair_by_value = Ownership_ir.pair_by_value (!tctx).move_plan t pv in
-  let scrut_is_trivial_ml = match t with
-    | MLrel _ | MLmagic (_, MLrel _) -> true
-    | _ -> false
-  in
   (* A scrutinee whose result is only pinned down by a type index arrives
      boxed, and a match cannot inspect a [std::any].  Telling the call what
      type this position wants is what makes it recover the value. *)
@@ -8726,10 +8540,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
     tctx := { !tctx with current_cpp_return_type = saved_ret };
     t
   in
-  let pair_g_opt = match concrete_match_type with
-    | Tglob (g, _, _) when is_prod_global g -> Some g
-    | _ -> None
-  in
+  let pair_g_opt = cs.cs_pair in
   (* Insert [any_cast] on the scrutinee when the runtime value is [std::any]
      but the template needs a typed expression.
 
@@ -8743,20 +8554,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
 
      Otherwise: no cast needed; the scrutinee already has the correct type. *)
   let t, fix_a_fired, cast_to =
-    let needs_pair_any_cast =
-      pair_g_opt <> None &&
-      ( scrut_is_cpp_erased || scrut_is_mlmagic || scrut_callee_ret_erased
-        || (scrut_is_magic && prints_as_any typ)
-        (* Read off the type only where nothing says otherwise: a variable
-           is boxed exactly when its binder is ([scrut_is_magic]), and one
-           declared [pair<std::any, exp<std::any>>] holds that pair. *)
-        || (not scrut_is_trivial_ml)
-           && (is_all_erased typ || resolves_to_any_type typ) &&
-           ( Ml_type_util.has_tany_in_type concrete_match_type
-             || (match concrete_match_type with
-                 | Tglob (_, args, _) -> List.exists resolves_to_any_type args
-                 | _ -> false) ) )
-    in
+    let needs_pair_any_cast = cs.cs_pair_any_cast in
     if needs_pair_any_cast then begin
       let g = Option.get pair_g_opt in
       (Cpp_erasure.unbox (Tglob (g, [Tany; Tany], [])) (t), true, None)
@@ -8855,22 +8653,6 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
          (2) {!Cpp_erasure.lower_boxed_reads} treats them as boxed.
          Non-pair leaf types (e.g. [List<any>]) are left unchanged so the
          use-site [any_cast] pass can still insert the correct cast. *)
-      let ids' =
-        if fix_a_fired then
-          List.map (fun (x, ty) ->
-            let cpp_ty = cpp_of_ml env ty in
-            match cpp_ty with
-            | Tglob (g, (_ :: _), _) when is_prod_global g ->
-              (x, Tdummy Ktype)
-            | Tglob (g, _, _) when is_list_global g ->
-              (x, ty)
-            | _ when prints_as_any cpp_ty ->
-              (x, ty)
-            | _ ->
-              (x, Tdummy Ktype))
-            ids'
-        else ids'
-      in
       let scrut_elems_are_any =
         (scrut_is_mlmagic || scrut_is_magic)
         && (match ml_typ with
@@ -8887,8 +8669,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
           | _ -> ml_typ )
         | None -> ml_typ
       in
-      let ids' = recover_pattern_var_types_from_scrutinee ~ctor:r scrut_ml_typ ids' in
-      let ids' = retype_dependent_params ml_typ ids' in
+      let ids' = custom_branch_binders env ~fix_a_fired ~scrut_ml_typ ~ml_typ r ids' in
       let n_pat_vars = List.length ids in
       let saved_env_types = (!tctx).env_types in
       push_binders env ids';
@@ -8931,6 +8712,12 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
           end)
           (List.init n_fields Fun.id)
       end;
+      if Probe.checking () then
+        List.iteri
+          (fun field_i _ ->
+            Representation_plan.check ~site:(Branch (case_occ, i)) ~field:field_i
+              ~live:(binder_is_boxed (n_pat_vars - field_i)) )
+          ids;
       let scrut_ind_opt =
         match ml_typ with
         | Tglob (GlobRef.IndRef _ as g, _, _) -> Some g
@@ -10709,6 +10496,7 @@ and gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx 
   result
 
 let () = type_term_arg := fun env a -> gen_expr env a
+let () = plan_representation := Representation_plan.region
 
 (** Whether [expr] is a numeral-converter application (e.g.
     [Nat.of_num_uint (Number.UIntDecimal ...)]) that {!gen_expr} folds into a

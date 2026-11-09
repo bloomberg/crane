@@ -47,7 +47,8 @@ let begin_body ~owner ?(function_ = false) () =
       body_owner = Some owner;
       body_function = function_;
       current_letin_depth = 0;
-      move_plan = Ownership_ir.empty }
+      move_plan = Ownership_ir.empty;
+      representation = [] }
 
 (** [with_method_env_types env params f] runs [f] with the de Bruijn type
     stack holding exactly [params] (innermost binder first, as returned by
