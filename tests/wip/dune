@@ -261,3 +261,36 @@
   (deps nullary_unit_effect_dropped.t.exe)
   (action (run ./nullary_unit_effect_dropped.t.exe))))
 
+
+(subdir local_mutual_callable_param_capture
+ (rule
+  (targets local_mutual_callable_param_capture.t.exe)
+  (deps LocalMutualCallableParamCapture.vo local_mutual_callable_param_capture.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_mutual_callable_param_capture.t.exe local_mutual_callable_param_capture.t.cpp local_mutual_callable_param_capture.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_mutual_callable_param_capture.t.exe)
+  (action (run ./local_mutual_callable_param_capture.t.exe))))
+
+(subdir local_fix_polymorphic_recursion
+ (rule
+  (targets local_fix_polymorphic_recursion.t.exe)
+  (deps LocalFixPolymorphicRecursion.vo local_fix_polymorphic_recursion.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_polymorphic_recursion.t.exe local_fix_polymorphic_recursion.t.cpp local_fix_polymorphic_recursion.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_polymorphic_recursion.t.exe)
+  (action (run ./local_fix_polymorphic_recursion.t.exe))))
+
+(subdir local_mutual_polymorphic_recursion
+ (rule
+  (targets local_mutual_polymorphic_recursion.t.exe)
+  (deps LocalMutualPolymorphicRecursion.vo local_mutual_polymorphic_recursion.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_mutual_polymorphic_recursion.t.exe local_mutual_polymorphic_recursion.t.cpp local_mutual_polymorphic_recursion.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_mutual_polymorphic_recursion.t.exe)
+  (action (run ./local_mutual_polymorphic_recursion.t.exe))))
