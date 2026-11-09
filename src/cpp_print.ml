@@ -150,23 +150,23 @@ let print_cpp_type_var vl i =
   | None -> str "T" ++ int i
 
 
-(** Under [CRANE_CHECK_IR], the type names the file being written introduced
-    at file scope, as written. *)
-let file_scope_types_written : CString.Set.t ref = ref CString.Set.empty
+(** Under [CRANE_CHECK_IR], the types the file being written introduced at
+    file scope, by the entity each declares. *)
+let file_scope_types_written : GlobRef.Set.t ref = ref GlobRef.Set.empty
 
-let note_file_scope_name ctx name =
+let note_file_scope_name ctx r =
   if Probe.checking () && not ctx.rc_in_struct then
-    file_scope_types_written := CString.Set.add (Pp.string_of_ppcmds name) !file_scope_types_written
+    file_scope_types_written := GlobRef.Set.add r !file_scope_types_written
 
-(** The type name a declaration introduces, for the shapes whose spelling is
-    settled here.  A struct records itself where it is printed. *)
-let rec decl_type_name ctx = function
-  | Dtemplate (_, _, inner) -> decl_type_name ctx inner
-  | Dusing u -> Some (str (declared_name ctx Type u.du_name))
-  | Dnspace (Some w, _) -> Some (str (String.capitalize_ascii (declared_name ctx Type w.nw_ref)))
+(** The type a declaration introduces, by the entity it declares: an
+    alias, a wrapper struct.  A struct records itself where it is printed. *)
+let rec decl_type_ref = function
+  | Dtemplate (_, _, inner) -> decl_type_ref inner
+  | Dusing u -> Some u.du_name
+  | Dnspace (Some w, _) -> Some w.nw_ref
   | _ -> None
 
-let note_file_scope_type ctx d = Option.iter (note_file_scope_name ctx) (decl_type_name ctx d)
+let note_file_scope_type ctx d = Option.iter (note_file_scope_name ctx) (decl_type_ref d)
 
 (** The C++ token an {!Minicpp.obj_access} prints as. *)
 let pp_obj_access = function Adot -> "." | Aarrow -> "->"
@@ -336,7 +336,7 @@ let rec member_kind = function
 
 (** The qualifiers a member of the struct being defined out of line is
     written with when it is named outside that struct's body ([Tid] and
-    [Tpromoted]), or [None] where it is written bare.
+    [Tpromoted], the node [t]), or [None] where it is written bare.
 
     A definition written outside its struct ([Owner::f]) qualifies the plain
     names in its signature with [Owner::], which is right for a member and
@@ -344,15 +344,24 @@ let rec member_kind = function
     "anything else": the class is at file scope, so its erased face is a
     file-scope [using iptr = std::any;], and some unrelated struct's hoisted
     body must resolve [iptr] to that alias rather than claim it as a member it
-    never declared.  The position says which names its file declares at file
-    scope ({!Cpp_state.out_of_line}).
+    never declared.  The position says which promoted variables' aliases its
+    file declares at file scope ({!Cpp_state.out_of_line}); the variable is
+    the alias's identity, one alias serving every class field of that name.
 
-    Those names only {i withhold} the qualifier, and a file-scope name that
-    a struct also declares as a member still resolves to the member, because
-    the body of an out-of-line definition is inside its class's scope. *)
-let member_scopes (ctx : render_ctx) id =
+    Those aliases only {i withhold} the qualifier, and a file-scope alias
+    that a struct also declares as a member still resolves to the member,
+    because the body of an out-of-line definition is inside its class's
+    scope.  A [Tid] is a constructor struct or the variant alias declared in
+    an inductive's struct, a member, never one of them. *)
+let member_scopes (ctx : render_ctx) t =
+  let at_file_scope =
+    match t with
+    | Tpromoted id -> fun aliases -> Id.Set.mem id aliases
+    | Tid _ -> fun _ -> false
+    | _ -> CErrors.anomaly Pp.(str "member_scopes: neither a Tid nor a Tpromoted.")
+  in
   match ctx.rc_scope with
-  | Some {ol_scope; ol_file_scope_types} when (not ctx.rc_in_struct) && not (CString.Set.mem (Id.to_string id) ol_file_scope_types) ->
+  | Some {ol_scope; ol_file_scope_aliases} when (not ctx.rc_in_struct) && not (at_file_scope ol_file_scope_aliases) ->
     Some (List.map (fun s -> Cpp_name.Class s) ol_scope.Scope_plan.qualifier)
   | _ -> None
 
@@ -425,7 +434,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
          An erased field also gets a file-scope [using] of the same name, and a
          hoisted body whose owner is some other struct must resolve to that
          one, not to a member that does not exist. *)
-      ( match member_scopes ctx id with
+      ( match member_scopes ctx t with
       | Some scopes -> Cpp_name.pp_scopes scopes ++ Id.print id
       | None -> Id.print id )
     | Tvar (Tv_index (_, Some id) | Tv_named id) -> Id.print id
@@ -434,7 +443,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl t =
        parameterized like generic types: Leaf<int>. When generating
        out-of-struct definitions, prepend struct name. *)
     | Tid (id, args) ->
-      let scopes = Option.default [] (member_scopes ctx id) in
+      let scopes = Option.default [] (member_scopes ctx t) in
       Cpp_name.pp_scopes scopes ++ Id.print id
       ++ (match args with [] -> mt () | _ -> str "<" ++ pp_list (pp_rec false) args ++ str ">")
     | Tnondeduced t ->
@@ -2430,21 +2439,22 @@ let pp_forward_declaration ctx env : Cpp_ast.defined -> _ = function
     struct_template_head ~pp_param:(pp_template_param_redecl ctx) ctx env tparams constraint_ ++ str "struct " ++ name ++ str ";"
   | Defined_enum r -> str "enum class " ++ enum_definition_name ctx r ++ str ";"
 
-let start_file_scope_census () = file_scope_types_written := CString.Set.empty
+let start_file_scope_census () = file_scope_types_written := GlobRef.Set.empty
 
-(** Under [CRANE_CHECK_IR], the type names the file [file] introduced at
-    file scope must be the ones planned for it. *)
+(** Under [CRANE_CHECK_IR], the types the file [file] introduced at file
+    scope must be the ones planned for it. *)
 let check_file_scope_types ~file =
   if Probe.checking () then begin
     let written = !file_scope_types_written and planned = Cpp_state.file_scope_types_of file in
-    file_scope_types_written := CString.Set.empty;
-    if not (CString.Set.equal written planned) then
+    file_scope_types_written := GlobRef.Set.empty;
+    if not (GlobRef.Set.equal written planned) then
+      let refs s = Pp.prlist_with_sep Pp.pr_comma GlobRef.print (GlobRef.Set.elements s) in
       Probe.violation "file-scope types"
         Pp.(
           str "the " ++ str (Common.file_name file) ++ str " introduced "
-          ++ prlist_with_sep pr_comma str (CString.Set.elements (CString.Set.diff written planned))
+          ++ refs (GlobRef.Set.diff written planned)
           ++ str " unplanned, and not "
-          ++ prlist_with_sep pr_comma str (CString.Set.elements (CString.Set.diff planned written)) )
+          ++ refs (GlobRef.Set.diff planned written) )
   end
 
 (** [pp_initialiser ctx env ty e] prints [e] as the initialiser of something
@@ -2706,7 +2716,7 @@ and pp_leaf_decl ctx env (d : cpp_decl) =
         ds_needs_shared_from_this = sft;
       } ->
     let struct_name = struct_definition_name ctx id in
-    note_file_scope_name ctx struct_name;
+    note_file_scope_name ctx id;
     if Probe.checking () then if ctx.rc_in_struct then printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref id);
     let f_s =
       entering_from ctx

@@ -1968,7 +1968,7 @@ let plan_file_layout s =
     find 0 analysis.sorted_modules
   in
   let erased = ref [] and specs = ref [] and member_defs = ref [] and forward = ref [] and homes = ref [] in
-  let types = ref CString.Set.empty in
+  let types = ref GlobRef.Set.empty in
   let home mp d (rendered : Cpp_ind.rendered) =
     List.iter
       (fun (_, d') ->
@@ -1990,7 +1990,7 @@ let plan_file_layout s =
     let pass = if lifted then 0 else 1 in
     forward :=
       ((pass, position mp), List.map (fun f -> (lifted, f)) (Cpp_leaf_plan.forward_declarations at ~module_:mp env d)) :: !forward;
-    types := List.fold_right CString.Set.add (Cpp_leaf_plan.file_scope_types at d) !types
+    types := List.fold_right GlobRef.Set.add (Cpp_leaf_plan.file_scope_types d) !types
   in
   let element_at mp = Cpp_ind.spelling_position ~file:Intf (Element_of mp) in
   let wrapper_lifted ~module_ se =
@@ -2067,7 +2067,12 @@ let plan_file_layout s =
             if at <= own && not (List.exists (fun h' -> ModPath.equal h'.wrapped h.wrapped) acc) then acc @ [h] else acc )
           []
           (List.stable_sort (fun (i, _, _) (j, _, _) -> Int.compare i j) (List.rev !homes)) };
-  Cpp_state.header_file_scope_types := Some !types
+  let aliases =
+    GlobRef.Set.fold
+      (fun r acc -> match Table.promoted_type_var_name r with Some v -> Id.Set.add v acc | None -> acc)
+      !types Id.Set.empty
+  in
+  Cpp_state.header_file_scope := Some {fs_types = !types; fs_aliases = aliases}
 
 (** Plan the synthesised templates each file writes
     ({!Cpp_print.plan_ctor_aliases}), read off what was generated ahead of

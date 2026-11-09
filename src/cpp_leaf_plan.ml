@@ -72,8 +72,8 @@ let type_names_into_a_struct ctx t =
   match t with
   | Tvar _ | Tinstance _ | Tvoid | Thole | Tdecltype_auto | Terased _ | Tany | Topaque -> Some false
   | Tunresolved -> None
-  | Tpromoted id -> Some (scopes_name_into_a_struct (Option.default [] (member_scopes ctx id)))
-  | Tid (id, args) -> scopes_name_into_a_struct (Option.default [] (member_scopes ctx id)) ||? any args
+  | Tpromoted _ -> Some (scopes_name_into_a_struct (Option.default [] (member_scopes ctx t)))
+  | Tid (_, args) -> scopes_name_into_a_struct (Option.default [] (member_scopes ctx t)) ||? any args
   | Tid_external (id_s, args) -> text_names_into_a_struct (external_type_name id_s) ||? any args
   | Tglob (r, tys, _) -> (
     match Cpp_names.inline_custom_text ctx r with
@@ -723,7 +723,7 @@ let ctor_alias_render_ctx ctx (declared : Cpp_ast.declared_in) =
   | In_struct_of home, Common.Intf ->
     {start with rc_in_struct = true; rc_in_template = Scope_plan.templated home; rc_module = Some home}
   | In_struct_of home, Common.Impl ->
-    let out_of_line ol_scope = {ol_scope; ol_file_scope_types = file_scope_types_of Common.Impl} in
+    let out_of_line ol_scope = {ol_scope; ol_file_scope_aliases = file_scope_aliases_of Common.Impl} in
     {start with rc_scope = Option.map out_of_line (Scope_plan.of_module home); rc_module = Some home}
 
 (* The indices of the type variables writing [t], naming the variables [vl]
@@ -1142,40 +1142,20 @@ let writing ctx (settled : Cpp_erasure.settled) =
     | Some uses -> {ctx with rc_tyctors = Planned uses}
     | None -> deciding ctx (ref [])
 
-(** The type names [d], written at namespace scope at the position [ctx],
-    introduces there, as the printer writes them ({!Cpp_print.decl_type_name}), the names it writes
-    resolved there first: those of the structs it defines, and the inline
-    custom texts of the aliases and wrappers it declares. *)
-let file_scope_types ctx (d : Cpp_erasure.settled) =
-  let rec declared : cpp_decl -> _ = function
-    | Dtemplate (_, _, inner) -> declared inner
-    | Dusing u -> [u.du_name]
-    | Dnspace (Some w, _) -> [w.nw_ref]
-    | _ -> []
-  in
-  let rec keys (d : Cpp_erasure.settled) =
-    let declared = declared (d :> cpp_decl) in
-    Cpp_names.inline_customs_named declared
-    @ List.map (fun r -> Cpp_resolution.Short (Type, r)) declared
-    @
-    match Cpp_erasure.view d with
-    | Template (_, _, inner) -> keys inner
-    | Namespace (None, decls) -> List.concat_map keys decls
-    | Decl (Dstruct {ds_ref; _}) -> [Cpp_resolution.Definition (Struct_definition, ds_ref)]
-    | Namespace (Some _, _) | Decl _ -> []
-  in
-  let names = Cpp_resolution.resolve (fun _ key -> live_value ctx key) (List.map (fun key -> (ctx.rc_frame, key)) (keys d)) in
-  let ctx = {ctx with rc_names = Names_resolved names} in
+(** The types [d], written at namespace scope, introduces there, by the
+    entity each declares ({!Cpp_print.decl_type_ref}): the aliases and
+    wrappers it declares and the structs it defines. *)
+let file_scope_types (d : Cpp_erasure.settled) =
   let rec go (d : Cpp_erasure.settled) =
-    (match decl_type_name ctx (d :> cpp_decl) with Some name -> [name] | None -> [])
+    (match decl_type_ref (d :> cpp_decl) with Some r -> [r] | None -> [])
     @
     match Cpp_erasure.view d with
     | Template (_, _, inner) -> go inner
     | Namespace (None, decls) -> List.concat_map go decls
-    | Decl (Dstruct {ds_ref; _}) -> [struct_definition_name ctx ds_ref]
+    | Decl (Dstruct {ds_ref; _}) -> [ds_ref]
     | Namespace (Some _, _) | Decl _ -> []
   in
-  List.map Pp.string_of_ppcmds (go d)
+  go d
 
 (* The wrapper structs [d] writes around something other than a sole struct
    merged into them, in the order it writes them, each named by [name]. *)

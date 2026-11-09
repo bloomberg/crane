@@ -78,7 +78,7 @@ done
 # a function and the file-scope names that withhold its qualifier) and the
 # spelling of that scope (Scope_plan.qualifier).  PENDING only shrinks.
 PRINTER_PLAN_ALLOWED=(
-  "Cpp_state : file_start pp_tvar sn file_scope_types_of"
+  "Cpp_state : file_start pp_tvar sn file_scope_aliases_of"
   "Module_plan : is_namespace_scope_ref"
   "Scope_plan : of_declaration qualifier"
 )

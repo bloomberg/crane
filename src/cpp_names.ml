@@ -968,7 +968,7 @@ let next (entered : Cpp_resolution.entered) (c : render_ctx) =
     | In_struct -> {c with rc_in_struct = true}
     | In_template -> {c with rc_in_template = true}
     | Function {owner; defines} ->
-      let out_of_line ol_scope = {ol_scope; ol_file_scope_types = file_scope_types_of c.rc_file} in
+      let out_of_line ol_scope = {ol_scope; ol_file_scope_aliases = file_scope_aliases_of c.rc_file} in
       { c with
         rc_scope = (if defines && not c.rc_in_struct then Option.map out_of_line (Scope_plan.of_declaration owner) else None) }
   in

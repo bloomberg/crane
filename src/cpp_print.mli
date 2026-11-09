@@ -89,9 +89,8 @@ val cut2 : unit -> Pp.t
 (** {2 The printer's spelling, as planning asks it}
 
     Planning's questions about what a declaration writes
-    ({!Cpp_leaf_plan.declaration_names_into_a_struct},
-    {!Cpp_leaf_plan.file_scope_types}) are asked of the same heads and names
-    the printer writes, not of a rendering. *)
+    ({!Cpp_leaf_plan.declaration_names_into_a_struct}) are asked of the same
+    heads and names the printer writes, not of a rendering. *)
 
 (** A type's name as the type printer writes it: the qualifiers in front of
     it, the name itself, whether a dependent qualifier in it asks for
@@ -117,7 +116,7 @@ val inductive_head : Cpp_state.render_ctx -> GlobRef.t -> applied:bool -> writte
 (** The qualifiers a member of the struct being defined out of line is
     written with when named outside that struct's body, or [None] where it
     is written bare. *)
-val member_scopes : Cpp_state.render_ctx -> Id.t -> Cpp_name.scope list option
+val member_scopes : Cpp_state.render_ctx -> cpp_type -> Cpp_name.scope list option
 
 (** The spelling of an external type's name. *)
 val external_type_name : string -> string
@@ -126,12 +125,9 @@ val external_type_name : string -> string
     written through. *)
 val uint63_type : unit -> GlobRef.t option
 
-(** The type name a declaration introduces at the position, for the shapes
-    whose spelling is settled by the declaration. *)
-val decl_type_name : Cpp_state.render_ctx -> cpp_decl -> Pp.t option
-
-(** The name the struct of the inductive is defined under. *)
-val struct_definition_name : Cpp_state.render_ctx -> GlobRef.t -> Pp.t
+(** The type a declaration introduces, by the entity it declares, for an
+    alias and a wrapper struct. *)
+val decl_type_ref : cpp_decl -> GlobRef.t option
 
 (** {2 Custom type templates} *)
 
