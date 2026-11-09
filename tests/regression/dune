@@ -14057,3 +14057,14 @@
   (deps promoted_alias_out_of_line.t.exe)
   (action (run ./promoted_alias_out_of_line.t.exe))))
 
+
+(subdir mutual_lambda_ground_instance
+ (rule
+  (targets mutual_lambda_ground_instance.t.exe)
+  (deps MutualLambdaGroundInstance.vo mutual_lambda_ground_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mutual_lambda_ground_instance.t.exe mutual_lambda_ground_instance.t.cpp mutual_lambda_ground_instance.cpp)))
+ (rule
+  (alias runtest)
+  (deps mutual_lambda_ground_instance.t.exe)
+  (action (run ./mutual_lambda_ground_instance.t.exe))))

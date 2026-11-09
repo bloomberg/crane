@@ -1781,9 +1781,10 @@ and observe_type_arg env sg db a =
 
 (** The use's instantiation of [schema]: for each variable, the type its
     metavariable in [metas] was solved to, frozen ({!Mlutil.freeze_types}), or
-    [Identity] for a [rigid] self-call; and the argument the call wrote at the
-    variable's binder, if the call reaches that binder -- [observed = None]
-    where what was written could not be read as a type. *)
+    [Identity] for a variable a call within the recursive group keeps [rigid];
+    and the argument the call wrote at the variable's binder, if the call
+    reaches that binder -- [observed = None] where what was written could not
+    be read as a type. *)
 and freeze_instantiation schema ~rigid metas written_at =
   let frozen = Array.of_list (freeze_types (Array.to_list metas)) in
   Scheme.Instantiation.make (Ml_schema.id schema) (fun v ->
@@ -1794,7 +1795,7 @@ and freeze_instantiation schema ~rigid metas written_at =
         | _ -> Scheme.Not_written
       in
       let solution =
-        if rigid then Scheme.Identity
+        if rigid v then Scheme.Identity
         else Scheme.Type frozen.(Scheme.Var.ordinal v - 1)
       in
       {Scheme.solution; source} )
@@ -1811,34 +1812,9 @@ and extract_cst_app env sg mle mlt kn args =
   (* First, the [ml_schema] of the constant, in expanded version. *)
   let schema = record_constant_type env sg kn None in
   let schema = Ml_schema.with_body (expand env (Ml_schema.body schema)) schema in
-  (* Can we instantiate types variables for this constant ? *)
-  (* In Ocaml, inside the definition of this constant, the answer is no. *)
   (* The metas the scheme's type variables are instantiated with, kept so
      that the call's own type arguments can be given to them below. *)
   let tvar_metas = Array.init (Ml_schema.arity schema) (fun _ -> new_meta ()) in
-  let rigid =
-    lang () == Cpp
-    && List.exists (fun c -> QConstant.equal env kn c) !current_fixpoints
-  in
-  let instantiated =
-    (* This is the version of the type that is instantiated (shocker) *)
-    if rigid then rigidify (Ml_schema.body schema)
-    else type_subst_vect tvar_metas (Ml_schema.body schema)
-  in
-  (* Then the expected type of this constant. *)
-  let a = new_meta () in
-  (* We compare stored and expected types in two steps. *)
-  (* First, can [kn] be applied to all args ? *)
-  let metas = List.map new_meta args in
-  let magic1 = needs_magic (type_recomp (metas, a), instantiated) in
-  (* Second, is the resulting type compatible with the expected type [mlt] ? *)
-  let magic2 = needs_magic (a, mlt) in
-  (* Now, the extraction of the arguments. *)
-  let s_full = type2signature env (Ml_schema.body schema) in
-  let s_full = sign_with_implicits (GlobRef.ConstRef kn) s_full 0 in
-  let s = sign_no_final_keeps s_full in
-  let ls = List.length s in
-  let la = List.length args in
   (* What the call wrote for a scheme variable: the observation of the
      argument at the binder the variable comes from, [Some None] where that
      argument says nothing readable, [None] where the call does not reach the
@@ -1869,24 +1845,67 @@ and extract_cst_app env sg mle mlt kn args =
      the term around it numbers its own -- a fixpoint's are rigid -- and
      binding a meta to the wrong one plants a mismatch that surfaces later as
      a coercion. *)
-  let () =
-    if lang () == Cpp && not rigid then
-      let rec informative = function
-        | Tdummy _ | Tunknown | Taxiom | Tapp _ | Tvar _ | Thole _ -> false
-        | Tmeta {contents = None} | Topen _ -> false
-        | Tarr (a, b) -> informative a && informative b
-        | Tglob (_, l, _) -> List.for_all informative l
-        | Tmeta {contents = Some u} -> informative u
-        | Tstring -> true
-      in
-      List.iter
-        (fun v ->
-          match written_at v with
-          | Some (Some t) when informative t ->
-            try_mgu tvar_metas.(Scheme.Var.ordinal v - 1) (expand env t)
-          | _ -> () )
-        (Ml_schema.vars schema)
+  let given =
+    let rec informative = function
+      | Tdummy _ | Tunknown | Taxiom | Tapp _ | Tvar _ | Thole _ -> false
+      | Tmeta {contents = None} | Topen _ -> false
+      | Tarr (a, b) -> informative a && informative b
+      | Tglob (_, l, _) -> List.for_all informative l
+      | Tmeta {contents = Some u} -> informative u
+      | Tstring -> true
+    in
+    Array.of_list
+      (List.map
+         (fun v ->
+           match written_at v with
+           | Some (Some t) when lang () == Cpp && informative t -> Some t
+           | _ -> None )
+         (Ml_schema.vars schema) )
   in
+  let given v = given.(Scheme.Var.ordinal v - 1) in
+  (* Can we instantiate the type variables of this constant?  Not inside the
+     definition of its own recursive group, which is extracted at the group's
+     rigid variables: a member's variable there is the caller's own, unless
+     the call writes a ground type for it -- [g bool] inside [f] is [g] at
+     [bool], whatever [f]'s variables are -- and then it is instantiated like
+     any other constant's. *)
+  let in_group =
+    lang () == Cpp
+    && List.exists (fun c -> QConstant.equal env kn c) !current_fixpoints
+  in
+  let rigid v = in_group && Option.is_empty (given v) in
+  let instantiated =
+    (* This is the version of the type that is instantiated (shocker) *)
+    if in_group then
+      rigidify
+        (type_subst_fun
+           (fun j ->
+             match Scheme.Var.of_tvar (Ml_schema.id schema) j with
+             | Some v when not (rigid v) -> Some tvar_metas.(j - 1)
+             | _ -> None )
+           (Ml_schema.body schema) )
+    else type_subst_vect tvar_metas (Ml_schema.body schema)
+  in
+  (* Then the expected type of this constant. *)
+  let a = new_meta () in
+  (* We compare stored and expected types in two steps. *)
+  (* First, can [kn] be applied to all args ? *)
+  let metas = List.map new_meta args in
+  let magic1 = needs_magic (type_recomp (metas, a), instantiated) in
+  (* Second, is the resulting type compatible with the expected type [mlt] ? *)
+  let magic2 = needs_magic (a, mlt) in
+  (* Now, the extraction of the arguments. *)
+  let s_full = type2signature env (Ml_schema.body schema) in
+  let s_full = sign_with_implicits (GlobRef.ConstRef kn) s_full 0 in
+  let s = sign_no_final_keeps s_full in
+  let ls = List.length s in
+  let la = List.length args in
+  List.iter
+    (fun v ->
+      match given v with
+      | Some t -> try_mgu tvar_metas.(Scheme.Var.ordinal v - 1) (expand env t)
+      | None -> () )
+    (Ml_schema.vars schema);
   let mla = make_mlargs env sg mle s args metas in
   (* The arguments are extracted, so the local unification is over: what it
      solved the scheme's variables to is frozen into the use, a variable it
