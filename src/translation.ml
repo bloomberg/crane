@@ -9228,7 +9228,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       in
       let renamed = List.map (fun ((id, _), _, _, _) -> id) funs_compiled in
       (* Build a lifted definition for each fixpoint function (usually just one) *)
-      let n_fix = Array.length funs in
+      let ungeneralised = lifted_fix_ungeneralised_params funs in
       List.iteri
         (fun i ((_, fix_ty), params, body, param_binders) ->
           let cpp_ty =
@@ -9239,16 +9239,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             | Tfun (dom, cod) -> (dom, cod)
             | _ -> ([], cpp_ty)
           in
-          (* Detect params that are not simply forwarded at recursive call
-             sites — these must keep std::function type to avoid infinite
-             recursive template instantiation. *)
-          let non_fwd_source_indices =
-            let lam_params, stripped_body =
-              Mlutil.collect_lams funs.(i)
-            in
-            detect_non_forwarded_params_fix
-              (List.length lam_params) n_fix i stripped_body
-          in
+          (* The callables a recursive call would instantiate the helper at
+             without end take a [crane::fn]. *)
+          let non_fwd_source_indices = ungeneralised.(i) in
           let cpp_params, all_temps_with_funs =
             build_lifted_cpp_params
               ~non_fwd_source_indices
@@ -10127,7 +10120,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         in
         let renamed = List.map (fun ((id, _), _, _, _) -> id) funs_compiled in
         (* Build lifted declarations *)
-        let n_fix = Array.length funs in
+        let ungeneralised = lifted_fix_ungeneralised_params funs in
         List.iteri
           (fun i ((_, fix_ty), params, body, param_binders) ->
             let cpp_ty =
@@ -10141,13 +10134,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               | Tfun (dom, cod) -> (dom, cod)
               | _ -> ([], cpp_ty)
             in
-            let non_fwd_source_indices =
-              let lam_params, stripped_body =
-                Mlutil.collect_lams funs.(i)
-              in
-              detect_non_forwarded_params_fix
-                (List.length lam_params) n_fix i stripped_body
-            in
+            let non_fwd_source_indices = ungeneralised.(i) in
             let cpp_params, all_temps_with_funs =
               build_lifted_cpp_params
                 ~non_fwd_source_indices

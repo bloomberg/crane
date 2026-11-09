@@ -14112,3 +14112,14 @@
   (alias runtest)
   (deps local_lifted_mutual.t.exe)
   (action (run ./local_lifted_mutual.t.exe))))
+
+(subdir local_lifted_mutual_closure_back
+ (rule
+  (targets local_lifted_mutual_closure_back.t.exe)
+  (deps LocalLiftedMutualClosureBack.vo local_lifted_mutual_closure_back.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_lifted_mutual_closure_back.t.exe local_lifted_mutual_closure_back.t.cpp local_lifted_mutual_closure_back.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_lifted_mutual_closure_back.t.exe)
+  (action (run ./local_lifted_mutual_closure_back.t.exe))))

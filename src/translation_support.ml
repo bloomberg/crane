@@ -1970,9 +1970,13 @@ let rec argument_source n_params locals = function
    |MLcons _ | MLtuple _ | MLparray _ -> `Fixed
   | MLlam _ | MLapp _ | MLletin _ | MLcase _ | MLfix _ -> `Closure
 
-(** For each function of a recursive group, the source-order indices of the
-    parameters a call from another member of its group passes a closure for,
-    where that closure's type would feed the instantiation that makes it.
+(** For each member of the recursive groups [bodies], the source-order
+    indices of the parameters a call from another member of its group passes
+    a closure for, where that closure's type would feed the instantiation
+    that makes it.  [callee self depth head] is the member the head of an
+    application in the body of [self], under [depth] binders past its
+    parameters, calls, if any: how a member names its partners is the
+    caller's.
 
     A deduced callable is the argument's own type, and a closure written in
     a function template has a type of its own in each instantiation of it:
@@ -1992,27 +1996,24 @@ let rec argument_source n_params locals = function
     parameter a self-call passes anything but itself is
     {!detect_non_forwarded_params}' to keep, and depends on nothing.  A
     self-call's closure is that function's too. *)
-let partner_closure_params groups struc =
-  let arity = ref Ref.User.Map.empty in
+let closure_feedback_params ~callee bodies =
+  let n_members = Array.length bodies in
   (* (callee, position) the parameter at each position of a member forwards
      to, and the (callee, position) each member passes a closure to. *)
-  let forwards = ref Ref.User.Map.empty in
-  let creates = ref Ref.User.Map.empty in
-  let fixed = ref Ref.User.Map.empty in
-  let add tbl r x =
-    tbl := Ref.User.Map.add r (x :: Option.default [] (Ref.User.Map.find_opt r !tbl)) !tbl
-  in
+  let forwards = Array.make n_members [] in
+  let creates = Array.make n_members [] in
+  let fixed = Array.make n_members [] in
+  let add tbl r x = tbl.(r) <- x :: tbl.(r) in
   let scan self body =
     let params, body = collect_lams body in
     let n = List.length params in
-    arity := Ref.User.Map.add self n !arity;
     let rec strip = function MLmagic (_, e) -> strip e | e -> e in
     let rec walk locals e =
       match e with
       | MLapp (f, args) ->
-        ( match strip f with
-        | MLglob {callee = g; _} when Recursive_groups.in_group groups self g ->
-          let self_call = Ref.User.equal g self in
+        ( match callee self (List.length locals) (strip f) with
+        | Some g ->
+          let self_call = Int.equal g self in
           List.iteri
             (fun k arg ->
               let source = argument_source n locals arg in
@@ -2022,7 +2023,7 @@ let partner_closure_params groups struc =
               | `Closure -> add creates self (g, k)
               | `Fixed -> () )
             args
-        | _ -> () );
+        | None -> () );
         walk locals f;
         List.iter (walk locals) args
       | MLlam (_, _, b) -> walk (Local_other :: locals) b
@@ -2053,47 +2054,101 @@ let partner_closure_params groups struc =
     in
     walk [] body
   in
-  Modutil.struct_iter
-    (fun d ->
-      List.iter
-        (fun fd ->
-          if Recursive_groups.group groups fd.fd_ref <> None then scan fd.fd_ref fd.fd_body )
-        (Mlutil.term_defs d) )
-    (fun _ -> ())
-    (fun _ -> ())
-    struc;
-  let find tbl r = Option.default [] (Ref.User.Map.find_opt r !tbl) in
-  let is_fixed (r, k) = List.mem k (find fixed r) in
+  Array.iteri scan bodies;
+  let is_fixed (r, k) = List.mem k fixed.(r) in
   let succ (r, i) =
-    List.filter_map (fun (j, dst) -> if j = i then Some dst else None) (find forwards r)
-    @ find creates r
+    List.filter_map (fun (j, dst) -> if j = i then Some dst else None) forwards.(r) @ creates.(r)
   in
-  let same (r, i) (r', i') = Ref.User.equal r r' && i = i' in
   (* Whether some parameter of [maker] depends on [start]. *)
   let reaches_maker maker start =
     let rec go seen = function
       | [] -> false
       | node :: rest ->
-        if List.exists (same node) seen || is_fixed node then go seen rest
-        else if Ref.User.equal (fst node) maker then true
+        if List.mem node seen || is_fixed node then go seen rest
+        else if Int.equal (fst node) maker then true
         else go (node :: seen) (succ node @ rest)
     in
     go [] [start]
   in
-  let kept = ref Ref.User.Map.empty in
-  Ref.User.Map.iter
+  let kept = Array.make n_members [] in
+  Array.iteri
     (fun maker targets ->
       List.iter
         (fun ((g, k) as target) ->
           if
-            (not (Ref.User.equal g maker))
+            (not (Int.equal g maker))
             && (not (is_fixed target))
-            && (not (List.mem k (find kept g)))
+            && (not (List.mem k kept.(g)))
             && reaches_maker maker target
           then add kept g k )
         targets )
-    !creates;
-  Ref.User.Map.fold (fun g is acc -> (g, List.sort compare is) :: acc) !kept []
+    creates;
+  Array.map (List.sort compare) kept
+
+(** {!closure_feedback_params} of the top-level recursive groups of
+    [struc]: a member calls a partner by name. *)
+let partner_closure_params groups struc =
+  let members = ref [] in
+  Modutil.struct_iter
+    (fun d ->
+      List.iter
+        (fun fd ->
+          if Recursive_groups.group groups fd.fd_ref <> None then
+            members := (fd.fd_ref, fd.fd_body) :: !members )
+        (Mlutil.term_defs d) )
+    (fun _ -> ())
+    (fun _ -> ())
+    struc;
+  let members = Array.of_list (List.rev !members) in
+  let refs = Array.map fst members in
+  let index g =
+    let rec go i =
+      if i >= Array.length refs then None else if Ref.User.equal refs.(i) g then Some i else go (i + 1)
+    in
+    go 0
+  in
+  let kept =
+    closure_feedback_params
+      ~callee:(fun self _ f ->
+        match f with
+        | MLglob {callee = g; _} when Recursive_groups.in_group groups refs.(self) g -> index g
+        | _ -> None )
+      (Array.map snd members)
+  in
+  let acc = ref [] in
+  Array.iteri (fun i is -> if is <> [] then acc := (refs.(i), is) :: !acc) kept;
+  !acc
+
+(** {!closure_feedback_params} of the local fixpoint group [funs], whose
+    member [j] a body of [n_params] parameters names, under [depth] binders,
+    by [MLrel (n_params + n_fix - j + depth)] ({!detect_non_forwarded_params_fix}):
+    a lifted member deduces its callables as a top-level function does. *)
+let local_fix_partner_closure_params funs =
+  let n_fix = Array.length funs in
+  let n_params = Array.map (fun f -> List.length (fst (collect_lams f))) funs in
+  closure_feedback_params
+    ~callee:(fun self depth f ->
+      match f with
+      | MLrel (db, _) ->
+        let j = n_params.(self) + n_fix + depth - db in
+        if j >= 0 && j < n_fix then Some j else None
+      | _ -> None )
+    funs
+
+(** For each member of the local fixpoint group [funs] lifted to a function
+    template, the source-order indices of the callable parameters it takes
+    as a [crane::fn] rather than deducing: those a self-call passes
+    something else for ({!detect_non_forwarded_params_fix}) and those a
+    partner passes a closure that flows back to it
+    ({!local_fix_partner_closure_params}). *)
+let lifted_fix_ungeneralised_params funs =
+  let n_fix = Array.length funs in
+  let partners = local_fix_partner_closure_params funs in
+  Array.mapi
+    (fun i f ->
+      let lam_params, body = collect_lams f in
+      detect_non_forwarded_params_fix (List.length lam_params) n_fix i body @ partners.(i) )
+    funs
 
 (** The extraction's {!partner_closure_params}. *)
 let partner_closure_params_table : int list Ref.User.Map.t ref =
