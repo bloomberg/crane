@@ -220,12 +220,12 @@ and tyctor_decision = {
 
 (** The out-of-line definition being written: the scope it is a member
     of, as planned, which a name written outside that struct's body is
-    qualified by; and the type names its file declares at file scope
-    ({!header_file_scope_types}), which a plain name in it means instead
-    of a member of that struct. *)
+    qualified by; and the promoted type variables whose alias its file
+    declares at file scope ({!header_file_scope}), which such a variable
+    written in it means instead of a member of that struct. *)
 and out_of_line = {
   ol_scope : Scope_plan.scope;
-  ol_file_scope_types : CString.Set.t;
+  ol_file_scope_aliases : Names.Id.Set.t;
 }
 
 (** Where in the output something is written or planned: a value, handed
@@ -273,15 +273,27 @@ and render_ctx = {
     struct. *)
 val file_start : Common.file -> render_ctx
 
-(** The type names the header declares at file scope, planned with its
-    layout ({!Cpp_leaf_plan.file_scope_types}); [None] until planned, which
-    file layout planning's own questions are asked before.  The
-    implementation declares no type of its own. *)
-val header_file_scope_types : CString.Set.t option ref
+(** What a file declares at file scope: the types, by the entity each
+    declaration declares, and the promoted type variables among them, by
+    the name their one alias is declared under ({!Table.promoted_type_var_field}). *)
+type file_scope = {
+  fs_types : Names.GlobRef.Set.t;
+  fs_aliases : Names.Id.Set.t;
+}
 
-(** The type names the file [file] declares at file scope, as planned:
-    none before they are planned. *)
-val file_scope_types_of : Common.file -> CString.Set.t
+(** What the header declares at file scope, planned with its layout
+    ({!Cpp_leaf_plan.file_scope_types}); [None] until planned, which file
+    layout planning's own questions are asked before.  The implementation
+    declares no type of its own. *)
+val header_file_scope : file_scope option ref
+
+(** The types the file [file] declares at file scope, as planned: none
+    before they are planned. *)
+val file_scope_types_of : Common.file -> Names.GlobRef.Set.t
+
+(** The promoted type variables whose alias the file [file] declares at
+    file scope, as planned: none before they are planned. *)
+val file_scope_aliases_of : Common.file -> Names.Id.Set.t
 
 
 (** A concept a frame is holding back until after the struct it was written

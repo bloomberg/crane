@@ -31,12 +31,11 @@ type ctor_aliases_read = {
     written as planned, or, before anything is planned, as decided. *)
 val read_decl : Cpp_state.render_ctx -> Common.env -> Cpp_erasure.settled -> Pp.t
 
-(** The type names the declaration, written at namespace scope at the
-    position, introduces there, as the printer writes them, what they name
-    resolved there first: its own, through a template head and an anonymous
-    namespace, and a struct's -- but not those of what a wrapper struct
-    holds, which are its members. *)
-val file_scope_types : Cpp_state.render_ctx -> Cpp_erasure.settled -> string list
+(** The types the declaration, written at namespace scope, introduces
+    there, by the entity each declares: its own, through a template head and
+    an anonymous namespace, and a struct's -- but not those of what a wrapper
+    struct holds, which are its members. *)
+val file_scope_types : Cpp_erasure.settled -> Names.GlobRef.t list
 
 (** The head of every global type in a type. *)
 val type_heads : cpp_type -> GlobRef.t list

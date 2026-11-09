@@ -533,10 +533,11 @@ and tyctor_decision = {
 }
 
 (** The out-of-line definition being written: the scope it is a member
-    of, and the type names its file declares at file scope. *)
+    of, and the promoted type variables whose alias its file declares at
+    file scope. *)
 and out_of_line = {
   ol_scope : Scope_plan.scope;
-  ol_file_scope_types : CString.Set.t;
+  ol_file_scope_aliases : Id.Set.t;
 }
 
 (** Where in the output something is written or planned: a value, handed
@@ -594,15 +595,27 @@ let file_start rc_file =
     rc_tyctors = Unplanned;
   }
 
-(* The type names the header declares at file scope: an erased type-class
-   field's [using], a wrapper, a struct.  A definition written out of line
-   qualifies the plain names in its signature with its struct's, which is
-   right for a member and wrong for one of these. *)
-let header_file_scope_types : CString.Set.t option ref = State.cell State.Unit None
+type file_scope = {
+  fs_types : GlobRef.Set.t;
+  fs_aliases : Id.Set.t;
+}
 
-let file_scope_types_of = function
-  | Common.Intf -> Option.default CString.Set.empty !header_file_scope_types
-  | Common.Impl -> CString.Set.empty
+(* What the header declares at file scope: the types (an erased type-class
+   field's [using], a wrapper, a struct), and among them the promoted type
+   variables' aliases.  A definition written out of line qualifies the plain
+   names in its signature with its struct's, which is right for a member and
+   wrong for one of these aliases. *)
+let header_file_scope : file_scope option ref = State.cell State.Unit None
+
+let file_scope_types_of file =
+  match (file, !header_file_scope) with
+  | Common.Intf, Some fs -> fs.fs_types
+  | (Common.Intf | Common.Impl), _ -> GlobRef.Set.empty
+
+let file_scope_aliases_of file =
+  match (file, !header_file_scope) with
+  | Common.Intf, Some fs -> fs.fs_aliases
+  | (Common.Intf | Common.Impl), _ -> Id.Set.empty
 
 (** The modules whose module types are file-scope concepts of a functor
     ({!Module_plan.concept_scope}): a functor's body, an application of the
