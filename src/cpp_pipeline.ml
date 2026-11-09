@@ -65,6 +65,7 @@ let boxed_reads = Pipeline_trace.pass "boxed_reads" Cpp_erasure.lower_boxed_read
 let template_args = Pipeline_trace.pass "template_args" Cpp_erasure.supply_template_args
 let method_calls = Pipeline_trace.pass "method_calls" Cpp_erasure.lower_method_calls
 let projections = Pipeline_trace.pass "projections" Cpp_erasure.lower_projections
+let conditionals = Pipeline_trace.pass "conditionals" Cpp_erasure.lower_conditionals
 let access_moves = Pipeline_trace.pass "access_moves" Cpp_erasure.lower_access_moves
 let constexpr = Pipeline_trace.pass "constexpr" Cpp_erasure.decide_constexpr
 let foreign = Pipeline_trace.pass "foreign" Cpp_erasure.instantiate_foreign
@@ -121,7 +122,6 @@ let seam = "materialise"
 
 (** Every pass after the seam, in the order they run. *)
 let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
-  let open Pipeline_trace in
   [ casts;
     (* With the heads final, a body naming a type variable no head declares
        is a name nothing in scope introduces; spell it [std::any] rather than
@@ -139,7 +139,7 @@ let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
     (* So does a projection, applied or named as a value. *)
     projections;
     (* A lambda invoked only to choose between two values is the choice. *)
-    pass "conditionals" Cpp_erasure.lower_conditionals;
+    conditionals;
     (* A member read moves the member, not the object it is read from. *)
     access_moves;
     (* With every type final, which definitions may be [constexpr]. *)
@@ -167,10 +167,11 @@ let pass_names =
     constraint the body has not settled, a cast whose caster is not chosen, a
     type variable nothing declares, a type argument a mapping's template names
     and its application leaves out, a call of a method or a projection
-    written as a call of a function, a member read of a moved object, a
-    definition not yet known to be [constexpr] or not, a mapping's text not yet
-    instantiated.  Each is discharged by one pass above, and
-    {!Cpp_erasure.settled} claims that by the end none is outstanding.  The
+    written as a call of a function, a lambda invoked only to choose between
+    two values, a member read of a moved object, a definition not yet known
+    to be [constexpr] or not, a mapping's text not yet instantiated.  Each is
+    discharged by one pass above, and {!Cpp_erasure.settled} claims that by
+    the end none is outstanding.  The
     list is closed: a new kind of debt the printer must not see is a new
     constructor here, with the pass that pays it. *)
 type obligation =
@@ -192,6 +193,9 @@ type obligation =
           application does not supply *)
   | Unlowered_method_call
   | Unlowered_projection
+  | Unlowered_conditional
+      (** a lambda invoked at once that only chooses between two values,
+          not written as the {!Minicpp.CPPcond} it computes *)
   | Move_under_access  (** a member read of a moved object *)
   | Undecided_constexpr
       (** a definition whose {!Minicpp.constexpr_eligibility} is not
@@ -213,9 +217,17 @@ type obligation =
 
 let obligations =
   [ Unresolved_type; Opaque_type; Unspellable_binder; Unsettled_callable; Unresolved_cast; Free_type_variable;
-    Implicit_boxed_read; Missing_template_argument; Unlowered_method_call; Unlowered_projection; Move_under_access;
-    Undecided_constexpr; Uninstantiated_mapping; Unlowered_qualifier; Unslotted_pointer; Unnamed_scrutinee;
-    Undecided_capture; Capture_outside_a_block ]
+    Implicit_boxed_read; Missing_template_argument; Unlowered_method_call; Unlowered_projection;
+    Unlowered_conditional; Move_under_access; Undecided_constexpr; Uninstantiated_mapping; Unlowered_qualifier;
+    Unslotted_pointer; Unnamed_scrutinee; Undecided_capture; Capture_outside_a_block ]
+
+(** Whether [o] is checked before the instantiation passes rather than on
+    the declaration the printer is handed.  A choice is recognised by the
+    shape of its lambda's body, and {!scrutinees} reshapes that body --
+    naming a match's computed scrutinee puts a declaration in front of the
+    match -- so on the final declaration a second run of {!conditionals}
+    finds nothing to do whether or not the first paid what it owed. *)
+let checked_before_instantiation = function Unlowered_conditional -> true | _ -> false
 
 let describe = function
   | Unresolved_type -> "an undetermined type (Tunresolved), owed by the pass that wrote it"
@@ -228,6 +240,7 @@ let describe = function
   | Missing_template_argument -> "a mapping's unsupplied type argument, owed by " ^ template_args.name
   | Unlowered_method_call -> "a method called as a function, owed by " ^ method_calls.name
   | Unlowered_projection -> "a projection called as a function, owed by " ^ projections.name
+  | Unlowered_conditional -> "a choice written as an invoked lambda, owed by " ^ conditionals.name
   | Move_under_access -> "a member read of a moved object, owed by " ^ access_moves.name
   | Undecided_constexpr -> "an undecided constexpr eligibility, owed by " ^ constexpr.name
   | Uninstantiated_mapping -> "an uninstantiated mapping, owed by " ^ foreign.name
@@ -263,6 +276,7 @@ let owes (decl : Cpp_erasure.settled) o =
   | Missing_template_argument -> rewrites template_args
   | Unlowered_method_call -> rewrites method_calls
   | Unlowered_projection -> rewrites projections
+  | Unlowered_conditional -> rewrites conditionals
   | Move_under_access -> rewrites access_moves
   | Undecided_constexpr -> rewrites constexpr
   | Uninstantiated_mapping -> rewrites foreign
@@ -272,7 +286,10 @@ let owes (decl : Cpp_erasure.settled) o =
   | Undecided_capture -> rewrites captures
   | Capture_outside_a_block -> rewrites initialisers
 
-(** [check_settled decl] fails if [decl] still owes the printer anything.
+(** [check_settled obligations decl] fails if [decl] still owes any of
+    [obligations]: called with those {!checked_before_instantiation} once the
+    settled passes have run, and with the rest on what the printer is handed,
+    so that between them [decl] owes the printer nothing.
 
     The claim is about the {e whole} declaration and so cannot be carried by
     the type of its root, which is why it is checked here rather than enforced
@@ -282,7 +299,7 @@ let owes (decl : Cpp_erasure.settled) o =
     one a user's input can break.  The declaration is named as {!Table} names
     any global, since one a pass generated -- a lifted helper -- is not in the
     name table [Printer.pr_global] reads, and would fail the report itself. *)
-let check_settled (decl : Cpp_erasure.settled) =
+let check_settled obligations (decl : Cpp_erasure.settled) =
   match List.filter (owes decl) obligations with
   | [] -> ()
   | owed ->
@@ -322,11 +339,13 @@ let finish decl =
   let inj (d : Cpp_erasure.settled) = (d :> cpp_decl) in
   let checking = Sys.getenv_opt "CRANE_CHECK_IR" <> None in
   let decl = run inj settled_passes settled in
+  let early, late = List.partition checked_before_instantiation obligations in
+  if checking then check_settled early decl;
   let decl = run inj instantiation_passes decl in
   if checking then begin
     Borrow_projection.check_decl (decl :> cpp_decl);
     Move_check.check_decl (decl :> cpp_decl);
-    check_settled decl
+    check_settled late decl
   end;
   Option.iter
     (fun name ->
