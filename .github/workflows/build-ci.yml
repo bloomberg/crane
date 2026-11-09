@@ -105,18 +105,40 @@ jobs:
                 compile_script="scripts/compile-gmp.sh"
               fi
 
-              # Collect all .cpp source files (excluding the .t.cpp driver).
-              # Separate extraction tests produce per-module .cpp files
-              # (e.g. Datatypes.cpp, List.cpp) instead of a single
-              # $test_name.cpp.
-              cpp_sources=()
-              for f in "$test_dir"/*.cpp; do
-                [ -f "$f" ] || continue
-                fname=$(basename "$f")
-                # Skip the test driver — it's added explicitly below
-                if [[ "$fname" == *.t.cpp ]]; then continue; fi
-                cpp_sources+=("$fname")
-              done
+              # Read the .cpp sources to link with the driver from this test's
+              # own dune rule, rather than globbing the directory: a test
+              # directory can hold other extraction targets' standalone
+              # outputs that are not part of this test's link (e.g.
+              # dependent_extraction_targets/*_a.cpp, present only for
+              # check-headers-standalone.sh), and some tests need
+              # $test_name.cpp plus named extras (e.g.
+              # erased_nested_type_args needs instance_in_record_literal.cpp
+              # too). A separate-extraction test with one .cpp per Rocq
+              # module (e.g. Datatypes.cpp, List.cpp) lists all of them in
+              # its rule the same way. A directory dune has no rule for (e.g.
+              # a template harness) falls back to collecting every .cpp, as
+              # before.
+              suite_dune="$(dirname "$test_dir")/dune"
+              if grep -q "(subdir $test_name\$" "$suite_dune" 2>/dev/null; then
+                cpp_sources=()
+                while IFS= read -r fname; do
+                  cpp_sources+=("$fname")
+                done < <(
+                  awk -v name="$test_name" '
+                    $0 ~ "\\(subdir " name "$" { found=1 }
+                    found && /\(subdir / && $0 !~ "\\(subdir " name "$" { exit }
+                    found && (/compile-std\.sh/ || /compile-gmp\.sh/ || /compile-bde\.sh/) { print; exit }
+                  ' "$suite_dune" | grep -oE '[A-Za-z0-9_./]+\.cpp' | grep -v '\.t\.cpp$'
+                )
+              else
+                cpp_sources=()
+                for f in "$test_dir"/*.cpp; do
+                  [ -f "$f" ] || continue
+                  fname=$(basename "$f")
+                  if [[ "$fname" == *.t.cpp ]]; then continue; fi
+                  cpp_sources+=("$fname")
+                done
+              fi
 
               # Compile the test
               if (
