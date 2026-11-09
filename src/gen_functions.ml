@@ -95,16 +95,55 @@ let gen_type_alias r vars ot =
     and still be different C++ names: [Include M] inside a functor re-exports
     [M]'s fields as constants of the including module, so the forwarder's body
     and the forwarder itself agree canonically and differ in exactly the
-    qualifier that keeps the call from being a call to itself. *)
-let rec glob_subst_expr (id : GlobRef.t) (repl : cpp_expr) (e : cpp_expr) =
+    qualifier that keeps the call from being a call to itself.
+
+    A call made of one of the Core uses [spare] names keeps its head: the
+    use was written at another instance than the declaration's own
+    ({!other_instance_self_calls}), and its template arguments are that
+    instance's. *)
+let rec glob_subst_expr ?(spare = []) (id : GlobRef.t) (repl : cpp_expr) (e : cpp_expr) =
   match e with
   | CPPglob (id', _, _) when GlobRef.UserOrd.equal id id' ->
     repl
-  | _ -> map_expr (glob_subst_expr id repl) (glob_subst_stmt id repl) Fun.id e
+  | CPPfun_call (({cs_occurrence = Some o; _} as cs), (CPPglob (id', _, _) as head), args)
+    when GlobRef.UserOrd.equal id id' && List.exists (Miniml.Occurrence.equal o) spare ->
+    CPPfun_call (cs, head, of_reversed (List.map (glob_subst_expr ~spare id repl) (to_reversed args)))
+  | _ -> map_expr (glob_subst_expr ~spare id repl) (glob_subst_stmt ~spare id repl) Fun.id e
 
 (** Statement-level case of {!glob_subst_expr}. *)
-and glob_subst_stmt (id : GlobRef.t) (repl : cpp_expr) (s : cpp_stmt) =
-  map_stmt (glob_subst_expr id repl) (glob_subst_stmt id repl) Fun.id s
+and glob_subst_stmt ?(spare = []) (id : GlobRef.t) (repl : cpp_expr) (s : cpp_stmt) =
+  map_stmt (glob_subst_expr ~spare id repl) (glob_subst_stmt ~spare id repl) Fun.id s
+
+(** The occurrences of the uses of [n] in [b] written at another instance
+    than [n]'s own: a use that solves one of [n]'s variables to a ground
+    type, as a self-call written [f bool] inside [f] does
+    ({!Extraction.extract_cst_app}).  Every other self-call is at [n]'s own
+    variables -- [Identity], or a hole a pass left for inference. *)
+let other_instance_self_calls n b =
+  let rec ground = function
+    | Miniml.Tarr (a, c) -> ground a && ground c
+    | Miniml.Tglob (_, l, _) -> List.for_all ground l
+    | Miniml.Tmeta {contents = Some t} -> ground t
+    | Miniml.Tstring -> true
+    | _ -> false
+  in
+  let elsewhere use =
+    match Global_use.instantiation use with
+    | None -> false
+    | Some inst ->
+      Scheme.Instantiation.exists
+        (fun _ (s : Miniml.ml_type Scheme.slot) ->
+          match s.solution with Scheme.Type t -> ground t | Scheme.Identity -> false )
+        inst
+  in
+  let found = ref [] in
+  let rec walk = function
+    | MLglob use when GlobRef.UserOrd.equal (Global_use.callee use) n && elsewhere use ->
+      found := Global_use.occurrence use :: !found
+    | e -> Mlutil.ast_iter walk e
+  in
+  walk b;
+  !found
 
 (** Substitute [CPPvar id] with [repl] in expressions and statements. Uses
     generic AST visitors for structural recursion. *)
@@ -1225,6 +1264,9 @@ let gen_dfun n b cty ty temps =
       Some [Sreturn (Some (mk_call (CPPraw custom_name) param_vars))]
     | _ -> None
   in
+  (* A self-call written at another instance keeps the template arguments
+     translation gave it; every other reference to [n] is [rec_call]. *)
+  let spare = other_instance_self_calls n b in
   (* method_self_ns is set by the caller (gen_decl/gen_dfun_def) before
      computing cty, so it's already active here. *)
   let inner =
@@ -1234,7 +1276,7 @@ let gen_dfun n b cty ty temps =
         | Some stmts -> stmts
         | None ->
           let b =
-            List.map (glob_subst_stmt n rec_call)
+            List.map (glob_subst_stmt ~spare n rec_call)
               (with_region ~owned:owned_params ?resumes b (fun () -> gen_body_stmts env cofix_wrap b))
           in
           return_captures_by_value b
@@ -1256,10 +1298,10 @@ let gen_dfun n b cty ty temps =
         | None ->
         match b with
         | MLaxiom _ | MLexn _ ->
-          List.map (glob_subst_stmt n rec_call) (gen_stmts env cofix_wrap b)
+          List.map (glob_subst_stmt ~spare n rec_call) (gen_stmts env cofix_wrap b)
         | _ ->
           List.map
-            (glob_subst_stmt n rec_call)
+            (glob_subst_stmt ~spare n rec_call)
             (with_region ~owned:owned_params ?resumes b (fun () -> gen_body_stmts env cofix_wrap b))
       in
       let b = return_captures_by_value b in

@@ -2,6 +2,7 @@
 #define INCLUDED_MUTUAL_LAMBDA_OTHER_INSTANCE
 
 #include "crane_fn.h"
+#include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
@@ -131,14 +132,15 @@ public:
 };
 
 /// f calls its partner g at another instance, g bool, than its own,
-/// passing a lambda over bool, and g passes it back to f.  The lambda
-/// is typed at bool (mutual_lambda_ground_instance), but both take it
-/// as a deduced callable, and a lambda in a function template has a new
-/// closure type in every instantiation: g<bool, L1> instantiates f<bool,
-/// L1 &>, whose lambda L2 instantiates g<bool, L2>, and so on --
-/// "recursive template instantiation exceeded maximum depth".  A self-call
-/// passing anything but the parameter takes it as a crane::fn
-/// (detect_non_forwarded_params); a partner's call is not looked at.
+/// passing a lambda over bool, and g passes it back to f.  A lambda
+/// in a function template has a new closure type in every instantiation, so
+/// were g to take it as a deduced callable, g<bool, L1> would
+/// instantiate f<bool, L1 &>, whose lambda L2 instantiates g<bool,
+/// L2>, and so on without end.  The lambda's type flows back into the
+/// instantiation that makes it, so g takes it as a crane::fn
+/// (partner_closure_params).  With a named callback instead the cycle
+/// closes and g deduces it (splice_partner_other_instance), as it does
+/// where g does not pass it back (mutual_lambda_ground_instance).
 struct MutualLambdaOtherInstance {
   template <typename T1, typename F0>
   static uint64_t f(F0 &&h, const T1 &y, uint64_t n) {
@@ -158,8 +160,9 @@ struct MutualLambdaOtherInstance {
     }
   }
 
-  template <typename T1, typename F0>
-  static uint64_t g(F0 &&h, const T1 &x, uint64_t n) {
+  template <typename T1>
+  static uint64_t g(const std::type_identity_t<crane::fn<uint64_t(T1)>> &h,
+                    const T1 &x, uint64_t n) {
     if (n <= 0) {
       return (h(x) + UINT64_C(1));
     } else {

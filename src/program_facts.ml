@@ -13,6 +13,7 @@ type program = {
   throwing_values : Names.GlobRef.t list;
   parameter_ownership : (Names.GlobRef.t * bool list) list;
   recursive_groups : Recursive_groups.t;
+  partner_closure_params : (Names.GlobRef.t * int list) list;
   recursion : Recursion_plan.t;
   control : Lower_control.t;
 }
@@ -26,6 +27,7 @@ let analyze_program normalized =
   { throwing_values = Structure_analysis.throwing_values struc;
     parameter_ownership = Ownership.summarize ~receiver struc;
     recursive_groups;
+    partner_closure_params = Translation.partner_closure_params recursive_groups struc;
     recursion;
     control =
       Lower_control.lower
