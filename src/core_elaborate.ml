@@ -525,7 +525,7 @@ let constant_at_alias b ty body =
    the class declares, or, a function named point-free, applied to
    parameters of its own -- and under the instance's own parameters, so those
    are the bodies the calls inside them are elaborated in.  The record as
-   written is walked too, with the rest of the declaration. *)
+   written is walked too, for the globals it names alone. *)
 let instance_methods b name body ty =
   Option.iter
     (fun (lam_params, methods) ->
@@ -557,26 +557,57 @@ let rec foreign_types b ~walked =
     foreign_types b ~walked:(GlobRef.Set_env.union walked pending)
   end
 
-let structure struc =
+(* [f] walking a body no call is generated from -- an instance's record as
+   written, where its methods are generated as {!Instance_methods}
+   elaborates them -- for the globals it names alone. *)
+let names_only (b : builder) f =
+  let scratch = ref {empty with named = !b.named} in
+  f scratch;
+  b := {!b with named = !scratch.named}
+
+(* A function generated as a method of its inductive is generated from its
+   body renumbered so the inductive's variables come first
+   ({!Method_registry.renumbering}), and nowhere as written. *)
+let method_ b vars (_, body, ty, this_pos) =
+  let r = Method_registry.renumbering ~num_ind_vars:(List.length vars) ~this_pos ty in
+  declaration b (Method_registry.renumber_type r ty) (Method_registry.renumber_body r body)
+
+let structure ~methods struc =
   let b = ref empty in
   let defined = ref GlobRef.Set_env.empty in
   let define r = defined := GlobRef.Set_env.add r !defined in
   let closed_type = walk_type b ~n_outer:0 Lexenv.empty in
   let inductive ind = Array.iter (fun p -> Array.iter (List.iter closed_type) p.ip_types) ind.ind_packets in
+  let as_methods =
+    let acc = ref GlobRef.Set_env.empty in
+    Modutil.struct_iter
+      (function
+        | Dind (kn, ind) -> List.iter (fun (_, (r, _, _, _)) -> acc := GlobRef.Set_env.add r !acc) (methods kn ind)
+        | Dterm _ | Dfix _ | Dtype _ -> () )
+      ignore ignore struc;
+    !acc
+  in
+  let as_method r = GlobRef.Set_env.mem r as_methods in
   Modutil.struct_iter
     (function
+      | Dterm (r, _, _) when as_method r -> define r
       | Dterm (r, body, ty) ->
         define r;
-        declaration b ty body;
-        constant_at_alias b ty body;
+        let written b =
+          declaration b ty body;
+          constant_at_alias b ty body
+        in
+        if Instance_methods.methods r body ty <> None then names_only b written else written b;
         instance_methods b r body ty
       | Dfix fds ->
         List.iter
           (fun fd ->
             define fd.fd_ref;
-            declaration b fd.fd_type fd.fd_body )
+            if not (as_method fd.fd_ref) then declaration b fd.fd_type fd.fd_body )
           fds
-      | Dind (_, ind) -> inductive ind
+      | Dind (kn, ind) ->
+        inductive ind;
+        List.iter (fun (vars, candidate) -> method_ b vars candidate) (methods kn ind)
       | Dtype (_, _, ty) -> closed_type ty )
     (function
       | Sind (_, ind) -> inductive ind

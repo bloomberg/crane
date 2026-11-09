@@ -1536,7 +1536,11 @@ let elaborate_pass_names = [elaborate_calls; plan_foreign_callables]
 let elaborate_unit struc =
   Translation_state.generating_outside_modules @@ fun () ->
   Pipeline_trace.event "elaborate" elaborate_calls;
-  let elaborations = Core_elaborate.structure struc in
+  let elaborations =
+    Core_elaborate.structure
+      ~methods:(fun kn ind -> List.map (fun (_, vars, candidate) -> (vars, candidate)) (Cpp.registered_methods kn ind))
+      struc
+  in
   Core_elaborate.install elaborations;
   Pipeline_trace.event "elaborate" plan_foreign_callables;
   Callable_abi.install_foreign

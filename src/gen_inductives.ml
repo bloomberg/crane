@@ -254,81 +254,18 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
      given says [shared_ptr<ITree<_>>]. *)
   with_itree_mode_for ty @@ fun () ->
   let num_ind_vars = List.length vars in
-
-  (* Get return type *)
-  let all_args, ret_ty = get_args_and_ret [] ty in
-
-  (* Determine the mapping from function type variables to inductive type
-     variables. For same-module methods, the function uses Tvars 1..num_ind_vars
-     for the inductive. For cross-module methods, the function may use different
-     Tvar positions. We extract the actual mapping from the Tglob at this_pos.
-
-     Example: fold_left has type (A → B → A) → list B → A → A where A=Tvar1
-     (accumulator), B=Tvar2 (list element). list<B> uses Tvar2, so ind_tvar_map
-     = [(2, 1)] meaning "Tvar2 → ind var position 1". Then Tvar1 is "extra" and
-     becomes template param T1. *)
-  let ind_tvar_map =
-    match List.nth_opt all_args this_pos with
-    | Some (Miniml.Tglob (_, tvar_args, _)) ->
-      (* Extract Tvar indices from the Tglob args, paired with their position.
-         Only include entries whose destination position is within the actual
-         inductive type vars (1..num_ind_vars).  Type parameters killed during
-         extraction (e.g., phantom params) produce Tglob args that map beyond
-         the available vars — treat those as extra method tvars instead. *)
-      List.filter (fun (_, dst) -> dst <= num_ind_vars)
-        (List.concat
-          (List.mapi
-             (fun pos t ->
-               match Table.type_var_of_arg t with
-               | Some i -> [(i, pos + 1)]
-               | None -> [] )
-             tvar_args ))
-    | _ ->
-      List.init num_ind_vars (fun i -> (i + 1, i + 1))
-  in
-  let ind_tvar_set = IntSet.of_list (List.map fst ind_tvar_map) in
-  (* Remap ML type variables: assign canonical positions so
-     convert_ml_type_to_cpp_type maps them correctly. - Inductive tvars →
-     positions 1..num_ind_vars - Extra tvars → positions num_ind_vars+1,
-     num_ind_vars+2, ... This avoids collisions when the function uses different
-     numbering than the inductive.
-
-     Example: fold_left has Tvar1 (accum), Tvar2 (list elem) ind_tvar_map = [(2,
-     1)] — Tvar2 is the list element → position 1 extra tvars: [1] — Tvar1 is
-     extra → position 2 (= num_ind_vars + 1) Full remap: Tvar1 → 2, Tvar2 → 1 *)
+  let _, ret_ty = get_args_and_ret [] ty in
+  (* The function's variables renumbered so the inductive's come first and
+     its own after them ({!Method_registry.renumbering}), the positions
+     convert_ml_type_to_cpp_type maps. *)
+  let renumbering = Method_registry.renumbering ~num_ind_vars ~this_pos ty in
+  let extra_tvars_orig = renumbering.extra in
+  let remap_ml_tvar = renumbering.rename in
   let all_tvars = List.sort compare (collect_tvars [] ty) in
-  let extra_tvars_orig =
-    List.filter (fun i -> not (IntSet.mem i ind_tvar_set)) all_tvars
-  in
-  let needs_remap =
-    (not (List.for_all (fun (src, dst) -> src = dst) ind_tvar_map))
-    || extra_tvars_orig <> []
-  in
-  (* Build complete remap table: (original_idx → canonical_idx) *)
-  let extra_remap =
-    List.mapi (fun i orig -> (orig, num_ind_vars + 1 + i)) extra_tvars_orig
-  in
-  let full_remap = ind_tvar_map @ extra_remap in
-  let remap_ml_tvar i =
-    match List.assoc_opt i full_remap with
-    | Some canonical -> canonical
-    | None -> i
-  in
-  let rec remap_ml_type = function
-    | Miniml.Tvar (rigid, i) -> Miniml.Tvar (rigid, remap_ml_tvar i)
-    | Miniml.Tapp (i, args) ->
-      Miniml.Tapp (remap_ml_tvar i, List.map remap_ml_type args)
-    | Miniml.Tarr (t1, t2) -> Miniml.Tarr (remap_ml_type t1, remap_ml_type t2)
-    | Miniml.Tglob (r, args, e) ->
-      Miniml.Tglob (r, List.map remap_ml_type args, e)
-    | Miniml.Tmeta {contents = Some t} -> remap_ml_type t
-    | t -> t
-  in
-  let ty = if needs_remap then remap_ml_type ty else ty in
-  let ret_ty = if needs_remap then remap_ml_type ret_ty else ret_ty in
-  let body =
-    if needs_remap then Mlutil.remap_tvars remap_ml_tvar body else body
-  in
+  let ty = Method_registry.renumber_type renumbering ty in
+  let ret_ty = Method_registry.renumber_type renumbering ret_ty in
+  let body = Method_registry.renumber_body renumbering body in
+  let extra_remap = List.mapi (fun i orig -> (orig, num_ind_vars + 1 + i)) extra_tvars_orig in
   (* After remapping, extra tvars are at positions num_ind_vars+1,
      num_ind_vars+2, ... *)
   let extra_tvars = List.map snd extra_remap in

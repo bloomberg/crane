@@ -80,6 +80,68 @@ let ml_return_type_has_ref ref ty =
   in
   contains ret
 
+(** {2 A method's variables} *)
+
+type renumbering = {
+  rename : int -> int;
+  extra : int list;
+  renamed : bool;
+}
+
+(* The function's variables mapped to canonical positions: the inductive's
+   to 1..num_ind_vars, at the positions the receiver's type gives them, the
+   function's own to num_ind_vars+1, num_ind_vars+2, ...  For a method of
+   another module's inductive the function may number them differently.
+
+   Example: fold_left has type (A -> B -> A) -> list B -> A -> A where
+   A=Tvar1 (accumulator), B=Tvar2 (list element).  list<B> uses Tvar2, so
+   Tvar2 -> 1; Tvar1 is the function's own and becomes position 2, its
+   template parameter T1. *)
+let renumbering ~num_ind_vars ~this_pos ty =
+  let all_args, _ = Ml_type_util.get_args_and_ret [] ty in
+  let ind_tvar_map =
+    match List.nth_opt all_args this_pos with
+    | Some (Miniml.Tglob (_, tvar_args, _)) ->
+      (* Only entries whose destination is one of the inductive's variables:
+         a parameter extraction killed (a phantom) maps past them, and is the
+         function's own instead. *)
+      List.filter
+        (fun (_, dst) -> dst <= num_ind_vars)
+        (List.concat
+           (List.mapi
+              (fun pos t ->
+                match Table.type_var_of_arg t with
+                | Some i -> [(i, pos + 1)]
+                | None -> [] )
+              tvar_args ) )
+    | _ -> List.init num_ind_vars (fun i -> (i + 1, i + 1))
+  in
+  let ind_tvar_set = Mlutil.IntSet.of_list (List.map fst ind_tvar_map) in
+  let extra =
+    List.filter (fun i -> not (Mlutil.IntSet.mem i ind_tvar_set)) (Mlutil.IntSet.elements (Mlutil.ml_tvars ty))
+  in
+  let renamed = (not (List.for_all (fun (src, dst) -> src = dst) ind_tvar_map)) || extra <> [] in
+  let full = ind_tvar_map @ List.mapi (fun i orig -> (orig, num_ind_vars + 1 + i)) extra in
+  let rename i =
+    match List.assoc_opt i full with
+    | Some canonical -> canonical
+    | None -> i
+  in
+  {rename; extra; renamed}
+
+let renumber_type r ty =
+  let rec go = function
+    | Miniml.Tvar (rigid, i) -> Miniml.Tvar (rigid, r.rename i)
+    | Miniml.Tapp (i, args) -> Miniml.Tapp (r.rename i, List.map go args)
+    | Miniml.Tarr (t1, t2) -> Miniml.Tarr (go t1, go t2)
+    | Miniml.Tglob (g, args, e) -> Miniml.Tglob (g, List.map go args, e)
+    | Miniml.Tmeta {contents = Some t} -> go t
+    | t -> t
+  in
+  if r.renamed then go ty else ty
+
+let renumber_body r body = if r.renamed then Mlutil.remap_tvars r.rename body else body
+
 (** {2 Body safety check} *)
 
 (** Check if a function body is safe to turn into a method.

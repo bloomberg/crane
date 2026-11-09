@@ -161,6 +161,29 @@ val get_candidates : t -> GlobRef.t -> method_candidate list
 val planned_candidate :
   t -> GlobRef.t -> GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> method_candidate option
 
+(** {2 A method's variables} *)
+
+(** How a function generated as a method of an inductive renumbers the type
+    variables of its type: the inductive's come first, at the positions its
+    receiver's type gives them, and the function's own follow, in order. *)
+type renumbering = {
+  rename : int -> int;  (** A variable of the function's, as the method numbers it. *)
+  extra : int list;  (** The function's own variables, as it numbers them, in order. *)
+  renamed : bool;  (** Whether {!rename} moves any variable. *)
+}
+
+(** [renumbering ~num_ind_vars ~this_pos ty] -- the renumbering of the
+    function of type [ty], its receiver at [this_pos], as a method of an
+    inductive of [num_ind_vars] variables. *)
+val renumbering : num_ind_vars:int -> this_pos:int -> Miniml.ml_type -> renumbering
+
+(** [renumber_type r ty] is [ty] with its variables renumbered by [r]. *)
+val renumber_type : renumbering -> Miniml.ml_type -> Miniml.ml_type
+
+(** [renumber_body r body] is [body] with the variables of its annotations
+    renumbered by [r]: the body the method is generated from. *)
+val renumber_body : renumbering -> Miniml.ml_ast -> Miniml.ml_ast
+
 (** {2 Body safety check} *)
 
 (** Check if a MiniML function body is safe to turn into a C++ method.

@@ -94,7 +94,7 @@ let () =
   let a = declare "pa" nat in
   let unit = ModPath.MPfile (DirPath.make [Id.of_string "U"]) in
   let elaborated =
-    Core_elaborate.structure
+    Core_elaborate.structure ~methods:(fun _ _ -> [])
       [(unit, [(Label.make "d", SEdecl (Dterm (r "d", MLapp (MLglob use, [a]), nat)))])]
   in
   (* The walk's result is a value: what it planned is read off it, with
@@ -147,3 +147,21 @@ let () =
     = Some nat);
   check "a call at its arity keeps the reading it was elaborated with"
     (Mlutil.Var_types.equal inst.tys (Call_tyargs.by_variable inst.call.tyargs))
+
+(* A function generated as a method of its inductive is generated, and its
+   calls elaborated, at its variables renumbered so the inductive's come
+   first: [fold_left]'s element variable, the receiver's, is the list's. *)
+let () =
+  let v i = Tvar (Schematic, i) in
+  let list t = Tglob (r "list", [t], []) in
+  let fold_left = Tarr (Tarr (v 1, Tarr (v 2, v 1)), Tarr (list (v 2), Tarr (v 1, v 1))) in
+  let n = Method_registry.renumbering ~num_ind_vars:1 ~this_pos:1 fold_left in
+  check "the receiver's variable is the inductive's, the function's own follow"
+    (n.renamed && n.rename 2 = 1 && n.rename 1 = 2 && n.extra = [1]);
+  check "the type is renumbered"
+    (Method_registry.renumber_type n fold_left
+    = Tarr (Tarr (v 2, Tarr (v 1, v 2)), Tarr (list (v 1), Tarr (v 2, v 2))));
+  let map = Tarr (Tarr (v 1, v 2), Tarr (list (v 1), list (v 2))) in
+  let n = Method_registry.renumbering ~num_ind_vars:1 ~this_pos:1 map in
+  check "variables already in place are left, the function's own still counted"
+    (n.renamed && n.rename 1 = 1 && n.rename 2 = 2 && n.extra = [2])
