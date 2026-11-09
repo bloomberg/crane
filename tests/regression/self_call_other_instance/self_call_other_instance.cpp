@@ -2,11 +2,12 @@
 
 /// f calls itself at bool, not at its own A, passing a lambda over
 /// bool.  Extraction instantiates the call at bool, so the lambda is
-/// [](bool b) and translation writes the call f<bool>; but the
-/// function's generation then replaces every reference to itself with the
-/// reference at its own template parameters (glob_subst_stmt with
-/// rec_call in gen_functions.ml), and the call becomes f<T1>, which
-/// takes no lambda over bool once f is called at a list.  The same
+/// [](bool b) and translation writes the call f<bool>.  The function's
+/// generation replaces every other reference to itself with the reference
+/// at its own template parameters (glob_subst_stmt with rec_call in
+/// gen_functions.ml); this one it spares, since the call's use solves A
+/// to a ground type (other_instance_self_calls).  Respelled f<T1>, it
+/// would take no lambda over bool once f is called at a list.  The same
 /// pair across two functions is mutual_lambda_ground_instance.
 uint64_t SelfCallOtherInstance::run(uint64_t n) {
   return f<List<uint64_t>>(

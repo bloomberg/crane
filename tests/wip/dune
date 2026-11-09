@@ -261,13 +261,3 @@
   (deps nullary_unit_effect_dropped.t.exe)
   (action (run ./nullary_unit_effect_dropped.t.exe))))
 
-(subdir self_call_other_instance
- (rule
-  (targets self_call_other_instance.t.exe)
-  (deps SelfCallOtherInstance.vo self_call_other_instance.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} self_call_other_instance.t.exe self_call_other_instance.t.cpp self_call_other_instance.cpp)))
- (rule
-  (alias runtest)
-  (deps self_call_other_instance.t.exe)
-  (action (run ./self_call_other_instance.t.exe))))

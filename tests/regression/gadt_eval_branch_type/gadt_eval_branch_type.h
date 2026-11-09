@@ -197,7 +197,7 @@ struct GadtEvalBranchType {
       return a0;
     } else if (std::holds_alternative<typename expr::Ite>(e.v())) {
       const auto &[a, a1, a2] = std::get<typename expr::Ite>(e.v());
-      if (crane::any_cast<bool>(eval<crane::obj>(*a))) {
+      if (crane::any_cast<bool>(eval<bool>(*a))) {
         return eval<crane::obj>(*a1);
       } else {
         return eval<crane::obj>(*a2);
