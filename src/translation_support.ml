@@ -476,7 +476,7 @@ let ml_expr_is_void_call = function
 let rec ml_value_is_void_call = function
   | MLapp (f, _) -> ml_callee_is_void f
   | MLmagic (_, e) -> ml_value_is_void_call e
-  | MLcase (_, _, pv) ->
+  | MLcase (_, _, pv, _) ->
     Array.length pv > 0
     && Array.for_all
          (fun (binds, _, _, body) ->
@@ -1286,7 +1286,7 @@ let args_may_corecurse ~self ~binder_type ts =
     | MLfix _ -> true
     | MLlam (_, _, b) -> corec (depth + 1) b
     | MLletin (_, _, a, b, _) -> corec depth a || corec (depth + 1) b
-    | MLcase (_, s, brs) ->
+    | MLcase (_, s, brs, _) ->
       corec depth s
       || Array.exists (fun (ids, _, _, b) -> corec (depth + List.length ids) b) brs
     | e ->
@@ -1493,7 +1493,7 @@ let rec collect_tvars_ast acc = function
       (Mlutil.Var_types.bindings (Mlutil.written_type_args use))
   | MLcons (ty, _, args) ->
     List.fold_left collect_tvars_ast (collect_tvars acc ty) args
-  | MLcase (ty, e, brs) ->
+  | MLcase (ty, e, brs, _) ->
     let acc = collect_tvars_ast (collect_tvars acc ty) e in
     Array.fold_left
       (fun acc (ids, ty, _, body) ->
@@ -1532,7 +1532,7 @@ let rec ast_may_throw = function
   | MLlam (_, _, body) -> ast_may_throw body
   | MLletin (_, _, a, b, _) -> ast_may_throw a || ast_may_throw b
   | MLcons (_, _, args) -> List.exists ast_may_throw args
-  | MLcase (_, e, brs) ->
+  | MLcase (_, e, brs, _) ->
     ast_may_throw e
     || Array.exists (fun (_, _, _, body) -> ast_may_throw body) brs
   | MLfix (_, _, funs, _, _) -> Array.exists ast_may_throw funs
@@ -1791,7 +1791,7 @@ let detect_non_forwarded_params_generic ~is_self_call n_params body =
     | MLletin (_, _, e1, e2, _) ->
       walk depth e1;
       walk (depth + 1) e2
-    | MLcase (_, scrut, branches) ->
+    | MLcase (_, scrut, branches, _) ->
       walk depth scrut;
       Array.iter
         (fun (ids, _, _, body) ->
@@ -1877,7 +1877,7 @@ let escaping_params ~suspended n_params body =
     | MLletin (_, _, e1, e2, _) ->
       walk under depth e1;
       walk under (depth + 1) e2
-    | MLcase (_, scrut, branches) ->
+    | MLcase (_, scrut, branches, _) ->
       walk under depth scrut;
       Array.iter
         (fun (ids, _, _, b) -> walk under (depth + List.length ids) b)
@@ -2036,7 +2036,7 @@ let closure_feedback_params ~callee bodies =
           | `Fixed -> Local_other
         in
         walk (bound :: locals) e2
-      | MLcase (_, scrut, branches) ->
+      | MLcase (_, scrut, branches, _) ->
         walk locals scrut;
         Array.iter
           (fun (ids, _, _, b) -> walk (List.map (fun _ -> Local_other) ids @ locals) b)
@@ -2478,7 +2478,7 @@ let rec infer_ml_body_type (a : ml_ast) : ml_type option =
       strip_tarr_n (count_real_ml_args args) ty
     | None -> None )
   | MLcons (ty, _, _) -> Some (resolve_tmeta ty)
-  | MLcase (_, _, pv) when Array.length pv > 0 ->
+  | MLcase (_, _, pv, _) when Array.length pv > 0 ->
     let (_, rty, _, _) = pv.(0) in
     Some (resolve_tmeta rty)
   | MLletin (_, _, _, body, _) -> infer_ml_body_type body
@@ -2926,7 +2926,7 @@ let rec collect_free_rels_set n_bound acc = function
       (collect_free_rels_set n_bound)
       (collect_free_rels_set n_bound acc f)
       args
-  | MLcase (_, e, brs) ->
+  | MLcase (_, e, brs, _) ->
     let acc = collect_free_rels_set n_bound acc e in
     Array.fold_left
       (fun acc (ids, _, _, body) ->
@@ -3149,7 +3149,7 @@ let rec ml_return_type_is_erased = function
     This is therefore the only place a projection's result type is written
     down. *)
 let ml_projection_field_type = function
-  | Miniml.MLcase (Tglob (r, _, _), _, pv) when Array.length pv = 1 ->
+  | Miniml.MLcase (Tglob (r, _, _), _, pv, _) when Array.length pv = 1 ->
     let ids, _, _, proj_body = pv.(0) in
     let n = List.length ids in
     let projected = function

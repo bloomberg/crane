@@ -137,7 +137,7 @@ let rec reaches_call group ~depth e =
   | MLlam _ | MLfix _ -> false
   | MLletin (_, _, rhs, body, _) ->
     reaches_call group ~depth rhs || reaches_call group ~depth:(depth + 1) body
-  | MLcase (_, scrut, branches) ->
+  | MLcase (_, scrut, branches, _) ->
     reaches_call group ~depth scrut || branch_reaches_call group ~depth branches
   | MLapp (f, args) -> List.exists (reaches_call group ~depth) (f :: args)
   | MLcons (_, _, args) | MLtuple args -> List.exists (reaches_call group ~depth) args
@@ -269,7 +269,7 @@ let rec scope ~group ~depth ?expected e =
               if through = Some i then strict ~reading ~tail a else strict ~reading:Stored ~tail:false a )
             args )
     | MLtuple args -> MLtuple (List.map (strict ~tail:false) args)
-    | MLcase (ty, scrut, branches) ->
+    | MLcase (ty, scrut, branches, occ) ->
       let scrut = strict ~tail:false scrut in
       let e' =
         MLcase
@@ -277,7 +277,8 @@ let rec scope ~group ~depth ?expected e =
             scrut,
             Array.map
               (fun (ids, rty, p, body) -> (ids, rty, p, inner ~expected:rty (List.length ids) body))
-              branches )
+              branches,
+            occ )
       in
       (* A match whose value is not the result, with a branch that recurses,
          is itself bound: the call ends its branch, so no binding inside the
@@ -337,7 +338,7 @@ let rec scope ~group ~depth ?expected e =
   let rec distribute ~depth e =
     let pushed =
       match e, expected with
-      | MLletin (id, ty, MLcase (cty, scrut, branches), rest, occ), Some rty
+      | MLletin (id, ty, MLcase (cty, scrut, branches, case_occ), rest, occ), Some rty
         when (not (Recursion_plan.match_bound_in_place cty branches)) && branch_reaches_call group ~depth branches ->
         into_branches ~fresh:group.fresh ~rty (id, ty, occ) branches rest
         |> Option.map (fun branches ->
@@ -346,7 +347,8 @@ let rec scope ~group ~depth ?expected e =
                    scrut,
                    Array.map
                      (fun (ids, rty, p, b) -> (ids, rty, p, scope ~group ~depth:(depth + List.length ids) ~expected:rty b))
-                     branches ) )
+                     branches,
+                   case_occ ) )
       | _ -> None
     in
     match pushed, e with

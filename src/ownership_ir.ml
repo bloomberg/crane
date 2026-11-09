@@ -126,7 +126,7 @@ let closure_reads d t =
     | MLlam (_, _, b) -> go (d' + 1) acc b
     | MLletin (_, _, a, b, _) -> go (d' + 1) (go d' acc a) b
     | MLfix (_, fs, defs, _, _) -> Array.fold_left (go (d' + Array.length fs)) acc defs
-    | MLcase (_, scrut, branches) ->
+    | MLcase (_, scrut, branches, _) ->
       Array.fold_left
         (fun acc (ids, _, _, body) -> go (d' + List.length ids) acc body)
         (go d' acc scrut) branches
@@ -330,7 +330,7 @@ let rec free ?(parts = true) ?(outside = Levels.empty) parents d t =
     let n = Array.length fs in
     let parents' = bind parents d ~n in
     whole (leave parents' d (closure_frees parents' (d + n) (Array.to_list defs)))
-  | MLcase (_, scrut, branches) ->
+  | MLcase (_, scrut, branches, _) ->
     Array.fold_left
       (fun acc (ids, _, _, body) ->
         let n = List.length ids in
@@ -379,7 +379,7 @@ let reads_at_uses ~n_outer ~arms ty a occurrence =
    taking the record apart that returns one field: the record read. *)
 let field_of = function
   | MLapp (MLglob {callee = r; _}, [t]) when Table.is_projection r -> Some t
-  | MLcase (ty, t, [|(ids, _, _, MLrel (k, _))|])
+  | MLcase (ty, t, [|(ids, _, _, MLrel (k, _))|], _)
     when Table.record_fields_of_type ty <> [] && k <= List.length ids ->
     Some t
   | _ -> None
@@ -450,7 +450,7 @@ let bound_in_place ty branches =
 let rec ending_calls a =
   match (call_of a, strip a) with
   | Some call, _ -> [call]
-  | None, MLcase (ty, _, branches) when bound_in_place ty branches ->
+  | None, MLcase (ty, _, branches, _) when bound_in_place ty branches ->
     List.concat_map (fun (_, _, _, b) -> ending_calls b) (Array.to_list branches)
   | None, MLletin (_, _, _, b, _) -> ending_calls b
   | None, _ -> []
@@ -465,7 +465,7 @@ let resume_of resumes d a occurrence =
   match (resumes, ending_calls a) with
   | Some _, [] | None, _ -> None
   | Some {origin; depth; resume_at; _}, ending -> (
-    match resume_at (Core_binder.make ~origin ~level:(depth + d) ~site:occurrence ()) with
+    match resume_at (Core_binder.make ~origin ~level:(depth + d) ~site:(Binding occurrence) ()) with
     | Some ({calls; _} as r) when List.exists (fun c -> List.exists (Occurrence.equal c) calls) ending -> Some (depth, r)
     | Some _ | None -> None )
 
@@ -594,7 +594,7 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
       read l occurrence
     (* A field is read out of its record where the projection stands. *)
     | MLapp (MLglob {callee = r; _}, [arg]) when Table.is_projection r -> walk ~consumed ~pinned parents d live arg
-    | MLcase (_, scrut, _) when field_of t <> None -> walk ~consumed ~pinned parents d live scrut
+    | MLcase (_, scrut, _, _) when field_of t <> None -> walk ~consumed ~pinned parents d live scrut
     (* A bind generated as sequencing runs its action and then its
        continuation's body, inline, though a mapping spells the same bind as
        an inline custom where it is generated as a call. *)
@@ -662,7 +662,7 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
        evaluation -- a field of the record it names, a component of the pair
        it hands over -- so what follows the scrutinee is what the branches
        read besides them. *)
-    | MLcase (ty, scrut, branches) ->
+    | MLcase (ty, scrut, branches, _) ->
       let after_scrut =
         Array.fold_left
           (fun acc (ids, _, _, body) ->
@@ -772,7 +772,7 @@ module Binding = struct
     Escape.is_shared_ptr_type ty
     &&
     match a with
-    | MLcase (_, MLrel (k, o), [|(_, _, _, MLrel _)|]) -> not (owned k o && fate o = Last_use)
+    | MLcase (_, MLrel (k, o), [|(_, _, _, MLrel _)|], _) -> not (owned k o && fate o = Last_use)
     | _ -> false
 
   (* A variant match takes apart a scrutinee the region owns, binding its
@@ -903,7 +903,7 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
       saving d a occurrence owned (fun () ->
           resuming added (fun () ->
               own (if let_owned owned d x ty a occurrence then Levels.add d owned_b else owned_b) (d + 1) b ) )
-    | MLcase (ty, scrut, branches) ->
+    | MLcase (ty, scrut, branches, _) ->
       own owned d scrut;
       Array.iteri
         (fun k ((ids, _, pat, body) as branch) ->
@@ -1042,7 +1042,7 @@ let region ?(owned = []) ?(copied = []) ?(outer = fun _ -> None) ?resumes ?(cert
 let branches_at root o =
   let exception Found of ml_branch array in
   let rec find = function
-    | MLcase (_, scrut, brs) when Option.equal Occurrence.equal (Option.map snd (scrutinee_var scrut)) (Some o) ->
+    | MLcase (_, scrut, brs, _) when Option.equal Occurrence.equal (Option.map snd (scrutinee_var scrut)) (Some o) ->
       raise (Found brs)
     | a -> Mlutil.ast_iter find a
   in
@@ -1182,7 +1182,8 @@ let turn_term ?(arguments = fun (c : Control_ir.Term.continue_) -> c.arguments) 
         ( scrutinee_type,
           scrutinee,
           Array.of_list
-            (List.map (fun (b : Control_ir.Term.branch) -> (b.binders, b.result_type, b.pattern, go b.body)) branches) )
+            (List.map (fun (b : Control_ir.Term.branch) -> (b.binders, b.result_type, b.pattern, go b.body)) branches),
+          Occurrence.fresh () )
     | Return t -> t
     | Continue c -> MLapp (MLdummy Kprop, arguments c)
     | Continue_into {cells; next} ->

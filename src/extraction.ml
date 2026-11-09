@@ -2317,7 +2317,7 @@ and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
       (* Apply standard case extraction for all inductives. *)
       let typs = List.map type_simpl (Array.to_list metas) in
       let typ = Tglob (GlobRef.IndRef ip, typs, []) in
-      MLcase (typ, a, Array.init br_size extract_branch)
+      MLcase (typ, a, Array.init br_size extract_branch, Occurrence.fresh ())
 
 (** {2 Extraction of a (co)-fixpoint} *)
 

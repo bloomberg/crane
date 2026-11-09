@@ -18,13 +18,14 @@ let rec canonical self body =
   | MLlam (_, _, b) -> MLlam (anon, Tunknown, canonical self b)
   | MLletin (_, _, a, b, occ) -> MLletin (anon, Tunknown, canonical self a, canonical self b, occ)
   | MLcons (_, c, args) -> MLcons (Tunknown, c, List.map (canonical self) args)
-  | MLcase (_, s, brs) ->
+  | MLcase (_, s, brs, occ) ->
     MLcase
       ( Tunknown,
         canonical self s,
         Array.map
           (fun (ids, _, p, b) -> (List.map (fun _ -> (anon, Tunknown)) ids, Tunknown, p, canonical self b))
-          brs )
+          brs,
+        occ )
   | MLfix (i, fns, bodies, co, occ) ->
     MLfix
       ( i,

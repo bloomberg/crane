@@ -1009,7 +1009,7 @@ let rec ml_arg_to_template_type ?expected env ml_arg =
        list ([template <typename _tcI0, typename T1>]), so the instance
        arguments must precede the type arguments here too. *)
     Some (Tglob (r, template_args @ instance_type_args r ts, []))
-  | MLcase (_, scrutinee, branches)
+  | MLcase (_, scrutinee, branches, _)
     when Array.length branches = 1 ->
     (* Record field projection — e.g., [base_category(PS)].
        Resolve to [Tqualified(scrutinee_type, field_name)]. *)

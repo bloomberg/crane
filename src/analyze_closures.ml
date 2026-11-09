@@ -50,7 +50,7 @@ and escapes ~n_outer k t =
     | MLlam (_, _, body) -> Mlutil.ast_occurs (k + 1) body
     | MLfix (_, ids, bodies, _, _) -> Array.exists (Mlutil.ast_occurs (k + Array.length ids)) bodies
     | MLletin (_, _, a, b, _) -> go k a || go (k + 1) b
-    | MLcase (_, scrut, branches) ->
+    | MLcase (_, scrut, branches, _) ->
       go k scrut || Array.exists (fun (ids, _, _, body) -> go (k + List.length ids) body) branches
     | MLcons (_, _, args) | MLtuple args -> List.exists (go k) args
     | MLparray (elts, def) -> Array.exists (go k) elts || go k def

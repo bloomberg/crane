@@ -359,7 +359,7 @@ let rec walk b ~n_outer lex = function
   (* A spine is read whole, as translation reads it.  A coercion of the
      callee is seen through at every argument -- [not] applied to the
      proposition it erases, in a type written [{P} + {~P}]. *)
-  | MLapp ((MLapp (MLglob _, _) | MLmagic _ | MLcase (_, _, [|_|])), _) as e ->
+  | MLapp ((MLapp (MLglob _, _) | MLmagic _ | MLcase (_, _, [|_|], _)), _) as e ->
     walk b ~n_outer lex (Mlutil.read_spine e)
   | MLapp (MLglob use, args) ->
     walk_use b ~n_outer lex use;
@@ -390,7 +390,7 @@ let rec walk b ~n_outer lex = function
     walk_type b ~n_outer lex ty;
     List.iter (walk b ~n_outer lex) args
   | MLtuple args -> List.iter (walk b ~n_outer lex) args
-  | MLcase (ty, scrut, branches) ->
+  | MLcase (ty, scrut, branches, _) ->
     walk_type b ~n_outer lex ty;
     walk b ~n_outer lex scrut;
     (* A branch's result type is written under its binders: a custom match
@@ -483,9 +483,12 @@ let rec inline_aliases ~n_outer lex e =
     | Lifted -> MLletin (x, ty, go lex a, under [(x, ty)] body, occ) )
   | MLletin (x, ty, a, body, occ) -> MLletin (x, ty, go lex a, under [(x, ty)] body, occ)
   | MLlam (x, ty, body) -> MLlam (x, ty, under [(x, ty)] body)
-  | MLcase (ty, scrut, branches) ->
+  | MLcase (ty, scrut, branches, occ) ->
     MLcase
-      (ty, go lex scrut, Array.map (fun (ids, rty, pat, body) -> (ids, rty, pat, under (List.rev ids) body)) branches)
+      ( ty,
+        go lex scrut,
+        Array.map (fun (ids, rty, pat, body) -> (ids, rty, pat, under (List.rev ids) body)) branches,
+        occ )
   | MLfix (i, fs, defs, cofix, occ) ->
     let fs' = List.rev_map (fun (f, ty) -> (Id f, ty)) (Array.to_list fs) in
     MLfix (i, fs, Array.map (under fs') defs, cofix, occ)

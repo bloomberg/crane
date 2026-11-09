@@ -95,7 +95,7 @@ and ml_ast w = function
   | MLcons (ty, r, args) ->
     tag w "MLcons"; ml_type w ty; globref w r; list w (ml_ast w) args
   | MLtuple args -> tag w "MLtuple"; list w (ml_ast w) args
-  | MLcase (ty, a, brs) -> tag w "MLcase"; ml_type w ty; ml_ast w a; array w (branch w) brs
+  | MLcase (ty, a, brs, _) -> tag w "MLcase"; ml_type w ty; ml_ast w a; array w (branch w) brs
   | MLfix (i, ids, bodies, cofix, _) ->
     tag w "MLfix"; int w i;
     array w (fun (x, ty) -> id w x; ml_type w ty) ids;

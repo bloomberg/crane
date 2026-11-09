@@ -20,7 +20,7 @@ let rec iter_annotations f = function
   | MLcons (ty, _, args) ->
     f ty;
     List.iter (iter_annotations f) args
-  | MLcase (ty, e, brs) ->
+  | MLcase (ty, e, brs, _) ->
     f ty;
     iter_annotations f e;
     Array.iter
@@ -82,7 +82,7 @@ let rec tail_result_type = function
   | MLlam (_, _, b) | MLletin (_, _, _, b, _) | MLmagic (_, b) -> tail_result_type b
   | MLcons (ty, _, _) -> Some ty
   | MLapp (f, args) -> Translation_types.ml_app_result_type f args
-  | MLcase (_, _, brs) ->
+  | MLcase (_, _, brs, _) ->
     Array.fold_left
       (fun acc (_, _, _, b) -> match acc with Some _ -> acc | None -> tail_result_type b)
       None brs

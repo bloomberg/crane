@@ -16,19 +16,29 @@
     avoid a clash and names a constructor field after the field, not after
     the pattern variable.
 
-    A binder a let or a sequential bind introduces also records that term
-    ({!site}), which tells two such binders apart where the scope does not:
-    one at one level in each of two branches. *)
+    A binder a let, a sequential bind or a pattern introduces also records
+    where ({!site}), which tells two such binders apart where the scope does
+    not: one at one level in each of two branches. *)
+
+(** The term binding a binder.  A pattern binds every variable of its
+    branch, one level each, so its match and the branch tell its binders
+    apart from any other's: patterns are flat, a constructor applied to
+    variables. *)
+type site =
+  | Binding of Miniml.Occurrence.t
+      (** the let binding it, or the use of the bind whose continuation's
+          parameter it is *)
+  | Branch of Miniml.Occurrence.t * int
+      (** the match and the index, among its branches, of the branch whose
+          pattern binds it *)
 
 type t = private {
   origin : Names.GlobRef.t;
   level : int;
-  site : Miniml.Occurrence.t option;
-      (** the let binding it, or the use of the bind whose continuation's
-          parameter it is, where one does *)
+  site : site option;  (** where one does *)
 }
 
-val make : origin:Names.GlobRef.t -> level:int -> ?site:Miniml.Occurrence.t -> unit -> t
+val make : origin:Names.GlobRef.t -> level:int -> ?site:site -> unit -> t
 
 (** The same binder among the binders in scope: origin and level. *)
 val equal : t -> t -> bool

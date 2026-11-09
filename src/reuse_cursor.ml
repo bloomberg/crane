@@ -51,7 +51,7 @@ let reads env e =
       else acc
     | MLlam (_, _, b) -> go (depth + 1) acc b
     | MLletin (_, _, a, b, _) -> go (depth + 1) (go depth acc a) b
-    | MLcase (_, s, branches) ->
+    | MLcase (_, s, branches, _) ->
       Array.fold_left (fun acc (ids, _, _, b) -> go (depth + List.length ids) acc b) (go depth acc s) branches
     | MLfix (_, ids, funs, _, _) -> Array.fold_left (go (depth + Array.length ids)) acc funs
     | MLapp (f, args) -> List.fold_left (go depth) acc (f :: args)
@@ -141,7 +141,7 @@ let own_value ty value =
     | MLcons (_, _, args) | MLtuple args -> List.for_all closure_free args
     | MLmagic (_, e) -> closure_free e
     | MLletin (_, _, a, b, _) -> closure_free a && closure_free b
-    | MLcase (_, s, branches) -> closure_free s && Array.for_all (fun (_, _, _, b) -> closure_free b) branches
+    | MLcase (_, s, branches, _) -> closure_free s && Array.for_all (fun (_, _, _, b) -> closure_free b) branches
     | MLparray (elements, default) -> Array.for_all closure_free elements && closure_free default
     | MLrel _ | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> true
   in

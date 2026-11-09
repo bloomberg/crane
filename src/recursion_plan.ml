@@ -193,7 +193,7 @@ let classify ~effects ~callee body =
     | MLletin (_, _, a, b, _) ->
       walk ~tail:false a;
       walk_under 1 ~tail b
-    | MLcase (_, s, branches) ->
+    | MLcase (_, s, branches, _) ->
       walk ~tail:false s;
       Array.iter (fun (ids, _, _, b) -> walk_under (List.length ids) ~tail b) branches
     | MLmagic (_, a) -> walk ~tail a
@@ -268,7 +268,7 @@ let modulo_cons_chains ~effects ~member ~bodies self =
       | f when Option.has_some (reached ~depth f) -> 1
       | MLletin (_, _, a, b, _) -> calls ~depth a + under 1 b
       | MLlam (_, _, b) -> under 1 b
-      | MLcase (_, s, branches) ->
+      | MLcase (_, s, branches, _) ->
         Array.fold_left
           (fun n (ids, _, _, b) -> n + under (List.length ids) b)
           (calls ~depth s) branches
@@ -304,7 +304,7 @@ let modulo_cons_chains ~effects ~member ~bodies self =
     in
     let walk_under n e = walk ~within ~inlined ~depth:(depth + n) e in
     match e with
-    | MLcase (_, s, branches) ->
+    | MLcase (_, s, branches, _) ->
       general_if (calls ~depth s > 0);
       Array.iter (fun (ids, _, _, b) -> walk_under (List.length ids) b) branches
     | MLletin (_, _, a, b, _) ->
@@ -356,7 +356,7 @@ let rec iter_scoped f lex e =
   | MLletin (x, ty, a, b, _) ->
     iter_scoped f lex a;
     iter_scoped f (bind [(x, ty)] lex) b
-  | MLcase (_, s, branches) ->
+  | MLcase (_, s, branches, _) ->
     iter_scoped f lex s;
     Array.iter (fun (ids, _, _, b) -> iter_scoped f (bind (List.rev ids) lex) b) branches
   | MLfix (_, ids, funs, _, _) ->
@@ -404,7 +404,7 @@ let value_levels ~heads ~depth e =
     | MLletin (_, _, a, b, _) ->
       go d a;
       go (d + 1) b
-    | MLcase (_, s, branches) ->
+    | MLcase (_, s, branches, _) ->
       go d s;
       Array.iter (fun (ids, _, _, b) -> go (d + List.length ids) b) branches
     | MLfix (_, ids, funs, _, _) -> Array.iter (go (d + Array.length ids)) funs
@@ -508,7 +508,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
       | MLletin (_, _, a, b, _) ->
         go ~enters:true d a;
         go ~enters (d + 1) b
-      | MLcase (_, s, branches) ->
+      | MLcase (_, s, branches, _) ->
         go ~enters:false d s;
         Array.iter (fun (ids, _, _, b) -> go ~enters (d + List.length ids) b) branches
       | MLmagic (_, e) -> go ~enters d e
@@ -539,7 +539,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
         enclosing
     in
     let r =
-      { binder = Core_binder.make ~origin ~level:depth ~site ();
+      { binder = Core_binder.make ~origin ~level:depth ~site:(Binding site) ();
         live = live_binders;
         after;
         passes = dedup_passings (inherited @ passings ~fixpoints ~targets ~live (depth + 1) rest);
@@ -569,7 +569,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
           funs
       | MLlam _ -> false
       | MLletin (_, _, a, b, _) -> reaches depth a || reaches (depth + 1) b
-      | MLcase (_, s, branches) ->
+      | MLcase (_, s, branches, _) ->
         reaches depth s
         || Array.exists (fun (ids, _, _, b) -> reaches (depth + List.length ids) b) branches
       | e ->
@@ -589,7 +589,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
         match e with
         | MLapp ((MLfix (_, _, _, _, occ) as fix), _) when reaches depth fix ->
           [{target = Entering occ; occurrence = occ}]
-        | MLcase (ty, _, branches) when match_bound_in_place ty branches ->
+        | MLcase (ty, _, branches, _) when match_bound_in_place ty branches ->
           List.concat_map
             (fun (ids, _, _, b) -> ending (depth + List.length ids) b)
             (Array.to_list branches)
@@ -635,7 +635,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
         match e with
         | MLapp ((MLfix _ as fix), args) when reaches depth fix ->
           through_closures [] (value_levels ~heads ~depth fix) @ calls_read depth [] args
-        | MLcase (ty, _, branches) when match_bound_in_place ty branches ->
+        | MLcase (ty, _, branches, _) when match_bound_in_place ty branches ->
           List.concat_map
             (fun (ids, _, _, b) -> arguments_read (depth + List.length ids) b)
             (Array.to_list branches)
@@ -689,7 +689,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
         List.iter (go depth) (action :: rest);
         walk ~targets ~heads ~fixpoints ~enclosing ~closures ~fields ~captures (depth + 1) k
       | _ -> List.iter (go depth) args )
-    | MLcase (ty, s, [|(ids, _, _, b)|]) when Table.record_fields_of_type ty <> [] -> (
+    | MLcase (ty, s, [|(ids, _, _, b)|], _) when Table.record_fields_of_type ty <> [] -> (
       go depth s;
       match strip s with
       | MLrel (i, _) ->
@@ -697,7 +697,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
         let fields = List.init n (fun k -> (depth + k, depth - i)) @ fields in
         walk ~targets ~heads ~fixpoints ~enclosing ~closures ~fields ~captures (depth + n) b
       | _ -> go (depth + List.length ids) b )
-    | MLcase (_, s, branches) ->
+    | MLcase (_, s, branches, _) ->
       go depth s;
       Array.iter (fun (ids, _, _, b) -> go (depth + List.length ids) b) branches
     | MLfix (_, ids, funs, _, occ) ->
@@ -737,7 +737,7 @@ let flow_fixpoints ~names depth body =
     match e with
     | MLlam (_, _, b) -> mentions (depth + 1) b
     | MLletin (_, _, a, b, _) -> mentions depth a || mentions (depth + 1) b
-    | MLcase (_, s, branches) ->
+    | MLcase (_, s, branches, _) ->
       mentions depth s
       || Array.exists (fun (ids, _, _, b) -> mentions (depth + List.length ids) b) branches
     | MLfix (_, ids, funs, _, _) -> Array.exists (mentions (depth + Array.length ids)) funs
@@ -754,7 +754,7 @@ let flow_fixpoints ~names depth body =
     | MLletin (_, _, a, b, _) ->
       flow depth a;
       flow (depth + 1) b
-    | MLcase (_, s, branches) ->
+    | MLcase (_, s, branches, _) ->
       flow depth s;
       Array.iter (fun (ids, _, _, b) -> flow (depth + List.length ids) b) branches
     | e -> Mlutil.ast_iter (flow depth) e
@@ -771,7 +771,7 @@ let rec iter_under f depth e =
   | MLletin (_, _, a, b, _) ->
     iter_under f depth a;
     iter_under f (depth + 1) b
-  | MLcase (_, s, branches) ->
+  | MLcase (_, s, branches, _) ->
     iter_under f depth s;
     Array.iter (fun (ids, _, _, b) -> iter_under f (depth + List.length ids) b) branches
   | MLfix (_, ids, funs, _, _) -> Array.iter (iter_under f (depth + Array.length ids)) funs
@@ -944,7 +944,7 @@ let inlined_calls ~self ~effects ~parameters ~inlines body =
       | Returning | Binding ->
         if x != Dummy then go Binding a;
         go pos b )
-    | MLcase (ty, s, branches) -> (
+    | MLcase (ty, s, branches, _) -> (
       let enum =
         match ty with
         | Tglob ((Names.GlobRef.IndRef _ as r), _, _) -> Table.is_enum_inductive r

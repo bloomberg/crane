@@ -288,7 +288,11 @@ and ml_ast =
   | MLglob of global_use
   | MLcons of ml_type * GlobRef.t * ml_ast list
   | MLtuple of ml_ast list
-  | MLcase of ml_type * ml_ast * ml_branch array
+  | MLcase of ml_type * ml_ast * ml_branch array * Occurrence.t
+      (** The matched head's type, the scrutinee, the branches, and the
+          occurrence telling this match apart from every other one in the
+          program, kept by a pass rebuilding it as [MLletin]'s is: the
+          binders of one branch at one level in two matches are still two. *)
   | MLfix of int * (Id.t * ml_type) array * ml_ast array * bool * Occurrence.t
       (** The function selected, the group's binders and bodies, whether it
           is a cofixpoint, and the occurrence telling this fixpoint apart

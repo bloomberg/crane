@@ -35,7 +35,7 @@ let arm body =
           ( lst,
             scrutinee,
             [| ([], lst, Pusual nil, MLcons (lst, nil, []));
-               ([(x, nat); (t, lst)], lst, Pusual cons, body) |] ) )
+               ([(x, nat); (t, lst)], lst, Pusual cons, body) |], Occurrence.fresh ()) )
   in
   let p = Ownership_ir.region ~owned:[1] ~n_outer:0 root in
   (p, Ownership_ir.reuse_arm p ~scrutinee ~branch:1 ~constructor:cons)
@@ -65,7 +65,7 @@ let () =
         MLcase
           ( bool,
             fresh_rel 1,
-            [| ([], lst, Pusual other, left); ([], lst, Pusual other, right); ([], lst, Pwild, ended) |] ),
+            [| ([], lst, Pusual other, left); ([], lst, Pusual other, right); ([], lst, Pwild, ended) |], Occurrence.fresh ()),
         Occurrence.fresh () )
   in
   let _, p = arm tail in
@@ -92,7 +92,7 @@ let () =
       parameter_type = (fun _ -> None);
       resume_at =
         (fun b ->
-          if Core_binder.equal b (Core_binder.make ~origin ~level:1 ()) && Core_binder.same_site b (Core_binder.make ~origin ~level:1 ~site ())
+          if Core_binder.equal b (Core_binder.make ~origin ~level:1 ()) && Core_binder.same_site b (Core_binder.make ~origin ~level:1 ~site:(Binding site) ())
           then Some {calls; kept = [s]; held = [s]; passed = []}
           else None ) }
   in
@@ -112,7 +112,7 @@ let () =
   let root = MLletin (Id (Id.of_string "y"), nat, call "h" [arg], resumed, Occurrence.fresh ()) in
   let read = match arg with MLrel (_, o) -> o | _ -> assert false in
   let call_site = match value with MLapp (MLglob g, _) -> g.occurrence | _ -> assert false in
-  let at_let = Core_binder.make ~origin ~level:2 ~site () in
+  let at_let = Core_binder.make ~origin ~level:2 ~site:(Binding site) () in
   let resumes : Ownership_ir.resumes =
     { origin;
       depth = 1;
@@ -140,7 +140,7 @@ let () =
     let site = Occurrence.fresh () in
     let root = MLletin (Id (Id.of_string "r"), nat, value, call "g" [fresh_rel 2; fresh_rel 1], site) in
     let call_site = match value with MLapp (MLglob g, _) -> g.occurrence | _ -> assert false in
-    let at_let = Core_binder.make ~origin ~level:2 ~site () in
+    let at_let = Core_binder.make ~origin ~level:2 ~site:(Binding site) () in
     let resumes : Ownership_ir.resumes =
       { origin;
         depth = 2;
@@ -173,7 +173,7 @@ let () =
   let root = MLletin (Id (Id.of_string "y"), nat, outer_value, inner, outer_site) in
   let call_of = function MLapp (MLglob g, _) -> g.occurrence | _ -> assert false in
   let point level site value =
-    (Core_binder.make ~origin ~level ~site (), {Ownership_ir.calls = [call_of value]; kept = [s]; held = [s]; passed = []})
+    (Core_binder.make ~origin ~level ~site:(Binding site) (), {Ownership_ir.calls = [call_of value]; kept = [s]; held = [s]; passed = []})
   in
   let points = [point 2 outer_site outer_value; point 3 inner_site inner_value] in
   let resumes : Ownership_ir.resumes =
@@ -201,7 +201,7 @@ let () =
     let site = Occurrence.fresh () in
     let root = MLletin (Id (Id.of_string "r"), nat, value, call "g" [fresh_rel 1; fresh_rel 4], site) in
     let call_site = match value with MLapp ((MLrel (_, o) | MLglob {occurrence = o; _}), _) -> o | _ -> assert false in
-    let at_let = Core_binder.make ~origin ~level:3 ~site () in
+    let at_let = Core_binder.make ~origin ~level:3 ~site:(Binding site) () in
     let resumes : Ownership_ir.resumes =
       { origin;
         depth = 3;
@@ -284,7 +284,7 @@ let () =
   let value = call "weigh" [fresh_rel 2] in
   let site = Occurrence.fresh () in
   let call_site = match value with MLapp (MLglob g, _) -> g.occurrence | _ -> assert false in
-  let at_let = Core_binder.make ~origin ~level:3 ~site () in
+  let at_let = Core_binder.make ~origin ~level:3 ~site:(Binding site) () in
   let use ?(passed = []) ?(handed = false) ?(ty = Tvar (Rigid, 1)) certain =
     let read = fresh_rel 2 in
     let body = if handed then MLapp (fresh_rel 4, [read; fresh_rel 1]) else call "g" [read; fresh_rel 1] in
