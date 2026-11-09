@@ -3210,19 +3210,11 @@ type slot = {
     as Core elaborated it, and what planning its C++ added; see
     {!plan_call}. *)
 type call_plan = {
-  cp_call : Elaborated_call.t;
+  cp_instantiated : Elaborated_call.instantiated;
+      (** The call's semantic half, decided before any of the C++ below. *)
   cp_expected_result : cpp_type option;
   cp_instance_type_args : cpp_type option list;
   cp_instance_families : (cpp_type * Id.t list * (Id.t * cpp_type) list) list;
-  cp_tyargs : Call_tyargs.t;
-      (** The callee's scheme variables as the call reads them, spelled in
-          the caller's scope. *)
-  cp_tys : Mlutil.Var_types.t;
-      (** {!cp_tyargs} as substitutions take it ({!Call_tyargs.by_variable}). *)
-  cp_fn_ml_ty_subst : ml_type;
-  cp_params : Param_pos.subst Param_pos.params;
-  cp_params_orig : Param_pos.orig Param_pos.params;
-  cp_subst_index_of_orig : Param_pos.orig Param_pos.pos -> Param_pos.subst Param_pos.pos option;
   cp_tvars : Id.t list;
   cp_concrete_tvar_type : cpp_type option;
   cp_instance_promoted : (Id.t * cpp_type) list;

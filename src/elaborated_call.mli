@@ -10,9 +10,9 @@
     Transitional.  Its roles are elaborated from Core ahead of translation
     ({!Core_elaborate}) where translation meets the call as written, and
     where it is translated otherwise; the holes its context states are
-    resolved where it is translated ({!Translation_calls.resolve_from_context}),
-    and the C++ part of planning the call ({!Translation_calls.plan_call})
-    starts from it. *)
+    resolved, and the callee's types instantiated, by
+    {!Core_elaborate.instantiate} ({!instantiated}), which the C++ part of
+    planning the call ({!Translation_calls.plan_call}) starts from. *)
 
 (** The role an argument the call writes has. *)
 type role =
@@ -80,3 +80,43 @@ val leading_params : t -> int
     ({!Call_tyargs.Argument_heads}): the arguments at it are then built at
     that type, so the call has to write it. *)
 val dictionary_filled : t -> bool
+
+(** A call whose reading of its callee's scheme variables is complete, and
+    the callee's types at that reading: section 3.4's [ElaboratedCall], the
+    semantic half of planning a call ({!Core_elaborate.instantiate}).  It
+    holds no C++ type, and is decided before, and without, anything about
+    the call's C++: the C++ half of planning
+    ({!Translation_calls.plan_call}) reads it and adds to it, never the
+    other way.
+
+    Transitional.  It is built where the call is translated, in the
+    traversal's lexical environment and with the ML types the call's
+    position states; the position is the one input not yet threaded by a
+    Core walk of its own. *)
+type instantiated = private {
+  call : t;  (** The call, with the holes its context states resolved. *)
+  reading : Call_tyargs.t;
+      (** The scheme variables as the call reads them in the end: {!call}'s
+          reading, plus a partial application's variables resolved for the
+          lambda it is eta-expanded into. *)
+  tys : Mlutil.Var_types.t;  (** {!reading} as substitutions take it ({!Call_tyargs.by_variable}). *)
+  callee_type_at_call : Miniml.ml_type;  (** The callee's type at {!reading}. *)
+  params : Param_pos.subst Param_pos.params;  (** The parameters of {!callee_type_at_call}. *)
+  params_orig : Param_pos.orig Param_pos.params;  (** The parameters the callee declares. *)
+  subst_index_of_orig : Param_pos.orig Param_pos.pos -> Param_pos.subst Param_pos.pos option;
+      (** A declared parameter's position among {!params}, where it has one
+          ({!Param_pos.subst_of_orig}). *)
+}
+
+(** [instantiate call ~reading ~at_call ~expand ~erased] -- [call] reading
+    its variables as [reading]: [at_call tys] instantiates a type the
+    callee declares at the reading's substitution, [expand] unfolds an
+    alias for an arrow, and [erased] says of an instantiated parameter
+    whether the instantiation erased it. *)
+val instantiate :
+  t ->
+  reading:Call_tyargs.t ->
+  at_call:(Mlutil.Var_types.t -> Miniml.ml_type -> Miniml.ml_type) ->
+  expand:(Miniml.ml_type -> Miniml.ml_type) ->
+  erased:(Miniml.ml_type -> bool) ->
+  instantiated

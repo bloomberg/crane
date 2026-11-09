@@ -180,6 +180,146 @@ let of_roles use args roles =
 
 let elaborate_arguments ~lex use args = of_roles use args (classify ~lex use.callee args)
 
+(* The holes of [call]'s reading of its scheme variables that its context
+   states: the ML type its position expects or states for its result
+   ([expected_ml], else [stated_ml]), and the heads its arguments' types give
+   a type-level function a domain names. *)
+let resolve_from_context ~lex ~expected_ml ~stated_ml (call : Elaborated_call.t) =
+  let {Elaborated_call.callee = id; callee_type = fn_ml_ty; primary = primary_ml_args; tyargs; _} =
+    call
+  in
+  (* An erased event family the position's type names: [memM_interp]'s [E],
+     given unapplied where [on_mem] takes a handler into [itree BotE].  The
+     family occurs in the callee's result only, where nothing deduces it and
+     the phantom filler would write [void]. *)
+  let tyargs =
+    match
+      match expected_ml with
+      | Some _ as t -> t
+      | None -> stated_ml
+    with
+    | Some result when Call_tyargs.interior_holes tyargs <> [] ->
+      let families = Ml_type_util.event_family_ml_tvars [fn_ml_ty] in
+      (* A family is a head, or one applied at the index it erases
+         ([BotE _]); [box nat] met at a bare variable is a value type, not
+         the family. *)
+      let family_shaped b =
+        match resolve_tmeta b with
+        | Miniml.Tglob (_, [], _) -> true
+        | Miniml.Tglob (_, args, _) ->
+          Ml_type_util.is_ml_erased_ty (List.nth args (List.length args - 1))
+        | _ -> false
+      in
+      (* With [~constructors]: an applied variable against an application
+         is the head, which for a family -- the only variables filled here --
+         is the answer. *)
+      let found =
+        tvar_instantiation_found ~lex ~constructors:true ~result
+          fn_ml_ty primary_ml_args
+      in
+      (* Only where nothing deduces it: a family a parameter spells is the
+         compiler's to read off the argument. *)
+      let deducible =
+        Option.default IntSet.empty (deducible_tvars_of_glob id)
+      in
+      Call_tyargs.resolve Call_tyargs.Expected_result
+        (fun v ->
+          let k = Scheme.Var.ordinal v in
+          match List.assoc_opt k found with
+          | Some b
+            when IntSet.mem k families && (not (IntSet.mem k deducible))
+                 && family_shaped b ->
+            Some b
+          | _ -> None )
+        (Call_tyargs.interior_holes tyargs) tyargs
+    | _ -> tyargs
+  in
+
+  (* A type-level function passed where a type alias in a domain names it
+     -- the category's [C] in [Id_ obj C] -- is a hole of the reading, stated
+     by the dictionary argument.  Filled before anything is substituted, so
+     the parameter types the arguments are generated against and the
+     explicit type arguments the call writes agree. *)
+  Elaborated_call.with_tyargs call
+    (resolve_from_argument_heads ~only_alias_args:true ~lex tyargs primary_ml_args)
+
+let instantiate ~lex ~expected_ml ~stated_ml ~caller ~scope call =
+  let call = resolve_from_context ~lex ~expected_ml ~stated_ml call in
+  let {Elaborated_call.callee = id; callee_type = fn_ml_ty; primary = primary_ml_args; tyargs; _} =
+    call
+  in
+  (* A partial application is eta-expanded into a lambda spelled in the
+     caller's scope, and a variable of the callee's that neither the call
+     nor its arguments instantiate is not one of the caller's: left in, it
+     prints as whichever caller variable shares its index -- [h_get]'s index
+     as the enclosing handler's [T1].  It is erased, and a position nothing
+     deduces is then written as the box it is. *)
+  let reading =
+    let n_params =
+      let rec count ty =
+        match expand_ml_fun_alias ty with
+        | Miniml.Tarr (t, rest) ->
+          (match resolve_tmeta t with
+           | Miniml.Tdummy _ -> count rest
+           | _ -> 1 + count rest)
+        | _ -> 0
+      in
+      count fn_ml_ty
+    in
+    (* Only one the lambda's result spells: a variable the codomain does not
+       mention -- a rank-2 handler's [forall X] -- is not the call's to
+       instantiate, and keeps itself.  And not in a call to the declaration
+       being generated, whose variables {e are} the caller's. *)
+    let self_call =
+      match caller with
+      | Some r -> GlobRef.UserOrd.equal r id
+      | None -> false
+    in
+    if self_call || List.length primary_ml_args >= n_params then tyargs
+    else
+      let tyargs = resolve_from_argument_types ~lex tyargs primary_ml_args in
+      let in_cod = collect_tvars_set IntSet.empty (ml_codomain fn_ml_ty) in
+      let open_vars = Call_tyargs.beyond_extent tyargs in
+      match
+        List.fold_left
+          (fun m v ->
+            let i = Scheme.Var.ordinal v in
+            if IntSet.mem i in_cod then max m i else m )
+          0 open_vars
+      with
+      | 0 -> tyargs
+      | n ->
+        (* Erased only where it would be misread: a variable whose spelling
+           no caller variable has is bound by the eta-lambda itself (see
+           [eta_tparams]), and deduced there from the parameter that names
+           it -- [memM T2] of a natural transformation. *)
+        let collides i =
+          List.exists
+            (fun v -> String.equal (Id.to_string v) (Minicpp.tvar_spelling i))
+            scope
+        in
+        Call_tyargs.resolve Call_tyargs.Eta_parameter
+          (fun v ->
+            let i = Scheme.Var.ordinal v in
+            Some
+              ( if IntSet.mem i in_cod && collides i then Miniml.Tunknown
+                else Miniml.Tvar (Miniml.Schematic, i) ) )
+          (List.filter (fun v -> Scheme.Var.ordinal v <= n) open_vars)
+          tyargs
+  in
+  (* The one substitution that takes the callee's declared types to this
+     call's; without it the argument generated into a [bind]'s [m A] is left
+     with no stated type at all.  The declared parameter list and the
+     substituted one are not indexed alike: substitution can make a
+     parameter dummy that was not one before ({!Param_pos}). *)
+  Elaborated_call.instantiate call ~reading
+    ~at_call:(fun tys -> instantiate_at_call id tys primary_ml_args)
+    ~expand:expand_ml_fun_alias
+    ~erased:(fun t ->
+      match resolve_tmeta t with
+      | Miniml.Tdummy _ -> true
+      | _ -> false )
+
 (** A global application of the program: the occurrence of the use naming
     its callee, and the roles of the arguments it writes. *)
 type entry = {

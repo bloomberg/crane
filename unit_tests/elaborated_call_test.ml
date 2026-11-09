@@ -116,3 +116,34 @@ let () =
   check "a call whose use was rewritten is found planned, one built afresh is not"
     (Core_elaborate.report ()
     = "elaborated calls: 2 planned; emission found 1, elaborated 1 itself")
+
+(* The semantic half of planning a call is decided from Core alone: the
+   callee's declared type, the call's reading of its variables, and the
+   lexical environment -- no translation state, no C++ type. *)
+let () =
+  let f = r "pk" in
+  let a1 = Tvar (Schematic, 1) in
+  Table.add_type f (Tarr (a1, Tarr (Tdummy Ktype, Tarr (a1, a1))));
+  let scheme = Scheme.Id.fresh f ~arity:1 in
+  let use =
+    Global_use.polymorphic f
+      (Scheme.Instantiation.make scheme (fun _ ->
+           { Scheme.solution = Scheme.Type nat;
+             source = Scheme.Written {binder = Scheme.Binder.of_position 0; observed = Some nat} } ) )
+  in
+  let a = declare "ka" nat and b = declare "kb" nat in
+  let inst =
+    Core_elaborate.instantiate ~lex:Lexenv.empty ~expected_ml:None ~stated_ml:None ~caller:None
+      ~scope:[] (Core_elaborate.elaborate_arguments ~lex:Lexenv.empty use [a; b])
+  in
+  check "the callee's type is instantiated at the reading"
+    (inst.callee_type_at_call = Tarr (nat, Tarr (Tdummy Ktype, Tarr (nat, nat))));
+  check "the declared parameters are the callee's own, its erased domain none of them"
+    (Param_pos.to_list inst.params_orig = [a1; a1]);
+  check "the instantiated parameters are at the reading"
+    (Param_pos.to_list inst.params = [nat; nat]);
+  check "a declared position names the same parameter after substitution"
+    (Option.bind (inst.subst_index_of_orig (Param_pos.of_regular ~leading:0 0)) (Param_pos.nth inst.params)
+    = Some nat);
+  check "a call at its arity keeps the reading it was elaborated with"
+    (Mlutil.Var_types.equal inst.tys (Call_tyargs.by_variable inst.call.tyargs))

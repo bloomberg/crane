@@ -22,6 +22,30 @@
     the call's context states are not resolved here. *)
 val elaborate_arguments : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> Elaborated_call.t
 
+(** [instantiate ~lex ~expected_ml ~stated_ml ~caller ~scope call] -- the
+    semantic half of planning [call] (section 3.4's [ElaboratedCall]): the
+    holes of its reading that its context states resolved -- an event family
+    the ML type its position expects ([expected_ml]) or states
+    ([stated_ml]) for its result names, a type-level function a dictionary
+    argument's type names -- then, for a partial application in a
+    declaration other than [caller], the variables the lambda it is
+    eta-expanded into would misread erased, and the callee's types
+    instantiated at that reading.  [scope] is the type variables the
+    position is generated under, by name: a variable of the callee's is
+    misread where it is spelled like one of them.
+
+    Everything it reads is Core: the call, the ML types [lex] binds, the
+    callee's declared type, and its position's ML types; no C++ type is
+    decided or read. *)
+val instantiate :
+  lex:Lexenv.t ->
+  expected_ml:Miniml.ml_type option ->
+  stated_ml:Miniml.ml_type option ->
+  caller:Names.GlobRef.t option ->
+  scope:Names.Id.t list ->
+  Elaborated_call.t ->
+  Elaborated_call.instantiated
+
 (** A unit's elaborated calls. *)
 type t
 
