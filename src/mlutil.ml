@@ -2515,7 +2515,8 @@ let rec kill_dummy = function
   | MLfix (i, fi, c, is_cofix, occ) ->
     ( try
         let k, c = kill_dummy_fix i c [] in
-        ast_subst (MLfix (i, fi, c, is_cofix, occ)) (kill_dummy_args k 1 (fresh_rel 1))
+        let fix = MLfix (i, fi, c, is_cofix, occ) in
+        Option.cata (fun k -> ast_subst fix (kill_dummy_args k 1 (fresh_rel 1))) fix k
       with Impossible -> MLfix (i, fi, Array.map kill_dummy c, is_cofix, occ) )
   | MLapp (MLfix (i, fi, c, is_cofix, occ), a) ->
     let a = List.map kill_dummy a in
@@ -2524,14 +2525,14 @@ let rec kill_dummy = function
     ( try
         let k, c = kill_dummy_fix i c (sign_of_args a) in
         let fake = MLapp (fresh_rel 1, List.map (ast_lift 1) a) in
-        let fake' = kill_dummy_args k 1 fake in
+        let fake' = Option.cata (fun k -> kill_dummy_args k 1 fake) fake k in
         ast_subst (MLfix (i, fi, c, is_cofix, occ)) fake'
       with Impossible ->
         MLapp (MLfix (i, fi, Array.map kill_dummy c, is_cofix, occ), a) )
   | MLletin (id, t, MLfix (i, fi, c, is_cofix, occ), e, let_occ) ->
     ( try
         let k, c = kill_dummy_fix i c [] in
-        let e = kill_dummy (kill_dummy_args k 1 e) in
+        let e = kill_dummy (Option.cata (fun k -> kill_dummy_args k 1 e) e k) in
         MLletin (id, t, MLfix (i, fi, c, is_cofix, occ), e, let_occ)
       with Impossible ->
         MLletin
@@ -2558,17 +2559,38 @@ and kill_dummy_hd = function
       with Impossible -> MLletin (id, t, kill_dummy c, kill_dummy_hd e, occ) )
   | a -> a
 
-(** Removes dummy lambdas from fixpoint body [i] and propagates the change
-    to all mutual bodies. *)
+(** Removes dummy lambdas from fixpoint body [i], under the signature [s] of
+    the arguments it is applied to, and from every other body of the group,
+    and propagates each change to all mutual bodies.  The signature [i] was
+    killed under, if any, is for the caller to adjust the references to the
+    fixpoint outside it; [Impossible] if no body had anything to kill.  A
+    partner is reached
+    only from within the group, so its calls are the only ones to adjust:
+    left with its erased binders, it would take a parameter for each of
+    them that the calls to it, their dummy arguments dropped, do not
+    pass. *)
 and kill_dummy_fix i c s =
   let n = Array.length c in
-  let k, ci = kill_dummy_lams s (kill_dummy_hd c.(i)) in
   let c = Array.copy c in
-  c.(i) <- ci;
+  let kill j sign =
+    let k, cj = kill_dummy_lams sign (kill_dummy_hd c.(j)) in
+    c.(j) <- cj;
+    for j' = 0 to n - 1 do
+      c.(j') <- kill_dummy_args k (n - j) c.(j')
+    done;
+    k
+  in
+  let k = try Some (kill i s) with Impossible -> None in
+  let killed = ref (Option.has_some k) in
   for j = 0 to n - 1 do
-    c.(j) <- kill_dummy (kill_dummy_args k (n - i) c.(j))
+    if j <> i then
+      try
+        ignore (kill j []);
+        killed := true
+      with Impossible -> ()
   done;
-  (k, c)
+  if not !killed then raise Impossible;
+  (k, Array.map kill_dummy c)
 
 (** Main normalization pass: applies simplification and dummy elimination
     repeatedly until fixed point. *)

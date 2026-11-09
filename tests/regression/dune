@@ -14090,3 +14090,14 @@
   (alias runtest)
   (deps self_call_other_instance.t.exe)
   (action (run ./self_call_other_instance.t.exe))))
+
+(subdir local_mutual_partner_type_arg
+ (rule
+  (targets local_mutual_partner_type_arg.t.exe)
+  (deps LocalMutualPartnerTypeArg.vo local_mutual_partner_type_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_mutual_partner_type_arg.t.exe local_mutual_partner_type_arg.t.cpp local_mutual_partner_type_arg.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_mutual_partner_type_arg.t.exe)
+  (action (run ./local_mutual_partner_type_arg.t.exe))))
