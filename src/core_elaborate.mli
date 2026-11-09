@@ -35,8 +35,10 @@ val elaborate_arguments : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast lis
     misread where it is spelled like one of them.
 
     Everything it reads is Core: the call, the ML types [lex] binds, the
-    callee's declared type, and its position's ML types; no C++ type is
-    decided or read. *)
+    callee's declared type, [caller]'s -- whose constraints name a
+    dictionary binder's class where its recorded type lost it -- and its
+    position's ML types; no C++ type is decided or read, and nothing of the
+    traversal that asks. *)
 val instantiate :
   lex:Lexenv.t ->
   expected_ml:Miniml.ml_type option ->
