@@ -9211,7 +9211,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       let free_args = List.map (fun (name, _, _) -> CPPvar name) free_vars in
       (* Generate the lifted function name *)
       let fix_name = fst ids.(x) in
-      let lifted_ref = lifted_ref (Lifted.Fixpoint (occ, x)) fix_name in
+      let member_refs = lifted_member_refs occ ids in
+      let lifted_ref = member_refs.(x) in
       (* Generate the fixpoint body using gen_fix, under the lifted function's
          own tvar scope, passing all mutual fixpoint names *)
       let all_fix_ids_list = Array.to_list ids in
@@ -9221,14 +9222,15 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             Array.to_list
               (Array.mapi
                  (fun i f ->
-                   gen_fix env ~all_fix_ids:all_fix_ids_list ~lifted:lifted_ref ~fix_idx:i ids.(i)
+                   gen_fix env ~all_fix_ids:all_fix_ids_list ~lifted:member_refs.(i) ~fix_idx:i ids.(i)
                      f )
                  funs ) )
       in
+      let renamed = List.map (fun ((id, _), _, _, _) -> id) funs_compiled in
       (* Build a lifted definition for each fixpoint function (usually just one) *)
       let n_fix = Array.length funs in
       List.iteri
-        (fun i ((renamed_id, fix_ty), params, body, param_binders) ->
+        (fun i ((_, fix_ty), params, body, param_binders) ->
           let cpp_ty =
             convert_ml_type_to_cpp_type env all_tvar_names fix_ty
           in
@@ -9254,22 +9256,18 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               all_temps
               (List.map (fun (n, t, _) -> (n, t)) free_vars @ params)
           in
-          (* Replace recursive self-references (CPPvar renamed_n) with calls to
-             the lifted function *)
-          let rec_call =
-            mk_cppglob lifted_ref
-              (class_args @ List.map (fun id -> named_tvar id) all_tvar_names)
-          in
+          (* Replace references to the group's members with calls to the
+             lifted functions *)
           let body =
-            List.map
-              (local_var_subst_stmt ~extra_args:free_args renamed_id rec_call)
+            subst_lifted_members ~extra_args:free_args renamed member_refs
+              (class_args @ List.map (fun id -> named_tvar id) all_tvar_names)
               body
           in
           (* The captured variables are the enclosing body's binders. *)
           let binders =
             parameter_binders env (List.map (fun (n, t, _) -> (n, t)) free_vars) @ param_binders
           in
-          let inner = Dfun (mk_dfun ~binders ~ret:cod lifted_ref (Ddef (cpp_params, body))) in
+          let inner = Dfun (mk_dfun ~binders ~ret:cod member_refs.(i) (Ddef (cpp_params, body))) in
           let lifted_decl =
             Dtemplate (class_temps @ all_temps_with_funs, None, inner)
           in
@@ -10112,8 +10110,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         let extended_tvar_names =
           build_extended_tvar_names fix_tvar_indices all_tvar_names all_body_tvars
         in
-        let fix_name = fst ids.(x) in
-        let lifted_ref = lifted_ref (Lifted.Fixpoint (occ, x)) fix_name in
+        let member_refs = lifted_member_refs occ ids in
+        let lifted_ref = member_refs.(x) in
         (* Compile under the lifted function's extended tvar scope, which covers
            both signature and body Tvar indices. *)
         let all_fix_ids_list = Array.to_list ids in
@@ -10123,14 +10121,15 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               Array.to_list
                 (Array.mapi
                    (fun i f ->
-                     gen_fix env ~all_fix_ids:all_fix_ids_list ~lifted:lifted_ref ~fix_idx:i ids.(i)
+                     gen_fix env ~all_fix_ids:all_fix_ids_list ~lifted:member_refs.(i) ~fix_idx:i ids.(i)
                        f )
                    funs ) )
         in
+        let renamed = List.map (fun ((id, _), _, _, _) -> id) funs_compiled in
         (* Build lifted declarations *)
         let n_fix = Array.length funs in
         List.iteri
-          (fun i ((renamed_id, fix_ty), params, body, param_binders) ->
+          (fun i ((_, fix_ty), params, body, param_binders) ->
             let cpp_ty =
               convert_ml_type_to_cpp_type
                 env
@@ -10158,13 +10157,13 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                 all_temps
                 params
             in
-            let rec_call =
-              mk_cppglob lifted_ref
+            let body =
+              subst_lifted_members renamed member_refs
                 (class_args @ List.map (fun id -> named_tvar id) all_tvar_names)
+                body
             in
-            let body = List.map (local_var_subst_stmt renamed_id rec_call) body in
             let inner =
-              Dfun (mk_dfun ~binders:param_binders ~ret:cod lifted_ref (Ddef (cpp_params, body)))
+              Dfun (mk_dfun ~binders:param_binders ~ret:cod member_refs.(i) (Ddef (cpp_params, body)))
             in
             let lifted_decl =
               Dtemplate (class_temps @ all_temps_with_funs, None, inner)

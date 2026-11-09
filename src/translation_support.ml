@@ -1748,6 +1748,20 @@ let build_extended_tvar_names sig_indices sig_names body_tvars =
 let lifted_ref site (binder : Id.t) : GlobRef.t =
   Lifted.ref_of (Lifted.make ~origin:!Table.current_decl_ref ~binder site)
 
+(** The helper each member of the local fixpoint group [ids] at [occ] is
+    lifted to: a member of its own per function of the group. *)
+let lifted_member_refs occ ids =
+  Array.mapi (fun i (n, _) -> lifted_ref (Lifted.Fixpoint (occ, i)) n) ids
+
+(** [body], a lifted member's, with each member of its group, which it names
+    by [renamed] (in array order), called as the helper [refs] lifts it to at
+    [targs], the group's own type arguments, and passed [extra_args], what the
+    group captures.  A member reaches its partners as it reaches itself. *)
+let subst_lifted_members ?(extra_args = []) renamed refs targs body =
+  List.fold_left2
+    (fun body id r -> List.map (local_var_subst_stmt ~extra_args id (mk_cppglob r targs)) body)
+    body renamed (Array.to_list refs)
+
 (* Walk an ML AST and collect source-order parameter indices that are NOT
    simply forwarded unchanged at recursive call sites.  [is_self_call depth f]
    returns true when the head [f] of an application is a self-recursive
