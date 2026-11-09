@@ -14090,3 +14090,36 @@
   (alias runtest)
   (deps self_call_other_instance.t.exe)
   (action (run ./self_call_other_instance.t.exe))))
+
+(subdir local_mutual_partner_type_arg
+ (rule
+  (targets local_mutual_partner_type_arg.t.exe)
+  (deps LocalMutualPartnerTypeArg.vo local_mutual_partner_type_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_mutual_partner_type_arg.t.exe local_mutual_partner_type_arg.t.cpp local_mutual_partner_type_arg.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_mutual_partner_type_arg.t.exe)
+  (action (run ./local_mutual_partner_type_arg.t.exe))))
+
+(subdir local_lifted_mutual
+ (rule
+  (targets local_lifted_mutual.t.exe)
+  (deps LocalLiftedMutual.vo local_lifted_mutual.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_lifted_mutual.t.exe local_lifted_mutual.t.cpp local_lifted_mutual.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_lifted_mutual.t.exe)
+  (action (run ./local_lifted_mutual.t.exe))))
+
+(subdir local_lifted_mutual_closure_back
+ (rule
+  (targets local_lifted_mutual_closure_back.t.exe)
+  (deps LocalLiftedMutualClosureBack.vo local_lifted_mutual_closure_back.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_lifted_mutual_closure_back.t.exe local_lifted_mutual_closure_back.t.cpp local_lifted_mutual_closure_back.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_lifted_mutual_closure_back.t.exe)
+  (action (run ./local_lifted_mutual_closure_back.t.exe))))
