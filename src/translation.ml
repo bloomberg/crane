@@ -6321,7 +6321,10 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       if written_tvar_args = [] || is_inline_custom id then None
       else
         Option.map
-          (fun t -> Minicpp.subst_cpp_tvars subst (cpp_of_ml env t))
+          (fun t ->
+            let live = cpp_of_ml env t in
+            check_installed_arity id live;
+            Minicpp.subst_cpp_tvars subst live)
           (find_type_opt id)
     in
     (* Each argument read at its parameter as the call writes it

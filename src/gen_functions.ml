@@ -374,14 +374,25 @@ let promote_typeclass_params (params : (Id.t * ml_type) list) =
   in
   (params, List.rev !temps)
 
+(** The value-parameter types, in declaration order, and the return type of
+    a function declaration, which keeps its parameters last first. *)
+let declared_signature = function
+  | Dfun {df_ret; df_shape = Ddef (params, _); _} ->
+    Some {Callable_abi.params = List.rev_map snd params; ret = df_ret}
+  | Dfun {df_ret; df_shape = Ddecl params; _} ->
+    Some {Callable_abi.params = List.rev_map snd params; ret = df_ret}
+  | _ -> None
+
 (** The head [n] is declared with: [temps] relaxed against [signature]
     ({!Plan_templates.relax_function_head}), as [n]'s callable plan and as a
     template head, with what the relaxations decided, which carry them
     through the declaration. *)
 let plan_function_head ?deduced_callables ?passing n ty temps signature =
   let temps, relaxations = relax_function_head temps signature in
+  let signature = declared_signature (Head_relaxation.apply_all relaxations signature) in
   let abi =
-    Callable_abi.of_head ?deduced_callables ?passing ~relaxations ~omitted:(Translation_support.type_arg_omission n)
+    Callable_abi.of_head ?deduced_callables ?passing ?signature ~relaxations
+      ~omitted:(Translation_support.type_arg_omission n)
       ~phantom_prefix:(Translation_types.leading_phantom_count n)
       ~relaxed:(fun i -> IntSet.mem i (Ml_type_util.relaxed_higher_kinded_tvars ty))
       ~callee:n ~scheme:(Mlutil.reference_scheme n) temps
@@ -1109,6 +1120,24 @@ let self_call_reference n ~undeducible =
   in
   mk_cppglob n (List.map (fun (_, id) -> named_tvar id) written)
 
+(** Checks the signature the function [n] is declared with, [decl], against
+    its plan's.  A top-level sequential [main] is declared to return [int]
+    for the entry point, which no call of it reads. *)
+let check_declared_signature n decl =
+  let is_entry_point =
+    match (n, decl) with
+    | GlobRef.ConstRef c, Dfun {df_ret = Tid_external ("int", []); _} ->
+      String.equal (Label.to_string (Constant.label c)) "main"
+    | _ -> false
+  in
+  if not is_entry_point then
+    let planned = Callable_abi.signature (Callable_abi.planned n) in
+    if not (Option.equal ( = ) planned (declared_signature decl)) then
+      Probe.violation "callable ABI"
+        Pp.(
+          str "the declaration of " ++ GlobRef.print n
+          ++ str " has another signature than its plan" )
+
 let gen_dfun n b cty ty temps =
   let scope = dfun_body_scope n b cty ty temps in
   let temps, relaxations = planned_scope_head n ty scope in
@@ -1433,6 +1462,7 @@ let gen_dfun n b cty ty temps =
     (inner, env)
   in
   let inner = Head_relaxation.apply_all relaxations inner in
+  if Probe.checking () then check_declared_signature n inner;
   match temps with
   | [] -> (inner, env)
   | l -> (Dtemplate (l, None, inner), env)
@@ -1703,6 +1733,10 @@ let plan_function ~fixpoint n b ty =
   with_function_head n b ty @@ fun ty h ->
   let plan cty =
     let abi, _, _ = plan_scope_head n ty (dfun_body_scope n h.fh_body cty ty h.fh_temps) in
+    ( if Probe.checking () then
+        match convert_ml_type_to_cpp_type (empty_env ()) [] ty with
+        | live -> Translation_support.check_planned_arity abi live
+        | exception e when CErrors.noncritical e -> () );
     Some abi
   in
   match h.fh_cty with

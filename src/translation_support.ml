@@ -3584,3 +3584,36 @@ let apply_hkt_tyctors g temps =
     unnamed rather than being an error. *)
 let tvar_name_at tvars i =
   if i >= 1 then List.nth_opt tvars (pred i) else None
+
+(** Checks the plan [abi] of a function against [live], the C++ type of its
+    declared ML type as a call site rebuilds it: the plan declares one value
+    parameter per domain other than a class dictionary or a skipped type, and
+    one dictionary template parameter per dictionary domain.  Its types are
+    not compared: the declaration spells its parameters after its head's
+    relaxations, through its instances' associated types and with aliases
+    expanded, so they differ from the type rebuilt here by design. *)
+let check_planned_arity abi live =
+  if Probe.checking () then
+    match Callable_abi.signature abi with
+    | None -> ()
+    | Some {Callable_abi.params; _} ->
+      let doms = match live with Tfun (d, _) -> d | _ -> [] in
+      let dicts, values = List.partition Table.is_typeclass_type_cpp doms in
+      let values = List.filter (fun t -> not (is_skipped_cpp_type t)) values in
+      let instances =
+        List.length
+          (List.filter
+             (fun p ->
+               match p.Callable_abi.origin with Callable_abi.From_instance _ -> true | _ -> false )
+             (Callable_abi.template_head abi) )
+      in
+      if List.length values <> List.length params || List.length dicts <> instances then
+        Probe.violation "callable ABI"
+          Pp.(
+            str "the plan of " ++ GlobRef.print (Callable_abi.callee abi)
+            ++ str (Printf.sprintf " declares %d value parameters and %d dictionaries" (List.length params) instances)
+            ++ str (Printf.sprintf " where its type has %d and %d" (List.length values) (List.length dicts)) )
+
+(** {!check_planned_arity} for the installed plan of [id], where it has one. *)
+let check_installed_arity id live =
+  if Probe.checking () then Option.iter (fun abi -> check_planned_arity abi live) (Callable_abi.lookup id)

@@ -102,6 +102,15 @@ type passing =
   | Borrowed
   | Forwarded
 
+(** The C++ types a function's value parameters are declared at, in
+    declaration order, and the return type it is declared at: its signature
+    after the relaxations of its head ({!relaxations}), ownership wrappers
+    included. *)
+type signature = {
+  params : Minicpp.cpp_type list;
+  ret : Minicpp.cpp_type;
+}
+
 type t
 
 val callee : t -> Names.GlobRef.t
@@ -110,6 +119,10 @@ val callee : t -> Names.GlobRef.t
     order, where the plan is of a declaration generated here; a foreign plan
     does not say. *)
 val passing : t -> passing list option
+
+(** The signature of the callee, where the plan is of a function generated
+    here; a method's is in {!receiver}, a foreign plan does not say. *)
+val signature : t -> signature option
 
 (** Where the callee is a method, what its plan says of it as one. *)
 val receiver : t -> receiver option
@@ -150,7 +163,8 @@ val dictionary_carriers : t -> Scheme.Var.t list
     the [k]th variable declares the scheme's [renumber k]th, where a method
     numbers its own variables after the receiver's, and [receiver] is what
     the plan of a method adds; [passing] how its value parameters are
-    passed, in declaration order; [omitted] says why the convention omits a
+    passed, in declaration order; [signature] what a function is declared
+    at; [omitted] says why the convention omits a
     variable of [scheme], if it does. *)
 val of_head :
   ?omitted:(Scheme.Var.t -> omission option) ->
@@ -160,6 +174,7 @@ val of_head :
   ?deduced_callables:Param_pos.orig Param_pos.pos list ->
   ?receiver:receiver ->
   ?passing:passing list ->
+  ?signature:signature ->
   ?relaxations:Head_relaxation.t list ->
   callee:Names.GlobRef.t ->
   scheme:Scheme.Id.t option ->
