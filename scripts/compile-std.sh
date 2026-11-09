@@ -70,7 +70,25 @@ HB_LLVM="${HB_LLVM:-/opt/homebrew/opt/llvm}"
 # adapter in a user's build.
 
 # Build the compiler command
-if [ -d "$HB_LLVM" ]; then
+if [ -n "${CXX:-}" ]; then
+    CXX_FLAGS=(
+        -std="$CXX_STD"
+        -"$OPT_LEVEL"
+        -fbracket-depth=1024
+        -I .
+        -I "$THEORIES_CPP"
+        -Wall -Wextra -Wpedantic -Wconversion -Wfloat-conversion
+        -Wsign-conversion -Wstring-compare -Wformat-overflow
+        -Wno-stringop-overflow -Wstringop-overflow -Wstringop-overflow=4
+        -Wno-unknown-warning-option -Wno-unused-function
+        -Wno-unused-local-typedef -Wno-shorten-64-to-32
+        -Wno-unused-variable -Wno-unused-value
+        -Wno-constant-conversion -Wno-sign-conversion
+        -Wno-implicit-int-conversion -Werror
+        -DCRANE_STRICT_ARITY
+    )
+    LINK_FLAGS=()
+elif [ -d "$HB_LLVM" ]; then
     CXX="$HB_LLVM/bin/clang++"
     # On macOS, Homebrew clang may not find the SDK automatically
     SYSROOT_FLAGS=()

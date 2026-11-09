@@ -17,7 +17,9 @@ THEORIES_CPP="$PROJECT_ROOT/theories/cpp"
 JOBS="${JOBS:-8}"
 
 HB_LLVM="${HB_LLVM:-/opt/homebrew/opt/llvm}"
-if [ -d "$HB_LLVM" ]; then
+if [ -n "${CXX:-}" ]; then
+    FLAGS=()
+elif [ -d "$HB_LLVM" ]; then
     CXX="$HB_LLVM/bin/clang++"
     FLAGS=(-nostdlib++ -stdlib=libc++ -I"$HB_LLVM/include/c++/v1")
     if [ "$(uname)" = "Darwin" ]; then

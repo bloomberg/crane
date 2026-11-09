@@ -59,12 +59,14 @@ jobs:
         run: |
           # clang-19 doesn't parse structured-binding packs (theories/cpp/shared_variant.h);
           # pull a newer clang from LLVM's apt repo instead of Ubuntu noble's default.
+          # Point CXX at it directly for later steps rather than relying on
+          # update-alternatives, which left clang++ resolving to an older clang.
           curl -fsSL https://apt.llvm.org/llvm.sh -o /tmp/llvm.sh
           chmod +x /tmp/llvm.sh
           sudo /tmp/llvm.sh 22
           sudo apt-get install -y libc++-22-dev libc++abi-22-dev libgmp-dev
-          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-22 100
-          clang++ --version
+          echo "CXX=clang++-22" >> "$GITHUB_ENV"
+          clang++-22 --version
 
       - name: Generated headers compile standalone
         run: scripts/check-headers-standalone.sh
