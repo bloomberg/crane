@@ -50,12 +50,18 @@ type passing =
   | Borrowed
   | Forwarded
 
+type signature = {
+  params : Minicpp.cpp_type list;
+  ret : Minicpp.cpp_type;
+}
+
 type t = {
   callee : GlobRef.t;
   head : template_parameter list;
   deduced_callables : Param_pos.orig Param_pos.pos list;
   receiver : receiver option;
   passing : passing list option;
+  signature : signature option;
   variables : (Scheme.Var.t * omission option) list;
   relaxations : Head_relaxation.t list;
   phase : Common.phase;
@@ -139,7 +145,7 @@ let mark_phantoms n head =
   go n head
 
 let of_head ?omitted ?(phantom_prefix = 0) ?relaxed ?renumber ?(deduced_callables = []) ?receiver
-    ?passing ?(relaxations = []) ~callee ~scheme temps =
+    ?passing ?signature ?(relaxations = []) ~callee ~scheme temps =
   let head =
     List.mapi
       (fun position (kind, name) ->
@@ -158,11 +164,13 @@ let of_head ?omitted ?(phantom_prefix = 0) ?relaxed ?renumber ?(deduced_callable
     deduced_callables;
     receiver;
     passing;
+    signature;
     variables = scheme_variables ?omitted scheme;
     relaxations;
     phase = Common.get_phase () }
 
 let passing abi = abi.passing
+let signature abi = abi.signature
 
 (* A method of an instance's struct belongs to the instance: it has no
    global of its own, and no scheme -- its variables are the method's own
@@ -239,6 +247,7 @@ let same_head a b =
   && List.equal Param_pos.equal a.deduced_callables b.deduced_callables
   && Option.equal ( = ) (Option.map receiver_key a.receiver) (Option.map receiver_key b.receiver)
   && Option.equal (List.equal ( = )) a.passing b.passing
+  && Option.equal ( = ) a.signature b.signature
   && variables_key a = variables_key b
   && List.equal Head_relaxation.equal a.relaxations b.relaxations
 
@@ -392,6 +401,7 @@ let foreign ?omitted ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept =
       deduced_callables = [];
       receiver = None;
       passing = None;
+      signature = None;
       variables = scheme_variables ?omitted scheme;
       relaxations = [];
       phase = Common.get_phase () }

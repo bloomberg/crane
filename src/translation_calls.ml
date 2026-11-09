@@ -119,7 +119,9 @@ let curry_to_expected env ?expected_ty use cglob =
   let decl_ty = find_type_opt use.callee in
   let ml_ty = instantiated_type use in
   let callee_site =
-    match Option.map (cpp_of_ml env) decl_ty with
+    let live = Option.map (cpp_of_ml env) decl_ty in
+    Option.iter (check_installed_arity use.callee) live;
+    match live with
     | Some (Tfun (dom, _)) -> Declared_at (List.length dom)
     | _ -> Declared
   in
