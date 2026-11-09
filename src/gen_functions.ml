@@ -408,7 +408,10 @@ type body_scope = {
   bs_owned_flags : bool list;
   bs_passing : Callable_abi.passing list;
       (** How each value parameter is passed, in declaration order. *)
-  bs_rec_call : cpp_expr;
+  bs_self_call_undeducible : (Id.t -> bool) option;
+      (** Under polymorphic recursion, the parameters a self-call has to
+          write although the call is not at the declaration's own
+          instantiation ({!self_call_reference}); [None] where it is. *)
   bs_gen_body_stmts : env -> (cpp_expr -> cpp_stmt) -> ml_ast -> cpp_stmt list;
   bs_no_pure : bool;
   bs_deduced_callables : Param_pos.orig Param_pos.pos list;
@@ -960,14 +963,14 @@ let dfun_body_scope n b cty ty temps =
         (tt, id) )
       typeclass_temps
   in
-  (* Build recursive call reference with typeclass and type params only.
-     Function type params (from fun_tys) are excluded because they should be
-     deduced from arguments, not explicitly specified in recursive calls. *)
-  (* A function recursing over a nested (non-uniform) inductive is
-     polymorphically recursive: the self-call is at [nest (A * A)], not at
-     [nest A].  Repeating the enclosing template arguments would force the
-     wrong instantiation, so let C++ deduce them from the argument instead —
-     the recursive argument always mentions the inductive, so deduction
+  (* A self-call writes what any call may write ({!self_call_reference}),
+     at the declaration's own parameters -- except under polymorphic
+     recursion.  A function recursing over a nested (non-uniform) inductive
+     is at [nest (A * A)] in its self-call, not at [nest A], although Core
+     records the call at its own variables (ML recursion is monomorphic).
+     Repeating the enclosing template arguments would force the wrong
+     instantiation, so let C++ deduce them from the argument instead -- the
+     recursive argument always mentions the inductive, so deduction
      succeeds. *)
   let recurses_on_non_uniform_ind =
     let rec mentions = function
@@ -994,37 +997,24 @@ let dfun_body_scope n b cty ty temps =
      deduces it, and the recursion is at the one instantiation the result
      names.  The self-call writes it and the parameters before it, leaving
      those after it to deduction. *)
-  let undeducible_prefix temps =
-    let spelled = List.concat_map (fun (_, ty) -> get_rendered_tvar_indices ty) ids in
-    let constrained =
-      get_tvar_indices cod
-      @ List.concat_map
-          (function _, TTfun (dom, cod), _ -> get_tvar_indices (Tfun (dom, cod)) | _ -> [])
-          fun_tys
-    in
-    let undeducible (tt, id) =
-      match (tt, tvar_number id) with
-      | TTtypename_default _, _ | _, None -> false
-      | _, Some i -> List.mem i constrained && not (List.mem i spelled)
-    in
-    let _, written =
-      List.fold_left (fun (k, n) t -> (k + 1, if undeducible t then k + 1 else n)) (0, 0) temps
-    in
-    CList.firstn written temps
-  in
-  let own_temps =
-    List.filter
-      (fun (_, id) -> not (List.exists (fun (i, _) -> tvar_id i = id) hkt_tvar_resolutions))
-      temps
-  in
-  let rec_call_temps =
-    typeclass_temps_basic
-    @
-    if recurses_on_non_uniform_ind && not tvars_are_phantom then undeducible_prefix own_temps
-    else own_temps
-  in
-  let rec_call =
-    mk_cppglob n (List.map (fun (_, id) -> named_tvar id) rec_call_temps)
+  let self_call_undeducible =
+    if recurses_on_non_uniform_ind && not tvars_are_phantom then
+      let spelled = List.concat_map (fun (_, ty) -> get_rendered_tvar_indices ty) ids in
+      let constrained =
+        get_tvar_indices cod
+        @ List.concat_map
+            (function _, TTfun (dom, cod), _ -> get_tvar_indices (Tfun (dom, cod)) | _ -> [])
+            fun_tys
+      in
+      Some
+        (fun id ->
+          match List.find_opt (fun (_, id') -> Id.equal id id') temps with
+          | Some (TTtypename_default _, _) | None -> false
+          | Some _ -> (
+            match tvar_number id with
+            | None -> false
+            | Some i -> List.mem i constrained && not (List.mem i spelled) ) )
+    else None
   in
   (* Combine all template params for function signature. Save the non-typeclass
      type params for Tvar index resolution below. *)
@@ -1058,7 +1048,7 @@ let dfun_body_scope n b cty ty temps =
     bs_owned_flags = owned_flags;
     bs_passing =
       List.rev (List.map2 (fun (_, ty) (_, _, owned) -> param_passing ~owned ty) ids ids_with_owned);
-    bs_rec_call = rec_call;
+    bs_self_call_undeducible = self_call_undeducible;
     bs_gen_body_stmts = gen_body_stmts;
     bs_no_pure = no_pure;
     bs_deduced_callables = deduced_callables;
@@ -1083,9 +1073,46 @@ let planned_scope_head n ty scope =
     Callable_abi.check decided );
   (Callable_abi.declared_head abi, Callable_abi.relaxations abi)
 
+(** The reference a self-call of [n] in its own body is written with: every
+    template parameter its plan lets a call write, at itself -- the call is
+    at the declaration's own instantiation, so each is in scope and exact.
+    That is not the policy of a call from elsewhere ({!Translation_calls.call_type_args}),
+    which writes nothing a value argument deduces, the instantiation it reads
+    possibly being unspellable.  Under polymorphic recursion
+    ([undeducible]) the call is at another instantiation than Core records,
+    so it writes only the dictionaries and the parameters up to the last one
+    nothing deduces, leaving the rest to deduction. *)
+let self_call_reference n ~undeducible =
+  let writable =
+    List.filter_map
+      (fun p ->
+        match (p.Callable_abi.write, p.Callable_abi.origin) with
+        | Callable_abi.Deduce_only, _ | _, Callable_abi.From_callable _ -> None
+        | _ -> Some (p.Callable_abi.origin, Callable_abi.Template_param.name p.Callable_abi.id) )
+      (Callable_abi.template_head (Callable_abi.planned n))
+  in
+  let written =
+    match undeducible with
+    | None -> writable
+    | Some undeducible ->
+      let dicts, rest =
+        List.partition
+          (function Callable_abi.From_instance _, _ -> true | _ -> false)
+          writable
+      in
+      let _, k =
+        List.fold_left
+          (fun (i, k) (_, id) -> (i + 1, if undeducible id then i + 1 else k))
+          (0, 0) rest
+      in
+      dicts @ CList.firstn k rest
+  in
+  mk_cppglob n (List.map (fun (_, id) -> named_tvar id) written)
+
 let gen_dfun n b cty ty temps =
   let scope = dfun_body_scope n b cty ty temps in
   let temps, relaxations = planned_scope_head n ty scope in
+  let rec_call = self_call_reference n ~undeducible:scope.bs_self_call_undeducible in
   let inner, env =
     with_itree_mode_for ty @@ fun () ->
   let {
@@ -1100,7 +1127,6 @@ let gen_dfun n b cty ty temps =
     bs_regular_temps = regular_temps;
     bs_promoted_var_resolutions = promoted_var_resolutions;
     bs_owned_flags = owned_flags;
-    bs_rec_call = rec_call;
     bs_gen_body_stmts = gen_body_stmts;
     bs_no_pure = no_pure;
   } =
