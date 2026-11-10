@@ -24,8 +24,10 @@ type concept_type =
   | Global of GlobRef.t * concept_type list  (** Any other named type, applied. *)
   | Namespaced of GlobRef.t * GlobRef.t * cpp_expr list * concept_type list
       (** A named type qualified by a namespace not inside [M], applied. *)
-  | Shared_pointer of concept_type
+  | Shared_pointer of concept_type  (** [std::shared_ptr] of the type. *)
   | Variant of variant_storage * concept_type list
+      (** A variant of the alternatives, stored as {!Minicpp.variant_storage}
+          says. *)
   | Function of concept_type list * concept_type  (** [crane::fn<R(A...)>] *)
   | Plain of cpp_type  (** A type no requirement qualifies. *)
 

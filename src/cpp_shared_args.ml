@@ -63,6 +63,8 @@ let in_stmt fresh s =
   in
   List.rev !bound @ [s]
 
+(* Fresh names avoid every name declared or read in a block seen so far,
+   each block noted before its statements are rewritten. *)
 let transform_decl d =
   let used = ref Id.Set.empty in
   let note_ids stmts = used := Id.Set.union !used (Id.Set.of_list (declared_ids stmts @ free_vars_body stmts)) in

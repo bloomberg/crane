@@ -7,7 +7,8 @@
     is the second pass in Crane's multi-pass extraction pipeline (after
     {!Method_registry}).
 
-    The analysis performs four tasks:
+    The analysis performs these tasks, and then collects the layout facts the
+    name resolver reads (the fields of {!t} after [global_scope_enums]):
     + {b Enum registration.} Identifies inductives whose constructors are all
       nullary and have no type parameters. These are rendered as [enum class] in
       C++ rather than the usual [std::variant]-based struct. Results are
@@ -15,28 +16,33 @@
       pipeline can query them.
     + {b Inductive name collection.} Builds a list of
       [(capitalized_name, defining_modpath)] pairs for every inductive in the
-      structure. Used by [cpp.ml] for name collision detection: if a wrapper
-      module has the same name as an inductive from a different module, the
-      wrapper must use a disambiguated name.
+      structure. Used for name collision detection: if a wrapper module has
+      the same name as an inductive from a different module, the wrapper must
+      use a disambiguated name (suffixed [_Mod]), and a colliding child module
+      is forced inside a parent wrapper ([collision_wrappers]).
     + {b Global-scope enum collection.} After enum registration, identifies
       which enums appear at global scope (i.e. as top-level [SEdecl] entries
       rather than inside sub-modules). These are emitted before any wrapper
       modules or the main module.
-    + {b Module classification and topological sort.} Classifies each top-level
-      module as either a "wrapper module" (a simple module containing only
-      declarations, no sub-modules — suitable for wrapping in a C++ struct) or a
-      regular module. Then topologically sorts all non-main modules by their
-      cross-module dependencies so that definitions appear before uses. The main
-      module (the last one in the structure) is always emitted last.
+    + {b Module classification and topological sort.} Orders each module's
+      inductives so that an inductive whose inline methods need another one
+      complete comes after it. Classifies each top-level module as either a
+      "wrapper module" (a simple module containing only declarations, no
+      sub-modules, suitable for wrapping in a C++ struct) or a regular
+      module. Then topologically sorts all non-main modules by their
+      cross-module dependencies so that definitions appear before uses. The
+      main module (the last one in the structure) is always emitted last.
 
     {2 Relationship to other modules}
 
-    - Runs {i after} {!Method_registry.create}, because the topological sort
+    - Runs {i after} the method registry is built ({!Method_registry.create},
+      or the whole-program registry when one exists), because the topological sort
       needs to know about method registrations to correctly model cross-module
       dependencies (a function that calls a method on a type from another module
       depends on that module).
-    - Runs {i before} [cpp.ml]'s rendering pass, which consumes the {!t} result
-      to iterate over modules in the correct order.
+    - Runs {i before} any rendering: [Cpp.prepare_structure] turns the {!t}
+      result into the unit's {!Module_plan}, which rendering iterates in the
+      correct order.
     - The enum registration side-effect ([Table.add_enum_inductive]) is also
       needed by {!Method_registry}, which is why enum detection also happens
       during the method registry pass (for inductives encountered before this
@@ -51,14 +57,16 @@ type module_info = {
   sels : (Label.t * ml_structure_elem) list;
       (** The module's declaration list (labels and structure elements). This is
           the same list that appears in the original [ml_structure], preserved
-          here so that [cpp.ml] can iterate over it without re-extracting from
-          the original structure. *)
+          here so that rendering can iterate over it without re-extracting from
+          the original structure.  Its inductive declarations are reordered so
+          that each follows the inductives its inline methods need complete. *)
   wrapper_name : string option;
       (** If this module should be wrapped in a C++ struct, [Some name] gives
           the capitalized wrapper struct name (e.g. ["List"] for the [list]
-          module). [None] if the module should not be wrapped — either because
-          it contains sub-modules, or because it is the main module, or because
-          it lacks function declarations.
+          module, suffixed [_Mod] when a global-scope enum or a type it cannot
+          be merged into already takes the name). [None] if the module should
+          not be wrapped, either because it contains sub-modules, or because
+          it is the main module, or because it lacks function declarations.
 
           A module qualifies as a wrapper when:
           - It contains at least one function declaration ([Dterm] or [Dfix]),
@@ -156,9 +164,9 @@ type t = {
 
 (** Perform all structure analysis in a single pass.
 
-    This is the main entry point, called once per unit from [cpp.ml]'s
-    [prepare_structure] -- the pass that renders nothing -- immediately after
-    creating the {!Method_registry}.
+    This is the main entry point, called once per unit from
+    [Cpp.prepare_structure] -- the pass that renders nothing -- once the
+    {!Method_registry} is obtained.
 
     Side effects:
     - Calls [Table.add_enum_inductive] for each detected enum.
@@ -169,7 +177,7 @@ type t = {
       module, there is an implicit dependency on the module that defines the
       type (because the method is emitted inside that module's struct).
     @param ml_structure The full extraction structure to analyze.
-    @return Analysis results consumed by [cpp.ml]'s rendering pass. *)
+    @return Analysis results, turned into the unit's {!Module_plan}. *)
 val analyze : Method_registry.t -> ml_structure -> t
 
 (** Register the inductives stored as shared variants
@@ -179,13 +187,14 @@ val analyze : Method_registry.t -> ml_structure -> t
 val register_shared_variants : ml_structure -> unit
 
 (** The definitions of [s] whose final bodies only raise: emitted as
-    zero-argument functions, and called wherever they are named. *)
+    zero-argument functions, and called wherever they are named.  Pure;
+    {!Program_facts} records the list. *)
 val throwing_values : ml_structure -> GlobRef.t list
 
-(** The template parameter every module-type concept is written over. *)
+(** The template parameter every module-type concept is written over ([M]). *)
 val concept_self_param : string
 
 (** The concept identifier a module type labelled [l] takes unless a clash
-    qualifies it ({!Cpp.modtype_concept_name} is the only reader outside this
-    module). *)
+    qualifies it ({!Cpp_names.modtype_concept_name} is the only reader outside
+    this module). *)
 val concept_name_of_label : Label.t -> string

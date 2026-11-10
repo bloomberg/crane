@@ -21,6 +21,7 @@ type t = {
           each is generated in. *)
 }
 
+(** [analyze struc] observes one unit's structure; it writes nothing. *)
 val analyze : Miniml.ml_structure -> t
 
 (** What analysing the whole normalized program observed, before it is split into
@@ -44,4 +45,7 @@ type program = {
 
 (** [analyze_program p] analyses the normalized program [p]; it writes nothing. *)
 val analyze_program : Core_phase.normalized Core_phase.program -> program
+
+(** Whether two analyses of a unit observed the same facts: under
+    [CRANE_CHECK_IR] a unit is analysed twice and the two must agree. *)
 val equal : t -> t -> bool

@@ -1,6 +1,8 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
+(** The concept a module type becomes.  See [modtype_concept.mli]. *)
+
 open Names
 open Miniml
 open Minicpp
@@ -42,6 +44,7 @@ type t =
   | Alias of {base : ModPath.t; refinements : (Id.t list * cpp_type) list}
   | Constraint of constraint_
 
+(* Whether [mp] is [base] or a module path inside it. *)
 let rec is_under base mp =
   ModPath.equal mp base || match mp with MPdot (parent, _) -> is_under base parent | _ -> false
 
@@ -90,6 +93,7 @@ let rec concept_type signature ty =
   | Tfun (dom, cod) -> Function (args dom, concept_type signature cod)
   | ty -> Plain ty
 
+(* The domains and codomain of an ML arrow type. *)
 let rec arrows = function
   | Tarr (arg, rest) ->
     let args, ret = arrows rest in
@@ -98,6 +102,9 @@ let rec arrows = function
 
 let convert t = Translation_types.convert_ml_type_to_cpp_type (Common.empty_env ()) [] t
 
+(* The requirements one specification of the signature at [signature]
+   asks of [M]; none for an inline custom, whose mapping stands in for the
+   member. *)
 let requirements signature = function
   | Sval (r, _, _) when Table.is_inline_custom r -> []
   | Stype (r, _, _) when Table.is_inline_custom r -> []
@@ -114,6 +121,8 @@ let requirements signature = function
            let r = GlobRef.IndRef (kn, i) in
            Inductive_member {member = r; enum = Cpp_names.is_enum_cached r; arity = List.length p.ip_vars} )
          ind.ind_packets )
+  (* A polymorphic value is a member template, which a requires-expression
+     cannot name without choosing its arguments: it asks nothing. *)
   | Sval (_, _, t) when Ml_type_util.has_tvar t -> []
   | Sval (r, _, t) -> (
     let args, ret = arrows t in
@@ -148,6 +157,7 @@ let rec constraint_of ~params = function
     Requirements {signature = mp; parameters = params; items = List.concat_map item sign}
   | MTwith (mt, _) -> constraint_of ~params:[] mt
 
+(* The named module type a module type refines, if it is one. *)
 let rec base_concept = function
   | MTident kn -> Some kn
   | MTwith (mt, _) -> base_concept mt

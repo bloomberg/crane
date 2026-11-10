@@ -74,10 +74,13 @@ let () = State.on_reset State.Extraction (fun () -> Minted.reset let_lambda_base
 
 (** The type a term builds in tail position, where its own annotations say so.
 
-    Only a constructor application answers.  [MLcons] carries the inductive it
-    builds (see the typing note on {!Miniml.ml_ast}), so it is the one node
-    that knows its type without reconstruction; a recursive call, by
-    definition, says nothing the fixpoint's own type does not already. *)
+    A constructor application answers: [MLcons] carries the inductive it
+    builds (see the typing note on {!Miniml.ml_ast}), so it knows its type
+    without reconstruction.  So does a fully applied global, from its declared
+    codomain as the call instantiates it
+    ({!Translation_types.ml_app_result_type}).  A recursive call, its head a
+    local, answers nothing: it says nothing the fixpoint's own type does not
+    already.  A match answers with its first branch that does. *)
 let rec tail_result_type = function
   | MLlam (_, _, b) | MLletin (_, _, _, b, _) | MLmagic (_, b) -> tail_result_type b
   | MLcons (ty, _, _) -> Some ty
@@ -140,6 +143,7 @@ let settle ids funs =
   Array.iter (fun (_, ty) -> mint ty) ids;
   (funs, mint)
 
+(* Whether [ty] still holds an unsolved metavariable or an open type. *)
 let rec left_open = function
   | Tmeta {contents = None} | Topen _ -> true
   | Tmeta {contents = Some t} -> left_open t
@@ -181,6 +185,8 @@ let check_let_lambda ~outer t a =
     | _ -> ()
   end
 
+(* Mints the open variables of the local definitions in [e], under a
+   declaration whose own variables number up to [outer]. *)
 let rec expr ~outer = function
   | MLletin (_, _, MLfix (_, ids, funs, _, _), b, _) ->
     ignore (settle ids funs);

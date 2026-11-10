@@ -58,7 +58,7 @@ let deapplied ~plain ~in_scope =
   ft
 
 let unmentioned_erased ids =
-  (* Stricter than {!tvar_is}, which lets an unresolved head answer to its
+  (* Stricter than {!Minicpp.tvar_is}, which lets an unresolved head answer to its
      index as well as to its name: a relaxation names its parameters [F1],
      [_P0] without renumbering them, so a variable that kept index 1 would
      otherwise answer for [T1]. *)

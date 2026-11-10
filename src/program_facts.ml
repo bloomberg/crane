@@ -1,6 +1,9 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
+(** Program facts, observed from the structure alone.  See
+    [program_facts.mli]. *)
+
 open Miniml
 
 type t = {
@@ -34,6 +37,8 @@ let analyze_program normalized =
         ~methods:(fun r -> Option.has_some (Method_registry.is_registered_method methods r))
         recursion normalized }
 
+(* The custom-extracted references [struc] names, a used constructor
+   adding its inductive. *)
 let used_customs struc =
   let used = ref Ref.User.Set.empty in
   let add r = used := Ref.User.Set.add r !used in
@@ -52,6 +57,8 @@ let used_customs struc =
     struc;
   !used
 
+(* The projections [struc]'s term definitions name anywhere in their
+   bodies. *)
 let higher_order_projections struc =
   let found = ref Ref.User.Set.empty in
   let rec scan = function

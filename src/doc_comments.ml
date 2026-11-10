@@ -4,8 +4,10 @@
 (** Extract doc comments from Rocq (.v) source files.
 
     Parses [(** ... *)] documentation comments and associates each with the
-    definition that immediately follows it. The table is set explicitly via
-    [set_table] and queried via [find] during C++ pretty-printing. *)
+    definition, constructor or record field that immediately follows it.
+    Extraction parses the source of the module being extracted and installs
+    the table with {!set_table}; the C++ printer reads it through {!find}
+    and {!pp}, emitting each comment as [///] lines above its declaration. *)
 
 (** {2 Doc-comment table}
 
@@ -68,7 +70,7 @@ let rec skip_whitespace_and_comments s i =
     with
     | ' ' | '\t' | '\n' | '\r' -> skip_whitespace_and_comments s (i + 1)
     | '(' when i + 1 < len && s.[i + 1] = '*' ->
-      (* Check if this is a doc comment — if so, don't skip it *)
+      (* A doc comment is not skipped: it is the caller's to read. *)
       if i + 2 < len && s.[i + 2] = '*' && not (i + 3 < len && s.[i + 3] = ')')
       then
         i (* doc comment: stop here *)
@@ -375,7 +377,7 @@ let translate_brackets ~translate text =
     generated [///] line terminates the comment for the C++ compiler (which
     treats CR as a line break) while the byte itself is invisible in most
     editors, letting text after it escape the comment and be compiled as
-    source (finding 63, CWE-94/CWE-116). Folding every line ending to [\n]
+    source (CWE-94/CWE-116).  Folding every line ending to [\n]
     before splitting ensures no raw [\r] ever reaches the emitted line. *)
 let normalize_line_endings text =
   let len = String.length text in
@@ -397,15 +399,16 @@ let normalize_line_endings text =
     splice (with only a warning) when trailing blanks separate the backslash
     from the newline, so trimming alone cannot neutralize it. A spliced line
     absorbs the following declaration into the comment, corrupting or
-    dropping generated code (finding 73, CWE-94/CWE-116). Appending a
+    dropping generated code (CWE-94/CWE-116).  Appending a
     non-blank, non-backslash marker guarantees the emitted line never ends in
     a splicing backslash. *)
 let escape_trailing_backslash line =
   let n = String.length line in
   if n > 0 && line.[n - 1] = '\\' then line ^ "_" else line
 
-(** Format a doc comment string as a list of [///]-prefixed lines. Translates
-    bracket references [[name]] by stripping the brackets. *)
+(** Format a doc comment string as a list of [///]-prefixed lines, each
+    trimmed, a blank line kept as a bare [///].  Bracket references [[name]]
+    lose their brackets ({!translate_brackets} with the identity). *)
 let format_as_cpp_lines text =
   let text = translate_brackets ~translate:(fun s -> s) text in
   let text = normalize_line_endings text in

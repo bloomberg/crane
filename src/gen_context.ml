@@ -3,7 +3,10 @@
 
 (** The state a declaration generator works in: the per-body bookkeeping every
     top-level body begins with, and the resolutions of class-promoted type
-    variables and higher-kinded carriers in scope. *)
+    variables and higher-kinded carriers in scope.  It sits between
+    {!Translation} (expressions and statements) and the declaration
+    generators ([Gen_functions], [Gen_records], [Gen_instances],
+    [Gen_inductives]) that build MiniCpp declarations from MiniML ones. *)
 
 open Common
 open Miniml
@@ -20,6 +23,8 @@ module IntSet = Escape.IntSet
     see {!body_generation_counts}. *)
 let body_generations : (Common.phase, int) Hashtbl.t = State.table State.Unit 3
 
+(** How many top-level bodies each phase ([Plan], [Emit]) has generated in
+    this unit. *)
 let body_generation_counts () =
   List.map
     (fun p -> (p, Option.default 0 (Hashtbl.find_opt body_generations p)))
@@ -32,7 +37,9 @@ let body_generation_counts () =
     moves -- a body with parameters sets that tracking after this.
 
     [owner] is the declaration the body belongs to, which
-    [CRANE_TRACE_PIPELINE] reports with the phase. *)
+    [CRANE_TRACE_PIPELINE] reports with the phase.  [function_] says the body
+    is a function's, generated as one, rather than a constant's initialiser
+    or a member's (see [body_function] in {!Translation_state}). *)
 let begin_body ~owner ?(function_ = false) () =
   let phase = get_phase () in
   Hashtbl.replace body_generations phase
@@ -64,7 +71,9 @@ let begin_body ~owner ?(function_ = false) () =
     reads as erased and provokes a spurious [any_cast]).
 
     [?outer] are the binders around the method -- an instance's own
-    parameters, its dictionaries among them -- pushed beneath [params]. *)
+    parameters, its dictionaries among them -- pushed beneath [params].
+    [?cpp] gives C++ types for [params] already decided by the caller, passed
+    on to {!Translation.push_binders}. *)
 let with_method_env_types ?(cpp = []) ?(outer = []) env params f =
   let saved_env_types = (!tctx).env_types in
   let saved_erased = save_erased_env () in
@@ -96,6 +105,8 @@ let is_class_tparam class_ref i =
     template binds. *)
 let hkt_alias_param_name i = Generated_name.indexed "A" i
 
+(* Re-exports of {!Ml_type_util} helpers the declaration generators read
+   through this module. *)
 let recover_method_quantifier = Ml_type_util.recover_method_quantifier
 
 let method_tvar_count = Ml_type_util.method_tvar_count
@@ -167,8 +178,9 @@ let class_promoted_concrete ?(tvar_base = 0) class_ref type_args =
 
     A field whose type is a class is promoted while extraction still sees a
     class there, but whether that class survives as a concept is decided
-    later, by {!Extract_env.demote_value_typeclasses}: one used in value
-    position comes out as a plain struct, and the field holding it stays an
+    later, by the inductive kind decisions of the target plan
+    ({!Target_plan.t}'s [inductive_kinds]): one used in value position comes
+    out as a plain struct, and the field holding it stays an
     ordinary value field.  Asking for it as [typename I::f] then sits beside
     the method requirement the value side emits, and a concept wanting one
     name both as a type and as a function is satisfied by no instance at all.
@@ -219,10 +231,10 @@ let class_fields_with_types = Table.get_record_field_bindings
     The field need not be a promoted variable of [class_ref].  A class-typed
     field is spelled [typename I::PROV] whether or not it was promoted -- that
     is what the concept requires of [I] -- so the path exists either way, and
-    a class whose every field is an instance promotes nothing at all.
-    Requiring promotion here left [ParamsV]'s [PROV] and [PTR] contributing no
-    resolutions, so [provenance], [ptr] and the rest fell back to the
-    file-scope [using provenance = std::any;].
+    a class whose every field is an instance promotes nothing at all.  So
+    [ParamsV]'s [PROV] and [PTR] contribute their resolutions though neither
+    is promoted; without them [provenance], [ptr] and the rest would fall back
+    to the file-scope [using provenance = std::any;].
 
     [fields] defaults to {!class_fields_with_types}; pass it when the caller
     already holds the pairing, as it does while generating the class itself. *)
@@ -300,6 +312,9 @@ let rec class_arg_type ~own_instances sh =
       Some (Tglob (r, List.map Option.get ts, []))
     else None
 
+(** The resolutions the class arguments [arg_shapes] of an instance supply:
+    each argument whose class is a type class contributes its own class's
+    promoted variables, spelled through {!class_arg_type}. *)
 let resolutions_of_shapes ~own_instances arg_shapes =
   List.concat_map
     (fun sh ->
@@ -315,6 +330,8 @@ let resolutions_of_shapes ~own_instances arg_shapes =
         | _ -> [] ) )
     arg_shapes
 
+(** {!resolutions_of_shapes} for the recorded class arguments of the instance
+    [inst_ref]; [] when it has no recorded class shape. *)
 let instance_arg_resolutions ~own_instances inst_ref =
   match Table.get_instance_class_shape inst_ref with
   | None -> []
@@ -580,12 +597,6 @@ let promoted_resolutions_of_body ?r ?ty b =
   | _ -> () );
   drop_ambiguous !found
 
-(** Map a function's own type variables to the associated types they really
-    stand for.  In [mret : forall M, Mon M -> forall A, A -> M A] the variable
-    standing for [M A] is [typename _tcI0::M] — an associated type of the
-    instance, not a template parameter.  Left as a free template parameter it
-    would be undeducible: nothing in the signature determines it. *)
-
 (** What the declarations a term names resolve through {e their} own types.
 
     A match over [boxed_iptr : @dval (@ParamsV natIPtr)] spells the
@@ -617,6 +628,12 @@ let with_body_resolutions r b f =
     @ type_resolutions_of_referenced_globals b )
     f
 
+(** Map a function's own type variables to the associated types they really
+    stand for.  In [mret : forall M, Mon M -> forall A, A -> M A] the variable
+    standing for [M A] is [typename _tcI0::M], an associated type of the
+    instance, not a template parameter.  Left as a free template parameter it
+    would be undeducible: nothing in the signature determines it.  The
+    positions come from {!Translation_support.hkt_tvar_positions_of_type}. *)
 let hkt_tvar_resolutions_of_type ?source_order ty =
   List.map
     (fun { htp_tvar; htp_instance; htp_field } ->
@@ -656,8 +673,8 @@ let apply_hkt_resolutions_decl resolutions decl =
 (** The arguments for the promoted variables [r] mentions without declaring,
     which are template parameters of whatever [r] is generated as -- see
     {!Table.promoted_type_params}.  They trail a concept's arguments (the
-    instance comes first, see {!gen_typeclass_cpp}) and lead a struct's (see
-    [Cpp_ind]); every use has to supply them in this order, or it names a
+    instance comes first, see {!Gen_records.gen_typeclass_cpp}) and lead a
+    struct's (see [Cpp_ind]); every use has to supply them in this order, or it names a
     different template. *)
 let mentioned_promoted_args r =
   List.map (fun v -> Tpromoted v) (Table.promoted_type_params r)
@@ -666,7 +683,7 @@ let mentioned_promoted_args r =
     [name]'s family parameters in [ty], spelled at [vars].  A family is a plain
     [typename] -- [E X] is written [E] -- and so is the parameter a conversion
     from another instantiation declares in its place, which the struct-level
-    {!deapply_plain_tvars} does not see. *)
+    {!Plan_templates.deapply_plain_tvars} does not see. *)
 let deapply_families name vars =
   let families = List.filteri (fun i _ -> Table.is_family_ind_param name i) vars in
   map_cpp_type (function

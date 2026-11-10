@@ -20,7 +20,10 @@
     The two lists are kept as distinct types, and so are their positions, so
     reading one list at the other's position does not compile. *)
 
+(** The kind of the declared parameter list. *)
 type orig
+
+(** The kind of the instantiated parameter list. *)
 type subst
 
 (** A position in a parameter list of kind ['k]. *)
@@ -35,11 +38,14 @@ type 'k params
 val orig_params :
   expand:(Miniml.ml_type -> Miniml.ml_type) -> Miniml.ml_type -> orig params
 
+(** {!orig_params} of an instantiated function type. *)
 val subst_params :
   expand:(Miniml.ml_type -> Miniml.ml_type) -> Miniml.ml_type -> subst params
 
 val to_list : 'k params -> Miniml.ml_type list
 val length : 'k params -> int
+
+(** The parameter at a position, [None] past the end. *)
 val nth : 'k params -> 'k pos -> Miniml.ml_type option
 
 (** Every parameter with its position. *)
@@ -86,4 +92,5 @@ val source_index : Miniml.ml_type list -> orig pos -> int option
     or one past the binders. *)
 val of_source_index : Miniml.ml_type list -> int -> orig pos option
 
+(** Whether two positions of one list are the same. *)
 val equal : 'k pos -> 'k pos -> bool

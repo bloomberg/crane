@@ -14,9 +14,10 @@
     use_count() == 1 can reuse the existing allocation by mutating fields
     in-place rather than allocating a new object.
 
-    The analysis runs on the MiniML AST before translation to MiniCpp, attaching
-    ownership annotations that translation.ml and cpp.ml use during code
-    generation. *)
+    The analysis runs on the MiniML AST before translation to MiniCpp.  It
+    attaches nothing to the tree: it answers per-parameter queries, which
+    {!Ownership} settles for the whole program and translation reads back
+    when it chooses parameter passing and the reuse path of a match. *)
 
 open Miniml
 open Table
@@ -24,7 +25,8 @@ open Table
 (** {2 Utility: occurrence counting} *)
 
 (** Count occurrences of de Bruijn index [k] in [t]. For case expressions, use
-    max over branches (conservative estimate).  An argument of an inline custom
+    max over branches (conservative estimate).  A fixpoint's bodies are summed,
+    not maximised.  An argument of an inline custom
     counts as many times as its template splices it: [sum_twice(%a0, %a0)]
     evaluates its argument twice, so a variable passed to it is read twice. *)
 let nb_occur_match =
@@ -69,8 +71,9 @@ let nb_occur_match =
   in
   nb
 
-(** Simple occurrence check: does [MLrel k] appear anywhere in [t]? Used by both
-    escape analysis and the combined analysis below. *)
+(** Simple occurrence check: does [MLrel k] appear anywhere in [t]?  {!escapes}
+    uses it for positions where any occurrence is a capture (lambda and
+    fixpoint bodies, partial applications, primitive arrays). *)
 let rec occurs k = function
   | MLrel (i, _) -> i = k
   | MLcase (_, scrut, branches, _) ->
@@ -149,10 +152,9 @@ let is_partial_app head args =
       function with [s] does.  The field needs a copy either way; a
       borrowed [s] pays for it at the construction site instead of at
       every borrowed link further up the call chain that only ever passed
-      [s] along -- [fun s => ret (s, a)] (a monad's [ret], reading [s] to
-      pair it with [a]) has the identical shape as [fun s => k (t s)] (a
-      monad's [bind], reading [s] to call [t]), and only the latter used
-      to be recognized as borrowable.
+      [s] along: [fun s => ret (s, a)] (a monad's [ret], reading [s] to
+      pair it with [a]) has the same shape as [fun s => k (t s)] (a
+      monad's [bind], reading [s] to call [t]), so both are borrowable.
 
       Every other query treats it as an escape -- {!sub_bindings_escape}'s
       scan of a match branch's body among them -- because a
@@ -162,7 +164,15 @@ let is_partial_app head args =
       occurrence too would silently turn the move back into a copy.  Only
       {!infer_owned_params}'s direct query -- is this *parameter itself*,
       not something extracted from it, merely read to build a new value --
-      asks [Of_param]. *)
+      asks [Of_param].
+
+    An [Of_param] query also counts as an escape passing [MLrel k] directly
+    to a parameter its callee owns ({!callee_flags}): the callee keeps it.
+
+    [Of_sub_binding] and [Of_param] both look inside a lambda passed directly
+    as a call argument instead of treating every capture as an escape, and
+    do not count a partial application passed directly as a call argument
+    as capturing its arguments. *)
 type escape_query = Conservative | Of_sub_binding | Of_param
 
 (** The settled ownership of each global's parameters, innermost first, as
@@ -239,9 +249,15 @@ let escapes ?(query = Conservative) ?(return_escapes = true) k t =
     A parameter can be borrowed when it only appears in:
     - Case scrutinee (destructured immediately)
     - Under MLmagic (transparent wrapper)
+    - Call arguments, other than one the callee owns
+    - Constructor arguments (read once to copy into the new field)
 
-    This is identical to escape analysis — a parameter "escapes" when the caller
-    needs to pass ownership rather than just lend a reference. *)
+    This is escape analysis with an [Of_param] query (a parameter "escapes"
+    when the caller needs to pass ownership rather than just lend a
+    reference), with two adjustments in {!infer_owned_params}: a parameter
+    only matched on and returned as it is stays borrowed
+    ({!returned_or_matched}), and a reuse scrutinee is owned
+    ({!is_reuse_scrutinee}). *)
 
 (** Check if sub-bindings of a parameter used as scrutinee escape.
     When param [k] appears only in scrutinee position but the extracted
@@ -390,11 +406,11 @@ let infer_owned_params n_params body =
      [Cons x (rec xs)] shape).  Only one of them may rewrite a given match --
      loopify owns the shape wherever it applies -- but BOTH need the scrutinee
      passed owned, because both recycle its cells: loopify does so through the
-     owning cursor its TMC loop carries (see Loopify.reuse_cursor).  So this
+     owning cursor its TMC loop carries (see {!Reuse_cursor}).  So this
      inference does not defer to loopify; it asks only whether reuse can be
-     performed at all.  The consumers that actually emit a rewrite --
-     translation's dual-path match and gen_decls' argument passing -- keep
-     deferring to loopify via [reuse_loopify_ok]. *)
+     performed at all.  The consumer that actually emits a reuse rewrite,
+     translation's dual-path match, defers to loopify via
+     [Table.reuse_loopify_ok]. *)
   List.init n_params (fun i ->
     let k = i + 1 in
     ( escapes ~query:Of_param k body
@@ -503,10 +519,12 @@ let single_use_nargs k t =
   search k t;
   !result
 
-(** Check if [ty] is a non-enum, non-coinductive, non-custom inductive
-    (wrapped in shared_ptr in C++). Custom-extracted inductives (e.g., prod
-    mapped to std::pair) are value types, not wrapped in shared_ptr.
-    Resolves Tmeta chains. *)
+(** Check if [ty] is a non-enum, non-coinductive, non-custom inductive.  The
+    name predates value-type inductives: most such inductives are value
+    types in C++, with only their recursive fields behind a shared pointer.
+    The predicate separates Crane's own inductive layouts from enums, lazy
+    coinductives and custom mappings.  Custom-extracted inductives (e.g., prod mapped to
+    std::pair) are excluded.  Resolves Tmeta chains. *)
 let rec is_shared_ptr_type = function
   | Tglob (r, _, _) ->
     ( match r with

@@ -1,6 +1,9 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
+(** LowerControl: the {!Control_ir} of a normalized program.  See
+    [lower_control.mli]. *)
+
 open Miniml
 open Control_ir
 open Control_ir.Term

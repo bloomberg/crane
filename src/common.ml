@@ -11,7 +11,7 @@
 (************************************************************************)
 
 (** Pretty-printing utilities, name resolution, and renaming for extracted code.
-*)
+    See the interface for where it sits in the pipeline. *)
 
 open Pp
 open Util
@@ -168,10 +168,6 @@ let pp_apply_cpp st args =
     (st ++ str "(" ++ prlist_with_sep (fun _ -> str ", ") identity args)
     ++ str ")"
 
-(* Stale note (no matching function in this module): "Same as [pp_apply], but
-   with also protection of the head by parenthesis" — a paren-protecting apply
-   taking [st]/[par]/[args]. Kept as an internal comment; not an API doc. *)
-
 (** Print a list of identifiers as space-separated bindings. *)
 let pr_binding = function
   | [] -> mt ()
@@ -212,15 +208,15 @@ let pp_boxed_tuple f = function
   | [x] -> f x
   | l -> pp_par true ((prlist_with_sep (fun () -> str "," ++ spc ()) f l))
 
-(** By default, in module Format, you can do horizontal placing of blocks even
-    if they include newlines, as long as the number of chars in the blocks is
-    less that a line length. To avoid this awkward situation, we attach a big
-    virtual size to [fnl] newlines. *)
+(** Module Format may place blocks side by side even when they contain
+    newlines, as long as they fit within a line.  Attaching a large virtual
+    size to [fnl] newlines would prevent that (the definition commented out
+    below); it is disabled, as suspicious. *)
 
 (* EG: This looks quite suspicious... but beware of bugs *)
 (* let fnl () = stras (1000000,"") ++ fnl () *)
-(** Shadow [Pp.fnl] to attach a large virtual size, preventing Pp from
-    collapsing lines. *)
+(** [Pp.fnl], re-exported; see above for the virtual size it does not
+    attach. *)
 let fnl () = fnl ()
 
 (** Two consecutive newlines. *)
@@ -231,7 +227,7 @@ let space_if = function
   | true -> str " "
   | false -> mt ()
 
-(** Identity function (historically removed quotes). *)
+(** Identity: a renaming carries no quotes to remove. *)
 let unquote s = s
 
 (** A name as name resolution settled it, before it is flattened to text. *)
@@ -456,10 +452,6 @@ let add_mp_sibling, get_mp_siblings =
   and get mp = try MPmap.find mp !tbl with Not_found -> Id.Set.empty in
   (add, get)
 
-(* When a module and an inductive type with the same C++ name are siblings
-   in the same enclosing scope, the module is renamed with a "_Mod" suffix.
-   Maps the module's ModPath.t to the renamed C++ name.  Populated by
-   detect_sibling_module_inductive_collisions, consulted by mp_renaming_fun. *)
 (** The module paths that are emitted as a C++ struct, i.e. the [SEmodule]s of
     the extracted structure.  A module type is {e not} one of these: it becomes
     a concept, whose associated types are not struct members.  Populated by
@@ -483,7 +475,11 @@ let () = register_cleanup (fun () -> Hashtbl.clear struct_module_paths)
     scope, where they are spelled bare. *)
 let is_struct_module mp = Hashtbl.mem struct_module_paths mp
 
-
+(** When a module and a type with the same C++ name meet in one scope, the
+    module is renamed with a ["_Mod"] suffix.  Maps the module's path to the
+    renamed C++ name.  Populated by
+    {!detect_sibling_module_inductive_collisions}, consulted by
+    {!mp_renaming_fun}. *)
 let sibling_collision_renames : (ModPath.t, string) Hashtbl.t =
   Hashtbl.create 8
 
@@ -735,11 +731,6 @@ let reset_renaming_tables () = do_cleanup ()
 
 (** {1 Renaming functions} *)
 
-(** This function creates from [id] a correct uppercase/lowercase identifier.
-    This is done by adding a [Coq_] or [coq_] prefix. To avoid potential clashes
-    with previous [Coq_id] variable, these prefixes are duplicated if already
-    existing. *)
-
 (** Returns [(escaped_name, was_changed)], where [was_changed] says whether the
     C++ spelling differs from the Rocq one -- because {!ascii_of_id} rewrote a
     character, because a leading underscore was unreserved, or because the name
@@ -758,7 +749,8 @@ let modular_rename_ex ?(global_scope = false) _k id =
     replacement). *)
 let modular_rename k id = fst (modular_rename_ex k id)
 
-(** C++ names of every inductive type declared directly in [sel]. *)
+(** The C++ name of the [using] alias a type-returning [Definition] is
+    emitted as, or [None] for any other declaration. *)
 let type_alias_name_of_decl = function
   (* An erased or custom-extracted alias is never emitted, so it competes for
      nothing. *)
@@ -768,6 +760,9 @@ let type_alias_name_of_decl = function
     Some (modular_rename Type (Label.to_id (Constant.label cst)))
   | _ -> None
 
+(** C++ names of the types declared directly in [sel] that a sibling module
+    competes with: its inductives, except type classes, and its type
+    aliases. *)
 let inductive_names_of_sel sel =
   List.concat_map
     (fun (_l, se) ->
@@ -1014,7 +1009,8 @@ let note_decided_while_emitting n =
 
 let names_decided_while_emitting () = List.rev !decided_while_emitting
 
-(** First, the real function ... *)
+(** The C++ renaming of a module path, innermost component first, computed
+    afresh; {!mp_renaming} caches it. *)
 let rec mp_renaming_fun full_mp =
   match full_mp with
   | _ when (not (modular ())) && at_toplevel full_mp -> [""]
@@ -1046,8 +1042,8 @@ let rec mp_renaming_fun full_mp =
       | Some ns -> ns
       | None -> string_of_modfile full_mp ) ]
 
-(** ... and its version using a cache *)
-
+(** {!mp_renaming_fun}, cached and noted as decided, except through a functor
+    parameter. *)
 and mp_renaming x =
   let add, get, _ = mp_renaming_table in
   (* A path through a functor parameter is renamed afresh each time, from the
@@ -1076,8 +1072,10 @@ let canonical_short_name : string GlobRef.Map.t ref = ref GlobRef.Map.empty
 
 let () = register_cleanup (fun () -> canonical_short_name := GlobRef.Map.empty)
 
-(** We build its fully-qualified name in a [string list] form (head is the short
-    name). *)
+(** The fully-qualified name of [r], named at kind [k], as a [string list]
+    whose head is the short name, the rest [r]'s module's renaming.  Decides
+    the short name: escaped, kept clear of its siblings, and recorded in the
+    global names locals avoid. *)
 let ref_renaming_fun (k, r) =
   let mp = modpath_of_r r in
   let l = mp_renaming mp in
@@ -1215,7 +1213,9 @@ let ref_renaming_fun (k, r) =
   canonical_short_name := GlobRef.Map.add r s !canonical_short_name;
   s :: l
 
-(** Cached version of ref_renaming_fun. *)
+(** {!ref_renaming_fun}, cached by reference and noted as decided (except
+    through a functor parameter, renamed afresh each time); and the cache read
+    alone, deciding nothing. *)
 let ref_renaming, decided_ref_renaming =
   let add, get, _ = mktable_ref ~census:"ref_renaming" true in
   ( (fun ((k, r) as x) ->
@@ -1232,18 +1232,15 @@ let ref_renaming, decided_ref_renaming =
 
 (** {2 On-the-fly qualification} *)
 
-(** [visible_clash vis mp0 (k,s)] checks if [mp0-s] of kind [k] can be
-    printed as [s] where [vis] is visible. More precisely, we check if there
-    exists a visible [mp] that declares [s]. The verification stops if we
-    encounter [mp=mp0]. *)
-
 (** Check if a module path is one of the current layer's functor parameters.
     @param mp0    The module path of the reference being printed
     @param params The functor parameter list of the current visible layer
     @return [true] iff [mp0] is one of the functor parameters *)
 let params_lookup mp0 params = List.exists (ModPath.equal mp0) params
 
-(** Check if a name clashes with a member a visible module declares.
+(** Whether the name [s] of [ks], defined in [mp0], clashes with a member a
+    visible module declares, so cannot be printed bare where [vis] is
+    visible.
     @param vis The scopes visible where the name is written, innermost first
     @param mp0 The defining module path (search stops when this is reached)
     @param ks  The [(kind, name)] pair to look for in [vis]
@@ -1263,8 +1260,8 @@ let visible_clash vis mp0 ks =
   in
   clash vis
 
-(** The files whose headers the unit includes, once both of its files are
-    rendered. *)
+(** The files whose headers the unit includes: the planned ones
+    ({!plan_written_files}). *)
 let opened_libraries () =
   if not (modular ()) then
     []
@@ -1651,7 +1648,7 @@ let is_native_string c =
     && is_native_string_rec empty_string_name string_constructor_name c
   | _ -> false
 
-(** Extract the underlying string. *)
+(** Extract the underlying OCaml string of a {!is_native_string} term. *)
 let get_native_string c =
   let buf = Buffer.create 64 in
   let rec get = function
@@ -1711,8 +1708,8 @@ let field_param_id i = Id.of_string (field_param_name i)
     The registry lives in {!Common} rather than {!Cpp_state} to avoid a
     dependency cycle: [Translation] depends on [Common] but not on
     [Cpp_state], while [Cpp_state] transitively depends on [Translation]
-    through [Method_registry].  Cleared by {!reset_ctor_field_names}
-    between extraction passes (called from {!Cpp_state.reset_cpp_state}). *)
+    through [Method_registry].  Cleared by {!reset_ctor_field_names} on every
+    extraction reset (as {!Cpp_state.reset_cpp_state} triggers). *)
 
 (** [ctor_owner_key g] is a stable string identifying the inductive that owns
     a constructor struct.  A constructor name is only unique {i within} its
@@ -1728,6 +1725,8 @@ let ctor_owner_key (g : GlobRef.t) =
   | GlobRef.ConstRef c -> Constant.to_string c
   | GlobRef.VarRef v -> Id.to_string v
 
+(** The field names, keyed by owner ({!ctor_owner_key}), constructor name and
+    field position. *)
 let ctor_field_names : (string * string * int, Id.t) Hashtbl.t =
   Hashtbl.create 64
 
@@ -1760,21 +1759,22 @@ let lookup_ctor_name tbl ~owner ctor_name field_idx =
   | Some id -> Some id
   | None -> sole_owner ()
 
-(** [register_ctor_field_name ctor_name field_idx field_id] records that
-    field [field_idx] of the C++ constructor struct [ctor_name] should be
-    named [field_id].
+(** [register_ctor_field_name ~owner ctor_name field_idx field_id] records
+    that field [field_idx] of the C++ constructor struct [ctor_name] of the
+    inductive [owner] should be named [field_id].
 
+    @param owner      The inductive, or one of its constructors
     @param ctor_name  PascalCase name of the constructor struct (e.g. ["Cons"])
     @param field_idx  0-based field position
-    @param field_id   The identifier to use (e.g. [d_hd], or [d_a0] as fallback) *)
+    @param field_id   The identifier to use (e.g. [d_hd]) *)
 let register_ctor_field_name ~owner ctor_name field_idx field_id =
   note_ctor_owner (ctor_owner_key owner) ctor_name;
   Hashtbl.replace ctor_field_names
     (ctor_owner_key owner, ctor_name, field_idx) field_id
 
-(** [lookup_ctor_field_name ctor_name field_idx] retrieves the registered
-    field name, falling back to the generic positional name
-    [d_a{field_idx}] when no name was registered (e.g. for custom-extracted
+(** [lookup_ctor_field_name ~owner ctor_name field_idx] retrieves the
+    registered field name, falling back to the positional
+    {!field_param_id} when no name was registered (e.g. for custom-extracted
     inductives or when the registry hasn't been populated yet). *)
 let lookup_ctor_field_name ~owner ctor_name field_idx =
   match lookup_ctor_name ctor_field_names ~owner ctor_name field_idx with
@@ -1809,8 +1809,8 @@ let () =
   tbl "ctor_bind_names" ctor_bind_names;
   tbl "ctor_name_owners" ctor_name_owners
 
-(** Clear the field name registry.  Must be called between extraction
-    passes to avoid stale names from one module leaking into another. *)
+(** Clear the field and binding name registries, so names from one
+    extraction do not leak into the next.  Runs on every extraction reset. *)
 let reset_ctor_field_names () =
   Hashtbl.clear ctor_field_names;
   Hashtbl.clear ctor_bind_names;
@@ -1882,7 +1882,8 @@ let enum_ctor_name_of_id id =
     two constructors would produce the same string, the later one gets a numeric
     suffix appended to make it unique.
     @param consnames Array of Rocq constructor identifiers in declaration order
-    @return Array of unique ["e_UPPER_CASED"] strings, one per constructor *)
+    @return Array of unique upper-cased names (["e_"]-prefixed under BDE), one
+            per constructor *)
 let enum_ctor_names_of_packet (consnames : Id.t array) : string array =
   let escaped =
     Array.map
@@ -1917,12 +1918,12 @@ let enum_ctor_name_of_ref kn i j =
     (enum_ctor_names_of_packet consnames).(j - 1)
   | _ -> enum_ctor_name ("ctor" ^ string_of_int j)
 
-(* ---- Needed C++ headers ---- *)
+(** {2 Needed C++ headers} *)
 
 (* The printer demands no header: a unit's demands are read off what is
-   generated ahead of its files ({!Cpp_demands}).  What it writes is recorded,
-   for {!Table.freeze_demands} to check under [CRANE_CHECK_IR], and only
-   then. *)
+   generated ahead of its files ({!Cpp_demands}).  What it writes is recorded
+   under [CRANE_CHECK_IR], and only then, for {!Table.freeze_demands} to check
+   against the demands. *)
 
 let writes h = if Probe.checking () then Table.written_needs_header h
 

@@ -12,7 +12,7 @@ open Minicpp
 (** {2 Named Constants}
 
     Frequently used [Id.t] values, defined once to avoid repeated
-    [Id.of_string] allocations across ~95 call sites. *)
+    [Id.of_string] allocations across the loopify modules. *)
 
 let id_result       = Id.of_string "_result"
 let id_enter        = Generated_name.id "Enter"
@@ -30,7 +30,7 @@ let id_self         = Id.of_string "_self"
     builds or tests one. *)
 let frame_field_key field = Id.to_string id_f ^ "." ^ Id.to_string field
 
-(* Perceus reuse cursor (see {!section:reuse-cursor}). *)
+(* Perceus reuse cursor (see the reuse-cursor section of {!Loopify_tmc}). *)
 let id_own          = Id.of_string "_own"
 
 (* A value-type result assembled in place (see {!Loopify_tmc.result_storage}). *)
@@ -41,16 +41,10 @@ let id_emplace      = Id.of_string "emplace"
 let id_uniq         = Id.of_string "_uniq"
 let id_rstep        = Id.of_string "_rs"
 
-(* Method names used with CPPaccess / CPPaccess_call *)
+(* Method names used with CPPaccess / CPPaccess_call: [get] and the variant
+   accessors [v] / [v_mut] on a value, and the [std::vector] members an
+   explicit frame stack is driven by. *)
 let id_get          = Id.of_string "get"
-
-(* [lazy_]: the factory a coinductive type's cofixpoint body returns.  Its
-   presence is how a cofixpoint is told from a fixpoint here. *)
-
-(* [crane_raw] (crane_fn.h): extracts a raw pointer from either a
-   [std::shared_ptr<T>] or an already-raw [T*] (arena mode), by overload
-   resolution.  Used in place of a bare [.get()] call wherever the extraction
-   target may be either representation. *)
 let id_v            = Id.of_string "v"
 let id_v_mut        = Id.of_string "v_mut"
 let id_empty        = Id.of_string "empty"
@@ -78,8 +72,8 @@ let rec list_drop n = function
   | _ :: xs -> list_drop (n - 1) xs
 let list_remove_at idx xs = List.filteri (fun i _ -> i <> idx) xs
 
-(** [map2_exn ~what f l1 l2] is [List.map2] with the same descriptive-error
-    contract as {!combine_exn}. *)
+(** [map2_exn ~what f l1 l2] is [List.map2], raising an anomaly that names
+    [what] and both lengths when the lists differ in length. *)
 let map2_exn ~what f l1 l2 =
   let n1 = List.length l1 and n2 = List.length l2 in
   if n1 <> n2 then
@@ -101,11 +95,10 @@ let map3_exn ~what f l1 l2 l3 =
     loopify pass to detect recursive calls, [CPPthis] references, [lazy_]
     factories, pointer-shadow variables, and more.
 
-    Earlier versions of this file had three independent implementations of the
-    same traversal.  This unified version delegates structural recursion to
-    {!iter_expr_children} and {!iter_stmt_children} from {!Minicpp}, which
-    already enumerate every constructor — so adding a new AST node to MiniCpp
-    automatically makes it visible to every predicate here. *)
+    The traversal delegates structural recursion to
+    {!Minicpp.iter_expr_children} and {!Minicpp.iter_stmt_children}, which
+    already enumerate every constructor, so a new MiniCpp AST node is
+    automatically visible to every predicate here. *)
 
 (** Return [true] when [pred] holds for [e] or any sub-expression reachable
     from [e], including inside lambda bodies.
@@ -149,8 +142,8 @@ and stmt_exists (pred : cpp_expr -> bool) (s : cpp_stmt) : bool =
 let body_exists (pred : cpp_expr -> bool) (stmts : cpp_stmt list) : bool =
   List.exists (stmt_exists pred) stmts
 
-(** Check whether a C++ return type is a value-type inductive (non-coinductive,
-    non-enum bare [Tglob]).  When true, TMC must wrap [_head]/_write in
+(** Check whether a C++ return type is a value-type inductive (a bare [Tglob]
+    that is neither coinductive nor custom-extracted).  When true, TMC must wrap [_head]/_write in
     [shared_ptr] because the constructor's recursive field is [shared_ptr].
     Handles [Tnamespace] wrapping for out-of-line (.cpp) method definitions. *)
 let rec is_value_type_ret = function
@@ -212,6 +205,13 @@ let movable ty = (not (is_borrowed ty)) && (ty = Tauto || worthwhile_move_type t
    - ctor_ptr_fields : accumulates across the full session; never cleared because
      struct shapes don't change within a Rocq session *)
 
+(** A constructor field stored behind the smart pointer: a recursive one, which
+    holds the inductive itself, or one [Crane BoxedFields] boxed for holding
+    some other inductive. *)
+type ptr_field = Recursive of int | Boxed of int
+
+let ptr_field_index = function Recursive i | Boxed i -> i
+
 (** Table mapping constructor struct names to their shared_ptr field indices.
     Installed before rendering ({!install_ctor_ptr_fields}) and queried by
     {!Loopify_tmc.make_cell} to determine which fields need [make_shared] wrapping
@@ -222,14 +222,6 @@ let movable ty = (not (is_borrowed ty)) && (ty = Tauto || worthwhile_move_type t
     of it because a constructor name alone does not identify a struct -- two
     inductives may each have a [Cons], with different fields.  The value is a
     list of the constructor's pointer fields, by 0-based index. *)
-
-(** A constructor field stored behind the smart pointer: a recursive one, which
-    holds the inductive itself, or one [Crane BoxedFields] boxed for holding
-    some other inductive. *)
-type ptr_field = Recursive of int | Boxed of int
-
-let ptr_field_index = function Recursive i | Boxed i -> i
-
 let ctor_ptr_fields : (string * string, ptr_field list) Hashtbl.t = Hashtbl.create 32
 
 (** Install the pointer fields of each constructor struct planned before
@@ -303,11 +295,11 @@ type recursion_kind =
 
 (** {2 Diagnostics}
 
-    Historically every bail-out in this pass silently returned the original
-    recursive body, so a function that loopify could not handle was
-    indistinguishable from one it chose not to touch.  That made the pass's
-    coverage unmeasurable.  The machinery below records, for every recursive
-    function the pass sees, which strategy fired or why it declined.
+    A bail-out returns the original recursive body, so without a record a
+    function that loopify could not handle would be indistinguishable from
+    one it chose not to touch, and the pass's coverage unmeasurable.  The
+    machinery below records, for every recursive function the pass sees,
+    which strategy fired or why it declined.
 
     A transform therefore returns {e what it did} alongside the body, rather
     than only the body: a bail-out hands back the body it was given, so
@@ -319,7 +311,7 @@ type recursion_kind =
 
 (** What the pass did with one recursive function. *)
 type loopify_outcome =
-  | Lp_tail  (** Rewritten to a flat [while] loop by {!transform_tail}. *)
+  | Lp_tail  (** Rewritten to a flat [while] loop by {!Loopify_tail.transform_tail}. *)
   | Lp_tmc  (** Rewritten by the tail-modulo-cons transform. *)
   | Lp_frame  (** Rewritten to an explicit frame stack. *)
   | Lp_deferred of string
@@ -391,7 +383,7 @@ let report_outcomes ?(unit_name = "") () =
         | _ -> ())
       final
 
-(** What {!apply_nontail_loopification} did with a body.  It chooses between
+(** What {!Loopify.apply_nontail_loopification} did with a body.  It chooses between
     the TMC and frame transforms internally, so it reports the choice here
     rather than leaving the caller to guess. *)
 type nontail_result = {
@@ -422,7 +414,7 @@ type call_checker = cpp_expr -> call_site option
     lambdas: an [f_impl] taking its own self-reference as a trailing parameter,
     and an [f] that ties the knot by passing [f_impl] to itself. These
     recognise that shape. They sit here, beside the other checkers, because
-    both {!transform_nontail} and {!loopify_inner_lambdas} need them. *)
+    both {!Loopify_frame} and {!Loopify.loopify_inner_lambdas} need them. *)
 
 (** Whether [w] is the wrapper tying the knot of the local fixpoint
     [fixpoint] for its callers: a lambda lowering the same function of the
@@ -506,9 +498,10 @@ let method_checker
     ~(has_self_param : bool)
     ~(this_pos : int)
     (self_ref : GlobRef.t option) : call_checker =
- (* Convert a receiver expression to a raw pointer for the CraneEnter struct.
-    CPPderef(shared_ptr): use shared_ptr.get() to extract the raw pointer.
-    CPPvar: take the address (&var) to get a pointer.
+ (* Convert a receiver expression to the raw pointer an [Enter] frame stores.
+    CPPderef(p): [crane_raw(p)], which extracts a raw pointer from either a
+    [std::shared_ptr<T>] or an already-raw [T*] (arena mode) by overload
+    resolution, where a bare [.get()] would assume one representation.
     Other: take the address. *)
  let recv_to_self recv =
    match receiver_storage recv with

@@ -16,6 +16,7 @@
 
 open Names
 
+(** One identity on global references, with the containers keyed by it. *)
 module type IDENTITY = sig
   val equal : GlobRef.t -> GlobRef.t -> bool
   val compare : GlobRef.t -> GlobRef.t -> int
