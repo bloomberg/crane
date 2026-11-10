@@ -20,134 +20,122 @@
     machine rather than a machine of its own, for two machines cannot unwind
     each other's stack.  {!Lower_control} produces them. *)
 
-(** What a loop is the loop of: a function of the program, or the member
-    [m] of the local fixpoint [occurrence]. *)
-module Loop : sig
-  type t =
-    | Function of Names.GlobRef.t
-    | Member of Miniml.Occurrence.t * int
+type t =
+  | Loop of loop
+  | Let of let_
+  | Match of match_
+  | Return of Miniml.ml_ast
+  | Continue of continue_
+  | Continue_into of continue_into
+  | Resume of resume
+  | Entry of entry
 
-  val equal : t -> t -> bool
-end
+(** The loop [loop] over [parameters], outermost first, running [body]. *)
+and loop = {
+  loop : Loop.t;
+  parameters : (Miniml.ml_ident * Miniml.ml_type) list;
+  body : t;
+}
 
-module Term : sig
-  type t =
-    | Loop of loop
-    | Let of let_
-    | Match of match_
-    | Return of Miniml.ml_ast
-    | Continue of continue_
-    | Continue_into of continue_into
-    | Resume of resume
-    | Entry of entry
+(** [value] bound to [binder] while [body] runs: a let, or a sequential
+    bind's action and its continuation's parameter. *)
+and let_ = {
+  binder : Miniml.ml_ident;
+  binder_type : Miniml.ml_type;
+  value : Miniml.ml_ast;
+  body : t;
+}
 
-  (** The loop [loop] over [parameters], outermost first, running [body]. *)
-  and loop = {
-    loop : Loop.t;
-    parameters : (Miniml.ml_ident * Miniml.ml_type) list;
-    body : t;
-  }
+and match_ = {
+  scrutinee_type : Miniml.ml_type;
+  scrutinee : Miniml.ml_ast;
+  branches : branch list;
+}
 
-  (** [value] bound to [binder] while [body] runs: a let, or a sequential
-      bind's action and its continuation's parameter. *)
-  and let_ = {
-    binder : Miniml.ml_ident;
-    binder_type : Miniml.ml_type;
-    value : Miniml.ml_ast;
-    body : t;
-  }
+and branch = {
+  binders : (Miniml.ml_ident * Miniml.ml_type) list;
+  result_type : Miniml.ml_type;
+  pattern : Miniml.ml_pattern;
+  body : t;
+}
 
-  and match_ = {
-    scrutinee_type : Miniml.ml_type;
-    scrutinee : Miniml.ml_ast;
-    branches : branch list;
-  }
+(** The next turn of [target], its parameters taking [arguments]: the
+    recursive call made of [occurrence], the use of the global or the read
+    of the member heading it. *)
+and continue_ = {
+  target : Loop.t;
+  occurrence : Miniml.Occurrence.t;
+  arguments : Miniml.ml_ast list;
+}
 
-  and branch = {
-    binders : (Miniml.ml_ident * Miniml.ml_type) list;
-    result_type : Miniml.ml_type;
-    pattern : Miniml.ml_pattern;
-    body : t;
-  }
+(** The next turn of a loop building what this one returns, tail modulo
+    cons: the constructors [cells], outermost first, each held in the hole
+    of the one around it, are made with the innermost's hole left empty,
+    and [next] continues the loop to fill it. *)
+and continue_into = {
+  cells : cell list;
+  next : continue_;
+}
 
-  (** The next turn of [target], its parameters taking [arguments]: the
-      recursive call made of [occurrence], the use of the global or the read
-      of the member heading it. *)
-  and continue_ = {
-    target : Loop.t;
-    occurrence : Miniml.Occurrence.t;
-    arguments : Miniml.ml_ast list;
-  }
+(** The constructor [constructor] applied to [arguments], in its declared
+    order, with its argument [hole] left out: the hole. *)
+and cell = {
+  constructor : Names.GlobRef.t;
+  hole : int;
+  arguments : Miniml.ml_ast list;
+}
 
-  (** The next turn of a loop building what this one returns, tail modulo
-      cons: the constructors [cells], outermost first, each held in the hole
-      of the one around it, are made with the innermost's hole left empty,
-      and [next] continues the loop to fill it. *)
-  and continue_into = {
-    cells : cell list;
-    next : continue_;
-  }
+(** [value] run for the value [binder] takes while [body] runs, where
+    [value] makes recursive calls: each [Continue] in it enters the loop
+    afresh, and [body] resumes once that turn returns, its result bound to
+    [binder]; each [Return] in it is the value bound so. *)
+and resume = {
+  binder : Miniml.ml_ident;
+  binder_type : Miniml.ml_type;
+  value : t;
+  body : t;
+}
 
-  (** The constructor [constructor] applied to [arguments], in its declared
-      order, with its argument [hole] left out: the hole. *)
-  and cell = {
-    constructor : Names.GlobRef.t;
-    hole : int;
-    arguments : Miniml.ml_ast list;
-  }
-
-  (** [value] run for the value [binder] takes while [body] runs, where
-      [value] makes recursive calls: each [Continue] in it enters the loop
-      afresh, and [body] resumes once that turn returns, its result bound to
-      [binder]; each [Return] in it is the value bound so. *)
-  and resume = {
-    binder : Miniml.ml_ident;
-    binder_type : Miniml.ml_type;
-    value : t;
-    body : t;
-  }
-
-  (** A further way into the machine of the loop it stands in, while
-      [scope] runs: the loop [entered], a [Continue] of which enters the
-      machine there as one of the enclosing loop does.  It is the function
-      of a local fixpoint of one member ({!Loop.Member}), its body under
-      the fixpoint's name and its parameters, [name] the binder [scope]
-      reads it by where a let binds it.  Its [Continue]s of the enclosing
-      loop re-enter that loop. *)
-  and entry = {
-    entered : loop;
-    name : (Miniml.ml_ident * Miniml.ml_type) option;
-    scope : t;
-  }
-end
+(** A further way into the machine of the loop it stands in, while
+    [scope] runs: the loop [entered], a [Continue] of which enters the
+    machine there as one of the enclosing loop does.  It is the function
+    of a local fixpoint of one member ({!Loop.Member}), its body under
+    the fixpoint's name and its parameters, [name] the binder [scope]
+    reads it by where a let binds it.  Its [Continue]s of the enclosing
+    loop re-enter that loop. *)
+and entry = {
+  entered : loop;
+  name : (Miniml.ml_ident * Miniml.ml_type) option;
+  scope : t;
+}
 
 (** The occurrences of the calls [t] continues a loop by, in order, those
     resumed after and those of its entries' loops included. *)
-val continues : Term.t -> Miniml.Occurrence.t list
+val continues : t -> Miniml.Occurrence.t list
 
 (** {!continues} of the loop [l] alone: those continuing it rather than
     the loop of one of [t]'s entries. *)
-val continues_of : Loop.t -> Term.t -> Miniml.Occurrence.t list
+val continues_of : Loop.t -> t -> Miniml.Occurrence.t list
 
 (** The occurrences of the calls [t] enters its loop by afresh and resumes
     after, in order: the [Continue]s in the value of a [Resume]. *)
-val resumed : Term.t -> Miniml.Occurrence.t list
+val resumed : t -> Miniml.Occurrence.t list
 
 (** The turns of [t] that build what they return, tail modulo cons, in
     order. *)
-val continues_into : Term.t -> Term.continue_into list
+val continues_into : t -> continue_into list
 
 (** The loops the entries in [t] enter, in order. *)
-val entries : Term.t -> Term.loop list
+val entries : t -> loop list
 
 (** [t] with [f] applied to the value of every [Return] in it. *)
-val map_returns : (Miniml.ml_ast -> Miniml.ml_ast) -> Term.t -> Term.t
+val map_returns : (Miniml.ml_ast -> Miniml.ml_ast) -> t -> t
 
 (** For each parameter of the loop [l], outermost first, whether every
     [Continue] of [l] passes it on unchanged: its argument there is a read of
     that parameter.  Such a parameter keeps its value for as long as the loop
     runs. *)
-val invariant_parameters : Term.loop -> bool list
+val invariant_parameters : loop -> bool list
 
 (** For each parameter of the loop [l], outermost first, whether every
     [Continue] of [l] passes it a value stored in what the caller passed
@@ -162,7 +150,7 @@ val invariant_parameters : Term.loop -> bool list
 val parts_passed :
   pointer_fields:(Names.GlobRef.t -> int list option) ->
   in_place:(Miniml.ml_type -> Miniml.ml_type -> bool) ->
-  Term.loop ->
+  loop ->
   bool list
 
 (** For each parameter of the loop [l], outermost first, whether every
@@ -174,7 +162,7 @@ val parts_passed :
 val derived_passed :
   pointer_fields:(Names.GlobRef.t -> int list option) ->
   in_place:(Miniml.ml_type -> Miniml.ml_type -> bool) ->
-  Term.loop ->
+  loop ->
   bool list
 
 (** A turn passing a parameter a value it makes: the [Continue] made of
@@ -192,6 +180,6 @@ type rebuilt = {
 val rebuilt :
   pointer_fields:(Names.GlobRef.t -> int list option) ->
   in_place:(Miniml.ml_type -> Miniml.ml_type -> bool) ->
-  Term.loop ->
+  loop ->
   int ->
   rebuilt list

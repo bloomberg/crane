@@ -28,7 +28,7 @@ let use () = Global_use.monomorphic count
 let call u args = MLapp (MLglob u, args)
 let plus a b = MLapp (MLglob (Global_use.monomorphic (r "plus")), [a; b])
 let lower body = Lower_control.tail_loop ~effects:Core_effects.empty ~target ~callee body
-let continues_at us t = List.equal Occurrence.equal (continues t) (List.map Global_use.occurrence us)
+let continues_at us t = List.equal Occurrence.equal (Term.continues t) (List.map Global_use.occurrence us)
 let id s = Id (Id.of_string s)
 
 let () =
@@ -76,7 +76,7 @@ let () =
 (* The parameters a loop keeps: those every Continue passes on as they
    are, read at the depth the Continue is under. *)
 let invariant body =
-  invariant_parameters {loop = target; parameters = [(id "n", nat); (id "acc", nat)]; body = lower body}
+  Term.invariant_parameters {loop = target; parameters = [(id "n", nat); (id "acc", nat)]; body = lower body}
 
 let () =
   (* match n with O => acc | S m => count n m *)
@@ -113,7 +113,7 @@ let () =
   (* A chain's call passing the parameters on keeps them. *)
   let kept = MLcons (nat, cons, [fresh_rel 2; call (use ()) [fresh_rel 2; fresh_rel 1]]) in
   check "a chain's call counts as a turn"
-    (invariant_parameters {loop = target; parameters = [(id "n", nat); (id "acc", nat)]; body = lower_cons kept}
+    (Term.invariant_parameters {loop = target; parameters = [(id "n", nat); (id "acc", nat)]; body = lower_cons kept}
     = [true; true] )
 
 (* A machine with a stack: a recursive call a let binds resumes into the
@@ -129,7 +129,7 @@ let () =
     check "the call's result is bound to the let's binder" (binder = id "x");
     check "the call enters the loop afresh" (Occurrence.equal c.occurrence (Global_use.occurrence u))
   | _ -> check "a let binding a recursive call resumes" false );
-  check "the call is resumed after" (List.equal Occurrence.equal (resumed (lower_frames body)) [Global_use.occurrence u]);
+  check "the call is resumed after" (List.equal Occurrence.equal (Term.resumed (lower_frames body)) [Global_use.occurrence u]);
   check "and continues the loop" (continues_at [u] (lower_frames body));
   check "without frames a let binding a call is returned with it" (lower body = Term.Return body);
   (* let x := (match n with O => acc | S m => count m acc) in count x acc:
@@ -140,7 +140,7 @@ let () =
   let rhs = MLcase (nat, fresh_rel 2, [| ([], nat, Pwild, fresh_rel 1); ([(id "m", nat)], nat, Pwild, call inner [fresh_rel 1; fresh_rel 2]) |], Occurrence.fresh ()) in
   let body = MLletin (id "x", nat, rhs, call tail [fresh_rel 1; fresh_rel 2], Occurrence.fresh ()) in
   let t = lower_frames body in
-  check "a call ending a branch of a let's match run in a lambda is no turn" (resumed t = []);
+  check "a call ending a branch of a let's match run in a lambda is no turn" (Term.resumed t = []);
   check "the tail call after it continues alone" (continues_at [tail] t);
   (* let x := (match p with {a} => count a acc) in count x acc, a record's
      one branch: generated as statements assigning the binder, the call in
@@ -153,10 +153,10 @@ let () =
   let body = MLletin (id "x", nat, rhs, call tail [fresh_rel 1; fresh_rel 2], Occurrence.fresh ()) in
   let t = lower_frames body in
   check "a call ending a branch of a let's record match is resumed after"
-    (List.equal Occurrence.equal (resumed t) [Global_use.occurrence inner]);
+    (List.equal Occurrence.equal (Term.resumed t) [Global_use.occurrence inner]);
   check "the tail call after it continues" (continues_at [inner; tail] t);
   check "a parameter passed on under the resumed binder is kept"
-    (invariant_parameters {loop = target; parameters = [(id "n", nat); (id "acc", nat)]; body = t} = [false; true])
+    (Term.invariant_parameters {loop = target; parameters = [(id "n", nat); (id "acc", nat)]; body = t} = [false; true])
 
 (* A machine adopting a local fixpoint of one member: where it is applied,
    an Entry of its function, entered by a Continue of it; its body
@@ -190,11 +190,11 @@ let () =
     check "the fixpoint applied enters it" (Loop.equal c.target entered.loop && Occurrence.equal c.occurrence fix)
   | _ -> check "an adopted fixpoint applied is an entry" false );
   check "an entry's body continues the function and the fixpoint"
-    (List.equal Occurrence.equal (continues t)
+    (List.equal Occurrence.equal (Term.continues t)
        [Global_use.occurrence back; go_read; Global_use.occurrence back'; fix] );
-  check "only the call a let binds is resumed after" (List.equal Occurrence.equal (resumed t) [go_read]);
+  check "only the call a let binds is resumed after" (List.equal Occurrence.equal (Term.resumed t) [go_read]);
   check "the function's parameters are read under the entry's binders"
-    (invariant_parameters {loop = target; parameters = [(id "n", nat); (id "acc", nat)]; body = t} = [true; false]);
+    (Term.invariant_parameters {loop = target; parameters = [(id "n", nat); (id "acc", nat)]; body = t} = [true; false]);
   check "a fixpoint not adopted is returned" (lower_frames (MLapp (fixpoint, [fresh_rel 1])) = Term.Return (MLapp (fixpoint, [fresh_rel 1])));
   (* let g := fix go k := ... in g n: the let's binder names the entry. *)
   let g_read = Occurrence.fresh () in

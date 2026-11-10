@@ -28,8 +28,8 @@ let shaped_loop ~lowerings r planned target =
   match planned with
   | Some lowering when List.mem lowering lowerings -> (
     match Lower_control.loop target with
-    | Some (Loop l) when Control_ir.continues l.body <> [] && (Control_ir.entries l.body = [] || lowering = Frames) ->
-      let builds = Control_ir.continues_into l.body <> [] in
+    | Some (Loop l) when Control_ir.Term.continues l.body <> [] && (Control_ir.Term.entries l.body = [] || lowering = Frames) ->
+      let builds = Control_ir.Term.continues_into l.body <> [] in
       let shaped = match lowering with Tail -> not builds | Modulo_cons -> builds | Frames -> true in
       if shaped then Some (l, lowering)
       else begin
@@ -67,14 +67,14 @@ let reason = function
 let in_place = Recursion_plan.in_place
 
 (* What each parameter of the loop [l] is passed by its Continues
-   ({!Control_ir.parts_passed}), read with the planned representation. *)
+   ({!Control_ir.Term.parts_passed}), read with the planned representation. *)
 let parts_passed l =
-  Control_ir.parts_passed ~pointer_fields:Loopify_analysis.constructor_pointer_fields ~in_place l
+  Control_ir.Term.parts_passed ~pointer_fields:Loopify_analysis.constructor_pointer_fields ~in_place l
 
 (* Whether every Continue of the loop [l] passes each of its parameters a
-   value derived from one of them ({!Control_ir.derived_passed}). *)
+   value derived from one of them ({!Control_ir.Term.derived_passed}). *)
 let derived_passed l =
-  Control_ir.derived_passed ~pointer_fields:Loopify_analysis.constructor_pointer_fields ~in_place l
+  Control_ir.Term.derived_passed ~pointer_fields:Loopify_analysis.constructor_pointer_fields ~in_place l
 
 (* The points a machine with a stack of frames, lowered from a body of the
    definition [origin] standing under [depth] of its binders, resumes at.
@@ -121,7 +121,7 @@ let resumes_of ?entry_captures ~origin ~depth ~available ~parameters:(first, (l 
 (* Whether the Core binder [b] is a parameter of the loop [l], whose first
    parameter is at the level [first], that every turn passes on unchanged. *)
 let invariant_at (l : Control_ir.Term.loop) ~first =
-  let invariant = Control_ir.invariant_parameters l in
+  let invariant = Control_ir.Term.invariant_parameters l in
   fun (b : Core_binder.t) -> b.level >= first && Option.default false (List.nth_opt invariant (b.level - first))
 
 (* The loop of the function [r] where its body is lowered as a machine with
@@ -137,7 +137,7 @@ let function_machine r =
        = Some Recursion_plan.Frame_stack
   in
   match if frames then Lower_control.loop (Control_ir.Loop.Function r) else None with
-  | Some (Control_ir.Term.Loop l) when List.compare_length_with (Control_ir.entries l.body) 1 <= 0 -> Some l
+  | Some (Control_ir.Term.Loop l) when List.compare_length_with (Control_ir.Term.entries l.body) 1 <= 0 -> Some l
   | Some _ | None -> None
 
 let function_resumes r ~depth =
@@ -153,7 +153,7 @@ let method_resumes r ~inductive ~receiver ~depth =
   let both = Table.loopify () && Table.loopifies_methods_of inductive in
   match method_loop r with
   | Some (l, Frames)
-    when Table.loopifies_method r && either && Control_ir.entries l.body = []
+    when Table.loopifies_method r && either && Control_ir.Term.entries l.body = []
          && Option.default false (List.nth_opt (derived_passed l) receiver) ->
     Some (resumes_of ~origin:r ~depth ~available:(invariant_at l ~first:0) ~parameters:(0, l) (), both)
   | Some _ | None -> None
@@ -162,7 +162,7 @@ let method_resumes r ~inductive ~receiver ~depth =
    lowered from, whether the loop varies it -- some Continue changes the
    parameter of the loop it stands for -- and whether every Continue passes
    it a value stored in what the caller passed for it
-   ({!Control_ir.parts_passed}).  A parameter standing for none of the
+   ({!Control_ir.Term.parts_passed}).  A parameter standing for none of the
    loop's is neither.  A loop built tail modulo cons may recycle the cells
    of an input it walks into its own ({!Reuse_cursor}).  A tail loop moves
    a parameter into its own next value at a Continue where the plan says
@@ -182,7 +182,7 @@ let planned_at (l : Control_ir.Term.loop) lowering positions =
   let at flags = List.map (function Some i -> List.nth flags i | None -> false) positions in
   { loop = l;
     lowering;
-    varying = at (List.map not (Control_ir.invariant_parameters l));
+    varying = at (List.map not (Control_ir.Term.invariant_parameters l));
     parts = at (parts_passed l);
     cursor =
       ( match lowering with
@@ -378,10 +378,10 @@ let rec lower_function ~tparams (f : dfun) {loop = l; lowering; varying; parts; 
   match (f.df_shape, lowering) with
   | Ddecl _, _ -> Error (Loopify.Left None)
   | Ddef (params, body), Modulo_cons ->
-    lower_modulo_cons ~tparams f params body l ?cursor ~varying ~parts (Control_ir.continues_into l.body)
+    lower_modulo_cons ~tparams f params body l ?cursor ~varying ~parts (Control_ir.Term.continues_into l.body)
   | Ddef (params, body), Frames -> lower_frames ~tparams f params body l ~varying ~parts
   | Ddef (params, body), Tail -> (
-    let continues = Control_ir.continues l.body in
+    let continues = Control_ir.Term.continues l.body in
     let jumps = ref [] in
     let jumped e = jumps := Loopify_analysis.made_of e :: !jumps in
     let exposed = Loopify_analysis.expose_tail_calls (jump continues) body in
@@ -396,7 +396,7 @@ let rec lower_function ~tparams (f : dfun) {loop = l; lowering; varying; parts; 
 (* The function [f] lowered to the loop [l] tail modulo cons, building the
    cells of its turns [into] around the calls they continue by. *)
 and lower_modulo_cons ~tparams (f : dfun) params body l ?cursor ~varying ~parts into =
-  let continues = Control_ir.continues l.body in
+  let continues = Control_ir.Term.continues l.body in
   let shapes = Loopify_tmc.control_shapes into in
   let jumps = ref [] in
   let jumped e = jumps := Loopify_analysis.made_of e :: !jumps in
@@ -415,7 +415,7 @@ and lower_modulo_cons ~tparams (f : dfun) params body l ?cursor ~varying ~parts 
    those of the entry it adopts, if it has one: the body Loopify finds of
    it ({!Loopify.frame_machine}). *)
 and lower_frames ~tparams (f : dfun) params body (l : Control_ir.Term.loop) ~varying ~parts =
-  let own = Control_ir.continues_of l.loop l.body in
+  let own = Control_ir.Term.continues_of l.loop l.body in
   let exposed = Loopify_analysis.expose_tail_calls (jump own) body in
   let parts, entered_pointers =
     match machine_storage f params body l with
@@ -423,7 +423,7 @@ and lower_frames ~tparams (f : dfun) params body (l : Control_ir.Term.loop) ~var
     | None -> (parts, None)
   in
   let machine () =
-    match Control_ir.entries l.body with
+    match Control_ir.Term.entries l.body with
     | [] -> Loopify.frame_machine ~loop:l.loop ~varying ~parts ~tparams (jump own) f params exposed
     | [entry] ->
       Loopify.frame_machine ~loop:l.loop ~entry:entry.loop ?entered_pointers ~varying ~parts ~tparams (jump own) f
@@ -498,7 +498,7 @@ let local_resumes ~owner ~function_ ~lifted ~member ~depth ~arity =
     | Some l ->
       List.find_opt
         (fun (e : Control_ir.Term.loop) -> Control_ir.Loop.equal e.loop (Member (fst member, snd member)))
-        (Control_ir.entries l.body)
+        (Control_ir.Term.entries l.body)
     | None -> None
   in
   (* A machine of its own: one {!local_loop} makes, or, of a fixpoint the
@@ -521,7 +521,7 @@ let local_resumes ~owner ~function_ ~lifted ~member ~depth ~arity =
         true )
   | Some origin, None, Some certain -> (
     match Lower_control.loop (Control_ir.Loop.Member (fst member, snd member)) with
-    | Some (Loop l) when Control_ir.continues l.body <> [] ->
+    | Some (Loop l) when Control_ir.Term.continues l.body <> [] ->
       (* What the body reads from outside the fixpoint is bound before the
          loop and in scope for all of it, as an invariant parameter is. *)
       let first = depth - arity in
@@ -544,12 +544,12 @@ let local_loop ~owner ~function_ ~lifted ~member ~tparams ~name (lam : cpp_lambd
     unlowered Loopify_analysis.survived_generically
   in
   match (Lower_control.loop member_loop, lowering) with
-  | Some (Loop l), Some lowering when Control_ir.continues l.body <> [] -> (
+  | Some (Loop l), Some lowering when Control_ir.Term.continues l.body <> [] -> (
     let params = List.filter_map (fun (ty, x) -> Option.map (fun x -> (x, ty)) x) (to_reversed lam.cl_params) in
     match Loopify.member_plan ~frames:(lowering = Frames) member params with
     | None -> unlowered "its lambda takes other parameters than its loop"
     | Some {member_varying = varying; member_parts = parts; member_moves = moves} ->
-      let continues = Control_ir.continues l.body in
+      let continues = Control_ir.Term.continues l.body in
       let jumps = ref [] in
       let jumped e = jumps := Loopify_analysis.made_of e :: !jumps in
       let exposed = Loopify_analysis.expose_tail_calls (jump continues) lam.cl_body in
@@ -634,17 +634,17 @@ let lower_method ~tparams ~self_ty (m : method_field) =
     let rebuilt =
       match (lowering, positions) with
       | Tail, Some (Some i :: _) ->
-        Control_ir.rebuilt ~pointer_fields:Loopify_analysis.constructor_pointer_fields ~in_place l i
+        Control_ir.Term.rebuilt ~pointer_fields:Loopify_analysis.constructor_pointer_fields ~in_place l i
       | (Modulo_cons | Frames | Tail), _ -> []
     in
     let value_receiver =
       match (lowering, positions) with
       | (Modulo_cons | Frames), Some (Some i :: _) when not (List.nth (derived_passed l) i) -> Some Loopify.value_receiver
-      | Tail, _ when List.exists (fun (r : Control_ir.rebuilt) -> r.read_elsewhere) rebuilt ->
+      | Tail, _ when List.exists (fun (r : Control_ir.Term.rebuilt) -> r.read_elsewhere) rebuilt ->
         Some Loopify.rebuilt_receiver_read
       | (Modulo_cons | Frames | Tail), _ -> None
     in
-    let park = List.map (fun (r : Control_ir.rebuilt) -> r.turn) rebuilt in
+    let park = List.map (fun (r : Control_ir.Term.rebuilt) -> r.turn) rebuilt in
     (* A machine holds a parameter by pointer where it lies in what the
        caller passed ({!Frame_storage}), the receiver -- [_self], a pointer
        to the caller's object -- among what it passed. *)
@@ -734,7 +734,7 @@ let lifted_loop r =
 
 let lifted_resumes r ~owner ~depth ~arity =
   match (owner, lifted_loop r) with
-  | Some origin, Some (l, Frames) when Control_ir.entries l.body = [] ->
+  | Some origin, Some (l, Frames) when Control_ir.Term.entries l.body = [] ->
     (* What the helper captures it takes as its first parameters, passed on
        unchanged by every call, as an invariant parameter is. *)
     let first = depth - arity in

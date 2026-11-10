@@ -25,4 +25,11 @@
    rocq-runtime.plugins.extraction
    findlib))
 
+; A directory of src/ is a namespace: src/control_ir/term.ml is
+; Control_ir.Term.  A module outside the directory that names the namespace
+; depends on every module in it (ocamldep reports only [Control_ir]), so a
+; directory may hold only modules none of which depend, even indirectly, on a
+; module outside it that names it.
+(include_subdirs qualified)
+
 (coq.pp (modules g_extraction))
