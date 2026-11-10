@@ -6,6 +6,8 @@
 open Names
 open Miniml
 
+(* The [let]s go under the lambdas one at a time, from the innermost, each
+   lifted over the binder it crosses. *)
 let rec float_lets_under_lams = function
   | MLletin (x, t, a, b, occ) -> (
     match float_lets_under_lams b with
@@ -32,6 +34,8 @@ let thunk_nullary_cofix x ids funs occ =
     MLapp (MLfix (x, ids, Array.map thunk funs, true, occ), [tt_v])
   | _ -> CErrors.anomaly (Pp.str "Fix_shape: a parameterless local cofixpoint needs unit")
 
+(* Bottom-up: every fixpoint's functions get their [let]s floated, then a
+   cofixpoint none of whose functions is a lambda is thunked. *)
 let rec expr e =
   match Mlutil.ast_map expr e with
   | MLfix (x, ids, funs, is_cofix, occ) ->

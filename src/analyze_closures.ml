@@ -8,10 +8,12 @@ open Miniml
 
 type group = Lifted | In_place | Closures
 
+(* The function an application applies, under any coercion. *)
 let rec callee = function MLmagic (_, f) -> callee f | f -> f
 
 let arity f = List.length (fst (Mlutil.collect_lams f))
 
+(* Whether [use] is a monadic bind generated as sequencing. *)
 let sequential_bind use = Core_effects.find use = Some {operation = Bind; mode = Sequential}
 
 let rec group ~n_outer ?continuation ~cofix ids bodies =

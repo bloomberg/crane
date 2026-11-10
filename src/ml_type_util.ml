@@ -1,7 +1,8 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(** Pure ml_type / cpp_type predicates and transforms shared across
-    translation.ml. *)
+(** Pure [ml_type] / [cpp_type] predicates and transforms shared by
+    extraction, translation, declaration generation and the printer.  See
+    [ml_type_util.mli]. *)
 
 open Common
 open Miniml
@@ -111,7 +112,8 @@ let rec find_self_ref_args ~is_self_or_mutual = function
   | _ -> None
 
 (** Check if an ML type is directly erased (non-recursive, top-level only).
-    Matches unresolved [Tmeta], [Tdummy], and [Tvar]. *)
+    Matches an unresolved [Tmeta], a [Topen] hole, [Tdummy], and a
+    [Schematic] [Tvar]. *)
 let is_erased_ml_type = function
   | Miniml.Tmeta {contents = None} | Miniml.Topen _ | Miniml.Tdummy _ | Miniml.Tvar (Schematic, _) -> true
   | _ -> false
@@ -364,7 +366,7 @@ let method_is_member_template class_ref field_ref =
 
 (** [ml_drop_arrows n t] is what is left of [t] after [n] of its arrows have
     been applied. Erased ([Tdummy]) domains do not count, matching the value
-    arrows a C++ call consumes. Fewer than [n] arrows leaves [Tunresolved], which
+    arrows a C++ call consumes. Fewer than [n] arrows leaves [Tunknown], which
     no caller can mistake for a function type. *)
 let rec ml_drop_arrows n t =
   if n <= 0 then t
@@ -464,7 +466,7 @@ let filter_value_types = List.filter (fun t -> not (isTdummy t))
 (** Test whether the codomain of an ML function type, after skipping [n]
     value-domain arrows, erases to [std::any] in the generated C++.
 
-    A [Tvar] or [Tunresolved] codomain erases to [std::any] only when
+    A [Tvar] or [Tunknown] codomain erases to [std::any] only when
     at least one [Tdummy Ktype] was encountered while traversing the domain.
     That marker identifies a higher-rank, universally-quantified function (e.g.
     [forall A : Type, A -> A]) whose C++ encoding stores arguments and results
@@ -507,8 +509,8 @@ let rec ml_codomain_after n = function
   | ty -> if n = 0 then Some ty else None
 
 (** Return [true] if the C++ type contains any unresolved type variable
-    ([Tvar] or [Tauto]).  Used by {!gen_type_conversion_expr} to decide whether
-    a field needs a converting constructor call. *)
+    ([Tvar] or [Tauto]): such a type has no spelling of its own at the use, so
+    it cannot serve as a cast target or a concrete expected type. *)
 let contains_tvar =
   exists_cpp_type (function Tvar _ | Tauto -> true | _ -> false)
 
@@ -532,8 +534,8 @@ let is_prod_global g =
   let n = Common.pp_global_name Type g in
   String.equal n "prod" || String.equal n "Prod"
 
-(** Structural equality on C++ types, ignoring [Tconst] wrappers
-    and [Tvar] name annotations.  Used to match the state parameter type
+(** Structural equality on C++ types, ignoring [Tconst] and [Tnamespace]
+    wrappers and [Tvar] name annotations.  Used to match the state parameter type
     against the state component of a [pair<S,R>] return type. *)
 let rec cpp_ty_eq t1 t2 =
   let rec strip = function Tconst t | Tnamespace (_, t) -> strip t | t -> t in
@@ -734,8 +736,9 @@ let rec extract_template_args = function
     erased container fields—e.g. [deque<pair<nat, bool>>] becomes
     [deque<any>].
 
-    Note: the variant in {!eta_fun} that preserves bare [Tglob(_,\[\],_)]
-    has intentionally different semantics and remains local. *)
+    Note: the variant in [Translation.eta_fun] that preserves bare
+    [Tglob(_,\[\],_)] has intentionally different semantics and remains
+    local. *)
 and erase_type_to_any = function
   | Tglob (g, args, ns) when args <> [] ->
     Tglob (g, List.map erase_type_to_any args, ns)
@@ -750,7 +753,8 @@ and resolve_tvars_to_any ty =
   map_cpp_type (function Tvar (Tv_index (_, None)) -> Tany | t -> t) ty
 
 (** [is_ml_erased_ty ty] — true if [ty] represents an erased position in the
-    ML AST: a bare type variable, [Tunresolved], or an empty [Tmeta].  These
+    ML AST: a bare type variable, [Tunknown], an empty [Tmeta] or a [Topen]
+    hole, seen through filled [Tmeta]s.  These
     arise from type-level parameters that were erased during extraction
     and correspond to [std::any] in the C++ representation. *)
 and is_ml_erased_ty = function
@@ -776,8 +780,9 @@ let is_skipped_ml_type = function
     Table.is_inline_custom r && Table.find_custom_opt r = Some ""
   | _ -> false
 
-(** Whether a single type node erases to [std::any]: [Tany] itself, and an
-    unnamed [Tvar], which {!tvar_erase_type} turns into one. *)
+(** Whether a single type node erases to [std::any]: [Tany] and [Topaque]
+    themselves, and an unnamed [Tvar], which {!tvar_erase_type} turns into
+    one. *)
 let is_tany_node = function
   | Tany | Topaque -> true
   | Tvar (Tv_index (_, None)) -> true
@@ -788,8 +793,8 @@ let is_tany_node = function
     projections, to be replaced by concrete types from the generated lambda. *)
 let has_tany_in_type = exists_cpp_type is_tany_node
 
-(** Like [has_tany_in_type] but also treats [dummy_type]/[dummy_prop]/[dummy_implicit]
-    VarRef markers as erased types.  Used for non-lambda let bindings where [auto]
+(** Like [has_tany_in_type] but also treats the [Terased] markers
+    ([dummy_type]/[dummy_prop]/[dummy_implicit]) as erased types.  Used for non-lambda let bindings where [auto]
     is the right fallback — but NOT for the Tfun+lambda case where we want to
     preserve the lambda's concrete return type. *)
 let has_erased_type_in_type =
@@ -806,7 +811,7 @@ let has_unresolved_promoted_in_type =
 (** Check if a C++ type is the [dummy_prop] marker from proof erasure.
 
     In the extraction pipeline, [Tdummy Kprop] in the ML AST gets converted
-    to [Tglob(VarRef "dummy_prop", [], [])] in the C++ AST by
+    to [Terased Ek_prop] (printed [dummy_prop]) in the C++ AST by
     [convert_ml_type_to_cpp_type]. This marker occupies Kill Kprop positions
     to maintain positional alignment during type argument processing, but it
     has no corresponding C++ template parameter.
@@ -832,9 +837,9 @@ let is_cpp_dummy_prop = function
   | Minicpp.Terased Minicpp.Ek_prop -> true
   | _ -> false
 
-(** Filter erased type arguments from a template argument list using a
-    two-phase approach: proof erasure stripping followed by all-or-nothing
-    type erasure.
+(** Filter erased type arguments from a template argument list, each argument
+    paired with a key that survives with it, using a two-phase approach:
+    proof erasure stripping followed by all-or-nothing type erasure.
 
     Phase 1: Strip proof-erasure markers ([dummy_prop] from [Tdummy Kprop]).
     These are positional placeholders in the ML AST that have no C++ analog.
@@ -842,8 +847,10 @@ let is_cpp_dummy_prop = function
     presence would trigger full erasure of concrete type arguments.
 
     Phase 2: Apply the "all or nothing" rule for erased types.
-    If ANY remaining type argument is erased (marked as [Tany] or [dummy_type]
-    / [dummy_implicit]), drop ALL type arguments and return [[]]  .
+    If ANY remaining type argument prints as [std::any] ({!prints_as_any}:
+    [Tany], [Topaque], or a [dummy_type] / [dummy_implicit] marker), drop ALL
+    type arguments and return [[]].  With [~preserve_positions:true] nothing
+    is dropped: each such argument is written [Tany] in its place instead.
 
     The "all or nothing" rule is required because C++ template arguments are
     positional. If we kept some type args and dropped others, the remaining
@@ -854,11 +861,8 @@ let is_cpp_dummy_prop = function
     - [std::make_optional(5u)] deduces [std::optional<unsigned int>]
     - [std::vector v{1, 2, 3}] deduces [std::vector<int>]
 
-    This function is called at multiple points in the translation pipeline:
-    - [gen_expr] (MLglob case): filter type args before emitting C++ call
-    - [gen_expr_custom_cons]: filter before applying custom syntax template
-    - [eta_fun]: filter when generating eta-expanded function wrappers
-    - [gen_decl_for_pp]: filter when generating type declarations
+    It is called wherever a call writes a global's explicit type arguments
+    ([Translation], [Translation_calls]).
 
     Example scenarios:
 
@@ -881,8 +885,9 @@ let is_cpp_dummy_prop = function
        After phase 1: [[]]
        Output: [[]]
 
-    @param tys List of C++ types (template arguments)
-    @return Filtered list: either all concrete types or empty list *)
+    @param pairs  keyed C++ types (template arguments)
+    @return the filtered list: either all concrete types or empty, unless
+      [preserve_positions] *)
 let filter_erased_keyed ?(preserve_positions = false) pairs =
   let all = pairs in
   let pairs = List.filter (fun (_, t) -> not (is_cpp_dummy_prop t)) pairs in
@@ -975,8 +980,7 @@ let rec subst_tvars_type subst = function
 
 (** Replace all unnamed Tvars with Tany (for type erasure in indexed
     inductives). Used when a type has Tvars that don't correspond to any
-    template parameters. This is defined early so it can be used in
-    gen_match_branch and gen_ind_header_v2. *)
+    template parameters.  Named variables are kept. *)
 let tvar_erase_type =
   rewrite_cpp_type (function
     | Tvar (Tv_index (_, None)) -> Some Tany
@@ -1126,7 +1130,7 @@ let rec strip_tarr_n n ty =
 
 (** Strip one level of reference or const-qualification from a C++ type.
     Normalises lambda parameter types before building [Tfun] wrappers.
-    Unlike [Loopify.strip_ref_and_const_type] this is intentionally
+    Unlike [Loopify_tail.strip_ref_and_const_type] this is intentionally
     non-recursive: a forwarding reference [T&&] becomes [T&]. *)
 let strip_cpp_ref_const = function
   | Tref (Lvalue, t) | Tconst t -> t
@@ -1236,7 +1240,8 @@ module Ctor_fields = struct
      [immer::flex_vector<immer::box<self>>]) when the container carries a
      [Boxed Element] wrapper and a self/mutual ref appears in its type args.
      The element box breaks the completeness cycle, so such a field is stored
-     by VALUE (matching gen_decls) -- it is not shared_ptr-wrapped and must not
+     by VALUE (matching the declaration, {!Gen_decls}) -- it is not
+    shared_ptr-wrapped and must not
      be dereferenced when bound in a match arm. *)
   let recurses_through_boxed f i =
     let rec go = function
@@ -1293,7 +1298,7 @@ let signed_neg_idx = 2
 
 (** {2 Template-parameter shape of a C++ signature}
 
-    These live here rather than in {!Gen_decls} because both the declaration
+    These live here rather than in {!Plan_templates} because both the declaration
     emitter and the call emitter need them: the first to decide which template
     parameters a signature can leave to deduction, the second to supply the
     ones it cannot. *)
@@ -1393,6 +1398,7 @@ let prune_unwritten_args =
     erased argument in a position nothing writes never reaches the C++. *)
 let has_tany_written t = has_tany_in_type (prune_unwritten_args t)
 
+(* What [fills] filled the hole [o] with, if anything. *)
 let filled_with fills o =
   List.find_map (fun (o', t) -> if Miniml.Open.equal o o' then Some t else None) fills
 
@@ -1572,22 +1578,24 @@ let rendered_tvar_arities t =
 (** Tvar names, sorted by index *)
 let get_tvars t = List.map snd (get_tvars_indexed t)
 
-(** Tvar indices only (unsorted) *)
+(** Tvar indices only, sorted *)
 let get_tvar_indices t = List.map fst (get_tvars_indexed t)
 
 (** Collect tvar indices that are represented concretely in the generated C++
     signature.
 
     In addition to the codomain and non-function domain parameters, tvars from
-    fully rendered function signatures are primary: {!gen_dfun} can represent
-    those signatures with [is_invocable_r_v] constraints.  This matters for a
+    fully rendered function signatures are primary: the function emitter
+    ([Gen_functions]) can represent those signatures with [is_invocable_r_v]
+    constraints.  This matters for a
     type such as [(B -> C) -> (A -> B) -> A -> C], where [B] occurs only in
     function-typed parameters but is nevertheless a real part of both callable
     signatures.
 
-    Used by both {!gen_dfun} (to choose between an [is_invocable_r_v]
-    constraint and plain [TTtypename]) and {!phantom_aware_temps} (to choose
-    whether a template parameter needs a [void] default). *)
+    Used by the function emitter (to choose between an [is_invocable_r_v]
+    constraint and plain [TTtypename]), by {!Plan_templates.phantom_aware_temps}
+    (to choose whether a template parameter needs a [void] default) and by the
+    call emitter ({!explicit_tvar_prefix}). *)
 let primary_tvar_indices dom cod =
   let add_rendered acc t =
     List.fold_left
@@ -1608,7 +1616,7 @@ let primary_tvar_indices dom cod =
 
 (** Collect tvar indices that appear in type INDEX positions of inductives
     in the ML type.  Type indices are stripped from the C++ type by
-    {!convert_ml_type_to_cpp_type} but may be needed in function bodies
+    {!Translation.convert_ml_type_to_cpp_type} but may be needed in function bodies
     for [any_cast] when matching on type-indexed inductives with
     wholesale-erased fields.
 
@@ -1677,14 +1685,14 @@ let applied_ml_tvar_arities tys =
 (** The type variables a declaration of type [ml_ty] relaxes out of its template
     head.
 
-    {!Gen_decls.relax_applied_return} replaces a higher-kinded parameter that is
+    {!Plan_templates.relax_applied_return} replaces a higher-kinded parameter that is
     only ever {e applied} in the parameter list with one fresh [typename] per
     application, deduced from the argument, and leaves the original a phantom
     defaulted to [void]. A call must then not write a template name there,
     because the position no longer takes one.
 
     Asked here of the ML type rather than read back from the declaration: a
-    table gen_decls fills cannot be consulted at a call site, since emission
+    table the declaration emitter fills cannot be consulted at a call site, since emission
     interleaves with body generation. The two agree because the condition is a
     property of the type both are built from -- applied somewhere in the
     domains, and spelled nowhere unapplied and nowhere in the codomain. *)
@@ -1745,7 +1753,7 @@ let relaxed_applied_ml_tvars ml_ty =
     that would otherwise demand the higher kind is elsewhere in the signature
     ([trigger_cast' (e : E void) : itree E A] applies it in the domain and
     names it in the codomain).  That application is taken back off by
-    {!Gen_decls.deapply_plain_tvars} once the kind is refused. *)
+    {!Plan_templates.deapply_plain_tvars} once the kind is refused. *)
 let event_family_ml_tvars tys =
   let fams = ref IntSet.empty in
   (* A variable handed to a family position of a generated type -- the [E] of
@@ -1821,8 +1829,10 @@ let event_family_ml_tvars tys =
 
     This is read off the ML type on purpose.  The converted C++ type at the
     point the kinds are chosen has not been through the signature relaxations,
-    so the occurrences that would justify the higher kind are not yet in it --
-    see the [hkt-kind-demotion-dead-end] note. *)
+    so the occurrences that would justify the higher kind are not yet in it;
+    and a kind chosen from the C++ type cannot be demoted afterwards, because
+    the declaration and every call that supplies the parameter must already
+    agree on it. *)
 
 let higher_kinded_ml_tvars tys =
   let hk = ref IntSet.empty in
@@ -1890,7 +1900,7 @@ let relaxed_higher_kinded_tvars ml_ty =
     constructor declares [template <typename> class].
 
     Being applied is the usual evidence for the higher kind, and
-    {!higher_kinded_ml_tvars} and [Gen_decls.applied_tvar_arities] both look
+    {!higher_kinded_ml_tvars} and [Plan_templates.applied_tvar_arities] both look
     for it.  It is not the only evidence.  [raiseUB (E : Type -> Type)
     (S : Sub UBE E) (B : Type)] applies [E] nowhere -- its result is [list B],
     and in the Vellvm original the result [itree E X] loses the event
@@ -1992,11 +2002,11 @@ let result_is_index_only_tvar ml_ty = Option.has_some (index_only_result_tvar ml
     phantom sitting behind a deducible parameter is out of reach this way and
     keeps its [void] default at the declaration.
 
-    The declaration emitter ({!Gen_decls.phantom_aware_temps}) and the call
+    The declaration emitter ({!Plan_templates.phantom_aware_temps}) and the call
     emitter both read the count from here, off the callee's type alone, so
     they agree whichever is generated first.
 
-    @param force_required  as in {!Gen_decls.phantom_aware_temps}: indices that
+    @param force_required  as in {!Plan_templates.phantom_aware_temps}: indices that
       count as represented even though they do not appear in [cty]. *)
 let explicit_tvar_prefix ?(force_required = IntSet.empty) cty =
   match cty with

@@ -4,10 +4,9 @@
 (** The one registry of mutable cells that must be emptied between runs.
 
     A cell enrols its reset where it is defined, with the scope it lives for,
-    and is emptied by {!reset} for that scope.  There used to be three such
-    registries ([Table.on_reset], [Cpp_state.owned_*] and
-    [Common.register_cleanup]) plus resets written out by hand at the call
-    sites, and a cell could sit in none of them. *)
+    and is emptied by {!reset} for that scope.  It is the only registry: no
+    reset is written out by hand at a call site, so a cell made with {!cell}
+    or {!table} cannot be missed by a reset. *)
 
 type scope = Extraction | Unit
 

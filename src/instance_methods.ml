@@ -176,6 +176,9 @@ type instance = {
   tvar_count : int;
 }
 
+(* [ty] split into the parameters a field declared at [declared_arity] value
+   arrows takes -- erased and class-typed ones riding along uncounted -- and
+   the rest, folded back into the result type. *)
 let split_at_arity declared_arity ty =
   let args, ret = get_args_and_ret [] ty in
   let rec split n acc = function
@@ -235,11 +238,10 @@ let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instan
      own. *)
   let field_body = strip_magic field_body in
   let field_body = if freshen then Mlutil.freshen_metas field_body else field_body in
-  (* Substitute type class parameter with instance's type arg in the
-     field type. This gives us the concrete return type (e.g., bool for
-     eqb: A -> A -> bool). For promoted dependent records, type_args may
-     be empty, leaving Tvars unsubstituted — we handle that below by
-     using lambda binder types. *)
+  (* The class field's type loses the method's own quantifier; give it back
+     before renumbering and substituting.  The instance's class arguments are
+     substituted into the result further down ([subst_ty]), which gives the
+     concrete type (e.g. [bool] for [eqb : A -> A -> bool]). *)
   let field_ml_ty =
     recover_method_quantifier class_ref method_ref field_ml_ty
   in
@@ -327,7 +329,7 @@ let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instan
      on its own -- numbers them after the instance's own binders, and
      need not have numbered them consecutively.  Read the body's
      quantifiers off the body and map them, in order, onto the
-     positions [type_var_names] gives them; left alone the body would
+     positions the declared signature gives them; left alone the body would
      name [A] where the class carrier sits. *)
   let field_body =
     if n_method_tvars = 0 then field_body
@@ -366,8 +368,8 @@ let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instan
      [fun A B f => f]).  The concept requires the declared arity, so
      re-introduce the missing arguments.
 
-     A body with no lambdas at all is left alone: the eta path in
-     [gen_method] below handles the point-free case, and it also
+     A body with no lambdas at all is left alone: {!eta_call}, which the
+     instance's generator uses, handles the point-free case, and it also
      bridges a parameter the class declares at an erased type to the
      concrete type the named body expects. *)
   let rec nb_lams = function
@@ -467,6 +469,7 @@ type param = {
 let is_erasable_binder_ty ty =
   erased_by_extraction ty || match ty with Miniml.Taxiom -> true | _ -> false
 
+(* Every leading [MLlam], erased or not. *)
 let rec count_leading_lams = function
   | MLlam (_, _, rest) -> 1 + count_leading_lams rest
   | _ -> 0

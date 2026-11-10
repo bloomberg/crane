@@ -84,6 +84,8 @@ type planned_result = {
   shared : bool;
 }
 
+(** The storage a loop without the reuse cursor assembles a [planned]
+    result of C++ type [ret_ty] in. *)
 let storage_of (planned : planned_result) ret_ty = if planned.values then Value_root ret_ty else Pointer_result ret_ty
 
 (* Whether a result may be assembled in cells a reuse cursor recycles: one
@@ -282,12 +284,12 @@ let branch_along shapes check expr =
       _last = _cell1;                    // advance to innermost
     ]} *)
 
-(** Generate [std::get<typename Type::Ctor>(ptr->v_mut()).<field> = val] —
-    the statement that patches the recursive field of a TMC cell.
+(* [std::get<typename Type::Ctor>(ptr->v_mut()).<field> = val] -- the
+    statement that patches the recursive field of a TMC cell.
 
-    The field index accounts for the reversed AST argument order
-    (see translation.ml:1776): AST index [rec_field_idx] maps to struct
-    field index [n_args - 1 - rec_field_idx].  The actual field name is
+    The field index accounts for the reversed argument order a [CPPfun_call]
+    stores ({!Minicpp.of_reversed}): argument index [rec_field_idx] maps to
+    struct field index [n_args - 1 - rec_field_idx].  The actual field name is
     resolved via {!Common.lookup_ctor_field_name}, which returns the
     descriptive Rocq binder name (e.g. [d_tl]) when one was registered
     during inductive definition, or falls back to the positional name
@@ -296,14 +298,19 @@ let branch_along shapes check expr =
     {!cell_rec_field} returns that lvalue split as [(object, field)], because
     the write-pointer update needs to take its address rather than assign to
     it; {!patch_cell_field} is the assignment. *)
+(** The constructor struct [cell] is built as: [Type::Ctor]. *)
 let cell_struct cell = Tqualified (cell.tca_type, Id.of_string cell.tca_ctor_name)
 
+(** The recursive field of [cell], reached from [ptr] through [access], as
+    [(object, field)]. *)
 let cell_rec_field ?(access = Aarrow) cell ptr =
   let field_idx = cell.tca_n_args - 1 - cell.tca_rec_field_idx in
   let v_mut = CPPaccess_call (access, ptr, id_v_mut, []) in
   ( CPPstd_get (cell_struct cell, Some v_mut),
     Common.lookup_ctor_field_name ~owner:cell.tca_constructor cell.tca_ctor_name field_idx )
 
+(** [ptr]'s recursive field, as {!cell_rec_field} reaches it, assigned
+    [val_expr]. *)
 let patch_cell_field cell ptr val_expr =
   let obj, field_id = cell_rec_field cell ptr in
   Sassign_expr (CPPget (obj, field_id), val_expr)
@@ -345,12 +352,18 @@ let place_base storage e =
 
     When [~vt_ret] is [Some ret_ty], the factory method cannot accept [nullptr]
     because the recursive parameter is a value type.  Instead we construct the
-    inner struct directly and wrap it:
-    [std::make_unique<list<T>>(typename list<T>::Cons\{x, nullptr\})]
+    inner struct directly and heap-allocate it:
+    [std::make_shared<list<T>>(typename list<T>::Cons\{x, nullptr\})]
+    (the pointer flavour's factory, [make_shared] or [crane::make_rc]).
 
     @param token [Some e] routes the allocation through
       [crane::make_rc_reusing_unchecked], recycling the cell [e] denotes
       instead of allocating (see {!section:reuse-cursor}).  [None] allocates.
+    @param rec_arg what the recursive argument is built with, [nullptr] by
+      default: the already-built inner chain, for the first cell of a
+      {!Value_root} result
+    @param allocate [false] builds the struct value only, unallocated (value
+      returns only)
     @param cell A single TMC cell allocation descriptor
     @param vt_ret [Some ret_ty] for value-type returns, [None] otherwise *)
 let build_cell_call ?token ?(rec_arg = CPPnullptr) ?(allocate = true) ~vt_ret cell =
@@ -394,8 +407,8 @@ let build_cell_call ?token ?(rec_arg = CPPnullptr) ?(allocate = true) ~vt_ret ce
   in
   match vt_ret with
   | Some _ ->
-    (* Direct struct construction wrapped in make_unique:
-       std::make_unique<Type>(typename Type::Ctor{args...}) *)
+    (* Direct struct construction, heap-allocated:
+       make_shared<Type>(typename Type::Ctor{args...}) *)
     let struct_init =
       CPPtype_name (cell_struct cell)
     in
@@ -426,20 +439,21 @@ let borrow_cursor_matches shadow_params stmts =
 
     An invariant parameter lives in function scope and is read by every
     iteration of the loop, but the recursion it came from gave each activation
-    its own copy.  Translation's last-use analysis sees only the source
+    its own copy.  The ownership plan ({!Ownership_ir}) sees only the source
     program's single syntactic occurrence, so it happily marks e.g. the base
     case of [repeat_with_sep] as [_result = std::move(s)] -- and the resume
     handler then reads [s] again on the next turn of the loop.  The last
     syntactic use is not the last dynamic use once the body is a loop.
 
-    Types whose move constructor was suppressed (the iterative drain
-    destructor) hid this: the "move" was a copy, so the stale read still saw a
-    live value.  Restore cheap moves on those types and the same code
-    segfaults, so this must be fixed for the loop shape itself, not for one
+    A type whose move is a copy hides this: the stale read still sees a live
+    value.  With a cheap move the same code reads a moved-from value and
+    crashes, so this is fixed for the loop shape itself, not for one
     special-member policy.
 
     Dropping a move only ever copies where it could have moved, so the pass
-    cannot change meaning. *)
+    cannot change meaning.  [block] maps the statement rewrite over a block:
+    over every statement, or only over a block that goes round the loop
+    again. *)
 let unmove_in invariant_params ~block stmts =
   let rec expr = function
     | CPPmove (CPPvar id) when Id.Set.mem id invariant_params -> CPPvar id
@@ -450,6 +464,7 @@ let unmove_in invariant_params ~block stmts =
   and stmt s = map_stmt ~fl:(block stmt) expr stmt Fun.id s in
   if Id.Set.is_empty invariant_params then stmts else block stmt stmts
 
+(** {!unmove_in} over every statement of [stmts], wherever they lead. *)
 let unmove_invariant_params invariant_params stmts =
   unmove_in invariant_params ~block:List.map stmts
 
@@ -633,7 +648,7 @@ let cursor_step ~(cursor : Reuse_cursor.t) ~derefs varying shadow_params call ar
 (** The statements stepping the cursor on to [field]: the reads [reads]
     first, then [reuse_step], which takes the token and the field. *)
 let step_stmts reads field =
-  (* CPPfun_call holds its arguments reversed (see translation.ml:1776),
+  (* CPPfun_call holds its arguments reversed ({!Minicpp.of_reversed}),
      so [reuse_step(_own, _uniq, a1)] is written innermost-first here. *)
   reads
   @ [ Sasgn
@@ -674,8 +689,8 @@ let cursor_jump ?cursor ~cursor_used ~derefs ~updates varying shadow_params call
     {!patch_cell_field}, patches the destination with the outermost cell, and
     sets [_last] to the innermost.
 
-    For a single cell (v1 behaviour), emits the same code as before.
-    For nested cells (e.g., [cons x (cons x (RECURSE xs))]), emits:
+    For a single cell, emits the single-cell form of the TMC transformation
+    above.  For nested cells (e.g., [cons x (cons x (RECURSE xs))]), emits:
     {[
       auto _cell  = Cons_(x, nullptr);    // outer
       auto _cell1 = Cons_(x, nullptr);    // inner
@@ -869,11 +884,13 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ?cursor ~jumped ~storage ~
     @param param_inits Optional custom initializers for shadow variables
     @param jumped told each recursive call rewritten: a tail call into a jump,
                   and the call a branch's cells are built around
-    @param varying which parameters the loop varies, where the caller knows;
-                   read off the calls otherwise
+    @param varying which parameters the loop varies, one flag per parameter
+    @param parts which parameters every recursive call passes a part of what
+                 it was passed ({!Loopify_tail.pointer_safe_flags})
     @param shapes the branches' shapes ({!branch_along})
     @param cursor the loop's {!Reuse_cursor}, its parameters positioned
                   among [params], where it has one
+    @param tparams the function's template parameters
     @param check Call checker for identifying recursive calls
     @param params Function parameters
     @param ret_ty Return type
@@ -967,8 +984,8 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~varying ~parts
   in
   List.iter jumped jumps;
   let body'' = body'' |> strip_unnecessary_blocks |> rewrite_borrowed_shadow_uses shadow_params in
-  (* The matches the loop reads through its pointer shadows.  Escape analysis
-     may have passed a scrutinee owned so that a loop would have cells to
+  (* The matches the loop reads through its pointer shadows.  The ownership
+     plan may have passed a scrutinee owned so that a loop would have cells to
      recycle, which also made translation emit a destructive match ([auto&]
      over [v_mut()], fields moved out).  That is exactly what must not happen
      here: a shadow is a [const] pointer to a cell the loop does not own --

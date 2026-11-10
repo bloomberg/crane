@@ -54,6 +54,7 @@ type t = {
 
 let entities t = t.entities
 
+(* The ids of an entity and of the helpers it claimed. *)
 let entity_ids e =
   List.fold_left
     (fun s h -> Id_set.add (Generated h.helper_id) s)

@@ -31,11 +31,13 @@ open Context.Rel.Declaration
 (*i*)
 
 (** Raised during inductive extraction to signal the kind of an inductive type
-    (e.g., record, singleton, standard). Caught by the inductive extraction
-    pipeline to classify the result. *)
+    ([Inductive], [Coinductive], [Record] or [Type_class]). Caught by
+    {!extract_really_ind}'s third pass to classify the result. *)
 exception I of record_field Core.Inductive.Kind.t
 
-(* A set of all fixpoint functions currently being extracted *)
+(* The constants of the fixpoint group {!extract_fixpoint} is extracting, so
+   a call inside the group is told apart from a call to an outside constant
+   ({!extract_cst_app}); [[]] outside a group. *)
 let current_fixpoints = ref ([] : Constant.t list)
 
 (** The local fixpoint a [let] binds while it is extracted, with the
@@ -46,20 +48,23 @@ let let_fix_entries = ref (None : (EConstr.t * EConstr.t array list) option)
 (* For the C++ backend: deferred meta fills for erased constructor type params.
    When a constructor like nil/none has a type parameter whose meta is unresolved
    after needs_magic (because the expected type is a dependent/erased type), we
-   record the meta and its erased Coq type here.  After the whole constant is
-   extracted, any meta that is STILL None gets filled with the recorded erased type.
-   This correctly handles nil in deque_action_mismatch (meta stays None → fill with
-   pair<any,any>) without affecting sigma_types (cons meta gets resolved to nat → skip). *)
+   record the meta and its erased Rocq type here.  After the whole constant is
+   extracted ({!extract_std_constant}), any meta that is STILL None gets filled
+   with the recorded erased type.  So [nil] in the deque_action_mismatch test
+   (meta stays None) is filled with [pair<any,any>], while sigma_types (the
+   [cons] meta is resolved to [nat]) is left alone. *)
 let pending_cpp_meta_fills : (ml_meta * ml_type) list ref = ref []
 
-(* NB: In C++, [type_of] and [get_of] might raise
-   [SingletonInductiveBecomeProp]. This exception will be caught in late
+(* NB: [type_of] and [sort_of] might raise
+   [SingletonInductiveBecomesProp]. This exception is caught in late
    wrappers around the exported functions of this file, in order to display the
    location of the issue. *)
 
+(** The type of [c], outer casts stripped. *)
 let type_of env sg c =
   Retyping.get_type_of ~polyprop:false env sg (Termops.strip_outer_cast sg c)
 
+(** The sort family of [c]'s type, outer casts stripped. *)
 let sort_of env sg c =
   Retyping.get_sort_family_of
     ~polyprop:false
@@ -69,25 +74,29 @@ let sort_of env sg c =
 
 (** {1 Generation of flags and signatures} *)
 
-(* The type [flag] gives us information about any Rocq term: \begin{itemize}
-   \item [TypeScheme] denotes a type scheme, that is something that will become
-   a type after enough applications. More formally, a type scheme has type
-   $(x_1:X_1)\ldots(x_n:X_n)s$ with [s = Set], [Prop] or [Type] \item [Default]
-   denotes the other cases. It may be inexact after instantiation. For example
-   [(X:Type)X] is [Default] and may give [Set] after instantiation, which is
-   rather [TypeScheme] \item [Logic] denotes a term of sort [Prop], or a type
-   scheme on sort [Prop] \item [Info] is the opposite. The same example
-   [(X:Type)X] shows that an [Info] term might in fact be [Logic] later on.
-   \end{itemize} *)
-
+(** Whether a term is logical or informative:
+    {ul
+    {- [Logic] denotes a term of sort [Prop], or a type scheme on sort
+       [Prop];}
+    {- [Info] is the opposite.  [(X:Type)X] shows that an [Info] term might
+       in fact be [Logic] after instantiation.}} *)
 type info =
   | Logic
   | Info
 
+(** Whether a term is a type scheme:
+    {ul
+    {- [TypeScheme] denotes something that becomes a type after enough
+       applications: a term of type [(x_1:X_1)...(x_n:X_n)s] with [s] one of
+       [Set], [Prop] or [Type];}
+    {- [Default] denotes the other cases.  It may be inexact after
+       instantiation: [(X:Type)X] is [Default] and may give [Set] after
+       instantiation, which is rather [TypeScheme].}} *)
 type scheme =
   | TypeScheme
   | Default
 
+(** The information {!flag_of_type} gives about any Rocq term. *)
 type flag = info * scheme
 
 (** {2 [flag_of_type] transforms a type [t] into a [flag]. Really important
@@ -99,6 +108,8 @@ let info_of_family = function
 
 let info_of_sort s = info_of_family (Sorts.family s)
 
+(** The {!flag} of a term of type [t]: [t] is reduced and its products are
+    stripped; a sort at the end makes the term a [TypeScheme]. *)
 let rec flag_of_type env sg t : flag =
   let t = whd_all env sg t in
   match EConstr.kind sg t with
@@ -109,19 +120,25 @@ let rec flag_of_type env sg t : flag =
 
 (** {2 Two particular cases of [flag_of_type]} *)
 
+(** Whether a term of type [t] is an informative value: [(Info, Default)]. *)
 let is_default env sg t =
   match flag_of_type env sg t with
   | Info, Default -> true
   | _ -> false
 
+(** Raised by {!check_default} with the reason the term is erased. *)
 exception NotDefault of kill_reason
 
+(** Raises {!NotDefault} unless a term of type [t] is an informative value:
+    [Ktype] for a type scheme, [Kprop] for a logical term. *)
 let check_default env sg t =
   match flag_of_type env sg t with
   | _, TypeScheme -> raise (NotDefault Ktype)
   | Logic, _ -> raise (NotDefault Kprop)
   | _ -> ()
 
+(** Whether [t] is the type of an informative type scheme: a binder at such a
+    type becomes an ML type variable. *)
 let is_info_scheme env sg t =
   match flag_of_type env sg t with
   | Info, TypeScheme -> true
@@ -219,9 +236,11 @@ let decompose_lambda_n sg n =
   in
   lamdec_rec [] n
 
-(** {2 [type_sign] gernerates a signature aimed at treating a type application}
+(** {2 [type_sign] generates a signature aimed at treating a type application}
 *)
 
+(** One entry per product of [c]: [Keep] for a binder at an informative type
+    scheme, [Kill Kprop] for any other binder. *)
 let rec type_sign env sg c =
   match EConstr.kind sg (whd_all env sg c) with
   | Prod (n, t, d) ->
@@ -281,6 +300,8 @@ let make_typvar n vl =
   let vl = Id.Set.of_list vl in
   next_ident_away id' vl
 
+(** {!type_sign}, plus the names of the type variables its [Keep] entries
+    introduce, outermost first. *)
 let rec type_sign_vl env sg c =
   match EConstr.kind sg (whd_all env sg c) with
   | Prod (n, t, d) ->
@@ -416,12 +437,13 @@ let rec db_from_ind dbmap i =
 (** {2 [parse_ind_args] builds a map: [i->j] iff the i-th Rocq argument of a
     constructor corresponds to the j-th type var of the ML inductive} *)
 
-(* \begin{itemize} \item [si] : signature of the inductive \item [i] : counter
-   of Rocq args for [(I args)] \item [j] : counter of ML type vars \item
-   [relmax] : total args number of the constructor \end{itemize} *)
+(* [si] is the signature of the inductive, [i] counts the Rocq args of
+   [(I args)], [j] counts the ML type vars, and [relmax] is the total number
+   of args of the constructor. *)
 
-(** Parses inductive type arguments into parameter/real argument lists, mapping
-    Rocq args to ML type vars.
+(** Maps the de Bruijn level of each constructor binder that a kept argument
+    of the constructor's result type [(I args)] names directly (a bare [Rel])
+    to the ML type var that argument instantiates.
     @param si Signature of the inductive type ([Keep]/[Kill] list)
     @param args Array of concrete arguments from a constructor head [(I args)]
     @param relmax Total number of arguments of the constructor (used to convert de Bruijn levels) *)
@@ -588,7 +610,24 @@ let type_extraction_declined = function
   | Assert_failure _ -> true
   | e -> CErrors.noncritical e
 
-(** Extracts a Rocq PCUIC type into an ML type. The [db] context translates [Rel]
+(** The inductives whose extraction {!extract_type} or {!extract_really_ind}
+    has started out of turn and not finished.  Extracting a class to answer a
+    question about one of its projections can reach that projection again;
+    the memo table that would stop the recursion is only written once the
+    extraction completes, so the guard has to be here. *)
+let extracting_inds = ref Names.Mindset.empty
+
+(** Whether [mind] is in {!extracting_inds}. *)
+let already_extracting mind = Names.Mindset.mem mind !extracting_inds
+
+(** Runs [f] with [mind] in {!extracting_inds}. *)
+let with_extracting mind f =
+  extracting_inds := Names.Mindset.add mind !extracting_inds;
+  Fun.protect ~finally:(fun () ->
+      extracting_inds := Names.Mindset.remove mind !extracting_inds )
+    f
+
+(** Extracts a Rocq type into an ML type. The [db] context translates [Rel]
     to [Tvar], and [j] is the next type var.
     @param env Rocq environment for reduction and sort checking
     @param sg Evar map for universe operations
@@ -596,19 +635,6 @@ let type_extraction_declined = function
     @param j Next available ML type variable index; [0] means no new type vars are generated
     @param c The Rocq term to extract as a type (possibly a type-level function)
     @param args Arguments accumulated during [App] spine traversal *)
-(* Extracting a class to answer a question about one of its projections can
-   reach that projection again; the memo table that would stop the recursion is
-   only written once the extraction completes, so the guard has to be here. *)
-let extracting_inds = ref Names.Mindset.empty
-
-let already_extracting mind = Names.Mindset.mem mind !extracting_inds
-
-let with_extracting mind f =
-  extracting_inds := Names.Mindset.add mind !extracting_inds;
-  Fun.protect ~finally:(fun () ->
-      extracting_inds := Names.Mindset.remove mind !extracting_inds )
-    f
-
 let rec extract_type env sg db j c args = fst (extract_spine env sg db j c args)
 
 (** {!extract_type}, together with the binders of the product spine it walked
@@ -1020,9 +1046,9 @@ and extract_really_ind env kn mib =
     | _ -> []
   in
   (* Second pass: we extract constructors.
-       For C++ records/classes, we also detect Sort-typed fields and promote
-       them to type variables during initial extraction, rather than
-       re-extracting afterward. *)
+       For C++ records/classes, Sort-typed and class-typed fields are promoted
+       to type variables here, in the same pass that extracts the
+       constructor's argument types, so those types already name them. *)
   (* Check if this inductive is a record with a single constructor *)
   let is_record_mib =
     mib.mind_record != Declarations.NotRecord && Int.equal mib.mind_ntypes 1
@@ -1067,8 +1093,8 @@ and extract_really_ind env kn mib =
             in
             scan fty )
           prods;
-        (* For C++ records: detect Sort-typed fields and promote to type vars
-           during initial extraction (instead of re-extracting later). *)
+        (* For C++ records: detect Sort-typed and class-typed fields and
+           promote them to type vars, numbered after the inductive's own. *)
         let dbmap, _promoted_vars =
           if lang () == Cpp && is_record_mib && Int.equal j 0 then (
             let nfields = List.length prods in
@@ -1153,9 +1179,9 @@ and extract_really_ind env kn mib =
                      incr next_tvar;
                      (pos, tv, field_idx, var_name) )
             in
-            (* Only promote if there are Sort fields AND also non-Sort fields
-               (i.e., the record has actual methods/data, not just types). This
-               prevents promotion for degenerate cases. *)
+            (* Only promote if there are promotable fields AND also other
+               fields (i.e., the record has actual methods/data, not just
+               types). This prevents promotion for degenerate cases. *)
             let n_non_sort = nfields - List.length promoted_entries in
             if promoted_entries = [] || n_non_sort <= 0 then
               (orig_dbmap, [])
@@ -1262,13 +1288,13 @@ and extract_really_ind env kn mib =
       (* A record is emitted as a flat C++ struct holding its fields by
          value, which cannot express a field whose type mentions the record
          itself: [Inductive cell := MkCell { key : nat; kids : list cell }]
-         produced [List<cell> kids;] inside [struct cell], before the closing
-         brace, i.e. an incomplete type.  The standard inductive
+         would produce [List<cell> kids;] inside [struct cell], before the
+         closing brace, i.e. an incomplete type.  The standard inductive
          representation has no such problem -- it puts recursive occurrences
          behind a smart pointer -- so fall back to it.  (The single-
-         constructor "flat" layout in [gen_decls.ml] already declines
-         self-referential types for the same reason; records reach the flat
-         struct by a different route and needed the same guard.)  Rocq
+         constructor "flat" layout declines self-referential types for the
+         same reason, {!Table.is_flat_inductive_packet}; records reach the
+         flat struct by a different route and need the same guard.)  Rocq
          rejects recursive [Record]s outright, so this only fires for the
          [Inductive]-with-named-fields spelling.  The occurrence is looked
          for anywhere in the field's type, not just at its head: going
@@ -1385,7 +1411,7 @@ and extract_really_ind env kn mib =
   constructor toward the corresponding list of ML types.
 
    - [db] is a context for translating Rocq [Rel] into ML type [Tvar]
-   - [dbmap] is a translation map (produced by a call to [parse_in_args])
+   - [dbmap] is a translation map (produced by a call to [parse_ind_args])
    - [i] is the rank of the current product (initially [params_nb+1])} *)
 
 (** Extracts a constructor's type signature into a list of ML types.
@@ -1891,12 +1917,13 @@ and make_mlargs env sg e s args typs =
     family over values at its body).  Where extraction fails -- a type
     constructor such as [F : Type -> Type] -- two shapes still name something
     C++ can spell:
-    - an inductive with no C++ template parameter and no custom spelling,
-      whose bare name is a type ([LeftProperty], whose only parameter is a
-      value); one with template parameters, a custom one ([option]) or a
-      logical one has no bare spelling;
-    - a [Rel] the caller binds at a type ([returns_type_sort]: [A : Type],
-      [F : Type -> Type]) and numbers as one of its variables.
+    {ul
+    {- an inductive with no C++ template parameter and no custom spelling,
+       whose bare name is a type ([LeftProperty], whose only parameter is a
+       value); one with template parameters, a custom one ([option]) or a
+       logical one has no bare spelling;}
+    {- a [Rel] the caller binds at a type ({!returns_type_sort}: [A : Type],
+       [F : Type -> Type]) and numbers as one of its variables.}}
     Anything else -- a proof or value [Rel], an application, a lambda -- says
     nothing. *)
 and observe_type_arg env sg db a =
@@ -2183,7 +2210,8 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
   in
   let magic1 = needs_magic (type_cons, type_recomp (metas, a)) in
   let magic2 = needs_magic (a, mlt) in
-  (* For C++: register any still-None type-param metas with their erased Coq type.
+  (* For C++: register any still-None type-param metas with their erased Rocq
+     type ({!pending_cpp_meta_fills}).
      After the whole constant is extracted, metas that are STILL None will be
      filled — those represent genuinely erased type positions (e.g. nil inside a
      lambda whose return type is a dependent/erased type like sem_ty TagList).
@@ -2291,7 +2319,7 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
       (MLcons (typ, GlobRef.ConstructRef cp, mla))
   in
   (* Decompose the instantiated+unified constructor type to recover the resolved
-     argument types. After [instantiation] replaced Tvars with metas, and
+     argument types. After [instantiate_prenex] replaced Tvars with metas, and
      [needs_magic] unified those metas with the expected types, [type_simpl]
      chases the meta chains to get concrete types. These are used by
      [anonym_or_dummy_lams_typed] so that partially applied constructors get
@@ -2336,11 +2364,10 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
         (* Split: outer lambda has [context_arity_before_unify] params, inner
            lambda has the rest. The inner lambda captures the outer params and
            applies the constructor with all args. We wrap the inner lambda in
-           [MLmagic] so that the C++ translation layer's [collect_lams] stops at
-           the outer lambda boundary — [collect_lams] only collects consecutive
-           [MLlam] nodes, so [MLmagic] acts as a transparent barrier. The C++
-           translation renders [MLmagic t] as just [t], so the inner lambda
-           becomes the return value of the outer lambda. *)
+           [MLmagic (Mbarrier, _)] so that {!Mlutil.collect_lams} stops at the
+           outer lambda boundary: it only collects consecutive [MLlam] nodes.
+           [Mbarrier] carries no coercion, so the C++ translation renders the
+           inner lambda as the return value of the outer lambda. *)
         let ca = context_arity_before_unify in
         let outer_s = List.firstn ca s' in
         let inner_s = List.skipn ca s' in
@@ -2372,7 +2399,6 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
     @param br Array of branch bodies (in functional form, one per constructor)
     @param mlt Expected ML type of the whole case expression *)
 and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
-  (* EDIT HERE: Add type information into branches *)
   (* [br]: bodies of each branch (in functional form) *)
   (* [ni]: number of arguments without parameters in each branch *)
   let ni = constructors_nrealargs env ip in
@@ -2540,10 +2566,9 @@ let rec gentypvar_ok sg c =
 
 (** {2 From a constant to a ML declaration} *)
 
-(** Currently the identity on the type: the historical behaviour of prefixing
-    universally-quantified type-variable arrows (see the commented reference
-    body) is disabled, so the count argument is ignored and [t] is returned
-    unchanged. *)
+(** The identity on [t]; the count of type variables is ignored.  Type
+    variables are not prefixed to the type as arrows (the commented-out body
+    shows that alternative). *)
 let add_tvars _n t =
   t (* if n <= 1 then t else Tarr (Tvar (n-1), add_tvars (n-1) t) *)
 
@@ -2917,9 +2942,9 @@ let extract_fixpoint env sg vkn is_fix (fi, ti, ci) =
     (List.init n (fun i ->
          {fd_ref = GlobRef.ConstRef vkn.(i); fd_body = terms.(i); fd_type = types.(i)} ))
 
-(** Main entry point for extracting a constant declaration, dispatching on kind
-    (axiom, definition, etc.). *)
-
+(** Main entry point for extracting a constant declaration, dispatching on its
+    {!flag} and on its body (symbol, primitive or axiom, transparent
+    definition, primitive projection, opaque definition). *)
 let extract_constant access env kn cb =
   let sg = Evd.from_env env in
   let r = GlobRef.ConstRef kn in
@@ -3200,8 +3225,8 @@ let extract_constant_spec env kn cb =
       (* A type scheme with more signature slots than type variables takes at
          least one VALUE argument (e.g. [sym_semty : sym -> Type], [s=[Kill]],
          [vl=[]]).  Such a family applied to a runtime value is not
-         representable as a C++ type; record it so that
-         [convert_ml_type_to_cpp_type] erases it to [std::any] at use sites
+         representable as a C++ type; record it so that C++ type conversion
+         ([convert_ml_type_to_cpp_type]) erases it to [std::any] at use sites
          instead of emitting [typename M::sym_semty] and needing a runtime
          [any_cast] guard.  A family with a body is that only if the body says
          so, as a declaration's does ({!extract_constant}): [EvenT n := {m |
@@ -3249,7 +3274,8 @@ let extract_with_type env sg c =
     | _ -> None
   with SingletonInductiveBecomesProp ind -> error_singleton_become_prop ind
 
-(** Extracts a constructor specification for module signatures. *)
+(** Extracts a single term with its ML type, for [Crane Show Extraction]; see
+    {!Extract_env.show_extraction}. *)
 let extract_constr env sg c =
   reset_meta_count ();
   try

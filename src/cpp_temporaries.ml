@@ -81,6 +81,7 @@ let subst_stmt x v s =
     in_expr (fun scrut -> Scustom_case (ty, scrut, tys, brs, cm)) scrut
   | _ -> None
 
+(* Whether [s] declares a temporary Normalize introduced. *)
 let is_temporary = function
   | Sasgn (y, Declare _, _) -> Mlutil.is_temporary_id y
   | _ -> false

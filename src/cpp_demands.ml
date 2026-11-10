@@ -5,6 +5,7 @@ open Minicpp
 
 let acquire_fence = "std::atomic_thread_fence(std::memory_order_acquire);"
 
+(* The header an external type, spelled [name], is declared in. *)
 let of_external name =
   if String.equal name Crane_rt.small_vector then Some Table.small_vector_header
   else if String.equal name Crane_rt.itree then Some Table.itree_header
@@ -17,6 +18,7 @@ let of_external name =
   else if String.equal name Crane_rt.rc then Some (Table.Standard "memory")
   else None
 
+(* Whether [t] is a template parameter, bare or applied. *)
 let at_type_variable = function Tvar _ | Tapply (Tvar _, _) -> true | _ -> false
 
 (* Where a mapping is written -- a match, a block, a type or a term --
@@ -279,6 +281,7 @@ let of_decl d = collect (fun ~decl ~ty:_ -> decl d)
 
 let of_type t = collect (fun ~decl:_ ~ty -> ty t)
 
+(* The globals [visit] writes the names of, as [collect] meets them. *)
 let globals visit =
   let found = ref [] in
   ignore (collect ~global:(fun r -> found := r :: !found) visit);
@@ -292,6 +295,8 @@ let tyctors_of_decl tyctor d = ignore (collect ~tyctor (fun ~decl ~ty:_ -> decl 
 
 let tyctors_of_type tyctor ~vl t = ignore (collect ~tyctor ~vl (fun ~decl:_ ~ty -> ty t))
 
+(* The promoted type variables [visit] writes, each once, in the order
+   written. *)
 let promoted visit =
   let found = ref [] in
   ignore

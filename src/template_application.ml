@@ -19,6 +19,8 @@ let adapt kind v =
     match Minicpp.tapply t [Tany] with Tapply _ -> body | applied -> applied )
   | _, v -> v
 
+(* The value a use gives the parameter [p], found by its origin; none for a
+   parameter C++ deduces or the declaration derives. *)
 let value ~instance ~scheme p =
   match p.origin with
   | From_instance k -> instance k

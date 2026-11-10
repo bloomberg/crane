@@ -8,7 +8,7 @@
     What it must not have is an identity that {i is} that reference's spelling:
     two helpers lifted out of two different declarations are two helpers even
     when they were bound to the same name, and keying them by spelling alone
-    silently merged them -- one definition emitted, the other's call sites left
+    would merge them -- one definition emitted, the other's call sites left
     pointing at it.  Nor is the name of its binder enough: one declaration
     may bind two lambdas to one name, in two branches, and those are two
     helpers too.
@@ -18,8 +18,10 @@
     the Core term that bound it ({!site}).  The spelling is derived from the
     identity rather than the other way round.  {!make} is injective by
     construction: a spelling already taken by a different identity is not
-    reused. *)
+    reused.  Translation mints an identity when it lifts a helper; the
+    printer and {!Generated_program} read it back off the reference. *)
 
+(** A lifted helper's identity. *)
 type t
 
 (** The Core term a helper was bound by: a let binding a lambda, by the
@@ -72,4 +74,5 @@ val fixpoint : t -> (Miniml.Occurrence.t * int) option
     name, which no source order tells apart, in the order they were made. *)
 val compare : t -> t -> int
 
+(** [equal a b] is [compare a b = 0]. *)
 val equal : t -> t -> bool

@@ -2,7 +2,9 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** Records and type classes: a record's struct, a class's concept and the
-    constraint a class-typed parameter states. *)
+    constraint a class-typed parameter states.  Part of declaration
+    generation (MiniML to MiniCpp), called from {!Gen_inductives},
+    {!Gen_functions} and {!Gen_instances}. *)
 
 open Common
 open Miniml
@@ -114,8 +116,9 @@ let gen_record_cpp name fields ind =
 (** The concept constraint an instance parameter of type [ty] carries.
 
     Three things go into the argument list, and the only reason this is a
-    function is that two call sites -- {!strip_outer_layers} for a lambda's
-    instance binder and {!promote_typeclass_params} for a declared one -- have
+    function is that two call sites -- {!Gen_instances.instance_layers} for an
+    instance's dictionary binder and {!Gen_functions.promote_typeclass_params}
+    for a declared one -- have
     to agree on all three or the constraint does not match the concept:
 
     - the instance itself, which the printer supplies as the first argument;
@@ -145,8 +148,8 @@ let concept_constraint_of_class_type ty =
      { I::eqb(a0, a1) } -> std::convertible_to<bool>;
    };
 
-   Uses CPPconvertible_to with the actual cpp_type for the constraint,
-   which will be pretty-printed in cpp.ml.
+   Uses [CPPconvertible_to] with the actual cpp_type for the constraint,
+   which the printer renders.
 *)
 let gen_typeclass_cpp name fields =
   let ip_vars = Table.get_ind_ip_vars name in
@@ -171,7 +174,7 @@ let gen_typeclass_cpp name fields =
       ip_vars
   in
   let param_vars = List.filteri (fun i _ -> is_tparam i) prefixed_ip_vars in
-  (* Read the promoted half off {!class_promoted_vars} rather than re-deriving
+  (* Read the promoted half off {!Gen_context.class_promoted_vars} rather than re-deriving
      it here: the two must agree element for element, because [type_reqs]
      below pairs them up. *)
   let promoted_vars = class_promoted_vars name in
@@ -236,7 +239,7 @@ let gen_typeclass_cpp name fields =
     | Miniml.Tglob (r, _, _) -> Table.is_typeclass r
     | _ -> false
   in
-  (* This is the same question {!promoted_var_is_associated_type} asks, so the
+  (* This is the same question {!Gen_context.promoted_var_is_associated_type} asks, so the
      two lists partition the fields and no name can reach both.  They are
      computed in different places and could drift apart again; a concept that
      wants one name as a type and as a function is satisfied by no instance at
@@ -324,7 +327,7 @@ let gen_typeclass_cpp name fields =
            across methods (e.g. [g : T -> T] would reuse [a0 : pair<T,T>]
            left over from [f : T*T -> T]).  Using [declval] gives each method
            its own correctly-typed arguments, matching the module-type concept
-           idiom in [cpp.ml]'s [pp_spec_as_requirement]. *)
+           idiom ({!Cpp_concepts.pp_requirement}). *)
         let arg_declvals =
           List.map
             (fun arg_ty ->
@@ -343,7 +346,7 @@ let gen_typeclass_cpp name fields =
            arguments are spelled out rather than deduced: a nullary method
            ([I::empty()]) offers nothing to deduce from, and defaulting the
            parameters instead would let a call that fails to deduce silently
-           fall back to [std::any].  {!method_tvar_count} is the same count
+           fall back to [std::any].  {!Ml_type_util.method_tvar_count} is the same count
            the instance binds. *)
         let ntv =
           method_tvar_count
@@ -366,7 +369,7 @@ let gen_typeclass_cpp name fields =
                 List.init ntv (fun _ -> Tany) )
         in
         let call = mk_call callee arg_declvals in
-        (* Constraint: use the cpp_type directly - cpp.ml will render it *)
+        (* Constraint: use the cpp_type directly; the printer renders it. *)
         let constraint_expr = CPPconvertible_to ret_cpp in
         Some (`Normal ([], (call, constraint_expr)))
   in

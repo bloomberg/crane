@@ -1,11 +1,13 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** How a local fixpoint group is generated, decided over Core
-    (docs/Pipeline-Disentangling-Plan.md, section 3.8 and Milestone 7):
-    whether it may outlive the scope it is bound in, and so must be closures
-    holding copies rather than lambdas referring into that scope. *)
+(** How a local fixpoint group is generated, decided over Core before
+    translation lowers it: whether it may outlive the scope it is bound in,
+    and so must be closures holding copies rather than lambdas referring
+    into that scope.  Translation asks {!group} at each local fixpoint it
+    generates. *)
 
+(** The way a local fixpoint group is generated. *)
 type group =
   | Lifted
       (** lifted to a function template, being polymorphic in a type variable
