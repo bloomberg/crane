@@ -26,19 +26,25 @@
     drafted instantiation; one passed to a global, refined against the
     parameter's ML type at the call's reading
     ({!Translation_types.slot_refined_lambda},
-    {!Core_elaborate.instantiate}).  Neither reads what the position states
-    beyond the term: the destination's C++ type, the ML type the call's
-    position expects, whether it is a box.
+    {!Core_elaborate.instantiate}).  Its parameters are declared and assigned
+    as lowering declares them ({!Translation_types.lambda_binder_emitted},
+    {!Translation_types.lambda_param_cpp_type},
+    {!Translation_types.lambda_param_assigned}), against the C++ slot the
+    plan reads off the position: a global's parameter type at the call's
+    reading, its erased domains [const auto &] where the callee deduces the
+    callable; a local function's declared domain; a constructor field's type
+    (a record's only where it returns a function, a custom constructor's
+    signature where it erased only its domain); the region's return type for
+    a lambda the region is.  None reads what the position states beyond the
+    term: the destination's C++ type, the ML type the call's position
+    expects, whether it is a box.
 
     Every variable read of the region is planned too, whatever bound the
     binder it reads -- a pattern, a let, a lambda's parameter, a local
-    fixpoint, the region's outer scope -- and counted against lowering's
-    answer where it is read ({!check_read}), not enforced: a lambda's
-    parameter is declared by the C++ slot the lambda fills
-    ({!Translation.gen_expr}'s [cpp_arg_info]), which the plan approximates
-    from the parameter's erasure, whether the callee deduces the callable,
-    and a constructor field's ML domain; and a let bound to a component read
-    out of a recovered pair records no type ([stmts_yield_boxed]). *)
+    fixpoint, the region's outer scope -- and checked against lowering's
+    answer where it is read ({!check_read}).  A let bound to a component read
+    out of a pair recovered from a box is bound at a dummy type, as lowering
+    binds it ({!Translation_types.stmts_yield_boxed}). *)
 
 (** [region ~outer body] -- every pattern binder of [body], a region generated
     in the scope [outer] binds, planned: keyed by its site
@@ -61,8 +67,8 @@ val region :
     record projection in an expression -- and checked against that answer. *)
 val check : ?as_bound:bool -> site:Core_binder.site -> field:int -> live:bool -> unit -> unit
 
-(** [check_read ~occ ~live] -- under [CRANE_CHECK_IR], whether the region's
-    plan ({!Translation_state.translation_ctx.planned_reads}) boxes the
-    binder the variable read at [occ] reads exactly when lowering does
-    ([live]).  Counted, not enforced. *)
+(** [check_read ~occ ~live] -- a [CRANE_CHECK_IR] violation unless the
+    region's plan ({!Translation_state.translation_ctx.planned_reads}) boxes
+    the binder the variable read at [occ] reads exactly when lowering does
+    ([live]).  A read the plan has no answer for is a violation too. *)
 val check_read : occ:Miniml.Occurrence.t -> live:bool -> unit

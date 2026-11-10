@@ -42,21 +42,55 @@ let push kind ids scope =
     planned = List.map (fun (_, ty) -> at_binding ty) ids @ scope.planned;
     kinds = List.map (fun _ -> kind) ids @ scope.kinds }
 
-(* A lambda's parameters ({!Translation.gen_expr}'s [MLlam]): one erasure
-   removed that the lambda keeps is declared [std::any], the box whatever
-   its caller passes; one nothing typed ([Tunknown]) too, where the slot the
-   lambda fills declares the parameter's domain a box ([slot_boxes], by
-   source position) -- otherwise lowering declares it [const auto &]. *)
-let push_parameters ?(slot_boxes = fun _ -> false) ids scope =
+(* The domains a slot of C++ type [t] declares, where it declares a
+   signature ({!Translation.gen_expr}'s [MLlam]). *)
+let rec slot_domains t =
+  match t with
+  | Tnondeduced t | Tconst t | Tref (Lvalue, t) -> slot_domains t
+  | Tfun (doms, _) -> Some doms
+  | t -> (
+    match unfold_cpp_typedef (Common.empty_env ()) t with
+    | Tfun (doms, _) as f when f <> t -> Some doms
+    | _ -> None )
+
+(* What a lambda's parameters [ids] (innermost first, over [body]) are read
+   at in its body ({!Translation.gen_expr}'s [MLlam]): each emitted one at
+   the type it is declared ({!Translation_types.lambda_param_cpp_type}) and
+   then assigned ({!Translation_types.lambda_param_assigned}) against the
+   slot's domains [slot], in source order, where the slot declares a
+   signature; one not emitted at the conversion of its ML type. *)
+let push_parameters ?slot_ty ~ns ~tvars ~reified ~body ids scope =
   let scope = push Kparameter ids scope in
   let n = List.length ids in
+  let slot = Option.bind slot_ty slot_domains in
+  let emitted i ty = lambda_binder_emitted (Common.empty_env ()) ~expected_ty:slot_ty ~body ids i ty in
+  let emitted_ids = List.filteri (fun i (_, ty) -> emitted i ty) ids in
+  let n_emitted = List.length emitted_ids in
+  let rank2_carrier =
+    if slot = None && List.exists (fun (_, ty) -> Rank2.quantifies_erased_type ty) emitted_ids then
+      Some Rank2.carrier_name
+    else None
+  in
   let declared =
+    let k = ref 0 in
     List.mapi
-      (fun k (_, ty) ->
-        match resolve_tmeta ty with
-        | Tdummy _ -> Some (Tany, Binding)
-        | Tunknown when slot_boxes (n - 1 - k) -> Some (Tany, Binding)
-        | _ -> at_binding ty )
+      (fun i (x, ty) ->
+        if not (emitted i ty) then at_binding ty
+        else
+          let j = !k in
+          incr k;
+          let slot_dom = Option.bind slot (fun doms -> List.nth_opt doms (n_emitted - 1 - j)) in
+          match
+            lambda_param_cpp_type (Common.empty_env ()) ~ns ~tvars ~rank2_carrier ~reified ~n_params:n ~body
+              ~unused:(not (Mlutil.ast_occurs (i + 1) body))
+              ~slot_dom
+              (Mlutil.id_of_mlid x, ty, false)
+          with
+          | decl, _ -> (
+            match strip_param_wrappers (lambda_param_assigned ~slot_dom ty decl) with
+            | t when t <> Topaque && not (is_cpp_dummy_type t) -> Some (t, Binding)
+            | _ -> None )
+          | exception _ -> at_binding ty )
       ids
   in
   {scope with planned = declared @ List.filteri (fun i _ -> i >= n) scope.planned}
@@ -142,28 +176,52 @@ let custom_pattern_binders scope ~(cs : custom_scrutinee) ~ty ~scrut cname ids =
       planned
   else planned
 
+(* Whether [a] projects a component out of a pair read from a binder that
+   holds a box ({!Translation.gen_expr_custom}'s pair-accessor case): the
+   pair is recovered as [pair<any, any>], and its components are boxes. *)
+let reads_boxed_component scope a =
+  let is_pair_projection r =
+    match Table.find_custom_opt r with
+    | Some s -> ( match inline_shape_of_text s with Inline_pair_projection _ -> true | _ -> false )
+    | None -> false
+  in
+  match a with
+  | MLapp (MLglob {callee = r; _}, args) when Table.is_inline_custom r && is_pair_projection r -> (
+    match List.filter (function MLdummy _ -> false | _ -> true) args with
+    | arg :: _ -> (
+      match strip_magic arg with
+      | MLrel (i, _) -> (
+        match Lexenv.type_opt scope.lex i with
+        | Some t ->
+          let t = resolve_tmeta t in
+          is_erased_ml_type t || (try ml_erases_to_box (Common.empty_env ()) t with _ -> false)
+        | None -> false )
+      | _ -> false )
+    | [] -> false )
+  | _ -> false
+
 let region ~outer body =
   let found = ref [] in
   let reads = ref [] in
   let promoted_active = (!tctx).promoted_var_map <> [] in
   let return = (!tctx).current_cpp_return_type in
   let type_vars = (!tctx).current_type_vars in
+  let ns = (!tctx).method_self_ns in
+  let reified = (!tctx).itree_mode = Reified in
+  let parameters ?slot_ty ~body ids scope = push_parameters ?slot_ty ~ns ~tvars:type_vars ~reified ~body ids scope in
   let is_lambda a = match strip_magic a with MLlam _ -> true | _ -> false in
-  (* A lambda stored in a constructor's field is written against the field's
-     declared function type: a parameter nothing typed is declared a box
-     where the field's domain there converts to one.  The field's C++ type is
-     approximated by converting its ML domain, ahead of the earlier choices
-     lowering makes for such a parameter (a pattern lambda's spelled type,
-     the slot's own concrete domain). *)
-  let rec walk_field_lambda scope field_ty lam =
+  (* A lambda stored in a constructor's field is written against [slot]
+     where the constructor's lowering says what it is, otherwise against the
+     field's type: its ML type converted. *)
+  let rec walk_field_lambda ?slot scope field_ty lam =
     let ids, body = Mlutil.collect_lams lam in
-    let doms = match field_ty with Some t -> ml_domains t | None -> [] in
-    let slot_boxes j =
-      match List.nth_opt doms j with
-      | Some d -> ( try resolves_to_any_type (cpp_of_ml (Common.empty_env ()) d) with _ -> false )
-      | None -> false
+    let slot_ty =
+      match (slot, field_ty) with
+      | Some s, _ -> s
+      | None, Some t -> ( try Some (cpp_of_ml (Common.empty_env ()) t) with _ -> None )
+      | None, None -> None
     in
-    walk (push_parameters ~slot_boxes ids scope) body
+    walk (parameters ?slot_ty ~body ids scope) body
   and walk scope = function
     (* A record projection ({!Translation.gen_expr}, {!Translation.gen_stmts}:
        after a custom match, before any other) declares its fields at the
@@ -238,7 +296,55 @@ let region ~outer body =
         (fun i e ->
           match strip_magic e with
           | MLlam _ when stores_erased_fn env r ~field_tys ~temps i e -> walk scope (erased_fn_lambda env e)
-          | MLlam _ as lam -> walk_field_lambda scope (List.nth_opt field_tys i) lam
+          | MLlam _ as lam ->
+            (* The slot's own signature where it erased only its domain
+               ({!Translation.gen_expr_custom_cons}'s [erased_fn_slot]). *)
+            let erased_fn_slot =
+              if ctor_arg_is_passthrough r i || not (ml_expr_is_function_value e) then None
+              else
+                match List.nth_opt field_tys i with
+                | Some (Miniml.Tvar (_, j)) -> (
+                  match Option.map tvar_erase_type (List.nth_opt temps (j - 1)) with
+                  | Some t when partially_erased_fun_ty t -> Some t
+                  | _ -> None )
+                | _ -> None
+            in
+            walk_field_lambda ?slot:(Option.map (fun t -> Some t) erased_fn_slot) scope (List.nth_opt field_tys i) lam
+          | _ -> walk scope e )
+        args
+    (* A record's field is written against the field's type at the record's
+       arguments only where that type returns a function
+       ({!Translation.gen_expr}'s record [expected_for_field]). *)
+    | MLcons (ty, r, args) when List.exists is_lambda args && Table.record_fields_of_type ty <> [] ->
+      let field_tys =
+        match Table.get_ctor_ip_types_opt r with
+        | Some ft -> List.filter (fun t -> not (Mlutil.isTdummy t)) ft
+        | None -> []
+      in
+      let env = Common.empty_env () in
+      let rec codomain = function
+        | Tconst t | Tref (_, t) -> codomain t
+        | Tfun (_, cod) -> Some cod
+        | t -> ( match unfold_cpp_typedef env t with Tfun _ as f when f <> t -> codomain f | _ -> None )
+      in
+      let slot ft =
+        match (ft, ty) with
+        | Miniml.Tvar _, _ -> None
+        | _, Miniml.Tglob (_, tys, _) -> (
+          match cpp_of_ml env (Mlutil.type_subst_list tys ft) with
+          | ct -> (
+            match codomain ct with
+            | Some cod when Option.has_some (codomain cod) && (not (prints_as_any ct)) && names_only_scoped_tvars ct ->
+              Some ct
+            | _ -> None )
+          | exception _ -> None )
+        | _ -> None
+      in
+      List.iteri
+        (fun i e ->
+          match (strip_magic e, List.nth_opt field_tys i) with
+          | (MLlam _ as lam), Some ft -> walk_field_lambda ~slot:(slot ft) scope (Some ft) lam
+          | (MLlam _ as lam), None -> walk_field_lambda ~slot:None scope None lam
           | _ -> walk scope e )
         args
     | MLcons (_, r, args) when List.exists is_lambda args ->
@@ -295,11 +401,46 @@ let region ~outer body =
                [const auto &] where the slot's domain is a box
                ({!Translation_calls.deduce_erased_domains}). *)
             let deduced = Callable_abi.deduces_callable use.callee (Param_pos.of_regular ~leading i) in
-            walk (push_parameters ~slot_boxes:(fun _ -> not deduced) ids scope) body
+            let slot_ty =
+              match param_ml_ty i with
+              | Some t -> (
+                match cpp_of_ml (Common.empty_env ()) t with
+                | c when prints_as_any c -> None
+                | c -> Some (if deduced then Translation_calls.deduce_erased_domains c else c)
+                | exception _ -> None )
+              | None -> None
+            in
+            walk (parameters ?slot_ty ~body ids scope) body
           | _ -> walk scope a )
         args
+    (* A lambda passed to a local function is written against that
+       function's declared domain at its position, where the binding site
+       declared one with no erased position ({!Translation.eta_fun}'s
+       [declared_dom]). *)
+    | MLapp (((MLrel (h, _) | MLmagic (_, MLrel (h, _))) as f), args)
+      when List.exists (function MLlam _ -> true | _ -> false) args ->
+      walk scope f;
+      let dom = match planned scope h with Some (Tfun (dom, _), _) -> dom | _ -> [] in
+      List.iteri
+        (fun k a ->
+          match a with
+          | MLlam _ as lam ->
+            let slot_ty =
+              match List.nth_opt dom k with
+              | Some t when not (exists_cpp_type prints_as_any t) -> Some t
+              | _ -> None
+            in
+            let ids, body = Mlutil.collect_lams lam in
+            walk (parameters ?slot_ty ~body ids scope) body
+          | _ -> walk scope a )
+        (List.filter (function MLdummy _ -> false | _ -> true) args)
     | MLletin (x, ty, a, body, _) ->
       walk scope a;
+      (* A component read out of a boxed pair is a box, however concrete its
+         ML type looks; lowering binds it at a dummy type, with no C++ type
+         recorded, so an accessor reading it again sees the erasure
+         ({!Translation_types.stmts_yield_boxed}). *)
+      let ty = if x <> Dummy && reads_boxed_component scope a then Tdummy Ktype else ty in
       walk (push Klet [(x, ty)] scope) body
     (* Any other lambda's binders at the types they are annotated with.
        Lowering also declares a parameter by the C++ slot the lambda fills --
@@ -308,7 +449,7 @@ let region ~outer body =
        rooted at one, and counts for every read of one. *)
     | MLlam _ as e ->
       let ids, body = Mlutil.collect_lams e in
-      walk (push_parameters ids scope) body
+      walk (parameters ~body ids scope) body
     | MLfix (_, fs, defs, _, _) ->
       let scope = push Kfix (List.rev_map (fun (f, ty) -> (Id f, ty)) (Array.to_list fs)) scope in
       Array.iter (walk scope) defs
@@ -320,7 +461,14 @@ let region ~outer body =
   in
   let depth = Lexenv.depth outer in
   let outer_planned = List.init depth (fun i -> Option.bind (Lexenv.type_opt outer (i + 1)) at_binding) in
-  walk {lex = outer; planned = outer_planned; kinds = List.init depth (fun _ -> Kouter)} body;
+  let scope = {lex = outer; planned = outer_planned; kinds = List.init depth (fun _ -> Kouter)} in
+  (* A lambda the region returns is written against the region's return
+     type. *)
+  ( match (strip_magic body, return) with
+  | (MLlam _ as e), Some t when slot_domains t <> None ->
+    let ids, body = Mlutil.collect_lams e in
+    walk (parameters ~slot_ty:t ~body ids scope) body
+  | _ -> walk scope body );
   (!found, List.rev !reads)
 
 let same_site a b =
@@ -338,6 +486,14 @@ let kind_name = function
 
 let check_read ~occ ~live =
   if Option.has_some (!tctx).body_owner && Probe.checking () then
+    let describe planned =
+      Pp.(
+        str "a read"
+        ++ (match (!tctx).body_owner with Some r -> str " in " ++ Names.GlobRef.print r | None -> mt ())
+        ++ str ": lowering "
+        ++ str (if live then "boxes" else "does not box")
+        ++ str " its binder, the plan " ++ str planned)
+    in
     match List.assq_opt occ (!tctx).planned_reads with
     | Some {rd_boxed; rd_kind} ->
       let agrees = rd_boxed = live in
@@ -347,8 +503,13 @@ let check_read ~occ ~live =
           ^ (if live then " live-boxed" else " live-value")
           ^ match (!tctx).body_owner with
             | Some r when not agrees -> " " ^ Pp.string_of_ppcmds (Names.GlobRef.print r)
-            | _ -> "")
-    | None -> Probe.hit "repr-read" (fun () -> "unplanned" ^ if live then " live-boxed" else " live-value")
+            | _ -> "");
+      if not agrees then
+        Probe.violation "variable read representation"
+          (describe ((if rd_boxed then "boxes" else "does not") ^ " (" ^ kind_name rd_kind ^ ")"))
+    | None ->
+      Probe.hit "repr-read" (fun () -> "unplanned" ^ if live then " live-boxed" else " live-value");
+      Probe.violation "variable read representation" (describe "has no answer")
 
 let check ?(as_bound = false) ~site ~field ~live () =
   let describe planned =
