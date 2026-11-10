@@ -14,6 +14,13 @@
 
     The binding goes in front of the statement, so only a call that statement
     evaluates unconditionally, once, is rewritten: one under a conditional, a
-    short-circuit or a loop's condition is left as written. *)
+    short-circuit or a loop's condition is left as written.
 
+    A pass of {!Cpp_pipeline}: it runs after the temporaries Normalize named
+    go back where they are read, so that none of them is put back into the
+    text that repeats it. *)
+
+(** [transform_decl d] is [d] with each repeated argument of every
+    statement's unconditional calls bound once, to a fresh [_onceN] local
+    that names nothing else in [d]. *)
 val transform_decl : Minicpp.cpp_decl -> Minicpp.cpp_decl

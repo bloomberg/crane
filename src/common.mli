@@ -11,7 +11,14 @@
 (************************************************************************)
 
 (** Pretty-printing utilities, name resolution, and renaming for extracted code.
-*)
+
+    Shared by every stage after extraction: translation (MiniML to MiniCpp)
+    and the printer both name globals, modules and locals through the tables
+    here.  The unit's names are decided while it is planned ({!Plan}) and read
+    back while it is emitted ({!Emit}); {!end_planning} separates the two.
+    It also holds the synthetic-name generators ([T0], [F0], [_tcI0], ...),
+    the constructor field-name registries, and the recording of the headers
+    and files what is written needs. *)
 
 open Names
 open Miniml
@@ -50,12 +57,9 @@ val intersperse : 'a -> 'a list -> 'a list
 (** [prepend_to_all sep lst] prepends [sep] before each element of [lst]. *)
 val prepend_to_all : 'a -> 'a list -> 'a list
 
-(** By default, in module Format, you can do horizontal placing of blocks even
-    if they include newlines, as long as the number of chars in the blocks are
-    less that a line length. To avoid this awkward situation, we attach a big
-    virtual size to [fnl] newlines. *)
-
-(** Forced newline. *)
+(** Forced newline: [Pp.fnl].  Module Format may still place a block
+    holding one beside another block when both fit within a line; no large
+    virtual size is attached to the newline to prevent that. *)
 val fnl : unit -> Pp.t
 
 (** Two consecutive newlines. *)
@@ -111,10 +115,13 @@ val crane_local_prefix : string
 (** The C++ spelling of a Rocq identifier, as an [Id.t]. *)
 val cpp_id_of_id : Id.t -> Id.t
 
-(** Rename a list of variables to fresh lowercase names. *)
+(** [rename_vars avoid ids] renames [ids] to fresh names, first letter
+    uncapitalised, outside [avoid]: the last of [ids] is named first.  Returns
+    the names and [avoid] extended with them. *)
 val rename_vars : Id.Set.t -> Id.t list -> env
 
-(** Rename type variables to fresh lowercase names. *)
+(** Rename type variables to fresh names, first letter uncapitalised, each
+    avoiding [avoid] and the ones before it. *)
 val rename_tvars : Id.Set.t -> Id.t list -> Id.t list
 
 (** Push new variable names into the de Bruijn environment. *)
@@ -216,11 +223,13 @@ val is_non_output_module : Names.ModPath.t -> bool
     {!set_non_output_modules}. *)
 val clear_non_output_modules : unit -> unit
 
+(** Kind of global identifier, which a reference is named at.  A reference
+    is renamed once, at the kind it is first named at. *)
 type kind =
-  | Term
-  | Type
-  | Cons
-  | Mod  (** Kind of global identifier: term, type, constructor, or module. *)
+  | Term  (** a constant *)
+  | Type  (** an inductive type or a type definition *)
+  | Cons  (** a constructor *)
+  | Mod  (** a module or module type *)
 
 (** Kernel [Label.t] of a global reference: the constant's own label for a
     [ConstRef], and the enclosing mutual-inductive block's label for an
@@ -246,6 +255,7 @@ val pp_global_name : kind -> GlobRef.t -> string
     check reads a plan back. *)
 val decided_global_name : GlobRef.t -> string option
 
+(** A name the naming tables decided: a global's short name or a module's. *)
 type decided_name =
   | Global_name of GlobRef.t
   | Module_name of ModPath.t
@@ -317,6 +327,7 @@ val inside : ?members:Id.Set.t -> ModPath.t -> ModPath.t list -> visibility -> v
 (** The visibility enclosing the innermost scope of [v]. *)
 val enclosing_visibility : visibility -> visibility
 
+(** Same scopes, functor parameters and declared members, layer by layer. *)
 val equal_visibility : visibility -> visibility -> bool
 
 (** The scopes of a visibility, innermost first, for a diagnostic. *)
@@ -456,7 +467,12 @@ val field_param_id : int -> Id.t
 
 (** {2 Constructor Field Name Registry}
 
-    See {!Common.ctor_field_names} for design rationale. *)
+    Maps a constructor struct's field, by owner, constructor name and
+    position, to the C++ field name derived from its Rocq binder.  Filled
+    where the struct is declared ({!Translation.compute_and_register_field_names})
+    and read where a field is accessed.  It lives here rather than in
+    {!Cpp_state} because [Cpp_state] depends on [Translation], which needs the
+    registry.  Cleared on every extraction reset. *)
 
 (** A stable key for the inductive owning a constructor struct.  Accepts
     either the inductive or one of its constructors. *)
@@ -467,7 +483,9 @@ val ctor_owner_key : Names.GlobRef.t -> string
 val register_ctor_field_name :
   owner:Names.GlobRef.t -> string -> int -> Id.t -> unit
 
-(** Look up the field name; falls back to [d_a{idx}] if unregistered. *)
+(** Look up the field name, retrying under the sole owner of the constructor
+    name when the given owner has none; falls back to {!field_param_id} if
+    unregistered. *)
 val lookup_ctor_field_name : owner:Names.GlobRef.t -> string -> int -> Id.t
 
 (** Clear the registry between extraction passes. *)
@@ -483,7 +501,8 @@ val reset_ctor_field_names : unit -> unit
 val register_ctor_bind_name :
   owner:Names.GlobRef.t -> string -> int -> Id.t -> unit
 
-(** Look up the binding variable name; falls back to [a{idx}] if unregistered. *)
+(** Look up the binding variable name; falls back to {!field_param_id} if
+    unregistered. *)
 val lookup_ctor_bind_name : owner:Names.GlobRef.t -> string -> int -> Id.t
 
 (** Name for a synthesized eta-expansion binder [i], e.g. ["_x0"].  Used when a
@@ -520,8 +539,8 @@ val ctor_fallback_id : int -> Id.t
     match template that mentions its scrutinee more than once binds it to one
     of these first, so a non-trivial scrutinee is evaluated once.
 
-    Minted and recognised in the same place: {!Loopify} elides the redundant
-    alias these introduce, and had been re-parsing the spelling to spot them. *)
+    Minted and recognised in the same place ({!is_scrutinee_cache_id}), so a
+    pass that has to spot one asks rather than parsing the spelling. *)
 val scrutinee_cache_id : int -> Id.t
 
 (** Whether [id] is a {!scrutinee_cache_id}. *)

@@ -3,12 +3,13 @@
 
 (** Structure analysis: pre-analyzes the full extraction structure before
     rendering begins. Computes module ordering, enum registrations, inductive
-    name maps, and wrapper module classifications.
+    name maps, wrapper module classifications, and the layout facts name
+    resolution reads (collision wrappers, alias sources, eponymous records,
+    concept names and scopes, lifted instances).
 
-    This is the second pass in the extraction pipeline, running after
-    Method_registry.create and before cpp.ml's rendering. It produces a
-    Structure_analysis.t record that cpp.ml consumes to iterate modules in the
-    correct dependency order.
+    It runs once per unit from [Cpp.prepare_structure], after the method
+    registry is obtained and before anything renders. The {!t} record it
+    returns is turned into the unit's {!Module_plan}.
 
     See structure_analysis.mli for the full interface documentation. *)
 
@@ -114,10 +115,9 @@ let element_inductives = function
   | _ -> []
 
 (** [(modpath, source)] for every module that is an alias for, or an
-    application of, another module.  Rendering used to record these as it
-    emitted the [using] declarations, which put them out of reach of any use
-    rendered earlier; they are a property of the structure, so they are decided
-    here. *)
+    application of, another module.  They are a property of the structure,
+    decided here before rendering, so a use rendered before the [using]
+    declaration for the alias can still resolve it. *)
 let collect_functor_app_sources (s : ml_structure) :
     (ModPath.t * ModPath.t) list =
   List.rev
@@ -204,9 +204,10 @@ let collect_functor_concept_scopes (s : ml_structure) : (ModPath.t * Module_plan
 
 (** {2 Enum registration} *)
 
-(** Register enum inductives by scanning a module's declaration list.
+(** Register enum inductives by scanning the whole structure.
 
-    An inductive qualifies as an enum when ALL of the following hold:
+    An inductive qualifies as an enum when ALL of the following hold (the
+    last three are {!Table.is_enum_inductive_packet}):
     - It is not a custom-extracted type ([is_custom] returns false).
     - It is not part of a mutual inductive block (only single inductives).
     - All constructors are nullary (no arguments — [ip_types] are all [[]]).
@@ -250,9 +251,10 @@ let register_shared_variants (s : ml_structure) : unit =
           (element_inductives se) )
       s
 
-(** Register every definition whose body only raises -- an axiom, an absurd
-    case, a proof-only definition whose body extraction simplifies to one -- as
-    a throwing value ([Table.add_throwing_value]): it is emitted as a
+(** Every definition whose body only raises -- an axiom, an absurd case, a
+    proof-only definition whose body extraction simplifies to one.  Each is a
+    throwing value: {!Program_facts} records the list and {!Install_legacy_plan}
+    installs it with [Table.add_throwing_value], so it is emitted as a
     zero-argument function that throws when called rather than a constant
     that throws during static initialisation, and every reference must call
     it.  Read off the final bodies, since simplification is what can turn
@@ -273,11 +275,11 @@ let throwing_values (s : ml_structure) : GlobRef.t list =
     spelled as Rocq spells it -- callers that care about the name a type is
     emitted under at global scope capitalise it themselves.
 
-    This information is used by cpp.ml for name collision detection. When
-    multiple modules define inductives with the same capitalized name, or when a
-    wrapper module name collides with an inductive name from a different module,
-    the rendering needs to disambiguate (e.g. by using a qualified name or a
-    different wrapper name).
+    {!analyze} uses this for name collision detection: a wrapper module whose
+    name an inductive from another module takes gets a suffixed name
+    ([classify_module]'s [taken]), and a child module whose capitalised name
+    collides is forced inside a parent wrapper
+    ({!collect_collision_wrappers}).
 
     Recurses into sub-modules to collect inductives at all nesting depths. *)
 let collect_inductive_names (s : ml_structure) : (string * ModPath.t) list =
@@ -312,7 +314,7 @@ let collect_inductive_names (s : ml_structure) : (string * ModPath.t) list =
 
     Note: only the top-level declarations are scanned (no recursion into
     sub-modules). Enums inside sub-modules are emitted within their containing
-    module's scope by the module rendering code in cpp.ml. *)
+    module's scope when that module is rendered. *)
 let collect_global_scope_enums (s : ml_structure) : GlobRef.t list =
   let acc = ref [] in
   List.iter
@@ -354,8 +356,8 @@ let is_func_decl (_, se) =
     - [not is_main]: It is not the main module being extracted.
 
     When a module qualifies, returns [Some name] where [name] is the capitalized
-    form of the module file name (e.g. "List" for list.v). Otherwise returns
-    [None].
+    form of the module file name (e.g. "List" for list.v), escaped if reserved
+    and suffixed [_Mod] when [taken]. Otherwise returns [None].
 
     The main module is excluded because its declarations are emitted directly at
     top level, not inside a wrapper struct.
@@ -483,10 +485,9 @@ let topological_sort
 
              The traversal is {!Modutil.struct_iter} rather than a local one,
              because a hand-written walk answers "what does this module name"
-             only for the cases it happens to list.  This one used to return
-             nothing at all for a module type, so a file whose content is a
-             bare alias depended on nothing, sorted with the roots, and was
-             written ahead of the file it aliases. *)
+             only for the cases it happens to list.  A module type must count
+             too: a file whose content is a bare alias depends on the file it
+             aliases and must be written after it. *)
           Modutil.struct_iter
             (Modutil.decl_iter_references add_dep add_dep add_dep)
             (Modutil.spec_iter_references add_dep add_dep add_dep)
@@ -930,8 +931,8 @@ let collect_eponymous_records (s : ml_structure) : GlobRef.t list =
        s [])
 
 (** The template parameter every module-type concept is written over:
-    [pp_spec_as_requirement] spells the modelled module ["M"] throughout the
-    requirement bodies it builds. *)
+    {!Cpp_concepts} spells the modelled module ["M"] in the
+    [template<typename M>] head and throughout the requirement bodies. *)
 let concept_self_param = "M"
 
 (** The C++ concept identifier a module type labelled [l] takes unless a
@@ -986,10 +987,8 @@ let collect_concept_renames (s : ml_structure) :
   ( renames modpath_of_r (List.rev classes),
     renames (function MPdot (mp, _) -> mp | mp -> mp) (List.rev modtypes) )
 
-(** The instances a wrapper struct does not keep.  An instance is emitted as a
-    struct at namespace scope wherever it was declared, because it is named as
-    a concept's template argument -- a type, which no module owns -- so a use
-    of one declared in a wrapped module must not qualify it with the wrapper. *)
+(** Whether a term of type [ty] is a type-class instance: its type, past any
+    arrows, is a type class. *)
 let is_instance_type (ty : ml_type) : bool =
   let rec return_type = function
     | Tarr (_, rest) -> return_type rest
@@ -999,6 +998,10 @@ let is_instance_type (ty : ml_type) : bool =
   | Tglob (class_ref, _, _) -> Table.is_typeclass class_ref
   | _ -> false
 
+(** The instances a wrapper struct does not keep.  An instance is emitted as a
+    struct at namespace scope wherever it was declared, because it is named as
+    a concept's template argument -- a type, which no module owns -- so a use
+    of one declared in a wrapped module must not qualify it with the wrapper. *)
 let collect_lifted_instances (modules : module_info list) : GlobRef.t list =
   List.concat_map
     (fun m ->
@@ -1015,13 +1018,18 @@ let collect_lifted_instances (modules : module_info list) : GlobRef.t list =
 
 (** Perform all structure analysis in a single call.
 
-    This is called once per unit from cpp.ml's [prepare_structure],
-    immediately after creating the Method_registry. The steps are:
-
-    1. Register enum inductives across all modules (side-effect on Table). 2.
-    Collect inductive names for collision detection. 3. Collect global-scope
-    enums for early emission. 4. Classify modules as wrapper vs. non-wrapper. 5.
-    Topologically sort modules by cross-module dependencies.
+    This is called once per unit from [Cpp.prepare_structure], once the method
+    registry is obtained. The steps are:
+    {ol
+    {- Register enum inductives across all modules (side-effect on Table).}
+    {- Collect inductive names for collision detection.}
+    {- Collect global-scope enums for early emission.}
+    {- Order each module's inductives, classify modules as wrapper or not,
+       and topologically sort them by cross-module dependencies.}
+    {- Decide the collision wrappers and their bystanders.}
+    {- Collect the eponymous records and the concept renames.}
+    {- Collect alias and functor-application sources, functor concept scopes
+       and lifted instances.}}
 
     The main module is identified as the last module in the input structure
     (following Rocq's convention that the extracted module is listed last). *)
@@ -1110,7 +1118,8 @@ let analyze (reg : Method_registry.t) (s : ml_structure) : t =
   let collision_wrappers, wrapper_bystanders =
     collect_collision_wrappers names sorted_modules
   in
-  (* 6. Collect the eponymous records, for the same reason. *)
+  (* 6. Collect the eponymous records and concept names, for the same
+     reason. *)
   let eponymous_records = collect_eponymous_records s in
   let concept_renames, modtype_concept_renames = collect_concept_renames s in
   (* 7. Collect the alias and functor-application targets, likewise. *)

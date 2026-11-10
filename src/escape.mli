@@ -1,7 +1,9 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Smart pointer optimization for MiniML AST.
+(** Escape analysis over MiniML terms, feeding parameter ownership and cell
+    reuse.  It runs before translation to MiniCpp; {!Ownership} settles its
+    per-parameter answers for the whole program, and translation reads them.
 
     Two-phase optimization strategy:
 
@@ -9,12 +11,13 @@
     (pass by value) or can borrow (pass by const reference).
 
     Phase 2 (reset/reuse): Reuse memory cells in pattern matches when
-    use_count() == 1. *)
+    use_count() == 1, or unconditionally for a shared variant's block. *)
 
 open Miniml
 
 (** [nb_occur_match k t] counts occurrences of de Bruijn index [k] in [t], using
-    maximum over branches (safe conservative estimate).
+    maximum over branches (safe conservative estimate).  An argument of an
+    inline custom counts once per time its template splices it.
 
     @param k de Bruijn index to count (1 = innermost binder)
     @param t the MiniML term to search
@@ -39,7 +42,8 @@ type escape_query = Conservative | Of_sub_binding | Of_param
 (** [escapes k t] checks if de Bruijn index [k] escapes in [t] (value outlives
     its scope). Escaping positions: constructor args (except for an
     [Of_param] query), lambda captures, tail position, fixpoint captures,
-    partial-application captures.
+    partial-application captures, and, for an [Of_param] query, an argument
+    the callee owns ({!callee_flags}).
 
     @param query defaults to [Conservative]
     @param return_escapes whether being returned counts (default [true])
@@ -94,8 +98,10 @@ val single_use_nargs : int -> ml_ast -> int
 
 (** [infer_owned_params n body] returns a bool list of length [n]. Element [i]
     is true when the parameter at de Bruijn index [i+1] needs ownership (pass by
-    value: shared_ptr<T>), false when it can be borrowed (pass by const ref:
-    const shared_ptr<T>&).
+    value), false when it can be borrowed (pass by const reference).  A
+    parameter that escapes is owned unless it is only matched on and returned
+    unchanged; a parameter matched with a reuse candidate arm
+    ({!is_reuse_scrutinee}) is owned when reuse is on.
 
     De Bruijn indexing: 1 = innermost/last parameter. Output order: element 0 →
     de Bruijn 1, element 1 → de Bruijn 2, etc.
@@ -104,7 +110,7 @@ val single_use_nargs : int -> ml_ast -> int
     @param body the lambda body with parameters still represented as de Bruijn
                 indices [1..n]
     @return list of length [n] where element [i] is [true] iff parameter
-            [i+1] (de Bruijn) escapes and must be passed by value *)
+            [i+1] (de Bruijn) must be passed by value *)
 val infer_owned_params : int -> ml_ast -> bool list
 
 (** [infer_sub_bindings_escape_params n body] returns a bool list of length [n]
@@ -140,8 +146,10 @@ module IntSet = Mlutil.IntSet
             one level above [depth] *)
 val free_rels : int -> ml_ast -> IntSet.t
 
-(** [is_shared_ptr_type ty] returns true if [ty] is a non-enum, non-coinductive
-    inductive (wrapped in shared_ptr in C++). *)
+(** [is_shared_ptr_type ty] returns true if [ty] is a non-enum, non-coinductive,
+    non-custom inductive.  The name predates value-type inductives: such a
+    type is now usually a value type whose recursive fields are shared
+    pointers. *)
 val is_shared_ptr_type : ml_type -> bool
 
 (** {2 Phase 2: reuse candidate discovery} *)

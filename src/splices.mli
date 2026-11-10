@@ -7,6 +7,7 @@
     into its body, the local fixpoint that copy is.  A value of the program
     being normalized ({!Core_phase.normalize}), read by the passes after it. *)
 
+(** The partners decided, and the copy each decided machine enters. *)
 type t
 
 (** Nothing decided. *)
@@ -29,4 +30,6 @@ val entered_copy : t -> Names.GlobRef.t -> Miniml.Occurrence.t option
     ({!entered_copy}). *)
 val is_entered_copy : t -> Miniml.Occurrence.t -> bool
 
+(** Whether two splicings decided alike: normalizing a program again under
+    [CRANE_CHECK_IR] must decide its partners as the first run did. *)
 val equal : t -> t -> bool

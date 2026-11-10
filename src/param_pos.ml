@@ -1,11 +1,16 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
+(** Positions in a callee's value-parameter list.  See [param_pos.mli]; the
+    kinds are phantom, every position an [int] here. *)
+
 type orig
 type subst
 type 'k pos = int
 type 'k params = Miniml.ml_type list
 
+(* The domains of [ty] up its arrow spine, [expand] applied at each step,
+   the [Tdummy] ones dropped. *)
 let collect ~expand ty =
   let rec go ty =
     match expand ty with

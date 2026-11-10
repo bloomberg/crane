@@ -1,11 +1,12 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** LowerControl (docs/Pipeline-Disentangling-Plan.md, Milestone 6): the
-    {!Control_ir} of a normalized program, from its Core bodies and its
-    recursion plan.
+(** LowerControl: the {!Control_ir} of a normalized program, from its Core
+    bodies and its recursion plan.  It runs after {!Recursion_plan} has
+    chosen each function's strategy and before translation, which reads the
+    loops installed here.
 
-    This first version lowers the loops of direct tail recursion
+    It lowers the loops of direct tail recursion
     ({!Recursion_plan.tail_loops}): a function, or a local fixpoint of one
     member, that recurses only by tail calls.  Its
     body is read as {!Recursion_plan} reads it -- applications whole, a
@@ -44,8 +45,10 @@
     compares the calls it turns into jumps with the [Continue]s here
     ({!Loopify.lower_local_tail_loops}). *)
 
+(** The lowered loops of a program, each by its {!Control_ir.Loop.t}. *)
 type t
 
+(** No loop lowered. *)
 val empty : t
 
 (** [tail_loop ~effects ~target ~callee body] is [body], standing under the

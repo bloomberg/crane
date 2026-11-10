@@ -18,14 +18,17 @@ type role =
   | Value
   | Dictionary
 
+(** One binder in scope. *)
 type binder = {
-  eb_id : Names.Id.t;
-  eb_type : Miniml.ml_type;
+  eb_id : Names.Id.t;  (** The name it is bound under. *)
+  eb_type : Miniml.ml_type;  (** Its type, as written where it is bound. *)
   eb_role : role;
 }
 
+(** The binders in scope, innermost first. *)
 type t = private binder list
 
+(** No binder in scope. *)
 val empty : t
 
 (** [push bs env] binds [bs], innermost first, inside [env]. *)

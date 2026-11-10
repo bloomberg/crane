@@ -3,7 +3,13 @@
 
 (** Type aliases and top-level functions and constants: the function head
     and body, declarations, and the generated-entity record a function's
-    file views come from. *)
+    file views come from.
+
+    Part of the MiniML to MiniCpp translation: the declaration-level layer
+    over the expression translation in {!Translation}, re-exported through
+    {!Gen_decls}.  The callable plan of each function ({!plan_function}) is
+    made before any body is generated; generating the function reads it
+    back ({!planned_scope_head}). *)
 
 open Common
 open Miniml
@@ -87,8 +93,8 @@ let gen_type_alias r vars ot =
 (** Substitute [CPPglob id] with [repl] in expressions and statements. Uses
     generic AST visitors for structural recursion.
 
-    Identity here is the {i user} name, not the canonical one {!globref_equal}
-    compares.  Every caller substitutes a declaration's own reference for a
+    Identity here is the {i user} name, not the canonical one
+    {!Common.globref_equal} compares.  Every caller substitutes a declaration's own reference for a
     self-call, and what makes an occurrence a self-call is that it is printed at
     the name being declared -- a property of the user name, since that is the
     one the C++ spelling comes from.  Two references can share a canonical name
@@ -406,19 +412,33 @@ let plan_function_head ?deduced_callables ?passing ~minted n ty temps signature 
     ({!plan_function_head}). *)
 type body_scope = {
   bs_cod : cpp_type;
-  bs_env : env;
+      (** The C++ return type: [unit] made [void], promoted variables
+          resolved. *)
+  bs_env : env;  (** Names every parameter, for de Bruijn lookup. *)
   bs_all_ids : (Id.t * ml_type) list;
+      (** Every parameter, renamed, innermost first. *)
   bs_all_params : (ml_ident * ml_type) list;
+      (** Every parameter as bound, innermost first: the eta-expansion ones,
+          then the body's lambdas. *)
   bs_ids : (Id.t * cpp_type) list;
+      (** The C++ value parameters, innermost first: dictionaries and erased
+          binders left out, types wrapped by ownership. *)
   bs_missing : (ml_ident * ml_type) list;
-  bs_b : ml_ast;
+      (** The parameters the body leaves to eta-expansion. *)
+  bs_b : ml_ast;  (** The body, on the signature's type-variable numbering. *)
   bs_typeclass_temps_basic : (template_type * Id.t) list;
+      (** The instance template parameters, constraints resolved. *)
   bs_regular_temps : (template_type * Id.t) list;
+      (** The type parameters and the callable ones: what [Tvar] index
+          resolution reads. *)
   bs_temps : (template_type * Id.t) list;
+      (** The template head before the relaxations. *)
   bs_minted : (Id.t * Callable_abi.minted) list;
       (** What the builders of {!bs_temps} recorded of each parameter. *)
   bs_promoted_var_resolutions : (Id.t * cpp_type) list;
-  bs_owned_flags : bool list;
+      (** Each promoted type variable, qualified through the instance
+          parameter that provides it. *)
+  bs_owned_flags : bool list;  (** Whether the body owns each of {!bs_all_ids}. *)
   bs_passing : Callable_abi.passing list;
       (** How each value parameter is passed, in declaration order. *)
   bs_self_call_undeducible : (Id.t -> bool) option;
@@ -426,11 +446,17 @@ type body_scope = {
           write although the call is not at the declaration's own
           instantiation ({!self_call_reference}); [None] where it is. *)
   bs_gen_body_stmts : env -> (cpp_expr -> cpp_stmt) -> ml_ast -> cpp_stmt list;
+      (** Generates body statements with the signature's higher-kinded
+          resolutions applied. *)
   bs_no_pure : bool;
+      (** Whether [__attribute__((pure))] is withheld: a monadic result or a
+          body that may throw. *)
   bs_deduced_callables : Param_pos.orig Param_pos.pos list;
+      (** The declared positions of the callables deduced as an [F &&]. *)
 }
 
-(** Generate a C++ function definition from an ML function body.
+(** Settle the {!body_scope} the function [n] is generated under, from its
+    ML body [b].
 
     When the body has fewer lambda binders than the ML type's domain (i.e. it
     is under-applied), missing parameters are eta-expanded by synthesising
@@ -440,6 +466,9 @@ type body_scope = {
     Including them would produce a spurious [CPPabort "unreachable"] IIFE as an
     extra argument, causing [std::function] call sites to receive the wrong
     number of arguments.
+
+    Settling the scope generates no body, so {!plan_function} runs it too, to
+    plan the head without generating the function.
 
     @param n     the global reference for the function being defined
     @param b     the ML AST body
@@ -725,20 +754,18 @@ let dfun_body_scope ~minted n b cty ty temps =
     if has_type_resolutions then resolve_promoted_in_type cod else cod
   in
   (* Push params into environment for de Bruijn lookup during body generation.
-     collect_lams returns params in reverse order (innermost first), so MLrel 1
-     refers to the last param in the list.
+     collect_typed_lams returns params in reverse order (innermost first), so
+     MLrel 1 refers to the last param in the list.
 
      push_vars' may rename parameters to avoid collisions. For example, if Rocq
      has: fun (f : T) (f0 : F) (f : forest) => ... push_vars' renames the
      duplicate 'f' to 'f1', producing: [f; f0; f1]
 
-     We must use these renamed ids (all_ids) for both: 1. The environment (for
+     These renamed ids (all_ids) are used for both: 1. The environment (for
      correct de Bruijn lookup in the body) 2. The C++ function signature (so
-     parameter names match body references)
-
-     Previously, the code discarded all_ids and used original names for the
-     signature, causing mismatches like: void foo(T f, F f0, forest f) { ...
-     f1->v() ... } where 'f1' in the body didn't match any parameter name. *)
+     parameter names match body references).  A signature spelled with the
+     original names would read [void foo(T f, F f0, forest f) { ... f1->v()
+     ... }], where the body's [f1] matches no parameter. *)
   let all_ids, env = push_vars' all_params_for_env (empty_env ()) in
   reset_env_types ();
   push_parameters env all_ids;
@@ -826,7 +853,8 @@ let dfun_body_scope ~minted n b cty ty temps =
      params or the return type.  Function-typed params that reference tvars
      outside this set (e.g., erased HKT type variables) get TTtypename (no
      is_invocable_v constraint) instead of TTfun, to avoid referencing template
-     type parameters that were filtered out as phantom by gen_decl_for_pp. *)
+     type parameters that were filtered out as phantom
+     ({!Plan_templates.phantom_aware_temps}, via {!with_function_head}). *)
   let primary = primary_tvar_indices dom cod in
   let unwrap_fun_ty2 = function
     | Tconst ((Tfun _ as f)) | Tref (Lvalue, Tconst (Tfun _ as f)) -> Some f
@@ -1146,6 +1174,20 @@ let check_declared_signature n decl =
           str "the declaration of " ++ GlobRef.print n
           ++ str " has another signature than its plan" )
 
+(** Generate the C++ definition of the function [n] from its ML body [b]:
+    its {!body_scope}, the head its plan declares, the body with every
+    self-call written as {!self_call_reference} says, the sigma-type
+    precondition assertions, and the entry-point rewrite of a monadic
+    [main].  Returns the declaration, wrapped in its template head when it
+    has one, and the environment its parameters were named in.
+
+    @param n     the global reference for the function being defined
+    @param b     the ML AST body
+    @param cty   the C++ type of the function (decomposed internally into domain
+                 and codomain)
+    @param ty    the original ML type
+    @param temps template type parameters, and [minted] what their builder
+                 recorded of each ({!Callable_abi.minted}) *)
 let gen_dfun ~minted n b cty ty temps =
   let scope = dfun_body_scope ~minted n b cty ty temps in
   let temps, relaxations = planned_scope_head n ty scope in
@@ -1336,8 +1378,9 @@ let gen_dfun ~minted n b cty ty temps =
   (* A self-call written at another instance keeps the template arguments
      translation gave it; every other reference to [n] is [rec_call]. *)
   let spare = other_instance_self_calls n b in
-  (* method_self_ns is set by the caller (gen_decl/gen_dfun_def) before
-     computing cty, so it's already active here. *)
+  (* method_self_ns is extended by the caller ([gen_decl__inner], or
+     {!with_function_head} for the others, through [with_method_ns_for_locals])
+     before computing cty, so it's already active here. *)
   let inner =
     if missing == [] then (
       let b =
@@ -1397,7 +1440,7 @@ let gen_dfun ~minted n b cty ty temps =
        The function keeps its original name.  [Struct::main()] does not
        collide with the free [int main()] because C++ member functions
        occupy a separate scope.  A wrapper [int main() \{ Struct::main(); \}]
-       is generated by {!Extract_env.print_impl_module} from the
+       is generated by [Extract_env.print_structure_to_file] from the
        {!Table.set_main_function} registration.
 
      {b 2. Top-level, sequential mode} ([struct_name = None, needs_run = false]):
@@ -1481,6 +1524,9 @@ let gen_dfun ~minted n b cty ty temps =
   | [] -> (inner, env)
   | l -> (Dtemplate (l, None, inner), env)
 
+(** The C++ declaration (no body) of the function [n], for a header: its
+    parameters named from [b]'s lambdas and typed from [dom], returning
+    [cod], under the template parameters [temps]. *)
 let gen_sfun n b dom cod temps =
   let all_params, b = collect_lams b in
   let owned_flags = infer_owned_flags ~owner:n b all_params in
@@ -1591,6 +1637,8 @@ let rec is_closed_type = function
   | Miniml.Tmeta {contents = None} | Miniml.Topen _ | Miniml.Tunknown | Miniml.Taxiom ->
     false
 
+(** Whether the second recovery pass may write a recovered type into its
+    binder: it names a promoted type var or is closed and informative. *)
 let writable_offer ty = names_promoted_type_var ty || is_closed_type ty
 
 (** Fill a body's empty type annotations from the declaration, in two passes.
@@ -1600,12 +1648,11 @@ let writable_offer ty = names_promoted_type_var ty || is_closed_type ty
     promoted type var -- would otherwise be declined by the one pass that
     knows the answer.
 
-    A hole neither pass can name is left a hole.  There used to be a third
-    pass here that filled every remaining one with the enclosing class's
-    first-declared associated type, which is right only when the class
-    declares exactly one and the hole is the carrier; where it is not, the
-    guess is what the body is printed from, and it pre-empts the passes in
-    {!Translation} that can still read the answer off the term. *)
+    A hole neither pass can name is left a hole.  Filling it with the
+    enclosing class's first-declared associated type would be right only when
+    the class declares exactly one and the hole is the carrier; where it is
+    not, the guess is what the body is printed from, and it pre-empts the
+    passes in {!Translation} that can still read the answer off the term. *)
 let recover_erased_body_types ty b =
   let b = Mlutil.recover_erased_types ~only:names_promoted_type_var ty b in
   Mlutil.recover_erased_types ~only:writable_offer ~refine_only:true ty b
@@ -1634,7 +1681,10 @@ let scheme_params ?(extra = IntSet.empty) cty =
         else Some (tvar_id i, Callable_abi.Scheme_param i) )
       (IntSet.elements extra)
 
-(** Generate C++ declaration from ML definition (main entry point) *)
+(** Generate the C++ declaration of [n] from its ML definition: a function
+    ({!gen_dfun}), a constant whose body only throws (as a zero-argument
+    function), or a constant initialised with its value.  Returns the
+    declaration, its environment and the C++ type's variables. *)
 let gen_decl__inner n b ty =
   with_body_resolutions n b @@ fun () ->
   with_itree_mode_for ty @@ fun () ->
@@ -1685,6 +1735,7 @@ let gen_decl__inner n b ty =
       | [] -> (inner, empty_env (), tvars)
       | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
 
+(** {!gen_decl__inner} with [n] as the declaration being generated. *)
 let gen_decl n b ty =
   Table.with_decl_ref n (fun () -> gen_decl__inner n b ty)
 
@@ -1803,6 +1854,7 @@ let gen_decl_for_pp__inner n b ty =
     (Some ds, empty_env (), h.fh_tvars)
   | _ -> (None, empty_env (), h.fh_tvars)
 
+(** {!gen_decl_for_pp__inner} with [n] as the declaration being generated. *)
 let gen_decl_for_pp n b ty =
   Table.with_decl_ref n (fun () -> gen_decl_for_pp__inner n b ty)
 
@@ -1810,10 +1862,13 @@ let gen_decl_for_pp n b ty =
     [(decl, env, tvars)]. *)
 let gen_dfun_def__inner n b ty = with_function_head n b ty (gen_function n)
 
+(** {!gen_dfun_def__inner} with [n] as the declaration being generated. *)
 let gen_dfun_def n b ty =
   Table.with_decl_ref n (fun () -> gen_dfun_def__inner n b ty)
 
-(** Generate C++ function specification (for header files) *)
+(** Generate the C++ specification of [n] for a header: a function's
+    declaration ({!gen_sfun}), a throwing constant's zero-argument
+    declaration, or a constant's initialised definition. *)
 let gen_spec__inner n b ty =
   with_body_resolutions n b @@ fun () ->
   with_itree_mode_for ty @@ fun () ->
@@ -1931,6 +1986,7 @@ let gen_spec__inner n b ty =
   in
   result
 
+(** {!gen_spec__inner} with [n] as the declaration being generated. *)
 let gen_spec n b ty =
   Table.with_decl_ref n (fun () -> gen_spec__inner n b ty)
 
@@ -1938,18 +1994,25 @@ let gen_spec n b ty =
     anything else's in the implementation file. *)
 type definition_file = Header | Implementation
 
+(** What generating a top-level term produced. *)
 type generated_entity =
   | Defined of cpp_decl * definition_file
-  | Declared of cpp_decl
+      (** a definition, and the file it is written in *)
+  | Declared of cpp_decl  (** a declaration with no definition anywhere *)
 
+(** A generated function, and what its file views are built from. *)
 type generated_fun = {
   gf_entity : generated_entity;
-  gf_env : env;
-  gf_lifted : cpp_decl list;
+  gf_env : env;  (** the environment its parameters were named in *)
+  gf_lifted : cpp_decl list;  (** the helpers lifted out of its body *)
 }
 
+(** A template's definition goes in the header, anything else's in the
+    implementation file. *)
 let definition_file_of tvars = if tvars = [] then Implementation else Header
 
+(** [d] as a definition, in the file its template variables [tvars] put it
+    in. *)
 let defined d tvars = Defined (d, definition_file_of tvars)
 
 (** Generate each function of a mutually recursive group, translating each
@@ -1979,5 +2042,7 @@ let gen_decl_for_pp_dual__inner n b ty =
   in
   {gf_entity; gf_env; gf_lifted}
 
+(** {!gen_decl_for_pp_dual__inner} with [n] as the declaration being
+    generated. *)
 let gen_decl_for_pp_dual n b ty =
   Table.with_decl_ref n (fun () -> gen_decl_for_pp_dual__inner n b ty)

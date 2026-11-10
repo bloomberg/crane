@@ -1,6 +1,9 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
+(** A call's reading of its callee's scheme variables.  See
+    [call_tyargs.mli]. *)
+
 open Miniml
 
 type evidence =
@@ -10,6 +13,9 @@ type evidence =
   | Expected_result
   | Eta_parameter
 
+(* What is known of one variable: its type and where it was read from; or
+   a hole, the use having written something no type could be read from
+   ([Unreadable]) or nothing at all ([Unwritten]). *)
 type slot =
   | Known of ml_type * evidence
   | Unreadable
@@ -87,6 +93,8 @@ let evidence_name = function
   | Expected_result -> "expected_result"
   | Eta_parameter -> "eta_parameter"
 
+(* The holes among [vs] that [answer] fills with a type that is not an
+   erased placeholder, each as read from [e]. *)
 let answers e answer vs t =
   List.filter_map
     (fun v ->
@@ -97,6 +105,8 @@ let answers e answer vs t =
         | _ -> None )
     vs
 
+(* [t] with the slots [found] replaced, each reported to {!Probe} as a
+   resolution from [e]. *)
 let with_answers e t found =
   List.iter
     (fun (v, _) ->

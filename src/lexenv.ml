@@ -1,6 +1,8 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
+(** The lexical environment of a Core body.  See [lexenv.mli]. *)
+
 type role =
   | Value
   | Dictionary

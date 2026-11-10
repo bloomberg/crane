@@ -76,7 +76,8 @@ let abort_ty : cpp_type option -> cpp_type = function
     + {!compute_and_register_field_names} transforms each binder into a
       C++-safe identifier and registers the mapping in
       {!Common.ctor_field_names}.
-    + Access sites ({!gen_match_branch}, record reuse, {!Loopify.patch_cell_field})
+    + Access sites (the inductive and record method generators in
+      {!Gen_inductives}, record reuse, {!Loopify_tmc.patch_cell_field})
       call {!Common.lookup_ctor_field_name} to resolve field names. *)
 
 (** Sanitize a Rocq binder name for use as a C++ struct field identifier.
@@ -297,7 +298,7 @@ let is_effect op use =
   match effect_of use with Some e -> e.Core_effects.operation = op | None -> false
 
 (** Whether the use [use] heads the effect operation [op], generated in
-    {!Sequential} mode. *)
+    {!Core_effects.Sequential} mode. *)
 let is_sequential_effect op use =
   match effect_of use with
   | Some {Core_effects.operation; mode = Sequential} -> operation = op
@@ -308,14 +309,14 @@ let is_sequential_effect op use =
 
 (* {!Ml_type_util.ml_type_is_instance} works the answer out; a caller with a
    global asks {!ref_is_instance} and one with a binder asks
-   {!binder_is_instance}. *)
+   {!Translation_types.binder_is_instance}. *)
 
 (** Collect [Id.t]s for typeclass-typed parameters in an ML arrow type.
 
     Only a parameter whose class Crane kept: each becomes a concept-constrained
     template parameter, and one whose class was skipped has nothing to be
     constrained by.  A skipped instance still has to be recognised as one where
-    it is {e used} -- see {!binder_is_instance}. *)
+    it is {e used} -- see {!Translation_types.binder_is_instance}. *)
 let collect_typeclass_param_ids ty =
   let rec aux acc i = function
     | Miniml.Tarr (t1, t2) ->
@@ -330,9 +331,9 @@ let collect_typeclass_param_ids ty =
 (** A type variable that really denotes an associated type of a type-class
     instance parameter: [htp_tvar] stands for [typename <htp_instance>::<htp_field>]. *)
 type hkt_tvar_position = {
-  htp_tvar : int;
+  htp_tvar : int;  (** the MiniML type variable's index *)
   htp_instance : Minicpp.cpp_type;  (** always a {!Minicpp.Tinstance} *)
-  htp_field : Id.t;
+  htp_field : Id.t;  (** the class's type parameter the variable fills *)
 }
 
 (** The type variables of an ML arrow type that stand for a higher-kinded
@@ -341,7 +342,7 @@ type hkt_tvar_position = {
     parameter.  Such a variable is not a C++ template parameter but the
     instance's associated type — see {!Table.get_ind_hkt_params}.
 
-    Instance parameters are numbered as [Gen_decls.gen_dfun] numbers them --
+    Instance parameters are numbered as [Gen_functions.gen_dfun] numbers them --
     it walks the binders innermost first, so the source-{e last} instance is
     [_tcI0] -- or, with [~source_order], as an instance struct numbers its
     own parameters, source-first.  With one instance the two orders coincide;
@@ -552,16 +553,6 @@ let rec qualify_inductives ?(skip = fun _ -> false) = function
     Tqualified (qualify_inductives ~skip base, id)
   | t -> t
 
-(** The real type printer ([Cpp_print.pp_cpp_type]), installed by {!Cpp_print}
-    at load time because this module cannot depend on it.
-
-    There used to be a second, string-level renderer here for callers that ran
-    before the printer was installed.  Nothing runs before a module's own
-    top-level initialiser, so it never did -- what it did do was spell a
-    handful of types differently from the printer (in Coq form, patched back
-    with three [Str.global_replace] passes), which is the whole of what a raw
-    template string embedded in printer output must not do. *)
-
 (** Whether a reference was methodified: spelled [x.f(...)] rather than
     [f(x, ...)]. *)
 let is_methodified r = Cpp_names.lookup_method_this_pos r <> None
@@ -618,7 +609,7 @@ let guard_compare n ids body =
           let ind = GlobRef.IndRef (kn, i) in
           let fname = factory_name_of_ctor ctor_ref in
           (* The qualifier is a type and is spelled as one, so the type printer
-             supplies both halves this used to render by hand: the enclosing
+             supplies both halves of it: the enclosing
              module of the inductive (e.g. "OrderedType::Compare", see
              [OrderedTypeEx.h]/[FSetInterface.h]), and any enclosing-functor
              "D::Defs::" prefix on the compared value's own type.  That prefix
@@ -805,11 +796,11 @@ let recover_pattern_var_types_from_scrutinee ~ctor (typ : ml_type) ids =
     @return a [cpp_expr] that produces a value of type [dst_ty] *)
 
 let gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
-  (* Every type rendered here lands in a raw string inside a template body
-     (a converting constructor, a [make_shared<...>] argument), so it must be
-     spelled exactly as the printer spells the same type in the surrounding
-     generated code -- hence the real printer rather than the eager
-     approximation. *)
+  (* Every type built here lands inside a template body (a converting
+     constructor, a [make_shared<...>] argument), so it must be spelled exactly
+     as the printer spells the same type in the surrounding generated code:
+     each one is handed to the printer as a type node ([CPPconvert],
+     [CPPalloc], {!Cpp_erasure.converting_ctor}), never rendered here. *)
   (* Strip a single [Tnamespace] wrapper when it matches the inner [Tglob].
      [convert_ml_type_to_cpp_type] wraps external inductives as
      [Tnamespace(g, Tglob(g,...))] for qualified rendering, but for pattern
@@ -821,8 +812,8 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
   (* Save the original dst_ty (with its Tnamespace wrapper, if any) before
      stripping.  The stripped form is used for structural comparison; the
      original is used for rendering converting constructors via
-     CPPconverting_ctor, which uses pp_cpp_type and correctly emits namespace
-     qualification and typename keywords. *)
+     [CPPconverting_ctor], which the printer spells with namespace
+     qualification and [typename] keywords. *)
   let orig_dst_ty = dst_ty in
   let src_ty = strip_ns src_ty and dst_ty = strip_ns dst_ty in
   (* Build an expression that names [expr] twice.  An access path can simply
@@ -843,7 +834,7 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
   in
   if src_ty = dst_ty then expr
   else
-    (* ---- Different types: dispatch on wrapper structure ---- *)
+    (* Different types: dispatch on wrapper structure. *)
     match (src_ty, dst_ty) with
     | Tshared_ptr src_inner, Tshared_ptr dst_inner
       when strip_ns src_inner = strip_ns dst_inner ->
@@ -985,8 +976,8 @@ let reify_monadic_param_type ml_ty cpp_ty =
   else cpp_ty
 
 (** Check whether an ML expression already produces a reified monadic value
-    (a [shared_ptr<ITree<R>>]).  Extends {!is_reified_monadic_var} to also
-    cover [MLapp(MLrel f, args)] where [f] is a local function whose return
+    (a [shared_ptr<ITree<R>>]).  A local whose type is monadic is one, and
+    so is [MLapp(MLrel f, args)] where [f] is a local function whose return
     type is monadic.  Such calls already return a tree, so wrapping in
     [ITree::ret()] would incorrectly double-wrap.
 
@@ -1116,8 +1107,8 @@ let rec is_reified_monadic_expr ml_expr =
 
 (** [stmts], a body, whose returned lambdas hold copies ([\[=\]]) rather
     than references into the frame they were written in, which they
-    outlive.  Where each lambda is made, Core has decided what it captures
-    (plan 3.8): a lambda the program writes is a closure; one holding
+    outlive.  Where each lambda is made, Core has decided what it captures:
+    a lambda the program writes is a closure; one holding
     references -- the lambdas of a local fixpoint generated in place
     ({!Analyze_closures.In_place}), a lambda invoked where it is written, a
     single-use eta-expansion a let binds -- runs where it is written, and
@@ -1200,7 +1191,7 @@ let return_captures_by_value stmts =
 
 (** Why a global is emitted as a function of no parameters, so that naming it
     calls it: a cofixpoint, whose value is built when asked for; a definition
-    whose body only throws ({!Structure_analysis.register_throwing_values}),
+    whose body only throws ({!Structure_analysis.throwing_values}),
     which must throw when asked for rather than during static
     initialisation; a monadic action, run when performed. *)
 type thunk_reason = Cofixpoint | Throws | Monadic
@@ -1241,7 +1232,7 @@ let rec ml_is_value = function
     rules this out syntactically, but it checks guardedness up to unfolding
     definitions, so a corecursive call may sit under a function that only
     builds the constructor once unfolded.  A body like that is suspended
-    whole, as every coinductive-returning body used to be. *)
+    whole rather than at its constructors. *)
 let calls_eagerly r body =
   let exception Found in
   let rec walk e =
@@ -1394,10 +1385,8 @@ let owned_parameters ?(declared = fun _ -> None) n ~owned ~ty =
   in
   List.filter_map (fun i -> if owned i && worth i then Some (i + 1) else None) (List.init n Fun.id)
 
-(* ============================================================================
-   Shared helpers for method generation (used by gen_ind_header_v2 and
-   gen_record_methods)
-   ============================================================================ *)
+(* Shared helpers for method generation (used by
+   [Gen_inductives.gen_ind_header_v2] and [Gen_inductives.gen_record_methods]). *)
 
 (** Re-export [IntSet] from [Escape] for local use in type variable collection. *)
 module IntSet = Escape.IntSet
@@ -1440,7 +1429,7 @@ let deapply_families =
   map_cpp_type (function Tapply ((Tvar _ as v), _) -> v | t -> t)
 
 (** The number of type parameters [g] is written with in C++: the promoted
-    variables it leads with ({!ind_promoted_type_args}), then an inductive's
+    variables it leads with ({!Table.promoted_type_params}), then an inductive's
     parameters or the variables of a type alias's body.  A family alias under
     a [Params] section is [BotE<ptr, X>], and [BotE<ptr>] is one short. *)
 let written_arity g =
@@ -1700,9 +1689,14 @@ let build_tvar_names ~outer_tvars tvar_indices =
     tvar_indices
 
 (** Build extended tvar names covering both signature and body Tvar indices.
-    sig_indices: sorted list of Tvar indices from the function signature
-    sig_names: corresponding Id.t names for those indices body_tvars:
-    sorted-unique list of all Tvar indices found in the body *)
+    A body index absent from the signature is mapped, by the offset between
+    the smallest such index and the smallest signature index, onto a
+    signature name where that lands in range, and onto [tvar_id i] otherwise;
+    an index neither covers is named by [anon_tvar_id].
+
+    @param sig_indices  sorted Tvar indices from the function signature
+    @param sig_names    the names of those indices, in the same order
+    @param body_tvars   sorted, deduplicated Tvar indices found in the body *)
 let build_extended_tvar_names sig_indices sig_names body_tvars =
   let n_sig = List.length sig_indices in
   let sig_set = IntSet.of_list sig_indices in
@@ -2154,6 +2148,8 @@ let lifted_fix_ungeneralised_params funs =
 let partner_closure_params_table : int list Ref.User.Map.t ref =
   State.cell State.Extraction Ref.User.Map.empty
 
+(** Install the extraction's {!partner_closure_params}, as computed for the
+    whole structure before any function is generated. *)
 let install_partner_closure_params l =
   partner_closure_params_table :=
     List.fold_left (fun m (g, is) -> Ref.User.Map.add g is m) Ref.User.Map.empty l
@@ -2238,10 +2234,14 @@ let generalises_callable ~kept_as_fn ~primary f =
   (not kept_as_fn) && not (IntSet.is_empty primary && is_fully_erased_fun_ty f)
 
 (** Convert ML params to C++ types with const/ref wrapping, and create
-    forwarding-ref template parameters for function-typed params. convert_fn:
-    function to convert ml_type -> cpp_type (typically
-    convert_ml_type_to_cpp_type env tvar_names) Returns
-    (cpp_params, all_temps_with_funs). *)
+    forwarding-ref template parameters for function-typed params, except
+    those at [non_fwd_source_indices] (source order), which keep their
+    function type.
+
+    @param convert_fn  converts an [ml_type] to a [cpp_type] (typically
+      [convert_ml_type_to_cpp_type env tvar_names])
+    @param base_temps  the template parameters the callable params are appended to
+    @return [(cpp_params, all_temps_with_funs)] *)
 let build_lifted_cpp_params ?(non_fwd_source_indices = []) convert_fn base_temps params =
   let n_total = List.length params in
   (* Non-forwarded check in source order (for fun_tys, which iterates List.rev) *)
@@ -2399,7 +2399,7 @@ let rec spelled_tvars_of ?(plain = fun _ -> false) acc = function
     {!Ml_type_util.higher_kinded_ml_tvars} less those the declaration only
     ever applies, in its parameters and nowhere else: each such application is
     relaxed there to a fresh deduced parameter
-    ({!Gen_decls.relax_applied_param}), and the variable left a plain
+    ({!Plan_templates.relax_applied_param}), and the variable left a plain
     [typename] -- [fused_trigger]'s [e : F T] is declared [_P0 e], and [F]
     [typename T1 = void].  So its arguments are no more spelled than a plain
     family's, and its position takes a box like any other. *)
@@ -2450,9 +2450,8 @@ let deducible_tvars_of_glob id =
 
     This reads a type off a typed AST -- [MLcons] and [MLcase] carry theirs,
     and a global's is in the table -- rather than guessing one back out of an
-    untyped C++ expression, which is what {!Loopify.infer_saved_type} used to
-    do.  Its answer annotates a [CPPlambda]'s return type, so the frame a
-    loopified call builds is typed instead of falling back on
+    untyped C++ expression.  Its answer annotates a [CPPlambda]'s return type,
+    so the frame a loopified call builds is typed instead of falling back on
     [decltype(lambda)].
 
     Instantiation goes through {!Mlutil.Var_types.apply}, by the callee's
@@ -2868,8 +2867,7 @@ let let_lambda ~lex ~n_outer t a b =
         in
         Inlined (beta_normalize (ast_subst_each (fun () -> Fresh_occurrences.term a) b))
 
-(** Check if a GlobRef returns a typeclass type (possibly through Tarr layers).
-*)
+(** Check if a GlobRef returns a typeclass type (possibly through Tarr layers). *)
 let ref_returns_typeclass r =
   match find_type_opt r with
   | Some ty -> Table.is_typeclass_type (ml_return_type ty)
@@ -2888,11 +2886,12 @@ let ref_is_instance r =
   | None -> false
 
 
-(* Use Common.extract_at_pos for extracting elements at a position *)
+(** Create a substitution function for extra type variables in C++ types:
+    an index in [extra_tvar_map] becomes its named variable, and one of the
+    containing inductive's own is left for [tvar_subst_stmt].
 
-(** Create a substitution function for extra type variables in C++ types.
-    num_ind_vars: number of type vars from the containing inductive/record
-    extra_tvar_map: mapping from Tvar index to Id for extra type vars *)
+    @param num_ind_vars    number of type vars of the containing inductive/record
+    @param extra_tvar_map  mapping from Tvar index to the name of an extra type var *)
 let make_subst_extra_tvars num_ind_vars extra_tvar_map =
   let rec subst = function
     | Tvar (Tv_index (i, None)) when List.mem_assoc i extra_tvar_map ->
@@ -2970,7 +2969,8 @@ let collect_free_rels n_bound body =
     each one has to arrive as an argument instead -- but not every free rel is
     a value there is anything to pass.
 
-    - A class instance is already carried by {!current_class_temps} as a
+    - A class instance is already carried by
+      {!Translation_state.current_class_temps} as a
       template parameter, explicit at every reference because nothing deduces
       one.  Passing it again emits [const Params _tcI0], which is ill-formed
       (a concept is not a type) and shadows the template parameter it is named
@@ -3040,11 +3040,11 @@ and abbreviates_value_inductive args body =
     match List.nth_opt args (j - 1) with Some t -> names_value_inductive t | None -> false )
   | _ -> false
 
-(** Wraps a C++ parameter type with const/ref based on ownership semantics.
-    Owned inductive/shared_ptr params are passed by value (moved in);
-    borrowed inductive/shared_ptr params are passed by const reference,
-    an inductive named through an abbreviation too ({!names_value_inductive});
-    other types are passed by const value.
+(** Whether a parameter of C++ type [cpp_ty] that its function does not own
+    is lent by const reference, read off the C++ type: a [shared_ptr], a
+    value inductive (an inductive named through an abbreviation too,
+    {!names_value_inductive}), or a template type parameter or dependent
+    type, whose size is unknown.
 
     A closure and a coinductive value are a pointer to a shared block, as a
     [shared_ptr] is: copying one in is a retain, and dropping it at the end
@@ -3100,6 +3100,12 @@ let rec core_lent_by_reference ty =
   | Miniml.Tarr _ | Miniml.Tvar _ -> Some true
   | _ -> None
 
+(** Wraps a C++ parameter type with const/ref based on ownership semantics.
+    An owned parameter is passed by value (the caller moves it in); a
+    borrowed one by const reference where it is lent by reference
+    ({!core_lent_by_reference} of its Core type [core] where that says,
+    {!cpp_lent_by_reference} otherwise), and by value otherwise.  Under
+    [CRANE_CHECK_IR] the two readings are checked against each other. *)
 let wrap_param_by_ownership ?(is_owned = false) ?core cpp_ty =
   let by_cpp = cpp_lent_by_reference cpp_ty in
   let lent =
@@ -3212,7 +3218,7 @@ let rec ml_body_returns_erased_field = function
     inside application heads.  A top-level [MLmagic] check therefore misses
     these cases.  This function follows application heads recursively.
 
-    Used in {!gen_spec} to detect when a function call's result needs a C++
+    Used in {!Gen_functions.gen_spec} to detect when a function call's result needs a C++
     cast to match the expected return type. *)
 let rec ml_head_has_magic = function
   | Miniml.MLmagic (_, _) -> true
@@ -3301,7 +3307,7 @@ let local_fix_selves cpp_of renamed_ids funs_with_params =
     application spine is flattened before [_self_f] is prefixed -- rewriting
     only the innermost call yields [_self_f(_self_f, a)(b)], which asks a
     three-argument lambda for two.  A unary fixpoint cannot show the
-    difference, which is why this went unnoticed.
+    difference.
 
     A fixpoint named as a value rather than called -- [H F], [F] handed to
     another function -- is the function its wrapper would be, written where
@@ -3392,10 +3398,6 @@ let rec ml_ast_type_hint = function
   | Miniml.MLmagic (_, inner) -> ml_ast_type_hint inner
   | _ -> None
 
-(** Convert ML type to C++ type. Handles custom types, inductives, type
-    variables, and erased parameters. env: variable environment; ns: set of
-    local references; tvars: type variable names *)
-
 (** What the position a subterm occupies tells the generator about how to
     build it.  These properties travel together down every position whose
     value ends up in the same slot -- an argument, a coercion's operand, a
@@ -3424,18 +3426,18 @@ type slot = {
   eta_keep_moves : bool;
       (** The slot holds a single-use partial application whose closure may
           capture by reference and keep its [CPPmove] wrappers.  Read once, by
-          the {!eta_fun} that builds that closure. *)
+          the {!Translation.eta_fun} that builds that closure. *)
   call_result : cpp_type option;
       (** The type the call this slot is an argument of is expected to
           produce.  An instance passed as a value -- [MonadIter_itree] as
           [interp]'s dictionary, whose own slot erases with the class's
           carrier -- has its carrier head that type, and so is where an
           argument extraction erased from it is read back
-          ({!instance_family_binding}). *)
+          ({!Translation_calls.instance_family_binding}). *)
   stated_ml_ty : ml_type option;
       (** The ML type the position states, erased parts and all -- the
           parameter an argument is passed at, [stateT nat (itree BotE) T] with
-          [BotE] applied at its erased index.  {!expected_ml_ty} withholds a
+          [BotE] applied at its erased index.  [expected_ml_ty] withholds a
           type with erasures in it, which is right for what it is used for;
           this is read only where an erased part is expected, to recover an
           event family nothing deduces. *)
@@ -3447,17 +3449,34 @@ type slot = {
 
 (** What a call to a global is, before its arguments are generated: the call
     as Core elaborated it, and what planning its C++ added; see
-    {!plan_call}. *)
+    {!Translation_calls.plan_call}. *)
 type call_plan = {
   cp_instantiated : Elaborated_call.instantiated;
       (** The call's semantic half, decided before any of the C++ below. *)
   cp_expected_result : cpp_type option;
+      (** The C++ type the call is expected to produce: the position's, with
+          a family it erased refined from what the arguments state, or, where
+          the position states none, the arguments' or the enclosing
+          function's return type. *)
   cp_instance_type_args : cpp_type option list;
+      (** The template argument each class-instance argument is passed as. *)
   cp_instance_families : (cpp_type * Id.t list * (Id.t * cpp_type) list) list;
+      (** The families the call's instances were found to have
+          ({!Translation_calls.instance_family_binding}); the slots their
+          arguments are generated against erase them the same way. *)
   cp_tvars : Id.t list;
+      (** The enclosing declaration's type variable names. *)
   cp_concrete_tvar_type : cpp_type option;
+      (** For a call with no written type arguments and excess value
+          arguments, the concrete type of its polymorphic result: the excess
+          arguments' types to the enclosing function's return type. *)
   cp_instance_promoted : (Id.t * cpp_type) list;
+      (** Promoted variables bound to concrete C++ types by the concrete
+          instances the call passes, so that constructors in its arguments
+          use those types instead of [std::any]. *)
   cp_result_tvar_map : (Id.t list * (Id.t * cpp_type) list) Lazy.t;
+      (** The callee's variables as the call's expected result instantiates
+          them, read for a parameter the substitution left erased. *)
 }
 
 (** The slot properties of a position that constrains nothing. *)

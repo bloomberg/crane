@@ -2,8 +2,9 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** A call's reading of its callee's scheme variables, variable by variable,
-    as call planning resolves it (docs/Type-Argument-Numbering-Refactor-Plan.md,
-    section 3.2).
+    as call planning resolves it.  Each variable is addressed by its
+    {!Scheme.Var.t}, the callee scheme's own numbering, never by its position
+    in a C++ template argument list.
 
     It starts from what the use wrote: each variable is known -- the argument
     the source gave at its binder -- or a hole, either because nothing was
@@ -33,11 +34,14 @@ type evidence =
       (** The template parameter an eta-expanded partial application binds
           for a variable the call leaves open. *)
 
+(** One call's reading: the callee and, for each of its variables, the
+    type known for it and its {!evidence}, or a hole. *)
 type t
 
 (** The reading of [use]'s written arguments; empty for a monomorphic use. *)
 val of_use : Miniml.global_use -> t
 
+(** The global the call names. *)
 val callee : t -> Names.GlobRef.t
 
 (** The callee's variables, in ordinal order. *)

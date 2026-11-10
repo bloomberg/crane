@@ -1,8 +1,9 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** What one relaxation of a function's head decided, as data
-    (docs/Pipeline-Disentangling-Plan.md, Milestone 4).
+(** What one relaxation of a function's head decided, as data, so that the
+    decision belongs to the callee's plan and not to whichever emitter
+    happens to generate the declaration.
 
     A relaxation ({!Plan_templates.relax_function_head}) answers a template
     parameter a call cannot supply by spelling the declaration differently,
@@ -34,6 +35,8 @@ type t =
           mentions them are erased wherever they are still spelled, an
           [any_cast]'s target excepted. *)
 
+(** Structural equality, by which two {!Callable_abi.t} plans of one callee
+    are compared. *)
 val equal : t -> t -> bool
 
 (** [deapplied ~plain ~in_scope ty] -- {!Deapplied}'s rewrite of one type. *)
