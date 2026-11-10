@@ -435,15 +435,19 @@ let by_reference l = match l.cl_capture with Immediate | Written By_reference ->
 (* The names the statements [ss] let escape among [xs], locals bound to
    lambdas reading their scope by reference, [group] being all such in the
    block: named other than as the function a call applies -- or as an
-   argument of a call applying one of [group], the members of a group
+   argument of a call applying one of [callees], the members of a group
    handing themselves on -- or named at all inside a lambda that copies
-   what it captures. *)
-let escaping ~group xs ss =
+   what it captures.  [callees] holds [group], and the members of its
+   knots taking the knot's members as parameters ([Self_passing]):
+   whether or not such a member reads its own scope, it takes its partners
+   by reference, for the call, and lets them escape no further
+   ({!check_by_reference_closures} checks it does not). *)
+let escaping ~group ~callees xs ss =
   let found = ref [] in
   let mem x = List.exists (Id.equal x) xs in
   let rec expr e =
     match e with
-    | CPPfun_call (_, CPPvar f, args) when List.exists (Id.equal f) group ->
+    | CPPfun_call (_, CPPvar f, args) when List.exists (Id.equal f) callees ->
       List.iter (function CPPvar x when List.exists (Id.equal x) group -> () | a -> expr a) (call_args args)
     | CPPvar x when mem x -> found := x :: !found
     | CPPlambda l when not (by_reference l) ->
@@ -456,20 +460,51 @@ let escaping ~group xs ss =
 (* Each lambda of a local fixpoint function whose plan holds a capture
    [By_reference] ({!Ownership_ir.Local_captures}) in [ss]: written
    capturing by reference, and not let escape by the statements after the
-   one binding it, in the block binding it -- the scope it reads. *)
+   one binding it, in the block binding it -- the scope it reads; nor any
+   lambda capturing one by reference; nor its partners by the members of
+   its knot they are lent to. *)
 let check_by_reference_closures owner ss =
   let report what = Probe.violation "closure captures" Pp.(str "in " ++ owner ++ str ", " ++ what) in
   let rec block ss =
-    let group =
+    let planned =
       List.filter_map
         (function
           | Sasgn (x, Declare _, CPPlambda {cl_fixpoint = Some lf; _})
             when Ownership_ir.Local_captures.by_reference lf.lf_member ->
-            Some x
+            Some (x, fst lf.lf_member)
           | _ -> None )
         ss
     in
-    let rec go = function
+    let group = List.map fst planned in
+    (* The members of those knots that take the knot's members as
+       parameters, each with those parameters and its body. *)
+    let impls =
+      List.filter_map
+        (function
+          | Sasgn (y, Declare _, CPPlambda {cl_fixpoint = Some {lf_member; lf_encoding = Self_passing selves; _}; cl_body; _})
+            when List.exists (fun (_, o) -> Miniml.Occurrence.equal o (fst lf_member)) planned ->
+            Some (y, selves, cl_body)
+          | _ -> None )
+        ss
+    in
+    let callees = group @ List.map (fun (y, _, _) -> y) impls in
+    (* What a call applying one of [impls] is lent, it calls, or lends a
+       call applying one of them, and lets go of nothing else. *)
+    List.iter
+      (fun (y, selves, body) ->
+        List.iter
+          (fun self ->
+            report
+              Pp.(
+                str "the local fixpoint lambda " ++ Id.print y ++ str " lets its partner " ++ Id.print self
+                ++ str ", which may read its scope by reference, escape" ) )
+          (escaping ~group:selves ~callees:selves selves body) )
+      impls;
+    (* [reading]: the locals bound so far in the block that read its scope
+       by reference -- the members planned so, and the lambdas capturing
+       one of [reading] by reference, as a group's wrappers do the impls,
+       which may outlive the scope no more than what they read. *)
+    let rec go reading = function
       | [] -> ()
       | (Sasgn (x, Declare _, CPPlambda ({cl_fixpoint = Some lf; _} as l)) as s) :: rest
         when Ownership_ir.Local_captures.by_reference lf.lf_member && l.cl_capture <> Written Captures_nothing ->
@@ -479,14 +514,23 @@ let check_by_reference_closures owner ss =
           report Pp.(str "the local fixpoint " ++ Id.print lf.lf_name ++ str " copies what its plan reads by reference");
         List.iter
           (fun x -> report Pp.(str "the local fixpoint lambda " ++ Id.print x ++ str " reads its scope by reference and escapes it"))
-          (escaping ~group [x] rest);
+          (escaping ~group ~callees [x] rest);
         stmt s;
-        go rest
+        go (x :: reading) rest
+      | (Sasgn (x, Declare _, (CPPlambda l as e)) as s) :: rest
+        when by_reference l && List.exists (fun y -> List.exists (Id.equal y) reading) (free_vars_expr e) ->
+        List.iter
+          (fun x ->
+            report
+              Pp.(str "the lambda " ++ Id.print x ++ str " reads a local fixpoint by reference and escapes it") )
+          (escaping ~group ~callees [x] rest);
+        stmt s;
+        go (x :: reading) rest
       | s :: rest ->
         stmt s;
-        go rest
+        go reading rest
     in
-    go ss
+    go [] ss
   and expr e = iter_expr_children ~on_expr:expr ~on_stmts:block e
   and stmt s = iter_stmt_children ~on_expr:expr ~on_stmts:block s in
   block ss

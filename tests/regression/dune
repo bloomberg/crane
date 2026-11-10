@@ -14145,3 +14145,14 @@
   (alias runtest)
   (deps local_mutual_polymorphic_recursion.t.exe)
   (action (run ./local_mutual_polymorphic_recursion.t.exe))))
+
+(subdir local_mutual_callable_param_capture
+ (rule
+  (targets local_mutual_callable_param_capture.t.exe)
+  (deps LocalMutualCallableParamCapture.vo local_mutual_callable_param_capture.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_mutual_callable_param_capture.t.exe local_mutual_callable_param_capture.t.cpp local_mutual_callable_param_capture.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_mutual_callable_param_capture.t.exe)
+  (action (run ./local_mutual_callable_param_capture.t.exe))))
