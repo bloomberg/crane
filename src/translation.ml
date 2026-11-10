@@ -5494,17 +5494,10 @@ and project_through_instance env use args inst =
      a closure does not deduce, and [ret] mentions its variable only in its
      result. *)
   let targs =
-    let n_class = Ml_type_util.projection_class_arity x in
-    (* A class parameter is a variable whose binder is one of those. *)
-    let of_method v =
-      match Option.bind (Mlutil.recorded_schema x) (fun s -> Ml_schema.origin s v) with
-      | Some b -> Scheme.Binder.position b.Ml_schema.binder >= n_class
-      | None -> true
-    in
     let by_var = List.map (fun (v, t) -> (v, cpp_of_ml env t)) (Mlutil.Var_types.bindings tys) in
     Template_application.to_list
       (Template_application.plan
-         (Callable_abi.foreign ~callee:x ~scheme:(Mlutil.reference_scheme x) ~kept:of_method ())
+         (Callable_abi.projection projection_abi x)
          ~instance:(fun _ -> None)
          ~scheme:(fun v -> Scheme.Var.assoc_opt v by_var) )
   in

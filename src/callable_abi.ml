@@ -20,6 +20,11 @@ type origin =
   | From_callable of int
   | Derived of Id.t
 
+type minted =
+  | Scheme_param of int
+  | Instance_param of int
+  | Callable_param of int
+
 type write_policy =
   | Writable
   | Deduce_only
@@ -96,34 +101,6 @@ let dictionary_carriers abi =
     (fun (v, o) -> if o <> None && Scheme.Var.ordinal v <= mentioned then Some v else None)
     abi.variables
 
-(* The [n] for which [spell n] is [name]: the number a generated name
-   carries, read back through the function that minted it. *)
-let numbered spell name =
-  let s = Id.to_string name in
-  let rec digits_from i =
-    if i > 0 && s.[i - 1] >= '0' && s.[i - 1] <= '9' then digits_from (i - 1) else i
-  in
-  let start = digits_from (String.length s) in
-  Option.bind
-    (int_of_string_opt (String.sub s start (String.length s - start)))
-    (fun n -> if String.equal (spell n) s then Some n else None)
-
-let origin_of ?(relaxed = fun _ -> false) ?(renumber = Fun.id) ~scheme name =
-  let var =
-    Option.bind (Minicpp.tvar_number name) (fun i ->
-        if relaxed i then None
-        else Option.bind scheme (fun s -> Scheme.Var.of_tvar s (renumber i)) )
-  in
-  match var with
-  | Some v -> From_scheme v
-  | None -> (
-    match numbered Common.tc_instance_name name with
-    | Some k -> From_instance k
-    | None -> (
-      match numbered Common.fun_tparam_name name with
-      | Some i -> From_callable i
-      | None -> Derived name ) )
-
 (* The first [n] parameters standing for scheme variables are the
    declaration's leading phantoms: no signature mentions them, so nothing
    deduces them, and a call writes them -- as their default, or [void]. *)
@@ -144,12 +121,25 @@ let mark_phantoms n head =
   in
   go n head
 
-let of_head ?omitted ?(phantom_prefix = 0) ?relaxed ?renumber ?(deduced_callables = []) ?receiver
-    ?passing ?signature ?(relaxations = []) ~callee ~scheme temps =
+(* The origin of the parameter [name], from what its builder recorded of
+   it in [minted]: a variable the declaration relaxed out of its head, or
+   one the scheme has no variable for, declares nothing. *)
+let minted_origin ~relaxed ~scheme minted name =
+  match List.assoc_opt name minted with
+  | Some (Scheme_param i) -> (
+    match if relaxed i then None else Option.bind scheme (fun s -> Scheme.Var.of_tvar s i) with
+    | Some v -> From_scheme v
+    | None -> Derived name )
+  | Some (Instance_param k) -> From_instance k
+  | Some (Callable_param i) -> From_callable i
+  | None -> Derived name
+
+let of_head ?omitted ?(phantom_prefix = 0) ?(relaxed = fun _ -> false) ?(deduced_callables = [])
+    ?receiver ?passing ?signature ?(relaxations = []) ?(minted = []) ~callee ~scheme temps =
   let head =
     List.mapi
       (fun position (kind, name) ->
-        let origin = origin_of ?relaxed ?renumber ~scheme name in
+        let origin = minted_origin ~relaxed ~scheme minted name in
         let write =
           match (kind, origin) with
           | Minicpp.TTtypename_default d, _ -> Defaulted d
@@ -174,9 +164,10 @@ let signature abi = abi.signature
 
 (* A method of an instance's struct belongs to the instance: it has no
    global of its own, and no scheme -- its variables are the method's own
-   quantifiers and the class-typed arguments it takes, all named. *)
-let of_instance_method ~instance (mf : Minicpp.method_field) =
-  of_head ~callee:instance ~scheme:None
+   quantifiers, all named, and the class-typed arguments it takes, which the
+   struct's builder records as its dictionaries. *)
+let of_instance_method ?minted ~instance (mf : Minicpp.method_field) =
+  of_head ?minted ~callee:instance ~scheme:None
     ~receiver:
       { dropped = [];
         dropped_names = [];
@@ -448,6 +439,25 @@ let plan ?omitted ?(instances = 0) ?higher_kinded ?kept ?reachable ?relaxed ?pha
       | None -> derive ()
     in
     with_dictionaries instances base
+
+(* The unit's plans of class fields called through a concrete instance, by
+   field. *)
+let projection_plans : t GlobRef.Map_env.t ref = State.cell State.Unit GlobRef.Map_env.empty
+
+let install_projections derive fields =
+  projection_plans := List.fold_left (fun m r -> GlobRef.Map_env.add r (derive r) m) GlobRef.Map_env.empty fields
+
+let projection derive x =
+  match GlobRef.Map_env.find_opt x !projection_plans with
+  | Some abi ->
+    if Probe.checking () && not (same_head abi (derive x)) then
+      Probe.violation "callable ABI"
+        Pp.(str "the projection plan of " ++ GlobRef.print x ++ str " differs from the one planned");
+    abi
+  | None -> (
+    match Common.get_phase () with
+    | Common.Emit -> unplanned Pp.(str "the projection " ++ GlobRef.print x)
+    | Common.Plan -> derive x )
 
 let report_foreign () =
   Printf.sprintf "foreign callable plans: %d planned; emission found %d"

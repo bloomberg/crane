@@ -72,7 +72,7 @@ let instance_promoted_types name body ty =
    Returns: (struct_decl option, class_ref option, type_args)
    The class_ref and type_args are used to generate static_assert in cpp.ml *)
 let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
-    cpp_decl option * GlobRef.t option * cpp_type list =
+    cpp_decl option * GlobRef.t option * cpp_type list * (Id.t * (Id.t * Callable_abi.minted) list) list =
   let instance_ref = name in
   (* Without bodies the methods are their heads alone: what planning reads
      ({!plan_instance_methods}), decided by the very code that generates
@@ -645,8 +645,11 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
               in
               (cpp_params, method_ret_ty, stmts, tc_tparams)
           in
+          (* The class-typed arguments are the method's dictionaries, in
+             order; its own variables are no scheme's. *)
+          let minted = List.mapi (fun k p -> (p, Callable_abi.Instance_param k)) tc_tparams in
           Some
-            ( Fmethod
+            ( ( Fmethod
                 {
                   mf_name = method_name;
                   (* The global the method is made from is the instance: it has
@@ -683,7 +686,8 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                   mf_loop = None;
                 },
               VPublic,
-              SNoTag )
+              SNoTag ),
+              (method_name, minted) )
       in
       let method_pairs =
         if List.length fields = List.length method_bodies then
@@ -697,10 +701,11 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                   (List.length fields)
                   (List.length method_bodies)))
       in
-      let methods =
-        List.filter_map
-          (fun ((fld, fty), body) -> gen_method (fld, fty) body)
-          method_pairs
+      let methods, minted =
+        List.split
+          (List.filter_map
+             (fun ((fld, fty), body) -> gen_method (fld, fty) body)
+             method_pairs )
       in
       (* Generate [using] declarations for promoted typeclass-typed fields
          from the constructor body.  For such fields, the constructor arg
@@ -1004,7 +1009,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
       in
       let all_usings = direct_usings @ nested_promoted_usings in
       if methods = [] && all_usings = [] then
-        (None, Some class_ref, concept_args class_ref non_promoted_type_args)
+        (None, Some class_ref, concept_args class_ref non_promoted_type_args, [])
       else
         let decl =
           Dstruct
@@ -1019,7 +1024,8 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
         ( Some
             (apply_hkt_resolutions_decl (hkt_tvar_resolutions_of_type ~source_order:true ty) decl),
           Some class_ref,
-          concept_args class_ref non_promoted_type_args )
+          concept_args class_ref non_promoted_type_args,
+          minted )
     | MLglob {callee = other; _} ->
       (* The instance is nothing but another instance's name.  C++ has a
          spelling for exactly that, and without it the name is never
@@ -1031,9 +1037,10 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
                du_rhs = Some (Tglob (other, [], []));
                du_note = None } ),
         Some class_ref,
-        concept_args class_ref type_args )
-    | _ -> (None, Some class_ref, concept_args class_ref type_args) )
-  | _ -> (None, None, [])
+        concept_args class_ref type_args,
+        [] )
+    | _ -> (None, Some class_ref, concept_args class_ref type_args, []) )
+  | _ -> (None, None, [], [])
 
 (** The callable plan of each method of the instance [name] -- [body] of
     type [ty] -- by the method's name, as generating its struct declares it,
@@ -1048,9 +1055,13 @@ let plan_instance_methods ~finish name body ty =
     | _ -> []
   in
   match gen_instance_struct ~bodies:false name body ty with
-  | Some decl, _, _ ->
-    List.map (fun mf -> (mf.mf_name, Callable_abi.of_instance_method ~instance:name mf)) (methods (finish decl))
-  | None, _, _ -> []
+  | Some decl, _, _, minted ->
+    List.map
+      (fun mf ->
+        ( mf.mf_name,
+          Callable_abi.of_instance_method ?minted:(List.assoc_opt mf.mf_name minted) ~instance:name mf ) )
+      (methods (finish decl))
+  | None, _, _, _ -> []
 
 (** Check if a term is a type class instance (constructs a type class record) *)
 let is_typeclass_instance (_body : ml_ast) (ty : ml_type) : bool =

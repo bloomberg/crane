@@ -243,6 +243,9 @@ type method_scope = {
       (** How each of {!ms_params} is passed. *)
   ms_fun_params : (Id.t * template_type * Id.t) list;
   ms_template_params : (template_type * Id.t) list;
+  ms_minted : (Id.t * Callable_abi.minted) list;
+      (** What each of {!ms_template_params} was made for: a dictionary, a
+          variable of the function's scheme, or a callable parameter. *)
   ms_deduced_callables : Param_pos.orig Param_pos.pos list;
 }
 
@@ -467,6 +470,15 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
     ms_passing = passing;
     ms_fun_params = fun_params;
     ms_template_params = template_params;
+    ms_minted =
+      List.mapi (fun k (_, id, _, _) -> (id, Callable_abi.Instance_param k)) typeclass_temps
+      @ List.map2 (fun name orig -> (name, Callable_abi.Scheme_param orig)) extra_tvar_names extra_tvars_orig
+      @ List.filter_map
+          (fun (_, cpp_ty, i, _, generalised) ->
+            match cpp_ty with
+            | Tfun _ when generalised -> Some (fun_tparam_id i, Callable_abi.Callable_param i)
+            | _ -> None )
+          params_with_idx;
     ms_deduced_callables = deduced_callables;
   }
 
@@ -595,12 +607,12 @@ let method_head vars s =
   }
 
 (** The callable plan of the method [func_ref] whose scope is [s] and head
-    [h]: a parameter named for one of its own variables declares the
-    function's variable it was renumbered from. *)
+    [h]: a parameter for one of its own variables declares the function's
+    variable it was renumbered from ({!method_scope}). *)
 let method_plan func_ref s h =
-  let renumber k = Option.default k (List.nth_opt s.ms_extra_tvars_orig (k - 1)) in
   let scheme = Mlutil.reference_scheme func_ref in
-  Callable_abi.of_head ~renumber ~omitted:(Translation_support.type_arg_omission func_ref)
+  Callable_abi.of_head ~minted:s.ms_minted
+    ~omitted:(Translation_support.type_arg_omission func_ref)
     ~deduced_callables:s.ms_deduced_callables ~passing:s.ms_passing
     ~receiver:
       { dropped =

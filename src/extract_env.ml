@@ -1532,7 +1532,8 @@ let plan_foreign_callables = "plan_foreign_callables"
 let elaborate_pass_names = [elaborate_calls; plan_foreign_callables]
 
 (** Elaborate every call of [struc] and install the elaborations, then plan
-    the callables of the globals it names that it does not declare. *)
+    the callables of the globals it names that it does not declare, and the
+    calls of class fields it may project through an instance. *)
 let elaborate_unit struc =
   Translation_state.generating_outside_modules @@ fun () ->
   Pipeline_trace.event "elaborate" elaborate_calls;
@@ -1545,7 +1546,13 @@ let elaborate_unit struc =
   Pipeline_trace.event "elaborate" plan_foreign_callables;
   Callable_abi.install_foreign
     (fun r -> Translation_calls.callee_abi ~instances:0 r)
-    (Core_elaborate.referenced elaborations)
+    (Core_elaborate.referenced elaborations);
+  (* Every global a call may project through an instance
+     ({!Translation_types.static_projection_instance}). *)
+  Callable_abi.install_projections Translation_calls.projection_abi
+    (List.filter
+       (fun r -> Table.is_inline_custom r || Table.singleton_method_class r <> None)
+       (Core_elaborate.referenced elaborations) )
 
 (** Decide the kinds of the template parameters of the unit's inductives and
     type aliases, into [plan], and install them for the readers not yet

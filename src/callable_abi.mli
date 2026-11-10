@@ -47,6 +47,16 @@ type origin =
       (** A parameter the declaration introduces for its own reasons, named
           so: none of a call's type arguments is its. *)
 
+(** What the builder of a head knows of a parameter as it names it, and
+    records rather than leaving the name to say: the callee's type variable
+    [Tvar i] it declares, the [k]th class dictionary it stands for, or the
+    value parameter at index [i] whose callable type it deduces.  A
+    parameter its builder records nothing for is [Derived]. *)
+type minted =
+  | Scheme_param of int
+  | Instance_param of int
+  | Callable_param of int
+
 type write_policy =
   | Writable  (** A call may write it, and must where nothing deduces it. *)
   | Deduce_only  (** No call writes it: C++ deduces it from an argument. *)
@@ -155,36 +165,39 @@ val dictionary_carriers : t -> Scheme.Var.t list
 
 (** The plan of a declaration of [callee] whose head is [temps], as
     {!Gen_functions} finalises it; [deduced_callables] are the declared
-    positions of the value parameters the head deduces as an [F &&].  [scheme] is the callee's scheme, which
-    the parameters named for its variables ([T1], [T2], ...) declare; the
-    first [phantom_prefix] of those are its leading phantoms.  A variable
+    positions of the value parameters the head deduces as an [F &&].
+    [minted] is what the builders of [temps] recorded of each parameter, by
+    the name they gave it; a parameter a relaxation added has no record,
+    and is [Derived].  [scheme] is the callee's scheme, whose [i]th variable
+    a parameter recorded as [Scheme_param i] declares; the first
+    [phantom_prefix] of those are its leading phantoms.  A variable
     [relaxed] says the declaration relaxed out of its head declares nothing
-    any more: the parameter left at it is [Derived].  A parameter named for
-    the [k]th variable declares the scheme's [renumber k]th, where a method
-    numbers its own variables after the receiver's, and [receiver] is what
+    any more: the parameter left at it is [Derived].  [receiver] is what
     the plan of a method adds; [passing] how its value parameters are
     passed, in declaration order; [signature] what a function is declared
-    at; [omitted] says why the convention omits a
-    variable of [scheme], if it does. *)
+    at; [omitted] says why the convention omits a variable of [scheme], if
+    it does. *)
 val of_head :
   ?omitted:(Scheme.Var.t -> omission option) ->
   ?phantom_prefix:int ->
   ?relaxed:(int -> bool) ->
-  ?renumber:(int -> int) ->
   ?deduced_callables:Param_pos.orig Param_pos.pos list ->
   ?receiver:receiver ->
   ?passing:passing list ->
   ?signature:signature ->
   ?relaxations:Head_relaxation.t list ->
+  ?minted:(Names.Id.t * minted) list ->
   callee:Names.GlobRef.t ->
   scheme:Scheme.Id.t option ->
   (Minicpp.template_type * Names.Id.t) list ->
   t
 
 (** The plan of the method [mf] of the struct of [instance]: its head, its
-    parameters' types and its return type.  The method has no global of its
-    own, so the plan's callee is the instance. *)
-val of_instance_method : instance:Names.GlobRef.t -> Minicpp.method_field -> t
+    parameters' types and its return type, [minted] what the struct's
+    builder recorded of its parameters.  The method has no global of its
+    own, so the plan's callee is the instance, and no scheme. *)
+val of_instance_method :
+  ?minted:(Names.Id.t * minted) list -> instance:Names.GlobRef.t -> Minicpp.method_field -> t
 
 (** Whether the value parameter at the declared position [pos] is a callable
     the head deduces as an [F &&]: the callee then calls it at its own
@@ -291,6 +304,17 @@ val plan :
   Names.GlobRef.t ->
   scheme:Scheme.Id.t option ->
   t
+
+(** [install_projections derive fields] makes [derive x] the unit's plan of
+    a call of each class field [x] of [fields] through a concrete instance,
+    planned before anything is rendered.  Replaces the unit's previous
+    projection plans. *)
+val install_projections : (Names.GlobRef.t -> t) -> Names.GlobRef.t list -> unit
+
+(** The plan {!install_projections} made of a call of the class field [x]
+    through a concrete instance.  Under [CRANE_CHECK_IR] it is checked
+    against [derive x]; emission finding none planned is a violation. *)
+val projection : (Names.GlobRef.t -> t) -> Names.GlobRef.t -> t
 
 (** How many foreign plans the unit planned, and how many emission found
     planned or derived itself. *)

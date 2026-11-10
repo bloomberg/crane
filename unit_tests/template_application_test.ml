@@ -28,24 +28,26 @@ let () =
     in
     let entries =
       List.init (Random.int 2) (fun k ->
-          (Minicpp.TTtypename, Common.tc_instance_id k) )
+          (Minicpp.TTtypename, Common.tc_instance_id k, Instance_param k) )
       @ List.concat_map
           (fun v ->
-            let name = Minicpp.tvar_id (Scheme.Var.ordinal v) in
+            let i = Scheme.Var.ordinal v in
             let kind =
               match Random.int 4 with
               | 0 -> Minicpp.TTtemplate 1
               | 1 -> Minicpp.TTtypename_default Minicpp.Tvoid
               | _ -> Minicpp.TTtypename
             in
-            (kind, name)
+            (kind, Minicpp.tvar_id i, Scheme_param i)
             :: ( if Random.int 4 = 0 then
-                   [(Minicpp.TTfun ([], Minicpp.Tvoid), Common.fun_tparam_id (Scheme.Var.ordinal v))]
+                   [(Minicpp.TTfun ([], Minicpp.Tvoid), Common.fun_tparam_id i, Callable_param i)]
                  else [] ) )
           shuffled
     in
     let abi =
-      of_head ~phantom_prefix:(Random.int 2) ~callee ~scheme:(Some scheme) entries
+      of_head ~phantom_prefix:(Random.int 2) ~callee ~scheme:(Some scheme)
+        ~minted:(List.map (fun (_, name, m) -> (name, m)) entries)
+        (List.map (fun (kind, name, _) -> (kind, name)) entries)
     in
     let value_of v = if Random.bool () then Some (ty ("V" ^ string_of_int (Scheme.Var.ordinal v))) else None in
     let values = List.map (fun v -> (v, value_of v)) vars in
