@@ -1025,9 +1025,9 @@ let dfun_body_scope ~minted n b cty ty temps =
           match List.find_opt (fun (_, id') -> Id.equal id id') temps with
           | Some (TTtypename_default _, _) | None -> false
           | Some _ -> (
-            match tvar_number id with
-            | None -> false
-            | Some i -> List.mem i constrained && not (List.mem i spelled) ) )
+            match List.assoc_opt id minted with
+            | Some (Callable_abi.Scheme_param i) -> List.mem i constrained && not (List.mem i spelled)
+            | _ -> false ) )
     else None
   in
   (* Combine all template params for function signature. Save the non-typeclass
@@ -1178,9 +1178,10 @@ let gen_dfun ~minted n b cty ty temps =
      The scope is read by ML variable -- entry [i - 1] names [Tvar i] -- and
      the head is not: it leaves out a variable the C++ type never spells
      ([after_family]'s [A], mentioned only by an erased family), and a
-     parameter named for scheme variable [i] ({!Callable_abi}) is then not
-     the head's [i]th.  Where the head names its parameters for the scheme,
-     the scope is laid out by those numbers; a variable the head omits
+     parameter declared for scheme variable [i] ({!Callable_abi}) is then
+     not the head's [i]th.  Where the head's builder recorded the variables
+     its parameters are for ({!Callable_abi.minted}), the scope is laid out
+     by those numbers; a variable the head omits
      keeps its own name, which nothing declares, rather than taking a
      neighbour's. *)
   let type_var_ids =
@@ -1192,7 +1193,12 @@ let gen_dfun ~minted n b cty ty temps =
           | _ -> None )
         regular_temps
     in
-    match List.filter_map tvar_number declared with
+    let scheme_number id =
+      match List.assoc_opt id scope.bs_minted with
+      | Some (Callable_abi.Scheme_param i) -> Some i
+      | _ -> None
+    in
+    match List.filter_map scheme_number declared with
     | [] -> declared
     | numbers -> List.init (List.fold_left max 0 numbers) (fun k -> tvar_id (k + 1))
   in
