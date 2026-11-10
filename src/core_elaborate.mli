@@ -13,7 +13,9 @@
     call translation built itself -- a global a let-bound alias names,
     applied where the alias is -- is elaborated where it is translated, in
     the traversal's environment.  Under [CRANE_CHECK_IR] every elaboration
-    taken from here is checked against that one. *)
+    taken from here is checked against that one.  The same holds of each
+    call's instantiation ({!instantiation}), planned where the walk meets the
+    call at the ML types the walk gives its position. *)
 
 (** [elaborate_arguments ~lex use args] -- the call [use args] as Core
     elaborates it from the call alone: which arguments are dictionaries,
@@ -61,7 +63,13 @@ type t
     branch's result type and the declared type of every global they call
     included; and every global named there unapplied, as its call with no
     arguments.  Each application is so elaborated where it is generated, at
-    the variables it is generated under. *)
+    the variables it is generated under, and instantiated ({!instantiate})
+    at the ML types its position expects and states as translation threads
+    them: a regular argument at its parameter's type (its call's, where that
+    has an erasure in it), an argument past the arity or of a local callee
+    at its call's, a lambda's body past the lambda's arrows, a let-bound
+    value at the binder's annotation, a bound lambda and every other
+    recursion translation makes without a position at none. *)
 val structure :
   methods:(Names.MutInd.t -> Miniml.ml_ind -> (Names.Id.t list * Method_registry.method_candidate) list) ->
   Miniml.ml_structure ->
@@ -106,6 +114,26 @@ val install : t -> unit
     violation: every call emission translates was elaborated from Core.
     Planning elaborates every call itself. *)
 val elaboration : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> Elaborated_call.t
+
+(** [instantiation ~lex ~expected_ml ~stated_ml ~caller ~scope use args]
+    -- the semantic half of the call [use args] while emitting: the
+    instantiation the installed elaborations planned for the application
+    naming its callee by [use], at the position the walk gave it, taken at
+    the argument nodes being translated ({!Elaborated_call.at_call}); or,
+    where they planned none or disagree, {!instantiate} of its
+    {!elaboration} here, with the ML types the traversal says its position
+    expects and states -- which under [CRANE_CHECK_IR] is a violation, bar a
+    call translation extended itself.  Under [CRANE_CHECK_IR] a planned one
+    is checked against that one.  Planning instantiates every call itself. *)
+val instantiation :
+  lex:Lexenv.t ->
+  expected_ml:Miniml.ml_type option ->
+  stated_ml:Miniml.ml_type option ->
+  caller:Names.GlobRef.t option ->
+  scope:Names.Id.t list ->
+  Miniml.global_use ->
+  Miniml.ml_ast list ->
+  Elaborated_call.instantiated
 
 (** How many calls the unit elaborated ahead, and how many emission found
     there or elaborated itself. *)

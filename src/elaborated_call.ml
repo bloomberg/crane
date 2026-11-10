@@ -77,3 +77,25 @@ let instantiate call ~reading ~at_call ~expand ~erased =
     params_orig;
     subst_index_of_orig = Param_pos.subst_of_orig ~erased:(fun t -> erased (subst t)) params_orig;
   }
+
+let same_reading a b =
+  let ordinals vs = List.map Scheme.Var.ordinal vs in
+  let evidences =
+    Call_tyargs.[Written; Argument_types; Argument_heads; Expected_result; Eta_parameter]
+  in
+  Mlutil.Var_types.equal (Call_tyargs.by_variable a) (Call_tyargs.by_variable b)
+  && List.equal Int.equal (ordinals (Call_tyargs.holes a)) (ordinals (Call_tyargs.holes b))
+  && List.equal Int.equal (ordinals (Call_tyargs.beyond_extent a)) (ordinals (Call_tyargs.beyond_extent b))
+  && List.for_all (fun e -> Call_tyargs.resolved_from e a = Call_tyargs.resolved_from e b) evidences
+
+let same_instantiation a b =
+  Names.GlobRef.UserOrd.equal a.call.callee b.call.callee
+  && List.equal ( = ) a.call.roles b.call.roles
+  && same_reading a.call.tyargs b.call.tyargs
+  && same_reading a.reading b.reading
+  && Mlutil.eq_ml_type a.callee_type_at_call b.callee_type_at_call
+
+let at_call inst call =
+  if not (Names.GlobRef.UserOrd.equal inst.call.callee call.callee && List.equal ( = ) inst.call.roles call.roles)
+  then invalid_arg "Elaborated_call.at_call";
+  {inst with call = {call with tyargs = inst.call.tyargs}}
