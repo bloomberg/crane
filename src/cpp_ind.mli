@@ -72,11 +72,22 @@ val generating_ahead : (unit -> 'a) -> 'a
     claims. *)
 val start_render : file:Common.file -> unit
 
-(** A declaration to finish ({!Finished_program.job}). *)
-type finishing = Finished_program.job
+(** A declaration to finish: the entity whose generation it belongs to
+    ({!Finished_program.id}), and what it is finished from. *)
+type finishing = {
+  owner : Generated_program.id;
+  methods : bool;
+      (** whether it is the owner's methods ({!Finished_program.Methods}),
+          rather than one of the declarations its generation numbers *)
+  key : Finished_program.key;
+}
 
-(** [finishing d] is [d] to finish, its result recorded by [d] itself. *)
-val finishing : Minicpp.cpp_decl -> finishing
+(** [source r] is the source entity [r], as an owner. *)
+val source : Names.GlobRef.t -> Generated_program.id
+
+(** [finishing ~owner d] is [d] to finish, as part of [owner]'s generation,
+    its result recorded by [d] itself. *)
+val finishing : owner:Generated_program.id -> Minicpp.cpp_decl -> finishing
 
 
 (** What generating a declaration ahead of the files leaves for later: the
@@ -93,7 +104,8 @@ type ahead = {
 }
 
 (** [functions_ahead ~entities funs]: [funs], generated ahead
-    ({!generated_once}) as [entities], to finish later ({!finalized}). *)
+    ({!generated_once}) as [entities], one each, to finish later
+    ({!finalized}). *)
 val functions_ahead :
   entities:Generated_program.entity list -> Gen_decls.generated_fun list -> ahead
 

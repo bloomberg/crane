@@ -997,18 +997,23 @@ let generate scope ~module_ d =
     finishes a declaration again under [CRANE_CHECK_IR] to compare, and
     finds one missing only as an anomaly. *)
 
-type finishing = Finished_program.job
+type finishing = {
+  owner : Generated_program.id;
+  methods : bool;
+  key : Finished_program.key;
+}
 
-let finishing = Finished_program.job
+let source r = Generated_program.Source (Entity_id.of_ref r)
+let finishing ~owner d = {owner; methods = false; key = Finished_program.key d}
 
-(** [finished_of ~what job] is what [job] is finished as in the unit's
+(** [finished_of ~what key] is what [key] is finished as in the unit's
     program ({!Finished_program.find}). *)
-let finished_of ~what (job : finishing) =
-  match (get_phase (), Finished_program.find job) with
+let finished_of ~what key =
+  match (get_phase (), Finished_program.find key) with
   | Plan, _ -> CErrors.anomaly Pp.(str "Crane: " ++ str what ++ str " was finished while planning.")
   | Emit, Some f ->
     let ahead = match !mode with Generating | Regenerating -> true | Peeking | Rendering -> false in
-    if (not ahead) && Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (Finished_program.finishes_as job f)
+    if (not ahead) && Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (Finished_program.finishes_as key f)
     then
       CErrors.anomaly
         Pp.(str "Crane: " ++ str what
@@ -1021,24 +1026,26 @@ let finished_of ~what (job : finishing) =
 
 (** A declaration finished on its own -- one written without a definition,
     a lifted helper. *)
-let finished_alone d = finished_of ~what:"a declaration" (finishing d)
+let finished_alone d = finished_of ~what:"a declaration" (Finished_program.key d)
 
 (** [finished_group ~what ds] is [ds], each finished ahead of the files. *)
 let finished_group ~what (ds : generated) : rendered =
-  List.map (fun (env, d) -> (env, finished_of ~what (finishing d))) ds
+  List.map (fun (env, d) -> (env, finished_of ~what (Finished_program.key d))) ds
 
 let finished_instance = finished_group ~what:"an instance"
 
-(** What finishing [funs] takes: every definition among them, then every
-    declaration. *)
-let functions_finishing (funs : Gen_decls.generated_fun list) =
+(** What finishing [funs], generated as [entities] (one each), takes: every
+    definition among them, then every declaration. *)
+let functions_finishing ~entities (funs : Gen_decls.generated_fun list) =
+  let funs = List.combine entities funs in
+  let owner (e : Generated_program.entity) = Generated_program.Source e.entity_id in
   List.filter_map
-    (fun (g : Gen_decls.generated_fun) ->
-      match g.gf_entity with Defined (d, _) -> Some (finishing d) | Declared _ -> None )
+    (fun (e, (g : Gen_decls.generated_fun)) ->
+      match g.gf_entity with Defined (d, _) -> Some (finishing ~owner:(owner e) d) | Declared _ -> None )
     funs
   @ List.filter_map
-      (fun (g : Gen_decls.generated_fun) ->
-        match g.gf_entity with Declared d -> Some (finishing d) | Defined _ -> None )
+      (fun (e, (g : Gen_decls.generated_fun)) ->
+        match g.gf_entity with Declared d -> Some (finishing ~owner:(owner e) d) | Defined _ -> None )
       funs
 
 (** [finalized funs] pairs each generated function with its entity, made
@@ -1050,7 +1057,7 @@ let finalized (funs : Gen_decls.generated_fun list) =
       match g.gf_entity with
       | Declared _ -> (g, None)
       | Defined (d, _) ->
-        (g, Some (Function_entity.of_finished (finished_of ~what:"a function" (finishing d)))) )
+        (g, Some (Function_entity.of_finished (finished_of ~what:"a function" (Finished_program.key d)))) )
     funs
 
 (** The views of [funs] a file writes, finished: a definition in the file
@@ -1402,16 +1409,19 @@ let generated_record_field_types () =
     variables [vars], takes: the struct members they are, recorded by the
     physical identity of their generation. *)
 let record_methods_finishing r vars fields : finishing =
-  Finished_program.job_of fields
-    (Dfields
-       { ds_ref = r;
-         ds_fields = fields;
-         ds_tparams = List.map (fun v -> (TTtypename, v)) vars;
-         ds_constraint = None;
-         ds_needs_shared_from_this = false } )
+  { owner = source r;
+    methods = true;
+    key =
+      Finished_program.key_of fields
+        (Dfields
+           { ds_ref = r;
+             ds_fields = fields;
+             ds_tparams = List.map (fun v -> (TTtypename, v)) vars;
+             ds_constraint = None;
+             ds_needs_shared_from_this = false } ) }
 
 let finished_record_methods r vars fields =
-  finished_of ~what:"an eponymous record's methods" (record_methods_finishing r vars fields)
+  finished_of ~what:"an eponymous record's methods" (record_methods_finishing r vars fields).key
 
 (** What was generated ahead of the header for each declaration it writes
     alone, by the declaration's physical node, with the module it was
@@ -1468,7 +1478,7 @@ let functions_ahead ~entities (funs : Gen_decls.generated_fun list) =
         (fun (g : Gen_decls.generated_fun) ->
           match g.gf_entity with Defined (d, _) -> Some d | Declared _ -> None )
         funs;
-    finishing = functions_finishing funs;
+    finishing = functions_finishing ~entities funs;
     helpers = List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) funs }
 
 let generate_ahead ~module_ d =
@@ -1478,13 +1488,14 @@ let generate_ahead ~module_ d =
     let ds, helpers = instance_entity ~module_ r a t in
     { entities = [entity r (List.map snd ds) helpers];
       functions = [];
-      finishing = List.map (fun (_, d) -> finishing d) ds;
+      finishing = List.map (fun (_, d) -> finishing ~owner:(source r) d) ds;
       helpers }
   | Header_only gen ->
     let g, lifted = header_entity ~module_ d gen in
     { nothing_ahead with
       entities = [entity (decl_entity d) (List.map snd g.decls) lifted];
-      finishing = List.map (fun (_, d) -> finishing d) (g.member_defs @ g.decls) }
+      finishing =
+        List.map (fun (_, decl) -> finishing ~owner:(source (decl_entity d)) decl) (g.member_defs @ g.decls) }
   | Nothing -> nothing_ahead
 
 let regenerate_ahead ~module_ d =

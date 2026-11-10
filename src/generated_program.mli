@@ -84,6 +84,10 @@ val record_ahead : entity -> unit
     handed on to another generation is not. *)
 val record_lifted_ahead : Minicpp.cpp_decl list -> unit
 
+(** Every entity and helper id of the unit's program as the walk ahead of
+    the files generated it ({!record_ahead}, {!record_lifted_ahead}). *)
+val generated_ahead_ids : unit -> Id_set.t
+
 (** Under [CRANE_CHECK_IR], fail unless the entities the two files took,
     with the helpers they claimed, are exactly those generated ahead of
     them: the walk ahead generates what the renders write, and nothing

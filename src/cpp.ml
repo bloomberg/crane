@@ -1647,12 +1647,43 @@ let generating_ahead f =
   init_std_names ();
   Cpp_ind.generating_ahead f
 
+module Owner_map = Stdlib.Map.Make (struct
+  type t = Generated_program.id
+
+  let compare = Generated_program.compare_id
+end)
+
 (** What finishing [aheads] takes: what each generated, in the order
     generated, and then the helpers lifted out of them, once every function
-    they may call is finished. *)
+    they may call is finished.  A helper is its own entity's; a declaration
+    handed on with them belongs to the entity of [a] it was generated as.
+    Each declaration is numbered among those of its entity in its
+    generation [a], which does not depend on the order of [aheads]. *)
 let finishing (aheads : Cpp_ind.ahead list) =
-  List.concat_map (fun (a : Cpp_ind.ahead) -> a.finishing) aheads
-  @ List.concat_map (fun (a : Cpp_ind.ahead) -> List.map Cpp_ind.finishing a.helpers) aheads
+  let numbered =
+    List.map
+      (fun (a : Cpp_ind.ahead) ->
+        let helper d : Cpp_ind.finishing =
+          match Generated_program.helper d with
+          | Some h -> Cpp_ind.finishing ~owner:(Generated_program.Generated h.helper_id) d
+          | None -> (
+            match List.find_opt (fun (e : Generated_program.entity) -> List.memq d e.decls) a.entities with
+            | Some e -> Cpp_ind.finishing ~owner:(Generated_program.Source e.entity_id) d
+            | None -> CErrors.anomaly Pp.(str "Crane: a declaration was handed on with helpers that no entity generated.") )
+        in
+        let counts = ref Owner_map.empty in
+        let number ({owner; methods; key} : Cpp_ind.finishing) =
+          if methods then Finished_program.job {owner; part = Methods} key
+          else
+            let n = Option.default 0 (Owner_map.find_opt owner !counts) in
+            counts := Owner_map.add owner (n + 1) !counts;
+            Finished_program.job {owner; part = Declaration n} key
+        in
+        let own = List.map number a.finishing in
+        (own, List.map (fun d -> number (helper d)) a.helpers) )
+      aheads
+  in
+  List.concat_map fst numbered @ List.concat_map snd numbered
 
 (** Record the unit's program ({!Generated_program.record_ahead}) and finish
     what was generated ahead, [aheads] in the order generated, all at once
@@ -1665,6 +1696,7 @@ let finish_ahead (aheads : Cpp_ind.ahead list) =
   let helpers = List.concat_map (fun (a : Cpp_ind.ahead) -> a.helpers) aheads in
   Generated_program.record_lifted_ahead helpers;
   let program = Finished_program.finish (finishing aheads) in
+  Finished_program.check_against_generated program;
   Finished_program.install program;
   List.iter Table.demand_header
     (Finished_program.demands program
@@ -1784,7 +1816,7 @@ let generate_ahead s =
           later
             { entities = [Cpp_ind.entity r [d] []];
               functions = [];
-              finishing = [Cpp_ind.finishing d];
+              finishing = [Cpp_ind.finishing ~owner:(Cpp_ind.source r) d];
               helpers = [] } ) )
     ~after_module:(fun ~module_ frame _ ->
       convert_eponymous_record_fields ~module_ frame;
