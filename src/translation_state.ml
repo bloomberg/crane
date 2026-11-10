@@ -106,6 +106,10 @@ type translation_ctx = {
      only under [CRANE_CHECK_IR], where translation checks it against the
      binder's recorded C++ type. *)
   representation : (Core_binder.site * int * planned_repr) list;
+  (* Whether the binder each variable read of the region reads holds a box,
+     as {!Representation_plan} plans it: by the read's occurrence.  Set
+     beside {!representation}, under the same condition. *)
+  planned_reads : (Occurrence.t * planned_read) list;
   (* Counter for generating unique match scrutinee variable names
      (_mp0, _mp1, ...). Reset at function boundaries. *)
   match_param_counter : int;
@@ -178,6 +182,20 @@ and planned_repr = {
   pr_bound_boxed : bool;
 }
 
+(** A variable read's binder as {!Representation_plan} plans it: whether it
+    holds a box, and what bound it. *)
+and planned_read = {
+  rd_boxed : bool;
+  rd_kind : binder_kind;
+}
+
+and binder_kind =
+  | Kouter  (** bound outside the region *)
+  | Kparameter  (** a lambda's parameter *)
+  | Klet
+  | Kfix  (** a local fixpoint's function *)
+  | Kpattern  (** a pattern's, or a record projection's *)
+
 (** What decided a binder's C++ type, and so which answer wins when both are
     available: an instantiation a pattern match pinned down is more precise
     than the type the binder was given where it was bound. *)
@@ -211,6 +229,7 @@ let tctx =
         current_letin_depth = 0;
         move_plan = Ownership_ir.empty;
         representation = [];
+        planned_reads = [];
         match_param_counter = 0;
         promoted_var_map = [];
         in_constructor_expr = false;
@@ -409,8 +428,11 @@ let with_itree_mode (m : itree_extraction_mode) (f : unit -> 'a) : 'a =
 (** {!Representation_plan.region}, which is translation's to name: it reads
     types the way translation converts them. *)
 let plan_representation :
-    (outer:Lexenv.t -> ml_ast -> (Core_binder.site * int * planned_repr) list) ref =
-  ref (fun ~outer:_ _ -> [])
+    (outer:Lexenv.t ->
+    ml_ast ->
+    (Core_binder.site * int * planned_repr) list * (Occurrence.t * planned_read) list)
+    ref =
+  ref (fun ~outer:_ _ -> ([], []))
 
 (** [with_region ~owned ~copied ~resumes body f] runs [f], which generates
     [body] as one C++ body owning the variables at the de Bruijn indices
@@ -431,13 +453,17 @@ let with_region ?(owned = []) ?(copied = []) ?resumes ?certain (body : ml_ast) (
      planning it again from its own scope would read those at the types they
      are bound at, not the ones their matches pinned down.  Its plan only adds
      what the enclosing one has no answer for. *)
-  let representation =
+  let representation, reads =
     match (!tctx).body_owner with
     | Some _ when Probe.checking () ->
-      (!tctx).representation @ !plan_representation ~outer:(!tctx).env_types body
-    | Some _ | None -> []
+      let binders, reads = !plan_representation ~outer:(!tctx).env_types body in
+      ((!tctx).representation @ binders, (!tctx).planned_reads @ reads)
+    | Some _ | None -> ([], [])
   in
-  with_field (fun c -> c.representation) (fun r -> tctx := { !tctx with representation = r }) representation
+  with_field
+    (fun c -> (c.representation, c.planned_reads))
+    (fun (r, rd) -> tctx := { !tctx with representation = r; planned_reads = rd })
+    (representation, reads)
   @@ fun () -> with_field (fun c -> c.move_plan) (fun p -> tctx := { !tctx with move_plan = p }) p f
 
 (** [with_plan p f] runs [f] with the moves planned by [p], an alternative

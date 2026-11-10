@@ -28,7 +28,17 @@
     ({!Translation_types.slot_refined_lambda},
     {!Core_elaborate.instantiate}).  Neither reads what the position states
     beyond the term: the destination's C++ type, the ML type the call's
-    position expects, whether it is a box. *)
+    position expects, whether it is a box.
+
+    Every variable read of the region is planned too, whatever bound the
+    binder it reads -- a pattern, a let, a lambda's parameter, a local
+    fixpoint, the region's outer scope -- and counted against lowering's
+    answer where it is read ({!check_read}), not enforced: a lambda's
+    parameter is declared by the C++ slot the lambda fills
+    ({!Translation.gen_expr}'s [cpp_arg_info]), which the plan approximates
+    from the parameter's erasure, whether the callee deduces the callable,
+    and a constructor field's ML domain; and a let bound to a component read
+    out of a recovered pair records no type ([stmts_yield_boxed]). *)
 
 (** [region ~outer body] -- every pattern binder of [body], a region generated
     in the scope [outer] binds, planned: keyed by its site
@@ -36,7 +46,11 @@
     Reads types in the type-variable scope current when it is called, which
     is the region's; its outer binders at the ML types [outer] gives them,
     converted.  A binder's recorded C++ type is never read. *)
-val region : outer:Lexenv.t -> Miniml.ml_ast -> (Core_binder.site * int * Translation_state.planned_repr) list
+val region :
+  outer:Lexenv.t ->
+  Miniml.ml_ast ->
+  (Core_binder.site * int * Translation_state.planned_repr) list
+  * (Miniml.Occurrence.t * Translation_state.planned_read) list
 
 (** [check ~site ~field ~live ()] -- a [CRANE_CHECK_IR] violation unless the
     region's plan ({!Translation_state.translation_ctx.representation}) boxes
@@ -46,3 +60,9 @@ val region : outer:Lexenv.t -> Miniml.ml_ast -> (Core_binder.site * int * Transl
     pinned down -- the reuse arm's second declaration of a branch's fields, a
     record projection in an expression -- and checked against that answer. *)
 val check : ?as_bound:bool -> site:Core_binder.site -> field:int -> live:bool -> unit -> unit
+
+(** [check_read ~occ ~live] -- under [CRANE_CHECK_IR], whether the region's
+    plan ({!Translation_state.translation_ctx.planned_reads}) boxes the
+    binder the variable read at [occ] reads exactly when lowering does
+    ([live]).  Counted, not enforced. *)
+val check_read : occ:Miniml.Occurrence.t -> live:bool -> unit

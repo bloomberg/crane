@@ -1477,6 +1477,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
   match ml_e with
   | MLrel (i, occ) ->
     check_binder_scopes env i;
+    let boxed_read = binder_is_boxed i in
+    Representation_plan.check_read ~occ ~live:boxed_read;
     let x = try get_db_name i env with Failure _ -> db_fallback_id i in
     let var_expr = CPPvar x in
     (* Move on a last use of a variable the region owns, as its plan says
@@ -1490,7 +1492,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let move_candidate =
       (not (Common.is_tc_instance_id x))
       &&
-      match Ownership_ir.use ~boxed:(binder_is_boxed i) (!tctx).move_plan occ with
+      match Ownership_ir.use ~boxed:boxed_read (!tctx).move_plan occ with
       | Some ((Share | Clone | Copy) as copy) ->
         (* The copy the plan names is the one the variable's declaration
            makes, where Core says what its type is. *)
@@ -1515,7 +1517,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         false
     in
     let result = if move_candidate then CPPmove var_expr else var_expr in
-    if binder_is_boxed i then begin
+    if boxed_read then begin
       match expected_ty with
       | Some (Tvar (Tv_index (n, _))) when own_index_only_result () = Some n ->
         (* The definition returns this variable boxed, and nothing else spells
