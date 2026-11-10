@@ -16,7 +16,9 @@
     {!Translation_types.pattern_field_pins}), with the plan's own answers for
     the binders it reads in place of the C++ types lowering recorded.  Under
     [CRANE_CHECK_IR] translation checks the two agree for every pattern
-    binder it declares.  Nothing reads the plan otherwise.
+    binder it declares: a match's branch, a custom match's, the reuse arm's
+    second declaration of a branch's fields, a record projection's.  An enum
+    branch binds none.  Nothing reads the plan otherwise.
 
     What it does not plan is a lambda's parameter: lowering types it by the
     C++ slot the lambda fills.  An answer that rests on one -- a match over
@@ -31,9 +33,13 @@
     converted.  A binder's recorded C++ type is never read. *)
 val region : outer:Lexenv.t -> Miniml.ml_ast -> (Core_binder.site * int * Translation_state.planned_repr) list
 
-(** [check ~site ~field ~live] -- a [CRANE_CHECK_IR] violation unless the
+(** [check ~site ~field ~live ()] -- a [CRANE_CHECK_IR] violation unless the
     region's plan ({!Translation_state.translation_ctx.representation}) boxes
     the pattern binder of field [field] bound at [site] exactly when lowering
     does ([live]), or marks its answer as resting on a lambda's parameter.  A
-    binder the plan has no answer for is a violation too. *)
-val check : site:Core_binder.site -> field:int -> live:bool -> unit
+    binder the plan has no answer for is a violation too.  [as_bound]: the
+    binder is declared at the type it is bound at, nothing pinned down -- the
+    reuse arm's second declaration of a branch's fields, a record projection
+    in an expression -- and checked against that answer, which rests on no
+    lambda's parameter. *)
+val check : ?as_bound:bool -> site:Core_binder.site -> field:int -> live:bool -> unit -> unit

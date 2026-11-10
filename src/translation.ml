@@ -5286,6 +5286,12 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       mk_iife None
         (cache @ List.concat_map fst asgns
          @ with_binders env renamed_ids (fun () ->
+               if Probe.checking () then
+                 List.iteri
+                   (fun i _ ->
+                     Representation_plan.check ~as_bound:true ~site:(Branch (case_occ, 0)) ~field:i
+                       ~live:(binder_is_boxed (n - i)) () )
+                   ids;
                with_iife_return_type expected_ty (fun () ->
                    with_fields_plan ml_e asgns (fun () ->
                        gen_stmts ~slot env' (fun x -> Sreturn (Some x)) body ) ) ) ) )
@@ -7657,7 +7663,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
           if Probe.checking () then
             List.iteri
               (fun i _ ->
-                Representation_plan.check ~site ~field:i ~live:(binder_is_boxed (n_pat_vars - i)) )
+                Representation_plan.check ~site ~field:i ~live:(binder_is_boxed (n_pat_vars - i)) () )
               rev_ids;
           gen_stmts env_for_body (fun x -> Sreturn (Some x)) body ))
   in
@@ -8338,6 +8344,12 @@ and gen_cpp_case (typ : ml_type) t env pv case_occ =
           | Some reused_cell ->
             let saved_env_types = (!tctx).env_types in
             push_binders env ids';
+            if Probe.checking () then
+              List.iteri
+                (fun i _ ->
+                  Representation_plan.check ~as_bound:true ~site:(Branch (case_occ, branch_idx)) ~field:i
+                    ~live:(binder_is_boxed (List.length ids' - i)) () )
+                rev_ids';
             let scrut_vmut =
               if scrut_is_ptr then
                 CPPaccess_call (Aarrow, scrut_expr, Id.of_string "v_mut", [])
@@ -8716,7 +8728,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv case_occ =
         List.iteri
           (fun field_i _ ->
             Representation_plan.check ~site:(Branch (case_occ, i)) ~field:field_i
-              ~live:(binder_is_boxed (n_pat_vars - field_i)) )
+              ~live:(binder_is_boxed (n_pat_vars - field_i)) () )
           ids;
       let scrut_ind_opt =
         match ml_typ with
@@ -10333,6 +10345,11 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
       in
       push_binders env (retype_dependent_params typ renamed_ids);
+      if Probe.checking () then
+        List.iteri
+          (fun i _ ->
+            Representation_plan.check ~site:(Branch (case_occ, 0)) ~field:i ~live:(binder_is_boxed (n - i)) () )
+          ids;
       let body_stmts =
         with_fields_plan ast asgns (fun () -> gen_stmts ~slot env' k body)
       in
