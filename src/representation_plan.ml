@@ -511,6 +511,18 @@ let check_read ~occ ~live =
       Probe.hit "repr-read" (fun () -> "unplanned" ^ if live then " live-boxed" else " live-value");
       Probe.violation "variable read representation" (describe "has no answer")
 
+let has_read occ = Option.has_some (List.assq_opt occ (!tctx).planned_reads)
+
+(** [read ~occ live] -- whether the variable read at [occ] holds a box: the
+    region's plan, where it has an answer, else [live ()].  Under
+    [CRANE_CHECK_IR], [live ()] is the oracle the plan is held to. *)
+let read ~occ live =
+  match List.assq_opt occ (!tctx).planned_reads with
+  | Some {rd_boxed; _} ->
+    if Option.has_some (!tctx).body_owner && Probe.checking () then check_read ~occ ~live:(live ());
+    rd_boxed
+  | None -> live ()
+
 let check ?(as_bound = false) ~site ~field ~live () =
   let describe planned =
     Pp.(

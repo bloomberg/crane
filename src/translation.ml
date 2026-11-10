@@ -1477,8 +1477,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
   match ml_e with
   | MLrel (i, occ) ->
     check_binder_scopes env i;
-    let boxed_read = binder_is_boxed i in
-    Representation_plan.check_read ~occ ~live:boxed_read;
+    (* Unplanned, the read is a violation under [CRANE_CHECK_IR]. *)
+    if Option.has_some (!tctx).body_owner && Probe.checking () && not (Representation_plan.has_read occ) then
+      Representation_plan.check_read ~occ ~live:(binder_is_boxed i);
+    let boxed_read = Representation_plan.read ~occ (fun () -> binder_is_boxed i) in
     let x = try get_db_name i env with Failure _ -> db_fallback_id i in
     let var_expr = CPPvar x in
     (* Move on a last use of a variable the region owns, as its plan says
@@ -2955,8 +2957,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let container_cast_erased_field ml_ft ml_arg expr =
       let is_erased_rel =
         match ml_arg with
-        | MLrel (j, _) | MLmagic (_, MLrel (j, _)) ->
-          binder_is_boxed j
+        | MLrel (j, occ) | MLmagic (_, MLrel (j, occ)) ->
+          Representation_plan.read ~occ (fun () -> binder_is_boxed j)
         | _ -> false
       in
       if not is_erased_rel then expr
@@ -4006,8 +4008,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             | Some ft ->
               let is_erased_rel =
                 match e with
-                | MLrel (j, _) | MLmagic (_, MLrel (j, _)) ->
-                  binder_is_boxed j
+                | MLrel (j, occ) | MLmagic (_, MLrel (j, occ)) ->
+                  Representation_plan.read ~occ (fun () -> binder_is_boxed j)
                 | _ -> false
               in
               ( match ft with
@@ -4318,8 +4320,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           | Some ft ->
             let is_erased_rel =
               match e with
-              | MLrel (j, _) | MLmagic (_, MLrel (j, _)) ->
-                binder_is_boxed j
+              | MLrel (j, occ) | MLmagic (_, MLrel (j, occ)) ->
+                Representation_plan.read ~occ (fun () -> binder_is_boxed j)
               | _ -> false
             in
             ( match ft with
@@ -5002,7 +5004,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       | Some ty when not (prints_as_any ty) && ty <> Tvoid
                     && not (match ty with Tglob (g, _, _) -> Table.is_erased_type_const g | _ -> false) ->
         let rec is_cpp_erased_var_rec = function
-          | MLrel (i, _) -> binder_is_boxed i
+          | MLrel (i, occ) -> Representation_plan.read ~occ (fun () -> binder_is_boxed i)
           | MLmagic (_, t') -> is_cpp_erased_var_rec t'
           | _ -> false
         in
@@ -5673,7 +5675,7 @@ and gen_call_args ~slot ?expected_ty env id plan =
        non-global callees (~[MLrel j when Escape.IntSet.mem ...] above). *)
     let ml_arg_is_erased_rel =
       match ml_arg with
-      | MLrel (j, _) | MLmagic (_, MLrel (j, _)) -> binder_is_boxed j
+      | MLrel (j, occ) | MLmagic (_, MLrel (j, occ)) -> Representation_plan.read ~occ (fun () -> binder_is_boxed j)
       | _ -> false
     in
     match param_ml_ty with
@@ -6898,9 +6900,9 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       | None -> None
     in
     let callee_cpp_erased =
-      match callee_rel_idx with
-      | Some i -> binder_is_boxed i
-      | None -> false
+      match f with
+      | MLrel (i, occ) | MLmagic (_, MLrel (i, occ)) -> Representation_plan.read ~occ (fun () -> binder_is_boxed i)
+      | _ -> false
     in
     (* A pattern binder whose definition-site field type is a type variable
        still has a concrete C++ type when the scrutinee instantiates that
@@ -7007,7 +7009,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         | MLmagic (_, _) ->
           let expected = param_expected_cpp_ty env callee_param_tys i in
           gen_expr ?expected_ty:expected ~slot:arg_slot env x
-        | MLrel (j, _) when binder_is_boxed j ->
+        | MLrel (j, occ) when Representation_plan.read ~occ (fun () -> binder_is_boxed j) ->
           let inner = gen_expr ~slot:arg_slot env x in
           let expected = param_expected_cpp_ty env callee_param_tys i in
           ( match expected with
@@ -8109,10 +8111,8 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt ~site =
     | Tvar _ ->
       let body_is_erased =
         match body with
-        | MLrel (i, _) ->
-          not (binder_is_boxed i) && is_env_var_erased env tvars i
-        | Miniml.MLmagic (_, MLrel (i, _)) ->
-          not (binder_is_boxed i) && is_env_var_erased env tvars i
+        | MLrel (i, occ) | Miniml.MLmagic (_, MLrel (i, occ)) ->
+          not (Representation_plan.read ~occ (fun () -> binder_is_boxed i)) && is_env_var_erased env tvars i
         | _ -> false
       in
       if body_is_erased then (fun e -> k (Cpp_erasure.unbox ret e))

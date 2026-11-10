@@ -455,10 +455,10 @@ let with_region ?(owned = []) ?(copied = []) ?resumes ?certain (body : ml_ast) (
      what the enclosing one has no answer for. *)
   let representation, reads =
     match (!tctx).body_owner with
-    | Some _ when Probe.checking () ->
+    | Some _ ->
       let binders, reads = !plan_representation ~outer:(!tctx).env_types body in
       ((!tctx).representation @ binders, (!tctx).planned_reads @ reads)
-    | Some _ | None -> ([], [])
+    | None -> ([], [])
   in
   with_field
     (fun c -> (c.representation, c.planned_reads))

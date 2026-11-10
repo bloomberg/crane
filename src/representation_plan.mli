@@ -18,7 +18,13 @@
     [CRANE_CHECK_IR] translation checks the two agree for every pattern
     binder it declares: a match's branch, a custom match's, the reuse arm's
     second declaration of a branch's fields, a record projection's.  An enum
-    branch binds none.  Nothing reads the plan otherwise.
+    branch binds none.
+
+    Lowering takes whether a variable read holds a box from the plan
+    ({!read}); its own answer is the fallback for a read the plan has none
+    for, and the oracle the plan is held to under [CRANE_CHECK_IR].  Pattern
+    binders' declarations, and every C++ type lowering spells a binder at,
+    are still its own.
 
     A lambda's binders are planned where lowering generates it: one a custom
     constructor stores into an erased field, rewritten as lowering rewrites
@@ -72,3 +78,12 @@ val check : ?as_bound:bool -> site:Core_binder.site -> field:int -> live:bool ->
     the binder the variable read at [occ] reads exactly when lowering does
     ([live]).  A read the plan has no answer for is a violation too. *)
 val check_read : occ:Miniml.Occurrence.t -> live:bool -> unit
+
+(** [read ~occ live] -- whether the variable read at [occ] holds a box: the
+    region's plan ({!region}), where it has an answer, otherwise [live ()],
+    lowering's own ({!Translation_types.binder_is_boxed}).  Under
+    [CRANE_CHECK_IR] the plan's answer is held to [live ()] ({!check_read}). *)
+val read : occ:Miniml.Occurrence.t -> (unit -> bool) -> bool
+
+(** Whether the region's plan has an answer for the read at [occ]. *)
+val has_read : Miniml.Occurrence.t -> bool
