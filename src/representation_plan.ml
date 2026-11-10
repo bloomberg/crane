@@ -21,10 +21,6 @@ type origin =
 type scope = {
   lex : Lexenv.t;
   planned : (cpp_type * origin) option list;
-  slot_rooted : bool list;
-      (* bound by a lambda inside the region, whose representation lowering
-         takes from the slot the lambda fills, or by a pattern over a
-         scrutinee that is such a binder *)
 }
 
 let boxed = function
@@ -40,10 +36,9 @@ let at_binding ty =
   | _ -> None
   | exception _ -> None
 
-let push ?(slot_rooted = false) ids scope =
+let push ids scope =
   { lex = Lexenv.push (List.map (fun (x, ty) -> {Lexenv.eb_id = Mlutil.id_of_mlid x; eb_type = ty; eb_role = Lexenv.Value}) ids) scope.lex;
-    planned = List.map (fun (_, ty) -> at_binding ty) ids @ scope.planned;
-    slot_rooted = List.map (fun _ -> slot_rooted) ids @ scope.slot_rooted }
+    planned = List.map (fun (_, ty) -> at_binding ty) ids @ scope.planned }
 
 let planned scope i = if i >= 1 then Option.flatten (List.nth_opt scope.planned (i - 1)) else None
 
@@ -128,6 +123,10 @@ let custom_pattern_binders scope ~(cs : custom_scrutinee) ~ty ~scrut cname ids =
 
 let region ~outer body =
   let found = ref [] in
+  let promoted_active = (!tctx).promoted_var_map <> [] in
+  let return = (!tctx).current_cpp_return_type in
+  let type_vars = (!tctx).current_type_vars in
+  let is_lambda a = match strip_magic a with MLlam _ -> true | _ -> false in
   let rec walk scope = function
     (* A record projection ({!Translation.gen_expr}, {!Translation.gen_stmts}:
        after a custom match, before any other) declares its fields at the
@@ -142,7 +141,7 @@ let region ~outer body =
       List.iteri
         (fun i (r, b) ->
           found :=
-            (Core_binder.Branch (occ, 0), i, {pr_boxed = boxed r; pr_bound_boxed = boxed b; pr_slot_rooted = false})
+            (Core_binder.Branch (occ, 0), i, {pr_boxed = boxed r; pr_bound_boxed = boxed b})
             :: !found )
         (List.combine retyped bound);
       let inner = push (List.rev ids) scope in
@@ -166,12 +165,7 @@ let region ~outer body =
       in
       Array.iteri
         (fun bi (ids, _, pat, body) ->
-          let slot_rooted =
-            match scrutinee_binder scope.lex scrut with
-            | Some i -> Option.default false (List.nth_opt scope.slot_rooted (i - 1))
-            | None -> false
-          in
-          let inner = push ~slot_rooted (List.rev ids) scope in
+          let inner = push (List.rev ids) scope in
           let inner =
             match pat with
             | Pusual r | Pcons (r, _) when ids <> [] ->
@@ -182,7 +176,7 @@ let region ~outer body =
                     match List.nth_opt ids i with Some (_, t) -> boxed (at_binding t) | None -> false
                   in
                   found :=
-                    (Core_binder.Branch (occ, bi), i, {pr_boxed = boxed p; pr_bound_boxed; pr_slot_rooted = slot_rooted})
+                    (Core_binder.Branch (occ, bi), i, {pr_boxed = boxed p; pr_bound_boxed})
                     :: !found )
                 field_planned;
               {inner with planned = List.rev field_planned @ scope.planned}
@@ -190,22 +184,84 @@ let region ~outer body =
           in
           walk inner body )
         branches
+    (* A lambda a custom constructor stores via [crane_erase_fn] is generated
+       rewritten ({!Translation_types.erased_fn_lambda}): a custom match on its
+       parameter reads it boxed.  Decided at the constructor's own drafted
+       instantiation, which is lowering's wherever the destination states no
+       more than the annotation. *)
+    | MLcons (ty, r, args) when Table.is_custom r ->
+      let env = Common.empty_env () in
+      let field_tys =
+        match Table.get_ctor_ip_types_opt r with
+        | Some ft -> List.filter (fun t -> not (Mlutil.isTdummy t)) ft
+        | None -> []
+      in
+      let temps = ctor_draft_temps env ~promoted_active ~return ty in
+      List.iteri
+        (fun i e ->
+          match strip_magic e with
+          | MLlam _ when stores_erased_fn env r ~field_tys ~temps i e -> walk scope (erased_fn_lambda env e)
+          | _ -> walk scope e )
+        args
+    (* A lambda passed to a global is generated in the slot of the parameter
+       it is passed at, its binders refined against that parameter's ML type
+       ({!Translation_types.slot_refined_lambda}): the callee's declared
+       type at the call's reading ({!Core_elaborate.instantiate}), where it
+       erases nothing.  Read with no type the call's position states. *)
+    | MLapp (MLglob use, args) when List.exists is_lambda args ->
+      let call = Core_elaborate.elaborate_arguments ~lex:scope.lex use args in
+      let inst =
+        Core_elaborate.instantiate ~lex:scope.lex ~expected_ml:None ~stated_ml:None ~caller:(!tctx).body_owner
+          ~scope:type_vars call
+      in
+      let leading = Elaborated_call.leading_params call in
+      let param_ml_ty i =
+        let param_index = Param_pos.of_regular ~leading i in
+        let subst =
+          if Table.is_inline_custom use.callee then Some (Param_pos.subst_at_declared param_index)
+          else inst.subst_index_of_orig param_index
+        in
+        match subst with
+        | Some j -> Param_pos.nth inst.params j
+        | None -> (
+          match Param_pos.nth inst.params_orig param_index with
+          | Some t when not (erased_by_extraction t) -> Some t
+          | _ -> None )
+      in
+      let regular_index a =
+        let rec go i = function [] -> None | r :: rest -> if r == a then Some i else go (i + 1) rest in
+        go 0 call.regular
+      in
+      List.iter
+        (fun a ->
+          match (strip_magic a, regular_index a) with
+          | (MLlam _ as lam), Some i ->
+            let expected_ml_ty =
+              match param_ml_ty i with Some t when not (ml_type_contains_erased t) -> Some t | _ -> None
+            in
+            let ids, body = Mlutil.collect_lams lam in
+            let ids, body = slot_refined_lambda (Common.empty_env ()) ~expected_ml_ty ids body in
+            walk (push ids scope) body
+          | _ -> walk scope a )
+        args
     | MLletin (x, ty, a, body, _) ->
       walk scope a;
       walk (push [(x, ty)] scope) body
-    (* A lambda's parameter is given the type of the slot the lambda fills
-       where lowering builds it -- a [const auto &] at a box, the callee's
-       domain at its instance -- which nothing here plans yet. *)
+    (* Any other lambda's binders at the types they are annotated with.
+       Lowering also declares a parameter by the C++ slot the lambda fills --
+       [const auto &], or [std::any] where the slot's domain is a box --
+       which the check holds to the same answer for every pattern binder
+       rooted at one. *)
     | MLlam _ as e ->
       let ids, body = Mlutil.collect_lams e in
-      walk (push ~slot_rooted:true ids scope) body
+      walk (push ids scope) body
     | MLfix (_, fs, defs, _, _) ->
       let scope = push (List.rev_map (fun (f, ty) -> (Id f, ty)) (Array.to_list fs)) scope in
       Array.iter (walk scope) defs
     | e -> Mlutil.ast_iter (walk scope) e
   in
   let outer_planned = List.init (Lexenv.depth outer) (fun i -> Option.bind (Lexenv.type_opt outer (i + 1)) at_binding) in
-  walk {lex = outer; planned = outer_planned; slot_rooted = List.map (fun _ -> false) outer_planned} body;
+  walk {lex = outer; planned = outer_planned} body;
   !found
 
 let same_site a b =
@@ -225,14 +281,13 @@ let check ?(as_bound = false) ~site ~field ~live () =
       ++ str ", the plan " ++ str planned)
   in
   match List.find_opt (fun (s, f, _) -> Int.equal f field && same_site s site) (!tctx).representation with
-  | Some (_, _, {pr_boxed; pr_bound_boxed; pr_slot_rooted}) ->
-    let pr_boxed, pr_slot_rooted = if as_bound then (pr_bound_boxed, false) else (pr_boxed, pr_slot_rooted) in
+  | Some (_, _, {pr_boxed; pr_bound_boxed}) ->
+    let pr_boxed = if as_bound then pr_bound_boxed else pr_boxed in
     let agrees = pr_boxed = live in
     Probe.hit "repr-plan" (fun () ->
         (if as_bound then "bound " else "")
-        ^ (if pr_slot_rooted then "slot-rooted " else "")
         ^ (if agrees then "agree " else "disagree ")
         ^ if agrees then if live then "boxed" else "value" else Pp.string_of_ppcmds (describe ""));
-    if not (agrees || pr_slot_rooted) then
+    if not agrees then
       Probe.violation "pattern binder representation" (describe (if pr_boxed then "boxes" else "does not"))
   | None -> Probe.violation "pattern binder representation" (describe "has no answer")
