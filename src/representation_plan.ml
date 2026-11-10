@@ -21,6 +21,7 @@ type origin =
 type scope = {
   lex : Lexenv.t;
   planned : (cpp_type * origin) option list;
+  kinds : binder_kind list;
 }
 
 let boxed = function
@@ -36,9 +37,29 @@ let at_binding ty =
   | _ -> None
   | exception _ -> None
 
-let push ids scope =
+let push kind ids scope =
   { lex = Lexenv.push (List.map (fun (x, ty) -> {Lexenv.eb_id = Mlutil.id_of_mlid x; eb_type = ty; eb_role = Lexenv.Value}) ids) scope.lex;
-    planned = List.map (fun (_, ty) -> at_binding ty) ids @ scope.planned }
+    planned = List.map (fun (_, ty) -> at_binding ty) ids @ scope.planned;
+    kinds = List.map (fun _ -> kind) ids @ scope.kinds }
+
+(* A lambda's parameters ({!Translation.gen_expr}'s [MLlam]): one erasure
+   removed that the lambda keeps is declared [std::any], the box whatever
+   its caller passes; one nothing typed ([Tunknown]) too, where the slot the
+   lambda fills declares the parameter's domain a box ([slot_boxes], by
+   source position) -- otherwise lowering declares it [const auto &]. *)
+let push_parameters ?(slot_boxes = fun _ -> false) ids scope =
+  let scope = push Kparameter ids scope in
+  let n = List.length ids in
+  let declared =
+    List.mapi
+      (fun k (_, ty) ->
+        match resolve_tmeta ty with
+        | Tdummy _ -> Some (Tany, Binding)
+        | Tunknown when slot_boxes (n - 1 - k) -> Some (Tany, Binding)
+        | _ -> at_binding ty )
+      ids
+  in
+  {scope with planned = declared @ List.filteri (fun i _ -> i >= n) scope.planned}
 
 let planned scope i = if i >= 1 then Option.flatten (List.nth_opt scope.planned (i - 1)) else None
 
@@ -123,11 +144,27 @@ let custom_pattern_binders scope ~(cs : custom_scrutinee) ~ty ~scrut cname ids =
 
 let region ~outer body =
   let found = ref [] in
+  let reads = ref [] in
   let promoted_active = (!tctx).promoted_var_map <> [] in
   let return = (!tctx).current_cpp_return_type in
   let type_vars = (!tctx).current_type_vars in
   let is_lambda a = match strip_magic a with MLlam _ -> true | _ -> false in
-  let rec walk scope = function
+  (* A lambda stored in a constructor's field is written against the field's
+     declared function type: a parameter nothing typed is declared a box
+     where the field's domain there converts to one.  The field's C++ type is
+     approximated by converting its ML domain, ahead of the earlier choices
+     lowering makes for such a parameter (a pattern lambda's spelled type,
+     the slot's own concrete domain). *)
+  let rec walk_field_lambda scope field_ty lam =
+    let ids, body = Mlutil.collect_lams lam in
+    let doms = match field_ty with Some t -> ml_domains t | None -> [] in
+    let slot_boxes j =
+      match List.nth_opt doms j with
+      | Some d -> ( try resolves_to_any_type (cpp_of_ml (Common.empty_env ()) d) with _ -> false )
+      | None -> false
+    in
+    walk (push_parameters ~slot_boxes ids scope) body
+  and walk scope = function
     (* A record projection ({!Translation.gen_expr}, {!Translation.gen_stmts}:
        after a custom match, before any other) declares its fields at the
        types they are bound at, pinned by nothing: as statements, with a
@@ -144,7 +181,7 @@ let region ~outer body =
             (Core_binder.Branch (occ, 0), i, {pr_boxed = boxed r; pr_bound_boxed = boxed b})
             :: !found )
         (List.combine retyped bound);
-      let inner = push (List.rev ids) scope in
+      let inner = push Kpattern (List.rev ids) scope in
       walk {inner with planned = List.rev retyped @ scope.planned} body
     | MLcase (ty, scrut, branches, occ) ->
       walk scope scrut;
@@ -165,7 +202,7 @@ let region ~outer body =
       in
       Array.iteri
         (fun bi (ids, _, pat, body) ->
-          let inner = push (List.rev ids) scope in
+          let inner = push Kpattern (List.rev ids) scope in
           let inner =
             match pat with
             | Pusual r | Pcons (r, _) when ids <> [] ->
@@ -201,6 +238,19 @@ let region ~outer body =
         (fun i e ->
           match strip_magic e with
           | MLlam _ when stores_erased_fn env r ~field_tys ~temps i e -> walk scope (erased_fn_lambda env e)
+          | MLlam _ as lam -> walk_field_lambda scope (List.nth_opt field_tys i) lam
+          | _ -> walk scope e )
+        args
+    | MLcons (_, r, args) when List.exists is_lambda args ->
+      let field_tys =
+        match Table.get_ctor_ip_types_opt r with
+        | Some ft -> List.filter (fun t -> not (Mlutil.isTdummy t)) ft
+        | None -> []
+      in
+      List.iteri
+        (fun i e ->
+          match strip_magic e with
+          | MLlam _ as lam -> walk_field_lambda scope (List.nth_opt field_tys i) lam
           | _ -> walk scope e )
         args
     (* A lambda passed to a global is generated in the slot of the parameter
@@ -241,34 +291,64 @@ let region ~outer body =
             in
             let ids, body = Mlutil.collect_lams lam in
             let ids, body = slot_refined_lambda (Common.empty_env ()) ~expected_ml_ty ids body in
-            walk (push ids scope) body
+            (* A callable the callee deduces is written against
+               [const auto &] where the slot's domain is a box
+               ({!Translation_calls.deduce_erased_domains}). *)
+            let deduced = Callable_abi.deduces_callable use.callee (Param_pos.of_regular ~leading i) in
+            walk (push_parameters ~slot_boxes:(fun _ -> not deduced) ids scope) body
           | _ -> walk scope a )
         args
     | MLletin (x, ty, a, body, _) ->
       walk scope a;
-      walk (push [(x, ty)] scope) body
+      walk (push Klet [(x, ty)] scope) body
     (* Any other lambda's binders at the types they are annotated with.
        Lowering also declares a parameter by the C++ slot the lambda fills --
        [const auto &], or [std::any] where the slot's domain is a box --
        which the check holds to the same answer for every pattern binder
-       rooted at one. *)
+       rooted at one, and counts for every read of one. *)
     | MLlam _ as e ->
       let ids, body = Mlutil.collect_lams e in
-      walk (push ids scope) body
+      walk (push_parameters ids scope) body
     | MLfix (_, fs, defs, _, _) ->
-      let scope = push (List.rev_map (fun (f, ty) -> (Id f, ty)) (Array.to_list fs)) scope in
+      let scope = push Kfix (List.rev_map (fun (f, ty) -> (Id f, ty)) (Array.to_list fs)) scope in
       Array.iter (walk scope) defs
+    (* A read: whatever its binder is planned. *)
+    | MLrel (i, occ) ->
+      let rd_kind = Option.default Kouter (List.nth_opt scope.kinds (i - 1)) in
+      reads := (occ, {rd_boxed = boxed (planned scope i); rd_kind}) :: !reads
     | e -> Mlutil.ast_iter (walk scope) e
   in
-  let outer_planned = List.init (Lexenv.depth outer) (fun i -> Option.bind (Lexenv.type_opt outer (i + 1)) at_binding) in
-  walk {lex = outer; planned = outer_planned} body;
-  !found
+  let depth = Lexenv.depth outer in
+  let outer_planned = List.init depth (fun i -> Option.bind (Lexenv.type_opt outer (i + 1)) at_binding) in
+  walk {lex = outer; planned = outer_planned; kinds = List.init depth (fun _ -> Kouter)} body;
+  (!found, List.rev !reads)
 
 let same_site a b =
   match (a, b) with
   | Core_binder.Branch (o, i), Core_binder.Branch (o', i') -> Occurrence.equal o o' && Int.equal i i'
   | Binding o, Binding o' -> Occurrence.equal o o'
   | Branch _, Binding _ | Binding _, Branch _ -> false
+
+let kind_name = function
+  | Kouter -> "outer"
+  | Kparameter -> "parameter"
+  | Klet -> "let"
+  | Kfix -> "fix"
+  | Kpattern -> "pattern"
+
+let check_read ~occ ~live =
+  if Option.has_some (!tctx).body_owner && Probe.checking () then
+    match List.assq_opt occ (!tctx).planned_reads with
+    | Some {rd_boxed; rd_kind} ->
+      let agrees = rd_boxed = live in
+      Probe.hit "repr-read" (fun () ->
+          (if agrees then "agree " else "disagree ")
+          ^ kind_name rd_kind
+          ^ (if live then " live-boxed" else " live-value")
+          ^ match (!tctx).body_owner with
+            | Some r when not agrees -> " " ^ Pp.string_of_ppcmds (Names.GlobRef.print r)
+            | _ -> "")
+    | None -> Probe.hit "repr-read" (fun () -> "unplanned" ^ if live then " live-boxed" else " live-value")
 
 let check ?(as_bound = false) ~site ~field ~live () =
   let describe planned =
