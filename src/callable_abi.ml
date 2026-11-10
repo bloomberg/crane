@@ -440,6 +440,25 @@ let plan ?omitted ?(instances = 0) ?higher_kinded ?kept ?reachable ?relaxed ?pha
     in
     with_dictionaries instances base
 
+(* The unit's plans of class fields called through a concrete instance, by
+   field. *)
+let projection_plans : t GlobRef.Map_env.t ref = State.cell State.Unit GlobRef.Map_env.empty
+
+let install_projections derive fields =
+  projection_plans := List.fold_left (fun m r -> GlobRef.Map_env.add r (derive r) m) GlobRef.Map_env.empty fields
+
+let projection derive x =
+  match GlobRef.Map_env.find_opt x !projection_plans with
+  | Some abi ->
+    if Probe.checking () && not (same_head abi (derive x)) then
+      Probe.violation "callable ABI"
+        Pp.(str "the projection plan of " ++ GlobRef.print x ++ str " differs from the one planned");
+    abi
+  | None -> (
+    match Common.get_phase () with
+    | Common.Emit -> unplanned Pp.(str "the projection " ++ GlobRef.print x)
+    | Common.Plan -> derive x )
+
 let report_foreign () =
   Printf.sprintf "foreign callable plans: %d planned; emission found %d"
     (GlobRef.Map_env.cardinal !foreign_plans) !foreign_found

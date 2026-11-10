@@ -127,6 +127,20 @@ let curry_to_expected env ?expected_ty use cglob =
   in
   curry_value_to_expected env ?expected_ty ~callee_site ml_ty cglob
 
+(** The plan a call of the class field [x] through a concrete instance is
+    written against.  The instance declares each method as a member template
+    over the method's own type variables -- the class's parameters are the
+    instance, not parameters of its methods -- so the plan keeps the
+    variables whose binders come after the class's. *)
+let projection_abi x =
+  let n_class = Ml_type_util.projection_class_arity x in
+  let of_method v =
+    match Option.bind (Mlutil.recorded_schema x) (fun s -> Ml_schema.origin s v) with
+    | Some b -> Scheme.Binder.position b.Ml_schema.binder >= n_class
+    | None -> true
+  in
+  Callable_abi.foreign ~callee:x ~scheme:(Mlutil.reference_scheme x) ~kept:of_method ()
+
 (** The plan a call to [id] is written against: the head [id] was declared
     with, or, where it is not generated here, the conventions its call sites
     assume -- [instances] dictionaries first, then the variables it keeps up

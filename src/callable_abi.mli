@@ -305,6 +305,17 @@ val plan :
   scheme:Scheme.Id.t option ->
   t
 
+(** [install_projections derive fields] makes [derive x] the unit's plan of
+    a call of each class field [x] of [fields] through a concrete instance,
+    planned before anything is rendered.  Replaces the unit's previous
+    projection plans. *)
+val install_projections : (Names.GlobRef.t -> t) -> Names.GlobRef.t list -> unit
+
+(** The plan {!install_projections} made of a call of the class field [x]
+    through a concrete instance.  Under [CRANE_CHECK_IR] it is checked
+    against [derive x]; emission finding none planned is a violation. *)
+val projection : (Names.GlobRef.t -> t) -> Names.GlobRef.t -> t
+
 (** How many foreign plans the unit planned, and how many emission found
     planned or derived itself. *)
 val report_foreign : unit -> string
