@@ -788,15 +788,7 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
      (e.g. [itree_vis] expects [std::function<std::any()>], not a bare
      lambda), and the mismatched [std::any_cast] throws at runtime
      (CWE-704, finding 44). *)
-  let is_passthrough_ctor_arg i =
-    match r with
-    | GlobRef.ConstructRef ((kn, mi), cidx) ->
-      ( try
-          let tmpl = List.nth (Table.find_custom_ctor_templates (kn, mi)) (cidx - 1) in
-          String.trim tmpl = Printf.sprintf "%%a%d" i
-        with _ -> false )
-    | _ -> false
-  in
+  let is_passthrough_ctor_arg = ctor_arg_is_passthrough r in
   (* PROMOTED TYPE VARIABLES in constructor expressions: Use module-level
      aliases (std::any) instead of template-qualified types.
 
@@ -910,45 +902,9 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
   let field_types_for_wrap = match Table.get_ctor_ip_types_opt r with
     | Some ft -> List.filter (fun t -> not (Mlutil.isTdummy t)) ft
     | None -> [] in
-  let draft_ctor_temps_for_wrap = match ty with
-    | Miniml.Tglob (cn, raw_tys, _) ->
-      let tys = match cn with
-        | GlobRef.IndRef (kn, _) ->
-          (match Table.get_ind_num_param_vars_opt kn with
-          | Some nv -> safe_firstn nv raw_tys
-          | None -> raw_tys)
-        | _ -> raw_tys
-      in
-      (* Resolve against the enclosing type-variable names: inside a member
-         template a [Tvar] is a real parameter, not an erased type. *)
-      let temps = template_params_of_ml ~site:Through_tvar env tys in
-      (* When all type args are erased and promoted_var_map is active, use
-         concrete promoted types so elements don't get wrapped in std::any. *)
-      if List.for_all prints_as_any temps && (!tctx).promoted_var_map <> [] then
-        match promoted_tys_of_arity (List.length tys) with
-        | Some promoted_tys -> promoted_tys
-        | None -> temps
-      else if List.for_all prints_as_any temps then
-        (* The constructor's own annotation was erased, but the enclosing
-           method declares the very same type with its arguments intact --
-           inside a member template, [Some a] returning [optional<_A0>]. *)
-        match (!tctx).current_cpp_return_type with
-        | Some (Tglob (rn, rargs, _))
-          when GlobRef.CanOrd.equal rn cn
-               && List.length rargs = List.length temps
-               && not (List.exists prints_as_any rargs) ->
-          rargs
-        | _ -> temps
-      else temps
-    | _ -> []
-  in
-  (* These are storage slots: writing a field down as [std::any] is what makes
-     the value in it boxed, so a slot whose representation was merely unknown
-     becomes known-boxed here (see {!materialise_opaque}).  Without this a
-     payload declared [pair<std::any, std::any>] would store its components
-     raw, and the consumer's [any_cast] on them would throw. *)
   let draft_ctor_temps_for_wrap =
-    List.map materialise_opaque draft_ctor_temps_for_wrap
+    ctor_draft_temps env ~promoted_active:((!tctx).promoted_var_map <> [])
+      ~return:(!tctx).current_cpp_return_type ty
   in
   (* The same slots, read off the destination instead of off this
      constructor's own annotation.  A locally concrete value can be built into
@@ -1143,39 +1099,9 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
             | _ -> Some cpp_ty)
         | None -> None
       in
-      let will_erase_fn_wrap =
-        match List.nth_opt field_types_for_wrap i with
-        | Some (Miniml.Tvar (_, j)) ->
-          (match List.nth_opt ctor_temps_at_slot (j - 1) with
-          | _ when is_passthrough_ctor_arg i -> false
-          | Some t when prints_as_any (unfold_cpp_typedef env t) ->
-            ml_expr_is_function_value e
-          | _ -> false)
-        | _ -> false
-      in
       let e =
-        if will_erase_fn_wrap then
-          match strip_magic e with
-          | MLlam (id, ty, body) ->
-            (* The lambda is stored via [crane_erase_fn] into an erased slot,
-               so at runtime it is invoked with its argument boxed as a single
-               [std::any] holding the fully-erased representation
-               ([pair<any,any>] for a pair domain) — that is what producers of
-               a value-dependent type emit (see a [Boxed] slot).  Its
-               parameter's own pattern match must therefore treat the scrutinee
-               as erased and go through [any_cast<pair<any,any>>]. *)
-            let param_cpp_ty = cpp_of_ml env ty in
-            if Ml_type_util.has_tany_in_type param_cpp_ty then
-              MLlam (id, ty, mark_own_param_for_pair_erasure 1 body)
-            else
-              (* Domain resolves to a fully concrete type at this literal (e.g.
-                 a literal index [0] picks out a concrete branch of a dependent
-                 type family), yet the value received at runtime is the erased
-                 [pair<any,any>] a generic producer emits.  Erase the parameter
-                 to [std::any] so the lambda renders with an erased parameter
-                 and the [any_cast<pair<any,any>>] on it compiles. *)
-              MLlam (id, Miniml.Tunknown, mark_own_param_for_pair_erasure 1 body)
-          | _ -> e
+        if stores_erased_fn env r ~field_tys:field_types_for_wrap ~temps:ctor_temps_at_slot i e then
+          erased_fn_lambda env e
         else e
       in
       (* The slot's own signature, when it erased only its domain: a callable
@@ -2074,78 +2000,12 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         match extend n with Some r -> r | None -> (args, a) )
       | _ -> (args, a)
     in
-    (* A binder's recorded type is whatever extraction managed to infer for
-       it, and a component it never inferred stays erased even where the rest
-       of the type is spelled in full: [pair(list(pair(A, B)), Tdummy)] for a
-       [x] the callee declares at [pair(list(pair(A, B)), list(B))].  The slot
-       states the whole shape, so refine the binder against it -- here, at the
-       {e ML} type, before anything reads it.
-
-       Doing it here rather than on the C++ spelling is the point.  The
-       signature and the body are generated from this one type: correct it at
-       the declaration and the body decomposes the pair at the type it really
-       has, while correcting the spelling alone leaves the body unboxing at the
-       erased view its own generation assumed (see
-       {!Ml_type_util.refine_param_from_slot}, which for that reason may only
-       refine as far as still-erased).
-
-       [args] is innermost-first and a signature's domains are in source order,
-       so the two are indexed opposite ways. *)
-    (* A variable of the callee's the slot names and this scope does not --
-       [TFunctor_block]'s [U], its instance emitted at [std::any] -- is erased
-       where it sits, so the rest of the slot still describes the lambda: its
-       binders ([md : list (metadata _)], what the structured binding of a
-       [List<metadata<std::any>>] holds) and its result. *)
-    (* Only where extraction left the lambda's binders open is it read at the
-       erased view: an erased position is no information about a binder that
-       has a type of its own ([state_get]'s [s : T1]), nor about its result. *)
-    let rec has_open_meta t =
-      match t with
-      | Miniml.Tmeta {contents = None} | Miniml.Topen _ -> true
-      | Miniml.Tmeta {contents = Some t} -> has_open_meta t
-      | Miniml.Tarr (a, b) -> has_open_meta a || has_open_meta b
-      | Miniml.Tglob (_, ts, _) -> List.exists has_open_meta ts
-      | _ -> false
-    in
+    (* The binders refined against the slot, where it is not a box: see
+       {!Translation_types.slot_refined_lambda}. *)
     let binders_left_open = List.exists (fun (_, ty) -> has_open_meta ty) args in
-    let rec erase_unscoped t =
-      match resolve_tmeta t with
-      | Miniml.Tvar _ as v when not (names_only_scoped_tvars (cpp_of_ml env v)) ->
-        Miniml.Tunknown
-      | Miniml.Tarr (a, b) -> Miniml.Tarr (erase_unscoped a, erase_unscoped b)
-      | Miniml.Tglob (g, ts, l) -> Miniml.Tglob (g, List.map erase_unscoped ts, l)
-      | t -> t
+    let args, a =
+      slot_refined_lambda env ~expected_ml_ty:(if boxed slot then None else slot.expected_ml_ty) args a
     in
-    (* A hole a binder's type is filled at is the hole the other binders'
-       and the body's annotations mention -- the match destructuring the
-       binder among them -- so they are generated with it filled too. *)
-    let fills = ref [] in
-    let args =
-      match (boxed slot, slot.expected_ml_ty) with
-      | false, Some fn_ty ->
-        let rec domains ty =
-          match resolve_tmeta ty with
-          | Miniml.Tarr (d, cod) -> d :: domains cod
-          | _ -> []
-        in
-        let doms = Array.of_list (domains fn_ty) in
-        let n = List.length args in
-        List.mapi
-          (fun i (x, ty) ->
-            if n - 1 - i >= Array.length doms then (x, ty)
-            else
-              let d = doms.(n - 1 - i) in
-              let d = if has_open_meta ty then erase_unscoped d else d in
-              ( x,
-                Ml_type_util.refine_erased
-                  ~fills
-                  ~writable:(fun t -> names_only_scoped_tvars (cpp_of_ml env t))
-                  ty d ) )
-          args
-      | _ -> args
-    in
-    let args = List.map (fun (x, t) -> (x, Ml_type_util.fill_holes_type !fills t)) args in
-    let a = Ml_type_util.fill_holes !fills a in
     let lam_params = List.map (fun (x, y) -> (id_of_mlid x, y)) args in
     let args, env = push_vars' lam_params env in
     let saved_env_types = (!tctx).env_types in

@@ -2908,6 +2908,153 @@ let ml_expr_is_function_value e =
        fall back on the shape rather than on the failed inference. *)
     | None -> ( match other with MLlam _ -> true | _ -> false ) )
 
+(** Whether [t] still has a hole extraction left open. *)
+let rec has_open_meta t =
+  match t with
+  | Miniml.Tmeta {contents = None} | Miniml.Topen _ -> true
+  | Miniml.Tmeta {contents = Some t} -> has_open_meta t
+  | Miniml.Tarr (a, b) -> has_open_meta a || has_open_meta b
+  | Miniml.Tglob (_, ts, _) -> List.exists has_open_meta ts
+  | _ -> false
+
+(** [slot_refined_lambda env ~expected_ml_ty args body] -- the binders [args]
+    (innermost first) of a lambda over [body], and [body], as lowering
+    generates them in a slot of ML type [expected_ml_ty]
+    ({!Translation.gen_expr}'s [MLlam] case; [None] where the slot is a box
+    or states none).
+
+    A binder's recorded type is whatever extraction managed to infer for it,
+    and a component it never inferred stays erased even where the rest of the
+    type is spelled in full: [pair(list(pair(A, B)), Tdummy)] for a [x] the
+    callee declares at [pair(list(pair(A, B)), list(B))].  The slot states the
+    whole shape, so the binder is refined against it -- at the {e ML} type,
+    before anything reads it.  The signature and the body are generated from
+    this one type: correct it at the declaration and the body decomposes the
+    pair at the type it really has, while correcting the spelling alone
+    leaves the body unboxing at the erased view its own generation assumed
+    (see {!Ml_type_util.refine_param_from_slot}, which for that reason may
+    only refine as far as still-erased).  A signature's domains are in source
+    order, so they index [args] the opposite way.
+
+    A variable of the callee's the slot names and this scope does not --
+    [TFunctor_block]'s [U], its instance emitted at [std::any] -- is erased
+    where it sits, so the rest of the slot still describes the lambda.  Only
+    where extraction left a binder open is it read at that erased view: an
+    erased position is no information about a binder that has a type of its
+    own ([state_get]'s [s : T1]).  A hole a binder's type is filled at is the
+    hole the other binders' and the body's annotations mention -- the match
+    destructuring the binder among them -- so they are filled too. *)
+let slot_refined_lambda env ~expected_ml_ty args body =
+  let rec erase_unscoped t =
+    match resolve_tmeta t with
+    | Miniml.Tvar _ as v when not (names_only_scoped_tvars (cpp_of_ml env v)) -> Miniml.Tunknown
+    | Miniml.Tarr (a, b) -> Miniml.Tarr (erase_unscoped a, erase_unscoped b)
+    | Miniml.Tglob (g, ts, l) -> Miniml.Tglob (g, List.map erase_unscoped ts, l)
+    | t -> t
+  in
+  let fills = ref [] in
+  let args =
+    match expected_ml_ty with
+    | Some fn_ty ->
+      let rec domains ty =
+        match resolve_tmeta ty with
+        | Miniml.Tarr (d, cod) -> d :: domains cod
+        | _ -> []
+      in
+      let doms = Array.of_list (domains fn_ty) in
+      let n = List.length args in
+      List.mapi
+        (fun i (x, ty) ->
+          if n - 1 - i >= Array.length doms then (x, ty)
+          else
+            let d = doms.(n - 1 - i) in
+            let d = if has_open_meta ty then erase_unscoped d else d in
+            (x, Ml_type_util.refine_erased ~fills ~writable:(fun t -> names_only_scoped_tvars (cpp_of_ml env t)) ty d) )
+        args
+    | None -> args
+  in
+  let args = List.map (fun (x, t) -> (x, Ml_type_util.fill_holes_type !fills t)) args in
+  (args, Ml_type_util.fill_holes !fills body)
+
+(** Whether argument [i] of constructor [r] is forwarded unboxed by the
+    constructor's custom template ([%a<i>] and nothing else): a pure
+    type-level erasure marker such as [sum1], with no field storage to box
+    into. *)
+let ctor_arg_is_passthrough r i =
+  match r with
+  | GlobRef.ConstructRef ((kn, mi), cidx) ->
+    ( try
+        let tmpl = List.nth (Table.find_custom_ctor_templates (kn, mi)) (cidx - 1) in
+        String.trim tmpl = Printf.sprintf "%%a%d" i
+      with _ -> false )
+  | _ -> false
+
+(** The template arguments a custom constructor annotated [ty] is drafted
+    at, before its destination refines them ({!Translation.gen_expr_custom_cons}):
+    the inductive's parameters, converted, where every one erases the
+    promoted types of [promoted_active]'s arity or, failing that, [return]'s
+    arguments when it is the same inductive; an unresolved one written down as
+    a box ({!Ml_type_util.materialise_opaque}). *)
+let ctor_draft_temps env ~promoted_active ~return (ty : ml_type) =
+  let temps =
+    match ty with
+    | Miniml.Tglob (cn, raw_tys, _) ->
+      let tys =
+        match cn with
+        | GlobRef.IndRef (kn, _) -> (
+          match Table.get_ind_num_param_vars_opt kn with
+          | Some nv -> safe_firstn nv raw_tys
+          | None -> raw_tys )
+        | _ -> raw_tys
+      in
+      let temps = template_params_of_ml ~site:Through_tvar env tys in
+      if List.for_all prints_as_any temps && promoted_active then
+        match promoted_tys_of_arity (List.length tys) with
+        | Some promoted_tys -> promoted_tys
+        | None -> temps
+      else if List.for_all prints_as_any temps then
+        match return with
+        | Some (Tglob (rn, rargs, _))
+          when GlobRef.CanOrd.equal rn cn
+               && List.length rargs = List.length temps
+               && not (List.exists prints_as_any rargs) ->
+          rargs
+        | _ -> temps
+      else temps
+    | _ -> []
+  in
+  List.map materialise_opaque temps
+
+(** Whether argument [e], at index [i] of constructor [r], is a function
+    stored via [crane_erase_fn] into an erased field: the field is at a type
+    parameter of the inductive ([field_tys], dummies dropped) whose template
+    argument ([temps]) prints as [std::any], and the constructor's template
+    does not forward the argument as it is. *)
+let stores_erased_fn env r ~field_tys ~temps i e =
+  match List.nth_opt field_tys i with
+  | Some (Miniml.Tvar (_, j)) -> (
+    match List.nth_opt temps (j - 1) with
+    | _ when ctor_arg_is_passthrough r i -> false
+    | Some t when prints_as_any (unfold_cpp_typedef env t) -> ml_expr_is_function_value e
+    | _ -> false )
+  | _ -> false
+
+(** [e], a constructor argument {!stores_erased_fn} says is stored via
+    [crane_erase_fn], as lowering generates it: a lambda is only ever invoked
+    with its whole argument boxed as one [std::any] holding the fully erased
+    representation ([pair<any,any>] for a pair domain), so a custom match on
+    its own parameter reads the scrutinee as erased
+    ({!mark_own_param_for_pair_erasure}); a parameter whose type converts with
+    no erased position -- a literal index picking a concrete branch of a type
+    family -- is erased to [std::any] so that the cast on it compiles. *)
+let erased_fn_lambda env e =
+  match strip_magic e with
+  | MLlam (id, ty, body) ->
+    if Ml_type_util.has_tany_in_type (cpp_of_ml env ty) then
+      MLlam (id, ty, mark_own_param_for_pair_erasure 1 body)
+    else MLlam (id, Miniml.Tunknown, mark_own_param_for_pair_erasure 1 body)
+  | _ -> e
+
 (** [is_boxed_source t] -- whether a value whose C++ type is [t] is
     physically inside a [std::any], and so may be read back out with an
     [any_cast].
