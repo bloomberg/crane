@@ -4253,3 +4253,11 @@ let extract_skip_or_module q =
 (** {2 Tables synchronization} *)
 
 let reset_tables () = State.reset State.Extraction
+
+(** {2 Local fixpoint groups recursing at a ground instance} *)
+
+let erased_fix_groups = State.cell State.Extraction ([] : Miniml.Occurrence.t list)
+
+let add_erased_fix_group occ = erased_fix_groups := occ :: !erased_fix_groups
+
+let is_erased_fix_group occ = List.exists (Miniml.Occurrence.equal occ) !erased_fix_groups

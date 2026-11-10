@@ -33,6 +33,41 @@ include Translation_calls
    BoxedFields], boxed or not per instantiation). *)
 type field_read = Read_as_bound | Read_through_pointer | Read_unboxed
 
+(* The types of the members of the local fixpoint groups being generated
+   that recurse at a ground instance ({!Table.is_erased_fix_group}), as the
+   environment binds them: a call of one is written at its own instance, and
+   its arguments are adapted to the erased parameters. *)
+let erased_member_types : Miniml.ml_type list ref = State.cell State.Unit []
+
+(* Record the members [ids] of the local fixpoint [occ] -- and the type
+   [let_ty] of the name it is bound to, if any -- in {!erased_member_types}
+   where the group is one.  Kept by identity, so a type recorded for one
+   group is no other binding's. *)
+let register_erased_members ?let_ty occ ids =
+  if Table.is_erased_fix_group occ then
+    erased_member_types :=
+      (match let_ty with Some t -> [t] | None -> []) @ List.map snd (Array.to_list ids) @ !erased_member_types
+
+(* Whether the variable [i] is a member of a group {!erased_member_types}
+   knows, its type erasing a domain. *)
+let erased_member i =
+  match get_env_type_opt i with
+  | Some (Miniml.Tarr _ as t) ->
+    List.memq t !erased_member_types && List.exists Mlutil.has_unknown (ml_domains t)
+  | _ -> false
+
+(* [expr], the argument [a] to a parameter of type [param_ty] that
+   erased a domain ({!erased_member_types}), adapted to it -- unless it is
+   a variable already of that type, which an adapter would only wrap again at
+   every call that passes it on. *)
+let adapt_to_erased_param env param_ty a expr =
+  match a with
+  | MLrel (j, _)
+    when (match get_env_type_opt j with
+          | Some t -> cpp_of_ml env t = cpp_of_ml env param_ty
+          | None -> false) -> expr
+  | _ -> erase_fn_arg_for_param env param_ty a expr
+
 (* The binders of the local fixpoint [occ], as the source has them, each
    with the member of the fixpoint it binds and the Core binders of that
    member's parameters, as [compiled], what {!gen_fix} made of each member,
@@ -7218,6 +7253,11 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     (* The callee's own function type, with an alias standing for one expanded
        -- a single-method class is its method, so [Iter M] {e is} the arrow the
        call goes through. *)
+    let erased_callee =
+      match f with
+      | MLrel (i, _) | MLmagic (_, MLrel (i, _)) -> erased_member i
+      | _ -> false
+    in
     let callee_fun_ml_ty =
       match f with
         | MLglob ({callee = r; _} as use) when not (Mlutil.Var_types.is_empty (Mlutil.written_type_args use)) ->
@@ -7235,6 +7275,11 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                is generalised into a deduced callable, which takes each
                argument at the type the argument already has. *)
             ( match f with
+            (* A member of a group recursing at a ground instance takes its
+               arguments adapted to its erased parameters
+               ({!erased_member_types}). *)
+            | MLrel (i, _) | MLmagic (_, MLrel (i, _)) when erased_callee ->
+              get_env_type_opt i
             | MLrel (i, _) | MLmagic (_, MLrel (i, _)) -> (
               match get_env_type_opt i with
               | Some (Miniml.Tglob (GlobRef.ConstRef _, _, _) as ty) -> (
@@ -7389,6 +7434,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         | _ -> gen_expr ~slot:arg_slot env x
       in
       match List.nth_opt callee_param_tys i with
+      | Some param_ty when erased_callee -> adapt_to_erased_param env param_ty x expr
       | Some param_ty -> erase_fn_arg_for_param env param_ty x expr
       | None -> expr) args
     in
@@ -8974,6 +9020,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     (* Special case for let-fix: the let binding name is the fix function name *)
     Local_types.check_minted ids;
     let ids, funs = Local_types.recover_fix_codomains ids funs in
+    register_erased_members ~let_ty occ ids;
     (* Collect all Tvar indices from the fixpoint types *)
     let fix_tvar_indices =
       Array.fold_left (fun acc (_, ty) -> collect_tvars acc ty) [] ids
@@ -9854,6 +9901,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
   | MLapp ((MLfix (x, ids, funs, cofix, occ) as fix_term), args) ->
     Local_types.check_minted ids;
     let ids, funs = Local_types.recover_fix_codomains ids funs in
+    register_erased_members occ ids;
     (* Collect Tvars from bodies too *)
     let body_tvars = Array.fold_left collect_tvars_ast [] funs in
     let all_body_tvars = List.sort_uniq Int.compare body_tvars in
@@ -9877,6 +9925,14 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         (List.mapi
            (fun i a ->
              let e = gen_expr env a in
+             (* As at a call of the member ({!erased_member_types}). *)
+             let e =
+               match List.nth_opt params i with
+               | Some (_, (Miniml.Tarr _ as ty))
+                 when Table.is_erased_fix_group occ && List.exists Mlutil.has_unknown (ml_domains ty) ->
+                 adapt_to_erased_param env ty a e
+               | _ -> e
+             in
              match (List.mem i first, List.nth_opt params i) with
              | true, Some (_, ty) ->
                let id = Id.of_string (Printf.sprintf "_arg%d" i) in

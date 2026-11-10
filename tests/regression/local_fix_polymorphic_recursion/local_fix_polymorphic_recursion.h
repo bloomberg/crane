@@ -16,11 +16,12 @@ template <typename A> struct List;
 
 /// A local fixpoint that calls itself at bool, not at the list nat it
 /// is entered at: polymorphic recursion.  Extraction types a local
-/// fixpoint's body at one instance, so A is both, and the loop Loopify
-/// makes of the tail call declares its variables at bool: bool _lc1_y
-/// is initialised from a list, and the List callable is stored in a
-/// crane::fn<uint64_t(bool)>.  No C++.  The top-level Fixpoint is
-/// self_call_other_instance.
+/// fixpoint's body at one instance, which the call at bool would pin, so
+/// the entry's list would reach a bool loop variable.  Instead the
+/// fixpoint's type binder is erased (Extraction.erased_fix_types): y is
+/// a crane::obj, h a crane::fn<uint64_t(crane::obj)>, and each closure
+/// stored into h goes through crane_erase_fn.  The top-level Fixpoint
+/// is self_call_other_instance.
 struct LocalFixPolymorphicRecursion {
   static uint64_t run(uint64_t k, uint64_t n);
 };
