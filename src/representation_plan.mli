@@ -20,10 +20,15 @@
     second declaration of a branch's fields, a record projection's.  An enum
     branch binds none.  Nothing reads the plan otherwise.
 
-    What it does not plan is a lambda's parameter: lowering types it by the
-    C++ slot the lambda fills.  An answer that rests on one -- a match over
-    such a parameter, or over a field matched out of one -- is marked so,
-    and not checked. *)
+    A lambda's binders are planned where lowering generates it: one a custom
+    constructor stores into an erased field, rewritten as lowering rewrites
+    it ({!Translation_types.erased_fn_lambda}), at the constructor's own
+    drafted instantiation; one passed to a global, refined against the
+    parameter's ML type at the call's reading
+    ({!Translation_types.slot_refined_lambda},
+    {!Core_elaborate.instantiate}).  Neither reads what the position states
+    beyond the term: the destination's C++ type, the ML type the call's
+    position expects, whether it is a box. *)
 
 (** [region ~outer body] -- every pattern binder of [body], a region generated
     in the scope [outer] binds, planned: keyed by its site
@@ -36,10 +41,8 @@ val region : outer:Lexenv.t -> Miniml.ml_ast -> (Core_binder.site * int * Transl
 (** [check ~site ~field ~live ()] -- a [CRANE_CHECK_IR] violation unless the
     region's plan ({!Translation_state.translation_ctx.representation}) boxes
     the pattern binder of field [field] bound at [site] exactly when lowering
-    does ([live]), or marks its answer as resting on a lambda's parameter.  A
-    binder the plan has no answer for is a violation too.  [as_bound]: the
-    binder is declared at the type it is bound at, nothing pinned down -- the
-    reuse arm's second declaration of a branch's fields, a record projection
-    in an expression -- and checked against that answer, which rests on no
-    lambda's parameter. *)
+    does ([live]).  A binder the plan has no answer for is a violation too.
+    [as_bound]: the binder is declared at the type it is bound at, nothing
+    pinned down -- the reuse arm's second declaration of a branch's fields, a
+    record projection in an expression -- and checked against that answer. *)
 val check : ?as_bound:bool -> site:Core_binder.site -> field:int -> live:bool -> unit -> unit

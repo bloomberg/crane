@@ -169,17 +169,13 @@ type translation_ctx = {
 }
 
 (** A pattern binder's representation as {!Representation_plan} plans it:
-    whether it holds a box, and whether that answer rests on a lambda's
-    parameter -- the scrutinee is one, or a field matched out of one -- whose
-    representation lowering takes from the C++ slot the lambda fills, which
-    the plan does not see.  [pr_bound_boxed] is whether it holds a box at
+    whether it holds a box.  [pr_bound_boxed] is whether it holds a box at
     the ML type it is bound at, nothing pinned down: how the reuse arm,
     which declares the same fields again, and a record projection in an
     expression declare it.  That answer rests on no other binder. *)
 and planned_repr = {
   pr_boxed : bool;
   pr_bound_boxed : bool;
-  pr_slot_rooted : bool;
 }
 
 (** What decided a binder's C++ type, and so which answer wins when both are
