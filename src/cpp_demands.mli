@@ -1,8 +1,8 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** The headers what a unit writes needs (docs/Pipeline-Disentangling-Plan.md,
-    Milestone 9): read off what is generated ahead of its files -- its
+(** The headers what a unit writes needs, planned before rendering as a
+    fact of the finished program: read off what is generated ahead of its files -- its
     finished declarations, the concepts of its module types, the types of
     its eponymous records' fields -- where the printer writes it, rather
     than raised by the pass that built each construct or by the printer as

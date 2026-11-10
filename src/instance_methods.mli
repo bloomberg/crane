@@ -1,8 +1,8 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** A type-class instance's methods as Core elaborates them
-    (docs/Pipeline-Disentangling-Plan.md, section 4.7: [ElaborateInstances]).
+(** A type-class instance's methods as Core elaborates them, before any
+    C++ is generated for the instance.
 
     An instance is a record of its class built under the instance's own
     parameters.  Each method is generated from its field of that record, but
@@ -28,12 +28,16 @@ type layers = {
   lam_params : (Names.Id.t * Miniml.ml_type) list;
 }
 
+(** [layers ty body] -- the instance of type [ty] and body [body] with its
+    own parameters stripped.  An instance eta-reduced past its parameters is
+    eta-expanded back first, so its parameters are stripped all the same. *)
 val layers : Miniml.ml_type -> Miniml.ml_ast -> layers
 
 (** [record_body name class_ref inner_ty lam_params inner_body] -- the record
     the instance [name] builds.  A singleton class's instance is its method:
     past the instance's own parameters, the body is the record's one field.
-    A fixpoint is the method calling itself, through this very instance. *)
+    A fixpoint in an unparameterised instance is the method calling itself,
+    through this very instance. *)
 val record_body :
   Names.GlobRef.t ->
   Names.GlobRef.t ->
@@ -115,8 +119,8 @@ val prepare_method :
     counts through. *)
 type param = {
   binder : Miniml.ml_ident;
-  binder_ty : Miniml.ml_type;
-  erased : bool;
+  binder_ty : Miniml.ml_type;  (** The type the body's binder is annotated with. *)
+  erased : bool;  (** No C++ parameter: the body still binds it, the accessor does not take it. *)
 }
 
 (** [params m] -- the binders {!method_.body} opens with that the accessor

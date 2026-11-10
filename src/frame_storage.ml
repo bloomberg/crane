@@ -71,11 +71,15 @@ let copied = function Stable | Cell | Shares -> Shares | Fresh -> Fresh
    cell is held by the handle the pattern bound, which the frame copies. *)
 let kept = function Cell -> Cell | Stable | Shares -> Shares | Fresh -> Fresh
 
+(* The kind of the value a term is, where [env] gives the kind of each Core
+   binder in scope: a variable's, through any in-place coercion; anything
+   else is computed afresh. *)
 let rec kind ~in_place env = function
   | MLrel (db, _) -> Option.default Fresh (List.nth_opt env (db - 1))
   | MLmagic (Mcoerce (from, into), e) when in_place from into -> kind ~in_place env e
   | _ -> Fresh
 
+(* Whether a frame may hold a pointer to a value of this kind. *)
 let pointable = function Stable | Cell -> true | Shares | Fresh -> false
 
 (* The constructor each binder of [b] is bound at, with its declared

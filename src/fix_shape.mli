@@ -2,7 +2,9 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** Every fixpoint takes the shape its type says, before anything counts its
-    parameters: {!Normalize}, {!Ownership.settle}, and translation.
+    parameters: {!Normalize}, {!Ownership.summarize}, and translation.
+    It runs among the core passes, after the knot is tied and before fresh
+    occurrences are minted.
 
     - The [let]s between a fixpoint's binder and its first lambda go under
       the lambdas: [fix F (h := H F) (l : L) := b] as
@@ -21,4 +23,6 @@
 (** [fix F (h := H F) (l : L) := b] as [fix F (l : L) := let h := H F in b]. *)
 val float_lets_under_lams : Miniml.ml_ast -> Miniml.ml_ast
 
+(** Both rewrites, over every definition of a structure: each fixpoint, local
+    or top-level, and each top-level [Dfix] body. *)
 val structure : Miniml.ml_structure -> Miniml.ml_structure

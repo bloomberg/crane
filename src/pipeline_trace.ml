@@ -1,6 +1,8 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
+(** See [pipeline_trace.mli]. *)
+
 type 'a pass = { name : string; run : 'a -> 'a }
 
 let pass name run = { name; run }

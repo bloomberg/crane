@@ -2,7 +2,11 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** The one registry of mutable cells that must be emptied between runs.  A
-    cell enrols where it is defined, with the scope it lives for. *)
+    cell enrols where it is defined, with the scope it lives for.
+    {!Table.reset_tables} and {!Cpp_state.reset_cpp_state} reset the
+    [Extraction] scope when a command starts;
+    {!Common.reset_renaming_tables} resets the [Unit] scope, at the start of
+    an extraction and before each generated file. *)
 
 (** How long a cell's contents are good for.
     - [Extraction]: one [Crane Extraction] command.

@@ -3,9 +3,10 @@
 (** Shared mutable state for the MiniML -> MiniCpp translation.
 
     Holds the per-declaration translation context ([tctx]) and its accessors,
-    so that the translation core ([translation.ml]) and the declaration
-    generators can share this state without a dependency cycle.  Mirrors the
-    [cpp_state.ml] pattern used by the pretty-printer. *)
+    so that the translation core ({!Translation}) and the declaration
+    generators ({!Gen_functions}, {!Gen_instances}, ...) can share this state
+    without a dependency cycle.  Mirrors {!Cpp_state}, the pretty-printer's
+    equivalent. *)
 
 module IntMap = Map.Make (Int)
 
@@ -14,7 +15,8 @@ open Miniml
 open Minicpp
 open Names
 
-(** Helper to create CPPglob with pre-computed custom_info.  [yields] is what
+(** A [CPPglob] for the global [r] at [tys], its custom extraction
+    ({!Table.custom_info}) looked up once here.  [yields] is what
     the global evaluates to, and is worth passing whenever the caller has the
     global's instantiated type: for a [%result] block template in value
     position it is the only record of the type, since there is no call node to
@@ -22,11 +24,11 @@ open Names
 let mk_cppglob ?yields (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
   CPPglob (r, tys, Some (Table.custom_info ?yields r))
 
-(** Helper for local variables (VarRef) - no custom extraction applies *)
+(** A [CPPglob] for a local variable ([VarRef]): no custom extraction applies. *)
 let mk_cppglob_local (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
   CPPglob (r, tys, None)
 
-(** Safe wrappers for Table lookups that may fail *)
+(** {!Table.find_type}, [None] where [r] has no recorded type. *)
 let find_type_opt (r : GlobRef.t) : ml_type option =
   try Some (Table.find_type r) with Not_found -> None
 
@@ -72,9 +74,10 @@ type translation_ctx = {
      variable's type as a parameter of: by binder, since every binder the
      body pushes shifts a parameter's index. *)
   current_parameters : Core_binder.t list;
-  (* C++ return type of the enclosing function, set by gen_dfun. Used to
-     recover erased template type args at call sites where C++ can't deduce
-     them from lambda arguments. *)
+  (* C++ return type of the enclosing function, set by the function and
+     instance generators ({!with_cpp_return_type}). Used to recover erased
+     template type args at call sites where C++ can't deduce them from lambda
+     arguments. *)
   current_cpp_return_type : cpp_type option;
   (* De Bruijn environment: each variable's binder, with its ML type and
      role. *)
@@ -116,9 +119,10 @@ type translation_ctx = {
   (* Maps promoted record fields to their C++ qualified types.
      Example: "m_carrier" -> Tqualified(Tvar "_tcI0", "m_carrier")
      (prints as: typename _tcI0::m_carrier).
-     Set by gen_dfun when generating template functions with typeclass
-     parameters. Used by convert_ml_type_to_cpp_type to resolve
-     [Tpromoted] markers. *)
+     Set ({!with_promoted_var_map}) when generating template functions and
+     instances with typeclass parameters. Used by
+     {!Translation.convert_ml_type_to_cpp_type} to resolve [Tpromoted]
+     markers. *)
   promoted_var_map : (Id.t * cpp_type) list;
   (* When true, we are inside a constructor expression (module-level static
      initializer). Promoted type vars that can't be resolved via
@@ -156,7 +160,7 @@ type translation_ctx = {
      ({!generating_outside_modules}), and [None] before either, where nothing
      may ask ({!local_inductives_in_scope}). *)
   local_inductives : GlobRef.t list option;
-  (** The C++ type of {e every} binder in scope, by de Bruijn index, paired
+  (* The C++ type of {e every} binder in scope, by de Bruijn index, paired
       with what decided it.
 
       A binder is typed once, where it is bound ({!Bbinding}, written by
@@ -206,8 +210,8 @@ and binder_origin =
 (** Mode for ITree effect extraction: sequential erases the tree,
     reified preserves it as [shared_ptr<ITree<R>>] ({!Core_effects.mode}). *)
 and itree_extraction_mode = Core_effects.mode =
-  | Sequential  (* Default: erase itree E R to R, bind becomes ; *)
-  | Reified     (* Preserve structure: itree E R becomes shared_ptr<ITree<R>> *)
+  | Sequential  (** Default: erase [itree E R] to [R]; bind becomes [;] *)
+  | Reified     (** Preserve structure: [itree E R] becomes [shared_ptr<ITree<R>>] *)
 
 (** The global translation context, reset between top-level declarations.
 
@@ -309,7 +313,7 @@ let current_scope_type_names () =
 
     Prefer this to a hand-written save/set/restore wherever the scope's extent
     is a lexical one.  Everything that converts a type reads the scope
-    ambiently (see {!Translation.cpp_of_ml}), so a restore that a path skips
+    ambiently (see {!Translation_types.cpp_of_ml}), so a restore that a path skips
     does not fail: the next conversion quietly numbers its type variables
     against the wrong function. *)
 let with_type_vars (tvars : Id.t list) (f : unit -> 'a) : 'a =
@@ -340,6 +344,9 @@ let with_method_self_ns (ns : Ref.User.Set.t) (f : unit -> 'a) : 'a =
     (fun ns -> tctx := { !tctx with method_self_ns = ns })
     ns f
 
+(** [spelling_bare local f] runs [f] with [local] as the inductives spelled
+    bare ({!translation_ctx.local_inductives}); the entries below are the only
+    callers. *)
 let spelling_bare (local : GlobRef.t list) (f : unit -> 'a) : 'a =
   with_field (fun c -> c.local_inductives) (fun l -> tctx := { !tctx with local_inductives = l }) (Some local) f
 

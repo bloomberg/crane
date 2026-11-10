@@ -4,19 +4,27 @@
 (** Which C++ declarations a MiniML declaration becomes.
 
    This module turns MiniML inductives ([ml_ind]) and declarations
-   ([ml_decl]/[ml_spec]) into {!Minicpp.cpp_decl} values.  It has two families
-   of entry points:
+   ([ml_decl]) into {!Minicpp.cpp_decl} values, between translation
+   ({!Translation}, {!Gen_decls}) and the printer ({!Cpp}).  Everything a
+   declaration becomes is generated once, ahead of both files
+   ({!generate_ahead}), finished in the unit's program
+   ({!Finished_program}), and taken from there by each file's pass:
 
-   - the source-file family ([impl_decls]) gives the full definitions that
-     go into the generated [.cpp]; and
-   - the header family ([header_decls])
-     gives the declarations that go into the generated [.h].
+   {ul
+   {- the source-file family ({!impl_decls}) gives the full definitions
+      that go into the generated [.cpp];}
+   {- the header family ({!header_decls}) gives the declarations that go
+      into the generated [.h];}
+   {- the [_ahead] family ({!header_element_ahead}, {!impl_element_ahead})
+      reads the same answers without taking them, for planning.}}
+
+   It also owns what the header plans about a module's body: its scope
+   ({!header_scope}), where its concepts go ({!plan_concepts}), and the
+   position and name resolution of a declaration as written
+   ({!spelling_position}, {!resolver_at}).
 
    Each answer pairs a declaration with the name environment its
-   sub-expressions are printed in; {!pp_decls} prints them.
-
-   Everything else in the implementation is an internal helper and is
-   deliberately hidden by this interface. *)
+   sub-expressions are printed in; {!pp_decls} prints them. *)
 
 (** Declarations as generated, each with the name environment it is printed
     in. *)
@@ -88,8 +96,11 @@ type ahead = {
   entities : Generated_program.entity list;
       (** What was generated, as the entities a file records taking it. *)
   functions : Minicpp.cpp_decl list;
-  finishing : finishing list;
+      (** The function definitions generated, registered with Loopify
+          before any function of the unit is finished. *)
+  finishing : finishing list;  (** What of the declaration to finish. *)
   helpers : Minicpp.cpp_decl list;
+      (** The helpers lifted out of it, finished after everything else. *)
 }
 
 (** [functions_ahead ~entities funs]: [funs], generated ahead
@@ -121,8 +132,10 @@ val generate_ahead : module_:Names.ModPath.t -> Miniml.ml_decl -> ahead
     Planned for every module ahead of the files ({!plan_header_scope}) and
     checked against the header's render context as it enters the module. *)
 type header_scope = {
-  in_struct : bool;
+  in_struct : bool;  (** The body is written inside a struct. *)
   concepts_hoisted : bool;
+      (** The module's class concepts are declared ahead of its struct, so
+          the body does not declare them again. *)
 }
 
 (** [plan_header_scope mp scope] plans [scope] for the body of the module
@@ -159,7 +172,7 @@ val render_section : Cpp_state.render_ctx -> section -> Cpp_ast.t list
 val resolver_at : file:Common.file -> Cpp_ast.spelling -> Cpp_ast.resolver
 
 (** {!Cpp_ast.resolve_tree} by {!resolver_at}, a declaration naming what
-    {!Cpp_print.unprinted_names} and {!Cpp_concepts.names_requested} say,
+    {!Cpp_leaf_plan.unprinted_names} and {!Cpp_concepts.names_requested} say,
     for a question about [t] rather than to write it: nothing it names is
     noted as written ({!Common.check_written_files}). *)
 val resolve_tree : file:Common.file -> Cpp_ast.t -> Cpp_ast.t
@@ -188,7 +201,10 @@ type concept_placement = Cpp_state.concept_placement = Ahead_of_struct | After_s
 (** {!Cpp_state.concept_plan}. *)
 type concept_plan = Cpp_state.concept_plan = {
   placements : (Cpp_state.held_concept * concept_placement) list;
+      (** The class concepts, then the module-type concepts, in declaration
+          order. *)
   held_back : Cpp_state.held_concept list;
+      (** The concepts the struct's body treats as not declared yet. *)
 }
 
 (** [plan_concepts ~nested ~classes ~modtypes] places the concepts
@@ -200,6 +216,7 @@ val plan_concepts :
   modtypes:(Cpp_state.held_concept * bool) list ->
   concept_plan
 
+(** Structural equality of two plans, placements in order. *)
 val equal_concept_plan : concept_plan -> concept_plan -> bool
 
 (** Where [plan] places the concept [c]; an anomaly if it does not. *)
@@ -271,8 +288,9 @@ val finished_record_methods :
 val regenerating : (unit -> 'a) -> 'a
 
 (** [peeking f] runs [f], reading what was generated ahead of the files to
-    plan what they will write of it: what {!ahead_once} recorded is handed
-    out without being taken -- nothing is recorded, claimed or deferred --
+    plan what they will write of it: what {!generated_once},
+    {!instance_entity} and the other generators recorded is handed out
+    without being taken -- nothing is recorded, claimed or deferred --
     and a lifted helper's placement is the planned one. *)
 val peeking : (unit -> 'a) -> 'a
 
@@ -282,13 +300,14 @@ val regenerate_ahead : module_:Names.ModPath.t -> Miniml.ml_decl -> unit
 
 (** [finished_alone d] is [d] finished on its own ({!Cpp_pipeline.finish}):
     a declaration written without a definition, or a lifted helper, as
-    the unit's program has it ({!Finished_program}).  That it does not is an anomaly; a file's
-    pass finishes it again under [CRANE_CHECK_IR] and checks. *)
+    the unit's program has it ({!Finished_program}).  That the program does
+    not have it is an anomaly; a file's pass finishes it again under
+    [CRANE_CHECK_IR] and checks. *)
 val finished_alone : Minicpp.cpp_decl -> Cpp_erasure.settled
 
 (** [finalized funs] pairs each generated function with its entity, made of
     the definition as the unit's program has it; [None] for a declaration.
-    That it does not is an anomaly; a file's pass finishes it again under
+    That the program does not have it is an anomaly; a file's pass finishes it again under
     [CRANE_CHECK_IR] and checks. *)
 val finalized :
   Gen_decls.generated_fun list ->
@@ -327,8 +346,10 @@ val instance_entity :
     out of it that the element places: a constant's or a function's.  A
     fixpoint's helpers are written in front of it, and are not among them. *)
 type element = {
-  rendered : rendered;
+  rendered : rendered;  (** The declarations written, finished. *)
   helpers : Minicpp.cpp_decl list;
+      (** The lifted helpers this element places; empty where the header
+          writes them in front of each function, or writes none. *)
   member_defs : rendered;
       (** The definitions of members its struct gave up, written at the end
           of the file: only a datatype's, and only in the header. *)

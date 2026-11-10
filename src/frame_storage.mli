@@ -2,8 +2,10 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** How the frames of a machine with a stack hold the parameters of its
-    loops, decided over its ControlIR (docs/Pipeline-Disentangling-Plan.md,
-    section 4.10: {!Ownership_ir.Storage}).
+    loops, decided over its ControlIR: for each parameter, the storage the
+    value a frame holds for it lies in ({!Ownership_ir.Storage}).  Loopify
+    and {!Control_to_legacy_minicpp} read the plan when they lay out the
+    frames of a machine with a stack.
 
     A machine runs on what its caller passed, which outlives it and which
     nothing changes while it runs.  A frame can hold a parameter by pointer

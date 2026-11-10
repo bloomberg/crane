@@ -1,13 +1,15 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** What a module's own declarations say about how its body is written
-    (docs/Pipeline-Disentangling-Plan.md, Milestone 9): a function of the
-    module and of the structure declaring it, the same in both files, and
-    so a fact to plan rather than one a render discovers on its way in. *)
+(** What a module's own declarations say about how its body is written: a
+    function of the module and of the structure declaring it, the same in
+    both files, and so a fact planned by the walk ahead of the files rather
+    than one a render discovers on its way in.  The printer reads the
+    planned frame ({!planned}) when it writes the module's struct. *)
 
 open Names
 
+(** The frame of one module. *)
 type t = {
   eponymous_type : GlobRef.t option;
       (** The inductive the module is named after, case aside, that is

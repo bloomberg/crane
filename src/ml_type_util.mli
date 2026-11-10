@@ -8,7 +8,11 @@
    value types), arrow and codomain analysis, type-variable substitution and
    erasure, and constructor-name resolution. It also exposes a block of
    well-known Coq constructor indices (positive, Z, decimal, hex, signed,
-   etc.) so that numeric-literal encodings can be recognised by tag. *)
+   etc.) so that numeric-literal encodings can be recognised by tag.
+
+   It holds no state and depends only on the tables ({!Table}), so every
+   stage from extraction to the printer can ask it; the environment-aware
+   questions built on these live in {!Translation}. *)
 
 (** {2 Asking whether a type is erased}
 
@@ -23,7 +27,8 @@
       an alias must run [Translation.unfold_cpp_typedef] first.  Note also
       that a [Tdummy] converts to a [dummy_type] marker, not to [Tany]:
       {!has_tany_in_type} misses it and {!has_erased_type_in_type} does not.
-    - {b Environment-aware} ([translation.ml]): [resolves_to_any_type],
+    - {b Environment-aware} ({!Translation}, defined in
+      [translation_types.ml]): [resolves_to_any_type],
       [spells_as_any], [is_boxed_source], and above all [classify_erasure],
       which is the one to reach for when the question is whether a {e value}
       may be boxed or cast.  These follow the ML type table and the typedef
@@ -69,7 +74,8 @@ val find_self_ref_args :
 
 (** {2 Erasure classification} *)
 
-(** Whether a MiniML type is fully erased. *)
+(** Whether a MiniML type is erased at its root (not looking inside it): an
+    unresolved [Tmeta], a [Topen] hole, a [Tdummy], or a schematic [Tvar]. *)
 val is_erased_ml_type : Miniml.ml_type -> bool
 
 (** Whether a MiniML type contains an erased component anywhere within it.
@@ -204,7 +210,7 @@ val method_is_member_template : Names.GlobRef.t -> Names.GlobRef.t -> bool
 val method_tvar_count : Names.GlobRef.t -> Miniml.ml_type -> int
 
 (** [ml_drop_arrows n t] is what is left of [t] once [n] of its value-carrying
-    arrows have been applied; [Tunresolved] if it has fewer than [n]. *)
+    arrows have been applied; [Tunknown] if it has fewer than [n]. *)
 val ml_drop_arrows : int -> Miniml.ml_type -> Miniml.ml_type
 
 (** Count the number of value-carrying arrows in a MiniML type. *)
@@ -255,7 +261,10 @@ val ml_type_is_unit_or_void : Miniml.ml_type -> bool
 (** Keep only the value-carrying types from a list of MiniML types. *)
 val filter_value_types : Miniml.ml_type list -> Miniml.ml_type list
 
-(** Whether the codomain of a MiniML type erases to [any]. *)
+(** [ml_codomain_erases_to_any n ty]: whether [ty]'s codomain, past [n]
+    value arrows, erases to [std::any] -- a type variable reached after a
+    [Tdummy Ktype] domain, the mark of a higher-rank quantified function.
+    [has_dummy] is the accumulator; callers omit it. *)
 val ml_codomain_erases_to_any :
   ?has_dummy:bool -> int -> Miniml.ml_type -> bool
 
@@ -279,7 +288,8 @@ val is_option_global : Names.GlobRef.t -> bool
 (** Whether a global reference is [prod]. *)
 val is_prod_global : Names.GlobRef.t -> bool
 
-(** Structural equality of two C++ types. *)
+(** Structural equality of two C++ types, seen through [Tconst] and
+    [Tnamespace] and comparing indexed type variables by index alone. *)
 val cpp_ty_eq : Minicpp.cpp_type -> Minicpp.cpp_type -> bool
 
 (** Whether a global reference is [list]. *)
@@ -384,7 +394,9 @@ val erase_type_to_any : Minicpp.cpp_type -> Minicpp.cpp_type
     with [Tany], so an [any_cast] target has a C++ spelling. *)
 val resolve_tvars_to_any : Minicpp.cpp_type -> Minicpp.cpp_type
 
-(** Whether a MiniML type is an erased type. *)
+(** Whether a MiniML type stands at an erased position, [std::any] in C++: a
+    type variable, [Tunknown], an unresolved [Tmeta] or a [Topen] hole.
+    Unlike {!is_erased_ml_type} it counts every [Tvar] and not [Tdummy]. *)
 val is_ml_erased_ty : Miniml.ml_type -> bool
 
 (** {2 Skipped types} *)
@@ -459,7 +471,17 @@ val ref_has_no_spelling : Names.GlobRef.t -> bool
     inline custom whose C++ text is empty. *)
 val ref_is_skipped : Names.GlobRef.t -> bool
 
+(** Whether a global has no C++ name to be written as: it is mapped to the
+    empty string ({!ref_has_no_spelling}), or, unmapped, it lives in a module
+    [Crane Extract Skip Module] left out, so its would-be name is introduced
+    nowhere. *)
 val ref_has_no_cpp_name : Names.GlobRef.t -> bool
+
+(** Whether a C++ type, as the printer will write it, mentions a global with
+    no C++ name ({!ref_has_no_cpp_name}).  An application of a nameless
+    constructor prints as its argument, so that constructor alone does not
+    count.  Asked before writing a type into a position that has an
+    alternative to writing it. *)
 val has_no_cpp_spelling : Minicpp.cpp_type -> bool
 
 (** Whether an ML type's result is a skipped type, such as a [ReSum]
@@ -507,10 +529,12 @@ val boxes_param_field : owner:Names.GlobRef.t -> Miniml.ml_type -> bool
     pattern on the constructor binds its non-erased fields, numbered from 0. *)
 module Ctor_fields : sig
   type t = private {
-    inductive : Names.GlobRef.t;
+    inductive : Names.GlobRef.t;  (** the constructor's inductive *)
     types : Miniml.ml_type list;  (** the non-erased fields, in order *)
   }
 
+  (** The fields of a constructor, as its declaration records them; no
+      fields when the declaration is not known. *)
   val of_ctor : Names.GlobRef.t -> t
 
   (** The inductive itself, or one of its mutual siblings. *)
@@ -531,10 +555,14 @@ module Ctor_fields : sig
       ({!boxes_param_field}). *)
   val boxed : t -> int -> bool
 
+  (** Under [Crane BoxedFields], field [i] is typed by one of the inductive's
+      parameters and stored as [crane::field<T>] ({!boxes_param_field}). *)
   val param_boxed : t -> int -> bool
 
   (** Field [i] is held behind a pointer, so a pattern binds the pointer
-      rather than the value. *)
+      rather than the value: a recursive field (one not stored by value
+      through a boxed container), or a {!boxed} or {!param_boxed} one; never
+      in a coinductive. *)
   val behind_pointer : t -> int -> bool
 end
 
@@ -552,7 +580,8 @@ val is_prod_ml_type : Miniml.ml_type -> bool
 
 (** {2 Well-known Coq constructor tag indices} *)
 
-(** Well-known Coq constructor tag indices (positive/Z/uint/decimal/hex/signed). *)
+(** 1-based constructor index of [xI] (the [2n+1] case) in Rocq's
+    [BinNums.positive]. *)
 val positive_xI_idx : int
 
 (** 1-based constructor index of [xO] (the [2n] case) in Rocq's
@@ -735,12 +764,20 @@ val get_tvars_indexed : Minicpp.cpp_type -> (int * Names.Id.t) list
 (** The names of the type variables in a C++ type, sorted by index. *)
 val get_tvars : Minicpp.cpp_type -> Names.Id.t list
 
-(** The indices of the type variables in a C++ type. *)
+(** The indices of the type variables in a C++ type, sorted. *)
 val get_tvar_indices : Minicpp.cpp_type -> int list
 
-(** The type-variable indices a C++ type actually renders, skipping the
-    positions a custom template drops. *)
+(** The arity at which the rendered type applies each type variable, keyed
+    by index, skipping the positions a spelling does not write
+    ({!written_type_args}).  Erasure can leave an application in the ML type
+    that the C++ type never spells, so where a rendered type is available its
+    arities are the ones its users must agree with. *)
 val rendered_tvar_arities : Minicpp.cpp_type -> (int, int) Hashtbl.t
+
+(** The type-variable indices a C++ type actually renders, skipping the
+    positions a spelling does not write ({!written_type_args}): a phantom
+    there, such as the [E] of [itree E R], is one C++ cannot deduce.
+    Unsorted. *)
 val get_rendered_tvar_indices : Minicpp.cpp_type -> int list
 
 (** [primary_tvar_indices dom cod] is the set of type-variable indices
@@ -787,7 +824,7 @@ val relaxed_higher_kinded_tvars : Miniml.ml_type -> IntSet.t
 
 (** The type variables a declaration of type [ml_ty] relaxes out of its
     template head: applied somewhere in the domains, and spelled nowhere
-    unapplied and nowhere in the codomain.  {!Gen_decls.relax_applied_return}
+    unapplied and nowhere in the codomain.  {!Plan_templates.relax_applied_return}
     turns each such application into its own deduced parameter and leaves the
     original a phantom, so a call must not write a template name there. *)
 val relaxed_applied_ml_tvars : Miniml.ml_type -> IntSet.t

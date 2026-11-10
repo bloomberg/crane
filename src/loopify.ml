@@ -24,37 +24,48 @@
     Converted to [while] loop with mutable shadow variables. No stack needed
     since no work happens after the recursive call.
 
+    {3 Tail Modulo Cons}
+    [map f l = match l with [] -> [] | x :: xs -> f x :: map f xs]
+
+    Converted to a loop that builds each constructor cell before the
+    recursive call fills its hole ({!Loopify_tmc}).
+
     {3 Non-Tail Recursion (Single Call)}
     [f x = if base(x) then result else combine(x, f(next(x)))]
 
-    Uses explicit stack with [CraneEnter] and [_Call] frames. The [CraneEnter] frame
-    initiates computation; [_Call] frames save continuation context.
+    Uses an explicit stack with [CraneEnter] and [CraneContN] frames.  The
+    [CraneEnter] frame initiates a computation; a [CraneContN] frame saves
+    what runs after the call returns.
 
     {3 Multi-Recursion (2+ Calls per Branch)}
     [fib n = if n < 2 then 1 else fib(n-1) + fib(n-2)]
 
-    Uses chained [_Call] frames or [CraneEnter/_After/_Combine] pattern to handle
-    multiple recursive calls in the same expression.
+    Uses chained [CraneContN] frames, one per point a call returns to, for
+    several recursive calls in the same expression.
 
     {2 Architecture}
 
     The pass operates in several stages:
 
-    1. {b Classification}: Analyze function body to determine recursion kind
-       (tail, non-tail, multi-call) via {!classify}
-
-    2. {b Transformation}: Apply appropriate strategy:
-       - {!transform_tail} for tail recursion → while loop with shadow vars
-       - {!transform_nontail} for non-tail → frame-based stack
-
-    3. {b Normalized input}: {!Normalize} binds every non-tail recursive call
-       in evaluation order before translation, so the transforms meet each
-       one as a statement; tail modulo cons reads the body with those
-       bindings put back ({!Cpp_temporaries.own_stmts})
-
-    4. {b Frame Generation}: Create typed frame structs ([CraneEnter], [_ResumeN],
-       etc.) and a dispatch loop that tests the popped frame with
-       [std::holds_alternative] in an if/else-if chain
+    {ol
+    {- {b Strategy}: the recursion plan decides, from each function's Core
+       body before any is lowered, whether it is a tail loop, a loop tail
+       modulo cons, a machine with a stack of frames, suspended, or not
+       looped at all ({!planned_strategy}, {!Recursion_plan.strategy}).}
+    {- {b Transformation}: the strategy picks the rewrite:
+       {!transform_tail} for a [while] loop with shadow variables,
+       {!transform_tmc} for tail modulo cons, {!transform_nontail} for a
+       frame-based stack.}
+    {- {b Normalized input}: {!Normalize} binds every non-tail recursive
+       call in evaluation order before translation, so the transforms meet
+       each one as a statement; tail modulo cons reads the body with those
+       bindings put back ({!Cpp_temporaries.own_stmts}).}
+    {- {b Frame generation}: typed frame structs ([CraneEnter],
+       [CraneContN]) and a dispatch loop that tests the popped frame with
+       [std::holds_alternative] in an if/else-if chain.}
+    {- {b Postcondition}: {!classify} runs again on the finished body; a
+       surviving self-call turns the outcome into a decline
+       ({!report_outcome}).}}
 
     {2 Decltype Rewriting}
 
@@ -74,9 +85,10 @@
     recurse.  Instead it is {e adopted} as a second entry point of the
     enclosing machine -- its own [CraneEnter_<name>] frame carrying its parameters
     and the variables it captures, dispatched from the same loop over the same
-    [std::variant] stack.  See {!adopted} for how the two shapes are made
-    alike, {!find_in_flow} for which statements are searched, and
-    {!machine_entry} for what an entry is.
+    [std::variant] stack.  See {!Loopify_frame.adopted} for how the two
+    shapes are made alike, {!Loopify_frame.find_in_flow} for which
+    statements are searched, and {!Loopify_frame.machine_entry} for what an
+    entry is.
 
     {2 Modules}
 
@@ -253,6 +265,8 @@ let method_survivors mf = calls_checker (Option.cata definition_calls [] mf.mf_g
     versions using the same while-loop or stack-frame techniques as
     top-level functions. *)
 
+(* The positions of the parameters of the loop [l] its lambda takes, those
+   that are not void, last first, as a lambda stores them. *)
 let kept_positions (l : Control_ir.Term.loop) =
   List.filteri (fun _ (_, ty) -> not (Ml_type_util.void_binder ty)) (List.mapi (fun i (_, ty) -> (i, ty)) l.parameters)
   |> List.rev_map fst
@@ -314,8 +328,12 @@ let member_plan ~frames member params =
     match branches, switch, blocks) and into lambda expressions within
     assignments and returns, to find local fixpoints at any depth.
 
-    @param tparams  Type parameters of the enclosing function
-    @param body     The statement list to scan and transform
+    @param tail_only  Lower tail loops only, leaving any other local
+                      fixpoint as it is
+    @param tparams    Type parameters of the enclosing function
+    @param outer_env  The parameters of the enclosing function, which a
+                      local fixpoint captures
+    @param body       The statement list to scan and transform
     @return The statement list with all recursive local fixpoints loopified *)
 let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
   (* What the enclosing scope binds, which a local fixpoint captures. *)
@@ -327,18 +345,19 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
        auto f      = [&](A... args) { return f_impl(args, f_impl); };
      v}
      The lambda's LAST parameter is a single self-reference [_self_f] and the
-     recursive call forwards it as its own last argument.  The patterns above
-     miss this shape: they key on the lambda's own name and on [Tfun] /
-     [mk_shared] init exprs, whereas this is [Some Tauto] + [CPPlambda] and
-     recurses through the self-parameter.  Recognise it here and, for tail
-     recursion, reuse {!transform_tail} with a checker taking the calls the
-     recursion plan finds of the member ({!planned_self_checker}), dropping
-     the trailing self-forward argument so the remaining args align
-     positionally with the non-self loop params.  After transformation the
-     self-parameter is unreferenced; the {!Cpp_print} lambda printer emits
-     unreferenced params without a name, so there is no [-Wunused-parameter].
-     Only single (non-mutual) fixpoints are handled; mutual ones (multiple
-     self-params) and non-tail recursion are left unchanged. *)
+     recursive call forwards it as its own last argument.  Recognise it by
+     the self-parameter its encoding recorded ({!fixpoint_self}), not by
+     name, and lower it as the recursion plan has the member: a tail loop
+     through {!transform_tail}, otherwise a machine through
+     {!transform_nontail}, with a checker taking the calls the recursion
+     plan finds of the member ({!planned_self_checker}), dropping the
+     trailing self-forward argument so the remaining args align positionally
+     with the non-self loop params.  After transformation the self-parameter
+     is unreferenced; the {!Cpp_print} lambda printer emits unreferenced
+     params without a name, so there is no [-Wunused-parameter].  Only single
+     (non-mutual) fixpoints are handled; a mutual group's lambda (one
+     self-parameter per member) is left unchanged, and so is every non-tail
+     one when [tail_only]. *)
   let try_loopify_ycomb ~fixpoint ~binders lparams ret_ty_opt lbody =
     match (fixpoint, fixpoint_self fixpoint lparams) with
     | None, _ | _, None -> None
@@ -575,13 +594,21 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
     so that any local fixpoints nested inside the thunk are
     loopified independently. *)
 
+(** Why no loop of a function was made: the transform declined it
+    ([Declined why]), or made none and left a call of the function in the
+    body ([Left survived]), [survived] being the decline when something
+    sharper than {!Loopify_analysis.survived_generically} is known. *)
+type unlowered =
+  | Declined of string
+  | Left of string option
+
 (** Apply nontail-recursion loopification, trying strategies in priority order:
     {ol
-      {- {b TMC} ({!transform_tmc}) — if the recursion plan lowers it "tail
+      {- {b TMC} ({!transform_tmc}): if the recursion plan lowers it "tail
          modulo cons" (each non-tail call the one call of a constructor
          chain), each return read as one of the plan's chains
          ({!branch_along}).}
-      {- {b General nontail} ({!transform_nontail}) — frame-based stack for all
+      {- {b General nontail} ({!transform_nontail}): frame-based stack for all
          other patterns, including multi-call (e.g. fibonacci, tree traversal).}}
 
     @param param_inits Optional custom initialisers for shadow / [_self]
@@ -601,14 +628,19 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
     @param tparams     Template parameter context
     @param adopted     A body calling back into this function, to adopt as a
                        second machine entry; see {!transform_nontail}
+    @param entered_by  Which of the recursion plan's calls enter the machine
+                       ({!entered_by_function}, {!entered_by_member})
+    @param cursor      The input whose cells the loop tail modulo cons
+                       recycles, where given
+    @param varying     Which parameters the loop changes, as its ControlIR
+                       says
+    @param binders     The Core binders the parameters stand for
+    @param parts       Which parameters every call passes a value stored in
+                       what the caller passed for it
     @param params      Function parameters [(id, type)]
     @param ret_ty      Return type
     @param body        Function body statements
     @return what the transform did; see {!nontail_result}. *)
-type unlowered =
-  | Declined of string
-  | Left of string option
-
 let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted ?entered_by ?modulo_cons ?shapes ?cursor ?loop
     ~varying ?binders ~parts check tparams params ret_ty body =
   let declined reason =
@@ -682,8 +714,8 @@ let function_loop r =
   | Some (Let _) -> None
   | None -> Some (Control_ir.Loop.Function r)
 
-(** The strategy of the function [r]: as the program's recursion plan has it ({!Recursion_plan.strategy}), read off its
-    Core body and its recursive group's before any of them was lowered, given
+(** The strategy of the function [r]: as the program's recursion plan has
+    it ({!Recursion_plan.strategy}), read off its Core body and its recursive group's before any of them was lowered, given
     the constructor fields planned behind the pointer.  A helper lifted out of
     a definition for one of its local fixpoints is planned by that fixpoint,
     and one lifted for a lambda a let binds by that let.
@@ -816,37 +848,14 @@ let local_frame_machine ~member ~name ~binders ~varying ~parts ~tparams check pa
         Some (loopify_inner_lambdas ~tparams (report_outcome ~name ~check ~strategy:Lp_frame machine))
       else None )
 
-(** Transform a struct method by loopifying its body.
-
-    Methods differ from free functions because recursive calls use
-    [this->method(args)] rather than [f(args)]. To loopify, we introduce a
-    synthetic [_self] parameter that replaces [this] in the body, allowing the
-    loop to track which object is being processed across iterations.
-
-    The transformation:
-    + Creates a {!method_checker} for the global the method was made from.
-    + Classifies the recursion pattern.
-    + Replaces [CPPthis] with [CPPvar _self] throughout the body.
-    + Adds [_self] (with the struct pointer type) to the parameter list.
-    + Applies the appropriate loopification strategy.
-    + For tail recursion: initializes the shadow variable directly from [this]
-      (no separate [_self = this] line needed).
-    + For nontail recursion: prepends [_self = this] initialization before the
-      loop, since the [CraneEnter] frame references [_self] by name.
-
-    @param tparams        Type parameters
-    @param self_ty        C++ type for the struct pointer (e.g.,
-                          [Tconst (Tptr (Tglob (...)))])
-    @param mf             The method record to transform
-    @param varying        Which of the receiver and the parameters the loop
-                          varies, as its ControlIR says
-    @param controlled     Whether a loop tail modulo cons or a machine takes
-                          the calls its ControlIR continues by, and builds
-                          its cells as its turns do, rather than every call
-                          of the method's
-    @return An [Fmethod] field with the loopified body *)
+(** Why a method is not lowered to a machine or a loop tail modulo cons
+    whose recursive call passes a receiver made in a turn: a frame or a cell
+    keeps a pointer to the receiver, which that value does not outlive. *)
 let value_receiver = "recursive call passes a value-type receiver, whose address cannot be stored in a frame"
 
+(** Why a method is not lowered to a tail loop one of whose recursive calls
+    makes the receiver it passes and reads the receiver in another argument:
+    the receiver is parked before that argument is evaluated. *)
 let rebuilt_receiver_read =
   "recursive call makes the receiver it passes and reads the receiver in another argument, which parking it overwrites"
 
@@ -866,6 +875,39 @@ let receiver_position mf =
     | Some (_, pos) -> pos
     | None -> r.this_pos )
 
+(** Transform a struct method by loopifying its body.
+
+    Methods differ from free functions because recursive calls use
+    [this->method(args)] rather than [f(args)]. To loopify, we introduce a
+    synthetic [_self] parameter that replaces [this] in the body, allowing the
+    loop to track which object is being processed across iterations.
+
+    The transformation:
+    + Reads the method's strategy off the recursion plan
+      ({!planned_strategy}).
+    + Creates a {!method_checker} for the global the method was made from.
+    + Replaces [CPPthis] with [CPPvar _self] throughout the body.
+    + Adds [_self] (with the struct pointer type) to the parameter list.
+    + Applies the appropriate loopification strategy.
+    + For a tail loop, parks each receiver made in a turn ([park]) in
+      [_self_store], declared ahead of the loop.
+    + Prepends [_self = this] where the lowered body still names [_self].
+
+    @param tparams        Type parameters
+    @param self_ty        C++ type for the struct pointer (e.g.,
+                          [Tconst (Tptr (Tglob (...)))])
+    @param mf             The method record to transform
+    @param varying        Which of the receiver and the parameters the loop
+                          varies, as its ControlIR says
+    @param parts          Which of them every call passes a value stored in
+                          what the caller passed for it
+    @param park           The calls of a tail loop whose receiver is made in
+                          the turn ({!Control_ir.Term.rebuilt})
+    @param moves          The parameters a tail loop moves into their next
+                          value, by call ({!Ownership_ir.continue_moves})
+    @param cursor         The input whose cells a loop tail modulo cons
+                          recycles
+    @return An [Fmethod] field with the loopified body *)
 let transform_method_own ?cursor ?moves ~varying ~parts ~park ~tparams ~self_ty mf =
   (* [tparams] arrives holding only the enclosing struct's parameters.  A
      method's body is written under its own template header too, and a
@@ -895,8 +937,9 @@ let transform_method_own ?cursor ?moves ~varying ~parts ~park ~tparams ~self_ty 
          loop and recursing on that local instead, so the pointer stored for
          [_self] stays valid across the back-edge.  The parking assignment
          happens first, so a turn whose other arguments read the receiver is
-         declined before this ({!rebuilt_receiver_read}).  Which turns park is the plan's [park] ({!Control_ir.Term.rebuilt}); every
-         other turn passes a receiver derived from the loop's parameters. *)
+         declined before this ({!rebuilt_receiver_read}).  Which turns park
+         is the plan's [park] ({!Control_ir.Term.rebuilt}); every other turn
+         passes a receiver derived from the loop's parameters. *)
       let self_store_ty =
         let rec pointee = function
           | Tref (_, t) | Tconst t -> pointee t

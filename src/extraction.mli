@@ -13,13 +13,20 @@
 (** {1 Extraction from Rocq Terms to MiniML}
 
     First stage of the extraction pipeline:
-    {v Rocq PCUIC  --[extraction.ml]-->  MiniML AST v}
+    {v Rocq kernel terms  --[extraction.ml]-->  MiniML AST v}
 
-    Converts Rocq's Polymorphic Cumulative Calculus of Inductive Constructions
-    (PCUIC) into a simply-typed functional language ({!Miniml}). This step
-    performs type erasure (removing propositions, universe levels, implicit
-    arguments) and computes signatures tracking which arguments survive
-    extraction ([Keep]/[Kill]). *)
+    Converts Rocq terms (the Predicative Calculus of Cumulative Inductive
+    Constructions, PCUIC) into a simply-typed functional language
+    ({!Miniml}). This step performs type erasure (removing propositions,
+    universe levels, implicit arguments) and computes signatures tracking
+    which arguments survive extraction ([Keep]/[Kill]).  Its output is read by
+    {!Extract_env}, which collects the declarations a run needs and hands them
+    to translation.
+
+    For the C++ backend it also records facts later stages cannot recover from
+    the ML AST alone: promoted type variables of type classes, higher-kinded
+    parameter positions, class-argument shapes of instances, sigma-type
+    preconditions, and value-dependent type schemes (all in {!Table}). *)
 
 open Names
 open Declarations
@@ -27,7 +34,10 @@ open Environ
 open Evd
 open Miniml
 
-(** Extract a single constant definition into an ML declaration.
+(** Extract a single constant definition into an ML declaration: a [Dtype]
+    for a type scheme, a [Dterm] for anything else (an axiom's body is
+    [MLaxiom], a logical constant's [MLdummy]).  A definition also records its
+    instance class shape and context instance applications in {!Table}.
     @param access Indirect accessor used to force opaque proof bodies when [access_opaque ()] is set
     @param env Rocq global environment
     @param kn The constant name to extract
@@ -38,7 +48,10 @@ val extract_constant :
 (** Extract the type signature of a constant (for module signatures).
     @param env Rocq global environment
     @param kn The constant name whose spec is extracted
-    @param cb The constant body; only its type is used (the body is inspected for [Def] to produce an abbreviation) *)
+    @param cb The constant body.  A type scheme's [Def] body becomes the
+    [Stype]'s abbreviation; a term's [Def] body is extracted as the [Sval]'s
+    value.  A type scheme taking a value argument whose body does not extract
+    is recorded with {!Table.add_value_dep_type_scheme}. *)
 val extract_constant_spec :
   env -> Constant.t -> ('a, 'b) pconstant_body -> ml_spec
 
@@ -50,8 +63,9 @@ val extract_constant_spec :
 val extract_with_type :
   env -> evar_map -> EConstr.t -> (Id.t list * ml_type) option
 
-(** Extract a mutual fixpoint definition. The bool parameter indicates whether
-    it's a regular fixpoint (true) or a cofixpoint (false).
+(** Extract a mutual fixpoint definition into one [Dfix], each member's body
+    with the group's recursive [Rel]s replaced by its constants.  A cofixpoint
+    group's members are registered with {!Table.add_cofixpoint}.
     @param env Rocq global environment
     @param sg Evar map for universe and constraint tracking
     @param vkn Array of constant names for each mutually recursive component
@@ -65,10 +79,14 @@ val extract_fixpoint :
   EConstr.rec_declaration ->
   ml_decl
 
-(** Extract a (mutual) inductive type definition. *)
+(** Extract a (mutual) inductive type definition.  The result's constructor
+    argument lists omit erased and implicit arguments; the cached
+    {!Table.lookup_ind} entry keeps them. *)
 val extract_inductive : env -> MutInd.t -> ml_ind
 
-(** Extract a single term (for [Extraction Compute] and [Show Extraction]).
+(** Extract a single term, for [Crane Show Extraction] on the current proof.
+    A type scheme extracts to [MLdummy Ktype], a logical term to
+    [MLdummy Kprop].
     @param env Rocq global environment
     @param sg Evar map for universe and constraint tracking
     @param c The term to extract

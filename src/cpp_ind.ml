@@ -13,9 +13,11 @@
 (** Which C++ declarations a MiniML declaration becomes.
 
     This module contains:
-    - ind_header_decls — inductive types
-    - generate — what a MiniML declaration becomes, whichever file is being
-      written; impl_decls / header_decls pick what the .cpp and the .h write
+    {ul
+    {- {!ind_header_decls}: what an inductive block becomes;}
+    {- {!generate}: what a MiniML declaration becomes, whichever file is
+       being written; {!impl_decls} and {!header_decls} pick what the [.cpp]
+       and the [.h] write of it.}}
 
     Every entry point answers with declarations rather than with rendered
     text; {!pp_decls} is where they are printed. *)
@@ -140,9 +142,11 @@ let scope_at (ctx : render_ctx) = {in_struct = ctx.rc_in_struct; concepts_hoiste
     other inductives become variant-like structs with constructors.
     @param kn mutual inductive kernel name identifying the inductive block
     @param ind miniml representation of the mutual inductive type block
-    @return pretty-printed C++ header fragment (forward declarations followed
-            by full struct/concept/enum definitions), or [mt ()] when all
-            packets in the block are custom or suppressed
+    @return the block's {!header_generation}: forward declarations followed
+            by full struct/concept/enum definitions (none when every packet
+            is custom or a monad), the member definitions moved after the
+            group, and whether a promoted struct needs
+            [enable_shared_from_this]
 
     DESIGN: Mutual inductive support with forward declarations
     Rocq supports mutually recursive inductive types. In C++, this requires:
@@ -280,9 +284,8 @@ let ind_header_decls scope kn ind =
       in
       (* Check if function comes from the same Rocq module as the inductive *)
       let same_module r = ModPath.equal (modpath_of_r r) ind_modpath in
-      (* Collect the candidates first and keep only those the rule about
-         calls keeps ([Method_registry.settle_file_calls]), as the registry's
-         scan did. *)
+      (* Collect the candidates first, then keep only those the rule about
+         calls keeps ([Method_registry.settle_file_calls]). *)
       let eligible = ref [] in
       let consider r body ty =
         if
@@ -314,7 +317,8 @@ let ind_header_decls scope kn ind =
           ~ref_of:(fun (r, _, _) -> r)
           (List.rev !eligible)
       in
-      (* Newest first, as before. *)
+      (* Newest first: the caller reverses the list it hands
+         [gen_ind_header_v2]. *)
       List.rev
         (List.filter_map
            (fun (r, body, ty) -> planned_method_candidate ind_ref r body ty)
@@ -452,11 +456,8 @@ let ind_header_decls scope kn ind =
               in
               methods @ new_methods
           in
-          (* Compute parameter-only type vars. Parameters (before the colon)
-             become template params. Indices (after the colon) are erased.
-             ind.ind_nparams gives the number of Rocq parameters. p.ip_sign
-             covers all args (params + indices). Count Keep entries in the first
-             nparams positions to get param type var count. *)
+          (* The template parameters: the kept Rocq parameters (before the
+             colon).  Indices (after the colon) are erased. *)
           let param_vars = Common.ind_struct_tparams kn ind p in
           let mutual_partners =
             if is_mutual then
@@ -588,14 +589,8 @@ let ind_header_decls scope kn ind =
     in
     {decls = forward_decls @ group; member_defs; promoted_sft = !promoted_sft}
 
-(** What a type class instance becomes: the struct carrying its methods, and
-    the [static_assert] that checks the struct against the class's concept.
-
-    An instance is named from wherever the class is used, and a concept check
-    cannot be written for a struct that is still a template, so the assert is
-    only worth emitting for a ground instance.  Both declarations go to
-    namespace scope; an instance declared inside a module is lifted out of the
-    module's struct rather than emitted as a member of it. *)
+(** The step an instance's struct takes before its methods are planned
+    and generated, the same in both. *)
 let finish_instance_struct = Plan_templates.deapply_plain_struct_tvars
 
 let plan_instance_methods r a t =
@@ -634,6 +629,14 @@ let planned_methods ~minted r decl =
   in
   on_decl decl
 
+(** What a type class instance becomes: the struct carrying its methods, and
+    the [static_assert] that checks the struct against the class's concept.
+
+    An instance is named from wherever the class is used, and a concept check
+    cannot be written for a struct that is still a template, so the assert is
+    only worth emitting for a ground instance.  Both declarations go to
+    namespace scope; an instance declared inside a module is lifted out of the
+    module's struct rather than emitted as a member of it. *)
 let instance_decls r a t =
   let ds_opt, class_ref_opt, concept_args, minted =
     Gen_decls.gen_instance_struct r a t
@@ -753,7 +756,7 @@ let same_generation (a : Gen_decls.generated_fun) (b : Gen_decls.generated_fun) 
   && List.equal Id.equal (fst a.gf_env) (fst b.gf_env)
   && Id.Set.equal (snd a.gf_env) (snd b.gf_env)
 
-(** [ahead_once ~module_ ~what ~recorded ~record ~same ?planned ?take gen]
+(** [ahead_once ~module_ ~what ~recorded ~record ~same ?planned ?take ?peek gen]
     is [gen ()] ahead of the files ({!generating_ahead}), recorded
     ([record]) with [module_], the module whose element it is generated as,
     and handed to [planned] to plan what taking it will need.  A file's pass
@@ -852,6 +855,8 @@ let () = State.on_reset State.Unit (fun () -> Node_table.reset header_claims)
 let plan_header_claim key lifted =
   Node_table.replace header_claims (Obj.repr key) (List.filter (newly_placed header_placed) lifted)
 
+(* What {!plan_header_claim} planned the generation [key] places, read
+   while peeking: nothing is claimed. *)
 let planned_claim key =
   match Node_table.find_opt header_claims (Obj.repr key) with
   | Some planned -> planned
@@ -880,9 +885,10 @@ let header_claim key lifted =
     CErrors.anomaly
       Pp.(str "Crane: a generation was taken whose helpers' placement was not planned.")
 
-(** [generated_once ?on_reuse node gen] is {!ahead_once} for the functions
-    generated at the MiniML node [node]: a file's pass hands them to
-    [on_reuse] to replay any effect generating them had. *)
+(** [generated_once ~module_ ?on_reuse ?on_peek ?planned node gen] is
+    {!ahead_once} for the functions generated at the MiniML node [node] in
+    [module_]: a file's pass hands them to [on_reuse] to replay any effect
+    generating them had, and a peek hands them to [on_peek]. *)
 let generated_once ~module_ ?(on_reuse = ignore) ?(on_peek = ignore) ?planned node gen =
   let recorded, record = in_node_table generated node in
   ahead_once ~module_ ~what:(fun () -> Pp.str "a function") ~recorded ~record
@@ -1198,6 +1204,7 @@ let plan_header_scope mp scope = header_scopes := MPmap.add mp scope !header_sco
 
 let header_scope mp = MPmap.find_opt mp !header_scopes
 
+(* The header scope planned for [mp]; an anomaly if none was. *)
 let planned_header_scope mp =
   match header_scope mp with
   | Some scope -> scope
@@ -1243,6 +1250,7 @@ let concept_placement plan c =
   | Some (_, p) -> p
   | None -> CErrors.anomaly Pp.(str "Crane: a concept was written whose placement was not planned.")
 
+(* The visibility planned for the body of [mp]; an anomaly if none was. *)
 let planned_visibility mp =
   match Scope_plan.visibility mp with
   | Some v -> v
@@ -1270,6 +1278,8 @@ let spelling_position ~file spelling =
 (* [k] of the position of [spelling] in [file]. *)
 let at_spelling ~file spelling k = k (spelling_position ~file spelling)
 
+(* The live name of [key] at [frame] inside the position of [spelling] in
+   [file], noting it as written. *)
 let head_resolver_at ~file spelling frame key =
   at_spelling ~file spelling (fun ctx -> Cpp_names.at_frame ctx frame (fun ctx -> Cpp_names.live_value ctx key))
 
@@ -1279,6 +1289,8 @@ let head_resolver_at ~file spelling frame key =
 let resolver_at ~file spelling frame key =
   Common.without_noting_written_files (fun () -> head_resolver_at ~file spelling frame key)
 
+(* The names a declaration asks resolution for: those its leaves print and
+   those its concepts name. *)
 let requested d = Cpp_leaf_plan.unprinted_names d @ Cpp_concepts.names_requested d
 
 let resolve_tree ~file t =
@@ -1494,6 +1506,9 @@ let regenerate_ahead ~module_ d =
   | Header_only gen -> ignore (header_entity ~module_ d gen : header_generation * cpp_decl list)
   | Functions _ | Nothing -> ()
 
+(* What the header ([is_header]) or the implementation writes for [d] at
+   [ctx], taken from what was generated ahead of the files.  Functions are
+   recorded as entities unless only peeking. *)
 let decls_for ~is_header ctx ~module_ d =
   let scope = scope_at ctx in
   match generate scope ~module_ d with

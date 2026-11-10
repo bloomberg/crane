@@ -4,9 +4,13 @@
 (** Loopify pass: transforms recursive MiniCpp functions into iterative ones.
 
     Operates on {!Minicpp.cpp_decl} nodes after translation produces them but
-    before pretty-printing. Detects self-recursive function/method bodies and
-    rewrites them using while loops and explicit stacks to prevent stack
-    overflow on deep inputs. *)
+    before pretty-printing.  Each function, method and local fixpoint is
+    lowered as the recursion plan decided from its Core body
+    ({!Recursion_plan.strategy}): a [while] loop, a loop tail modulo cons,
+    or a machine with an explicit stack of frames, which keeps deep inputs
+    from overflowing the C++ stack.  Each loop must agree with its ControlIR
+    ({!Lower_control.loop}); under [CRANE_CHECK_IR] a disagreement is a
+    violation. *)
 
 open Names
 open Minicpp
@@ -15,8 +19,10 @@ open Minicpp
     [f] once Loopify's transform has made [loop] of it: the local fixpoints
     in [loop] lowered, and the outcome recorded, [strategy] -- a tail loop
     unless given -- or, where a call survived, a decline for [survived].
-    It raises [Loopify_analysis.Not_linearisable] where that transform
-    declines the function whole. *)
+    A local fixpoint whose transform declines is left as it was, its
+    decline recorded; the caller catches
+    [Loopify_analysis.Not_linearisable] around the transform that built
+    [loop], not around this. *)
 val after_tail_loop :
   ?strategy:Loopify_analysis.loopify_outcome ->
   ?survived:string ->
@@ -32,18 +38,19 @@ val after_tail_loop :
     body is a decline for [survived], where something sharper is known than
     {!Loopify_analysis.survived_generically}. *)
 type unlowered =
-  | Declined of string
+  | Declined of string  (** The transform declined, for this reason. *)
   | Left of string option
+      (** No loop was made; the reason to record if a call survives. *)
 
-(** [frame_machine ~loop ?entry ~varying ~tparams check f params body] is the
-    machine with a stack of frames of the function [f], the loop [loop] of
-    its ControlIR, whose body [body] has its tail calls exposed: [check]
-    recognises the calls that enter it at [f], and
-    the body Loopify adopts, where its ControlIR has the entry [entry], is
-    a second entry of it ({!Loopify_frame.find_adopted}), whose frames hold
-    by pointer the parameters standing for the Core binders
-    [entered_pointers] accepts; its frames save
-    the parameters [varying] of [f]'s.  With it comes
+(** [frame_machine ~loop ?entry ?entered_pointers ~varying ~parts ~tparams
+    check f params body] is the machine with a stack of frames of the
+    function [f], the loop [loop] of its ControlIR, whose body [body] has
+    its tail calls exposed: [check] recognises the calls that enter it at
+    [f], and the body Loopify adopts, where its ControlIR has the entry
+    [entry], is a second entry of it ({!Loopify_frame.find_adopted}), whose
+    frames hold by pointer the parameters standing for the Core binders
+    [entered_pointers] accepts; its frames save the parameters [varying] of
+    [f]'s, and hold by pointer those [parts] marks.  With it comes
     the reason a call it leaves behind survived, where it adopted a body.
     [Error why] where Loopify would do anything else with [f]: adopt
     another body than the entry or none where there is one, or make a
@@ -87,12 +94,13 @@ val record_unlowered : ?unlowered:unlowered -> dfun -> cpp_stmt list -> unit
     of which no loop is attempted: its calls those of the method. *)
 val record_unlowered_method : method_field -> unit
 
-(** [modulo_cons_loop ~jumped ~varying ~shapes ~tparams check f params
-    body] is the tail-modulo-cons loop of the function [f], whose body
-    [body] has its tail calls exposed: [check]
-    recognises the calls the loop takes, [shapes] the branches it builds
-    cells in ({!Loopify_tmc.branch_along}), [varying] the parameters it
-    changes, [cursor] the input it recycles the cells of, and [jumped] is
+(** [modulo_cons_loop ~jumped ?cursor ~varying ~parts ~shapes ~tparams check
+    f params body] is the tail-modulo-cons loop of the function [f], whose
+    body [body] has its tail calls exposed: [check] recognises the calls the
+    loop takes, [shapes] the branches it builds cells in
+    ({!Loopify_tmc.branch_along}), [varying] the parameters it changes,
+    [parts] those every call passes a value stored in what the caller passed
+    for it, [cursor] the input it recycles the cells of, and [jumped] is
     told each call it takes.  [None] where
     Loopify would do anything else with [f]: adopt a body, a violation under
     [CRANE_CHECK_IR], or leave a call behind.  It raises
@@ -110,7 +118,8 @@ val modulo_cons_loop :
   cpp_stmt list ->
   cpp_stmt list option
 
-(** [transform_method_own ~varying ~tparams ~self_ty m] is Loopify's
+(** [transform_method_own ?cursor ?moves ~varying ~parts ~park ~tparams
+    ~self_ty m] is Loopify's
     transform of the method [m] of a struct whose receiver pointer type is
     [self_ty], under the struct's template parameters [tparams], before the
     local fixpoints in it are lowered: [m] itself where it declines.  A tail
@@ -161,12 +170,13 @@ val lower_local_tail_loops :
 val lower_function_locals :
   tparams:(template_type * Id.t) list -> (Id.t * cpp_type) list -> cpp_stmt list -> cpp_stmt list
 
-(** [local_frame_machine ~member ~name ~binders ~varying ~tparams check
-    params ret_ty body] is the body of the machine with a stack of frames of the local
-    fixpoint [name], the function [member] of a Core fixpoint, its body
-    [body] over its parameters [params], standing for the Core binders
-    [binders], with its tail calls exposed: [check] recognises the calls
-    entering it, and its frames save the parameters [varying].
+(** [local_frame_machine ~member ~name ~binders ~varying ~parts ~tparams
+    check params ret_ty body] is the body of the machine with a stack of
+    frames of the local fixpoint [name], the function [member] of a Core
+    fixpoint, its body [body] over its parameters [params], standing for the
+    Core binders [binders], with its tail calls exposed: [check] recognises
+    the calls entering it, its frames save the parameters [varying], and
+    hold by pointer those [parts] marks.
     The local fixpoints in it are lowered after it, as Loopify
     lowers them.  [None] where the machine leaves a call behind.  Under
     [CRANE_CHECK_IR] the calls entering it must be its loop's [Continue]s.
@@ -194,9 +204,13 @@ val local_frame_machine :
     ({!Control_ir.Term.parts_passed}) or, of a machine with a stack of frames,
     whether its frames hold it by pointer ({!Frame_storage}). *)
 type member_plan = {
-  member_varying : bool list;
+  member_varying : bool list;  (** Whether some Continue changes it. *)
   member_parts : bool list;
+      (** Whether it is passed parts of the caller's, or held by pointer in
+          a frame. *)
   member_moves : (Miniml.Occurrence.t * Ownership_ir.Continue_move.t list) list;
+      (** The parameters each Continue of a tail loop moves into their next
+          value ({!Ownership_ir.continue_moves}); empty for a machine. *)
 }
 
 (** [member_plan ~frames member params] is the plan of the local fixpoint
@@ -221,12 +235,12 @@ val check_pointer_fields : dstruct -> unit
 
 (** {2 Diagnostics}
 
-    Every bail-out in this pass used to return the original recursive body
-    silently, making the pass's coverage unmeasurable. The pass now records an
-    outcome per recursive function, validated against the postcondition that no
-    self-call survives the transform. [Set Crane Loopify Diagnostics] prints
-    them as they are produced; [Set Crane Loopify Strict] turns a decline into
-    an error. *)
+    The pass records an outcome per recursive function, so that a bail-out,
+    which leaves the original recursive body, is never silent and coverage
+    is measurable.  Each outcome is validated against the postcondition that
+    no self-call survives the transform.  [Set Crane Loopify Diagnostics]
+    prints them as they are produced; [Set Crane Loopify Strict] turns a
+    decline into an error. *)
 
 (** What the pass did with one recursive function. *)
 type loopify_outcome =

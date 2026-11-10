@@ -15,26 +15,34 @@
     takes from there ({!record}).  {!check_against_ahead} holds the two to
     the same entities, and {!check_against_plan} holds every unit to
     "emission generates what the unit declares, and the helpers lifted out of
-    it". *)
+    it".  Both checks run once a unit's files are written
+    ([Extract_env]). *)
 
+(** What a program holds: a source declaration's generation, or a helper
+    lifted out of one. *)
 type id =
   | Source of Entity_id.t
   | Generated of Generated_entity_id.t
 
+(** Source entities before helpers, each kind by its own order. *)
 val compare_id : id -> id -> int
 val pp_id : id -> Pp.t
 
+(** Sets of ids, ordered by {!compare_id}. *)
 module Id_set : Set.S with type elt = id
 
 (** A helper lifted out of a body. *)
 type helper = {
   helper_id : Generated_entity_id.t;
+      (** The helper's identity, made from its {!Lifted.t}. *)
   helper_decl : Minicpp.cpp_decl;
+      (** The declaration that defines it. *)
 }
 
 (** One source declaration's generation. *)
 type entity = {
   entity_id : Entity_id.t;
+      (** The source declaration generated. *)
   decls : Minicpp.cpp_decl list;
       (** What generating it produced, before {!Cpp_pipeline.finish}. *)
   helpers : helper list;
@@ -53,6 +61,7 @@ val dependencies : Minicpp.cpp_decl list -> Entity_id.Set.t
 (** One phase's generated program. *)
 type t
 
+(** The source declarations' generations of a program. *)
 val entities : t -> entity list
 
 (** Every entity and helper id of the program. *)
@@ -69,8 +78,8 @@ val record : entity -> entity
 
 (** Under [CRANE_CHECK_IR], fail unless every entity generated ahead of the
     files or taken by them is one the unit [declares], and every helper was
-    lifted out of such an entity or out of none: emission generates what was
-    planned, and the helpers its bodies lift. *)
+    lifted out of an entity the unit declares or generated, or out of none:
+    emission generates what was planned, and the helpers its bodies lift. *)
 val check_against_plan : declares:(Names.GlobRef.t -> bool) -> unit
 
 (** [record_ahead e] adds [e], and the helpers lifted out of it, to the
