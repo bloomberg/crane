@@ -10,7 +10,12 @@ let rec term e =
   | MLrel (i, _) -> fresh_rel i
   | MLletin (x, ty, a, b, _) -> MLletin (x, ty, a, b, Occurrence.fresh ())
   | MLcase (ty, scrut, branches, _) -> MLcase (ty, scrut, branches, Occurrence.fresh ())
-  | MLfix (i, ids, bodies, cofix, _) -> MLfix (i, ids, bodies, cofix, Occurrence.fresh ())
+  | MLfix (i, ids, bodies, cofix, occ) ->
+    let occ' = Occurrence.fresh () in
+    (* A group recursing at a ground instance stays one under its new
+       occurrence ({!Table.add_erased_fix_group}). *)
+    if Table.is_erased_fix_group occ then Table.add_erased_fix_group occ';
+    MLfix (i, ids, bodies, cofix, occ')
   | MLglob use -> MLglob (Global_use.refresh use)
   | e -> e
 

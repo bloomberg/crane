@@ -14123,3 +14123,25 @@
   (alias runtest)
   (deps local_lifted_mutual_closure_back.t.exe)
   (action (run ./local_lifted_mutual_closure_back.t.exe))))
+
+(subdir local_fix_polymorphic_recursion
+ (rule
+  (targets local_fix_polymorphic_recursion.t.exe)
+  (deps LocalFixPolymorphicRecursion.vo local_fix_polymorphic_recursion.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_polymorphic_recursion.t.exe local_fix_polymorphic_recursion.t.cpp local_fix_polymorphic_recursion.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_polymorphic_recursion.t.exe)
+  (action (run ./local_fix_polymorphic_recursion.t.exe))))
+
+(subdir local_mutual_polymorphic_recursion
+ (rule
+  (targets local_mutual_polymorphic_recursion.t.exe)
+  (deps LocalMutualPolymorphicRecursion.vo local_mutual_polymorphic_recursion.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_mutual_polymorphic_recursion.t.exe local_mutual_polymorphic_recursion.t.cpp local_mutual_polymorphic_recursion.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_mutual_polymorphic_recursion.t.exe)
+  (action (run ./local_mutual_polymorphic_recursion.t.exe))))

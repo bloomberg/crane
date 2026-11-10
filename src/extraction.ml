@@ -38,6 +38,11 @@ exception I of inductive_kind
 (* A set of all fixpoint functions currently being extracted *)
 let current_fixpoints = ref ([] : Constant.t list)
 
+(** The local fixpoint a [let] binds while it is extracted, with the
+    applications of its name in the [let]'s body: the group's entries
+    ({!erased_fix_types}). *)
+let let_fix_entries = ref (None : (EConstr.t * EConstr.t array list) option)
+
 (* For the C++ backend: deferred meta fills for erased constructor type params.
    When a constructor like nil/none has a type parameter whose meta is unresolved
    after needs_magic (because the expected type is a dependent/erased type), we
@@ -1515,6 +1520,107 @@ and record_constant_type env sg kn opt_typ =
 
 (** {1 Extraction of a term} *)
 
+(** The member types of a local fixpoint group that recurses at a ground
+    instance, or [None] for one that does not.  [entries] are the argument
+    lists the group's member [i] is entered with from outside.
+
+    A local group is typed as an ML [let rec]: one type per member, which its
+    calls share.  A type binder passed a closed type by a call inside the
+    group ([f bool ...] inside [f (A : Type)]), and something else as well --
+    the [list nat] the group is entered at, say, directly or through a partner
+    that passes its own binder on -- is pinned to one and coerced from the
+    other: a coercion between two unrelated types that C++ cannot perform.
+    Such a group's members are typed from their declared types instead, with
+    every type binder unknown -- held as a [crane::obj], as OCaml holds it as
+    an [Obj.t] -- and everything else left to inference.
+
+    A binder passed only one closed type is that type throughout, and one
+    whose closed types all come from entries is a generalised [let] entered at
+    several instances.  One passed types built from variables is not pinned:
+    [go (A * A)] does not unify with [A], so inference leaves it a variable
+    the member is generic in, and the lifted member is a template calling
+    itself at the bigger instance.  A group with no entry -- a recursor's
+    fixpoint, which is the constant's whole body -- is the constant itself,
+    whose calls are its template's. *)
+and erased_fix_types env sg ~entries i (fi, ti, ci) =
+  let nf = Array.length fi in
+  let type_positions t =
+    let rec go env k t acc =
+      match EConstr.kind sg (whd_all env sg t) with
+      | Prod (x, d, c) ->
+        let acc = if is_info_scheme env sg d then k :: acc else acc in
+        go (push_rel_assum (x, d) env) (k + 1) c acc
+      | _ -> List.rev acc
+    in
+    go env 0 t []
+  in
+  let positions = Array.map type_positions ti in
+  (* The binder at position [p] of member [m] is [(m, p)].  A call passing a
+     caller's own binder on joins the two: inference types them as one. *)
+  let parent = Hashtbl.create 7 in
+  let rec find x = match Hashtbl.find_opt parent x with Some y when y <> x -> find y | _ -> x in
+  let join x y = let x = find x and y = find y in if x <> y then Hashtbl.replace parent x y in
+  (* What each binder is passed: a type, closed or not. *)
+  let passed = ref [] in
+  let pass ~inner m p t = passed := ((m, p), t, inner) :: !passed in
+  let walk j =
+    let lams, body = EConstr.decompose_lambda sg ci.(j) in
+    let l = List.length lams in
+    let own q = List.mem q positions.(j) && q < l in
+    let rec search depth t =
+      ( match EConstr.kind sg t with
+      | App (h, args) -> (
+        match EConstr.kind sg h with
+        | Rel r when r - depth > l && r - depth - l <= nf ->
+          let m = nf - (r - depth - l) in
+          List.iter
+            (fun p ->
+              if p < Array.length args then
+                match EConstr.kind sg args.(p) with
+                | Rel a when a > depth && a - depth <= l && own (l - (a - depth)) ->
+                  join (m, p) (j, l - (a - depth))
+                | _ -> pass ~inner:true m p args.(p) )
+            positions.(m)
+        | _ -> () )
+      | _ -> () );
+      EConstr.iter_with_binders sg succ search depth t
+    in
+    search 0 body
+  in
+  List.iter
+    (fun args ->
+      List.iter (fun p -> if p < Array.length args then pass ~inner:false i p args.(p)) positions.(i))
+    entries;
+  (* A binder a call inside the group passes a closed type, and that is
+     passed anything else too, is typed at two instances, which one ML type
+     cannot be.  Entries alone differing are a [let] generalised. *)
+  let pinned_twice () =
+    List.iter walk (List.init nf Fun.id);
+    List.exists
+      (fun (x, t, inner) ->
+        inner
+        && EConstr.Vars.closed0 sg t
+        && List.exists (fun (y, u, _) -> find x = find y && not (EConstr.eq_constr sg t u)) !passed )
+      !passed
+  in
+  if
+    lang () != Cpp
+    || List.is_empty entries
+    || Array.for_all List.is_empty positions
+    || not (pinned_twice ())
+  then None
+  else
+    let rec erase = function
+      | Tvar _ | Tapp _ -> Tunknown
+      | Tunknown -> new_meta ()
+      | Tarr (a, b) -> Tarr (erase a, erase b)
+      | Tglob (r, l, a) -> Tglob (r, List.map erase l, a)
+      | Tmeta {contents = Some t} -> erase t
+      | t -> t
+    in
+    try Some (Array.map (fun t -> erase (extract_type env sg [] 1 t [])) ti)
+    with e when CErrors.noncritical e -> None
+
 (** Extracts a Rocq PCUIC term into an ML AST expression. Precondition: term is
     informative and not a type scheme.
     @param env Rocq environment, extended as lambdas and let-ins are entered
@@ -1587,7 +1693,24 @@ and extract_term env sg mle mlt c args =
               try_mgu a ty
             | _ -> ()
         in
-        let c1' = extract_term env sg mle a c1 [] in
+        let c1' =
+          match EConstr.kind sg c1 with
+          | Fix _ ->
+            (* The applications of the bound name in the body are the
+               group's entries ({!erased_fix_types}). *)
+            let entries = ref [] in
+            let rec search depth t =
+              ( match EConstr.kind sg t with
+              | App (h, a) when EConstr.isRelN sg (depth + 1) h -> entries := a :: !entries
+              | _ -> () );
+              EConstr.iter_with_binders sg succ search depth t
+            in
+            search 0 (applistc c2 args');
+            let saved = !let_fix_entries in
+            let_fix_entries := Some (c1, !entries);
+            Fun.protect ~finally:(fun () -> let_fix_entries := saved) (fun () -> extract_term env sg mle a c1 [])
+          | _ -> extract_term env sg mle a c1 []
+        in
         (* The type of [c1'] is generalized and stored in [mle]. *)
         let mle' =
           if generalizable c1' then
@@ -1637,7 +1760,37 @@ and extract_term env sg mle mlt c args =
     let ip = ci.ci_ind in
     extract_app env sg mle mlt (extract_case env sg mle (ip, c0, br)) args
   | Fix ((_, i), recd) ->
-    extract_app env sg mle mlt (extract_fix env sg mle i recd false) args
+    (* The group is entered by this application, or, let-bound, by the
+       applications of its name the let's body makes; one applied to
+       variables alone is an eta-expansion of a constant that is the
+       fixpoint, and enters nothing. *)
+    let entries =
+      match !let_fix_entries with
+      | Some (c', entries) when c' == c -> entries
+      | _ ->
+        if args <> [] && not (List.for_all (EConstr.isRel sg) args) then [Array.of_list args] else []
+    in
+    ( match erased_fix_types env sg ~entries i recd with
+    | None ->
+      extract_app env sg mle mlt (extract_fix env sg mle i recd false) args
+    | Some tys ->
+      (* The head's type is known before the arguments, so a coercion lands
+         on the argument that needs it, as at a constant's call. *)
+      let doms, _ = type_decomp tys.(i) in
+      let rec split doms args =
+        match (doms, args) with
+        | d :: doms, _ :: args ->
+          let typed, rest = split doms args in
+          (d :: typed, rest)
+        | _, args -> ([], List.map new_meta args)
+      in
+      let typed, rest = split doms args in
+      let arg_tys = typed @ rest in
+      let head = extract_fix ~tys env sg mle i recd false tys.(i) in
+      let () = match head with MLfix (_, _, _, _, occ) -> Table.add_erased_fix_group occ | _ -> () in
+      let applied = type_recomp (arg_tys, mlt) in
+      let head = put_magic ~from:tys.(i) ~into:applied head in
+      mlapp head (List.map2 (extract_maybe_term env sg mle) arg_tys args) )
   | CoFix (i, recd) ->
     extract_app env sg mle mlt (extract_fix env sg mle i recd true) args
   | Cast (c, _, _) -> extract_term env sg mle mlt c args
@@ -2328,11 +2481,18 @@ and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
     @param i Index of the main fixpoint component to extract (the one whose type unifies with [mlt])
     @param recd The raw recursive declaration: binder names [fi], types [ti], bodies [ci]
     @param is_cofix [true] for a cofixpoint, [false] for a regular fixpoint
-    @param mlt Expected ML type of fixpoint component [i] *)
-and extract_fix env sg mle i ((fi, ti, ci) as recd) is_cofix mlt =
+    @param mlt Expected ML type of fixpoint component [i]
+    @param tys The members' types, when {!erased_fix_types} gives them *)
+and extract_fix ?tys env sg mle i ((fi, ti, ci) as recd) is_cofix mlt =
   let env = push_rec_types recd env in
-  let metas = Array.map new_meta fi in
-  metas.(i) <- mlt;
+  let metas =
+    match tys with
+    | Some tys -> Array.copy tys
+    | None ->
+      let metas = Array.map new_meta fi in
+      metas.(i) <- mlt;
+      metas
+  in
   let mle = Array.fold_left Mlenv.push_type mle metas in
   let ei = Array.map2 (extract_maybe_term env sg mle) metas ci in
   MLfix

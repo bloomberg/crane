@@ -1388,3 +1388,15 @@ val promoted_inductives : unit Ref.User.Tbl.t
 (** Record that a reference is promoted; see {!promoted_inductives}.  A
     promotion outlives the rendering that decided it. *)
 val promote_inductive : GlobRef.t -> unit
+
+(** {2 Local fixpoint groups recursing at a ground instance} *)
+
+(** Record the local fixpoint group [occ] as one whose members' type binders
+    extraction erased because a call recurses at a ground instance
+    ({!Extraction.erased_fix_types}): its calls are written at their own
+    instance, and translation adapts their arguments to the erased
+    parameters. *)
+val add_erased_fix_group : Miniml.Occurrence.t -> unit
+
+(** Whether {!add_erased_fix_group} recorded [occ]. *)
+val is_erased_fix_group : Miniml.Occurrence.t -> bool

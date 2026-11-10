@@ -6,12 +6,12 @@ Import ListNotations.
 (** The local version of [mutual_lambda_other_instance]: [f] calls its
     partner [g] at [bool], not at the [list nat] it is entered at, and [g]
     passes the lambda back to [f].  Extraction types a local group's bodies
-    at one instance, so the group is not lifted (it has no type variables
-    of its own) and its lambdas take [f]'s callable at
-    [crane::fn<uint64_t(List<uint64_t>)>] and [g]'s at
-    [crane::fn<uint64_t(bool)>]: [g]'s call back to [f] has no conversion.
-    No C++.  No infinite instantiation can arise here: the callables are
-    [crane::fn] already. *)
+    at one instance, which would type [f]'s callable over [List] and [g]'s
+    over [bool], with no conversion from one to the other.  Instead the
+    group's type binders are erased ([Extraction.erased_fix_types]): both
+    callables are [crane::fn<uint64_t(crane::obj)>], a closure written at its
+    own instance is adapted by [crane_erase_fn], and [g] passes [h] back
+    unadapted, as it is already erased. *)
 
 Module LocalMutualPolymorphicRecursion.
 
