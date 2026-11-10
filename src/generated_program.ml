@@ -100,6 +100,8 @@ let record_ahead e =
   List.iter record_helper_ahead e.helpers;
   generated_ahead := { !generated_ahead with entities = e :: !generated_ahead.entities }
 
+let generated_ahead_ids () = ids !generated_ahead
+
 let check_against_plan ~declares =
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then
     let emitted = Id_set.union (ids !generated_ahead) (entities_ids !taken) in
