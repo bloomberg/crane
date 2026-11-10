@@ -320,11 +320,21 @@ let instantiate ~lex ~expected_ml ~stated_ml ~caller ~scope call =
       | Miniml.Tdummy _ -> true
       | _ -> false )
 
+(** Where the walk met an application: in a body as it is generated -- a
+    declaration's, a method's, an instance method's -- or in a term a custom
+    type is applied to, converted wherever the type is. *)
+type site =
+  | Body
+  | Type_term
+
 (** A global application of the program: the occurrence of the use naming
-    its callee, and the roles of the arguments it writes. *)
+    its callee, the roles of the arguments it writes, and its instantiation
+    as planned where the walk met it ({!instantiate}), if that succeeded. *)
 type entry = {
   occurrence : Occurrence.t;
   roles : Elaborated_call.role list;
+  planned : Elaborated_call.instantiated option;
+  site : site;
 }
 
 type t = {
@@ -338,101 +348,212 @@ let empty = {calls = Ref.User.Map.empty; named = GlobRef.Set_env.empty}
    {!structure}. *)
 type builder = t ref
 
+(* The ML types a position expects ([expected]) and states ([stated]) for
+   the value generated there: the slot translation threads, kept as
+   translation keeps it. *)
+type position = {expected : ml_type option; stated : ml_type option}
+
+let no_position = {expected = None; stated = None}
+
+(* Where a body is generated: the declaration it is generated as ([caller],
+   none for a method of an inductive, which is lowered outside any), the
+   type variables it is generated under by name ([scope]), and how many its
+   head numbers ([n_outer], past which a let-bound lambda numbers its own). *)
+type walker = {
+  b : builder;
+  n_outer : int;
+  caller : GlobRef.t option;
+  scope : Id.t list;
+  site : site;
+}
+
+(* The variables a head of [n] generates under: [T1] .. [Tn]. *)
+let head_scope n = List.init n (fun k -> Minicpp.tvar_id (k + 1))
+
+let walker ?caller ?scope b ~n_outer =
+  let scope = match scope with Some s -> s | None -> head_scope n_outer in
+  {b; n_outer; caller; scope; site = Body}
+
 let name (b : builder) r = b := {!b with named = GlobRef.Set_env.add r !b.named}
 
-let record (b : builder) lex use args =
+let record w ~position lex use args =
   match classify ~lex use.callee args with
   | roles ->
-    let others = Option.default [] (Ref.User.Map.find_opt use.callee !b.calls) in
-    let entry = {occurrence = Global_use.occurrence use; roles} in
-    b := {!b with calls = Ref.User.Map.add use.callee (entry :: others) !b.calls}
+    let planned =
+      match
+        instantiate ~lex ~expected_ml:position.expected ~stated_ml:position.stated ~caller:w.caller
+          ~scope:w.scope (of_roles use args roles)
+      with
+      | inst -> Some inst
+      | exception e when CErrors.noncritical e -> None
+    in
+    let others = Option.default [] (Ref.User.Map.find_opt use.callee !(w.b).calls) in
+    let entry = {occurrence = Global_use.occurrence use; roles; planned; site = w.site} in
+    w.b := {!(w.b) with calls = Ref.User.Map.add use.callee (entry :: others) !(w.b).calls};
+    planned
   (* A callee with no type is never translated as a call: the traversal
      reaches it by another route or not at all. *)
-  | exception Not_found -> ()
+  | exception Not_found -> None
+
+(* Where the [i]th regular argument of [inst] is generated: the substituted
+   parameter at its position, or, where substitution erased it, the one the
+   callee declares (translation's [gen_call_args]). *)
+let argument_position (inst : Elaborated_call.instantiated) i =
+  let param_index = Param_pos.of_regular ~leading:(Elaborated_call.leading_params inst.call) i in
+  let subst_index =
+    if Table.is_inline_custom inst.call.callee then Some (Param_pos.subst_at_declared param_index)
+    else inst.subst_index_of_orig param_index
+  in
+  match subst_index with
+  | Some i -> Param_pos.nth inst.params i
+  | None -> (
+    match Param_pos.nth inst.params_orig param_index with
+    | Some t when not (erased_by_extraction t) -> Some t
+    | _ -> None )
+
+(* The position of each argument of a global call planned as [planned], in
+   a call at [position]: a regular argument is expected at its parameter's
+   type unless that has an erasure in it, and stated at it; one past the
+   callee's arity is applied to the result, and inherits the call's
+   position; any other, and every argument of a call not planned, is
+   generated with none. *)
+let argument_positions ~position planned =
+  match planned with
+  | None -> fun _ -> no_position
+  | Some (inst : Elaborated_call.instantiated) ->
+    let roles = Array.of_list inst.call.roles in
+    let regular_index =
+      let k = ref (-1) in
+      Array.map (function Elaborated_call.Regular -> incr k; !k | _ -> -1) roles
+    in
+    fun i ->
+      if i >= Array.length roles then no_position
+      else
+        match roles.(i) with
+        | Elaborated_call.Regular ->
+          let param = argument_position inst regular_index.(i) in
+          let expected =
+            match param with
+            | Some t when not (ml_type_contains_erased t) -> Some t
+            | _ -> position.expected
+          in
+          {expected; stated = param}
+        | Elaborated_call.Excess -> position
+        | Elaborated_call.Dictionary | Elaborated_call.Erased_dictionary | Elaborated_call.Dropped ->
+          no_position
+
+(* The position of the body of a lambda of [n] binders at [position]: its
+   expected type past [n] arrows, where that leaves a resolved codomain;
+   its stated type as it was. *)
+let lambda_body_position ~n position =
+  let rec strip n ty =
+    if n = 0 then Some ty
+    else match resolve_tmeta ty with Tarr (_, cod) -> strip (n - 1) cod | _ -> None
+  in
+  let expected =
+    match position.expected with
+    | Some fn_ty -> (
+      match strip n fn_ty with
+      | Some cod -> (
+        match resolve_tmeta cod with
+        | Tdummy _ | Tunknown | Tmeta {contents = None} | Topen _ -> position.expected
+        | _ -> Some cod )
+      | None -> position.expected )
+    | None -> None
+  in
+  {position with expected}
 
 let binder role (x, ty) = {Lexenv.eb_id = Mlutil.id_of_mlid x; eb_type = ty; eb_role = role}
 
 (* The binders [ids], innermost first, as [collect_lams] returns them. *)
 let push role ids lex = Lexenv.push (List.map (binder role) ids) lex
 
-let rec walk b ~n_outer lex = function
+(* [walk w ~position lex e] elaborates the calls of [e], generated in [lex]
+   at [position], each at the position translation generates it at: a
+   recursion translation makes with no slot of its own resets it. *)
+let rec walk w ?(position = no_position) lex e =
+  let go ?(position = no_position) lex e = walk w ~position lex e in
+  match e with
   (* A spine is read whole, as translation reads it.  A coercion of the
      callee is seen through at every argument -- [not] applied to the
      proposition it erases, in a type written [{P} + {~P}]. *)
   | MLapp ((MLapp (MLglob _, _) | MLmagic _ | MLcase (_, _, [|_|], _)), _) as e ->
-    walk b ~n_outer lex (Mlutil.read_spine e)
+    go ~position lex (Mlutil.read_spine e)
   | MLapp (MLglob use, args) ->
-    walk_use b ~n_outer lex use;
-    record b lex use args;
-    List.iter (walk b ~n_outer lex) args
+    walk_use w lex use;
+    let at = argument_positions ~position (record w ~position lex use args) in
+    List.iteri (fun i a -> go ~position:(at i) lex a) args
+  (* A local callee's arguments are generated at the call's position. *)
   | MLapp (f, args) ->
-    walk b ~n_outer lex f;
-    List.iter (walk b ~n_outer lex) args
+    go lex f;
+    List.iter (go ~position lex) args
   | MLlam _ as e ->
     let ids, body = Mlutil.collect_lams e in
-    List.iter (fun (_, ty) -> walk_type b ~n_outer lex ty) ids;
-    walk b ~n_outer (push Lexenv.Value ids lex) body
+    List.iter (fun (_, ty) -> walk_type w lex ty) ids;
+    go ~position:(lambda_body_position ~n:(List.length ids) position) (push Lexenv.Value ids lex) body
   (* An alias of a polymorphic function is not bound but put in place of its
      uses ({!Translation_support.let_lambda}), and its calls are those of
-     what it abbreviates, at the arguments each use gives it. *)
+     what it abbreviates, at the arguments each use gives it.  A lambda that
+     is bound is generated as a function of its own, at no position. *)
   | MLletin (x, ty, (MLlam _ as a), body, _) -> (
-    walk_type b ~n_outer lex ty;
-    match let_lambda ~lex ~n_outer ty a body with
-    | Inlined body -> walk b ~n_outer lex body
+    walk_type w lex ty;
+    match let_lambda ~lex ~n_outer:w.n_outer ty a body with
+    | Inlined body -> go ~position lex body
     | Bound | At_instance _ | Lifted ->
-      walk b ~n_outer lex a;
-      walk b ~n_outer (push Lexenv.Value [(x, ty)] lex) body )
+      go lex a;
+      go ~position (push Lexenv.Value [(x, ty)] lex) body )
   | MLletin (x, ty, a, body, _) ->
-    walk_type b ~n_outer lex ty;
-    walk b ~n_outer lex a;
-    walk b ~n_outer (push Lexenv.Value [(x, ty)] lex) body
+    walk_type w lex ty;
+    go ~position:{position with expected = Some ty} lex a;
+    go ~position (push Lexenv.Value [(x, ty)] lex) body
   | MLcons (ty, _, args) ->
-    walk_type b ~n_outer lex ty;
-    List.iter (walk b ~n_outer lex) args
-  | MLtuple args -> List.iter (walk b ~n_outer lex) args
+    walk_type w lex ty;
+    List.iter (go ~position:{expected = None; stated = position.stated} lex) args
+  | MLtuple args -> List.iter (go lex) args
   | MLcase (ty, scrut, branches, _) ->
-    walk_type b ~n_outer lex ty;
-    walk b ~n_outer lex scrut;
+    walk_type w lex ty;
+    go lex scrut;
     (* A branch's result type is written under its binders: a custom match
        declares it as the type its arm returns. *)
     Array.iter
       (fun (ids, rty, _, body) ->
-        List.iter (fun (_, ty) -> walk_type b ~n_outer lex ty) ids;
+        List.iter (fun (_, ty) -> walk_type w lex ty) ids;
         let lex = push Lexenv.Value (List.rev ids) lex in
-        walk_type b ~n_outer lex rty;
-        walk b ~n_outer lex body )
+        walk_type w lex rty;
+        go ~position lex body )
       branches
   | MLfix (_, fs, defs, _, _) ->
-    Array.iter (fun (_, ty) -> walk_type b ~n_outer lex ty) fs;
+    Array.iter (fun (_, ty) -> walk_type w lex ty) fs;
     (* The last function of the group is the innermost binder. *)
     let fs = List.rev_map (fun (f, ty) -> (Id f, ty)) (Array.to_list fs) in
-    Array.iter (walk b ~n_outer (push Lexenv.Value fs lex)) defs
-  | MLmagic (_, e) -> walk b ~n_outer lex e
+    Array.iter (go (push Lexenv.Value fs lex)) defs
+  | MLmagic (_, e) -> go ~position lex e
   | MLparray (elems, def) ->
-    Array.iter (walk b ~n_outer lex) elems;
-    walk b ~n_outer lex def
+    Array.iter (go lex) elems;
+    go lex def
   (* A global named but not applied -- a function passed as a value -- is
      translated as its call with no arguments. *)
   | MLglob use ->
-    walk_use b ~n_outer lex use;
-    record b lex use []
+    walk_use w lex use;
+    ignore (record w ~position lex use [])
   | MLrel _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> ()
 
-and walk_use b ~n_outer lex use =
-  name b use.callee;
-  Global_use.iter_types (walk_type b ~n_outer lex) use
+and walk_use w lex use =
+  name w.b use.callee;
+  Global_use.iter_types (walk_type w lex) use
 
 (* A custom type applied to a term -- a fixed-size array to its length --
-   has calls of its own, translated where the type is converted. *)
-and walk_type b ~n_outer lex ty =
+   has calls of its own, translated where the type is converted, in no
+   declaration's name. *)
+and walk_type w lex ty =
   match resolve_tmeta ty with
   | Tglob (g, tys, args) ->
-    List.iter (walk_type b ~n_outer lex) tys;
-    if Table.is_custom g then List.iter (walk b ~n_outer lex) args
+    List.iter (walk_type w lex) tys;
+    if Table.is_custom g then List.iter (walk {w with caller = None; site = Type_term} lex) args
   | Tarr (dom, cod) ->
-    walk_type b ~n_outer lex dom;
-    walk_type b ~n_outer lex cod
-  | Tapp (_, tys) -> List.iter (walk_type b ~n_outer lex) tys
+    walk_type w lex dom;
+    walk_type w lex cod
+  | Tapp (_, tys) -> List.iter (walk_type w lex) tys
   | _ -> ()
 
 (* The variables a declaration of type [ty] is generated under: the type
@@ -504,23 +625,23 @@ let generated_definition ty body =
     Mlutil.named_lams params (inline_aliases ~n_outer:(head_variables ty') lex inner)
 
 (* A declaration's calls, read in that scope. *)
-let declaration b ty body =
+let declaration ?caller ?scope b ty body =
   let lex, body = declaration_scope ty body in
   let ty = Mlutil.type_simpl ty in
-  let n_outer = head_variables ty in
-  walk_type b ~n_outer Lexenv.empty ty;
-  walk b ~n_outer lex body
+  let w = walker ?caller ?scope b ~n_outer:(head_variables ty) in
+  walk_type w Lexenv.empty ty;
+  walk w lex body
 
 (* A constant typed by a name that stands for arrows -- an instance of a
    single-method class is typed by the class -- is generated eta-expanded to
    those arrows ({!Gen_functions.gen_spec}): the slot it initialises is a
    function of the full signature, which no partial application fills. *)
-let constant_at_alias b ty body =
+let constant_at_alias ~caller b ty body =
   let ty = Mlutil.type_simpl ty in
   let body = match body with MLmagic (_, b) -> b | b -> b in
   if Ml_type_util.ml_domains ty = [] then
     match Ml_type_util.eta_expand_to (Ml_type_util.expand_ml_fun_alias ty) body with
-    | expanded when expanded != body -> walk b ~n_outer:(head_variables ty) Lexenv.empty expanded
+    | expanded when expanded != body -> walk (walker ~caller b ~n_outer:(head_variables ty)) Lexenv.empty expanded
     | _ -> ()
 
 (* An instance's methods are generated from its record's fields not as
@@ -535,15 +656,15 @@ let instance_methods b name body ty =
       let lex =
         Lexenv.push (List.rev_map (fun (x, ty) -> binder (parameter_role ty) (Id x, ty)) lam_params) Lexenv.empty
       in
-      let n_outer = head_variables ty in
+      let w = walker ~caller:name b ~n_outer:(head_variables ty) in
       List.iter
         (fun (m : Instance_methods.method_) ->
-          walk b ~n_outer lex m.body;
+          walk w lex m.body;
           let params, inner = Instance_methods.params m in
           if List.for_all (fun p -> p.Instance_methods.erased) params then
             Option.iter
               (fun (eta, call) ->
-                walk b ~n_outer (push Lexenv.Value (List.rev_map (fun (x, ty) -> (Id x, ty)) eta) lex) call )
+                walk w (push Lexenv.Value (List.rev_map (fun (x, ty) -> (Id x, ty)) eta) lex) call )
               (Instance_methods.eta_call m inner) )
         methods )
     (Instance_methods.methods name body ty)
@@ -556,7 +677,8 @@ let instance_methods b name body ty =
 let rec foreign_types b ~walked =
   let pending = GlobRef.Set_env.diff !b.named walked in
   if not (GlobRef.Set_env.is_empty pending) then begin
-    GlobRef.Set_env.iter (fun r -> Option.iter (walk_type b ~n_outer:0 Lexenv.empty) (find_type_opt r)) pending;
+    let w = {(walker b ~n_outer:0) with site = Type_term} in
+    GlobRef.Set_env.iter (fun r -> Option.iter (walk_type w Lexenv.empty) (find_type_opt r)) pending;
     foreign_types b ~walked:(GlobRef.Set_env.union walked pending)
   end
 
@@ -570,16 +692,19 @@ let names_only (b : builder) f =
 
 (* A function generated as a method of its inductive is generated from its
    body renumbered so the inductive's variables come first
-   ({!Method_registry.renumbering}), and nowhere as written. *)
+   ({!Method_registry.renumbering}), and nowhere as written: outside any
+   declaration, under the inductive's variables and then its own, each
+   spelled as the method spells it ({!Gen_inductives.method_scope}). *)
 let method_ b vars (_, body, ty, this_pos) =
   let r = Method_registry.renumbering ~num_ind_vars:(List.length vars) ~this_pos ty in
-  declaration b (Method_registry.renumber_type r ty) (Method_registry.renumber_body r body)
+  let scope = vars @ head_scope (List.length r.Method_registry.extra) in
+  declaration ~scope b (Method_registry.renumber_type r ty) (Method_registry.renumber_body r body)
 
 let structure ~methods struc =
   let b = ref empty in
   let defined = ref GlobRef.Set_env.empty in
   let define r = defined := GlobRef.Set_env.add r !defined in
-  let closed_type = walk_type b ~n_outer:0 Lexenv.empty in
+  let closed_type = walk_type {(walker b ~n_outer:0) with site = Type_term} Lexenv.empty in
   let inductive ind = Array.iter (fun p -> Array.iter (List.iter closed_type) p.ip_types) ind.ind_packets in
   let as_methods =
     let acc = ref GlobRef.Set_env.empty in
@@ -597,8 +722,8 @@ let structure ~methods struc =
       | Dterm (r, body, ty) ->
         define r;
         let written b =
-          declaration b ty body;
-          constant_at_alias b ty body
+          declaration ~caller:r b ty body;
+          constant_at_alias ~caller:r b ty body
         in
         if Instance_methods.methods r body ty <> None then names_only b written else written b;
         instance_methods b r body ty
@@ -606,7 +731,7 @@ let structure ~methods struc =
         List.iter
           (fun fd ->
             define fd.fd_ref;
-            if not (as_method fd.fd_ref) then declaration b fd.fd_type fd.fd_body )
+            if not (as_method fd.fd_ref) then declaration ~caller:fd.fd_ref b fd.fd_type fd.fd_body )
           fds
       | Dind (kn, ind) ->
         inductive ind;
@@ -624,13 +749,14 @@ let referenced t = GlobRef.Set_env.elements t.named
 
 let installed = State.cell State.Unit empty
 
-type tally = {found : int; recomputed : int}
+type tally = {found : int; recomputed : int; taken : int; live : int}
 
-let tally = State.cell State.Unit {found = 0; recomputed = 0}
+let no_tally = {found = 0; recomputed = 0; taken = 0; live = 0}
+let tally = State.cell State.Unit no_tally
 
 let install t =
   installed := t;
-  tally := {found = 0; recomputed = 0}
+  tally := no_tally
 
 (* A body's annotations may be rewritten before it is translated, which
    rebuilds every node, so the use's occurrence is what identifies the
@@ -687,7 +813,72 @@ let elaboration ~lex use args =
             ++ str " is translated where Core elaboration did not reach it." );
       elaborate () )
 
+(* The instantiation planned for the application, with [n] arguments, that
+   names its callee by [use]: [`Planned] where every entry the walk made
+   there planned one and all agree, [`Ambiguous] with the sites of the
+   entries where they do not or one failed, [`Unwalked] where the walk made none. *)
+let planned t use n =
+  match Ref.User.Map.find_opt use.callee t.calls with
+  | None -> `Unwalked
+  | Some entries -> (
+    let occurrence = Global_use.occurrence use in
+    match
+      List.filter
+        (fun e -> Occurrence.equal e.occurrence occurrence && Int.equal (List.length e.roles) n)
+        entries
+    with
+    | [] -> `Unwalked
+    | {planned = Some p; _} :: rest
+      when List.for_all
+             (function
+               | {planned = Some p'; _} -> Elaborated_call.same_instantiation p p'
+               | {planned = None; _} -> false )
+             rest ->
+      `Planned p
+    | entries -> `Ambiguous (List.map (fun (e : entry) -> e.site) entries) )
+
+let instantiation ~lex ~expected_ml ~stated_ml ~caller ~scope use args =
+  let call = elaboration ~lex use args in
+  let live () = instantiate ~lex ~expected_ml ~stated_ml ~caller ~scope call in
+  match Common.get_phase () with
+  | Common.Plan -> live ()
+  | Common.Emit -> (
+    let describe what =
+      Pp.(str "a call to " ++ str (Table.kername_of_global use.callee) ++ str what)
+    in
+    match planned !installed use (List.length args) with
+    | `Planned p ->
+      tally := {!tally with taken = !tally.taken + 1};
+      let p = Elaborated_call.at_call p call in
+      if Probe.checking () then begin
+        let agrees = Elaborated_call.same_instantiation p (live ()) in
+        Probe.hit "elab-plan" (fun () -> if agrees then "agree" else "disagree " ^ Table.kername_of_global use.callee);
+        if not agrees then
+          Probe.violation "planned instantiations"
+            (describe " is instantiated where it is translated otherwise than Core planned it.")
+      end;
+      p
+    | (`Ambiguous _ | `Unwalked) as why ->
+      tally := {!tally with live = !tally.live + 1};
+      Probe.hit "elab-plan" (fun () ->
+          (match why with
+           | `Ambiguous sites ->
+             "ambiguous "
+             ^ String.concat "," (List.map (function Body -> "body" | Type_term -> "type") sites)
+             ^ " "
+           | `Unwalked -> "unwalked ")
+          ^ Table.kername_of_global use.callee);
+      if not (extended !installed use (List.length args)) then
+        Probe.violation "planned instantiations"
+          (describe
+             ( match why with
+             | `Ambiguous _ -> " has no single instantiation planned for it."
+             | `Unwalked -> " is translated where Core elaboration did not reach it." ) );
+      live () )
+
 let report () =
   let n = Ref.User.Map.fold (fun _ l acc -> acc + List.length l) !installed.calls 0 in
-  Printf.sprintf "elaborated calls: %d planned; emission found %d, elaborated %d itself" n
-    !tally.found !tally.recomputed
+  Printf.sprintf
+    "elaborated calls: %d planned; emission found %d, elaborated %d itself; took %d instantiations planned, \
+     %d instantiated itself"
+    n !tally.found !tally.recomputed !tally.taken !tally.live

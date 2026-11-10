@@ -89,10 +89,12 @@ val dictionary_filled : t -> bool
     ({!Translation_calls.plan_call}) reads it and adds to it, never the
     other way.
 
-    Transitional.  It is built where the call is translated, in the
-    traversal's lexical environment and with the ML types the call's
-    position states; the position is the one input not yet threaded by a
-    Core walk of its own. *)
+    Planned ahead of translation by the Core walk
+    ({!Core_elaborate.structure}), in the walk's lexical environment and
+    with the ML types it gives the call's position, and taken at the
+    argument nodes translation meets ({!at_call}).  Transitional: a call
+    translation builds itself is instantiated where it is translated, in the
+    traversal's environment and position. *)
 type instantiated = private {
   call : t;  (** The call, with the holes its context states resolved. *)
   reading : Call_tyargs.t;
@@ -120,3 +122,15 @@ val instantiate :
   expand:(Miniml.ml_type -> Miniml.ml_type) ->
   erased:(Miniml.ml_type -> bool) ->
   instantiated
+
+(** Whether [a] and [b] instantiate one call alike: the same callee, its
+    arguments in the same roles, the same readings -- each variable's type,
+    its holes, and what each resolution was read from -- and the same
+    instantiated callee type.  The argument nodes are not compared. *)
+val same_instantiation : instantiated -> instantiated -> bool
+
+(** [at_call inst call] -- [inst], planned for an application elsewhere
+    built from the same Core, as the instantiation of [call]: its argument
+    nodes [call]'s, its readings [inst]'s.  [Invalid_argument] unless both
+    have one callee and one role per argument. *)
+val at_call : instantiated -> t -> instantiated

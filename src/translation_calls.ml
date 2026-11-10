@@ -1455,8 +1455,8 @@ let plan_call ~lex ?expected_ty env (inst : Elaborated_call.instantiated) =
 
 (** [lower_call ~caller ~slot ?expected_ty env use args]: the call [use]
     [args] in the declaration [caller], lowered against its callee before any
-    of its arguments is -- its semantic half first, from Core and the ML
-    types its position states ({!Core_elaborate.instantiate}), then how its
+    of its arguments is -- its semantic half first, as Core planned it at
+    the ML types its position states ({!Core_elaborate.instantiation}), then how its
     arguments meet the callee's parameters in C++ ({!plan_call}), and the
     template application planned and validated against the callee's ABI
     ({!call_type_args}).  Generating the arguments reads the result and
@@ -1465,9 +1465,8 @@ let lower_call ~caller ~slot ?expected_ty env use args =
   let id = use.callee in
   let lex = current_lexenv () in
   let inst =
-    Core_elaborate.instantiate ~lex ~expected_ml:slot.expected_ml_ty
-      ~stated_ml:slot.stated_ml_ty ~caller ~scope:(!tctx).current_type_vars
-      (Core_elaborate.elaboration ~lex use args)
+    Core_elaborate.instantiation ~lex ~expected_ml:slot.expected_ml_ty
+      ~stated_ml:slot.stated_ml_ty ~caller ~scope:(!tctx).current_type_vars use args
   in
   let plan = plan_call ~lex ?expected_ty env inst in
   call_type_args ~caller ~lex ?expected_ty env id plan
