@@ -129,6 +129,24 @@ let custom_pattern_binders scope ~(cs : custom_scrutinee) ~ty ~scrut cname ids =
 let region ~outer body =
   let found = ref [] in
   let rec walk scope = function
+    (* A record projection ({!Translation.gen_expr}, {!Translation.gen_stmts}:
+       after a custom match, before any other) declares its fields at the
+       types they are bound at, pinned by nothing: as statements, with a
+       dependent parameter's field retyped as erased; in an expression, not
+       ([pr_bound_boxed]).  The body is planned at the statement form's. *)
+    | MLcase (ty, scrut, ([|(ids, _, _, body)|] as branches), occ)
+      when (not (Table.is_custom_match branches)) && Table.record_fields_of_type ty <> [] ->
+      walk scope scrut;
+      let bound = List.map (fun (_, t) -> at_binding t) ids in
+      let retyped = List.map (fun (_, t) -> at_binding t) (retype_dependent_params ty ids) in
+      List.iteri
+        (fun i (r, b) ->
+          found :=
+            (Core_binder.Branch (occ, 0), i, {pr_boxed = boxed r; pr_bound_boxed = boxed b; pr_slot_rooted = false})
+            :: !found )
+        (List.combine retyped bound);
+      let inner = push (List.rev ids) scope in
+      walk {inner with planned = List.rev retyped @ scope.planned} body
     | MLcase (ty, scrut, branches, occ) ->
       walk scope scrut;
       let var_type = Lexenv.type_opt scope.lex in
@@ -160,7 +178,12 @@ let region ~outer body =
               let field_planned = fields r ids in
               List.iteri
                 (fun i p ->
-                  found := (Core_binder.Branch (occ, bi), i, {pr_boxed = boxed p; pr_slot_rooted = slot_rooted}) :: !found )
+                  let pr_bound_boxed =
+                    match List.nth_opt ids i with Some (_, t) -> boxed (at_binding t) | None -> false
+                  in
+                  found :=
+                    (Core_binder.Branch (occ, bi), i, {pr_boxed = boxed p; pr_bound_boxed; pr_slot_rooted = slot_rooted})
+                    :: !found )
                 field_planned;
               {inner with planned = List.rev field_planned @ scope.planned}
             | _ -> inner
@@ -191,20 +214,23 @@ let same_site a b =
   | Binding o, Binding o' -> Occurrence.equal o o'
   | Branch _, Binding _ | Binding _, Branch _ -> false
 
-let check ~site ~field ~live =
+let check ?(as_bound = false) ~site ~field ~live () =
   let describe planned =
     Pp.(
-      str "field " ++ int field ++ str " of a pattern"
+      str "field " ++ int field
+      ++ str (if as_bound then " of a pattern, declared as bound" else " of a pattern")
       ++ (match (!tctx).body_owner with Some r -> str " in " ++ Names.GlobRef.print r | None -> mt ())
       ++ str ": lowering "
       ++ str (if live then "boxes" else "does not box")
       ++ str ", the plan " ++ str planned)
   in
   match List.find_opt (fun (s, f, _) -> Int.equal f field && same_site s site) (!tctx).representation with
-  | Some (_, _, {pr_boxed; pr_slot_rooted}) ->
+  | Some (_, _, {pr_boxed; pr_bound_boxed; pr_slot_rooted}) ->
+    let pr_boxed, pr_slot_rooted = if as_bound then (pr_bound_boxed, false) else (pr_boxed, pr_slot_rooted) in
     let agrees = pr_boxed = live in
     Probe.hit "repr-plan" (fun () ->
-        (if pr_slot_rooted then "slot-rooted " else "")
+        (if as_bound then "bound " else "")
+        ^ (if pr_slot_rooted then "slot-rooted " else "")
         ^ (if agrees then "agree " else "disagree ")
         ^ if agrees then if live then "boxed" else "value" else Pp.string_of_ppcmds (describe ""));
     if not (agrees || pr_slot_rooted) then
