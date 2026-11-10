@@ -2976,6 +2976,293 @@ let slot_refined_lambda env ~expected_ml_ty args body =
   let args = List.map (fun (x, t) -> (x, Ml_type_util.fill_holes_type !fills t)) args in
   (args, Ml_type_util.fill_holes !fills body)
 
+(* Whether [body] takes its single binder apart: matches on it, or applies to
+   it a projection spelled as member access (an inline custom [%a0.first]). *)
+let body_reads_members_of_binder body =
+  let member_access g =
+    Table.is_inline_custom g
+    && ( match Table.find_custom_opt g with
+       | Some txt ->
+         String.length txt > 4 && String.sub txt 0 4 = "%a0."
+       | None -> false )
+  in
+  let rec reads depth e =
+    match e with
+    | MLapp (MLglob {callee = g; _}, MLrel (k, _) :: _)
+      when k = depth + 1 && member_access g ->
+      true
+    | MLlam (_, _, b) -> reads (depth + 1) b
+    | MLletin (_, _, x, b, _) -> reads depth x || reads (depth + 1) b
+    | MLcase (_, sc, pv, _) ->
+      reads depth sc
+      || Array.exists
+           (fun (ids, _, _, br) -> reads (depth + List.length ids) br)
+           pv
+    | MLfix (_, ids, funs, _, _) ->
+      Array.exists (reads (depth + Array.length ids)) funs
+    | e ->
+      let found = ref false in
+      Mlutil.ast_iter (fun x -> if reads depth x then found := true) e;
+      !found
+  in
+  (match body with
+   | MLcase (_, MLrel (1, _), pv, _) -> is_custom_match pv
+   | _ -> false)
+  || reads 0 body
+
+(* The type a match in [body] reads its single binder at, where that type has
+   no parameters -- and so one spelling, which the body cannot be reading at
+   some other, erased, view: [if b] states [bool] whatever the binder's own
+   annotation lost. *)
+let binder_matched_at body =
+  let found = ref None in
+  let rec walk depth e =
+    match e with
+    | MLcase ((Miniml.Tglob (_, [], _) as t), sc, _, _)
+      when (match strip_magic sc with MLrel (j, _) -> j = depth + 1 | _ -> false)
+           && !found = None ->
+      found := Some t
+    | MLlam (_, _, b) -> walk (depth + 1) b
+    | MLletin (_, _, x, b, _) -> walk depth x; walk (depth + 1) b
+    | MLcase (_, sc, pv, _) ->
+      walk depth sc;
+      Array.iter (fun (ids, _, _, br) -> walk (depth + List.length ids) br) pv
+    | MLfix (_, ids, funs, _, _) -> Array.iter (walk (depth + Array.length ids)) funs
+    | e -> Mlutil.ast_iter (walk depth) e
+  in
+  walk 0 body;
+  !found
+
+(** Whether binder [i] of a lambda's [binders] (innermost-first, over
+    [body]) becomes a C++ parameter, the lambda written against a slot of C++
+    type [expected_ty] ({!Translation.gen_expr}'s [MLlam]).  A binder typed
+    [Tdummy] carries nothing, unless the body names it or the slot's
+    declaration takes a value at its position: [Cat IFun]'s [cat] binds
+    objects [a b c] that [obj := Type -> Type] erases, and [Cat] is a
+    function of them all the same -- and only where the slot's own domain
+    there is a box: an erased binder stands for an erased value, [Id_]'s
+    object, never for the [Nat] state a [stateT] takes first.  A binder with
+    no type ([Taxiom]) is one erasure took the type from -- [IFun]'s
+    [forall T] -- and unused it is erased like a dummy.  The count of binders
+    the term writes and the parameter list it is written with are both read
+    off this, so they cannot disagree. *)
+let lambda_binder_emitted env ~expected_ty ~body binders i ty =
+  (* Where the slot is a definitional class -- an alias for a function type
+     -- which of its domains the declaration takes as values.  Read off the
+     alias's own definition, before this call instantiated it: [Id_ obj C] is
+     [forall a : obj, C a a], a function of an object, and stays one when
+     [obj := Type -> Type] erases the object; [MonadIter m] is
+     [forall R I : Type, ...], and takes [R] and [I] as types only. *)
+  let slot_value_doms =
+    let rec alias_ref t =
+      match strip_param_spelling t with
+      | Tnamespace (_, t) -> alias_ref t
+      | Tglob (GlobRef.ConstRef kn, _, _) -> Some kn
+      | _ -> None
+    in
+    let rec value_doms t =
+      match resolve_tmeta (expand_ml_fun_alias t) with
+      | Miniml.Tarr (d, c) -> not (erased_by_extraction d) :: value_doms c
+      | _ -> []
+    in
+    match Option.bind expected_ty alias_ref with
+    | Some kn -> (
+      match Table.lookup_typedef_unchecked kn with
+      | Some body -> value_doms body
+      | None -> [] )
+    | None -> []
+  in
+  let slot_doms_cpp =
+    match Option.map (unfold_cpp_typedef env) expected_ty with
+    | Some (Tfun (doms, _)) -> doms
+    | _ -> []
+  in
+  let slot_keeps binders i =
+    let d = List.length binders - 1 - i in
+    match List.nth_opt slot_value_doms d with
+    | Some true -> (
+      match List.nth_opt slot_doms_cpp d with
+      | Some t -> prints_as_any t
+      | None -> true )
+    | _ -> false
+  in
+  slot_keeps binders i
+  || (is_runtime_binder_type ty && ty <> Miniml.Taxiom)
+  || Mlutil.ast_occurs (i + 1) body
+
+(** The C++ type a lambda declares its parameter [(id, ty, owned)] at
+    ({!Translation.gen_expr}'s [MLlam]), and the substitution its body is
+    rewritten with, if any.  [slot_dom] is the domain the slot the lambda
+    fills declares at this parameter's position, where it declares a
+    signature; [unused], that the body never reads the parameter; [body], the
+    lambda's body; [n_params], how many binders it has; [rank2_carrier], the
+    template parameter a polymorphic function object writes its erased
+    positions at; [reified], that itree terms are extracted reified.  Lowering
+    passes what it is generating against, the representation plan what it
+    reads off Core. *)
+let lambda_param_cpp_type env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~body ~unused ~slot_dom (id, ty, owned) =
+  let at_carrier ty =
+    match rank2_carrier with None -> ty | Some x -> Rank2.at_carrier x ty
+  in
+  let tvar_in_scope n = List.exists (Id.equal n) tvars in
+  let slot_param_cpp_ty =
+    (* Only a type this lambda could actually be written against.  The slot
+       is read off the callee's declaration, so it may name that
+       declaration's own template parameters, which are no more in scope here
+       than the erasure was -- adopting one trades [std::any] for a free
+       name. *)
+    match slot_dom with
+    | Some t
+      when Id.Set.for_all tvar_in_scope (Minicpp.tvar_names t) ->
+      Some t
+    | _ -> None
+  in
+  let bare_cpp_ty =
+    cpp_of_ml env ty
+  in
+  let stored_cpp_ty =
+    convert_ml_type_to_cpp_type env ~ns
+      tvars ty
+  in
+  let body_subst =
+    match (bare_cpp_ty, stored_cpp_ty) with
+    | Tglob (g1, [], _), Tshared_ptr (Tglob (g2, [], _))
+      when globref_equal g1 g2 && Table.is_coinductive g2 ->
+      Some (id, CPPderef (CPPvar id))
+    | _ -> None
+  in
+  let param_cpp_ty =
+    match body_subst with
+    | Some _ -> Tref (Lvalue, Tconst stored_cpp_ty)
+    (* A binder the body never reads is a parameter only for its callers, and
+       the slot's own spelling is the one they call it at:
+       [Id_<std::any, ...>] takes its object as a box, whatever the binder's
+       annotation recorded -- [MemE], the family the object stands for. *)
+    | None when unused && Option.has_some slot_param_cpp_ty ->
+      Option.get slot_param_cpp_ty
+    (* The binder's annotation is a definition unfolded -- [FusedS] as
+       [state * nat] -- and a class field in it names no instance in this
+       scope, so it would fall back to the file-scope [std::any].  The slot
+       writes the definition by name, which its own declaration resolved. *)
+    | None
+      when mentions_unresolved_promoted bare_cpp_ty
+           && Option.has_some slot_param_cpp_ty ->
+      wrap_param_by_ownership ~is_owned:owned
+        (Option.get slot_param_cpp_ty)
+    | None
+      when rank2_carrier <> None
+           && has_tany_in_type bare_cpp_ty
+           && not (Rank2.is_bare_box bare_cpp_ty) ->
+      Tref (Lvalue, Tconst (at_carrier bare_cpp_ty))
+    | None
+      when prints_as_any bare_cpp_ty
+           && ( match slot_param_cpp_ty with
+              | Some d -> not (prints_as_any d)
+              | None -> false ) ->
+      (* The binder's own annotation says nothing -- a constructor eta-expanded
+         into a lambda ([fmap inr m]) is handed a parameter extraction never
+         gave a type -- but the slot it flows into does: the callee's
+         instantiated domain.  Taking the type from there is what keeps the
+         signature and the body in step, since the body was generated against
+         the concrete type the constructor needs.  Written [std::any] instead,
+         the parameter is a claim the body cannot keep, and the error lands
+         inside the lambda at the use. *)
+      wrap_param_by_ownership ~is_owned:owned
+        (Option.get slot_param_cpp_ty)
+    | None
+      when Ml_type_util.has_tany_written bare_cpp_ty
+           && n_params = 1
+           && (body_reads_members_of_binder body || binder_matched_at body <> None) ->
+      (* A pattern lambda: the body decomposes this parameter with a
+         structured binding, which is ill-formed at [std::any].  Or it reads
+         one of its members through a projection that is spelled as member
+         access ([fst si] as [si.first]), which is ill-formed there just the
+         same.  [crane_erase_fn] probes a generic callable with exactly that --
+         and the binding is in the body, not the signature, so no [requires]
+         can absorb the failure and the probe becomes a hard error.  Spelling
+         the type keeps the probe well-formed: CTAD then deduces a signature,
+         and the adapter unboxes at this very type, which is the one the
+         producer boxed.
+
+         Which type to spell is the slot's answer where it has one.  The
+         binder's own is assembled from an ML type whose erased components
+         were never inferred, so it erases a whole component the container
+         keeps ([pair<Nat, std::any>] against a list of
+         [pair<Nat, Exp0<std::any>>]); the slot spells the container's shape
+         and leaves only the genuinely erased leaf to [std::any].
+
+         It may refine the spelling only as far as still-erased, though.  The
+         body was generated against the erased view and unboxes at it; a
+         signature that erases nowhere is one the body's casts no longer agree
+         with.  The exception is a match that reads the binder at a fully
+         known type -- [if b] at [bool] -- since the body reads it at that
+         type, uncast. *)
+      let refined =
+        match (binder_matched_at body, slot_dom) with
+        | Some t, _ -> cpp_of_ml env t
+        | None, Some slot ->
+          Ml_type_util.refine_param_from_slot ~tvars ~slot
+            bare_cpp_ty
+        | None, None -> bare_cpp_ty
+      in
+      wrap_param_by_ownership ~is_owned:owned refined
+    | None
+      when reified && ml_type_is_unit ty ->
+      (* A reified tree's continuation is typed [unit -> itree ...] in ML, but
+         [unit] is not one C++ type here: the value a reified tree carries is
+         whatever its consumer chose, and the same Rocq type reaches the
+         printer as [std::monostate] over a concrete tree and as [std::any]
+         over one whose event type was erased.  The binder is under-determined
+         rather than erased -- nothing in the term says which -- so it
+         deduces.  Committing to [std::monostate] rejects every call through
+         an erased tree.  The slot is still emitted; see the parameter filter
+         in {!Translation.gen_expr}. *)
+      Tref (Lvalue, Tconst Tauto)
+    | None when Ml_type_util.has_tany_written bare_cpp_ty ->
+      (* The type is spelled with erased positions (std::any).  Use
+         [const auto&] so the C++ compiler deduces the concrete type at the
+         call site -- explicit std::any in the param type would block valid
+         calls and prevent field accesses inside the body from resolving to
+         the concrete type.
+
+         The erasure has to be one the spelling shows.  A type whose erased
+         argument sits in a position its template never writes renders
+         concretely, and a generic parameter there is a liability: a consumer
+         that probes the callable with a [std::any] -- [crane_erase_fn] does --
+         instantiates the body at [std::any] and fails inside it, where no
+         [requires] can catch it. *)
+      Tref (Lvalue, Tconst Tauto)
+    | None ->
+      (* A function the slot takes at fewer domains than the binder's arrows
+         flatten to -- [esc : A -> cont R B], with [cont R B] an alias for a
+         function type -- is curried where the slot says ([Declared_at]). *)
+      let declared_arity =
+        match Option.map (unfold_cpp_typedef env) slot_dom with
+        | Some (Tfun (doms, _)) -> List.length doms
+        | _ -> 0
+      in
+      wrap_param_by_ownership ~is_owned:owned
+        (if declared_arity > 0 then spell_arrows (Declared_at declared_arity) bare_cpp_ty
+         else bare_cpp_ty)
+  in
+  (param_cpp_ty, body_subst)
+
+(** The C++ type a lambda parameter of ML type [ml_ty] declared [declared]
+    ({!lambda_param_cpp_type}) is read at in its body.  A binder erasure would
+    have removed, kept because the slot takes it ({!binder_emitted}), holds
+    whatever box the caller passes.  So does one the slot declares erased
+    ([slot_dom]), even though it is declared [const auto &] so the deduction
+    can also land on a concrete type: assigned [std::any], uses inside the
+    body recover their own type from it, where the [Tauto] the declaration
+    strips to would say, wrongly, that the value is already what the body
+    wants. *)
+let lambda_param_assigned ~slot_dom ml_ty declared =
+  if erased_by_extraction ml_ty then Tany
+  else
+    match (declared, slot_dom) with
+    | Tref (Lvalue, Tconst Tauto), Some d when prints_as_any d -> Tany
+    | _ -> declared
+
 (** Whether argument [i] of constructor [r] is forwarded unboxed by the
     constructor's custom template ([%a<i>] and nothing else): a pure
     type-level erasure marker such as [sum1], with no field storage to box
