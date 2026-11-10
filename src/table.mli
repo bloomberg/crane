@@ -241,11 +241,11 @@ val ind_param_vars :
   Miniml.ml_ind -> Miniml.ml_ind_packet -> Names.Id.t list * int
 
 (** Add inductive kind to table. *)
-val add_inductive_kind : MutInd.t -> inductive_kind -> unit
+val add_inductive_kind : MutInd.t -> record_field Core.Inductive.Kind.t -> unit
 
 (** The recorded kind of the inductive a reference belongs to, if any.  Every
     question about an inductive's kind is answered from this. *)
-val inductive_kind_of : GlobRef.t -> inductive_kind option
+val inductive_kind_of : GlobRef.t -> record_field Core.Inductive.Kind.t option
 
 (** Check if reference is coinductive. *)
 val is_coinductive : GlobRef.t -> bool

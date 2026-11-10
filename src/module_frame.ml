@@ -29,8 +29,8 @@ let eponymous ~name sel =
             if String.lowercase_ascii (pp_global_name Type r) <> lowercase_module then (ty, record)
             else
               match ind.ind_kind with
-              | TypeClass _ -> (ty, record)
-              | Record fields -> (ty, Some (r, fields, p))
+              | Core.Inductive.Kind.Type_class _ -> (ty, record)
+              | Core.Inductive.Kind.Record fields -> (ty, Some (r, fields, p))
               | _ -> (Some r, record) )
           acc (inductive_refs kn ind)
       | _ -> acc )
@@ -119,7 +119,7 @@ let concept_collision mp sel =
   List.exists
     (fun (_, se) ->
       match se with
-      | SEdecl (Dind (kn, ({ind_kind = TypeClass _; _} as ind))) ->
+      | SEdecl (Dind (kn, ({ind_kind = Core.Inductive.Kind.Type_class _; _} as ind))) ->
         List.exists
           (fun (r, _) -> Option.equal String.equal (concept_name r) (Some (Common.emitted_module_name mp)))
           (inductive_refs kn ind)

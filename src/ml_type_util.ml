@@ -243,7 +243,7 @@ let unwritten_parameters ty params body =
         Pp.(
           str "a definition binds " ++ int (List.length params) ++ str " of the "
           ++ int (List.length params + List.length missing)
-          ++ str " parameters its type declares; Core.normalize eta-expands every one" ) );
+          ++ str " parameters its type declares; Core_phase.normalize eta-expands every one" ) );
   missing
 
 let declared_parameters ty b =
@@ -1490,7 +1490,7 @@ let get_tvars_indexed t =
   in
   let rec aux l = function
     | Tpromoted _ ->
-      (* Promoted type var marker from a Record-turned-TypeClass.  These
+      (* Promoted type var marker from a Record-turned-Type_class.  These
          represent projected type members (e.g., [Obj] from [PreCategory])
          and must be resolved through typeclass instance access — not as
          standalone template parameters. *)

@@ -129,7 +129,7 @@ val gen_ind_header_v2 :
   GlobRef.t array ->
   ml_type list array ->
   (GlobRef.t * ml_ast * ml_type * int) list ->
-  inductive_kind ->
+  record_field Core.Inductive.Kind.t ->
   cpp_decl
 
 (** Generate methods for eponymous records. For records merged into module

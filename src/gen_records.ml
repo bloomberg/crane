@@ -266,7 +266,7 @@ let gen_typeclass_cpp name fields =
     | Some field_ref ->
       let method_name = Common.pp_global_name Term field_ref in
       if is_typeclass_field_type field_ty then
-        (* TypeClass-typed field (a superclass instance).  It carries no
+        (* Type_class-typed field (a superclass instance).  It carries no
            method of its own: the instance exposes it as a nested type, so
            the concept asks for [typename I::field;] rather than a call.  A
            method requirement would try to use the concept name as a concrete

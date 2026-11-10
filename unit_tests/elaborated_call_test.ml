@@ -57,7 +57,7 @@ let () =
    class-typed binder inside the body is a value. *)
 let () =
   let kn = MutInd.make1 (KerName.make (ModPath.MPfile (DirPath.make [Id.of_string "T"])) (Label.make "C")) in
-  Table.add_inductive_kind kn (TypeClass []);
+  Table.add_inductive_kind kn (Core.Inductive.Kind.Type_class []);
   let class_ty = Tglob (GlobRef.IndRef (kn, 0), [], []) in
   let h = r "h" in
   Table.add_type h (Tarr (class_ty, Tarr (nat, nat)));

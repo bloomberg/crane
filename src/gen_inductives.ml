@@ -1178,7 +1178,7 @@ let gen_ind_header_v2
     tys
     method_candidates
     ind_kind =
-  let is_coinductive = ind_kind = Coinductive in
+  let is_coinductive = ind_kind = Core.Inductive.Kind.Coinductive in
   (* Scoped-arena redesign (2026-08-10): arena allocation is no longer a
      compile-time property of the type.  Every recursive field is the ordinary
      smart pointer ([std::shared_ptr] / [crane::rc]); the recursive-field factory

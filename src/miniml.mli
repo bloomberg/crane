@@ -152,7 +152,7 @@ type ml_type =
           other evidence, leaves the parameter to deduction, or reports it. *)
   | Topen of Open.t
       (** An annotation reconstruction left open: a metavariable nothing
-          solved, as {!Core.freeze} hands it on.  Immutable, and read as
+          solved, as {!Core_phase.freeze} hands it on.  Immutable, and read as
           erased.  The annotations that shared the metavariable share the
           [Open.t], so a reader that fills it from other evidence fills it
           wherever it is written ({!Ml_type_util.fill_holes}).  Unlike a
@@ -175,18 +175,6 @@ and ml_meta = private {
 }
 
 (** {2 ML inductive types} *)
-
-(** How an inductive type should be treated by the backend. [Standard] is an
-    ordinary (finite) inductive; [Coinductive] a lazily-unfolded one; [Record]
-    a single-constructor inductive presented with named projections (the list
-    gives each field's projection reference, [None] for an anonymous field);
-    and [TypeClass] a record standing for a Rocq type class, whose fields are
-    its methods. *)
-and inductive_kind =
-  | Coinductive
-  | Standard
-  | Record of record_field list
-  | TypeClass of record_field list  (** Type class methods *)
 
 (** One field of a record or type class: its projection ([None] when the field
     is anonymous) paired with its ML type.  Extraction selects the two together
@@ -221,24 +209,16 @@ and ml_ind_packet = {
   ip_consarg_names : Id.t option list array;
 }
 
-(** How an inductive relates to another already-extracted one, used to share
-    definitions. [NoEquiv] means it is emitted on its own; [Equiv kn] redirects
-    it to the kernel name [kn] of an equivalent inductive; [RenEquiv s]
-    redirects to an inductive living in the module renamed [s]. *)
-and equiv =
-  | NoEquiv
-  | Equiv of KerName.t
-  | RenEquiv of string
-
 (** A whole (possibly mutual) inductive definition: [ind_kind] its
-    classification, [ind_nparams] the number of uniform parameters,
-    [ind_packets] one {!ml_ind_packet} per mutually-defined body, and
-    [ind_equiv] any sharing/redirection information. *)
+    classification ({!Core.Inductive.Kind}), [ind_nparams] the number of
+    uniform parameters, [ind_packets] one {!ml_ind_packet} per
+    mutually-defined body, and [ind_equiv] any sharing/redirection
+    information ({!Core.Inductive.Equivalence}). *)
 and ml_ind = {
-  mutable ind_kind : inductive_kind;
+  mutable ind_kind : record_field Core.Inductive.Kind.t;
   ind_nparams : int;
   ind_packets : ml_ind_packet array;
-  ind_equiv : equiv;
+  ind_equiv : Core.Inductive.Equivalence.t;
 }
 
 (** {2 ML terms} *)
@@ -537,7 +517,7 @@ end
 
     A metavariable is extraction's: unification solves it while types are
     reconstructed, and the Core passes may still.  Freezing the program
-    ({!Core.freeze}) replaces each by its solution, or by a {!Topen} where
+    ({!Core_phase.freeze}) replaces each by its solution, or by a {!Topen} where
     there is none, and from then on none is made ({!Mlutil.new_meta} makes an
     open annotation instead) and none solved: a local definition's open types
     are minted before it ({!Local_types}), and a slot that fills a hole

@@ -62,8 +62,8 @@ let module_struct_name (mp : ModPath.t) : string option =
     as {!ind_header_decls} gives them. *)
 let ind_template_kinds kn ind =
   match ind.ind_kind with
-  | TypeClass _ | Record _ -> []
-  | Standard | Coinductive ->
+  | Core.Inductive.Kind.Type_class _ | Core.Inductive.Kind.Record _ -> []
+  | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive ->
     List.filter_map
       (fun (i, p) ->
         let r = GlobRef.IndRef (kn, i) in
@@ -182,13 +182,13 @@ let ind_header_decls scope kn ind =
       ind.ind_packets
   in
   match ind.ind_kind with
-  | TypeClass fields ->
+  | Core.Inductive.Kind.Type_class fields ->
     (* Type classes become C++ concepts *)
     (* Skip if concepts have been hoisted or we're inside a struct *)
     header_decls
       ( if scope.in_struct || scope.concepts_hoisted then []
         else [(empty_env (), gen_typeclass_cpp names.(0) fields)] )
-  | Record fields ->
+  | Core.Inductive.Kind.Record fields ->
     (* Check if this is an eponymous record being merged into module struct *)
     let ind_ref = names.(0) in
     header_decls

@@ -60,7 +60,7 @@ let rec mint ~minted ~next = function
 (* The number each let-bound lambda's variables were minted past, by the
    variables minted for them: what lowering the lambda is checked against.
    A minted variable is told apart by the node itself, which freezing keeps
-   where it replaces the cell solved to it ({!Core.freeze}): numbers say
+   where it replaces the cell solved to it ({!Core_phase.freeze}): numbers say
    nothing, every lambda's starting past a head of its own. *)
 module Minted = Hashtbl.Make (struct
   type t = ml_type

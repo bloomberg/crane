@@ -33,7 +33,7 @@ open Context.Rel.Declaration
 (** Raised during inductive extraction to signal the kind of an inductive type
     (e.g., record, singleton, standard). Caught by the inductive extraction
     pipeline to classify the result. *)
-exception I of inductive_kind
+exception I of record_field Core.Inductive.Kind.t
 
 (* A set of all fixpoint functions currently being extracted *)
 let current_fixpoints = ref ([] : Constant.t list)
@@ -962,10 +962,10 @@ and extract_really_ind env kn mib =
       || ((not (modular ())) && at_toplevel (MutInd.modpath kn))
       || KerName.equal (MutInd.canonical kn) (MutInd.user kn)
     then
-      NoEquiv
+      Core.Inductive.Equivalence.Distinct
     else (
       ignore (extract_ind env (MutInd.make1 (MutInd.canonical kn)));
-      Equiv (MutInd.canonical kn) )
+      Core.Inductive.Equivalence.Equivalent_to (MutInd.canonical kn) )
   in
   (* Everything concerning parameters. *)
   (* We do that first, since they are common to all the [mib]. *)
@@ -1006,7 +1006,7 @@ and extract_really_ind env kn mib =
     kn
     mib
     {
-      ind_kind = Standard;
+      ind_kind = Core.Inductive.Kind.Inductive;
       ind_nparams = npar;
       ind_packets = Array.map fst packets;
       ind_equiv = equiv;
@@ -1087,7 +1087,7 @@ and extract_really_ind env kn mib =
                   let prod_ty = Context.Rel.Declaration.get_type prod_decl in
                   (* A field should be promoted if its Rocq type is:
                      (a) a Sort (Type/Set) — the field carries a type, or
-                     (b) a TypeClass-classified inductive — the field
+                     (b) a Type_class-classified inductive — the field
                          carries a typeclass dictionary that becomes a
                          concept-constrained template parameter in C++. *)
                   (* [is_typeclass] is answered out of a table this very
@@ -1244,12 +1244,12 @@ and extract_really_ind env kn mib =
     try
       let ip = (kn, 0) in
       let r = GlobRef.IndRef ip in
-      if is_custom r then raise (I Standard);
-      if mib.mind_finite == CoFinite then raise (I Coinductive);
-      if not (Int.equal mib.mind_ntypes 1) then raise (I Standard);
+      if is_custom r then raise (I Core.Inductive.Kind.Inductive);
+      if mib.mind_finite == CoFinite then raise (I Core.Inductive.Kind.Coinductive);
+      if not (Int.equal mib.mind_ntypes 1) then raise (I Core.Inductive.Kind.Inductive);
       let p, u = packets.(0) in
-      if p.ip_logical then raise (I Standard);
-      if not (Int.equal (Array.length p.ip_types) 1) then raise (I Standard);
+      if p.ip_logical then raise (I Core.Inductive.Kind.Inductive);
+      if not (Int.equal (Array.length p.ip_types) 1) then raise (I Core.Inductive.Kind.Inductive);
       let typ = p.ip_types.(0) in
       let l =
         if conservative_types () then
@@ -1257,8 +1257,8 @@ and extract_really_ind env kn mib =
         else
           List.filter (fun t -> not (isTdummy (expand env t))) typ
       in
-      if List.is_empty l then raise (I Standard);
-      if mib.mind_record == Declarations.NotRecord then raise (I Standard);
+      if List.is_empty l then raise (I Core.Inductive.Kind.Inductive);
+      if mib.mind_record == Declarations.NotRecord then raise (I Core.Inductive.Kind.Inductive);
       (* A record is emitted as a flat C++ struct holding its fields by
          value, which cannot express a field whose type mentions the record
          itself: [Inductive cell := MkCell { key : nat; kids : list cell }]
@@ -1284,7 +1284,7 @@ and extract_really_ind env kn mib =
         | Tmeta {contents = Some t} -> mentions_self t
         | _ -> false
       in
-      if List.exists mentions_self typ then raise (I Standard);
+      if List.exists mentions_self typ then raise (I Core.Inductive.Kind.Inductive);
       (* Now we're sure it's a record. *)
       (* First, we find its field names. *)
       let field_names =
@@ -1333,7 +1333,7 @@ and extract_really_ind env kn mib =
          After promotion:
            - nb_sign_keeps = 0 (no regular fields kept)
            - ip_vars = ["m_carrier"] (1 promoted field)
-           - has_promoted = true → classify as TypeClass for concept generation
+           - has_promoted = true → classify as Type_class for concept generation
 
          Without promotion, [m_carrier] would be a struct field of type "Type",
          which doesn't exist in C++. Instead, it becomes:
@@ -1345,7 +1345,7 @@ and extract_really_ind env kn mib =
       let has_promoted =
         lang () == Cpp && List.length p.ip_vars > nb_sign_keeps
       in
-      (* A promoted record (with Type-valued fields) should be a TypeClass
+      (* A promoted record (with Type-valued fields) should be a Type_class
          (C++ concept) only when it also carries function-typed fields —
          i.e., it models an algebraic structure such as Monoid whose
          operations become [requires]-clause entries.  A record with only
@@ -1364,9 +1364,9 @@ and extract_really_ind env kn mib =
           typ
       in
       if is_class || (has_promoted && has_arrow_field) then
-        TypeClass field_glob
+        Core.Inductive.Kind.Type_class field_glob
       else
-        Record field_glob
+        Core.Inductive.Kind.Record field_glob
     with I info -> info
   in
   let i =

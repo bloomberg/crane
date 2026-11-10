@@ -485,7 +485,7 @@ let declared_classes sel =
   List.concat_map
     (fun (l, se) ->
       match se with
-      | SEdecl (Dind (kn, ({ind_kind = TypeClass fields; _} as ind))) ->
+      | SEdecl (Dind (kn, ({ind_kind = Core.Inductive.Kind.Type_class fields; _} as ind))) ->
         List.init (Array.length ind.ind_packets) (fun i -> (l, GlobRef.IndRef (kn, i), fields))
       | SEdecl (Dtype (r, _, _)) when Table.singleton_class_method r <> None ->
         [(l, r, Table.get_record_field_bindings r)]
@@ -658,7 +658,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
         && (not ctx.rc_concepts_hoisted)
         && (match d with
            | Miniml.Dind (_, ind) -> (
-             match ind.ind_kind with Miniml.TypeClass _ -> true | _ -> false )
+             match ind.ind_kind with Core.Inductive.Kind.Type_class _ -> true | _ -> false )
            | _ -> false)
         && not (Cpp_ast.is_empty body)
       then ([Cpp_ast.(seq [text (pp_doc_comment l); body])], Cpp_ast.empty)
@@ -2192,8 +2192,8 @@ let plan_names s =
              (Array.to_list ind.ind_packets) )
         (* A record's fields, named as its struct spells them. *)
         @ ( match ind.ind_kind with
-          | Record fields -> List.concat_map (fun (f, _) -> Option.cata (name Type) [] f) fields
-          | Standard | Coinductive | TypeClass _ -> [] )
+          | Core.Inductive.Kind.Record fields -> List.concat_map (fun (f, _) -> Option.cata (name Type) [] f) fields
+          | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive | Core.Inductive.Kind.Type_class _ -> [] )
       | Dtype (r, _, _) -> name Type r
       | Dterm (r, _, _) -> name Term r
       | Dfix fds -> List.concat_map (fun fd -> name Term fd.fd_ref) fds )
@@ -2270,14 +2270,14 @@ let plan_referenced_names s =
   in
   let inductive kn ind =
     ( match ind.ind_kind with
-    | Record fields | TypeClass fields -> List.iter (fun (f, _) -> Option.iter (name Term) f) fields
-    | Standard | Coinductive -> () );
+    | Core.Inductive.Kind.Record fields | Core.Inductive.Kind.Type_class fields -> List.iter (fun (f, _) -> Option.iter (name Term) f) fields
+    | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive -> () );
     Array.iteri
       (fun i p ->
         name Type (GlobRef.IndRef (kn, i));
         ( match ind.ind_equiv with
-        | Equiv kne -> name Type (GlobRef.IndRef (MutInd.make1 kne, i))
-        | NoEquiv | RenEquiv _ -> () );
+        | Core.Inductive.Equivalence.Equivalent_to kne -> name Type (GlobRef.IndRef (MutInd.make1 kne, i))
+        | Core.Inductive.Equivalence.Distinct | Core.Inductive.Equivalence.Equivalent_in_renamed_module _ -> () );
         Array.iteri
           (fun j args ->
             name Cons (GlobRef.ConstructRef ((kn, i), j + 1));
@@ -2332,7 +2332,7 @@ let promoted_inductive mp sel =
   if List.exists (function _, SEmodule _ -> true | _ -> false) sel then None
   else
     match inductives with
-    | [(kn, ({ind_kind = Standard | Coinductive; _} as ind))] ->
+    | [(kn, ({ind_kind = Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive; _} as ind))] ->
       List.fold_left
         (fun found i ->
           let r = GlobRef.IndRef (kn, i) in
@@ -2719,8 +2719,8 @@ let plan_nested_structs s =
            if is_custom r || is_monad r || not (in_struct || in_unmerged_wrapper r) then []
            else
              match ind.ind_kind with
-             | TypeClass _ -> []
-             | Record _ when Module_plan.is_eponymous_record r -> []
+             | Core.Inductive.Kind.Type_class _ -> []
+             | Core.Inductive.Kind.Record _ when Module_plan.is_eponymous_record r -> []
              | _ when Table.is_enum_inductive r ->
                [(enum_declaration_name r, NSref r)]
              (* Moved out of the collision struct holding it to namespace
@@ -2820,7 +2820,7 @@ let plan_pointer_fields s =
   Translation_state.generating_outside_modules @@ fun () ->
   List.concat_map
     (function
-      | Dind (kn, ({ind_kind = (Standard | Coinductive) as kind; _} as ind)) ->
+      | Dind (kn, ({ind_kind = (Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive) as kind; _} as ind)) ->
         List.concat
           (List.mapi
              (fun i p ->
@@ -2833,7 +2833,7 @@ let plan_pointer_fields s =
                         let c = GlobRef.ConstructRef ((kn, i), j + 1) in
                         match
                           Gen_decls.constructor_pointer_fields ~name
-                            ~is_coinductive:(kind = Coinductive) vars p.ip_types.(j)
+                            ~is_coinductive:(kind = Core.Inductive.Kind.Coinductive) vars p.ip_types.(j)
                         with
                         | [] -> []
                         | fields -> [(name, Ml_type_util.ctor_struct_name_of_ref ~fallback_idx:j c, fields)] )) )
@@ -2861,7 +2861,7 @@ let plan_module_names s =
 let plan_field_names s =
   List.concat_map
     (function
-      | Dind (kn, ({ind_kind = Standard | Coinductive; _} as ind)) ->
+      | Dind (kn, ({ind_kind = Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive; _} as ind)) ->
         List.concat
           (List.mapi
              (fun i p ->
@@ -2974,7 +2974,7 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
         match se with
         | Miniml.SEdecl (Miniml.Dind (_, ind)) -> (
           match ind.Miniml.ind_kind with
-          | Miniml.TypeClass _ ->
+          | Core.Inductive.Kind.Type_class _ ->
             Array.fold_left
               (fun acc p ->
                 Array.fold_left
@@ -3024,7 +3024,7 @@ let concept_prereqs ~wrapper_sels (s : ml_structure) : Names.Label.Set.t =
       if Ref.User.Set.mem r needed then Some l else None
     | Miniml.SEdecl (Miniml.Dind (kn, ind)) -> (
       match ind.Miniml.ind_kind with
-      | Miniml.TypeClass _ -> None
+      | Core.Inductive.Kind.Type_class _ -> None
       | _ ->
         if
           List.exists

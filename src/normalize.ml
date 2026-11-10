@@ -423,9 +423,9 @@ let methods_of struc = Method_registry.create ~ret_is_erased:Translation.return_
 (* The effect operations are those of the program being normalized, read
    off it first ({!Core_effects.analyze}): a bind is sequencing only where
    the declaration it is written in erases its monad. *)
-let structure (program : Core.normalizing) : Core.normalizing =
+let structure (program : Core_phase.normalizing) : Core_phase.normalizing =
   let methods = methods_of program.structure in
-  let {Core.structure = struc; splices} =
+  let {Core_phase.structure = struc; splices} =
     Recursion_plan.splice_partners ~loopified:(loopified ~methods)
       ~inlines:(fun r -> Method_registry.is_registered_method methods r = None)
       program

@@ -18,7 +18,7 @@ FINISHING="Cpp_pipeline Loopify Loopify_analysis Loopify_tail Loopify_tmc Loopif
 
 # layer modules : forbidden dependencies
 rules=(
-  "miniml minicpp foreign_template crane_rt tparam_kinds scheme ml_schema lexenv : $TRANSLATION $PRINTER $FINISHING Table Common"
+  "core/inductive miniml minicpp foreign_template crane_rt tparam_kinds scheme ml_schema lexenv : $TRANSLATION $PRINTER $FINISHING Table Common"
   "cpp_pipeline loopify loopify_analysis loopify_tail loopify_tmc loopify_frame cpp_depth borrow_projection cpp_erasure function_entity cpp_constants cpp_local_closures cpp_shared_args cpp_simplify cpp_temporaries move_check ownership_ir return_moves control_to_legacy_minicpp : $TRANSLATION $PRINTER"
   # The printer reads Cpp_erasure's settled declarations; nothing else of the
   # finishing passes.

@@ -5,7 +5,7 @@
     functions ({!Recursion_plan.splice_partners}): which functions it
     decided, and, for each whose machine enters a copy of a partner spliced
     into its body, the local fixpoint that copy is.  A value of the program
-    being normalized ({!Core.normalize}), read by the passes after it. *)
+    being normalized ({!Core_phase.normalize}), read by the passes after it. *)
 
 type t
 

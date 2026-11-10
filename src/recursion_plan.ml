@@ -1246,7 +1246,7 @@ let splice_member ~inlines ~originals ~defs ~members fd =
   | Some ((_ :: _), _, body) when not (recurses {fd with fd_body = body}) -> Some ([], None, fd.fd_body)
   | spliced -> spliced
 
-let splice_partners ~loopified ~inlines ({structure = struc; splices} : Core.normalizing) : Core.normalizing =
+let splice_partners ~loopified ~inlines ({structure = struc; splices} : Core_phase.normalizing) : Core_phase.normalizing =
   let groups = Recursive_groups.analyze struc in
   let originals = ref Ref.User.Map.empty in
   Modutil.struct_iter
@@ -1308,7 +1308,7 @@ let splice_partners ~loopified ~inlines ({structure = struc; splices} : Core.nor
    spliced stays a call of another function.  A function on no cycle calls
    no function it could recurse through. *)
 let analyze groups program =
-  let struc = Core.structure program in
+  let struc = Core_phase.structure program in
   let effects = Core_effects.analyze struc in
   (* Every body is read with its applications whole, as translation reads
      them ({!Mlutil.read_spine}): [(magic f) x] and [(f x) y] are calls of
@@ -1409,7 +1409,7 @@ let analyze groups program =
           | _ -> []
         in
         let lex, body = Core_elaborate.declaration_scope fd.fd_type fd.fd_body in
-        resumes_of ~effects ~entered:(Splices.is_entered_copy (Core.splices program)) ~origin:r ~targets lex body )
+        resumes_of ~effects ~entered:(Splices.is_entered_copy (Core_phase.splices program)) ~origin:r ~targets lex body )
       defs
   in
   let adoptable =
