@@ -604,11 +604,11 @@ let plan_instance_methods r a t =
 (* Each method of the struct of the instance [r] declared with the head its
    plan gives it, which was made before anything was generated; under
    [CRANE_CHECK_IR] the head it was generated with is checked against it. *)
-let planned_methods r decl =
+let planned_methods ~minted r decl =
   let planned mf =
     if Probe.checking () then
       Callable_abi.check_instance_method ~instance:r mf.mf_name
-        (Callable_abi.of_instance_method ~instance:r mf);
+        (Callable_abi.of_instance_method ?minted:(List.assoc_opt mf.mf_name minted) ~instance:r mf);
     let abi = Callable_abi.planned_instance_method ~instance:r mf.mf_name in
     match Callable_abi.receiver abi with
     | Some {params; ret; _} when List.length params = List.length mf.mf_params ->
@@ -635,10 +635,10 @@ let planned_methods r decl =
   on_decl decl
 
 let instance_decls r a t =
-  let ds_opt, class_ref_opt, concept_args =
+  let ds_opt, class_ref_opt, concept_args, minted =
     Gen_decls.gen_instance_struct r a t
   in
-  let ds_opt = Option.map (fun d -> planned_methods r (finish_instance_struct d)) ds_opt in
+  let ds_opt = Option.map (fun d -> planned_methods ~minted r (finish_instance_struct d)) ds_opt in
   let struct_decl =
     match ds_opt with
     | Some ds -> [(empty_env (), ds)]

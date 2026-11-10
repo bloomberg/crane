@@ -153,13 +153,18 @@ val gen_record_methods :
     concept arguments). The last two are used by cpp_ind.ml to generate the
     static_assert verifying the instance satisfies the concept; the arguments
     come back already converted and resolved, because they are only correct in
-    the promoted-variable scope of the instance they were read in. *)
+    the promoted-variable scope of the instance they were read in.  Last,
+    by method name, what the struct's builder recorded of each of the
+    method's template parameters ({!Callable_abi.minted}). *)
 val gen_instance_struct :
   ?bodies:bool ->
   GlobRef.t ->
   ml_ast ->
   ml_type ->
-  cpp_decl option * GlobRef.t option * cpp_type list
+  cpp_decl option
+  * GlobRef.t option
+  * cpp_type list
+  * (Id.t * (Id.t * Callable_abi.minted) list) list
 
 (** [plan_instance_methods ~finish r b ty] is the callable plan of each
     method of the instance [r] -- of body [b] and type [ty] -- by the method's

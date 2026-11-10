@@ -387,11 +387,11 @@ let declared_signature = function
     ({!Plan_templates.relax_function_head}), as [n]'s callable plan and as a
     template head, with what the relaxations decided, which carry them
     through the declaration. *)
-let plan_function_head ?deduced_callables ?passing n ty temps signature =
+let plan_function_head ?deduced_callables ?passing ~minted n ty temps signature =
   let temps, relaxations = relax_function_head temps signature in
   let signature = declared_signature (Head_relaxation.apply_all relaxations signature) in
   let abi =
-    Callable_abi.of_head ?deduced_callables ?passing ?signature ~relaxations
+    Callable_abi.of_head ?deduced_callables ?passing ?signature ~relaxations ~minted
       ~omitted:(Translation_support.type_arg_omission n)
       ~phantom_prefix:(Translation_types.leading_phantom_count n)
       ~relaxed:(fun i -> IntSet.mem i (Ml_type_util.relaxed_higher_kinded_tvars ty))
@@ -415,6 +415,8 @@ type body_scope = {
   bs_typeclass_temps_basic : (template_type * Id.t) list;
   bs_regular_temps : (template_type * Id.t) list;
   bs_temps : (template_type * Id.t) list;
+  bs_minted : (Id.t * Callable_abi.minted) list;
+      (** What the builders of {!bs_temps} recorded of each parameter. *)
   bs_promoted_var_resolutions : (Id.t * cpp_type) list;
   bs_owned_flags : bool list;
   bs_passing : Callable_abi.passing list;
@@ -445,8 +447,9 @@ type body_scope = {
                  and codomain)
     @param ty    the original ML type (used for domain decomposition and type
                  inference)
-    @param temps template type parameters *)
-let dfun_body_scope n b cty ty temps =
+    @param temps template type parameters, and [minted] what their builder
+                 recorded of each ({!Callable_abi.minted}) *)
+let dfun_body_scope ~minted n b cty ty temps =
   let dom, cod =
     match cty with Tfun (d, c) -> (d, c) | t -> ([ Tvoid ], t)
   in
@@ -841,10 +844,10 @@ let dfun_body_scope n b cty ty temps =
             List.exists (fun idx -> not (IntSet.mem idx primary)) fun_idx
           in
           if has_undeclared then
-            Some (x, TTtypename, fun_tparam_id i)
+            Some (x, TTtypename, fun_tparam_id i, i)
           else
             let fcod = if is_cpp_unit_type fcod then Tvoid else fcod in
-            Some (x, TTfun (fdom, fcod), fun_tparam_id i)
+            Some (x, TTfun (fdom, fcod), fun_tparam_id i, i)
         | _ -> None )
       (List.mapi (fun i (x, ty) -> (x, ty, i)) (List.rev ids))
   in
@@ -858,7 +861,7 @@ let dfun_body_scope n b cty ty temps =
       | (y, _) :: rest -> if Id.equal x y then Some i else index_of x (i + 1) rest
     in
     List.filter_map
-      (fun (x, _, _) -> Option.bind (index_of x 0 source) (Param_pos.of_source_index binder_tys))
+      (fun (x, _, _, _) -> Option.bind (index_of x 0 source) (Param_pos.of_source_index binder_tys))
       fun_tys
   in
   (* Replace the parameter type of promoted (forwarded) function params with the
@@ -1014,7 +1017,7 @@ let dfun_body_scope n b cty ty temps =
       let constrained =
         get_tvar_indices cod
         @ List.concat_map
-            (function _, TTfun (dom, cod), _ -> get_tvar_indices (Tfun (dom, cod)) | _ -> [])
+            (function _, TTfun (dom, cod), _, _ -> get_tvar_indices (Tfun (dom, cod)) | _ -> [])
             fun_tys
       in
       Some
@@ -1029,7 +1032,7 @@ let dfun_body_scope n b cty ty temps =
   in
   (* Combine all template params for function signature. Save the non-typeclass
      type params for Tvar index resolution below. *)
-  let regular_temps = temps @ List.map (fun (_, t, n) -> (t, n)) fun_tys in
+  let regular_temps = temps @ List.map (fun (_, t, n, _) -> (t, n)) fun_tys in
   (* Variables standing for a higher-kinded class parameter are rendered as
      associated types of the instance, so they must not also be declared as
      template parameters: nothing would deduce them.  They stay in
@@ -1055,6 +1058,10 @@ let dfun_body_scope n b cty ty temps =
     bs_typeclass_temps_basic = typeclass_temps_basic;
     bs_regular_temps = regular_temps;
     bs_temps = temps;
+    bs_minted =
+      minted
+      @ List.mapi (fun k (_, id, _, _) -> (id, Callable_abi.Instance_param k)) typeclass_temps
+      @ List.map (fun (_, _, id, i) -> (id, Callable_abi.Callable_param i)) fun_tys;
     bs_promoted_var_resolutions = promoted_var_resolutions;
     bs_owned_flags = owned_flags;
     bs_passing =
@@ -1069,7 +1076,8 @@ let dfun_body_scope n b cty ty temps =
     callers see it: outside the type-variable scope its body is generated in. *)
 let plan_scope_head n ty scope =
   with_type_vars [] (fun () ->
-      plan_function_head ~deduced_callables:scope.bs_deduced_callables ~passing:scope.bs_passing n
+      plan_function_head ~deduced_callables:scope.bs_deduced_callables ~passing:scope.bs_passing
+        ~minted:scope.bs_minted n
         ty scope.bs_temps
         (Dfun (mk_dfun n ~ret:scope.bs_cod ~no_pure:scope.bs_no_pure (Ddef (scope.bs_ids, [])))))
 
@@ -1138,8 +1146,8 @@ let check_declared_signature n decl =
           str "the declaration of " ++ GlobRef.print n
           ++ str " has another signature than its plan" )
 
-let gen_dfun n b cty ty temps =
-  let scope = dfun_body_scope n b cty ty temps in
+let gen_dfun ~minted n b cty ty temps =
+  let scope = dfun_body_scope ~minted n b cty ty temps in
   let temps, relaxations = planned_scope_head n ty scope in
   let rec_call = self_call_reference n ~undeducible:scope.bs_self_call_undeducible in
   let inner, env =
@@ -1606,6 +1614,20 @@ let gen_constant_value ?expected_ty b =
   | MLdummy _ -> Cpp_erasure.empty_box
   | _ -> gen_expr ?expected_ty (empty_env ()) b
 
+(** The parameters a head declares for the type variables [cty] spells,
+    and for the ML variables [extra] it does not, by the variable each
+    stands for: the name {!Plan_templates.phantom_aware_temps} gives it. *)
+let scheme_params ?(extra = IntSet.empty) cty =
+  let spelled =
+    List.filter (fun (i, _) -> i > 0) (Ml_type_util.get_tvars_indexed cty)
+  in
+  List.map (fun (i, id) -> (id, Callable_abi.Scheme_param i)) spelled
+  @ List.filter_map
+      (fun i ->
+        if List.mem_assoc i spelled then None
+        else Some (tvar_id i, Callable_abi.Scheme_param i) )
+      (IntSet.elements extra)
+
 (** Generate C++ declaration from ML definition (main entry point) *)
 let gen_decl__inner n b ty =
   with_body_resolutions n b @@ fun () ->
@@ -1616,7 +1638,7 @@ let gen_decl__inner n b ty =
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
   match cty with
     | Tfun _ ->
-      let f, env = gen_dfun n b cty ty temps in
+      let f, env = gen_dfun ~minted:(scheme_params cty) n b cty ty temps in
       (f, env, tvars)
     | _ ->
     match b with
@@ -1667,6 +1689,8 @@ type function_head = {
   fh_body : ml_ast;
   fh_cty : cpp_type;
   fh_temps : (template_type * Id.t) list;
+  fh_minted : (Id.t * Callable_abi.minted) list;
+      (** The variable each of {!fh_temps} is declared for. *)
   fh_tvars : Id.t list;
       (** Typeclass-typed parameters first -- they become template parameters
           inside {!gen_dfun} without appearing in the C++ type, and a caller
@@ -1703,13 +1727,21 @@ let with_function_head n b ty k =
     | Tarr _ -> collect_typeclass_param_ids ty
     | _ -> []
   in
-  k ty {fh_body = b; fh_cty = cty; fh_temps = temps; fh_tvars = tc_param_ids @ tvars}
+  let minted =
+    scheme_params ~extra:(IntSet.union index_tvar_set (Ml_type_util.collect_ml_tvars ty)) cty
+  in
+  k ty
+    { fh_body = b;
+      fh_cty = cty;
+      fh_temps = temps;
+      fh_minted = minted;
+      fh_tvars = tc_param_ids @ tvars }
 
 (** [gen_function n ty h] generates the function [n] under [h]: its
     definition, the environment its names were allocated in, and the template
     parameters callers see -- [h]'s, then one per callable parameter. *)
 let gen_function n ty h =
-  let f, env = gen_dfun n h.fh_body h.fh_cty ty h.fh_temps in
+  let f, env = gen_dfun ~minted:h.fh_minted n h.fh_body h.fh_cty ty h.fh_temps in
   let callable_tparams =
     match h.fh_cty with
     | Tfun (dom, _) ->
@@ -1732,7 +1764,7 @@ let plan_function ~fixpoint n b ty =
   Table.with_decl_ref n @@ fun () ->
   with_function_head n b ty @@ fun ty h ->
   let plan cty =
-    let abi, _, _ = plan_scope_head n ty (dfun_body_scope n h.fh_body cty ty h.fh_temps) in
+    let abi, _, _ = plan_scope_head n ty (dfun_body_scope ~minted:h.fh_minted n h.fh_body cty ty h.fh_temps) in
     ( if Probe.checking () then
         match convert_ml_type_to_cpp_type (empty_env ()) [] ty with
         | live -> Translation_support.check_planned_arity abi live

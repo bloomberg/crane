@@ -20,6 +20,11 @@ let () =
      default, a deduced callable, and a parameter the declaration made up. *)
   let abi =
     of_head ~callee ~scheme:(Some scheme)
+      ~minted:
+        [ (Common.tc_instance_id 0, Instance_param 0);
+          (Minicpp.tvar_id 2, Scheme_param 2);
+          (Common.fun_tparam_id 0, Callable_param 0);
+          (Minicpp.tvar_id 1, Scheme_param 1) ]
       [ (Minicpp.TTtypename, Common.tc_instance_id 0);
         (Minicpp.TTtypename, Minicpp.tvar_id 2);
         (Minicpp.TTfun ([], Minicpp.Tvoid), Common.fun_tparam_id 0);
@@ -41,10 +46,20 @@ let () =
     (Option.map (fun p -> Template_param.position p.id) (parameter_of_var abi (var 1)) = Some 4
      && Option.map (fun p -> Template_param.position p.id) (parameter_of_var abi (var 2)) = Some 1);
   check "valid" (validate abi = []);
-  (* A name that merely looks generated is not the variable's. *)
-  let other = of_head ~callee ~scheme:(Some scheme) [(Minicpp.TTtypename, id "T01")] in
-  check "T01 is no variable"
+  (* The origin is what the builder recorded, not what the name says: a
+     parameter spelled as a variable's is none without the record, and one
+     spelled otherwise is the variable recorded. *)
+  let other = of_head ~callee ~scheme:(Some scheme) [(Minicpp.TTtypename, Minicpp.tvar_id 1)] in
+  check "an unrecorded T1 is no variable"
     (match template_head other with [{origin = Derived _; _}] -> true | _ -> false);
+  let renamed =
+    of_head ~callee ~scheme:(Some scheme) ~minted:[(id "A", Scheme_param 2)]
+      [(Minicpp.TTtypename, id "A")]
+  in
+  check "a recorded A is its variable"
+    ( match template_head renamed with
+    | [{origin = From_scheme v; _}] -> Scheme.Var.equal v (var 2)
+    | _ -> false );
   (* A plan of a callable Crane does not generate states its scheme. *)
   let f = foreign ~callee ~scheme:(Some scheme) () in
   check "foreign plans one writable parameter per variable"
