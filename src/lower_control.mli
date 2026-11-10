@@ -88,7 +88,7 @@ val install : t -> unit
 (** The loop [l], if it is lowered: a [Control_ir.Term.Loop]. *)
 val loop : Control_ir.Loop.t -> Control_ir.Term.t option
 
-(** The {!Control_ir.continues} of [t] the code made of it keeps no call of: those
+(** The {!Control_ir.Term.continues} of [t] the code made of it keeps no call of: those
     made of an occurrence no other [Continue] shares, nor any Core term [t]
     holds -- what it returns, binds, matches on, or passes a turn or a cell.
     A call Core copied shares its occurrence with its copies, any of which

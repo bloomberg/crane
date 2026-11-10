@@ -122,7 +122,7 @@ val modulo_cons_loop :
     ({!Loopify_tmc.control_shapes}), recycling the cells of the input
     [cursor] walks, where given.  A tail loop parks the receiver of the
     calls made of [park], those of the turns that make the receiver they
-    pass ({!Control_ir.rebuilt}), and passes the others theirs, which the
+    pass ({!Control_ir.Term.rebuilt}), and passes the others theirs, which the
     turns derive from the loop's parameters; a loop of another kind parks
     none.  Under [CRANE_CHECK_IR] it parks every call of [park].  A tail
     loop moves a parameter into its own next value at the calls [moves]
@@ -189,9 +189,9 @@ val local_frame_machine :
     parameter its lambda takes -- the loop's parameters that are not void
     ({!Ml_type_util.void_binder}), in the order a lambda stores them, the
     last first ({!Minicpp.to_reversed}): whether some Continue changes it
-    ({!Control_ir.invariant_parameters}), and whether every Continue passes
+    ({!Control_ir.Term.invariant_parameters}), and whether every Continue passes
     it a value stored in what the caller passed for it
-    ({!Control_ir.parts_passed}) or, of a machine with a stack of frames,
+    ({!Control_ir.Term.parts_passed}) or, of a machine with a stack of frames,
     whether its frames hold it by pointer ({!Frame_storage}). *)
 type member_plan = {
   member_varying : bool list;

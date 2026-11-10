@@ -191,7 +191,7 @@ let rec storage_root ~root ~bound e =
 
 (** Pointer-safety flags for [params]: those of them every recursive call
     passes a value stored in what the caller passed for it, as the loop's
-    ControlIR says ({!Control_ir.parts_passed}), [parts], that are a
+    ControlIR says ({!Control_ir.Term.parts_passed}), [parts], that are a
     borrowed value type. *)
 let pointer_safe_flags ~parts params =
   List.map2 (fun part (_, ty) -> part && Option.has_some (borrowed_value_param_pointee ty)) parts params

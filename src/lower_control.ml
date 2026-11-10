@@ -126,7 +126,7 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
       (* A fixpoint the scope enters by no turn -- applied only in a
          closure, or named as a value -- is no way into the machine. *)
       match lower entering (depth + 1) b with
-      | scope when Control_ir.continues_of entered.loop scope <> [] -> Entry {entered; name = Some (x, ty); scope}
+      | scope when Control_ir.Term.continues_of entered.loop scope <> [] -> Entry {entered; name = Some (x, ty); scope}
       | _ -> Let {binder = x; binder_type = ty; value = a; body = lower callee (depth + 1) b} )
     | f when Option.has_some (named callee ~depth f 0) -> continue_ f (Option.get (named callee ~depth f 0)) []
     | MLapp (f, args) when Option.has_some (named callee ~depth f (List.length args)) ->
@@ -231,7 +231,7 @@ let lower ~methods plan program =
   let check_entered r lowered =
     match Splices.entered_copy (Core.splices program) r with
     | Some o when Probe.checking () ->
-      let enters t = List.exists (fun (e : loop) -> Loop.equal e.loop (Loop.Member (o, 0))) (Control_ir.entries t) in
+      let enters t = List.exists (fun (e : loop) -> Loop.equal e.loop (Loop.Member (o, 0))) (Control_ir.Term.entries t) in
       if not (Option.cata enters false lowered) then
         Probe.violation "entered partner"
           Pp.(str "the machine of " ++ str (Table.kername_of_global r) ++ str " does not enter the partner spliced into its body")
@@ -332,6 +332,6 @@ let held_occurrences t =
    (held_occurrences).  A copied call shares its occurrence with its
    copies, and only these are told apart from them. *)
 let taken_continues t =
-  let continues = Control_ir.continues t and held = held_occurrences t in
+  let continues = Control_ir.Term.continues t and held = held_occurrences t in
   let count o l = List.length (List.filter (Miniml.Occurrence.equal o) l) in
   List.filter (fun o -> count o continues = 1 && count o held = 0) continues

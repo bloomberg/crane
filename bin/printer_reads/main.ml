@@ -24,6 +24,20 @@ let strip s =
   let n = String.length library_prefix in
   if String.length s >= n && String.sub s 0 n = library_prefix then String.sub s n (String.length s - n) else s
 
+(* The plugin's modules with a typed tree, by stripped name: a module of a
+   directory of src/ is [Dir__Name] ([include_subdirs qualified]). *)
+let known : (string, unit) Hashtbl.t = Hashtbl.create 256
+
+(* A module path [(m, "A.B.")] where [m__A] is a module of the plugin -- [A]
+   is a file of the directory [m], reached through its alias module -- is
+   [m__A]'s path [B.]: name each value by the module that defines it, or a
+   reference through a directory's namespace would reach nothing. *)
+let rec canonical (m, pre) =
+  match String.index_opt pre '.' with
+  | Some i when Hashtbl.mem known (m ^ "__" ^ String.sub pre 0 i) ->
+    canonical (m ^ "__" ^ String.sub pre 0 i, String.sub pre (i + 1) (String.length pre - i - 1))
+  | _ -> (m, pre)
+
 type node = string * string (* module, value (dotted inside a submodule) *)
 
 let edges : (node, node list) Hashtbl.t = Hashtbl.create 4096
@@ -41,7 +55,7 @@ let analyse cmt_file =
       | Pident id -> (
         match Hashtbl.find_opt modules id with Some r -> Some r | None -> Some (strip (Ident.name id), "") )
       | Pdot (Pident id, name) when Ident.name id = "Crane_plugin" -> Some (name, "")
-      | Pdot (q, name) -> Option.map (fun (mm, pre) -> (mm, pre ^ name ^ ".")) (resolve_module q)
+      | Pdot (q, name) -> Option.map (fun (mm, pre) -> canonical (mm, pre ^ name ^ ".")) (resolve_module q)
       | _ -> None
     in
     let resolve_value (p : Path.t) =
@@ -131,7 +145,11 @@ let analyse cmt_file =
   | _ -> ()
 
 let load dir root =
-  Array.iter (fun f -> if Filename.check_suffix f ".cmt" then analyse (Filename.concat dir f)) (Sys.readdir dir);
+  let cmts = List.filter (fun f -> Filename.check_suffix f ".cmt") (Array.to_list (Sys.readdir dir)) in
+  List.iter
+    (fun f -> Hashtbl.replace known (strip (String.capitalize_ascii (Filename.chop_suffix f ".cmt"))) ())
+    cmts;
+  List.iter (fun f -> analyse (Filename.concat dir f)) cmts;
   match Hashtbl.find_opt defined root with
   | None ->
     prerr_endline ("printer_reads: no typed tree for " ^ root ^ " in " ^ dir);

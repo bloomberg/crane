@@ -17,7 +17,7 @@
     loop's [Continue]s, by the occurrence each records
     ({!Minicpp.call_sig.cs_occurrence}); the parameters a jump leaves alone
     are those every [Continue] passes on unchanged
-    ({!Control_ir.invariant_parameters}).  What is left to the C++ is how
+    ({!Control_ir.Term.invariant_parameters}).  What is left to the C++ is how
     each is spelled: the arguments the call was translated with and the
     shadow each varying
     parameter is kept in ({!Loopify_tail}).  The local fixpoints in the

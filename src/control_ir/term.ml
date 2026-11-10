@@ -1,87 +1,71 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-module Loop = struct
-  type t =
-    | Function of Names.GlobRef.t
-    | Member of Miniml.Occurrence.t * int
+type t =
+  | Loop of loop
+  | Let of let_
+  | Match of match_
+  | Return of Miniml.ml_ast
+  | Continue of continue_
+  | Continue_into of continue_into
+  | Resume of resume
+  | Entry of entry
 
-  let equal a b =
-    match (a, b) with
-    | Function g, Function g' -> Names.GlobRef.UserOrd.equal g g'
-    | Member (o, m), Member (o', m') -> Miniml.Occurrence.equal o o' && Int.equal m m'
-    | (Function _ | Member _), _ -> false
-end
+and loop = {
+  loop : Loop.t;
+  parameters : (Miniml.ml_ident * Miniml.ml_type) list;
+  body : t;
+}
 
-module Term = struct
-  type t =
-    | Loop of loop
-    | Let of let_
-    | Match of match_
-    | Return of Miniml.ml_ast
-    | Continue of continue_
-    | Continue_into of continue_into
-    | Resume of resume
-    | Entry of entry
+and let_ = {
+  binder : Miniml.ml_ident;
+  binder_type : Miniml.ml_type;
+  value : Miniml.ml_ast;
+  body : t;
+}
 
-  and loop = {
-    loop : Loop.t;
-    parameters : (Miniml.ml_ident * Miniml.ml_type) list;
-    body : t;
-  }
+and match_ = {
+  scrutinee_type : Miniml.ml_type;
+  scrutinee : Miniml.ml_ast;
+  branches : branch list;
+}
 
-  and let_ = {
-    binder : Miniml.ml_ident;
-    binder_type : Miniml.ml_type;
-    value : Miniml.ml_ast;
-    body : t;
-  }
+and branch = {
+  binders : (Miniml.ml_ident * Miniml.ml_type) list;
+  result_type : Miniml.ml_type;
+  pattern : Miniml.ml_pattern;
+  body : t;
+}
 
-  and match_ = {
-    scrutinee_type : Miniml.ml_type;
-    scrutinee : Miniml.ml_ast;
-    branches : branch list;
-  }
+and continue_ = {
+  target : Loop.t;
+  occurrence : Miniml.Occurrence.t;
+  arguments : Miniml.ml_ast list;
+}
 
-  and branch = {
-    binders : (Miniml.ml_ident * Miniml.ml_type) list;
-    result_type : Miniml.ml_type;
-    pattern : Miniml.ml_pattern;
-    body : t;
-  }
+and continue_into = {
+  cells : cell list;
+  next : continue_;
+}
 
-  and continue_ = {
-    target : Loop.t;
-    occurrence : Miniml.Occurrence.t;
-    arguments : Miniml.ml_ast list;
-  }
+and cell = {
+  constructor : Names.GlobRef.t;
+  hole : int;
+  arguments : Miniml.ml_ast list;
+}
 
-  and continue_into = {
-    cells : cell list;
-    next : continue_;
-  }
+and resume = {
+  binder : Miniml.ml_ident;
+  binder_type : Miniml.ml_type;
+  value : t;
+  body : t;
+}
 
-  and cell = {
-    constructor : Names.GlobRef.t;
-    hole : int;
-    arguments : Miniml.ml_ast list;
-  }
-
-  and resume = {
-    binder : Miniml.ml_ident;
-    binder_type : Miniml.ml_type;
-    value : t;
-    body : t;
-  }
-
-  and entry = {
-    entered : loop;
-    name : (Miniml.ml_ident * Miniml.ml_type) option;
-    scope : t;
-  }
-end
-
-open Term
+and entry = {
+  entered : loop;
+  name : (Miniml.ml_ident * Miniml.ml_type) option;
+  scope : t;
+}
 
 (* The turns [t] continues a loop by, in order. *)
 let turns t =

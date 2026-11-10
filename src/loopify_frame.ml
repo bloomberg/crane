@@ -932,7 +932,7 @@ type enter_rewrite_ctx = {
   er_entering : Miniml.Occurrence.t list option;
       (** The calls that enter the machine at one of its entries: the
           Continues of its loop and of the loops its entries enter
-          ({!Control_ir.continues}); [None] where it has no ControlIR *)
+          ({!Control_ir.Term.continues}); [None] where it has no ControlIR *)
   er_aliased : Id.Set.t;
       (** The locals in scope that are references, or that a reference
           names: one bound to a matched value's field, to what a pointer the
@@ -2425,7 +2425,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~varying ?adopted ?entere
                er_entered_by = entered_by;
                er_entered = entered;
                er_points_into = points_into;
-               er_entering = Option.bind loop (fun l -> Option.map Control_ir.continues (Lower_control.loop l));
+               er_entering = Option.bind loop (fun l -> Option.map Control_ir.Term.continues (Lower_control.loop l));
                er_aliased = aliased_params ~pointer_safe:pointer_safe_varying own_entry }
   in
   (* The body is a sequence like any other: a recursive call bound at its top

@@ -114,7 +114,7 @@ let planned_jumps loop check =
     Probe.violation "control IR" (Pp.str no_control_ir);
     raise (Not_linearisable no_control_ir)
   | Some t ->
-    let continues = Control_ir.continues t in
+    let continues = Control_ir.Term.continues t in
     fun e ->
       match made_of e with
       | Some o when List.exists (Miniml.Occurrence.equal o) continues -> check e
@@ -137,7 +137,7 @@ let checked_tail_loop loop transform =
     in
     match Lower_control.loop l with
     | None -> Probe.violation "control IR" Pp.(str "no ControlIR for the loop of " ++ what ())
-    | Some t when not (made_as_planned (Control_ir.continues t) (List.rev !jumps)) ->
+    | Some t when not (made_as_planned (Control_ir.Term.continues t) (List.rev !jumps)) ->
       Probe.violation "control IR"
         Pp.(str "the calls the loop of " ++ what () ++ str " jumps at are not its Continues")
     | Some _ -> () )
@@ -164,9 +164,9 @@ let machine_disagreement l entries =
   | Some _ when List.exists (fun (_, o) -> not (Option.has_some o)) entries ->
     Some Pp.(str "the machine of " ++ what () ++ str " is entered by a call made of no Core call")
   | Some t ->
-    if not (same (made (fun _ -> true)) (Control_ir.continues t)) then
+    if not (same (made (fun _ -> true)) (Control_ir.Term.continues t)) then
       Some Pp.(str "the calls the machine of " ++ what () ++ str " is entered by are not its Continues")
-    else if Control_ir.continues_into t = [] && not (same (made Fun.id) (Control_ir.resumed t)) then
+    else if Control_ir.Term.continues_into t = [] && not (same (made Fun.id) (Control_ir.Term.resumed t)) then
       Some Pp.(str "the calls the machine of " ++ what () ++ str " resumes after are not its Resumes' Continues")
     else None
 
@@ -273,9 +273,9 @@ let member_plan ~frames member params =
     let kept = kept_positions l in
     if List.compare_lengths kept params <> 0 then None
     else
-      let invariant = Control_ir.invariant_parameters l in
+      let invariant = Control_ir.Term.invariant_parameters l in
       let in_place = Recursion_plan.in_place in
-      let parts = Control_ir.parts_passed ~pointer_fields:constructor_pointer_fields ~in_place l in
+      let parts = Control_ir.Term.parts_passed ~pointer_fields:constructor_pointer_fields ~in_place l in
       let parts =
         if not frames then parts
         else
@@ -895,7 +895,7 @@ let transform_method_own ?cursor ?moves ~varying ~parts ~park ~tparams ~self_ty 
          loop and recursing on that local instead, so the pointer stored for
          [_self] stays valid across the back-edge.  The parking assignment
          happens first, so a turn whose other arguments read the receiver is
-         declined before this ({!rebuilt_receiver_read}).  Which turns park is the plan's [park] ({!Control_ir.rebuilt}); every
+         declined before this ({!rebuilt_receiver_read}).  Which turns park is the plan's [park] ({!Control_ir.Term.rebuilt}); every
          other turn passes a receiver derived from the loop's parameters. *)
       let self_store_ty =
         let rec pointee = function
@@ -970,7 +970,7 @@ let transform_method_own ?cursor ?moves ~varying ~parts ~park ~tparams ~self_ty 
              loop continues by, and the cells built around them its turns'. *)
           let check = planned_jumps loop self_check in
           let shapes =
-            Option.map (fun t -> Loopify_tmc.control_shapes (Control_ir.continues_into t)) (Option.bind loop Lower_control.loop)
+            Option.map (fun t -> Loopify_tmc.control_shapes (Control_ir.Term.continues_into t)) (Option.bind loop Lower_control.loop)
           in
           let r =
             apply_nontail_loopification
