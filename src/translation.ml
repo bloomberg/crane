@@ -508,7 +508,7 @@ let record_taken ~is_typeclass t base =
     them. *)
 let ungenerated_let_lambda what =
   if Probe.checking () then
-    Probe.violation "let-bound lambda" Pp.(str "Core.normalize left " ++ str what ++ str " to translation")
+    Probe.violation "let-bound lambda" Pp.(str "Core_phase.normalize left " ++ str what ++ str " to translation")
 
 let check_closure_local ty a ~local =
   if Probe.checking () then

@@ -78,7 +78,7 @@ val structure :
 (** [declaration_scope ty body] is the lexical environment a definition of
     type [ty] generates its body [body] in, its parameters bound at the
     types the body is generated with, and the body under them.  In a
-    normalized program ({!Core.normalize}) that body is the one generated:
+    normalized program ({!Core_phase.normalize}) that body is the one generated:
     eta-expanded, its let-bound lambdas as {!generated_definition} puts
     them. *)
 val declaration_scope : Miniml.ml_type -> Miniml.ml_ast -> Lexenv.t * Miniml.ml_ast
