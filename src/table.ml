@@ -333,7 +333,7 @@ let get_ind_num_param_vars_opt kn =
     Some n
   with Not_found | Invalid_argument _ -> None
 
-let inductive_kinds = ref (Mindmap_env.empty : inductive_kind Mindmap_env.t)
+let inductive_kinds = ref (Mindmap_env.empty : record_field Core.Inductive.Kind.t Mindmap_env.t)
 
 let init_inductive_kinds () = inductive_kinds := Mindmap_env.empty
 
@@ -503,14 +503,14 @@ let singleton_shape r =
     other kind queries, because the higher-kinded parameter table below is
     restricted by it. *)
 let is_typeclass r =
-  (match inductive_kind_of r with Some (TypeClass _) -> true | _ -> false)
+  (match inductive_kind_of r with Some (Core.Inductive.Kind.Type_class _) -> true | _ -> false)
   || singleton_class_method r <> None
 
 let is_coinductive r =
-  match inductive_kind_of r with Some Coinductive -> true | _ -> false
+  match inductive_kind_of r with Some Core.Inductive.Kind.Coinductive -> true | _ -> false
 
 let has_any_coinductive () =
-  Mindmap_env.exists (fun _ kind -> kind == Coinductive) !inductive_kinds
+  Mindmap_env.exists (fun _ kind -> kind == Core.Inductive.Kind.Coinductive) !inductive_kinds
 
 (** {2 Demands}
 
@@ -668,7 +668,7 @@ let is_coinductive_type = function
     differ in length and the pairing is then lost. *)
 let get_record_field_bindings r =
   match inductive_kind_of r with
-  | Some (Record f | TypeClass f) -> f
+  | Some (Core.Inductive.Kind.Record f | Core.Inductive.Kind.Type_class f) -> f
   | _ -> (
     match singleton_shape r with
     | Some {sc_field = m, ty; _} -> [(Some m, ty)]
@@ -1378,7 +1378,7 @@ let fold_type_body_types f r acc =
              section -- is parameterised by [ptr] and [iptr].  Nothing looked
              there, so both spellings fell to the file-scope
              [using ptr = std::any;]. *)
-          | Miniml.TypeClass _ ->
+          | Core.Inductive.Kind.Type_class _ ->
             List.map snd (get_record_field_bindings r)
           | _ ->
             Array.fold_left
@@ -3084,7 +3084,7 @@ let is_custom r = Ref.Can.Map.mem r !customs
 let is_flat_inductive_packet kn ind i =
   try
     let p = ind.ind_packets.(i) in
-    let ordinary = match ind.ind_kind with Standard -> true | _ -> false in
+    let ordinary = match ind.ind_kind with Core.Inductive.Kind.Inductive -> true | _ -> false in
     let (_, num_param_vars) = ind_param_vars ind p in
     let is_enum =
       Array.for_all (fun tys -> tys = []) p.ip_types && num_param_vars = 0
@@ -3138,7 +3138,7 @@ let is_shared_variant_packet kn ind i =
       (not (is_flat_inductive_packet kn ind i))
       && List.exists (function Tdummy _ -> false | _ -> true) fields
     in
-    (match ind.ind_kind with Standard -> true | _ -> false)
+    (match ind.ind_kind with Core.Inductive.Kind.Inductive -> true | _ -> false)
     && (not (is_custom (GlobRef.IndRef (kn, i))))
     && (List.exists (type_mentions_kn ~descend_arr:false kn) fields || holds_something ())
   with _ -> false

@@ -109,13 +109,6 @@ and ml_meta = {
 
 (** {2 ML inductive types} *)
 
-(** Kind of inductive type. *)
-and inductive_kind =
-  | Coinductive
-  | Standard
-  | Record of record_field list
-  | TypeClass of record_field list  (** Type class methods *)
-
 (** One field of a record or type class: its projection ([None] when the field
     is anonymous) paired with its ML type.
 
@@ -153,18 +146,12 @@ and ml_ind_packet = {
   ip_consarg_names : Id.t option list array;
 }
 
-(** Equivalence information for an inductive. *)
-and equiv =
-  | NoEquiv
-  | Equiv of KerName.t
-  | RenEquiv of string
-
 (** [ip_nparams] contains the number of parameters. *)
 and ml_ind = {
-  mutable ind_kind : inductive_kind;
+  mutable ind_kind : record_field Core.Inductive.Kind.t;
   ind_nparams : int;
   ind_packets : ml_ind_packet array;
-  ind_equiv : equiv;
+  ind_equiv : Core.Inductive.Equivalence.t;
 }
 
 (** {2 ML terms} *)

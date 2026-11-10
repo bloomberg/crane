@@ -80,7 +80,7 @@ val tail_loop :
     fixpoint returning another type than its function -- told apart with
     every abbreviation unfolded, as the C++ does not spell them -- for a
     machine has one result. *)
-val lower : methods:(Names.GlobRef.t -> bool) -> Recursion_plan.t -> Core.normalized Core.program -> t
+val lower : methods:(Names.GlobRef.t -> bool) -> Recursion_plan.t -> Core_phase.normalized Core_phase.program -> t
 
 (** Make [t] the extraction's, the one {!loop} reads. *)
 val install : t -> unit

@@ -226,7 +226,7 @@ let register_enum_inductives (s : ml_structure) : unit =
       List.iter
         (fun (ind_ref, i, ind) ->
           match ind.ind_kind with
-          | Record _ | TypeClass _ -> ()
+          | Core.Inductive.Kind.Record _ | Core.Inductive.Kind.Type_class _ -> ()
           | _ ->
             let is_mutual = Array.length ind.ind_packets > 1 in
             if
@@ -917,7 +917,7 @@ let collect_eponymous_records (s : ml_structure) : GlobRef.t list =
          List.fold_left
            (fun acc (ind_ref, _i, ind) ->
              match ind.ind_kind with
-             | Record _
+             | Core.Inductive.Kind.Record _
                when Option.equal String.equal
                       (Some
                          (String.lowercase_ascii
@@ -967,7 +967,7 @@ let collect_concept_renames (s : ml_structure) :
           ( List.fold_left
               (fun acc (ind_ref, _i, ind) ->
                 match ind.ind_kind with
-                | TypeClass _ -> (ind_ref, Common.pp_global_name Type ind_ref) :: acc
+                | Core.Inductive.Kind.Type_class _ -> (ind_ref, Common.pp_global_name Type ind_ref) :: acc
                 | _ -> acc )
               classes (element_inductives se),
             modtypes ) )

@@ -152,7 +152,7 @@ val eta_parameters :
 
 (** [unwritten_parameters ty params body]: the {!eta_parameters} of a
     definition whose leading lambdas bind [params] over [body].  In a
-    normalized program ({!Core.normalize}) every definition binds every
+    normalized program ({!Core_phase.normalize}) every definition binds every
     parameter its type declares, so these are the parameters of an axiom or
     an exception, which has no body to bind them; under [CRANE_CHECK_IR] any
     other definition missing one is a violation. *)

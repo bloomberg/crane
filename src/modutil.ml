@@ -111,9 +111,9 @@ let struct_iter do_decl do_spec do_mp s =
 (** Callback type for reference iteration. *)
 type do_ref = GlobRef.t -> unit
 
-(** Iterate over field references in an inductive kind (Record/TypeClass). *)
+(** Iterate over field references in an inductive kind (Record/Type_class). *)
 let record_iter_references do_term = function
-  | Record l | TypeClass l ->
+  | Core.Inductive.Kind.Record l | Core.Inductive.Kind.Type_class l ->
     List.iter (fun (r, _) -> Option.iter do_term r) l
   | _ -> ()
 
@@ -195,7 +195,7 @@ let ind_iter_references do_term do_cons do_type kn ind =
         match
           ind.ind_equiv
         with
-        | Miniml.Equiv kne -> do_type (GlobRef.IndRef (MutInd.make1 kne, snd ip))
+        | Core.Inductive.Equivalence.Equivalent_to kne -> do_type (GlobRef.IndRef (MutInd.make1 kne, snd ip))
         | _ -> () );
     Array.iteri (fun j -> cons_iter (ip, j + 1)) p.ip_types
   in

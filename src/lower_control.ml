@@ -187,7 +187,7 @@ let rec fixpoints wanted acc e =
   !acc
 
 let lower ~methods plan program =
-  let struc = Core.structure program in
+  let struc = Core_phase.structure program in
   let effects = Core_effects.analyze struc in
   let functions, locals = Recursion_plan.tail_loops plan in
   let modulo_cons, local_modulo_cons = Recursion_plan.modulo_cons_loops plan in
@@ -229,7 +229,7 @@ let lower ~methods plan program =
   (* A partner's copy spliced into the body of [r] is entered by the
      machine [lowered] lowers it as ({!Splices.entered_copy}). *)
   let check_entered r lowered =
-    match Splices.entered_copy (Core.splices program) r with
+    match Splices.entered_copy (Core_phase.splices program) r with
     | Some o when Probe.checking () ->
       let enters t = List.exists (fun (e : loop) -> Loop.equal e.loop (Loop.Member (o, 0))) (Control_ir.Term.entries t) in
       if not (Option.cata enters false lowered) then

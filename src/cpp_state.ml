@@ -548,7 +548,7 @@ and render_ctx = {
   rc_file : Common.file;
   (* Inside a struct body? Affects qualification of nested type references. *)
   rc_in_struct : bool;
-  (* TypeClass concepts already emitted for the current module? *)
+  (* Type_class concepts already emitted for the current module? *)
   rc_concepts_hoisted : bool;
   (* The out-of-line definition being printed, if one is: the struct it is
      a member of, which a name written outside that struct's body is

@@ -85,26 +85,26 @@ let classify_inductive
   let is_eponymous = Module_plan.is_eponymous_record ind_ref in
   let is_rec =
     match ind.Miniml.ind_kind with
-    | Miniml.Record _ -> true
-    | Miniml.TypeClass _ -> true (* type classes are also records *)
+    | Core.Inductive.Kind.Record _ -> true
+    | Core.Inductive.Kind.Type_class _ -> true (* type classes are also records *)
     | _ -> false
   in
   let is_en = is_enum_inductive ind_ref in
   let is_gse = Module_plan.is_global_scope_enum ind_ref in
   let kind =
     match ind.Miniml.ind_kind with
-    | Miniml.Standard | Miniml.Coinductive ->
+    | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive ->
       if is_en then
         IK_Enum
       else
         IK_Standard
-    | Miniml.Record fields ->
+    | Core.Inductive.Kind.Record fields ->
       let projections = List.map fst fields in
       if is_eponymous then
         IK_Eponymous projections
       else
         IK_Record projections
-    | Miniml.TypeClass fields -> IK_TypeClass (List.map fst fields)
+    | Core.Inductive.Kind.Type_class fields -> IK_TypeClass (List.map fst fields)
   in
   let rtn =
     {

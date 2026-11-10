@@ -10,7 +10,7 @@ type kind_reason =
 
 type kind_decision = {
   block : MutInd.t;
-  kind : inductive_kind;
+  kind : record_field Core.Inductive.Kind.t;
   reason : kind_reason;
 }
 
@@ -54,7 +54,7 @@ let kind_after decisions kn ind = Option.default ind.ind_kind (decided decisions
 let is_typeclass_after decisions r =
   let of_block kn =
     match decided decisions kn with
-    | Some (TypeClass _) -> true
+    | Some (Core.Inductive.Kind.Type_class _) -> true
     | Some _ -> false
     | None -> Table.is_typeclass r
   in
@@ -70,7 +70,7 @@ let is_typeclass_after decisions r =
     Crane classifies that copy independently.  The two answers can differ --
     instantiation registers a class declared inside a functor in Rocq's type
     class database while the body's own copy stays unregistered, so [F.Cl] is
-    a {!Record} and [FN.Cl] a {!TypeClass}.  One declaration with two kinds is
+    a {!Core.Inductive.Kind.Record} and [FN.Cl] a {!Core.Inductive.Kind.Type_class}.  One declaration with two kinds is
     a disagreement every later reader inherits: the struct is emitted from the
     body's copy, which is the one that exists in C++, while a call site
     reading the instantiated copy treats its instances as template arguments
@@ -82,7 +82,7 @@ let is_typeclass_after decisions r =
 let functor_alignment struc =
   (* Every module body's inductive kinds, keyed by the module's own path and
      the inductive's label -- the pair a functor application can name. *)
-  let body_kinds : (string * Label.t, inductive_kind) Hashtbl.t = Hashtbl.create 16 in
+  let body_kinds : (string * Label.t, record_field Core.Inductive.Kind.t) Hashtbl.t = Hashtbl.create 16 in
   let rec body_of (me : ml_module_expr) =
     match me with MEfunctor (_, _, me) -> body_of me | me -> me
   in
@@ -119,8 +119,8 @@ let functor_alignment struc =
                 ( Hashtbl.find_opt body_kinds (ModPath.to_string mp_functor, l),
                   kind_after !decisions kn ind )
               with
-              | Some (TypeClass _), Record fields -> Some (TypeClass fields)
-              | Some (Record _), TypeClass fields -> Some (Record fields)
+              | Some (Core.Inductive.Kind.Type_class _), Core.Inductive.Kind.Record fields -> Some (Core.Inductive.Kind.Type_class fields)
+              | Some (Core.Inductive.Kind.Record _), Core.Inductive.Kind.Type_class fields -> Some (Core.Inductive.Kind.Record fields)
               | _ -> None
             in
             match aligned with
@@ -194,7 +194,7 @@ let value_use_demotion prior struc =
      and demoting it would turn the refinement into a member. *)
   let scan_ind kn ind =
     let scan_field =
-      match kind_after prior kn ind with TypeClass _ -> scan_type | _ -> scan_arg
+      match kind_after prior kn ind with Core.Inductive.Kind.Type_class _ -> scan_type | _ -> scan_arg
     in
     Array.iter (fun p -> Array.iter (List.iter scan_field) p.ip_types) ind.ind_packets
   in
@@ -253,8 +253,8 @@ let value_use_demotion prior struc =
   let decisions = ref [] in
   let decide kn ind =
     match kind_after prior kn ind with
-    | TypeClass fields when Mindmap_env.mem kn !demoted ->
-      decisions := {block = kn; kind = Record fields; reason = Used_as_value} :: !decisions
+    | Core.Inductive.Kind.Type_class fields when Mindmap_env.mem kn !demoted ->
+      decisions := {block = kn; kind = Core.Inductive.Kind.Record fields; reason = Used_as_value} :: !decisions
     | _ -> ()
   in
   if not (Mindmap_env.is_empty !demoted) then
@@ -315,9 +315,9 @@ let same_callables a b =
 let kind_equal a b =
   let fields_equal = List.equal (fun (r, _) (r', _) -> Option.equal GlobRef.UserOrd.equal r r') in
   match (a, b) with
-  | Coinductive, Coinductive | Standard, Standard -> true
-  | Record f, Record f' | TypeClass f, TypeClass f' -> fields_equal f f'
-  | (Coinductive | Standard | Record _ | TypeClass _), _ -> false
+  | Core.Inductive.Kind.Coinductive, Core.Inductive.Kind.Coinductive | Core.Inductive.Kind.Inductive, Core.Inductive.Kind.Inductive -> true
+  | Core.Inductive.Kind.Record f, Core.Inductive.Kind.Record f' | Core.Inductive.Kind.Type_class f, Core.Inductive.Kind.Type_class f' -> fields_equal f f'
+  | (Core.Inductive.Kind.Coinductive | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Record _ | Core.Inductive.Kind.Type_class _), _ -> false
 
 let same_name (r, s) (r', s') = GlobRef.UserOrd.equal r r' && String.equal s s'
 

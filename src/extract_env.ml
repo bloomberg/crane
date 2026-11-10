@@ -1402,7 +1402,7 @@ let core_passes to_appear : ml_structure Pipeline_trace.pass list =
 
 let core_pass_names = Pipeline_trace.names (core_passes ([], []))
 
-(** {!Normalize}, on the frozen program ({!Core.normalize}), before it is
+(** {!Normalize}, on the frozen program ({!Core_phase.normalize}), before it is
     analysed: every consumer of the structure (the method registry built
     before printing as much as the printer) sees the same bodies, and a body
     an optimization introduces meets Normalize's contract like any other.
@@ -1410,8 +1410,8 @@ let core_pass_names = Pipeline_trace.names (core_passes ([], []))
     let-bound lambdas put as they are generated, which is the body
     translation generates, so that is the body Normalize names the calls
     of. *)
-let normalize_passes : Core.normalizing Pipeline_trace.pass list =
-  let rewriting f (p : Core.normalizing) = {p with structure = f p.structure} in
+let normalize_passes : Core_phase.normalizing Pipeline_trace.pass list =
+  let rewriting f (p : Core_phase.normalizing) = {p with structure = f p.structure} in
   Pipeline_trace.
     [ pass "eta_expand" (rewriting Normalize.eta_expand);
       pass "let_lambdas" (rewriting Normalize.let_lambdas);
@@ -1454,15 +1454,15 @@ let check_structure_unchanged planned struc =
             ++ prlist_with_sep pr_comma Label.print changed) )
     planned
 
-(** [freeze core]: the frozen program ({!Core.freeze}), normalized
-    ({!Core.normalize}), with the facts the whole of it is analysed for --
+(** [freeze core]: the frozen program ({!Core_phase.freeze}), normalized
+    ({!Core_phase.normalize}), with the facts the whole of it is analysed for --
     which definitions only throw, which parameters are owned, settled across
     calls, how each function recurses -- installed before any unit is
     planned ({!Program_facts.analyze_program}). *)
 let freeze core =
   Translation_state.generating_outside_modules @@ fun () ->
   let normalized =
-    Core.normalize (Pipeline_trace.run ~stage:"normalize" normalize_passes) (Core.freeze core)
+    Core_phase.normalize (Pipeline_trace.run ~stage:"normalize" normalize_passes) (Core_phase.freeze core)
   in
   Pipeline_trace.event "core" "analyze_program";
   Install_legacy_plan.install_program (Program_facts.analyze_program normalized);
@@ -1470,9 +1470,9 @@ let freeze core =
 
 let optimize_struct to_appear struc =
   let core =
-    Core.optimize (Pipeline_trace.run ~stage:"core" (core_passes to_appear)) (Core.extracted struc)
+    Core_phase.optimize (Pipeline_trace.run ~stage:"core" (core_passes to_appear)) (Core_phase.extracted struc)
   in
-  if Pipeline_trace.enabled () then ignore (observed_fingerprint ~stage:"core" (Core.structure core));
+  if Pipeline_trace.enabled () then ignore (observed_fingerprint ~stage:"core" (Core_phase.structure core));
   core
 
 (** The steps of {!analyze_and_plan}, in order. *)
@@ -1580,8 +1580,8 @@ let declares struc =
   let add r = declared := Ref.User.Set.add r !declared in
   let inductive kn ind =
     ( match ind.ind_kind with
-    | Record fields | TypeClass fields -> List.iter (fun (f, _) -> Option.iter add f) fields
-    | Standard | Coinductive -> () );
+    | Core.Inductive.Kind.Record fields | Core.Inductive.Kind.Type_class fields -> List.iter (fun (f, _) -> Option.iter add f) fields
+    | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive -> () );
     Array.iteri
       (fun i p ->
         add (GlobRef.IndRef (kn, i));
@@ -1602,10 +1602,10 @@ let declares struc =
 (** Renders an entire ML structure to C++ header and implementation files:
     plans the unit, renders each file once, then writes and formats them. *)
 let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
-    (fn, si, mo) dry (core : Core.normalized Core.program) =
+    (fn, si, mo) dry (core : Core_phase.normalized Core_phase.program) =
   let dry = dry || Probe.census_dry () in
   Probe.census_unit ();
-  let struc = Core.structure core in
+  let struc = Core_phase.structure core in
   Buffer.clear buf;
   let d = descr () in
   (* Empties every per-file cell, the mutual-recursion registry among them,
@@ -1985,7 +1985,7 @@ let full_extr_reading opaque_access f (refs, mps) read =
              nothing. *)
           let current = MPfile (Lib.library_dp ()) in
           let foreign, own =
-            Core.partition
+            Core_phase.partition
               (fun mp ->
                 (not (ModPath.equal mp current))
                 &&
@@ -1994,8 +1994,8 @@ let full_extr_reading opaque_access f (refs, mps) read =
                 | None -> false )
               core
           in
-          List.iter (fun (mp, _) -> Table.claim_extracted_unit mp target) (Core.modules own);
-          (List.map fst (Core.modules foreign), own)
+          List.iter (fun (mp, _) -> Table.claim_extracted_unit mp target) (Core_phase.modules own);
+          (List.map fst (Core_phase.modules foreign), own)
       in
       let unit_includes =
         List.sort_uniq String.compare (List.filter_map Table.extracted_unit_of foreign)
@@ -2037,8 +2037,8 @@ let full_extraction_exports ?(validate = true) ~opaque_access f lr =
     each in a namespace of its own: [Separate Extraction]'s layout, and
     [Extraction Library]'s.  The file of a library [dry] says is rendered but
     not written. *)
-let print_per_library ~dry (core : Core.normalized Core.program) =
-  let struc = Core.structure core in
+let print_per_library ~dry (core : Core_phase.normalized Core_phase.program) =
+  let struc = Core_phase.structure core in
   (* Run all per-unit cleanup in [~finally] so state is reset even when the
      body aborts. *)
   Fun.protect
@@ -2225,7 +2225,7 @@ let print_per_library ~dry (core : Core.normalized Core.program) =
           Common.rename_file_namespace mp ns )
     struc;
   let print (mp, unit) =
-    match (mp, Core.structure unit) with
+    match (mp, Core_phase.structure unit) with
     | MPfile _, [(_, sel)] ->
       if has_real_decls sel then begin
         let ns = file_namespace mp sel in
@@ -2306,7 +2306,7 @@ let print_per_library ~dry (core : Core.normalized Core.program) =
         (Mlutil.term_defs d)
     | _ -> ()
   ) struc;
-  List.iter print (Core.modules core)
+  List.iter print (Core_phase.modules core)
 
 (** Entry point for extracting specific references to separate files. Each Rocq
     .v file gets its own C++ output file. *)
@@ -2323,7 +2323,7 @@ let separate_extraction ~opaque_access lr =
       | (MPdot _ | MPbound _), _ ->
         user_err
           (str "Separate Extraction from inside a module is not supported.") )
-    (Core.modules core);
+    (Core_phase.modules core);
   print_per_library ~dry:(fun _ -> false) (freeze core)
 
 (** {2 Simple extraction in the Rocq toplevel. The vernacular command is
@@ -2599,7 +2599,7 @@ let show_extraction ~pstate =
     (* Frozen and normalized unoptimised, as it is shown: that is what
        installs the facts about the whole program -- its recursion plan
        among them -- that lowering the term reads. *)
-    let frozen = freeze (Core.optimize Fun.id (Core.extracted [(mp, [(l, SEdecl decl)])])) in
-    print_one_decl (Core.structure frozen) mp decl
+    let frozen = freeze (Core_phase.optimize Fun.id (Core_phase.extracted [(mp, [(l, SEdecl decl)])])) in
+    print_one_decl (Core_phase.structure frozen) mp decl
   in
   Feedback.msg_notice (Pp.prlist_with_sep Pp.fnl extr_term trms)

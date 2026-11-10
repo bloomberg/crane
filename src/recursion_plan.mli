@@ -39,7 +39,7 @@ val empty : t
 
 (** [analyze groups p] plans every function the normalized program [p]
     defines, in the recursive groups [groups]. *)
-val analyze : Recursive_groups.t -> Core.normalized Core.program -> t
+val analyze : Recursive_groups.t -> Core_phase.normalized Core_phase.program -> t
 
 val equal : t -> t -> bool
 
@@ -203,7 +203,7 @@ val adoptable_in : t -> Names.GlobRef.t -> Miniml.Occurrence.t list
     recorded in [p]'s splices: splicing again leaves a function decided as
     it is, so normalizing the result again rewrites nothing. *)
 val splice_partners :
-  loopified:(Names.GlobRef.t -> bool) -> inlines:(Names.GlobRef.t -> bool) -> Core.normalizing -> Core.normalizing
+  loopified:(Names.GlobRef.t -> bool) -> inlines:(Names.GlobRef.t -> bool) -> Core_phase.normalizing -> Core_phase.normalizing
 
 (** Whether functions of types [a] and [b] yield one type, once every
     abbreviation is unfolded and a variable of the definition's scheme is

@@ -774,7 +774,7 @@ let inductive_names_of_sel sel =
       match se with
       (* A type class becomes a concept, which is hoisted to namespace scope
          rather than nested, so it never competes for a member name. *)
-      | SEdecl (Dind (_kn, {ind_kind = TypeClass _; _})) -> []
+      | SEdecl (Dind (_kn, {ind_kind = Core.Inductive.Kind.Type_class _; _})) -> []
       | SEdecl (Dind (_kn, ind)) ->
         Array.to_list
           (Array.map (fun p -> modular_rename Type p.ip_typename) ind.ind_packets)
@@ -835,7 +835,7 @@ let file_colliding_type_names sel =
 (** C++ names of the inductives declared directly in [sel] that cannot absorb
     an enclosing module of the same name.  The eponymous merge folds the
     module's members into the type's own declaration, which only a record or a
-    class has room for: a [Standard] inductive nests its constructor structs
+    class has room for: an [Inductive] inductive nests its constructor structs
     there instead, and an [enum class] or a coinductive has no such body at
     all, so a module eponymous with one of those has to be renamed. *)
 let unmergeable_inductive_names_of_sel sel =
@@ -861,8 +861,8 @@ let unmergeable_inductive_names_of_sel sel =
       | SEdecl (Dind (kn, ind)) ->
         let mergeable =
           match ind.ind_kind with
-          | Standard | Coinductive -> false
-          | Record _ | TypeClass _ -> true
+          | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Coinductive -> false
+          | Core.Inductive.Kind.Record _ | Core.Inductive.Kind.Type_class _ -> true
         in
         List.filteri
           (fun i _ ->

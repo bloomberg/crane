@@ -23,7 +23,7 @@ type kind_reason =
 
 type kind_decision = {
   block : Names.MutInd.t;
-  kind : Miniml.inductive_kind;
+  kind : Miniml.record_field Core.Inductive.Kind.t;
   reason : kind_reason;
 }
 
@@ -118,10 +118,10 @@ val same_instance_methods :
   bool
 
 (** The kind decided for [block], if any. *)
-val kind_of : t -> Names.MutInd.t -> Miniml.inductive_kind option
+val kind_of : t -> Names.MutInd.t -> Miniml.record_field Core.Inductive.Kind.t option
 
 (** The same kind; a record or class by its field references. *)
-val kind_equal : Miniml.inductive_kind -> Miniml.inductive_kind -> bool
+val kind_equal : Miniml.record_field Core.Inductive.Kind.t -> Miniml.record_field Core.Inductive.Kind.t -> bool
 
 (** The same decisions, the input aside. *)
 val equal : t -> t -> bool

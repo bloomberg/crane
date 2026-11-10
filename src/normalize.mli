@@ -18,7 +18,7 @@
 (** [eta_expand s] gives every definition in [s] a parameter at each arrow
     of its type, applying the body it writes to the ones it leaves out: the
     body translation generates, here once for every consumer instead of
-    re-derived by each.  It runs first in {!Core.normalize}, so the calls
+    re-derived by each.  It runs first in {!Core_phase.normalize}, so the calls
     {!structure} names are those of that body. *)
 val eta_expand : Miniml.ml_structure -> Miniml.ml_structure
 
@@ -48,8 +48,8 @@ val into_branches :
   Miniml.ml_branch array option
 
 (** [structure p] normalizes every loopified fixpoint group in [p], a
-    frozen program ({!Core.normalize}), once each partner a loopified
+    frozen program ({!Core_phase.normalize}), once each partner a loopified
     function is to have inlined is spliced into it
     ({!Recursion_plan.splice_partners}), and records what splicing
     decided. *)
-val structure : Core.normalizing -> Core.normalizing
+val structure : Core_phase.normalizing -> Core_phase.normalizing

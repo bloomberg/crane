@@ -150,10 +150,10 @@ and global_use w u =
 let record_field w (r, ty) = option w (globref w) r; ml_type w ty
 
 let ind_kind w = function
-  | Coinductive -> tag w "Coinductive"
-  | Standard -> tag w "Standard"
-  | Record fs -> tag w "Record"; list w (record_field w) fs
-  | TypeClass fs -> tag w "TypeClass"; list w (record_field w) fs
+  | Core.Inductive.Kind.Coinductive -> tag w "Coinductive"
+  | Core.Inductive.Kind.Inductive -> tag w "Standard"
+  | Core.Inductive.Kind.Record fs -> tag w "Record"; list w (record_field w) fs
+  | Core.Inductive.Kind.Type_class fs -> tag w "TypeClass"; list w (record_field w) fs
 
 let packet w p =
   id w p.ip_typename;
@@ -169,9 +169,9 @@ let ml_ind w ind =
   int w ind.ind_nparams;
   array w (packet w) ind.ind_packets;
   match ind.ind_equiv with
-  | NoEquiv -> tag w "NoEquiv"
-  | Equiv kn -> tag w "Equiv"; kername w kn
-  | RenEquiv s -> tag w "RenEquiv"; str w s
+  | Core.Inductive.Equivalence.Distinct -> tag w "NoEquiv"
+  | Core.Inductive.Equivalence.Equivalent_to kn -> tag w "Equiv"; kername w kn
+  | Core.Inductive.Equivalence.Equivalent_in_renamed_module s -> tag w "RenEquiv"; str w s
 
 let fix_def w {fd_ref; fd_body; fd_type} =
   globref w fd_ref; ml_ast w fd_body; ml_type w fd_type

@@ -31,11 +31,11 @@ let ind kind =
            ip_vars = [];
            ip_types = [||];
            ip_consarg_names = [||] } |];
-    ind_equiv = NoEquiv }
+    ind_equiv = Core.Inductive.Equivalence.Distinct }
 
 let () =
   let body_kn = kn "F" "Cl" and app_kn = kn "FN" "Cl" in
-  let app_ind = ind (Record [field]) in
+  let app_ind = ind (Core.Inductive.Kind.Record [field]) in
   let functor_elem =
     ( lbl "F",
       SEmodule
@@ -43,7 +43,7 @@ let () =
             MEfunctor
               ( MBId.make (dir "Top") (Id.of_string "X"),
                 MTident (mp "S"),
-                MEstruct (mp "F", [(lbl "Cl", SEdecl (Dind (body_kn, ind (TypeClass [field]))))]) );
+                MEstruct (mp "F", [(lbl "Cl", SEdecl (Dind (body_kn, ind (Core.Inductive.Kind.Type_class [field]))))]) );
           ml_mod_type = MTident (mp "S") } )
   in
   let app_elem =
@@ -56,10 +56,10 @@ let () =
   let facts = Program_facts.analyze struc in
   let plan = Target_plan.plan facts struc in
   check "the application takes the body's kind"
-    (Option.equal Target_plan.kind_equal (Target_plan.kind_of plan app_kn) (Some (TypeClass [field])));
+    (Option.equal Target_plan.kind_equal (Target_plan.kind_of plan app_kn) (Some (Core.Inductive.Kind.Type_class [field])));
   check "the body is not re-decided" (Target_plan.kind_of plan body_kn = None);
   check "planning writes nothing into the structure"
-    (match app_ind.ind_kind with Record _ -> true | _ -> false);
+    (match app_ind.ind_kind with Core.Inductive.Kind.Record _ -> true | _ -> false);
   check "planning is deterministic" (Target_plan.equal plan (Target_plan.plan facts struc));
   (* A class the structure handles as data is demoted, seen through the
      alignment decided before it: nothing installed it anywhere. *)
@@ -74,7 +74,7 @@ let () =
   let struc = [(mp "Top", [functor_elem; app_elem; use])] in
   let plan = Target_plan.plan facts struc in
   check "a class used as data ends a struct"
-    (Option.equal Target_plan.kind_equal (Target_plan.kind_of plan app_kn) (Some (Record [field])));
+    (Option.equal Target_plan.kind_equal (Target_plan.kind_of plan app_kn) (Some (Core.Inductive.Kind.Record [field])));
   check "both decisions are kept, in order"
     (List.map (fun (d : Target_plan.kind_decision) -> d.reason) plan.inductive_kinds
      = [Target_plan.Functor_alignment; Target_plan.Used_as_value])

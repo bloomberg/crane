@@ -43,5 +43,5 @@ type program = {
 }
 
 (** [analyze_program p] analyses the normalized program [p]; it writes nothing. *)
-val analyze_program : Core.normalized Core.program -> program
+val analyze_program : Core_phase.normalized Core_phase.program -> program
 val equal : t -> t -> bool

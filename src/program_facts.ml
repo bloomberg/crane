@@ -19,7 +19,7 @@ type program = {
 }
 
 let analyze_program normalized =
-  let struc = Core.structure normalized in
+  let struc = Core_phase.structure normalized in
   let recursive_groups = Recursive_groups.analyze struc in
   let methods = Method_registry.create ~ret_is_erased:Translation.return_type_is_erased struc in
   let receiver r = Option.map snd (Method_registry.is_registered_method methods r) in

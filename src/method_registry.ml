@@ -286,9 +286,9 @@ let find_eponymous_inductive module_name_str decls =
               match
                 ind.ind_kind
               with
-              | TypeClass _ ->
+              | Core.Inductive.Kind.Type_class _ ->
                 None (* Type classes become concepts, not methods *)
-              | Record _ -> Some ind_ref (* Eponymous record *)
+              | Core.Inductive.Kind.Record _ -> Some ind_ref (* Eponymous record *)
               | _ -> Some ind_ref (* Eponymous inductive *)
             else
               find_in_packets (i + 1)
@@ -350,9 +350,9 @@ let find_all_module_inductives decls =
         let ind_ref = GlobRef.IndRef (kn, i) in
         if is_custom ind_ref || is_mutual then None
         else match ind.ind_kind with
-          | TypeClass _ -> None
-          | Record _ -> None     (* Records have their own eponymous merging *)
-          | Coinductive -> None  (* Coinductives use lazy eval, methods
+          | Core.Inductive.Kind.Type_class _ -> None
+          | Core.Inductive.Kind.Record _ -> None     (* Records have their own eponymous merging *)
+          | Core.Inductive.Kind.Coinductive -> None  (* Coinductives use lazy eval, methods
                                     would capture this in closures *)
           | _ ->
             if Table.is_enum_inductive ind_ref then None
@@ -911,7 +911,7 @@ let rec pre_register_methods_from_structure
                  Registering methods on standalone records (like Q from
                  QArith) would generate method calls without definitions. *)
               match ind.ind_kind with
-              | TypeClass _ | Record _ -> ()
+              | Core.Inductive.Kind.Type_class _ | Core.Inductive.Kind.Record _ -> ()
               | _ ->
                 (* Register methods from sibling declarations at this level. *)
                 register_methods_for_epon

@@ -146,7 +146,7 @@ let () =
      one branch: generated as statements assigning the binder, the call in
      the branch resumes. *)
   let kn = MutInd.make1 (KerName.make (ModPath.MPfile (DirPath.make [Id.of_string "T"])) (Label.make "R")) in
-  Table.add_inductive_kind kn (Record [(Some (r "a"), nat)]);
+  Table.add_inductive_kind kn (Core.Inductive.Kind.Record [(Some (r "a"), nat)]);
   let record = Tglob (GlobRef.IndRef (kn, 0), [], []) in
   let inner = use () and tail = use () in
   let rhs = MLcase (record, fresh_rel 2, [| ([(id "a", nat)], nat, Pwild, call inner [fresh_rel 1; fresh_rel 2]) |], Occurrence.fresh ()) in
