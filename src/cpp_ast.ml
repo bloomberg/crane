@@ -1,6 +1,8 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
+(** CppAST.  See [cpp_ast.mli]. *)
+
 open Names
 
 module Needs = struct
@@ -174,6 +176,7 @@ let pp_struct_head {template; name; base} =
     ++ (match base with Some b -> str " : public " ++ pp_base b | None -> mt ())
     ++ str " {")
 let decl ~needs text = Decl {text; needs}
+(* A declaration not yet printed, its names not yet resolved. *)
 let leaf ?(needs = Needs.none) ?tyctors declaration =
   Unprinted {declaration; needs; names = Cpp_resolution.unresolved; tyctors}
 
@@ -365,8 +368,13 @@ type translation_unit = {
   deferred_members : t list;
   wrapper_bodies : (string * body) list;
 }
+(* [opening]: the forward declarations and the templates due ahead of
+   every section; [body]: the sections, each with what is due in it placed. *)
 type scheduled = {opening : t; body : t list}
 
+(* The sections of [u] after its forward declarations, in the order
+   written, each a chunk at namespace scope laid out as
+   {!translation_unit} says. *)
 let sections u =
   let non_empty = List.filter (fun t -> not (is_empty t)) in
   let groups sep l = match non_empty l with [] -> empty | l -> Seq [concat sep l; Text (cut2 ())] in
@@ -523,6 +531,8 @@ let head_names {template; name; base = _} =
   (match name with Named _ -> false | Module_struct _ -> true)
   || List.exists (function Typename (Type_variable _) -> false | Typename (Module_parameter _) | Constrained _ -> true) template
 
+(* The head [h] of a struct written as [spelling] says, its names resolved
+   there. *)
 let resolve_head (resolve : spelling -> resolver) spelling h =
   match spelling with
   | _ when not (head_names h) -> h
@@ -533,6 +543,9 @@ let resolve_head (resolve : spelling -> resolver) spelling h =
       template = List.map (resolve_template_param here) h.template;
       name = (match h.name with Named _ as n -> n | Module_struct m -> Module_struct (resolve_declared_module here m)) }
 
+(* [declaration] with the module, concept and global references its own
+   fields carry resolved as [resolve] names them where it is written; a
+   finished declaration carries none, its names being in its table. *)
 let resolve_declaration (resolve : resolver) declaration =
   let here key = Cpp_resolution.name_of key (resolve [] key) in
   let module_ref = resolve_module_ref here and template_param = resolve_template_param here in

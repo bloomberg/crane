@@ -1,9 +1,9 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** No local is read after it is moved (docs/Pipeline-Disentangling-Plan.md,
-    section 4.10: "a moved local is not subsequently read on the same control
-    path").
+(** No local is read after it is moved: a moved local is not read again on
+    the same control path.  A validator of OwnershipIR's decisions, run over
+    the finished MiniCpp of each declaration.
 
     The moves a body holds come from several places -- translation at the
     last uses its region's plan finds ({!Ownership_ir}), Loopify's frames
@@ -20,7 +20,7 @@
     read through the reference after it is a violation, and so is a read of
     the whole after a part is moved out through one.
     A method is called on the whole local.  A reuse arm's token is checked
-    as a linear one (section 4.10): the reuse factory it is handed to
+    as a linear one, used exactly once: the reuse factory it is handed to
     consumes the token's storage, which nothing may read or consume again,
     though what the arm moved out of the local before is not read of it.  An assignment gives a local, or a member, a new value; a [return]
     or a [throw] ends the path; a loop's body is followed by its head; the
@@ -32,10 +32,15 @@
     convention its callable plan states ({!convention_violations}), and the
     lambda of each local fixpoint in its body -- its parameters other than
     the members it calls through -- against its function's
-    ({!Ownership_ir.Local_passing}).
+    ({!Ownership_ir.Local_passing}).  A local fixpoint lambda whose plan
+    captures by reference ({!Ownership_ir.Local_captures}) must be written
+    capturing by reference and must not escape the block that binds it.
 
     Under [CRANE_CHECK_IR] each violation is reported ({!Probe.violation}). *)
 
+(** Check every function and method body of a declaration, nested
+    namespaces, templates and structs included, and report each violation
+    of the rules above. *)
 val check_decl : Minicpp.cpp_decl -> unit
 
 (** The locals [ss], a body, reads after it moves them, the backend's own
@@ -43,8 +48,8 @@ val check_decl : Minicpp.cpp_decl -> unit
 val moved_reads : Minicpp.cpp_stmt list -> Names.Id.t list
 
 (** The references [ss], a body, reads after the local each was bound into
-    is given a new value, each with that local (section 4.10: "borrowed
-    values do not escape the region"): the storage a reference names is
+    is given a new value, each with that local, since a borrowed value must
+    not outlive the region it borrows from: the storage a reference names is
     destroyed or replaced by an assignment to the local holding it.  A
     pointer local given a new value leaves what it pointed at as it was. *)
 val stale_references : Minicpp.cpp_stmt list -> (Names.Id.t * Names.Id.t) list

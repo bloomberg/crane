@@ -1,9 +1,14 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Tail-recursion loopification for {!Loopify}: the [while] rewrite, the
-    generic return-statement rewriter, shadow variables, and the expression
-    decompositions the other strategies build on. *)
+(** Tail-recursion loopification for {!Loopify}: the [while] rewrite
+    ({!transform_tail}), the generic return-statement rewriter that
+    {!Loopify_tmc} shares, and the shadow variables every strategy declares
+    for the parameters a loop varies ({!build_shadow_setup},
+    {!make_shadow_updates}).  Runs on MiniCpp function bodies, after
+    translation and before printing; which functions it lowers, and which
+    calls are its jumps, the ControlIR of each loop decides
+    ({!Control_to_legacy_minicpp}). *)
 
 open Names
 open Minicpp
@@ -11,23 +16,20 @@ open Loopify_analysis
 
 (** {2 Tail recursion transformation}
 
-    A [_continue] flag drives the while condition.  Each dispatch arm either
-    assigns [_result] and clears the flag, which leaves the loop, or updates
-    the shadow parameters and leaves the flag set.
+    The body runs inside [while (true)].  Each arm either returns its value
+    directly, which leaves the loop and the function, or updates the shadow
+    parameters and falls through to the next iteration.
 
     {[
-      RetType _result\{\};
       auto _loop_x = x; auto _loop_l = l;
-      bool _continue = true;
-      while (_continue) \{
+      while (true) \{
         auto &&_sv = _loop_l->v();
         if (std::holds_alternative<Base>(_sv)) \{
-          _result = base_val; _continue = false;
+          return base_val;
         \} else \{
           _loop_x = new_x; _loop_l = new_l;
         \}
       \}
-      return _result;
     ]} *)
 
 (** Create a shadow variable name for tail-recursion loop variables:
@@ -47,7 +49,7 @@ let rec strip_ref_type = function
     in the loop body.  However, [const] on a pointer pointee is preserved:
     [const tree *] stays [const tree *] because the pointer variable itself is
     mutable (can be reassigned), while the [const] just prevents modification
-    through the pointer — removing it would break [_loop_self = this] when
+    through the pointer; removing it would break [_loop_self = this] when
     [this] is [const T *] in a const method. *)
 let rec strip_ref_and_const_type = function
   | Tref (_, t) -> strip_ref_and_const_type t
@@ -60,7 +62,7 @@ let rec strip_ref_and_const_type = function
     pessimizing-move warning since the move constructor receives [const T&&]
     and falls back to copy anyway; and a move of a type that copies for free
     -- a scalar -- transfers nothing.  An [auto] parameter may be anything,
-    and is moved as a type variable is ({!Ownership_ir.worth_moving}). *)
+    and is moved as a type variable is ({!Ownership_ir.worth_moving_cpp}). *)
 let is_moveable_param_type = function
   | Tref _ | Tconst _ -> false
   | Tauto -> true
@@ -72,9 +74,11 @@ let is_moveable_param_type = function
     value-type inductive.  These can be optimised to [const T*] shadows that
     avoid copying the entire value at each loop iteration.
 
-    Under [Crane Reuse] an owned by-value parameter qualifies too.  Reuse needs
-    the scrutinee owned (that is what gives the loop cells it may recycle), and
-    escape analysis therefore passes it by value; without this case the shadow
+    Under [Crane Reuse] with non-atomic reference counts
+    ({!Table.non_atomic_rc}) an owned by-value parameter qualifies too.  Reuse
+    needs the scrutinee owned (that is what gives the loop cells it may
+    recycle), and escape analysis ({!Escape}) therefore passes it by value;
+    without this case the shadow
     would be a [T] and every iteration would copy the whole node -- strictly
     worse than the borrow it replaced.  A by-value parameter lives for the whole
     call, so a pointer into it (or into a subterm it keeps alive) is as safe as
@@ -98,7 +102,9 @@ let borrowed_value_param_pointee = function
   | _ -> None
 
 (** Extract the underlying type variable id from a forwarding-reference type.
-    [Tref (Forwarding, Tvar (Tv_index (_, Some id) | Tv_named id))] → [Some id] *)
+    [Tref (Forwarding, Tvar (Tv_index (_, Some id) | Tv_named id))] gives
+    [Some id]; any reference wrapper is looked through, not only a
+    forwarding one. *)
 let rec extract_fwd_ref_tvar = function
   | Tref (_, inner) -> extract_fwd_ref_tvar inner
   | Tvar (Tv_index (_, Some id) | Tv_named id) -> Some id
@@ -124,8 +130,8 @@ let lookup_tparam_fun_type tparams id =
     ([const T&] where [T] is a value-type inductive), the shadow becomes
     [const T*] (raw pointer).
 
-    A callable parameter arrives as a deduced template parameter — the caller's
-    closure type — and a shadow exists only because the back edge reassigns it.
+    A callable parameter arrives as a deduced template parameter (the caller's
+    closure type), and a shadow exists only because the back edge reassigns it.
     Those two facts cannot both hold of one variable: a closure type has exactly
     one value, so nothing the loop builds is assignable to it.  The shadow has
     to be a type that can hold every callable the loop puts in it, which is the
@@ -163,7 +169,7 @@ let tail_shadow_init orig_id shadow_ty ty =
     - When the shadow is a pointer and the argument is a variable: [&arg]
     - Otherwise: pass through unchanged
 
-    @param shadow_ids  Set of shadow variable IDs (already raw pointers) *)
+    @param shadow_ids  Shadow variable IDs that are already raw pointers *)
 let tail_shadow_arg ~shadow_ids shadow_ty arg =
   match shadow_ty, arg with
   | Tptr _, CPPderef (CPPvar id) when List.exists (Id.equal id) shadow_ids ->
@@ -189,10 +195,11 @@ let rec storage_root ~root ~bound e =
   | CPPstd_get (_, Some e) -> inside e
   | _ -> None
 
-(** Pointer-safety flags for [params]: those of them every recursive call
-    passes a value stored in what the caller passed for it, as the loop's
-    ControlIR says ({!Control_ir.Term.parts_passed}), [parts], that are a
-    borrowed value type. *)
+(** Pointer-safety flags for [params], parallel to it: a parameter is
+    pointer-safe when every recursive call passes it a value stored inside
+    what the caller passed for it ([parts], as the loop's ControlIR derives
+    it with {!Control_ir.Term.parts_passed}) and its type is a borrowed value
+    type ({!borrowed_value_param_pointee}). *)
 let pointer_safe_flags ~parts params =
   List.map2 (fun part (_, ty) -> part && Option.has_some (borrowed_value_param_pointee ty)) parts params
 
@@ -204,10 +211,11 @@ let pointer_safe_flags ~parts params =
     Code originally written against [const T&] needs adjustment:
     - Bare variable access [id] becomes [*id]
     - Member calls [id.method(args)] become [id->method(args)]
-    - Direct assignments [id = rhs] keep the LHS undereferenceed (the
+    - Direct assignments [id = rhs] keep the LHS undereferenced (the
       pointer itself is being reassigned)
-    - Pattern-match scrutinees involving a pointer shadow suppress the
-      value-type flag to avoid incorrect deref codegen
+    - A match whose scrutinee's object is a pointer shadow ([xs.v()]) is
+      matched through [->]; any other scrutinee is rewritten as an
+      ordinary expression
 
     @param shadow_params The shadow parameter list; only entries whose type
                          is [Tptr _] are considered pointer-safe
@@ -264,30 +272,34 @@ let rewrite_borrowed_shadow_uses shadow_params stmts =
 
 (** Wrap [e] in [std::move] only when it is an lvalue (a plain variable
     reference).  Wrapping rvalues (function calls, literals, binary ops) in
-    [std::move] is a pessimising move — it prevents copy elision on the
+    [std::move] is a pessimising move: it prevents copy elision on the
     assignment and is rejected by [-Wpessimizing-move]. *)
 let move_if_lvalue = function
   | CPPvar _ as e -> CPPmove e
   | e -> e
 
-(** Assign [expr] to the [_result] accumulator variable.
-    Generates the statement list [[\[_result = expr;\]]]. *)
+(** Assign [expr] to the [_result] accumulator variable:
+    the statement list [[\[_result = expr;\]]].  Used by the frame machine
+    ({!Loopify_frame}), which keeps a [_result]; the tail loop returns
+    directly ({!assign_result_and_stop}). *)
 let assign_result expr =
   [Sexpr (CPPbinop (Bassign, CPPvar (id_result), move_if_lvalue expr))]
 
-(** Return [expr] directly from the tail-recursion while loop.
-    Used only in tail-recursion rewriting. *)
+(** Return [expr] directly from the tail-recursion [while (true)] loop, which
+    leaves both the loop and the function.  Used only in tail-recursion
+    rewriting. *)
 let assign_result_and_stop expr =
   [ Sreturn (Some (move_if_lvalue expr)) ]
 
 (** Generate temp-based parameter updates to avoid read-after-write hazards. For
     a recursive call like [f b (a mod b)], we must evaluate all argument
-    expressions (which reference _loop_ variables) before overwriting any of
-    them. We emit: auto _next_a = expr_for_a; auto _next_b = expr_for_b; _loop_a
-    = std::move(_next_a); _loop_b = std::move(_next_b);
+    expressions (which reference [_loop_] variables) before overwriting any of
+    them. We emit [auto _next_a = expr_for_a; auto _next_b = expr_for_b;
+    _loop_a = std::move(_next_a); _loop_b = std::move(_next_b);], staging
+    through a temporary only the variables another update reads.
 
-    Self-assignments (_loop_x = _loop_x) are skipped entirely. When there is
-    only one non-trivial assignment the temps are unnecessary but harmless.
+    Self-assignments ([_loop_x = _loop_x]) are skipped entirely. With at most
+    one non-trivial assignment no temporary is made.
 
     [CPPderef] arguments (advancing a list tail via [*(d_a1)]) are NOT moved
     because the deref target may be through a shared_ptr whose pointee is
@@ -303,8 +315,8 @@ let assign_result_and_stop expr =
     ([const T &a1_value = *a1]), each with the pointer it dereferences: one
     stands for that dereference.
 
-    What an argument moves of a parameter, the plan says, and [args] spell
-    already ({!moving_jumps}).  [last_reads] are the locals of the turn the
+    What an argument moves of a parameter the ownership plan decides, and
+    [args] spell it already ({!moving_jumps}).  [last_reads] are the locals of the turn the
     plan lets the jump move into a parameter's next value at the last of
     the updates reading them by name
     ({!Ownership_ir.Continue_move.Move_argument}): which that is, the
@@ -380,13 +392,13 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
   in
   moved_at_last_read @@
   if List.length non_trivial <= 1 then
-    (* 0 or 1 assignment — no hazard possible, assign directly *)
+    (* 0 or 1 assignment: no hazard possible, assign directly *)
     List.filter_map
       (fun ((shadow_id, ty), arg) ->
         if is_self_assign shadow_id arg then None
         else Some (Sasgn (shadow_id, Existing, make_rhs ty arg)) )
       pairs
-  else (* 2+ assignments — use temporaries only where needed *)
+  else (* 2+ assignments: use temporaries only where needed *)
     (* Whether [e] reads one of the variables [names]. *)
     let rec mentions names e =
       match e with
@@ -492,8 +504,8 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
     The tail-recursion and TMC loopification passes share the same structural
     traversal of [Sif], [Scustom_case], [Smatch] and [Sblock].  They differ
     only in how they handle [Sreturn]:
-    tail recursion assigns [_result] and breaks, while TMC patches a write
-    pointer or allocates cells with holes.
+    tail recursion returns the value directly, while TMC ({!Loopify_tmc})
+    patches a write pointer or allocates cells with holes.
 
     We factor out the shared traversal into a generic rewriter --
     {!generic_rewrite_stmt}/{!generic_rewrite_stmts} -- parameterised by a
@@ -553,12 +565,18 @@ type top_rewrite_config = {
 
 (** Generic top-level statement rewriter.
 
-    Similar to {!generic_rewrite_lambda_return} but operates at the
-    top level of the loop body rather than inside visitor lambdas:
-    - Returns a single [cpp_stmt] (wrapping in [Sblock] as needed).
-    - Handles [Sswitch] (only present at the top level of visitor bodies).
-    - Uses {!generic_rewrite_stmts} for list-level recursion, which
-      optionally detects the void tail-call pattern. *)
+    Rewrites every [Sreturn] in tail position of the loop body under [trc]:
+    a recursive call becomes [trc.trc_jump], anything else
+    [trc.trc_on_other].
+    {ul {- Returns a single [cpp_stmt] (wrapping in [Sblock] as needed).}
+        {- Recurses through [Sif], [Sswitch], [Scustom_case], [Smatch] and
+           [Sblock]; other statements are left alone.}
+        {- Uses {!generic_rewrite_stmts} for list-level recursion, which
+           optionally detects the void tail-call pattern.}}
+
+    [aliases] are the binders inside the storage of a shadow kept by value,
+    each with its shadow, and [derefs] the references to a dereference in
+    scope ({!make_shadow_updates}). *)
 let rec generic_rewrite_stmt ?(aliases = []) ?(derefs = []) trc = function
   | Sreturn (Some e) ->
     ( match trc.trc_inner.rc_check e with
@@ -652,10 +670,11 @@ let wrap_as_block = function
 (** Rewrite a statement list for plain tail-call loopification.
 
     Constructs a tail-recursion {!top_rewrite_config} and delegates to
-    {!generic_rewrite_stmts}.  Base returns assign [_result] and break;
-    tail calls update shadow variables with no suffix (control falls through
-    to the [while (true)] test).  Void tail-call detection is enabled.
-    [jumped] is told each call rewritten into a jump. *)
+    {!generic_rewrite_stmts}.  Base returns return their value directly
+    ({!assign_result_and_stop}); tail calls update shadow variables with no
+    suffix (control falls through to the [while (true)] test).  Void
+    tail-call detection is enabled.  [jumped] is told each call rewritten
+    into a jump, and [last_reads] fills [rc_last_reads]. *)
 let rewrite_visit_stmts ?(last_reads = fun _ _ -> []) ~jumped check varying shadow_params =
   let inner_rc =
     { rc_check = check;
@@ -705,8 +724,8 @@ let would_conflict block_stmts rest =
 
 (** Remove unnecessary [Sblock] wrappers throughout a statement list.
 
-    An [Sblock] wrapper is unnecessary — and can be inlined into the surrounding
-    list — when doing so would not introduce a duplicate declaration at the
+    An [Sblock] wrapper is unnecessary, and can be inlined into the surrounding
+    list, when doing so would not introduce a duplicate declaration at the
     enclosing scope level.  Concretely:
 
     - [Sblock []] is always dropped.
@@ -771,15 +790,15 @@ and strip_loopify_stmt = function
 
 (** {3 Shadow variable setup}
 
-    Both {!transform_tail} and {!transform_tmc} begin with an identical preamble:
-    determine which parameters vary across recursive calls, compute pointer-safety
+    Both {!transform_tail} and {!Loopify_tmc.transform_tmc} begin with an identical preamble:
+    take which parameters vary across recursive calls, compute pointer-safety
     flags, derive shadow variable names and types, and build the substitution map.
     This shared preamble is factored into {!build_shadow_setup}. *)
 
 (** Result of the shared shadow-variable preamble for tail and TMC transforms.
 
-    Every field is purely derived from the function's parameters, its body, and
-    the call checker — no mutation, no side effects.  The record is consumed
+    Every field is purely derived from the function's parameters and the
+    loop's plan; no mutation, no side effects.  The record is consumed
     immediately by the caller to build shadow declarations and substitute
     parameter references. *)
 type shadow_setup = {
@@ -794,22 +813,10 @@ type shadow_setup = {
           [const T*] shadows). *)
   ss_subs : (Id.t * Id.t) list;
       (** Substitution list: [(original_id, shadow_id)] pairs.  Applied to
-          the function body via {!subst_stmt} so that references to the
-          original parameter are redirected to the shadow variable. *)
+          the function body via {!Loopify_analysis.subst_stmt} so that
+          references to the original parameter are redirected to the shadow
+          variable. *)
 }
-
-(** Compute the shadow-variable setup shared by {!transform_tail} and
-    {!transform_tmc}.
-
-    Analyses the function body to determine which parameters vary across
-    recursive calls, computes pointer-safety flags (whether a parameter can
-    be borrowed as [const T*] instead of copied), derives shadow variable
-    names ([_loop_X]) and types, and builds the old→new substitution list.
-
-    @param check  Call checker identifying recursive calls
-    @param params Function parameters [(id, type)]
-    @param body   Function body statements
-    @return {!shadow_setup} record consumed by the caller *)
 
 (** The jumps [check] finds, each moving into the next value of a shadow
     kept by value the shadow itself where the plan moves it there
@@ -906,6 +913,22 @@ let planned_last_reads ~moves e args =
          flags args )
   | Some _ | None -> []
 
+(** Compute the shadow-variable setup shared by {!transform_tail} and
+    {!Loopify_tmc.transform_tmc}.
+
+    Computes pointer-safety flags (whether a parameter can be borrowed as
+    [const T*] instead of copied, {!pointer_safe_flags}), derives shadow
+    variable names ([_loop_X]) and types, and builds the old-to-new
+    substitution list.
+
+    @param varying Which parameters the recursive calls change, parallel to
+                   [params], as the loop's ControlIR says
+    @param parts   Which parameters every recursive call passes a part of
+                   what the caller passed ({!pointer_safe_flags})
+    @param tparams The surrounding template header, for callable parameters'
+                   shadow types ({!tail_shadow_type})
+    @param params  Function parameters [(id, type)]
+    @return {!shadow_setup} record consumed by the caller *)
 let build_shadow_setup ~varying ~parts tparams params =
   let pointer_safe = pointer_safe_flags ~parts params in
   let varying_params = filter_by_mask varying params in
@@ -924,8 +947,8 @@ let build_shadow_setup ~varying ~parts tparams params =
 
 (** Drop the shadow variables a loop body only ever writes.
 
-    A parameter can vary across recursive calls and still never be read — an
-    index carried along only to keep a dependent type well-formed, say.  Its
+    A parameter can vary across recursive calls and still never be read (an
+    index carried along only to keep a dependent type well-formed, say).  Its
     shadow is then set but never used, which [-Werror] rejects.  Remove both
     the declaration and the writes, iterating so that a staging temporary
     ([_next_x]) left dead by the removal goes too.
@@ -940,7 +963,7 @@ let drop_unread_shadows shadow_decls body =
     | Sasgn (id, _, _) | Sexpr (CPPbinop (Bassign, CPPvar id, _)) -> Some id
     | _ -> None
   in
-  (* Every variable the statements *read* — the target of an assignment is a
+  (* Every variable the statements *read*: the target of an assignment is a
      write, so only right-hand sides are walked. *)
   let reads stmts =
     let tbl = Hashtbl.create 16 in
@@ -986,45 +1009,48 @@ let drop_unread_shadows shadow_decls body =
     Tail recursion is the simplest loopification case.  Since no work happens
     after the recursive call, we can convert it directly into iteration.
 
-    {b Non-void functions} use a [_continue] guard variable and a [_result]
-    accumulator:
+    {b Non-void functions} return from inside the loop: a base case returns
+    its value directly ({!assign_result_and_stop}), and [while (true)]
+    without [break] never falls through, so no [_result] or trailing return
+    is needed:
 
     {v
     let rec f x = if base(x) then result else f(next(x))
-    →
-    T _result;
+    ->
     auto _loop_x = x;
-    bool _continue = true;
-    while (_continue) {
-      if (base(_loop_x)) { _result = result; _continue = false; }
+    while (true) {
+      if (base(_loop_x)) { return result; }
       else { _loop_x = next(_loop_x); }
     }
-    return _result;
     v}
 
-    {b Void functions} (e.g. cofixpoint [spin], [forever]) never set
-    [_continue = false] — their base cases exit via [return;] (which becomes
-    [Sreturn None]) rather than assigning a result.  So [_continue] and
-    [_result] are unnecessary and the loop simplifies to [while (true)]:
+    {b Void functions} (e.g. cofixpoint [spin], [forever]) exit via
+    [return;] ([Sreturn None]), and a trailing [return;] follows the loop:
 
     {v
     CoFixpoint forever n := Tau (forever (S n))
-    →
+    ->
     auto _loop_n = n;
     while (true) { _loop_n = _loop_n + 1; }
     return;
     v}
 
-    After rewriting, {!strip_empty_blocks} removes any empty [Sblock]s left
-    by tail-call rewrites that produced no shadow updates (e.g. a
-    zero-parameter cofixpoint like [spin] whose only recursive call has no
-    arguments to update).
+    After rewriting, {!strip_unnecessary_blocks} removes any empty
+    [Sblock]s left by tail-call rewrites that produced no shadow updates
+    (e.g. a zero-parameter cofixpoint like [spin] whose only recursive call
+    has no arguments to update), and {!drop_unread_shadows} removes shadows
+    the body only writes.
 
     @param param_inits Optional custom initializers for shadow variables
                        (default: copy from original parameter)
     @param jumped Told each recursive call rewritten into a jump
-    @param varying Which parameters the recursive calls change, where the
-                   caller knows; read off the calls [check] finds otherwise
+    @param moves What each jump moves into each parameter's next value, by
+                 the occurrence of the call ({!Ownership_ir.continue_moves})
+    @param varying Which parameters the recursive calls change, parallel to
+                   [params]
+    @param parts Which parameters every recursive call passes a part of
+                 what the caller passed ({!pointer_safe_flags})
+    @param tparams The surrounding template header
     @param check Call checker for identifying recursive calls
     @param params Function parameters [(id, type)] list
     @param ret_ty Return type of the function
@@ -1058,7 +1084,7 @@ let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~varying
     |> rewrite_borrowed_shadow_uses shadow_params
   in
   (* Rewrite recursive calls (list-level rewrite handles void tail-call
-     pattern [Sexpr call; Sreturn None] → [Sreturn (Some call)]) *)
+     pattern [Sexpr call; Sreturn None] -> [Sreturn (Some call)]) *)
   let check = moving_jumps ~moves ~subs ~shadow_params params check in
   let body'' =
     rewrite_visit_stmts ~last_reads:(planned_last_reads ~moves) ~jumped check varying shadow_params body'
@@ -1078,8 +1104,7 @@ let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~varying
   @ [Swhile (CPPbool true, body'')]
   @ (if is_void then [Sreturn None] else [])
 
-(* {2 Non-tail recursion transformation}
-
-   Non-tail recursion uses a frame-based stack with [CraneEnter] and continuation
-   variants and a dispatch loop; see {!transform_nontail}. *)
+(* Non-tail recursion uses a frame-based stack with [CraneEnter] and
+   continuation variants and a dispatch loop; see
+   {!Loopify_frame.transform_nontail}. *)
 

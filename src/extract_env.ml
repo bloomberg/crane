@@ -1468,6 +1468,8 @@ let freeze core =
   Install_legacy_plan.install_program (Program_facts.analyze_program normalized);
   normalized
 
+(** The extracted structure [struc] through the Core passes
+    ({!core_pass_names}), keeping what [to_appear] names. *)
 let optimize_struct to_appear struc =
   let core =
     Core_phase.optimize (Pipeline_trace.run ~stage:"core" (core_passes to_appear)) (Core_phase.extracted struc)
@@ -1640,7 +1642,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
      dependence then shows as a difference in the generated files.  Nor may
      a render depend on having run before: [CRANE_RENDER_TWICE] renders both
      files again once both are rendered, and fails unless each comes out the
-     same (the plan's Milestone 9). *)
+     same: rendering is a function of the frozen plan alone. *)
   let render_impl () =
     Pipeline_trace.event "emit" "render_impl";
     d.pp_struct struc
@@ -1813,10 +1815,11 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
     Feedback.msg_notice (str formatted_output);
     Buffer.reset buf );
   (* Loopify records an outcome per recursive function but reports nothing as
-     it goes: a function may be transformed more than once per unit (by the
-     implementation and header passes) and only the best of those outcomes
-     describes the code actually emitted.  Report now that they are all in,
-     and only when the files are written. *)
+     it goes: a function may be lowered more than once per unit, or lowered
+     and then left as recursion when its group's partners were not all
+     lowered, and only the last outcome recorded of it describes the code
+     actually emitted.  Report now that they are all in, and only when the
+     files are written. *)
   if not dry then Loopify.report_outcomes ~unit_name:(match fn with Some f -> Filename.basename f | None -> "") ()
 
 (*********************************************)
