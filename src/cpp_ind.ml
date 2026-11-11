@@ -999,20 +999,20 @@ let generate scope ~module_ d =
 (** {2 The finished program}
 
     What a file writes is read from the unit's finished program
-    ({!Finished_program}), finished ahead of the files; a file's pass
+    ({!Unit_program}), finished ahead of the files; a file's pass
     finishes a declaration again under [CRANE_CHECK_IR] to compare, and
     finds one missing only as an anomaly. *)
 
-let source r = Generated_program.Source (Entity_id.of_ref r)
+let source r = Unit_program.Source (Entity_id.of_ref r)
 
 (** [declaration owner n] is the [n]th declaration of [owner]'s generation. *)
-let declaration owner n = {Finished_program.owner; part = Declaration n}
+let declaration owner n = {Unit_program.owner; part = Declaration n}
 
 (** The id of the lifted helper [d] in the unit's program: its own
     generation's only declaration. *)
 let helper_id d =
-  match Generated_program.helper d with
-  | Some h -> declaration (Generated_program.Generated h.helper_id) 0
+  match Unit_program.helper d with
+  | Some h -> declaration (Unit_program.Generated h.helper_id) 0
   | None -> CErrors.anomaly Pp.(str "Crane: a declaration placed as a lifted helper is not one.")
 
 (** The declaration a generated function finishes. *)
@@ -1031,13 +1031,13 @@ let function_id ~fallback g = declaration (source (function_ref ~fallback g)) 0
 let numbered ?(from = 0) owner ds = List.mapi (fun i _ -> declaration owner (from + i)) ds
 
 (** [finished_of ~what id d] is the declaration [id] of the unit's program
-    ({!Finished_program.find}), finished from [d]. *)
+    ({!Unit_program.find}), finished from [d]. *)
 let finished_of ~what id d =
-  match (get_phase (), Finished_program.find id) with
+  match (get_phase (), Unit_program.find id) with
   | Plan, _ -> CErrors.anomaly Pp.(str "Crane: " ++ str what ++ str " was finished while planning.")
   | Emit, Some f ->
     let ahead = match !mode with Generating | Regenerating -> true | Peeking | Rendering -> false in
-    if (not ahead) && Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (Finished_program.finishes_as d f)
+    if (not ahead) && Sys.getenv_opt "CRANE_CHECK_IR" <> None && not (Unit_program.finishes_as d f)
     then
       CErrors.anomaly
         Pp.(str "Crane: " ++ str what
@@ -1066,7 +1066,7 @@ let instance_ids r ds = numbered (source r) ds
 let finished_instance r ds = finished_group ~what:"an instance" (instance_ids r ds) ds
 
 let instance_jobs r (ds : generated) =
-  List.map2 (fun id (_, d) -> Finished_program.job id d) (instance_ids r ds) ds
+  List.map2 (fun id (_, d) -> Unit_program.job id d) (instance_ids r ds) ds
 
 let instance_placed r (ds : generated) helpers =
   helpers_placed helpers @ List.combine (instance_ids r ds) (List.map snd ds)
@@ -1081,7 +1081,7 @@ let finished_concept r d = finished_of ~what:"a class concept" (concept_id r) d
     among them, then every declaration. *)
 let functions_finishing elements =
   let funs = List.concat_map (fun (fallback, gs) -> List.map (fun g -> (fallback, g)) gs) elements in
-  let job (fallback, g) = Finished_program.job (function_id ~fallback g) (function_decl g) in
+  let job (fallback, g) = Unit_program.job (function_id ~fallback g) (function_decl g) in
   List.filter_map
     (fun ((_, (g : Gen_decls.generated_fun)) as f) ->
       match g.gf_entity with Defined _ -> Some (job f) | Declared _ -> None )
@@ -1164,7 +1164,7 @@ let function_views ~is_header ~lifted_inline ~fallback scope funs =
 (** {2 The generated program}
 
     Every generation the printer is about to render is recorded as an entity
-    of {!Generated_program}, and what the printer writes is read back from
+    of {!Unit_program}, and what the printer writes is read back from
     the recorded entity. *)
 
 (** The source entity a MiniML declaration is: an inductive block by its
@@ -1174,26 +1174,26 @@ let decl_entity = function
   | Dtype (r, _, _) | Dterm (r, _, _) -> r
   | Dfix fds -> (List.hd fds).fd_ref
 
-(** [entity r decls helpers] is the generation of [r]: [decls], and the
-    helpers among [helpers]. *)
-let entity r decls helpers : Generated_program.entity =
+(** [entity r ids helpers] is the generation of [r]: the declarations
+    [ids], and the helpers among [helpers]. *)
+let entity r ids helpers : Unit_program.entity =
   { entity_id = Entity_id.of_ref r;
-    decls;
-    helpers = List.filter_map Generated_program.helper helpers }
+    declarations = ids;
+    helpers = List.filter_map Unit_program.helper helpers }
 
-(** [record_entity r decls helpers] records the generation of [r]. *)
-let record_entity r decls helpers = Generated_program.record (entity r decls helpers)
+(** [record_entity r ids helpers] records the generation of [r]. *)
+let record_entity r ids helpers = Unit_program.record (entity r ids helpers)
 
 (** [funs_entities ~fallback funs] is each generated function as the entity
     its declaration is about, [fallback] where it says none. *)
 let funs_entities ~fallback (funs : Gen_decls.generated_fun list) =
   List.map
-    (fun (g : Gen_decls.generated_fun) -> entity (function_ref ~fallback g) [function_decl g] g.gf_lifted)
+    (fun (g : Gen_decls.generated_fun) -> entity (function_ref ~fallback g) [function_id ~fallback g] g.gf_lifted)
     funs
 
 (** [record_funs ~fallback funs] records {!funs_entities}. *)
 let record_funs ~fallback funs =
-  List.iter (fun e -> ignore (Generated_program.record e)) (funs_entities ~fallback funs)
+  List.iter (fun e -> ignore (Unit_program.record e)) (funs_entities ~fallback funs)
 
 
 (** What a file writes for one MiniML declaration, and the helpers lifted
@@ -1232,7 +1232,7 @@ let instance_entity ~module_ r a t =
     ~planned:(fun ((_, lifted) as v) -> plan_header_claim v lifted)
     ~take:(fun ((ds, lifted) as v) ->
       let helpers = header_claim v lifted in
-      ignore (record_entity r (List.map snd ds) helpers);
+      ignore (record_entity r (instance_ids r ds) helpers);
       (ds, helpers) )
     ~peek:(fun ((ds, _) as v) -> (ds, planned_claim v))
     (fun () -> Translation.collecting_lifted (fun () -> instance_decls r a t))
@@ -1462,10 +1462,10 @@ let record_methods_decl r vars fields =
       ds_needs_shared_from_this = false }
 
 (** The id of the methods of the eponymous record [r]. *)
-let record_methods_id r = {Finished_program.owner = source r; part = Methods}
+let record_methods_id r = {Unit_program.owner = source r; part = Methods}
 
 let record_methods_finishing r vars fields =
-  Finished_program.job (record_methods_id r) (record_methods_decl r vars fields)
+  Unit_program.job (record_methods_id r) (record_methods_decl r vars fields)
 
 let finished_record_methods r vars fields =
   finished_of ~what:"an eponymous record's methods" (record_methods_id r) (record_methods_decl r vars fields)
@@ -1483,6 +1483,17 @@ let same_header_generation a b =
   && same_generated a.member_defs b.member_defs
   && a.promoted_sft = b.promoted_sft
 
+(** The ids of what the header writes for [d], generated as [g]: its
+    member definitions, then its declarations. *)
+let header_ids d (g : header_generation) =
+  let owner = source (decl_entity d) in
+  (numbered owner g.member_defs, numbered ~from:(List.length g.member_defs) owner g.decls)
+
+(** Every declaration {!header_ids} numbers. *)
+let header_declarations d g =
+  let member_defs, decls = header_ids d g in
+  member_defs @ decls
+
 (** [header_entity d gen] is what the declaration [d] generates for the
     header ([gen ()]), with the helpers lifted out of it, recorded as the
     entity [d] is.  It is generated ahead of the files, in the scope the
@@ -1497,16 +1508,10 @@ let header_entity ~module_ d gen =
     ~planned:(fun ((_, lifted) as v) -> plan_header_claim v lifted)
     ~take:(fun ((g, lifted) as v) ->
       let helpers = header_claim v lifted in
-      ignore (record_entity (decl_entity d) (List.map snd g.decls) helpers);
+      ignore (record_entity (decl_entity d) (header_declarations d g) helpers);
       (g, helpers) )
     ~peek:(fun ((g, _) as v) -> (g, planned_claim v))
     (fun () -> Translation.collecting_lifted gen)
-
-(** The ids of what the header writes for [d], generated as [g]: its
-    member definitions, then its declarations. *)
-let header_ids d (g : header_generation) =
-  let owner = source (decl_entity d) in
-  (numbered owner g.member_defs, numbered ~from:(List.length g.member_defs) owner g.decls)
 
 let finished_header ids ds = finished_group ~what:"a header declaration" ids ds
 
@@ -1516,11 +1521,11 @@ let finished_header ids ds = finished_group ~what:"a header declaration" ids ds
 let generate_in_scope ~module_ d k = k (generate (planned_header_scope module_) ~module_ d)
 
 type ahead = {
-  entities : Generated_program.entity list;
+  entities : Unit_program.entity list;
   functions : cpp_decl list;
-  finishing : Finished_program.job list;
+  finishing : Unit_program.job list;
   helpers : cpp_decl list;
-  handed_on : Finished_program.job list;
+  handed_on : Unit_program.job list;
 }
 
 let nothing_ahead = {entities = []; functions = []; finishing = []; helpers = []; handed_on = []}
@@ -1543,15 +1548,15 @@ let generate_ahead ~module_ d =
   | Instance (r, a, t) ->
     let ds, helpers = instance_entity ~module_ r a t in
     { nothing_ahead with
-      entities = [entity r (List.map snd ds) helpers];
+      entities = [entity r (instance_ids r ds) helpers];
       finishing = instance_jobs r ds;
       helpers }
   | Header_only gen ->
     let g, lifted = header_entity ~module_ d gen in
     let member_def_ids, decl_ids = header_ids d g in
-    let jobs ids ds = List.map2 (fun id (_, decl) -> Finished_program.job id decl) ids ds in
+    let jobs ids ds = List.map2 (fun id (_, decl) -> Unit_program.job id decl) ids ds in
     { nothing_ahead with
-      entities = [entity (decl_entity d) (List.map snd g.decls) lifted];
+      entities = [entity (decl_entity d) (member_def_ids @ decl_ids) lifted];
       finishing = jobs member_def_ids g.member_defs @ jobs decl_ids g.decls }
   | Nothing -> nothing_ahead
 

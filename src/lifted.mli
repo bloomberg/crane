@@ -19,7 +19,7 @@
     identity rather than the other way round.  {!make} is injective by
     construction: a spelling already taken by a different identity is not
     reused.  Translation mints an identity when it lifts a helper; the
-    printer and {!Generated_program} read it back off the reference. *)
+    printer and {!Unit_program} read it back off the reference. *)
 
 (** A lifted helper's identity. *)
 type t

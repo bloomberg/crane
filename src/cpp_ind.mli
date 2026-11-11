@@ -8,7 +8,7 @@
    ({!Translation}, {!Gen_decls}) and the printer ({!Cpp}).  Everything a
    declaration becomes is generated once, ahead of both files
    ({!generate_ahead}), finished in the unit's program
-   ({!Finished_program}), and taken from there by each file's pass:
+   ({!Unit_program}), and taken from there by each file's pass:
 
    {ul
    {- the source-file family ({!impl_decls}) gives the full definitions
@@ -81,30 +81,38 @@ val generating_ahead : (unit -> 'a) -> 'a
 val start_render : file:Common.file -> unit
 
 (** [source r] is the source entity [r], as an owner. *)
-val source : Names.GlobRef.t -> Generated_program.id
+val source : Names.GlobRef.t -> Unit_program.owner
 
 (** [helper_id d] is the id of the lifted helper [d] in the unit's program
-    ({!Finished_program.id}): the only declaration of its own generation.
+    ({!Unit_program.id}): the only declaration of its own generation.
     That [d] is not a lifted helper is an anomaly. *)
-val helper_id : Minicpp.cpp_decl -> Finished_program.id
+val helper_id : Minicpp.cpp_decl -> Unit_program.id
 
 (** [helpers_placed ds] is each lifted helper of [ds] under its
     {!helper_id}. *)
-val helpers_placed : Minicpp.cpp_decl list -> (Finished_program.id * Minicpp.cpp_decl) list
+val helpers_placed : Minicpp.cpp_decl list -> (Unit_program.id * Minicpp.cpp_decl) list
+
+(** [instance_ids r ds] is the id of each of [ds], the declarations of the
+    instance [r]. *)
+val instance_ids : Names.GlobRef.t -> generated -> Unit_program.id list
 
 (** [instance_jobs r ds] is [ds], the declarations of the instance [r], to
     finish, each under its id. *)
-val instance_jobs : Names.GlobRef.t -> generated -> Finished_program.job list
+val instance_jobs : Names.GlobRef.t -> generated -> Unit_program.job list
 
 (** [instance_placed r ds helpers] is [helpers], the helpers lifted out of
     the methods of the instance [r], then [ds], its declarations, each under
     its id: how a wrapper module places an instance, as it places a lifted
     helper. *)
 val instance_placed :
-  Names.GlobRef.t -> generated -> Minicpp.cpp_decl list -> (Finished_program.id * Minicpp.cpp_decl) list
+  Names.GlobRef.t -> generated -> Minicpp.cpp_decl list -> (Unit_program.id * Minicpp.cpp_decl) list
 
 (** [concept_id r] is the id of the concept of the class [r]. *)
-val concept_id : Names.GlobRef.t -> Finished_program.id
+val concept_id : Names.GlobRef.t -> Unit_program.id
+
+(** [record_methods_id r] is the id of the methods of the eponymous record
+    [r] ({!Unit_program.Methods}). *)
+val record_methods_id : Names.GlobRef.t -> Unit_program.id
 
 
 (** What generating a declaration ahead of the files leaves for later: the
@@ -113,17 +121,17 @@ val concept_id : Names.GlobRef.t -> Finished_program.id
     it to finish; and the helpers lifted out of it, finished once everything
     else is. *)
 type ahead = {
-  entities : Generated_program.entity list;
+  entities : Unit_program.entity list;
       (** What was generated, as the entities a file records taking it. *)
   functions : Minicpp.cpp_decl list;
       (** The function definitions generated, registered with Loopify
           before any function of the unit is finished. *)
-  finishing : Finished_program.job list;
+  finishing : Unit_program.job list;
       (** What of the declaration to finish, each under its id. *)
   helpers : Minicpp.cpp_decl list;
       (** The helpers lifted out of it, finished after everything else, each
           under its {!helper_id}. *)
-  handed_on : Finished_program.job list;
+  handed_on : Unit_program.job list;
       (** Declarations of its own handed on to be finished with its helpers,
           after them. *)
 }
@@ -137,15 +145,15 @@ val nothing_ahead : ahead
     ({!finalized}). *)
 val functions_ahead : (Names.GlobRef.t * Gen_decls.generated_fun list) list -> ahead
 
-(** [entity r decls helpers] is the generation of [r]: [decls], and the
-    helpers among [helpers]. *)
+(** [entity r ids helpers] is the generation of [r]: the declarations
+    [ids], and the helpers among [helpers]. *)
 val entity :
-  Names.GlobRef.t -> Minicpp.cpp_decl list -> Minicpp.cpp_decl list -> Generated_program.entity
+  Names.GlobRef.t -> Unit_program.id list -> Minicpp.cpp_decl list -> Unit_program.entity
 
 (** [funs_entities ~fallback funs] is each generated function as the entity
     its declaration is about, [fallback] where it says none. *)
 val funs_entities :
-  fallback:Names.GlobRef.t -> Gen_decls.generated_fun list -> Generated_program.entity list
+  fallback:Names.GlobRef.t -> Gen_decls.generated_fun list -> Unit_program.entity list
 
 (** Generate, ahead of both files, what the declaration [d] is written as
     that {!impl_decls} and {!header_decls} then take from here: its
@@ -295,12 +303,12 @@ val generated_record_field_types : unit -> Minicpp.cpp_type list
 (** [record_methods_finishing r vars fields] is what finishing [fields],
     the methods of the eponymous record [r] of variables [vars], takes: the
     members of its module's struct, as the owner's methods
-    ({!Finished_program.Methods}). *)
+    ({!Unit_program.Methods}). *)
 val record_methods_finishing :
   Names.GlobRef.t ->
   Names.Id.t list ->
   (Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag) list ->
-  Finished_program.job
+  Unit_program.job
 
 (** [finished_record_methods r vars fields] is {!record_methods_finishing}
     finished ahead of the files, taken from there by the header. *)
@@ -329,10 +337,10 @@ val regenerate_ahead : module_:Names.ModPath.t -> Miniml.ml_decl -> unit
 
 (** [finished_placed (id, d)] is [d], the declaration [id] placed beside
     the generation it was lifted out of or handed on with, as the unit's
-    program has it ({!Finished_program}).  That the program does not have it
+    program has it ({!Unit_program}).  That the program does not have it
     is an anomaly; a file's pass finishes it again under [CRANE_CHECK_IR]
     and checks.  So for every [finished_] reader below. *)
-val finished_placed : Finished_program.id * Minicpp.cpp_decl -> Cpp_erasure.settled
+val finished_placed : Unit_program.id * Minicpp.cpp_decl -> Cpp_erasure.settled
 
 (** [finished_helper d] is the lifted helper [d] ({!finished_placed} under
     its {!helper_id}). *)
@@ -365,13 +373,14 @@ val template_kinds : Miniml.ml_structure -> (Names.GlobRef.t * Tparam_kinds.t) l
 
 (** {2 Recording the generated program}
 
-    What the printer renders is recorded in {!Generated_program} as it is
+    What the printer renders is recorded in {!Unit_program} as it is
     generated. *)
 
-(** [record_entity r decls helpers] records that generating the source
-    entity [r] produced [decls] and lifted [helpers]. *)
+(** [record_entity r ids helpers] records that generating the source
+    entity [r] gave the declarations [ids] to finish and lifted
+    [helpers]. *)
 val record_entity :
-  Names.GlobRef.t -> Minicpp.cpp_decl list -> Minicpp.cpp_decl list -> Generated_program.entity
+  Names.GlobRef.t -> Unit_program.id list -> Minicpp.cpp_decl list -> Unit_program.entity
 
 (** [record_funs ~fallback funs] records each generated function as the
     entity its declaration is about, [fallback] where it names none. *)
