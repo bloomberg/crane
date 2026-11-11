@@ -14189,3 +14189,14 @@
   (alias runtest)
   (deps numeral_wrap_gmp.t.exe)
   (action (run ./numeral_wrap_gmp.t.exe))))
+
+(subdir alias_slot
+ (rule
+  (targets alias_slot.t.exe)
+  (deps AliasSlot.vo alias_slot.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} alias_slot.t.exe alias_slot.t.cpp alias_slot.cpp)))
+ (rule
+  (alias runtest)
+  (deps alias_slot.t.exe)
+  (action (run ./alias_slot.t.exe))))
