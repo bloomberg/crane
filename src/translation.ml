@@ -6539,6 +6539,47 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
               (fun i _ -> (List.nth eta_arg_reads i) (CPPvar (eta_param_id i)))
               eta_args
           in
+          (* The closure may be called many times (it is handed to a fold or
+             a map), and Rocq evaluates a partial application's arguments
+             once, where it is built.  An argument that computes something
+             is therefore bound once outside the closure, which captures
+             the result; left in the body it would be computed again on
+             every call. *)
+          let rec eta_arg_is_cheap = function
+            | CPPvar _ | CPPglob _ | CPPint _ | CPPuint _ | CPPbool _
+            | CPPfloat _ | CPPstring _ | CPPenum_val _ | CPPnullptr
+            | CPPnumeral _ | CPPthis | CPPlambda _
+            | CPPfun_call (_, CPPrt (Crane_rt.Constant _), _) ->
+              true
+            | CPPmove e | CPPderef e | CPPget (e, _) | CPPget' (e, _, _)
+            | CPPaccess (_, e, _) | CPPnamespace (_, e) | CPPforward (_, e)
+            | CPPany_cast (_, e) | CPPany_cast_tolerant (_, e) | CPPunbox (_, e)
+            | CPPconvert (_, e) | CPPbox (_, e) | CPPerase_fn (_, e)
+            | CPPfn_value e ->
+              eta_arg_is_cheap e
+            | CPPfun_call
+                (_, CPPglob (_, _, Some {ci_inline = Some {it_shape = Inline_pair_projection _; _}; _}), {rev = [e]}) ->
+              eta_arg_is_cheap e
+            | _ -> false
+          in
+          let eta_hoisted = ref [] in
+          let args =
+            List.mapi
+              (fun i a ->
+                if eta_keep_moves || eta_arg_is_cheap a then a
+                else begin
+                  let id = Id.of_string (Printf.sprintf "_pa%d" i) in
+                  eta_hoisted :=
+                    Sasgn (id, Declare (Tauto, None), a) :: !eta_hoisted;
+                  CPPvar id
+                end )
+              args
+          in
+          let eta_bind_once lam =
+            match List.rev !eta_hoisted with
+            | [] -> lam
+            | decls -> mk_iife None (decls @ [Sreturn (Some lam)])
+          in
           let call_args = args @ eta_vars in
           (* The result is the callee's, so it is read off the declaration for
              the same reason the parameters are: what the call returns is
@@ -6638,22 +6679,31 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             let n = List.length exp_dom in
             let outer = List.filteri (fun i _ -> i < n) eta_args in
             let inner = List.filteri (fun i _ -> i >= n) eta_args in
-            mk_lambda outer None
-              [ Sreturn
-                  (Some
-                     (mk_lambda ~tparams:eta_tparams inner ret_ty body
-                        ~capture:Closure ) ) ]
-              ~capture:Closure
+            eta_bind_once
+              (mk_lambda outer None
+                 [ Sreturn
+                     (Some
+                        (mk_lambda ~tparams:eta_tparams inner ret_ty body
+                           ~capture:Closure ) ) ]
+                 ~capture:Closure )
           | _ when eta_keep_moves ->
             mk_lambda ~tparams:eta_tparams eta_args ret_ty body ~capture:Immediate
-          | _ -> (
+          | _ ->
             (* The arguments are read where the closure is made, and taken
-               by move there when the plan moves them. *)
-            match mk_lambda ~tparams:eta_tparams eta_args ret_ty body ~capture:Closure with
-            | CPPlambda l ->
-              CPPlambda
-                {l with cl_moved = moved_names env (Ownership_ir.eta_captures (!tctx).move_plan ml_args)}
-            | e -> e ) )
+               by move there when the plan moves them.  The bound arguments
+               are locals of the scope that builds the closure, which ends
+               before the closure is called: it copies them. *)
+            eta_bind_once
+              ( match mk_lambda ~tparams:eta_tparams eta_args ret_ty body ~capture:Closure with
+              | CPPlambda l as e ->
+                let free = free_vars_expr e in
+                let moved =
+                  List.filter
+                    (fun x -> List.exists (Id.equal x) free)
+                    (moved_names env (Ownership_ir.eta_captures (!tctx).move_plan ml_args))
+                in
+                CPPlambda {l with cl_moved = moved}
+              | e -> e ) )
       | _ ->
         if id_is_typeclass_instance && args = [] then
           cglob

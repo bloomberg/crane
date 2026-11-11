@@ -162,14 +162,16 @@ struct FoldClosureBuild {
   /// If the closure chain has dangling references, the second call
   /// might read clobbered stack memory.
   static inline const uint64_t test2 = []() {
-    crane::fn<uint64_t(uint64_t)> f = [](uint64_t _x0) -> uint64_t {
-      return compose_adders(
-          mylist<uint64_t>::mycons(
-              UINT64_C(5), mylist<uint64_t>::mycons(UINT64_C(10),
-                                                    mylist<uint64_t>::mynil())),
-          _x0);
-    };
-    return (f(UINT64_C(0)) + f(UINT64_C(100)));
+    return []() {
+      crane::fn<uint64_t(uint64_t)> f = []() {
+        auto _pa0 = mylist<uint64_t>::mycons(
+            UINT64_C(5),
+            mylist<uint64_t>::mycons(UINT64_C(10), mylist<uint64_t>::mynil()));
+        return
+            [=](uint64_t _x0) -> uint64_t { return compose_adders(_pa0, _x0); };
+      }();
+      return (f(UINT64_C(0)) + f(UINT64_C(100)));
+    }();
   }();
   /// Pattern 3: Fold producing a list of closures (not composing them).
   /// Each closure captures the list element from the fold iteration.

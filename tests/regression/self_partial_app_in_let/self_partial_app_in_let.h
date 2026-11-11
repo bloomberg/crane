@@ -143,9 +143,10 @@ struct Pos {
   static T1 peano_rect(T1 a,
                        std::type_identity_t<crane::fn<T1(Positive, T1)>> f,
                        const Positive &p) {
+    auto _lc1_pa0 = f(Positive::xh(), a);
     crane::fn<T1(Positive)> f2 = [=](Positive _x0) -> T1 {
       return peano_rect<T1>(
-          f(Positive::xh(), a),
+          _lc1_pa0,
           [=](const Positive &p0, const T1 &x) {
             return f(succ(Positive::xo(p0)), f(Positive::xo(p0), x));
           },

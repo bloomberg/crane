@@ -668,6 +668,10 @@ val add_type_alias_body : GlobRef.t -> Miniml.ml_type -> unit
     [r] is a type-level [Definition] rather than a term. *)
 val has_type_alias_body : GlobRef.t -> bool
 
+(** The global a chain of type aliases from [r] ends in; [r] itself when it
+    is not an alias of an applied global. *)
+val type_alias_head : GlobRef.t -> GlobRef.t
+
 (** [add_ind_class_arg r arg] records that a constructor field type of
     [r] names the applied instance [arg] -- the same shape
     {!add_instance_class_shape} records, and read by the same rule.  The Rocq

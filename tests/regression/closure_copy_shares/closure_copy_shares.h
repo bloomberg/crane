@@ -112,27 +112,26 @@ struct ClosureCopyShares {
   /// Stored in a list, so they are function values rather than functions.
   static inline const List<crane::fn<uint64_t(uint64_t)>> closures = []() {
     return []() {
-      crane::fn<uint64_t(uint64_t)> a = [](uint64_t _x0) -> uint64_t {
-        return adder(
+      crane::fn<uint64_t(uint64_t)> a = []() {
+        auto _pa0 = List<uint64_t>::cons(
+            UINT64_C(1),
             List<uint64_t>::cons(
-                UINT64_C(1),
+                UINT64_C(2),
                 List<uint64_t>::cons(
-                    UINT64_C(2),
+                    UINT64_C(3),
                     List<uint64_t>::cons(
-                        UINT64_C(3),
+                        UINT64_C(4),
                         List<uint64_t>::cons(
-                            UINT64_C(4),
+                            UINT64_C(5),
                             List<uint64_t>::cons(
-                                UINT64_C(5),
+                                UINT64_C(6),
                                 List<uint64_t>::cons(
-                                    UINT64_C(6),
+                                    UINT64_C(7),
                                     List<uint64_t>::cons(
-                                        UINT64_C(7),
-                                        List<uint64_t>::cons(
-                                            UINT64_C(8),
-                                            List<uint64_t>::nil())))))))),
-            _x0);
-      };
+                                        UINT64_C(8),
+                                        List<uint64_t>::nil()))))))));
+        return [=](uint64_t _x0) -> uint64_t { return adder(_pa0, _x0); };
+      }();
       return List<crane::fn<uint64_t(uint64_t)>>::cons(
           a, List<crane::fn<uint64_t(uint64_t)>>::cons(
                  [=](uint64_t _x0) -> uint64_t {

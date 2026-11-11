@@ -199,13 +199,11 @@ struct EtaFoldCallback {
                   UINT64_C(2),
                   List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))
               .template map<crane::fn<uint64_t(uint64_t)>>([](uint64_t n) {
-                return [=](uint64_t _x0) -> uint64_t {
-                  return grab(
-                      box::box0(List<uint64_t>::cons(
-                          n, List<uint64_t>::cons((n + UINT64_C(1)),
-                                                  List<uint64_t>::nil()))),
-                      _x0);
-                };
+                auto _pa0 = box::box0(List<uint64_t>::cons(
+                    n, List<uint64_t>::cons((n + UINT64_C(1)),
+                                            List<uint64_t>::nil())));
+                return
+                    [=](uint64_t _x0) -> uint64_t { return grab(_pa0, _x0); };
               });
       return fs.template fold_right<uint64_t>(
           [](const crane::fn<uint64_t(uint64_t)> &f, uint64_t eta0_) {

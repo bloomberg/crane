@@ -1358,6 +1358,14 @@ let has_type_alias_body r = Ref.Can.Map.mem r !type_alias_bodies
 let add_type_alias_body r t =
   type_alias_bodies := Ref.Can.Map.add r t !type_alias_bodies
 
+(* The global a chain of type aliases from [r] ends in: [r] itself when it
+   is no alias, or its body is no applied global. *)
+let rec type_alias_head r =
+  match Ref.Can.Map.find_opt r !type_alias_bodies with
+  | Some (Miniml.Tglob (r', _, _)) when not (GlobRef.CanOrd.equal r r') ->
+    type_alias_head r'
+  | _ -> r
+
 (* The types [r]'s own definition writes: an inductive's constructor payloads,
    a type alias's right-hand side.  Folded with [f] over every subterm. *)
 let fold_type_body_types f r acc =
@@ -3150,7 +3158,8 @@ let is_shared_variant_packet kn ind i =
 let (_, add_shared_variant, is_shared_variant_registered) =
   make_refset_can ~name:"shared_variants" ()
 
-let is_shared_variant r = shared_variant () && is_shared_variant_registered r
+let is_shared_variant r =
+  shared_variant () && is_shared_variant_registered (type_alias_head r)
 
 let is_inline_custom r = is_custom r && to_inline r
 

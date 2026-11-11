@@ -526,7 +526,7 @@ let loopify_inner_lambdas ?(tail_only = false) ~tparams ?(outer_env = []) body =
         ( process_expr scrut,
           r,
           List.map (fun (id, body) -> (id, process_stmts body)) branches,
-          default )
+          Option.map process_stmts default )
     | Smatch (scrut, branches, default) ->
       Smatch
         ( { scrut with sc_expr = process_expr scrut.sc_expr },

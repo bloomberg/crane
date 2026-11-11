@@ -111,9 +111,10 @@ private:
     if (!tag_) return nullptr;
     if (!tag_->inline_) return box_;
     if (!tag_->counted) return nullptr;
-    std::uintptr_t w;
-    std::memcpy(&w, bytes_, sizeof w);
-    return w != 0 && (w & 1) == 0 ? reinterpret_cast<const shared_block *>(w) : nullptr;
+    const shared_block *p;
+    std::memcpy(&p, bytes_, sizeof p);
+    const std::uintptr_t w = reinterpret_cast<std::uintptr_t>(p);
+    return w != 0 && (w & 1) == 0 ? p : nullptr;
   }
   void release() noexcept {
     if (auto *b = counted_block())
@@ -158,7 +159,7 @@ public:
 
   void swap(obj &o) noexcept {
     std::swap(tag_, o.tag_);
-    unsigned char tmp[sizeof bytes_];
+    alignas(void *) unsigned char tmp[sizeof bytes_];
     std::memcpy(tmp, bytes_, sizeof bytes_);
     std::memcpy(bytes_, o.bytes_, sizeof bytes_);
     std::memcpy(o.bytes_, tmp, sizeof bytes_);
