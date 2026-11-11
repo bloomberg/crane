@@ -14156,3 +14156,14 @@
   (alias runtest)
   (deps local_mutual_callable_param_capture.t.exe)
   (action (run ./local_mutual_callable_param_capture.t.exe))))
+
+(subdir loopify_default
+ (rule
+  (targets loopify_default.t.exe)
+  (deps LoopifyDefault.vo loopify_default.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_default.t.exe loopify_default.t.cpp loopify_default.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_default.t.exe)
+  (action (run ./loopify_default.t.exe))))

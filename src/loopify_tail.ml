@@ -577,7 +577,11 @@ let rec generic_rewrite_stmt ?(aliases = []) ?(derefs = []) trc = function
   | Sswitch (scrut, r, branches, default) ->
     let rw = generic_rewrite_stmts ~aliases ~derefs trc in
     Sswitch
-      (scrut, r, List.map (fun (id, body) -> (id, rw body)) branches, default)
+      ( scrut, r, List.map (fun (id, body) -> (id, rw body)) branches,
+        (* The default branch returns too: left as it was, its [return]
+           would leave a tail-modulo-cons loop with the list built so far
+           dropped. *)
+        Option.map rw default )
   | Scustom_case (ty, scrut, tyargs, branches, err) ->
     let rw = generic_rewrite_stmts ~aliases ~derefs trc in
     Scustom_case (ty, scrut, tyargs,

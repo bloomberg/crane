@@ -679,11 +679,14 @@ and collect_stmt check ~in_visitor = function
   | Swhile (cond, body) | Sfor_range (_, cond, body) ->
     collect_expr check cond @ collect_stmts check ~in_visitor body
   | Sblock stmts -> collect_stmts check ~in_visitor stmts
-  | Sswitch (scrut, _, branches, _) ->
+  | Sswitch (scrut, _, branches, default) ->
     collect_expr check scrut
     @ List.concat_map
         (fun (_, body) -> collect_stmts check ~in_visitor body)
         branches
+    @ (match default with
+       | Some ss -> collect_stmts check ~in_visitor ss
+       | None -> [])
   | Scustom_case (_, scrut, _, branches, _) ->
     collect_expr check scrut
     @ List.concat_map
@@ -751,12 +754,15 @@ let rec count_calls_stmts (check : call_checker) stmts =
         + count_calls_stmts check then_br
         + count_calls_stmts check else_br
       | Sblock ss -> count_calls_stmts check ss
-      | Sswitch (e, _, branches, _) ->
+      | Sswitch (e, _, branches, default) ->
         count_calls_expr check e
         + List.fold_left
             (fun acc (_, body) -> acc + count_calls_stmts check body)
             0
             branches
+        + (match default with
+           | Some ss -> count_calls_stmts check ss
+           | None -> 0)
       | Scustom_case (_, scrut, _, branches, _) ->
         count_calls_expr check scrut
         + List.fold_left
