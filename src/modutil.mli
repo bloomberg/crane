@@ -16,16 +16,19 @@ open Miniml
 (** {1 ML Module Utilities}
 
     Traversal, search, and optimization functions over the MiniML module
-    structure ({!Miniml.ml_structure}). *)
+    structure ({!Miniml.ml_structure}).  {!optimize_struct} is the
+    simplification and dead-code pass extraction runs on the structure before
+    it reaches the backend; the iterators and maps are shared by every later
+    pass that walks a structure. *)
 
 (** Search for an AST node satisfying a predicate anywhere in the structure.
     @param f predicate to test each [ml_ast] node
-    @param the structure to search
     @return [true] if any node satisfies [f], [false] otherwise *)
 val struct_ast_search : (ml_ast -> bool) -> ml_structure -> bool
 
 (** Search for a type satisfying a predicate anywhere in the structure.
-    @param f predicate to test each [ml_type] node
+    @param f predicate tested on each leaf type: a node that is neither an
+      arrow nor a [Tglob], whose arguments are searched instead
     @return [true] if any type satisfies [f], [false] otherwise *)
 val struct_type_search : (ml_type -> bool) -> ml_structure -> bool
 
@@ -34,7 +37,8 @@ val struct_type_search : (ml_type -> bool) -> ml_structure -> bool
     recursive group. *)
 val struct_functions : ml_structure -> (GlobRef.t * ml_ast * ml_type) list
 
-(** Iterate over all declarations, specifications, and module paths.
+(** Iterate over all declarations, specifications, and module paths, in
+    module and functor bodies and module types alike.
     @param do_decl callback invoked for each [ml_decl] found
     @param do_spec callback invoked for each [ml_spec] found
     @param do_mp callback invoked for each [ModPath.t] found *)
@@ -57,7 +61,7 @@ val type_iter_references : do_ref -> ml_type -> unit
 
 (** [ast_iter_references do_term do_cons do_type ast] applies the appropriate
     callback to every reference in [ast].
-    @param prune when [prune a] is [true], [a] is skipped entirely — neither its
+    @param prune when [prune a] is [true], [a] is skipped entirely: neither its
       own references nor those of its subterms are visited (used to drop subtrees
       that later passes fold away, e.g. numeral-converter applications)
     @param do_term callback for term-level references ([MLglob])
@@ -91,7 +95,6 @@ val msid_of_mt : ml_module_type -> ModPath.t
 
 (** Look up a declaration by its [GlobRef.t] in the structure.
     @param r the global reference to look up
-    @param the structure to search
     @raise Not_found if the reference is not in the structure. *)
 val get_decl_in_structure : GlobRef.t -> ml_structure -> ml_decl
 

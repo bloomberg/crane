@@ -21,7 +21,7 @@ DECLARE PLUGIN "rocq-crane.plugin"
 
 {
 
-(* ML names *)
+(* Printers for the argument entries below *)
 
 open Stdarg
 open Pp
@@ -68,7 +68,7 @@ END
 (* Extraction commands *)
 
 VERNAC COMMAND EXTEND Extraction CLASSIFIED AS QUERY STATE opaque_access
-(* Extraction in the Rocq toplevel *)
+(* Extraction printed in the Rocq toplevel *)
 | [ "Crane" "Extraction" global(x) ] -> { simple_extraction x }
 | [ "Crane" "Recursive" "Extraction" ne_global_list(l) ] -> { full_extraction None l }
 
@@ -85,12 +85,12 @@ VERNAC COMMAND EXTEND Extraction CLASSIFIED AS QUERY STATE opaque_access
 END
 
 VERNAC COMMAND EXTEND SeparateExtraction CLASSIFIED AS QUERY STATE opaque_access
-(* Same, with content split in several files *)
+(* Extraction with content split in several files *)
 | [ "Crane" "Separate" "Extraction" ne_global_list(l) ]
   -> { separate_extraction l }
 END
 
-(* Modular extraction (one Rocq library = one ML module) *)
+(* Modular extraction (one Rocq library = one C++ unit) *)
 VERNAC COMMAND EXTEND ExtractionLibrary CLASSIFIED AS QUERY STATE opaque_access
 | [ "Crane" "Extraction" "Library" identref(m) ]
   -> { extraction_library false m }
@@ -238,7 +238,7 @@ END
 
 (* Commands for setting, printing and resetting callbacks extraction. *)
 
-(* Defining a Rocq object as ML callback for FFI call target from C *)
+(* Defining a Rocq object as a callback, an FFI call target from C *)
 VERNAC COMMAND EXTEND ExtractionCallback CLASSIFIED AS SIDEFF
 | [ "Crane" "Extract" "Callback" string_opt(o) global(x) ]
   -> { extract_callback o x }
@@ -260,8 +260,8 @@ VERNAC COMMAND EXTEND PrintExtractionForeign CLASSIFIED AS QUERY
   -> {Feedback.msg_notice (print_extraction_foreign ()) }
 END
 
-(* Overriding of a Rocq object by an ML one *)
-(* TODO: currently is inlined, no option for otherwise *)
+(* Overriding of a Rocq object by a C++ one; the [Inlined] variant below
+   also marks the constant to be inlined *)
 VERNAC COMMAND EXTEND ExtractionConstant CLASSIFIED AS SIDEFF
 | [ "Crane" "Extract" "Constant" global(x) string_list(idl) "=>" cppname(y) "From" string_list(import) ]
   -> { extract_constant_import false x idl y import }
@@ -269,7 +269,7 @@ VERNAC COMMAND EXTEND ExtractionConstant CLASSIFIED AS SIDEFF
   -> { extract_constant_import false x idl y [] }
 END
 
-(* Overriding of a Rocq object by an ML one that will be a FFI call to C *)
+(* Overriding of a Rocq object by a C++ one that will be an FFI call to C *)
 VERNAC COMMAND EXTEND ExtractionForeignConstant CLASSIFIED AS SIDEFF
 | [ "Crane" "Extract" "Foreign" "Constant" global(x) "=>" string(y) ]
   -> { extract_constant_foreign x y }

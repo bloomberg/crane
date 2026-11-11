@@ -1,6 +1,9 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
+(** Whether a binder holds a box, planned from Core.  See
+    [representation_plan.mli]. *)
+
 open Miniml
 open Minicpp
 open Util
@@ -24,6 +27,7 @@ type scope = {
   kinds : binder_kind list;
 }
 
+(* Whether a planned type is a box. *)
 let boxed = function
   | Some (Topaque, _) | None -> false
   | Some (t, _) -> resolves_to_any_type t
@@ -37,6 +41,8 @@ let at_binding ty =
   | _ -> None
   | exception _ -> None
 
+(* [scope] under the binders [ids], innermost first, each planned at the
+   conversion of its ML type. *)
 let push kind ids scope =
   { lex = Lexenv.push (List.map (fun (x, ty) -> {Lexenv.eb_id = Mlutil.id_of_mlid x; eb_type = ty; eb_role = Lexenv.Value}) ids) scope.lex;
     planned = List.map (fun (_, ty) -> at_binding ty) ids @ scope.planned;
@@ -95,6 +101,7 @@ let push_parameters ?slot_ty ~ns ~tvars ~reified ~body ids scope =
   in
   {scope with planned = declared @ List.filteri (fun i _ -> i >= n) scope.planned}
 
+(* The type the binder at de Bruijn index [i] is planned to have. *)
 let planned scope i = if i >= 1 then Option.flatten (List.nth_opt scope.planned (i - 1)) else None
 
 (* {!Translation_types.scrutinee_binder}, with the binder's ML type read in
@@ -177,7 +184,7 @@ let custom_pattern_binders scope ~(cs : custom_scrutinee) ~ty ~scrut cname ids =
   else planned
 
 (* Whether [a] projects a component out of a pair read from a binder that
-   holds a box ({!Translation.gen_expr_custom}'s pair-accessor case): the
+   holds a box ({!Translation.eta_fun}'s pair-accessor case): the
    pair is recovered as [pair<any, any>], and its components are boxes. *)
 let reads_boxed_component scope a =
   let is_pair_projection r =
@@ -471,12 +478,14 @@ let region ~outer body =
   | _ -> walk scope body );
   (!found, List.rev !reads)
 
+(* Two sites are the same match and branch, or the same binding. *)
 let same_site a b =
   match (a, b) with
   | Core_binder.Branch (o, i), Core_binder.Branch (o', i') -> Occurrence.equal o o' && Int.equal i i'
   | Binding o, Binding o' -> Occurrence.equal o o'
   | Branch _, Binding _ | Binding _, Branch _ -> false
 
+(* How a binder kind is named in probe output. *)
 let kind_name = function
   | Kouter -> "outer"
   | Kparameter -> "parameter"

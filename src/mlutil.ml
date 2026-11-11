@@ -94,16 +94,18 @@ let unreserve_leading_underscore s =
   if !i = 0 || !i = n || is_digit s.[!i] then s
   else Generated_name.separate_underscores (String.sub s !i (n - !i) ^ "_")
 
-(** Converts an [ml_ident] to an [Id.t].  The binder comes from the Rocq
-    source, so a leading underscore is moved to the end: that spelling belongs
-    to the names Crane invents for itself (see
-    {!unreserve_leading_underscore}). *)
+(* The prefix of a {!temporary_id}, in the reserved space. *)
 let temporary_prefix = "_tmp"
 
 let temporary_id n = Id.of_string (temporary_prefix ^ string_of_int n)
 
 let is_temporary_id id = String.starts_with ~prefix:temporary_prefix (Id.to_string id)
 
+(** Converts an [ml_ident] to an [Id.t].  The binder comes from the Rocq
+    source, so a leading underscore is moved to the end: that spelling belongs
+    to the names Crane invents for itself (see
+    {!unreserve_leading_underscore}).  A {!temporary_id} keeps its reserved
+    name. *)
 let id_of_mlid =
   let unreserve id =
     Id.of_string (unreserve_leading_underscore (Id.to_string id))
@@ -183,41 +185,15 @@ let rec eq_ml_type t1 t2 =
 and eq_ml_meta m1 m2 =
   Int.equal m1.id m2.id && Option.equal eq_ml_type m1.contents m2.contents
 
-(** [fill_placeholders pre args] applies a head already carrying [pre] to
-    [args].
-
-    Extraction eta-expands a type constructor passed as an argument -- what
-    stands for [M] is [M _], and for [AE +' BE] it is [sum1 AE BE _], the last
-    argument a placeholder extraction could not name -- so applying such a head
-    to a real argument does not extend the application, it fills the
-    placeholder.  Appending instead would give the constructor one argument per
-    substitution it passes through: [m<std::any, A>] for an [m] that takes one,
-    [Sum1<AE, BE, std::any, std::any>] for a [Sum1] that takes three.
-
-    The placeholders are not always trailing.  A carrier that is a type-level
-    lambda -- [fun T => holder T (box T)] -- has no MiniML spelling, and what
-    extraction leaves is the body with every occurrence of the binder written
-    as [Tunknown]: [holder[_, box[_]]].  Applying that is filling each hole,
-    not appending, which would give [holder] a third argument it does not
-    take.
-
-    That reading of a non-trailing hole belongs to a {e generated} head, whose
-    higher-kinded parameters hold the carrier already applied at the element
-    (see [Gen_decls.gen_record_cpp]).  A custom mapping takes a family at a
-    plain [typename], its index erased -- [sum1 => "Sum1"] -- so a hole
-    inside such an argument is that family's own placeholder, and filling it
-    would apply the family a second time when it is applied for real:
-    [sum1 (CE _) (FailE _) _] nested in [CE +' FailE +' ...] became
-    [Sum1<CE, FailE, X, X>].  [~generated:false] says the head is such a
-    mapping.  Its own arguments' placeholders are nested; a hole standing as
-    one of its arguments, short of the trailing run, can only be the binder:
-    [fun T => T * box T] arrives as [prod[_, box[_]]]. *)
+(** Whether a type carries a [Tunknown] hole.  See {!fill_placeholders}. *)
 let type_has_hole = exists_ml_type (function Tunknown -> true | _ -> false)
 
 (* Sees through a resolved meta, as [type_has_hole] does: one that answered
    "there is a hole" for a hole this could not reach filled nothing. *)
 let fill_type_hole a = map_ml_type (function Tunknown -> a | t -> t)
 
+(* [rpre], a reversed argument list, without its leading run of at most [n]
+   placeholders. *)
 let rec drop_placeholders rpre n =
   match (rpre, n) with
   | Tunknown :: rest, n when n > 0 -> drop_placeholders rest (n - 1)
@@ -239,12 +215,42 @@ let constructor_params = function
     | None -> [] )
   | GlobRef.IndRef _ | GlobRef.ConstructRef _ | GlobRef.VarRef _ -> []
 
+(* See [mlutil.mli]. *)
 let writes_binder ?(generated = true) ?(constructors = []) args =
   let binder = if generated then type_has_hole else ( = ) Tunknown in
   List.rev (drop_placeholders (List.rev args) (List.length args))
   |> List.filteri (fun i _ -> not (List.mem i constructors))
   |> List.exists binder
 
+(** [fill_placeholders pre args] applies a head already carrying [pre] to
+    [args].
+
+    Extraction eta-expands a type constructor passed as an argument -- what
+    stands for [M] is [M _], and for [AE +' BE] it is [sum1 AE BE _], the last
+    argument a placeholder extraction could not name -- so applying such a head
+    to a real argument does not extend the application, it fills the
+    placeholder.  Appending instead would give the constructor one argument per
+    substitution it passes through: [m<std::any, A>] for an [m] that takes one,
+    [Sum1<AE, BE, std::any, std::any>] for a [Sum1] that takes three.
+
+    The placeholders are not always trailing.  A carrier that is a type-level
+    lambda -- [fun T => holder T (box T)] -- has no MiniML spelling, and what
+    extraction leaves is the body with every occurrence of the binder written
+    as [Tunknown]: [holder[_, box[_]]].  Applying that is filling each hole,
+    not appending, which would give [holder] a third argument it does not
+    take.
+
+    That reading of a non-trailing hole belongs to a {e generated} head, whose
+    higher-kinded parameters hold the carrier already applied at the element
+    (see {!Gen_records.gen_record_cpp}).  A custom mapping takes a family at a
+    plain [typename], its index erased -- [sum1 => "Sum1"] -- so a hole
+    inside such an argument is that family's own placeholder, and filling it
+    would apply the family a second time when it is applied for real:
+    [sum1 (CE _) (FailE _) _] nested in [CE +' FailE +' ...] became
+    [Sum1<CE, FailE, X, X>].  [~generated:false] says the head is such a
+    mapping.  Its own arguments' placeholders are nested; a hole standing as
+    one of its arguments, short of the trailing run, can only be the binder:
+    [fun T => T * box T] arrives as [prod[_, box[_]]]. *)
 let fill_placeholders ?(generated = true) ?(constructors = []) pre args =
   let kept = List.rev (drop_placeholders (List.rev pre) (List.length args)) in
   (* The trailing run of placeholders is the eta-expansion, whichever part of
@@ -469,7 +475,7 @@ let needs_magic p =
 
 (** [put_magic_if ~from ~into b a] wraps [a] in a coercion when [b] says one is
     needed.  Takes the two types explicitly because [needs_magic]'s pair is
-    unordered — [mgu] is symmetric — while a backend needs to know which side
+    unordered ([mgu] is symmetric) while a backend needs to know which side
     the term is on and which side the context wants. *)
 let put_magic_if ~from ~into b =
   if b then fun a -> MLmagic (Mcoerce (from, into), a) else Fun.id
@@ -547,7 +553,7 @@ module Mlenv = struct
     mle.free <- Metaset.union (Metaset.diff mle.free !rem) !add
 
   (* From a type to a type schema. If a [Tmeta] is still uninstantiated and does
-     appears in the [mle], then it becomes a [Tvar]. *)
+     not appear among the free metas of [mle], then it becomes a [Tvar]. *)
 
   let generalization mle t =
     let c = ref 0 in
@@ -851,8 +857,8 @@ let rec rigidify = function
 
 type abbrev_map = GlobRef.t -> ml_type option
 
-(** {2 Delta-reduction of type constants everywhere in a ML type [t]. [env] is a
-    function of type [ml_type_env]} *)
+(** {2 Delta-reduction of type constants everywhere in a ML type [t]. [env] is an
+    {!abbrev_map}} *)
 
 let type_expand env t =
   let rec expand = function
@@ -1164,7 +1170,7 @@ let freshen_metas e =
   in
   ast_map_types (map_ml_type fresh) e
 
-(** [has_unknown t] — whether [t] mentions {!Tunknown} anywhere.
+(** [has_unknown t]: whether [t] mentions {!Tunknown} anywhere.
 
     [Tunknown] is what extraction leaves where a type was erased, so its
     presence is the marker that an annotation is missing information rather
@@ -1266,8 +1272,8 @@ let recover_erased_types ?only ?(refine_only = false) (expected : ml_type)
      m B] at [m = stateT S m'] is declared with two domains and applied to
      three; and a partial application has fewer.  Only the positions the
      declaration actually spells are offered, which is exactly the prefix.
-     Requiring the lengths to agree instead withdrew every offer at such a
-     call -- including the ones the declaration named perfectly well. *)
+     Requiring the lengths to agree would withdraw every offer at such a
+     call -- including the ones the declaration names perfectly well. *)
   let callee_doms use args =
     match (try Some (Table.find_type use.callee) with Not_found -> None) with
     | None -> []
@@ -1617,7 +1623,7 @@ let permut_rels k k' =
    copied there, keeping the occurrences of its own reads. *)
 let renamed occ = function MLrel (j, _) -> MLrel (j, occ) | e -> e
 
-(** {2 Substitution. [ml_subst e t] substitutes [e] for [Rel 1] in [t]. Lifting
+(** {2 Substitution. [ast_subst e t] substitutes [e] for [Rel 1] in [t]. Lifting
     (of one binder) is done at the same time} *)
 
 let ast_subst_each make =
@@ -1946,7 +1952,7 @@ let rec ast_glob_subst s t =
 (* Factorisation of some match branches into a common "x -> f x" branch may
    break types sometimes. Example: [type 'x a = A]. Then [let id = function A ->
    A] has type ['x a -> 'y a], which is incompatible with the type of [let id x
-   = x]. We now check that the type arguments of the inductive are preserved by
+   = x]. We check that the type arguments of the inductive are preserved by
    our transformation.
 
    TODO: this verification should be done someday modulo expansion of type
@@ -2201,10 +2207,10 @@ let expand_linear_let o id e =
    carries no types, as it did upstream.  Here [Mcoerce] names the two types
    of one specific boundary (see {!Miniml.ml_magic}), so relocating the node
    leaves it describing a gap it is no longer at, and the backend's [coerce]
-   reads those types as authoritative.  The rewrites are therefore deleted
-   rather than repaired; what they bought was a slightly smaller AST.
+   reads those types as authoritative.  Those rewrites are therefore not
+   made here; they would buy only a slightly smaller AST.
 
-   The one case that had to be kept is a coercion wrapping a lambda that is
+   The one case that is handled is a coercion wrapping a lambda that is
    then applied ([simpl_app] below), because leaving that beta-redex standing
    reaches the backend as an immediately-invoked lambda.  It is handled by
    {!split_arrow_coercion}, which does not move the coercion but splits it
@@ -2391,7 +2397,7 @@ let kill_some_lams bl (ids, c) =
 
 (** {2 [kill_dummy_lams] uses the last function to kill the lambdas
     corresponding to a [dummy_name]. It can raise [Impossible] if there is
-    nothing to do, or if there is no lambda left at all. In addition, it now
+    nothing to do, or if there is no lambda left at all. In addition, it
     accepts a signature that may mention some implicits} *)
 
 (** Merges an implicit signature with identifier list, creating a full Keep/Kill
@@ -2647,7 +2653,7 @@ let general_optimize_fix f ids n args m c occ =
      counting from the innermost is argument [m - d], because [args_f] maps
      argument [i] to [MLrel (m - i)].
 
-     They used to be written [Taxiom] on the premise that [normalize]
+     They cannot be written [Taxiom] on the premise that [normalize]
      beta-reduces them away before any C++ path sees them.  The premise holds
      only where the recursive occurrence is {e applied}: a point-free
      self-reference is no redex, the lambdas survive, and [Taxiom] prints as

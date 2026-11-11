@@ -1,6 +1,9 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
+(** The module plan and the tables it is installed into.  See
+    [module_plan.mli]. *)
+
 open Names
 
 type wrapper_role = Own | Flattened | Bystander
@@ -29,7 +32,7 @@ let table ?(scope = State.Extraction) name =
   Table.register_census name (fun () -> Hashtbl.length t);
   t
 
-(* {!table}, keyed by global references at their user identity: what a name
+(* As {!table}, keyed by global references at their user identity: what a name
    is known to be, under the name it was written. *)
 let ref_table ?(scope = State.Extraction) name =
   let t = Ref.User.Tbl.create 16 in
@@ -129,6 +132,8 @@ let last_answers equal_key l =
     (fun i (k, _) -> not (List.exists (fun (k', _) -> equal_key k k') (List.filteri (fun j _ -> j > i) l)))
     l
 
+(* Each fact of [f] read back through the queries; a wrapper's role only
+   where [f] gives one. *)
 let installed f =
   let mp_equal = ModPath.equal and ref_equal = GlobRef.UserOrd.equal in
   List.for_all is_global_scope_enum f.global_scope_enums

@@ -1,8 +1,9 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** What a leaf of the tree asks of resolution and of scheduling, decided
-    before it is printed: the names it is resolved for ({!unprinted_names}),
+(** What a leaf of the C++ tree ({!Cpp_ast}) asks of resolution and of
+    scheduling, decided before it is printed and after the unit's
+    declarations are finished: the names it is resolved for ({!unprinted_names}),
     the declarations it needs placed ahead of it ({!Cpp_ast.Needs}), and the
     synthesised templates it writes, with how it writes each type
     constructor a template template argument writes.  {!Cpp_print} prints a
@@ -180,6 +181,7 @@ val print_unprinted :
     order it defines them, and what each declares. *)
 val structs_defined : Cpp_erasure.settled -> Cpp_ast.defined list
 
+(** The struct or enum a definition declares. *)
 val defined_ref : Cpp_ast.defined -> Names.GlobRef.t
 
 (** The assertions a declaration holds back, in the order it writes them:
@@ -196,8 +198,8 @@ val held_back_assertions : Cpp_state.render_ctx -> Cpp_erasure.settled -> Cpp_as
     need not have declared. *)
 type forward_declaration = {
   fwd_ref : Names.GlobRef.t;  (** The struct or enum it declares. *)
-  fwd_tree : Cpp_ast.t;
-  fwd_constrained : bool;
+  fwd_tree : Cpp_ast.t;  (** The declaration, as an element of its module. *)
+  fwd_constrained : bool;  (** Whether it is a constrained template. *)
 }
 
 (** [forward_declarations ctx ~module_ env d] is the forward declaration of

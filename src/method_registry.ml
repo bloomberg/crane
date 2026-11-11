@@ -4,18 +4,19 @@
 (** Method registry: pre-scans the full extraction structure to identify which
     functions should become methods on eponymous inductive types.
 
-    This module is the first pass in Crane's multi-pass extraction pipeline. It
-    runs before any C++ code is emitted, building a table that maps function
-    GlobRef.t values to their method_info records.
+    It runs before any C++ code is emitted, from {!Program_facts} and
+    {!Cpp.prepare_structure}, building a table that maps function [GlobRef.t]
+    values to their [method_info] records.
 
-    The overall flow is: 1. [create] iterates every module in the ml_structure.
-    2. For each module, it finds the eponymous inductive (if any) — the
-    inductive whose lowercase name matches the module name. 3. For each function
-    in that module (and wrapper modules), it checks whether the function's type
-    has the eponymous type as an argument. 4. It verifies the function body is
-    safe (no bare [return this]). 5. After all methods are found,
-    [compute_returns_any] checks which methods have return types that need to be
-    erased to [std::any].
+    The overall flow is:
+    + [create] iterates every module in the ml_structure.
+    + For each module, it finds the eponymous inductive (if any): the
+      inductive whose lowercase name matches the module name.
+    + For each function in that module (and wrapper modules), it checks
+      whether the function's type has the eponymous type as an argument.
+    + It verifies the function body is safe (no bare [return this]).
+    + After all methods are found, [compute_returns_any] checks which methods
+      have return types that need to be erased to [std::any].
 
     See method_registry.mli for the full interface documentation. *)
 
@@ -82,6 +83,7 @@ let ml_return_type_has_ref ref ty =
 
 (** {2 A method's variables} *)
 
+(* See [method_registry.mli]. *)
 type renumbering = {
   rename : int -> int;
   extra : int list;
@@ -129,6 +131,7 @@ let renumbering ~num_ind_vars ~this_pos ty =
   in
   {rename; extra; renamed}
 
+(* Solved metas are followed; a variable [rename] does not map stays put. *)
 let renumber_type r ty =
   let rec go = function
     | Miniml.Tvar (rigid, i) -> Miniml.Tvar (rigid, r.rename i)
@@ -150,7 +153,7 @@ let renumber_body r body = if r.renamed then Mlutil.remap_tvars r.rename body el
     received via the [this] pointer (a raw pointer) rather than as a
     [std::shared_ptr]. If the function's body directly returns that first
     argument (a bare [MLrel] in tail position), the generated C++ would produce
-    [return this;] — but [this] is a raw pointer and cannot be implicitly
+    [return this;], but [this] is a raw pointer and cannot be implicitly
     converted back to [std::shared_ptr<T>], causing a compilation error.
 
     This function returns [true] if the body is safe to transform.
@@ -163,7 +166,7 @@ let renumber_body r body = if r.renamed then Mlutil.remap_tvars r.rename body el
 
     Note: we only check for DIRECT returns of the first argument. Using the
     first argument for field access (record projection), match dispatch, or
-    passing to other methods is fine — those translate to [this->field],
+    passing to other methods is fine: those translate to [this->field],
     [this->v()], and [this->method()] respectively, none of which require
     converting [this] back to [shared_ptr].
 
@@ -186,9 +189,9 @@ let body_safe_for_method ?(this_pos = 0) ?(ret_has_shared_epon = false) body =
   let num_lams, inner = strip_lams 0 body in
   (* Argument at position [this_pos] (0-indexed, outermost first) has de Bruijn
      index [num_lams - this_pos].  When [this_pos = 0] this is [num_lams]
-     (the outermost lambda), matching the previous behaviour.  For later
-     positions (e.g. enum first arg skipped by [find_epon_arg_pos]) we check
-     the correct inductive argument. *)
+     (the outermost lambda).  For later positions (e.g. enum first arg
+     skipped by [find_epon_arg_pos]) we check the correct inductive
+     argument. *)
   let target_db = num_lams - this_pos in
   (* Check if [MLrel target_db] appears as a direct return value in the AST. A
      "direct return" means the expression IS just [MLrel] (not wrapped in
@@ -222,7 +225,7 @@ let body_safe_for_method ?(this_pos = 0) ?(ret_has_shared_epon = false) body =
   match inner with
   | MLcase (_, MLrel (scrut_idx, _), branches, _) when scrut_idx = target_db ->
     (* Case 1: Top-level match on first arg (e.g. [match xs with ...]). Only
-       check branches, not the scrutinee — the scrutinee is the first argument
+       check branches, not the scrutinee: the scrutinee is the first argument
        but is used for dispatch, not directly returned. *)
     not
       (Array.exists
@@ -474,7 +477,8 @@ let register_into
     therefore name neither the file's type aliases nor those of its functions
     that are not methods of the same type: both are declared further down.
     [write_reg : regfile -> reg -> register_value -> ...], whose body calls
-    [replace_nth], hit both ([regfile] and [State::replace_nth] undeclared).
+    [replace_nth], would name both before their declarations ([regfile] and
+    [State::replace_nth] undeclared).
 
     A call to a method of any type is fine: it is rendered on the receiver,
     and [Structure_analysis] orders the receiver's struct before the caller's.
@@ -485,8 +489,8 @@ let register_into
     apply the rule about calls with these helpers: the pre-scan
     ([register_methods_for_epon ~top_level_siblings], settled in [create]
     once every inductive's methods are known) and the render-time lookup in
-    [Cpp_ind].  Type aliases were already kept out at render time; the
-    pre-scan now does the same. *)
+    [Cpp_ind].  Functions whose types name a module type alias are kept out
+    at both places too. *)
 
 (** [file_calls modpath decls body]: the functions defined by the file
     [modpath] among [decls] that [body] refers to.  A function with inline
@@ -587,7 +591,7 @@ let deferred_top_level :
     - [~cross_module:true]: allows any module. Used when registering methods
       from parent-level declarations that reference the eponymous type.
 
-    Custom types and enum-only inductives are excluded — custom types have
+    Custom types and enum-only inductives are excluded: custom types have
     user-provided C++ implementations, and enums are rendered as [enum class]
     values with no struct to attach methods to. *)
 let register_methods_for_epon
@@ -674,16 +678,16 @@ let register_methods_for_epon
        struct is at C++ global scope, ahead of the file's module struct, and
        in a nested module it is a member written ahead of them.  So a function
        whose type names one stays a function -- in a nested module, as the
-       module's frame already keeps it ({!Module_frame.method_candidates});
-       registered here as well, its calls were written as calls of a method
-       of an eponymous record that the record never got, and a function of
-       an eponymous inductive was given to it as a method naming an alias
+       module's frame already keeps it ({!Module_frame.method_candidates}).
+       Registering it here as well would write its calls as calls of a
+       method of an eponymous record that the record never gets, and give a
+       function of an eponymous inductive to it as a method naming an alias
        declared after it.  [~top_level_siblings]: the inductive is declared
        at the top level of a file.  An inline method body can name neither
        the file's type aliases nor its non-method functions: both are
        declared further down.  [write_reg : regfile -> reg -> register_value
-       -> ...], whose body calls [replace_nth], hit both ([regfile] and
-       [State::replace_nth] undeclared); the rule about calls is below. *)
+       -> ...], whose body calls [replace_nth], would name both undeclared
+       ([regfile] and [State::replace_nth]); the rule about calls is below. *)
     let module_aliases =
       List.filter_map
         (fun (_l, se) ->
@@ -817,11 +821,10 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
     if not (List.exists (fun (r', _, _, _) -> globref_equal r' r) existing) then
       Ref.User.Tbl.replace cands ind_ref (existing @ [(r, body, ty, pos)])
   in
-  (* Check if the inductive argument at position [pos] in [ty] uses concrete
-     type parameters. Functions specialized to e.g. [tree nat] instead of
-     [tree A] can't safely become methods because the loopification's decltype
-     inference doesn't handle concrete type substitutions inside template
-     structs. *)
+  (* Check if the receiver argument of type [best_ref] in [ty] has concrete
+     type arguments. A function specialized to e.g. [tree nat] instead of
+     [tree A] stays a free function rather than a method of the generic
+     [tree] struct, whose members are written over its own parameters. *)
   let has_concrete_type_args best_ref ty =
     let rec find_arg pos = function
       | Miniml.Tarr (Miniml.Tglob (r, tvar_args, _), _rest)
@@ -987,7 +990,7 @@ let rec pre_register_methods_from_structure
             (parent_decls @ sel)
             inner_sel
         | MEfunctor (_mbid, _mt, body) ->
-          (* Recurse into functor bodies — they may contain modules with
+          (* Recurse into functor bodies: they may contain modules with
              eponymous types. *)
           pre_register_methods_from_module_expr
             tbl
@@ -1047,7 +1050,7 @@ let compute_returns_any
   (* Step 1: In a single walk of the structure, build (a) IndRef -> param_vars
      for all inductives and (b) a term-ref -> ML type index so step 2 can look
      up each method's type in O(1) instead of re-walking the whole structure
-     per method (which was O(methods x structure)). *)
+     per method. *)
   let ind_param_vars : Id.t list Ref.User.Tbl.t = Ref.User.Tbl.create 32 in
   let method_types : Miniml.ml_type Ref.User.Tbl.t = Ref.User.Tbl.create 256 in
   let rec collect_from_sel sel =
@@ -1103,8 +1106,9 @@ let compute_returns_any
 
 (** Build the complete method registry from the full extraction structure.
 
-    This is the main entry point, called once from [cpp.ml] at the start of
-    [do_struct_with_decl_tracking] before any C++ code is rendered.
+    This is the main entry point, called before any C++ code is rendered:
+    by {!Program_facts.analyze_program}, by {!Cpp.prepare_structure} for the
+    unit being rendered, and by [Normalize].
 
     The two-phase approach (register methods, then compute returns_any) is
     necessary because [compute_returns_any] needs the full set of registered

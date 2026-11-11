@@ -2,8 +2,9 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** The moves a [return] writes: none where C++ moves the returned value on
-    its own.  Every other move is decided over Core
-    ({!Ownership_ir}) or made as control is lowered. *)
+    its own.  A pass over a translated declaration, run before printing.
+    Every other move is decided over Core ({!Ownership_ir}) or made as
+    control is lowered. *)
 
 open Minicpp
 

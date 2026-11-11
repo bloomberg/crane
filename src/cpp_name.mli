@@ -1,15 +1,13 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** A C++ name as resolution settled it, before it is flattened to text
-    (docs/Pipeline-Disentangling-Plan.md, Milestone 9, the seed of
-    [CppAST.Name]).
+(** A C++ name as resolution settled it, before it is flattened to text:
+    the structured name the printer writes and the file-layout passes read.
 
-    Callers used to recover facts about a name from its printed string:
-    testing for a [':'] to see whether it came out qualified, capitalising
-    whatever follows the last ["::"], or scanning a rendered declaration for
-    the identifier in front of each ["::"] to decide what the declaration
-    asks of the file.  The string cannot say what a qualifier {e is} -- a
+    Facts about a name are read from this structure, not recovered from its
+    printed string: whether it is qualified, its final component, and the
+    identifier in front of each ["::"] that decides what a declaration asks
+    of the file.  The string cannot say what a qualifier {e is} -- a
     namespace, a struct, a template parameter -- and those are different
     questions for the compiler reading it: naming into a namespace asks only
     that the name be declared, naming into a struct asks that the struct be
@@ -104,6 +102,7 @@ val pp_qualifier : (string -> scope) -> t -> Pp.t
     its own business, and {!written} does not look inside it. *)
 val pp_type_qualifier : (string -> scope) -> Pp.t -> Pp.t
 
+(** Same kind, same qualifiers and base; foreign names by their text. *)
 val equal : t -> t -> bool
 
 (** What a rendered document qualifies its names by, in the order written. *)
@@ -114,4 +113,8 @@ type written =
       (** a run of text no qualifier was tagged in, which may still contain
           a ["::"] some other path wrote *)
 
+(** The qualifiers a rendered document writes, read back from the tags
+    {!pp}, {!pp_scope}, {!pp_qualifier} and {!pp_type_qualifier} put on
+    them; doc comments are skipped and adjacent untagged text is joined into
+    one {!Untagged} run. *)
 val written : Pp.t -> written list

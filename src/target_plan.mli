@@ -2,7 +2,8 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** What the backend decided about a unit before rendering it: policy, read
-    from the structure and its {!Program_facts}, as a value.
+    from the structure, as a value.  Built after {!Program_facts} and before
+    translation; {!plan} takes the facts but reads none of them yet.
 
     Transitional: the plan holds the decisions converted so far -- the kinds
     inductives are emitted as, the kinds of their template parameters, the
@@ -21,9 +22,10 @@ type kind_reason =
       (** A type class the structure handles as data is a struct, not a
           concept. *)
 
+(** One inductive block emitted as a kind other than extraction's. *)
 type kind_decision = {
-  block : Names.MutInd.t;
-  kind : Miniml.record_field Core.Inductive.Kind.t;
+  block : Names.MutInd.t;  (** the mutual block, every packet of it *)
+  kind : Miniml.record_field Core.Inductive.Kind.t;  (** the kind emitted *)
   reason : kind_reason;
 }
 
@@ -64,6 +66,9 @@ type representation = {
           variables. *)
 }
 
+(** A unit's plan.  {!plan} fills [inductive_kinds]; the later fields
+    start empty and are filled by {!with_template_kinds} and
+    {!with_layout} as each stage is decided. *)
 type t = {
   input : Ml_fingerprint.t option;
       (** The structure planned, where something reads it: under
@@ -79,6 +84,8 @@ type t = {
       (** Where each declaration lives and what it is called, decided once
           the template-parameter kinds are installed ({!with_layout}). *)
   representation : representation;
+      (** How declarations are spelled and stored, decided with the layout
+          ({!with_layout}). *)
   callables : Callable_abi.t list;
       (** The callable plan of each function and method the unit generates,
           decided once the layout is installed ({!with_layout}). *)
@@ -92,7 +99,10 @@ type t = {
           callable plans. *)
 }
 
-(** [plan facts struc] decides; it writes nothing. *)
+(** [plan facts struc] decides the inductive kinds: functor applications'
+    copies aligned with their functor body's ({!Functor_alignment}), then
+    type classes used as data demoted to records ({!Used_as_value}).  It
+    writes nothing. *)
 val plan : Program_facts.t -> Miniml.ml_structure -> t
 
 (** [plan] with the template-parameter kinds decided. *)

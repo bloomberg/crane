@@ -1,9 +1,10 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Whether a pattern binder holds a box, planned from Core ahead of lowering
-    (docs/Pipeline-Disentangling-Plan.md, Milestone 4: a binder's
-    representation, Value or Boxed).
+(** Whether a binder holds a box, planned from Core ahead of lowering: each
+    binder's representation is either a value or a box ([std::any]), and the
+    plan decides which from the Core body of a region before translation
+    lowers it.
 
     Transitional.  Lowering decides a binder's representation itself, by the
     C++ type it records for each binder ({!Translation_types.binder_is_boxed});

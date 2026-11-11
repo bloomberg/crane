@@ -1,6 +1,8 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
+(** A finished declaration split into its declaration and definition.  See
+    [function_entity.mli]. *)
 
 type t = {
   declaration : Cpp_erasure.settled;

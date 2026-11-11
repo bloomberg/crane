@@ -33,6 +33,7 @@ let rec solve_rigid rigid e =
 let copy_with ~types ~rigid e =
   Fresh_occurrences.term (solve_rigid rigid (Mlutil.ast_map_types types (Mlutil.freshen_holes (Mlutil.freshen_metas e))))
 
+(* A copy at no instantiation. *)
 let copy = copy_with ~types:Fun.id ~rigid:(fun _ -> None)
 
 (* What [use] solves its callee's variables to: a type for each annotation,
@@ -55,6 +56,8 @@ let instance use body =
   let types, rigid = solutions use in
   copy_with ~types ~rigid body
 
+(* The lambdas of the instantiated body are peeled one per declared domain;
+   each argument then stands for its parameter, by substitution or a let. *)
 let call ~ty use body args =
   let types, _ = solutions use in
   let ty = Mlutil.type_simpl (types ty) in

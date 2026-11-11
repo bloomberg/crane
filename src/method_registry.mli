@@ -10,18 +10,22 @@
     [List] struct in C++ rather than a free function.
 
     A function qualifies as a method when:
-    - It lives in the same module as (or a wrapper module of) an eponymous
-      inductive type, {b and}
-    - One of its arguments has the eponymous type (this becomes the [this]
-      parameter), {b and}
-    - Its body is "safe" — it does not directly return the first argument, which
-      would create an invalid [return this] converting a raw pointer back to
-      [shared_ptr].
+    {ul
+    {- it lives in the same module as (or a wrapper module of) an eponymous
+       inductive type, {b and}}
+    {- one of its arguments has the eponymous type (this becomes the [this]
+       parameter), {b and}}
+    {- its body is "safe": it does not directly return the receiver, which
+       would create an invalid [return this] converting a raw pointer back to
+       [shared_ptr] ({!body_safe_for_method}), {b and}}
+    {- under [Crane Reuse], its body does not consume a shared variant's
+       receiver, which a borrowed [this] cannot give up.}}
 
     This module performs the full method detection scan {i once} over the entire
-    [ml_structure] before code generation begins, storing the results in an
-    opaque registry. During rendering, [cpp.ml] queries the registry instead of
-    re-scanning the AST.
+    [ml_structure] before code generation begins (from {!Program_facts} and
+    {!Cpp.prepare_structure}), storing the results in an opaque registry.
+    During rendering, the backend queries the registry instead of re-scanning
+    the AST.
 
     {2 Lifecycle}
 
@@ -83,12 +87,17 @@ type t
 
     This performs the complete method detection pass:
     + For each module, finds the eponymous inductive (if any) by comparing the
-      module name against inductive names (case-insensitive).
+      module name against inductive names (case-insensitive); a module with
+      several eligible inductives ({!find_all_module_inductives}) instead
+      assigns each function to the inductive its type mentions most.
     + Scans all [Dterm] and [Dfix] declarations in the same module (and wrapper
       modules) for functions whose type includes the eponymous type as an
-      argument.
-    + Checks each candidate's body with [body_safe_for_method] to ensure it does
-      not directly return the first argument.
+      argument, skipping those whose type names a module type alias or an
+      inductive declared after the eponymous one.
+    + Checks each candidate's body with {!body_safe_for_method} to ensure it does
+      not directly return the receiver.
+    + Settles the sibling functions of top-level inductives
+      ({!settle_file_calls}) once every other method is registered.
     + After all methods are registered, runs [compute_returns_any] to determine
       which methods have erased return types.
 
@@ -115,9 +124,9 @@ val lookup : t -> GlobRef.t -> method_info option
 val cpp_arg_pos : Miniml.ml_type -> int -> int
 
 (** Convenience: is the function a registered method? Returns
-    [Some (epon_ref, this_pos)] if yes, [None] otherwise. Used primarily by the
-    topological sort in [Structure_analysis] to add cross-module dependencies
-    when a function calls a method defined in another module.
+    [Some (epon_ref, this_pos)] if yes, [None] otherwise. Used by
+    {!Program_facts} for each method's receiver, and by the renderer through
+    {!Cpp_state.is_registered_method}.
     @param t the registry to query
     @param func_ref the function to test
     @return [Some (epon_ref, this_pos)] where [epon_ref] is the eponymous
@@ -155,9 +164,9 @@ val get_candidates : t -> GlobRef.t -> method_candidate list
 (** [planned_candidate t epon_ref func_ref body ty] is the candidate
     rendering would make of [func_ref], of body [body] and type [ty], as a
     method of [epon_ref]: [Some] where the function qualifies and {!create}
-    registered it so, [None] where it does not qualify.  Under
-    [CRANE_CHECK_IR] one that qualifies but was not registered is reported,
-    as a method the scan missed. *)
+    registered it so, [None] where it does not qualify or was not registered.
+    Under [CRANE_CHECK_IR] one that qualifies but was not registered is
+    reported, as a method the scan missed. *)
 val planned_candidate :
   t -> GlobRef.t -> GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> method_candidate option
 
@@ -191,7 +200,7 @@ val renumber_body : renumbering -> Miniml.ml_ast -> Miniml.ml_ast
     When a function becomes a method, its first argument is received as a raw
     [this] pointer instead of a [shared_ptr]. If the function body directly
     returns that first argument (i.e. the result is a bare [MLrel] pointing to
-    argument 0), the generated C++ would contain [return this] — but [this] is a
+    argument 0), the generated C++ would contain [return this], but [this] is a
     raw pointer and cannot be implicitly converted to [shared_ptr], causing a
     compile error.
 
@@ -218,7 +227,7 @@ val renumber_body : renumbering -> Miniml.ml_ast -> Miniml.ml_ast
       [body]; determines which [MLrel] index is checked for direct return.
     @param ret_has_shared_epon  When [true], relaxes the safety check to
       allow returning [this] wrapped in a constructor whose return type
-      contains [shared_ptr] of the eponymous type — the generated C++ will
+      contains [shared_ptr] of the eponymous type: the generated C++ will
       use [shared_from_this()] instead of a bare [this]. Defaults to
       [false]. *)
 val body_safe_for_method :
@@ -231,7 +240,7 @@ val body_safe_for_method :
 
     Used at method registration call sites to determine whether
     [replace_return_this_stmt] will convert [return this] to
-    [return shared_from_this()] — when the return type references the eponymous
+    [return shared_from_this()]: when the return type references the eponymous
     inductive, the C++ return type will contain [shared_ptr].
     @param ref the inductive [GlobRef.t] to search for in the return type
     @param ty the full curried ML type (arrow chain) of the function

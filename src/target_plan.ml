@@ -1,6 +1,9 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
+(** What the backend decided about a unit before rendering it.  See
+    [target_plan.mli]. *)
+
 open Names
 open Miniml
 
@@ -319,6 +322,7 @@ let kind_equal a b =
   | Core.Inductive.Kind.Record f, Core.Inductive.Kind.Record f' | Core.Inductive.Kind.Type_class f, Core.Inductive.Kind.Type_class f' -> fields_equal f f'
   | (Core.Inductive.Kind.Coinductive | Core.Inductive.Kind.Inductive | Core.Inductive.Kind.Record _ | Core.Inductive.Kind.Type_class _), _ -> false
 
+(* The same global under the same name. *)
 let same_name (r, s) (r', s') = GlobRef.UserOrd.equal r r' && String.equal s s'
 
 let equal a b =

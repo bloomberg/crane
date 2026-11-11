@@ -2,7 +2,12 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** Type-class instances: the struct carrying an instance's methods, its
-    template head, and the static assertion against the class's concept. *)
+    template head, and the static assertion against the class's concept.
+
+    Part of declaration generation, the MiniML-to-MiniCpp step after
+    translation's expression lowering: {!Gen_decls} includes this module,
+    and the backend calls it to plan an instance's callables before
+    rendering ({!plan_instance_methods}) and to generate its struct. *)
 
 open Common
 open Miniml
@@ -65,12 +70,17 @@ let instance_promoted_types name body ty =
   | _ -> []
 
 (** Generate a C++ struct for a type class instance.
-   Type class instances become structs with static methods.
-   Example: Instance IntEq : Eq int := { eqb := Int.eqb }.
-   becomes: struct IntEq { static bool eqb(int a, int b) { ... } };
+    Type class instances become structs with static methods.
+    Example: [Instance IntEq : Eq int := { eqb := Int.eqb }.]
+    becomes: [struct IntEq { static bool eqb(int a, int b) { ... } };]
 
-   Returns: (struct_decl option, class_ref option, type_args)
-   The class_ref and type_args are used to generate static_assert in cpp.ml *)
+    Returns [(struct_decl, class_ref, concept_args, minted)]: the struct, or a
+    [using] where the instance is another instance's name, [None] where it
+    declares nothing; the class, [None] if [ty] is not a class; the arguments
+    the [static_assert] against the class's concept spells; and, by method
+    name, the template parameters each method mints for its class-typed
+    arguments ({!Callable_abi.minted}).  [~bodies:false] generates the
+    methods' heads alone. *)
 let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
     cpp_decl option * GlobRef.t option * cpp_type list * (Id.t * (Id.t * Callable_abi.minted) list) list =
   let instance_ref = name in
@@ -112,7 +122,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
   (* A promoted associated type named inside the instance's own field bodies is
      the associated type of one of its class-typed parameters, and resolves
      through that parameter -- [typename _tcI0::iptr] -- exactly as it does in
-     the signature of a function taking the same parameter ({!gen_dfun} builds
+     the signature of a function taking the same parameter ({!Gen_functions.gen_dfun} builds
      the same map from the same function).
 
      Without it the bodies are generated as the module-level constructor
@@ -717,8 +727,9 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
          This function interprets an ML expression at the type level:
          - [MLglob r] → named type [Tglob(r, ...)]
          - [MLapp(MLglob r, args)] → template type with type args
-         - [MLrel i] → template parameter reference [Tvar(0, Some name)]
-         - [MLmagic e] → strip magic wrapper *)
+         - [MLrel i] → the named template parameter it binds ([named_tvar])
+         - [MLmagic e] → strip magic wrapper
+         - a single-branch [MLcase] projecting a field → [Tqualified] *)
       let rec ml_expr_to_cpp_type body =
         match body with
         | MLglob {callee = r; _} -> Tglob (r, [], [])
@@ -1046,7 +1057,7 @@ let gen_instance_struct ?(bodies = true) (name : GlobRef.t) (body : ml_ast) (ty 
     type [ty] -- by the method's name, as generating its struct declares it,
     without generating a body: the struct's head is planned with the other
     callables, before anything is rendered.  [finish] is what becomes of the
-    struct before it is written ({!Cpp_ind.instance_struct}). *)
+    struct before it is written ([finish_instance_struct] in {!Cpp_ind}). *)
 let plan_instance_methods ~finish name body ty =
   let rec methods = function
     | Dstruct ds ->
@@ -1063,7 +1074,8 @@ let plan_instance_methods ~finish name body ty =
       (methods (finish decl))
   | None, _, _, _ -> []
 
-(** Check if a term is a type class instance (constructs a type class record) *)
+(** Check if a term is a type class instance: its type's result is a type
+    class.  The body is not read. *)
 let is_typeclass_instance (_body : ml_ast) (ty : ml_type) : bool =
   match ml_return_type ty with
   | Tglob (class_ref, _, _) -> Table.is_typeclass class_ref

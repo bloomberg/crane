@@ -28,6 +28,7 @@ let rec has_return stmts =
   List.iter fs stmts;
   !found
 
+(* Whether [stmts] read [x] free. *)
 let mentions x stmts = List.exists (Id.equal x) (free_vars_body stmts)
 
 (* A lambda's parameters, an unnamed one named [_argI] -- its argument is
@@ -65,6 +66,8 @@ type expansion = {
   body : cpp_stmt list;  (** the lambda's statements *)
 }
 
+(* [l] applied to [args], opened up; [None] if its parameters are templated
+   or do not match [args] in number. *)
 let expand fresh (l : cpp_lambda) args =
   match named_params l with
   | Some params when List.length params = List.length args ->
@@ -98,6 +101,8 @@ let straight_line ex =
     Some (ex.bindings @ List.rev rev_stmts, e)
   | _ -> None
 
+(* The number of statement and expression nodes, compared against
+   {!budget}. *)
 let rec size_stmts l =
   List.fold_left
     (fun n s ->
@@ -145,13 +150,6 @@ let budget = 60
 
 (** {1 Rules} *)
 
-(** R1.  A body ending [auto f = [..](params) { body }; return f(args);] --
-    the lambda bound once and called once, as what the enclosing function
-    returns -- ends with [{ params = args; body }] instead.  A [return] in
-    [body] returns from the function, which is what returning the call's
-    result did; a local the lambda returned through a by-reference capture is
-    now the function's own, and leaves by an implicit move rather than a copy.
-    The lambda must return what the function does. *)
 (* Two types that spell the same C++ type: a type variable is the name it
    prints as, however it is indexed; a global is itself under any of its
    kernel names; and the expressions a [Tglob] carries are not printed. *)
@@ -171,6 +169,13 @@ let rec same_type a b =
   | Tvariant (k, ts), Tvariant (k', ts') -> k = k' && all ts ts'
   | _ -> a = b
 
+(** R1.  A body ending [auto f = [..](params) { body }; return f(args);] --
+    the lambda bound once and called once, as what the enclosing function
+    returns -- ends with [{ params = args; body }] instead.  A [return] in
+    [body] returns from the function, which is what returning the call's
+    result did; a local the lambda returned through a by-reference capture is
+    now the function's own, and leaves by an implicit move rather than a copy.
+    The lambda must return what the function does. *)
 let inline_tail_call fresh ret_ty stmts =
   match List.rev stmts with
   | Sreturn (Some (CPPfun_call (_, CPPvar f', args))) :: Sasgn (f, Declare (Tauto, _), CPPlambda l)
@@ -212,7 +217,6 @@ let inline_iife_initializers fresh stmts =
     once no call is left the record, a value of pure constructions, is
     dropped.  Only straight-line bodies, under {!budget}, expanded at every
     call or at none. *)
-
 let specialize_local_records fresh stmts =
   let rec go = function
     | [] -> []
@@ -333,6 +337,8 @@ let specialize_local_records fresh stmts =
 
 (** {1 Entry point} *)
 
+(* One function body, returning [ret_ty], through R2, R3 then R1; one
+   counter numbers every expansion in it. *)
 let body ret_ty stmts =
   let fresh = ref 0 in
   stmts

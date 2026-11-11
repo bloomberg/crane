@@ -10,6 +10,7 @@
     hand.  A declaration and a definition that differ in a constraint are two
     different functions. *)
 
+(** A finished declaration with its two views. *)
 type t
 
 (** [of_finished d] splits [d], already finished, where it defines a
