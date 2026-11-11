@@ -1420,7 +1420,7 @@ and extract_really_ind env kn mib =
 
    - [db] is a context for translating Rocq [Rel] into ML type [Tvar]
    - [dbmap] is a translation map (produced by a call to [parse_ind_args])
-   - [i] is the rank of the current product (initially [params_nb+1])} *)
+   - [i] is the rank of the current product (initially [ndecls+1])} *)
 
 (** Extracts a constructor's type signature into a list of ML types.
     @param env Rocq environment, extended as each product binder is consumed
@@ -1428,7 +1428,9 @@ and extract_really_ind env kn mib =
     @param db De Bruijn variable context for [Rel]→[Tvar] translation
     @param dbmap Position-to-type-var map produced by {!parse_ind_args}
     @param c Constructor type (starting after inductive parameters have been stripped)
-    @param i Rank of the current product (initially [params_nb + 1]) *)
+    @param i Rank of the current product: the de Bruijn level of its binder
+      under the inductive's parameter context, so initially [ndecls + 1],
+      counting let-in parameters, which the context binds as [Rel]s too *)
 and extract_type_cons env sg db dbmap c i =
   match EConstr.kind sg (whd_all env sg c) with
   | Prod (n, t, d) ->
