@@ -14211,3 +14211,14 @@
   (alias runtest)
   (deps atomic_include.t.exe)
   (action (run ./atomic_include.t.exe))))
+
+(subdir ptr_word
+ (rule
+  (targets ptr_word.t.exe)
+  (deps PtrWord.vo ptr_word.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ptr_word.t.exe ptr_word.t.cpp ptr_word.cpp)))
+ (rule
+  (alias runtest)
+  (deps ptr_word.t.exe)
+  (action (run ./ptr_word.t.exe))))

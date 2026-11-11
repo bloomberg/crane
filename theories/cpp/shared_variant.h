@@ -90,24 +90,28 @@ private:
 
   // 0: moved from, no alternative.  Odd: an alternative with no fields, its
   // index above the tag bit.  Otherwise the address of a block.
-  std::uintptr_t w_;
+  // Held as a pointer, not an integer, so that a capability-carrying
+  // implementation (Fil-C) keeps the block's capability with the word.
+  using word = shared_block *;
+  word w_;
 
   static constexpr std::uintptr_t tag(std::size_t i) { return (std::uintptr_t(i) << 1) | 1; }
-  bool boxed() const { return w_ != 0 && (w_ & 1) == 0; }
-  const shared_block *hdr() const { return reinterpret_cast<const shared_block *>(w_); }
+  static word tag_word(std::size_t i) { return reinterpret_cast<word>(tag(i)); }
+  std::uintptr_t bits() const { return reinterpret_cast<std::uintptr_t>(w_); }
+  bool boxed() const { return bits() != 0 && (bits() & 1) == 0; }
+  const shared_block *hdr() const { return w_; }
   template <std::size_t I> block<I> *blk() const {
     return static_cast<block<I> *>(const_cast<shared_block *>(hdr()));
   }
 
   template <std::size_t I> bool is() const {
-    if constexpr (inline_alt<I>) return w_ == tag(I);
+    if constexpr (inline_alt<I>) return bits() == tag(I);
     else return boxed() && hdr()->destroy == &block<I>::drop;
   }
 
-  template <std::size_t I, class... A> static std::uintptr_t make(A &&...a) {
-    if constexpr (inline_alt<I>) return tag(I);
-    else return reinterpret_cast<std::uintptr_t>(
-        static_cast<shared_block *>(new block<I>(std::forward<A>(a)...)));
+  template <std::size_t I, class... A> static word make(A &&...a) {
+    if constexpr (inline_alt<I>) return tag_word(I);
+    else return static_cast<shared_block *>(new block<I>(std::forward<A>(a)...));
   }
 
   void release() {
@@ -127,7 +131,7 @@ private:
       on_index([&](auto i) {
         constexpr std::size_t I = decltype(i)::value;
         if constexpr (!inline_alt<I>) {
-          std::uintptr_t fresh = make<I>(std::as_const(blk<I>()->value));
+          word fresh = make<I>(std::as_const(blk<I>()->value));
           release();
           w_ = fresh;
         }
@@ -149,7 +153,7 @@ public:
   shared_variant(const shared_variant &o) : w_(o.w_) {
     if (boxed()) hdr()->retain();
   }
-  shared_variant(shared_variant &&o) noexcept : w_(std::exchange(o.w_, 0)) {}
+  shared_variant(shared_variant &&o) noexcept : w_(std::exchange(o.w_, nullptr)) {}
 
   template <class T, class D = std::decay_t<T>,
             class = std::enable_if_t<(index_of<D>() < sizeof...(Ts))>>
@@ -177,7 +181,7 @@ public:
   }
 
   template <std::size_t I, class... A> alt<I> &emplace(A &&...a) {
-    std::uintptr_t fresh = make<I>(std::forward<A>(a)...);
+    word fresh = make<I>(std::forward<A>(a)...);
     release();
     w_ = fresh;
     return raw<I>();
@@ -300,6 +304,14 @@ template <class T> class shared_box {
     return w != 0;
   }
   T *ptr() const { return std::launder(reinterpret_cast<T *>(const_cast<unsigned char *>(s_))); }
+  // Whole-word copies, which keep a pointer's capability where a bytewise
+  // swap would not (Fil-C).
+  void swap_word(shared_box &o) noexcept {
+    alignas(void *) unsigned char tmp[sizeof s_];
+    std::memcpy(tmp, s_, sizeof s_);
+    std::memcpy(s_, o.s_, sizeof s_);
+    std::memcpy(o.s_, tmp, sizeof s_);
+  }
 
 public:
   using element_type = T;
@@ -324,12 +336,12 @@ public:
     std::memset(o.s_, 0, sizeof o.s_);
   }
   shared_box &operator=(shared_box o) noexcept {
-    std::swap(s_, o.s_);
+    swap_word(o);
     return *this;
   }
   shared_box &operator=(std::nullptr_t) noexcept {
     shared_box empty;
-    std::swap(s_, empty.s_);
+    swap_word(empty);
     return *this;
   }
   ~shared_box() {
