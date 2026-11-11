@@ -44,7 +44,7 @@
       nothing but the names of the helpers it lifts out of bodies; the table
       census taken after planning is compared after emission
       ([check_no_late_decisions]), and what it generated against what the
-      unit declares ({!Generated_program.check_against_plan}).
+      unit declares ({!Unit_program.check_against_plan}).
     + {b Demands} are frozen ([Table.freeze_demands]) and each file is written
       with the preamble its body demanded, then formatted.
 
