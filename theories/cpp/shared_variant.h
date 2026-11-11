@@ -29,6 +29,7 @@
 #ifndef INCLUDED_CRANE_SHARED_VARIANT
 #define INCLUDED_CRANE_SHARED_VARIANT
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>

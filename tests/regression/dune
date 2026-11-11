@@ -14200,3 +14200,14 @@
   (alias runtest)
   (deps alias_slot.t.exe)
   (action (run ./alias_slot.t.exe))))
+
+(subdir atomic_include
+ (rule
+  (targets atomic_include.t.exe)
+  (deps AtomicInclude.vo atomic_include.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} atomic_include.t.exe atomic_include.t.cpp atomic_include.cpp)))
+ (rule
+  (alias runtest)
+  (deps atomic_include.t.exe)
+  (action (run ./atomic_include.t.exe))))
