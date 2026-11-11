@@ -11,6 +11,13 @@
     reads it by name where it was built.  A static local is built the first
     time control reaches it and kept: evaluated again, the term is a count
     bump rather than an allocation per node.  [crane::immortal] makes its
-    blocks immortal, since it is read from every thread. *)
+    blocks immortal, since it is read from every thread.  An erased closure
+    ([crane_erase_fn]) over a closed lambda is hoisted the same way, as
+    [erased_fn]: it too is the same value wherever it is evaluated.
 
+    One of the per-declaration passes of {!Cpp_pipeline}. *)
+
+(** [d] with each function body's constants declared once at its top.
+    Outside any function body (a global's initialiser) a marked constant is
+    its initialiser; a lambda's body is a function body of its own. *)
 val decl : Minicpp.cpp_decl -> Minicpp.cpp_decl

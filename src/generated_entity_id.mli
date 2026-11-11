@@ -12,6 +12,7 @@ type role =
       (** A function lifted out of the owner's body, keyed by the term that
           bound it there ({!Lifted.site}). *)
 
+(** A generated declaration's identity. *)
 type t
 
 (** The identity of the helper [h] ({!Lifted}). *)
@@ -21,7 +22,13 @@ val lifted_helper : Lifted.t -> t
     outside any declaration. *)
 val owner : t -> Entity_id.t option
 
+(** What it is for its owner. *)
 val role : t -> role
+
 val equal : t -> t -> bool
+
+(** Orders by owner, then by role. *)
 val compare : t -> t -> int
+
+(** [owner/lifted:binder], for diagnostics. *)
 val pp : t -> Pp.t

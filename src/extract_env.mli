@@ -48,12 +48,14 @@
     + {b Demands} are frozen ([Table.freeze_demands]) and each file is written
       with the preamble its body demanded, then formatted.
 
-    Within a render, each MiniML declaration is generated
-    ({!Cpp_ind.generate}, {!Gen_decls}, which translate bodies through
-    {!Translation}), finished ({!Cpp_pipeline.finish}: loopify, depth
-    flattening, last-use moves, borrow projections, constraint settling,
-    erasure, free type variables), and printed ({!Cpp_print.pp_cpp_decl},
-    which accepts only a {!Cpp_erasure.settled} declaration).
+    Each MiniML declaration is generated ahead of the files
+    ({!Cpp_ind.generate_ahead}, {!Gen_decls}, which translate bodies through
+    {!Translation}, lowering control as they go), finished
+    ({!Cpp_pipeline.finish}: local closures, constants, temporaries,
+    simplification, depth flattening, constraint settling, and the
+    {!Cpp_erasure} seam's casts, free type variables, projections and
+    captures), and printed ({!Cpp_print.read_cpp_decl}, which accepts only a
+    {!Cpp_erasure.settled} declaration).
 
     Mutable state is registered with {!State} under one of two scopes:
     [Extraction] (one command) and [Unit] (one generated file).

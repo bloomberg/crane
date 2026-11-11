@@ -2,9 +2,10 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** OwnershipIR: what each region does with the values it reads, holds
-    and builds, decided over Core and ControlIR before C++ is generated
-    (docs/Pipeline-Disentangling-Plan.md, sections 4.10 and 6.4, Milestone
-    7): how each read uses its variable ({!Use}), how each closure holds
+    and builds, decided over Core and ControlIR before C++ is generated, so
+    that every move, copy and capture the C++ makes follows from the plan
+    and a moved local is never read again: how each read uses its variable
+    ({!Use}), how each closure holds
     what it captures ({!Capture}), where a machine's frames store what they
     hold ({!Storage}), where each construction is built ({!Allocation}),
     which binders a frame takes as it is saved or entered ({!Frame_save},
@@ -36,6 +37,9 @@
     the region owns, a borrow where it is read in place, else a copy, named
     by what a copy of the variable's Core type is. *)
 
+(** The plan of one region's reads: each read's {!fate} and {!Use}, each
+    closure's captures, each construction's {!Allocation}, and the moves of
+    the machine the region may be lowered as. *)
 type t
 
 (** Nothing planned: no read is a last use. *)
@@ -139,6 +143,7 @@ val closure_local : t -> Miniml.ml_type -> Miniml.ml_ast -> bool option
     storage, is not read by value. *)
 val reuse_arm : t -> scrutinee:Miniml.ml_ast -> branch:int -> constructor:Names.GlobRef.t -> t
 
+(** Where a construction is built. *)
 module Allocation : sig
   type t =
     | Fresh  (** allocates the storage it is built in *)
@@ -169,7 +174,7 @@ val bound_at_instance : t -> let_:Miniml.Occurrence.t -> t
 
 (** What [p] says of a read. *)
 type fate =
-  | Last_use
+  | Last_use  (** nothing reads the variable after it, nor beside it *)
   | Read_again  (** a later or concurrent read, or a closure, may read it *)
   | Inspected
       (** a last use where translation reads the value in place: the
@@ -361,6 +366,8 @@ module Frame_save : sig
       both move is moved. *)
   val record : Core_binder.t -> t -> unit
 
+  (** What was recorded of the let binding [binder]: [None] where no frame
+      is saved there. *)
   val lookup : Core_binder.t -> t option
 end
 
@@ -371,7 +378,7 @@ end
     it, [None] for one of no runtime value, which the lambda does not take.
     Translation decides it once per group, before generating the group's
     lambdas from it and before any loop is lowered from them
-    ({!Translation.local_passing}). *)
+    (the [local_passing] of [Translation]). *)
 module Local_passing : sig
   type t = Callable_abi.passing option list
 
@@ -440,5 +447,7 @@ module Entry_moves : sig
   (** [record_plan p]: {!record} of every call {!entry_moves} plans. *)
   val record_plan : region_plan -> unit
 
+  (** What was recorded of [call]: [None] where no frame entering an entry
+      there takes anything. *)
   val lookup : Miniml.Occurrence.t -> t option
 end

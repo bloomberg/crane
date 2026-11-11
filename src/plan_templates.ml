@@ -7,8 +7,10 @@
     gets, and which parameters are phantom.  Decided from a declaration's
     types and signature, before anything is rendered -- the target plan's
     template-parameter kinds and callable plans -- and again as the
-    declaration is generated, which must agree; {!Gen_decls} asks, and the
-    printer writes what the head says. *)
+    declaration is generated, which must agree; {!Gen_functions},
+    {!Gen_inductives} and {!Cpp_ind} ask, and the printer writes what the
+    head says.  The rewrites a relaxation makes of the declaration under its
+    head are {!Head_relaxation}'s. *)
 
 open Miniml
 open Minicpp
@@ -18,7 +20,7 @@ open Ml_type_util
 
 (** Arity of every type variable that [cty] applies to arguments, keyed by
     template parameter name.  A Rocq parameter of kind [Type -> Type] reaches
-    C++ as the head of a {!Tapply}, and a plain [typename] cannot be applied,
+    C++ as the head of a [Minicpp.Tapply], and a plain [typename] cannot be applied,
     so such a parameter has to be declared [template <typename> class]. *)
 let applied_tvar_arities cty =
   let arities = Hashtbl.create 4 in
@@ -104,7 +106,11 @@ let with_applied_tvars ?ml_ty cty temps =
     by the types [tys] -- an inductive's constructor fields, or the body of a
     type alias -- with the kinds of its positions.  The arities are read off
     the ML types rather than the converted C++ ones because the parameter list
-    has to be fixed before the types are converted.  Records nothing. *)
+    has to be fixed before the types are converted.  [applied], when given,
+    is the rendered C++ body of a type alias, read instead of [tys] for the
+    arities and for which parameters are phantom.  Returns the parameter list
+    and its {!Tparam_kinds.t}; records nothing ({!hkt_templates} records).
+    [r] is not read. *)
 let template_kinds ?applied r vars tys =
   (* Read from the rendered type where there is one: the ML body still applies
      a variable that erasure removed, and the parameter list has to agree with
@@ -246,7 +252,11 @@ let hkt_templates ?applied r vars tys =
     signature of the callback [g] that produces it, so [B] is redeclared last
     with that result as its default ([typename B = std::invoke_result_t<G &,
     A &>]) -- last because a default may only name parameters declared before
-    it, and the callback is one of those. *)
+    it, and the callback is one of those.
+
+    Returns the relaxed head and no rewrite: the declaration keeps its
+    spelling.  Like every relaxation below, [decl] is read as a signature
+    and the result is [(temps, rewrite)] ({!relax_function_head}). *)
 let relax_applied_return temps decl =
   (* Only a template template parameter is applied here: a family is a plain
      parameter, written applied until {!deapply_plain_tvars} takes the
@@ -403,9 +413,6 @@ let relax_applied_param temps decl =
   match decl with
   | Dfun {df_ret = ret; df_shape = Ddef (params, _); _} ->
     let param_tys = List.map snd params in
-    (* A variable applied in the parameters and named nowhere else: not by the
-       return type, not by another template parameter's constraint, and not
-       bare among the parameters either. *)
     (* A position that takes the variable as a bare template name --
        [Sum1<T1, T2, T4>], whose first two arguments are templates -- states
        its kind outright: what is supplied there {e is} a template, so the
@@ -416,6 +423,9 @@ let relax_applied_param temps decl =
         (exists_cpp_type (function Ttyctor t -> tvar_named id t | _ -> false))
         (ret :: param_tys)
     in
+    (* A variable applied in the parameters and named nowhere else: not by the
+       return type, not by another template parameter's constraint, and not
+       bare among the parameters either. *)
     let only_applied_in_params id =
       let total = List.fold_left (fun a t -> a + occurrences (tvar_is id) t) 0 in
       let applied =
@@ -590,7 +600,7 @@ let deapply_plain_struct_tvars decl =
     it -- which is the only way such a parameter is ever given a value, and
     the reason it is defaulted rather than dropped. *)
 let default_unmentioned_temps temps decl =
-  (* Stricter than {!tvar_is}, which lets an unresolved head answer to its
+  (* Stricter than {!Minicpp.tvar_is}, which lets an unresolved head answer to its
      index as well as to its name: a relaxation names its parameters [F1],
      [_P0] without renumbering them, so a variable that kept index 1 would
      otherwise answer for [T1] and no parameter would ever look unmentioned. *)
@@ -652,8 +662,10 @@ let default_unmentioned_temps temps decl =
 (** A function's head, relaxed: what the relaxations above decide from the
     head [temps] and the signature [signature] -- a declaration whose body
     is not read -- and the rewrite that carries their decisions through the
-    declaration, its body included.  Each relaxation decides from the
-    signature the previous ones left. *)
+    declaration, its body included ({!Head_relaxation.apply}).  Each
+    relaxation decides from the signature the previous ones left, in order:
+    {!relax_applied_return}, {!relax_tt_applied_return},
+    {!relax_applied_param}, {!deapplied_head}, {!default_unmentioned_temps}. *)
 let relax_function_head temps signature =
   let temps, _, relaxations =
     List.fold_left
@@ -673,19 +685,27 @@ let relax_function_head temps signature =
 (** Build template parameter list with phantom detection.
 
     Type variables represented concretely in the generated signature (i.e.
-    {!primary_tvar_indices}) are emitted as plain [typename T].  All others —
-    phantom tvars from erased HKT positions or custom-template positions that
-    the C++ compiler cannot deduce — are emitted with a [void] default
-    ([typename T = void]).
+    {!Ml_type_util.primary_tvar_indices}) are emitted as plain [typename T].
+    All others (phantom tvars from erased HKT positions or custom-template
+    positions that the C++ compiler cannot deduce) are emitted with a [void]
+    default ([typename T = void]), except the leading run every call site
+    spells out ({!Ml_type_util.explicit_tvar_prefix}), which stays required.
+    Applied variables then become template template parameters
+    ({!with_applied_tvars}).
 
     We never {i remove} tvars from the list: only default them.  Removing
     would shift the de Bruijn index-to-name mapping used throughout the
-    pipeline (see {!convert_ml_type_to_cpp_type}).
+    pipeline (see {!Translation.convert_ml_type_to_cpp_type}).
 
     @param force_required  Set of tvar indices that must be required (plain
       [typename T]) even if they don't appear in the C++ function type.
       Used for type INDEX tvars that are stripped from the C++ type but needed
-      for [any_cast] in function bodies. *)
+      for [any_cast] in function bodies.
+    @param also_declared  Set of tvar indices the ML type has but the C++
+      type may not spell; each is declared, as a defaulted phantom unless
+      it is primary.
+    @param ml_ty  The ML type of the declaration, passed to
+      {!with_applied_tvars} to veto higher kinds it does not demand. *)
 let phantom_aware_temps
     ?(force_required = IntSet.empty) ?(also_declared = IntSet.empty) ?ml_ty cty
     tvars =

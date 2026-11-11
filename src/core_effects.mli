@@ -2,8 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** The effect operations of a unit's program, elaborated from Core ahead of
-    translation (docs/Pipeline-Disentangling-Plan.md, section 4.7): which
-    applications are a registered monad's [bind] or [ret] ([Crane Extract
+    translation, part of the unit's {!Program_facts}: which applications are a registered monad's [bind] or [ret] ([Crane Extract
     Monad]), and how each is generated.
 
     How is the declaration's: one whose codomain is a monad the extraction
@@ -19,14 +18,17 @@
     each is checked against the global's registration and the mode the
     generation translating it is in. *)
 
+(** How a declaration's effect operations are generated. *)
 type mode =
   | Sequential  (** the monad erased: [bind] is sequencing, [ret] its value *)
   | Reified  (** the monad kept as a tree: [bind] and [ret] build it *)
 
+(** Which registered monad operation a global is. *)
 type operation =
-  | Bind
-  | Return
+  | Bind  (** the monad's [bind] *)
+  | Return  (** the monad's [ret] *)
 
+(** One use of an operation, and the mode it is generated in. *)
 type effect_ = {operation : operation; mode : mode}
 
 (** The mode a monad's computations are generated in: {!Reified} for one
@@ -39,12 +41,15 @@ val operation_of : Names.GlobRef.t -> operation option
 (** A unit's effect operations. *)
 type t
 
+(** No operations. *)
 val empty : t
 
 (** [analyze s] -- every use of a [bind] or [ret] in [s]'s declarations'
     bodies, each with the mode of the declaration it is written in. *)
 val analyze : Miniml.ml_structure -> t
 
+(** Whether two analyses found the same operations, at the same
+    occurrences, in the same modes. *)
 val equal : t -> t -> bool
 
 (** Make [t] the unit's operations, the ones {!find} reads. *)

@@ -1,9 +1,12 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** The C++ a file writes, as a tree, before it is printed
-    (docs/Pipeline-Disentangling-Plan.md, section 4.13: the seed of
-    [CppAST]).
+(** CppAST: the C++ a file writes, as a tree, between rendering and
+    printing.  {!Cpp_ind} builds it from the finished declarations, the
+    driver ({!Extract_env}) assembles it into a {!translation_unit},
+    {!schedule} places the declarations that are due only once the file is
+    assembled, {!resolve} resolves the names each declaration is written
+    with, and {!print} writes the file.
 
     A file is assembled out of chunks the driver moves around -- a module's
     struct to the top, a concept ahead of everything, a member definition to
@@ -36,8 +39,13 @@ module Needs : sig
     defines : GlobRef.t list;  (** Of those, the ones it defines. *)
   }
 
+  (** Needing nothing. *)
   val none : t
+
+  (** Whether it needs nothing. *)
   val is_none : t -> bool
+
+  (** [union a b]: what [a] needs, then what [b] needs. *)
   val union : t -> t -> t
 end
 
@@ -131,7 +139,7 @@ type defined =
     }
       (** The struct [struct_], over the definition's template head and
           constraint, which its forward declaration repeats. *)
-  | Defined_enum of GlobRef.t
+  | Defined_enum of GlobRef.t  (** The scoped enum an enum inductive is written as. *)
 
 (** The name a {!Defined_struct} is declared under. *)
 and defined_name =
@@ -185,9 +193,9 @@ type declaration =
     a holder, a struct over the parameters its body captures holding such
     an alias. *)
 and synthesised = {
-  name : string;
+  name : string;  (** The name it is declared under. *)
   holder : holder_parameter list option;  (** A holder's parameters, where it is one. *)
-  declared_in : declared_in;
+  declared_in : declared_in;  (** Where it is declared. *)
   body : Minicpp.cpp_type;  (** The type it abbreviates, its own parameter the sentinel. *)
   vars : Id.t list;  (** The names of the type variables [body] names by index. *)
   planned : string;  (** [body] as the plan wrote it, which its name digests. *)
@@ -239,14 +247,17 @@ and definition = Cpp_resolution.definition = Enum_definition | Struct_definition
     is printed with, resolved before it is printed ({!resolve_tree}). *)
 type unprinted = {
   declaration : declaration;
-  needs : Needs.t;
+  needs : Needs.t;  (** What placing the declarations it needs reads. *)
   names : Cpp_resolution.table;
+      (** The names it is printed with, once {!resolve_tree} has resolved
+          them where it is written. *)
   tyctors : Cpp_state.tyctor_use list option;
       (** How the type constructors it writes as template template arguments
           are written, planned with the synthesised templates it writes; none
           where nothing planned them, where printing decides them. *)
 }
 
+(** A file, or a part of one. *)
 type t = private
   | Text of Pp.t  (** Written as it is; nothing is placed by it. *)
   | Decl of {text : Pp.t; needs : Needs.t}  (** A declaration, as printed. *)
@@ -330,7 +341,10 @@ and concept_position =
   | Module_types_ahead  (** Its module types' concepts, ahead of it. *)
   | After_struct  (** Concepts naming its members, after it, after a blank line. *)
 
+(** [text pp] is {!Text}. *)
 val text : Pp.t -> t
+
+(** Nothing. *)
 val empty : t
 
 (** [concept_group position l] is {!Concept_group}; nothing, if [l] is
@@ -341,6 +355,9 @@ val concept_group : concept_position -> t list -> t
     otherwise.
     @raise Invalid_argument if a name in it is not resolved. *)
 val pp_template_head : template_param list -> Pp.t
+
+(** [decl ~needs pp] is {!Decl}: a declaration already printed as [pp],
+    needing [needs]. *)
 val decl : needs:Needs.t -> Pp.t -> t
 
 (** [unprinted ~needs ?tyctors env d] is [d], printed in [env] where the
@@ -405,6 +422,8 @@ val wrapper_struct : name:string -> module_:ModPath.t -> fields:t -> t
 
 (** [elements ~source t] is [t], spelled as the elements of [source] are. *)
 val elements : source:ModPath.t -> t -> t
+
+(** [seq l] is {!Seq}. *)
 val seq : t list -> t
 
 (** [joined l] is the non-empty ones of [l] as {!Joined}; the one, if only
@@ -449,6 +468,7 @@ val needs : t -> Needs.t
     one. *)
 type declared = Declared of declaration | Struct_of of ModPath.t
 
+(** What [t] declares in the scope it is written in, in order. *)
 val declared : t -> declared list
 
 (** The names of the {!Wrapper_struct}s in [t], in the order written. *)

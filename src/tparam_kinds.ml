@@ -7,10 +7,10 @@
     when the declaration's header is generated; read back wherever a use of
     the declaration is converted.
 
-    It lives below {!Table} so that {!Minicpp} can ask it directly: rebuilding
-    an application ([Minicpp.map_cpp_type]) has to know whether its head is
-    parameterised by a family, and that used to be a hook {!Table} installed
-    into {!Minicpp} at load time. *)
+    It lives below {!Table} so that {!Minicpp} can ask it directly, with no
+    hook installed at load time: rebuilding an application
+    ([Minicpp.map_cpp_type]) has to know whether its head is parameterised
+    by a family. *)
 
 type t = {
   template_templates : (int * int) list;
@@ -44,6 +44,7 @@ let sizes () =
   [ ("hkt_ind_params", Ref.User.Tbl.length template_template);
     ("phantom_type_params", Ref.User.Tbl.length phantom) ]
 
+(* An empty list is not recorded, so [has_family] tests membership. *)
 let record_in tbl r positions = if positions <> [] then Ref.User.Tbl.replace tbl r positions
 
 let record r k =

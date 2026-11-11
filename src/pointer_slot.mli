@@ -2,7 +2,10 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** What a pointer to a value is held in: which spelling a smart pointer to
-    it gets, and so which header that spelling needs. *)
+    it gets, and so which header that spelling needs ({!Crane_rt.shared_box},
+    {!Crane_rt.shared_or}). *)
+
+(** The kind of slot. *)
 
 type t =
   | Shared

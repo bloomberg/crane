@@ -9,7 +9,7 @@
     runtime surface greppable from one place; every emitter reads them rather
     than repeating the string. *)
 
-(** {2 [crane_rc.h]} -- reference counting under [Crane NonAtomicRc]. *)
+(** {2 [rc.h]} -- reference counting under [Crane NonAtomicRc]. *)
 
 val rc : string  (** [crane::rc<T>] -- the non-atomic [shared_ptr]. *)
 
@@ -22,7 +22,7 @@ val child_slot : string
 
 val enable_rc_from_this : string  (** [crane::enable_rc_from_this<T>] *)
 
-(** {2 [crane_reuse.h]} -- Perceus in-place reuse. *)
+(** {2 [rc.h]} -- Perceus in-place reuse. *)
 
 val make_rc_reusing : string
 (** [crane::make_rc_reusing<T>] -- rebuild into a token's storage, checking
@@ -35,7 +35,7 @@ val make_rc_reusing_unchecked : string
 val reuse_step : string
 (** [crane::reuse_step] -- advance a reuse token along a spine. *)
 
-(** {2 [crane_arena.h]} -- arena allocation. *)
+(** {2 [arena.h]} -- arena allocation. *)
 
 val arena_alloc : string  (** [crane::arena_alloc<T>] *)
 
@@ -153,8 +153,8 @@ val make_counting : string  (** [crane::make_counting<T>] *)
     spelling, so a call into the runtime cannot be built out of a string that
     no runtime header defines. *)
 type helper =
-  | Make_rc_reusing_unchecked
-  | Reuse_step
+  | Make_rc_reusing_unchecked  (** {!make_rc_reusing_unchecked} *)
+  | Reuse_step  (** {!reuse_step} *)
   | Raw  (** [crane_raw(p)] -- the raw pointer a smart pointer holds. *)
   | Unbox_field  (** [crane::unbox(f)] -- a {!field} read as [const T&]. *)
   | Deep_box

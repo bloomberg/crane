@@ -1,9 +1,8 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** The scopes a definition written outside its struct's body is a member of
-    (docs/Pipeline-Disentangling-Plan.md, Milestone 9): for each module the
-    unit emits as a struct, how a definition of one of its members, written
+(** The scopes a definition written outside its struct's body is a member of,
+    part of the {!Target_plan}: for each module the unit emits as a struct, how a definition of one of its members, written
     out of line, names that struct.  Planned from the layout and the names
     before anything is rendered ({!Cpp.plan_scopes}), installed once, and
     read by declaration: where a definition goes is a question about the
@@ -22,6 +21,7 @@ type scope = {
           first: [["Outer"; "Inner"]] is [Outer::Inner]. *)
 }
 
+(** Whether two scopes are of the same module, with the same qualifier. *)
 val equal : scope -> scope -> bool
 
 (** The qualifier as written, its components joined by [::]. *)
@@ -43,8 +43,10 @@ type t = {
   frames : (ModPath.t * ModPath.t list) list;
 }
 
+(** No scopes. *)
 val empty : t
 
+(** Whether two plans hold the same entries in the same order. *)
 val equal_plans : t -> t -> bool
 
 (** Make [t] the unit's scopes. *)
@@ -78,9 +80,9 @@ val of_declaration : GlobRef.t -> scope option
 val visibility : ModPath.t -> Common.visibility option
 
 (** The inductives the body of the module [mp] spells bare: those it and
-    each module body enclosing it declare, as {!Cpp.inductives_declared_in}
+    each module body enclosing it declare, as [Cpp.inductives_declared_in]
     says, and, in a file module that is not a library's, those
-    {!Cpp.file_local_inductives} says every such module does. *)
+    [Cpp.file_local_inductives] says every such module does. *)
 val local_inductives : ModPath.t -> GlobRef.t list option
 
 (** The modules whose frames ({!Module_frame}) are around the body of the

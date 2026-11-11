@@ -62,6 +62,8 @@ let reads env e =
   in
   go 0 [] e
 
+(* [e] without the in-place coercions around it: they change nothing a
+   parameter stands for. *)
 let rec strip ~in_place = function
   | MLmagic (Mcoerce (from, into), e) when in_place from into -> strip ~in_place e
   | e -> e

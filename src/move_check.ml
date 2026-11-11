@@ -312,8 +312,8 @@ and loop report aliases after head_of ss =
 (* The backend's own storage -- a loop's accumulator, a frame, a temporary
    -- is named with a leading underscore and handed over by protocols this
    walk cannot see: a frame pushed after a move of [_result] is resumed only
-   once a base case has assigned it again.  Loopify checks its frames against
-   the recursion plan; this checks the program's locals. *)
+   once a base case has assigned it again.  Loopify checks the loops it
+   builds against their ControlIR; this checks the program's locals. *)
 let backend x = String.length (Id.to_string x) > 0 && (Id.to_string x).[0] = '_'
 
 (* The locals [ss] declares as pointers, in any scope. *)
@@ -330,6 +330,8 @@ let pointers ss =
   List.iter (fun s -> ignore (fs s)) ss;
   !found
 
+(* Walk the body [ss] from an empty set of references, collecting what it
+   reads after a move and the references it reads stale. *)
 let walk_body ss =
   let report = {found = []; stale = []; pointers = pointers ss} in
   body report Id.Map.empty ss;
@@ -339,6 +341,8 @@ let moved_reads ss = List.sort_uniq Id.compare (List.filter (fun x -> not (backe
 
 let stale_references ss = List.sort_uniq compare (walk_body ss).stale
 
+(* Report, as [owner]'s, every moved read and stale reference of [ss],
+   the backend's own storage aside. *)
 let check_body owner ss =
   let report = walk_body ss in
   List.iter
@@ -535,6 +539,9 @@ let check_by_reference_closures owner ss =
   and stmt s = iter_stmt_children ~on_expr:expr ~on_stmts:block s in
   block ss
 
+(* Every body of [d] through all four checks: moved reads, local fixpoint
+   conventions, by-reference closures, and, for a top-level function or a
+   method with a globref, its own callable convention. *)
 let rec check_decl d =
   let rec field (f, _, _) =
     match f with

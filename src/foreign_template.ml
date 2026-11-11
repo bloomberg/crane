@@ -8,8 +8,8 @@
     printer folds over tokens rather than scanning the text again where it
     is spelled.  Literal C++ between placeholders stays opaque. *)
 
-(** Custom extraction syntax placeholder types for template string substitution.
-*)
+(** One token of a parsed mapping: a placeholder, or literal text
+    ([CCstring]).  Each constructor is documented in [foreign_template.mli]. *)
 type custom_case =
   | CCscrut
   | CCty
@@ -41,11 +41,11 @@ let parse_number s i n =
     let num_str = String.sub s i (j - i) in
     Some (int_of_string num_str, j)
 
-(* The following functions parse custom placeholders in extraction syntax
-   strings: - parse_custom_fixed: parses fixed placeholders like %scrut or %ty -
-   parse_numbered_args: parses placeholders like %a0, %t12 (single argument) -
-   parse_custom_numbered_binders: parses placeholders like %b0a1, %b10a20 (two
-   arguments) *)
+(* Three scanners split a template's text at its placeholders:
+   [parse_custom_fixed] at fixed ones like [%scrut] or [%ty],
+   [parse_numbered_args] at one-index ones like [%a0] or [%t12], and
+   [parse_custom_numbered_binders] at two-index ones like [%b0a1] or
+   [%b10a20]. *)
 
 (** Parses fixed custom placeholders like [%scrut] or [%ty] in a custom
     extraction syntax string. Returns a list of {!custom_case} chunks.
@@ -165,16 +165,16 @@ let expand_custom_binders esc1 esc2 f = expand_custom_chunks (parse_custom_numbe
 (** Expand fixed-name placeholders (e.g. [%scrut], [%ty]) in a command list. *)
 let expand_custom_fixed esc cc = expand_custom_chunks (parse_custom_fixed esc cc)
 
-(** Expand [%elem] / [%elem{i}] placeholders (completeness-aware element
-    wrapping, WRAP.md): like [%t{i}] but rendered boxed when the element type
-    recurses through a boxed-element container. Bare [%elem] means index 0. *)
+(** Expand [%elem] / [%elem{i}] placeholders: like [%t{i}], but the element
+    type is written inside the container's [Boxed Element] wrapper where it
+    recurses through the container.  Bare [%elem] means index 0. *)
 let expand_elem_args cmds =
   let cmds = expand_numbered_args "elem" (fun i -> CCelem i) cmds in
   expand_custom_fixed "elem" (CCelem 0) cmds
 
 (** Parse a custom {e type} template: the [%t{i}] and [%elem{i}] holes of a
-    mapping such as ["std::pair<%t0,%t1>"].  This and {!parse_term_template}
-    are the only places that know the syntax; consumers fold over the tokens
+    mapping such as ["std::pair<%t0,%t1>"].  The parsers of this module are
+    the only places that know the syntax; consumers fold over the tokens
     rather than scanning the text again. *)
 let parse_type_template s =
   expand_elem_args (parse_numbered_args "t" (fun i -> CCty_arg i) s)
@@ -219,6 +219,8 @@ let memoized parse =
 let type_template = memoized parse_type_template
 let term_template = memoized parse_term_template
 
+(* A match template: [%scrut], [%ty], [%t{i}], [%br{i}] and the binder
+   holes [%b{i}a{j}] and [%b{i}t{j}]. *)
 let match_template =
   memoized (fun s ->
       parse_custom_fixed "scrut" CCscrut s
@@ -228,6 +230,9 @@ let match_template =
       |> expand_custom_binders "b" "a" (fun i j -> CCbr_var (i, j))
       |> expand_custom_binders "b" "t" (fun i j -> CCbr_var_ty (i, j)) )
 
+(* Split [tokens] into statements at the top-level semicolons of their
+   literal text, tracking quotes and parentheses; see
+   {!block_statements}. *)
 let statements tokens =
   let depth = ref 0 in
   let quote = ref None in

@@ -132,6 +132,9 @@ let rec reduce defs shrunk fuel e =
     | None -> Option.default e (push defs shrunk fuel use args) )
   | _ -> e
 
+(* The call [use args] with the global's body instantiated, its arguments
+   that are known constructors in place, then settled: kept only if
+   smaller than the call. *)
 and unfold defs shrunk fuel use args =
   let known = List.map (known_ctor defs) args in
   if List.for_all Option.is_empty known then None
@@ -161,6 +164,8 @@ and settle defs fuel e =
   in
   go fuel e
 
+(* The call [use args], one argument a match and the others values, pushed
+   into the match's branches: kept only if some branch unfolds. *)
 and push defs shrunk fuel use args =
   let rec split before = function
     | (MLcase (ty, s, brs, occ) as m) :: after
@@ -232,6 +237,8 @@ let rec drop_domain j ty =
   | j, Tarr (d, c) -> Option.map (fun c -> Tarr (d, c)) (drop_domain (j - 1) c)
   | _ -> None
 
+(* The first [n] domains of [ty], outermost first; [None] if it has fewer
+   arrows. *)
 let rec domains n ty =
   if n = 0 then Some []
   else

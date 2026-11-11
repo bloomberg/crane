@@ -521,6 +521,11 @@ type tail_save = {
   outside : Levels.t;
 }
 
+(* The reads of [t], each with whether it is a last use, the captures of
+   the closures it makes, the local fixpoints it applies where they are
+   written, the saves of the machine it may be lowered as, and the calls
+   entering that machine's entries: one backward walk, from what is live
+   after each subterm to what is live before it. *)
 let liveness ~n_outer ~copied ~arms ~resumes t =
   (* The captures a call re-entering the entry the region is lowered as
      passes it, and the level of the fixpoint's member such a call names. *)
@@ -999,6 +1004,8 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
   own owned 0 t;
   (!out, !read_types, !captured, !copied_reads, !saved_owned, !entry_owned)
 
+(* The plan of [root] from what {!liveness} found of it, with which reads,
+   captures, saves and entries own their variable ({!ownership}). *)
 let plan ~n_outer ~outer ~resumes ~certain root root_owned root_copied arms (reads, captures, entered, saves, entries) =
   let owned, read_types, captured_owned, copied_reads, saved_owned, entry_owned =
     ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned:root_owned ~copied:root_copied root
@@ -1097,6 +1104,8 @@ let bound_at_instance p ~let_ =
 
 let closure_local p ty a = if p == empty then None else Some (closure_local ~n_outer:p.n_outer ty a)
 
+(* Whether the variable the read [o] reads is owned there: [None] of a read
+   not planned, and owned only where every copy of the read is. *)
 let owned_at p o =
   match List.filter (fun (o', _) -> Occurrence.equal o o') p.owned with
   | [] -> None
@@ -1271,6 +1280,9 @@ let taken_by_closure p o =
   ( match fate ~whole:true p o with Last_use | Inspected -> true | Read_again | Unplanned -> false )
   && (owned p 0 o || List.exists (Occurrence.equal o) p.copied_reads)
 
+(* The variables, by de Bruijn index at [closure], that [closure] takes by
+   move: every read of each inside it is a last use, of a variable owned
+   where the closure is made. *)
 let moved_captures p closure =
   let every l o = match List.filter (fun (o', _) -> Occurrence.equal o o') l with
     | [] -> false
@@ -1291,6 +1303,8 @@ let moved_captures p closure =
          if List.for_all (fun (l', o) -> l' <> l || moves o) reads then Some (-l) else None )
        reads )
 
+(* {!moved_captures} of the fixpoint [fix], given to the last of its
+   functions reading each variable, by index at [fix]. *)
 let moved_captures_by_member p fix =
   match fix with
   | MLfix (_, _, funs, _, _) ->
@@ -1310,6 +1324,8 @@ let moved_captures_by_member p fix =
     Array.to_list (Array.map (List.sort_uniq Int.compare) taken)
   | _ -> []
 
+(* The variables, by index where [ts] stand, that a closure made around
+   [ts] takes by move ({!eta_captures}). *)
 let moved_reads p ts =
   let rec go acc = function
     | MLrel (i, o) -> if taken_by_closure p o then i :: acc else acc

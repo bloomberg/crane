@@ -2,8 +2,15 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** Inductive types: methods generated onto an inductive's struct, and the
-    struct itself -- constructors, factories, conversions, and the iterative
-    destructor. *)
+    struct itself -- constructors, factories, conversions, accessors and the
+    iterative destructor.
+
+    Part of declaration generation: {!Gen_decls} includes this module after
+    {!Gen_functions}, and {!Cpp_ind} calls {!gen_ind_header_v2} and
+    {!gen_record_methods} to turn an inductive or an eponymous record into a
+    MiniCpp [Dstruct] (or [Denum]).  Methods are generated ahead of the files
+    ({!generate_method_ahead}) and taken from {!methods_ahead} when the struct
+    is built. *)
 
 open Common
 open Miniml
@@ -21,6 +28,9 @@ open Gen_functions
 
 module IntSet = Escape.IntSet
 
+(** Replace [this] in an expression that a method returns with
+    [shared_from_this()] of [inner_ty], recursing into lambdas and calls: a
+    raw [this] cannot convert to the [shared_ptr] the return type expects. *)
 let rec replace_return_this_expr inner_ty = function
   | CPPthis -> CPPshared_from_this inner_ty
   | CPPlambda l ->
@@ -214,41 +224,65 @@ and stmt_has_shared_from_this = function
     function's type and body with its variables renumbered so the
     inductive's come first, the variables of its own and their names, its
     return type, its parameters and the environment naming them, and the head
-    before {!method_head} decides which of its own variables it keeps.
-    @param name     [GlobRef] of the containing inductive type
-    @param vars     Template type variables of the containing inductive
-    @param func_ref Rocq reference for the Rocq function being methodified
-    @param body     ML body of the function
-    @param ty       ML type of the function
-    @param this_pos 0-based index of the [this] argument in the parameter list *)
+    before {!method_head} decides which of its own variables it keeps. *)
 type method_scope = {
-  ms_ty : ml_type;
-  ms_ret_ty : ml_type;
-  ms_body : ml_ast;
+  ms_ty : ml_type;  (** The function's type, renumbered. *)
+  ms_ret_ty : ml_type;  (** Its ML return type, renumbered. *)
+  ms_body : ml_ast;  (** Its body, renumbered. *)
   ms_all_tvars : int list;
+      (** The variables of the type before renumbering, sorted. *)
   ms_remap : int -> int;
+      (** The renumbering, from a variable of the function's scheme to its
+          position after the inductive's. *)
   ms_extra_tvars_orig : int list;
+      (** The function's own variables, the ones the inductive does not bind,
+          numbered as in its scheme. *)
   ms_extra_tvar_names : Id.t list;
+      (** The C++ names of {!ms_extra_tvars_orig}, in the same order. *)
   ms_subst_extra_tvars : cpp_type -> cpp_type;
+      (** Spells the function's own variables in a C++ type by their names. *)
   ms_method_ns : Ref.User.Set.t;
+      (** The inductive alone: the scope its types are converted in, so a
+          recursive occurrence inside a container is spelled as the struct's
+          fields spell it. *)
   ms_strip_self_ptr : cpp_type -> cpp_type;
+      (** Removes the [shared_ptr] around a value-type inductive, which a
+          method takes and returns by value. *)
   ms_ret_cpp : cpp_type;
+      (** The C++ return type, before {!method_head} erases the variables it
+          alone mentions. *)
   ms_ids_with_types : (ml_ident * ml_type) list;
-  ms_inner_body : ml_ast;
-  ms_env : env;
+      (** The declared parameters, innermost first. *)
+  ms_inner_body : ml_ast;  (** The body under those parameters. *)
+  ms_env : env;  (** The environment naming the parameters, renamed apart. *)
   ms_method_owned_flags : bool list;
+      (** Whether each parameter is owned, innermost first. *)
   ms_this_arg_id : Id.t option;
+      (** The parameter that becomes the receiver [this]. *)
   ms_params : (Id.t * cpp_type) list;
+      (** The C++ parameters: the runtime ones other than the receiver, each
+          wrapped by ownership, a callable as an [F &&]. *)
   ms_passing : Callable_abi.passing list;
       (** How each of {!ms_params} is passed. *)
   ms_fun_params : (Id.t * template_type * Id.t) list;
+      (** The callable parameters generalised to a template parameter: the
+          parameter, its [TTfun] constraint and the template parameter's
+          name. *)
   ms_template_params : (template_type * Id.t) list;
+      (** The template parameters before {!method_head} drops any: the
+          instances, then the function's own variables, then the
+          callables. *)
   ms_minted : (Id.t * Callable_abi.minted) list;
       (** What each of {!ms_template_params} was made for: a dictionary, a
           variable of the function's scheme, or a callable parameter. *)
   ms_deduced_callables : Param_pos.orig Param_pos.pos list;
+      (** The declared positions of the callables deduced as an [F &&]. *)
 }
 
+(** [method_scope name vars (func_ref, body, ty, this_pos)] settles the scope
+    of the method made of the function [func_ref], of body [body] and type
+    [ty], in the inductive [name] whose template variables are [vars];
+    [this_pos] is the 0-based index of the parameter that becomes [this]. *)
 let method_scope name vars (func_ref, body, ty, this_pos) =
   (* Promotion moves a function into a struct; it does not change what the
      function returns.  The mode is read off the codomain here exactly as it is
@@ -307,13 +341,11 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
      push_vars' may rename duplicate parameters (e.g., two params named 't'
      become 't', 't0').
 
-     We must use the renamed ids (all_ids) consistently for: 1. The environment
-     - so gen_expr/gen_stmts produce correct variable references 2. The C++
-     method signature - so parameter names match what the body references
-
-     Previously, renamed ids were discarded and original names used for the
-     signature, causing errors like: void method(tree t) { ... t0->v() ... }
-     where 't0' in the body didn't exist as a parameter.
+     The renamed ids (all_ids) are used consistently for both the
+     environment, so gen_expr/gen_stmts produce correct variable references,
+     and the C++ method signature, so parameter names match what the body
+     references.  Signing with the original names would declare
+     [void method(tree t)] around a body reading [t0].
 
      Only as many as the type declares, as for a function: a lambda beyond
      them -- under a result that is an alias of a function type -- is the
@@ -689,8 +721,8 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
   begin_body ~owner:func_ref ();
   let method_n_params = List.length ids_with_types in
   (* method_owned_flags[i] corresponds to de Bruijn index i+1.
-     db index i+1 maps to ids_with_types[i] (outermost-first, same order
-     as push_vars' which prepends in list order).
+     db index i+1 maps to ids_with_types[i] (innermost first, the order
+     push_vars' puts at the front of the environment).
      Only track ownership for non-trivial types (inductives). *)
   let owned_params =
     Translation_support.owned_parameters (List.length method_owned_flags)
@@ -789,8 +821,8 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      [shared_ptr] from the raw pointer.  Only applied when the return type
      contains [shared_ptr] (e.g. [shared_ptr<T>], [pair<shared_ptr, shared_ptr>])
      to avoid replacing [this] in method calls that just forward the receiver. *)
-  (* Compute self_type unconditionally — needed by both return-this and
-     lambda-this passes. *)
+  (* Compute self_type unconditionally: both the return-this and the
+     lambda-this passes need it. *)
   let self_type_args =
     List.map named_tvar vars
   in
@@ -800,11 +832,11 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
       List.map (replace_return_this_stmt self_type) stmts
     else stmts
   in
-  (* Replace [CPPthis] with [CPPshared_from_this] inside by-value lambda
-     bodies.  When a method returns a closure that captures [this], the raw
-     pointer would dangle after the caller's [shared_ptr] is released.
-     Using [shared_from_this()] inside the lambda ensures the closure keeps
-     the object alive. *)
+  (* Replace [CPPthis] inside by-value lambda bodies with a copy of the
+     receiver bound at the top of the method ({!replace_this_in_lambdas}).
+     When a method returns a closure that captures [this], the raw pointer
+     would dangle once the receiver is gone; the closure holding its own copy
+     keeps the value alive. *)
   let stmts = return_captures_by_value stmts in
   let stmts = replace_this_in_lambdas ?receiver:this_arg_id self_type stmts in
   (* Apply tvar_subst_stmt with the extended vars list (defined above).
@@ -923,6 +955,10 @@ let methods_ahead :
 
 let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset methods_ahead)
 
+(** [generate_method_ahead name vars candidate] generates the method made of
+    [candidate] in the inductive [name], whose variables are [vars], before
+    the files are rendered, records it in {!methods_ahead} with the helpers
+    lifted out of its body, and returns those helpers. *)
 let generate_method_ahead name vars ((func_ref, _, _, _) as candidate) =
   let generation = collecting_lifted (fun () -> generate_method name vars candidate) in
   Ref.User.Tbl.replace methods_ahead func_ref
@@ -930,6 +966,10 @@ let generate_method_ahead name vars ((func_ref, _, _, _) as candidate) =
      :: Option.default [] (Ref.User.Tbl.find_opt methods_ahead func_ref) );
   snd generation
 
+(** [check_method_ahead name vars candidate] generates the method again and
+    raises an anomaly unless it is the one {!generate_method_ahead}
+    recorded.  Run under [CRANE_CHECK_IR], in the reverse order: the order
+    methods are generated in must not change them. *)
 let check_method_ahead name vars ((func_ref, _, _, _) as candidate) =
   let recorded =
     List.find_map
@@ -985,23 +1025,8 @@ let gen_methods ?(merged = false) name vars candidates =
          Borrow_projection.lend ~coinductive:(Table.is_coinductive name) (gen_single_method name vars c) )
        candidates )
 
-(** Generate C++ header for an inductive type (v2 style: encapsulated struct
-    with methods).
-
-    Produces a self-contained struct with:
-    - Nested constructor-alternative structs (e.g. [Leaf {}], [Node { ... }])
-    - [using variant_t = std::variant<Leaf, Node>]
-    - Private [variant_t d_v_] data member
-    - Explicit constructors for each alternative
-    - Static factory methods ([cons(...)], [cons_uptr(...)]) with move semantics
-    - Methods from [method_candidates] (with [this] substitution)
-
-    @param consarg_names  binder names from {!Miniml.ml_ind_packet.ip_consarg_names};
-      when provided, constructor struct fields and factory parameters use
-      descriptive names derived from the Rocq source instead of [d_a0] etc. *)
-
 (** Does the ML type [ml_ty] contain [ind_ref] (or a mutual sibling) anywhere
-    in its type arguments — but NOT at the top level?  Used to detect fields
+    in its type arguments, but NOT at the top level?  Used to detect fields
     like [list(tree(A))] inside [tree]'s definition, which need field-level
     [shared_ptr] wrapping instead of type-argument wrapping. *)
 let ml_type_has_nested_self_ref ~ind_ref ml_ty =
@@ -1052,12 +1077,15 @@ let ml_type_recurses_through_boxed_container ~ind_ref ml_ty =
   in
   find_boxed_rec ml_ty
 
-(** Completeness-aware element wrapping (WRAP.md): if a constructor field of
-    [ind_ref] recurses THROUGH a boxed-element container (a container carrying a
-    [Boxed Element] wrapper, e.g. [list <self>] where [list -> immer::flex_vector]),
-    record [ind_ref] as an inductive that must be boxed as a container element
-    everywhere it occurs, so its C++ representation is type-consistent. Call this
-    for every constructor field type. *)
+(** Completeness-aware element wrapping: if a constructor field of [ind_ref]
+    recurses THROUGH a boxed-element container (a container carrying a
+    [Boxed Element] wrapper, e.g. [list <self>] where
+    [list -> immer::flex_vector]), record [ind_ref] as an inductive that must
+    be boxed as a container element everywhere it occurs, so its C++
+    representation is type-consistent: a type is complete only after its
+    definition, and a container of the incomplete type is legal only when
+    each element sits behind a box.  Call this for every constructor field
+    type. *)
 let maybe_record_boxed_recursive_ind ~ind_ref ml_ty =
   if ml_type_recurses_through_boxed_container ~ind_ref ml_ty then
     Table.add_boxed_recursive_ind ind_ref
@@ -1067,10 +1095,10 @@ let maybe_record_boxed_recursive_ind ~ind_ref ml_ty =
     under [Crane BoxedFields], held inductives behind the smart pointer.
     Every reading of a field's storage -- the struct, its factories, its
     conversion to another instantiation, the pointer fields planned before
-    rendering -- comes from here.  Scoped-arena redesign: recursive fields
-    are always the ordinary smart pointer ([Tshared_ptr], rendered as
-    std::shared_ptr / crane::rc); arena-ness is decided per-object at the
-    factory call site, not baked into the field type. *)
+    rendering -- comes from here.  Recursive fields are always the ordinary
+    smart pointer ([Tshared_ptr], rendered as std::shared_ptr / crane::rc);
+    whether an object lives in an arena is decided per object at the factory
+    call site, not baked into the field type. *)
 let constructor_field_storage ~name ~is_coinductive var_names ty =
   let cpp_ty =
     convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Ref.User.Set.singleton name) var_names ty
@@ -1084,7 +1112,8 @@ let constructor_field_storage ~name ~is_coinductive var_names ty =
           list(tree)   → shared_ptr<List<tree>>.
      The body sees *a0 at the bare type directly with no
      element-wise conversion needed. *)
-  (* Completeness-aware element wrapping (WRAP.md). *)
+  (* Completeness-aware element wrapping: record [name] as boxed wherever it
+     is a container element ({!maybe_record_boxed_recursive_ind}). *)
   maybe_record_boxed_recursive_ind ~ind_ref:name ty;
   let bare_cpp_ty = convert_ml_type_to_cpp_type (empty_env ()) var_names ty in
   if ml_type_has_nested_self_ref ~ind_ref:name ty && not is_coinductive then
@@ -1114,8 +1143,8 @@ let constructor_field_at_own_vars vars cpp_ty =
 
 (** The fields of a constructor of [name], of types [tys], that its struct
     stores behind the smart pointer, each with whether it holds [name]
-    itself: what {!Loopify} reads off the struct, decided before it is
-    generated. *)
+    itself: what loop lowering reads off the struct, decided before it is
+    generated ({!Loopify_analysis.install_ctor_ptr_fields}). *)
 let constructor_pointer_fields ~name ~is_coinductive vars tys =
   List.concat
     (List.mapi
@@ -1129,29 +1158,11 @@ let constructor_pointer_fields ~name ~is_coinductive vars tys =
          | _ -> [] )
        tys )
 
-(** Generate the C++ struct definition for an inductive type.
-
-    Produces one of three shapes depending on the inductive:
-    - {b Value type}: a struct with an inner [std::variant] of constructor
-      structs, factory methods, and [v()]/[v_mut()] accessors.
-    - {b Shared-ptr type}: same struct wrapped in [std::shared_ptr] at use
-      sites, with [shared_from_this] support and pointer-based destructors.
-    - {b Enum}: a simple [enum class] with no variant or constructor structs.
-
-    Major sections generated (in order): constructor structs, variant typedef,
-    factory methods, iterative destructor (for recursive types),
-    converting constructor (for mutual-inductive field-type differences),
-    [operator==], and stream insertion.
-
-    @param is_mutual     true when this type is part of a mutual block
-    @param consarg_names field names from Rocq binders, indexed by constructor
-    @param mutual_partners other types in the mutual block *)
-
-(* Whether ML type [t] is a reference to [ref_name] applied to the same type
-   variables [ref_vars], its parameters (i.e., a direct recursive or mutual
-   recursive occurrence).  The arguments after them are a family's type
-   indices, which its C++ type does not take: [succE : expr nat -> expr nat]
-   holds an [expr] like any other. *)
+(** Whether ML type [t] is a reference to [ref_name] applied to the same type
+    variables [ref_vars], its parameters (i.e., a direct recursive or mutual
+    recursive occurrence).  The arguments after them are a family's type
+    indices, which its C++ type does not take: [succE : expr nat -> expr nat]
+    holds an [expr] like any other. *)
 let rec is_ref_to ref_name ref_vars = function
   | Miniml.Tglob (r, args, _) ->
     globref_equal r ref_name
@@ -1168,6 +1179,49 @@ let rec is_ref_to ref_name ref_vars = function
   | Miniml.Tmeta {contents = Some t} -> is_ref_to ref_name ref_vars t
   | _ -> false
 
+(** Generate the C++ declaration of an inductive type: an encapsulated struct
+    with its methods.
+
+    Produces one of four shapes depending on the inductive:
+    {ul
+    {- {b Empty}: a struct whose default constructor is deleted.}
+    {- {b Enum}: a plain [enum class], for a non-mutual, non-custom inductive
+       without parameters whose constructors are all nullary.}
+    {- {b Flat}: a plain struct of public fields, for a flat inductive
+       ({!Table.is_flat_inductive}), with [clone], a conversion to another
+       instantiation and one factory.}
+    {- {b Variant}: a struct with a nested struct per constructor
+       alternative (e.g. [Leaf {}], [Node { ... }]), [using variant_t =
+       std::variant<Leaf, Node>] and a private member of that type ([v_], or
+       [d_v_] under BDE); a coinductive holds a [crane::lazy<variant_t>]
+       ([lazy_v_] / [d_lazyV_]) instead.}}
+
+    The variant shape's members, in order: constructor structs, the variant
+    alias, the marker aliases [crane_family_tag] / [crane_cheap_copy] where
+    they apply, the private member, a default constructor, an explicit
+    constructor per alternative, the converting constructor from another
+    instantiation, the coinductive's thunk constructor, static factory
+    methods (with their [__reuse] variants under [Crane Reuse]), the
+    coinductive's [lazy_] factory, the iterative destructor for recursive
+    types with re-defaulted copy/move members, [v_mut()], mutating methods,
+    [v()], the coinductive's [lazy_cell()], and const methods.  Every shape
+    gets the methods from [method_candidates] ({!gen_methods}).
+
+    @param is_mutual       whether this type is part of a mutual block
+    @param consarg_names   binder names from
+                           {!Miniml.ml_ind_packet.ip_consarg_names}, indexed by
+                           constructor: struct fields and factory parameters
+                           use them instead of positional names ([d_a0])
+    @param mutual_partners the other types of the mutual block, each with its
+                           constructors, their argument types and binder
+                           names
+    @param vars            the inductive's template variable names
+    @param name            the inductive
+    @param cnames          its constructors
+    @param tys             the argument types of each constructor
+    @param method_candidates
+      functions to generate as methods: [(func_ref, body, type, this_pos)]
+    @param ind_kind        whether the inductive is coinductive *)
 let gen_ind_header_v2
     ?(is_mutual = false)
     ?(consarg_names = [||])
@@ -1179,9 +1233,9 @@ let gen_ind_header_v2
     method_candidates
     ind_kind =
   let is_coinductive = ind_kind = Core.Inductive.Kind.Coinductive in
-  (* Scoped-arena redesign (2026-08-10): arena allocation is no longer a
-     compile-time property of the type.  Every recursive field is the ordinary
-     smart pointer ([std::shared_ptr] / [crane::rc]); the recursive-field factory
+  (* Arena allocation is not a compile-time property of the type.  Every
+     recursive field is the ordinary smart pointer ([std::shared_ptr] /
+     [crane::rc]); the recursive-field factory
      is the *runtime-arena-aware* one ([crane::arena_make_shared] /
      [crane::rc<T>::make], see [Alloc_arena_scoped]), which bump-allocates from the
      current arena only when a [crane::arena_scope] is open at the call site and
@@ -1512,8 +1566,8 @@ let gen_ind_header_v2
       in
 
       (* 4. Public explicit constructors for each alternative.
-         Public so that std::make_shared / std::make_unique can construct
-         instances directly (single allocation). *)
+         Public so that std::make_shared can construct instances directly
+         (single allocation). *)
       (* Note: nested struct types don't need template args - they inherit from parent *)
       let public_ctors =
         Array.to_list
@@ -1544,7 +1598,7 @@ let gen_ind_header_v2
                  (* For inductive: d_v_(std::move(_v)) when the constructor
                     struct has non-trivial fields (shared_ptr etc.).  For
                     trivially-copyable structs (e.g., empty nullary constructors
-                    like O, Nil, Leaf), skip std::move — it has no effect and
+                    like O, Nil, Leaf), skip std::move: it has no effect and
                     triggers performance-move-const-arg. *)
                  let has_nontrivial_fields =
                    List.exists (fun ty -> not (isTdummy ty)) tys.(i)
@@ -1595,9 +1649,9 @@ let gen_ind_header_v2
          a shared variant, whose blocks the runtime already frees iteratively
          (shared_block.h's [free_block]). *)
       let iterative_destructor =
-        (* Scoped-arena redesign: recursive fields are ordinary smart pointers
-           even for arena-backed values (the region only owns the payload
-           memory; per-node refcounting still drives destruction), so the
+        (* Recursive fields are ordinary smart pointers even for arena-backed
+           values (the region only owns the payload memory; per-node
+           refcounting still drives destruction), so the
            iterative destructor that drains those smart-pointer chains is
            needed here exactly as for any other recursive type. *)
         if is_coinductive || Table.is_shared_variant name then []
@@ -1621,8 +1675,9 @@ let gen_ind_header_v2
           (* Self-recursion routed through another user-defined inductive
              (e.g. [RNode : box rose -> rose], where [box] is a plain
              one-field wrapper).  The occurrence is neither direct nor a
-             list, so without this the type looked non-recursive, no drain
-             was emitted at all, and destruction recursed once per level
+             list, so without this the type would look non-recursive, no
+             drain would be emitted at all, and destruction would recurse once
+             per level
              through the default member-wise [~shared_ptr] chain -- a stack
              overflow on deep values (CWE-674; regression:
              tests/regression/wrapper_nested_recursion_no_drain).
@@ -1708,9 +1763,10 @@ let gen_ind_header_v2
                | [] ->
                  (* Recursion routed through some *other* mediating shape --
                     [prod], [option], a record, a list of pairs, a nested list,
-                    a user-defined option-like inductive, ...  The three cases
-                    above cover only the shapes that predate the general
-                    harvester; everything else is handed to [harvest_field],
+                    a user-defined option-like inductive, ...  The cases above
+                    cover the direct, list-shaped and flat-wrapper shapes,
+                    which have dedicated drains; everything else is handed to
+                    [harvest_field],
                     which walks the mediator's structure and moves out every
                     [Self] it reaches.  See its comment for the traversal. *)
                  if List.exists contains_self args then `Nested ml_ty else `None
@@ -1820,17 +1876,16 @@ let gen_ind_header_v2
           let is_sole p =
             CPPbinop (Beq, CPPaccess_call (Adot, p, Id.of_string "use_count", []), CPPint 1)
           in
-          (* ---------------------------------------------------------------
-             Generic mediator harvester.
+          (* Generic mediator harvester.
 
              A constructor field whose type merely *contains* [Self] --
              [(Self * nat)], [option (option Self)], [list (nat * Self)],
              [cell Self], [w Self] where [w] holds a [list] -- reaches its
              nested [Self]s through an arbitrary composition of products,
-             options, records and other inductives.  Each such shape used to
-             need its own case in [classify_ml_self_ref]; anything unrecognised
-             got no drain at all, so destroying a deep value recursed once per
-             level and overflowed the stack (CWE-674).
+             options, records and other inductives.  Giving each such shape
+             its own case in [classify_ml_self_ref] would leave every
+             unrecognised one with no drain at all, so destroying a deep value
+             would recurse once per level and overflow the stack (CWE-674).
 
              Instead of enumerating shapes, [harvest_val] walks the mediator's
              *type* and emits the C++ that walks the corresponding value,
@@ -1858,8 +1913,8 @@ let gen_ind_header_v2
              Anything the walk does not understand (custom containers other
              than [std::pair]/[std::optional], mutual blocks, non-uniform
              recursion, or a type nested deeper than [harvest_fuel]) raises
-             [Harvest_bail] and the field is left undrained -- the previous
-             behaviour, never something worse. *)
+             [Harvest_bail] and the field is left undrained -- the same as
+             having no drain for it, never something worse. *)
           let harvest_fuel = 12 in
           let hv_seq = ref 0 in
           let fresh_hv p =
@@ -1881,7 +1936,7 @@ let gen_ind_header_v2
           (* Guard [body] on [p] being the sole owner of its pointee -- every
              drain moves a value out of one, so it must first establish that
              nobody else can see it.  The acquire fence follows the [use_count]
-             test rather than preceding it; see {!unique_fence}. *)
+             test rather than preceding it; see [unique_fence]. *)
           let sole_owner p body =
             [Sif (
               CPPbinop (Band, p,
@@ -2154,9 +2209,13 @@ let gen_ind_header_v2
               | stmts -> Some stmts
             with Harvest_bail | Not_found -> None
           in
-          (* Build drain statements for classified fields.  [Direct] fields get
-             a simple [push_back(std::move(field))].  [List g] fields with a
-             custom mapping (e.g. std::deque) iterate elements onto the stack. *)
+          (* Build drain statements for classified fields.  [Direct] fields
+             move onto the worklist where this node owns them alone.
+             [Wrapper] fields move the [Self]s of a uniquely-owned wrapper
+             cell.  [List g] fields walk the list: a custom mapping (e.g.
+             std::deque) through its [Drain] template or a range-for, a
+             list-shaped inductive along its cons spine.  [Stmts] are the
+             harvester's own statements. *)
           let mk_classified_field_stmts classified_fields =
             List.concat_map (fun (field_id, cls) ->
               let fe = CPPaccess (Aarrow, CPPvar _alt_id, field_id) in
@@ -2180,9 +2239,10 @@ let gen_ind_header_v2
                      wfields
                    @ [Sexpr (dot0 fe "reset")])
               | `List list_g ->
-                (* This iterative drain replaces the naive recursive destructor,
-                   so cleanup of a deep deque-backed recursive value no longer
-                   overflows the call stack (the primary CWE-674 mitigation;
+                (* This iterative drain stands in for the naive recursive
+                   destructor, so cleanup of a deep deque-backed recursive
+                   value does not overflow the call stack (the primary CWE-674
+                   mitigation;
                    regression: tests/regression/deque_deep_tree_stackoverflow).
                    Residual tradeoff (CWE-400): the drain heap-allocates one
                    [make_shared] wrapper per element, so under extreme memory
@@ -2634,13 +2694,14 @@ let gen_ind_header_v2
          (e.g., Cons → cons).  If this collides with a C++ keyword, the
          type's own name or a type its module declares, the factory falls
          back to PascalCase with trailing underscore (e.g., Char → Char_).
-         See {!factory_name_of_ctor}.
+         See {!Translation_support.factory_name_of_ctor}.
 
-         Move semantics: All parameters use the "sink parameter" idiom
-         (passed by value, std::move'd into the struct initializer).
-         Non-coinductive recursive fields take the inner type by value and
-         are wrapped in make_shared internally; coinductive fields take a
-         [const shared_ptr<T>&]. *)
+         Move semantics: parameters use the "sink parameter" idiom (passed by
+         value, std::move'd into the struct initializer unless trivially
+         copyable).  Non-coinductive fields stored behind a pointer take the
+         inner type by value and are allocated internally (make_shared, or
+         the arena-aware factory); a coinductive's take the value type by
+         [const &]. *)
       let mk_factory_methods ret_ty build i tys_list =
         let c = cnames.(i) in
         let cname = ctor_struct_name_of_ref ~fallback_idx:i c in
@@ -2687,7 +2748,8 @@ let gen_ind_header_v2
         in
         (* For owned recursive fields in value-type inductives, factory
            params take the inner value by value (sink parameter) so callers
-           can move in.  Coinductive shared_ptr fields stay as const ref. *)
+           can move in.  A coinductive's pointer fields take the value type
+           by const reference. *)
         let params =
           List.map
             (fun (j, storage_ty, api_ty) ->
@@ -2782,11 +2844,11 @@ let gen_ind_header_v2
                   if inner = api_ty then arg
                   else gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:inner arg
                 in
-                (* Scoped-arena redesign: a single unified factory call.  For
-                   arena-eligible types this is the runtime-arena-aware factory
-                   ([Alloc_arena_scoped]: crane::rc<T>::make / crane::arena_make_shared)
-                   which bump-allocates only when a scope is open and otherwise
-                   is exactly make_shared/make_rc; NoArena / coinductive / mutual
+                (* A single factory call.  For arena-eligible types this is
+                   the runtime-arena-aware factory ([Alloc_arena_scoped]:
+                   crane::rc<T>::make / crane::arena_make_shared), which
+                   bump-allocates only when a scope is open and otherwise is
+                   exactly make_shared/make_rc; NoArena / coinductive / mutual
                    types keep the plain factory. *)
                 if arena_runtime_ok then
                   mk_call (CPPalloc (Alloc_arena_scoped, inner)) [converted]
@@ -2991,20 +3053,18 @@ let gen_ind_header_v2
           []
       in
 
-      (* Scoped-arena redesign: the old [arena_deep_copy_ctor] (which
-         deep-copied every recursive raw-pointer field on copy, the
-         source of the composite-hang failure mode) is gone entirely.  Recursive
-         fields are now ordinary refcounted smart pointers, so the normal copy
-         path is already correct and O(1) per node. *)
+      (* No deep-copy constructor: recursive fields, arena-backed or not, are
+         ordinary refcounted smart pointers, so the implicit copy is correct
+         and O(1) per node.  What remains is the converting constructor from
+         another instantiation of the same template. *)
       let value_copy_clone_methods =
           let converting_ctor =
             let all_fields_empty =
               Array.for_all (fun tys_list -> tys_list = []) tys
             in
-            (* Scoped-arena redesign: arena-backed types are now ordinary
-               recursive smart-pointer types, so the cross-instantiation
-               converting constructor is generated for them exactly as for any
-               other polymorphic recursive type (no special arena suppression). *)
+            (* Arena-backed types are ordinary recursive smart-pointer types,
+               so the cross-instantiation converting constructor is generated
+               for them exactly as for any other polymorphic type. *)
             if vars = [] || all_fields_empty then []
             else
               let n_vars = List.length vars in
@@ -3320,9 +3380,10 @@ let gen_ind_header_v2
             SAccessors )
       in
 
-      (* Add mutable accessor for reuse optimization (Phase 3). For
-         non-coinductive types: variant_t& v_mut() { return v_; } Not generated
-         for coinductive types (lazy evaluation complicates reuse). *)
+      (* Mutable accessor, for in-place reuse of a uniquely-owned value and
+         for the iterative destructor's drains.  For non-coinductive types:
+         variant_t& v_mut() { return v_; }.  Not generated for coinductive
+         types (lazy evaluation complicates reuse). *)
       let v_mut_accessor =
         if is_coinductive then
           []
@@ -3394,11 +3455,14 @@ let gen_ind_header_v2
         List.filter (fun (_, _, tag) -> tag <> SManipulators) method_fields
       in
 
-      (* BDE field ordering: public: constructor structs, variant_using (TYPES)
+      (* BDE field ordering: public: constructor structs, variant_using,
+         element_using (TYPES)
          private: variant_member (DATA)
-         public: public_ctors + lazy_ctor + factory methods (CREATORS),
-         v_mut + manipulators (MANIPULATORS),
-         v_accessor + const methods (ACCESSORS) *)
+         public: default_ctor + public_ctors + converting ctor + lazy_ctor +
+         factory methods + lazy_factory (CREATORS),
+         destructor + defaulted special members + v_mut + manipulators
+         (MANIPULATORS),
+         v_accessor + lazy_cell_accessor + const methods (ACCESSORS) *)
       let all_fields =
         constructor_structs
         @ [variant_using]
@@ -3418,11 +3482,10 @@ let gen_ind_header_v2
            [use_count()==1]).  Emitted whenever we declare a custom destructor,
            for every extraction: the suppression is a property of the *type*,
            so reuse-off code pays the same needless refcount traffic that reuse
-           needs eliminated.  Restoring real moves does expose code that reads
-           a value after moving from it -- the loopify fix-ups (invariant
-           parameters are never moved from, and neither are prvalues or
-           borrowed cells) exist because the copy fallback used to hide exactly
-           those bugs. *)
+           needs eliminated.  Real moves expose code that reads a value after
+           moving from it, which a copy fallback would hide: the loop
+           lowering therefore never moves from invariant parameters,
+           prvalues or borrowed cells. *)
         @ (match iterative_destructor with
            | _ :: _ -> [(Fdefaulted_special_members, VPublic, SManipulators)]
            | [] -> [])
@@ -3443,11 +3506,13 @@ let gen_ind_header_v2
           ds_needs_shared_from_this = needs_shared_from_this;
         }
 
-(** Generate methods for eponymous records. Uses the shared gen_single_method
-    helper for records where methods are generated directly on the module struct
-    (which has record fields merged). name: the record's GlobRef (e.g., IndRef
-    for CHT) vars: the type variables of the record (e.g., [K; V] for CHT<K, V>)
-    method_candidates: list of (func_ref, body, type, this_position) tuples *)
+(** Generate methods for eponymous records: the record's fields are merged
+    into its module's struct, and the functions taking the record become
+    instance methods of that struct ({!gen_methods} with [~merged:true]).
+    @param name the record's [GlobRef] (e.g. the [IndRef] of [CHT])
+    @param vars the record's type variables (e.g. [[K; V]] for [CHT<K, V>])
+    @param method_candidates
+      functions to generate as methods: [(func_ref, body, type, this_pos)] *)
 let gen_record_methods (name : GlobRef.t) (vars : Id.t list) method_candidates =
   gen_methods ~merged:true name vars method_candidates
  

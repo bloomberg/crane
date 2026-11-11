@@ -26,8 +26,13 @@
     already a value, what its cofixpoint would have evaluated when first
     observed, so the tree is the same tree, node for node.  The copy is a
     fixpoint of the definition itself, which Crane suspends as it does any
-    other.  A definition no rewrite shrinks is left exactly as it was. *)
+    other.  A definition no rewrite shrinks is left exactly as it was.
 
+    One of the MiniML passes run before the program is frozen
+    ([core_passes] in [extract_env.ml]), after {!Ml_dedup}. *)
+
+(** Every top-level definition of the structure, those inside its modules
+    included, specialized and simplified where that shrinks it. *)
 val structure : Miniml.ml_structure -> Miniml.ml_structure
 
 (** A definition of the structure: a term and its type, or a fixpoint of
