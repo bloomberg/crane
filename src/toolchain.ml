@@ -13,7 +13,8 @@ exception NoClangFound
 (** Non-zero Clang exit code paired with captured diagnostics. *)
 exception ClangError of int * string
 
-(** Raised when the native OCaml compiler is not available. *)
+(** Raised when [ocamlfind], which runs the native OCaml compiler, is not
+    available. *)
 exception NoOcamloptFound
 
 (** Non-zero [ocamlopt] exit code paired with captured diagnostics. *)

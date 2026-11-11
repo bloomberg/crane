@@ -1,9 +1,9 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** What a declaration names, resolved before it is printed
-    (docs/Pipeline-Disentangling-Plan.md, section 8.5 and Milestone 9: the
-    seed of [ResolveCppNames]).
+(** What a declaration names, resolved before it is printed, so that the
+    printer looks each name up in a table rather than deciding it from the
+    global tables as it writes.
 
     A name is resolved where it is written, and inside one declaration that
     is not always where the declaration is: printing a module type's concept
@@ -17,8 +17,8 @@ open Names
 (** A scope printing a declaration enters inside the one it is written in. *)
 type entered =
   | Signature of {signature : ModPath.t; parameters : ModPath.t list}
-      (** An anonymous signature's requirements, its own path and the functor
-          parameters visible in it visible. *)
+      (** An anonymous signature's requirements, with its own path and the
+          functor parameters visible in it in scope. *)
   | Inductive_struct of GlobRef.t
       (** The scope the struct of the inductive opens, between its module and
           its members: the constructors' structs declared in it hide what the
@@ -115,16 +115,17 @@ type key =
           an assertion names it inside it.  A {!Holds} answer, asked for
           every type class. *)
 
+(** A key described in words, for diagnostics. *)
 val pp_key : key -> Pp.t
 
 (** A type's head as written: the qualifiers in front of it, the name
     itself, whether it asks for [typename] in front, and whether template
     arguments following it ask for the [template] disambiguator. *)
 type head = {
-  outer : Cpp_name.scope list;
-  head : Cpp_name.t;
-  typename : bool;
-  templated : bool;
+  outer : Cpp_name.scope list;  (** qualifiers in front, outermost first *)
+  head : Cpp_name.t;  (** the name itself *)
+  typename : bool;  (** whether [typename] goes in front *)
+  templated : bool;  (** whether template arguments ask for [template] *)
 }
 
 (** A constant or constructor as an expression names it. *)
@@ -157,10 +158,16 @@ type value =
   | Access of access
   | Holds of bool
 
+(** A reference described in words, for diagnostics. *)
 val pp_reference : reference -> Pp.t
+
+(** An access described in words, for diagnostics. *)
 val pp_access : access -> Pp.t
 
-(** The name a key other than {!Type_head} resolves to. *)
+(** [name_of key v] is the name [v] holds; an anomaly naming [key] where [v]
+    is any other answer ({!Type_head}, {!Inline_custom}, {!Value_reference},
+    {!Value_access}, {!Read_by_a_function} and {!Held_back_concept} keys
+    resolve to those). *)
 val name_of : key -> value -> Cpp_name.t
 
 (** A declaration's names, by frame and key. *)
@@ -173,12 +180,14 @@ val unresolved : table
     [value] resolves it at its frame. *)
 val resolve : (frame -> key -> value) -> (frame * key) list -> table
 
+(** The outcome of looking a key up in a {!table}. *)
 type 'a lookup =
-  | Found of 'a
+  | Found of 'a  (** What the key resolved to. *)
   | Unresolved  (** The table was never resolved. *)
   | Not_requested  (** It was, but this was not asked for. *)
 
-(** The name [key], not a {!Type_head}, resolved to at [frame]. *)
+(** The name [key] resolved to at [frame]; [key] is one resolving to a name
+    ({!name_of}). *)
 val find : table -> frame -> key -> Cpp_name.t lookup
 
 (** The head the global resolved to at [frame], in the form given. *)

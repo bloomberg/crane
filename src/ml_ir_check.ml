@@ -8,6 +8,8 @@ let violation r what =
   Probe.violation "global use"
     Pp.(str "the use of " ++ GlobRef.print r ++ str " " ++ str what)
 
+(* The types an instantiation holds: each slot's solution, and the type
+   observed at each written argument. *)
 let solution_types inst =
   Scheme.Instantiation.fold
     (fun _ {Scheme.solution; source} acc ->
@@ -21,6 +23,8 @@ let solution_types inst =
       | _ -> acc )
     inst []
 
+(* The holes ({!Miniml.Thole}) occurring in a type, through solved
+   metavariables. *)
 let rec holes acc = function
   | Thole h -> h :: acc
   | Tarr (a, b) -> holes (holes acc a) b

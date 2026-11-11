@@ -27,9 +27,11 @@ type chain = {
   innermost : cell;
 }
 
+(* The plan of one local fixpoint, the counterpart of a definition's
+   entries in [t]: per member lists are in the fixpoint's member order. *)
 type local_group = {
   occurrence : Occurrence.t;  (* the fixpoint's *)
-  local_kind : kind;
+  local_kind : kind;  (* the group's, as the member that recurses most *)
   chains : chain list option list;
       (* per member, its chains, if it recurses through no other call that
          is not a tail call *)
@@ -93,14 +95,16 @@ and recomputable = {
 }
 
 type t = {
-  groups : group list;
-  by_member : group Ref.User.Map.t;
-  defined : Ref.User.Set.t;
-  locals : local_group list;
+  groups : group list;  (* one per recursive group *)
+  by_member : group Ref.User.Map.t;  (* each member's group *)
+  defined : Ref.User.Set.t;  (* every function the program defines *)
+  locals : local_group list;  (* one per local fixpoint, copies included *)
   modulo_cons : chain list Ref.User.Map.t;
+      (* per definition that recurses by some call that is not a tail call,
+         its chains, if every such call is the one call of a chain *)
   suspended : Ref.User.Set.t;  (* the definitions whose body suspends *)
-  resumes : resume list Ref.User.Map.t;
-  adoptable : Occurrence.t list Ref.User.Map.t;
+  resumes : resume list Ref.User.Map.t;  (* per definition, its resume points *)
+  adoptable : Occurrence.t list Ref.User.Map.t;  (* per definition, {!flow_fixpoints} calling its group *)
   kinds : kind Ref.User.Map.t;  (* per definition, its own calls *)
   calls : Occurrence.t list Ref.User.Map.t;  (* per member, the uses heading its calls in its group's bodies *)
   let_lambdas : Occurrence.t list;  (* the lets binding a lambda *)
@@ -119,6 +123,7 @@ let empty =
     calls = Ref.User.Map.empty;
     let_lambdas = [] }
 
+(* The number of lambdas heading a term, plus [n], and the body under them. *)
 let rec split_params n = function
   | MLlam (_, _, b) -> split_params (n + 1) b
   | b -> (n, b)
@@ -219,6 +224,7 @@ let classify ~effects ~callee body =
   walk ~depth:0 ~tail:true body;
   if !nontail_call then Nontail else if !tail_call then Tail else No_recursion
 
+(* The kind of a group of two kinds: the one that recurses most. *)
 let combine a b =
   match (a, b) with
   | Nontail, _ | _, Nontail -> Nontail
@@ -907,7 +913,8 @@ type inlined_call = {
    arguments or a body suspended whole, and a match, let, fixpoint or bind
    that is an operand, which translation runs in a lambda invoked in place,
    as it does a match bound by a let that is no custom or record match.
-   Loopify neither rewrites an enum's match, a switch.  A call of a custom
+   Nor does a call in an enum's match, generated as a switch, which Loopify
+   does not rewrite.  A call of a custom
    is its text, not a call.  A call with fewer arguments than its callee's
    parameters is a closure; one with more is an operand of the call it
    heads.  A saturated call continues in the partner's body where its

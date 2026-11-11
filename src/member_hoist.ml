@@ -42,9 +42,11 @@ let field_names ?(body_only = false) (p : GlobRef.t -> bool) (f : cpp_field) :
     else ignore (map_field ex st ty (f, VPublic, SNoTag)) );
   !found
 
-(** [split_struct ~group d] is [d] with the members that name a type of
-    [group] left as declarations, paired with their definitions, to be written
-    once every struct in [group] is complete.
+(** [split_struct ~names d] is [d] with the members that name a global
+    satisfying [names] left as declarations, paired with their definitions,
+    to be written once every struct those globals name is complete.
+    [enclosing] is the nearest named namespace around [d], which the hoisted
+    definitions are qualified by; [body_only] is {!split_named}'s.
 
     A mutually recursive group of inductives has no order in which each struct
     can be written whole: [Tree::leaf] takes a [List<Branch>] by value, which

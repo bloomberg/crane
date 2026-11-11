@@ -3,10 +3,9 @@
 
 (** The C++ calling convention of a generated callable: its template head
     in final declaration order, each parameter with the origin it has and
-    the way a call may supply it (docs/Type-Argument-Numbering-Refactor-Plan.md,
-    section 3.3).
+    the way a call may supply it.
 
-    The head is the third numbering a call moves between.  A parameter that
+    The head is the third numbering a call moves between ({!Scheme}).  A parameter that
     stands for a scheme variable keeps that variable's identity wherever the
     declaration put it -- after a phantom parameter was dropped, or a
     defaulted one moved last -- so a call maps an instantiation onto the head
@@ -31,10 +30,15 @@ module Template_param : sig
   (** The parameter's place in the head, from [0]. *)
   val position : t -> int
 
+  (** The name the declaration gives the parameter. *)
   val name : t -> Names.Id.t
+
+  (** Same position and same name. *)
   val equal : t -> t -> bool
 end
 
+(** What a template parameter stands for, which decides whether a call's
+    type argument may be written at it. *)
 type origin =
   | From_scheme of Scheme.Var.t
       (** The callee's scheme variable this parameter declares. *)
@@ -57,6 +61,7 @@ type minted =
   | Instance_param of int
   | Callable_param of int
 
+(** How a call may supply a template parameter. *)
 type write_policy =
   | Writable  (** A call may write it, and must where nothing deduces it. *)
   | Deduce_only  (** No call writes it: C++ deduces it from an argument. *)
@@ -67,11 +72,12 @@ type write_policy =
           default: nothing deduces it, so a call writing anything after it
           writes it too, as this filler. *)
 
+(** One parameter of a head. *)
 type template_parameter = {
-  id : Template_param.t;
-  origin : origin;
-  kind : Minicpp.template_type;
-  write : write_policy;
+  id : Template_param.t;  (** its place and name *)
+  origin : origin;  (** what it stands for *)
+  kind : Minicpp.template_type;  (** how it is declared *)
+  write : write_policy;  (** how a call may supply it *)
 }
 
 (** What the plan of a method adds: it is generated as a member of an
@@ -117,12 +123,15 @@ type passing =
     after the relaxations of its head ({!relaxations}), ownership wrappers
     included. *)
 type signature = {
-  params : Minicpp.cpp_type list;
-  ret : Minicpp.cpp_type;
+  params : Minicpp.cpp_type list;  (** value parameters' types *)
+  ret : Minicpp.cpp_type;  (** the return type *)
 }
 
+(** The plan of one callable. *)
 type t
 
+(** The global the plan is of; for an instance's method, the instance
+    ({!of_instance_method}). *)
 val callee : t -> Names.GlobRef.t
 
 (** How each of the callee's value parameters is passed, in declaration
@@ -211,9 +220,9 @@ val parameter_of_var : t -> Scheme.Var.t -> template_parameter option
     part of it. *)
 val equal : t -> t -> bool
 
-(** The plan invariants of section 8.1, as violations: positions and names
-    unique and in order, every scheme origin the callee's scheme's, no
-    origin declared twice. *)
+(** The plan's own invariants, as violations: positions and names unique
+    and in order, every scheme origin the callee's scheme's, no origin
+    declared twice. *)
 val validate : t -> string list
 
 (** {2 The frozen map} *)
@@ -259,8 +268,7 @@ val deduces_callable : Names.GlobRef.t -> Param_pos.orig Param_pos.pos -> bool
 
 (** The plan of a callable Crane does not generate here -- a custom mapping,
     a declaration of another file or library -- as the conventions its call
-    sites assume state it: [instances]
-    dictionaries first, then one parameter per variable [kept] keeps, in
+    sites assume state it: [instances] dictionaries first, then one parameter per variable [kept] keeps, in
     order and no more than [reachable] of them, a template-template one
     where [higher_kinded] says so, a [relaxed] one a [Derived] parameter
     defaulted to [void], the first [phantom_prefix] of them phantoms, each
@@ -289,8 +297,7 @@ val install_foreign : (Names.GlobRef.t -> t) -> Names.GlobRef.t list -> unit
     planned none, {!foreign}'s.  Under [CRANE_CHECK_IR] a planned one is
     checked against {!foreign}'s, and emission finding none planned is a
     violation: every callee a body names is planned before bodies are
-    generated.  A method's call is still planned against
-    its foreign one: it is written as its function's call would be, then
+    generated.  A method's call is still planned against its foreign one: it is written as its function's call would be, then
     printed on the receiver without the variables the receiver carries or
     {!dropped_positions}. *)
 val plan :

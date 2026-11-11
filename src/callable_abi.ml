@@ -68,8 +68,10 @@ type t = {
   passing : passing list option;
   signature : signature option;
   variables : (Scheme.Var.t * omission option) list;
+      (** every variable of the callee's scheme, with why the convention
+          omits it, if it does *)
   relaxations : Head_relaxation.t list;
-  phase : Common.phase;
+  phase : Common.phase;  (** when the plan was decided, for diagnostics *)
 }
 
 let callee abi = abi.callee
@@ -244,14 +246,18 @@ let same_head a b =
 
 let equal a b = GlobRef.UserOrd.equal a.callee b.callee && same_head a b
 
+(* The installed plans, by callee ({!install}). *)
 let plans : t GlobRef.Map_env.t ref = State.cell State.Extraction GlobRef.Map_env.empty
 
+(* The callables a function with no plan is assumed to deduce, by callee
+   ({!install}). *)
 let assumed : Param_pos.orig Param_pos.pos list Ref.User.Map.t ref =
   State.cell State.Extraction Ref.User.Map.empty
 
 let () =
   Table.register_census "callable ABI plans" (fun () -> GlobRef.Map_env.cardinal !plans)
 
+(* The head of [abi], one line, for a violation report. *)
 let describe abi =
   let kind = function
     | Minicpp.TTtypename -> "typename"
@@ -279,6 +285,7 @@ let phase_name = function
   | Common.Plan -> "while planning"
   | Common.Emit -> "while emitting"
 
+(* Reports each of {!validate}'s violations. *)
 let validated abi =
   List.iter
     (fun problem ->

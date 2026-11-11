@@ -469,9 +469,9 @@ let machine r =
 
 (* Whether Loopify lowers every local fixpoint in the body of the
    definition [r], machines included, [function_] saying whether that body
-   is a function's: a function it loopifies, as it finishes it or as the
-   bridge lowers its loop ({!Loopify.after_tail_loop}), not a helper lifted
-   out of another definition.  Of any other body it lowers the local tail
+   is a function's: a function it loopifies, with its loop
+   ({!Loopify.after_tail_loop}) or, where none is made, alone
+   ({!lower_locals}), not a helper lifted out of another definition.  Of any other body it lowers the local tail
    loops alone. *)
 let lowers_local_machines ~function_ r = function_ && Table.should_loopify r && not (Option.has_some (Lifted.of_ref r))
 

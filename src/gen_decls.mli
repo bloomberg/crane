@@ -2,10 +2,10 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Declaration-level C++ code generation from extracted MiniML.
 
-    This module turns Coq/MiniML declarations into {!Minicpp} C++ declarations:
-    inductive types (both the older make-function style and the v2 encapsulated
-    struct-with-methods style), records, typeclass concepts, typeclass
-    instances, and top-level (possibly mutually recursive) function definitions
+    This module turns Rocq/MiniML declarations into {!Minicpp} C++ declarations:
+    inductive types (an encapsulated struct with methods, held by value, behind
+    a [std::shared_ptr], or as an [enum class]), records, typeclass concepts,
+    typeclass instances, and top-level (possibly mutually recursive) function definitions
     and their forward-declaration specs for header emission.
 
     It sits above the expression-level codegen in {!Translation} (which it uses
@@ -23,8 +23,8 @@ open Names
     type_variables). *)
 val gen_decl : GlobRef.t -> ml_ast -> ml_type -> cpp_decl * env * variable list
 
-(** Similar to gen_decl but returns None for non-function types (used by
-    pp_hdecl). *)
+(** Similar to {!gen_decl} but returns [None] for a term whose C++ type is
+    not a function's, which the caller declares some other way. *)
 val gen_decl_for_pp :
   GlobRef.t -> ml_ast -> ml_type -> cpp_decl option * env * variable list
 
@@ -45,9 +45,9 @@ type generated_entity =
 (** A generated function, with the environment its names were allocated in and
     the helpers lifted out of its body. *)
 type generated_fun = {
-  gf_entity : generated_entity;
-  gf_env : env;
-  gf_lifted : cpp_decl list;
+  gf_entity : generated_entity;  (** the definition or declaration *)
+  gf_env : env;  (** the environment its names were allocated in *)
+  gf_lifted : cpp_decl list;  (** helpers lifted out of its body *)
 }
 
 (** [defined d tvars] is the definition [d] of a function or constant whose
@@ -109,6 +109,9 @@ val gen_typeclass_cpp : GlobRef.t -> Miniml.record_field list -> cpp_decl
 (** Generate C++ header for an inductive type (v2 style: encapsulated struct
     with methods).
     @param is_mutual       whether this is part of a mutual inductive definition
+    @param mutual_partners the other types of the mutual block, each with its
+                           constructors, their argument types and their
+                           argument binder names
     @param consarg_names   constructor argument binder names from
                            {!Miniml.ml_ind_packet.ip_consarg_names}: struct
                            fields use them (e.g. [d_left]) instead of
@@ -119,7 +122,8 @@ val gen_typeclass_cpp : GlobRef.t -> Miniml.record_field list -> cpp_decl
     @param tys             constructor argument types
     @param method_candidates
       functions to generate as methods: (func_ref, body, type, this_position)
-    @param ind_kind        whether the inductive is coinductive, standard, etc. *)
+    @param ind_kind        whether the inductive is coinductive, a record,
+                           a typeclass, etc. *)
 val gen_ind_header_v2 :
   ?is_mutual:bool ->
   ?consarg_names:Id.t option list array ->
@@ -150,8 +154,8 @@ val gen_record_methods :
 
 (** Generate a C++ struct for a type class instance. Type class instances become
     structs with static methods. Returns (struct_decl option, class_ref option,
-    concept arguments). The last two are used by cpp_ind.ml to generate the
-    static_assert verifying the instance satisfies the concept; the arguments
+    concept arguments). The last two are used by {!Cpp_ind} to generate the
+    [static_assert] verifying the instance satisfies the concept; the arguments
     come back already converted and resolved, because they are only correct in
     the promoted-variable scope of the instance they were read in.  Last,
     by method name, what the struct's builder recorded of each of the

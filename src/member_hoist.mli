@@ -28,6 +28,7 @@ val split_group : ('a * Minicpp.cpp_decl) list -> ('a * Minicpp.cpp_decl) list
     rather than a type that is incomplete: out-lining moves the body and
     leaves the signature where it was, so a signature naming the obstacle is
     not helped by moving anything.
+
     Returns the structs and the hoisted definitions separately, because where
     those definitions go is the caller's question: after the group is enough
     for a cycle between siblings, and not enough for one with a struct emitted

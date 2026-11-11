@@ -64,8 +64,8 @@ let takes_from v stmts =
 (* A local copied out of a member of another -- [T2 s0 = si.first] -- is a
    [const] reference to it instead, where the other is neither assigned nor
    moved from afterwards, and the local neither assigned nor taken from: the
-   other outlives it,
-   and no pass after this one moves from it, so what it names stays put.  The copy it saved is made only by a use that keeps the
+   other outlives it, and no pass after this one moves from it, so what it
+   names stays put.  The copy it saved is made only by a use that keeps the
    value.  A type a copy costs nothing for -- a scalar, a pointer -- is
    copied as it was. *)
 let rec bind_by_reference = function

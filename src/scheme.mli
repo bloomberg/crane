@@ -2,14 +2,15 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** The three numberings a call to a polymorphic global moves between, as
-    distinct types (docs/Type-Argument-Numbering-Refactor-Plan.md, section 1).
+    distinct types.
 
-    - A {!Binder.t} is a binder of the callee's Rocq product spine, the place
-      an argument of the application stands at.
-    - A {!Var.t} is a variable of the callee's MiniML type scheme, owned by
-      the scheme ({!Id.t}) it belongs to.
-    - A template parameter of the C++ declaration is the third, and lives
-      with the callable's ABI plan.
+    {ul
+    {- A {!Binder.t} is a binder of the callee's Rocq product spine, the
+       place an argument of the application stands at.}
+    {- A {!Var.t} is a variable of the callee's MiniML type scheme, owned by
+       the scheme ({!Id.t}) it belongs to.}
+    {- A template parameter of the C++ declaration is the third, and lives
+       with the callable's ABI plan ({!Callable_abi}).}}
 
     None of them is an [int] to its clients, so an index of one cannot be
     used as an index of another; every crossing is a named function, the way
@@ -25,9 +26,16 @@ module Id : sig
       other scheme minted in this run. *)
   val fresh : Names.GlobRef.t -> arity:int -> t
 
+  (** The declaration the scheme belongs to. *)
   val owner : t -> Names.GlobRef.t
+
+  (** How many variables the scheme quantifies. *)
   val arity : t -> int
+
+  (** Identity of the minting, not of the owner: two schemes minted for one
+      declaration are distinct. *)
   val equal : t -> t -> bool
+
   val pp : t -> Pp.t
 end
 
@@ -35,6 +43,7 @@ end
 module Var : sig
   type t
 
+  (** The scheme the variable belongs to. *)
   val owner : t -> Id.t
 
   (** The variable's place in its scheme, from [1]: the body spells it
@@ -54,9 +63,9 @@ module Var : sig
   (** What [l] pairs with the variable, if anything. *)
   val assoc_opt : t -> (t * 'a) list -> 'a option
 
-  (** {!assoc_opt} at the variable [l]'s scheme spells [Tvar (_, i)]
+  (** {!assoc_opt} at the variable that [l]'s scheme spells [Tvar (_, i)]
       ({!of_tvar}): for a reader holding a variable it met in that scheme's
-      body.  [l] pairs variables of one scheme. *)
+      body.  [l] pairs variables of one scheme; [None] when [l] is empty. *)
   val assoc_tvar : int -> (t * 'a) list -> 'a option
 
   val pp : t -> Pp.t
@@ -97,9 +106,10 @@ type 'ty source_evidence =
       observed : 'ty option;
     }
 
+(** What one use says about one scheme variable. *)
 type 'ty slot = {
-  solution : 'ty solution;
-  source : 'ty source_evidence;
+  solution : 'ty solution;  (** what the variable was solved to *)
+  source : 'ty source_evidence;  (** what the source application wrote for it *)
 }
 
 (** One slot per variable of a scheme, indexed by {!Var.t}. *)
@@ -109,13 +119,17 @@ module Instantiation : sig
   (** [make id f] has the slot [f v] for every variable [v] of [id]. *)
   val make : Id.t -> (Var.t -> 'ty slot) -> 'ty t
 
+  (** The scheme the instantiation has one slot per variable of. *)
   val scheme : 'ty t -> Id.t
 
   (** The slot of [v]; [Invalid_argument] for a variable of another scheme,
       which is a caller confusing two schemes, never a missing entry. *)
   val slot : 'ty t -> Var.t -> 'ty slot
 
+  (** [map f i] applies [f] to every type in every slot: solutions and
+      observed arguments alike. *)
   val map : ('a -> 'b) -> 'a t -> 'b t
+
   val map_slots : (Var.t -> 'a slot -> 'b slot) -> 'a t -> 'b t
   val fold : (Var.t -> 'ty slot -> 'acc -> 'acc) -> 'ty t -> 'acc -> 'acc
   val for_all : (Var.t -> 'ty slot -> bool) -> 'ty t -> bool

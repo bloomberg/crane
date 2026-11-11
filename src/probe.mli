@@ -1,8 +1,8 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Instrumentation and boundary checks for the type-argument numbering
-    refactor (docs/Type-Argument-Numbering-Refactor-Plan.md).
+(** Instrumentation and boundary checks: counters for repair paths, the
+    [CRANE_CHECK_IR] switch and its violation report, and the Loopify census.
 
     A probe records that a guarded or repairing code path was taken, so a
     corpus sweep can say how often each still fires.  Lines go to the file

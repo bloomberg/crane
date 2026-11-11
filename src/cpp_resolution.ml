@@ -65,6 +65,7 @@ let pp_key k =
   | Read_by_a_function r -> global "whether a function reads" r
   | Held_back_concept r -> global "whether the concept is held back of" r
 
+(* Total orders on frames and keys, for the table's map. *)
 let compare_entered a b =
   let rank = function Signature _ -> 0 | Inductive_struct _ -> 1 | In_struct -> 2 | In_template -> 3 | Function _ -> 4 in
   match (a, b) with
@@ -188,6 +189,8 @@ let resolve value requests =
 
 type 'a lookup = Found of 'a | Unresolved | Not_requested
 
+(* [lookup read t frame key]: what [key] resolved to at [frame], read as
+   the answer [read] expects. *)
 let lookup read t frame key =
   match t with
   | Unresolved_table -> Unresolved

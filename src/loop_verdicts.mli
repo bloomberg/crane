@@ -1,8 +1,7 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** What control lowering did with each loop it decided on
-    (docs/Pipeline-Disentangling-Plan.md, Milestone 6): the record the
+(** What control lowering did with each loop it decided on: the record the
     finished program is checked against under [CRANE_CHECK_IR]
     ({!Control_to_legacy_minicpp.check_lowered}), in place of running Loopify
     again to see what it would change.  Written only while the checks run,
