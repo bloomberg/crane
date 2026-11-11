@@ -1,7 +1,8 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Core's inductive types.  See [inductive.mli]. *)
+(** Core's inductive types: backend kind and equivalence to an already
+    extracted inductive.  See [inductive.mli]. *)
 
 module Kind = struct
   type 'field t =

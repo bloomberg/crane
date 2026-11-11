@@ -3,30 +3,24 @@
 
 (** {1 Name Resolution}
 
-    Pre-computed C++ name resolution cache.
+    A per-extraction cache of how each inductive type is rendered.
 
-    This module moves name resolution logic out of [cpp.ml]'s pretty-printer
-    into a pre-computation phase that runs during translation. The cache maps
-    [GlobRef.t] values to resolved C++ names, eliminating the need for complex
-    name resolution at render time.
-
-    The cache is populated once per extraction pass by {!create}, which scans
-    the full [ml_structure] and resolves every inductive type name and global
-    function name according to the same rules that [cpp.ml] previously applied at
-    render time (wrapper qualification, eponymous record merging, collision
-    detection, etc.).
-
-    Runs {i after} {!Structure_analysis.analyze} (whose {!Structure_analysis.t}
-    result it consumes) and {i before} [cpp.ml]'s rendering pass, which queries
-    it in preference to re-deriving names.
+    {!create} scans the [ml_structure] once, after
+    {!Structure_analysis.analyze} and before rendering, and records for every
+    inductive declared at top level or in a module structure its
+    classification ({!Minicpp.cpp_ind_kind}: standard, enum, record,
+    eponymous record or type class) and its raw type name.  The printer reads
+    the classification through {!Cpp_names}, falling back to the live tables
+    for an inductive the scan did not see.  Nothing here qualifies or renames
+    a name: [rtn_display] is the Rocq type name as declared.
 
     {2 Usage}
 
     {[
-      let nrc = Name_resolution.create ~structure_analysis:analysis ... in
-      match Name_resolution.resolve_type nrc r with
-      | Some name -> (* use pre-resolved name *)
-      | None -> (* fall back to current logic *)
+      let nrc = Name_resolution.create ~structure_analysis:analysis s in
+      match Name_resolution.get_ind_kind nrc r with
+      | Some kind -> (* the scan classified [r] *)
+      | None -> (* not scanned: classify from the tables *)
     ]}
 
     {b Side-effect caveat.} Unlike a naive render-time resolver, {!create} must
@@ -38,19 +32,21 @@
 open Names
 open Minicpp
 
-(** Opaque cache type. *)
+(** The cache: a type name and an inductive kind per scanned inductive. *)
 type t
 
 (** Pre-resolved name for a type reference. *)
 type resolved_type_name = {
   rtn_display : string;
-      (** The full display string (e.g., "List", "Nat::nat", "CHT") *)
+      (** The Rocq type name as declared, unqualified and not renamed *)
   rtn_is_eponymous : bool;
       (** True if this is an eponymous record merged into module *)
   rtn_is_record : bool;
       (** True if this is a record (not standard inductive) *)
   rtn_is_enum : bool;  (** True if this is an enum class *)
-  rtn_is_local : bool;  (** True if defined in the current module scope *)
+  rtn_is_local : bool;
+      (** True if defined in the current module scope; {!create} records
+          [false] for every inductive *)
   rtn_is_global_scope_enum : bool;  (** True if this enum is at global scope *)
 }
 
@@ -60,11 +56,11 @@ type resolved_term_name = {
   rtm_wrapper_qualified : bool;  (** True if name was wrapper-qualified *)
 }
 
-(** Create a name resolution cache from analysis results. Should be called once
-    per extraction pass, after Structure_analysis.analyze and after
-    the wrapper table is populated.
-    @param structure_analysis the result of {!Structure_analysis.analyze}
-      with an inductive from another module
+(** Create the cache for a structure. Called once per extraction pass, after
+    {!Structure_analysis.analyze}.  Inductives inside functor bodies are not
+    scanned.
+    @param structure_analysis the result of {!Structure_analysis.analyze};
+      currently unused
     @return a freshly built name resolution cache *)
 val create :
   structure_analysis:Structure_analysis.t ->
@@ -100,14 +96,16 @@ val register_type : t -> GlobRef.t -> resolved_type_name -> unit
     @param name the resolved name information (ignored) *)
 val register_term : t -> GlobRef.t -> resolved_term_name -> unit
 
-(** Check if a type is an eponymous record (pre-computed).
-    @param t the name resolution cache
+(** Check if a type is an eponymous record.  Reads
+    {!Module_plan.is_eponymous_record}, not the cache.
+    @param t the name resolution cache (ignored)
     @param r the inductive reference to test
     @return [true] if [r] is an eponymous record flattened into its parent namespace *)
 val is_eponymous : t -> GlobRef.t -> bool
 
-(** Check if a type is an enum at global scope (pre-computed).
-    @param t the name resolution cache
+(** Check if a type is an enum at global scope.  Reads
+    {!Module_plan.is_global_scope_enum}, not the cache.
+    @param t the name resolution cache (ignored)
     @param r the inductive reference to test
     @return [true] if [r] is an enum class emitted at global scope *)
 val is_global_scope_enum : t -> GlobRef.t -> bool

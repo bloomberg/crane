@@ -4,7 +4,7 @@
 (** The module plan: what preparing a structure decided about its layout,
     before anything is rendered -- where declarations live and what they are
     called.  These are backend decisions, part of a unit's target plan
-    ({!Target_plan.modules}), not observations about the program.  Decided by
+    ({!Target_plan.t.modules}), not observations about the program.  Decided by
     {!Cpp.prepare_structure} and installed by {!Install_legacy_plan}, the one
     writer, before anything is rendered, and read-only afterwards -- which is
     what makes it safe to read from a [.cpp] body printed before the [.h] that
@@ -70,6 +70,7 @@ type t = {
 (** The plan of a unit that decides nothing. *)
 val empty : t
 
+(** Field-by-field equality, lists compared in order. *)
 val equal : t -> t -> bool
 
 (** Record a unit's facts.  The enums replace the previous unit's; the rest
@@ -83,10 +84,25 @@ val install : t -> unit
     one. *)
 val installed : t -> bool
 
+(** {1 Queries}
+
+    Each reads the installed tables: the answer of the last plan
+    {!install}ed that gave one. *)
+
+(** Whether an enum inductive is written at global scope
+    ([global_scope_enums] of the current unit). *)
 val is_global_scope_enum : GlobRef.t -> bool
+
+(** The name a type class's concept is emitted under, if planned. *)
 val concept_name : GlobRef.t -> string option
+
+(** The name a module type's concept is emitted under, if planned. *)
 val modtype_concept_name : ModPath.t -> string option
+
+(** The functor body a functor application's declarations are copies of. *)
 val functor_app_source : ModPath.t -> ModPath.t option
+
+(** Whether an inductive is a record merged into its module's struct. *)
 val is_eponymous_record : GlobRef.t -> bool
 
 (** The eponymous record of the module a constant is declared in, if any: at
@@ -94,9 +110,23 @@ val is_eponymous_record : GlobRef.t -> bool
     [Record<Args>::f()]. *)
 val eponymous_record_containing : GlobRef.t -> eponymous_record option
 
+(** Whether a declaration is lifted out of its wrapper to namespace scope in
+    the current unit. *)
 val is_namespace_scope_ref : GlobRef.t -> bool
+
+(** The wrapper struct a module is emitted in, and its role there. *)
 val wrapper : ModPath.t -> (string * wrapper_role) option
+
+(** The name of {!wrapper}. *)
 val wrapper_struct : ModPath.t -> string option
+
+(** The role of {!wrapper}. *)
 val wrapper_role : ModPath.t -> wrapper_role option
+
+(** Whether a type name goes to global scope rather than its wrapper's
+    struct. *)
 val is_global_scope_type : GlobRef.t -> bool
+
+(** Whether a top-level element of the current unit moves ahead of the
+    header's concepts. *)
 val is_concept_prerequisite : Label.t -> bool

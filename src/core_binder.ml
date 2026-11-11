@@ -1,6 +1,8 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
+(** The Core binder a C++ local stands for.  See [core_binder.mli]. *)
+
 type site =
   | Binding of Miniml.Occurrence.t
   | Branch of Miniml.Occurrence.t * int

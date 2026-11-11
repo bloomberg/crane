@@ -2,7 +2,8 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** The Core binder a C++ local stands for, recorded where translation
-    declares the local (docs/Pipeline-Disentangling-Plan.md, Milestone 6).
+    declares the local, so that passes after translation can relate a C++
+    local back to the Core variable it binds.
 
     A binder is named by the definition whose Core body binds it and by its
     de Bruijn level there: the number of binders, the definition's parameters
@@ -32,12 +33,16 @@ type site =
       (** the match and the index, among its branches, of the branch whose
           pattern binds it *)
 
+(** A binder: the definition whose body binds it, its de Bruijn level
+    there, and, for a let, bind or pattern binder, its site. *)
 type t = private {
-  origin : Names.GlobRef.t;
-  level : int;
-  site : site option;  (** where one does *)
+  origin : Names.GlobRef.t;  (** the definition whose Core body binds it *)
+  level : int;  (** its de Bruijn level in that body, parameters included *)
+  site : site option;  (** the term binding it, for a let, bind or pattern *)
 }
 
+(** [make ~origin ~level ?site ()] is the binder at [level] in [origin]'s
+    body, bound at [site] if given. *)
 val make : origin:Names.GlobRef.t -> level:int -> ?site:site -> unit -> t
 
 (** The same binder among the binders in scope: origin and level. *)

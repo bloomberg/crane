@@ -17,6 +17,7 @@ let is_borrowed = Loopify_analysis.is_borrowed
    return of one copies unless the move is written. *)
 type held = Moved_on_return | Copied_on_return
 
+(* Whether [e] is a call or a construction, built in the caller's object. *)
 let prvalue = function
   | CPPfun_call _ | CPPaccess_call _ | CPPmethod_call _ | CPPprojection _ | CPPstruct _
   | CPPstructmk _ | CPPstruct_id _ ->
@@ -25,8 +26,8 @@ let prvalue = function
 
 let drop_return_moves d =
   let hold env ids h = List.fold_left (fun env id -> IdMap.add id h env) env ids in
-  (* A name not declared where this walk sees it -- by a foreign fragment --
-     keeps the reading the printer gave every name before. *)
+  (* A name not declared where this walk sees it, such as one a foreign
+     fragment declares, is taken to be moved on return: its move is dropped. *)
   let held env x = try IdMap.find x env with Not_found -> Moved_on_return in
   let by_type ty = if is_borrowed ty then Copied_on_return else Moved_on_return in
   let rec stmts env = function

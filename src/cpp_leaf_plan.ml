@@ -47,6 +47,8 @@ let writes_into_a_struct = function
   | Cpp_name.Scope (Cpp_name.Class _ | Cpp_name.Parameter _) -> true
   | Cpp_name.Foreign_text text | Cpp_name.Untagged text -> text_names_into_a_struct text
 
+(* Whether any of the qualifiers names into a struct or a template
+   parameter. *)
 let scopes_name_into_a_struct = List.exists (fun s -> writes_into_a_struct (Cpp_name.Scope s))
 
 (** Whether the head [h] is written through a struct or a template
@@ -254,6 +256,7 @@ let is_held_back_assertion ctx (d : Cpp_erasure.settled) =
   | Decl (Dstatic_assert (CPPconcept_app (class_ref, _, _), None)) -> class_concept_held_back ctx class_ref
   | _ -> false
 
+(* {!declaration_names_into_a_struct}, its names as [names] resolved them. *)
 let resolved_names_into_a_struct ctx names (settled : Cpp_erasure.settled) =
   declaration_names_into_a_struct {ctx with rc_names = Names_resolved names} (settled :> cpp_decl)
 
@@ -327,8 +330,8 @@ let plan_ctor_aliases written =
   let impl, impl_writes = planned Common.Impl in
   ctor_alias_plan := Some {intf; impl; intf_writes; impl_writes}
 
-(** The declaration of [alias], printed where the tree puts it as declared
-    where it is ({!Cpp_ast.Template_in}). *)
+(** The declaration of the template [a], printed where the tree puts it as
+    declared where it is ({!Cpp_ast.Template_in}). *)
 let ctor_alias_declaration a =
   Cpp_ast.synthesised_template ~tyctors:a.ca_uses
     { name = ctor_alias_name a;
@@ -357,6 +360,7 @@ let ctor_aliases_declared_in ~file =
       if List.exists (fun a' -> String.equal (ctor_alias_name a') (ctor_alias_name a)) acc then acc else acc @ [a] )
     [] declared
 
+(* Whether the unit's templates are planned yet. *)
 let alias_plan_made () = Option.has_some !ctor_alias_plan
 
 (* What is planned for [w], written in the module [module_], in the file
@@ -414,8 +418,7 @@ let check_ctor_alias_plan ~file =
   end
 
 (** The structs the file being written has constrained forward declarations
-    of, planned with its layout, each by its reference and the name its
-    declaration declares. *)
+    of, planned with its layout, each by its reference. *)
 let constrained_structs : GlobRef.t list ref = State.cell State.Unit []
 
 (* The frames printing [d] enters names at: {!pp_cpp_decl}'s scopes, read
@@ -588,6 +591,8 @@ let makes_requires_clause ctx tparams =
       | _ -> false )
     tparams
 
+(* Whether the definition is a constrained template: a [requires] clause, a
+   constraint, or a concept-kinded parameter. *)
 let constrained ctx : Cpp_ast.defined -> bool = function
   | Defined_struct {tparams; constraint_; _} ->
     Option.has_some constraint_ || makes_requires_clause ctx tparams
@@ -896,7 +901,7 @@ and ctor_alias_of_probe ctx vl ~base probe =
        would be declared as a partial specialisation of nothing.  Which
        it writes is read off the structure the rendering walks
        ({!vars_written}); under [CRANE_CHECK_IR], reading it off the
-       rendered text, as planning did before, must find the same. *)
+       rendered text must find the same. *)
     let written = vars_written (snd (Lazy.force rendered_with_uses)) vl probe in
     let all = captured probe in
     let captured = List.filter (fun (i, _) -> List.mem i written) all in
@@ -958,16 +963,16 @@ and ctor_alias_of_probe ctx vl ~base probe =
           List.map (fun (i, name) -> Cpp_state.Captured_variable (i, name)) vars
           @ List.map (fun id -> Cpp_state.Captured_instance id) instances )
 
-(** [t] as the type constructors in it are written at [ctx]: decided there
-    and noted ({!Cpp_state.Deciding}). *)
+(** [ctx], deciding each type constructor written there and noting the
+    decision in [noted] ({!Cpp_state.Deciding}). *)
 and deciding ctx noted = {ctx with rc_tyctors = Deciding {decide = ctor_alias_at; noted}}
 
 (** The body [t] of a synthesised template, naming the variables [vl] by
     index, written at [at], where the template is declared: how it writes
     the type constructors in it, decided there first ({!tyctors_spelled}),
     and the text, its names resolved there, which is the template's name's
-    digest.  Under [CRANE_CHECK_IR], deciding them by rendering the body,
-    as planning did before, must decide the same. *)
+    digest.  Under [CRANE_CHECK_IR], deciding them by rendering the body
+    must decide the same. *)
 and written_body at vl t =
   let noted = ref [] in
   let found_before = Option.map ( ! ) at.rc_aliases in
@@ -991,8 +996,7 @@ and written_body at vl t =
     writing it ({!tyctor_spelled}), inside the struct of the inductive whose
     members are written around it, if any ({!Cpp_resolution.Inductive_struct});
     and how each type constructor is written, in the order first spelled.
-    Under [CRANE_CHECK_IR], rendering each, as planning did before, must
-    decide the same. *)
+    Under [CRANE_CHECK_IR], rendering each must decide the same. *)
 let ctor_aliases_found ctx visit =
   let found = ref [] and noted = ref [] in
   let ctx = deciding {ctx with rc_aliases = Some found} noted in
@@ -1016,6 +1020,7 @@ let ctor_aliases_found ctx visit =
           (Pp.str "a declaration decides other type constructors than rendering them does") );
   (!found, !noted)
 
+(* What planning reads off [d] written at [ctx]. *)
 let ctor_aliases_written ctx (d : Cpp_erasure.settled) =
   let aliases, uses = ctor_aliases_found ctx (fun f -> Cpp_demands.tyctors_of_decl f (d :> cpp_decl)) in
   {read_written = (module_written ctx, Written_declaration (d :> cpp_decl)); read_aliases = aliases; read_uses = uses}
@@ -1069,6 +1074,9 @@ let needs_of ~templates (settled : Cpp_erasure.settled) =
   in
   {Cpp_ast.Needs.templates; names; defines}
 
+(* What placing the fields of the record [r] needs: the templates planned
+   for them, checked under [CRANE_CHECK_IR], and the constrained structs
+   their types name. *)
 let fields_needs ctx ~module_ ~vl r types =
   let file = ctx.rc_file in
   let aliases = planned_aliases ~file ~module_ (Written_fields r) in
@@ -1082,13 +1090,16 @@ let fields_needs ctx ~module_ ~vl r types =
   in
   {Cpp_ast.Needs.templates = List.map ctor_alias_name aliases; names; defines = []}
 
+(* {!needs_of} at [ctx], the templates as planned there. *)
 let printed_needs ctx settled = needs_of ~templates:(List.map ctor_alias_name (ctor_aliases_planned ctx settled)) settled
 
+(* The globals a template head names: its concepts and its types'. *)
 let template_param_globals tps =
   let types = ref [] in
   ignore (map_tparams (fun t -> types := t :: !types; t) tps);
   List.filter_map (function TTconcept (r, _), _ -> Some r | _ -> None) tps @ List.concat_map type_globals !types
 
+(* The globals a [requires] constraint names. *)
 let constraint_globals c =
   let found = ref [] in
   Minicpp.iter_globrefs (fun r -> found := r :: !found) (Dstatic_assert (c, None));
@@ -1108,6 +1119,8 @@ let rec defined_types : cpp_decl -> _ = function
   | Denum {de_ref; _} -> [Definition (Enum_definition, de_ref)]
   | _ -> []
 
+(* What printing [d] names, at each frame it enters: its globals, and the
+   definitions it makes. *)
 let declaration_names d =
   let frames = declaration_frames d in
   global_names frames (declaration_globals d)

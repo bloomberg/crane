@@ -23,9 +23,9 @@ open Mlutil
 
 (** {1 Functions upon ML modules} *)
 
-(** Note: a syntax like [(F M) with ...] is actually legal, see for instance bug
-    #4720. Hence the code below tries to handle [MTsig], maybe not in a perfect
-    way, but that should be enough for the use of [se_iter] below. *)
+(* Note: a syntax like [(F M) with ...] is actually legal, see for instance bug
+   #4720. Hence the code below tries to handle [MTsig], maybe not in a perfect
+   way, but that should be enough for the use of [se_iter] below. *)
 
 (** Extract module path from a module type. *)
 let rec msid_of_mt = function
@@ -83,7 +83,8 @@ let se_iter do_decl do_spec do_mp =
   in
   se_iter
 
-(** Iterate callbacks over all elements of a structure. *)
+(** Every function defined outside a functor: a constant whose body is a
+    lambda, and each member of a recursive group, in definition order. *)
 let struct_functions struc =
   let acc = ref [] in
   let rec elems l =
@@ -100,6 +101,7 @@ let struct_functions struc =
   List.iter (fun (_, l) -> elems l) struc;
   List.rev !acc
 
+(** {!se_iter} over every element of every top-level structure. *)
 let struct_iter do_decl do_spec do_mp s =
   List.iter
     (function
@@ -252,7 +254,9 @@ let struct_ast_search f s =
     false
   with Found -> true
 
-(** Search for a type matching a predicate. *)
+(** Search for a type matching a predicate.  [f] is tested on the leaves:
+    every node that is neither an arrow nor a [Tglob] (whose arguments are
+    searched); a solved [Tmeta] is a leaf too. *)
 let rec type_search f = function
   | Tarr (a, b) ->
     type_search f a;
@@ -352,7 +356,7 @@ let get_decl_in_structure r struc =
 
 (** {2 Optimization of a ml_structure} *)
 
-(** Some transformations of ML terms. [optimize_struct] simplify all beta
+(* Some transformations of ML terms. [optimize_struct] simplifies all beta
     redexes (when the argument does not occur, it is just thrown away; when it
     occurs exactly once it is substituted; otherwise a let-in redex is created
     for clarity) and iota redexes, plus some other optimizations. *)
@@ -380,10 +384,6 @@ let dfix_to_mlfix fds i =
   let c = Array.of_list (List.map (fun fd -> subst 0 fd.fd_body) fds) in
   MLfix (i, ids, c, false, Occurrence.fresh ())
 
-(** [optim_se] applies the [normalize] function everywhere and does the inlining
-    of code. The inlined functions are kept for the moment in order to preserve
-    the global interface, later [depcheck_se] will get rid of them if possible
-*)
 (* A let-fix promoted to its declaration ([local_length]'s inner [go]) keeps
    the binder annotations it had inside it, where extraction may have left a
    metavariable for a variable the declaration's signature quantifies -- the
@@ -404,6 +404,7 @@ let unify_binders_with_signature t body =
   let doms = List.skipn (max 0 (List.length doms - List.length ids)) doms in
   List.iter2 (fun (_, body_ty) sig_ty -> try_mgu body_ty sig_ty) ids doms
 
+(** See [modutil.mli]. *)
 let decl_of_term r a t =
   match dump_unused_vars (optimize_fix a) with
   (* An instance of a singleton class stays an instance, whose method the
@@ -414,10 +415,15 @@ let decl_of_term r a t =
     let c = Mlutil.ast_subst_each (fun () -> MLglob (Mlutil.self_reference r)) c in
     unify_binders_with_signature t c;
     Dfix [{fd_ref = r; fd_body = c; fd_type = t}]
-    (* The [] ML type args are safe: gen_expr reads template args from the
-       C++ environment, not from MLglob's arg list. *)
+    (* The self-reference instantiates [r] at its own type variables
+       ({!Miniml.Global_use.identity}), so a self-call states no type
+       arguments of its own. *)
   | a -> Dterm (r, a, t)
 
+(** [optim_se] applies the [normalize] function everywhere and does the inlining
+    of code. The inlined functions are kept for the moment in order to preserve
+    the global interface, later [depcheck_se] will get rid of them if possible
+*)
 let rec optim_se top to_appear s = function
   | [] -> []
   | (l, SEdecl (Dterm (r, a, t))) :: lse ->
@@ -453,9 +459,9 @@ and optim_me to_appear s = function
     MEapply (optim_me to_appear s me, optim_me to_appear s me')
   | MEfunctor (mbid, mt, me) -> MEfunctor (mbid, mt, optim_me to_appear s me)
 
-(** After these optimisations, some dependencies may not be needed anymore. For
-    non-library extraction, we recompute a minimal set of dependencies for
-    first-level definitions (no module pruning yet). *)
+(* After these optimisations, some dependencies may not be needed anymore. For
+   non-library extraction, we recompute a minimal set of dependencies for
+   first-level definitions (no module pruning yet). *)
 
 (** Normalize a GlobRef to its base inductive reference. *)
 let base_r =
@@ -609,4 +615,5 @@ let map_struct ?spec ?(with_type = Fun.id) decl s =
   in
   List.map (fun (mp, sel) -> (mp, elems sel)) s
 
+(** {!map_struct} with the module types untouched. *)
 let map_struct_decls f s = map_struct f s

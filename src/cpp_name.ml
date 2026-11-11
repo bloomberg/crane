@@ -1,6 +1,8 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
+(** A C++ name as resolution settled it.  See [cpp_name.mli]. *)
+
 type scope =
   | Global
   | Namespace of string
@@ -15,6 +17,8 @@ let scope_text = function
   | Global -> ""
   | Namespace s | Class s | Parameter s -> s
 
+(* Whether a qualifier writes anything; an empty namespace or struct is a
+   monolithic extraction's file. *)
 let names_something = function Global -> true | s -> scope_text s <> ""
 
 let name scopes base = Name {scopes = List.filter names_something scopes; base}
@@ -75,6 +79,8 @@ let tag_of = function
   | Class s -> tag_prefix ^ "c:" ^ s
   | Parameter s -> tag_prefix ^ "p:" ^ s
 
+(* The qualifier a tag written by {!tag_of} stands for; [None] for any other
+   tag. *)
 let scope_of_tag tag =
   let n = String.length tag_prefix in
   if String.length tag < n + 2 || not (String.starts_with ~prefix:tag_prefix tag) then None

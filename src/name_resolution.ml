@@ -1,8 +1,8 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Pre-computed C++ name resolution cache. See name_resolution.mli for
-    documentation.
+(** A per-extraction cache of how each inductive type is rendered.  See
+    [name_resolution.mli].
 
     IMPORTANT: This module must NOT call Common.pp_global or
     Common.pp_global_name during [create], because those functions have side
@@ -45,7 +45,7 @@ let resolve_type t r = Ref.User.Tbl.find_opt t.type_names r
 
 (** Looks up the pre-computed C++ name for a term reference. Currently stubbed:
     term names are not pre-computed to avoid side effects. *)
-let resolve_term _t _r = None (* term names not pre-computed — see note above *)
+let resolve_term _t _r = None (* term names not pre-computed; see note above *)
 
 (** Registers a resolved type name in the cache. Overwrites any existing entry
     for the given reference. *)
@@ -71,9 +71,9 @@ let get_ind_kind t r = Ref.User.Tbl.find_opt t.ind_kinds r
     the given reference. *)
 let register_ind_kind t r kind = Ref.User.Tbl.replace t.ind_kinds r kind
 
-(** Classifies an inductive type using side-effect-free queries. Uses raw names
-    from miniml packets to avoid triggering renaming side effects. Returns a
-    thunk that computes the resolved name and kind. *)
+(** Classifies packet [i] of an inductive using side-effect-free queries. Uses
+    the raw name from the MiniML packet to avoid triggering renaming side
+    effects. Returns a thunk yielding the reference, its name and its kind. *)
 let classify_inductive
     (kn : MutInd.t)
     (i : int)
@@ -109,7 +109,7 @@ let classify_inductive
   let rtn =
     {
       rtn_display = raw_name;
-      (* raw name — display rendering uses pp_global at render time *)
+      (* raw name; display rendering uses pp_global at render time *)
       rtn_is_eponymous = is_eponymous;
       rtn_is_record = is_rec;
       rtn_is_enum = is_en;
@@ -120,14 +120,15 @@ let classify_inductive
   fun () -> (ind_ref, rtn, kind)
 
 (** Creates a name resolution cache from an ML structure. Pre-computes type
-    classifications for all inductive types without side effects. *)
+    classifications for every inductive at top level or in a module structure,
+    without side effects. *)
 let create
     ~structure_analysis:_
     s =
   let type_names = Ref.User.Tbl.create 256 in
   let ind_kinds = Ref.User.Tbl.create 64 in
   (* Pre-classify all inductive types using side-effect-free queries only. We do
-     NOT call pp_global_name or pp_global here — those have side effects on
+     NOT call pp_global_name or pp_global here: those have side effects on
      Common.ml's renaming tables that would change the output. *)
   let rec scan_sel sel =
     List.iter

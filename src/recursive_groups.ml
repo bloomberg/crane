@@ -1,6 +1,8 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
+(** The recursive groups of a frozen program.  See [recursive_groups.mli]. *)
+
 open Miniml
 module Map = Ref.User.Map
 module Set = Ref.User.Set

@@ -12,8 +12,9 @@
     reference through a temporary.
 
     Which methods are projections is not read off their C++ bodies: it was
-    decided from the Core function each method is made of, and recorded on
-    its receiver ({!Escape.returns_receiver_field}).  Under [CRANE_CHECK_IR]
+    decided from the Core function each method is made of
+    ({!Escape.returns_receiver_field}), and recorded on its receiver
+    ([returns_field] of {!Minicpp.receiver}).  Under [CRANE_CHECK_IR]
     the body is checked to agree.
 
     The split is made where the method is generated, so every pass after

@@ -7,6 +7,7 @@
 open Names
 open Minicpp
 
+(* Whether [e] mentions [this] anywhere. *)
 let rec reads_this e =
   match e with
   | CPPthis -> true
@@ -46,6 +47,9 @@ let lends_field m =
   | Tref _ | Tvoid -> false
   | _ -> true
 
+(* Whether [m] is split, as the Core decision ({!lends_field}) says.  Under
+   [CRANE_CHECK_IR], a body that does not have the shape that decision
+   promises ({!reads_one_field}) is a violation. *)
 let is_projection m =
   let lends = lends_field m in
   ( if Probe.checking () then
@@ -88,6 +92,8 @@ let lend ~coinductive ((f, vis, tag) as field) =
   | Fmethod m when coinductive && is_projection m -> List.map (fun f -> (f, vis, tag)) (split m)
   | _ -> [field]
 
+(* A coinductive struct whose method still lends a field unsplit was
+   generated without {!lend}. *)
 let rec check_decl d =
   match d with
   | Dtemplate (_, _, inner) -> check_decl inner

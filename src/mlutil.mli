@@ -11,7 +11,10 @@
 (************************************************************************)
 
 (** Utility functions over ML types and terms, type environments, and
-    optimization passes. *)
+    optimization passes.  Shared by every stage that handles MiniML: type
+    reconstruction in extraction, the {!normalize} simplifier that
+    {!Modutil.optimize_struct} runs, and the backend's readers of types and
+    global uses. *)
 
 open Names
 open Miniml
@@ -21,6 +24,7 @@ open Miniml
     Each sees through a resolved meta and visits every child type, a [Tapp]'s
     arguments included. *)
 
+(** Sets of type variable indices. *)
 module IntSet : Stdlib.Set.S with type elt = int and type t = Stdlib.Set.Make(Stdlib.Int).t
 
 (** [t] with every resolved meta at its root taken off. *)
@@ -29,6 +33,7 @@ val ml_resolve : ml_type -> ml_type
 (** The immediate sub-types of an already resolved type. *)
 val ml_type_children : ml_type -> ml_type list
 
+(** Whether some node of the type, the root included, satisfies [p]. *)
 val exists_ml_type : (ml_type -> bool) -> ml_type -> bool
 
 (** Pre-order: [f] sees a node before its children. *)
@@ -104,9 +109,13 @@ val forwarding_use : GlobRef.t -> global_use
     position, so they cannot be paired by position with a source binder, an
     argument or a template parameter. *)
 module Var_types : sig
+  (** The types, by variable. *)
   type t
 
+  (** No variable spoken for. *)
   val empty : t
+
+  (** Whether no variable is spoken for. *)
   val is_empty : t -> bool
 
   (** [through last f]: every variable of [last]'s scheme up to [last],
@@ -129,6 +138,7 @@ module Var_types : sig
       variables: each variable spoken for is replaced, any other stays. *)
   val apply : t -> ml_type -> ml_type
 
+  (** The same variables at equal types ({!eq_ml_type}). *)
   val equal : t -> t -> bool
 end
 
@@ -176,8 +186,13 @@ val type_has_meta : ml_type -> bool
     not an ordinary MiniML type until {!close} says it is hole-free or
     {!resolve} has filled its holes from other evidence. *)
 module Partial : sig
+  (** A type that may hold holes. *)
   type t = private ml_type
 
+  (** [instantiate inst ty] is [ty], in the callee's scheme variables, with
+      each variable [inst] solves to a type replaced by that type, which may
+      hold holes; a variable it leaves standing for itself
+      ({!Scheme.Identity}) stays. *)
   val instantiate : ml_type Scheme.Instantiation.t -> ml_type -> t
 
   (** The holes, in order of first occurrence. *)
@@ -204,7 +219,8 @@ val type_subst_vect : ml_type array -> ml_type -> ml_type
     [Tvar 1 .. Tvar n], with fresh meta variables. *)
 val instantiate_prenex : int -> ml_type -> ml_type
 
-(** Replace unknown meta variables with fresh type variables. *)
+(** Replace every [Tunknown] with a fresh metavariable, so that an erased
+    existential can unify with a concrete type at a use site. *)
 val instantiate_unknowns : ml_type -> ml_type
 
 (** Attempt most general unification of two types.  Mutably updates
@@ -219,8 +235,8 @@ val try_mgu : ml_type -> ml_type -> unit
 val needs_magic : ml_type * ml_type -> bool
 
 (** Conditionally wrap an ML term in a coercion.  The two types are passed
-    explicitly because {!needs_magic}'s pair is unordered — [mgu] is symmetric
-    — whereas a backend must know which side the term is on.
+    explicitly because {!needs_magic}'s pair is unordered ([mgu] is
+    symmetric) whereas a backend must know which side the term is on.
     @param from the type the term itself has
     @param into the type the context requires
     @param b    when [true], wraps [a]
@@ -235,12 +251,16 @@ val put_magic_if :
     @param a    the ML expression to (possibly) wrap *)
 val put_magic : from:ml_type -> into:ml_type -> ml_ast -> ml_ast
 
-(** Check if an ML term can be generalized. *)
+(** Check if an ML term can be generalized at a let.  For C++ an
+    application never is; anything else is, an approximation that well-typed
+    Rocq never exercises. *)
 val generalizable : ml_ast -> bool
 
 (** {2 ML type environment} *)
 
 module Mlenv : sig
+  (** Type schemas of the binders in scope, innermost first, with the free
+      metavariables they mention. *)
   type t
 
   (** The empty type environment. *)
@@ -330,7 +350,9 @@ type abbrev_map = GlobRef.t -> ml_type option
     @param t   the ML type to expand *)
 val type_expand : abbrev_map -> ml_type -> ml_type
 
-(** Simplify an ML type. *)
+(** Simplify an ML type: {!type_expand} with no abbreviation, which only
+    replaces solved metavariables by their contents (when type expansion is
+    enabled). *)
 val type_simpl : ml_type -> ml_type
 
 (** Convert an ML type to a signature element for its outermost position.
@@ -445,7 +467,8 @@ val collect_lams : ml_ast -> (ml_ident * ml_type) list * ml_ast
 (** Collect exactly n lambda abstractions from a term.
     @param n the number of leading [MLlam] nodes to collect; asserts if fewer exist
     @param t the term to peel
-    @return [(binders, body)] where [binders] has exactly [n] entries (outermost first) *)
+    @return [(binders, body)] where [binders] has exactly [n] entries
+            (innermost first, as {!collect_lams} returns them) *)
 val collect_n_lams : int -> ml_ast -> (ml_ident * ml_type) list * ml_ast
 
 (** Remove n lambda abstractions from a term.
@@ -455,8 +478,9 @@ val remove_n_lams : int -> ml_ast -> ml_ast
 (** Count the number of lambda abstractions at the head of a term. *)
 val nb_lams : ml_ast -> int
 
-(** Wrap a term in lambda abstractions with the given identifiers and types.
-    @param ids list of [(identifier, type)] pairs, outermost binder first
+(** Wrap a term in lambda abstractions with the given identifiers and types:
+    the converse of {!collect_lams}.
+    @param ids list of [(identifier, type)] pairs, innermost binder first
     @param a   the body to wrap *)
 val named_lams : (ml_ident * ml_type) list -> ml_ast -> ml_ast
 
@@ -516,7 +540,7 @@ val freshen_metas : ml_ast -> ml_ast
     open what their originals did independently of them. *)
 val freshen_holes : ml_ast -> ml_ast
 
-(** [has_unknown t] — whether [t] mentions [Tunknown], the marker extraction
+(** [has_unknown t]: whether [t] mentions [Tunknown], the marker extraction
     leaves where a type was erased. *)
 val has_unknown : ml_type -> bool
 
@@ -643,10 +667,10 @@ exception Impossible
 
 (** Classification of signatures based on their contents. *)
 type sign_kind =
-  | EmptySig
-  | NonLogicalSig (* at least a [Keep] *)
-  | SafeLogicalSig (* only [Kill Ktype] *)
-  | UnsafeLogicalSig (* No [Keep], not all [Kill Ktype] *)
+  | EmptySig  (** the empty signature *)
+  | NonLogicalSig  (** at least a [Keep] *)
+  | SafeLogicalSig  (** only [Kill Ktype] *)
+  | UnsafeLogicalSig  (** no [Keep], not all [Kill Ktype] *)
 
 (** Classify a signature into one of the sign_kind categories.
     @return [EmptySig] for an empty list; [NonLogicalSig] if any [Keep] is

@@ -1,8 +1,9 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** A copy of a Core term that is new terms (docs/Pipeline-Disentangling-Plan.md,
-    Milestone 6).
+(** A copy of a Core term that is new terms: the same shape, with every
+    occurrence fresh.  Used where a pass duplicates a body, such as inlining
+    a callee at a call.
 
     Every consumer of Core names a place in a definition by an occurrence: a
     read's, a let's, a match's, a local fixpoint's or a global use's -- the recursion
