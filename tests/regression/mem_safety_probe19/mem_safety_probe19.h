@@ -367,11 +367,14 @@ struct MemSafetyProbe19 {
   /// TEST 5: Double use of returned closure.
   /// Ensures the closure is a real std::function, not inlined.
   static inline const uint64_t test_double_use = []() {
-    crane::fn<uint64_t(uint64_t)> f = [](uint64_t _x0) -> uint64_t {
-      return tree::node(tree::leaf(), UINT64_C(7), tree::leaf())
-          .choose_fn(true, _x0);
-    };
-    return (f(UINT64_C(1)) + f(UINT64_C(2)));
+    return []() {
+      crane::fn<uint64_t(uint64_t)> f = []() {
+        auto _pa0 = tree::node(tree::leaf(), UINT64_C(7), tree::leaf());
+        return
+            [=](uint64_t _x0) -> uint64_t { return _pa0.choose_fn(true, _x0); };
+      }();
+      return (f(UINT64_C(1)) + f(UINT64_C(2)));
+    }();
   }();
 
   /// TEST 6: Pass returned closure to a higher-order function.
@@ -382,11 +385,14 @@ struct MemSafetyProbe19 {
   }
 
   static inline const uint64_t test_pass_closure = []() {
-    crane::fn<uint64_t(uint64_t)> f = [](uint64_t _x0) -> uint64_t {
-      return tree::node(tree::leaf(), UINT64_C(15), tree::leaf())
-          .choose_fn(true, _x0);
-    };
-    return apply_to(std::move(f), UINT64_C(10));
+    return []() {
+      crane::fn<uint64_t(uint64_t)> f = []() {
+        auto _pa0 = tree::node(tree::leaf(), UINT64_C(15), tree::leaf());
+        return
+            [=](uint64_t _x0) -> uint64_t { return _pa0.choose_fn(true, _x0); };
+      }();
+      return apply_to(std::move(f), UINT64_C(10));
+    }();
   }();
   static inline const uint64_t test_nested_match =
       tree::node(tree::leaf(), UINT64_C(4), tree::leaf())

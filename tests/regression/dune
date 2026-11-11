@@ -14156,3 +14156,69 @@
   (alias runtest)
   (deps local_mutual_callable_param_capture.t.exe)
   (action (run ./local_mutual_callable_param_capture.t.exe))))
+
+(subdir loopify_default
+ (rule
+  (targets loopify_default.t.exe)
+  (deps LoopifyDefault.vo loopify_default.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_default.t.exe loopify_default.t.cpp loopify_default.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_default.t.exe)
+  (action (run ./loopify_default.t.exe))))
+
+(subdir eta_arg
+ (rule
+  (targets eta_arg.t.exe)
+  (deps EtaArg.vo eta_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_arg.t.exe eta_arg.t.cpp eta_arg.cpp)))
+ (rule
+  (alias runtest)
+  (deps eta_arg.t.exe)
+  (action (run ./eta_arg.t.exe))))
+
+(subdir numeral_wrap_gmp
+ (rule
+  (targets numeral_wrap_gmp.t.exe)
+  (deps NumeralWrapGmp.vo numeral_wrap_gmp.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-gmp.sh %{project_root} numeral_wrap_gmp.t.exe numeral_wrap_gmp.t.cpp numeral_wrap_gmp.cpp)))
+ (rule
+  (alias runtest)
+  (deps numeral_wrap_gmp.t.exe)
+  (action (run ./numeral_wrap_gmp.t.exe))))
+
+(subdir alias_slot
+ (rule
+  (targets alias_slot.t.exe)
+  (deps AliasSlot.vo alias_slot.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} alias_slot.t.exe alias_slot.t.cpp alias_slot.cpp)))
+ (rule
+  (alias runtest)
+  (deps alias_slot.t.exe)
+  (action (run ./alias_slot.t.exe))))
+
+(subdir atomic_include
+ (rule
+  (targets atomic_include.t.exe)
+  (deps AtomicInclude.vo atomic_include.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} atomic_include.t.exe atomic_include.t.cpp atomic_include.cpp)))
+ (rule
+  (alias runtest)
+  (deps atomic_include.t.exe)
+  (action (run ./atomic_include.t.exe))))
+
+(subdir ptr_word
+ (rule
+  (targets ptr_word.t.exe)
+  (deps PtrWord.vo ptr_word.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ptr_word.t.exe ptr_word.t.cpp ptr_word.cpp)))
+ (rule
+  (alias runtest)
+  (deps ptr_word.t.exe)
+  (action (run ./ptr_word.t.exe))))

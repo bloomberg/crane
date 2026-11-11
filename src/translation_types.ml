@@ -841,29 +841,26 @@ let render_numeral info (n : Z.t) : cpp_expr =
     [None] if any node is not a recognized positive constructor.
     Constructor indices (1-based): xI=[positive_xI_idx], xO=[positive_xO_idx],
     xH=[positive_xH_idx]. *)
-let rec try_fold_positive expr : int64 option =
+let rec try_fold_positive expr : Z.t option =
   match strip_magic expr with
   | MLcons (_, GlobRef.ConstructRef (_, idx), []) when idx = positive_xH_idx ->
-    Some 1L
+    Some Z.one
   | MLcons (_, GlobRef.ConstructRef (_, idx), [inner]) when idx = positive_xI_idx ->
-    Option.map (fun n -> Int64.add (Int64.mul 2L n) 1L) (try_fold_positive inner)
+    Option.map (fun n -> Z.succ (Z.shift_left n 1)) (try_fold_positive inner)
   | MLcons (_, GlobRef.ConstructRef (_, idx), [inner]) when idx = positive_xO_idx ->
-    Option.map (fun n -> Int64.mul 2L n) (try_fold_positive inner)
+    Option.map (fun n -> Z.shift_left n 1) (try_fold_positive inner)
   | _ -> None
 
 (** Fold a Zpos/Zneg constructor wrapping a positive chain into a rendered
     numeral string.  [cidx] is the 1-based constructor index of the Z
     constructor; [inner] is its positive argument.  Returns [None] if [inner]
-    cannot be folded. *)
+    cannot be folded.  The value is kept at arbitrary precision: an [int64]
+    wraps silently from 2^63 on. *)
 let try_fold_z_binary info cidx inner : cpp_expr option =
   Option.map
     (fun pos_val ->
-      let z_val =
-        if cidx = z_pos_idx then pos_val
-        else if cidx = z_neg_idx then Int64.neg pos_val
-        else pos_val
-      in
-      render_numeral info (Z.of_int64 z_val))
+      let z_val = if cidx = z_neg_idx then Z.neg pos_val else pos_val in
+      render_numeral info z_val)
     (try_fold_positive inner)
 
 (** Whether [r] is a type family over a value -- [sem : idx -> Type] --
