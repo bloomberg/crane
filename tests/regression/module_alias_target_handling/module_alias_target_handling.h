@@ -1260,9 +1260,10 @@ struct Coq_Pos {
   static T1 peano_rect(T1 a,
                        std::type_identity_t<crane::fn<T1(unsigned int, T1)>> f0,
                        unsigned int p) {
+    auto _lc1_pa0 = f0(1u, a);
     crane::fn<T1(unsigned int)> f2 = [=](unsigned int _x0) -> T1 {
       return peano_rect<T1>(
-          f0(1u, a),
+          _lc1_pa0,
           [=](unsigned int p0, const T1 &x) {
             return f0(((2u * p0) + 1u), f0((2u * p0), x));
           },

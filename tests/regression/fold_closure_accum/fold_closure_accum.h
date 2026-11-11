@@ -276,15 +276,12 @@ struct FoldClosureAccum {
     return []() {
       tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
       tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
-      crane::fn<uint64_t(uint64_t)> f =
-          [=, t1 = std::move(t1),
-           t2 = std::move(t2)](uint64_t _x0) -> uint64_t {
-        return compose_adders(
-            List<tree>::cons(
-                std::move(t1),
-                List<tree>::cons(std::move(t2), List<tree>::nil())),
-            _x0);
-      };
+      crane::fn<uint64_t(uint64_t)> f = [&]() {
+        auto _pa0 = List<tree>::cons(
+            std::move(t1), List<tree>::cons(std::move(t2), List<tree>::nil()));
+        return
+            [=](uint64_t _x0) -> uint64_t { return compose_adders(_pa0, _x0); };
+      }();
       return (f(UINT64_C(0)) + f(UINT64_C(100)));
     }();
   }();

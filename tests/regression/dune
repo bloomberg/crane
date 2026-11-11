@@ -14167,3 +14167,14 @@
   (alias runtest)
   (deps loopify_default.t.exe)
   (action (run ./loopify_default.t.exe))))
+
+(subdir eta_arg
+ (rule
+  (targets eta_arg.t.exe)
+  (deps EtaArg.vo eta_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_arg.t.exe eta_arg.t.cpp eta_arg.cpp)))
+ (rule
+  (alias runtest)
+  (deps eta_arg.t.exe)
+  (action (run ./eta_arg.t.exe))))
