@@ -992,21 +992,19 @@ let has_recursive_fields r =
     of some parameter references an earlier parameter (via de Bruijn index).
     For example, [sigT (A : Type) (P : A -> Type)] has a dependent second
     parameter because [P]'s type mentions [A].  [prod (A B : Type)] does not.
-    Returns [true] if any parameter depends on an earlier one. *)
+    Returns [true] if any parameter depends on an earlier one, and [false]
+    for an inductive the global environment does not hold (one declared in
+    a functor parameter's signature). *)
 let has_dependent_params r =
   match r with
-  | GlobRef.IndRef (kn, _) ->
-    ( try
-        let mib = Global.lookup_mind kn in
-        let ctx = mib.mind_params_ctxt in
-        List.exists (fun decl ->
-          match decl with
-          | Context.Rel.Declaration.LocalAssum (_, ty) ->
-            not (Vars.closed0 ty)
-          | Context.Rel.Declaration.LocalDef (_, body, ty) ->
-            not (Vars.closed0 ty) || not (Vars.closed0 body)
-        ) ctx
-      with _ -> false )
+  | GlobRef.IndRef (kn, _) when Environ.mem_mind kn (Global.env ()) ->
+    let mib = Global.lookup_mind kn in
+    List.exists
+      (function
+        | Context.Rel.Declaration.LocalAssum (_, ty) -> not (Vars.closed0 ty)
+        | Context.Rel.Declaration.LocalDef (_, body, ty) ->
+          not (Vars.closed0 ty) || not (Vars.closed0 body))
+      mib.mind_params_ctxt
   | _ -> false
 
 let {Goptions.get = std_lib} =
@@ -3091,7 +3089,7 @@ let is_flat_inductive_packet kn ind i =
     && Array.length p.ip_types = 1
     && (not is_enum)
     && not has_self_ref
-  with _ -> false
+  with Invalid_argument _ | Failure _ -> false
 
 (** Check if [r] is a flat inductive.  First checks the flat-inductives
     registry (populated by [Cpp.prepare_structure] before rendering).  If not found
