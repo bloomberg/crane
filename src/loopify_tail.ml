@@ -270,6 +270,11 @@ let rewrite_borrowed_shadow_uses shadow_params stmts =
   in
   List.map stmt stmts
 
+(** Whether a shadow's C++ type is a pointer ([const T *]), seen through
+    [const] and references: a pointer shadow is repointed, never
+    overwritten in place. *)
+let rec pointer = function Tptr _ -> true | Tconst t | Tref (_, t) -> pointer t | _ -> false
+
 (** Wrap [e] in [std::move] only when it is an lvalue (a plain variable
     reference).  Wrapping rvalues (function calls, literals, binary ops) in
     [std::move] is a pessimising move: it prevents copy elision on the
@@ -281,14 +286,14 @@ let move_if_lvalue = function
 (** Assign [expr] to the [_result] accumulator variable:
     the statement list [[\[_result = expr;\]]].  Used by the frame machine
     ({!Loopify_frame}), which keeps a [_result]; the tail loop returns
-    directly ({!assign_result_and_stop}). *)
+    directly ({!return_result}). *)
 let assign_result expr =
   [Sexpr (CPPbinop (Bassign, CPPvar (id_result), move_if_lvalue expr))]
 
 (** Return [expr] directly from the tail-recursion [while (true)] loop, which
     leaves both the loop and the function.  Used only in tail-recursion
     rewriting. *)
-let assign_result_and_stop expr =
+let return_result expr =
   [ Sreturn (Some (move_if_lvalue expr)) ]
 
 (** Generate temp-based parameter updates to avoid read-after-write hazards. For
@@ -372,7 +377,6 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
       Cpp_erasure.converting_ctor vty [core]
     | _ -> arg
   in
-  let rec pointer = function Tptr _ -> true | Tconst t | Tref (_, t) -> pointer t | _ -> false in
   let by_value id = List.exists (fun (s, ty) -> Id.equal s id && not (pointer ty)) shadow_params in
   let moved_at_last_read updates =
     fst
@@ -606,7 +610,6 @@ let rec generic_rewrite_stmt ?(aliases = []) ?(derefs = []) trc = function
        bindings are aliases of the shadow while the branch runs, and
        overwriting the shadow overwrites them.  A pointer shadow is only
        repointed; what it pointed at stays where it was. *)
-    let rec pointer = function Tptr _ -> true | Tconst t | Tref (_, t) -> pointer t | _ -> false in
     let by_value =
       List.filter_map
         (fun (id, ty) -> if pointer ty then None else Some id)
@@ -671,7 +674,7 @@ let wrap_as_block = function
 
     Constructs a tail-recursion {!top_rewrite_config} and delegates to
     {!generic_rewrite_stmts}.  Base returns return their value directly
-    ({!assign_result_and_stop}); tail calls update shadow variables with no
+    ({!return_result}); tail calls update shadow variables with no
     suffix (control falls through to the [while (true)] test).  Void
     tail-call detection is enabled.  [jumped] is told each call rewritten
     into a jump, and [last_reads] fills [rc_last_reads]. *)
@@ -686,7 +689,7 @@ let rewrite_visit_stmts ?(last_reads = fun _ _ -> []) ~jumped check varying shad
   generic_rewrite_stmts
     { trc_inner = inner_rc;
       trc_jump = (fun ~derefs:_ ~updates _ args -> updates args);
-      trc_on_other = (fun ~derefs:_ e -> wrap_as_block (assign_result_and_stop e));
+      trc_on_other = (fun ~derefs:_ e -> wrap_as_block (return_result e));
       trc_rewrite_branch = Fun.id;
       trc_detect_void_tail = true }
 
@@ -830,7 +833,6 @@ type shadow_setup = {
 let moving_jumps ~moves ~subs ~shadow_params params (check : call_checker) : call_checker =
   if moves = [] then check
   else
-    let rec pointer = function Tptr _ -> true | Tconst t | Tref (_, t) -> pointer t | _ -> false in
     let by_value shadow =
       match List.assoc_opt shadow shadow_params with Some ty -> not (pointer ty) | None -> false
     in
@@ -1010,7 +1012,7 @@ let drop_unread_shadows shadow_decls body =
     after the recursive call, we can convert it directly into iteration.
 
     {b Non-void functions} return from inside the loop: a base case returns
-    its value directly ({!assign_result_and_stop}), and [while (true)]
+    its value directly ({!return_result}), and [while (true)]
     without [break] never falls through, so no [_result] or trailing return
     is needed:
 
@@ -1094,7 +1096,7 @@ let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~varying
      - Non-void: [... while (true) { ... return val; }]
      - Void:     [... while (true) { ... } return;]
      Non-void base cases return directly via [Sreturn] (from
-     [assign_result_and_stop]); no [_result] variable or trailing return needed
+     [return_result]); no [_result] variable or trailing return needed
      since [while (true)] without [break] never falls through.
      Void base cases exit via [Sreturn None] (plain [return;]).
      Both use [while (true)] for the loop condition. *)

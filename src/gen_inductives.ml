@@ -3198,7 +3198,7 @@ let gen_ind_header_v2
                                        Id.of_string "v", [])
                   in
                   let rec build_if_chain = function
-                    | [] -> CErrors.anomaly (Pp.str "iterative_destructor: empty constructor list")
+                    | [] -> CErrors.anomaly (Pp.str "converting constructor: empty constructor list")
                     | [(_, cname_id, field_info, converted)] ->
                       (* Last branch: no guard *)
                       make_branch_body cname_id field_info converted

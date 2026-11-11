@@ -251,10 +251,6 @@ type kind =
   | Cons
   | Mod
 
-(** Apply case convention to identifier based on kind (currently identity). *)
-let kindcase_id k id =
-  id (* if upperkind k then uppercase_id id else lowercase_id id *)
-
 (** {2 de Bruijn environments for programs} *)
 
 (** de Bruijn environment: names in scope and avoided names. *)
@@ -736,7 +732,7 @@ let reset_renaming_tables () = do_cleanup ()
     character, because a leading underscore was unreserved, or because the name
     is a C++ keyword.  A changed name may have landed on one already taken, so
     it is the caller's cue to look for a collision. *)
-let modular_rename_ex ?(global_scope = false) _k id =
+let modular_rename_ex ?(global_scope = false) id =
   let s = ascii_of_id id in
   let s = Mlutil.unreserve_leading_underscore s in
   let is_kw =
@@ -747,7 +743,7 @@ let modular_rename_ex ?(global_scope = false) _k id =
 
 (** Rename an identifier for modular extraction (keyword escaping, prime
     replacement). *)
-let modular_rename k id = fst (modular_rename_ex k id)
+let modular_rename id = fst (modular_rename_ex id)
 
 (** The C++ name of the [using] alias a type-returning [Definition] is
     emitted as, or [None] for any other declaration. *)
@@ -757,7 +753,7 @@ let type_alias_name_of_decl = function
   | Dtype (_, _, Tdummy Ktype) -> None
   | Dtype (r, _, _) when Table.is_any_inline_custom r -> None
   | Dtype (GlobRef.ConstRef cst, _, _) ->
-    Some (modular_rename Type (Label.to_id (Constant.label cst)))
+    Some (modular_rename (Label.to_id (Constant.label cst)))
   | _ -> None
 
 (** C++ names of the types declared directly in [sel] that a sibling module
@@ -772,7 +768,7 @@ let inductive_names_of_sel sel =
       | SEdecl (Dind (_kn, {ind_kind = Core.Inductive.Kind.Type_class _; _})) -> []
       | SEdecl (Dind (_kn, ind)) ->
         Array.to_list
-          (Array.map (fun p -> modular_rename Type p.ip_typename) ind.ind_packets)
+          (Array.map (fun p -> modular_rename p.ip_typename) ind.ind_packets)
       (* A [Definition] returning a type is emitted as a [using] alias beside
          the module's struct, in the same scope: [Handler.v] declares both a
          [Module Handler] and a [Definition Handler], and one of the two names
@@ -793,17 +789,17 @@ let label_of_r : GlobRef.t -> Label.t = function
     renames, which then only qualifies an outer reference that did not need
     it. *)
 let member_names_of_sel sel =
-  let name k id = Id.of_string (modular_rename k id) in
+  let name id = Id.of_string (modular_rename id) in
   List.fold_left
     (fun acc (l, se) ->
       let ids =
         match se with
         | SEdecl (Dind (_, ind)) ->
-          Array.to_list (Array.map (fun p -> name Type p.ip_typename) ind.ind_packets)
+          Array.to_list (Array.map (fun p -> name p.ip_typename) ind.ind_packets)
         | SEdecl (Dfix fds) ->
-          List.map (fun fd -> name Term (Label.to_id (label_of_r fd.fd_ref))) fds
-        | SEdecl _ -> [name Term (Label.to_id l)]
-        | SEmodule _ | SEmodtype _ -> [name Mod (Label.to_id l)]
+          List.map (fun fd -> name (Label.to_id (label_of_r fd.fd_ref))) fds
+        | SEdecl _ -> [name (Label.to_id l)]
+        | SEmodule _ | SEmodtype _ -> [name (Label.to_id l)]
       in
       List.fold_left (fun acc id -> Id.Set.add id acc) acc ids )
     Id.Set.empty sel
@@ -822,7 +818,7 @@ let file_colliding_type_names sel =
       match se with
       | SEdecl (Dind (_kn, ind)) ->
         Array.to_list
-          (Array.map (fun p -> modular_rename Type p.ip_typename) ind.ind_packets)
+          (Array.map (fun p -> modular_rename p.ip_typename) ind.ind_packets)
       | SEdecl d -> Stdlib.Option.to_list (type_alias_name_of_decl d)
       | _ -> [] )
     sel
@@ -865,7 +861,7 @@ let unmergeable_inductive_names_of_sel sel =
             || List.exists (Names.Ind.CanOrd.equal (kn, i)) self_typed )
           (Array.to_list
              (Array.map
-                (fun p -> modular_rename Type p.ip_typename)
+                (fun p -> modular_rename p.ip_typename)
                 ind.ind_packets ) )
       | _ -> [] )
     sel
@@ -899,7 +895,7 @@ let detect_sibling_module_inductive_collisions (s : ml_structure) =
         match se with
         | SEmodule m ->
           Hashtbl.replace struct_module_paths (MPdot (parent_mp, l)) ();
-          let mod_name = modular_rename Mod (Label.to_id l) in
+          let mod_name = modular_rename (Label.to_id l) in
           let clashes names = List.exists (String.equal mod_name) names in
           (* An inductive declared {e inside} the module and sharing its name
              is the eponymous case: the backend merges the type into the module
@@ -934,7 +930,7 @@ let detect_sibling_module_inductive_collisions (s : ml_structure) =
             let enclosing =
               match Hashtbl.find_opt sibling_collision_renames (MPdot (parent_mp, l)) with
               | Some renamed -> renamed
-              | None -> modular_rename Mod (Label.to_id l)
+              | None -> modular_rename (Label.to_id l)
             in
             scan_sel ~enclosing inner_mp inner_sel
           | _ -> () )
@@ -1022,7 +1018,7 @@ let rec mp_renaming_fun full_mp =
       | None ->
         ( match lmp with
         | [""] -> modfstlev_rename l
-        | _ -> modular_rename Mod (Label.to_id l) )
+        | _ -> modular_rename (Label.to_id l) )
     in
     (* A module named [std] or [crane] is emitted as [std_] / [crane_] so it
        does not shadow the standard library or the Crane runtime namespace;
@@ -1034,7 +1030,7 @@ let rec mp_renaming_fun full_mp =
        already uses it.  OCaml had to alpha-rename it to [M__3], because a
        shadowed name there is unreachable; in C++ the template parameter simply
        shadows, and the outer name stays reachable by qualifying it. *)
-    [modular_rename Mod (MBId.to_id mbid)]
+    [modular_rename (MBId.to_id mbid)]
   | MPfile _ ->
     assert (modular ());
     (* see [at_toplevel] above *)
@@ -1113,13 +1109,13 @@ let ref_renaming_fun (k, r) =
             globs
         | _ -> globs
       in
-      let id = next_ident_away (kindcase_id k (cpp_id_of_id idg)) globs in
+      let id = next_ident_away (cpp_id_of_id idg) globs in
       Id.to_string id
     | _ ->
       (* Only the module being extracted puts its declarations at global
          scope, beside the C library's own names. *)
       let global_scope = Table.is_toplevel mp in
-      let s, changed = modular_rename_ex ~global_scope k idg in
+      let s, changed = modular_rename_ex ~global_scope idg in
       let is_bound = is_mp_bound (base_mp mp) in
       (* Avoid collisions caused by keyword/prime escaping. For constructors,
          track per inductive type. For other globals, track per module path.
@@ -1137,7 +1133,7 @@ let ref_renaming_fun (k, r) =
            eponymous Dnspace merge may capitalize the enclosing struct
            (e.g. module Ascii + type ascii -> struct Ascii). *)
         let parent_idg = safe_basename_of_global (GlobRef.IndRef ind) in
-        let parent_s, _ = modular_rename_ex k parent_idg in
+        let parent_s, _ = modular_rename_ex parent_idg in
         let siblings =
           Id.Set.add
             (ctor_scope_id (Id.of_string parent_s))
@@ -1164,7 +1160,7 @@ let ref_renaming_fun (k, r) =
           match (r, mp) with
           | GlobRef.ConstRef _, ModPath.MPdot (_, l)
             when Hashtbl.mem struct_module_paths mp ->
-            Some (modular_rename Mod (Label.to_id l))
+            Some (modular_rename (Label.to_id l))
           | _ -> None
         in
         let key = if is_ind then ctor_cpp_id else fun id -> id in
@@ -1524,7 +1520,7 @@ let resolve_module_in vis mp =
   | _ -> pp_ocaml_gen vis Mod mp (mp_scope_kinds mp) (List.rev ls) None
 
 (** The C++ name of a module label, as {!modular_rename} spells it. *)
-let module_label_name l = modular_rename Mod (Label.to_id l)
+let module_label_name l = modular_rename (Label.to_id l)
 
 (** Special hack for constants of type Ascii.ascii : if an
     [Extract Inductive ascii => char] has been declared, then the constants are
@@ -1844,9 +1840,6 @@ let scrutinee_cache_id n =
   Id.of_string
     (if n = 0 then scrutinee_cache_prefix
      else scrutinee_cache_prefix ^ string_of_int n)
-
-let is_scrutinee_cache_id id =
-  String.starts_with ~prefix:scrutinee_cache_prefix (Id.to_string id)
 
 let db_fallback_name i = "_db" ^ string_of_int i
 

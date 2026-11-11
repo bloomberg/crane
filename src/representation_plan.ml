@@ -478,13 +478,6 @@ let region ~outer body =
   | _ -> walk scope body );
   (!found, List.rev !reads)
 
-(* Two sites are the same match and branch, or the same binding. *)
-let same_site a b =
-  match (a, b) with
-  | Core_binder.Branch (o, i), Core_binder.Branch (o', i') -> Occurrence.equal o o' && Int.equal i i'
-  | Binding o, Binding o' -> Occurrence.equal o o'
-  | Branch _, Binding _ | Binding _, Branch _ -> false
-
 (* How a binder kind is named in probe output. *)
 let kind_name = function
   | Kouter -> "outer"
@@ -542,7 +535,7 @@ let check ?(as_bound = false) ~site ~field ~live () =
       ++ str (if live then "boxes" else "does not box")
       ++ str ", the plan " ++ str planned)
   in
-  match List.find_opt (fun (s, f, _) -> Int.equal f field && same_site s site) (!tctx).representation with
+  match List.find_opt (fun (s, f, _) -> Int.equal f field && Core_binder.equal_site s site) (!tctx).representation with
   | Some (_, _, {pr_boxed; pr_bound_boxed}) ->
     let pr_boxed = if as_bound then pr_bound_boxed else pr_boxed in
     let agrees = pr_boxed = live in

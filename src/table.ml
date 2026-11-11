@@ -2473,15 +2473,6 @@ let shared_variant () = shared_variant_requested () && not (String.equal (std_li
 let {Goptions.get = boxed_fields} =
   declare_bool_option_and_ref ~key:["Crane"; "BoxedFields"] ~value:false ()
 
-(* --- Last-use moves --------------------------------------------------- *)
-
-(* [Crane MoveLastUse] is declared, on by default, but nothing reads it: a
-   read is moved wherever OwnershipIR finds it the last use of an owned local
-   ([Ownership_ir.Last_use]), removing a refcount round-trip per hand-off,
-   whatever the option says. *)
-let {Goptions.get = move_last_use} =
-  declare_bool_option_and_ref ~key:["Crane"; "MoveLastUse"] ~value:true ()
-
 (* --- Scoped-arena master switch -------------------------------------- *)
 
 (* [Set Crane Arena] turns on the runtime scoped-arena machinery for a whole
@@ -3505,22 +3496,15 @@ let get_ref_import_list r =
   | Some imports -> StringSet.elements imports
   | None -> []
 
-(* Global custom imports, not tied to any reference.  Nothing adds to it, so
-   it is always empty; [imports_of] below still unions it in. *)
-let empty_custom_imports = StringSet.empty
-
-let custom_imports = Summary.ref empty_custom_imports ~name:"CraneCustomImports"
-
 let imports_of refs =
   Ref.User.Set.fold
     (fun r acc ->
       match Ref.Can.Map.find_opt r !ref_imports with
       | Some imports -> StringSet.union imports acc
       | None -> acc )
-    refs !custom_imports
+    refs StringSet.empty
 
-(* The imports of the customs the unit's files write, plus the global ones
-   ({!custom_imports}, empty). *)
+(* The imports of the customs the unit's files write. *)
 let get_custom_imports () = StringSet.elements (imports_of (written_customs ()))
 
 (* The headers whose mappings put the program's values on several threads:

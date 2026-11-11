@@ -1786,18 +1786,10 @@ let dummy_lams a n = many_lams Dummy a (List.init n (fun _ -> Taxiom))
 
 (** {2 mixed according to a signature} *)
 
-let rec anonym_or_dummy_lams a = function
-  | [] -> a
-  | Keep :: s ->
-    MLlam (anonymous, Taxiom, anonym_or_dummy_lams a s)
-    (* Dead for the C++ backend: Crane's extraction.ml always calls
-       anonym_or_dummy_lams_typed instead, which uses actual resolved types. *)
-  | Kill k :: s -> MLlam (Dummy, Tdummy k, anonym_or_dummy_lams a s)
-
-(* Like [anonym_or_dummy_lams], but uses actual resolved types for [Keep]
-   entries instead of [Taxiom]. The [types] list provides one type per signature
-   element; if the lists go out of sync (e.g. the types list is shorter), we
-   fall back to [Taxiom] to avoid crashing. *)
+(* An anonymous lambda for each [Keep] entry of the signature, at its type
+   among [types], and a [Dummy] one for each [Kill].  The [types] list provides
+   one type per signature element; if the lists go out of sync (e.g. the types
+   list is shorter), we fall back to [Taxiom] to avoid crashing. *)
 let rec anonym_or_dummy_lams_typed a types = function
   | [] -> a
   | Keep :: s ->
@@ -2385,15 +2377,6 @@ let kill_some_lams bl (ids, c) =
     in
     parse_ids 0 1 bl;
     (select_via_bl bl ids, gen_subst v (n' - n) c)
-(* let kill_some_lams' bl tys (ids,c) = let n = List.length bl in let n' =
-   List.fold_left (fun n b -> if b == Keep then (n+1) else n) 0 bl in if
-   Int.equal n n' then ids,tys,c else if Int.equal n' 0 && not (List.exists
-   is_impl_kill bl) then [],ast_lift (-n) c else begin let v = Array.make n None
-   in let rec parse_ids i j = function | [] -> () | Keep :: l -> v.(i) <- Some
-   (MLrel j); parse_ids (i+1) (j+1) l | Kill (Kimplicit _ as k) :: l -> v.(i) <-
-   Some (MLdummy k); parse_ids (i+1) j l | Kill _ :: l -> parse_ids (i+1) j l in
-   parse_ids 0 1 bl; select_via_bl bl (List.combine ids tys), gen_subst v (n'-n)
-   c end *)
 
 (** {2 [kill_dummy_lams] uses the last function to kill the lambdas
     corresponding to a [dummy_name]. It can raise [Impossible] if there is

@@ -1211,7 +1211,6 @@ let gen_dfun ~minted n b cty ty temps =
   } =
     scope
   in
-  (* Requires clause for typeclass constraints not yet implemented. *)
   (* Set current type variables for pattern matching lambda generation.
      These are the template parameters that can be used in type annotations.
      Exclude typeclass instance params — they are not ML type variables
@@ -1417,7 +1416,6 @@ let gen_dfun ~minted n b cty ty temps =
             (with_region ~owned:owned_params ?resumes b (fun () -> gen_body_stmts env cofix_wrap b))
       in
       let b = return_captures_by_value b in
-      (* let b = List.map forward_fun_args b in *)
       clear_current_type_vars ();
       set_current_parameters [];
       Dfun

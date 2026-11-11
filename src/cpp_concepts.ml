@@ -15,6 +15,10 @@ open Cpp_names
 open Cpp_print
 open Cpp_leaf_plan
 
+(** The modelled module, the parameter every concept is written over
+    ({!Structure_analysis.concept_self_param}), followed by [::]. *)
+let self_scope = Structure_analysis.concept_self_param ^ "::"
+
 (** What a module type contributes where a concept body is expected.
 
     [MTident] and its refinements name a concept that already exists; only an
@@ -49,13 +53,13 @@ let pp_concept_clause name = function
 
 (** {!pp_concept_clause} with its [template<typename M>] introduction. *)
 let pp_concept_def name body =
-  str "template<typename M>" ++ fnl () ++ pp_concept_clause name body
+  str ("template<typename " ^ Structure_analysis.concept_self_param ^ ">") ++ fnl () ++ pp_concept_clause name body
 
 (** The type member [name] of [M], an enum's capitalised, applied to [args]
     when it is a template. *)
 let pp_member_type ~enum name r args =
   let name = Cpp_name.pp (if enum then enum_name name r else name) in
-  let m = Cpp_name.pp_scope (Cpp_name.Parameter "M") in
+  let m = Cpp_name.pp_scope (Cpp_name.Parameter Structure_analysis.concept_self_param) in
   match args with
   | [] -> str "typename " ++ m ++ name
   | _ ->
@@ -171,9 +175,9 @@ let pp_requirement ctx names frame : Modtype_concept.requirement -> Pp.t =
     pp_member_type ~enum (name (Short (Type, member))) member placeholders ++ str ";" ++ fnl ()
   | Type_member {member; arity} ->
     let name = Cpp_name.pp (name (Unmapped (Type, member))) in
-    if arity = 0 then str "typename M::" ++ name ++ str ";" ++ fnl ()
+    if arity = 0 then str ("typename " ^ self_scope) ++ name ++ str ";" ++ fnl ()
     else
-      str "typename M::template "
+      str ("typename " ^ self_scope ^ "template ")
       ++ name
       ++ str "<"
       ++ prlist_with_sep (fun () -> str ", ") identity (List.init arity (fun _ -> str "void"))
@@ -182,13 +186,13 @@ let pp_requirement ctx names frame : Modtype_concept.requirement -> Pp.t =
   | Instance_member {value; class_; arguments} ->
     let value = Cpp_name.pp (name (Unmapped (Term, value))) in
     writes_standard "concepts";
-    str "typename M::"
+    str ("typename " ^ self_scope)
     ++ value
     ++ str ";"
     ++ fnl ()
     ++ str "requires "
     ++ str (Cpp_name.to_string (name (Short (Type, class_))))
-    ++ str "<typename M::"
+    ++ str ("<typename " ^ self_scope)
     ++ value
     ++ prlist (fun a -> str ", " ++ pp_concept_type a) arguments
     ++ str ">;"
@@ -200,7 +204,7 @@ let pp_requirement ctx names frame : Modtype_concept.requirement -> Pp.t =
     let qualified_ret = pp_concept_type result in
     str "requires ("
     ++ fnl ()
-    ++ str "  requires { { M::"
+    ++ str ("  requires { { " ^ self_scope)
     ++ name
     ++ str " } -> "
     ++ str convertible_to
@@ -208,7 +212,7 @@ let pp_requirement ctx names frame : Modtype_concept.requirement -> Pp.t =
     ++ qualified_ret
     ++ str ">; } ||"
     ++ fnl ()
-    ++ str "  requires { { M::"
+    ++ str ("  requires { { " ^ self_scope)
     ++ name
     ++ str "() } -> "
     ++ str convertible_to
@@ -227,7 +231,7 @@ let pp_requirement ctx names frame : Modtype_concept.requirement -> Pp.t =
       List.map (fun ty -> str declval ++ str "<" ++ pp_concept_type ty ++ str ">()") parameters
     in
     let call_expr =
-      str "M::" ++ name ++ str "(" ++ prlist_with_sep (fun () -> str ", ") identity declvals ++ str ")"
+      str self_scope ++ name ++ str "(" ++ prlist_with_sep (fun () -> str ", ") identity declvals ++ str ")"
     in
     str "{ "
     ++ call_expr
@@ -240,7 +244,7 @@ let pp_requirement ctx names frame : Modtype_concept.requirement -> Pp.t =
   | Submodule {label; module_type} ->
     str "  requires "
     ++ Cpp_name.pp (name (Modtype_concept module_type))
-    ++ str "<typename M::"
+    ++ str ("<typename " ^ self_scope)
     ++ str (Label.to_string label)
     ++ str ">;"
     ++ fnl ()
@@ -277,7 +281,7 @@ let pp_refinements ctx refinements =
       (fun (idl, cpp) ->
         let path = String.concat "::" (List.map Id.to_string idl) in
         str (sn ()).same_as
-        ++ str "<typename M::"
+        ++ str ("<typename " ^ self_scope)
         ++ str path
         ++ str ", "
         ++ pp_type ctx cpp
@@ -296,7 +300,7 @@ let pp_modtype_concept ctx ~names ~params path (c : Modtype_concept.t) =
   let here key = Cpp_name.pp (name_in ctx names [] key) in
   let name = here (Modtype_concept_declared path) in
   let head =
-    str "template<typename M"
+    str ("template<typename " ^ Structure_analysis.concept_self_param)
     ++ prlist (fun p -> str ", typename " ++ here (Module p)) params
     ++ str ">" ++ fnl ()
   in
@@ -306,7 +310,7 @@ let pp_modtype_concept ctx ~names ~params path (c : Modtype_concept.t) =
       prlist (fun p -> str ", " ++ here (Module p)) (concept_extra_args base)
     in
     head ++ str "concept " ++ name ++ str " = " ++ here (Modtype_concept base)
-    ++ str "<M" ++ base_args ++ str ">"
+    ++ str ("<" ^ Structure_analysis.concept_self_param) ++ base_args ++ str ">"
     ++ prlist (fun c -> str " && " ++ c) (pp_refinements ctx refinements)
     ++ str ";"
   | Constraint c ->

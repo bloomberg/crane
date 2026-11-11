@@ -48,6 +48,10 @@ val make : origin:Names.GlobRef.t -> level:int -> ?site:site -> unit -> t
 (** The same binder among the binders in scope: origin and level. *)
 val equal : t -> t -> bool
 
+(** Whether two sites are the same binding, or the same branch of the same
+    match. *)
+val equal_site : site -> site -> bool
+
 (** Whether no site tells [b] and [b'] apart: either records none, or both
     record the same one. *)
 val same_site : t -> t -> bool

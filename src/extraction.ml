@@ -1095,7 +1095,7 @@ and extract_really_ind env kn mib =
           prods;
         (* For C++ records: detect Sort-typed and class-typed fields and
            promote them to type vars, numbered after the inductive's own. *)
-        let dbmap, _promoted_vars =
+        let dbmap =
           if lang () == Cpp && is_record_mib && Int.equal j 0 then (
             let nfields = List.length prods in
             let nb_existing_tvars =
@@ -1184,7 +1184,7 @@ and extract_really_ind env kn mib =
                types). This prevents promotion for degenerate cases. *)
             let n_non_sort = nfields - List.length promoted_entries in
             if promoted_entries = [] || n_non_sort <= 0 then
-              (orig_dbmap, [])
+              orig_dbmap
             else
               let promoted_dbmap =
                 List.fold_left
@@ -1242,9 +1242,9 @@ and extract_really_ind env kn mib =
                         | _ -> () )
                 prods;
               p.ip_vars <- p.ip_vars @ promoted_var_names;
-              (merged, promoted_var_names) )
+              merged )
           else
-            (orig_dbmap, [])
+            orig_dbmap
         in
         let db = db_from_ind dbmap ndecls in
         p.ip_types.(j) <-
@@ -3246,7 +3246,6 @@ let extract_constant_spec env kn cb =
         Stype (r, vl, Some t) )
     | Info, Default ->
       let t = Ml_schema.body (record_constant_type env sg kn (Some typ)) in
-      let sg = Evd.from_env env in
       let mk_spec c =
         let e, ty = extract_std_constant env sg kn c typ in
         Sval (r, e, ty)

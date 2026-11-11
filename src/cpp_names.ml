@@ -483,14 +483,16 @@ let inductive_type_name ctx r =
     else Cpp_name.inside (capitalize_initial n) (fun s -> Cpp_name.Class s) n
   | _ -> global_name ctx Type r
 
+(** Whether the name [n] needs [typename] at the position [ctx]: C++
+    requires it in front of a qualified, possibly dependent, type name inside
+    a class template. *)
+let needs_typename (ctx : render_ctx) n = ctx.rc_in_template && Cpp_name.is_qualified n
+
 (** The [typename] prefix the name [n] needs at the position [ctx]: C++
     requires it in front of a qualified, possibly dependent, type name inside
     a class template. *)
 let typename_prefix_for (ctx : render_ctx) n =
-  if ctx.rc_in_template && Cpp_name.is_qualified n then
-    str "typename "
-  else
-    mt ()
+  if needs_typename ctx n then str "typename " else mt ()
 
 (** Whether the qualifiers [quals], outermost first, are written in [n],
     one after another. *)
@@ -1042,8 +1044,6 @@ let definition_name ctx definition r = named ctx (Definition (definition, r))
 (** The struct a member of the inductive type [r] is named through at the
     position [ctx]. *)
 let inductive_scope ctx r = named ctx (Inductive_scope r)
-
-let needs_typename (ctx : render_ctx) n = ctx.rc_in_template && Cpp_name.is_qualified n
 
 let unqualified_head head : Cpp_resolution.head = {outer = []; head; typename = false; templated = false}
 

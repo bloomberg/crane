@@ -951,11 +951,6 @@ val check_non_atomic_rc_request : unit -> unit
     swaps the factory, never the pointer representation. *)
 val arena_enabled : unit -> bool
 
-val move_last_use : unit -> bool
-(** The [Crane MoveLastUse] option, on by default.  Nothing reads it: a read
-    is moved wherever OwnershipIR finds it the last use of an owned local
-    ([Last_use], an {!Ownership_ir.fate}), and unsetting the option changes
-    nothing. *)
 
 val count_rc : unit -> bool
 (** Whether [CRANE_COUNT_RC=1] is set: spell every shared pointer
