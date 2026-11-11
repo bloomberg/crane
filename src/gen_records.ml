@@ -39,11 +39,9 @@ let gen_record_cpp name fields ind =
     | (Tpromoted id | Tvar (Tv_index (_, Some id) | Tv_named id))
       when List.mem (Id.to_string id) promoted_var_names ->
       Tany
-    | Tglob (g, _, _) when Table.is_promoted_type_var g ->
-      ( match Table.promoted_type_var_name g with
-      | Some var_id when List.mem (Id.to_string var_id) promoted_var_names ->
-        Tany
-      | _ -> Tany )
+    (* Any record's or class's promoted field: a plain struct has no
+       instance to name it through, whoever owns it. *)
+    | Tglob (g, _, _) when Table.is_promoted_type_var g -> Tany
     | ty -> ty
   in
   (* A field's type at a given spelling of the template parameters.  The

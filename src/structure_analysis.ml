@@ -931,7 +931,7 @@ let collect_eponymous_records (s : ml_structure) : GlobRef.t list =
        s [])
 
 (** The template parameter every module-type concept is written over:
-    {!Cpp_concepts} spells the modelled module ["M"] in the
+    {!Cpp_concepts} spells the modelled module by it in the
     [template<typename M>] head and throughout the requirement bodies. *)
 let concept_self_param = "M"
 
@@ -941,7 +941,7 @@ let concept_self_param = "M"
     concept named [concept_self_param] would be shadowed by its own template
     parameter. *)
 let concept_name_of_label l =
-  let s = Common.modular_rename Type (Label.to_id l) in
+  let s = Common.modular_rename (Label.to_id l) in
   if String.equal s concept_self_param then s ^ "_" else s
 
 (** Decide the name every concept is emitted under, for the type classes and

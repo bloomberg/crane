@@ -306,7 +306,7 @@ let foreign_text fr =
     the record's struct was written -- a record with a field named [this] has
     one named [this_], and a projection of it has to say so too. *)
 let projection_field_name (r : GlobRef.t) : string =
-  Common.modular_rename Term (Label.to_id (label_of_r r))
+  Common.modular_rename (Label.to_id (label_of_r r))
 
 
 (** Whether a definition whose eligibility the seam decided

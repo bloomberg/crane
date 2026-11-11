@@ -168,9 +168,8 @@ and settle defs fuel e =
    into the match's branches: kept only if some branch unfolds. *)
 and push defs shrunk fuel use args =
   let rec split before = function
-    | (MLcase (ty, s, brs, occ) as m) :: after
+    | MLcase (ty, s, brs, occ) :: after
       when List.for_all is_value before && List.for_all is_value after ->
-      ignore m;
       Some (List.rev before, ty, s, brs, occ, after)
     | a :: after -> split (a :: before) after
     | [] -> None

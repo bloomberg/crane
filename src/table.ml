@@ -992,21 +992,19 @@ let has_recursive_fields r =
     of some parameter references an earlier parameter (via de Bruijn index).
     For example, [sigT (A : Type) (P : A -> Type)] has a dependent second
     parameter because [P]'s type mentions [A].  [prod (A B : Type)] does not.
-    Returns [true] if any parameter depends on an earlier one. *)
+    Returns [true] if any parameter depends on an earlier one, and [false]
+    for an inductive the global environment does not hold (one declared in
+    a functor parameter's signature). *)
 let has_dependent_params r =
   match r with
-  | GlobRef.IndRef (kn, _) ->
-    ( try
-        let mib = Global.lookup_mind kn in
-        let ctx = mib.mind_params_ctxt in
-        List.exists (fun decl ->
-          match decl with
-          | Context.Rel.Declaration.LocalAssum (_, ty) ->
-            not (Vars.closed0 ty)
-          | Context.Rel.Declaration.LocalDef (_, body, ty) ->
-            not (Vars.closed0 ty) || not (Vars.closed0 body)
-        ) ctx
-      with _ -> false )
+  | GlobRef.IndRef (kn, _) when Environ.mem_mind kn (Global.env ()) ->
+    let mib = Global.lookup_mind kn in
+    List.exists
+      (function
+        | Context.Rel.Declaration.LocalAssum (_, ty) -> not (Vars.closed0 ty)
+        | Context.Rel.Declaration.LocalDef (_, body, ty) ->
+          not (Vars.closed0 ty) || not (Vars.closed0 body))
+      mib.mind_params_ctxt
   | _ -> false
 
 let {Goptions.get = std_lib} =
@@ -2481,15 +2479,6 @@ let shared_variant () = shared_variant_requested () && not (String.equal (std_li
 let {Goptions.get = boxed_fields} =
   declare_bool_option_and_ref ~key:["Crane"; "BoxedFields"] ~value:false ()
 
-(* --- Last-use moves --------------------------------------------------- *)
-
-(* [Crane MoveLastUse] is declared, on by default, but nothing reads it: a
-   read is moved wherever OwnershipIR finds it the last use of an owned local
-   ([Ownership_ir.Last_use]), removing a refcount round-trip per hand-off,
-   whatever the option says. *)
-let {Goptions.get = move_last_use} =
-  declare_bool_option_and_ref ~key:["Crane"; "MoveLastUse"] ~value:true ()
-
 (* --- Scoped-arena master switch -------------------------------------- *)
 
 (* [Set Crane Arena] turns on the runtime scoped-arena machinery for a whole
@@ -3108,7 +3097,7 @@ let is_flat_inductive_packet kn ind i =
     && Array.length p.ip_types = 1
     && (not is_enum)
     && not has_self_ref
-  with _ -> false
+  with Invalid_argument _ | Failure _ -> false
 
 (** Check if [r] is a flat inductive.  First checks the flat-inductives
     registry (populated by [Cpp.prepare_structure] before rendering).  If not found
@@ -3514,22 +3503,15 @@ let get_ref_import_list r =
   | Some imports -> StringSet.elements imports
   | None -> []
 
-(* Global custom imports, not tied to any reference.  Nothing adds to it, so
-   it is always empty; [imports_of] below still unions it in. *)
-let empty_custom_imports = StringSet.empty
-
-let custom_imports = Summary.ref empty_custom_imports ~name:"CraneCustomImports"
-
 let imports_of refs =
   Ref.User.Set.fold
     (fun r acc ->
       match Ref.Can.Map.find_opt r !ref_imports with
       | Some imports -> StringSet.union imports acc
       | None -> acc )
-    refs !custom_imports
+    refs StringSet.empty
 
-(* The imports of the customs the unit's files write, plus the global ones
-   ({!custom_imports}, empty). *)
+(* The imports of the customs the unit's files write. *)
 let get_custom_imports () = StringSet.elements (imports_of (written_customs ()))
 
 (* The headers whose mappings put the program's values on several threads:

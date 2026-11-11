@@ -10,7 +10,6 @@ module Needs = struct
 
   let none = {templates = []; names = []; defines = []}
   let is_none n = n.templates = [] && n.names = [] && n.defines = []
-  let union a b = {templates = a.templates @ b.templates; names = a.names @ b.names; defines = a.defines @ b.defines}
 end
 
 type declared_in = Cpp_state.declared_in = In_struct_of of ModPath.t | At_namespace_scope of ModPath.t list
@@ -233,16 +232,6 @@ let module_ enclosure ?(fields = empty) b =
   | Struct _ | Out_of_line | In_enclosing_scope -> () );
   let t = Module {module_ = b.body_module; enclosure; fields; members = b.body_members} in
   if is_empty t then empty else t
-
-let rec needs = function
-  | Text _ | Declarations _ -> Needs.none
-  | Decl {needs; _} | Unprinted {needs; _} -> needs
-  | Elements {elements; _} -> needs elements
-  | Seq l | Joined l -> List.fold_left (fun acc t -> Needs.union acc (needs t)) Needs.none l
-  | Top_level t -> needs t
-  | Module {fields; members; _} -> needs (Seq (fields :: members))
-  | Wrapper_struct {fields; _} -> needs fields
-  | Concept_group {concepts; _} -> needs (Seq concepts)
 
 type declared = Declared of declaration | Struct_of of ModPath.t
 

@@ -14222,3 +14222,13 @@
   (alias runtest)
   (deps ptr_word.t.exe)
   (action (run ./ptr_word.t.exe))))
+(subdir inductive_letin_params
+ (rule
+  (targets inductive_letin_params.t.exe)
+  (deps InductiveLetinParams.vo inductive_letin_params.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} inductive_letin_params.t.exe inductive_letin_params.t.cpp inductive_letin_params.cpp)))
+ (rule
+  (alias runtest)
+  (deps inductive_letin_params.t.exe)
+  (action (run ./inductive_letin_params.t.exe))))

@@ -44,9 +44,6 @@ module Needs : sig
 
   (** Whether it needs nothing. *)
   val is_none : t -> bool
-
-  (** [union a b]: what [a] needs, then what [b] needs. *)
-  val union : t -> t -> t
 end
 
 (** Where a synthesised template is declared ({!Cpp_state.declared_in}),
@@ -459,9 +456,6 @@ val is_empty : t -> bool
 (** [concat sep l] writes [l] with [sep ()] between each two, as
     [Pp.prlist_with_sep]. *)
 val concat : (unit -> Pp.t) -> t list -> t
-
-(** What the declarations of [t] need, together. *)
-val needs : t -> Needs.t
 
 (** What [t] declares in the scope it is written in, in the order written:
     a declaration not yet printed, or a module's struct -- nothing inside

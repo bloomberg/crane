@@ -1719,7 +1719,7 @@ let gen_ind_header_v2
              first nullary and the second [A -> g A -> g A].  That is the shape
              the [`List] drain below knows how to walk iteratively.
 
-             [is_list_global] matches only the stdlib [list], by name.  A
+             [is_list_global] matches only the stdlib [list], by identity.  A
              user-defined inductive of the same shape needs the same treatment,
              because a type whose recursion goes *through* it --
              [Inductive tree := node : nat -> lst tree -> tree] -- has no direct
@@ -3198,7 +3198,7 @@ let gen_ind_header_v2
                                        Id.of_string "v", [])
                   in
                   let rec build_if_chain = function
-                    | [] -> CErrors.anomaly (Pp.str "iterative_destructor: empty constructor list")
+                    | [] -> CErrors.anomaly (Pp.str "converting constructor: empty constructor list")
                     | [(_, cname_id, field_info, converted)] ->
                       (* Last branch: no guard *)
                       make_branch_body cname_id field_info converted

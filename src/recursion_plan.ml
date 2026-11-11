@@ -998,10 +998,14 @@ let flow_of r fd =
   let _, body = Core_elaborate.declaration_scope fd.fd_type fd.fd_body in
   if Translation_support.suspends_whole r (Ml_type_util.ml_return_type fd.fd_type) body then None else Some body
 
+(* The number of parameters the definition [fd] is generated taking: every
+   one its type declares. *)
+let fd_parameters fd = List.length (Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type))
+
 (* The number of parameters of [g], among the definitions [defs]. *)
 let parameters defs g =
   match Ref.User.Map.find_opt g defs with
-  | Some fd -> List.length (Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type))
+  | Some fd -> fd_parameters fd
   | None -> 0
 
 (* The partner of [self] spliced next into [body], its body as generated,
@@ -1332,11 +1336,10 @@ let analyze groups program =
      body applied to those it does not bind ({!Core_elaborate.declaration_scope}):
      its calls are read there, a call with fewer arguments than that being
      the closure the C++ makes of it. *)
-  let parameters fd = List.length (Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type)) in
   (* A member's own calls: what a loop of the member can take. *)
   let member_kind r fd =
     let callee ~depth:_ = function
-      | MLglob use when Names.GlobRef.UserOrd.equal use.callee r -> Some (parameters fd)
+      | MLglob use when Names.GlobRef.UserOrd.equal use.callee r -> Some (fd_parameters fd)
       | _ -> None
     in
     classify ~effects ~callee (snd (Core_elaborate.declaration_scope fd.fd_type fd.fd_body))
@@ -1402,16 +1405,11 @@ let analyze groups program =
         in
         (* A call with fewer arguments than its callee's parameters is a
            closure the C++ makes, whose call runs where the closure does. *)
-        let parameters g =
-          match Ref.User.Map.find_opt g defs with
-          | Some fd -> List.length (Ml_type_util.ml_domains (Mlutil.type_simpl fd.fd_type))
-          | None -> 0
-        in
         let rec targets = function
           | MLmagic (_, e) -> targets e
           | MLapp (MLglob use, args)
             when List.exists (Common.globref_equal use.callee) members
-                 && List.length args >= parameters use.callee ->
+                 && List.length args >= parameters defs use.callee ->
             [{target = Function use.callee; occurrence = Global_use.occurrence use}]
           | _ -> []
         in

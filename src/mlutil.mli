@@ -490,17 +490,10 @@ val named_lams : (ml_ident * ml_type) list -> ml_ast -> ml_ast
 val dummy_lams : ml_ast -> int -> ml_ast
 
 (** Wrap a term in anonymous or dummy lambda abstractions based on the
-    signature.
-    @param a the body to wrap
-    @param s the signature; [Keep] entries become anonymous lambdas, [Kill k]
-             entries become [Dummy] lambdas with [Tdummy k] type *)
-val anonym_or_dummy_lams : ml_ast -> signature -> ml_ast
-
-(** Wrap a term in anonymous or dummy lambda abstractions with concrete types.
-    Like [anonym_or_dummy_lams] but uses actual resolved ML types for [Keep]
-    positions instead of [Taxiom].
+    signature: a [Keep] entry becomes an anonymous lambda at its type among
+    [types], a [Kill k] entry a [Dummy] lambda at [Tdummy k].
     @param a     the body to wrap
-    @param types ML types for the [Keep] positions, matched positionally;
+    @param types one ML type per signature entry, matched positionally;
                  falls back to [Taxiom] when the list runs out
     @param s     the signature driving the lambda structure *)
 val anonym_or_dummy_lams_typed : ml_ast -> ml_type list -> signature -> ml_ast

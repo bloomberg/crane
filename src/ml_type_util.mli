@@ -282,17 +282,16 @@ val has_unbound_tvar : Names.variable list -> Minicpp.cpp_type -> bool
 
 (** {2 Well-known global references} *)
 
-(** Whether a global reference is [option]. *)
-val is_option_global : Names.GlobRef.t -> bool
-
-(** Whether a global reference is [prod]. *)
+(** Whether a global reference is the standard library's [prod], by
+    identity. *)
 val is_prod_global : Names.GlobRef.t -> bool
 
 (** Structural equality of two C++ types, seen through [Tconst] and
     [Tnamespace] and comparing indexed type variables by index alone. *)
 val cpp_ty_eq : Minicpp.cpp_type -> Minicpp.cpp_type -> bool
 
-(** Whether a global reference is [list]. *)
+(** Whether a global reference is the standard library's [list], by
+    identity. *)
 val is_list_global : Names.GlobRef.t -> bool
 
 (** Whether [g] is [list] under a custom mapping, so that its values are a C++

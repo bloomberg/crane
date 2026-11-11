@@ -240,7 +240,7 @@ val label_of_r : GlobRef.t -> Label.t
     with [_], and replace primes with [_].  Names that reach C++ without
     passing through the reference tables (module-type labels, for instance)
     must still be run through this. *)
-val modular_rename : kind -> Id.t -> string
+val modular_rename : Id.t -> string
 
 (** Emit the file [mp] under the namespace [ns] rather than its own name, in
     its declaration and in every reference to it.  Must be decided before any
@@ -537,14 +537,8 @@ val ctor_fallback_id : int -> Id.t
 
 (** The [n]th scrutinee cache temporary: [_cs], [_cs1], [_cs2], ...  A custom
     match template that mentions its scrutinee more than once binds it to one
-    of these first, so a non-trivial scrutinee is evaluated once.
-
-    Minted and recognised in the same place ({!is_scrutinee_cache_id}), so a
-    pass that has to spot one asks rather than parsing the spelling. *)
+    of these first, so a non-trivial scrutinee is evaluated once. *)
 val scrutinee_cache_id : int -> Id.t
-
-(** Whether [id] is a {!scrutinee_cache_id}. *)
-val is_scrutinee_cache_id : Id.t -> bool
 
 (** Fallback name for a de-Bruijn-indexed variable [i] when no source binder
     name is available, e.g. ["_db0"]. *)

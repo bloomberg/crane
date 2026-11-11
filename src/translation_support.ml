@@ -921,18 +921,12 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
                    for. *)
                 [Sthrow inactive_field_message] ) ]
       end
-    | (_, dst) when (let strip_ns = function Tnamespace (_, t) -> t | t -> t in
-                     match strip_ns dst with
-                     | Tglob (g, [elem_ty], _) ->
-                       Ml_type_util.is_custom_list_global g
-                       && elem_ty <> Tany && elem_ty <> Tauto
-                     | _ -> false) ->
-      let strip_ns = function Tnamespace (_, t) -> t | t -> t in
-      (match strip_ns dst with
-       | Tglob (g, [_], _) ->
-         (match src_ty with
-           | Tany -> Cpp_erasure.unbox (Tglob (g, [Tany], [])) expr
-           | _ -> expr)
+    (* A custom-mapped list at a known element type, under any namespace
+       wrapper: only an erased source needs unboxing. *)
+    | (_, (Tglob (g, [elem_ty], _) | Tnamespace (_, Tglob (g, [elem_ty], _))))
+      when Ml_type_util.is_custom_list_global g && elem_ty <> Tany && elem_ty <> Tauto ->
+      (match src_ty with
+       | Tany -> Cpp_erasure.unbox (Tglob (g, [Tany], [])) expr
        | _ -> expr)
     | _ ->
       (* Type variables or fully concrete different types: converting
@@ -2236,7 +2230,10 @@ let generalises_callable ~kept_as_fn ~primary f =
 (** Convert ML params to C++ types with const/ref wrapping, and create
     forwarding-ref template parameters for function-typed params, except
     those at [non_fwd_source_indices] (source order), which keep their
-    function type.
+    function type.  A [std::shared_ptr] parameter is taken by [const &],
+    any other by [const] value: ownership is not consulted, unlike
+    {!wrap_param_by_ownership}, so a lifted helper copies what an owned
+    parameter would have moved.
 
     @param convert_fn  converts an [ml_type] to a [cpp_type] (typically
       [convert_ml_type_to_cpp_type env tvar_names])

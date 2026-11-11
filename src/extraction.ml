@@ -425,6 +425,14 @@ let db_from_rel_context env =
 (** {2 Create a type variable context from indications taken from an inductive
     type (see just below)} *)
 
+(** The exceptions a best-effort step gives up on: any error extraction can
+    raise, its own assertions included -- a term extracted outside the context
+    it was written in can trip one ([Mlenv.get]'s) -- but not running out of
+    memory or stack, an interrupt, or a timeout. *)
+let best_effort_failure = function
+  | Out_of_memory | Stack_overflow | Sys.Break | Control.Timeout -> false
+  | _ -> true
+
 (** Builds a de Bruijn context for an inductive type from a position mapping.
     @param dbmap Map from constructor argument positions to ML type variable indices
     @param i Countdown index: counts down from [ndecls] to [1], building the list in reverse *)
@@ -880,7 +888,7 @@ and extract_type_app env sg db (r, s) args =
             let ty = type_of env sg c in
             let ty = extract_type_scheme env sg db ty p in
             extract_term env sg Mlenv.empty ty c [] :: a
-          with _ -> a ) )
+          with e when best_effort_failure e -> a ) )
       (List.combine s args)
       []
   in
@@ -1095,7 +1103,7 @@ and extract_really_ind env kn mib =
           prods;
         (* For C++ records: detect Sort-typed and class-typed fields and
            promote them to type vars, numbered after the inductive's own. *)
-        let dbmap, _promoted_vars =
+        let dbmap =
           if lang () == Cpp && is_record_mib && Int.equal j 0 then (
             let nfields = List.length prods in
             let nb_existing_tvars =
@@ -1184,7 +1192,7 @@ and extract_really_ind env kn mib =
                types). This prevents promotion for degenerate cases. *)
             let n_non_sort = nfields - List.length promoted_entries in
             if promoted_entries = [] || n_non_sort <= 0 then
-              (orig_dbmap, [])
+              orig_dbmap
             else
               let promoted_dbmap =
                 List.fold_left
@@ -1242,9 +1250,9 @@ and extract_really_ind env kn mib =
                         | _ -> () )
                 prods;
               p.ip_vars <- p.ip_vars @ promoted_var_names;
-              (merged, promoted_var_names) )
+              merged )
           else
-            (orig_dbmap, [])
+            orig_dbmap
         in
         let db = db_from_ind dbmap ndecls in
         p.ip_types.(j) <-
@@ -1412,7 +1420,7 @@ and extract_really_ind env kn mib =
 
    - [db] is a context for translating Rocq [Rel] into ML type [Tvar]
    - [dbmap] is a translation map (produced by a call to [parse_ind_args])
-   - [i] is the rank of the current product (initially [params_nb+1])} *)
+   - [i] is the rank of the current product (initially [ndecls+1])} *)
 
 (** Extracts a constructor's type signature into a list of ML types.
     @param env Rocq environment, extended as each product binder is consumed
@@ -1420,7 +1428,9 @@ and extract_really_ind env kn mib =
     @param db De Bruijn variable context for [Rel]→[Tvar] translation
     @param dbmap Position-to-type-var map produced by {!parse_ind_args}
     @param c Constructor type (starting after inductive parameters have been stripped)
-    @param i Rank of the current product (initially [params_nb + 1]) *)
+    @param i Rank of the current product: the de Bruijn level of its binder
+      under the inductive's parameter context, so initially [ndecls + 1],
+      counting let-in parameters, which the context binds as [Rel]s too *)
 and extract_type_cons env sg db dbmap c i =
   match EConstr.kind sg (whd_all env sg c) with
   | Prod (n, t, d) ->
@@ -2257,7 +2267,7 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
                         in
                         pending_cpp_meta_fills :=
                           (r, erase_leaves concrete) :: !pending_cpp_meta_fills )
-                    with _ -> () )
+                    with e when best_effort_failure e -> () )
                 | _ -> () )
             | Kill _ -> () ))
           param_sign param_args
@@ -2585,7 +2595,7 @@ and type_expunge_from_sign env = type_expunge_from_sign (mlt_env env)
     reference with the given name. *)
 let is_ref name gr =
   try globref_equal gr (Rocqlib.lib_ref name)
-  with _ -> false
+  with e when best_effort_failure e -> false
 
 (* Check if a term's head is a specific global reference *)
 let head_is_ref sg name t =
@@ -2788,7 +2798,7 @@ let extract_std_constant env sg kn body typ =
   let schema = record_constant_type env sg kn (Some typ) in
   let numtvars = Ml_schema.arity schema and t = Ml_schema.body schema in
   (* Detect sigma type preconditions and register assertions *)
-  (try detect_sigma_assertions env sg kn typ with _ -> ());
+  (try detect_sigma_assertions env sg kn typ with e when best_effort_failure e -> ());
   (* An instance of a singleton class keeps its class's type, but its body is
      the class's method, and is extracted at the method's type: unfolded at
      the class in [typ], the method's own [forall]s are type variables the
@@ -3048,7 +3058,7 @@ let extract_constant access env kn cb =
                 if
                   EConstr.Vars.closed0 sg x
                   && (try is_info_scheme env sg (type_of env sg x)
-                      with _ -> false)
+                      with e when best_effort_failure e -> false)
                 then Some Table.Carg_unknown
                 else None )
             (List.filter
@@ -3105,7 +3115,7 @@ let extract_constant access env kn cb =
             | Const (c, _) -> Typeclasses.is_class (GlobRef.ConstRef c)
             | Ind (i, _) -> Typeclasses.is_class (GlobRef.IndRef i)
             | _ -> false )
-            && (try is_default env sg t with _ -> false)
+            && (try is_default env sg t with e when best_effort_failure e -> false)
           in
           ( ords @ [(if is_class then Some k else None)],
             (if is_class then k + 1 else k),
@@ -3246,7 +3256,6 @@ let extract_constant_spec env kn cb =
         Stype (r, vl, Some t) )
     | Info, Default ->
       let t = Ml_schema.body (record_constant_type env sg kn (Some typ)) in
-      let sg = Evd.from_env env in
       let mk_spec c =
         let e, ty = extract_std_constant env sg kn c typ in
         Sval (r, e, ty)
