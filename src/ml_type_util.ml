@@ -523,16 +523,9 @@ let has_unbound_tvar bound_names =
     | Tvar (Tv_index (_, None)) | Tauto -> true
     | _ -> false )
 
-(** Check if [g] is the Coq [option] inductive (rendered as
-    [std::optional]).  Used to detect [optional<shared_ptr<T>>] patterns
-    that need special inline cloning instead of copy construction. *)
-let is_option_global g =
-  let n = Common.pp_global_name Type g in
-  String.equal n "option" || String.equal n "Option"
-
-let is_prod_global g =
-  let n = Common.pp_global_name Type g in
-  String.equal n "prod" || String.equal n "Prod"
+(** Whether [g] is the standard library's [prod], by identity: a user's
+    inductive of the same name is not the pair. *)
+let is_prod_global g = Rocqlib.check_ref "core.prod.type" g
 
 (** Structural equality on C++ types, ignoring [Tconst] and [Tnamespace]
     wrappers and [Tvar] name annotations.  Used to match the state parameter type
@@ -557,9 +550,8 @@ let rec cpp_ty_eq t1 t2 =
   | Tany, Tany -> true
   | _ -> false
 
-let is_list_global g =
-  let n = Common.pp_global_name Type g in
-  String.equal n "list"
+(** Whether [g] is the standard library's [list], by identity. *)
+let is_list_global g = Rocqlib.check_ref "core.list.type" g
 
 (** Whether [g] is [list] under a custom mapping, so that its values are a C++
     container -- [std::deque<T>] and the like -- rather than a Crane inductive.
