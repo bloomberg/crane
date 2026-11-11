@@ -15,7 +15,8 @@ exception NoClangFound
     and the compiler's captured stderr. *)
 exception ClangError of int * string
 
-(** Raised when [ocamlopt] cannot be found on [PATH]. *)
+(** Raised when [ocamlfind], through which [ocamlopt] is run, cannot be
+    found. *)
 exception NoOcamloptFound
 
 (** [OcamloptError (code, diagnostics)] reports a non-zero OCaml compiler
@@ -46,7 +47,7 @@ val compile_cpp :
     runtime. Include directories and flags are supplied as discrete argv
     elements, and [outfile] overrides the derived destination.
 
-    @raise NoOcamloptFound when [ocamlopt] is unavailable
+    @raise NoOcamloptFound when [ocamlfind] is unavailable
     @raise OcamloptError when compilation or linking fails *)
 val compile_ocaml :
   ?shouldlink:bool ->
@@ -58,7 +59,8 @@ val compile_ocaml :
   unit
 
 (** [compile_and_test ?outfile ?errfile infile] links the object corresponding
-    to extracted C++ source [infile] with the adjacent [.t.cpp] driver, executes
+    to extracted C++ source [infile] with the adjacent [.t.cpp] driver at
+    [-O2], executes
     the resulting test program, and returns its stdout followed by stderr.
 
     @raise NoClangFound when [clang++] is unavailable

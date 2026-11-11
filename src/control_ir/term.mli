@@ -1,9 +1,8 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** ControlIR (docs/Pipeline-Disentangling-Plan.md, sections 4.9 and 6.4):
-    a function's control as it is implemented, before any C++ is chosen for
-    it.  The terms it does not change stay Core ({!Miniml.ml_ast}); what it
+(** ControlIR: a function's control as it is implemented, before any C++
+    is chosen for it.  The terms it does not change stay Core ({!Miniml.ml_ast}); what it
     makes explicit is where control goes.
 
     It holds the loops of direct tail recursion: a function that recurses
@@ -20,11 +19,12 @@
     machine rather than a machine of its own, for two machines cannot unwind
     each other's stack.  {!Lower_control} produces them. *)
 
+(** A function's control. *)
 type t =
   | Loop of loop
   | Let of let_
   | Match of match_
-  | Return of Miniml.ml_ast
+  | Return of Miniml.ml_ast  (** Leaves the function with the Core value. *)
   | Continue of continue_
   | Continue_into of continue_into
   | Resume of resume
@@ -46,12 +46,17 @@ and let_ = {
   body : t;
 }
 
+(** A match whose branches carry control, the [MLcase] of Core it stands
+    for with each branch's body in ControlIR. *)
 and match_ = {
   scrutinee_type : Miniml.ml_type;
   scrutinee : Miniml.ml_ast;
   branches : branch list;
 }
 
+(** One branch of a {!match_}, as Core's {!Miniml.ml_branch}: the
+    pattern's binders, the branch's result type, the pattern, and [body]
+    under those binders. *)
 and branch = {
   binders : (Miniml.ml_ident * Miniml.ml_type) list;
   result_type : Miniml.ml_type;

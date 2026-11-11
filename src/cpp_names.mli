@@ -1,12 +1,19 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** This module turns Coq [GlobRef.t]s and inductive references into their C++
-   names and qualified paths. It provides string and [Pp.t] renderings of
+(** This module turns Rocq [GlobRef.t]s and inductive references into their
+   C++ names and qualified paths. It provides string and [Pp.t] renderings of
    globals, field names, and inductive/enum type names, together with the
    namespace and struct qualification needed to reference them from a given
    context. Cached predicates over the name-resolution cache ([with_cache],
-   [*_cached]) keep repeated lookups cheap. *)
+   [*_cached]) keep repeated lookups cheap.
+
+   It sits between the C++ printer and name resolution: every name the
+   printer writes is asked of a position ({!Cpp_state.render_ctx}), and is
+   read off the table {!Cpp_resolution} filled for the declaration being
+   written before it was printed.  The functions named [live_*] are the
+   resolver's own answers, which fill that table and, under
+   [CRANE_CHECK_IR], check what is printed against it. *)
 
 (** {2 Names of globals} *)
 
@@ -287,14 +294,16 @@ val modtype_concept_name : Names.ModPath.t -> string
     declares is named at file scope, unqualified. *)
 val file_named_by_key : unit_files:Names.ModPath.t list -> Cpp_resolution.key -> Names.ModPath.t option
 
-(** The name the struct of [id] is defined under. *)
+(** The name the struct of the inductive is defined under at the position:
+    {!struct_spelling}, read there. *)
 val struct_definition_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
 
-(** The name the scoped enum of [r] is defined under. *)
+(** The name the scoped enum of the inductive is defined under at the
+    position ({!inductive_type_name} there). *)
 val enum_definition_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
 
-(** The name the inductive type [x] is written under as a value: the struct
-    a constructor's value is built through, at the position. *)
+(** The name the inductive type is written under as a value: the struct a
+    constructor's value is built through, at the position. *)
 val inductive_value : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
 
 (** The name the type is defined under at the position, declared as the
@@ -353,5 +362,7 @@ val at_frame : Cpp_state.render_ctx -> Cpp_resolution.frame -> (Cpp_state.render
 val live_name : Cpp_state.render_ctx -> Cpp_resolution.key -> Cpp_name.t
 
 (** What [key] resolves to at the position [c], as the resolver resolves it
-    ({!live_name} for a name): what {!Cpp_resolution.resolve} is given. *)
+    ({!live_name} for a name; a head, an inline custom text, a reference, an
+    access or a truth value for the keys that are not names): what
+    {!Cpp_resolution.resolve} is given. *)
 val live_value : Cpp_state.render_ctx -> Cpp_resolution.key -> Cpp_resolution.value

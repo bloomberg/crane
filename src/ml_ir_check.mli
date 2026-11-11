@@ -2,8 +2,9 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** Boundary checks on MiniML as it leaves extraction and its optimisations
-    for translation, run under [CRANE_CHECK_IR]
-    (docs/Type-Argument-Numbering-Refactor-Plan.md, section 8.1). *)
+    for translation, run under [CRANE_CHECK_IR]: every global use reaching
+    translation carries a well-formed instantiation of its callee's own type
+    scheme. *)
 
 (** Checks every global use in the structure: no proof placeholder among
     its written arguments; an instantiation at the callee's own scheme, with

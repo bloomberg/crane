@@ -22,8 +22,9 @@ let partition keep p =
 
 let modules p = List.map (fun ((mp, _) as m) -> (mp, { p with structure = [m] })) p.structure
 
-(** Every type annotation of the structure: declared types, the types bodies
-    annotate, constructor argument types and type definitions. *)
+(** [iter_types f p] calls [f] on every type annotation of the structure:
+    declared types, the types bodies annotate, constructor argument types and
+    type definitions. *)
 let iter_types f p =
   let visit_body b = ignore (Mlutil.ast_map_types (fun t -> f t; t) b) in
   let visit_ind ind = Array.iter (fun pk -> Array.iter (List.iter f) pk.ip_types) ind.ind_packets in
@@ -61,6 +62,8 @@ let open_annotations p =
   iter_types walk p;
   Opens.length seen
 
+(* An anomaly: the program at [phase] breaks an invariant, [what] saying
+   which. *)
 let failure phase what =
   CErrors.anomaly Pp.(str ("Crane: the " ^ phase ^ " Core program " ^ what ^ "."))
 

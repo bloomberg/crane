@@ -273,15 +273,13 @@ let promoted_at (c : render_ctx) r =
   | Some mp -> not (List.exists (globref_equal r) (Module_frame.demoted_around mp))
   | None -> true
 
-(** Whether a non-local inductive's Dnspace wrapper was merged with its inner
-    struct at the position [c]: true if the wrapper WAS merged (no pending
-    declarations, so List<A>); false if it was NOT merged (has pending
-    declarations, so List::list<A>). *)
+(** Whether the inductive [r]'s namespace wrapper is merged with its struct
+    at the position [c]: [r] is promoted there ({!promoted_at}), or no
+    declaration was queued against its wrapper.  A merged wrapper is spelled
+    [List<A>], an unmerged one [List::list<A>]. *)
 let merged_at c r = promoted_at c r || not (in_unmerged_wrapper r)
 
-(* ============================================================================
-   Helper functions to reduce code duplication
-   ============================================================================ *)
+(** {2 Name predicates and inductive/enum naming} *)
 
 (** [mp_encloses outer mp] is whether [mp] is [outer] itself or a module
     nested inside it. *)
@@ -309,8 +307,9 @@ let mp_relation_to ~struct_mp r =
   else if mp_encloses r_mp struct_mp then Ancestor
   else Unrelated
 
-(** Check if a GlobRef is a record type (not a regular inductive). Records don't
-    get wrapped in namespace structs, so they keep their original case. *)
+(** Whether [r] is a record type rather than an inductive with
+    constructors.  A record gets no namespace wrapper, so it keeps its
+    original case. *)
 let is_record_inductive r =
   match r with
   | GlobRef.IndRef _ -> Table.get_record_fields r <> []
@@ -357,11 +356,16 @@ let capitalize_base = Cpp_name.map_base String.capitalize_ascii
 let capitalize_struct n =
   if Common.get_force_cross_file_qualification () then capitalize_base n else capitalize_initial n
 
-(** Get the appropriate name for an inductive reference.
-    - Local inductives: original name directly (e.g., "list", "EvenTree")
-    - Non-local inductives: capitalized name (e.g., "List", "Nat")
-    Returns the name and whether it is a non-local inductive's
-    (capitalized) one. *)
+(** The name of the inductive [r] at the position [ctx], and whether it is
+    a non-local inductive's, which stands for its namespace wrapper:
+    {ul
+    {- an eponymous record: its module's struct's name, capitalized;}
+    {- a promoted inductive: its struct's name, capitalized ({!capitalize_struct});}
+    {- a local inductive: its own name (e.g. [list], [EvenTree]), capitalized
+       under separate extraction's full qualification;}
+    {- any other inductive: its name capitalized (e.g. [List], [Nat]), the
+       one case answering [true].}}
+    Any other global is named as {!global_name} names it. *)
 let inductive_name ctx r =
   let n, needs_ns =
     match r with
@@ -378,8 +382,8 @@ let inductive_name ctx r =
   in
   (n, needs_ns)
 
-(** Check if capitalizing an enum type name would collide with its parent
-    module's struct name. Returns true if so. *)
+(** Whether capitalizing [base_name], the name of the enum [r], would
+    collide with its parent module's struct name. *)
 let enum_name_collides base_name r =
   match r with
   | GlobRef.IndRef (kn, _) ->
@@ -479,8 +483,9 @@ let inductive_type_name ctx r =
     else Cpp_name.inside (capitalize_initial n) (fun s -> Cpp_name.Class s) n
   | _ -> global_name ctx Type r
 
-(** Add typename prefix for dependent types in template contexts. C++ requires
-    'typename' keyword when accessing nested types in templates. *)
+(** The [typename] prefix the name [n] needs at the position [ctx]: C++
+    requires it in front of a qualified, possibly dependent, type name inside
+    a class template. *)
 let typename_prefix_for (ctx : render_ctx) n =
   if ctx.rc_in_template && Cpp_name.is_qualified n then
     str "typename "
@@ -641,9 +646,10 @@ let wrapper_qualified_type_name (ctx : render_ctx) r n =
   | _ when Module_plan.is_global_scope_type r -> n
   | _ -> if ctx.rc_in_struct then n else wrapper_qualify r n
 
-(** Check if a global function needs :: prefix to avoid name collision. When
-    generating out-of-struct definitions, we add :: to call external functions
-    rather than recursing into the struct's own member. *)
+(** Whether the global [x] needs a [::] prefix at the position [ctx]: in an
+    out-of-line definition of a struct's member, an unqualified call of a
+    function declared outside that struct's module would otherwise name the
+    struct's own member of that name. *)
 let needs_global_qualifier (ctx : render_ctx) x =
   match ctx.rc_scope with
   | Some {ol_scope = scope; _} ->
@@ -759,22 +765,17 @@ let live_access x : Cpp_resolution.access =
   in
   if not accessor then Variable else if Common.under_mp_bound x_mp then Either_form else Accessor
 
-(* ============================================================================
-   Cache-backed name resolution helpers
-   ============================================================================
-   These query the pre-computed Name_resolution cache for classification
-   information (eponymous, enum, record, merged status). The actual display name
-   rendering is still done by the original functions (inductive_type_name,
-   inductive_name_info, etc.) since they depend on the visibility context which
-   is only available during rendering.
+(** {2 Name-resolution cache and cached predicates} *)
 
-   The cache accelerates boolean queries that cpp.ml uses frequently to decide
-   HOW to render a name, while the original functions produce the actual
-   name. *)
+(* These query the precomputed {!Name_resolution} cache, where it is
+   installed ({!Cpp_state.name_cache}), for how an inductive is classified:
+   eponymous record, enum, record.  The names themselves are produced by the
+   functions above ({!inductive_type_name}, {!inductive_name}), which depend
+   on the position being written; the cache only answers the questions that
+   decide how a name is rendered. *)
 
-(** Higher-order helper to reduce cache-fallback pattern duplication.
-    Queries [cached_lookup] when [name_cache] is populated; otherwise falls
-    back to [fallback].
+(** [cached_lookup] of the name-resolution cache where
+    {!Cpp_state.name_cache} is populated; otherwise [fallback].
     @param cached_lookup function applied to the [Name_resolution.t] cache and
                          [r] when the cache is available
     @param fallback      function applied to [r] when no cache is present
@@ -789,27 +790,32 @@ let with_cache
   | Some cache -> cached_lookup cache r
   | None -> fallback r
 
-(** Cache-backed is_eponymous_record check — avoids hashtable lookup. *)
+(** {!Module_plan.is_eponymous_record}, answered by the cache where it is
+    installed. *)
 let is_eponymous_record_cached : GlobRef.t -> bool =
   with_cache Name_resolution.is_eponymous Module_plan.is_eponymous_record
 
-(** Cache-backed is_global_scope_enum check — avoids hashtable lookup. *)
+(** {!Module_plan.is_global_scope_enum}, answered by the cache where it is
+    installed. *)
 let is_global_scope_enum_cached : GlobRef.t -> bool =
   with_cache Name_resolution.is_global_scope_enum (fun r ->
     Module_plan.is_global_scope_enum r )
 
-(** Cache-backed inductive classification queries. *)
+(** The C++ inductive kind of [r], as the cache classifies it; [None]
+    where no cache is installed or it does not classify [r]. *)
 let get_ind_kind_cached : GlobRef.t -> Minicpp.cpp_ind_kind option =
   with_cache Name_resolution.get_ind_kind (fun _ -> None)
 
-(** Cache-backed enum check — falls back to [is_enum_inductive]. *)
+(** Whether [r] is an enum, as the cache classifies it, falling back to
+    [is_enum_inductive]. *)
 let is_enum_cached (r : GlobRef.t) : bool =
   match get_ind_kind_cached r with
   | Some IK_Enum -> true
   | Some _ -> false
   | None -> is_enum_inductive r
 
-(** Cache-backed record check — falls back to [is_record_inductive]. *)
+(** Whether [r] is a record, eponymous or not, as the cache classifies it,
+    falling back to {!is_record_inductive}. *)
 let is_record_cached (r : GlobRef.t) : bool =
   match get_ind_kind_cached r with
   | Some (IK_Record _ | IK_Eponymous _) -> true
@@ -853,8 +859,8 @@ let struct_declaration_name ~merged ~promoted ~local id =
 
 (** Look up method info for a function reference in the method registry,
     where every candidate a render collects is registered
-    ({!Method_registry.planned_candidate}). Returns Some this_pos if the
-    function is a method, None otherwise.
+    ({!Method_registry.planned_candidate}): the position of the receiver
+    argument where [n] is a method, [None] otherwise.
 
     The answer is in the numbering of the arguments a C++ call site writes,
     not of the ML type's arrows: a candidate records the ML position, which is
@@ -1168,9 +1174,12 @@ and live_namers =
     live_value = (fun c key -> live_value c key) }
 
 (** What [key] resolves to at the position [c], as the resolver resolves
-    it: a type's head for a {!Cpp_resolution.Type_head}, a reference for a
-    {!Cpp_resolution.Value_reference}, an access for an
-    {!Cpp_resolution.Value_access}, a name for anything else. *)
+    it: a type's head for a {!Cpp_resolution.Type_head}, the text for a
+    {!Cpp_resolution.Inline_custom}, a reference for a
+    {!Cpp_resolution.Value_reference}, an access for a
+    {!Cpp_resolution.Value_access}, a truth value for a
+    {!Cpp_resolution.Read_by_a_function} or a
+    {!Cpp_resolution.Held_back_concept}, a name for anything else. *)
 and live_value c (key : Cpp_resolution.key) : Cpp_resolution.value =
   match key with
   | Type_head (form, r) -> Head (live_namers.live_head c form r)

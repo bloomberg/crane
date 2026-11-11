@@ -17,7 +17,8 @@
     [Extract Inductive]/[Extract Constant] mappings, cached inductive metadata,
     the global extraction flags, and the per-run reset hooks that clear all of
     the above between extractions.  Most other modules read and write this state
-    rather than threading it explicitly. *)
+    rather than threading it explicitly.  It sits below extraction, translation
+    and the printer: all three read it, and it depends on none of them. *)
 
 open Names
 open Libnames
@@ -352,7 +353,8 @@ val get_main_function : unit -> (Id.t * ml_type * Id.t option * bool) option
 (** Reset main function tracking (between extraction units). *)
 val reset_main_function : unit -> unit
 
-(** Get record fields for a reference (empty for non-record). *)
+(** The field references of a record or type class, [None] for an anonymous
+    field; empty for anything else. *)
 val get_record_fields : GlobRef.t -> GlobRef.t option list
 
 (** Get record fields from ML type. *)
@@ -522,10 +524,13 @@ val is_flat_inductive_packet : Names.MutInd.t -> Miniml.ml_ind -> int -> bool
     declaration order, if it has been extracted. *)
 val ind_consnames : MutInd.t -> int -> Id.t array option
 
-(** Sigma type assertion. *)
+(** A precondition a sigma-typed parameter carries, emitted at the top of the
+    function that takes it. *)
 type sigma_assertion =
   | AssertExpr of string
+      (** a C++ expression template, [%0] standing for the parameter name *)
   | AssertComment of string
+      (** a Rocq predicate with no C++ translation, emitted as a comment *)
 
 (** Add sigma assertion for a field.
     @param r   the function global reference the assertion belongs to
@@ -559,8 +564,8 @@ val projection_arity : GlobRef.t -> int
 (** Get projection info (inductive and arity). *)
 val projection_info : GlobRef.t -> inductive * int (* arity *)
 
-(** Install the unit's projections used as function values
-    ({!Program_facts.higher_order_projections}). *)
+(** Install the unit's projections used as function values (the
+    [higher_order_projections] field of {!Program_facts.t}). *)
 val set_higher_order_projections : Ref.User.Set.t -> unit
 
 (** The installed projections used as function values. *)
@@ -584,7 +589,10 @@ val promoted_type_var_field : Names.Id.t -> GlobRef.t option
 (** Every field promoted to a type variable. *)
 val promoted_type_var_fields : unit -> GlobRef.t list
 
-(** Register an erased type constant (non-promoted type-valued record field). *)
+(** Register an erased type constant: a type-valued record field that is not
+    promoted (a family such as [Hom : Obj -> Obj -> Type]), or a type
+    definition or axiom whose body extracts to no type.  Either is spelled
+    [std::any]. *)
 val add_erased_type_const : GlobRef.t -> unit
 
 (** Check if reference is an erased type constant. *)
@@ -771,9 +779,8 @@ type opt_flag = {
   opt_case_app : bool;  (** 128: Case optimization - application *)
   opt_let_app : bool;  (** 256: Let-application optimization *)
   opt_lin_let : bool;  (** 512: Linear let optimization *)
-  opt_lin_beta : bool;
+  opt_lin_beta : bool;  (** 1024: Linear beta reduction *)
 }
-(** 1024: Linear beta reduction *)
 
 (** Get current optimization flags. *)
 val optims : unit -> opt_flag
@@ -815,16 +822,17 @@ val loopify_strict : unit -> bool
     an override, such as the methods generated on an inductive. *)
 val should_loopify : ?default:bool -> GlobRef.t -> bool
 
+(** Whether the method made from a function is loopified where its
+    inductive's methods are: its own [Crane Loopify] / [Crane NoLoopify]
+    setting, and yes by default. *)
+val loopifies_method : GlobRef.t -> bool
+
 (** Whether the methods generated on inductive [r] are loopified.  They are
     structural recursion over [r], one C++ frame per cell, and the user has
     no name to hang [Crane Loopify] on, so they are by default -- except on a
     coinductive, whose recursion sits under a lazy thunk and never builds a
-    deep C++ stack. *)
-val loopifies_method : GlobRef.t -> bool
-(** Whether the method made from a function is loopified where its
-    inductive's methods are: its own [Crane Loopify] / [Crane NoLoopify]
-    setting, and yes by default. *)
-
+    deep C++ stack.  A [Crane Loopify] / [Crane NoLoopify] on [r] overrides
+    the default. *)
 val loopifies_methods_of : GlobRef.t -> bool
 
 (** Declaration currently being translated; consulted by {!reuse_loopify_ok}. *)
@@ -862,9 +870,11 @@ val extraction_reuse : bool -> qualid list -> unit
 (** Reset per-function reuse table. *)
 val reset_extraction_reuse : unit -> unit
 
-(** Scoped-arena redesign: whether an inductive's recursive-field factory should
-    contain the runtime [in_arena_scope()] branch (bump-allocate when a scope is
-    open).  True for every type except those opted out via [Crane NoArena]. *)
+(** Whether an inductive's recursive-field factory should contain the runtime
+    [in_arena_scope()] branch (bump-allocate when a scope is open).  Arena
+    allocation is a property of whether a scope is open at run time, not of
+    the type, so this is true for every type except those opted out via
+    [Crane NoArena]. *)
 val should_use_arena_at_runtime : GlobRef.t -> bool
 
 (** Whether [Set Crane BoxedFields] is in effect: constructor fields of
@@ -881,6 +891,12 @@ val shared_variant : unit -> bool
     {!is_shared_variant_packet}. *)
 val is_shared_variant : GlobRef.t -> bool
 
+(** Whether packet [i] of the extracted inductive [kn] qualifies as a shared
+    variant: under [Set Crane SharedVariant], an ordinary, non-custom
+    inductive that is recursive (directly or through a sibling of its block)
+    or is a tagged union with a constructor holding something.  The
+    structural test {!add_shared_variant} is fed from; readers ask
+    {!is_shared_variant}. *)
 val is_shared_variant_packet : Names.MutInd.t -> Miniml.ml_ind -> int -> bool
 
 (** Record that an inductive is stored as a shared variant; done by
@@ -936,9 +952,10 @@ val check_non_atomic_rc_request : unit -> unit
 val arena_enabled : unit -> bool
 
 val move_last_use : unit -> bool
-(** [Crane MoveLastUse], on by default: whether {!Last_use} rewrites a local's
-    final read as [std::move].  Unset it to rule the pass out when diagnosing a
-    generated body. *)
+(** The [Crane MoveLastUse] option, on by default.  Nothing reads it: a read
+    is moved wherever OwnershipIR finds it the last use of an owned local
+    ([Last_use], an {!Ownership_ir.fate}), and unsetting the option changes
+    nothing. *)
 
 val count_rc : unit -> bool
 (** Whether [CRANE_COUNT_RC=1] is set: spell every shared pointer
@@ -1108,8 +1125,11 @@ val indref_of_match : ml_branch array -> GlobRef.t
 (** Find custom match extraction code. *)
 val find_custom_match : ml_branch array -> string
 
-(** Completeness-aware element wrapping (WRAP.md). Look up the [Boxed Element]
-    wrapper template (e.g. ["immer::box<%t0>"]) for a custom container. *)
+(** Look up the [Boxed Element] wrapper template (e.g. ["immer::box<%t0>"])
+    for a custom container.  The wrapper is applied to the container's element
+    only where the element type is incomplete at the point the container is
+    named, i.e. where the element recurses through the container
+    ({!is_boxed_recursive_ind}). *)
 val find_boxed_wrapper_opt : GlobRef.t -> string option
 
 (** Look up the [Drain "..."] iterative-destructor template for a custom
@@ -1220,8 +1240,9 @@ val extract_callback : string option -> qualid -> unit
 (** The imports of the customs the unit's files write. *)
 val get_custom_imports : unit -> string list
 
-(** Install the custom references the unit's program names
-    ({!Program_facts.used_customs}), which decide {!unit_is_concurrent}. *)
+(** Install the custom references the unit's program names (the
+    [used_customs] field of {!Program_facts.t}), which decide
+    {!unit_is_concurrent}. *)
 val set_named_customs : Ref.User.Set.t -> unit
 
 (** The installed custom references the unit's program names. *)
@@ -1322,11 +1343,12 @@ val extract_skip_or_module : qualid -> unit
 type numeral_info = {
   num_zero_ctor : int;  (** Index of zero constructor *)
   num_succ_ctor : int;  (** Index of successor constructor *)
-  num_fmt : string;  (** Format string for numeral *)
+  num_fmt : string;  (** Format string for the literal, with one [%n] placeholder *)
   num_converters : GlobRef.t list;
     (** Converter functions (e.g. [Nat.of_num_uint]) that parse digit chains
-        into this numeral type.  Resolved automatically from the inductive's
-        module when [Crane Extract Numeral] is processed. *)
+        into this numeral type.  Resolved by name when [Crane Extract
+        Numeral] is processed: in the module named after the type ([Nat] for
+        [nat]), or else in the inductive's own directory. *)
   num_ind : GlobRef.t;
     (** The numeral inductive itself, so a rendering site holding only the
         info can still ask what C++ type the literal has to fit in. *)
@@ -1339,8 +1361,8 @@ val is_numeral_inductive : GlobRef.t -> bool
 val get_numeral_info : GlobRef.t -> numeral_info option
 
 (** Check if a function is a registered numeral converter (e.g.
-    [Nat.of_num_uint]).  These are resolved from the same module as the
-    numeral inductive during [Crane Extract Numeral] processing. *)
+    [Nat.of_num_uint]), as resolved during [Crane Extract Numeral]
+    processing ({!numeral_info}). *)
 val is_numeral_converter : GlobRef.t -> bool
 
 (** Return the numeral inductive targeted by a converter function, if any. *)
@@ -1393,7 +1415,7 @@ val promote_inductive : GlobRef.t -> unit
 
 (** Record the local fixpoint group [occ] as one whose members' type binders
     extraction erased because a call recurses at a ground instance
-    ({!Extraction.erased_fix_types}): its calls are written at their own
+    ([Extraction.erased_fix_types]): its calls are written at their own
     instance, and translation adapts their arguments to the erased
     parameters. *)
 val add_erased_fix_group : Miniml.Occurrence.t -> unit

@@ -163,10 +163,11 @@ let labels_of_ref r =
   let mp, l = KerName.repr (repr_of_r r) in
   parse_labels2 [l] mp
 
-(** {1 The main tables: constants, inductives, records,} *)
+(** {1 The main tables: constants, inductives, records} *)
 
-(* These tables are not registered within Rocq save/undo mechanism since we
-   reset their contents at each run of Extraction *)
+(* The caches below are not registered with Rocq's save/undo mechanism: their
+   contents are reset at each run of extraction ({!on_reset}).  The tables
+   declared with [Summary.ref] are the exception. *)
 
 (* We use [constant_body] (resp. [mutual_inductive_body]) as checksum to ensure
    that the table contents aren't outdated. *)
@@ -226,10 +227,13 @@ let add_cst_type kn cb s = cst_types := Cmap_env.add kn (cb, s) !cst_types
 let lookup_cst_type kn cb =
   lookup_with_body_check (fun kn -> Cmap_env.find_opt kn !cst_types) kn cb
 
+(** The cached scheme of [kn], without the checksum. *)
 let constant_schema kn = Option.map snd (Cmap_env.find_opt kn !cst_types)
 
 (** {2 Inductives table} *)
 
+(** Extracted inductives, keyed by block, each with the kernel body it was
+    extracted from as a checksum. *)
 let inductives =
   ref (Mindmap_env.empty : (mutual_inductive_body * ml_ind) Mindmap_env.t)
 
@@ -315,6 +319,7 @@ let packet_is_non_uniform p =
   nvars > 0
   && Array.exists (fun fields -> List.exists nested fields) p.Miniml.ip_types
 
+(* A non-uniform packet keeps no template parameters ({!packet_is_non_uniform}). *)
 let ind_param_vars ind p =
   if packet_is_non_uniform p then ([], 0) else
   let sign_len = List.length p.Miniml.ip_sign in
@@ -333,6 +338,7 @@ let get_ind_num_param_vars_opt kn =
     Some n
   with Not_found | Invalid_argument _ -> None
 
+(* Each extracted inductive's kind: record, class, coinductive, ... *)
 let inductive_kinds = ref (Mindmap_env.empty : record_field Core.Inductive.Kind.t Mindmap_env.t)
 
 let init_inductive_kinds () = inductive_kinds := Mindmap_env.empty
@@ -527,8 +533,8 @@ let has_any_coinductive () =
     then leaks from one file into the next of a separate extraction.
 
     {!freeze_demands} closes collection once both bodies are rendered.  A
-    demand raised after that is one no body raised, so the preamble written
-    from them is missing it; under [CRANE_CHECK_IR] that is an error
+    demand raised after that comes too late for the preamble written from the
+    demands, which is missing it; under [CRANE_CHECK_IR] that is an error
     rather than a C++ file that does not compile. *)
 
 let raised_demands = ref CString.Set.empty
@@ -1096,8 +1102,6 @@ let projection_arity r = snd (GlobRef.Map.find r !projs)
 
 let projection_info r = GlobRef.Map.find r !projs
 
-(* Table of promoted type variables from dependent records. Maps a ConstRef
-   (erased carrier projection) to its variable name (Id.t). *)
 (** {2 Promoted Type Variables}
 
     "Promotion" refers to the extraction transformation that converts
@@ -1137,7 +1141,8 @@ let projection_info r = GlobRef.Map.find r !projs
     ]}
 
     This table tracks which record fields were promoted so that usage sites
-    can generate correct C++ type qualifications instead of field accesses. *)
+    can generate correct C++ type qualifications instead of field accesses.
+    It maps the field's projection ([ConstRef]) to its variable name. *)
 
 let promoted_type_vars = ref (GlobRef.Map.empty : Names.Id.t GlobRef.Map.t)
 
@@ -1171,15 +1176,12 @@ let promoted_type_var_field name =
     (fun r v acc -> if acc = None && Id.equal v name then Some r else acc)
     !promoted_type_vars None
 
-(* Table of erased type constants — non-promoted type-valued record fields
-   like [Hom : Obj -> Obj -> Type] in [PreCategory].  These are dependent
-   type families whose C++ representation is [std::any] because the extraction
-   cannot resolve them statically.  Distinguished from promoted type vars
-   (simple [Type]-valued fields like [Obj]) and concrete type aliases
-   (standalone definitions like [Force := list Unit]). *)
-(** Erased type constants: dependent type families that become [std::any] in C++,
-    including promoted record fields (simple [Type]-valued like [Obj]) and concrete
-    type aliases (standalone definitions like [Force := list Unit]). *)
+(** Erased type constants, spelled [std::any] in C++: non-promoted type-valued
+    record fields like [Hom : Obj -> Obj -> Type] in [PreCategory], dependent
+    type families extraction cannot resolve statically; and type definitions or
+    axioms whose body extracts to no type ([Tunknown], [Taxiom]).  Distinguished
+    from promoted type vars (simple [Type]-valued fields like [Obj]) and from
+    concrete type aliases (standalone definitions like [Force := list Unit]). *)
 let (_, add_erased_type_const, is_erased_type_const) =
   make_refset ~name:"erased_type_consts" ()
 
@@ -1371,13 +1373,12 @@ let fold_type_body_types f r acc =
              it: a class is not parameterised by the associated types it
              declares, and it says nothing about the ones it merely mentions.
 
-             Skipping classes outright was the imprecise version, and it lost
-             the case where the dependence arrives through a third type:
-             [Class ToDvalueBase I := { tdb : I -> dvalue_base }] names no
-             class at all, while [dvalue_base] -- a [Variant] from the same
-             section -- is parameterised by [ptr] and [iptr].  Nothing looked
-             there, so both spellings fell to the file-scope
-             [using ptr = std::any;]. *)
+             Classes cannot be skipped outright, because a dependence may
+             arrive through a third type: [Class ToDvalueBase I := { tdb : I
+             -> dvalue_base }] names no class at all, while [dvalue_base] -- a
+             [Variant] from the same section -- is parameterised by [ptr] and
+             [iptr].  Skipping the class would leave both spellings to the
+             file-scope [using ptr = std::any;]. *)
           | Core.Inductive.Kind.Type_class _ ->
             List.map snd (get_record_field_bindings r)
           | _ ->
@@ -1608,10 +1609,10 @@ let is_extrcompute () = !extrcompute
 
 (** {2 Printing} *)
 
-(* The following functions work even on objects not in [Global.env ()]. Warning:
-   for inductive objects, this only works if an [extract_inductive] have been
-   done earlier, otherwise we can only ask the Nametab about currently visible
-   objects. *)
+(* The following functions work even on objects not in [Global.env ()].
+   Warning: for inductive objects, this only works if the inductive was added
+   to the extraction tables ({!add_ind}) earlier; otherwise only the Nametab
+   can be asked, and it knows only currently visible objects. *)
 
 (** Returns the basename identifier for a global reference, falling back to
     Nametab if extraction tables have no entry. *)
@@ -1659,7 +1660,8 @@ let kername_of_global r =
     Printf.sprintf "%s,%d,%d" (s (MutInd.user mind)) i j
   | GlobRef.VarRef v -> Id.to_string v
 
-(** Like [safe_pr_global] but with full qualification, for constants only. *)
+(** Like [safe_pr_global] but with full qualification.  Where the Nametab has
+    no path, only a constant can be printed (from its kernel name). *)
 let safe_pr_long_global r =
   try Printer.pr_global r
   with Not_found ->
@@ -2014,8 +2016,13 @@ let output_directory_for_module () =
     | _ -> base_dir
   with _ -> base_dir
 
-(** Reject a user-supplied extraction target filename that could place generated
-    files outside the configured output directory.
+(* The targets already extracted to in this session.  A second extraction to
+   one of them would overwrite the first's files with no trace of it. *)
+let claimed_output_targets : (string, unit) Hashtbl.t = Hashtbl.create 7
+
+(** Take a user-supplied extraction target for this extraction, rejecting one
+    already taken in this session and one that could place generated files
+    outside the configured output directory.
 
     A monolithic extraction target such as [Crane Extraction "f" M] flows
     directly into the [.h]/[.cpp] output paths. Allowing an absolute path or a
@@ -2024,10 +2031,6 @@ let output_directory_for_module () =
     absolute paths and any parent-directory component outright; ordinary
     relative subpaths (e.g. ["sub/name"]) remain allowed and, being relative and
     free of [..], are guaranteed to stay under the output directory. *)
-(* The targets already extracted to in this session.  A second extraction to
-   one of them would overwrite the first's files with no trace of it. *)
-let claimed_output_targets : (string, unit) Hashtbl.t = Hashtbl.create 7
-
 let claim_output_target target =
   if Hashtbl.mem claimed_output_targets target then
     CErrors.user_err
@@ -2061,8 +2064,8 @@ let claim_output_target target =
 (* The C++ unit each Rocq library was extracted into.  A later extraction that
    depends on that library must include its header rather than re-emit its
    declarations, which would be a duplicate symbol at link time.  The map is
-   written into the [.vo] so that [Require]-ing the library carries it. *)
-(* Each claim keeps the library whose compilation made it. *)
+   written into the [.vo] so that [Require]-ing the library carries it.  Each
+   claim keeps the library whose compilation made it. *)
 let extracted_units = Summary.ref MPmap.empty ~name:"CraneExtractedUnits"
 
 let set_extracted_unit mp claim =
@@ -2224,9 +2227,6 @@ let loopify_diagnostics () =
 let {Goptions.get = loopify_strict} =
   declare_bool_option_and_ref ~key:["Crane"; "Loopify"; "Strict"] ~value:false ()
 
-(* Per-function loopify/noloopify table. First set = force-loopify, second set =
-   force-noloopify. *)
-
 (* Suffix of a dotted kernel-name-string path: the last [n] '.'-separated
    components. Used as a fallback match key for functor-internal
    registrations below (both arena and, further down, guard-compare). *)
@@ -2236,6 +2236,8 @@ let key_suffix n key =
   if len <= n then key
   else String.concat "." (List.filteri (fun i _ -> i >= len - n) parts)
 
+(* Per-function loopify/noloopify table. First set = force-loopify, second set =
+   force-noloopify. *)
 let empty_loopify_table = (Ref.User.Set.empty, Ref.User.Set.empty)
 
 let loopify_table = Summary.ref empty_loopify_table ~name:"CraneExtrLoopify"
@@ -2255,7 +2257,9 @@ let loopify_key = function
   | _ -> None
 
 (** Determines whether a function should be loopified: forced on/off per
-    function, falling back to the global [Crane Loopify] setting. *)
+    function (exactly, then by the two-component suffix of
+    {!loopify_suffix_table}), then [default], then the global [Crane Loopify]
+    setting. *)
 let should_loopify ?default r =
   let yes, no = !loopify_table in
   if Ref.User.Set.mem r yes then
@@ -2267,6 +2271,8 @@ let should_loopify ?default r =
     | Some b -> b
     | None -> ( match default with Some d -> d | None -> loopify () )
 
+(* The methods generated on inductive [r]: loopified by default, except on a
+   coinductive, whose recursion sits under a lazy thunk. *)
 let loopifies_methods_of r = should_loopify ~default:(not (is_coinductive r)) r
 
 (* Whether the method made from function [r] is loopified, when its
@@ -2404,13 +2410,12 @@ let reset_extraction_reuse () = Lib.add_leaf (reset_reuse ())
 
 (* --- Arena extraction ------------------------------------------------ *)
 
-(* Scoped-arena redesign (2026-08-10): arena allocation is a runtime property of
-   whether a [crane::arena_scope] is open, not a compile-time property of a type.
-   The old opt-in surface ([Set Crane Arena] global, [Crane Arena <ind>],
-   [Crane Arena Shared <ind>]) is gone; only [Crane NoArena <ind>] remains, as a
-   per-type opt-*out* so a type can be excluded from ever bump-allocating even
-   when a scope happens to be open (see [no_arena_table] / [should_use_arena_at_runtime]
-   below). *)
+(* Arena allocation is a runtime property of whether a [crane::arena_scope] is
+   open, not a compile-time property of a type.  [Set Crane Arena] decides
+   only whether the arena-aware factory is emitted at all ({!arena_enabled});
+   [Crane NoArena <ind>] is a per-type opt-out, so a type can be excluded from
+   ever bump-allocating even when a scope happens to be open (see
+   [no_arena_table] / [should_use_arena_at_runtime] below). *)
 
 (* --- Non-atomic reference counting ----------------------------------- *)
 
@@ -2470,11 +2475,10 @@ let {Goptions.get = boxed_fields} =
 
 (* --- Last-use moves --------------------------------------------------- *)
 
-(* [Last_use] rewrites a local's final read as [std::move], removing a
-   refcount round-trip per hand-off.  On by default: it is a correctness-
-   preserving transform that every generated body wants, and the option is
-   here so that a body it gets wrong can be diagnosed by turning it off rather
-   than by rebuilding the plugin. *)
+(* [Crane MoveLastUse] is declared, on by default, but nothing reads it: a
+   read is moved wherever OwnershipIR finds it the last use of an owned local
+   ([Ownership_ir.Last_use]), removing a refcount round-trip per hand-off,
+   whatever the option says. *)
 let {Goptions.get = move_last_use} =
   declare_bool_option_and_ref ~key:["Crane"; "MoveLastUse"] ~value:true ()
 
@@ -2495,17 +2499,17 @@ let {Goptions.get = move_last_use} =
      make_shared/make_rc.  Copying is O(1) either way, so there is still no
      deep-copy path -- the flag only gates the factory, never the layout.
 
-   Because it only swaps the factory (not the pointer type), it does NOT
-   reintroduce the old per-type deep-clone/composite-hang failure mode. *)
+   Because it only swaps the factory (not the pointer type), no type ever
+   needs a deep clone to move between the arena and the heap. *)
 let {Goptions.get = arena_enabled} =
   declare_bool_option_and_ref ~key:["Crane"; "Arena"] ~value:false ()
 
-(* Per-inductive NoArena opt-out table (scoped-arena redesign).  Membership
-   means "never bump-allocate this type's nodes even when an arena scope is
-   open" -- for types with program-lifetime identity requirements or a
-   comparator/hash that assumes stable heap addresses across scope boundaries.
-   Reuses the same Ref.User.Set + canonical-path 2-component suffix-match machinery
-   the old arena_table used, so functor-internal directives still match. *)
+(* Per-inductive NoArena opt-out table.  Membership means "never
+   bump-allocate this type's nodes even when an arena scope is open" -- for
+   types with program-lifetime identity requirements or a comparator/hash that
+   assumes stable heap addresses across scope boundaries.  Backed by a
+   Ref.User.Set plus a canonical-path 2-component suffix match
+   ({!no_arena_suffix_table}), so functor-internal directives still match. *)
 
 let empty_no_arena_table = Ref.User.Set.empty
 
@@ -2585,9 +2589,9 @@ let extraction_no_arena l =
    both resolve to the same [Constant.canonical] printed string, yet neither
    [GlobRef.Map] (canonical-KerName-based) nor [Ref.User.Map] (user-KerName-based)
    report a match. String-keying on the canonical path collapses these two
-   while still requiring an exact dirpath+label match, so it does not
-   resurrect the earlier same-named-different-modules Label-keying collision
-   bug. *)
+   while still requiring an exact dirpath+label match, so two same-named
+   constants in different modules stay distinct (keying by label alone would
+   collide them). *)
 let guard_compare_key_string = function
   | GlobRef.ConstRef c -> Some (Names.KerName.to_string (Names.Constant.canonical c))
   | GlobRef.VarRef _ | GlobRef.IndRef _ | GlobRef.ConstructRef _ -> None
@@ -2699,7 +2703,8 @@ let inline_table = Summary.ref empty_inline_table ~name:"CraneExtrInline"
 
 let to_inline r = Ref.Can.Set.mem r (fst !inline_table)
 
-(* Extension for supporting foreign function call extraction. *)
+(* Foreign function call extraction: constants called through a C++ function
+   of the given name ([Crane Extract Foreign Constant]). *)
 
 let empty_foreign_set = Ref.Can.Set.empty
 
@@ -2707,16 +2712,11 @@ let foreign_set = Summary.ref empty_foreign_set ~name:"CraneExtrForeign"
 
 let to_foreign r = Ref.Can.Set.mem r !foreign_set
 
-(* End of Extension for supporting foreign function call extraction. *)
-
-(* Extension for supporting callback registration extraction. *)
-
-(* A map from qualid to string opt (alias) *)
+(* Callback registration: each registered constant, mapped to the alias it is
+   exported under, if one was given. *)
 let empty_callback_map = Ref.User.Map.empty
 
 let callback_map = Summary.ref empty_callback_map ~name:"CraneExtrCallback"
-
-(* End of Extension for supporting callback registration extraction. *)
 
 let to_keep r = Ref.Can.Set.mem r (snd !inline_table)
 
@@ -3103,7 +3103,7 @@ let is_flat_inductive_packet kn ind i =
   with _ -> false
 
 (** Check if [r] is a flat inductive.  First checks the flat-inductives
-    registry (populated during Pre phase / global pre-pass).  If not found
+    registry (populated by [Cpp.prepare_structure] before rendering).  If not found
     there — which can happen for functor-parameterized inductives whose
     module-path kn differs across instantiation sites — falls back to
     looking up the ML inductive in the inductives cache and running the same
@@ -3193,11 +3193,11 @@ let custom_info ?yields r : Minicpp.custom_info =
     A custom mapping is a template string, and nothing in it says how the
     named type behaves when it is copied.  Crane cannot read
     [std::pair<%t0, %t1>] and find out that copying it is free when copying
-    its arguments is, so the user says so.  Before this the answer was a list
-    of names built into the compiler, which was wrong twice over: it made a
-    property of the user's C++ library a property of Crane, and it named only
-    the [std] spellings, so the same types under the BDE flavour
-    ([bsl::pair], [bsl::optional]) were quietly excluded. *)
+    its arguments is, so the user says so.  A list of names built into Crane
+    would be wrong twice over: it would make a property of the user's C++
+    library a property of Crane, and it would name only the spellings it knew,
+    quietly excluding the same types under another flavour ([bsl::pair],
+    [bsl::optional]). *)
 let trivially_copyable_heads =
   Summary.ref CString.Set.empty ~name:"CraneExtrTriviallyCopyable"
 
@@ -3324,7 +3324,8 @@ let custom_matchs = Summary.ref Ref.Can.Map.empty ~name:"CraneExtrCustomMatchs"
 
 let add_custom_match r s = custom_matchs := Ref.Can.Map.add r s !custom_matchs
 
-(* Completeness-aware element wrapping (see WRAP.md).
+(* Completeness-aware element wrapping: an element type that recurses through
+   its container is incomplete where the container is named, so it is wrapped.
 
    [boxed_wrappers] maps a custom container inductive (e.g. [list] mapped to
    [immer::flex_vector]) to the wrapper template applied to its element at
@@ -3504,8 +3505,8 @@ let get_ref_import_list r =
   | Some imports -> StringSet.elements imports
   | None -> []
 
-(* Legacy global custom imports — always empty now that nothing populates it
-   (retained only because [get_custom_imports] below still unions it in). *)
+(* Global custom imports, not tied to any reference.  Nothing adds to it, so
+   it is always empty; [imports_of] below still unions it in. *)
 let empty_custom_imports = StringSet.empty
 
 let custom_imports = Summary.ref empty_custom_imports ~name:"CraneCustomImports"
@@ -3518,8 +3519,8 @@ let imports_of refs =
       | None -> acc )
     refs !custom_imports
 
-(* The imports of the customs the unit's files write, plus any legacy global
-   imports. *)
+(* The imports of the customs the unit's files write, plus the global ones
+   ({!custom_imports}, empty). *)
 let get_custom_imports () = StringSet.elements (imports_of (written_customs ()))
 
 (* The headers whose mappings put the program's values on several threads:
@@ -3557,10 +3558,6 @@ let non_atomic_rc () = non_atomic_rc_requested () && not (unit_is_concurrent ())
 
 let single_threaded () = single_threaded_requested () && not (unit_is_concurrent ())
 
-(* Resolved smart-pointer names for string-level codegen (kept here, in a low
-   module, so both [Cpp_state.init_std_names] and the string-building sites in
-   Translation/Gen_decls agree without a module cycle).  [Crane NonAtomicRc]
-   selects the namespace-neutral [crane::rc]; otherwise the std/BDE flavor. *)
 (* [CRANE_COUNT_RC=1] swaps the shared pointer for the counting one in
    count_rc.h, so a run reports its reference-count traffic.  It is an
    environment variable rather than a vernacular flag because it is a property
@@ -3617,6 +3614,11 @@ let plugin_digest =
 
 let plugin_build_stamp () = Lazy.force plugin_digest
 
+(* Resolved smart-pointer names for string-level codegen (kept here, in a low
+   module, so both [Cpp_state.init_std_names] and the string-building sites in
+   Translation/Gen_decls agree without a module cycle).  [CRANE_COUNT_RC]
+   selects the counting pointer, [Crane NonAtomicRc] the namespace-neutral
+   [crane::rc]; otherwise the std/BDE flavor. *)
 let shared_ptr_name () =
   if count_rc () then Crane_rt.counting_ptr
   else if non_atomic_rc () then Crane_rt.rc
@@ -4081,15 +4083,17 @@ let extract_skip_module m =
   Lib.add_leaf (in_skip_module mp)
 
 (* Numeral inductive tracking. Stores (zero_ctor_index, succ_ctor_index) for
-   Peano-style numerals. Constructor indices are 1-based (Rocq convention). *)
+   Peano-style numerals, [-1] where the type has no such constructor.
+   Constructor indices are 1-based (Rocq convention). *)
 type numeral_info = {
   num_zero_ctor : int; (* constructor index of zero, 1-based *)
   num_succ_ctor : int; (* constructor index of successor, 1-based *)
   num_fmt : string; (* format string with %n placeholder for the integer *)
   num_converters : GlobRef.t list;
-    (* Converter functions (e.g. Nat.of_num_uint) resolved from Rocq's
-       Number Notation system.  Used to recognize digit-chain applications
-       and fold them into integer literals. *)
+    (* Converter functions (e.g. Nat.of_num_uint), looked up by name in the
+       module named after the type, or else in the inductive's own directory
+       ({!extract_numeral}).  Used to recognize digit-chain applications and
+       fold them into integer literals. *)
   num_ind : GlobRef.t;
     (* The numeral inductive itself, so a rendering site holding only the
        info can still ask what C++ type the literal has to fit in. *)
@@ -4126,11 +4130,6 @@ let in_numeral : GlobRef.t * numeral_info -> obj =
          (r', { info with num_converters = convs' })))
        ~discharge:(fun x -> Some x)
 
-(** Detect and register numeral inductive types for optimized extraction.
-    Supports both Peano-style inductives (zero/successor pattern, e.g. nat)
-    and non-Peano numeric types (e.g. N, Z).  For Peano types, S(S(..O))
-    chains are folded.  For all types, digit-chain converters like
-    [of_num_uint] are resolved and registered for large-literal folding. *)
 (* A numeral format is documented as a numeric-literal formatting directive, but
    it is rendered by textual [%n] substitution and emitted verbatim as C++
    ([CPPraw]).  Without a syntax guard a format could smuggle arbitrary C++
@@ -4178,6 +4177,11 @@ let validate_numeral_fmt fmt =
                 c)))
     fmt
 
+(** Detect and register numeral inductive types for optimized extraction.
+    Supports both Peano-style inductives (zero/successor pattern, e.g. nat)
+    and non-Peano numeric types (e.g. N, Z).  For Peano types, S(S(..O))
+    chains are folded.  For all types, digit-chain converters like
+    [of_num_uint] are resolved and registered for large-literal folding. *)
 let extract_numeral r fmt =
   check_inside_section ();
   validate_numeral_fmt fmt;
@@ -4187,9 +4191,11 @@ let extract_numeral r fmt =
   | GlobRef.IndRef (kn, i) ->
     let mib = Global.lookup_mind kn in
     let mip = mib.mind_packets.(i) in
-    (* Try to detect a Peano pattern (zero + successor).  Non-Peano types
-       (e.g. N with N0/Npos, Z with Z0/Zpos/Zneg) get -1 for both indices,
-       which means try_fold_numeral will never match their constructors. *)
+    (* Try to detect a Peano pattern: the last nullary constructor is taken
+       as zero and the last unary one as successor, -1 where there is none.
+       Non-Peano types get indices too (N: N0 and Npos; Z: Z0 and Zneg), and
+       are not folded only because [Translation_types.try_fold_numeral] never
+       finds a chain of them ending in the zero constructor. *)
     let ctor_arities = mip.mind_consnrealdecls in
     let zero_idx = ref (-1) in
     let succ_idx = ref (-1) in

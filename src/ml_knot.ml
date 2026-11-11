@@ -6,6 +6,7 @@ open Miniml
 
 let same = GlobRef.CanOrd.equal
 
+(* Whether [e] names the global [f] anywhere. *)
 let rec mentions f = function
   | MLglob {callee; _} when same callee f -> true
   | e ->

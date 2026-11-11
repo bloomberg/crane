@@ -1,11 +1,11 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** How each function of a normalized program recurses
-    (docs/Pipeline-Disentangling-Plan.md, Milestone 6), read off its Core
-    body before any function is lowered: a fact about the program
-    ({!Program_facts.analyze_program}), and what Loopify transforms a
-    function by.
+(** How each function of a normalized program recurses, read off its Core
+    body before any function is lowered, so that the decision to make a loop
+    of a function is a fact about the program
+    ({!Program_facts.analyze_program}) rather than something the C++ printer
+    rediscovers; Loopify transforms a function by it.
 
     A call is a tail call where the function's result is the call's.  The
     effect operations are read as {!Core_effects} elaborates them: in a
@@ -21,26 +21,32 @@
     reads the constructors its result is built of around its calls, which
     decide whether it is lowered tail modulo cons ({!strategy}). *)
 
+(** How a function, or a recursive group, recurses. *)
 type kind =
-  | No_recursion
+  | No_recursion  (** it makes no recursive call *)
   | Tail  (** every recursive call is a tail call *)
   | Nontail  (** some recursive call is not *)
 
 (** A recursive group's plan: its members, in definition order, and how
     the group recurses: as the member that recurses most. *)
 type group = private {
-  members : Names.GlobRef.t list;
-  kind : kind;
+  members : Names.GlobRef.t list;  (** in definition order *)
+  kind : kind;  (** that of the member that recurses most *)
 }
 
+(** The plan of a whole program: a {!group} per recursive group, and the
+    strategy, calls, resume points and adoptable fixpoints of each function
+    and local fixpoint. *)
 type t
 
+(** The plan of a program that defines nothing. *)
 val empty : t
 
 (** [analyze groups p] plans every function the normalized program [p]
     defines, in the recursive groups [groups]. *)
 val analyze : Recursive_groups.t -> Core_phase.normalized Core_phase.program -> t
 
+(** Whether two plans decide every function and fixpoint alike. *)
 val equal : t -> t -> bool
 
 (** The effect operation the use [use] is, where [effects] says it is
@@ -92,14 +98,14 @@ val group_of : Names.GlobRef.t -> group option
     the constructor's declared order, holds the call. *)
 type cell = private {
   constructor : Names.GlobRef.t;
-  hole : int;
+  hole : int;  (** the argument holding the call, in declared order *)
 }
 
 (** The constructors around one recursive call, outermost first, the
     innermost holding the call itself. *)
 type chain = private {
-  around : cell list;
-  innermost : cell;
+  around : cell list;  (** outermost first, the innermost excluded *)
+  innermost : cell;  (** the cell holding the call itself *)
 }
 
 (** How a function's recursion is lowered, one per function. *)
@@ -134,7 +140,7 @@ val kind_of_strategy : strategy -> kind
     argument, which its constructor stores behind the pointer, and every
     constructor in a chain stores some field there: [pointer_fields c] are
     the arguments of [c] so stored, [None] where it stores none
-    ({!Gen_inductives.constructor_pointer_fields}). *)
+    ({!Loopify_analysis.constructor_pointer_fields}). *)
 val strategy :
   pointer_fields:(Names.GlobRef.t -> int list option) -> Names.GlobRef.t -> strategy option
 
@@ -237,7 +243,7 @@ val member_calls : Miniml.Occurrence.t * int -> Miniml.Occurrence.t list
     each by the occurrence of the use heading it, which the C++ call made
     of it records ({!Minicpp.call_sig.cs_occurrence}): the recursive calls
     of [r], the copies of its partners spliced into its body included.
-    None for a function on no cycle. *)
+    Empty for a function on no cycle. *)
 val calls : Names.GlobRef.t -> Miniml.Occurrence.t list
 
 (** Whether the bodies of the group of the local fixpoint [occurrence] read
@@ -281,7 +287,9 @@ type call = private {
     it that what follows reads as values -- what a frame keeps across the
     call: not a dictionary the declaration takes, nor a member of a local
     fixpoint the point is in that what follows only calls -- [after], the
-    calls its right-hand side ends in, and [read_by_call], those of [live]
+    calls its right-hand side ends in, [passes], the binders of [live] what
+    follows hands on unchanged to one of those calls ({!passing}), and
+    [read_by_call], those of [live]
     those calls read: their arguments, directly or through a closure a let
     binds, and what a local fixpoint called captures -- a closure reads what
     it captures when it is called, and a machine adopting the fixpoint takes

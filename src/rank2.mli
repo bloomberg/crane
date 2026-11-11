@@ -14,7 +14,7 @@
     become the lambda's own template parameter -- the {e carrier} -- so the
     parameter reads [const E<_X> &] and the body says [_X] where it would
     otherwise guess.  The callee recovers the result with
-    [std::invoke_result_t]; see {!Gen_decls.relax_tt_applied_return}.
+    [std::invoke_result_t]; see {!Plan_templates.relax_tt_applied_return}.
 
     The carrier's extent is the lambda's body, and is carried by
     {!Translation_state.with_rank2_carrier}: every erased type inside denotes
