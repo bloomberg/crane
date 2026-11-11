@@ -14178,3 +14178,14 @@
   (alias runtest)
   (deps eta_arg.t.exe)
   (action (run ./eta_arg.t.exe))))
+
+(subdir numeral_wrap_gmp
+ (rule
+  (targets numeral_wrap_gmp.t.exe)
+  (deps NumeralWrapGmp.vo numeral_wrap_gmp.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-gmp.sh %{project_root} numeral_wrap_gmp.t.exe numeral_wrap_gmp.t.cpp numeral_wrap_gmp.cpp)))
+ (rule
+  (alias runtest)
+  (deps numeral_wrap_gmp.t.exe)
+  (action (run ./numeral_wrap_gmp.t.exe))))
