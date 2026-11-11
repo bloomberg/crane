@@ -21,21 +21,9 @@
     {!Cpp_erasure}), so as a member it would keep every pass from ever naming
     [Cpp_ir].
 
-    The files still find a declaration by the physical identity of what it
-    was finished from ({!key}, {!find}): a render takes the generation it
-    writes from the walk ahead of the files and so holds the very node that
-    was finished, but not yet its {!id}.  That index is derived from the
-    program and private to it. *)
-
-(** What a declaration was finished from, by its physical identity. *)
-type key
-
-(** [key d] is [d], by its own identity. *)
-val key : Minicpp.cpp_decl -> key
-
-(** [key_of node d] is [d], by the identity of [node]: a declaration
-    assembled from a generation, by the generation. *)
-val key_of : 'a -> Minicpp.cpp_decl -> key
+    A file's render finds a declaration by its {!id}: the render takes the
+    generation it writes from the walk ahead of the files, and numbers its
+    declarations as the walk did when it said what to finish. *)
 
 (** Which of its owner's declarations a declaration is. *)
 type part =
@@ -59,9 +47,8 @@ val pp_id : id -> Pp.t
 (** A declaration to finish, under the identity it gets in the program. *)
 type job
 
-(** [job id key] is what [key] was finished from, to finish as the
-    declaration [id]. *)
-val job : id -> key -> job
+(** [job id d] is [d], to finish as the declaration [id]. *)
+val job : id -> Minicpp.cpp_decl -> job
 
 (** A declaration of a program. *)
 type declaration = {
@@ -73,7 +60,7 @@ type declaration = {
 type t
 
 (** [finish jobs] is the program of [jobs], each finished once, in order: a
-    job whose {!key} an earlier one finished already is that declaration.
+    job whose {!id} an earlier one finished already is that declaration.
     Under [CRANE_CHECK_IR], two different declarations under one {!id} are a
     violation. *)
 val finish : job list -> t
@@ -117,9 +104,8 @@ val install : t -> unit
     comes out as it is in the installed program, under the same {!id}. *)
 val refinish : job list -> unit
 
-(** What [key] is finished as in the installed program, if it is there. *)
-val find : key -> Cpp_erasure.settled option
+(** The declaration [id] of the installed program, if it is there. *)
+val find : id -> Cpp_erasure.settled option
 
-(** [finishes_as key f] is whether finishing what [key] was finished from
-    again gives [f]. *)
-val finishes_as : key -> Cpp_erasure.settled -> bool
+(** [finishes_as d f] is whether finishing [d] again gives [f]. *)
+val finishes_as : Minicpp.cpp_decl -> Cpp_erasure.settled -> bool

@@ -215,7 +215,9 @@ let outside_every_struct mp = not (Scope_plan.nested mp)
     helper defines a function and {!spec_is_hoistable} says it may be. *)
 let hoisted_helpers : bool GlobRef.Map_env.t ref = State.cell State.Unit GlobRef.Map_env.empty
 
-let helper_entity d = Function_entity.of_finished (Cpp_ind.finished_alone d)
+(** The lifted helper [d], placed under [id] ({!Cpp_ind.finished_placed}),
+    as the function entity it finished as. *)
+let helper_entity (id, d) = Function_entity.of_finished (Cpp_ind.finished_placed (id, d))
 
 (* The function the lifted helper [d], finalized as [e], defines, if it
    defines one: only a function's declaration can be hoisted. *)
@@ -224,8 +226,8 @@ let hoistable_function e d = if Function_entity.defines_function e then decl_glo
 (** Plan whether the declaration of the lifted helper [d], placed at
     namespace scope as an element of [module_], is hoisted
     ({!hoisted_helpers}). *)
-let plan_helper_hoist ~module_ d =
-  let e = helper_entity d in
+let plan_helper_hoist ~module_ ((_, d) as placed) =
+  let e = helper_entity placed in
   Option.iter
     (fun r ->
       hoisted_helpers :=
@@ -241,8 +243,8 @@ let plan_helper_hoist ~module_ d =
     Both come from one finished definition, so the hoisted declaration states
     the head the definition does; the definition then leaves the template
     defaults to the declaration. *)
-let lifted_views ~module_ ?(may_hoist = true) (d : cpp_decl) =
-  let e = helper_entity d in
+let lifted_views ~module_ ?(may_hoist = true) ((_, d) as placed : Finished_program.id * cpp_decl) =
+  let e = helper_entity placed in
   let planned = Option.bind (hoistable_function e d) (fun r -> GlobRef.Map_env.find_opt r !hoisted_helpers) in
   ( match planned with
     | Some hoists when Probe.checking () && hoists <> spec_is_hoistable ~module_ (Function_entity.declaration e) ->
@@ -409,7 +411,7 @@ let dbg_lifted =
         | None -> "<not-a-lifted-helper>"
       in
       let split =
-        let e = Function_entity.of_finished (Cpp_ind.finished_alone d) in
+        let e = Function_entity.of_finished (Cpp_ind.finished_helper d) in
         if Function_entity.defines_function e then
           let spec = Function_entity.declaration e in
           Printf.sprintf "splits=yes hoistable=%b spec=%S"
@@ -431,11 +433,12 @@ let generated_concept ~module_ r fields =
   ignore (record_entity r [d] []);
   d
 
-(** The concept [d] of a class, written at the position [ctx] as an element
+(** The concept [d] of the class [r], written at the position [ctx] as an element
     of the module [module_] wherever the file moves it -- ahead of or after
     the struct of the module declaring the class, or to the top of the file
     -- printed where the tree puts it. *)
-let class_concept_element ctx ~module_ d = Cpp_leaf_plan.unprinted ctx ~module_ (empty_env ()) (Cpp_ind.finished_alone d)
+let class_concept_element ctx ~module_ r d =
+  Cpp_leaf_plan.unprinted ctx ~module_ (empty_env ()) (Cpp_ind.finished_concept r d)
 
 (** The functions of a module's method candidates [candidates] its
     eponymous record's struct is given as methods: those that are not
@@ -689,7 +692,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
                member's signature resolves against the struct, a nested [t] or
                a sibling type, and hoisting the declaration to file scope takes
                those names out of scope with it. *)
-            let def, _ = lifted_views ~module_ ~may_hoist:(not ctx.rc_in_struct) d' in
+            let def, _ = lifted_views ~module_ ~may_hoist:(not ctx.rc_in_struct) (Cpp_ind.helper_id d', d') in
             let pp = element (empty_env ()) def in
             if Cpp_ast.is_empty pp then acc
             else if Cpp_ast.is_empty acc then pp
@@ -811,7 +814,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
             List.map
               (fun (l, r, fields) ->
                 let d = generated_concept ~module_ r fields in
-                let concept = class_concept_element ctx ~module_ d in
+                let concept = class_concept_element ctx ~module_ r d in
                 (HCclass r, Cpp_ast.(seq [text (pp_doc_comment l); concept]), concept_names_member mp d) )
               (declared_classes sel)
           else []
@@ -1008,7 +1011,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
                     (List.map
                        (fun h ->
                          Cpp_ast.seq
-                           [ Cpp_leaf_plan.unprinted ctx ~module_ (empty_env ()) (fst (lifted_views ~module_ ~may_hoist:false h));
+                           [ Cpp_leaf_plan.unprinted ctx ~module_ (empty_env ()) (fst (lifted_views ~module_ ~may_hoist:false (Cpp_ind.helper_id h, h)));
                              Cpp_ast.text (fnl ()) ] )
                        method_helpers )
                 in
@@ -1141,26 +1144,27 @@ let joined f l = Cpp_ast.joined (List.map f l)
 
     Every definition is split as it was finished ahead of the files
     ({!Cpp_ind.finalized}). *)
-let file_views ~is_header (gens : Gen_decls.generated_fun list list) =
-  let views ((g : Gen_decls.generated_fun), entity) =
+let file_views ~is_header (gens : (GlobRef.t * Gen_decls.generated_fun) list list) =
+  let views (fallback, (g : Gen_decls.generated_fun)) =
     let with_env d = (d, g.gf_env) in
-    match (g.gf_entity, entity) with
+    match (g.gf_entity, snd (List.hd (Cpp_ind.finalized ~fallback [g]))) with
     | Defined (_, file), Some e ->
       ( [with_env (Function_entity.declaration e)],
         if (file = Gen_decls.Header) = is_header then
           [with_env (Function_entity.definition_after_declaration e)]
         else [] )
-    | Declared d, _ -> ([with_env (Cpp_ind.finished_alone d)], [])
+    | Declared d, _ -> ([with_env (Cpp_ind.finished_declared ~fallback g d)], [])
     | Defined _, None -> assert false
   in
-  let rec regroup gens views =
-    match gens with
-    | [] -> []
-    | gs :: gens ->
-      let mine, rest = List.chop (List.length gs) views in
-      (List.concat_map fst mine, List.concat_map snd mine) :: regroup gens rest
-  in
-  regroup gens (List.map views (Cpp_ind.finalized (List.concat gens)))
+  List.map
+    (fun gs ->
+      let mine = List.map views gs in
+      (List.concat_map fst mine, List.concat_map snd mine) )
+    gens
+
+(** The functions [gs] generated for an element, each with the entity
+    [fallback] it falls back to ({!Cpp_ind.funs_entities}). *)
+let with_fallback fallback gs = List.map (fun g -> (fallback, g)) gs
 
 (** What a function element of a wrapper module is, for generating it. *)
 type wrapper_element =
@@ -1235,13 +1239,13 @@ let pp_wrapper_module_dual ~is_header ctx mp func_sels =
       (* The helpers lifted out of its methods come first: the instance
          struct calls them. *)
       let ds, helpers = Cpp_ind.instance_entity ~module_:mp r a t in
-      ([], helpers @ List.map snd ds)
+      ([], Cpp_ind.instance_placed r ds helpers)
     | Wrapper_functions (fallback, generate) ->
       let gs = generate () in
       record_funs ~fallback gs;
       let lifted = List.concat_map (fun g -> g.gf_lifted) gs in
       List.iter (dbg_lifted ~site:"wrapper-dterm" ~module_:mp) lifted;
-      (gs, lifted)
+      (with_fallback fallback gs, Cpp_ind.helpers_placed lifted)
   in
   let generated = List.map process_sel func_sels in
   let all_results = file_views ~is_header (List.map fst generated) in
@@ -1647,43 +1651,17 @@ let generating_ahead f =
   init_std_names ();
   Cpp_ind.generating_ahead f
 
-module Owner_map = Stdlib.Map.Make (struct
-  type t = Generated_program.id
-
-  let compare = Generated_program.compare_id
-end)
-
 (** What finishing [aheads] takes: what each generated, in the order
-    generated, and then the helpers lifted out of them, once every function
-    they may call is finished.  A helper is its own entity's; a declaration
-    handed on with them belongs to the entity of [a] it was generated as.
-    Each declaration is numbered among those of its entity in its
-    generation [a], which does not depend on the order of [aheads]. *)
+    generated, and then the helpers lifted out of them and what they handed
+    on with them, once every function they may call is finished.  Each
+    declaration is under the id its generation gave it, which does not
+    depend on the order of [aheads]. *)
 let finishing (aheads : Cpp_ind.ahead list) =
-  let numbered =
-    List.map
+  List.concat_map (fun (a : Cpp_ind.ahead) -> a.finishing) aheads
+  @ List.concat_map
       (fun (a : Cpp_ind.ahead) ->
-        let helper d : Cpp_ind.finishing =
-          match Generated_program.helper d with
-          | Some h -> Cpp_ind.finishing ~owner:(Generated_program.Generated h.helper_id) d
-          | None -> (
-            match List.find_opt (fun (e : Generated_program.entity) -> List.memq d e.decls) a.entities with
-            | Some e -> Cpp_ind.finishing ~owner:(Generated_program.Source e.entity_id) d
-            | None -> CErrors.anomaly Pp.(str "Crane: a declaration was handed on with helpers that no entity generated.") )
-        in
-        let counts = ref Owner_map.empty in
-        let number ({owner; methods; key} : Cpp_ind.finishing) =
-          if methods then Finished_program.job {owner; part = Methods} key
-          else
-            let n = Option.default 0 (Owner_map.find_opt owner !counts) in
-            counts := Owner_map.add owner (n + 1) !counts;
-            Finished_program.job {owner; part = Declaration n} key
-        in
-        let own = List.map number a.finishing in
-        (own, List.map (fun d -> number (helper d)) a.helpers) )
+        List.map (fun d -> Finished_program.job (Cpp_ind.helper_id d) d) a.helpers @ a.handed_on )
       aheads
-  in
-  List.concat_map fst numbered @ List.concat_map snd numbered
 
 (** Record the unit's program ({!Generated_program.record_ahead}) and finish
     what was generated ahead, [aheads] in the order generated, all at once
@@ -1808,37 +1786,30 @@ let generate_ahead s =
   let wrapper_functions = ref [] in
   let aheads = ref [] in
   let later (a : Cpp_ind.ahead) = aheads := a :: !aheads in
-  let lifted helpers = later {Cpp_ind.entities = []; functions = []; finishing = []; helpers} in
+  let lifted helpers = later {Cpp_ind.nothing_ahead with helpers} in
   walk_as_rendered ~modtype:Cpp_ind.modtype_concept
     ~classes:(fun ~module_ ->
       List.iter (fun (_, r, fields) ->
           let d = Cpp_ind.concept ~module_ r fields in
           later
-            { entities = [Cpp_ind.entity r [d] []];
-              functions = [];
-              finishing = [Cpp_ind.finishing ~owner:(Cpp_ind.source r) d];
-              helpers = [] } ) )
+            { Cpp_ind.nothing_ahead with
+              entities = [Cpp_ind.entity r [d] []];
+              finishing = [Finished_program.job (Cpp_ind.concept_id r) d] } ) )
     ~after_module:(fun ~module_ frame _ ->
       convert_eponymous_record_fields ~module_ frame;
       Option.iter
         (fun (r, vars, candidates) ->
           let fields, hs = Cpp_ind.record_methods ~module_ r vars candidates in
           later
-            { entities = record_method_entities r fields hs;
-              functions = [];
+            { Cpp_ind.nothing_ahead with
+              entities = record_method_entities r fields hs;
               finishing =
                 (if fields <> [] then [Cpp_ind.record_methods_finishing r vars fields] else []);
               helpers = hs } )
         (eponymous_record_methods frame) )
     ~after_wrapper:(fun () ->
       let elements = List.rev !wrapper_functions in
-      later
-        (Cpp_ind.functions_ahead
-           ~entities:
-             (List.concat_map
-                (fun (fallback, gs) -> Cpp_ind.funs_entities ~fallback gs)
-                elements )
-           (List.concat_map snd elements) );
+      later (Cpp_ind.functions_ahead elements);
       wrapper_functions := [] )
     ~decl:(fun ~wrapper ~module_ se ->
       match se with
@@ -1857,10 +1828,10 @@ let generate_ahead s =
           (* Lifted out of the wrapper whole, after its helpers. *)
           let ds, hs = Cpp_ind.instance_entity ~module_ r a t in
           later
-            { entities = [Cpp_ind.entity r (List.map snd ds) hs];
-              functions = [];
-              finishing = [];
-              helpers = hs @ List.map snd ds }
+            { Cpp_ind.nothing_ahead with
+              entities = [Cpp_ind.entity r (List.map snd ds) hs];
+              helpers = hs;
+              handed_on = Cpp_ind.instance_jobs r ds }
         | Wrapper_nothing -> () )
       | SEdecl d -> later (Cpp_ind.generate_ahead ~module_ d)
       | _ -> ())
@@ -1913,7 +1884,7 @@ let struct_members ~wrapper mp sel =
       List.filter_map
         (fun (_, se) ->
           match wrapper_element ~module_:mp se with
-          | Wrapper_functions (_, generate) -> Some (generate ())
+          | Wrapper_functions (fallback, generate) -> Some (with_fallback fallback (generate ()))
           | Wrapper_instance _ | Wrapper_nothing -> None )
         sel
     in
@@ -2030,8 +2001,9 @@ let plan_file_layout s =
     | Wrapper_nothing -> []
     | Wrapper_instance (r, a, t) ->
       let ds, helpers = Cpp_ind.instance_entity ~module_ r a t in
-      helpers @ List.map snd ds
-    | Wrapper_functions (_, generate) -> List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) (generate ())
+      Cpp_ind.instance_placed r ds helpers
+    | Wrapper_functions (_, generate) ->
+      Cpp_ind.helpers_placed (List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) (generate ()))
   in
   let wrapper_functions mp se =
     let at = element_at mp in
@@ -2055,7 +2027,7 @@ let plan_file_layout s =
           let def, spec = lifted_views ~module_:mp h in
           defines ~lifted:false at mp (empty_env ()) def;
           Option.iter (fun spec -> add specs mp {Cpp_ind.source = mp; declarations = [(empty_env (), spec)]}) spec )
-        e.helpers
+        (Cpp_ind.helpers_placed e.helpers)
     end
   in
   let in_writing_order band = List.map snd (List.stable_sort (fun (i, _) (j, _) -> Int.compare i j) (List.rev !band)) in
@@ -2138,7 +2110,7 @@ let plan_ctor_aliases s =
         if header then Cpp_ind.header_element_ahead at ~module_ d else Cpp_ind.impl_element_ahead at ~module_ d
       in
       written at (List.map snd e.rendered);
-      helpers at ~module_ e.helpers;
+      helpers at ~module_ (Cpp_ind.helpers_placed e.helpers);
       written at (List.map snd e.member_defs)
     in
     let wrapper_element ~module_ se =
@@ -2148,18 +2120,20 @@ let plan_ctor_aliases s =
       | Wrapper_instance (r, a, t) ->
         if header then
           let ds, hs = Cpp_ind.instance_entity ~module_ r a t in
-          helpers at ~module_ (hs @ List.map snd ds)
-      | Wrapper_functions (_, generate) ->
+          helpers at ~module_ (Cpp_ind.instance_placed r ds hs)
+      | Wrapper_functions (fallback, generate) ->
         let gs = generate () in
         List.iter
           (fun (specs, defs) -> written at (List.map fst (if header then specs @ defs else defs)))
-          (file_views ~is_header:header [gs]);
-        if header then helpers at ~module_ (List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) gs)
+          (file_views ~is_header:header [with_fallback fallback gs]);
+        if header then
+          helpers at ~module_
+            (Cpp_ind.helpers_placed (List.concat_map (fun (g : Gen_decls.generated_fun) -> g.gf_lifted) gs))
     in
     let classes ~module_ cs =
       if header then
         let at = element_at module_ in
-        List.iter (fun (_, r, fields) -> written at [Cpp_ind.finished_alone (Cpp_ind.concept ~module_ r fields)]) cs
+        List.iter (fun (_, r, fields) -> written at [Cpp_ind.finished_concept r (Cpp_ind.concept ~module_ r fields)]) cs
     in
     let after_module ~module_ (frame : Module_frame.t) _ =
       if header then begin
@@ -2174,7 +2148,7 @@ let plan_ctor_aliases s =
           (fun (r, vars, candidates) ->
             let fields, hs = Cpp_ind.record_methods ~module_ r vars candidates in
             if fields <> [] then written at [Cpp_ind.finished_record_methods r vars fields];
-            written at (List.map (fun h -> fst (lifted_views ~module_ ~may_hoist:false h)) hs) )
+            written at (List.map (fun h -> fst (lifted_views ~module_ ~may_hoist:false h)) (Cpp_ind.helpers_placed hs)) )
           (eponymous_record_methods frame)
       end
     in
@@ -3512,7 +3486,7 @@ let do_struct_with_decl_tracking ~is_header f s =
                  dropping it. *)
               let class_concept (l, r, fields) =
                 let d = generated_concept ~module_:mp r fields in
-                let concept = class_concept_element (element_position mp {top with rc_in_struct = true}) ~module_:mp d in
+                let concept = class_concept_element (element_position mp {top with rc_in_struct = true}) ~module_:mp r d in
                 Cpp_ast.elements ~source:mp Cpp_ast.(seq [text (pp_doc_comment l); concept])
               in
               let concepts_moved =

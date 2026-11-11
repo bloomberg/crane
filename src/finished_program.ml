@@ -1,18 +1,6 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-module Node_table = Hashtbl.Make (struct
-  type t = Obj.t
-
-  let equal = ( == )
-  let hash = Hashtbl.hash
-end)
-
-type key = Obj.t * Minicpp.cpp_decl
-
-let key d : key = (Obj.repr d, d)
-let key_of node d : key = (Obj.repr node, d)
-
 type part =
   | Declaration of int
   | Methods
@@ -34,9 +22,9 @@ module Id_map = Map.Make (struct
   let compare = compare_id
 end)
 
-type job = id * key
+type job = id * Minicpp.cpp_decl
 
-let job id key : job = (id, key)
+let job id d : job = (id, d)
 
 type declaration = {
   id : id;
@@ -45,40 +33,36 @@ type declaration = {
 
 type t = {
   declarations : declaration list;
-  index : declaration Node_table.t;
-      (** Each declaration by the physical identity of what it was finished
-          from: how a file's render finds it. *)
+  by_id : Cpp_erasure.settled Id_map.t;
+      (** Each declaration by its id: how a file's render finds it. *)
   demands : Table.header list;
   globals : Names.GlobRef.t list;
   promoted : Names.Id.t list;
 }
 
+(* [compare] rather than [=]: a NaN literal is equal to itself. *)
+let same_source d d' = d == d' || compare d d' = 0
+
 let finish jobs =
-  let index = Node_table.create 256 in
   let declarations = ref [] and demands = ref [] and globals = ref [] and promoted = ref [] in
-  let keys = ref Id_map.empty in
+  let sources = ref Id_map.empty and by_id = ref Id_map.empty in
   List.iter
-    (fun (id, (node, d)) ->
-      ( match Id_map.find_opt id !keys with
-      | Some node' when node' != node ->
-        Probe.violation "finished program" Pp.(str "two declarations finished as " ++ pp_id id)
-      | Some _ | None -> keys := Id_map.add id node !keys );
-      match Node_table.find_opt index node with
-      | Some d ->
-        if compare_id d.id id <> 0 then
-          Probe.violation "finished program"
-            Pp.(str "one declaration finished as " ++ pp_id d.id ++ str " and as " ++ pp_id id)
+    (fun (id, d) ->
+      match Id_map.find_opt id !sources with
+      | Some d' ->
+        if Probe.checking () && not (same_source d d') then
+          Probe.violation "finished program" Pp.(str "two declarations finished as " ++ pp_id id)
       | None ->
         let f = Cpp_pipeline.finish d in
         demands := List.rev_append (Cpp_demands.of_decl (f :> Minicpp.cpp_decl)) !demands;
         globals := List.rev_append (Cpp_demands.globals_of_decl (f :> Minicpp.cpp_decl)) !globals;
         promoted := List.rev_append (Cpp_demands.promoted_of_decl (f :> Minicpp.cpp_decl)) !promoted;
-        let declaration = {id; finished = f} in
-        declarations := declaration :: !declarations;
-        Node_table.replace index node declaration )
+        declarations := {id; finished = f} :: !declarations;
+        sources := Id_map.add id d !sources;
+        by_id := Id_map.add id f !by_id )
     jobs;
   { declarations = List.rev !declarations;
-    index;
+    by_id = !by_id;
     demands = List.sort_uniq compare !demands;
     globals = !globals;
     promoted = List.rev !promoted }
@@ -113,8 +97,7 @@ let check_against_generated t =
   end
 
 let installed =
-  State.cell State.Unit
-    {declarations = []; index = Node_table.create 0; demands = []; globals = []; promoted = []}
+  State.cell State.Unit {declarations = []; by_id = Id_map.empty; demands = []; globals = []; promoted = []}
 
 let installed_globals () = !installed.globals
 
@@ -124,16 +107,15 @@ let installed_promoted () = !installed.promoted
 
 let install t = installed := t
 
-(* [compare] rather than [=]: a NaN literal is equal to itself. *)
-let finishes_as ((_, d) : key) f = compare f (Cpp_pipeline.finish d) = 0
+let finishes_as d f = compare f (Cpp_pipeline.finish d) = 0
 
-let find ((node, _) : key) = Option.map (fun d -> d.finished) (Node_table.find_opt !installed.index node)
+let find id = Id_map.find_opt id !installed.by_id
 
 let refinish jobs =
   List.iter
-    (fun (id, ((node, _) as key)) ->
-      match Node_table.find_opt !installed.index node with
-      | Some d when compare_id d.id id = 0 && finishes_as key d.finished -> ()
+    (fun (id, d) ->
+      match find id with
+      | Some f when finishes_as d f -> ()
       | Some _ | None ->
         CErrors.anomaly
           Pp.(str "Crane: a declaration was finished differently again in the reverse order.") )
