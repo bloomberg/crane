@@ -14,7 +14,8 @@
     lambda so that it stays an expression. *)
 
 open Names
-open Minicpp
+
+type expr = Cpp_ir.Lowered.Expr.t
 
 (** Nesting a compiler parses comfortably.  Below this an initialiser is left
     exactly as it was, so the pass is invisible to all but the pathological
@@ -27,21 +28,50 @@ let max_depth = 100
 let chunk_depth = 32
 
 (** Whether descending into a subexpression is sound: a piece can be lifted
-    out ahead of it only if it is evaluated with it. *)
-let descendable = evaluates_children
+    out ahead of it only if it is evaluated with it.  A lambda's body runs
+    when it is called, and a conditional's or a connective's second operand
+    only if the first says so. *)
+let descendable : expr -> bool = function
+  | Lambda _ | Conditional _ | Binary ((And | Or), _, _) -> false
+  | _ -> true
+
+(** The expressions [e] evaluates directly, not through a statement: of a
+    requires expression, the expressions it constrains and not the
+    constraints. *)
+let operands (e : expr) =
+  match e with
+  | Requires q -> List.map fst q.constraints
+  | _ ->
+    let found = ref [] in
+    let ignore_ _ = () in
+    Cpp_ir.Children.expr {expr = (fun c -> found := c :: !found); stmt = ignore_; type_ = ignore_} e;
+    !found
 
 (** The expression's nesting, counting only what {!descendable} admits: what
     is not descended into is not restructured either, so it does not
     contribute. *)
 let rec depth e =
-  if not (descendable e) then
-    1
-  else
-    1
-    + fold_expr_children
-        ~on_expr:(fun acc c -> max acc (depth c))
-        ~on_stmts:(fun acc _ -> acc)
-        0 e
+  if not (descendable e) then 1 else 1 + List.fold_left (fun acc c -> max acc (depth c)) 0 (operands e)
+
+(** A rewrite of an expression's children by [expr], its statements and
+    types left as they are. *)
+let children expr : Cpp_ir.Lowered.phase Cpp_ir.Map.t = Cpp_ir.Map.make ~expr ~stmt:Fun.id ~type_:Fun.id ()
+
+(** [e] evaluated in place: a nullary lambda borrowing its scope, called at
+    once. *)
+let invoked_in_place body : expr =
+  Call
+    ( {yields = Untyped; params = Unknown; constructs = None; occurrence = None},
+      Lambda
+        { params = [];
+          type_params = [];
+          return_type = None;
+          body;
+          capture = Runs_in_place;
+          moved = [];
+          binders = [];
+          fixpoint = None },
+      [] )
 
 (** [flatten_expr e] is [e] rewritten so that no remaining nesting reaches
     {!chunk_depth}, paired with the bindings the lifted pieces were given, in
@@ -57,14 +87,14 @@ let rec flatten_expr e =
     if not (descendable e) then
       bound_expr e
     else begin
-      let e = map_expr go (fun s -> s) (fun t -> t) e in
+      let e = Cpp_ir.Map.expr (children go) e in
       if depth e < chunk_depth then
         e
       else begin
         let id = Id.of_string (Printf.sprintf "_lit%d" !next) in
         incr next;
-        stmts := Sasgn (id, Declare (Tauto, None), e) :: !stmts;
-        CPPmove (CPPvar id)
+        stmts := (Bind_variable (id, Declare (Auto, None), e) : Cpp_ir.Lowered.Stmt.t) :: !stmts;
+        Move (Local id)
       end
     end
   in
@@ -78,13 +108,16 @@ let rec flatten_expr e =
 and bound_expr e =
   if descendable e && depth e > max_depth then begin
     let stmts, e = flatten_expr e in
-    mk_iife None (stmts @ [Sreturn (Some e)])
+    invoked_in_place (stmts @ [Return (Some e)])
   end
   else
-    map_expr bound_expr bound_stmt (fun t -> t) e
+    Cpp_ir.Map.expr (bounded ()) e
 
-and bound_stmt s = map_stmt bound_expr bound_stmt (fun t -> t) s
+and bound_stmt s = Cpp_ir.Map.stmt (bounded ()) s
+
+(** The rewrite bounding every expression and statement below a node. *)
+and bounded () = Cpp_ir.Map.make ~expr:bound_expr ~stmt:bound_stmt ~type_:Fun.id ()
 
 (** [flatten decl] rewrites every expression in [decl] whose nesting exceeds
     {!max_depth}, and leaves the rest untouched. *)
-let flatten decl = map_decl bound_expr bound_stmt (fun t -> t) decl
+let flatten (decl : Cpp_ir.Lowered.Decl.t) = Cpp_ir.Map.decl (bounded ()) decl

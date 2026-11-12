@@ -80,49 +80,48 @@ let initialisers = Pipeline_trace.pass "initialisers" Cpp_erasure.invoke_capturi
 type stage =
   | Ir of Cpp_ir.Lowered.Decl.t Pipeline_trace.pass
   | Legacy of cpp_decl Pipeline_trace.pass
-[@@warning "-37"]
 
 let stage_name = function Ir p -> p.name | Legacy p -> p.name
 
 (** Every pass before the {!Cpp_erasure} seam, in the order they run. *)
 let minicpp_passes : stage list =
-  List.map (fun p -> Legacy p) @@
   [ (* Control is lowered as it is generated, from its ControlIR
        ({!Control_to_legacy_minicpp}): nothing is left here to lower.  Under
        [CRANE_CHECK_IR] what is emitted must be what control lowering
        recorded deciding, every loop the plan commits to decided, and no
        lowered loop still makes a call it takes. *)
-    on_decl "control" (fun d ->
-        if Probe.checking () then Control_to_legacy_minicpp.check_lowered d;
-        d );
+    Legacy
+      (on_decl "control" (fun d ->
+           if Probe.checking () then Control_to_legacy_minicpp.check_lowered d;
+           d ));
     (* Closures made and used in one place become the code they stand for.
        The moves they hold were decided over Core, the arguments a local
        fixpoint applied in place binds its parameters to in order
        ({!Ownership_ir.evaluated_first}). *)
-    on_decl "local_closures" Cpp_local_closures.transform_decl;
+    Legacy (on_decl "local_closures" Cpp_local_closures.transform_decl);
     (* A function's constants are declared once at its top, now that nothing
        moves code between functions -- and before the passes that rewrite what
        an initialiser holds: [depth] splits a deep one into bindings, which in
        a static's initialiser run once. *)
-    on_decl "constants" Cpp_constants.decl;
+    Legacy (on_decl "constants" Cpp_constants.decl);
     (* The temporaries Normalize named for loopification and loopification did
        not need go back where they are read. *)
-    on_decl "temporaries" Cpp_temporaries.decl;
+    Legacy (on_decl "temporaries" Cpp_temporaries.decl);
     (* An argument a mapping would splice, and so evaluate, more than once is
        named once -- after the temporaries went back, so that none of them is
        put back into the text that repeats it. *)
-    on_decl "shared_args" Cpp_shared_args.transform_decl;
+    Legacy (on_decl "shared_args" Cpp_shared_args.transform_decl);
     (* Small local simplifications, before ownership reads the uses. *)
-    on_decl "simplify" Cpp_simplify.transform_decl;
+    Legacy (on_decl "simplify" Cpp_simplify.transform_decl);
     (* An initialiser nested deeper than a compiler will parse becomes a run of
        bindings; everything shallower is left as it stands. *)
-    on_decl "depth" Cpp_depth.flatten;
+    Ir (Pipeline_trace.pass "depth" Cpp_depth.flatten);
     (* A returned value is moved by the language; writing the move there
        only suppresses copy elision. *)
-    on_decl "return_moves" Return_moves.drop_return_moves;
+    Legacy (on_decl "return_moves" Return_moves.drop_return_moves);
     (* Which callable parameters keep a constraint is decided here, with the
        body that decides it in hand; the printer writes what it is given. *)
-    constraints ]
+    Legacy constraints ]
 
 (** Writing a type down is what decides its representation, so the [Topaque]
     slots are settled before anything reads the declaration as final.
