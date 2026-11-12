@@ -156,9 +156,8 @@ let () =
   check "an empty chunk is no chunk" (Cpp_ast.is_empty (top Cpp_ast.empty));
   check "a declaration needing something is not empty" (not (Cpp_ast.is_empty (leaf ~templates:["T"] "")));
   let unprinted ?templates () =
-    let settled = Cpp_erasure.materialise (Minicpp.Dstatic_assert (Minicpp.CPPbool true, None)) in
-    let ir = Result.get_ok (Legacy_minicpp_to_cpp_ir.convert settled) in
-    Cpp_ast.unprinted ~needs:(needs ?templates ()) (Common.empty_env ()) {Finished_decl.settled; ir}
+    let decl : Cpp_ir.Resolved.Decl.t = Static_assert (Literal (Bool true), None) in
+    Cpp_ast.unprinted ~needs:(needs ?templates ()) (Common.empty_env ()) decl
   in
   let spelled ?(templates = []) sections =
     let write spelling (_ : Cpp_ast.unprinted) = Pp.str (spelling_text spelling) in

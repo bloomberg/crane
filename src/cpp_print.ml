@@ -2959,7 +2959,7 @@ let print_unprinted ctx ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
   | Derived_functor {template; name; base} -> pp_derived_functor ctx template name base
   | Forward_declaration {env; defined} -> pp_forward_declaration ctx env defined
   | Synthesised_template s -> pp_synthesised ctx s
-  | Declaration {env; ir; _} | Absorbed {env; ir; _} -> pp_cpp_decl ctx env ir
+  | Declaration {env; decl} | Absorbed {env; decl} -> pp_cpp_decl ctx env decl
   | Fields {vars; fields; _} ->
     prlist_with_sep fnl (fun (name, ty) -> pp_cpp_type ctx false vars ty ++ spc () ++ str name ++ str ";") fields ++ fnl ()
   | Global_alias a ->

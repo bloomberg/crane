@@ -109,8 +109,7 @@ val job : id -> Minicpp.cpp_decl -> job
 (** A finished declaration of a program. *)
 type declaration = {
   id : id;
-  finished : Cpp_erasure.settled;
-  ir : Cpp_ir.Resolved.Decl.t;  (** [finished], in CppIR *)
+  finished : Cpp_ir.Resolved.Decl.t;  (** In CppIR. *)
 }
 
 (** A unit's program. *)
@@ -125,7 +124,7 @@ val entities : t -> entity list
 val declarations : t -> declaration list
 
 (** The finished helpers of a program, in the order they were finished. *)
-val helpers : t -> (Generated_entity_id.t * Cpp_erasure.settled) list
+val helpers : t -> (Generated_entity_id.t * Cpp_ir.Resolved.Decl.t) list
 
 (** The headers the declarations of a program need for what they write down
     ({!Cpp_demands}). *)
@@ -155,11 +154,10 @@ val record_lifted_ahead : Minicpp.cpp_decl list -> unit
 (** [finish jobs] is the unit's program with [jobs] finished, each once, in
     order: a job whose {!id} an earlier one finished already is that
     declaration.  Every finished declaration is converted to CppIR
-    ({!Legacy_minicpp_to_cpp_ir}), and what {!Cpp_demands} reads is read off
-    the conversion; one that does not convert is an anomaly.  Under
-    [CRANE_CHECK_IR], two different declarations under one id are a
-    violation, and so is a conversion {!Cpp_demands} reads otherwise than
-    the MiniCpp declaration ({!Cpp_demands.Legacy}). *)
+    ({!Legacy_minicpp_to_cpp_ir}), which is all the program holds of it, and
+    what {!Cpp_demands} reads is read off the conversion; one that does not
+    convert is an anomaly.  Under [CRANE_CHECK_IR], two different
+    declarations under one id are a violation. *)
 val finish : job list -> t
 
 (** Under [CRANE_CHECK_IR], fail unless [t] finished exactly the
@@ -173,13 +171,14 @@ val install : t -> unit
 (** {2 Reading the installed program} *)
 
 (** The declaration [id] of the installed program, if it is there. *)
-val find : id -> Cpp_erasure.settled option
+val find : id -> Cpp_ir.Resolved.Decl.t option
 
-(** {!find}, with the declaration's CppIR. *)
+(** {!find}, with the declaration's id. *)
 val find_declaration : id -> declaration option
 
-(** [finishes_as d f] is whether finishing [d] again gives [f]. *)
-val finishes_as : Minicpp.cpp_decl -> Cpp_erasure.settled -> bool
+(** [finishes_as d f] is whether finishing [d] again, and converting it to
+    CppIR, gives [f]. *)
+val finishes_as : Minicpp.cpp_decl -> Cpp_ir.Resolved.Decl.t -> bool
 
 (** [refinish jobs] finishes [jobs] again, in order, and fails unless each
     comes out as it is in the installed program, under the same {!id}. *)
@@ -188,12 +187,9 @@ val refinish : job list -> unit
 (** {!globals} of the installed program. *)
 val installed_globals : unit -> Names.GlobRef.t list
 
-(** The declarations of the installed program in CppIR, in the order they
-    were finished. *)
-val installed_ir : unit -> Cpp_ir.Resolved.Decl.t list
-
-(** {!installed_ir}, each with its MiniCpp. *)
-val installed_finished : unit -> Finished_decl.t list
+(** The declarations of the installed program, in the order they were
+    finished. *)
+val installed_finished : unit -> Cpp_ir.Resolved.Decl.t list
 
 (** The promoted type variables the installed program's declarations write
     ({!Cpp_demands.promoted_of_decl}), in the order they were finished. *)

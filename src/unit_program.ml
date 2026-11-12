@@ -81,8 +81,7 @@ let job id d : job = (id, d)
 
 type declaration = {
   id : id;
-  finished : Cpp_erasure.settled;
-  ir : Cpp_ir.Resolved.Decl.t;
+  finished : Cpp_ir.Resolved.Decl.t;
 }
 
 type t = {
@@ -183,39 +182,6 @@ let converted id f =
   | Error e ->
     CErrors.anomaly Pp.(str "Crane: " ++ str (Legacy_minicpp_to_cpp_ir.describe e) ++ str " in " ++ pp_id id ++ str ".")
 
-(* Under [CRANE_CHECK_IR], what {!Cpp_demands} reads off the declaration
-   [ir], [id] of the program, is what it reads off its MiniCpp twin [f]: the
-   same headers, globals and promoted variables, each counted as often.  The
-   order is not compared: every reader of the three sorts them. *)
-let check_demands id f ir =
-  let same what compare a b =
-    if not (List.equal (fun x y -> compare x y = 0) (List.sort compare a) (List.sort compare b)) then
-      Probe.violation "CppIR demands" Pp.(str what ++ str " read off CppIR differ in " ++ pp_id id)
-  in
-  let f = (f : Cpp_erasure.settled :> Minicpp.cpp_decl) in
-  same "the headers" compare (Cpp_demands.Legacy.of_decl f) (Cpp_demands.of_decl ir);
-  same "the globals" Names.GlobRef.UserOrd.compare (Cpp_demands.Legacy.globals_of_decl f) (Cpp_demands.globals_of_decl ir);
-  same "the promoted variables" Names.Id.compare (Cpp_demands.Legacy.promoted_of_decl f) (Cpp_demands.promoted_of_decl ir)
-
-(* Under [CRANE_CHECK_IR], the globals the declaration [ir], [id] of the
-   program, names ({!Cpp_ir.Globrefs}) are those its MiniCpp twin [f] names,
-   each as often, and it declares the same global.  The order is not
-   compared: the MiniCpp traversal meets a node's children in the order
-   OCaml evaluates a constructor's arguments, and what reads them collects
-   a set. *)
-let check_globrefs id f ir =
-  let f = (f : Cpp_erasure.settled :> Minicpp.cpp_decl) in
-  let named iter d =
-    let found = ref [] in
-    iter (fun r -> found := r :: !found) d;
-    List.sort Names.GlobRef.UserOrd.compare !found
-  in
-  if
-    not
-      (List.equal Names.GlobRef.UserOrd.equal (named Minicpp.iter_globrefs f) (named Cpp_ir.Globrefs.iter ir)
-      && Option.equal Names.GlobRef.UserOrd.equal (Minicpp.decl_globref f) (Cpp_ir.Globrefs.declared ir))
-  then Probe.violation "CppIR globals" Pp.(str "the globals read off CppIR differ in " ++ pp_id id)
-
 let finish jobs =
   let declarations = ref [] and demands = ref [] and globals = ref [] and promoted = ref [] in
   let sources = ref Id_map.empty and by_id = ref Id_map.empty in
@@ -226,18 +192,13 @@ let finish jobs =
         if Probe.checking () && not (same_source d d') then
           Probe.violation "unit program" Pp.(str "two declarations finished as " ++ pp_id id)
       | None ->
-        let f = Cpp_pipeline.finish d in
-        let ir = converted id f in
-        if Probe.checking () then begin
-          check_demands id f ir;
-          check_globrefs id f ir
-        end;
-        demands := List.rev_append (Cpp_demands.of_decl ir) !demands;
-        globals := List.rev_append (Cpp_demands.globals_of_decl ir) !globals;
-        promoted := List.rev_append (Cpp_demands.promoted_of_decl ir) !promoted;
-        declarations := {id; finished = f; ir} :: !declarations;
+        let finished = converted id (Cpp_pipeline.finish d) in
+        demands := List.rev_append (Cpp_demands.of_decl finished) !demands;
+        globals := List.rev_append (Cpp_demands.globals_of_decl finished) !globals;
+        promoted := List.rev_append (Cpp_demands.promoted_of_decl finished) !promoted;
+        declarations := {id; finished} :: !declarations;
         sources := Id_map.add id d !sources;
-        by_id := Id_map.add id {id; finished = f; ir} !by_id )
+        by_id := Id_map.add id {id; finished} !by_id )
     jobs;
   { !program with
     declarations = List.rev !declarations;
@@ -264,13 +225,14 @@ let install t = program := t
 
 let installed_globals () = !program.globals
 
-let installed_ir () = List.map (fun d -> d.ir) !program.declarations
-
-let installed_finished () = List.map (fun d -> {Finished_decl.settled = d.finished; ir = d.ir}) !program.declarations
+let installed_finished () = List.map (fun d -> d.finished) !program.declarations
 
 let installed_promoted () = !program.promoted
 
-let finishes_as d f = compare f (Cpp_pipeline.finish d) = 0
+let finishes_as d f =
+  match Legacy_minicpp_to_cpp_ir.convert (Cpp_pipeline.finish d) with
+  | Ok ir -> compare f ir = 0
+  | Error _ -> false
 
 let find_declaration id = Id_map.find_opt id !program.by_id
 

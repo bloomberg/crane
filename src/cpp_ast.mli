@@ -145,10 +145,9 @@ and defined_name =
 
 (** What a declaration not yet printed declares. *)
 type declaration =
-  | Declaration of {env : Common.env; settled : Cpp_erasure.settled; ir : Cpp_ir.Resolved.Decl.t}
-      (** A finished declaration, printed in the name environment [env];
-          [ir] is [settled] in CppIR. *)
-  | Absorbed of {env : Common.env; settled : Cpp_erasure.settled; ir : Cpp_ir.Resolved.Decl.t}
+  | Declaration of {env : Common.env; decl : Cpp_ir.Resolved.Decl.t}
+      (** A finished declaration, printed in the name environment [env]. *)
+  | Absorbed of {env : Common.env; decl : Cpp_ir.Resolved.Decl.t}
       (** A member of the struct a declaration writes around a wrapper
           module's declarations, printed in [env].  What it needs is placed
           with that declaration, which is what was planned. *)
@@ -361,11 +360,11 @@ val decl : needs:Needs.t -> Pp.t -> t
 (** [unprinted ~needs ?tyctors env d] is [d], printed in [env] where the
     tree puts it, writing its type constructors as [tyctors] says
     ({!unprinted.tyctors}). *)
-val unprinted : needs:Needs.t -> ?tyctors:Cpp_state.tyctor_use list -> Common.env -> Finished_decl.t -> t
+val unprinted : needs:Needs.t -> ?tyctors:Cpp_state.tyctor_use list -> Common.env -> Cpp_ir.Resolved.Decl.t -> t
 
 (** [absorbed ?tyctors env d] is {!Absorbed}, printed where the tree puts
     it. *)
-val absorbed : ?tyctors:Cpp_state.tyctor_use list -> Common.env -> Finished_decl.t -> t
+val absorbed : ?tyctors:Cpp_state.tyctor_use list -> Common.env -> Cpp_ir.Resolved.Decl.t -> t
 
 (** [fields ~needs ?tyctors ~record ~vars fields] is {!Fields}, printed
     where the tree puts it. *)

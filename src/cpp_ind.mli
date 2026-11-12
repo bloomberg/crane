@@ -32,7 +32,7 @@ type generated = (Common.env * Minicpp.cpp_decl) list
 
 (** Declarations finished for the printer ({!Cpp_pipeline.finish} of what
     one MiniML declaration became). *)
-type rendered = (Common.env * Finished_decl.t) list
+type rendered = (Common.env * Cpp_ir.Resolved.Decl.t) list
 
 (** Print the declarations an entry point answered with, at the position
     given. *)
@@ -222,7 +222,7 @@ val resolve : file:Common.file -> Cpp_ast.scheduled -> Cpp_ast.scheduled
     writes it spelled [spelling]: at the position printing it is at, and of
     the names resolution settles there ({!resolver_at}), which are the ones
     printing it reads. *)
-val names_into_a_struct_as_written : file:Common.file -> Cpp_ast.spelling -> Finished_decl.t -> bool option
+val names_into_a_struct_as_written : file:Common.file -> Cpp_ast.spelling -> Cpp_ir.Resolved.Decl.t -> bool option
 
 (** Print a declaration not yet printed as the tree spells it
     ({!Cpp_ast.print}). *)
@@ -316,7 +316,7 @@ val finished_record_methods :
   Names.GlobRef.t ->
   Names.Id.t list ->
   (Minicpp.cpp_field * Minicpp.cpp_visibility * Minicpp.section_tag) list ->
-  Finished_decl.t
+  Cpp_ir.Resolved.Decl.t
 
 (** [regenerating f] runs [f], generating again what was generated ahead
     of the files to check it: {!generated_once} and {!instance_entity}
@@ -340,14 +340,14 @@ val regenerate_ahead : module_:Names.ModPath.t -> Miniml.ml_decl -> unit
     program has it ({!Unit_program}).  That the program does not have it
     is an anomaly; a file's pass finishes it again under [CRANE_CHECK_IR]
     and checks.  So for every [finished_] reader below. *)
-val finished_placed : Unit_program.id * Minicpp.cpp_decl -> Finished_decl.t
+val finished_placed : Unit_program.id * Minicpp.cpp_decl -> Cpp_ir.Resolved.Decl.t
 
 (** [finished_helper d] is the lifted helper [d] ({!finished_placed} under
     its {!helper_id}). *)
-val finished_helper : Minicpp.cpp_decl -> Finished_decl.t
+val finished_helper : Minicpp.cpp_decl -> Cpp_ir.Resolved.Decl.t
 
 (** [entity_placed (id, d)] is the function entity of {!finished_placed}:
-    its declaration and definition, in MiniCpp and in CppIR. *)
+    its declaration and definition. *)
 val entity_placed : Unit_program.id * Minicpp.cpp_decl -> Function_entity.t
 
 (** [helper_entity d] is {!entity_placed} of the lifted helper [d] under
@@ -355,13 +355,13 @@ val entity_placed : Unit_program.id * Minicpp.cpp_decl -> Function_entity.t
 val helper_entity : Minicpp.cpp_decl -> Function_entity.t
 
 (** [finished_concept r d] is [d], the concept of the class [r]. *)
-val finished_concept : Names.GlobRef.t -> Minicpp.cpp_decl -> Finished_decl.t
+val finished_concept : Names.GlobRef.t -> Minicpp.cpp_decl -> Cpp_ir.Resolved.Decl.t
 
 (** [finished_declared ~fallback g d] is [d], the declaration without a
     definition that the generated function [g] is, [fallback] the entity it
     falls back to ({!funs_entities}). *)
 val finished_declared :
-  fallback:Names.GlobRef.t -> Gen_decls.generated_fun -> Minicpp.cpp_decl -> Finished_decl.t
+  fallback:Names.GlobRef.t -> Gen_decls.generated_fun -> Minicpp.cpp_decl -> Cpp_ir.Resolved.Decl.t
 
 (** [finalized ~fallback funs] pairs each generated function with its
     entity, made of the definition as the unit's program has it; [None] for

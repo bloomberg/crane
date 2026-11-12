@@ -14,14 +14,11 @@
     planned for it. *)
 
 open Names
-open Minicpp
 open Cpp_state
 open Cpp_names
 open Cpp_print
 
-(** What planning a leaf reads off a finished declaration's CppIR.  Under
-    [CRANE_CHECK_IR] each reading is held to its MiniCpp twin where it is
-    asked ({!twin}). *)
+(** What planning a leaf reads off a finished declaration. *)
 module Ir = struct
   open Cpp_ir
   open Grammar
@@ -278,7 +275,7 @@ let rec map_type f (t : ty) : ty =
 and rebind_applied_head (h : ty) (args : ty list) : ty =
   match args with
   | [a] when not (prints_as_any a) -> (
-    let family = Minicpp.family_parameterised in
+    let family = Tparam_kinds.has_family in
     let rec sub (t : ty) : ty =
       match t with
       | Any -> a
@@ -301,18 +298,6 @@ and rebind_applied_head (h : ty) (args : ty list) : ty =
     | In_namespace (r, Entity_application (g, tys, es)) -> In_namespace (r, Entity_application (g, List.map sub tys, es))
     | h -> h )
   | _ -> h
-
-(** [twin ~what ~same legacy ir] is [ir], a reading of a declaration's CppIR;
-    under [CRANE_CHECK_IR] it must be [same] as [legacy ()], the reading of
-    its MiniCpp. *)
-let twin ~what ~same legacy ir =
-  if Probe.checking () && not (same (legacy ()) ir) then
-    Probe.violation "CppIR leaf plan" Pp.(str "a declaration's CppIR reads otherwise than its MiniCpp: " ++ str what);
-  ir
-
-(* Equal as sets under [compare], for a reading whose every consumer sorts:
-   of two references [compare] equates, either may be the one kept. *)
-let same_set compare a b = List.equal (fun x y -> compare x y = 0) (List.sort_uniq compare a) (List.sort_uniq compare b)
 
 (** Whether text no name was written through -- an external name, a custom
     mapping's replacement -- qualifies a name into something other than one
@@ -436,64 +421,6 @@ let rec declaration_names_into_a_struct ctx (d : Cpp_ir.Resolved.Decl.t) =
       | answer -> answer )
   | _ -> None
 
-(* The head of every global type in [ty], a type constructor written as a
-   template template argument entered too ({!exists_cpp_type}). *)
-let type_heads ty =
-  let heads = ref [] in
-  ignore
-    (exists_cpp_type
-       (fun t ->
-         (match t with Tglob (r, _, _) | Tforeign {fr_custom = r; _} -> heads := r :: !heads | _ -> ());
-         false )
-       ty );
-  !heads
-
-(* What writing [d] names that its globals ({!Minicpp.iter_globrefs}) do not:
-   the head of each type constructor written as a template template
-   argument, a leaf to a type's traversal, the primitive integer type,
-   through whose mapping each literal of that type is spelled, and the
-   custom whose template a custom match or a block custom writes. *)
-let globals_written_beside (d : cpp_decl) =
-  let found = ref [] in
-  let rec ty t =
-    ignore
-      (map_cpp_type
-         (fun t ->
-           ( match t with
-           | Tglob (_, _, args) | Tforeign {fr_values = args; _} -> List.iter (fun e -> ignore (expr e)) args
-           | Texpr_type e -> ignore (expr e)
-           | Ttyctor head -> found := type_heads head @ !found
-           | _ -> () );
-           t )
-         t );
-    t
-  and expr e =
-    ( match e with
-    | CPPuint _ -> found := Option.cata (fun r -> [r]) [] (uint63_type ()) @ !found
-    | CPPglob (x, _, _) -> (
-      match Module_plan.eponymous_record_containing x with
-      | Some {Module_plan.record; _} -> found := record :: !found
-      | None -> () )
-    | _ -> () );
-    map_expr expr stmt ty e
-  and stmt s =
-    ( match s with
-    | Scustom_case (_, _, _, _, cm) -> found := cm.cm_inductive :: !found
-    | Sblock_custom (r, _, _, _, _, _, _) -> found := r :: !found
-    | _ -> () );
-    map_stmt expr stmt ty s
-  in
-  let rec decl = function
-    | Dtemplate (tps, c, inner) ->
-      ignore (map_tparams ty tps);
-      Option.iter (fun e -> ignore (expr e)) c;
-      decl inner
-    | Dnspace (_, ds) -> List.iter decl ds
-    | d -> ignore (map_decl expr stmt ty d)
-  in
-  decl d;
-  !found
-
 (* Whether [probe], a type constructor applied to the sentinel, is written as
    a template name applied to the sentinel alone, read off its structure and
    not off its rendering.  An instantiated mapping is that name where its
@@ -536,11 +463,11 @@ let rec declared_types ?(outer = []) (d : Cpp_ir.Resolved.Decl.t) =
 let stand_ins t =
   List.concat_map
     (function
-      | Cpp_ast.Declared (Declaration {ir; _} | Absorbed {ir; _}) ->
+      | Cpp_ast.Declared (Declaration {decl; _} | Absorbed {decl; _}) ->
         List.map
           (fun (target, definition, tparams) ->
             Cpp_ast.(global_alias (Alias_of_type {target = global_ref target; definition; tparams})) )
-          (declared_types ir)
+          (declared_types decl)
       | Declared
           ( Fields _ | Modtype_concept _ | Global_alias _ | Assertion _ | Module_alias _ | Functor_alias _
           | Derived_functor _ | Forward_declaration _ | Synthesised_template _ ) ->
@@ -550,13 +477,8 @@ let stand_ins t =
 
 (** Whether [d] is an assertion the struct being written holds back
     ({!held_back_assertions}), which it writes nothing for. *)
-let is_held_back_assertion ctx (d : Finished_decl.t) =
-  let legacy () =
-    match Cpp_erasure.view d.settled with
-    | Decl (Dstatic_assert (CPPconcept_app (class_ref, _, _), None)) -> Some class_ref
-    | _ -> None
-  in
-  match twin ~what:"the class asserted" ~same:( = ) legacy (Ir.asserted_class d.ir) with
+let is_held_back_assertion ctx d =
+  match Ir.asserted_class d with
   | Some class_ref -> class_concept_held_back ctx class_ref
   | None -> false
 
@@ -725,63 +647,6 @@ let check_ctor_alias_plan ~file =
     of, planned with its layout, each by its reference. *)
 let constrained_structs : GlobRef.t list ref = State.cell State.Unit []
 
-(* The frames printing [d] enters names at: {!pp_cpp_decl}'s scopes, read
-   without printing. *)
-let legacy_declaration_frames (d : Cpp_erasure.settled) =
-  let entered frame l = List.rev_append l frame in
-  let template_body tps = if tps = [] then [] else [Cpp_resolution.In_template] in
-  let rec decl frame (d : Cpp_erasure.settled) =
-    match Cpp_erasure.view d with
-    | Template (_, _, inner) -> frame :: decl frame inner
-    | Namespace (None, decls) -> List.concat_map (decl frame) decls
-    | Namespace (Some w, members) -> (
-      match (members :> cpp_decl list) with
-      | [Dstruct {ds_ref; ds_tparams; _}] when w.nw_merges ->
-        [frame; entered frame ((Cpp_resolution.In_struct :: template_body ds_tparams) @ [Inductive_struct ds_ref])]
-      | _ -> frame :: List.concat_map (decl (Cpp_resolution.In_struct :: frame)) members )
-    | Decl (Dfun {df_path; df_shape; _}) ->
-      let defines = match df_shape with Ddef _ -> true | Ddecl _ -> false in
-      [Cpp_resolution.Function {owner = fst df_path.dp_outer; defines} :: frame]
-    | Decl (Dstruct {ds_ref; ds_tparams; _}) ->
-      [frame; entered frame (Cpp_resolution.Inductive_struct ds_ref :: template_body ds_tparams)]
-    | Decl (Dmember_def {dm_owner; dm_tparams; _}) ->
-      [frame; entered frame (template_body dm_tparams @ [Cpp_resolution.Inductive_struct dm_owner])]
-    | Decl (Dfields {ds_ref; ds_tparams; _}) ->
-      [frame; entered frame ((Cpp_resolution.In_struct :: template_body ds_tparams) @ [Inductive_struct ds_ref])]
-    | Decl _ -> [frame]
-  in
-  decl [] d
-
-(* The globals [d] declares, which it names where it declares them, and the
-   classes its template parameters are constrained by: no expression or type
-   of it names them. *)
-let rec declared_globals (d : cpp_decl) =
-  let concepts tps = List.filter_map (function TTconcept (r, _), _ -> Some r | _ -> None) tps in
-  let rec field (f, _, _) =
-    match f with
-    | Fmethod {mf_tparams = tps; _} | Fconstructor {fc_tparams = tps; _} | Fnested_using (tps, _, _) -> concepts tps
-    | Fnested_struct (_, fs) -> List.concat_map field fs
-    | Fmember_decl m -> field (field_of_member m, VPublic, SNoTag)
-    | Fvar' (r, _) -> [r]
-    | _ -> []
-  in
-  match d with
-  | Dtemplate (tps, _, inner) -> concepts tps @ declared_globals inner
-  | Dnspace (w, ds) -> (match w with Some w -> [w.nw_ref] | None -> []) @ List.concat_map declared_globals ds
-  | Dfun {df_path; _} -> List.map fst (dfun_path_list df_path)
-  | Dstruct {ds_ref; ds_tparams; ds_fields; _} | Dfields {ds_ref; ds_tparams; ds_fields; _} ->
-    (ds_ref :: concepts ds_tparams) @ List.concat_map field ds_fields
-  | Dasgn {da_ref; _} -> [da_ref]
-  | Dusing {du_name; du_tparams; _} -> du_name :: concepts du_tparams
-  | Dstruct_fwd (tps, r) -> r :: concepts tps
-  | Dmember_def {dm_owner; dm_enclosing; dm_tparams; dm_field} ->
-    (dm_owner :: Option.cata (fun w -> [w.nw_ref]) [] dm_enclosing)
-    @ concepts dm_tparams
-    @ field (field_of_member dm_field, VPublic, SNoTag)
-  | Denum {de_ref; _} -> [de_ref]
-  | Dconcept (id, _) -> [id]
-  | Dstatic_assert _ -> []
-
 (* Of [globals], those whose name is decided -- printing decides none --
    asked for at each of [frames], each as the type and the expression
    printers may name it, and as the type printer may write it as a type's
@@ -855,18 +720,6 @@ let rec structs_defined (d : Cpp_ir.Resolved.Decl.t) : Cpp_ast.defined list =
     [Defined_struct {struct_ = ref_; name = As_defined; tparams = type_params; constraint_}]
   | Enum {ref_; _} -> [Defined_enum ref_]
   | _ -> []
-
-(* The structs and scoped enums [d] defines at namespace scope, each by the
-   reference it is declared under, read off its MiniCpp. *)
-let rec legacy_structs_defined (d : Cpp_erasure.settled) =
-  match Cpp_erasure.view d with
-  | Template (_, _, inner) -> legacy_structs_defined inner
-  | Namespace (None, decls) -> List.concat_map legacy_structs_defined decls
-  | Namespace (Some w, members) -> (
-    match (members :> cpp_decl list) with [Dstruct _] when w.nw_merges -> [w.nw_ref] | _ -> [] )
-  | Decl (Dstruct {ds_ref; _}) -> [ds_ref]
-  | Decl (Denum {de_ref; _}) -> [de_ref]
-  | Decl _ -> []
 
 let defined_ref : Cpp_ast.defined -> _ = function Defined_struct {struct_ = r; _} | Defined_enum r -> r
 
@@ -1393,17 +1246,11 @@ let constrained_named ~names ~defined =
     defines.  The declarations of a wrapper module it writes into a struct
     of its own ({!Cpp_ast.Wrapper_struct}) are members of that struct, and
     need what they need themselves. *)
-let needs_of ~templates (d : Finished_decl.t) =
+let needs_of ~templates d =
   let names, defines =
     constrained_named
-      ~names:(fun () ->
-        twin ~what:"the globals" ~same:(same_set GlobRef.UserOrd.compare)
-          (fun () -> Cpp_demands.Legacy.globals_of_decl (d.settled :> cpp_decl))
-          (Cpp_demands.globals_of_decl d.ir) )
-      ~defined:(fun () ->
-        twin ~what:"the structs defined" ~same:( = )
-          (fun () -> legacy_structs_defined d.settled)
-          (Ir.structs_defined d.ir) )
+      ~names:(fun () -> Cpp_demands.globals_of_decl d)
+      ~defined:(fun () -> Ir.structs_defined d)
   in
   {Cpp_ast.Needs.templates; names; defines}
 
@@ -1424,8 +1271,7 @@ let fields_needs ctx ~module_ ~vl r types =
   {Cpp_ast.Needs.templates = List.map ctor_alias_name aliases; names; defines = []}
 
 (* {!needs_of} at [ctx], the templates as planned there. *)
-let printed_needs ctx (d : Finished_decl.t) =
-  needs_of ~templates:(List.map ctor_alias_name (ctor_aliases_planned ctx d.ir)) d
+let printed_needs ctx d = needs_of ~templates:(List.map ctor_alias_name (ctor_aliases_planned ctx d)) d
 
 (* The globals a template head names: its concepts and its types'. *)
 let template_param_globals (tps : Cpp_ir.Resolved.phase Cpp_ir.Template.parameters) =
@@ -1445,39 +1291,15 @@ let constraint_globals c =
   Cpp_ir.Globrefs.iter (fun r -> found := r :: !found) (Static_assert (c, None) : Cpp_ir.Resolved.Decl.t);
   !found
 
-let declaration_globals (d : Finished_decl.t) =
-  let legacy () =
-    let globals = ref [] in
-    Minicpp.iter_globrefs (fun r -> globals := r :: !globals) (d.settled :> cpp_decl);
-    !globals @ globals_written_beside (d.settled :> cpp_decl) @ declared_globals (d.settled :> cpp_decl)
-  in
-  twin ~what:"the globals printing names" ~same:(same_set GlobRef.UserOrd.compare) legacy (Ir.declaration_globals d.ir)
-
-(* The structs and scoped enums [d] defines, each as its definition is
-   named. *)
-let rec legacy_defined_types : cpp_decl -> _ = function
-  | Dtemplate (_, _, inner) -> legacy_defined_types inner
-  | Dnspace (_, ds) -> List.concat_map legacy_defined_types ds
-  | Dstruct {ds_ref; _} -> [Cpp_resolution.Definition (Struct_definition, ds_ref)]
-  | Denum {de_ref; _} -> [Definition (Enum_definition, de_ref)]
-  | _ -> []
-
 (* What printing [d] names, at each frame it enters: its globals, and the
    definitions it makes. *)
-let declaration_names (d : Finished_decl.t) =
-  let frames =
-    twin ~what:"the frames printing enters" ~same:( = ) (fun () -> legacy_declaration_frames d.settled)
-      (Ir.declaration_frames d.ir)
-  in
-  let defined =
-    twin ~what:"the definitions made" ~same:( = ) (fun () -> legacy_defined_types (d.settled :> cpp_decl))
-      (Ir.defined_types d.ir)
-  in
-  global_names frames (declaration_globals d)
+let declaration_names d =
+  let frames = Ir.declaration_frames d and defined = Ir.defined_types d in
+  global_names frames (Ir.declaration_globals d)
   @ List.concat_map (fun frame -> List.map (fun key -> (frame, key)) defined) frames
 
 let unprinted_names : Cpp_ast.declaration -> _ = function
-  | Declaration {settled; ir; _} | Absorbed {settled; ir; _} -> declaration_names {settled; ir}
+  | Declaration {decl; _} | Absorbed {decl; _} -> declaration_names decl
   | Fields {fields; _} -> global_names [[]] (List.concat_map (fun (_, ty) -> type_globals ty) fields)
   | Assertion {subject = Instance {args; _}; _} -> global_names [[]] (List.concat_map type_globals args)
   | Global_alias (Alias_of_type {tparams; _}) -> global_names [[]] (template_param_globals tparams)
@@ -1490,56 +1312,31 @@ let unprinted_names : Cpp_ast.declaration -> _ = function
   | Functor_alias _ | Derived_functor _ ->
     []
 
-(* [ctx], writing the declaration [settled] written in the module it names
+(* [ctx], writing the declaration [d] written in the module it names
    there: its names resolved there first, at each frame printing it enters,
    and its type constructors written as planned, or, where nothing is
    planned yet, as decided. *)
-let writing ctx (d : Finished_decl.t) =
+let writing ctx d =
   let names =
     Cpp_resolution.resolve (fun frame key -> at_frame ctx frame (fun c -> live_value c key)) (declaration_names d)
   in
   let ctx = {ctx with rc_names = Names_resolved names} in
   if not (alias_plan_made ()) then deciding ctx (ref [])
   else
-    match planned_tyctors ~file:ctx.rc_file ~module_:(module_written ctx) (Written_declaration d.ir) with
+    match planned_tyctors ~file:ctx.rc_file ~module_:(module_written ctx) (Written_declaration d) with
     | Some uses -> {ctx with rc_tyctors = Planned uses}
     | None -> deciding ctx (ref [])
 
 (** The types [d], written at namespace scope, introduces there, by the
     entity each declares ({!Cpp_print.decl_type_ref}): the aliases and
     wrappers it declares and the structs it defines. *)
-let file_scope_types (d : Finished_decl.t) =
-  let rec legacy_decl_type_ref = function
-    | Dtemplate (_, _, inner) -> legacy_decl_type_ref inner
-    | Dusing u -> Some u.du_name
-    | Dnspace (Some w, _) -> Some w.nw_ref
-    | _ -> None
-  in
-  let rec go (d : Cpp_erasure.settled) =
-    (match legacy_decl_type_ref (d :> cpp_decl) with Some r -> [r] | None -> [])
-    @
-    match Cpp_erasure.view d with
-    | Template (_, _, inner) -> go inner
-    | Namespace (None, decls) -> List.concat_map go decls
-    | Decl (Dstruct {ds_ref; _}) -> [ds_ref]
-    | Namespace (Some _, _) | Decl _ -> []
-  in
-  twin ~what:"the types introduced at namespace scope" ~same:( = ) (fun () -> go d.settled) (Ir.file_scope_types d.ir)
+let file_scope_types = Ir.file_scope_types
+
+let declaration_globals = Ir.declaration_globals
 
 (* The wrapper structs [d] writes around something other than a sole struct
    merged into them, in the order it writes them, each named by [name]. *)
-let rec legacy_unmerged_wrappers (d : Cpp_erasure.settled) =
-  match Cpp_erasure.view d with
-  | Template (_, _, inner) -> legacy_unmerged_wrappers inner
-  | Namespace (None, decls) -> List.concat_map legacy_unmerged_wrappers decls
-  | Namespace (Some w, members) ->
-    if w.nw_merges then [] else List.concat_map legacy_unmerged_wrappers members @ [w.nw_ref]
-  | Decl _ -> []
-
-let unmerged_wrappers_named ~name (d : Finished_decl.t) =
-  List.map name
-    (twin ~what:"the unmerged wrappers" ~same:( = ) (fun () -> legacy_unmerged_wrappers d.settled)
-       (Ir.unmerged_wrappers d.ir) )
+let unmerged_wrappers_named ~name d = List.map name (Ir.unmerged_wrappers d)
 
 (** The wrapper structs [d] writes around something other than a sole
     struct merged into them, in the order it writes them: the structs
@@ -1559,7 +1356,7 @@ let absorbed_by ~homed d =
 
 let absorbs ~homed d = List.exists (fun r -> Option.has_some (home_of ~homed r)) (unmerged_wrappers_named ~name:Fun.id d)
 
-let read_decl ctx env (d : Finished_decl.t) = read_cpp_decl (writing ctx d) env d.ir
+let read_decl ctx env d = read_cpp_decl (writing ctx d) env d
 
 (* [d], which {!absorbs}, written at [ctx]: the wrapper struct holding a
    wrapper module's declarations, a {!Cpp_ast.Wrapper_struct}, the
@@ -1568,32 +1365,32 @@ let read_decl ctx env (d : Finished_decl.t) = read_cpp_decl (writing ctx d) env 
    wrapper is built around one inductive's declaration, at namespace scope
    and never inside a template or another wrapper ({!Cpp_ind}), so the
    wrappers [d] writes are [d] alone. *)
-let absorbing ctx ~homed ?tyctors env (d : Finished_decl.t) =
-  note_file_scope_type ctx d.ir;
-  match Finished_decl.view d with
-  | Namespace (Some w, members) when not w.nw_merges -> (
-    match home_of ~homed w.nw_ref with
+let absorbing ctx ~homed ?tyctors env (d : Cpp_ir.Resolved.Decl.t) =
+  note_file_scope_type ctx d;
+  match d with
+  | Namespace (Some w, members) when not w.merges -> (
+    match home_of ~homed w.ref_ with
     | Some module_ ->
       let written = Cpp_ast.concat Pp.fnl (List.map (Cpp_ast.absorbed ?tyctors env) members) in
-      Cpp_ast.wrapper_struct ~name:(nspace_wrapper_name ctx w.nw_ref) ~module_ ~fields:Cpp_ast.(seq [written; text (Pp.fnl ())])
+      Cpp_ast.wrapper_struct ~name:(nspace_wrapper_name ctx w.ref_) ~module_ ~fields:Cpp_ast.(seq [written; text (Pp.fnl ())])
     | None -> CErrors.anomaly Pp.(str "Crane: a wrapper absorbing a wrapper module is not that module's home.") )
-  | Namespace _ | Template _ | Decl ->
+  | _ ->
     CErrors.anomaly Pp.(str "Crane: a declaration absorbing a wrapper module is not the wrapper struct holding it.")
 
 let printed_decl ctx env d = (read_decl ctx env d, printed_needs ctx d)
 
-(** [settled], printed where it is made, with what placing the declarations
+(** [d], printed where it is made, with what placing the declarations
     it needs reads ({!needs_of}). *)
 let write_decl ctx env d =
   let text, needs = printed_decl ctx env d in
   Cpp_ast.decl ~needs text
 
-(** [settled], which {!absorbs}, written where it is made ({!absorbing}),
+(** [d], which {!absorbs}, written where it is made ({!absorbing}),
     behind what placing the declarations it needs reads. *)
-let write_absorbing ctx ~homed env (d : Finished_decl.t) =
+let write_absorbing ctx ~homed env d =
   let tyctors =
     if not (alias_plan_made ()) then None
-    else planned_tyctors ~file:ctx.rc_file ~module_:(module_written ctx) (Written_declaration d.ir)
+    else planned_tyctors ~file:ctx.rc_file ~module_:(module_written ctx) (Written_declaration d)
   in
   let tree = absorbing (writing ctx d) ~homed ?tyctors env d in
   let needs = printed_needs ctx d in
@@ -1609,13 +1406,13 @@ let write_absorbing ctx ~homed env (d : Finished_decl.t) =
             ++ str " need" ) );
   Cpp_ast.seq [Cpp_ast.decl ~needs (Pp.mt ()); tree]
 
-let planned_needs ~file ~module_ (d : Finished_decl.t) =
-  needs_of ~templates:(List.map ctor_alias_name (planned_ctor_aliases ~file ~module_ d.ir)) d
+let planned_needs ~file ~module_ d =
+  needs_of ~templates:(List.map ctor_alias_name (planned_ctor_aliases ~file ~module_ d)) d
 
-let unprinted ctx ~module_ env (d : Finished_decl.t) =
+let unprinted ctx ~module_ env d =
   let file = ctx.rc_file in
   Cpp_ast.unprinted ~needs:(planned_needs ~file ~module_ d)
-    ?tyctors:(planned_tyctors ~file ~module_ (Written_declaration d.ir))
+    ?tyctors:(planned_tyctors ~file ~module_ (Written_declaration d))
     env d
 
 let unprinted_fields ctx ~module_ ~vl r fields =
@@ -1634,7 +1431,7 @@ let print_unprinted ctx ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
   ( if Probe.checking () then
       let tyctors =
         match u.declaration with
-        | Declaration {ir; _} -> Some (ctor_aliases_written ctx ir).read_uses
+        | Declaration {decl; _} -> Some (ctor_aliases_written ctx decl).read_uses
         | Fields {record; vars; fields} -> Some (ctor_aliases_of_fields ctx ~vl:vars record (List.map snd fields)).read_uses
         | Synthesised_template s -> Some (snd (written_body ctx s.vars s.body))
         | _ -> u.tyctors
@@ -1644,7 +1441,7 @@ let print_unprinted ctx ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
           (Pp.str "a declaration printed where the tree puts it writes its type constructors otherwise than planned");
       let needs =
         match u.declaration with
-        | Declaration {settled; ir; _} -> printed_needs ctx {settled; ir}
+        | Declaration {decl; _} -> printed_needs ctx decl
         | Fields {record; vars; fields} ->
           fields_needs ctx ~module_:(module_written ctx) ~vl:vars record (List.map snd fields)
         | _ -> u.needs
