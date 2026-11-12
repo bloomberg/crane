@@ -540,13 +540,13 @@ let check_fixpoint_escape name ~closures generated_escapes =
    is the same every time it is evaluated. *)
 let is_shared_constant_term e =
   let rec closed = function
-    | MLcons (_, _, ts) -> List.for_all closed ts
+    | MLcons (_, _, ts, _) -> List.for_all closed ts
     | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ | MLdummy _ -> true
     | MLmagic (_, a) -> closed a
     | _ -> false
   in
   match e with
-  | MLcons (_, (GlobRef.ConstructRef ((kn, i), _) as r), (_ :: _ as ts)) ->
+  | MLcons (_, (GlobRef.ConstructRef ((kn, i), _) as r), (_ :: _ as ts), _) ->
     Table.is_shared_variant (GlobRef.IndRef (kn, i))
     && (not (Table.is_custom r))
     && List.exists (function MLdummy _ -> false | _ -> true) ts
@@ -574,7 +574,7 @@ let constant_name e =
     | _ -> None
   in
   let rec pos = function
-    | MLcons (_, r, args) -> (
+    | MLcons (_, r, args, _) -> (
       match (ind_name r, args) with
       | Some ("positive", 1), [p] -> Option.map (fun v -> Z.(add (mul v (of_int 2)) one)) (pos p)
       | Some ("positive", 2), [p] -> Option.map (fun v -> Z.mul v (Z.of_int 2)) (pos p)
@@ -584,7 +584,7 @@ let constant_name e =
     | _ -> None
   in
   let rec nat = function
-    | MLcons (_, r, args) -> (
+    | MLcons (_, r, args, _) -> (
       match (ind_name r, args) with
       | Some ("nat", 1), [] -> Some Z.zero
       | Some ("nat", 2), [n] -> Option.map Z.succ (nat n)
@@ -598,7 +598,7 @@ let constant_name e =
   in
   let name =
     match e with
-    | MLcons (_, r, args) -> (
+    | MLcons (_, r, args, _) -> (
       match (ind_name r, args) with
       | Some ("positive", _), _ -> Option.bind (pos e) (named "pos_")
       | Some ("N", 2), [p] -> Option.bind (pos p) (named "n_")
@@ -2772,9 +2772,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         | Some into -> coerce ~from ~into cglob
         | None -> cglob )
       | _ -> curry_to_expected env ?expected_ty use cglob )
-  | MLcons (ty, r, ts) when is_custom r ->
+  | MLcons (ty, r, ts, _) when is_custom r ->
     gen_expr_custom_cons ?expected_ty ~slot env ty r ts
-  | MLcons (ty, r, ts)
+  | MLcons (ty, r, ts, _)
     when ts = []
          &&
          match r with
@@ -2798,7 +2798,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
      runtime makes every block it holds immortal too.  Only where the term
      comes out as its factory call: a conversion into another slot type is
      left as it is. *)
-  | MLcons (_, _, ts) as e
+  | MLcons (_, _, ts, _) as e
     when (not slot.building_constant) && is_shared_constant_term e
          && not (takes_reuse_token e) -> (
     let built = gen_expr ?expected_ty ~slot:{slot with building_constant = true} env e in
@@ -2807,7 +2807,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       when Table.is_shared_variant n && ts <> [] ->
       mk_call (CPPrt (Crane_rt.Constant (constant_name e))) [built]
     | _ -> built )
-  | MLcons (ty, r, ts) as construction ->
+  | MLcons (ty, r, ts, _) as construction ->
     let slot = into_erased_return slot in
     (* The annotation carries this producer's own instantiation, and a stored
        closure whose arrows extraction never unified leaves it erased -- a
@@ -2936,8 +2936,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                           ts
                       in
                       ( match first_elem with
-                      | Some (MLmagic (_, MLcons (elem_ty, _, _))) -> elem_ty
-                      | Some (MLcons (elem_ty, _, _)) -> elem_ty
+                      | Some (MLmagic (_, MLcons (elem_ty, _, _, _))) -> elem_ty
+                      | Some (MLcons (elem_ty, _, _, _)) -> elem_ty
                       | _ -> t )
                     | _ -> t )
                   tys_filt
@@ -2946,7 +2946,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               let resolved_ty = Miniml.Tglob (n, tys_resolved, schema_opt) in
               let rec update_nested_ty ast =
                 match ast with
-                | MLcons (arg_typ, arg_c, arg_ts) ->
+                | MLcons (arg_typ, arg_c, arg_ts, arg_occ) ->
                   ( match arg_typ with
                   | Miniml.Tglob (arg_ref, arg_tys, _)
                     when GlobRef.CanOrd.equal arg_ref n
@@ -2956,9 +2956,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                                 | Miniml.Tunknown -> true
                                 | _ -> false )
                               arg_tys ->
-                    MLcons (resolved_ty, arg_c, List.map update_nested_ty arg_ts)
+                    MLcons (resolved_ty, arg_c, List.map update_nested_ty arg_ts, arg_occ)
                   | _ ->
-                    MLcons (arg_typ, arg_c, List.map update_nested_ty arg_ts) )
+                    MLcons (arg_typ, arg_c, List.map update_nested_ty arg_ts, arg_occ) )
                 | MLmagic (m, inner) -> MLmagic (m, update_nested_ty inner)
                 | other -> other
               in
@@ -3108,8 +3108,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                         ts_updated
                     in
                     ( match first_elem with
-                    | Some (MLmagic (_, MLcons (elem_ty, _, _))) -> elem_ty
-                    | Some (MLcons (elem_ty, _, _)) -> elem_ty
+                    | Some (MLmagic (_, MLcons (elem_ty, _, _, _))) -> elem_ty
+                    | Some (MLcons (elem_ty, _, _, _)) -> elem_ty
                     | _ -> t )
                   | _ -> t )
                 tys
@@ -3540,7 +3540,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                    deque<any>, matching what any_cast<deque<any>> expects when
                    consuming through the erased field. *)
                 let rec is_custom_list_cons = function
-                  | MLcons (_, GlobRef.ConstructRef ((kn, _), _), _) ->
+                  | MLcons (_, GlobRef.ConstructRef ((kn, _), _), _, _) ->
                     let ind = GlobRef.IndRef (kn, 0) in
                     Ml_type_util.is_custom_list_global ind
                   | MLmagic (_, inner) -> is_custom_list_cons inner
@@ -3964,7 +3964,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                      | Miniml.Tglob (n_ind, _, _) -> globref_equal g n_ind
                      | _ -> false)
                      || ( match strip_magic e with
-                        | MLcons (_, GlobRef.ConstructRef ((kn, i), _), _) ->
+                        | MLcons (_, GlobRef.ConstructRef ((kn, i), _), _, _) ->
                           globref_equal g (GlobRef.IndRef (kn, i))
                         | _ -> false ) ->
                 (* The recursive spine: every cell of a list is the same C++
@@ -9248,7 +9248,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                 | _ -> None
               in
               match b_inner with
-              | Miniml.MLcons (ctor_ty, _, ts) ->
+              | Miniml.MLcons (ctor_ty, _, ts, _) ->
                 let result = ref None in
                 List.iteri (fun i (ti : Miniml.ml_ast) ->
                   match ti with
@@ -9813,7 +9813,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         [k (gen_expr ?expected_ty:(position_cpp_ty None) env t)]
     end
   | MLcase (typ, t, pv, case_occ) when is_custom_match pv -> gen_custom_cpp_case env k typ t pv case_occ
-  | MLcons (_, r, []) when Table.is_tt_constructor r
+  | MLcons (_, r, [], _) when Table.is_tt_constructor r
       && (!tctx).current_cpp_return_type = Some Tvoid ->
     (* tt (unit constructor) in tail position of a void-returning function *)
     if (!tctx).itree_mode = Reified then [k (mk_itree_ret Tvoid [])]

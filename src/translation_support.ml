@@ -1096,7 +1096,7 @@ let rec is_reified_monadic_expr ml_expr =
            | Some m -> (not (Table.is_inline_custom r)) || is_monad_reified m
            | None -> false ) )
        | None -> false )
-  | MLcons (ty, _, _) -> is_monadic_ml_type ty
+  | MLcons (ty, _, _, _) -> is_monadic_ml_type ty
   | _ -> false
 
 (** [stmts], a body, whose returned lambdas hold copies ([\[=\]]) rather
@@ -1217,7 +1217,7 @@ let naming_calls ~cpp_of r =
 let rec ml_is_value = function
   | MLrel _ | MLlam _ | MLdummy _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> true
   | MLglob {callee = r; _} -> thunk_reason r = None
-  | MLcons (_, _, args) | MLtuple args -> List.for_all ml_is_value args
+  | MLcons (_, _, args, _) | MLtuple args -> List.for_all ml_is_value args
   | MLmagic (_, e) -> ml_is_value e
   | _ -> false
 
@@ -1233,7 +1233,7 @@ let calls_eagerly r body =
     match e with
     | MLglob {callee = r'; _} when globref_equal r r' -> raise Found
     | MLlam _ -> ()
-    | MLcons (ty, _, _) when Table.is_coinductive_type ty -> ()
+    | MLcons (ty, _, _, _) when Table.is_coinductive_type ty -> ()
     | _ -> Mlutil.ast_iter walk e
   in
   try walk body; false with Found -> true
@@ -1474,7 +1474,7 @@ let rec collect_tvars_ast acc = function
       (fun acc (_, t) -> collect_tvars acc t)
       acc
       (Mlutil.Var_types.bindings (Mlutil.written_type_args use))
-  | MLcons (ty, _, args) ->
+  | MLcons (ty, _, args, _) ->
     List.fold_left collect_tvars_ast (collect_tvars acc ty) args
   | MLcase (ty, e, brs, _) ->
     let acc = collect_tvars_ast (collect_tvars acc ty) e in
@@ -1514,7 +1514,7 @@ let rec ast_may_throw = function
   | MLglob {callee = r; _} -> Table.is_throwing_value r
   | MLlam (_, _, body) -> ast_may_throw body
   | MLletin (_, _, a, b, _) -> ast_may_throw a || ast_may_throw b
-  | MLcons (_, _, args) -> List.exists ast_may_throw args
+  | MLcons (_, _, args, _) -> List.exists ast_may_throw args
   | MLcase (_, e, brs, _) ->
     ast_may_throw e
     || Array.exists (fun (_, _, _, body) -> ast_may_throw body) brs
@@ -1785,7 +1785,7 @@ let detect_non_forwarded_params_generic ~is_self_call n_params body =
         (fun (ids, _, _, body) ->
           walk (depth + List.length ids) body )
         branches
-    | MLcons (_, _, args) -> List.iter (walk depth) args
+    | MLcons (_, _, args, _) -> List.iter (walk depth) args
     | MLtuple args -> List.iter (walk depth) args
     | MLfix (_, _, bodies, _, _) ->
       let n = Array.length bodies in
@@ -1870,7 +1870,7 @@ let escaping_params ~suspended n_params body =
       Array.iter
         (fun (ids, _, _, b) -> walk under (depth + List.length ids) b)
         branches
-    | MLcons (_, _, args) | MLtuple args -> List.iter (walk under depth) args
+    | MLcons (_, _, args, _) | MLtuple args -> List.iter (walk under depth) args
     | MLfix (_, _, bodies, _, _) ->
       (* A local fixpoint is a closure over its free variables. *)
       let n = Array.length bodies in
@@ -2032,7 +2032,7 @@ let closure_feedback_params ~callee bodies =
       | MLfix (_, _, bodies, _, _) ->
         let locals = List.init (Array.length bodies) (fun _ -> Local_closure) @ locals in
         Array.iter (walk locals) bodies
-      | MLcons (_, _, args) | MLtuple args -> List.iter (walk locals) args
+      | MLcons (_, _, args, _) | MLtuple args -> List.iter (walk locals) args
       | MLmagic (_, e) -> walk locals e
       | MLparray (elts, def) ->
         Array.iter (walk locals) elts;
@@ -2473,7 +2473,7 @@ let rec infer_ml_body_type (a : ml_ast) : ml_type option =
       in
       strip_tarr_n (count_real_ml_args args) ty
     | None -> None )
-  | MLcons (ty, _, _) -> Some (resolve_tmeta ty)
+  | MLcons (ty, _, _, _) -> Some (resolve_tmeta ty)
   | MLcase (_, _, pv, _) when Array.length pv > 0 ->
     let (_, rty, _, _) = pv.(0) in
     Some (resolve_tmeta rty)
@@ -2937,7 +2937,7 @@ let rec collect_free_rels_set n_bound acc = function
         collect_free_rels_set (n_bound + List.length params + n_fix) acc body )
       acc
       funs
-  | MLcons (_, _, args) ->
+  | MLcons (_, _, args, _) ->
     List.fold_left (collect_free_rels_set n_bound) acc args
   | MLmagic (_, a) -> collect_free_rels_set n_bound acc a
   | MLtuple args -> List.fold_left (collect_free_rels_set n_bound) acc args
@@ -3369,7 +3369,7 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
     inserted around it.  Used to recover a type argument left [Tunresolved] by
     extraction. *)
 let rec ml_ast_type_hint = function
-  | Miniml.MLcons (t, _, _) -> Some t
+  | Miniml.MLcons (t, _, _, _) -> Some t
   | Miniml.MLmagic (Miniml.Mcoerce (from, _), inner) ->
     ( match Ml_type_util.resolve_tmeta from with
     | Miniml.Tunknown | Miniml.Tdummy _ -> ml_ast_type_hint inner

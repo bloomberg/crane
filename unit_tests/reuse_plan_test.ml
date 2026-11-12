@@ -34,28 +34,28 @@ let arm body =
         MLcase
           ( lst,
             scrutinee,
-            [| ([], lst, Pusual nil, MLcons (lst, nil, []));
+            [| ([], lst, Pusual nil, MLcons (lst, nil, [], Occurrence.fresh ()));
                ([(x, nat); (t, lst)], lst, Pusual cons, body) |], Occurrence.fresh ()) )
   in
   let p = Ownership_ir.region ~owned:[1] ~n_outer:0 root in
   (p, Ownership_ir.reuse_arm p ~scrutinee ~branch:1 ~constructor:cons)
 
 let () =
-  let inner = MLcons (lst, cons, [fresh_rel 1; fresh_rel 2]) in
+  let inner = MLcons (lst, cons, [fresh_rel 1; fresh_rel 2], Occurrence.fresh ()) in
   let closure = MLlam (Id (Id.of_string "y"), nat, call "suml" [inner]) in
-  let tail = MLcons (lst, cons, [call "twice" [closure; fresh_rel 2]; call "g" [fresh_rel 1]]) in
+  let tail = MLcons (lst, cons, [call "twice" [closure; fresh_rel 2]; call "g" [fresh_rel 1]], Occurrence.fresh ()) in
   let region, p = arm tail in
   check "the construction returned takes the storage" (reused p tail);
   check "a construction inside a closure does not" (not (reused p inner));
   check "nothing is reused outside the rebuilding branch" (not (reused region tail));
-  let temporary = MLcons (lst, cons, [fresh_rel 2; MLcons (lst, nil, [])]) in
-  let tail = MLcons (lst, cons, [call "suml" [temporary]; fresh_rel 1]) in
+  let temporary = MLcons (lst, cons, [fresh_rel 2; MLcons (lst, nil, [], Occurrence.fresh ())], Occurrence.fresh ()) in
+  let tail = MLcons (lst, cons, [call "suml" [temporary]; fresh_rel 1], Occurrence.fresh ()) in
   let _, p = arm tail in
   check "a construction passed to a call does not" (not (reused p temporary));
   check "the one returned around it does" (reused p tail);
-  let left = MLcons (lst, cons, [fresh_rel 3; fresh_rel 2]) in
-  let right = MLcons (lst, cons, [fresh_rel 3; MLcons (lst, nil, [])]) in
-  let ended = MLcons (lst, nil, []) in
+  let left = MLcons (lst, cons, [fresh_rel 3; fresh_rel 2], Occurrence.fresh ()) in
+  let right = MLcons (lst, cons, [fresh_rel 3; MLcons (lst, nil, [], Occurrence.fresh ())], Occurrence.fresh ()) in
+  let ended = MLcons (lst, nil, [], Occurrence.fresh ()) in
   let bool = Tglob (GlobRef.VarRef (Id.of_string "bool"), [], []) in
   let tail =
     MLletin

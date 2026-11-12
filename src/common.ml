@@ -1553,12 +1553,12 @@ let check_extract_ascii () =
 let is_list_cons l =
   List.for_all
     (function
-      | MLcons (_, GlobRef.ConstructRef (_, _), []) -> true
+      | MLcons (_, GlobRef.ConstructRef (_, _), [], _) -> true
       | _ -> false )
     l
 
 let is_native_char = function
-  | MLcons (_, gr, l) ->
+  | MLcons (_, gr, l, _) ->
     is_ascii_registered ()
     && Rocqlib.check_ref ascii_constructor_name gr
     && check_extract_ascii ()
@@ -1569,14 +1569,14 @@ let is_native_char = function
 let get_native_char c =
   let rec cumul = function
     | [] -> 0
-    | MLcons (_, GlobRef.ConstructRef (_, j), []) :: l -> 2 - j + (2 * cumul l)
+    | MLcons (_, GlobRef.ConstructRef (_, j), [], _) :: l -> 2 - j + (2 * cumul l)
     | _ ->
       CErrors.anomaly
         (Pp.str "get_native_char: malformed ascii constructor list")
   in
   let l =
     match c with
-    | MLcons (_, _, l) -> l
+    | MLcons (_, _, l, _) -> l
     | _ -> CErrors.anomaly (Pp.str "get_native_char: expected MLcons")
   in
   Char.chr (cumul l)
@@ -1623,9 +1623,9 @@ let check_extract_string () =
     @return [true] iff the ML expression is a statically-known string literal *)
 let rec is_native_string_rec empty_string_ref string_constructor_ref = function
   (* "EmptyString" constructor *)
-  | MLcons (_, gr, []) -> Rocqlib.check_ref empty_string_ref gr
+  | MLcons (_, gr, [], _) -> Rocqlib.check_ref empty_string_ref gr
   (* "String" constructor *)
-  | MLcons (_, gr, [hd; tl]) ->
+  | MLcons (_, gr, [hd; tl], _) ->
     Rocqlib.check_ref string_constructor_ref gr
     && is_native_char hd
     && is_native_string_rec empty_string_ref string_constructor_ref tl
@@ -1637,7 +1637,7 @@ let rec is_native_string_rec empty_string_ref string_constructor_ref = function
     we check every character via [is_native_string_rec]. *)
 let is_native_string c =
   match c with
-  | MLcons (_, GlobRef.ConstructRef (ind, j), l) ->
+  | MLcons (_, GlobRef.ConstructRef (ind, j), l, _) ->
     is_string_registered ()
     && Rocqlib.check_ref string_type_name (GlobRef.IndRef ind)
     && check_extract_string ()
@@ -1649,10 +1649,10 @@ let get_native_string c =
   let buf = Buffer.create 64 in
   let rec get = function
     (* "EmptyString" constructor *)
-    | MLcons (_, gr, []) when Rocqlib.check_ref empty_string_name gr ->
+    | MLcons (_, gr, [], _) when Rocqlib.check_ref empty_string_name gr ->
       Buffer.contents buf
     (* "String" constructor *)
-    | MLcons (_, gr, [hd; tl]) when Rocqlib.check_ref string_constructor_name gr
+    | MLcons (_, gr, [hd; tl], _) when Rocqlib.check_ref string_constructor_name gr
       ->
       Buffer.add_char buf (get_native_char hd);
       get tl

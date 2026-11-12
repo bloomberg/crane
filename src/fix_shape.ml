@@ -21,7 +21,7 @@ let thunk_nullary_cofix x ids funs occ =
   match (Table.resolve_unit_type (), Table.resolve_tt_ctor ()) with
   | Some u, Some tt ->
     let unit_ty = Tglob (u, [], []) in
-    let tt_v = MLcons (unit_ty, tt, []) in
+    let tt_v = MLcons (unit_ty, tt, [], Occurrence.fresh ()) in
     let n = Array.length ids in
     (* Under the new binder the block's functions are [MLrel (k + 1)] to
        [MLrel (k + n)] at [k] binders deeper still. *)

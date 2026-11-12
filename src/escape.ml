@@ -56,7 +56,7 @@ let nb_occur_match =
            (nb k head, 0) args)
     | MLapp (head, args) ->
       List.fold_left (fun total arg -> total + nb k arg) (nb k head) args
-    | MLcons (_, _, args) | MLtuple args ->
+    | MLcons (_, _, args, _) | MLtuple args ->
       List.fold_left (fun total arg -> total + nb k arg) 0 args
     | MLmagic (_, a) -> nb k a
     | MLparray (elts, def) ->
@@ -87,7 +87,7 @@ let rec occurs k = function
   | MLfix (_, ids, bodies, _, _) ->
     let k' = k + Array.length ids in
     Array.exists (occurs k') bodies
-  | MLcons (_, _, args) | MLtuple args -> List.exists (occurs k) args
+  | MLcons (_, _, args, _) | MLtuple args -> List.exists (occurs k) args
   | MLmagic (_, a) -> occurs k a
   | MLparray (elts, def) -> Array.exists (occurs k) elts || occurs k def
   | MLglob _
@@ -221,7 +221,7 @@ let escapes ?(query = Conservative) ?(return_escapes = true) k t =
     | MLfix (_, ids, bodies, _, _) ->
       let k' = k + Array.length ids in
       Array.exists (occurs k') bodies
-    | MLcons (_, _, args) ->
+    | MLcons (_, _, args, _) ->
       List.exists (check k cons_escapes false) args
     | MLtuple args -> List.exists (check k cons_escapes false) args
     | MLmagic (_, a) -> check k in_tail false a
@@ -312,7 +312,7 @@ let find_reuse_candidates (pv : ml_branch array) =
     | _ -> false
   in
   let tail_conses body =
-    List.filter_map (function MLcons (_, r, args) -> Some (r, args) | _ -> None) (tail_constructions body)
+    List.filter_map (function MLcons (_, r, args, _) -> Some (r, args) | _ -> None) (tail_constructions body)
   in
   let cands = ref [] in
   Array.iteri
@@ -373,7 +373,7 @@ let is_reuse_scrutinee k body =
     | MLapp (f, args) -> scan d f; List.iter (scan d) args
     | MLfix (_, ids, bodies, _, _) ->
       Array.iter (scan (d + Array.length ids)) bodies
-    | MLcons (_, _, ts) | MLtuple ts -> List.iter (scan d) ts
+    | MLcons (_, _, ts, _) | MLtuple ts -> List.iter (scan d) ts
     | MLmagic (_, a) -> scan d a
     | MLparray (arr, def) -> Array.iter (scan d) arr; scan d def
     | _ -> ()
@@ -465,7 +465,7 @@ let free_rels depth t =
     | MLfix (_, ids, bodies, _, _) ->
       let d' = d + Array.length ids in
       Array.iter (collect d') bodies
-    | MLcons (_, _, args) | MLtuple args -> List.iter (collect d) args
+    | MLcons (_, _, args, _) | MLtuple args -> List.iter (collect d) args
     | MLmagic (_, a) -> collect d a
     | MLparray (elts, def) ->
       Array.iter (collect d) elts;
@@ -506,7 +506,7 @@ let single_use_nargs k t =
     | MLapp (head, args) ->
       search k head;
       List.iter (search k) args
-    | MLcons (_, _, args) -> List.iter (search k) args
+    | MLcons (_, _, args, _) -> List.iter (search k) args
     | MLtuple args -> List.iter (search k) args
     | MLmagic (_, a) -> search k a
     | MLparray (elts, def) ->

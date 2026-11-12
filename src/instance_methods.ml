@@ -77,7 +77,7 @@ let record_body name class_ref inner_ty lam_params inner_body =
   in
   match (Table.singleton_class_method class_ref, inner_body) with
   | Some _, (MLcons _ as b) -> b
-  | Some m, b -> MLcons (inner_ty, class_ref, [as_method m b])
+  | Some m, b -> MLcons (inner_ty, class_ref, [as_method m b], Occurrence.fresh ())
   | None, b -> b
 
 let record_type_args (cons_ty : ml_type) type_args =
@@ -540,7 +540,7 @@ let methods name body ty =
   match inner_ty with
   | Tglob (class_ref, type_args, _) when Table.is_typeclass class_ref -> (
     match record_body name class_ref inner_ty lam_params inner_body with
-    | MLcons (cons_ty, _, method_bodies) ->
+    | MLcons (cons_ty, _, method_bodies, _) ->
       let fields = Table.record_field_bindings_of_type inner_ty in
       if List.length fields <> List.length method_bodies then None
       else

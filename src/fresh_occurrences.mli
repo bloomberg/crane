@@ -2,8 +2,8 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** Every term of the program translation lowers is an occurrence of its
-    own: every read of a local, let, match, local fixpoint and use of a
-    global.
+    own: every read of a local, let, match, construction, local fixpoint
+    and use of a global.
 
     A rewrite that copies a term copies its occurrences with it: a local
     fixpoint's outer parameters, passed again at each of its recursive calls

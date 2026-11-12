@@ -2277,7 +2277,7 @@ let plan_referenced_names s =
          type names. *)
       if under_mp_bound (modpath_of_r callee) then
         Option.iter ty (try Some (Table.find_type callee) with Not_found -> None)
-    | MLcons (t, r, _) ->
+    | MLcons (t, r, _, _) ->
       name Cons r;
       ty t
     | MLcase (t, _, brs, _) ->

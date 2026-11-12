@@ -121,7 +121,7 @@ let closure_reads d t =
     | MLrel (i, o) -> if d' - i < d then (d' - i, o) :: acc else acc
     | MLmagic (_, t) -> go d' acc t
     | MLapp (f, args) -> List.fold_left (go d') acc (f :: args)
-    | MLcons (_, _, args) | MLtuple args -> List.fold_left (go d') acc args
+    | MLcons (_, _, args, _) | MLtuple args -> List.fold_left (go d') acc args
     | MLparray (elems, default) -> List.fold_left (go d') acc (default :: Array.to_list elems)
     | MLlam (_, _, b) -> go (d' + 1) acc b
     | MLletin (_, _, a, b, _) -> go (d' + 1) (go d' acc a) b
@@ -322,7 +322,7 @@ let rec free ?(parts = true) ?(outside = Levels.empty) parents d t =
   | MLapp (MLglob {callee = r; _}, [arg]) when parts && projected d r (strip arg) <> None ->
     Levels.singleton (fst (Option.get (projected d r (strip arg))))
   | MLapp (f, args) -> frees parents d (f :: args)
-  | MLcons (_, _, args) | MLtuple args -> frees parents d args
+  | MLcons (_, _, args, _) | MLtuple args -> frees parents d args
   | MLparray (elems, default) -> frees parents d (default :: Array.to_list elems)
   | MLlam (_, _, body) -> whole (closure_under parents d ~n:1 body)
   | MLletin (_, _, a, b, _) -> Levels.union (free parents d a) (under parents d ~n:1 b)
@@ -641,7 +641,7 @@ let liveness ~n_outer ~copied ~arms ~resumes t =
         enters call Levels.empty args ~pinned parents d live
       | _ -> () );
       unsequenced ~inspected:(fun k -> k = 0) ~pinned parents d live (f :: args)
-    | MLcons (_, _, args) | MLtuple args -> unsequenced ~pinned parents d live args
+    | MLcons (_, _, args, _) | MLtuple args -> unsequenced ~pinned parents d live args
     | MLparray (elems, default) ->
       unsequenced ~pinned parents d live (default :: Array.to_list elems)
     (* A closure reads what it closes over where it is made; its own body
@@ -890,7 +890,7 @@ let ownership ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~copied t =
         List.iter (own (Levels.diff owned !resumed) d) args
       end
       else all (f :: args)
-    | MLcons (_, _, args) | MLtuple args -> all args
+    | MLcons (_, _, args, _) | MLtuple args -> all args
     | MLparray (elems, default) -> all (default :: Array.to_list elems)
     (* A closure's body is a region of its own. *)
     | MLlam _ | MLfix _ ->
@@ -1066,7 +1066,7 @@ let reuse_arm p ~scrutinee ~branch ~constructor =
       | Some brs when branch < Array.length brs ->
         let _, _, _, body = brs.(branch) in
         List.filter
-          (function MLcons (_, r, _) -> Common.globref_equal r constructor | _ -> false)
+          (function MLcons (_, r, _, _) -> Common.globref_equal r constructor | _ -> false)
           (Escape.tail_constructions body)
       | _ -> []
     in
@@ -1331,7 +1331,7 @@ let moved_reads p ts =
     | MLrel (i, o) -> if taken_by_closure p o then i :: acc else acc
     | MLmagic (_, t) -> go acc t
     | MLapp (f, args) -> List.fold_left go acc (f :: args)
-    | MLcons (_, _, args) | MLtuple args -> List.fold_left go acc args
+    | MLcons (_, _, args, _) | MLtuple args -> List.fold_left go acc args
     (* What a closure among them takes by move, the closure made around
        them takes by move first, to hand it on. *)
     | (MLlam _ | MLfix _) as closure -> moved_captures p closure @ acc

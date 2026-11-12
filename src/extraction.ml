@@ -2326,7 +2326,7 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
       ~from:type_cons
       ~into:(type_recomp (metas, a))
       magic1
-      (MLcons (typ, GlobRef.ConstructRef cp, mla))
+      (MLcons (typ, GlobRef.ConstructRef cp, mla, Occurrence.fresh ()))
   in
   (* Decompose the instantiated+unified constructor type to recover the resolved
      argument types. After [instantiate_prenex] replaced Tvars with metas, and

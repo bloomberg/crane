@@ -580,7 +580,7 @@ let rec walk w ?(position = no_position) lex e =
     walk_type w lex ty;
     go ~position:{position with expected = Some ty} lex a;
     go ~position (push Lexenv.Value [(x, ty)] lex) body
-  | MLcons (ty, _, args) ->
+  | MLcons (ty, _, args, _) ->
     walk_type w lex ty;
     List.iter (go ~position:{expected = None; stated = position.stated} lex) args
   | MLtuple args -> List.iter (go lex) args

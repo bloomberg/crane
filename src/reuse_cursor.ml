@@ -55,7 +55,7 @@ let reads env e =
       Array.fold_left (fun acc (ids, _, _, b) -> go (depth + List.length ids) acc b) (go depth acc s) branches
     | MLfix (_, ids, funs, _, _) -> Array.fold_left (go (depth + Array.length ids)) acc funs
     | MLapp (f, args) -> List.fold_left (go depth) acc (f :: args)
-    | MLcons (_, _, args) | MLtuple args -> List.fold_left (go depth) acc args
+    | MLcons (_, _, args, _) | MLtuple args -> List.fold_left (go depth) acc args
     | MLmagic (_, e) -> go depth acc e
     | MLparray (elements, default) -> Array.fold_left (go depth) (go depth acc default) elements
     | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> acc
@@ -140,7 +140,7 @@ let own_value ty value =
   let rec closure_free = function
     | MLlam _ | MLfix _ -> false
     | MLapp (f, args) -> List.for_all closure_free (f :: args)
-    | MLcons (_, _, args) | MLtuple args -> List.for_all closure_free args
+    | MLcons (_, _, args, _) | MLtuple args -> List.for_all closure_free args
     | MLmagic (_, e) -> closure_free e
     | MLletin (_, _, a, b, _) -> closure_free a && closure_free b
     | MLcase (_, s, branches, _) -> closure_free s && Array.for_all (fun (_, _, _, b) -> closure_free b) branches
@@ -163,7 +163,7 @@ let own_value ty value =
     match head value with
     | MLapp (MLglob {callee; _}, _) -> computes callee
     | MLapp (MLrel _, _) -> true
-    | MLcons (_, r, _) -> computes r
+    | MLcons (_, r, _, _) -> computes r
     | MLtuple _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> true
     | _ -> false
   in

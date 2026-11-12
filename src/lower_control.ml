@@ -51,7 +51,7 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
      innermost holding the call itself, and none calls it elsewhere. *)
   and chain callee depth e =
     match e with
-    | MLcons (_, constructor, args) -> (
+    | MLcons (_, constructor, args, _) -> (
       let calling = List.filteri (fun _ (_, a) -> calls callee ~depth a > 0) (List.mapi (fun i a -> (i, a)) args) in
       match calling with
       | [(hole, a)] when calls callee ~depth a = 1 -> (
@@ -134,7 +134,7 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
     | f when Option.has_some (named callee ~depth f 0) -> continue_ f (Option.get (named callee ~depth f 0)) []
     | MLapp (f, args) when Option.has_some (named callee ~depth f (List.length args)) ->
       continue_ f (Option.get (named callee ~depth f (List.length args))) args
-    | MLcons (_, c, [a]) when Recursion_plan.identity c -> lower callee depth a
+    | MLcons (_, c, [a], _) when Recursion_plan.identity c -> lower callee depth a
     | MLapp (MLglob use, [a]) when Recursion_plan.identity use.callee && Table.to_inline use.callee ->
       lower callee depth a
     | MLapp (MLglob use, args) when effect_ use = Some Core_effects.Bind -> (

@@ -291,7 +291,7 @@ let region ~outer body =
        parameter reads it boxed.  Decided at the constructor's own drafted
        instantiation, which is lowering's wherever the destination states no
        more than the annotation. *)
-    | MLcons (ty, r, args) when Table.is_custom r ->
+    | MLcons (ty, r, args, _) when Table.is_custom r ->
       let env = Common.empty_env () in
       let field_tys =
         match Table.get_ctor_ip_types_opt r with
@@ -322,7 +322,7 @@ let region ~outer body =
     (* A record's field is written against the field's type at the record's
        arguments only where that type returns a function
        ({!Translation.gen_expr}'s record [expected_for_field]). *)
-    | MLcons (ty, r, args) when List.exists is_lambda args && Table.record_fields_of_type ty <> [] ->
+    | MLcons (ty, r, args, _) when List.exists is_lambda args && Table.record_fields_of_type ty <> [] ->
       let field_tys =
         match Table.get_ctor_ip_types_opt r with
         | Some ft -> List.filter (fun t -> not (Mlutil.isTdummy t)) ft
@@ -354,7 +354,7 @@ let region ~outer body =
           | (MLlam _ as lam), None -> walk_field_lambda ~slot:None scope None lam
           | _ -> walk scope e )
         args
-    | MLcons (_, r, args) when List.exists is_lambda args ->
+    | MLcons (_, r, args, _) when List.exists is_lambda args ->
       let field_tys =
         match Table.get_ctor_ip_types_opt r with
         | Some ft -> List.filter (fun t -> not (Mlutil.isTdummy t)) ft

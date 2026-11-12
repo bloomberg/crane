@@ -163,7 +163,7 @@ let ast_iter_references ?(prune = fun _ -> false) do_term do_cons do_type a =
     | MLglob ({callee = r; _} as use) ->
       do_term r;
       Global_use.iter_types (type_iter_references do_type) use
-    | MLcons (_, r, _) -> do_cons r
+    | MLcons (_, r, _, _) -> do_cons r
     | MLcase (ty, _, v, _) ->
       type_iter_references do_type ty;
       Array.iter (fun (_, _, p, _) -> patt_iter_references do_cons p) v

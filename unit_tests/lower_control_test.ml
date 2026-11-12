@@ -98,7 +98,7 @@ let lower_cons body = Lower_control.tail_loop ~modulo_cons:true ~effects:Core_ef
 let () =
   (* cons n (cons acc (count n acc)): two cells, the call in the second's hole. *)
   let u = use () in
-  let body = MLcons (nat, cons, [fresh_rel 2; MLcons (nat, cons, [fresh_rel 1; call u [fresh_rel 2; fresh_rel 1]])]) in
+  let body = MLcons (nat, cons, [fresh_rel 2; MLcons (nat, cons, [fresh_rel 1; call u [fresh_rel 2; fresh_rel 1]], Occurrence.fresh ())], Occurrence.fresh ()) in
   ( match lower_cons body with
   | Term.Continue_into {cells = [outer; inner]; next} ->
     check "each cell's hole is the argument holding the call" (outer.hole = 1 && inner.hole = 1);
@@ -108,10 +108,10 @@ let () =
   check "a chain's call is among the loop's continues" (continues_at [u] (lower_cons body));
   check "without modulo cons a chain is returned" (lower body = Term.Return body);
   (* cons (count n acc) (count n acc): two calls, no chain. *)
-  let twice = MLcons (nat, cons, [call (use ()) [fresh_rel 2; fresh_rel 1]; call (use ()) [fresh_rel 2; fresh_rel 1]]) in
+  let twice = MLcons (nat, cons, [call (use ()) [fresh_rel 2; fresh_rel 1]; call (use ()) [fresh_rel 2; fresh_rel 1]], Occurrence.fresh ()) in
   check "a constructor holding two calls is returned" (lower_cons twice = Term.Return twice);
   (* A chain's call passing the parameters on keeps them. *)
-  let kept = MLcons (nat, cons, [fresh_rel 2; call (use ()) [fresh_rel 2; fresh_rel 1]]) in
+  let kept = MLcons (nat, cons, [fresh_rel 2; call (use ()) [fresh_rel 2; fresh_rel 1]], Occurrence.fresh ()) in
   check "a chain's call counts as a turn"
     (Term.invariant_parameters {loop = target; parameters = [(id "n", nat); (id "acc", nat)]; body = lower_cons kept}
     = [true; true] )

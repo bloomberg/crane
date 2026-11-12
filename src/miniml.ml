@@ -173,7 +173,7 @@ and ml_ast =
   | MLlam of ml_ident * ml_type * ml_ast
   | MLletin of ml_ident * ml_type * ml_ast * ml_ast * Occurrence.t
   | MLglob of global_use
-  | MLcons of ml_type * GlobRef.t * ml_ast list
+  | MLcons of ml_type * GlobRef.t * ml_ast list * Occurrence.t
   | MLtuple of ml_ast list
   | MLcase of ml_type * ml_ast * ml_branch array * Occurrence.t
   | MLfix of int * (Id.t * ml_type) array * ml_ast array * bool * Occurrence.t
