@@ -157,6 +157,24 @@ val closed_instance_call : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast li
 val static_projection_call :
   lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> Elaborated_call.static_projection option
 
+(** [closed_head_call ~lex use args] -- whether the call [use args] applies
+    arguments past its callee's arity to a head, the callee applied to the
+    rest, that names no value but instance parameters: a function built from
+    nothing the call can change, the same every time the call is evaluated.
+    As the walk decided it where it met the application, from the call and
+    the binders of its own environment; where the walk made no single
+    decision there, and in planning, decided from the call and [lex]; under
+    [CRANE_CHECK_IR] a planned decision is checked against that one. *)
+val closed_head_call : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> bool
+
+(** [member_template_call ~lex use args] -- whether the call [use args]
+    projects a class field through its one dictionary argument, an instance
+    Crane kept ({!Translation_types.kept_instance_of_projection}), whose class
+    declares the field as a member template, so the instance's own method can
+    stand for the field's dispatcher.  Decided, and checked, as
+    {!closed_head_call} is. *)
+val member_template_call : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> bool
+
 (** [singleton_dictionary_call ~live occ] -- the class and its one method
     where the variable read at the occurrence [occ], at the head of an
     application, is a singleton class's dictionary: as the walk decided it

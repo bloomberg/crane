@@ -553,12 +553,6 @@ let is_shared_constant_term e =
     && List.for_all closed ts
   | _ -> false
 
-(* Whether [e] names no value of [env]: its only free variables are instance
-   parameters, which C++ takes as template arguments ({!binder_is_instance}),
-   so a static built from it is the same at every evaluation. *)
-let names_no_value e =
-  Escape.IntSet.for_all (binder_is_instance (current_lexenv ())) (Escape.free_rels 0 e)
-
 (* The instance parameter, the class and its one method, where the variable
    [i], read at [occ] at the head of an application, is a singleton class's
    dictionary, as Core decided it ({!Core_elaborate.singleton_dictionary_call});
@@ -5832,11 +5826,10 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     let leading_params = Elaborated_call.leading_params call in
     (* The callee applied to all but the excess args, where that names no
        local: a function -- a handler [case_] combines -- built from nothing
-       the call can change. *)
+       the call can change, as Core decided it
+       ({!Core_elaborate.closed_head_call}). *)
     let closed_head =
-      let n = List.length args - List.length excess_args in
-      (not slot.building_constant) && (not (Table.is_custom id)) && n > 0 && excess_args <> []
-      && names_no_value (MLapp (f, List.filteri (fun i _ -> i < n) args))
+      (not slot.building_constant) && Core_elaborate.closed_head_call ~lex:(current_lexenv ()) use args
     in
     let args =
       let slot = if closed_head then {slot with building_constant = true} else slot in
@@ -5893,16 +5886,12 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        forwards -- all but the instance's.  The dispatcher is a template
        forwarding to [_tcI0::bind] that repeats its argument passing, which a
        C++ compiler is not sure to see through.  A method erased at
-       [std::any] is left to the dispatcher, which does the erasing. *)
+       [std::any] is left to the dispatcher, which does the erasing.  Core
+       decides which calls those are ({!Core_elaborate.member_template_call}). *)
     let cglob =
       match (plan.cp_instantiated.call.instances, plan.cp_instance_type_args, all_type_args) with
       | [inst], [Some inst_ty], _ :: method_targs
-        when (match kept_instance_of_projection ~lex:(current_lexenv ()) id [inst] with
-              | Some _ -> (
-                match resolve_tmeta (instance_class_ty ~lex:(current_lexenv ()) inst) with
-                | Miniml.Tglob (c, _, _) -> Ml_type_util.method_is_member_template c id
-                | _ -> false )
-              | None -> false) ->
+        when Core_elaborate.member_template_call ~lex:(current_lexenv ()) use ml_args ->
         CPPscope (CPPtype_name inst_ty, Common.id_of_global Term id, method_targs)
       | _ ->
         mk_cppglob ?yields:(glob_yields env id (Mlutil.Var_types.apply tys)) id

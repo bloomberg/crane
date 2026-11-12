@@ -330,9 +330,11 @@ type site =
 (** A global application of the program: the occurrence of the use naming
     its callee, the roles of the arguments it writes, its instantiation as
     planned where the walk met it ({!instantiate}), if that succeeded,
-    whether it builds a closed instance ({!builds_closed_instance}), and
+    whether it builds a closed instance ({!builds_closed_instance}),
     whether it calls a class field as a static member of an instance
-    ({!Translation_types.static_projection}). *)
+    ({!Translation_types.static_projection}), whether its head is closed
+    ({!closed_head}), and whether it calls a kept instance's member template
+    ({!member_template_projection}). *)
 type entry = {
   occurrence : Occurrence.t;
   roles : Elaborated_call.role list;
@@ -340,6 +342,8 @@ type entry = {
   site : site;
   closed_instance : bool;
   static_projection : Elaborated_call.static_projection option;
+  closed_head : bool;
+  member_template : bool;
 }
 
 type t = {
@@ -364,6 +368,33 @@ let builds_closed_instance ~lex use args =
   && args <> []
   && Table.builds_instance use.callee
   && Escape.IntSet.for_all (binder_is_instance lex) (Escape.free_rels 0 (MLapp (MLglob use, args)))
+
+(* Whether the call [call] of [use], standing in [lex], applies arguments past its
+   callee's arity to a head -- the callee applied to the rest, at least one --
+   that names no value of [lex]: a function, a handler [case_] combines, say,
+   built from nothing the call can change, so the same every time the call is
+   evaluated.  Not a custom callee, whose text is no function to keep. *)
+let closed_head ~lex use (call : Elaborated_call.t) =
+  let n = List.length call.args - List.length call.excess in
+  (not (Table.is_custom call.callee))
+  && n > 0 && call.excess <> []
+  && Escape.IntSet.for_all (binder_is_instance lex)
+       (Escape.free_rels 0 (MLapp (MLglob use, List.filteri (fun i _ -> i < n) call.args)))
+
+(* Whether the call [call], standing in [lex], projects a class field
+   through its one dictionary argument where that instance was kept
+   ({!Translation_types.kept_instance_of_projection}) and its class declares
+   the field as a member template: the instance's own method can then be
+   called in place of the field's dispatcher. *)
+let member_template_projection ~lex (call : Elaborated_call.t) =
+  match call.instances with
+  | [inst] -> (
+    kept_instance_of_projection ~lex call.callee [inst] <> None
+    &&
+    match resolve_tmeta (instance_class_ty ~lex inst) with
+    | Tglob (c, _, _) -> method_is_member_template c call.callee
+    | _ -> false )
+  | _ -> false
 
 (* The class and its one method, where the variable [i] of [lex] is the
    dictionary of a singleton class: an instance parameter -- a declaration's
@@ -411,10 +442,11 @@ let name (b : builder) r = b := {!b with named = GlobRef.Set_env.add r !b.named}
 let record w ~position lex use args =
   match classify ~lex use.callee args with
   | roles ->
+    let call = of_roles use args roles in
     let planned =
       match
         instantiate ~lex ~expected_ml:position.expected ~stated_ml:position.stated ~caller:w.caller
-          ~scope:w.scope (of_roles use args roles)
+          ~scope:w.scope call
       with
       | inst -> Some inst
       | exception e when CErrors.noncritical e -> None
@@ -426,7 +458,9 @@ let record w ~position lex use args =
         planned;
         site = w.site;
         closed_instance = builds_closed_instance ~lex use args;
-        static_projection = static_projection ~lex use args }
+        static_projection = static_projection ~lex use args;
+        closed_head = closed_head ~lex use call;
+        member_template = member_template_projection ~lex call }
     in
     w.b := {!(w.b) with calls = Ref.User.Map.add use.callee (entry :: others) !(w.b).calls};
     planned
@@ -968,6 +1002,16 @@ let static_projection_call ~lex use args =
   lookup "static projections" ~equal
     ~live:(fun () -> static_projection ~lex use args)
     (entry_fact ~equal (fun e -> e.static_projection) use (List.length args))
+
+let closed_head_call ~lex use args =
+  lookup "closed heads" ~equal:Bool.equal
+    ~live:(fun () -> closed_head ~lex use (elaborate_arguments ~lex use args))
+    (entry_fact ~equal:Bool.equal (fun e -> e.closed_head) use (List.length args))
+
+let member_template_call ~lex use args =
+  lookup "member template projections" ~equal:Bool.equal
+    ~live:(fun () -> member_template_projection ~lex (elaborate_arguments ~lex use args))
+    (entry_fact ~equal:Bool.equal (fun e -> e.member_template) use (List.length args))
 
 let singleton_dictionary_call ~live occ =
   let planned =
