@@ -255,7 +255,7 @@ let region ~outer body =
         if Table.is_custom_match branches then
           let cs =
             custom_match_scrutinee (Common.empty_env ()) ty scrut branches
-              ~var_boxed:(fun i -> boxed (planned scope i)) ~var_type
+              ~var_boxed:(fun i _ -> boxed (planned scope i)) ~var_type
           in
           custom_pattern_binders scope ~cs ~ty ~scrut
         else
@@ -477,53 +477,6 @@ let region ~outer body =
     walk (parameters ~slot_ty:t ~body ids scope) body
   | _ -> walk scope body );
   (!found, List.rev !reads)
-
-(* How a binder kind is named in probe output. *)
-let kind_name = function
-  | Kouter -> "outer"
-  | Kparameter -> "parameter"
-  | Klet -> "let"
-  | Kfix -> "fix"
-  | Kpattern -> "pattern"
-
-let check_read ~occ ~live =
-  if Option.has_some (!tctx).body_owner && Probe.checking () then
-    let describe planned =
-      Pp.(
-        str "a read"
-        ++ (match (!tctx).body_owner with Some r -> str " in " ++ Names.GlobRef.print r | None -> mt ())
-        ++ str ": lowering "
-        ++ str (if live then "boxes" else "does not box")
-        ++ str " its binder, the plan " ++ str planned)
-    in
-    match List.assq_opt occ (!tctx).planned_reads with
-    | Some {rd_boxed; rd_kind} ->
-      let agrees = rd_boxed = live in
-      Probe.hit "repr-read" (fun () ->
-          (if agrees then "agree " else "disagree ")
-          ^ kind_name rd_kind
-          ^ (if live then " live-boxed" else " live-value")
-          ^ match (!tctx).body_owner with
-            | Some r when not agrees -> " " ^ Pp.string_of_ppcmds (Names.GlobRef.print r)
-            | _ -> "");
-      if not agrees then
-        Probe.violation "variable read representation"
-          (describe ((if rd_boxed then "boxes" else "does not") ^ " (" ^ kind_name rd_kind ^ ")"))
-    | None ->
-      Probe.hit "repr-read" (fun () -> "unplanned" ^ if live then " live-boxed" else " live-value");
-      Probe.violation "variable read representation" (describe "has no answer")
-
-let has_read occ = Option.has_some (List.assq_opt occ (!tctx).planned_reads)
-
-(** [read ~occ live] -- whether the variable read at [occ] holds a box: the
-    region's plan, where it has an answer, else [live ()].  Under
-    [CRANE_CHECK_IR], [live ()] is the oracle the plan is held to. *)
-let read ~occ live =
-  match List.assq_opt occ (!tctx).planned_reads with
-  | Some {rd_boxed; _} ->
-    if Option.has_some (!tctx).body_owner && Probe.checking () then check_read ~occ ~live:(live ());
-    rd_boxed
-  | None -> live ()
 
 let check ?(as_bound = false) ~site ~field ~live () =
   let describe planned =
