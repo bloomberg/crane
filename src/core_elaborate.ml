@@ -828,8 +828,13 @@ type tally = {found : int; recomputed : int; taken : int; live : int}
 let no_tally = {found = 0; recomputed = 0; taken = 0; live = 0}
 let tally = State.cell State.Unit no_tally
 
+(* Whether the unit's elaborations are installed: planning translates
+   bodies before they are. *)
+let walked = State.cell State.Unit false
+
 let install t =
   installed := t;
+  walked := true;
   tally := no_tally
 
 (* A body's annotations may be rewritten before it is translated, which
@@ -865,19 +870,25 @@ let extended t use n =
 
 let elaboration ~lex use args =
   let elaborate () = elaborate_arguments ~lex use args in
+  let from_core roles =
+    let call = of_roles use args roles in
+    if Probe.checking () && not (Elaborated_call.same_roles call (elaborate ())) then
+      CErrors.anomaly
+        Pp.(
+          str "Crane: a call to " ++ str (Table.kername_of_global use.callee)
+          ++ str " elaborated from Core disagrees with its elaboration where it is translated." );
+    call
+  in
   match Common.get_phase () with
-  | Common.Plan -> elaborate ()
+  | Common.Plan -> (
+    match roles !installed use (List.length args) with
+    | Some roles -> from_core roles
+    | None -> elaborate () )
   | Common.Emit -> (
     match roles !installed use (List.length args) with
     | Some roles ->
       tally := {!tally with found = !tally.found + 1};
-      let call = of_roles use args roles in
-      if Probe.checking () && not (Elaborated_call.same_roles call (elaborate ())) then
-        CErrors.anomaly
-          Pp.(
-            str "Crane: a call to " ++ str (Table.kername_of_global use.callee)
-            ++ str " elaborated from Core disagrees with its elaboration where it is translated." );
-      call
+      from_core roles
     | None ->
       tally := {!tally with recomputed = !tally.recomputed + 1};
       if not (extended !installed use (List.length args)) then
@@ -914,24 +925,30 @@ let planned t use n =
 let instantiation ~lex ~expected_ml ~stated_ml ~caller ~scope use args =
   let call = elaboration ~lex use args in
   let live () = instantiate ~lex ~expected_ml ~stated_ml ~caller ~scope call in
+  let describe what =
+    Pp.(str "a call to " ++ str (Table.kername_of_global use.callee) ++ str what)
+  in
+  let from_core p =
+    let p = Elaborated_call.at_call p call in
+    if Probe.checking () then begin
+      let agrees = Elaborated_call.same_instantiation p (live ()) in
+      Probe.hit "elab-plan" (fun () -> if agrees then "agree" else "disagree " ^ Table.kername_of_global use.callee);
+      if not agrees then
+        Probe.violation "planned instantiations"
+          (describe " is instantiated where it is translated otherwise than Core planned it.")
+    end;
+    p
+  in
   match Common.get_phase () with
-  | Common.Plan -> live ()
+  | Common.Plan -> (
+    match planned !installed use (List.length args) with
+    | `Planned p -> from_core p
+    | `Ambiguous _ | `Unwalked -> live () )
   | Common.Emit -> (
-    let describe what =
-      Pp.(str "a call to " ++ str (Table.kername_of_global use.callee) ++ str what)
-    in
     match planned !installed use (List.length args) with
     | `Planned p ->
       tally := {!tally with taken = !tally.taken + 1};
-      let p = Elaborated_call.at_call p call in
-      if Probe.checking () then begin
-        let agrees = Elaborated_call.same_instantiation p (live ()) in
-        Probe.hit "elab-plan" (fun () -> if agrees then "agree" else "disagree " ^ Table.kername_of_global use.callee);
-        if not agrees then
-          Probe.violation "planned instantiations"
-            (describe " is instantiated where it is translated otherwise than Core planned it.")
-      end;
-      p
+      from_core p
     | (`Ambiguous _ | `Unwalked) as why ->
       tally := {!tally with live = !tally.live + 1};
       Probe.hit "elab-plan" (fun () ->
@@ -950,24 +967,23 @@ let instantiation ~lex ~expected_ml ~stated_ml ~caller ~scope use args =
              | `Unwalked -> " is translated where Core elaboration did not reach it." ) );
       live () )
 
-(* [lookup what ~equal ~live planned] -- in emission, the answer the
-   installed walk planned ([planned], [None] where it planned none or its
-   entries disagree), checked under [CRANE_CHECK_IR] against [live ()], the
-   answer the traversal's own environment gives, which is taken where the
-   walk planned none; in planning, [live ()]. *)
+(* [lookup what ~equal ~live planned] -- the answer the installed walk
+   planned ([planned], [None] where it planned none or its entries
+   disagree), checked under [CRANE_CHECK_IR] against [live ()], the answer
+   the traversal's own environment gives, which is taken where the walk
+   planned none or is not installed yet. *)
 let lookup what ~equal ~live planned =
-  match Common.get_phase () with
-  | Common.Plan -> live ()
-  | Common.Emit -> (
-    match planned with
-    | Some p ->
-      Probe.hit "elab-fact" (fun () -> String.map (function ' ' -> '_' | c -> c) what ^ " planned");
-      if Probe.checking () && not (equal p (live ())) then
-        Probe.violation what (Pp.str "the answer translation's environment gives differs from Core's");
-      p
-    | None ->
-      Probe.hit "elab-fact" (fun () -> String.map (function ' ' -> '_' | c -> c) what ^ " live");
-      live () )
+  let phase = match Common.get_phase () with Common.Plan -> "plan " | Common.Emit -> "" in
+  match planned with
+  | Some _ when not !walked -> live ()
+  | Some p ->
+    Probe.hit "elab-fact" (fun () -> phase ^ String.map (function ' ' -> '_' | c -> c) what ^ " planned");
+    if Probe.checking () && not (equal p (live ())) then
+      Probe.violation what (Pp.str "the answer translation's environment gives differs from Core's");
+    p
+  | None ->
+    Probe.hit "elab-fact" (fun () -> phase ^ String.map (function ' ' -> '_' | c -> c) what ^ " live");
+    live ()
 
 (* The one value the answers all give, if they agree on one. *)
 let agreed equal = function

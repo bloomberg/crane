@@ -1013,6 +1013,7 @@ let plan_accessors = "plan_accessors"
 let plan_nested_structs = "plan_nested_structs"
 let plan_scopes = "plan_scopes"
 let plan_instance_promoted_types = "plan_instance_promoted_types"
+let elaborate_calls = "elaborate_calls"
 let plan_callables = "plan_callables"
 let install_callables = "install_callables"
 
@@ -1029,6 +1030,7 @@ let layout_pass_names =
     plan_accessors;
     plan_nested_structs;
     plan_instance_promoted_types;
+    elaborate_calls;
     plan_callables;
     install_callables ]
 
@@ -1044,10 +1046,12 @@ let layout_pass_names =
     ({!Cpp.plan_concept_prerequisites}), which constants are
     accessor functions ({!Cpp.plan_accessors}), and how a definition written
     outside its struct's body names the struct ({!Cpp.plan_scopes}), then
-    plan the callable of each
+    elaborate every call of the unit and install the elaborations
+    ({!Core_elaborate.structure}), so that planning the callables reads
+    them as emission does, then plan the callable of each
     function and method a render will generate, installing each before the
     next is decided.  Returns all of them, with the callables assumed of the
-    functions that have no plan.  Under [CRANE_CHECK_IR] the callables are
+    functions that have no plan, and the elaborations.  Under [CRANE_CHECK_IR] the callables are
     planned a second time with every list reversed, and the two must agree:
     a head is a function of its declaration, not of what was planned before
     it.  Runs in the planning phase, which is the one that names modules. *)
@@ -1086,6 +1090,14 @@ let plan_layout struc =
   Pipeline_trace.event "layout" plan_instance_promoted_types;
   let instance_promoted_types = Cpp.plan_instance_promoted_types struc in
   Install_legacy_plan.install_instance_promoted_types instance_promoted_types;
+  Pipeline_trace.event "layout" elaborate_calls;
+  let elaborations =
+    Translation_state.generating_outside_modules @@ fun () ->
+    Core_elaborate.structure
+      ~methods:(fun kn ind -> List.map (fun (_, vars, candidate) -> (vars, candidate)) (Cpp.registered_methods kn ind))
+      struc
+  in
+  Core_elaborate.install elaborations;
   Pipeline_trace.event "layout" plan_callables;
   let ((callables, instance_methods) as planned) = Cpp.plan_callables struc in
   if
@@ -1113,7 +1125,8 @@ let plan_layout struc =
       scopes;
       instance_promoted_types },
     planned,
-    assumed )
+    assumed,
+    elaborations )
 
 (** The tables' sizes ({!Table.census}), and how many names emission had
     decided ({!Common.names_decided_while_emitting}), at one point of a
@@ -1534,22 +1547,14 @@ let install_template_kinds = "install_template_kinds"
 let represent_pass_names = [template_kinds; install_template_kinds]
 
 (** The steps run on the unit's Core once its target is planned, in order. *)
-let elaborate_calls = "elaborate_calls"
 let plan_foreign_callables = "plan_foreign_callables"
-let elaborate_pass_names = [elaborate_calls; plan_foreign_callables]
+let elaborate_pass_names = [plan_foreign_callables]
 
-(** Elaborate every call of [struc] and install the elaborations, then plan
-    the callables of the globals it names that it does not declare, and the
-    calls of class fields it may project through an instance. *)
-let elaborate_unit struc =
+(** Plan the callables of the globals the unit's [elaborations] name that it
+    does not declare, and the calls of class fields it may project through
+    an instance. *)
+let elaborate_unit elaborations =
   Translation_state.generating_outside_modules @@ fun () ->
-  Pipeline_trace.event "elaborate" elaborate_calls;
-  let elaborations =
-    Core_elaborate.structure
-      ~methods:(fun kn ind -> List.map (fun (_, vars, candidate) -> (vars, candidate)) (Cpp.registered_methods kn ind))
-      struc
-  in
-  Core_elaborate.install elaborations;
   Pipeline_trace.event "elaborate" plan_foreign_callables;
   Callable_abi.install_foreign
     (fun r -> Translation_calls.callee_abi ~instances:0 r)
@@ -1631,9 +1636,9 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   ignore (Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace) struc);
   let plan = plan_representation plan struc in
   let planned = observed_fingerprint ~stage:"unit" struc in
-  let modules, representation, callables, assumed = plan_layout struc in
+  let modules, representation, callables, assumed, elaborations = plan_layout struc in
   let plan = Target_plan.with_layout plan modules representation callables assumed in
-  elaborate_unit struc;
+  elaborate_unit elaborations;
   let planned_checkpoint = checkpoint () in
   (* Both bodies are rendered before either file is opened.  A preamble has to
      say what the body it precedes demands -- which headers it includes, which
@@ -2580,8 +2585,8 @@ let extract_and_compile ~opaque_access file l =
 let print_one_decl struc mp decl =
   let d = descr () in
   reset_renaming_tables ();
-  ignore (plan_layout struc);
-  elaborate_unit struc;
+  let _, _, _, _, elaborations = plan_layout struc in
+  elaborate_unit elaborations;
   end_planning ();
   let ans =
     Cpp.generate_decl_ahead ~module_:mp decl;

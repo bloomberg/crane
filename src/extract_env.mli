@@ -158,10 +158,11 @@ val unit_pass_names : string list
 (** Deciding the unit's data representation once its preparation has run. *)
 val represent_pass_names : string list
 
-(** Settling the unit's layout, naming what it declares and refers to, and
-    planning its callables, before anything of it is rendered. *)
+(** Settling the unit's layout, naming what it declares and refers to,
+    elaborating its calls, and planning its callables, before anything of it
+    is rendered. *)
 val layout_pass_names : string list
 
-(** The steps run on a unit's Core once its target is planned
-    ({!Core_elaborate.structure}, {!Callable_abi.install_foreign}), in order. *)
+(** The steps run on a unit's Core once its layout is planned
+    ({!Callable_abi.install_foreign}), in order. *)
 val elaborate_pass_names : string list

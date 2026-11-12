@@ -104,7 +104,9 @@ val referenced : t -> Names.GlobRef.t list
     for an application [t] did not walk. *)
 val roles : t -> Miniml.global_use -> int -> Elaborated_call.role list option
 
-(** Make [t] the unit's elaborations, the ones {!elaboration} reads. *)
+(** Make [t] the unit's elaborations, the ones {!elaboration} reads.  They
+    are installed before the unit's callables are planned, so planning reads
+    them too; until then every answer below is decided where it is asked. *)
 val install : t -> unit
 
 (** [elaboration ~lex use args] -- the elaboration of the call [use args]
@@ -112,7 +114,8 @@ val install : t -> unit
     have for the application naming its callee by [use], or, where they have
     none, as elaborated here in [lex] -- which under [CRANE_CHECK_IR] is a
     violation: every call emission translates was elaborated from Core.
-    Planning elaborates every call itself. *)
+    Planning takes the installed roles alike, and elaborates a call they
+    have none for itself, which is no violation there. *)
 val elaboration : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> Elaborated_call.t
 
 (** [instantiation ~lex ~expected_ml ~stated_ml ~caller ~scope use args]
@@ -124,7 +127,9 @@ val elaboration : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> Ela
     {!elaboration} here, with the ML types the traversal says its position
     expects and states -- which under [CRANE_CHECK_IR] is a violation, bar a
     call translation extended itself.  Under [CRANE_CHECK_IR] a planned one
-    is checked against that one.  Planning instantiates every call itself. *)
+    is checked against that one.  Planning takes a planned instantiation
+    alike, and instantiates a call it has none for itself, which is no
+    violation there. *)
 val instantiation :
   lex:Lexenv.t ->
   expected_ml:Miniml.ml_type option ->
@@ -140,9 +145,9 @@ val instantiation :
     that it is the same value every time it is evaluated: as the walk
     decided it where it met the application naming its callee by [use],
     from the call and the binders of its own environment.  Where the walk
-    made no single decision there, and in planning, it is decided from the
-    call and [lex]; under [CRANE_CHECK_IR] a planned decision is checked
-    against that one. *)
+    made no single decision there, or is not installed yet, it is decided
+    from the call and [lex]; under [CRANE_CHECK_IR] a planned decision is
+    checked against that one. *)
 val closed_instance_call : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> bool
 
 (** [static_projection_call ~lex use args] -- where the call [use args]
@@ -151,9 +156,9 @@ val closed_instance_call : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast li
     parameters, and the operands the call leaves out
     ({!Translation_types.static_projection}), as the walk decided it where
     it met the application, from the call and the binders of its own
-    environment.  Where the walk made no single decision there, and in
-    planning, it is decided from the call and [lex]; under [CRANE_CHECK_IR]
-    a planned decision is checked against that one. *)
+    environment.  Where the walk made no single decision there, or is not
+    installed yet, it is decided from the call and [lex]; under
+    [CRANE_CHECK_IR] a planned decision is checked against that one. *)
 val static_projection_call :
   lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> Elaborated_call.static_projection option
 
@@ -163,8 +168,9 @@ val static_projection_call :
     nothing the call can change, the same every time the call is evaluated.
     As the walk decided it where it met the application, from the call and
     the binders of its own environment; where the walk made no single
-    decision there, and in planning, decided from the call and [lex]; under
-    [CRANE_CHECK_IR] a planned decision is checked against that one. *)
+    decision there, or is not installed yet, decided from the call and
+    [lex]; under [CRANE_CHECK_IR] a planned decision is checked against that
+    one. *)
 val closed_head_call : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> bool
 
 (** [member_template_call ~lex use args] -- whether the call [use args]
@@ -178,8 +184,8 @@ val member_template_call : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast li
 (** [singleton_dictionary_call ~live occ] -- the class and its one method
     where the variable read at the occurrence [occ], at the head of an
     application, is a singleton class's dictionary: as the walk decided it
-    for that occurrence, from the binder its environment has for it.  In
-    planning it is [live ()], translation's own reading; under
+    for that occurrence, from the binder its environment has for it.  Until
+    the walk is installed it is [live ()], translation's own reading; under
     [CRANE_CHECK_IR] a planned decision is checked against that one. *)
 val singleton_dictionary_call :
   live:(unit -> (Names.GlobRef.t * Names.GlobRef.t) option) ->
