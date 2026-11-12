@@ -293,16 +293,16 @@ let of_modtype_concept (c : Modtype_concept.t) =
   let concepts () = need [Table.Standard "concepts"] in
   let rec cty : Modtype_concept.concept_type -> unit = function
     | Member {arguments; _} -> List.iter cty arguments
-    | Parameter t | Plain t -> need (of_type (Legacy_minicpp_to_cpp_ir.type_exn t))
+    | Parameter t | Plain t -> need (of_type t)
     | Foreign {pieces; arguments; _} ->
       List.iter
-        (function Fp_type i | Fp_element (i, _) -> Option.iter cty (List.nth_opt arguments i) | _ -> ())
+        (function Cpp_ir.Foreign.Type_argument i | Element (i, _) -> Option.iter cty (List.nth_opt arguments i) | _ -> ())
         pieces
     | Global (r, args) ->
       need (of_type (Entity_application (r, [], [])));
       List.iter cty args
     | Namespaced (r, r', e, args) ->
-      need (of_type (Legacy_minicpp_to_cpp_ir.type_exn (Tnamespace (r, Tglob (r', [], e)))));
+      need (of_type (In_namespace (r, Entity_application (r', [], e))));
       List.iter cty args
     | Shared_pointer t -> cty t
     | Variant (_, ts) -> List.iter cty ts
@@ -336,6 +336,6 @@ let of_modtype_concept (c : Modtype_concept.t) =
   ( match c with
   | Alias {refinements; _} ->
     if refinements <> [] then concepts ();
-    List.iter (fun (_, t) -> need (of_type (Legacy_minicpp_to_cpp_ir.type_exn t))) refinements
+    List.iter (fun (_, t) -> need (of_type t)) refinements
   | Constraint c -> constraint_ c );
   !found

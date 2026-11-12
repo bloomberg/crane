@@ -9,7 +9,6 @@ open Pp
 open Util
 open Names
 open Common
-open Minicpp
 open Cpp_state
 open Cpp_names
 open Cpp_print
@@ -73,13 +72,9 @@ let pp_member_type ~enum name r args =
 
 let type_names frame ty = global_names [frame] (type_globals ty)
 
-(* A type of a module type's concept, which no finished declaration holds,
-   in CppIR. *)
-let concept_cpp_type t = Legacy_minicpp_to_cpp_ir.type_exn t
-
 (* The type [Namespaced (r, r', e, _)] names: [r'] written in the namespace
    [r]. *)
-let namespaced r r' e = concept_cpp_type (Tnamespace (r, Tglob (r', [], e)))
+let namespaced r r' e : Cpp_ir.Resolved.Type.t = In_namespace (r, Entity_application (r', [], e))
 
 let rec concept_type_names frame : Modtype_concept.concept_type -> _ = function
   | Member {member; arguments; _} -> (frame, Cpp_resolution.Global (Type, member)) :: concept_types_names frame arguments
@@ -89,7 +84,7 @@ let rec concept_type_names frame : Modtype_concept.concept_type -> _ = function
   | Variant (_, args) -> concept_types_names frame args
   | Shared_pointer ty -> concept_type_names frame ty
   | Function (dom, cod) -> concept_types_names frame (cod :: dom)
-  | Parameter ty | Plain ty -> type_names frame (concept_cpp_type ty)
+  | Parameter ty | Plain ty -> type_names frame ty
 
 and concept_types_names frame tys = List.concat_map (concept_type_names frame) tys
 
@@ -119,7 +114,7 @@ let modules frame = List.map (fun p -> (frame, Cpp_resolution.Module p))
 let concept_body_names : Modtype_concept.t -> _ = function
   | Alias {base; refinements} ->
     (([], Cpp_resolution.Modtype_concept base) :: modules [] (concept_extra_args base))
-    @ List.concat_map (fun (_, ty) -> type_names [] (concept_cpp_type ty)) refinements
+    @ List.concat_map (fun (_, ty) -> type_names [] ty) refinements
   | Constraint c -> constraint_names [] c
 
 let modtype_concept_names ~path ~params (c : Modtype_concept.t) =
@@ -133,10 +128,10 @@ let rec pp_concept_type ctx names frame (t : Modtype_concept.concept_type) : Pp.
   match t with
   | Member {member; enum; arguments} ->
     pp_member_type ~enum (name_in ctx names frame (Global (Type, member))) member (List.map pp_concept_type arguments)
-  | Parameter ty -> str "typename " ++ pp_type ctx (concept_cpp_type ty)
+  | Parameter ty -> str "typename " ++ pp_type ctx ty
   | Foreign {custom; pieces; arguments} ->
     Common.writes_custom custom;
-    pp_type_pieces custom (List.map Legacy_minicpp_to_cpp_ir.foreign_piece pieces) (fun i ->
+    pp_type_pieces custom pieces (fun i ->
         Option.map pp_concept_type (List.nth_opt arguments i) )
   | Global (r, []) -> pp_type ctx (Entity_application (r, [], []))
   | Global (r, args) ->
@@ -151,12 +146,12 @@ let rec pp_concept_type ctx names frame (t : Modtype_concept.concept_type) : Pp.
     ++ prlist_with_sep (fun () -> str ", ") pp_concept_type args
     ++ str ">"
   | Shared_pointer ty -> str ((sn ()).ns ^ "::") ++ str "shared_ptr<" ++ pp_concept_type ty ++ str ">"
-  | Variant (Inline_variant, tys) ->
+  | Variant (Inline, tys) ->
     str ((sn ()).ns ^ "::")
     ++ str "variant<"
     ++ prlist_with_sep (fun () -> str ", ") pp_concept_type tys
     ++ str ">"
-  | Variant (Shared_variant, tys) ->
+  | Variant (Shared, tys) ->
     str Crane_rt.shared_variant
     ++ str "<"
     ++ prlist_with_sep (fun () -> str ", ") pp_concept_type tys
@@ -168,7 +163,7 @@ let rec pp_concept_type ctx names frame (t : Modtype_concept.concept_type) : Pp.
     ++ str "("
     ++ prlist_with_sep (fun () -> str ", ") pp_concept_type dom
     ++ str ")>"
-  | Plain ty -> pp_type ctx (concept_cpp_type ty)
+  | Plain ty -> pp_type ctx ty
 
 (** One line of a module-type concept's [requires] clause
     ({!Modtype_concept.requirement}).  A nullary value may be a static data
@@ -293,7 +288,7 @@ let pp_refinements ctx refinements =
         ++ str ("<typename " ^ self_scope)
         ++ str path
         ++ str ", "
-        ++ pp_type ctx (concept_cpp_type cpp)
+        ++ pp_type ctx cpp
         ++ str ">" )
       refinements
   in

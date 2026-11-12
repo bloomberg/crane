@@ -6,9 +6,7 @@
     Every other move is decided over Core ({!Ownership_ir}) or made as
     control is lowered. *)
 
-open Minicpp
-
-val drop_return_moves : cpp_decl -> cpp_decl
+val drop_return_moves : Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t
 (** Remove the [std::move] around the value of every [return] that moves it
     anyway -- a call, a construction, or a by-value local or parameter of the
     innermost function -- where writing it would only suppress copy elision.

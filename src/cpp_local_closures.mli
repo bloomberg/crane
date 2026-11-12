@@ -14,4 +14,4 @@
        becomes the end of the function.}} *)
 
 (** Apply every rule throughout [d], each function body on its own. *)
-val transform_decl : Minicpp.cpp_decl -> Minicpp.cpp_decl
+val transform_decl : Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t

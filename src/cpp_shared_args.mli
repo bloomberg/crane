@@ -23,4 +23,4 @@
 (** [transform_decl d] is [d] with each repeated argument of every
     statement's unconditional calls bound once, to a fresh [_onceN] local
     that names nothing else in [d]. *)
-val transform_decl : Minicpp.cpp_decl -> Minicpp.cpp_decl
+val transform_decl : Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t

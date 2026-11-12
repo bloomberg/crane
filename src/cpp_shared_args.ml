@@ -5,60 +5,64 @@
     [cpp_shared_args.mli]. *)
 
 open Names
-open Minicpp
+
+type expr = Cpp_ir.Lowered.Expr.t
+type stmt = Cpp_ir.Lowered.Stmt.t
 
 (* Whether evaluating [e] a second time costs nothing and does nothing. *)
-let rec free_to_repeat e =
-  match e with
-  | CPPvar _ | CPPint _ | CPPuint _ | CPPbool _ | CPPfloat _ | CPPstring _
-  | CPPenum_val _ | CPPnullptr | CPPnumeral _ ->
-    true
-  | CPPderef e | CPPget' (e, _, _) | CPPaccess (_, e, _) -> free_to_repeat e
+let rec free_to_repeat : expr -> bool = function
+  | Local _ | Literal _ | Enum_value _ | Numeral _ -> true
+  | Dereference e | Project (e, _, _) | Access (_, e, _) -> free_to_repeat e
   | _ -> false
 
 (* The text of a mapping that splices some argument more than once. *)
-let repeating_text = function
-  | CPPglob (_, _, Some {ci_inline = Some {it_linear = false; it_text; _}; _}) -> Some it_text
+let repeating_text : expr -> string option = function
+  | Entity (_, _, Some {inline = Some {linear = false; text; _}; _}) -> Some text
   | _ -> None
+
+(* Whether [e] evaluates each of its operands whenever it is evaluated: not a
+   lambda, a conditional or a connective. *)
+let evaluates_operands : expr -> bool = function
+  | Lambda _ | Conditional _ | Binary ((And | Or), _, _) -> false
+  | _ -> true
 
 (* [e] with each argument it must evaluate once named, at every position [e]
    evaluates unconditionally; [bind x a] binds [x] to [a] ahead of [e], in
    evaluation order. *)
-let rec name_args fresh bind e =
-  if not (evaluates_children e) then e
+let rec name_args fresh bind (e : expr) : expr =
+  if not (evaluates_operands e) then e
   else
-    let e = map_expr (name_args fresh bind) Fun.id Fun.id e in
+    let e = Cpp_ir.Map.expr (Cpp_ir.Map.make ~expr:(name_args fresh bind) ~stmt:Fun.id ~type_:Fun.id ()) e in
     match e with
-    | CPPfun_call (sg, f, args) -> (
+    | Call (sg, f, args) -> (
       match repeating_text f with
       | Some text ->
         let named =
           List.mapi
             (fun i a ->
-              if Foreign_template.arg_mentions text i > 1 && not (free_to_repeat a)
-              then (
+              if Foreign_template.arg_mentions text i > 1 && not (free_to_repeat a) then (
                 let x = fresh () in
                 bind x a;
-                CPPvar x )
-              else a)
-            (call_args args)
+                (Local x : expr) )
+              else a )
+            args
         in
-        CPPfun_call (sg, f, of_reversed (List.rev named))
+        Call (sg, f, named)
       | None -> e )
     | _ -> e
 
 (* The statements a rewrite of [s] puts ahead of it, and [s] rewritten: only
    where [s] evaluates its expression once, as its first act. *)
-let in_stmt fresh s =
+let in_stmt fresh (s : stmt) : stmt list =
   let bound = ref [] in
-  let bind x a = bound := Sasgn (x, Declare (Tref (Forwarding, Tauto), None), a) :: !bound in
+  let bind x a = bound := (Bind_variable (x, Declare (Reference (Forwarding, Auto), None), a) : stmt) :: !bound in
   let e' e = name_args fresh bind e in
-  let s =
+  let s : stmt =
     match s with
-    | Sreturn (Some e) -> Sreturn (Some (e' e))
-    | Sexpr e -> Sexpr (e' e)
-    | Sasgn (y, t, e) -> Sasgn (y, t, e' e)
-    | Sif (c, a, b) -> Sif (e' c, a, b)
+    | Return (Some e) -> Return (Some (e' e))
+    | Expression e -> Expression (e' e)
+    | Bind_variable (y, t, e) -> Bind_variable (y, t, e' e)
+    | If i -> If {i with condition = e' i.condition}
     | s -> s
   in
   List.rev !bound @ [s]
@@ -67,7 +71,9 @@ let in_stmt fresh s =
    each block noted before its statements are rewritten. *)
 let transform_decl d =
   let used = ref Id.Set.empty in
-  let note_ids stmts = used := Id.Set.union !used (Id.Set.of_list (declared_ids stmts @ free_vars_body stmts)) in
+  let note_ids stmts =
+    used := Id.Set.union !used (Id.Set.of_list (Cpp_ir.Variables.declared stmts @ Cpp_ir.Variables.free_in_body stmts))
+  in
   let n = ref 0 in
   let rec fresh () =
     incr n;
@@ -77,6 +83,7 @@ let transform_decl d =
   let rec block stmts =
     note_ids stmts;
     List.concat_map (fun s -> in_stmt fresh (stmt s)) stmts
-  and stmt s = map_stmt ~fl:block expr stmt Fun.id s
-  and expr e = map_expr ~fl:block expr stmt Fun.id e in
-  map_decl ~fl:block expr stmt Fun.id d
+  and stmt s = Cpp_ir.Map.stmt (children ()) s
+  and expr e = Cpp_ir.Map.expr (children ()) e
+  and children () = Cpp_ir.Map.make ~stmts:block ~expr ~stmt ~type_:Fun.id () in
+  Cpp_ir.Map.decl (children ()) d

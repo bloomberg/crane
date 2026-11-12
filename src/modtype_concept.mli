@@ -8,28 +8,29 @@
     custom mapping.  The printer only spells those answers. *)
 
 open Names
-open Minicpp
+
+module Ir = Cpp_ir.Resolved
 
 (** A type as a concept's requirements spell it, from inside the concept. *)
 type concept_type =
   | Member of {member : GlobRef.t; enum : bool; arguments : concept_type list}
       (** A type member of [M]: [typename M::x], applied to [arguments]
           through [template] when it has any. *)
-  | Parameter of cpp_type
+  | Parameter of Ir.Type.t
       (** A type of a parameter of the functor declaring the module type,
           which the concept is over too: [typename P::t]. *)
-  | Foreign of {custom : GlobRef.t; pieces : foreign_piece list; arguments : concept_type list}
+  | Foreign of {custom : GlobRef.t; pieces : Cpp_ir.Foreign.piece list; arguments : concept_type list}
       (** The custom [custom]'s mapping template, its holes filled with the
           arguments. *)
   | Global of GlobRef.t * concept_type list  (** Any other named type, applied. *)
-  | Namespaced of GlobRef.t * GlobRef.t * cpp_expr list * concept_type list
+  | Namespaced of GlobRef.t * GlobRef.t * Ir.Expr.t list * concept_type list
       (** A named type qualified by a namespace not inside [M], applied. *)
   | Shared_pointer of concept_type  (** [std::shared_ptr] of the type. *)
-  | Variant of variant_storage * concept_type list
-      (** A variant of the alternatives, stored as {!Minicpp.variant_storage}
-          says. *)
+  | Variant of Cpp_ir.Type.Variant_storage.t * concept_type list
+      (** A variant of the alternatives, stored as
+          {!Cpp_ir.Type.Variant_storage} says. *)
   | Function of concept_type list * concept_type  (** [crane::fn<R(A...)>] *)
-  | Plain of cpp_type  (** A type no requirement qualifies. *)
+  | Plain of Ir.Type.t  (** A type no requirement qualifies. *)
 
 (** One requirement on [M]. *)
 type requirement =
@@ -66,7 +67,7 @@ and item =
 
 (** The concept of a module type. *)
 type t =
-  | Alias of {base : ModPath.t; refinements : (Id.t list * cpp_type) list}
+  | Alias of {base : ModPath.t; refinements : (Id.t list * Ir.Type.t) list}
       (** Another module type's concept, conjoined with the [same_as]
           constraints of its [with Definition] refinements, innermost first.
           A [with Module] refinement constrains nothing: its module is

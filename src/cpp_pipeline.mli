@@ -2,7 +2,9 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** The passes a MiniCpp declaration goes through between translation and the
-    printer.
+    printer.  It is lowered into CppIR ({!Cpp_ir.Lowered}) first; the passes
+    before the {!Cpp_erasure} seam not yet written over CppIR run on the
+    MiniCpp it converts back to ({!Cpp_ir_to_legacy_minicpp}).
 
     Control was lowered as the declaration was generated
     ({!Control_to_legacy_minicpp}), and is only checked here, under

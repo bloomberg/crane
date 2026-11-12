@@ -14,7 +14,7 @@ cd "$(dirname "$0")/.."
 
 TRANSLATION="Translation Translation_state Translation_support Translation_types Translation_calls Gen_decls Gen_context Gen_records Gen_instances Gen_functions Gen_inductives Plan_templates Cpp_leaf_plan Cpp_ind Cpp Extract_env Structure_analysis Method_registry"
 PRINTER="Cpp_print"
-FINISHING="Cpp_pipeline Loopify Loopify_analysis Loopify_tail Loopify_tmc Loopify_frame Cpp_depth Borrow_projection Cpp_erasure Function_entity Cpp_constants Cpp_local_closures Cpp_shared_args Cpp_simplify Cpp_temporaries Move_check Ownership_ir Return_moves Control_to_legacy_minicpp Legacy_minicpp_to_cpp_ir"
+FINISHING="Cpp_pipeline Loopify Loopify_analysis Loopify_tail Loopify_tmc Loopify_frame Cpp_depth Borrow_projection Cpp_erasure Function_entity Cpp_constants Cpp_local_closures Cpp_shared_args Cpp_simplify Cpp_temporaries Move_check Ownership_ir Return_moves Control_to_legacy_minicpp Legacy_minicpp_to_cpp_ir Cpp_ir_to_legacy_minicpp"
 
 # The printer reads Cpp_erasure's settled declarations, and converts into
 # CppIR the one kind of MiniCpp it is still handed, a type translation's
@@ -26,11 +26,11 @@ PRINTER_FINISHING=${PRINTER_FINISHING/ Legacy_minicpp_to_cpp_ir/}
 # layer modules : forbidden dependencies
 rules=(
   "core/inductive miniml minicpp foreign_template crane_rt tparam_kinds scheme ml_schema lexenv : $TRANSLATION $PRINTER $FINISHING Table Common"
-  "cpp_pipeline loopify loopify_analysis loopify_tail loopify_tmc loopify_frame cpp_depth borrow_projection cpp_erasure function_entity cpp_constants cpp_local_closures cpp_shared_args cpp_simplify cpp_temporaries move_check ownership_ir return_moves control_to_legacy_minicpp legacy_minicpp_to_cpp_ir : $TRANSLATION $PRINTER"
+  "cpp_pipeline loopify loopify_analysis loopify_tail loopify_tmc loopify_frame cpp_depth borrow_projection cpp_erasure function_entity cpp_constants cpp_local_closures cpp_shared_args cpp_simplify cpp_temporaries move_check ownership_ir return_moves control_to_legacy_minicpp legacy_minicpp_to_cpp_ir cpp_ir_to_legacy_minicpp : $TRANSLATION $PRINTER"
   # CppIR is one node of the dependency graph (src/cpp_ir/ is a namespace), so
   # none of its files may reach a module that names it: not MiniCpp, not the
   # program, not the conversion into it.
-  "cpp_ir/grammar cpp_ir/representation_obligation cpp_ir/type cpp_ir/expr cpp_ir/stmt cpp_ir/decl cpp_ir/field cpp_ir/template cpp_ir/inductive cpp_ir/foreign cpp_ir/function cpp_ir/struct cpp_ir/type_alias cpp_ir/member_definition cpp_ir/binary_operator cpp_ir/unary_operator cpp_ir/resolved cpp_ir/lowered cpp_ir/children cpp_ir/globrefs cpp_ir/written : $TRANSLATION $PRINTER $FINISHING Table Common Minicpp Unit_program"
+  "cpp_ir/grammar cpp_ir/representation_obligation cpp_ir/type cpp_ir/expr cpp_ir/stmt cpp_ir/decl cpp_ir/field cpp_ir/template cpp_ir/inductive cpp_ir/foreign cpp_ir/function cpp_ir/struct cpp_ir/type_alias cpp_ir/member_definition cpp_ir/binary_operator cpp_ir/unary_operator cpp_ir/resolved cpp_ir/lowered cpp_ir/children cpp_ir/globrefs cpp_ir/written cpp_ir/resolve cpp_ir/map cpp_ir/variables : $TRANSLATION $PRINTER $FINISHING Table Common Minicpp Unit_program"
   "cpp_print : $TRANSLATION $PRINTER_FINISHING"
 )
 
