@@ -308,3 +308,13 @@ let type_children : type p. (p Type.t -> unit) -> p Type.t -> unit =
   | Variable _ | Instance _ | Promoted_member _ | Erased _ | Void | Any | Carrier_parameter | Auto | Type_of _
   | Decltype_auto | Obligation _ ->
     ()
+
+(** Whether [p] holds of [t] or of a type inside it ({!type_children}): a
+    type constructor's head is entered, a [decltype]'s expression is not. *)
+let rec exists_type : type p. (p Type.t -> bool) -> p Type.t -> bool =
+ fun p t ->
+  p t
+  ||
+  let found = ref false in
+  type_children (fun t -> if not !found then found := exists_type p t) t;
+  !found

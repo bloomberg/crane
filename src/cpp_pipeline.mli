@@ -2,9 +2,9 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** The passes a MiniCpp declaration goes through between translation and the
-    printer.  It is lowered into CppIR ({!Cpp_ir.Lowered}) first; the passes
-    before the {!Cpp_erasure} seam not yet written over CppIR run on the
-    MiniCpp it converts back to ({!Cpp_ir_to_legacy_minicpp}).
+    printer.  It is lowered into CppIR ({!Cpp_ir.Lowered}) first, every pass
+    runs over CppIR, and the declaration handed back is resolved
+    ({!Cpp_ir.Resolved}).
 
     Control was lowered as the declaration was generated
     ({!Control_to_legacy_minicpp}), and is only checked here, under
@@ -25,7 +25,7 @@
     unspellable type, an unsettled constraint, an unresolved cast, an
     undeclared type variable, a mapping's unsupplied type argument, or a
     method or projection called as a function. *)
-val finish : Minicpp.cpp_decl -> Cpp_erasure.settled
+val finish : Minicpp.cpp_decl -> Cpp_ir.Resolved.Decl.t
 
 
 (** The names of the passes {!finish} runs, in order, the {!Cpp_erasure} seam

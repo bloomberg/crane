@@ -4,7 +4,12 @@
 (** No local is read after it is moved.  See [move_check.mli]. *)
 
 open Names
-open Minicpp
+open Cpp_ir.Grammar
+
+type ty = Cpp_ir.Lowered.Type.t
+type expr = Cpp_ir.Lowered.Expr.t
+type stmt = Cpp_ir.Lowered.Stmt.t
+type phase = Cpp_ir.Lowered.phase
 
 (* What a read or a move reaches: a whole local, or one member of it; or the
    storage of a local, which a reuse arm hands its constructor as the token,
@@ -66,19 +71,18 @@ let check_after report a b =
     a.moves
 
 (* The local whose variant [e] reaches into: [x.v_mut()], [x->v()]. *)
-let variant_of = function
-  | CPPfun_call (_, CPPaccess (Adot, (CPPvar _ as x), _), {rev = []}) | CPPaccess_call (_, (CPPvar _ as x), _, []) ->
-    Some x
+let variant_of : expr -> expr option = function
+  | Call (_, Access (Dot, (Local _ as x), _), []) | Access_call (_, (Local _ as x), _, []) -> Some x
   | _ -> None
 
 (* The local [e] names storage inside of, as a reference bound to [e] does:
    the local itself, a field of it, the alternative its variant holds, a
    field of that.  Through a pointer, what is named is not the local's. *)
-let rec reaches aliases e =
+let rec reaches aliases (e : expr) =
   match e with
-  | CPPvar x -> Some (match Id.Map.find_opt x aliases with Some base -> base | None -> x)
-  | CPPaccess (Adot, e, _) | CPPget (e, _) | CPPstd_get (_, Some e) -> reaches aliases e
-  | CPPfun_call (_, CPPaccess (Adot, e, _), {rev = []}) | CPPaccess_call (Adot, e, _, []) -> reaches aliases e
+  | Local x -> Some (match Id.Map.find_opt x aliases with Some base -> base | None -> x)
+  | Access (Dot, e, _) | Member (e, _) | Variant_get (_, Some e) -> reaches aliases e
+  | Call (_, Access (Dot, e, _), []) | Access_call (Dot, e, _, []) -> reaches aliases e
   | _ -> None
 
 (* [aliases] with each of [xs] a local of its own. *)
@@ -91,73 +95,76 @@ let bind_into aliases xs e =
   | Some base -> List.fold_left (fun m x -> Id.Map.add x base m) aliases xs
   | None -> own aliases xs
 
-let rec is_reference = function Tref _ -> true | Tnamespace (_, t) -> is_reference t | _ -> false
+let rec is_reference : ty -> bool = function Reference _ -> true | In_namespace (_, t) -> is_reference t | _ -> false
 
 (* [aliases] once [s] has run: a structured binding, or a declaration of a
    reference, binds its names into what it names; any other declaration
    binds a local of its own. *)
-let aliases_after aliases = function
-  | Sbind (xs, e) -> bind_into aliases xs e
-  | Sasgn (x, Declare (ty, _), e) when is_reference ty -> bind_into aliases [x] e
-  | Sasgn (x, (Declare _ | Declare_static _), _) | Sdecl (x, _, _) | Sdecl_init (x, _) | Sblock_custom (_, _, x, _, _, _, _)
-    ->
+let aliases_after aliases : stmt -> aliases = function
+  | Structured_binding (xs, e) -> bind_into aliases xs e
+  | Bind_variable (x, Declare (ty, _), e) when is_reference ty -> bind_into aliases [x] e
+  | Bind_variable (x, (Declare _ | Declare_static _), _) | Declare (x, _, _) | Declare_value_initialized (x, _)
+  | Foreign_block {result = x; _} ->
     own aliases [x]
   | _ -> aliases
 
 (* The member a read reaches when it reads one: a field, a field of the
    alternative a variant holds -- the cell a reuse arm hands its constructor
    as the token -- or a pair component through the projection mapping. *)
-let member e =
+let member (e : expr) : (expr * string) option =
   match e with
-  | CPPaccess (Adot, CPPstd_get (_, Some holder), f) when variant_of holder <> None ->
+  | Access (Dot, Variant_get (_, Some holder), f) when variant_of holder <> None ->
     Some (Option.get (variant_of holder), Id.to_string f)
-  | CPPaccess (Adot, x, f) | CPPget (x, f) -> Some (x, Id.to_string f)
-  | CPPfun_call
-      (_, CPPglob (_, _, Some {ci_inline = Some {it_shape = Inline_pair_projection f; _}; _}), {rev = [x]}) ->
-    Some (x, f)
-  | CPPforeign (Foreign_call, fr) -> foreign_pair_projection fr
+  | Access (Dot, x, f) | Member (x, f) -> Some (x, Id.to_string f)
+  | Call (_, Entity (_, _, Some {inline = Some {shape = Pair_projection f; _}; _}), [x]) -> Some (x, f)
+  (* A pair projection's mapping instantiated ([%a0.first]). *)
+  | Foreign
+      ( Call,
+        {values = [pair]; pieces = [Text ""; Value 0; Text f] | [Value 0; Text f]; _} )
+    when f = ".first" || f = ".second" ->
+    Some (pair, String.sub f 1 (String.length f - 1))
   | _ -> None
 
 (* A member of the local [x]; of a reference, the part it names. *)
 let member_of aliases x f =
   match local aliases x with Through t -> Through {t with member = Some f} | _ -> Member (x, f)
 
-let rec expr report aliases e : effect_ =
+let rec expr report aliases (e : expr) : effect_ =
   let expr = expr report aliases in
   match (member e, e) with
-  | Some (CPPvar x, f), _ -> {none with reads = [member_of aliases x f]}
-  | Some (CPPmove (CPPvar x), f), _ -> {none with moves = [member_of aliases x f]}
-  | _, CPPmove m when (match member m with Some (CPPvar _, _) -> true | _ -> false) -> (
-    match member m with Some (CPPvar x, f) -> {none with moves = [member_of aliases x f]} | _ -> none )
-  | _, CPPraw _ -> raise Opaque
-  | _, CPPvar x -> {none with reads = [local aliases x]}
-  | _, CPPmove (CPPvar x) -> {none with moves = [local aliases x]}
+  | Some (Local x, f), _ -> {none with reads = [member_of aliases x f]}
+  | Some (Move (Local x), f), _ -> {none with moves = [member_of aliases x f]}
+  | _, Move m when (match member m with Some (Local _, _) -> true | _ -> false) -> (
+    match member m with Some (Local x, f) -> {none with moves = [member_of aliases x f]} | _ -> none )
+  | _, Foreign_text _ -> raise Opaque
+  | _, Local x -> {none with reads = [local aliases x]}
+  | _, Move (Local x) -> {none with moves = [local aliases x]}
   (* A reuse factory takes the storage of the local it is handed as its
      token, first, to rebuild it in place. *)
-  | _, CPPfun_call (_, (CPPqualified_t (_, f) | CPPscope (_, f, [])), args) when Generated_name.is_companion "reuse" f -> (
-    match call_args args with
-    | CPPmove (CPPvar x) :: rest -> unsequenced report ({none with moves = [Storage x]} :: List.map expr rest)
+  | _, Call (_, (Type_member (_, f) | Scope (_, f, [])), args) when Generated_name.is_companion "reuse" f -> (
+    match args with
+    | Move (Local x) :: rest -> unsequenced report ({none with moves = [Storage x]} :: List.map expr rest)
     | args -> unsequenced report (List.map expr args) )
   (* A method is called on the whole object, a variant's accessor included. *)
-  | _, CPPfun_call (_, CPPaccess (Adot, CPPvar x, _), args) ->
-    let args = List.map expr (call_args args) in
+  | _, Call (_, Access (Dot, Local x, _), args) ->
+    let args = List.map expr args in
     unsequenced report ({none with reads = [local aliases x]} :: args)
   (* A condition runs first, and one arm after it. *)
-  | _, CPPcond (c, a, b) ->
+  | _, Conditional (c, a, b) ->
     let c = expr c and arms = union (expr a) (expr b) in
     check_after report c arms;
     union c arms
-  | _, CPPbinop ((Band | Bor), l, r) ->
+  | _, Binary ((And | Or), l, r) ->
     let l = expr l and r = expr r in
     check_after report l r;
     union l r
   (* The value assigned is computed before the place it goes to. *)
-  | _, CPPbinop (Bassign, l, r) ->
+  | _, Binary (Assign, l, r) ->
     let l = expr l and r = expr r in
     check_after report r l;
     union l r
   (* A braced initialiser evaluates its elements in order. *)
-  | _, (CPPstruct (_, _, es) | CPPstruct_id (_, _, es) | CPPbraced es) ->
+  | _, (Aggregate {values = es; _} | Local_aggregate {values = es; _} | Braced es) ->
     List.fold_left
       (fun before e ->
         let e = expr e in
@@ -168,13 +175,13 @@ let rec expr report aliases e : effect_ =
      what it moves; its body is a body of its own.  What it closes over is
      what is free in it, scope by scope: a parameter of a lambda inside it
      is that lambda's, not a local of the scope the closure is made in. *)
-  | _, CPPlambda l ->
-    body report aliases l.cl_body;
-    {reads = List.map (local aliases) (free_vars_expr e); moves = List.map (local aliases) l.cl_moved}
+  | _, Lambda l ->
+    body report aliases l.body;
+    {reads = List.map (local aliases) (Cpp_ir.Variables.free_in_expr e); moves = List.map (local aliases) l.moved}
   | _ ->
     (* Everything else evaluates its parts in an order C++ does not fix. *)
     let parts = ref [] in
-    iter_expr_children ~on_expr:(fun e -> parts := expr e :: !parts) ~on_stmts:(body report aliases) e;
+    Cpp_ir.Subterms.expr ~expr:(fun e -> parts := expr e :: !parts) ~stmts:(body report aliases) e;
     unsequenced report !parts
 
 and unsequenced report parts =
@@ -211,35 +218,35 @@ and kill p live =
 
 and kill_all xs live = List.fold_left (fun l x -> kill (Whole x) l) live xs
 
-and stmt report jumps aliases live s =
+and stmt report jumps aliases live (s : stmt) =
   let at' = at report aliases and walk' = walk report jumps aliases in
   match s with
-  | Sraw _ -> raise Opaque
-  | Sreturn None | Sthrow _ -> []
-  | Sreturn (Some e) -> at' [] e
-  | Scontinue -> jumps.continue_
-  | Sbreak -> jumps.break_
-  | Sasgn (x, Existing, e) ->
+  | Foreign_text _ -> raise Opaque
+  | Return None | Throw _ -> []
+  | Return (Some e) -> at' [] e
+  | Continue -> jumps.continue_
+  | Break -> jumps.break_
+  | Bind_variable (x, Existing, e) ->
     reassigned report aliases x live;
     at' (kill (Whole x) live) e
-  | Sasgn (x, _, e) -> at' (kill (Whole x) live) e
-  | Sassign_expr (lhs, e) | Sexpr (CPPbinop (Bassign, lhs, e)) -> (
+  | Bind_variable (x, _, e) -> at' (kill (Whole x) live) e
+  | Assign (lhs, e) | Expression (Binary (Assign, lhs, e)) -> (
     match (member lhs, lhs) with
-    | Some (CPPvar x, f), _ -> at' (kill (member_of aliases x f) live) e
-    | _, CPPvar x ->
+    | Some (Local x, f), _ -> at' (kill (member_of aliases x f) live) e
+    | _, Local x ->
       reassigned report aliases x live;
       at' (kill (local aliases x) live) e
     | _ -> at' (at' live lhs) e )
-  | Sdecl (x, _, _) | Sdecl_init (x, _) -> kill (Whole x) live
-  | Sif (c, t, e) -> at' (walk' live t @ walk' live e) c
-  | Sif_constexpr (_, t, e) -> walk' live t @ walk' live e
-  | Sif_decl (x, _, c, t, e) ->
+  | Declare (x, _, _) | Declare_value_initialized (x, _) -> kill (Whole x) live
+  | If {condition = c; then_ = t; else_ = e} -> at' (walk' live t @ walk' live e) c
+  | If_constexpr {then_ = t; else_ = e; _} -> walk' live t @ walk' live e
+  | If_declaration {name = x; init = c; then_ = t; else_ = e; _} ->
     let walk = walk report jumps (own aliases [x]) in
     at' (kill (Whole x) (walk live t @ walk live e)) c
-  | Sblock ss -> walk' live ss
-  | Swhile (c, ss) -> loop report aliases live (fun report l -> at report aliases l c) ss
-  | Sfor_range (x, e, ss) -> at' (loop report (own aliases [x]) live (fun _ l -> kill (Whole x) l) ss) e
-  | Sswitch (e, _, branches, dflt) ->
+  | Block ss -> walk' live ss
+  | While (c, ss) -> loop report aliases live (fun report l -> at report aliases l c) ss
+  | For_range (x, e, ss) -> at' (loop report (own aliases [x]) live (fun _ l -> kill (Whole x) l) ss) e
+  | Switch {scrutinee = e; branches; default = dflt; _} ->
     let alts = List.map (fun (_, ss) -> walk' live ss) branches in
     let other = match dflt with Some ss -> walk' live ss | None -> live in
     at' (List.concat (other :: alts)) e
@@ -247,36 +254,36 @@ and stmt report jumps aliases live s =
      fields, it binds the alternative, by reference unless it owns the
      scrutinee, and then it moves the alternative out into a local of its
      own. *)
-  | Smatch (scrut, branches, els) ->
-    let branch b =
-      let fields = List.map (fun fb -> fb.fb_name) b.smb_field_bindings in
+  | Match (scrut, branches, els) ->
+    let branch (b : phase Match.branch) =
+      let fields = List.map (fun (fb : phase Match.field_binding) -> fb.name) b.field_bindings in
       let aliases, bound =
-        match (fields, b.smb_var) with
-        | [], Some x when scrut.sc_owned -> (own aliases [x], [x])
-        | [], Some x -> (bind_into aliases [x] scrut.sc_expr, [x])
-        | _, _ -> (bind_into aliases fields scrut.sc_expr, fields)
+        match (fields, b.var) with
+        | [], Some x when scrut.owned -> (own aliases [x], [x])
+        | [], Some x -> (bind_into aliases [x] scrut.expr, [x])
+        | _, _ -> (bind_into aliases fields scrut.expr, fields)
       in
-      let l = kill_all bound (walk report jumps aliases live b.smb_body) in
-      List.fold_right (fun c l -> at report aliases l c) b.smb_extra_conds l
+      let l = kill_all bound (walk report jumps aliases live b.body) in
+      List.fold_right (fun c l -> at report aliases l c) b.extra_conditions l
     in
     let other = match els with Some ss -> walk' live ss | None -> live in
-    at' (List.concat (other :: List.map branch branches)) scrut.sc_expr
-  | Scustom_case (_, scrut, _, branches, _) ->
-    let branch (ps, _, ss) =
-      let xs = List.map (fun p -> p.cp_name) ps in
-      kill_all xs (walk report jumps (own aliases xs) live ss)
+    at' (List.concat (other :: List.map branch branches)) scrut.expr
+  | Custom_match m ->
+    let branch (b : phase Custom_match.branch) =
+      let xs = List.map (fun (p : phase Custom_match.param) -> p.name) b.params in
+      kill_all xs (walk report jumps (own aliases xs) live b.body)
     in
-    at' (List.concat_map branch branches) scrut
-  | Sbind (xs, e) -> at' (kill_all xs live) e
+    at' (List.concat_map branch m.branches) m.scrutinee
+  | Structured_binding (xs, e) -> at' (kill_all xs live) e
   (* A block template declares the variable it binds. *)
-  | Sblock_custom (_, _, x, _, args, _, _) ->
+  | Foreign_block {result = x; values = args; _} ->
     let eff = List.fold_left (fun acc a -> union acc (expr report aliases a)) none args in
     let live = kill (Whole x) live in
     check_after report eff {none with reads = live};
     eff.reads @ eff.moves @ live
   | _ ->
     let live = ref live in
-    iter_stmt_children ~on_expr:(fun e -> live := at' !live e) ~on_stmts:(fun _ -> ()) s;
+    Cpp_ir.Subterms.stmt ~expr:(fun e -> live := at' !live e) ~stmts:(fun _ -> ()) s;
     !live
 
 (* The local [x] is given a new value, [live] being read after: a
@@ -318,15 +325,15 @@ let backend x = String.length (Id.to_string x) > 0 && (Id.to_string x).[0] = '_'
 
 (* The locals [ss] declares as pointers, in any scope. *)
 let pointers ss =
-  let rec is_pointer = function Tptr _ -> true | Tconst t | Tnamespace (_, t) -> is_pointer t | _ -> false in
+  let rec is_pointer : ty -> bool = function Pointer _ -> true | Const t | In_namespace (_, t) -> is_pointer t | _ -> false in
   let found = ref [] in
-  let rec fe e = map_expr fe fs Fun.id e
-  and fs s =
+  let rec fe e = Cpp_ir.Map.expr (rw ()) e
+  and fs (s : stmt) =
     ( match s with
-    | Sasgn (x, Declare (ty, _), _) | Sdecl (x, ty, _) when is_pointer ty -> found := x :: !found
+    | Bind_variable (x, Declare (ty, _), _) | Declare (x, ty, _) when is_pointer ty -> found := x :: !found
     | _ -> () );
-    map_stmt fe fs Fun.id s
-  in
+    Cpp_ir.Map.stmt (rw ()) s
+  and rw () = Cpp_ir.Map.make ~expr:fe ~stmt:fs ~type_:Fun.id () in
   List.iter (fun s -> ignore (fs s)) ss;
   !found
 
@@ -360,6 +367,13 @@ let check_body owner ss =
 
 (* What the parameters [params] of a callable whose plan passes them as
    [passing] says, and whose body is [body], break of it. *)
+(* Whether a parameter of type [t] is declared by reference: a [const]
+   type is one, as the declaration writes it. *)
+let rec declared_by_reference : ty -> bool = function
+  | Reference _ | Const _ -> true
+  | In_namespace (_, t) -> declared_by_reference t
+  | _ -> false
+
 let passing_violations (passing : Callable_abi.passing list) params body =
   if List.compare_lengths passing params <> 0 then
     [ Printf.sprintf "the plan passes %d parameters, the declaration takes %d" (List.length passing)
@@ -368,22 +382,22 @@ let passing_violations (passing : Callable_abi.passing list) params body =
     (* What the body moves by name, and the names it declares again: a
        frame handler binds a parameter's name to the frame's field. *)
     let moved = ref [] and declared = ref [] in
-    let rec fe e =
-      (match e with CPPmove (CPPvar x) -> moved := x :: !moved | _ -> ());
-      map_expr fe fs Fun.id e
-    and fs s =
-      (match s with Sasgn (x, Declare _, _) -> declared := x :: !declared | _ -> ());
-      map_stmt fe fs Fun.id s
-    in
+    let rec fe (e : expr) =
+      (match e with Move (Local x) -> moved := x :: !moved | _ -> ());
+      Cpp_ir.Map.expr (rw ()) e
+    and fs (s : stmt) =
+      (match s with Bind_variable (x, Declare _, _) -> declared := x :: !declared | _ -> ());
+      Cpp_ir.Map.stmt (rw ()) s
+    and rw () = Cpp_ir.Map.make ~expr:fe ~stmt:fs ~type_:Fun.id () in
     List.iter (fun s -> ignore (fs s)) body;
     List.concat
       (List.map2
-         (fun (p : Callable_abi.passing) (x, ty) ->
+         (fun (p : Callable_abi.passing) (x, (ty : ty)) ->
            let name = Id.to_string x in
            match (p, ty) with
-           | Forwarded, Tref (Forwarding, _) -> []
+           | Forwarded, Reference (Forwarding, _) -> []
            | Forwarded, _ -> ["the plan forwards " ^ name ^ ", declared otherwise"]
-           | (Owned | Borrowed), Tref (Forwarding, _) -> ["the declaration forwards " ^ name ^ ", the plan does not"]
+           | (Owned | Borrowed), Reference (Forwarding, _) -> ["the declaration forwards " ^ name ^ ", the plan does not"]
            | Owned, _ when declared_by_reference ty -> ["the plan owns " ^ name ^ ", declared by reference"]
            | Borrowed, _
              when declared_by_reference ty && List.exists (Id.equal x) !moved
@@ -407,34 +421,34 @@ let check_convention owner r params body =
    function it is generated for ({!Ownership_ir.Local_passing}): the
    parameters it takes other than the members it calls through. *)
 let check_local_conventions owner ss =
-  let rec fe e =
+  let rec fe (e : expr) =
     ( match e with
-    | CPPlambda {cl_fixpoint = Some lf; cl_params; cl_body; _} -> (
-      match Ownership_ir.Local_passing.lookup lf.lf_member with
+    | Lambda {fixpoint = Some lf; params; body; _} -> (
+      match Ownership_ir.Local_passing.lookup lf.member with
       | Some passing ->
-        let selves = match lf.lf_encoding with Self_passing ids -> ids | Knot | Lowered -> [] in
-        (* [to_reversed] lists them the last first; the plan, the first. *)
+        let selves = match lf.encoding with Self_passing ids -> ids | Knot | Lowered -> [] in
         let params =
-          List.rev
-            (List.filter_map
-               (fun (ty, x) ->
-                 match x with
-                 | Some x when List.exists (Id.equal x) selves -> None
-                 | Some x -> Some (x, ty)
-                 | None -> Some (Id.of_string "_", ty) )
-               (to_reversed cl_params) )
+          List.filter_map
+            (fun (ty, x) ->
+              match x with
+              | Some x when List.exists (Id.equal x) selves -> None
+              | Some x -> Some (x, ty)
+              | None -> Some (Id.of_string "_", ty) )
+            params
         in
         report_conventions
-          Pp.(owner ++ str ", the local fixpoint " ++ Id.print lf.lf_name)
-          (passing_violations (List.filter_map Fun.id passing) params cl_body)
+          Pp.(owner ++ str ", the local fixpoint " ++ Id.print lf.name)
+          (passing_violations (List.filter_map Fun.id passing) params body)
       | None -> () )
     | _ -> () );
-    map_expr fe fs Fun.id e
-  and fs s = map_stmt fe fs Fun.id s in
+    Cpp_ir.Map.expr (rw ()) e
+  and fs s = Cpp_ir.Map.stmt (rw ()) s
+  and rw () = Cpp_ir.Map.make ~expr:fe ~stmt:fs ~type_:Fun.id () in
   List.iter (fun s -> ignore (fs s)) ss
 
 (* Whether [l] reads the scope it is made in by reference. *)
-let by_reference l = match l.cl_capture with Immediate | Written By_reference -> true | Closure | Written _ -> false
+let by_reference (l : phase Lambda.t) =
+  match l.capture with Runs_in_place | Written By_reference -> true | Stored | Written _ -> false
 
 (* The names the statements [ss] let escape among [xs], locals bound to
    lambdas reading their scope by reference, [group] being all such in the
@@ -449,15 +463,15 @@ let by_reference l = match l.cl_capture with Immediate | Written By_reference ->
 let escaping ~group ~callees xs ss =
   let found = ref [] in
   let mem x = List.exists (Id.equal x) xs in
-  let rec expr e =
+  let rec expr (e : expr) =
     match e with
-    | CPPfun_call (_, CPPvar f, args) when List.exists (Id.equal f) callees ->
-      List.iter (function CPPvar x when List.exists (Id.equal x) group -> () | a -> expr a) (call_args args)
-    | CPPvar x when mem x -> found := x :: !found
-    | CPPlambda l when not (by_reference l) ->
-      List.iter (fun x -> if mem x then found := x :: !found) (free_vars_expr e)
-    | _ -> iter_expr_children ~on_expr:expr ~on_stmts:(List.iter stmt) e
-  and stmt s = iter_stmt_children ~on_expr:expr ~on_stmts:(List.iter stmt) s in
+    | Call (_, Local f, args) when List.exists (Id.equal f) callees ->
+      List.iter (fun (a : expr) -> match a with Local x when List.exists (Id.equal x) group -> () | a -> expr a) args
+    | Local x when mem x -> found := x :: !found
+    | Lambda l when not (by_reference l) ->
+      List.iter (fun x -> if mem x then found := x :: !found) (Cpp_ir.Variables.free_in_expr e)
+    | _ -> Cpp_ir.Subterms.expr ~expr ~stmts:(List.iter stmt) e
+  and stmt s = Cpp_ir.Subterms.stmt ~expr ~stmts:(List.iter stmt) s in
   List.iter stmt ss;
   List.sort_uniq Id.compare !found
 
@@ -472,10 +486,11 @@ let check_by_reference_closures owner ss =
   let rec block ss =
     let planned =
       List.filter_map
-        (function
-          | Sasgn (x, Declare _, CPPlambda {cl_fixpoint = Some lf; _})
-            when Ownership_ir.Local_captures.by_reference lf.lf_member ->
-            Some (x, fst lf.lf_member)
+        (fun (s : stmt) ->
+          match s with
+          | Bind_variable (x, Declare _, Lambda {fixpoint = Some lf; _})
+            when Ownership_ir.Local_captures.by_reference lf.member ->
+            Some (x, fst lf.member)
           | _ -> None )
         ss
     in
@@ -484,10 +499,11 @@ let check_by_reference_closures owner ss =
        parameters, each with those parameters and its body. *)
     let impls =
       List.filter_map
-        (function
-          | Sasgn (y, Declare _, CPPlambda {cl_fixpoint = Some {lf_member; lf_encoding = Self_passing selves; _}; cl_body; _})
-            when List.exists (fun (_, o) -> Miniml.Occurrence.equal o (fst lf_member)) planned ->
-            Some (y, selves, cl_body)
+        (fun (s : stmt) ->
+          match s with
+          | Bind_variable (y, Declare _, Lambda {fixpoint = Some {member; encoding = Self_passing selves; _}; body; _})
+            when List.exists (fun (_, o) -> Miniml.Occurrence.equal o (fst member)) planned ->
+            Some (y, selves, body)
           | _ -> None )
         ss
     in
@@ -508,21 +524,21 @@ let check_by_reference_closures owner ss =
        by reference -- the members planned so, and the lambdas capturing
        one of [reading] by reference, as a group's wrappers do the impls,
        which may outlive the scope no more than what they read. *)
-    let rec go reading = function
+    let rec go reading : stmt list -> unit = function
       | [] -> ()
-      | (Sasgn (x, Declare _, CPPlambda ({cl_fixpoint = Some lf; _} as l)) as s) :: rest
-        when Ownership_ir.Local_captures.by_reference lf.lf_member && l.cl_capture <> Written Captures_nothing ->
+      | (Bind_variable (x, Declare _, Lambda ({fixpoint = Some lf; _} as l)) as s) :: rest
+        when Ownership_ir.Local_captures.by_reference lf.member && l.capture <> Written Nothing ->
         (* One the C++ has capture nothing -- what the plan reads is a
            dictionary, a template parameter -- refers into no scope. *)
         if not (by_reference l) then
-          report Pp.(str "the local fixpoint " ++ Id.print lf.lf_name ++ str " copies what its plan reads by reference");
+          report Pp.(str "the local fixpoint " ++ Id.print lf.name ++ str " copies what its plan reads by reference");
         List.iter
           (fun x -> report Pp.(str "the local fixpoint lambda " ++ Id.print x ++ str " reads its scope by reference and escapes it"))
           (escaping ~group ~callees [x] rest);
         stmt s;
         go (x :: reading) rest
-      | (Sasgn (x, Declare _, (CPPlambda l as e)) as s) :: rest
-        when by_reference l && List.exists (fun y -> List.exists (Id.equal y) reading) (free_vars_expr e) ->
+      | (Bind_variable (x, Declare _, (Lambda l as e)) as s) :: rest
+        when by_reference l && List.exists (fun y -> List.exists (Id.equal y) reading) (Cpp_ir.Variables.free_in_expr e) ->
         List.iter
           (fun x ->
             report
@@ -535,32 +551,32 @@ let check_by_reference_closures owner ss =
         go reading rest
     in
     go [] ss
-  and expr e = iter_expr_children ~on_expr:expr ~on_stmts:block e
-  and stmt s = iter_stmt_children ~on_expr:expr ~on_stmts:block s in
+  and expr e = Cpp_ir.Subterms.expr ~expr ~stmts:block e
+  and stmt s = Cpp_ir.Subterms.stmt ~expr ~stmts:block s in
   block ss
 
 (* Every body of [d] through all four checks: moved reads, local fixpoint
    conventions, by-reference closures, and, for a top-level function or a
    method with a globref, its own callable convention. *)
-let rec check_decl d =
-  let rec field (f, _, _) =
+let rec check_decl (d : Cpp_ir.Lowered.Decl.t) =
+  let rec field ((f, _, _) : phase Field.member) =
     match f with
-    | Fmethod m ->
-      check_body (Id.print m.mf_name) m.mf_body;
-      check_local_conventions (Id.print m.mf_name) m.mf_body;
-      check_by_reference_closures (Id.print m.mf_name) m.mf_body;
-      Option.iter (fun r -> check_convention (Id.print m.mf_name) r m.mf_params m.mf_body) m.mf_globref
-    | Fnested_struct (_, fs) -> List.iter field fs
+    | Method m ->
+      check_body (Id.print m.name) m.body;
+      check_local_conventions (Id.print m.name) m.body;
+      check_by_reference_closures (Id.print m.name) m.body;
+      Option.iter (fun r -> check_convention (Id.print m.name) r m.params m.body) m.globref
+    | Nested_struct (_, fs) -> List.iter field fs
     | _ -> ()
   in
   match d with
-  | Dfun {df_shape = Ddef (params, ss); df_path; _} ->
-    let r, _ = match List.rev df_path.dp_inner with inner :: _ -> inner | [] -> df_path.dp_outer in
+  | Function {shape = Definition (params, ss); path; _} ->
+    let r, _ = match List.rev path.inner with inner :: _ -> inner | [] -> path.outer in
     check_body (GlobRef.print r) ss;
     check_local_conventions (GlobRef.print r) ss;
     check_by_reference_closures (GlobRef.print r) ss;
-    if df_path.dp_inner = [] then check_convention (GlobRef.print r) r (List.rev params) ss
-  | Dtemplate (_, _, inner) -> check_decl inner
-  | Dnspace (_, ds) -> List.iter check_decl ds
-  | Dstruct s | Dfields s -> List.iter field s.ds_fields
+    if path.inner = [] then check_convention (GlobRef.print r) r (List.rev params) ss
+  | Template (_, _, inner) -> check_decl inner
+  | Namespace (_, ds) -> List.iter check_decl ds
+  | Struct s | Merged_struct_members s -> List.iter field s.fields
   | _ -> ()

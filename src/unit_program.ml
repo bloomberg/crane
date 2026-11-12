@@ -176,17 +176,6 @@ let record_ahead e =
 (* [compare] rather than [=]: a NaN literal is equal to itself. *)
 let same_source d d' = d == d' || compare d d' = 0
 
-(* The finished declaration [f], [id] of the program, in CppIR.  Every
-   finished declaration converts, holding no form only a lowered declaration
-   may; each conversion is a probe hit, so that a sweep counts them. *)
-let converted id f =
-  match Legacy_minicpp_to_cpp_ir.convert f with
-  | Ok ir ->
-    Probe.hit "cpp_ir" (fun () -> "converted");
-    ir
-  | Error e ->
-    CErrors.anomaly Pp.(str "Crane: " ++ str (Legacy_minicpp_to_cpp_ir.describe e) ++ str " in " ++ pp_id id ++ str ".")
-
 let finish jobs =
   let declarations = ref [] and demands = ref [] and globals = ref [] and promoted = ref [] in
   let sources = ref Id_map.empty and by_id = ref Id_map.empty in
@@ -197,7 +186,8 @@ let finish jobs =
         if Probe.checking () && not (same_source d d') then
           Probe.violation "unit program" Pp.(str "two declarations finished as " ++ pp_id id)
       | None ->
-        let finished = converted id (Cpp_pipeline.finish d) in
+        let finished = Cpp_pipeline.finish d in
+        Probe.hit "cpp_ir" (fun () -> "converted");
         demands := List.rev_append (Cpp_demands.of_decl finished) !demands;
         globals := List.rev_append (Cpp_demands.globals_of_decl finished) !globals;
         promoted := List.rev_append (Cpp_demands.promoted_of_decl finished) !promoted;
@@ -235,9 +225,7 @@ let installed_finished () = List.map (fun d -> d.finished) !program.declarations
 let installed_promoted () = !program.promoted
 
 let finishes_as d f =
-  match Legacy_minicpp_to_cpp_ir.convert (Cpp_pipeline.finish d) with
-  | Ok ir -> compare f ir = 0
-  | Error _ -> false
+  compare f (Cpp_pipeline.finish d) = 0
 
 let find_declaration id = Id_map.find_opt id !program.by_id
 

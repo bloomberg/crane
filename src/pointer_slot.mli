@@ -20,7 +20,4 @@ type t =
   | Pointer  (** An ordinary pointer. *)
 
 (** [of_pointee t] is what a pointer to a value of type [t] is held in. *)
-val of_pointee : Minicpp.cpp_type -> t
-
-(** {!of_pointee} of a pointee in CppIR. *)
-val of_ir_pointee : Cpp_ir.Resolved.Type.t -> t
+val of_pointee : 'p Cpp_ir.Type.t -> t

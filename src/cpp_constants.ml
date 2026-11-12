@@ -19,7 +19,7 @@ let marked : expr -> _ = function
    and an allocation each time. *)
 let closed_erase_fn (e : expr) =
   match e with
-  | Erase_callable (_, l) when Minicpp.closed_lambda (Cpp_ir_to_legacy_minicpp.expr l) -> Some e
+  | Erase_callable (_, l) when Cpp_ir.Variables.closed_lambda l -> Some e
   | _ -> None
 
 (* The identifiers [body] declares or reads, which a constant's name must not

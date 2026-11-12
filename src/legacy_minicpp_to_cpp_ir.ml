@@ -517,7 +517,7 @@ let resolved resolve convert x =
   | exception Unconvertible f -> Error f
   | exception Cpp_ir.Resolve.Owed form -> Error (Lowered_only form)
 
-let convert (d : Cpp_erasure.settled) = resolved Cpp_ir.Resolve.decl decl (d :> cpp_decl)
+let lower_type t = lowered ty t
 let type_ t = resolved Cpp_ir.Resolve.type_ ty t
 let expr e = resolved Cpp_ir.Resolve.expr expr e
 
@@ -525,3 +525,10 @@ let type_exn t =
   match type_ t with
   | Ok t -> t
   | Error f -> CErrors.anomaly Pp.(str "Crane: a type written outside every finished declaration: " ++ str (describe f))
+
+let instantiated_type_exn instantiate t =
+  match Cpp_ir.Resolve.type_ (instantiate (lowered ty t)) with
+  | t -> t
+  | exception Cpp_ir.Resolve.Owed form ->
+    CErrors.anomaly
+      Pp.(str "Crane: a type written outside every finished declaration: " ++ str (describe (Lowered_only form)))

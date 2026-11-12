@@ -7,6 +7,10 @@ open Crane_plugin
 open Minicpp
 
 let id = Id.of_string
+
+(* The checks read CppIR; the bodies are built in MiniCpp and lowered. *)
+let lower = List.map Legacy_minicpp_to_cpp_ir.lower_stmt
+let lower_params = List.map (fun (x, t) -> (x, Legacy_minicpp_to_cpp_ir.lower_type t))
 let v x = CPPvar (id x)
 let tree = Tglob (GlobRef.VarRef (id "tree"), [], [])
 
@@ -46,7 +50,7 @@ let match_ t fields body =
       None )
 
 let check name body expected =
-  let found = List.map Id.to_string (Move_check.moved_reads body) in
+  let found = List.map Id.to_string (Move_check.moved_reads (lower body)) in
   if found <> expected then (
     Printf.eprintf "move_check: %s: found [%s]\n" name (String.concat "; " found);
     exit 1 )
@@ -139,7 +143,7 @@ let () =
   Callable_abi.install [Callable_abi.of_head ~passing:[Owned; Borrowed] ~callee:f ~scheme:None []] [];
   let cref = Tref (Lvalue, Tconst tree) in
   let convention name params body expected =
-    let found = Option.map List.length (Move_check.convention_violations f params body) in
+    let found = Option.map List.length (Move_check.convention_violations f (lower_params params) (lower body)) in
     if found <> Some expected then (
       Printf.eprintf "move_check: %s: %s violations, expected %d\n" name
         (match found with Some n -> string_of_int n | None -> "no plan's") expected;
@@ -163,7 +167,7 @@ let () =
    names the new value. *)
 let () =
   let stale name body expected =
-    let found = List.map (fun (a, b) -> Id.to_string a ^ "@" ^ Id.to_string b) (Move_check.stale_references body) in
+    let found = List.map (fun (a, b) -> Id.to_string a ^ "@" ^ Id.to_string b) (Move_check.stale_references (lower body)) in
     if found <> expected then (
       Printf.eprintf "move_check: %s: stale [%s]\n" name (String.concat "; " found);
       exit 1 )

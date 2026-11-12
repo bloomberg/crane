@@ -258,7 +258,7 @@ val lookup_method_this_pos : Names.GlobRef.t -> int option
     the method [n] was instantiated at, the ones a call must write: the
     receiver's struct carries its own parameters, and the parameters the
     method's plan drops are not in its signature at all. *)
-val method_type_args : Names.GlobRef.t -> Minicpp.cpp_type list -> Minicpp.cpp_type list
+val method_type_args : Names.GlobRef.t -> 'a list -> 'a list
 
 (** Sets of identifiers ([Names.variable]). *)
 module IdSet : Set.S with type elt = Names.variable
