@@ -610,7 +610,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
        an inductive only a functor's instantiation knows the representation
        of, the pointer [shared_or_t] is given as its alternative. *)
     | Shared_pointer t ->
-      if Probe.checking () && Pointer_slot.of_ir_pointee t = Pointer_slot.Shared then
+      if Probe.checking () && Pointer_slot.of_pointee t = Pointer_slot.Shared then
         CErrors.anomaly (Pp.str "pp_cpp_type: a pointer's slot not chosen (Cpp_erasure.lower_pointer_slots)");
       writes_standard "memory";
       cpp_angle (sn ()).shared_ptr (pp_rec false t)

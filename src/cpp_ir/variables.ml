@@ -160,3 +160,89 @@ let rec pure : type p. p Expr.t -> bool = function
   | Binary (o, a, b) -> o <> Assign && pure a && pure b
   | Unary (o, a) -> o <> Address_of && pure a
   | _ -> false
+
+(** [lambda_needs_capture params body] is [(needs_capture, uses_this)]:
+    whether a lambda of these parameters and this body names a variable it
+    neither binds nor declares -- its own, or one a nested lambda names --
+    and so must capture, and whether it names the enclosing [this]. *)
+let lambda_needs_capture : type p. (p Type.t * Id.t option) list -> p Stmt.t list -> bool * bool =
+ fun params body ->
+  let names ps = List.fold_left (fun acc (_, x) -> match x with Some id -> Id.Set.add id acc | None -> acc) Id.Set.empty ps in
+  let uses_this = ref false in
+  let rec collect_from_expr (refs, decls) (e : p Expr.t) =
+    match e with
+    | Local id -> (Id.Set.add id refs, decls)
+    | Dereference e -> collect_from_expr (refs, decls) e
+    | This | Shared_from_this _ ->
+      uses_this := true;
+      (refs, decls)
+    | Lambda {params = inner_params; body = inner_body; _} ->
+      let inner_refs, inner_decls = List.fold_left collect_from_stmt (Id.Set.empty, Id.Set.empty) inner_body in
+      let inner_free = Id.Set.diff inner_refs (Id.Set.union (names inner_params) inner_decls) in
+      (Id.Set.union refs inner_free, decls)
+    | _ ->
+      let acc = ref (refs, decls) in
+      Subterms.expr
+        ~expr:(fun e' -> acc := collect_from_expr !acc e')
+        ~stmts:(fun stmts -> acc := List.fold_left collect_from_stmt !acc stmts)
+        e;
+      !acc
+  and collect_from_stmt (refs, decls) (s : p Stmt.t) =
+    match s with
+    | Declare (id, _, _) -> (refs, Id.Set.add id decls)
+    | Bind_variable (id, binding, e) -> (
+      let refs', decls' = collect_from_expr (refs, decls) e in
+      match binding with
+      | Declare _ | Declare_static _ -> (refs', Id.Set.add id decls')
+      | Existing -> (Id.Set.add id refs', decls') )
+    | Assign (lhs, e) ->
+      let refs', decls' = collect_from_expr (refs, decls) lhs in
+      collect_from_expr (refs', decls') e
+    | Custom_match m ->
+      List.fold_left
+        (fun (r, d) (b : p Custom_match.branch) ->
+          let branch_decls = List.fold_left (fun acc (q : p Custom_match.param) -> Id.Set.add q.name acc) d b.params in
+          List.fold_left collect_from_stmt (r, branch_decls) b.body )
+        (collect_from_expr (refs, decls) m.scrutinee)
+        m.branches
+    | Foreign_block b ->
+      let refs', decls' = List.fold_left collect_from_expr (refs, decls) b.values in
+      (refs', Id.Set.add b.result decls')
+    | Match (scrut, branches, default) -> (
+      let refs, decls = collect_from_expr (refs, decls) scrut.expr in
+      let acc =
+        List.fold_left
+          (fun acc (br : p Match.branch) ->
+            let refs', decls' = List.fold_left collect_from_expr acc br.extra_conditions in
+            let branch_decls =
+              let d = List.fold_left (fun d (fb : p Match.field_binding) -> Id.Set.add fb.name d) decls' br.field_bindings in
+              match br.var with Some id -> Id.Set.add id d | None -> d
+            in
+            List.fold_left collect_from_stmt (refs', branch_decls) br.body )
+          (refs, decls) branches
+      in
+      match default with Some stmts -> List.fold_left collect_from_stmt acc stmts | None -> acc )
+    | _ ->
+      let acc = ref (refs, decls) in
+      Subterms.stmt
+        ~expr:(fun e -> acc := collect_from_expr !acc e)
+        ~stmts:(fun stmts -> acc := List.fold_left collect_from_stmt !acc stmts)
+        s;
+      !acc
+  in
+  let all_refs, local_decls = List.fold_left collect_from_stmt (Id.Set.empty, Id.Set.empty) body in
+  let free_vars = Id.Set.diff all_refs (Id.Set.union (names params) local_decls) in
+  ((not (Id.Set.is_empty free_vars)) || !uses_this, !uses_this)
+
+(** Whether [e] is a lambda that captures nothing, or one such invoked at
+    once with no argument: a value that names no variable of its scope, so
+    the same wherever it is evaluated. *)
+let closed_lambda : type p. p Expr.t -> bool =
+ fun e ->
+  let captureless (e : p Expr.t) =
+    match e with Lambda {params; body; _} -> not (fst (lambda_needs_capture params body)) | _ -> false
+  in
+  match e with
+  | Lambda _ -> captureless e
+  | Call (_, f, []) -> captureless f
+  | _ -> false

@@ -231,77 +231,7 @@ let same_type (t : ty) = t
 let call (f : expr) (args : expr list) : expr =
   Call ({yields = Untyped; params = Unknown; constructs = None; occurrence = None}, f, args)
 
-(** Whether a lambda's body names its scope, and whether it names [this]:
-    what it must capture.  A variable a nested lambda reads from outside
-    itself counts. *)
-let lambda_needs_capture (params : (ty * Id.t option) list) (body : stmt list) : bool * bool =
-  let names ps = List.fold_left (fun acc (_, x) -> match x with Some id -> Id.Set.add id acc | None -> acc) Id.Set.empty ps in
-  let param_names = names params in
-  let uses_this = ref false in
-  let rec collect_from_expr (refs, decls) (e : expr) =
-    match e with
-    | Local id -> (Id.Set.add id refs, decls)
-    | Dereference e -> collect_from_expr (refs, decls) e
-    | This | Shared_from_this _ ->
-      uses_this := true;
-      (refs, decls)
-    | Lambda {params = inner_params; body = inner_body; _} ->
-      let inner_refs, inner_decls = List.fold_left collect_from_stmt (Id.Set.empty, Id.Set.empty) inner_body in
-      let inner_free = Id.Set.diff inner_refs (Id.Set.union (names inner_params) inner_decls) in
-      (Id.Set.union refs inner_free, decls)
-    | _ ->
-      let acc = ref (refs, decls) in
-      Cpp_ir.Subterms.expr
-        ~expr:(fun e' -> acc := collect_from_expr !acc e')
-        ~stmts:(fun stmts -> acc := List.fold_left collect_from_stmt !acc stmts)
-        e;
-      !acc
-  and collect_from_stmt (refs, decls) (s : stmt) =
-    match s with
-    | Declare (id, _, _) -> (refs, Id.Set.add id decls)
-    | Bind_variable (id, binding, e) -> (
-      let refs', decls' = collect_from_expr (refs, decls) e in
-      match binding with
-      | Declare _ | Declare_static _ -> (refs', Id.Set.add id decls')
-      | Existing -> (Id.Set.add id refs', decls') )
-    | Assign (lhs, e) ->
-      let refs', decls' = collect_from_expr (refs, decls) lhs in
-      collect_from_expr (refs', decls') e
-    | Custom_match m ->
-      List.fold_left
-        (fun (r, d) (b : phase Custom_match.branch) ->
-          let branch_decls = List.fold_left (fun acc (p : phase Custom_match.param) -> Id.Set.add p.name acc) d b.params in
-          List.fold_left collect_from_stmt (r, branch_decls) b.body )
-        (collect_from_expr (refs, decls) m.scrutinee)
-        m.branches
-    | Foreign_block b ->
-      let refs', decls' = List.fold_left collect_from_expr (refs, decls) b.values in
-      (refs', Id.Set.add b.result decls')
-    | Match (scrut, branches, default) -> (
-      let refs, decls = collect_from_expr (refs, decls) scrut.expr in
-      let acc =
-        List.fold_left
-          (fun acc (br : phase Match.branch) ->
-            let refs', decls' = List.fold_left collect_from_expr acc br.extra_conditions in
-            let branch_decls =
-              let d = List.fold_left (fun d (fb : phase Match.field_binding) -> Id.Set.add fb.name d) decls' br.field_bindings in
-              match br.var with Some id -> Id.Set.add id d | None -> d
-            in
-            List.fold_left collect_from_stmt (refs', branch_decls) br.body )
-          (refs, decls) branches
-      in
-      match default with Some stmts -> List.fold_left collect_from_stmt acc stmts | None -> acc )
-    | _ ->
-      let acc = ref (refs, decls) in
-      Cpp_ir.Subterms.stmt
-        ~expr:(fun e -> acc := collect_from_expr !acc e)
-        ~stmts:(fun stmts -> acc := List.fold_left collect_from_stmt !acc stmts)
-        s;
-      !acc
-  in
-  let all_refs, local_decls = List.fold_left collect_from_stmt (Id.Set.empty, Id.Set.empty) body in
-  let free_vars = Id.Set.diff all_refs (Id.Set.union param_names local_decls) in
-  ((not (Id.Set.is_empty free_vars)) || !uses_this, !uses_this)
+let lambda_needs_capture = Cpp_ir.Variables.lambda_needs_capture
 
 (** Whether [e] holds a lambda that captures, read off the captures as
     written down ({!decide_captures}). *)
@@ -991,7 +921,7 @@ let pointer_slots () =
           Some (External (n, [ft p; Shared_pointer p']))
         | Shared_pointer p -> (
           let p' = ft p in
-          match Pointer_slot.of_ir_pointee p with
+          match Pointer_slot.of_pointee p with
           | Pointer_slot.Shared -> Some (External (Crane_rt.shared_box, [p']))
           | Pointer_slot.At_instantiation -> Some (External (Crane_rt.shared_or, [p'; Shared_pointer p']))
           | Pointer_slot.Pointer -> Some (Shared_pointer p') )
@@ -1008,7 +938,7 @@ let pointer_slots () =
   and fe (e : expr) : expr =
     match Map.expr (rw ()) e with
     (* A shared value goes into its slot as it is: no cell to allocate. *)
-    | Allocate ((Heap | Arena_scoped), t) when Pointer_slot.of_ir_pointee t = Pointer_slot.Shared ->
+    | Allocate ((Heap | Arena_scoped), t) when Pointer_slot.of_pointee t = Pointer_slot.Shared ->
       Type_member (External (Crane_rt.shared_box, [t]), Id.of_string "make")
     (* A unit of non-atomic pointers allocates in an arena through its own
        pointer's factory. *)

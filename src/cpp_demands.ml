@@ -66,7 +66,7 @@ module Ir = struct
       | Variant (Inline, _) -> variant ()
       | Variant (Shared, _) -> rt Crane_rt.shared_variant_header
       | Shared_pointer t -> (
-        match Pointer_slot.of_ir_pointee t with
+        match Pointer_slot.of_pointee t with
         | Shared -> rt Crane_rt.shared_variant_header
         | At_instantiation ->
           rt Crane_rt.shared_variant_header;

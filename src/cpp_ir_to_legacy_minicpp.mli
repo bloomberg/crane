@@ -1,10 +1,10 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Lowered CppIR back into MiniCpp, for the passes of
-    {!Cpp_pipeline.finish} not yet written over CppIR: each runs on the
-    MiniCpp its declaration converts back to, and what it returns is
-    lowered again ({!Legacy_minicpp_to_cpp_ir.lower}).
+(** Lowered CppIR back into MiniCpp, for the readers still written over
+    MiniCpp: the control check and {!Move_check} under [CRANE_CHECK_IR], and
+    Loopify's and local closures' statement rewrites, which convert around
+    themselves.
 
     The conversion inverts {!Legacy_minicpp_to_cpp_ir.lower}: lowering a
     declaration and converting it back gives the declaration back. *)

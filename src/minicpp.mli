@@ -181,7 +181,7 @@ type cpp_type =
   | Tinstance of Id.t * GlobRef.t
       (** A type-class instance template parameter ([_tcI0]) and the class
           constraining it.  Types qualified under it ([typename _tcI0::M]) are
-          dependent — see {!instance_dependent}. *)
+          dependent. *)
   | Tpromoted of Id.t
       (** A [Type]-valued type-class field, lifted to an associated type.
           Carries only its name: which instance it hangs off is decided later,
@@ -1045,7 +1045,7 @@ and match_piece =
   | Mp_text of string  (** literal C++ of the mapping *)
   | Mp_scrutinee of {parenthesised : bool}
       (** [%scrut], parenthesised where it is written with a leading pointer
-          operator ({!written_with_leading_pointer_operator}): the text may
+          operator ({!Cpp_ir.Written.written_with_leading_pointer_operator}): the text may
           follow it with a member access. *)
   | Mp_matched_type  (** [%ty] *)
   | Mp_type_arg of int  (** [%t{i}] *)
@@ -1169,17 +1169,6 @@ val inline_shape_of_text : string -> inline_shape
     instantiated. *)
 val foreign_pair_projection : foreign -> (cpp_expr * string) option
 
-(** Whether [e] is written with a leading [*] or [&]: a prefix pointer
-    operator, which binds looser than a member access a mapping's text
-    appends to [e], so that [e] spliced there has to be parenthesised.  Read
-    off the tree, the way the printer writes it. *)
-val written_with_leading_pointer_operator : cpp_expr -> bool
-
-(** Whether a value spliced into a mapping's text in front of a member
-    access is parenthesised there: a binary operation, a mapping's call or
-    block, or one {!written_with_leading_pointer_operator}. *)
-val spliced_in_parentheses : cpp_expr -> bool
-
 (** An inline mapping's text, classified once when the use is resolved. *)
 val inline_template : string -> inline_template
 
@@ -1214,12 +1203,6 @@ val ind_ty_ptr : GlobRef.t -> cpp_type list -> cpp_type
     @param ty the base type to wrap as an rvalue reference
     @return [Tref (Lvalue, Tref ty)] *)
 val rval_ref : cpp_type -> cpp_type
-
-(** The instance parameter a type is qualified under, if any: [typename
-    _tcI0::M] yields its {!Tinstance} name and class.  Such a type is
-    dependent — what it resolves to is a property of the instance C++
-    eventually substitutes, so codegen cannot decide it. *)
-val instance_dependent : cpp_type -> (Id.t * GlobRef.t) option
 
 (** {2 Generic AST traversal combinators}
 
@@ -1512,11 +1495,6 @@ val tvar_name : cpp_type -> Names.Id.t option
 (** [tvar_names ty] is every type variable [ty] names. *)
 val tvar_names : cpp_type -> Names.Id.Set.t
 
-(** [tvar_spellings ty] is every name the type variables in [ty] answer to --
-    both the parameter name and the positional [T<i>], since an occurrence may
-    carry either.  For building a scope that {!tvar_is} will be asked about. *)
-val tvar_spellings : cpp_type -> Names.Id.Set.t
-
 (** [deduces_tparam x tys] is whether any of [tys] names the type variable
     [x], and so lets C++ deduce it from an argument. *)
 val deduces_tparam : Names.Id.t -> cpp_type list -> bool
@@ -1608,28 +1586,6 @@ val iter_expr_children :
 val iter_stmt_children :
   on_expr:(cpp_expr -> unit) -> on_stmts:(cpp_stmt list -> unit) ->
   cpp_stmt -> unit
-
-(** [lambda_needs_capture params body] is [(needs_capture, uses_this)]:
-    whether a lambda of these parameters and this body names a variable it
-    neither binds nor declares -- its own, or one a nested lambda names --
-    and so must capture ([\[&\]] or [\[=\]]), and whether it names the
-    enclosing [this].  A function of the tree, read by the printer to write
-    the capture and by the passes that ask whether a value is closed. *)
-val lambda_needs_capture : (cpp_type * Id.t option) list -> cpp_stmt list -> bool * bool
-
-(** Whether [e] is a lambda that captures nothing, or one such invoked at
-    once with no argument: a value that names no variable of its scope, so
-    the same wherever it is evaluated. *)
-val closed_lambda : cpp_expr -> bool
-
-(** Whether [e] contains a lambda that captures, read off the captures as
-    written down ({!Written}); a capture not written down is refused.  For
-    the printer: a static's initialiser in a struct holding one is wrapped in
-    a closed lambda. *)
-val expr_contains_capturing_lambda : cpp_expr -> bool
-
-(** Statement counterpart of {!expr_contains_capturing_lambda}. *)
-val stmt_contains_capturing_lambda : cpp_stmt -> bool
 
 (** Whether a [TTfun] constraint states nothing the caller can be held to, and
     so is dropped rather than printed: a rank-2 callback's result is not the

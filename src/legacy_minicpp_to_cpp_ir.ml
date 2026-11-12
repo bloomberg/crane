@@ -518,7 +518,6 @@ let resolved resolve convert x =
   | exception Cpp_ir.Resolve.Owed form -> Error (Lowered_only form)
 
 let lower_type t = lowered ty t
-let convert d = resolved Cpp_ir.Resolve.decl decl d
 let type_ t = resolved Cpp_ir.Resolve.type_ ty t
 let expr e = resolved Cpp_ir.Resolve.expr expr e
 

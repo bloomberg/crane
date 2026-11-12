@@ -851,53 +851,6 @@ let uninstantiated_mapping r =
   CErrors.anomaly
     Pp.(str "a mapping's application reached the printer uninstantiated: " ++ GlobRef.print r)
 
-(* A conjunction under a disjunction, or the reverse, is parenthesised
-   where it is written. *)
-let parenthesised_operand op = function
-  | CPPbinop (Band, _, _) -> op = Bor
-  | CPPbinop (Bor, _, _) -> op = Band
-  | _ -> false
-
-let starts_with_pointer_operator s = s <> "" && (s.[0] = '*' || s.[0] = '&')
-
-let rec written_with_leading_pointer_operator = function
-  | CPPderef _ | CPPunop (Uaddr, _) -> true
-  | CPPraw s -> starts_with_pointer_operator s
-  | CPPnumeral (_, n) -> starts_with_pointer_operator n.nl_text
-  | CPPbinop (op, lhs, _) -> (not (parenthesised_operand op lhs)) && written_with_leading_pointer_operator lhs
-  | CPPmethod_call {mc_receiver; _} -> written_with_leading_pointer_operator mc_receiver
-  | CPPforeign ((Foreign_constant | Foreign_call), fr) -> foreign_written_with_leading_pointer_operator fr
-  | _ -> false
-
-(* A mapping's text begins with its first non-empty piece; a value spliced
-   there begins as it is written, unless it is a string literal (written as
-   the string object it stands for) or parenthesised for a member access
-   following it. *)
-and foreign_written_with_leading_pointer_operator fr =
-  let rec first = function
-    | Fp_text "" :: rest -> first rest
-    | Fp_text s :: _ -> starts_with_pointer_operator s
-    | Fp_value i :: rest -> (
-      let followed_by_dot =
-        match rest with
-        | Fp_text s :: _ ->
-          let s = String.trim s in
-          s <> "" && s.[0] = '.'
-        | _ -> false
-      in
-      match List.nth_opt fr.fr_values i with
-      | Some (CPPstring _) | None -> false
-      | Some e when followed_by_dot && spliced_in_parentheses e -> false
-      | Some e -> written_with_leading_pointer_operator e )
-    | _ -> false
-  in
-  first fr.fr_pieces
-
-(* What a mapping's text parenthesises where a member access follows it. *)
-and spliced_in_parentheses = function
-  | CPPbinop _ | CPPforeign ((Foreign_call | Foreign_block _), _) | CPPfun_call (_, CPPforeign _, _) -> true
-  | e -> written_with_leading_pointer_operator e
-
 let custom_match_text cm =
   match cm.cm_scrutinee with
   | Scrut_owned when Foreign_template.structured_binding cm.cm_template <> None ->
@@ -935,16 +888,6 @@ let static_fun ~name ~ret ~params ~body =
 
 (** Rvalue reference type [T&&]. *)
 let rval_ref ty = Tref (Forwarding, ty)
-
-(** The instance parameter a type is qualified under, if any: [typename
-    _tcI0::M] (and longer chains like [typename _tcI0::M::inner]) yield the
-    instance and its class.  Such a type is dependent — what it resolves to is
-    a property of the instance C++ eventually substitutes, so codegen cannot
-    decide it. *)
-let rec instance_dependent = function
-  | Tqualified (base, _) | Tapply (base, _) -> instance_dependent base
-  | Tinstance (id, class_ref) -> Some (id, class_ref)
-  | _ -> None
 
 (** Check if a C++ type is an erasure marker ({!Terased}). These arise from
     Tdummy Ktype/Kprop/Kimplicit in the ML AST.  They are used by the
@@ -1461,29 +1404,6 @@ let rec strip_param_spelling = function
   | Tnondeduced t | Tconst t | Tref (_, t) -> strip_param_spelling t
   | t -> t
 
-(** Every name the type variables in [ty] answer to.
-
-    A type variable has up to two spellings -- the parameter name it was given
-    and the positional [T<i>] its index prints as -- and which one a given
-    occurrence carries depends on whether its head was ever resolved.  A scope
-    built from one spelling would fail to recognise the other and erase a
-    variable that is perfectly well in scope, so both go in.  {!tvar_is} asks
-    the same question from the other side, and the two have to agree. *)
-let tvar_spellings ty =
-  let acc = ref Id.Set.empty in
-  ignore
-    (exists_cpp_type
-       (fun t ->
-         ( match t with
-         | Tvar (Tv_named n) -> acc := Id.Set.add n !acc
-         | Tvar (Tv_index (i, name)) ->
-           Option.iter (fun n -> acc := Id.Set.add n !acc) name;
-           acc := Id.Set.add (tvar_id i) !acc
-         | _ -> () );
-         false )
-       ty );
-  !acc
-
 (** Whether any of [tys] names the type variable [x], and so lets C++ deduce
     it.  A template parameter the call site cannot supply and the compiler
     cannot infer is worse than the erasure it replaced. *)
@@ -1811,177 +1731,6 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
       List.iter on_expr br.smb_extra_conds;
       on_stmts br.smb_body) branches;
     Option.iter on_stmts default
-
-(** Check if a lambda needs to capture variables from enclosing scope.
-    A lambda needs [&] capture if its body references variables that are
-    not lambda parameters and not locally declared within the body.
-    [this] pointer references always require capture.
-
-    Returns [(needs_capture, uses_this)].  Also recurses into nested lambdas:
-    if a nested lambda captures from the outer lambda's scope, that counts
-    as the outer lambda needing capture.
-
-    @param params  the lambda's formal parameters as [(type, optional_name)] pairs
-    @param body    the lambda's statement body
-    @return [(needs_capture, uses_this)] where [needs_capture] is [true] when
-            the lambda has free variables (so it must use [[&]] or [[=]]) and
-            [uses_this] is [true] when the body references the enclosing [this] *)
-let lambda_needs_capture
-    (params : (cpp_type * Names.Id.t option) list)
-    (body : cpp_stmt list) : bool * bool =
-  let param_names =
-    List.fold_left
-      (fun acc (_, id_opt) ->
-        match id_opt with Some id -> Id.Set.add id acc | None -> acc)
-      Id.Set.empty params
-  in
-  let uses_this = ref false in
-  let rec collect_from_expr (refs, decls) e =
-    match e with
-    | CPPvar id -> (Id.Set.add id refs, decls)
-    | CPPderef e -> collect_from_expr (refs, decls) e
-    | CPPthis | CPPshared_from_this _ ->
-      uses_this := true;
-      (refs, decls)
-    | CPPlambda {cl_params = inner_params; cl_body = inner_body; _} ->
-      let inner_param_names =
-        List.fold_left
-          (fun acc (_, id_opt) ->
-            match id_opt with Some id -> Id.Set.add id acc | None -> acc)
-          Id.Set.empty (to_reversed inner_params)
-      in
-      let inner_refs, inner_decls =
-        List.fold_left collect_from_stmt (Id.Set.empty, Id.Set.empty) inner_body
-      in
-      let inner_free =
-        Id.Set.diff inner_refs (Id.Set.union inner_param_names inner_decls)
-      in
-      (Id.Set.union refs inner_free, decls)
-    | _ ->
-      let acc = ref (refs, decls) in
-      iter_expr_children
-        ~on_expr:(fun e' -> acc := collect_from_expr !acc e')
-        ~on_stmts:(fun stmts ->
-          acc := List.fold_left collect_from_stmt !acc stmts)
-        e;
-      !acc
-  and collect_from_stmt (refs, decls) stmt =
-    match stmt with
-    | Sraw raw_s -> collect_from_expr (refs, decls) (CPPraw raw_s)
-    | Sdecl (id, _, _) -> (refs, Id.Set.add id decls)
-    | Sasgn (id, ty, e) ->
-      let refs', decls' = collect_from_expr (refs, decls) e in
-      ( match ty with
-      | Declare _ | Declare_static _ -> (refs', Id.Set.add id decls')
-      | Existing -> (Id.Set.add id refs', decls') )
-    | Sassign_expr (lhs, e) ->
-      (* The lhs is scanned for captures (referenced, not declared); the RHS
-         is also scanned. *)
-      let refs', decls' = collect_from_expr (refs, decls) lhs in
-      collect_from_expr (refs', decls') e
-    | Scustom_case (_, scrut, _, branches, _) ->
-      List.fold_left
-        (fun (r, d) (branch_vars, _, stmts) ->
-          let branch_decls =
-            List.fold_left (fun acc p -> Id.Set.add p.cp_name acc) d branch_vars
-          in
-          List.fold_left collect_from_stmt (r, branch_decls) stmts)
-        (collect_from_expr (refs, decls) scrut)
-        branches
-    | Sblock_custom (_, _, id, _, args, _, _) ->
-      let refs', decls' =
-        List.fold_left collect_from_expr (refs, decls) args
-      in
-      (refs', Id.Set.add id decls')
-    | Smatch (scrut, branches, default) ->
-      let refs, decls = collect_from_expr (refs, decls) scrut.sc_expr in
-      let acc =
-        List.fold_left
-          (fun acc br ->
-            let acc =
-              List.fold_left collect_from_expr acc br.smb_extra_conds
-            in
-            let refs', decls' = acc in
-            let branch_decls =
-              let d =
-                List.fold_left
-                  (fun d fb -> Id.Set.add fb.fb_name d)
-                  decls' br.smb_field_bindings
-              in
-              match br.smb_var with Some id -> Id.Set.add id d | None -> d
-            in
-            List.fold_left
-              collect_from_stmt (refs', branch_decls) br.smb_body)
-          (refs, decls) branches
-      in
-      ( match default with
-      | Some stmts -> List.fold_left collect_from_stmt acc stmts
-      | None -> acc )
-    | _ ->
-      let acc = ref (refs, decls) in
-      iter_stmt_children
-        ~on_expr:(fun e -> acc := collect_from_expr !acc e)
-        ~on_stmts:(fun stmts ->
-          acc := List.fold_left collect_from_stmt !acc stmts)
-        stmt;
-      !acc
-  in
-  let all_refs, local_decls =
-    List.fold_left collect_from_stmt (Id.Set.empty, Id.Set.empty) body
-  in
-  let bound_vars = Id.Set.union param_names local_decls in
-  let free_vars = Id.Set.diff all_refs bound_vars in
-  ((not (Id.Set.is_empty free_vars)) || !uses_this, !uses_this)
-
-(** Whether [e] is a lambda that captures nothing, or one such invoked at
-    once with no argument: a value that names no variable of its scope, so
-    the same wherever it is evaluated.  The printer writes [[]] for it, and
-    the C++ compiler holds it to that. *)
-let closed_lambda (e : cpp_expr) : bool =
-  let captureless = function
-    | CPPlambda {cl_params; cl_body; _} -> not (fst (lambda_needs_capture (to_reversed cl_params) cl_body))
-    | _ -> false
-  in
-  match e with
-  | CPPlambda _ -> captureless e
-  | CPPfun_call (_, f, args) -> call_args args = [] && captureless f
-  | _ -> false
-
-(* Read off the captures as decided: a lambda writing [[]] still may hold
-   one that captures. *)
-let rec expr_contains_capturing_lambda (e : cpp_expr) : bool =
-  match e with
-  | CPPlambda {cl_capture = Written Captures_nothing; cl_body = body; _} ->
-    List.exists stmt_contains_capturing_lambda body
-  | CPPlambda {cl_capture = Written (By_reference | By_copy _); _} -> true
-  | CPPlambda {cl_capture = Immediate | Closure; _} ->
-    invalid_arg "Minicpp.expr_contains_capturing_lambda: a capture not written down"
-  | _ ->
-    let exception Found in
-    ( try
-        iter_expr_children
-          ~on_expr:(fun e' ->
-            if expr_contains_capturing_lambda e' then raise Found)
-          ~on_stmts:(fun stmts ->
-            if List.exists stmt_contains_capturing_lambda stmts then
-              raise Found)
-          e;
-        false
-      with Found -> true )
-
-(** Statement counterpart of {!expr_contains_capturing_lambda}. *)
-and stmt_contains_capturing_lambda (s : cpp_stmt) : bool =
-  let exception Found in
-  ( try
-      iter_stmt_children
-        ~on_expr:(fun e ->
-          if expr_contains_capturing_lambda e then raise Found)
-        ~on_stmts:(fun stmts ->
-          if List.exists stmt_contains_capturing_lambda stmts then
-            raise Found)
-        s;
-      false
-    with Found -> true )
 
 (** Whether a [TTfun] constraint states nothing the caller can be held to, and
     so is dropped rather than printed.
