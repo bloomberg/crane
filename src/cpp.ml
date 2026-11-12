@@ -1338,10 +1338,20 @@ let module_plan_of_analysis
       eponymous_records =
         List.map
           (fun record ->
+            (* An eponymous record is a record inductive of the structure
+               being extracted ({!Structure_analysis.collect_eponymous_records}),
+               so its parameters are known. *)
             let type_params =
               match record with
-              | GlobRef.IndRef (kn, _) -> Option.default 2 (Table.get_ind_num_param_vars_opt kn)
-              | _ -> 2
+              | GlobRef.IndRef (kn, _) -> (
+                match Table.get_ind_num_param_vars_opt kn with
+                | Some n -> n
+                | None ->
+                  CErrors.anomaly
+                    Pp.(str "Crane: the eponymous record " ++ GlobRef.print record ++ str " is not an extracted inductive.") )
+              | _ ->
+                CErrors.anomaly
+                  Pp.(str "Crane: the eponymous record " ++ GlobRef.print record ++ str " is not an inductive.")
             in
             {Module_plan.record; type_params} )
           eponymous_records;
@@ -2392,6 +2402,12 @@ let plan_promoted_inductives s =
   in
   List.concat_map (fun (mp, sel) -> elems mp sel) s
 
+(** The files of the unit written as a wrapper struct: a library's. *)
+let wrapped_files () =
+  List.filter_map
+    (fun (mi : Structure_analysis.module_info) -> if mi.wrapper_name <> None then Some mi.modpath else None)
+    (get_structure_analysis ()).sorted_modules
+
 let plan_accessors s =
   Translation_state.generating_outside_modules @@ fun () ->
   let accessor ~in_struct ~in_template r ty =
@@ -2427,12 +2443,7 @@ let plan_accessors s =
   in
   (* A library file is written as a wrapper struct; the file being extracted
      is not. *)
-  let wrapped =
-    List.filter_map
-      (fun (mi : Structure_analysis.module_info) ->
-        if mi.wrapper_name <> None then Some mi.modpath else None )
-      (get_structure_analysis ()).sorted_modules
-  in
+  let wrapped = wrapped_files () in
   List.concat_map
     (fun (mp, sel) ->
       elems ~in_struct:(List.exists (ModPath.equal mp) wrapped) ~in_template:false sel )
@@ -2462,12 +2473,7 @@ let plan_visibility s =
     | MEstruct (mp, sel) -> body (inside ~members:(member_names_of_sel sel) mp params outer) mp sel acc
     | MEident _ | MEapply _ -> acc
   and body v mp sel acc = elems v sel ((mp, v) :: acc) in
-  let wrapped =
-    List.filter_map
-      (fun (mi : Structure_analysis.module_info) ->
-        if mi.wrapper_name <> None then Some mi.modpath else None )
-      (get_structure_analysis ()).sorted_modules
-  in
+  let wrapped = wrapped_files () in
   let top acc (mp, sel) =
     let v = inside mp [] base in
     if List.exists (ModPath.equal mp) wrapped || not (wraps_children mp sel) then body v mp sel acc
@@ -2572,11 +2578,7 @@ let plan_bodies ~start ~enter s =
     | MEstruct (mp, sel) -> body (enter state ~frame:None mp sel) mp sel acc
     | MEident _ | MEapply _ -> acc
   and body state mp sel acc = elems state mp sel ((mp, state) :: acc) in
-  let wrapped =
-    List.filter_map
-      (fun (mi : Structure_analysis.module_info) -> if mi.wrapper_name <> None then Some mi.modpath else None)
-      (get_structure_analysis ()).sorted_modules
-  in
+  let wrapped = wrapped_files () in
   let top acc (mp, sel) =
     let wrapper = List.exists (ModPath.equal mp) wrapped in
     let state = start ~wrapper in
@@ -2780,12 +2782,7 @@ let plan_nested_structs s =
   (* A file with no wrapper of its own whose child collides with a global
      type is written inside a collision wrapper struct, its own declarations
      among them, and they are not local there. *)
-  let wrapper_files =
-    List.filter_map
-      (fun (mi : Structure_analysis.module_info) ->
-        if mi.wrapper_name <> None then Some mi.modpath else None )
-      (get_structure_analysis ()).sorted_modules
-  in
+  let wrapper_files = wrapped_files () in
   List.concat_map
     (fun (mp, sel) ->
       let role l =
