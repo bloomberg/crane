@@ -1071,6 +1071,7 @@ and ctor_alias_of_probe ctx vl ~base probe =
         | t -> t )
       probe
   in
+  if Probe.checking () then ignore (Legacy_minicpp_to_cpp_ir.type_exn probe);
   let declared_in = ctor_alias_declared ctx probe in
   let render t = written_body (ctor_alias_render_ctx ctx declared_in) vl t in
   let rendered_with_uses = lazy (render probe) in
