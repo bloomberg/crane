@@ -559,15 +559,16 @@ let is_shared_constant_term e =
 let names_no_value e =
   Escape.IntSet.for_all (binder_is_instance (current_lexenv ())) (Escape.free_rels 0 e)
 
-(* Whether [e], the call [f args], is closed ({!names_no_value}) and builds a
-   typeclass instance, which its Rocq type says ({!Table.builds_instance}): a
-   singleton class's method is a function, so its instance's ML type is an
-   arrow, not the class. *)
-let is_closed_instance_call env f args e =
-  (not (Table.is_custom f))
-  && args <> []
-  && Table.builds_instance f
-  && names_no_value e
+(* The instance parameter, the class and its one method, where the variable
+   [i], read at [occ] at the head of an application, is a singleton class's
+   dictionary, as Core decided it ({!Core_elaborate.singleton_dictionary_call});
+   {!singleton_dictionary} is the traversal's own reading, checked against
+   it. *)
+let singleton_call env i occ =
+  let live () = Option.map (fun (_, c, m) -> (c, m)) (singleton_dictionary env (MLrel (i, occ))) in
+  match Core_elaborate.singleton_dictionary_call ~live occ with
+  | Some (c, m) -> Option.map (fun id -> (id, c, m)) (Common.get_db_name_opt i env)
+  | None -> None
 
 (* The name a hoisted constant is declared under (see {!Cpp_constants}): a
    numeral's value where the term is one of Rocq's [positive], [N], [Z] or
@@ -1597,8 +1598,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
      projection: the method, called on the instance -- a template parameter,
      so a static member -- at the method's own type variables, which here are
      the projection's, numbered past the class's parameters. *)
-  | MLapp (head, args) when singleton_dictionary env head <> None ->
-    let inst, class_ref, method_ref = Option.get (singleton_dictionary env head) in
+  | MLapp (MLrel (i, occ), args) when singleton_call env i occ <> None ->
+    let inst, class_ref, method_ref = Option.get (singleton_call env i occ) in
     let ipv = List.length (Table.get_ind_ip_vars class_ref) in
     let n_own = Ml_type_util.method_tvar_count class_ref (Table.find_type method_ref) in
     let tvars = get_current_type_vars () in
@@ -1693,9 +1694,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
      same value every time it is evaluated, and evaluating it composes fresh
      closures.  It is built once and kept, as a closed constructor term is
      (see {!Cpp_constants}).  An instance is a pure value, so building it
-     once cannot drop an effect; only where it comes out as a call. *)
-  | MLapp (MLglob {callee = f; _}, args) as e
-    when (not slot.building_constant) && is_closed_instance_call env f args e -> (
+     once cannot drop an effect; only where it comes out as a call.  Core
+     decides which calls those are ({!Core_elaborate.closed_instance_call}). *)
+  | MLapp (MLglob ({callee = f; _} as use), args) as e
+    when (not slot.building_constant)
+         && Core_elaborate.closed_instance_call ~lex:(current_lexenv ()) use args -> (
     let built = gen_expr ?expected_ty ~slot:{slot with building_constant = true} env e in
     match built with
     | CPPfun_call _ ->

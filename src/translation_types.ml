@@ -994,7 +994,10 @@ let binder_is_instance lex i =
   | None -> false
 
 (** A singleton class's dictionary at the head of a call: the instance
-    parameter it is, the class, and the class's one method. *)
+    parameter it is, the class, and the class's one method, as the
+    traversal's environment reads it.  Emission takes Core's reading
+    ({!Core_elaborate.singleton_dictionary_call}) and checks it against this
+    one. *)
 let singleton_dictionary env head =
   match strip_magic head with
   | MLrel (i, _) -> (
