@@ -75,8 +75,18 @@ let scrutinees = Pipeline_trace.pass "scrutinees" Cpp_erasure.name_scrutinees
 let captures = Pipeline_trace.pass "captures" Cpp_erasure.decide_captures
 let initialisers = Pipeline_trace.pass "initialisers" Cpp_erasure.invoke_capturing_initialisers
 
+(** A pass before the seam: over CppIR, or over the MiniCpp a lowered
+    declaration converts back to ({!Cpp_ir_to_legacy_minicpp}). *)
+type stage =
+  | Ir of Cpp_ir.Lowered.Decl.t Pipeline_trace.pass
+  | Legacy of cpp_decl Pipeline_trace.pass
+[@@warning "-37"]
+
+let stage_name = function Ir p -> p.name | Legacy p -> p.name
+
 (** Every pass before the {!Cpp_erasure} seam, in the order they run. *)
-let minicpp_passes : cpp_decl Pipeline_trace.pass list =
+let minicpp_passes : stage list =
+  List.map (fun p -> Legacy p) @@
   [ (* Control is lowered as it is generated, from its ControlIR
        ({!Control_to_legacy_minicpp}): nothing is left here to lower.  Under
        [CRANE_CHECK_IR] what is emitted must be what control lowering
@@ -157,7 +167,7 @@ let settled_passes : Cpp_erasure.settled Pipeline_trace.pass list =
 let instantiation_passes = [foreign; qualifiers; pointer_slots; scrutinees; captures; initialisers]
 
 let pass_names =
-  Pipeline_trace.names minicpp_passes @ [seam] @ Pipeline_trace.names settled_passes
+  List.map stage_name minicpp_passes @ [seam] @ Pipeline_trace.names settled_passes
   @ Pipeline_trace.names instantiation_passes
 
 (** {2 What the printer is not owed}
@@ -263,6 +273,49 @@ let check_settled obligations (decl : Cpp_erasure.settled) =
         | Some r -> str " in " ++ Table.safe_pr_global r
         | None -> mt () )
 
+(** A declaration on its way through the passes before the seam, in the
+    representation the last pass left it in. *)
+type staged =
+  | In_ir of Cpp_ir.Lowered.Decl.t
+  | In_minicpp of cpp_decl
+
+let to_minicpp = function In_ir d -> Cpp_ir_to_legacy_minicpp.decl d | In_minicpp d -> d
+
+(** [lower d] is [d] in CppIR.  Under [CRANE_CHECK_IR] it fails unless
+    converting it back gives [d] again: a pass left on MiniCpp then reads
+    exactly what it read before the declaration was lowered. *)
+let lower d =
+  let ir = Legacy_minicpp_to_cpp_ir.lower d in
+  if Probe.checking () && compare (Cpp_ir_to_legacy_minicpp.decl ir) d <> 0 then
+    CErrors.anomaly
+      Pp.(
+        str "Crane: a declaration does not convert back from CppIR to the MiniCpp it was lowered from"
+        ++ match decl_globref d with Some r -> str " in " ++ Table.safe_pr_global r | None -> mt () );
+  ir
+
+let to_ir = function In_ir d -> d | In_minicpp d -> lower d
+
+(** [run_stages ~tracing note stages decl] lowers [decl] and runs [stages]
+    over it, converting only where a stage over the other representation
+    follows, and hands back the MiniCpp the seam takes.  [note] is told what
+    each stage did, in MiniCpp, which a stage over CppIR converts to only
+    when [tracing]. *)
+let run_stages ~tracing note stages decl =
+  let step d = function
+    | Ir p ->
+      let before = to_ir d in
+      let after = p.run before in
+      if tracing then
+        note p.name (Cpp_ir_to_legacy_minicpp.decl before) (Cpp_ir_to_legacy_minicpp.decl after);
+      In_ir after
+    | Legacy p ->
+      let before = to_minicpp d in
+      let after = p.run before in
+      note p.name before after;
+      In_minicpp after
+  in
+  to_minicpp (List.fold_left step (In_ir (lower decl)) stages)
+
 let finish decl =
   let trace = traced decl in
   let steps = ref [] in
@@ -284,7 +337,7 @@ let finish decl =
         d' )
       d passes
   in
-  let decl = run Fun.id minicpp_passes decl in
+  let decl = run_stages ~tracing:(trace <> None) note minicpp_passes decl in
   let settled = Cpp_erasure.materialise decl in
   note seam decl (settled :> cpp_decl);
   let inj (d : Cpp_erasure.settled) = (d :> cpp_decl) in

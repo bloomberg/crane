@@ -24,6 +24,11 @@ type failure =
 
 val describe : failure -> string
 
+(** [lower d] is [d] in CppIR, at the phase that may still owe resolution
+    decisions.
+    @raise Anomaly if [d] holds a form nothing produces. *)
+val lower : Minicpp.cpp_decl -> Cpp_ir.Lowered.Decl.t
+
 (** [convert d] is [d] in CppIR, or why it is not expressible there. *)
 val convert : Cpp_erasure.settled -> (Cpp_ir.Resolved.Decl.t, failure) result
 

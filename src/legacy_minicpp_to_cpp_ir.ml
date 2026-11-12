@@ -15,14 +15,13 @@ type failure =
 
 exception Unconvertible of failure
 
-let lowered_only form = raise_notrace (Unconvertible (Lowered_only form))
 let dead form = raise_notrace (Unconvertible (Dead form))
 
 let describe = function
   | Lowered_only form -> form ^ ", which only a lowered declaration may hold, survived resolution"
   | Dead form -> form ^ ", which no pass produces and CppIR does not have, was produced"
 
-type phase = Cpp_ir.Resolved.phase
+type phase = Cpp_ir.Lowered.phase
 
 let list = List.map
 let opt = Option.map
@@ -50,12 +49,12 @@ let written_capture : written_capture -> E.Written_capture.t = function
   | By_copy {this; moved} -> By_copy {this; moved}
 
 let capture : capture -> phase E.Capture.t = function
-  | Immediate -> lowered_only "an Immediate capture"
-  | Closure -> lowered_only "a Closure capture"
+  | Immediate -> Runs_in_place
+  | Closure -> Stored
   | Written w -> Written (written_capture w)
 
 let constexpr : constexpr_eligibility -> phase D.Constexpr.t = function
-  | Undecided -> lowered_only "Undecided"
+  | Undecided -> Undecided
   | Eligible -> Eligible
   | Ineligible -> Ineligible
 
@@ -186,10 +185,10 @@ let rec ty : cpp_type -> phase T.t = function
   | Tvariant (s, ts) -> Variant (variant_storage s, list ty ts)
   | Tshared_ptr t -> Shared_pointer (ty t)
   | Tvoid -> Void
-  | Tunresolved -> lowered_only "Tunresolved"
+  | Tunresolved -> Obligation Unresolved_type
   | Tany -> Any
   | Ttyctor t -> Type_constructor (ty t)
-  | Topaque -> lowered_only "Topaque"
+  | Topaque -> Obligation Opaque_type
   | Tauto -> Auto
   | Tdecay t -> Decay (ty t)
   | Tnondeduced t -> Non_deduced (ty t)
@@ -251,7 +250,7 @@ and expr : cpp_expr -> phase E.t = function
   | CPPmove e -> Move (expr e)
   | CPPforward (t, e) -> Forward (ty t, expr e)
   | CPPlambda l -> Lambda (lambda l)
-  | CPPsuspend _ -> lowered_only "CPPsuspend"
+  | CPPsuspend (t, e) -> Suspend (ty t, expr e)
   | CPPalloc (k, t) -> Allocate (alloc_kind k, ty t)
   | CPPstructmk _ -> dead "CPPstructmk"
   | CPPstruct (r, ts, es) -> Aggregate (aggregate r ts es)
@@ -344,7 +343,7 @@ and custom_match ret scrut targs branches (cm : custom_match) : phase S.Custom_m
     pieces =
       ( match cm.cm_pieces with
       | Some ps -> Instantiated (list match_piece ps)
-      | None -> lowered_only "an uninstantiated custom match" ) }
+      | None -> Uninstantiated ) }
 
 and match_scrutinee (sc : smatch_scrutinee) : phase S.Match.scrutinee =
   {expr = expr sc.sc_expr; access = access sc.sc_access; owned = sc.sc_owned; flat = sc.sc_flat}
@@ -391,7 +390,9 @@ and stmt : cpp_stmt -> phase S.t = function
   | Sblock ss -> Block (stmts ss)
   | Scontinue -> Continue
   | Sbreak -> Break
-  | Sblock_custom _ -> lowered_only "Sblock_custom"
+  | Sblock_custom (custom, template, result, t, values, type_args, binder) ->
+    Foreign_block
+      {custom; template; result; result_type = ty t; values = list expr values; type_args = list ty type_args; binder}
   | Smatch (sc, bs, default) -> Match (match_scrutinee sc, list match_branch bs, opt stmts default)
 
 let invocation (i : invocation) : phase Tp.Invocation.t =
@@ -401,7 +402,7 @@ let parameter_kind : template_type -> phase Tp.Parameter_kind.t = function
   | TTtypename -> Typename
   | TTtypename_default t -> Typename_default (ty t)
   | TTtemplate n -> Template n
-  | TTfun _ -> lowered_only "TTfun"
+  | TTfun (ds, c) -> Callable_declared (list ty ds, ty c)
   | TTinvocable (is, r) -> Invocable (list invocation is, ty r)
   | TTconcept (r, ts) -> Concept (r, list ty ts)
 
@@ -494,20 +495,20 @@ let rec decl : cpp_decl -> phase D.t = function
         member = out_of_line m.dm_field }
   | Denum e -> Enum {ref_ = e.de_ref; ctors = e.de_ctors; rocq_names = e.de_ctor_rocq_names; type_params = tparams e.de_tparams}
 
-let convert (d : Cpp_erasure.settled) =
-  match decl (d :> cpp_decl) with
-  | d -> Ok d
-  | exception Unconvertible f -> Error f
+let lower d =
+  match decl d with
+  | d -> d
+  | exception Unconvertible f -> CErrors.anomaly Pp.(str "Crane: a declaration did not lower: " ++ str (describe f))
 
-let type_ t =
-  match ty t with
-  | t -> Ok t
+let resolved resolve convert x =
+  match resolve (convert x) with
+  | x -> Ok x
   | exception Unconvertible f -> Error f
+  | exception Cpp_ir.Resolve.Owed form -> Error (Lowered_only form)
 
-let expr e =
-  match expr e with
-  | e -> Ok e
-  | exception Unconvertible f -> Error f
+let convert (d : Cpp_erasure.settled) = resolved Cpp_ir.Resolve.decl decl (d :> cpp_decl)
+let type_ t = resolved Cpp_ir.Resolve.type_ ty t
+let expr e = resolved Cpp_ir.Resolve.expr expr e
 
 let type_exn t =
   match type_ t with
