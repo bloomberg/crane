@@ -495,10 +495,13 @@ let rec decl : cpp_decl -> phase D.t = function
         member = out_of_line m.dm_field }
   | Denum e -> Enum {ref_ = e.de_ref; ctors = e.de_ctors; rocq_names = e.de_ctor_rocq_names; type_params = tparams e.de_tparams}
 
-let lower d =
-  match decl d with
-  | d -> d
+let lowered convert x =
+  match convert x with
+  | x -> x
   | exception Unconvertible f -> CErrors.anomaly Pp.(str "Crane: a declaration did not lower: " ++ str (describe f))
+
+let lower d = lowered decl d
+let lower_stmt s = lowered stmt s
 
 let resolved resolve convert x =
   match resolve (convert x) with

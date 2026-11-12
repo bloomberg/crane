@@ -103,10 +103,10 @@ let minicpp_passes : stage list =
        moves code between functions -- and before the passes that rewrite what
        an initialiser holds: [depth] splits a deep one into bindings, which in
        a static's initialiser run once. *)
-    Legacy (on_decl "constants" Cpp_constants.decl);
+    Ir (Pipeline_trace.pass "constants" Cpp_constants.decl);
     (* The temporaries Normalize named for loopification and loopification did
        not need go back where they are read. *)
-    Legacy (on_decl "temporaries" Cpp_temporaries.decl);
+    Ir (Pipeline_trace.pass "temporaries" Cpp_temporaries.decl);
     (* An argument a mapping would splice, and so evaluate, more than once is
        named once -- after the temporaries went back, so that none of them is
        put back into the text that repeats it. *)
