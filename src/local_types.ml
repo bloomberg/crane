@@ -40,7 +40,7 @@ let rec iter_annotations f = function
     Array.iter (iter_annotations f) arr;
     iter_annotations f def
   | MLtuple args -> List.iter (iter_annotations f) args
-  | MLrel _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> ()
+  | MLrel _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> ()
 
 (* Solves each unsolved metavariable of a type, in order, to the rigid
    variable [!next], advancing [next], and tells [minted] the variable. *)

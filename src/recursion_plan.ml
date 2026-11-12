@@ -213,7 +213,7 @@ let classify ~effects ~callee body =
     | MLparray (a, d) ->
       Array.iter (walk ~tail:false) a;
       walk ~tail:false d
-    | MLrel _ | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ ->
+    | MLrel _ | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ ->
       ()
   and continuation ~depth ~tail = function
     | MLlam _ as k ->
@@ -987,7 +987,7 @@ let inlined_calls ~self ~effects ~parameters ~inlines body =
     | MLparray (a, d) ->
       Array.iter operand a;
       operand d
-    | MLrel _ | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> ()
+    | MLrel _ | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> ()
   in
   go Returning body;
   List.rev !found

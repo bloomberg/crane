@@ -56,7 +56,7 @@ and escapes ~n_outer k t =
       go k scrut || Array.exists (fun (ids, _, _, body) -> go (k + List.length ids) body) branches
     | MLcons (_, _, args) | MLtuple args -> List.exists (go k) args
     | MLparray (elts, def) -> Array.exists (go k) elts || go k def
-    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _ -> false
+    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> false
   (* A group generated in place runs where it is called, and its bodies read
      what they close over there. *)
   and in_place k bodies =

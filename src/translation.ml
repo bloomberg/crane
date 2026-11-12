@@ -541,7 +541,7 @@ let check_fixpoint_escape name ~closures generated_escapes =
 let is_shared_constant_term e =
   let rec closed = function
     | MLcons (_, _, ts) -> List.for_all closed ts
-    | MLuint _ | MLfloat _ | MLstring _ | MLdummy _ -> true
+    | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ | MLdummy _ -> true
     | MLmagic (_, a) -> closed a
     | _ -> false
   in
@@ -796,22 +796,6 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
           sc )
     | _ -> ty
   in
-  (* Try to fold binary positive chains inside Z/N constructors to avoid
-     unsigned-int overflow.  Zpos(xI(xO(...xH...))) and Zneg(...) chains
-     are folded into INT64_C(n) / INT64_C(-n) literals when the parent
-     inductive has a numeral format registered via Crane Extract Numeral. *)
-  let folded =
-    match (r, ts) with
-    | GlobRef.ConstructRef ((kn, i), _), [inner] ->
-      let ind_ref = GlobRef.IndRef (kn, i) in
-      ( match Table.get_numeral_info ind_ref with
-      | Some info -> try_fold_z_binary info r inner
-      | None -> None )
-    | _ -> None
-  in
-  match folded with
-  | Some e -> e
-  | None ->
   (* Some custom-extracted inductives (e.g. [sum1], registered as
      [Crane Extract Inductive sum1 => "" ["%a0" "%a0"]]) are pure type-level
      erasure markers: their constructor template forwards the argument
@@ -1610,16 +1594,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       (List.map (gen_expr env) value_args)
   (* Every application translation is handed is canonical
      ({!Core_normalize}): no head here is a global already applied, a
-     coercion, or a one-branch match. *)
-  | MLapp (f, _) as e when Probe.checking () && not (Core_normalize.canonical_head f) ->
-    Probe.violation "non-canonical application" (Pp.str "an application head Core_normalize reads through");
+     coercion, or a one-branch match, and no numeral literal is spelled
+     as a converter's application or as a constructor term. *)
+  | (MLapp _ | MLcons _) as e when Probe.checking () && not (Core_normalize.canonical_application e) ->
+    Probe.violation "non-canonical application" (Pp.str "a term Core_normalize writes otherwise");
     gen_expr ?expected_ty ~slot env (Core_normalize.spine e)
-  | MLapp (((MLdummy _ | MLexn _) as absurd), _) ->
-    (* Applying an absurd head — the eliminator of a branch that the indices
-       rule out.  The application is itself unreachable, so emit the throw
-       alone: calling it would apply the throwing thunk's [std::any] result
-       as though it were a function. *)
-    gen_expr ?expected_ty env absurd
   | MLapp (MLglob ({callee = r; _} as use), a1 :: l) when is_effect Core_effects.Return use ->
     let ret_tys = Mlutil.written_type_args use in
     if not (is_sequential_effect Core_effects.Return use) then begin
@@ -1662,19 +1641,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        ...). *)
     with_escape_analysis (fun () -> with_region a (fun () ->
       mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) ) )
-  (* A numeral converter applied to a digit chain is the literal it
-     computes ({!numeral_converter_literal}). *)
-  | MLapp (MLglob {callee = r; _}, [arg]) when numeral_converter_literal r arg <> None ->
-    let info, n = Option.get (numeral_converter_literal r arg) in
-    render_numeral info n
   (* A class field is projected through the instance wherever the instance
-     survived, whatever mapping the field carries -- see
-     {!static_projection_instance}. *)
-  | MLapp (MLglob ({callee = x; _} as use), args)
-    when static_projection_instance env x args <> None -> (
-    let inst = Option.get (static_projection_instance env x args) in
-    match static_projection_missing env use args inst with
-    | [] -> project_through_instance env use args inst
+     survived, whatever mapping the field carries, as Core decided it
+     ({!Core_elaborate.static_projection_call}). *)
+  | MLapp (MLglob use, args)
+    when Core_elaborate.static_projection_call ~lex:(current_lexenv ()) use args <> None -> (
+    let projection = Option.get (Core_elaborate.static_projection_call ~lex:(current_lexenv ()) use args) in
+    match projection.missing with
+    | [] -> project_through_instance env use args projection
     | missing ->
       let k = List.length missing in
       let call =
@@ -2804,35 +2778,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         | Some into -> coerce ~from ~into cglob
         | None -> cglob )
       | _ -> curry_to_expected env ?expected_ty use cglob )
-  | MLcons (_ty, r, _ts)
-    when match r with
-         | GlobRef.ConstructRef ((kn, i), _) ->
-           Table.is_numeral_inductive (GlobRef.IndRef (kn, i))
-         | _ -> false ->
-    (* Try to fold Peano numeral chain into an integer literal *)
-    let ind_ref =
-      match r with
-      | GlobRef.ConstructRef ((kn, i), _) -> GlobRef.IndRef (kn, i)
-      | _ -> CErrors.anomaly (Pp.str "try_fold_numeral: expected ConstructRef")
-    in
-    ( match Table.get_numeral_info ind_ref with
-    | Some info ->
-      ( match try_fold_numeral info ml_e with
-      | Some n ->
-        render_numeral info (Z.of_int n)
-      | None ->
-        (* Peano folding failed.  Try binary positive folding for
-           Z constructors: Zpos(xI(xO(...xH...))) / Zneg(...) chains
-           can overflow unsigned int, so fold into INT64_C(n) literals. *)
-        let z_folded =
-          match _ts with
-          | [inner] -> try_fold_z_binary info r inner
-          | _ -> None
-        in
-        ( match z_folded with
-        | Some e -> e
-        | None -> gen_expr_custom_cons ?expected_ty ~slot env _ty r _ts ) )
-    | None -> gen_expr_custom_cons ?expected_ty ~slot env _ty r _ts )
   | MLcons (ty, r, ts) when is_custom r ->
     gen_expr_custom_cons ?expected_ty ~slot env ty r ts
   | MLcons (ty, r, ts)
@@ -4551,7 +4496,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               (* At the instance's class type where that is closed: the
                  match's own annotation may have erased the arguments. *)
               let class_ty =
-                match instance_class_ty env t with
+                match instance_class_ty ~lex:(current_lexenv ()) t with
                 | ct when Mlutil.type_maxvar ct = 0
                           && not (ml_type_contains_erased ct) -> ct
                 | _ -> typ
@@ -4898,6 +4843,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) ) )
   | MLstring s -> CPPstring s
   | MLuint x -> CPPuint x
+  | MLnumeral (ind, n) -> (
+    match Table.get_numeral_info ind with
+    | Some info -> render_numeral info n
+    | None -> CErrors.anomaly Pp.(str "a literal of " ++ Printer.pr_global ind ++ str ", which has no numeral mapping") )
   | MLfloat f -> CPPfloat f
   | MLparray (elems, def) ->
     let elems = Array.map (gen_expr env) elems in
@@ -5069,7 +5018,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
    concrete, so the term is an ordinary application and not the single-branch
    match a projection through an instance {e variable} extracts to; the C++ is
    the same either way. *)
-and project_through_instance env use args inst =
+and project_through_instance env use args (projection : Elaborated_call.static_projection) =
+  let inst = List.nth args projection.instance in
   let x = use.callee and tys = Mlutil.written_type_args use in
   let operands =
     List.filter
@@ -5105,7 +5055,7 @@ and project_through_instance env use args inst =
 
      Only a suffix as long as the operand list is safe to read. *)
   let operand_ml_tys =
-    let doms = projection_value_domains env use inst in
+    let doms = projection.domains in
     let extra = List.length doms - List.length operands in
     if extra >= 0 then List.filteri (fun i _ -> i >= extra) doms else []
   in
@@ -5947,9 +5897,9 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     let cglob =
       match (plan.cp_instantiated.call.instances, plan.cp_instance_type_args, all_type_args) with
       | [inst], [Some inst_ty], _ :: method_targs
-        when (match kept_instance_of_projection env id [inst] with
+        when (match kept_instance_of_projection ~lex:(current_lexenv ()) id [inst] with
               | Some _ -> (
-                match resolve_tmeta (instance_class_ty env inst) with
+                match resolve_tmeta (instance_class_ty ~lex:(current_lexenv ()) inst) with
                 | Miniml.Tglob (c, _, _) -> Ml_type_util.method_is_member_template c id
                 | _ -> false )
               | None -> false) ->
@@ -10162,16 +10112,6 @@ and gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx 
 let () = type_term_arg := fun env a -> gen_expr env a
 let () = plan_representation := Representation_plan.region
 
-(** Whether [expr] is a numeral-converter application (e.g.
-    [Nat.of_num_uint (Number.UIntDecimal ...)]) that {!gen_expr} folds into a
-    literal ({!numeral_converter_literal}).  When true, the whole subtree is
-    replaced by a raw integer literal at translation time, so the converter and
-    its digit-chain argument (and everything they transitively reference) are
-    never emitted.  Dependency collection uses this to avoid pulling in the
-    vestigial [of_num_uint]/[of_uint]/[Uint] machinery. *)
-let is_foldable_numeral_converter_app = function
-  | MLapp (MLglob {callee = r; _}, [arg]) -> Option.has_some (numeral_converter_literal r arg)
-  | _ -> false
 
 (** [with_method_ns_for_locals () f] runs [f] with the module's local
     inductives added to {!Translation_state.method_self_ns}, and puts the

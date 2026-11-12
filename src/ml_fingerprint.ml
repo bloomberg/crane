@@ -109,6 +109,7 @@ and ml_ast w = function
   | MLfloat f -> tag w "MLfloat"; str w (Float64.to_hex_string f)
   | MLstring s -> tag w "MLstring"; str w (Pstring.to_string s)
   | MLparray (xs, d) -> tag w "MLparray"; array w (ml_ast w) xs; ml_ast w d
+  | MLnumeral (r, n) -> tag w "MLnumeral"; globref w r; str w (Z.to_string n)
 
 and magic w = function
   | Mcoerce (a, b) -> tag w "Mcoerce"; ml_type w a; ml_type w b

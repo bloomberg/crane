@@ -1215,7 +1215,7 @@ let naming_calls ~cpp_of r =
     cannot fail to terminate.  A lambda is a value; so is a constructor of
     values.  A global is a value unless naming it calls it ({!thunk_reason}). *)
 let rec ml_is_value = function
-  | MLrel _ | MLlam _ | MLdummy _ | MLuint _ | MLfloat _ | MLstring _ -> true
+  | MLrel _ | MLlam _ | MLdummy _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> true
   | MLglob {callee = r; _} -> thunk_reason r = None
   | MLcons (_, _, args) | MLtuple args -> List.for_all ml_is_value args
   | MLmagic (_, e) -> ml_is_value e
@@ -1501,7 +1501,7 @@ let rec collect_tvars_ast acc = function
    |MLexn _
    |MLdummy _
    |MLaxiom _
-   |MLuint _
+   |MLuint _ | MLnumeral _
    |MLfloat _
    |MLstring _ -> acc
 
@@ -1523,7 +1523,7 @@ let rec ast_may_throw = function
   | MLmagic (_, a) -> ast_may_throw a
   | MLparray (arr, def) -> Array.exists ast_may_throw arr || ast_may_throw def
   | MLtuple args -> List.exists ast_may_throw args
-  | MLrel _ | MLdummy _ | MLuint _ | MLfloat _ | MLstring _ -> false
+  | MLrel _ | MLdummy _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ -> false
 
 (** Build Tvar i -> concrete_type substitution by unifying two ML types
     structurally. Walks both types in parallel; when one side has Tvar i and the
@@ -1799,7 +1799,7 @@ let detect_non_forwarded_params_generic ~is_self_call n_params body =
      |MLexn _
      |MLdummy _
      |MLaxiom _
-     |MLuint _
+     |MLuint _ | MLnumeral _
      |MLfloat _
      |MLstring _ -> ()
   in
@@ -1879,7 +1879,7 @@ let escaping_params ~suspended n_params body =
     | MLparray (elts, def) ->
       Array.iter (walk under depth) elts;
       walk under depth def
-    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _
+    | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _
      |MLstring _ -> ()
   in
   walk suspended 0 body;
@@ -1954,7 +1954,7 @@ let rec argument_source n_params locals = function
     else
       let i = n_params - (db - depth) in
       if i >= 0 && i < n_params then `Param i else `Fixed
-  | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _ | MLstring _
+  | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _
    |MLcons _ | MLtuple _ | MLparray _ -> `Fixed
   | MLlam _ | MLapp _ | MLletin _ | MLcase _ | MLfix _ -> `Closure
 
@@ -2037,7 +2037,7 @@ let closure_feedback_params ~callee bodies =
       | MLparray (elts, def) ->
         Array.iter (walk locals) elts;
         walk locals def
-      | MLrel _ | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLfloat _
+      | MLrel _ | MLglob _ | MLexn _ | MLdummy _ | MLaxiom _ | MLuint _ | MLnumeral _ | MLfloat _
        |MLstring _ -> ()
     in
     walk [] body
@@ -2950,7 +2950,7 @@ let rec collect_free_rels_set n_bound acc = function
    |MLexn _
    |MLdummy _
    |MLaxiom _
-   |MLuint _
+   |MLuint _ | MLnumeral _
    |MLfloat _
    |MLstring _ -> acc
 

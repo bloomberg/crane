@@ -99,3 +99,14 @@ let at_call inst call =
   if not (Names.GlobRef.UserOrd.equal inst.call.callee call.callee && List.equal ( = ) inst.call.roles call.roles)
   then invalid_arg "Elaborated_call.at_call";
   {inst with call = {call with tyargs = inst.call.tyargs}}
+
+type static_projection = {
+  instance : int;
+  domains : Miniml.ml_type list;
+  missing : Miniml.ml_type list;
+}
+
+let same_static_projection a b =
+  Int.equal a.instance b.instance
+  && List.equal Mlutil.eq_ml_type a.domains b.domains
+  && List.equal Mlutil.eq_ml_type a.missing b.missing

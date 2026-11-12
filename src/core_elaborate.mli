@@ -145,6 +145,18 @@ val instantiation :
     against that one. *)
 val closed_instance_call : lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> bool
 
+(** [static_projection_call ~lex use args] -- where the call [use args]
+    calls a class field as a static member of the instance it projects
+    through: which argument that instance is, the member's value
+    parameters, and the operands the call leaves out
+    ({!Translation_types.static_projection}), as the walk decided it where
+    it met the application, from the call and the binders of its own
+    environment.  Where the walk made no single decision there, and in
+    planning, it is decided from the call and [lex]; under [CRANE_CHECK_IR]
+    a planned decision is checked against that one. *)
+val static_projection_call :
+  lex:Lexenv.t -> Miniml.global_use -> Miniml.ml_ast list -> Elaborated_call.static_projection option
+
 (** [singleton_dictionary_call ~live occ] -- the class and its one method
     where the variable read at the occurrence [occ], at the head of an
     application, is a singleton class's dictionary: as the walk decided it

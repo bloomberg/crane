@@ -943,7 +943,7 @@ let rec map_types_in_ast (f : ml_type -> ml_type) = function
     | MLexn _
     | MLdummy _
     | MLaxiom _
-    | MLuint _
+    | MLuint _ | MLnumeral _
     | MLfloat _
     | MLstring _ ) as t -> t
 

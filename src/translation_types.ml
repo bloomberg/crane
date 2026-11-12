@@ -836,45 +836,6 @@ let render_numeral info (n : Z.t) : cpp_expr =
   | _ -> () );
   CPPnumeral (info.Table.num_ind, {nl_value = n; nl_text = Common.render_template [("%n", Z.to_string n)] info.Table.num_fmt})
 
-(** [registered_constructor name r]: [r]'s 1-based constructor index, where
-    [r] is a constructor of the inductive Rocq registers as [name]
-    ([num.pos.type], [num.uint.type], ...).  Digit chains and binary
-    numerals are read by constructor index, which only means anything once
-    the inductive is known. *)
-let registered_constructor name = function
-  | GlobRef.ConstructRef (ind, idx) when Rocqlib.has_ref name && Rocqlib.check_ref name (GlobRef.IndRef ind) ->
-    Some idx
-  | _ -> None
-
-(** Try to fold a binary positive chain [xI(xO(...xH...))] into an [int64].
-    Returns [Some n] where [n > 0] if the entire chain can be folded, or
-    [None] if any node is not a recognized positive constructor.
-    Constructor indices (1-based): xI=[positive_xI_idx], xO=[positive_xO_idx],
-    xH=[positive_xH_idx]. *)
-let rec try_fold_positive expr : Z.t option =
-  match strip_magic expr with
-  | MLcons (_, r, args) -> (
-    match (registered_constructor "num.pos.type" r, args) with
-    | Some idx, [] when idx = positive_xH_idx -> Some Z.one
-    | Some idx, [inner] when idx = positive_xI_idx ->
-      Option.map (fun n -> Z.succ (Z.shift_left n 1)) (try_fold_positive inner)
-    | Some idx, [inner] when idx = positive_xO_idx ->
-      Option.map (fun n -> Z.shift_left n 1) (try_fold_positive inner)
-    | _ -> None )
-  | _ -> None
-
-(** Fold a constructor [r] wrapping a positive chain -- [Zpos], [Zneg],
-    [Npos] -- into a rendered numeral string; [inner] is its positive
-    argument.  Negative only for [Zneg].  Returns [None] if [inner] cannot
-    be folded.  The value is kept at arbitrary precision: an [int64] wraps
-    silently from 2^63 on. *)
-let try_fold_z_binary info r inner : cpp_expr option =
-  Option.map
-    (fun pos_val ->
-      let z_val = if registered_constructor "num.Z.type" r = Some z_neg_idx then Z.neg pos_val else pos_val in
-      render_numeral info z_val)
-    (try_fold_positive inner)
-
 (** Whether [r] is a type family over a value -- [sem : idx -> Type] --
     whose applications ML writes without their argument, so that a generic
     declaration erases them where an instantiation can name them. *)
@@ -1166,20 +1127,6 @@ let save_erased_env () : binder_env = (!tctx).cpp_binder_types
 (** Restore binder-type state saved by {!save_erased_env}. *)
 let restore_erased_env saved = tctx := { !tctx with cpp_binder_types = saved }
 
-(** Try to fold a Peano numeral chain of [info]'s inductive -- its successor
-    constructor down to its zero constructor -- into an integer. *)
-let rec try_fold_numeral info expr =
-  let index = function
-    | GlobRef.ConstructRef (ind, cidx) when GlobRef.CanOrd.equal (GlobRef.IndRef ind) info.Table.num_ind ->
-      Some cidx
-    | _ -> None
-  in
-  match strip_magic expr with
-  | MLcons (_ty, cr, []) when index cr = Some info.Table.num_zero_ctor -> Some 0
-  | MLcons (_ty, cr, [inner]) when index cr = Some info.Table.num_succ_ctor ->
-    Option.map (fun n -> n + 1) (try_fold_numeral info inner)
-  | _ -> None
-
 (** [promoted_tys_of_arity n] is the concrete types the enclosing scope's
     promoted type variables stand for, when there are exactly [n] of them and
     so they can be read as the arguments of an [n]-ary type.  Erased entries
@@ -1300,8 +1247,9 @@ let eta_expand_to_expected ?expected_ty ~ml_arity ~returns_a_lambda ~arity f =
     mk_lambda params None [Sreturn (Some call)] ~capture:Closure
   | _ -> f
 
-(* The class an instance argument is an instance of, as an ML type. *)
-let instance_class_ty env ml_arg =
+(* The class an instance argument is an instance of, as an ML type, a
+   variable's read off its binder in [lex]. *)
+let instance_class_ty ~lex ml_arg =
   let of_ref r =
     match Table.find_type r with
     | ty -> ml_return_type ty
@@ -1310,7 +1258,7 @@ let instance_class_ty env ml_arg =
   match strip_dictionary ml_arg with
   | MLglob {callee = r; _} | MLapp (MLglob {callee = r; _}, _) -> of_ref r
   | MLrel (i, _) -> (
-    match get_env_type_opt i with
+    match Lexenv.type_opt lex i with
     | Some ty -> ml_return_type ty
     | None -> Miniml.Tunknown )
   | _ -> Miniml.Tunknown
@@ -1329,47 +1277,32 @@ let instance_class_ty env ml_arg =
    Requiring the field to belong to {e this} instance's class is what keeps the
    rule from firing on an ordinary mapped constant that merely takes an
    instance among its arguments. *)
-let kept_instance_of_projection env x args =
-  let lex = current_lexenv () in
+let kept_instance_of_projection ~lex x args =
   List.find_opt
     (fun a ->
       is_typeclass_instance_arg ~lex a
       && (not (instance_arg_is_erased ~lex a))
       && List.mem (Some x)
-           (record_fields_of_type (instance_class_ty env a)) )
+           (record_fields_of_type (instance_class_ty ~lex a)) )
     args
 
-(* The instance a class field is called on as a static member, rather than
-   through the field's dispatcher: a mapped field's, as above, and a singleton
-   class's method's -- its dictionary is known wherever the call is, its
-   projection's only one, and the instance struct declaring the method under
-   the dispatcher's own name hides the dispatcher from any call inside it. *)
-let static_projection_instance env x args =
-  if Table.is_inline_custom x then kept_instance_of_projection env x args
-  else if Table.singleton_method_class x <> None then
-    List.find_opt
-      (fun a ->
-        let lex = current_lexenv () in
-        is_typeclass_instance_arg ~lex a && not (instance_arg_is_erased ~lex a))
-      args
-  else None
-
-(* The value parameters of class field [x] called through [inst] at [tys], as
-   the method declares them.
+(* The value parameters of class field [use] called through [inst] in
+   [lex], as the method declares them.
 
    Two substitutions, because the projection's type quantifies over the
-   class's carrier as well as the method's own variables and [tys] carries
-   only the latter -- its leading entry, the carrier's, is [Tdummy].  The
-   carrier is what the instance is an instance {e at}, the sole argument of
-   its class type; without it every [m A] absorbs its argument and says
-   [std::any].  The carrier, the dictionary and the erased type arguments
-   all stand in front of the value parameters. *)
-let projection_value_domains env use inst =
+   class's carrier as well as the method's own variables and the use's
+   type arguments carry only the latter -- its leading entry, the
+   carrier's, is [Tdummy].  The carrier is what the instance is an instance
+   {e at}, the sole argument of its class type; without it every [m A]
+   absorbs its argument and says [std::any].  The carrier, the dictionary
+   and the erased type arguments all stand in front of the value
+   parameters. *)
+let projection_value_domains ~lex use inst =
   match Table.find_type use.callee with
   | exception Not_found -> []
   | ty ->
     let ty =
-      match resolve_tmeta (instance_class_ty env inst) with
+      match resolve_tmeta (instance_class_ty ~lex inst) with
       | Tglob (_, [carrier], _) -> subst_dict_carrier carrier ty
       | _ -> ty
     in
@@ -1380,18 +1313,41 @@ let projection_value_domains env use inst =
            | Tdummy _ -> false
            | t -> not (Table.is_typeclass_type t))
 
-(* The operands a singleton method's call through [inst] leaves out: a
-   static member takes them all, so a partial application closes over the
-   rest. *)
-let static_projection_missing env use args inst =
-  if Table.is_inline_custom use.callee then []
-  else
-    let operands =
-      List.filter (fun a -> not (Mlutil.isMLdummy a || a == inst)) args
-    in
-    List.filteri
-      (fun i _ -> i >= List.length operands)
-      (projection_value_domains env use inst)
+(** [static_projection ~lex use args] -- where the call [use args], standing
+    in [lex], calls a class field as a static member of the instance it
+    projects through, rather than through the field's dispatcher: which
+    argument that instance is, the member's value parameters, and the
+    operands the call leaves out.  A mapped field is projected so wherever
+    its instance was kept ({!kept_instance_of_projection}), and a singleton
+    class's method wherever its instance was -- its dictionary is known
+    wherever the call is, its projection's only one, and the instance struct
+    declaring the method under the dispatcher's own name hides the
+    dispatcher from any call inside it.  A mapped field's call leaves
+    nothing out; a singleton method's static member takes every operand, so
+    a partial application closes over the rest. *)
+let static_projection ~lex use args : Elaborated_call.static_projection option =
+  let x = use.callee in
+  let inst =
+    if Table.is_inline_custom x then kept_instance_of_projection ~lex x args
+    else if Table.singleton_method_class x <> None then
+      List.find_opt (fun a -> is_typeclass_instance_arg ~lex a && not (instance_arg_is_erased ~lex a)) args
+    else None
+  in
+  Option.map
+    (fun inst ->
+      let domains = projection_value_domains ~lex use inst in
+      let missing =
+        if Table.is_inline_custom x then []
+        else
+          let operands = List.filter (fun a -> not (Mlutil.isMLdummy a || a == inst)) args in
+          List.filteri (fun i _ -> i >= List.length operands) domains
+      in
+      let rec position i = function
+        | a :: rest -> if a == inst then i else position (i + 1) rest
+        | [] -> assert false
+      in
+      {Elaborated_call.instance = position 0 args; domains; missing} )
+    inst
 
 (** The shape a value physically has once it has been through a [std::any]:
     unchanged for a leaf, and one level of template with every argument boxed
@@ -1404,69 +1360,6 @@ let static_projection_missing env use args inst =
 let boxed_shape_of = function
   | Tglob (g, (_ :: _ as args), ns) -> Tglob (g, List.map (fun _ -> Tany) args, ns)
   | t -> t
-
-(** Fold a Decimal.uint digit chain into an arbitrary-precision integer.
-    Constructor indices (1-based): Nil=[uint_nil_idx], D0..[decimal_d9_idx].
-    Digits are processed outside-in (most significant first).
-    Uses [Z.t] from zarith to avoid overflow on large literals. *)
-let rec try_fold_decimal_uint expr acc =
-  match strip_magic expr with
-  | MLcons (_, r, args) -> (
-    match (registered_constructor "num.uint.type" r, args) with
-    | Some idx, [] when idx = uint_nil_idx -> Some acc
-    | Some cidx, [inner] when cidx >= decimal_d0_idx && cidx <= decimal_d9_idx ->
-      let digit = Z.of_int (cidx - decimal_d0_idx) in
-      try_fold_decimal_uint inner Z.(acc * of_int 10 + digit)
-    | _ -> None )
-  | _ -> None
-
-(** Fold a Decimal.signed_int (Pos | Neg) wrapping a Decimal.uint chain.
-    Constructor indices (1-based): Pos=[signed_pos_idx], Neg=[signed_neg_idx]. *)
-let try_fold_signed_decimal_int expr =
-  match strip_magic expr with
-  | MLcons (_, r, [inner]) -> (
-    match registered_constructor "num.int.type" r with
-    | Some idx when idx = signed_pos_idx -> try_fold_decimal_uint inner Z.zero
-    | Some idx when idx = signed_neg_idx -> Option.map Z.neg (try_fold_decimal_uint inner Z.zero)
-    | _ -> None )
-  | _ -> None
-
-(** Fold a Hexadecimal.uint digit chain into an arbitrary-precision integer.
-    Constructor indices (1-based): Nil=[uint_nil_idx], D0..[hex_df_idx].
-    Uses [Z.t] from zarith to avoid overflow on large literals. *)
-let rec try_fold_hex_uint expr acc =
-  match strip_magic expr with
-  | MLcons (_, r, args) -> (
-    match (registered_constructor "num.hexadecimal_uint.type" r, args) with
-    | Some idx, [] when idx = uint_nil_idx -> Some acc
-    | Some cidx, [inner] when cidx >= hex_d0_idx && cidx <= hex_df_idx ->
-      let digit = Z.of_int (cidx - hex_d0_idx) in
-      try_fold_hex_uint inner Z.(acc * of_int 16 + digit)
-    | _ -> None )
-  | _ -> None
-
-(** Fold a Hexadecimal.signed_int (Pos | Neg) wrapping a Hexadecimal.uint chain.
-    Constructor indices (1-based): Pos=[signed_pos_idx], Neg=[signed_neg_idx]. *)
-let try_fold_signed_hex_int expr =
-  match strip_magic expr with
-  | MLcons (_, r, [inner]) -> (
-    match registered_constructor "num.hexadecimal_int.type" r with
-    | Some idx when idx = signed_pos_idx -> try_fold_hex_uint inner Z.zero
-    | Some idx when idx = signed_neg_idx -> Option.map Z.neg (try_fold_hex_uint inner Z.zero)
-    | _ -> None )
-  | _ -> None
-
-(** Fold a Number.signed_int (IntDecimal | IntHexadecimal) into an
-    arbitrary-precision integer.
-    Constructors: IntDecimal(idx=1), IntHexadecimal(idx=2). *)
-let try_fold_num_int expr =
-  match strip_magic expr with
-  | MLcons (_, r, [inner]) -> (
-    match registered_constructor "num.num_int.type" r with
-    | Some 1 -> try_fold_signed_decimal_int inner
-    | Some 2 -> try_fold_signed_hex_int inner
-    | _ -> None )
-  | _ -> None
 
 (** Whether [e] reads a component straight out of a pair recovered from a
     [std::any].  Such a component is itself a box, so it needs no further
@@ -1483,34 +1376,6 @@ let is_erased_pair_component = function
     separated at. *)
 let type_term_arg : (env -> ml_ast -> cpp_expr) ref =
   ref (fun _ _ -> CErrors.anomaly (Pp.str "Translation.type_term_arg: unset"))
-
-(** Fold a Number.uint (UIntDecimal | UIntHexadecimal) into an
-    arbitrary-precision integer.
-    Constructor indices (1-based): UIntDecimal=[num_uint_decimal_idx],
-    UIntHexadecimal=[num_uint_hex_idx]. *)
-let try_fold_num_uint expr =
-  match strip_magic expr with
-  | MLcons (_, r, [inner]) -> (
-    match registered_constructor "num.num_uint.type" r with
-    | Some idx when idx = num_uint_decimal_idx -> try_fold_decimal_uint inner Z.zero
-    | Some idx when idx = num_uint_hex_idx -> try_fold_hex_uint inner Z.zero
-    | _ -> None )
-  | _ -> None
-
-(** [numeral_converter_literal r arg]: the numeral mapping and the value of
-    the converter [r] (a registered one, see {!Table.extract_numeral})
-    applied to the digit chain [arg], a [Number.uint] or a [Number.int],
-    where it is one.  The one place both translation, which renders the
-    application as the literal, and dependency collection, which then
-    leaves the converter and its digit inductives out, decide that it
-    folds. *)
-let numeral_converter_literal r arg =
-  match Option.bind (Table.numeral_ind_of_converter r) Table.get_numeral_info with
-  | None -> None
-  | Some info -> (
-    match try_fold_num_uint arg with
-    | Some n -> Some (info, n)
-    | None -> Option.map (fun n -> (info, n)) (try_fold_num_int arg) )
 
 let rec convert_ml_type_to_cpp_type
     env

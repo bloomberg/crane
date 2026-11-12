@@ -244,8 +244,9 @@ and ml_branch = (ml_ident * ml_type) list * ml_type * ml_pattern * ml_ast
     [MLmagic] a marker at a type gap opened by erasure — either an unsafe
     coercion carrying both of its types, or a lambda-grouping barrier, as
     {!ml_magic} records; the
-    primitive literals [MLuint], [MLfloat] and [MLstring]; and [MLparray] a
-    persistent-array literal (element array plus default value).
+    primitive literals [MLuint], [MLfloat] and [MLstring]; [MLparray] a
+    persistent-array literal (element array plus default value); and
+    [MLnumeral] a literal of a numeral inductive.
 
     Typing note: [MLcons] and [MLcase] deliberately carry an {!ml_type} — the
     type of the applied constructor, or of the matched head — so that later
@@ -287,6 +288,10 @@ and ml_ast =
   | MLfloat of Float64.t
   | MLstring of Pstring.t
   | MLparray of ml_ast array * ml_ast
+  | MLnumeral of GlobRef.t * Z.t
+      (** A value of a numeral inductive -- one [Crane Extract Numeral]
+          registers -- and the inductive: what a numeral converter applied
+          to a digit chain computes ({!Numeral_literal}). *)
 
 (** A global named at a use: the callee, and what the use means for the
     callee's type scheme.  Built only through {!Global_use}; a reader that

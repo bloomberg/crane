@@ -1001,6 +1001,7 @@ let rec eq_ml_ast t1 t2 =
   | MLaxiom _, MLaxiom _ -> true (* ignore the name of the axiom *)
   | MLmagic (_, t1), MLmagic (_, t2) -> eq_ml_ast t1 t2
   | MLuint i1, MLuint i2 -> Uint63.equal i1 i2
+  | MLnumeral (r1, n1), MLnumeral (r2, n2) -> GlobRef.CanOrd.equal r1 r2 && Z.equal n1 n2
   | MLfloat f1, MLfloat f2 -> Float64.equal f1 f2
   | MLstring s1, MLstring s2 -> Pstring.equal s1 s2
   | MLparray (t1, def1), MLparray (t2, def2) ->
@@ -1018,7 +1019,7 @@ let rec eq_ml_ast t1 t2 =
       | MLdummy _
       | MLaxiom _
       | MLmagic _
-      | MLuint _
+      | MLuint _ | MLnumeral _
       | MLfloat _
       | MLstring _
       | MLparray _ ),
@@ -1073,7 +1074,7 @@ let ast_iter_rel_applied f =
      |MLexn _
      |MLdummy _
      |MLaxiom _
-     |MLuint _
+     |MLuint _ | MLnumeral _
      |MLfloat _
      |MLstring _ -> ()
   in
@@ -1103,7 +1104,7 @@ let ast_map f = function
     | MLexn _
     | MLdummy _
     | MLaxiom _
-    | MLuint _
+    | MLuint _ | MLnumeral _
     | MLfloat _
     | MLstring _ ) as a -> a
 
@@ -1149,7 +1150,7 @@ let rec ast_map_types f = function
     | MLexn _
     | MLdummy _
     | MLaxiom _
-    | MLuint _
+    | MLuint _ | MLnumeral _
     | MLfloat _
     | MLstring _ ) as a -> a
 
@@ -1402,7 +1403,7 @@ let ast_map_lift f n = function
     | MLexn _
     | MLdummy _
     | MLaxiom _
-    | MLuint _
+    | MLuint _ | MLnumeral _
     | MLfloat _
     | MLstring _ ) as a -> a
 
@@ -1432,7 +1433,7 @@ let ast_iter f = function
    |MLexn _
    |MLdummy _
    |MLaxiom _
-   |MLuint _
+   |MLuint _ | MLnumeral _
    |MLfloat _
    |MLstring _ -> ()
 
@@ -1481,7 +1482,7 @@ let nb_occur_match =
      |MLexn _
      |MLdummy _
      |MLaxiom _
-     |MLuint _
+     |MLuint _ | MLnumeral _
      |MLfloat _
      |MLstring _ -> 0
   in
@@ -1538,7 +1539,7 @@ let dump_unused_vars a =
      |MLexn _
      |MLdummy _
      |MLaxiom _
-     |MLuint _
+     |MLuint _ | MLnumeral _
      |MLfloat _
      |MLstring _ -> a
   and ren_branch env ((ids, r, p, b) as tr) =
@@ -1588,11 +1589,14 @@ and ast_sizes l = List.fold_left (fun n a -> n + ast_size a) 0 l
 (* [canonical_app f args], [f] canonical: the application, its head read
    through.  A global applied twice is applied once to both argument lists; a
    coercion at the head is dropped; a single-branch match at the head takes
-   the arguments into its branch, past the branch's binders. *)
+   the arguments into its branch, past the branch's binders; an absurd head
+   -- an erased value, or the throw standing for a branch the indices rule
+   out -- is the whole application, which never evaluates its arguments. *)
 let rec canonical_app f args =
   match f with
   | MLapp ((MLglob _ as g), inner) -> MLapp (g, inner @ args)
   | MLmagic (_, f) -> canonical_app f args
+  | MLexn _ | MLdummy _ -> f
   | MLcase (ty, scrut, [|(ids, rty, pat, body)|], occ) ->
     let args = List.map (ast_lift (List.length ids)) args in
     let body =
@@ -2721,7 +2725,7 @@ let rec ml_size = function
    |MLexn _
    |MLdummy _
    |MLaxiom _
-   |MLuint _
+   |MLuint _ | MLnumeral _
    |MLfloat _
    |MLstring _ -> 0
 
@@ -2902,7 +2906,7 @@ let remap_tvars f =
           occ )
     | MLmagic (m, a) -> MLmagic (m, remap_ast a)
     | MLparray (arr, def) -> MLparray (Array.map remap_ast arr, remap_ast def)
-    | a -> a (* MLrel, MLexn, MLdummy, MLaxiom, MLuint, MLfloat, MLstring *)
+    | a -> a (* MLrel, MLexn, MLdummy, MLaxiom, MLuint, MLfloat, MLstring, MLnumeral *)
   in
   remap_ast
 

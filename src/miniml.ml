@@ -185,6 +185,7 @@ and ml_ast =
   | MLfloat of Float64.t
   | MLstring of Pstring.t
   | MLparray of ml_ast array * ml_ast
+  | MLnumeral of GlobRef.t * Z.t
 
 (** A global at a use.  See miniml.mli. *)
 and global_use = {

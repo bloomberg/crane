@@ -130,14 +130,15 @@ module Visit : VISIT = struct
       | IndRef (ind, _) | ConstructRef ((ind, _), _) -> add_kn (MutInd.user ind)
       | VarRef _ -> assert false
 
-  (* Prune numeral-converter applications (e.g. [Nat.of_num_uint (...)]): the
-     translation pass folds them into raw integer literals, so the converter,
-     its digit-chain argument, and everything they transitively reference are
-     never emitted.  Visiting them anyway would pull in the vestigial
-     [of_num_uint]/[of_uint]/[Uint] machinery that no generated code calls. *)
+  (* Prune numeral-converter applications (e.g. [Nat.of_num_uint (...)]):
+     Core writes them as the literals they compute ({!Numeral_literal.fold}),
+     so the converter, its digit-chain argument, and everything they
+     transitively reference are never emitted.  Visiting them anyway would
+     pull in the vestigial [of_num_uint]/[of_uint]/[Uint] machinery that no
+     generated code calls. *)
   let add_decl_deps d =
     decl_iter_references
-      ~prune:Translation.is_foldable_numeral_converter_app
+      ~prune:Numeral_literal.converter_folds
       add_ref add_ref add_ref d
 
   let add_spec_deps = spec_iter_references add_ref add_ref add_ref
@@ -1554,7 +1555,7 @@ let elaborate_unit struc =
     (fun r -> Translation_calls.callee_abi ~instances:0 r)
     (Core_elaborate.referenced elaborations);
   (* Every global a call may project through an instance
-     ({!Translation_types.static_projection_instance}). *)
+     ({!Translation_types.static_projection}). *)
   Callable_abi.install_projections Translation_calls.projection_abi
     (List.filter
        (fun r -> Table.is_inline_custom r || Table.singleton_method_class r <> None)
