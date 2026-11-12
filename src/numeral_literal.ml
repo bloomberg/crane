@@ -110,20 +110,22 @@ let rec peano info expr =
   | MLcons (_, cr, [inner]) when index cr = Some info.Table.num_succ_ctor -> Option.map Z.succ (peano info inner)
   | _ -> None
 
+(* Whether [r] is the global Rocq registers as [name]. *)
+let registered name r = Rocqlib.has_ref name && Rocqlib.check_ref name r
+
 let constructor_literal = function
   | MLcons (_, (GlobRef.ConstructRef ((kn, i), _) as r), args) as e -> (
-    match Table.get_numeral_info (GlobRef.IndRef (kn, i)) with
+    let ind = GlobRef.IndRef (kn, i) in
+    match Table.get_numeral_info ind with
     | None -> None
+    | Some info when registered "num.pos.type" ind -> Option.map (fun n -> (info, n)) (positive e)
     | Some info -> (
-      match peano info e with
-      | Some n -> Some (info, n)
-      | None -> (
-        match args with
-        | [inner] ->
-          Option.map
-            (fun p -> (info, if registered_constructor "num.Z.type" r = Some z_neg_idx then Z.neg p else p))
-            (positive inner)
-        | _ -> None ) ) )
+      match (peano info e, args) with
+      | Some n, _ -> Some (info, n)
+      | None, [inner] when registered "num.Z.Zpos" r || registered "num.N.Npos" r ->
+        Option.map (fun p -> (info, p)) (positive inner)
+      | None, [inner] when registered "num.Z.Zneg" r -> Option.map (fun p -> (info, Z.neg p)) (positive inner)
+      | None, _ -> None ) )
   | _ -> None
 
 let literal = function

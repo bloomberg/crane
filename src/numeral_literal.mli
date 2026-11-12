@@ -23,10 +23,10 @@ val converter_literal : Names.GlobRef.t -> Miniml.ml_ast -> (Table.numeral_info 
 
 (** [constructor_literal e]: the numeral mapping and the value of the
     constructor term [e] of a numeral inductive, where it is a literal: a
-    chain of the inductive's successor constructor down to its zero
-    constructor ([S (S O)]), or one of its constructors around a binary
-    [positive] chain ([Zpos (xO xH)], [Zneg (xI xH)], [Npos xH]), negative
-    for [Zneg]. *)
+    binary chain of Rocq's [positive] ([xO (xI xH)]), [Zpos], [Zneg] or
+    [Npos] around one ([Zneg (xI xH)] is -3), or else a chain of the
+    inductive's successor constructor down to its zero constructor
+    ([S (S O)], [Z0]). *)
 val constructor_literal : Miniml.ml_ast -> (Table.numeral_info * Z.t) option
 
 (** [fold e]: [e], where it is a numeral literal -- a numeral converter

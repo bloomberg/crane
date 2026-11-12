@@ -14233,6 +14233,17 @@
   (deps inductive_letin_params.t.exe)
   (action (run ./inductive_letin_params.t.exe))))
 
+(subdir numeral_positive_chain
+ (rule
+  (targets numeral_positive_chain.t.exe)
+  (deps NumeralPositiveChain.vo numeral_positive_chain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} numeral_positive_chain.t.exe numeral_positive_chain.t.cpp numeral_positive_chain.cpp)))
+ (rule
+  (alias runtest)
+  (deps numeral_positive_chain.t.exe)
+  (action (run ./numeral_positive_chain.t.exe))))
+
 (subdir numeral_converter_kind
  (rule
   (targets numeral_converter_kind.t.exe)
