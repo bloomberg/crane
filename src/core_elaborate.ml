@@ -330,9 +330,11 @@ type site =
 (** A global application of the program: the occurrence of the use naming
     its callee, the roles of the arguments it writes, its instantiation as
     planned where the walk met it ({!instantiate}), if that succeeded,
-    whether it builds a closed instance ({!builds_closed_instance}), and
+    whether it builds a closed instance ({!builds_closed_instance}),
     whether it calls a class field as a static member of an instance
-    ({!Translation_types.static_projection}). *)
+    ({!Translation_types.static_projection}), whether its head is closed
+    ({!closed_head}), and whether it calls a kept instance's member template
+    ({!member_template_projection}). *)
 type entry = {
   occurrence : Occurrence.t;
   roles : Elaborated_call.role list;
@@ -340,6 +342,8 @@ type entry = {
   site : site;
   closed_instance : bool;
   static_projection : Elaborated_call.static_projection option;
+  closed_head : bool;
+  member_template : bool;
 }
 
 type t = {
@@ -364,6 +368,33 @@ let builds_closed_instance ~lex use args =
   && args <> []
   && Table.builds_instance use.callee
   && Escape.IntSet.for_all (binder_is_instance lex) (Escape.free_rels 0 (MLapp (MLglob use, args)))
+
+(* Whether the call [call] of [use], standing in [lex], applies arguments past its
+   callee's arity to a head -- the callee applied to the rest, at least one --
+   that names no value of [lex]: a function, a handler [case_] combines, say,
+   built from nothing the call can change, so the same every time the call is
+   evaluated.  Not a custom callee, whose text is no function to keep. *)
+let closed_head ~lex use (call : Elaborated_call.t) =
+  let n = List.length call.args - List.length call.excess in
+  (not (Table.is_custom call.callee))
+  && n > 0 && call.excess <> []
+  && Escape.IntSet.for_all (binder_is_instance lex)
+       (Escape.free_rels 0 (MLapp (MLglob use, List.filteri (fun i _ -> i < n) call.args)))
+
+(* Whether the call [call], standing in [lex], projects a class field
+   through its one dictionary argument where that instance was kept
+   ({!Translation_types.kept_instance_of_projection}) and its class declares
+   the field as a member template: the instance's own method can then be
+   called in place of the field's dispatcher. *)
+let member_template_projection ~lex (call : Elaborated_call.t) =
+  match call.instances with
+  | [inst] -> (
+    kept_instance_of_projection ~lex call.callee [inst] <> None
+    &&
+    match resolve_tmeta (instance_class_ty ~lex inst) with
+    | Tglob (c, _, _) -> method_is_member_template c call.callee
+    | _ -> false )
+  | _ -> false
 
 (* The class and its one method, where the variable [i] of [lex] is the
    dictionary of a singleton class: an instance parameter -- a declaration's
@@ -411,10 +442,11 @@ let name (b : builder) r = b := {!b with named = GlobRef.Set_env.add r !b.named}
 let record w ~position lex use args =
   match classify ~lex use.callee args with
   | roles ->
+    let call = of_roles use args roles in
     let planned =
       match
         instantiate ~lex ~expected_ml:position.expected ~stated_ml:position.stated ~caller:w.caller
-          ~scope:w.scope (of_roles use args roles)
+          ~scope:w.scope call
       with
       | inst -> Some inst
       | exception e when CErrors.noncritical e -> None
@@ -426,7 +458,9 @@ let record w ~position lex use args =
         planned;
         site = w.site;
         closed_instance = builds_closed_instance ~lex use args;
-        static_projection = static_projection ~lex use args }
+        static_projection = static_projection ~lex use args;
+        closed_head = closed_head ~lex use call;
+        member_template = member_template_projection ~lex call }
     in
     w.b := {!(w.b) with calls = Ref.User.Map.add use.callee (entry :: others) !(w.b).calls};
     planned
@@ -794,8 +828,13 @@ type tally = {found : int; recomputed : int; taken : int; live : int}
 let no_tally = {found = 0; recomputed = 0; taken = 0; live = 0}
 let tally = State.cell State.Unit no_tally
 
+(* Whether the unit's elaborations are installed: planning translates
+   bodies before they are. *)
+let walked = State.cell State.Unit false
+
 let install t =
   installed := t;
+  walked := true;
   tally := no_tally
 
 (* A body's annotations may be rewritten before it is translated, which
@@ -831,19 +870,25 @@ let extended t use n =
 
 let elaboration ~lex use args =
   let elaborate () = elaborate_arguments ~lex use args in
+  let from_core roles =
+    let call = of_roles use args roles in
+    if Probe.checking () && not (Elaborated_call.same_roles call (elaborate ())) then
+      CErrors.anomaly
+        Pp.(
+          str "Crane: a call to " ++ str (Table.kername_of_global use.callee)
+          ++ str " elaborated from Core disagrees with its elaboration where it is translated." );
+    call
+  in
   match Common.get_phase () with
-  | Common.Plan -> elaborate ()
+  | Common.Plan -> (
+    match roles !installed use (List.length args) with
+    | Some roles -> from_core roles
+    | None -> elaborate () )
   | Common.Emit -> (
     match roles !installed use (List.length args) with
     | Some roles ->
       tally := {!tally with found = !tally.found + 1};
-      let call = of_roles use args roles in
-      if Probe.checking () && not (Elaborated_call.same_roles call (elaborate ())) then
-        CErrors.anomaly
-          Pp.(
-            str "Crane: a call to " ++ str (Table.kername_of_global use.callee)
-            ++ str " elaborated from Core disagrees with its elaboration where it is translated." );
-      call
+      from_core roles
     | None ->
       tally := {!tally with recomputed = !tally.recomputed + 1};
       if not (extended !installed use (List.length args)) then
@@ -880,24 +925,30 @@ let planned t use n =
 let instantiation ~lex ~expected_ml ~stated_ml ~caller ~scope use args =
   let call = elaboration ~lex use args in
   let live () = instantiate ~lex ~expected_ml ~stated_ml ~caller ~scope call in
+  let describe what =
+    Pp.(str "a call to " ++ str (Table.kername_of_global use.callee) ++ str what)
+  in
+  let from_core p =
+    let p = Elaborated_call.at_call p call in
+    if Probe.checking () then begin
+      let agrees = Elaborated_call.same_instantiation p (live ()) in
+      Probe.hit "elab-plan" (fun () -> if agrees then "agree" else "disagree " ^ Table.kername_of_global use.callee);
+      if not agrees then
+        Probe.violation "planned instantiations"
+          (describe " is instantiated where it is translated otherwise than Core planned it.")
+    end;
+    p
+  in
   match Common.get_phase () with
-  | Common.Plan -> live ()
+  | Common.Plan -> (
+    match planned !installed use (List.length args) with
+    | `Planned p -> from_core p
+    | `Ambiguous _ | `Unwalked -> live () )
   | Common.Emit -> (
-    let describe what =
-      Pp.(str "a call to " ++ str (Table.kername_of_global use.callee) ++ str what)
-    in
     match planned !installed use (List.length args) with
     | `Planned p ->
       tally := {!tally with taken = !tally.taken + 1};
-      let p = Elaborated_call.at_call p call in
-      if Probe.checking () then begin
-        let agrees = Elaborated_call.same_instantiation p (live ()) in
-        Probe.hit "elab-plan" (fun () -> if agrees then "agree" else "disagree " ^ Table.kername_of_global use.callee);
-        if not agrees then
-          Probe.violation "planned instantiations"
-            (describe " is instantiated where it is translated otherwise than Core planned it.")
-      end;
-      p
+      from_core p
     | (`Ambiguous _ | `Unwalked) as why ->
       tally := {!tally with live = !tally.live + 1};
       Probe.hit "elab-plan" (fun () ->
@@ -916,24 +967,23 @@ let instantiation ~lex ~expected_ml ~stated_ml ~caller ~scope use args =
              | `Unwalked -> " is translated where Core elaboration did not reach it." ) );
       live () )
 
-(* [lookup what ~equal ~live planned] -- in emission, the answer the
-   installed walk planned ([planned], [None] where it planned none or its
-   entries disagree), checked under [CRANE_CHECK_IR] against [live ()], the
-   answer the traversal's own environment gives, which is taken where the
-   walk planned none; in planning, [live ()]. *)
+(* [lookup what ~equal ~live planned] -- the answer the installed walk
+   planned ([planned], [None] where it planned none or its entries
+   disagree), checked under [CRANE_CHECK_IR] against [live ()], the answer
+   the traversal's own environment gives, which is taken where the walk
+   planned none or is not installed yet. *)
 let lookup what ~equal ~live planned =
-  match Common.get_phase () with
-  | Common.Plan -> live ()
-  | Common.Emit -> (
-    match planned with
-    | Some p ->
-      Probe.hit "elab-fact" (fun () -> String.map (function ' ' -> '_' | c -> c) what ^ " planned");
-      if Probe.checking () && not (equal p (live ())) then
-        Probe.violation what (Pp.str "the answer translation's environment gives differs from Core's");
-      p
-    | None ->
-      Probe.hit "elab-fact" (fun () -> String.map (function ' ' -> '_' | c -> c) what ^ " live");
-      live () )
+  let phase = match Common.get_phase () with Common.Plan -> "plan " | Common.Emit -> "" in
+  match planned with
+  | Some _ when not !walked -> live ()
+  | Some p ->
+    Probe.hit "elab-fact" (fun () -> phase ^ String.map (function ' ' -> '_' | c -> c) what ^ " planned");
+    if Probe.checking () && not (equal p (live ())) then
+      Probe.violation what (Pp.str "the answer translation's environment gives differs from Core's");
+    p
+  | None ->
+    Probe.hit "elab-fact" (fun () -> phase ^ String.map (function ' ' -> '_' | c -> c) what ^ " live");
+    live ()
 
 (* The one value the answers all give, if they agree on one. *)
 let agreed equal = function
@@ -968,6 +1018,16 @@ let static_projection_call ~lex use args =
   lookup "static projections" ~equal
     ~live:(fun () -> static_projection ~lex use args)
     (entry_fact ~equal (fun e -> e.static_projection) use (List.length args))
+
+let closed_head_call ~lex use args =
+  lookup "closed heads" ~equal:Bool.equal
+    ~live:(fun () -> closed_head ~lex use (elaborate_arguments ~lex use args))
+    (entry_fact ~equal:Bool.equal (fun e -> e.closed_head) use (List.length args))
+
+let member_template_call ~lex use args =
+  lookup "member template projections" ~equal:Bool.equal
+    ~live:(fun () -> member_template_projection ~lex (elaborate_arguments ~lex use args))
+    (entry_fact ~equal:Bool.equal (fun e -> e.member_template) use (List.length args))
 
 let singleton_dictionary_call ~live occ =
   let planned =
