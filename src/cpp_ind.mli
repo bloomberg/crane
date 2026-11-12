@@ -364,14 +364,20 @@ val finished_concept : Names.GlobRef.t -> Minicpp.cpp_decl -> Cpp_ir.Resolved.De
 val finished_declared :
   fallback:Names.GlobRef.t -> Gen_decls.generated_fun -> Minicpp.cpp_decl -> Cpp_ir.Resolved.Decl.t
 
-(** [finalized ~fallback funs] pairs each generated function with its
-    entity, made of the definition as the unit's program has it; [None] for
-    a declaration.  [fallback] is the entity a function falls back to
+(** A generated function, finished: a definition, with the file holding it
+    and its entity, made of the definition as the unit's program has it; or
+    a declaration with no definition anywhere. *)
+type finished_fun =
+  | Finished_definition of Gen_decls.definition_file * Function_entity.t
+  | Finished_declaration of Minicpp.cpp_decl
+
+(** [finalized ~fallback funs] pairs each generated function with what it
+    finishes as.  [fallback] is the entity a function falls back to
     ({!funs_entities}). *)
 val finalized :
   fallback:Names.GlobRef.t ->
   Gen_decls.generated_fun list ->
-  (Gen_decls.generated_fun * Function_entity.t option) list
+  (Gen_decls.generated_fun * finished_fun) list
 
 (** The kinds of the template parameters of every inductive and type alias
     [struc] declares, decided before anything is generated: a use converted

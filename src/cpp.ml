@@ -1156,14 +1156,13 @@ let joined f l = Cpp_ast.joined (List.map f l)
 let file_views ~is_header (gens : (GlobRef.t * Gen_decls.generated_fun) list list) =
   let views (fallback, (g : Gen_decls.generated_fun)) =
     let with_env d = (d, g.gf_env) in
-    match (g.gf_entity, snd (List.hd (Cpp_ind.finalized ~fallback [g]))) with
-    | Defined (_, file), Some e ->
+    match snd (List.hd (Cpp_ind.finalized ~fallback [g])) with
+    | Cpp_ind.Finished_definition (file, e) ->
       ( [with_env (Function_entity.declaration e)],
         if (file = Gen_decls.Header) = is_header then
           [with_env (Function_entity.definition_after_declaration e)]
         else [] )
-    | Declared d, _ -> ([with_env (Cpp_ind.finished_declared ~fallback g d)], [])
-    | Defined _, None -> assert false
+    | Finished_declaration d -> ([with_env (Cpp_ind.finished_declared ~fallback g d)], [])
   in
   List.map
     (fun gs ->
