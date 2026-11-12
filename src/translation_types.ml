@@ -1300,8 +1300,9 @@ let eta_expand_to_expected ?expected_ty ~ml_arity ~returns_a_lambda ~arity f =
     mk_lambda params None [Sreturn (Some call)] ~capture:Closure
   | _ -> f
 
-(* The class an instance argument is an instance of, as an ML type. *)
-let instance_class_ty env ml_arg =
+(* The class an instance argument is an instance of, as an ML type, a
+   variable's read off its binder in [lex]. *)
+let instance_class_ty ~lex ml_arg =
   let of_ref r =
     match Table.find_type r with
     | ty -> ml_return_type ty
@@ -1310,7 +1311,7 @@ let instance_class_ty env ml_arg =
   match strip_dictionary ml_arg with
   | MLglob {callee = r; _} | MLapp (MLglob {callee = r; _}, _) -> of_ref r
   | MLrel (i, _) -> (
-    match get_env_type_opt i with
+    match Lexenv.type_opt lex i with
     | Some ty -> ml_return_type ty
     | None -> Miniml.Tunknown )
   | _ -> Miniml.Tunknown
@@ -1329,47 +1330,32 @@ let instance_class_ty env ml_arg =
    Requiring the field to belong to {e this} instance's class is what keeps the
    rule from firing on an ordinary mapped constant that merely takes an
    instance among its arguments. *)
-let kept_instance_of_projection env x args =
-  let lex = current_lexenv () in
+let kept_instance_of_projection ~lex x args =
   List.find_opt
     (fun a ->
       is_typeclass_instance_arg ~lex a
       && (not (instance_arg_is_erased ~lex a))
       && List.mem (Some x)
-           (record_fields_of_type (instance_class_ty env a)) )
+           (record_fields_of_type (instance_class_ty ~lex a)) )
     args
 
-(* The instance a class field is called on as a static member, rather than
-   through the field's dispatcher: a mapped field's, as above, and a singleton
-   class's method's -- its dictionary is known wherever the call is, its
-   projection's only one, and the instance struct declaring the method under
-   the dispatcher's own name hides the dispatcher from any call inside it. *)
-let static_projection_instance env x args =
-  if Table.is_inline_custom x then kept_instance_of_projection env x args
-  else if Table.singleton_method_class x <> None then
-    List.find_opt
-      (fun a ->
-        let lex = current_lexenv () in
-        is_typeclass_instance_arg ~lex a && not (instance_arg_is_erased ~lex a))
-      args
-  else None
-
-(* The value parameters of class field [x] called through [inst] at [tys], as
-   the method declares them.
+(* The value parameters of class field [use] called through [inst] in
+   [lex], as the method declares them.
 
    Two substitutions, because the projection's type quantifies over the
-   class's carrier as well as the method's own variables and [tys] carries
-   only the latter -- its leading entry, the carrier's, is [Tdummy].  The
-   carrier is what the instance is an instance {e at}, the sole argument of
-   its class type; without it every [m A] absorbs its argument and says
-   [std::any].  The carrier, the dictionary and the erased type arguments
-   all stand in front of the value parameters. *)
-let projection_value_domains env use inst =
+   class's carrier as well as the method's own variables and the use's
+   type arguments carry only the latter -- its leading entry, the
+   carrier's, is [Tdummy].  The carrier is what the instance is an instance
+   {e at}, the sole argument of its class type; without it every [m A]
+   absorbs its argument and says [std::any].  The carrier, the dictionary
+   and the erased type arguments all stand in front of the value
+   parameters. *)
+let projection_value_domains ~lex use inst =
   match Table.find_type use.callee with
   | exception Not_found -> []
   | ty ->
     let ty =
-      match resolve_tmeta (instance_class_ty env inst) with
+      match resolve_tmeta (instance_class_ty ~lex inst) with
       | Tglob (_, [carrier], _) -> subst_dict_carrier carrier ty
       | _ -> ty
     in
@@ -1380,18 +1366,41 @@ let projection_value_domains env use inst =
            | Tdummy _ -> false
            | t -> not (Table.is_typeclass_type t))
 
-(* The operands a singleton method's call through [inst] leaves out: a
-   static member takes them all, so a partial application closes over the
-   rest. *)
-let static_projection_missing env use args inst =
-  if Table.is_inline_custom use.callee then []
-  else
-    let operands =
-      List.filter (fun a -> not (Mlutil.isMLdummy a || a == inst)) args
-    in
-    List.filteri
-      (fun i _ -> i >= List.length operands)
-      (projection_value_domains env use inst)
+(** [static_projection ~lex use args] -- where the call [use args], standing
+    in [lex], calls a class field as a static member of the instance it
+    projects through, rather than through the field's dispatcher: which
+    argument that instance is, the member's value parameters, and the
+    operands the call leaves out.  A mapped field is projected so wherever
+    its instance was kept ({!kept_instance_of_projection}), and a singleton
+    class's method wherever its instance was -- its dictionary is known
+    wherever the call is, its projection's only one, and the instance struct
+    declaring the method under the dispatcher's own name hides the
+    dispatcher from any call inside it.  A mapped field's call leaves
+    nothing out; a singleton method's static member takes every operand, so
+    a partial application closes over the rest. *)
+let static_projection ~lex use args : Elaborated_call.static_projection option =
+  let x = use.callee in
+  let inst =
+    if Table.is_inline_custom x then kept_instance_of_projection ~lex x args
+    else if Table.singleton_method_class x <> None then
+      List.find_opt (fun a -> is_typeclass_instance_arg ~lex a && not (instance_arg_is_erased ~lex a)) args
+    else None
+  in
+  Option.map
+    (fun inst ->
+      let domains = projection_value_domains ~lex use inst in
+      let missing =
+        if Table.is_inline_custom x then []
+        else
+          let operands = List.filter (fun a -> not (Mlutil.isMLdummy a || a == inst)) args in
+          List.filteri (fun i _ -> i >= List.length operands) domains
+      in
+      let rec position i = function
+        | a :: rest -> if a == inst then i else position (i + 1) rest
+        | [] -> assert false
+      in
+      {Elaborated_call.instance = position 0 args; domains; missing} )
+    inst
 
 (** The shape a value physically has once it has been through a [std::any]:
     unchanged for a leaf, and one level of template with every argument boxed

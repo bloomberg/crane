@@ -134,3 +134,17 @@ val same_instantiation : instantiated -> instantiated -> bool
     nodes [call]'s, its readings [inst]'s.  [Invalid_argument] unless both
     have one callee and one role per argument. *)
 val at_call : instantiated -> t -> instantiated
+
+(** A class field called as a static member of the instance it projects
+    through, rather than through the field's dispatcher. *)
+type static_projection = {
+  instance : int;  (** The instance's position among the arguments the call writes. *)
+  domains : Miniml.ml_type list;  (** The member's value parameters, at the call. *)
+  missing : Miniml.ml_type list;
+      (** The trailing ones of {!domains} the call gives no operand for, which a
+          partial application closes over. *)
+}
+
+(** Whether two static projections project through the same argument, at the
+    same parameters. *)
+val same_static_projection : static_projection -> static_projection -> bool

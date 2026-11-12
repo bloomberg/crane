@@ -1668,13 +1668,13 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let info, n = Option.get (numeral_converter_literal r arg) in
     render_numeral info n
   (* A class field is projected through the instance wherever the instance
-     survived, whatever mapping the field carries -- see
-     {!static_projection_instance}. *)
-  | MLapp (MLglob ({callee = x; _} as use), args)
-    when static_projection_instance env x args <> None -> (
-    let inst = Option.get (static_projection_instance env x args) in
-    match static_projection_missing env use args inst with
-    | [] -> project_through_instance env use args inst
+     survived, whatever mapping the field carries, as Core decided it
+     ({!Core_elaborate.static_projection_call}). *)
+  | MLapp (MLglob use, args)
+    when Core_elaborate.static_projection_call ~lex:(current_lexenv ()) use args <> None -> (
+    let projection = Option.get (Core_elaborate.static_projection_call ~lex:(current_lexenv ()) use args) in
+    match projection.missing with
+    | [] -> project_through_instance env use args projection
     | missing ->
       let k = List.length missing in
       let call =
@@ -4551,7 +4551,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               (* At the instance's class type where that is closed: the
                  match's own annotation may have erased the arguments. *)
               let class_ty =
-                match instance_class_ty env t with
+                match instance_class_ty ~lex:(current_lexenv ()) t with
                 | ct when Mlutil.type_maxvar ct = 0
                           && not (ml_type_contains_erased ct) -> ct
                 | _ -> typ
@@ -5069,7 +5069,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
    concrete, so the term is an ordinary application and not the single-branch
    match a projection through an instance {e variable} extracts to; the C++ is
    the same either way. *)
-and project_through_instance env use args inst =
+and project_through_instance env use args (projection : Elaborated_call.static_projection) =
+  let inst = List.nth args projection.instance in
   let x = use.callee and tys = Mlutil.written_type_args use in
   let operands =
     List.filter
@@ -5105,7 +5106,7 @@ and project_through_instance env use args inst =
 
      Only a suffix as long as the operand list is safe to read. *)
   let operand_ml_tys =
-    let doms = projection_value_domains env use inst in
+    let doms = projection.domains in
     let extra = List.length doms - List.length operands in
     if extra >= 0 then List.filteri (fun i _ -> i >= extra) doms else []
   in
@@ -5947,9 +5948,9 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     let cglob =
       match (plan.cp_instantiated.call.instances, plan.cp_instance_type_args, all_type_args) with
       | [inst], [Some inst_ty], _ :: method_targs
-        when (match kept_instance_of_projection env id [inst] with
+        when (match kept_instance_of_projection ~lex:(current_lexenv ()) id [inst] with
               | Some _ -> (
-                match resolve_tmeta (instance_class_ty env inst) with
+                match resolve_tmeta (instance_class_ty ~lex:(current_lexenv ()) inst) with
                 | Miniml.Tglob (c, _, _) -> Ml_type_util.method_is_member_template c id
                 | _ -> false )
               | None -> false) ->

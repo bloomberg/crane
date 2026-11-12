@@ -329,14 +329,17 @@ type site =
 
 (** A global application of the program: the occurrence of the use naming
     its callee, the roles of the arguments it writes, its instantiation as
-    planned where the walk met it ({!instantiate}), if that succeeded, and
-    whether it builds a closed instance ({!builds_closed_instance}). *)
+    planned where the walk met it ({!instantiate}), if that succeeded,
+    whether it builds a closed instance ({!builds_closed_instance}), and
+    whether it calls a class field as a static member of an instance
+    ({!Translation_types.static_projection}). *)
 type entry = {
   occurrence : Occurrence.t;
   roles : Elaborated_call.role list;
   planned : Elaborated_call.instantiated option;
   site : site;
   closed_instance : bool;
+  static_projection : Elaborated_call.static_projection option;
 }
 
 type t = {
@@ -422,7 +425,8 @@ let record w ~position lex use args =
         roles;
         planned;
         site = w.site;
-        closed_instance = builds_closed_instance ~lex use args }
+        closed_instance = builds_closed_instance ~lex use args;
+        static_projection = static_projection ~lex use args }
     in
     w.b := {!(w.b) with calls = Ref.User.Map.add use.callee (entry :: others) !(w.b).calls};
     planned
@@ -939,21 +943,31 @@ let agreed equal = function
 let same_head (c, m) (c', m') = GlobRef.CanOrd.equal c c' && GlobRef.CanOrd.equal m m'
 
 
+(* What every entry the walk made for the application, with [n] arguments,
+   naming its callee by [use] says of it ([fact]), if they all say one
+   thing. *)
+let entry_fact ~equal fact use n =
+  match Ref.User.Map.find_opt use.callee !installed.calls with
+  | None -> None
+  | Some entries ->
+    let occurrence = Global_use.occurrence use in
+    agreed equal
+      (List.filter_map
+         (fun e ->
+           if Occurrence.equal e.occurrence occurrence && Int.equal (List.length e.roles) n then Some (fact e)
+           else None )
+         entries )
+
 let closed_instance_call ~lex use args =
-  let planned =
-    match Ref.User.Map.find_opt use.callee !installed.calls with
-    | None -> None
-    | Some entries ->
-      let occurrence = Global_use.occurrence use and n = List.length args in
-      agreed Bool.equal
-        (List.filter_map
-           (fun e ->
-             if Occurrence.equal e.occurrence occurrence && Int.equal (List.length e.roles) n then
-               Some e.closed_instance
-             else None )
-           entries )
-  in
-  lookup "closed instance calls" ~equal:Bool.equal ~live:(fun () -> builds_closed_instance ~lex use args) planned
+  lookup "closed instance calls" ~equal:Bool.equal
+    ~live:(fun () -> builds_closed_instance ~lex use args)
+    (entry_fact ~equal:Bool.equal (fun e -> e.closed_instance) use (List.length args))
+
+let static_projection_call ~lex use args =
+  let equal = Option.equal Elaborated_call.same_static_projection in
+  lookup "static projections" ~equal
+    ~live:(fun () -> static_projection ~lex use args)
+    (entry_fact ~equal (fun e -> e.static_projection) use (List.length args))
 
 let singleton_dictionary_call ~live occ =
   let planned =
