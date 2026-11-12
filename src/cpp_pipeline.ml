@@ -339,7 +339,7 @@ let finish decl =
   let decl = run inj instantiation_passes decl in
   if checking then begin
     Borrow_projection.check_decl (inj decl);
-    Move_check.check_decl (Cpp_ir_to_legacy_minicpp.decl (inj decl));
+    Move_check.check_decl (inj decl);
     check_settled late decl
   end;
   Option.iter

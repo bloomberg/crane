@@ -3,7 +3,7 @@
 
 (** No local is read after it is moved: a moved local is not read again on
     the same control path.  A validator of OwnershipIR's decisions, run over
-    the finished MiniCpp of each declaration.
+    each finished declaration in CppIR.
 
     The moves a body holds come from several places -- translation at the
     last uses its region's plan finds ({!Ownership_ir}), Loopify's frames
@@ -41,18 +41,18 @@
 (** Check every function and method body of a declaration, nested
     namespaces, templates and structs included, and report each violation
     of the rules above. *)
-val check_decl : Minicpp.cpp_decl -> unit
+val check_decl : Cpp_ir.Lowered.Decl.t -> unit
 
 (** The locals [ss], a body, reads after it moves them, the backend's own
     storage aside. *)
-val moved_reads : Minicpp.cpp_stmt list -> Names.Id.t list
+val moved_reads : Cpp_ir.Lowered.Stmt.t list -> Names.Id.t list
 
 (** The references [ss], a body, reads after the local each was bound into
     is given a new value, each with that local, since a borrowed value must
     not outlive the region it borrows from: the storage a reference names is
     destroyed or replaced by an assignment to the local holding it.  A
     pointer local given a new value leaves what it pointed at as it was. *)
-val stale_references : Minicpp.cpp_stmt list -> (Names.Id.t * Names.Id.t) list
+val stale_references : Cpp_ir.Lowered.Stmt.t list -> (Names.Id.t * Names.Id.t) list
 
 (** [convention_violations r params body]: what the parameters [params] of
     the callable [r], in declaration order, and its [body] contradict of the
@@ -64,4 +64,4 @@ val stale_references : Minicpp.cpp_stmt list -> (Names.Id.t * Names.Id.t) list
     the body (a name the body declares again, as a frame handler binds a
     parameter's to the frame's field, is that local's). *)
 val convention_violations :
-  Names.GlobRef.t -> (Names.Id.t * Minicpp.cpp_type) list -> Minicpp.cpp_stmt list -> string list option
+  Names.GlobRef.t -> (Names.Id.t * Cpp_ir.Lowered.Type.t) list -> Cpp_ir.Lowered.Stmt.t list -> string list option
