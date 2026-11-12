@@ -801,10 +801,10 @@ let rec gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type
      inductive has a numeral format registered via Crane Extract Numeral. *)
   let folded =
     match (r, ts) with
-    | GlobRef.ConstructRef ((kn, i), cidx), [inner] ->
+    | GlobRef.ConstructRef ((kn, i), _), [inner] ->
       let ind_ref = GlobRef.IndRef (kn, i) in
       ( match Table.get_numeral_info ind_ref with
-      | Some info -> try_fold_z_binary info cidx inner
+      | Some info -> try_fold_z_binary info r inner
       | None -> None )
     | _ -> None
   in
@@ -1664,22 +1664,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        ...). *)
     with_escape_analysis (fun () -> with_region a (fun () ->
       mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) ) )
-  | MLapp (MLglob ({callee = r; _} as use), [arg]) when Table.is_numeral_converter r ->
-    (* Fold Number.uint/signed_int digit chain into a direct integer literal.
-       Tries unsigned (of_num_uint) then signed (of_num_int).
-       Falls through to eta_fun on failure. *)
-    let ind_ref = Option.get (Table.numeral_ind_of_converter r) in
-    ( match Table.get_numeral_info ind_ref with
-    | Some info ->
-      let folded = match try_fold_num_uint arg with
-        | Some _ as r -> r
-        | None -> try_fold_num_int arg
-      in
-      ( match folded with
-      | Some n ->
-        render_numeral info n
-      | None -> eta_fun env (MLglob use) [arg] )
-    | None -> eta_fun env (MLglob use) [arg] )
+  (* A numeral converter applied to a digit chain is the literal it
+     computes ({!numeral_converter_literal}). *)
+  | MLapp (MLglob {callee = r; _}, [arg]) when numeral_converter_literal r arg <> None ->
+    let info, n = Option.get (numeral_converter_literal r arg) in
+    render_numeral info n
   (* A class field is projected through the instance wherever the instance
      survived, whatever mapping the field carries -- see
      {!static_projection_instance}. *)
@@ -2836,9 +2825,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            Z constructors: Zpos(xI(xO(...xH...))) / Zneg(...) chains
            can overflow unsigned int, so fold into INT64_C(n) literals. *)
         let z_folded =
-          match (_ts, r) with
-          | [inner], GlobRef.ConstructRef (_, cidx) ->
-            try_fold_z_binary info cidx inner
+          match _ts with
+          | [inner] -> try_fold_z_binary info r inner
           | _ -> None
         in
         ( match z_folded with
@@ -10176,16 +10164,13 @@ let () = plan_representation := Representation_plan.region
 
 (** Whether [expr] is a numeral-converter application (e.g.
     [Nat.of_num_uint (Number.UIntDecimal ...)]) that {!gen_expr} folds into a
-    literal via [Table.get_numeral_info].  When true, the whole subtree is
+    literal ({!numeral_converter_literal}).  When true, the whole subtree is
     replaced by a raw integer literal at translation time, so the converter and
     its digit-chain argument (and everything they transitively reference) are
     never emitted.  Dependency collection uses this to avoid pulling in the
     vestigial [of_num_uint]/[of_uint]/[Uint] machinery. *)
 let is_foldable_numeral_converter_app = function
-  | MLapp (MLglob {callee = r; _}, [arg]) when Table.is_numeral_converter r ->
-    ( match try_fold_num_uint arg with
-    | Some _ -> true
-    | None -> Option.has_some (try_fold_num_int arg) )
+  | MLapp (MLglob {callee = r; _}, [arg]) -> Option.has_some (numeral_converter_literal r arg)
   | _ -> false
 
 (** [with_method_ns_for_locals () f] runs [f] with the module's local
