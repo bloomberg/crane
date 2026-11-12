@@ -764,8 +764,13 @@ let constant_at_alias ~caller b ty body =
    written but as {!Instance_methods} elaborates them -- expanded to the arity
    the class declares, or, a function named point-free, applied to
    parameters of its own -- and under the instance's own parameters, so those
-   are the bodies the calls inside them are elaborated in.  The record as
-   written is walked too, for the globals it names alone. *)
+   are the bodies the calls inside them are elaborated in.  A method that
+   binds no parameter but erased ones and is applied to parameters of its
+   own is generated as that application alone ({!Gen_instances}), so that is
+   the only body of it walked: the body as written shares its matches'
+   occurrences with the application, which pushes the arguments into a
+   single-branch match ({!Mlutil.canonical_app}).  The record as written is
+   walked too, for the globals it names alone. *)
 let instance_methods b name body ty =
   Option.iter
     (fun (lam_params, methods) ->
@@ -775,13 +780,14 @@ let instance_methods b name body ty =
       let w = walker ~caller:name b ~n_outer:(head_variables ty) in
       List.iter
         (fun (m : Instance_methods.method_) ->
-          walk w lex m.body;
           let params, inner = Instance_methods.params m in
-          if List.for_all (fun p -> p.Instance_methods.erased) params then
-            Option.iter
-              (fun (eta, call) ->
-                walk w (push Lexenv.Value (List.rev_map (fun (x, ty) -> (Id x, ty)) eta) lex) call )
-              (Instance_methods.eta_call m inner) )
+          let eta =
+            if List.for_all (fun p -> p.Instance_methods.erased) params then Instance_methods.eta_call m inner
+            else None
+          in
+          match eta with
+          | Some (eta, call) -> walk w (push Lexenv.Value (List.rev_map (fun (x, ty) -> (Id x, ty)) eta) lex) call
+          | None -> walk w lex m.body )
         methods )
     (Instance_methods.methods name body ty)
 
