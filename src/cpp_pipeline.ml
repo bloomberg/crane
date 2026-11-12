@@ -118,7 +118,7 @@ let minicpp_passes : stage list =
     Ir (Pipeline_trace.pass "depth" Cpp_depth.flatten);
     (* A returned value is moved by the language; writing the move there
        only suppresses copy elision. *)
-    Legacy (on_decl "return_moves" Return_moves.drop_return_moves);
+    Ir (Pipeline_trace.pass "return_moves" Return_moves.drop_return_moves);
     (* Which callable parameters keep a constraint is decided here, with the
        body that decides it in hand; the printer writes what it is given. *)
     Legacy constraints ]
