@@ -170,6 +170,21 @@ let rec worth_moving_cpp (ty : Minicpp.cpp_type) =
   | Ttyctor _ | Tptr _ | Tvoid | Tauto | Tunresolved | Tany | Topaque ->
     false
 
+let rec worth_moving_ir : type p. p Cpp_ir.Type.t -> bool = function
+  | Entity_application (r, tparams, _) -> worth_moving_ref worth_moving_ir r tparams
+  | Foreign {custom; types; _} -> worth_moving_ref worth_moving_ir custom types
+  | Shared_pointer _ | Function _ | Erased _ -> true
+  | Variant (_, ts) | Named (_, ts) | External (_, ts) -> List.exists worth_moving_ir ts
+  | Non_deduced t -> worth_moving_ir t
+  | Rebind (h, x) -> worth_moving_ir h || worth_moving_ir x
+  | Carrier_parameter -> false
+  | Reference (Forwarding, t) -> worth_moving_ir t
+  | Type_of _ | Decltype_auto -> false
+  | Const t | In_namespace (_, t) | Member (t, _) | Apply (t, _) | Reference (Lvalue, t) -> worth_moving_ir t
+  | Variable _ | Instance _ | Promoted_member _ -> true
+  | Decay t -> worth_moving_ir t
+  | Type_constructor _ | Pointer _ | Void | Auto | Any | Obligation _ -> false
+
 (* A value of the global type [r] is a handle on a counted block: a
    coinductive's node, a shared variant's alternative. *)
 let shares_ref r = Table.is_coinductive r || Table.is_shared_variant r

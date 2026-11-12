@@ -101,7 +101,7 @@ let lowered_passes : Cpp_ir.Lowered.Decl.t Pipeline_trace.pass list =
        recorded deciding, every loop the plan commits to decided, and no
        lowered loop still makes a call it takes. *)
     on_decl "control" (fun d ->
-        if Probe.checking () then Control_to_legacy_minicpp.check_lowered (Cpp_ir_to_legacy_minicpp.decl d);
+        if Probe.checking () then Control_to_legacy_minicpp.check_lowered d;
         d );
     (* Closures made and used in one place become the code they stand for.
        The moves they hold were decided over Core, the arguments a local

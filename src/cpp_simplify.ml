@@ -68,7 +68,7 @@ let takes_from v stmts =
     stmts
 
 (* Whether a value of [ty] costs more to copy than to move. *)
-let worth_moving ty = Ownership_ir.worth_moving_cpp (Cpp_ir_to_legacy_minicpp.ty ty)
+let worth_moving = Ownership_ir.worth_moving_ir
 
 (* A local copied out of a member of another -- [T2 s0 = si.first] -- is a
    [const] reference to it instead, where the other is neither assigned nor

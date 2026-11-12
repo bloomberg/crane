@@ -56,9 +56,58 @@ let declared_here (stmts : stmt list) =
       | _ -> [] )
     stmts
 
-(* [stmts] with every identifier renamed by [f] ({!Minicpp.rename_ids}). *)
+(* [stmts] with [f] applied to every identifier they declare or read: a
+   local, every kind of declaration, a match's and a mapping's binders, a
+   lambda's parameters and the names its local fixpoint goes by.  Applied to
+   all of them alike it renames consistently, so a body comes out
+   alpha-equivalent as long as [f]'s fresh names are fresh.  A type is left
+   as it is, and so is what a lambda captures by move. *)
 let rename_ids f stmts =
-  List.map Legacy_minicpp_to_cpp_ir.lower_stmt (Minicpp.rename_ids f (List.map Cpp_ir_to_legacy_minicpp.stmt stmts))
+  let keys = List.map (fun (x, b) -> (f x, b)) in
+  let rec expr (e : expr) : expr =
+    match e with
+    | Local x -> Local (f x)
+    | Lambda l ->
+      let fixpoint (lf : Cpp_ir.Expr.Local_fixpoint.t) : Cpp_ir.Expr.Local_fixpoint.t =
+        { lf with
+          name = f lf.name;
+          captured = keys lf.captured;
+          encoding = (match lf.encoding with Self_passing selves -> Self_passing (List.map f selves) | (Knot | Lowered) as e -> e) }
+      in
+      Cpp_ir.Map.expr (m ())
+        (Lambda
+           { l with
+             params = List.map (fun (t, x) -> (t, Option.map f x)) l.params;
+             binders = keys l.binders;
+             fixpoint = Option.map fixpoint l.fixpoint })
+    | _ -> Cpp_ir.Map.expr (m ()) e
+  and stmt (s : stmt) : stmt =
+    let renamed : stmt =
+      match s with
+      | Bind_variable (x, b, e) -> Bind_variable (f x, b, e)
+      | Declare (x, t, b) -> Declare (f x, t, b)
+      | Declare_value_initialized (x, t) -> Declare_value_initialized (f x, t)
+      | Structured_binding (xs, e) -> Structured_binding (List.map f xs, e)
+      | If_declaration i -> If_declaration {i with name = f i.name}
+      | For_range (x, e, ss) -> For_range (f x, e, ss)
+      | Foreign_block b -> Foreign_block {b with result = f b.result}
+      | Match (sc, branches, default) ->
+        let branch (b : _ Cpp_ir.Stmt.Match.branch) : _ Cpp_ir.Stmt.Match.branch =
+          { b with
+            var = Option.map f b.var;
+            field_bindings = List.map (fun (fb : _ Cpp_ir.Stmt.Match.field_binding) -> {fb with name = f fb.name}) b.field_bindings }
+        in
+        Match (sc, List.map branch branches, default)
+      | Custom_match c ->
+        let branch (b : _ Cpp_ir.Stmt.Custom_match.branch) : _ Cpp_ir.Stmt.Custom_match.branch =
+          {b with params = List.map (fun (p : _ Cpp_ir.Stmt.Custom_match.param) -> {p with name = f p.name}) b.params}
+        in
+        Custom_match {c with branches = List.map branch c.branches}
+      | _ -> s
+    in
+    Cpp_ir.Map.stmt (m ()) renamed
+  and m () = children ~expr ~stmt in
+  List.map stmt stmts
 
 (** A lambda opened up for splicing into the body around it: its parameters
     bound to the arguments and its locals given names nothing else in the
