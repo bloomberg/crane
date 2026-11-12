@@ -192,6 +192,16 @@ val singleton_dictionary_call :
   Miniml.Occurrence.t ->
   (Names.GlobRef.t * Names.GlobRef.t) option
 
+(** [shared_constant e] -- whether the construction [e] is a closed
+    constructor term of a shared variant with fields, built from
+    constructors, literals and erased arguments only, so the same value
+    every time it is evaluated: as the walk decided it for the
+    construction's occurrence.  Where the walk made no single decision
+    there, or is not installed yet, decided from [e]; under [CRANE_CHECK_IR]
+    a planned decision is checked against that one.  [false] of anything
+    but a construction. *)
+val shared_constant : Miniml.ml_ast -> bool
+
 (** How many calls the unit elaborated ahead, and how many emission found
     there or elaborated itself. *)
 val report : unit -> string

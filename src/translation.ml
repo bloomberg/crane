@@ -535,24 +535,6 @@ let check_fixpoint_escape name ~closures generated_escapes =
              ( if closures then " escapes in Core but nowhere in its generated code"
                else " escapes in its generated code but nowhere in Core" ) )
 
-(* Whether [e] is a closed constructor term of a shared variant with fields:
-   built from constructors, literals and erased arguments only, so its value
-   is the same every time it is evaluated. *)
-let is_shared_constant_term e =
-  let rec closed = function
-    | MLcons (_, _, ts, _) -> List.for_all closed ts
-    | MLuint _ | MLnumeral _ | MLfloat _ | MLstring _ | MLdummy _ -> true
-    | MLmagic (_, a) -> closed a
-    | _ -> false
-  in
-  match e with
-  | MLcons (_, (GlobRef.ConstructRef ((kn, i), _) as r), (_ :: _ as ts), _) ->
-    Table.is_shared_variant (GlobRef.IndRef (kn, i))
-    && (not (Table.is_custom r))
-    && List.exists (function MLdummy _ -> false | _ -> true) ts
-    && List.for_all closed ts
-  | _ -> false
-
 (* The instance parameter, the class and its one method, where the variable
    [i], read at [occ] at the head of an application, is a singleton class's
    dictionary, as Core decided it ({!Core_elaborate.singleton_dictionary_call});
@@ -2797,9 +2779,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
      allocation per node.  The outermost closed term is the constant; the
      runtime makes every block it holds immortal too.  Only where the term
      comes out as its factory call: a conversion into another slot type is
-     left as it is. *)
+     left as it is.  Core decides which terms those are
+     ({!Core_elaborate.shared_constant}). *)
   | MLcons (_, _, ts, _) as e
-    when (not slot.building_constant) && is_shared_constant_term e
+    when (not slot.building_constant) && Core_elaborate.shared_constant e
          && not (takes_reuse_token e) -> (
     let built = gen_expr ?expected_ty ~slot:{slot with building_constant = true} env e in
     match built with
